@@ -1,0 +1,36 @@
+# InferSwarm .gitignore — documentation/bootstrap repository.
+# Extend as runtime code lands; do not pre-add speculative toolchains.
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Python (for future runtime work and local scripting)
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+
+# Tooling caches
+.cache/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Local environment / secrets — never commit credentials
+.env
+.env.*
+*.key
+*.pem
+
+# Local scratch notes and benchmark working dirs (results are committed
+# under docs/benchmarks/ with provenance; scratch is not)
+scratch/
+tmp/

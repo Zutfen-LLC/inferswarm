@@ -1,0 +1,96 @@
+name: Hardware report
+description: Share your hardware and measured InferSwarm-relevant results — a first-class contribution.
+labels: ["area:hardware", "type:investigation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Hardware reports help InferSwarm reason about real, varied machines
+        instead of stereotypes. Measured numbers are gold; if you can't
+        measure something, leave it blank rather than estimating.
+
+        Please do not include personally identifying information beyond a
+        public GitHub handle — we only need the machine.
+  - type: input
+    id: cpu
+    attributes:
+      label: CPU
+      placeholder: e.g. Ryzen 9 5950X (16C/32T)
+    validations:
+      required: true
+  - type: input
+    id: ram
+    attributes:
+      label: System RAM
+      placeholder: e.g. 128GB DDR4-3600 (2x64GB)
+    validations:
+      required: true
+  - type: textarea
+    id: gpus
+    attributes:
+      label: GPU(s) and VRAM
+      description: All GPUs that participated, with VRAM. Include secondary/contributing cards.
+      placeholder: |
+        GPU 0: RTX 3060 12GB (primary)
+        GPU 1: RTX 3060 12GB (worker)
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS
+      placeholder: e.g. CachyOS Linux, kernel 6.x
+    validations:
+      required: true
+  - type: textarea
+    id: drivers
+    attributes:
+      label: Drivers / runtimes
+      placeholder: |
+        NVIDIA driver: 5xx.xx
+        CUDA: 12.x
+        ROCm / oneAPI: n/a
+    validations:
+      required: true
+  - type: textarea
+    id: pcie
+    attributes:
+      label: PCIe topology (if available)
+      description: Output of nvidia-smi topo -m or equivalent; which slots/lanes the GPUs occupy.
+  - type: input
+    id: network
+    attributes:
+      label: Network link
+      description: "For multi-machine participation: link type and configured rate."
+      placeholder: e.g. direct 1 GbE (measured ~118 MB/s)
+  - type: textarea
+    id: results
+    attributes:
+      label: Measured results
+      description: |
+        Real measurements with their protocol (tool, workload, model).
+        Label each number MEASURED / CALCULATED — estimates are not results.
+        Example fields: TTFT, prefill throughput, decode tokens/sec,
+        transfer bandwidths (host-to-GPU, node-to-node).
+  - type: dropdown
+    id: role
+    attributes:
+      label: Role of this hardware
+      options:
+        - Primary (host engine / model runtime)
+        - Worker (contributing resources)
+        - Both
+        - Single-machine, no distribution
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: InferSwarm / FreeToken commits
+      description: So results are reproducible.
+      placeholder: e.g. inferswarm@a1b2c3d, freetoken@e4f5a6b
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else worth knowing
+      description: Thermal behavior, power limits, PCIe bifurcation quirks, crashes — context that explains the numbers.

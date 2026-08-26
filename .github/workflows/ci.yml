@@ -1,0 +1,134 @@
+name: CI
+
+# Lightweight checks for a documentation/bootstrap repository:
+# - YAML syntax for issue templates and workflows
+# - internal Markdown link integrity
+# - repository hygiene (no empty speculative directories)
+#
+# Deliberately NOT here: GPU benchmarks (no fake GPU CI), no self-hosted
+# runners attached to public-PR-triggered workflows. Hardware benchmarks run
+# on trusted hardware and are committed with provenance; see BENCHMARKING.md
+# and SECURITY.md.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Docs and repository checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Install check dependencies
+        run: python3 -m pip install --user pyyaml
+
+      - name: Validate YAML files
+        run: |
+          python3 - <<'EOF'
+          import sys, glob
+          import yaml
+          files = glob.glob(".github/**/*.yml", recursive=True) + \
+                  glob.glob(".github/**/*.yaml", recursive=True)
+          if not files:
+              sys.exit("No YAML files found — checker misconfigured")
+          for f in files:
+              with open(f) as fh:
+                  list(yaml.safe_load_all(fh))
+              print(f"OK  {f}")
+          print(f"{len(files)} YAML files valid")
+          EOF
+
+      - name: Check internal Markdown links
+        run: |
+          python3 - <<'EOF'
+          import os, re, sys
+
+          root = "."
+          md_files = []
+          for dirpath, dirnames, filenames in os.walk(root):
+              if dirpath.startswith(("./.git", "./.github/workflows")):
+                  dirnames[:] = []
+                  continue
+              for name in filenames:
+                  if name.endswith(".md"):
+                      md_files.append(os.path.join(dirpath, name))
+
+          link_re = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
+          errors = []
+          checked = 0
+          for path in md_files:
+              base = os.path.dirname(path)
+              text = open(path, encoding="utf-8").read()
+              for target in link_re.findall(text):
+                  if target.startswith(("http://", "https://", "mailto:", "#")):
+                      continue
+                  target = target.split("#")[0]
+                  if not target:
+                      continue
+                  resolved = os.path.normpath(os.path.join(base, target))
+                  checked += 1
+                  if not os.path.exists(resolved):
+                      errors.append(f"{path}: broken link -> {target}")
+
+          if errors:
+              print("\n".join(errors))
+              sys.exit(1)
+          print(f"{checked} internal links across {len(md_files)} Markdown files OK")
+          EOF
+
+      - name: Check repository hygiene
+        run: |
+          # No empty directories should be committed content (git does not
+          # track them anyway) — this catches stray local-only clutter.
+          find . -path ./.git -prune -o -type d -empty -print | grep . && {
+            echo "Empty directories found"; exit 1; } || echo "No empty directories"
+
+      - name: Check consistent project naming
+        run: |
+          # "InferSwarm" is the project name in prose. Lowercase "inferswarm"
+          # is legitimate only as a repo/branch/URL/identifier reference.
+          # Misspelling forms are rejected outright (grep); the prose check
+          # strips fenced code blocks first, since branch/repo names inside
+          # code fences are legitimately lowercase.
+          if grep -rnE 'Inferswarm|Infer Swarm|InferSWARM|InfersWARM' --include='*.md' .; then
+            echo "Misspelled project name found"
+            exit 1
+          fi
+          python3 - <<'EOF'
+          import glob, re, sys
+          fence = re.compile(r"^[ \t]*(```|~~~).*$")
+          bad = []
+          for path in glob.glob("**/*.md", recursive=True):
+              if ".git/" in path:
+                  continue
+              keep = True   # True = prose, False = inside fence
+              lines = []
+              for line in open(path, encoding="utf-8"):
+                  if fence.match(line):
+                      keep = not keep
+                      continue
+                  if keep:
+                      lines.append(line)
+              prose = "".join(lines)
+              # lowercase inferswarm in prose, excluding backticked refs
+              for m in re.finditer(r"(?<![/`\w-])inferswarm(?![/\w-])", prose):
+                  ctx = prose[max(0, m.start()-40):m.end()+40].replace("\n", " ")
+                  bad.append(f"{path}: ...{ctx}...")
+          if bad:
+              print("\n".join(bad))
+              print("Lowercase 'inferswarm' in prose — use 'InferSwarm'")
+              sys.exit(1)
+          print("Naming consistent")
+          EOF

@@ -1,0 +1,41 @@
+name: Feature request
+description: Propose a capability or improvement.
+labels: ["type:feature"]
+body:
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: What are you trying to accomplish? What workload or hardware situation motivates this?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed capability
+      description: What should InferSwarm be able to do that it cannot do today?
+    validations:
+      required: true
+  - type: textarea
+    id: insufficiency
+    attributes:
+      label: Why existing capability is insufficient
+      description: What have you tried or considered with what exists today, and where does it fall short?
+    validations:
+      required: true
+  - type: textarea
+    id: hardware-model-context
+    attributes:
+      label: Expected hardware / model context
+      description: Hardware (GPUs/RAM/network) and model(s) you expect this to involve. Feature fit often depends on this.
+      placeholder: |
+        e.g. 3× RTX 3060 12GB over 1 GbE; Qwen3.6-35B-A3B
+  - type: checkboxes
+    id: principles
+    attributes:
+      label: Alignment check
+      options:
+        - label: This does not require exotic networking (InfiniBand/RDMA/10+GbE) as a hard dependency.
+          required: false
+        - label: This keeps the fabric usable without a paid control plane.
+          required: false

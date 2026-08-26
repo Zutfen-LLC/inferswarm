@@ -1,0 +1,83 @@
+name: Bug report
+description: Something doesn't work as documented or expected.
+labels: ["type:bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report an issue. The more exact your
+        environment details, the more reproducible the report — InferSwarm
+        results are hardware- and model-dependent by nature.
+  - type: input
+    id: version
+    attributes:
+      label: InferSwarm commit / version
+      description: Commit SHA of this repository, plus FreeToken fork commit if a runtime experiment is involved.
+      placeholder: e.g. inferswarm@a1b2c3d, freetoken@e4f5a6b
+    validations:
+      required: true
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Hardware
+      description: CPU, RAM, GPU(s) + VRAM, network link if relevant.
+      placeholder: |
+        CPU: Ryzen 9 5950X
+        RAM: 128GB DDR4
+        GPUs: 2× RTX 3060 12GB
+        Network: direct 1 GbE between nodes (for distributed issues)
+    validations:
+      required: true
+  - type: textarea
+    id: os-drivers
+    attributes:
+      label: OS and drivers
+      description: OS/kernel, GPU driver version, CUDA/ROCm/XPU runtime version where applicable.
+      placeholder: |
+        OS: CachyOS, kernel 6.x
+        Driver: 5xx.xx
+        CUDA: 12.x
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Model / checkpoint
+      description: Model repository + revision + quantization/weight format, if a runtime experiment is involved.
+      placeholder: e.g. Qwen3.6-35B-A3B @ <rev>, NVFP4
+  - type: textarea
+    id: command
+    attributes:
+      label: Command or configuration
+      description: Exact command line and/or config used. Redact secrets.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: topology
+    attributes:
+      label: Topology (for distributed issues)
+      description: Which resources participated where — primary GPU, secondary GPU(s), RAM workers, network workers; PCIe topology if known (nvidia-smi topo -m).
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Error output, warnings, or surprising measurements. Use code fences.
+      render: text
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal sequence to trigger the behavior.
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expectation
+    attributes:
+      label: Expected vs actual behavior
+      description: What you expected, what happened instead.
+    validations:
+      required: true
