@@ -14,6 +14,12 @@ microbenchmark alone.
 
 Establish the ground truth everything else will be compared against.
 
+Phase 0's baseline-selection rules, held-constant configuration list, and
+anti-starvation prohibitions are fixed in advance by
+[docs/phase1-poc-success-criteria.md](docs/phase1-poc-success-criteria.md)
+(sections 2, 3, 9, 10) — the canonical baseline is the measured winner of a
+pre-declared configuration sweep, not whichever single-GPU run happened first.
+
 - [ ] Establish deterministic benchmark methodology (fixed seeds, fixed
       prompts/workloads, fixed measurement protocol, warmup rules).
 - [ ] Profile one RTX 3060: memory bandwidth, PCIe link width/speed, single-
@@ -66,6 +72,13 @@ Goal:
 experts vs. host-RAM offload baseline from Phase 0) with correctness checks
 against the non-distributed reference. Implementation happens primarily in
 the [FreeToken fork](docs/integrations/freetoken.md).
+
+The GO / ITERATE / NO-GO thresholds, hard correctness gates, mechanism-validity
+gates, and statistical rules that decide this phase were fixed before any
+measurement existed:
+[docs/phase1-poc-success-criteria.md](docs/phase1-poc-success-criteria.md).
+That document also states exactly what a Phase-1 GO does and does not
+authorize.
 
 ## Phase 2 — Three-GPU scaling
 
