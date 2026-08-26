@@ -12,8 +12,9 @@ fails the project's purpose of turning the hardware you already own into
 inference capacity (README, principle 2).
 
 MoE expert dispatch gives a reason to believe commodity networking could
-suffice: activation payloads are tiny relative to expert weights (hundreds of
-bytes to a few KB vs. megabytes per expert per touch, per the
+suffice: activation payloads are tiny relative to expert weights (on the
+order of a few to tens of kilobytes for the models studied, versus megabytes
+of expert weights per expert touch, per the
 [feasibility investigation](../investigations/multi_gpu_moe_feasibility.md)),
 so a dispatch/execute/combine flow moves orders of magnitude fewer bytes than
 a weights-migration flow. Whether that reason survives contact with real

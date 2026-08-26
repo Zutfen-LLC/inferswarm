@@ -50,10 +50,12 @@ Why this model for the POC:
   [feasibility investigation](docs/investigations/multi_gpu_moe_feasibility.md))
   is larger than one 12 GB card's practical expert capacity, so a second GPU
   has real work to hold;
-- the expert set is small enough to distribute across two 12 GB cards, so the
-  experiment is controlled rather than capacity-starved;
-- on larger cards (e.g. a 24 GB RTX 3090) the same expert set fits entirely,
-  which gives us a built-in control case for sanity-checking.
+- the expert set is plausibly distributable across two 12 GB cards (Phase
+  0/1 will establish the practical expert capacity after runtime and
+  non-expert allocations), so the experiment is controlled rather than
+  capacity-starved;
+- on larger cards (e.g. a 24 GB RTX 3090) the same expert set should fit
+  entirely, which gives us a built-in control case for sanity-checking.
 
 Goal:
 
@@ -77,11 +79,13 @@ Goal:
 
 - test fan-out (dispatch to multiple secondary devices per layer);
 - test per-GPU batching (multiple selected experts executed per dispatch);
-- test whether performance scales with device count, or whether
-  synchronization eliminates the benefit.
+- test whether performance scales with device count, and if it does not,
+  measure the actual cause — synchronization is one candidate among several,
+  not a presupposed answer.
 
 **Exit criteria:** one-/two-/three-GPU comparison at identical workloads;
-an honest statement of where the scaling curve bends and why.
+cause(s) of any scaling bend identified with evidence; synchronization
+overhead quantified separately.
 
 ## Phase 3 — Mixed GPU + RAM placement
 
