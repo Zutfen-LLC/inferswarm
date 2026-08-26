@@ -36,6 +36,7 @@ mechanism.
 > workload.
 
 Model: `Qwen3.6-35B-A3B`. Rig: `2x RTX 3060 12GB`, same machine, PCIe only.
+Checkpoint and weight format are pinned in §1.1.
 
 ### What H1 does not assert
 
@@ -52,6 +53,7 @@ does **not** support, any of:
 | Scaling beyond two devices | ROADMAP Phase 2 |
 | Mixed GPU + GPU + RAM placement in one run | ROADMAP Phase 3 |
 | Larger models / capacity-constrained regimes | ROADMAP Phase 7 |
+| Other weight precisions (Q6/Q8/FP8/BF16) | §1.1 — a separate future format-scaling experiment |
 
 Two further distinctions that the criteria below enforce with hard gates:
 
@@ -62,6 +64,89 @@ Two further distinctions that the criteria below enforce with hard gates:
   parks weights on GPU 1 and streams them to GPU 0 per invocation is a
   different architecture (the feasibility investigation's "Architecture A"),
   and gate **F5** below fails it.
+
+### 1.1 Phase-1 checkpoint, and why the format is not the architecture
+
+FreeToken supports several `Qwen3.6-35B-A3B` checkpoints and weight formats.
+Every mechanic this document depends on — NVFP4 expert banks, the
+Marlin/Triton backend choice, the `MARLIN_MAX_CACHE_SIZE = 992` slot cap, the
+`rtol/atol = 2e-3` backend-vs-backend tolerance (§5), the ~16.9 GB compact
+expert-pool arithmetic (§13) — is a property of **one** of them. Naming the
+model family without naming the checkpoint would leave the document's own
+constants unanchored.
+
+```
+Checkpoint:   nvidia/Qwen3.6-35B-A3B-NVFP4
+Revision:     MUST be pinned to an exact upstream revision (commit SHA)
+              before the first Phase-0 run.
+```
+
+The revision is **not chosen in this document** — the pin is a Phase-0
+prerequisite, not a decision rule, and inventing a SHA now would be a
+fabricated provenance record. The binding rule is:
+
+> No Phase-0 measurement may begin until the exact upstream revision of
+> `nvidia/Qwen3.6-35B-A3B-NVFP4` is recorded in the result directory. Both
+> arms run that same pinned revision (§2.3, §3 rule 4). A revision change
+> re-runs Phase 0 *and* the candidate, per §2.2.
+
+#### NVFP4 is the Phase-1 POC format, not an InferSwarm constraint
+
+> **NVFP4 is the controlled Phase-1 POC format. It is not an InferSwarm
+> architectural constraint, and nothing in this document may be read as
+> making Q4-class weights the preferred or permanent InferSwarm format.**
+
+InferSwarm's architecture is intended to pool heterogeneous inference
+resources **regardless of the model weight precision the operator chooses**.
+It must remain capable in principle of distributing experts and other model
+components at any precision the underlying model and worker backend support —
+Q6-class, Q8-class, FP8, BF16/FP16, and future formats added by worker or
+runtime backends.
+
+This is not a new commitment; it is what the existing resource abstraction
+already says. [ARCHITECTURE.md](../ARCHITECTURE.md)'s worker contract is
+capability-shaped rather than format-shaped — `ExpertExecutionCapability` is
+defined as *"can execute MoE experts (formats, latency)"*, plural, and
+`StorageCapability` as *"can hold state"*, byte-denominated — and
+[ADR 0004](adr/0004-moe-as-first-execution-strategy.md) keeps the abstraction
+independent of the first target's specifics. Accordingly a higher precision
+is treated as:
+
+- **larger resident byte requirements** per expert, so fewer experts fit per
+  device and placement changes;
+- **different execution capability and performance** per device;
+- **possibly different kernels** on the execution path;
+
+and **not** as a fundamentally different distributed architecture. Dispatch
+shape, placement, residency accounting, and the remote-execution boundary are
+unchanged by the number of bits in a weight.
+
+Concretely, all three of these are conceptually valid InferSwarm workloads
+wherever the model/worker backend supports the representation:
+
+| | Hardware | Operator's choice | What they are buying |
+|---|---|---|---|
+| **User A** | 2x 12 GB GPUs | NVFP4 / Q4-class | maximum model capacity on small cards |
+| **User B** | 2x 24 GB GPUs | Q6 / Q8-class | fidelity, traded against capacity |
+| **User C** | larger accelerator fleet | FP8 or BF16 experts | fidelity at fleet scale |
+
+A user with multiple large GPUs may deliberately prefer a larger
+quantization for higher model fidelity rather than Q4-class weights, and that
+is a first-class InferSwarm case, not a degenerate one.
+
+**Phase 1 nevertheless runs NVFP4 only**, because a single fixed format keeps
+the experiment controlled: §3 requires both arms to hold weight format
+constant, and sweeping precisions would confound the one variable Phase 1
+exists to isolate. This document therefore does **not** expand the Phase-1
+benchmark campaign to multiple quantizations, and a Phase-1 verdict says
+nothing about any other format.
+
+**Future validation (not Phase 1).** Format and precision scaling —
+whether distributed expert execution behaves the same at Q6/Q8/FP8/BF16, and
+how placement responds to larger resident expert bytes — is its own
+experiment with its own criteria, to be run separately once the mechanism
+itself has a verdict. §16 does not authorize any cross-format claim from
+Phase 1.
 
 ---
 
@@ -123,7 +208,9 @@ The Phase-0 record must state all of the following for the canonical baseline
 and, unchanged, for the candidate:
 
 ```
-model repository / revision / expert_quant (weight format)
+model repository            (Phase 1: nvidia/Qwen3.6-35B-A3B-NVFP4, §1.1)
+model revision              (exact upstream commit SHA, pinned before Phase 0)
+expert_quant                (resolved weight format, not the flag text)
 FreeToken commit + InferSwarm branch commit
 --moe-backend                 and, for hybrid, the ft bench bw profile used
 --nvfp4-backend               (resolved value, not "auto")
@@ -170,7 +257,9 @@ campaign rather than merely weakening it:
    routing, or disabling `--moe-prefill-hit-d2d` / prefill overlap on the
    baseline only.
 4. **Different quantization or weight format** between arms. Same
-   `expert_quant`, same checkpoint revision. No NVFP4-vs-FP8 comparisons.
+   `expert_quant`, same checkpoint, same pinned revision (§1.1). No
+   NVFP4-vs-FP8 comparisons. This holds the format constant *within* Phase 1;
+   it is not a statement that InferSwarm is an NVFP4 architecture (§1.1).
 5. **Different context length, prompt set, or output length.** `ignore_eos`
    is used so output length is exact and identical.
 6. **Different CPU resources.** Same `--moe-cpu-threads`, same physical cores
@@ -203,7 +292,7 @@ run **INVALID** — not NO-GO, because it says nothing about H1.
 | **F3 — dispatch shape** | One activation payload per (device, layer, step) — not one per expert | Dispatch count per decode step must equal the number of layers in which GPU 1 held ≥ 1 selected expert |
 | **F4 — combine** | Remote results returned and combined correctly | Covered by C1/C2 (§5) |
 | **F5 — no weight streaming** | Steady-state host→GPU-1 traffic must be **< 1 %** of the bytes that streaming the remotely executed experts' weights would require | Measured host→GPU-1 bytes per decode step vs. the CALCULATED weight bytes from `_BANK_BYTES_PER_EXPERT` (`offload_cache.py:82-89`); plus a GPU-1 expert-copy counter at ~0 in steady state |
-| **F6 — no silent fallback** | Zero fallback events in the measured window; no measured decode step routed 0 experts to GPU 1 | Fallback counter reported as exactly 0; per-step remote-execution counts recorded |
+| **F6 — no silent fallback** | Every route that placement assigned to GPU 1 either executes on GPU 1 or produces an explicit, recorded failure. **Zero** silent fallback of GPU-1-assigned work to GPU 0, CPU, or host RAM | The four counters below, per class: `selected_for_gpu1 == executed_on_gpu1`, `fallback_elsewhere == 0`, `explicit_failure == 0` |
 
 **Failure semantics differ by gate**, and the difference is deliberate:
 
@@ -231,6 +320,41 @@ Notes that make these checkable rather than aspirational:
 - **F5 is the difference between the two architectures.** If host→GPU-1 bytes
   scale with remote invocations, the candidate is a weight-streaming path
   wearing a remote-execution costume, and its numbers do not test H1.
+
+**F6 tests fallback semantics, not participation.** MoE routing is sparse: for
+any given decode step or layer, the router may legitimately select no expert
+whose placement is GPU 1. That is ordinary sparse routing, **not** fallback,
+and such steps and layers are valid and counted normally. F6 therefore does
+**not** require GPU 1 to participate in every layer or every token — §F2
+already carries the participation requirement (≥ 20 % of decode-time expert
+executions on GPU 1 in every workload class), which is where a mechanism that
+is present but negligible is caught.
+
+What F6 forbids is work that *was* assigned to GPU 1 quietly being served
+somewhere else. The candidate must therefore instrument four distinct
+counters, accumulated per (class, session) and reported separately:
+
+```
+selected_for_gpu1   routes the router selected whose placement is GPU 1
+executed_on_gpu1    of those, the ones that actually executed on GPU 1
+explicit_failure    of those, the ones that failed and were recorded as failures
+fallback_elsewhere  of those, the ones served on GPU 0 / CPU / host RAM instead
+```
+
+For a valid measured campaign:
+
+```
+selected_for_gpu1 == executed_on_gpu1
+fallback_elsewhere == 0
+explicit_failure   == 0
+```
+
+A step or layer with `selected_for_gpu1 == 0` contributes zero to all four and
+is a normal measured step. A nonzero `fallback_elsewhere` is invalidating: the
+arm being measured is not the arm being claimed. A nonzero `explicit_failure`
+is also invalidating for the campaign, but it is the honest failure mode —
+recorded, visible, and diagnosable — which is the entire point of requiring
+failures to be explicit rather than silently absorbed.
 
 ---
 
@@ -289,17 +413,38 @@ correctness fixtures run with `--sampling-defaults none` (framework defaults →
 greedy), fixed prompt, fixed `max_tokens`, and `ignore_eos`.
 
 1. **Self-consistency precondition.** Two independent baseline runs of every
-   correctness fixture must produce **identical** token sequences. If they do
-   not, the runtime is not deterministic enough for exact-equality gating;
-   C3 downgrades to the divergence-index rule alone, and the failure of the
-   precondition is reported prominently. This is checked *before* the
-   candidate is run.
+   correctness fixture must produce **identical** token sequences. This is
+   checked *before* the candidate is run.
+
+   **If the precondition fails, the correctness campaign is INVALID** — not
+   downgraded, not relaxed. Concretely:
+
+   > If the baseline fails the C3 greedy self-consistency precondition, the
+   > correctness campaign is **INVALID** until either a stable deterministic
+   > fixture is established, or a different correctness method is
+   > predeclared — in a PR amending this document, with its exact thresholds
+   > written before any candidate result is seen. No Phase-1 verdict may be
+   > issued in the meantime.
+
+   The reasoning is simple: the candidate is never benchmarked for
+   correctness against an unstable reference. An unstable baseline makes
+   "candidate differs from baseline" uninterpretable, and any rule that
+   tolerated it would hand the decision back to post-result discretion, which
+   is exactly what issue #1 exists to remove. There is deliberately **no**
+   softer fallback rule here — an undefined "divergence-index rule" would be
+   a threshold chosen after seeing the data.
+
+   The failure is reported prominently, with both baseline sequences and the
+   index at which they first diverge, as the diagnostic input to establishing
+   a stable fixture.
 2. **Given self-consistency, the gate is:** the candidate must reproduce the
    baseline's generated tokens **exactly for the first 64 tokens** of every
    correctness fixture.
 3. **Beyond token 64**, divergence attributable to accumulated reduction-order
    differences at near-tie logit positions is **expected and is not a
-   failure**. The divergence index is recorded for every fixture.
+   failure**. The candidate-vs-baseline divergence index is recorded for every
+   fixture as a reported diagnostic. It is **not** a gate and no threshold is
+   attached to it — it explains a result, it never decides one.
 4. **Step-0 logits.** At the first generated token: identical `argmax`,
    identical top-5 ordering, and full logit vector within `rtol=2e-3,
    atol=2e-3`.
@@ -389,7 +534,23 @@ Definitions used below:
   Geometric, because these are ratios and the aggregate must not be dragged
   by whichever class is fastest in absolute tokens/sec.
 - **Significant** = the bootstrap 95 % CI on the ratio excludes `1.000`
-  (§10).
+  (§10), as measured by the campaign.
+
+**The verdict vocabulary is closed.** Phase 1 produces exactly one of:
+
+```
+GO   ·   ITERATE   ·   NO-GO   ·   INVALID
+```
+
+No other decision state exists, and none may be introduced by a later
+section, a report, or an amendment that does not say it is changing this
+list. Where a condition is worth recording but is not itself a decision — an
+out-of-band startup cost (§11), a Marlin cap that bound (§13), a dropped
+workload class (§9) — it is attached to the ordinary verdict as a **recorded
+caveat**, written as `GO — startup caveat` or `ITERATE — startup caveat` or
+equivalent prose. A caveat qualifies a verdict; it never becomes one. This
+matters because a proliferating set of half-verdicts is how a NO-GO quietly
+becomes a "GO, with reservations".
 
 ### GO
 
@@ -411,11 +572,16 @@ result would demand — issue #1 explicitly rejects a 2x requirement. But it
 must also be well above "we added an entire second GPU for a rounding error".
 Two anchors set the value:
 
-- *From below:* with the reproducibility rules of §10 (CV ≤ 5 %, n = 10,
-  median), the 95 % CI half-width on a class ratio is roughly ±5 %. A
-  threshold at +5–10 % would sit inside the measurement's own uncertainty,
-  which is how "statistically indistinguishable" gets reported as success.
-  +20 % with a +10 % CI floor is unambiguously outside that band.
+- *From below:* §10 caps the **ordinary run-to-run noise** this campaign will
+  tolerate at all — baseline CV ≤ 5 % in every class, or the campaign is
+  re-run. +20 %, with a +10 % CI floor, is placed comfortably beyond that
+  allowed noise band, so a GO cannot be a dressed-up "statistically
+  indistinguishable". This placement is an **architectural judgment call**,
+  not a derivation: the width of the bootstrap CI on a median ratio at
+  n = 10 is not determined by the CV, and the CI the campaign actually
+  produces is the authority. G4's CI floor is what enforces this at
+  decision time — the observed interval must clear +10 % on its own, whatever
+  the CV turned out to be.
 - *From above:* the mechanism's theoretical headroom is large. Under the
   canonical baseline a substantial share of decode time is PCIe expert
   fetches and CPU miss execution; the candidate can in principle remove most
@@ -460,7 +626,7 @@ and **at least one** of these circumstances:
 | Case | Condition |
 |---|---|
 | **A — sub-threshold but real** | `R_agg` significant and in `[1.05, 1.20)` |
-| **B — mechanism wins, overhead eats it** | Per §8 Rule A the intrinsic cross-device path is cheaper than the baseline's miss path, but scheduler/synchronization/dispatch overhead consumes the gain |
+| **B — mechanism wins, overhead eats it** | Per §8 Rule A `REMOTE_INTRINSIC < BASE_SERVICE` — the matched cross-device service path is cheaper than the best baseline service path for the same expert touches — but the §8.4 removable overhead consumes the gain |
 | **C — split workloads** | **2 or 3** of the 4 classes significant with `R_c ≥ 1.20`, the remainder neutral (`R_c ≥ 0.95`, not significant), so `R_agg` misses G4/G5. A benefit confined to a **single** class is not this case — it is N6 |
 | **D — prefill tradeoff out of band** | Decode satisfies G4 and G5, but TTFT is in `(1.25x, 1.60x]` or prefill in `[0.60x, 0.80x)`, with a named cause |
 | **E — bounded prototype cost** | GO is missed and the shortfall is attributable to a declared prototype limitation — disabled CUDA graph capture (§12), F3 per-expert dispatch, an unoptimized combine — that satisfies I5 |
@@ -480,7 +646,7 @@ answer on this hardware.
 | N2 | `R_agg` is not significant — the 95 % CI includes `1.000` |
 | N3 | `R_agg < 1.05`, or `R_agg < 1.20` with no ITERATE case satisfied |
 | N4 | `R_agg < 1.00` beyond noise — the candidate is slower than the canonical baseline |
-| N5 | Per §8 Rule B: the intrinsic cross-device path (remote execution + result return, **excluding all dispatch/sync/combine overhead**) is already no cheaper than the baseline's PCIe-fetch/CPU-execute path for the same expert touches |
+| N5 | Per §8 Rule B: the apples-to-apples intrinsic remote-execution path (`REMOTE_INTRINSIC` — activation transfer + remote expert execution + result return, with §8.4 removable prototype overhead excluded) is already no cheaper than the equivalent best baseline service path (`BASE_SERVICE`, which includes the baseline's transfers **and** its expert compute) over the same expert touches — and all five §8.5 preconditions hold |
 | N6 | Per §8 Rule C: the benefit is confined to a single workload class — **3 or more** of the 4 frozen classes show no significant gain |
 | N7 | The benefit requires conditions a real user would not experience: an artificially shrunk baseline, a hand-picked routing trace, a synthetic prompt, or a configuration outside FreeToken's normal supported modes |
 | N8 | The apparent gain exists in per-layer or microbenchmark measurement but disappears under end-to-end measurement |
@@ -496,37 +662,184 @@ Phases 2–4 are reconsidered rather than executed on momentum.
 
 ## 8. Architectural failure vs. implementation failure
 
+This section separates *"the cross-device path is intrinsically too
+expensive on this hardware"* from *"the prototype is rough"*. Getting the
+separation wrong in either direction is fatal: excusing everything as
+prototype roughness turns NO-GO into ITERATE forever, while an unmatched
+cost comparison can manufacture an architectural NO-GO that the architecture
+did not earn.
+
+### 8.1 The matching invariant
+
+> **Candidate and baseline comparisons must include equivalent mandatory work
+> on both sides.** Whatever a route *must* do to produce an expert's output
+> is counted on both sides, or excluded from both. Only costs that are
+> genuinely removable from the candidate without changing what it computes
+> may be excluded, and they are excluded from the candidate side alone —
+> because there is nothing equivalent to remove on the baseline side.
+
+The concrete failure this rules out: expert **compute** is mandatory work on
+every route. A comparison that counts the candidate's remote expert
+execution while omitting the baseline's expert execution charges the
+candidate for arithmetic the baseline also performs, and can produce a false
+architectural NO-GO. Expert compute appears on both sides of every comparison
+below, or on neither.
+
+### 8.2 Service costs, per route
+
 Issue #5 requires the complete-layer breakdown for both arms:
 
 ```
 candidate, per MoE layer per decode step:
-    t_dispatch → t_remote_exec → t_return → t_combine → t_sync
+    t_dispatch → t_act_xfer → t_remote_exec → t_result_xfer → t_combine → t_sync
     (plus t_local_exec on GPU 0)
 
-canonical baseline, per MoE layer per decode step:
-    t_miss_detect → t_pcie_fetch  or  t_cpu_exec → t_local_exec
+baseline, per MoE layer per decode step, by the route the baseline used:
+    offload : t_weight_fetch(host→GPU0) → t_expert_exec(GPU0)
+    cpu     : t_act_xfer(GPU→CPU) → t_cpu_expert_exec → t_result_xfer(CPU→GPU)
+    hybrid  : both of the above, deliberately overlapped, then combined
 ```
 
-Define, over the same set of expert touches in the same measured window:
+A **service cost** is the cost of getting one expert's output produced, over
+the same set of expert touches in the same measured window. Matched by
+construction:
 
 ```
-INTRINSIC  = t_remote_exec + t_return
-OVERHEAD   = t_dispatch + t_sync + t_combine
-BASE_MISS  = t_pcie_fetch + t_cpu_exec
+REMOTE_INTRINSIC  = t_act_xfer(GPU0→GPU1)
+                  + t_remote_expert_exec(GPU1)
+                  + t_result_xfer(GPU1→GPU0)
+
+OFFLOAD_INTRINSIC = t_weight_fetch(host→GPU0)
+                  + t_expert_exec(GPU0)
+
+CPU_INTRINSIC     = t_act_xfer(GPU→CPU)
+                  + t_cpu_expert_exec
+                  + t_result_xfer(CPU→GPU)
 ```
 
-**Rule A — implementation failure.** If `INTRINSIC < BASE_MISS` but the
-candidate misses GO, then executing an expert on the other card and shipping
-the result back is genuinely cheaper than the baseline's miss path, and the
-loss lives in `OVERHEAD`. That is an implementation problem. ITERATE is
-available, subject to I4–I6.
+Each of the three includes transfer **and** execution. None of them is a
+miss-traffic-only quantity, and `BASE_MISS` — transfer without the
+corresponding compute — is not used anywhere in this document.
 
-**Rule B — architectural failure.** If `INTRINSIC ≥ BASE_MISS` — that is, the
-cross-device path loses *even after every gram of prototype overhead is
-excluded* — then no amount of implementation polish changes the sign on this
-hardware. **NO-GO (N5).** No ITERATE case may be invoked against Rule B: an
-ITERATE justified by removing overhead that is already excluded from the
-comparison is circular.
+### 8.3 Hybrid: overlap is measured, never summed
+
+FreeToken's hybrid backend **deliberately overlaps** the PCIe-fetch/GPU route
+with the CPU route: some misses are fetched to GPU 0 and computed there while
+the remainder are computed on the CPU, and the partial results are combined.
+Adding `OFFLOAD_INTRINSIC + CPU_INTRINSIC` would therefore charge the
+baseline twice for time it spent once, inflating the baseline's cost and
+manufacturing a candidate win.
+
+> **No hybrid comparison may sum the PCIe/GPU route and the CPU route.**
+
+Exactly one of the two methods below is used, **declared in the result
+directory before the comparison is computed**, and used for both arms:
+
+- **M1 — matched expert-route service cost.** Partition the measured expert
+  touches by the route the baseline actually served each one on. Compute
+  `OFFLOAD_INTRINSIC` over the GPU-route touches and `CPU_INTRINSIC` over the
+  CPU-route touches, each as a per-touch cost. The baseline's service cost for
+  the matched touch set is the **occupancy-weighted per-touch cost**, never
+  the sum of two wall-clock totals that ran concurrently. The candidate's
+  `REMOTE_INTRINSIC` is computed per touch over the same touches.
+- **M2 — measured critical-path contribution.** Take the measured
+  wall-clock contribution of the **complete MoE layer** to the decode step —
+  end of attention to MoE output ready — for each arm, from the Issue #5
+  breakdown. Overlap is then handled by the measurement itself, because
+  concurrent work contributes to the critical path once. On the candidate
+  side, and only there, the §8.4 removable costs are subtracted.
+
+M2 is the safer default and is preferred when hybrid wins the §2.2 sweep,
+precisely because it cannot double-count. If M1 is used, the report must
+state the measured overlap fraction and show that no interval was counted
+in both route totals.
+
+**Double-counting check, mandatory in the report.** Under either method the
+summed per-route baseline costs must not exceed the measured complete-MoE-layer
+wall clock for that arm. If they do, the accounting is wrong and Rule B may
+not be invoked on it.
+
+### 8.4 Removable prototype overhead (candidate side only)
+
+These are costs a working implementation could remove **without changing what
+the candidate computes**, so they are excluded from the candidate's intrinsic
+path and named individually with their measured magnitude:
+
+```
+t_dispatch_python     unnecessary Python-level dispatch on the decode path
+t_dispatch_per_expert per-expert rather than per-device dispatch (F3)
+t_sync_redundant      synchronization not required for correctness
+t_launch_avoidable    avoidable kernel/stream launches
+t_combine_unopt       unoptimized combine
+t_graph_disabled      performance lost to disabled CUDA-graph capture, where
+                      §12 shows capture can eventually be restored
+```
+
+Three constraints on that list:
+
+1. **Named and quantified, or not excluded.** An unmeasured "overhead" term
+   may not be excluded from `REMOTE_INTRINSIC`.
+2. **Removable in principle, demonstrably.** `t_graph_disabled` may be
+   excluded only under the §12 conditions; a cost that cannot be shown to be
+   removable stays inside the intrinsic path.
+3. **Mandatory work is never on this list.** Activation transfer, remote
+   expert execution, and result transfer are what remote execution *is*. They
+   stay in `REMOTE_INTRINSIC` — which is exactly why the baseline side keeps
+   its transfers and its expert compute too (§8.1).
+
+Everything excluded here remains inside the candidate's **end-to-end**
+`R_agg` (§3 rule 8, §12 rule 1). §8 is a diagnostic decomposition, not a
+second, kinder performance number.
+
+### 8.5 The rules
+
+Let `BASE_SERVICE` be the **best** baseline service cost for the matched
+touch set — the minimum over the baseline configurations actually measured in
+the §2.1 sweep, computed by the declared §8.3 method. Best, not merely
+canonical: Rule B is an architectural claim, so it must survive the strongest
+baseline path available on this hardware.
+
+**Rule A — implementation failure.** If
+
+```
+REMOTE_INTRINSIC < BASE_SERVICE
+```
+
+but the candidate misses GO, then executing an expert on the other card and
+shipping its result back is genuinely cheaper than the best baseline route
+for the same expert touches, and the loss lives in the §8.4 removable costs
+plus whatever else the end-to-end number carries. That is an implementation
+problem. **ITERATE is available**, subject to I4–I7.
+
+**Rule B — architectural failure.** If
+
+```
+REMOTE_INTRINSIC ≥ BASE_SERVICE
+```
+
+— that is, the apples-to-apples intrinsic remote-execution path is **no
+cheaper** than the equivalent best baseline service path, *after* the §8.4
+removable prototype overhead has been excluded from the candidate side and
+with all mandatory work (transfers **and** expert compute) counted on both
+sides — then no implementation polish changes the sign on this hardware.
+**NO-GO (N5).** No ITERATE case may be invoked against Rule B: an ITERATE
+justified by removing overhead that is already excluded from the comparison
+is circular.
+
+Rule B may only be invoked when **all** of the following hold, and the report
+states each one:
+
+| | Precondition for invoking Rule B |
+|---|---|
+| B-i | Both sides include the same mandatory work: transfer **and** expert execution on each route (§8.1) |
+| B-ii | The §8.3 method (M1 or M2) was declared before the comparison was computed, and hybrid overlap is not summed |
+| B-iii | The double-counting check of §8.3 passes |
+| B-iv | Every §8.4 exclusion is named and quantified from the measured breakdown |
+| B-v | `BASE_SERVICE` is the minimum over the measured B1–B5 sweep, not a convenient single configuration |
+
+If any precondition fails, the comparison is not evidence of architectural
+failure. The verdict is then decided by §7 on the end-to-end result alone,
+and the §8 comparison is reported as inconclusive.
 
 **Rule C — generality failure.** If the advantage is present only where
 routing happens to concentrate on GPU-1-resident experts — concretely, if
@@ -543,12 +856,14 @@ improving while three do not is indistinguishable from having found the one
 workload that happens to suit the placement, which is the cherry-picking
 failure mode this document exists to prevent.
 
-Rule B is deliberately the harshest reading available, and it exists because
-"the prototype was rough" is the easiest story to tell about any
-disappointing result. Excluding overhead entirely is the only way to ask the
-architecture question separately from the implementation question.
-
----
+Rule B remains the harshest reading available to the candidate, because "the
+prototype was rough" is the easiest story to tell about any disappointing
+result. What §8.1 adds is the symmetric discipline: the baseline does not get
+to be judged on transfer alone while the candidate is judged on transfer plus
+compute. Excluding *removable* overhead is the only way to ask the
+architecture question separately from the implementation question; excluding
+*mandatory* work on one side only would be a different error with the same
+shape.
 
 ## 9. Workload selection — frozen before benchmarking
 
@@ -640,10 +955,28 @@ completed before any ratio is computed. Computing ratios mid-campaign and
 stopping when a number looks good is prohibited, and the completion order is
 recorded so the prohibition is auditable.
 
-These rules are what make §7's thresholds meaningful: with CV ≤ 5 % and
-n = 10 the 95 % CI half-width on a class ratio is roughly ±5 %, so the +20 %
-GO threshold and its +10 % CI floor sit clearly outside run-to-run noise,
-while the ITERATE floor at +5 % is exactly where "real but small" begins.
+**The measured CI is authoritative.** Every significance decision in §7 —
+G4's `R_agg` CI lower bound, G5's per-class significance, N2 — is made on the
+bootstrap interval this campaign actually produces, never on an interval
+inferred from the CV or from `n`. No rule in this document substitutes a
+predicted CI width for a measured one.
+
+These rules are what make §7's thresholds meaningful, in this sense: §10
+places a hard ceiling on the ordinary run-to-run noise the campaign will
+accept (CV ≤ 5 %, or re-run), and §7's thresholds are then placed comfortably
+beyond that ceiling — +20 % for GO with a +10 % CI floor, +5 % for the
+ITERATE floor. Where exactly to place them beyond it is an architectural
+judgment call (§7), not a quantity derived from the CV and `n`. A dispersion
+statistic on per-rep throughputs does **not** determine the half-width of a
+bootstrap CI on a **median ratio** at `n = 10`, and this document does not
+claim that it does.
+
+As an explicitly labelled **heuristic observation** only, and binding on
+nothing: a CV in the low single digits is the regime in which a few-percent
+difference is usually hard to distinguish from noise, which is the intuition
+behind not setting a +5 % GO bar. If the campaign's measured CIs turn out
+wider or narrower than that intuition suggests, the measured CIs win and the
+thresholds are unchanged — they were never derived from the intuition.
 
 ---
 
@@ -666,12 +999,17 @@ Rules:
   placement cost is not charged to every generated token. It is also not
   hidden: M-start is reported for both arms with the same provenance as
   everything else.
-- **Startup bound.** If candidate M-start exceeds baseline M-start by more
-  than **3x** or by more than **180 seconds absolute**, the verdict is
-  recorded as **GO-with-caveat** (or ITERATE-with-caveat) and the report must
-  name a remediation. It does not by itself block GO — it is genuinely a
-  one-time cost — but an unbounded startup cost is a real usability problem
-  and naming it is the honest treatment.
+- **Startup bound, as a caveat and not a verdict.** If candidate M-start
+  exceeds baseline M-start by more than **3x** or by more than **180 seconds
+  absolute**, the ordinary §7 verdict is unchanged and a **recorded startup
+  caveat** is attached to it — written `GO — startup caveat`,
+  `ITERATE — startup caveat`, or equivalent prose — and the report must name
+  a remediation. Per §7 the verdict vocabulary is closed
+  (GO / ITERATE / NO-GO / INVALID): the caveat is a qualifier on one of those
+  four, never a fifth state. Startup remains **operational and non-gating** —
+  it is genuinely a one-time cost, and this document defines no reason for it
+  to gate — but an unbounded startup cost is a real usability problem and
+  naming it on the verdict line is the honest treatment.
 - **M-cold is reported because residency is the hypothesis.** H1 is about
   *resident* experts; how long residency takes to establish, and how the
   system behaves before it does, is exactly the kind of fact that would
@@ -799,13 +1137,13 @@ Precedence, applied top to bottom. The first row that fires decides.
 
 | Order | Gate | GO | ITERATE | NO-GO / INVALID |
 |---|---|---|---|---|
-| **1** | **Mechanism validity** (F1–F6) | All pass: GPU 1 holds ≥ 25 % of combined expert bytes; ≥ 20 % of decode expert executions on GPU 1 in every class; one payload per (device, layer, step); host→GPU-1 steady-state traffic < 1 % of weight-streaming equivalent; zero fallback events | F1, F2, F4, F5, F6 pass; **F3 may fail** and be named as the case-E bottleneck | F1, F2, F4, F5, or F6 fails ⇒ **INVALID**: the run is not evidence about H1 in either direction |
-| **2** | **Correctness** (C1–C4) | C1 within `rtol/atol 2e-3` with deviation reported; C2 exact; C3 first 64 greedy tokens identical + step-0 argmax/top-5 identical; C4 zero NaN/Inf | Identical requirement — correctness is never traded | Any failure ⇒ **NO-GO** for that build; a verdict is possible only after fix + full campaign re-run |
+| **1** | **Mechanism validity** (F1–F6) | All pass: GPU 1 holds ≥ 25 % of combined expert bytes; ≥ 20 % of decode expert executions on GPU 1 in every class; one payload per (device, layer, step); host→GPU-1 steady-state traffic < 1 % of weight-streaming equivalent; `selected_for_gpu1 == executed_on_gpu1` with zero silent fallback and zero explicit failures | F1, F2, F4, F5, F6 pass; **F3 may fail** and be named as the case-E bottleneck | F1, F2, F4, F5, or F6 fails ⇒ **INVALID**: the run is not evidence about H1 in either direction |
+| **2** | **Correctness** (C1–C4) | C1 within `rtol/atol 2e-3` with deviation reported; C2 exact; C3 first 64 greedy tokens identical + step-0 argmax/top-5 identical, after the baseline passed the self-consistency precondition; C4 zero NaN/Inf | Identical requirement — correctness is never traded | Any failure ⇒ **NO-GO** for that build; a verdict is possible only after fix + full campaign re-run. C3 self-consistency precondition failure ⇒ **INVALID** until a stable fixture or another predeclared method exists (§5.3) |
 | **3** | **Reproducibility** (§10) | Baseline CV ≤ 5 % in every class; both sessions completed; no early stopping; no rep discarded | Same | Violation ⇒ **INVALID**, re-run required |
 | **4** | **Decode performance** | `R_agg ≥ 1.20` with 95 % CI lower bound ≥ 1.10; **every** class significant with `R_c ≥ 1.05` | Significant `R_agg ∈ [1.05, 1.20)`, **or** a §7 case B/C/D/E — **and** I4–I7 satisfied, including no class below `0.95` | CI includes 1.000; or `R_agg < 1.05`; or `R_agg < 1.20` with no ITERATE case; or slower than baseline beyond noise |
 | **5** | **TTFT / prefill** | TTFT ≤ 1.25x baseline **and** prefill ≥ 0.80x baseline, every class | TTFT ∈ (1.25x, 1.60x] or prefill ∈ [0.60x, 0.80x) with a named cause and decode meeting G4/G5 | TTFT > 1.60x or prefill < 0.60x — the tradeoff is unbounded |
 | **6** | **Full-layer evidence** (issue #5) | Breakdown present for **both** arms and consistent with the end-to-end result | Breakdown present for both arms and identifies the named bottleneck | Missing, single-arm, or contradicting the end-to-end result ⇒ **INVALID** |
-| **7** | **Architecture vs. implementation** (§8) | n/a — GO does not need this distinction | Rule A: `INTRINSIC < BASE_MISS`, loss is in `OVERHEAD` | Rule B: `INTRINSIC ≥ BASE_MISS` ⇒ **NO-GO (N5)**. Rule C: benefit confined to a single class (≥ 3 classes with no significant gain) ⇒ **NO-GO (N6)** |
+| **7** | **Architecture vs. implementation** (§8) | n/a — GO does not need this distinction | Rule A: `REMOTE_INTRINSIC < BASE_SERVICE` on matched service costs; the loss is in the §8.4 removable overhead | Rule B: `REMOTE_INTRINSIC ≥ BASE_SERVICE` with all §8.5 preconditions met ⇒ **NO-GO (N5)**; preconditions unmet ⇒ inconclusive, §7 decides on the end-to-end result. Rule C: benefit confined to a single class (≥ 3 classes with no significant gain) ⇒ **NO-GO (N6)** |
 | **8** | **Capacity** (§13) | Recorded; **cannot contribute to GO** | Recorded | Recorded. Coverage improvements never offset a performance NO-GO |
 
 **Precedence, stated plainly:**
@@ -858,8 +1196,9 @@ whether Phase 1 is still the right experiment.
 - the negative result, recorded and published (issue #10) with full
   provenance, not buried;
 - an explicit statement of which §7 rule fired and which §8 rule applied;
-- a roadmap review. If Rule B fired — the intrinsic cross-device path is not
-  cheaper on this hardware — then Phases 2 and 4 inherit that finding, and
+- a roadmap review. If Rule B fired — the matched intrinsic cross-device
+  service path is not cheaper than the best baseline service path on this
+  hardware — then Phases 2 and 4 inherit that finding, and
   proceeding with them unchanged would require an argument this document does
   not supply.
 
@@ -901,18 +1240,38 @@ The go/no-go report (issue #10) is reviewable against this list:
 - [ ] Held-constant list (§2.3) recorded as *resolved* values, both arms
 - [ ] No §3 prohibition violated
 - [ ] F1–F6 evaluated and reported before any performance number
+- [ ] F6 reported as the four counters (`selected_for_gpu1`,
+      `executed_on_gpu1`, `explicit_failure`, `fallback_elsewhere`), not as a
+      participation claim; steps with no GPU-1-selected expert counted as
+      normal
 - [ ] C1–C4 evaluated; C1 deviation reported as a number, not just a verdict
-- [ ] C3 self-consistency precondition checked before the candidate ran
+- [ ] C3 self-consistency precondition checked before the candidate ran; if it
+      failed, the campaign is marked INVALID and no verdict is issued
 - [ ] Primary metric is warm batch-1 decode; no microbenchmark contributed to
       the verdict
 - [ ] Four frozen workload classes, hash-pinned before candidate benchmarking;
       any drop recorded with reason
 - [ ] n = 10, two sessions, interleaved, medians, bootstrap CIs, CV reported,
       no rep discarded, no early stopping
-- [ ] M-start / M-warm / M-cold reported separately; startup not amortized
+- [ ] M-start / M-warm / M-cold reported separately; startup not amortized;
+      any startup breach recorded as a caveat on an ordinary verdict, not as a
+      new decision state
+- [ ] The verdict is exactly one of GO / ITERATE / NO-GO / INVALID (§7)
+- [ ] Every significance claim cites the campaign's measured bootstrap CI, not
+      a CI inferred from CV or `n` (§10)
 - [ ] CUDA-graph status stated; no subtraction arithmetic anywhere
 - [ ] Coverage, hit rate, and throughput reported as three separate quantities
 - [ ] Any TP run labelled secondary/contextual
+- [ ] If §8 was invoked: the §8.3 method (M1/M2) was declared before the
+      comparison was computed, hybrid overlap was not summed, the
+      double-counting check passed, and each §8.4 exclusion is named with its
+      measured magnitude
+- [ ] If Rule B is claimed: all five §8.5 preconditions stated and met,
+      including expert compute counted on **both** sides
+- [ ] Checkpoint `nvidia/Qwen3.6-35B-A3B-NVFP4` and its exact pinned revision
+      recorded, identical on both arms (§1.1)
+- [ ] No cross-format or cross-precision claim made from an NVFP4-only
+      campaign (§1.1, §16)
 - [ ] Verdict states which rule fired, and which §8 rule applied
 - [ ] No claim that distributed execution, 1 GbE, or heterogeneous inference
       has been validated beyond what §16 authorizes
@@ -938,6 +1297,12 @@ decision rule:
    is what it is.
 6. **The exact Issue #3 fixtures** filling the four W-classes. The selection
    *policy* is fixed here (§9); the specific prompts come from real traces.
-7. **Whether baseline greedy decoding is bit-reproducible run-to-run** on this
-   runtime — checked by the C3 self-consistency precondition, with a defined
-   fallback if it is not.
+7. **The exact upstream revision of `nvidia/Qwen3.6-35B-A3B-NVFP4`.** The
+   checkpoint is fixed here (§1.1); the revision SHA is pinned in the result
+   directory **before the first Phase-0 run**, and inventing one now would be
+   a fabricated provenance record.
+8. **Whether baseline greedy decoding is bit-reproducible run-to-run** on this
+   runtime — checked by the C3 self-consistency precondition. If it is not,
+   the consequence is fully defined and is not a relaxation: the correctness
+   campaign is INVALID until a stable deterministic fixture or another
+   predeclared correctness method exists (§5.3).
