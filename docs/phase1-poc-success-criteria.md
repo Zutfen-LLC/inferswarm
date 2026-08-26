@@ -325,7 +325,7 @@ Notes that make these checkable rather than aspirational:
 any given decode step or layer, the router may legitimately select no expert
 whose placement is GPU 1. That is ordinary sparse routing, **not** fallback,
 and such steps and layers are valid and counted normally. F6 therefore does
-**not** require GPU 1 to participate in every layer or every token — §F2
+**not** require GPU 1 to participate in every layer or every token — F2
 already carries the participation requirement (≥ 20 % of decode-time expert
 executions on GPU 1 in every workload class), which is where a mechanism that
 is present but negligible is caught.
