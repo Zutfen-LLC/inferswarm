@@ -626,7 +626,7 @@ and **at least one** of these circumstances:
 | Case | Condition |
 |---|---|
 | **A — sub-threshold but real** | `R_agg` significant and in `[1.05, 1.20)` |
-| **B — mechanism wins, overhead eats it** | Per §8 Rule A `REMOTE_INTRINSIC < BASE_SERVICE` — the matched cross-device service path is cheaper than the best baseline service path for the same expert touches — but the §8.4 removable overhead consumes the gain |
+| **B — mechanism wins, the loss is elsewhere** | Per §8 Rule A `REMOTE_INTRINSIC < BASE_NONLOCAL_SERVICE` over the matched non-local touch set (§8.3) — the cross-device service path is cheaper than the best **non-local** baseline service path for the same touches — but the §8.6 removable overhead, or a named placement/scheduling cost per §8.7 and §8.8, consumes the gain |
 | **C — split workloads** | **2 or 3** of the 4 classes significant with `R_c ≥ 1.20`, the remainder neutral (`R_c ≥ 0.95`, not significant), so `R_agg` misses G4/G5. A benefit confined to a **single** class is not this case — it is N6 |
 | **D — prefill tradeoff out of band** | Decode satisfies G4 and G5, but TTFT is in `(1.25x, 1.60x]` or prefill in `[0.60x, 0.80x)`, with a named cause |
 | **E — bounded prototype cost** | GO is missed and the shortfall is attributable to a declared prototype limitation — disabled CUDA graph capture (§12), F3 per-expert dispatch, an unoptimized combine — that satisfies I5 |
@@ -646,7 +646,7 @@ answer on this hardware.
 | N2 | `R_agg` is not significant — the 95 % CI includes `1.000` |
 | N3 | `R_agg < 1.05`, or `R_agg < 1.20` with no ITERATE case satisfied |
 | N4 | `R_agg < 1.00` beyond noise — the candidate is slower than the canonical baseline |
-| N5 | Per §8 Rule B: the apples-to-apples intrinsic remote-execution path (`REMOTE_INTRINSIC` — activation transfer + remote expert execution + result return, with §8.4 removable prototype overhead excluded) is already no cheaper than the equivalent best baseline service path (`BASE_SERVICE`, which includes the baseline's transfers **and** its expert compute) over the same expert touches — and all five §8.5 preconditions hold |
+| N5 | Per §8 Rule B: over the **matched non-local touch set** (§8.3), the apples-to-apples intrinsic remote-execution path (`REMOTE_INTRINSIC` — activation transfer + remote expert execution + result return, with §8.6 removable prototype overhead excluded) is already no cheaper than the equivalent best **non-local** baseline service path (`BASE_NONLOCAL_SERVICE`, which includes the baseline's transfers **and** its expert compute) — and all six §8.7 preconditions hold, B-vi included, so baseline GPU-0-local cache hits were excluded from the comparison. A candidate that is merely slower than a baseline local hit does **not** satisfy N5 |
 | N6 | Per §8 Rule C: the benefit is confined to a single workload class — **3 or more** of the 4 frozen classes show no significant gain |
 | N7 | The benefit requires conditions a real user would not experience: an artificially shrunk baseline, a hand-picked routing trace, a synthetic prompt, or a configuration outside FreeToken's normal supported modes |
 | N8 | The apparent gain exists in per-layer or microbenchmark measurement but disappears under end-to-end measurement |
@@ -669,6 +669,10 @@ prototype roughness turns NO-GO into ITERATE forever, while an unmatched
 cost comparison can manufacture an architectural NO-GO that the architecture
 did not earn.
 
+Everything in §8 is a **diagnostic decomposition**. It never produces a
+performance number, never replaces `R_agg`, and never rescues an end-to-end
+result. Its only job is to classify a result §7 has already produced.
+
 ### 8.1 The matching invariant
 
 > **Candidate and baseline comparisons must include equivalent mandatory work
@@ -685,7 +689,105 @@ candidate for arithmetic the baseline also performs, and can produce a false
 architectural NO-GO. Expert compute appears on both sides of every comparison
 below, or on neither.
 
-### 8.2 Service costs, per route
+§8.2 adds the second half of the same discipline: the two sides must also be
+the same *population* of expert touches, serviced from the same starting
+condition.
+
+### 8.2 Which tier remote execution is asked to beat
+
+The resource hierarchy of [ARCHITECTURE.md](../ARCHITECTURE.md), applied to
+a single expert touch on this rig:
+
+| Tier | Service path | Role in Phase 1 |
+|---|---|---|
+| **L0** | Expert already resident in GPU 0's expert cache — a local cache hit, compute only, no transfer | The cheapest tier. **Not** what remote execution replaces |
+| **L1** | Expert resident on GPU 1 — activation out, remote compute, result back | The InferSwarm candidate mechanism |
+| **L2** | Expert not resident on GPU 0 — host→GPU-0 weight fetch, or CPU execution, or the hybrid overlap of both | The existing FreeToken non-local path |
+
+H1 (§1) asks whether **L1 improves on L2**. It does not ask whether L1 beats
+L0, and no sane placement policy would want it to: an L0 hit contains no
+capacity-boundary service to replace, so requiring a remote worker to beat
+local residency would test a hypothesis this project never advanced.
+
+> **Binding rule: a baseline GPU-0-local cache hit (L0) is not an eligible
+> baseline service comparator for Rule A or Rule B.** Those rules operate only
+> over the matched non-local touch set defined in §8.3, against
+> `BASE_NONLOCAL_SERVICE` (§8.4).
+
+**This changes nothing about the performance verdict.** The cost of routing a
+touch to GPU 1 whose baseline counterpart was an L0 hit is real, a user pays
+it, and it stays fully inside:
+
+- the candidate's end-to-end `R_agg` and every per-class `R_c` (§6, §7);
+- the placement and residency analysis (§13);
+- the hit-rate analysis (§13), which stays separate from coverage and
+  throughput.
+
+Baseline local hits are **never** excluded from `R_agg`. The canonical
+end-to-end baseline remains the strongest B1–B5 configuration (§2.2), local
+hits included, and the candidate must still beat that real baseline
+end-to-end. The exclusion in this section is scoped to §8's architectural
+diagnostic and nowhere else. §8.8 says what a local-hit displacement *is*
+evidence of.
+
+### 8.3 The matched non-local touch set
+
+C2 (§5.2) requires the candidate's router selections to be **exactly** equal
+to the baseline's, so the triple `(layer, decode step, expert id)` identifies
+the same unit of work in both arms. That is what makes a matched touch set
+well defined rather than a reconstruction.
+
+```
+MATCHED_NONLOCAL_TOUCH_SET =
+    { (layer L, step S, expert E) :
+        the candidate executed E on GPU 1 at (L, S),
+        AND the canonical baseline did NOT serve the same touch (L, S, E)
+            as a GPU-0-resident cache hit }
+```
+
+For every candidate GPU-1 touch, the corresponding **canonical-baseline**
+route is classified into exactly one of:
+
+| Class | What the baseline did at that touch | Eligible for Rule A/B |
+|---|---|---|
+| **LOCAL_HIT** | Expert weights already resident in GPU 0's expert cache before the touch; executed on GPU 0 with no fetch | **No** |
+| **OFFLOAD_MISS** | Not resident; baseline fetched weights host→GPU 0 and executed there | Yes |
+| **CPU_SERVICE** | Not resident; baseline computed the expert on CPU and returned the result | Yes |
+| **HYBRID_NONLOCAL** | Not resident; baseline served the route through its overlapped hybrid CPU/PCIe miss path | Yes |
+
+The classification is a function of the **baseline arm's own state** at that
+touch and of nothing the candidate did, so it cannot be tuned after seeing
+candidate results.
+
+**Evidence, and its limits.** The classification is built from the baseline's
+per-touch residency state — the existing `OffloadMoeCache` hit/miss
+accounting (`stat_active` / `stat_missing`, `decode_miss_stats`), which §12
+rule 5 records as graph-safe — joined to the recorded C2 routing on
+`(layer, step, expert id)`. This requires hit/miss resolution **per touch**,
+not merely an aggregate miss rate per layer or per run. If the instrumentation
+yields only aggregate rates, the matched set cannot be constructed and §8 is
+INCONCLUSIVE per §8.7. It may not be approximated by apportioning an
+aggregate miss rate across touches: that would assign baseline tiers to
+individual touches by assumption, which is the failure this correction exists
+to prevent.
+
+**Census, required in the Phase-1 report**, per workload class and in total,
+so a reviewer cannot unknowingly compare different service regimes:
+
+```
+N_total      candidate expert touches executed on GPU 1
+N_local        of which baseline route was LOCAL_HIT        (ineligible)
+N_offload      of which baseline route was OFFLOAD_MISS     (eligible)
+N_cpu          of which baseline route was CPU_SERVICE      (eligible)
+N_hybrid       of which baseline route was HYBRID_NONLOCAL  (eligible)
+N_eligible   = N_offload + N_cpu + N_hybrid, the size of
+               MATCHED_NONLOCAL_TOUCH_SET
+```
+
+`N_total = N_local + N_eligible` must hold exactly; these are integer
+counters and, per C2's precedent, integers have no tolerance.
+
+### 8.4 Service costs, per route
 
 Issue #5 requires the complete-layer breakdown for both arms:
 
@@ -695,38 +797,56 @@ candidate, per MoE layer per decode step:
     (plus t_local_exec on GPU 0)
 
 baseline, per MoE layer per decode step, by the route the baseline used:
+    local   : t_expert_exec(GPU0)                              ← L0, ineligible
     offload : t_weight_fetch(host→GPU0) → t_expert_exec(GPU0)
     cpu     : t_act_xfer(GPU→CPU) → t_cpu_expert_exec → t_result_xfer(CPU→GPU)
-    hybrid  : both of the above, deliberately overlapped, then combined
+    hybrid  : the offload and cpu routes, deliberately overlapped, then combined
 ```
 
-A **service cost** is the cost of getting one expert's output produced, over
-the same set of expert touches in the same measured window. Matched by
-construction:
+A **service cost** is the cost of getting one expert's output produced. All of
+the following are computed **over `MATCHED_NONLOCAL_TOUCH_SET` only**, on the
+same touches, in the same measured window. Matched by construction:
 
 ```
-REMOTE_INTRINSIC  = t_act_xfer(GPU0→GPU1)
-                  + t_remote_expert_exec(GPU1)
-                  + t_result_xfer(GPU1→GPU0)
+REMOTE_INTRINSIC        = t_act_xfer(GPU0→GPU1)
+                        + t_remote_expert_exec(GPU1)
+                        + t_result_xfer(GPU1→GPU0)
 
-OFFLOAD_INTRINSIC = t_weight_fetch(host→GPU0)
-                  + t_expert_exec(GPU0)
+OFFLOAD_MISS_SERVICE    = t_weight_fetch(host→GPU0)
+                        + t_expert_exec(GPU0)
 
-CPU_INTRINSIC     = t_act_xfer(GPU→CPU)
-                  + t_cpu_expert_exec
-                  + t_result_xfer(CPU→GPU)
+CPU_SERVICE             = t_act_xfer(GPU→CPU)
+                        + t_cpu_expert_exec
+                        + t_result_xfer(CPU→GPU)
+
+HYBRID_NONLOCAL_SERVICE = the measured critical-path service attributable to
+                          the corresponding nonresident routes, preserving
+                          overlap — never a sum of the two above (§8.5)
 ```
 
-Each of the three includes transfer **and** execution. None of them is a
-miss-traffic-only quantity, and `BASE_MISS` — transfer without the
-corresponding compute — is not used anywhere in this document.
+Each includes transfer **and** execution. None is a miss-traffic-only
+quantity, and `BASE_MISS` — transfer without the corresponding compute — is
+not used anywhere in this document.
 
-### 8.3 Hybrid: overlap is measured, never summed
+```
+BASE_NONLOCAL_SERVICE = the best applicable baseline service cost over the
+                        matched non-local touches
+```
+
+"Best applicable" means the minimum over the baseline configurations actually
+measured in the §2.1 sweep, each computed by the declared §8.5 method, and
+restricted to the non-local classes of §8.3. Best, not merely canonical: Rule
+B is an architectural claim, so it must survive the strongest non-local
+baseline path available on this hardware. **Ordinary local-cache hits are not
+used when computing `BASE_NONLOCAL_SERVICE`**, in any configuration, under
+either method.
+
+### 8.5 Hybrid: overlap is measured, never summed
 
 FreeToken's hybrid backend **deliberately overlaps** the PCIe-fetch/GPU route
 with the CPU route: some misses are fetched to GPU 0 and computed there while
 the remainder are computed on the CPU, and the partial results are combined.
-Adding `OFFLOAD_INTRINSIC + CPU_INTRINSIC` would therefore charge the
+Adding `OFFLOAD_MISS_SERVICE + CPU_SERVICE` would therefore charge the
 baseline twice for time it spent once, inflating the baseline's cost and
 manufacturing a candidate win.
 
@@ -735,9 +855,9 @@ manufacturing a candidate win.
 Exactly one of the two methods below is used, **declared in the result
 directory before the comparison is computed**, and used for both arms:
 
-- **M1 — matched expert-route service cost.** Partition the measured expert
+- **M1 — matched expert-route service cost.** Partition the matched non-local
   touches by the route the baseline actually served each one on. Compute
-  `OFFLOAD_INTRINSIC` over the GPU-route touches and `CPU_INTRINSIC` over the
+  `OFFLOAD_MISS_SERVICE` over the GPU-route touches and `CPU_SERVICE` over the
   CPU-route touches, each as a per-touch cost. The baseline's service cost for
   the matched touch set is the **occupancy-weighted per-touch cost**, never
   the sum of two wall-clock totals that ran concurrently. The candidate's
@@ -745,21 +865,28 @@ directory before the comparison is computed**, and used for both arms:
 - **M2 — measured critical-path contribution.** Take the measured
   wall-clock contribution of the **complete MoE layer** to the decode step —
   end of attention to MoE output ready — for each arm, from the Issue #5
-  breakdown. Overlap is then handled by the measurement itself, because
-  concurrent work contributes to the critical path once. On the candidate
-  side, and only there, the §8.4 removable costs are subtracted.
+  breakdown, attributed to the matched non-local touches. Overlap is then
+  handled by the measurement itself, because concurrent work contributes to
+  the critical path once. On the candidate side, and only there, the §8.6
+  removable costs are subtracted.
 
 M2 is the safer default and is preferred when hybrid wins the §2.2 sweep,
 precisely because it cannot double-count. If M1 is used, the report must
 state the measured overlap fraction and show that no interval was counted
 in both route totals.
 
-**Double-counting check, mandatory in the report.** Under either method the
-summed per-route baseline costs must not exceed the measured complete-MoE-layer
-wall clock for that arm. If they do, the accounting is wrong and Rule B may
-not be invoked on it.
+Under M2 the attribution to matched non-local touches must be stated: a
+complete-layer measurement contains L0 local-hit work as well, and that share
+belongs to neither side of the Rule A/B comparison. If the layer measurement
+cannot be attributed to the non-local touches, M2 is unavailable for that run
+and M1 or §8.7's inconclusive path applies.
 
-### 8.4 Removable prototype overhead (candidate side only)
+**Double-counting check, mandatory in the report.** Under either method the
+summed per-route baseline costs must not exceed the measured
+complete-MoE-layer wall clock for that arm. If they do, the accounting is
+wrong and Rule B may not be invoked on it.
+
+### 8.6 Removable prototype overhead (candidate side only)
 
 These are costs a working implementation could remove **without changing what
 the candidate computes**, so they are excluded from the candidate's intrinsic
@@ -787,44 +914,66 @@ Three constraints on that list:
    stay in `REMOTE_INTRINSIC` — which is exactly why the baseline side keeps
    its transfers and its expert compute too (§8.1).
 
+Placement is **not** on this list either, in either direction. A wrong
+placement decision is not a removable overhead term to be subtracted from
+`REMOTE_INTRINSIC`; it is a separate finding, handled by §8.8.
+
 Everything excluded here remains inside the candidate's **end-to-end**
 `R_agg` (§3 rule 8, §12 rule 1). §8 is a diagnostic decomposition, not a
 second, kinder performance number.
 
-### 8.5 The rules
+### 8.7 The rules
 
-Let `BASE_SERVICE` be the **best** baseline service cost for the matched
-touch set — the minimum over the baseline configurations actually measured in
-the §2.1 sweep, computed by the declared §8.3 method. Best, not merely
-canonical: Rule B is an architectural claim, so it must survive the strongest
-baseline path available on this hardware.
+All comparisons below are computed over `MATCHED_NONLOCAL_TOUCH_SET` (§8.3),
+using `BASE_NONLOCAL_SERVICE` (§8.4) under the declared §8.5 method.
 
-**Rule A — implementation failure.** If
+**Rule A — implementation or placement opportunity.** If, over the matched
+non-local touch set,
 
 ```
-REMOTE_INTRINSIC < BASE_SERVICE
+REMOTE_INTRINSIC < BASE_NONLOCAL_SERVICE
 ```
 
-but the candidate misses GO, then executing an expert on the other card and
-shipping its result back is genuinely cheaper than the best baseline route
-for the same expert touches, and the loss lives in the §8.4 removable costs
-plus whatever else the end-to-end number carries. That is an implementation
-problem. **ITERATE is available**, subject to I4–I7.
+but the candidate misses GO, then remote execution is intrinsically cheaper
+than the baseline's non-local service for exactly those touches: the remote
+tier is doing its job where it was asked to. The remaining loss lives
+somewhere else, and **which** somewhere else must be named from the measured
+evidence rather than assumed. Candidates, all visible in the §8.3 census and
+the Issue #5 breakdown:
 
-**Rule B — architectural failure.** If
+- **removable prototype overhead** (§8.6) — dispatch, sync, combine, graphs;
+- **placement quality** — GPU-1 touches whose baseline counterpart was
+  `LOCAL_HIT`, i.e. experts the baseline kept resident on GPU 0 that the
+  candidate displaced to the remote tier (§8.8);
+- **routing imbalance** across layers, classes, or devices;
+- another measured scheduling or serialization cost, named as a code path.
+
+> **Do not label every Rule-A case an implementation problem.** Where the
+> census and the breakdown distinguish remote-path overhead from local-hit
+> displacement, the report says which, with the numbers. "Overhead" is not a
+> permitted summary of a placement result, and vice versa.
+
+**ITERATE may be available**, subject to the unchanged I4–I7 — including I4's
+requirement that the bottleneck be named and source-grounded, which a
+placement finding satisfies exactly as well as an overhead finding.
+
+**Rule B — architectural failure of the remote tier on this hardware.** Rule
+B may fire only if, over a sufficiently supported matched non-local touch set,
 
 ```
-REMOTE_INTRINSIC ≥ BASE_SERVICE
+REMOTE_INTRINSIC ≥ BASE_NONLOCAL_SERVICE
 ```
 
-— that is, the apples-to-apples intrinsic remote-execution path is **no
-cheaper** than the equivalent best baseline service path, *after* the §8.4
-removable prototype overhead has been excluded from the candidate side and
-with all mandatory work (transfers **and** expert compute) counted on both
-sides — then no implementation polish changes the sign on this hardware.
-**NO-GO (N5).** No ITERATE case may be invoked against Rule B: an ITERATE
-justified by removing overhead that is already excluded from the comparison
-is circular.
+after all of: equivalent mandatory work counted on both sides (§8.1);
+removable candidate overhead excluded only under §8.6; hybrid overlap handled
+per §8.5; baseline GPU-0-local cache hits excluded (§8.2); and the same
+expert-touch population compared on both sides (§8.3).
+
+Then the remote resident tier fails to improve on the **non-local service it
+is intended to replace** — not merely on local residency — and no
+implementation polish changes that sign on this hardware. **NO-GO (N5).** No
+ITERATE case may be invoked against Rule B: an ITERATE justified by removing
+overhead that is already excluded from the comparison is circular.
 
 Rule B may only be invoked when **all** of the following hold, and the report
 states each one:
@@ -832,14 +981,46 @@ states each one:
 | | Precondition for invoking Rule B |
 |---|---|
 | B-i | Both sides include the same mandatory work: transfer **and** expert execution on each route (§8.1) |
-| B-ii | The §8.3 method (M1 or M2) was declared before the comparison was computed, and hybrid overlap is not summed |
-| B-iii | The double-counting check of §8.3 passes |
-| B-iv | Every §8.4 exclusion is named and quantified from the measured breakdown |
-| B-v | `BASE_SERVICE` is the minimum over the measured B1–B5 sweep, not a convenient single configuration |
+| B-ii | The §8.5 method (M1 or M2) was declared before the comparison was computed, and hybrid overlap is not summed |
+| B-iii | The double-counting check of §8.5 passes |
+| B-iv | Every §8.6 exclusion is named and quantified from the measured breakdown |
+| B-v | `BASE_NONLOCAL_SERVICE` is the minimum over the measured B1–B5 sweep, not a convenient single configuration |
+| **B-vi** | **The comparison excludes baseline GPU-0-local cache hits. Every touch used for Rule B corresponds to a baseline non-local service path (`OFFLOAD_MISS`, `CPU_SERVICE`, or `HYBRID_NONLOCAL`), and the §8.3 census is published** |
 
-If any precondition fails, the comparison is not evidence of architectural
-failure. The verdict is then decided by §7 on the end-to-end result alone,
-and the §8 comparison is reported as inconclusive.
+**Insufficient matched non-local evidence.** If the matched non-local touch
+set cannot support a credible apples-to-apples service comparison, then:
+
+> **§8 is INCONCLUSIVE, Rule B may not fire, and the formal Phase-1 verdict is
+> decided by §7 on the end-to-end result.** The report must state why the §8
+> comparison was considered insufficient.
+
+At minimum, the comparison is insufficient when any of these holds:
+
+1. The baseline's hit/miss state is not available at **per-touch** resolution,
+   so `MATCHED_NONLOCAL_TOUCH_SET` cannot be constructed without apportioning
+   an aggregate rate (§8.3);
+2. `N_eligible = 0` for any workload class over which a Rule-B claim is being
+   made;
+3. The bootstrap 95 % CI on the per-touch difference
+   `REMOTE_INTRINSIC − BASE_NONLOCAL_SERVICE` — computed by §10's method,
+   10,000 resamples over the per-touch service costs — includes zero, so the
+   sign of the comparison is not established.
+
+No percentage floor is invented here, because the existing instrumentation
+does not justify one; condition 3 defers to the same measured-CI discipline
+§10 already applies everywhere else, and the measured CI remains
+authoritative.
+
+Two things this must not become:
+
+- **A missing diagnostic is never a NO-GO.** Absence of §8 evidence is
+  absence of evidence about the *architecture*; §7 still decides the verdict
+  on the end-to-end result, which may itself be GO, ITERATE, or NO-GO on its
+  own terms.
+- **INCONCLUSIVE is not a verdict.** It describes the §8 diagnostic only. The
+  formal verdict vocabulary remains closed at GO / ITERATE / NO-GO / INVALID
+  (§7), and "§8 inconclusive" is recorded as a stated property of the report,
+  never as a decision state.
 
 **Rule C — generality failure.** If the advantage is present only where
 routing happens to concentrate on GPU-1-resident experts — concretely, if
@@ -858,12 +1039,50 @@ failure mode this document exists to prevent.
 
 Rule B remains the harshest reading available to the candidate, because "the
 prototype was rough" is the easiest story to tell about any disappointing
-result. What §8.1 adds is the symmetric discipline: the baseline does not get
-to be judged on transfer alone while the candidate is judged on transfer plus
-compute. Excluding *removable* overhead is the only way to ask the
+result. What §8.1 and §8.2 add is symmetry in both dimensions: the baseline
+is not judged on transfer alone while the candidate is judged on transfer
+plus compute, and the candidate is not asked to beat a tier it was never
+meant to replace. Excluding *removable* overhead is the only way to ask the
 architecture question separately from the implementation question; excluding
-*mandatory* work on one side only would be a different error with the same
-shape.
+*mandatory* work on one side, or comparing against the *wrong tier*, would be
+different errors with the same shape.
+
+### 8.8 Placement mistakes are placement evidence
+
+A candidate can be slow because it put the wrong experts on the wrong device:
+
+```
+baseline:   hot expert X stays resident in GPU 0's cache   → L0 local hit
+candidate:  expert X is assigned to GPU 1                  → L1 remote dispatch
+```
+
+Every touch of X now pays an activation transfer, a remote execution, and a
+result return in place of a local GEMM. That is a genuine, user-visible cost
+and it is fully charged to the candidate in `R_agg`, per class, and in the
+hit-rate analysis — a candidate that displaces enough hot experts can miss GO
+and reach an end-to-end NO-GO on §7 alone, with §8 having said nothing.
+
+But it is **not** evidence that the remote-execution mechanism is
+intrinsically bad. It is evidence about:
+
+- placement quality and the placement policy that produced it;
+- scheduling and residency policy;
+- whether hot experts should be replicated rather than moved;
+- promotion/demotion between tiers as routing shifts.
+
+Those are Phase 2/3 questions ([ROADMAP.md](../ROADMAP.md)) and Phase-5
+runtime questions. **Phase 1 neither implements nor commits to any of them** —
+no hot-expert replication, no routing-aware placement, no dynamic
+promotion/demotion, no heterogeneous capacity scheduler. §8's only obligation
+is to classify the evidence correctly so that a later phase inherits a
+placement finding as a placement finding, and an architectural finding as an
+architectural finding.
+
+The §8.3 census is what makes this checkable: a report showing a large
+`N_local` alongside `REMOTE_INTRINSIC < BASE_NONLOCAL_SERVICE` is describing
+a placement problem sitting on top of a working mechanism, and must say so in
+those words rather than filing it under "overhead".
+
 
 ## 9. Workload selection — frozen before benchmarking
 
@@ -1143,7 +1362,7 @@ Precedence, applied top to bottom. The first row that fires decides.
 | **4** | **Decode performance** | `R_agg ≥ 1.20` with 95 % CI lower bound ≥ 1.10; **every** class significant with `R_c ≥ 1.05` | Significant `R_agg ∈ [1.05, 1.20)`, **or** a §7 case B/C/D/E — **and** I4–I7 satisfied, including no class below `0.95` | CI includes 1.000; or `R_agg < 1.05`; or `R_agg < 1.20` with no ITERATE case; or slower than baseline beyond noise |
 | **5** | **TTFT / prefill** | TTFT ≤ 1.25x baseline **and** prefill ≥ 0.80x baseline, every class | TTFT ∈ (1.25x, 1.60x] or prefill ∈ [0.60x, 0.80x) with a named cause and decode meeting G4/G5 | TTFT > 1.60x or prefill < 0.60x — the tradeoff is unbounded |
 | **6** | **Full-layer evidence** (issue #5) | Breakdown present for **both** arms and consistent with the end-to-end result | Breakdown present for both arms and identifies the named bottleneck | Missing, single-arm, or contradicting the end-to-end result ⇒ **INVALID** |
-| **7** | **Architecture vs. implementation** (§8) | n/a — GO does not need this distinction | Rule A: `REMOTE_INTRINSIC < BASE_SERVICE` on matched service costs; the loss is in the §8.4 removable overhead | Rule B: `REMOTE_INTRINSIC ≥ BASE_SERVICE` with all §8.5 preconditions met ⇒ **NO-GO (N5)**; preconditions unmet ⇒ inconclusive, §7 decides on the end-to-end result. Rule C: benefit confined to a single class (≥ 3 classes with no significant gain) ⇒ **NO-GO (N6)** |
+| **7** | **Architecture vs. implementation** (§8) — evaluated over the matched non-local touch set only; baseline GPU-0-local hits excluded | n/a — GO does not need this distinction | Rule A: `REMOTE_INTRINSIC < BASE_NONLOCAL_SERVICE`; the loss is in the §8.6 removable overhead **or** in a named placement/scheduling cost (§8.8) | Rule B: `REMOTE_INTRINSIC ≥ BASE_NONLOCAL_SERVICE` with all six §8.7 preconditions met (B-vi: no local hits in the comparison) ⇒ **NO-GO (N5)**; preconditions unmet or evidence insufficient ⇒ **§8 INCONCLUSIVE** (not a verdict), §7 decides on the end-to-end result. Rule C: benefit confined to a single class (≥ 3 classes with no significant gain) ⇒ **NO-GO (N6)** |
 | **8** | **Capacity** (§13) | Recorded; **cannot contribute to GO** | Recorded | Recorded. Coverage improvements never offset a performance NO-GO |
 
 **Precedence, stated plainly:**
@@ -1197,8 +1416,9 @@ whether Phase 1 is still the right experiment.
   provenance, not buried;
 - an explicit statement of which §7 rule fired and which §8 rule applied;
 - a roadmap review. If Rule B fired — the matched intrinsic cross-device
-  service path is not cheaper than the best baseline service path on this
-  hardware — then Phases 2 and 4 inherit that finding, and
+  service path is not cheaper than the best **non-local** baseline service
+  path on this hardware, over touches the baseline did not already serve from
+  GPU 0's cache — then Phases 2 and 4 inherit that finding, and
   proceeding with them unchanged would require an argument this document does
   not supply.
 
@@ -1262,12 +1482,22 @@ The go/no-go report (issue #10) is reviewable against this list:
 - [ ] CUDA-graph status stated; no subtraction arithmetic anywhere
 - [ ] Coverage, hit rate, and throughput reported as three separate quantities
 - [ ] Any TP run labelled secondary/contextual
-- [ ] If §8 was invoked: the §8.3 method (M1/M2) was declared before the
+- [ ] If §8 was invoked: the §8.5 method (M1/M2) was declared before the
       comparison was computed, hybrid overlap was not summed, the
-      double-counting check passed, and each §8.4 exclusion is named with its
+      double-counting check passed, and each §8.6 exclusion is named with its
       measured magnitude
-- [ ] If Rule B is claimed: all five §8.5 preconditions stated and met,
-      including expert compute counted on **both** sides
+- [ ] The §8.3 census is published per class and in total (`N_total`,
+      `N_local`, `N_offload`, `N_cpu`, `N_hybrid`, `N_eligible`), and
+      `N_total = N_local + N_eligible` exactly
+- [ ] If Rule B is claimed: all six §8.7 preconditions stated and met,
+      including expert compute counted on **both** sides (B-i) and baseline
+      GPU-0-local cache hits excluded from the comparison (B-vi)
+- [ ] Baseline local hits are counted in full in `R_agg` and every `R_c` —
+      excluded only from §8's Rule A/B diagnostic
+- [ ] If the matched non-local evidence was insufficient, §8 is reported
+      INCONCLUSIVE with the reason stated, and the verdict came from §7 alone
+- [ ] Any GPU-1 touch whose baseline counterpart was a local hit is reported
+      as placement evidence (§8.8), not as remote-path overhead
 - [ ] Checkpoint `nvidia/Qwen3.6-35B-A3B-NVFP4` and its exact pinned revision
       recorded, identical on both arms (§1.1)
 - [ ] No cross-format or cross-precision claim made from an NVFP4-only
