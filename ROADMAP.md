@@ -14,6 +14,20 @@ microbenchmark alone.
 
 Establish the ground truth everything else will be compared against.
 
+Phase 0's baseline-selection rules, held-constant configuration list, and
+anti-starvation prohibitions are fixed in advance by
+[docs/phase1-poc-success-criteria.md](docs/phase1-poc-success-criteria.md)
+(sections 2, 3, 9, 10). Phase 0 produces **two** distinct non-distributed
+configurations: `CANONICAL_PERFORMANCE_BASELINE`, the measured winner of a
+pre-declared configuration sweep (not whichever single-GPU run happened
+first), and `CORRECTNESS_REFERENCE` (section 2.4), a fixed single-device GPU
+configuration used only to decide whether distributed execution computes the
+intended result. The sweep's configurations are stated with explicit
+`--nvfp4-backend` values rather than relying on the runtime default.
+Section 1.1 of that document also fixes the Phase-1 checkpoint
+(`nvidia/Qwen3.6-35B-A3B-NVFP4`), whose exact upstream revision must be
+pinned before the first Phase-0 run.
+
 - [ ] Establish deterministic benchmark methodology (fixed seeds, fixed
       prompts/workloads, fixed measurement protocol, warmup rules).
 - [ ] Profile one RTX 3060: memory bandwidth, PCIe link width/speed, single-
@@ -22,8 +36,9 @@ Establish the ground truth everything else will be compared against.
       baseline configuration.
 - [ ] Capture real MoE routing behavior (expert selection traces) for
       representative workloads.
-- [ ] Establish a correctness reference: recorded outputs from a known-good
-      non-distributed configuration to compare against.
+- [ ] Establish the correctness reference: recorded outputs from the fixed,
+      non-distributed, single-device GPU configuration of section 2.4, checked
+      for greedy self-consistency before any candidate comparison.
 
 **Exit criteria:** reproducible baseline numbers for one 3060 with recorded
 provenance, plus routing traces. No distributed code yet.
@@ -40,6 +55,7 @@ Model:
 
 ```
 Qwen3.6-35B-A3B
+checkpoint: nvidia/Qwen3.6-35B-A3B-NVFP4  (revision pinned before Phase 0)
 ```
 
 Why this model for the POC:
@@ -57,6 +73,13 @@ Why this model for the POC:
 - on larger cards (e.g. a 24 GB RTX 3090) the same expert set should fit
   entirely, which gives us a built-in control case for sanity-checking.
 
+NVFP4 is the controlled format for this first experiment, not an InferSwarm
+constraint: the architecture is meant to pool resources whatever weight
+precision the operator chooses (Q6/Q8/FP8/BF16 included), with higher
+precision changing resident bytes, kernels, and performance rather than the
+distribution architecture. See section 1.1 of the criteria document; format
+scaling is a separate future experiment.
+
 Goal:
 
 > Demonstrate resident expert execution on a second GPU and compare it
@@ -66,6 +89,14 @@ Goal:
 experts vs. host-RAM offload baseline from Phase 0) with correctness checks
 against the non-distributed reference. Implementation happens primarily in
 the [FreeToken fork](docs/integrations/freetoken.md).
+
+The GO / ITERATE / NO-GO / INVALID verdicts and their thresholds, hard
+correctness gates, mechanism-validity
+gates, and statistical rules that decide this phase were fixed before any
+measurement existed:
+[docs/phase1-poc-success-criteria.md](docs/phase1-poc-success-criteria.md).
+That document also states exactly what a Phase-1 GO does and does not
+authorize.
 
 ## Phase 2 — Three-GPU scaling
 
