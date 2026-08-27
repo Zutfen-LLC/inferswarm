@@ -5,11 +5,12 @@ Label: MEASURED
 Status: P0-C complete
 Captured: 2026-08-27T15:24:01+00:00
 Source artifact SHA-256: fef830fea83f45b6b4b47e7aef30d4104c01c299307d587ef263dcf2403ca499
+Repository JSON SHA-256: 806421cf5753cad7e2b52748ecb0bed54e8803eba20191a4829d141b7aea33fd
 ```
 
 This is the accepted Phase-0 P0-C hardware-profile evidence for InferSwarm issue #2. It was captured only after the P0-C procedure and provenance gate were committed in InferSwarm and after FreeToken PR #2 fixed the same-GPU sequential diagnostic bind defect found by the exploratory runs.
 
-The complete machine-produced artifact is [`p0c-hardware-profile.json`](p0c-hardware-profile.json). The summary below is descriptive only; where it disagrees with the JSON, the JSON wins.
+The complete JSON data are committed as [`p0c-hardware-profile.json`](p0c-hardware-profile.json). That repository copy was reserialized with whitespace-only normalization; every JSON value and raw per-repetition observation is preserved. The source host artifact digest above remains the byte identity of the machine-produced file. The summary below is descriptive only; where it disagrees with the JSON data, the JSON wins.
 
 ## Provenance gate
 
@@ -84,6 +85,6 @@ The grouped step is intentionally **not divided by eight**. Experts inside that 
 
 ## P0-C verdict
 
-**PASS.** The accepted artifact contains every item required by [`docs/benchmarks/phase0-p0c-hardware-profile.md`](../phase0-p0c-hardware-profile.md): exact repository provenance, clean FreeToken state, selected RTX 3060 12-GB identity and UUID, host/runtime/topology provenance, successful `ft bench bw`, usable NVFP4 calibration, per-repetition VRAM bandwidth evidence, true `top_k=1` expert latency, and the separately labelled grouped diagnostic.
+**PASS.** The accepted artifact contains every item required by [`docs/benchmarks/phase0-p0c-hardware-profile.md`](../../phase0-p0c-hardware-profile.md): exact repository provenance, clean FreeToken state, selected RTX 3060 12-GB identity and UUID, host/runtime/topology provenance, successful `ft bench bw`, usable NVFP4 calibration, per-repetition VRAM bandwidth evidence, true `top_k=1` expert latency, and the separately labelled grouped diagnostic.
 
 This verdict says only that the Phase-0 hardware profile is complete. It does **not** establish an InferSwarm speedup and does not select `CANONICAL_PERFORMANCE_BASELINE`. Per `BENCHMARKING.md`, the microbenchmarks diagnose; only later end-to-end serving measurements can decide performance.
