@@ -1,0 +1,86 @@
+{
+  "schema": "inferswarm.phase0.workload-manifest/1",
+  "manifest_id": "phase0-v1-2026-08-27",
+  "canonical": true,
+  "frozen_at": "2026-08-27T09:44:00-04:00",
+  "notes": "Canonical Phase-0/Phase-1 workload set. Performance sampling follows the pinned Qwen3.6 checkpoint generation_config; CORRECTNESS_REFERENCE overrides requests to greedy in the FreeToken harness.",
+  "provenance": {
+    "model_repository": "nvidia/Qwen3.6-35B-A3B-NVFP4",
+    "model_revision": "491c2f1ea524c639598bf8fa787a93fed5a6fbce",
+    "selection_contract": "docs/phase1-poc-success-criteria.md section 9",
+    "free_token_harness_schema": "benchmarks/inferswarm_phase0/workload-manifest.schema.json",
+    "sampling_source": "pinned checkpoint generation_config.json: temperature=1.0, top_p=0.95, top_k=20",
+    "w1_source": "Real public coding-agent transcript replay: direct public maintainer-task excerpt from InferSwarm issue #2 plus direct agent implementation-report excerpt from Zutfen-LLC/FreeToken PR #1, followed by one fixed replay-continuation instruction.",
+    "w2_source": "math-ai/aime25 test.jsonl revision 9692efc2d7ffbd5fc1b167e2bb4d0972010c4af4, test id 0, with FreeToken's boxed-answer instruction.",
+    "w3_source": "Substantive non-repetitive long-context engineering review: the precommitted Phase-0/Phase-1 methodology dossier plus the existing public multi-GPU MoE feasibility investigation as an appendix; composed and frozen before any Phase-1 candidate performance result.",
+    "w4_source": "Short technical interactive question about the core InferSwarm capacity-vs-performance distinction, frozen before candidate measurement.",
+    "token_shape_preflight": {
+      "method": "AutoTokenizer.apply_chat_template against the exact pinned checkpoint revision",
+      "model_revision": "491c2f1ea524c639598bf8fa787a93fed5a6fbce",
+      "formatted_prompt_tokens": {
+        "W1": 569,
+        "W2": 54,
+        "W3": 16819,
+        "W4": 121
+      },
+      "class_rules": {
+        "W1": "<= 2000",
+        "W2": "<= 1000",
+        "W3": "13600..18400 and <= 20000",
+        "W4": "96..160 and <= 200"
+      },
+      "result": "PASS",
+      "note": "Repository preflight only; the FreeToken serving path remains authoritative during P0-D and canonical runs."
+    }
+  },
+  "workloads": [
+    {
+      "class_id": "W1",
+      "description": "Coding / agentic replay from the real public Phase-0 maintainer and coding-agent exchange",
+      "fixture_path": "fixtures/w1-agentic-review.txt",
+      "content_sha256": "cea659ba97b16ed7909dbb5a581ad83c46606a374610a50a69494791a0b186f1",
+      "output_tokens": 512,
+      "ignore_eos": true,
+      "sampling": {"temperature": 1.0, "top_p": 0.95, "top_k": 20},
+      "seed": null,
+      "chat_template_kwargs": {"enable_thinking": true},
+      "role": "user"
+    },
+    {
+      "class_id": "W2",
+      "description": "Open-ended reasoning using FreeToken's AIME-25 workload family",
+      "fixture_path": "fixtures/w2-aime25.txt",
+      "content_sha256": "a4f2fdc66c946d8f9097d34fe8d173c7dbb9d647401e8f6bc9b79a0158d26e5d",
+      "output_tokens": 512,
+      "ignore_eos": true,
+      "sampling": {"temperature": 1.0, "top_p": 0.95, "top_k": 20},
+      "seed": null,
+      "chat_template_kwargs": {"enable_thinking": true},
+      "role": "user"
+    },
+    {
+      "class_id": "W3",
+      "description": "Long-context technical synthesis over the InferSwarm experiment contract and feasibility investigation",
+      "fixture_path": "fixtures/w3-long-context.txt",
+      "content_sha256": "7b2002252e06b28f5841d0d5467de9898423af57b84c3d5cb6d141b35df1647b",
+      "output_tokens": 256,
+      "ignore_eos": true,
+      "sampling": {"temperature": 1.0, "top_p": 0.95, "top_k": 20},
+      "seed": null,
+      "chat_template_kwargs": {"enable_thinking": true},
+      "role": "user"
+    },
+    {
+      "class_id": "W4",
+      "description": "Short interactive technical explanation",
+      "fixture_path": "fixtures/w4-short-interactive.txt",
+      "content_sha256": "41226057cf336c5f7fb618bda61f11c98927167629ef4b5bdfbfa1ba48ae54f7",
+      "output_tokens": 128,
+      "ignore_eos": true,
+      "sampling": {"temperature": 1.0, "top_p": 0.95, "top_k": 20},
+      "seed": null,
+      "chat_template_kwargs": {"enable_thinking": true},
+      "role": "user"
+    }
+  ]
+}

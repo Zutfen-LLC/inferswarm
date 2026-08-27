@@ -1,0 +1,483 @@
+You are given a long technical dossier about the InferSwarm Phase-0/Phase-1 experimental contract. Read the entire dossier before answering.
+
+Task: produce a concise architecture-and-methodology review that identifies the ten most consequential invariants that must remain true from Phase 0 through the first two-GPU candidate. For each invariant, cite the dossier record numbers that support it, explain the failure mode it prevents, and state whether violating it should make a run INVALID, NO-GO, ITERATE, or merely diagnostic/inconclusive. Then identify three places where two superficially similar quantities must not be conflated, such as performance baseline versus correctness reference, resident coverage versus routing hit rate, or microbenchmark latency versus end-to-end throughput.
+
+Do not invent benchmark numbers. Do not assume aggregate VRAM coverage implies cache hit rate or end-to-end speed. Prefer evidence that comes from the actual executing runtime over configuration intent.
+
+--- BEGIN DOSSIER ---
+
+Record 01 — checkpoint provenance
+
+The controlled Phase-0/1 model is `nvidia/Qwen3.6-35B-A3B-NVFP4`, pinned to one immutable upstream commit before any canonical measurement. The repository name, exact 40-hex revision, local snapshot identity, tokenizer/config files, quantization metadata, and resolved expert format belong to experimental provenance. A branch name such as `main`, a shortened SHA, or a local directory whose Hugging Face snapshot disagrees with the declared revision is not reproducible enough for the campaign. The important principle is not merely that the model name stays the same; the complete model snapshot must stay the same. If upstream changes after the pin, the campaign does not silently advance with it.
+
+A canonical runner should prove the pin before a server starts where possible, and should preserve the declared model identity in every result artifact. If a local Hugging Face cache path exposes a `snapshots/<sha>` component, the runner can cross-check that value with the declared revision instead of trusting the operator. If the checkpoint revision changes materially after Phase 0, the dependent baseline and candidate measurements become incomparable and must be re-run under the benchmark contract. This is an INVALID/reproducibility condition rather than evidence that the distributed mechanism is slow or incorrect.
+
+Record 02 — performance baseline selection
+
+InferSwarm does not compare its candidate against whichever single-GPU run happened first. Phase 0 defines a predeclared B1-B5 sweep of legitimate FreeToken configurations on the same RTX 3060. The configurations exercise the existing offload, hybrid, auto, forced-Triton offload, and CPU paths with explicit NVFP4 backend flags. The winner is selected only after both canonical sessions exist, using the precommitted warm decode statistic. That measured winner becomes `CANONICAL_PERFORMANCE_BASELINE`.
+
+This is deliberately inconvenient for the candidate. A weak comparator would make a speedup easy to manufacture, especially if the baseline were capacity-starved by a backend-specific cache limit or an accidentally stale calibration profile. All five arms remain in the evidence even if two resolve to equivalent execution paths. If B1 auto resolves to Triton, for example, B1 and B4 may legitimately collapse into equivalent observations; the experiment records that fact rather than forcing a difference. Selection by speed is permitted only inside the declared baseline sweep. Selection after looking at candidate results is prohibited because it changes the question being answered.
+
+Record 03 — correctness reference separation
+
+The performance baseline and the correctness reference are two different non-distributed configurations with different jobs. `CANONICAL_PERFORMANCE_BASELINE` is selected because it is the strongest valid existing FreeToken performance path on the target hardware. `CORRECTNESS_REFERENCE` is fixed in advance because the candidate needs a stable numerical target that uses the same GPU-resident expert kernel family where possible. The correctness reference is never chosen by speed and no performance ratio is computed against it merely because its outputs are convenient.
+
+The correctness reference runs greedy requests even when the frozen performance workloads use model-recommended sampling. Two independent reference runs must first agree with themselves on the frozen fixtures. If the reference is not self-consistent, the later candidate comparison is INVALID until a stable deterministic fixture or a newly predeclared method exists. The correct response is not to loosen tolerances after seeing divergence. This separation prevents an error in either direction: a CPU/hybrid performance winner is not automatically the right numeric reference, and a deliberately fixed GPU reference is not automatically the baseline a user would actually choose for speed.
+
+Record 04 — explicit backend configuration
+
+Every B1-B5 arm states the relevant MoE and NVFP4 backend flags explicitly rather than relying on defaults. Defaults are implementation details that may change between FreeToken revisions, and some flags are inert under particular resolved paths. For example, a requested NVFP4 backend can become irrelevant if the expert bank is loaded for a CPU-targeted path. The artifact must therefore record both what was requested and what the live engine says actually executed.
+
+`auto` is a resolution request, not a configuration record. A canonical artifact that says only “backend=auto” has not yet told a reviewer which kernel or data path produced the measurement. The instrumentation endpoint should expose resolved backend state, whether automatic CPU-layer decisions fired, the resolved cache size and bytes, hybrid fetch fraction, graph state, attention backend, cache/page settings, and other held-constant fields. Missing runtime readback is an experimental validity problem because two arms can receive similar CLI commands yet execute different mechanisms. The benchmark question is about real execution, not intended execution.
+
+Record 05 — physical GPU identity
+
+Phase 0 runs on one specific physical RTX 3060 12 GB that later serves as GPU 0 in the candidate comparison. Numeric CUDA indices are unstable across boots and multi-GPU systems, so canonical runs resolve the selected device to a stable NVIDIA UUID. The provenance record also captures the card name, memory class, driver-facing environment, compute capability, and PCIe topology. The live engine reports which device it actually bound; the runner cross-checks that against the selected UUID.
+
+A mismatch is not a minor metadata defect. Running one baseline arm on a different card, a 3060 Ti, or a card attached through materially different topology would change the measured system. Similarly, a command that names `cuda:0` while a child process binds another device can produce plausible numbers that are not the declared experiment. Canonical measurement should refuse an unprovable device where possible and invalidate a live arm if the executing engine contradicts the selected UUID. Phase-1 secondary-device selection follows the same principle: GPU 1 is named explicitly and must differ from GPU 0 rather than being assumed to be `cuda:1`.
+
+Record 06 — hardware profile boundaries
+
+The Phase-0 hardware profile measures several distinct things: host/system-memory behavior, PCIe transfer/gather behavior, device-to-device VRAM bandwidth, and a true top-k=1 single-expert NVFP4 execution latency. These measurements are diagnostics. They help explain later end-to-end behavior, size capacity, and identify topology problems, but none of them independently selects the performance baseline or establishes a Phase-1 speedup.
+
+This distinction prevents a common systems error: observing that a transfer or expert GEMV microbenchmark is faster on one path and extrapolating that the entire serving stack must improve by the same amount. A real generation includes routing, cache service, synchronization, scheduler work, attention, result combination, HTTP/SSE handling, and possibly disabled CUDA graphs. Some of those costs can dominate at batch-one decode even when a microkernel is excellent. The project therefore records microbenchmarks with provenance and evidence labels but keeps the formal verdict on the complete serving path. A microbenchmark can diagnose a bottleneck; it cannot replace the user-visible result.
+
+Record 07 — session-level bandwidth calibration
+
+The `ft bench bw` profile is a session prerequisite rather than a side effect of only one arm. Both the explicit hybrid configuration and the `--moe-backend auto` configuration can consume the same profile. This matters particularly in the reversed second session: if the profile were refreshed only when B2 ran, B3 could execute first and consume stale calibration left from another device, format, or environment.
+
+A canonical campaign refreshes the NVFP4 profile before the sweep traversal and captures the exact command, timestamps, return status, resolved profile path, profile bytes/hash, selected GPU UUID, and the values that the same runtime readers will consume. A failed command, unreadable profile, mismatched GPU, or unusable calibration blocks canonical measurement before a server starts. The profile is part of baseline legitimacy, not a tuning opportunity after seeing throughput. If the environment changes enough to invalidate the calibration, a new session should produce a new profile rather than quietly reusing the old one.
+
+Record 08 — workload freezing
+
+The four workload classes are fixed before candidate performance exists. W1 is coding/agentic, W2 is open-ended reasoning/conversation, W3 is long context, and W4 is a short interactive turn. Each fixture has exact UTF-8 bytes and a SHA-256, exact requested output-token count, explicit sampling parameters, `ignore_eos`, chat-template arguments, and a version-controlled provenance note. The performance sweep and routing investigation use the same frozen content rather than choosing separate prompts that make one subsystem look better.
+
+Frozen means the prompt is not rewritten to fit a result. If a prompt later proves outside its class shape under the pinned tokenizer, the appropriate response is to stop before canonical candidate measurement and deliberately re-freeze the workload set with a reviewed change. Once candidate performance has been observed, changing wording, replacing a difficult class, or dropping a class is a visible methodological event. The benchmark may record why a class was dropped, but it cannot pretend the resulting aggregate is still the original four-class experiment. Hashes make accidental edits and silent cherry-picking mechanically visible.
+
+Record 09 — workload shape rules
+
+The workload classes have different prompt-shape contracts. W1 and W2 are bounded above because they represent ordinary coding-agent and reasoning requests. W3 targets approximately sixteen thousand prompt tokens because the experiment needs substantial KV/state pressure without turning into an arbitrarily huge context. W4 targets approximately 128 tokens because TTFT sensitivity disappears if every request is long. The harness freezes machine-checkable tolerance bands for the approximate classes before measurement rather than choosing a tolerance after seeing the fixtures.
+
+The token count that matters is the count observed by the actual server/tokenizer path, not a character-count estimate. A fixture outside the frozen class band should not be silently truncated, padded, or reclassified during a canonical run. The observation can be retained for diagnosis, but the block is invalid as evidence for that class. Exact completion length is equally important: `ignore_eos=true` ensures every arm performs the same requested number of decode steps, preventing early EOS behavior from making one configuration appear faster simply because it did less work.
+
+Record 10 — performance sampling versus greedy correctness
+
+Qwen's checkpoint recommends sampled generation for ordinary use, so a realistic performance workload can state those values explicitly at the request level. FreeToken does not expose a seed through its sampling parameters, which means sampled text is not a suitable deterministic correctness fixture. The harness therefore preserves the manifest's performance sampling for B1-B5 while overriding only the correctness-reference requests to greedy values.
+
+This is a deliberate two-purpose design. Using greedy sampling everywhere would improve reproducibility but could move the routing workload away from the model's intended behavior. Using sampled requests for correctness would make exact run-to-run token checks ill-defined without a seed. Recording both manifest sampling and the correctness override keeps the distinction reviewable. A future contributor must not “simplify” the harness by making one setting serve both purposes unless the benchmark contract is deliberately amended before candidate results exist.
+
+Record 11 — warmup and repetitions
+
+Every canonical (configuration, workload class) block uses two discarded warmup generations followed by ten measured generations. Warmup lets the expert cache and runtime settle into the steady-state regime the primary performance gate is intended to evaluate. The measured repetitions remain individually visible: token-arrival gaps, TTFT, prefill timing, prompt/completion counts, output hash, and relevant runtime observations are preserved rather than collapsed into an average.
+
+No measured repetition is deleted because it looks inconvenient. If a known external event contaminates a block, such as another process consuming resources or observed thermal throttling, the whole block can be re-run and the discard recorded with its reason. This keeps analyst discretion from operating at the individual-repetition level. Missing repetitions and failed requests are also data about campaign completeness; a summary cannot claim a complete canonical campaign if the expected count is not present. The raw observation label and the campaign-validity verdict remain separate so a real measurement can be retained even when it does not belong to a valid baseline.
+
+Record 12 — two-session ordering
+
+The campaign runs two full independent sessions. The second reverses traversal order so thermal state, cache history, and time-dependent host effects are not always assigned to the same arm. Session identity and execution order are part of the artifact. The sessions remain independently reviewable rather than being pooled immediately into one attractive aggregate.
+
+Where the precommitted decision rules say the worse session verdict stands, the analysis follows that rule. A disagreement is itself meaningful evidence about repeatability or environmental sensitivity. The campaign does not average away a bad session merely to cross a threshold. This is especially important on enthusiast desktop hardware, where background tasks, boost behavior, temperature, PCIe contention, and pageable/pinned memory conditions can be less controlled than on dedicated datacenter systems. Reversed ordering is not a claim that every nuisance is eliminated; it is a simple symmetry measure that prevents obvious ordering bias.
+
+Record 13 — prefill measurement
+
+TTFT is not prefill throughput. TTFT includes request transport, tokenization, chat-template work, queuing, model prefill, sampling of the first generated token, detokenization, and the streaming hop. Dividing prompt tokens by TTFT would therefore attribute unrelated work to the model's prefill kernel and could make comparisons misleading. The Phase-0 harness instead instruments the real prefill forward path with CUDA events and accumulates chunked prefill intervals per request.
+
+Attribution matters as much as timing. Instrumentation records should be tied to the request UID when possible. If the runner can only identify “some new record after sequence N” and more than one candidate exists, taking the newest one would silently assign another request's interval to the measured generation. Canonical measured repetitions treat unavailable, disabled, stale, ambiguous, shared-batch, or unusable prefill records as validity problems rather than fabricating a number. Warmups are discarded and need not satisfy the same evidence bar, but measured observations do.
+
+Record 14 — warm decode throughput
+
+The primary Phase-1 performance question is steady-state batch-one decode, measured through the real serving interface rather than an isolated engine call. The client timestamps streamed token events and uses the actual completion-token count. Full inter-token gap lists are retained so medians, tails, variance, and later diagnostics remain possible. Exact requested output length prevents a configuration from winning by returning fewer tokens.
+
+This metric is intentionally user-visible. It includes scheduler and serving overhead a user would pay, as well as any candidate cost from remote synchronization or graph-disable decisions. A prototype is not allowed to subtract an estimated implementation penalty from its measured decode number and then claim the adjusted result meets GO. Diagnostics may estimate how much a removable cost contributes, but the formal speed ratio uses the observed end-to-end path. That discipline separates “the architecture might improve after optimization” from “this build already demonstrates the required benefit.”
+
+Record 15 — runtime configuration readback
+
+Canonical artifacts must capture resolved runtime state from the engine after it is serving. Relevant fields include model expert quantization, requested/resolved MoE backend, CPU thread/layer decisions, requested/resolved NVFP4 backend, cache policy and slots, KV reserve, attention backend, page size, memory ratio, maximum running requests, maximum sequence length, CUDA-graph configuration and actual capture state, prefill length, cache type, and hybrid fetch parameters when applicable.
+
+The reason is simple: a command line is not proof of execution. Auto-selection can change backends, runtime policy can lock layers to CPU, a backend flag can become inert because another path owns expert execution, and environment availability can alter kernel choice. A result whose resolved configuration is missing cannot support a strong comparison merely because the command looked correct. Runtime readback also makes cross-arm held-constant checks mechanical instead of relying on reviewer memory. Missing resolved fields invalidate canonical interpretation while preserving the underlying observation for debugging.
+
+Record 16 — held constants
+
+The experiment changes one intended mechanism while holding the rest of the environment as constant as practical. Model revision and expert format, GPU 0, workload bytes, output lengths, CPU resources, memory policy, attention/cache settings, graph settings, sequence limits, and relevant serving configuration are either fixed or explicitly compared across arms. Some resolved quantities, such as cache slots or KV pages, may legitimately differ because they are consequences of a backend's valid operation; the criteria require them to be recorded rather than artificially equalized.
+
+A generic “same flags” assertion is insufficient. The runner compares the live resolved values for fields that must agree. If a supposedly held-constant value differs across arms, the campaign has changed more than one variable and the result is invalid as the declared A/B experiment. This is not a performance loss charged to the candidate; it is a comparability failure. The distinction matters because systems with automatic planning routinely transform identical requests into different execution configurations.
+
+Record 17 — B3 auto resolution
+
+B3 exists to measure FreeToken's automatic MoE backend choice, but the predeclared sweep constrains what counts as a legitimate resolution. The resulting path should coincide with the B1 or B2 family represented elsewhere in the sweep, including the relevant NVFP4 execution semantics where that flag actually controls expert execution. If B3 resolves to an unexpected third mechanism, preserving the data is useful, but the campaign no longer matches the declared sweep until the discrepancy is understood.
+
+This check protects against silent changes in runtime auto-selection logic between the criteria document and the measured commit. It also prevents a summary from treating a new backend as though it were a predeclared comparator merely because the CLI still said `auto`. A future version of the experiment can intentionally add a new baseline arm, but doing so is a reviewable methodological change made before candidate measurement, not an interpretation patched in after the fact.
+
+Record 18 — correctness gates
+
+Numerical correctness is a hard gate separate from performance. Candidate and reference comparisons operate on identical hidden inputs, weights, router selections, and routing weights where the test requires it. Combined MoE-layer output uses the predeclared tolerance and also reports observed deviation. Router expert IDs and placement accounting are integer state and are expected to match exactly. Step-zero logits and end-to-end greedy token behavior provide additional checks, while NaN/Inf anywhere in candidate logits is unacceptable.
+
+The first 64 generated tokens form the explicit end-to-end equality gate after the reference passes its own self-consistency requirement. Divergence later in the sequence can occur from accumulated reduction-order effects near logit ties and is recorded diagnostically rather than assigned an improvised threshold. Correctness cannot be traded for speed: a faster build that fails the hard numerical gates is NO-GO for that build and must be fixed and re-run. Conversely, an unstable reference makes the campaign INVALID rather than making the candidate wrong.
+
+Record 19 — cache capacity accounting
+
+Expert-cache capacity is a placement fact measured in slots and bytes. For Qwen3.6, the routed expert pool spans many layer/expert slots, and some NVFP4 backends can impose an implementation-specific maximum cache size such as the Marlin 992-slot cap. A baseline can therefore be limited by a kernel/backend constraint before it runs out of VRAM. The experiment records whether such a cap applies and whether it actually binds.
+
+This is why B4 forces the alternative Triton path: a slower per-expert kernel with a materially larger resident cache might outperform a faster kernel whose cache is artificially capped. Which trade wins is empirical. The important methodological rule is that capacity cannot be cited as performance. “Thirty percent of expert bytes are resident” says nothing by itself about which experts the router will select or how expensive the remaining misses are. Resident coverage, measured hit rate, and end-to-end tokens per second remain distinct quantities in the report.
+
+Record 20 — routing evidence
+
+Issue #3 replaces speculative routing-locality assumptions with measured traces on the same frozen workloads used by Phase 0. The runtime already sees expert selections and cache hit/miss decisions each decode step; instrumentation should expose enough information to build per-layer selection histograms and empirical miss-rate-versus-cache-fraction curves. Coverage is not substituted for hit rate. A global LRU holding a given fraction of slots can perform better or worse than that fraction depending on actual expert popularity and temporal locality.
+
+Routing histograms also feed later placement. Phase 1 should not guess which experts to make resident on GPU 1 from expert count alone. The placement is derived from observed service history and ideally targets experts whose baseline service was non-local rather than displacing cheap GPU-0 hits. Graph constraints matter here: instrumentation known to be inaccurate under captured CUDA graphs must come from a diagnostic run with capture disabled, clearly separated from the gating performance result.
+
+Record 21 — per-touch state
+
+Some later architecture diagnostics need more than aggregate cache hit rates. To compare remote execution against the baseline service a corresponding expert touch would have received, the evidence must identify the baseline route for the same `(layer, step, expert)` touch: local hit, offload miss, CPU service, or hybrid non-local service. Apportioning an aggregate miss percentage across individual touches by assumption would manufacture matched data that was never observed.
+
+If per-touch state is unavailable, the matched-non-local diagnostic becomes inconclusive. That missing diagnostic is not automatically a NO-GO because absence of architecture-decomposition evidence is not evidence that remote execution is intrinsically bad. The end-to-end performance rules still decide the formal verdict. This distinction illustrates a broader project rule: missing evidence can invalidate a campaign when the evidence is required for a gating claim, or make a specific optional diagnostic inconclusive, but it should not be converted into a negative architectural result by rhetoric.
+
+Record 22 — secondary GPU residency
+
+The Phase-1 candidate must demonstrate remote execution, not remote storage followed by weight streaming back to GPU 0. GPU 1 receives its frozen subset of expert weights at startup or placement initialization and keeps them resident. The secondary bank exposes a deterministic mapping from `(layer_id, expert_id)` to a remote slot and uses the same production expert kernel family required by the numerical reference. Startup weight bytes are counted separately from steady-state traffic.
+
+During steady-state decode, a remote expert invocation transfers activation/routing data to GPU 1, executes the expert on GPU 1, and returns a partial output. It does not fetch that expert's weights from host RAM or GPU 0 as part of servicing the route. Mechanism accounting must make this checkable. If steady-state host-to-GPU-1 expert-weight traffic resembles weight streaming, the experiment is measuring a different architecture and fails the mechanism-validity gate regardless of whether the text output is coherent.
+
+Record 23 — route ownership
+
+Every selected expert route has exactly one execution owner. Routes assigned to GPU 1 are excluded from GPU-0 and CPU service; routes not assigned to GPU 1 follow the existing FreeToken path. The candidate keeps separate counters for `selected_for_gpu1`, `executed_on_gpu1`, `explicit_failure`, and `fallback_elsewhere`. A GPU-1-selected route that cannot execute is reported as a failure rather than quietly recomputed somewhere else.
+
+This is essential because silent fallback can make a broken distributed mechanism look correct. If every remote attempt fails and CPU service rescues the request, generated text may still match the reference while the benchmark never exercised the mechanism under test. Placement accounting and executed-expert totals therefore accompany numerical correctness. Integer counters should reconcile exactly. Mechanism validity is evaluated before performance because a speed number from a candidate that did not actually execute the declared remote routes cannot support H1 in either direction.
+
+Record 24 — destination-batched dispatch
+
+The candidate's dispatch shape is one payload per destination, MoE layer, and decode step containing all relevant remote expert IDs/routes for that worker. It is not one RPC-like operation or host synchronization per expert. GPU 0 performs routing, constructs a fixed-shape activation/routing payload for GPU 1, continues its own local expert service where possible, receives one combined partial result from GPU 1, and adds the local and remote partials.
+
+This shape matters even on a same-host proof of concept because per-expert synchronization would embed an avoidable implementation pathology into the architecture measurement. The mechanism counters record remote dispatches per layer/step and can therefore prove that fan-out is destination-batched. Later network work can preserve the same semantic unit without committing Phase 1 to an RPC framework. The first prototype may serialize local and remote work for correctness, but performance work should make synchronization boundaries explicit rather than hiding a large number of tiny host-controlled calls.
+
+Record 25 — peer transport provenance
+
+Two consumer GPUs in the same machine do not imply efficient direct peer access. PCIe root complexes, switches, ACS/IOMMU policy, motherboard lane allocation, and driver behavior can determine whether peer copies engage or traffic is host-staged. The candidate probes and records the actual capability and transport mode. GPU UUIDs and topology are associated with transfer measurements so a reviewer can understand which path a timing describes.
+
+This evidence is explanatory but user-visible cost remains inside the end-to-end result. If the actual machine must host-stage a transfer, the candidate pays that cost; the report cannot replace it with a theoretical peer-copy number. At the same time, topology findings help distinguish a mechanism that is fundamentally expensive from a prototype tied to an unusually poor link. Phase 1 does not promise general network or topology viability—it records the environment precisely enough for later phases to decide what to test next.
+
+Record 26 — CUDA graph state
+
+FreeToken's decode capture region includes substantial model execution, and cross-device operations have no established precedent in the initial codebase. The first correct two-GPU candidate may therefore disable CUDA graph capture for the affected path. That decision is allowed, but its performance cost is real and stays inside the candidate's measured throughput. The baseline is not intentionally crippled by disabling graphs just to create a symmetrical-looking comparison.
+
+A graph-disabled baseline can be measured as a diagnostic to estimate the magnitude of graph-related overhead. That diagnostic may support a bounded ITERATE explanation if the criteria's conditions are satisfied. It may not be subtracted from the candidate's wall-clock result to manufacture a GO. Instrumentation accuracy also depends on graph state: counters documented as graph-safe can come from gating runs, while routing-frequency mechanisms that are accurate only with capture disabled must come from separately labeled diagnostic runs.
+
+Record 27 — complete MoE-layer timing
+
+Single-expert latency is not the real distributed unit of work. The full path includes dispatch, activation transfer, selected-expert execution on each participating device, return transfer, synchronization, combination, and any local expert service that overlaps with remote work. Issue #5 requires comparable full-layer timing for candidate and baseline so the report can identify where an end-to-end result comes from.
+
+The breakdown must preserve overlap. If CPU service and a PCIe/GPU route execute concurrently under the hybrid baseline, adding their independent wall-clock totals would double-count time and inflate the comparator. The analysis either attributes per-touch service by the actual route or uses measured critical-path contribution. Both methods operate within measured repetitions before statistical comparison. A decomposition that contradicts the end-to-end timing is a reason to question instrumentation, not permission to replace the user-visible result with the more attractive internal number.
+
+Record 28 — matched non-local comparison
+
+The architecture-level question is whether remote resident execution can be cheaper than the non-local service it is intended to replace. Ordinary GPU-0 local cache hits are therefore excluded from `BASE_NONLOCAL_SERVICE` when making that specific intrinsic comparison. Candidate touches assigned to GPU 1 are joined to the baseline's observed per-touch service route; only touches whose baseline route was an offload miss, CPU service, or hybrid non-local service belong to the matched non-local set.
+
+This exclusion does not make local hits free in the end-to-end verdict. If poor placement moves a hot expert from a cheap GPU-0 hit to GPU 1, the candidate pays the resulting slowdown in `R_agg`. The matched diagnostic simply prevents a placement mistake from being mislabeled as proof that remote execution is intrinsically worse than the tier it was meant to augment. A report can simultaneously say “end-to-end placement lost” and “remote service was cheaper than matched baseline non-local service” without contradiction.
+
+Record 29 — hybrid overlap
+
+FreeToken's hybrid backend deliberately overlaps some CPU expert work with PCIe fetch plus GPU expert execution. A valid comparison cannot compute hybrid service cost by simply summing the complete CPU-route wall clock and complete PCIe/GPU-route wall clock, because concurrent intervals would be charged twice. The chosen analysis method is declared before the comparison is computed and applied consistently.
+
+One method partitions matched expert touches by the route actually used and computes an occupancy-weighted per-touch cost. Another uses the measured critical-path contribution of the whole MoE layer. In either case, mandatory transfer and expert execution work are included on both sides, and removable prototype overhead is treated only as the criteria permit. The report names and quantifies exclusions. Methodological asymmetry—counting compute on the candidate but only transfer on the baseline, for example—can create an architectural conclusion from bookkeeping rather than performance.
+
+Record 30 — statistical unit
+
+Expert touches inside a generation are not independent experimental samples. Thousands of `(layer, step, expert)` observations share the same request, cache history, thermal state, scheduler conditions, and model trajectory. Resampling those touches as though they were independent would create artificially narrow confidence intervals. The independent sampling unit for formal end-to-end and matched-service uncertainty is the measured repetition block.
+
+Within each (configuration, class, session), the primary decode statistic is the median across the ten measured generations. Per-class candidate/baseline ratios are formed from those block-level results and the four-class aggregate uses the geometric mean. Bootstrap resampling operates on repetition blocks, recomputing the statistic rather than treating every token or expert touch as an independent draw. Per-repetition eligible-touch counts remain available for diagnostics. The measured confidence interval is authoritative; a predicted interval based only on CV and sample size cannot substitute for the actual resampling result.
+
+Record 31 — noise floor and outliers
+
+The canonical performance baseline must have sufficiently low run-to-run variance for the precommitted thresholds to be meaningful. If baseline coefficient of variation exceeds the allowed noise ceiling in any class, the environment is not accepted for a verdict. The response is to identify the source and re-run the affected campaign under controlled conditions, not to widen confidence rules after seeing the data.
+
+Individual repetitions are never discarded because they are inconvenient. A known contamination can justify re-running an entire block, with the discard and reason recorded. Min, median, max, IQR, and CV remain visible. No early stopping is allowed: every class, arm, repetition, and session is completed before performance ratios decide anything. This avoids optional stopping, where an operator could end a campaign at the first moment the aggregate crossed a desired threshold.
+
+Record 32 — warm, cold, and startup regimes
+
+Model startup, the first cold generation, and steady-state warm decode answer different operational questions. `M-start` includes model loading, placement initialization, graph capture, and readiness. `M-cold` exposes the transition from an initially cold expert cache or newly established residency toward steady state. `M-warm` is the gating performance regime used for the primary decode verdict after the declared warmups.
+
+Startup is reported rather than amortized into every generated token, because doing so would exaggerate a one-time cost. It is also not hidden: excessive startup can attach an explicit usability caveat to an otherwise ordinary verdict. Cold behavior matters because H1 is specifically about residency; the report should show how long the mechanism takes to reach the state whose warm performance is being judged. Keeping the three regimes separate prevents a favorable warm number from erasing painful startup or a one-time initialization cost from swamping steady-state comparison.
+
+Record 33 — evidence labels
+
+InferSwarm uses explicit evidence labels so arithmetic and expectation cannot quietly become measurement. `MEASURED` describes observations collected from a run. `CALCULATED` describes deterministic arithmetic derived from known inputs. `ESTIMATED` and `SPECULATIVE` describe progressively weaker assumptions. A capacity calculation such as expert bytes divided by free VRAM can be useful and exact as arithmetic while still saying nothing about measured throughput.
+
+Every numeric claim in investigations and benchmark reports carries the appropriate provenance and label. This is particularly important during the early POC, where there are many tempting ratios: activation bytes versus expert-weight bytes, theoretical PCIe ceilings, resident coverage, expected dispatch counts, or modeled cache hit rates. They can motivate an experiment but cannot satisfy its exit gate. A GO requires the declared end-to-end evidence and correctness/mechanism gates, not a collection of calculated numbers that make the architecture look plausible.
+
+Record 34 — artifact completeness and validity
+
+A Phase-0 run has at least two orthogonal states: whether execution completed and whether the completed data forms a valid canonical campaign. A run can execute every planned generation yet still be invalid because a prerequisite failed, a resolved field is missing, a workload shape is wrong, or a held constant differs. Conversely, a measured repetition remains a real observation even if the campaign later becomes invalid.
+
+The artifact therefore stores structured invalidation reason codes, failures, expected-versus-observed repetition counts, runtime configuration, provenance, and raw repetition records. Human summaries lead with the campaign state rather than a flattering throughput number. Partial data is never silently promoted to a baseline. This design also makes debugging cheaper: a reviewer can see whether the problem was a server crash, instrumentation hole, GPU mismatch, workload error, or configuration disagreement without reconstructing what the harness intended to do.
+
+Record 35 — repository provenance
+
+Software commits are part of benchmark provenance. Canonical Phase 0 records exact FreeToken and InferSwarm commit SHAs and requires a clean FreeToken working tree. A dirty tree cannot be reproduced from a commit hash; recording only the names of modified files does not recover the code that actually ran. The long-lived FreeToken `inferswarm` branch is the integration baseline, while POC branches merge back through review.
+
+A material runtime, model, driver-facing, or benchmark-contract change can invalidate comparisons across old and new sessions. The project does not splice numbers from incompatible environments into a single speedup ratio. Evidence lives in the InferSwarm repository under benchmark/investigation structures rather than remaining only in an ignored local `phase0-runs` directory. Results are immutable once published; corrections are new records that explicitly supersede earlier ones.
+
+Record 36 — Phase-0 exit gate
+
+Tooling completion is not Phase-0 completion. Before canonical Phase-1 measurement, the project needs a valid `CANONICAL_PERFORMANCE_BASELINE` from two sessions, the exact checkpoint pin, a self-consistent `CORRECTNESS_REFERENCE`, a frozen W1-W4 manifest, measured routing/residency evidence sufficient to derive placement rather than guess it, and committed provenance/artifacts. A merged harness merely makes those measurements possible.
+
+Implementation work for the two-GPU mechanism can proceed opportunistically before every measurement exists, but no canonical candidate result is allowed to influence the still-open Phase-0 baseline, workload, or routing decisions. This separation preserves the anti-goalpost design. If Phase-0 evidence shows an assumption is false, the project changes the plan openly rather than changing the numbers or quietly modifying the benchmark after seeing the candidate.
+
+Record 37 — Phase-1 scope
+
+The first candidate is deliberately narrow: an in-process, same-host, two-CUDA-device prototype inside the FreeToken fork. It distributes routed-expert execution at decode time. It is not a network worker, RPC protocol, generalized fabric scheduler, multi-secondary-GPU fan-out system, dynamic promotion/demotion engine, model-porting exercise, or multi-precision experiment. Prefill may remain on the existing GPU-0 path in the first valid candidate, but TTFT and prefill are still measured end to end so the local choice is not hidden.
+
+This restraint is methodological. Building a generalized worker abstraction before the mechanism has a verdict would mix architecture design with the experiment and make failure harder to interpret. Phase 5 can extract a stable worker contract from evidence about what the earlier POCs actually required. Until then, downstream-only controls and a small secondary-resident bank are easier to reason about, test, and remove.
+
+Record 38 — static placement
+
+Phase 1 uses one deterministic, evidence-derived placement artifact rather than a dynamic scheduler. The artifact records schema/version, exact model revision and expert format, source Phase-0 trace identity, placement algorithm/version, deterministic tie-break rule, remote byte/slot budget, exact expert IDs, and its own SHA-256. The placement is frozen before candidate performance begins.
+
+Routing frequency alone is not necessarily the right objective. The hypothesis is that GPU-1 resident execution can replace expensive non-local baseline service, so placement should consider whether a selected expert was already a cheap GPU-0 hit. The pre-measurement check only establishes mechanism geometry—enough resident bytes and likely selected touches to make the validity gates achievable. It does not use a performance model to predict tokens per second and then tune placement until the prediction looks favorable. If later evidence motivates a better dynamic or replication policy, that belongs to a subsequent phase.
+
+Record 39 — mixed GPU and RAM future
+
+System RAM remains a first-class InferSwarm tier. Secondary GPUs augment host-memory offload rather than replacing it. The hard later acceptance criterion is a single inference run in which some experts execute from the primary GPU tier, some from secondary GPU residency, and some continue through the existing host-RAM/CPU/offload path. Alternative modes such as “all GPU” versus “all RAM” do not demonstrate the intended architecture.
+
+Phase 1 does not need to implement that full mixed-placement policy; its job is to prove or disprove resident remote expert execution on one secondary GPU relative to the strongest single-GPU path. But the POC should avoid assumptions that would make the later RAM tier impossible. For example, it should not require the entire expert set to fit across GPUs or redefine success as elimination of host-memory service. Capacity-constrained larger models are expected to keep host RAM relevant even after multiple accelerators participate.
+
+Record 40 — final causal discipline
+
+The entire experiment exists to answer one causal question: on this hardware and frozen workload, does keeping a subset of routed experts resident on a second RTX 3060 and executing them there improve interactive inference compared with FreeToken's best legitimate single-3060 plus host-memory path, while computing the intended result? Every methodology rule above prevents a neighboring question from being substituted for that one.
+
+A positive capacity calculation is not a speedup. A fast remote GEMM is not an end-to-end speedup. Correct text produced entirely through silent fallback is not evidence that remote execution works. A slow candidate on bad placement is a real end-to-end result but is not automatically proof that remote service is intrinsically worse than non-local host service. A missing diagnostic is not automatically negative evidence. A benchmark chosen after seeing the candidate is not a fair comparator. The project succeeds scientifically even if the formal verdict is NO-GO, provided the mechanism, correctness, workload, baseline, and provenance rules make that negative answer trustworthy.
+
+--- END DOSSIER ---
+
+Now answer the task. Keep the final review structured, evidence-linked by record number, and explicit about which violations invalidate the experiment versus merely limiting a diagnostic conclusion.
+
+
+--- BEGIN FEASIBILITY-INVESTIGATION APPENDIX ---
+
+> **Provenance note.** This investigation originated during the initial
+> FreeToken feasibility study, before the standalone InferSwarm repository
+> existed. It is preserved here verbatim as historical research input: its
+> findings informed the InferSwarm roadmap and ADRs, but it is **not the
+> final architecture contract**, and its estimates and speculation remain
+> labeled as such ([EST]/[SPEC] markers below) — none of its performance
+> figures have been measured on the target hardware. It is unmodified except
+> for this header. Where its recommendations were adopted or superseded, see
+> the [ADRs](../adr/README.md) and [ROADMAP.md](../../ROADMAP.md).
+
+# Feasibility: secondary NVIDIA GPUs as an expert-storage/cache tier for MoE inference
+
+**Status:** investigation only, no production code changed.
+**Target hardware:** 1× RTX 3090 (24GB) + 3× RTX 3060 (12GB) + 1× RTX 3060 Ti (8GB) = 68GB aggregate, PCIe-only (no NVLink-eligible pair present — RTX 3060/3060 Ti have no NVLink fingers at all, and the lone 3090 has no NVLink partner).
+
+**Revision note:** the first pass of this investigation used Qwen3.6-35B-A3B as the sole test model and found the whole exercise unnecessary for it — at FreeToken's native sub-8-bit formats its entire expert set already fits on the 3090 alone. That finding is correct but was the wrong question: it tells us about the regime where multi-GPU expert tiering *isn't* needed, not whether it's ever useful. This revision keeps Qwen as the **control case** and adds three larger models spanning the regimes where the primary GPU's 24GB genuinely isn't enough, to answer the real question: **at what expert-pool-to-VRAM ratio does the secondary tier start mattering, and which architecture wins when it does?**
+
+Labeling convention: **[CODE]** = verified against source, **[DOC]** = from `docs/*.md`, **[HF]** = fetched from the model's real HuggingFace `config.json`, **[CALC]** = arithmetic derived from [CODE]/[DOC]/[HF] numbers, **[EST]** = order-of-magnitude estimate from general hardware/ML-systems knowledge, not measured on the target rig, **[SPEC]** = speculative, needs a real experiment.
+
+---
+
+## Executive summary
+
+Four models were sized against this hardware, spanning three memory regimes:
+
+| Model | Native/assumed format | Total expert weight | Fits 3090 alone (20GB usable)? | Fits 68GB aggregate (60GB usable)? | Regime |
+|---|---|---:|---|---|---|
+| Qwen3.6-35B-A3B **(control)** | NVFP4/MXFP4/Q4_0 [CODE] | 16.9 GB [CALC] | **Yes**, 100%+ coverage | Yes | 1 — pool < primary GPU |
+| Ling-3.0-flash *(not yet supported by FreeToken)* | NVFP4 [SPEC — hypothetical, model not implemented] | 63.4 GB [CALC from HF config] | No, 31.5% coverage | **Yes, 94.6% coverage** | 2 — pool fits aggregate, not primary |
+| DeepSeek-V4-Flash-0731 | FP8 (dense) + DS-FP4 (experts), native shipped format [CODE] | 137.1 GB [CALC] | No, 14.6% coverage | No, 43.8% coverage | 3 — pool >> aggregate |
+| GLM-5.2 | native (FreeToken's own comment states the figure) [CODE] | **~407 GB** [CODE, `glm_moe_dsa/config.py:61`] | No, 4.9% coverage | No, 14.7% coverage | 3 — pool much >> aggregate |
+
+This reframes the finding cleanly: **multi-GPU expert tiering has zero value for Qwen-class models (already solved by quantization) and clearly diminishing value as the pool grows past the aggregate 68GB (GLM-5.2: host RAM stays dominant no matter what you do with the secondary GPUs).** The interesting zone is in between — DeepSeek-V4-Flash-0731 (already supported, real cache-hit improvement from 14.6%→43.8% is available but requires the same invasive engineering as before) and especially the hypothetical Ling-3.0-flash, whose expert pool (63.4GB) is almost exactly sized to this specific machine's 68GB aggregate, producing the largest swing of any model studied (31.5%→94.6% cache coverage) — but Ling's architecture isn't implemented in FreeToken at all today, so that result is conditional on a separate, non-trivial model-support effort.
+
+A second finding changes the architecture recommendation from the first pass: activation-vs-weight byte ratios get **more** favorable to Architecture B (remote execution) as models get larger — 217× for Qwen, 325× for Ling, 816× for DeepSeek-V4-Flash — because activation size is fixed by `hidden_size` while expert weight size grows with both `hidden_size` and `moe_intermediate_size`. Combined with the persistent, unresolved uncertainty about real consumer-GPU PCIe/P2P bandwidth (Architecture A's core dependency), **Architecture B becomes the more robust bet for the models where multi-GPU tiering could plausibly matter**, because its cost (small-transfer synchronization latency) is far less topology-sensitive than Architecture A's cost (bulk bandwidth, which depends heavily on exactly which PCIe lanes and root complexes the secondary GPUs land on).
+
+**Recommendation: verdict F, with a specific next step.** The single biggest unknown — real cross-GPU bandwidth and P2P availability on the actual 5-GPU rig — still hasn't been measured (no CUDA toolkit or second discrete GPU was available in this investigation's environment; see Minimal Proof of Concept). That measurement decides between "Architecture A is viable" and "only Architecture B is viable," which is a large fork in engineering cost. If forced to commit without it: **prioritize DeepSeek-V4-Flash-0731 first** (already supported, no new model-porting work, genuine 3× cache-hit improvement available), **build Architecture B, not A** (robust to the topology uncertainty), and treat Ling-3.0-flash as a compelling *second* target that requires implementing Bailing/`bailing_hybrid` model support in FreeToken before any multi-GPU work on it is worthwhile.
+
+---
+
+## Current architecture
+
+*(unchanged from the first pass — the cache/offload mechanics don't depend on which model is loaded)*
+
+```
+router (per MoE layer, top-k of N experts)
+   │
+   ▼
+expert_ids tensor  ──────────────────────────────────────────────►  OffloadMoeCache
+   │                                                                 (offload_cache.py)
+   │                                                     slot_for_id[layer, expert] → slot or -1
+   │                                                     id_of_slot[slot] → flat_id
+   │                                                     (dense int32 arrays, O(1) lookup,
+   │                                                      one shared pool across ALL layers)
+   │
+   ├─ DECODE (per step, per layer): ensure_experts()/ensure_experts_hybrid() [offload_kernels.py]
+   │    global-LRU victim selection (flat id = layer*E+expert), rewrites expert_ids to slot ids,
+   │    hybrid caps fetch to hybrid_fetch_fraction ("q*"), overflow → CPU executor.
+   │    copy_missing() → fast_index_copy_multi_jit: one fused kernel launch, GPU-initiated read
+   │    directly from pinned/registered host pointers, on the CURRENT/compute stream (no
+   │    dedicated decode copy stream, no decode-side double buffering).
+   │
+   ├─ PREFILL (per chunk, per layer): materialize_layer() unconditionally reloads the WHOLE
+   │    layer's expert set every prefill pass regardless of prior cache residency. Hit rows come
+   │    from device-to-device copy (HBM bandwidth); true misses cross PCIe via cudaMemcpyBatchAsync.
+   │    prefill_overlap mode double-buffers layer L+1's copy against layer L's compute via a
+   │    dedicated prefill_copy_stream + paired CUDA events — the only true double-buffering
+   │    in the codebase.
+   │
+   ▼
+grouped GEMM on the quant-format kernel (fused_mxfp4/nvfp4/fp8_block/q4_0/ds_fp4) → output
+```
+
+**Backends** (`docs/models.md:20-32`): `fused` (all experts resident, never auto), `offload` (host RAM + GPU LRU cache), `cpu` (misses computed on CPU), `hybrid` (per-step split, calibrated by `ft bench bw`'s measured CPU-vs-PCIe bandwidth ratio — the paper's "q\* policy", concretely `hybrid_fetch_fraction` in `moe/bench_profile.py`).
+
+---
+
+## Single-GPU assumptions
+
+*(unchanged from the first pass — this is model-agnostic engine architecture, not something the model-target pivot affects)*
+
+| Component | Code location | Assumption | Difficulty to generalize |
+|---|---|---|---|
+| CLI GPU selection | `server/args.py:634-639` | `--gpu` parser already accepts a list (`gpu_select.py:587-593`) but rejected unless `--tensor-parallel-size > 1` | Trivial — policy gate |
+| Device binding | `gpu_select.py:773-791`, `engine.py:294-298` | One `torch.cuda.set_device()` per process (one process per TP rank) | Trivial — already the multi-GPU mechanism, for TP |
+| VRAM budget | `engine/cache_budget.py`, `engine.py:707-726` | Per-rank `mem_get_info` + cross-rank `all_reduce(MIN)` | Trivial for equal-VRAM TP peers; **not designed for heterogeneous VRAM sizes** (24/12/12/12/8GB) |
+| CUDA graphs | `engine/graph.py:94-198` | One graph pool per rank/device; cross-rank comm via NCCL-on-stream inside capture | Trivial for TP; **major** for ad hoc cross-device copies inside a captured decode graph |
+| KV cache pools | `kvcache/*.py` | One `_device` per pool instance | Trivial |
+| Checkpoint format/conversion | `checkpoint/convert.py:174-195` | TP-agnostic FTW format; conversion is single-process | Moderate — deliberate simplification, not a serving blocker |
+| **MoE expert-offload cache** | `moe/offload_cache.py`, `offload_kernels.py`, `expert_banks.py`, `host_banks.py` | Single `torch.device`; flat `[cache_size]` slot pool; global LRU over one flat id space; **zero references to `tp_info`/`rank` anywhere in these files** | **Major architectural constraint / likely blocker.** Under existing TP, each rank independently builds its own full host-RAM cache — no cross-device cache sharing exists at any layer of this stack. |
+| CPU MoE kernel | `kernel/csrc/cpu_moe/cpu_moe_ext.cpp:1094-1095` | Explicitly single-NUMA-node; no GPU-topology awareness anywhere in `moe/`/`engine/` | Moderate (NUMA) / n/a for GPU topology, since none exists |
+
+**Bottom line, unchanged:** FreeToken already has real multi-GPU support (tensor parallelism — NCCL, per-rank sharding, per-rank CUDA graphs), but it solves a different problem (replicate/shard one model across *equal-ish* GPUs) and is completely unaware of the expert-offload cache. None of the four models in this revised study change that structural fact — the engineering gap is the same regardless of which model sits on top of it.
+
+---
+
+## Hardware analysis: 3090 + 3×3060 + 3060 Ti
+
+*(unchanged core argument from the first pass, still the dominant constraint regardless of model choice)*
+
+- **NVLink is moot** — no eligible pair exists in this rig. **[EST]**
+- **Consumer motherboard lane budget is the sharpest constraint, independent of FreeToken's code.** A mainstream desktop CPU exposes ~20–24 PCIe lanes total; fitting 5 discrete GPUs means most secondary slots run at x4 or narrower, or sit behind the chipset's shared DMI uplink. Realistic secondary-GPU bandwidth is plausibly 3–8GB/s, not the ~24GB/s a PCIe4 x16 headline number implies. **[EST]**
+- **Consumer GPU P2P is unreliable, not simply on/off** — `cudaDeviceEnablePeerAccess` between GeForce cards can work when both share a root complex/switch with compatible ACS/IOMMU settings, but silently falls back to a host-staged two-hop copy otherwise, which is worse than FreeToken's existing single-hop host-RAM path. **[EST]**
+- **Host RAM is already bigger and closer than the secondary GPUs' 44GB** for any model whose need is *capacity*, undermining Architecture A's core value proposition regardless of which model runs. **[EST]**
+- **New this revision — Ling-3.0-flash's router hints at a mitigation for Architecture B specifically.** Its real config **[HF]** shows `n_group: 8`, `topk_group: 4` — a DeepSeek-style grouped top-k router that first selects 4 of 8 expert groups, then routes within them (512 experts / 8 groups = 64 experts/group). If expert *groups* (not individual experts) are pinned to physical GPUs — e.g. 2 groups per secondary GPU — a token's forward pass touches at most `topk_group=4` groups instead of potentially all 512 experts' worth of devices, meaningfully bounding the cross-GPU fan-out Architecture B would otherwise incur. This is a real, source-grounded architectural affordance, but its magnitude (how many *distinct* GPUs get touched per layer in practice) depends on the model's actual routing distribution and hasn't been measured. **[SPEC]** No equivalent grouped-routing field was found for DeepSeek-V4-Flash-0731 or GLM-5.2 in the traces performed — those would route more uniformly across whichever placement is chosen, unless similar structure exists that wasn't checked.
+
+---
+
+## Model Size Regimes
+
+**[CODE]/[HF]/[CALC]** exact figures, computed with FreeToken's own per-format byte formulas (`offload_cache.py:36-89`, extended per-model where the source agent captured a different formula, e.g. GLM-5.2's `expert_bank_row_bytes` in `glm_moe_dsa`'s AOT table):
+
+| Model | Total params | Active params | Expert bytes (native/assumed fmt) | Fits 3090 (20GB usable)? | Fits 68GB aggregate (60GB usable)? | Expected multi-GPU value |
+|---|---:|---:|---:|---|---|---|
+| **Qwen3.6-35B-A3B** | ~35B (implied by name; not stated in-repo) | ~3B (implied by "A3B"; not stated in-repo) | 16.9GB (NVFP4/MXFP4/Q4_0) | **Yes**, 100%+ | Yes | **Control / none** |
+| **Ling-3.0-flash** | 124B [SPEC, from HF model card, not verified against a param-count field — Ling's config.json carries no total/active-param field either] | 5.1B [SPEC, same caveat] | 63.4GB (NVFP4, hypothetical — FreeToken doesn't support this architecture) | No, 31.5% | **Yes, 94.6%** | **Potentially the largest swing of any model studied — but conditional on new model support** |
+| **DeepSeek-V4-Flash-0731** | ~285B [CALC, derived from `args.py` fields — not stated in-repo] | ~8–10B [CALC, derived — not stated in-repo] | 137.1GB (FP8 dense + DS-FP4 experts, native shipped format) | No, 14.6% | No, 43.8% | **Real, measurable-in-principle improvement (3× cache-hit); already supported today** |
+| **GLM-5.2** | not stated in-repo | not stated in-repo | **~407GB**, FreeToken's own source states this figure (`glm_moe_dsa/config.py:61`, a comment on a dev-only layer-cap knob: *"pinning the full ~407 GB of experts"*) | No, 4.9% | No, 14.7% | **Modest — host RAM remains dominant regardless of secondary-GPU tiering** |
+
+Per-expert byte sizes and slot counts behind this table:
+
+| Model | H (hidden) | I (expert intermediate) | Layers × Experts = slots | Bytes/expert | Format |
+|---|---:|---:|---:|---:|---|
+| Qwen3.6-35B-A3B | 2048 | 512 | 40 × 256 = 10,240 | 1.69 MiB (NVFP4) | native |
+| Ling-3.0-flash | 2560 | 768 | 40 × 512 = 20,480 | 3.17 MiB (NVFP4) | hypothetical |
+| DeepSeek-V4-Flash-0731 | 4096 | 2048 | 43 × 256 = 11,008 | 12.75 MiB (DS-FP4) | native |
+| GLM-5.2 | 6144 | 2048 | ~20,561 (backed out from the 407GB figure) | 20.27 MiB (NVFP4) | native (per `aot_models.py`) |
+
+**Important caveats attached to every number above:**
+- None of the four models' total/active parameter counts are stated anywhere in FreeToken's source — the "35B-A3B", "124B/5.1B", etc. figures come from model names/HF cards, not from FreeToken. The `~8–10B active` figure for DeepSeek-V4-Flash-0731 and the total-param figures are this investigation's own arithmetic from `args.py`'s dataclass fields (params-per-expert × active/total expert counts), not something FreeToken asserts. **[CALC]**
+- **Ling-3.0-flash's expert-bytes figure is doubly hypothetical**: FreeToken does not implement the `bailing_hybrid`/`BailingMoeV3ForCausalLM` architecture at all, so "63.4GB in NVFP4" assumes FreeToken's existing NVFP4 packing scheme would apply unchanged to a model it has never quantized. The geometry-only arithmetic (H, I, expert count → bytes) is solid; the packaging assumption is not verified.
+- Ling's real config **[HF]** also revealed it isn't plain MHA as first summarized — it uses an MLA-style compressed KV path (`kv_lora_rank=512`, `qk_rope_head_dim=64`), which matters a lot: naive MHA math would put its KV cache at ~22GB at 32K context (unworkable against a 68GB budget with 63GB already spent on experts), but the actual MLA-compressed KV cache is **[CALC]** only ~1.5GB at 32K context and ~5.9GB at 128K context — small enough that Ling's "94.6% of experts fit in the aggregate" headline number survives realistic KV budgeting with room to spare.
+- DeepSeek-V4-Flash-0731's dense/attention layers use MLA already (`num_kv_heads=1`, a single shared latent), so its KV cache is likewise compact relative to its huge expert pool — the bottleneck for this model is entirely expert-weight residency, not KV cache. **[CODE]**
+
+---
+
+## Weight movement vs. activation movement — quantified per model
+
+**[CALC]**, bf16 activations, round-trip (hidden state in + expert output out) per single expert invocation, vs. that model's native/assumed per-expert weight size:
+
+| Model | Activation round-trip | Weight/expert | Ratio (weight ÷ activation) |
+|---|---:|---:|---:|
+| Qwen3.6-35B-A3B | 8,192 bytes | 1.69 MiB | **217×** |
+| Ling-3.0-flash | 10,240 bytes | 3.17 MiB | **325×** |
+| DeepSeek-V4-Flash-0731 | 16,384 bytes | 12.75 MiB | **816×** |
+
+The ratio *grows* with model size because activation cost scales with `hidden_size` alone while weight cost scales with `hidden_size × moe_intermediate_size`. This is the strongest single argument in this report for preferring **Architecture B (remote execution)** over **Architecture A (weight caching)** as models get larger — precisely the regime where multi-GPU tiering starts to matter at all. For DeepSeek-V4-Flash-0731, moving activations instead of weights cuts PCIe traffic per expert-touch by ~three orders of magnitude.
+
+The catch, unchanged from the first pass: at batch=1 decode this becomes a **latency**, not bandwidth, problem. **[CALC]** With top-k experts per layer likely spanning most/all of the secondary GPUs under naive placement (e.g. DeepSeek-V4-Flash-0731's top-6-of-256 spread across 4 secondary GPUs, or Ling's top-8-of-512 — mitigated somewhat by its grouped router, see Hardware analysis above), a reasonable estimate is on the order of 100–200 cross-GPU dispatch/sync round-trips per decode token (batched per-GPU-per-layer). At an **[EST]** 20–50µs/hop synchronization cost (no NVLink, PCIe-only, likely CPU-mediated event signaling on consumer boards), that's roughly 2–10ms/token of pure overhead — a cost that scales with layer count and GPU fan-out, not model size directly, so it hits DeepSeek-V4-Flash-0731's 43 layers and Ling's 40 MoE layers similarly. Whether that's acceptable depends on the model's baseline per-token compute latency, which is larger for bigger active-param-count models — meaning the relative overhead of Architecture B's synchronization cost likely shrinks (as a fraction of total token time) for the larger models it's most relevant to. **[SPEC]** — no real measurement exists to confirm the actual per-hop latency on this hardware.
+
+---
+
+## Expert-cache pressure analysis
+
+This section is necessarily the most speculative in the report: **no MoE routing traces for any of these four models were available to this investigation**, and none of FreeToken's benchmark tooling (`benchmarks/bench_offload_cache_copy.py`, `moe/benchbw.py`) captures real routing locality — they measure copy-path bandwidth at synthetic/parameterized miss rates, not actual expert-popularity distributions from real prompts. **[CODE]** Everything below is a framework for reasoning about the question, not measured data.
+
+What determines whether a given cache-size fraction (e.g. "43.8% of DeepSeek-V4-Flash-0731's experts resident") translates into a *similar* miss rate, or something better/worse:
+
+- **If routing were perfectly uniform random** across all experts, cache-hit rate for a Global-LRU cache holding fraction *f* of the total slots would (after warmup, with reuse across a token's neighbors' routing) roughly track *f* itself, possibly slightly better due to intra-request locality (a batch of related tokens is more likely to re-hit whatever was just loaded, before the LRU clock evicts it).
+- **Real MoE routers are not uniform.** Public research on trained MoE models generally reports mild-to-moderate expert-popularity skew (a long-tail of frequently-used experts and a cold tail), and load-balancing auxiliary losses used in training exist specifically to *prevent* extreme skew — meaning cache-hit rate for a fixed cache fraction is plausibly somewhat *better* than the naive uniform estimate, but not dramatically so, for a well-trained router at production scale. This is a general characterization from ML-systems literature, not something specific to any model traced in this investigation, and should be treated as directional only. **[EST]**
+- **Coding-agent workloads specifically** (FreeToken's own stated target use case, per its Anthropic/OpenAI-compatible tool-calling API support) plausibly show *more* expert-reuse locality than open-ended chat, if particular code/reasoning "modes" consistently activate overlapping expert subsets across a session — but this is a hypothesis about semantic routing correlation, not something this investigation can verify without running real traffic through an instrumented cache. **[SPEC]**
+- **The actionable conclusion:** the cache-coverage percentages in the Model Size Regimes table (e.g. DeepSeek-V4-Flash-0731's 14.6%→43.8%) are a reasonable *floor* on the achievable improvement from adding the secondary tier, since real routing locality, if present, would only make a bigger cache pay off *more* per byte, not less. They should not be read as a promise of a proportional tokens/sec improvement, since PCIe transfer time for the remaining misses (whatever their true rate is) is what actually gates decode latency.
+
+Recommended first real measurement (cheap, no multi-GPU code required): instrument the existing single-GPU `OffloadMoeCache`'s hit/miss counters (`slot_for_id` lookups already happen every decode step) across a representative session of the target workload (e.g. a real coding-agent transcript replayed through DeepSeek-V4-Flash-0731 at a few different `--moe-cache-size` values), and plot miss rate vs. cache-size fraction empirically. This requires zero new architecture — just logging — and would replace every `[EST]`/`[SPEC]` figure in this section with a real number for the one model that's both native and large enough to matter.
+
+---
+
+## Minimal proof of concept
+
+**Question to answer:** *Is fetching an MoE expert's weights from a secondary GPU's VRAM, or executing it there and shipping back activations, actually faster than FreeToken's existing host-RAM/PCIe or CPU-compute path, on the real 5-GPU rig?*
+
+**Environment note:** this investigation's sandbox has exactly one discrete GPU (an RTX 3060) and no CUDA toolkit or PyTorch installed — `nvcc`, `libcudart.so`, and `torch` are all absent. **None of the three tests below could be executed in this environment.** What follows is a ready-to-run design for the actual target machine; no numbers are fabricated in their place.
+
+- **Test A — pinned host RAM → 3090, expert-weight transfer + execution.** This is FreeToken's existing `offload` backend path; run `ft bench bw` on the real rig to get this baseline directly, no new code needed.
+- **Test B — 3060 → 3090, expert-weight transfer + execution.** Allocate a tensor of realistic expert shape (start with DeepSeek-V4-Flash-0731's `[2048,4096]`/`[4096,2048]` gate_up/down shapes at DS-FP4 packing, ~12.75MiB/expert) resident on a 3060; time a `cudaMemcpyAsync`/`cudaMemcpyPeerAsync` to the 3090 with CUDA events. **Critically, also record whether `cudaDeviceCanAccessPeer`/`cudaDeviceEnablePeerAccess` actually succeeds** — if it silently falls back to a host-staged copy, that result alone likely answers whether Architecture A is worth pursuing further.
+- **Test C — 3090 activation → 3060 → expert execution → 3090 result.** Ship a `[batch, 2048]`-ish bf16 hidden-state tensor (10–16KB depending on model and batch size) to a 3060, run the grouped-GEMM kernel for one resident expert there, ship the small result back — time the full round trip including both cross-device syncs. This directly tests Architecture B's actual per-hop latency, replacing every `[EST]` synchronization-cost number in this report.
+- **Also run, at zero engineering cost:** `nvidia-smi topo -m` and `nvidia-smi topo -p2p r` on the real rig. This alone would confirm or refute the "secondary GPUs likely sit behind narrow/chipset lanes with unreliable P2P" hypothesis this report leans on heavily, in about thirty seconds.
+- **Success criterion for Architecture A:** Test B is meaningfully (>~30%) faster than Test A *and* P2P actually engages. **Success criterion for Architecture B:** Test C's round-trip latency is low enough (this report's rough budget: a few ms, given ~100+ hops/token would otherwise cost multiple ms) that a full decode step's worth of remote dispatches wouldn't dominate token latency for a large model. **Failure on both:** stop, and treat the answer as "host RAM + CPU/hybrid offload remains the right architecture on this hardware regardless of model size," i.e. converge back toward the original (Qwen-only) finding even for the larger models.
+- This is a few hours of work on the real rig and should run **before** any of the phased roadmap below, exactly as recommended in the first pass — that recommendation is unchanged by the model-target pivot.
+
+---
+
+## Implementation roadmap (if Phase 0 supports proceeding)
+
+**Phase 0 — measurement/instrumentation** (Small): the PoC above (Tests A/B/C + `nvidia-smi topo`), plus the cache-pressure instrumentation described above using DeepSeek-V4-Flash-0731 (already supported, largest native model, and the one with a real, already-quantified cache-hit-fraction upside). No production modules touched.
+
+**Phase 1 — two-GPU PoC (3090 + one 3060), DeepSeek-V4-Flash-0731** (Moderate): if Phase 0 favors Architecture B, prototype remote execution for a single MoE layer's overflow experts on one secondary GPU, measuring real decode tokens/sec against the existing `offload`/`hybrid` baselines. If Phase 0 favors Architecture A instead, prototype a second-tier slot pool on device 1 fed from `OffloadMoeCache`'s eviction stream. Either way, expect to need to disable CUDA graph capture for the affected layers initially (`engine/graph.py` has no precedent for cross-device operations inside a captured graph).
+
+**Phase 2 — generalized multi-GPU expert placement, still DeepSeek-V4-Flash-0731** (Large): extend to all four secondary GPUs with a heterogeneous-capacity-aware placement policy (12/12/12/8GB, unequal).
+
+**Phase 3 — scheduler/cache policy** (Large): integrate with the existing q\*/`hybrid_fetch_fraction` calibration (now three-way: PCIe-to-secondary-GPU, PCIe-to-host, CPU-compute); extend `ft bench bw` to profile per-secondary-GPU bandwidth and per-hop remote-execution latency.
+
+**Phase 4 — heterogeneous optimization + Ling-3.0-flash model support** (Very Large, two independent tracks): (a) load-balance by observed expert popularity across unequal-capacity GPUs for DeepSeek-V4-Flash-0731; (b) **separately**, implement `bailing_hybrid`/`BailingMoeV3ForCausalLM` support in FreeToken (a new model architecture: MLA-with-`kv_lora_rank` attention, grouped top-k MoE routing, per-layer SwiGLU clipping lists) — this is a substantial, self-contained engineering project independent of anything in this report, needed before Ling's compelling "94.6% aggregate coverage" number becomes actionable.
+
+**Phase 5 — production integration** (Very Large): CUDA-graph compatibility, `--gpu` multi-device CLI surface, `/v1/stats` aggregation, failure handling for an absent/busy/thermal-throttled secondary GPU.
+
+**Overall estimate: unchanged from the first pass — Large to Very Large** for a general solution; Moderate for the Phase 0/1 work that actually produces a go/no-go signal. Adding Ling-3.0-flash to the roadmap adds an entire independent Very-Large workstream (model porting) on top of the multi-GPU work itself.
+
+---
+
+## Risks / blockers
+
+*(unchanged from the first pass — none of these are model-specific)*
+
+- **PCIe topology on a 5-GPU consumer board**: likely narrower-than-headline lanes for most secondary GPUs.
+- **Lack of reliable P2P**: silent host-staged fallback would erase Architecture A's rationale.
+- **CUDA graph constraints**: no precedent in this codebase for cross-device operations inside a captured graph.
+- **Device synchronization overhead**: tens of µs/hop, multiplied by potentially 100+ hops/token in Architecture B.
+- **Heterogeneous GPU performance**: 12GB/8GB secondary cards have less VRAM *and* less compute than the 3090.
+- **Scheduler complexity**: TP (existing) and expert-tiering (proposed) are different multi-GPU axes with zero precedent for combining them.
+- **New this revision — model-porting risk for Ling-3.0-flash**: the single most compelling numeric result in this report (31.5%→94.6% cache coverage) is entirely conditional on a model architecture FreeToken has never implemented. Treat it as a strong argument for *prioritizing* Ling support on its own single-GPU merits (it's an unusually well-sized model for consumer hardware even without any multi-GPU work — Qwen-style, it mostly fits after MLA-compressed KV accounting), not as a validated multi-GPU proof point yet.
+
+---
+
+## Final verdict
+
+1. **Can FreeToken reasonably be extended to use all five GPUs for one MoE model?** Technically yes, but the MoE cache internals remain single-device by construction for every model traced — this is unaffected by model choice. Large/Very-Large engineering regardless of target.
+2. **Would doing so likely outperform FreeToken's existing 3090 + host RAM/CPU mode?** **Model-dependent, now clearly bracketed**: no for Qwen3.6-35B-A3B (control, confirmed); plausibly yes but unmeasured for DeepSeek-V4-Flash-0731 (14.6%→43.8% cache-hit-fraction improvement is real and available today); plausibly the strongest case of any model studied for Ling-3.0-flash (31.5%→94.6%), but conditional on first porting an unimplemented model architecture; modest at best for GLM-5.2, where host RAM remains dominant even with the full 68GB aggregate (4.9%→14.7%).
+3. **Would secondary VRAM primarily be useful for storage, execution, or both?** The larger the model, the more the activation/weight byte ratio (217×→325×→816× across the three models compared) favors **execution** (Architecture B) over storage (Architecture A) — the opposite of what a purely capacity-driven intuition suggests, and a genuinely new finding from this revision.
+4. **Is FreeToken a good architectural starting point?** Unchanged: reasonable but not a natural fit — its offload cache is deliberately single-device, and its existing multi-GPU code (TP) solves an orthogonal problem, for any model.
+5. **Approximate implementation complexity?** Large to Very Large for a general solution; Moderate for Phase 0/1. Add an independent Very-Large workstream if Ling-3.0-flash support is pursued.
+6. **What is the first experiment we should run?** Unchanged and now more urgent: the Test A/B/C proof-of-concept + `nvidia-smi topo -m -p2p` on the real 5-GPU rig — this investigation's sandbox physically cannot run it (one GPU, no CUDA toolkit), so every bandwidth/latency number in this report remains an estimate pending that measurement.
+7. **Is this worth engineering?** **Not for Qwen-class models (confirmed). Conditionally yes for DeepSeek-V4-Flash-0731**, pending the Phase 0 measurement, since it's already supported and has a real, quantified cache-hit upside — this is the correct first target, not Qwen and not (yet) Ling. **Ling-3.0-flash is the most numerically compelling case in this study but requires a separate model-porting investment before the multi-GPU question is even answerable for it — pursue that decision on its own single-GPU merits first, independent of this report's conclusions.**
+
+
+--- END FEASIBILITY-INVESTIGATION APPENDIX ---
+
+Using the entire prompt, including the appendix, now answer the original task at the top. Preserve the requested evidence-by-record structure, and use the appendix as additional context rather than as measured Phase-0 evidence.

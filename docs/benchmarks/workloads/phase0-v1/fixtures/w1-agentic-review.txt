@@ -1,0 +1,34 @@
+Public coding-agent transcript replay — InferSwarm Phase 0 / FreeToken.
+
+=== MAINTAINER TASK — InferSwarm issue #2, direct public excerpt ===
+
+Objective
+
+Baseline one RTX 3060 (12 GB) using existing FreeToken host-RAM/offload behavior, with full provenance, as the reference everything later is compared against.
+
+Scope
+
+- Deterministic benchmark methodology: fixed seeds, fixed prompt/workload set, fixed warmup and measurement protocol (repeated runs, variance recorded).
+- Hardware profile of the 3060: memory bandwidth, PCIe link width/speed, single-expert execution latency at the relevant weight formats.
+- FreeToken host-RAM/offload baseline runs on Qwen3.6-35B-A3B: TTFT, prefill throughput, decode tokens/sec.
+- All results recorded per the benchmark contract with MEASURED labels under `docs/benchmarks/results/`.
+
+=== AGENT IMPLEMENTATION REPORT — FreeToken PR #1, direct public excerpt ===
+
+No results are claimed by this PR
+
+This PR claims no benchmark numbers of any kind. It was developed without the target RTX 3060, so nothing here was measured on the declared hardware, and no result directory is created — in this repo or in InferSwarm. The only committed text fixture anywhere in the diff is a smoke-test prompt explicitly labelled as not a workload.
+
+This is tooling and instrumentation. No distributed execution, no second-GPU expert path, no Phase-1 candidate.
+
+Review found that the harness could still produce an apparently canonical, `COMPLETE`, `MEASURED` artifact while a precommitted requirement had failed. The invariant it now enforces:
+
+A canonical-looking Phase-0 artifact exists only when every prerequisite, held-constant rule, workload-shape rule, instrumentation requirement, provenance requirement and repetition requirement was actually satisfied. Anything else is explicitly `INVALID`, `INCOMPLETE` or `NON_CANONICAL`.
+
+Campaign validity is now a first-class answer, separate from execution completeness.
+
+Workload shape and output length are contract, not commentary. A prompt outside its frozen class rule and a `completion_tokens` that is not the requested `max_tokens` each invalidate the canonical block; the observation is preserved in full and the prompt is never rewritten or truncated.
+
+=== REPLAY CONTINUATION ===
+
+Continue as the coding agent reviewing the landed work. Identify the three highest-risk ways a future Phase-0 run could still look reproducible while actually violating the experiment contract, and for each propose one concrete validation or test that would catch it. Stay within the existing Phase-0 scope; do not design the Phase-1 distributed executor.
