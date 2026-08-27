@@ -1,0 +1,46 @@
+name: Temporary token probe
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - run: python3 -m pip install --user transformers huggingface_hub jinja2
+      - run: |
+          python3 - <<'EOF'
+          from pathlib import Path
+          from transformers import AutoTokenizer
+          tok = AutoTokenizer.from_pretrained(
+              "nvidia/Qwen3.6-35B-A3B-NVFP4",
+              revision="491c2f1ea524c639598bf8fa787a93fed5a6fbce",
+              trust_remote_code=True,
+          )
+          paths = [
+              "docs/benchmarks/workloads/phase0-v1/fixtures/w3-long-context.txt",
+              "docs/phase1-poc-success-criteria.md",
+              "docs/investigations/multi_gpu_moe_feasibility.md",
+              "docs/implementation/phase1-two-gpu-poc.md",
+              "ARCHITECTURE.md",
+          ]
+          for path in paths:
+              text = Path(path).read_text(encoding="utf-8")
+              encoded = tok.apply_chat_template(
+                  [{"role":"user","content":text}],
+                  tokenize=True,
+                  add_generation_prompt=True,
+                  enable_thinking=True,
+              )
+              try:
+                  ids = encoded["input_ids"]
+              except (TypeError, KeyError):
+                  ids = encoded
+              if ids and isinstance(ids[0], list):
+                  ids = ids[0]
+              print(f"{path}: {len(ids)} formatted tokens")
+          EOF
