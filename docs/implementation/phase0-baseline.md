@@ -105,9 +105,9 @@ manifest id `inferswarm-phase0-w1-w4-v1`.
 The four classes are fixed before any Phase-1 candidate performance exists:
 
 - **W1 — coding / agentic:** a real public coding-agent transcript replay made
-  from verbatim maintainer-task excerpts in InferSwarm issue #2 and verbatim
-  agent implementation-report excerpts in FreeToken PR #1, followed by one
-  fixed replay-continuation review instruction;
+  from direct public maintainer-task excerpts in InferSwarm issue #2 and
+  direct public agent implementation-report excerpts in FreeToken PR #1,
+  followed by one fixed replay-continuation review instruction;
 - **W2 — reasoning / conversation:** AIME-25 test problem id `0`, pinned to
   `math-ai/aime25` revision
   `9692efc2d7ffbd5fc1b167e2bb4d0972010c4af4`, plus the same boxed-answer
@@ -137,7 +137,7 @@ manifest.
 Frozen prompt SHA-256 values:
 
 ```text
-W1  8c328325a0df9879b23d6f06a913eebadb501048822e9f63b5843dec2a51f718
+W1  078303fe708aadb247e01e416a6ca16db933a353d38aee8b550a19bfb72b15df
 W2  51e1235f1c85cf333085c9e2889a20fb7e7ef65f320856975bac705eb04e43d4
 W3  279c11ce0194e1d839dc92d910785d996a93e33046d047a018a652b24e75f2b3
 W4  345802e1ac06ec0357fe67d19ca0ba2439a10be8fae134fa4e1e302d52c347c6
@@ -166,6 +166,12 @@ a deliberate re-freeze **before** any candidate performance is observed; the
 harness must never truncate or rewrite a prompt to make it fit. Once candidate
 measurement exists, the success criteria's frozen-workload rule applies and a
 friendlier rewording is not the same experiment.
+
+Before the first Phase-1 candidate benchmark, P0-J must archive the actual
+materialized prompt identity and serving-reported prompt-token counts with the
+frozen hashes in the Phase-0 evidence. That satisfies §9's requirement that
+prompts, token counts, and hashes all be committed before candidate
+measurement begins.
 
 The FreeToken example manifest under
 `benchmarks/inferswarm_phase0/examples/` remains smoke-only and is not part of
