@@ -98,6 +98,12 @@ measurement existed:
 That document also states exactly what a Phase-1 GO does and does not
 authorize.
 
+The ordered engineering sequence is recorded separately in the
+[Phase-1 two-GPU POC implementation plan](docs/implementation/phase1-two-gpu-poc.md).
+That plan is subordinate to the success criteria and keeps the first
+implementation deliberately narrow and FreeToken-local until the POC earns a
+more general abstraction.
+
 ## Phase 2 — Three-GPU scaling
 
 Hardware:
