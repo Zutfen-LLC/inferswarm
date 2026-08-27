@@ -1,0 +1,32 @@
+You are reviewing an implementation for InferSwarm Phase 0 in the public repository `Zutfen-LLC/FreeToken`.
+
+The canonical task is InferSwarm issue #2: establish a reproducible single-RTX-3060 baseline for `nvidia/Qwen3.6-35B-A3B-NVFP4` before any distributed execution is benchmarked. The implementation under review is the Phase-0 harness that later became FreeToken PR #1.
+
+Review the implementation as a coding agent and identify concrete correctness, reproducibility, or methodology defects that should block merge. Focus on whether the harness can accidentally produce a canonical-looking artifact when a prerequisite is missing or violated.
+
+The implementation is supposed to provide all of the following:
+
+- an explicit B1-B5 single-GPU baseline sweep rather than whichever configuration happened to be run first;
+- a frozen W1-W4 workload manifest with hashes, exact output lengths, sampling parameters, `ignore_eos`, and chat-template settings;
+- two discarded warmups plus ten measured repetitions per arm/workload;
+- two sessions, with the second session reversing traversal order;
+- complete per-repetition raw timing rather than only averages;
+- exact model repository and 40-hex revision provenance;
+- exact FreeToken and InferSwarm commit provenance;
+- stable physical GPU identity by UUID;
+- a fresh `ft bench bw` profile before the sweep where required;
+- resolved runtime configuration read back from the live server;
+- real prefill timing rather than `prompt_tokens / TTFT`;
+- a separate greedy `CORRECTNESS_REFERENCE`;
+- refusal of dirty-tree, model-pin, local-snapshot, and GPU-identity mismatches;
+- no distributed execution and no fabricated benchmark results.
+
+Assume the implementation may already contain extensive tests. Do not reward checklist coverage by itself. Trace failure modes: ask what happens when a server crashes, a repetition is missing, prefill attribution is ambiguous, B3 resolves unexpectedly, the checkpoint path disagrees with the declared revision, the wrong GPU is selected, a supposedly held-constant runtime value differs across arms, or an output terminates before the requested token count.
+
+Return a prioritized review with:
+1. merge-blocking findings;
+2. non-blocking concerns;
+3. specific tests or invariants that would prove each finding fixed;
+4. a final MERGE / DO NOT MERGE recommendation.
+
+Do not invent benchmark numbers and do not propose weakening the precommitted InferSwarm criteria to make the implementation easier to pass.
