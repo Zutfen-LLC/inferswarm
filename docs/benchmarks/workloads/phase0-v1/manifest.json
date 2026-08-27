@@ -1,0 +1,97 @@
+{
+  "schema": "inferswarm.phase0.workload-manifest/1",
+  "manifest_id": "inferswarm-phase0-w1-w4-v1",
+  "canonical": true,
+  "frozen_at": "2026-08-27T12:40:00Z",
+  "notes": "Frozen before any Phase-1 candidate performance result. W1/W2/W4 are inline. W3 is deterministically materialized by materialize_w3.py and hash-pinned here. Changing any prompt wording requires a deliberate re-freeze and, after candidate measurement begins, a new experiment record.",
+  "provenance": {
+    "model_repository": "nvidia/Qwen3.6-35B-A3B-NVFP4",
+    "model_revision": "491c2f1ea524c639598bf8fa787a93fed5a6fbce",
+    "performance_sampling_source": "Pinned checkpoint generation_config.json (temperature=1.0, top_p=0.95, top_k=20).",
+    "correctness_sampling": "FreeToken Phase-0 harness overrides these same frozen prompts to greedy for CORRECTNESS_REFERENCE.",
+    "W1": "Public coding-agent work-trace replay normalized from InferSwarm issue #2 and Zutfen-LLC/FreeToken PR #1; contains task + landed-agent implementation report + fixed follow-up review instruction.",
+    "W2": {
+      "dataset": "math-ai/aime25",
+      "revision": "9692efc2d7ffbd5fc1b167e2bb4d0972010c4af4",
+      "split": "test",
+      "id": "0",
+      "source": "Same AIME-25 class used by FreeToken bench_decode_moe.py; fixed problem plus FreeToken boxed-answer instruction."
+    },
+    "W3": "Deterministically generated synthetic-but-project-grounded long engineering ledger from public Phase-0/1 contract invariants by materialize_w3.py; no measured results. Generator output SHA-256 is pinned by the manifest.",
+    "W4": "Hand-authored short interactive InferSwarm design question, frozen before benchmarking."
+  },
+  "workloads": [
+    {
+      "class_id": "W1",
+      "description": "Coding/agentic: public coding-agent task + implementation-report replay.",
+      "content": "Public coding-agent work-trace replay — InferSwarm Phase 0 / FreeToken.\n\nMaintainer task:\nEstablish a reproducible Phase-0 baseline harness for InferSwarm issue #2. The harness must implement the precommitted B1–B5 single-RTX-3060 sweep, preserve every warmup and measured repetition, capture full provenance, keep performance and correctness references distinct, and refuse canonical runs when required provenance or workload constraints are missing. Do not implement distributed execution and do not claim benchmark results.\n\nAgent implementation report excerpt:\nThe harness now treats campaign validity separately from execution completeness. A canonical-looking artifact is impossible when a prerequisite failed: failures are recorded as INVALID, INCOMPLETE, or NON_CANONICAL. The session-level `ft bench bw` calibration runs before the sweep because both B2 and B3 consume it. GPU identity is resolved to a stable UUID and cross-checked against the live engine. Workload shape and exact output length are validation gates. Correctness-reference requests force greedy sampling while performance runs preserve the frozen manifest sampling. Resolved runtime configuration is read back from the engine rather than inferred from flags. No benchmark results are claimed by this tooling change.\n\nContinue as the coding agent reviewing the landed work. Identify the three highest-risk ways a future Phase-0 run could still look reproducible while actually violating the experiment contract, and for each propose one concrete validation or test that would catch it. Stay within the existing Phase-0 scope; do not design the Phase-1 distributed executor.",
+      "content_sha256": "8f20a8177caa78321b47ea8e82acfe86cb820af747ab6c55e8cda52e3d6f9a71",
+      "output_tokens": 512,
+      "ignore_eos": true,
+      "sampling": {
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "top_k": 20
+      },
+      "seed": null,
+      "chat_template_kwargs": {
+        "enable_thinking": true
+      },
+      "role": "user"
+    },
+    {
+      "class_id": "W2",
+      "description": "Open-ended reasoning: AIME-25 problem 0, matching FreeToken's benchmark workload family.",
+      "content": "Find the sum of all integer bases $b>9$ for which $17_b$ is a divisor of $97_b.$\nPlease reason step by step, and put your final answer within \\boxed{}.",
+      "content_sha256": "51e1235f1c85cf333085c9e2889a20fb7e7ef65f320856975bac705eb04e43d4",
+      "output_tokens": 512,
+      "ignore_eos": true,
+      "sampling": {
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "top_k": 20
+      },
+      "seed": null,
+      "chat_template_kwargs": {
+        "enable_thinking": true
+      },
+      "role": "user"
+    },
+    {
+      "class_id": "W3",
+      "description": "Long context: project-grounded engineering ledger for audit/synthesis under KV pressure.",
+      "content_sha256": "279c11ce0194e1d839dc92d910785d996a93e33046d047a018a652b24e75f2b3",
+      "output_tokens": 256,
+      "ignore_eos": true,
+      "sampling": {
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "top_k": 20
+      },
+      "seed": null,
+      "chat_template_kwargs": {
+        "enable_thinking": true
+      },
+      "role": "user",
+      "fixture_path": "w3-long-context.txt"
+    },
+    {
+      "class_id": "W4",
+      "description": "Short interactive: concise two-GPU usefulness/evidence question.",
+      "content": "I have two RTX 3060 12 GB cards in one Linux workstation. FreeToken can already run Qwen3.6-35B-A3B-NVFP4 with routed experts backed by host RAM. InferSwarm's first experiment would keep a subset of experts resident on the second card, execute those experts there, and return only the partial MoE output. What evidence would convince you this is genuinely useful rather than just moving work around? Answer concisely and distinguish correctness evidence from end-to-end performance evidence.",
+      "content_sha256": "345802e1ac06ec0357fe67d19ca0ba2439a10be8fae134fa4e1e302d52c347c6",
+      "output_tokens": 128,
+      "ignore_eos": true,
+      "sampling": {
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "top_k": 20
+      },
+      "seed": null,
+      "chat_template_kwargs": {
+        "enable_thinking": true
+      },
+      "role": "user"
+    }
+  ]
+}
