@@ -32,7 +32,7 @@ The expected W3 digest is:
 
 | Class | Frozen character | Output |
 |---|---|---:|
-| W1 | Real public coding-agent transcript replay: verbatim maintainer-task excerpt from InferSwarm issue #2 + verbatim agent-report excerpt from FreeToken PR #1 + one fixed replay-continuation instruction | 512 |
+| W1 | Real public coding-agent transcript replay: direct maintainer-task excerpt from InferSwarm issue #2 + direct agent-report excerpt from FreeToken PR #1 + one fixed replay-continuation instruction | 512 |
 | W2 | `math-ai/aime25`, pinned revision `9692efc2d7ffbd5fc1b167e2bb4d0972010c4af4`, test id `0`, with the same boxed-answer instruction used by FreeToken's decode benchmark | 512 |
 | W3 | Deterministic, project-grounded long engineering ledger for audit/synthesis under long-context KV pressure | 256 |
 | W4 | Short interactive question about what evidence would make two-GPU resident expert execution genuinely useful | 128 |
@@ -66,7 +66,7 @@ override. The performance sweep does not.
 
 | Class | SHA-256 |
 |---|---|
-| W1 | `8c328325a0df9879b23d6f06a913eebadb501048822e9f63b5843dec2a51f718` |
+| W1 | `078303fe708aadb247e01e416a6ca16db933a353d38aee8b550a19bfb72b15df` |
 | W2 | `51e1235f1c85cf333085c9e2889a20fb7e7ef65f320856975bac705eb04e43d4` |
 | W3 | `279c11ce0194e1d839dc92d910785d996a93e33046d047a018a652b24e75f2b3` |
 | W4 | `345802e1ac06ec0357fe67d19ca0ba2439a10be8fae134fa4e1e302d52c347c6` |
@@ -88,6 +88,12 @@ P0-D's non-canonical serving smoke must materialize W3 and exercise the frozen
 manifest before the canonical sessions. If the pinned model reports a prompt
 outside its precommitted class band, the smoke has found a P0-D blocker; do
 not silently resize the prompt after any candidate result exists.
+
+Before the first Phase-1 candidate benchmark, the Phase-0 evidence publication
+must archive the actual materialized prompt identity and serving-reported
+prompt-token counts alongside these frozen hashes, satisfying §9's requirement
+that prompts, token counts, and hashes all be committed before candidate
+measurement begins.
 
 ## Immutability
 
