@@ -26,7 +26,7 @@ profile, and routing/residency evidence exist with reproducible provenance.
 | Reproducible Phase-0 harness and runtime instrumentation | **DONE** | FreeToken PR #1, `bench: add reproducible InferSwarm Phase 0 baseline harness`, merged into FreeToken `inferswarm` |
 | Real RTX 3060 development host provisioned | **DONE for execution readiness** | Debian host has RTX 3060 12 GB, current NVIDIA driver/CUDA toolkit, FreeToken editable install, and real CUDA tests exercised. This is setup evidence, not a Phase-0 benchmark result. |
 | Full-suite regression check on the real 3060 | **DONE for harness validation** | PR-induced failures were fixed before merge. The remaining pageable-pointer test failure exists on the FreeToken base and can poison the immediately following CUDA test; isolated production pinned-memory/NVFP4/Triton paths pass. This does not count as a Phase-0 performance result. |
-| Exact Qwen checkpoint revision pin | **TODO — blocks canonical measurement** | Pin exact 40-hex upstream revision of `nvidia/Qwen3.6-35B-A3B-NVFP4`; record it in every artifact. |
+| Exact Qwen checkpoint revision pin | **DONE — pinned 2026-08-27** | `nvidia/Qwen3.6-35B-A3B-NVFP4` @ `491c2f1ea524c639598bf8fa787a93fed5a6fbce`; every canonical Phase-0/1 artifact must retain this exact revision. |
 | Frozen canonical W1–W4 workload manifest | **TODO — blocks canonical measurement** | Finish/freeze issue #3 fixtures and hashes; the committed FreeToken example manifest is smoke-only and must not be used canonically. |
 | RTX 3060 hardware profile | **TODO** | Run the Phase-0 `profile` subcommand on the selected physical GPU UUID. |
 | Non-canonical real-serving smoke | **TODO** | Exercise the pinned model and representative B2/B3 paths with `--dev-smoke` before spending time on the canonical campaign. |
@@ -61,25 +61,40 @@ incompatible environments.
 
 ## 3. P0-A — pin the model revision
 
-Before the first canonical measurement, pin the exact upstream revision of:
+The Phase-0/1 POC checkpoint is pinned to this immutable upstream revision:
 
 ```
-nvidia/Qwen3.6-35B-A3B-NVFP4
+Repository: nvidia/Qwen3.6-35B-A3B-NVFP4
+Revision:   491c2f1ea524c639598bf8fa787a93fed5a6fbce
+Pinned:     2026-08-27
 ```
+
+At pin time this revision was the head of upstream `main`. The upstream
+history contained the original checkpoint upload followed by two commits that
+changed `README.md` only, so this pin retains the originally uploaded model,
+configuration, tokenizer, quantization metadata, and weight files while
+making the complete repository snapshot immutable. See the
+[upstream pinned revision](https://huggingface.co/nvidia/Qwen3.6-35B-A3B-NVFP4/tree/491c2f1ea524c639598bf8fa787a93fed5a6fbce)
+and [commit history](https://huggingface.co/nvidia/Qwen3.6-35B-A3B-NVFP4/commits/main).
 
 Requirements:
 
-- exact 40-hex commit SHA;
-- same repository and revision for every B1–B5 arm and the correctness
-  reference;
+- use the exact 40-hex commit SHA above — never `main`, a tag, or a shortened
+  revision — for canonical measurement;
+- use the same repository and revision for every B1–B5 arm and the
+  correctness reference;
 - canonical live arms must report resolved `expert_quant = nvfp4`;
 - if using a Hugging Face snapshot path, the local snapshot SHA/repository
   must agree with the declared repository/revision or the harness must refuse
-  the run.
+  the run;
+- do not silently advance this pin if upstream `main` moves. Deliberately
+  changing the revision is a model change and requires the affected baseline
+  and candidate measurements to be rerun under the benchmark contract.
 
-Deliverable: the exact model pin appears in the frozen workload/campaign
-instructions and subsequently in every result artifact. No benchmark number
-may precede this pin.
+Deliverable: **complete.** This document is the canonical Phase-0 campaign
+instruction and now records the exact pin. Every subsequent result artifact
+must record the same repository and revision. No benchmark number may precede
+this pin.
 
 ## 4. P0-B — freeze the canonical workload manifest
 
@@ -163,7 +178,7 @@ Use the merged FreeToken harness. Canonical invocation shape:
 PYTHONPATH=python:. python benchmarks/phase0_baseline.py sweep \
     --model /path/to/pinned/Qwen3.6-35B-A3B-NVFP4 \
     --model-repository nvidia/Qwen3.6-35B-A3B-NVFP4 \
-    --model-revision <exact-40-hex-model-revision> \
+    --model-revision 491c2f1ea524c639598bf8fa787a93fed5a6fbce \
     --gpu GPU-<UUID> \
     --manifest /path/to/frozen-workloads.json \
     --inferswarm-commit <exact-40-hex-inferswarm-commit> \
@@ -227,7 +242,7 @@ Invocation shape from the FreeToken harness documentation:
 PYTHONPATH=python:. python benchmarks/phase0_baseline.py reference \
     --model /path/to/pinned/model \
     --model-repository nvidia/Qwen3.6-35B-A3B-NVFP4 \
-    --model-revision <exact-40-hex-model-revision> \
+    --model-revision 491c2f1ea524c639598bf8fa787a93fed5a6fbce \
     --gpu GPU-<UUID> \
     --manifest /path/to/frozen-workloads.json \
     --nvfp4-backend <resolved-reference-backend> \
