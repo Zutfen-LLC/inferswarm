@@ -13,7 +13,25 @@
     "w1_source": "Real public coding-agent transcript replay: direct public maintainer-task excerpt from InferSwarm issue #2 plus direct agent implementation-report excerpt from Zutfen-LLC/FreeToken PR #1, followed by one fixed replay-continuation instruction.",
     "w2_source": "math-ai/aime25 test.jsonl revision 9692efc2d7ffbd5fc1b167e2bb4d0972010c4af4, test id 0, with FreeToken's boxed-answer instruction.",
     "w3_source": "Substantive non-repetitive long-context engineering review: the precommitted Phase-0/Phase-1 methodology dossier plus the existing public multi-GPU MoE feasibility investigation as an appendix; composed and frozen before any Phase-1 candidate performance result.",
-    "w4_source": "Short technical interactive question about the core InferSwarm capacity-vs-performance distinction, frozen before candidate measurement."
+    "w4_source": "Short technical interactive question about the core InferSwarm capacity-vs-performance distinction, frozen before candidate measurement.",
+    "token_shape_preflight": {
+      "method": "AutoTokenizer.apply_chat_template against the exact pinned checkpoint revision",
+      "model_revision": "491c2f1ea524c639598bf8fa787a93fed5a6fbce",
+      "formatted_prompt_tokens": {
+        "W1": 569,
+        "W2": 54,
+        "W3": 16819,
+        "W4": 121
+      },
+      "class_rules": {
+        "W1": "<= 2000",
+        "W2": "<= 1000",
+        "W3": "13600..18400 and <= 20000",
+        "W4": "96..160 and <= 200"
+      },
+      "result": "PASS",
+      "note": "Repository preflight only; the FreeToken serving path remains authoritative during P0-D and canonical runs."
+    }
   },
   "workloads": [
     {
