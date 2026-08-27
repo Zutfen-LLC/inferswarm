@@ -1,0 +1,719 @@
+Long-context engineering review workload.
+
+The following is a frozen, synthetic-but-project-grounded engineering ledger built from the public InferSwarm Phase-0/1 contracts and FreeToken harness behavior. It contains no benchmark measurements and makes no performance claim. Treat repeated invariants as independent review entries from a long-running project log rather than as permission to ignore them.
+
+Read the entire ledger. After the final record, produce a compact audit that:
+1. groups the recurring risks into provenance, workload integrity, correctness, mechanism validity, and performance methodology;
+2. identifies at least five dependencies where a failure early in Phase 0 would invalidate a later Phase-1 claim;
+3. calls out any pair of records that can appear contradictory unless the distinction between diagnostic evidence and gating evidence is preserved.
+
+BEGIN LEDGER
+
+[Record 001] Phase: campaign setup. Topic: model pin.
+State: The Phase-0/1 checkpoint is nvidia/Qwen3.6-35B-A3B-NVFP4 at immutable revision 491c2f1ea524c639598bf8fa787a93fed5a6fbce; canonical runs may not follow upstream main.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 002] Phase: Phase-1 handoff. Topic: baseline selection.
+State: CANONICAL_PERFORMANCE_BASELINE is the measured winner of the predeclared B1–B5 single-GPU sweep, not whichever arm is easiest for the candidate to beat.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 003] Phase: evidence audit. Topic: correctness reference.
+State: CORRECTNESS_REFERENCE is a fixed non-distributed single-device GPU configuration and is never chosen by speed or used as the performance denominator.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 004] Phase: instrumentation review. Topic: workload freeze.
+State: W1–W4 prompts, output lengths, sampling, chat-template settings, and content hashes are frozen before candidate performance is observed.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 005] Phase: baseline execution. Topic: W1 shape.
+State: W1 is coding/agentic, at most 2,000 prompt tokens, with exactly 512 generated tokens under ignore_eos.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 006] Phase: preflight. Topic: W2 shape.
+State: W2 is open-ended reasoning/conversation, at most 1,000 prompt tokens, with exactly 512 generated tokens under ignore_eos.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 007] Phase: campaign setup. Topic: W3 shape.
+State: W3 is the long-context class, targeted at 16,000 prompt tokens; the harness freezes a plus-or-minus 15 percent band and an absolute 20,000-token ceiling.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 008] Phase: campaign setup. Topic: W4 shape.
+State: W4 is the short interactive class, targeted at 128 prompt tokens with a plus-or-minus 25 percent band and exactly 128 generated tokens.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 009] Phase: Phase-1 handoff. Topic: sampling.
+State: Performance requests state temperature, top_p, and top_k explicitly so server defaults cannot drift; the correctness reference overrides the same frozen prompts to greedy sampling.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 010] Phase: evidence audit. Topic: seed boundary.
+State: FreeToken exposes no sampling seed, so the manifest records seed as null rather than pretending sampled generations are seeded.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 011] Phase: instrumentation review. Topic: GPU identity.
+State: Canonical Phase 0 selects one physical RTX 3060 by stable GPU UUID and verifies the running engine reports the same device.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 012] Phase: baseline execution. Topic: hardware profile.
+State: The hardware profile records CPU/RAM/OS, driver, CUDA-facing environment, PCIe current/max link, topology, VRAM bandwidth, and expert microbench diagnostics.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 013] Phase: baseline execution. Topic: microbenchmark rule.
+State: VRAM bandwidth and single-expert latency are diagnostics only; neither can establish an end-to-end performance win.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 014] Phase: preflight. Topic: bench-bw prerequisite.
+State: A fresh NVFP4 `ft bench bw` profile is a session-level prerequisite because B2 and B3 both consume it, including reversed traversal.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 015] Phase: campaign setup. Topic: B1–B5 sweep.
+State: All five baseline arms are legitimate FreeToken configurations; the sweep records explicit NVFP4 backend choices rather than relying on defaults.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 016] Phase: Phase-1 handoff. Topic: warmups.
+State: Each arm/workload block performs two discarded warmup generations before ten measured generations, with no selective repetition removal.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 017] Phase: evidence audit. Topic: sessions.
+State: Two complete sessions are required; the second reverses traversal order so thermal or temporal drift is not assigned to one configuration.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 018] Phase: instrumentation review. Topic: variance.
+State: Run-to-run variance is part of the evidence; a baseline coefficient of variation above five percent in any class invalidates the campaign for threshold decisions.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 019] Phase: baseline execution. Topic: prefill.
+State: Prefill throughput is measured at the model-forward boundary with request attribution; prompt_tokens divided by TTFT is explicitly not a prefill measurement.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 020] Phase: preflight. Topic: TTFT.
+State: TTFT remains an end-to-end first-token observation that includes work outside the raw prefill kernel and is compared separately from decode.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 021] Phase: campaign setup. Topic: routing traces.
+State: Issue #3 records expert selections and cache hit/miss behavior on the frozen workloads so placement decisions are grounded in routing evidence.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 022] Phase: campaign setup. Topic: coverage distinction.
+State: Resident expert coverage, routing hit rate, and tokens per second are three different quantities; coverage is never promoted into a throughput claim.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 023] Phase: Phase-1 handoff. Topic: graph safety.
+State: Routing histograms that require collect_decode_freq come from graph-disabled diagnostic runs; graph-enabled gating runs may use graph-safe cache statistics.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 024] Phase: evidence audit. Topic: Phase-1 scope.
+State: The first distributed mechanism is same-host two-GPU decode-time resident expert execution; it is not a network worker, RPC fabric, or generalized scheduler.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 025] Phase: instrumentation review. Topic: remote ownership.
+State: A route assigned to GPU 1 executes there exactly once; silent fallback to GPU 0 or CPU is invalid mechanism evidence.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 026] Phase: baseline execution. Topic: remote payload.
+State: All GPU-1-selected experts for a layer/step are represented in one destination-batched activation/routing dispatch rather than one request per expert.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 027] Phase: baseline execution. Topic: resident weights.
+State: GPU-1 expert weights are loaded during startup/placement and steady-state decode must not stream those weights to service remote routes.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 028] Phase: preflight. Topic: placement.
+State: Phase-1 placement is static, deterministic, evidence-derived from Phase-0 routing/cache traces, and hash-pinned before candidate throughput is observed.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 029] Phase: campaign setup. Topic: host RAM tier.
+State: Host RAM remains a first-class execution/storage tier; secondary GPUs augment rather than replace the existing offload path.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 030] Phase: Phase-1 handoff. Topic: mixed tiers later.
+State: Primary GPU plus secondary GPU plus host RAM in one inference run is a later hard architecture acceptance criterion, not a Phase-1 prerequisite.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 031] Phase: evidence audit. Topic: network later.
+State: Ordinary 1 GbE is evaluated only after the local mechanism; Phase 0/1 must not smuggle network conclusions into a same-host result.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 032] Phase: instrumentation review. Topic: evidence labels.
+State: Every numeric claim is labeled MEASURED, CALCULATED, ESTIMATED, or SPECULATIVE; a planning record must not masquerade as a measurement.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 033] Phase: baseline execution. Topic: model pin.
+State: The Phase-0/1 checkpoint is nvidia/Qwen3.6-35B-A3B-NVFP4 at immutable revision 491c2f1ea524c639598bf8fa787a93fed5a6fbce; canonical runs may not follow upstream main.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 034] Phase: preflight. Topic: baseline selection.
+State: CANONICAL_PERFORMANCE_BASELINE is the measured winner of the predeclared B1–B5 single-GPU sweep, not whichever arm is easiest for the candidate to beat.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 035] Phase: campaign setup. Topic: correctness reference.
+State: CORRECTNESS_REFERENCE is a fixed non-distributed single-device GPU configuration and is never chosen by speed or used as the performance denominator.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 036] Phase: campaign setup. Topic: workload freeze.
+State: W1–W4 prompts, output lengths, sampling, chat-template settings, and content hashes are frozen before candidate performance is observed.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 037] Phase: Phase-1 handoff. Topic: W1 shape.
+State: W1 is coding/agentic, at most 2,000 prompt tokens, with exactly 512 generated tokens under ignore_eos.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 038] Phase: evidence audit. Topic: W2 shape.
+State: W2 is open-ended reasoning/conversation, at most 1,000 prompt tokens, with exactly 512 generated tokens under ignore_eos.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 039] Phase: instrumentation review. Topic: W3 shape.
+State: W3 is the long-context class, targeted at 16,000 prompt tokens; the harness freezes a plus-or-minus 15 percent band and an absolute 20,000-token ceiling.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 040] Phase: baseline execution. Topic: W4 shape.
+State: W4 is the short interactive class, targeted at 128 prompt tokens with a plus-or-minus 25 percent band and exactly 128 generated tokens.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 041] Phase: baseline execution. Topic: sampling.
+State: Performance requests state temperature, top_p, and top_k explicitly so server defaults cannot drift; the correctness reference overrides the same frozen prompts to greedy sampling.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 042] Phase: preflight. Topic: seed boundary.
+State: FreeToken exposes no sampling seed, so the manifest records seed as null rather than pretending sampled generations are seeded.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 043] Phase: campaign setup. Topic: GPU identity.
+State: Canonical Phase 0 selects one physical RTX 3060 by stable GPU UUID and verifies the running engine reports the same device.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 044] Phase: Phase-1 handoff. Topic: hardware profile.
+State: The hardware profile records CPU/RAM/OS, driver, CUDA-facing environment, PCIe current/max link, topology, VRAM bandwidth, and expert microbench diagnostics.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 045] Phase: evidence audit. Topic: microbenchmark rule.
+State: VRAM bandwidth and single-expert latency are diagnostics only; neither can establish an end-to-end performance win.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 046] Phase: instrumentation review. Topic: bench-bw prerequisite.
+State: A fresh NVFP4 `ft bench bw` profile is a session-level prerequisite because B2 and B3 both consume it, including reversed traversal.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 047] Phase: baseline execution. Topic: B1–B5 sweep.
+State: All five baseline arms are legitimate FreeToken configurations; the sweep records explicit NVFP4 backend choices rather than relying on defaults.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 048] Phase: preflight. Topic: warmups.
+State: Each arm/workload block performs two discarded warmup generations before ten measured generations, with no selective repetition removal.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 049] Phase: campaign setup. Topic: sessions.
+State: Two complete sessions are required; the second reverses traversal order so thermal or temporal drift is not assigned to one configuration.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 050] Phase: campaign setup. Topic: variance.
+State: Run-to-run variance is part of the evidence; a baseline coefficient of variation above five percent in any class invalidates the campaign for threshold decisions.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 051] Phase: Phase-1 handoff. Topic: prefill.
+State: Prefill throughput is measured at the model-forward boundary with request attribution; prompt_tokens divided by TTFT is explicitly not a prefill measurement.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 052] Phase: evidence audit. Topic: TTFT.
+State: TTFT remains an end-to-end first-token observation that includes work outside the raw prefill kernel and is compared separately from decode.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 053] Phase: instrumentation review. Topic: routing traces.
+State: Issue #3 records expert selections and cache hit/miss behavior on the frozen workloads so placement decisions are grounded in routing evidence.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 054] Phase: baseline execution. Topic: coverage distinction.
+State: Resident expert coverage, routing hit rate, and tokens per second are three different quantities; coverage is never promoted into a throughput claim.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 055] Phase: baseline execution. Topic: graph safety.
+State: Routing histograms that require collect_decode_freq come from graph-disabled diagnostic runs; graph-enabled gating runs may use graph-safe cache statistics.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 056] Phase: preflight. Topic: Phase-1 scope.
+State: The first distributed mechanism is same-host two-GPU decode-time resident expert execution; it is not a network worker, RPC fabric, or generalized scheduler.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 057] Phase: campaign setup. Topic: remote ownership.
+State: A route assigned to GPU 1 executes there exactly once; silent fallback to GPU 0 or CPU is invalid mechanism evidence.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 058] Phase: Phase-1 handoff. Topic: remote payload.
+State: All GPU-1-selected experts for a layer/step are represented in one destination-batched activation/routing dispatch rather than one request per expert.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 059] Phase: evidence audit. Topic: resident weights.
+State: GPU-1 expert weights are loaded during startup/placement and steady-state decode must not stream those weights to service remote routes.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 060] Phase: instrumentation review. Topic: placement.
+State: Phase-1 placement is static, deterministic, evidence-derived from Phase-0 routing/cache traces, and hash-pinned before candidate throughput is observed.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 061] Phase: baseline execution. Topic: host RAM tier.
+State: Host RAM remains a first-class execution/storage tier; secondary GPUs augment rather than replace the existing offload path.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 062] Phase: preflight. Topic: mixed tiers later.
+State: Primary GPU plus secondary GPU plus host RAM in one inference run is a later hard architecture acceptance criterion, not a Phase-1 prerequisite.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 063] Phase: campaign setup. Topic: network later.
+State: Ordinary 1 GbE is evaluated only after the local mechanism; Phase 0/1 must not smuggle network conclusions into a same-host result.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 064] Phase: campaign setup. Topic: evidence labels.
+State: Every numeric claim is labeled MEASURED, CALCULATED, ESTIMATED, or SPECULATIVE; a planning record must not masquerade as a measurement.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 065] Phase: Phase-1 handoff. Topic: model pin.
+State: The Phase-0/1 checkpoint is nvidia/Qwen3.6-35B-A3B-NVFP4 at immutable revision 491c2f1ea524c639598bf8fa787a93fed5a6fbce; canonical runs may not follow upstream main.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 066] Phase: evidence audit. Topic: baseline selection.
+State: CANONICAL_PERFORMANCE_BASELINE is the measured winner of the predeclared B1–B5 single-GPU sweep, not whichever arm is easiest for the candidate to beat.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 067] Phase: instrumentation review. Topic: correctness reference.
+State: CORRECTNESS_REFERENCE is a fixed non-distributed single-device GPU configuration and is never chosen by speed or used as the performance denominator.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 068] Phase: baseline execution. Topic: workload freeze.
+State: W1–W4 prompts, output lengths, sampling, chat-template settings, and content hashes are frozen before candidate performance is observed.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 069] Phase: baseline execution. Topic: W1 shape.
+State: W1 is coding/agentic, at most 2,000 prompt tokens, with exactly 512 generated tokens under ignore_eos.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 070] Phase: preflight. Topic: W2 shape.
+State: W2 is open-ended reasoning/conversation, at most 1,000 prompt tokens, with exactly 512 generated tokens under ignore_eos.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 071] Phase: campaign setup. Topic: W3 shape.
+State: W3 is the long-context class, targeted at 16,000 prompt tokens; the harness freezes a plus-or-minus 15 percent band and an absolute 20,000-token ceiling.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 072] Phase: Phase-1 handoff. Topic: W4 shape.
+State: W4 is the short interactive class, targeted at 128 prompt tokens with a plus-or-minus 25 percent band and exactly 128 generated tokens.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 073] Phase: evidence audit. Topic: sampling.
+State: Performance requests state temperature, top_p, and top_k explicitly so server defaults cannot drift; the correctness reference overrides the same frozen prompts to greedy sampling.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 074] Phase: instrumentation review. Topic: seed boundary.
+State: FreeToken exposes no sampling seed, so the manifest records seed as null rather than pretending sampled generations are seeded.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 075] Phase: baseline execution. Topic: GPU identity.
+State: Canonical Phase 0 selects one physical RTX 3060 by stable GPU UUID and verifies the running engine reports the same device.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 076] Phase: preflight. Topic: hardware profile.
+State: The hardware profile records CPU/RAM/OS, driver, CUDA-facing environment, PCIe current/max link, topology, VRAM bandwidth, and expert microbench diagnostics.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 077] Phase: campaign setup. Topic: microbenchmark rule.
+State: VRAM bandwidth and single-expert latency are diagnostics only; neither can establish an end-to-end performance win.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 078] Phase: campaign setup. Topic: bench-bw prerequisite.
+State: A fresh NVFP4 `ft bench bw` profile is a session-level prerequisite because B2 and B3 both consume it, including reversed traversal.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 079] Phase: Phase-1 handoff. Topic: B1–B5 sweep.
+State: All five baseline arms are legitimate FreeToken configurations; the sweep records explicit NVFP4 backend choices rather than relying on defaults.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 080] Phase: evidence audit. Topic: warmups.
+State: Each arm/workload block performs two discarded warmup generations before ten measured generations, with no selective repetition removal.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 081] Phase: instrumentation review. Topic: sessions.
+State: Two complete sessions are required; the second reverses traversal order so thermal or temporal drift is not assigned to one configuration.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 082] Phase: baseline execution. Topic: variance.
+State: Run-to-run variance is part of the evidence; a baseline coefficient of variation above five percent in any class invalidates the campaign for threshold decisions.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 083] Phase: baseline execution. Topic: prefill.
+State: Prefill throughput is measured at the model-forward boundary with request attribution; prompt_tokens divided by TTFT is explicitly not a prefill measurement.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 084] Phase: preflight. Topic: TTFT.
+State: TTFT remains an end-to-end first-token observation that includes work outside the raw prefill kernel and is compared separately from decode.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 085] Phase: campaign setup. Topic: routing traces.
+State: Issue #3 records expert selections and cache hit/miss behavior on the frozen workloads so placement decisions are grounded in routing evidence.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 086] Phase: Phase-1 handoff. Topic: coverage distinction.
+State: Resident expert coverage, routing hit rate, and tokens per second are three different quantities; coverage is never promoted into a throughput claim.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 087] Phase: evidence audit. Topic: graph safety.
+State: Routing histograms that require collect_decode_freq come from graph-disabled diagnostic runs; graph-enabled gating runs may use graph-safe cache statistics.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 088] Phase: instrumentation review. Topic: Phase-1 scope.
+State: The first distributed mechanism is same-host two-GPU decode-time resident expert execution; it is not a network worker, RPC fabric, or generalized scheduler.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 089] Phase: baseline execution. Topic: remote ownership.
+State: A route assigned to GPU 1 executes there exactly once; silent fallback to GPU 0 or CPU is invalid mechanism evidence.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 090] Phase: preflight. Topic: remote payload.
+State: All GPU-1-selected experts for a layer/step are represented in one destination-batched activation/routing dispatch rather than one request per expert.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 091] Phase: campaign setup. Topic: resident weights.
+State: GPU-1 expert weights are loaded during startup/placement and steady-state decode must not stream those weights to service remote routes.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 092] Phase: campaign setup. Topic: placement.
+State: Phase-1 placement is static, deterministic, evidence-derived from Phase-0 routing/cache traces, and hash-pinned before candidate throughput is observed.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 093] Phase: Phase-1 handoff. Topic: host RAM tier.
+State: Host RAM remains a first-class execution/storage tier; secondary GPUs augment rather than replace the existing offload path.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 094] Phase: evidence audit. Topic: mixed tiers later.
+State: Primary GPU plus secondary GPU plus host RAM in one inference run is a later hard architecture acceptance criterion, not a Phase-1 prerequisite.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 095] Phase: instrumentation review. Topic: network later.
+State: Ordinary 1 GbE is evaluated only after the local mechanism; Phase 0/1 must not smuggle network conclusions into a same-host result.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 096] Phase: baseline execution. Topic: evidence labels.
+State: Every numeric claim is labeled MEASURED, CALCULATED, ESTIMATED, or SPECULATIVE; a planning record must not masquerade as a measurement.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 097] Phase: baseline execution. Topic: model pin.
+State: The Phase-0/1 checkpoint is nvidia/Qwen3.6-35B-A3B-NVFP4 at immutable revision 491c2f1ea524c639598bf8fa787a93fed5a6fbce; canonical runs may not follow upstream main.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 098] Phase: preflight. Topic: baseline selection.
+State: CANONICAL_PERFORMANCE_BASELINE is the measured winner of the predeclared B1–B5 single-GPU sweep, not whichever arm is easiest for the candidate to beat.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 099] Phase: campaign setup. Topic: correctness reference.
+State: CORRECTNESS_REFERENCE is a fixed non-distributed single-device GPU configuration and is never chosen by speed or used as the performance denominator.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 100] Phase: Phase-1 handoff. Topic: workload freeze.
+State: W1–W4 prompts, output lengths, sampling, chat-template settings, and content hashes are frozen before candidate performance is observed.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 101] Phase: evidence audit. Topic: W1 shape.
+State: W1 is coding/agentic, at most 2,000 prompt tokens, with exactly 512 generated tokens under ignore_eos.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 102] Phase: instrumentation review. Topic: W2 shape.
+State: W2 is open-ended reasoning/conversation, at most 1,000 prompt tokens, with exactly 512 generated tokens under ignore_eos.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 103] Phase: baseline execution. Topic: W3 shape.
+State: W3 is the long-context class, targeted at 16,000 prompt tokens; the harness freezes a plus-or-minus 15 percent band and an absolute 20,000-token ceiling.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 104] Phase: preflight. Topic: W4 shape.
+State: W4 is the short interactive class, targeted at 128 prompt tokens with a plus-or-minus 25 percent band and exactly 128 generated tokens.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 105] Phase: campaign setup. Topic: sampling.
+State: Performance requests state temperature, top_p, and top_k explicitly so server defaults cannot drift; the correctness reference overrides the same frozen prompts to greedy sampling.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 106] Phase: campaign setup. Topic: seed boundary.
+State: FreeToken exposes no sampling seed, so the manifest records seed as null rather than pretending sampled generations are seeded.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 107] Phase: Phase-1 handoff. Topic: GPU identity.
+State: Canonical Phase 0 selects one physical RTX 3060 by stable GPU UUID and verifies the running engine reports the same device.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 108] Phase: evidence audit. Topic: hardware profile.
+State: The hardware profile records CPU/RAM/OS, driver, CUDA-facing environment, PCIe current/max link, topology, VRAM bandwidth, and expert microbench diagnostics.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 109] Phase: instrumentation review. Topic: microbenchmark rule.
+State: VRAM bandwidth and single-expert latency are diagnostics only; neither can establish an end-to-end performance win.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 110] Phase: baseline execution. Topic: bench-bw prerequisite.
+State: A fresh NVFP4 `ft bench bw` profile is a session-level prerequisite because B2 and B3 both consume it, including reversed traversal.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 111] Phase: baseline execution. Topic: B1–B5 sweep.
+State: All five baseline arms are legitimate FreeToken configurations; the sweep records explicit NVFP4 backend choices rather than relying on defaults.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 112] Phase: preflight. Topic: warmups.
+State: Each arm/workload block performs two discarded warmup generations before ten measured generations, with no selective repetition removal.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 113] Phase: campaign setup. Topic: sessions.
+State: Two complete sessions are required; the second reverses traversal order so thermal or temporal drift is not assigned to one configuration.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 114] Phase: Phase-1 handoff. Topic: variance.
+State: Run-to-run variance is part of the evidence; a baseline coefficient of variation above five percent in any class invalidates the campaign for threshold decisions.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 115] Phase: evidence audit. Topic: prefill.
+State: Prefill throughput is measured at the model-forward boundary with request attribution; prompt_tokens divided by TTFT is explicitly not a prefill measurement.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 116] Phase: instrumentation review. Topic: TTFT.
+State: TTFT remains an end-to-end first-token observation that includes work outside the raw prefill kernel and is compared separately from decode.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 117] Phase: baseline execution. Topic: routing traces.
+State: Issue #3 records expert selections and cache hit/miss behavior on the frozen workloads so placement decisions are grounded in routing evidence.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 118] Phase: preflight. Topic: coverage distinction.
+State: Resident expert coverage, routing hit rate, and tokens per second are three different quantities; coverage is never promoted into a throughput claim.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 119] Phase: campaign setup. Topic: graph safety.
+State: Routing histograms that require collect_decode_freq come from graph-disabled diagnostic runs; graph-enabled gating runs may use graph-safe cache statistics.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 120] Phase: campaign setup. Topic: Phase-1 scope.
+State: The first distributed mechanism is same-host two-GPU decode-time resident expert execution; it is not a network worker, RPC fabric, or generalized scheduler.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 121] Phase: Phase-1 handoff. Topic: remote ownership.
+State: A route assigned to GPU 1 executes there exactly once; silent fallback to GPU 0 or CPU is invalid mechanism evidence.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 122] Phase: evidence audit. Topic: remote payload.
+State: All GPU-1-selected experts for a layer/step are represented in one destination-batched activation/routing dispatch rather than one request per expert.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 123] Phase: instrumentation review. Topic: resident weights.
+State: GPU-1 expert weights are loaded during startup/placement and steady-state decode must not stream those weights to service remote routes.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 124] Phase: baseline execution. Topic: placement.
+State: Phase-1 placement is static, deterministic, evidence-derived from Phase-0 routing/cache traces, and hash-pinned before candidate throughput is observed.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 125] Phase: baseline execution. Topic: host RAM tier.
+State: Host RAM remains a first-class execution/storage tier; secondary GPUs augment rather than replace the existing offload path.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 126] Phase: preflight. Topic: mixed tiers later.
+State: Primary GPU plus secondary GPU plus host RAM in one inference run is a later hard architecture acceptance criterion, not a Phase-1 prerequisite.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 127] Phase: campaign setup. Topic: network later.
+State: Ordinary 1 GbE is evaluated only after the local mechanism; Phase 0/1 must not smuggle network conclusions into a same-host result.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 128] Phase: Phase-1 handoff. Topic: evidence labels.
+State: Every numeric claim is labeled MEASURED, CALCULATED, ESTIMATED, or SPECULATIVE; a planning record must not masquerade as a measurement.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 129] Phase: evidence audit. Topic: model pin.
+State: The Phase-0/1 checkpoint is nvidia/Qwen3.6-35B-A3B-NVFP4 at immutable revision 491c2f1ea524c639598bf8fa787a93fed5a6fbce; canonical runs may not follow upstream main.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 130] Phase: instrumentation review. Topic: baseline selection.
+State: CANONICAL_PERFORMANCE_BASELINE is the measured winner of the predeclared B1–B5 single-GPU sweep, not whichever arm is easiest for the candidate to beat.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 131] Phase: baseline execution. Topic: correctness reference.
+State: CORRECTNESS_REFERENCE is a fixed non-distributed single-device GPU configuration and is never chosen by speed or used as the performance denominator.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 132] Phase: preflight. Topic: workload freeze.
+State: W1–W4 prompts, output lengths, sampling, chat-template settings, and content hashes are frozen before candidate performance is observed.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 133] Phase: campaign setup. Topic: W1 shape.
+State: W1 is coding/agentic, at most 2,000 prompt tokens, with exactly 512 generated tokens under ignore_eos.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 134] Phase: campaign setup. Topic: W2 shape.
+State: W2 is open-ended reasoning/conversation, at most 1,000 prompt tokens, with exactly 512 generated tokens under ignore_eos.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 135] Phase: Phase-1 handoff. Topic: W3 shape.
+State: W3 is the long-context class, targeted at 16,000 prompt tokens; the harness freezes a plus-or-minus 15 percent band and an absolute 20,000-token ceiling.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 136] Phase: evidence audit. Topic: W4 shape.
+State: W4 is the short interactive class, targeted at 128 prompt tokens with a plus-or-minus 25 percent band and exactly 128 generated tokens.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 137] Phase: instrumentation review. Topic: sampling.
+State: Performance requests state temperature, top_p, and top_k explicitly so server defaults cannot drift; the correctness reference overrides the same frozen prompts to greedy sampling.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 138] Phase: baseline execution. Topic: seed boundary.
+State: FreeToken exposes no sampling seed, so the manifest records seed as null rather than pretending sampled generations are seeded.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 139] Phase: baseline execution. Topic: GPU identity.
+State: Canonical Phase 0 selects one physical RTX 3060 by stable GPU UUID and verifies the running engine reports the same device.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 140] Phase: preflight. Topic: hardware profile.
+State: The hardware profile records CPU/RAM/OS, driver, CUDA-facing environment, PCIe current/max link, topology, VRAM bandwidth, and expert microbench diagnostics.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 141] Phase: campaign setup. Topic: microbenchmark rule.
+State: VRAM bandwidth and single-expert latency are diagnostics only; neither can establish an end-to-end performance win.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 142] Phase: Phase-1 handoff. Topic: bench-bw prerequisite.
+State: A fresh NVFP4 `ft bench bw` profile is a session-level prerequisite because B2 and B3 both consume it, including reversed traversal.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 143] Phase: evidence audit. Topic: B1–B5 sweep.
+State: All five baseline arms are legitimate FreeToken configurations; the sweep records explicit NVFP4 backend choices rather than relying on defaults.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 144] Phase: instrumentation review. Topic: warmups.
+State: Each arm/workload block performs two discarded warmup generations before ten measured generations, with no selective repetition removal.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 145] Phase: baseline execution. Topic: sessions.
+State: Two complete sessions are required; the second reverses traversal order so thermal or temporal drift is not assigned to one configuration.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 146] Phase: preflight. Topic: variance.
+State: Run-to-run variance is part of the evidence; a baseline coefficient of variation above five percent in any class invalidates the campaign for threshold decisions.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 147] Phase: campaign setup. Topic: prefill.
+State: Prefill throughput is measured at the model-forward boundary with request attribution; prompt_tokens divided by TTFT is explicitly not a prefill measurement.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 148] Phase: campaign setup. Topic: TTFT.
+State: TTFT remains an end-to-end first-token observation that includes work outside the raw prefill kernel and is compared separately from decode.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 149] Phase: Phase-1 handoff. Topic: routing traces.
+State: Issue #3 records expert selections and cache hit/miss behavior on the frozen workloads so placement decisions are grounded in routing evidence.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 150] Phase: evidence audit. Topic: coverage distinction.
+State: Resident expert coverage, routing hit rate, and tokens per second are three different quantities; coverage is never promoted into a throughput claim.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 151] Phase: instrumentation review. Topic: graph safety.
+State: Routing histograms that require collect_decode_freq come from graph-disabled diagnostic runs; graph-enabled gating runs may use graph-safe cache statistics.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 152] Phase: baseline execution. Topic: Phase-1 scope.
+State: The first distributed mechanism is same-host two-GPU decode-time resident expert execution; it is not a network worker, RPC fabric, or generalized scheduler.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 153] Phase: baseline execution. Topic: remote ownership.
+State: A route assigned to GPU 1 executes there exactly once; silent fallback to GPU 0 or CPU is invalid mechanism evidence.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 154] Phase: preflight. Topic: remote payload.
+State: All GPU-1-selected experts for a layer/step are represented in one destination-batched activation/routing dispatch rather than one request per expert.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 155] Phase: campaign setup. Topic: resident weights.
+State: GPU-1 expert weights are loaded during startup/placement and steady-state decode must not stream those weights to service remote routes.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 156] Phase: Phase-1 handoff. Topic: placement.
+State: Phase-1 placement is static, deterministic, evidence-derived from Phase-0 routing/cache traces, and hash-pinned before candidate throughput is observed.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 157] Phase: evidence audit. Topic: host RAM tier.
+State: Host RAM remains a first-class execution/storage tier; secondary GPUs augment rather than replace the existing offload path.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 158] Phase: instrumentation review. Topic: mixed tiers later.
+State: Primary GPU plus secondary GPU plus host RAM in one inference run is a later hard architecture acceptance criterion, not a Phase-1 prerequisite.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 159] Phase: baseline execution. Topic: network later.
+State: Ordinary 1 GbE is evaluated only after the local mechanism; Phase 0/1 must not smuggle network conclusions into a same-host result.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 160] Phase: preflight. Topic: evidence labels.
+State: Every numeric claim is labeled MEASURED, CALCULATED, ESTIMATED, or SPECULATIVE; a planning record must not masquerade as a measurement.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 161] Phase: campaign setup. Topic: model pin.
+State: The Phase-0/1 checkpoint is nvidia/Qwen3.6-35B-A3B-NVFP4 at immutable revision 491c2f1ea524c639598bf8fa787a93fed5a6fbce; canonical runs may not follow upstream main.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 162] Phase: campaign setup. Topic: baseline selection.
+State: CANONICAL_PERFORMANCE_BASELINE is the measured winner of the predeclared B1–B5 single-GPU sweep, not whichever arm is easiest for the candidate to beat.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 163] Phase: Phase-1 handoff. Topic: correctness reference.
+State: CORRECTNESS_REFERENCE is a fixed non-distributed single-device GPU configuration and is never chosen by speed or used as the performance denominator.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 164] Phase: evidence audit. Topic: workload freeze.
+State: W1–W4 prompts, output lengths, sampling, chat-template settings, and content hashes are frozen before candidate performance is observed.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 165] Phase: instrumentation review. Topic: W1 shape.
+State: W1 is coding/agentic, at most 2,000 prompt tokens, with exactly 512 generated tokens under ignore_eos.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 166] Phase: baseline execution. Topic: W2 shape.
+State: W2 is open-ended reasoning/conversation, at most 1,000 prompt tokens, with exactly 512 generated tokens under ignore_eos.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 167] Phase: baseline execution. Topic: W3 shape.
+State: W3 is the long-context class, targeted at 16,000 prompt tokens; the harness freezes a plus-or-minus 15 percent band and an absolute 20,000-token ceiling.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 168] Phase: preflight. Topic: W4 shape.
+State: W4 is the short interactive class, targeted at 128 prompt tokens with a plus-or-minus 25 percent band and exactly 128 generated tokens.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+[Record 169] Phase: campaign setup. Topic: sampling.
+State: Performance requests state temperature, top_p, and top_k explicitly so server defaults cannot drift; the correctness reference overrides the same frozen prompts to greedy sampling.
+Review focus: explain why this is held constant rather than tuned after seeing throughput.
+
+[Record 170] Phase: Phase-1 handoff. Topic: seed boundary.
+State: FreeToken exposes no sampling seed, so the manifest records seed as null rather than pretending sampled generations are seeded.
+Review focus: what exact artifact would prove this statement held for a run?
+
+[Record 171] Phase: evidence audit. Topic: GPU identity.
+State: Canonical Phase 0 selects one physical RTX 3060 by stable GPU UUID and verifies the running engine reports the same device.
+Review focus: distinguish the measured fact from any inference someone might be tempted to draw.
+
+[Record 172] Phase: instrumentation review. Topic: hardware profile.
+State: The hardware profile records CPU/RAM/OS, driver, CUDA-facing environment, PCIe current/max link, topology, VRAM bandwidth, and expert microbench diagnostics.
+Review focus: state whether this belongs to mechanism validity, correctness, performance, or provenance.
+
+[Record 173] Phase: baseline execution. Topic: microbenchmark rule.
+State: VRAM bandwidth and single-expert latency are diagnostics only; neither can establish an end-to-end performance win.
+Review focus: name the failure mode if this invariant is violated silently.
+
+[Record 174] Phase: preflight. Topic: bench-bw prerequisite.
+State: A fresh NVFP4 `ft bench bw` profile is a session-level prerequisite because B2 and B3 both consume it, including reversed traversal.
+Review focus: identify the cheapest preflight or post-run check that makes this auditable.
+
+[Record 175] Phase: campaign setup. Topic: B1–B5 sweep.
+State: All five baseline arms are legitimate FreeToken configurations; the sweep records explicit NVFP4 backend choices rather than relying on defaults.
+Review focus: point out any plausible source of accidental cherry-picking or goalpost movement.
+
+[Record 176] Phase: campaign setup. Topic: warmups.
+State: Each arm/workload block performs two discarded warmup generations before ten measured generations, with no selective repetition removal.
+Review focus: which later conclusion would become invalid if this record were wrong?
+
+
+END LEDGER
+
+Do not invent measured numbers. Base the audit only on the frozen ledger above, and preserve the distinction between what is precommitted, what must be measured, and what is intentionally deferred.
