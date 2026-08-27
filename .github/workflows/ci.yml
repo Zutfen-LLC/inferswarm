@@ -79,7 +79,10 @@ jobs:
                   add_generation_prompt=True,
                   **w.get("chat_template_kwargs", {}),
               )
-              input_ids = encoded["input_ids"] if isinstance(encoded, dict) else encoded
+              try:
+                  input_ids = encoded["input_ids"]
+              except (TypeError, KeyError):
+                  input_ids = encoded
               if input_ids and isinstance(input_ids[0], list):
                   input_ids = input_ids[0]
               n = len(input_ids)
