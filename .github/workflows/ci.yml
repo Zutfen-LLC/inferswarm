@@ -2,6 +2,7 @@ name: CI
 
 # Lightweight checks for a documentation/bootstrap repository:
 # - YAML syntax for issue templates and workflows
+# - frozen Phase-0 workload manifest integrity
 # - internal Markdown link integrity
 # - repository hygiene (no empty speculative directories)
 #
@@ -49,6 +50,9 @@ jobs:
               print(f"OK  {f}")
           print(f"{len(files)} YAML files valid")
           EOF
+
+      - name: Check frozen Phase-0 workloads
+        run: python3 scripts/check_phase0_workloads.py
 
       - name: Check internal Markdown links
         run: |
