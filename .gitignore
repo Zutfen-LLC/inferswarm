@@ -34,3 +34,7 @@ dist/
 # under docs/benchmarks/ with provenance; scratch is not)
 scratch/
 tmp/
+
+# Deterministically materialized Phase-0 long-context fixture. Its generator
+# and SHA-256 are versioned under docs/benchmarks/workloads/phase0-v1/.
+docs/benchmarks/workloads/phase0-v1/w3-long-context.txt
