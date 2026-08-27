@@ -104,9 +104,10 @@ manifest id `inferswarm-phase0-w1-w4-v1`.
 
 The four classes are fixed before any Phase-1 candidate performance exists:
 
-- **W1 — coding / agentic:** a public coding-agent work-trace replay normalized
-  from InferSwarm issue #2 and FreeToken PR #1: maintainer task, landed-agent
-  implementation report, and a fixed follow-up code-review instruction;
+- **W1 — coding / agentic:** a real public coding-agent transcript replay made
+  from verbatim maintainer-task excerpts in InferSwarm issue #2 and verbatim
+  agent implementation-report excerpts in FreeToken PR #1, followed by one
+  fixed replay-continuation review instruction;
 - **W2 — reasoning / conversation:** AIME-25 test problem id `0`, pinned to
   `math-ai/aime25` revision
   `9692efc2d7ffbd5fc1b167e2bb4d0972010c4af4`, plus the same boxed-answer
@@ -136,7 +137,7 @@ manifest.
 Frozen prompt SHA-256 values:
 
 ```text
-W1  8f20a8177caa78321b47ea8e82acfe86cb820af747ab6c55e8cda52e3d6f9a71
+W1  8c328325a0df9879b23d6f06a913eebadb501048822e9f63b5843dec2a51f718
 W2  51e1235f1c85cf333085c9e2889a20fb7e7ef65f320856975bac705eb04e43d4
 W3  279c11ce0194e1d839dc92d910785d996a93e33046d047a018a652b24e75f2b3
 W4  345802e1ac06ec0357fe67d19ca0ba2439a10be8fae134fa4e1e302d52c347c6
