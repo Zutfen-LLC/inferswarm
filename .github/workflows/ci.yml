@@ -73,13 +73,16 @@ jobs:
           errors = []
           for w in doc["workloads"]:
               text = (root / w["fixture_path"]).read_text(encoding="utf-8")
-              ids = tok.apply_chat_template(
+              encoded = tok.apply_chat_template(
                   [{"role": w.get("role", "user"), "content": text}],
                   tokenize=True,
                   add_generation_prompt=True,
                   **w.get("chat_template_kwargs", {}),
               )
-              n = len(ids)
+              input_ids = encoded["input_ids"] if isinstance(encoded, dict) else encoded
+              if input_ids and isinstance(input_ids[0], list):
+                  input_ids = input_ids[0]
+              n = len(input_ids)
               cid = w["class_id"]
               print(f"{cid} formatted_prompt_tokens={n}")
               if cid == "W1" and n > 2000:
