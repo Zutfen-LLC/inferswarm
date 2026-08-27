@@ -55,7 +55,7 @@ jobs:
         run: python3 scripts/check_phase0_workloads.py
 
       - name: TEMP install pinned-tokenizer probe dependencies
-        run: python3 -m pip install --user transformers huggingface_hub
+        run: python3 -m pip install --user transformers huggingface_hub jinja2
 
       - name: TEMP probe pinned Qwen workload token shapes
         run: |
