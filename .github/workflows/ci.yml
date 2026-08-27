@@ -54,6 +54,47 @@ jobs:
       - name: Check frozen Phase-0 workloads
         run: python3 scripts/check_phase0_workloads.py
 
+      - name: TEMP install pinned-tokenizer probe dependencies
+        run: python3 -m pip install --user transformers huggingface_hub
+
+      - name: TEMP probe pinned Qwen workload token shapes
+        run: |
+          python3 - <<'EOF'
+          import json
+          from pathlib import Path
+          from transformers import AutoTokenizer
+
+          repo = "nvidia/Qwen3.6-35B-A3B-NVFP4"
+          revision = "491c2f1ea524c639598bf8fa787a93fed5a6fbce"
+          root = Path("docs/benchmarks/workloads/phase0-v1")
+          doc = json.loads((root / "manifest.json").read_text())
+          tok = AutoTokenizer.from_pretrained(repo, revision=revision, trust_remote_code=True)
+
+          errors = []
+          for w in doc["workloads"]:
+              text = (root / w["fixture_path"]).read_text(encoding="utf-8")
+              ids = tok.apply_chat_template(
+                  [{"role": w.get("role", "user"), "content": text}],
+                  tokenize=True,
+                  add_generation_prompt=True,
+                  **w.get("chat_template_kwargs", {}),
+              )
+              n = len(ids)
+              cid = w["class_id"]
+              print(f"{cid} formatted_prompt_tokens={n}")
+              if cid == "W1" and n > 2000:
+                  errors.append(f"W1 {n} > 2000")
+              elif cid == "W2" and n > 1000:
+                  errors.append(f"W2 {n} > 1000")
+              elif cid == "W3" and not (13600 <= n <= 18400 and n <= 20000):
+                  errors.append(f"W3 {n} outside 13600..18400")
+              elif cid == "W4" and not (96 <= n <= 160 and n <= 200):
+                  errors.append(f"W4 {n} outside 96..160")
+          if errors:
+              raise SystemExit("token-shape probe failed: " + "; ".join(errors))
+          print("Pinned-Qwen formatted workload shapes satisfy the frozen harness bands")
+          EOF
+
       - name: Check internal Markdown links
         run: |
           python3 - <<'EOF'
