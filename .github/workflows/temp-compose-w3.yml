@@ -1,0 +1,37 @@
+name: Temporary W3 composer
+on:
+  pull_request:
+permissions:
+  contents: write
+jobs:
+  compose:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'ezutfen'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - name: Compose tracked long-context fixture once
+        run: |
+          set -euo pipefail
+          root=docs/benchmarks/workloads/phase0-v1/fixtures
+          if [ ! -f "$root/w3-contract-dossier.txt" ]; then
+            mv "$root/w3-long-context.txt" "$root/w3-contract-dossier.txt"
+          fi
+          {
+            cat "$root/w3-contract-dossier.txt"
+            printf '\n\n--- BEGIN FEASIBILITY-INVESTIGATION APPENDIX ---\n\n'
+            cat docs/investigations/multi_gpu_moe_feasibility.md
+            printf '\n\n--- END FEASIBILITY-INVESTIGATION APPENDIX ---\n\n'
+            printf 'Using the entire prompt, including the appendix, now answer the original task at the top. Preserve the requested evidence-by-record structure, and use the appendix as additional context rather than as measured Phase-0 evidence.\n'
+          } > "$root/w3-long-context.txt"
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add "$root/w3-contract-dossier.txt" "$root/w3-long-context.txt"
+          if git diff --cached --quiet; then
+            echo 'W3 composition already tracked; nothing to commit.'
+            exit 0
+          fi
+          git commit -m 'bench: expand W3 to canonical long-context shape'
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
