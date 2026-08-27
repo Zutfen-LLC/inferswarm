@@ -27,9 +27,9 @@ profile, and routing/residency evidence exist with reproducible provenance.
 | Real RTX 3060 development host provisioned | **DONE for execution readiness** | Debian host has RTX 3060 12 GB, current NVIDIA driver/CUDA toolkit, FreeToken editable install, and real CUDA tests exercised. This is setup evidence, not a Phase-0 benchmark result. |
 | Full-suite regression check on the real 3060 | **DONE for harness validation** | PR-induced failures were fixed before merge. The remaining pageable-pointer test failure exists on the FreeToken base and can poison the immediately following CUDA test; isolated production pinned-memory/NVFP4/Triton paths pass. This does not count as a Phase-0 performance result. |
 | Exact Qwen checkpoint revision pin | **DONE — pinned 2026-08-27** | `nvidia/Qwen3.6-35B-A3B-NVFP4` @ `491c2f1ea524c639598bf8fa787a93fed5a6fbce`; every canonical Phase-0/1 artifact must retain this exact revision. |
-| Frozen canonical W1–W4 workload manifest | **TODO — blocks canonical measurement** | Finish/freeze issue #3 fixtures and hashes; the committed FreeToken example manifest is smoke-only and must not be used canonically. |
+| Frozen canonical W1–W4 workload manifest | **DONE — frozen 2026-08-27** | [`docs/benchmarks/workloads/phase0-v1/manifest.json`](../benchmarks/workloads/phase0-v1/manifest.json); exact hashes and pinned-Qwen token-shape preflight are recorded, with runtime shape still rechecked during P0-D. |
 | RTX 3060 hardware profile | **TODO** | Run the Phase-0 `profile` subcommand on the selected physical GPU UUID. |
-| Non-canonical real-serving smoke | **TODO** | Exercise the pinned model and representative B2/B3 paths with `--dev-smoke` before spending time on the canonical campaign. |
+| Non-canonical real-serving smoke | **TODO** | Exercise the pinned model and frozen W1–W4 manifest on representative B2/B3 paths with `--dev-smoke` before spending time on the canonical campaign. |
 | Canonical B1–B5 performance sweep | **TODO** | Two complete sessions, second in reverse order; no early stopping or discarded measured repetitions. |
 | Select `CANONICAL_PERFORMANCE_BASELINE` | **TODO** | Select the measured winner only after both valid sessions exist; selection is human review of precommitted metrics, not a harness-side optimization. |
 | `CORRECTNESS_REFERENCE` | **TODO** | Two independent greedy reference runs; require self-consistent output hashes before Phase 1 can use the reference. |
@@ -98,27 +98,75 @@ this pin.
 
 ## 4. P0-B — freeze the canonical workload manifest
 
-Issue #3 supplies the representative workload material used both for the
-baseline and the routing analysis. Freeze the W1–W4 fixtures **before** the
-candidate is benchmarked.
+The canonical workload set is frozen at
+[`docs/benchmarks/workloads/phase0-v1/manifest.json`](../benchmarks/workloads/phase0-v1/manifest.json),
+manifest id `phase0-v1-2026-08-27`.
 
-For each workload class, the manifest must pin at least:
+The four classes are fixed before any Phase-1 candidate performance exists:
 
-- fixture contents or version-controlled fixture path;
-- SHA-256;
-- requested output-token count;
-- sampling parameters;
-- `ignore_eos`;
-- chat-template settings;
-- the workload-shape rule enforced by the harness.
+- **W1 — coding / agentic:** a replay of the real public Phase-0 coding-agent
+  exchange, using direct public maintainer-task excerpts from InferSwarm issue
+  #2 and direct public agent implementation-report excerpts from FreeToken PR
+  #1, followed by one fixed replay-continuation review instruction;
+- **W2 — reasoning / conversation:** AIME-25 test problem id `0`, pinned to
+  `math-ai/aime25` revision
+  `9692efc2d7ffbd5fc1b167e2bb4d0972010c4af4`, with the same boxed-answer
+  instruction used by FreeToken's decode benchmark;
+- **W3 — long context:** a substantive non-repetitive technical synthesis
+  workload combining the already-fixed Phase-0/Phase-1 methodology dossier
+  with the existing public multi-GPU MoE feasibility investigation as an
+  appendix. It was composed before candidate performance and contains no
+  fabricated benchmark observations;
+- **W4 — short interactive:** a concise technical question separating resident
+  coverage, routing hit rate, service cost, and end-to-end throughput.
 
-Use the FreeToken harness validator and hashing helper. The example smoke
-manifest under `benchmarks/inferswarm_phase0/examples/` is explicitly
-non-canonical and must not be promoted into the real campaign.
+Every class freezes the exact output length, `ignore_eos = true`, `seed = null`,
+`role = user`, and `chat_template_kwargs = {"enable_thinking": true}`. Performance
+sampling is the pinned checkpoint's stated generation configuration, recorded
+explicitly rather than inherited from a runtime default:
 
-Deliverable: one version-controlled canonical workload manifest in InferSwarm
-(or a path arrangement referenced from InferSwarm) whose hashes do not change
-between Phase 0 and Phase 1.
+```json
+{"temperature": 1.0, "top_p": 0.95, "top_k": 20}
+```
+
+`CORRECTNESS_REFERENCE` continues to override these same frozen prompts to
+greedy sampling and records that override rather than mutating the manifest.
+
+Frozen prompt SHA-256 values:
+
+```text
+W1  cea659ba97b16ed7909dbb5a581ad83c46606a374610a50a69494791a0b186f1
+W2  a4f2fdc66c946d8f9097d34fe8d173c7dbb9d647401e8f6bc9b79a0158d26e5d
+W3  7b2002252e06b28f5841d0d5467de9898423af57b84c3d5cb6d141b35df1647b
+W4  41226057cf336c5f7fb618bda61f11c98927167629ef4b5bdfbfa1ba48ae54f7
+```
+
+A pre-measurement tokenizer check against the exact pinned Qwen revision and
+chat template produced these formatted prompt counts:
+
+```text
+W1    569 tokens   (required <= 2,000)
+W2     54 tokens   (required <= 1,000)
+W3 16,819 tokens   (required 13,600..18,400; ceiling 20,000)
+W4    121 tokens   (required 96..160; ceiling 200)
+```
+
+That check is repository preflight, not benchmark evidence. The actual
+prompt-token count reported by the FreeToken serving path remains authoritative
+and P0-D must exercise this exact manifest before canonical sessions. A shape
+mismatch there is a smoke blocker; the harness must never truncate or rewrite a
+prompt to make it fit.
+
+`scripts/check_phase0_workloads.py` is the permanent lightweight repository
+guard: it verifies all four fixture hashes and the frozen protocol fields in
+CI. The FreeToken example manifest under
+`benchmarks/inferswarm_phase0/examples/` remains smoke-only and is not part of
+this campaign.
+
+Deliverable: **complete.** Exact fixture bytes, provenance, hashes, sampling,
+output lengths, template settings, and token-shape preflight are committed
+before measurement. The same manifest is used for Phase-0 baseline/routing
+work and the Phase-1 candidate comparison.
 
 ## 5. P0-C — capture the hardware profile
 
@@ -152,14 +200,15 @@ establish a Phase-1 performance claim.
 ## 6. P0-D — run one non-canonical serving smoke
 
 Before the canonical two-session campaign, use `--dev-smoke` to prove the
-whole serving path works with the pinned checkpoint, workload container, and
-selected GPU.
+whole serving path works with the pinned checkpoint, the frozen W1–W4
+manifest, and the selected GPU.
 
 The smoke should be deliberately small and must remain visibly
 `NON_CANONICAL`. Its purpose is to catch operational failures cheaply:
 
 - checkpoint/load failure;
-- invalid manifest wiring;
+- invalid manifest wiring or hash drift;
+- W1–W4 prompt-token shape violations under the pinned serving tokenizer;
 - `ft bench bw` profile creation/consumption failure;
 - server startup or instrumentation failure;
 - GPU UUID mismatch;
