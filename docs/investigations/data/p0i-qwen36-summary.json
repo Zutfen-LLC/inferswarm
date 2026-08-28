@@ -1,0 +1,60 @@
+{
+  "schema": "inferswarm.phase0.routing-summary/1",
+  "label": "MEASURED_AND_CALCULATED",
+  "source": {
+    "run_json_sha256": "1ecd14c8c157eb6cde62f8514b8f2af82a36dfe69e3a7241f5be6c9908e539dc",
+    "exact_routing_sha256": "4071e2bfd3c18f39e5c5a0b5ff8913ca0fb99b843cf7abca0ecc1f4ebd0a252f",
+    "cache_pressure_sha256": "f02d96a079a6af94b3fec9d2c571322a1274cd408a3a9ff2ef162f538babab3a",
+    "archive_sha256": "7bb8e55b9abb10eab4168cef6df50b76057668469e3ded214c40d6ff62cd254a",
+    "model_repository": "nvidia/Qwen3.6-35B-A3B-NVFP4",
+    "model_revision": "491c2f1ea524c639598bf8fa787a93fed5a6fbce",
+    "workload_manifest_sha256": "10f81e5418a71a68f387632de422c3337cc7ba0518111a8746ad856d0210b24a",
+    "freetoken_commit": "a42c03ce0233451df699cfd6c4e09573751c067f",
+    "inferswarm_methodology_commit": "0807842ce4cfd587ec77c5605cb61ed955dc3a11"
+  },
+  "verdict": {
+    "headline": "VALID CANONICAL CAMPAIGN",
+    "expected_observations": 288,
+    "observed_observations": 288,
+    "missing_observations": 0
+  },
+  "geometry": {
+    "num_moe_layers": 40,
+    "num_experts_per_layer": 256,
+    "total_expert_slots": 10240,
+    "minimum_cache_slots_M": 256,
+    "auto_cache_slots_A": 3774
+  },
+  "measured_cache_pressure": [
+    {"slots": 256, "cache_fraction": 0.025, "active_selections": 4492800, "misses": 4492800, "miss_rate": 1.0},
+    {"slots": 1135, "cache_fraction": 0.11083984375, "active_selections": 4492800, "misses": 2052072, "miss_rate": 0.4567467948717949},
+    {"slots": 2015, "cache_fraction": 0.19677734375, "active_selections": 4492800, "misses": 1425226, "miss_rate": 0.3172182158119658},
+    {"slots": 2894, "cache_fraction": 0.2826171875, "active_selections": 4492800, "misses": 968553, "miss_rate": 0.2155754537037037},
+    {"slots": 3774, "cache_fraction": 0.3685546875, "active_selections": 4492800, "misses": 660925, "miss_rate": 0.14710238675213676}
+  ],
+  "calculated_static_hot_slot_coverage": [
+    {"slots": 256, "coverage": 0.1462},
+    {"slots": 1135, "coverage": 0.3985},
+    {"slots": 2015, "coverage": 0.5662},
+    {"slots": 2894, "coverage": 0.6901},
+    {"slots": 3774, "coverage": 0.7844}
+  ],
+  "per_workload_measured_miss_rate": {
+    "W1": {"256": 1.0, "1135": 0.4433, "2015": 0.2947, "2894": 0.1976, "3774": 0.13},
+    "W2": {"256": 1.0, "1135": 0.476, "2015": 0.3425, "2894": 0.2243, "3774": 0.1495},
+    "W3": {"256": 1.0, "1135": 0.4484, "2015": 0.3137, "2894": 0.2222, "3774": 0.1587},
+    "W4": {"256": 1.0, "1135": 0.4503, "2015": 0.3131, "2894": 0.2397, "3774": 0.1831}
+  },
+  "per_workload_calculated_static_coverage": {
+    "W1": {"unique_slots": 9005, "256": 0.2119, "1135": 0.5214, "2015": 0.6978, "2894": 0.81, "3774": 0.8843},
+    "W2": {"unique_slots": 9460, "256": 0.2637, "1135": 0.5458, "2015": 0.6935, "2894": 0.7935, "3774": 0.8652},
+    "W3": {"unique_slots": 8081, "256": 0.2156, "1135": 0.5121, "2015": 0.6893, "2894": 0.8079, "3774": 0.888},
+    "W4": {"unique_slots": 6931, "256": 0.2359, "1135": 0.5541, "2015": 0.7297, "2894": 0.8439, "3774": 0.9182}
+  },
+  "privacy": {
+    "contains_prompt_text": false,
+    "contains_output_text": false,
+    "contains_hostname": false,
+    "contains_host_local_paths": false
+  }
+}
