@@ -184,6 +184,16 @@ much easier to remove or extract later.
 
 Phase 1 does not need a dynamic placement scheduler.
 
+The canonical pre-performance candidate is
+`phase1-qwen36-placement-v2` / `coverage_constrained_complement_5442`,
+SHA-256
+`2f62bb84df40d4cc5649e940a39cb53d2975eadecbc320fb97d2b037d4e005f4`.
+It supersedes v1 for the candidate while retaining v1 replay and historical
+evidence. See the
+[`v2 methodology correction`](phase1-placement-methodology-correction-v2.md).
+The correction changes only the static GPU-1 identity set; route ownership,
+dispatch, combine, transport, cache, prefill, and all gates remain unchanged.
+
 Use Phase-0 routing/cache evidence to generate one deterministic placement
 artifact before the first candidate benchmark. Prefer experts whose Phase-0
 service was non-local on GPU 0 rather than merely the most frequently selected

@@ -5,6 +5,18 @@ Status: Decision document. Written before Phase 0 baselines exist and before
 any Phase-1 result exists. Nothing here claims a measurement.
 ```
 
+> **Canonical placement amendment (2026-08-28).** Before any canonical
+> Phase-1 candidate output or performance was observed, the v1 zero-overlap
+> geometry was found incompatible with the unchanged per-class F2 floor.
+> The canonical pre-performance candidate is now
+> `phase1-qwen36-placement-v2` / `coverage_constrained_complement_5442`,
+> SHA-256
+> `2f62bb84df40d4cc5649e940a39cb53d2975eadecbc320fb97d2b037d4e005f4`.
+> The deterministic P0-I-only correction is recorded in
+> [`phase1-placement-methodology-correction-v2.md`](implementation/phase1-placement-methodology-correction-v2.md).
+> F2 remains ≥20% independently in W1, W2, W3, and W4; no gate, workload,
+> tolerance, or performance rule in this document changed.
+
 Canonical for [ROADMAP.md](../ROADMAP.md) Phase 1 and for InferSwarm issue #1.
 Subordinate to the [benchmark contract](../BENCHMARKING.md), which governs
 labels, provenance, and the microbenchmark rule everywhere in this project.

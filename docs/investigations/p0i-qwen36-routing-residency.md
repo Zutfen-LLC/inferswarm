@@ -161,6 +161,13 @@ therefore a valid two-GPU POC target.
 
 ## Phase-1 placement consequence
 
+> **Historical note.** The zero-overlap complementary placement described in
+> this section became v1 and is preserved as such. Before canonical candidate
+> performance, its already-frozen coverage was found incompatible with F2 for
+> W1, W3, and W4. The canonical candidate is superseded by the deterministic
+> [v2 methodology correction](../implementation/phase1-placement-methodology-correction-v2.md),
+> which uses only this same P0-I evidence.
+
 P0-I supports a deterministic placement derived before any Phase-1 candidate throughput is
 observed. The placement policy is specified separately in
 [`phase1-placement-policy.md`](../implementation/phase1-placement-policy.md).

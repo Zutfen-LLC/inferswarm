@@ -7,6 +7,15 @@ Source: canonical P0-I routing evidence
 Canonical remote placement: complement_5442
 ```
 
+> **Correction / historical status (2026-08-28).** This v1 validation remains
+> intact as historical evidence, including its artifact SHA and calculated
+> coverage. Its final claim of "ample selected-route geometry" was wrong:
+> W1, W3, and W4 are below the independently predeclared 20% F2 floor. V1 is
+> superseded for the canonical pre-performance candidate by
+> [`phase1-qwen36-placement-v2`](phase1-placement-methodology-correction-v2.md).
+> No canonical Phase-1 candidate performance had been observed before that
+> correction was frozen.
+
 This note records the mechanical validation of the generated Phase-1 placement artifact before any Phase-1 candidate throughput exists. It is subordinate to `phase1-placement-policy.md` and does not change the predeclared placement rule.
 
 ## Publication integrity
@@ -63,4 +72,9 @@ A later placement experiment may add per-expert miss telemetry and compare a mis
 
 ## Verdict
 
-**VALIDATED.** The generated artifact is a deterministic implementation of the predeclared policy and provides ample selected-route geometry for the Phase-1 mechanism gates. Whether those remote routes can be executed cheaply enough to improve end-to-end inference remains **[SPEC]** until the Phase-1 A/B campaign.
+**HISTORICAL VALIDATION, SUPERSEDED FOR THE CANONICAL CANDIDATE.** The generated
+artifact is a deterministic implementation of the v1 policy, but it does not
+provide viable F2 geometry for W1, W3, or W4. Its rationale, bytes, SHA, and
+physical PR #9 result remain part of the record. Whether any placement can
+improve end-to-end inference remains **[SPEC]** until an authorized canonical
+performance campaign; no such candidate performance informed v2.
