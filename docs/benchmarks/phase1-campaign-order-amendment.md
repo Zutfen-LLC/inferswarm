@@ -160,6 +160,67 @@ If the Session-2 B1 revalidation then materially drifts:
 B4, hybrid, CPU, or any other arm may not be silently substituted in either
 session.
 
+### Campaign identity binding the Session-1 gate
+
+A passing Session-1 B1 resolution authorizes candidate-first measurement only
+for **exactly the campaign that produced it**. A `COMPLETE`/`VALID`/passed
+Session-1 record from any other campaign is not this campaign's gate. Each
+campaign therefore carries a deterministic **campaign identity**: one SHA-256
+over a stable canonical-JSON representation of the components that define the
+experiment —
+
+- the exact FreeToken commit (HEAD of the clean campaign checkout);
+- the InferSwarm methodology commit the campaign belongs to;
+- the campaign runner version;
+- the model repository and the exact pinned model revision;
+- the frozen workload-manifest SHA-256;
+- the frozen placement artifact SHA-256;
+- the canonical protocol identity (classes, warmups, measured repetitions,
+  session arm orders, deviations); and
+- the primary arm definitions (the exact `ft serve` flag sets of
+  `CANONICAL_PERFORMANCE_BASELINE` and `PHASE1_CANDIDATE`).
+
+Rules:
+
+- Session 1 records the fingerprint — the SHA-256 **and** the human-readable
+  component values — in its provenance record and its session summary.
+- Session 2 refuses to start, **before any server starts**, unless the
+  Session-1 record (a) is `COMPLETE` and `VALID`, (b) has a passed baseline
+  identity gate, (c) comes from the expected Session-1 artifact set (the
+  session's plan, provenance, and baseline runtime artifacts, present and
+  agreeing with the summary's own SHA-256 index rather than trusted from
+  booleans alone), and (d) records **exactly** the current campaign identity.
+- If any component differs, Session 2 names it (older FreeToken HEAD, wrong
+  model revision, manifest, placement, runner version, protocol, or arm
+  definitions) and refuses; the remediation is to rerun Session 1 on the
+  current campaign, never to waive the mismatch.
+
+### Resolved expert-cache slot count: provenance, not a validity threshold
+
+The B1 identity requires `--moe-cache-auto` (the methodology's own rule) and
+the other resolved identity properties fixed in §2.3 (offload backend, Triton
+NVFP4 resolution, GPU decode, zero CPU MoE layers, graph-enabled decode). The
+**exact resolved expert-cache slot count is recorded as provenance** — §2.3
+already requires the resolved `moe_cache_size` in slots for every arm — and
+this amendment fixes **no numeric validity band** on it: a threshold that
+exists only in runner code (a hidden ±10 % rule) is not methodology and may
+not gate anything. If the resolved slot count changes what matters downstream
+(KV capacity), the consequence is governed by the predeclared
+supplementary-KV rule below, not by a slot-count identity gate.
+
+Two companion runner rules follow from the gate semantics above and are
+binding on the campaign runner:
+
+- **InferSwarm treatment present on a baseline arm is a B1 identity failure**
+  (the arm is not B1), with the same session-aware consequences as a resolved
+  identity drift — not an invalidation that still benchmarks.
+- **A resolved-arm contract failure discovered after the server is healthy and
+  before the first warmup stops measurement for that arm.** The runner never
+  benchmarks a configuration it already knows is not the declared experiment:
+  the arm is aborted before its first warmup, no generation of that arm is
+  recorded as a successful measurement, the planned generations are preserved
+  as not-executed evidence, and the session is `INVALID`/`INCOMPLETE`.
+
 ## Predeclared supplementary KV-matched arm
 
 §3 rule 2 requires a supplementary baseline run pinned to the candidate's KV
@@ -216,7 +277,10 @@ parameter. The campaign still uses:
 What changes is only what was not executable or not fully specified as written:
 the physically impossible repetition-level arm ordering; the baseline-identity
 gate semantics for the two counterbalanced sessions (Session-1 gate, Session-2
-revalidation); and the predeclaration of the §3-rule-2 supplementary
+revalidation, and the campaign-identity binding that makes the Session-1 gate
+authorize exactly the campaign that produced it); the explicit statement that
+the resolved expert-cache slot count is provenance with no hidden numeric
+validity band; and the predeclaration of the §3-rule-2 supplementary
 KV-matched arm, whose trigger and pinned capacity are fixed before execution
 instead of being discovered — or guessed — later. No threshold, statistic,
 gate, workload, arm flag, or decision rule moves.
