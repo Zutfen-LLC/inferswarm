@@ -7,6 +7,16 @@ Target issue: #4 — resident remote expert execution on a second RTX 3060
 Policy id: phase1-qwen36-placement-v1
 ```
 
+> **Supersession amendment (2026-08-28).** This historical v1 policy and its
+> byte-identical artifact are retained, but v1 is superseded for the canonical
+> pre-performance Phase-1 candidate by
+> [`phase1-qwen36-placement-v2`](phase1-placement-methodology-correction-v2.md),
+> artifact SHA-256
+> `2f62bb84df40d4cc5649e940a39cb53d2975eadecbc320fb97d2b037d4e005f4`.
+> The correction was frozen before any canonical candidate output or
+> performance observation. The v1 derivation below remains historical and must
+> not be rewritten or regenerated differently.
+
 This document fixes how the first two-GPU Phase-1 expert placement is derived. It exists so
 placement cannot be tuned after candidate throughput is visible.
 
@@ -199,3 +209,9 @@ possible loss of cheap GPU-0 hits remain to be measured.
 
 No placement may be changed in response to Phase-1 throughput without creating a new,
 explicitly versioned experiment.
+
+The v2 amendment was not a response to throughput: none had been collected.
+PR #9's noncanonical mechanism smoke exposed that this policy's zero-overlap
+constraint made the unchanged F2 floor mathematically impossible for three
+classes under the already-frozen P0-I routing evidence. That runtime
+observation was not an input to v2 identity selection.
