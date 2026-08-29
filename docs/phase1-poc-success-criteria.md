@@ -17,6 +17,22 @@ any Phase-1 result exists. Nothing here claims a measurement.
 > F2 remains ≥20% independently in W1, W2, W3, and W4; no gate, workload,
 > tolerance, or performance rule in this document changed.
 
+> **Canonical campaign-order amendment (2026-08-29).** Before any canonical
+> Phase-1 candidate performance existed, §10's repetition-level `A/B/A/B…`
+> interleaving was found physically impossible to execute on the canonical
+> rig without destroying the warmed serving state it exists to measure: both
+> arms require exclusive use of the same physical GPU 0. §10's executable
+> ordering is now two **counterbalanced arm-major sessions** (Session 1
+> baseline→candidate from a fresh thermal reset; Session 2
+> candidate→baseline from an independent thermal reset; `W1 → W2 → W3 → W4`
+> within every arm; one fresh server process per arm per session; no radix
+> cache clearing between classes). The §8.7 optional repetition pairing is
+> structurally unavailable under this ordering and the already-permitted
+> unpaired path applies. The amendment is recorded in
+> [`phase1-campaign-order-amendment.md`](benchmarks/phase1-campaign-order-amendment.md).
+> No threshold, statistic, workload, gate, baseline identity, placement, or
+> candidate configuration changed.
+
 Canonical for [ROADMAP.md](../ROADMAP.md) Phase 1 and for InferSwarm issue #1.
 Subordinate to the [benchmark contract](../BENCHMARKING.md), which governs
 labels, provenance, and the microbenchmark rule everywhere in this project.
@@ -1263,15 +1279,20 @@ comparison that can end the project.
 > benchmark generation block as defined in §10 — not the expert touch.**
 
 **What a block is.** `REMOTE_INTRINSIC` is measured on the candidate arm and
-`BASE_NONLOCAL_SERVICE` on the baseline arms, so a repetition block is the
-candidate repetition together with its **interleaved counterpart** at the same
-index within (session, workload class) — the A/B/A/B ordering §10 already
-fixes is what makes that pairing meaningful, since paired repetitions ran under
-the same thermal and load conditions. Where a pairing cannot be recovered from
-the result directory, each arm is still aggregated per repetition and the
-bootstrap still resamples repetition blocks; only the pairing is dropped, and
-the fact is reported. Touch-level resampling is not an alternative in either
-case.
+`BASE_NONLOCAL_SERVICE` on the baseline arms, so a repetition block was
+originally conceived as the candidate repetition together with its
+**interleaved counterpart** at the same index within (session, workload
+class) — the A/B/A/B ordering §10 originally fixed was what made that pairing
+meaningful, since paired repetitions ran under the same thermal and load
+conditions. §10's campaign-order amendment replaced repetition-level
+interleaving with counterbalanced arm-major sessions before any candidate
+performance existed, so the pairing is **structurally unavailable** in the
+canonical campaign: repetitions with equal indices did not run under
+contemporaneous conditions and must not be manufactured into paired
+observations. The already-permitted unpaired path therefore applies: each arm
+is still aggregated per repetition and the bootstrap still resamples
+repetition blocks; the pairing is dropped, and the fact is reported. Touch
+-level resampling is not an alternative in either case.
 
 **Per-repetition diagnostic.** Within each measured repetition `r` of each
 (configuration, workload class, session), using only that repetition's own
@@ -1579,10 +1600,26 @@ request is the expected starting state for both arms.
 **Repetitions.** `n = 10` measured generations per (configuration, class,
 session).
 
-**Sessions and ordering.** Two full sessions. Session 1 interleaves
-`A/B/A/B…`; session 2 runs on a different day and thermal state with the
-order reversed. Interleaving keeps thermal drift symmetric between arms
-rather than assigned to whichever arm ran second.
+**Sessions and ordering.** Two full sessions. As originally written, this
+section required: *"Session 1 interleaves `A/B/A/B…`; session 2 runs on a
+different day and thermal state with the order reversed. Interleaving keeps
+thermal drift symmetric between arms rather than assigned to whichever arm
+ran second."* That original language is preserved here and superseded, before
+any candidate performance existed, by the
+[Phase-1 campaign-order amendment](benchmarks/phase1-campaign-order-amendment.md):
+repetition-level interleaving cannot be executed on the canonical rig because
+both arms require exclusive use of the same physical GPU 0, and reloading a
+server between individual measured repetitions would destroy the warmed
+serving state this section exists to measure. The executable ordering is two
+**counterbalanced arm-major sessions**. Session 1 begins from a fresh
+thermal-reset state and runs `CANONICAL_PERFORMANCE_BASELINE` first, then
+`PHASE1_CANDIDATE`; Session 2 begins from an independent thermal-reset state
+and reverses the arm order. Within each arm/server process the workload-class
+order is `W1 → W2 → W3 → W4` in both sessions, with one fresh server process
+per arm per session, no restart between classes, and no radix-cache clearing
+between classes. Counterbalancing keeps thermal/order drift symmetric between
+arms rather than assigned to whichever arm ran second — the unchanged intent
+of the original rule.
 
 **Primary statistic.** Median of the per-rep decode tok/s within each
 (configuration, class, session). Median rather than mean because a single
@@ -1936,8 +1973,10 @@ The go/no-go report (issue #10) is reviewable against this list:
       the verdict
 - [ ] Four frozen workload classes, hash-pinned before candidate benchmarking;
       any drop recorded with reason
-- [ ] n = 10, two sessions, interleaved, medians, bootstrap CIs, CV reported,
-      no rep discarded, no early stopping
+- [ ] n = 10, two sessions, counterbalanced arm-major order per the campaign
+      -order amendment, medians, bootstrap CIs, CV reported, no rep discarded,
+      no early stopping; the report states that §8.7 repetition pairing is
+      unavailable
 - [ ] M-start / M-warm / M-cold reported separately; startup not amortized;
       any startup breach recorded as a caveat on an ordinary verdict, not as a
       new decision state
