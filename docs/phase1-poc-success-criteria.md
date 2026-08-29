@@ -1621,6 +1621,19 @@ between classes. Counterbalancing keeps thermal/order drift symmetric between
 arms rather than assigned to whichever arm ran second — the unchanged intent
 of the original rule.
 
+**Baseline identity under this ordering.** Because Session 2 runs the
+candidate first, baseline-identity checking is asymmetric and is fixed by the
+same amendment: Session 1 B1 runtime resolution is the **campaign-build
+baseline identity gate** and must pass before the first candidate measurement
+anywhere in the campaign (including before Session 2 may start); Session 2
+revalidates B1 when its counterbalanced B1 arm runs — it cannot stop before
+candidate performance, because the protocol intentionally places the candidate
+first. If Session-2 B1 materially drifts, Session 2 is `INVALID`, its
+already-collected candidate performance is retained as invalid evidence but
+excluded from every `R_c`, `R_agg`, and verdict, the baseline is refreshed,
+and the complete affected campaign is rerun with no candidate data reused or
+spliced.
+
 **Primary statistic.** Median of the per-rep decode tok/s within each
 (configuration, class, session). Median rather than mean because a single
 background process or scheduler hiccup skews a mean at `n = 10`, and this is
@@ -1977,6 +1990,12 @@ The go/no-go report (issue #10) is reviewable against this list:
       -order amendment, medians, bootstrap CIs, CV reported, no rep discarded,
       no early stopping; the report states that §8.7 repetition pairing is
       unavailable
+- [ ] Session-1 B1 runtime resolution (the campaign-build baseline identity
+      gate) passed before any candidate measurement; the Session-2 B1
+      revalidation outcome is recorded — if it drifted, Session 2 is INVALID,
+      its candidate performance is retained as invalid evidence and excluded
+      from every `R_c`/`R_agg`/verdict, and the complete affected campaign was
+      rerun with no candidate data reused or spliced
 - [ ] M-start / M-warm / M-cold reported separately; startup not amortized;
       any startup breach recorded as a caveat on an ordinary verdict, not as a
       new decision state

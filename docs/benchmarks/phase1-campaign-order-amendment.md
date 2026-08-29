@@ -127,10 +127,70 @@ FreeToken campaign build** rather than dividing candidate numbers by historical
 Phase-0 numbers collected from another commit/day. This is a current-build
 observation of the already-frozen B1 identity, not a new baseline selection.
 
-If B1 no longer resolves to the expected legitimate configuration on the
-campaign build, the campaign **stops before candidate performance** and the
-Phase-0 baseline must be refreshed. B4, hybrid, CPU, or any other arm may not
-be silently substituted.
+### Session-1 gate and Session-2 revalidation
+
+Baseline identity is checked at two different points with two different
+consequences, because the counterbalanced order is not symmetric with respect
+to when B1 resolves:
+
+- **Session 1 B1 runtime resolution is the campaign-build baseline identity
+  gate.** Session 1 runs B1 first, and that resolution must pass before the
+  **first candidate measurement anywhere in the campaign** — before Session 1's
+  own candidate arm runs, and before Session 2 may start at all (Session 2's
+  first arm is the candidate). If Session-1 B1 no longer resolves to the
+  expected legitimate configuration, the campaign stops with **no candidate
+  generation collected**, and the Phase-0 baseline must be refreshed.
+- **Session 2 revalidates B1 when its counterbalanced B1 arm runs.** By design
+  Session 2 runs the candidate first; no preliminary B1 server is started
+  before the Session-2 candidate, because that would perturb the
+  candidate-first thermal/cache condition this amendment exists to preserve.
+  Session 2 therefore **cannot** stop before candidate performance, and no rule
+  in this amendment claims that it can.
+
+If the Session-2 B1 revalidation then materially drifts:
+
+1. Session 2 is `INVALID`.
+2. All already-collected Session-2 candidate performance is **retained as
+   invalid evidence** but excluded from every `R_c`, from `R_agg`, and from
+   every verdict.
+3. The baseline must be refreshed and the **complete affected campaign** is
+   rerun.
+4. No candidate data is reused or spliced into the rerun.
+
+B4, hybrid, CPU, or any other arm may not be silently substituted in either
+session.
+
+## Predeclared supplementary KV-matched arm
+
+§3 rule 2 requires a supplementary baseline run pinned to the candidate's KV
+capacity whenever the two primary arms resolve different KV capacities. That
+arm is **predeclared** in every canonical campaign plan before execution; a
+campaign plan is not "fully specified" while a later runtime observation could
+reveal that an unplanned arm is mandatory. The operator does not guess or pass
+the capacity manually:
+
+- **Arm id:** `baseline_b1_kv_matched` — the B1 identity plus
+  `--num-tokens 17075`, nothing else.
+- **Pinned capacity:** 17,075 tokens. The canonical candidate requests
+  `--num-tokens 17075`, and the candidate's runtime contract requires its
+  *resolved* KV capacity to equal 17,075 tokens, so the supplementary arm's
+  configuration is fully known before any performance exists.
+- **Trigger, fixed before execution:** the arm is required exactly when
+  `candidate_resolved_kv_capacity != baseline_resolved_kv_capacity`, evaluated
+  once both primary runtime reports exist. No performance number controls this
+  branch.
+- **Placement and budget:** if required, it runs after both primary arms of the
+  same session, with the full 48-generation block (2 discarded warmups + 10
+  measured per class, W1→W4), one fresh server process, same as every arm. If
+  the capacities are equal, the arm is recorded `NOT_REQUIRED_BY_KV_RULE` and
+  its generations are not executed.
+- **Accounting:** required primary generations and conditional supplementary
+  generations are counted separately, the condition's resolution is recorded
+  (required / not required / unresolved), and a canonical session cannot be
+  `COMPLETE`/`VALID` when the condition is true and the supplementary block is
+  missing.
+- **Status:** supplementary and non-gating. It never replaces B1 as a primary
+  comparator, never enters `R_c` or `R_agg`, and never affects a verdict.
 
 ## What does not change
 
@@ -153,7 +213,13 @@ parameter. The campaign still uses:
 - the same session-agreement rule: both sessions are evaluated independently,
   and the worse verdict stands.
 
-Only the physically impossible repetition-level arm ordering changes.
+What changes is only what was not executable or not fully specified as written:
+the physically impossible repetition-level arm ordering; the baseline-identity
+gate semantics for the two counterbalanced sessions (Session-1 gate, Session-2
+revalidation); and the predeclaration of the §3-rule-2 supplementary
+KV-matched arm, whose trigger and pinned capacity are fixed before execution
+instead of being discovered — or guessed — later. No threshold, statistic,
+gate, workload, arm flag, or decision rule moves.
 
 ## Anti-goalpost statement
 
