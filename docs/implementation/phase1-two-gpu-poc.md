@@ -28,7 +28,13 @@ of the evidence the candidate depends on:
 
 1. issue #2 has produced a valid `CANONICAL_PERFORMANCE_BASELINE` on GPU 0;
 2. the exact `nvidia/Qwen3.6-35B-A3B-NVFP4` revision is pinned;
-3. `CORRECTNESS_REFERENCE` exists and passes its self-consistency check;
+3. `CORRECTNESS_REFERENCE` exists and passes its self-consistency check.
+   Since the pre-re-evaluation v2 amendment, the Phase-1 comparator is the
+   matched-state `PHASE1_CORRECTNESS_REFERENCE_V2` — the candidate's GPU0
+   serving configuration with the InferSwarm treatment removed — defined in
+   [`phase1-correctness-reference-methodology-correction-v2.md`](phase1-correctness-reference-methodology-correction-v2.md).
+   The P0-H R512 configuration remains historical Phase-0 evidence and is no
+   longer the Phase-1 numerical reference;
 4. issue #3 has produced real routing/cache traces for the frozen workload
    set, including enough hit/miss information to choose a placement without
    guessing;

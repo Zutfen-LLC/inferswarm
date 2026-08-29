@@ -17,6 +17,12 @@ The Phase-1 placement record consists of the preserved historical
 canonical pre-performance
 [`v2 methodology correction`](phase1-placement-methodology-correction-v2.md).
 
+The Phase-1 numerical comparator is the matched-state
+[`correctness-reference v2 methodology correction`](phase1-correctness-reference-methodology-correction-v2.md),
+frozen before the corrected Phase-1 candidate re-evaluation. It supersedes the
+P0-H R512 configuration as the Phase-1 `CORRECTNESS_REFERENCE` only; Phase-0
+evidence and all performance baselines are unchanged.
+
 The important distinction is between **tooling implemented** and **phase
 complete**. Phase 0 is not complete merely because its benchmark harness has
 landed; it completes only when its canonical evidence exists and the Phase-0
