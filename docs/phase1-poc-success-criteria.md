@@ -350,20 +350,53 @@ configuration record.
 
 ### 2.4 The correctness reference (`CORRECTNESS_REFERENCE`)
 
-A fixed, non-distributed, single-device GPU configuration, declared before
-Phase 0, never chosen by speed, and identical for every correctness fixture in
-§5:
+> **Amendment (Phase-1 correctness-reference v2).** The original Phase-1
+> `CORRECTNESS_REFERENCE` was the P0-H R512 single-device configuration. It was
+> superseded — before any corrected Phase-1 candidate evaluation and after the
+> methodology-change PR required by this section — by the matched-state
+> `PHASE1_CORRECTNESS_REFERENCE_V2` defined below. R512 remains a valid,
+> self-consistent configuration and remains the historical Phase-0 evidence;
+> it is superseded only as the Phase-1 numerical comparator. The full causal
+> record, the preserved historical NO-GO verdicts, and the frozen v2
+> configuration are in
+> [`phase1-correctness-reference-methodology-correction-v2.md`](implementation/phase1-correctness-reference-methodology-correction-v2.md).
+> §2.4 was **not** always this way; the amendment history is part of the
+> record, not an edit of it.
+
+A fixed, non-distributed, single-device GPU configuration, never chosen by
+speed, identical for every correctness fixture in §5, and constructed to
+isolate the Phase-1 treatment: the candidate's GPU0 serving configuration with
+the InferSwarm treatment removed. Since the v2 amendment, the canonical
+Phase-1 reference is:
 
 ```
 ft serve  --model nvidia/Qwen3.6-35B-A3B-NVFP4   (pinned revision, §1.1)
+          --gpu GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55
           --moe-backend offload
           --moe-cpu-layers 0
-          --nvfp4-backend <the value the candidate's remote expert GEMM
-                           resolves to, recorded as a resolved value>
-          --moe-cache-size <fixed; >= num_experts, and <= 992 under marlin>
+          --nvfp4-backend triton
+          --moe-cache-size 3774
+          --kv-reserve-tokens 17075
+          --num-tokens 17075
+          --memory-ratio 0.85
+          --cuda-graph-max-bs 0
+          --max-running-requests 1
           --sampling-defaults none        (framework defaults -> greedy, §5.3)
-          one GPU; the second card absent or unused
+          one GPU; the second card absent or unused; no placement artifact,
+          no InferSwarm resident bank, no remote decode, no remote transport
 ```
+
+Resolved values — not flags — are the record: expert quant `nvfp4`, GPU MoE
+decode target, empty CPU MoE layers, Triton NVFP4 backend, 3,774 expert-cache
+slots, page size 1, attention backend FI, hybrid radix cache, prefill overlap
+enabled, enough KV capacity for W3, and no decode CUDA graphs, matching the
+distributed Phase-1 candidate. The warmed serving-state protocol (fresh server
+per session, canonical W1 → W2 → W3 → W4 order, frozen request bodies and
+output lengths, `ignore_eos`, greedy, two warmups per workload, no restart or
+radix-cache clearing between classes) is part of the frozen fixture, so the
+local reference has the same deterministic cache-history opportunity as the
+candidate. The reference is defined by this mechanical derivation, not by
+numerical closeness to the candidate.
 
 Why exactly this, from source rather than by preference:
 
@@ -393,12 +426,17 @@ Why exactly this, from source rather than by preference:
    when `config.moe_cpu_layers is None` (`engine.py:517-523`). Without it, a
    quota-capped host could silently move part of the *reference* onto the CPU
    executor and change what "the same kernel" means.
-5. **A fixed `--moe-cache-size`** keeps the reference stable run to run instead
-   of tracking whatever `--moe-cache-auto` resolves to on the day. It must
-   satisfy the `cache_size >= num_experts` floor and, under `marlin`,
-   `MARLIN_MAX_CACHE_SIZE = 992` (`python/freetoken/moe/offload_cache.py:93`,
-   enforced at 408-422). Cache size changes how often the reference fetches,
-   not what it computes.
+ 5. **A fixed `--moe-cache-size`** keeps the reference stable run to run instead
+    of tracking whatever `--moe-cache-auto` resolves to on the day. It must
+    satisfy the `cache_size >= num_experts` floor and, under `marlin`,
+    `MARLIN_MAX_CACHE_SIZE = 992` (`python/freetoken/moe/offload_cache.py:93`,
+    enforced at 408-422). The original wording of this item — "Cache size
+    changes how often the reference fetches, not what it computes" — was
+    corrected by the v2 amendment: for the complete warmed serving state,
+    cache geometry also alters radix-cache eviction history, so the reference
+    must match the candidate's resolved cache/KV geometry rather than merely
+    share its kernel family. See
+    [`phase1-correctness-reference-methodology-correction-v2.md`](implementation/phase1-correctness-reference-methodology-correction-v2.md).
 
 Binding rules:
 
