@@ -588,3 +588,50 @@ Thus `E2A = 1.023686`, `E2B = 1.274224`, and `E3 = 0.755544`, with `S3/S1 = 0.96
 All D3 ownership arithmetic was exact with no dropped or duplicated routes. Every D3 arm retained zero fallback, failure, graph recapture, steady host synchronization, and steady expert-weight H2D; every retained generation completed at 128 tokens with zero process major faults, `pswpin`, and `pswpout`. Total generation wall including warmups was 71.626 s; fresh-process startup/ready time was 559.802 s. The bounded generic MoE timing surface produced an S1 complete-layer median of 0.233 ms (p95 0.777 ms); D3 component intervals were unavailable/not-applicable, so they are not combined into a critical-path claim.
 
 Final classification is `D3_SCALING_PROMISING`; `COMPOUNDING_MARGINAL_PENALTY = false`. The result justifies one further bounded architecture question: whether this marginal retention persists with a fourth worker and/or a deliberately heterogeneous low-cost resident worker. No follow-on experiment was started. Host-local raw evidence remains under `~/inferswarm-evidence/architecture-search/d3-three-gpu-fanout/` and is not committed here. Canonical Phase-1 NO-GO remains unchanged.
+
+---
+
+## 13. D4 capability-weighted heterogeneous placement
+
+D4 tested whether D3's equal route-pressure placement made the faster worker wait for the slower worker. It changed placement only: the D3 GPU0-local plus independent A/B fan-out, wait, reconstruction, and canonical sum topology remained unchanged. No fourth GPU, network worker, or D5 work was introduced.
+
+### Startup reuse
+
+An unchanged D3 S3 baseline startup was profiled at 200.149 s. Approximate phase walls were 14.002 s GPU/runtime initialization, 10.076 s non-expert model loading, 48.967 s normalized expert-bank materialization, 121.068 s resident-worker loading, 5.117 s graph capture, and 0.919 s other. Process-group checkpoint-window reads were approximately 26.211 GB; disk reads overlap parsing/materialization, so those phase estimates are not additive.
+
+FreeToken added a benchmark-only, CUDA-free parent that stages the exact immutable model snapshot read-only in tmpfs and launches every arm as a new subprocess. Only snapshot files are reused. Engine, CUDA allocator/runtime state, GPU0 cache, resident banks, KV state, streams/events, graphs, counters, pointers, and request state remain fresh. Three fresh-engine startups were 163.537, 164.520, and 163.509 s: median 163.537 s, 1.224x versus baseline, saving 36.613 s per arm. Remaining phase medians were about 5 s non-expert loading, 17 s expert-bank materialization, 121 s resident loading, and 5 s capture. The one-time full-copy plus byte verification cost 239.258 s and amortizes after approximately seven arms; D4 used more than seven fresh model starts across reuse measurement, calibration, correctness, and serving, so no broader loader redesign was pursued.
+
+### Frozen calibration and placement
+
+FreeToken `c74e3c94105e23398a39f707e5d63a03f820116f` measured the already-proven captured D3 one-layer physical path for 200 repetitions per isolated worker:
+
+| Worker | Median | p95 | max |
+|---|---:|---:|---:|
+| A, Gen2 x1 | 279.9410 us | 287.5119 us | 292.5740 us |
+| B, Gen3 x16 | 177.9415 us | 191.6544 us | 204.6130 us |
+
+Both calibration arms had zero major faults, paging, fallback, failure, recapture, steady host sync, and steady expert-weight movement. Frozen inverse-service targets were A 38.861826% and B 61.138174%. Calibration evidence SHA-256 was `a7b0a0fa2e32ed25109985f64e26bcba54b0d3afe50494c4646a4d079558cc79`.
+
+InferSwarm commit `c7e0dc0` froze placement SHA-256 `283595b7559bb3aa46a08c7d00cfef1e0a77eb62967d6392c618a63f35d34cdf` before D4 execution/performance. It preserves the exact D3 top-6000 remote union, 3,000 identities per worker, 3,774 GPU0 dynamic-cache slots, and the 4,240-identity local remainder. Exact-rational deterministic derivation predicts W4 remote shares A 38.857414% / B 61.142586% and normalized service walls 104.269068 / 104.288431 us, an absolute difference of 0.019363 us.
+
+### Correctness and serving result
+
+FreeToken `1935ca0c80bc2163e5541d89f8430d3c15580769` passed the D4 SHA-pinned parser, exact banks/ownership, whole-model BS1 capture, real mixed A+B+local oracle, changed payload without recapture, and graph-local versus weighted deterministic W4 equality. Final gate: `D4_PLACEMENT_PRIMITIVE_PASS`. D3's concurrency proof remains applicable because execution code/topology did not change.
+
+The matched screen ran D3 equal control then D4 weighted, each with one discarded warmup and exactly three retained 128-token W4 generations:
+
+| Arm | Retained decode tok/s | Median |
+|---|---:|---:|
+| D4-CONTROL | 51.061229, 51.237563, 51.255660 | 51.237563 |
+| D4-WEIGHTED | 51.089438, 51.252748, 51.267758 | 51.252748 |
+
+Weighted measured total route shares were A 37.294537%, B 58.312008%, and GPU0 4.393455%; the remote-only split was A 39.008352% / B 60.991648%, close to the frozen capacity target. Control remote split was A 50.122894% / B 49.877106%. Despite that large physical routing change, median inter-token wall was effectively unchanged (19.372838 ms control, 19.365014 ms weighted).
+
+- `WEIGHTED_GAIN = 1.000296362`
+- `WEIGHTED_VS_S2B = 0.755765223`
+- `WEIGHTED_VS_S1 = 0.963013754`
+- final classification: `D4_WEIGHTING_NEUTRAL`
+
+Both arms had exact ownership, identical GPU0-local counts, zero fallback/failure/recapture/steady host synchronization/steady expert-weight movement, and zero retained major faults, `pswpin`, or `pswpout`.
+
+The leading slow-worker critical-path hypothesis is not supported: capability weighting moved remote pressure from roughly 50/50 to 39/61 without moving throughput. Do not add another worker yet. The next bounded experiment should add non-perturbing worker-completion and join/fan-in timing under equal and weighted placement, then isolate fixed two-worker graph/host-staged transport tax from GPU0 reconstruction/local work and PCIe contention. Canonical Phase-1 NO-GO, D2, and D3 remain unchanged.
