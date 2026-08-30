@@ -50,3 +50,4 @@ deciding whether the target is achievable — that distinction is the point.
 | [0003](0003-1gbe-baseline-network-target.md) | 1 GbE baseline network target | Accepted |
 | [0004](0004-moe-as-first-execution-strategy.md) | MoE as first execution strategy | Accepted |
 | [0005](0005-ram-remains-first-class-tier.md) | System RAM remains a first-class tier | Accepted |
+| [0006](0006-backend-independent-worker-and-representation-boundary.md) | Backend-independent worker and representation boundary | Accepted |
