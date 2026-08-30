@@ -1,0 +1,3508 @@
+{
+  "bootstrap": {
+    "arms": "unpaired",
+    "resamples": 10000,
+    "seed": 0,
+    "session_seed_rule": "independent numpy Generator(seed=0) per session"
+  },
+  "campaign_identity_sha256": "1a1dda536059c8d71f9179597c46d17c65a7763d9a8875414d7ce823b1c2ec13",
+  "cold_first_generation": {
+    "1": {
+      "baseline_b1": {
+        "decode_tok_s": 55.833926046880244,
+        "ttft_ms": 2116.5393060073256
+      },
+      "candidate_v2": {
+        "decode_tok_s": 3.9679566103155386,
+        "ttft_ms": 7505.022714001825
+      }
+    },
+    "2": {
+      "baseline_b1": {
+        "decode_tok_s": 55.85521572129572,
+        "ttft_ms": 2124.2716270207893
+      },
+      "candidate_v2": {
+        "decode_tok_s": 3.8849481356020297,
+        "ttft_ms": 7498.386580991792
+      }
+    }
+  },
+  "instrumentation_control": {
+    "control_plane_failures": 0,
+    "http_client_timeout_seconds": 305.0,
+    "maximum_observed_snapshot_elapsed_upper_bound": {
+      "arm": "candidate_v2",
+      "class": "W2",
+      "seconds": 155.6659791469574,
+      "session": 1
+    },
+    "operation_timeout_seconds": 300.0
+  },
+  "mechanism_and_complete_layer": {
+    "1": {
+      "baseline_b1": {
+        "W1": {
+          "durations_ms": {
+            "complete_layer": {
+              "cv_percent": 82.1321613664448,
+              "iqr": 0.292864,
+              "max": 1.57184,
+              "median": 0.233472,
+              "min": 0.082944,
+              "n": 204400,
+              "p95": 0.538624,
+              "status": "valid"
+            },
+            "gpu0_branch.complete_local_branch": {
+              "cv_percent": 82.6891537920371,
+              "iqr": 0.29286399999999996,
+              "max": 1.569792,
+              "median": 0.231424,
+              "min": 0.080896,
+              "n": 204400,
+              "p95": 0.536576,
+              "status": "valid"
+            },
+            "gpu0_branch.host_to_gpu0_expert_fetch_copy": {
+              "cv_percent": 126.33614844110934,
+              "iqr": 0.28876799999999997,
+              "max": 1.480704,
+              "median": 0.14848,
+              "min": 0.003072,
+              "n": 204400,
+              "p95": 0.451584,
+              "status": "valid"
+            },
+            "gpu0_branch.local_expert_execution": {
+              "cv_percent": 0.8651502733098343,
+              "iqr": 0.0010239999999999971,
+              "max": 0.080896,
+              "median": 0.075776,
+              "min": 0.073728,
+              "n": 204400,
+              "p95": 0.0768,
+              "status": "valid"
+            },
+            "gpu0_branch.route_cache_service_bookkeeping": {
+              "cv_percent": 47.211614482358584,
+              "iqr": 0.004096,
+              "max": 0.014336,
+              "median": 0.006144,
+              "min": 0.002048,
+              "n": 204400,
+              "p95": 0.009216,
+              "status": "valid"
+            },
+            "gpu1_branch.complete_gpu1_branch": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.gpu1_route_contribution_execution": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.gpu1_to_host_route_contributions_d2h": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.host_to_gpu1_payload_h2d": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.final_moe_sum_reduce": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.host_remote_join_wait": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.host_to_gpu0_returned_route_contributions": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.route_reconstruction": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.classification_control_host_wait": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.gpu0_to_host_activation_routing": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.gpu0_to_host_staging_host_wait": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.host_remote_submit_control": {
+              "status": "not_applicable"
+            }
+          },
+          "snapshot_elapsed_upper_bound_s": 153.8209924697876,
+          "timing_population": {
+            "capacity_steps": 5120,
+            "complete_layer_timing_valid": true,
+            "component_timing_valid": true,
+            "records_retained": 204400,
+            "remote_overlap_active": false,
+            "steps_observed": 5110,
+            "steps_retained": 5110,
+            "truncated": false
+          }
+        },
+        "W2": {
+          "durations_ms": {
+            "complete_layer": {
+              "cv_percent": 79.12668085454222,
+              "iqr": 0.29388800000000004,
+              "max": 1.569792,
+              "median": 0.233472,
+              "min": 0.082944,
+              "n": 204400,
+              "p95": 0.690176,
+              "status": "valid"
+            },
+            "gpu0_branch.complete_local_branch": {
+              "cv_percent": 79.61949618651167,
+              "iqr": 0.293888,
+              "max": 1.567744,
+              "median": 0.232448,
+              "min": 0.080896,
+              "n": 204400,
+              "p95": 0.688128,
+              "status": "valid"
+            },
+            "gpu0_branch.host_to_gpu0_expert_fetch_copy": {
+              "cv_percent": 116.67350776979546,
+              "iqr": 0.289792,
+              "max": 1.477632,
+              "median": 0.14848,
+              "min": 0.003072,
+              "n": 204400,
+              "p95": 0.602112,
+              "status": "valid"
+            },
+            "gpu0_branch.local_expert_execution": {
+              "cv_percent": 0.8661393701764698,
+              "iqr": 0.0,
+              "max": 0.080896,
+              "median": 0.075776,
+              "min": 0.073728,
+              "n": 204400,
+              "p95": 0.0768,
+              "status": "valid"
+            },
+            "gpu0_branch.route_cache_service_bookkeeping": {
+              "cv_percent": 45.18278886685111,
+              "iqr": 0.004096,
+              "max": 0.014336,
+              "median": 0.006144,
+              "min": 0.002048,
+              "n": 204400,
+              "p95": 0.009216,
+              "status": "valid"
+            },
+            "gpu1_branch.complete_gpu1_branch": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.gpu1_route_contribution_execution": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.gpu1_to_host_route_contributions_d2h": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.host_to_gpu1_payload_h2d": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.final_moe_sum_reduce": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.host_remote_join_wait": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.host_to_gpu0_returned_route_contributions": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.route_reconstruction": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.classification_control_host_wait": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.gpu0_to_host_activation_routing": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.gpu0_to_host_staging_host_wait": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.host_remote_submit_control": {
+              "status": "not_applicable"
+            }
+          },
+          "snapshot_elapsed_upper_bound_s": 152.97799158096313,
+          "timing_population": {
+            "capacity_steps": 5120,
+            "complete_layer_timing_valid": true,
+            "component_timing_valid": true,
+            "records_retained": 204400,
+            "remote_overlap_active": false,
+            "steps_observed": 5110,
+            "steps_retained": 5110,
+            "truncated": false
+          }
+        },
+        "W3": {
+          "durations_ms": {
+            "complete_layer": {
+              "cv_percent": 75.56166907702737,
+              "iqr": 0.294912,
+              "max": 1.547264,
+              "median": 0.233472,
+              "min": 0.082944,
+              "n": 102000,
+              "p95": 0.6769151999999881,
+              "status": "valid"
+            },
+            "gpu0_branch.complete_local_branch": {
+              "cv_percent": 76.03258301313782,
+              "iqr": 0.293888,
+              "max": 1.54624,
+              "median": 0.232448,
+              "min": 0.080896,
+              "n": 102000,
+              "p95": 0.67584,
+              "status": "valid"
+            },
+            "gpu0_branch.host_to_gpu0_expert_fetch_copy": {
+              "cv_percent": 111.58326248998975,
+              "iqr": 0.289792,
+              "max": 1.455104,
+              "median": 0.149504,
+              "min": 0.003072,
+              "n": 102000,
+              "p95": 0.589824,
+              "status": "valid"
+            },
+            "gpu0_branch.local_expert_execution": {
+              "cv_percent": 0.9080633923105689,
+              "iqr": 0.0,
+              "max": 0.079872,
+              "median": 0.075776,
+              "min": 0.074752,
+              "n": 102000,
+              "p95": 0.077824,
+              "status": "valid"
+            },
+            "gpu0_branch.route_cache_service_bookkeeping": {
+              "cv_percent": 43.779324496297974,
+              "iqr": 0.004096,
+              "max": 0.014336,
+              "median": 0.006144,
+              "min": 0.002048,
+              "n": 102000,
+              "p95": 0.009216,
+              "status": "valid"
+            },
+            "gpu1_branch.complete_gpu1_branch": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.gpu1_route_contribution_execution": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.gpu1_to_host_route_contributions_d2h": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.host_to_gpu1_payload_h2d": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.final_moe_sum_reduce": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.host_remote_join_wait": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.host_to_gpu0_returned_route_contributions": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.route_reconstruction": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.classification_control_host_wait": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.gpu0_to_host_activation_routing": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.gpu0_to_host_staging_host_wait": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.host_remote_submit_control": {
+              "status": "not_applicable"
+            }
+          },
+          "snapshot_elapsed_upper_bound_s": 77.28067183494568,
+          "timing_population": {
+            "capacity_steps": 5120,
+            "complete_layer_timing_valid": true,
+            "component_timing_valid": true,
+            "records_retained": 102000,
+            "remote_overlap_active": false,
+            "steps_observed": 2550,
+            "steps_retained": 2550,
+            "truncated": false
+          }
+        },
+        "W4": {
+          "durations_ms": {
+            "complete_layer": {
+              "cv_percent": 78.38101115934381,
+              "iqr": 0.29388800000000004,
+              "max": 1.57184,
+              "median": 0.233472,
+              "min": 0.082944,
+              "n": 50800,
+              "p95": 0.6881791999999954,
+              "status": "valid"
+            },
+            "gpu0_branch.complete_local_branch": {
+              "cv_percent": 78.87114195070764,
+              "iqr": 0.29286399999999996,
+              "max": 1.570816,
+              "median": 0.231424,
+              "min": 0.080896,
+              "n": 50800,
+              "p95": 0.687104,
+              "status": "valid"
+            },
+            "gpu0_branch.host_to_gpu0_expert_fetch_copy": {
+              "cv_percent": 115.89048137949511,
+              "iqr": 0.28876799999999997,
+              "max": 1.480704,
+              "median": 0.14848,
+              "min": 0.003072,
+              "n": 50800,
+              "p95": 0.601088,
+              "status": "valid"
+            },
+            "gpu0_branch.local_expert_execution": {
+              "cv_percent": 0.9105405818985782,
+              "iqr": 0.0,
+              "max": 0.079872,
+              "median": 0.075776,
+              "min": 0.073728,
+              "n": 50800,
+              "p95": 0.0768,
+              "status": "valid"
+            },
+            "gpu0_branch.route_cache_service_bookkeeping": {
+              "cv_percent": 44.3186326778261,
+              "iqr": 0.004096,
+              "max": 0.014336,
+              "median": 0.006144,
+              "min": 0.002048,
+              "n": 50800,
+              "p95": 0.009216,
+              "status": "valid"
+            },
+            "gpu1_branch.complete_gpu1_branch": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.gpu1_route_contribution_execution": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.gpu1_to_host_route_contributions_d2h": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.host_to_gpu1_payload_h2d": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.final_moe_sum_reduce": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.host_remote_join_wait": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.host_to_gpu0_returned_route_contributions": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.route_reconstruction": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.classification_control_host_wait": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.gpu0_to_host_activation_routing": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.gpu0_to_host_staging_host_wait": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.host_remote_submit_control": {
+              "status": "not_applicable"
+            }
+          },
+          "snapshot_elapsed_upper_bound_s": 37.50619435310364,
+          "timing_population": {
+            "capacity_steps": 5120,
+            "complete_layer_timing_valid": true,
+            "component_timing_valid": true,
+            "records_retained": 50800,
+            "remote_overlap_active": false,
+            "steps_observed": 1270,
+            "steps_retained": 1270,
+            "truncated": false
+          }
+        }
+      },
+      "candidate_v2": {
+        "W1": {
+          "durations_ms": {
+            "complete_layer": {
+              "cv_percent": 47.3697844693931,
+              "iqr": 0.12390400000000001,
+              "max": 596.742144,
+              "median": 3.611648,
+              "min": 1.717248,
+              "n": 204400,
+              "p95": 3.822592,
+              "status": "valid"
+            },
+            "gpu0_branch.complete_local_branch": {
+              "cv_percent": 6.632668835692581,
+              "iqr": 0.058367999999999975,
+              "max": 5.190656,
+              "median": 1.125376,
+              "min": 0.930816,
+              "n": 203602,
+              "p95": 1.199104,
+              "status": "valid"
+            },
+            "gpu0_branch.host_to_gpu0_expert_fetch_copy": {
+              "cv_percent": 25.865329839455676,
+              "iqr": 0.009216000000000002,
+              "max": 1.594368,
+              "median": 0.167936,
+              "min": 0.1536,
+              "n": 203602,
+              "p95": 0.18944,
+              "status": "valid"
+            },
+            "gpu0_branch.local_expert_execution": {
+              "cv_percent": 6.596221279336814,
+              "iqr": 0.026624000000000092,
+              "max": 3.627008,
+              "median": 0.5888,
+              "min": 0.078848,
+              "n": 203602,
+              "p95": 0.623616,
+              "status": "valid"
+            },
+            "gpu0_branch.route_cache_service_bookkeeping": {
+              "cv_percent": 20.52126529932823,
+              "iqr": 0.01638400000000001,
+              "max": 4.376576,
+              "median": 0.323584,
+              "min": 0.176128,
+              "n": 203602,
+              "p95": 0.344064,
+              "status": "valid"
+            },
+            "gpu1_branch.complete_gpu1_branch": {
+              "cv_percent": 242.2843226095028,
+              "iqr": 0.02633601427078247,
+              "max": 593.4623413085938,
+              "median": 0.605567991733551,
+              "min": 0.5752959847450256,
+              "n": 156962,
+              "p95": 0.6449599862098694,
+              "status": "valid"
+            },
+            "gpu1_branch.gpu1_route_contribution_execution": {
+              "cv_percent": 311.29530866899347,
+              "iqr": 0.020383983850479126,
+              "max": 593.2892456054688,
+              "median": 0.46931201219558716,
+              "min": 0.44377601146698,
+              "n": 156962,
+              "p95": 0.5018560290336609,
+              "status": "valid"
+            },
+            "gpu1_branch.gpu1_to_host_route_contributions_d2h": {
+              "cv_percent": 5.17253553130422,
+              "iqr": 0.0022399984300136566,
+              "max": 0.15692800283432007,
+              "median": 0.05119999870657921,
+              "min": 0.04825599864125252,
+              "n": 156962,
+              "p95": 0.05452800169587135,
+              "status": "valid"
+            },
+            "gpu1_branch.host_to_gpu1_payload_h2d": {
+              "cv_percent": 5.014780517322896,
+              "iqr": 0.00374399870634079,
+              "max": 0.21750399470329285,
+              "median": 0.08403199911117554,
+              "min": 0.07923199981451035,
+              "n": 156962,
+              "p95": 0.09008000046014786,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.final_moe_sum_reduce": {
+              "cv_percent": 7.037494351355999,
+              "iqr": 0.007168000000000008,
+              "max": 3.161088,
+              "median": 0.154624,
+              "min": 0.003072,
+              "n": 156962,
+              "p95": 0.169984,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.host_remote_join_wait": {
+              "cv_percent": 10.186367339786612,
+              "iqr": 0.0002999999999999999,
+              "max": 0.074143,
+              "median": 0.006791,
+              "min": 0.005359,
+              "n": 156962,
+              "p95": 0.007263,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.host_to_gpu0_returned_route_contributions": {
+              "cv_percent": 5.54972854410463,
+              "iqr": 0.006143999999999997,
+              "max": 1.147904,
+              "median": 0.115712,
+              "min": 0.009216,
+              "n": 156962,
+              "p95": 0.12288,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.route_reconstruction": {
+              "cv_percent": 6.701783359446726,
+              "iqr": 0.00716799999999998,
+              "max": 1.134592,
+              "median": 0.128,
+              "min": 0.00512,
+              "n": 156962,
+              "p95": 0.137216,
+              "status": "valid"
+            },
+            "remote_dispatch_control.classification_control_host_wait": {
+              "cv_percent": 524.6780471039508,
+              "iqr": 0.0019440000000000013,
+              "max": 38.54102,
+              "median": 0.048262,
+              "min": 0.045948,
+              "n": 204400,
+              "p95": 0.051165,
+              "status": "valid"
+            },
+            "remote_dispatch_control.gpu0_to_host_activation_routing": {
+              "cv_percent": 5.766392917243522,
+              "iqr": 0.0036479979753494263,
+              "max": 1.0560640096664429,
+              "median": 0.08499199897050858,
+              "min": 0.08057600259780884,
+              "n": 156962,
+              "p95": 0.09014400094747543,
+              "status": "valid"
+            },
+            "remote_dispatch_control.gpu0_to_host_staging_host_wait": {
+              "cv_percent": 14.59403642713862,
+              "iqr": 0.00021900000000000044,
+              "max": 0.127842,
+              "median": 0.005387,
+              "min": 0.004765,
+              "n": 156962,
+              "p95": 0.005695,
+              "status": "valid"
+            },
+            "remote_dispatch_control.host_remote_submit_control": {
+              "cv_percent": 217.74070414397295,
+              "iqr": 0.02874599999999994,
+              "max": 593.539694,
+              "median": 0.6773515,
+              "min": 0.640414,
+              "n": 156962,
+              "p95": 0.71713995,
+              "status": "valid"
+            }
+          },
+          "mechanism": {
+            "aggregate": {
+              "combine_operations": 156962,
+              "dispatch_mismatch_layer_calls": 0,
+              "executed_on_gpu0": 1278653,
+              "executed_on_gpu1": 356547,
+              "expected_remote_dispatches": 156962,
+              "explicit_failure": 0,
+              "failure_events": 0,
+              "fallback_elsewhere": 0,
+              "final_sum_reductions": 156962,
+              "hypothetical_streamed_remote_weight_bytes": 633090557952,
+              "prefill_remote_dispatches": 0,
+              "remote_dispatches": 156962,
+              "remote_selected_layer_calls": 156962,
+              "route_reconstruction_operations": 156962,
+              "selected_for_gpu1": 356547,
+              "total_router_selections": 1635200
+            },
+            "expert_weight_traffic": {
+              "source": "transport/storage execution-boundary observed counter",
+              "startup_bytes_host_to_gpu1": 9662902272,
+              "steady_state_bytes_host_to_gpu1": 0
+            },
+            "gates": {
+              "F1": {
+                "combined_expert_cache_bytes": 16364077056,
+                "gpu1_expert_byte_fraction": 0.5904947916666666,
+                "gpu1_expert_cache_bytes": 9662902272,
+                "passed": true,
+                "threshold": 0.25
+              },
+              "F2": {
+                "executed_on_gpu1": 356547,
+                "gpu1_execution_fraction": 0.21804488747553816,
+                "passed": true,
+                "scope": "current reset-delimited workload window; classes are not averaged",
+                "threshold": 0.2,
+                "total_router_selections": 1635200
+              },
+              "F3": {
+                "actual_dispatches": 156962,
+                "expected_dispatches": 156962,
+                "passed": true,
+                "per_layer_call_mismatches": 0
+              },
+              "F4": {
+                "passed": null,
+                "status": "evaluated_by_correctness"
+              },
+              "F5": {
+                "denominator_rule": "unique remote identities per layer/step x bytes_per_identity",
+                "hypothetical_streamed_remote_weight_bytes": 633090557952,
+                "passed": true,
+                "ratio": 0.0010313878667094364,
+                "steady_state_expert_weight_bytes_host_to_gpu1": 0,
+                "steady_state_host_to_gpu1_bytes": 652961920,
+                "threshold": 0.01
+              },
+              "F6": {
+                "executed_on_gpu1": 356547,
+                "explicit_failure": 0,
+                "fallback_elsewhere": 0,
+                "passed": true,
+                "selected_for_gpu1": 356547
+              }
+            },
+            "overlap_active": true,
+            "ownership": {
+              "selected_accounted_exactly": true,
+              "successful_selection_arithmetic_exact": true
+            },
+            "residency": {
+              "aliasing_rule": "GPU0 prefill views alias slot storage and are not recounted",
+              "combined_expert_cache_bytes": 16364077056,
+              "gpu0": {
+                "actual_expert_bank_tensor_bytes": 6701174784,
+                "configured_expert_cache_slots": 3774
+              },
+              "gpu1": {
+                "actual_expert_bank_tensor_bytes": 9662902272,
+                "frozen_resident_slots": 5442
+              },
+              "gpu1_expert_byte_fraction": 0.5904947916666666
+            },
+            "transport": "host_staged"
+          },
+          "snapshot_elapsed_upper_bound_s": 154.29650568962097,
+          "timing_population": {
+            "capacity_steps": 5120,
+            "complete_layer_timing_valid": true,
+            "component_timing_valid": true,
+            "records_retained": 204400,
+            "remote_overlap_active": true,
+            "steps_observed": 5110,
+            "steps_retained": 5110,
+            "truncated": false
+          }
+        },
+        "W2": {
+          "durations_ms": {
+            "complete_layer": {
+              "cv_percent": 88.5929426765571,
+              "iqr": 0.187392,
+              "max": 1075.530752,
+              "median": 3.708928,
+              "min": 1.7152,
+              "n": 204400,
+              "p95": 3.762176,
+              "status": "valid"
+            },
+            "gpu0_branch.complete_local_branch": {
+              "cv_percent": 4.79734285853303,
+              "iqr": 0.05734400000000006,
+              "max": 4.363264,
+              "median": 1.14688,
+              "min": 0.932864,
+              "n": 201172,
+              "p95": 1.179648,
+              "status": "valid"
+            },
+            "gpu0_branch.host_to_gpu0_expert_fetch_copy": {
+              "cv_percent": 22.786135667138463,
+              "iqr": 0.009216000000000002,
+              "max": 3.41504,
+              "median": 0.169984,
+              "min": 0.1536,
+              "n": 201172,
+              "p95": 0.187392,
+              "status": "valid"
+            },
+            "gpu0_branch.local_expert_execution": {
+              "cv_percent": 5.563765739775903,
+              "iqr": 0.027648000000000006,
+              "max": 1.959936,
+              "median": 0.594944,
+              "min": 0.078848,
+              "n": 201172,
+              "p95": 0.616448,
+              "status": "valid"
+            },
+            "gpu0_branch.route_cache_service_bookkeeping": {
+              "cv_percent": 13.04613037589787,
+              "iqr": 0.01638400000000001,
+              "max": 3.468288,
+              "median": 0.333824,
+              "min": 0.177152,
+              "n": 201172,
+              "p95": 0.34816,
+              "status": "valid"
+            },
+            "gpu1_branch.complete_gpu1_branch": {
+              "cv_percent": 512.2659176150349,
+              "iqr": 0.025023996829986572,
+              "max": 1072.3323974609375,
+              "median": 0.6122879981994629,
+              "min": 0.5760319828987122,
+              "n": 187195,
+              "p95": 0.6378880143165588,
+              "status": "valid"
+            },
+            "gpu1_branch.gpu1_route_contribution_execution": {
+              "cv_percent": 658.414416543206,
+              "iqr": 0.019167989492416382,
+              "max": 1072.1617431640625,
+              "median": 0.47276800870895386,
+              "min": 0.4443199932575226,
+              "n": 187195,
+              "p95": 0.49460160434246025,
+              "status": "valid"
+            },
+            "gpu1_branch.gpu1_to_host_route_contributions_d2h": {
+              "cv_percent": 14.469135568128197,
+              "iqr": 0.0030080005526542664,
+              "max": 3.0805439949035645,
+              "median": 0.05257600173354149,
+              "min": 0.047680001705884933,
+              "n": 187195,
+              "p95": 0.05417599901556969,
+              "status": "valid"
+            },
+            "gpu1_branch.host_to_gpu1_payload_h2d": {
+              "cv_percent": 9.583686490879451,
+              "iqr": 0.003871999680995941,
+              "max": 3.0900800228118896,
+              "median": 0.08604799956083298,
+              "min": 0.0791039988398552,
+              "n": 187195,
+              "p95": 0.09043200314044952,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.final_moe_sum_reduce": {
+              "cv_percent": 4.5965485134626425,
+              "iqr": 0.007168000000000008,
+              "max": 0.355328,
+              "median": 0.156672,
+              "min": 0.003072,
+              "n": 187195,
+              "p95": 0.171008,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.host_remote_join_wait": {
+              "cv_percent": 10.398988255056038,
+              "iqr": 0.00037699999999999973,
+              "max": 0.0686,
+              "median": 0.006916,
+              "min": 0.005357,
+              "n": 187195,
+              "p95": 0.007229,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.host_to_gpu0_returned_route_contributions": {
+              "cv_percent": 4.786108765975373,
+              "iqr": 0.006143999999999997,
+              "max": 0.25088,
+              "median": 0.11776,
+              "min": 0.008192,
+              "n": 187195,
+              "p95": 0.121856,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.route_reconstruction": {
+              "cv_percent": 8.324843238764444,
+              "iqr": 0.006143999999999997,
+              "max": 0.251904,
+              "median": 0.130048,
+              "min": 0.00512,
+              "n": 187195,
+              "p95": 0.134144,
+              "status": "valid"
+            },
+            "remote_dispatch_control.classification_control_host_wait": {
+              "cv_percent": 526.5445525459405,
+              "iqr": 0.002452999999999997,
+              "max": 39.28818,
+              "median": 0.049904,
+              "min": 0.045839,
+              "n": 204400,
+              "p95": 0.051269,
+              "status": "valid"
+            },
+            "remote_dispatch_control.gpu0_to_host_activation_routing": {
+              "cv_percent": 4.945178661061462,
+              "iqr": 0.003903999924659729,
+              "max": 0.23001599311828613,
+              "median": 0.08736000210046768,
+              "min": 0.0806720033288002,
+              "n": 187195,
+              "p95": 0.0899839997291565,
+              "status": "valid"
+            },
+            "remote_dispatch_control.gpu0_to_host_staging_host_wait": {
+              "cv_percent": 11.44184939404937,
+              "iqr": 0.00024499999999999956,
+              "max": 0.065827,
+              "median": 0.005463,
+              "min": 0.00482,
+              "n": 187195,
+              "p95": 0.005733,
+              "status": "valid"
+            },
+            "remote_dispatch_control.host_remote_submit_control": {
+              "cv_percent": 460.7274593880686,
+              "iqr": 0.028779,
+              "max": 1072.409501,
+              "median": 0.681181,
+              "min": 0.640649,
+              "n": 187195,
+              "p95": 0.7118743,
+              "status": "valid"
+            }
+          },
+          "mechanism": {
+            "aggregate": {
+              "combine_operations": 187195,
+              "dispatch_mismatch_layer_calls": 0,
+              "executed_on_gpu0": 1040153,
+              "executed_on_gpu1": 595047,
+              "expected_remote_dispatches": 187195,
+              "explicit_failure": 0,
+              "failure_events": 0,
+              "fallback_elsewhere": 0,
+              "final_sum_reductions": 187195,
+              "hypothetical_streamed_remote_weight_bytes": 1056574973952,
+              "prefill_remote_dispatches": 0,
+              "remote_dispatches": 187195,
+              "remote_selected_layer_calls": 187195,
+              "route_reconstruction_operations": 187195,
+              "selected_for_gpu1": 595047,
+              "total_router_selections": 1635200
+            },
+            "expert_weight_traffic": {
+              "source": "transport/storage execution-boundary observed counter",
+              "startup_bytes_host_to_gpu1": 9662902272,
+              "steady_state_bytes_host_to_gpu1": 0
+            },
+            "gates": {
+              "F1": {
+                "combined_expert_cache_bytes": 16364077056,
+                "gpu1_expert_byte_fraction": 0.5904947916666666,
+                "gpu1_expert_cache_bytes": 9662902272,
+                "passed": true,
+                "threshold": 0.25
+              },
+              "F2": {
+                "executed_on_gpu1": 595047,
+                "gpu1_execution_fraction": 0.36389860567514676,
+                "passed": true,
+                "scope": "current reset-delimited workload window; classes are not averaged",
+                "threshold": 0.2,
+                "total_router_selections": 1635200
+              },
+              "F3": {
+                "actual_dispatches": 187195,
+                "expected_dispatches": 187195,
+                "passed": true,
+                "per_layer_call_mismatches": 0
+              },
+              "F4": {
+                "passed": null,
+                "status": "evaluated_by_correctness"
+              },
+              "F5": {
+                "denominator_rule": "unique remote identities per layer/step x bytes_per_identity",
+                "hypothetical_streamed_remote_weight_bytes": 1056574973952,
+                "passed": true,
+                "ratio": 0.0007370335463154531,
+                "steady_state_expert_weight_bytes_host_to_gpu1": 0,
+                "steady_state_host_to_gpu1_bytes": 778731200,
+                "threshold": 0.01
+              },
+              "F6": {
+                "executed_on_gpu1": 595047,
+                "explicit_failure": 0,
+                "fallback_elsewhere": 0,
+                "passed": true,
+                "selected_for_gpu1": 595047
+              }
+            },
+            "overlap_active": true,
+            "ownership": {
+              "selected_accounted_exactly": true,
+              "successful_selection_arithmetic_exact": true
+            },
+            "residency": {
+              "aliasing_rule": "GPU0 prefill views alias slot storage and are not recounted",
+              "combined_expert_cache_bytes": 16364077056,
+              "gpu0": {
+                "actual_expert_bank_tensor_bytes": 6701174784,
+                "configured_expert_cache_slots": 3774
+              },
+              "gpu1": {
+                "actual_expert_bank_tensor_bytes": 9662902272,
+                "frozen_resident_slots": 5442
+              },
+              "gpu1_expert_byte_fraction": 0.5904947916666666
+            },
+            "transport": "host_staged"
+          },
+          "snapshot_elapsed_upper_bound_s": 155.6659791469574,
+          "timing_population": {
+            "capacity_steps": 5120,
+            "complete_layer_timing_valid": true,
+            "component_timing_valid": true,
+            "records_retained": 204400,
+            "remote_overlap_active": true,
+            "steps_observed": 5110,
+            "steps_retained": 5110,
+            "truncated": false
+          }
+        },
+        "W3": {
+          "durations_ms": {
+            "complete_layer": {
+              "cv_percent": 48.16716123728339,
+              "iqr": 0.0460799999999999,
+              "max": 463.47264,
+              "median": 3.786752,
+              "min": 1.724416,
+              "n": 102000,
+              "p95": 3.87072,
+              "status": "valid"
+            },
+            "gpu0_branch.complete_local_branch": {
+              "cv_percent": 125.2993570702613,
+              "iqr": 0.02662399999999998,
+              "max": 462.61248,
+              "median": 1.173504,
+              "min": 0.939008,
+              "n": 101819,
+              "p95": 1.210368,
+              "status": "valid"
+            },
+            "gpu0_branch.host_to_gpu0_expert_fetch_copy": {
+              "cv_percent": 27.935536309177934,
+              "iqr": 0.004096000000000016,
+              "max": 1.304576,
+              "median": 0.17408,
+              "min": 0.154624,
+              "n": 101819,
+              "p95": 0.19456,
+              "status": "valid"
+            },
+            "gpu0_branch.local_expert_execution": {
+              "cv_percent": 236.95903866545683,
+              "iqr": 0.01126399999999994,
+              "max": 462.188544,
+              "median": 0.608256,
+              "min": 0.079872,
+              "n": 101819,
+              "p95": 0.630784,
+              "status": "valid"
+            },
+            "gpu0_branch.route_cache_service_bookkeeping": {
+              "cv_percent": 19.219666805862968,
+              "iqr": 0.005119999999999958,
+              "max": 0.601088,
+              "median": 0.342016,
+              "min": 0.1792,
+              "n": 101819,
+              "p95": 0.359424,
+              "status": "valid"
+            },
+            "gpu1_branch.complete_gpu1_branch": {
+              "cv_percent": 8.519018867903632,
+              "iqr": 0.013983964920043945,
+              "max": 2.7975358963012695,
+              "median": 0.624288022518158,
+              "min": 0.5772160291671753,
+              "n": 80789,
+              "p95": 0.6510720252990723,
+              "status": "valid"
+            },
+            "gpu1_branch.gpu1_route_contribution_execution": {
+              "cv_percent": 10.92366417036208,
+              "iqr": 0.0106239914894104,
+              "max": 2.6498560905456543,
+              "median": 0.4806399941444397,
+              "min": 0.445279985666275,
+              "n": 80789,
+              "p95": 0.5039680004119873,
+              "status": "valid"
+            },
+            "gpu1_branch.gpu1_to_host_route_contributions_d2h": {
+              "cv_percent": 4.543109171173142,
+              "iqr": 0.0009279996156692505,
+              "max": 0.17004799842834473,
+              "median": 0.054496001452207565,
+              "min": 0.04854400083422661,
+              "n": 80789,
+              "p95": 0.05580800026655197,
+              "status": "valid"
+            },
+            "gpu1_branch.host_to_gpu1_payload_h2d": {
+              "cv_percent": 4.989420717380013,
+              "iqr": 0.002080000936985016,
+              "max": 0.43004798889160156,
+              "median": 0.08860799670219421,
+              "min": 0.08038400113582611,
+              "n": 80789,
+              "p95": 0.0926079973578453,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.final_moe_sum_reduce": {
+              "cv_percent": 10.163949910230611,
+              "iqr": 0.0030719999999999914,
+              "max": 3.209216,
+              "median": 0.160768,
+              "min": 0.055296,
+              "n": 80789,
+              "p95": 0.175104,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.host_remote_join_wait": {
+              "cv_percent": 10.43725974150647,
+              "iqr": 0.0001910000000000002,
+              "max": 0.068597,
+              "median": 0.007159,
+              "min": 0.005581,
+              "n": 80789,
+              "p95": 0.007399,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.host_to_gpu0_returned_route_contributions": {
+              "cv_percent": 9.979723001366846,
+              "iqr": 0.0030720000000000053,
+              "max": 3.208192,
+              "median": 0.120832,
+              "min": 0.008192,
+              "n": 80789,
+              "p95": 0.125952,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.route_reconstruction": {
+              "cv_percent": 4.62460704487048,
+              "iqr": 0.002048000000000022,
+              "max": 0.237568,
+              "median": 0.134144,
+              "min": 0.00512,
+              "n": 80789,
+              "p95": 0.139264,
+              "status": "valid"
+            },
+            "remote_dispatch_control.classification_control_host_wait": {
+              "cv_percent": 677.4805211564445,
+              "iqr": 0.0007269999999999985,
+              "max": 37.808394,
+              "median": 0.051162,
+              "min": 0.046404,
+              "n": 102000,
+              "p95": 0.052257,
+              "status": "valid"
+            },
+            "remote_dispatch_control.gpu0_to_host_activation_routing": {
+              "cv_percent": 4.416321138337347,
+              "iqr": 0.0016000047326087952,
+              "max": 0.19622400403022766,
+              "median": 0.09052799642086029,
+              "min": 0.08179199695587158,
+              "n": 80789,
+              "p95": 0.09328000247478485,
+              "status": "valid"
+            },
+            "remote_dispatch_control.gpu0_to_host_staging_host_wait": {
+              "cv_percent": 12.441412775260604,
+              "iqr": 0.0001810000000000006,
+              "max": 0.073234,
+              "median": 0.005733,
+              "min": 0.00495,
+              "n": 80789,
+              "p95": 0.005965,
+              "status": "valid"
+            },
+            "remote_dispatch_control.host_remote_submit_control": {
+              "cv_percent": 9.07806884271069,
+              "iqr": 0.016817000000000082,
+              "max": 10.287077,
+              "median": 0.695194,
+              "min": 0.64337,
+              "n": 80789,
+              "p95": 0.725548,
+              "status": "valid"
+            }
+          },
+          "mechanism": {
+            "aggregate": {
+              "combine_operations": 80789,
+              "dispatch_mismatch_layer_calls": 0,
+              "executed_on_gpu0": 627784,
+              "executed_on_gpu1": 188216,
+              "expected_remote_dispatches": 80789,
+              "explicit_failure": 0,
+              "failure_events": 0,
+              "fallback_elsewhere": 0,
+              "final_sum_reductions": 80789,
+              "hypothetical_streamed_remote_weight_bytes": 334199341056,
+              "prefill_remote_dispatches": 0,
+              "remote_dispatches": 80789,
+              "remote_selected_layer_calls": 80789,
+              "route_reconstruction_operations": 80789,
+              "selected_for_gpu1": 188216,
+              "total_router_selections": 816000
+            },
+            "expert_weight_traffic": {
+              "source": "transport/storage execution-boundary observed counter",
+              "startup_bytes_host_to_gpu1": 9662902272,
+              "steady_state_bytes_host_to_gpu1": 0
+            },
+            "gates": {
+              "F1": {
+                "combined_expert_cache_bytes": 16364077056,
+                "gpu1_expert_byte_fraction": 0.5904947916666666,
+                "gpu1_expert_cache_bytes": 9662902272,
+                "passed": true,
+                "threshold": 0.25
+              },
+              "F2": {
+                "executed_on_gpu1": 188216,
+                "gpu1_execution_fraction": 0.23065686274509803,
+                "passed": true,
+                "scope": "current reset-delimited workload window; classes are not averaged",
+                "threshold": 0.2,
+                "total_router_selections": 816000
+              },
+              "F3": {
+                "actual_dispatches": 80789,
+                "expected_dispatches": 80789,
+                "passed": true,
+                "per_layer_call_mismatches": 0
+              },
+              "F4": {
+                "passed": null,
+                "status": "evaluated_by_correctness"
+              },
+              "F5": {
+                "denominator_rule": "unique remote identities per layer/step x bytes_per_identity",
+                "hypothetical_streamed_remote_weight_bytes": 334199341056,
+                "passed": true,
+                "ratio": 0.0010056340594151096,
+                "steady_state_expert_weight_bytes_host_to_gpu1": 0,
+                "steady_state_host_to_gpu1_bytes": 336082240,
+                "threshold": 0.01
+              },
+              "F6": {
+                "executed_on_gpu1": 188216,
+                "explicit_failure": 0,
+                "fallback_elsewhere": 0,
+                "passed": true,
+                "selected_for_gpu1": 188216
+              }
+            },
+            "overlap_active": true,
+            "ownership": {
+              "selected_accounted_exactly": true,
+              "successful_selection_arithmetic_exact": true
+            },
+            "residency": {
+              "aliasing_rule": "GPU0 prefill views alias slot storage and are not recounted",
+              "combined_expert_cache_bytes": 16364077056,
+              "gpu0": {
+                "actual_expert_bank_tensor_bytes": 6701174784,
+                "configured_expert_cache_slots": 3774
+              },
+              "gpu1": {
+                "actual_expert_bank_tensor_bytes": 9662902272,
+                "frozen_resident_slots": 5442
+              },
+              "gpu1_expert_byte_fraction": 0.5904947916666666
+            },
+            "transport": "host_staged"
+          },
+          "snapshot_elapsed_upper_bound_s": 76.96339893341064,
+          "timing_population": {
+            "capacity_steps": 5120,
+            "complete_layer_timing_valid": true,
+            "component_timing_valid": true,
+            "records_retained": 102000,
+            "remote_overlap_active": true,
+            "steps_observed": 2550,
+            "steps_retained": 2550,
+            "truncated": false
+          }
+        },
+        "W4": {
+          "durations_ms": {
+            "complete_layer": {
+              "cv_percent": 62.08870992887927,
+              "iqr": 0.05324799999999996,
+              "max": 423.368704,
+              "median": 3.698688,
+              "min": 1.794048,
+              "n": 50800,
+              "p95": 3.795968,
+              "status": "valid"
+            },
+            "gpu0_branch.complete_local_branch": {
+              "cv_percent": 6.511289194917961,
+              "iqr": 0.031231999999999926,
+              "max": 4.211712,
+              "median": 1.14688,
+              "min": 0.970752,
+              "n": 50663,
+              "p95": 1.189888,
+              "status": "valid"
+            },
+            "gpu0_branch.host_to_gpu0_expert_fetch_copy": {
+              "cv_percent": 39.68493212973457,
+              "iqr": 0.005120000000000013,
+              "max": 1.537024,
+              "median": 0.169984,
+              "min": 0.160768,
+              "n": 50663,
+              "p95": 0.262144,
+              "status": "valid"
+            },
+            "gpu0_branch.local_expert_execution": {
+              "cv_percent": 9.767342779734802,
+              "iqr": 0.014336000000000015,
+              "max": 3.662848,
+              "median": 0.594944,
+              "min": 0.078848,
+              "n": 50663,
+              "p95": 0.61952,
+              "status": "valid"
+            },
+            "gpu0_branch.route_cache_service_bookkeeping": {
+              "cv_percent": 20.590113858495556,
+              "iqr": 0.008191999999999977,
+              "max": 0.576512,
+              "median": 0.3328,
+              "min": 0.183296,
+              "n": 50663,
+              "p95": 0.350208,
+              "status": "valid"
+            },
+            "gpu1_branch.complete_gpu1_branch": {
+              "cv_percent": 339.6311566588568,
+              "iqr": 0.013536036014556885,
+              "max": 420.05841064453125,
+              "median": 0.6113280057907104,
+              "min": 0.5990080237388611,
+              "n": 38498,
+              "p95": 0.6378560066223145,
+              "status": "valid"
+            },
+            "gpu1_branch.gpu1_route_contribution_execution": {
+              "cv_percent": 437.0491081885264,
+              "iqr": 0.009440004825592041,
+              "max": 419.88336181640625,
+              "median": 0.47206398844718933,
+              "min": 0.4610559940338135,
+              "n": 38498,
+              "p95": 0.49459201097488403,
+              "status": "valid"
+            },
+            "gpu1_branch.gpu1_to_host_route_contributions_d2h": {
+              "cv_percent": 4.58140098064114,
+              "iqr": 0.0008959993720054626,
+              "max": 0.19436800479888916,
+              "median": 0.05273599922657013,
+              "min": 0.05040000006556511,
+              "n": 38498,
+              "p95": 0.05407999828457832,
+              "status": "valid"
+            },
+            "gpu1_branch.host_to_gpu1_payload_h2d": {
+              "cv_percent": 4.638105682582969,
+              "iqr": 0.0018879994750022888,
+              "max": 0.20934399962425232,
+              "median": 0.08665599673986435,
+              "min": 0.08265600353479385,
+              "n": 38498,
+              "p95": 0.09011200070381165,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.final_moe_sum_reduce": {
+              "cv_percent": 3.8674499318928093,
+              "iqr": 0.0040959999999999885,
+              "max": 0.2816,
+              "median": 0.157696,
+              "min": 0.003072,
+              "n": 38498,
+              "p95": 0.165888,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.host_remote_join_wait": {
+              "cv_percent": 11.52765403172122,
+              "iqr": 0.00018099999999999974,
+              "max": 0.06989,
+              "median": 0.00699,
+              "min": 0.005713,
+              "n": 38498,
+              "p95": 0.007222,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.host_to_gpu0_returned_route_contributions": {
+              "cv_percent": 6.002958300609076,
+              "iqr": 0.0020479999999999943,
+              "max": 0.247808,
+              "median": 0.118784,
+              "min": 0.009216,
+              "n": 38498,
+              "p95": 0.12288,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.route_reconstruction": {
+              "cv_percent": 5.654130137753886,
+              "iqr": 0.0030719999999999914,
+              "max": 0.314368,
+              "median": 0.131072,
+              "min": 0.00512,
+              "n": 38498,
+              "p95": 0.136192,
+              "status": "valid"
+            },
+            "remote_dispatch_control.classification_control_host_wait": {
+              "cv_percent": 929.487610763302,
+              "iqr": 0.0006890000000000021,
+              "max": 38.516588,
+              "median": 0.050058,
+              "min": 0.048164,
+              "n": 50800,
+              "p95": 0.051111,
+              "status": "valid"
+            },
+            "remote_dispatch_control.gpu0_to_host_activation_routing": {
+              "cv_percent": 4.741789223009161,
+              "iqr": 0.0016959980130195618,
+              "max": 0.2059520035982132,
+              "median": 0.08793599903583527,
+              "min": 0.08348800241947174,
+              "n": 38498,
+              "p95": 0.09091199934482574,
+              "status": "valid"
+            },
+            "remote_dispatch_control.gpu0_to_host_staging_host_wait": {
+              "cv_percent": 12.40438269565512,
+              "iqr": 0.00017900000000000034,
+              "max": 0.060901,
+              "median": 0.005557,
+              "min": 0.005035,
+              "n": 38498,
+              "p95": 0.005792,
+              "status": "valid"
+            },
+            "remote_dispatch_control.host_remote_submit_control": {
+              "cv_percent": 305.91040200698416,
+              "iqr": 0.01564224999999997,
+              "max": 420.13468,
+              "median": 0.680115,
+              "min": 0.666666,
+              "n": 38498,
+              "p95": 0.7088020500000001,
+              "status": "valid"
+            }
+          },
+          "mechanism": {
+            "aggregate": {
+              "combine_operations": 38498,
+              "dispatch_mismatch_layer_calls": 0,
+              "executed_on_gpu0": 320964,
+              "executed_on_gpu1": 85436,
+              "expected_remote_dispatches": 38498,
+              "explicit_failure": 0,
+              "failure_events": 0,
+              "fallback_elsewhere": 0,
+              "final_sum_reductions": 38498,
+              "hypothetical_streamed_remote_weight_bytes": 151701528576,
+              "prefill_remote_dispatches": 0,
+              "remote_dispatches": 38498,
+              "remote_selected_layer_calls": 38498,
+              "route_reconstruction_operations": 38498,
+              "selected_for_gpu1": 85436,
+              "total_router_selections": 406400
+            },
+            "expert_weight_traffic": {
+              "source": "transport/storage execution-boundary observed counter",
+              "startup_bytes_host_to_gpu1": 9662902272,
+              "steady_state_bytes_host_to_gpu1": 0
+            },
+            "gates": {
+              "F1": {
+                "combined_expert_cache_bytes": 16364077056,
+                "gpu1_expert_byte_fraction": 0.5904947916666666,
+                "gpu1_expert_cache_bytes": 9662902272,
+                "passed": true,
+                "threshold": 0.25
+              },
+              "F2": {
+                "executed_on_gpu1": 85436,
+                "gpu1_execution_fraction": 0.2102263779527559,
+                "passed": true,
+                "scope": "current reset-delimited workload window; classes are not averaged",
+                "threshold": 0.2,
+                "total_router_selections": 406400
+              },
+              "F3": {
+                "actual_dispatches": 38498,
+                "expected_dispatches": 38498,
+                "passed": true,
+                "per_layer_call_mismatches": 0
+              },
+              "F4": {
+                "passed": null,
+                "status": "evaluated_by_correctness"
+              },
+              "F5": {
+                "denominator_rule": "unique remote identities per layer/step x bytes_per_identity",
+                "hypothetical_streamed_remote_weight_bytes": 151701528576,
+                "passed": true,
+                "ratio": 0.0010557024804121642,
+                "steady_state_expert_weight_bytes_host_to_gpu1": 0,
+                "steady_state_host_to_gpu1_bytes": 160151680,
+                "threshold": 0.01
+              },
+              "F6": {
+                "executed_on_gpu1": 85436,
+                "explicit_failure": 0,
+                "fallback_elsewhere": 0,
+                "passed": true,
+                "selected_for_gpu1": 85436
+              }
+            },
+            "overlap_active": true,
+            "ownership": {
+              "selected_accounted_exactly": true,
+              "successful_selection_arithmetic_exact": true
+            },
+            "residency": {
+              "aliasing_rule": "GPU0 prefill views alias slot storage and are not recounted",
+              "combined_expert_cache_bytes": 16364077056,
+              "gpu0": {
+                "actual_expert_bank_tensor_bytes": 6701174784,
+                "configured_expert_cache_slots": 3774
+              },
+              "gpu1": {
+                "actual_expert_bank_tensor_bytes": 9662902272,
+                "frozen_resident_slots": 5442
+              },
+              "gpu1_expert_byte_fraction": 0.5904947916666666
+            },
+            "transport": "host_staged"
+          },
+          "snapshot_elapsed_upper_bound_s": 39.48759365081787,
+          "timing_population": {
+            "capacity_steps": 5120,
+            "complete_layer_timing_valid": true,
+            "component_timing_valid": true,
+            "records_retained": 50800,
+            "remote_overlap_active": true,
+            "steps_observed": 1270,
+            "steps_retained": 1270,
+            "truncated": false
+          }
+        }
+      }
+    },
+    "2": {
+      "baseline_b1": {
+        "W1": {
+          "durations_ms": {
+            "complete_layer": {
+              "cv_percent": 82.17202350445324,
+              "iqr": 0.292864,
+              "max": 1.585152,
+              "median": 0.233472,
+              "min": 0.082944,
+              "n": 204400,
+              "p95": 0.538624,
+              "status": "valid"
+            },
+            "gpu0_branch.complete_local_branch": {
+              "cv_percent": 82.72667270071494,
+              "iqr": 0.29286399999999996,
+              "max": 1.583104,
+              "median": 0.231424,
+              "min": 0.080896,
+              "n": 204400,
+              "p95": 0.5376,
+              "status": "valid"
+            },
+            "gpu0_branch.host_to_gpu0_expert_fetch_copy": {
+              "cv_percent": 126.35194841182222,
+              "iqr": 0.28876799999999997,
+              "max": 1.492992,
+              "median": 0.14848,
+              "min": 0.003072,
+              "n": 204400,
+              "p95": 0.451584,
+              "status": "valid"
+            },
+            "gpu0_branch.local_expert_execution": {
+              "cv_percent": 0.8736020699391639,
+              "iqr": 0.0010239999999999971,
+              "max": 0.080896,
+              "median": 0.075776,
+              "min": 0.073728,
+              "n": 204400,
+              "p95": 0.0768,
+              "status": "valid"
+            },
+            "gpu0_branch.route_cache_service_bookkeeping": {
+              "cv_percent": 47.11150727509758,
+              "iqr": 0.004096,
+              "max": 0.014336,
+              "median": 0.006144,
+              "min": 0.002048,
+              "n": 204400,
+              "p95": 0.009216,
+              "status": "valid"
+            },
+            "gpu1_branch.complete_gpu1_branch": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.gpu1_route_contribution_execution": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.gpu1_to_host_route_contributions_d2h": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.host_to_gpu1_payload_h2d": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.final_moe_sum_reduce": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.host_remote_join_wait": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.host_to_gpu0_returned_route_contributions": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.route_reconstruction": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.classification_control_host_wait": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.gpu0_to_host_activation_routing": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.gpu0_to_host_staging_host_wait": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.host_remote_submit_control": {
+              "status": "not_applicable"
+            }
+          },
+          "snapshot_elapsed_upper_bound_s": 152.7266492843628,
+          "timing_population": {
+            "capacity_steps": 5120,
+            "complete_layer_timing_valid": true,
+            "component_timing_valid": true,
+            "records_retained": 204400,
+            "remote_overlap_active": false,
+            "steps_observed": 5110,
+            "steps_retained": 5110,
+            "truncated": false
+          }
+        },
+        "W2": {
+          "durations_ms": {
+            "complete_layer": {
+              "cv_percent": 79.16060498864958,
+              "iqr": 0.29388800000000004,
+              "max": 1.579008,
+              "median": 0.233472,
+              "min": 0.082944,
+              "n": 204400,
+              "p95": 0.690176,
+              "status": "valid"
+            },
+            "gpu0_branch.complete_local_branch": {
+              "cv_percent": 79.6518899413242,
+              "iqr": 0.293888,
+              "max": 1.57696,
+              "median": 0.231424,
+              "min": 0.080896,
+              "n": 204400,
+              "p95": 0.688128,
+              "status": "valid"
+            },
+            "gpu0_branch.host_to_gpu0_expert_fetch_copy": {
+              "cv_percent": 116.72120336903104,
+              "iqr": 0.289792,
+              "max": 1.487872,
+              "median": 0.14848,
+              "min": 0.003072,
+              "n": 204400,
+              "p95": 0.602112,
+              "status": "valid"
+            },
+            "gpu0_branch.local_expert_execution": {
+              "cv_percent": 0.8772685013733369,
+              "iqr": 0.0,
+              "max": 0.080896,
+              "median": 0.075776,
+              "min": 0.073728,
+              "n": 204400,
+              "p95": 0.0768,
+              "status": "valid"
+            },
+            "gpu0_branch.route_cache_service_bookkeeping": {
+              "cv_percent": 45.178716941483756,
+              "iqr": 0.004096,
+              "max": 0.014336,
+              "median": 0.006144,
+              "min": 0.002048,
+              "n": 204400,
+              "p95": 0.009216,
+              "status": "valid"
+            },
+            "gpu1_branch.complete_gpu1_branch": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.gpu1_route_contribution_execution": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.gpu1_to_host_route_contributions_d2h": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.host_to_gpu1_payload_h2d": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.final_moe_sum_reduce": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.host_remote_join_wait": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.host_to_gpu0_returned_route_contributions": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.route_reconstruction": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.classification_control_host_wait": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.gpu0_to_host_activation_routing": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.gpu0_to_host_staging_host_wait": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.host_remote_submit_control": {
+              "status": "not_applicable"
+            }
+          },
+          "snapshot_elapsed_upper_bound_s": 152.01518535614014,
+          "timing_population": {
+            "capacity_steps": 5120,
+            "complete_layer_timing_valid": true,
+            "component_timing_valid": true,
+            "records_retained": 204400,
+            "remote_overlap_active": false,
+            "steps_observed": 5110,
+            "steps_retained": 5110,
+            "truncated": false
+          }
+        },
+        "W3": {
+          "durations_ms": {
+            "complete_layer": {
+              "cv_percent": 75.6168186924135,
+              "iqr": 0.29388800000000004,
+              "max": 1.55648,
+              "median": 0.233472,
+              "min": 0.082944,
+              "n": 102000,
+              "p95": 0.677888,
+              "status": "valid"
+            },
+            "gpu0_branch.complete_local_branch": {
+              "cv_percent": 76.08851197294035,
+              "iqr": 0.293888,
+              "max": 1.554432,
+              "median": 0.231424,
+              "min": 0.080896,
+              "n": 102000,
+              "p95": 0.676864,
+              "status": "valid"
+            },
+            "gpu0_branch.host_to_gpu0_expert_fetch_copy": {
+              "cv_percent": 111.64331108404473,
+              "iqr": 0.289792,
+              "max": 1.46432,
+              "median": 0.149504,
+              "min": 0.003072,
+              "n": 102000,
+              "p95": 0.589824,
+              "status": "valid"
+            },
+            "gpu0_branch.local_expert_execution": {
+              "cv_percent": 0.907912018755882,
+              "iqr": 0.0,
+              "max": 0.079872,
+              "median": 0.075776,
+              "min": 0.073728,
+              "n": 102000,
+              "p95": 0.0768,
+              "status": "valid"
+            },
+            "gpu0_branch.route_cache_service_bookkeeping": {
+              "cv_percent": 43.791980142508,
+              "iqr": 0.004096,
+              "max": 0.014336,
+              "median": 0.006144,
+              "min": 0.002048,
+              "n": 102000,
+              "p95": 0.009216,
+              "status": "valid"
+            },
+            "gpu1_branch.complete_gpu1_branch": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.gpu1_route_contribution_execution": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.gpu1_to_host_route_contributions_d2h": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.host_to_gpu1_payload_h2d": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.final_moe_sum_reduce": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.host_remote_join_wait": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.host_to_gpu0_returned_route_contributions": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.route_reconstruction": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.classification_control_host_wait": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.gpu0_to_host_activation_routing": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.gpu0_to_host_staging_host_wait": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.host_remote_submit_control": {
+              "status": "not_applicable"
+            }
+          },
+          "snapshot_elapsed_upper_bound_s": 76.86757183074951,
+          "timing_population": {
+            "capacity_steps": 5120,
+            "complete_layer_timing_valid": true,
+            "component_timing_valid": true,
+            "records_retained": 102000,
+            "remote_overlap_active": false,
+            "steps_observed": 2550,
+            "steps_retained": 2550,
+            "truncated": false
+          }
+        },
+        "W4": {
+          "durations_ms": {
+            "complete_layer": {
+              "cv_percent": 78.41272156119064,
+              "iqr": 0.29388800000000004,
+              "max": 1.545216,
+              "median": 0.233472,
+              "min": 0.082944,
+              "n": 50800,
+              "p95": 0.688128,
+              "status": "valid"
+            },
+            "gpu0_branch.complete_local_branch": {
+              "cv_percent": 78.90213629008478,
+              "iqr": 0.29286399999999996,
+              "max": 1.543168,
+              "median": 0.231424,
+              "min": 0.080896,
+              "n": 50800,
+              "p95": 0.687104,
+              "status": "valid"
+            },
+            "gpu0_branch.host_to_gpu0_expert_fetch_copy": {
+              "cv_percent": 115.9034703392541,
+              "iqr": 0.289792,
+              "max": 1.453056,
+              "median": 0.14848,
+              "min": 0.003072,
+              "n": 50800,
+              "p95": 0.6001151999999955,
+              "status": "valid"
+            },
+            "gpu0_branch.local_expert_execution": {
+              "cv_percent": 0.9245722993722196,
+              "iqr": 0.0,
+              "max": 0.079872,
+              "median": 0.075776,
+              "min": 0.073728,
+              "n": 50800,
+              "p95": 0.0768,
+              "status": "valid"
+            },
+            "gpu0_branch.route_cache_service_bookkeeping": {
+              "cv_percent": 44.368189306523846,
+              "iqr": 0.004096,
+              "max": 0.014336,
+              "median": 0.006144,
+              "min": 0.002048,
+              "n": 50800,
+              "p95": 0.009216,
+              "status": "valid"
+            },
+            "gpu1_branch.complete_gpu1_branch": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.gpu1_route_contribution_execution": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.gpu1_to_host_route_contributions_d2h": {
+              "status": "not_applicable"
+            },
+            "gpu1_branch.host_to_gpu1_payload_h2d": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.final_moe_sum_reduce": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.host_remote_join_wait": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.host_to_gpu0_returned_route_contributions": {
+              "status": "not_applicable"
+            },
+            "join_reconstruct_reduce.route_reconstruction": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.classification_control_host_wait": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.gpu0_to_host_activation_routing": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.gpu0_to_host_staging_host_wait": {
+              "status": "not_applicable"
+            },
+            "remote_dispatch_control.host_remote_submit_control": {
+              "status": "not_applicable"
+            }
+          },
+          "snapshot_elapsed_upper_bound_s": 37.46385169029236,
+          "timing_population": {
+            "capacity_steps": 5120,
+            "complete_layer_timing_valid": true,
+            "component_timing_valid": true,
+            "records_retained": 50800,
+            "remote_overlap_active": false,
+            "steps_observed": 1270,
+            "steps_retained": 1270,
+            "truncated": false
+          }
+        }
+      },
+      "candidate_v2": {
+        "W1": {
+          "durations_ms": {
+            "complete_layer": {
+              "cv_percent": 46.494295168282676,
+              "iqr": 0.056319999999999926,
+              "max": 597.279744,
+              "median": 3.721216,
+              "min": 1.801216,
+              "n": 204400,
+              "p95": 3.84,
+              "status": "valid"
+            },
+            "gpu0_branch.complete_local_branch": {
+              "cv_percent": 6.265553406019146,
+              "iqr": 0.029696000000000167,
+              "max": 4.794368,
+              "median": 1.15712,
+              "min": 0.979968,
+              "n": 203602,
+              "p95": 1.206272,
+              "status": "valid"
+            },
+            "gpu0_branch.host_to_gpu0_expert_fetch_copy": {
+              "cv_percent": 25.432985907134604,
+              "iqr": 0.005120000000000013,
+              "max": 3.163136,
+              "median": 0.172032,
+              "min": 0.162816,
+              "n": 203602,
+              "p95": 0.188416,
+              "status": "valid"
+            },
+            "gpu0_branch.local_expert_execution": {
+              "cv_percent": 6.045572186743148,
+              "iqr": 0.01331199999999999,
+              "max": 3.649536,
+              "median": 0.600064,
+              "min": 0.078848,
+              "n": 203602,
+              "p95": 0.627712,
+              "status": "valid"
+            },
+            "gpu0_branch.route_cache_service_bookkeeping": {
+              "cv_percent": 20.62040017190634,
+              "iqr": 0.007168000000000008,
+              "max": 3.895296,
+              "median": 0.336896,
+              "min": 0.185344,
+              "n": 203602,
+              "p95": 0.355328,
+              "status": "valid"
+            },
+            "gpu1_branch.complete_gpu1_branch": {
+              "cv_percent": 238.92884352202722,
+              "iqr": 0.01462399959564209,
+              "max": 593.9478759765625,
+              "median": 0.6162880063056946,
+              "min": 0.5989760160446167,
+              "n": 156962,
+              "p95": 0.6430720090866089,
+              "status": "valid"
+            },
+            "gpu1_branch.gpu1_route_contribution_execution": {
+              "cv_percent": 307.62347672958947,
+              "iqr": 0.01283198595046997,
+              "max": 593.7754516601562,
+              "median": 0.47648000717163086,
+              "min": 0.4636479914188385,
+              "n": 156962,
+              "p95": 0.4999360144138336,
+              "status": "valid"
+            },
+            "gpu1_branch.gpu1_to_host_route_contributions_d2h": {
+              "cv_percent": 8.007430476603512,
+              "iqr": 0.0008960030972957611,
+              "max": 1.10316801071167,
+              "median": 0.05209600180387497,
+              "min": 0.04940799996256828,
+              "n": 156962,
+              "p95": 0.05350400134921074,
+              "status": "valid"
+            },
+            "gpu1_branch.host_to_gpu1_payload_h2d": {
+              "cv_percent": 5.391338415191392,
+              "iqr": 0.0021120011806488037,
+              "max": 1.1162240505218506,
+              "median": 0.08691199868917465,
+              "min": 0.08236800134181976,
+              "n": 156962,
+              "p95": 0.09100800007581711,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.final_moe_sum_reduce": {
+              "cv_percent": 5.479879281142059,
+              "iqr": 0.0030719999999999914,
+              "max": 1.2288,
+              "median": 0.157696,
+              "min": 0.004096,
+              "n": 156962,
+              "p95": 0.172032,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.host_remote_join_wait": {
+              "cv_percent": 122.26023629367417,
+              "iqr": 0.00022900000000000004,
+              "max": 3.474972,
+              "median": 0.007079,
+              "min": 0.005541,
+              "n": 156962,
+              "p95": 0.007732,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.host_to_gpu0_returned_route_contributions": {
+              "cv_percent": 10.380743013900076,
+              "iqr": 0.0020479999999999943,
+              "max": 3.110912,
+              "median": 0.118784,
+              "min": 0.009216,
+              "n": 156962,
+              "p95": 0.124928,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.route_reconstruction": {
+              "cv_percent": 11.039187300094918,
+              "iqr": 0.0020479999999999943,
+              "max": 4.031488,
+              "median": 0.130048,
+              "min": 0.00512,
+              "n": 156962,
+              "p95": 0.137216,
+              "status": "valid"
+            },
+            "remote_dispatch_control.classification_control_host_wait": {
+              "cv_percent": 506.67398008038117,
+              "iqr": 0.0008830000000000018,
+              "max": 38.038842,
+              "median": 0.049992,
+              "min": 0.047931,
+              "n": 204400,
+              "p95": 0.052412,
+              "status": "valid"
+            },
+            "remote_dispatch_control.gpu0_to_host_activation_routing": {
+              "cv_percent": 5.346181655229949,
+              "iqr": 0.0018239989876747131,
+              "max": 1.0153919458389282,
+              "median": 0.08899199962615967,
+              "min": 0.0846719965338707,
+              "n": 156962,
+              "p95": 0.09379199892282486,
+              "status": "valid"
+            },
+            "remote_dispatch_control.gpu0_to_host_staging_host_wait": {
+              "cv_percent": 12.305032064930026,
+              "iqr": 0.0002180000000000003,
+              "max": 0.074003,
+              "median": 0.005745,
+              "min": 0.005232,
+              "n": 156962,
+              "p95": 0.006365,
+              "status": "valid"
+            },
+            "remote_dispatch_control.host_remote_submit_control": {
+              "cv_percent": 215.23270032913322,
+              "iqr": 0.01721500000000009,
+              "max": 594.02386,
+              "median": 0.685761,
+              "min": 0.66537,
+              "n": 156962,
+              "p95": 0.714548,
+              "status": "valid"
+            }
+          },
+          "mechanism": {
+            "aggregate": {
+              "combine_operations": 156962,
+              "dispatch_mismatch_layer_calls": 0,
+              "executed_on_gpu0": 1278653,
+              "executed_on_gpu1": 356547,
+              "expected_remote_dispatches": 156962,
+              "explicit_failure": 0,
+              "failure_events": 0,
+              "fallback_elsewhere": 0,
+              "final_sum_reductions": 156962,
+              "hypothetical_streamed_remote_weight_bytes": 633090557952,
+              "prefill_remote_dispatches": 0,
+              "remote_dispatches": 156962,
+              "remote_selected_layer_calls": 156962,
+              "route_reconstruction_operations": 156962,
+              "selected_for_gpu1": 356547,
+              "total_router_selections": 1635200
+            },
+            "expert_weight_traffic": {
+              "source": "transport/storage execution-boundary observed counter",
+              "startup_bytes_host_to_gpu1": 9662902272,
+              "steady_state_bytes_host_to_gpu1": 0
+            },
+            "gates": {
+              "F1": {
+                "combined_expert_cache_bytes": 16364077056,
+                "gpu1_expert_byte_fraction": 0.5904947916666666,
+                "gpu1_expert_cache_bytes": 9662902272,
+                "passed": true,
+                "threshold": 0.25
+              },
+              "F2": {
+                "executed_on_gpu1": 356547,
+                "gpu1_execution_fraction": 0.21804488747553816,
+                "passed": true,
+                "scope": "current reset-delimited workload window; classes are not averaged",
+                "threshold": 0.2,
+                "total_router_selections": 1635200
+              },
+              "F3": {
+                "actual_dispatches": 156962,
+                "expected_dispatches": 156962,
+                "passed": true,
+                "per_layer_call_mismatches": 0
+              },
+              "F4": {
+                "passed": null,
+                "status": "evaluated_by_correctness"
+              },
+              "F5": {
+                "denominator_rule": "unique remote identities per layer/step x bytes_per_identity",
+                "hypothetical_streamed_remote_weight_bytes": 633090557952,
+                "passed": true,
+                "ratio": 0.0010313878667094364,
+                "steady_state_expert_weight_bytes_host_to_gpu1": 0,
+                "steady_state_host_to_gpu1_bytes": 652961920,
+                "threshold": 0.01
+              },
+              "F6": {
+                "executed_on_gpu1": 356547,
+                "explicit_failure": 0,
+                "fallback_elsewhere": 0,
+                "passed": true,
+                "selected_for_gpu1": 356547
+              }
+            },
+            "overlap_active": true,
+            "ownership": {
+              "selected_accounted_exactly": true,
+              "successful_selection_arithmetic_exact": true
+            },
+            "residency": {
+              "aliasing_rule": "GPU0 prefill views alias slot storage and are not recounted",
+              "combined_expert_cache_bytes": 16364077056,
+              "gpu0": {
+                "actual_expert_bank_tensor_bytes": 6701174784,
+                "configured_expert_cache_slots": 3774
+              },
+              "gpu1": {
+                "actual_expert_bank_tensor_bytes": 9662902272,
+                "frozen_resident_slots": 5442
+              },
+              "gpu1_expert_byte_fraction": 0.5904947916666666
+            },
+            "transport": "host_staged"
+          },
+          "snapshot_elapsed_upper_bound_s": 155.1999044418335,
+          "timing_population": {
+            "capacity_steps": 5120,
+            "complete_layer_timing_valid": true,
+            "component_timing_valid": true,
+            "records_retained": 204400,
+            "remote_overlap_active": true,
+            "steps_observed": 5110,
+            "steps_retained": 5110,
+            "truncated": false
+          }
+        },
+        "W2": {
+          "durations_ms": {
+            "complete_layer": {
+              "cv_percent": 88.1494635045992,
+              "iqr": 0.029695999999999945,
+              "max": 1082.278912,
+              "median": 3.688448,
+              "min": 1.789952,
+              "n": 204400,
+              "p95": 3.759104,
+              "status": "valid"
+            },
+            "gpu0_branch.complete_local_branch": {
+              "cv_percent": 4.153441748014393,
+              "iqr": 0.019455999999999918,
+              "max": 4.764672,
+              "median": 1.147904,
+              "min": 0.976896,
+              "n": 201172,
+              "p95": 1.179648,
+              "status": "valid"
+            },
+            "gpu0_branch.host_to_gpu0_expert_fetch_copy": {
+              "cv_percent": 21.780376245091336,
+              "iqr": 0.0030719999999999914,
+              "max": 1.537024,
+              "median": 0.171008,
+              "min": 0.162816,
+              "n": 201172,
+              "p95": 0.188416,
+              "status": "valid"
+            },
+            "gpu0_branch.local_expert_execution": {
+              "cv_percent": 5.112137786582734,
+              "iqr": 0.006144000000000038,
+              "max": 2.435072,
+              "median": 0.591872,
+              "min": 0.078848,
+              "n": 201172,
+              "p95": 0.613376,
+              "status": "valid"
+            },
+            "gpu0_branch.route_cache_service_bookkeeping": {
+              "cv_percent": 12.753830313488365,
+              "iqr": 0.0030719999999999636,
+              "max": 3.33824,
+              "median": 0.334848,
+              "min": 0.18432,
+              "n": 201172,
+              "p95": 0.351232,
+              "status": "valid"
+            },
+            "gpu1_branch.complete_gpu1_branch": {
+              "cv_percent": 510.8749624933499,
+              "iqr": 0.013183951377868652,
+              "max": 1078.978759765625,
+              "median": 0.609503984451294,
+              "min": 0.5952320098876953,
+              "n": 187195,
+              "p95": 0.6346240043640137,
+              "status": "valid"
+            },
+            "gpu1_branch.gpu1_route_contribution_execution": {
+              "cv_percent": 655.7155136109975,
+              "iqr": 0.011263996362686157,
+              "max": 1078.8035888671875,
+              "median": 0.4713599979877472,
+              "min": 0.4607999920845032,
+              "n": 187195,
+              "p95": 0.4936000108718872,
+              "status": "valid"
+            },
+            "gpu1_branch.gpu1_to_host_route_contributions_d2h": {
+              "cv_percent": 14.112480939793775,
+              "iqr": 0.0008639991283416748,
+              "max": 3.0457921028137207,
+              "median": 0.05135999992489815,
+              "min": 0.048767998814582825,
+              "n": 187195,
+              "p95": 0.052639998495578766,
+              "status": "valid"
+            },
+            "gpu1_branch.host_to_gpu1_payload_h2d": {
+              "cv_percent": 4.626922500249687,
+              "iqr": 0.0018239989876747131,
+              "max": 0.21766400337219238,
+              "median": 0.08614400029182434,
+              "min": 0.08195199817419052,
+              "n": 187195,
+              "p95": 0.08972799777984619,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.final_moe_sum_reduce": {
+              "cv_percent": 3.7799615061055967,
+              "iqr": 0.0020479999999999943,
+              "max": 0.33792,
+              "median": 0.156672,
+              "min": 0.02048,
+              "n": 187195,
+              "p95": 0.169984,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.host_remote_join_wait": {
+              "cv_percent": 11.625982596653122,
+              "iqr": 0.00017899999999999947,
+              "max": 0.132631,
+              "median": 0.006919,
+              "min": 0.005495,
+              "n": 187195,
+              "p95": 0.007149,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.host_to_gpu0_returned_route_contributions": {
+              "cv_percent": 3.8647238197694644,
+              "iqr": 0.0020479999999999943,
+              "max": 0.385024,
+              "median": 0.11776,
+              "min": 0.009216,
+              "n": 187195,
+              "p95": 0.121856,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.route_reconstruction": {
+              "cv_percent": 10.657384159428657,
+              "iqr": 0.0020479999999999943,
+              "max": 4.140032,
+              "median": 0.128,
+              "min": 0.00512,
+              "n": 187195,
+              "p95": 0.13312,
+              "status": "valid"
+            },
+            "remote_dispatch_control.classification_control_host_wait": {
+              "cv_percent": 523.3123271027514,
+              "iqr": 0.0007300000000000015,
+              "max": 38.812792,
+              "median": 0.049471,
+              "min": 0.047608,
+              "n": 204400,
+              "p95": 0.050602,
+              "status": "valid"
+            },
+            "remote_dispatch_control.gpu0_to_host_activation_routing": {
+              "cv_percent": 4.341353435097563,
+              "iqr": 0.0015039965510368347,
+              "max": 0.2216320037841797,
+              "median": 0.08822400122880936,
+              "min": 0.08374399691820145,
+              "n": 187195,
+              "p95": 0.09087999910116196,
+              "status": "valid"
+            },
+            "remote_dispatch_control.gpu0_to_host_staging_host_wait": {
+              "cv_percent": 11.665937439892943,
+              "iqr": 0.00017599999999999994,
+              "max": 0.066361,
+              "median": 0.005601,
+              "min": 0.005039,
+              "n": 187195,
+              "p95": 0.005836,
+              "status": "valid"
+            },
+            "remote_dispatch_control.host_remote_submit_control": {
+              "cv_percent": 460.57263166194946,
+              "iqr": 0.015892000000000017,
+              "max": 1079.056769,
+              "median": 0.67705,
+              "min": 0.660805,
+              "n": 187195,
+              "p95": 0.7054522999999999,
+              "status": "valid"
+            }
+          },
+          "mechanism": {
+            "aggregate": {
+              "combine_operations": 187195,
+              "dispatch_mismatch_layer_calls": 0,
+              "executed_on_gpu0": 1040153,
+              "executed_on_gpu1": 595047,
+              "expected_remote_dispatches": 187195,
+              "explicit_failure": 0,
+              "failure_events": 0,
+              "fallback_elsewhere": 0,
+              "final_sum_reductions": 187195,
+              "hypothetical_streamed_remote_weight_bytes": 1056574973952,
+              "prefill_remote_dispatches": 0,
+              "remote_dispatches": 187195,
+              "remote_selected_layer_calls": 187195,
+              "route_reconstruction_operations": 187195,
+              "selected_for_gpu1": 595047,
+              "total_router_selections": 1635200
+            },
+            "expert_weight_traffic": {
+              "source": "transport/storage execution-boundary observed counter",
+              "startup_bytes_host_to_gpu1": 9662902272,
+              "steady_state_bytes_host_to_gpu1": 0
+            },
+            "gates": {
+              "F1": {
+                "combined_expert_cache_bytes": 16364077056,
+                "gpu1_expert_byte_fraction": 0.5904947916666666,
+                "gpu1_expert_cache_bytes": 9662902272,
+                "passed": true,
+                "threshold": 0.25
+              },
+              "F2": {
+                "executed_on_gpu1": 595047,
+                "gpu1_execution_fraction": 0.36389860567514676,
+                "passed": true,
+                "scope": "current reset-delimited workload window; classes are not averaged",
+                "threshold": 0.2,
+                "total_router_selections": 1635200
+              },
+              "F3": {
+                "actual_dispatches": 187195,
+                "expected_dispatches": 187195,
+                "passed": true,
+                "per_layer_call_mismatches": 0
+              },
+              "F4": {
+                "passed": null,
+                "status": "evaluated_by_correctness"
+              },
+              "F5": {
+                "denominator_rule": "unique remote identities per layer/step x bytes_per_identity",
+                "hypothetical_streamed_remote_weight_bytes": 1056574973952,
+                "passed": true,
+                "ratio": 0.0007370335463154531,
+                "steady_state_expert_weight_bytes_host_to_gpu1": 0,
+                "steady_state_host_to_gpu1_bytes": 778731200,
+                "threshold": 0.01
+              },
+              "F6": {
+                "executed_on_gpu1": 595047,
+                "explicit_failure": 0,
+                "fallback_elsewhere": 0,
+                "passed": true,
+                "selected_for_gpu1": 595047
+              }
+            },
+            "overlap_active": true,
+            "ownership": {
+              "selected_accounted_exactly": true,
+              "successful_selection_arithmetic_exact": true
+            },
+            "residency": {
+              "aliasing_rule": "GPU0 prefill views alias slot storage and are not recounted",
+              "combined_expert_cache_bytes": 16364077056,
+              "gpu0": {
+                "actual_expert_bank_tensor_bytes": 6701174784,
+                "configured_expert_cache_slots": 3774
+              },
+              "gpu1": {
+                "actual_expert_bank_tensor_bytes": 9662902272,
+                "frozen_resident_slots": 5442
+              },
+              "gpu1_expert_byte_fraction": 0.5904947916666666
+            },
+            "transport": "host_staged"
+          },
+          "snapshot_elapsed_upper_bound_s": 155.20827722549438,
+          "timing_population": {
+            "capacity_steps": 5120,
+            "complete_layer_timing_valid": true,
+            "component_timing_valid": true,
+            "records_retained": 204400,
+            "remote_overlap_active": true,
+            "steps_observed": 5110,
+            "steps_retained": 5110,
+            "truncated": false
+          }
+        },
+        "W3": {
+          "durations_ms": {
+            "complete_layer": {
+              "cv_percent": 48.438222894444365,
+              "iqr": 0.06451199999999968,
+              "max": 455.643136,
+              "median": 3.679232,
+              "min": 1.785856,
+              "n": 102000,
+              "p95": 3.7632,
+              "status": "valid"
+            },
+            "gpu0_branch.complete_local_branch": {
+              "cv_percent": 125.8581158543802,
+              "iqr": 0.027648000000000117,
+              "max": 454.795264,
+              "median": 1.147904,
+              "min": 0.9728,
+              "n": 101819,
+              "p95": 1.184768,
+              "status": "valid"
+            },
+            "gpu0_branch.host_to_gpu0_expert_fetch_copy": {
+              "cv_percent": 28.371762303935395,
+              "iqr": 0.005120000000000013,
+              "max": 1.303552,
+              "median": 0.171008,
+              "min": 0.161792,
+              "n": 101819,
+              "p95": 0.190464,
+              "status": "valid"
+            },
+            "gpu0_branch.local_expert_execution": {
+              "cv_percent": 238.7733385755803,
+              "iqr": 0.012287999999999966,
+              "max": 454.37952,
+              "median": 0.592896,
+              "min": 0.078848,
+              "n": 101819,
+              "p95": 0.615424,
+              "status": "valid"
+            },
+            "gpu0_branch.route_cache_service_bookkeeping": {
+              "cv_percent": 19.44033966760129,
+              "iqr": 0.007168000000000008,
+              "max": 3.387392,
+              "median": 0.334848,
+              "min": 0.18432,
+              "n": 101819,
+              "p95": 0.351232,
+              "status": "valid"
+            },
+            "gpu1_branch.complete_gpu1_branch": {
+              "cv_percent": 8.194411149888472,
+              "iqr": 0.01356804370880127,
+              "max": 3.6419520378112793,
+              "median": 0.6091200113296509,
+              "min": 0.5942400097846985,
+              "n": 80789,
+              "p95": 0.6344640254974365,
+              "status": "valid"
+            },
+            "gpu1_branch.gpu1_route_contribution_execution": {
+              "cv_percent": 10.48827977942461,
+              "iqr": 0.0103360116481781,
+              "max": 3.5041279792785645,
+              "median": 0.4708479940891266,
+              "min": 0.45871999859809875,
+              "n": 80789,
+              "p95": 0.4933759868144989,
+              "status": "valid"
+            },
+            "gpu1_branch.gpu1_to_host_route_contributions_d2h": {
+              "cv_percent": 4.720976463554299,
+              "iqr": 0.0009599998593330383,
+              "max": 0.14214399456977844,
+              "median": 0.05135999992489815,
+              "min": 0.0488319993019104,
+              "n": 80789,
+              "p95": 0.052799999713897705,
+              "status": "valid"
+            },
+            "gpu1_branch.host_to_gpu1_payload_h2d": {
+              "cv_percent": 4.4592274463153485,
+              "iqr": 0.002048000693321228,
+              "max": 0.18268799781799316,
+              "median": 0.08630400151014328,
+              "min": 0.08207999914884567,
+              "n": 80789,
+              "p95": 0.08985599875450134,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.final_moe_sum_reduce": {
+              "cv_percent": 3.6915640250694195,
+              "iqr": 0.0030719999999999914,
+              "max": 0.303104,
+              "median": 0.156672,
+              "min": 0.034816,
+              "n": 80789,
+              "p95": 0.169984,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.host_remote_join_wait": {
+              "cv_percent": 11.275094650149969,
+              "iqr": 0.0001940000000000006,
+              "max": 0.133227,
+              "median": 0.006914,
+              "min": 0.005569,
+              "n": 80789,
+              "p95": 0.007168,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.host_to_gpu0_returned_route_contributions": {
+              "cv_percent": 4.6091949169028785,
+              "iqr": 0.0020479999999999943,
+              "max": 0.258048,
+              "median": 0.11776,
+              "min": 0.009216,
+              "n": 80789,
+              "p95": 0.121856,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.route_reconstruction": {
+              "cv_percent": 4.748554299804459,
+              "iqr": 0.0020479999999999943,
+              "max": 0.259072,
+              "median": 0.129024,
+              "min": 0.00512,
+              "n": 80789,
+              "p95": 0.13312,
+              "status": "valid"
+            },
+            "remote_dispatch_control.classification_control_host_wait": {
+              "cv_percent": 701.1124107670591,
+              "iqr": 0.0007549999999999987,
+              "max": 37.980806,
+              "median": 0.049467,
+              "min": 0.047493,
+              "n": 102000,
+              "p95": 0.050634049999999986,
+              "status": "valid"
+            },
+            "remote_dispatch_control.gpu0_to_host_activation_routing": {
+              "cv_percent": 4.285010184778406,
+              "iqr": 0.0017600059509277344,
+              "max": 0.20319999754428864,
+              "median": 0.08844800293445587,
+              "min": 0.08399999886751175,
+              "n": 80789,
+              "p95": 0.09126400202512741,
+              "status": "valid"
+            },
+            "remote_dispatch_control.gpu0_to_host_staging_host_wait": {
+              "cv_percent": 12.944091207162355,
+              "iqr": 0.0001879999999999998,
+              "max": 0.070207,
+              "median": 0.005663,
+              "min": 0.00516,
+              "n": 80789,
+              "p95": 0.005912,
+              "status": "valid"
+            },
+            "remote_dispatch_control.host_remote_submit_control": {
+              "cv_percent": 8.949124574409081,
+              "iqr": 0.016523000000000065,
+              "max": 10.390559,
+              "median": 0.677115,
+              "min": 0.660272,
+              "n": 80789,
+              "p95": 0.7051022,
+              "status": "valid"
+            }
+          },
+          "mechanism": {
+            "aggregate": {
+              "combine_operations": 80789,
+              "dispatch_mismatch_layer_calls": 0,
+              "executed_on_gpu0": 627784,
+              "executed_on_gpu1": 188216,
+              "expected_remote_dispatches": 80789,
+              "explicit_failure": 0,
+              "failure_events": 0,
+              "fallback_elsewhere": 0,
+              "final_sum_reductions": 80789,
+              "hypothetical_streamed_remote_weight_bytes": 334199341056,
+              "prefill_remote_dispatches": 0,
+              "remote_dispatches": 80789,
+              "remote_selected_layer_calls": 80789,
+              "route_reconstruction_operations": 80789,
+              "selected_for_gpu1": 188216,
+              "total_router_selections": 816000
+            },
+            "expert_weight_traffic": {
+              "source": "transport/storage execution-boundary observed counter",
+              "startup_bytes_host_to_gpu1": 9662902272,
+              "steady_state_bytes_host_to_gpu1": 0
+            },
+            "gates": {
+              "F1": {
+                "combined_expert_cache_bytes": 16364077056,
+                "gpu1_expert_byte_fraction": 0.5904947916666666,
+                "gpu1_expert_cache_bytes": 9662902272,
+                "passed": true,
+                "threshold": 0.25
+              },
+              "F2": {
+                "executed_on_gpu1": 188216,
+                "gpu1_execution_fraction": 0.23065686274509803,
+                "passed": true,
+                "scope": "current reset-delimited workload window; classes are not averaged",
+                "threshold": 0.2,
+                "total_router_selections": 816000
+              },
+              "F3": {
+                "actual_dispatches": 80789,
+                "expected_dispatches": 80789,
+                "passed": true,
+                "per_layer_call_mismatches": 0
+              },
+              "F4": {
+                "passed": null,
+                "status": "evaluated_by_correctness"
+              },
+              "F5": {
+                "denominator_rule": "unique remote identities per layer/step x bytes_per_identity",
+                "hypothetical_streamed_remote_weight_bytes": 334199341056,
+                "passed": true,
+                "ratio": 0.0010056340594151096,
+                "steady_state_expert_weight_bytes_host_to_gpu1": 0,
+                "steady_state_host_to_gpu1_bytes": 336082240,
+                "threshold": 0.01
+              },
+              "F6": {
+                "executed_on_gpu1": 188216,
+                "explicit_failure": 0,
+                "fallback_elsewhere": 0,
+                "passed": true,
+                "selected_for_gpu1": 188216
+              }
+            },
+            "overlap_active": true,
+            "ownership": {
+              "selected_accounted_exactly": true,
+              "successful_selection_arithmetic_exact": true
+            },
+            "residency": {
+              "aliasing_rule": "GPU0 prefill views alias slot storage and are not recounted",
+              "combined_expert_cache_bytes": 16364077056,
+              "gpu0": {
+                "actual_expert_bank_tensor_bytes": 6701174784,
+                "configured_expert_cache_slots": 3774
+              },
+              "gpu1": {
+                "actual_expert_bank_tensor_bytes": 9662902272,
+                "frozen_resident_slots": 5442
+              },
+              "gpu1_expert_byte_fraction": 0.5904947916666666
+            },
+            "transport": "host_staged"
+          },
+          "snapshot_elapsed_upper_bound_s": 76.93129301071167,
+          "timing_population": {
+            "capacity_steps": 5120,
+            "complete_layer_timing_valid": true,
+            "component_timing_valid": true,
+            "records_retained": 102000,
+            "remote_overlap_active": true,
+            "steps_observed": 2550,
+            "steps_retained": 2550,
+            "truncated": false
+          }
+        },
+        "W4": {
+          "durations_ms": {
+            "complete_layer": {
+              "cv_percent": 62.782674694790494,
+              "iqr": 0.20991999999999988,
+              "max": 438.501376,
+              "median": 3.757056,
+              "min": 1.785856,
+              "n": 50800,
+              "p95": 3.93216,
+              "status": "valid"
+            },
+            "gpu0_branch.complete_local_branch": {
+              "cv_percent": 6.497338754739718,
+              "iqr": 0.06758400000000009,
+              "max": 1.836032,
+              "median": 1.1776,
+              "min": 0.971776,
+              "n": 50663,
+              "p95": 1.2288,
+              "status": "valid"
+            },
+            "gpu0_branch.host_to_gpu0_expert_fetch_copy": {
+              "cv_percent": 38.53105776531552,
+              "iqr": 0.007168000000000008,
+              "max": 1.552384,
+              "median": 0.177152,
+              "min": 0.161792,
+              "n": 50663,
+              "p95": 0.265216,
+              "status": "valid"
+            },
+            "gpu0_branch.local_expert_execution": {
+              "cv_percent": 9.551471055915982,
+              "iqr": 0.020479999999999943,
+              "max": 0.92672,
+              "median": 0.612352,
+              "min": 0.078848,
+              "n": 50663,
+              "p95": 0.636928,
+              "status": "valid"
+            },
+            "gpu0_branch.route_cache_service_bookkeeping": {
+              "cv_percent": 20.673680647281838,
+              "iqr": 0.020479999999999998,
+              "max": 0.516096,
+              "median": 0.339968,
+              "min": 0.18432,
+              "n": 50663,
+              "p95": 0.3584,
+              "status": "valid"
+            },
+            "gpu1_branch.complete_gpu1_branch": {
+              "cv_percent": 345.0950709821743,
+              "iqr": 0.01862400770187378,
+              "max": 435.0722351074219,
+              "median": 0.6293439865112305,
+              "min": 0.5939520001411438,
+              "n": 38498,
+              "p95": 0.654591977596283,
+              "status": "valid"
+            },
+            "gpu1_branch.gpu1_route_contribution_execution": {
+              "cv_percent": 443.7036091331824,
+              "iqr": 0.013312011957168579,
+              "max": 434.8926696777344,
+              "median": 0.48553600907325745,
+              "min": 0.45772799849510193,
+              "n": 38498,
+              "p95": 0.506816029548645,
+              "status": "valid"
+            },
+            "gpu1_branch.gpu1_to_host_route_contributions_d2h": {
+              "cv_percent": 5.300914763769287,
+              "iqr": 0.002847999334335327,
+              "max": 0.12822400033473969,
+              "median": 0.05350400134921074,
+              "min": 0.04899200052022934,
+              "n": 38498,
+              "p95": 0.05526399984955788,
+              "status": "valid"
+            },
+            "gpu1_branch.host_to_gpu1_payload_h2d": {
+              "cv_percent": 4.966646050945468,
+              "iqr": 0.003103993833065033,
+              "max": 0.22179199755191803,
+              "median": 0.08924800157546997,
+              "min": 0.08256000280380249,
+              "n": 38498,
+              "p95": 0.09318400174379349,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.final_moe_sum_reduce": {
+              "cv_percent": 4.041532264317907,
+              "iqr": 0.004096000000000016,
+              "max": 0.26624,
+              "median": 0.161792,
+              "min": 0.013312,
+              "n": 38498,
+              "p95": 0.171008,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.host_remote_join_wait": {
+              "cv_percent": 12.01802112140071,
+              "iqr": 0.0004549999999999997,
+              "max": 0.113642,
+              "median": 0.007218,
+              "min": 0.00563,
+              "n": 38498,
+              "p95": 0.007536,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.host_to_gpu0_returned_route_contributions": {
+              "cv_percent": 6.019985897623556,
+              "iqr": 0.004096000000000002,
+              "max": 0.248832,
+              "median": 0.121856,
+              "min": 0.009216,
+              "n": 38498,
+              "p95": 0.126976,
+              "status": "valid"
+            },
+            "join_reconstruct_reduce.route_reconstruction": {
+              "cv_percent": 5.712324214190121,
+              "iqr": 0.004096000000000016,
+              "max": 0.238592,
+              "median": 0.134144,
+              "min": 0.00512,
+              "n": 38498,
+              "p95": 0.140288,
+              "status": "valid"
+            },
+            "remote_dispatch_control.classification_control_host_wait": {
+              "cv_percent": 909.7769772727127,
+              "iqr": 0.002450000000000001,
+              "max": 38.511538,
+              "median": 0.051468,
+              "min": 0.047508,
+              "n": 50800,
+              "p95": 0.052811,
+              "status": "valid"
+            },
+            "remote_dispatch_control.gpu0_to_host_activation_routing": {
+              "cv_percent": 4.833006896402085,
+              "iqr": 0.0031679943203926086,
+              "max": 0.181536003947258,
+              "median": 0.09132800251245499,
+              "min": 0.08409599959850311,
+              "n": 38498,
+              "p95": 0.09507200121879578,
+              "status": "valid"
+            },
+            "remote_dispatch_control.gpu0_to_host_staging_host_wait": {
+              "cv_percent": 12.302821966059206,
+              "iqr": 0.0003759999999999996,
+              "max": 0.068897,
+              "median": 0.00593,
+              "min": 0.005214,
+              "n": 38498,
+              "p95": 0.006267,
+              "status": "valid"
+            },
+            "remote_dispatch_control.host_remote_submit_control": {
+              "cv_percent": 311.53824406724266,
+              "iqr": 0.019657999999999953,
+              "max": 435.148873,
+              "median": 0.698403,
+              "min": 0.660078,
+              "n": 38498,
+              "p95": 0.7250950500000001,
+              "status": "valid"
+            }
+          },
+          "mechanism": {
+            "aggregate": {
+              "combine_operations": 38498,
+              "dispatch_mismatch_layer_calls": 0,
+              "executed_on_gpu0": 320964,
+              "executed_on_gpu1": 85436,
+              "expected_remote_dispatches": 38498,
+              "explicit_failure": 0,
+              "failure_events": 0,
+              "fallback_elsewhere": 0,
+              "final_sum_reductions": 38498,
+              "hypothetical_streamed_remote_weight_bytes": 151701528576,
+              "prefill_remote_dispatches": 0,
+              "remote_dispatches": 38498,
+              "remote_selected_layer_calls": 38498,
+              "route_reconstruction_operations": 38498,
+              "selected_for_gpu1": 85436,
+              "total_router_selections": 406400
+            },
+            "expert_weight_traffic": {
+              "source": "transport/storage execution-boundary observed counter",
+              "startup_bytes_host_to_gpu1": 9662902272,
+              "steady_state_bytes_host_to_gpu1": 0
+            },
+            "gates": {
+              "F1": {
+                "combined_expert_cache_bytes": 16364077056,
+                "gpu1_expert_byte_fraction": 0.5904947916666666,
+                "gpu1_expert_cache_bytes": 9662902272,
+                "passed": true,
+                "threshold": 0.25
+              },
+              "F2": {
+                "executed_on_gpu1": 85436,
+                "gpu1_execution_fraction": 0.2102263779527559,
+                "passed": true,
+                "scope": "current reset-delimited workload window; classes are not averaged",
+                "threshold": 0.2,
+                "total_router_selections": 406400
+              },
+              "F3": {
+                "actual_dispatches": 38498,
+                "expected_dispatches": 38498,
+                "passed": true,
+                "per_layer_call_mismatches": 0
+              },
+              "F4": {
+                "passed": null,
+                "status": "evaluated_by_correctness"
+              },
+              "F5": {
+                "denominator_rule": "unique remote identities per layer/step x bytes_per_identity",
+                "hypothetical_streamed_remote_weight_bytes": 151701528576,
+                "passed": true,
+                "ratio": 0.0010557024804121642,
+                "steady_state_expert_weight_bytes_host_to_gpu1": 0,
+                "steady_state_host_to_gpu1_bytes": 160151680,
+                "threshold": 0.01
+              },
+              "F6": {
+                "executed_on_gpu1": 85436,
+                "explicit_failure": 0,
+                "fallback_elsewhere": 0,
+                "passed": true,
+                "selected_for_gpu1": 85436
+              }
+            },
+            "overlap_active": true,
+            "ownership": {
+              "selected_accounted_exactly": true,
+              "successful_selection_arithmetic_exact": true
+            },
+            "residency": {
+              "aliasing_rule": "GPU0 prefill views alias slot storage and are not recounted",
+              "combined_expert_cache_bytes": 16364077056,
+              "gpu0": {
+                "actual_expert_bank_tensor_bytes": 6701174784,
+                "configured_expert_cache_slots": 3774
+              },
+              "gpu1": {
+                "actual_expert_bank_tensor_bytes": 9662902272,
+                "frozen_resident_slots": 5442
+              },
+              "gpu1_expert_byte_fraction": 0.5904947916666666
+            },
+            "transport": "host_staged"
+          },
+          "snapshot_elapsed_upper_bound_s": 39.83792805671692,
+          "timing_population": {
+            "capacity_steps": 5120,
+            "complete_layer_timing_valid": true,
+            "component_timing_valid": true,
+            "records_retained": 50800,
+            "remote_overlap_active": true,
+            "steps_observed": 1270,
+            "steps_retained": 1270,
+            "truncated": false
+          }
+        }
+      }
+    }
+  },
+  "performance": {
+    "1": {
+      "classes": {
+        "W1": {
+          "baseline_decode_tok_s": {
+            "cv_percent": 2.8198845993069455,
+            "iqr": 2.930310194782642,
+            "max": 59.254644638095606,
+            "median": 57.28593954022058,
+            "min": 55.14354118721623,
+            "n": 10
+          },
+          "baseline_prefill_tok_s_median": 32.6840718906256,
+          "baseline_ttft_ms_median": 1758.8092520163627,
+          "candidate_decode_tok_s": {
+            "cv_percent": 2.4259520860497936,
+            "iqr": 0.10653862916569956,
+            "max": 4.222586829201335,
+            "median": 4.105904167401032,
+            "min": 3.9158499633181068,
+            "n": 10
+          },
+          "candidate_prefill_tok_s_median": 32.68192156900483,
+          "candidate_ttft_ms_median": 2009.504375499091,
+          "prefill_ratio": 0.9999342088822968,
+          "r_c": 0.07167385575509795,
+          "r_c_ci95": [
+            0.06866100933593494,
+            0.07375562317985353
+          ],
+          "significant": true,
+          "token_latency_ms": {
+            "baseline": {
+              "max": 47.847565001575276,
+              "p50_of_p50": 16.303687487379648,
+              "p95_of_p95": 25.557569504599087
+            },
+            "candidate": {
+              "max": 1153.0363589990884,
+              "p50_of_p50": 244.96065500716213,
+              "p95_of_p95": 258.58852350211237
+            }
+          },
+          "ttft_ratio": 1.1425368459912992
+        },
+        "W2": {
+          "baseline_decode_tok_s": {
+            "cv_percent": 1.4485428599505838,
+            "iqr": 0.6820677225029996,
+            "max": 55.903898496667416,
+            "median": 55.000635638031184,
+            "min": 52.993706003677715,
+            "n": 10
+          },
+          "baseline_prefill_tok_s_median": 30.943472037895226,
+          "baseline_ttft_ms_median": 1755.72611449752,
+          "candidate_decode_tok_s": {
+            "cv_percent": 2.4047476688860816,
+            "iqr": 0.17184334297977655,
+            "max": 4.042982241732413,
+            "median": 3.854351552825393,
+            "min": 3.8269630405745483,
+            "n": 10
+          },
+          "candidate_prefill_tok_s_median": 30.93562344372497,
+          "candidate_ttft_ms_median": 2013.4165464987746,
+          "prefill_ratio": 0.9997463570293391,
+          "r_c": 0.07007830924339775,
+          "r_c_ci95": [
+            0.06952671293368774,
+            0.0733238928654816
+          ],
+          "significant": true,
+          "token_latency_ms": {
+            "baseline": {
+              "max": 46.2404869904276,
+              "p50_of_p50": 17.250732489628717,
+              "p95_of_p95": 26.32025649654679
+            },
+            "candidate": {
+              "max": 1311.1507259891368,
+              "p50_of_p50": 261.9924535101745,
+              "p95_of_p95": 267.29722249729093
+            }
+          },
+          "ttft_ratio": 1.1467714297084453
+        },
+        "W3": {
+          "baseline_decode_tok_s": {
+            "cv_percent": 2.054903662261232,
+            "iqr": 1.591669658135288,
+            "max": 53.71229710470595,
+            "median": 52.30064146269022,
+            "min": 50.60769884518544,
+            "n": 10
+          },
+          "baseline_prefill_tok_s_median": 29.23835497313275,
+          "baseline_ttft_ms_median": 1850.3631929925177,
+          "candidate_decode_tok_s": {
+            "cv_percent": 0.5363637166159458,
+            "iqr": 0.03454154210247973,
+            "max": 3.943175182700234,
+            "median": 3.908678865848699,
+            "min": 3.887490063097339,
+            "n": 10
+          },
+          "candidate_prefill_tok_s_median": 29.223978348720507,
+          "candidate_ttft_ms_median": 2118.367779010441,
+          "prefill_ratio": 0.9995082957154924,
+          "r_c": 0.07473481694554432,
+          "r_c_ci95": [
+            0.07411238139126886,
+            0.0769945063727368
+          ],
+          "significant": true,
+          "token_latency_ms": {
+            "baseline": {
+              "max": 50.53778798901476,
+              "p50_of_p50": 18.523285500123166,
+              "p95_of_p95": 26.149725992581807
+            },
+            "candidate": {
+              "max": 839.5513680006843,
+              "p50_of_p50": 256.93977101764176,
+              "p95_of_p95": 270.89099401200656
+            }
+          },
+          "ttft_ratio": 1.1448389089411632
+        },
+        "W4": {
+          "baseline_decode_tok_s": {
+            "cv_percent": 2.0918974396047156,
+            "iqr": 2.1130934095045717,
+            "max": 56.74346119980638,
+            "median": 55.24393829980799,
+            "min": 53.7243122211369,
+            "n": 10
+          },
+          "baseline_prefill_tok_s_median": 32.673752875016056,
+          "baseline_ttft_ms_median": 1756.0638050053967,
+          "candidate_decode_tok_s": {
+            "cv_percent": 0.4330949609532309,
+            "iqr": 0.026415661711442162,
+            "max": 4.090234932827253,
+            "median": 4.053847746884371,
+            "min": 4.034555476648577,
+            "n": 10
+          },
+          "candidate_prefill_tok_s_median": 32.66394299659592,
+          "candidate_ttft_ms_median": 2013.3317599975271,
+          "prefill_ratio": 0.9996997627282773,
+          "r_c": 0.07338086080836966,
+          "r_c_ci95": [
+            0.07186318429747154,
+            0.07510124873658756
+          ],
+          "significant": true,
+          "token_latency_ms": {
+            "baseline": {
+              "max": 43.619561998639256,
+              "p50_of_p50": 17.096914496505633,
+              "p95_of_p95": 27.368149501853622
+            },
+            "candidate": {
+              "max": 655.2152599906549,
+              "p50_of_p50": 248.65247400884982,
+              "p95_of_p95": 262.3613585019484
+            }
+          },
+          "ttft_ratio": 1.1465026237992189
+        }
+      },
+      "r_agg": 0.0724456878320842,
+      "r_agg_ci95": [
+        0.071677850969044,
+        0.07372796981744571
+      ],
+      "r_agg_significant": true
+    },
+    "2": {
+      "classes": {
+        "W1": {
+          "baseline_decode_tok_s": {
+            "cv_percent": 2.828342440412296,
+            "iqr": 2.9504716769080943,
+            "max": 59.26954596081783,
+            "median": 57.29974207247085,
+            "min": 55.14366862777682,
+            "n": 10
+          },
+          "baseline_prefill_tok_s_median": 32.65724724380973,
+          "baseline_ttft_ms_median": 1760.0291404960444,
+          "candidate_decode_tok_s": {
+            "cv_percent": 1.015506511950728,
+            "iqr": 0.041265623750117886,
+            "max": 4.0318900111606135,
+            "median": 4.003417953601559,
+            "min": 3.8928422814294756,
+            "n": 10
+          },
+          "candidate_prefill_tok_s_median": 32.78653301919101,
+          "candidate_ttft_ms_median": 2010.2633850037819,
+          "prefill_ratio": 1.0039588693565038,
+          "r_c": 0.06986799257382637,
+          "r_c_ci95": [
+            0.06762763203312223,
+            0.07168120885864425
+          ],
+          "significant": true,
+          "token_latency_ms": {
+            "baseline": {
+              "max": 48.12017100630328,
+              "p50_of_p50": 16.336283995769918,
+              "p95_of_p95": 25.611356992158107
+            },
+            "candidate": {
+              "max": 1184.5777849957813,
+              "p50_of_p50": 250.52748249436263,
+              "p95_of_p95": 265.5334895098349
+            }
+          },
+          "ttft_ratio": 1.1421761939902948
+        },
+        "W2": {
+          "baseline_decode_tok_s": {
+            "cv_percent": 1.469490912327331,
+            "iqr": 0.6934247046814477,
+            "max": 55.94324719718851,
+            "median": 54.99849509125717,
+            "min": 52.99757487729116,
+            "n": 10
+          },
+          "baseline_prefill_tok_s_median": 30.923194378072395,
+          "baseline_ttft_ms_median": 1756.6948454914382,
+          "candidate_decode_tok_s": {
+            "cv_percent": 0.3467216176814821,
+            "iqr": 0.016896525924164685,
+            "max": 3.901986055104456,
+            "median": 3.8854166666378553,
+            "min": 3.860536157845993,
+            "n": 10
+          },
+          "candidate_prefill_tok_s_median": 31.042111488249923,
+          "candidate_ttft_ms_median": 2004.9438745045336,
+          "prefill_ratio": 1.0038455635832322,
+          "r_c": 0.07064587240416148,
+          "r_c_ci95": [
+            0.07001858378776475,
+            0.0711347683151815
+          ],
+          "significant": true,
+          "token_latency_ms": {
+            "baseline": {
+              "max": 46.222523000324145,
+              "p50_of_p50": 17.264597001485527,
+              "p95_of_p95": 26.35787300823722
+            },
+            "candidate": {
+              "max": 1326.717790972907,
+              "p50_of_p50": 259.6570689929649,
+              "p95_of_p95": 264.75211551587563
+            }
+          },
+          "ttft_ratio": 1.1413159659745271
+        },
+        "W3": {
+          "baseline_decode_tok_s": {
+            "cv_percent": 2.0419737227573775,
+            "iqr": 1.5661951705114205,
+            "max": 53.70105866273509,
+            "median": 52.33948450519145,
+            "min": 50.61259193780591,
+            "n": 10
+          },
+          "baseline_prefill_tok_s_median": 29.220018291888163,
+          "baseline_ttft_ms_median": 1851.0383454995463,
+          "candidate_decode_tok_s": {
+            "cv_percent": 0.4359821887782241,
+            "iqr": 0.029554311257725452,
+            "max": 4.042599804021166,
+            "median": 4.018067773295427,
+            "min": 3.994060366980513,
+            "n": 10
+          },
+          "candidate_prefill_tok_s_median": 29.332266743022497,
+          "candidate_ttft_ms_median": 2104.7406130091986,
+          "prefill_ratio": 1.0038414914738605,
+          "r_c": 0.0767693417556851,
+          "r_c_ci95": [
+            0.07616690163263515,
+            0.07901541664395755
+          ],
+          "significant": true,
+          "token_latency_ms": {
+            "baseline": {
+              "max": 50.520371994934976,
+              "p50_of_p50": 18.496124510420486,
+              "p95_of_p95": 26.148346994887106
+            },
+            "candidate": {
+              "max": 822.6160519989207,
+              "p50_of_p50": 249.67693799408153,
+              "p95_of_p95": 263.27468949602917
+            }
+          },
+          "ttft_ratio": 1.1370594337640179
+        },
+        "W4": {
+          "baseline_decode_tok_s": {
+            "cv_percent": 2.063796110786708,
+            "iqr": 1.994395676766743,
+            "max": 56.784657403005255,
+            "median": 55.2701898701938,
+            "min": 53.766377548528965,
+            "n": 10
+          },
+          "baseline_prefill_tok_s_median": 32.65932466566224,
+          "baseline_ttft_ms_median": 1756.7298895010026,
+          "candidate_decode_tok_s": {
+            "cv_percent": 2.2642206985398183,
+            "iqr": 0.16443212982380961,
+            "max": 4.096949321876166,
+            "median": 3.9452529694431666,
+            "min": 3.87947137749125,
+            "n": 10
+          },
+          "candidate_prefill_tok_s_median": 32.774895378089916,
+          "candidate_ttft_ms_median": 2016.6462909983238,
+          "prefill_ratio": 1.0035386742870769,
+          "r_c": 0.07138120890680655,
+          "r_c_ci95": [
+            0.06983479201431973,
+            0.07488885491784132
+          ],
+          "significant": true,
+          "token_latency_ms": {
+            "baseline": {
+              "max": 43.426321004517376,
+              "p50_of_p50": 17.07684900611639,
+              "p95_of_p95": 27.377568505471572
+            },
+            "candidate": {
+              "max": 680.2803209866397,
+              "p50_of_p50": 256.10319650149904,
+              "p95_of_p95": 269.3644535029307
+            }
+          },
+          "ttft_ratio": 1.147954675929804
+        }
+      },
+      "r_agg": 0.07211642565733109,
+      "r_agg_ci95": [
+        0.07139908565375379,
+        0.07327680939480903
+      ],
+      "r_agg_significant": true
+    }
+  },
+  "schema": "inferswarm.phase1.p6-analysis/1",
+  "section_8": {
+    "conclusion": "INCONCLUSIVE",
+    "reason": "canonical blocks do not expose per-touch expert identity joined to baseline pre-touch hit/miss state; MATCHED_NONLOCAL_TOUCH_SET cannot be constructed without forbidden aggregate apportionment",
+    "rule_b_fires": false
+  },
+  "session_verdicts": {
+    "1": {
+      "GO": {
+        "G1": true,
+        "G2": true,
+        "G3": true,
+        "G4": false,
+        "G5": false,
+        "G6": true,
+        "G7": true
+      },
+      "ITERATE": {
+        "I1": true,
+        "I2": true,
+        "I3": true,
+        "I4": true,
+        "I5": false,
+        "I6": false,
+        "I7": false
+      },
+      "ITERATE_cases": {
+        "A": false,
+        "B": false,
+        "C": false,
+        "D": false,
+        "E": false
+      },
+      "NO_GO": {
+        "N1": false,
+        "N2": false,
+        "N3": true,
+        "N4": true,
+        "N5": false,
+        "N6": true,
+        "N7": false,
+        "N8": false,
+        "N9": true
+      },
+      "verdict": "NO-GO"
+    },
+    "2": {
+      "GO": {
+        "G1": true,
+        "G2": true,
+        "G3": true,
+        "G4": false,
+        "G5": false,
+        "G6": true,
+        "G7": true
+      },
+      "ITERATE": {
+        "I1": true,
+        "I2": true,
+        "I3": true,
+        "I4": true,
+        "I5": false,
+        "I6": false,
+        "I7": false
+      },
+      "ITERATE_cases": {
+        "A": false,
+        "B": false,
+        "C": false,
+        "D": false,
+        "E": false
+      },
+      "NO_GO": {
+        "N1": false,
+        "N2": false,
+        "N3": true,
+        "N4": true,
+        "N5": false,
+        "N6": true,
+        "N7": false,
+        "N8": false,
+        "N9": true
+      },
+      "verdict": "NO-GO"
+    }
+  },
+  "startup_caveat": false,
+  "startup_seconds": {
+    "1": {
+      "baseline_b1": 79.28009557723999,
+      "baseline_b1_kv_matched": 79.24528336524963,
+      "candidate_v2": 158.50406098365784
+    },
+    "2": {
+      "baseline_b1": 79.25169634819031,
+      "baseline_b1_kv_matched": 79.25395083427429,
+      "candidate_v2": 158.5534806251526
+    }
+  },
+  "validation": {
+    "artifact_hashes_verified": true,
+    "baseline_cv_within_5_percent": true,
+    "canonical_arm_definitions": true,
+    "required_repetitions_present": true,
+    "same_campaign_identity": true,
+    "selective_repetition_deletion": false,
+    "sessions_complete": true,
+    "sessions_valid": true
+  },
+  "worse_valid_session_verdict": "NO-GO"
+}
