@@ -1,0 +1,1 @@
+6c9cb2c5dbd46cdd93049769427b3c5bec47cdbb0564050c8fedb7a90eac15d7  phase1r-d3-three-device-placement.json
