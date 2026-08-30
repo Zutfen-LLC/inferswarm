@@ -563,3 +563,28 @@ The fresh session supersedes the earlier incomplete INVALID for the overall D3 p
 `D3_PRIMITIVE_PASS_OVERLAP_CONFIRMED`
 
 Authorization: D3 may proceed to the short `S1/S2A/S2B/S3` serving screen. That screen, and E2A/E2B/E3 calculations, have not been run here.
+
+---
+
+## 12. D3 serving screen — valid completion
+
+The frozen short W4 serving screen ran on `inferswarm01` in the mandated fresh-process order `S1`, `S2A`, `S2B`, `S3`, with one discarded warmup and exactly three retained greedy 128-token generations per arm. It used FreeToken `9aa113e3` (a measurement-only harness commit on top of accepted runtime/correctness SHA `b472a29e941f5435df12b4441960d952eee3d992`), handoff `1118320ce17c702c6dc1c16cd36825e412dc05db`, and frozen placement SHA `6677fe1c506376a55aa8dcabb8d5761dc0373ced9d9b053209991059556d5887`. Common geometry was GPU0 `GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55`, TP1, offload, zero CPU MoE layers, Triton NVFP4, 3,774 GPU0 cache slots, 17,075 KV/runtime tokens, one running request, and graph BS `[1]`.
+
+| Arm | Retained decode tok/s | Median decode tok/s |
+|---|---:|---:|
+| S1 | 52.8961, 53.2212, 53.2395 | 53.2212 |
+| S2A | 54.2339, 54.4818, 54.4867 | 54.4818 |
+| S2B | 66.7866, 67.8157, 67.8542 | 67.8157 |
+| S3 | 51.1066, 51.2780, 51.2377 | 51.2377 |
+
+Thus `E2A = 1.023686`, `E2B = 1.274224`, and `E3 = 0.755544`, with `S3/S1 = 0.962732`, `S3/S2A = 0.940457`, and `S3/S2B = 0.755544`. The first resident worker is approximately neutral on the Gen2 x1 A path, while B's Gen3 x16 path improves W4 decode throughput by 27.4% versus S1. S3 does not exceed B-only throughput but retains 75.554% of it while adding another 3,000 resident identities.
+
+| Arm | A selections/share | B selections/share | GPU0 local selections/share |
+|---|---:|---:|---:|
+| S2A | 77,900 / 47.920768% | 0 / 0% | 84,660 / 52.079232% |
+| S2B | 0 / 0% | 77,518 / 47.685778% | 85,042 / 52.314222% |
+| S3 | 77,900 / 47.920768% | 77,518 / 47.685778% | 7,142 / 4.393455% |
+
+All D3 ownership arithmetic was exact with no dropped or duplicated routes. Every D3 arm retained zero fallback, failure, graph recapture, steady host synchronization, and steady expert-weight H2D; every retained generation completed at 128 tokens with zero process major faults, `pswpin`, and `pswpout`. Total generation wall including warmups was 71.626 s; fresh-process startup/ready time was 559.802 s. The bounded generic MoE timing surface produced an S1 complete-layer median of 0.233 ms (p95 0.777 ms); D3 component intervals were unavailable/not-applicable, so they are not combined into a critical-path claim.
+
+Final classification is `D3_SCALING_PROMISING`; `COMPOUNDING_MARGINAL_PENALTY = false`. The result justifies one further bounded architecture question: whether this marginal retention persists with a fourth worker and/or a deliberately heterogeneous low-cost resident worker. No follow-on experiment was started. Host-local raw evidence remains under `~/inferswarm-evidence/architecture-search/d3-three-gpu-fanout/` and is not committed here. Canonical Phase-1 NO-GO remains unchanged.
