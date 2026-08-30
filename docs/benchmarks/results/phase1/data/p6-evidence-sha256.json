@@ -1,0 +1,173 @@
+{
+  "analysis": {
+    "arms": "unpaired",
+    "artifact_hashes_reverified": true,
+    "bootstrap_resamples": 10000,
+    "bootstrap_seed": 0,
+    "result": {
+      "path": "docs/benchmarks/results/phase1/data/p6-analysis.json",
+      "sha256": "aed7b7849f0083efe9fc43bd84325330bdeab168626fb84cb80d41156bc09703"
+    },
+    "script": {
+      "path": "scripts/analyze_phase1_p6.py",
+      "sha256": "11e56b2d26e1cc3a3dd1ac6c203e0831a114272570d7736d9b089e6ab01e5eb5"
+    }
+  },
+  "campaign_external": {
+    "session-1": {
+      "indexed_artifacts": {
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1/W1.jsonl": "47c6d601c435d313f1e26d900aa0d715d7a8e5d70ddbbf9a24ddf145b60a6227",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1/W2.jsonl": "77d5a3d6ba5ae9d660bcef36446b037b52ca1a455c552f0269808d6ec31b2f2f",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1/W3.jsonl": "aa0a6291f74c453d63ba88e0f6f823514521047728c03bcee343f2e420465de4",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1/W4.jsonl": "1ed00178dc9961a8ef05fd5eb122cfa2c94cc598ceac3fba3893c587201baf0b",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1/block-mechanism-W1.json": "4a2a335b29e3b9f8f69e3798450689e31f1757571577824fe2e0c755eae0bd85",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1/block-mechanism-W2.json": "000a79dd308e1f2a42d909444a48d083102dab477ae6a17010f7b2e86b42ce6e",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1/block-mechanism-W3.json": "247c1a03dbb40d09e806c4cbaca7cf48cb439c12e55b918445a0236bfad8df28",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1/block-mechanism-W4.json": "a359d1dc2d1dea231e36f6450f382ec8915f7272cc2cc5933e714723206152ce",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1/runtime.json": "8bb0be3f71e6031087e712f2ec847bd7bc9aafa83f5033981acc1230d3e9aa54",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1/server.log": "f1174114277812989af7020d9b84f8d4cfbc9a33893c25e723c2f3bf274a2872",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1/startup.json": "0f395d8ee93bf439546bcd8ba463f0e68162e7db0b7f8c68869820baaa71f15e",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1/summary.json": "e38e055fc5e84a2f31c3c134849a0bb6d093c30a2d4bfb650d2ef3089d83957e",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1_kv_matched/W1.jsonl": "108312f7768dc3d80a5aeee06ee0709032f9a17739032fa454edd3bacd03146b",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1_kv_matched/W2.jsonl": "5f0bd93d7803b0f7c0e5dd6e11d7c30f86eac384ad5222a5253320bb11aa069d",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1_kv_matched/W3.jsonl": "b434760687f57acfeb52a9fa6063c5e77c2b8732ee9f646204bf437fa2671fa5",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1_kv_matched/W4.jsonl": "936723885ef37ff297d73e12d2a0b4768057dea87348cb1233885ff74723d40e",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1_kv_matched/block-mechanism-W1.json": "96f180f1845ab17fe9b16939a627804f2103fd4ad4c56151f16674364f5efbe1",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1_kv_matched/block-mechanism-W2.json": "f3e49817bf894b6ce12403623267e0d949674c44b3a10ff5fc586d207c682f87",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1_kv_matched/block-mechanism-W3.json": "106e6274fd8324474437b8a5063aa4c42d7499d9a4eeccf8ca04e8c8b6f9d8d0",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1_kv_matched/block-mechanism-W4.json": "2188df040acba24bb20f074f7f92baf3c8065910be7e8151304057c3499ca5a0",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1_kv_matched/runtime.json": "f980e74b1a9bf742c7e966cf26f8448172c77df67dd92d67fc1f467e51fc7c3d",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1_kv_matched/server.log": "98b5a39d6211f3744be8236838f87257258af57b561a3753c00e1a0934bc8478",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1_kv_matched/startup.json": "89cd7fb3554d34f38710caa96e6154bc4699a9da4d7dc950e2d28f2f509c2dd7",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/baseline_b1_kv_matched/summary.json": "97c5457121fe09125c4c22b34a2a1b1447c370eedb9abbea0b656029cb6b7a01",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/candidate_v2/W1.jsonl": "2580bd6a72ed81d7b64699d7d05713adf0e1b1bb66f7fecc81889966b6f29847",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/candidate_v2/W2.jsonl": "0da8bd4053387e291711dc849bf8324dddfc525c32d4af0342ed853e07b85881",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/candidate_v2/W3.jsonl": "035b570c1d8595251ba04a0d62f38b59c422c9fc021f37e6156153b2a3452b56",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/candidate_v2/W4.jsonl": "a91c5437957611b2c011bf8b7b0eb7cae3b57ac53716ca68c840625dc38dc505",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/candidate_v2/block-mechanism-W1.json": "cf43bebe6d335222030b13533b8df2a8f1fec8dcdca1986462635e2266e717d5",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/candidate_v2/block-mechanism-W2.json": "4dfbc9daad29c241b3e534dc985cd1ac1d79c80b7ab239452acb57e1837acb6f",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/candidate_v2/block-mechanism-W3.json": "5246863286d0824e6fd681e16eb47d2e79696d2565928cf2b48dc40e87be9a74",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/candidate_v2/block-mechanism-W4.json": "e7adcea1115ec8587d8bbf1328e4d712fb6dc02dbcc8c81670f3f155f8f61ed4",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/candidate_v2/runtime.json": "b8be77a7e0a381ab4e09f900e90f08e4c6a07f64113926f6458a3dc02804f4a4",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/candidate_v2/server.log": "a67e933dd69136e305aacaa8ed07eb80f446958530be7484bc37274d77f78988",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/candidate_v2/startup.json": "4171556df1d591e40ff5915972dda9f6baed0e34cb3078757d4ca27682acb83c",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/candidate_v2/summary.json": "6e90ccc4768aee3bdd741873983b4a5f6adcd4228b4bc8e8b04577bd507af4a2",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/plan.json": "1bdf5bdd285256e7473b2595480084cf065874a20bf1b4c94c6e78b0a7b953da",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/provenance.json": "602511369d814e52e3b1eeb0f0fd2f5eefded716e979e69d2b057db068137f3e"
+      },
+      "plan": {
+        "path": "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/plan.json",
+        "sha256": "1bdf5bdd285256e7473b2595480084cf065874a20bf1b4c94c6e78b0a7b953da"
+      },
+      "provenance": {
+        "path": "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/provenance.json",
+        "sha256": "602511369d814e52e3b1eeb0f0fd2f5eefded716e979e69d2b057db068137f3e"
+      },
+      "runner_index_verified_by_analysis": true,
+      "session_summary": {
+        "path": "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-1/session-summary.json",
+        "sha256": "c398530118bc1389fcb8dce80440557f28aeea2a025f37b048b8ecc1c650789c"
+      }
+    },
+    "session-2": {
+      "indexed_artifacts": {
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1/W1.jsonl": "5b28bfe4efe65a05340f1f3538466e97af669e2f0ac7605467ced4b1645f759e",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1/W2.jsonl": "49bb1c8ef22759cb4e375eabf0158583836980ec813d62c661530ecf2e3ce188",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1/W3.jsonl": "9c17cbc07401cfa8c5d8b514072a1dae0d66357759c50f4abd7c73125c5539d4",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1/W4.jsonl": "ed313cac21b684087482a97c1ce1333e368f3c8e7fc9360262e9bd261af51dc8",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1/block-mechanism-W1.json": "fecc7f8b8eb9a00ecb3d1bd71abcc6fe6a9db285f47ba55375604db2ff3f79d0",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1/block-mechanism-W2.json": "5a8643a6fc0087bb5e2497cda69a59ad22db686400d2220d6f69fe372e7e214e",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1/block-mechanism-W3.json": "d86ee4decc660f784aedb8cc8126de965838b09d3984dd4a65eda4acc30e8032",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1/block-mechanism-W4.json": "b69c76bb48da49a47d417d6e5d920d4caeadc013c19499f28b54418f0b6d5373",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1/runtime.json": "8bb0be3f71e6031087e712f2ec847bd7bc9aafa83f5033981acc1230d3e9aa54",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1/server.log": "0dd492782875a26f830841263340fc45ff14bb048cd05b14bf9abed5a79202b8",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1/startup.json": "fffe9527ea8b1fa499a53c1170c0472b77e52990701de44df49b8127483d6078",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1/summary.json": "cfa3e50e70684bbc4173ea47e7151363b22739d6a22af8e061a5f74af57c1011",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1_kv_matched/W1.jsonl": "44d075cd7639980bbce91b4a4ed77b7c5054106a0844cb298045967f0ec2a018",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1_kv_matched/W2.jsonl": "459ffaf16240e3e5b3ceb17f7dda8c34d0ea9d6db7008f045f94c96b7b2c480f",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1_kv_matched/W3.jsonl": "183962f143c0caa5f651e261ee385f2d6689aa40256dfd8d0c1f6adc7c6414fb",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1_kv_matched/W4.jsonl": "f00982dd692dccccf6fff126de096667a85df275c813a66c2b16fd4936f131e8",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1_kv_matched/block-mechanism-W1.json": "4883174ed81e9c3103f40a530ad96182ac8e7ba8aa28c2e3724e91bcd1d2fa19",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1_kv_matched/block-mechanism-W2.json": "93871163f64ec10fff4cd13e7e85071e5010929cc7b0776e173d800386cd0588",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1_kv_matched/block-mechanism-W3.json": "6a6b86b7bb86e172a81519c83c1ca69f38cd727c35be4b7aa91811ce05042ee0",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1_kv_matched/block-mechanism-W4.json": "7aa68f7eb622fc279fcad445cdf682ca76c94fa808c22f3a2691274e0d1d15b3",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1_kv_matched/runtime.json": "f980e74b1a9bf742c7e966cf26f8448172c77df67dd92d67fc1f467e51fc7c3d",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1_kv_matched/server.log": "3aa7765e8d8a92c0ee30d7034506b6acd171d21d8d2ba503f146e9b46bcd0206",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1_kv_matched/startup.json": "ae4cd9ea06b60d537bd87af87bcd42583bd2fb745c7cb821a19e317e65f1506d",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/baseline_b1_kv_matched/summary.json": "34de61e647005a63715869bc654c3f402c310324a91321a448887b0b553a37b3",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/candidate_v2/W1.jsonl": "37d3df2af01e9e5b2f2df11745ecddadacb303476e0618d42ddd74a3cf3799e7",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/candidate_v2/W2.jsonl": "4e3fccee73f0d856a97de6dff18f2bdd9e58afd0a4fca704b7fb9b7ab1153ad0",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/candidate_v2/W3.jsonl": "7ded1e99ac14fdf0ded0f7d409b57490c147848afbade5f3069e75b3d41db465",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/candidate_v2/W4.jsonl": "ddca94c870339cfbedefdccec5143b9f1ba6c7c15744c9c371cffa06bc3c9730",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/candidate_v2/block-mechanism-W1.json": "635b22e685207f824e774520863382b74cab48434ddc19664c68d41bc73d6165",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/candidate_v2/block-mechanism-W2.json": "107c1320ec1f65026a213cede17a12debd904c4750e26de97557d93f68379e47",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/candidate_v2/block-mechanism-W3.json": "a39f32e5094418021f209dfb57160cdcc240538e2f3f7ea4fbdb07d8807dd992",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/candidate_v2/block-mechanism-W4.json": "bb1445f326e1a6e24a00e7fbecc3a93ba1487429c01421e4d70ae8661e2645e0",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/candidate_v2/runtime.json": "b8be77a7e0a381ab4e09f900e90f08e4c6a07f64113926f6458a3dc02804f4a4",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/candidate_v2/server.log": "a8010f5d8f2cf48939d872bfab8ae84f261690f93af316774b578fb5948de0ac",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/candidate_v2/startup.json": "726f78becd9c3c07d9199e5d639ebc0f6229ece3ff1bf65e62880bda042200dd",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/candidate_v2/summary.json": "7ef4f30b2bb780fc47328a916e0f1ea6cf7d933cc87a99fcde1bc266f5b58f6d",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/plan.json": "84cdba972dfb42481ef15f9bee17859a68169960a2293873be640d89f7d2e4c6",
+        "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/provenance.json": "a117f276a6b224cf375062f7b8f3c619831522179ca41f23f65cab80ec7104ad"
+      },
+      "plan": {
+        "path": "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/plan.json",
+        "sha256": "84cdba972dfb42481ef15f9bee17859a68169960a2293873be640d89f7d2e4c6"
+      },
+      "provenance": {
+        "path": "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/provenance.json",
+        "sha256": "a117f276a6b224cf375062f7b8f3c619831522179ca41f23f65cab80ec7104ad"
+      },
+      "runner_index_verified_by_analysis": true,
+      "session_summary": {
+        "path": "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/phase1-campaign/session-2/session-summary.json",
+        "sha256": "eb357c016c5506d8dc54b4a85f48da1fd673c5ea7699c5f63fa6690c5ec1bad1"
+      }
+    }
+  },
+  "campaign_identity_sha256": "1a1dda536059c8d71f9179597c46d17c65a7763d9a8875414d7ce823b1c2ec13",
+  "external_evidence_root": "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd",
+  "qualification_and_prerequisites": {
+    "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/campaign-plan.json": "78e0d01a400d0d86c9e614b6100bf4e456cc1999803daad7ccd34a52e4411229",
+    "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/campaign/campaign-validation.json": "34d031afd09f7f526c7e2e9ffd7a1668604d8e3615850e745970c3750cb595ea",
+    "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/prerequisites/phase1-p6-f29013fd-prerequisites.json": "67e3cf67465687ec0ac1b99517110a31668d4638334cea58d25385e371c9fa91",
+    "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/qualification/c3-reference-v2-self-consistency.json": "312db8623d6c0f6cd32cffbb1d1f2357cd524e3b7fa3580c5a790397f34461b2",
+    "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/qualification/c3-reference-v2-session-a.json": "113b5cd5335e244265cf543ef89f87708ad1d6e1f07b260c72ad0e57e72069a0",
+    "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/qualification/c3-reference-v2-session-b.json": "113b5cd5335e244265cf543ef89f87708ad1d6e1f07b260c72ad0e57e72069a0",
+    "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/qualification/candidate-c1-c4-exact-build.json": "1904345b79531a91c261a94396e2dd71350b874f8a9a3ee5bc53a14fdfc84b7f",
+    "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/qualification/p2-p3-p4-requalification-exact-build.json": "510ec3e90d733067da5be8d48f3ad17b8b31de27f3835ace36b227187f115efc",
+    "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/qualification/p6-software-sanity-disposition.json": "6240a103c4b1638f1b27d6f32fc4ca16c780f6046558cc978b72be66c3295048",
+    "/home/zutfen/inferswarm-evidence/phase1-p6-f29013fd/qualification/p6-software-sanity.json": "722cffc3e06ad9b00bf9ec0775d9ea99c775404ca24c2ecd45983ef96689999b"
+  },
+  "repository_raw_byte_copies": {
+    "docs/benchmarks/results/phase1/data/raw/session-1/baseline_b1/W1.jsonl": "47c6d601c435d313f1e26d900aa0d715d7a8e5d70ddbbf9a24ddf145b60a6227",
+    "docs/benchmarks/results/phase1/data/raw/session-1/baseline_b1/W2.jsonl": "77d5a3d6ba5ae9d660bcef36446b037b52ca1a455c552f0269808d6ec31b2f2f",
+    "docs/benchmarks/results/phase1/data/raw/session-1/baseline_b1/W3.jsonl": "aa0a6291f74c453d63ba88e0f6f823514521047728c03bcee343f2e420465de4",
+    "docs/benchmarks/results/phase1/data/raw/session-1/baseline_b1/W4.jsonl": "1ed00178dc9961a8ef05fd5eb122cfa2c94cc598ceac3fba3893c587201baf0b",
+    "docs/benchmarks/results/phase1/data/raw/session-1/baseline_b1_kv_matched/W1.jsonl": "108312f7768dc3d80a5aeee06ee0709032f9a17739032fa454edd3bacd03146b",
+    "docs/benchmarks/results/phase1/data/raw/session-1/baseline_b1_kv_matched/W2.jsonl": "5f0bd93d7803b0f7c0e5dd6e11d7c30f86eac384ad5222a5253320bb11aa069d",
+    "docs/benchmarks/results/phase1/data/raw/session-1/baseline_b1_kv_matched/W3.jsonl": "b434760687f57acfeb52a9fa6063c5e77c2b8732ee9f646204bf437fa2671fa5",
+    "docs/benchmarks/results/phase1/data/raw/session-1/baseline_b1_kv_matched/W4.jsonl": "936723885ef37ff297d73e12d2a0b4768057dea87348cb1233885ff74723d40e",
+    "docs/benchmarks/results/phase1/data/raw/session-1/candidate_v2/W1.jsonl": "2580bd6a72ed81d7b64699d7d05713adf0e1b1bb66f7fecc81889966b6f29847",
+    "docs/benchmarks/results/phase1/data/raw/session-1/candidate_v2/W2.jsonl": "0da8bd4053387e291711dc849bf8324dddfc525c32d4af0342ed853e07b85881",
+    "docs/benchmarks/results/phase1/data/raw/session-1/candidate_v2/W3.jsonl": "035b570c1d8595251ba04a0d62f38b59c422c9fc021f37e6156153b2a3452b56",
+    "docs/benchmarks/results/phase1/data/raw/session-1/candidate_v2/W4.jsonl": "a91c5437957611b2c011bf8b7b0eb7cae3b57ac53716ca68c840625dc38dc505",
+    "docs/benchmarks/results/phase1/data/raw/session-1/plan.json": "1bdf5bdd285256e7473b2595480084cf065874a20bf1b4c94c6e78b0a7b953da",
+    "docs/benchmarks/results/phase1/data/raw/session-1/session-summary.json": "c398530118bc1389fcb8dce80440557f28aeea2a025f37b048b8ecc1c650789c",
+    "docs/benchmarks/results/phase1/data/raw/session-2/baseline_b1/W1.jsonl": "5b28bfe4efe65a05340f1f3538466e97af669e2f0ac7605467ced4b1645f759e",
+    "docs/benchmarks/results/phase1/data/raw/session-2/baseline_b1/W2.jsonl": "49bb1c8ef22759cb4e375eabf0158583836980ec813d62c661530ecf2e3ce188",
+    "docs/benchmarks/results/phase1/data/raw/session-2/baseline_b1/W3.jsonl": "9c17cbc07401cfa8c5d8b514072a1dae0d66357759c50f4abd7c73125c5539d4",
+    "docs/benchmarks/results/phase1/data/raw/session-2/baseline_b1/W4.jsonl": "ed313cac21b684087482a97c1ce1333e368f3c8e7fc9360262e9bd261af51dc8",
+    "docs/benchmarks/results/phase1/data/raw/session-2/baseline_b1_kv_matched/W1.jsonl": "44d075cd7639980bbce91b4a4ed77b7c5054106a0844cb298045967f0ec2a018",
+    "docs/benchmarks/results/phase1/data/raw/session-2/baseline_b1_kv_matched/W2.jsonl": "459ffaf16240e3e5b3ceb17f7dda8c34d0ea9d6db7008f045f94c96b7b2c480f",
+    "docs/benchmarks/results/phase1/data/raw/session-2/baseline_b1_kv_matched/W3.jsonl": "183962f143c0caa5f651e261ee385f2d6689aa40256dfd8d0c1f6adc7c6414fb",
+    "docs/benchmarks/results/phase1/data/raw/session-2/baseline_b1_kv_matched/W4.jsonl": "f00982dd692dccccf6fff126de096667a85df275c813a66c2b16fd4936f131e8",
+    "docs/benchmarks/results/phase1/data/raw/session-2/candidate_v2/W1.jsonl": "37d3df2af01e9e5b2f2df11745ecddadacb303476e0618d42ddd74a3cf3799e7",
+    "docs/benchmarks/results/phase1/data/raw/session-2/candidate_v2/W2.jsonl": "4e3fccee73f0d856a97de6dff18f2bdd9e58afd0a4fca704b7fb9b7ab1153ad0",
+    "docs/benchmarks/results/phase1/data/raw/session-2/candidate_v2/W3.jsonl": "7ded1e99ac14fdf0ded0f7d409b57490c147848afbade5f3069e75b3d41db465",
+    "docs/benchmarks/results/phase1/data/raw/session-2/candidate_v2/W4.jsonl": "ddca94c870339cfbedefdccec5143b9f1ba6c7c15744c9c371cffa06bc3c9730",
+    "docs/benchmarks/results/phase1/data/raw/session-2/plan.json": "84cdba972dfb42481ef15f9bee17859a68169960a2293873be640d89f7d2e4c6",
+    "docs/benchmarks/results/phase1/data/raw/session-2/session-summary.json": "eb357c016c5506d8dc54b4a85f48da1fd673c5ea7699c5f63fa6690c5ec1bad1"
+  },
+  "schema": "inferswarm.phase1.p6-evidence-sha256/1"
+}
