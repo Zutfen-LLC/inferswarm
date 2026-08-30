@@ -529,3 +529,37 @@ The current evidence progression is:
 5. **D3:** must now determine whether the favorable architecture has a bounded marginal worker tax as another worker is added.
 
 The project should continue only while new workers add meaningful capacity without a precipitous, compounding throughput falloff.
+
+---
+
+## 11. D3 on `inferswarm01` — primitive completion
+
+`inferswarm02` was abandoned for D3 model execution after a substrate OOM abort. D3 migrated to `inferswarm01`; this is a host change for the architecture-search experiment, not a change to canonical Phase-1.
+
+Physical D3 roles on `inferswarm01` are frozen:
+
+- GPU0/coordinator: `GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55`, BDF `03:00.0`, healthy x16.
+- worker A: `GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176`, BDF `05:00.0`, Gen2 x1 riser.
+- worker B: `GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099`, BDF `02:00.0`, Gen3 x16.
+
+`D3B_INFERSWARM01_GOOD` established the physical topology. The captured primitive then passed real one-layer exact correctness, dynamic payload replay, whole-model capture for `a`, `b`, and `ab`, and an explicit captured concurrency control: A 17.033 ms, B 17.026 ms, AB 17.044 ms (`AB/max = 1.001`, `AB/(A+B) = 0.500`). This is physical concurrent A/B scheduling evidence, not a serving screen.
+
+The initially attempted whole-model completion is preserved as `D3_PRIMITIVE_INVALID`: its local request completed, but an instrumentation payload-wrapper parsing defect prevented scheduler token-ID retention. The defect was repaired in FreeToken `b472a29e941f5435df12b4441960d952eee3d992`, with no production D3 runtime change.
+
+A new clean four-arm correctness session then ran one fresh graph-enabled W4 greedy request (32-token cap) per clean server process, in order `local`, `a`, `b`, `ab`. All four exact token-ID sequences had 32 tokens and SHA-256 `c2b34b307eb0e57ac09e27b1cdc444a9e2184a245cc6bd91fe5d4fdf25a967dc`, using compact JSON token-ID encoding. The retained D3 ownership counts were:
+
+| Shape | A | B | GPU0 local | Total |
+|---|---:|---:|---:|---:|
+| a | 4,718 | 0 | 5,202 | 9,920 |
+| b | 0 | 4,721 | 5,199 | 9,920 |
+| ab | 4,718 | 4,721 | 481 | 9,920 |
+
+All D3 shape contracts reported BS1 graph active, exact corrected placement SHA, zero fallback/failure/recapture/steady host synchronization/steady expert-weight movement, and no dropped or duplicated routes. The generation windows had zero major faults, `pswpin`, and `pswpout`. Evidence is:
+
+`~/inferswarm-evidence/architecture-search/d3-three-gpu-fanout/d3-whole-model-correctness-session2.json`
+
+The fresh session supersedes the earlier incomplete INVALID for the overall D3 primitive verdict. Final primitive classification is:
+
+`D3_PRIMITIVE_PASS_OVERLAP_CONFIRMED`
+
+Authorization: D3 may proceed to the short `S1/S2A/S2B/S3` serving screen. That screen, and E2A/E2B/E3 calculations, have not been run here.
