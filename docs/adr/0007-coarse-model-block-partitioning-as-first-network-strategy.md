@@ -3,6 +3,13 @@
 Date: 2026-08-30
 Status: Accepted
 
+> **Current doctrine clarification (2026-08-31):** this remains the accepted
+> first network strategy/evidence direction. ADR 0008/Fabric Doctrine does not
+> canonize `inter-node = contiguous block`: strategies define legal boundaries
+> and the planner selects intra/inter-node granularity from measured economics.
+> The retired N1-N3 sequence below is historical planning scaffolding, not the
+> current roadmap.
+
 ## Context
 
 ADR 0003 established ordinary 1 Gigabit Ethernet as InferSwarm's baseline
