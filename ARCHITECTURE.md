@@ -1,223 +1,314 @@
 # InferSwarm Architecture
 
 ```
-Status: Research / Proof of Concept — this document records direction and
-open questions, not settled design.
+Status: Research / Proof of Concept
 ```
 
 InferSwarm is a **heterogeneous inference fabric**: a layer that turns
-disparate compute resources — GPUs of different vendors and generations,
-CPUs, system RAM, and eventually storage — into one logical inference
-platform that a host engine can use without caring where each piece of work
-actually runs.
+disparate compute and memory resources into one logical inference platform
+without requiring the host engine to treat every device or machine as the same
+kind of worker.
 
-This is an initial architecture document. Several questions are called out
-as unresolved deliberately; they will be settled by the roadmap's
-proof-of-concept phases and recorded as ADRs in
-[docs/adr/](docs/adr/README.md), not decided by fiat here.
+The architecture is evidence-driven. Concrete execution strategies are proven
+first in the FreeToken integration fork; only then are stable concepts extracted
+into InferSwarm. Accepted architecture decisions live under
+[`docs/adr/`](docs/adr/README.md).
 
 ## Purpose
 
-The fabric's job is to answer, for a given inference workload and a set of
-contributed resources:
+For a given model/workload and a set of contributed resources, InferSwarm must
+eventually answer:
 
-1. **where** each piece of state (weights, activations, KV cache) should live;
-2. **where** each piece of computation should execute;
-3. **how** data moves between those places;
-4. **how all of the above is measured**, so that (1) and (2) are decisions
-   based on evidence rather than assumptions about hardware.
+1. **where** state lives — weights, KV/recurrent state, activations, caches;
+2. **where** computation executes;
+3. **what execution granularity** is appropriate for each boundary;
+4. **how** data moves between resources/nodes;
+5. **how capabilities are measured** so placement decisions are based on
+   evidence rather than device labels.
 
-Everything else — model semantics, tokenization, serving API — belongs to the
-host inference engine. InferSwarm deliberately does not own those.
+Model semantics, tokenization, serving APIs, and user-visible generation
+behavior remain owned by the host inference engine.
 
-## Architectural layers
+## Current architectural shape
 
-Conceptual layering:
+Conceptually:
 
-```
+```text
 Inference Engine
-      │
-      ▼
-Execution Adapter          ← narrow seam; engine-specific, thin
-      │
-      ▼
-InferSwarm Planner / Scheduler
-      │
-      ▼
-Transport / Worker Interface
-      │
-      ├── same-machine GPU
-      ├── network worker
-      ├── CPU/RAM
-      └── future storage tier
+      |
+      v
+Execution Adapter
+      |
+      v
+InferSwarm execution/placement plan
+      |
+      +--------------------------+
+      |                          |
+      v                          v
+Node-local resources        Remote node block
+(GPU/RAM/etc.)              (persistent model block)
+      |                          |
+backend-native fast path    backend-native fast path
+      |                          |
+      +------------ semantic boundaries ------------+
 ```
 
-- **Inference Engine** — the host runtime that owns model semantics and the
-  serving surface. Today: FreeToken (see
-  [FreeToken relationship](#freetoken-relationship)). Tomorrow: potentially
-  others.
-- **Execution Adapter** — the narrow, engine-specific glue that exposes the
-  fabric to one host engine. This is the seam that keeps host-engine changes
-  and fabric changes from entangling (principle 10 in the
-  [README](README.md)).
-- **Planner / Scheduler** — decides placement and dispatch based on worker
-  capabilities and measured profiles. Unbuilt; its contract will be
-  formalized only to the extent the POCs actually require (ROADMAP Phase 5).
-- **Transport / Worker Interface** — talks to workers, whether they are
-  another GPU in the same machine, a process exposing system RAM, or a remote
-  node over ordinary Ethernet. Protocol direction:
-  [docs/protocols/](docs/protocols/README.md).
+The conceptual layers are not yet stable public interfaces. They exist to keep
+experiments from defining the permanent API accidentally.
 
-These layers are conceptual. The first POCs will not implement them as
-separate components; they exist so that experimental code grown inside the
-FreeToken fork has a target shape to converge toward.
+## Two execution granularities now supported by evidence/direction
+
+### 1. Node-local fine-grained resource execution
+
+The first proven strategy is distributed MoE expert execution within one
+machine.
+
+Conceptually for one MoE layer:
+
+```text
+router
+  |
+  +-- local selected experts
+  +-- resident secondary-GPU experts
+  +-- host-RAM/CPU tier where applicable
+  |
+  v
+route reconstruction / reduction
+```
+
+Phase1R D1-D7 established several important facts:
+
+- backend-native captured execution matters enormously on the first
+  NVIDIA/FreeToken stack;
+- a healthy-link resident secondary GPU can improve throughput;
+- worker service cost depends materially on link topology and physical work;
+- dummy expert execution and fixed transport are real costs;
+- simply balancing logical routes or minimizing fan-in does not make a very
+  slow link behave like a fast performance worker.
+
+This makes local GPU/RAM placement a measured resource-planning problem, not a
+rule that "more VRAM always means more speed."
+
+A future planner may therefore distinguish resources that are
+performance-positive, neutral/constrained, or capacity-only. Those categories
+are descriptive research concepts today, not a frozen API.
+
+### 2. Inter-node coarse model-block execution
+
+[ADR 0007](docs/adr/0007-coarse-model-block-partitioning-as-first-network-strategy.md)
+sets the first multi-machine strategy.
+
+A remote machine is **not initially treated as a long-distance PCIe expert
+worker**. Instead, it owns a contiguous block of model execution:
+
+```text
+Node A
+  embedding / layers 0..N
+  block-local KV/recurrent state
+        |
+        | hidden-state boundary
+        v
+Node B
+  layers N+1..M
+  block-local KV/recurrent state
+        |
+        | hidden-state boundary
+        v
+Node C / final block
+```
+
+Each node:
+
+- loads only the state assigned to its block;
+- keeps that block's persistent KV/recurrent state local;
+- executes the block using its backend-native fast path;
+- exchanges only the semantic state needed at the block boundary.
+
+The first network baseline remains ordinary **1 Gigabit Ethernet** (ADR 0003).
+Faster networking is an optimization/comparison, not a prerequisite baked into
+the architecture.
+
+The active evidence sequence is #31 through #34.
+
+## Node-local composition
+
+The two granularities are intended to compose eventually:
+
+```text
+Distributed InferSwarm
+
+Node A
+  model block A
+  +-- local GPU coordinator
+  +-- local secondary GPU(s)
+  +-- local RAM/CPU tier
+        |
+        | Ethernet block boundary
+        v
+Node B
+  model block B
+  +-- local resources appropriate to that node
+```
+
+This composition is a direction, not yet a demonstrated runtime. The first
+network POC deliberately keeps node-local behavior simple enough to isolate the
+block/network boundary.
+
+## State ownership
+
+### Model weights
+
+Placement assigns only the model state a node/resource needs. A node must not
+require full-model host RAM merely because the checkpoint contains unrelated
+layers. Selective loading is therefore a core distributed requirement, tracked
+by issue #31.
+
+### KV and recurrent state
+
+State should live with the model block that consumes and updates it. Moving KV
+state across the network every token would defeat the purpose of coarse
+partitioning unless a specific model requires an explicit cross-block state
+transfer.
+
+### Activations
+
+Activations are transient boundary state. Their representation and transport
+are execution-strategy specific and are not yet a stable public protocol.
 
 ## Resource hierarchy
 
-A vocabulary for talking about resource tiers:
+The earlier L0/L1/L2/L3 vocabulary remains useful **within a node**:
 
-```
+```text
 L0 — primary/local accelerator resources
-L1 — secondary accelerator resources
+L1 — additional local accelerator resources
 L2 — system RAM / CPU
 L3 — future NVMe backing
 ```
 
-L0 is the accelerator the host engine would use on its own (e.g. the one GPU
-in a single-GPU machine). L1 adds further accelerators — a second GPU in the
-same machine, or a GPU in another machine. L2 is host memory and CPU, which
-remain full citizens (principle 4 in the [README](README.md)), not a fallback
-that exists only until something better arrives. L3 is future NVMe-backed
-capacity, expected to serve as a backing tier rather than a latency-critical
-hot execution tier.
+A remote machine is better described as a **node containing its own resource
+hierarchy**, not merely another L1 device. This avoids conflating PCIe-local
+latency with network-node semantics.
 
-This is a **conceptual hierarchy for describing resources, not a strict cache
-hierarchy**. The scheduler may execute work where data already resides rather
-than promoting everything toward L0 — that is the entire point of resident
-remote execution. Nothing here dictates a fixed promotion path.
+System RAM remains first-class per ADR 0005. Secondary GPUs augment capacity;
+they do not make RAM obsolete.
 
-## Worker concept
+## Capability concept
 
-A worker should eventually expose **capabilities, not vendor identity**.
-Conceptual shape only — these types do not exist yet and are not implemented
-in this repository:
+A future capability model must represent measured behavior without hard-coding
+one vendor, transport, or work unit.
 
-```
-FabricWorker
-├── ExpertExecutionCapability      ← can execute MoE experts (formats, latency)
-├── LayerStageCapability            ← can execute a dense layer/stage
-├── StorageCapability               ← can hold state (VRAM/RAM/future NVMe)
-└── ResourceProfile                 ← measured capabilities (principle 8)
+Conceptually only:
+
+```text
+Node / FabricResource
+├── StorageCapability
+├── ExpertExecutionCapability
+├── ModelBlockExecutionCapability
+├── BackendExecutionCapability
+└── ResourceProfile
 ```
 
-The naming is deliberately model-independent (`FabricWorker`,
-`WorkerCapability`, `ExecutionPlan`, `ResourceProfile`). MoE is the first
-execution strategy, not the definition of the platform — an MoE-specific
-executor can exist *underneath* the capability abstraction, but the
-abstraction itself must not assume every worker is an "expert worker"
-(principle 9). Exactly how much of this contract the first POCs need is an
-open question, deliberately deferred until the POCs reveal requirements
-(ROADMAP Phase 5, issue "Define model-independent worker capability
-contract").
+Potential measured profile inputs already supported by evidence include:
 
-## MoE execution concept
+- resident capacity;
+- supported representations/backends;
+- backend-native fast-path availability;
+- PCIe generation/width/topology;
+- H2D/D2H bandwidth and small-message latency;
+- expert/branch service curves;
+- network RTT/bandwidth;
+- node RAM limits;
+- block execution latency.
 
-The first execution strategy: distributed expert execution. Conceptual flow
-for one MoE layer:
+The exact fields/type names are deliberately **not frozen**. Issue #8 stays
+deferred until the N-series adds real block/network requirements.
 
-```
-router
-  │
-  ├── local selected experts        (L0)
-  │
-  ├── remote selected experts       (L1: same-machine or network GPU)
-  │
-  └── RAM/CPU fallback              (L2)
-  │
-  ▼
-combine
-```
+## Backend-independent execution
 
-The core protocol-level rule: a remote worker should receive **one activation
-payload plus all selected expert IDs / routing information relevant to that
-worker**, execute and accumulate locally, and return the smallest practical
-combined result. Consequences:
+ADR 0006 remains authoritative: CUDA Graphs and NVFP4/Triton are first-backend
+implementation choices, not InferSwarm semantics.
 
-- one network round trip per worker per layer (batched by destination), not
-  one request per expert;
-- per-expert fan-out is the worker's local problem, hidden behind the
-  dispatch boundary;
-- the combine step receives few, already-reduced results.
+The generalized rule is:
 
-This is spelled out further in [docs/protocols/](docs/protocols/README.md).
-The scheduling question — which experts live where, given measured routing
-behavior and device capabilities — is open, and the first inputs are being
-collected in ROADMAP Phases 0–3.
+> keep the hot path inside the fastest stable execution mechanism the backend
+> provides, and keep cross-resource boundaries semantic rather than tied to a
+> particular device API.
 
-Note also: resident expert *coverage* (which experts are resident where) and
-cache *hit rate* (which experts actually get selected) are different
-quantities. Coverage is a placement decision; hit rate depends on the model's
-real routing distribution and must be measured, not assumed (see
-[docs/investigations/](docs/investigations/)).
+Examples:
 
-## Dense model future direction
+- local NVIDIA expert workers may participate in CUDA-graph-compatible
+  execution;
+- another accelerator backend may use its own compiled/queued/persistent path;
+- a network node may execute a locally captured model block and exchange hidden
+  state only at block boundaries.
 
-For dense models, per-expert dispatch does not apply. The plausible direction
-is coarse layer/pipeline partitioning across workers, or replica placement
-for small models. This is recorded as a future direction only — no
-implementation commitment, no design yet. The lesson carried forward from the
-MoE work: pick the granularity at which the payload-to-work ratio favors
-moving small things and keeping big things resident.
+The semantic boundary is strategy-specific: routed work/contributions for the
+expert strategy, block input/output state for the model-block strategy.
 
-## Heterogeneous hardware future direction
+## Transport
 
-Intended backend shape:
+Transport is subordinate to execution semantics.
 
-```
-Worker Backend
-├── CUDA
-├── ROCm
+Possible substrates include:
+
+- same-host pinned staging/device copies;
+- future CUDA/ROCm/XPU IPC or P2P mechanisms;
+- shared memory;
+- ordinary TCP over Ethernet;
+- faster network transports when useful.
+
+InferSwarm does not require one transport to serve every work unit. A
+fine-grained local expert boundary and a coarse network block boundary may have
+different transport needs while still belonging to one execution plan.
+
+Protocol design notes live in [`docs/protocols/`](docs/protocols/README.md).
+
+## Hardware heterogeneity
+
+The intended backend direction remains:
+
+```text
+Backend implementations
+├── CUDA / NVIDIA
+├── ROCm / AMD
 ├── Intel XPU
 └── CPU
 ```
 
-CUDA is first because the initial POC hardware is NVIDIA. Worker support for
-a vendor does not imply that vendor's hardware must be able to serve as the
-primary model runtime — a weak or unusual device can still be a useful
-contributing worker. ROCm and XPU backends are investigations (ROADMAP
-Phase 6), not current work; nothing in the architecture should hard-code
-NVIDIA, CUDA, or multi-GPU assumptions into the fabric itself.
+The first experiments are NVIDIA-focused to isolate architecture mechanics.
+Later AMD/Intel work should begin only after the boundary it is implementing is
+stable enough that vendor bring-up is not confused with architecture debugging.
+
+A weak or narrow-link GPU can still be useful as a capacity resource even when
+it is not throughput-positive. That tradeoff should eventually be measured and
+surfaced rather than hidden behind a binary "supported/unsupported" label.
 
 ## FreeToken relationship
 
-FreeToken (specifically the [Zutfen-LLC fork](https://github.com/Zutfen-LLC/FreeToken))
-is the **initial host/runtime integration used for validation**. It is where
-the first POC implementation work happens, because it already has the MoE
-offload machinery, model support, and measurement tooling the early phases
-need.
+The Zutfen FreeToken fork is the initial host/runtime integration used for
+validation. Focused `poc/*` branches carry experimental implementation; this
+repository carries canonical roadmap, evidence artifacts, and architecture
+decisions.
 
-It is not necessarily InferSwarm's permanent, exclusive runtime dependency.
-The long-term intent is that distributed-execution functionality proven in
-the fork is extracted into this repository behind the narrow execution seam
-(ROADMAP Phase 5), so that InferSwarm's runtime components become cleanly
-separable and the fork does not have to remain deeply divergent from
-upstream FreeToken.
-
-Branch policy, and how issues/PRs flow between the two repositories:
-[docs/integrations/freetoken.md](docs/integrations/freetoken.md).
+The long-term goal remains a narrow integration seam, not a permanently deep
+fork. See [`docs/integrations/freetoken.md`](docs/integrations/freetoken.md).
 
 ## Open questions
 
-Deliberately unresolved, to be answered by experiment and recorded as ADRs:
+Current evidence questions, in order:
 
-- Is resident remote expert execution actually faster than host-RAM offload
-  on target hardware, end-to-end? (ROADMAP Phase 1)
-- Does 1 GbE networking sustain useful inference participation, and is its
-  limiting factor latency/synchronization or bandwidth? (Phase 4)
-- What subset of the `FabricWorker` capability contract do the POCs actually
-  need? (Phase 5)
-- How should expert placement weigh routing locality, capacity, and measured
-  per-device latency? (Phases 2–3)
-- Where exactly is the boundary between the open-source fabric and future
-  commercial management tooling? (Principle 7 governs the direction; exact
-  boundary TBD.)
+- Can a node selectively load only its assigned model block with bounded RAM?
+  (#31)
+- Can two model blocks separated by an explicit local boundary reproduce the
+  unsplit model exactly? (#32)
+- Can that boundary move across ordinary 1 GbE while preserving useful
+  backend-native execution? (#33)
+- What is the end-to-end two-node decode/prefill cost, and does 1 GbE remain a
+  viable commodity baseline? (#34)
+- If two-node evidence is positive, how should three-node placement and
+  capability-aware block sizing work?
+- When should a local accelerator be considered performance-positive versus
+  capacity-only, and how should that measured distinction enter placement?
+- What exact model-independent capability contract is justified after these
+  POCs? (#8)
