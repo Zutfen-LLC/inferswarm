@@ -15,7 +15,8 @@ roadmap.
 |---|---|---|
 | Phase 0 — baseline and instrumentation | [phase0-baseline.md](phase0-baseline.md) | **Complete.** Canonical baseline, correctness, routing, and residency evidence exist. |
 | Phase 1 — two-GPU local POC | [phase1-two-gpu-poc.md](phase1-two-gpu-poc.md) | **Complete.** Canonical verdict `NO-GO`; methodology/results remain immutable historical evidence. |
-| Phase1R — post-NO-GO architecture search | [phase1r-architecture-search-handoff.md](phase1r-architecture-search-handoff.md) | **Complete through D7.** Records graph-compatible local worker experiments, multiworker scaling, loader/route/transport optimizations, and the Gen2 x1 limitation on tested hardware. |
+| Phase1R — post-NO-GO architecture search | [phase1r-architecture-search-handoff.md](phase1r-architecture-search-handoff.md) | **Complete through D7.** Detailed chronological record. |
+| Phase1R disposition | [phase1r-final-disposition.md](phase1r-final-disposition.md) | **Frozen current conclusion.** Summarizes the local hardware conclusion and network pivot. |
 
 The Phase-1 placement/correctness correction documents remain historical
 methodology records and are not superseded by the current N-series.
