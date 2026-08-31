@@ -51,3 +51,4 @@ deciding whether the target is achievable — that distinction is the point.
 | [0004](0004-moe-as-first-execution-strategy.md) | MoE as first execution strategy | Accepted |
 | [0005](0005-ram-remains-first-class-tier.md) | System RAM remains a first-class tier | Accepted |
 | [0006](0006-backend-independent-worker-and-representation-boundary.md) | Backend-independent worker and representation boundary | Accepted |
+| [0007](0007-coarse-model-block-partitioning-as-first-network-strategy.md) | Coarse model-block partitioning as first network strategy | Accepted |
