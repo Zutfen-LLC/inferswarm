@@ -88,6 +88,71 @@ model/full CPU expert bank?
 
 N1 is blocked until N0 passes.
 
+### N0 result (2026-08-31)
+
+Verdict: **`N0_SELECTIVE_BLOCK_PASS`**. N1 may proceed to local split-block
+execution equivalence.
+
+The tested FreeToken head is
+`4c60ff522a95cf147456a4333271ee05b505fc58`, descended from the required D7
+head `a14f711dacc7383e398d84157bd955ce46a3ea92`. The checkpoint index SHA-256 is
+`d67403a4e9793c0ba8a136baf14b3b76ec7b32c822267978084895e07ebd8a3e`.
+The frozen plan is
+[`n0-qwen36-two-block-plan.json`](../investigations/data/n0-qwen36-two-block-plan.json).
+
+The real checkpoint has 124,468 tensors and 23,407,580,856 bytes. Its text
+decoder has 40 routed-MoE layers: 30 linear-attention/GatedDelta layers and 10
+full-attention layers. Applying the frozen byte-minimax rule selected boundary
+19:
+
+- Block A owns `[0,19)`, the input embedding, 8,606,770,176 routed-expert
+  bytes, and 671,070,768 non-expert layer bytes; total owned checkpoint state
+  is 10,294,959,664 bytes.
+- Block B owns `[19,40)`, 9,512,745,984 routed-expert bytes, 731,259,552
+  non-expert layer bytes, the 4,096-byte final norm, and 286,064,648-byte LM
+  head; total owned checkpoint state is 10,530,074,280 bytes.
+- The input embedding is 1,017,118,720 bytes. The checkpoint is untied, so no
+  tensor is duplicated between blocks. Small config/tokenizer/rope metadata is
+  process-local but is not checkpoint model-weight duplication.
+
+The research-only path filters the safetensors index before `get_tensor`,
+constructs only owned decoder modules, builds expert banks for explicit global
+layer IDs, and limits expert staging to one layer mapping at a time. It does not
+change the normal loader. Physical sentinels rejected `load_file()` and the
+legacy full expert-bank constructor.
+
+On the 125 GiB RAM / three RTX 3060 reference host, the unchanged full loader
+peaked at 28,174,820 KiB RSS. Fresh selective processes measured:
+
+| | Block A | Block B |
+|---|---:|---:|
+| unique fetched keys | 44,305 | 48,970 |
+| fetched checkpoint bytes | 10,294,959,436 | 10,530,074,024 |
+| unexpected fetched keys | 0 | 0 |
+| peak RSS/HWM | 11,265,648 KiB | 11,402,164 KiB |
+| retained RSS | 10,816,120 KiB | 10,958,144 KiB |
+| block-local KV/recurrent state | 32,718,848 bytes | 32,980,992 bytes |
+| `pswpin` / `pswpout` | 0 / 0 | 0 / 0 |
+
+The remaining conservatively allowed but unfetched keys are only ModelOpt
+`input_scale` calibration scalars unused by FreeToken's W4A16 kernels (57 for A,
+64 for B). No fetched key was outside the frozen allow-set. Major faults were
+deliberate file-backed checkpoint reads with zero swap traffic, not swap
+dependence.
+
+A normal full-model run captured a real 9-token prefill and established-context
+decode fixture. Both selective blocks matched their corresponding layer slice
+exactly for prefill and decode, including B's final norm: max absolute and
+relative deviation were both `0.0`, with no NaN/Inf. A allocated KV only for
+global layers `3,7,11,15`; B only for `19,23,27,31,35,39`; each allocated
+recurrent state only for its 15 owned GatedDelta layers. Mechanical layer/key
+union and disjointness checks passed with no unowned required state.
+
+The designated approximately 16 GiB RAM / RTX 3090 host was not available for
+a physical run. The reference-host process peaks are below 16 GiB, but this is
+not represented as a low-RAM-machine measurement. No networking or N1 chaining
+was implemented during N0.
+
 ## N1 — local split-block equivalence — issue #32
 
 ### Question
