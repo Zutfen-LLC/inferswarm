@@ -760,3 +760,82 @@ T3 ownership remained A 77,900 (47.920768%), B 77,518 (47.685778%), and GPU0 loc
 Formal classification is `D6_TRANSPORT_TAX_PARTIAL`: AB improved by 3.286%, satisfying the partial threshold, but did not meet the strong joint requirements (`AB_TRANSPORT_GAIN >= 1.08` and `D6_E3 >= 0.82`). Marginal retention is `promising`, not strong. It narrowly missed 0.82 and remains below the predeclared 0.85 minimum for recommending a fourth worker. Do not add a fourth worker yet. The next bounded question should measure the remaining per-worker dependency/join and fixed activation cost, with the 12-us zero-local cache-planning/launch tail as a secondary GPU0 target. No D7 or fourth-worker work was started. Host-specific evidence remains under `~/inferswarm-evidence/architecture-search/d6-count-aware-transport/` and is not committed.
 
 The final targeted D2/D3/D4/D5/D6, NVFP4, runtime-report, and argument regression suite reported 215 passed and 6 skipped. D6 instrumentation-off execution preserves D5's captured decode operations; D6 runtime selection remains a separate opt-in flag and executor.
+
+---
+
+## 16. D7 fan-in-sparse / layer-affine heterogeneous placement
+
+D7 tested one placement-only architecture hypothesis: preserve the exact frozen D3 6,000-identity remote union and 3,000/3,000 capacities, but minimize simultaneous A+B participation per token/layer. Canonical Phase-1 remains `NO-GO`; D2–D6 remain frozen. No fourth GPU, network worker, generic scheduler, or generic worker score was introduced.
+
+FreeToken branch `poc/phase1r-d7-fanin-sparse-placement` started exactly at accepted D6 head `8f2bd4d8005843dbc55bcc5e5d667574fb8f1442`. InferSwarm started at `b1e42ed6bd5e0f0fbd52ffbbd55a74314e9ad8b9`. InferSwarm placement commit `66a49bf1dfd119e16d8011f79f375e0475d687af` was pushed before physical D7 performance. The frozen artifact is `docs/investigations/data/phase1r-d7-fanin-sparse-placement.json`, SHA-256 `c360cad506fa4dbc2f768b24d8ad5dfd1d10956aafc88a5fa6e2736dfe0581d1`, schema `inferswarm.phase1r.d7-placement/1`, status `FROZEN_BEFORE_D7_PERFORMANCE`.
+
+### Frozen joint-route derivation
+
+The derivation used exact P0-I token/layer/top-k records, SHA-256 `4071e2bfd3c18f39e5c5a0b5ff8913ca0fb99b843cf7abca0ecc1f4ebd0a252f`, with ten measured exact-trace repetitions per W1–W4. It did not collect or tune against new serving routes. A capacity DP found an exact whole-layer solution, so the split-layer count is zero.
+
+- worker A layers: `0, 1, 2, 3, 4, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 22, 23, 26, 31`
+- worker B layers: `5, 8, 9, 18, 19, 20, 21, 24, 25, 27, 28, 29, 30, 32, 33, 34, 35, 36, 37, 38, 39`
+
+Among zero-co-participation whole-layer solutions, the slower Gen2 x1 A worker received the lower equal-W1–W4 expected active-event burden, then the lower owned-route burden. No broad hardware score was derived.
+
+| Frozen prediction | D3 equal | D7 sparse | Reduction |
+|---|---:|---:|---:|
+| mean remote workers active | 1.985750 | 0.999924 | 49.6450% |
+| P_BOTH | 98.5825% | 0% | 100% |
+| pooled A active events | 557,553 | 266,703 | 52.1654% |
+| pooled B active events | 556,933 | 294,840 | 47.0590% |
+
+Pooled frozen routes changed from A 2,087,134 / B 2,087,174 / local 318,492 to A 1,975,577 / B 2,198,731 / local 318,492. Thus useful remote coverage, total remote routes, and local-vs-remote coverage remained exact; only A/B ownership changed.
+
+### Capability snapshot and implementation boundary
+
+The descriptive worker snapshot is:
+
+`~/inferswarm-evidence/architecture-search/d7-fanin-sparse/d7-worker-capabilities.json`
+
+It records RTX 3060 UUID/model/VRAM/GDDR6/compute capability, BDF, idle and under-load link state, PHB topology, D3 independent/concurrent pinned large-copy rates and small-transfer latency, D4 fixed-width service, D5 compact count curves, D6 count-aware branch curves and zero-route medians, and probe temperature/power. Worker A's measured independent large-copy rates were 0.3477 GiB/s H2D and 0.3979 GiB/s D2H; worker B's were 9.8616 and 10.3631 GiB/s. No extensive new benchmark campaign or worker score was run.
+
+D7 reuses the D6 count-aware executor. Production changes are limited to a SHA-pinned D7 placement parser/selection flag and an opt-in joint-participation histogram. The latter was necessary because D6's marginal A and B count histograms cannot reconstruct the simultaneous A+B intersection. It defaults off under the historical D6 flag and was enabled identically for L0/L1/L2. D6 compute, transport, reconstruction, graph, and fallback behavior were not redesigned.
+
+The selected D3/D4/D5/D6/D7 FreeToken regression run reported 58 passed. The D3/D4/D7 InferSwarm derivation run reported 8 passed. The D7 placement-only targeted rerun reported 5 passed. Final physical FreeToken head for the primitive and serving screen was `a14f711dacc7383e398d84157bd955ce46a3ea92`.
+
+### Primitive and correctness
+
+Final primitive classification is `D7_FANIN_SPARSE_PRIMITIVE_PASS`. Exact 3,000/3,000 banks, resident bytes, no overlap, D3 union equality, 4,240 local complement, bulk/concurrent loader, A-only, B-only, local+A, local+B, zero-route transitions, stale-tail protection, physical invocation arithmetic, and whole-model BS1 capture passed. There is no A+B split-layer case because split count is zero. D6 equal and D7 sparse produced the same deterministic 32-token W4 sequence, SHA-256 `c2b34b307eb0e57ac09e27b1cdc444a9e2184a245cc6bd91fe5d4fdf25a967dc`.
+
+Representative direct graph-replay layer walls were 247.220 us for a D7 A-only four-route event and 184.391 us for a D7 B-only four-route event. The accepted uninstrumented D6 equal A+B reference is 244.736 us. D7 has no remaining active A+B split layer.
+
+### Frozen serving result
+
+The screen ran in exact order L0 D6 B-only, L1 D6 equal AB, L2 D7 sparse AB. Each arm used a fresh Engine/GPU state, the same bulk eight-worker loader setting, one discarded warmup, and exactly three retained greedy 128-token W4 generations.
+
+| Arm | Retained decode tok/s | Median |
+|---|---:|---:|
+| L0 D6 B-only | 69.690409, 70.917809, 70.908540 | 70.908540 |
+| L1 D6 equal AB | 57.853461, 58.071390, 58.076488 | 58.071390 |
+| L2 D7 sparse AB | 56.432289, 56.648203, 56.617370 | 56.617370 |
+
+- `AFFINITY_GAIN = 0.974961522`
+- `D7_E3 = 0.798456303`
+- `E3_GAIN = 0.974961522`
+- `P_BOTH_REDUCTION_SERVING = 1.0`
+- `PARTICIPATION_REDUCTION_SERVING = 0.497079497`
+
+| Placement | Zero | A only | B only | A+B | Mean workers |
+|---|---:|---:|---:|---:|---:|
+| L1 equal | 0 / 0% | 144 / 0.7087% | 92 / 0.4528% | 20,084 / 98.8386% | 1.988386 |
+| L2 sparse | 0 / 0% | 9,652 / 47.5000% | 10,668 / 52.5000% | 0 / 0% | 1.000000 |
+
+L1 routes were A 77,900 (47.9208%), B 77,518 (47.6858%), and local 7,142 (4.3935%). L2 routes were A 74,040 (45.5463%), B 81,378 (50.0603%), and local 7,142 (4.3935%). The remote total remained exactly 155,418 and local total remained 7,142. A changed -4.96%; B changed +4.98%.
+
+Both workers remained represented in all 20,320 L2 graph layer-events. Route-active branches were A 9,652 and B 10,668; zero-route branches were A 10,668 and B 9,652. Physical expert-route invocations exactly matched the A/B/local route counts. Returned D2H payload was 303,267,840 bytes A and 333,324,288 bytes B.
+
+Every retained generation had zero process major faults, `pswpin`, and `pswpout`. Process RSS was about 0.93 GB and MemAvailable stayed near 84.3 GB. All arms retained exact ownership, graph BS1, and zero fallback, failure, recapture, steady host synchronization, and steady expert-weight movement. GPU roles, PCIe link state, power limits, and clock policy were unchanged between arms.
+
+### Classification and next step
+
+Formal classification is `D7_FANIN_SPARSE_NOT_SUPPORTED`. D7_E3 did not clear 0.85 and did not reach 0.90. A fourth-worker D8 is not recommended and was not started.
+
+Fact: the intended routing mechanism moved completely, but median throughput fell 2.504% relative to equal AB. Fact: D7 concentrated routes on the sole active worker within each layer; frozen W4 mean A routes when active rose from 3.851 to 7.681 and B from 3.860 to 7.657. Fact: the D7 A-only representative wall (247.220 us) was not lower than the accepted equal A+B wall (244.736 us), whereas B-only was lower at 184.391 us. There were no remaining split A+B layers.
+
+The leading measured association is therefore A-only service latency under concentrated per-layer route counts, not residual A+B co-participation. Represented zero-route branch costs (D6 medians 33.792 us A and 16.384 us B), the unchanged GPU0 planning/launch tail, and other fixed graph/dependency work remain hypotheses for the rest. Optimize those measured fixed and A-only costs before considering another worker. Host-specific evidence is under `~/inferswarm-evidence/architecture-search/d7-fanin-sparse/` and is not committed.
