@@ -1,7 +1,14 @@
 # 0005. System RAM remains a first-class tier
 
 Date: 2026-08-26
-Status: Accepted
+Status: Superseded by 0008
+
+> **Current doctrine clarification (2026-08-31):** ADR 0008 supersedes this
+> ADR's intrinsic tier, `primary`/`secondary`, expert-placement, and universal
+> `FabricWorker` framing. The durable decision survives unchanged in substance:
+> system RAM is a first-class Memory Resource, CPU execution is first-class
+> compute, and a valid plan may prefer or require them rather than treating them
+> as a deprecated fallback.
 
 ## Context
 
