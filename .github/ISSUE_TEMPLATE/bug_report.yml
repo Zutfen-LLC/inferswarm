@@ -56,8 +56,8 @@ body:
   - type: textarea
     id: topology
     attributes:
-      label: Topology (for distributed issues)
-      description: Which resources participated where — primary GPU, secondary GPU(s), RAM workers, network workers; PCIe topology if known (nvidia-smi topo -m).
+      label: Resource topology / plan context (for distributed issues)
+      description: Which Nodes, Compute Units, Memory Resources, and links participated; their plan-relative execution/residency/cache/staging roles if known; PCIe/NUMA/network topology if relevant. Historical reproductions may use the terminology from the original experiment.
   - type: textarea
     id: logs
     attributes:
