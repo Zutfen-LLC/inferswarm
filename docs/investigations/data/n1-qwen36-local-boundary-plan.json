@@ -12,7 +12,7 @@
   "model": {
     "repository": "nvidia/Qwen3.6-35B-A3B-NVFP4",
     "revision": "491c2f1ea524c639598bf8fa787a93fed5a6fbce",
-    "hidden_size": 4096,
+    "hidden_size": 2048,
     "hidden_dtype": "bfloat16",
     "quantization": "NVFP4 checkpoint with the existing FreeToken native backends",
     "tokenizer_and_generation_config": "unchanged pinned snapshot"
@@ -60,7 +60,7 @@
     "message_types": ["HELLO", "HELLO_ACK", "OPEN_SESSION", "ACK", "PREFILL", "DECODE", "TOKEN_RESULT", "CLOSE_SESSION", "RESET_SESSION", "ERROR"],
     "maximum_payload_bytes": 67108864,
     "flags": {"PREFILL_FINAL": 1},
-    "validation": ["magic", "protocol_version", "known_message_type", "known_flags_only", "payload_limit", "exact_payload_length", "batch_size_one", "hidden_size_4096", "bfloat16_dtype", "shape_implied_payload_length"]
+    "validation": ["magic", "protocol_version", "known_message_type", "known_flags_only", "payload_limit", "exact_payload_length", "batch_size_one", "hidden_size_2048", "bfloat16_dtype", "shape_implied_payload_length"]
   },
   "handshake": {
     "encoding": "length-prefixed UTF-8 scalar fields plus fixed-width numeric fields; no JSON",
@@ -69,15 +69,15 @@
     "role_validation": "A asserts entrance/coordinator role and B asserts final/service role"
   },
   "boundary_tensor": {
-    "semantic_point": "materialized output residual stream after global layer 18 and input residual stream to global layer 19",
+    "semantic_point": "exact output residual-stream pair after global layer 18 and input residual-stream pair to global layer 19",
     "source_runtime_detail": "Qwen3.6 internally keeps layer output as a BF16 (hidden,residual) pair for fused add+RMSNorm",
-    "materialization": "Process A performs the same backend BF16 residual add, boundary = hidden + residual, once after layer 18; Process B begins global layer 19 with boundary as hidden and residual=None",
-    "why_materialization_is_required": "sending only the unfused hidden member would omit the accumulated residual; sending both members would double the canonical payload even though layer 19 immediately materializes their BF16 sum",
-    "retained_execution_precondition": "real-model Block B output and logits from this materialized seam must be exactly equal to the unsplit residual-pair path",
+    "materialization": "none; Process A serializes hidden followed by residual without numeric conversion, and Process B reconstructs both before global layer 19",
+    "why_two_planes_are_required": "source inspection showed that global layer 19 consumes both members through fused add+RMSNorm. Real prefill and established-context decode probes showed that both plain BF16 addition and backend-assisted pre-materialization changed downstream activations, although the two diagnostic tokens happened to remain unchanged. Exact semantics therefore require both planes.",
+    "pre_retained_probe_result": "two one-plane materialization alternatives rejected; retained N1 execution must use the exact residual pair",
     "dtype": "torch.bfloat16",
-    "layout": "C-contiguous row-major [token_count,4096]",
+    "layout": "two consecutive C-contiguous row-major BF16 planes: hidden[token_count,2048] then residual[token_count,2048], equivalently residual_pair[2,token_count,2048]",
     "element_bytes": 2,
-    "payload_formula": "token_count * 4096 * 2",
+    "payload_formula": "2 * token_count * 2048 * 2",
     "decode_payload_bytes": 8192,
     "conversion": "no BF16-to-FP32 conversion"
   },
