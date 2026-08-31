@@ -635,3 +635,70 @@ Weighted measured total route shares were A 37.294537%, B 58.312008%, and GPU0 4
 Both arms had exact ownership, identical GPU0-local counts, zero fallback/failure/recapture/steady host synchronization/steady expert-weight movement, and zero retained major faults, `pswpin`, or `pswpout`.
 
 The leading slow-worker critical-path hypothesis is not supported: capability weighting moved remote pressure from roughly 50/50 to 39/61 without moving throughput. Do not add another worker yet. The next bounded experiment should add non-perturbing worker-completion and join/fan-in timing under equal and weighted placement, then isolate fixed two-worker graph/host-staged transport tax from GPU0 reconstruction/local work and PCIe contention. Canonical Phase-1 NO-GO, D2, and D3 remain unchanged.
+
+---
+
+## 14. D5 resident loading and compact physical route execution
+
+D5 was a new post-NO-GO architecture-search experiment with two independent tracks. D5-L changed startup residency only; D5-C changed the experimental decode executor. Canonical Phase-1, D2, D3, and D4 results remain frozen.
+
+### D5-L startup-only result
+
+The opt-in legacy microprofile reproduced the resident bottleneck: worker A loaded in 73.220 s, worker B in 47.924 s, and serial A+B in 120.988 s. Each worker transferred and verified 5,326,848,000 bytes in each direction. A used 714 chunks averaging 7.461 MB; B used 684 averaging 7.788 MB. In the matched serial AB run, A spent 14.453 s in H2D, 13.031 s in D2H verification, and 43.845 s in CPU equality/SHA work; B spent 0.849 s, 1.448 s, and 43.989 s respectively. This measurement shows that exact CPU verification/hash work, plus A's Gen2 x1 round trip, dominated rather than source gathering or GPU scatter.
+
+The frozen D5 loader uses one exactly sized pinned staging tensor per bank in final remote-slot order, six large H2D transfers per worker directly into final resident tensors, no GPU `index_copy_`, one large D2H verification per bank, exact byte comparison, deterministic SHA-256, prompt staging release, explicit devices, and concurrent A/B materialization. A bounded 1/2/4/8 CPU-worker sweep produced concurrent AB walls of 65.018, 63.569, 64.404, and 61.822 s. Eight workers were frozen before D5-C because they were fastest and stable.
+
+Final isolated bulk walls were A 61.190 s and B 35.135 s; concurrent AB was 61.822 s, close to `max(A,B)` rather than their sum. Resident-wall speedup was 1.957x versus the freshly profiled 120.988 s legacy serial wall. Matched full startup fell from 201.673 s to 145.547 s (1.386x, 56.126 s saved). The useful 2x target was narrowly missed, but the safe improvement should be retained for future architecture-search work.
+
+Legacy and bulk paths retained exact slot mapping, tensor shape/dtype/layout, auxiliary tensors, native raw bytes without conversion, accounting, and fail-closed restoration. Per-tensor source/resident exact comparison and SHA verification passed on both A and B. Real one-layer output was exact, and graph-local versus bulk compact AB produced identical 32-token W4 output with SHA-256 `c2b34b307eb0e57ac09e27b1cdc444a9e2184a245cc6bd91fe5d4fdf25a967dc`. D5-L is not a decode-scalability result.
+
+### D5-C mechanism and correctness
+
+The fixed-width diagnostic used captured real resident NVFP4 worker execution and same-device CUDA events. Median duration in milliseconds for useful counts `0/1/2/4/6/8` was:
+
+| Worker | 0 | 1 | 2 | 4 | 6 | 8 |
+|---|---:|---:|---:|---:|---:|---:|
+| fixed A | 0.089088 | 0.089088 | 0.089088 | 0.089088 | 0.089088 | 0.089088 |
+| fixed B | 0.088960 | 0.088864 | 0.088864 | 0.088896 | 0.088960 | 0.088752 |
+
+This directly confirms that zero-weight non-owned routes left physical fixed-width work essentially unchanged.
+
+The separate D5 executor performs stable device-only compaction into fixed-capacity K buffers, transfers fixed-capacity metadata, carries device-resident active counts, exits inactive Triton programs before expert-weight access, deterministically zeroes inactive tails, scatters compact route contributions back to exclusive original positions, and performs exactly one canonical route-order reduction. GPU0 expert compute is count-aware. The experimental cache planner still sees valid fixed-capacity tail IDs; dummy cache planning remains and is reported, but dummy expert compute is eliminated.
+
+Compact duration and `duration(count)/duration(8)` were:
+
+| Worker | 0 | 1 | 2 | 4 | 6 | 8 |
+|---|---:|---:|---:|---:|---:|---:|
+| compact A ms | 0.015360 | 0.040960 | 0.055296 | 0.061440 | 0.074752 | 0.089088 |
+| compact A ratio | 0.172 | 0.460 | 0.621 | 0.690 | 0.839 | 1.000 |
+| compact B ms | 0.016384 | 0.040752 | 0.054992 | 0.061264 | 0.073728 | 0.089088 |
+| compact B ratio | 0.184 | 0.457 | 0.617 | 0.688 | 0.828 | 1.000 |
+
+All-local, all-A, all-B, mixed A+B+local, stable positions, 0..K counts, dynamic consecutive count changes, inactive-tail zeroing, one-layer local-oracle equality, graph BS1, and whole-model short equality passed. The targeted loader/compaction/D3/D4 regression run reported 131 passed and 6 skipped. Final primitive classification: `D5_COMPACT_PRIMITIVE_PASS`.
+
+### D5-C serving result
+
+FreeToken `b7c857a7fe7afe716a7f6b6ae4bda2ae72060a92` ran the frozen serving order F0, C1, C2, C3. Every arm used a fresh Engine/GPU state, the frozen eight-worker bulk loader, one discarded warmup, and exactly three retained greedy 128-token W4 generations.
+
+| Arm | Retained decode tok/s | Median |
+|---|---:|---:|
+| F0 fixed equal S3 | 51.021228, 51.188824, 51.185105 | 51.185105 |
+| C1 compact B | 73.171028, 74.438260, 74.477759 | 74.438260 |
+| C2 compact equal S3 | 57.152054, 57.273206, 57.293662 | 57.273206 |
+| C3 compact weighted S3 | 57.824755, 57.952018, 57.932780 | 57.932780 |
+
+- `COMPACT_EQUAL_GAIN = 1.118942832`
+- `COMPACT_E3_EQUAL = 0.769405492`
+- `COMPACT_WEIGHTING_GAIN = 1.011516277`
+- `COMPACT_E3_WEIGHTED = 0.778266178`
+- `C2 / historical D3 S3 = 1.117794239`
+- `C3 / historical D3 S3 = 1.130667067`
+- `C3 / historical D3 S2B = 0.854267964`
+
+F0 equal ownership was A 77,900, B 77,518, local 7,142; its remote split was A 50.122894% / B 49.877106%. C2 had the same logical ownership, but physically executed exactly 77,900 A, 77,518 B, and 7,142 local expert invocations, skipping 169,702 remote dummy invocations and 155,418 local-tail invocations across the observed calls. C3 moved ownership to A 60,626, B 94,792, local 7,142; its remote split was A 39.008352% / B 60.991648%, and physical invocations exactly matched those owned routes. C1 executed 77,518 B and 85,042 local routes, with no A branch.
+
+Every arm had exact ownership with no drop/duplication, zero fallback/failure/recapture/steady host synchronization, zero steady expert-weight movement, zero retained major faults, and zero `pswpin`/`pswpout`. Direct throughput is authoritative; overlapping timing components are not summed.
+
+Formal classification is `D5_DUMMY_TAX_CONFIRMED`: eliminating dummy physical route compute improved matched equal S3 by 11.894%. Capability weighting remained neutral after compaction (`1.0115x`, within 0.97–1.05). Compact equal and weighted marginal retention are both promising, not strong (`0.7694` and `0.7783`, below 0.90).
+
+The next bounded experiment should isolate the remaining fixed-capacity host-staged activation/metadata/return transfers, GPU0 return H2D, fan-in event/wait behavior, reconstruction, PCIe contention, and graph-node overhead. A fourth/heterogeneous worker is not yet recommended because compact retention did not reach the predeclared strong 0.90 region. No D6 or fourth worker was started. Host-specific evidence remains under `~/inferswarm-evidence/architecture-search/d5-compact/` and is not committed.
