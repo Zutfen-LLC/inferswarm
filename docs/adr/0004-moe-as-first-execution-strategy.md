@@ -3,6 +3,12 @@
 Date: 2026-08-26
 Status: Accepted
 
+> **Current doctrine clarification (2026-08-31):** this remains the accepted
+> historical sequencing decision to begin with MoE expert execution. Under ADR
+> 0008/Fabric Doctrine, `FabricWorker`, `WorkerCapability`, expert identity, and
+> expert placement below are provisional first-strategy vocabulary rather than
+> generic planner/resource ontology.
+
 ## Context
 
 InferSwarm is a model-independent fabric (principle 9), but a research
