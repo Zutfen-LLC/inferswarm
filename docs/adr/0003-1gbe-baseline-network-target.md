@@ -3,6 +3,12 @@
 Date: 2026-08-26
 Status: Accepted
 
+> **Current doctrine clarification (2026-08-31):** the 1 GbE baseline and
+> no-exotic-networking requirement remain accepted. The MoE-specific batching
+> and dispatch examples below are historical strategy context, not permanent
+> protocol/granularity doctrine. ADR 0008/Fabric Doctrine governs legal
+> strategy boundaries and measured granularity selection.
+
 ## Context
 
 Distributed inference projects conventionally assume fast interconnects —

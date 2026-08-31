@@ -1,7 +1,14 @@
 # 0006. Backend-independent worker and representation boundary
 
 Date: 2026-08-30
-Status: Accepted
+Status: Superseded by 0008
+
+> **Current doctrine clarification (2026-08-31):** ADR 0008 supersedes the
+> universal physical `Worker` abstraction used here. The durable decisions
+> remain canonical through the Fabric Doctrine: backend-native fast execution,
+> backend-native state representations, strategy-specific semantic execution
+> boundaries, transport orthogonality, bounded heterogeneous correctness
+> contracts, and rebuilding stable fast paths at execution-plan epochs.
 
 ## Context
 

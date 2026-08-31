@@ -3,6 +3,13 @@
 Date: 2026-08-26
 Status: Accepted
 
+> **Current doctrine clarification (2026-08-31):** references below to an
+> InferSwarm Agent/worker and worker protocol describe possible runtime roles
+> inside the open-source execution fabric. Under ADR 0008/Fabric Doctrine,
+> `Worker` is not a physical resource class; Nodes, Compute Units, Memory
+> Resources, Links, Model Execution Strategies, and Execution Plans carry the
+> canonical resource/planning semantics.
+
 ## Context
 
 InferSwarm needs a canonical home and an explicit boundary between the
@@ -46,21 +53,21 @@ not be artificially crippled to enforce a commercial tier.
 ## Consequences
 
 - Distributed-execution functionality proven in the FreeToken fork is
-  destined for extraction into this repository (ROADMAP Phase 5), because the
-  runtime belongs inside the boundary.
+destined for extraction into this repository (ROADMAP Phase 5), because the
+runtime belongs inside the boundary.
 - This repository stays deliberately free of speculative package trees until
-  implementation establishes real boundaries; the boundary above describes
-  *intent*, not present contents.
+implementation establishes real boundaries; the boundary above describes
+*intent*, not present contents.
 - Commercial/control-plane code never lands in this repository.
 - Zutfen retains no special technical chokepoint: contributions are accepted
-  under Apache-2.0 and the fabric's usability is not license-gated.
+under Apache-2.0 and the fabric's usability is not license-gated.
 
 ## Hypotheses distinguished from decisions
 
 - **Decided:** the boundary itself, the license, and the no-crippling rule.
 - **Not decided:** the exact product shape of any commercial offering, or
-  whether one will exist at all. "InferSwarm Control / Enterprise" are
-  placeholders describing where management tooling would live, not
-  announcements.
+whether one will exist at all. "InferSwarm Control / Enterprise" are
+placeholders describing where management tooling would live, not
+announcements.
 - **Not decided by this ADR:** whether the fabric's performance goals are
-  achievable — that is the ROADMAP's business, not the boundary's.
+achievable — that is the ROADMAP's business, not the boundary's.

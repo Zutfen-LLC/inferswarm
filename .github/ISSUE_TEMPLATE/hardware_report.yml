@@ -10,7 +10,7 @@ body:
         measure something, leave it blank rather than estimating.
 
         Please do not include personally identifying information beyond a
-        public GitHub handle — we only need the machine.
+        public GitHub handle — we only need the machine/resources.
   - type: input
     id: cpu
     attributes:
@@ -29,10 +29,10 @@ body:
     id: gpus
     attributes:
       label: GPU(s) and VRAM
-      description: All GPUs that participated, with VRAM. Include secondary/contributing cards.
+      description: All GPUs observed or participating, with VRAM and slot/topology context where known. Do not assign permanent primary/worker roles unless reproducing a historical experiment that used those terms.
       placeholder: |
-        GPU 0: RTX 3060 12GB (primary)
-        GPU 1: RTX 3060 12GB (worker)
+        GPU 0: RTX 3060 12GB — PCIe Gen3 x16
+        GPU 1: RTX 3060 12GB — PCIe Gen3 x8
     validations:
       required: true
   - type: input
@@ -55,13 +55,13 @@ body:
   - type: textarea
     id: pcie
     attributes:
-      label: PCIe topology (if available)
-      description: Output of nvidia-smi topo -m or equivalent; which slots/lanes the GPUs occupy.
+      label: PCIe / local topology (if available)
+      description: Output of nvidia-smi topo -m or equivalent; slots/lanes, NUMA/root-complex relationships, negotiated link state if known.
   - type: input
     id: network
     attributes:
       label: Network link
-      description: "For multi-machine participation: link type and configured rate."
+      description: "For multi-Node participation: link type, configured/negotiated rate, and measured throughput/latency where available."
       placeholder: e.g. direct 1 GbE (measured ~118 MB/s)
   - type: textarea
     id: results
@@ -71,18 +71,24 @@ body:
         Real measurements with their protocol (tool, workload, model).
         Label each number MEASURED / CALCULATED — estimates are not results.
         Example fields: TTFT, prefill throughput, decode tokens/sec,
-        transfer bandwidths (host-to-GPU, node-to-node).
+        transfer bandwidth/latency, memory bytes, topology/link behavior.
   - type: dropdown
-    id: role
+    id: context
     attributes:
-      label: Role of this hardware
+      label: Report context
       options:
-        - Primary (host engine / model runtime)
-        - Worker (contributing resources)
-        - Both
-        - Single-machine, no distribution
+        - Single-Node resource/topology measurements
+        - Multi-Node / distributed Execution Plan participant
+        - Standalone baseline / control
+        - Historical experiment reproduction
+        - Other / exploratory
     validations:
       required: true
+  - type: textarea
+    id: plan_roles
+    attributes:
+      label: Plan-relative roles (if applicable)
+      description: Describe what these resources actually did in the measured plan — active execution, required residency, cache/replica, staging, backing/source, or unused comparison resource. These are plan-relative, not permanent hardware classes.
   - type: input
     id: commit
     attributes:

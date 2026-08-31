@@ -1,314 +1,498 @@
 # InferSwarm Architecture
 
-```
+```text
 Status: Research / Proof of Concept
 ```
 
-InferSwarm is a **heterogeneous inference fabric**: a layer that turns
-disparate compute and memory resources into one logical inference platform
-without requiring the host engine to treat every device or machine as the same
-kind of worker.
+InferSwarm is an **open-source heterogeneous inference fabric**: a layer that
+turns disparate compute, memory, and connectivity resources into one logical
+inference platform while allowing model-specific execution strategies to remain
+separate from generic resource planning.
 
-The architecture is evidence-driven. Concrete execution strategies are proven
-first in the FreeToken integration fork; only then are stable concepts extracted
-into InferSwarm. Accepted architecture decisions live under
-[`docs/adr/`](docs/adr/README.md).
+## Canonical documentation hierarchy
+
+This file is a readable architecture overview, not the normative specification.
+Repository precedence is:
+
+> **[ADRs](docs/adr/README.md) decide; the
+> [Fabric Doctrine](docs/architecture/fabric-doctrine.md) specifies;
+> `ARCHITECTURE.md` explains; `ROADMAP.md` sequences.**
+
+[ADR 0008](docs/adr/0008-canonical-fabric-doctrine.md) adopted the current
+doctrine after the completed resource/residency/planner Wayfinder (#37,
+decisions #38-#46).
+
+The architecture is **doctrine-shaped, API-unfrozen**. The concepts below are
+stable enough to guide implementation, but final public class names, planner
+algorithms, strategy/plugin APIs, wire formats, storage schemas, and migration
+mechanisms are intentionally not frozen yet.
 
 ## Purpose
 
-For a given model/workload and a set of contributed resources, InferSwarm must
-eventually answer:
+For a requested model/workload and a set of operator-approved resources,
+InferSwarm must eventually answer:
 
-1. **where** state lives — weights, KV/recurrent state, activations, caches;
-2. **where** computation executes;
-3. **what execution granularity** is appropriate for each boundary;
-4. **how** data moves between resources/nodes;
-5. **how capabilities are measured** so placement decisions are based on
-   evidence rather than device labels.
+1. what resources exist and how they are connected;
+2. what logical model/runtime state exists and where valid materializations
+   reside;
+3. what model-specific execution decompositions are legal;
+4. which legal plan is correct and feasible;
+5. among feasible plans, which is expected to deliver the greatest useful
+   inference service under current measurements, workload evidence, and
+   operator policy;
+6. how a running plan adapts safely when resources, demand, evidence, or health
+   change.
 
-Model semantics, tokenization, serving APIs, and user-visible generation
-behavior remain owned by the host inference engine.
+Model semantics remain owned by the host/model integration and its Model
+Execution Strategy. Generic placement does not become a Qwen/MoE scheduler.
 
-## Current architectural shape
-
-Conceptually:
-
-```text
-Inference Engine
-      |
-      v
-Execution Adapter
-      |
-      v
-InferSwarm execution/placement plan
-      |
-      +--------------------------+
-      |                          |
-      v                          v
-Node-local resources        Remote node block
-(GPU/RAM/etc.)              (persistent model block)
-      |                          |
-backend-native fast path    backend-native fast path
-      |                          |
-      +------------ semantic boundaries ------------+
-```
-
-The conceptual layers are not yet stable public interfaces. They exist to keep
-experiments from defining the permanent API accidentally.
-
-## Two execution granularities now supported by evidence/direction
-
-### 1. Node-local fine-grained resource execution
-
-The first proven strategy is distributed MoE expert execution within one
-machine.
-
-Conceptually for one MoE layer:
+## Conceptual shape
 
 ```text
-router
-  |
-  +-- local selected experts
-  +-- resident secondary-GPU experts
-  +-- host-RAM/CPU tier where applicable
-  |
-  v
-route reconstruction / reduction
-```
-
-Phase1R D1-D7 established several important facts:
-
-- backend-native captured execution matters enormously on the first
-  NVIDIA/FreeToken stack;
-- a healthy-link resident secondary GPU can improve throughput;
-- worker service cost depends materially on link topology and physical work;
-- dummy expert execution and fixed transport are real costs;
-- simply balancing logical routes or minimizing fan-in does not make a very
-  slow link behave like a fast performance worker.
-
-This makes local GPU/RAM placement a measured resource-planning problem, not a
-rule that "more VRAM always means more speed."
-
-A future planner may therefore distinguish resources that are
-performance-positive, neutral/constrained, or capacity-only. Those categories
-are descriptive research concepts today, not a frozen API.
-
-### 2. Inter-node coarse model-block execution
-
-[ADR 0007](docs/adr/0007-coarse-model-block-partitioning-as-first-network-strategy.md)
-sets the first multi-machine strategy.
-
-A remote machine is **not initially treated as a long-distance PCIe expert
-worker**. Instead, it owns a contiguous block of model execution:
-
-```text
-Node A
-  embedding / layers 0..N
-  block-local KV/recurrent state
+Host inference engine
         |
-        | hidden-state boundary
         v
-Node B
-  layers N+1..M
-  block-local KV/recurrent state
+Model Execution Strategy
+(model/revision semantics)
         |
-        | hidden-state boundary
+        | opaque legal state/execution units,
+        | constraints, demand, representations,
+        | correctness and strategy economics
         v
-Node C / final block
+Generic InferSwarm planner
+        |
+        | resource graph + evidence + policy
+        v
+Versioned Execution Plan / epoch
+        |
+        +----------------+----------------+----------------+
+        |                |                |                |
+        v                v                v                v
+  Compute Units     Memory Resources    Links/paths     backing/sources
+ GPU/CPU/NPU/...    RAM/VRAM/HBM/...   local/network   checkpoint/etc.
+        \                |                /
+         \_______________|_______________/
+                         |
+                         v
+             backend-native execution
 ```
 
-Each node:
+The resource graph describes **what InferSwarm has**. An Execution Plan
+describes **what InferSwarm intends to do with it**.
 
-- loads only the state assigned to its block;
-- keeps that block's persistent KV/recurrent state local;
-- executes the block using its backend-native fast path;
-- exchanges only the semantic state needed at the block boundary.
+## Resource graph
 
-The first network baseline remains ordinary **1 Gigabit Ethernet** (ADR 0003).
-Faster networking is an optimization/comparison, not a prerequisite baked into
-the architecture.
+### Swarm
 
-The active evidence sequence is #31 through #34.
+A **Swarm** is the durable logical management/planning domain. It survives
+Coordinator replacement, Node joins/departures, model changes, and plan changes.
 
-## Node-local composition
+### Coordinator
 
-The two granularities are intended to compose eventually:
+A **Coordinator** is a replaceable control-plane role, not a hardware class. It
+may have no inference-native compute of its own.
+
+### Node
+
+A **Node** is one physical host/resource domain under one local
+platform/runtime authority. A machine with several GPUs is one Node; PCIe root
+complexes, NUMA domains, RAM, and local devices are topology inside it.
+
+### Compute Unit
+
+A **Compute Unit** is an independently characterizable execution-capable
+resource such as a GPU, CPU execution domain, NPU, or future accelerator.
+
+### Memory Resource
+
+A **Memory Resource** is an independently accountable memory/addressability
+domain such as system RAM, VRAM, HBM, or future CXL-attached memory.
+
+Compute Units and Memory Resources are deliberately separate concepts: state
+may reside somewhere other than the Compute Unit that executes against it when
+the applicable strategy/backend allows that arrangement.
+
+### Links and locality
+
+**Links/topology** describe discovered connectivity and data-movement
+relationships. Locality is relational and measured, not a permanent tier.
+
+InferSwarm no longer canonizes L0/L1/L2/L3, `primary`, `secondary`, or
+`performance`/`capacity` as intrinsic resource classes. Those terms may remain
+inside historical research records where they accurately describe the
+experiment at the time.
+
+A pathological same-host path can be worse than a good network path. The
+planner uses measured evidence rather than assuming that a nominal locality
+label determines performance.
+
+### Runtime executors/workers
+
+A worker/executor is a **runtime/Execution Plan construct**, not a physical
+resource ontology. A backend may map an executor to one Compute Unit, fuse
+multiple same-host accelerators into one efficient execution structure, or use
+another legal resource subgraph.
+
+## State and residency
+
+The key abstraction is **Logical State Unit**: strategy-defined logical state
+identity independent of physical location or byte representation.
+
+A Logical State Unit may have zero or more **Materializations** on Memory
+Resources. The following concepts are distinct:
+
+- **backing/source** — where state can validly be obtained again;
+- **residency** — a plan commitment to retain a materialization;
+- **staging** — bounded transient load/convert/transfer state;
+- **cache** — redundant valid state retained for economic benefit and freely
+  evictable without violating correctness/recovery guarantees;
+- **replica** — deliberately retained redundancy that may be relied on only to
+  the extent its freshness/recovery contract explicitly says so;
+- **execution location** — where computation happens;
+- **authority** — which lineage may define the current value of mutable state.
+
+Strategies classify state according to semantics such as:
+
+- immutable source state;
+- derived/reconstructible state with an explicitly valid recovery path;
+- mutable authoritative state with one current authoritative lineage unless an
+  explicit coherence model provides otherwise.
+
+### No implicit host mirror
+
+A central invariant is:
+
+> **Accelerator residency does not inherently require an equivalent persistent
+> host-RAM materialization.**
+
+A valid implementation can read/convert through bounded RAM staging, establish
+a backend-native accelerator materialization, then release staging whose only
+purpose was materialization/transfer.
+
+Persistent host state remains entirely valid when it has an explicit plan or
+runtime role—RAM residency, CPU execution, cache, replica, source state that
+must actually remain resident, metadata, or measured runtime overhead. The
+problem is unexplained duplicated backing retained merely because an accelerator
+copy exists.
+
+Memory evidence therefore distinguishes:
+
+- persistent required;
+- persistent optional;
+- transient peak;
+- unexplained duplication/leakage.
+
+The first post-Wayfinder implementation gate is issue #48, which proves this
+invariant on the N0-derived selective accelerator path.
+
+## Planning
+
+Planning has two stages conceptually:
 
 ```text
-Distributed InferSwarm
-
-Node A
-  model block A
-  +-- local GPU coordinator
-  +-- local secondary GPU(s)
-  +-- local RAM/CPU tier
+requested model/workload
++ strategy legality
++ operator-approved resources/policy
++ current trusted evidence
         |
-        | Ethernet block boundary
         v
-Node B
-  model block B
-  +-- local resources appropriate to that node
+correct + feasible plan set
+        |
+        v
+rank by expected workload usefulness
+        |
+        v
+selected Execution Plan
 ```
 
-This composition is a direction, not yet a demonstrated runtime. The first
-network POC deliberately keeps node-local behavior simple enough to isolate the
-block/network boundary.
+Correctness and feasibility always precede performance ranking.
 
-## State ownership
+A slow but correct plan remains technically feasible unless an explicit
+operator service requirement makes it policy-infeasible. The planner does not
+maximize hardware participation or utilization for its own sake.
 
-### Model weights
+A resource can have plan-relative functions such as:
 
-Placement assigns only the model state a node/resource needs. A node must not
-require full-model host RAM merely because the checkpoint contains unrelated
-layers. Selective loading is therefore a core distributed requirement, tracked
-by issue #31.
+- active execution;
+- active/required residency;
+- cache/replica;
+- staging/scratch;
+- backing/source;
+- no active use.
 
-### KV and recurrent state
+Its contribution may be described for explanation as performance-beneficial,
+capacity/feasibility-contributing, redundancy-beneficial, unnecessary,
+incompatible, unavailable, quarantined, operator-excluded, or
+performance-deprioritized. These are conclusions about the current plan, not
+permanent hardware labels.
 
-State should live with the model block that consumes and updates it. Moving KV
-state across the network every token would defeat the purpose of coarse
-partitioning unless a specific model requires an explicit cross-block state
+### Operator policy
+
+Normal users should not have to map experts, layers, or other model components
+onto devices manually. Operators instead define generic constraints/preferences
+such as:
+
+- which resources may participate;
+- reservations/contribution limits;
+- locality or communication restrictions;
+- trust/authority restrictions;
+- dependency/availability expectations;
+- supported operational budgets;
+- explicit service requirements;
+- automatic reconfiguration/admission policy.
+
+Plans and exclusions must be explainable on demand.
+
+## Measurement and health
+
+InferSwarm is measurement-first where practical, but keeps evidence categories
+separate:
+
+- nominal specification;
+- discovered configuration;
+- measured behavior;
+- runtime observation;
+- accepted historical baseline;
+- planner estimate.
+
+Unknown performance is uncertainty, not failure.
+
+Measurements have context: hardware identity, topology, runtime/backend,
+representation, strategy/model where applicable, protocol, load/conditions, and
+provenance. Revalidation is dependency-scoped rather than blindly rerunning
+every benchmark or trusting measurements forever.
+
+### Performance versus integrity
+
+Do not collapse health into one score. Availability, compatibility, integrity
+trust, performance expectation, and evidence confidence/freshness are distinct.
+
+- A slow resource may remain useful.
+- Thermal throttling or a narrow link usually changes economics, not
+  correctness.
+- A disappearing Node is unavailable, not automatically corrupted.
+- Evidence that computation/state/transport is untrustworthy triggers
+  **quarantine** of the narrowest supported correctness-bearing scope.
+
+Quarantine cannot be outweighed by speed or silently expire. Explicit successful
+integrity revalidation is required before the affected scope returns to
+correctness-bearing use.
+
+## Model Execution Strategies
+
+The generic planner is neither an expert scheduler nor a block scheduler.
+
+> **A Model Execution Strategy translates model/revision semantics into an
+> abstract constrained planning problem; the generic planner solves that
+> problem against the Swarm.**
+
+A strategy exposes conceptually:
+
+- opaque Logical State Units and execution-planning units;
+- legal split/grouping/co-location/dependency boundaries;
+- immutable/reconstructible/mutable state semantics;
+- demand frequency, conditionality, sequencing, concurrency, reuse, and
+  material correlations;
+- legal representations/transformations;
+- backend/capability requirements;
+- correctness/equivalence contracts;
+- strategy-specific execution/communication economics.
+
+**Strategy constrains; planner chooses.**
+
+The generic planner must not require concepts such as expert, router,
+transformer layer, KV cache, attention, SSM, Qwen, GLM, CUDA Graph, Triton, or
+NVFP4. A strategy may still attach such labels for diagnostics/explanations.
+
+## Execution Plans, epochs, and elasticity
+
+An active **Execution Plan** is an immutable versioned snapshot for an explicit
+execution scope. Changes to resources, evidence, policy, or demand produce a
+candidate replacement plan rather than mutating the active one in place.
+
+Every activation has a distinct **plan epoch/generation**. Correctness-bearing
+work/results/state transitions belong to the epoch that authorized them, and
+late work from a retired epoch cannot mutate current state.
+
+A strategy declares safe transition/recovery boundaries. A safe boundary is a
+correctness concept—not necessarily a token, request, session, or downtime
+boundary.
+
+### Scale up
+
+When better resources join, InferSwarm may:
+
+1. discover/characterize and integrity-validate them;
+2. prepare a better replacement plan while the current epoch keeps serving;
+3. materialize immutable/reconstructible state, build backend fast paths, and
+   prepare connections/buffers;
+4. switch at the earliest safe strategy boundary when operator policy and
+   expected benefit justify the transition.
+
+An active session can therefore gain throughput with little or no perceptible
+interruption.
+
+### Scale down
+
+When a required resource disappears, InferSwarm does not attempt to preserve
+hardware symmetry with the failed plan. It replans against the surviving
+trusted graph and prefers any correct feasible replacement over unnecessary
+outage.
+
+That replacement may use resources that were previously unused or optional:
+
+- slower/smaller GPUs;
+- CPUs;
+- system RAM;
+- existing caches/replicas;
+- a different legal distribution granularity.
+
+A materially slower plan is still valid when it is the best surviving feasible
+plan, absent an explicit service constraint.
+
+### Mutable-state hard stop
+
+Session continuity depends on trustworthy mutable-authority continuity—not on
+survival of a particular GPU. If required authoritative state survives, has a
+coherent current replica, or is explicitly reconstructible from retained
+trusted inputs, the session may continue/resume/replay from a valid recovery
+boundary.
+
+If required authoritative mutable state is unrecoverably lost, the affected
+scope must fail rather than fabricate continuity.
+
+## Adaptive Demand Profiles
+
+InferSwarm may learn model/revision-specific structural demand over a strategy's
+opaque planning units.
+
+Applicable evidence may include:
+
+- model-wide/general history;
+- workload/profile-class history;
+- Swarm-local history;
+- host-defined user/application/tenant profile history;
+- current-session observations.
+
+A profile is not necessarily a human user identity.
+
+Explicit **Workload Intent** is optional prior evidence only. InferSwarm should
+not require users to classify a workload before serving it.
+
+Demand learning should be possible without persistently storing raw prompts,
+responses, token sequences, or semantic prompt embeddings. Structural demand
+can include access frequency, conditional/joint demand, sequencing,
+concurrency, reuse, and other strategy-relevant statistics.
+
+Hardware changes normally alter the *cost of satisfying demand*, not necessarily
+the underlying demand profile, so compatible model/revision/strategy demand
+history can remain useful after hardware joins/leaves. Model revisions or
+strategy decompositions require explicit compatibility/mapping before profiles
 transfer.
 
-### Activations
+Observations can accumulate continuously, but placement changes happen through
+deliberate plan epochs rather than per-request migration. Adaptive placement may
+make a model faster over time, but improvement is not guaranteed or monotonic.
 
-Activations are transient boundary state. Their representation and transport
-are execution-strategy specific and are not yet a stable public protocol.
+## Distribution granularity
 
-## Resource hierarchy
+Distribution granularity is an Execution Plan/epoch choice, not a permanent
+model or topology property.
 
-The earlier L0/L1/L2/L3 vocabulary remains useful **within a node**:
+The strategy defines legal cuts/groupings. The planner globally evaluates those
+choices using:
 
-```text
-L0 — primary/local accelerator resources
-L1 — additional local accelerator resources
-L2 — system RAM / CPU
-L3 — future NVMe backing
-```
+- communication volume and frequency;
+- latency/dependency sensitivity;
+- measured bandwidth/path contention;
+- execution cost;
+- state residency/capacity/reuse;
+- mutable-state constraints;
+- parallelism/load balance;
+- Adaptive Demand Profiles;
+- transition/reconfiguration cost;
+- workload objective.
 
-A remote machine is better described as a **node containing its own resource
-hierarchy**, not merely another L1 device. This avoids conflating PCIe-local
-latency with network-node semantics.
+The enduring heuristic is:
 
-System RAM remains first-class per ADR 0005. Secondary GPUs augment capacity;
-they do not make RAM obsolete.
+> **Keep high-frequency/dependency-sensitive communication on the lowest-cost
+> measured locality practical, and cross a more expensive boundary only when
+> enough useful compute, state residency, capacity, reuse, or parallelism lies
+> behind it to justify the crossing.**
 
-## Capability concept
+But coarse is not intrinsically better. Coarsening can increase memory pressure,
+imbalance, serialization, conditional-work waste, and transition cost while
+reducing flexibility/parallelism.
 
-A future capability model must represent measured behavior without hard-coding
-one vendor, transport, or work unit.
+Intra-node and inter-node granularities may differ or even be heterogeneous at
+the same physical scope. A coarse network region may contain fine local GPU/RAM
+placement, but that arrangement is not a universal hierarchy.
 
-Conceptually only:
+ADR 0007 therefore remains the accepted **first** coarse-block-over-Ethernet
+network strategy/evidence direction, not permanent `inter-node = contiguous
+block` architecture.
 
-```text
-Node / FabricResource
-├── StorageCapability
-├── ExpertExecutionCapability
-├── ModelBlockExecutionCapability
-├── BackendExecutionCapability
-└── ResourceProfile
-```
+## Backend-native execution and transport
 
-Potential measured profile inputs already supported by evidence include:
+The architecture requires **backend-native fast execution**, not CUDA Graphs
+specifically. NVIDIA implementations may use CUDA Graphs/Triton/native packing;
+AMD, Intel, CPU, or future backends may use their own compiled/queued/persistent
+mechanisms and native representations.
 
-- resident capacity;
-- supported representations/backends;
-- backend-native fast-path availability;
-- PCIe generation/width/topology;
-- H2D/D2H bandwidth and small-message latency;
-- expert/branch service curves;
-- network RTT/bandwidth;
-- node RAM limits;
-- block execution latency.
+Same-backend multi-device fusion is allowed beneath the semantic planning
+boundary when it is the fastest correct implementation.
 
-The exact fields/type names are deliberately **not frozen**. Issue #8 stays
-deferred until the N-series adds real block/network requirements.
+Cross-resource boundaries are strategy-specific semantic work/state rather than
+one universal message schema. Transport is subordinate to those semantics and
+may include same-host copies/staging, shared memory, P2P/IPC, ordinary TCP,
+RDMA-style mechanisms, or future transports.
 
-## Backend-independent execution
+Ordinary **1 Gigabit Ethernet remains the baseline network target** under ADR
+0003. Faster networking is welcome and should improve plans where measurements
+support it, but it is not a mandatory architectural dependency.
 
-ADR 0006 remains authoritative: CUDA Graphs and NVFP4/Triton are first-backend
-implementation choices, not InferSwarm semantics.
+## Current evidence and implementation posture
 
-The generalized rule is:
+The controlled historical proving ground remains Qwen3.6-35B-A3B-NVFP4 on the
+recorded NVIDIA/FreeToken environments.
 
-> keep the hot path inside the fastest stable execution mechanism the backend
-> provides, and keep cross-resource boundaries semantic rather than tied to a
-> particular device API.
+- Phase 0 established baseline/routing evidence.
+- Canonical Phase 1 proved the tested mechanism correct and gave that exact
+  host-orchestrated candidate a `NO-GO` performance verdict.
+- Phase1R D1-D7 measured backend-fast-path importance, topology, physical work,
+  transport, placement, fan-in, and multiworker effects. Those hardware results
+  are topology/runtime-specific, not universal PCIe cutoffs.
+- N0 produced `N0_SELECTIVE_BLOCK_PASS`: selective checkpoint loading,
+  block-only state ownership, bounded block-scoped loading, and exact isolated
+  block correctness.
+- N0 did **not** prove release of all equivalent persistent CPU backing after
+  final accelerator residency. The retained `expert_bank_final_host_bytes`
+  exposed that separate requirement.
+- The aborted N1 partial run is non-canonical; N1-N3 are retired historical
+  scaffolding rather than the current roadmap.
 
-Examples:
+The current evidence-gated sequence is in [ROADMAP.md](ROADMAP.md), beginning
+with issue #48: accelerator residency without implicit persistent host mirrors.
 
-- local NVIDIA expert workers may participate in CUDA-graph-compatible
-  execution;
-- another accelerator backend may use its own compiled/queued/persistent path;
-- a network node may execute a locally captured model block and exchange hidden
-  state only at block boundaries.
+FreeToken remains the initial validation/integration vehicle, not the permanent
+product boundary. Reusable runtime functionality should eventually live behind
+a narrow host-engine seam in this repository when evidence makes that seam
+stable enough to extract.
 
-The semantic boundary is strategy-specific: routed work/contributions for the
-expert strategy, block input/output state for the model-block strategy.
+## Intentionally open implementation questions
 
-## Transport
+The following remain deliberately unfrozen:
 
-Transport is subordinate to execution semantics.
+- concrete public resource/plan/strategy type names;
+- exact planner/search algorithm and cost function;
+- exact capability/calibration schema;
+- strategy/plugin/public extension API;
+- execution-plan/control-plane wire schemas and version negotiation;
+- migration/transparent-failover implementation;
+- Adaptive Demand Profile statistics/storage/privacy implementation;
+- cache/promotion/prefetch/progressive-materialization algorithms;
+- exact heterogeneous backend interfaces;
+- final production UI/control-plane shape.
 
-Possible substrates include:
-
-- same-host pinned staging/device copies;
-- future CUDA/ROCm/XPU IPC or P2P mechanisms;
-- shared memory;
-- ordinary TCP over Ethernet;
-- faster network transports when useful.
-
-InferSwarm does not require one transport to serve every work unit. A
-fine-grained local expert boundary and a coarse network block boundary may have
-different transport needs while still belonging to one execution plan.
-
-Protocol design notes live in [`docs/protocols/`](docs/protocols/README.md).
-
-## Hardware heterogeneity
-
-The intended backend direction remains:
-
-```text
-Backend implementations
-├── CUDA / NVIDIA
-├── ROCm / AMD
-├── Intel XPU
-└── CPU
-```
-
-The first experiments are NVIDIA-focused to isolate architecture mechanics.
-Later AMD/Intel work should begin only after the boundary it is implementing is
-stable enough that vendor bring-up is not confused with architecture debugging.
-
-A weak or narrow-link GPU can still be useful as a capacity resource even when
-it is not throughput-positive. That tradeoff should eventually be measured and
-surfaced rather than hidden behind a binary "supported/unsupported" label.
-
-## FreeToken relationship
-
-The Zutfen FreeToken fork is the initial host/runtime integration used for
-validation. Focused `poc/*` branches carry experimental implementation; this
-repository carries canonical roadmap, evidence artifacts, and architecture
-decisions.
-
-The long-term goal remains a narrow integration seam, not a permanently deep
-fork. See [`docs/integrations/freetoken.md`](docs/integrations/freetoken.md).
-
-## Open questions
-
-Current evidence questions, in order:
-
-- Can a node selectively load only its assigned model block with bounded RAM?
-  (#31)
-- Can two model blocks separated by an explicit local boundary reproduce the
-  unsplit model exactly? (#32)
-- Can that boundary move across ordinary 1 GbE while preserving useful
-  backend-native execution? (#33)
-- What is the end-to-end two-node decode/prefill cost, and does 1 GbE remain a
-  viable commodity baseline? (#34)
-- If two-node evidence is positive, how should three-node placement and
-  capability-aware block sizing work?
-- When should a local accelerator be considered performance-positive versus
-  capacity-only, and how should that measured distinction enter placement?
-- What exact model-independent capability contract is justified after these
-  POCs? (#8)
+These are downstream implementation/research questions under the doctrine, not
+reasons to reopen the resource/residency/planner fundamentals.

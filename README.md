@@ -3,169 +3,236 @@
 **by Zutfen LLC**
 
 > InferSwarm is an open-source heterogeneous inference fabric for turning
-> disparate compute resources into one logical inference platform.
+> disparate compute and memory resources into one logical inference platform.
 
 **Many machines. One model.**
 
 *Turn the hardware you already own into distributed inference capacity.*
 
-```
+```text
 Status: Research / Proof of Concept
 ```
 
-InferSwarm is an experimental open-source heterogeneous inference fabric
-intended to let multiple machines and hardware resources cooperate on a single
-inference workload. It is a Zutfen LLC project; it is not a separate company or
-organization.
+InferSwarm is an experimental Apache-2.0 project intended to let heterogeneous
+resources cooperate on inference without requiring every device or machine to
+look like the same kind of worker.
 
-Nothing in this repository is a product yet. There is no released InferSwarm
-runtime today. What exists is the project home, architecture record, benchmark
-contract, experimental evidence, and the current validation roadmap. Early
-implementation work continues in the [FreeToken integration fork](#current-implementation-vehicle).
+There is no released production InferSwarm runtime today. The repository is the
+canonical home for architecture decisions, the normative Fabric Doctrine,
+benchmark/evidence records, and the current evidence-gated roadmap. Early
+runtime experiments continue in the
+[Zutfen FreeToken fork](#current-implementation-vehicle).
+
+## Canonical docs
+
+Repository precedence is:
+
+> **[ADRs](docs/adr/README.md) decide; the
+> [Fabric Doctrine](docs/architecture/fabric-doctrine.md) specifies;
+> [ARCHITECTURE.md](ARCHITECTURE.md) explains;
+> [ROADMAP.md](ROADMAP.md) sequences.**
+
+[ADR 0008](docs/adr/0008-canonical-fabric-doctrine.md) adopts the current
+resource/residency/planning model after the completed Wayfinder (#37,
+decisions #38-#46).
+
+The architecture is **doctrine-shaped, API-unfrozen**: current implementation
+must preserve the doctrine's semantics, but final public planner/strategy type
+names, plugins, wire protocols, and storage schemas are deliberately deferred
+until real implementations prove the seam.
 
 ## What the research has established
 
-The first research track used Qwen3.6-35B-A3B-NVFP4 and RTX 3060-class NVIDIA
-hardware to test fine-grained resident MoE expert execution.
+The first research track used Qwen3.6-35B-A3B-NVFP4 and NVIDIA hardware to test
+resident sparse/MoE execution and then selective model-block loading.
 
-- Phase 0 established the reproducible single-GPU baseline and exact routing
-  evidence.
-- Canonical Phase 1 proved resident remote expert execution correct but produced
-  an immutable `NO-GO` for the tested host-orchestrated two-GPU candidate.
-- Phase1R then showed why: dropping out of backend-native captured execution was
-  catastrophic, while a graph-compatible resident remote worker could improve
-  decode throughput substantially.
-- D3-D7 extended that mechanism to multiple local workers and measured the
-  effects of PCIe topology, dummy expert work, transport volume, placement, and
-  fan-in. A healthy Gen3 x16 RTX 3060 was strongly useful; the available Gen2
-  x1 worker was capacity-positive but throughput-negative on the tested path.
+- **Phase 0** established a reproducible baseline, correctness reference, and
+  routing/cache-pressure evidence.
+- **Canonical Phase 1** proved its resident remote-expert mechanism correct but
+  produced an immutable `NO-GO` performance verdict for the exact tested
+  host-orchestrated two-GPU candidate.
+- **Phase1R D1-D7** established that backend-native fast execution matters
+  enormously on the tested FreeToken/CUDA stack and measured the effects of
+  physical work, PCIe topology, transport volume, placement, and fan-in. A
+  healthy Gen3 x16 RTX 3060 was performance-positive on the tested path; the
+  available Gen2 x1 RTX 3060 was capacity-positive but throughput-negative.
+  That is topology/runtime-specific evidence, not a universal PCIe cutoff.
+- **N0** completed with `N0_SELECTIVE_BLOCK_PASS`, proving selective checkpoint
+  loading, block-only ownership, bounded block-scoped loading, and exact
+  isolated-block correctness on the frozen Qwen proving ground.
+- N0 also exposed the next architecture requirement: final accelerator
+  residency had not yet proven release of equivalent persistent CPU backing.
+  The retained `expert_bank_final_host_bytes` is the gap now tracked by #48.
 
-The completed local-expert research record is maintained in
+Historical evidence remains historical and scope-qualified; the project does
+not rewrite old results simply because the architecture vocabulary improved.
+
+The detailed Phase1R record is maintained in
 [`docs/implementation/phase1r-architecture-search-handoff.md`](docs/implementation/phase1r-architecture-search-handoff.md).
-These results do not establish a universal PCIe cutoff or a production worker
-policy; they establish the measured behavior of the tested hardware/runtime.
 
 ## Current research direction
 
-The next primary architecture track is **coarse multi-node model-block
-partitioning over ordinary Ethernet**.
+The resource/residency/planner Wayfinder is complete. The old N1-N3 coarse
+multi-node sequence is retired as historical scaffolding rather than the active
+roadmap.
 
-Instead of treating another machine as a fine-grained remote expert endpoint on
-every MoE layer, each node should own a contiguous block of model layers and the
-state needed to execute that block. Network boundaries move comparatively small
-hidden-state payloads between persistent node-local execution plans. This keeps
-backend-native fast execution local to each machine and aims to make 1 Gigabit
-Ethernet a viable baseline rather than requiring specialized networking.
+The first corrected runtime gate is:
 
-The immediate sequence is:
+> **[#48 — Prove accelerator residency without implicit persistent host
+> mirrors](https://github.com/Zutfen-LLC/inferswarm/issues/48)**
 
-1. selective model-block loading with bounded host RAM;
-2. local split-block correctness across an explicit execution boundary;
-3. two-node block execution over ordinary 1 GbE;
-4. end-to-end two-node decode, with faster networking as an optional comparison;
-5. three-node scaling only if the two-node result earns it.
+Starting from the valid N0 selective-loading substrate, #48 must establish a
+backend-native accelerator materialization, release host staging whose only
+purpose was materialization/transfer, preserve correctness, and account memory
+such that:
 
-The previous fine-grained network-expert idea remains useful historical
-research, not the current first network strategy. See [ADR 0007](docs/adr/0007-coarse-model-block-partitioning-as-first-network-strategy.md).
+```text
+deliberate accelerator bytes:       X
+deliberate persistent host bytes:   Y  (explicit roles)
+bounded transient host overlap:     Z
+unexplained persistent host mirror: 0
+```
+
+After that evidence is frozen, the roadmap proceeds through doctrine-shaped
+frozen-plan realization, local heterogeneous/split execution, minimum automatic
+planning, measured multi-node boundary work, end-to-end elasticity/recovery,
+and finally a materially different model architecture before declaring public
+strategy/planner APIs stable.
+
+See [ROADMAP.md](ROADMAP.md) for the exact gates.
 
 ## Long-term objective
 
-Modern inference engines generally assume one homogeneous machine: one GPU (or
-several similar GPUs), local VRAM, and a fast interconnect. A great deal of
-usable compute does not look like that. InferSwarm's long-term objective is to
-make resources such as:
+InferSwarm aims to make resources such as:
 
 - NVIDIA GPUs;
 - AMD GPUs;
 - Intel GPUs;
 - CPUs;
-- GPU VRAM;
+- GPU VRAM / HBM;
 - system RAM;
-- eventually NVMe backing storage;
-- multiple GPUs inside one machine;
+- multiple GPUs with asymmetric local links;
 - multiple machines connected over ordinary Ethernet;
+- future useful backing/memory resources such as NVMe or CXL where evidence
+  supports them;
 
-available as one logical inference resource, with placement decisions driven by
-measured capability rather than assumed symmetry.
+available to one logical planning domain, with decisions driven by model
+semantics, measured capability, state requirements, workload demand, and
+operator policy rather than assumed hardware symmetry.
 
 ## Design principles
 
-These principles are canonical for the project and are elaborated in
-[ARCHITECTURE.md](ARCHITECTURE.md).
+These are a concise overview; the
+[Fabric Doctrine](docs/architecture/fabric-doctrine.md) is normative.
 
-1. **Heterogeneity is a first-class feature.** Vendor, generation, VRAM size,
-   compute speed, bus topology, and network speed may all differ. Placement
-   should reason about measured capabilities, not assume symmetry.
-2. **Commodity networking matters.** The baseline network target is 1 Gigabit
-   Ethernet. Faster networking should help, but the architecture must not
-   require InfiniBand, RDMA, GPUDirect, or 10/25/100 GbE.
-3. **Move computation intelligently, not blindly.** Keep large state resident
-   near the compute that uses it and move the smallest practical semantic state
-   across resource boundaries. The correct granularity is strategy-dependent:
-   routed experts locally, model blocks between machines, and potentially other
-   units later.
-4. **System RAM remains first-class.** Secondary accelerators augment rather
-   than erase host-memory capacity. RAM remains a valid storage/execution tier.
-5. **NVMe is a future backing tier.** Designs must not block eventual
-   NVMe-backed cold storage, but NVMe is not assumed to be a latency-critical
-   execution tier.
-6. **Resource contribution may be partial and elastic.** A machine may
-   contribute an entire GPU, part of its memory, RAM, or another bounded
-   resource; exclusive ownership is not assumed universally.
-7. **Execution fabric and management plane are distinct.** The open-source
-   fabric must remain usable without a paid control plane.
-8. **Measure hardware; do not stereotype it.** Workers/nodes should eventually
-   advertise measured execution, capacity, bandwidth, latency, and topology
-   characteristics. The exact contract remains evidence-driven and unfrozen.
-9. **Model-independent fabric.** MoE expert execution was the first strategy,
-   not the definition of InferSwarm. Model-block execution is the next strategy.
-10. **Keep the integration seam narrow.** InferSwarm should not require a host
-    inference engine rewrite; proven execution boundaries should converge on a
-    small integration seam.
+1. **Heterogeneity is first-class.** Vendor, generation, memory size, compute
+   speed, bus topology, and network speed may differ.
+2. **Resources do not have permanent plan roles.** There is no canonical
+   `primary`/`secondary` GPU or L0/L1/L2/L3 hierarchy. A GPU, CPU, RAM domain,
+   or link participates according to the current plan.
+3. **System RAM and CPU remain first-class.** They may provide residency,
+   execution, staging, cache/replica value, or no active role depending on the
+   plan; accelerators augment rather than deprecate them.
+4. **State identity and physical copies are different things.** Logical state,
+   materializations, backing, residency, staging, cache, replica, execution
+   location, and mutable authority are distinct.
+5. **Accelerator residency does not imply a host mirror.** Persistent host
+   copies require an explicit purpose and accounting.
+6. **Correctness and feasibility precede optimization.** Slow-but-viable is
+   still viable unless an explicit operator service requirement says otherwise.
+7. **Measure hardware; do not stereotype it.** Context-valid measurements drive
+   economics; unknown is uncertainty; correctness failures quarantine rather
+   than merely reduce a performance score.
+8. **Model semantics stay behind a Model Execution Strategy.** Strategies
+   define legal opaque state/execution units and boundaries; the generic
+   planner chooses among them without needing concepts such as `expert`, Qwen,
+   CUDA Graph, or NVFP4.
+9. **Granularity is measured and plan-relative.** High-frequency/dependency-
+   sensitive communication should stay on the lowest-cost measured locality
+   practical, but coarse boundaries have costs too. Intra-node and inter-node
+   granularities may differ.
+10. **Elasticity works both directions.** Better resources may be prepared and
+    folded into active sessions at safe boundaries; resource loss should fall
+    back to any correct feasible surviving plan—including slower GPUs or
+    CPU/RAM—before declaring outage.
+11. **InferSwarm can adapt to structural demand.** Model/profile/Swarm/session
+    history may inform future placement without requiring prompt/response
+    retention or assigning human meanings to model parts.
+12. **Commodity networking matters.** Ordinary 1 Gigabit Ethernet remains the
+    baseline network target. Faster networks are welcome optimizations, not a
+    mandatory project dependency.
+13. **Execution fabric and management plane are distinct.** The open-source
+    fabric must remain fully usable without a paid control plane.
+14. **Keep the host integration seam narrow.** FreeToken is the first proving
+    vehicle, not the product boundary.
+
+## Conceptual architecture
+
+```text
+Host inference engine
+        |
+        v
+Model Execution Strategy
+        |
+        | legal opaque units / state / demand /
+        | representations / correctness / economics
+        v
+Generic InferSwarm planner
+        |
+        | Swarm resource graph + evidence + policy
+        v
+Versioned Execution Plan / epoch
+        |
+        +-------------------+-------------------+
+        |                   |                   |
+   Compute Units       Memory Resources      Links/paths
+   GPU/CPU/NPU/...     RAM/VRAM/HBM/...     local/network
+```
+
+The resource graph describes what InferSwarm **has**. The Execution Plan
+describes what InferSwarm **intends to do with it**.
+
+## Historical execution strategies
+
+MoE expert execution remains the first strategy actually researched and is
+preserved by ADR 0004.
+
+ADR 0007 remains accepted as the first **network strategy/evidence direction**:
+coarse contiguous model blocks over ordinary Ethernet. It is not a permanent
+rule that inter-node execution must use contiguous blocks. The current doctrine
+allows the Model Execution Strategy and planner to select another legal
+intra/inter-node granularity when measurements justify it.
 
 ## Current implementation vehicle
 
-The current experimental vehicle is the Zutfen fork of FreeToken:
+The experimental host/runtime vehicle is the Zutfen fork of FreeToken:
 
 > **<https://github.com/Zutfen-LLC/FreeToken>**
 
-Conceptually:
+Focused `poc/*` branches answer bounded questions. InferSwarm issues and this
+repository remain canonical for architecture, methodology, acceptance criteria,
+and retained evidence. A positive experiment does not automatically become a
+permanent FreeToken fork feature or a public InferSwarm API.
 
-```
-FreeToken
-    model/runtime integration
-            │
-            ▼
-InferSwarm execution boundary
-            │
-     local resources / remote nodes
-```
-
-FreeToken is the initial validation runtime, not necessarily a permanent
-exclusive dependency. Novel distributed-execution mechanisms are proven in
-focused `poc/*` branches; accepted evidence and architecture decisions are
-recorded canonically in this repository. See
-[`docs/integrations/freetoken.md`](docs/integrations/freetoken.md).
+See [`docs/integrations/freetoken.md`](docs/integrations/freetoken.md).
 
 ## Repository layout
 
+```text
+.github/             issue templates, pull request template, CI
+docs/adr/            architecture decision records
+docs/architecture/   normative Fabric Doctrine
+docs/benchmarks/     benchmark methodology/results
+docs/investigations/ research inputs and feasibility work
+docs/implementation/ active/historical experiment plans and handoffs
+docs/protocols/      semantic-boundary and transport design notes
+docs/integrations/   host-engine integration notes
+ARCHITECTURE.md      derived architecture overview
+BENCHMARKING.md      benchmark/evidence contract
+ROADMAP.md           evidence-gated successor roadmap
 ```
-.github/            issue templates, pull request template, CI
-docs/adr/           architecture decision records
-docs/benchmarks/    benchmark methodology/results
-docs/investigations/ research inputs, placement artifacts, feasibility work
-docs/implementation/active and historical experiment plans/handoffs
-docs/protocols/     execution-boundary and transport design notes
-docs/integrations/  host-engine integration notes
-ARCHITECTURE.md     architecture direction and open questions
-BENCHMARKING.md     benchmark contract
-ROADMAP.md          evidence-driven research roadmap
-```
-
-Runtime code will move into this repository only when experiments establish a
-stable seam worth extracting.
 
 ## License
 
-Apache License 2.0. See [LICENSE](LICENSE). Contributions are accepted under
-the same license; see [CONTRIBUTING.md](CONTRIBUTING.md).
+Apache License 2.0. See [LICENSE](LICENSE). Contributions are accepted under the
+same license; see [CONTRIBUTING.md](CONTRIBUTING.md).

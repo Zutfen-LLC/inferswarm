@@ -3,6 +3,12 @@
 Date: 2026-08-26
 Status: Accepted
 
+> **Current doctrine clarification (2026-08-31):** FreeToken remains the
+> initial proving/integration vehicle and extraction remains the goal. The old
+> `ROADMAP Phase 5` sequencing and `heterogeneous workers` diagram below are
+> historical framing; current implementation order and resource semantics are
+> defined by ADR 0008, the Fabric Doctrine, and the current `ROADMAP.md`.
+
 ## Context
 
 InferSwarm's first proofs of concept need a host inference engine that
