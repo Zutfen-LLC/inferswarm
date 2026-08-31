@@ -5,6 +5,17 @@ choices that constrain future work, set boundaries, or commit the project to
 a direction. They are not a log of implementation details — "which linter we
 use" is not an ADR; "what the project's open-source boundary is" is.
 
+## Canonical documentation hierarchy
+
+Following ADR 0008 and the completed resource/residency/planner Wayfinder:
+
+> **ADRs decide; the [Fabric Doctrine](../architecture/fabric-doctrine.md)
+> specifies; `ARCHITECTURE.md` explains; `ROADMAP.md` sequences.**
+
+ADRs record durable decisions and supersession. The Fabric Doctrine is the
+normative detailed synthesis of the current resource/residency/planning model.
+Derived overview/roadmap prose must not silently override either.
+
 ## Convention
 
 - One Markdown file per decision, named `NNNN-short-title.md`, numbered from
@@ -49,6 +60,7 @@ deciding whether the target is achievable — that distinction is the point.
 | [0002](0002-freetoken-as-initial-integration-runtime.md) | FreeToken as initial integration runtime | Accepted |
 | [0003](0003-1gbe-baseline-network-target.md) | 1 GbE baseline network target | Accepted |
 | [0004](0004-moe-as-first-execution-strategy.md) | MoE as first execution strategy | Accepted |
-| [0005](0005-ram-remains-first-class-tier.md) | System RAM remains a first-class tier | Accepted |
-| [0006](0006-backend-independent-worker-and-representation-boundary.md) | Backend-independent worker and representation boundary | Accepted |
+| [0005](0005-ram-remains-first-class-tier.md) | System RAM remains a first-class tier | **Superseded by 0008** |
+| [0006](0006-backend-independent-worker-and-representation-boundary.md) | Backend-independent worker and representation boundary | **Superseded by 0008** |
 | [0007](0007-coarse-model-block-partitioning-as-first-network-strategy.md) | Coarse model-block partitioning as first network strategy | Accepted |
+| [0008](0008-canonical-fabric-doctrine.md) | Canonical Fabric Doctrine | **Accepted** |
