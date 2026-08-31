@@ -702,3 +702,61 @@ Every arm had exact ownership with no drop/duplication, zero fallback/failure/re
 Formal classification is `D5_DUMMY_TAX_CONFIRMED`: eliminating dummy physical route compute improved matched equal S3 by 11.894%. Capability weighting remained neutral after compaction (`1.0115x`, within 0.97–1.05). Compact equal and weighted marginal retention are both promising, not strong (`0.7694` and `0.7783`, below 0.90).
 
 The next bounded experiment should isolate the remaining fixed-capacity host-staged activation/metadata/return transfers, GPU0 return H2D, fan-in event/wait behavior, reconstruction, PCIe contention, and graph-node overhead. A fourth/heterogeneous worker is not yet recommended because compact retention did not reach the predeclared strong 0.90 region. No D6 or fourth worker was started. Host-specific evidence remains under `~/inferswarm-evidence/architecture-search/d5-compact/` and is not committed.
+
+---
+
+## 15. D6 count-aware transport and fixed fan-in tax isolation
+
+D6 was a new post-NO-GO experiment on the frozen D3 equal placement and physical roles. It did not change placement, add a fourth GPU, or add network workers. FreeToken branch `poc/phase1r-d6-count-aware-transport` started exactly at accepted D5 head `b7c857a7fe7afe716a7f6b6ae4bda2ae72060a92`. The D5 bulk/concurrent resident loader remained frozen at eight CPU staging workers.
+
+### D6-A critical path
+
+The first full 23-marker diagnostic retained only 0.9180 of uninstrumented B-only throughput and was rejected as perturbing. D6 then used one narrow same-device interval per captured graph, with all external CUDA events preallocated before capture and all reads after replay. B-only passed the 0.97 perturbation gate at 0.978261. The equal-AB worst interval retained 0.941119 and is explicitly treated as potentially perturbing; its component medians support attribution but are not summed as authoritative wall time.
+
+The representative raw route payload was identical across shapes. It resolved to four B and four GPU0-local routes in B-only, and four A plus four B routes in equal AB. Uninstrumented captured one-layer wall increased from 138.240 us B-only to 244.736 us AB: a measured residual of 106.496 us.
+
+| Component median | B-only | Equal AB |
+|---|---:|---:|
+| classify/compact | 17.408 us | 18.432 us |
+| GPU0 payload staging | 10.304 us | 9.040 us |
+| GPU0 local branch | 56.000 us | 12.160 us |
+| fan-in wait intervals | 19.456 us | 151.552 us |
+| returned contribution H2D | 7.296 us | 18.272 us |
+| scatter/reconstruction | 5.568 us | 13.408 us |
+| final canonical reduction | 4.096 us | 4.096 us |
+| complete layer (instrumented) | 123.904 us | 248.832 us |
+
+Worker B's representative branch was 74.368 us B-only and 66.512 us under concurrent AB. Worker A's branch was 167.856 us A-only and 167.216 us under AB, for 99.619% concurrent retention. A's AB branch decomposed into 36.896 us inbound H2D, 50.688 us compact expert compute, and 84.832 us fixed 32,768-byte outbound D2H. B's AB branch was 10.240, 53.248, and 8.000 us respectively. Thus B did not slow when A participated; the new x1 A branch extended the join. The expanded join plus the second fixed return H2D and scatter explains the residual despite 43.840 us less GPU0-local work. GPU0 zero-local work still measured 12.160 us, consistent with the known dummy cache-planning/launch tail, but this reduction relative to B-only cannot explain the positive residual.
+
+D5 moved 4,096 activation bytes, 68 route/count metadata bytes, and 32,768 contribution bytes on each return leg per active worker/layer: 69,700 bytes on the counted worker path. At four useful routes only 36,900 bytes were useful, for 52.941% efficiency. The A-only versus concurrent measurements show that PCIe/root-complex contention was not the limiter; the fixed payload on A's Gen2 x1 path was.
+
+### D6-B mechanism and primitive
+
+D6 retains one whole-model BS1 CUDA graph and uses device-side active counts. GPU0 packs only active slot/weight entries to mapped pinned host storage; each worker reads only those entries. A worker writes only active compact contribution rows to mapped host storage, and GPU0 scatters only active rows directly from that storage to original route positions. No token-time host decision, synchronization, graph selection, recapture, eager fallback, or expert-weight movement is introduced. Activation H2D and the four-byte active count remain unavoidable per represented worker branch.
+
+At four useful routes, actual counted bytes per worker/layer are 4,096 activation, 36 metadata, and 16,384 on each return leg: 36,900 bytes, saving 32,800 bytes (47.059%) versus D5. At zero routes, D6 transfers 4,096 activation bytes and the four-byte count, performs no expert work, moves no slot/weight rows and no returned contribution bytes, and leaves stale tails unobservable. Activation transfer remains.
+
+Controlled 0/1/2/4/6/8 route transitions, zero-route workers, stale-tail protection, exact ownership/reconstruction, one canonical reduction, and dynamic captured replay passed. At the representative 4/4 split, D6 worker branch medians were A 122.880 us and B 64.512 us; A improved 26.511% versus its D5 AB branch. D5 compact AB and D6 AB produced the exact same 32-token W4 sequence, SHA-256 `c2b34b307eb0e57ac09e27b1cdc444a9e2184a245cc6bd91fe5d4fdf25a967dc`. Primitive classification: `D6_TRANSPORT_PRIMITIVE_PASS`.
+
+### D6 serving result
+
+The frozen T0/T1/T2/T3 order used fresh engines, equal placement, one discarded warmup, and exactly three retained greedy 128-token W4 generations:
+
+| Arm | Retained decode tok/s | Median |
+|---|---:|---:|
+| T0 D5 compact B-only | 73.369118, 74.709990, 74.697232 | 74.697232 |
+| T1 D5 compact equal AB | 57.308474, 57.477620, 57.454017 | 57.454017 |
+| T2 D6 B-only | 71.260629, 72.615370, 72.524171 | 72.524171 |
+| T3 D6 equal AB | 59.098975, 59.342031, 59.352757 | 59.342031 |
+
+- `B_TRANSPORT_GAIN = 0.970908415`
+- `AB_TRANSPORT_GAIN = 1.032861302`
+- `D6_E3 = 0.818237978`
+- `D6_VS_D5_E3 = 1.063809198`
+- `AB6 / historical D5 C3 weighted = 1.024325629`
+
+T3 ownership remained A 77,900 (47.920768%), B 77,518 (47.685778%), and GPU0 local 7,142 (4.393455%). Physical invocations exactly matched ownership. Across the retained T3 window, D6 counted 1,441,051,600 worker-path bytes versus a matched D5 fixed-capacity geometry of 2,832,608,000, saving 1,391,556,400 bytes (49.128%). A had 92 zero-route worker layers and B had 144. Every retained arm had zero fallback, failure, recapture, steady host synchronization, expert-weight movement, major faults, `pswpin`, and `pswpout`; RSS and MemAvailable were recorded per generation.
+
+Formal classification is `D6_TRANSPORT_TAX_PARTIAL`: AB improved by 3.286%, satisfying the partial threshold, but did not meet the strong joint requirements (`AB_TRANSPORT_GAIN >= 1.08` and `D6_E3 >= 0.82`). Marginal retention is `promising`, not strong. It narrowly missed 0.82 and remains below the predeclared 0.85 minimum for recommending a fourth worker. Do not add a fourth worker yet. The next bounded question should measure the remaining per-worker dependency/join and fixed activation cost, with the 12-us zero-local cache-planning/launch tail as a secondary GPU0 target. No D7 or fourth-worker work was started. Host-specific evidence remains under `~/inferswarm-evidence/architecture-search/d6-count-aware-transport/` and is not committed.
+
+The final targeted D2/D3/D4/D5/D6, NVFP4, runtime-report, and argument regression suite reported 215 passed and 6 skipped. D6 instrumentation-off execution preserves D5's captured decode operations; D6 runtime selection remains a separate opt-in flag and executor.
