@@ -1,236 +1,179 @@
 # InferSwarm Roadmap
 
-This roadmap tracks validation work, not feature shipping. Each phase exists
-to answer a question; the question is stated, the hardware and model are
-named, and the exit criteria are measurable. Later phases depend on earlier
-results — if a phase fails its criteria, we change the plan rather than the
-numbers.
+This roadmap tracks **validation questions**, not feature shipping. Results follow
+[BENCHMARKING.md](BENCHMARKING.md): if an experiment fails, the plan changes
+rather than the thresholds or the numbers.
 
-A core rule for every phase: results follow the
-[BENCHMARKING.md](BENCHMARKING.md) contract. No phase is "done" on a
-microbenchmark alone.
+## Completed foundation
 
-## Phase 0 — Baseline and instrumentation
+### Phase 0 — baseline and routing evidence — COMPLETE
 
-Establish the ground truth everything else will be compared against.
+The Qwen3.6/RTX 3060 baseline, correctness reference, and W1-W4 MoE routing /
+cache-pressure evidence are complete. Canonical issues #1-#3 are closed.
 
-Phase 0's baseline-selection rules, held-constant configuration list, and
-anti-starvation prohibitions are fixed in advance by
-[docs/phase1-poc-success-criteria.md](docs/phase1-poc-success-criteria.md)
-(sections 2, 3, 9, 10). Phase 0 produces **two** distinct non-distributed
-configurations: `CANONICAL_PERFORMANCE_BASELINE`, the measured winner of a
-pre-declared configuration sweep (not whichever single-GPU run happened
-first), and `CORRECTNESS_REFERENCE` (section 2.4), a fixed single-device GPU
-configuration used only to decide whether distributed execution computes the
-intended result. The sweep's configurations are stated with explicit
-`--nvfp4-backend` values rather than relying on the runtime default.
-Section 1.1 of that document also fixes the Phase-1 checkpoint
-(`nvidia/Qwen3.6-35B-A3B-NVFP4`), whose exact upstream revision must be
-pinned before the first Phase-0 run.
+Primary records include:
 
-- [ ] Establish deterministic benchmark methodology (fixed seeds, fixed
-      prompts/workloads, fixed measurement protocol, warmup rules).
-- [ ] Profile one RTX 3060: memory bandwidth, PCIe link width/speed, single-
-      expert execution latency at the relevant weight formats.
-- [ ] Measure existing FreeToken host-RAM/offload behavior on that GPU as the
-      baseline configuration.
-- [ ] Capture real MoE routing behavior (expert selection traces) for
-      representative workloads.
-- [ ] Establish the correctness reference: recorded outputs from the fixed,
-      non-distributed, single-device GPU configuration of section 2.4, checked
-      for greedy self-consistency before any candidate comparison.
+- [`docs/benchmarks/results/phase0/`](docs/benchmarks/results/phase0/)
+- [`docs/investigations/p0i-qwen36-routing-residency.md`](docs/investigations/p0i-qwen36-routing-residency.md)
 
-**Exit criteria:** reproducible baseline numbers for one 3060 with recorded
-provenance, plus routing traces. No distributed code yet.
+### Phase 1 — two-GPU local POC — COMPLETE / canonical `NO-GO`
 
-## Phase 1 — Two-GPU local POC
+The original Phase-1 candidate proved resident remote expert execution correct
+but was dramatically slower than the canonical baseline. The immutable verdict
+is:
 
-Hardware:
+`NO-GO`
 
-```
-2× RTX 3060 12GB
-```
+This verdict applies only to the exact tested Phase-1 mechanism and hardware;
+it is not a blanket rejection of distributed inference.
 
-Model:
+Canonical report:
 
-```
-Qwen3.6-35B-A3B
-checkpoint: nvidia/Qwen3.6-35B-A3B-NVFP4  (revision pinned before Phase 0)
-```
+- [`docs/benchmarks/results/phase1/phase1-go-no-go-report.md`](docs/benchmarks/results/phase1/phase1-go-no-go-report.md)
 
-Why this model for the POC:
+Issues #4, #5, and #10 are closed as completed.
 
-- already supported by FreeToken (no model-porting work blocking the
-  experiment);
-- its expert set (~16.9 GB at FreeToken's compact formats, per the
-  [feasibility investigation](docs/investigations/multi_gpu_moe_feasibility.md))
-  is larger than one 12 GB card's practical expert capacity, so a second GPU
-  has real work to hold;
-- the expert set is plausibly distributable across two 12 GB cards (Phase
-  0/1 will establish the practical expert capacity after runtime and
-  non-expert allocations), so the experiment is controlled rather than
-  capacity-starved;
-- on larger cards (e.g. a 24 GB RTX 3090) the same expert set should fit
-  entirely, which gives us a built-in control case for sanity-checking.
+### Phase1R — local architecture search D1-D7 — COMPLETE
 
-NVFP4 is the controlled format for this first experiment, not an InferSwarm
-constraint: the architecture is meant to pool resources whatever weight
-precision the operator chooses (Q6/Q8/FP8/BF16 included), with higher
-precision changing resident bytes, kernels, and performance rather than the
-distribution architecture. See section 1.1 of the criteria document; format
-scaling is a separate future experiment.
+Phase1R investigated why Phase 1 failed and whether a graph-compatible local
+resident-worker architecture could still be useful.
 
-Goal:
+The accumulated result is maintained in:
 
-> Demonstrate resident expert execution on a second GPU and compare it
-> against existing RAM offload.
+- [`docs/implementation/phase1r-architecture-search-handoff.md`](docs/implementation/phase1r-architecture-search-handoff.md)
 
-**Exit criteria:** end-to-end decode/prefill comparison (second-GPU resident
-experts vs. host-RAM offload baseline from Phase 0) with correctness checks
-against the non-distributed reference. Implementation happens primarily in
-the [FreeToken fork](docs/integrations/freetoken.md).
+Key findings:
 
-The GO / ITERATE / NO-GO / INVALID verdicts and their thresholds, hard
-correctness gates, mechanism-validity
-gates, and statistical rules that decide this phase were fixed before any
-measurement existed:
-[docs/phase1-poc-success-criteria.md](docs/phase1-poc-success-criteria.md).
-That document also states exactly what a Phase-1 GO does and does not
-authorize.
+- backend-native captured execution is critical on the current NVIDIA stack;
+- a healthy-link resident RTX 3060 can improve decode throughput materially;
+- graph-compatible multiworker execution is correct and physically concurrent;
+- dummy expert work and fixed transport were real, measurable scaling taxes and
+  were reduced by D5/D6;
+- capability weighting and fan-in-sparse placement did not repair scaling on
+  the available Gen2 x1 worker;
+- the tested Gen2 x1 RTX 3060 is best treated provisionally as a
+  capacity-positive / throughput-negative resource, not as evidence that all
+  narrow-link devices are universally unsuitable.
 
-The ordered engineering sequence is recorded separately in the
-[Phase-1 two-GPU POC implementation plan](docs/implementation/phase1-two-gpu-poc.md).
-That plan is subordinate to the success criteria and keeps the first
-implementation deliberately narrow and FreeToken-local until the POC earns a
-more general abstraction.
+Historical three-GPU issue #7 is closed for the tested topology. A future
+Gen3 x8 hardware-causality retest is tracked in #35 and does not block the
+current roadmap.
 
-## Phase 2 — Three-GPU scaling
+## Current active track — N-series coarse multi-node execution
 
-Hardware:
+[ADR 0007](docs/adr/0007-coarse-model-block-partitioning-as-first-network-strategy.md)
+sets the current network direction.
 
-```
-3× RTX 3060 12GB
-```
+The first multi-machine strategy is **coarse contiguous model-block
+partitioning over ordinary 1 Gigabit Ethernet**, not fine-grained expert RPC on
+every MoE layer.
 
-Goal:
+Why:
 
-- test fan-out (dispatch to multiple secondary devices per layer);
-- test per-GPU batching (multiple selected experts executed per dispatch);
-- test whether performance scales with device count, and if it does not,
-  measure the actual cause — synchronization is one candidate among several,
-  not a presupposed answer.
+- the project goal is to use hardware and networking people already have;
+- local experiments showed fine-grained worker participation is highly
+  sensitive to service latency/interconnect quality;
+- a coarse node boundary lets each machine retain backend-native fast execution
+  locally and pay network transitions only between large blocks;
+- selective loading also solves the independent problem that a node should not
+  require enough host RAM for model state it does not own.
 
-**Exit criteria:** one-/two-/three-GPU comparison at identical workloads;
-cause(s) of any scaling bend identified with evidence; synchronization
-overhead quantified separately.
+### N0 — selective model-block loading — ACTIVE — issue #31
 
-## Phase 3 — Mixed GPU + RAM placement
+Prove that a process/node can load only its assigned contiguous model block,
+with bounded host RAM and no mandatory full CPU expert-bank materialization.
 
-Demonstrate, in one inference run:
+**Exit criteria:** complementary blocks load/execute correctly; peak RAM and
+materialized bytes are accounted; unrelated model state is never loaded.
 
-```
-some experts → primary GPU
-some experts → secondary GPU(s)
-some experts → host RAM / existing FreeToken path
-```
+### N1 — local split-block equivalence — BLOCKED BY N0 — issue #32
 
-This is a **hard architectural acceptance criterion**: tiers must
-participate together, not as alternative modes. System RAM remains a
-first-class tier (design principle 4) — secondary GPUs augment, not replace,
-host-memory offload.
+On one machine, execute two complementary model blocks across an explicit
+process/execution boundary before networking is introduced.
 
-**Exit criteria:** a single run with all three tiers active, verified by
-placement accounting, with end-to-end numbers and correctness checks.
+**Exit criteria:** complete deterministic inference matches the unsplit
+reference; block-local KV/recurrent state ownership and boundary payload are
+explicit; backend-native fast execution remains active within each block.
 
-## Phase 4 — 1 GbE POC
+### N2 — two-machine block primitive over 1 GbE — BLOCKED BY N1 — issue #33
 
-Move one worker to another physical machine.
+Move one block to a second physical machine using a persistent compact binary
+boundary over ordinary 1 GbE.
 
-Baseline network:
+**Exit criteria:** exact two-machine correctness; decode/prefill boundary bytes
+and network wall measured; no node needs full-model host RAM; 1 GbE gets an
+honest primitive-level viability verdict. If available, 10 GbE is an optional
+comparison only.
 
-```
-ordinary 1 Gigabit Ethernet
-```
+### N3 — end-to-end two-node serving — BLOCKED BY N2 — issue #34
 
-No exotic networking requirement — the architecture targets commodity
-networking (design principle 2).
+Run the frozen W1-W4-style end-to-end serving comparison across two nodes.
 
-Measure:
+**Exit criteria:** correctness, decode tok/s, TTFT, prefill, and network overhead
+measured with provenance; the 1 GbE verdict determines whether a three-node N4
+experiment is justified.
 
-- activation dispatch latency;
-- complete MoE-layer latency (dispatch → per-device selected-expert execution
-  → combine);
-- decode tokens/sec;
-- prefill separately from decode;
-- impact of 1 / 2.5 / 5 / 10 GbE links if hardware permits;
-- latency sensitivity independently of bandwidth (e.g. artificial delay at
-  constant payload size).
+### N4 — three-node scaling — NOT YET CREATED
 
-**Exit criteria:** an evidence-backed answer to "is 1 GbE viable, and is the
-limiting factor latency/synchronization or bandwidth?" — with the
-expectation, tested rather than assumed, that once activation payloads are
-small, viability depends primarily on latency/synchronization behavior.
+Create only if N3 earns it. Do not pre-design three-node scheduling before the
+two-node execution boundary is measured.
 
-## Phase 5 — Generalized worker abstraction
+## Deferred but still valid work
 
-Only after the preceding POCs justify it:
+### Mixed accelerator + RAM execution — issue #6
 
-- extract the proven execution seam from the FreeToken fork;
-- introduce stable worker/resource abstractions (only what the experiments
-  actually required — see the open capability-contract issue);
-- move reusable InferSwarm runtime code into this repository.
+ADR 0005 remains accepted: system RAM is a first-class tier. The original
+GPU+GPU+RAM expert-placement issue remains open but deferred until the N-series
+clarifies the broader node/block boundary.
 
-**Exit criteria:** distributed-execution functionality lives in
-`Zutfen-LLC/inferswarm`, the fork's divergence shrinks, and the seam is thin
-enough to describe in one page.
+### Model-independent capability contract — issue #8
 
-## Phase 6 — Heterogeneous vendor workers
+Do not freeze the public worker/node contract before N0-N3 reveal the actual
+fields needed for selective loading, block execution, network boundaries, and
+measured hardware profiles.
 
-Investigate:
+### Larger-model validation — issue #13
 
-- AMD ROCm expert worker;
-- Intel XPU expert worker;
-- CPU worker improvements.
+GLM-5.3-Flash remains a potentially valuable capacity-constrained target, now
+explicitly deferred until the node-partition substrate exists. Future analysis
+must consider both coarse node partitioning and optional local expert residency.
 
-Worker support need not imply that the hardware can serve as the primary
-model runtime — a contributing worker is valuable on its own
-([ARCHITECTURE.md](ARCHITECTURE.md#heterogeneous-hardware-future-direction)).
+### Heterogeneous vendors
 
-**Exit criteria:** at least one non-NVIDIA worker executing experts correctly
-with measured performance, and a decision on backend interface shape.
+AMD ROCm, Intel XPU/Arc, and CPU contributions remain long-term goals. They
+should be introduced after the execution boundary is stable enough that vendor
+bring-up does not get conflated with distributed-architecture debugging.
 
-## Phase 7 — Larger-model validation
+### Local link-class follow-up — issue #35
 
-Use models that genuinely exceed individual GPU capacity, where multi-device
-capacity is not optional. Potential cases (per the
-[feasibility investigation](docs/investigations/multi_gpu_moe_feasibility.md)):
+When a suitable x8→x16 riser arrives, retest the third RTX 3060 on the Z440's
+Gen3 x8 slot. This is useful hardware-causality evidence but does not block N0.
 
-- DeepSeek-V4-Flash — already supported by FreeToken; expert pool (~137 GB)
-  far exceeds aggregate VRAM of the POC rig, so partial-coverage effects
-  dominate;
-- Ling-3.0-flash — compelling aggregate-capacity fit, *if/when runtime model
-  support exists* (its architecture is not implemented in FreeToken today;
-  this is a separate, prior workstream);
-- other large sparse MoE models.
+## Superseded network plan
 
-**Exit criteria:** measured end-to-end results on at least one
-capacity-constrained model, with the fabric's benefit stated honestly
-relative to host-RAM offload on the same hardware.
+Issue #9 proposed making the first 1 GbE POC a fine-grained remote MoE expert
+worker. It is closed `not planned` and preserved as historical reasoning.
+ADR 0003 — **1 GbE as the baseline network target** — remains accepted. ADR
+0007 changes the first network execution granularity, not the commodity-network
+requirement.
 
 ## Later / exploratory
 
-Exploratory only — no schedule, no commitment, revisited after Phase 7:
+No schedule or commitment yet:
 
-- dense-model pipeline execution;
-- elastic GPU borrowing (partial/idle-capacity contribution);
+- node-local composition of local GPUs + RAM beneath a coarse distributed node;
+- automatic hardware capability profiling and performance/capacity worker
+  classification;
+- elastic/borrowed accelerator capacity;
 - NVMe backing tier;
 - multi-site execution;
-- automatic expert replication;
-- routing-aware placement;
+- replicas and other model-independent strategies;
 - commercial control-plane integration.
 
 ## Issue tracking
 
-Each phase's near-term work is tracked as issues in this repository.
-InferSwarm issues are canonical; implementation PRs land in the FreeToken
-fork and link back (see [docs/integrations/freetoken.md](docs/integrations/freetoken.md)).
+InferSwarm issues are canonical for architecture, roadmap, and acceptance
+criteria. FreeToken carries focused implementation experiments and links back
+to the corresponding InferSwarm issue. Accepted experimental heads/evidence are
+recorded before research branches are archived; see
+[`docs/integrations/freetoken.md`](docs/integrations/freetoken.md).
