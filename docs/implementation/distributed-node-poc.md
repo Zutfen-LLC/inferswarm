@@ -1,10 +1,19 @@
 # Distributed-node POC implementation plan
 
-Status: **Active planning record**
+Status: **Historical / superseded planning record**
+
+> **Current scope note (2026-08-31):** This document records the earlier N0-N3
+> coarse distributed-node plan and is preserved as planning history. N0
+> completed with `N0_SELECTIVE_BLOCK_PASS`; N1 was intentionally stopped and
+> its partial run is non-canonical; issues #32-#34 are retired. Do **not** use
+> the sequence below as the active roadmap. Current architecture is defined by
+> ADR 0008 and the Fabric Doctrine; current evidence gates are in `ROADMAP.md`,
+> beginning with issue #48. ADR 0007 remains accepted as the first network
+> strategy/evidence direction, not permanent inter-node granularity doctrine.
 
 Architecture decision: [ADR 0007](../adr/0007-coarse-model-block-partitioning-as-first-network-strategy.md)
 
-Canonical issues: #31, #32, #33, #34.
+Historical canonical issues: #31, #32, #33, #34.
 
 This plan begins after the completed Phase1R D1-D7 local architecture search.
 It does **not** reopen canonical Phase 1 or reinterpret the D-series results.
