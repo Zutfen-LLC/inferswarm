@@ -465,6 +465,15 @@ Ordinary **1 Gigabit Ethernet remains the baseline network target** under ADR
 0003. Faster networking is welcome and should improve plans where measurements
 support it, but it is not a mandatory architectural dependency.
 
+R4 supplied the first accepted physical network-boundary evidence for that
+posture. On the frozen Qwen `[0,19) / [19,40)` two-Node candidate, actual
+clean-arm application demand peaked at about `2.947 Mb/s` A→B against a
+`747.12 Mb/s` frozen 80%-margin limit derived from the measured ordinary-1-GbE
+path, with zero retransmits. That is strong evidence that link **capacity** is
+not the limiting resource for this exact semantic boundary; it is not a claim
+that 1 GbE is universally sufficient or that latency/end-to-end serving
+performance is already solved.
+
 ## Current evidence and implementation posture
 
 The controlled historical proving ground remains Qwen3.6-35B-A3B-NVFP4 on the
@@ -508,16 +517,32 @@ recorded NVIDIA/FreeToken environments.
   The same physical graph selected the single-resource candidate for warm decode
   throughput and the resident split for warm TTFT, while lower-ranked feasible
   candidates and unused/excluded resources remained explicitly explainable.
+- R4 / issue #57 produced `R4_MULTI_NODE_BOUNDARY_PASS`: the accepted contiguous
+  split executed across `inferswarm01` and `inferswarm03` over one persistent
+  ordinary-TCP 1-GbE path with byte-exact correctness, complete wire accounting,
+  backend-native resident execution, #53 RELEASE, and zero steady-state
+  model-state movement/fallback/recapture/source fetches. Its exact canonical
+  network disposition is `R4_1GBE_PRIMITIVE_CAPACITY_VIABLE`.
 - The aborted N1 partial run remains non-canonical; N1-N3 are retired historical
   scaffolding rather than the current roadmap.
 
-The current evidence gate in [ROADMAP.md](ROADMAP.md) is **R4 — measured
-multi-node boundary primitive**, tracked by issue #57. R4 keeps the accepted
-contiguous Qwen split and moves its one proven semantic boundary between two
-physical Nodes over persistent ordinary TCP, preserving backend-native resident
-execution and state/authority semantics while producing the first honest
-network-boundary correctness and economics evidence. It does not yet freeze a
-public wire protocol or claim production distributed-serving economics.
+Accepted R4 canonical provenance is physical producer
+`e97f60b7b0120a72a7cf9926cf6a5c558782c9b2` and corrected evidence
+`d5735c6b5075e835e7e8118922c44a7b0cf7439b`. The earlier `9a26fd2` evidence is
+invalidated historical ancestry. The accepted evidence remains immutable even
+though FreeToken `main` has since diverged.
+
+Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) is the pre-R5
+implementation-line prerequisite: establish a durable FreeToken InferSwarm
+integration line without rebasing/re-writing accepted evidence.
+
+The current successor evidence gate in [ROADMAP.md](ROADMAP.md) is
+**R5A — static end-to-end multi-node serving**, tracked by issue
+[#60](https://github.com/Zutfen-LLC/inferswarm/issues/60). R5A must integrate the
+R0-R4 seams through a normal host-runtime request: strategy legality, generic
+planning with applicable R4 evidence, a frozen plan, multi-Node realization,
+backend-native execution, and a correct measured response. Live epoch changes,
+scale-up/down, and failure recovery remain R5B work.
 
 FreeToken remains the initial validation/integration vehicle, not the permanent
 product boundary. Reusable runtime functionality should eventually live behind
