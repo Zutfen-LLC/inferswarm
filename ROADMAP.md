@@ -118,6 +118,13 @@ further implementation:
 The normative synthesis is
 [`docs/architecture/fabric-doctrine.md`](docs/architecture/fabric-doctrine.md).
 
+### Documentation synchronization — issue #47 — COMPLETE
+
+Issue #47 synchronized ADR 0008 and the Fabric Doctrine into the top-level
+architecture/roadmap hierarchy, ADR forward/supersession notes, and current
+repository guidance. Historical measurements remain unchanged except for
+explicit forward scope notes where needed.
+
 ### Retired N1-N3 sequence — HISTORICAL SCAFFOLDING
 
 Issues #32-#34 and
@@ -130,106 +137,107 @@ verbatim. Successor experiments must satisfy the doctrine/evidence gates below.
 
 ---
 
-## Current handoff work
+## Completed post-Wayfinder runtime gates
 
-### Documentation synchronization — issue #47
+### Runtime Gate R0 — accelerator residency without implicit host mirrors — issue #48 — COMPLETE
 
-Synchronize the repository around ADR 0008 and the Fabric Doctrine:
+Accepted result:
 
-- umbrella ADR and normative doctrine;
-- derived `ARCHITECTURE.md` and this roadmap;
-- ADR forward/supersession notes;
-- current README/contributor/integration/protocol guidance;
-- repository-wide stale-assumption sweep.
+`P48_ACCELERATOR_RESIDENCY_PASS`
 
-Historical measurements remain unchanged except for explicit forward scope notes
-where a document could otherwise be mistaken for current planning guidance.
+Starting from the valid N0 selective-loader substrate, R0 proved that retaining
+the tested accelerator materialization does not inherently require retaining an
+equivalent persistent host-RAM materialization after bounded staging has
+completed.
 
-### Runtime Gate R0 — accelerator residency without implicit host mirrors — issue #48
+The accepted evidence established final accelerator-native correctness,
+component/materialization accounting, released live host source-bank
+materializations, repeated resident execution without lazy rematerialization,
+and `unexplained_persistent_host_mirror_bytes == 0` for the proven path.
 
-**This is the first corrected post-Wayfinder implementation gate.**
+R0 deliberately did **not** establish OS-level physical host-page reclamation;
+that stronger capacity property was later resolved by issue #53.
 
-Starting from the valid N0 selective-loader substrate, prove:
+### R1 — doctrine-shaped frozen-plan realization — issue #50 — COMPLETE
 
-> creating/retaining the tested accelerator materialization does not inherently
-> retain an equivalent persistent host-RAM materialization after bounded staging
-> has completed.
+Accepted result:
 
-Required evidence includes:
+`R1_FROZEN_PLAN_REALIZATION_PASS`
 
-- final accelerator-native execution correctness;
-- persistent required memory accounting;
-- persistent optional cache/replica accounting;
-- transient staging/packing/transfer peak accounting;
-- no lazy reappearance of the equivalent host materialization during repeated
-  execution;
-- deliberate accelerator bytes `X`;
-- deliberate persistent host bytes `Y` with explicit roles;
-- bounded transient host overlap `Z`;
-- **unexplained persistent host mirror bytes = 0** for the proven path.
+R1 proved that one explicitly frozen, versioned doctrine-shaped plan can drive
+validation, realization, observed-state reconciliation, authority accounting,
+staging release, and execution without introducing a generalized optimizer or
+freezing public planner/strategy APIs.
 
-RSS/HWM is supporting evidence, not a substitute for component/materialization
-accounting.
+The accepted frozen plan preserved correctness, clean intended-vs-observed
+reconciliation, backend-fast-path compatibility, zero unplanned persistent
+model-state bytes, and zero unexplained persistent host-mirror bytes.
 
-**Gate:** do not specify the replacement local split/heterogeneous experiment
-until R0 passes and its evidence is frozen.
+### R2 — local heterogeneous/split execution — issue #51 — COMPLETE
+
+Accepted result:
+
+`R2_LOCAL_SPLIT_EXECUTION_PASS`
+
+R2 proved one nontrivial doctrine-shaped local plan across two independently
+identified Compute Units using the frozen contiguous `[0,19) / [19,40)` Qwen3.6
+candidate. Under the methodology frozen by issue #52, the split was byte-exact
+to the canonical matched reference for W1-W4 generated sequences and selected
+logits, with explicit/disjoint state ownership and mutable authority, an exact
+measured activation boundary, captured backend-native execution on both sides,
+zero steady-state model-state movement, clean reconciliation, and zero
+unexplained persistent host model-mirror bytes.
+
+The matched placement evidence remains separate from the architectural pass:
+this exact measured two-GPU placement is `PERFORMANCE_NEGATIVE` for decode
+throughput (median split/baseline ratio about `0.9122`) while the resident split
+showed dramatically lower TTFT. This is candidate/topology evidence, not a
+universal device or PCIe rule.
+
+Canonical FreeToken R2 implementation/evidence merged as PR #17, merge commit
+`8627f441c880398389042ce8c0a604f6c4321dfa`.
+
+### Pre-R3 host-staging retention and physical reclamation — issue #53 — COMPLETE
+
+Accepted result:
+
+`HOST_STAGING_RECLAMATION_PASS`
+
+Issue #53 resolved the capacity-accounting ambiguity left visible after R2. The
+retained pages were anonymous mmap HostBank allocations pinned with
+`cudaHostRegister` and held past their useful lifetime by a process-lifetime
+retention owner. The accepted RELEASE path physically reclaimed `99.974%`
+combined of the known Block A/B staging bytes while both workers and accelerator
+banks remained alive; W2/W4 remained byte-exact, and host fetch/source access,
+rematerialization, model-state movement, fallback, and graph recapture remained
+zero.
+
+This establishes a critical R3 accounting distinction:
+
+- logical source/materialization release;
+- intentionally retained host cache/materialization;
+- physically available/reclaimed host capacity;
+
+are separate facts.
+
+The current RETAIN path is **not** a proven live-evictable post-finalization
+cache and there is no proven post-finalization rematerialization API. Until that
+lifecycle is separately demonstrated, `reclaimable_host_cache_bytes` is a
+plan-time/lifecycle-policy opportunity, not an on-demand runtime-eviction
+capability.
+
+Canonical FreeToken host-reclamation work merged as PR #18, merge commit
+`2fc64ae7c79bdc494a52468da329ddafd0adb8ba`.
 
 ---
 
-## Successor evidence gates
+## Current evidence gate
 
-The issue numbers after #48 should be created only when the preceding evidence
-makes their exact acceptance criteria knowable. The names below describe the
-intended sequence, not pre-frozen implementation APIs.
+Successor issues are created only when preceding evidence makes concrete
+methodology and acceptance criteria knowable. R0, R1, R2, and the pre-R3
+host-capacity prerequisite are now accepted. The active gate is R3.
 
-### R1 — doctrine-shaped frozen-plan realization — BLOCKED BY R0
-
-Prove that the runtime can realize one explicitly frozen test plan using the
-current doctrine concepts without building a generalized optimizer.
-
-The experiment should be able to account for, as applicable:
-
-- participating Compute Units and Memory Resources;
-- Logical State Units and concrete Materializations;
-- execution locations/resource subgraphs;
-- required/optional/staging state roles;
-- legal Model Execution Strategy boundary;
-- paths/transport used;
-- mutable authority where relevant;
-- complete plan memory accounting.
-
-A hand-authored research plan or temporary internal manifest is acceptable.
-The point is to prove that the runtime can express/realize the doctrine—not to
-publish final `ExecutionPlan`, `ComputeUnit`, or strategy classes.
-
-**Gate to R2:** frozen-plan realization must preserve correctness, accounting,
-and backend-native fast execution without reintroducing implicit host mirrors.
-
-### R2 — local heterogeneous/split execution — BLOCKED BY R1
-
-Relaunch local multi-resource execution using a strategy-legal boundary selected
-for the experiment. It may be expert-scale, block-scale, or another legal unit;
-the old N1 split is not automatically canonical.
-
-Required evidence:
-
-- complete inference correctness against a matched reference;
-- explicit state ownership/authority and boundary semantics;
-- no hidden shared state that makes the boundary unreal;
-- backend-native fast execution on participating backends;
-- exact persistent/transient memory accounting;
-- matched end-to-end A/B performance and latency evidence;
-- resource/link/topology provenance;
-- explicit explanation of why each participating resource helps feasibility,
-  performance, or another declared plan objective.
-
-A slow-but-correct result remains valid evidence even if it produces a `NO-GO`
-for that placement candidate.
-
-**Gate to R3:** prove at least one nontrivial doctrine-shaped local plan and
-capture enough real candidate economics to justify minimum automatic selection.
-
-### R3 — minimum automatic planning — BLOCKED BY R2
+### R3 — minimum automatic planning — CURRENT
 
 Introduce the smallest planner/strategy seam needed to demonstrate:
 
@@ -250,16 +258,32 @@ It must not pretend to be a production scheduler.
 Required outcomes:
 
 - technically infeasible plans are excluded for explicit reasons;
+- hard operator-policy violations are distinguished from technical
+  infeasibility;
 - performance-poor but correct plans remain distinguishable from unsupported
   plans;
 - available resources may remain unused when appropriate;
-- plan explanations identify participation, exclusions, bottlenecks, and
-  evidence confidence;
-- no generic planner branch depends on model nouns such as `expert` or Qwen.
+- plan explanations identify participation, exclusions, bottlenecks, applicable
+  evidence, and evidence confidence/freshness;
+- candidate memory feasibility distinguishes persistent required, persistent
+  optional, transient peak, and physically reclaimable capacity where proven;
+- R3 does not treat #53 RETAIN bytes as live-evictable capacity or assume a
+  post-finalization rematerialization path that has not been proven;
+- no generic planner branch depends on model nouns such as `expert`, `router`,
+  Qwen, or other first-strategy/backend vocabulary.
 
-**Gate to R4:** the planner must be capable of comparing legal strategy
-alternatives using measured evidence before network boundary work is promoted
-back to the primary track.
+**Gate to R4:** the planner must be capable of comparing multiple legal strategy
+alternatives using measured/context-valid evidence and selecting/explaining a
+correct feasible plan before network boundary work is promoted back to the
+primary track.
+
+---
+
+## Successor evidence gates
+
+The names below describe the intended sequence, not pre-frozen implementation
+APIs. Their concrete issues should be created only when preceding evidence makes
+their exact methodology knowable.
 
 ### R4 — measured multi-node boundary primitive — BLOCKED BY R3
 
@@ -386,7 +410,8 @@ proof.
 ### Adaptive Demand Profiles
 
 Demand-profile learning from model-wide, profile/Swarm history, and live
-structural demand is doctrine-approved but does not block R0-R3.
+structural demand is doctrine-approved but does not block the completed R0-R2
+gates or current R3.
 
 Introduce it only when a strategy exposes a meaningful demand signal and there
 are enough legal placement alternatives for adaptation to matter. It should be
@@ -399,6 +424,9 @@ promotion, and prepared materializations where strategy/backend semantics allow
 it. Concrete policies should be introduced only when measured economics justify
 them.
 
+Issue #53 does not establish the current RETAIN source banks as a live-evictable
+post-finalization cache; do not use that unproven lifecycle as planner capacity.
+
 ### Future NVMe/CXL/storage roles
 
 Do not block future backing/storage resources, but do not predefine an intrinsic
@@ -408,7 +436,7 @@ NVMe tier or assume it belongs on the latency-critical hot path.
 
 The Gen3 x8 third-GPU retest remains useful hardware-causality evidence. Its
 result can refine applicable resource/path evidence but does not define a
-universal link-class policy or block the current R0 residency gate.
+universal link-class policy or block the current R3 planner gate.
 
 ---
 
