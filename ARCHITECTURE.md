@@ -502,15 +502,22 @@ recorded NVIDIA/FreeToken environments.
   reclaimed `99.974%` of known combined Block A/B staging bytes while workers
   remained live and W2/W4 remained byte-exact with no rematerialization or
   graph recapture.
+- R3 / issue #55 produced `R3_MINIMUM_AUTOMATIC_PLANNING_PASS`: the minimum
+  generic planner independently selected among multiple legal local candidates
+  from a frozen resource snapshot, operator policy, and context-valid evidence.
+  The same physical graph selected the single-resource candidate for warm decode
+  throughput and the resident split for warm TTFT, while lower-ranked feasible
+  candidates and unused/excluded resources remained explicitly explainable.
 - The aborted N1 partial run remains non-canonical; N1-N3 are retired historical
   scaffolding rather than the current roadmap.
 
-The current evidence gate in [ROADMAP.md](ROADMAP.md) is **R3 — minimum automatic
-planning**. R3 is the first gate that introduces actual automatic candidate
-selection, while remaining deliberately small, doctrine-shaped, and API-unfrozen.
-It must demonstrate the strategy/planner separation using multiple legal
-candidates and measured/context-valid evidence without turning Qwen/MoE nouns
-into generic planner semantics.
+The current evidence gate in [ROADMAP.md](ROADMAP.md) is **R4 — measured
+multi-node boundary primitive**, tracked by issue #57. R4 keeps the accepted
+contiguous Qwen split and moves its one proven semantic boundary between two
+physical Nodes over persistent ordinary TCP, preserving backend-native resident
+execution and state/authority semantics while producing the first honest
+network-boundary correctness and economics evidence. It does not yet freeze a
+public wire protocol or claim production distributed-serving economics.
 
 FreeToken remains the initial validation/integration vehicle, not the permanent
 product boundary. Reusable runtime functionality should eventually live behind
