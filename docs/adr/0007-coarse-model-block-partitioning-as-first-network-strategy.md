@@ -3,14 +3,23 @@
 Date: 2026-08-30
 Status: Accepted
 
-> **Current doctrine/evidence clarification (2026-09-01):** this remains the
-> accepted **first** network strategy/evidence direction, not permanent
-> `inter-node = contiguous block` doctrine. ADR 0008/Fabric Doctrine governs
-> legal strategy boundaries and measured granularity selection. The retired
-> N1-N3 sequence is historical planning scaffolding. R4 / issue #57 has now
-> completed the first physical two-Node proof for the coarse-block direction,
-> earning `R4_MULTI_NODE_BOUNDARY_PASS` and
-> `R4_1GBE_PRIMITIVE_CAPACITY_VIABLE` for the exact frozen candidate/context.
+> **Current doctrine clarification (2026-08-31):** this remains the accepted
+> first network strategy/evidence direction. ADR 0008/Fabric Doctrine does not
+> canonize `inter-node = contiguous block`: strategies define legal boundaries
+> and the planner selects intra/inter-node granularity from measured economics.
+> The retired N1-N3 sequence below is historical planning scaffolding, not the
+> current roadmap.
+
+> **Accepted evidence update (2026-09-01):** R4 / issue #57 completed the first
+> physical two-Node proof for this direction. The frozen `[0,19) / [19,40)` Qwen
+> split earned `R4_MULTI_NODE_BOUNDARY_PASS` over persistent ordinary TCP, and
+> the exact canonical 1-GbE arm earned
+> `R4_1GBE_PRIMITIVE_CAPACITY_VIABLE`. Corrected accepted evidence measured
+> about `2.947 Mb/s` peak clean-arm A→B application demand against a
+> precommitted `747.12 Mb/s` 80%-margin limit on the measured path, with zero
+> retransmits. This validates the first candidate/context; it does not convert
+> contiguous blocks into permanent inter-node doctrine. R5A/R5B now own
+> integrated serving and elasticity questions.
 
 ## Context
 
@@ -35,102 +44,110 @@ base substantially.
   count-aware transport, and elimination of simultaneous A+B layer
   participation.
 
-Those results did not prove Ethernet expert RPC impossible. They showed that
-fine-grained per-layer remote participation is highly sensitive to service
-latency and execution-boundary overhead, making it a poor first ordinary-1-GbE
+Those results do not prove that Ethernet expert RPC is impossible. They do show
+that fine-grained per-layer remote participation is highly sensitive to
+service latency and execution-boundary overhead. Extending that shape over the
+ordinary 1 GbE baseline is therefore no longer the strongest first network
 experiment.
 
-A coarser model partition offers a different payload/work ratio: a Node can
-keep a contiguous block of model state and block-local mutable/runtime state
-resident, execute that block through a backend-native fast path, and exchange
-comparatively small semantic state only at block boundaries.
+At the same time, the product goal remains "use the hardware you already have."
+Requiring 10/25/40/100 GbE simply to make multi-machine participation viable
+would weaken that goal materially.
+
+A coarser model partition provides a different payload/work ratio: a node can
+keep a contiguous block of layers and its block-local state resident, execute
+that block through its backend-native fast path, and exchange comparatively
+small hidden-state payloads only at block boundaries.
 
 ## Decision
 
-InferSwarm's **first multi-machine execution strategy/evidence direction is
-coarse contiguous model-block partitioning**, tested first over ordinary
-1 Gigabit Ethernet.
+InferSwarm's **first multi-machine execution strategy is coarse contiguous
+model-block partitioning**, tested first over ordinary 1 Gigabit Ethernet.
 
 Concretely:
 
-1. **A distributed participant may own a contiguous block of model execution.**
-   It loads only the weights/state required by that block plus declared bounded
-   runtime/staging overhead.
-2. **Block-local mutable/recurrent/KV state stays with the block that owns it**
-   unless a future strategy declares a different semantic boundary.
-3. **The cross-node hot path carries strategy-semantic block-boundary state,**
-   not model weights/state that should remain resident.
-4. **Backend-native fast execution remains local to each Node.** A global graph
-   spanning machines is not required.
-5. **Networking occurs at coarse semantic boundaries rather than automatically
-   inside every model layer.** Persistent connections and compact transfer are
-   appropriate when measurements support them.
-6. **1 GbE remains the baseline.** Faster networking is a comparison/optimizer,
-   not a minimum requirement baked into the architecture.
-7. **Fine-grained remote expert execution remains a legal research strategy,**
-   not the mandatory network shape.
-8. **A Node may contain its own local resource plan.** Coarse inter-node
-   partitioning does not imply one-GPU-per-Node architecture.
-9. **The generic execution boundary is strategy-specific semantic work/state.**
-   The planner/resource ontology must not collapse expert dispatch and block
-   execution into one model-specific universal wire schema.
+1. **A distributed node owns a contiguous block of model execution.** It loads
+   only the weights/state required by that block plus bounded runtime/staging
+   overhead.
 
-This decision chooses the **first experiment**, not the permanent granularity.
+2. **Block-local KV/recurrent state stays with the block that uses it.** It is
+   not shuttled across the network every layer/token unless a future model
+   semantics requires a specifically documented boundary state.
+
+3. **The cross-node hot-path payload is semantic block-boundary state.** For
+   the first POC this is expected to be the hidden activation plus the minimum
+   explicit request/sequence metadata required by the downstream block.
+
+4. **Backend-native fast execution remains local to each node.** On the first
+   NVIDIA/FreeToken implementation this may mean a CUDA Graph or another
+   captured/compiled local block. InferSwarm does not require one global graph
+   spanning machines.
+
+5. **Networking occurs between coarse blocks, not inside every model layer.**
+   Persistent connections and compact binary framing remain design goals.
+
+6. **1 GbE remains the baseline.** ADR 0003 is not superseded. Faster networking
+   is an optional performance improvement and comparison point, not a minimum
+   requirement for the first network architecture.
+
+7. **Fine-grained remote expert execution remains an available research
+   strategy, not the primary network strategy.** It may be revisited on faster
+   networks or for workloads/hardware where measurement supports it.
+
+8. **A node may later contain its own local InferSwarm resource plan.** Coarse
+   inter-node partitioning does not prevent a node from using multiple local
+   GPUs, RAM, or other tiers internally. That composition is future work and is
+   not required by the first network POC.
+
+9. **The generic execution boundary is strategy-specific semantic work/state.**
+   ADR 0006's routed-work/route-contribution boundary describes the proven MoE
+   expert strategy. It is not a universal wire shape. Model-block execution
+   instead consumes and produces block-boundary model state. The eventual
+   top-level capability contract must represent both without forcing either
+   into the other's message schema.
+
+The first evidence sequence is tracked by canonical issues:
+
+- #31 — selective model-block loading with bounded host RAM;
+- #32 — local split-block execution equivalence;
+- #33 — two-machine block execution over 1 GbE;
+- #34 — end-to-end two-node distributed decode.
+
+A three-node experiment is created only if the two-node evidence earns it.
 
 ## Consequences
 
-- Selective loading is a distributed-architecture prerequisite: a Node must not
-  require full-model host RAM for state it does not own.
-- Model/block boundaries, state ownership, and backend-native participant
-  execution become measurable strategy objects.
-- Protocol work must remain subordinate to semantic strategy boundaries; a
-  stable public network protocol stays deferred.
-- Larger-model validation may use other legal partitions when evidence supports
-  them.
-- Local sparse/expert residency remains independently useful and may coexist
-  inside a coarse inter-node plan.
-- Hardware/path capability is measured rather than reduced to one universal
-  score or static locality tier.
-
-## Accepted evidence progression
-
-The original #31-#34 N-series planning sequence was superseded after N0 and the
-Wayfinder. The accepted evidence path ultimately became:
-
-- N0 / #31 — `N0_SELECTIVE_BLOCK_PASS`;
-- R0 / #48 — `P48_ACCELERATOR_RESIDENCY_PASS`;
-- R1 / #50 — `R1_FROZEN_PLAN_REALIZATION_PASS`;
-- R2 / #51 — `R2_LOCAL_SPLIT_EXECUTION_PASS`;
-- #53 — `HOST_STAGING_RECLAMATION_PASS`;
-- R3 / #55 — `R3_MINIMUM_AUTOMATIC_PLANNING_PASS`;
-- R4 / #57 — `R4_MULTI_NODE_BOUNDARY_PASS`.
-
-R4 reused the already-proven `[0,19) / [19,40)` Qwen split and changed the
-principal variable from local to physical Node/network locality. The two blocks
-executed on `inferswarm01` and `inferswarm03` over persistent ordinary TCP with
-byte-exact correctness, backend-native resident execution, complete
-application-wire accounting, and zero steady-state model-state movement.
-
-For the exact canonical 1-GbE arm, corrected accepted evidence found peak
-clean-arm application demand of about `2.947 Mb/s` A→B against a precommitted
-`747.12 Mb/s` 80%-margin limit on the measured path, with zero retransmits.
-That exact primitive therefore earned:
-
-`R4_1GBE_PRIMITIVE_CAPACITY_VIABLE`
+- Selective loading is now a distributed-architecture prerequisite rather than
+  merely a startup optimization. A node must not require full-model host RAM
+  for state it does not own.
+- Model-block boundaries, KV/state ownership, and block-local fast execution
+  become first-class research objects.
+- The original Phase-4 fine-grained remote-expert issue is superseded before
+  implementation; its historical reasoning remains useful evidence.
+- Protocol work must distinguish expert-dispatch and model-block work units.
+  A stable public protocol is still deferred until the POCs reveal the required
+  fields.
+- Larger-model validation may distribute arbitrary contiguous model state, not
+  only routed experts, where evidence says that is the correct granularity.
+- Local expert-residency work remains valuable independently, especially on
+  healthy PCIe links and as a possible within-node strategy.
+- Hardware capability measurement remains important, but D7 does not justify a
+  generic worker score. The eventual capability contract stays deferred.
 
 ## Hypotheses distinguished from decisions
 
-- **Decided:** coarse contiguous model-block partitioning was the first
-  multi-machine strategy/evidence direction; 1 GbE remains the baseline; Nodes
-  should load only assigned state and retain block-local state where the
-  strategy requires it.
-- **Proven:** the accepted R4 two-Node implementation is correct, resident,
-  backend-native, and honestly accounted for the frozen Qwen split.
-- **Proven for the exact R4 context:** ordinary 1-GbE capacity is comfortably
-  sufficient for the measured semantic boundary demand.
-- **Not decided:** that future network plans must use contiguous blocks. The
-  strategy/planner may choose another legal granularity from measured economics.
-- **Not yet proven:** integrated ordinary serving-path economics/concurrency or
-  live execution-plan elasticity/recovery. R5A and R5B are the successor gates.
-- **Not claimed:** that 10 GbE or faster links are unnecessary in every
-  workload/model/topology.
+- **Decided:** coarse contiguous model-block partitioning is the first
+  multi-machine strategy; 1 GbE remains the baseline; nodes should load only
+  assigned state and keep block-local runtime/KV state local.
+- **Decided:** the project does not require fine-grained network expert RPC to
+  succeed before testing coarse node partitioning.
+- **Not yet proven:** that two-node block execution is correct in the current
+  FreeToken integration; issues #31 and #32 establish that prerequisite.
+- **Not yet proven:** that 1 GbE produces acceptable end-to-end decode or
+  prefill performance. Issues #33 and #34 measure that directly.
+- **Not yet decided:** optimal block boundaries, scheduling policy, network wire
+  format, capability schema, failure/retry semantics, elastic node membership,
+  or three-plus-node topology.
+- **Not claimed:** that 10 GbE is unnecessary in every workload. The claim to
+  test is that it should not be required to make the first commodity-LAN
+  architecture useful.
