@@ -182,8 +182,22 @@ Memory evidence therefore distinguishes:
 - transient peak;
 - unexplained duplication/leakage.
 
-The first post-Wayfinder implementation gate is issue #48, which proves this
-invariant on the N0-derived selective accelerator path.
+Issue #48 established `P48_ACCELERATOR_RESIDENCY_PASS` on the N0-derived
+selective accelerator path: the final accelerator materialization remained
+correct after equivalent live host source-bank materializations were released,
+with no lazy rematerialization and zero unexplained persistent host mirror
+bytes.
+
+Issue #53 later established the stronger `HOST_STAGING_RECLAMATION_PASS` needed
+for capacity accounting. On the accepted R2 two-worker path, staging pages whose
+lifecycle ended after final accelerator residency were physically reclaimable
+while workers and accelerator materializations remained live and correct.
+Logical release, intentionally retained host materialization/cache state, and
+physically available host capacity are therefore distinct facts.
+
+The current RETAIN lifecycle is not a proven live-evictable post-finalization
+cache and has no proven post-finalization rematerialization API. Planner logic
+must not count that unproven behavior as on-demand runtime capacity.
 
 ## Planning
 
@@ -465,14 +479,38 @@ recorded NVIDIA/FreeToken environments.
 - N0 produced `N0_SELECTIVE_BLOCK_PASS`: selective checkpoint loading,
   block-only state ownership, bounded block-scoped loading, and exact isolated
   block correctness.
-- N0 did **not** prove release of all equivalent persistent CPU backing after
-  final accelerator residency. The retained `expert_bank_final_host_bytes`
-  exposed that separate requirement.
-- The aborted N1 partial run is non-canonical; N1-N3 are retired historical
+- R0 / issue #48 produced `P48_ACCELERATOR_RESIDENCY_PASS`: final
+  accelerator-resident routed state remained exact after equivalent live host
+  source materializations were released, with zero unexplained persistent host
+  mirror bytes.
+- R1 / issue #50 produced `R1_FROZEN_PLAN_REALIZATION_PASS`: a versioned frozen
+  doctrine-shaped plan drove validation, realization, observed-state
+  reconciliation, authority, memory roles, staging release, and correct
+  execution without freezing a generalized public planner API.
+- R2 / issue #51 produced `R2_LOCAL_SPLIT_EXECUTION_PASS`: one frozen
+  `[0,19) / [19,40)` local split executed complete inference across two real
+  Compute Units with byte-exact corrected-methodology correctness, disjoint
+  state ownership/authority, an exact measured activation boundary, captured
+  backend-native execution on both sides, zero steady-state model-state
+  movement, and zero unexplained host model mirrors.
+- R2's exact measured placement remains `PERFORMANCE_NEGATIVE` for decode
+  throughput (median split/baseline ratio about `0.9122`) despite dramatically
+  lower TTFT for the resident split. Correctness/feasibility and placement
+  economics remain separate conclusions.
+- Pre-R3 issue #53 produced `HOST_STAGING_RECLAMATION_PASS`: after final
+  accelerator residency, the full-residency RELEASE lifecycle physically
+  reclaimed `99.974%` of known combined Block A/B staging bytes while workers
+  remained live and W2/W4 remained byte-exact with no rematerialization or
+  graph recapture.
+- The aborted N1 partial run remains non-canonical; N1-N3 are retired historical
   scaffolding rather than the current roadmap.
 
-The current evidence-gated sequence is in [ROADMAP.md](ROADMAP.md), beginning
-with issue #48: accelerator residency without implicit persistent host mirrors.
+The current evidence gate in [ROADMAP.md](ROADMAP.md) is **R3 — minimum automatic
+planning**. R3 is the first gate that introduces actual automatic candidate
+selection, while remaining deliberately small, doctrine-shaped, and API-unfrozen.
+It must demonstrate the strategy/planner separation using multiple legal
+candidates and measured/context-valid evidence without turning Qwen/MoE nouns
+into generic planner semantics.
 
 FreeToken remains the initial validation/integration vehicle, not the permanent
 product boundary. Reusable runtime functionality should eventually live behind
