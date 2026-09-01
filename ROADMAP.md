@@ -407,6 +407,33 @@ inside a research strategy/backend implementation. Vendor abstraction should be
 extracted when real evidence identifies the stable seam, not invented ahead of
 proof.
 
+#### Portable accelerator backend hypothesis
+
+InferSwarm should explicitly evaluate Vulkan as a common portable accelerator
+execution substrate across NVIDIA, AMD, Intel, and other Vulkan-capable
+hardware. The architectural hypothesis is that a portable Vulkan path may
+provide sufficient inference performance—particularly for decode and
+strategy-specific distributed workloads—to serve as a default execution
+substrate, while vendor-native CUDA, HIP/ROCm, SYCL, or other backends remain
+optional performance optimizations beneath the same backend-independent
+resource/planner semantics.
+
+This is **not yet a decision that Vulkan is the preferred backend**. Promotion
+of Vulkan to a preferred/default backend policy requires matched InferSwarm
+correctness and performance evidence, including native-versus-Vulkan comparison
+on at least NVIDIA and AMD hardware and cross-vendor execution where practical.
+The comparison should measure workload-relevant decode and prefill behavior,
+materialization/representation cost, memory use, correctness/equivalence, and
+mixed-device operation rather than relying on generic GEMM results alone.
+
+The generic resource graph and planner must not encode CUDA, ROCm, Vulkan,
+SYCL, or another execution API as hardware identity. Backend availability,
+representation support, correctness qualification, and measured economics are
+capabilities/evidence associated with a resource and execution strategy. A
+future ADR may establish a portable baseline backend policy only after this
+evidence identifies the stable execution seam and demonstrates that the
+simplicity/coverage benefit is worth any measured performance cost.
+
 ### Adaptive Demand Profiles
 
 Demand-profile learning from model-wide, profile/Swarm history, and live
