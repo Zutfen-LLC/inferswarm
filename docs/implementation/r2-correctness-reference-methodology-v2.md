@@ -122,12 +122,22 @@ This rule is mechanical and is not selected from closeness to a candidate result
 model repository:       nvidia/Qwen3.6-35B-A3B-NVFP4
 model revision:         491c2f1ea524c639598bf8fa787a93fed5a6fbce
 FreeToken lineage:      R2 branch from accepted base 6a242a34083c3080aa6d8f92625a6be4a0d124db
-reference GPU UUID:     GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176
+reference Compute Unit: frozen-plan gpu-a (exec.block-a / boundary producer)
+reference GPU UUID:     GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099
 reference GPU model:    NVIDIA GeForce RTX 3060 12 GiB
 workload manifest SHA:  10f81e5418a71a68f387632de422c3337cc7ba0518111a8746ad856d0210b24a
 workload order:         W1 -> W2 -> W3 -> W4
 selected logit steps:   0, 1, 15, 31
 ```
+
+The Compute Unit selection is mechanically derived from the frozen candidate plan:
+remove the consumer/second Compute Unit and retain the Compute Unit assigned to the
+boundary-producer execution, `exec.block-a`. For this plan that is `gpu-a`, stable
+device UUID `GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099`. If that exact Compute Unit
+is unavailable, reference capture stops; it is not substituted after observing any
+numerical result. The third-GPU matched-local run on
+`GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176` remains noncanonical diagnostic evidence
+and is not the v2 canonical reference source.
 
 The reference records exact prompt token IDs for every workload and fails before
 capture if tokenization differs. Generation is greedy with temperature `0.0`,
@@ -141,6 +151,8 @@ The reference must resolve and retain:
 attention backend:             FI
 expert format/backend:         NVFP4 / Triton
 MoE execution:                 ordinary one-GPU offload as required by 12 GiB capacity
+MoE cache slots:               3,774
+prefill overlap:               false
 runtime capacity:              17,152 tokens
 prefill chunk:                 64 tokens
 KV page size:                  1
@@ -157,8 +169,9 @@ state from an earlier workload. Workloads are captured in W1-W4 order for identi
 and auditability, but each workload's numerical model state is independent.
 
 The reference must record resolved values, not merely requested flags. A mismatch
-between requested and resolved attention backend, NVFP4 backend, capacity, chunk,
-page size, graph policy, or state-reset protocol stops capture.
+between requested and resolved attention backend, NVFP4 backend, MoE cache size
+`3,774`, prefill overlap `false`, capacity, chunk, page size, graph policy, or
+state-reset protocol stops capture.
 
 ### Removed treatment
 
@@ -178,8 +191,10 @@ The complete model cannot remain resident on one 12 GiB RTX 3060, so the one-GPU
 reference uses ordinary expert offload. That is a capacity mechanism, not the R2
 treatment. FreeToken #48 and accepted R1 evidence establish that the native expert
 representation is preserved across resident and offload materialization. The v2
-capture must still record its resolved cache size, prefill overlap setting, expert
-source representation, and any expert movement so this difference remains auditable.
+reference freezes `moe_cache_slots=3774` and `prefill_overlap=false`, matching the
+geometry used by the byte-identical diagnostic control. The capture must record those
+resolved values, expert source representation, and any expert movement. It fails
+closed rather than resizing the cache or enabling overlap.
 
 ## Reference artifact provenance gate
 
@@ -193,7 +208,15 @@ Every reference artifact must retain at minimum:
     "model": "nvidia/Qwen3.6-35B-A3B-NVFP4",
     "revision": "491c2f1ea524c639598bf8fa787a93fed5a6fbce",
     "producer_commit": "...",
-    "runtime_configuration": {},
+    "runtime_configuration": {
+      "attention_backend": "fi",
+      "nvfp4_backend": "triton",
+      "moe_backend": "offload",
+      "moe_cache_slots": 3774,
+      "prefill_overlap": false,
+      "page_size": 1,
+      "concurrency": 1
+    },
     "prefill_chunk_tokens": 64,
     "runtime_capacity_tokens": 17152,
     "session_state_protocol": "fresh-zeroed-state-per-workload",
@@ -223,8 +246,12 @@ processes under the identical frozen configuration and protocol. Record for each
 - NaN and Inf counts.
 
 The two captures must have exact token sequences and pass the unchanged full-logit
-threshold at every selected checkpoint. Byte-identical artifacts are preferred. If
-the captures are not self-consistent, stop; do not select either artifact.
+threshold at every selected checkpoint. Byte-identical artifacts are preferred.
+Selection is predeclared: if and only if the pair passes this self-consistency gate,
+session A is the canonical v2 reference and session B is its corroborating capture.
+Session B can never replace session A based on closeness to the R2 candidate. If the
+pair is not self-consistent, neither artifact is selected and candidate evaluation
+does not begin.
 
 ## Unchanged candidate gate
 
