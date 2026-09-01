@@ -257,93 +257,131 @@ Accepted FreeToken R3 PR #19 merged as
 producer was `f2ea03738a0162f1f26c57a90e548e2d22119a3b`; the retained evidence head
 was `c4b78bc993c549d055a8695e78537ff52bc7033e`.
 
+### R4 — measured multi-node boundary primitive — issue #57 — COMPLETE
+
+Accepted results:
+
+`R4_MULTI_NODE_BOUNDARY_PASS`
+
+`R4_1GBE_PRIMITIVE_CAPACITY_VIABLE`
+
+R4 moved the accepted R2/R3 contiguous `[0,19) / [19,40)` Qwen split from
+same-host transport to two physical Nodes (`inferswarm01` and `inferswarm03`)
+over one persistent research-internal ordinary-TCP connection. It preserved
+byte-exact generated-token correctness and frozen selected-logit identity,
+strategy-semantic boundary checksums, backend-native resident execution,
+disjoint state ownership/authority, clean reconciliation, #53 RELEASE, and zero
+steady-state model-state movement/fallback/recapture/source fetches.
+
+The canonical link was mechanically verified as negotiated 1000 Mb/s full
+duplex, MTU 1500, direct LAN. Corrected accepted capacity evidence compares the
+actual clean-arm workload wire demand—not socket-buffer timing or transport
+microbenchmark capability—against the frozen 80% path margin. Peak measured
+application demand was about `2.947 Mb/s` A→B and `0.0769 Mb/s` B→A versus a
+`747.12 Mb/s` applicable limit derived from the lower measured sustainable TCP
+direction (`933.9 Mb/s`), with zero retransmits.
+
+Canonical provenance:
+
+- accepted R4 physical producer:
+  `e97f60b7b0120a72a7cf9926cf6a5c558782c9b2`;
+- accepted corrected evidence:
+  `d5735c6b5075e835e7e8118922c44a7b0cf7439b`;
+- preservation branch head:
+  `b2d72a36e79624028e74a2e7256f03546d4b8b5b`.
+
+The earlier R4 evidence head `9a26fd2` is invalidated and retained only as
+historical ancestry. FreeToken PR #20 is evidence-bearing but is not a sane
+direct merge surface against current upstream-tracking `main`; that integration
+problem is separated into issue #59 rather than rewriting accepted R4 history.
+
+R4 establishes a measured viable **primitive capacity result** for this exact
+boundary/context. It does not establish production serving, concurrency,
+elasticity, failover, a permanent contiguous-block strategy, or a public wire
+protocol.
+
 ---
 
 ## Current evidence gate
 
-Successor issues are created only when preceding evidence makes concrete
-methodology and acceptance criteria knowable. R0-R3 and the pre-R3 host-capacity
-prerequisite are accepted. The active gate is R4, tracked by issue #57.
+R0-R4 and the pre-R3 host-capacity prerequisite are accepted.
 
-### R4 — measured multi-node boundary primitive — CURRENT
+Before R5A implementation, issue
+[#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) must establish a durable
+FreeToken InferSwarm integration line that preserves the accepted evidence
+lineage while deliberately integrating current upstream-tracking FreeToken
+`main`. #59 is an implementation-line prerequisite, not a new architecture gate.
 
-Resume multi-node research now that the local/resource/planning substrate is
-clean.
+### R5A — static end-to-end multi-node serving — issue #60 — CURRENT / BLOCKED BY #59
 
-[ADR 0007](docs/adr/0007-coarse-model-block-partitioning-as-first-network-strategy.md)
-remains the **leading first network candidate**: a coarse contiguous model block
-over ordinary 1 GbE. It is not permanent doctrine.
+Issue [#60](https://github.com/Zutfen-LLC/inferswarm/issues/60) is the current
+successor evidence gate.
 
-Issue #57 freezes the accepted R2/R3 contiguous Qwen split as the minimum first
-physical two-Node experiment because it is already strategy-legal, exact,
-resident, backend-native, and exposes one explicit semantic boundary. R4 changes
-one principal variable—Node/network locality—rather than inventing a new model
-decomposition and transport simultaneously.
+R5A must prove that the pieces established separately by R0-R4 operate as one
+static serving path:
 
-Primitive-level evidence must establish:
+```text
+normal host-runtime request
+  -> strategy legal candidates
+  -> generic planner + current evidence/policy
+  -> frozen Execution Plan
+  -> multi-Node realization
+  -> backend-native distributed execution
+  -> correct response
+```
 
-- exact cross-node correctness;
-- strategy-semantic boundary state;
-- payload size/frequency and complete wire/application accounting;
-- network latency/bandwidth/contention provenance;
-- persistent backend-native execution on each Node;
-- state residency/authority and per-Node reconciliation;
-- exact memory/materialization requirements per Node;
-- preservation of the proven #53 RELEASE lifecycle where applicable;
-- an honest 1 GbE primitive-capacity disposition for the frozen candidate.
+Unlike R4, applicable network performance evidence now exists. The two-Node
+candidate must no longer be kept artificially `FEASIBLE_UNRANKED` when accepted
+R4 evidence matches the frozen R5A context. The generic evidence/applicability
+rules must ingest or reject that evidence honestly; the planner must not
+hard-code a network preference simply because R5A is a network-serving test.
 
-The canonical arm uses mechanically verified ordinary negotiated 1 GbE and a
-persistent research-internal TCP path. Faster networking may be measured as a
-separate comparison only after preserving the 1 GbE baseline arm.
+Required retained evidence includes, under matched controls and a frozen
+objective/methodology:
 
-R4 is an evidence-collection experiment for a previously unmeasured network
-candidate. It must not claim that the R3 planner automatically preferred the
-network plan based on evidence that R4 exists to obtain; the candidate may
-correctly remain feasible/unranked before R4 measurement.
+- request-level correctness and session isolation;
+- planner candidates, evidence applicability, ranking, selected plan, and
+  explanations for unused/excluded/lower-ranked resources;
+- TTFT;
+- prefill wall/throughput;
+- decode tok/s and inter-token latency;
+- complete request wall time;
+- network application bytes/contribution;
+- realization/startup cost;
+- RAM/VRAM/materialization and staging-release accounting;
+- paging/swap evidence;
+- capture/replay/fallback/recapture/source-fetch invariants;
+- a bounded multi-request/session concurrency arm.
 
-A performance-negative 1 GbE result does not invalidate a correct
-`R4_MULTI_NODE_BOUNDARY_PASS`. Architecture correctness and the exact network
-economic disposition are separate conclusions.
+R5A is **static serving**. It does not require live plan changes, failover, or
+resource joins/leaves.
 
-**Gate to R5:** no end-to-end distributed performance claims until the actual
-network primitive is correct, resident, measured, and explainable.
+**Gate to R5B:** no live elasticity/recovery claims until a normal serving path
+can select/realize/execute a correct measured multi-Node plan end to end.
 
 ---
 
 ## Successor evidence gates
 
-The names below describe the intended sequence, not pre-frozen implementation
-APIs. Their concrete issues should be created only when preceding evidence makes
-their exact methodology knowable.
+The names below describe intended sequence and questions. Concrete methodology
+should be frozen only when predecessor evidence makes it knowable.
 
-### R5 — end-to-end multi-node serving and elasticity — BLOCKED BY R4
+### R5B — plan epochs, scale-up/down, and recovery — BLOCKED BY R5A
 
-Measure complete serving with matched controls, including as applicable:
-
-- correctness;
-- TTFT;
-- prefill throughput/latency;
-- decode tok/s/latency;
-- aggregate throughput/concurrency;
-- network contribution;
-- per-resource utilization/evidence where measurement does not perturb results;
-- RAM/VRAM/materialization accounting;
-- paging;
-- plan explanation and confidence.
-
-Then exercise #43 elasticity semantics:
+Exercise the execution-plan epoch and failure semantics already decided by #43
+through a real serving path.
 
 #### Scale up
 
 Add a beneficial resource/Node while serving, characterize it, prepare a better
-replacement epoch, and activate it at a strategy-safe boundary with little/no
-perceptible interruption when the test strategy permits.
+replacement epoch while the current epoch remains valid, and activate it at a
+strategy-safe boundary when the measured benefit and policy justify the switch.
 
 #### Scale down
 
-Remove a required resource/Node and prove that InferSwarm searches the surviving
+Remove a required resource/Node and prove InferSwarm searches the surviving
 trusted graph for the best correct feasible recovery plan—even when it must use
-slower/smaller GPUs, CPU/RAM, caches/replicas, or changed legal granularity.
+slower/smaller GPUs, CPU/RAM, caches/replicas, or a different legal granularity.
 
 Service should fail only when no feasible plan exists or required authoritative
 mutable state cannot be safely recovered under the declared state contract.
@@ -354,12 +392,13 @@ Return/add useful resources and demonstrate a later optimization epoch where
 expected benefit warrants it.
 
 Transparent zero-downtime failover is not a universal acceptance criterion;
-correct authority continuity and truthful recovery semantics are.
+correct epoch ownership, authority continuity, truthful recovery semantics, and
+late-work rejection are.
 
 **Gate to R6:** the resource/planner/epoch seams must work under real changes
 before the public strategy/planner API is considered stable.
 
-### R6 — architecture falsification with a materially different model — BLOCKED BY R5 FOR API STABILITY
+### R6 — architecture falsification with a materially different model — BLOCKED BY R5B FOR API STABILITY
 
 Before declaring a public Model Execution Strategy/planner interface stable,
 validate the doctrine against a model architecture materially different from
@@ -437,8 +476,8 @@ simplicity/coverage benefit is worth any measured performance cost.
 ### Adaptive Demand Profiles
 
 Demand-profile learning from model-wide, profile/Swarm history, and live
-structural demand is doctrine-approved but does not block the completed R0-R3
-gates or current R4.
+structural demand is doctrine-approved but does not block the completed R0-R4
+gates or current R5A.
 
 Introduce it only when a strategy exposes a meaningful demand signal and there
 are enough legal placement alternatives for adaptation to matter. It should be
@@ -463,7 +502,7 @@ NVMe tier or assume it belongs on the latency-critical hot path.
 
 The Gen3 x8 third-GPU retest remains useful hardware-causality evidence. Its
 result can refine applicable resource/path evidence but does not define a
-universal link-class policy or block the current R4 network gate.
+universal link-class policy or block the current R5A serving gate.
 
 ---
 

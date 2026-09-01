@@ -9,6 +9,16 @@ Status: Accepted
 > protocol/granularity doctrine. ADR 0008/Fabric Doctrine governs legal
 > strategy boundaries and measured granularity selection.
 
+> **Accepted evidence update (2026-09-01):** R4 / issue #57 supplied the first
+> accepted physical two-Node evidence under this decision. The frozen coarse
+> Qwen boundary earned `R4_MULTI_NODE_BOUNDARY_PASS`; its exact ordinary-1-GbE
+> arm earned `R4_1GBE_PRIMITIVE_CAPACITY_VIABLE`. Corrected methodology measured
+> peak clean-arm application demand of about `2.947 Mb/s` A→B and `0.0769 Mb/s`
+> B→A against a precommitted `747.12 Mb/s` 80%-margin limit on the measured
+> path, with zero retransmits. This is context-specific primitive evidence, not
+> a universal claim that every model/workload is 1-GbE viable. R5A/R5B now own
+> integrated serving and elasticity questions.
+
 ## Context
 
 Distributed inference projects conventionally assume fast interconnects —

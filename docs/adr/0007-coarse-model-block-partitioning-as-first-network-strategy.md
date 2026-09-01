@@ -10,6 +10,17 @@ Status: Accepted
 > The retired N1-N3 sequence below is historical planning scaffolding, not the
 > current roadmap.
 
+> **Accepted evidence update (2026-09-01):** R4 / issue #57 completed the first
+> physical two-Node proof for this direction. The frozen `[0,19) / [19,40)` Qwen
+> split earned `R4_MULTI_NODE_BOUNDARY_PASS` over persistent ordinary TCP, and
+> the exact canonical 1-GbE arm earned
+> `R4_1GBE_PRIMITIVE_CAPACITY_VIABLE`. Corrected accepted evidence measured
+> about `2.947 Mb/s` peak clean-arm A→B application demand against a
+> precommitted `747.12 Mb/s` 80%-margin limit on the measured path, with zero
+> retransmits. This validates the first candidate/context; it does not convert
+> contiguous blocks into permanent inter-node doctrine. R5A/R5B now own
+> integrated serving and elasticity questions.
+
 ## Context
 
 ADR 0003 established ordinary 1 Gigabit Ethernet as InferSwarm's baseline
