@@ -9,6 +9,7 @@ Canonical architecture:
 
 - [ADR 0008](../adr/0008-canonical-fabric-doctrine.md)
 - [Fabric Doctrine](../architecture/fabric-doctrine.md)
+- [ROADMAP](../../ROADMAP.md)
 
 ## Core rule
 
@@ -33,7 +34,8 @@ from a retired epoch cannot mutate current state or contribute to current
 outputs.
 
 This does not freeze an `epoch_id` field name or wire encoding; it is a
-correctness requirement the eventual protocol must satisfy.
+correctness requirement the eventual protocol must satisfy. R5B is the first
+planned physical execution of these epoch/recovery semantics.
 
 ## State authority and recovery
 
@@ -88,25 +90,48 @@ performance tax.
 These facts remain valuable strategy evidence. They do **not** define a
 universal `ExpertRequest` or worker protocol.
 
-## Historical strategy example B — coarse contiguous model blocks
+## Strategy example B — coarse contiguous model blocks
 
 [ADR 0007](../adr/0007-coarse-model-block-partitioning-as-first-network-strategy.md)
 remains accepted as InferSwarm's first network strategy/evidence direction.
 
-The historical coarse-block concept keeps one model region's weights and
-block-local state resident and exchanges strategy-defined block-boundary state,
-expected initially to include hidden-state/request-position information needed
-by the downstream region.
+R4 / issue #57 physically proved the first two-Node instance of this shape. The
+accepted `[0,19) / [19,40)` Qwen split kept each region's model/runtime state
+resident and exchanged two plane-major contiguous bf16 tensors (`hidden` and
+`residual`) at the semantic block boundary.
 
-ADR 0008/Fabric Doctrine clarifies the scope:
+The accepted R4 research transport used one persistent ordinary-TCP connection
+with a bounded versioned frame and binary activation payload. That wire shape is
+**evidence**, not a public protocol contract.
 
-- coarse blocks remain a legitimate first network candidate;
+ADR 0008/Fabric Doctrine continues to define the scope:
+
+- coarse blocks are a legitimate measured network strategy;
 - `inter-node = contiguous block` is **not** permanent architecture;
 - the strategy defines legal boundaries and the planner chooses granularity
   from measured communication/state/execution/demand economics;
 - intra-node and inter-node granularities may differ;
-- a future network experiment must be derived from the current roadmap rather
-  than reopening retired issues #32-#34 verbatim.
+- later strategies may expose different semantic payloads without changing the
+  generic resource ontology.
+
+## Accepted R4 transport evidence
+
+R4 established these context-specific facts for the frozen candidate:
+
+- physical Nodes: `inferswarm01` ↔ `inferswarm03`;
+- ordinary TCP over mechanically verified negotiated 1 GbE full-duplex,
+  MTU 1500, direct LAN;
+- persistent connection reused across workload/session re-establishment;
+- decode semantic payload: `8,192` bytes;
+- max 64-row prefill semantic payload: `524,288` bytes;
+- diagnostic boundary checksum equality on every checked transfer;
+- clean serving-like arm excluded full-logit diagnostic transfer;
+- no model-state materialization crossed the steady-state network boundary;
+- fail-closed handling for protocol/session/length/layout/checksum/drift errors;
+- backend-native resident execution remained active on both Nodes.
+
+The temporary R4 header included enough identity/operation/layout/session
+metadata to make the POC fail closed. Its names and encoding are not canonized.
 
 ## 1 GbE baseline
 
@@ -115,23 +140,33 @@ ADR 0003 remains accepted:
 > ordinary **1 Gigabit Ethernet** is the baseline network target; faster
 > networking may improve performance but must not be required by architecture.
 
-That is a network target, not a guarantee that every strategy boundary will be
-useful over 1 GbE.
+R4 now provides the first accepted physical capacity evidence. Corrected
+methodology measured actual clean-arm workload application demand rather than
+mistaking socket-buffer timing or transport-microbenchmark capability for
+demand.
 
-For any retained network experiment, measure rather than assume:
+For the exact R4 context:
 
-- semantic payload bytes;
-- boundary frequency;
+- lower sustainable TCP direction: `933.9 Mb/s`;
+- frozen 80% margin: `747.12 Mb/s`;
+- peak clean-arm demand: about `2.947 Mb/s` A→B and `0.0769 Mb/s` B→A;
+- retransmits: `0`;
+- disposition: `R4_1GBE_PRIMITIVE_CAPACITY_VIABLE`.
+
+That result means network **capacity** is comfortably sufficient for this exact
+coarse semantic boundary. It does not guarantee acceptable latency or serving
+economics for every strategy/model/concurrency level.
+
+For retained network/serving experiments continue to measure rather than
+assume:
+
+- semantic and protocol bytes;
+- boundary frequency/cadence;
 - latency/RTT for the actual payload/work pattern;
-- sustained payload bandwidth;
+- sustainable bandwidth and contention;
 - serialization/copy/staging cost;
-- shared-path contention where material;
 - node-local execution time;
 - end-to-end service impact.
-
-A coarse strategy may reduce round-trip frequency; a fine strategy may exploit
-conditional demand or smaller residency units. #45 doctrine requires measuring
-the global trade rather than canonizing either shape.
 
 ## Capability and strategy negotiation
 
@@ -150,8 +185,9 @@ specific Execution Plan/strategy implementation safely, for example:
 - correctness/equivalence contract;
 - transport/runtime compatibility.
 
-The exact schema is intentionally deferred until doctrine-shaped local/network
-experiments reveal the minimum real seam.
+The exact schema remains deliberately unfrozen. R5A should reuse the smallest
+proven research seams necessary for static serving without promoting the R4
+wire frame into a product protocol.
 
 ## Transport is subordinate to semantics
 
@@ -192,11 +228,15 @@ Avoid treating any of the following as universal architecture:
 
 ## Current roadmap relationship
 
-The current first runtime gate is issue #48: accelerator residency without an
-implicit persistent host mirror. Protocol/network implementation is downstream
-of clean residency, frozen-plan realization, local heterogeneous/split
-execution, and minimum automatic planning.
+R4 / #57 is complete. The physical network primitive is correct, resident,
+measured, and explainable.
 
-When network work resumes, ADR 0007 is the leading first candidate and ADR 0003
-sets the 1 GbE baseline, but the exact semantic boundary/protocol must be
-re-derived under the current Fabric Doctrine and measured topology.
+Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) first establishes
+a durable FreeToken integration line without rewriting the accepted evidence
+lineage. Then [#60](https://github.com/Zutfen-LLC/inferswarm/issues/60) / R5A
+must prove static end-to-end multi-Node serving through a normal host-runtime
+request path and ingest applicable R4 measurements as planner evidence.
+
+R5B subsequently exercises plan epochs, scale-up/down, and truthful failure
+recovery. Neither R5A nor R5B should freeze a public universal wire protocol
+unless the accumulated evidence actually identifies a stable seam.
