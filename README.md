@@ -60,9 +60,23 @@ resident sparse/MoE execution and then selective model-block loading.
 - **N0** completed with `N0_SELECTIVE_BLOCK_PASS`, proving selective checkpoint
   loading, block-only ownership, bounded block-scoped loading, and exact
   isolated-block correctness on the frozen Qwen proving ground.
-- N0 also exposed the next architecture requirement: final accelerator
-  residency had not yet proven release of equivalent persistent CPU backing.
-  The retained `expert_bank_final_host_bytes` is the gap now tracked by #48.
+- **R0 / #48** completed with `P48_ACCELERATOR_RESIDENCY_PASS`, proving that the
+  tested final accelerator materialization did not require an equivalent
+  persistent host-RAM mirror after bounded staging completed.
+- **R1 / #50** completed with `R1_FROZEN_PLAN_REALIZATION_PASS`, proving that a
+  versioned doctrine-shaped frozen plan could drive realization,
+  reconciliation, authority/accounting, and correct execution.
+- **R2 / #51** completed with `R2_LOCAL_SPLIT_EXECUTION_PASS`, proving the frozen
+  `[0,19) / [19,40)` split across two real Compute Units with byte-exact
+  corrected-methodology correctness, captured backend-native execution, and
+  zero steady-state model-state movement.
+- **#53** completed with `HOST_STAGING_RECLAMATION_PASS`, proving physical host
+  staging reclamation after final residency for the accepted RELEASE lifecycle.
+- **R3 / #55** completed with `R3_MINIMUM_AUTOMATIC_PLANNING_PASS`, proving the
+  first automatic strategy-constrained, generic-planner selection across
+  multiple legal local candidates using context-valid evidence and operator
+  policy. The selected plan remained immutable and auditable before
+  heavyweight realization/execution.
 
 Historical evidence remains historical and scope-qualified; the project does
 not rewrite old results simply because the architecture vocabulary improved.
@@ -72,32 +86,23 @@ The detailed Phase1R record is maintained in
 
 ## Current research direction
 
-The resource/residency/planner Wayfinder is complete. The old N1-N3 coarse
-multi-node sequence is retired as historical scaffolding rather than the active
-roadmap.
+The resource/residency/planner Wayfinder and runtime gates R0-R3 are complete.
+The old N1-N3 coarse multi-node sequence remains retired historical scaffolding.
 
-The first corrected runtime gate is:
+The current evidence gate is:
 
-> **[#48 — Prove accelerator residency without implicit persistent host
-> mirrors](https://github.com/Zutfen-LLC/inferswarm/issues/48)**
+> **[#57 — R4: Prove and measure the first two-node boundary over ordinary 1
+> GbE](https://github.com/Zutfen-LLC/inferswarm/issues/57)**
 
-Starting from the valid N0 selective-loading substrate, #48 must establish a
-backend-native accelerator materialization, release host staging whose only
-purpose was materialization/transfer, preserve correctness, and account memory
-such that:
+R4 keeps the accepted contiguous Qwen split and backend-native resident
+execution semantics, moves the proven semantic boundary from same-host transport
+to two physical Nodes over a persistent ordinary-TCP path, re-proves exact
+correctness/residency, and measures the actual network boundary honestly.
 
-```text
-deliberate accelerator bytes:       X
-deliberate persistent host bytes:   Y  (explicit roles)
-bounded transient host overlap:     Z
-unexplained persistent host mirror: 0
-```
-
-After that evidence is frozen, the roadmap proceeds through doctrine-shaped
-frozen-plan realization, local heterogeneous/split execution, minimum automatic
-planning, measured multi-node boundary work, end-to-end elasticity/recovery,
-and finally a materially different model architecture before declaring public
-strategy/planner APIs stable.
+R4 is a measured multi-node primitive, not yet production distributed serving,
+elasticity, or a stable public wire protocol. A performance-negative 1 GbE
+result does not invalidate a correct architecture proof; it becomes measured
+planner evidence for later gates.
 
 See [ROADMAP.md](ROADMAP.md) for the exact gates.
 

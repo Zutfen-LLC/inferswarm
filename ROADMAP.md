@@ -212,7 +212,7 @@ banks remained alive; W2/W4 remained byte-exact, and host fetch/source access,
 rematerialization, model-state movement, fallback, and graph recapture remained
 zero.
 
-This establishes a critical R3 accounting distinction:
+This establishes a critical planner-accounting distinction:
 
 - logical source/materialization release;
 - intentionally retained host cache/materialization;
@@ -229,53 +229,84 @@ capability.
 Canonical FreeToken host-reclamation work merged as PR #18, merge commit
 `2fc64ae7c79bdc494a52468da329ddafd0adb8ba`.
 
+### R3 — minimum automatic planning — issue #55 — COMPLETE
+
+Accepted result:
+
+`R3_MINIMUM_AUTOMATIC_PLANNING_PASS`
+
+R3 proved the minimum doctrine-shaped automatic-planning seam:
+
+> **strategy constrains; planner chooses.**
+
+Using multiple legal local candidates, a generic planner independently applied
+technical feasibility, hard operator policy/integrity eligibility, evidence
+applicability, objective ranking, and deterministic tie-breaking without
+branching on Qwen/MoE/backend nouns. It selected the evidence-backed
+single-resource candidate for warm decode throughput and the resident two-GPU
+split for warm TTFT, while preserving technically feasible but lower-ranked
+alternatives and explaining unused/excluded resources.
+
+The planner decision and its inputs were frozen and hashed before heavyweight
+realization. Selected candidates compiled through the existing strategy/runtime
+seam and executed correctly under the accepted reference methodology; R3 did
+not become a production scheduler or freeze a public planner/strategy API.
+
+Accepted FreeToken R3 PR #19 merged as
+`2ac72d547b2a24a3672d1b83268865db5490084d`. The accepted implementation
+producer was `f2ea03738a0162f1f26c57a90e548e2d22119a3b`; the retained evidence head
+was `c4b78bc993c549d055a8695e78537ff52bc7033e`.
+
 ---
 
 ## Current evidence gate
 
 Successor issues are created only when preceding evidence makes concrete
-methodology and acceptance criteria knowable. R0, R1, R2, and the pre-R3
-host-capacity prerequisite are now accepted. The active gate is R3.
+methodology and acceptance criteria knowable. R0-R3 and the pre-R3 host-capacity
+prerequisite are accepted. The active gate is R4, tracked by issue #57.
 
-### R3 — minimum automatic planning — CURRENT
+### R4 — measured multi-node boundary primitive — CURRENT
 
-Introduce the smallest planner/strategy seam needed to demonstrate:
+Resume multi-node research now that the local/resource/planning substrate is
+clean.
 
-> **strategy constrains; planner chooses.**
+[ADR 0007](docs/adr/0007-coarse-model-block-partitioning-as-first-network-strategy.md)
+remains the **leading first network candidate**: a coarse contiguous model block
+over ordinary 1 GbE. It is not permanent doctrine.
 
-The Model Execution Strategy supplies legal opaque units/constraints and
-strategy-specific economics. The generic planner consumes the current resource
-graph/evidence/operator policy and selects among multiple legal candidates.
+Issue #57 freezes the accepted R2/R3 contiguous Qwen split as the minimum first
+physical two-Node experiment because it is already strategy-legal, exact,
+resident, backend-native, and exposes one explicit semantic boundary. R4 changes
+one principal variable—Node/network locality—rather than inventing a new model
+decomposition and transport simultaneously.
 
-The first implementation may use:
+Primitive-level evidence must establish:
 
-- exhaustive enumeration at POC scale;
-- bounded heuristic search;
-- temporary internal data structures.
+- exact cross-node correctness;
+- strategy-semantic boundary state;
+- payload size/frequency and complete wire/application accounting;
+- network latency/bandwidth/contention provenance;
+- persistent backend-native execution on each Node;
+- state residency/authority and per-Node reconciliation;
+- exact memory/materialization requirements per Node;
+- preservation of the proven #53 RELEASE lifecycle where applicable;
+- an honest 1 GbE primitive-capacity disposition for the frozen candidate.
 
-It must not pretend to be a production scheduler.
+The canonical arm uses mechanically verified ordinary negotiated 1 GbE and a
+persistent research-internal TCP path. Faster networking may be measured as a
+separate comparison only after preserving the 1 GbE baseline arm.
 
-Required outcomes:
+R4 is an evidence-collection experiment for a previously unmeasured network
+candidate. It must not claim that the R3 planner automatically preferred the
+network plan based on evidence that R4 exists to obtain; the candidate may
+correctly remain feasible/unranked before R4 measurement.
 
-- technically infeasible plans are excluded for explicit reasons;
-- hard operator-policy violations are distinguished from technical
-  infeasibility;
-- performance-poor but correct plans remain distinguishable from unsupported
-  plans;
-- available resources may remain unused when appropriate;
-- plan explanations identify participation, exclusions, bottlenecks, applicable
-  evidence, and evidence confidence/freshness;
-- candidate memory feasibility distinguishes persistent required, persistent
-  optional, transient peak, and physically reclaimable capacity where proven;
-- R3 does not treat #53 RETAIN bytes as live-evictable capacity or assume a
-  post-finalization rematerialization path that has not been proven;
-- no generic planner branch depends on model nouns such as `expert`, `router`,
-  Qwen, or other first-strategy/backend vocabulary.
+A performance-negative 1 GbE result does not invalidate a correct
+`R4_MULTI_NODE_BOUNDARY_PASS`. Architecture correctness and the exact network
+economic disposition are separate conclusions.
 
-**Gate to R4:** the planner must be capable of comparing multiple legal strategy
-alternatives using measured/context-valid evidence and selecting/explaining a
-correct feasible plan before network boundary work is promoted back to the
-primary track.
+**Gate to R5:** no end-to-end distributed performance claims until the actual
+network primitive is correct, resident, measured, and explainable.
 
 ---
 
@@ -284,37 +315,6 @@ primary track.
 The names below describe the intended sequence, not pre-frozen implementation
 APIs. Their concrete issues should be created only when preceding evidence makes
 their exact methodology knowable.
-
-### R4 — measured multi-node boundary primitive — BLOCKED BY R3
-
-Resume multi-node research only after the local/resource/planning substrate is
-clean.
-
-[ADR 0007](docs/adr/0007-coarse-model-block-partitioning-as-first-network-strategy.md)
-remains the **leading first network candidate**: a coarse contiguous model block
-over ordinary 1 GbE. It is not permanent doctrine.
-
-Before implementation, re-check the candidate against the target model,
-measured resource graph, and #45 granularity economics. If another strategy-
-legal boundary is clearly the stronger experiment, record the reason before
-changing direction.
-
-Primitive-level evidence should establish:
-
-- exact cross-node correctness;
-- strategy-semantic boundary state;
-- payload size/frequency;
-- network latency/bandwidth/contention provenance;
-- persistent backend-native execution on each Node;
-- state residency/authority behavior;
-- exact memory requirements per Node;
-- honest 1 GbE viability result for the frozen primitive.
-
-Faster networking may be measured as a comparison after preserving the 1 GbE
-baseline arm.
-
-**Gate to R5:** no end-to-end distributed performance claims until the actual
-network primitive is correct, resident, measured, and explainable.
 
 ### R5 — end-to-end multi-node serving and elasticity — BLOCKED BY R4
 
@@ -437,8 +437,8 @@ simplicity/coverage benefit is worth any measured performance cost.
 ### Adaptive Demand Profiles
 
 Demand-profile learning from model-wide, profile/Swarm history, and live
-structural demand is doctrine-approved but does not block the completed R0-R2
-gates or current R3.
+structural demand is doctrine-approved but does not block the completed R0-R3
+gates or current R4.
 
 Introduce it only when a strategy exposes a meaningful demand signal and there
 are enough legal placement alternatives for adaptation to matter. It should be
@@ -463,7 +463,7 @@ NVMe tier or assume it belongs on the latency-critical hot path.
 
 The Gen3 x8 third-GPU retest remains useful hardware-causality evidence. Its
 result can refine applicable resource/path evidence but does not define a
-universal link-class policy or block the current R3 planner gate.
+universal link-class policy or block the current R4 network gate.
 
 ---
 
