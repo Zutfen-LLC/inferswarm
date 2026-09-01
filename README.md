@@ -77,6 +77,13 @@ resident sparse/MoE execution and then selective model-block loading.
   multiple legal local candidates using context-valid evidence and operator
   policy. The selected plan remained immutable and auditable before
   heavyweight realization/execution.
+- **R4 / #57** completed with `R4_MULTI_NODE_BOUNDARY_PASS`, proving the accepted
+  contiguous Qwen split across two physical Nodes over persistent ordinary TCP
+  while preserving byte-exact correctness, backend-native residency/execution,
+  #53 staging release, and complete boundary/wire accounting. The canonical
+  1-GbE arm is `R4_1GBE_PRIMITIVE_CAPACITY_VIABLE`: peak measured clean-arm
+  application demand was about `2.947 Mb/s` A→B against a frozen `747.12 Mb/s`
+  80%-margin limit on the measured path.
 
 Historical evidence remains historical and scope-qualified; the project does
 not rewrite old results simply because the architecture vocabulary improved.
@@ -86,23 +93,28 @@ The detailed Phase1R record is maintained in
 
 ## Current research direction
 
-The resource/residency/planner Wayfinder and runtime gates R0-R3 are complete.
+The resource/residency/planner Wayfinder and runtime gates R0-R4 are complete.
 The old N1-N3 coarse multi-node sequence remains retired historical scaffolding.
 
-The current evidence gate is:
+The next implementation prerequisite is:
 
-> **[#57 — R4: Prove and measure the first two-node boundary over ordinary 1
-> GbE](https://github.com/Zutfen-LLC/inferswarm/issues/57)**
+> **[#59 — Pre-R5: establish a durable FreeToken InferSwarm integration
+> line](https://github.com/Zutfen-LLC/inferswarm/issues/59)**
 
-R4 keeps the accepted contiguous Qwen split and backend-native resident
-execution semantics, moves the proven semantic boundary from same-host transport
-to two physical Nodes over a persistent ordinary-TCP path, re-proves exact
-correctness/residency, and measures the actual network boundary honestly.
+The current successor evidence gate is:
 
-R4 is a measured multi-node primitive, not yet production distributed serving,
-elasticity, or a stable public wire protocol. A performance-negative 1 GbE
-result does not invalidate a correct architecture proof; it becomes measured
-planner evidence for later gates.
+> **[#60 — R5A: prove static end-to-end multi-node serving from a
+> planner-selected plan](https://github.com/Zutfen-LLC/inferswarm/issues/60)**
+
+R5A moves from a manually coordinated research primitive to an integrated
+serving path: a normal host-runtime request must reach strategy legality,
+generic planning, a frozen plan, multi-Node realization, backend-native
+execution, and a correct response. Accepted R4 network measurements now become
+context-valid planner evidence rather than remaining a `FEASIBLE_UNRANKED`
+evidence-collection input.
+
+Live plan epochs, scale-up/down, and failure recovery are deliberately deferred
+to R5B after static serving is correct, measured, and explainable.
 
 See [ROADMAP.md](ROADMAP.md) for the exact gates.
 
@@ -218,6 +230,11 @@ Focused `poc/*` branches answer bounded questions. InferSwarm issues and this
 repository remain canonical for architecture, methodology, acceptance criteria,
 and retained evidence. A positive experiment does not automatically become a
 permanent FreeToken fork feature or a public InferSwarm API.
+
+Accepted R4 evidence remains immutable on its R3-descended research lineage.
+Issue #59 establishes a durable integration branch before R5A so continuing
+FreeToken development does not require rebasing or rewriting that evidence
+history.
 
 See [`docs/integrations/freetoken.md`](docs/integrations/freetoken.md).
 
