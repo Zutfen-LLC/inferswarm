@@ -64,9 +64,9 @@ retained R2 candidate evaluation.
 
 | Evidence | SHA-256 | Result |
 | --- | --- | --- |
-| `chunk-controls.json` | `f2099bffa7186758175de5fb7902858e2fd780af1b3b92529275eeb68cb63b51` | reciprocal W2/W4 chunk controls |
-| `matched-local-control.json` | `2bf83d7c8ef6a7cc288dd5832ce542d2912a6c73412d24d45e4f2dba8995bf9e` | split and one-GPU local W4 chunk64 are byte-identical |
-| `first-divergence.json` | `8141ee61625795a6f9621536bea744b89d408f03fe82931b3e1ffc224f42d836` | first geometry-dependent state is layer-0 recurrent state |
+| `chunk-controls.json` | `c5254e57ffb79f1627a629b994474404ac75a011c1b89b9d960224147141a9e5` | reciprocal W2/W4 chunk controls |
+| `matched-local-control.json` | `2434b6bd4279969a1bb49dcfc84fcfdcaf4e8554e328fe5a53b2bfc9245911a4` | split and one-GPU local W4 chunk64 are byte-identical |
+| `first-divergence.json` | `09b81c3e8c8f9cab338a84016e2f813d5dfff2fffb5d52fb64e14bc81c7e6cab` | first geometry-dependent state is layer-0 recurrent state |
 
 The reciprocal controls show:
 
@@ -100,7 +100,9 @@ There is no split-specific divergent checkpoint, layer, or mutable state in the
 captured W4 path. Comparing the matched local computation at chunk64 and chunk128
 instead finds the first retained state difference at global decoder layer 0:
 convolution state remains exact, while GatedDeltaNet recurrent state differs. The
-first KV difference appears at global layer 3. This precedes the layer-19 boundary.
+recurrent-state max absolute/relative deviations are `0.043923377990722656` and
+`18153.4453125`, with NaN/Inf `0/0`. The first KV difference appears at global
+layer 3. This precedes the layer-19 boundary.
 
 Classification: `REFERENCE_GEOMETRY_MISMATCH`.
 
