@@ -304,10 +304,16 @@ protocol.
 
 ## Current evidence gate
 
-R0-R5B, the pre-R3 host-capacity prerequisite, Pre-R6 integration (#64),
-and the external-Coordinator separation (#67,
-`EXTERNAL_COORDINATOR_SEPARATION_PASS`) are accepted. #65/R6 unblocks once
-FreeToken PR Zutfen-LLC/FreeToken#24 merges into `inferswarm-research`.
+R0-R5B, the pre-R3 host-capacity prerequisite, Pre-R6 integration (#64), and
+external-Coordinator separation (#67) are accepted. FreeToken PR #24 merged
+normally into protected `inferswarm-research` as
+`84ebd2b7ae56c60292f7b9c7ca256f41f64d8b11`, preserving the final physical
+producer `2bcf33f6d6e5dc9fc5c13e37e7110833cbad0fcd` and retained evidence head
+`603a63bf44728814d3182191dcd87e21229e5370` in ancestry.
+
+The current evidence gate is therefore R6 / issue #65. It is **unblocked and
+current** on exact FreeToken base
+`84ebd2b7ae56c60292f7b9c7ca256f41f64d8b11`.
 
 Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) is complete. It
 established the durable FreeToken `inferswarm-research` implementation line
@@ -444,12 +450,25 @@ extensions, or model weights), while all model materialization and
 correctness-bearing inference executed on `inferswarm01`/`inferswarm03`
 over a bounded research-internal realization wire.
 
-Accepted disposition: `EXTERNAL_COORDINATOR_SEPARATION_PASS`; evidence
-retained in FreeToken `docs/inferswarm_external_coordinator/` on the
-`inferswarm-external-coordinator` branch (PR Zutfen-LLC/FreeToken#24),
-which must merge into `inferswarm-research` before #65 unblocks.
+Accepted disposition: `EXTERNAL_COORDINATOR_SEPARATION_PASS`.
 
-### R6 — architecture falsification with Gemma 4 12B — issue #65 — BLOCKED BY #67 MERGE
+Canonical FreeToken provenance:
+
+- final physical implementation producer:
+  `2bcf33f6d6e5dc9fc5c13e37e7110833cbad0fcd`;
+- accepted retained evidence head:
+  `603a63bf44728814d3182191dcd87e21229e5370`;
+- normal merge of FreeToken PR #24 into protected `inferswarm-research`:
+  `84ebd2b7ae56c60292f7b9c7ca256f41f64d8b11`.
+
+Evidence is retained in FreeToken `docs/inferswarm_external_coordinator/`.
+The earlier physical producers `df8a429e9110…` and `84e531971d6c…` remain in
+history as explicitly superseded evidence and are not the canonical gate proof.
+
+### R6 — architecture falsification with Gemma 4 12B — issue #65 — CURRENT
+
+R6 is unblocked on exact FreeToken base
+`84ebd2b7ae56c60292f7b9c7ca256f41f64d8b11`.
 
 Before declaring a public Model Execution Strategy/planner interface stable,
 validate the doctrine against a model architecture materially different from
