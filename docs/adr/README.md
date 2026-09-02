@@ -16,6 +16,12 @@ ADRs record durable decisions and supersession. The Fabric Doctrine is the
 normative detailed synthesis of the current resource/residency/planning model.
 Derived overview/roadmap prose must not silently override either.
 
+ADR 0009 additionally adopts
+[`docs/architecture/model-artifact-distribution.md`](../architecture/model-artifact-distribution.md)
+as a normative Fabric Doctrine supplement for model artifact acquisition and
+distribution semantics. It remains subordinate to ADR decisions and should be
+consolidated into the main doctrine if/when that structure is next revised.
+
 ## Convention
 
 - One Markdown file per decision, named `NNNN-short-title.md`, numbered from
@@ -64,3 +70,4 @@ deciding whether the target is achievable — that distinction is the point.
 | [0006](0006-backend-independent-worker-and-representation-boundary.md) | Backend-independent worker and representation boundary | **Superseded by 0008** |
 | [0007](0007-coarse-model-block-partitioning-as-first-network-strategy.md) | Coarse model-block partitioning as first network strategy | Accepted |
 | [0008](0008-canonical-fabric-doctrine.md) | Canonical Fabric Doctrine | **Accepted** |
+| [0009](0009-plan-driven-model-artifact-distribution.md) | Plan-driven model artifact acquisition and distribution | **Accepted** |
