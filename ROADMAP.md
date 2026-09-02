@@ -304,7 +304,7 @@ protocol.
 
 ## Current evidence gate
 
-R0-R5A and the pre-R3 host-capacity prerequisite are accepted.
+R0-R5B and the pre-R3 host-capacity prerequisite are accepted.
 
 Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) is complete. It
 established the durable FreeToken `inferswarm-research` implementation line
@@ -366,7 +366,7 @@ were approximately `373.6 ms` for the same-Node resident plan, `1877.5 ms` for
 the two-Node resident plan, and `2630.6 ms` for the source-backed control. These
 historical benchmark claims remain scoped to their frozen context.
 
-That prerequisite now unblocks R5B; R5A itself made no live
+That prerequisite unblocked R5B; R5A itself made no live
 elasticity/recovery claim.
 
 ---
@@ -376,13 +376,20 @@ elasticity/recovery claim.
 The names below describe intended sequence and questions. Concrete methodology
 should be frozen only when predecessor evidence makes it knowable.
 
-### R5B — plan epochs, scale-up/down, and recovery — issue #62 — CURRENT
+### R5B — plan epochs, scale-up/down, and recovery — issue #62 — COMPLETE
 
-Issue [#62](https://github.com/Zutfen-LLC/inferswarm/issues/62) freezes the R5B
-methodology and passing conditions. R5B starts from exact FreeToken research
-head `d9f45a9ef7b5f89800f96c54397202a7d43beb52`. Newer upstream-tracking
-FreeToken `main`, including GLM-5.3 work, is outside this research lineage and
-must not be merged, rebased, or cherry-picked into R5B.
+Issue [#62](https://github.com/Zutfen-LLC/inferswarm/issues/62) is complete with
+accepted result:
+
+`R5B_PLAN_EPOCH_RECOVERY_PASS`
+
+Canonical FreeToken provenance:
+
+- physical implementation producer:
+  `7dd945a67c04198ec2d9afe782a39c90e8141f5e`;
+- accepted evidence head: `b6f674b5bf0f76b9b40bd2f79e36cfc18cb6f7e6`;
+- merged protected `inferswarm-research` head:
+  `00ccd01fede8d2ad21ee83104f3b998c89ff9d1f`.
 
 Exercise the execution-plan epoch and failure semantics already decided by #43
 through a real serving path.
@@ -411,10 +418,20 @@ Transparent zero-downtime failover is not a universal acceptance criterion;
 correct epoch ownership, authority continuity, truthful recovery semantics, and
 late-work rejection are.
 
-**Gate to R6:** the resource/planner/epoch seams must work under real changes
-before the public strategy/planner API is considered stable.
+R5B satisfied the resource/planner/epoch prerequisite under real changes. Its
+accepted evidence remains immutable.
 
-### R6 — architecture falsification with a materially different model — BLOCKED BY R5B FOR API STABILITY
+### Pre-R6 integration refresh — issue #64 — CURRENT PREREQUISITE
+
+Issue [#64](https://github.com/Zutfen-LLC/inferswarm/issues/64) refreshes the
+durable FreeToken `inferswarm-research` line from the exact accepted R5B merge
+head while preserving its ancestry and historical evidence. It must explicitly
+integrate and requalify the frozen upstream implementation target before R6.
+
+Issue [#65](https://github.com/Zutfen-LLC/inferswarm/issues/65) remains blocked
+until #64 passes.
+
+### R6 — architecture falsification with Gemma 4 12B — issue #65 — BLOCKED BY #64
 
 Before declaring a public Model Execution Strategy/planner interface stable,
 validate the doctrine against a model architecture materially different from
@@ -434,6 +451,8 @@ The purpose is not necessarily to beat the Qwen benchmark. It is to ask:
 
 Revise internal APIs freely if the falsification test exposes a better seam;
 change doctrine only if a foundational invariant itself is disproven.
+
+R6 is API-falsification research, not production feature shipping.
 
 ---
 
