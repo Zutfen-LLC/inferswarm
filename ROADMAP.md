@@ -304,7 +304,10 @@ protocol.
 
 ## Current evidence gate
 
-R0-R5B and the pre-R3 host-capacity prerequisite are accepted.
+R0-R5B, the pre-R3 host-capacity prerequisite, Pre-R6 integration (#64),
+and the external-Coordinator separation (#67,
+`EXTERNAL_COORDINATOR_SEPARATION_PASS`) are accepted. #65/R6 unblocks once
+FreeToken PR Zutfen-LLC/FreeToken#24 merges into `inferswarm-research`.
 
 Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) is complete. It
 established the durable FreeToken `inferswarm-research` implementation line
@@ -421,17 +424,32 @@ late-work rejection are.
 R5B satisfied the resource/planner/epoch prerequisite under real changes. Its
 accepted evidence remains immutable.
 
-### Pre-R6 integration refresh — issue #64 — CURRENT PREREQUISITE
+### Pre-R6 integration refresh — issue #64 — COMPLETE
 
-Issue [#64](https://github.com/Zutfen-LLC/inferswarm/issues/64) refreshes the
-durable FreeToken `inferswarm-research` line from the exact accepted R5B merge
-head while preserving its ancestry and historical evidence. It must explicitly
-integrate and requalify the frozen upstream implementation target before R6.
+Issue [#64](https://github.com/Zutfen-LLC/inferswarm/issues/64) refreshed the
+durable FreeToken `inferswarm-research` line with the explicitly integrated
+and requalified upstream target. Accepted disposition:
+`PRE_R6_INTEGRATION_REQUALIFICATION_PASS` at accepted research head
+`8cfcda4c44065ceba4230dc548a12696093d5177`.
 
-Issue [#65](https://github.com/Zutfen-LLC/inferswarm/issues/65) remains blocked
-until #64 passes.
+### Pre-R6 external Coordinator separation — issue #67 — COMPLETE
 
-### R6 — architecture falsification with Gemma 4 12B — issue #65 — BLOCKED BY #64
+Issue [#67](https://github.com/Zutfen-LLC/inferswarm/issues/67) proved the
+Coordinator is a replaceable control-plane role rather than an implicit
+compute-host role: ordinary request ingress, session identity, generic
+planning, frozen Execution Plan authority, epoch coordination, and
+committed-output accounting physically executed on the CPU-only VM
+`inferswarm00` (no NVIDIA driver, CUDA, torch, triton, native execution
+extensions, or model weights), while all model materialization and
+correctness-bearing inference executed on `inferswarm01`/`inferswarm03`
+over a bounded research-internal realization wire.
+
+Accepted disposition: `EXTERNAL_COORDINATOR_SEPARATION_PASS`; evidence
+retained in FreeToken `docs/inferswarm_external_coordinator/` on the
+`inferswarm-external-coordinator` branch (PR Zutfen-LLC/FreeToken#24),
+which must merge into `inferswarm-research` before #65 unblocks.
+
+### R6 — architecture falsification with Gemma 4 12B — issue #65 — BLOCKED BY #67 MERGE
 
 Before declaring a public Model Execution Strategy/planner interface stable,
 validate the doctrine against a model architecture materially different from
