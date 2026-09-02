@@ -72,7 +72,7 @@ placement or distribution.
 
 InferSwarm may read only selected byte ranges from an upstream object where that
 is correct and supported, or may ingest/transform upstream files into finer-
-granained internal artifacts. Any transformation must retain sufficient
+grained internal artifacts. Any transformation must retain sufficient
 provenance and integrity information to establish the exact model/revision and
 logical state represented.
 
