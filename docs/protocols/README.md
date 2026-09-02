@@ -231,12 +231,14 @@ Avoid treating any of the following as universal architecture:
 R4 / #57 is complete. The physical network primitive is correct, resident,
 measured, and explainable.
 
-Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) first establishes
-a durable FreeToken integration line without rewriting the accepted evidence
-lineage. Then [#60](https://github.com/Zutfen-LLC/inferswarm/issues/60) / R5A
-must prove static end-to-end multi-Node serving through a normal host-runtime
-request path and ingest applicable R4 measurements as planner evidence.
+Issues [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) and
+[#60](https://github.com/Zutfen-LLC/inferswarm/issues/60) are complete. R5A
+proved static end-to-end multi-Node serving through a normal host-runtime
+request path with generic evidence-aware planning and an immutable selected
+plan. The accepted FreeToken merge head is
+`d9f45a9ef7b5f89800f96c54397202a7d43beb52`.
 
-R5B subsequently exercises plan epochs, scale-up/down, and truthful failure
-recovery. Neither R5A nor R5B should freeze a public universal wire protocol
-unless the accumulated evidence actually identifies a stable seam.
+Issue [#62](https://github.com/Zutfen-LLC/inferswarm/issues/62) is the current
+R5B gate for plan epochs, scale-up/down, and truthful failure recovery. R5B must
+preserve protocol-level epoch attribution and retired-work fencing without
+freezing a public universal wire protocol or `epoch_id` encoding.

@@ -291,9 +291,9 @@ Canonical provenance:
   `b2d72a36e79624028e74a2e7256f03546d4b8b5b`.
 
 The earlier R4 evidence head `9a26fd2` is invalidated and retained only as
-historical ancestry. FreeToken PR #20 is evidence-bearing but is not a sane
-direct merge surface against current upstream-tracking `main`; that integration
-problem is separated into issue #59 rather than rewriting accepted R4 history.
+historical ancestry. FreeToken PR #20 is evidence-bearing but was not a sane
+direct merge surface against the then-current upstream-tracking `main`; issue
+#59 resolved that integration problem without rewriting accepted R4 history.
 
 R4 establishes a measured viable **primitive capacity result** for this exact
 boundary/context. It does not establish production serving, concurrency,
@@ -304,20 +304,28 @@ protocol.
 
 ## Current evidence gate
 
-R0-R4 and the pre-R3 host-capacity prerequisite are accepted.
+R0-R5A and the pre-R3 host-capacity prerequisite are accepted.
 
-Before R5A implementation, issue
-[#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) must establish a durable
-FreeToken InferSwarm integration line that preserves the accepted evidence
-lineage while deliberately integrating current upstream-tracking FreeToken
-`main`. #59 is an implementation-line prerequisite, not a new architecture gate.
+Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) is complete. It
+established the durable FreeToken `inferswarm-research` implementation line
+without rewriting accepted R4 history.
 
-### R5A — static end-to-end multi-node serving — issue #60 — CURRENT / BLOCKED BY #59
+### R5A — static end-to-end multi-node serving — issue #60 — COMPLETE
 
-Issue [#60](https://github.com/Zutfen-LLC/inferswarm/issues/60) is the current
-successor evidence gate.
+Issue [#60](https://github.com/Zutfen-LLC/inferswarm/issues/60) is complete with
+accepted result:
 
-R5A must prove that the pieces established separately by R0-R4 operate as one
+`R5A_STATIC_MULTI_NODE_SERVING_PASS`
+
+Canonical FreeToken provenance:
+
+- physical implementation producer:
+  `60ea7bd9841a636a26bfe7f140dba04b0a562f03`;
+- accepted evidence head: `136fc6385afaa0864e289746484b211f3a1fcdd8`;
+- merged protected `inferswarm-research` head:
+  `d9f45a9ef7b5f89800f96c54397202a7d43beb52`.
+
+R5A proved that the pieces established separately by R0-R4 operate as one
 static serving path:
 
 ```text
@@ -330,13 +338,12 @@ normal host-runtime request
   -> correct response
 ```
 
-Unlike R4, applicable network performance evidence now exists. The two-Node
-candidate must no longer be kept artificially `FEASIBLE_UNRANKED` when accepted
-R4 evidence matches the frozen R5A context. The generic evidence/applicability
-rules must ingest or reject that evidence honestly; the planner must not
-hard-code a network preference simply because R5A is a network-serving test.
+Unlike R4, applicable network performance evidence existed. The generic
+evidence/applicability rules ingested or rejected that evidence honestly, and
+the planner did not hard-code a network preference simply because R5A was a
+network-serving test.
 
-Required retained evidence includes, under matched controls and a frozen
+Accepted retained evidence includes, under matched controls and a frozen
 objective/methodology:
 
 - request-level correctness and session isolation;
@@ -353,11 +360,14 @@ objective/methodology:
 - capture/replay/fallback/recapture/source-fetch invariants;
 - a bounded multi-request/session concurrency arm.
 
-R5A is **static serving**. It does not require live plan changes, failover, or
-resource joins/leaves.
+R5A is **static serving**. It did not claim live plan changes, failover, or
+resource joins/leaves. Its accepted context-specific median TTFT measurements
+were approximately `373.6 ms` for the same-Node resident plan, `1877.5 ms` for
+the two-Node resident plan, and `2630.6 ms` for the source-backed control. These
+historical benchmark claims remain scoped to their frozen context.
 
-**Gate to R5B:** no live elasticity/recovery claims until a normal serving path
-can select/realize/execute a correct measured multi-Node plan end to end.
+That prerequisite now unblocks R5B; R5A itself made no live
+elasticity/recovery claim.
 
 ---
 
@@ -366,7 +376,13 @@ can select/realize/execute a correct measured multi-Node plan end to end.
 The names below describe intended sequence and questions. Concrete methodology
 should be frozen only when predecessor evidence makes it knowable.
 
-### R5B — plan epochs, scale-up/down, and recovery — BLOCKED BY R5A
+### R5B — plan epochs, scale-up/down, and recovery — issue #62 — CURRENT
+
+Issue [#62](https://github.com/Zutfen-LLC/inferswarm/issues/62) freezes the R5B
+methodology and passing conditions. R5B starts from exact FreeToken research
+head `d9f45a9ef7b5f89800f96c54397202a7d43beb52`. Newer upstream-tracking
+FreeToken `main`, including GLM-5.3 work, is outside this research lineage and
+must not be merged, rebased, or cherry-picked into R5B.
 
 Exercise the execution-plan epoch and failure semantics already decided by #43
 through a real serving path.

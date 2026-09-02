@@ -532,17 +532,22 @@ Accepted R4 canonical provenance is physical producer
 invalidated historical ancestry. The accepted evidence remains immutable even
 though FreeToken `main` has since diverged.
 
-Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) is the pre-R5
-implementation-line prerequisite: establish a durable FreeToken InferSwarm
-integration line without rebasing/re-writing accepted evidence.
+Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) is complete and
+established the durable FreeToken `inferswarm-research` line without rewriting
+accepted evidence. Issue [#60](https://github.com/Zutfen-LLC/inferswarm/issues/60)
+is also complete with `R5A_STATIC_MULTI_NODE_SERVING_PASS`: a normal
+host-runtime request reached generic planning, an immutable selected plan,
+multi-Node realization, backend-native execution, and a correct measured
+response. The accepted FreeToken merge head is
+`d9f45a9ef7b5f89800f96c54397202a7d43beb52`.
 
-The current successor evidence gate in [ROADMAP.md](ROADMAP.md) is
-**R5A — static end-to-end multi-node serving**, tracked by issue
-[#60](https://github.com/Zutfen-LLC/inferswarm/issues/60). R5A must integrate the
-R0-R4 seams through a normal host-runtime request: strategy legality, generic
-planning with applicable R4 evidence, a frozen plan, multi-Node realization,
-backend-native execution, and a correct measured response. Live epoch changes,
-scale-up/down, and failure recovery remain R5B work.
+The current successor evidence gate in [ROADMAP.md](ROADMAP.md) is **R5B — plan
+epochs, scale-up/down, and truthful recovery**, tracked by issue
+[#62](https://github.com/Zutfen-LLC/inferswarm/issues/62). It exercises the
+already-accepted #43 semantics through ordinary serving without freezing a
+public epoch field, final protocol, planner/strategy API, daemon, or production
+control plane. Newer upstream-tracking FreeToken `main`, including GLM-5.3
+work, remains outside the R5 research lineage.
 
 FreeToken remains the initial validation/integration vehicle, not the permanent
 product boundary. Reusable runtime functionality should eventually live behind
