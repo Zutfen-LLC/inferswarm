@@ -541,13 +541,19 @@ multi-Node realization, backend-native execution, and a correct measured
 response. The accepted FreeToken merge head is
 `d9f45a9ef7b5f89800f96c54397202a7d43beb52`.
 
-The current successor evidence gate in [ROADMAP.md](ROADMAP.md) is **R5B — plan
-epochs, scale-up/down, and truthful recovery**, tracked by issue
-[#62](https://github.com/Zutfen-LLC/inferswarm/issues/62). It exercises the
+Issue [#62](https://github.com/Zutfen-LLC/inferswarm/issues/62) is complete with
+accepted disposition `R5B_PLAN_EPOCH_RECOVERY_PASS`. Its accepted FreeToken
+merge head is `00ccd01fede8d2ad21ee83104f3b998c89ff9d1f`. R5B exercised the
 already-accepted #43 semantics through ordinary serving without freezing a
 public epoch field, final protocol, planner/strategy API, daemon, or production
-control plane. Newer upstream-tracking FreeToken `main`, including GLM-5.3
-work, remains outside the R5 research lineage.
+control plane.
+
+The current prerequisite in [ROADMAP.md](ROADMAP.md) is issue
+[#64](https://github.com/Zutfen-LLC/inferswarm/issues/64), which refreshes the
+durable FreeToken integration line after accepted R5B. Issue
+[#65](https://github.com/Zutfen-LLC/inferswarm/issues/65), the R6 Gemma 4 12B
+architecture-falsification gate, remains blocked by #64. R6 is API-falsification
+research, not production feature shipping.
 
 FreeToken remains the initial validation/integration vehicle, not the permanent
 product boundary. Reusable runtime functionality should eventually live behind

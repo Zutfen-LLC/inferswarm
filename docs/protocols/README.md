@@ -238,7 +238,14 @@ request path with generic evidence-aware planning and an immutable selected
 plan. The accepted FreeToken merge head is
 `d9f45a9ef7b5f89800f96c54397202a7d43beb52`.
 
-Issue [#62](https://github.com/Zutfen-LLC/inferswarm/issues/62) is the current
-R5B gate for plan epochs, scale-up/down, and truthful failure recovery. R5B must
-preserve protocol-level epoch attribution and retired-work fencing without
-freezing a public universal wire protocol or `epoch_id` encoding.
+Issue [#62](https://github.com/Zutfen-LLC/inferswarm/issues/62) is complete with
+accepted disposition `R5B_PLAN_EPOCH_RECOVERY_PASS` and accepted FreeToken
+merge head `00ccd01fede8d2ad21ee83104f3b998c89ff9d1f`. It preserved
+protocol-level epoch attribution and retired-work fencing without freezing a
+public universal wire protocol or `epoch_id` encoding.
+
+Issue [#64](https://github.com/Zutfen-LLC/inferswarm/issues/64) is the current
+Pre-R6 integration prerequisite. Issue
+[#65](https://github.com/Zutfen-LLC/inferswarm/issues/65), the Gemma 4 12B R6
+API-falsification gate, remains blocked by #64; it is research, not production
+feature shipping.

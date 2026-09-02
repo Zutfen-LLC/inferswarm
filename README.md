@@ -93,28 +93,27 @@ The detailed Phase1R record is maintained in
 
 ## Current research direction
 
-The resource/residency/planner Wayfinder and runtime gates R0-R4 are complete.
+The resource/residency/planner Wayfinder and runtime gates R0-R5B are complete.
 The old N1-N3 coarse multi-node sequence remains retired historical scaffolding.
 
 The next implementation prerequisite is:
 
-> **[#59 — Pre-R5: establish a durable FreeToken InferSwarm integration
-> line](https://github.com/Zutfen-LLC/inferswarm/issues/59)**
+> **[#64 — Pre-R6: refresh the durable FreeToken integration line after
+> accepted R5B](https://github.com/Zutfen-LLC/inferswarm/issues/64)**
 
 The current successor evidence gate is:
 
-> **[#60 — R5A: prove static end-to-end multi-node serving from a
-> planner-selected plan](https://github.com/Zutfen-LLC/inferswarm/issues/60)**
+> **[#65 — R6: falsify the generic Model Execution Strategy API with Gemma 4
+> 12B](https://github.com/Zutfen-LLC/inferswarm/issues/65)** — blocked by #64.
 
-R5A moves from a manually coordinated research primitive to an integrated
-serving path: a normal host-runtime request must reach strategy legality,
-generic planning, a frozen plan, multi-Node realization, backend-native
-execution, and a correct response. Accepted R4 network measurements now become
-context-valid planner evidence rather than remaining a `FEASIBLE_UNRANKED`
-evidence-collection input.
+R5B / #62 is complete with accepted disposition
+`R5B_PLAN_EPOCH_RECOVERY_PASS` and accepted FreeToken merge head
+`00ccd01fede8d2ad21ee83104f3b998c89ff9d1f`. Issue #64 now refreshes that
+durable implementation line against the frozen upstream target before R6 may
+start.
 
-Live plan epochs, scale-up/down, and failure recovery are deliberately deferred
-to R5B after static serving is correct, measured, and explainable.
+R6 remains an API-falsification evidence gate against a materially different
+model architecture. It is not production feature shipping.
 
 See [ROADMAP.md](ROADMAP.md) for the exact gates.
 
