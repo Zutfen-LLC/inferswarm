@@ -491,11 +491,16 @@ change doctrine only if a foundational invariant itself is disproven.
 
 R6 is API-falsification research, not production feature shipping.
 
-### R6 — architecture falsification with Gemma 4 12B — issue #65 — COMPLETE
+### R6 — architecture falsification with Gemma 4 12B — issue #65 — COMPLETE (gate-corrected 2026-09-03; one frozen criterion measured FAIL — maintainer adjudication pending)
 
 FreeToken PR #25 (branch `inferswarm-r6`, base `84ebd2b7ae56c60292f7b9c7ca256f41f64d8b11`)
 implemented and physically ran the canonical dense gate. Retained evidence:
-FreeToken `docs/inferswarm_r6/` (machine-checked `result.json`, 17/17).
+FreeToken `docs/inferswarm_r6/`.  A gate-correction pass (PR #25 head
+`b0f49b9`) replaced the original placeholder composer checks with fail-closed
+re-derivation; the corrected composer yields **27/28 checks** — the single
+failing check is the frozen secondary logit comparator, physically captured
+and honestly reported (see below).  The earlier "17/17" figure came from the
+placeholder composer and is superseded.
 
 - Canonical run producer `44d6c94e4fd2ee967451cc959f930883ca3f4a25`.
 - Topology: CPU-only Coordinator on inferswarm00; dense 3-stage chain —
@@ -503,10 +508,39 @@ FreeToken `docs/inferswarm_r6/` (machine-checked `result.json`, 17/17).
   `[16,32)` (7.28 GiB), inferswarm03 `[32,48)`+norm+tied-lm_head (9.29 GiB)
   over the R4 boundary wire; tied embedding declared shared state on
   first/last stages only.
-- Correctness: exact 8/8 greedy token equality vs the unpartitioned
-  transformers reference `[818, 6073, 529, 74413, 46515, 600, 2557, 532]`;
+- Correctness (primary): exact 8/8 greedy token equality vs the
+  unpartitioned transformers reference
+  `[818, 6073, 529, 74413, 46515, 600, 2557, 532]`;
   fencing arm (duplicate position, retired epoch) mechanically rejected;
   SIGTERM epoch RECLAIMED; postflight GPUs idle; Coordinator torch-free.
+- Secondary logit comparator (frozen threshold 0.25 over the declared
+  top-32 domain, steps 0/1/7): physically captured through the canonical
+  distributed path during the correction pass (evidence arm with an
+  explicit-override producer, distinctly recorded — the canonical
+  producer `44d6c94` retained no distributed logits); per-step max
+  |Δ| 0.25 / 0.50 / 0.515625, aggregate 0.515625 → **threshold exceeded,
+  measured FAIL retained** (NaN/Inf count 0; primary equality
+  re-confirmed on the same replays).  Full-vocab float32 rows retained
+  so the comparator is independently re-derivable.  The threshold was
+  not loosened; whether this numeric drift blocks R6 or joins the
+  retained anomalies as a non-claim is a maintainer decision.
+- Stage materialization/accounting (all three stages, from retained
+  run-bound evidence including the recovered stage-3 final report):
+  observed fetched bytes exactly equal planned owned (+declared shared
+  for the tied embedding on the last stage) — 9,256,814,624 /
+  7,278,939,168 / 9,292,212,768; zero unexpected checkpoint keys; zero
+  whole-shard sentinel calls; zero host staging residue; zero
+  unexplained persistent host mirror.
+- Methodology chronology: original freeze (32-row prefill chunks)
+  preserved verbatim; the 64-row amendment is a dated, commit-bound
+  methodology amendment (`METHODOLOGY-AMENDMENT-001.md`, frozen at
+  ff561e5 before the successful canonical rerun) — a strategy-owned
+  geometry correction within the unchanged 1 MiB wire budget, not
+  threshold tuning.
+- Boundary geometry: single plane everywhere (`planes: 1`, row width
+  3840, bf16); the 2-plane reporting inconsistency was a correction-pass
+  code fix (Qwen's 2-plane boundary remains a first-model artifact
+  finding); regression-tested.
 - Census-driven granularity: the 2-stage split is MEASURED_INFEASIBLE on
   12 GiB 3060s (hardware OOM retained) — the 3-stage chain follows the
   frozen representation, not a cosmetic split.
@@ -518,11 +552,16 @@ FreeToken `docs/inferswarm_r6/` (machine-checked `result.json`, 17/17).
   multi-chunk prefill continuation) diverges, A/B-proven, while
   replay-prefill is exact; the accepted epoch controller commits only
   replay step-0 tokens, so the canonical arm is unaffected.
-- Regressions: 01 research 238+4 passed and benchmarks 563 passed;
-  00 control-plane 72 passed; zero failures.
+- Regressions (correction head): 01 research 265 passed (+4 r5a
+  preflight legacy-style) and benchmarks 563 passed; 00 control-plane
+  + focused R6 suites 121 passed / 1 skipped (torch-free by design);
+  zero failures.
 
-Status: PASS evidence retained; gate acceptance pending maintainer merge
-of FreeToken PR #25 (not self-merged per gate discipline).
+Status: gate evidence corrected and retained; the corrected machine
+verdict is `R6_DENSE_ARCHITECTURE_FALSIFICATION_FAIL` (27/28; comparator
+threshold).  Gate acceptance — including adjudication of the secondary
+comparator drift — is pending the maintainer's merge decision on
+FreeToken PR #25 (not self-merged per gate discipline).
 
 ---
 
