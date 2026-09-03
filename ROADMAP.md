@@ -465,7 +465,7 @@ Evidence is retained in FreeToken `docs/inferswarm_external_coordinator/`.
 The earlier physical producers `df8a429e9110…` and `84e531971d6c…` remain in
 history as explicitly superseded evidence and are not the canonical gate proof.
 
-### R6 — architecture falsification with Gemma 4 12B — issue #65 — CURRENT
+### R6 — architecture falsification with Gemma 4 12B — issue #65 (gate complete; see COMPLETE section below)
 
 R6 is unblocked on exact FreeToken base
 `84ebd2b7ae56c60292f7b9c7ca256f41f64d8b11`.
@@ -490,6 +490,39 @@ Revise internal APIs freely if the falsification test exposes a better seam;
 change doctrine only if a foundational invariant itself is disproven.
 
 R6 is API-falsification research, not production feature shipping.
+
+### R6 — architecture falsification with Gemma 4 12B — issue #65 — COMPLETE
+
+FreeToken PR #25 (branch `inferswarm-r6`, base `84ebd2b7ae56c60292f7b9c7ca256f41f64d8b11`)
+implemented and physically ran the canonical dense gate. Retained evidence:
+FreeToken `docs/inferswarm_r6/` (machine-checked `result.json`, 17/17).
+
+- Canonical run producer `44d6c94e4fd2ee967451cc959f930883ca3f4a25`.
+- Topology: CPU-only Coordinator on inferswarm00; dense 3-stage chain —
+  inferswarm01 GPU0 `[0,16)`+embeddings (9.26 GiB selective), GPU1
+  `[16,32)` (7.28 GiB), inferswarm03 `[32,48)`+norm+tied-lm_head (9.29 GiB)
+  over the R4 boundary wire; tied embedding declared shared state on
+  first/last stages only.
+- Correctness: exact 8/8 greedy token equality vs the unpartitioned
+  transformers reference `[818, 6073, 529, 74413, 46515, 600, 2557, 532]`;
+  fencing arm (duplicate position, retired epoch) mechanically rejected;
+  SIGTERM epoch RECLAIMED; postflight GPUs idle; Coordinator torch-free.
+- Census-driven granularity: the 2-stage split is MEASURED_INFEASIBLE on
+  12 GiB 3060s (hardware OOM retained) — the 3-stage chain follows the
+  frozen representation, not a cosmetic split.
+- Assumption audit: planner core / epoch controller / #67 xc wire
+  GENERIC_AND_REUSED_UNCHANGED; N0 Qwen-pinned census and the 2-plane
+  boundary FIRST_MODEL_ARTIFACT_REFACTORED; N-stage chain and 64-row
+  boundary geometry GENERIC_BUT_REQUIRED_EXTENSION.
+- Retained anomaly (non-claim): the KV-extend path (incremental decode /
+  multi-chunk prefill continuation) diverges, A/B-proven, while
+  replay-prefill is exact; the accepted epoch controller commits only
+  replay step-0 tokens, so the canonical arm is unaffected.
+- Regressions: 01 research 238+4 passed and benchmarks 563 passed;
+  00 control-plane 72 passed; zero failures.
+
+Status: PASS evidence retained; gate acceptance pending maintainer merge
+of FreeToken PR #25 (not self-merged per gate discipline).
 
 ---
 
