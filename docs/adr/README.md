@@ -22,6 +22,13 @@ as a normative Fabric Doctrine supplement for model artifact acquisition and
 distribution semantics. It remains subordinate to ADR decisions and should be
 consolidated into the main doctrine if/when that structure is next revised.
 
+ADR 0010 additionally adopts
+[`docs/architecture/numerical-equivalence-contract.md`](../architecture/numerical-equivalence-contract.md)
+as a normative Fabric Doctrine supplement for exact-integrity, heterogeneous
+numerical-equivalence, semantic-output, and correctness-qualification semantics.
+It refines Fabric Doctrine sections 4, 5, 6, and 10 and should be consolidated
+into the main doctrine when that document is next structurally revised.
+
 ## Convention
 
 - One Markdown file per decision, named `NNNN-short-title.md`, numbered from
@@ -71,3 +78,4 @@ deciding whether the target is achievable — that distinction is the point.
 | [0007](0007-coarse-model-block-partitioning-as-first-network-strategy.md) | Coarse model-block partitioning as first network strategy | Accepted |
 | [0008](0008-canonical-fabric-doctrine.md) | Canonical Fabric Doctrine | **Accepted** |
 | [0009](0009-plan-driven-model-artifact-distribution.md) | Plan-driven model artifact acquisition and distribution | **Accepted** |
+| [0010](0010-heterogeneous-numerical-equivalence.md) | Heterogeneous numerical-equivalence correctness contract | **Accepted** |
