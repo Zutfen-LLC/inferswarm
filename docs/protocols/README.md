@@ -244,8 +244,11 @@ merge head `00ccd01fede8d2ad21ee83104f3b998c89ff9d1f`. It preserved
 protocol-level epoch attribution and retired-work fencing without freezing a
 public universal wire protocol or `epoch_id` encoding.
 
-Issue [#64](https://github.com/Zutfen-LLC/inferswarm/issues/64) is the current
-Pre-R6 integration prerequisite. Issue
-[#65](https://github.com/Zutfen-LLC/inferswarm/issues/65), the Gemma 4 12B R6
-API-falsification gate, remains blocked by #64; it is research, not production
-feature shipping.
+Issues [#64](https://github.com/Zutfen-LLC/inferswarm/issues/64) and #67 are
+complete. Historical R6 / issue
+[#65](https://github.com/Zutfen-LLC/inferswarm/issues/65) remains
+`R6_DENSE_ARCHITECTURE_FALSIFICATION_FAIL`. Issue #71 localized the observed
+numerical difference as `BACKEND_EXECUTION_LOCAL` without changing that verdict.
+ADR 0010 defines the new correctness contract. Issue #74 freezes the first
+qualification methodology. Only a separate accepted successor can execute
+calibration, freeze thresholds, and open the sealed holdout.

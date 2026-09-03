@@ -54,6 +54,9 @@ jobs:
       - name: Check frozen Phase-0 workloads
         run: python3 scripts/check_phase0_workloads.py
 
+      - name: Check issue 74 frozen methodology
+        run: python3 -m unittest tests.test_issue74_methodology -v
+
       - name: Check internal Markdown links
         run: |
           python3 - <<'EOF'

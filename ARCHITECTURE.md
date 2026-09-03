@@ -474,6 +474,46 @@ not the limiting resource for this exact semantic boundary; it is not a claim
 that 1 GbE is universally sufficient or that latency/end-to-end serving
 performance is already solved.
 
+## Heterogeneous numerical correctness
+
+[ADR 0010](docs/adr/0010-heterogeneous-numerical-equivalence.md) and its
+[normative supplement](docs/architecture/numerical-equivalence-contract.md)
+define heterogeneous numerical correctness. They control if this explanatory
+summary differs from them.
+
+Correctness has three conjunctive layers:
+
+1. Exact integrity invariants prove that the authorized model, representation,
+   state, plan, input, and execution path ran.
+2. Qualified numerical equivalence applies the strategy's prospectively frozen
+   envelopes to declared floating-point checkpoints.
+3. The strategy's semantic contract checks discrete output decisions. The first
+   deterministic greedy profile requires exact token IDs.
+
+Each layer must pass. Tensor closeness cannot excuse wrong state, transport,
+authority, attribution, or fallback. Matching tokens cannot excuse a numerical
+envelope failure.
+
+The Model Execution Strategy owns its checkpoint, comparator, applicability,
+reference, and semantic definitions. Backend adapters can capture tensors and
+report the observed path. The generic planner does not compare tensors and does
+not contain model, GPU, CUDA, or backend tolerances.
+
+The planner consumes immutable, context-scoped qualification evidence before
+it ranks performance. A compatible candidate without applicable qualification
+does not enter the correctness-bearing feasible set. A material change to the
+model, representation, strategy contract, backend build, math stack, device
+class or role, or relevant geometry can require requalification.
+
+Transfer and state invariants remain exact. Sender and receiver boundary bytes,
+Logical State Unit coverage, Materialization ownership, plan and session
+attribution, and authority or fencing facts never become tolerant.
+
+An operator can request the optional hard policy `BIT_EXACT_REQUIRED`. The
+planner then excludes candidates without applicable bit-exact evidence. It must
+not weaken the request to ordinary numerical equivalence. Bit exactness is not
+the default requirement for the heterogeneous fabric.
+
 ## Current evidence and implementation posture
 
 The controlled historical proving ground remains Qwen3.6-35B-A3B-NVFP4 on the
@@ -548,12 +588,20 @@ already-accepted #43 semantics through ordinary serving without freezing a
 public epoch field, final protocol, planner/strategy API, daemon, or production
 control plane.
 
-The current prerequisite in [ROADMAP.md](ROADMAP.md) is issue
-[#64](https://github.com/Zutfen-LLC/inferswarm/issues/64), which refreshes the
-durable FreeToken integration line after accepted R5B. Issue
-[#65](https://github.com/Zutfen-LLC/inferswarm/issues/65), the R6 Gemma 4 12B
-architecture-falsification gate, remains blocked by #64. R6 is API-falsification
-research, not production feature shipping.
+Historical R6 / issue
+[#65](https://github.com/Zutfen-LLC/inferswarm/issues/65) remains permanently
+`R6_DENSE_ARCHITECTURE_FALSIFICATION_FAIL`. Issue
+[#71](https://github.com/Zutfen-LLC/inferswarm/issues/71) localized the first
+single-versus-distributed numerical difference as `BACKEND_EXECUTION_LOCAL`
+while retaining exact transport and state evidence. It did not set a tolerance
+or reinterpret R6.
+
+ADR 0010 / issue #72 established the heterogeneous correctness contract. Issue
+[#74](https://github.com/Zutfen-LLC/inferswarm/issues/74) freezes the first
+prospective calibration and sealed-holdout methodology. It does not execute
+calibration. Only a later, separately authorized gate can run calibration,
+freeze derived thresholds, and open the sealed holdout. A still-later R6
+successor remains an independent full integration attempt.
 
 FreeToken remains the initial validation/integration vehicle, not the permanent
 product boundary. Reusable runtime functionality should eventually live behind

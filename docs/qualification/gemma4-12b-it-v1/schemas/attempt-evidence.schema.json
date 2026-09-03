@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inferswarm.dev/schema/issue74/attempt-evidence-1.json",
+  "title": "InferSwarm issue #74 immutable attempt evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "contract_id", "attempt_id", "arm", "preflight_sha256", "producer", "corpus_sha256", "status", "cases", "artifact_sha256"],
+  "properties": {
+    "schema": {"const": "inferswarm.issue74.attempt-evidence/1"},
+    "contract_id": {"const": "inferswarm.gemma4-heterogeneous-numerical-equivalence/1"},
+    "attempt_id": {"type": "string", "minLength": 1},
+    "arm": {"enum": ["A", "B", "C", "D"]},
+    "preflight_sha256": {"$ref": "#/$defs/sha"},
+    "producer": {
+      "type": "object", "additionalProperties": false, "required": ["commit", "clean"],
+      "properties": {"commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}, "clean": {"const": true}}
+    },
+    "corpus_sha256": {"$ref": "#/$defs/sha"},
+    "status": {"enum": ["VALID", "INFRASTRUCTURE_INVALID"]},
+    "invalid_reason_code": {"enum": ["PROCESS_DID_NOT_START", "PROCESS_CRASH_BEFORE_FIRST_CASE", "NODE_OR_LINK_LOST_BEFORE_CASE_COMMIT", "ARTIFACT_WRITE_OR_HASH_FAILURE", "OPERATOR_ABORT_BEFORE_CASE_COMMIT", "PREFLIGHT_IDENTITY_CHANGED_BEFORE_CASE_COMMIT", "EVIDENCE_SCHEMA_OR_COMPLETENESS_FAILURE"]},
+    "repeats_attempt_id": {"type": "string"},
+    "cases": {"type": "array", "items": {"$ref": "#/$defs/case"}},
+    "artifact_sha256": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/sha"}}
+  },
+  "allOf": [
+    {"if": {"properties": {"status": {"const": "INFRASTRUCTURE_INVALID"}}}, "then": {"required": ["invalid_reason_code"]}},
+    {"if": {"properties": {"status": {"const": "VALID"}}}, "then": {"not": {"required": ["invalid_reason_code"]}}}
+  ],
+  "$defs": {
+    "sha": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "case": {
+      "type": "object", "additionalProperties": false,
+      "required": ["case_id", "prompt_sha256", "token_ids_sha256", "case_committed", "exact_integrity", "semantic_output", "finite", "native_tensor_sha256", "envelopes", "generated_token_ids", "diagnostics"],
+      "properties": {
+        "case_id": {"type": "string", "pattern": "^[csph]74-"},
+        "prompt_sha256": {"$ref": "#/$defs/sha"},
+        "token_ids_sha256": {"$ref": "#/$defs/sha"},
+        "case_committed": {"const": true},
+        "exact_integrity": {"enum": ["PASS", "FAIL"]},
+        "semantic_output": {"enum": ["PASS", "FAIL"]},
+        "finite": {"type": "boolean"},
+        "native_tensor_sha256": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/sha"}},
+        "envelopes": {"type": "object", "minProperties": 15, "maxProperties": 15, "additionalProperties": {"type": "string", "pattern": "^0x[0-9a-f.]+p[+-][0-9]+$"}},
+        "generated_token_ids": {"type": "array", "minItems": 8, "maxItems": 8, "items": {"type": "integer", "minimum": 0}},
+        "diagnostics": {"type": "object"}
+      }
+    }
+  }
+}
