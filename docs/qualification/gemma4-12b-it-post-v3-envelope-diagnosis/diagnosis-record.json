@@ -1,0 +1,792 @@
+{
+ "applicability_split_audit": {
+  "failing_case_cell": {
+   "calibration_cell_max": 1.8798637214214804,
+   "calibration_cell_median": 0.5053399519876606,
+   "calibration_cell_n": 24,
+   "calibration_cell_p90": 1.2595055767307666,
+   "cell_max_rank_among_576": 12,
+   "content_class": "repetitive-low-entropy",
+   "failing_obs_vs_cell_max": 1.4256549168336867,
+   "length_regime": [
+    36,
+    40
+   ]
+  },
+  "leave_one_cell_out": {
+   "mathematics-numerals|24-28": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "mathematics-numerals|36-40": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.597865823092606
+   },
+   "mathematics-numerals|4-8": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "mathematics-numerals|52-56": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "multilingual-text|24-28": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "multilingual-text|36-40": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "multilingual-text|4-8": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "multilingual-text|52-56": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "ordinary-prose|24-28": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "ordinary-prose|36-40": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "ordinary-prose|4-8": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "ordinary-prose|52-56": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "punctuation-whitespace-rare-high-entropy|24-28": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "punctuation-whitespace-rare-high-entropy|36-40": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "punctuation-whitespace-rare-high-entropy|4-8": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "punctuation-whitespace-rare-high-entropy|52-56": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "repetitive-low-entropy|24-28": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "repetitive-low-entropy|36-40": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "repetitive-low-entropy|4-8": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "repetitive-low-entropy|52-56": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "source-code-structured-syntax|24-28": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "source-code-structured-syntax|36-40": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "source-code-structured-syntax|4-8": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   },
+   "source-code-structured-syntax|52-56": {
+    "failing_obs_still_exceeds": true,
+    "limit_without_cell": 2.6131138414325275
+   }
+  },
+  "pre_observability_answers": [
+   "Cell/class/regime/token-count were all frozen BEFORE candidate execution (committed corpus manifests) \u2014 genuinely pre-observable.",
+   "No split materially explains error behavior: leave-one-cell-out leaves the max-based limit within [1.79, 2.61] for every dropped cell and the failing observation still exceeds every leave-one-cell-out limit.",
+   "The top-10 tail spans >= 8 distinct cells across all 6 content classes; the failing case's own calibration cell (repetitive-low-entropy 36-40) has cell max 1.8799 \u2014 far below the limit driver's cell.",
+   "Encoding any of these dimensions as a prospective applicability key would therefore be post-hoc relabeling, not regime detection."
+  ],
+  "tail_concentration": {
+   "distinct_cells_in_top10": 10,
+   "distinct_cells_in_top20": 14,
+   "distinct_content_classes_in_top10": 5
+  },
+  "token_count_split": {
+   "bottom20_token_counts": [
+    4,
+    4,
+    5,
+    5,
+    5,
+    6,
+    6,
+    6,
+    6,
+    7,
+    7,
+    24,
+    24,
+    27,
+    36,
+    40,
+    40,
+    52,
+    53,
+    53
+   ],
+   "spearman_value_vs_token_count": 0.23224907782089457,
+   "top20_token_counts": [
+    4,
+    5,
+    8,
+    25,
+    25,
+    26,
+    28,
+    36,
+    36,
+    36,
+    37,
+    37,
+    39,
+    39,
+    52,
+    53,
+    54,
+    55,
+    56,
+    56
+   ],
+   "verdict": "Weak monotone length association only (Spearman ~0.24): the extreme tail spans every regime (4-56 tokens); token count does not separate the failing observation's regime from the calibration population."
+  }
+ },
+ "classification": "V3_ENVELOPE_DIAGNOSIS_ORDINARY_TAIL",
+ "downstream_propagation": {
+  "conditional_top_decile": {
+   "cases_within_all_other_14_limits": 59,
+   "e_d_frozen": 26.9375,
+   "max_case_e_d_top": 26.9375,
+   "max_e_full_top": 26.9375,
+   "mean_case_e_d_top": 9.931044756355933,
+   "mean_e_full_rest": 3.65403081984747,
+   "mean_e_full_top": 11.517909163135593,
+   "n": 59
+  },
+  "interpretation": "The failing family moves WITH the consumer-facing error families (Spearman 0.78-0.89) but is not redundant with them; hidden-state RMS spikes did not translate into downstream limit breaches anywhere in calibration (top-decile fam cases: all within all other limits; case E_D max 26.94 equals the frozen E_D bound exactly, by construction of the max-based rule). For the failing holdout case the retained verdict facts prove the spike was ATTENUATED to zero downstream effect: semantic pass, no bound breach, no domain escape, finite outputs. The envelope is therefore an EARLY-WARNING tensor metric with real co-movement but no demonstrated independent causal path to decision failure in this campaign.",
+  "rank_correlations_over_584": {
+   "fam_vs_case_e_d": 0.7826748868255777,
+   "fam_vs_e_full_maxabs": 0.7989567769632443,
+   "fam_vs_e_full_rms": 0.8111422393407403,
+   "fam_vs_fnhs_maxabs": 0.8927446283929569,
+   "fam_vs_hres_rms": 0.8522998238945512
+  },
+  "retention_boundary": "Per-decision holdout rows for h86-03-05-01 were expunged with the node-local #88 evidence after maintainer adjudication; the committed compact record retains the failing family/limit/observed triple plus the calibration-side per-case/per-decision evidence. Propagation is therefore quantified indirectly via calibration co-movement, and directly at the case level via the retained holdout verdict facts (192/192 SEMANTIC_PASS, zero NaN/Inf, zero DECISION_LOCAL_BOUND_EXCEEDED, zero DECISION_DOMAIN_ESCAPE on the holdout arm including the failing case)."
+ },
+ "failing_observation": {
+  "calibration_values_below_observed": 576,
+  "case_id": "h86-03-05-01",
+  "envelope": "final-normalized-hidden-state:rms-difference",
+  "exceedance_fraction": 0.02561048620544981,
+  "exceedance_percent": 2.561048620544981,
+  "gate": "ENVELOPE_EXCEEDED",
+  "limit": 2.6131138414325275,
+  "limit_hex": "0x1.4e7a83acd6bccp+1",
+  "limit_rule": "max(statistical_max,stress_max)",
+  "observed": 2.6800369574218053,
+  "observed_exceeds_every_calibration_case": true,
+  "observed_hex": "0x1.570b737619580p+1",
+  "statistical_max": 2.6131138414325275,
+  "statistical_max_case": "c86-03-03-21",
+  "statistical_n": 576,
+  "statistical_second_max": 2.597865823092606,
+  "stress_max": 0.49281098569709225
+ },
+ "family_distribution": {
+  "by_cell": {
+   "mathematics-numerals|24-28": {
+    "max": 1.9052934098328256,
+    "median": 0.5031819171109047,
+    "n": 24,
+    "p90": 0.7716284972229543,
+    "p99": 1.6947279532933948
+   },
+   "mathematics-numerals|36-40": {
+    "max": 2.6131138414325275,
+    "median": 0.4856589893940094,
+    "n": 24,
+    "p90": 1.438849298549107,
+    "p99": 2.445892841167375
+   },
+   "mathematics-numerals|4-8": {
+    "max": 1.4366385571513127,
+    "median": 0.2977416582593577,
+    "n": 24,
+    "p90": 0.7991450099570672,
+    "p99": 1.3283585618429694
+   },
+   "mathematics-numerals|52-56": {
+    "max": 2.154669675336262,
+    "median": 0.5355614256927557,
+    "n": 24,
+    "p90": 0.9350323637011391,
+    "p99": 1.9068874711424297
+   },
+   "multilingual-text|24-28": {
+    "max": 2.2770606044899337,
+    "median": 0.5645010960804208,
+    "n": 24,
+    "p90": 0.9462733701690549,
+    "p99": 2.1414938113796995
+   },
+   "multilingual-text|36-40": {
+    "max": 1.2440384050739652,
+    "median": 0.5350186595808462,
+    "n": 24,
+    "p90": 0.9482142546752326,
+    "p99": 1.2168380866522335
+   },
+   "multilingual-text|4-8": {
+    "max": 2.049255645174044,
+    "median": 0.37508911871968376,
+    "n": 24,
+    "p90": 0.9615323894167899,
+    "p99": 1.8789207643474448
+   },
+   "multilingual-text|52-56": {
+    "max": 1.3722376313161655,
+    "median": 0.496188518532038,
+    "n": 24,
+    "p90": 0.8788242346944224,
+    "p99": 1.3554872844314438
+   },
+   "ordinary-prose|24-28": {
+    "max": 0.9423516978363942,
+    "median": 0.416355653017044,
+    "n": 24,
+    "p90": 0.5766140736655662,
+    "p99": 0.8727082547893777
+   },
+   "ordinary-prose|36-40": {
+    "max": 0.9756181356014664,
+    "median": 0.42703821950446214,
+    "n": 24,
+    "p90": 0.8147313048887851,
+    "p99": 0.9562506294115933
+   },
+   "ordinary-prose|4-8": {
+    "max": 0.6358096922564419,
+    "median": 0.271075075799696,
+    "n": 24,
+    "p90": 0.46826040743245656,
+    "p99": 0.6256482163982743
+   },
+   "ordinary-prose|52-56": {
+    "max": 0.9029032317158683,
+    "median": 0.380545994010948,
+    "n": 24,
+    "p90": 0.7582907433229685,
+    "p99": 0.8922152135361197
+   },
+   "punctuation-whitespace-rare-high-entropy|24-28": {
+    "max": 2.167780329872356,
+    "median": 0.5074607025491438,
+    "n": 24,
+    "p90": 0.8070654488954543,
+    "p99": 1.8599982774621209
+   },
+   "punctuation-whitespace-rare-high-entropy|36-40": {
+    "max": 2.066503925975774,
+    "median": 0.6523860653472016,
+    "n": 24,
+    "p90": 1.147964883830731,
+    "p99": 1.9413924358031118
+   },
+   "punctuation-whitespace-rare-high-entropy|4-8": {
+    "max": 2.3834800665837554,
+    "median": 0.4875949659154033,
+    "n": 24,
+    "p90": 0.8470532326948472,
+    "p99": 2.207509739232618
+   },
+   "punctuation-whitespace-rare-high-entropy|52-56": {
+    "max": 1.7935459934880529,
+    "median": 0.6249152608381537,
+    "n": 24,
+    "p90": 1.3410249026050494,
+    "p99": 1.7473310707947538
+   },
+   "repetitive-low-entropy|24-28": {
+    "max": 1.6476188698196004,
+    "median": 0.4729583842600357,
+    "n": 24,
+    "p90": 1.05036757941834,
+    "p99": 1.5282245608484597
+   },
+   "repetitive-low-entropy|36-40": {
+    "max": 1.8798637214214804,
+    "median": 0.5053399519876606,
+    "n": 24,
+    "p90": 1.2595055767307666,
+    "p99": 1.867120166615317
+   },
+   "repetitive-low-entropy|4-8": {
+    "max": 1.72696913849608,
+    "median": 0.3626909764190026,
+    "n": 24,
+    "p90": 0.7468106478262615,
+    "p99": 1.531357032552746
+   },
+   "repetitive-low-entropy|52-56": {
+    "max": 2.597865823092606,
+    "median": 0.4099018219290595,
+    "n": 24,
+    "p90": 1.477507679410457,
+    "p99": 2.4231308653102674
+   },
+   "source-code-structured-syntax|24-28": {
+    "max": 1.163075086849264,
+    "median": 0.4627687313965051,
+    "n": 24,
+    "p90": 0.8128412278923859,
+    "p99": 1.0951311754384565
+   },
+   "source-code-structured-syntax|36-40": {
+    "max": 2.1490804330531654,
+    "median": 0.6503046107037926,
+    "n": 24,
+    "p90": 0.8751622630447933,
+    "p99": 1.8990429447235981
+   },
+   "source-code-structured-syntax|4-8": {
+    "max": 0.8875911690164178,
+    "median": 0.29625527203057744,
+    "n": 24,
+    "p90": 0.5477986077454561,
+    "p99": 0.872317899978665
+   },
+   "source-code-structured-syntax|52-56": {
+    "max": 1.7622122200835846,
+    "median": 0.6308420565175934,
+    "n": 24,
+    "p90": 1.3273612863217694,
+    "p99": 1.7517003318578734
+   }
+  },
+  "by_content_class": {
+   "mathematics-numerals": {
+    "max": 2.6131138414325275,
+    "median": 0.48027158208707327,
+    "n": 96,
+    "p90": 0.9313712064112296,
+    "p99": 2.177591883641074
+   },
+   "multilingual-text": {
+    "max": 2.2770606044899337,
+    "median": 0.5087396228049147,
+    "n": 96,
+    "p90": 0.9668351930611733,
+    "p99": 2.0606458931398377
+   },
+   "ordinary-prose": {
+    "max": 0.9756181356014664,
+    "median": 0.3665130070781202,
+    "n": 96,
+    "p90": 0.6643945216367295,
+    "p99": 0.9440150197246476
+   },
+   "punctuation-whitespace-rare-high-entropy": {
+    "max": 2.3834800665837554,
+    "median": 0.5731509599456601,
+    "n": 96,
+    "p90": 1.1477448319986356,
+    "p99": 2.1785653167079255
+   },
+   "repetitive-low-entropy": {
+    "max": 2.597865823092606,
+    "median": 0.4099018219290595,
+    "n": 96,
+    "p90": 1.1232015734187897,
+    "p99": 1.9157638265050347
+   },
+   "source-code-structured-syntax": {
+    "max": 2.1490804330531654,
+    "median": 0.47780914232825467,
+    "n": 96,
+    "p90": 0.9022561320886251,
+    "p99": 1.7815556307320626
+   }
+  },
+  "by_length_regime": {
+   "24|28": {
+    "max": 2.2770606044899337,
+    "median": 0.47594989399031007,
+    "n": 144,
+    "p90": 0.8640538109516581,
+    "p99": 2.054910954255356
+   },
+   "36|40": {
+    "max": 2.6131138414325275,
+    "median": 0.5132557316092643,
+    "n": 144,
+    "p90": 1.0430638030567005,
+    "p99": 2.1135725350098866
+   },
+   "4|8": {
+    "max": 2.3834800665837554,
+    "median": 0.33112575026107305,
+    "n": 144,
+    "p90": 0.7747882439747306,
+    "p99": 1.9106724473025172
+   },
+   "52|56": {
+    "max": 2.597865823092606,
+    "median": 0.5338306822763635,
+    "n": 144,
+    "p90": 1.1500567995078772,
+    "p99": 2.01856561953929
+   }
+  },
+  "gaps": {
+   "failing_observed": 2.6800369574218053,
+   "obs_to_second_stat_max": 1.0316302457189184,
+   "obs_to_stat_max": 1.0256104862054498,
+   "stat_max_to_second": 1.0058694402937907,
+   "statistical_max": 2.6131138414325275
+  },
+  "statistical": {
+   "max": 2.6131138414325275,
+   "median": 0.46286523155340664,
+   "min": 0.12784167874634192,
+   "n": 576,
+   "p90": 0.947004275530465,
+   "p99": 2.1504777436239397,
+   "top10_desc": [
+    2.6131138414325275,
+    2.597865823092606,
+    2.3834800665837554,
+    2.2770606044899337,
+    2.167780329872356,
+    2.154669675336262,
+    2.1490804330531654,
+    2.066503925975774,
+    2.049255645174044,
+    1.9052934098328256
+   ]
+  },
+  "stress": {
+   "all_asc": [
+    0.17961589195646477,
+    0.1968110343229549,
+    0.21156063937706931,
+    0.24229456677544903,
+    0.2607250469652212,
+    0.3793066080286327,
+    0.4478417425709699,
+    0.49281098569709225
+   ],
+   "max": 0.49281098569709225,
+   "min": 0.17961589195646477,
+   "n": 8
+  },
+  "tail_shape": {
+   "exponential_qq_r2": 0.7812948249111301,
+   "hill_k10": 0.1656100128880306,
+   "hill_k160": 0.40635964828836996,
+   "hill_k40": 0.3756348286692446,
+   "lognormal_qq_r2": 0.9856075971844234,
+   "n_above_1p5": 24,
+   "n_above_2p0": 9,
+   "n_above_2p4": 2,
+   "top_decile_share_of_sum": 0.2656620381157425
+  },
+  "top15_cases": [
+   {
+    "case_id": "c86-03-03-21",
+    "content_class": "mathematics-numerals",
+    "length_regime": [
+     36,
+     40
+    ],
+    "token_count": 36,
+    "value": 2.6131138414325275
+   },
+   {
+    "case_id": "c86-04-05-12",
+    "content_class": "repetitive-low-entropy",
+    "length_regime": [
+     52,
+     56
+    ],
+    "token_count": 53,
+    "value": 2.597865823092606
+   },
+   {
+    "case_id": "c86-01-06-02",
+    "content_class": "punctuation-whitespace-rare-high-entropy",
+    "length_regime": [
+     4,
+     8
+    ],
+    "token_count": 5,
+    "value": 2.3834800665837554
+   },
+   {
+    "case_id": "c86-02-04-22",
+    "content_class": "multilingual-text",
+    "length_regime": [
+     24,
+     28
+    ],
+    "token_count": 25,
+    "value": 2.2770606044899337
+   },
+   {
+    "case_id": "c86-02-06-12",
+    "content_class": "punctuation-whitespace-rare-high-entropy",
+    "length_regime": [
+     24,
+     28
+    ],
+    "token_count": 25,
+    "value": 2.167780329872356
+   },
+   {
+    "case_id": "c86-04-03-10",
+    "content_class": "mathematics-numerals",
+    "length_regime": [
+     52,
+     56
+    ],
+    "token_count": 56,
+    "value": 2.154669675336262
+   },
+   {
+    "case_id": "c86-03-02-01",
+    "content_class": "source-code-structured-syntax",
+    "length_regime": [
+     36,
+     40
+    ],
+    "token_count": 36,
+    "value": 2.1490804330531654
+   },
+   {
+    "case_id": "c86-03-06-02",
+    "content_class": "punctuation-whitespace-rare-high-entropy",
+    "length_regime": [
+     36,
+     40
+    ],
+    "token_count": 37,
+    "value": 2.066503925975774
+   },
+   {
+    "case_id": "c86-01-04-21",
+    "content_class": "multilingual-text",
+    "length_regime": [
+     4,
+     8
+    ],
+    "token_count": 4,
+    "value": 2.049255645174044
+   },
+   {
+    "case_id": "c86-02-03-05",
+    "content_class": "mathematics-numerals",
+    "length_regime": [
+     24,
+     28
+    ],
+    "token_count": 28,
+    "value": 1.9052934098328256
+   },
+   {
+    "case_id": "c86-03-03-16",
+    "content_class": "mathematics-numerals",
+    "length_regime": [
+     36,
+     40
+    ],
+    "token_count": 36,
+    "value": 1.8860660141927361
+   },
+   {
+    "case_id": "c86-03-05-12",
+    "content_class": "repetitive-low-entropy",
+    "length_regime": [
+     36,
+     40
+    ],
+    "token_count": 37,
+    "value": 1.8798637214214804
+   },
+   {
+    "case_id": "c86-04-05-10",
+    "content_class": "repetitive-low-entropy",
+    "length_regime": [
+     52,
+     56
+    ],
+    "token_count": 56,
+    "value": 1.8381486153433078
+   },
+   {
+    "case_id": "c86-03-05-04",
+    "content_class": "repetitive-low-entropy",
+    "length_regime": [
+     36,
+     40
+    ],
+    "token_count": 39,
+    "value": 1.8244569613946833
+   },
+   {
+    "case_id": "c86-04-06-06",
+    "content_class": "punctuation-whitespace-rare-high-entropy",
+    "length_regime": [
+     52,
+     56
+    ],
+    "token_count": 52,
+    "value": 1.7935459934880529
+   }
+  ]
+ },
+ "issue": 90,
+ "non_claims": [
+  "This diagnosis does NOT change issue #88's terminal V3_HOLDOUT_FAIL verdict.",
+  "No v3 threshold was modified, widened, or reinterpreted.",
+  "No successor threshold value is proposed from #88 observations.",
+  "Consumed h86-* holdout observations are permanently ineligible as future calibration or holdout evidence; used here as diagnostic data only.",
+  "No physical model execution was performed for this diagnosis."
+ ],
+ "provenance": {
+  "accepted": {
+   "freetoken_producer_merge": "5e44be50cd9ed322366a01cd5d80d958950d1ac5",
+   "inferswarm_evidence_merge": "dc00dd933fcbdcaddffc0c9fd4fd25baf5b70da5",
+   "physical_producer": "560bb7e833ad4ca9386eb87799bb0aafb82b3e59",
+   "v3_methodology_base": "a8ec98a9fb9b673c93de5100d784ea772395efdb"
+  },
+  "pinned_files_sha256": {
+   "docs/qualification/gemma4-12b-it-v3-campaign-88/phaseB/reference-margin-summary.json": "8d13d5bba3968b8f00627dc55a9b5d1b021128139d0bbf557be054f3ad0960dd",
+   "docs/qualification/gemma4-12b-it-v3-campaign-88/phaseB/selected-eight.json": "9866e4f194f476ae0b30aa18f3ca379ae19ad7d272b0786d977e41ec18adb878",
+   "docs/qualification/gemma4-12b-it-v3-campaign-88/phaseC/decision-domain-manifest.json": "df446d71bc044558a58bbe3ced4ebde3e9a956d09f59ded4014b7fababd307691",
+   "docs/qualification/gemma4-12b-it-v3-campaign-88/phaseEF/calibration-summary.json": "81bbd737977426fde86340cd5efe00b51ee8fc6c333d1356e84a3d6384499b53",
+   "docs/qualification/gemma4-12b-it-v3-campaign-88/phaseEF/threshold-manifest.json": "251c4b7a8127e086001cc59e96cf7f61c17c59fa3bd120a15b5c4678fa9f5e5d",
+   "docs/qualification/gemma4-12b-it-v3-campaign-88/phaseG/phaseG-semantic-adjudication.json": "47cd66f4353874eaae04a4284cce58e9e39b77dea8e1b4c8deb7089a05e10a9c",
+   "docs/qualification/gemma4-12b-it-v3-campaign-88/phaseHI/phaseI-failures.json": "820ee1a1a57752dd8fe2c04c7333d8a8a5a0325ce293b7b16d4add5495af7293",
+   "docs/qualification/gemma4-12b-it-v3-campaign-88/preflight-applicability.json": "49e0bdd47157fe406ee5b4270f9c4bc864f5a124828a8644f2669e04175c145e",
+   "docs/qualification/gemma4-12b-it-v3/manifests/calibration-corpus.json": "09731f1b2e66a6892b886c01bd2ec058be147b73885213844f2863caa10b41b6",
+   "docs/qualification/gemma4-12b-it-v3/manifests/sealed-holdout-commitment.json": "48a40c13171bf97e9aa1666328baaca4d4844c6c6a846ae3ee41a919d36aa8d5",
+   "docs/qualification/gemma4-12b-it-v3/manifests/stress-pool.json": "4e4735c19f10bdcff4bf4173d9e96d2330df5c98de40f2701e1e3c309d29f015"
+  },
+  "tooling": "scripts/issue90_post_v3_diagnosis.py"
+ },
+ "schema": "inferswarm.issue90.post-v3-envelope-diagnosis/1",
+ "statistical_contract_audit": {
+  "distinct_statements": {
+   "acceptance_rule": "zero of 24 fresh holdout cases may exceed limit[e]",
+   "answer_guarantee_or_target": "TARGETED, never guaranteed. The tolerance statement bounds the population fraction above the limit (<= 1% marginal, per family, at 97.8% confidence under Bonferroni); it says nothing that forces zero exceedances among 24 fresh draws. Under iid exchangeability the max-based limit is exceeded by at least one holdout case with probability m/(n+s+m) = 24/608 = 3.95% per family even with NO distributional change whatsoever.",
+   "estimator": "limit[e] = max(statistical_max[e], stress_max[e])",
+   "tolerance_statement": "Distribution-free: P(at least 99% of the case population lies below X_(n)) >= 1 - 0.05/16 = 0.996875 per family \u2014 a COVERAGE statement about the bound."
+  },
+  "exact_calculations": {
+   "calibration_n_for_exchangeable_95pct_zero_of_24": 456,
+   "coverage_required_for_95pct_zero_of_24": 0.9978650616302984,
+   "distribution_free_tolerance_n_reproduced": 574,
+   "p_at_least_one_of_24_exceeds__coverage_exactly_99pct": 0.21432185919278124,
+   "p_at_least_one_of_24_exceeds__exchangeable_max_limit": 0.039473684210526314,
+   "p_global_max_of_608_in_holdout_arm": 0.039473684210526314,
+   "p_no_family_fails__16_independent": 0.5249866810152746,
+   "p_single_holdout_exceeds_max_of_584": 0.0017094017094017094,
+   "p_some_family_fails__16_independent": 0.47501331898472543,
+   "per_case_exceedance_budget_for_95pct_zero_of_24": 0.002134938369701578,
+   "selected_stress_arm_effect": "All 15 frozen limits are statistical-arm driven (stress maxima are 3-30x below the statistical maxima for every family), so the selected stress arm never raised any limit and does not alter the exchangeability arithmetic; pooling it moves the per-family failure probability only from 24/600=4.00% (statistical-only basis) to 24/608=3.95%."
+  },
+  "frozen_design": {
+   "holdout_cases": 24,
+   "min_n_distribution_free": 574,
+   "selected_stress_cases": 8,
+   "simultaneous_confidence": 0.95,
+   "simultaneous_families": 16,
+   "statistical_cases": 576,
+   "target_marginal_coverage": 0.99
+  }
+ },
+ "successor_options": {
+  "options": [
+   {
+    "assumptions": "iid cases within an arm; case-level max reduction (unchanged).",
+    "avoids_tuning": "Sample size and bound form fixed prospectively; h86-03-05-01 never enters any calculation.",
+    "correctness_claim": "With stated confidence, P(zero of m fresh holdout cases exceed the bound) >= the stated level \u2014 claim and rule coincide.",
+    "failure_modes": "Conservative limits; ~4-5x corpus cost if zero-exceedance is kept.",
+    "holdout_contract": "Fresh sealed holdout; zero exceedances of the prediction bound.",
+    "id": "S1_prediction_bound",
+    "name": "Prospective one-sided prediction bound matched to the acceptance rule",
+    "sample_size": "Zero-of-24 at 95% exchangeable requires n >= 456 calibration cases pooled per family basis (n >= m*0.95/0.05); with the 16-family Bonferroni budget, n >= ~2700 for a 99.79%-coverage max-order bound \u2014 OR keep n=576 and allow <= k exceedances with exact beta-binomial levels (k=1 of 24 passes at 99.85% under exchangeability)."
+   },
+   {
+    "assumptions": "None beyond v3; this is an acceptance-rule change, not a statistical one.",
+    "avoids_tuning": "No numeric change anywhere.",
+    "correctness_claim": "Bound covers >= 99% of the population at 0.9969 confidence per family.",
+    "failure_modes": "Weaker than ADR 0010's conjunctive zero-exceedance reading; maintainer doctrine decision.",
+    "holdout_contract": "Holdout adjudicates exceedances against a pre-frozen tail-count rule.",
+    "id": "S2_accept_coverage_claim",
+    "name": "Keep the estimator; restate the acceptance rule as the coverage claim it makes",
+    "sample_size": "Unchanged."
+   },
+   {
+    "assumptions": "REQUIRES a demonstrated pre-observable regime split. This diagnosis found NONE (leave-one-cell-out and tail-concentration sections): not evidence-supported for v4 on current evidence.",
+    "avoids_tuning": "Moot on current evidence.",
+    "correctness_claim": "Per-regime numerical equivalence.",
+    "failure_modes": "Post-hoc relabeling; overfitting cell labels.",
+    "holdout_contract": "One holdout case per cell (as v3).",
+    "id": "S3_stratified_envelopes",
+    "name": "Applicability-conditioned (per-cell) envelopes",
+    "sample_size": "24/cell already; per-cell limits would need more per cell."
+   },
+   {
+    "assumptions": "Log-normal QQ R^2 0.986 for the failing family (12 smooth families > 0.96) supports log-scale modeling; Hill indices 0.17-0.41.",
+    "avoids_tuning": "Model family + sample size frozen before any new execution; fit on fresh calibration only.",
+    "correctness_claim": "Explicit parametric upper tail bound per family.",
+    "failure_modes": "Misspecification exactly in the extreme tail; weaker than distribution-free.",
+    "holdout_contract": "Fresh sealed holdout; zero exceedances of the modeled bound.",
+    "id": "S4_logscale_robust",
+    "name": "Log-scale parametric tail bound with finite-sample validation",
+    "sample_size": "Possibly n=576 with simulation-validated coverage."
+   },
+   {
+    "assumptions": "Doctrine claim that the normalized hidden state is not independently correctness-bearing. Supporting: co-movement without any downstream breach anywhere in 608 cases. Against: rho < 1 (residual independent signal); it is the ONLY gate that fired in #88.",
+    "avoids_tuning": "Doctrine/methodology-version change decided before any new holdout exists.",
+    "correctness_claim": "Qualification certified on consumer-facing tensors (E_full, E_D, integrity).",
+    "failure_modes": "Removes the only canary that fired; must rest on doctrine, not one failure.",
+    "holdout_contract": "Per successor contract.",
+    "id": "S5_demote_metric",
+    "name": "Demote final-normalized-hidden-state families from acceptance-bearing to telemetry",
+    "sample_size": "Unchanged."
+   },
+   {
+    "assumptions": "Tier boundary justified prospectively from doctrine, not from #88.",
+    "avoids_tuning": "Structure change; no thresholds from #88 observations.",
+    "correctness_claim": "Acceptance: exact integrity + E_full + E_D under a matched prediction rule. Telemetry: all 15 families retained per-case with alert thresholds.",
+    "failure_modes": "Tier boundary drift; S5-in-disguise if the boundary chases the failure.",
+    "holdout_contract": "Fresh sealed holdout under the tiered contract.",
+    "id": "S6_split_qualification_and_telemetry",
+    "name": "Two-tier contract: coherent acceptance core + mandatory 15-family telemetry",
+    "sample_size": "Per S1 for the acceptance core."
+   }
+  ],
+  "recommendation": "Recommend S1+S6 as the successor design direction: a prospective prediction bound whose statistical claim and acceptance rule coincide, with all 15 families retained as mandatory telemetry. S5 (demotion) is a maintainer doctrine decision that must be settled BEFORE the v4 freeze. S3 is rejected on current evidence. No threshold values are proposed here."
+ }
+}
