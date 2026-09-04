@@ -182,6 +182,7 @@ class V3Fixture:
             "calibration_corpus_sha256": sha_canonical(self.corpus),
             "stress_pool_sha256": sha_canonical(self.pool),
             "stress_selection_commitment_sha256": sha_canonical(self.commitment),
+            "reference_margin_summary_sha256": sha_canonical(self.margins),
             "stress_selection_sha256": sha_canonical(self.selection),
             "decision_domain_manifest_sha256": sha_canonical(self.domain_manifest),
             "evidence_sha256": ["a" * 64, "b" * 64],
@@ -194,6 +195,7 @@ class V3Fixture:
             calibration_corpus=self.corpus,
             stress_pool=self.pool,
             selection_commitment=self.commitment,
+            reference_margin_summary=self.margins,
             stress_selection=self.selection,
             decision_domain_manifest=self.domain_manifest,
             calibration_summary=self.summary,
@@ -714,6 +716,49 @@ class TestThresholdDerivation(unittest.TestCase):
         with self.assertRaises(MethodologyError):
             FIXTURE.derive(stress_selection=broken)
 
+    def test_reject_selection_not_derived_by_frozen_selector(self):
+        # An arbitrary structurally valid 4+4 selection (different margins,
+        # same shape/pool binding) must FAIL: it is not the selector's output
+        # over the supplied reference-margin summary.
+        broken = copy.deepcopy(FIXTURE.selection)
+        # swap the margin values between the smallest and largest groups so
+        # the shape stays valid but the selector replay disagrees
+        broken["selected"][0]["reference_top1_margin_hex"] = (40.0).hex()
+        broken["selected"][7]["reference_top1_margin_hex"] = (0.0).hex()
+        broken["selected"][7]["exact_zero_margin"] = True
+        with self.assertRaises(MethodologyError) as ctx:
+            FIXTURE.derive(stress_selection=broken)
+        self.assertIn("SELECTED_EIGHT_NOT_SELECTOR_DERIVED", str(ctx.exception))
+
+    def test_reject_margin_summary_omitted(self):
+        args = dict(
+            calibration_corpus=FIXTURE.corpus,
+            stress_pool=FIXTURE.pool,
+            selection_commitment=FIXTURE.commitment,
+            stress_selection=FIXTURE.selection,
+            decision_domain_manifest=FIXTURE.domain_manifest,
+            calibration_summary=FIXTURE.summary,
+            program_sha256="c" * 64,
+        )
+        with self.assertRaises(TypeError):
+            derive_v3_threshold_manifest(**args)
+
+    def test_reject_inconsistent_margin_summary(self):
+        # a DIFFERENT (still internally valid) margin summary does not
+        # reproduce the committed selected-eight -> rejected.
+        margins = copy.deepcopy(FIXTURE.margins)
+        margins["cases"][0]["top1_margin_hex"] = (0.5).hex()
+        with self.assertRaises(MethodologyError) as ctx:
+            FIXTURE.derive(reference_margin_summary=margins)
+        self.assertIn("SELECTED_EIGHT_NOT_SELECTOR_DERIVED", str(ctx.exception))
+
+    def test_threshold_manifest_binds_margin_summary_sha(self):
+        manifest = FIXTURE.derive()
+        self.assertEqual(
+            manifest["reference_margin_summary_sha256"],
+            sha_canonical(FIXTURE.margins),
+        )
+
     def test_reject_wrong_state_selection(self):
         broken = copy.deepcopy(FIXTURE.selection)
         broken["state"] = "DRAFT"
@@ -1021,6 +1066,80 @@ class TestUnsealPreflight(unittest.TestCase):
                 expected_stress_selection_sha256=sha_canonical(FIXTURE.selection),
             )
         self.assertIn(CUSTODY_NOT_VERIFIED, str(ctx.exception))
+
+    def test_cli_hashes_actual_files(self):
+        import tempfile
+
+        from verify_issue86_v3_unseal import main as unseal_main
+
+        manifest = FIXTURE.derive()
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            manifest_path = tmp_path / "threshold.json"
+            manifest_path.write_bytes(canonical_json_bytes(manifest))
+            # a tampered certificate copy must FAIL via actual-byte hashing
+            bad_cert = tmp_path / "bad-cert.pem"
+            bad_cert.write_bytes(b"-----BEGIN CERTIFICATE-----\nnot the real one\n")
+            with self.assertRaises(UnsealPreflightError) as ctx:
+                unseal_main([
+                    "--threshold-manifest", str(manifest_path),
+                    "--expected-threshold-sha256", sha_canonical(manifest),
+                    "--expected-stress-selection-sha256", sha_canonical(FIXTURE.selection),
+                    "--custody-record", str(V3 / "manifests/holdout-custody-record.json"),
+                    "--holdout-ciphertext", str(V3 / "sealed/holdout.cms"),
+                    "--recipient-certificate", str(bad_cert),
+                    "--private-key-path", "/home/zutfen/.local/share/inferswarm/issue86-holdout-v3/recipient-private-key.pem",
+                ])
+            self.assertIn(WRONG_V3_HOLDOUT_MATERIAL, str(ctx.exception))
+            # a missing ciphertext file must FAIL (unreadable), not pass
+            with self.assertRaises(OSError):
+                unseal_main([
+                    "--threshold-manifest", str(manifest_path),
+                    "--expected-threshold-sha256", sha_canonical(manifest),
+                    "--expected-stress-selection-sha256", sha_canonical(FIXTURE.selection),
+                    "--custody-record", str(V3 / "manifests/holdout-custody-record.json"),
+                    "--holdout-ciphertext", str(tmp_path / "nonexistent.cms"),
+                    "--recipient-certificate", str(V3 / "sealed/recipient-certificate.pem"),
+                    "--private-key-path", "/home/zutfen/.local/share/inferswarm/issue86-holdout-v3/recipient-private-key.pem",
+                ])
+            # the REAL files must PASS end-to-end through the CLI
+            import contextlib
+            import io
+
+            buffer = io.StringIO()
+            with contextlib.redirect_stdout(buffer):
+                unseal_main([
+                    "--threshold-manifest", str(manifest_path),
+                    "--expected-threshold-sha256", sha_canonical(manifest),
+                    "--expected-stress-selection-sha256", sha_canonical(FIXTURE.selection),
+                    "--custody-record", str(V3 / "manifests/holdout-custody-record.json"),
+                    "--holdout-ciphertext", str(V3 / "sealed/holdout.cms"),
+                    "--recipient-certificate", str(V3 / "sealed/recipient-certificate.pem"),
+                    "--private-key-path", "/home/zutfen/.local/share/inferswarm/issue86-holdout-v3/recipient-private-key.pem",
+                ])
+            self.assertIn("UNSEAL_PRECONDITIONS_PASS_DECRYPT_NOT_PERFORMED", buffer.getvalue())
+
+    def test_cli_rejects_historical_h74_ciphertext_file(self):
+        import tempfile
+
+        from verify_issue86_v3_unseal import main as unseal_main
+
+        manifest = FIXTURE.derive()
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest_path = Path(tmp) / "threshold.json"
+            manifest_path.write_bytes(canonical_json_bytes(manifest))
+            # a copy of the HISTORICAL #74 ciphertext routed into the v3 CLI
+            with self.assertRaises(UnsealPreflightError) as ctx:
+                unseal_main([
+                    "--threshold-manifest", str(manifest_path),
+                    "--expected-threshold-sha256", sha_canonical(manifest),
+                    "--expected-stress-selection-sha256", sha_canonical(FIXTURE.selection),
+                    "--custody-record", str(V3 / "manifests/holdout-custody-record.json"),
+                    "--holdout-ciphertext", str(V1 / "sealed/holdout.cms"),
+                    "--recipient-certificate", str(V3 / "sealed/recipient-certificate.pem"),
+                    "--private-key-path", "/home/zutfen/.local/share/inferswarm/issue86-holdout-v3/recipient-private-key.pem",
+                ])
+            self.assertIn(WRONG_HISTORICAL_HOLDOUT, str(ctx.exception))
 
     def test_no_decrypt_in_source(self):
         source = (ROOT / "scripts/verify_issue86_v3_unseal.py").read_text()

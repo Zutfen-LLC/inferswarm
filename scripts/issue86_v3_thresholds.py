@@ -16,7 +16,11 @@ Fail-closed contract (issue #86 section 12): rejects any calibration row
 that lacks exact integrity, finite/evidence-complete state, all 15
 numerical envelopes, all 8 canonical-prefix semantic decision rows, exact
 domain membership binding, or exact case identity. Rejects any holdout
-material in the inputs.
+material in the inputs. The complete 48-case reference-margin summary is a
+REQUIRED input: the frozen selector is replayed over it and the committed
+selected-eight artifact must equal the replay exactly, and the summary's
+canonical SHA-256 is bound into the threshold manifest
+(`reference_margin_summary_sha256`).
 """
 from __future__ import annotations
 
@@ -82,6 +86,7 @@ HISTORICAL_H74_CIPHERTEXT_SHA256 = (
 _CALIBRATION_SUMMARY_FIELDS = {
     "schema", "contract_id", "tooling_version", "calibration_corpus_sha256",
     "stress_pool_sha256", "stress_selection_commitment_sha256",
+    "reference_margin_summary_sha256",
     "stress_selection_sha256", "decision_domain_manifest_sha256",
     "evidence_sha256", "statistical_cases", "stress_cases",
 }
@@ -175,6 +180,7 @@ def derive_v3_threshold_manifest(
     calibration_corpus: dict[str, Any],
     stress_pool: dict[str, Any],
     selection_commitment: dict[str, Any],
+    reference_margin_summary: dict[str, Any],
     stress_selection: dict[str, Any],
     decision_domain_manifest: dict[str, Any],
     calibration_summary: dict[str, Any],
@@ -185,6 +191,7 @@ def derive_v3_threshold_manifest(
         "calibration_summary": calibration_summary,
         "stress_selection": stress_selection,
         "decision_domain_manifest": decision_domain_manifest,
+        "reference_margin_summary": reference_margin_summary,
     })
     if forbidden:
         raise MethodologyError("holdout inputs are forbidden: " + ", ".join(forbidden[:4]))
@@ -222,12 +229,41 @@ def derive_v3_threshold_manifest(
     if commitment_sha != V3_STRESS_COMMITMENT_SHA256:
         raise MethodologyError("v3 stress selection commitment hash mismatch")
 
-    # --- validate the future selected-eight manifest -----------------------
+    # --- re-prove the selected eight: replay the frozen selector ------------
+    # The 48-case reference-margin summary is a REQUIRED input. The frozen
+    # selector is replayed over (stress_pool, reference_margin_summary,
+    # selection_commitment) and the committed selected-eight artifact must be
+    # EXACTLY EQUAL to the replay output (canonical-JSON byte equality). An
+    # arbitrary structurally valid 4+4 selection can therefore never reach
+    # threshold derivation.
     from select_issue86_margin_stress_v3 import (
         NegativeReferenceMarginError,
         NonfiniteReferenceMarginError,
+        select as select_v3,
     )
 
+    replayed_selection = select_v3(
+        stress_pool, reference_margin_summary, selection_commitment
+    )
+    margin_summary_sha = sha256_bytes(canonical_json_bytes(reference_margin_summary))
+    if canonical_json_bytes(stress_selection) != canonical_json_bytes(replayed_selection):
+        raise MethodologyError(
+            "the committed selected-eight artifact is NOT the exact output of "
+            "the frozen v3 selector replayed over the supplied 48-case "
+            "reference-margin summary (SELECTED_EIGHT_NOT_SELECTOR_DERIVED)"
+        )
+    if stress_selection.get("reference_margin_summary_sha256") != margin_summary_sha:
+        raise MethodologyError(
+            "the selected-eight artifact does not bind the supplied reference "
+            "margin summary"
+        )
+    if calibration_summary.get("reference_margin_summary_sha256") != margin_summary_sha:
+        raise MethodologyError(
+            "the calibration summary does not bind the supplied reference "
+            "margin summary"
+        )
+
+    # --- validate the future selected-eight manifest -----------------------
     if stress_selection.get("schema") != "inferswarm.issue86.v3-selected-stress-eighth/1":
         raise MethodologyError("v3 selected-eight schema mismatch")
     if stress_selection.get("state") != "FROZEN_AFTER_MATCHED_REFERENCE_BEFORE_HETEROGENEOUS_CANDIDATE":
@@ -397,6 +433,7 @@ def derive_v3_threshold_manifest(
         "calibration_evidence_sha256": sorted(evidence_hashes),
         "stress_pool_sha256": pool_sha,
         "stress_selection_commitment_sha256": commitment_sha,
+        "reference_margin_summary_sha256": margin_summary_sha,
         "stress_selection_sha256": sha256_bytes(canonical_json_bytes(stress_selection)),
         "decision_domain_manifest_sha256": domain_manifest_sha,
         "derivation_program_sha256": program_sha256,
@@ -420,8 +457,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     design.add_argument("--json", action="store_true")
     derive = subparsers.add_parser("derive-thresholds")
     for name in ("--calibration-corpus", "--stress-pool", "--selection-commitment",
-                 "--stress-selection", "--decision-domain-manifest",
-                 "--calibration-summary", "--out"):
+                 "--reference-margins", "--stress-selection",
+                 "--decision-domain-manifest", "--calibration-summary", "--out"):
         derive.add_argument(name, required=True, type=Path)
     args = parser.parse_args(argv)
 
@@ -436,6 +473,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         calibration_corpus=json.loads(args.calibration_corpus.read_text()),
         stress_pool=json.loads(args.stress_pool.read_text()),
         selection_commitment=json.loads(args.selection_commitment.read_text()),
+        reference_margin_summary=json.loads(args.reference_margins.read_text()),
         stress_selection=json.loads(args.stress_selection.read_text()),
         decision_domain_manifest=json.loads(args.decision_domain_manifest.read_text()),
         calibration_summary=json.loads(args.calibration_summary.read_text()),

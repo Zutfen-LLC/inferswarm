@@ -17,8 +17,8 @@ no model weights).
 | `scripts/select_issue86_margin_stress_v3.py` | frozen v3 selector (zero-eligible; negative/nonfinite fatal) |
 | `scripts/commit_issue86_holdout.py` | holdout commitment + custody-record builders (historical-reuse guards) |
 | `scripts/build_issue86_schemas.py` | deterministic emission of all 9 v3 JSON Schemas |
-| `scripts/issue86_v3_thresholds.py` | deterministic 15-limit + E_D threshold derivation; `statistical-design` subcommand |
-| `scripts/verify_issue86_v3_unseal.py` | v3 unseal preflight — never decrypts, stops before decrypt |
+| `scripts/issue86_v3_thresholds.py` | deterministic 15-limit + E_D threshold derivation; `statistical-design` subcommand. The complete 48-case reference-margin summary is a REQUIRED input (`--reference-margins`): the frozen selector is replayed over it and the committed selected-eight must equal the replay exactly (`SELECTED_EIGHT_NOT_SELECTOR_DERIVED` otherwise); the summary SHA is bound into the manifest (`reference_margin_summary_sha256`) |
+| `scripts/verify_issue86_v3_unseal.py` | v3 unseal preflight — never decrypts, stops before decrypt. The CLI REQUIRES `--holdout-ciphertext` and `--recipient-certificate` file paths and hashes the ACTUAL bytes of the supplied files; missing files fail unreadable, corrupt/wrong/historical material fails the identity checks (no frozen-hash substitution anywhere in the CLI path) |
 
 ## Build/freeze chronology (2026-09-04, orchestrator host)
 

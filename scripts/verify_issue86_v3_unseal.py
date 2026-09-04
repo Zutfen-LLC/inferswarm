@@ -239,19 +239,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--expected-threshold-sha256", required=True)
     parser.add_argument("--expected-stress-selection-sha256", required=True)
     parser.add_argument("--custody-record", required=True, type=Path)
+    parser.add_argument("--holdout-ciphertext", required=True, type=Path)
+    parser.add_argument("--recipient-certificate", required=True, type=Path)
     parser.add_argument("--private-key-path", required=True, type=Path)
     args = parser.parse_args(argv)
     manifest = json.loads(args.threshold_manifest.read_text(encoding="utf-8"))
     custody = json.loads(args.custody_record.read_text(encoding="utf-8"))
-    from issue86_v3_thresholds import V3_HOLDOUT_CERTIFICATE_SHA256 as CERT_SHA
-    from issue86_v3_thresholds import V3_HOLDOUT_CIPHERTEXT_SHA256 as CT_SHA
+    # Hash the ACTUAL bytes of the supplied holdout/certificate files —
+    # never substitute the frozen hash constants. Missing files fail here
+    # (unreadable path), corrupt/historical/wrong material fails the
+    # identity checks inside the verifier.
+    holdout_ciphertext_sha256 = sha256_file(args.holdout_ciphertext)
+    recipient_certificate_sha256 = sha256_file(args.recipient_certificate)
 
     record = validate_unseal_preconditions(
         threshold_manifest=manifest,
         threshold_manifest_sha256=sha256_bytes(canonical_json_bytes(manifest)),
         expected_committed_threshold_sha256=args.expected_threshold_sha256,
-        holdout_ciphertext_sha256=CT_SHA,
-        recipient_certificate_sha256=CERT_SHA,
+        holdout_ciphertext_sha256=holdout_ciphertext_sha256,
+        recipient_certificate_sha256=recipient_certificate_sha256,
         custody_record=custody,
         expected_stress_selection_sha256=args.expected_stress_selection_sha256,
         private_key_path=args.private_key_path,

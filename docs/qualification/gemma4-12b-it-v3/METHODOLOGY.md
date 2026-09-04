@@ -214,7 +214,15 @@ private key, incomplete threshold freeze, and the historical #74 holdout).
 
 Threshold derivation rejects any calibration row lacking exact integrity,
 finite/evidence-complete state, all 15 envelopes, all 8 canonical-prefix
-semantic rows, exact domain membership, or exact case identity.
+semantic rows, exact domain membership, or exact case identity. The
+complete 48-case reference-margin summary is a REQUIRED derivation input:
+the frozen selector is replayed over it and the committed selected-eight
+artifact must be EXACTLY the replay output, and the summary's canonical
+SHA-256 is bound into the threshold manifest — an arbitrary structurally
+valid 4+4 selection cannot reach threshold derivation. The unseal
+preflight CLI hashes the actual bytes of the supplied holdout ciphertext
+and recipient certificate files (both paths mandatory); it never
+substitutes frozen hash constants.
 
 ## 13. Negative controls
 
