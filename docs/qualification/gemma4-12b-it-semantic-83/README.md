@@ -9,11 +9,14 @@ Read [`SEMANTIC-CONTRACT.md`](SEMANTIC-CONTRACT.md).
 Contents:
 
 - `SEMANTIC-CONTRACT.md` — the contract: what #81 falsified, the
-  first-divergence diagnostic summary, the proved decision-stability
-  theorems (`m > 2E`, ambiguity set, tightness), the A+B(+C-reserved)
-  autoregressive trajectory design, the strict vs decision-stability
-  profile taxonomy, the prospective calibration/holdout chronology, and
-  the successor gate outline.
+  first-divergence diagnostic summary, the mandatory full-vocabulary
+  numerical bound `E_full` vs the supplemental decision-local bound
+  `E_D` separation, the proved decision-stability theorems
+  (`m_D > 2E_D`, ambiguity set, tightness incl. tie behavior), fail-closed
+  `DECISION_DOMAIN_ESCAPE` containment, frozen argmax/tie-break semantics,
+  the A+B(+C-reserved) autoregressive trajectory design, the strict vs
+  decision-stability profile taxonomy, the prospective
+  calibration/holdout chronology, and the successor gate outline.
 - `evidence/first-divergence-{statistical,stress}.json` — per-case
   first-divergence records extracted read-only from the retained #81
   Phase-D artifacts (reference index + per-case chain JSONs), with

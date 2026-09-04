@@ -70,20 +70,44 @@ deterministic greedy generation the strategy declares one of two profiles
 - **strict exact-token profile** — exact deterministic greedy-token identity
   at every step (`EXACT_TOKENS_REQUIRED`, the operator-facing
   `BIT_EXACT_REQUIRED` policy of §9); or
-- **decision-stability profile** — with a prospectively qualified consumer
-  logit max-absolute bound `E` on a frozen comparison domain `D` (§5.4):
-  exact argmax identity is required whenever the reference top1–top2 margin
-  `m > 2E` (the decision is provably stable); when `m ≤ 2E` the candidate
-  decision must lie in the ambiguity set
-  `A_E(r) = { j ∈ D | r[a] − r[j] ≤ 2E }`; after the first allowed
+- **decision-stability profile** — a *supplemental semantic layer on top of
+  the unchanged mandatory numerical envelopes*: the strategy prospectively
+  freezes a decision domain `D ⊆ {0..V−1}` with reference winner `a ∈ D`, a
+  supplemental qualified consumer-logit max-absolute bound `E_D` on `D`
+  (§5.4), and the deterministic argmax/tie-break rule (§1.3.1). At each
+  canonical decision, with `j` the actual candidate full-vocabulary emitted
+  winner: if `j ∉ D` the decision fails immediately
+  (`DECISION_DOMAIN_ESCAPE`); if the reference top1–top2 margin on `D`
+  `m_D > 2E_D` (stable decision), exact identity `j == a` is required; when
+  `m_D ≤ 2E_D` (unstable decision, including the tie boundary) the emitted
+  token must lie in the ambiguity set
+  `A_ED(r) = { k ∈ D | r[a] − r[k] ≤ 2E_D }`; after the first allowed
   unstable divergence the case branches and later free-running steps are
   excluded from same-input semantic evaluation (they are no longer
   same-input comparisons). Numerical envelopes are qualified exclusively on
   canonical identical-prefix replay.
 
-The `m > 2E` stability rule and the `2E` admissibility bound are theorems of
-the symmetric max-absolute envelope (issue #83 SEMANTIC-CONTRACT §3), not
-empirical tolerances.
+The `m_D > 2E_D` stability rule and the `2E_D` admissibility bound are
+theorems of the symmetric max-absolute envelope (issue #83
+SEMANTIC-CONTRACT §3), not empirical tolerances.
+
+#### 1.3.1 `E_D` supplements and never replaces the numerical layer
+
+The decision-stability profile does not modify the numerical layer. The
+mandatory FP32 consumer-logit qualification remains over the full
+vocabulary where practical (`E_full`, §5.4); top-k/decision-local domains
+may supplement but not replace it. A decision-stability qualification
+requires the mandatory numerical envelopes (including `E_full`) to pass
+AND the decision-local `E_D`/containment/stability gate to pass. A smaller
+`D` never waives full-vocabulary correctness. A proper-subset decision
+domain is valid only for contexts whose qualification demonstrates zero
+decision-domain escapes under the frozen method (fail-closed
+`DECISION_DOMAIN_ESCAPE`). Because `m_D = 2E_D` can produce ties, the
+frozen argmax/tie-break semantics are part of the semantic profile's
+applicability key whenever ties can affect emitted tokens; mismatched
+reference/candidate tie-breaking makes the profile inapplicable or failed,
+and `m_D = 2E_D` is treated as unstable absent a stronger prospective
+proof.
 
 Other semantic gates a strategy may declare:
 - exact rank-one identity;
@@ -220,8 +244,13 @@ contract should distinguish mandatory gates from diagnostics.
 - under the strict exact-token profile, deterministic greedy selected-token
   identity is exact at every step;
 - under the decision-stability profile (issue #83), the reference top1–top2
-  margin per decision and the candidate decision's membership in the frozen
-  ambiguity set are mandatory measurements and gates.
+  margin per decision, decision-domain containment of the actual candidate
+  emitted winner (fail-closed `DECISION_DOMAIN_ESCAPE`), and the candidate
+  decision's membership in the frozen ambiguity set are mandatory
+  measurements and gates. These are supplemental to — and conjunctive with
+  — the mandatory numerical gates of §5.1/§5.4, including the
+  full-vocabulary FP32 consumer-logit envelope `E_full`; they never replace
+  them.
 
 ### 5.3 Supporting diagnostics
 
@@ -247,6 +276,19 @@ domains are preferred when practical. Final-row logits should use the full
 vocabulary when practical; a historical/top-k subset can supplement but should
 not be the sole qualification domain.
 
+This rule governs the **numerical layer** and is unchanged by issue #83's
+decision-stability profile: the full-vocabulary FP32 consumer-logit
+max-absolute envelope (`E_full` =
+`fp32-consumer-logits:max-absolute-difference`) remains a mandatory
+qualification envelope. The decision-stability profile's frozen decision
+domain `D` and its supplemental bound `E_D` live in the **semantic layer**
+(§1.3.1): they are additional and conjunctive, never a replacement for or
+waiver of the full-vocabulary numerical domain. If `D` is a proper subset,
+the actual candidate full-vocabulary emitted winner must be contained in
+`D` on every acceptance decision (`DECISION_DOMAIN_ESCAPE` otherwise), and
+the frozen deterministic argmax/tie-break rule is part of the semantic
+profile because equality `m_D = 2E_D` can produce ties.
+
 ## 6. Unconditional failures
 
 Fail closed on:
@@ -257,7 +299,9 @@ Fail closed on:
 - NaN/Inf at declared finite checkpoints;
 - deterministic greedy-token mismatch under a profile that requires exact
   tokens (strict profile), or a decision outside the frozen ambiguity set /
-  a mismatch on a provably stable decision (decision-stability profile);
+  a mismatch on a provably stable decision / the actual candidate
+  full-vocabulary emitted winner outside the frozen decision domain
+  `D` — `DECISION_DOMAIN_ESCAPE` (decision-stability profile);
 - silent fallback/substitution;
 - missing/inapplicable qualification for correctness-bearing serving;
 - any exceeded mandatory frozen numerical limit.
