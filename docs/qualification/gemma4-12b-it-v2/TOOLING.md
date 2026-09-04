@@ -45,14 +45,28 @@ that accepts the exact v2 stress evidence while preserving all v1 behavior:
   summary (all gates) → holdout-exclusion scan on every input. It does NOT
   recompute the ranking and does not need the holdout.
 - `scripts/verify_issue79_v2_unseal.py` — v2 unseal preflight/verifier.
-  `validate_unseal_preconditions(...)` refuses permission unless the
-  threshold manifest validates against the v2 schema, matches the
-  externally committed SHA, says `SEALED_NOT_CONSUMED`, is bound to the
-  accepted v2 tooling version, and every artifact SHA (corpus, pool,
-  commitment, selected-eight, ciphertext `23311c55…`, certificate
-  `9edb50e8…`) is exact, custody is not blocked, and any future private-key
-  path is external to the repo scope. It never decrypts and never invokes
-  OpenSSL. The v1 unseal script remains byte-identical.
+  The operator CLI is the real fail-closed pre-decrypt barrier. Required
+  arguments: `--threshold-manifest`, `--expected-threshold-sha256`,
+  `--expected-stress-selection-sha256` (the selected-eight artifact is bound
+  to this INDEPENDENTLY supplied committed SHA — never merely to the
+  manifest's own field; error class `SELECTED_STRESS_SELECTION_SHA_MISMATCH`),
+  `--holdout-ciphertext`, `--recipient-certificate`, `--custody-record`
+  (custody must be explicitly `FOUND_VERIFIED` with matching frozen
+  ciphertext/certificate/public-key-DER provenance and two custodians each
+  `public_key_match == true`; absence of proof is not proof of custody —
+  error class `HOLDOUT_CUSTODY_NOT_VERIFIED`), `--private-key-path`
+  (REQUIRED; always proven external to the repository root, which is derived
+  deterministically from the verifier's own file location, never an optional
+  operator responsibility — error class
+  `PRIVATE_KEY_PATH_NOT_EXTERNAL_TO_REPO`), and `--out`. The threshold
+  manifest is validated against the exact committed v2 threshold JSON Schema
+  (`docs/qualification/gemma4-12b-it-v2/schemas/threshold-manifest.schema.json`,
+  Draft 2020-12) before any further authorization result (error class
+  `THRESHOLD_MANIFEST_SCHEMA_INVALID`). It never decrypts and never invokes
+  OpenSSL; on success it writes a record whose verdict is exactly
+  `UNSEAL_PRECONDITIONS_PASS_DECRYPT_NOT_PERFORMED` with
+  `decrypt_performed = false` and `openssl_invoked = false`. The v1 unseal
+  script remains byte-identical.
 
 **Threshold math is unchanged from v1**: for each of exactly 15 envelopes,
 `limit = max(statistical_max over 576, stress_max over 8)`, comparison
@@ -73,12 +87,22 @@ qualification evidence directory), synthetic finite envelope summaries and
 evidence SHAs. A structural test asserts no selected-eight manifest exists
 anywhere under the v2 evidence directory. Positive path proves: manifest
 validates → summary validates → derivation succeeds → threshold manifest
-validates → byte-for-byte determinism → unseal preflight passes up to but
-not including decrypt. Negative controls cover statistical-corpus
-substitution/duplication/count drift, stress-provenance forgery (v1 rows,
-non-selected rows, wrong SHAs, v1 schema, wrong state/inputs, margin
-drift), correctness gates, holdout poisoning, and every unseal-preflight
-precondition.
+validates → byte-for-byte determinism → operator CLI unseal preflight passes
+using the same externally supplied selected-eight SHA binding the future
+operator will use (real custody record, external key path, exact
+ciphertext/certificate), up to but not including decrypt. Negative controls
+cover statistical-corpus substitution/duplication/count drift,
+stress-provenance forgery (v1 rows, non-selected rows, wrong SHAs, v1
+schema, wrong state/inputs, margin drift), correctness gates, holdout
+poisoning, full threshold-manifest JSON-Schema structural mutations (missing
+limit, 16th envelope, malformed hex, wrong rule/comparison, missing
+manual-editing field, extra top-level property, duplicate evidence SHA)
+rejected inside `validate_unseal_preconditions`, custody fail-closed
+(absent/blocked/unknown verdict, wrong holdout state, ciphertext /
+certificate / public-key-DER provenance mismatch, missing or unverified
+custodians), private-key externality (repo-local absolute/relative,
+symlink-into-repo, repo-root-omitted), and every CLI argument being
+required.
 
 ## Frozen inputs (unchanged, verified by tests)
 

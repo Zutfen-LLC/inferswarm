@@ -10,9 +10,12 @@ qualification evidence directory.
 from __future__ import annotations
 
 import ast
+import contextlib
 import copy
 import hashlib
+import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -36,14 +39,30 @@ from issue79_v2_thresholds import (  # noqa: E402
 )
 from select_issue76_margin_stress_v2 import MARGIN_DEFINITION, select  # noqa: E402
 from verify_issue79_v2_unseal import (  # noqa: E402
+    CUSTODY_NOT_VERIFIED,
     EXPECTED_RECIPIENT_CERTIFICATE_SHA256,
     HOLDOUT_CIPHERTEXT_SHA256,
+    PRIVATE_KEY_NOT_EXTERNAL,
+    REPO_ROOT,
+    SELECTED_SHA_MISMATCH,
+    THRESHOLD_SCHEMA_INVALID,
     UnsealPreflightError,
+    load_threshold_schema,
+    main as unseal_main,
     validate_unseal_preconditions,
 )
 
 V1 = ROOT / "docs/qualification/gemma4-12b-it-v1"
 V2 = ROOT / "docs/qualification/gemma4-12b-it-v2"
+CUSTODY_RECORD_PATH = V2 / "manifests/holdout-custody-record.json"
+THRESHOLD_SCHEMA_PATH = V2 / "schemas/threshold-manifest.schema.json"
+# External accepted key locations (never read; externality proof only).
+EXTERNAL_KEY_ORCHESTRATOR = (
+    "/home/zutfen/.local/share/inferswarm/issue74-holdout-v1/recipient-private-key.pem"
+)
+EXTERNAL_KEY_INFERSWARM00 = (
+    "/srv/inferswarm/state/issue74-holdout-custody/recipient-private-key.pem"
+)
 
 # Frozen identity constants (issue #79 text; also asserted against files).
 FROZEN_CORPUS_SHA = "e147ce0a672fe7f8616f9e000fea770bfeab6e0a1aca637ffe6bc07cd64c3175"
@@ -559,19 +578,38 @@ class TestUnsealPreflightNegativeControls(unittest.TestCase):
     def setUp(self):
         self.manifest = FIXTURE.derive()
         self.manifest_sha = sha_canonical(self.manifest)
+        self.selection_sha = sha_canonical(FIXTURE.stress_selection)
+        self.custody = load(CUSTODY_RECORD_PATH)
         self.ok = dict(
             threshold_manifest=self.manifest,
             threshold_manifest_sha256=self.manifest_sha,
             expected_committed_threshold_sha256=self.manifest_sha,
+            expected_stress_selection_sha256=self.selection_sha,
             holdout_ciphertext_sha256=HOLDOUT_CIPHERTEXT_SHA256,
             recipient_certificate_sha256=EXPECTED_RECIPIENT_CERTIFICATE_SHA256,
+            custody_record=self.custody,
         )
 
-    def assert_preflight_fails(self, **overrides):
+    def assert_preflight_fails(self, code=None, **overrides):
         args = dict(self.ok)
         args.update(overrides)
-        with self.assertRaises(UnsealPreflightError):
+        with self.assertRaises(UnsealPreflightError) as ctx:
             validate_unseal_preconditions(**args)
+        if code is not None:
+            self.assertIn(code, str(ctx.exception))
+
+    def self_consistent(self, manifest):
+        """Re-bind the threshold SHAs so ONLY the manifest mutation itself
+        can cause the failure (proves the check is not SHA-reliance)."""
+        manifest_sha = sha_canonical(manifest)
+        return dict(
+            self.ok,
+            threshold_manifest=manifest,
+            threshold_manifest_sha256=manifest_sha,
+            expected_committed_threshold_sha256=manifest_sha,
+        )
+
+    # --- threshold provenance (retained controls) ---------------------------
 
     def test_wrong_threshold_file_sha(self):
         self.assert_preflight_fails(expected_committed_threshold_sha256="9" * 64)
@@ -579,72 +617,38 @@ class TestUnsealPreflightNegativeControls(unittest.TestCase):
     def test_wrong_threshold_schema(self):
         manifest = copy.deepcopy(self.manifest)
         manifest["schema"] = "inferswarm.issue74.threshold-manifest/1"
-        self.assert_preflight_fails(
-            threshold_manifest=manifest,
-            threshold_manifest_sha256=sha_canonical(manifest),
-            expected_committed_threshold_sha256=sha_canonical(manifest),
-        )
+        with self.assertRaises(UnsealPreflightError):
+            validate_unseal_preconditions(**self.self_consistent(manifest))
 
     def test_wrong_tooling_version(self):
         manifest = copy.deepcopy(self.manifest)
         manifest["tooling_or_methodology_version"] = "some-other-version"
-        self.assert_preflight_fails(
-            threshold_manifest=manifest,
-            threshold_manifest_sha256=sha_canonical(manifest),
-            expected_committed_threshold_sha256=sha_canonical(manifest),
-        )
+        with self.assertRaises(UnsealPreflightError):
+            validate_unseal_preconditions(**self.self_consistent(manifest))
 
     def test_wrong_holdout_state(self):
         manifest = copy.deepcopy(self.manifest)
         manifest["holdout_state"] = "CONSUMED"
-        self.assert_preflight_fails(
-            threshold_manifest=manifest,
-            threshold_manifest_sha256=sha_canonical(manifest),
-            expected_committed_threshold_sha256=sha_canonical(manifest),
-        )
+        with self.assertRaises(UnsealPreflightError):
+            validate_unseal_preconditions(**self.self_consistent(manifest))
 
     def test_wrong_calibration_corpus_sha(self):
         manifest = copy.deepcopy(self.manifest)
         manifest["calibration_corpus_sha256"] = "8" * 64
-        self.assert_preflight_fails(
-            threshold_manifest=manifest,
-            threshold_manifest_sha256=sha_canonical(manifest),
-            expected_committed_threshold_sha256=sha_canonical(manifest),
-        )
+        with self.assertRaises(UnsealPreflightError):
+            validate_unseal_preconditions(**self.self_consistent(manifest))
 
     def test_wrong_stress_pool_sha(self):
         manifest = copy.deepcopy(self.manifest)
         manifest["stress_pool_sha256"] = "7" * 64
-        self.assert_preflight_fails(
-            threshold_manifest=manifest,
-            threshold_manifest_sha256=sha_canonical(manifest),
-            expected_committed_threshold_sha256=sha_canonical(manifest),
-        )
+        with self.assertRaises(UnsealPreflightError):
+            validate_unseal_preconditions(**self.self_consistent(manifest))
 
     def test_wrong_selection_commitment_sha(self):
         manifest = copy.deepcopy(self.manifest)
         manifest["stress_selection_commitment_sha256"] = "6" * 64
-        self.assert_preflight_fails(
-            threshold_manifest=manifest,
-            threshold_manifest_sha256=sha_canonical(manifest),
-            expected_committed_threshold_sha256=sha_canonical(manifest),
-        )
-
-    def test_wrong_selected_manifest_sha(self):
-        # The manifest's selected-eight SHA must equal the EXTERNALLY
-        # committed selection SHA; a self-consistent field mutation is not
-        # sufficient — the binding to the committed artifact is what fails.
-        manifest = copy.deepcopy(self.manifest)
-        manifest["stress_selection_sha256"] = "5" * 64
-        self.assert_preflight_fails(
-            threshold_manifest=manifest,
-            threshold_manifest_sha256=sha_canonical(manifest),
-            expected_committed_threshold_sha256=sha_canonical(manifest),
-            expected_stress_selection_sha256=sha_canonical(FIXTURE.stress_selection),
-        )
-
-    def test_selected_manifest_sha_not_bound_to_expected_selection(self):
-        self.assert_preflight_fails(expected_stress_selection_sha256="0" * 64)
+        with self.assertRaises(UnsealPreflightError):
+            validate_unseal_preconditions(**self.self_consistent(manifest))
 
     def test_wrong_ciphertext_sha(self):
         self.assert_preflight_fails(holdout_ciphertext_sha256="4" * 64)
@@ -652,24 +656,353 @@ class TestUnsealPreflightNegativeControls(unittest.TestCase):
     def test_wrong_recipient_certificate_sha(self):
         self.assert_preflight_fails(recipient_certificate_sha256="3" * 64)
 
-    def test_custody_blocked_state(self):
-        self.assert_preflight_fails(custody_state="HOLDOUT_CUSTODY_BLOCKED")
+    # --- BLOCKER 1: external selected-eight SHA binding ---------------------
 
-    def test_private_key_inside_repo_scope_rejected(self):
-        with self.assertRaises(UnsealPreflightError):
-            validate_unseal_preconditions(
-                **self.ok,
-                private_key_path=str(ROOT / "keys/recipient-private-key.pem"),
-                repo_root=ROOT,
-            )
+    def test_expected_selected_sha_is_a_mandatory_keyword(self):
+        args = dict(self.ok)
+        del args["expected_stress_selection_sha256"]
+        with self.assertRaises(TypeError):
+            validate_unseal_preconditions(**args)
 
-    def test_private_key_external_to_repo_scope_accepted(self):
-        record = validate_unseal_preconditions(
-            **self.ok,
-            private_key_path="/srv/inferswarm/state/issue74-holdout-custody/recipient-private-key.pem",
-            repo_root=ROOT,
+    def test_malformed_expected_selected_sha_fails(self):
+        self.assert_preflight_fails(
+            code=SELECTED_SHA_MISMATCH, expected_stress_selection_sha256="not-a-sha"
         )
-        self.assertEqual(record["verdict"], "UNSEAL_PRECONDITIONS_PASS_DECRYPT_NOT_PERFORMED")
+
+    def test_wrong_expected_selected_sha_fails(self):
+        self.assert_preflight_fails(
+            code=SELECTED_SHA_MISMATCH, expected_stress_selection_sha256="0" * 64
+        )
+
+    def test_manifest_field_selected_sha_alone_is_insufficient(self):
+        # Manifest field is syntactically valid but no external binding is
+        # possible without the mandatory expected SHA (TypeError above); here
+        # a WRONG external expected SHA must fail even though everything else
+        # is self-consistent.
+        self.assert_preflight_fails(
+            code=SELECTED_SHA_MISMATCH, expected_stress_selection_sha256="1" * 64
+        )
+
+    def test_self_consistent_selected_sha_mutation_still_fails(self):
+        # Mutate the manifest's own selected-eight SHA and re-bind the
+        # threshold file SHAs so the manifest is fully self-consistent; the
+        # EXTERNAL expected SHA remains the real one, so the preflight must
+        # still refuse.
+        manifest = copy.deepcopy(self.manifest)
+        manifest["stress_selection_sha256"] = "5" * 64
+        with self.assertRaises(UnsealPreflightError) as ctx:
+            validate_unseal_preconditions(**self.self_consistent(manifest))
+        self.assertIn(SELECTED_SHA_MISMATCH, str(ctx.exception))
+
+    def test_matching_external_selected_sha_passes(self):
+        record = validate_unseal_preconditions(
+            **self.ok, private_key_path=EXTERNAL_KEY_ORCHESTRATOR
+        )
+        self.assertEqual(
+            record["verdict"], "UNSEAL_PRECONDITIONS_PASS_DECRYPT_NOT_PERFORMED"
+        )
+
+    # --- BLOCKER 2: real JSON Schema validation inside the preflight --------
+
+    def test_missing_one_limit_fails(self):
+        manifest = copy.deepcopy(self.manifest)
+        del manifest["limits"][ENVELOPES[0]]
+        with self.assertRaises(UnsealPreflightError):
+            validate_unseal_preconditions(**self.self_consistent(manifest))
+
+    def test_sixteenth_extra_envelope_fails(self):
+        manifest = copy.deepcopy(self.manifest)
+        manifest["limits"]["bogus-family:bogus-metric"] = copy.deepcopy(
+            manifest["limits"][ENVELOPES[0]]
+        )
+        with self.assertRaises(UnsealPreflightError):
+            validate_unseal_preconditions(**self.self_consistent(manifest))
+
+    def test_malformed_limit_hex_fails(self):
+        manifest = copy.deepcopy(self.manifest)
+        manifest["limits"][ENVELOPES[0]]["limit_hex"] = "2.5"
+        with self.assertRaises(UnsealPreflightError):
+            validate_unseal_preconditions(**self.self_consistent(manifest))
+
+    def test_wrong_rule_fails(self):
+        manifest = copy.deepcopy(self.manifest)
+        manifest["limits"][ENVELOPES[0]]["rule"] = "max(statistical_max,stress_max)+0.001"
+        with self.assertRaises(UnsealPreflightError):
+            validate_unseal_preconditions(**self.self_consistent(manifest))
+
+    def test_wrong_comparison_fails(self):
+        manifest = copy.deepcopy(self.manifest)
+        manifest["limits"][ENVELOPES[0]]["comparison"] = "observed<limit+1"
+        with self.assertRaises(UnsealPreflightError):
+            validate_unseal_preconditions(**self.self_consistent(manifest))
+
+    def test_missing_manual_editing_field_fails(self):
+        manifest = copy.deepcopy(self.manifest)
+        del manifest["manual_editing_or_rounding"]
+        with self.assertRaises(UnsealPreflightError):
+            validate_unseal_preconditions(**self.self_consistent(manifest))
+
+    def test_extra_unexpected_top_level_property_fails(self):
+        manifest = copy.deepcopy(self.manifest)
+        manifest["unexpected_extra"] = "x"
+        with self.assertRaises(UnsealPreflightError):
+            validate_unseal_preconditions(**self.self_consistent(manifest))
+
+    def test_duplicate_calibration_evidence_sha_fails(self):
+        manifest = copy.deepcopy(self.manifest)
+        manifest["calibration_evidence_sha256"] = ["e" * 64, "e" * 64]
+        with self.assertRaises(UnsealPreflightError):
+            validate_unseal_preconditions(**self.self_consistent(manifest))
+
+    def test_committed_threshold_schema_is_bound_to_canonical_path(self):
+        from verify_issue79_v2_unseal import THRESHOLD_SCHEMA_PATH as verifier_path
+        self.assertEqual(verifier_path, THRESHOLD_SCHEMA_PATH)
+        schema = load_threshold_schema()
+        self.assertEqual(
+            schema["$id"], "https://inferswarm.dev/schema/issue79/v2-threshold-manifest-1.json"
+        )
+        self.assertEqual(
+            schema["properties"]["schema"]["const"],
+            "inferswarm.issue79.v2-threshold-manifest/1",
+        )
+
+    # --- BLOCKER 3: custody fails closed -------------------------------------
+
+    def assert_custody_fails(self, **overrides):
+        self.assert_preflight_fails(code=CUSTODY_NOT_VERIFIED, **overrides)
+
+    def test_custody_record_absent_fails(self):
+        self.assert_custody_fails(custody_record=None)
+
+    def test_custody_state_none_without_record_fails(self):
+        self.assert_custody_fails(custody_record=None, custody_state=None)
+
+    def test_custody_record_empty_fails(self):
+        self.assert_custody_fails(custody_record={})
+
+    def test_custody_unknown_verdict_fails(self):
+        custody = copy.deepcopy(self.custody)
+        custody["custody_verdict"] = "SOME_NEW_STATE"
+        self.assert_custody_fails(custody_record=custody)
+
+    def test_custody_blocked_verdict_fails(self):
+        custody = copy.deepcopy(self.custody)
+        custody["custody_verdict"] = "HOLDOUT_CUSTODY_BLOCKED"
+        self.assert_custody_fails(custody_record=custody)
+
+    def test_custody_blocked_state_flag_fails(self):
+        self.assert_custody_fails(custody_state="HOLDOUT_CUSTODY_BLOCKED")
+
+    def test_custody_wrong_schema_fails(self):
+        custody = copy.deepcopy(self.custody)
+        custody["schema"] = "someone.elses.custody-record/9"
+        self.assert_custody_fails(custody_record=custody)
+
+    def test_custody_wrong_holdout_state_fails(self):
+        custody = copy.deepcopy(self.custody)
+        custody["holdout_state"] = "SEALED_NOT_CONSUMED"
+        self.assert_custody_fails(custody_record=custody)
+
+    def test_custody_wrong_ciphertext_sha_fails(self):
+        custody = copy.deepcopy(self.custody)
+        custody["holdout_ciphertext_sha256"] = "2" * 64
+        self.assert_custody_fails(custody_record=custody)
+
+    def test_custody_wrong_certificate_sha_fails(self):
+        custody = copy.deepcopy(self.custody)
+        custody["recipient_certificate_sha256"] = "a" * 64
+        self.assert_custody_fails(custody_record=custody)
+
+    def test_custody_wrong_public_key_der_sha_fails(self):
+        custody = copy.deepcopy(self.custody)
+        custody["recipient_public_key_der_sha256"] = "b" * 64
+        self.assert_custody_fails(custody_record=custody)
+
+    def test_custody_missing_custodians_fails(self):
+        custody = copy.deepcopy(self.custody)
+        custody["custodians"] = []
+        self.assert_custody_fails(custody_record=custody)
+
+    def test_custody_single_unverified_custodian_fails(self):
+        custody = copy.deepcopy(self.custody)
+        custody["custodians"] = [
+            {"custodian_id": "only-one", "public_key_match": False}
+        ]
+        self.assert_custody_fails(custody_record=custody)
+
+    def test_custody_one_public_key_match_false_fails(self):
+        custody = copy.deepcopy(self.custody)
+        custody["custodians"][1]["public_key_match"] = False
+        self.assert_custody_fails(custody_record=custody)
+
+    def test_real_committed_custody_record_is_found_verified(self):
+        self.assertEqual(self.custody["custody_verdict"], "FOUND_VERIFIED")
+
+    # --- BLOCKER 4: private-key externality always proven --------------------
+
+    def assert_key_fails(self, **overrides):
+        self.assert_preflight_fails(code=PRIVATE_KEY_NOT_EXTERNAL, **overrides)
+
+    def test_repo_local_absolute_key_fails(self):
+        self.assert_key_fails(private_key_path=str(ROOT / "keys/recipient-private-key.pem"))
+
+    def test_repo_local_relative_key_fails(self):
+        previous = Path.cwd()
+        os.chdir(ROOT)
+        try:
+            self.assert_key_fails(private_key_path="keys/recipient-private-key.pem")
+        finally:
+            os.chdir(previous)
+
+    def test_symlink_outside_repo_resolving_inside_repo_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            link = Path(tmp) / "external-alias.pem"
+            os.symlink(ROOT / "scripts/verify_issue79_v2_unseal.py", link)
+            self.assert_key_fails(private_key_path=str(link))
+
+    def test_key_inside_repo_with_repo_root_omitted_fails(self):
+        # The failure mode being excluded: repo-local key + repo_root omitted
+        # must NOT pass — REPO_ROOT defaults deterministically.
+        self.assert_key_fails(
+            private_key_path=str(ROOT / "k.pem"), repo_root=None
+        )
+
+    def test_committed_certificate_material_fails(self):
+        self.assert_key_fails(private_key_path=str(V1 / "sealed/recipient-certificate.pem"))
+
+    def test_external_orchestrator_key_path_accepted(self):
+        record = validate_unseal_preconditions(
+            **self.ok, private_key_path=EXTERNAL_KEY_ORCHESTRATOR
+        )
+        self.assertEqual(
+            record["verdict"], "UNSEAL_PRECONDITIONS_PASS_DECRYPT_NOT_PERFORMED"
+        )
+
+    def test_external_inferswarm00_key_path_accepted(self):
+        record = validate_unseal_preconditions(
+            **self.ok, private_key_path=EXTERNAL_KEY_INFERSWARM00
+        )
+        self.assertEqual(
+            record["verdict"], "UNSEAL_PRECONDITIONS_PASS_DECRYPT_NOT_PERFORMED"
+        )
+
+
+class TestOperatorCliContract(unittest.TestCase):
+    """The operator CLI itself must be the fail-closed barrier."""
+
+    def setUp(self):
+        self.manifest = FIXTURE.derive()
+        self.manifest_sha = sha_canonical(self.manifest)
+        self.selection_sha = sha_canonical(FIXTURE.stress_selection)
+        self.tmp = tempfile.TemporaryDirectory()
+        self.base = Path(self.tmp.name)
+        self.manifest_path = self.base / "threshold-manifest.json"
+        self.manifest_path.write_bytes(canonical_json_bytes(self.manifest))
+        # Byte-identical copies of the committed holdout/certificate material
+        # (SHA must match the frozen values; contents are public non-secret).
+        self.holdout_path = self.base / "holdout.cms"
+        self.holdout_path.write_bytes((V1 / "sealed/holdout.cms").read_bytes())
+        self.cert_path = self.base / "recipient-certificate.pem"
+        self.cert_path.write_bytes((V1 / "sealed/recipient-certificate.pem").read_bytes())
+        self.custody_path = self.base / "holdout-custody-record.json"
+        self.custody_path.write_bytes(CUSTODY_RECORD_PATH.read_bytes())
+        self.out_path = self.base / "unseal-preflight.json"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def argv(self, **overrides):
+        args = dict(
+            threshold_manifest=str(self.manifest_path),
+            expected_threshold_sha256=self.manifest_sha,
+            expected_stress_selection_sha256=self.selection_sha,
+            holdout_ciphertext=str(self.holdout_path),
+            recipient_certificate=str(self.cert_path),
+            custody_record=str(self.custody_path),
+            private_key_path=EXTERNAL_KEY_ORCHESTRATOR,
+            out=str(self.out_path),
+        )
+        args.update(overrides)
+        argv = []
+        for key, value in args.items():
+            argv.extend([f"--{key.replace('_', '-')}", str(value)])
+        return argv
+
+    def test_cli_requires_every_external_argument(self):
+        required = [
+            "threshold_manifest", "expected_threshold_sha256",
+            "expected_stress_selection_sha256", "holdout_ciphertext",
+            "recipient_certificate", "custody_record", "private_key_path", "out",
+        ]
+        for omitted in required:
+            with self.subTest(omitted):
+                args = dict(
+                    threshold_manifest=str(self.manifest_path),
+                    expected_threshold_sha256=self.manifest_sha,
+                    expected_stress_selection_sha256=self.selection_sha,
+                    holdout_ciphertext=str(self.holdout_path),
+                    recipient_certificate=str(self.cert_path),
+                    custody_record=str(self.custody_path),
+                    private_key_path=EXTERNAL_KEY_ORCHESTRATOR,
+                    out=str(self.out_path),
+                )
+                del args[omitted]
+                argv = []
+                for key, value in args.items():
+                    argv.extend([f"--{key.replace('_', '-')}", str(value)])
+                with contextlib.redirect_stderr(io.StringIO()):
+                    with self.assertRaises(SystemExit) as ctx:
+                        unseal_main(argv)
+                self.assertEqual(ctx.exception.code, 2)
+
+    def test_cli_positive_end_to_end_external_binding(self):
+        with contextlib.redirect_stdout(io.StringIO()) as stdout:
+            code = unseal_main(self.argv())
+        self.assertEqual(code, 0)
+        record = json.loads(self.out_path.read_text())
+        self.assertEqual(
+            record["verdict"], "UNSEAL_PRECONDITIONS_PASS_DECRYPT_NOT_PERFORMED"
+        )
+        self.assertFalse(record["decrypt_performed"])
+        self.assertFalse(record["openssl_invoked"])
+        self.assertEqual(record["stress_selection_sha256"], self.selection_sha)
+        self.assertIn("UNSEAL_PRECONDITIONS_PASS_DECRYPT_NOT_PERFORMED", stdout.getvalue())
+
+    def test_cli_rejects_repo_local_private_key(self):
+        with self.assertRaises(SystemExit) as ctx:
+            unseal_main(self.argv(private_key_path=str(ROOT / "keys/key.pem")))
+        self.assertIn("UNSEAL_PRECONDITIONS_FAIL", str(ctx.exception.code))
+        self.assertIn(PRIVATE_KEY_NOT_EXTERNAL, str(ctx.exception.code))
+        self.assertFalse(self.out_path.exists())
+
+    def test_cli_rejects_wrong_expected_selected_sha(self):
+        with self.assertRaises(SystemExit) as ctx:
+            unseal_main(self.argv(expected_stress_selection_sha256="0" * 64))
+        self.assertIn(SELECTED_SHA_MISMATCH, str(ctx.exception.code))
+        self.assertFalse(self.out_path.exists())
+
+    def test_cli_rejects_malformed_threshold_structure(self):
+        manifest = copy.deepcopy(self.manifest)
+        manifest["unexpected_extra"] = "x"
+        path = self.base / "malformed-threshold.json"
+        path.write_bytes(canonical_json_bytes(manifest))
+        with self.assertRaises(SystemExit) as ctx:
+            unseal_main(
+                self.argv(
+                    threshold_manifest=str(path),
+                    expected_threshold_sha256=sha_file(path),
+                )
+            )
+        self.assertIn(THRESHOLD_SCHEMA_INVALID, str(ctx.exception.code))
+        self.assertFalse(self.out_path.exists())
+
+    def test_cli_rejects_absent_custody_record_content(self):
+        empty = self.base / "empty-custody.json"
+        empty.write_text("null")
+        with self.assertRaises(SystemExit) as ctx:
+            unseal_main(self.argv(custody_record=str(empty)))
+        self.assertIn(CUSTODY_NOT_VERIFIED, str(ctx.exception.code))
+        self.assertFalse(self.out_path.exists())
 
 
 class TestToolingPurity(unittest.TestCase):
