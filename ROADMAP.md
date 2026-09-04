@@ -345,20 +345,45 @@ mandatory full-vocabulary `E_full` envelope, the supplemental decision-local
 `DECISION_DOMAIN_ESCAPE` gates, and preservation of the strict exact-token /
 `BIT_EXACT_REQUIRED` profile.
 
-Issue [#86](https://github.com/Zutfen-LLC/inferswarm/issues/86) is the
-**CURRENT methodology/tooling freeze gate**: the first Gemma v3
-decision-stability qualification methodology implementing the accepted #83
-contract — fresh c86/p86/h86 corpora, the frozen
-`reference-top-1024-with-cutoff-ties/1` decision domain, the supplemental
-`E_D` derivation, the 16-family simultaneous statistical design (minimum n
-574; the balanced 576-case design retained), frozen
-`ARGMAX_FIRST_MAX` tie-break semantics, the exact semantic gate order,
-complete CPU-only schemas/derivation/evaluation/unseal-preflight tooling,
-a fresh sealed v3 holdout, and comprehensive negative controls. It
-authorizes no physical execution and no holdout unseal. Only after
-maintainer acceptance of #86 may a new physical v3 qualification issue
-authorize reference/candidate execution. None of this reinterprets
-historical R6, #76, or #81 as passes.
+Issue #86 is complete. It prospectively froze the first Gemma v3
+implementation of the #83 decision-stability contract: fresh c86/p86/h86
+corpora, `reference-top-1024-with-cutoff-ties/1`, the supplemental `E_D`, the
+16-family simultaneous statistical design, frozen `ARGMAX_FIRST_MAX` semantics,
+CPU-only derivation/evaluation/unseal-preflight tooling, and a fresh sealed v3
+holdout. PR #87 was accepted at methodology head
+`a8ec98a9fb9b673c93de5100d784ea772395efdb`.
+
+Issue #88 is complete with immutable terminal verdict:
+
+`V3_HOLDOUT_FAIL`
+
+The physical campaign passed exact integrity and the new decision-stability
+semantic layer throughout: 4672/4672 calibration decisions and 192/192 holdout
+decisions were `SEMANTIC_PASS`, with zero `DECISION_DOMAIN_ESCAPE`, zero
+`DECISION_LOCAL_BOUND_EXCEEDED`, and zero NaN/Inf. One mandatory inherited
+numerical envelope nevertheless exceeded its frozen holdout limit:
+`h86-03-05-01` `final-normalized-hidden-state:rms-difference` observed
+`2.6800369574218053` versus limit `2.6131138414325275` (+2.56%). Under ADR 0010
+and the frozen v3 conjunction, matching semantic output cannot waive that
+numerical failure.
+
+Accepted provenance:
+
+- InferSwarm evidence PR #89 merged as
+  `dc00dd933fcbdcaddffc0c9fd4fd25baf5b70da5`;
+- FreeToken physical producer PR #30 merged to `inferswarm-research` as
+  `5e44be50cd9ed322366a01cd5d80d958950d1ac5`;
+- physical producer `560bb7e833ad4ca9386eb87799bb0aafb82b3e59`.
+
+Issue #90 is the **CURRENT correctness-qualification gate**. It diagnoses the
+post-v3 numerical-envelope failure from retained #88 evidence before any
+successor methodology is frozen. It must distinguish ordinary tail behavior,
+a pre-observable applicability split, metric/envelope mismatch, and an actual
+execution anomaly; reconstruct the failing value from retained bytes; trace its
+propagation through `E_full`, `E_D`, and semantic decisions; and audit the v3
+statistical claim against the separate zero-exceedance holdout rule. It does not
+authorize a v3 rerun, post-hoc threshold change, successor threshold, fresh
+holdout, or physical v4 campaign.
 
 Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) is complete. It
 established the durable FreeToken `inferswarm-research` implementation line
@@ -571,68 +596,53 @@ greedy token under the strict exact-token profile. Exact integrity passed,
 NaN/Inf remained zero, thresholds were never derived, and the retained holdout
 remains sealed.
 
-### Heterogeneous greedy semantic contract — issue #83 — PROPOSED (pending acceptance)
+### Heterogeneous greedy semantic contract — issue #83 — COMPLETE
 
-Define the prospective strategy semantic-output contract after #81. The active
-questions are identical-prefix numerical replay, mathematically grounded
-decision stability under a qualified consumer-logit error bound, treatment of
-autoregressive branching after an allowed near-tie decision, and the
-relationship between ordinary heterogeneous correctness and strict
-exact-token/`BIT_EXACT_REQUIRED` reproducibility.
+Issue #83 accepted the prospective decision-stability semantic contract at
+`d60b8f6c4490c91312e8d073b4ac55794bf68841` (PR #85). It separates
+canonical-prefix numerical replay from free-running post-branch behavior,
+preserves the mandatory full-vocabulary `E_full` numerical envelope, adds the
+supplemental decision-local `E_D`/domain-containment/stability theorem, freezes
+deterministic argmax/tie semantics, and preserves strict exact-token /
+`BIT_EXACT_REQUIRED` as a separate stronger profile.
 
-The issue #83 adjudication (branch `issue-83-semantic-contract`,
-`docs/qualification/gemma4-12b-it-semantic-83/`) delivers:
+#81 remains `CALIBRATION_SEMANTIC_FAIL`; #83 did not reinterpret it.
 
-- a machine-verified first-divergence diagnostic over the retained #81
-  Phase-D evidence (reproduction-gated: 236/576 statistical, 4/8 stress
-  reproduced exactly; first divergence always at an exactly-shared prefix;
-  divergent decisions are reference near-ties; zero violations of the
-  stability theorem across all same-prefix rows);
-- proved (not fitted) decision-stability mathematics: `m_D > 2E_D` forces
-  argmax identity, any in-`D` candidate winner satisfies
-  `r[a] − r[j] ≤ 2E_D`, and the factor 2 is tight (strict flip below,
-  tie at, guaranteed identity above `2E_D`);
-- the strict separation of the two envelopes: the mandatory
-  full-vocabulary FP32 consumer-logit numerical bound `E_full` (one of the
-  unchanged 15 numerical envelopes) is never replaced or waived, while a
-  supplemental decision-local bound `E_D` on a frozen strategy-declared
-  domain `D` may additionally qualify decision stability — conjunctively,
-  never alternatively;
-- fail-closed decision-domain containment: the actual candidate
-  full-vocabulary emitted winner must lie in `D` on every acceptance
-  decision; otherwise `DECISION_DOMAIN_ESCAPE` (an unconditional semantic
-  failure, not "unstable"), and ambiguity-set membership is evaluated
-  against the actual emitted token;
-- frozen argmax/tie-break semantics as part of the semantic profile
-  (applicability-bearing when ties can affect emitted tokens;
-  `m_D = 2E_D` treated as unstable absent a stronger prospective proof);
-- the A+B(+C-reserved) trajectory design: canonical-prefix teacher-forced
-  replay for all numerical envelopes, decision-local semantic gate with the
-  ambiguity set, branch labels after the first allowed divergence;
-- the two-profile taxonomy (strict exact-token vs decision-stability) and
-  its relationship to `BIT_EXACT_REQUIRED`;
-- a prospective calibration/holdout chronology with no circularity and no
-  post-hoc rescue of #81: the 15 numerical envelopes (incl. `E_full`) and,
-  where a proper-subset `D` is used, the supplemental `E_D` are derived on
-  same-prefix rows → full threshold-manifest freeze barrier (15 limits +
-  `D` identity + `E_D` + tie-break semantics) → semantic gates → fresh
-  sealed holdout (integrity + full numerical envelopes + containment +
-  stability/ambiguity gate);
-- doctrine updates in
-  `docs/architecture/numerical-equivalence-contract.md` (§1.3, §5.2, §6).
+### Gemma v3 methodology and physical qualification — issues #86 / #88 — COMPLETE / FAILED
 
-#81 remains `CALIBRATION_SEMANTIC_FAIL` and was not re-evaluated. This is
-still a design/research gate only. Do not launch another physical
-qualification campaign or unseal the retained holdout from #83. The successor
-methodology gate (Gemma v3) freezes E-derivation and domain choice before any
-physical run.
+Issue #86 froze the first executable Gemma v3 decision-stability methodology
+before physical execution. Issue #88 then executed it end to end under the
+frozen topology and terminated honestly with:
+
+`V3_HOLDOUT_FAIL`
+
+The semantic objective itself passed everywhere, including the fresh holdout,
+but one mandatory `final-normalized-hidden-state:rms-difference` envelope
+exceeded its frozen limit by 2.56%. Evidence PR #89 and FreeToken producer PR
+#30 are merged; the failure is immutable and does not authorize threshold
+tuning or rerun.
+
+### Post-v3 numerical-envelope diagnosis — issue #90 — CURRENT
+
+Issue #90 is the next active gate. Using retained #88 evidence only, determine
+whether the single holdout exceedance is best explained by ordinary tail
+behavior, a real pre-observable applicability regime, a metric/envelope mismatch,
+an execution anomaly, or a mixed/inconclusive result.
+
+The gate must reconstruct the exact failure, characterize the full failing-family
+distribution, test applicability splits, trace propagation into `E_full`, `E_D`,
+and semantic decisions, and audit the v3 distribution-free tolerance claim
+against its separate zero-exceedance holdout acceptance rule.
+
+No v4 methodology, threshold, fresh holdout, or physical campaign may be frozen
+from this gate. A successor method becomes eligible only after #90 makes the
+remaining statistical/correctness question concrete.
 
 ### R6 successor full integration attempt — future independent gate
 
-After #83 and a successor methodology produce applicable qualification evidence,
-define a new full integration attempt. Do not reuse the historical R6 verdict,
-back-fit new limits to R6/#81 evidence, or treat either failed campaign as a
-pass.
+A new dense full-integration attempt remains blocked on applicable successor
+qualification evidence. Do not reuse the historical R6 verdict, back-fit new
+limits to R6/#81/#88 evidence, or treat any failed campaign as a pass.
 
 ---
 
