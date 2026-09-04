@@ -1,0 +1,32 @@
+[
+  {
+    "byte_identical": 12,
+    "gpus": [
+      "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+      "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"
+    ],
+    "pair": "s1d01a0-vs-s1d01a1",
+    "records": 12,
+    "residuals": []
+  },
+  {
+    "byte_identical": 12,
+    "gpus": [
+      "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+      "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176"
+    ],
+    "pair": "s1d01a0-vs-s1d03b0",
+    "records": 12,
+    "residuals": []
+  },
+  {
+    "byte_identical": 12,
+    "gpus": [
+      "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+      "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176"
+    ],
+    "pair": "s1d01a1-vs-s1d03b0",
+    "records": 12,
+    "residuals": []
+  }
+]
