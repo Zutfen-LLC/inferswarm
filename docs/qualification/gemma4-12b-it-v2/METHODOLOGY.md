@@ -206,3 +206,14 @@ This methodology must be reviewed and accepted by the maintainer before any
 of the above. Physical execution for v2 requires its own prospective
 producer chronology (fresh producer branch/SHA; the v1 harness may be
 reused only if code-identical and revalidated).
+
+## Issue #79 — executable v2 tooling
+
+Issue #79 freezes the versioned v2 calibration-summary and threshold-manifest
+schemas and the v2 threshold-derivation and holdout-unseal-preflight
+tooling that binds the `p76-*` stress evidence to the unchanged v1
+threshold math. See [TOOLING.md](TOOLING.md). Threshold math is unchanged
+from v1; only artifact versioning/provenance changes to support `p76-*`.
+No v2 model execution has occurred; physical execution remains
+unauthorized until #79 is reviewed/accepted.
+

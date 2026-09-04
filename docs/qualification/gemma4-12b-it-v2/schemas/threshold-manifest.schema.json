@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inferswarm.dev/schema/issue79/v2-threshold-manifest-1.json",
+  "title": "InferSwarm issue #79 v2 derived threshold manifest (unchanged v1 threshold math, p76 stress provenance)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "contract_id",
+    "tooling_or_methodology_version",
+    "calibration_corpus_sha256",
+    "calibration_case_ids_sha256",
+    "calibration_case_identities_sha256",
+    "calibration_summary_sha256",
+    "calibration_evidence_sha256",
+    "stress_pool_sha256",
+    "stress_selection_commitment_sha256",
+    "stress_selection_sha256",
+    "derivation_program_sha256",
+    "metric_reducer",
+    "limits",
+    "holdout_state",
+    "manual_editing_or_rounding"
+  ],
+  "properties": {
+    "schema": {"const": "inferswarm.issue79.v2-threshold-manifest/1"},
+    "contract_id": {"const": "inferswarm.gemma4-heterogeneous-numerical-equivalence/1"},
+    "tooling_or_methodology_version": {"const": "inferswarm.issue79.v2-threshold-tooling/1 (methodology v2 accepted at inferswarm@8905566031e0296694b3f1288d0f9d1ae15f8134)"},
+    "calibration_corpus_sha256": {"$ref": "#/$defs/sha"},
+    "calibration_case_ids_sha256": {"$ref": "#/$defs/sha"},
+    "calibration_case_identities_sha256": {"$ref": "#/$defs/sha"},
+    "calibration_summary_sha256": {"$ref": "#/$defs/sha"},
+    "calibration_evidence_sha256": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/sha"}},
+    "stress_pool_sha256": {"$ref": "#/$defs/sha"},
+    "stress_selection_commitment_sha256": {"$ref": "#/$defs/sha"},
+    "stress_selection_sha256": {"$ref": "#/$defs/sha"},
+    "derivation_program_sha256": {"$ref": "#/$defs/sha"},
+    "metric_reducer": {"const": "host-float64/full-domain/nearest-rank-higher-p99/per-case-family-max/1"},
+    "limits": {
+      "type": "object",
+      "minProperties": 15,
+      "maxProperties": 15,
+      "propertyNames": {
+        "enum": [
+          "local-bf16-backend-operation-output:max-absolute-difference",
+          "local-bf16-backend-operation-output:rms-difference",
+          "local-bf16-backend-operation-output:p99-absolute-error",
+          "hidden-residual-stream:max-absolute-difference",
+          "hidden-residual-stream:rms-difference",
+          "hidden-residual-stream:p99-absolute-error",
+          "final-normalized-hidden-state:max-absolute-difference",
+          "final-normalized-hidden-state:rms-difference",
+          "final-normalized-hidden-state:p99-absolute-error",
+          "bf16-logits:max-absolute-difference",
+          "bf16-logits:rms-difference",
+          "bf16-logits:p99-absolute-error",
+          "fp32-consumer-logits:max-absolute-difference",
+          "fp32-consumer-logits:rms-difference",
+          "fp32-consumer-logits:p99-absolute-error"
+        ]
+      },
+      "additionalProperties": {"$ref": "#/$defs/limit"}
+    },
+    "holdout_state": {"const": "SEALED_NOT_CONSUMED"},
+    "manual_editing_or_rounding": {"const": "PROHIBITED"}
+  },
+  "$defs": {
+    "sha": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "hex": {"type": "string", "pattern": "^0x[0-9a-f.]+p[+-][0-9]+$"},
+    "limit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statistical_max_hex", "stress_max_hex", "limit_hex", "rule", "comparison"],
+      "properties": {
+        "statistical_max_hex": {"$ref": "#/$defs/hex"},
+        "stress_max_hex": {"$ref": "#/$defs/hex"},
+        "limit_hex": {"$ref": "#/$defs/hex"},
+        "rule": {"const": "max(statistical_max,stress_max)"},
+        "comparison": {"const": "observed<=limit"}
+      }
+    }
+  }
+}

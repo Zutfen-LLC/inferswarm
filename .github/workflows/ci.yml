@@ -60,6 +60,9 @@ jobs:
       - name: Check issue 76 v2 stress methodology
         run: python3 -m unittest tests.test_issue76_v2_stress_selection -v
 
+      - name: Check issue 79 v2 threshold tooling (CPU-only)
+        run: python3 -m unittest tests.test_issue79_v2_threshold_tooling -v
+
       - name: Check internal Markdown links
         run: |
           python3 - <<'EOF'
