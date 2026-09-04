@@ -1,0 +1,53 @@
+{
+  "schema": "inferswarm.issue81.phaseABC-verdicts/1",
+  "producer_freetoken": "9f06d81c6e9519d7ddf68b302c1c2aa14993387d",
+  "phaseA_same_device_repeatability": {
+    "reference_3090_inferswarm04": {
+      "realizations": 3,
+      "sentinel_cases": 12,
+      "tokens_exact_all_pairs": true,
+      "margins_exact_all_pairs": true,
+      "nan_inf_total": 0,
+      "evidence": ["/srv/inferswarm/state/i81/phaseA-3090-r{1,2,3}/index-pa3090r{1,2,3}.json on inferswarm04"]
+    },
+    "chain_3060_01A0_01A1_03B0": {
+      "realizations": 3,
+      "sentinel_cases": 12,
+      "tokens_exact_all_pairs": true,
+      "margins_exact_all_pairs": true,
+      "nan_inf_total": 0,
+      "note": "each realization = fresh chain_runner process on 01 + fresh last_stage_service process on 03",
+      "evidence": ["/srv/inferswarm/state/i81/phaseA-chain-r{1,2,3}/index-pachainr{1,2,3}.json on inferswarm01"]
+    },
+    "verdict": "SAME_DEVICE_REPEATABLE"
+  },
+  "phaseB_cross_card": {
+    "instrument": "frozen #71 stage-role replay (benchmarks.inferswarm_r6_localization.run_stage1_diag, role=first layers [0,16), canonical replay-prefill, capture steps 0/1/7)",
+    "cards": {
+      "01-A0": {"uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099", "tag": "s1d01a0"},
+      "01-A1": {"uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55", "tag": "s1d01a1"},
+      "03-B0": {"uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176", "tag": "s1d03b0"}
+    },
+    "pairs": [
+      {"pair": "s1d01a0-vs-s1d01a1", "records": 12, "byte_identical": 12},
+      {"pair": "s1d01a0-vs-s1d03b0", "records": 12, "byte_identical": 12},
+      {"pair": "s1d01a1-vs-s1d03b0", "records": 12, "byte_identical": 12}
+    ],
+    "uuid_label_note": "the s1d01a1 bundle's gpu_uuid field records GPU-1fc28f83 because nvidia-smi -i 0 ignores CUDA_VISIBLE_DEVICES; physical execution on GPU-d5c05739 (01-A1) is proven by CUDA_VISIBLE_DEVICES=1 + torch.cuda device identity check (cuda:0 == d5c05739 under CVD=1), performed 2026-09-04",
+    "disposition_evidence": "all three physical RTX 3060 cards byte-identical on matched stage-role replay; supports RTX_3060_DEVICE_CLASS for stage-role execution. 03-B1 (GPU-a57bd3fb) not tested: idle spare, outside qualification scope; recorded as non-covered instance.",
+    "evidence": ["/srv/inferswarm/state/i81/stage1diag-crosscard.json on inferswarm01", "/srv/inferswarm/state/i81/stage1diag-s1d{01a0,01a1,03b0}/ on 01 (03b0 copied from 03)"]
+  },
+  "phaseC_heterogeneous_stage_replay": {
+    "reference_single_arm_3090": {
+      "run": "phaseBC-pc04ref", "cases": 12, "status": "RUN_COMPLETE",
+      "index_sha256": "58d6688cf9cd5f8523580d33d46a1552de387855a5858b4cfb93b36973dee06a",
+      "note": "reference_runner full-model single arm; 24 GiB 3090 fits the dense model"
+    },
+    "tokens_3090_vs_chain": {"mismatches": 4, "of": 12,
+      "cases": ["c74-01-03-15", "c74-02-06-06", "c74-03-01-13", "c74-04-04-04"],
+      "interpretation": "consistent with accepted #71 localization BACKEND_EXECUTION_LOCAL (device-class bf16 accumulation residual, 1-2 ULP/GEMM x 48 layers flipping near-tie greedy argmax); diagnostic only, no threshold defined or applied in Phase C"
+    },
+    "cross_card_single_full_model_note": "single-full-model arm on 12 GiB RTX 3060 is physically impossible (dense model ~23 GiB; both attempts died deterministically in weight materialization with CUDA OOM before any case executed). Classified infrastructure-invalid, retained at /srv/inferswarm/state/i81/invalid/phaseBC-pb01a1-OOM.log and phaseBC-pb03b0-OOM.log. No replacement single-arm 3060 runs: Phase B/C use the frozen #71 matched stage-role instrument instead.",
+    "validity": "diagnostic/applicability evidence only; defines no thresholds, adds no statistical cases, weakens no exact gates"
+  }
+}

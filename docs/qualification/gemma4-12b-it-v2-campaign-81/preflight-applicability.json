@@ -1,0 +1,50 @@
+{
+  "schema": "inferswarm.issue81.preflight-applicability/1",
+  "campaign": "inferswarm#81 gemma numerical qualification v2",
+  "freetoken_producer": "9f06d81c6e9519d7ddf68b302c1c2aa14993387d",
+  "freetoken_clean_base": "d4d16089165917704a87f4e2f0c4a09969646f95",
+  "inferswarm_accepted_head": "d8a98b5614123c7408aa60b0137220c252fd50b9",
+  "localization_anchor": "9586695e6ef35943b1cc4e78becd792892080e15",
+  "model": "google/gemma-4-12B-it",
+  "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+  "checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+  "tokenizer_sha256": "cc8d3a0ce36466cc (16-prefix of /srv/models/gemma-r6/tokenizer.json, identical on 01/03/04)",
+  "nodes": {
+    "inferswarm04": {
+      "role": "reference (RTX 3090)",
+      "gpu": [{"uuid": "GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03", "product": "NVIDIA GeForce RTX 3090", "compute_capability": "8.6"}],
+      "worktree": "/home/zutfen/FreeToken-81 @ 9f06d81 (clean, native ext rebuilt)",
+      "native_ext_sha16": {"_pinned_tensor": "b6453082d52f30e7", "_cpu_moe": "48374f6ef64ff641", "_ple_store": "bf926433b25e5f4e"},
+      "stack": {"python": "3.13.5", "torch": "2.11.0+cu130", "cuda_runtime": "13.0", "nvcc": "release 13.1", "driver": "610.57.04", "triton": "3.6.0", "transformers": "5.16.1", "flashinfer": "0.6.17"}
+    },
+    "inferswarm01": {
+      "role": "candidate stage 1 (GPU-0, layers [0,16)) + stage 2 (GPU-1, layers [16,32))",
+      "gpu": [
+        {"index": 0, "uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099", "product": "NVIDIA GeForce RTX 3060", "compute_capability": "8.6"},
+        {"index": 1, "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55", "product": "NVIDIA GeForce RTX 3060", "compute_capability": "8.6"}
+      ],
+      "worktree": "/home/zutfen/FreeToken-81 @ 9f06d81 (clean, native ext rebuilt)",
+      "native_ext_sha16": {"_pinned_tensor": "2886bfa57ce8d36b", "_cpu_moe": "48374f6ef64ff641", "_ple_store": "66f2d7c2c58782c5"},
+      "stack": {"python": "3.13.5", "torch": "2.11.0+cu130", "cuda_runtime": "13.0", "nvcc": "release 13.1", "driver": "610.57.04", "triton": "3.6.0", "transformers": "5.16.1", "flashinfer": "0.6.17"}
+    },
+    "inferswarm03": {
+      "role": "candidate last stage (GPU-0, layers [32,48)) + Phase-B second physical 3060 card",
+      "gpu": [
+        {"index": 0, "uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176", "product": "NVIDIA GeForce RTX 3060", "compute_capability": "8.6"},
+        {"index": 1, "uuid": "GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0", "product": "NVIDIA GeForce RTX 3060", "compute_capability": "8.6", "note": "second card present since R6 era; available for Phase-B cross-card coverage"}
+      ],
+      "worktree": "/home/zutfen/FreeToken-81 @ 9f06d81 (clean, native ext rebuilt)",
+      "native_ext_sha16": {"_pinned_tensor": "2886bfa57ce8d36b", "_cpu_moe": "48374f6ef64ff641", "_ple_store": "66f2d7c2c58782c5"},
+      "stack": {"python": "3.13.5", "torch": "2.11.0+cu130", "cuda_runtime": "13.0", "nvcc": "release 13.1", "driver": "610.57.04", "triton": "3.6.0", "transformers": "5.16.1", "flashinfer": "0.6.17"}
+    }
+  },
+  "native_ext_note": "Native extension .so hashes differ between inferswarm04 and inferswarm01/03 built from identical source at identical producer; this is build-path-embedded metadata, not semantic difference. 01 and 03 are byte-identical to each other. Recorded honestly, no byte equality claimed.",
+  "execution_mode": "native BF16 text execution; Triton attention; deterministic greedy replay-prefill; one replay chunk within frozen 64-row regime; 8 greedy tokens per case; capture positions 0,1,3,7; no incremental KV-extend; no multi-chunk; no Transformers-vs-FreeToken gate",
+  "frozen_artifacts_verified_local": {
+    "margin_stress_pool_sha256": "533b32857721b3f99243e5695bc18b24960cbd3c80692d626154907d6ecbd7c9",
+    "selection_commitment_sha256": "04421a6f19f6338a340dfea296214509eae3adc5ca32067dfd76880ab1cacba0",
+    "selector_sha256": "e32e8672671c3b3ec6b47e3b119c66fd54e2c5a62ba72fb2ec2288764508beab",
+    "calibration_corpus_sha256": "e147ce0a672fe7f8616f9e000fea770bfeab6e0a1aca637ffe6bc07cd64c3175",
+    "holdout_ciphertext_sha256": "23311c5514b2561c66a2ecd0c9cfa25c3f4f91b83b67353aada8355f48e25c59"
+  }
+}
