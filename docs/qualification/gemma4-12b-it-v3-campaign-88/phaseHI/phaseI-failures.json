@@ -1,0 +1,9 @@
+[
+ {
+  "case_id": "h86-03-05-01",
+  "envelope": "final-normalized-hidden-state:rms-difference",
+  "gate": "ENVELOPE_EXCEEDED",
+  "limit": 2.6131138414325275,
+  "observed": 2.6800369574218053
+ }
+]
