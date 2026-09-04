@@ -35,5 +35,10 @@ Take the largest summary from the eight selected stress cases. The inclusive
 limit is the larger of those values. A candidate satisfies the envelope when
 `observed <= limit`.
 
+Before reduction, verify all 576 statistical identities against the exact
+frozen calibration corpus. Verify all eight stress identities against the
+committed post-reference selection. Verify that the selection belongs to the
+exact frozen 48-case pool. A summary row contains `case_id` and `case_sha256`.
+
 Serialize every derived value with an exact hexadecimal binary64 string. Do not
 round or edit it.

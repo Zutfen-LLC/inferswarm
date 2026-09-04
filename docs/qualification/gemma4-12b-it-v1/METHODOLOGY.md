@@ -76,6 +76,11 @@ text profile uses `encode(add_special_tokens=False)` with no chat template.
 The execution harness must consume the frozen token IDs. It must not retokenize
 the text during a physical run.
 
+The methodology manifest commits an order-independent hash of all 576 case
+IDs. It also commits an order-independent hash of each `case_id` to
+`case_sha256` mapping. Each calibration-summary row must contain both values.
+Threshold derivation loads the exact frozen corpus and verifies both values.
+
 The corpus is deterministic. Its public seed and procedure are committed.
 The generator uses a SHA-256-derived local pseudorandom stream for each case.
 It truncates a generated content-class sequence to an exact token count. It
@@ -99,8 +104,12 @@ break.
 
 `manifests/margin-stress-selection-commitment.json` freezes this rule, the pool
 hash, and an output count of exactly eight. After the reference run, use
-`scripts/select_issue74_margin_stress.py` to emit the selected manifest. Commit
-that manifest before any heterogeneous candidate execution.
+`scripts/select_issue74_margin_stress.py` with the frozen pool, reference-margin
+summary, and selection commitment. The program emits the selected manifest.
+The selected manifest binds the rule commitment, pool, reference-margin
+summary, and full identity of each selected case. Commit that manifest before
+any heterogeneous candidate execution. The initial methodology does not name
+the eight cases because the matched-reference run produces that selection.
 
 For each envelope, the final calibration limit is:
 
@@ -136,6 +145,33 @@ error. This makes exactly 15 mandatory envelopes.
 
 ## 6. Statistical design
 
+The target calibration population is the equal-weighted mixture of the 24
+frozen content-by-length cells. For an envelope and proposed threshold `x`,
+define:
+
+```text
+q_h = P(metric <= x | cell h), for h = 1,...,24
+q_bar = (1/24) * sum(q_h)
+```
+
+Each cell contributes exactly 24 independent observations. Therefore, the
+probability that all 576 calibration observations are at or below `x` is:
+
+```text
+product(q_h^24)
+```
+
+AM-GM gives:
+
+```text
+product(q_h^(1/24)) <= q_bar
+product(q_h^24) <= q_bar^576
+```
+
+If `q_bar < p`, then the probability that all calibration observations are at
+or below `x` is less than `p^576`. This result preserves the conservative
+maximum-order-statistic bound for the balanced design.
+
 For every envelope:
 
 - population content `p = 0.99`;
@@ -144,20 +180,25 @@ For every envelope:
 - Bonferroni per-envelope alpha `alpha_i = 0.05 / 15`;
 - distribution-free upper tolerance limit `= X_(n)`, the sample maximum.
 
-The requirement is:
+The conservative sample-size requirement is:
 
 ```text
-P(F(X_(n)) >= p) = 1 - p^n >= 1 - alpha_i
+P(q_bar(X_(n)) >= p) >= 1 - p^n >= 1 - alpha_i
 n >= ceil(log(alpha_i) / log(p)) = 568
 ```
 
-The selected count is 576 because `24 cells * 24 cases = 576`. The mechanical
-record is `manifests/sample-size-derivation.json`. A method change is required
-if the program does not return 568 and 576.
+The value 568 is the scalar lower bound. The balanced design selects 576
+because `24 cells * 24 cases = 576`. The mechanical record is
+`manifests/sample-size-derivation.json`. A method change is required if the
+program does not return 568 and 576.
 
-This design gives simultaneous confidence about the marginal population
-coverage of each envelope. It does not claim that 99 percent of requests pass
-all 15 envelopes together. The holdout is a separate falsification gate.
+For each envelope, the calibration maximum is a distribution-free upper
+tolerance limit for at least 99 percent coverage of the equal-weighted 24-cell
+target mixture. Bonferroni gives simultaneous 95 percent confidence across the
+15 marginal statements. This design does not claim 99 percent coverage for an
+individual cell. It does not claim that 99 percent of requests pass all 15
+envelopes together. It does not cover a production distribution that uses
+different cell weights. The holdout is a separate falsification gate.
 
 ## 7. Physical arms and order
 
@@ -190,10 +231,13 @@ outputs.
 
 ## 8. Threshold freeze
 
-`scripts/issue74_methodology.py derive-thresholds` accepts only the frozen
-methodology manifest and retained calibration summaries. It fails closed on a
-holdout field, a holdout case ID, an exact or semantic failure, non-finite data,
-missing cases, missing envelopes, or missing evidence hashes.
+`scripts/issue74_methodology.py derive-thresholds` requires the frozen
+methodology manifest, calibration corpus, stress pool, committed post-reference
+stress selection, and retained calibration summary. It verifies the exact
+corpus and selection hashes. It verifies the complete case-ID sets and each
+`case_sha256`. It fails closed on a holdout field, a holdout case ID, an exact
+or semantic failure, non-finite data, missing cases, substituted cases,
+duplicate cases, missing envelopes, or missing evidence hashes.
 
 The program verifies evidence completeness. It computes each 576-case maximum
 and each eight-case stress maximum. It writes their maximum as an exact

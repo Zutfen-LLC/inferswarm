@@ -10,7 +10,9 @@ The methodology is frozen for review. Physical execution is not authorized.
 - [METHODOLOGY.md](METHODOLOGY.md) defines the campaign and stop rules.
 - [REDUCER.md](REDUCER.md) defines numerical reduction.
 - [EVIDENCE.md](EVIDENCE.md) defines evidence, preflight, and invalid runs.
-- `manifests/` contains the exact corpus and all commitments.
+- `manifests/` contains the exact corpora and pre-reference commitments. The
+  post-reference eight-case stress selection is added and committed before
+  heterogeneous candidate execution.
 - `manifests/qualification-draft.json` keeps the candidate excluded until all
   physical evidence and the sealed holdout pass.
 - `schemas/` contains the preflight, attempt-evidence, calibration-summary, and

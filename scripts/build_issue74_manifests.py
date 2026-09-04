@@ -14,6 +14,8 @@ from issue74_methodology import (
     METHODOLOGY_SCHEMA,
     POPULATION_CONTENT,
     SELECTED_CALIBRATION_CASES,
+    case_identities_sha256,
+    case_ids_sha256,
     canonical_json_bytes,
     minimum_sample_size,
     sha256_file,
@@ -111,11 +113,16 @@ def main() -> int:
         "familywise_alpha": 1.0 - FAMILYWISE_CONFIDENCE,
         "mandatory_envelope_count": len(ENVELOPES),
         "bonferroni_per_envelope_alpha": (1.0 - FAMILYWISE_CONFIDENCE) / len(ENVELOPES),
-        "probability_statement": "P(F(X_(n))>=p)=1-p^n>=1-alpha_i",
+        "target_population": "equal-weighted mixture of the 24 frozen content-by-length cells",
+        "cell_coverage_definition": "q_h=P(metric<=x|cell h)",
+        "equal_mixture_coverage": "q_bar=(1/24)*sum(q_h)",
+        "balanced_all_below_probability": "product(q_h^24)",
+        "am_gm_bound": "product(q_h^24)<=q_bar^576",
+        "probability_statement": "if q_bar<p, P(all 576 observations<=x)<p^576; therefore P(q_bar(X_(576))>=p)>=1-p^576",
         "minimum_n": minimum,
         "selected_n": SELECTED_CALIBRATION_CASES,
         "selection_reason": "24 balanced cells times 24 independent cases",
-        "interpretation_limit": "marginal 0.99 population coverage for each envelope with simultaneous 0.95 confidence; not joint request-pass probability",
+        "interpretation_limit": "marginal 0.99 coverage of the equal-weighted 24-cell mixture for each envelope with simultaneous 0.95 confidence; not per-cell coverage, joint request-pass probability, or coverage under other mixture weights",
     })
 
     write("qualification-draft.json", {
@@ -188,13 +195,24 @@ def main() -> int:
             "cell_count": 24,
             "cases_per_cell": 24,
             "independent_unit": "one deterministic prompt case",
+            "target_population": "equal-weighted mixture of the 24 frozen content-by-length cells",
+            "balanced_mixture_proof": "product(q_h^24)<=q_bar^576 by AM-GM",
         },
         "corpora": {
             "calibration_manifest_sha256": sha256_file(MANIFESTS / "calibration-corpus.json"),
             "calibration_case_count": 576,
+            "calibration_case_ids_sha256": case_ids_sha256(
+                calibration["cases"], expected_count=576, prefix="c74-"
+            ),
+            "calibration_case_identities_sha256": case_identities_sha256(
+                calibration["cases"], expected_count=576, prefix="c74-"
+            ),
             "stress_pool_manifest_sha256": sha256_file(MANIFESTS / "margin-stress-pool.json"),
             "stress_pool_case_count": 48,
             "stress_selected_case_count": 8,
+            "stress_selection_commitment_sha256": sha256_file(
+                MANIFESTS / "margin-stress-selection-commitment.json"
+            ),
             "holdout_commitment_sha256": sha256_file(MANIFESTS / "sealed-holdout-commitment.json"),
             "holdout_ciphertext_sha256": holdout["ciphertext_sha256"],
             "holdout_case_count": 24,
@@ -209,7 +227,7 @@ def main() -> int:
         },
         "semantic_profile": {"generated_tokens": 8, "capture_positions": [0, 1, 3, 7], "exact_token_positions": list(range(8))},
         "threshold_rule": "max(576-case statistical maximum,8-case stress maximum) for each envelope",
-        "threshold_input_policy": "calibration summaries and frozen methodology only; all holdout fields and case IDs are rejected",
+        "threshold_input_policy": "frozen methodology, exact calibration corpus, exact stress pool, committed post-reference stress selection, and calibration summary only; all holdout fields and case IDs are rejected",
         "holdout_acceptance": "zero exceedances; exact integrity, applicability, finite values, all envelopes, all token IDs, and required role coverage",
         "historical_r6": "R6_DENSE_ARCHITECTURE_FALSIFICATION_FAIL_UNTOUCHED",
         "authorization": "STOP_FOR_MAINTAINER_REVIEW_BEFORE_PHYSICAL_CALIBRATION",

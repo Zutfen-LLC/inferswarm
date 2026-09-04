@@ -58,6 +58,9 @@ use it for a valid numerical exceedance.
 7. Retain the immutable attempt and its hash.
 
 The calibration summary may refer only to retained Arm D calibration hashes.
+Each statistical row must contain the exact frozen `c74-` case ID and
+`case_sha256`. Each stress row must contain the exact selected `p74-` case ID
+and `case_sha256`. The summary must bind the committed selected-manifest hash.
 It must not contain a holdout field or an `h74-` case ID.
 
 ## Methodology execution audit

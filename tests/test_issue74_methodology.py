@@ -5,10 +5,11 @@ import ast
 import json
 import os
 import sys
-import tempfile
 import unittest
 from collections import Counter
 from pathlib import Path
+
+from jsonschema import Draft202012Validator, ValidationError
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -25,6 +26,7 @@ from issue74_methodology import (  # noqa: E402
     ENVELOPES,
     LENGTH_REGIMES,
     MethodologyError,
+    balanced_mixture_all_below_bound,
     canonical_json_bytes,
     conservative_case_family,
     derive_threshold_manifest,
@@ -46,9 +48,10 @@ def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def summary_case(case_id: str, default: float = 1.0) -> dict:
+def summary_case(case: dict, default: float = 1.0) -> dict:
     return {
-        "case_id": case_id,
+        "case_id": case["case_id"],
+        "case_sha256": case["case_sha256"],
         "exact_integrity": "PASS",
         "semantic_output": "PASS",
         "finite": True,
@@ -128,6 +131,14 @@ class Issue74ReducerTests(unittest.TestCase):
         derivation = load("sample-size-derivation.json")
         self.assertEqual((derivation["minimum_n"], derivation["selected_n"]), (568, 576))
 
+    def test_balanced_mixture_inequality_preserves_the_568_case_bound(self):
+        coverages = [0.91 + index / 1000 for index in range(24)]
+        actual, upper_bound = balanced_mixture_all_below_bound(coverages, 24)
+        self.assertLessEqual(actual, upper_bound)
+        self.assertEqual(minimum_sample_size(), 568)
+        alpha_i = (1.0 - 0.95) / 15
+        self.assertLess(0.99 ** 568, alpha_i)
+
     def test_exactly_15_mandatory_envelopes(self):
         methodology = load("methodology.json")
         self.assertEqual(len(ENVELOPES), 15)
@@ -159,50 +170,165 @@ class Issue74ReducerTests(unittest.TestCase):
 class Issue74ThresholdTests(unittest.TestCase):
     def setUp(self):
         self.methodology = load("methodology.json")
+        self.calibration_corpus = load("calibration-corpus.json")
+        self.stress_pool = load("margin-stress-pool.json")
+        self.selection_commitment = load("margin-stress-selection-commitment.json")
+        pool_hash = hashlib.sha256(canonical_json_bytes(self.stress_pool)).hexdigest()
+        margins = {
+            "schema": "inferswarm.issue74.reference-margin-summary/1",
+            "contract_id": CONTRACT_ID,
+            "stress_pool_sha256": pool_hash,
+            "cases": [
+                {"case_id": row["case_id"], "top1_margin_hex": float(index + 1).hex()}
+                for index, row in enumerate(reversed(self.stress_pool["cases"]))
+            ],
+        }
+        self.stress_selection = select(self.stress_pool, margins, self.selection_commitment)
+        selected_cases = [row["case"] for row in self.stress_selection["selected"]]
         self.calibration = {
             "schema": "inferswarm.issue74.calibration-summary/1",
             "contract_id": CONTRACT_ID,
             "calibration_corpus_sha256": self.methodology["corpora"]["calibration_manifest_sha256"],
-            "stress_selection_sha256": "c" * 64,
+            "stress_selection_sha256": hashlib.sha256(
+                canonical_json_bytes(self.stress_selection)
+            ).hexdigest(),
             "evidence_sha256": ["a" * 64],
-            "statistical_cases": [summary_case(f"c74-test-{index:03d}", 1.0) for index in range(576)],
-            "stress_cases": [summary_case(f"p74-test-{index:03d}", 2.0) for index in range(8)],
+            "statistical_cases": [summary_case(case, 1.0) for case in self.calibration_corpus["cases"]],
+            "stress_cases": [summary_case(case, 2.0) for case in selected_cases],
         }
+
+    def derive(self, calibration=None, stress_selection=None):
+        return derive_threshold_manifest(
+            self.methodology,
+            self.calibration if calibration is None else calibration,
+            self.calibration_corpus,
+            self.stress_pool,
+            self.stress_selection if stress_selection is None else stress_selection,
+            program_sha256="b" * 64,
+        )
 
     def test_threshold_is_maximum_of_statistical_and_stress(self):
         first, second = ENVELOPES[:2]
         self.calibration["statistical_cases"][11]["envelopes"][first] = (3.0).hex()
         self.calibration["stress_cases"][2]["envelopes"][second] = (4.0).hex()
-        result = derive_threshold_manifest(self.methodology, self.calibration, program_sha256="b" * 64)
+        result = self.derive()
+        calibration_schema = json.loads((BASE / "schemas/calibration-summary.schema.json").read_text())
+        threshold_schema = json.loads((BASE / "schemas/threshold-manifest.schema.json").read_text())
+        Draft202012Validator(calibration_schema).validate(self.calibration)
+        Draft202012Validator(threshold_schema).validate(result)
         self.assertEqual(result["limits"][first]["limit_hex"], (3.0).hex())
         self.assertEqual(result["limits"][second]["limit_hex"], (4.0).hex())
         self.assertTrue(all(row["rule"] == "max(statistical_max,stress_max)" for row in result["limits"].values()))
+
+        reordered = json.loads(json.dumps(self.calibration))
+        reordered["statistical_cases"].reverse()
+        reordered["stress_cases"].reverse()
+        self.derive(reordered)
 
     def test_holdout_cannot_influence_threshold_derivation(self):
         for key, value in (("holdout_cases", []), ("unseal_key", "secret"), ("case_id", "h74-01")):
             poisoned = json.loads(json.dumps(self.calibration))
             poisoned[key] = value
             with self.assertRaisesRegex(MethodologyError, "holdout inputs are forbidden"):
-                derive_threshold_manifest(self.methodology, poisoned, program_sha256="b" * 64)
+                self.derive(poisoned)
+        for key, value in (("holdout_values", [1.0]), ("unsealed_plaintext", "secret"), ("case_id", "h74-01")):
+            poisoned_selection = json.loads(json.dumps(self.stress_selection))
+            poisoned_selection[key] = value
+            with self.assertRaisesRegex(MethodologyError, "holdout inputs are forbidden"):
+                self.derive(stress_selection=poisoned_selection)
 
     def test_missing_and_failed_evidence_fail_closed(self):
         missing = json.loads(json.dumps(self.calibration))
         missing["statistical_cases"].pop()
         with self.assertRaises(MethodologyError):
-            derive_threshold_manifest(self.methodology, missing, program_sha256="b" * 64)
+            self.derive(missing)
         failed = json.loads(json.dumps(self.calibration))
         failed["statistical_cases"][0]["exact_integrity"] = "FAIL"
         with self.assertRaises(MethodologyError):
-            derive_threshold_manifest(self.methodology, failed, program_sha256="b" * 64)
+            self.derive(failed)
+        semantic = json.loads(json.dumps(self.calibration))
+        semantic["statistical_cases"][0]["semantic_output"] = "FAIL"
+        with self.assertRaises(MethodologyError):
+            self.derive(semantic)
+        incomplete = json.loads(json.dumps(self.calibration))
+        incomplete["stress_cases"][0]["evidence_complete"] = False
+        with self.assertRaises(MethodologyError):
+            self.derive(incomplete)
+        missing_envelope = json.loads(json.dumps(self.calibration))
+        del missing_envelope["statistical_cases"][0]["envelopes"][ENVELOPES[0]]
+        with self.assertRaises(MethodologyError):
+            self.derive(missing_envelope)
         nonfinite = json.loads(json.dumps(self.calibration))
         nonfinite["stress_cases"][0]["envelopes"][ENVELOPES[0]] = "nan"
         with self.assertRaises(MethodologyError):
-            derive_threshold_manifest(self.methodology, nonfinite, program_sha256="b" * 64)
+            self.derive(nonfinite)
+
+    def test_statistical_case_substitutions_fail_closed(self):
+        unknown = json.loads(json.dumps(self.calibration))
+        unknown["statistical_cases"][0]["case_id"] = "c74-unknown-valid-syntax"
+        unknown["statistical_cases"][0]["case_sha256"] = "d" * 64
+        with self.assertRaisesRegex(MethodologyError, "frozen case identity"):
+            self.derive(unknown)
+
+        duplicate = json.loads(json.dumps(self.calibration))
+        duplicate["statistical_cases"][0] = duplicate["statistical_cases"][1]
+        with self.assertRaisesRegex(MethodologyError, "duplicate"):
+            self.derive(duplicate)
+
+        replaced = json.loads(json.dumps(self.calibration))
+        for index, row in enumerate(replaced["statistical_cases"]):
+            row["case_id"] = f"c74-substitute-{index:03d}"
+            row["case_sha256"] = "d" * 64
+        with self.assertRaisesRegex(MethodologyError, "frozen case identity"):
+            self.derive(replaced)
+
+        wrong_hash = json.loads(json.dumps(self.calibration))
+        wrong_hash["statistical_cases"][0]["case_sha256"] = "d" * 64
+        with self.assertRaisesRegex(MethodologyError, "frozen case identity"):
+            self.derive(wrong_hash)
+
+    def test_stress_selection_and_case_substitutions_fail_closed(self):
+        wrong_selection_hash = json.loads(json.dumps(self.calibration))
+        wrong_selection_hash["stress_selection_sha256"] = "d" * 64
+        with self.assertRaisesRegex(MethodologyError, "exact stress selection"):
+            self.derive(wrong_selection_hash)
+
+        selected_ids = {row["case_id"] for row in self.calibration["stress_cases"]}
+        other_pool_case = next(row for row in self.stress_pool["cases"] if row["case_id"] not in selected_ids)
+        one_other = json.loads(json.dumps(self.calibration))
+        one_other["stress_cases"][0] = summary_case(other_pool_case, 2.0)
+        with self.assertRaisesRegex(MethodologyError, "frozen case identity"):
+            self.derive(one_other)
+
+        arbitrary = json.loads(json.dumps(self.calibration))
+        arbitrary["stress_cases"] = [summary_case(row, 2.0) for row in self.stress_pool["cases"][8:16]]
+        with self.assertRaisesRegex(MethodologyError, "frozen case identity"):
+            self.derive(arbitrary)
+
+        duplicate = json.loads(json.dumps(self.calibration))
+        duplicate["stress_cases"][0] = duplicate["stress_cases"][1]
+        with self.assertRaisesRegex(MethodologyError, "duplicate"):
+            self.derive(duplicate)
+
+        wrong_hash = json.loads(json.dumps(self.calibration))
+        wrong_hash["stress_cases"][0]["case_sha256"] = "d" * 64
+        with self.assertRaisesRegex(MethodologyError, "frozen case identity"):
+            self.derive(wrong_hash)
+
+        wrong_selected_identity = json.loads(json.dumps(self.stress_selection))
+        wrong_selected_identity["selected"][0]["case"]["case_sha256"] = "d" * 64
+        matching_summary = json.loads(json.dumps(self.calibration))
+        matching_summary["stress_selection_sha256"] = hashlib.sha256(
+            canonical_json_bytes(wrong_selected_identity)
+        ).hexdigest()
+        with self.assertRaisesRegex(MethodologyError, "duplicate or non-pool case"):
+            self.derive(matching_summary, wrong_selected_identity)
 
 
 class Issue74StressSelectionTests(unittest.TestCase):
     def test_selection_is_exact_deterministic_and_reference_only(self):
         pool = load("margin-stress-pool.json")
+        commitment = load("margin-stress-selection-commitment.json")
         pool_hash = hashlib.sha256(canonical_json_bytes(pool)).hexdigest()
         margins = {
             "schema": "inferswarm.issue74.reference-margin-summary/1",
@@ -211,8 +337,8 @@ class Issue74StressSelectionTests(unittest.TestCase):
             "cases": [{"case_id": row["case_id"], "top1_margin_hex": float(index + 1).hex()}
                       for index, row in enumerate(reversed(pool["cases"]))],
         }
-        first = select(pool, margins)
-        second = select(pool, json.loads(json.dumps(margins)))
+        first = select(pool, margins, commitment)
+        second = select(pool, json.loads(json.dumps(margins)), commitment)
         self.assertEqual(first, second)
         self.assertEqual(first["selected_count"], 8)
         self.assertEqual(len(first["selected"]), 8)
@@ -220,6 +346,7 @@ class Issue74StressSelectionTests(unittest.TestCase):
 
     def test_nonpositive_reference_margin_is_rejected(self):
         pool = load("margin-stress-pool.json")
+        commitment = load("margin-stress-selection-commitment.json")
         margins = {
             "schema": "inferswarm.issue74.reference-margin-summary/1",
             "contract_id": CONTRACT_ID,
@@ -228,7 +355,40 @@ class Issue74StressSelectionTests(unittest.TestCase):
         }
         margins["cases"][0]["top1_margin_hex"] = (0.0).hex()
         with self.assertRaises(ValueError):
-            select(pool, margins)
+            select(pool, margins, commitment)
+
+
+class Issue74SchemaTests(unittest.TestCase):
+    def setUp(self):
+        self.schema = json.loads((BASE / "schemas/calibration-summary.schema.json").read_text())
+        calibration_case = load("calibration-corpus.json")["cases"][0]
+        stress_case = load("margin-stress-pool.json")["cases"][0]
+        self.statistical_row = summary_case(calibration_case)
+        self.stress_row = summary_case(stress_case)
+
+    def assert_valid(self, property_name, row):
+        schema = {"$ref": f"#/$defs/{property_name}", "$defs": self.schema["$defs"]}
+        Draft202012Validator(schema).validate(row)
+
+    def assert_invalid(self, property_name, row):
+        with self.assertRaises(ValidationError):
+            self.assert_valid(property_name, row)
+
+    def test_calibration_summary_case_id_semantics(self):
+        self.assert_valid("statistical_case", self.statistical_row)
+        self.assert_valid("stress_case", self.stress_row)
+
+        p_in_statistical = json.loads(json.dumps(self.statistical_row))
+        p_in_statistical["case_id"] = "p74-valid-shape"
+        self.assert_invalid("statistical_case", p_in_statistical)
+
+        c_in_stress = json.loads(json.dumps(self.stress_row))
+        c_in_stress["case_id"] = "c74-valid-shape"
+        self.assert_invalid("stress_case", c_in_stress)
+
+        s_in_statistical = json.loads(json.dumps(self.statistical_row))
+        s_in_statistical["case_id"] = "s74-loose-regex-no-longer-valid"
+        self.assert_invalid("statistical_case", s_in_statistical)
 
 
 class Issue74SafetyTests(unittest.TestCase):
