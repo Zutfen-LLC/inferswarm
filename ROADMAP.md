@@ -555,7 +555,7 @@ greedy token under the strict exact-token profile. Exact integrity passed,
 NaN/Inf remained zero, thresholds were never derived, and the retained holdout
 remains sealed.
 
-### Heterogeneous greedy semantic contract — issue #83 — CURRENT
+### Heterogeneous greedy semantic contract — issue #83 — PROPOSED (pending acceptance)
 
 Define the prospective strategy semantic-output contract after #81. The active
 questions are identical-prefix numerical replay, mathematically grounded
@@ -564,8 +564,52 @@ autoregressive branching after an allowed near-tie decision, and the
 relationship between ordinary heterogeneous correctness and strict
 exact-token/`BIT_EXACT_REQUIRED` reproducibility.
 
-This is a design/research gate only. Do not launch another physical
-qualification campaign or unseal the retained holdout from #83.
+The issue #83 adjudication (branch `issue-83-semantic-contract`,
+`docs/qualification/gemma4-12b-it-semantic-83/`) delivers:
+
+- a machine-verified first-divergence diagnostic over the retained #81
+  Phase-D evidence (reproduction-gated: 236/576 statistical, 4/8 stress
+  reproduced exactly; first divergence always at an exactly-shared prefix;
+  divergent decisions are reference near-ties; zero violations of the
+  stability theorem across all same-prefix rows);
+- proved (not fitted) decision-stability mathematics: `m_D > 2E_D` forces
+  argmax identity, any in-`D` candidate winner satisfies
+  `r[a] − r[j] ≤ 2E_D`, and the factor 2 is tight (strict flip below,
+  tie at, guaranteed identity above `2E_D`);
+- the strict separation of the two envelopes: the mandatory
+  full-vocabulary FP32 consumer-logit numerical bound `E_full` (one of the
+  unchanged 15 numerical envelopes) is never replaced or waived, while a
+  supplemental decision-local bound `E_D` on a frozen strategy-declared
+  domain `D` may additionally qualify decision stability — conjunctively,
+  never alternatively;
+- fail-closed decision-domain containment: the actual candidate
+  full-vocabulary emitted winner must lie in `D` on every acceptance
+  decision; otherwise `DECISION_DOMAIN_ESCAPE` (an unconditional semantic
+  failure, not "unstable"), and ambiguity-set membership is evaluated
+  against the actual emitted token;
+- frozen argmax/tie-break semantics as part of the semantic profile
+  (applicability-bearing when ties can affect emitted tokens;
+  `m_D = 2E_D` treated as unstable absent a stronger prospective proof);
+- the A+B(+C-reserved) trajectory design: canonical-prefix teacher-forced
+  replay for all numerical envelopes, decision-local semantic gate with the
+  ambiguity set, branch labels after the first allowed divergence;
+- the two-profile taxonomy (strict exact-token vs decision-stability) and
+  its relationship to `BIT_EXACT_REQUIRED`;
+- a prospective calibration/holdout chronology with no circularity and no
+  post-hoc rescue of #81: the 15 numerical envelopes (incl. `E_full`) and,
+  where a proper-subset `D` is used, the supplemental `E_D` are derived on
+  same-prefix rows → full threshold-manifest freeze barrier (15 limits +
+  `D` identity + `E_D` + tie-break semantics) → semantic gates → fresh
+  sealed holdout (integrity + full numerical envelopes + containment +
+  stability/ambiguity gate);
+- doctrine updates in
+  `docs/architecture/numerical-equivalence-contract.md` (§1.3, §5.2, §6).
+
+#81 remains `CALIBRATION_SEMANTIC_FAIL` and was not re-evaluated. This is
+still a design/research gate only. Do not launch another physical
+qualification campaign or unseal the retained holdout from #83. The successor
+methodology gate (Gemma v3) freezes E-derivation and domain choice before any
+physical run.
 
 ### R6 successor full integration attempt — future independent gate
 

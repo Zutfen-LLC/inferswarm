@@ -63,10 +63,68 @@ all tensor families, representations, models, or backends.
 
 ### 1.3 Semantic output correctness
 
-A strategy declares semantic gates separately from tensor-error gates.
-Examples include:
+A strategy declares semantic gates separately from tensor-error gates. For
+deterministic greedy generation the strategy declares one of two profiles
+(issue #83; both remain valid, neither implies the other):
 
-- exact deterministic greedy-token identity;
+- **strict exact-token profile** — exact deterministic greedy-token identity
+  at every step (`EXACT_TOKENS_REQUIRED`, the operator-facing
+  `BIT_EXACT_REQUIRED` policy of §9); or
+- **decision-stability profile** — a *supplemental semantic layer on top of
+  the unchanged mandatory numerical envelopes*: the strategy prospectively
+  freezes a decision domain `D ⊆ {0..V−1}` with reference winner `a ∈ D`, a
+  supplemental qualified consumer-logit max-absolute bound `E_D` on `D`
+  (§5.4), and the deterministic argmax/tie-break rule (§1.3.1). At each
+  canonical decision, with `j` the actual candidate full-vocabulary emitted
+  winner, evaluated in fail-closed order:
+  (1) the observed decision-local bound on the acceptance-bearing row,
+  `max_{i∈D} |candidate_i − reference_i| ≤ E_D`, must hold — otherwise
+  the decision fails immediately (`DECISION_LOCAL_BOUND_EXCEEDED`); the
+  stability theorems are licensed only after the observed row proves the
+  frozen `E_D` assumption, and passing `E_full` does not imply this
+  tighter check passes;
+  (2) if `j ∉ D` the decision fails immediately
+  (`DECISION_DOMAIN_ESCAPE`);
+  (3) if the reference top1–top2 margin on `D`
+  `m_D > 2E_D` (stable decision), exact identity `j == a` is required;
+  (4) when
+  `m_D ≤ 2E_D` (unstable decision, including the tie boundary) the emitted
+  token must lie in the ambiguity set
+  `A_ED(r) = { k ∈ D | r[a] − r[k] ≤ 2E_D }`; after the first allowed
+  unstable divergence the case branches and later free-running steps are
+  excluded from same-input semantic evaluation (they are no longer
+  same-input comparisons). Numerical envelopes are qualified exclusively on
+  canonical identical-prefix replay.
+
+The `m_D > 2E_D` stability rule and the `2E_D` admissibility bound are
+theorems of the symmetric max-absolute envelope (issue #83
+SEMANTIC-CONTRACT §3), not empirical tolerances.
+
+#### 1.3.1 `E_D` supplements and never replaces the numerical layer
+
+The decision-stability profile does not modify the numerical layer. The
+mandatory FP32 consumer-logit qualification remains over the full
+vocabulary where practical (`E_full`, §5.4); top-k/decision-local domains
+may supplement but not replace it. A decision-stability qualification
+requires the mandatory numerical envelopes (including `E_full`) to pass
+AND the decision-local `E_D`/containment/stability gate to pass. A smaller
+`D` never waives full-vocabulary correctness. The frozen `E_D` is an
+assumption each acceptance-bearing row must prove: the observed
+`max_{i∈D} |candidate_i − reference_i|` must not exceed `E_D` on any
+calibration or fresh-holdout decision, checked before containment,
+stability, or ambiguity adjudication (`DECISION_LOCAL_BOUND_EXCEEDED`
+otherwise); passing `E_full` never implies this tighter per-row check.
+A proper-subset decision
+domain is valid only for contexts whose qualification demonstrates zero
+decision-domain escapes under the frozen method (fail-closed
+`DECISION_DOMAIN_ESCAPE`). Because `m_D = 2E_D` can produce ties, the
+frozen argmax/tie-break semantics are part of the semantic profile's
+applicability key whenever ties can affect emitted tokens; mismatched
+reference/candidate tie-breaking makes the profile inapplicable or failed,
+and `m_D = 2E_D` is treated as unstable absent a stronger prospective
+proof.
+
+Other semantic gates a strategy may declare:
 - exact rank-one identity;
 - top-k membership/overlap where appropriate;
 - bounded rank movement;
@@ -198,8 +256,20 @@ contract should distinguish mandatory gates from diagnostics.
 
 - exact equality is always measured and is a gate for exact fields and strict
   bit-exact policy;
-- deterministic greedy selected-token identity is exact under the first Gemma
-  semantic profile.
+- under the strict exact-token profile, deterministic greedy selected-token
+  identity is exact at every step;
+- under the decision-stability profile (issue #83), the reference top1–top2
+  margin per decision, the observed decision-local bound
+  `max_{i∈D} |candidate_i − reference_i| ≤ E_D` on every
+  acceptance-bearing row (fail-closed `DECISION_LOCAL_BOUND_EXCEEDED`,
+  checked before any theorem adjudication),
+  decision-domain containment of the actual candidate
+  emitted winner (fail-closed `DECISION_DOMAIN_ESCAPE`), and the candidate
+  decision's membership in the frozen ambiguity set are mandatory
+  measurements and gates. These are supplemental to — and conjunctive with
+  — the mandatory numerical gates of §5.1/§5.4, including the
+  full-vocabulary FP32 consumer-logit envelope `E_full`; they never replace
+  them.
 
 ### 5.3 Supporting diagnostics
 
@@ -225,6 +295,23 @@ domains are preferred when practical. Final-row logits should use the full
 vocabulary when practical; a historical/top-k subset can supplement but should
 not be the sole qualification domain.
 
+This rule governs the **numerical layer** and is unchanged by issue #83's
+decision-stability profile: the full-vocabulary FP32 consumer-logit
+max-absolute envelope (`E_full` =
+`fp32-consumer-logits:max-absolute-difference`) remains a mandatory
+qualification envelope. The decision-stability profile's frozen decision
+domain `D` and its supplemental bound `E_D` live in the **semantic layer**
+(§1.3.1): they are additional and conjunctive, never a replacement for or
+waiver of the full-vocabulary numerical domain. If `D` is a proper subset,
+the observed decision-local bound on the acceptance-bearing row
+(`max_{i∈D} |candidate_i − reference_i| ≤ E_D`) is checked first, before
+containment or any theorem adjudication (`DECISION_LOCAL_BOUND_EXCEEDED`
+otherwise; passing `E_full` never implies it), the actual candidate
+full-vocabulary emitted winner must be contained in
+`D` on every acceptance decision (`DECISION_DOMAIN_ESCAPE` otherwise), and
+the frozen deterministic argmax/tie-break rule is part of the semantic
+profile because equality `m_D = 2E_D` can produce ties.
+
 ## 6. Unconditional failures
 
 Fail closed on:
@@ -234,7 +321,12 @@ Fail closed on:
 - wrong frozen semantic dtype;
 - NaN/Inf at declared finite checkpoints;
 - deterministic greedy-token mismatch under a profile that requires exact
-  tokens;
+  tokens (strict profile), or the observed decision-local error on the
+  acceptance-bearing row exceeding the frozen `E_D` —
+  `DECISION_LOCAL_BOUND_EXCEEDED`, a decision outside the frozen ambiguity
+  set / a mismatch on a provably stable decision / the actual candidate
+  full-vocabulary emitted winner outside the frozen decision domain
+  `D` — `DECISION_DOMAIN_ESCAPE` (decision-stability profile);
 - silent fallback/substitution;
 - missing/inapplicable qualification for correctness-bearing serving;
 - any exceeded mandatory frozen numerical limit.
