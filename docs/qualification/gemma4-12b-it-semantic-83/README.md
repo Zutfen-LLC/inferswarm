@@ -11,7 +11,10 @@ Contents:
 - `SEMANTIC-CONTRACT.md` — the contract: what #81 falsified, the
   first-divergence diagnostic summary, the mandatory full-vocabulary
   numerical bound `E_full` vs the supplemental decision-local bound
-  `E_D` separation, the proved decision-stability theorems
+  `E_D` separation, the observed decision-local bound as a fail-closed
+  per-row prerequisite (`DECISION_LOCAL_BOUND_EXCEEDED`, checked before
+  containment and theorem adjudication), the proved decision-stability
+  theorems
   (`m_D > 2E_D`, ambiguity set, tightness incl. tie behavior), fail-closed
   `DECISION_DOMAIN_ESCAPE` containment, frozen argmax/tie-break semantics,
   the A+B(+C-reserved) autoregressive trajectory design, the strict vs

@@ -43,6 +43,7 @@ REFERENCE_DOMAIN_ESCAPE = "REFERENCE_DOMAIN_ESCAPE"
 STABLE_DECISION_MISMATCH = "STABLE_DECISION_MISMATCH"
 UNSTABLE_DECISION_INADMISSIBLE = "UNSTABLE_DECISION_INADMISSIBLE"
 TIE_BREAK_MISMATCH = "TIE_BREAK_MISMATCH_INAPPLICABLE"
+DECISION_LOCAL_BOUND_EXCEEDED = "DECISION_LOCAL_BOUND_EXCEEDED"
 
 
 def argmax(xs, tie_break="lowest_id"):
@@ -67,18 +68,32 @@ def margin_on_domain(r, D, a):
 def evaluate_decision(r, cand, D, E_D,
                       ref_tie_break="lowest_id",
                       cand_tie_break="lowest_id"):
-    """Pure-logic decision-stability semantic gate (contract section 4.2).
+    """Pure-logic decision-stability semantic gate (contract sections
+    3.2.1/3.4/4.2), in the fail-closed order:
+
+    0. observed decision-local bound on the acceptance-bearing row
+       (DECISION_LOCAL_BOUND_EXCEEDED otherwise) -- the theorems are
+       licensed only after the observed row proves the frozen E_D
+       assumption, and passing E_full never implies this check;
+    1. tie-break applicability + reference containment (a in D);
+    2. candidate containment of the ACTUAL emitted winner
+       (DECISION_DOMAIN_ESCAPE otherwise);
+    3. m_D > 2E_D stable-decision adjudication;
+    4. m_D <= 2E_D ambiguity-set adjudication.
 
     r/cand are full-vocabulary FP32 logit rows; D is the frozen decision
     domain. Returns (verdict, label) with verdict in {PASS, FAIL,
-    INAPPLICABLE}. Containment of the ACTUAL emitted candidate winner is
-    checked first and fail-closed.
+    INAPPLICABLE}.
     """
     if ref_tie_break != cand_tie_break:
         return "INAPPLICABLE", TIE_BREAK_MISMATCH
     a = argmax(r, tie_break=ref_tie_break)      # reference full-vocab winner
     if a not in D:
         return "FAIL", REFERENCE_DOMAIN_ESCAPE  # D invalid for this context
+    # 0. observed decision-local bound FIRST (contract 3.2.1)
+    decision_local_error = max(abs(cand[i] - r[i]) for i in D)
+    if decision_local_error > E_D:
+        return "FAIL", DECISION_LOCAL_BOUND_EXCEEDED
     j = argmax(cand, tie_break=cand_tie_break)  # actual emitted winner
     if j not in D:
         return "FAIL", DECISION_DOMAIN_ESCAPE
@@ -155,11 +170,15 @@ class SemanticGateEvaluator(unittest.TestCase):
         c = [0.0, -3.0, -9.0]
         verdict, label = evaluate_decision(r, c, {0, 1, 2}, E_D)
         self.assertEqual(verdict, "PASS")
-        # a stable-decision mismatch fails with no tolerance
-        c2 = [0.0, 0.5, -9.0]          # j = 1 != a, still in D
+        # A would-be stable-decision mismatch (j = 1 != a) can only arise
+        # by violating the bound on D (Theorem 1: a bound-respecting
+        # candidate cannot flip a stable decision) — so the 3.2.1 check
+        # fires first and the failure is DECISION_LOCAL_BOUND_EXCEEDED,
+        # never a tolerated mismatch:
+        c2 = [0.0, 0.5, -9.0]          # j = 1 != a; err@1 = 3.5 > E_D
         verdict, label = evaluate_decision(r, c2, {0, 1, 2}, E_D)
         self.assertEqual(verdict, "FAIL")
-        self.assertEqual(label, STABLE_DECISION_MISMATCH)
+        self.assertEqual(label, DECISION_LOCAL_BOUND_EXCEEDED)
 
     def test_unstable_decision_requires_ambiguity_membership(self):
         r = [0.0, -1.0, -2.5, -7.0]    # m_D = 1.0 <= 2E_D
@@ -168,10 +187,13 @@ class SemanticGateEvaluator(unittest.TestCase):
         self.assertEqual(A, {0, 1})    # gap 2.5 > 2E_D excluded
         verdict, _ = evaluate_decision(r, [0.0, -0.5, -2.5, -7.0], D, E_D)
         self.assertEqual(verdict, "PASS")  # j=1 inside A
-        # emitted token inside D but OUTSIDE the ambiguity set fails
+        # An emitted token outside the ambiguity set can only arise by
+        # violating the bound on D (Theorem 2: a bound-respecting
+        # in-domain winner is always ambiguity-admissible) — so the 3.2.1
+        # check fires first:
         verdict, label = evaluate_decision(r, [0.0, -1.0, 0.5, -7.0], D, E_D)
         self.assertEqual(verdict, "FAIL")
-        self.assertEqual(label, UNSTABLE_DECISION_INADMISSIBLE)
+        self.assertEqual(label, DECISION_LOCAL_BOUND_EXCEEDED)
 
     def test_domain_escape_negative_control(self):
         """CRITICAL negative control: reference winner a in D; the
@@ -203,6 +225,67 @@ class SemanticGateEvaluator(unittest.TestCase):
         c = [0.0, -5.0, 1.0]              # m_D = 5.0 huge, but j = 2 outside
         verdict, label = evaluate_decision(r, c, D, 0.5)
         self.assertEqual((verdict, label), ("FAIL", DECISION_DOMAIN_ESCAPE))
+
+    def test_decision_local_bound_exceeded_negative_control(self):
+        """CRITICAL negative control (contract 3.2.1): E_full would PASS,
+        the actual winner stays inside D, the ambiguity/stability
+        conditions would otherwise PASS — but the OBSERVED
+        max_{i in D} |cand_i - r_i| exceeds E_D. The gate MUST fail
+        DECISION_LOCAL_BOUND_EXCEEDED."""
+        D = {0, 1, 2}
+        r = [0.0, -0.5, -1.0, -20.0, -20.0, -20.0]
+        E_D = 0.3
+        E_full = 2.0   # mandatory full-vocab envelope (looser than E_D)
+        # error mass 1.5 lives on the low-logit tail (outside D) AND on a
+        # D member: full-vocab max-abs 1.5 <= E_full (E_full would pass),
+        # but observed error on D is 0.5 > E_D:
+        c = [0.0, -0.5, -0.5, -21.5, -18.5, -20.0]   # err@2 = 0.5
+        self.assertLessEqual(
+            max(abs(c[i] - r[i]) for i in range(len(r))), E_full)
+        self.assertGreater(
+            max(abs(c[i] - r[i]) for i in D), E_D)     # bound EXCEEDED
+        # actual winner remains inside D ...
+        self.assertIn(argmax(c), D)
+        # ... and the stability/ambiguity conditions would otherwise PASS:
+        m_D = margin_on_domain(r, D, argmax(r))
+        self.assertLessEqual(m_D, 2 * E_D)              # unstable branch
+        self.assertIn(argmax(c), ambiguity_set(r, D, argmax(r), E_D))
+        # yet the gate fails fail-closed, before theorem adjudication:
+        verdict, label = evaluate_decision(r, c, D, E_D)
+        self.assertEqual(verdict, "FAIL")
+        self.assertEqual(label, DECISION_LOCAL_BOUND_EXCEEDED)
+
+    def test_decision_local_bound_checked_before_domain_escape(self):
+        """Ordering proof: a row that violates BOTH the decision-local
+        bound AND candidate containment reports the bound failure, not
+        DECISION_DOMAIN_ESCAPE — the 3.2.1 check runs first."""
+        D = {0, 1}
+        r = [0.0, -1.0, -5.0]
+        E = 0.1
+        # error on D = 0.3 > E; and token 2 (outside D) is the winner
+        c = [0.3, -1.0, 2.0]
+        self.assertGreater(max(abs(c[i] - r[i]) for i in D), E)
+        self.assertNotIn(argmax(c), D)
+        verdict, label = evaluate_decision(r, c, D, E)
+        self.assertEqual((verdict, label),
+                         ("FAIL", DECISION_LOCAL_BOUND_EXCEEDED))
+
+    def test_decision_local_bound_checked_before_stability_adjudication(self):
+        """Ordering proof (stable branch): m_D is huge (the decision would
+        be adjudicated STABLE and c emits the reference winner a, i.e. it
+        would PASS), but the observed bound on D exceeds E_D — the gate
+        must fail DECISION_LOCAL_BOUND_EXCEEDED first, never reach the
+        Theorem-1 stable-decision adjudication."""
+        D = {0, 1, 2}
+        r = [0.0, -3.0, -9.0]            # m_D = 3.0 > 2E_D = 0.4
+        E = 0.2
+        c = [0.0 + 0.5, -3.0, -9.0]      # err@0 = 0.5 > E; argmax(c) = 0 = a
+        self.assertGreater(max(abs(c[i] - r[i]) for i in D), E)
+        self.assertEqual(argmax(c), 0)   # would-be PASS under Theorem 1
+        verdict, label = evaluate_decision(r, c, D, E)
+        self.assertEqual((verdict, label),
+                         ("FAIL", DECISION_LOCAL_BOUND_EXCEEDED))
+        self.assertNotEqual(label, STABLE_DECISION_MISMATCH)
 
     def test_reference_winner_outside_domain_is_invalid(self):
         r = [-5.0, 0.0, -1.0]             # full-vocab winner is token 1
@@ -310,6 +393,43 @@ class ContractDocument(unittest.TestCase):
         # no results-informed domain sizing
         self.assertIn("rank-17", text)  # mentioned only to forbid its use
         self.assertIn("results-informed", text)
+
+    def test_decision_local_bound_prerequisite_wording(self):
+        """The 3.2.1 fail-closed prerequisite and its ordering are stated
+        in the contract, verbatim where correctness-bearing."""
+        text = norm(CONTRACT.read_text())
+        self.assertIn("DECISION_LOCAL_BOUND_EXCEEDED", text)
+        self.assertIn("decision_local_error = max_{i∈D} "
+                      "|candidate_i - reference_i|", text)
+        # fail-closed rule text
+        self.assertIn("if decision_local_error > E_D:", text)
+        self.assertIn("FAIL: DECISION_LOCAL_BOUND_EXCEEDED", text)
+        # the check precedes containment and both adjudications, in order
+        self.assertIn("decision-local bound first", text)
+        self.assertIn("containment second", text)
+        # the theorems are licensed only after the row proves E_D
+        self.assertIn("may only be invoked after the observed row proves "
+                      "the frozen `E_D` assumption", text)
+        # E_full passing does NOT imply this check passes
+        self.assertIn("does **not** imply this check passes", text)
+        self.assertIn("neither substitutes for the other", text)
+        # chronology requires the observed bound on calibration AND
+        # fresh-holdout rows
+        self.assertIn("on every calibration and fresh-holdout decision",
+                      text)
+        # it is not "unstable", not branch-eligible, not ambiguity-admissible
+        self.assertIn("not branch-eligible", text)
+
+    def test_doctrine_states_decision_local_bound_prerequisite(self):
+        text = norm(DOCTRINE.read_text())
+        self.assertIn("DECISION_LOCAL_BOUND_EXCEEDED", text)
+        self.assertIn("max_{i∈D} |candidate_i − reference_i| ≤ E_D", text)
+        # ordering: before containment and theorem adjudication
+        self.assertIn("checked before containment", text)
+        self.assertIn("before containment or any theorem adjudication",
+                      text)
+        # passing E_full never implies the tighter per-row check
+        self.assertIn("passing `E_full` never implies", text)
 
     def test_tie_break_wording(self):
         text = norm(CONTRACT.read_text())

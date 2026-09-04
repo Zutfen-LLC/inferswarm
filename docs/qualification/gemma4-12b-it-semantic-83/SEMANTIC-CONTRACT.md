@@ -192,6 +192,44 @@ AND
 decision-local E_D / containment / stability gate PASS (semantic layer)
 ```
 
+#### 3.2.1 The observed decision-local bound is a fail-closed prerequisite
+
+`E_D` is a frozen *assumption about every acceptance-bearing row*. The
+theorems of §3.3 condition on the candidate actually satisfying the bound
+on `D`; they do not enforce it. The qualification must therefore observe
+the bound explicitly on the actual acceptance-bearing canonical-prefix
+row — on every calibration and fresh-holdout decision (§6) — **before**
+any containment, stability, or ambiguity semantics are applied:
+
+```text
+decision_local_error = max_{i∈D} |candidate_i - reference_i|
+
+if decision_local_error > E_D:
+    FAIL: DECISION_LOCAL_BOUND_EXCEEDED
+```
+
+This check precedes, in this exact order:
+
+1. `DECISION_DOMAIN_ESCAPE` candidate containment (§3.4);
+2. `m_D > 2E_D` stable-decision adjudication (Theorem 1);
+3. `m_D ≤ 2E_D` ambiguity-set adjudication (Theorem 2).
+
+A row whose observed decision-local error exceeds the frozen `E_D`
+cannot be adjudicated by the decision-stability theorems at all: the
+theorems may only be invoked after the observed row proves the frozen
+`E_D` assumption. The failure is fail-closed and unconditional: it is
+not classified as "unstable", is not branch-eligible, and is not
+admissible under any ambiguity set.
+
+Passing the mandatory full-vocabulary envelope `E_full` (§3.1) does
+**not** imply this check passes. `E_full` bounds error over the entire
+vocabulary and is in general looser on `D` than the decision-local bound
+(whenever both are derived over the same rows, `E_D ≤ E_full` because
+`D ⊆ {0..V−1}`), so a row can satisfy
+`max_{i∈V} |candidate_i − reference_i| ≤ E_full` while violating
+`max_{i∈D} |candidate_i − reference_i| ≤ E_D`. The two checks are
+separate and conjunctive; neither substitutes for the other.
+
 ### 3.3 The theorems (proved, not fitted)
 
 Let:
@@ -293,6 +331,13 @@ observed #81 values. The descriptive #81 yields in
 stable at E = 1.0) are diagnostics of rule power, not thresholds, and are
 not adopted.
 
+**`E_D` is an observed-row prerequisite, not a certificate.** Freezing a
+qualified `E_D` does not make any particular acceptance-bearing row
+satisfy it: the bound is an assumption each row must prove (§3.2.1). The
+theorems below are stated for candidates satisfying the bound on `D`;
+the §3.2.1 check (`DECISION_LOCAL_BOUND_EXCEEDED` otherwise) is what
+licenses invoking them on an actual row.
+
 ### 3.4 Decision-domain containment (fail-closed)
 
 Theorems 1–3 prove argmax behavior **over `D`**. Actual generation emits
@@ -318,10 +363,8 @@ Therefore, for any decision-stability profile using a proper subset `D`:
 - **candidate containment (fail-closed):** the actual candidate
   full-vocabulary emitted winner `j` must satisfy `j ∈ D`. If
   `j ∉ D`, the semantic gate fails immediately and unconditionally:
-
-  ```text
-  DECISION_DOMAIN_ESCAPE
-  ```
+  `DECISION_DOMAIN_ESCAPE`. This check runs **after** the §3.2.1
+  decision-local bound has been observed to hold on the row.
 
   This is not classified as "unstable", is not branch-eligible, and is
   not admissible under any ambiguity set. Ambiguity-set membership is
@@ -385,8 +428,15 @@ The successor contract combines designs A + B from the issue, with C reserved:
    substrate on which BOTH `E_full` and `E_D` are derived.
 2. **Decision-local semantic gate (B).** At each canonical decision step,
    with `E_D` qualified on the frozen domain `D`, the reference winner
-   `a ∈ D`, and `j` = the actual candidate full-vocabulary emitted winner:
-   - **containment first:** if `j ∉ D`, the decision fails immediately:
+   `a ∈ D`, and `j` = the actual candidate full-vocabulary emitted winner,
+   evaluated in this exact fail-closed order:
+   - **decision-local bound first (§3.2.1):** the observed
+     `decision_local_error = max_{i∈D}|candidate_i − reference_i|` on
+     this acceptance-bearing row must satisfy
+     `decision_local_error ≤ E_D`; otherwise the decision fails
+     immediately: `DECISION_LOCAL_BOUND_EXCEEDED` — the theorem layer is
+     not licensed for this row;
+   - **containment second:** if `j ∉ D`, the decision fails immediately:
      `DECISION_DOMAIN_ESCAPE` (§3.4);
    - if `m_D > 2E_D` (**stable decision**): `j == a` exactly — a mismatch
      is a semantic failure, with no tolerance;
@@ -432,8 +482,10 @@ Two distinct profiles now exist, and neither weakens the other:
 - **Heterogeneous decision-stability profile (this contract).** The
   mandatory numerical envelopes (including full-vocabulary `E_full`) PLUS
   the prospectively frozen semantic triple `(D, E_D, argmax/tie-break rule)`
-  with fail-closed containment (§3.4), the Theorem-1/2 gates, and branch
-  semantics. This is ordinary heterogeneous correctness; it does not satisfy
+  with the observed decision-local bound as a fail-closed per-row
+  prerequisite (§3.2.1), fail-closed containment (§3.4), the
+  Theorem-1/2 gates, and branch semantics. This is ordinary
+  heterogeneous correctness; it does not satisfy
   a strict operator request and must not be silently substituted for one.
 
 A strict-profile qualification of context X and a stability-profile
@@ -471,10 +523,14 @@ kinds, separating the two bounds, and fixing the order:
    - `E_D`;
    - the frozen argmax/tie-break semantics.
 4. **Semantic qualification on calibration (calibration-bearing).** The
-   containment and Theorem-1/2 gates run on the same retained calibration
-   rows using the frozen `E_D` and frozen tie-break rule. Requirements:
-   zero `DECISION_DOMAIN_ESCAPE`; zero inadmissible decisions; every
-   stable decision exactly identical; unstable decisions within `A_ED`;
+   decision-local bound observation, containment, and Theorem-1/2 gates
+   run on the same retained calibration rows using the frozen `E_D` and
+   frozen tie-break rule, in the fail-closed order of §4.2 — on every
+   decision: first the observed decision-local bound
+   `max_{i∈D}|candidate_i − reference_i| ≤ E_D`
+   (`DECISION_LOCAL_BOUND_EXCEEDED` otherwise); then zero
+   `DECISION_DOMAIN_ESCAPE`; zero inadmissible decisions; every stable
+   decision exactly identical; unstable decisions within `A_ED`;
    branches recorded.
 5. **Sealed holdout (holdout-bearing).** A fresh, independently generated
    sealed corpus (new commitment; the #74 holdout stays permanently sealed
@@ -482,6 +538,9 @@ kinds, separating the two bounds, and fixing the order:
    historical evidence) evaluates, without any tuning:
    - exact integrity;
    - the mandatory full numerical envelopes (incl. `E_full`);
+   - the observed decision-local bound on `D` (≤ `E_D`) on every
+     decision, checked before any containment or theorem adjudication
+     (§3.2.1);
    - decision-domain containment;
    - the stability/ambiguity semantic gate.
    A holdout failure is retained; it does not authorize threshold changes.
@@ -519,6 +578,12 @@ Adopted by this PR (maintainer acceptance merges them):
 - No claim that `E_D` or any decision-local domain can replace, waive, or
   loosen `E_full` or any mandatory numerical envelope; the two are
   conjunctive (§3.2).
+- No claim that passing `E_full` (or any of the 15 numerical envelopes)
+  implies the decision-local bound passes on any particular row: the
+  observed `max_{i∈D}|candidate_i − reference_i| ≤ E_D` check (§3.2.1)
+  is a separate, fail-closed prerequisite on every acceptance-bearing
+  decision, and a row failing it fails the semantic gate regardless of
+  every other gate (§4.2 order).
 - No claim that `A_ED(r)` is "precisely every token that can always be made
   winner": membership is necessary (Theorem 2); strict-flip achievability
   holds for gaps strictly below `2E_D`, and at the boundary only a tie can
@@ -542,7 +607,8 @@ Adopted by this PR (maintainer acceptance merges them):
    re-adjudicated), `E_full` derivation (unchanged 15-envelope method),
    `E_D` derivation (max over same-prefix rows of the declared per-row
    envelope metric on `D`), tie-break semantics, corpus generation,
-   semantic gates, branch labels, schemas.
+   semantic gates (incl. the §3.2.1 observed decision-local bound check
+   and the §4.2 fail-closed evaluation order), branch labels, schemas.
 2. Harness deltas (FreeToken research branch, mechanical): teacher-forced
    replay mode on the candidate arm; per-decision retention of the FP32 row
    (full row supports `E_full`; the frozen `D` slice supports `E_D`) on
