@@ -302,7 +302,7 @@ protocol.
 
 ---
 
-## Current evidence gate
+## Current correctness-qualification sequence
 
 R0-R5B, the pre-R3 host-capacity prerequisite, Pre-R6 integration (#64), and
 external-Coordinator separation (#67) are accepted. FreeToken PR #24 merged
@@ -311,9 +311,23 @@ normally into protected `inferswarm-research` as
 producer `2bcf33f6d6e5dc9fc5c13e37e7110833cbad0fcd` and retained evidence head
 `603a63bf44728814d3182191dcd87e21229e5370` in ancestry.
 
-The current evidence gate is therefore R6 / issue #65. It is **unblocked and
-current** on exact FreeToken base
-`84ebd2b7ae56c60292f7b9c7ca256f41f64d8b11`.
+Historical R6 / issue #65 executed from the accepted line and remains
+permanently `R6_DENSE_ARCHITECTURE_FALSIFICATION_FAIL`. Issue #71 localized the
+first single-versus-distributed difference to legal backend execution on
+different devices. Its accepted classification is `BACKEND_EXECUTION_LOCAL`.
+The exact state and transport proofs remained intact. The localization did not
+set a tolerance and did not convert R6 into a pass.
+
+ADR 0010 / issue #72 now defines the three-layer heterogeneous correctness
+contract. Issue #74 is the current methodology-freeze gate. It freezes the
+corpus, reducers, statistical design, evidence rules, threshold derivation, and
+sealed holdout before new physical observations exist.
+
+Issue #74 does not authorize physical calibration. After maintainer acceptance,
+a separate gate can execute calibration, commit mechanically derived
+thresholds, and then open the sealed holdout. A still-later R6 successor must
+perform an independent full integration attempt. Neither gate can reinterpret
+historical R6.
 
 Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) is complete. It
 established the durable FreeToken `inferswarm-research` implementation line
@@ -465,10 +479,10 @@ Evidence is retained in FreeToken `docs/inferswarm_external_coordinator/`.
 The earlier physical producers `df8a429e9110…` and `84e531971d6c…` remain in
 history as explicitly superseded evidence and are not the canonical gate proof.
 
-### R6 — architecture falsification with Gemma 4 12B — issue #65 — CURRENT
+### R6 — architecture falsification with Gemma 4 12B — issue #65 — FAILED
 
-R6 is unblocked on exact FreeToken base
-`84ebd2b7ae56c60292f7b9c7ca256f41f64d8b11`.
+Historical R6 ran on its frozen FreeToken ancestry and produced
+`R6_DENSE_ARCHITECTURE_FALSIFICATION_FAIL`. This result is permanent.
 
 Before declaring a public Model Execution Strategy/planner interface stable,
 validate the doctrine against a model architecture materially different from
@@ -489,7 +503,37 @@ The purpose is not necessarily to beat the Qwen benchmark. It is to ask:
 Revise internal APIs freely if the falsification test exposes a better seam;
 change doctrine only if a foundational invariant itself is disproven.
 
-R6 is API-falsification research, not production feature shipping.
+Issue #71 later localized the observed numerical difference as
+`BACKEND_EXECUTION_LOCAL`. It preserved byte-exact model state, inputs, and
+transport. This diagnosis does not relax the historical R6 comparator.
+
+### Heterogeneous correctness contract — issue #72 / ADR 0010 — COMPLETE
+
+ADR 0010 defines correctness as the conjunction of exact integrity, qualified
+numerical equivalence, and strategy-declared semantic output. The Model
+Execution Strategy owns the comparator and semantic contract. The generic
+planner consumes applicable qualification evidence before performance ranking.
+
+### First numerical-equivalence methodology freeze — issue #74 — CURRENT
+
+Freeze the first Gemma/FreeToken qualification method without physical model or
+GPU execution. The frozen work includes 576 balanced calibration prompts,
+reference-only margin-stress selection, 15 envelopes, mechanical threshold
+derivation, a sealed 24-case holdout, evidence schemas, and invalid-run rules.
+
+Maintainer review is a hard stop. Completion does not authorize calibration.
+
+### Qualification execution — separate successor gate — BLOCKED
+
+After explicit methodology acceptance, run same-device and cross-card controls,
+heterogeneous stage controls, full calibration, threshold freeze, and the
+sealed holdout in that order. Do not open the holdout before the threshold
+manifest is committed and verified.
+
+### R6 successor full integration attempt — future independent gate
+
+After applicable numerical qualification exists, define a new full integration
+attempt. Do not reuse the R6 verdict or back-fit the new limits to R6 evidence.
 
 ---
 

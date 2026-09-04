@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://inferswarm.dev/schema/issue74/preflight-1.json",
+  "title": "InferSwarm issue #74 physical preflight",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "contract_id", "arm", "authorization", "producer", "model", "software", "devices", "ordered_stage_roles", "modes", "geometry", "result"],
+  "properties": {
+    "schema": {"const": "inferswarm.issue74.preflight/1"},
+    "contract_id": {"const": "inferswarm.gemma4-heterogeneous-numerical-equivalence/1"},
+    "arm": {"enum": ["A", "B", "C", "D"]},
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["execution_issue", "maintainer_acceptance_url", "accepted_methodology_commit"],
+      "properties": {
+        "execution_issue": {"type": "integer", "minimum": 1},
+        "maintainer_acceptance_url": {"type": "string", "minLength": 1},
+        "accepted_methodology_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"}
+      }
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "base_commit", "base_is_ancestor", "commit", "clean", "build_sha256"],
+      "properties": {
+        "repository": {"const": "Zutfen-LLC/FreeToken"},
+        "base_commit": {"const": "d4d16089165917704a87f4e2f0c4a09969646f95"},
+        "base_is_ancestor": {"const": true},
+        "commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "clean": {"const": true},
+        "build_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "revision", "checkpoint_sha256", "representation"],
+      "properties": {
+        "repository": {"const": "google/gemma-4-12B-it"},
+        "revision": {"const": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7"},
+        "checkpoint_sha256": {"const": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d"},
+        "representation": {"const": "native-bf16-text"}
+      }
+    },
+    "software": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["python", "torch", "cuda_runtime", "driver", "triton", "native_extensions", "cublas", "math_libraries"],
+      "properties": {
+        "python": {"type": "string", "minLength": 1},
+        "torch": {"type": "string", "minLength": 1},
+        "cuda_runtime": {"type": "string", "minLength": 1},
+        "driver": {"type": "string", "minLength": 1},
+        "triton": {"type": "string", "minLength": 1},
+        "native_extensions": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/identity"}},
+        "cublas": {"type": "string", "minLength": 1},
+        "math_libraries": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/identity"}}
+      }
+    },
+    "devices": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/device"}},
+    "ordered_stage_roles": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/stage"}},
+    "modes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["attention", "math", "deterministic", "greedy", "fallback_allowed"],
+      "properties": {
+        "attention": {"const": "triton"},
+        "math": {"type": "string", "minLength": 1},
+        "deterministic": {"const": true},
+        "greedy": {"const": true},
+        "fallback_allowed": {"const": false}
+      }
+    },
+    "geometry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["replay_chunk_rows", "maximum_replay_rows", "multi_chunk", "incremental_kv_extend", "prompt_token_min", "prompt_token_max", "generated_tokens", "capture_positions", "matrix_shapes_sha256"],
+      "properties": {
+        "replay_chunk_rows": {"const": 64},
+        "maximum_replay_rows": {"const": 63},
+        "multi_chunk": {"const": false},
+        "incremental_kv_extend": {"const": false},
+        "prompt_token_min": {"const": 4},
+        "prompt_token_max": {"const": 56},
+        "generated_tokens": {"const": 8},
+        "capture_positions": {"const": [0, 1, 3, 7]},
+        "matrix_shapes_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "result": {"enum": ["PASS", "STOP_APPLICABILITY_MISMATCH"]}
+  },
+  "$defs": {
+    "identity": {
+      "type": "object", "additionalProperties": false, "required": ["name", "version", "sha256"],
+      "properties": {"name": {"type": "string"}, "version": {"type": "string"}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+    },
+    "device": {
+      "type": "object", "additionalProperties": false, "required": ["uuid", "product", "architecture", "node", "roles"],
+      "properties": {"uuid": {"type": "string"}, "product": {"type": "string"}, "architecture": {"type": "string"}, "node": {"type": "string"}, "roles": {"type": "array", "minItems": 1, "items": {"type": "string"}}}
+    },
+    "stage": {
+      "type": "object", "additionalProperties": false, "required": ["order", "role", "device_uuid", "layer_start", "layer_end"],
+      "properties": {"order": {"type": "integer", "minimum": 0}, "role": {"type": "string"}, "device_uuid": {"type": "string"}, "layer_start": {"type": "integer", "minimum": 0}, "layer_end": {"type": "integer", "minimum": 1}}
+    }
+  }
+}
