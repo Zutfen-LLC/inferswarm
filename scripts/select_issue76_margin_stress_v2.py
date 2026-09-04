@@ -4,9 +4,19 @@
 Differences from the v1 selector (scripts/select_issue74_margin_stress.py),
 which is retained unchanged as historical evidence:
 
-- eligibility: a pool case is stress-selection-eligible only when its margin
-  is finite AND strictly positive. Zero/nonpositive-margin cases are retained
-  as reference evidence but are INELIGIBLE, not a fatal pool-wide error;
+- eligibility: a pool case is stress-selection-eligible only when its
+  margin is finite AND strictly positive. A FINITE zero or negative margin
+  is unsuitable for stress selection: the case is retained as reference
+  evidence but is INELIGIBLE, not a fatal pool-wide error. A NON-FINITE
+  reference margin (NaN, +Inf, -Inf) means the reference correctness path
+  produced invalid numerical output and is an UNCONDITIONAL reference
+  correctness failure: the selector fails closed immediately with
+  NONFINITE_REFERENCE_MARGIN and never continues selection;
+- reference-margin binding: every reference-margin row must carry the
+  exact frozen pool case identity — its case_id must exist in the frozen
+  pool, its case_sha256 must equal the frozen pool case's case_sha256,
+  each frozen case must be covered exactly once, and duplicate rows are
+  rejected;
 - minimum eligible count: at least 8 eligible cases are required;
 - selection: four smallest positive margins + four largest positive margins
   from eligible cases only.
@@ -35,6 +45,20 @@ V2_MARGIN_SUMMARY_SCHEMA = "inferswarm.issue76.reference-margin-summary/2"
 V2_SELECTION_SCHEMA = "inferswarm.issue76.margin-stress-selection/2"
 MIN_ELIGIBLE = 8
 MARGIN_DEFINITION = "min over all 8 greedy steps of fp32(top1_logit - top2_logit)"
+
+
+def _is_sha256_hex(value: object) -> bool:
+    return (
+        isinstance(value, str)
+        and len(value) == 64
+        and all(ch in "0123456789abcdef" for ch in value)
+    )
+
+
+class NonfiniteReferenceMarginError(ValueError):
+    """A reference margin was NaN/+Inf/-Inf: the reference correctness path
+    produced invalid numerical output. Fail closed; never convert a
+    non-finite reference value into an ineligible case count."""
 
 
 def select(pool: dict[str, Any], margins: dict[str, Any], commitment: dict[str, Any]) -> dict[str, Any]:
@@ -77,17 +101,52 @@ def select(pool: dict[str, Any], margins: dict[str, Any], commitment: dict[str, 
         raise ValueError("v2 reference margins must cover each pool case exactly once")
     if len(rows) != len(pool_cases):
         raise ValueError("v2 reference margins contain duplicate case IDs")
+    # Bind every reference-margin row to the exact frozen case identity:
+    # case_id alone is NOT sufficient — the row's case_sha256 must equal the
+    # frozen pool case's case_sha256 (chain: margin summary -> exact v2 pool
+    # SHA -> exact case-ID set -> exact case_id->case_sha256 mapping -> value).
+    seen_ids: set[str] = set()
+    for row in rows:
+        case_id = row.get("case_id")
+        if not isinstance(case_id, str) or case_id not in pool_cases:
+            raise ValueError(f"reference margin row has unknown case id: {case_id!r}")
+        if case_id in seen_ids:
+            raise ValueError(f"v2 reference margins contain duplicate case ID {case_id!r}")
+        seen_ids.add(case_id)
+        row_case_sha = row.get("case_sha256")
+        if row_case_sha is None:
+            raise ValueError(f"reference margin row for {case_id!r} is missing case_sha256")
+        if not _is_sha256_hex(row_case_sha):
+            raise ValueError(f"reference margin row for {case_id!r} has a malformed case_sha256")
+        expected_sha = pool_cases[case_id].get("case_sha256")
+        if not _is_sha256_hex(expected_sha):
+            raise ValueError(f"frozen pool case {case_id!r} lacks a well-formed case_sha256")
+        if row_case_sha != expected_sha:
+            raise ValueError(
+                f"reference margin row for {case_id!r} does not bind the exact frozen "
+                f"pool case identity (case_sha256 mismatch: got {row_case_sha}, "
+                f"frozen pool has {expected_sha})"
+            )
     eligible: list[tuple[float, str]] = []
     ineligible: list[dict[str, Any]] = []
     for row in rows:
         margin = float.fromhex(row["top1_margin_hex"])
-        if math.isfinite(margin) and margin > 0.0:
+        if not math.isfinite(margin):
+            raise NonfiniteReferenceMarginError(
+                "NONFINITE_REFERENCE_MARGIN: reference case "
+                f"{row['case_id']!r} produced margin {margin!r} "
+                f"({row['top1_margin_hex']!r}); the reference correctness path "
+                "emitted invalid numerical output — selection stops "
+                "unconditionally (non-finite is NOT an ineligible case)"
+            )
+        if margin > 0.0:
             eligible.append((margin, row["case_id"]))
         else:
             ineligible.append({
                 "case_id": row["case_id"],
+                "case_sha256": row["case_sha256"],
                 "top1_margin_hex": row["top1_margin_hex"],
-                "reason": "nonpositive-or-nonfinite-margin-ineligible",
+                "reason": "finite-nonpositive-margin-ineligible",
             })
     if len(eligible) < MIN_ELIGIBLE:
         raise ValueError(
@@ -115,7 +174,12 @@ def select(pool: dict[str, Any], margins: dict[str, Any], commitment: dict[str, 
         "selection_commitment_sha256": sha256_bytes(canonical_json_bytes(commitment)),
         "reference_margin_summary_sha256": sha256_bytes(canonical_json_bytes(margins)),
         "selection_inputs": "MATCHED_REFERENCE_MARGINS_ONLY",
-        "eligibility_rule": "margin is finite AND margin > 0; ineligible cases retained as reference evidence",
+        "eligibility_rule": (
+            "eligible iff margin is finite and > 0; finite <= 0 is ineligible "
+            "(retained as reference evidence); a non-finite margin (NaN/+Inf/"
+            "-Inf) is an unconditional reference correctness failure "
+            "(NONFINITE_REFERENCE_MARGIN) and stops selection"
+        ),
         "selection_rule": "sort eligible positive margins by (margin,case_id); take first four and last four",
         "minimum_eligible_cases": MIN_ELIGIBLE,
         "eligible_case_count": len(eligible),

@@ -80,13 +80,31 @@ prospectively:
 margin is finite AND margin > 0
 ```
 
-5. zero/nonpositive cases are retained as reference evidence but are
+   The eligibility rule is exactly: eligible iff the margin is finite and
+   strictly `> 0`; a FINITE margin `<= 0` (an exact tie at 0.0 or a finite
+   negative value) makes the case INELIGIBLE; a NON-FINITE margin (NaN,
+   +Inf, -Inf) is an unconditional reference correctness failure and stops
+   selection immediately. A non-finite reference value means the reference
+   correctness path produced invalid numerical output (ADR 0010 / accepted
+   #74 correctness semantics) — it is NOT merely another ineligible
+   category, it is never converted into an ineligible case count, and it is
+   never silently ignored;
+
+5. finite zero/nonpositive cases are retained as reference evidence but are
    INELIGIBLE, not a fatal pool-wide error;
 6. at least 8 eligible cases are required (fail closed otherwise);
 7. from eligible cases exactly four smallest positive margins and four
    largest positive margins are selected (deterministic tie-break by
    case_id);
-8. the selected 8-case manifest is frozen/committed before any
+8. every reference-margin row is bound to the exact frozen case identity:
+   the row's `case_id` must exist in the frozen v2 pool AND its
+   `case_sha256` must equal the frozen pool case's `case_sha256`; unknown
+   case IDs, missing or malformed case hashes, correct-ID-wrong-hash rows,
+   swapped hashes, duplicate/substituted rows, and incomplete pool coverage
+   are all rejected. The valid path establishes the full chain
+   reference-margin summary -> exact v2 pool SHA -> exact case-ID set ->
+   exact `case_id -> case_sha256` mapping -> margin value;
+9. the selected 8-case manifest is frozen/committed before any
    heterogeneous candidate execution.
 
 The v1 observed 48-case pool and its observed margins are explicitly
@@ -98,8 +116,8 @@ the commitment).
 | artifact | sha256 |
 |---|---|
 | `manifests/margin-stress-pool.json` (48 cases, seed `inferswarm-issue-76-stress-pool-v2`) | `533b32857721b3f99243e5695bc18b24960cbd3c80692d626154907d6ecbd7c9` |
-| `manifests/margin-stress-selection-commitment.json` | `a9bc03ae1ec0578a2f426f1bc2fac2c400813189d0cc2a7c4834b62d23160a9a` |
-| selector program `scripts/select_issue76_margin_stress_v2.py` | `46d3e044a238a99a6f7aae4627aae6019755d16186d9153b4ad328ac059845d9` |
+| `manifests/margin-stress-selection-commitment.json` | `04421a6f19f6338a340dfea296214509eae3adc5ca32067dfd76880ab1cacba0` |
+| selector program `scripts/select_issue76_margin_stress_v2.py` | `e32e8672671c3b3ec6b47e3b119c66fd54e2c5a62ba72fb2ec2288764508beab` |
 | generator program `scripts/generate_issue76_stress_pool_v2.py` | recorded in pool `generator_sha256` |
 
 Pool provenance verified: 48 cases, 2 per cell, all 24 content-class x
@@ -139,10 +157,18 @@ stress-case calibration selection (pool seed + eligibility rule) and does
 NOT change: the qualification subject, the target population, the numerical
 envelopes, the reducer, the semantic profile, or the holdout acceptance
 contract. The holdout cases are cell-stratified and disjoint from both the
-v1 and v2 stress pools (verified: v2 pool token ids are disjoint from the
-v1 pool and calibration corpus; holdout generation uses its own sealed
-namespace and secret seed, so v2 stress-pool membership cannot collide with
-holdout cases).
+v1 and v2 stress pools. This disjointness is MECHANICALLY VERIFIED from the
+PUBLIC holdout commitment
+(`docs/qualification/gemma4-12b-it-v1/manifests/sealed-holdout-commitment.json`),
+not merely inferred from the independent seed/namespace: the v2 stress
+pool's `prompt_sha256` set has zero intersection with the holdout
+commitment's per-case `prompt_sha256` set, and the v2 `token_ids_sha256`
+set has zero intersection with the holdout commitment's `token_ids_sha256`
+set (machine-checked in
+`tests/test_issue76_v2_stress_selection.py::TestV2StressPoolFrozen::test_pool_is_disjoint_from_public_holdout_commitment`).
+No holdout plaintext is required or consulted for this proof — only the
+already-public commitment hashes. The independent sealed namespace/seed
+remains additional provenance.
 
 Preserved exactly: encrypted CMS bytes, certificate, ciphertext sha256
 `23311c5514b2561c66a2ecd0c9cfa25c3f4f91b83b67353aada8355f48e25c59`, secret

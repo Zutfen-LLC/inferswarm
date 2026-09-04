@@ -6,6 +6,7 @@ import math
 import sys
 import unittest
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -14,6 +15,7 @@ from issue74_methodology import CONTRACT_ID, canonical_json_bytes, sha256_bytes 
 from select_issue76_margin_stress_v2 import (  # noqa: E402
     MARGIN_DEFINITION,
     MIN_ELIGIBLE,
+    NonfiniteReferenceMarginError,
     select,
 )
 
@@ -88,6 +90,26 @@ class TestV2StressPoolFrozen(unittest.TestCase):
         v2_ids = {tuple(c["token_ids"]) for c in pool["cases"]}
         self.assertFalse(v2_ids & {tuple(c["token_ids"]) for c in v1_pool["cases"]})
         self.assertFalse(v2_ids & {tuple(c["token_ids"]) for c in calibration["cases"]})
+
+    def test_pool_is_disjoint_from_public_holdout_commitment(self):
+        # Mechanical disjointness proof against the RETAINED sealed holdout,
+        # using only the public per-case commitments (no unsealing, no
+        # plaintext): the v2 stress pool shares zero prompt_sha256 and zero
+        # token_ids_sha256 with the holdout commitment's cells.
+        pool = load(V2, "margin-stress-pool.json")
+        holdout = load(V1, "sealed-holdout-commitment.json")
+        v2_prompts = {c["prompt_sha256"] for c in pool["cases"]}
+        v2_token_hashes = {c["token_ids_sha256"] for c in pool["cases"]}
+        holdout_prompts = {cell["prompt_sha256"] for cell in holdout["cells"]}
+        holdout_token_hashes = {cell["token_ids_sha256"] for cell in holdout["cells"]}
+        self.assertFalse(
+            v2_prompts & holdout_prompts,
+            "v2 stress pool intersects the sealed holdout by prompt_sha256",
+        )
+        self.assertFalse(
+            v2_token_hashes & holdout_token_hashes,
+            "v2 stress pool intersects the sealed holdout by token_ids_sha256",
+        )
 
     def test_margin_definition_is_unchanged_min_over_8(self):
         self.assertEqual(
@@ -187,6 +209,131 @@ class TestV2SelectionEligibility(unittest.TestCase):
         ids = [c["case_id"] for c in self.pool["cases"]]
         with self.assertRaises(ValueError):
             select(v1_pool, make_margins(self.pool, {cid: 1.0 for cid in ids}), self.commitment)
+
+
+class TestV2NonfiniteReferenceMarginFailsClosed(unittest.TestCase):
+    """ADR 0010 semantics: a finite <= 0 margin is merely ineligible; a
+    non-finite reference value means the reference correctness path produced
+    invalid numerical output and must fail closed immediately."""
+
+    def setUp(self):
+        self.pool = load(V2, "margin-stress-pool.json")
+        self.commitment = make_commitment(self.pool)
+
+    def _select_with(self, margin: float) -> Any:
+        ids = [c["case_id"] for c in self.pool["cases"]]
+        margins = {cid: 1.0 for cid in ids}
+        margins[ids[0]] = margin
+        return select(self.pool, make_margins(self.pool, margins), self.commitment)
+
+    def test_nan_margin_fails_closed(self):
+        with self.assertRaises(NonfiniteReferenceMarginError) as ctx:
+            self._select_with(float("nan"))
+        self.assertIn("NONFINITE_REFERENCE_MARGIN", str(ctx.exception))
+
+    def test_positive_inf_margin_fails_closed(self):
+        with self.assertRaises(NonfiniteReferenceMarginError) as ctx:
+            self._select_with(float("inf"))
+        self.assertIn("NONFINITE_REFERENCE_MARGIN", str(ctx.exception))
+
+    def test_negative_inf_margin_fails_closed(self):
+        with self.assertRaises(NonfiniteReferenceMarginError) as ctx:
+            self._select_with(float("-inf"))
+        self.assertIn("NONFINITE_REFERENCE_MARGIN", str(ctx.exception))
+
+    def test_nonfinite_is_not_counted_as_ineligible_evidence(self):
+        # The selector must never convert NaN/Inf into an ineligible case
+        # count and continue: selection output must not exist at all.
+        ids = [c["case_id"] for c in self.pool["cases"]]
+        margins = {cid: 0.5 + 0.01 * i for i, cid in enumerate(ids)}
+        margins[ids[9]] = float("nan")
+        with self.assertRaises(NonfiniteReferenceMarginError):
+            select(self.pool, make_margins(self.pool, margins), self.commitment)
+
+    def test_nonfinite_fails_even_with_finite_ineligible_cases_present(self):
+        # Zero/negative ineligible cases do NOT mask or defer the failure.
+        ids = [c["case_id"] for c in self.pool["cases"]]
+        margins = {cid: 1.0 for cid in ids}
+        margins[ids[0]] = 0.0
+        margins[ids[1]] = -0.5
+        margins[ids[2]] = float("inf")
+        with self.assertRaises(NonfiniteReferenceMarginError):
+            select(self.pool, make_margins(self.pool, margins), self.commitment)
+
+
+class TestV2ReferenceMarginIdentityBinding(unittest.TestCase):
+    """Every reference-margin row must bind the exact frozen pool case:
+    known case_id AND case_sha256 equal to the frozen pool case's hash."""
+
+    def setUp(self):
+        self.pool = load(V2, "margin-stress-pool.json")
+        self.commitment = make_commitment(self.pool)
+        self.ids = [c["case_id"] for c in self.pool["cases"]]
+
+    def _margins(self) -> dict:
+        return make_margins(self.pool, {cid: 1.0 for cid in self.ids})
+
+    def test_positive_fixture_binds_actual_frozen_pool_identities(self):
+        result = select(self.pool, self._margins(), self.commitment)
+        self.assertEqual(result["selected_count"], 8)
+        frozen = {c["case_id"]: c["case_sha256"] for c in self.pool["cases"]}
+        for row in self._margins()["cases"]:
+            self.assertEqual(row["case_sha256"], frozen[row["case_id"]])
+
+    def test_wrong_case_hash_fails(self):
+        margins = self._margins()
+        margins["cases"][0]["case_sha256"] = "f" * 64
+        with self.assertRaises(ValueError):
+            select(self.pool, margins, self.commitment)
+
+    def test_missing_case_hash_fails(self):
+        margins = self._margins()
+        del margins["cases"][0]["case_sha256"]
+        with self.assertRaises(ValueError):
+            select(self.pool, margins, self.commitment)
+
+    def test_malformed_case_hash_fails(self):
+        margins = self._margins()
+        margins["cases"][0]["case_sha256"] = "not-a-sha256"
+        with self.assertRaises(ValueError):
+            select(self.pool, margins, self.commitment)
+
+    def test_swapped_hashes_between_two_valid_cases_fail(self):
+        margins = self._margins()
+        a = margins["cases"][0]
+        b = margins["cases"][1]
+        a["case_sha256"], b["case_sha256"] = b["case_sha256"], a["case_sha256"]
+        with self.assertRaises(ValueError):
+            select(self.pool, margins, self.commitment)
+
+    def test_unknown_valid_looking_case_id_fails(self):
+        margins = self._margins()
+        margins["cases"][0]["case_id"] = "p76-99-99-99"  # syntactically valid p76-* id
+        with self.assertRaises(ValueError):
+            select(self.pool, margins, self.commitment)
+
+    def test_duplicate_row_replacing_another_frozen_case_fails(self):
+        margins = self._margins()
+        # Substitute row 1's identity with a duplicate of row 0's case.
+        for key in ("case_id", "case_sha256"):
+            margins["cases"][1][key] = margins["cases"][0][key]
+        with self.assertRaises(ValueError):
+            select(self.pool, margins, self.commitment)
+
+    def test_incomplete_pool_coverage_fails(self):
+        margins = self._margins()
+        margins["cases"] = margins["cases"][:-1]
+        with self.assertRaises(ValueError):
+            select(self.pool, margins, self.commitment)
+
+    def test_substituted_row_with_other_pools_case_fails(self):
+        # A row carrying a legitimate v1 pool case identity must be rejected.
+        v1_pool = load(V1, "margin-stress-pool.json")
+        margins = self._margins()
+        margins["cases"][0]["case_id"] = v1_pool["cases"][0]["case_id"]
+        margins["cases"][0]["case_sha256"] = v1_pool["cases"][0]["case_sha256"]
+        with self.assertRaises(ValueError):
+            select(self.pool, margins, self.commitment)
 
 
 class TestV1ArtifactsUntouched(unittest.TestCase):
