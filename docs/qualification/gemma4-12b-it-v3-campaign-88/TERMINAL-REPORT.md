@@ -20,18 +20,24 @@ DECISION_LOCAL_BOUND_EXCEEDED; zero NaN/Inf).
 - InferSwarm methodology: `a8ec98a9fb9b673c93de5100d784ea772395efdb`
   (issue #86 / PR #87, accepted; issue #88 authorizes execution)
 - InferSwarm evidence branch: `issue-88-v3-campaign`
-  - Phase B barrier commit `884d31b` (margins + selected-eight)
-  - Phase C barrier commit (decision-domain manifest, 4672 rows)
-  - Phase E/F commit (calibration summary + threshold manifest, file sha
+  - Phase B barrier commit `884d31b2bf7a39efd300ac5d83f58f29ce40cf92`
+    (margins + selected-eight)
+  - Phase C barrier commit `4e2f7bf84fd1364a48a013833d508ee0b0dd229f`
+    (decision-domain manifest, 4672 rows)
+  - Phase E/F commit `e4e7bfe7fb75c697a12c9d8b193be03382dc0753`
+    (calibration summary + threshold manifest, file sha
     `251c4b7a8127e086001cc59e96cf7f61c17c59fa3bd120a15b5c4678fa9f5e5d`)
-  - Phase G commit `8e7d13a` (semantic adjudication PASS)
+  - Phase G commit `8e7d13af956d26322d620eeb91242f8071500c15`
+    (semantic adjudication PASS)
 - FreeToken base: `d4d16089165917704a87f4e2f0c4a09969646f95`
 - Physical producer: `560bb7e833ad4ca9386eb87799bb0aafb82b3e59`
-  (branch `issue-88-v3-qualification`, PR Zutfen-LLC/FreeToken#30, OPEN,
-  unmerged). Producer lineage: `cc0680a` (initial freeze) → `906d9e3`
-  (phaseC-1 capture-defect fix) → `560bb7e` (phaseD-stress-1 all-8-decisions
-  fix); both fixes landed BEFORE any qualification-bearing candidate
-  evidence; the affected attempts are retained as invalid (below).
+  (branch `issue-88-v3-qualification`, PR Zutfen-LLC/FreeToken#30,
+  accepted and merged to `inferswarm-research` as
+  `5e44be50cd9ed322366a01cd5d80d958950d1ac5`). Producer lineage:
+  `cc0680a` (initial freeze) → `906d9e3` (phaseC-1 capture-defect fix) →
+  `560bb7e` (phaseD-stress-1 all-8-decisions fix); both fixes landed BEFORE
+  any qualification-bearing candidate evidence; the affected attempts are
+  retained as invalid (below).
 - Subject: google/gemma-4-12B-it @ 707f0a3b…, checkpoint sha256
   `5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d`
   (verified byte-identical on 01/03/04)
@@ -46,7 +52,8 @@ DECISION_LOCAL_BOUND_EXCEEDED; zero NaN/Inf).
 ## Phase record
 
 - **P** Producer frozen (28 CPU-pure tests), pushed, clean trees on all
-  nodes; PR #30 opened against `inferswarm-research`.
+  nodes; PR #30 opened against `inferswarm-research` and later accepted/merged
+  after terminal campaign adjudication.
 - **A** Preflight/applicability recorded; no drift. Chain plan = frozen
   R6 plan sha256 `a91e3f71…` with EXPLICIT_OVERRIDE_ISSUE88_EXECUTION.
 - **B** 48/48 p86 reference margins: 0 nonfinite, 0 negative, 7 exact
