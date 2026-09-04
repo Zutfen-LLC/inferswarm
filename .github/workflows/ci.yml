@@ -57,6 +57,9 @@ jobs:
       - name: Check issue 74 frozen methodology
         run: python3 -m unittest tests.test_issue74_methodology -v
 
+      - name: Check issue 76 v2 stress methodology
+        run: python3 -m unittest tests.test_issue76_v2_stress_selection -v
+
       - name: Check internal Markdown links
         run: |
           python3 - <<'EOF'
