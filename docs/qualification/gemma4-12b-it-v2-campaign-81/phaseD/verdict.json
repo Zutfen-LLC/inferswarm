@@ -1,0 +1,106 @@
+{
+  "actions_taken": {
+    "holdout": "REMAINS SEALED (23311c5514b2561c66a2ecd0c9cfa25c3f4f91b83b67353aada8355f48e25c59); Phase-G/H unseal preconditions never reached",
+    "reruns_of_valid_failures": "none",
+    "threshold_derivation": "STOPPED (not started)",
+    "threshold_modifications": "none (no threshold ever derived)"
+  },
+  "campaign": "inferswarm#81 gemma numerical qualification v2",
+  "candidate_runs": {
+    "statistical_576": {
+      "attempt": "i81-phaseD-chain",
+      "cases": 576,
+      "host": "inferswarm01 (2x RTX 3060, stages 1-2) + inferswarm03 (RTX 3060, last stage via R4 wire)",
+      "nan_inf_total": 0,
+      "producer": "9f06d81c6e95 dirty=false",
+      "status": "RUN_COMPLETE"
+    },
+    "stress_8": {
+      "attempt": "i81-phaseD-chain-stress",
+      "cases": 8,
+      "nan_inf_total": 0,
+      "note": "first launch attempt infrastructure-invalid (single-connection last-stage service had exited with the 576 client; connection refused, 0 cases executed); rerun valid with fresh service process",
+      "status": "RUN_COMPLETE"
+    }
+  },
+  "evidence_index_sha256": {
+    "chain_statistical_576": "e73021d051df3aaaf3e8fb63f072b28443cc6afa836d909f6603e253e22e6771",
+    "chain_stress_8": "0a49971365d0aac25c18ce0ff6973dfbed92152110f296a0b06bd43282c4ff80",
+    "reference_statistical_576": "24b1cd52e4039c97f5815dff4d4cc2f2b2663b673db8b215f598498b9395d298",
+    "reference_stress_8": "212fbbac4629a85d624f06b21302f85bffe4a198466d819495c7d23d2b8fa5ff"
+  },
+  "evidence_locations": {
+    "inferswarm01": [
+      "/srv/inferswarm/state/i81/phaseD-chain/",
+      "/srv/inferswarm/state/i81/phaseD-chain-stress/",
+      "/srv/inferswarm/state/i81/refphaseD/ (reference bundle copy for assembly)",
+      "/srv/inferswarm/state/i81/phaseD-semantic-fail.json"
+    ],
+    "inferswarm03": [
+      "/srv/inferswarm/state/i81/phaseD-chain-laststage/",
+      "/srv/inferswarm/state/i81/phaseD-chain-stress-laststage/"
+    ],
+    "inferswarm04": [
+      "/srv/inferswarm/state/i81/phaseD-reference/",
+      "/srv/inferswarm/state/i81/phaseD-reference-stress/",
+      "/srv/inferswarm/state/i81/invalid/"
+    ]
+  },
+  "exact_integrity": {
+    "statistical_576": "PASS (case-id sets equal; all 576 case_sha256 equal reference)",
+    "stress_8": "PASS (all 8 case_sha256 equal reference)"
+  },
+  "nonfinite": "PASS (zero NaN/Inf across all four runs)",
+  "producer_freetoken": "9f06d81c6e9519d7ddf68b302c1c2aa14993387d",
+  "reference_runs": {
+    "statistical_576": {
+      "attempt": "i81-phaseD-reference-04",
+      "cases": 576,
+      "host": "inferswarm04 (RTX 3090)",
+      "nan_inf_total": 0,
+      "producer": "9f06d81c6e95 dirty=false",
+      "status": "RUN_COMPLETE"
+    },
+    "stress_8": {
+      "attempt": "i81-phaseD-reference-stress-04",
+      "cases": 8,
+      "host": "inferswarm04 (RTX 3090)",
+      "nan_inf_total": 0,
+      "note": "first launch attempt infrastructure-invalid (missing input file, 0 cases executed; log at invalid/phaseD-refstress-infra.log); rerun valid",
+      "status": "RUN_COMPLETE",
+      "tokens_match_phase0_rerun": true
+    }
+  },
+  "schema": "inferswarm.issue81.phaseD-verdict/1",
+  "semantic_output": {
+    "classification": "narrowest evidence-supported classification: deterministic greedy-token divergence between matched RTX 3090 reference and three-stage RTX 3060 candidate chain caused by device-class bf16 GEMM accumulation divergence (accepted #71 localization: BACKEND_EXECUTION_LOCAL, 1-2 ULP/GEMM x 48 layers) flipping near-tie argmax. NOT nondeterminism: Phase A proved exact same-device repeatability on both arms (3 realizations each). NOT integrity: all case identities exact. NOT nonfinite: zero NaN/Inf.",
+    "first_divergence_position_histogram": {
+      "0": 62,
+      "1": 51,
+      "2": 32,
+      "3": 38,
+      "4": 22,
+      "5": 18,
+      "6": 11,
+      "7": 2
+    },
+    "margin_correlation": {
+      "margin_below_0p01": "95 cases, 76 mismatched (80%)",
+      "margin_below_0p5": "353 cases, 205 mismatched (58%)",
+      "match_median_reference_margin": 0.5,
+      "mismatch_median_reference_margin": 0.125
+    },
+    "statistical_mismatches": 236,
+    "statistical_total": 576,
+    "stress_mismatch_cases": [
+      "p76-01-02-02",
+      "p76-01-04-02",
+      "p76-02-02-02",
+      "p76-02-06-01"
+    ],
+    "stress_mismatch_note": "exactly the four smallest-positive-margin selections (all 0.125); the four largest-margin selections (>=1.5) all matched",
+    "stress_mismatches": 4,
+    "stress_total": 8,
+    "verdict": "CALIBRATION_SEMANTIC_FAIL"
+  }
+}
