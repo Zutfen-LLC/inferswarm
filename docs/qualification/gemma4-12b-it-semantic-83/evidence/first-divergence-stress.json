@@ -1,0 +1,360 @@
+{
+ "schema": "inferswarm.issue83.first-divergence-decisions/1",
+ "arm": "stress",
+ "case_count": 8,
+ "divergence_step_histogram": {
+  "1": 1,
+  "2": 1,
+  "4": 1,
+  "5": 1
+ },
+ "cases": [
+  {
+   "case_id": "p76-01-02-02",
+   "case_sha256": "bebb94b99ad802107a60e95f33422e7ed1f94a0b60ce522740399badd0ee60d8",
+   "arm": "stress",
+   "first_divergence_step": 4,
+   "ref_tokens": [
+    236770,
+    236770,
+    236770,
+    236770,
+    236761,
+    236761,
+    236761,
+    236761
+   ],
+   "chain_tokens": [
+    236770,
+    236770,
+    236770,
+    236770,
+    236772,
+    236761,
+    236761,
+    236761
+   ],
+   "divergence_detail": {
+    "position": 4,
+    "shared_prefix_ref": [
+     236770,
+     236770,
+     236770,
+     236770
+    ],
+    "shared_prefix_chain": [
+     236770,
+     236770,
+     236770,
+     236770
+    ],
+    "prefix_exact": true,
+    "candidate_token": 236772,
+    "chain_top1_index": 236772,
+    "chain_top1_value_hex": "0x1.1c00000000000p+4",
+    "chain_top2_index": 236761,
+    "chain_top2_value_hex": "0x1.0c00000000000p+4",
+    "chain_margin_hex": "0x1.0000000000000p+0",
+    "candidate_is_chain_top1": true,
+    "captured_step": false,
+    "ref_top1_index": 236761,
+    "ref_top1_value_hex": "0x1.1600000000000p+4",
+    "ref_top2_index": 236770,
+    "ref_top2_value_hex": "0x1.1000000000000p+4",
+    "ref_margin_hex": "0x1.8000000000000p-2",
+    "candidate_is_ref_top1": false,
+    "candidate_is_ref_top2": false,
+    "candidate_rank_is_1_or_2": false
+   }
+  },
+  {
+   "case_id": "p76-01-04-02",
+   "case_sha256": "f4900ea7fc91a3b0fe1099c9ce29825a5e9d6977b3d729baf1c8e3ba90e7c88a",
+   "arm": "stress",
+   "first_divergence_step": 5,
+   "ref_tokens": [
+    236770,
+    236770,
+    236761,
+    236770,
+    236761,
+    236770,
+    236761,
+    236761
+   ],
+   "chain_tokens": [
+    236770,
+    236770,
+    236761,
+    236770,
+    236761,
+    236761,
+    236770,
+    236761
+   ],
+   "divergence_detail": {
+    "position": 5,
+    "shared_prefix_ref": [
+     236770,
+     236770,
+     236761,
+     236770,
+     236761
+    ],
+    "shared_prefix_chain": [
+     236770,
+     236770,
+     236761,
+     236770,
+     236761
+    ],
+    "prefix_exact": true,
+    "candidate_token": 236761,
+    "chain_top1_index": 236761,
+    "chain_top1_value_hex": "0x1.1000000000000p+4",
+    "chain_top2_index": 236770,
+    "chain_top2_value_hex": "0x1.0e00000000000p+4",
+    "chain_margin_hex": "0x1.0000000000000p-3",
+    "candidate_is_chain_top1": true,
+    "captured_step": false,
+    "ref_top1_index": 236770,
+    "ref_top1_value_hex": "0x1.1000000000000p+4",
+    "ref_top2_index": 236761,
+    "ref_top2_value_hex": "0x1.0e00000000000p+4",
+    "ref_margin_hex": "0x1.0000000000000p-3",
+    "candidate_is_ref_top1": false,
+    "candidate_is_ref_top2": true,
+    "candidate_rank_is_1_or_2": true
+   }
+  },
+  {
+   "case_id": "p76-02-02-02",
+   "case_sha256": "6a38a65b321d48831a448ca5542e52a8afc74807aac4d9488dea69f4c68bc50e",
+   "arm": "stress",
+   "first_divergence_step": 2,
+   "ref_tokens": [
+    236761,
+    236761,
+    236761,
+    236770,
+    236761,
+    236770,
+    236770,
+    236770
+   ],
+   "chain_tokens": [
+    236761,
+    236761,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770
+   ],
+   "divergence_detail": {
+    "position": 2,
+    "shared_prefix_ref": [
+     236761,
+     236761
+    ],
+    "shared_prefix_chain": [
+     236761,
+     236761
+    ],
+    "prefix_exact": true,
+    "candidate_token": 236770,
+    "chain_top1_index": 236770,
+    "chain_top1_value_hex": "0x1.3000000000000p+4",
+    "chain_top2_index": 236761,
+    "chain_top2_value_hex": "0x1.2a00000000000p+4",
+    "chain_margin_hex": "0x1.8000000000000p-2",
+    "candidate_is_chain_top1": true,
+    "captured_step": false,
+    "ref_top1_index": 236761,
+    "ref_top1_value_hex": "0x1.3200000000000p+4",
+    "ref_top2_index": 236770,
+    "ref_top2_value_hex": "0x1.1e00000000000p+4",
+    "ref_margin_hex": "0x1.4000000000000p+0",
+    "candidate_is_ref_top1": false,
+    "candidate_is_ref_top2": true,
+    "candidate_rank_is_1_or_2": true
+   }
+  },
+  {
+   "case_id": "p76-02-06-01",
+   "case_sha256": "b4d95db5ae159252c0199d7b85adff4b5de75006f99a6b41ab95098c46790765",
+   "arm": "stress",
+   "first_divergence_step": 1,
+   "ref_tokens": [
+    236761,
+    236761,
+    236770,
+    236761,
+    236770,
+    236770,
+    236770,
+    236770
+   ],
+   "chain_tokens": [
+    236761,
+    236770,
+    236761,
+    236761,
+    236770,
+    236761,
+    236770,
+    236770
+   ],
+   "divergence_detail": {
+    "position": 1,
+    "shared_prefix_ref": [
+     236761
+    ],
+    "shared_prefix_chain": [
+     236761
+    ],
+    "prefix_exact": true,
+    "candidate_token": 236770,
+    "chain_top1_index": 236770,
+    "chain_top1_value_hex": "0x1.3400000000000p+4",
+    "chain_top2_index": 236761,
+    "chain_top2_value_hex": "0x1.3200000000000p+4",
+    "chain_margin_hex": "0x1.0000000000000p-3",
+    "candidate_is_chain_top1": true,
+    "captured_step": true,
+    "ref_top1_index": 236761,
+    "ref_top1_value_hex": "0x1.3200000000000p+4",
+    "ref_top2_index": 236770,
+    "ref_top2_value_hex": "0x1.2c00000000000p+4",
+    "ref_margin_hex": "0x1.8000000000000p-2",
+    "candidate_is_ref_top1": false,
+    "candidate_is_ref_top2": true,
+    "candidate_rank_is_1_or_2": true
+   }
+  },
+  {
+   "case_id": "p76-04-03-02",
+   "case_sha256": "47583cd3883ffb6d02ee075ade8fc0c07b98bc68baae8d9eebd1e33a1ac7d51e",
+   "arm": "stress",
+   "first_divergence_step": null,
+   "ref_tokens": [
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770
+   ],
+   "chain_tokens": [
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770
+   ]
+  },
+  {
+   "case_id": "p76-04-04-02",
+   "case_sha256": "796ffd5dbd17c75f3ab1624aa967b222289568d95e7092deecfc82518adb79cb",
+   "arm": "stress",
+   "first_divergence_step": null,
+   "ref_tokens": [
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770
+   ],
+   "chain_tokens": [
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770
+   ]
+  },
+  {
+   "case_id": "p76-03-04-01",
+   "case_sha256": "15ae01e65f8ba7623223d7bd062b864789268e6f626e2e76978a446989a8095e",
+   "arm": "stress",
+   "first_divergence_step": null,
+   "ref_tokens": [
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770
+   ],
+   "chain_tokens": [
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770
+   ]
+  },
+  {
+   "case_id": "p76-03-04-02",
+   "case_sha256": "0d63f3c7f0960bd8a959f17562b289271bce655f91f2efcec87623b31e8071d7",
+   "arm": "stress",
+   "first_divergence_step": null,
+   "ref_tokens": [
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770
+   ],
+   "chain_tokens": [
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770,
+    236770
+   ]
+  }
+ ],
+ "source_sha256": {
+  "/srv/inferswarm/state/i81/refphaseD/phaseD-reference-stress/p76-01-02-02/case-pdrefstress.json": "5a7d2895678020383d0554d7d758208b72b15e6eaea7f7be11f162c720d9cb69",
+  "/srv/inferswarm/state/i81/phaseD-chain-stress/p76-01-02-02/chain-case-pdchainstress.json": "93802bfe340b502a118190b10da107a3d2610553efe36fed446893df434a0832",
+  "/srv/inferswarm/state/i81/refphaseD/phaseD-reference-stress/p76-01-04-02/case-pdrefstress.json": "6373d9d09a2d2534017c0916e82391b3e2b8ff80c71dd808cdc05c4f323b5d62",
+  "/srv/inferswarm/state/i81/phaseD-chain-stress/p76-01-04-02/chain-case-pdchainstress.json": "53f360a5dda70db1e632a6f448665bd71a7016989d0feaeb6420070793e698ba",
+  "/srv/inferswarm/state/i81/refphaseD/phaseD-reference-stress/p76-02-02-02/case-pdrefstress.json": "45fbb27e8fa8d8f22cfea65841355dbbd9ef05bddc2659fbf7efccf4decd5a99",
+  "/srv/inferswarm/state/i81/phaseD-chain-stress/p76-02-02-02/chain-case-pdchainstress.json": "832f1d1a3fb332fc61004cc10575ad08649549bb168c692dea6aec2855324c1f",
+  "/srv/inferswarm/state/i81/refphaseD/phaseD-reference-stress/p76-02-06-01/case-pdrefstress.json": "854eb7067cab98dd5e12f5c1c54e199d4d905ac313babde2b9ff376184869924",
+  "/srv/inferswarm/state/i81/phaseD-chain-stress/p76-02-06-01/chain-case-pdchainstress.json": "b143fa837caa9e9229f3707a589c6084c9426cb83f58cfb7f82455e1d7489f19",
+  "/srv/inferswarm/state/i81/refphaseD/phaseD-reference-stress/p76-04-03-02/case-pdrefstress.json": "d99bad98db1b5e0ef9ce9d0fb8b9717a18f23fc02367eb5fdcf49b27a1454656",
+  "/srv/inferswarm/state/i81/phaseD-chain-stress/p76-04-03-02/chain-case-pdchainstress.json": "fd91fd9f3af862d09fc4fa3a25c6a82d0e480ea5544afa2fb93964acbc1e3a67",
+  "/srv/inferswarm/state/i81/refphaseD/phaseD-reference-stress/p76-04-04-02/case-pdrefstress.json": "820fef301f99b6208ff10ad844e5146fe935df57ed30ea2cf2f31db1972db10b",
+  "/srv/inferswarm/state/i81/phaseD-chain-stress/p76-04-04-02/chain-case-pdchainstress.json": "e727393e734dc2d4d0b658435de9237fcf0bbdde59e92c7a2f40340ca5e0c4ad",
+  "/srv/inferswarm/state/i81/refphaseD/phaseD-reference-stress/p76-03-04-01/case-pdrefstress.json": "4c0b2f2d8871beb8dbf19f98bac5f46b462caaab6aafd1c28f8f02df9e998bf2",
+  "/srv/inferswarm/state/i81/phaseD-chain-stress/p76-03-04-01/chain-case-pdchainstress.json": "fe7b9ad156e1455331826e379a99fb94d9324ee9d2717162075c0b445421ac61",
+  "/srv/inferswarm/state/i81/refphaseD/phaseD-reference-stress/p76-03-04-02/case-pdrefstress.json": "64641c08c6c7f8585434a656dc2bb1de142b50b3b9f3bfb1c4c279bd6526b9d2",
+  "/srv/inferswarm/state/i81/phaseD-chain-stress/p76-03-04-02/chain-case-pdchainstress.json": "ee1963471bedb604c3f69e4569f305524c15b81426bf73fc6f9c66e70960fa1e"
+ },
+ "ref_index_sha256": "212fbbac4629a85d624f06b21302f85bffe4a198466d819495c7d23d2b8fa5ff"
+}

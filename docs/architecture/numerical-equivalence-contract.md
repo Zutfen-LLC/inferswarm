@@ -63,10 +63,29 @@ all tensor families, representations, models, or backends.
 
 ### 1.3 Semantic output correctness
 
-A strategy declares semantic gates separately from tensor-error gates.
-Examples include:
+A strategy declares semantic gates separately from tensor-error gates. For
+deterministic greedy generation the strategy declares one of two profiles
+(issue #83; both remain valid, neither implies the other):
 
-- exact deterministic greedy-token identity;
+- **strict exact-token profile** — exact deterministic greedy-token identity
+  at every step (`EXACT_TOKENS_REQUIRED`, the operator-facing
+  `BIT_EXACT_REQUIRED` policy of §9); or
+- **decision-stability profile** — with a prospectively qualified consumer
+  logit max-absolute bound `E` on a frozen comparison domain `D` (§5.4):
+  exact argmax identity is required whenever the reference top1–top2 margin
+  `m > 2E` (the decision is provably stable); when `m ≤ 2E` the candidate
+  decision must lie in the ambiguity set
+  `A_E(r) = { j ∈ D | r[a] − r[j] ≤ 2E }`; after the first allowed
+  unstable divergence the case branches and later free-running steps are
+  excluded from same-input semantic evaluation (they are no longer
+  same-input comparisons). Numerical envelopes are qualified exclusively on
+  canonical identical-prefix replay.
+
+The `m > 2E` stability rule and the `2E` admissibility bound are theorems of
+the symmetric max-absolute envelope (issue #83 SEMANTIC-CONTRACT §3), not
+empirical tolerances.
+
+Other semantic gates a strategy may declare:
 - exact rank-one identity;
 - top-k membership/overlap where appropriate;
 - bounded rank movement;
@@ -198,8 +217,11 @@ contract should distinguish mandatory gates from diagnostics.
 
 - exact equality is always measured and is a gate for exact fields and strict
   bit-exact policy;
-- deterministic greedy selected-token identity is exact under the first Gemma
-  semantic profile.
+- under the strict exact-token profile, deterministic greedy selected-token
+  identity is exact at every step;
+- under the decision-stability profile (issue #83), the reference top1–top2
+  margin per decision and the candidate decision's membership in the frozen
+  ambiguity set are mandatory measurements and gates.
 
 ### 5.3 Supporting diagnostics
 
@@ -234,7 +256,8 @@ Fail closed on:
 - wrong frozen semantic dtype;
 - NaN/Inf at declared finite checkpoints;
 - deterministic greedy-token mismatch under a profile that requires exact
-  tokens;
+  tokens (strict profile), or a decision outside the frozen ambiguity set /
+  a mismatch on a provably stable decision (decision-stability profile);
 - silent fallback/substitution;
 - missing/inapplicable qualification for correctness-bearing serving;
 - any exceeded mandatory frozen numerical limit.
