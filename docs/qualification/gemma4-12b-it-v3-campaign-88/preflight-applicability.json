@@ -1,0 +1,73 @@
+{
+  "schema": "inferswarm.issue88.v3-preflight-applicability/1",
+  "contract_id": "inferswarm.gemma4-heterogeneous-numerical-equivalence/1",
+  "issue": 88,
+  "methodology_commit": "a8ec98a9fb9b673c93de5100d784ea772395efdb",
+  "freetoken_base": "d4d16089165917704a87f4e2f0c4a09969646f95",
+  "producer_freetoken_sha": "cc0680a84b2021cef1dba023e6fc5fb1a0f2e46b",
+  "producer_branch": "issue-88-v3-qualification",
+  "producer_pr": "Zutfen-LLC/FreeToken#30",
+  "recorded_at": "2026-09-04",
+  "role_mapping": {
+    "reference": {
+      "host": "inferswarm04",
+      "gpu_uuid": "GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03",
+      "gpu_model": "NVIDIA GeForce RTX 3090 (24 GiB)",
+      "pci_bus_id": "00000000:01:00.0"
+    },
+    "candidate_stage1": {
+      "host": "inferswarm01",
+      "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+      "gpu_model": "NVIDIA GeForce RTX 3060",
+      "layers": [0, 16]
+    },
+    "candidate_stage2": {
+      "host": "inferswarm01",
+      "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+      "gpu_model": "NVIDIA GeForce RTX 3060",
+      "layers": [16, 32]
+    },
+    "candidate_stage3_last": {
+      "host": "inferswarm03",
+      "gpu_uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176",
+      "gpu_model": "NVIDIA GeForce RTX 3060",
+      "layers": [32, 48],
+      "wire": "tcp/18485 (inferswarm.r4.boundary-wire/1)"
+    }
+  },
+  "environment": {
+    "driver": "610.57.04 (all nodes)",
+    "torch": "2.11.0+cu130 (all nodes)",
+    "cuda_runtime": "13.0",
+    "toolkit_nvcc": "cuda_13.1.r13.1 (all nodes)",
+    "triton": "3.6.0 (all nodes)",
+    "transformers": "5.16.1 (all nodes)",
+    "flashinfer": "0.6.17 (all nodes)",
+    "python": "3.13.5 (all nodes)",
+    "sglang_kernel": "not importable in the node venvs (also not importable at the accepted #81 applicability record; the Gemma replay-prefill path does not import it)",
+    "native_extension_pinned_tensor_sha256": {
+      "inferswarm01": "c6e4fd7da895ef1f502e6bde06063bf96eee29c2309e10d10132b3bfe22bc398",
+      "inferswarm03": "c6e4fd7da895ef1f502e6bde06063bf96eee29c2309e10d10132b3bfe22bc398",
+      "inferswarm04": "8bd9de8778e2af55b5dbb88b4ef0398b00171cb763e3d066d5d1bbe3270aad56",
+      "note": "01==03 byte-identical; 04 differs by build-path metadata embedded in the .so from identical source (recorded honestly per #81 precedent)"
+    },
+    "producer_dirty": "0 (all nodes, after build_ext; build/ and *.so are gitignored)"
+  },
+  "subject": {
+    "model": "google/gemma-4-12B-it",
+    "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+    "checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "checkpoint_path": "/srv/models/gemma-r6 (all nodes, sha256 verified 2026-09-04)",
+    "execution": "native BF16 text; Triton attention; deterministic greedy replay-prefill; 8 decisions/case; one replay chunk <=64 rows",
+    "argmax_tie_break": "ARGMAX_FIRST_MAX/lowest-token-id-among-exactly-equal-fp32-maxima",
+    "decision_domain": "reference-top-1024-with-cutoff-ties/1"
+  },
+  "chain_participant_plan": {
+    "source": "/srv/inferswarm/state/i76/chain-plan.json (frozen R6 plan, byte-identical on 01/03)",
+    "sha256": "a91e3f71353905d4af3722408327a9f9bda0f2655061ae9e44f51d9a3edf28fc",
+    "digest": "sha256:ee845188d3328bdec29bf4b09d71f7ccda0701ff5758cb1d8a70460a40fecfb1",
+    "plan_producer_sha": "44d6c94e4fd2ee967451cc959f930883ca3f4a25",
+    "producer_override": "EXPLICIT_OVERRIDE_ISSUE88_EXECUTION (authorized campaign under new frozen producer cc0680a, same base d4d1608)"
+  },
+  "verdict": "PREFLIGHT_PASS: all correctness-bearing applicability dimensions recorded and matching across nodes; no drift from the frozen subject; proceeding to Phase B reference-only execution"
+}

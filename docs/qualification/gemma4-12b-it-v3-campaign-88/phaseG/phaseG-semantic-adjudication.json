@@ -1,0 +1,8 @@
+{
+ "cases": 584,
+ "e_d_hex": "0x1.af00000000000p+4",
+ "rows": 4672,
+ "verdict_counts": {
+  "SEMANTIC_PASS": 4672
+ }
+}
