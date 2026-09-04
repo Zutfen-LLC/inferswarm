@@ -252,9 +252,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     holdout_ciphertext_sha256 = sha256_file(args.holdout_ciphertext)
     recipient_certificate_sha256 = sha256_file(args.recipient_certificate)
 
+    # Hash the ACTUAL threshold file bytes (accepted #79 behavior): the
+    # committed/refetched artifact must remain byte-identical, so a file
+    # that differs from the committed bytes by even whitespace/newlines
+    # must fail here. The verifier separately enforces that the parsed
+    # manifest's canonical representation hashes to the same SHA, so BOTH
+    # the exact file bytes and the canonical representation are bound.
     record = validate_unseal_preconditions(
         threshold_manifest=manifest,
-        threshold_manifest_sha256=sha256_bytes(canonical_json_bytes(manifest)),
+        threshold_manifest_sha256=sha256_file(args.threshold_manifest),
         expected_committed_threshold_sha256=args.expected_threshold_sha256,
         holdout_ciphertext_sha256=holdout_ciphertext_sha256,
         recipient_certificate_sha256=recipient_certificate_sha256,

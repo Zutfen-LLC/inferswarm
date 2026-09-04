@@ -1067,6 +1067,52 @@ class TestUnsealPreflight(unittest.TestCase):
             )
         self.assertIn(CUSTODY_NOT_VERIFIED, str(ctx.exception))
 
+    def test_cli_rejects_whitespace_only_threshold_file_change(self):
+        # The committed threshold artifact must remain BYTE-IDENTICAL: a file
+        # that differs only in whitespace/newlines (identical parsed JSON,
+        # identical canonical hash) must FAIL the preflight via actual-byte
+        # hashing of --threshold-manifest (accepted #79 behavior).
+        import tempfile
+
+        from verify_issue86_v3_unseal import main as unseal_main
+
+        manifest = FIXTURE.derive()
+        canonical = canonical_json_bytes(manifest)
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            committed = tmp_path / "threshold.json"
+            committed.write_bytes(canonical)
+            # byte-identical copy PASSES
+            import contextlib
+            import io
+
+            buffer = io.StringIO()
+            with contextlib.redirect_stdout(buffer):
+                unseal_main([
+                    "--threshold-manifest", str(committed),
+                    "--expected-threshold-sha256", sha_canonical(manifest),
+                    "--expected-stress-selection-sha256", sha_canonical(FIXTURE.selection),
+                    "--custody-record", str(V3 / "manifests/holdout-custody-record.json"),
+                    "--holdout-ciphertext", str(V3 / "sealed/holdout.cms"),
+                    "--recipient-certificate", str(V3 / "sealed/recipient-certificate.pem"),
+                    "--private-key-path", "/home/zutfen/.local/share/inferswarm/issue86-holdout-v3/recipient-private-key.pem",
+                ])
+            self.assertIn("UNSEAL_PRECONDITIONS_PASS_DECRYPT_NOT_PERFORMED", buffer.getvalue())
+            # whitespace-reformatted copy (same parsed JSON) FAILS
+            reformatted = tmp_path / "threshold-reformatted.json"
+            reformatted.write_bytes(json.dumps(manifest, indent=4).encode() + b"\n\n")
+            with self.assertRaises(UnsealPreflightError) as ctx:
+                unseal_main([
+                    "--threshold-manifest", str(reformatted),
+                    "--expected-threshold-sha256", sha_canonical(manifest),
+                    "--expected-stress-selection-sha256", sha_canonical(FIXTURE.selection),
+                    "--custody-record", str(V3 / "manifests/holdout-custody-record.json"),
+                    "--holdout-ciphertext", str(V3 / "sealed/holdout.cms"),
+                    "--recipient-certificate", str(V3 / "sealed/recipient-certificate.pem"),
+                    "--private-key-path", "/home/zutfen/.local/share/inferswarm/issue86-holdout-v3/recipient-private-key.pem",
+                ])
+            self.assertIn(SELECTED_SHA_MISMATCH, str(ctx.exception))
+
     def test_cli_hashes_actual_files(self):
         import tempfile
 
