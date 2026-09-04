@@ -318,16 +318,31 @@ different devices. Its accepted classification is `BACKEND_EXECUTION_LOCAL`.
 The exact state and transport proofs remained intact. The localization did not
 set a tolerance and did not convert R6 into a pass.
 
-ADR 0010 / issue #72 now defines the three-layer heterogeneous correctness
-contract. Issue #74 is the current methodology-freeze gate. It freezes the
-corpus, reducers, statistical design, evidence rules, threshold derivation, and
-sealed holdout before new physical observations exist.
+ADR 0010 / issue #72 defines the three-layer heterogeneous correctness contract:
+exact integrity, qualified numerical execution equivalence, and
+strategy-declared semantic output correctness. Issues #74, #77, and #79 are
+complete: they froze the first prospective Gemma numerical methodology, repaired
+the stress-selection semantics without changing the pre-registered margin
+definition, and completed the versioned calibration/threshold/unseal tooling.
 
-Issue #74 does not authorize physical calibration. After maintainer acceptance,
-a separate gate can execute calibration, commit mechanically derived
-thresholds, and then open the sealed holdout. A still-later R6 successor must
-perform an independent full integration attempt. Neither gate can reinterpret
-historical R6.
+Issue #76 remains the stopped v1 qualification attempt at
+`PHASE0_REFERENCE_COMPLETE / STRESS_SELECTION_BLOCKED`. Issue #81 is also
+complete and remains a valid terminal `CALIBRATION_SEMANTIC_FAIL`: all 584
+Phase-D cases completed on both arms with exact case identity and zero NaN/Inf,
+but the strict exact-token semantic profile changed at least one greedy token in
+236/576 statistical cases and 4/8 stress cases. Threshold derivation never
+started, and the retained sealed holdout was never opened. PR #82 merged the
+immutable #81 evidence record at
+`46a5d6da6ed63722c2d43dc49edfbac6c91fd915`.
+
+Issue #83 is the **current correctness-design gate**. It must prospectively
+define semantic correctness for heterogeneous greedy decoding, including the
+separation between identical-prefix numerical replay and free-running
+autoregressive behavior, decision stability near argmax ties, and preservation
+of a strict exact-token / `BIT_EXACT_REQUIRED` profile. No new physical
+qualification campaign or holdout unseal is authorized until that semantic
+contract and its successor methodology are frozen. None of this reinterprets
+historical R6, #76, or #81 as passes.
 
 Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) is complete. It
 established the durable FreeToken `inferswarm-research` implementation line
@@ -514,26 +529,50 @@ numerical equivalence, and strategy-declared semantic output. The Model
 Execution Strategy owns the comparator and semantic contract. The generic
 planner consumes applicable qualification evidence before performance ranking.
 
-### First numerical-equivalence methodology freeze — issue #74 — CURRENT
+### First numerical-equivalence methodology freeze — issue #74 — COMPLETE
 
-Freeze the first Gemma/FreeToken qualification method without physical model or
-GPU execution. The frozen work includes 576 balanced calibration prompts,
-reference-only margin-stress selection, 15 envelopes, mechanical threshold
-derivation, a sealed 24-case holdout, evidence schemas, and invalid-run rules.
+Issue #74 prospectively froze the first Gemma/FreeToken qualification method:
+576 balanced calibration prompts, reference-only stress selection, 15 numerical
+envelopes, distribution-free threshold derivation, a sealed 24-case holdout,
+evidence schemas, and invalid-run rules. Historical v1 artifacts remain
+immutable.
 
-Maintainer review is a hard stop. Completion does not authorize calibration.
+### Methodology-v2 and executable tooling — issues #77 / #79 — COMPLETE
 
-### Qualification execution — separate successor gate — BLOCKED
+Issue #77 prospectively repaired the stress-pool eligibility semantics after the
+stopped #76 attempt without changing the pre-registered min-over-8 margin
+definition. Issue #79 then bound the v2 `p76-*` stress artifacts to versioned
+calibration-summary, threshold-freeze, and holdout-unseal tooling while
+preserving the unchanged 576-case `c74-*` statistical corpus and threshold math.
 
-After explicit methodology acceptance, run same-device and cross-card controls,
-heterogeneous stage controls, full calibration, threshold freeze, and the
-sealed holdout in that order. Do not open the holdout before the threshold
-manifest is committed and verified.
+### Qualification execution — issues #76 / #81 — COMPLETE / FAILED
+
+Issue #76 stopped before candidate execution because its v1 selector could not
+handle genuine zero-margin ties. Issue #81 completed the v2 physical campaign
+through full calibration and stopped correctly at `CALIBRATION_SEMANTIC_FAIL`:
+236/576 statistical cases and 4/8 selected stress cases changed at least one
+greedy token under the strict exact-token profile. Exact integrity passed,
+NaN/Inf remained zero, thresholds were never derived, and the retained holdout
+remains sealed.
+
+### Heterogeneous greedy semantic contract — issue #83 — CURRENT
+
+Define the prospective strategy semantic-output contract after #81. The active
+questions are identical-prefix numerical replay, mathematically grounded
+decision stability under a qualified consumer-logit error bound, treatment of
+autoregressive branching after an allowed near-tie decision, and the
+relationship between ordinary heterogeneous correctness and strict
+exact-token/`BIT_EXACT_REQUIRED` reproducibility.
+
+This is a design/research gate only. Do not launch another physical
+qualification campaign or unseal the retained holdout from #83.
 
 ### R6 successor full integration attempt — future independent gate
 
-After applicable numerical qualification exists, define a new full integration
-attempt. Do not reuse the R6 verdict or back-fit the new limits to R6 evidence.
+After #83 and a successor methodology produce applicable qualification evidence,
+define a new full integration attempt. Do not reuse the historical R6 verdict,
+back-fit new limits to R6/#81 evidence, or treat either failed campaign as a
+pass.
 
 ---
 
