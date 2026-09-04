@@ -335,13 +335,29 @@ started, and the retained sealed holdout was never opened. PR #82 merged the
 immutable #81 evidence record at
 `46a5d6da6ed63722c2d43dc49edfbac6c91fd915`.
 
-Issue #83 is the **current correctness-design gate**. It must prospectively
-define semantic correctness for heterogeneous greedy decoding, including the
-separation between identical-prefix numerical replay and free-running
-autoregressive behavior, decision stability near argmax ties, and preservation
-of a strict exact-token / `BIT_EXACT_REQUIRED` profile. No new physical
-qualification campaign or holdout unseal is authorized until that semantic
-contract and its successor methodology are frozen. None of this reinterprets
+Issue #83 is complete: the semantic contract for heterogeneous greedy
+decoding was accepted at
+`d60b8f6c4490c91312e8d073b4ac55794bf68841` (PR #85). It prospectively
+defines semantic correctness — canonical-prefix numerical replay separated
+from free-running behavior, decision stability near argmax ties, the
+mandatory full-vocabulary `E_full` envelope, the supplemental decision-local
+`E_D` bound with fail-closed `DECISION_LOCAL_BOUND_EXCEEDED` /
+`DECISION_DOMAIN_ESCAPE` gates, and preservation of the strict exact-token /
+`BIT_EXACT_REQUIRED` profile.
+
+Issue [#86](https://github.com/Zutfen-LLC/inferswarm/issues/86) is the
+**CURRENT methodology/tooling freeze gate**: the first Gemma v3
+decision-stability qualification methodology implementing the accepted #83
+contract — fresh c86/p86/h86 corpora, the frozen
+`reference-top-1024-with-cutoff-ties/1` decision domain, the supplemental
+`E_D` derivation, the 16-family simultaneous statistical design (minimum n
+574; the balanced 576-case design retained), frozen
+`ARGMAX_FIRST_MAX` tie-break semantics, the exact semantic gate order,
+complete CPU-only schemas/derivation/evaluation/unseal-preflight tooling,
+a fresh sealed v3 holdout, and comprehensive negative controls. It
+authorizes no physical execution and no holdout unseal. Only after
+maintainer acceptance of #86 may a new physical v3 qualification issue
+authorize reference/candidate execution. None of this reinterprets
 historical R6, #76, or #81 as passes.
 
 Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) is complete. It

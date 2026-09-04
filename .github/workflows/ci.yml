@@ -66,6 +66,9 @@ jobs:
       - name: Check issue 83 semantic contract (CPU-only)
         run: python3 -m unittest tests.test_issue83_semantic_contract -v
 
+      - name: Check issue 86 v3 methodology/tooling (CPU-only)
+        run: python3 -m unittest tests.test_issue86_v3_methodology -v
+
       - name: Check internal Markdown links
         run: |
           python3 - <<'EOF'
