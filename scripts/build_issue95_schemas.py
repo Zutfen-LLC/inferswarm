@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Emit the versioned v4 JSON Schemas (issue #86) deterministically.
+"""Emit the versioned issue #95 v4 JSON Schemas deterministically.
 
 CPU-only, pure stdlib. Running this script always produces byte-identical
 schema files (canonical JSON), so the committed schemas are reproducible.
@@ -79,7 +79,7 @@ def build() -> dict[str, dict]:
 
     schemas["calibration-corpus.schema.json"] = schema(
         "calibration-corpus-1.json",
-        "InferSwarm issue #86 v4 576-case statistical calibration corpus",
+        "InferSwarm issue #95 v4 1896-case statistical calibration corpus",
         ["schema", "contract_id", "generator", "generator_sha256", "tokenizer",
          "seed", "cases_per_cell", "cases", "disjointness"],
         {
@@ -97,7 +97,7 @@ def build() -> dict[str, dict]:
 
     schemas["stress-pool.schema.json"] = schema(
         "stress-pool-1.json",
-        "InferSwarm issue #86 v4 48-case reference-only stress pool",
+        "InferSwarm issue #95 v4 48-case reference-only stress pool",
         ["schema", "contract_id", "generator", "generator_sha256", "tokenizer",
          "seed", "selection_input_only", "cases_per_cell", "cases", "disjointness"],
         {
@@ -116,7 +116,7 @@ def build() -> dict[str, dict]:
 
     schemas["reference-margin-summary.schema.json"] = schema(
         "reference-margin-summary-1.json",
-        "InferSwarm issue #86 v4 reference-only margin summary over the p86 pool",
+        "InferSwarm issue #95 v4 reference-only margin summary over the p95 pool",
         ["schema", "contract_id", "margin_definition", "stress_pool_sha256", "cases"],
         {
             "schema": {"const": "inferswarm.issue95.v4-reference-margin-summary/1"},
@@ -141,7 +141,7 @@ def build() -> dict[str, dict]:
 
     schemas["selected-stress-eighth.schema.json"] = schema(
         "selected-stress-eighth-1.json",
-        "InferSwarm issue #86 v4 selected-eight stress manifest (future physical artifact)",
+        "InferSwarm issue #95 v4 selected-eight stress manifest (future physical artifact)",
         ["schema", "contract_id", "margin_definition", "margin_definition_unchanged_from",
          "stress_pool_sha256", "selection_commitment_sha256",
          "reference_margin_summary_sha256", "selection_inputs", "eligibility_rule",
@@ -194,7 +194,7 @@ def build() -> dict[str, dict]:
     }
     schemas["decision-domain-manifest.schema.json"] = schema(
         "decision-domain-manifest-1.json",
-        "InferSwarm issue #86 v4 reference-only decision-domain manifest (D(r) memberships)",
+        "InferSwarm issue #95 v4 reference-only decision-domain manifest (D(r) memberships)",
         ["schema", "contract_id", "construction", "k", "reference_derived_only",
          "candidate_membership_influence", "statistical_cases", "stress_cases"],
         {
@@ -269,7 +269,7 @@ def build() -> dict[str, dict]:
     }
     schemas["calibration-summary.schema.json"] = schema(
         "calibration-summary-1.json",
-        "InferSwarm issue #86 v4 calibration summary (15 envelopes + per-decision decision-local evidence)",
+        "InferSwarm issue #95 v4 calibration summary (15 envelopes + per-decision decision-local evidence)",
         ["schema", "contract_id", "tooling_version", "calibration_corpus_sha256",
          "stress_pool_sha256", "stress_selection_commitment_sha256",
          "reference_margin_summary_sha256",
@@ -303,56 +303,63 @@ def build() -> dict[str, dict]:
             "comparison": {"const": "observed<=limit"},
         },
     }
-    schemas["threshold-manifest.schema.json"] = schema(
-        "threshold-manifest-1.json",
-        "InferSwarm issue #86 v4 threshold manifest (15 numerical limits + E_D + frozen semantic provenance)",
-        ["schema", "contract_id", "tooling_version", "calibration_corpus_sha256",
-         "calibration_case_ids_sha256", "calibration_case_identities_sha256",
-         "calibration_summary_sha256", "calibration_evidence_sha256",
-         "stress_pool_sha256", "stress_selection_commitment_sha256",
-         "reference_margin_summary_sha256",
-         "stress_selection_sha256", "decision_domain_manifest_sha256",
-         "derivation_program_sha256", "metric_reducer", "e_d_reducer",
-         "decision_domain_construction", "e_d_hex", "statistical_e_d_hex",
-         "stress_e_d_hex", "argmax_tie_break", "limits", "holdout_state",
-         "manual_editing_or_rounding"],
-        {
-            "schema": {"const": "inferswarm.issue95.v4-threshold-manifest/1"},
-            "contract_id": {"const": CONTRACT},
-            "tooling_version": {"const": "inferswarm.issue95.v4-threshold-tooling/1"},
-            "calibration_corpus_sha256": SHA,
-            "calibration_case_ids_sha256": SHA,
-            "calibration_case_identities_sha256": SHA,
-            "calibration_summary_sha256": SHA,
+    core_ids = [
+        "fp32-consumer-logits:max-absolute-difference",
+        "fp32-consumer-logits:rms-difference",
+        "fp32-consumer-logits:p99-absolute-error",
+        "decision_local_E_D",
+    ]
+    telemetry_ids = sorted(identity for identity in ENVELOPES
+                           if not identity.startswith("fp32-consumer-logits:"))
+    provenance = {
+        "type": "object", "additionalProperties": False,
+        "required": ["calibration_corpus_sha256", "calibration_summary_sha256",
+                     "calibration_evidence_sha256", "selected_stress_sha256",
+                     "decision_domain_manifest_sha256", "derivation_program_sha256",
+                     "holdout_commitment_sha256", "argmax_tie_break"],
+        "properties": {
+            "calibration_corpus_sha256": SHA, "calibration_summary_sha256": SHA,
             "calibration_evidence_sha256": {"type": "array", "minItems": 1, "uniqueItems": True, "items": SHA},
-            "stress_pool_sha256": SHA,
-            "stress_selection_commitment_sha256": SHA,
-            "reference_margin_summary_sha256": SHA,
-            "stress_selection_sha256": SHA,
-            "decision_domain_manifest_sha256": SHA,
-            "derivation_program_sha256": SHA,
-            "metric_reducer": {"const": REDUCER},
-            "e_d_reducer": {"const": E_D_REDUCER},
-            "decision_domain_construction": {"const": DOMAIN_ID},
-            "e_d_hex": HEX,
-            "statistical_e_d_hex": HEX,
-            "stress_e_d_hex": HEX,
+            "selected_stress_sha256": SHA, "decision_domain_manifest_sha256": SHA,
+            "derivation_program_sha256": SHA, "holdout_commitment_sha256": SHA,
             "argmax_tie_break": {"const": TIE_BREAK},
-            "limits": {
-                "type": "object",
-                "minProperties": 15,
-                "maxProperties": 15,
-                "propertyNames": {"enum": list(ENVELOPES)},
-                "additionalProperties": limit,
-            },
-            "holdout_state": {"const": "SEALED_NOT_CONSUMED"},
-            "manual_editing_or_rounding": {"const": "PROHIBITED"},
         },
+    }
+    schemas["core-threshold-manifest.schema.json"] = schema(
+        "core-threshold-manifest-1.json",
+        "InferSwarm issue #95 v4 four-identity conjunctive core threshold manifest",
+        ["schema", "contract_id", "comparator_tier_contract_sha256", "provenance",
+         "limits", "holdout_state", "manual_editing_or_rounding"],
+        {"schema": {"const": "inferswarm.issue95.v4-core-threshold-manifest/1"},
+         "contract_id": {"const": CONTRACT}, "comparator_tier_contract_sha256": SHA,
+         "provenance": provenance,
+         "limits": {"type": "object", "additionalProperties": False,
+                    "required": core_ids,
+                    "properties": {identity: limit for identity in core_ids}},
+         "holdout_state": {"const": "SEALED_NOT_CONSUMED"},
+         "manual_editing_or_rounding": {"const": "PROHIBITED"}},
+    )
+    telemetry_band = {**limit, "required": ["statistical_max_hex", "stress_max_hex", "limit_hex", "rule", "comparison", "qualification_semantics"],
+                      "properties": {**limit["properties"], "qualification_semantics": {"const": "TELEMETRY_ALERT_NOT_QUALIFICATION_FAILURE"}}}
+    schemas["telemetry-reference-bands.schema.json"] = schema(
+        "telemetry-reference-bands-1.json",
+        "InferSwarm issue #95 v4 twelve-identity telemetry reference-band manifest",
+        ["schema", "contract_id", "comparator_tier_contract_sha256", "provenance",
+         "bands", "holdout_state", "manual_editing_or_rounding", "finite_exceedance"],
+        {"schema": {"const": "inferswarm.issue95.v4-telemetry-reference-bands/1"},
+         "contract_id": {"const": CONTRACT}, "comparator_tier_contract_sha256": SHA,
+         "provenance": provenance,
+         "bands": {"type": "object", "additionalProperties": False,
+                   "required": telemetry_ids,
+                   "properties": {identity: telemetry_band for identity in telemetry_ids}},
+         "holdout_state": {"const": "SEALED_NOT_CONSUMED"},
+         "manual_editing_or_rounding": {"const": "PROHIBITED"},
+         "finite_exceedance": {"const": "TELEMETRY_ALERT_NOT_QUALIFICATION_FAILURE"}},
     )
 
     schemas["sealed-holdout-commitment.schema.json"] = schema(
         "sealed-holdout-commitment-1.json",
-        "InferSwarm issue #86 v4 public sealed-holdout commitment",
+        "InferSwarm issue #95 v4 public sealed-holdout commitment",
         ["schema", "contract_id", "state", "case_count", "cells", "secret_seed_sha256",
          "generator", "generator_sha256", "tokenizer_json_sha256", "cipher",
          "ciphertext_sha256", "recipient_certificate_sha256", "unseal_rule",
@@ -397,7 +404,7 @@ def build() -> dict[str, dict]:
 
     schemas["holdout-custody-record.schema.json"] = schema(
         "holdout-custody-record-1.json",
-        "InferSwarm issue #86 v4 non-secret holdout custody record",
+        "InferSwarm issue #95 v4 non-secret holdout custody record",
         ["schema", "contract_id", "custodians", "holdout_ciphertext_sha256",
          "recipient_certificate_sha256", "recipient_public_key_der_sha256",
          "holdout_state", "private_material_in_repository", "fail_closed_rule",

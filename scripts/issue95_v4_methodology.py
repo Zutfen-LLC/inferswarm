@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
-"""InferSwarm issue #86: Gemma v4 decision-stability methodology (CPU-only).
+"""InferSwarm issue #95 Gemma v4 prediction-aligned methodology (CPU-only).
 
-Implements the accepted issue #83 semantic contract as the first Gemma v4
-methodology, frozen BEFORE any physical execution. Pure stdlib. Never
-imports/initializes torch, transformers, Triton, CUDA, a FreeToken model
-runtime, and never queries NVIDIA devices (purity is unit-tested).
-
-Provenance: issue #86 text; issue #83 contract accepted at
-inferswarm@d60b8f6c4490c91312e8d073b4ac55794bf68841 (PR #85).
+Implements the accepted issue #93 two-tier numerical classification and issue
+#83 semantic contract before any physical execution. Pure stdlib: it never
+imports or initializes a model runtime and never queries accelerators.
 """
 from __future__ import annotations
 
 import math
+from fractions import Fraction
 from typing import Any, Iterable, Sequence
 
 # Reuse ONLY the pure frozen helpers of the v1 tool (byte-identical file,
@@ -28,7 +25,7 @@ CONTRACT_ID = "inferswarm.gemma4-prediction-aligned-qualification/1"
 METHODOLOGY_ID = "inferswarm.issue95.v4-methodology/1"
 ISSUE83_ACCEPTED_SHA = "d60b8f6c4490c91312e8d073b4ac55794bf68841"
 
-# --- frozen v4 corpora identities (issue #86 section 1/2/10) ---------------
+# --- frozen issue #95 v4 corpus identities --------------------------------
 
 V4_CALIBRATION_SEED = "inferswarm-issue-95-calibration-v4-2"
 V4_STRESS_POOL_SEED = "inferswarm-issue-95-stress-pool-v4"
@@ -42,13 +39,52 @@ V4_MARGIN_SUMMARY_SCHEMA = "inferswarm.issue95.v4-reference-margin-summary/1"
 V4_SELECTED_EIGHT_SCHEMA = "inferswarm.issue95.v4-selected-stress-eighth/1"
 V4_COMMITMENT_STATE = "COMMITTED_BEFORE_MATCHED_REFERENCE_EXECUTION"
 V4_SELECTION_STATE = "FROZEN_AFTER_MATCHED_REFERENCE_BEFORE_HETEROGENEOUS_CANDIDATE"
-V4_STATISTICAL_CASES = 1896
-V4_CASES_PER_CELL = 79
 V4_CORE_FAMILY_COUNT = 4
+V4_ALPHA = Fraction(1, 20)
+V4_CELLS = 24
 V4_TELEMETRY_FAMILY_COUNT = 12
 V4_STRESS_POOL_CASES = 48
 V4_HOLDOUT_CASES = 24
 V4_SELECTED_STRESS_CASES = 8
+
+
+def derive_prediction_aligned_design(
+    *, family_count: int = V4_CORE_FAMILY_COUNT, alpha: Fraction = V4_ALPHA,
+    cells: int = V4_CELLS, selected_stress_cases: int = V4_SELECTED_STRESS_CASES,
+) -> dict[str, Any]:
+    """Mechanically solve family_count/(r+1) <= alpha for minimum integer r.
+
+    Selected stress cases deliberately contribute zero predictive sample size;
+    they only participate in the independently derived maxima/bands.
+    """
+    if family_count <= 0 or alpha <= 0 or alpha >= 1 or cells <= 0:
+        raise MethodologyError("invalid predictive-design inputs")
+    r = 0
+    while Fraction(family_count, r + 1) > alpha:
+        r += 1
+    per_family = Fraction(1, r + 1)
+    familywise = family_count * per_family
+    return {
+        "cells": cells,
+        "cases_per_cell": r,
+        "statistical_cases": cells * r,
+        "holdout_cases": cells,
+        "core_family_count": family_count,
+        "alpha": float(alpha),
+        "per_core_family_strict_exceedance_bound": f"1/{r + 1}",
+        "familywise_bonferroni_bound": f"{family_count}/{r + 1}",
+        "familywise_failure_probability": float(familywise),
+        "zero_exceedance_probability_at_least": float(1 - familywise),
+        "inclusive_holdout_comparison": "observed<=limit",
+        "stress_cases": selected_stress_cases,
+        "stress_cases_contribute_predictive_sample_size": 0,
+        "theorem": "within-cell exchangeability; global maximum lies in one cell; a strict future record in that cell has probability <=1/80",
+    }
+
+
+_V4_DERIVED_DESIGN = derive_prediction_aligned_design()
+V4_CASES_PER_CELL = _V4_DERIVED_DESIGN["cases_per_cell"]
+V4_STATISTICAL_CASES = _V4_DERIVED_DESIGN["statistical_cases"]
 MARGIN_DEFINITION = "min over all 8 greedy decisions of fp32(top1_logit - top2_logit)"
 V4_ELIGIBILITY = (
     "non-finite margin: unconditional reference failure (NONFINITE_REFERENCE_MARGIN); "
@@ -75,12 +111,12 @@ def _check_v4_frozen_identity(
 
 
 def decision_domain_construction_identity() -> str:
-    """The frozen v4 decision-domain construction rule identity (issue #86 §5)."""
+    """The frozen v4 decision-domain construction rule identity (issue #95)."""
     return "reference-top-1024-with-cutoff-ties/1"
 
 
 def argmax_tie_break_identity() -> str:
-    """The frozen deterministic greedy rule identity (issue #86 §8)."""
+    """The frozen deterministic greedy rule identity (issue #95)."""
     return "ARGMAX_FIRST_MAX/lowest-token-id-among-exactly-equal-fp32-maxima"
 
 
@@ -258,7 +294,7 @@ def case_e_d(decision_errors: Iterable[float]) -> float:
 def derive_e_d(statistical_case_e_ds: Sequence[float], stress_case_e_ds: Sequence[float]) -> float:
     """E_D = max(statistical_E_D, stress_E_D); no rounding, no safety factor.
 
-    statistical arm: exactly the 576 v4 statistical cases;
+    statistical arm: exactly the 1896 v4 statistical cases;
     stress arm: exactly the 8 committed selected stress cases.
     """
     if len(statistical_case_e_ds) != V4_STATISTICAL_CASES:
@@ -278,52 +314,10 @@ def derive_e_d(statistical_case_e_ds: Sequence[float], stress_case_e_ds: Sequenc
 
 
 # ---------------------------------------------------------------------------
-# Section 7: 16-family simultaneous statistical design.
+# Issue #95 prediction-aligned design is derived by
+# derive_prediction_aligned_design above.  No population-content/tolerance
+# qualification contract exists in v4.
 # ---------------------------------------------------------------------------
-
-POPULATION_CONTENT = 0.99
-FAMILYWISE_CONFIDENCE = 0.95
-SIMULTANEOUS_FAMILIES = 4  # three FP32 consumer-logit metrics plus E_D
-BONFERRONI_FAMILIES = SIMULTANEOUS_FAMILIES
-
-
-def minimum_sample_size_v4(
-    population_content: float = POPULATION_CONTENT,
-    familywise_confidence: float = FAMILYWISE_CONFIDENCE,
-    family_count: int = SIMULTANEOUS_FAMILIES,
-) -> int:
-    """Minimum n for a maximum-order-statistic tolerance limit under
-    Bonferroni allocation across 16 simultaneous families
-    (ceil(log(alpha_i)/log(p)), alpha_i = (1-0.95)/16)."""
-    if not 0.0 < population_content < 1.0:
-        raise MethodologyError("population content must be between zero and one")
-    if not 0.0 < familywise_confidence < 1.0:
-        raise MethodologyError("familywise confidence must be between zero and one")
-    if family_count <= 0:
-        raise MethodologyError("family count must be positive")
-    alpha_i = (1.0 - familywise_confidence) / family_count
-    return math.ceil(math.log(alpha_i) / math.log(population_content))
-
-
-def statistical_design_v4() -> dict[str, Any]:
-    """The machine-reproducible 16-family statistical design record."""
-    minimum = minimum_sample_size_v4()
-    return {
-        "population_content": POPULATION_CONTENT,
-        "familywise_confidence": FAMILYWISE_CONFIDENCE,
-        "simultaneous_families": SIMULTANEOUS_FAMILIES,
-        "families": "three FP32 consumer-logit core metrics plus the calibration-derived E_D family",
-        "bonferroni_alpha_per_family": (1.0 - FAMILYWISE_CONFIDENCE) / SIMULTANEOUS_FAMILIES,
-        "construction": "distribution-free maximum-order-statistic tolerance limit",
-        "minimum_n": minimum,
-        "selected_n": V4_STATISTICAL_CASES,
-        "design": "balanced 24 cells x 79 independent cases",
-        "independent_unit": "the case, not the token row",
-        "sufficiency": (
-            f"1896 >= {minimum}; within-case decision/checkpoint values are reduced "
-            "conservatively (max) before the across-case maximum"
-        ),
-    }
 
 
 # ---------------------------------------------------------------------------

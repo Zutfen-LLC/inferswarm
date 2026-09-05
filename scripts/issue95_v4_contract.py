@@ -13,8 +13,8 @@ from typing import Any
 
 from issue74_methodology import MethodologyError, canonical_json_bytes, sha256_bytes
 from issue95_v4_methodology import (
-    V4_CASES_PER_CELL, V4_CORE_FAMILY_COUNT, V4_STATISTICAL_CASES,
-    V4_TELEMETRY_FAMILY_COUNT,
+    V4_CORE_FAMILY_COUNT, V4_TELEMETRY_FAMILY_COUNT,
+    derive_prediction_aligned_design,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,26 +23,16 @@ COMPARATOR_SCHEMA = 'inferswarm.issue95.v4-comparator-tier-contract/1'
 
 
 def predictive_design() -> dict[str, Any]:
-    cells = 24
-    if V4_STATISTICAL_CASES != cells * V4_CASES_PER_CELL:
-        raise MethodologyError('v4 calibration count is not the frozen balanced design')
-    if V4_CASES_PER_CELL != 79 or V4_CORE_FAMILY_COUNT != 4:
+    """Return the canonical mechanically-derived issue #95 design."""
+    design = derive_prediction_aligned_design()
+    if (
+        design['core_family_count'] != V4_CORE_FAMILY_COUNT
+        or design['cases_per_cell'] != 79
+        or design['statistical_cases'] != 1896
+        or design['familywise_failure_probability'] > 0.05
+    ):
         raise MethodologyError('v4 predictive theorem constants changed')
-    per_family = 1.0 / (V4_CASES_PER_CELL + 1)
-    familywise = V4_CORE_FAMILY_COUNT * per_family
-    return {
-        'cells': cells,
-        'cases_per_cell': V4_CASES_PER_CELL,
-        'statistical_cases': V4_STATISTICAL_CASES,
-        'holdout_cases': cells,
-        'per_core_family_strict_exceedance_bound': f'1/{V4_CASES_PER_CELL + 1}',
-        'familywise_bonferroni_bound': f'{V4_CORE_FAMILY_COUNT}/{V4_CASES_PER_CELL + 1}',
-        'familywise_failure_probability': familywise,
-        'zero_exceedance_probability_at_least': 1.0 - familywise,
-        'inclusive_holdout_comparison': 'observed<=limit',
-        'stress_cases_contribute_predictive_sample_size': 0,
-        'theorem': 'within-cell exchangeability; global maximum lies in one cell; a strict future record in that cell has probability <=1/80',
-    }
+    return design
 
 
 def comparator_tier_contract(classification: dict[str, Any] | None = None) -> dict[str, Any]:
