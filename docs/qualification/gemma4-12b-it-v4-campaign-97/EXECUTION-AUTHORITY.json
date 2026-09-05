@@ -1,0 +1,53 @@
+{
+  "schema": "inferswarm.issue97.v4-execution-authority/1",
+  "issue": 97,
+  "state": "CALIBRATION_DEPLOYMENT_AUTHORIZED_HOLDOUT_UNAUTHORIZED",
+  "accepted_methodology_merge": "e12a6e3d5589044bace0c9555c0d364fb57a6229",
+  "producer": {
+    "repository": "Zutfen-LLC/FreeToken",
+    "branch": "inferswarm-97-v4-physical-qualification",
+    "commit": "57dfcb7289efac8f66de5b3abbe8de04f2580f75",
+    "launch_argument": "--expected-producer-sha 57dfcb7289efac8f66de5b3abbe8de04f2580f75",
+    "requirement": "every participating worktree must be clean and exactly at commit before any runtime/CUDA initialization"
+  },
+  "subject": {
+    "repository": "google/gemma-4-12B-it",
+    "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+    "checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "model_path_requirement": "/srv/models/gemma-r6",
+    "execution": "native BF16; Triton attention; deterministic greedy replay-prefill; exactly 8 canonical-prefix decisions; one replay chunk <=64"
+  },
+  "calibration_case_policy": {
+    "allowed_namespaces": ["c95-*", "p95-*"],
+    "prohibited_namespaces": ["h95-*", "c74-*", "c86-*", "p76-*", "p86-*"],
+    "holdout_calibration_run_prohibited": true
+  },
+  "topology": {
+    "reference": {"host": "inferswarm04", "gpu_uuid": "GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03", "role": "single reference"},
+    "candidate": [
+      {"host": "inferswarm01", "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099", "role": "stage1", "layers": "[0,16)"},
+      {"host": "inferswarm01", "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55", "role": "stage2", "layers": "[16,32)"},
+      {"host": "inferswarm03", "gpu_uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176", "role": "stage3", "layers": "[32,48)"}
+    ]
+  },
+  "chain_plan": {
+    "source_repository": "Zutfen-LLC/FreeToken",
+    "source_path": "docs/inferswarm_r6/chain-plan.json",
+    "deployment_path": "/srv/inferswarm/state/issue97/participant-plan.json",
+    "sha256": "a91e3f71353905d4af3722408327a9f9bda0f2655061ae9e44f51d9a3edf28fc",
+    "digest": "sha256:ee845188d3328bdec29bf4b09d71f7ccda0701ff5758cb1d8a70460a40fecfb1",
+    "historical_producer_override": "only after require_producer_identity verifies the externally pinned issue-97 producer"
+  },
+  "semantic_contract": {
+    "argmax": "ARGMAX_FIRST_MAX/lowest-token-id-among-exactly-equal-fp32-maxima",
+    "decision_domain": "reference-top-1024-with-cutoff-ties/1",
+    "reference_only_domain": true
+  },
+  "holdout": {
+    "state": "SEALED_NOT_CONSUMED",
+    "unseal_authorized": false,
+    "ciphertext_sha256": "17757acb091fd5b3b1a4ef7b8fcd392b448e91eee39c04003afd9a4ccac4a844",
+    "recipient_certificate_sha256": "99bb4eb992d3a38eb54f6821c4477edc7ad30df977333d39a5b120dac8e57430",
+    "recipient_public_key_der_sha256": "629b2ab2320cfe1517b5eb435edf241cf30d109b8da0bc9b62002165d6a9fdd2"
+  }
+}
