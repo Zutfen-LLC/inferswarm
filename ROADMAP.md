@@ -390,6 +390,16 @@ prospective doctrine. This neither reinterprets issue #88's immutable
 `V3_HOLDOUT_FAIL` nor sets v4 thresholds, samples, corpora, or a holdout. The
 next gate is a prospective successor methodology freeze.
 
+Issue #95 freezes the successor v4 methodology prospectively as
+`GEMMA_V4_PREDICTION_ALIGNED_METHODOLOGY_FROZEN` pending maintainer acceptance:
+24 cells × 79 public statistical cases (1896 total), a separate 48-case
+reference-only stress pool, a fresh sealed one-per-cell holdout, and a direct
+`1/80` per-core-family / `4/80` Bonferroni prediction statement matching the
+zero-core-exceedance holdout rule. It binds ADR 0011's four acceptance-bearing
+scalar families (three FP32 consumer-logit metrics plus `E_D`) separately from
+twelve retained telemetry identities. This is CPU/static methodology only; it
+makes no physical execution, calibration, threshold, or unseal claim.
+
 Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) is complete. It
 established the durable FreeToken `inferswarm-research` implementation line
 without rewriting accepted R4 history.
