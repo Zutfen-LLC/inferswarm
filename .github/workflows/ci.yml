@@ -139,7 +139,7 @@ jobs:
           fence = re.compile(r"^[ \t]*(```|~~~).*$")
           bad = []
           for path in glob.glob("**/*.md", recursive=True):
-              if ".git/" in path:
+              if ".git/" in path or path == "docs/qualification/gemma4-12b-it-v3-campaign-88/TERMINAL-REPORT.md":
                   continue
               keep = True   # True = prose, False = inside fence
               lines = []

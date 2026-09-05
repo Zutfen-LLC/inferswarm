@@ -16,7 +16,7 @@
   "producer": {
     "repository": "Zutfen-LLC/FreeToken",
     "branch": "inferswarm-97-v4-physical-qualification",
-    "commit": "0d8222656f15e52e7408c9aaa68586b21aec7a6e",
+    "commit": "57dfcb7289efac8f66de5b3abbe8de04f2580f75",
     "state": "CLEAN_SOURCE_REQUIRED_ON_DEPLOYMENT"
   },
   "software": {
