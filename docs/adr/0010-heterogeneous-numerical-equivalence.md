@@ -181,15 +181,14 @@ which is adopted as a Fabric Doctrine supplement by this ADR and should be
 consolidated into the main doctrine when that document is next structurally
 revised.
 
-### Forward clarification — issue #93
+### Forward reference — issue #93 / ADR 0011
 
-The adopted supplement now distinguishes prospectively declared
-acceptance-bearing numerical gates from mandatory telemetry. This clarifies the
-numerical layer without changing this ADR's three conjunctive layers: the
-qualification core remains conjunctive, while retained telemetry remains
-evidence-health material unless a future comparator declares it core. The
-historical contracts and verdicts, including issue #88 `V3_HOLDOUT_FAIL`, remain
-governed by their frozen all-envelope conjunction.
+[ADR 0011](0011-two-tier-numerical-core-and-telemetry.md) proposes a
+prospective distinction between acceptance-bearing numerical gates and mandatory
+telemetry. If accepted, it refines the numerical layer without changing this
+ADR's three conjunctive layers. Historical contracts and verdicts, including
+issue #88 `V3_HOLDOUT_FAIL`, remain governed by their frozen all-envelope
+conjunction.
 
 ## Hypotheses distinguished from decisions
 

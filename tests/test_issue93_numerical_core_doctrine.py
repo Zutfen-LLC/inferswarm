@@ -19,6 +19,7 @@ class Issue93NumericalCoreDoctrineTests(unittest.TestCase):
             "NUMERICAL_CORE_TWO_TIER_DOCTRINE_ACCEPTED",
         )
         self.assertEqual(payload["classification_contract_version"], 1)
+        self.assertTrue(payload["tier_change_requires_new_comparator_version"])
         self.assertEqual(payload["historical_contract"], "inferswarm.gemma4-heterogeneous-numerical-equivalence/1")
         entries = payload["families"]
         frozen_map = json.loads(FAMILY_MAP.read_text())
@@ -32,6 +33,7 @@ class Issue93NumericalCoreDoctrineTests(unittest.TestCase):
             {(entry["family"], entry["metric"]) for entry in entries},
             frozen_pairs,
         )
+        self.assertTrue(all(entry["finite_required"] is True for entry in entries))
         self.assertEqual(
             {entry["tier"] for entry in entries},
             {"ACCEPTANCE_BEARING", "MANDATORY_TELEMETRY"},

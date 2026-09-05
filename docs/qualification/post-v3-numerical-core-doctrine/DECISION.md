@@ -1,8 +1,9 @@
 # Post-v3 numerical-core doctrine decision (issue #93)
 
-Status: resolved doctrine gate; prospective, API-unfrozen
+Status: proposed doctrine gate; pending maintainer acceptance; prospective,
+API-unfrozen
 
-Terminal disposition:
+Proposed terminal disposition:
 
 `NUMERICAL_CORE_TWO_TIER_DOCTRINE_ACCEPTED`
 
@@ -129,9 +130,9 @@ statistical model, parameter, threshold, corpus, sample size, or holdout rule.
 
 ## Q6 — authority mapping
 
-ADR 0010 remains the accepted three-layer correctness decision. Its forward
-clarification now adopts the amended numerical-equivalence supplement, which
-states the tier rule and preserves historical frozen-contract conjunctions.
+ADR 0010 remains the accepted three-layer correctness decision. Proposed ADR
+0011 refines its numerical-layer supplement, states the tier rule, and preserves
+historical frozen-contract conjunctions.
 `docs/architecture/numerical-equivalence-contract.md` is the detailed
 normative wording; `ROADMAP.md` sequences the successor methodology gate.
 
