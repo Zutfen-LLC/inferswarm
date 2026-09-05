@@ -643,9 +643,10 @@ Findings (all machine-derived from retained evidence):
   cases — an early-warning metric, not a demonstrated independent
   correctness path.
 - Statistical audit: the v3 construction TARGETED, never GUARANTEED, zero
-  holdout exceedances. Per family, P(>=1 of 24 exceeds the max-based
-  limit) = 24/608 = 3.95% under pure exchangeability (21.4% at the stated
-  99% coverage; 3.95%-47.5% across 16 families). The acceptance rule was
+  holdout exceedances. Per family, P(>=1 of 24 exceeds the
+  statistical-maximum limit) = 24/600 = 4.00% under pure exchangeability
+  (21.4% at the stated 99% coverage; 4.00%-47.96% across 16 families;
+  Bonferroni confidence 1 - 0.05/16 = 99.6875%). The acceptance rule was
   stricter than the statistical statement it was built on.
 
 Recommended next gate: a successor methodology freeze adopting (S1) a

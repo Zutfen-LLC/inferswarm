@@ -164,14 +164,59 @@ class TestDerivedNotConstant(unittest.TestCase):
 
     def test_statistical_identities_exact(self):
         ex = self.record["statistical_contract_audit"]["exact_calculations"]
-        self.assertAlmostEqual(ex["p_global_max_of_608_in_holdout_arm"], 24 / 608, places=15)
+        n, m = 576, 24
+        # corrected basis: 576 statistical cases only (stress arm is
+        # selection-biased and must NOT be pooled as exchangeable draws)
+        self.assertAlmostEqual(ex["p_single_holdout_exceeds_max_of_576"], 1 / 577, places=15)
+        self.assertAlmostEqual(ex["p_at_least_one_of_24_exceeds__exchangeable_max_limit"],
+                               m / (n + m), places=15)  # 24/600
         self.assertAlmostEqual(ex["p_at_least_one_of_24_exceeds__coverage_exactly_99pct"],
                                1 - 0.99 ** 24, places=15)
         self.assertEqual(ex["calibration_n_for_exchangeable_95pct_zero_of_24"], 456)
         self.assertEqual(ex["distribution_free_tolerance_n_reproduced"], 574)
-        n, m = 576 + 8, 24
-        self.assertAlmostEqual(ex["p_at_least_one_of_24_exceeds__exchangeable_max_limit"],
-                               m / (n + m), places=15)
+        # 16-independent-family recomputation from the 4.00% per-family value
+        self.assertAlmostEqual(ex["p_no_family_fails__16_independent"],
+                               (1 - m / (n + m)) ** 16, places=15)
+        self.assertAlmostEqual(ex["p_some_family_fails__16_independent"], 1 - (0.96) ** 16, places=4)
+
+    def test_no_pooled_stress_basis_in_prediction_arithmetic(self):
+        # the old erroneous pooling (24/608) must not reappear anywhere
+        src = TOOL.read_text()
+        self.assertNotIn("24 / 608", src)
+        self.assertNotIn("24/608", src)
+        record_text = json.dumps(self.record)
+        self.assertNotIn("24/608", record_text)
+        self.assertNotIn("3.95%", record_text)
+
+    def test_bonferroni_confidence_stated_correctly(self):
+        text = TOOL.read_text() + json.dumps(self.record)
+        self.assertNotIn("97.8%", text)
+        self.assertIn("0.996875", text)
+
+    def test_top10_class_count_derived_not_hardcoded(self):
+        # derived: 10 distinct cells across 5 of 6 content classes
+        tc = self.record["applicability_split_audit"]["tail_concentration"]
+        self.assertEqual(tc["distinct_cells_in_top10"], 10)
+        self.assertEqual(tc["distinct_content_classes_in_top10"], 5)
+        answers = self.record["applicability_split_audit"]["pre_observability_answers"]
+        joined = " ".join(answers)
+        self.assertIn("10 distinct cells across 5 of 6 content classes", joined)
+        # guard: the tool prose must not hard-code the class-count claim
+        src = TOOL.read_text()
+        self.assertNotIn("across all 6 content classes", src)
+
+    def test_no_unsupported_cross_family_qq_claim(self):
+        # QQ R2 is derived only for the failing family; no cross-family
+        # fit claim may appear in tool or record
+        src = TOOL.read_text()
+        record_text = json.dumps(self.record)
+        for bad in ("12 smooth families", "12 families", "14 families"):
+            self.assertNotIn(bad, src)
+            self.assertNotIn(bad, record_text)
+        # the failing-family value remains derived and retained
+        self.assertAlmostEqual(
+            self.record["family_distribution"]["tail_shape"]["lognormal_qq_r2"],
+            0.9856075971844234, places=12)
 
     def test_propagation_conditional_counts(self):
         ct = self.record["downstream_propagation"]["conditional_top_decile"]

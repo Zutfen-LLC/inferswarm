@@ -65,7 +65,9 @@ from retained evidence).
   produced by case `c86-03-03-21` (mathematics-numerals, [36,40]).
 - The failing observation exceeds **every one of the 584** retained
   calibration (576 statistical + 8 stress) case values: it would rank
-  585th of 585. It is 3.16% above the second-highest calibration case
+  above the entire retained sample (585th of 585; equivalently above all
+  576 statistical cases, the basis of the prediction arithmetic in §5).
+  It is 3.16% above the second-highest calibration case
   (`c86-04-05-12`, 2.5979, repetitive-low-entropy [52,56]) and 2.56% above
   the highest. The next-highest holdout case observed was 1.1518 — the
   failing case is 2.33x the runner-up holdout observation.
@@ -83,7 +85,7 @@ frozen limits — all 15 are statistical-arm driven).
 
 Tail structure:
 
-- Top-10 values span **10 distinct cells across 5 content classes**
+- Top-10 values span **10 distinct cells across 5 of 6 content classes**
   (top-20: 14 cells); the top of the distribution is not concentrated in
   any regime.
 - Smooth heavy tail, no multimodality and no isolated outlier: consecutive
@@ -174,26 +176,31 @@ rule:
    limit.
 
 The construction **targeted, but never guaranteed, zero holdout
-exceedances**. Exact calculations:
+exceedances**. Exact calculations (basis: the 576 statistical cases — the
+8 selected stress cases are margin-extreme by selection and are NOT
+pooled as exchangeable calibration draws; all 15 frozen limits are
+statistical-arm driven, so the stress arm never enters the prediction
+arithmetic):
 
-- P(a single fresh case exceeds X_(584)) = 1/585 ≈ 0.17%.
+- P(a single fresh case exceeds X_(576)) = 1/577 ≈ 0.17%.
 - Under iid exchangeability, P(≥1 of 24 holdout cases exceeds the
-  max-based limit) = 24/608 = **3.95% per family even with no
+  statistical-maximum limit) = 24/600 = **4.00% per family even with no
   distributional change at all** (equivalently, P(the global max of all
-  608 cases lands in the 24-case holdout arm) = 24/608).
+  600 cases lands in the 24-case holdout arm) = 24/600).
 - If the bound had exactly 99% marginal coverage (the tolerance target),
   P(≥1 exceedance in 24) = 1 − 0.99²⁴ = **21.4%**.
 - Zero-of-24 at 95% requires per-case coverage ≥ 99.79% (exceedance
   budget 0.00213/case), which the max-order-statistic rule delivers only
   with n ≥ 2700 at the Bonferroni confidence; the exchangeable zero-of-24
   95% requirement alone needs n ≥ 456 (24·0.95/0.05).
-- 16 simultaneous families: between 3.95% (perfect dependence) and 47.5%
-  (independence, P(none of 16 fails) = 0.525) built-in probability that at
-  least one family registers a holdout exceedance somewhere.
+- 16 simultaneous families: between 4.00% (perfect dependence) and 47.96%
+  (independence, P(none of 16 fails) = 0.96¹⁶ = 0.5204) built-in
+  probability that at least one family registers a holdout exceedance
+  somewhere.
 - Selected stress arm: all 15 limits are statistical-arm driven (stress
   maxima 3–30x below statistical maxima), so the stress arm never raised
-  any limit and does not alter the arithmetic (pooling moves the
-  per-family figure only 4.00%→3.95%).
+  any limit and — being selection-biased rather than exchangeable — does
+  not improve the iid prediction-bound arithmetic.
 
 The observed event — one case exceeding a sample-maximum limit by 2.56%
 with zero semantic effect — is precisely what this arithmetic predicts
@@ -207,7 +214,7 @@ statistical statement it was built on.**
 | S1 | Prospective one-sided prediction bound matching the acceptance rule (claim = rule) | **Recommended core** |
 | S2 | Keep estimator, restate acceptance as the coverage claim it makes | Fallback; doctrine decision |
 | S3 | Stratified/applicability-conditioned envelopes | **Rejected on current evidence** (no split found, §3) |
-| S4 | Log-scale parametric tail bound (log-normal QQ R² 0.986) | Viable alternative; assumption-heavy |
+| S4 | Log-scale parametric tail bound (log-normal QQ R² 0.986 for the failing family; cross-family fits not claimed) | Viable alternative; assumption-heavy |
 | S5 | Demote the hidden-state family to telemetry | Maintainer doctrine decision; must precede v4 freeze |
 | S6 | Two-tier: coherent acceptance core (E_full, E_D, integrity) + all-15-family mandatory telemetry | **Recommended companion** |
 

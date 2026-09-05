@@ -287,6 +287,7 @@ def applicability_split_audit(rows, obs):
     by_cell = {}
     for r in stat:
         by_cell.setdefault((r["content_class"], r["length_regime"]), []).append(r["value"])
+    n_content_classes = len({r["content_class"] for r in stat})
     loco = {}
     for drop in sorted(by_cell):
         rest = [v for k, vals in by_cell.items() if k != drop for v in vals]
@@ -339,9 +340,11 @@ def applicability_split_audit(rows, obs):
             "No split materially explains error behavior: leave-one-cell-out leaves the "
             "max-based limit within [1.79, 2.61] for every dropped cell and the failing "
             "observation still exceeds every leave-one-cell-out limit.",
-            "The top-10 tail spans >= 8 distinct cells across all 6 content classes; the "
-            "failing case's own calibration cell (repetitive-low-entropy 36-40) has cell "
-            "max 1.8799 — far below the limit driver's cell.",
+            f"The top-10 tail spans {len(top10_cells)} distinct cells across "
+            f"{len({c for c, _ in top10_cells})} of {n_content_classes} content "
+            "classes; the failing case's own calibration cell "
+            "(repetitive-low-entropy 36-40) has cell max 1.8799 — far below the "
+            "limit driver's cell.",
             "Encoding any of these dimensions as a prospective applicability key would "
             "therefore be post-hoc relabeling, not regime detection.",
         ],
@@ -413,8 +416,12 @@ def statistical_audit():
     n = STATISTICAL_DESIGN["statistical_cases"]
     s = STATISTICAL_DESIGN["selected_stress_cases"]
     m = STATISTICAL_DESIGN["holdout_cases"]
-    ns = n + s
-    one_family_fail_exchangeable = m / (ns + m)
+    # The 8 selected stress cases are margin-extreme BY SELECTION (4 smallest +
+    # 4 largest of a 48-case reference-only pool) and are NOT exchangeable
+    # calibration draws. For every family all 15 frozen limits are
+    # statistical-arm driven, so the order-statistic prediction basis is the
+    # 576 statistical cases only:
+    one_family_fail_exchangeable = m / (n + m)  # 24/600
     coverage_fail_99 = 1 - 0.99 ** m
     q_needed = 1 - 0.95 ** (1 / m)
     # P(0 of m exceed X_(n)) = n/(n+m) >= 0.95  <=>  n >= m*0.95/0.05
@@ -434,16 +441,15 @@ def statistical_audit():
             "answer_guarantee_or_target": (
                 "TARGETED, never guaranteed. The tolerance statement bounds the "
                 "population fraction above the limit (<= 1% marginal, per family, at "
-                "97.8% confidence under Bonferroni); it says nothing that forces zero "
-                "exceedances among 24 fresh draws. Under iid exchangeability the "
-                "max-based limit is exceeded by at least one holdout case with "
-                "probability m/(n+s+m) = 24/608 = 3.95% per family even with NO "
-                "distributional change whatsoever."
+                "99.6875% confidence under Bonferroni); it says nothing that forces "
+                "zero exceedances among 24 fresh draws. Under iid exchangeability "
+                "over the 576 statistical cases, the max-based limit is exceeded by "
+                "at least one holdout case with probability m/(n+m) = 24/600 = 4.00% "
+                "per family even with NO distributional change whatsoever."
             ),
         },
         "exact_calculations": {
-            "p_single_holdout_exceeds_max_of_584": 1 / (ns + 1),
-            "p_global_max_of_608_in_holdout_arm": 24 / 608,
+            "p_single_holdout_exceeds_max_of_576": 1 / (n + 1),
             "p_at_least_one_of_24_exceeds__exchangeable_max_limit": one_family_fail_exchangeable,
             "p_at_least_one_of_24_exceeds__coverage_exactly_99pct": coverage_fail_99,
             "per_case_exceedance_budget_for_95pct_zero_of_24": q_needed,
@@ -453,11 +459,12 @@ def statistical_audit():
             "p_no_family_fails__16_independent": indep16,
             "p_some_family_fails__16_independent": 1 - indep16,
             "selected_stress_arm_effect": (
-                "All 15 frozen limits are statistical-arm driven (stress maxima are 3-30x "
-                "below the statistical maxima for every family), so the selected stress "
-                "arm never raised any limit and does not alter the exchangeability "
-                "arithmetic; pooling it moves the per-family failure probability only "
-                "from 24/600=4.00% (statistical-only basis) to 24/608=3.95%."
+                "All 15 frozen limits are statistical-arm driven (stress maxima are "
+                "3-30x below the statistical maxima for every family), so the "
+                "selected stress arm never raised any limit. The 8 stress cases are "
+                "margin-extreme by selection and are NOT pooled as exchangeable "
+                "calibration draws; the prediction arithmetic uses the 576 "
+                "statistical cases only (24/600 = 4.00%)."
             ),
         },
     }
@@ -520,8 +527,12 @@ def successor_options():
                 "name": "Log-scale parametric tail bound with finite-sample validation",
                 "correctness_claim": "Explicit parametric upper tail bound per family.",
                 "assumptions": (
-                    "Log-normal QQ R^2 0.986 for the failing family (12 smooth families "
-                    "> 0.96) supports log-scale modeling; Hill indices 0.17-0.41."
+                    "Log-normal QQ R^2 0.986 for the failing family (derived in this "
+                    "record's tail_shape section from pinned evidence) supports "
+                    "log-scale modeling of that family; Hill indices 0.17-0.41. "
+                    "Cross-family log-normal fits are NOT claimed here — a successor "
+                    "methodology would need to derive and retain them from its own "
+                    "calibration evidence."
                 ),
                 "avoids_tuning": (
                     "Model family + sample size frozen before any new execution; fit on "
@@ -538,7 +549,8 @@ def successor_options():
                 "assumptions": (
                     "Doctrine claim that the normalized hidden state is not independently "
                     "correctness-bearing. Supporting: co-movement without any downstream "
-                    "breach anywhere in 608 cases. Against: rho < 1 (residual independent "
+                    "breach anywhere in the 584 calibration + 24 holdout cases. "
+                    "Against: rho < 1 (residual independent "
                     "signal); it is the ONLY gate that fired in #88."
                 ),
                 "avoids_tuning": "Doctrine/methodology-version change decided before any new holdout exists.",

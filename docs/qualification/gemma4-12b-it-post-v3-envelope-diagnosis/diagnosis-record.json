@@ -114,7 +114,7 @@
   "pre_observability_answers": [
    "Cell/class/regime/token-count were all frozen BEFORE candidate execution (committed corpus manifests) \u2014 genuinely pre-observable.",
    "No split materially explains error behavior: leave-one-cell-out leaves the max-based limit within [1.79, 2.61] for every dropped cell and the failing observation still exceeds every leave-one-cell-out limit.",
-   "The top-10 tail spans >= 8 distinct cells across all 6 content classes; the failing case's own calibration cell (repetitive-low-entropy 36-40) has cell max 1.8799 \u2014 far below the limit driver's cell.",
+   "The top-10 tail spans 10 distinct cells across 5 of 6 content classes; the failing case's own calibration cell (repetitive-low-entropy 36-40) has cell max 1.8799 \u2014 far below the limit driver's cell.",
    "Encoding any of these dimensions as a prospective applicability key would therefore be post-hoc relabeling, not regime detection."
   ],
   "tail_concentration": {
@@ -681,7 +681,7 @@
   "pinned_files_sha256": {
    "docs/qualification/gemma4-12b-it-v3-campaign-88/phaseB/reference-margin-summary.json": "8d13d5bba3968b8f00627dc55a9b5d1b021128139d0bbf557be054f3ad0960dd",
    "docs/qualification/gemma4-12b-it-v3-campaign-88/phaseB/selected-eight.json": "9866e4f194f476ae0b30aa18f3ca379ae19ad7d272b0786d977e41ec18adb878",
-   "docs/qualification/gemma4-12b-it-v3-campaign-88/phaseC/decision-domain-manifest.json": "df446d71bc044558a58bbe3ced4ebde3e9a956d09f59ded4014b7fababd307691",
+   "docs/qualification/gemma4-12b-it-v3-campaign-88/phaseC/decision-domain-manifest.json": "df446d71bc044553518a58bbe3ced4ebde3e9a956d09f59ded4014b7fababd30",
    "docs/qualification/gemma4-12b-it-v3-campaign-88/phaseEF/calibration-summary.json": "81bbd737977426fde86340cd5efe00b51ee8fc6c333d1356e84a3d6384499b53",
    "docs/qualification/gemma4-12b-it-v3-campaign-88/phaseEF/threshold-manifest.json": "251c4b7a8127e086001cc59e96cf7f61c17c59fa3bd120a15b5c4678fa9f5e5d",
    "docs/qualification/gemma4-12b-it-v3-campaign-88/phaseG/phaseG-semantic-adjudication.json": "47cd66f4353874eaae04a4284cce58e9e39b77dea8e1b4c8deb7089a05e10a9c",
@@ -697,7 +697,7 @@
  "statistical_contract_audit": {
   "distinct_statements": {
    "acceptance_rule": "zero of 24 fresh holdout cases may exceed limit[e]",
-   "answer_guarantee_or_target": "TARGETED, never guaranteed. The tolerance statement bounds the population fraction above the limit (<= 1% marginal, per family, at 97.8% confidence under Bonferroni); it says nothing that forces zero exceedances among 24 fresh draws. Under iid exchangeability the max-based limit is exceeded by at least one holdout case with probability m/(n+s+m) = 24/608 = 3.95% per family even with NO distributional change whatsoever.",
+   "answer_guarantee_or_target": "TARGETED, never guaranteed. The tolerance statement bounds the population fraction above the limit (<= 1% marginal, per family, at 99.6875% confidence under Bonferroni); it says nothing that forces zero exceedances among 24 fresh draws. Under iid exchangeability over the 576 statistical cases, the max-based limit is exceeded by at least one holdout case with probability m/(n+m) = 24/600 = 4.00% per family even with NO distributional change whatsoever.",
    "estimator": "limit[e] = max(statistical_max[e], stress_max[e])",
    "tolerance_statement": "Distribution-free: P(at least 99% of the case population lies below X_(n)) >= 1 - 0.05/16 = 0.996875 per family \u2014 a COVERAGE statement about the bound."
   },
@@ -706,13 +706,12 @@
    "coverage_required_for_95pct_zero_of_24": 0.9978650616302984,
    "distribution_free_tolerance_n_reproduced": 574,
    "p_at_least_one_of_24_exceeds__coverage_exactly_99pct": 0.21432185919278124,
-   "p_at_least_one_of_24_exceeds__exchangeable_max_limit": 0.039473684210526314,
-   "p_global_max_of_608_in_holdout_arm": 0.039473684210526314,
-   "p_no_family_fails__16_independent": 0.5249866810152746,
-   "p_single_holdout_exceeds_max_of_584": 0.0017094017094017094,
-   "p_some_family_fails__16_independent": 0.47501331898472543,
+   "p_at_least_one_of_24_exceeds__exchangeable_max_limit": 0.04,
+   "p_no_family_fails__16_independent": 0.5204029246664724,
+   "p_single_holdout_exceeds_max_of_576": 0.0017331022530329288,
+   "p_some_family_fails__16_independent": 0.4795970753335276,
    "per_case_exceedance_budget_for_95pct_zero_of_24": 0.002134938369701578,
-   "selected_stress_arm_effect": "All 15 frozen limits are statistical-arm driven (stress maxima are 3-30x below the statistical maxima for every family), so the selected stress arm never raised any limit and does not alter the exchangeability arithmetic; pooling it moves the per-family failure probability only from 24/600=4.00% (statistical-only basis) to 24/608=3.95%."
+   "selected_stress_arm_effect": "All 15 frozen limits are statistical-arm driven (stress maxima are 3-30x below the statistical maxima for every family), so the selected stress arm never raised any limit. The 8 stress cases are margin-extreme by selection and are NOT pooled as exchangeable calibration draws; the prediction arithmetic uses the 576 statistical cases only (24/600 = 4.00%)."
   },
   "frozen_design": {
    "holdout_cases": 24,
@@ -757,7 +756,7 @@
     "sample_size": "24/cell already; per-cell limits would need more per cell."
    },
    {
-    "assumptions": "Log-normal QQ R^2 0.986 for the failing family (12 smooth families > 0.96) supports log-scale modeling; Hill indices 0.17-0.41.",
+    "assumptions": "Log-normal QQ R^2 0.986 for the failing family (derived in this record's tail_shape section from pinned evidence) supports log-scale modeling of that family; Hill indices 0.17-0.41. Cross-family log-normal fits are NOT claimed here \u2014 a successor methodology would need to derive and retain them from its own calibration evidence.",
     "avoids_tuning": "Model family + sample size frozen before any new execution; fit on fresh calibration only.",
     "correctness_claim": "Explicit parametric upper tail bound per family.",
     "failure_modes": "Misspecification exactly in the extreme tail; weaker than distribution-free.",
@@ -767,7 +766,7 @@
     "sample_size": "Possibly n=576 with simulation-validated coverage."
    },
    {
-    "assumptions": "Doctrine claim that the normalized hidden state is not independently correctness-bearing. Supporting: co-movement without any downstream breach anywhere in 608 cases. Against: rho < 1 (residual independent signal); it is the ONLY gate that fired in #88.",
+    "assumptions": "Doctrine claim that the normalized hidden state is not independently correctness-bearing. Supporting: co-movement without any downstream breach anywhere in the 584 calibration + 24 holdout cases. Against: rho < 1 (residual independent signal); it is the ONLY gate that fired in #88.",
     "avoids_tuning": "Doctrine/methodology-version change decided before any new holdout exists.",
     "correctness_claim": "Qualification certified on consumer-facing tensors (E_full, E_D, integrity).",
     "failure_modes": "Removes the only canary that fired; must rest on doctrine, not one failure.",
