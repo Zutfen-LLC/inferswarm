@@ -379,6 +379,17 @@ Issue #90 diagnosed the post-v3 numerical-envelope failure from retained
 #88 evidence; its record and successor recommendation live in the
 issue-#90 section below.
 
+Issue #93 resolves the S5 doctrine question with
+`NUMERICAL_CORE_TWO_TIER_DOCTRINE_ACCEPTED`: future comparators must declare a
+conjunctive acceptance-bearing numerical core and mandatory retained telemetry
+before physical calibration. The first Gemma family classification retains the
+full-vocabulary FP32 consumer-logit family (including `E_full`) in the core and
+keeps `E_D`, exact integrity, finite output, and semantic stability
+acceptance-bearing; internal checkpoint families remain telemetry under the
+prospective doctrine. This neither reinterprets issue #88's immutable
+`V3_HOLDOUT_FAIL` nor sets v4 thresholds, samples, corpora, or a holdout. The
+next gate is a prospective successor methodology freeze.
+
 Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) is complete. It
 established the durable FreeToken `inferswarm-research` implementation line
 without rewriting accepted R4 history.

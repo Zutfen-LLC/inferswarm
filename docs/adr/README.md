@@ -28,6 +28,9 @@ as a normative Fabric Doctrine supplement for exact-integrity, heterogeneous
 numerical-equivalence, semantic-output, and correctness-qualification semantics.
 It refines Fabric Doctrine sections 4, 5, 6, and 10 and should be consolidated
 into the main doctrine when that document is next structurally revised.
+ADR 0011 refines its numerical layer with prospective
+acceptance-bearing/mandatory-telemetry tiers without changing historical frozen
+qualification verdicts.
 
 ## Convention
 
@@ -79,3 +82,4 @@ deciding whether the target is achievable — that distinction is the point.
 | [0008](0008-canonical-fabric-doctrine.md) | Canonical Fabric Doctrine | **Accepted** |
 | [0009](0009-plan-driven-model-artifact-distribution.md) | Plan-driven model artifact acquisition and distribution | **Accepted** |
 | [0010](0010-heterogeneous-numerical-equivalence.md) | Heterogeneous numerical-equivalence correctness contract | **Accepted** |
+| [0011](0011-two-tier-numerical-core-and-telemetry.md) | Two-tier numerical core and mandatory telemetry | **Accepted** |

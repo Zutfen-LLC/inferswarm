@@ -1,0 +1,38 @@
+{
+  "schema": "inferswarm.post-v3-numerical-core-classification/1",
+  "terminal_disposition": "NUMERICAL_CORE_TWO_TIER_DOCTRINE_ACCEPTED",
+  "classification_contract_version": 1,
+  "tier_change_requires_new_comparator_version": true,
+  "historical_contract": "inferswarm.gemma4-heterogeneous-numerical-equivalence/1",
+  "scope": "Prospective tier classification only. It does not reinterpret V3_HOLDOUT_FAIL or alter historical evidence, limits, verdicts, or eligibility.",
+  "preserved_invariants": [
+    "exact_integrity",
+    "finite_output",
+    "strict_exact_token_profile",
+    "decision_stability_profile",
+    "full_vocabulary_consumer_logits"
+  ],
+  "additional_acceptance_gates": [
+    "decision_local_E_D",
+    "DECISION_LOCAL_BOUND_EXCEEDED",
+    "DECISION_DOMAIN_ESCAPE",
+    "frozen_argmax_tie_break"
+  ],
+  "families": [
+    {"family": "local-bf16-backend-operation-output", "metric": "max-absolute-difference", "tier": "MANDATORY_TELEMETRY", "finite_required": true, "basis": "Internal localization checkpoint; no independent consumer, theorem, authoritative-state, or unsummed boundary role is established."},
+    {"family": "local-bf16-backend-operation-output", "metric": "rms-difference", "tier": "MANDATORY_TELEMETRY", "finite_required": true, "basis": "Internal localization checkpoint; no independent consumer, theorem, authoritative-state, or unsummed boundary role is established."},
+    {"family": "local-bf16-backend-operation-output", "metric": "p99-absolute-error", "tier": "MANDATORY_TELEMETRY", "finite_required": true, "basis": "Internal localization checkpoint; no independent consumer, theorem, authoritative-state, or unsummed boundary role is established."},
+    {"family": "hidden-residual-stream", "metric": "max-absolute-difference", "tier": "MANDATORY_TELEMETRY", "finite_required": true, "basis": "Internal intermediate; its intended present-output property is covered downstream by the consumer-logit core, absent a strategy proof of an exception."},
+    {"family": "hidden-residual-stream", "metric": "rms-difference", "tier": "MANDATORY_TELEMETRY", "finite_required": true, "basis": "Internal intermediate; its intended present-output property is covered downstream by the consumer-logit core, absent a strategy proof of an exception."},
+    {"family": "hidden-residual-stream", "metric": "p99-absolute-error", "tier": "MANDATORY_TELEMETRY", "finite_required": true, "basis": "Internal intermediate; its intended present-output property is covered downstream by the consumer-logit core, absent a strategy proof of an exception."},
+    {"family": "final-normalized-hidden-state", "metric": "max-absolute-difference", "tier": "MANDATORY_TELEMETRY", "finite_required": true, "basis": "Internal intermediate; it is retained as a canary but has no independently established acceptance property beyond the downstream core."},
+    {"family": "final-normalized-hidden-state", "metric": "rms-difference", "tier": "MANDATORY_TELEMETRY", "finite_required": true, "basis": "Internal intermediate; it is retained as a canary but has no independently established acceptance property beyond the downstream core."},
+    {"family": "final-normalized-hidden-state", "metric": "p99-absolute-error", "tier": "MANDATORY_TELEMETRY", "finite_required": true, "basis": "Internal intermediate; it is retained as a canary but has no independently established acceptance property beyond the downstream core."},
+    {"family": "bf16-logits", "metric": "max-absolute-difference", "tier": "MANDATORY_TELEMETRY", "finite_required": true, "basis": "Pre-consumer representation checkpoint; the acceptance property is owned by the full-vocabulary FP32 consumer surface, not duplicate representation telemetry."},
+    {"family": "bf16-logits", "metric": "rms-difference", "tier": "MANDATORY_TELEMETRY", "finite_required": true, "basis": "Pre-consumer representation checkpoint; the acceptance property is owned by the full-vocabulary FP32 consumer surface, not duplicate representation telemetry."},
+    {"family": "bf16-logits", "metric": "p99-absolute-error", "tier": "MANDATORY_TELEMETRY", "finite_required": true, "basis": "Pre-consumer representation checkpoint; the acceptance property is owned by the full-vocabulary FP32 consumer surface, not duplicate representation telemetry."},
+    {"family": "fp32-consumer-logits", "metric": "max-absolute-difference", "tier": "ACCEPTANCE_BEARING", "finite_required": true, "basis": "Full-vocabulary strategy-consumed output; E_full directly bounds the numerical surface consumed for output behavior."},
+    {"family": "fp32-consumer-logits", "metric": "rms-difference", "tier": "ACCEPTANCE_BEARING", "finite_required": true, "basis": "Full-vocabulary strategy-consumed output; this frozen family remains a conjunctive core numerical gate under the prospective two-tier contract."},
+    {"family": "fp32-consumer-logits", "metric": "p99-absolute-error", "tier": "ACCEPTANCE_BEARING", "finite_required": true, "basis": "Full-vocabulary strategy-consumed output; this frozen family remains a conjunctive core numerical gate under the prospective two-tier contract."}
+  ]
+}

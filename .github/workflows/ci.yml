@@ -72,6 +72,9 @@ jobs:
       - name: Check issue 90 post-v3 envelope diagnosis (CPU-only)
         run: python3 -m unittest tests.test_issue90_post_v3_diagnosis -v
 
+      - name: Check issue 93 numerical-core doctrine (CPU-only)
+        run: python3 -m unittest tests.test_issue93_numerical_core_doctrine -v
+
       - name: Check internal Markdown links
         run: |
           python3 - <<'EOF'
