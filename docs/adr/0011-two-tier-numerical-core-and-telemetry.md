@@ -1,7 +1,7 @@
 # 0011. Two-tier numerical core and mandatory telemetry
 
 Date: 2026-09-04
-Status: Proposed — pending maintainer acceptance
+Status: Accepted
 
 ## Context
 
