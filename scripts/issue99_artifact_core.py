@@ -99,18 +99,16 @@ def digest_of_bytes(data: bytes) -> str:
     return "sha256:" + hashlib.sha256(data).hexdigest()
 
 
-def self_digest(document: Mapping[str, Any]) -> str:
-    """Digest of a document excluding its own identity fields.
-
-    A frozen document carries exactly one top-level self-identity key
-    (``digest``-like, or ``artifact_id`` for records); it is excluded so the
-    digest covers only the content it identities.
-    """
-    identity_keys = ("digest", "plan_digest", "requirements_digest",
-                     "authorization_digest", "participant_requirements_digest",
-                     "artifact_id")
-    payload = {key: value for key, value in document.items() if key not in identity_keys}
+def self_digest(document: Mapping[str, Any], *, identity_field: str) -> str:
+    """Hash all document fields except its own explicit identity field."""
+    payload = {key: value for key, value in document.items() if key != identity_field}
     return digest_of_bytes(canonical_json_bytes(payload))
+
+
+def validate_self_identity(document: Mapping[str, Any], *, identity_field: str) -> None:
+    """Reject a missing or stale frozen identity before the document is used."""
+    if document.get(identity_field) != self_digest(document, identity_field=identity_field):
+        raise _fail("RECONCILIATION_MISMATCH", f"{identity_field} self-identity mismatch")
 
 
 def write_canonical_json(path: Path, document: Mapping[str, Any]) -> None:
@@ -191,7 +189,7 @@ def freeze_artifact_record(
     }
     if transform is not None:
         record["transform"] = dict(transform)
-    record["artifact_id"] = self_digest(record)
+    record["artifact_id"] = self_digest(record, identity_field="artifact_id")
     return record
 
 
@@ -217,7 +215,7 @@ def validate_artifact_record(record: Mapping[str, Any]) -> dict[str, Any]:
             record["origin"] = origin
         if record["kind"] == "transform" and "transform" not in record:
             raise _fail("MALFORMED_ARTIFACT_RECORD", "transform identity missing")
-        expected = self_digest(record)
+        expected = self_digest(record, identity_field="artifact_id")
         if record["artifact_id"] != expected:
             raise _fail("MALFORMED_ARTIFACT_RECORD", "artifact_id self-identity mismatch")
     except KeyError as missing:
@@ -250,6 +248,7 @@ def derive_participant_requirements(
       participant under the same requirement class (no silent whole-model
       inclusion, no convenience preloads).
     """
+    validate_self_identity(plan, identity_field="plan_digest")
     model = plan["model"]
     declared_unit_ids = {unit["id"] for unit in plan["logical_state_units"]}
     participants_out = []
@@ -297,6 +296,7 @@ def derive_participant_requirements(
         if missing:
             raise _fail("REQUIRED_STATE_COVERAGE_INCOMPLETE", f"uncovered: {missing}")
         participant_doc = {
+            "plan_digest": plan["plan_digest"],
             "participant_id": participant["participant_id"],
             "node_id": participant["node_id"],
             "execution_unit_id": participant["execution_unit_id"],
@@ -308,7 +308,8 @@ def derive_participant_requirements(
             "required_artifacts": [records[aid] for aid in sorted(records)],
             "required_artifact_bytes": sum(r["length"] for r in records.values()),
         }
-        participant_doc["participant_requirements_digest"] = self_digest(participant_doc)
+        participant_doc["participant_requirements_digest"] = self_digest(
+            participant_doc, identity_field="participant_requirements_digest")
         participants_out.append(participant_doc)
     document = {
         "schema": REQUIREMENTS_SCHEMA,
@@ -316,7 +317,7 @@ def derive_participant_requirements(
         "model": dict(model),
         "participants": participants_out,
     }
-    document["requirements_digest"] = self_digest(document)
+    document["requirements_digest"] = self_digest(document, identity_field="requirements_digest")
     return document
 
 
@@ -349,8 +350,12 @@ class CoordinatorAuthority:
                  eligible_sources: Sequence[Mapping[str, Any]]) -> None:
         self.bytes_observed = 0
         self._reject_bytes(plan, requirements, eligible_sources)
+        validate_self_identity(plan, identity_field="plan_digest")
+        validate_self_identity(requirements, identity_field="requirements_digest")
         if requirements["plan_digest"] != plan["plan_digest"]:
             raise _fail("RECONCILIATION_MISMATCH", "requirements do not belong to the plan")
+        # Retain a snapshot so caller mutations cannot change authorized records.
+        requirements = json.loads(canonical_json_bytes(requirements))
         source_ids = [s["source_id"] for s in eligible_sources]
         if len(set(source_ids)) != len(source_ids):
             raise _fail("SOURCE_UNAUTHORIZED", "duplicate eligible source ids")
@@ -361,6 +366,11 @@ class CoordinatorAuthority:
         self._required_records: dict[str, dict[str, dict[str, Any]]] = {}
         participants: dict[str, dict[str, Any]] = {}
         for participant in requirements["participants"]:
+            validate_self_identity(participant, identity_field="participant_requirements_digest")
+            if participant["plan_digest"] != plan["plan_digest"]:
+                raise _fail("RECONCILIATION_MISMATCH", "participant belongs to another plan")
+            for record in participant["required_artifacts"]:
+                validate_artifact_record(record)
             pid = participant["participant_id"]
             state = participant["required_logical_state"]
             self._declared_states[pid] = set(
@@ -377,7 +387,9 @@ class CoordinatorAuthority:
             "eligible_sources": [dict(s) for s in eligible_sources],
             "participants": participants,
         }
-        authorization["authorization_digest"] = self_digest(authorization)
+        authorization["authorization_digest"] = self_digest(
+            authorization, identity_field="authorization_digest")
+        self._authorization_digest = authorization["authorization_digest"]
         self.authorization = authorization
 
     def _reject_bytes(self, *values: Any) -> None:
@@ -388,18 +400,26 @@ class CoordinatorAuthority:
             self.bytes_observed += sum(sink)
             raise _fail("SOURCE_UNAUTHORIZED", "bulk bytes presented to the Coordinator")
 
+    def _validate_authorization(self) -> None:
+        self._reject_bytes(self.authorization)
+        validate_self_identity(self.authorization, identity_field="authorization_digest")
+        if self.authorization["authorization_digest"] != self._authorization_digest:
+            raise _fail("RECONCILIATION_MISMATCH", "authorization changed after construction")
+
     def check_acquisition(self, *, participant_id: str, artifact_record: Mapping[str, Any],
-                          source_id: str) -> None:
+                          source_descriptor: Mapping[str, Any]) -> None:
         """Node-side gate: may this participant fetch this artifact from this source?"""
-        self._reject_bytes(artifact_record)
+        self._reject_bytes(artifact_record, source_descriptor)
+        self._validate_authorization()
         participant = self.authorization["participants"].get(participant_id)
         if participant is None:
             raise _fail("SOURCE_UNAUTHORIZED", f"participant {participant_id} not in authorization")
         if artifact_record["artifact_id"] not in participant["required_artifact_ids"]:
             raise _fail("UNDECLARED_REQUIREMENT_ARTIFACT",
                         f"artifact {artifact_record['artifact_id']} not in the required set")
-        if source_id not in participant["eligible_source_ids"]:
-            raise _fail("SOURCE_UNAUTHORIZED", f"source {source_id} not eligible")
+        if (source_descriptor.get("source_id") not in participant["eligible_source_ids"]
+                or dict(source_descriptor) not in self.authorization["eligible_sources"]):
+            raise _fail("SOURCE_UNAUTHORIZED", "source descriptor not eligible")
         expected = self._required_records[participant_id][artifact_record["artifact_id"]]
         if dict(artifact_record) != dict(expected):
             raise _fail("PROVENANCE_IDENTITY_MISMATCH", "authorized artifact record drifted")
@@ -408,6 +428,7 @@ class CoordinatorAuthority:
                   materializations: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         """Audit which verified artifacts/materializations satisfied the realization."""
         self._reject_bytes(materializations)
+        self._validate_authorization()
         required_ids = set(self.authorization["participants"][participant_id]["required_artifact_ids"])
         used = set(used_artifact_ids)
         if used != required_ids:
@@ -463,13 +484,12 @@ class LocalFileSource:
 
     def __init__(self, *, source_id: str, root: Path) -> None:
         self.source_id = source_id
-        self.endpoint = f"file://{root}"
         self.root = Path(root)
         self.access_log: list[dict[str, Any]] = []
         self._lock = threading.Lock()
 
     def descriptor(self) -> dict[str, Any]:
-        return {"source_id": self.source_id, "endpoint": self.endpoint}
+        return {"source_id": self.source_id, "endpoint": self.root.resolve().as_uri()}
 
     def read(self, origin: Mapping[str, Any], offset: int, length: int) -> bytes:
         name = origin["source_object"]
@@ -631,7 +651,11 @@ class NodeArtifactCache:
         return path if path.is_file() else None
 
     def has_verified(self, record: Mapping[str, Any]) -> bool:
-        return self.lookup(record["content_digest"]) is not None
+        validate_artifact_record(record)
+        if self.lookup(record["content_digest"]) is None:
+            return False
+        self.open_verified(record)
+        return True
 
     def open_verified(self, record: Mapping[str, Any]) -> bytes:
         """Read a trusted object, re-verifying exact bytes (tamper-evident)."""
@@ -640,7 +664,7 @@ class NodeArtifactCache:
         if path is None:
             raise _fail("UNVERIFIED_SOURCE_READ_REFUSED", record["content_digest"])
         data = path.read_bytes()
-        if digest_of_bytes(data) != record["content_digest"]:
+        if digest_of_bytes(data) != record["content_digest"] or len(data) != record["length"]:
             raise _fail("CACHE_OBJECT_TAMPERED", record["content_digest"])
         return data
 
@@ -652,6 +676,7 @@ class NodeArtifactCache:
         with self._lock:
             target = self.root / "objects" / _digest_path_component(record["content_digest"])
             if target.is_file():
+                self.open_verified(record)
                 self._discard_partial_locked(record["artifact_id"])
                 return target  # deduplication: content identity already verified
             temp = self.root / "partial" / f"publish-{record['content_digest']}.tmp"
@@ -801,7 +826,7 @@ class AcquisitionLedger:
         event.setdefault("wall_time_seconds", round(time.monotonic() - self.started, 6))
         self.events.append(event)
 
-    def document(self, *, records_by_digest: Mapping[str, Mapping[str, Any]] = {},
+    def document(self, *, records_by_artifact_id: Mapping[str, Mapping[str, Any]] = {},
                  participants: Mapping[str, Mapping[str, Any]] = {}) -> dict[str, Any]:
         hits = [e for e in self.events if e["event"] == "CACHE_HIT"]
         acquired = [e for e in self.events if e["event"] == "ACQUIRED"]
@@ -812,15 +837,16 @@ class AcquisitionLedger:
             by_source[event["source_id"]] = by_source.get(event["source_id"], 0) + event["bytes"]
         unrelated = 0
         for event in acquired:
-            record = records_by_digest.get(event["content_digest"])
+            record = records_by_artifact_id.get(event["artifact_id"])
             if record is None:
                 unrelated += event["bytes"]
                 continue
             declared = set(participants.get(event["participant_id"], {}).get("declared_state_ids", []))
-            if not set(record["satisfies_logical_state_ids"]) & declared:
+            if (record["content_digest"] != event["content_digest"]
+                    or not set(record["satisfies_logical_state_ids"]) <= declared):
                 unrelated += event["bytes"]
-        acquired_records = [dict(records_by_digest[e["content_digest"]])
-                            for e in acquired if e["content_digest"] in records_by_digest]
+        acquired_records = [dict(records_by_artifact_id[e["artifact_id"]])
+                            for e in acquired if e["artifact_id"] in records_by_artifact_id]
         document = {
             "schema": LEDGER_SCHEMA,
             "events": self.events,
@@ -853,7 +879,7 @@ def _unexplained_full_object_bytes(records: Sequence[Mapping[str, Any]]) -> int:
     object was acquired under a range/shared class. Ranges that happen to
     cover a small file the plan genuinely requires as metadata are explained.
     """
-    by_object: dict[str, dict[str, Any]] = {}
+    by_object: dict[tuple, dict[str, Any]] = {}
     unexplained = 0
     for record in records:
         origin = record["origin"]
@@ -863,7 +889,8 @@ def _unexplained_full_object_bytes(records: Sequence[Mapping[str, Any]]) -> int:
             continue
         if record["kind"] != "byte_range":
             continue
-        key = origin["source_object_digest"]
+        key = (tuple(sorted(record["provenance"].items())), origin["source_object"],
+               origin["source_object_digest"], origin["source_object_length"])
         entry = by_object.setdefault(key, {
             "source_object": origin["source_object"],
             "length": origin["source_object_length"],
@@ -904,7 +931,8 @@ def acquire_artifact(
     """
     validate_artifact_record(record)
     authorization.check_acquisition(
-        participant_id=participant_id, artifact_record=record, source_id=source.source_id)
+        participant_id=participant_id, artifact_record=record,
+        source_descriptor=source.descriptor())
     if cache.has_verified(record):
         ledger.record({"event": "CACHE_HIT", "participant_id": participant_id,
                        "artifact_id": record["artifact_id"],

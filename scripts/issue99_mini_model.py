@@ -43,6 +43,7 @@ from issue99_artifact_core import (
     fail,
     freeze_artifact_record,
     self_digest,
+    validate_self_identity,
 )
 
 MINI_MODEL_ID = "issue99/mini-lm-8l"
@@ -244,7 +245,7 @@ def build_mini_model_repository(root: Path) -> dict[str, Any]:
             if key.startswith("vision.") or key.startswith("mtp.")),
         "oracle": oracle,
     }
-    catalog["catalog_digest"] = self_digest(catalog)
+    catalog["catalog_digest"] = self_digest(catalog, identity_field="catalog_digest")
     (root / CATALOG_OBJECT).write_bytes(canonical_json_bytes(catalog))
     return catalog
 
@@ -375,7 +376,7 @@ def oracle_execution(root: Path) -> dict[str, Any]:
         "expected_logits_digest": result["logits_digest"],
         "expected_final_hidden_digest": result["final_hidden_digest"],
     }
-    workload["workload_digest"] = self_digest(workload)
+    workload["workload_digest"] = self_digest(workload, identity_field="workload_digest")
     return workload
 
 
@@ -596,7 +597,7 @@ def build_frozen_plan(catalog: Mapping[str, Any]) -> dict[str, Any]:
             "expected_final_hidden_digest": catalog["oracle"]["expected_final_hidden_digest"],
         },
     }
-    plan["plan_digest"] = self_digest(plan)
+    plan["plan_digest"] = self_digest(plan, identity_field="plan_digest")
     return plan
 
 
@@ -616,6 +617,11 @@ class MiniLmParticipantRuntime:
     def __init__(self, *, plan: Mapping[str, Any],
                  participant_requirements: Mapping[str, Any],
                  cache: Any) -> None:
+        validate_self_identity(plan, identity_field="plan_digest")
+        validate_self_identity(participant_requirements,
+                               identity_field="participant_requirements_digest")
+        if participant_requirements["plan_digest"] != plan["plan_digest"]:
+            raise fail("RECONCILIATION_MISMATCH", "participant belongs to another plan")
         self.plan = plan
         self.requirements = participant_requirements
         self.cache = cache

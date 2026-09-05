@@ -95,7 +95,7 @@ digest is computed by operator scaffolding reading the complete repository
 11. restart arm: `exec.a` re-realizes entirely from verified cache hits;
 12. recovery replica (`exec.c`): controlled mid-transfer interruption, legal
     resume from the identity-bound retained prefix;
-13. eleven fail-closed negative controls (see below).
+13. sixteen fail-closed negative controls (see below).
 
 ## Negative controls (all must fail closed)
 
@@ -105,6 +105,11 @@ digest is computed by operator scaffolding reading the complete repository
 | wrong model/revision provenance at derivation | `PROVENANCE_IDENTITY_MISMATCH` |
 | missing required artifact at authorized Source | `SOURCE_OBJECT_UNAVAILABLE` |
 | present-but-ineligible Source (zero bytes move) | `SOURCE_UNAUTHORIZED` |
+| eligible Source ID with a different endpoint/root (zero bytes move) | `SOURCE_UNAUTHORIZED` |
+| stale plan body at derivation and authorization | `RECONCILIATION_MISMATCH` |
+| stale requirements body at authorization | `RECONCILIATION_MISMATCH` |
+| stale authorization identity at acquisition | `RECONCILIATION_MISMATCH` |
+| corrupt local cache at acquisition and materialization (zero verified hit bytes) | `CACHE_OBJECT_TAMPERED` |
 | partial state bound to another artifact (discard+restart) | `PARTIAL_STATE_IDENTITY_MISMATCH` |
 | reading an unverified partial as a trusted Source | `UNVERIFIED_SOURCE_READ_REFUSED` |
 | publishing wrong-digest bytes as a trusted Source | `INTEGRITY_DIGEST_MISMATCH` |
@@ -124,6 +129,33 @@ observed usage. Every control-plane entry point mechanically rejects `bytes`
 payloads (`bytes_observed == 0` is retained evidence); bulk model bytes move
 only Source → Node directly. The Coordinator is CPU-only.
 
+Each frozen document excludes only its own identity field from its digest.
+The plan digest covers all plan fields except `plan_digest`.
+The requirements digest includes `plan_digest` and all participant documents.
+Each participant document includes `plan_digest` in its own digest.
+The authorization digest includes both `plan_digest` and `requirements_digest`.
+Artifact identity excludes only `artifact_id`.
+
+Derivation validates the plan identity before it calls the strategy resolver.
+Authorization construction validates the plan, requirements, participant,
+and artifact identities. It checks the upstream plan links.
+The authority retains a copy of the required records.
+Acquisition and reconciliation validate the frozen authorization again.
+The participant runtime validates the plan and participant requirements
+before it accepts staging inputs.
+
+Acquisition presents the Source descriptor to the authority before any read.
+The descriptor must exactly match an eligible `{source_id, endpoint}` pair.
+The local file descriptor derives its endpoint from the actual Source root.
+An eligible ID with a different endpoint fails before any bytes move.
+These internal descriptors do not establish credentials or a public protocol.
+
+An existing cache object must pass digest and length verification before
+acquisition returns `CACHE_HIT` or records verified cache-hit bytes.
+A corrupt object fails with `CACHE_OBJECT_TAMPERED`.
+This proof does not automatically repair that object.
+`open_verified()` also validates the bytes before materialization.
+
 ## Accounting
 
 The retained ledger distinguishes: required source bytes, verified cache-hit
@@ -133,6 +165,21 @@ final optional cache bytes per node, materializations created from acquired
 artifacts, boundary transfer bytes, per-participant hit/acquire splits, and
 the two zero invariants. Wall-time fields are retained per arm but are not
 regression identities.
+
+Ledger events resolve artifact records by `artifact_id`.
+The unrelated-byte calculation checks those records against the participant's
+declared Logical State Units. The whole-object calculation uses their exact
+upstream provenance and ranges. Coverage counts the union of overlapping ranges.
+`content_digest` identifies cache content for physical deduplication.
+Distinct artifacts with identical content retain separate ledger identities.
+Focused tests verify shared-content acquisition, cache reuse, unrelated-byte
+attribution, and complete-object detection without record replacement.
+
+The Issue #74 review manifest also covers living repository files.
+Its workflow and roadmap hashes are refreshed after the Issue #99 changes.
+This follows the existing review-manifest practice.
+Historical methodology, corpora, and qualification dispositions do not change.
+The Issue #86 and #95 manifests remain valid without changes.
 
 ## Non-claims
 

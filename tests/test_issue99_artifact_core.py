@@ -27,6 +27,7 @@ from issue99_artifact_core import (  # noqa: E402
     digest_of_bytes,
     freeze_artifact_record,
     guard_full_object_acquisition,
+    self_digest,
     validate_artifact_record,
 )
 
@@ -287,7 +288,7 @@ class CoordinatorAuthorityTests(unittest.TestCase):
             with self.assertRaisesRegex(AcquisitionError, "SOURCE_UNAUTHORIZED"):
                 authority.check_acquisition(
                     participant_id="unit-node", artifact_record=state_record,
-                    source_id="some-other-source")
+                    source_descriptor={"source_id": "some-other-source", "endpoint": "http://127.0.0.1:1"})
 
     def test_acquisition_gate_refuses_undeclared_artifact(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -297,7 +298,7 @@ class CoordinatorAuthorityTests(unittest.TestCase):
             unrelated = range_record(temp, "obj.bin", data, 200, 256, state_id="other.state")
             with self.assertRaisesRegex(AcquisitionError, "UNDECLARED_REQUIREMENT_ARTIFACT"):
                 authority.check_acquisition(
-                    participant_id="unit-node", artifact_record=unrelated, source_id="op-http")
+                    participant_id="unit-node", artifact_record=unrelated, source_descriptor=authority.authorization["eligible_sources"][0])
 
     def test_acquisition_gate_refuses_drifted_record(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -307,7 +308,7 @@ class CoordinatorAuthorityTests(unittest.TestCase):
             drifted["content_digest"] = "sha256:" + "0" * 64
             with self.assertRaisesRegex(AcquisitionError, "PROVENANCE_IDENTITY_MISMATCH"):
                 authority.check_acquisition(
-                    participant_id="unit-node", artifact_record=drifted, source_id="op-http")
+                    participant_id="unit-node", artifact_record=drifted, source_descriptor=authority.authorization["eligible_sources"][0])
 
     def test_reconciliation_requires_verified_sources_and_exact_bytes(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -495,10 +496,10 @@ class AcquireArtifactTests(unittest.TestCase):
             "plan": plan, "requirements": requirements, "root": root,
         }
 
-    def _authority(self, fixture, source_id="op-http"):
+    def _authority(self, fixture, source):
         return CoordinatorAuthority(
             plan=fixture["plan"], requirements=fixture["requirements"],
-            eligible_sources=[{"source_id": source_id, "endpoint": "http://127.0.0.1:1"}])
+            eligible_sources=[source.descriptor()])
 
     def test_fresh_acquire_then_cache_hit(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -508,7 +509,7 @@ class AcquireArtifactTests(unittest.TestCase):
             try:
                 cache = NodeArtifactCache(temp / "node-cache")
                 ledger = AcquisitionLedger()
-                authority = self._authority(fixture)
+                authority = self._authority(fixture, http)
                 result = acquire_artifact(
                     cache=cache, source=http, record=fixture["state_record"],
                     authorization=authority, participant_id="unit-node", ledger=ledger,
@@ -519,13 +520,13 @@ class AcquireArtifactTests(unittest.TestCase):
                     cache=cache, source=http, record=fixture["state_record"],
                     authorization=authority, participant_id="unit-node", ledger=ledger)
                 self.assertEqual(hit["status"], "CACHE_HIT")
-                records = {fixture["state_record"]["content_digest"]: fixture["state_record"]}
+                records = {fixture["state_record"]["artifact_id"]: fixture["state_record"]}
                 participants = {"unit-node": {
                     "required_artifact_bytes": 120_000 + 13,
                     "declared_state_ids": ["unit.state", "unit.meta"],
                 }}
                 aggregate = ledger.document(
-                    records_by_digest=records, participants=participants)["aggregate"]
+                    records_by_artifact_id=records, participants=participants)["aggregate"]
                 self.assertEqual(aggregate["newly_acquired_bytes"], 120_000)
                 self.assertEqual(aggregate["verified_cache_hit_bytes"], 120_000)
                 self.assertEqual(aggregate["acquired_bytes_by_source"], {"op-http": 120_000})
@@ -543,7 +544,7 @@ class AcquireArtifactTests(unittest.TestCase):
                 http.corrupt_at["obj.bin"] = 60_000
                 cache = NodeArtifactCache(temp / "node-cache")
                 ledger = AcquisitionLedger()
-                authority = self._authority(fixture)
+                authority = self._authority(fixture, http)
                 with self.assertRaisesRegex(AcquisitionError, "INTEGRITY_DIGEST_MISMATCH"):
                     acquire_artifact(
                         cache=cache, source=http, record=fixture["state_record"],
@@ -565,7 +566,7 @@ class AcquireArtifactTests(unittest.TestCase):
             try:
                 cache = NodeArtifactCache(temp / "node-cache")
                 ledger = AcquisitionLedger()
-                authority = self._authority(fixture)
+                authority = self._authority(fixture, http)
                 http.interrupt_after["obj.bin"] = 60_000
                 first = acquire_artifact(
                     cache=cache, source=http, record=fixture["state_record"],
@@ -610,7 +611,7 @@ class AcquireArtifactTests(unittest.TestCase):
                 cache._part_path(fixture["state_record"]["artifact_id"]).write_bytes(
                     misbound_part)
                 ledger = AcquisitionLedger()
-                authority = self._authority(fixture)
+                authority = self._authority(fixture, http)
                 result = acquire_artifact(
                     cache=cache, source=http, record=fixture["state_record"],
                     authorization=authority, participant_id="unit-node", ledger=ledger,
@@ -634,7 +635,7 @@ class AcquireArtifactTests(unittest.TestCase):
             try:
                 # Only the HTTP source is authorized; the file source is a
                 # present-but-ineligible Source with identical bytes.
-                authority = self._authority(fixture, source_id="op-http")
+                authority = self._authority(fixture, http)
                 cache = NodeArtifactCache(temp / "node-cache")
                 ledger = AcquisitionLedger()
                 with self.assertRaisesRegex(AcquisitionError, "SOURCE_UNAUTHORIZED"):
@@ -659,6 +660,172 @@ class AcquireArtifactTests(unittest.TestCase):
         self.assertEqual(_unexplained_full_object_bytes([partial]), 0)
         metadata = whole_record("meta.json", b'{}')
         self.assertEqual(_unexplained_full_object_bytes([metadata]), 0)
+
+
+class ProofIntegrityRegressionTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.data = make_object(self.root, "obj.bin", 256)
+        self.record = range_record(self.root, "obj.bin", self.data, 0, 100)
+        self.plan = unit_plan([participant(metadata=())])
+        self.resolver = lambda cls, rid: [self.record]
+        self.requirements = derive_participant_requirements(self.plan, self.resolver)
+        self.source = LocalFileSource(source_id="authorized", root=self.root)
+        self.cache = NodeArtifactCache(self.root / "cache")
+        self.ledger = AcquisitionLedger()
+
+    def authority(self):
+        return CoordinatorAuthority(plan=self.plan, requirements=self.requirements,
+                                    eligible_sources=[self.source.descriptor()])
+
+    def acquire(self, authority, source=None, record=None):
+        return acquire_artifact(cache=self.cache, source=source or self.source,
+                                record=record or self.record, authorization=authority,
+                                participant_id="unit-node", ledger=self.ledger)
+
+    def test_stale_plan_body_fails_at_derivation_and_authorization(self):
+        self.plan["model"]["revision"] = "drifted"
+        with self.assertRaisesRegex(AcquisitionError, "RECONCILIATION_MISMATCH"):
+            derive_participant_requirements(self.plan, self.resolver)
+        with self.assertRaisesRegex(AcquisitionError, "RECONCILIATION_MISMATCH"):
+            self.authority()
+
+    def test_requirements_digest_covers_upstream_plan_identity(self):
+        before = self.requirements["requirements_digest"]
+        self.requirements["plan_digest"] = "sha256:drifted"
+        self.assertNotEqual(before, self_digest(
+            self.requirements, identity_field="requirements_digest"))
+        with self.assertRaisesRegex(AcquisitionError, "RECONCILIATION_MISMATCH"):
+            self.authority()
+
+    def test_stale_requirements_body_fails_authorization(self):
+        self.requirements["participants"][0]["required_artifact_bytes"] += 1
+        with self.assertRaisesRegex(AcquisitionError, "RECONCILIATION_MISMATCH"):
+            self.authority()
+
+    def test_nested_participant_digest_is_validated(self):
+        self.requirements["participants"][0]["node_id"] = "drifted"
+        self.requirements["requirements_digest"] = self_digest(
+            self.requirements, identity_field="requirements_digest")
+        with self.assertRaisesRegex(AcquisitionError, "RECONCILIATION_MISMATCH"):
+            self.authority()
+
+    def test_refrozen_plan_with_stale_requirements_fails_authorization(self):
+        self.plan["new_plan_field"] = True
+        self.plan["plan_digest"] = self_digest(self.plan, identity_field="plan_digest")
+        with self.assertRaisesRegex(AcquisitionError, "RECONCILIATION_MISMATCH"):
+            self.authority()
+
+    def test_authorization_binds_both_upstream_digests_and_rejects_drift(self):
+        for field in ("plan_digest", "requirements_digest"):
+            with self.subTest(field=field):
+                authority = self.authority()
+                before = authority.authorization["authorization_digest"]
+                authority.authorization[field] = "sha256:drifted"
+                self.assertNotEqual(before, self_digest(
+                    authority.authorization, identity_field="authorization_digest"))
+                with self.assertRaisesRegex(AcquisitionError, "RECONCILIATION_MISMATCH"):
+                    self.acquire(authority)
+                self.assertEqual(self.source.access_log, [])
+
+    def test_each_identity_excludes_only_its_own_field(self):
+        fields = ("plan_digest", "requirements_digest", "participant_requirements_digest",
+                  "authorization_digest", "artifact_id", "digest")
+        for own in fields:
+            doc = dict.fromkeys(fields, "original")
+            expected = self_digest(doc, identity_field=own)
+            doc[own] = "changed"
+            self.assertEqual(expected, self_digest(doc, identity_field=own))
+            for upstream in set(fields) - {own}:
+                changed = dict(doc, **{upstream: "changed"})
+                self.assertNotEqual(expected, self_digest(changed, identity_field=own))
+
+    def test_spoofed_authorized_source_id_different_root_moves_zero_bytes(self):
+        authority = self.authority()
+        spoof = LocalFileSource(source_id=self.source.source_id, root=self.root / "other")
+        with self.assertRaisesRegex(AcquisitionError, "SOURCE_UNAUTHORIZED"):
+            self.acquire(authority, source=spoof)
+        self.assertEqual(spoof.access_log, [])
+        self.assertEqual(self.source.access_log, [])
+        self.assertEqual(self.ledger.events, [])
+        self.assertEqual(self.cache.inventory()["verified_objects"], [])
+
+    def test_spoofed_http_endpoint_moves_zero_bytes(self):
+        self.source = LocalHttpSource(source_id="authorized", root=self.root)
+        self.addCleanup(self.source.close)
+        spoof = LocalHttpSource(source_id="authorized", root=self.root)
+        self.addCleanup(spoof.close)
+        with self.assertRaisesRegex(AcquisitionError, "SOURCE_UNAUTHORIZED"):
+            self.acquire(self.authority(), source=spoof)
+        self.assertEqual(spoof.access_log, [])
+        self.assertEqual(self.source.access_log, [])
+        self.assertEqual(self.ledger.events, [])
+
+    def test_authority_record_snapshot_does_not_follow_caller_mutation(self):
+        authority = self.authority()
+        self.requirements["participants"][0]["required_artifacts"][0]["content_digest"] = "drifted"
+        self.assertEqual(self.acquire(authority)["status"], "ACQUIRED")
+
+    def test_corrupt_cache_is_not_a_hit_or_materialization_source(self):
+        authority = self.authority()
+        self.assertEqual(self.acquire(authority)["status"], "ACQUIRED")
+        self.cache.lookup(self.record["content_digest"]).write_bytes(b"!" * 100)
+        requests = len(self.source.access_log)
+        with self.assertRaisesRegex(AcquisitionError, "CACHE_OBJECT_TAMPERED"):
+            self.acquire(authority)
+        self.assertEqual(len(self.source.access_log), requests)
+        self.assertEqual(self.ledger.document()["aggregate"]["verified_cache_hit_bytes"], 0)
+        with self.assertRaisesRegex(AcquisitionError, "CACHE_OBJECT_TAMPERED"):
+            self.cache.open_verified(self.record)
+
+    def test_identical_content_retains_artifact_audit_and_cache_deduplication(self):
+        from issue99_proof import _records_index, _ledger_participants
+
+        data = b"x" * 200
+        (self.root / "obj.bin").write_bytes(data)
+        left = range_record(self.root, "obj.bin", data, 0, 100, state_id="left")
+        right = range_record(self.root, "obj.bin", data, 100, 200, state_id="right")
+        self.assertEqual(left["content_digest"], right["content_digest"])
+        self.assertNotEqual(left["artifact_id"], right["artifact_id"])
+        self.plan = unit_plan([participant(assigned=("left", "right"), metadata=())],
+                              units=[{"id": "left"}, {"id": "right"}])
+        self.requirements = derive_participant_requirements(
+            self.plan, lambda cls, rid: [left if rid == "left" else right])
+        authority = self.authority()
+        self.assertEqual(self.acquire(authority, record=left)["status"], "ACQUIRED")
+        self.assertEqual(self.acquire(authority, record=right)["status"], "CACHE_HIT")
+        index = _records_index(self.requirements)
+        self.assertEqual(set(index), {left["artifact_id"], right["artifact_id"]})
+        self.assertEqual(len(self.cache.inventory()["verified_objects"]), 1)
+        self.assertEqual({e["artifact_id"] for e in self.ledger.events}, set(index))
+        report = self.ledger.document(records_by_artifact_id=index,
+                                      participants=_ledger_participants(self.requirements))
+        self.assertEqual(report["aggregate"]["unrelated_model_bytes_acquired_for_realization"], 0)
+        self.assertEqual(report["aggregate"]["unexplained_full_model_dependency"], 0)
+        # A separate node acquires the other range. Both ranges must count.
+        self.cache = NodeArtifactCache(self.root / "second-cache")
+        self.acquire(authority, record=right)
+        report = self.ledger.document(records_by_artifact_id=index,
+                                      participants={"unit-node": {"declared_state_ids": ["left"]}})
+        self.assertEqual(report["aggregate"]["unrelated_model_bytes_acquired_for_realization"], 100)
+        self.assertEqual(report["aggregate"]["unexplained_full_model_dependency"], 200)
+
+    def test_coverage_unions_overlapping_semantic_artifacts(self):
+        from issue99_proof import _upstream_coverage
+
+        records = [range_record(self.root, "obj.bin", self.data, 0, 100, state_id=state)
+                   for state in ("left", "alias")]
+        requirements = {"participants": [{"required_artifacts": records}]}
+        coverage = _upstream_coverage(requirements, {"objects": {"obj.bin": {"length": 256}}})
+        self.assertEqual(coverage["obj.bin"], 0.390625)
+
+    def test_whole_object_audit_does_not_join_distinct_upstream_objects(self):
+        data = b"x" * 200
+        left = range_record(self.root, "first.bin", data, 0, 100, state_id="left")
+        right = range_record(self.root, "second.bin", data, 100, 200, state_id="right")
+        self.assertEqual(_unexplained_full_object_bytes([left, right]), 0)
 
 
 class CoreBoundaryTests(unittest.TestCase):

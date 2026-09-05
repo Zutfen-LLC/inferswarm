@@ -13,7 +13,7 @@ sys.path.insert(0, str(SCRIPTS))
 from issue74_methodology import sha256_file  # noqa: E402
 
 import issue99_proof as proof  # noqa: E402
-from issue99_artifact_core import self_digest  # noqa: E402
+from issue99_artifact_core import self_digest, validate_self_identity  # noqa: E402
 
 
 def strip_volatile(value):
@@ -83,6 +83,11 @@ class FreshCampaignTests(unittest.TestCase):
             "wrong_provenance_identity": "PROVENANCE_IDENTITY_MISMATCH",
             "missing_required_artifact": "SOURCE_OBJECT_UNAVAILABLE",
             "unauthorized_source": "SOURCE_UNAUTHORIZED",
+            "spoofed_authorized_source": "SOURCE_UNAUTHORIZED",
+            "stale_plan_identity": "RECONCILIATION_MISMATCH",
+            "stale_requirements_identity": "RECONCILIATION_MISMATCH",
+            "stale_authorization_identity": "RECONCILIATION_MISMATCH",
+            "corrupt_local_cache": "CACHE_OBJECT_TAMPERED",
             "foreign_partial_state_discarded": "PARTIAL_STATE_IDENTITY_MISMATCH",
             "unverified_object_read_refused": "UNVERIFIED_SOURCE_READ_REFUSED",
             "wrong_digest_publication_refused": "INTEGRITY_DIGEST_MISMATCH",
@@ -97,6 +102,10 @@ class FreshCampaignTests(unittest.TestCase):
             self.assertEqual(control["outcome"], "FAIL_CLOSED_EXPECTED", name)
             self.assertEqual(control["observed_reason"], reason, name)
         self.assertTrue(self.documents["negative-controls.json"]["all_fail_closed"])
+        self.assertTrue(controls["spoofed_authorized_source"]["zero_bytes_moved"])
+        self.assertEqual(controls["corrupt_local_cache"]["verified_cache_hit_bytes"], 0)
+        self.assertEqual(controls["corrupt_local_cache"]["materialization_attempt"][
+            "observed_reason"], "CACHE_OBJECT_TAMPERED")
 
     def test_interrupted_transfer_resumed_from_bound_prefix(self):
         evidence = self.documents["interrupted-transfer.json"]
@@ -227,10 +236,10 @@ class CommittedEvidenceTests(unittest.TestCase):
     def test_requirement_manifest_is_self_consistent(self):
         requirements = json.loads((EVIDENCE / "participant-requirements.json").read_text())
         self.assertEqual(requirements["requirements_digest"],
-                         self_digest(requirements))
+                         self_digest(requirements, identity_field="requirements_digest"))
         for participant in requirements["participants"]:
             self.assertEqual(participant["participant_requirements_digest"],
-                             self_digest(participant))
+                             self_digest(participant, identity_field="participant_requirements_digest"))
             declared = (participant["required_logical_state"]["assigned"]
                         + participant["required_logical_state"]["declared_shared"]
                         + participant["required_logical_state"]["required_metadata"])
@@ -239,6 +248,21 @@ class CommittedEvidenceTests(unittest.TestCase):
             self.assertEqual(covered, sorted(declared), participant["participant_id"])
             self.assertEqual(participant["required_artifact_bytes"],
                              sum(r["length"] for r in participant["required_artifacts"]))
+
+    def test_retained_digest_chain_validates_complete_documents(self):
+        plan = json.loads((EVIDENCE / "frozen-plan.json").read_text())
+        requirements = json.loads((EVIDENCE / "participant-requirements.json").read_text())
+        authorization = json.loads((EVIDENCE / "realization-authorization.json").read_text())
+        for document, identity in ((plan, "plan_digest"),
+                                   (requirements, "requirements_digest"),
+                                   (authorization, "authorization_digest")):
+            validate_self_identity(document, identity_field=identity)
+        self.assertEqual(requirements["plan_digest"], plan["plan_digest"])
+        self.assertEqual(authorization["plan_digest"], plan["plan_digest"])
+        self.assertEqual(authorization["requirements_digest"], requirements["requirements_digest"])
+        for participant in requirements["participants"]:
+            validate_self_identity(participant, identity_field="participant_requirements_digest")
+            self.assertEqual(participant["plan_digest"], plan["plan_digest"])
 
     def test_manifest_detects_tampering(self):
         summary_path = EVIDENCE / "canonical-summary.json"

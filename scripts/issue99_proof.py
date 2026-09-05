@@ -163,7 +163,7 @@ class _Timing:
 
 
 def _records_index(requirements: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
-    return {record["content_digest"]: record
+    return {record["artifact_id"]: record
             for participant in requirements["participants"]
             for record in participant["required_artifacts"]}
 
@@ -445,7 +445,7 @@ def run_campaign(out_dir: Path | None = None) -> dict[str, Any]:
 
             # -- accounting ----------------------------------------------------
             ledger_document = ledger.document(
-                records_by_digest=_records_index(requirements),
+                records_by_artifact_id=_records_index(requirements),
                 participants=_ledger_participants(requirements))
             evidence["acquisition-ledger.json"] = ledger_document
             aggregate = ledger_document["aggregate"]
@@ -647,15 +647,22 @@ def _upstream_coverage(requirements: Mapping[str, Any],
     alone a complete model repository. Small runtime metadata may be wholly
     possessed when declared as ``required_metadata``.
     """
-    covered: dict[str, int] = {}
+    ranges: dict[str, list[tuple[int, int]]] = {}
     for record in _records_index(requirements).values():
         origin = record["origin"]
         name = origin["source_object"]
         if record["kind"] == "byte_range":
-            span = origin["byte_end"] - origin["byte_start"]
+            span = (origin["byte_start"], origin["byte_end"])
         else:
-            span = record["length"]
-        covered[name] = covered.get(name, 0) + span
+            span = (0, record["length"])
+        ranges.setdefault(name, []).append(span)
+    covered: dict[str, int] = {}
+    for name, spans in ranges.items():
+        end = 0
+        covered[name] = 0
+        for start, stop in sorted(spans):
+            covered[name] += max(0, stop - max(start, end))
+            end = max(end, stop)
     return {
         name: round(covered.get(name, 0) / spec["length"], 6)
         for name, spec in catalog["objects"].items()
@@ -736,6 +743,58 @@ def _run_negative_controls(*, work: Path, source_root: Path, catalog: Mapping[st
     controls["unauthorized_source"]["zero_bytes_moved"] = zero_bytes_moved
     controls["unauthorized_source"]["structural_pass"] = zero_bytes_moved
 
+    spoof = LocalFileSource(source_id=file_source.source_id, root=work / "spoofed-source")
+    controls["spoofed_authorized_source"] = _fail_closed(
+        acquire_artifact, cache=node_delta, source=spoof,
+        record=config_record, authorization=coordinator, participant_id="exec.a",
+        ledger=ledger, expected_reason="SOURCE_UNAUTHORIZED")
+    controls["spoofed_authorized_source"]["zero_bytes_moved"] = not spoof.access_log
+    controls["spoofed_authorized_source"]["structural_pass"] = not spoof.access_log
+
+    drifted_plan = copy.deepcopy(plan)
+    drifted_plan["strategy"]["selected_before_execution"] = False
+    controls["stale_plan_identity"] = _fail_closed(
+        derive_participant_requirements, drifted_plan, resolver,
+        expected_reason="RECONCILIATION_MISMATCH")
+    controls["stale_plan_identity"]["authorization_attempt"] = _fail_closed(
+        CoordinatorAuthority, plan=drifted_plan, requirements=requirements,
+        eligible_sources=[http_source.descriptor()], expected_reason="RECONCILIATION_MISMATCH")
+    drifted_requirements = copy.deepcopy(requirements)
+    drifted_requirements["participants"][0]["required_artifact_bytes"] += 1
+    controls["stale_requirements_identity"] = _fail_closed(
+        CoordinatorAuthority, plan=plan, requirements=drifted_requirements,
+        eligible_sources=[http_source.descriptor()], expected_reason="RECONCILIATION_MISMATCH")
+    drifted_authority = CoordinatorAuthority(
+        plan=plan, requirements=requirements, eligible_sources=[http_source.descriptor()])
+    drifted_authority.authorization["requirements_digest"] = "sha256:drifted"
+    controls["stale_authorization_identity"] = _fail_closed(
+        acquire_artifact, cache=node_delta, source=http_source, record=config_record,
+        authorization=drifted_authority, participant_id="exec.a", ledger=ledger,
+        expected_reason="RECONCILIATION_MISMATCH")
+
+    # The cache must verify an existing object before it records a hit.
+    corrupt_cache = NodeArtifactCache(work / "corrupt-cache")
+    acquire_artifact(cache=corrupt_cache, source=http_source, record=config_record,
+                     authorization=coordinator, participant_id="exec.a", ledger=ledger)
+    corrupt_cache.lookup(config_record["content_digest"]).write_bytes(
+        b"!" * config_record["length"])
+    events_before = len(ledger.events)
+    requests_before = len(http_source.access_log)
+    controls["corrupt_local_cache"] = _fail_closed(
+        acquire_artifact, cache=corrupt_cache, source=http_source, record=config_record,
+        authorization=coordinator, participant_id="exec.a", ledger=ledger,
+        expected_reason="CACHE_OBJECT_TAMPERED")
+    runtime = MiniLmParticipantRuntime(
+        plan=plan, participant_requirements=participant_a, cache=corrupt_cache)
+    controls["corrupt_local_cache"]["materialization_attempt"] = _fail_closed(
+        runtime._artifact_bytes, config_record, expected_reason="CACHE_OBJECT_TAMPERED")
+    hit_bytes = sum(e["bytes"] for e in ledger.events[events_before:]
+                    if e["event"] == "CACHE_HIT")
+    controls["corrupt_local_cache"]["verified_cache_hit_bytes"] = hit_bytes
+    controls["corrupt_local_cache"]["structural_pass"] = (
+        hit_bytes == 0 and len(http_source.access_log) == requests_before
+        and runtime.staging_bytes_read == 0)
+
     # 5. partial-transfer state bound to another artifact is discarded/restarted.
     node_eps = NodeArtifactCache(work / "node-eps-cache")
     embed = next(r for r in participant_a["required_artifacts"]
@@ -805,7 +864,7 @@ def _run_negative_controls(*, work: Path, source_root: Path, catalog: Mapping[st
     tampered_plan = copy.deepcopy(plan)
     tampered_plan["participants"][0]["required_state"]["assigned_logical_state"].append(
         "whole.model.repository")
-    tampered_plan["plan_digest"] = core.self_digest(tampered_plan)
+    tampered_plan["plan_digest"] = core.self_digest(tampered_plan, identity_field="plan_digest")
     controls["whole_model_injection"] = _fail_closed(
         derive_participant_requirements, tampered_plan, resolver,
         expected_reason="UNDECLARED_REQUIREMENT_ARTIFACT")
@@ -822,7 +881,7 @@ def _run_negative_controls(*, work: Path, source_root: Path, catalog: Mapping[st
                 "source_object_length": len(vision_bytes)})
     controls["whole_model_injection"]["acquisition_attempt"] = _fail_closed(
         coordinator.check_acquisition, participant_id="exec.a",
-        artifact_record=vision_record, source_id=http_source.source_id,
+        artifact_record=vision_record, source_descriptor=http_source.descriptor(),
         expected_reason="UNDECLARED_REQUIREMENT_ARTIFACT")
     controls["whole_model_injection"]["structural_pass"] = not (
         http_source.requests_for(vision_name))
