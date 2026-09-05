@@ -337,7 +337,7 @@ def evaluate_decision(
 ) -> dict[str, Any]:
     """Evaluate ONE canonical-prefix decision under the frozen v4 gate order.
 
-    Order (issue #86 §9; #83 §4.2 fail-closed order):
+    Order (issue #95; inherited #83 §4.2 fail-closed order):
       3. decision_local_error <= E_D (else DECISION_LOCAL_BOUND_EXCEEDED);
       4. actual candidate full-vocabulary winner j in D(r) (else
          DECISION_DOMAIN_ESCAPE);

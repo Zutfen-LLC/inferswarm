@@ -316,12 +316,13 @@ def build() -> dict[str, dict]:
         "required": ["calibration_corpus_sha256", "calibration_summary_sha256",
                      "calibration_evidence_sha256", "selected_stress_sha256",
                      "decision_domain_manifest_sha256", "derivation_program_sha256",
-                     "holdout_commitment_sha256", "argmax_tie_break"],
+                     "holdout_commitment_sha256", "holdout_custody_record_sha256", "argmax_tie_break"],
         "properties": {
             "calibration_corpus_sha256": SHA, "calibration_summary_sha256": SHA,
             "calibration_evidence_sha256": {"type": "array", "minItems": 1, "uniqueItems": True, "items": SHA},
             "selected_stress_sha256": SHA, "decision_domain_manifest_sha256": SHA,
             "derivation_program_sha256": SHA, "holdout_commitment_sha256": SHA,
+            "holdout_custody_record_sha256": SHA,
             "argmax_tie_break": {"const": TIE_BREAK},
         },
     }

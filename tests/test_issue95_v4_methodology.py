@@ -1,5 +1,6 @@
 import ast
 import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -69,6 +70,8 @@ class Issue95V4MethodologyTests(unittest.TestCase):
         telemetry = schemas['telemetry-reference-bands.schema.json']['properties']['bands']
         self.assertEqual(len(telemetry['required']), 12)
         self.assertFalse(set(core['required']) & set(telemetry['required']))
+        for doc in (schemas['core-threshold-manifest.schema.json'], schemas['telemetry-reference-bands.schema.json']):
+            self.assertIn('holdout_custody_record_sha256', doc['properties']['provenance']['required'])
 
     def test_v4_has_no_stale_population_coverage_contract(self):
         v4 = ROOT / 'docs/qualification/gemma4-12b-it-v4'
@@ -77,6 +80,19 @@ class Issue95V4MethodologyTests(unittest.TestCase):
         text = '\n'.join(sources).lower()
         for forbidden in ('population_content', 'minimum_sample_size_v4', 'statistical_design_v4', '99%-coverage', 'maximum-order-statistic tolerance', '16-family'):
             self.assertNotIn(forbidden, text)
+
+    def test_unseal_rejects_substituted_custody_bytes_before_key_handling(self):
+        from issue74_methodology import sha256_file
+        from verify_issue95_v4_unseal import validate_unseal_preconditions
+        custody = ROOT / 'docs/qualification/gemma4-12b-it-v4/manifests/holdout-custody-record.json'
+        with tempfile.TemporaryDirectory() as temp:
+            temp = Path(temp)
+            threshold = temp / 'core.json'
+            threshold.write_text(json.dumps({'schema': 'inferswarm.issue95.v4-core-threshold-manifest/1', 'holdout_state': 'SEALED_NOT_CONSUMED', 'provenance': {'holdout_custody_record_sha256': sha256_file(custody)}}))
+            substitute = temp / 'custody.json'
+            substitute.write_text(custody.read_text() + ' ')
+            with self.assertRaisesRegex(MethodologyError, 'HOLDOUT_CUSTODY_RECORD_SHA_MISMATCH'):
+                validate_unseal_preconditions(core_threshold_path=threshold, expected_core_threshold_sha256=sha256_file(threshold), ciphertext=ROOT / 'docs/qualification/gemma4-12b-it-v4/sealed/holdout.cms', certificate=ROOT / 'docs/qualification/gemma4-12b-it-v4/sealed/recipient-certificate.pem', custody_record_path=substitute, expected_custody_record_sha256=sha256_file(custody), private_key_path=Path('/nonexistent'))
 
     def test_cpu_static_sources_do_not_import_runtime_stack(self):
         forbidden = {'torch', 'transformers', 'triton', 'cuda'}
