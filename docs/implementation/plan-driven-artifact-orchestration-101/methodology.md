@@ -1,6 +1,6 @@
 # Issue #101 CPU orchestration methodology
 
-Status: Frozen before canonical execution.
+Status: Revised for the PR #102 correctness repair. Frozen before regeneration.
 Implementation base: `53fb8f4c7ba3108a21f983712e5cbdb747a26600`.
 
 This proof implements the internal lifecycle in ADR 0009.
@@ -21,14 +21,19 @@ Epoch 2 assigns coefficients 1, 4, and 5 to Nodes A and C.
 Realize A first. A must reuse 1 locally, acquire 4 from C, and acquire 5
 from origin. After A publishes, C must reuse 1 and 4 locally and acquire
 5 from A. C must retain optional coefficient 3. A must retain coefficient 2.
+Participant P-C runs on Node C. Participant P-A runs on Node A.
 Each participant evaluates its three coefficients at input 2.
 Independent reference literals are 23 for epoch 1 and 29 for epoch 2.
 Materialization reads only verified cache objects and reconciles all requirements.
 
 ## Control and publication
 
-Use complete Node inventory snapshots with artifact-specific attribution.
-A trusted in-process receipt binds each snapshot to its verified publication.
+Use complete Node inventory snapshots with two separate sets.
+The local set contains durable objects with reverified content digests and lengths.
+The advertised set contains only explicit Source publications with artifact records.
+Match frozen artifact requirements to the verified local content set.
+Use only the advertised set to build the peer Source index.
+A trusted in-process receipt binds both sets to Node verification.
 The receipt is an internal capability, not a wire authentication protocol.
 The Coordinator accepts only registered exact Node descriptors.
 It replaces the previous snapshot and rejects snapshot sequence rollback.
@@ -42,7 +47,34 @@ A replacement freeze invalidates all previous attempts.
 After a source failure, retain the failure and request fresh authorization.
 The Coordinator may exclude that exact artifact/source pair for that plan.
 No Node can authorize fallback. Interrupted data uses issue #99 resume rules.
-Only successful verification and cache publication permit inventory publication.
+Only successful verification permits an explicit peer Source publication.
+Acquisition and local cache hits do not publish peer availability automatically.
+The canonical peer-reuse campaign explicitly enables publication after acquisition.
+
+## Repair controls
+
+Populate Node C's durable cache with coefficient 4 without peer advertisement.
+Remove the upstream object and register no origin Sources.
+Freeze a plan for Participant P-local on Node C.
+Require a local delta hit, an empty missing set, and zero Source reads.
+Require a cache-hit result and an empty peer Source index.
+Reconstruct the Node and cache objects around the same durable directory.
+Use a new Coordinator context and repeat the proof in epoch 2.
+Then explicitly publish the artifact and require its Source index entry.
+This control does not claim durable Coordinator sessions or snapshot sequences.
+
+Run Participants P1 and P2 on Node C with disjoint requirements 1 and 3.
+Repeat with the opposite Participant order.
+Require each delta, attempt, execution, and reconciliation to use its exact Participant.
+Reject P1's artifact under P2's delta before Source reads.
+Reject use of P1's attempt by P2 through the unchanged acquisition primitive.
+Reject P1's artifacts or Materialization records in P2's reconciliation.
+Attribute a retained four-byte P1 read to P2 as an accounting negative control.
+Require four unrequired bytes and a failed acceptance check in both orders.
+Remove that injected record before valid-campaign accounting.
+In epoch 2, assign coefficient 1 to both Participants.
+Require both Participants to reuse Node C's unadvertised verified cache.
+Retain the valid records and the injected accounting control separately.
 
 ## Required controls
 
@@ -65,9 +97,23 @@ Record failure reasons, transfer bytes, publication, and fallback authorization.
 ## Acceptance and custody
 
 Derive unrequired acquisition bytes from frozen requirements and transfer events.
+Index requirements and realization records by `(epoch, participant_id)`.
+Check the Node identity against the exact frozen Participant.
+Retain both Participant and Node IDs in transfer, lifecycle, cache-hit,
+Materialization, reconciliation, and realization publication records.
+Initial cache seeding and inventory snapshots remain Node-scoped records.
 Derive Coordinator byte observations from the guards on valid control instances.
-Derive replacement reacquisition from acquired events and pre-epoch inventory.
+Derive replacement reacquisition from Source reads and verified local content
+before each exact realization. Do not use peer advertisements for this calculation.
+Count optional retained content once per Node and epoch.
 Derive unverified advertisement count from receipt validation and publication audit.
+Derive the complete-repository prerequisite claim from successful reconciled
+executions with incomplete verified local inventories before and after realization.
+Retain each execution witness and its missing content digests.
+Also check the generic producer for `has_complete_model_repository`.
+Fail the producer if either check cannot disprove the prerequisite.
+A mutation test inserts a complete-repository gate into plan freezing.
+The canonical producer must fail under that mutation.
 Retain exact descriptors, source reads, lifecycle events, cache-hit bytes,
 per-epoch deltas, inventories, authorizations, and execution comparisons.
 Retain producer hashes and a manifest over all evidence and local producers.
