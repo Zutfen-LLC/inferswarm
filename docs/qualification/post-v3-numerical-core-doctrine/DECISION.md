@@ -1,9 +1,8 @@
 # Post-v3 numerical-core doctrine decision (issue #93)
 
-Status: proposed doctrine gate; pending maintainer acceptance; prospective,
-API-unfrozen
+Status: accepted doctrine gate; prospective, API-unfrozen
 
-Proposed terminal disposition:
+Terminal disposition:
 
 `NUMERICAL_CORE_TWO_TIER_DOCTRINE_ACCEPTED`
 
@@ -130,7 +129,7 @@ statistical model, parameter, threshold, corpus, sample size, or holdout rule.
 
 ## Q6 — authority mapping
 
-ADR 0010 remains the accepted three-layer correctness decision. Proposed ADR
+ADR 0010 remains the accepted three-layer correctness decision. Accepted ADR
 0011 refines its numerical-layer supplement, states the tier rule, and preserves
 historical frozen-contract conjunctions.
 `docs/architecture/numerical-equivalence-contract.md` is the detailed
@@ -138,11 +137,11 @@ normative wording; `ROADMAP.md` sequences the successor methodology gate.
 
 ### Retained before-to-after normative mapping
 
-| Current authority / wording | Proposed replacement wording | Historical-contract carve-out |
+| Current authority / wording | Accepted replacement wording | Historical-contract carve-out |
 |---|---|---|
 | ADR 0010 §1–§3: qualified numerical execution equivalence is one conjunctive correctness layer, with strategy-declared numerical gates. | ADR 0011 retains that layer and makes its qualification core conjunctive: exact integrity, finite policy, acceptance-bearing numerical gates, and semantic gates. | The three-layer architecture is unchanged; issue #88 remains `V3_HOLDOUT_FAIL` under its frozen all-envelope conjunction. |
 | Numerical-equivalence contract §2: strategy owns “mandatory numerical metrics and gates.” | The strategy prospectively owns acceptance-bearing numerical gates **and** mandatory telemetry families, including their tier identity. | No historical comparator or evidence record receives a retroactive tier change. |
-| Contract §5.1 / §6: any exceeded mandatory frozen numerical limit is an unconditional failure. | Any exceeded **acceptance-bearing** frozen numerical limit is an unconditional failure; a finite mandatory-telemetry exceedance is evidence-health material, not qualification failure. | This proposed distinction applies only to a successor comparator version. It does not waive the #88 final-hidden-state limit. |
+| Contract §5.1 / §6: any exceeded mandatory frozen numerical limit is an unconditional failure. | Any exceeded **acceptance-bearing** frozen numerical limit is an unconditional failure; a finite mandatory-telemetry exceedance is evidence-health material, not qualification failure. | This accepted distinction applies only to a successor comparator version. It does not waive the #88 final-hidden-state limit. |
 | Contract §7: mandatory metrics participate in the prospectively frozen statistical qualification method. | Future methodology declares every family's tier before calibration; familywise qualification accounting applies to core families, while telemetry alert/reference bands are not acceptance limits unless expressly promoted. | No successor threshold, sample size, corpus, or holdout is selected here, and consumed `h86-*` data remain ineligible. |
 
 ## Non-claims
