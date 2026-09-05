@@ -78,6 +78,9 @@ jobs:
       - name: Check issue 95 v4 prediction-aligned methodology (CPU-only)
         run: python3 -m unittest tests.test_issue95_v4_methodology tests.test_issue95_v4_thresholds -v
 
+      - name: Check issue 99 plan-driven artifact acquisition (CPU-only)
+        run: python3 -m unittest tests.test_issue99_artifact_core tests.test_issue99_proof -v
+
       - name: Check internal Markdown links
         run: |
           python3 - <<'EOF'

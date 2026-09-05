@@ -37,6 +37,7 @@ Those terms are not current generic doctrine unless reaffirmed by ADR
 | Host staging reclamation | issue #53 | **Complete: `HOST_STAGING_RECLAMATION_PASS`.** |
 | R3 — minimum automatic planning | issue #55 | **Complete: `R3_MINIMUM_AUTOMATIC_PLANNING_PASS`.** |
 | R4 — physical two-Node boundary | issue #57 | **Complete: `R4_MULTI_NODE_BOUNDARY_PASS`; 1-GbE arm `R4_1GBE_PRIMITIVE_CAPACITY_VIABLE`.** |
+| Plan-driven artifact acquisition | issue #99 | **Complete: `PLAN_DRIVEN_ARTIFACT_ACQUISITION_PASS`.** Minimum ADR 0009 acquisition seam; record under [plan-driven-artifact-acquisition-99/](plan-driven-artifact-acquisition-99/). |
 
 The Phase-1 placement/correctness correction documents and retired N-series
 records remain historical methodology/provenance.
