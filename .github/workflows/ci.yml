@@ -81,6 +81,9 @@ jobs:
       - name: Check issue 99 plan-driven artifact acquisition (CPU-only)
         run: python3 -m unittest tests.test_issue99_artifact_core tests.test_issue99_proof -v
 
+      - name: Check issue 101 plan-driven artifact orchestration (CPU-only)
+        run: python3 -m unittest tests.test_issue101_orchestration tests.test_issue101_proof -v
+
       - name: Check internal Markdown links
         run: |
           python3 - <<'EOF'
