@@ -11,6 +11,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 from issue74_methodology import MethodologyError
 from issue95_v4_contract import comparator_tier_contract, derive_separate_bands, predictive_design
+import issue95_v4_methodology as v4
 from issue95_v4_methodology import derive_prediction_aligned_design
 
 
@@ -123,6 +124,109 @@ class Issue95V4MethodologyTests(unittest.TestCase):
             names = {node.names[0].name.split('.')[0] for node in ast.walk(tree) if isinstance(node, ast.Import)}
             names |= {node.module.split('.')[0] for node in ast.walk(tree) if isinstance(node, ast.ImportFrom) and node.module}
             self.assertFalse(names & forbidden, (name, names & forbidden))
+
+    def test_v4_decision_domain_is_reference_top_1024_with_cutoff_ties(self):
+        no_ties = [float(index) for index in range(1025)]
+        domain = v4.decision_domain(no_ties)
+        self.assertEqual(len(domain), 1024)
+        self.assertEqual(domain, tuple(range(1, 1025)))
+        self.assertIn(v4.frozen_argmax(no_ties), domain)
+
+        # 1,023 values are strictly above the cutoff; all three cutoff ties belong.
+        cutoff_ties = [10.0, 10.0, 10.0] + [float(index) for index in range(11, 1034)]
+        tied_domain = v4.decision_domain(cutoff_ties)
+        self.assertEqual(len(tied_domain), 1026)
+        self.assertEqual(tied_domain[:3], (0, 1, 2))
+        self.assertIn(v4.frozen_argmax(cutoff_ties), tied_domain)
+        wrong_fixed_width = tuple(sorted(range(len(cutoff_ties)), key=lambda i: cutoff_ties[i], reverse=True)[:1024])
+        self.assertNotEqual(tied_domain, wrong_fixed_width)
+        self.assertEqual(v4.decision_domain(cutoff_ties), tied_domain)  # reference-only construction
+        with self.assertRaisesRegex(MethodologyError, 'reference logits must be finite'):
+            v4.decision_domain([0.0, float('nan')])
+
+    def test_v4_frozen_argmax_and_evaluator_identity_fail_closed(self):
+        self.assertEqual(v4.frozen_argmax([2.0, 7.0, 7.0]), 1)
+        self.assertEqual(v4.frozen_argmax([7.0, 6.0, 8.0]), 2)
+        for logits in ([float('inf')], [0.0, float('nan')]):
+            with self.subTest(logits=logits):
+                with self.assertRaisesRegex(MethodologyError, 'finite logits'):
+                    v4.frozen_argmax(logits)
+        reference = [3.0, 2.0, 1.0]
+        with self.assertRaisesRegex(MethodologyError, 'argmax/tie-break mismatch'):
+            v4.evaluate_decision(reference, reference, v4.decision_domain(reference), 0.0,
+                                 tie_break_identity='alternate',
+                                 domain_identity=v4.decision_domain_construction_identity())
+
+    def test_v4_decision_local_bound_exceedance_precedes_all_adjudication(self):
+        reference = [10.0, 9.0, 0.0]
+        domain = v4.decision_domain(reference)
+        combined_failure = v4.evaluate_decision(
+            reference, [7.0, 9.0, 11.0], domain, 1.0,
+            tie_break_identity=v4.argmax_tie_break_identity(),
+            domain_identity=v4.decision_domain_construction_identity())
+        self.assertEqual(combined_failure['verdict'], v4.DECISION_LOCAL_BOUND_EXCEEDED)
+        direct_control = v4.evaluate_decision(
+            reference, [8.0, 9.0, 0.0], domain, 0.5,
+            tie_break_identity=v4.argmax_tie_break_identity(),
+            domain_identity=v4.decision_domain_construction_identity())
+        self.assertEqual(direct_control['verdict'], v4.DECISION_LOCAL_BOUND_EXCEEDED)
+
+    def test_v4_domain_escape_precedes_stability_adjudication(self):
+        reference = [0.0] + [float(index) for index in range(1, 1025)]
+        domain = v4.decision_domain(reference)
+        self.assertNotIn(0, domain)
+        result = v4.evaluate_decision(
+            reference, [2000.0] + reference[1:], domain, 0.0,
+            tie_break_identity=v4.argmax_tie_break_identity(),
+            domain_identity=v4.decision_domain_construction_identity())
+        self.assertEqual(result['verdict'], v4.DECISION_DOMAIN_ESCAPE)
+        self.assertNotIn('stability', result)
+        self.assertNotIn('m_d_hex', result)
+
+    def test_v4_stable_branch_requires_exact_reference_winner(self):
+        reference = [10.0, 9.0, 0.0]
+        domain = v4.decision_domain(reference)
+        e_d = 0.4
+        self.assertGreater(v4.margin_on_domain(reference, domain), 2.0 * e_d)
+        self.assertEqual(v4.ambiguity_set(reference, domain, e_d), (0,))
+        passed = v4.evaluate_decision(reference, [9.8, 9.0, 0.0], domain, e_d,
+                                      tie_break_identity=v4.argmax_tie_break_identity(),
+                                      domain_identity=v4.decision_domain_construction_identity())
+        # The evaluator consumes the executor's actual full-vocabulary winner;
+        # inject an in-domain different emitted token to exercise the stable gate.
+        mismatch = v4.evaluate_decision(reference, [9.8, 9.0, 0.0], domain, e_d,
+                                        tie_break_identity=v4.argmax_tie_break_identity(),
+                                        domain_identity=v4.decision_domain_construction_identity(),
+                                        candidate_emitted_token=1)
+        self.assertEqual((passed['stability'], passed['verdict']), ('STABLE', v4.SEMANTIC_PASS))
+        self.assertEqual((mismatch['stability'], mismatch['verdict']), ('STABLE', 'STABLE_DECISION_MISMATCH'))
+
+    def test_v4_unstable_branch_uses_only_the_frozen_ambiguity_set(self):
+        equality_reference = [10.0, 9.0, 0.0]
+        equality = v4.evaluate_decision(equality_reference, equality_reference,
+                                        v4.decision_domain(equality_reference), 0.5,
+                                        tie_break_identity=v4.argmax_tie_break_identity(),
+                                        domain_identity=v4.decision_domain_construction_identity())
+        self.assertEqual((equality['stability'], equality['verdict']), ('UNSTABLE', v4.SEMANTIC_PASS))
+
+        reference = [10.0, 9.2, 0.0]
+        domain = v4.decision_domain(reference)
+        allowed = v4.evaluate_decision(reference, [9.5, 9.6, 0.0], domain, 0.5,
+                                       tie_break_identity=v4.argmax_tie_break_identity(),
+                                       domain_identity=v4.decision_domain_construction_identity())
+        outside = v4.evaluate_decision(reference, reference, domain, 0.5,
+                                       tie_break_identity=v4.argmax_tie_break_identity(),
+                                       domain_identity=v4.decision_domain_construction_identity(),
+                                       candidate_emitted_token=2)
+        self.assertEqual((allowed['stability'], allowed['verdict']), ('UNSTABLE', v4.SEMANTIC_PASS))
+        self.assertEqual((outside['stability'], outside['verdict']), ('UNSTABLE', 'UNSTABLE_DECISION_INADMISSIBLE'))
+
+    def test_v4_semantic_contract_identities_remain_frozen(self):
+        self.assertEqual(v4.decision_domain_construction_identity(), 'reference-top-1024-with-cutoff-ties/1')
+        self.assertEqual(v4.argmax_tie_break_identity(), 'ARGMAX_FIRST_MAX/lowest-token-id-among-exactly-equal-fp32-maxima')
+        self.assertEqual(v4.DECISION_LOCAL_BOUND_EXCEEDED, 'DECISION_LOCAL_BOUND_EXCEEDED')
+        self.assertEqual(v4.DECISION_DOMAIN_ESCAPE, 'DECISION_DOMAIN_ESCAPE')
+        self.assertEqual(v4.SEMANTIC_PASS, 'SEMANTIC_PASS')
 
 
 if __name__ == '__main__':
