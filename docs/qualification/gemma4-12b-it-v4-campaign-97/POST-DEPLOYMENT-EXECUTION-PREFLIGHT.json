@@ -1,0 +1,21 @@
+{
+  "schema": "inferswarm.issue97.v4-post-deployment-execution-preflight/1",
+  "state": "V4_CALIBRATION_EXECUTION_READY",
+  "producer_sha": "57dfcb7289efac8f66de5b3abbe8de04f2580f75",
+  "build_realization": {
+    "authorized_scope": "setup.py build_ext --inplace only; no extension import/dlopen, CUDA runtime/device initialization, model construction, model execution, or CUDA kernel execution",
+    "command": "CUDA_HOME=/usr/local/cuda TMPDIR=/var/tmp PATH=/home/zutfen/FreeToken/.venv/bin:$PATH /home/zutfen/FreeToken/.venv/bin/python setup.py build_ext --inplace",
+    "setup_py_sha256": "882256e63982adb03e70beb20d4a2a86b36c37c32001de67653a5ee71a564257",
+    "toolchain": "Python 3.13.5; nvcc CUDA 13.1; ninja from the existing FreeToken venv",
+    "nodes": {
+      "inferswarm01": {"head": "57dfcb7289efac8f66de5b3abbe8de04f2580f75", "dirty_lines": 0, "extensions": {"_pinned_tensor": "b1b375d08aacd996da3e9e78237115fef877d1336f511e616ef39aefbb8564ad", "_cpu_moe": "e60a86da5394d181341b97267e0a8570441640c25192488e5023207377b53c7a", "_ple_store": "7427f7294bd3138047faba82727a9707fc94a6646222be9c5d4d2402c28f9174"}},
+      "inferswarm03": {"head": "57dfcb7289efac8f66de5b3abbe8de04f2580f75", "dirty_lines": 0, "extensions": {"_pinned_tensor": "b1b375d08aacd996da3e9e78237115fef877d1336f511e616ef39aefbb8564ad", "_cpu_moe": "e60a86da5394d181341b97267e0a8570441640c25192488e5023207377b53c7a", "_ple_store": "7427f7294bd3138047faba82727a9707fc94a6646222be9c5d4d2402c28f9174"}},
+      "inferswarm04": {"head": "57dfcb7289efac8f66de5b3abbe8de04f2580f75", "dirty_lines": 0, "extensions": {"_pinned_tensor": "0bcf5c85aff0c3153b579a154932ab59577dc8c7017b6e58abc0b7450dc36238", "_cpu_moe": "e60a86da5394d181341b97267e0a8570441640c25192488e5023207377b53c7a", "_ple_store": "cd385af597b5afca0cd508be6ee3079f64cc4e727428df24a75d73b91df3ab1b"}}
+    },
+    "adjudication": "01==03 byte-identical for all three extensions. 04 differs only for _pinned_tensor and _ple_store; each preserves the same NEEDED linkage as 01/03, while _cpu_moe is byte-identical. This is accepted non-semantic host build-path/build-ID metadata per the established #81/#88 precedent."
+  },
+  "resolved_census": {"flashinfer": "CENSUS_FALSE_POSITIVE_WRONG_DISTRIBUTION_NAME; flashinfer-python==0.6.17 on all nodes", "cublas": "nvidia-cublas==13.1.0.3; libcublas.so.13 sha256 89b60e079abfb9ebcc7a57aedfa4d5d575efe40f9abfc18d868b0c69a295ec74; libcublasLt.so.13 sha256 82ced05138be3a1e4d6802dcd4290569932601578f10f6f40f3f15fd525390f4"},
+  "subject": {"model_path": "/srv/models/gemma-r6", "checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d", "tokenizer_sha256": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f", "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7"},
+  "chain_plan": {"sha256": "a91e3f71353905d4af3722408327a9f9bda0f2655061ae9e44f51d9a3edf28fc", "digest": "sha256:ee845188d3328bdec29bf4b09d71f7ccda0701ff5758cb1d8a70460a40fecfb1", "stages": ["[0,16)", "[16,32)", "[32,48)"]},
+  "holdout": {"state": "SEALED_NOT_CONSUMED", "unseal_authorized": false, "ciphertext_sha256": "17757acb091fd5b3b1a4ef7b8fcd392b448e91eee39c04003afd9a4ccac4a844", "certificate_sha256": "99bb4eb992d3a38eb54f6821c4477edc7ad30df977333d39a5b120dac8e57430", "public_key_der_sha256": "629b2ab2320cfe1517b5eb435edf241cf30d109b8da0bc9b62002165d6a9fdd2"}
+}
