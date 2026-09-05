@@ -1,6 +1,6 @@
 59a9a5aa714e50cbf550ac1b051f1fec9a354ef13fb7af564f32694820162326  docs/qualification/gemma4-12b-it-v4/METHODOLOGY.md
 10d9cd1675d89e5ef9e2c078f94c7c8b218dc0db803206a3ae33815d32d8e248  docs/qualification/gemma4-12b-it-v4/TOOLING.md
-4b024969ab2f659195a4c73a4a6523f77b8f35d84354b7732fcab09a98aa63de  docs/qualification/gemma4-12b-it-v4/manifests/build-audit.json
+c12b5c2ecbd36e9d9bcf4acbd198d7cb89db7ef3be0156796fc9ae4d63d0265d  docs/qualification/gemma4-12b-it-v4/manifests/build-audit.json
 b14d0377bc0ddc0a585f4f216aee52e1ac2b2e1727b140f41d3b3054be40119e  docs/qualification/gemma4-12b-it-v4/manifests/calibration-corpus.json
 2fd21964a3a21bf4f2dce747c3fb558ab19d231bba1e4dda85f62c9b72e3a6be  docs/qualification/gemma4-12b-it-v4/manifests/comparator-tier-contract.json
 2b0dcebf813f52e1ef9ceac440a1a69358c9638c25f709803bd8d243829a2210  docs/qualification/gemma4-12b-it-v4/manifests/disjointness-proof.json

@@ -85,6 +85,18 @@ def _identities(cases: Any, *, count: int, prefix: str, label: str) -> dict[str,
     return result
 
 
+def _balanced_cells(cases: Any, *, per_cell: int, expected_cells: int, label: str) -> None:
+    cells: dict[tuple[str, str], int] = {}
+    for case in cases:
+        parts = case.get("case_id", "").split("-") if isinstance(case, dict) else []
+        if len(parts) != 4:
+            raise MethodologyError(f"v4 {label} case ID does not encode a frozen cell")
+        cell = (parts[1], parts[2])
+        cells[cell] = cells.get(cell, 0) + 1
+    if len(cells) != expected_cells or set(cells.values()) != {per_cell}:
+        raise MethodologyError(f"v4 {label} cells must be exactly {expected_cells} x {per_cell}")
+
+
 def _metric(value: Any, *, label: str) -> float:
     if not isinstance(value, str):
         raise MethodologyError(f"{label} must be hexadecimal float evidence")
@@ -250,8 +262,7 @@ def derive_v4_threshold_artifacts(*, calibration_corpus: dict[str, Any], stress_
                                   selection_commitment: dict[str, Any], reference_margin_summary: dict[str, Any],
                                   selected_stress: dict[str, Any], decision_domain_manifest: dict[str, Any],
                                   calibration_summary: dict[str, Any], comparator_contract: dict[str, Any],
-                                  holdout_commitment: dict[str, Any], holdout_custody_record: dict[str, Any],
-                                  program_sha256: str) -> dict[str, Any]:
+                                  holdout_commitment: dict[str, Any], holdout_custody_record: dict[str, Any]) -> dict[str, Any]:
     """Fail-closed v4 derivation from frozen identities and complete evidence."""
     _require_frozen(calibration_corpus, sha=V4_CALIBRATION_CORPUS_SHA256, schema=V4_CALIBRATION_SCHEMA, label="calibration corpus")
     _require_frozen(stress_pool, sha=V4_STRESS_POOL_SHA256, schema=V4_STRESS_POOL_SCHEMA, label="stress pool")
@@ -260,13 +271,16 @@ def derive_v4_threshold_artifacts(*, calibration_corpus: dict[str, Any], stress_
     _require_frozen(holdout_custody_record, sha=V4_HOLDOUT_CUSTODY_RECORD_SHA256, schema="inferswarm.issue95.v4-holdout-custody-record/1", label="holdout custody record")
     if holdout_commitment.get("state") != "SEALED_NOT_CONSUMED" or holdout_custody_record.get("holdout_state") != "SEALED_NOT_CONSUMED":
         raise MethodologyError("v4 holdout identity is not sealed and unconsumed")
+    program_sha256 = sha256_file(Path(__file__).resolve())
     if not is_sha256(program_sha256):
         raise MethodologyError("v4 derivation program identity must be SHA-256")
     if canonical_json_bytes(comparator_contract) != canonical_json_bytes(comparator_tier_contract()):
         raise MethodologyError("v4 comparator tier contract mismatch")
 
     statistical_ids = _identities(calibration_corpus.get("cases"), count=V4_STATISTICAL_CASES, prefix="c95-", label="calibration corpus")
+    _balanced_cells(calibration_corpus["cases"], per_cell=79, expected_cells=24, label="calibration corpus")
     pool_ids = _identities(stress_pool.get("cases"), count=48, prefix="p95-", label="stress pool")
+    _balanced_cells(stress_pool["cases"], per_cell=2, expected_cells=24, label="stress pool")
     replayed = _replay_selected_stress(stress_pool, reference_margin_summary, selection_commitment)
     if canonical_json_bytes(selected_stress) != canonical_json_bytes(replayed):
         raise MethodologyError("SELECTED_EIGHT_NOT_SELECTOR_DERIVED")
