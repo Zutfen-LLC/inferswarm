@@ -1,0 +1,85 @@
+{
+  "schema": "inferswarm.issue97.v4-applicability-preflight/1",
+  "issue": 97,
+  "recorded_at": "2026-09-05",
+  "methodology": {
+    "accepted_merge": "e12a6e3d5589044bace0c9555c0d364fb57a6229",
+    "contract_id": "inferswarm.gemma4-prediction-aligned-qualification/1",
+    "v4_manifest_sha256_verified": true
+  },
+  "subject": {
+    "model": "google/gemma-4-12B-it",
+    "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+    "checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "execution": "native BF16, Triton attention, deterministic eight-decision replay-prefill, one <=64-row replay chunk"
+  },
+  "producer": {
+    "repository": "Zutfen-LLC/FreeToken",
+    "branch": "inferswarm-97-v4-physical-qualification",
+    "commit": "0d8222656f15e52e7408c9aaa68586b21aec7a6e",
+    "state": "CLEAN_SOURCE_REQUIRED_ON_DEPLOYMENT"
+  },
+  "software": {
+    "python": "3.13.5",
+    "torch": "2.11.0+cu130",
+    "cuda_runtime": "13.0",
+    "triton": "3.6.0",
+    "transformers": "5.16.1",
+    "nvidia_driver": "610.57.04"
+  },
+  "topology": {
+    "reference": {
+      "host": "inferswarm04",
+      "gpu_uuid": "GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03",
+      "gpu_name": "NVIDIA GeForce RTX 3090",
+      "memory": "24576 MiB",
+      "pci_bus_id": "00000000:01:00.0"
+    },
+    "candidate": [
+      {
+        "role": "stage1",
+        "host": "inferswarm01",
+        "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+        "gpu_name": "NVIDIA GeForce RTX 3060",
+        "memory": "12288 MiB",
+        "pci_bus_id": "00000000:02:00.0"
+      },
+      {
+        "role": "stage2",
+        "host": "inferswarm01",
+        "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+        "gpu_name": "NVIDIA GeForce RTX 3060",
+        "memory": "12288 MiB",
+        "pci_bus_id": "00000000:03:00.0"
+      },
+      {
+        "role": "stage3",
+        "host": "inferswarm03",
+        "gpu_uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176",
+        "gpu_name": "NVIDIA GeForce RTX 3060",
+        "memory": "12288 MiB",
+        "pci_bus_id": "00000000:01:00.0"
+      }
+    ],
+    "nonparticipating_hardware": [
+      {
+        "host": "inferswarm03",
+        "gpu_uuid": "GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0",
+        "reason": "not selected for the frozen three-stage candidate path"
+      }
+    ]
+  },
+  "holdout": {
+    "state": "SEALED_NOT_CONSUMED",
+    "ciphertext_sha256": "17757acb091fd5b3b1a4ef7b8fcd392b448e91eee39c04003afd9a4ccac4a844",
+    "recipient_certificate_sha256": "99bb4eb992d3a38eb54f6821c4477edc7ad30df977333d39a5b120dac8e57430",
+    "recipient_public_key_der_sha256": "629b2ab2320cfe1517b5eb435edf241cf30d109b8da0bc9b62002165d6a9fdd2",
+    "custodians_verified": ["orchestrator-local", "inferswarm00-external"],
+    "unseal_authorized": false
+  },
+  "applicability_verdict": "PASS_FOR_CALIBRATION_DEPLOYMENT",
+  "limitations": [
+    "Pre-existing node worktrees were not reused; a fresh clean deployment of the recorded producer is required.",
+    "This preflight performs no model execution, CUDA initialization, threshold derivation, or holdout decryption."
+  ]
+}
