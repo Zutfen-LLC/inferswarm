@@ -61,6 +61,37 @@ under a versioned comparator contract and applicable qualification evidence.
 There is no universal epsilon and no assumption that one tolerance is valid for
 all tensor families, representations, models, or backends.
 
+### 1.2.1 Numerical-core tiers
+
+A comparator prospectively classifies every retained numerical family as either
+an **acceptance-bearing numerical gate** or **mandatory telemetry**. The
+qualification core is conjunctive: exact integrity, finite-output requirements,
+acceptance-bearing numerical gates, and semantic gates must pass. A valid
+exceedance of a core numerical gate fails that frozen qualification.
+
+A numerical checkpoint belongs in the core only when its bounded comparison is
+needed to establish a distinct strategy correctness property that the other
+core gates cannot establish: a direct strategy-consumed output, a theorem
+premise for a semantic gate, authoritative mutable or future-use state, a
+strategy semantic boundary requiring numerical equivalence, or an independently
+demonstrated correctness risk. Causal upstream influence alone is insufficient;
+it would make every intermediate tensor a gate. A full tensor domain specifies
+how a selected checkpoint is compared, not that every internal checkpoint is a
+core gate.
+
+Mandatory telemetry has frozen checkpoint/domain/reducer/finite/reporting
+semantics and retained evidence. Its numeric exceedance alone does not fail an
+otherwise passing qualification. An internal checkpoint may be telemetry only
+when a stronger downstream core observable fully exercises the property it was
+meant to protect on the same canonical input, without unobserved state lifetime
+or lossy semantic transformation. This downstream subsumption is unavailable
+for persistent or future-use state, authoritative mutable state, independently
+consumed surfaces, semantic-boundary values, or theorem prerequisites.
+
+Tier identity is part of the comparator contract and applicability identity.
+Moving a family between tiers creates a new prospective
+comparator/qualification version; it cannot repair a historical verdict.
+
 ### 1.3 Semantic output correctness
 
 A strategy declares semantic gates separately from tensor-error gates. For
@@ -145,7 +176,7 @@ contract**.
 The strategy defines:
 
 - comparison checkpoints and domains;
-- mandatory numerical metrics and gates;
+- acceptance-bearing numerical gates and mandatory telemetry families;
 - semantic output profile;
 - reference/candidate relationships;
 - applicability dimensions that can materially change correctness.
@@ -243,11 +274,20 @@ instance-bound or explicitly `INSUFFICIENT_EVIDENCE` for class generalization.
 A strategy may define additional metrics, but the first heterogeneous numerical
 contract should distinguish mandatory gates from diagnostics.
 
-### 5.1 Mandatory numerical gates for the first contract
+The historical Gemma v1/v3 contracts froze all fifteen listed envelope families
+as conjunctive gates; their results, including `V3_HOLDOUT_FAIL`, remain
+unchanged. Prospectively, issue #93 classifies the full-vocabulary FP32
+consumer-logit family as the first contract's numerical core and the remaining
+internal families as mandatory telemetry in
+`docs/qualification/post-v3-numerical-core-doctrine/`. A successor methodology
+must freeze its tier before physical calibration; this doctrine supplies no
+threshold, sample-size, corpus, or holdout rule.
 
-- maximum absolute difference over the frozen complete comparison domain;
-- RMS difference over that domain;
-- a prospectively declared tail-percentile absolute-error measure;
+### 5.1 Acceptance-bearing numerical gates for the first contract
+
+- maximum absolute difference, RMS difference, and a prospectively declared
+  tail-percentile absolute-error measure over each frozen acceptance-bearing
+  comparison domain;
 - finite output: NaN/Inf are unconditional failures unless the strategy
   explicitly declares such values semantically valid, which the first Gemma
   contract does not.
@@ -271,7 +311,16 @@ contract should distinguish mandatory gates from diagnostics.
   full-vocabulary FP32 consumer-logit envelope `E_full`; they never replace
   them.
 
-### 5.3 Supporting diagnostics
+### 5.3 Mandatory telemetry and supporting diagnostics
+
+Mandatory telemetry is retained/versioned numerical evidence, not optional
+logging. It may create diagnostic records, mark qualification health
+`DEGRADED` pending focused revalidation, or justify a later prospective core
+promotion. It neither converts a passing qualification into failure nor proves
+integrity distrust/quarantine by itself. Future methodology may define alert or
+reference bands for telemetry, but those bands do not consume the core's
+familywise qualification error budget unless the methodology prospectively
+places them in the core.
 
 Useful diagnostics include:
 
@@ -329,10 +378,11 @@ Fail closed on:
   `D` — `DECISION_DOMAIN_ESCAPE` (decision-stability profile);
 - silent fallback/substitution;
 - missing/inapplicable qualification for correctness-bearing serving;
-- any exceeded mandatory frozen numerical limit.
+- any exceeded acceptance-bearing frozen numerical limit.
 
 A numerically close tensor cannot repair an exact or semantic failure. Matching
-semantic output cannot waive a failed mandatory numerical envelope.
+semantic output cannot waive a failed acceptance-bearing numerical envelope;
+telemetry is governed by its prospective evidence-health policy.
 
 Missing qualification means evidence is absent/inapplicable; it does not by
 itself prove corrupt hardware.
@@ -346,7 +396,8 @@ A strategy qualification protocol must freeze before physical calibration:
 - calibration population/corpus-generation rule;
 - independent-case definition;
 - comparison checkpoints/domains;
-- mandatory metrics;
+- every numerical family's tier, plus core metrics and telemetry reporting
+  semantics;
 - statistical risk target and sample-size method;
 - threshold-derivation algorithm;
 - semantic gates;

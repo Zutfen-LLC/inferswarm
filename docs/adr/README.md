@@ -28,6 +28,9 @@ as a normative Fabric Doctrine supplement for exact-integrity, heterogeneous
 numerical-equivalence, semantic-output, and correctness-qualification semantics.
 It refines Fabric Doctrine sections 4, 5, 6, and 10 and should be consolidated
 into the main doctrine when that document is next structurally revised.
+Its issue #93 forward clarification distinguishes prospective acceptance-bearing
+numerical gates from mandatory telemetry without changing historical frozen
+qualification verdicts.
 
 ## Convention
 
