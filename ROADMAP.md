@@ -375,15 +375,9 @@ Accepted provenance:
   `5e44be50cd9ed322366a01cd5d80d958950d1ac5`;
 - physical producer `560bb7e833ad4ca9386eb87799bb0aafb82b3e59`.
 
-Issue #90 is the **CURRENT correctness-qualification gate**. It diagnoses the
-post-v3 numerical-envelope failure from retained #88 evidence before any
-successor methodology is frozen. It must distinguish ordinary tail behavior,
-a pre-observable applicability split, metric/envelope mismatch, and an actual
-execution anomaly; reconstruct the failing value from retained bytes; trace its
-propagation through `E_full`, `E_D`, and semantic decisions; and audit the v3
-statistical claim against the separate zero-exceedance holdout rule. It does not
-authorize a v3 rerun, post-hoc threshold change, successor threshold, fresh
-holdout, or physical v4 campaign.
+Issue #90 diagnosed the post-v3 numerical-envelope failure from retained
+#88 evidence; its record and successor recommendation live in the
+issue-#90 section below.
 
 Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) is complete. It
 established the durable FreeToken `inferswarm-research` implementation line
@@ -622,21 +616,52 @@ exceeded its frozen limit by 2.56%. Evidence PR #89 and FreeToken producer PR
 #30 are merged; the failure is immutable and does not authorize threshold
 tuning or rerun.
 
-### Post-v3 numerical-envelope diagnosis — issue #90 — CURRENT
+### Post-v3 numerical-envelope diagnosis — issue #90 — COMPLETE (pending maintainer acceptance)
 
-Issue #90 is the next active gate. Using retained #88 evidence only, determine
-whether the single holdout exceedance is best explained by ordinary tail
-behavior, a real pre-observable applicability regime, a metric/envelope mismatch,
-an execution anomaly, or a mixed/inconclusive result.
+Issue #90 is complete. Terminal classification:
+`V3_ENVELOPE_DIAGNOSIS_ORDINARY_TAIL`.
 
-The gate must reconstruct the exact failure, characterize the full failing-family
-distribution, test applicability splits, trace propagation into `E_full`, `E_D`,
-and semantic decisions, and audit the v3 distribution-free tolerance claim
-against its separate zero-exceedance holdout acceptance rule.
+Delivered via branch `issue-90-post-v3-diagnosis`: fail-closed CPU-only
+diagnosis tool `scripts/issue90_post_v3_diagnosis.py` (hash-pinned to the
+accepted #88/#86 evidence bytes), diagnostic record
+`docs/qualification/gemma4-12b-it-post-v3-envelope-diagnosis/`
+(DIAGNOSIS.md + machine-readable diagnosis-record.json), and a 17-test
+CI-wired suite with hash-drift/missing-evidence negative controls.
 
-No v4 methodology, threshold, fresh holdout, or physical campaign may be frozen
-from this gate. A successor method becomes eligible only after #90 makes the
-remaining statistical/correctness question concrete.
+Findings (all machine-derived from retained evidence):
+
+- The failing observation exceeds all 584 retained calibration case values
+  but only by +2.56% over the max — a smooth continuation of a multi-cell
+  heavy tail (log-normal QQ R2 0.986; top-10 spans 10 cells / 5 classes).
+- No pre-observable applicability split survives: leave-one-cell-out never
+  rescues the limit; the failing case's own cell max ranks 12/576; token
+  count correlates only 0.23. Stratified envelopes rejected for v4.
+- Propagation: on the holdout arm (incl. the failing case) the spike was
+  attenuated to zero downstream effect (192/192 SEMANTIC_PASS, no E_D
+  breach, no domain escape); the family co-moves with E_full/E_D
+  (Spearman 0.78-0.89) without any downstream breach in 584 calibration
+  cases — an early-warning metric, not a demonstrated independent
+  correctness path.
+- Statistical audit: the v3 construction TARGETED, never GUARANTEED, zero
+  holdout exceedances. Per family, P(>=1 of 24 exceeds the
+  statistical-maximum limit) = 24/600 = 4.00% under pure exchangeability
+  (21.4% at the stated 99% coverage; 4.00%-47.96% across 16 families;
+  Bonferroni confidence 1 - 0.05/16 = 99.6875%). The acceptance rule was
+  stricter than the statistical statement it was built on.
+
+Recommended next gate: a successor methodology freeze adopting (S1) a
+prospective one-sided prediction bound whose claim and acceptance rule
+coincide (n >= 2700 for zero-of-24 at Bonferroni confidence, or an
+explicit <=k-of-m beta-binomial rule) and (S6) two-tier
+qualification-core + all-15-family telemetry, with the S5 doctrine
+question (is the normalized hidden-state family still
+acceptance-bearing?) settled BEFORE the freeze. No threshold values
+proposed; h86-* observations permanently ineligible as future
+calibration/holdout evidence.
+
+No v4 methodology, threshold, fresh holdout, or physical campaign was
+frozen from this gate. #88's `V3_HOLDOUT_FAIL` verdict is unchanged.
+
 
 ### R6 successor full integration attempt — future independent gate
 

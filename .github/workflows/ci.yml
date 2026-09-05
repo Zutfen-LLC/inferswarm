@@ -69,6 +69,9 @@ jobs:
       - name: Check issue 86 v3 methodology/tooling (CPU-only)
         run: python3 -m unittest tests.test_issue86_v3_methodology -v
 
+      - name: Check issue 90 post-v3 envelope diagnosis (CPU-only)
+        run: python3 -m unittest tests.test_issue90_post_v3_diagnosis -v
+
       - name: Check internal Markdown links
         run: |
           python3 - <<'EOF'
