@@ -400,6 +400,11 @@ scalar families (three FP32 consumer-logit metrics plus `E_D`) separately from
 twelve retained telemetry identities. This is CPU/static methodology only; it
 makes no physical execution, calibration, threshold, or unseal claim.
 
+Issue #99 is complete on the orthogonal distribution lane: the minimum
+plan-driven model artifact acquisition proof required by ADR 0009 terminated
+`PLAN_DRIVEN_ARTIFACT_ACQUISITION_PASS` (see its section under the successor
+evidence gates). It does not touch the #97 physical qualification lane.
+
 Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) is complete. It
 established the durable FreeToken `inferswarm-research` implementation line
 without rewriting accepted R4 history.
@@ -683,6 +688,50 @@ calibration/holdout evidence.
 No v4 methodology, threshold, fresh holdout, or physical campaign was
 frozen from this gate. #88's `V3_HOLDOUT_FAIL` verdict is unchanged.
 
+
+### Plan-driven model artifact acquisition — issue #99 — COMPLETE
+
+Issue [#99](https://github.com/Zutfen-LLC/inferswarm/issues/99) implemented
+and proved the minimum end-to-end plan-driven artifact acquisition path
+required by ADR 0009 and the Model Artifact Distribution supplement. Terminal
+disposition:
+
+`PLAN_DRIVEN_ARTIFACT_ACQUISITION_PASS`
+
+Proven on a compact CPU-only safetensors-format fixture (no accelerators, no
+model runtime, isolated temporary paths): a frozen plan derives each
+participant's required immutable artifacts through a model-independent core
+with all model-specific LSU→range knowledge at the strategy adapter boundary;
+the canonical participant begins with an empty durable cache and no local
+model repository, acquires only its required byte ranges from the one
+authorized loopback HTTP Source via Range requests, verifies exact
+digest/provenance before publication into a content-addressed cache, stages
+allow-list-planned Materializations, executes the chained two-partition
+workload exactly against the operator oracle, and reconciles through the
+CPU-only Coordinator (zero bulk bytes observed). A second participant reuses
+verified cache hits for shared state; a restart arm reacquires nothing; a
+recovery replica resumes a controlled interrupted transfer from an
+identity-bound partial; ten fail-closed negative controls (corrupt bytes,
+wrong provenance, missing artifact, unauthorized source, foreign partial,
+unverified promotion, incomplete coverage, whole-model injection, unplanned
+staging fetch, structural absence of any complete-repository feasibility
+gate) all fail closed.
+
+Mechanically retained zero invariants:
+
+```text
+unrelated_model_bytes_acquired_for_realization == 0
+unexplained_full_model_dependency == 0
+```
+
+Implementation and evidence: `scripts/issue99_artifact_core.py`,
+`scripts/issue99_mini_model.py`, `scripts/issue99_proof.py`, tests
+`tests/test_issue99_artifact_core.py` / `tests/test_issue99_proof.py`, and the
+retained record under
+`docs/implementation/plan-driven-artifact-acquisition-99/`. Internal schemas,
+digests, cache layout, and source descriptors remain unfrozen; no public
+CAS/manifest or peer protocol was introduced, and no physical FreeToken
+integration is claimed. The #97 physical qualification lane was not touched.
 
 ### R6 successor full integration attempt — future independent gate
 

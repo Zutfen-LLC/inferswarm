@@ -495,6 +495,14 @@ separate evidence gate should prove the minimum end-to-end artifact path:
 Peer-to-peer multi-source swarming should be a later optimization unless the
 first proof shows that it is necessary to establish the architecture.
 
+Status note (issue #99, 2026-09-05): the minimum successor proof above has
+been executed on a compact CPU-only fixture with terminal disposition
+`PLAN_DRIVEN_ARTIFACT_ACQUISITION_PASS`; see
+[the issue #99 implementation record](../implementation/plan-driven-artifact-acquisition-99/README.md).
+That proof is internal-first: nothing in it freezes a public schema, digest
+algorithm, CAS API, storage layout, or peer protocol, and §16 non-decisions
+remain in force.
+
 ---
 
 ## 16. Non-decisions
