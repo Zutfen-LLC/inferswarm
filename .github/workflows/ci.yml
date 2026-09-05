@@ -76,7 +76,7 @@ jobs:
         run: python3 -m unittest tests.test_issue93_numerical_core_doctrine -v
 
       - name: Check issue 95 v4 prediction-aligned methodology (CPU-only)
-        run: python3 -m unittest tests.test_issue95_v4_methodology -v
+        run: python3 -m unittest tests.test_issue95_v4_methodology tests.test_issue95_v4_thresholds -v
 
       - name: Check internal Markdown links
         run: |

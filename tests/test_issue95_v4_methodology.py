@@ -94,6 +94,28 @@ class Issue95V4MethodologyTests(unittest.TestCase):
             with self.assertRaisesRegex(MethodologyError, 'HOLDOUT_CUSTODY_RECORD_SHA_MISMATCH'):
                 validate_unseal_preconditions(core_threshold_path=threshold, expected_core_threshold_sha256=sha256_file(threshold), ciphertext=ROOT / 'docs/qualification/gemma4-12b-it-v4/sealed/holdout.cms', certificate=ROOT / 'docs/qualification/gemma4-12b-it-v4/sealed/recipient-certificate.pem', custody_record_path=substitute, expected_custody_record_sha256=sha256_file(custody), private_key_path=Path('/nonexistent'))
 
+    def test_unseal_negative_control_matrix_stops_before_decrypt(self):
+        from issue74_methodology import sha256_file
+        from verify_issue95_v4_unseal import validate_unseal_preconditions
+        custody = ROOT / 'docs/qualification/gemma4-12b-it-v4/manifests/holdout-custody-record.json'
+        with tempfile.TemporaryDirectory() as temp:
+            temp = Path(temp)
+            threshold = temp / 'core.json'
+            threshold.write_text(json.dumps({'schema': 'inferswarm.issue95.v4-core-threshold-manifest/1', 'holdout_state': 'SEALED_NOT_CONSUMED', 'provenance': {'holdout_custody_record_sha256': sha256_file(custody)}}))
+            kwargs = dict(core_threshold_path=threshold, expected_core_threshold_sha256=sha256_file(threshold), ciphertext=ROOT / 'docs/qualification/gemma4-12b-it-v4/sealed/holdout.cms', certificate=ROOT / 'docs/qualification/gemma4-12b-it-v4/sealed/recipient-certificate.pem', custody_record_path=custody, expected_custody_record_sha256=sha256_file(custody))
+            with self.assertRaisesRegex(MethodologyError, 'PRIVATE_KEY_PATH_NOT_EXTERNAL_REGULAR_READABLE_FILE'):
+                validate_unseal_preconditions(**kwargs, private_key_path=temp / 'missing.pem')
+            wrong = temp / 'wrong.bin'; wrong.write_bytes(b'wrong')
+            bad_material = kwargs | {'certificate': wrong}
+            with self.assertRaisesRegex(MethodologyError, 'HOLDOUT_MATERIAL_MISMATCH'):
+                validate_unseal_preconditions(**bad_material, private_key_path=temp / 'missing.pem')
+            repo_key = ROOT / '.issue95-test-private-key'; repo_key.write_text('not a key')
+            try:
+                with self.assertRaisesRegex(MethodologyError, 'PRIVATE_KEY_PATH_NOT_EXTERNAL_TO_REPO'):
+                    validate_unseal_preconditions(**kwargs, private_key_path=repo_key)
+            finally:
+                repo_key.unlink()
+
     def test_cpu_static_sources_do_not_import_runtime_stack(self):
         forbidden = {'torch', 'transformers', 'triton', 'cuda'}
         for name in ('issue95_v4_methodology.py', 'issue95_v4_contract.py', 'issue95_v4_thresholds.py', 'verify_issue95_v4_unseal.py'):

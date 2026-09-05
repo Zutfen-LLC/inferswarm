@@ -177,6 +177,46 @@ class Issue95V4ThresholdTests(unittest.TestCase):
         with self.assertRaisesRegex(MethodologyError, "domain"):
             self.derive(decision_domain_manifest=domain, calibration_summary=summary)
 
+    def test_explicit_deriver_negative_control_matrix(self):
+        # Every mutation goes through the real evidence-consuming deriver.
+        corpus, pool, commitment, margins, selected, domain, summary = self.evidence()
+        cases = [
+            ("nan", lambda: summary["statistical_cases"][0]["envelopes"].__setitem__(ENVELOPES[0], "nan")),
+            ("duplicate-decision", lambda: summary["statistical_cases"][0]["decisions"].__setitem__(1, copy.deepcopy(summary["statistical_cases"][0]["decisions"][0]))),
+            ("wrong-case-e-d", lambda: summary["statistical_cases"][0].__setitem__("case_e_d_hex", float(0.0).hex())),
+            ("post-branch-extra", lambda: summary["statistical_cases"][0].__setitem__("post_branch_tensor", "forbidden")),
+            ("holdout-input", lambda: summary.__setitem__("holdout_case_ids", ["h95-01-01-01"])),
+        ]
+        for label, mutate in cases:
+            with self.subTest(label=label):
+                corpus, pool, commitment, margins, selected, domain, summary = self.evidence()
+                mutate()
+                with self.assertRaises(MethodologyError):
+                    self.derive(calibration_summary=summary)
+        for label, mutate in (
+            ("wrong-k", lambda: domain.__setitem__("k", 1023)),
+            ("candidate-influenced-domain", lambda: domain.__setitem__("candidate_membership_influence", "ALLOWED")),
+            ("missing-stress", lambda: selected["selected"].pop()),
+            ("duplicate-stress", lambda: selected["selected"].__setitem__(1, copy.deepcopy(selected["selected"][0]))),
+        ):
+            with self.subTest(label=label):
+                corpus, pool, commitment, margins, selected, domain, summary = self.evidence()
+                mutate()
+                with self.assertRaises(MethodologyError):
+                    self.derive(selected_stress=selected, decision_domain_manifest=domain, calibration_summary=summary)
+        for label, mutate in (
+            ("core-demotion", lambda: self.contract["core_numerical_pairs"].pop()),
+            ("telemetry-promotion", lambda: self.contract["mandatory_telemetry_pairs"].pop()),
+        ):
+            with self.subTest(label=label):
+                contract = copy.deepcopy(self.contract)
+                if label == "core-demotion":
+                    contract["core_numerical_pairs"].pop()
+                else:
+                    contract["mandatory_telemetry_pairs"].pop()
+                with self.assertRaises(MethodologyError):
+                    self.derive(comparator_contract=contract)
+
     def test_rejects_substituted_frozen_corpus_contract_or_holdout_identity(self):
         corpus = self.evidence()[0]
         corpus["cases"][0]["prompt_text"] += " substituted"
