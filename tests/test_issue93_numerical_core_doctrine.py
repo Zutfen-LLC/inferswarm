@@ -59,6 +59,9 @@ class Issue93NumericalCoreDoctrineTests(unittest.TestCase):
             "does not turn a passing qualification into a failure",
             "new comparator/qualification contract version",
             "no threshold",
+            "Retained before-to-after normative mapping",
+            "Historical-contract carve-out",
+            "Contract §5.1 / §6",
             "V3_HOLDOUT_FAIL",
         ):
             self.assertIn(required, text)
