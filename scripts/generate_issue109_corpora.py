@@ -15,6 +15,7 @@ corpus, pool, or holdout.
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -38,6 +39,7 @@ from issue109_v5_methodology import (
     V5_STRESS_POOL_SEED,
     component_stream,
     mixture_population_declaration,
+    target_length,
 )
 
 V5_DISJOINTNESS_NOTE = (
@@ -46,6 +48,21 @@ V5_DISJOINTNESS_NOTE = (
     "pool, and sealed-holdout commitment (v1 c74/p74/h74, v2 p76, v3 "
     "c86/p86/h86, v4 c95/p95/h95)"
 )
+HISTORICAL_EXCLUSION = Path(__file__).resolve().parents[1] / (
+    "docs/qualification/gemma4-12b-it-v5/manifests/historical-exclusion-inventory.json"
+)
+
+
+def _historical_identities() -> tuple[set[str], str]:
+    inventory = json.loads(HISTORICAL_EXCLUSION.read_text(encoding="utf-8"))
+    identities = {
+        identity["prompt_sha256"]
+        for identity in inventory["identities"]
+    } | {
+        identity["token_ids_sha256"]
+        for identity in inventory["identities"]
+    }
+    return identities, sha256_file(HISTORICAL_EXCLUSION)
 
 
 def _tokenizer_block() -> dict[str, Any]:
@@ -62,7 +79,7 @@ def _mixture_case(
     content_class: str, regime_index: int, global_index: int, cell_ordinal: int,
 ) -> dict[str, Any]:
     low, high = LENGTH_REGIMES[regime_index]
-    target = low + global_index % (high - low + 1)
+    target = target_length(seed, namespace, regime_index, global_index)
     cell = f"{content_class}:{low}-{high}"
     text, token_ids = generate_prompt(
         tokenizer, seed=seed, namespace=namespace, content_class=content_class,
@@ -88,15 +105,19 @@ def generate_mixture_cases(
     tokenizer: Any, *, seed: str, namespace: str, prefix: str, count: int,
 ) -> list[dict[str, Any]]:
     """Draw ``count`` IID mixture-population cases; see mixture_population_declaration()."""
+    exclusions, _inventory_sha = _historical_identities()
     cell_ordinals: dict[tuple[str, int], int] = {}
     cases: list[dict[str, Any]] = []
     for index, (content_class, regime_index) in component_stream(seed, namespace, count):
         key = (content_class, regime_index)
         cell_ordinals[key] = cell_ordinals.get(key, 0) + 1
-        cases.append(_mixture_case(
+        case = _mixture_case(
             seed, namespace, prefix, tokenizer, content_class, regime_index,
             index, cell_ordinals[key],
-        ))
+        )
+        if case["prompt_sha256"] in exclusions or case["token_ids_sha256"] in exclusions:
+            raise RuntimeError("historical exclusion inventory rejected a v5 predictive draw")
+        cases.append(case)
     case_ids = {case["case_id"] for case in cases}
     if len(case_ids) != count:
         raise RuntimeError("mixture draw produced a duplicate case_id")
@@ -115,6 +136,7 @@ def generate_calibration(tokenizer: Any) -> dict[str, Any]:
         "generator_sha256": sha256_file(Path(__file__)),
         "tokenizer": _tokenizer_block(),
         "seed": V5_CALIBRATION_SEED,
+        "historical_exclusion_inventory_sha256": _historical_identities()[1],
         "mixture_population": mixture_population_declaration(),
         "cases": cases,
         "disjointness": V5_DISJOINTNESS_NOTE,
@@ -154,6 +176,7 @@ def generate_holdout(tokenizer: Any, secret_seed: str) -> dict[str, Any]:
         "generator": "scripts/generate_issue109_corpora.py",
         "generator_sha256": sha256_file(Path(__file__)),
         "secret_seed_sha256": sha256_bytes(secret_seed.encode()),
+        "historical_exclusion_inventory_sha256": _historical_identities()[1],
         "tokenizer_json_sha256": TOKENIZER_SHA256,
         "cases": cases,
     }

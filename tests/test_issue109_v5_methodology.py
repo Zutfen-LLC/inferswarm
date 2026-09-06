@@ -17,6 +17,8 @@ from issue109_v5_methodology import (
     derive_mixture_prediction_design,
     mixture_components,
     mixture_population_declaration,
+    physical_subject_contract,
+    target_length_stream,
 )
 
 
@@ -67,6 +69,12 @@ class Issue109V5MethodologyTests(unittest.TestCase):
         with self.assertRaises(MethodologyError):
             list(component_stream('seed', 'calibration', -1))
 
+    def test_target_lengths_are_case_local_uniform_draws(self):
+        first = list(target_length_stream('seed-a', 'calibration', 2, 50))
+        self.assertEqual(first, list(target_length_stream('seed-a', 'calibration', 2, 50)))
+        self.assertNotEqual(first, list(target_length_stream('seed-b', 'calibration', 2, 50)))
+        self.assertTrue(all(36 <= value <= 40 for value in first))
+
     def test_mixture_population_declaration_is_frozen_and_shared(self):
         declaration = mixture_population_declaration()
         self.assertEqual(declaration['schema'], 'inferswarm.issue109.v5-mixture-population/1')
@@ -76,6 +84,12 @@ class Issue109V5MethodologyTests(unittest.TestCase):
         self.assertEqual(len(declaration['components']), 24)
         # Deterministic: rebuilding produces byte-identical output.
         self.assertEqual(canonical_json_bytes(declaration), canonical_json_bytes(mixture_population_declaration()))
+
+    def test_physical_subject_contract_preserves_v4_geometry_and_semantic_order(self):
+        subject = physical_subject_contract()
+        self.assertEqual(subject["checkpoint_sha256"], "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d")
+        self.assertEqual(subject["decision_count"], 8)
+        self.assertIn("DECISION_DOMAIN_ESCAPE", subject["reason_codes"])
 
     def test_accepted_classification_binds_exactly_three_core_and_thirteen_telemetry(self):
         contract = comparator_tier_contract()

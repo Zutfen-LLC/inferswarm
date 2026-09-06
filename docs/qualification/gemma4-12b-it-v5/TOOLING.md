@@ -4,6 +4,7 @@
 - `scripts/issue109_v5_methodology.py` derives the mixture-population statistical design (1416/24/24 components/alpha=0.05) and re-exports the unchanged v4 semantic gate.
 - `scripts/issue109_v5_contract.py` mechanically merges the accepted #108 fp32-consumer-logits/E_D reclassification with the twelve unchanged telemetry identities.
 - `scripts/build_issue109_schemas.py` and `scripts/build_issue109_disjointness.py` emit the versioned JSON Schemas and the mechanical disjointness proof against every prior corpus/pool/holdout.
+- `scripts/build_issue109_historical_exclusion.py` emits the fixed hash-bound historical identity inventory. The predictive generator rejects an identity in this inventory.
 - `scripts/issue109_v5_methodology_freeze.py` validates the complete v5 freeze against the accepted #108 doctrine and emits the terminal record; run it to reproduce `GEMMA_V5_CORRECTED_QUALIFICATION_METHODOLOGY_FROZEN`.
 - `scripts/issue109_v5_thresholds.py` is future-calibration-only and rejects a count other than 1416 statistical cases, eight selected stress cases, or an incomplete holdout custody record.
 - `scripts/verify_issue109_v5_unseal.py` hashes actual supplied core-threshold/ciphertext/certificate bytes, validates external two-custodian metadata, and stops before decrypt.

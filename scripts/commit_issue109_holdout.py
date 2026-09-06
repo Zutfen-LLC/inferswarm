@@ -85,6 +85,9 @@ def build_commitment(
             for row in cases
         ],
         "secret_seed_sha256": plaintext_holdout["secret_seed_sha256"],
+        "historical_exclusion_inventory_sha256": plaintext_holdout[
+            "historical_exclusion_inventory_sha256"
+        ],
         "generator": plaintext_holdout["generator"],
         "generator_sha256": plaintext_holdout["generator_sha256"],
         "tokenizer_json_sha256": plaintext_holdout["tokenizer_json_sha256"],

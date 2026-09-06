@@ -8,7 +8,7 @@ Terminal disposition on maintainer acceptance:
 
 ## Subject and preservation
 
-The physical subject is unchanged: `google/gemma-4-12B-it` revision `707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7`. Historical `#88`, `#90`, `#93`, `#97`, `#105`, and `#108` records are immutable. Consumed `h74-*`, `h86-*`, and `h95-*` observations are permanently diagnostic-only and cannot become v5 inputs.
+The physical subject is unchanged. It is `google/gemma-4-12B-it` at revision `707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7`. The checkpoint SHA-256 is `5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d`. It uses native BF16 text execution and Triton attention. It uses one <=64-row replay chunk. The reference path uses one RTX 3090. The candidate path uses the accepted three-stage RTX 3060 chain. `manifests/physical-subject.json` freezes this identity, the eight decisions, the evaluation order, and the fail-closed reason codes. Historical `#88`, `#90`, `#93`, `#97`, `#105`, and `#108` records are immutable. Consumed `h74-*`, `h86-*`, and `h95-*` observations are permanently diagnostic-only and cannot become v5 inputs.
 
 ## What this freeze instantiates
 
@@ -22,7 +22,7 @@ ADR 0012 and issue #108 accepted a doctrine (`docs/qualification/post-v4-statist
 
 ## Mixture-population design
 
-Unlike the v1/v3/v4 fixed-balanced-cell design (which issue #105/#108 found does not support a pooled cross-cell probability statement), the v5 population is a frozen 24-component mixture: one component per `(content_class, length_regime)` pair, uniform weight `1/24`, drawn IID per case via a SHA-256-seeded RNG keyed on the draw index (see `mixture-population.json`). Calibration (public seed) and holdout (independent secret seed) are draws from the **same** generator and weights, which is what establishes their joint exchangeability under issue #108 Q2 — not a shared fixed cell count.
+The v1/v3/v4 design used fixed balanced cells. Issue #105/#108 found that design does not support a pooled cross-cell probability statement. The v5 target is a frozen 24-component mixture. Each component is one `(content_class, length_regime)` pair. Each component has weight `1/24`. The component and target length use SHA-256-seeded case-local draws. The target length is uniform over the inclusive selected regime. Calibration uses a public seed. Holdout uses an independent secret seed. Both arms use the same generator and weights. This establishes joint exchangeability under issue #108 Q2. A shared fixed cell count does not establish it.
 
 - Calibration: **1416** IID mixture draws (`c109-*`).
 - Fresh sealed holdout: **24** IID mixture draws (`h109-*`), one future campaign.

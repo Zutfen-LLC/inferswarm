@@ -89,6 +89,33 @@ CONSTRUCTION = "POOLED_ORDER_STATISTIC_PREDICTION"
 QUALIFICATION_CLAIM = "ZERO_EXCEEDANCE_CAMPAIGN_MIXTURE"
 
 
+def physical_subject_contract() -> dict[str, Any]:
+    """Return the unchanged v5 physical subject and semantic gate contract."""
+    return {
+        "schema": "inferswarm.issue109.v5-physical-subject/1",
+        "model": "google/gemma-4-12B-it",
+        "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+        "checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+        "execution": "native BF16 text execution; Triton attention; one <=64-row replay chunk",
+        "reference_geometry": "single RTX 3090 reference path",
+        "candidate_geometry": "accepted three-stage RTX 3060 heterogeneous chain",
+        "decision_count": 8,
+        "evaluation_order": [
+            "finite and exact-integrity gate",
+            "decision_local_error<=E_D",
+            "actual candidate winner in reference-derived domain",
+            "stable exact-winner or unstable ambiguity-set adjudication",
+        ],
+        "reason_codes": [
+            "DECISION_LOCAL_BOUND_EXCEEDED",
+            "DECISION_DOMAIN_ESCAPE",
+            "STABLE_DECISION_MISMATCH",
+            "UNSTABLE_DECISION_INADMISSIBLE",
+            "SEMANTIC_PASS",
+        ],
+    }
+
+
 def mixture_components() -> tuple[tuple[str, int], ...]:
     """Return the 24 frozen (content_class, length_regime_index) components."""
     return tuple(
@@ -175,6 +202,32 @@ def component_stream(
         yield index, components[rng.randrange(len(components))]
 
 
+def target_length_stream(
+    seed: str, namespace: str, regime_index: int, count: int,
+) -> Iterator[int]:
+    """Yield IID uniform target lengths for one frozen length regime.
+
+    A draw uses only its seed, namespace, regime, and draw index. It does not
+    depend on another draw or on the selected mixture component.
+    """
+    if count < 0 or not 0 <= regime_index < len(LENGTH_REGIMES):
+        raise MethodologyError("invalid target-length stream inputs")
+    for index in range(count):
+        yield target_length(seed, namespace, regime_index, index)
+
+
+def target_length(seed: str, namespace: str, regime_index: int, draw_index: int) -> int:
+    """Return one IID uniform target length for a complete prompt draw."""
+    if not 0 <= regime_index < len(LENGTH_REGIMES) or draw_index < 0:
+        raise MethodologyError("invalid target-length draw inputs")
+    low, high = LENGTH_REGIMES[regime_index]
+    material = "\0".join(
+        (seed, namespace, "target-length", str(regime_index), str(draw_index))
+    ).encode()
+    rng = random.Random(int.from_bytes(hashlib.sha256(material).digest(), "big"))
+    return rng.randint(low, high)
+
+
 def mixture_population_declaration() -> dict[str, Any]:
     """The frozen, non-secret mixture-population generator declaration.
 
@@ -196,6 +249,11 @@ def mixture_population_declaration() -> dict[str, Any]:
             "for draw index i, component = components[SHA256(seed \\0 namespace \\0 "
             "'mixture-component' \\0 i)-seeded Random.randrange(24)]; frozen before "
             "any case content is generated"
+        ),
+        "target_length_selection_rule": (
+            "for draw index i and selected regime r, length = "
+            "SHA256(seed \\0 namespace \\0 'target-length' \\0 r \\0 i)-seeded "
+            "Random.randint(low, high); each inclusive regime length is uniform"
         ),
         "draws_are_iid": True,
         "calibration_and_holdout_share_generator": True,

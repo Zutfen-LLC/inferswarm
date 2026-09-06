@@ -82,6 +82,7 @@ def mixture_population_schema() -> dict:
         "additionalProperties": False,
         "required": ["schema", "contract_id", "assumption_profile", "components",
                      "component_count", "component_weights", "component_selection_rule",
+                     "target_length_selection_rule",
                      "draws_are_iid", "calibration_and_holdout_share_generator",
                      "calibration_namespace", "holdout_namespace", "generator", "note"],
         "properties": {
@@ -102,6 +103,7 @@ def mixture_population_schema() -> dict:
             "component_count": {"const": V5_MIXTURE_COMPONENTS},
             "component_weights": {"type": "string"},
             "component_selection_rule": {"type": "string"},
+            "target_length_selection_rule": {"type": "string"},
             "draws_are_iid": {"const": True},
             "calibration_and_holdout_share_generator": {"const": True},
             "calibration_namespace": {"const": "calibration"},
@@ -119,7 +121,7 @@ def build() -> dict[str, dict]:
         "calibration-corpus-1.json",
         f"InferSwarm issue #109 v5 {V5_CALIBRATION_CASES}-case mixture-population calibration corpus",
         ["schema", "contract_id", "generator", "generator_sha256", "tokenizer",
-         "seed", "mixture_population", "cases", "disjointness"],
+         "seed", "historical_exclusion_inventory_sha256", "mixture_population", "cases", "disjointness"],
         {
             "schema": {"const": "inferswarm.issue109.v5-calibration-corpus/1"},
             "contract_id": {"const": CONTRACT},
@@ -127,6 +129,7 @@ def build() -> dict[str, dict]:
             "generator_sha256": SHA,
             "tokenizer": tokenizer_block(),
             "seed": {"const": "inferswarm-issue-109-calibration-v5-2"},
+            "historical_exclusion_inventory_sha256": SHA,
             "mixture_population": mixture_population_schema(),
             "cases": {"type": "array", "minItems": V5_CALIBRATION_CASES,
                       "maxItems": V5_CALIBRATION_CASES, "items": case_ref()},
@@ -406,6 +409,7 @@ def build() -> dict[str, dict]:
         "sealed-holdout-commitment-1.json",
         "InferSwarm issue #109 v5 public sealed-holdout commitment",
         ["schema", "contract_id", "state", "case_count", "draws", "secret_seed_sha256",
+         "historical_exclusion_inventory_sha256",
          "generator", "generator_sha256", "tokenizer_json_sha256", "cipher",
          "ciphertext_sha256", "recipient_certificate_sha256", "unseal_rule",
          "plaintext_retention"],
@@ -433,6 +437,7 @@ def build() -> dict[str, dict]:
                 },
             },
             "secret_seed_sha256": SHA,
+            "historical_exclusion_inventory_sha256": SHA,
             "generator": {"type": "string"},
             "generator_sha256": SHA,
             "tokenizer_json_sha256": SHA,
@@ -494,6 +499,22 @@ def build() -> dict[str, dict]:
         list(mixture_population_schema()["required"]),
         mixture_population_schema()["properties"],
     )
+
+    for name, title in {
+        "calibration-observation.schema.json": "InferSwarm issue #109 v5 calibration observation",
+        "semantic-row.schema.json": "InferSwarm issue #109 v5 semantic decision row",
+        "holdout-result.schema.json": "InferSwarm issue #109 v5 holdout result",
+        "unseal-preflight.schema.json": "InferSwarm issue #109 v5 unseal preflight result",
+    }.items():
+        schemas[name] = schema(
+            name.removesuffix(".schema.json") + "-1.json",
+            title,
+            ["schema", "contract_id"],
+            {
+                "schema": {"type": "string"},
+                "contract_id": {"const": CONTRACT},
+            },
+        )
 
     return schemas
 

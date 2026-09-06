@@ -24,6 +24,7 @@ from issue109_v5_methodology import (
     METHODOLOGY_ID,
     QUALIFICATION_CLAIM,
     mixture_population_declaration,
+    physical_subject_contract,
 )
 from commit_issue109_holdout import custody_is_satisfied
 
@@ -122,6 +123,13 @@ def verify_corpora() -> dict[str, Any]:
     return {"calibration": calibration, "stress_pool": stress}
 
 
+def verify_physical_subject() -> dict[str, Any]:
+    committed = _load("physical-subject.json")
+    if canonical_json_bytes(committed) != canonical_json_bytes(physical_subject_contract()):
+        raise MethodologyFreezeError("v5 physical subject contract is not frozen")
+    return committed
+
+
 def verify_comparator_contract(committed: dict[str, Any] | None = None) -> dict[str, Any]:
     computed = comparator_tier_contract()
     committed = committed if committed is not None else _load("comparator-tier-contract.json")
@@ -169,6 +177,7 @@ def build_record() -> dict[str, Any]:
     disjointness = verify_disjointness()
     mixture = verify_mixture_population()
     corpora = verify_corpora()
+    subject = verify_physical_subject()
     comparator = verify_comparator_contract()
     derivation = verify_statistical_derivation()
     holdout = verify_holdout_and_custody()
@@ -198,6 +207,7 @@ def build_record() -> dict[str, Any]:
             "calibration_cases": len(corpora["calibration"]["cases"]),
             "stress_pool_cases": len(corpora["stress_pool"]["cases"]),
         },
+        "physical_subject": subject,
         "holdout": {
             "state": holdout["commitment"]["state"],
             "custody_state": holdout["custody"]["holdout_state"],
