@@ -1,0 +1,43 @@
+{
+  "schema": "inferswarm.issue110.v5-storage-preflight/1",
+  "contract_id": "inferswarm.gemma4-mixture-population-qualification/1",
+  "recorded_date": "2026-09-06",
+  "purpose": "Candidate evidence-root storage preflight, recorded before the first candidate case (issue #110 storage directive)",
+  "determination": {
+    "out_dir_is_correctness_bearing": false,
+    "evidence": "The --out-dir argument of benchmarks.inferswarm_110.chain_runner and .last_stage_service is a pure CLI storage destination for evidence files (capture bundles, decision rows, case summaries). It is not part of the frozen producer identity: it does not appear in any frozen constant, methodology hash, execution-math path, or evidence-content hash (file contents hash the case/row/capture bytes, not their location). Changing the output root changes neither producer bytes at 7e5c852163afd9aadfccc406be267e8d060e79ef nor any correctness-bearing execution semantics. No symlink, bind mount, or indirection is used.",
+    "workaround_used": false
+  },
+  "candidate_evidence_roots": [
+    {
+      "host": "inferswarm01",
+      "role": "candidate stages 1-2 (GPU-0 [0,16), GPU-1 [16,32)) + chain case summaries",
+      "path": "/srv/models/issue110/candidate",
+      "backing_device": "/dev/sda1",
+      "disk_model": "TEAM T2532TB (1.9T local SATA SSD)",
+      "filesystem": "ext4",
+      "mount_options": "rw,noatime",
+      "network_backed": false,
+      "free_bytes_at_freeze": 1943652683776,
+      "projected_candidate_usage_bytes": 140000000000,
+      "fits": true
+    },
+    {
+      "host": "inferswarm03",
+      "role": "candidate stage-3/last-stage capture bundles + decision-<i>.f32 rows",
+      "path": "/srv/models/issue110/candidate-laststage",
+      "backing_device": "/dev/sda1",
+      "disk_model": "TEAM T2532TB (1.9T local SATA SSD)",
+      "filesystem": "ext4",
+      "mount_options": "rw,noatime",
+      "position_of_path_relative_to_mount": "directory on the /srv/models mount",
+      "network_backed": false,
+      "free_bytes_at_freeze": 1865199620096,
+      "projected_candidate_usage_bytes": 450000000000,
+      "fits": true
+    }
+  ],
+  "reference_run_untouched": true,
+  "locality_proof": "lsblk + findmnt on both hosts: /srv/models is /dev/sda1 ext4 rw,noatime on a physically local TEAM T2532TB SATA SSD (bus-attached block device, no NFS/CIFS/sshfs/fuse entries in /proc/mounts for these paths).",
+  "notes": "Root-filesystem constraint that motivated this preflight: the reference run on inferswarm04 measures ~90.8 MB/case apparent (capture bundle dominates and scales with prompt length regime: mean 23.5 MB regime-01 to 131.3 MB regime-04). Candidate on 01 with the same retention would project ~129 GB against 164 GB free on its 220 GB root SSD - fits but tight; the directive to use the local 2 TB SSDs removes the risk. Paths frozen; no relocation after candidate execution begins. Reference evidence remains at /srv/inferswarm/state/issue110/reference on inferswarm04 (root SSD, ~78 GB remaining to write, 106 GB free - completes with ~28 GB headroom)."
+}
