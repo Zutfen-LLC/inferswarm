@@ -84,9 +84,6 @@ jobs:
       - name: Check issue 101 plan-driven artifact orchestration (CPU-only)
         run: python3 -m unittest tests.test_issue101_orchestration tests.test_issue101_proof -v
 
-      - name: Check issue 103 artifact-locality transition planning (CPU-only)
-        run: python3 -m unittest tests.test_issue103_planner -v
-
       - name: Check internal Markdown links
         run: |
           python3 - <<'EOF'

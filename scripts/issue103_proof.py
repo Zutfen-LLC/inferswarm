@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import json
-import math
 import os
 import sys
 import tempfile
@@ -18,6 +16,7 @@ from issue99_artifact_core import LocalFileSource, write_canonical_json
 from issue101_orchestration import Coordinator
 from issue103_fixture import Fixture, Strategy
 from issue103_planner import (
+    EXCLUDED,
     FEASIBLE_UNRANKED,
     MIN_TRANSITION_COST,
     RANKED,
@@ -41,7 +40,7 @@ EVIDENCE_FILES = {
     "strategy.json", "requirements.json", "inventories.json", "source-index.json",
     "path-evidence.json", "candidate-economics.json", "objective-decisions.json",
     "tie-permutation.json", "negative-controls.json", "accounting.json", "purity-audit.json",
-    "isolation.json", "canonical-summary.json", "producer-hashes.json",
+    "isolation.json", "immutable-inputs.json", "canonical-summary.json", "producer-hashes.json",
 }
 PURITY_TOKENS = (
     "qwen", "gemma", "moe", "expert", "router", "transformer layer",
@@ -51,7 +50,10 @@ EVIDENCE_CONTRACT = {
     "path": {"evidence_version": "issue103-fixture-v1", "evidence_identity": "path-band-v1",
              "applicability_context": {"serialized": True, "fixture": "cpu-only"}},
     "execution": {"evidence_version": "issue103-fixture-v1", "evidence_identity": "execution-band-v1",
-                   "applicability_context": {"fixture": "cpu-only", "warm": True}},
+                   "applicability_context": {"fixture": "cpu-only", "warm": True},
+                   "objective": WARM_DECODE_THROUGHPUT,
+                   "metric": "warm-decode-throughput", "units": "fixture-items-per-second",
+                   "direction": "maximize"},
 }
 
 
@@ -181,6 +183,34 @@ def make_context(root: Path, *, arm: str):
     }
 
 
+def make_inventory_arm_b(arm_a):
+    """Change only C's verified inventory while all frozen planning inputs stay fixed."""
+    fixture = arm_a["fixture"]
+    arm_a_nodes = arm_a["nodes"]
+    fixture.seed(arm_a_nodes["C"], (1, 2, 3), advertise=False)
+    nodes = {
+        **arm_a_nodes,
+        "C": fixture.node(arm_a_nodes["C"].cache.root.parent, "C"),
+    }
+    coordinator = Coordinator(
+        node_sources=[node.descriptor() for node in nodes.values()],
+        origin_sources=[arm_a["origin"].descriptor()],
+    )
+    requirements = coordinator.freeze(arm_a["plan"], fixture.resolve)
+    require(requirements == arm_a["requirements"], "inventory mutation changed requirements")
+    snapshots = [arm_a["snapshots"][0], arm_a["snapshots"][1], nodes["C"].inventory()]
+    for snapshot in snapshots:
+        coordinator.ingest(snapshot)
+    return {
+        **arm_a,
+        "arm": "B",
+        "nodes": nodes,
+        "coordinator": coordinator,
+        "requirements": requirements,
+        "snapshots": snapshots,
+    }
+
+
 def selected_sources(context):
     coordinator = context["coordinator"]
     requirements = context["requirements"]
@@ -237,8 +267,10 @@ def build_execution_evidence(context):
             "participant_id": candidate["participant_id"],
             "node_id": candidate["node_id"],
             "score": scores[candidate["candidate_id"]],
-            "metric": "warm-decode-throughput",
-            "units": "fixture-score",
+            "objective": WARM_DECODE_THROUGHPUT,
+            "metric": EVIDENCE_CONTRACT["execution"]["metric"],
+            "units": EVIDENCE_CONTRACT["execution"]["units"],
+            "direction": EVIDENCE_CONTRACT["execution"]["direction"],
             "evidence_version": "issue103-fixture-v1",
             "evidence_identity": "execution-band-v1",
             "applicability_context": {"fixture": "cpu-only", "warm": True},
@@ -246,19 +278,6 @@ def build_execution_evidence(context):
             "requirements_digest": context["requirements"]["requirements_digest"],
         }))
     return sorted(result, key=lambda item: item["candidate_id"])
-
-
-def remap_path_evidence(records, context):
-    """Bind the same frozen path identities to the current temporary descriptors."""
-    descriptors = {node_id: context["nodes"][node_id].descriptor() for node_id in "ABC"}
-    descriptors["origin"] = context["origin"].descriptor()
-    remapped = []
-    for record in records:
-        item = dict(record)
-        item["source"] = descriptors[item["source"]["source_id"]]
-        item["target"] = descriptors[item["target_node_id"]]
-        remapped.append(_with_digest(item))
-    return remapped
 
 
 def run_objectives(context, path_evidence, execution_evidence):
@@ -413,6 +432,75 @@ def negative_controls(root, path_evidence, execution_evidence):
                           target={"source_id": "C", "endpoint": "file:///wrong"})
         if item["candidate_id"] == "A" else item for item in items])
 
+    def execution_mutation(name, **changes):
+        context = make_context(root / name, arm="A")
+        mutated = [
+            _mutated_evidence(item, **changes) if item["candidate_id"] == "A" else item
+            for item in build_execution_evidence(context)
+        ]
+        result = run_objectives(
+            context,
+            build_path_evidence(context, source_selections=selected_sources(context)),
+            mutated,
+        )["execution"]
+        row = next(row for row in result["candidates"] if row["candidate_id"] == "A")
+        controls[name] = {
+            "passed": row["ranking_status"] == FEASIBLE_UNRANKED
+            and row["technical_feasibility"],
+            "technical_feasibility": row["technical_feasibility"],
+            "ranking_status": row["ranking_status"],
+            "ranking_reason": row["ranking_reason"],
+        }
+
+    execution_mutation("wrong_execution_metric", metric="unrelated-metric")
+    execution_mutation("wrong_execution_units", units="unrelated-units")
+    execution_mutation("incompatible_execution_objective", objective=MIN_TRANSITION_COST)
+
+    def eligibility_mutation(name, field, reason):
+        context = make_context(root / name, arm="A")
+        candidate = next(item for item in context["candidates"] if item["candidate_id"] == "A")
+        candidate["feasibility"][field] = False
+        path_records = build_path_evidence(context, source_selections=selected_sources(context))
+        context["coordinator"].selections.clear()
+        target = next(item for item in path_records if item["candidate_id"] == "A")
+        poisoned_path = [
+            _mutated_evidence(item, source={"source_id": "wrong", "endpoint": "file:///wrong"})
+            if item is target else item for item in path_records
+        ]
+        poisoned_execution = [
+            _mutated_evidence(item, metric="wrong") if item["candidate_id"] == "A" else item
+            for item in build_execution_evidence(context)
+        ]
+        result = run_objectives(context, poisoned_path, poisoned_execution)
+        transition_row = next(
+            row for row in result["transition"]["candidates"] if row["candidate_id"] == "A"
+        )
+        execution_row = next(
+            row for row in result["execution"]["candidates"] if row["candidate_id"] == "A"
+        )
+        controls[name] = {
+            "passed": transition_row["ranking_status"] == EXCLUDED
+            and execution_row["ranking_status"] == EXCLUDED
+            and transition_row["ranking_reason"] == reason
+            and execution_row["ranking_reason"] == reason
+            and not any(
+                ticket["participant_id"] == "P-A" for ticket in context["coordinator"].selections
+            ),
+            "technical_feasibility": transition_row["technical_feasibility"],
+            "hard_policy_eligible": transition_row["hard_policy_eligible"],
+            "integrity_eligible": transition_row["integrity_eligible"],
+            "ranking_reason": transition_row["ranking_reason"],
+            "ranking_work_observed": any(
+                ticket["participant_id"] == "P-A" for ticket in context["coordinator"].selections
+            ),
+        }
+
+    eligibility_mutation("technical_infeasibility", "technical_feasibility",
+                         "TECHNICAL_INFEASIBILITY")
+    eligibility_mutation("hard_policy_exclusion", "hard_policy_eligible",
+                         "HARD_POLICY_EXCLUSION")
+    eligibility_mutation("integrity_exclusion", "integrity_eligible", "INTEGRITY_EXCLUSION")
+
     context = make_context(root / "permutation", arm="A")
     permutation_path = build_path_evidence(context, source_selections=selected_sources(context))
     planner = LocalityPlanner(coordinator=context["coordinator"], requirements=context["requirements"],
@@ -428,8 +516,9 @@ def negative_controls(root, path_evidence, execution_evidence):
         "ranking_order": forward["ranking_order"],
     }
 
-    arm_a = make_context(root / "locality-a", arm="A")
-    arm_b = make_context(root / "locality-b", arm="B")
+    arm_a = make_context(root / "locality", arm="A")
+    locality_path = build_path_evidence(arm_a, source_selections=selected_sources(arm_a))
+    arm_b = make_inventory_arm_b(arm_a)
     controls["locality_feasibility_mutation"] = {
         "passed": [c["candidate_id"] for c in arm_a["candidates"]] ==
         [c["candidate_id"] for c in arm_b["candidates"]]
@@ -438,9 +527,8 @@ def negative_controls(root, path_evidence, execution_evidence):
         "technical_feasibility_changed": 0,
     }
 
-    arm_b_path = remap_path_evidence(path_evidence, arm_b)
-    arm_b_decisions = run_objectives(arm_b, arm_b_path, execution_evidence)
-    tie = tie_permutation(arm_a, path_evidence, execution_evidence)
+    arm_b_decisions = run_objectives(arm_b, locality_path, execution_evidence)
+    tie = tie_permutation(arm_a, locality_path, execution_evidence)
     tie_forward = tie["forward"]
     tie_reverse = tie["reverse"]
     controls["candidate_order_permutation"] = {
@@ -454,7 +542,7 @@ def negative_controls(root, path_evidence, execution_evidence):
         _mutated_evidence(item, verified_local_required_bytes=12)
         for item in execution_evidence
     ]
-    contaminated = run_objectives(arm_b, arm_b_path, contaminated_evidence)
+    contaminated = run_objectives(arm_b, locality_path, contaminated_evidence)
     controls["objective_contamination_mutation"] = {
         "passed": contaminated["execution"]["selected_candidate_id"] is None
         and all(row["execution_ranking_status"] == FEASIBLE_UNRANKED
@@ -466,12 +554,102 @@ def negative_controls(root, path_evidence, execution_evidence):
     }
     valid_rows = arm_b_decisions["transition"]["candidates"]
     valid_events = [event for row in valid_rows for event in row["transfer_events"]]
-    injected = account_transfer_events(valid_rows, valid_events + [{
-        "candidate_id": "A", "artifact_id": "unexplained", "bytes": 4,
+    first = valid_events[0]
+
+    def accounting_mutation(name, events):
+        result = account_transfer_events(valid_rows, events)
+        controls[name] = {"passed": result["unexplained_transition_bytes"] > 0, **result}
+
+    accounting_mutation("wrong_transfer_participant", [
+        {**first, "participant_id": "P-wrong"}, *valid_events[1:]
+    ])
+    accounting_mutation("wrong_transfer_source", [
+        {**first, "source": {"source_id": "wrong", "endpoint": "file:///wrong"}},
+        *valid_events[1:],
+    ])
+    accounting_mutation("duplicate_transfer_event", [*valid_events, deepcopy(first)])
+    unexplained_artifact = account_transfer_events(valid_rows, [*valid_events, {
+        "candidate_id": first["candidate_id"],
+        "participant_id": first["participant_id"],
+        "artifact_id": "unexplained",
+        "bytes": first["bytes"],
+        "source": deepcopy(first["source"]),
     }])
-    controls["unexplained_transfer_injection"] = {
-        "passed": injected["unexplained_transition_bytes"] == 4,
-        **injected,
+    unexplained_bytes = account_transfer_events(valid_rows, [
+        {**first, "bytes": first["bytes"] + 1}, *valid_events[1:]
+    ])
+    controls["unexplained_transfer_artifact_or_bytes"] = {
+        "passed": unexplained_artifact["unexplained_transition_bytes"] > 0
+        and unexplained_bytes["unexplained_transition_bytes"] > 0,
+        "unexplained_transition_bytes": (
+            unexplained_artifact["unexplained_transition_bytes"]
+            + unexplained_bytes["unexplained_transition_bytes"]
+        ),
+        "artifact_mutation": unexplained_artifact,
+        "byte_mutation": unexplained_bytes,
+    }
+
+    ambiguity_context = make_context(root / "ambiguity", arm="A")
+    ambiguity_path = build_path_evidence(
+        ambiguity_context, source_selections=selected_sources(ambiguity_context)
+    )
+    ambiguity_execution = build_execution_evidence(ambiguity_context)
+    path_target = next(item for item in ambiguity_path if item["candidate_id"] == "A")
+    competing_path = _mutated_evidence(
+        path_target,
+        bandwidth_bytes_per_second=path_target["bandwidth_bytes_per_second"] * 2,
+    )
+    path_results = [
+        run_objectives(ambiguity_context, order, ambiguity_execution)["transition"]
+        for order in (
+            [path_target, competing_path] + [item for item in ambiguity_path if item is not path_target],
+            [competing_path, path_target] + [item for item in ambiguity_path if item is not path_target],
+        )
+    ]
+    controls["ambiguous_path_evidence_permutation"] = {
+        "passed": path_results[0]["selected_candidate_id"] == path_results[1]["selected_candidate_id"]
+        and path_results[0]["ranking_order"] == path_results[1]["ranking_order"]
+        and path_results[0]["ranked_candidate_ids"] == path_results[1]["ranked_candidate_ids"]
+        and path_results[0]["costs"] == path_results[1]["costs"]
+        and all(
+            next(row for row in result["candidates"] if row["candidate_id"] == "A")[
+                "ranking_status"
+            ] == FEASIBLE_UNRANKED
+            for result in path_results
+        ),
+        "selected_by_permutation": [result["selected_candidate_id"] for result in path_results],
+        "ranking_by_permutation": [result["ranking_order"] for result in path_results],
+        "ranked_by_permutation": [result["ranked_candidate_ids"] for result in path_results],
+        "costs_by_permutation": [result["costs"] for result in path_results],
+    }
+    execution_target = next(item for item in ambiguity_execution if item["candidate_id"] == "B")
+    competing_execution = _mutated_evidence(execution_target, score=999.0)
+    execution_results = [
+        run_objectives(ambiguity_context, ambiguity_path, order)["execution"]
+        for order in (
+            [execution_target, competing_execution]
+            + [item for item in ambiguity_execution if item is not execution_target],
+            [competing_execution, execution_target]
+            + [item for item in ambiguity_execution if item is not execution_target],
+        )
+    ]
+    controls["ambiguous_execution_evidence_permutation"] = {
+        "passed": execution_results[0]["selected_candidate_id"]
+        == execution_results[1]["selected_candidate_id"]
+        and execution_results[0]["ranking_order"] == execution_results[1]["ranking_order"]
+        and execution_results[0]["ranked_candidate_ids"]
+        == execution_results[1]["ranked_candidate_ids"]
+        and execution_results[0]["scores"] == execution_results[1]["scores"]
+        and all(
+            next(row for row in result["candidates"] if row["candidate_id"] == "B")[
+                "ranking_status"
+            ] == FEASIBLE_UNRANKED
+            for result in execution_results
+        ),
+        "selected_by_permutation": [result["selected_candidate_id"] for result in execution_results],
+        "ranking_by_permutation": [result["ranking_order"] for result in execution_results],
+        "ranked_by_permutation": [result["ranked_candidate_ids"] for result in execution_results],
+        "scores_by_permutation": [result["scores"] for result in execution_results],
     }
     return controls
 
@@ -495,6 +673,20 @@ def _economic_view(decision):
     }
 
 
+def _immutable_planning_inputs(context, path_evidence, execution_evidence):
+    """Return every planning input that the inventory-only mutation must preserve."""
+    return {
+        "strategy": context["strategy"].frozen_document(),
+        "candidate_order_contract": context["candidates"],
+        "plan": context["plan"],
+        "participant_requirements": context["requirements"],
+        "authorized_source_descriptors": context["authorized_source_descriptors"],
+        "path_evidence": path_evidence,
+        "execution_evidence": execution_evidence,
+        "evidence_contract": EVIDENCE_CONTRACT,
+    }
+
+
 def run_campaign(out_dir: Path | None = None):
     methodology = ROOT / AREA / "methodology.md"
     frozen_methodology_hash = sha(methodology) if methodology.is_file() else None
@@ -507,10 +699,45 @@ def run_campaign(out_dir: Path | None = None):
             execution_evidence = build_execution_evidence(arm_a)
             arm_a_decisions = run_objectives(arm_a, path_evidence, execution_evidence)
 
-            arm_b = make_context(root / "arm-b", arm="B")
-            arm_b_path = remap_path_evidence(path_evidence, arm_b)
-            arm_b_decisions = run_objectives(arm_b, arm_b_path, execution_evidence)
+            arm_b = make_inventory_arm_b(arm_a)
+            arm_b_decisions = run_objectives(arm_b, path_evidence, execution_evidence)
             tie = tie_permutation(arm_a, path_evidence, execution_evidence)
+
+            immutable_a = _immutable_planning_inputs(arm_a, path_evidence, execution_evidence)
+            immutable_b = _immutable_planning_inputs(arm_b, path_evidence, execution_evidence)
+            immutable_a_bytes = canonical_json_bytes(immutable_a)
+            immutable_b_bytes = canonical_json_bytes(immutable_b)
+            immutable_inputs = {
+                "arm_a": immutable_a,
+                "arm_b": immutable_b,
+                "arm_a_canonical_sha256": hashlib.sha256(immutable_a_bytes).hexdigest(),
+                "arm_b_canonical_sha256": hashlib.sha256(immutable_b_bytes).hexdigest(),
+                "arm_a_arm_b_byte_identical": immutable_a_bytes == immutable_b_bytes,
+            }
+            require(immutable_inputs["arm_a_arm_b_byte_identical"],
+                    "inventory mutation changed frozen planning inputs")
+            path_bytes = canonical_json_bytes(path_evidence)
+            inventory_only_mutation = {
+                "arm_a_and_arm_b_a_snapshot_byte_identical": canonical_json_bytes(
+                    arm_a["snapshots"][0]
+                ) == canonical_json_bytes(arm_b["snapshots"][0]),
+                "arm_a_and_arm_b_b_snapshot_byte_identical": canonical_json_bytes(
+                    arm_a["snapshots"][1]
+                ) == canonical_json_bytes(arm_b["snapshots"][1]),
+                "c_snapshot_non_inventory_fields_byte_identical": canonical_json_bytes({
+                    key: value for key, value in arm_a["snapshots"][2].items()
+                    if key != "verified_objects"
+                }) == canonical_json_bytes({
+                    key: value for key, value in arm_b["snapshots"][2].items()
+                    if key != "verified_objects"
+                }),
+                "only_c_verified_objects_changed": (
+                    arm_a["snapshots"][2]["verified_objects"]
+                    != arm_b["snapshots"][2]["verified_objects"]
+                ),
+            }
+            require(all(inventory_only_mutation.values()),
+                    "Arm B changed data outside C's verified inventory")
 
             controls = negative_controls(root / "controls", path_evidence, execution_evidence)
             isolation = audit.document()
@@ -543,9 +770,6 @@ def run_campaign(out_dir: Path | None = None):
             for objective in ("transition", "execution")
             for row in decision[objective]["candidates"]
         )
-        all_rows = [row for decision in (arm_a_decisions, arm_b_decisions)
-                    for objective in ("transition", "execution")
-                    for row in decision[objective]["candidates"]]
         unverified_locality = sum(
             not audit_entry["verified_receipt_valid"]
             for context in (arm_a, arm_b)
@@ -605,30 +829,18 @@ def run_campaign(out_dir: Path | None = None):
         documents = {
             "strategy.json": strategy_doc,
             "requirements.json": {"plan": arm_a["plan"], "requirements": arm_a["requirements"]},
-            "inventories.json": {"arm_a": arm_a["snapshots"], "arm_b": arm_b["snapshots"]},
+            "inventories.json": {
+                "arm_a": arm_a["snapshots"],
+                "arm_b": arm_b["snapshots"],
+                "inventory_only_mutation": inventory_only_mutation,
+            },
             "source-index.json": {"arm_a": arm_a["coordinator"].source_index(),
                                   "arm_b": arm_b["coordinator"].source_index()},
             "path-evidence.json": {
                 "records": path_evidence,
-                "arm_b_records": arm_b_path,
-                "inventory_only_semantics_unchanged": all(
-                    {
-                        key: left[key] for key in ("candidate_id", "participant_id", "node_id",
-                                                   "artifact_id", "target_node_id", "path_id",
-                                                   "bandwidth_bytes_per_second", "evidence_version",
-                                                   "evidence_identity", "applicability_context",
-                                                   "requirement_identity", "plan_digest",
-                                                   "requirements_digest")
-                    } == {
-                        key: right[key] for key in ("candidate_id", "participant_id", "node_id",
-                                                    "artifact_id", "target_node_id", "path_id",
-                                                    "bandwidth_bytes_per_second", "evidence_version",
-                                                    "evidence_identity", "applicability_context",
-                                                    "requirement_identity", "plan_digest",
-                                                    "requirements_digest")
-                    }
-                    for left, right in zip(path_evidence, arm_b_path)
-                ),
+                "arm_a_canonical_sha256": hashlib.sha256(path_bytes).hexdigest(),
+                "arm_b_canonical_sha256": hashlib.sha256(path_bytes).hexdigest(),
+                "arm_a_arm_b_byte_identical": True,
             },
             "candidate-economics.json": {"arm_a": _economic_view(arm_a_decisions["transition"]),
                                           "arm_b": _economic_view(arm_b_decisions["transition"])},
@@ -663,6 +875,7 @@ def run_campaign(out_dir: Path | None = None):
                                  "zero_invariants": zero},
             "purity-audit.json": purity,
             "isolation.json": isolation,
+            "immutable-inputs.json": immutable_inputs,
             "canonical-summary.json": summary,
         }
         producer_hashes = {path: sha(ROOT / path) for path in PRODUCERS}

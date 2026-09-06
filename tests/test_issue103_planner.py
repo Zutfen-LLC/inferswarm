@@ -15,7 +15,9 @@ import issue103_proof as proof  # noqa: E402
 def normalize_volatile(value):
     if isinstance(value, dict):
         return {
-            key: ("<volatile-digest>" if key == "evidence_digest"
+            key: ("<volatile-digest>" if key in {
+                      "evidence_digest", "arm_a_canonical_sha256", "arm_b_canonical_sha256"
+                  }
                   else normalize_volatile(item))
             for key, item in value.items()
         }
@@ -90,6 +92,83 @@ class PlannerProofTests(unittest.TestCase):
             self.assertEqual(controls[name]["ranking_status"], "FEASIBLE_UNRANKED")
             self.assertTrue(controls[name]["technical_feasibility"])
 
+    def test_technical_policy_and_integrity_gates_remain_distinct(self):
+        controls = self.documents["negative-controls.json"]["controls"]
+        technical = controls["technical_infeasibility"]
+        self.assertFalse(technical["technical_feasibility"])
+        self.assertTrue(technical["hard_policy_eligible"])
+        self.assertTrue(technical["integrity_eligible"])
+        self.assertEqual(technical["ranking_reason"], "TECHNICAL_INFEASIBILITY")
+        policy = controls["hard_policy_exclusion"]
+        self.assertTrue(policy["technical_feasibility"])
+        self.assertFalse(policy["hard_policy_eligible"])
+        self.assertTrue(policy["integrity_eligible"])
+        self.assertEqual(policy["ranking_reason"], "HARD_POLICY_EXCLUSION")
+        integrity = controls["integrity_exclusion"]
+        self.assertTrue(integrity["technical_feasibility"])
+        self.assertTrue(integrity["hard_policy_eligible"])
+        self.assertFalse(integrity["integrity_eligible"])
+        self.assertEqual(integrity["ranking_reason"], "INTEGRITY_EXCLUSION")
+        self.assertFalse(any(control["ranking_work_observed"]
+                             for control in (technical, policy, integrity)))
+
+    def test_execution_evidence_is_bound_to_objective_metric_and_units(self):
+        controls = self.documents["negative-controls.json"]["controls"]
+        contract = self.documents["immutable-inputs.json"]["arm_a"]["evidence_contract"][
+            "execution"
+        ]
+        self.assertEqual({key: contract[key] for key in ("objective", "metric", "units", "direction")}, {
+            "objective": "WARM_DECODE_THROUGHPUT",
+            "metric": "warm-decode-throughput",
+            "units": "fixture-items-per-second",
+            "direction": "maximize",
+        })
+        expected = {
+            "wrong_execution_metric": "EXECUTION_EVIDENCE_METRIC_MISMATCH",
+            "wrong_execution_units": "EXECUTION_EVIDENCE_UNITS_MISMATCH",
+            "incompatible_execution_objective": "EXECUTION_EVIDENCE_OBJECTIVE_INAPPLICABLE",
+        }
+        for name, reason in expected.items():
+            with self.subTest(name=name):
+                self.assertEqual(controls[name]["ranking_status"], "FEASIBLE_UNRANKED")
+                self.assertTrue(controls[name]["technical_feasibility"])
+                self.assertEqual(controls[name]["ranking_reason"], reason)
+
+    def test_transfer_accounting_uses_exact_participant_source_and_event_identity(self):
+        controls = self.documents["negative-controls.json"]["controls"]
+        for name in ("wrong_transfer_participant", "wrong_transfer_source",
+                     "duplicate_transfer_event", "unexplained_transfer_artifact_or_bytes"):
+            with self.subTest(name=name):
+                self.assertTrue(controls[name]["passed"])
+                self.assertGreater(controls[name]["unexplained_transition_bytes"], 0)
+
+    def test_ambiguous_ranking_evidence_is_permutation_invariant(self):
+        controls = self.documents["negative-controls.json"]["controls"]
+        for name in ("ambiguous_path_evidence_permutation",
+                     "ambiguous_execution_evidence_permutation"):
+            with self.subTest(name=name):
+                control = controls[name]
+                self.assertTrue(control["passed"])
+                self.assertEqual(control["selected_by_permutation"][0],
+                                 control["selected_by_permutation"][1])
+                self.assertEqual(control["ranking_by_permutation"][0],
+                                 control["ranking_by_permutation"][1])
+                self.assertEqual(control["ranked_by_permutation"][0],
+                                 control["ranked_by_permutation"][1])
+                economic_key = "costs_by_permutation" if "path" in name else "scores_by_permutation"
+                self.assertEqual(control[economic_key][0], control[economic_key][1])
+
+    def test_arm_b_changes_only_c_verified_inventory(self):
+        mutation = self.documents["inventories.json"]["inventory_only_mutation"]
+        self.assertTrue(all(mutation.values()))
+        immutable = self.documents["immutable-inputs.json"]
+        self.assertTrue(immutable["arm_a_arm_b_byte_identical"])
+        self.assertEqual(immutable["arm_a_canonical_sha256"],
+                         immutable["arm_b_canonical_sha256"])
+        path = self.documents["path-evidence.json"]
+        self.assertTrue(path["arm_a_arm_b_byte_identical"])
+        self.assertEqual(path["arm_a_canonical_sha256"], path["arm_b_canonical_sha256"])
+
     def test_all_adversarial_controls_are_retained(self):
         controls = self.documents["negative-controls.json"]["controls"]
         expected = {
@@ -98,8 +177,15 @@ class PlannerProofTests(unittest.TestCase):
             "same_source_id_drifted_descriptor", "missing_path_bandwidth_evidence",
             "nonpositive_bandwidth", "nonfinite_bandwidth", "wrong_target_applicability",
             "candidate_order_permutation", "locality_feasibility_mutation",
-            "objective_contamination_mutation", "unexplained_transfer_injection",
+            "objective_contamination_mutation",
             "stale_ranking_provenance",
+            "technical_infeasibility", "hard_policy_exclusion", "integrity_exclusion",
+            "wrong_execution_metric", "wrong_execution_units",
+            "incompatible_execution_objective", "wrong_transfer_participant",
+            "wrong_transfer_source", "duplicate_transfer_event",
+            "unexplained_transfer_artifact_or_bytes",
+            "ambiguous_path_evidence_permutation",
+            "ambiguous_execution_evidence_permutation",
         }
         self.assertEqual(set(controls), expected)
         self.assertTrue(all(control["passed"] for control in controls.values()))
@@ -113,9 +199,7 @@ class PlannerProofTests(unittest.TestCase):
     def test_frozen_evidence_regenerates_deterministically(self):
         with tempfile.TemporaryDirectory() as rerun:
             regenerated = proof.run_campaign(Path(rerun) / "evidence")
-        for name in ("strategy.json", "requirements.json", "path-evidence.json",
-                     "objective-decisions.json", "negative-controls.json",
-                     "canonical-summary.json"):
+        for name in proof.EVIDENCE_FILES:
             self.assertEqual(normalize_volatile(self.documents[name]),
                              normalize_volatile(regenerated[name]), name)
 

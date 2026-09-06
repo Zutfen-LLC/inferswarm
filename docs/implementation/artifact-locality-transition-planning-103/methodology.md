@@ -28,9 +28,20 @@ Arm B adds all three artifacts to C's verified cache. It does not change the
 strategy, plan, requirements, capacity, policy, integrity, path evidence, or
 execution evidence. The costs become 0.5, 1.0, and 0.0 seconds.
 
+The two arms use the same source and target descriptors. They also use the
+same path-evidence bytes. The retained immutable-input document contains both
+arm inputs. It records their canonical digests and their byte-equality result.
+The inventory document verifies that A and B have identical snapshots. It
+also verifies that only C's `verified_objects` field changes.
+
 Execution evidence gives candidate scores of 10, 20, and 15. The declared
 execution objective selects B in both inventory arms. The locality objective
 selects A in Arm A and C in Arm B.
+
+The execution contract binds `WARM_DECODE_THROUGHPUT` to the
+`warm-decode-throughput` metric. Its units are `fixture-items-per-second`. Its
+direction is `maximize`. Evidence with a different objective, metric, or unit
+does not provide a score.
 
 ## Cost boundary
 
@@ -45,12 +56,35 @@ digest, applicability, artifact, plan, and Participant identity. Missing,
 invalid, stale, or mismatched ranking evidence keeps a technically feasible
 candidate as `FEASIBLE_UNRANKED`.
 
+The planner applies gates in this order:
+
+1. The strategy supplies a legal candidate.
+2. The planner checks technical feasibility.
+3. The planner checks hard policy eligibility.
+4. The planner checks integrity eligibility.
+5. The planner checks evidence applicability.
+6. The planner applies the declared objective.
+
+Each gate has a separate result and exclusion reason. An excluded candidate
+does not start requirement, source, path, or execution ranking work.
+
+The planner requires one unambiguous applicable ranking record. Byte-identical
+duplicates are equivalent. Competing path or execution records make the
+candidate `FEASIBLE_UNRANKED`. Evidence order cannot change the result.
+
 ## Controls and custody
 
-The campaign retains controls for unverified and corrupt local state, stale
-peer advertisements, unauthorized and drifted Source descriptors, missing and
-invalid bandwidth, wrong target applicability, input permutation, locality
-feasibility mutation, objective contamination, and unexplained transfer bytes.
+The campaign retains controls for each feasibility and eligibility gate. It
+also retains controls for unverified and corrupt local state, stale peer
+advertisements, unauthorized and drifted Source descriptors, missing and
+invalid bandwidth, wrong target applicability, execution-objective mismatch,
+metric mismatch, unit mismatch, ambiguous evidence, input permutation,
+locality feasibility mutation, and objective contamination.
+
+Transfer accounting uses the exact candidate, participant, artifact, byte
+count, and authorized Source descriptor. Controls change each identity field.
+Controls also add a duplicate event and an unexplained event. Each mutation
+produces nonzero unexplained bytes.
 
 The planner module has a static purity audit. The audit rejects listed
 model-family and runtime-specific nouns. The campaign uses standard-library

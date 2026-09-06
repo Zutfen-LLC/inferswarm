@@ -17,6 +17,7 @@ RANKED = "RANKED"
 FEASIBLE_UNRANKED = "FEASIBLE_UNRANKED"
 EXCLUDED = "EXCLUDED"
 
+
 def _descriptor_key(value: Mapping[str, Any]) -> bytes:
     return canonical_json_bytes(dict(value))
 
@@ -47,7 +48,8 @@ def validate_path_evidence(document: Mapping[str, Any]) -> dict[str, Any]:
 def validate_execution_evidence(document: Mapping[str, Any]) -> dict[str, Any]:
     """Validate one frozen execution-performance record."""
     required = {
-        "schema", "candidate_id", "participant_id", "node_id", "score", "metric", "units",
+        "schema", "candidate_id", "participant_id", "node_id", "score", "objective",
+        "metric", "units", "direction",
         "evidence_version", "evidence_identity", "applicability_context", "plan_digest",
         "requirements_digest", "evidence_digest",
     }
@@ -82,10 +84,14 @@ class LocalityPlanner:
     def _path_for(self, *, candidate, record, ticket):
         matches = [item for item in self.path_evidence
                    if item.get("candidate_id") == candidate["candidate_id"]
+                   and item.get("participant_id") == candidate["participant_id"]
                    and item.get("artifact_id") == record["artifact_id"]]
         if not matches:
             return None, "MISSING_PATH_BANDWIDTH_EVIDENCE"
-        evidence = matches[0]
+        unique = {_descriptor_key(item): item for item in matches}
+        if len(unique) != 1:
+            return None, "AMBIGUOUS_PATH_EVIDENCE"
+        evidence = next(iter(unique.values()))
         try:
             validate_path_evidence(evidence)
         except ValueError:
@@ -112,12 +118,16 @@ class LocalityPlanner:
             return None, "INVALID_PATH_BANDWIDTH_EVIDENCE"
         return evidence, None
 
-    def _execution_for(self, candidate):
+    def _execution_for(self, candidate, objective):
         matches = [item for item in self.execution_evidence
-                   if item.get("candidate_id") == candidate["candidate_id"]]
-        if len(matches) != 1:
+                   if item.get("candidate_id") == candidate["candidate_id"]
+                   and item.get("participant_id") == candidate["participant_id"]]
+        if not matches:
             return None, "MISSING_EXECUTION_EVIDENCE"
-        evidence = matches[0]
+        unique = {_descriptor_key(item): item for item in matches}
+        if len(unique) != 1:
+            return None, "AMBIGUOUS_EXECUTION_EVIDENCE"
+        evidence = next(iter(unique.values()))
         try:
             validate_execution_evidence(evidence)
         except ValueError:
@@ -132,34 +142,109 @@ class LocalityPlanner:
         if (evidence["participant_id"] != candidate["participant_id"]
                 or evidence["node_id"] != candidate["node_id"]):
             return None, "EXECUTION_EVIDENCE_INAPPLICABLE"
+        if (evidence["objective"] != objective
+                or evidence["objective"] != contract["objective"]
+                or evidence["direction"] != contract["direction"]):
+            return None, "EXECUTION_EVIDENCE_OBJECTIVE_INAPPLICABLE"
+        if evidence["metric"] != contract["metric"]:
+            return None, "EXECUTION_EVIDENCE_METRIC_MISMATCH"
+        if evidence["units"] != contract["units"]:
+            return None, "EXECUTION_EVIDENCE_UNITS_MISMATCH"
         score = evidence["score"]
         if not isinstance(score, (int, float)) or isinstance(score, bool) or not math.isfinite(float(score)):
             return None, "INVALID_EXECUTION_EVIDENCE"
         return evidence, None
 
-    def _row(self, candidate):
+    @staticmethod
+    def _eligibility_reason(feasibility):
+        if not feasibility["technical_feasibility"]:
+            return "TECHNICAL_INFEASIBILITY"
+        if not feasibility["hard_policy_eligible"]:
+            return "HARD_POLICY_EXCLUSION"
+        if not feasibility["integrity_eligible"]:
+            return "INTEGRITY_EXCLUSION"
+        return None
+
+    def _row(self, candidate, objective):
         feasibility = candidate["feasibility"]
-        technical = all((feasibility["technical_feasibility"],
-                         feasibility["hard_policy_eligible"],
-                         feasibility["integrity_eligible"]))
+        exclusion_reason = self._eligibility_reason(feasibility)
+        row = {
+            "candidate_id": candidate["candidate_id"],
+            "participant_id": candidate["participant_id"],
+            "node_id": candidate["node_id"],
+            "required_artifact_ids": [],
+            "required_artifact_bytes": 0,
+            "required_artifact_bytes_by_id": {},
+            "verified_local_required_artifact_ids": [],
+            "verified_local_required_bytes": 0,
+            "missing_artifact_ids": [],
+            "missing_artifact_bytes": 0,
+            "locality_evidence_status": "NOT_EVALUATED",
+            "source_authorization_status": "NOT_EVALUATED",
+            "selected_source_descriptor_by_artifact": {},
+            "path_evidence_identity_by_nonlocal_artifact": {},
+            "bandwidth_bytes_per_second_by_nonlocal_artifact": {},
+            "estimated_transfer_seconds_by_artifact": {},
+            "estimated_transition_seconds": None,
+            "transform_materialization_seconds": 0.0,
+            "technical_feasibility": feasibility["technical_feasibility"],
+            "hard_policy_eligible": feasibility["hard_policy_eligible"],
+            "integrity_eligible": feasibility["integrity_eligible"],
+            "transition_ranking_status": EXCLUDED if exclusion_reason else FEASIBLE_UNRANKED,
+            "transition_ranking_reason": exclusion_reason or "NOT_EVALUATED_FOR_OBJECTIVE",
+            "execution_evidence": None,
+            "execution_evidence_reason": exclusion_reason or "NOT_EVALUATED_FOR_OBJECTIVE",
+            "execution_ranking_status": EXCLUDED if exclusion_reason else FEASIBLE_UNRANKED,
+            "execution_ranking_reason": exclusion_reason or "NOT_EVALUATED_FOR_OBJECTIVE",
+            "ranking_status": EXCLUDED if exclusion_reason else FEASIBLE_UNRANKED,
+            "ranking_reason": exclusion_reason,
+            "ranking_value": None,
+            "transfer_events": [],
+            "ranking_input_without_frozen_provenance": 0,
+        }
+        if exclusion_reason:
+            return row
+
         participant = self._candidate_requirements(candidate["participant_id"])
-        delta = self.coordinator.delta(candidate["participant_id"])
         records = {record["artifact_id"]: record for record in participant["required_artifacts"]}
+        row.update({
+            "required_artifact_ids": sorted(records),
+            "required_artifact_bytes": sum(r["length"] for r in records.values()),
+            "required_artifact_bytes_by_id": {
+                artifact_id: records[artifact_id]["length"] for artifact_id in sorted(records)
+            },
+        })
+
+        if objective == WARM_DECODE_THROUGHPUT:
+            execution, reason = self._execution_for(candidate, objective)
+            row["execution_evidence"] = deepcopy(execution) if execution else None
+            row["execution_evidence_reason"] = reason
+            row["execution_ranking_status"] = RANKED if execution else FEASIBLE_UNRANKED
+            row["execution_ranking_reason"] = (
+                "COMPLETE_FROZEN_EXECUTION_EVIDENCE" if execution else reason
+            )
+            if reason == "RANKING_INPUT_WITHOUT_FROZEN_PROVENANCE":
+                row["ranking_input_without_frozen_provenance"] = 1
+            return row
+
+        delta = self.coordinator.delta(candidate["participant_id"])
         local_ids = set(delta["local_artifact_ids"])
         missing_ids = set(delta["missing_artifact_ids"])
-        selected_sources = {}
-        path_ids = {}
-        bandwidths = {}
-        per_artifact = {}
-        transfer_events = []
         reasons = []
-        provenance_violations = 0
+        row.update({
+            "locality_evidence_status": "VERIFIED_INVENTORY",
+            "verified_local_required_artifact_ids": sorted(local_ids),
+            "verified_local_required_bytes": sum(records[aid]["length"] for aid in local_ids),
+            "missing_artifact_ids": sorted(missing_ids),
+            "missing_artifact_bytes": sum(records[aid]["length"] for aid in missing_ids),
+            "source_authorization_status": "EXACT_AUTHORIZATION",
+        })
         for artifact_id in sorted(records):
             record = records[artifact_id]
             ticket = self.coordinator.authorize(delta, artifact_id)
-            selected_sources[artifact_id] = deepcopy(ticket["source"])
+            row["selected_source_descriptor_by_artifact"][artifact_id] = deepcopy(ticket["source"])
             if artifact_id in local_ids:
-                per_artifact[artifact_id] = 0.0
+                row["estimated_transfer_seconds_by_artifact"][artifact_id] = 0.0
                 continue
             if artifact_id not in missing_ids:
                 raise fail("RECONCILIATION_MISMATCH", "delta does not cover exact requirement")
@@ -167,60 +252,37 @@ class LocalityPlanner:
             if evidence is None:
                 reasons.append(reason)
                 if reason == "RANKING_INPUT_WITHOUT_FROZEN_PROVENANCE":
-                    provenance_violations += 1
+                    row["ranking_input_without_frozen_provenance"] += 1
                 continue
             seconds = float(record["length"]) / float(evidence["bandwidth_bytes_per_second"])
-            per_artifact[artifact_id] = seconds
-            path_ids[artifact_id] = evidence["path_id"]
-            bandwidths[artifact_id] = evidence["bandwidth_bytes_per_second"]
-            transfer_events.append({"candidate_id": candidate["candidate_id"],
-                                    "participant_id": candidate["participant_id"],
-                                    "artifact_id": artifact_id, "bytes": record["length"],
-                                    "source": deepcopy(ticket["source"])})
-        priced_missing = [artifact_id for artifact_id in missing_ids if artifact_id in per_artifact]
-        transition_seconds = math.fsum(per_artifact[artifact_id] for artifact_id in priced_missing)
+            row["estimated_transfer_seconds_by_artifact"][artifact_id] = seconds
+            row["path_evidence_identity_by_nonlocal_artifact"][artifact_id] = evidence["path_id"]
+            row["bandwidth_bytes_per_second_by_nonlocal_artifact"][artifact_id] = evidence[
+                "bandwidth_bytes_per_second"
+            ]
+            row["transfer_events"].append({
+                "candidate_id": candidate["candidate_id"],
+                "participant_id": candidate["participant_id"],
+                "artifact_id": artifact_id,
+                "bytes": record["length"],
+                "source": deepcopy(ticket["source"]),
+            })
+        priced_missing = [
+            artifact_id for artifact_id in missing_ids
+            if artifact_id in row["estimated_transfer_seconds_by_artifact"]
+        ]
+        transition_seconds = math.fsum(
+            row["estimated_transfer_seconds_by_artifact"][artifact_id]
+            for artifact_id in priced_missing
+        )
         if len(priced_missing) != len(missing_ids):
             transition_seconds = None
-        transition_reason = reasons[0] if reasons else None
-        execution, execution_reason = self._execution_for(candidate)
-        if not technical:
-            status, reason, value = EXCLUDED, "TECHNICAL_OR_HARD_ELIGIBILITY_FAILED", None
-        else:
-            status, reason, value = RANKED, None, None
-        return {
-            "candidate_id": candidate["candidate_id"],
-            "participant_id": candidate["participant_id"],
-            "node_id": candidate["node_id"],
-            "required_artifact_ids": sorted(records),
-            "required_artifact_bytes": sum(r["length"] for r in records.values()),
-            "required_artifact_bytes_by_id": {aid: records[aid]["length"] for aid in sorted(records)},
-            "verified_local_required_artifact_ids": sorted(local_ids),
-            "verified_local_required_bytes": sum(records[aid]["length"] for aid in local_ids),
-            "missing_artifact_ids": sorted(missing_ids),
-            "missing_artifact_bytes": sum(records[aid]["length"] for aid in missing_ids),
-            "locality_evidence_status": "VERIFIED_INVENTORY",
-            "source_authorization_status": "EXACT_AUTHORIZATION",
-            "selected_source_descriptor_by_artifact": selected_sources,
-            "path_evidence_identity_by_nonlocal_artifact": path_ids,
-            "bandwidth_bytes_per_second_by_nonlocal_artifact": bandwidths,
-            "estimated_transfer_seconds_by_artifact": per_artifact,
-            "estimated_transition_seconds": transition_seconds,
-            "transform_materialization_seconds": 0.0,
-            "technical_feasibility": technical,
-            "hard_policy_eligible": feasibility["hard_policy_eligible"],
-            "integrity_eligible": feasibility["integrity_eligible"],
-            "transition_ranking_status": RANKED if transition_seconds is not None else FEASIBLE_UNRANKED,
-            "transition_ranking_reason": transition_reason or "COMPLETE_FROZEN_PATH_EVIDENCE",
-            "execution_evidence": deepcopy(execution) if execution else None,
-            "execution_evidence_reason": execution_reason,
-            "execution_ranking_status": RANKED if execution else FEASIBLE_UNRANKED,
-            "execution_ranking_reason": execution_reason or "COMPLETE_FROZEN_EXECUTION_EVIDENCE",
-            "ranking_status": status,
-            "ranking_reason": reason,
-            "ranking_value": value,
-            "transfer_events": transfer_events,
-            "ranking_input_without_frozen_provenance": provenance_violations,
-        }
+        row["estimated_transition_seconds"] = transition_seconds
+        row["transition_ranking_status"] = RANKED if transition_seconds is not None else FEASIBLE_UNRANKED
+        row["transition_ranking_reason"] = (
+            reasons[0] if reasons else "COMPLETE_FROZEN_PATH_EVIDENCE"
+        )
+        return row
 
     def rank(self, objective: str, *, candidate_order: Sequence[Mapping[str, Any]] | None = None):
         if objective not in (MIN_TRANSITION_COST, WARM_DECODE_THROUGHPUT):
@@ -228,10 +290,9 @@ class LocalityPlanner:
         candidates = list(candidate_order if candidate_order is not None else self.candidates)
         rows = []
         for candidate in candidates:
-            row = self._row(candidate)
-            if not row["technical_feasibility"]:
-                row["ranking_status"] = EXCLUDED
-                row["ranking_reason"] = "TECHNICAL_OR_HARD_ELIGIBILITY_FAILED"
+            row = self._row(candidate, objective)
+            if row["ranking_status"] == EXCLUDED:
+                pass
             elif objective == MIN_TRANSITION_COST:
                 if row["transition_ranking_status"] == RANKED:
                     row["ranking_status"] = RANKED
@@ -271,18 +332,29 @@ class LocalityPlanner:
 
 
 def account_transfer_events(rows: Sequence[Mapping[str, Any]], events: Sequence[Mapping[str, Any]]):
-    """Derive unexplained bytes from exact candidate/artifact accounting."""
-    expected = {(row["candidate_id"], artifact_id): row["required_artifact_bytes_by_id"][artifact_id]
-                for row in rows for artifact_id in row["missing_artifact_ids"]}
+    """Derive unexplained bytes from exact candidate, participant, artifact, and source identity."""
+    expected = {
+        (
+            row["candidate_id"],
+            row["participant_id"],
+            artifact_id,
+            row["required_artifact_bytes_by_id"][artifact_id],
+            _descriptor_key(row["selected_source_descriptor_by_artifact"][artifact_id]),
+        ): row["required_artifact_bytes_by_id"][artifact_id]
+        for row in rows for artifact_id in row["missing_artifact_ids"]
+    }
     unexplained = 0
-    accepted = []
+    accepted = set()
     for event in events:
-        key = (event.get("candidate_id"), event.get("artifact_id"))
-        if (key not in expected or event.get("bytes") != expected[key]
-                or key in accepted):
-            unexplained += int(event.get("bytes", 0))
+        source = event.get("source")
+        source_key = _descriptor_key(source) if isinstance(source, Mapping) else None
+        key = (event.get("candidate_id"), event.get("participant_id"),
+               event.get("artifact_id"), event.get("bytes"), source_key)
+        if key not in expected or key in accepted:
+            event_bytes = event.get("bytes", 0)
+            unexplained += event_bytes if isinstance(event_bytes, int) and event_bytes > 0 else 0
         else:
-            accepted.append(key)
+            accepted.add(key)
     missing = set(expected) - set(accepted)
     missing_bytes = sum(expected[key] for key in missing)
     return {"expected_event_count": len(expected), "accepted_event_count": len(accepted),
