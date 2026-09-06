@@ -84,6 +84,9 @@ jobs:
       - name: Check issue 108 post-v4 statistical and metric doctrine (CPU-only)
         run: python3 -m unittest tests.test_issue108_post_v4_statistical_metric_doctrine -v
 
+      - name: Check issue 109 v5 mixture-population methodology freeze (CPU-only)
+        run: python3 -m unittest tests.test_issue109_v5_methodology tests.test_issue109_v5_thresholds tests.test_issue109_v5_methodology_freeze -v
+
       - name: Check issue 99 plan-driven artifact acquisition (CPU-only)
         run: python3 -m unittest tests.test_issue99_artifact_core tests.test_issue99_proof -v
 

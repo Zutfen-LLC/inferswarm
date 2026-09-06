@@ -435,9 +435,41 @@ population. A target that requires named-cell coverage must use named-stratum
 accounting. The next Gemma comparator keeps full-vocabulary FP32 consumer-logit
 max-absolute and RMS gates plus `E_D` acceptance-bearing, moves p99 to mandatory
 telemetry, and covers all eight canonical decisions. No v5 parameters or
-physical work occurred. The next gate is issue #109, the prospective v5
-methodology freeze. Record:
+physical work occurred. Record:
 `docs/qualification/post-v4-statistical-metric-doctrine/`.
+
+Issue #109 completed the prospective v5 methodology freeze with
+`GEMMA_V5_CORRECTED_QUALIFICATION_METHODOLOGY_FROZEN`, instantiating #108's doctrine rather
+than redefining it: `MIXTURE_POPULATION_EXCHANGEABILITY` /
+`POOLED_ORDER_STATISTIC_PREDICTION` / `ZERO_EXCEEDANCE_CAMPAIGN_MIXTURE`,
+validated directly against the unchanged, accepted #108
+`statistical-contract.json`. A frozen 24-component (`content_class` ×
+`length_regime`) mixture population, uniform weight `1/24`, is drawn IID per
+case (component chosen by a SHA-256-seeded RNG keyed on the draw index) for
+both arms: 1416 calibration cases (`c109-*`) from a public seed and a fresh
+24-case sealed holdout (`h109-*`) from an independent secret seed — the same
+generator and weights for both is what establishes their joint
+exchangeability, not a shared fixed cell count (the flaw #105/#108 found in
+the v1/v3/v4 balanced design). For `N=1416`/`H=24`, a calibration maximum has
+strict-exceedance probability `H/(N+H)=1/60`; with the three #108-accepted
+acceptance-bearing families (`fp32-consumer-logits:max-absolute-difference`,
+`fp32-consumer-logits:rms-difference`, `decision_local_E_D`; p99 moved to
+telemetry) the Bonferroni familywise bound is `3/60=1/20=5%`, matching v4's
+95% confidence through a doctrine-compliant construction. The unchanged v4
+canonical-prefix semantic gate (decision-domain construction, argmax
+tie-break, `E_D` reducer) is re-exported byte-identical, not redefined. The
+fresh holdout was generated once, immediately CMS-sealed
+(AES-256-CBC/RSA-3072, `-binary` byte-exact round-trip verified), and its
+plaintext discarded; it has never been a repository artifact. Holdout
+**custody is honestly incomplete** — only one verified local custodian
+exists (`holdout_state: SEALED_CUSTODY_INCOMPLETE`, `unseal_authorized:
+false`) — and both the threshold deriver and the unseal preflight fail
+closed against the real committed custody record until a second
+independently verified custodian is established; this is an outstanding
+manual action, not a placeholder. No physical execution, threshold
+derivation from physical evidence, or holdout decryption occurred. The next
+gate is issue #110, physical v5 execution (after custody completion).
+Record: `docs/qualification/gemma4-12b-it-v5/`.
 
 Issue #99 is complete on the orthogonal distribution lane: the minimum
 plan-driven model artifact acquisition proof required by ADR 0009 terminated
