@@ -51,8 +51,10 @@ within-cell exchangeability is invalid.
 
 [`statistical-contract.json`](statistical-contract.json) compares each allowed
 class by assumptions, finite-sample guarantee, familywise composition,
-sample-burden scaling, and failure modes. The key distribution-free identities
-are:
+sample-burden scaling, and failure modes. Its compatibility constraints state
+which assumption profile and qualification claim each class can support. They
+do not select a v5 assumption profile, construction, or claim. Issue #109
+must make that prospective selection. The key distribution-free identities are:
 
 - For `N` exchangeable calibration cases and `H` exchangeable future campaign
   cases, a calibration maximum has strict-exceedance probability at most
@@ -137,4 +139,6 @@ python3 -m unittest tests.test_issue108_post_v4_statistical_metric_doctrine -v
 
 The tool is pure stdlib and CPU-only. It verifies the source hashes in
 [`source-bindings.json`](source-bindings.json) before it emits the doctrine
-record.
+record. This includes the top-level binding of
+`RAW-EVIDENCE-RETENTION.json` and the SHA-256 value of every retained durable
+repository file that manifest names. It does not access node-local evidence.

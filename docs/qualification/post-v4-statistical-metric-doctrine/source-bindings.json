@@ -12,7 +12,7 @@
     {"path": "docs/qualification/gemma4-12b-it-v4-campaign-97/b/TERMINAL-REPORT.md", "sha256": "052437bd65446fb8d95a5a615a1f9c93783e02adcb22eb95a9e0603fae5e9af4"},
     {"path": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/DIAGNOSIS.md", "sha256": "93503c34c3f180e0b79b6a66c05538f24ffc27d27281cd8d8a9b08a8163e4e66"},
     {"path": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/diagnosis-record.json", "sha256": "53167636bb6d09cb22eb205ddb11a242009a190c709f109959c1d8bdca75ce27"},
-    {"path": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/RAW-EVIDENCE-RETENTION.json", "sha256": "2e1ec275e4318193e1ad685e0a2159b59bcd09c5c1705e61839df700f1604632"},
+    {"path": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/RAW-EVIDENCE-RETENTION.json", "sha256": "69fe0e8024fadea237c16e37d549b48de6ed7b0c9a632fde79fc2429ac0f18e9"},
     {"path": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/RAW-EVIDENCE-EXPUNGEMENT.json", "sha256": "4123d4b6b9c95518dfae0988ccddd6de3091b86e668c405bc548a3d7fdd0d321"}
   ]
 }

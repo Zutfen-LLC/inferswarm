@@ -17,6 +17,22 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 AREA = REPO_ROOT / "docs/qualification/post-v4-statistical-metric-doctrine"
+RETENTION_MANIFEST = (
+    "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/"
+    "RAW-EVIDENCE-RETENTION.json"
+)
+
+ASSUMPTION_PROFILES = {
+    "MIXTURE_POPULATION_EXCHANGEABILITY",
+    "WITHIN_NAMED_STRATUM_EXCHANGEABILITY",
+}
+
+QUALIFICATION_CLAIMS = {
+    "ZERO_EXCEEDANCE_CAMPAIGN_MIXTURE",
+    "ZERO_EXCEEDANCE_CAMPAIGN_NAMED_STRATA",
+    "MARGINAL_PER_CASE_MIXTURE",
+    "MARGINAL_PER_CASE_NAMED_STRATUM",
+}
 
 
 class DoctrineError(ValueError):
@@ -30,6 +46,19 @@ def load_json(name: str) -> dict:
 
 def sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def retained_repo_path(path_text: str) -> Path:
+    """Return a repository-local retained-evidence path or fail closed."""
+    candidate = Path(path_text)
+    if candidate.is_absolute():
+        raise DoctrineError("RETAINED_RAW_EVIDENCE_PATH_INVALID")
+    resolved = (REPO_ROOT / candidate).resolve()
+    try:
+        resolved.relative_to(REPO_ROOT.resolve())
+    except ValueError as error:
+        raise DoctrineError("RETAINED_RAW_EVIDENCE_PATH_INVALID") from error
+    return resolved
 
 
 def campaign_max_exceedance_probability(
@@ -69,17 +98,21 @@ def stratified_campaign_exceedance_upper_bound(
 
 
 def validate_statistical_contract(contract: dict) -> None:
-    """Reject a claim whose stated assumptions cannot establish it."""
+    """Validate prospective statistical doctrine without selecting v5."""
     if contract["schema"] != "inferswarm.issue108.statistical-contract/1":
         raise DoctrineError("UNSUPPORTED_STATISTICAL_CONTRACT_SCHEMA")
-    profile = contract["assumption_profile"]
-    construction = contract["construction"]
-    if (profile == "WITHIN_NAMED_STRATUM_EXCHANGEABILITY"
-            and construction.startswith("POOLED_")):
-        raise DoctrineError("UNSUPPORTED_POOLED_MAXIMUM_CLAIM")
+    if {"assumption_profile", "construction"} & set(contract):
+        raise DoctrineError("CONCRETE_V5_SELECTION_FORBIDDEN")
+    profiles = set(contract["permitted_assumption_profiles"])
+    if profiles != ASSUMPTION_PROFILES:
+        raise DoctrineError("INCOMPLETE_ASSUMPTION_PROFILE_DOCTRINE")
+    requirements = contract["assumption_profile_requirements"]
+    if set(requirements) != profiles:
+        raise DoctrineError("INCOMPLETE_ASSUMPTION_PROFILE_DOCTRINE")
+    for requirement in requirements.values():
+        if not requirement:
+            raise DoctrineError("INCOMPLETE_ASSUMPTION_PROFILE_DOCTRINE")
     allowed = set(contract["permitted_construction_classes"])
-    if construction not in allowed:
-        raise DoctrineError("UNPERMITTED_CONSTRUCTION_CLASS")
     comparison = contract["construction_comparison"]
     if set(comparison) != allowed:
         raise DoctrineError("INCOMPLETE_CONSTRUCTION_COMPARISON")
@@ -89,14 +122,21 @@ def validate_statistical_contract(contract: dict) -> None:
                       "failure_modes"):
             if not entry.get(field):
                 raise DoctrineError("INCOMPLETE_CONSTRUCTION_COMPARISON")
-    if profile == "MIXTURE_POPULATION_EXCHANGEABILITY":
-        mixture = contract["mixture_population_requirements"]
-        if not mixture["case_generator_is_iid_from_one_frozen_mixture"]:
-            raise DoctrineError("MIXTURE_EXCHANGEABILITY_NOT_ESTABLISHED")
-        if mixture["per_stratum_coverage_claim_allowed"]:
-            raise DoctrineError("MIXTURE_DOES_NOT_ESTABLISH_PER_STRATUM_COVERAGE")
-    elif profile != "WITHIN_NAMED_STRATUM_EXCHANGEABILITY":
-        raise DoctrineError("UNKNOWN_ASSUMPTION_PROFILE")
+    compatibility = contract["compatibility_constraints"]
+    pairs = set()
+    for entry in compatibility:
+        profile = entry["assumption_profile"]
+        construction = entry["construction"]
+        claims = entry["qualification_claims"]
+        pair = (profile, construction)
+        if profile not in profiles or construction not in allowed:
+            raise DoctrineError("INVALID_DOCTRINE_COMPATIBILITY")
+        if pair in pairs or not claims or not set(claims) <= QUALIFICATION_CLAIMS:
+            raise DoctrineError("INVALID_DOCTRINE_COMPATIBILITY")
+        pairs.add(pair)
+    if (not pairs or {construction for _, construction in pairs} != allowed
+            or {profile for profile, _ in pairs} != profiles):
+        raise DoctrineError("INCOMPLETE_DOCTRINE_COMPATIBILITY")
     familywise = contract["familywise_composition"]
     if familywise["independence_assumed"]:
         raise DoctrineError("FAMILYWISE_INDEPENDENCE_ASSUMPTION_FORBIDDEN")
@@ -110,6 +150,72 @@ def validate_statistical_contract(contract: dict) -> None:
     }
     if not required <= prohibitions:
         raise DoctrineError("STATISTICAL_PROHIBITION_MISSING")
+
+
+def validate_prospective_methodology(methodology: dict, contract: dict) -> None:
+    """Reject a proposed methodology that is outside the accepted doctrine.
+
+    This validator checks a prospective proposal. It does not choose one.
+    """
+    validate_statistical_contract(contract)
+    profile = methodology["assumption_profile"]
+    construction = methodology["construction"]
+    claim = methodology["qualification_claim"]
+    if construction not in set(contract["permitted_construction_classes"]):
+        raise DoctrineError("UNPERMITTED_CONSTRUCTION_CLASS")
+    if profile not in set(contract["permitted_assumption_profiles"]):
+        raise DoctrineError("UNKNOWN_ASSUMPTION_PROFILE")
+    matches = [
+        entry for entry in contract["compatibility_constraints"]
+        if entry["assumption_profile"] == profile
+        and entry["construction"] == construction
+    ]
+    if not matches:
+        raise DoctrineError("INCOMPATIBLE_ASSUMPTION_CONSTRUCTION")
+    if profile == "MIXTURE_POPULATION_EXCHANGEABILITY":
+        if not methodology["declared_iid_mixture_target"]:
+            raise DoctrineError("UNDECLARED_CROSS_STRATUM_EXCHANGEABILITY")
+        if methodology["claims_per_stratum_coverage"]:
+            raise DoctrineError("MIXTURE_DOES_NOT_ESTABLISH_PER_STRATUM_COVERAGE")
+    elif profile == "WITHIN_NAMED_STRATUM_EXCHANGEABILITY":
+        if not methodology["declared_named_strata"]:
+            raise DoctrineError("NAMED_STRATA_UNDECLARED")
+    if claim not in matches[0]["qualification_claims"]:
+        raise DoctrineError("INCOMPATIBLE_QUALIFICATION_CLAIM")
+
+
+def verify_retained_raw_evidence(retention_manifest: dict) -> None:
+    """Verify every durable repository file named by the retention manifest."""
+    if retention_manifest.get("schema") != "inferswarm.issue105.raw-evidence-retention/1":
+        raise DoctrineError("UNSUPPORTED_RETAINED_RAW_EVIDENCE_SCHEMA")
+    files = retention_manifest.get("retained_durable_repo", {}).get("files")
+    if not isinstance(files, list):
+        raise DoctrineError("RETAINED_RAW_EVIDENCE_INVENTORY_INVALID")
+    raw_rows = 0
+    producer_records = 0
+    seen_paths = set()
+    for entry in files:
+        if not isinstance(entry, dict):
+            raise DoctrineError("RETAINED_RAW_EVIDENCE_INVENTORY_INVALID")
+        path_text = entry.get("path")
+        expected_sha256 = entry.get("sha256")
+        if (not isinstance(path_text, str) or not isinstance(expected_sha256, str)
+                or len(expected_sha256) != 64):
+            raise DoctrineError("RETAINED_RAW_EVIDENCE_INVENTORY_INVALID")
+        if path_text in seen_paths:
+            raise DoctrineError("RETAINED_RAW_EVIDENCE_INVENTORY_INVALID")
+        seen_paths.add(path_text)
+        path = retained_repo_path(path_text)
+        if not path.is_file():
+            raise DoctrineError("RETAINED_RAW_EVIDENCE_FILE_MISSING")
+        if sha256_file(path) != expected_sha256:
+            raise DoctrineError("RETAINED_RAW_EVIDENCE_HASH_DRIFT")
+        if path.suffix == ".f32":
+            raw_rows += 1
+        if "producer case record" in entry.get("role", ""):
+            producer_records += 1
+    if raw_rows < 16 or producer_records < 2:
+        raise DoctrineError("RETAINED_RAW_EVIDENCE_INVENTORY_INCOMPLETE")
 
 
 def validate_metric_classification(classification: dict) -> None:
@@ -141,6 +247,16 @@ def verify_source_bindings(bindings: dict) -> None:
             raise DoctrineError("HISTORICAL_SOURCE_MISSING")
         if sha256_file(path) != binding["sha256"]:
             raise DoctrineError("HISTORICAL_SOURCE_HASH_DRIFT")
+    if not any(binding.get("path") == RETENTION_MANIFEST
+               for binding in bindings["historical_inputs"]):
+        raise DoctrineError("RETAINED_RAW_EVIDENCE_MANIFEST_UNBOUND")
+    retention_path = REPO_ROOT / RETENTION_MANIFEST
+    try:
+        with retention_path.open(encoding="utf-8") as source:
+            retention_manifest = json.load(source)
+    except (OSError, json.JSONDecodeError) as error:
+        raise DoctrineError("RETAINED_RAW_EVIDENCE_MANIFEST_INVALID") from error
+    verify_retained_raw_evidence(retention_manifest)
 
 
 def calculation_identities() -> dict:

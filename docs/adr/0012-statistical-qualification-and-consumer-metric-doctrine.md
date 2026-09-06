@@ -45,14 +45,18 @@ as an ADR 0010/0011 forward refinement.
 
 - Issue #109 must choose a permitted construction and declare its parameters
   before any physical v5 work.
+- Issue #108 records permitted assumption profiles, construction classes, and
+  compatibility constraints. It does not select a v5 profile or construction.
 - A probability statement can no longer use a pooled maximum with only
   within-stratum exchangeability.
 - p99 remains retained, finite-checked telemetry. Its finite exceedance alone
   does not fail a qualification under the new comparator.
 - The next comparator has more complete canonical-decision measurement than
   v4. This can change future calibration burden. It does not alter v4.
-- The pure-stdlib validator and static tests fail closed when the v4
-  assumption mismatch is reintroduced.
+- The pure-stdlib validator and static tests fail closed when an incompatible
+  prospective statistical combination is proposed. They also verify every
+  retained raw FP32 row and producer case record named by the hash-bound
+  retention manifest.
 
 ## Hypotheses distinguished from decisions
 
