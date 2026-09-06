@@ -237,6 +237,8 @@ class CampaignTests(unittest.TestCase):
                 if isinstance(value, list):
                     return [visit(item) for item in value]
                 if isinstance(value, str):
+                    if value in ("os.listdir", "os.scandir"):
+                        return "<DIRECTORY_ENUMERATION>"
                     return value.replace(temporary, "<TEMP>")
                 return value
             return visit(json.loads(json.dumps(documents)))
