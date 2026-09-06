@@ -427,6 +427,18 @@ unbounded. Named next gate: a
 statistical-contract and metric doctrine review before any v5 freeze.
 Record: `docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/`.
 
+Issue #108 completed that review with
+`POST_V4_STATISTICAL_METRIC_DOCTRINE_ACCEPTED`. A successor must state a
+prospective campaign or marginal coverage claim with assumptions that establish
+it. Pooled order-statistic prediction is allowed only for an IID frozen mixture
+population. A target that requires named-cell coverage must use named-stratum
+accounting. The next Gemma comparator keeps full-vocabulary FP32 consumer-logit
+max-absolute and RMS gates plus `E_D` acceptance-bearing, moves p99 to mandatory
+telemetry, and covers all eight canonical decisions. No v5 parameters or
+physical work occurred. The next gate is issue #109, the prospective v5
+methodology freeze. Record:
+`docs/qualification/post-v4-statistical-metric-doctrine/`.
+
 Issue #99 is complete on the orthogonal distribution lane: the minimum
 plan-driven model artifact acquisition proof required by ADR 0009 terminated
 `PLAN_DRIVEN_ARTIFACT_ACQUISITION_PASS` (see its section under the successor

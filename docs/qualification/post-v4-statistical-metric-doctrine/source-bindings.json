@@ -1,0 +1,18 @@
+{
+  "schema": "inferswarm.issue108.source-bindings/1",
+  "historical_inputs": [
+    {"path": "docs/adr/0010-heterogeneous-numerical-equivalence.md", "sha256": "7085dcab80cf9aaa4f5c650bbf210c4bba68d15647f8d6aad044b85823bcb572"},
+    {"path": "docs/adr/0011-two-tier-numerical-core-and-telemetry.md", "sha256": "079927a3b73ec9140246f6b0f1958b85d53d30b2cc2e4b7e273d62569918cc6a"},
+    {"path": "docs/architecture/numerical-equivalence-contract.md", "sha256": "4a516c4f0df76c75ad612591f41f1342afd7f8706c95e95bb07081eb5364ceb0"},
+    {"path": "docs/qualification/gemma4-12b-it-semantic-83/SEMANTIC-CONTRACT.md", "sha256": "dd4936df7c9f8a74bce85181a8cde4ffc3ec385dbcd07013c8b7be2ad3a0b8be"},
+    {"path": "docs/qualification/gemma4-12b-it-post-v3-envelope-diagnosis/DIAGNOSIS.md", "sha256": "1032ff1836137613ade7ecad8a147077516527fa1e50f594f7d081d3284c3b53"},
+    {"path": "docs/qualification/post-v3-numerical-core-doctrine/DECISION.md", "sha256": "0eb3dfddaa553fd8a51127b3bf7aa9eafc2b6f4020a563b118bf32896e0ab1b2"},
+    {"path": "docs/qualification/gemma4-12b-it-v4/METHODOLOGY.md", "sha256": "59a9a5aa714e50cbf550ac1b051f1fec9a354ef13fb7af564f32694820162326"},
+    {"path": "docs/qualification/gemma4-12b-it-v4/manifests/statistical-derivation.json", "sha256": "d8f7c662e1c77f696e9d95d6ef6bd6ef18b8978dd08ee67bef3952c7f9172d88"},
+    {"path": "docs/qualification/gemma4-12b-it-v4-campaign-97/b/TERMINAL-REPORT.md", "sha256": "052437bd65446fb8d95a5a615a1f9c93783e02adcb22eb95a9e0603fae5e9af4"},
+    {"path": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/DIAGNOSIS.md", "sha256": "93503c34c3f180e0b79b6a66c05538f24ffc27d27281cd8d8a9b08a8163e4e66"},
+    {"path": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/diagnosis-record.json", "sha256": "53167636bb6d09cb22eb205ddb11a242009a190c709f109959c1d8bdca75ce27"},
+    {"path": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/RAW-EVIDENCE-RETENTION.json", "sha256": "2e1ec275e4318193e1ad685e0a2159b59bcd09c5c1705e61839df700f1604632"},
+    {"path": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/RAW-EVIDENCE-EXPUNGEMENT.json", "sha256": "4123d4b6b9c95518dfae0988ccddd6de3091b86e668c405bc548a3d7fdd0d321"}
+  ]
+}

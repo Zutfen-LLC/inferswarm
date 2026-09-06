@@ -81,6 +81,9 @@ jobs:
       - name: Check issue 105 post-v4 core diagnosis (CPU-only)
         run: python3 -m unittest tests.test_issue105_post_v4_core_diagnosis -v
 
+      - name: Check issue 108 post-v4 statistical and metric doctrine (CPU-only)
+        run: python3 -m unittest tests.test_issue108_post_v4_statistical_metric_doctrine -v
+
       - name: Check issue 99 plan-driven artifact acquisition (CPU-only)
         run: python3 -m unittest tests.test_issue99_artifact_core tests.test_issue99_proof -v
 

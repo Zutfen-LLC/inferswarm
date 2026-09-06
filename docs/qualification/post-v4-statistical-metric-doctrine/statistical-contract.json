@@ -1,0 +1,52 @@
+{
+  "schema": "inferswarm.issue108.statistical-contract/1",
+  "status": "ACCEPTED_PROSPECTIVE_DOCTRINE",
+  "assumption_profile": "MIXTURE_POPULATION_EXCHANGEABILITY",
+  "construction": "POOLED_ORDER_STATISTIC_PREDICTION",
+  "qualification_target": {
+    "primary_claim": "For one prospectively frozen target case generator, the unconditional probability that a fresh declared holdout campaign has zero strict exceedances in every acceptance-bearing numerical family is at least 1 - alpha_familywise.",
+    "marginal_per_case_claim": "A separate order-statistic construction may claim a bound on one fresh case from the same target population.",
+    "applicability_scope": "The mixture claim applies only to the declared mixture population. It does not establish coverage for every named component or every possible workload cell.",
+    "non_claims": [
+      "No conditional-on-calibration coverage claim is made.",
+      "No per-cell claim follows from a pooled mixture claim.",
+      "No claim transfers to a changed model, comparator, backend path, generator, or applicability key."
+    ]
+  },
+  "mixture_population_requirements": {
+    "case_generator_is_iid_from_one_frozen_mixture": true,
+    "component_selection_is_part_of_the_frozen_generator": true,
+    "calibration_and_holdout_use_the_same_generator": true,
+    "component_weights_and_case_generation_are_frozen_before_calibration": true,
+    "per_stratum_coverage_claim_allowed": false,
+    "rationale": "A fixed independent draw from the same declared mixture makes the numerical-error value marginally exchangeable even when component cells have different conditional error distributions. This supports only the stated mixture-population claim."
+  },
+  "permitted_construction_classes": [
+    "POOLED_ORDER_STATISTIC_PREDICTION",
+    "STRATIFIED_ORDER_STATISTIC_PREDICTION",
+    "MARGINAL_ORDER_STATISTIC_PREDICTION",
+    "PROSPECTIVELY_VALIDATED_PARAMETRIC_PREDICTION",
+    "AUDITABLE_HIERARCHICAL_PREDICTION"
+  ],
+  "construction_requirements": {
+    "POOLED_ORDER_STATISTIC_PREDICTION": "Use only for an IID frozen mixture population. A calibration maximum gives the campaign strict-exceedance identity H/(N+H) for N calibration and H holdout cases. A different selected order statistic must state its rank identity.",
+    "STRATIFIED_ORDER_STATISTIC_PREDICTION": "Use when the target requires coverage in named strata. Declare each stratum and its campaign allocation before calibration. Within-stratum exchangeability supports a stratum term H_s/(N_s+H_s); compose all strata and metrics with a valid union bound unless a stronger justified dependence result is declared.",
+    "MARGINAL_ORDER_STATISTIC_PREDICTION": "State a per-case claim separately from a zero-exceedance campaign claim. For N calibration cases and kth order statistic, the strict-exceedance probability is (N+1-k)/(N+1) under exchangeability, with ties conservative.",
+    "PROSPECTIVELY_VALIDATED_PARAMETRIC_PREDICTION": "Declare the distribution, transformation, fitting rule, model-check rule, extrapolation boundary, and failure disposition before physical calibration. It must not claim distribution-free coverage.",
+    "AUDITABLE_HIERARCHICAL_PREDICTION": "Declare all hierarchy, pooling, prior or estimator, posterior/predictive coverage theorem, and failure modes before calibration. It is not permitted until its stated theorem covers the required named-stratum or mixture target."
+  },
+  "familywise_composition": {
+    "method": "BONFERRONI_OR_STRONGER_VALID_BOUND",
+    "independence_assumed": false,
+    "requirement": "The methodology allocates per-metric error budgets before calibration. Their valid union bound must not exceed the declared familywise error budget. Telemetry-only metrics are outside this qualification budget but remain mandatory finite-checked retained telemetry."
+  },
+  "prohibitions": [
+    "NO_POST_HOC_POOLING",
+    "NO_CONSUMED_HOLDOUT_AS_SUCCESSOR_INPUT",
+    "NO_UNDECLARED_CROSS_STRATUM_EXCHANGEABILITY",
+    "NO_FIXED_BALANCED_CELL_DESIGN_POOLED_AS_IF_IID",
+    "NO_POST_HOC_APPLICABILITY_SPLIT",
+    "NO_V5_PARAMETER_SELECTION"
+  ],
+  "next_gate": "#109 prospective v5 methodology freeze"
+}

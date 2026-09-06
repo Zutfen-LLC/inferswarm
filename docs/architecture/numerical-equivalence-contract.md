@@ -92,6 +92,32 @@ Tier identity is part of the comparator contract and applicability identity.
 Moving a family between tiers creates a new prospective
 comparator/qualification version; it cannot repair a historical verdict.
 
+### 1.2.2 Prospective statistical and consumer-metric constraints
+
+ADR 0012 adds forward constraints for a qualification probability statement.
+A methodology must state whether it claims marginal per-case coverage or
+zero-exceedance coverage for a finite campaign. It must state the target
+population, applicability scope, exchangeability assumptions, estimator class,
+and familywise composition before calibration.
+
+A pooled order-statistic construction requires an IID frozen target generator.
+The claim then applies only to its declared mixture population. It does not
+establish coverage in every component or named stratum. A qualification that
+requires named-stratum coverage must use named-stratum accounting. A fixed
+balanced-cell design cannot use a pooled maximum under only within-cell
+exchangeability.
+
+For the next Gemma deterministic greedy comparator, the full-vocabulary FP32
+consumer-logit max-absolute and RMS metrics remain acceptance-bearing. The
+full-vocabulary p99 metric is mandatory telemetry. This is a new comparator
+version. It does not change historical contracts. Every acceptance-bearing
+consumer-logit metric and `E_D` applies to all eight canonical-prefix decisions
+in that profile. A future strategy can use a smaller set only when its semantic
+contract proves that omitted decisions are outside its qualified surface.
+
+The complete forward decision and static calculation record are in
+[`post-v4-statistical-metric-doctrine/`](../qualification/post-v4-statistical-metric-doctrine/).
+
 ### 1.3 Semantic output correctness
 
 A strategy declares semantic gates separately from tensor-error gates. For
