@@ -1,0 +1,1102 @@
+{
+ "applicability_split_audit": {
+  "failing_case_cell": {
+   "case_p99": 16.765625,
+   "cell_max_p99": 11.0078125,
+   "cell_max_rank_among_24_cells": 14,
+   "cell_median": 1.28125,
+   "cell_n": 79,
+   "content_class": "ordinary-prose",
+   "exceeds_own_cell_max_by": 0.5230660042583393,
+   "length_regime": [
+    4,
+    8
+   ]
+  },
+  "failing_case_holdout_cell_records": {
+   "decision_local_E_D": {
+    "case_value": 20.875,
+    "own_cell_max": 26.625,
+    "own_cell_rank": 79,
+    "sets_own_cell_record": false
+   },
+   "fp32-consumer-logits:max-absolute-difference": {
+    "case_value": 23.296875,
+    "own_cell_max": 26.625,
+    "own_cell_rank": 79,
+    "sets_own_cell_record": false
+   },
+   "fp32-consumer-logits:p99-absolute-error": {
+    "case_value": 16.765625,
+    "own_cell_max": 11.0078125,
+    "own_cell_rank": 80,
+    "sets_own_cell_record": true
+   },
+   "fp32-consumer-logits:rms-difference": {
+    "case_value": 8.920099737721817,
+    "own_cell_max": 4.617361191608861,
+    "own_cell_rank": 80,
+    "sets_own_cell_record": true
+   }
+  },
+  "p99_by_cell": {
+   "mathematics-numerals|24-28": {
+    "max": 16.640625,
+    "median": 2.21875,
+    "n": 79
+   },
+   "mathematics-numerals|36-40": {
+    "max": 15.7529296875,
+    "median": 1.70703125,
+    "n": 79
+   },
+   "mathematics-numerals|4-8": {
+    "max": 5.0625,
+    "median": 1.09375,
+    "n": 79
+   },
+   "mathematics-numerals|52-56": {
+    "max": 14.1484375,
+    "median": 2.03125,
+    "n": 79
+   },
+   "multilingual-text|24-28": {
+    "max": 14.8046875,
+    "median": 1.9375,
+    "n": 79
+   },
+   "multilingual-text|36-40": {
+    "max": 10.8486328125,
+    "median": 1.734375,
+    "n": 79
+   },
+   "multilingual-text|4-8": {
+    "max": 5.6796875,
+    "median": 1.265625,
+    "n": 79
+   },
+   "multilingual-text|52-56": {
+    "max": 12.625,
+    "median": 1.53125,
+    "n": 79
+   },
+   "ordinary-prose|24-28": {
+    "max": 15.0625,
+    "median": 1.34375,
+    "n": 79
+   },
+   "ordinary-prose|36-40": {
+    "max": 10.203125,
+    "median": 1.21875,
+    "n": 79
+   },
+   "ordinary-prose|4-8": {
+    "max": 11.0078125,
+    "median": 1.28125,
+    "n": 79
+   },
+   "ordinary-prose|52-56": {
+    "max": 8.578125,
+    "median": 1.19140625,
+    "n": 79
+   },
+   "punctuation-whitespace-rare-high-entropy|24-28": {
+    "max": 5.859375,
+    "median": 1.9375,
+    "n": 79
+   },
+   "punctuation-whitespace-rare-high-entropy|36-40": {
+    "max": 10.5234375,
+    "median": 1.8125,
+    "n": 79
+   },
+   "punctuation-whitespace-rare-high-entropy|4-8": {
+    "max": 14.6875,
+    "median": 1.375,
+    "n": 79
+   },
+   "punctuation-whitespace-rare-high-entropy|52-56": {
+    "max": 9.4921875,
+    "median": 1.921875,
+    "n": 79
+   },
+   "repetitive-low-entropy|24-28": {
+    "max": 13.765625,
+    "median": 1.65625,
+    "n": 79
+   },
+   "repetitive-low-entropy|36-40": {
+    "max": 14.3203125,
+    "median": 1.625,
+    "n": 79
+   },
+   "repetitive-low-entropy|4-8": {
+    "max": 6.875,
+    "median": 1.4765625,
+    "n": 79
+   },
+   "repetitive-low-entropy|52-56": {
+    "max": 12.625,
+    "median": 1.609375,
+    "n": 79
+   },
+   "source-code-structured-syntax|24-28": {
+    "max": 11.109375,
+    "median": 1.84375,
+    "n": 79
+   },
+   "source-code-structured-syntax|36-40": {
+    "max": 11.984375,
+    "median": 1.5625,
+    "n": 79
+   },
+   "source-code-structured-syntax|4-8": {
+    "max": 7.0,
+    "median": 1.1875,
+    "n": 79
+   },
+   "source-code-structured-syntax|52-56": {
+    "max": 13.1875,
+    "median": 2.1875,
+    "n": 79
+   }
+  },
+  "p99_by_content_class": {
+   "mathematics-numerals": {
+    "max": 16.640625,
+    "median": 1.767578125,
+    "n": 316
+   },
+   "multilingual-text": {
+    "max": 14.8046875,
+    "median": 1.625,
+    "n": 316
+   },
+   "ordinary-prose": {
+    "max": 15.0625,
+    "median": 1.25,
+    "n": 316
+   },
+   "punctuation-whitespace-rare-high-entropy": {
+    "max": 14.6875,
+    "median": 1.75,
+    "n": 316
+   },
+   "repetitive-low-entropy": {
+    "max": 14.3203125,
+    "median": 1.5625,
+    "n": 316
+   },
+   "source-code-structured-syntax": {
+    "max": 13.1875,
+    "median": 1.59375,
+    "n": 316
+   }
+  },
+  "p99_by_length_regime": {
+   "24-28": {
+    "max": 16.640625,
+    "median": 1.84375,
+    "n": 474
+   },
+   "36-40": {
+    "max": 15.7529296875,
+    "median": 1.625,
+    "n": 474
+   },
+   "4-8": {
+    "max": 14.6875,
+    "median": 1.28125,
+    "n": 474
+   },
+   "52-56": {
+    "max": 14.1484375,
+    "median": 1.6875,
+    "n": 474
+   }
+  },
+  "reference_min_margin": 0.125,
+  "reference_step_margins": [
+   1.625,
+   0.375,
+   0.125,
+   0.75,
+   1.625,
+   0.125,
+   1.375,
+   2.125
+  ],
+  "spearman_token_count_vs_maxabs": 0.08984,
+  "spearman_token_count_vs_p99": 0.113241,
+  "split_verdict": "NO_PROSPECTIVE_SPLIT_DEMONSTRATED: no pre-observable dimension explains more than the single failed case. The failing cell's calibration p99 maximum ranks 14th of 24 (ordinary-prose [4,8], max 11.0078 vs global 16.6406); the four lowest cell maxima are [4,8] cells, so the shortest-length regime is NOT systematically heavier in v4. Token count correlates weakly (spearman 0.11). The case is a cross-cell tail draw, not a regime member.",
+  "tested_dimensions": [
+   "content class",
+   "length regime",
+   "cell (class x regime)",
+   "token count (rank correlation)",
+   "decision index",
+   "capture position",
+   "reference top-1 margins",
+   "reference/candidate activation scale (logit lattice)",
+   "producer/device/role identity"
+  ]
+ },
+ "classification": "V4_CORE_DIAGNOSIS_MIXED",
+ "classification_basis": {
+  "contract_gap_present": true,
+  "execution_anomaly": false,
+  "metric_design_contribution": true,
+  "ordinary_tail_supported": true,
+  "single_case_dominates": true
+ },
+ "classification_statement": "MIXED: ordinary heavy-tail behavior (the physical phenomenon \u2014 a single cross-cell tail draw, extreme-but-in-family on all four near-collinear core families) COMBINED WITH two design-level contributors that made the tail terminal: the p99 order-statistic knife edge and the frozen prediction theorem's unbounded non-max-cell path. No execution anomaly; no prospective applicability split.",
+ "cross_campaign_comparison": {
+  "qualitative_similarity": "Both terminals are single-case tail draws that exceed EVERY retained calibration value (v3: 585th of 585; v4: 1897th of 1897 on p99), with small exceedances (+2.56% v3, +0.75% v4) and the holdout runner-up far below (2.33x v3, 3.19x v4). Different cells, different families, different arms of the methodology (15-envelope telemetry family vs 4-family core). Three consecutive single-case-dominated terminals across different cells/families support a generic heavy-tail interpretation over a fixed applicability split.",
+  "same_cell": false,
+  "same_family": false,
+  "v3_failing": {
+   "calibration_n": 584,
+   "case_id": "h86-03-05-01",
+   "cell": "repetitive-low-entropy [36,40]",
+   "exceedance_ratio": 0.02561048620544981,
+   "family": "final-normalized-hidden-state:rms-difference",
+   "limit": 2.6131138414325275,
+   "observed": 2.6800369574218053,
+   "rank_above_all_calibration": 1
+  },
+  "v4_failing": {
+   "case_id": "h95-01-01-01",
+   "cell": "ordinary-prose [4,8]",
+   "exceedance_ratio": 0.007511737089201942,
+   "family": "fp32-consumer-logits:p99-absolute-error",
+   "holdout_runner_up": 5.25,
+   "limit": 16.640625,
+   "observed": 16.765625,
+   "runner_up_ratio": 3.193452380952381
+  },
+  "what_90_got_right": "#90's ordinary-tail classification and its warning that reliance on an observed calibration maximum is operationally brittle for heavy/discrete distributions were correct and are now materially strengthened: v4 was deliberately prediction-aligned and still failed through exactly the single-case tail path #90 described.",
+  "what_90_left_unresolved": "#90 could not distinguish estimator-brittleness from metric design because v3's failing family was a telemetry envelope. #97's failure is in the acceptance-bearing core, and this diagnosis additionally identifies (a) the p99 order-statistic knife edge (fails iff >1% of the vocabulary exceeds the limit) and (b) a genuine gap in the frozen prediction theorem (Section 6): only the max-cell record path was bounded, while the observed failure arrived through a non-max cell."
+ },
+ "downstream_trace": {
+  "case_e_d": 20.875,
+  "over_limit_profiles": {
+   "p99_decision": {
+    "count": 2854,
+    "decision_index": 3,
+    "inside_top1024_domain": 0,
+    "max_reference_rank": 262141,
+    "median_reference_rank": 241124,
+    "min_reference_rank": 32921
+   },
+   "worst_e_d_decision": {
+    "count": 31,
+    "decision_index": 7,
+    "inside_top1024_domain": 3,
+    "max_reference_rank": 262139,
+    "median_reference_rank": 253204,
+    "min_reference_rank": 32
+   }
+  },
+  "per_decision": [
+   {
+    "candidate_emitted": 236770,
+    "candidate_winner": 236770,
+    "committed_decision_local_error": 0.640625,
+    "decision_index": 0,
+    "decision_local_error": 0.640625,
+    "decision_local_matches_committed": true,
+    "domain_size": 1026,
+    "m_d": 1.625,
+    "reference_emitted": 236770,
+    "reference_winner": 236770,
+    "stability": "UNSTABLE",
+    "verdict": "SEMANTIC_PASS"
+   },
+   {
+    "candidate_emitted": 236770,
+    "candidate_winner": 236770,
+    "committed_decision_local_error": 0.640625,
+    "decision_index": 1,
+    "decision_local_error": 0.640625,
+    "decision_local_matches_committed": true,
+    "domain_size": 1025,
+    "m_d": 0.375,
+    "reference_emitted": 236770,
+    "reference_winner": 236770,
+    "stability": "UNSTABLE",
+    "verdict": "SEMANTIC_PASS"
+   },
+   {
+    "candidate_emitted": 655,
+    "candidate_winner": 655,
+    "committed_decision_local_error": 16.75,
+    "decision_index": 2,
+    "decision_local_error": 16.75,
+    "decision_local_matches_committed": true,
+    "domain_size": 1027,
+    "m_d": 0.125,
+    "reference_emitted": 236761,
+    "reference_winner": 236761,
+    "stability": "UNSTABLE",
+    "verdict": "SEMANTIC_PASS"
+   },
+   {
+    "candidate_emitted": 236764,
+    "candidate_winner": 236764,
+    "committed_decision_local_error": 13.96875,
+    "decision_index": 3,
+    "decision_local_error": 13.96875,
+    "decision_local_matches_committed": true,
+    "domain_size": 1024,
+    "m_d": 0.75,
+    "reference_emitted": 236770,
+    "reference_winner": 236770,
+    "stability": "UNSTABLE",
+    "verdict": "SEMANTIC_PASS"
+   },
+   {
+    "candidate_emitted": 236770,
+    "candidate_winner": 236770,
+    "committed_decision_local_error": 16.6875,
+    "decision_index": 4,
+    "decision_local_error": 16.6875,
+    "decision_local_matches_committed": true,
+    "domain_size": 1026,
+    "m_d": 1.625,
+    "reference_emitted": 236761,
+    "reference_winner": 236761,
+    "stability": "UNSTABLE",
+    "verdict": "SEMANTIC_PASS"
+   },
+   {
+    "candidate_emitted": 236771,
+    "candidate_winner": 236771,
+    "committed_decision_local_error": 18.09375,
+    "decision_index": 5,
+    "decision_local_error": 18.09375,
+    "decision_local_matches_committed": true,
+    "domain_size": 1030,
+    "m_d": 0.125,
+    "reference_emitted": 236761,
+    "reference_winner": 236761,
+    "stability": "UNSTABLE",
+    "verdict": "SEMANTIC_PASS"
+   },
+   {
+    "candidate_emitted": 532,
+    "candidate_winner": 532,
+    "committed_decision_local_error": 20.03125,
+    "decision_index": 6,
+    "decision_local_error": 20.03125,
+    "decision_local_matches_committed": true,
+    "domain_size": 1025,
+    "m_d": 1.375,
+    "reference_emitted": 236761,
+    "reference_winner": 236761,
+    "stability": "UNSTABLE",
+    "verdict": "SEMANTIC_PASS"
+   },
+   {
+    "candidate_emitted": 236771,
+    "candidate_winner": 236771,
+    "committed_decision_local_error": 20.875,
+    "decision_index": 7,
+    "decision_local_error": 20.875,
+    "decision_local_matches_committed": true,
+    "domain_size": 1031,
+    "m_d": 2.125,
+    "reference_emitted": 236761,
+    "reference_winner": 236761,
+    "stability": "UNSTABLE",
+    "verdict": "SEMANTIC_PASS"
+   }
+  ],
+  "semantic_totals": {
+   "DECISION_DOMAIN_ESCAPE": 0,
+   "DECISION_LOCAL_BOUND_EXCEEDED": 0,
+   "SEMANTIC_PASS": 192,
+   "STABLE": 0,
+   "STABLE_DECISION_MISMATCH": 0,
+   "UNSTABLE": 192,
+   "UNSTABLE_DECISION_INADMISSIBLE": 0,
+   "total": 192
+  },
+  "telemetry_alert_case_ids": [
+   "h95-01-01-01"
+  ],
+  "telemetry_alerts": [
+   {
+    "band_hex": "0x1.e25998d27a586p-1",
+    "case_id": "h95-01-01-01",
+    "family": "hidden-residual-stream:rms-difference",
+    "observed_hex": "0x1.e7de0711e754cp-1"
+   },
+   {
+    "band_hex": "0x1.71f81ebfc43d3p+1",
+    "case_id": "h95-01-01-01",
+    "family": "final-normalized-hidden-state:rms-difference",
+    "observed_hex": "0x1.7a1e6775b6ba1p+1"
+   },
+   {
+    "band_hex": "0x1.1540000000000p+3",
+    "case_id": "h95-01-01-01",
+    "family": "final-normalized-hidden-state:p99-absolute-error",
+    "observed_hex": "0x1.3100000000000p+3"
+   },
+   {
+    "band_hex": "0x1.0a40000000000p+4",
+    "case_id": "h95-01-01-01",
+    "family": "bf16-logits:p99-absolute-error",
+    "observed_hex": "0x1.0c40000000000p+4"
+   }
+  ],
+  "verdict": "The p99 spike stayed overwhelmingly in the behaviorally irrelevant region: on the p99-maximum decision (index 3), ZERO of the 2854 over-limit full-vocab elements lie inside the frozen top-1024 decision domain (best reference rank 32921). On the worst-E_D decision (index 7), 3 of 31 over-limit elements do touch the domain, but the decision-local error 20.875 still passed the frozen E_D limit 26.625 with headroom, and all 8 decisions were ambiguity-admissible UNSTABLE (reference margins down to 0.125 near-ties); semantic PASS 192/192 case-wide with zero bound exceedances and zero domain escapes. The p99 exceedance did not translate into decision risk, but a semantic PASS does not waive the core failure.",
+  "worst_decision_domain_still_under_E_D_limit": true,
+  "worst_decision_index": 7
+ },
+ "failing_observation": {
+  "all_decision_max_abs": {
+   "0": 1.0,
+   "1": 0.75,
+   "2": 27.0625,
+   "3": 23.296875,
+   "4": 23.3125,
+   "5": 19.9296875,
+   "6": 20.03125,
+   "7": 20.875
+  },
+  "all_decision_p99": {
+   "0": 0.546875,
+   "1": 0.375,
+   "2": 15.828125,
+   "3": 16.765625,
+   "4": 15.75,
+   "5": 11.15625,
+   "6": 11.109375,
+   "7": 11.375
+  },
+  "all_decision_rms": {
+   "0": 0.21785689017738707,
+   "1": 0.13462568004207282,
+   "2": 7.564321020720032,
+   "3": 8.920099737721817,
+   "4": 7.092366935738642,
+   "5": 4.4063213594696995,
+   "6": 4.361772592180838,
+   "7": 4.421347588741593
+  },
+  "case_e_d_hex": "0x1.4e00000000000p+4",
+  "case_id": "h95-01-01-01",
+  "case_sha256": "87ddb92b33a1fc9bfc03b6288d28882aa8323e3aeac54d922d5260689a720a82",
+  "content_class": "ordinary-prose",
+  "dtype": "float32",
+  "elements_over_p99_limit": 2854,
+  "envelope_positions": [
+   0,
+   1,
+   3,
+   7
+  ],
+  "fraction_over_p99_limit": 0.01088714599609375,
+  "length_regime": [
+   4,
+   8
+  ],
+  "max_abs_envelope_reproduced": 23.296875,
+  "neighbor_order_statistics": {
+   "p100": 23.296875,
+   "p98": 15.8125,
+   "p99": 16.765625,
+   "p99.5": 17.59375,
+   "p99.9": 19.359375
+  },
+  "p99_candidate_row_sha256": "4a0a559e6c90e3b73bed2eb1e9171667510c77eedd30c65eba16af7f320273d3",
+  "p99_exceedance_absolute": 0.125,
+  "p99_exceedance_ratio": 0.007511737089201942,
+  "p99_index_zero_based": 259522,
+  "p99_limit": 16.640625,
+  "p99_max_decision_index": 3,
+  "p99_plateau": {
+   "count": 10,
+   "span": [
+    259515,
+    259524
+   ],
+   "value": 16.765625
+  },
+  "p99_reference_row_sha256": "4dc65a7b4ace282d56155f99ec632f38d98d0574dea451108409b1187661d6d2",
+  "p99_reproduced": 16.765625,
+  "producer": "c60a4b7080913eba90585de8e8602460a7f5b1a7",
+  "reducer": "ascending sort; one-based nearest-rank/higher ceil(0.99*262144)=259523 -> index 259522",
+  "reference_gpu_uuid": "GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03",
+  "reference_min_top1_margin_hex": "0x1.0000000000000p-3",
+  "reference_role": "reference-single",
+  "rms_envelope_reproduced": 8.920099737721817,
+  "row_element_count": 262144,
+  "same_decision_max_abs": 23.296875,
+  "same_decision_rms": 8.920099737721817,
+  "subject_checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+  "tail_min_increment": 0.000244140625
+ },
+ "family_distributions": {
+  "cross_family_spearman": {
+   "fp32-consumer-logits:max-absolute-difference||decision_local_E_D": 0.946045,
+   "fp32-consumer-logits:max-absolute-difference||fp32-consumer-logits:p99-absolute-error": 0.983708,
+   "fp32-consumer-logits:max-absolute-difference||fp32-consumer-logits:rms-difference": 0.969047,
+   "fp32-consumer-logits:p99-absolute-error||decision_local_E_D": 0.944275,
+   "fp32-consumer-logits:rms-difference||decision_local_E_D": 0.932299,
+   "fp32-consumer-logits:rms-difference||fp32-consumer-logits:p99-absolute-error": 0.993323
+  },
+  "families": {
+   "decision_local_E_D": {
+    "holdout": {
+     "exceedances": 0,
+     "n": 24,
+     "top3": [
+      [
+       20.875,
+       "h95-01-01-01"
+      ],
+      [
+       7.625,
+       "h95-02-05-01"
+      ],
+      [
+       6.734375,
+       "h95-03-03-01"
+      ]
+     ]
+    },
+    "statistical": {
+     "limit_equals_stat_max": true,
+     "max": 26.625,
+     "median": 2.703125,
+     "min": 0.59375,
+     "n": 1896,
+     "p90": 7.296875,
+     "p99": 18.0625,
+     "top5": [
+      21.1875,
+      22.4375,
+      23.25,
+      25.625,
+      26.625
+     ]
+    },
+    "stress": {
+     "max": 6.6875,
+     "n": 8
+    },
+    "upper_gap_ratios": {
+     "max_over_median": 9.84971098265896,
+     "max_over_second": 1.0390243902439025,
+     "second_over_fifth": 1.2094395280235988
+    }
+   },
+   "fp32-consumer-logits:max-absolute-difference": {
+    "holdout": {
+     "exceedances": 0,
+     "n": 24,
+     "top3": [
+      [
+       23.296875,
+       "h95-01-01-01"
+      ],
+      [
+       9.09375,
+       "h95-03-03-01"
+      ],
+      [
+       8.359375,
+       "h95-02-05-01"
+      ]
+     ]
+    },
+    "statistical": {
+     "limit_equals_stat_max": true,
+     "max": 26.625,
+     "median": 3.125,
+     "min": 0.6875,
+     "n": 1896,
+     "p90": 8.359375,
+     "p99": 18.625,
+     "top5": [
+      23.5625,
+      24.125,
+      24.21875,
+      25.3125,
+      26.625
+     ]
+    },
+    "stress": {
+     "max": 7.36328125,
+     "n": 8
+    },
+    "upper_gap_ratios": {
+     "max_over_median": 8.52,
+     "max_over_second": 1.0518518518518518,
+     "second_over_fifth": 1.0742705570291777
+    }
+   },
+   "fp32-consumer-logits:p99-absolute-error": {
+    "holdout": {
+     "exceedances": 1,
+     "n": 24,
+     "top3": [
+      [
+       16.765625,
+       "h95-01-01-01"
+      ],
+      [
+       5.25,
+       "h95-03-03-01"
+      ],
+      [
+       4.53125,
+       "h95-02-05-01"
+      ]
+     ]
+    },
+    "statistical": {
+     "limit_equals_stat_max": true,
+     "max": 16.640625,
+     "median": 1.59375,
+     "min": 0.375,
+     "n": 1896,
+     "p90": 4.34375,
+     "p99": 10.90625,
+     "top5": [
+      14.6875,
+      14.8046875,
+      15.0625,
+      15.7529296875,
+      16.640625
+     ]
+    },
+    "stress": {
+     "max": 4.1875,
+     "n": 8
+    },
+    "upper_gap_ratios": {
+     "max_over_median": 10.441176470588236,
+     "max_over_second": 1.0563511251627302,
+     "second_over_fifth": 1.0725398936170212
+    }
+   },
+   "fp32-consumer-logits:rms-difference": {
+    "holdout": {
+     "exceedances": 0,
+     "n": 24,
+     "top3": [
+      [
+       8.920099737721817,
+       "h95-01-01-01"
+      ],
+      [
+       2.2741594733135315,
+       "h95-03-03-01"
+      ],
+      [
+       1.7053696627501778,
+       "h95-02-05-01"
+      ]
+     ]
+    },
+    "statistical": {
+     "limit_equals_stat_max": true,
+     "max": 10.134608423216454,
+     "median": 0.6333870753896887,
+     "min": 0.14003561976759335,
+     "n": 1896,
+     "p90": 1.7411962230654792,
+     "p99": 5.876152287334992,
+     "top5": [
+      9.131910328821727,
+      9.155316663531364,
+      9.459332556630454,
+      9.779375166340225,
+      10.134608423216454
+     ]
+    },
+    "stress": {
+     "max": 1.6203014938142977,
+     "n": 8
+    },
+    "upper_gap_ratios": {
+     "max_over_median": 16.000655550132876,
+     "max_over_second": 1.036324739651968,
+     "second_over_fifth": 1.0709013573507176
+    }
+   }
+  },
+  "holdout_rank_among_1897": {
+   "h95-01-01-01": {
+    "decision_local_E_D": 1891,
+    "fp32-consumer-logits:max-absolute-difference": 1892,
+    "fp32-consumer-logits:p99-absolute-error": 1897,
+    "fp32-consumer-logits:rms-difference": 1892
+   },
+   "h95-01-02-01": {
+    "decision_local_E_D": 912,
+    "fp32-consumer-logits:max-absolute-difference": 940,
+    "fp32-consumer-logits:p99-absolute-error": 662,
+    "fp32-consumer-logits:rms-difference": 615
+   },
+   "h95-01-03-01": {
+    "decision_local_E_D": 1494,
+    "fp32-consumer-logits:max-absolute-difference": 1125,
+    "fp32-consumer-logits:p99-absolute-error": 1174,
+    "fp32-consumer-logits:rms-difference": 1131
+   },
+   "h95-01-04-01": {
+    "decision_local_E_D": 171,
+    "fp32-consumer-logits:max-absolute-difference": 316,
+    "fp32-consumer-logits:p99-absolute-error": 258,
+    "fp32-consumer-logits:rms-difference": 221
+   },
+   "h95-01-05-01": {
+    "decision_local_E_D": 486,
+    "fp32-consumer-logits:max-absolute-difference": 401,
+    "fp32-consumer-logits:p99-absolute-error": 387,
+    "fp32-consumer-logits:rms-difference": 377
+   },
+   "h95-01-06-01": {
+    "decision_local_E_D": 25,
+    "fp32-consumer-logits:max-absolute-difference": 59,
+    "fp32-consumer-logits:p99-absolute-error": 39,
+    "fp32-consumer-logits:rms-difference": 34
+   },
+   "h95-02-01-01": {
+    "decision_local_E_D": 79,
+    "fp32-consumer-logits:max-absolute-difference": 59,
+    "fp32-consumer-logits:p99-absolute-error": 116,
+    "fp32-consumer-logits:rms-difference": 144
+   },
+   "h95-02-02-01": {
+    "decision_local_E_D": 1563,
+    "fp32-consumer-logits:max-absolute-difference": 1464,
+    "fp32-consumer-logits:p99-absolute-error": 1462,
+    "fp32-consumer-logits:rms-difference": 1416
+   },
+   "h95-02-03-01": {
+    "decision_local_E_D": 855,
+    "fp32-consumer-logits:max-absolute-difference": 733,
+    "fp32-consumer-logits:p99-absolute-error": 662,
+    "fp32-consumer-logits:rms-difference": 609
+   },
+   "h95-02-04-01": {
+    "decision_local_E_D": 1360,
+    "fp32-consumer-logits:max-absolute-difference": 1396,
+    "fp32-consumer-logits:p99-absolute-error": 1345,
+    "fp32-consumer-logits:rms-difference": 1281
+   },
+   "h95-02-05-01": {
+    "decision_local_E_D": 1725,
+    "fp32-consumer-logits:max-absolute-difference": 1707,
+    "fp32-consumer-logits:p99-absolute-error": 1727,
+    "fp32-consumer-logits:rms-difference": 1700
+   },
+   "h95-02-06-01": {
+    "decision_local_E_D": 203,
+    "fp32-consumer-logits:max-absolute-difference": 258,
+    "fp32-consumer-logits:p99-absolute-error": 197,
+    "fp32-consumer-logits:rms-difference": 199
+   },
+   "h95-03-01-01": {
+    "decision_local_E_D": 547,
+    "fp32-consumer-logits:max-absolute-difference": 599,
+    "fp32-consumer-logits:p99-absolute-error": 602,
+    "fp32-consumer-logits:rms-difference": 596
+   },
+   "h95-03-02-01": {
+    "decision_local_E_D": 1325,
+    "fp32-consumer-logits:max-absolute-difference": 1123,
+    "fp32-consumer-logits:p99-absolute-error": 1141,
+    "fp32-consumer-logits:rms-difference": 1084
+   },
+   "h95-03-03-01": {
+    "decision_local_E_D": 1666,
+    "fp32-consumer-logits:max-absolute-difference": 1748,
+    "fp32-consumer-logits:p99-absolute-error": 1778,
+    "fp32-consumer-logits:rms-difference": 1786
+   },
+   "h95-03-04-01": {
+    "decision_local_E_D": 1219,
+    "fp32-consumer-logits:max-absolute-difference": 1059,
+    "fp32-consumer-logits:p99-absolute-error": 764,
+    "fp32-consumer-logits:rms-difference": 784
+   },
+   "h95-03-05-01": {
+    "decision_local_E_D": 1060,
+    "fp32-consumer-logits:max-absolute-difference": 692,
+    "fp32-consumer-logits:p99-absolute-error": 709,
+    "fp32-consumer-logits:rms-difference": 746
+   },
+   "h95-03-06-01": {
+    "decision_local_E_D": 1572,
+    "fp32-consumer-logits:max-absolute-difference": 1439,
+    "fp32-consumer-logits:p99-absolute-error": 1431,
+    "fp32-consumer-logits:rms-difference": 1392
+   },
+   "h95-04-01-01": {
+    "decision_local_E_D": 1526,
+    "fp32-consumer-logits:max-absolute-difference": 419,
+    "fp32-consumer-logits:p99-absolute-error": 456,
+    "fp32-consumer-logits:rms-difference": 423
+   },
+   "h95-04-02-01": {
+    "decision_local_E_D": 19,
+    "fp32-consumer-logits:max-absolute-difference": 50,
+    "fp32-consumer-logits:p99-absolute-error": 39,
+    "fp32-consumer-logits:rms-difference": 64
+   },
+   "h95-04-03-01": {
+    "decision_local_E_D": 420,
+    "fp32-consumer-logits:max-absolute-difference": 541,
+    "fp32-consumer-logits:p99-absolute-error": 646,
+    "fp32-consumer-logits:rms-difference": 689
+   },
+   "h95-04-04-01": {
+    "decision_local_E_D": 974,
+    "fp32-consumer-logits:max-absolute-difference": 1329,
+    "fp32-consumer-logits:p99-absolute-error": 1188,
+    "fp32-consumer-logits:rms-difference": 1152
+   },
+   "h95-04-05-01": {
+    "decision_local_E_D": 136,
+    "fp32-consumer-logits:max-absolute-difference": 181,
+    "fp32-consumer-logits:p99-absolute-error": 197,
+    "fp32-consumer-logits:rms-difference": 187
+   },
+   "h95-04-06-01": {
+    "decision_local_E_D": 1581,
+    "fp32-consumer-logits:max-absolute-difference": 401,
+    "fp32-consumer-logits:p99-absolute-error": 298,
+    "fp32-consumer-logits:rms-difference": 278
+   }
+  },
+  "top10_overlap": {
+   "intersection": [
+    "c95-01-06-49",
+    "c95-02-03-28",
+    "c95-03-03-48"
+   ],
+   "intersection_size": 3,
+   "union_size": 19
+  }
+ },
+ "issue": 105,
+ "non_claims": [
+  "This diagnosis does NOT change issue #97's terminal V4_HOLDOUT_CORE_FAIL verdict.",
+  "No v4 threshold, telemetry band, decision domain, semantic artifact, or holdout artifact was modified.",
+  "No h95 case was rerun; h95 is consumed and its observations are diagnostic-only, permanently ineligible as future calibration/stress/holdout input.",
+  "No successor threshold value, sample size, corpus, holdout construction, or stratification key is proposed.",
+  "No new physical/CUDA model execution was performed; the only non-stdlib step was the frozen reducer over retained capture bytes on a CPU.",
+  "Historical #88/#90/#93/#95 evidence and verdicts are unchanged and un-reinterpreted."
+ ],
+ "p99_reducer_audit": {
+  "correlations": {
+   "vs_e_d": 0.944275,
+   "vs_max_abs": 0.983708,
+   "vs_rms": 0.993323
+  },
+  "diagnostic_conclusion": "REQUIRE_DOCTRINE_REVIEW (diagnostic only): p99 as reduced carries no materially independent correctness information beyond max-abs/rms/E_D here, and its >1%-of-vocabulary step semantics make the observed-maximum prediction bound brittle. Its acceptance-bearing status is unchanged by this diagnosis; any tier/reducer change requires a separate prospective doctrine gate.",
+  "discretization": {
+   "exceedance_equals_local_lattice_spacing": true,
+   "p99_magnitude_lattice_spacing": 0.125,
+   "p99_plateau_elements": 10,
+   "rows_are_bf16_lattice_valued": true,
+   "tail_min_increment": 0.000244140625
+  },
+  "finite_sample_definition": "ascending sort of all 262144 full-vocab float64 absolute errors; one-based nearest-rank/higher index ceil(0.99*262144)=259523 (0-based 259522); per-case family value = max over frozen capture positions (0,1,3,7) of 8 decisions",
+  "independent_information": "Materially none at case level: spearman 0.98-0.99 with the other core families, and the case that failed p99 also carries the holdout maxima of max-abs, rms, and E_D. Under the frozen 4-position capture design the same case would ALSO have failed max-absolute-difference had decision 2 (27.0625 > 26.625) been a capture position; the single-family failure is partly a position-subsampling artifact. p99's distinct failure threshold is an order-statistic knife edge, not independent evidence.",
+  "knife_edge_mechanism": "p99 fails exactly when more than 1% of the vocabulary exceeds the limit; here 2854 elements (1.0887%) did, while max-absolute-difference on the same rows passed with 12.4% headroom. The failing value sits on a 10-element plateau.",
+  "p99_over_maxabs_ratio": {
+   "failing_case": 0.7196512407780014,
+   "max": 0.7728070175438596,
+   "median": 0.5228658536585366,
+   "p90": 0.5903905979951607
+  },
+  "position_subsampling_note": {
+   "decision2_max_abs": 27.0625,
+   "decision2_would_exceed_max_abs_limit": true,
+   "frozen_positions": [
+    0,
+    1,
+    3,
+    7
+   ],
+   "max_abs_limit": 26.625
+  }
+ },
+ "provenance": {
+  "accepted": {
+   "freetoken_producer_merge": "605e129ce3de56af48c8eda3e990cd572552a7c7",
+   "frozen_v4_methodology_state": "GEMMA_V4_PREDICTION_ALIGNED_METHODOLOGY_FROZEN",
+   "inferswarm_terminal_evidence_merge": "3d25d8b610348ee0dd64a93614c5ecf6b396051f",
+   "issue88_terminal_verdict": "V3_HOLDOUT_FAIL",
+   "issue90_classification": "V3_ENVELOPE_DIAGNOSIS_ORDINARY_TAIL",
+   "issue97_terminal_verdict": "V4_HOLDOUT_CORE_FAIL",
+   "phase_a_calibration_producer": "57dfcb7289efac8f66de5b3abbe8de04f2580f75",
+   "phase_b_holdout_producer": "c60a4b7080913eba90585de8e8602460a7f5b1a7",
+   "pr98_accepted_head_before_merge": "81ff1798a69d8e0b04f62d95dd6553b3f58092dc"
+  },
+  "envelope_reproduction": "all 15 failing-case envelopes reproduced byte-exact through the frozen #76 reducer over the retained capture bundles on inferswarm01 (torch CPU, retained bytes only, no model execution), 2026-09-06",
+  "node_retained_capture_bundles": {
+   "candidate last stage (inferswarm03)": {
+    "path": "/srv/models/issue97/holdout-candidate-laststage/h95-01-01-01/capture-cand95h.pt",
+    "sha256": "1d5d2c44ea74b7baa86de98ad490cb1fb641dc5d53bfc4aac9ae4fee186bd6c9"
+   },
+   "candidate stage1 (inferswarm01)": {
+    "path": "/srv/models/issue97/holdout-candidate/h95-01-01-01/capture-cand95h-cand95h-stage1.pt",
+    "sha256": "0df35b1a4df4ee67e60c6ca36a54cb158239465116167ec5aa237d49353ba80b"
+   },
+   "candidate stage2 (inferswarm01)": {
+    "path": "/srv/models/issue97/holdout-candidate/h95-01-01-01/capture-cand95h-cand95h-stage2.pt",
+    "sha256": "ad4c91a9bf60da3f250dda3ea38502e4c3832d42440420344f9619b1a97a5a80"
+   },
+   "reference (inferswarm04)": {
+    "path": "/srv/inferswarm/state/issue97/holdout-reference/h95-01-01-01/capture-href95.pt",
+    "sha256": "eb2b30994e7edc2a52bf66c034782481d544a2e03c82b0c181a187c8bc549e2d"
+   }
+  },
+  "phase_b_adjudicator_sha256": "8728ee92abf6eee883fd8a8ed45b1f896f771f0139495816fc6ac3bab12c544d",
+  "pinned_files_sha256": {
+   "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/h95-01-01-01/chain-case-cand95h.json": "f2438c34a8cb149ad48f114822d17b7ed35b6ccb7e37223716b010d727a40c50",
+   "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/h95-01-01-01/reference-case-href95.json": "273eac194d81536a0e3d764c141d4ca40147bfecf51a62a212dddd31a2745c7e",
+   "docs/qualification/gemma4-12b-it-v3-campaign-88/phaseEF/calibration-summary.json": "81bbd737977426fde86340cd5efe00b51ee8fc6c333d1356e84a3d6384499b53",
+   "docs/qualification/gemma4-12b-it-v3-campaign-88/phaseEF/threshold-manifest.json": "251c4b7a8127e086001cc59e96cf7f61c17c59fa3bd120a15b5c4678fa9f5e5d",
+   "docs/qualification/gemma4-12b-it-v3-campaign-88/phaseHI/phaseI-failures.json": "820ee1a1a57752dd8fe2c04c7333d8a8a5a0325ce293b7b16d4add5495af7293",
+   "docs/qualification/gemma4-12b-it-v4-campaign-97/a2/calibration-summary.json": "c5d81c188018eabaa1cafec0d0583a288f55733e3a3f023a8021bd167b15782c",
+   "docs/qualification/gemma4-12b-it-v4-campaign-97/a2/core-threshold-manifest.json": "c714f5613b541106e985c7337e723dcad297637541e5f937bb2c6f3a7bfbbf50",
+   "docs/qualification/gemma4-12b-it-v4-campaign-97/a2/reference-margin-summary.json": "09bf9299dc0ea8a9056f0aeba69d7760ff03ab2ece0c3223ccb78620f383ad5b",
+   "docs/qualification/gemma4-12b-it-v4-campaign-97/a2/selected-stress-eighth.json": "a1bb5caadbf3bab0dd35f34db5fa44d6e0a1d3bed67648b32b4b97969d3f44d2",
+   "docs/qualification/gemma4-12b-it-v4-campaign-97/a2/telemetry-reference-bands.json": "7b38c13e11416f81139c1721f433a12d4e4377540bb115b63e09f0bb54032534",
+   "docs/qualification/gemma4-12b-it-v4-campaign-97/b/holdout-adjudication.json": "b491d5489d4449fadc3dbda978da993363a5276c6ce331a9e44d1ac7a2381bb5",
+   "docs/qualification/gemma4-12b-it-v4-campaign-97/b/holdout-rows.json": "de35101450d863d4c2da37d8ae63db958db36cc800b51f69f01be8399f7749a1",
+   "docs/qualification/gemma4-12b-it-v4/manifests/calibration-corpus.json": "b14d0377bc0ddc0a585f4f216aee52e1ac2b2e1727b140f41d3b3054be40119e",
+   "docs/qualification/gemma4-12b-it-v4/manifests/statistical-derivation.json": "d8f7c662e1c77f696e9d95d6ef6bd6ef18b8978dd08ee67bef3952c7f9172d88"
+  },
+  "pinned_rows_sha256": {
+   "cand-decision-0.f32": "01113daeef1f7d801ceb0b15e1eeb84ccc83afd4a92831cd823250c3aa1ef630",
+   "cand-decision-1.f32": "f733d7710ce050657eac3ff3d95b54540d6a8082bf5c7a6f33bf677714264793",
+   "cand-decision-2.f32": "f3f6f2a5c7e6d74ade2bc4d346bdebc81e900ba19d705248201b6f6e8e5cfbcd",
+   "cand-decision-3.f32": "4a0a559e6c90e3b73bed2eb1e9171667510c77eedd30c65eba16af7f320273d3",
+   "cand-decision-4.f32": "d0917c176beddfce9bb8baffd426bddcfae1c0db8b1d959f8c3803defdbdaec4",
+   "cand-decision-5.f32": "30a9ec175bdcf4f10526ffe7cba235f539b2f48defcb0ad7eea45c49512abbe4",
+   "cand-decision-6.f32": "5d5b74d99758d12e4dead9b70457661cd57c01c2f31261d9a83f357bfe5ae1a2",
+   "cand-decision-7.f32": "120bbddb6d4d9534aa3faa1bebe27a933d81e89b4ec4955f4daab1e00626e9d3",
+   "ref-decision-0.f32": "5a2041feb90e10c2e9bcd499325aef8f60e2ad2de95a88b830a6f160d8760412",
+   "ref-decision-1.f32": "9e193c4a7e50be5bae19f82b8c11cbd420cb96b14fff3ba2c9e9261503d8a030",
+   "ref-decision-2.f32": "ab8f3eb9bf2d890e6b748378d502db80869907c608769f682b243315e6d10c40",
+   "ref-decision-3.f32": "4dc65a7b4ace282d56155f99ec632f38d98d0574dea451108409b1187661d6d2",
+   "ref-decision-4.f32": "ef17609799b96e61e460b6ae80322e37755f30fb9b9301c963b6c7caabf39e48",
+   "ref-decision-5.f32": "a1ae174d404b2e256fb2f90d59cb3b92d8348f7d919c679781947cdc88110b60",
+   "ref-decision-6.f32": "b30e1395b20a6bd7e30f031cef64e4588ed4a2f627311295e19778187718a686",
+   "ref-decision-7.f32": "2f6dfcf69adf6115a1d8cf41341a9fbe9f4a7d4bd9000660579a11f9feb8823a"
+  }
+ },
+ "retention_manifest": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/RAW-EVIDENCE-RETENTION.json",
+ "schema": "inferswarm.issue105.post-v4-core-diagnosis/1",
+ "statistical_contract_audit": {
+  "correct_bounds": {
+   "cases_per_cell_needed_distribution_free_95": 1919,
+   "distribution_free_bound_vacuous": true,
+   "familywise_distribution_free": 1.2,
+   "familywise_full_cross_cell_homogeneity": 0.050606220347917764,
+   "homogeneity_claim_marginally_invalid": true,
+   "per_family_distribution_free_union": 0.3,
+   "per_family_full_cross_cell_homogeneity": 0.012651555086979441
+  },
+  "frozen_replay_reproduced": true,
+  "frozen_statement": {
+   "claimed_zero_exceedance_probability_at_least": 0.95,
+   "familywise": "4/80",
+   "per_family": "1/80",
+   "stress_contribution": 0,
+   "theorem": "within-cell exchangeability; global maximum lies in one cell; a strict future record in that cell has probability <=1/80"
+  },
+  "gap_analysis": {
+   "bounded_path": "strict record within the single max cell",
+   "failing_cell": {
+    "cell_max": 11.0078125,
+    "content_class": "ordinary-prose",
+    "length_regime": [
+     4,
+     8
+    ]
+   },
+   "failing_cell_max_rank_of_24": 14,
+   "global_p99_max_cell": {
+    "cell_max": 16.640625,
+    "content_class": "mathematics-numerals",
+    "length_regime": [
+     24,
+     28
+    ]
+   },
+   "observed_path": "cross-cell draw in a non-max cell"
+  },
+  "reconciliation": "One observed exceedance is NOT inconsistent with a correct >=95% prospective statement (a 5% event occurred), and the terminal failure does not invalidate exchangeability. But the frozen proof did not establish the >=95% claim it asserted: it bounded only the max-cell record path (1/80) and ignored the other 23 cells' record paths, each <=1/80, whose union is 24/80=30% per family distribution-free (96/80 familywise, vacuous). The observed failure arrived exactly through the unbounded path: the failing case's own cell maximum was 11.0078 (14th of 24), far below the global limit 16.6406. Even under full cross-cell homogeneity the familywise bound is 96/1897 = 5.06% > 5%. Reliance on an observed calibration maximum is operationally brittle for this heavy, lattice-discretized distribution even where the coverage statement is mathematically correct; a different tolerance construction would change the claim's shape, not remove the tail risk."
+ },
+ "successor_directions": {
+  "directions": [
+   {
+    "assumptions": "occasional valid campaign failures at the real familywise rate are acceptable",
+    "avoids_tuning_to_h95": "yes",
+    "conservatism": "n/a (miscalibrated, not conservative)",
+    "evidence_backing": "statistical_contract_audit gap analysis",
+    "name": "retain v4 design unchanged",
+    "sample_burden": "unchanged (79/cell)",
+    "supported_claim": "as frozen: not actually >=95% (correct distribution-free bound is vacuous; homogeneous bound 5.06%)"
+   },
+   {
+    "assumptions": "within-cell exchangeability retained; the multi-cell record union is bounded correctly (or a parametric/quantile tolerance bound is adopted)",
+    "avoids_tuning_to_h95": "yes if specified prospectively",
+    "conservatism": "distribution-free union over 24 cells needs ~1920 cases/cell for 95% \u2014 likely infeasible; homogeneity or parametric assumptions trade rigor for size",
+    "evidence_backing": "correct_bounds in this diagnosis",
+    "name": "corrected prediction/tolerance construction",
+    "sample_burden": "large unless assumptions are added",
+    "supported_claim": "an honestly >=95% (or chosen alpha) prospective zero-exceedance statement"
+   },
+   {
+    "assumptions": "a pre-observable applicability split exists",
+    "avoids_tuning_to_h95": "a post-hoc h95-01-01-01 key is forbidden and would be tuning",
+    "conservatism": "n/a",
+    "evidence_backing": "applicability_split_audit",
+    "name": "prospective stratification",
+    "sample_burden": "multiplies per-stratum sample needs",
+    "supported_claim": "none beyond v4 \u2014 no split was demonstrated (failing cell ranks 14/24; length correlation 0.11)"
+   },
+   {
+    "assumptions": "metric-design problem established",
+    "avoids_tuning_to_h95": "must be argued from the >1% mechanism, not the 0.125 overage",
+    "conservatism": "neutral",
+    "evidence_backing": "p99_reducer_audit",
+    "name": "p99 reducer/domain revision",
+    "sample_burden": "unchanged",
+    "supported_claim": "order-statistic knife edge removed only if independently justified"
+   },
+   {
+    "assumptions": "execution anomaly evidence exists",
+    "avoids_tuning_to_h95": "n/a",
+    "conservatism": "n/a",
+    "evidence_backing": "reproduction + integrity records",
+    "name": "backend investigation",
+    "sample_burden": "n/a",
+    "supported_claim": "none \u2014 integrity PASS, all 15 envelopes reproduce byte-exact, divergence consistent with the #71-localized device-class bf16 GEMM residual"
+   },
+   {
+    "assumptions": "continuously measured numerical behavior suits graded/tolerance-band reporting rather than one-shot pass/fail",
+    "avoids_tuning_to_h95": "yes if the abstraction is argued prospectively",
+    "conservatism": "orthogonal to the bound repair",
+    "evidence_backing": "downstream trace: 0 of 2854 over-limit elements in any decision domain across both campaigns",
+    "name": "non-binary operational abstraction",
+    "sample_burden": "unchanged",
+    "supported_claim": "decision-relevant (semantic layer passed 192/192 both campaigns) separated from numerical-core drift"
+   }
+  ],
+  "recommended_next_gate": "STATISTICAL_CONTRACT_AND_METRIC_DOCTRINE_REVIEW (prospective gate, no parameters chosen here): repair the prediction theorem's multi-cell union gap and decide p99's acceptance-bearing status BEFORE any v5 methodology freeze, physical calibration, or holdout construction. The ordinary-tail physical phenomenon needs no backend investigation and justifies no stratification.",
+  "rule": "No successor parameters, sample sizes, corpora, or thresholds are selected here."
+ }
+}

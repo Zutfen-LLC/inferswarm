@@ -409,6 +409,21 @@ holdout case (16.765625 vs 16.640625, +0.75%) with the semantic layer passing
 immutable and is not reinterpreted by this result. Full record:
 `docs/qualification/gemma4-12b-it-v4-campaign-97/b/`.
 
+Issue #105 diagnosed the #97 terminal failure from retained evidence
+(raw FP32 rows for the failing case committed in-repo, producer-bound;
+all 15 envelopes reproduced byte-exact through the frozen reducer).
+Classification `V4_CORE_DIAGNOSIS_MIXED`: the physical phenomenon is an
+ordinary heavy-tail single-case draw (no prospective applicability split;
+failing cell ranks 14th of 24), but two design-level contributors made
+the tail terminal — the p99 order-statistic knife edge (fails iff >1% of
+the vocabulary exceeds the limit; the +0.125 exceedance is one BF16
+lattice step) and a genuine gap in the frozen prediction theorem, which
+bounded only the max-cell record path (1/80) while the failure arrived
+through a non-max cell (correct distribution-free familywise bound is
+vacuous; 96/1897 = 5.06% even under full homogeneity). Named next gate: a
+statistical-contract and metric doctrine review before any v5 freeze.
+Record: `docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/`.
+
 Issue #99 is complete on the orthogonal distribution lane: the minimum
 plan-driven model artifact acquisition proof required by ADR 0009 terminated
 `PLAN_DRIVEN_ARTIFACT_ACQUISITION_PASS` (see its section under the successor
