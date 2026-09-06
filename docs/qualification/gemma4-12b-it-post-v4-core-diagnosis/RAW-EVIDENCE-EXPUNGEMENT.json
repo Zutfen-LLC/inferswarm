@@ -1,0 +1,144 @@
+{
+ "schema": "inferswarm.issue97.raw-evidence-expungement/1",
+ "operation": "post-#105 authorized raw-evidence expungement (issue #97 node-local bulk evidence)",
+ "executed_utc_date": "2026-09-06",
+ "authority": {
+  "issue_97_verdict": "V4_HOLDOUT_CORE_FAIL",
+  "issue_105_verdict": "V4_CORE_DIAGNOSIS_MIXED",
+  "accepted_105_merge": "cd3b50dbafc55a78a1eeb618ccb10f97fad88778",
+  "accepted_105_head": "c01366d81d357ea920d37292ca3a7ed736b950db",
+  "retention_manifest": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/RAW-EVIDENCE-RETENTION.json",
+  "retention_manifest_sha256": "2e1ec275e4318193e1ad685e0a2159b59bcd09c5c1705e61839df700f1604632",
+  "deletion_authority": "maintainer-reviewed SAFE_TO_EXPUNGE_AFTER_ACCEPTANCE classifications only"
+ },
+ "pre_deletion_verification": {
+  "repo_durable_rows": "all 16 FP32 consumer-logit rows + both producer case records byte-exact vs producer record row_f32_sha256, diagnosis-tool pins, and diagnosis-record.json",
+  "node_durable_bundles": "all four capture bundles verified in place against manifest SHA-256 and byte counts before any deletion",
+  "adjudicator_retained": "01:/srv/models/issue97/adjudicate_b.py sha256 8728ee92abf6eee883fd8a8ed45b1f896f771f0139495816fc6ac3bab12c544d (matches diagnosis record pin)",
+  "manifest_typo_finding": "RAW-EVIDENCE-RETENTION.json carries 4 hand-transcription SHA typos in retained_durable_repo entries (ref-decision-5, cand-decision-1, cand-decision-2, cand-decision-4); blobs verified byte-exact against all committed authorities, so classification (path-based) was unaffected; see computed_shas"
+ },
+ "computed_shas_for_typo_entries": {
+  "ref-decision-5.f32": "a1ae174d404b2e256fb2f90d59cb3b92d8348f7d919c679781947cdc88110b60",
+  "cand-decision-1.f32": "f733d7710ce050657eac3ff3d95b54540d6a8082bf5c7a6f33bf677714264793",
+  "cand-decision-2.f32": "f3f6f2a5c7e6d74ade2bc4d346bdebc81e900ba19d705248201b6f6e8e5cfbcd",
+  "cand-decision-4.f32": "d0917c176beddfce9bb8baffd426bddcfae1c0db8b1d959f8c3803defdbdaec4"
+ },
+ "deletion_scope_resolution": {
+  "holdout-candidate_wildcard": "entry 5 ('holdout-candidate* except h95-01-01-01 bundles') resolved to exactly the 23 named non-durable h95-* case directories on each of 01/03; h95-01-01-01 directories kept whole per manifest note 1; top-level index jsons unclassified -> kept",
+  "unclassified_kept": {
+   "inferswarm04_holdout-reference_dir": "2.09 GB; inventory-listed in the manifest but named verbatim in NO expunge entry -> kept whole (fail-closed)",
+   "inferswarm04_manifests_and_participant-plan": "unclassified -> kept",
+   "inferswarm01_holdout-adjudication_adjudicate_bpy_inferswarm": "unclassified; adjudicator explicitly retained via sha in diagnosis record -> kept"
+  }
+ },
+ "hosts": [
+  {
+   "host": "inferswarm04",
+   "root": "/srv/inferswarm/state/issue97",
+   "deleted": {
+    "duplicates-batch5": 44466313161,
+    "reference": 4239240236
+   },
+   "reclaimed_bytes": 48705553397,
+   "df_avail_before_bytes": 52366503936,
+   "df_avail_after_bytes": 101076967424,
+   "durable_survivors": {
+    "holdout-reference/h95-01-01-01/capture-href95.pt": "eb2b30994e7edc2a52bf66c034782481d544a2e03c82b0c181a187c8bc549e2d"
+   },
+   "post_delete_sha_verified": true
+  },
+  {
+   "host": "inferswarm01",
+   "root": "/srv/models/issue97",
+   "deleted": {
+    "reference": 174460899694,
+    "candidate": 36644529541,
+    "candidate-laststage": 319129606284,
+    "calibration": 23170965,
+    "holdout-reference": 2089720891,
+    "holdout-candidate 23 non-durable case dirs": 431695919,
+    "holdout-candidate-laststage 23 non-durable case dirs": 3768846125
+   },
+   "df_avail_before_bytes": 1407054000128,
+   "durable_survivors": {
+    "holdout-candidate/h95-01-01-01/capture-cand95h-cand95h-stage1.pt": "0df35b1a4df4ee67e60c6ca36a54cb158239465116167ec5aa237d49353ba80b",
+    "holdout-candidate/h95-01-01-01/capture-cand95h-cand95h-stage2.pt": "ad4c91a9bf60da3f250dda3ea38502e4c3832d42440420344f9619b1a97a5a80",
+    "holdout-candidate-laststage/h95-01-01-01/capture-cand95h.pt": "1d5d2c44ea74b7baa86de98ad490cb1fb641dc5d53bfc4aac9ae4fee186bd6c9"
+   },
+   "post_delete_sha_verified": true,
+   "reclaimed_bytes": 536548469419,
+   "df_avail_after_bytes": 1943652691968
+  },
+  {
+   "host": "inferswarm03",
+   "root": "/srv/models/issue97",
+   "deleted": {
+    "candidate-laststage": 319129606284,
+    "holdout-candidate-laststage 23 non-durable case dirs": 3768846125
+   },
+   "df_avail_before_bytes": 1542290235392,
+   "durable_survivors": {
+    "holdout-candidate-laststage/h95-01-01-01/capture-cand95h.pt": "1d5d2c44ea74b7baa86de98ad490cb1fb641dc5d53bfc4aac9ae4fee186bd6c9"
+   },
+   "post_delete_sha_verified": true,
+   "reclaimed_bytes": 322898452409,
+   "df_avail_after_bytes": 1865199628288
+  },
+  {
+   "host": "orchestrator (this host)",
+   "root": "/home/zutfen/is97",
+   "deleted": {
+    "is97 orchestration scratch": 1265163139
+   },
+   "df_avail_before_bytes": 4787511296,
+   "df_avail_after_bytes": 6061293568,
+   "reclaimed_bytes": 1265163139
+  }
+ ],
+ "consolidation_decision": "Four durable capture bundles kept in place (manifest permits keep-in-place); paths match the accepted manifest verbatim with verified SHA-256. No migration performed; no bytes moved.",
+ "already_absent_before_cleanup": [],
+ "invariants": {
+  "zero_unauthorized_deletions": true,
+  "every_authorized_expunge_path_gone": true,
+  "every_durable_path_present_and_sha_exact": true,
+  "repo_evidence_byte_identical": true,
+  "no_unrelated_paths_changed": true,
+  "note": "invariant assertions in this record are backed by the verification transcript summarized in 'verification' below"
+ },
+ "total_reclaimed_bytes": 909417638364,
+ "total_reclaimed_gib": 846.96,
+ "durable_node_bytes_retained": 65511042,
+ "verification": {
+  "authorized_paths_gone": {
+   "inferswarm04": [
+    "duplicates-batch5",
+    "reference"
+   ],
+   "inferswarm01": [
+    "reference",
+    "candidate",
+    "candidate-laststage",
+    "calibration",
+    "holdout-reference",
+    "23 non-durable h95-* dirs in holdout-candidate",
+    "23 non-durable h95-* dirs in holdout-candidate-laststage"
+   ],
+   "inferswarm03": [
+    "candidate-laststage",
+    "23 non-durable h95-* dirs in holdout-candidate-laststage"
+   ],
+   "orchestrator": [
+    "~/is97"
+   ]
+  },
+  "durable_post_delete_sha256": {
+   "inferswarm04:/srv/inferswarm/state/issue97/holdout-reference/h95-01-01-01/capture-href95.pt": "eb2b30994e7edc2a52bf66c034782481d544a2e03c82b0c181a187c8bc549e2d",
+   "inferswarm01:/srv/models/issue97/holdout-candidate/h95-01-01-01/capture-cand95h-cand95h-stage1.pt": "0df35b1a4df4ee67e60c6ca36a54cb158239465116167ec5aa237d49353ba80b",
+   "inferswarm01:/srv/models/issue97/holdout-candidate/h95-01-01-01/capture-cand95h-cand95h-stage2.pt": "ad4c91a9bf60da3f250dda3ea38502e4c3832d42440420344f9619b1a97a5a80",
+   "inferswarm01:/srv/models/issue97/holdout-candidate-laststage/h95-01-01-01/capture-cand95h.pt": "1d5d2c44ea74b7baa86de98ad490cb1fb641dc5d53bfc4aac9ae4fee186bd6c9",
+   "inferswarm03:/srv/models/issue97/holdout-candidate-laststage/h95-01-01-01/capture-cand95h.pt": "1d5d2c44ea74b7baa86de98ad490cb1fb641dc5d53bfc4aac9ae4fee186bd6c9"
+  },
+  "df_deltas_vs_du_accounting": "df delta within 0.01-0.04% of du-based accounting on every host (fs metadata/rounding)",
+  "repo_evidence": "all 16 raw FP32 rows + both producer case records re-hashed from origin/main@cd3b50d AFTER deletion: byte-identical (git-committed, never touched)"
+ }
+}
