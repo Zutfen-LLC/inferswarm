@@ -97,6 +97,13 @@ def comparator_tier_contract(
         "classification_terminal_disposition": v4.get("terminal_disposition")
         or "POST_V4_STATISTICAL_METRIC_DOCTRINE_ACCEPTED",
         "core_numerical_pairs": [{"family": f, "metric": m} for f, m in core],
+        "consumer_logit_reducer_contract": {
+            "capture_position_rule": "all 8 canonical-prefix decisions",
+            "vocabulary_scope": "full vocabulary",
+            "max-absolute-difference": "case maximum of 8 full-vocabulary decision reducers",
+            "rms-difference": "case maximum of 8 full-vocabulary decision reducers",
+            "p99-absolute-error": "case maximum of 8 full-vocabulary decision reducers",
+        },
         "semantic_core": {
             "identity": "decision_local_E_D", "tier": "ACCEPTANCE_BEARING",
             "case_reducer": "max over all 8 canonical-prefix decision-local errors",

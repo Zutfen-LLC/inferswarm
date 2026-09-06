@@ -1,8 +1,8 @@
 b3162155fd3cfd2740a0e17f37d5362518727d97d686f1beed920234f9f07529  docs/qualification/gemma4-12b-it-v5/METHODOLOGY.md
 80997989d40950d9bcb2144264d60845540a9c10f9e6ff88fa28eb13015074c8  docs/qualification/gemma4-12b-it-v5/TOOLING.md
-82649c22ba55af357758bc56b688396018eda13dc1abf7008b37dddde2f7d407  docs/qualification/gemma4-12b-it-v5/manifests/build-audit.json
+65ae007bfee136d25a30f1d4c4bc564463b019edf7107880f1df9a5c588b8bf6  docs/qualification/gemma4-12b-it-v5/manifests/build-audit.json
 42f6ca9da6a49c251de4783d45c00f2f9fa9dec4787ffcb0343002f7dd7bc95c  docs/qualification/gemma4-12b-it-v5/manifests/calibration-corpus.json
-beead9ea45ff2bf50fd0868ec5520680dd567ab3c127507ab1a5b9d156cf0713  docs/qualification/gemma4-12b-it-v5/manifests/comparator-tier-contract.json
+ebba447573ea7af9faeab91e1036a780db453661fbc5eb067f6acfd78a1df5af  docs/qualification/gemma4-12b-it-v5/manifests/comparator-tier-contract.json
 7157b762a612f0f420d7d6fb58e8990bbe649d5ce57d4fca665ec6fdfd6aa51b  docs/qualification/gemma4-12b-it-v5/manifests/disjointness-proof.json
 af4fce3d2171604a40f546c4adb05ca10cf3e1e1f5b559a5400f2bd6d4332062  docs/qualification/gemma4-12b-it-v5/manifests/historical-exclusion-inventory.json
 808ddc80fee4c7b438953122a6a4c7c63156fbeee71c5ef00c3094b34440d23f  docs/qualification/gemma4-12b-it-v5/manifests/holdout-custody-record.json

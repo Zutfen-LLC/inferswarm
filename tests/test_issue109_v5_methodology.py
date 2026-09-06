@@ -104,6 +104,9 @@ class Issue109V5MethodologyTests(unittest.TestCase):
         })
         telemetry_pairs = {(p['family'], p['metric']) for p in contract['mandatory_telemetry_pairs']}
         self.assertIn(('fp32-consumer-logits', 'p99-absolute-error'), telemetry_pairs)
+        reducers = contract["consumer_logit_reducer_contract"]
+        self.assertEqual(reducers["capture_position_rule"], "all 8 canonical-prefix decisions")
+        self.assertEqual(reducers["vocabulary_scope"], "full vocabulary")
 
     def test_v3_tier_drift_is_rejected(self):
         source = json.loads((ROOT / 'docs/qualification/post-v3-numerical-core-doctrine/first-contract-classification.json').read_text())
