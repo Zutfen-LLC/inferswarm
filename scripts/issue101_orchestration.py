@@ -79,7 +79,7 @@ class Node:
     def descriptor(self):
         return {"source_id": self.node_id, "endpoint": self.cache.root.resolve().as_uri()}
 
-    def publish(self, record, role="OPTIONAL_CACHE_SOURCE"):
+    def publish(self, record, role="OPTIONAL_CACHE_SOURCE", *, realization=None):
         record = validate_artifact_record(record)
         if role not in ROLES:
             raise fail("UNVERIFIED_OBJECT_PUBLICATION_REFUSED", "availability role")
@@ -90,12 +90,16 @@ class Node:
                  "content_digest": record["content_digest"], "length": record["length"],
                  "role": role, "source": self.descriptor(), "record": deepcopy(record)}
         self._published[record["artifact_id"]] = entry
-        self.publications.append({"artifact_id": record["artifact_id"],
+        self.publications.append({**(realization or {}), "node_id": self.node_id,
+                                  "artifact_id": record["artifact_id"],
                                   "verified_local_object_available": verified,
                                   "content_digest": record["content_digest"],
                                   "length": record["length"]})
 
     def inventory(self):
+        # Re-verify durable content independently of peer advertisement policy.
+        objects = [obj for obj in self.cache.inventory()["verified_objects"]
+                   if obj["byte_digest_verified"]]
         entries = []
         for entry in self._published.values():
             if self.cache.has_verified(entry["record"]):
@@ -103,6 +107,7 @@ class Node:
         self._sequence += 1
         return VerifiedInventory({"node_id": self.node_id, "sequence": self._sequence,
                                   "source": self.descriptor(),
+                                  "verified_objects": objects,
                                   "entries": sorted(entries, key=lambda e: e["artifact_id"])},
                                  _SNAPSHOT_ISSUER)
 
@@ -112,7 +117,10 @@ class Node:
     def acquire(self, coordinator, ticket, source):
         authority, record = coordinator.validate_attempt(ticket, self.node_id, source.descriptor())
         identity = {"attempt_digest": ticket["attempt_digest"], "artifact_id": record["artifact_id"],
+                    "participant_id": ticket["participant_id"], "node_id": self.node_id,
+                    "epoch": ticket["epoch"],
                     "plan_digest": ticket["plan_digest"]}
+        ledger_start = len(self.ledger.events)
         try:
             local = self.cache.has_verified(record)
             if not local:
@@ -124,10 +132,12 @@ class Node:
         except AcquisitionError as error:
             self.failures.append({**identity, "reason": str(error).split(":")[0]})
             raise
+        finally:
+            for event in self.ledger.events[ledger_start:]:
+                event.update(identity)
         if result["status"] == "INTERRUPTED":
             self.failures.append({**identity, "reason": "TRANSFER_INTERRUPTED"})
             return result
-        self.publish(record)
         self.lifecycle.append({**identity, "state": "VERIFIED_AVAILABLE"})
         return result
 
@@ -225,10 +235,15 @@ class Coordinator:
         previous = self._snapshots.get(node_id)
         if previous and snapshot["sequence"] <= previous["sequence"]:
             raise fail("RECONCILIATION_MISMATCH", "stale inventory sequence")
+        local = {(obj["content_digest"], obj["length"]) for obj in snapshot["verified_objects"]
+                 if obj["byte_digest_verified"]}
+        if len(local) != len(snapshot["verified_objects"]):
+            raise fail("UNVERIFIED_OBJECT_PUBLICATION_REFUSED", "unverified local inventory")
         for entry in snapshot["entries"]:
             record = validate_artifact_record(entry["record"])
             if (entry["source"] != snapshot["source"] or entry["node_id"] != node_id
                     or entry["role"] not in ROLES
+                    or (record["content_digest"], record["length"]) not in local
                     or any(entry[k] != record[k] for k in ("artifact_id", "content_digest", "length"))):
                 raise fail("UNVERIFIED_OBJECT_PUBLICATION_REFUSED", "inventory identity")
         copied = json.loads(canonical_json_bytes(snapshot))
@@ -257,17 +272,18 @@ class Coordinator:
         snapshot = self._snapshots.get(participant["node_id"])
         if snapshot is None:
             raise fail("RECONCILIATION_MISMATCH", "target inventory missing")
-        local = {e["artifact_id"]: e["record"] for e in snapshot["entries"]}
+        local = {(obj["content_digest"], obj["length"]) for obj in snapshot["verified_objects"]}
         required = participant["required_artifacts"]
-        document = {"generation": self._generation, "plan_digest": self._plan["plan_digest"],
+        document = {"epoch": self._plan["epoch"],
+                    "generation": self._generation, "plan_digest": self._plan["plan_digest"],
                     "participant_id": participant_id, "node_id": participant["node_id"],
                     "participant_requirements_digest": participant["participant_requirements_digest"],
                     "inventory_sequence": snapshot["sequence"],
                     "required_artifact_ids": sorted(r["artifact_id"] for r in required),
                     "local_artifact_ids": sorted(r["artifact_id"] for r in required
-                                                 if local.get(r["artifact_id"]) == r),
+                                                 if (r["content_digest"], r["length"]) in local),
                     "missing_artifact_ids": sorted(r["artifact_id"] for r in required
-                                                   if local.get(r["artifact_id"]) != r)}
+                                                   if (r["content_digest"], r["length"]) not in local)}
         document["delta_digest"] = self_digest(document, identity_field="delta_digest")
         self._deltas[document["delta_digest"]] = deepcopy(document)
         return document
@@ -300,7 +316,8 @@ class Coordinator:
             source = candidates[0]
         authority = CoordinatorAuthority(plan=self._plan, requirements=self._requirements,
                                          eligible_sources=[source])
-        ticket = {"plan_digest": self._plan["plan_digest"], "generation": self._generation,
+        ticket = {"epoch": self._plan["epoch"],
+                  "plan_digest": self._plan["plan_digest"], "generation": self._generation,
                   "participant_id": delta["participant_id"], "node_id": delta["node_id"],
                   "participant_requirements_digest": participant["participant_requirements_digest"],
                   "delta_digest": delta["delta_digest"], "artifact_id": artifact_id,
@@ -324,7 +341,8 @@ class Coordinator:
             raise fail("RECONCILIATION_MISMATCH", "stale or changed authorization")
         if node_id != ticket["node_id"] or source_descriptor != ticket["source"]:
             raise fail("SOURCE_UNAUTHORIZED", "exact source or target changed")
-        if _source_key(ticket["artifact_id"], source_descriptor) in self._excluded:
+        if (ticket["mode"] != "LOCAL_CACHE"
+                and _source_key(ticket["artifact_id"], source_descriptor) in self._excluded):
             raise fail("SOURCE_UNAUTHORIZED", "source attempt rejected")
         participant = self._participant(ticket["participant_id"])
         record = next(r for r in participant["required_artifacts"] if r["artifact_id"] == ticket["artifact_id"])
@@ -341,14 +359,23 @@ class Coordinator:
         self.validate_attempt(ticket, ticket["node_id"], ticket["source"])
         self._excluded.add(_source_key(ticket["artifact_id"], ticket["source"]))
         self.rejections.append({"attempt_digest": ticket["attempt_digest"], "reason": reason,
+                                "epoch": ticket["epoch"], "participant_id": ticket["participant_id"],
+                                "node_id": ticket["node_id"],
                                 "artifact_id": ticket["artifact_id"], "source": deepcopy(ticket["source"])})
 
     def reconcile(self, participant_id, used_artifact_ids, materializations):
         self._guard(participant_id, used_artifact_ids, materializations)
+        participant = self._participant(participant_id)
+        for materialization in materializations:
+            if (materialization.get("participant_id") != participant_id
+                    or materialization.get("node_id") != participant["node_id"]
+                    or materialization.get("epoch") != self._plan["epoch"]):
+                raise fail("RECONCILIATION_MISMATCH", "materialization realization identity")
         authority = CoordinatorAuthority(plan=self._plan, requirements=self._requirements,
                                          eligible_sources=[])
         result = authority.reconcile(participant_id=participant_id,
                                      used_artifact_ids=used_artifact_ids,
                                      materializations=materializations)
         self.bytes_observed += authority.bytes_observed
+        result.update(epoch=self._plan["epoch"], node_id=participant["node_id"])
         return result

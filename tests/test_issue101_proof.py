@@ -6,11 +6,66 @@ import json
 import tempfile
 import sys
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import issue101_proof as proof
+
+
+class ParticipantTests(unittest.TestCase):
+    def test_wrong_participant_bytes_fail_accounting_in_both_orders(self):
+        with tempfile.TemporaryDirectory() as directory:
+            controls = [proof.participant_control(Path(directory) / str(index), order)
+                        for index, order in enumerate((("P1", "P2"), ("P2", "P1")))]
+            for control in controls:
+                self.assertEqual(control["injected_accounting"]["unrequired_artifact_bytes_acquired"], 4)
+                self.assertTrue(control["injected_accounting_rejected"])
+                for key in ("cross_participant_authorization", "cross_participant_attempt",
+                            "cross_participant_reconciliation", "cross_participant_materialization"):
+                    self.assertTrue(control[key]["failed_closed"])
+                self.assertEqual(control["accounting"]["local_verified_cache_hit_bytes"], 8)
+                self.assertEqual(control["accounting"]["total_data_plane_bytes"], 8)
+                for realization in control["realizations"]:
+                    if realization["epoch"] == 2:
+                        self.assertEqual(realization["delta"]["missing_artifact_ids"], [])
+            self.assertEqual(controls[0]["zero_invariants"], controls[1]["zero_invariants"])
+
+    def test_replacement_accounting_uses_unadvertised_local_content_for_exact_participant(self):
+        with tempfile.TemporaryDirectory() as directory:
+            campaign = proof.Campaign(Path(directory))
+            campaign.freeze(1, {"P1": ("C", [1]), "P2": ("C", [3])})
+            campaign.realize("P1", advertise=False)
+            campaign.realize("P2", advertise=False)
+            campaign.freeze(2, {"P2": ("C", [1]), "P1": ("C", [3])})
+            campaign.realize("P2", advertise=False)
+            campaign.realize("P1", advertise=False)
+            local_transfer = next(t for t in campaign.transfers if t["epoch"] == 2 and t["participant_id"] == "P2")
+            old_read = deepcopy(next(t["reads"][0] for t in campaign.transfers
+                                     if t["epoch"] == 1 and t["participant_id"] == "P1"))
+            old_read.update({k: local_transfer[k] for k in ("epoch", "participant_id", "node_id")})
+            old_read["attempt_digest"] = local_transfer["ticket"]["attempt_digest"]
+            local_transfer["reads"].append(old_read)
+            zero, _ = proof.measure_accounting(campaign)
+            self.assertEqual(zero["replacement_plan_reacquired_already_verified_required_bytes"], 4)
+            self.assertEqual(zero["unrequired_artifact_bytes_acquired"], 0)
+            with self.assertRaisesRegex(AssertionError, "nonzero acceptance invariant"):
+                proof.accounting(campaign)
+
+    def test_two_participants_on_one_node_use_exact_requirements(self):
+        with tempfile.TemporaryDirectory() as directory:
+            campaign = proof.Campaign(Path(directory))
+            campaign.freeze(1, {"P1": ("C", [1]), "P2": ("C", [3])})
+            campaign.realize("P1")
+            campaign.realize("P2")
+            for realization, number in zip(campaign.realizations, (1, 3)):
+                self.assertEqual(realization["node_id"], "C")
+                self.assertEqual(realization["delta"]["required_artifact_ids"],
+                                 [campaign.fixture.records[number]["artifact_id"]])
+                self.assertEqual(realization["execution"]["reconciliation"]["participant_id"],
+                                 realization["participant_id"])
+            self.assertEqual(proof.accounting(campaign)[0]["unrequired_artifact_bytes_acquired"], 0)
 
 
 class CampaignTests(unittest.TestCase):
@@ -35,6 +90,58 @@ class CampaignTests(unittest.TestCase):
         self.assertTrue(all(e["execution"]["matches_reference"]
                             for e in self.documents["epochs.json"]["realizations"]))
 
+    def test_retained_repair_controls_prove_local_reconstruction_and_participant_identity(self):
+        repairs = self.documents["repair-controls.json"]
+        local = repairs["unadvertised_local_cache"]
+        self.assertEqual(local["accounting"]["total_data_plane_bytes"], 0)
+        self.assertEqual(local["accounting"]["local_verified_cache_hit_bytes"], 8)
+        for result in local["rounds"]:
+            self.assertEqual(result["authorized_origin_sources"], [])
+            self.assertEqual(result["source_index"], {})
+            self.assertEqual(result["realization"]["delta"]["missing_artifact_ids"], [])
+        self.assertTrue(local["rounds"][1]["reconstructed"])
+        self.assertTrue(local["explicit_source_index"])
+        for control in repairs["colocated_participants"]:
+            self.assertEqual(control["injected_accounting"]["unrequired_artifact_bytes_acquired"], 4)
+            self.assertTrue(control["injected_accounting_rejected"])
+
+    def test_retained_realization_records_preserve_both_identities(self):
+        controls = [self.documents["epochs.json"], *self.documents["repair-controls.json"]["colocated_participants"]]
+        for control in controls:
+            for realization in control["realizations"]:
+                identity = {k: realization[k] for k in ("epoch", "participant_id", "node_id")}
+                self.assertNotEqual(identity["participant_id"], identity["node_id"])
+                execution = realization["execution"]
+                records = [realization["delta"], execution, execution["reconciliation"],
+                           *execution["reconciliation"]["materializations"], *realization["ledger"],
+                           *realization["new_publications"]]
+                for record in records:
+                    self.assertEqual({k: record[k] for k in identity}, identity)
+
+    def test_repository_prerequisite_claim_has_execution_witnesses(self):
+        summary = self.documents["canonical-summary.json"]
+        self.assertFalse(summary["whole_repository_feasibility_prerequisite"])
+        evidence = summary["repository_prerequisite_evidence"]
+        self.assertFalse(evidence["structural_gate_present"])
+        self.assertEqual(len(evidence["execution_witnesses"]), 3)
+        for witness in evidence["execution_witnesses"]:
+            self.assertTrue(witness["missing_before"])
+            self.assertTrue(witness["missing_after"])
+            self.assertTrue(witness["matches_reference"])
+
+    def test_producer_fails_if_complete_repository_prerequisite_is_introduced(self):
+        freeze = proof.Coordinator.freeze
+
+        def require_repository(coordinator, plan, resolver):
+            for participant in plan["participants"]:
+                snapshot = coordinator._snapshots[participant["node_id"]]
+                proof.require(len(snapshot["verified_objects"]) == 6, "injected complete repository prerequisite")
+            return freeze(coordinator, plan, resolver)
+
+        with patch.object(proof.Coordinator, "freeze", require_repository):
+            with self.assertRaisesRegex(AssertionError, "injected complete repository prerequisite"):
+                proof.run_campaign()
+
     def test_all_required_negative_controls_fail_closed(self):
         controls = self.documents["negative-controls.json"]
         self.assertEqual(set(controls), set(proof.NEGATIVE_REASONS))
@@ -46,16 +153,21 @@ class CampaignTests(unittest.TestCase):
 
     def validate_identity_chain(self, documents):
         from issue99_artifact_core import validate_self_identity, validate_artifact_record
-        for plan in documents["epochs.json"]["plans"]:
-            validate_self_identity(plan, identity_field="plan_digest")
-        for requirements in documents["epochs.json"]["requirements"]:
-            validate_self_identity(requirements, identity_field="requirements_digest")
-            for participant in requirements["participants"]:
-                validate_self_identity(participant, identity_field="participant_requirements_digest")
-                for record in participant["required_artifacts"]:
-                    validate_artifact_record(record)
-        for realization in documents["epochs.json"]["realizations"]:
-            validate_self_identity(realization["delta"], identity_field="delta_digest")
+        repairs = documents["repair-controls.json"]
+        local = repairs["unadvertised_local_cache"]
+        controls = [documents["epochs.json"], *repairs["colocated_participants"],
+                    {**local, "realizations": [r["realization"] for r in local["rounds"]]}]
+        for control in controls:
+            for plan in control["plans"]:
+                validate_self_identity(plan, identity_field="plan_digest")
+            for requirements in control["requirements"]:
+                validate_self_identity(requirements, identity_field="requirements_digest")
+                for participant in requirements["participants"]:
+                    validate_self_identity(participant, identity_field="participant_requirements_digest")
+                    for record in participant["required_artifacts"]:
+                        validate_artifact_record(record)
+            for realization in control["realizations"]:
+                validate_self_identity(realization["delta"], identity_field="delta_digest")
         attempts = set()
         references = []
 

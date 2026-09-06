@@ -14,6 +14,22 @@ Node C first acquires state from Nodes A and B and the origin.
 Node A then acquires newly published state from C.
 Node C later acquires newly published state from A.
 The independent execution references match in both epochs.
+Participants P-A and P-C have IDs distinct from their Node IDs.
+
+Local possession uses reverified durable cache content.
+Peer availability uses a separate explicit advertisement set.
+An unadvertised object satisfies local delta and cache-hit acquisition.
+It does not enter the peer Source index until the Node publishes it.
+The retained reconstruction control removes the upstream object and authorizes
+no origins. It reads zero Source bytes before and after Node reconstruction.
+
+Realization starts with an exact frozen Participant and resolves its Node.
+Delta, authorization, transfer, Materialization, and reconciliation retain both IDs.
+Accounting indexes requirements by `(epoch, participant_id)`.
+The shared-Node control gives two Participants disjoint requirements.
+An injected acquisition for the wrong Participant produces four unrequired bytes
+and fails acceptance in both Participant orders.
+A replacement plan then proves legitimate unadvertised cache reuse by both Participants.
 
 | Measured CPU fixture accounting | Bytes |
 |---|---:|
@@ -26,6 +42,9 @@ The independent execution references match in both epochs.
 | Replacement acquisition of already verified required state | 0 |
 
 All ten required negative controls fail closed.
+The complete-repository prerequisite claim is derived from execution witnesses
+and the generic structural check. A mutation test proves that an introduced
+complete-repository gate causes the producer to fail.
 No unverified state enters advertised inventory.
 The retained operation audit confines campaign file operations to temporary
 paths. It records no network access or process execution.
@@ -42,6 +61,7 @@ The internal receipt, descriptor, digest, storage, and API choices remain unfroz
 - [Acquisition and lifecycle ledger](evidence/acquisition-ledger.json)
 - [Peer reuse](evidence/peer-reuse.json)
 - [Negative controls](evidence/negative-controls.json)
+- [Local cache and Participant repair controls](evidence/repair-controls.json)
 - [Isolation audit](evidence/isolation.json)
 - [Producer hashes](evidence/producer-hashes.json)
 - [Integrity manifest](evidence/MANIFEST.sha256)

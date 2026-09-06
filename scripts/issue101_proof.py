@@ -14,9 +14,9 @@ from typing import Any
 
 from issue74_methodology import canonical_json_bytes
 from issue99_artifact_core import (
-    AcquisitionError, LocalFileSource, NodeArtifactCache, self_digest, write_canonical_json,
+    AcquisitionError, LocalFileSource, NodeArtifactCache, acquire_artifact, self_digest, write_canonical_json,
 )
-from issue101_fixture import Fixture, execute
+from issue101_fixture import Fixture, REFERENCE, execute
 from issue101_orchestration import Coordinator, Node
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,7 +41,7 @@ NEGATIVE_REASONS = {
 EVIDENCE_FILES = {"fixture.json", "epochs.json", "inventories.json", "source-index.json",
                   "authorizations.json", "acquisition-ledger.json", "peer-reuse.json",
                   "negative-controls.json", "isolation.json", "canonical-summary.json",
-                  "producer-hashes.json"}
+                  "producer-hashes.json", "repair-controls.json"}
 
 
 def require(condition, message):
@@ -117,12 +117,13 @@ class IsolationAudit:
 class MeteredSource:
     """Record actual data-plane reads, including failed verification inputs."""
 
-    def __init__(self, source, record, reads, *, corrupt=False):
+    def __init__(self, source, record, reads, ticket, *, corrupt=False):
         self.source = source
         self.source_id = source.source_id
         self.record = record
         self.reads = reads
         self.corrupt = corrupt
+        self.identity = {key: ticket[key] for key in ("epoch", "participant_id", "node_id", "attempt_digest")}
 
     def descriptor(self):
         return self.source.descriptor()
@@ -131,7 +132,7 @@ class MeteredSource:
         data = self.source.read(origin, offset, length)
         if self.corrupt:
             data = bytes([data[0] ^ 255]) + data[1:]
-        self.reads.append({"artifact_id": self.record["artifact_id"],
+        self.reads.append({**self.identity, "artifact_id": self.record["artifact_id"],
                            "source": self.descriptor(), "offset": offset, "bytes": len(data)})
         return data
 
@@ -175,11 +176,16 @@ class Campaign:
         record = self.record(ticket["artifact_id"])
         source_id = ticket["source"]["source_id"]
         source = self.origin if source_id == "origin" else self.nodes[source_id].source(record)
-        return MeteredSource(source, record, self.reads, corrupt=corrupt)
+        return MeteredSource(source, record, self.reads, ticket, corrupt=corrupt)
 
-    def realize(self, node_id):
+    def realize(self, participant_id, *, advertise=False):
+        participant = next(p for p in self.requirements[-1]["participants"]
+                           if p["participant_id"] == participant_id)
+        node_id = participant["node_id"]
+        identity = {"epoch": self.plans[-1]["epoch"], "participant_id": participant_id,
+                    "node_id": node_id}
         node = self.nodes[node_id]
-        delta = self.coordinator.delta(node_id)
+        delta = self.coordinator.delta(participant_id)
         before = node.inventory()
         ledger_start = len(node.ledger.events)
         publication_start = len(node.publications)
@@ -187,20 +193,21 @@ class Campaign:
             ticket = self.coordinator.authorize(delta, artifact_id)
             read_start = len(self.reads)
             result = node.acquire(self.coordinator, ticket, self.source(ticket))
-            self.transfers.append({"epoch": self.plans[-1]["epoch"], "node_id": node_id,
+            self.transfers.append({**identity,
                                    "ticket": ticket, "result": result,
                                    "reads": deepcopy(self.reads[read_start:])})
-        participant = next(p for p in self.requirements[-1]["participants"] if p["node_id"] == node_id)
+            if advertise:
+                node.publish(self.record(artifact_id), realization=identity)
         execution = execute(self.plans[-1], participant, node, self.coordinator)
         require(execution["matches_reference"], "execution differs from independent reference")
         events = [{k: v for k, v in e.items() if k != "wall_time_seconds"}
                   for e in node.ledger.events[ledger_start:]]
-        self.realizations.append({"epoch": self.plans[-1]["epoch"], "node_id": node_id,
+        self.realizations.append({**identity,
                                   "delta": delta, "inventory_before": before,
                                   "inventory_after": node.inventory(), "ledger": events,
                                   "new_publications": deepcopy(node.publications[publication_start:]),
                                   "execution": execution})
-        self.report(f"epoch-{self.plans[-1]['epoch']}-after-{node_id}")
+        self.report(f"epoch-{self.plans[-1]['epoch']}-after-{participant_id}")
 
 
 def expect_failure(caller, expected):
@@ -222,11 +229,11 @@ def cached_path(node, record):
 
 def negative_control(name, root):
     campaign = Campaign(root)
-    campaign.freeze(1, {"C": [1, 3, 4]})
+    campaign.freeze(1, {"P-C": ("C", [1, 3, 4])})
     c = campaign.coordinator
     node = campaign.nodes["C"]
     record = campaign.fixture.records[1]
-    delta = c.delta("C")
+    delta = c.delta("P-C")
     ticket = c.authorize(delta, record["artifact_id"])
     expected = NEGATIVE_REASONS[name]
     extra = {}
@@ -268,7 +275,7 @@ def negative_control(name, root):
         result = expect_failure(lambda: node.acquire(c, ticket, campaign.origin), expected)
         require(not campaign.origin.access_log, "unauthorized fallback read")
     elif name == "stale_plan_authorization":
-        campaign.freeze(2, {"C": [1, 4, 5]})
+        campaign.freeze(2, {"P-C": ("C", [1, 4, 5])})
         result = expect_failure(lambda: node.acquire(c, ticket, campaign.source(ticket)), expected)
     elif name == "unrequired_artifact_injection":
         result = expect_failure(lambda: c.authorize(delta, campaign.fixture.records[6]["artifact_id"]), expected)
@@ -284,7 +291,7 @@ def negative_control(name, root):
                 "authorize": lambda: c.authorize(delta, payload),
                 "validate_attempt": lambda: c.validate_attempt(ticket, "C", {"payload": payload}),
                 "reject_source": lambda: c.reject_source(ticket, payload),
-                "reconcile": lambda: c.reconcile("C", [payload], []),
+                "reconcile": lambda: c.reconcile("P-C", [payload], []),
             }
             for entry, caller in calls.items():
                 entry_points[f"{type(payload).__name__}:{entry}"] = expect_failure(caller, expected)
@@ -293,17 +300,17 @@ def negative_control(name, root):
     elif name == "cache_integrity_drift_after_inventory":
         campaign.fixture.seed(node, [1])
         campaign.report("verified-local-before-drift")
-        local = c.authorize(c.delta("C"), record["artifact_id"])
+        local = c.authorize(c.delta("P-C"), record["artifact_id"])
         cached_path(node, record).write_bytes(b"xxxx")
         result = expect_failure(lambda: node.acquire(c, local, campaign.source(local)), expected)
         require(not any(e["event"] == "CACHE_HIT" for e in node.ledger.events), "corrupt local hit counted")
     elif name == "replacement_plan_stale_delta":
-        campaign.freeze(2, {"C": [1, 4, 5]})
-        changed = c.delta("C")
+        campaign.freeze(2, {"P-C": ("C", [1, 4, 5])})
+        changed = c.delta("P-C")
         changed["missing_artifact_ids"] = []
         changed["delta_digest"] = self_digest(changed, identity_field="delta_digest")
         result = expect_failure(lambda: c.authorize(changed, record["artifact_id"]), expected)
-        requirement = c.delta("C")
+        requirement = c.delta("P-C")
         requirement["participant_requirements_digest"] = "sha256:" + "0" * 64
         requirement["delta_digest"] = self_digest(requirement, identity_field="delta_digest")
         extra["changed_requirement"] = expect_failure(lambda: c.authorize(requirement, record["artifact_id"]), expected)
@@ -320,38 +327,60 @@ def negative_control(name, root):
             "coordinator_rejected_payload_bytes": c.bytes_observed}
 
 
-def accounting(campaign):
+def measure_accounting(campaign):
     transfers = campaign.transfers
     actual = [read for transfer in transfers for read in transfer["reads"]]
     by_source: dict[str, dict[str, Any]] = {}
     for read in actual:
-        key = json.dumps(read["source"], sort_keys=True)
-        entry = by_source.setdefault(key, {"source": read["source"], "bytes": 0})
+        descriptor_key = json.dumps(read["source"], sort_keys=True)
+        entry = by_source.setdefault(descriptor_key, {"source": read["source"], "bytes": 0})
         entry["bytes"] += read["bytes"]
-    unrequired = sum(read["bytes"] for transfer in transfers for read in transfer["reads"]
-                     if read["artifact_id"] not in next(
-                         [record["artifact_id"] for record in participant["required_artifacts"]]
-                         for plan, requirements in zip(campaign.plans, campaign.requirements)
-                         if plan["epoch"] == transfer["epoch"]
-                         for participant in requirements["participants"]
-                         if participant["node_id"] == transfer["node_id"]))
-    reacquired = sum(read["bytes"] for transfer in transfers if transfer["epoch"] == 2
-                     for read in transfer["reads"] if read["artifact_id"] in next(
-                         [entry["artifact_id"] for entry in r["inventory_before"]["entries"]]
-                         for r in campaign.realizations
-                         if r["epoch"] == 2 and r["node_id"] == transfer["node_id"]))
+    requirements_by_realization = {}
+    for plan, requirements in zip(campaign.plans, campaign.requirements):
+        for participant in requirements["participants"]:
+            key = (plan["epoch"], participant["participant_id"])
+            require(key not in requirements_by_realization, "duplicate realization requirements")
+            requirements_by_realization[key] = participant
+    realizations = {(r["epoch"], r["participant_id"]): r for r in campaign.realizations}
+    require(len(realizations) == len(campaign.realizations), "duplicate realization records")
+    unrequired = 0
+    reacquired = 0
+    for transfer in transfers:
+        key = (transfer["epoch"], transfer["participant_id"])
+        participant = requirements_by_realization[key]
+        realization = realizations[key]
+        identity = {k: transfer[k] for k in ("epoch", "participant_id", "node_id")}
+        require(transfer["node_id"] == participant["node_id"], "transfer Node differs from participant")
+        for record in [transfer["ticket"], realization, *transfer["reads"]]:
+            require(all(record[k] == v for k, v in identity.items()), "transfer realization identity differs")
+        required = {r["artifact_id"]: r for r in participant["required_artifacts"]}
+        local = {(obj["content_digest"], obj["length"])
+                 for obj in realization["inventory_before"]["verified_objects"]}
+        for read in transfer["reads"]:
+            record = required.get(read["artifact_id"])
+            if record is None:
+                unrequired += read["bytes"]
+            elif transfer["epoch"] != campaign.plans[0]["epoch"]:
+                if (record["content_digest"], record["length"]) in local:
+                    reacquired += read["bytes"]
     unverified = sum(not p["verified_local_object_available"]
                      for node in campaign.nodes.values() for p in node.publications)
     unverified += sum(len(a["snapshot"]["entries"]) for a in campaign.coordinator.inventory_audit
                       if not a["verified_receipt_valid"])
-    optional = 0
+    optional_objects = {}
     for realization in campaign.realizations:
-        if realization["epoch"] != 2:
+        if realization["epoch"] == campaign.plans[0]["epoch"]:
             continue
-        before = {e["artifact_id"] for e in realization["inventory_before"]["entries"]}
-        required = set(realization["delta"]["required_artifact_ids"])
-        optional += sum(e["length"] for e in realization["inventory_after"]["entries"]
-                        if e["artifact_id"] in before - required)
+        before = {obj["content_digest"] for obj in realization["inventory_before"]["verified_objects"]}
+        # Count optional durable bytes once per Node and epoch.
+        required_content = {record["content_digest"]
+                    for (epoch, _), participant in requirements_by_realization.items()
+                    if epoch == realization["epoch"] and participant["node_id"] == realization["node_id"]
+                    for record in participant["required_artifacts"]}
+        for obj in realization["inventory_after"]["verified_objects"]:
+            if obj["content_digest"] in before - required_content:
+                optional_objects[(realization["epoch"], realization["node_id"], obj["content_digest"])] = obj["length"]
+    optional = sum(optional_objects.values())
     zero = {"unrequired_artifact_bytes_acquired": unrequired,
             "coordinator_bulk_artifact_bytes_observed": campaign.coordinator.bytes_observed,
             "replacement_plan_reacquired_already_verified_required_bytes": reacquired,
@@ -365,6 +394,11 @@ def accounting(campaign):
               "resume_reused_prefix_bytes": sum(e["bytes"] for r in campaign.realizations
                                                  for e in r["ledger"] if e["event"] == "RESUME_REUSED_PREFIX"),
               "total_data_plane_bytes": sum(r["bytes"] for r in actual)}
+    return zero, totals
+
+
+def accounting(campaign):
+    zero, totals = measure_accounting(campaign)
     require(all(value == 0 for value in zero.values()), "nonzero acceptance invariant")
     return zero, totals
 
@@ -397,24 +431,149 @@ def peer_reuse(campaign):
     return {"reuses": reuses}
 
 
+def unadvertised_local_control(root):
+    campaign = Campaign(root)
+    node = campaign.nodes["C"]
+    record = campaign.fixture.records[4]
+    node.cache.publish(record, bytes([4, 0, 0, 0]))
+    campaign.nodes = {"C": node}
+    # Remove the upstream bytes. Only the durable local object can satisfy this plan.
+    (campaign.fixture.root / "coefficients.bin").unlink()
+    rounds = []
+    for epoch in (1, 2):
+        if epoch == 2:
+            node = Node("C", NodeArtifactCache(root / "C"))
+            campaign.nodes["C"] = node
+        campaign.coordinator = Coordinator(node_sources=[node.descriptor()], origin_sources=[])
+        campaign.report(f"local-epoch-{epoch}-before")
+        campaign.freeze(epoch, {"P-local": ("C", [4])})
+        campaign.realize("P-local", advertise=False)
+        realization = campaign.realizations[-1]
+        require(realization["delta"]["local_artifact_ids"] == [record["artifact_id"]], "verified local artifact missed")
+        require(not realization["delta"]["missing_artifact_ids"], "local artifact marked missing")
+        require(not campaign.coordinator.source_index(), "local possession advertised implicitly")
+        require(not campaign.reads, "local realization read a Source")
+        require(all(t["ticket"]["mode"] == "LOCAL_CACHE" and t["result"]["status"] == "CACHE_HIT"
+                    for t in campaign.transfers), "local realization did not use cache")
+        rounds.append({"epoch": epoch, "reconstructed": epoch == 2,
+                       "authorized_origin_sources": deepcopy(campaign.coordinator._origins),
+                       "source_index": campaign.coordinator.source_index(), "realization": realization})
+    zero, totals = accounting(campaign)
+    node.publish(record)
+    campaign.report("local-explicit-advertisement")
+    require(record["artifact_id"] in campaign.coordinator.source_index(), "explicit advertisement missing")
+    return {"rounds": rounds, "plans": campaign.plans, "requirements": campaign.requirements,
+            "transfers": campaign.transfers, "zero_invariants": zero, "accounting": totals,
+            "explicit_source_index": campaign.coordinator.source_index()}
+
+
+def participant_control(root, order):
+    campaign = Campaign(root)
+    assignments = {pid: ("C", [1] if pid == "P1" else [3]) for pid in order}
+    campaign.freeze(1, assignments)
+    c = campaign.coordinator
+    record = campaign.fixture.records[1]
+    rejected = expect_failure(lambda: c.authorize(c.delta("P2"), record["artifact_id"]),
+                              "UNDECLARED_REQUIREMENT_ARTIFACT")
+    ticket = c.authorize(c.delta("P1"), record["artifact_id"])
+    authority, _ = c.validate_attempt(ticket, "C", ticket["source"])
+    wrong_participant = expect_failure(
+        lambda: acquire_artifact(cache=campaign.nodes["C"].cache, source=campaign.source(ticket),
+                                 record=record, authorization=authority, participant_id="P2",
+                                 ledger=campaign.nodes["C"].ledger), "SOURCE_UNAUTHORIZED")
+    for pid in order:
+        campaign.realize(pid, advertise=False)
+    wrong_reconciliation = expect_failure(
+        lambda: c.reconcile("P2", [record["artifact_id"]], []), "RECONCILIATION_MISMATCH")
+    p1 = next(r for r in campaign.realizations if r["participant_id"] == "P1")
+    p2 = next(r for r in campaign.realizations if r["participant_id"] == "P2")
+    wrong_materialization = expect_failure(
+        lambda: c.reconcile("P2", p2["delta"]["required_artifact_ids"],
+                            p1["execution"]["reconciliation"]["materializations"]), "RECONCILIATION_MISMATCH")
+    # Attribute a real P1 Source read to P2. P1's requirement must not hide it.
+    injected = deepcopy(next(t for t in campaign.transfers if t["participant_id"] == "P1"))
+    injected["participant_id"] = "P2"
+    injected["ticket"] = deepcopy(next(t["ticket"] for t in campaign.transfers if t["participant_id"] == "P2"))
+    for read in injected["reads"]:
+        read["participant_id"] = "P2"
+        read["attempt_digest"] = injected["ticket"]["attempt_digest"]
+    campaign.transfers.append(injected)
+    invalid, _ = measure_accounting(campaign)
+    require(invalid["unrequired_artifact_bytes_acquired"] == record["length"], "wrong participant bytes hidden")
+    try:
+        accounting(campaign)
+    except AssertionError as error:
+        require(str(error) == "nonzero acceptance invariant", "wrong accounting failure")
+        accounting_rejected = True
+    else:
+        raise AssertionError("wrong participant accounting passed")
+    campaign.transfers.pop()
+    # A replacement plan legitimately shares one verified object on this Node.
+    campaign.freeze(2, {pid: ("C", [1]) for pid in order})
+    for pid in order:
+        campaign.realize(pid, advertise=False)
+        require(campaign.realizations[-1]["delta"]["missing_artifact_ids"] == [], "shared local cache missed")
+    zero, totals = accounting(campaign)
+    require(not any(e["node_id"] == "C" for entries in c.source_index().values() for e in entries),
+            "shared local cache advertised implicitly")
+    return {"participant_order": list(order), "plans": campaign.plans, "requirements": campaign.requirements,
+            "realizations": campaign.realizations, "transfers": campaign.transfers,
+            "authorizations": c.selections, "zero_invariants": zero, "accounting": totals,
+            "cross_participant_authorization": rejected, "cross_participant_attempt": wrong_participant,
+            "cross_participant_reconciliation": wrong_reconciliation,
+            "cross_participant_materialization": wrong_materialization,
+            "injected_transfer": injected, "injected_accounting": invalid,
+            "injected_accounting_rejected": accounting_rejected}
+
+
+def repository_prerequisite_evidence(campaign, structural_gate_present):
+    witnesses = []
+    fixture_digests = {r["content_digest"] for r in campaign.fixture.records.values()}
+    for realization in campaign.realizations:
+        before = {obj["content_digest"] for obj in realization["inventory_before"]["verified_objects"]}
+        after = {obj["content_digest"] for obj in realization["inventory_after"]["verified_objects"]}
+        execution = realization["execution"]
+        witnesses.append({"epoch": realization["epoch"], "participant_id": realization["participant_id"],
+                          "node_id": realization["node_id"],
+                          "missing_before": sorted(fixture_digests - before),
+                          "missing_after": sorted(fixture_digests - after),
+                          "matches_reference": execution["matches_reference"],
+                          "reconciliation_status": execution["reconciliation"]["status"]})
+    realized_without_repository = bool(witnesses) and all(
+        w["missing_before"] and w["missing_after"] and w["matches_reference"]
+        and w["reconciliation_status"] == "PLANNED_AND_REALIZED" for w in witnesses)
+    prerequisite = structural_gate_present or not realized_without_repository
+    require(not prerequisite, "complete repository prerequisite is not disproved")
+    return {"structural_gate_present": structural_gate_present, "execution_witnesses": witnesses,
+            "whole_repository_feasibility_prerequisite": prerequisite}
+
+
 def run_campaign(out_dir: Path | None = None):
     methodology = ROOT / AREA / "methodology.md"
     frozen_methodology_hash = sha(methodology)
     producer_hashes = {path: sha(ROOT / path) for path in PRODUCERS}
+    structural_gate_present = "has_complete_model_repository" in (
+        ROOT / "scripts/issue101_orchestration.py").read_text()
     with tempfile.TemporaryDirectory(prefix="issue101-cpu-") as temporary:
         root = Path(temporary)
         with IsolationAudit(root) as audit:
             campaign = Campaign(root / "valid")
-            campaign.freeze(1, {"C": [1, 3, 4]})
-            campaign.realize("C")
-            campaign.freeze(2, {"A": [1, 4, 5], "C": [1, 4, 5]})
-            campaign.realize("A")
-            campaign.realize("C")
+            campaign.freeze(1, {"P-C": ("C", [1, 3, 4])})
+            campaign.realize("P-C", advertise=True)
+            campaign.freeze(2, {"P-A": ("A", [1, 4, 5]), "P-C": ("C", [1, 4, 5])})
+            campaign.realize("P-A", advertise=True)
+            campaign.realize("P-C", advertise=True)
             zero, totals = accounting(campaign)
+            require(all(r["execution"]["reference"] == REFERENCE[r["epoch"]]
+                        for r in campaign.realizations), "canonical reference changed")
+            prerequisite = repository_prerequisite_evidence(campaign, structural_gate_present)
+            repairs = {"unadvertised_local_cache": unadvertised_local_control(root / "local"),
+                       "colocated_participants": [participant_control(root / "participants" / str(index), order)
+                                                 for index, order in enumerate((("P1", "P2"), ("P2", "P1")))]}
             reuse = peer_reuse(campaign)
             negatives = {name: negative_control(name, root / "negative" / name) for name in NEGATIVE_REASONS}
             final_inventories = [node.inventory() for node in campaign.nodes.values()]
-            require(all(len(s["entries"]) < len(campaign.fixture.records) for s in final_inventories),
+            require(all(len(s["verified_objects"]) < len(campaign.fixture.records) for s in final_inventories),
                     "participant owns full fixture repository")
         isolation = audit.document()
         require(isolation["cpu_only"] and not isolation["freetoken_tree_modified"]
@@ -423,8 +582,9 @@ def run_campaign(out_dir: Path | None = None):
                    "implementation_base": BASE, "temporary_root": str(root),
                    "methodology_sha256_before_execution": frozen_methodology_hash,
                    "zero_invariants": zero, "accounting": totals,
-                   "whole_repository_feasibility_prerequisite": False,
-                   "final_inventory_artifact_counts": {s["node_id"]: len(s["entries"]) for s in final_inventories},
+                   "whole_repository_feasibility_prerequisite": prerequisite["whole_repository_feasibility_prerequisite"],
+                   "repository_prerequisite_evidence": prerequisite,
+                   "final_inventory_artifact_counts": {s["node_id"]: len(s["verified_objects"]) for s in final_inventories},
                    "fixture_artifact_count": len(campaign.fixture.records),
                    "negative_controls_passed": len(negatives),
                    "non_claims": ["No physical runtime integration or performance claim.",
@@ -441,7 +601,7 @@ def run_campaign(out_dir: Path | None = None):
                                         "lifecycle": {n: node.lifecycle for n, node in campaign.nodes.items()}},
             "peer-reuse.json": reuse, "negative-controls.json": negatives,
             "isolation.json": isolation, "canonical-summary.json": summary,
-            "producer-hashes.json": producer_hashes,
+            "producer-hashes.json": producer_hashes, "repair-controls.json": repairs,
         }
     require(sha(methodology) == frozen_methodology_hash, "methodology changed during execution")
     if out_dir is not None:
