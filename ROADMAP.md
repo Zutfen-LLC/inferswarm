@@ -471,6 +471,28 @@ derivation from physical evidence, or holdout decryption occurred. The next
 gate is issue #110, physical v5 execution (after custody completion).
 Record: `docs/qualification/gemma4-12b-it-v5/`.
 
+Issue #110's pre-execution phase completed the custody handoff:
+`SECOND_INDEPENDENT_CUSTODY_VERIFIED` (canonical hosts `inferswarm01` and
+`hermes`, distinct local storage boundaries, matching private-key /
+normalized-seed / public-DER identities, `decrypt_performed: false`,
+`private_material_in_repository: false`; an additional copy on
+`inferswarm00` is recorded but not relied upon for the correctness-bearing
+two-custodian proof) followed by `PRE_EXECUTION_CUSTODY_HANDOFF_TOOLING_REPAIR`.
+The repair is additive only: the accepted #109 threshold deriver required the
+custody record to hash to the accepted incomplete baseline while also
+requiring two verified custodians — an unsatisfiable conjunction once
+custody completes. The frozen deriver is retained byte-identical; a
+deterministic builder generates `scripts/issue110_v5_thresholds.py` from it
+with exactly one substitution (the custody-record hash constant replaced by
+the #110 effective completed custody record's SHA-256), mechanically proven
+by tests (one-line source diff, function-bytecode and constant identity).
+The historical #109 custody record is retained unmodified and the effective
+record reuses the frozen v5 custody schema with
+`SEALED_NOT_CONSUMED`/`unseal_authorized: false`. No physical qualification
+has begun: no model execution, no CUDA, no calibration, no stress or
+candidate execution, and no holdout decrypt occurred. Record:
+`docs/qualification/gemma4-12b-it-v5-campaign-110/`.
+
 Issue #99 is complete on the orthogonal distribution lane: the minimum
 plan-driven model artifact acquisition proof required by ADR 0009 terminated
 `PLAN_DRIVEN_ARTIFACT_ACQUISITION_PASS` (see its section under the successor
