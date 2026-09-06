@@ -78,6 +78,15 @@ jobs:
       - name: Check issue 95 v4 prediction-aligned methodology (CPU-only)
         run: python3 -m unittest tests.test_issue95_v4_methodology tests.test_issue95_v4_thresholds -v
 
+      - name: Check issue 99 plan-driven artifact acquisition (CPU-only)
+        run: python3 -m unittest tests.test_issue99_artifact_core tests.test_issue99_proof -v
+
+      - name: Check issue 101 plan-driven artifact orchestration (CPU-only)
+        run: python3 -m unittest tests.test_issue101_orchestration tests.test_issue101_proof -v
+
+      - name: Check issue 103 artifact-locality transition planning (CPU-only)
+        run: python3 -m unittest tests.test_issue103_planner -v
+
       - name: Check internal Markdown links
         run: |
           python3 - <<'EOF'
@@ -139,7 +148,7 @@ jobs:
           fence = re.compile(r"^[ \t]*(```|~~~).*$")
           bad = []
           for path in glob.glob("**/*.md", recursive=True):
-              if ".git/" in path or path == "docs/qualification/gemma4-12b-it-v3-campaign-88/TERMINAL-REPORT.md":
+              if ".git/" in path:
                   continue
               keep = True   # True = prose, False = inside fence
               lines = []

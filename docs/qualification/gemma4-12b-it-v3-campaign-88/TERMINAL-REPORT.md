@@ -122,7 +122,7 @@ DECISION_LOCAL_BOUND_EXCEEDED; zero NaN/Inf).
   phaseD-laststage-final-report.json
 - inferswarm01 `/srv/models/i88-scratch/`: overflow spillover of the
   stage3 evidence (disk-headroom measure; same bytes)
-- Committed compact artifacts: inferswarm
+- Committed compact artifacts: `inferswarm`
   `docs/qualification/gemma4-12b-it-v3-campaign-88/` (phaseB/, phaseC/,
   phaseEF/, phaseG/, preflight-applicability.json, this report)
 
