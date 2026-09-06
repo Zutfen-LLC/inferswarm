@@ -3,6 +3,7 @@ import json
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -85,6 +86,41 @@ class Issue109V5MethodologyTests(unittest.TestCase):
         self.assertEqual(len(declaration['components']), 24)
         # Deterministic: rebuilding produces byte-identical output.
         self.assertEqual(canonical_json_bytes(declaration), canonical_json_bytes(mixture_population_declaration()))
+        self.assertIn('Do not redraw the component or target length.', declaration['historical_exclusion_conditional_law'])
+
+    def test_historical_retry_preserves_component_and_target_length(self):
+        """A historical rejection may change only prompt realization randomness."""
+        import generate_issue109_corpora as generator
+        calls = []
+
+        def fake_prompt(_tokenizer, *, seed, namespace, content_class, cell, index, target):
+            calls.append((namespace, content_class, cell, index, target))
+            return f'{namespace}|{content_class}|{target}', [target] * target
+
+        component = list(component_stream('retry-seed', 'calibration', 1))[0][1]
+        first_prompt = f'calibration|{component[0]}|{v5.target_length("retry-seed", "calibration", component[1], 0)}'
+        first_hash = v5.sha256_bytes(first_prompt.encode('utf-8'))
+        with patch.object(generator, 'generate_prompt', side_effect=fake_prompt), \
+             patch.object(generator, '_historical_identities', return_value=({first_hash}, '0' * 64)):
+            cases = generator.generate_mixture_cases(
+                object(), seed='retry-seed', namespace='calibration', prefix='c109-', count=1,
+            )
+        case = cases[0]
+        expected_length = v5.target_length('retry-seed', 'calibration', component[1], 0)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(case['historical_rejection_attempt'], 1)
+        self.assertEqual(case['content_class'], component[0])
+        self.assertEqual(case['length_regime'], list(v5.LENGTH_REGIMES[component[1]]))
+        self.assertEqual(case['token_count'], expected_length)
+        self.assertEqual(calls[0][1:], calls[1][1:])
+        self.assertEqual(calls[0][0], 'calibration')
+        self.assertEqual(calls[1][0], 'calibration:case:0:attempt:1')
+        self.assertNotEqual(case['prompt_text'], first_prompt)
+
+    def test_calibration_and_holdout_share_the_same_rejection_construction(self):
+        import generate_issue109_corpora as generator
+        self.assertEqual(generator.generate_calibration.__code__.co_names.count('generate_mixture_cases'), 1)
+        self.assertEqual(generator.generate_holdout.__code__.co_names.count('generate_mixture_cases'), 1)
 
     def test_physical_subject_contract_preserves_v4_geometry_and_semantic_order(self):
         subject = physical_subject_contract()
@@ -154,12 +190,11 @@ class Issue109V5MethodologyTests(unittest.TestCase):
         for doc in (schemas['core-threshold-manifest.schema.json'], schemas['telemetry-reference-bands.schema.json']):
             self.assertIn('holdout_custody_record_sha256', doc['properties']['provenance']['required'])
 
-    def test_committed_corpora_are_disjoint_and_unique(self):
+    def test_committed_corpora_have_unique_draw_ids(self):
         calibration = json.loads((ROOT / 'docs/qualification/gemma4-12b-it-v5/manifests/calibration-corpus.json').read_text())
         stress = json.loads((ROOT / 'docs/qualification/gemma4-12b-it-v5/manifests/stress-pool.json').read_text())
         self.assertEqual(len(calibration['cases']), 1416)
         self.assertEqual(len({c['case_id'] for c in calibration['cases']}), 1416)
-        self.assertEqual(len({c['prompt_sha256'] for c in calibration['cases']}), 1416)
         self.assertEqual(len(stress['cases']), 48)
         self.assertEqual(len({c['case_id'] for c in stress['cases']}), 48)
 

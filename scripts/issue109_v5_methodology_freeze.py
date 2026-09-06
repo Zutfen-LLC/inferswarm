@@ -188,6 +188,17 @@ def verify_holdout_and_custody(
     ):
         if tainted.get(field) == current:
             raise MethodologyFreezeError("v5 replacement holdout reused tainted material")
+    superseded = _load("superseded-pre-correction-holdout-attempt.json")
+    if superseded.get("disposition") != "SUPERSEDED_AND_INELIGIBLE_FOR_FINAL_ISSUE109_FREEZE":
+        raise MethodologyFreezeError("v5 pre-correction holdout disposition mismatch")
+    if superseded.get("bound_generator_sha256") == commitment.get("generator_sha256"):
+        raise MethodologyFreezeError("v5 final holdout reused the pre-correction generator")
+    for field, current in (
+        ("ciphertext_sha256", commitment.get("ciphertext_sha256")),
+        ("certificate_sha256", commitment.get("recipient_certificate_sha256")),
+    ):
+        if superseded.get(field) == current:
+            raise MethodologyFreezeError("v5 final holdout reused superseded material")
     return {
         "commitment": commitment,
         "custody": custody,
@@ -213,7 +224,8 @@ def build_record() -> dict[str, Any]:
             "disjointness-proof.json", "comparator-tier-contract.json",
             "statistical-derivation.json", "sealed-holdout-commitment.json",
             "holdout-custody-record.json", "stress-selection-commitment.json",
-            "tainted-pre-freeze-holdout-attempt.json", "prerequisite-bindings.json",
+            "tainted-pre-freeze-holdout-attempt.json",
+            "superseded-pre-correction-holdout-attempt.json", "prerequisite-bindings.json",
         )
     }
 

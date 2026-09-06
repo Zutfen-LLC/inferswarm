@@ -113,6 +113,11 @@ class MethodologyFreezeRecordTests(unittest.TestCase):
         with self.assertRaisesRegex(freeze.MethodologyFreezeError, "must not authorize unseal"):
             freeze.verify_holdout_and_custody(custody=custody)
 
+    def test_pre_correction_holdout_is_ineligible_for_final_freeze(self):
+        superseded = json.loads((freeze.MANIFESTS / "superseded-pre-correction-holdout-attempt.json").read_text())
+        self.assertEqual(superseded["disposition"], "SUPERSEDED_AND_INELIGIBLE_FOR_FINAL_ISSUE109_FREEZE")
+        self.assertIn("component and target length", superseded["reason"])
+
     def test_record_is_deterministic_and_json_serializable(self):
         self.assertEqual(
             json.loads(json.dumps(self.record, sort_keys=True)),

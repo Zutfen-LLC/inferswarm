@@ -217,7 +217,11 @@ def target_length_stream(
 
 
 def target_length(seed: str, namespace: str, regime_index: int, draw_index: int) -> int:
-    """Return one IID uniform target length for a complete prompt draw."""
+    """Return one IID uniform target length for a frozen mixture draw.
+
+    Historical rejection can retry prompt realization with an attempt nonce.
+    It must not call this function again for the same draw index.
+    """
     if not 0 <= regime_index < len(LENGTH_REGIMES) or draw_index < 0:
         raise MethodologyError("invalid target-length draw inputs")
     low, high = LENGTH_REGIMES[regime_index]
@@ -243,6 +247,15 @@ def mixture_population_declaration() -> dict[str, Any]:
             {"content_class": content_class, "length_regime": list(LENGTH_REGIMES[regime_index])}
             for content_class, regime_index in mixture_components()
         ],
+        "historical_exclusion_conditional_law": (
+            "For each draw index, select one component uniformly from the 24 "
+            "components and select one target length uniformly in that component's "
+            "regime. Freeze both values. Generate a prompt realization. If its "
+            "prompt or token identity is in the fixed historical exclusion inventory, "
+            "increment a case-local attempt nonce and regenerate only the prompt "
+            "realization. Do not redraw the component or target length. Retain the "
+            "accepted realization at the original draw index. Do not use quota balancing."
+        ),
         "component_count": V5_MIXTURE_COMPONENTS,
         "component_weights": "uniform 1/24 per component",
         "component_selection_rule": (

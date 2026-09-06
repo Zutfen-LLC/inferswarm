@@ -100,10 +100,10 @@ def _tokenizer_block() -> dict[str, Any]:
 
 def _mixture_case(
     seed: str, namespace: str, prefix: str, tokenizer: Any,
-    content_class: str, regime_index: int, global_index: int, cell_ordinal: int,
+    content_class: str, regime_index: int, target: int, global_index: int,
+    cell_ordinal: int,
 ) -> dict[str, Any]:
     low, high = LENGTH_REGIMES[regime_index]
-    target = target_length(seed, namespace, regime_index, global_index)
     cell = f"{content_class}:{low}-{high}"
     text, token_ids = generate_prompt(
         tokenizer, seed=seed, namespace=namespace, content_class=content_class,
@@ -133,25 +133,22 @@ def generate_mixture_cases(
     cell_ordinals: dict[tuple[str, int], int] = {}
     cases: list[dict[str, Any]] = []
     for index, (initial_class, initial_regime) in component_stream(seed, namespace, count):
-        # This is case-local rejection sampling from the frozen target law.
-        # A rejection does not change another draw, a corpus seed, or a quota.
-        # Each retry redraws the complete component/content realization from the
-        # same IID mixture. The accepted attempt remains draw position ``index``.
+        # Freeze the mixture component and target length before prompt
+        # realization. Historical exclusion conditions only the realization,
+        # so it cannot change the 1/24 component weights or length law.
+        content_class, regime_index = initial_class, initial_regime
+        target = target_length(seed, namespace, regime_index, index)
         attempt = 0
         while True:
             if attempt == 0:
                 attempt_namespace = namespace
-                content_class, regime_index = initial_class, initial_regime
             else:
                 attempt_namespace = f"{namespace}:case:{index}:attempt:{attempt}"
-                _unused, (content_class, regime_index) = next(component_stream(
-                    seed, attempt_namespace, 1
-                ))
             key = (content_class, regime_index)
             next_ordinal = cell_ordinals.get(key, 0) + 1
             case = _mixture_case(
                 seed, attempt_namespace, prefix, tokenizer, content_class,
-                regime_index, index, next_ordinal,
+                regime_index, target, index, next_ordinal,
             )
             if (case["prompt_sha256"] not in exclusions
                     and case["token_ids_sha256"] not in exclusions):
@@ -187,9 +184,11 @@ def generate_calibration(tokenizer: Any) -> dict[str, Any]:
         "realized_component_counts": realized_component_counts(cases),
         "realized_component_counts_role": "OBSERVATIONAL_NOT_QUOTAS_OR_STRATA",
         "historical_rejection_rule": (
-            "case-local rejection sampling: redraw only the rejected draw from "
-            "the frozen IID target generator; no global seed, quota, or component "
-            "count is changed"
+            "for each draw index, select exactly one uniform 1/24 component and "
+            "exactly one uniform target length in its regime; freeze both; on a "
+            "historical identity collision, increment only a case-local prompt "
+            "realization attempt nonce and retry prompt realization until accepted; "
+            "never redraw the component or target length, and never balance quotas"
         ),
         "disjointness": V5_DISJOINTNESS_NOTE,
     }
@@ -234,9 +233,11 @@ def generate_holdout(tokenizer: Any, secret_seed: str) -> dict[str, Any]:
         "realized_component_counts": realized_component_counts(cases),
         "realized_component_counts_role": "OBSERVATIONAL_NOT_QUOTAS_OR_STRATA",
         "historical_rejection_rule": (
-            "case-local rejection sampling: redraw only the rejected draw from "
-            "the frozen IID target generator; no global seed, quota, or component "
-            "count is changed"
+            "for each draw index, select exactly one uniform 1/24 component and "
+            "exactly one uniform target length in its regime; freeze both; on a "
+            "historical identity collision, increment only a case-local prompt "
+            "realization attempt nonce and retry prompt realization until accepted; "
+            "never redraw the component or target length, and never balance quotas"
         ),
     }
 
@@ -248,17 +249,24 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--stress-pool-out", type=Path)
     parser.add_argument("--holdout-out", type=Path)
     parser.add_argument("--holdout-secret-seed")
+    parser.add_argument("--holdout-secret-seed-file", type=Path)
     args = parser.parse_args(argv)
     if sha256_file(args.tokenizer_json) != TOKENIZER_SHA256:
         raise ValueError("tokenizer.json SHA-256 mismatch")
     from tokenizers import Tokenizer
     tokenizer = Tokenizer.from_file(str(args.tokenizer_json))
     if args.holdout_out:
-        if not args.holdout_secret_seed or args.calibration_out or args.stress_pool_out:
-            parser.error("holdout generation requires only --holdout-out and --holdout-secret-seed")
-        args.holdout_out.write_bytes(canonical_json_bytes(generate_holdout(tokenizer, args.holdout_secret_seed)))
+        if bool(args.holdout_secret_seed) == bool(args.holdout_secret_seed_file):
+            parser.error("holdout generation requires exactly one secret-seed input")
+        if args.calibration_out or args.stress_pool_out:
+            parser.error("holdout generation requires only --holdout-out and one secret-seed input")
+        secret_seed = args.holdout_secret_seed
+        if args.holdout_secret_seed_file:
+            secret_seed = args.holdout_secret_seed_file.read_text(encoding="utf-8").strip()
+        args.holdout_out.write_bytes(canonical_json_bytes(generate_holdout(tokenizer, secret_seed)))
     else:
-        if not args.calibration_out or not args.stress_pool_out or args.holdout_secret_seed:
+        if (not args.calibration_out or not args.stress_pool_out
+                or args.holdout_secret_seed or args.holdout_secret_seed_file):
             parser.error("public generation requires --calibration-out and --stress-pool-out")
         args.calibration_out.write_bytes(canonical_json_bytes(generate_calibration(tokenizer)))
         args.stress_pool_out.write_bytes(canonical_json_bytes(generate_stress_pool(tokenizer)))
