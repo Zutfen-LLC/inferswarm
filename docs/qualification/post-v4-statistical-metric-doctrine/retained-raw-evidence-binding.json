@@ -1,0 +1,55 @@
+{
+  "schema": "inferswarm.issue108.retained-raw-evidence-binding/1",
+  "issue": 108,
+  "historical_retention_manifest": {
+    "path": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/RAW-EVIDENCE-RETENTION.json",
+    "sha256": "2e1ec275e4318193e1ad685e0a2159b59bcd09c5c1705e61839df700f1604632"
+  },
+  "producer_case_records": [
+    {
+      "role": "reference",
+      "path": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/h95-01-01-01/reference-case-href95.json",
+      "sha256": "273eac194d81536a0e3d764c141d4ca40147bfecf51a62a212dddd31a2745c7e",
+      "row_path_template": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/h95-01-01-01/ref-decision-{decision}.f32"
+    },
+    {
+      "role": "candidate",
+      "path": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/h95-01-01-01/chain-case-cand95h.json",
+      "sha256": "f2438c34a8cb149ad48f114822d17b7ed35b6ccb7e37223716b010d727a40c50",
+      "row_path_template": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/h95-01-01-01/cand-decision-{decision}.f32"
+    }
+  ],
+  "historical_manifest_transcription_errors": [
+    {
+      "path": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/h95-01-01-01/ref-decision-5.f32",
+      "producer_case_record": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/h95-01-01-01/reference-case-href95.json",
+      "producer_decision_index": 5,
+      "historical_manifest_sha256": "a1ae174d404b2e256fb2f90d59cb3b92d8348f7d919679781947cdc88110b60",
+      "producer_row_sha256": "a1ae174d404b2e256fb2f90d59cb3b92d8348f7d919c679781947cdc88110b60"
+    },
+    {
+      "path": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/h95-01-01-01/cand-decision-1.f32",
+      "producer_case_record": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/h95-01-01-01/chain-case-cand95h.json",
+      "producer_decision_index": 1,
+      "historical_manifest_sha256": "f733d7710ce050657eac3ff3d95b54540d6a8082bf6c7a6f33bf677714264793",
+      "producer_row_sha256": "f733d7710ce050657eac3ff3d95b54540d6a8082bf5c7a6f33bf677714264793"
+    },
+    {
+      "path": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/h95-01-01-01/cand-decision-2.f32",
+      "producer_case_record": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/h95-01-01-01/chain-case-cand95h.json",
+      "producer_decision_index": 2,
+      "historical_manifest_sha256": "f3f6f2a5c7e6d74ade2bc4d346bdebc81e900ba19d705246201b6f6e8e5cfbcd",
+      "producer_row_sha256": "f3f6f2a5c7e6d74ade2bc4d346bdebc81e900ba19d705248201b6f6e8e5cfbcd"
+    },
+    {
+      "path": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/h95-01-01-01/cand-decision-4.f32",
+      "producer_case_record": "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/h95-01-01-01/chain-case-cand95h.json",
+      "producer_decision_index": 4,
+      "historical_manifest_sha256": "d0917c176beddfce9bb8baffd426bddcfae1c0db8b1d95f8c3803defdbdaec4",
+      "producer_row_sha256": "d0917c176beddfce9bb8baffd426bddcfae1c0db8b1d959f8c3803defdbdaec4"
+    }
+  ],
+  "classification": "HISTORICAL_MANIFEST_TRANSCRIPTION_ERRORS_ONLY",
+  "effect": "This erratum records manifest transcription errors. It does not change the underlying issue #105 observations or verdict.",
+  "non_reinterpretation": "This erratum does not rewrite or reinterpret issue #105. The accepted issue #105 retention manifest remains immutable."
+}

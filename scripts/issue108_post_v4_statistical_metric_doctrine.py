@@ -21,6 +21,17 @@ RETENTION_MANIFEST = (
     "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/"
     "RAW-EVIDENCE-RETENTION.json"
 )
+RETAINED_RAW_EVIDENCE_BINDING = "retained-raw-evidence-binding.json"
+EXPECTED_HISTORICAL_MANIFEST_DISCREPANCIES = frozenset({
+    "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/"
+    "h95-01-01-01/ref-decision-5.f32",
+    "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/"
+    "h95-01-01-01/cand-decision-1.f32",
+    "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/"
+    "h95-01-01-01/cand-decision-2.f32",
+    "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/"
+    "h95-01-01-01/cand-decision-4.f32",
+})
 
 ASSUMPTION_PROFILES = {
     "MIXTURE_POPULATION_EXCHANGEABILITY",
@@ -184,38 +195,156 @@ def validate_prospective_methodology(methodology: dict, contract: dict) -> None:
         raise DoctrineError("INCOMPATIBLE_QUALIFICATION_CLAIM")
 
 
-def verify_retained_raw_evidence(retention_manifest: dict) -> None:
-    """Verify every durable repository file named by the retention manifest."""
+def is_sha256(value: object) -> bool:
+    return (isinstance(value, str) and len(value) == 64
+            and all(character in "0123456789abcdef" for character in value))
+
+
+def producer_rows(producer_record: dict, row_path_template: str,
+                  producer_path: str) -> dict[str, tuple[str, str, int]]:
+    """Derive all eight retained row bindings from one producer record."""
+    decisions = producer_record.get("decisions")
+    if not isinstance(decisions, list):
+        raise DoctrineError("PRODUCER_CASE_RECORD_INVALID")
+    rows = {}
+    for decision in decisions:
+        if not isinstance(decision, dict):
+            raise DoctrineError("PRODUCER_CASE_RECORD_INVALID")
+        index = decision.get("decision_index")
+        row_sha256 = decision.get("row_f32_sha256")
+        if (not isinstance(index, int) or not is_sha256(row_sha256)
+                or index in rows):
+            raise DoctrineError("PRODUCER_CASE_RECORD_INVALID")
+        try:
+            row_path = row_path_template.format(decision=index)
+        except (KeyError, ValueError) as error:
+            raise DoctrineError("PRODUCER_CASE_RECORD_INVALID") from error
+        rows[index] = (row_path, row_sha256, producer_path)
+    if set(rows) != set(range(8)):
+        raise DoctrineError("PRODUCER_CASE_RECORD_INVALID")
+    return {
+        row_path: (row_sha256, source_path, index)
+        for index, (row_path, row_sha256, source_path) in rows.items()
+    }
+
+
+def verify_retained_raw_evidence(retention_manifest: dict,
+                                 raw_evidence_binding: dict) -> None:
+    """Verify immutable #105 rows against their immutable producer records."""
     if retention_manifest.get("schema") != "inferswarm.issue105.raw-evidence-retention/1":
         raise DoctrineError("UNSUPPORTED_RETAINED_RAW_EVIDENCE_SCHEMA")
     files = retention_manifest.get("retained_durable_repo", {}).get("files")
     if not isinstance(files, list):
         raise DoctrineError("RETAINED_RAW_EVIDENCE_INVENTORY_INVALID")
-    raw_rows = 0
-    producer_records = 0
-    seen_paths = set()
+    entries = {}
     for entry in files:
         if not isinstance(entry, dict):
             raise DoctrineError("RETAINED_RAW_EVIDENCE_INVENTORY_INVALID")
         path_text = entry.get("path")
         expected_sha256 = entry.get("sha256")
         if (not isinstance(path_text, str) or not isinstance(expected_sha256, str)
-                or len(expected_sha256) != 64):
+                or (path_text.endswith(".f32") is False
+                    and not is_sha256(expected_sha256))):
             raise DoctrineError("RETAINED_RAW_EVIDENCE_INVENTORY_INVALID")
-        if path_text in seen_paths:
+        if path_text in entries:
             raise DoctrineError("RETAINED_RAW_EVIDENCE_INVENTORY_INVALID")
-        seen_paths.add(path_text)
+        entries[path_text] = entry
         path = retained_repo_path(path_text)
         if not path.is_file():
             raise DoctrineError("RETAINED_RAW_EVIDENCE_FILE_MISSING")
-        if sha256_file(path) != expected_sha256:
-            raise DoctrineError("RETAINED_RAW_EVIDENCE_HASH_DRIFT")
-        if path.suffix == ".f32":
-            raw_rows += 1
-        if "producer case record" in entry.get("role", ""):
-            producer_records += 1
-    if raw_rows < 16 or producer_records < 2:
+        if path.suffix != ".f32" and "producer case record" not in entry.get("role", ""):
+            if sha256_file(path) != expected_sha256:
+                raise DoctrineError("RETAINED_RAW_EVIDENCE_HASH_DRIFT")
+
+    if raw_evidence_binding.get("schema") != (
+            "inferswarm.issue108.retained-raw-evidence-binding/1"):
+        raise DoctrineError("UNSUPPORTED_RETAINED_RAW_EVIDENCE_BINDING_SCHEMA")
+    historical_manifest = raw_evidence_binding.get("historical_retention_manifest")
+    if not isinstance(historical_manifest, dict):
+        raise DoctrineError("RETAINED_RAW_EVIDENCE_BINDING_INVALID")
+    if (historical_manifest.get("path") != RETENTION_MANIFEST
+            or not is_sha256(historical_manifest.get("sha256"))):
+        raise DoctrineError("RETAINED_RAW_EVIDENCE_BINDING_INVALID")
+    if raw_evidence_binding.get("classification") != (
+            "HISTORICAL_MANIFEST_TRANSCRIPTION_ERRORS_ONLY"):
+        raise DoctrineError("RETAINED_RAW_EVIDENCE_BINDING_INVALID")
+    if raw_evidence_binding.get("effect") != (
+            "This erratum records manifest transcription errors. It does not "
+            "change the underlying issue #105 observations or verdict."):
+        raise DoctrineError("RETAINED_RAW_EVIDENCE_BINDING_INVALID")
+    if raw_evidence_binding.get("non_reinterpretation") != (
+            "This erratum does not rewrite or reinterpret issue #105. The "
+            "accepted issue #105 retention manifest remains immutable."):
+        raise DoctrineError("RETAINED_RAW_EVIDENCE_BINDING_INVALID")
+
+    producer_bindings = raw_evidence_binding.get("producer_case_records")
+    if not isinstance(producer_bindings, list) or len(producer_bindings) != 2:
+        raise DoctrineError("PRODUCER_CASE_RECORD_BINDING_INVALID")
+    producer_roles = set()
+    expected_rows = {}
+    for binding in producer_bindings:
+        if not isinstance(binding, dict):
+            raise DoctrineError("PRODUCER_CASE_RECORD_BINDING_INVALID")
+        role = binding.get("role")
+        path_text = binding.get("path")
+        expected_sha256 = binding.get("sha256")
+        row_path_template = binding.get("row_path_template")
+        if (role not in {"reference", "candidate"} or role in producer_roles
+                or not isinstance(path_text, str) or not is_sha256(expected_sha256)
+                or not isinstance(row_path_template, str)):
+            raise DoctrineError("PRODUCER_CASE_RECORD_BINDING_INVALID")
+        producer_roles.add(role)
+        manifest_entry = entries.get(path_text)
+        if manifest_entry is None or manifest_entry.get("sha256") != expected_sha256:
+            raise DoctrineError("PRODUCER_CASE_RECORD_MANIFEST_BINDING_DRIFT")
+        producer_path = retained_repo_path(path_text)
+        if sha256_file(producer_path) != expected_sha256:
+            raise DoctrineError("PRODUCER_CASE_RECORD_HASH_DRIFT")
+        try:
+            producer_record = json.loads(producer_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise DoctrineError("PRODUCER_CASE_RECORD_INVALID") from error
+        for row_path, binding_data in producer_rows(
+                producer_record, row_path_template, path_text).items():
+            if row_path in expected_rows:
+                raise DoctrineError("PRODUCER_CASE_RECORD_BINDING_INVALID")
+            expected_rows[row_path] = binding_data
+    if producer_roles != {"reference", "candidate"}:
+        raise DoctrineError("PRODUCER_CASE_RECORD_BINDING_INVALID")
+
+    manifest_row_paths = {
+        path_text for path_text in entries if path_text.endswith(".f32")
+    }
+    if manifest_row_paths != set(expected_rows):
         raise DoctrineError("RETAINED_RAW_EVIDENCE_INVENTORY_INCOMPLETE")
+    for row_path, (expected_sha256, _, _) in expected_rows.items():
+        if sha256_file(retained_repo_path(row_path)) != expected_sha256:
+            raise DoctrineError("PRODUCER_BOUND_RAW_ROW_HASH_DRIFT")
+
+    discrepancies = raw_evidence_binding.get(
+        "historical_manifest_transcription_errors")
+    if not isinstance(discrepancies, list):
+        raise DoctrineError("ERRATUM_DISCREPANCY_SET_INVALID")
+    declared_discrepancies = {entry.get("path") for entry in discrepancies
+                              if isinstance(entry, dict)}
+    if (len(discrepancies) != len(declared_discrepancies)
+            or declared_discrepancies != EXPECTED_HISTORICAL_MANIFEST_DISCREPANCIES):
+        raise DoctrineError("ERRATUM_DISCREPANCY_SET_INVALID")
+    actual_discrepancies = {
+        row_path for row_path, (expected_sha256, _, _) in expected_rows.items()
+        if entries[row_path]["sha256"] != expected_sha256
+    }
+    if actual_discrepancies != declared_discrepancies:
+        raise DoctrineError("UNDECLARED_MANIFEST_PRODUCER_DISCREPANCY")
+    for discrepancy in discrepancies:
+        row_path = discrepancy["path"]
+        expected_sha256, producer_path, decision_index = expected_rows[row_path]
+        if (discrepancy.get("producer_case_record") != producer_path
+                or discrepancy.get("producer_decision_index") != decision_index
+                or discrepancy.get("historical_manifest_sha256")
+                != entries[row_path]["sha256"]
+                or discrepancy.get("producer_row_sha256") != expected_sha256):
+            raise DoctrineError("ERRATUM_DISCREPANCY_BINDING_INVALID")
 
 
 def validate_metric_classification(classification: dict) -> None:
@@ -247,8 +376,12 @@ def verify_source_bindings(bindings: dict) -> None:
             raise DoctrineError("HISTORICAL_SOURCE_MISSING")
         if sha256_file(path) != binding["sha256"]:
             raise DoctrineError("HISTORICAL_SOURCE_HASH_DRIFT")
-    if not any(binding.get("path") == RETENTION_MANIFEST
-               for binding in bindings["historical_inputs"]):
+    manifest_binding = next(
+        (binding for binding in bindings["historical_inputs"]
+         if binding.get("path") == RETENTION_MANIFEST),
+        None,
+    )
+    if manifest_binding is None:
         raise DoctrineError("RETAINED_RAW_EVIDENCE_MANIFEST_UNBOUND")
     retention_path = REPO_ROOT / RETENTION_MANIFEST
     try:
@@ -256,7 +389,12 @@ def verify_source_bindings(bindings: dict) -> None:
             retention_manifest = json.load(source)
     except (OSError, json.JSONDecodeError) as error:
         raise DoctrineError("RETAINED_RAW_EVIDENCE_MANIFEST_INVALID") from error
-    verify_retained_raw_evidence(retention_manifest)
+    raw_evidence_binding = load_json(RETAINED_RAW_EVIDENCE_BINDING)
+    historical_manifest = raw_evidence_binding.get("historical_retention_manifest")
+    if (not isinstance(historical_manifest, dict)
+            or manifest_binding.get("sha256") != historical_manifest.get("sha256")):
+        raise DoctrineError("RETAINED_RAW_EVIDENCE_MANIFEST_UNBOUND")
+    verify_retained_raw_evidence(retention_manifest, raw_evidence_binding)
 
 
 def calculation_identities() -> dict:
@@ -285,6 +423,7 @@ def build_record() -> dict:
     contract = load_json("statistical-contract.json")
     classification = load_json("metric-core-classification.json")
     bindings = load_json("source-bindings.json")
+    raw_evidence_binding = load_json(RETAINED_RAW_EVIDENCE_BINDING)
     validate_statistical_contract(contract)
     validate_metric_classification(classification)
     verify_source_bindings(bindings)
@@ -294,6 +433,7 @@ def build_record() -> dict:
         "statistical_contract": contract,
         "metric_core_classification": classification,
         "source_bindings": bindings,
+        "retained_raw_evidence_binding": raw_evidence_binding,
         "calculation_identities": calculation_identities(),
     }
 

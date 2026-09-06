@@ -131,6 +131,38 @@ class DoctrineRecordTests(unittest.TestCase):
                 doctrine.DoctrineError, "HISTORICAL_SOURCE_HASH_DRIFT"):
             doctrine.verify_source_bindings(bindings)
 
+    def test_accepted_issue105_retention_manifest_has_its_historical_hash(self):
+        expected_sha256 = (
+            "2e1ec275e4318193e1ad685e0a2159b59bcd09c5c1705e61839df700f1604632"
+        )
+        retention_path = doctrine.REPO_ROOT / doctrine.RETENTION_MANIFEST
+        self.assertEqual(doctrine.sha256_file(retention_path), expected_sha256)
+        historical_binding = next(
+            binding for binding in self.record["source_bindings"]["historical_inputs"]
+            if binding["path"] == doctrine.RETENTION_MANIFEST
+        )
+        self.assertEqual(historical_binding["sha256"], expected_sha256)
+        self.assertEqual(
+            self.record["retained_raw_evidence_binding"]
+            ["historical_retention_manifest"]["sha256"],
+            expected_sha256,
+        )
+
+    def test_historical_retention_manifest_byte_drift_is_rejected(self):
+        retention_path = doctrine.REPO_ROOT / doctrine.RETENTION_MANIFEST
+        original_sha256_file = doctrine.sha256_file
+
+        def drift_retention_manifest(path):
+            if path == retention_path:
+                return "0" * 64
+            return original_sha256_file(path)
+
+        with mock.patch.object(
+                doctrine, "sha256_file", side_effect=drift_retention_manifest):
+            with self.assertRaisesRegex(
+                    doctrine.DoctrineError, "HISTORICAL_SOURCE_HASH_DRIFT"):
+                doctrine.verify_source_bindings(self.record["source_bindings"])
+
     def test_retained_raw_row_hash_drift_is_rejected(self):
         raw_row = doctrine.REPO_ROOT / (
             "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/"
@@ -145,8 +177,32 @@ class DoctrineRecordTests(unittest.TestCase):
 
         with mock.patch.object(doctrine, "sha256_file", side_effect=drift_raw_row):
             with self.assertRaisesRegex(
-                    doctrine.DoctrineError, "RETAINED_RAW_EVIDENCE_HASH_DRIFT"):
+                    doctrine.DoctrineError, "PRODUCER_BOUND_RAW_ROW_HASH_DRIFT"):
                 doctrine.verify_source_bindings(self.record["source_bindings"])
+
+    def test_producer_case_record_hash_drift_is_rejected(self):
+        producer_record = doctrine.REPO_ROOT / (
+            "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/raw/"
+            "h95-01-01-01/reference-case-href95.json"
+        )
+        original_sha256_file = doctrine.sha256_file
+
+        def drift_producer_record(path):
+            if path == producer_record:
+                return "0" * 64
+            return original_sha256_file(path)
+
+        retention_manifest = json.loads(
+            (doctrine.REPO_ROOT / doctrine.RETENTION_MANIFEST).read_text(
+                encoding="utf-8"))
+        with mock.patch.object(
+                doctrine, "sha256_file", side_effect=drift_producer_record):
+            with self.assertRaisesRegex(
+                    doctrine.DoctrineError, "PRODUCER_CASE_RECORD_HASH_DRIFT"):
+                doctrine.verify_retained_raw_evidence(
+                    retention_manifest,
+                    self.record["retained_raw_evidence_binding"],
+                )
 
     def test_missing_retained_raw_file_is_rejected(self):
         retention_path = doctrine.REPO_ROOT / doctrine.RETENTION_MANIFEST
@@ -157,7 +213,35 @@ class DoctrineRecordTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(
                 doctrine.DoctrineError, "RETAINED_RAW_EVIDENCE_FILE_MISSING"):
-            doctrine.verify_retained_raw_evidence(retention_manifest)
+            doctrine.verify_retained_raw_evidence(
+                retention_manifest,
+                self.record["retained_raw_evidence_binding"],
+            )
+
+    def test_erratum_must_cover_the_exact_known_discrepancy_set(self):
+        raw_evidence_binding = copy.deepcopy(
+            self.record["retained_raw_evidence_binding"])
+        raw_evidence_binding["historical_manifest_transcription_errors"].pop()
+        retention_manifest = json.loads(
+            (doctrine.REPO_ROOT / doctrine.RETENTION_MANIFEST).read_text(
+                encoding="utf-8"))
+        with self.assertRaisesRegex(
+                doctrine.DoctrineError, "ERRATUM_DISCREPANCY_SET_INVALID"):
+            doctrine.verify_retained_raw_evidence(
+                retention_manifest, raw_evidence_binding)
+
+    def test_undeclared_manifest_producer_discrepancy_is_rejected(self):
+        retention_manifest = json.loads(
+            (doctrine.REPO_ROOT / doctrine.RETENTION_MANIFEST).read_text(
+                encoding="utf-8"))
+        retention_manifest["retained_durable_repo"]["files"][0]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(
+                doctrine.DoctrineError,
+                "UNDECLARED_MANIFEST_PRODUCER_DISCREPANCY"):
+            doctrine.verify_retained_raw_evidence(
+                retention_manifest,
+                self.record["retained_raw_evidence_binding"],
+            )
 
     def test_metric_core_retires_p99_from_acceptance(self):
         metrics = self.record["metric_core_classification"]["metrics"]
