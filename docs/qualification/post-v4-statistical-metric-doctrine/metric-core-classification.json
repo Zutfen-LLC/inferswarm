@@ -1,0 +1,59 @@
+{
+  "schema": "inferswarm.issue108.metric-core-classification/1",
+  "status": "ACCEPTED_PROSPECTIVE_DOCTRINE",
+  "comparator_version_rule": "This classification requires a new prospective comparator version. It does not change any historical comparator, threshold, evidence record, or verdict.",
+  "metrics": [
+    {
+      "identity": "fp32-consumer-logits:max-absolute-difference",
+      "tier": "ACCEPTANCE_BEARING",
+      "protected_property": "A pointwise full-vocabulary envelope bounds every individual consumer-logit displacement on each canonical decision.",
+      "subsumption": "Not subsumed. It protects an individual-coordinate property that RMS and p99 do not bound directly, and it remains the full-surface E_full prerequisite.",
+      "promotion_or_demotion_evidence": "A future change needs a strategy proof that another core observation bounds every consumer-relevant coordinate under the same inputs and applicability key."
+    },
+    {
+      "identity": "fp32-consumer-logits:rms-difference",
+      "tier": "ACCEPTANCE_BEARING",
+      "protected_property": "An aggregate full-vocabulary energy envelope detects diffuse consumer-surface drift that a pointwise maximum limit does not quantify.",
+      "subsumption": "Not subsumed by max-absolute difference because a maximum limit does not establish the permitted aggregate-error budget. It is separate from decision-local E_D, which covers only the semantic domain.",
+      "promotion_or_demotion_evidence": "A future change needs a prospective theorem or direct strategy evidence that another core metric bounds the relevant aggregate consumer error without an unobserved consumer."
+    },
+    {
+      "identity": "fp32-consumer-logits:p99-absolute-error",
+      "tier": "MANDATORY_TELEMETRY",
+      "protected_property": "The reducer describes upper-tail prevalence in the full vocabulary. For the current deterministic greedy semantic profile, no strategy theorem or independent consumer property requires that percentile after max-absolute difference, RMS, decision-local E_D, containment, and semantic stability pass.",
+      "subsumption": "The current core contains a pointwise full-vocabulary bound for every p99 element, an aggregate full-vocabulary bound for diffuse drift, and decision-domain plus semantic controls for emitted behavior. This does not mathematically derive a numeric p99 limit; it establishes that p99 has no separately justified acceptance property in this comparator.",
+      "promotion_or_demotion_evidence": "Promotion requires prospective strategy evidence of an independently correctness-bearing percentile property, such as a declared consumer or theorem whose safe operation depends on a quantile bound and is not covered by the other core gates."
+    },
+    {
+      "identity": "decision_local_E_D",
+      "tier": "ACCEPTANCE_BEARING",
+      "protected_property": "A decision-domain bound is a theorem prerequisite for containment and stability or ambiguity adjudication at each canonical decision.",
+      "subsumption": "Not subsumed. Passing a full-vocabulary E_full limit does not prove the tighter per-decision E_D limit.",
+      "promotion_or_demotion_evidence": "It may change only with a stronger prospective semantic theorem that replaces its prerequisite and preserves containment, tie, and decision semantics."
+    }
+  ],
+  "p99_disposition": "P99_MOVE_TO_MANDATORY_TELEMETRY",
+  "p99_telemetry_requirements": [
+    "Retain the full-vocabulary reducer, decision coverage, finite-output check, provenance, and report for every qualification campaign.",
+    "A finite p99 reference-band exceedance creates telemetry health and focused revalidation work. It does not fail an otherwise passing new comparator qualification by itself.",
+    "No historical p99 verdict changes."
+  ],
+  "capture_position_rule": {
+    "current_gemma_profile": "ALL_8_CANONICAL_DECISIONS",
+    "subset_permitted_for_current_gemma_profile": false,
+    "requirement": "Every acceptance-bearing FP32 consumer-logit metric and decision-local E_D applies to all eight teacher-forced canonical-prefix decisions. The case reducer is the maximum across those decisions where the metric has a case-level limit.",
+    "rationale": "Issue #105 showed that an uncaptured canonical decision had a larger full-vocabulary max-absolute error than every retained capture-position observation. A subset therefore cannot establish the advertised all-canonical-decision property.",
+    "future_strategy_rule": "A different strategy may declare a smaller canonical decision set only when its semantic contract proves that omitted decisions are outside the qualified consumer and semantic surface. Sampling a subset of otherwise in-scope canonical decisions is not permitted."
+  },
+  "unchanged_acceptance_bearing_controls": [
+    "exact integrity",
+    "finite-output policy",
+    "full-vocabulary E_full",
+    "decision_local_E_D",
+    "DECISION_LOCAL_BOUND_EXCEEDED",
+    "DECISION_DOMAIN_ESCAPE",
+    "semantic stability",
+    "frozen tie semantics"
+  ],
+  "next_gate": "#109 prospective v5 methodology freeze"
+}

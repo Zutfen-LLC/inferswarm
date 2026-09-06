@@ -1,0 +1,141 @@
+{
+  "schema": "inferswarm.issue108.statistical-contract/1",
+  "status": "ACCEPTED_PROSPECTIVE_DOCTRINE",
+  "permitted_assumption_profiles": [
+    "MIXTURE_POPULATION_EXCHANGEABILITY",
+    "WITHIN_NAMED_STRATUM_EXCHANGEABILITY"
+  ],
+  "qualification_target": {
+    "primary_claim": "For one prospectively frozen target case generator, the unconditional probability that a fresh declared holdout campaign has zero strict exceedances in every acceptance-bearing numerical family is at least 1 - alpha_familywise.",
+    "marginal_per_case_claim": "A separate order-statistic construction may claim a bound on one fresh case from the same target population.",
+    "applicability_scope": "The mixture claim applies only to the declared mixture population. It does not establish coverage for every named component or every possible workload cell.",
+    "non_claims": [
+      "No conditional-on-calibration coverage claim is made.",
+      "No per-cell claim follows from a pooled mixture claim.",
+      "No claim transfers to a changed model, comparator, backend path, generator, or applicability key."
+    ]
+  },
+  "assumption_profile_requirements": {
+    "MIXTURE_POPULATION_EXCHANGEABILITY": "Use only when one frozen IID mixture generator, including component selection and weights, generates both calibration and holdout cases. This profile supports only mixture-population claims, not per-stratum coverage.",
+    "WITHIN_NAMED_STRATUM_EXCHANGEABILITY": "Use only when each named stratum and its calibration and holdout allocation are frozen before calibration. This profile does not establish cross-stratum exchangeability."
+  },
+  "permitted_construction_classes": [
+    "POOLED_ORDER_STATISTIC_PREDICTION",
+    "STRATIFIED_ORDER_STATISTIC_PREDICTION",
+    "MARGINAL_ORDER_STATISTIC_PREDICTION",
+    "PROSPECTIVELY_VALIDATED_PARAMETRIC_PREDICTION",
+    "AUDITABLE_HIERARCHICAL_PREDICTION"
+  ],
+  "construction_requirements": {
+    "POOLED_ORDER_STATISTIC_PREDICTION": "Use only for an IID frozen mixture population. A calibration maximum gives the campaign strict-exceedance identity H/(N+H) for N calibration and H holdout cases. A different selected order statistic must state its rank identity.",
+    "STRATIFIED_ORDER_STATISTIC_PREDICTION": "Use when the target requires coverage in named strata. Declare each stratum and its campaign allocation before calibration. Within-stratum exchangeability supports a stratum term H_s/(N_s+H_s); compose all strata and metrics with a valid union bound unless a stronger justified dependence result is declared.",
+    "MARGINAL_ORDER_STATISTIC_PREDICTION": "State a per-case claim separately from a zero-exceedance campaign claim. For N calibration cases and kth order statistic, the strict-exceedance probability is (N+1-k)/(N+1) under exchangeability, with ties conservative.",
+    "PROSPECTIVELY_VALIDATED_PARAMETRIC_PREDICTION": "Declare the distribution, transformation, fitting rule, model-check rule, extrapolation boundary, and failure disposition before physical calibration. It must not claim distribution-free coverage.",
+    "AUDITABLE_HIERARCHICAL_PREDICTION": "Declare all hierarchy, pooling, prior or estimator, posterior/predictive coverage theorem, and failure modes before calibration. It is not permitted until its stated theorem covers the required named-stratum or mixture target."
+  },
+  "compatibility_constraints": [
+    {
+      "assumption_profile": "MIXTURE_POPULATION_EXCHANGEABILITY",
+      "construction": "POOLED_ORDER_STATISTIC_PREDICTION",
+      "qualification_claims": ["ZERO_EXCEEDANCE_CAMPAIGN_MIXTURE"]
+    },
+    {
+      "assumption_profile": "WITHIN_NAMED_STRATUM_EXCHANGEABILITY",
+      "construction": "STRATIFIED_ORDER_STATISTIC_PREDICTION",
+      "qualification_claims": ["ZERO_EXCEEDANCE_CAMPAIGN_NAMED_STRATA"]
+    },
+    {
+      "assumption_profile": "MIXTURE_POPULATION_EXCHANGEABILITY",
+      "construction": "MARGINAL_ORDER_STATISTIC_PREDICTION",
+      "qualification_claims": ["MARGINAL_PER_CASE_MIXTURE"]
+    },
+    {
+      "assumption_profile": "WITHIN_NAMED_STRATUM_EXCHANGEABILITY",
+      "construction": "MARGINAL_ORDER_STATISTIC_PREDICTION",
+      "qualification_claims": ["MARGINAL_PER_CASE_NAMED_STRATUM"]
+    },
+    {
+      "assumption_profile": "MIXTURE_POPULATION_EXCHANGEABILITY",
+      "construction": "PROSPECTIVELY_VALIDATED_PARAMETRIC_PREDICTION",
+      "qualification_claims": [
+        "ZERO_EXCEEDANCE_CAMPAIGN_MIXTURE",
+        "MARGINAL_PER_CASE_MIXTURE"
+      ]
+    },
+    {
+      "assumption_profile": "WITHIN_NAMED_STRATUM_EXCHANGEABILITY",
+      "construction": "PROSPECTIVELY_VALIDATED_PARAMETRIC_PREDICTION",
+      "qualification_claims": [
+        "ZERO_EXCEEDANCE_CAMPAIGN_NAMED_STRATA",
+        "MARGINAL_PER_CASE_NAMED_STRATUM"
+      ]
+    },
+    {
+      "assumption_profile": "MIXTURE_POPULATION_EXCHANGEABILITY",
+      "construction": "AUDITABLE_HIERARCHICAL_PREDICTION",
+      "qualification_claims": [
+        "ZERO_EXCEEDANCE_CAMPAIGN_MIXTURE",
+        "MARGINAL_PER_CASE_MIXTURE"
+      ]
+    },
+    {
+      "assumption_profile": "WITHIN_NAMED_STRATUM_EXCHANGEABILITY",
+      "construction": "AUDITABLE_HIERARCHICAL_PREDICTION",
+      "qualification_claims": [
+        "ZERO_EXCEEDANCE_CAMPAIGN_NAMED_STRATA",
+        "MARGINAL_PER_CASE_NAMED_STRATUM"
+      ]
+    }
+  ],
+  "construction_comparison": {
+    "POOLED_ORDER_STATISTIC_PREDICTION": {
+      "assumptions": "Calibration and holdout cases are IID draws from one frozen mixture target. The mixture includes the component-selection rule and weights.",
+      "finite_sample_guarantee": "For a calibration maximum and H future cases, strict exceedance is at most H/(N+H). It is exact for continuously distributed exchangeable values. A selected order statistic needs its own rank guarantee.",
+      "familywise_composition": "Allocate a predeclared error budget to each acceptance-bearing metric and use Bonferroni or a stronger valid bound.",
+      "sample_burden_scaling": "For a fixed future campaign size, the maximum-based bound decreases as N increases. The method does not provide per-component coverage.",
+      "failure_modes": "A changed generator, changed mixture weights, non-IID sampling, or a per-component claim invalidates the pooled guarantee. Ties make strict-exceedance identities conservative bounds."
+    },
+    "STRATIFIED_ORDER_STATISTIC_PREDICTION": {
+      "assumptions": "Calibration and holdout values are exchangeable within each named stratum. Strata and future campaign allocation are frozen before calibration.",
+      "finite_sample_guarantee": "For a stratum maximum, strict exceedance is at most H_s/(N_s+H_s). The covered campaign is at most the union over strata before metric composition.",
+      "familywise_composition": "Compose named-stratum paths and acceptance-bearing metrics with Bonferroni or a stronger valid bound. Do not assume stratum or metric independence.",
+      "sample_burden_scaling": "Each protected stratum consumes its own calibration burden. Rare or high-risk strata can dominate the total burden.",
+      "failure_modes": "A missing stratum, changed allocation, invalid within-stratum exchangeability, or undeclared cross-stratum pooling invalidates the claim. Ties make strict-exceedance identities conservative bounds."
+    },
+    "MARGINAL_ORDER_STATISTIC_PREDICTION": {
+      "assumptions": "One future case and N calibration cases are exchangeable under the declared mixture or named-stratum target.",
+      "finite_sample_guarantee": "For kth calibration order statistic, strict exceedance is at most (N+1-k)/(N+1), with equality for continuously distributed exchangeable values.",
+      "familywise_composition": "Compose metric-level marginal error budgets with Bonferroni or a stronger valid bound. Do not present this as a zero-exceedance campaign guarantee.",
+      "sample_burden_scaling": "The available rank resolution improves as N increases. A campaign claim requires separate accounting for its future case count.",
+      "failure_modes": "Generator or applicability drift invalidates exchangeability. Confusing a marginal bound with a campaign bound is a failed contract. Ties make the stated strict-exceedance result conservative."
+    },
+    "PROSPECTIVELY_VALIDATED_PARAMETRIC_PREDICTION": {
+      "assumptions": "A predeclared distribution and transformation describe the applicable tail. Fitting, model checking, and extrapolation limits are frozen before physical calibration.",
+      "finite_sample_guarantee": "Only the stated model-based predictive theorem applies. This class has no distribution-free guarantee.",
+      "familywise_composition": "Compose valid model-based per-metric predictive bounds with Bonferroni or a stronger theorem that states its dependence assumptions.",
+      "sample_burden_scaling": "Calibration must support model fitting and an independent predeclared validation procedure. Tail and stratum complexity increase the required evidence burden.",
+      "failure_modes": "Model misspecification, failed diagnostics, unsupported tail extrapolation, or validation failure produces no qualification claim and requires a fail-closed disposition."
+    },
+    "AUDITABLE_HIERARCHICAL_PREDICTION": {
+      "assumptions": "The frozen hierarchy, pooling rule, estimator or prior, and target-population relation are correct for every claimed component.",
+      "finite_sample_guarantee": "Only an explicit auditable posterior or predictive coverage theorem for the stated target applies. This class has no automatic distribution-free guarantee.",
+      "familywise_composition": "Compose metric and campaign risk with Bonferroni or a stronger stated theorem. Partial pooling does not remove the need to account for every claimed stratum.",
+      "sample_burden_scaling": "The burden includes enough observations to identify each protected level and to validate the declared pooling behavior. Added hierarchy increases validation burden.",
+      "failure_modes": "A misspecified hierarchy, unsupported pooling relation, failed predictive check, or uncovered stratum produces no qualification claim and requires a fail-closed disposition."
+    }
+  },
+  "familywise_composition": {
+    "method": "BONFERRONI_OR_STRONGER_VALID_BOUND",
+    "independence_assumed": false,
+    "requirement": "The methodology allocates per-metric error budgets before calibration. Their valid union bound must not exceed the declared familywise error budget. Telemetry-only metrics are outside this qualification budget but remain mandatory finite-checked retained telemetry."
+  },
+  "prohibitions": [
+    "NO_POST_HOC_POOLING",
+    "NO_CONSUMED_HOLDOUT_AS_SUCCESSOR_INPUT",
+    "NO_UNDECLARED_CROSS_STRATUM_EXCHANGEABILITY",
+    "NO_FIXED_BALANCED_CELL_DESIGN_POOLED_AS_IF_IID",
+    "NO_POST_HOC_APPLICABILITY_SPLIT",
+    "NO_V5_PARAMETER_SELECTION"
+  ],
+  "next_gate": "#109 prospective v5 methodology freeze"
+}

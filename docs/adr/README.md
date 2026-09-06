@@ -31,6 +31,9 @@ into the main doctrine when that document is next structurally revised.
 ADR 0011 refines its numerical layer with prospective
 acceptance-bearing/mandatory-telemetry tiers without changing historical frozen
 qualification verdicts.
+ADR 0012 further constrains prospective statistical qualification claims and
+the current Gemma consumer-metric classification. It does not change historical
+comparators or verdicts.
 
 ## Convention
 
@@ -83,3 +86,4 @@ deciding whether the target is achievable — that distinction is the point.
 | [0009](0009-plan-driven-model-artifact-distribution.md) | Plan-driven model artifact acquisition and distribution | **Accepted** |
 | [0010](0010-heterogeneous-numerical-equivalence.md) | Heterogeneous numerical-equivalence correctness contract | **Accepted** |
 | [0011](0011-two-tier-numerical-core-and-telemetry.md) | Two-tier numerical core and mandatory telemetry | **Accepted** |
+| [0012](0012-statistical-qualification-and-consumer-metric-doctrine.md) | Statistical qualification and consumer-metric doctrine | **Accepted** |
