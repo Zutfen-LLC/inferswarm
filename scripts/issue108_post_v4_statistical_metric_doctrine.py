@@ -75,11 +75,20 @@ def validate_statistical_contract(contract: dict) -> None:
     profile = contract["assumption_profile"]
     construction = contract["construction"]
     if (profile == "WITHIN_NAMED_STRATUM_EXCHANGEABILITY"
-            and construction == "POOLED_CALIBRATION_MAXIMUM"):
+            and construction.startswith("POOLED_")):
         raise DoctrineError("UNSUPPORTED_POOLED_MAXIMUM_CLAIM")
     allowed = set(contract["permitted_construction_classes"])
     if construction not in allowed:
         raise DoctrineError("UNPERMITTED_CONSTRUCTION_CLASS")
+    comparison = contract["construction_comparison"]
+    if set(comparison) != allowed:
+        raise DoctrineError("INCOMPLETE_CONSTRUCTION_COMPARISON")
+    for entry in comparison.values():
+        for field in ("assumptions", "finite_sample_guarantee",
+                      "familywise_composition", "sample_burden_scaling",
+                      "failure_modes"):
+            if not entry.get(field):
+                raise DoctrineError("INCOMPLETE_CONSTRUCTION_COMPARISON")
     if profile == "MIXTURE_POPULATION_EXCHANGEABILITY":
         mixture = contract["mixture_population_requirements"]
         if not mixture["case_generator_is_iid_from_one_frozen_mixture"]:

@@ -42,10 +42,23 @@ class DoctrineRecordTests(unittest.TestCase):
     def test_v4_style_claim_is_rejected_under_within_cell_only(self):
         contract = copy.deepcopy(self.record["statistical_contract"])
         contract["assumption_profile"] = "WITHIN_NAMED_STRATUM_EXCHANGEABILITY"
-        contract["construction"] = "POOLED_CALIBRATION_MAXIMUM"
+        contract["construction"] = "POOLED_ORDER_STATISTIC_PREDICTION"
         with self.assertRaisesRegex(
                 doctrine.DoctrineError, "UNSUPPORTED_POOLED_MAXIMUM_CLAIM"):
             doctrine.validate_statistical_contract(contract)
+
+    def test_every_allowed_construction_has_a_complete_comparison(self):
+        contract = self.record["statistical_contract"]
+        comparison = contract["construction_comparison"]
+        self.assertEqual(
+            set(comparison), set(contract["permitted_construction_classes"]),
+        )
+        for entry in comparison.values():
+            for field in (
+                    "assumptions", "finite_sample_guarantee",
+                    "familywise_composition", "sample_burden_scaling",
+                    "failure_modes"):
+                self.assertTrue(entry[field], field)
 
     def test_historical_source_hash_drift_is_rejected(self):
         bindings = copy.deepcopy(self.record["source_bindings"])

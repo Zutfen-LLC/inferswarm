@@ -49,14 +49,17 @@ within-cell exchangeability is invalid.
 
 ### Q3. Permitted construction classes
 
-The allowed classes are in
-[`statistical-contract.json`](statistical-contract.json). The key
-distribution-free identities are:
+[`statistical-contract.json`](statistical-contract.json) compares each allowed
+class by assumptions, finite-sample guarantee, familywise composition,
+sample-burden scaling, and failure modes. The key distribution-free identities
+are:
 
 - For `N` exchangeable calibration cases and `H` exchangeable future campaign
-  cases, a calibration maximum has strict-exceedance probability `H/(N+H)`.
+  cases, a calibration maximum has strict-exceedance probability at most
+  `H/(N+H)`. Equality requires continuously distributed values.
 - For the `k`th calibration order statistic and one exchangeable future case,
-  strict-exceedance probability is `(N+1-k)/(N+1)`.
+  strict-exceedance probability is at most `(N+1-k)/(N+1)`. Equality requires
+  continuously distributed values.
 - For named strata, the campaign bound is at most
   `sum_s H_s/(N_s+H_s)` before metric composition.
 
