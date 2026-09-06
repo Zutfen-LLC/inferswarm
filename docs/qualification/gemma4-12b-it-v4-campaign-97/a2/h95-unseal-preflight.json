@@ -1,0 +1,15 @@
+{
+  "inputs": {
+    "certificate_sha256": "99bb4eb992d3a38eb54f6821c4477edc7ad30df977333d39a5b120dac8e57430",
+    "ciphertext_sha256": "17757acb091fd5b3b1a4ef7b8fcd392b448e91eee39c04003afd9a4ccac4a844",
+    "core_threshold_sha256": "c714f5613b541106e985c7337e723dcad297637541e5f937bb2c6f3a7bfbbf50",
+    "custody_record_sha256": "0c9746e7f2886877318281c81940d8f7235918b5f2e119ed589f314a58111f28",
+    "decryption_performed": false,
+    "private_key_used": "orchestrator-local custodian (non-decrypting public DER derivation only)",
+    "recipient_public_key_der_sha256": "629b2ab2320cfe1517b5eb435edf241cf30d109b8da0bc9b62002165d6a9fdd2"
+  },
+  "ran_at": "2026-09-05",
+  "result": "PRECONDITIONS_PASS_STOP_BEFORE_DECRYPT",
+  "schema": "inferswarm.issue97.v4-holdout-unseal-preflight-record/1",
+  "verdict": "PRECONDITIONS_PASS_STOP_BEFORE_DECRYPT"
+}

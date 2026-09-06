@@ -1,0 +1,81 @@
+{
+  "schema": "inferswarm.issue97.v4-phaseb-execution-authority/1",
+  "issue": 97,
+  "state": "HOLDOUT_EXECUTION_AUTHORITY_CLOSED_UNSEAL_STILL_UNAUTHORIZED",
+  "classification": "V4_HOLDOUT_UNSEAL_READY_BLOCKED_BY_MISSING_EXECUTION_AUTHORITY",
+  "classified_at": "2026-09-06",
+  "blocker_summary": "The frozen Phase A producer (57dfcb72...) hard-rejects every h95-* case ID at admission (commit ce7eedf), deferring to a 'separate, explicitly authorized path' that did not exist anywhere in the producer tree, the InferSwarm repo, or any branch at freeze time. Executing Phase B on that producer was impossible without violating the producer freeze; decrypting h95 with no execution machinery would have consumed the single-use holdout without producing evidence. Stopped before decrypt; no plaintext revealed; no h95 case executed.",
+  "phase_a_producer": {
+    "repository": "Zutfen-LLC/FreeToken",
+    "branch": "inferswarm-97-v4-physical-qualification",
+    "commit": "57dfcb7289efac8f66de5b3abbe8de04f2580f75",
+    "role": "calibration producer (c95/p95 only); immutable historical identity",
+    "pr": "Zutfen-LLC/FreeToken#31",
+    "change_scope": "none; every frozen inferswarm_97 file remains byte-identical (sha256 asserted below and by the Phase B test suite)"
+  },
+  "phase_b_producer": {
+    "repository": "Zutfen-LLC/FreeToken",
+    "branch": "inferswarm-97-v4-physical-qualification",
+    "commit": "c60a4b7080913eba90585de8e8602460a7f5b1a7",
+    "parent": "57dfcb7289efac8f66de5b3abbe8de04f2580f75",
+    "role": "holdout-only execution authority: h95 admission entrypoints + equivalence tests; adds ZERO execution/model math",
+    "pr": "Zutfen-LLC/FreeToken#31",
+    "launch_argument": "--expected-producer-sha c60a4b7080913eba90585de8e8602460a7f5b1a7",
+    "requirement": "every participating worktree must be clean and exactly at commit before any runtime/CUDA initialization",
+    "added_files_sha256": {
+      "benchmarks/inferswarm_97b/__init__.py": "8f9c0a764a0ba10104fd01d36a1025ff2d1a5141b93743f4883abba93f1aa940",
+      "benchmarks/inferswarm_97b/reference_runner_holdout.py": "effd555c956294073804c3737b906086ce2d8c81de0079c91b0a3fff2319bd36",
+      "benchmarks/inferswarm_97b/chain_runner_holdout.py": "2c0f6fb92c51f9d157809f6091db8ec6cabfe251035db6e2cc6b739ce52d0c57",
+      "tests/research/test_inferswarm_97b_holdout_authority.py": "3a9c15b8c742692aa03f95c72650cdac406d5b51f19cf75565254432c34ab9fc"
+    },
+    "design": "Holdout-only entrypoints in a NEW benchmarks/inferswarm_97b/ package accept exactly the 24 committed h95 cell IDs (public commitment identities) and delegate to the frozen Phase A runner main() with ONLY the module-level admission callable swapped (h95-only in; c95/p95 rejected; unknown/substituted/duplicate holdout IDs rejected). All execution, model math, topology, capture, teacher-forcing, and evidence contracts are the byte-identical frozen Phase A code.",
+    "equivalence_proof": "13-test CPU-only suite (tests/research/test_inferswarm_97b_holdout_authority.py): (1) every Phase A frozen file byte-identical to its 57dfcb7 sha256; (2) admission accepts exactly the 24 committed cells, rejects calibration/historical/unknown/substituted/duplicate/non-dict; (3) each entrypoint executed as __main__ delegates to the frozen main with only the admission swapped and propagates its exit code (sentinel rc=7); (4) Phase A package admission unaffected by import or entrypoint run; (5) source audit: 97b imports no torch/freetoken/76-harness and contains no model/runtime calls. Synthetic fixtures only; no secret material."
+  },
+  "unchanged_frozen_identities": {
+    "methodology_commit": "e12a6e3d5589044bace0c9555c0d364fb57a6229",
+    "contract_id": "inferswarm.gemma4-prediction-aligned-qualification/1",
+    "checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "model_revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+    "core_threshold_manifest_sha256": "c714f5613b541106e985c7337e723dcad297637541e5f937bb2c6f3a7bfbbf50",
+    "telemetry_reference_bands_sha256": "7b38c13e11416f81139c1721f433a12d4e4377540bb115b63e09f0bb54032534",
+    "decision_domain_manifest_sha256": "59a7b740e5724cc5d69206d2dfbb7ae3c87013f5292c3e07db92081f965383e9",
+    "selected_eighth_sha256": "a1bb5caadbf3bab0dd35f34db5fa44d6e0a1d3bed67648b32b4b97969d3f44d2",
+    "calibration_summary_sha256": "c5d81c188018eabaa1cafec0d0583a288f55733e3a3f023a8021bd167b15782c",
+    "derivation_program_sha256": "bc3dc5ecf9f1d6f15a9e4c28ae6701535cc35da43af1a7701b40f853f8ac039b",
+    "holdout_ciphertext_sha256": "17757acb091fd5b3b1a4ef7b8fcd392b448e91eee39c04003afd9a4ccac4a844",
+    "holdout_certificate_sha256": "99bb4eb992d3a38eb54f6821c4477edc7ad30df977333d39a5b120dac8e57430",
+    "holdout_custody_record_sha256": "0c9746e7f2886877318281c81940d8f7235918b5f2e119ed589f314a58111f28",
+    "recipient_public_key_der_sha256": "629b2ab2320cfe1517b5eb435edf241cf30d109b8da0bc9b62002165d6a9fdd2"
+  },
+  "phase_a_files_byte_identical_to_57dfcb7": {
+    "benchmarks/inferswarm_97/reference_runner.py": "f04b515c0a9b3dbccc52f8f2b0fe96c705637c0d128421e4c2437a6bbffde46d",
+    "benchmarks/inferswarm_97/chain_runner.py": "480f01b6a456f948ec327c0afdbfd84237c6efb1e903b8a3f94a1672c89df921",
+    "benchmarks/inferswarm_97/last_stage_service.py": "79bed35acd48873f4513c47fe9a8ab5243b42e9cb041a9d723a47688d2be308b",
+    "benchmarks/inferswarm_97/__init__.py": "183d8824838f0ced70284a4c180f1ad83321375c8e15473c8071e44da20e2db3"
+  },
+  "holdout_admission": {
+    "accepted_namespace": "h95-",
+    "accepted_case_ids": "exactly the 24 committed sealed-holdout-commitment cells (one per population cell)",
+    "rejected": "all c95-*/p95-* calibration, c74/c86/p76/p86/h86 historical, unknown/renumbered/substituted h95 IDs, duplicates, non-dict rows",
+    "fails_closed_before": "CUDA initialization, model loading, any correctness-bearing execution"
+  },
+  "tests": {
+    "phase_b_suite": "tests/research/test_inferswarm_97b_holdout_authority.py (13 tests, CPU-only, synthetic fixtures) — green on the c60a4b7 freeze tree",
+    "phase_a_suite_still_green": "tests/research/test_inferswarm_97_harness.py (10 tests) — green on the same tree",
+    "ci": "FreeToken repository defines no branch/PR test workflow (release/nightly only); no checks run on inferswarm-97-v4-physical-qualification at either 57dfcb7 or c60a4b7. Qualification evidence is the locally executed suites above."
+  },
+  "h95_state_at_record": {
+    "holdout_state": "SEALED_NOT_CONSUMED",
+    "unseal_authorized": false,
+    "plaintext_revealed": false,
+    "h95_case_executed": false,
+    "non_decrypting_preflight_verdict": "PRECONDITIONS_PASS_STOP_BEFORE_DECRYPT",
+    "preflight_rerun_at": "2026-09-06",
+    "preflight_record": "docs/qualification/gemma4-12b-it-v4-campaign-97/a2/h95-unseal-preflight.json"
+  },
+  "topology_unchanged": {
+    "reference": "inferswarm04 RTX 3090 (GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03)",
+    "candidate_chain": "inferswarm01 GPU-0 [0,16) + GPU-1 [16,32) + inferswarm03 (GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176) [32,48) via the #76 R4 wire service"
+  },
+  "unseal_rule": "Decrypt only after a NEW explicit maintainer authorization reviewing the Phase B checkpoint. The Phase B producer exists; the unseal itself remains unauthorized."
+}

@@ -1,0 +1,75 @@
+{
+  "case_count": 24,
+  "contract_id": "inferswarm.gemma4-prediction-aligned-qualification/1",
+  "core_results": {
+    "decision_local_E_D": {
+      "limit_hex": "0x1.aa00000000000p+4",
+      "observed_hex": "0x1.4e00000000000p+4",
+      "pass": true
+    },
+    "fp32-consumer-logits:max-absolute-difference": {
+      "limit_hex": "0x1.aa00000000000p+4",
+      "observed_hex": "0x1.74c0000000000p+4",
+      "pass": true
+    },
+    "fp32-consumer-logits:p99-absolute-error": {
+      "limit_hex": "0x1.0a40000000000p+4",
+      "observed_hex": "0x1.0c40000000000p+4",
+      "pass": false
+    },
+    "fp32-consumer-logits:rms-difference": {
+      "limit_hex": "0x1.444eb652ef62bp+3",
+      "observed_hex": "0x1.1d71750152592p+3",
+      "pass": true
+    }
+  },
+  "frozen_inputs": {
+    "argmax_tie_break": "ARGMAX_FIRST_MAX/lowest-token-id-among-exactly-equal-fp32-maxima",
+    "core_threshold_manifest_sha256": "c714f5613b541106e985c7337e723dcad297637541e5f937bb2c6f3a7bfbbf50",
+    "decision_domain_construction": "reference-top-1024-with-cutoff-ties/1",
+    "global_E_D_hex": "0x1.aa00000000000p+4",
+    "telemetry_reference_bands_sha256": "7b38c13e11416f81139c1721f433a12d4e4377540bb115b63e09f0bb54032534"
+  },
+  "integrity_failures": [],
+  "producer_phase_a": "57dfcb7289efac8f66de5b3abbe8de04f2580f75",
+  "producer_phase_b": "c60a4b7080913eba90585de8e8602460a7f5b1a7",
+  "schema": "inferswarm.issue97b.v4-holdout-adjudication/1",
+  "semantic_totals": {
+    "DECISION_DOMAIN_ESCAPE": 0,
+    "DECISION_LOCAL_BOUND_EXCEEDED": 0,
+    "SEMANTIC_PASS": 192,
+    "STABLE": 0,
+    "STABLE_DECISION_MISMATCH": 0,
+    "UNSTABLE": 192,
+    "UNSTABLE_DECISION_INADMISSIBLE": 0,
+    "total": 192
+  },
+  "telemetry_alert_count": 4,
+  "telemetry_alerts": [
+    {
+      "band_hex": "0x1.e25998d27a586p-1",
+      "case_id": "h95-01-01-01",
+      "family": "hidden-residual-stream:rms-difference",
+      "observed_hex": "0x1.e7de0711e754cp-1"
+    },
+    {
+      "band_hex": "0x1.71f81ebfc43d3p+1",
+      "case_id": "h95-01-01-01",
+      "family": "final-normalized-hidden-state:rms-difference",
+      "observed_hex": "0x1.7a1e6775b6ba1p+1"
+    },
+    {
+      "band_hex": "0x1.1540000000000p+3",
+      "case_id": "h95-01-01-01",
+      "family": "final-normalized-hidden-state:p99-absolute-error",
+      "observed_hex": "0x1.3100000000000p+3"
+    },
+    {
+      "band_hex": "0x1.0a40000000000p+4",
+      "case_id": "h95-01-01-01",
+      "family": "bf16-logits:p99-absolute-error",
+      "observed_hex": "0x1.0c40000000000p+4"
+    }
+  ],
+  "terminal_verdict": "V4_HOLDOUT_CORE_FAIL"
+}

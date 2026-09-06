@@ -1,0 +1,9 @@
+{
+ "total_decisions": 15232,
+ "stable": 3772,
+ "unstable": 11460,
+ "stable_exact_winner_failures": 0,
+ "ambiguity_membership_failures": 0,
+ "decision_local_bound_exceeded": 0,
+ "decision_domain_escape": 0
+}

@@ -390,15 +390,24 @@ prospective doctrine. This neither reinterprets issue #88's immutable
 `V3_HOLDOUT_FAIL` nor sets v4 thresholds, samples, corpora, or a holdout. The
 next gate is a prospective successor methodology freeze.
 
-Issue #95 freezes the successor v4 methodology prospectively as
-`GEMMA_V4_PREDICTION_ALIGNED_METHODOLOGY_FROZEN` pending maintainer acceptance:
-24 cells × 79 public statistical cases (1896 total), a separate 48-case
-reference-only stress pool, a fresh sealed one-per-cell holdout, and a direct
-`1/80` per-core-family / `4/80` Bonferroni prediction statement matching the
-zero-core-exceedance holdout rule. It binds ADR 0011's four acceptance-bearing
-scalar families (three FP32 consumer-logit metrics plus `E_D`) separately from
-twelve retained telemetry identities. This is CPU/static methodology only; it
-makes no physical execution, calibration, threshold, or unseal claim.
+Issue #95 was accepted at `e12a6e3d5589044bace0c9555c0d364fb57a6229` with
+`GEMMA_V4_PREDICTION_ALIGNED_METHODOLOGY_FROZEN`: 24 cells × 79 public
+statistical cases (1896 total), a separate 48-case reference-only stress pool,
+a fresh sealed one-per-cell holdout, and a direct `1/80` per-core-family /
+`4/80` Bonferroni prediction statement matching the zero-core-exceedance
+holdout rule. It binds ADR 0011's four acceptance-bearing scalar families
+(three FP32 consumer-logit metrics plus `E_D`) separately from twelve retained
+telemetry identities.
+
+Issue #97 executed to a terminal verdict. Physical calibration (Phase A,
+producer `57dfcb72…`) passed completely; the h95 holdout was unsealed once
+under explicit maintainer Phase B authorization (producer `c60a4b70…`) and
+produced the terminal result `V4_HOLDOUT_CORE_FAIL`: the frozen
+`fp32-consumer-logits:p99-absolute-error` limit was exceeded by a single
+holdout case (16.765625 vs 16.640625, +0.75%) with the semantic layer passing
+192/192 and zero integrity failures. Historical #88 `V3_HOLDOUT_FAIL` remains
+immutable and is not reinterpreted by this result. Full record:
+`docs/qualification/gemma4-12b-it-v4-campaign-97/b/`.
 
 Issue #99 is complete on the orthogonal distribution lane: the minimum
 plan-driven model artifact acquisition proof required by ADR 0009 terminated
