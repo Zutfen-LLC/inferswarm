@@ -3,7 +3,6 @@ import ast
 from copy import deepcopy
 import hashlib
 import json
-import re
 import tempfile
 import sys
 import unittest
@@ -238,8 +237,7 @@ class CampaignTests(unittest.TestCase):
                 if isinstance(value, list):
                     return [visit(item) for item in value]
                 if isinstance(value, str):
-                    return re.sub(r"/tmp/issue101-cpu-[^/]+", "<TEMP>",
-                                  value.replace(temporary, "<TEMP>"))
+                    return value.replace(temporary, "<TEMP>")
                 return value
             return visit(json.loads(json.dumps(documents)))
 
