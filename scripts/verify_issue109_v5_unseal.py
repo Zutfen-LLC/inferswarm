@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from issue74_methodology import MethodologyError, sha256_bytes, sha256_file
+from issue109_v5_methodology import CONTRACT_ID
 from commit_issue109_holdout import custody_is_satisfied
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -95,7 +96,24 @@ def validate_unseal_preconditions(*, core_threshold_path: Path, expected_core_th
     public_der_sha = sha256_bytes(private_der)
     if public_der_sha != custody.get('recipient_public_key_der_sha256'):
         raise MethodologyError('RECIPIENT_PUBLIC_KEY_DER_SHA_MISMATCH')
-    return {'verdict': 'PRECONDITIONS_PASS_STOP_BEFORE_DECRYPT', 'threshold_sha256': sha256_file(core_threshold_path), 'custody_record_sha256': sha256_file(custody_record_path), 'ciphertext_sha256': sha256_file(ciphertext), 'certificate_sha256': sha256_file(certificate), 'recipient_public_key_der_sha256': public_der_sha}
+    threshold_sha = sha256_file(core_threshold_path)
+    custody_sha = sha256_file(custody_record_path)
+    ciphertext_sha = sha256_file(ciphertext)
+    certificate_sha = sha256_file(certificate)
+    return {
+        'schema': 'inferswarm.issue109.v5-unseal-preflight/1',
+        'contract_id': CONTRACT_ID,
+        'verdict': 'PRECONDITIONS_PASS_STOP_BEFORE_DECRYPT',
+        'threshold_sha256': threshold_sha, 'custody_record_sha256': custody_sha,
+        'ciphertext_sha256': ciphertext_sha, 'certificate_sha256': certificate_sha,
+        'recipient_public_key_der_sha256': public_der_sha,
+        'bound_identities': {
+            'core_threshold_sha256': expected_core_threshold_sha256,
+            'holdout_custody_record_sha256': expected_custody_record_sha256,
+            'holdout_ciphertext_sha256': commitment['ciphertext_sha256'],
+            'recipient_certificate_sha256': commitment['recipient_certificate_sha256'],
+        },
+    }
 
 
 if __name__ == '__main__':

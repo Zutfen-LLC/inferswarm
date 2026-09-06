@@ -36,11 +36,11 @@ from issue109_v5_methodology import (
 ROOT = Path(__file__).resolve().parents[1]
 V5 = ROOT / "docs/qualification/gemma4-12b-it-v5/manifests"
 V5_TOOLING_VERSION = "inferswarm.issue109.v5-threshold-tooling/1"
-V5_CALIBRATION_CORPUS_SHA256 = "42f6ca9da6a49c251de4783d45c00f2f9fa9dec4787ffcb0343002f7dd7bc95c"
-V5_STRESS_POOL_SHA256 = "61464d26957522ba60245a2605d933fa681414ff272a67dd79884b5ca06b8f99"
-V5_STRESS_COMMITMENT_SHA256 = "9c78aadd13ea1a004c6c799f0a65c509c86ee932852dd4c9bc6d13bf0239b51b"
-V5_HOLDOUT_COMMITMENT_SHA256 = "954a71954ba6ab2c92d7f8d28f6fb78738c49058864343faf412ae1c53ba1102"
-V5_HOLDOUT_CUSTODY_RECORD_SHA256 = "808ddc80fee4c7b438953122a6a4c7c63156fbeee71c5ef00c3094b34440d23f"
+V5_CALIBRATION_CORPUS_SHA256 = "cdc5932018c14a38aa77319355a1f3fb823484c1f559eb915bb3105f2adcd615"
+V5_STRESS_POOL_SHA256 = "4113a55b0f492a9d2bb1854615fcea3df246b62d8ddd71be06950a32ba542071"
+V5_STRESS_COMMITMENT_SHA256 = "e4631f72890a5c4fb5e22f5214eb5b6a747016f1280d8a39024c3893f850acdb"
+V5_HOLDOUT_COMMITMENT_SHA256 = "c9d9ef5849a1a218e3bb8a5bd6fca2987dc709cf75666b77559029aed3f675d1"
+V5_HOLDOUT_CUSTODY_RECORD_SHA256 = "a516d855e706eb6c0318ab54ac58cbd8d6e2cc9d6cbd28a16f74c2a352cd6608"
 
 _SUMMARY_FIELDS = {
     "schema", "contract_id", "tooling_version", "calibration_corpus_sha256",
@@ -55,9 +55,14 @@ _CASE_FIELDS = {
 }
 _DECISION_FIELDS = {
     "decision_index", "domain_membership_sha256", "domain_size",
-    "decision_local_error_hex",
+    "decision_local_error_hex", "consumer_logit_reducers",
 }
 _DOMAIN_DECISION_FIELDS = {"decision_index", "domain_membership_sha256", "domain_size"}
+_CONSUMER_REDUCERS = (
+    "fp32-consumer-logits:max-absolute-difference",
+    "fp32-consumer-logits:rms-difference",
+    "fp32-consumer-logits:p99-absolute-error",
+)
 
 
 def _hash(document: dict[str, Any]) -> str:
@@ -202,6 +207,7 @@ def _validate_summary_arm(rows: Any, identities: dict[str, str], domains: dict[s
         if not isinstance(decisions, list) or len(decisions) != 8:
             raise MethodologyError("v5 case must contain exactly 8 decision rows")
         errors: list[float] = []
+        consumer_values = {identity: [] for identity in _CONSUMER_REDUCERS}
         seen_decisions: set[int] = set()
         for decision in decisions:
             if not isinstance(decision, dict) or set(decision) != _DECISION_FIELDS:
@@ -214,10 +220,22 @@ def _validate_summary_arm(rows: Any, identities: dict[str, str], domains: dict[s
             if domain is None or decision.get("domain_membership_sha256") != domain["domain_membership_sha256"] or decision.get("domain_size") != domain["domain_size"]:
                 raise MethodologyError("v5 summary decision domain identity mismatch")
             errors.append(_metric(decision.get("decision_local_error_hex"), label=f"{case_id} decision-local error"))
+            reducers = decision.get("consumer_logit_reducers")
+            if not isinstance(reducers, dict) or set(reducers) != set(_CONSUMER_REDUCERS):
+                raise MethodologyError("v5 summary decision must contain three full-vocabulary consumer reducers")
+            for identity in _CONSUMER_REDUCERS:
+                consumer_values[identity].append(_metric(
+                    reducers[identity], label=f"{case_id} decision {index} {identity}"
+                ))
         if seen_decisions != set(range(8)):
             raise MethodologyError("v5 summary decision indices incomplete")
         if _metric(row.get("case_e_d_hex"), label=f"{case_id} case E_D") != case_e_d(errors):
             raise MethodologyError("v5 case E_D does not equal its eight-decision maximum")
+        for identity, values in consumer_values.items():
+            if _metric(envelopes[identity], label=f"{case_id} case {identity}") != max(values):
+                raise MethodologyError(
+                    "v5 case consumer-logit scalar does not equal its eight-decision maximum"
+                )
     if seen != set(identities):
         raise MethodologyError("v5 calibration arm case set mismatch")
     return rows

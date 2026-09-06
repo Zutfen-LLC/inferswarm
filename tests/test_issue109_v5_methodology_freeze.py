@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import issue109_v5_methodology_freeze as freeze
+import validate_issue109_prerequisites as prerequisites
 from issue74_methodology import MethodologyError, canonical_json_bytes
 
 
@@ -57,7 +58,7 @@ class MethodologyFreezeRecordTests(unittest.TestCase):
 
     def test_disjointness_proof_is_clean(self):
         proof = self.record["disjointness_proof"]
-        self.assertEqual(proof["verdict"], "MECHANICALLY_DISJOINT")
+        self.assertEqual(proof["verdict"], "HISTORICAL_EXCLUSION_PASS_PREDICTIVE_COLLISIONS_RETAINED")
 
     def test_holdout_is_sealed_but_custody_is_honestly_incomplete(self):
         holdout = self.record["holdout"]
@@ -73,12 +74,12 @@ class MethodologyFreezeRecordTests(unittest.TestCase):
     def test_disjointness_tamper_is_rejected(self):
         proof = copy.deepcopy(self.record["disjointness_proof"])
         proof["verdict"] = "OVERLAP_FOUND"
-        with self.assertRaisesRegex(freeze.MethodologyFreezeError, "not mechanically disjoint"):
+        with self.assertRaisesRegex(freeze.MethodologyFreezeError, "historical exclusion proof"):
             freeze.verify_disjointness(proof)
 
     def test_nonzero_overlap_row_is_rejected_even_with_the_stated_verdict(self):
         proof = copy.deepcopy(self.record["disjointness_proof"])
-        proof["comparisons"][0]["prompt_sha256_overlap"] = 1
+        proof["historical_comparisons"][0]["prompt_sha256_overlap"] = 1
         with self.assertRaisesRegex(freeze.MethodologyFreezeError, "nonzero overlap"):
             freeze.verify_disjointness(proof)
 
@@ -117,6 +118,18 @@ class MethodologyFreezeRecordTests(unittest.TestCase):
             json.loads(json.dumps(self.record, sort_keys=True)),
             json.loads(json.dumps(freeze.build_record(), sort_keys=True)),
         )
+
+    def test_immutable_prerequisite_byte_and_ancestry_drift_fail_closed(self):
+        document = prerequisites.validate_prerequisites()
+        for name in ("issue108_statistical_contract", "issue108_metric_classification", "adr0012", "issue83_semantic_contract"):
+            tampered = copy.deepcopy(document)
+            next(row for row in tampered["bindings"] if row["name"] == name)["sha256"] = "0" * 64
+            with self.subTest(name=name), self.assertRaisesRegex(Exception, "prerequisite drift"):
+                prerequisites.validate_prerequisites(tampered)
+        tampered = copy.deepcopy(document)
+        tampered["accepted_issue108_merge"] = "0" * 40
+        with self.assertRaisesRegex(Exception, "wrong accepted #108 merge"):
+            prerequisites.validate_prerequisites(tampered)
 
 
 if __name__ == "__main__":

@@ -43,14 +43,38 @@ from issue109_v5_methodology import (
 )
 
 V5_DISJOINTNESS_NOTE = (
-    "v5 artifacts are mechanically disjoint by prompt_sha256 and "
-    "token_ids_sha256 from every prior InferSwarm calibration corpus, stress "
-    "pool, and sealed-holdout commitment (v1 c74/p74/h74, v2 p76, v3 "
-    "c86/p86/h86, v4 c95/p95/h95)"
+    "v5 predictive draws are excluded from fixed historical identities only. "
+    "Predictive prompt/token collisions are audit-only and are retained as IID "
+    "draws; the non-predictive stress pool is deliberately distinct."
 )
 HISTORICAL_EXCLUSION = Path(__file__).resolve().parents[1] / (
     "docs/qualification/gemma4-12b-it-v5/manifests/historical-exclusion-inventory.json"
 )
+
+
+def realized_component_counts(cases: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return sorted observational component counts from realized draw content.
+
+    The returned values are audit data. They never specify generation quotas
+    and must not be used to condition predictive sampling.
+    """
+    counts = {
+        (content_class, tuple(LENGTH_REGIMES[regime_index])): 0
+        for content_class, regime_index in mixture_population_declaration_components()
+    }
+    for case in cases:
+        key = (case["content_class"], tuple(case["length_regime"]))
+        counts[key] = counts.get(key, 0) + 1
+    return [
+        {"content_class": content_class, "length_regime": list(regime), "count": count}
+        for (content_class, regime), count in sorted(counts.items())
+    ]
+
+
+def mixture_population_declaration_components() -> tuple[tuple[str, int], ...]:
+    """Avoid a second public representation of the fixed component universe."""
+    from issue109_v5_methodology import mixture_components
+    return mixture_components()
 
 
 def _historical_identities() -> tuple[set[str], str]:
@@ -108,15 +132,36 @@ def generate_mixture_cases(
     exclusions, _inventory_sha = _historical_identities()
     cell_ordinals: dict[tuple[str, int], int] = {}
     cases: list[dict[str, Any]] = []
-    for index, (content_class, regime_index) in component_stream(seed, namespace, count):
-        key = (content_class, regime_index)
-        cell_ordinals[key] = cell_ordinals.get(key, 0) + 1
-        case = _mixture_case(
-            seed, namespace, prefix, tokenizer, content_class, regime_index,
-            index, cell_ordinals[key],
-        )
-        if case["prompt_sha256"] in exclusions or case["token_ids_sha256"] in exclusions:
-            raise RuntimeError("historical exclusion inventory rejected a v5 predictive draw")
+    for index, (initial_class, initial_regime) in component_stream(seed, namespace, count):
+        # This is case-local rejection sampling from the frozen target law.
+        # A rejection does not change another draw, a corpus seed, or a quota.
+        # Each retry redraws the complete component/content realization from the
+        # same IID mixture. The accepted attempt remains draw position ``index``.
+        attempt = 0
+        while True:
+            if attempt == 0:
+                attempt_namespace = namespace
+                content_class, regime_index = initial_class, initial_regime
+            else:
+                attempt_namespace = f"{namespace}:case:{index}:attempt:{attempt}"
+                _unused, (content_class, regime_index) = next(component_stream(
+                    seed, attempt_namespace, 1
+                ))
+            key = (content_class, regime_index)
+            next_ordinal = cell_ordinals.get(key, 0) + 1
+            case = _mixture_case(
+                seed, attempt_namespace, prefix, tokenizer, content_class,
+                regime_index, index, next_ordinal,
+            )
+            if (case["prompt_sha256"] not in exclusions
+                    and case["token_ids_sha256"] not in exclusions):
+                cell_ordinals[key] = next_ordinal
+                case["draw_index"] = index
+                case["historical_rejection_attempt"] = attempt
+                break
+            attempt += 1
+            if attempt > 1_000_000:
+                raise RuntimeError("historical case-local rejection did not terminate")
         cases.append(case)
     case_ids = {case["case_id"] for case in cases}
     if len(case_ids) != count:
@@ -139,6 +184,13 @@ def generate_calibration(tokenizer: Any) -> dict[str, Any]:
         "historical_exclusion_inventory_sha256": _historical_identities()[1],
         "mixture_population": mixture_population_declaration(),
         "cases": cases,
+        "realized_component_counts": realized_component_counts(cases),
+        "realized_component_counts_role": "OBSERVATIONAL_NOT_QUOTAS_OR_STRATA",
+        "historical_rejection_rule": (
+            "case-local rejection sampling: redraw only the rejected draw from "
+            "the frozen IID target generator; no global seed, quota, or component "
+            "count is changed"
+        ),
         "disjointness": V5_DISJOINTNESS_NOTE,
     }
 
@@ -179,6 +231,13 @@ def generate_holdout(tokenizer: Any, secret_seed: str) -> dict[str, Any]:
         "historical_exclusion_inventory_sha256": _historical_identities()[1],
         "tokenizer_json_sha256": TOKENIZER_SHA256,
         "cases": cases,
+        "realized_component_counts": realized_component_counts(cases),
+        "realized_component_counts_role": "OBSERVATIONAL_NOT_QUOTAS_OR_STRATA",
+        "historical_rejection_rule": (
+            "case-local rejection sampling: redraw only the rejected draw from "
+            "the frozen IID target generator; no global seed, quota, or component "
+            "count is changed"
+        ),
     }
 
 

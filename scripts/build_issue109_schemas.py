@@ -41,13 +41,13 @@ def schema(schema_id: str, title: str, required: list[str], properties: dict) ->
     }
 
 
-def case_ref() -> dict:
+def case_ref(*, predictive: bool = False) -> dict:
     return {
         "type": "object",
         "additionalProperties": False,
         "required": ["case_id", "content_class", "length_regime", "token_count",
                      "prompt_text", "token_ids", "prompt_sha256", "token_ids_sha256",
-                     "case_sha256"],
+                     "case_sha256"] + (["draw_index", "historical_rejection_attempt"] if predictive else []),
         "properties": {
             "case_id": {"type": "string"},
             "content_class": {"type": "string"},
@@ -58,6 +58,8 @@ def case_ref() -> dict:
             "prompt_sha256": SHA,
             "token_ids_sha256": SHA,
             "case_sha256": SHA,
+            "draw_index": {"type": "integer", "minimum": 0},
+            "historical_rejection_attempt": {"type": "integer", "minimum": 0},
         },
     }
 
@@ -121,7 +123,8 @@ def build() -> dict[str, dict]:
         "calibration-corpus-1.json",
         f"InferSwarm issue #109 v5 {V5_CALIBRATION_CASES}-case mixture-population calibration corpus",
         ["schema", "contract_id", "generator", "generator_sha256", "tokenizer",
-         "seed", "historical_exclusion_inventory_sha256", "mixture_population", "cases", "disjointness"],
+         "seed", "historical_exclusion_inventory_sha256", "mixture_population", "cases",
+         "realized_component_counts", "realized_component_counts_role", "historical_rejection_rule", "disjointness"],
         {
             "schema": {"const": "inferswarm.issue109.v5-calibration-corpus/1"},
             "contract_id": {"const": CONTRACT},
@@ -132,7 +135,13 @@ def build() -> dict[str, dict]:
             "historical_exclusion_inventory_sha256": SHA,
             "mixture_population": mixture_population_schema(),
             "cases": {"type": "array", "minItems": V5_CALIBRATION_CASES,
-                      "maxItems": V5_CALIBRATION_CASES, "items": case_ref()},
+                      "maxItems": V5_CALIBRATION_CASES, "items": case_ref(predictive=True)},
+            "realized_component_counts": {"type": "array", "minItems": V5_MIXTURE_COMPONENTS,
+                "maxItems": V5_MIXTURE_COMPONENTS, "items": {"type": "object", "additionalProperties": False,
+                "required": ["content_class", "length_regime", "count"], "properties": {
+                    "content_class": {"type": "string"}, "length_regime": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer"}}, "count": {"type": "integer", "minimum": 0}}}},
+            "realized_component_counts_role": {"const": "OBSERVATIONAL_NOT_QUOTAS_OR_STRATA"},
+            "historical_rejection_rule": {"type": "string"},
             "disjointness": {"type": "string"},
         },
     )
@@ -280,12 +289,21 @@ def build() -> dict[str, dict]:
         "type": "object",
         "additionalProperties": False,
         "required": ["decision_index", "domain_membership_sha256", "domain_size",
-                     "decision_local_error_hex"],
+                     "decision_local_error_hex", "consumer_logit_reducers"],
         "properties": {
             "decision_index": {"type": "integer", "minimum": 0, "maximum": 7},
             "domain_membership_sha256": SHA,
             "domain_size": {"type": "integer", "minimum": 1},
             "decision_local_error_hex": HEX,
+            "consumer_logit_reducers": {
+                "type": "object", "additionalProperties": False,
+                "required": ["fp32-consumer-logits:max-absolute-difference", "fp32-consumer-logits:rms-difference", "fp32-consumer-logits:p99-absolute-error"],
+                "properties": {
+                    "fp32-consumer-logits:max-absolute-difference": HEX,
+                    "fp32-consumer-logits:rms-difference": HEX,
+                    "fp32-consumer-logits:p99-absolute-error": HEX,
+                },
+            },
         },
     }
     summary_case_row = {
@@ -408,7 +426,7 @@ def build() -> dict[str, dict]:
     schemas["sealed-holdout-commitment.schema.json"] = schema(
         "sealed-holdout-commitment-1.json",
         "InferSwarm issue #109 v5 public sealed-holdout commitment",
-        ["schema", "contract_id", "state", "case_count", "draws", "secret_seed_sha256",
+        ["schema", "contract_id", "state", "case_count", "draws", "realized_component_counts", "realized_component_counts_role", "historical_rejection_rule", "secret_seed_sha256",
          "historical_exclusion_inventory_sha256",
          "generator", "generator_sha256", "tokenizer_json_sha256", "cipher",
          "ciphertext_sha256", "recipient_certificate_sha256", "unseal_rule",
@@ -424,7 +442,7 @@ def build() -> dict[str, dict]:
                     "type": "object",
                     "additionalProperties": False,
                     "required": ["case_id", "content_class", "length_regime", "token_count",
-                                 "prompt_sha256", "token_ids_sha256", "case_sha256"],
+                                 "prompt_sha256", "token_ids_sha256", "case_sha256", "draw_index", "historical_rejection_attempt"],
                     "properties": {
                         "case_id": {"type": "string", "pattern": "^h109-"},
                         "content_class": {"type": "string"},
@@ -433,9 +451,14 @@ def build() -> dict[str, dict]:
                         "prompt_sha256": SHA,
                         "token_ids_sha256": SHA,
                         "case_sha256": SHA,
+                        "draw_index": {"type": "integer", "minimum": 0},
+                        "historical_rejection_attempt": {"type": "integer", "minimum": 0},
                     },
                 },
             },
+            "realized_component_counts": {"type": "array", "minItems": V5_MIXTURE_COMPONENTS, "maxItems": V5_MIXTURE_COMPONENTS, "items": {"type": "object", "additionalProperties": False, "required": ["content_class", "length_regime", "count"], "properties": {"content_class": {"type": "string"}, "length_regime": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"type": "integer"}}, "count": {"type": "integer", "minimum": 0}}}},
+            "realized_component_counts_role": {"const": "OBSERVATIONAL_NOT_QUOTAS_OR_STRATA"},
+            "historical_rejection_rule": {"type": "string"},
             "secret_seed_sha256": SHA,
             "historical_exclusion_inventory_sha256": SHA,
             "generator": {"type": "string"},
@@ -500,21 +523,37 @@ def build() -> dict[str, dict]:
         mixture_population_schema()["properties"],
     )
 
-    for name, title in {
-        "calibration-observation.schema.json": "InferSwarm issue #109 v5 calibration observation",
-        "semantic-row.schema.json": "InferSwarm issue #109 v5 semantic decision row",
-        "holdout-result.schema.json": "InferSwarm issue #109 v5 holdout result",
-        "unseal-preflight.schema.json": "InferSwarm issue #109 v5 unseal preflight result",
-    }.items():
-        schemas[name] = schema(
-            name.removesuffix(".schema.json") + "-1.json",
-            title,
-            ["schema", "contract_id"],
-            {
-                "schema": {"type": "string"},
-                "contract_id": {"const": CONTRACT},
-            },
-        )
+    schemas["calibration-observation.schema.json"] = schema(
+        "calibration-observation-1.json", "InferSwarm issue #109 v5 complete calibration observation",
+        ["schema", "contract_id", "case_id", "case_sha256", "producer", "applicability",
+         "exact_integrity", "finite", "evidence_sha256", "envelopes", "decisions", "semantic_rows"],
+        {"schema": {"const": "inferswarm.issue109.v5-calibration-observation/1"},
+         "contract_id": {"const": CONTRACT}, "case_id": {"type": "string"}, "case_sha256": SHA,
+         "producer": {"type": "object", "additionalProperties": False, "required": ["reference", "candidate", "comparator_tier_contract_sha256"], "properties": {"reference": {"type": "string"}, "candidate": {"type": "string"}, "comparator_tier_contract_sha256": SHA}},
+         "applicability": {"const": "MATCHED_REFERENCE_AND_CANDIDATE"}, "exact_integrity": {"const": "PASS"}, "finite": {"const": True},
+         "evidence_sha256": {"type": "array", "minItems": 1, "uniqueItems": True, "items": SHA},
+         "envelopes": summary_case_row["properties"]["envelopes"], "decisions": summary_case_row["properties"]["decisions"],
+         "semantic_rows": {"type": "array", "minItems": 8, "maxItems": 8, "items": {"$ref": "semantic-row-1.json"}}},
+    )
+    schemas["semantic-row.schema.json"] = schema(
+        "semantic-row-1.json", "InferSwarm issue #109 v5 semantic decision verdict",
+        ["schema", "contract_id", "case_id", "case_sha256", "decision_index", "reference_winner_identity", "candidate_winner_identity", "domain_membership_sha256", "domain_size", "decision_local_error_hex", "stability", "ambiguity_state", "tie_rule", "containment_result", "reason_code", "semantic_verdict", "evidence_sha256"],
+        {"schema": {"const": "inferswarm.issue109.v5-semantic-row/1"}, "contract_id": {"const": CONTRACT}, "case_id": {"type": "string"}, "case_sha256": SHA,
+         "decision_index": {"type": "integer", "minimum": 0, "maximum": 7}, "reference_winner_identity": {"type": "string"}, "candidate_winner_identity": {"type": "string"}, "domain_membership_sha256": SHA, "domain_size": {"type": "integer", "minimum": 1}, "decision_local_error_hex": HEX,
+         "stability": {"enum": ["STABLE", "UNSTABLE"]}, "ambiguity_state": {"type": "string"}, "tie_rule": {"const": TIE_BREAK}, "containment_result": {"enum": ["PASS", "FAIL"]}, "reason_code": {"enum": ["DECISION_LOCAL_BOUND_EXCEEDED", "DECISION_DOMAIN_ESCAPE", "STABLE_DECISION_MISMATCH", "UNSTABLE_DECISION_INADMISSIBLE", "SEMANTIC_PASS"]}, "semantic_verdict": {"enum": ["PASS", "FAIL"]}, "evidence_sha256": {"type": "array", "minItems": 1, "uniqueItems": True, "items": SHA}},
+    )
+    schemas["holdout-result.schema.json"] = schema(
+        "holdout-result-1.json", "InferSwarm issue #109 v5 holdout case adjudication",
+        ["schema", "contract_id", "holdout_commitment_sha256", "case_id", "case_sha256", "comparator_tier_contract_sha256", "core_threshold_manifest_sha256", "telemetry_reference_bands_sha256", "acceptance_families", "telemetry", "decisions", "semantic_verdict", "exact_integrity", "finite", "terminal_reason", "provenance"],
+        {"schema": {"const": "inferswarm.issue109.v5-holdout-result/1"}, "contract_id": {"const": CONTRACT}, "holdout_commitment_sha256": SHA, "case_id": {"type": "string", "pattern": "^h109-"}, "case_sha256": SHA, "comparator_tier_contract_sha256": SHA, "core_threshold_manifest_sha256": SHA, "telemetry_reference_bands_sha256": SHA,
+         "acceptance_families": {"type": "object", "additionalProperties": False, "required": core_ids, "properties": {identity: {"type": "object", "additionalProperties": False, "required": ["observed_hex", "limit_hex", "verdict"], "properties": {"observed_hex": HEX, "limit_hex": HEX, "verdict": {"enum": ["PASS", "FAIL"]}}} for identity in core_ids}},
+         "telemetry": {"type": "object", "minProperties": 13, "maxProperties": 13, "additionalProperties": {"type": "object"}}, "decisions": summary_case_row["properties"]["decisions"], "semantic_verdict": {"enum": ["PASS", "FAIL"]}, "exact_integrity": {"enum": ["PASS", "FAIL"]}, "finite": {"type": "boolean"}, "terminal_reason": {"type": "string"}, "provenance": {"type": "object", "additionalProperties": False, "required": ["evidence_sha256", "producer"], "properties": {"evidence_sha256": {"type": "array", "minItems": 1, "uniqueItems": True, "items": SHA}, "producer": {"type": "string"}}}},
+    )
+    schemas["unseal-preflight.schema.json"] = schema(
+        "unseal-preflight-1.json", "InferSwarm issue #109 v5 non-decrypting unseal preflight",
+        ["schema", "contract_id", "verdict", "threshold_sha256", "custody_record_sha256", "ciphertext_sha256", "certificate_sha256", "recipient_public_key_der_sha256", "bound_identities"],
+        {"schema": {"const": "inferswarm.issue109.v5-unseal-preflight/1"}, "contract_id": {"const": CONTRACT}, "verdict": {"const": "PRECONDITIONS_PASS_STOP_BEFORE_DECRYPT"}, "threshold_sha256": SHA, "custody_record_sha256": SHA, "ciphertext_sha256": SHA, "certificate_sha256": SHA, "recipient_public_key_der_sha256": SHA, "bound_identities": {"type": "object", "additionalProperties": False, "required": ["core_threshold_sha256", "holdout_custody_record_sha256", "holdout_ciphertext_sha256", "recipient_certificate_sha256"], "properties": {"core_threshold_sha256": SHA, "holdout_custody_record_sha256": SHA, "holdout_ciphertext_sha256": SHA, "recipient_certificate_sha256": SHA}}},
+    )
 
     return schemas
 

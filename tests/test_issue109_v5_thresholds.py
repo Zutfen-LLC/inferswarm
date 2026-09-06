@@ -48,7 +48,8 @@ class Issue109V5ThresholdTests(unittest.TestCase):
         cls.complete_custody = copy.deepcopy(cls.custody)
         cls.complete_custody["holdout_state"] = "SEALED_NOT_CONSUMED"
         cls.complete_custody["custodians"] = cls.complete_custody["custodians"] + [
-            {**cls.complete_custody["custodians"][0], "custodian_id": "second-independent-custodian"},
+            {**cls.complete_custody["custodians"][0], "custodian_id": "second-independent-custodian",
+             "host": "independent-host", "location": "/independent/custody/issue109"},
         ]
 
     def evidence(self):
@@ -99,7 +100,12 @@ class Issue109V5ThresholdTests(unittest.TestCase):
                 {"decision_index": decision_index,
                  "domain_membership_sha256": f"{index * 8 + decision_index:064x}",
                  "domain_size": 1024,
-                 "decision_local_error_hex": float((decision_index + 1) / 8).hex()}
+                 "decision_local_error_hex": float((decision_index + 1) / 8).hex(),
+                 "consumer_logit_reducers": {
+                     "fp32-consumer-logits:max-absolute-difference": float(index + 1).hex(),
+                     "fp32-consumer-logits:rms-difference": float(index + 1).hex(),
+                     "fp32-consumer-logits:p99-absolute-error": float(index + 1).hex(),
+                 }}
                 for decision_index in range(8)
             ]
             domain_rows.append({
@@ -183,6 +189,22 @@ class Issue109V5ThresholdTests(unittest.TestCase):
         summary["statistical_cases"][0]["decisions"].pop()
         with self.assertRaisesRegex(MethodologyError, "8"):
             self.derive(calibration_summary=summary)
+
+    def test_all_eight_consumer_logit_reducers_are_required_and_recomputed(self):
+        summary = self.evidence()[-1]
+        del summary["statistical_cases"][0]["decisions"][7]["consumer_logit_reducers"]
+        with self.assertRaisesRegex(MethodologyError, "decision fields"):
+            self.derive(calibration_summary=summary)
+        summary = self.evidence()[-1]
+        row = summary["statistical_cases"][0]
+        row["decisions"][7]["consumer_logit_reducers"]["fp32-consumer-logits:max-absolute-difference"] = float(9999.0).hex()
+        with self.assertRaisesRegex(MethodologyError, "consumer-logit scalar"):
+            self.derive(calibration_summary=summary)
+        # When the case scalar agrees, an otherwise uncaptured decision 7
+        # mechanically controls the derived case maximum.
+        row["envelopes"]["fp32-consumer-logits:max-absolute-difference"] = float(9999.0).hex()
+        result = self.derive(calibration_summary=summary)
+        self.assertEqual(result["core_threshold_manifest"]["limits"]["fp32-consumer-logits:max-absolute-difference"]["limit_hex"], float(9999.0).hex())
 
     def test_rejects_non_selector_selected_stress_and_domain_identity_drift(self):
         selected = self.evidence()[4]

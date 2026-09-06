@@ -1,5 +1,6 @@
 import ast
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -162,12 +163,13 @@ class Issue109V5MethodologyTests(unittest.TestCase):
         self.assertEqual(len(stress['cases']), 48)
         self.assertEqual(len({c['case_id'] for c in stress['cases']}), 48)
 
-    def test_committed_disjointness_proof_has_no_overlap(self):
+    def test_committed_disjointness_proof_excludes_history_and_retains_predictive_collisions(self):
         proof = json.loads((ROOT / 'docs/qualification/gemma4-12b-it-v5/manifests/disjointness-proof.json').read_text())
-        self.assertEqual(proof['verdict'], 'MECHANICALLY_DISJOINT')
-        for row in proof['comparisons']:
+        self.assertEqual(proof['verdict'], 'HISTORICAL_EXCLUSION_PASS_PREDICTIVE_COLLISIONS_RETAINED')
+        for row in proof['historical_comparisons']:
             self.assertEqual(row['prompt_sha256_overlap'], 0)
             self.assertEqual(row['token_ids_sha256_overlap'], 0)
+        self.assertEqual(proof['predictive_collision_audit']['calibration_holdout']['handling'], 'RETAINED_IID_AUDIT_ONLY')
 
     def test_custody_record_is_honest_about_incomplete_custody(self):
         from commit_issue109_holdout import custody_is_satisfied
@@ -177,31 +179,50 @@ class Issue109V5MethodologyTests(unittest.TestCase):
         self.assertFalse(custody['unseal_authorized'])
         self.assertFalse(custody_is_satisfied(custody))
 
+    def test_v5_manifest_entries_exist_and_hash_exactly(self):
+        from issue74_methodology import sha256_file
+        manifest = ROOT / 'docs/qualification/gemma4-12b-it-v5/MANIFEST.sha256'
+        for line in manifest.read_text().splitlines():
+            expected, relative = line.split(maxsplit=1)
+            path = ROOT / relative
+            self.assertTrue(path.is_file(), relative)
+            self.assertEqual(sha256_file(path), expected, relative)
+
     def test_custody_helper_requires_two_distinct_verified_custodians(self):
         from commit_issue109_holdout import build_custody_record, custody_is_satisfied
-        commitment = {'ciphertext_sha256': 'a' * 64, 'recipient_certificate_sha256': 'b' * 64}
-        one = build_custody_record(commitment, [
-            {'private_key_sha256': 'c' * 64, 'public_key_match': True, 'verified_date': '2026-01-01'},
-        ])
-        self.assertEqual(one['holdout_state'], 'SEALED_CUSTODY_INCOMPLETE')
-        self.assertIn('outstanding_action', one)
-        self.assertFalse(custody_is_satisfied(one))
-        two = build_custody_record(commitment, [
-            {'custodian_id': 'a', 'private_key_sha256': 'c' * 64, 'public_key_match': True, 'verified_date': '2026-01-01'},
-            {'custodian_id': 'b', 'private_key_sha256': 'c' * 64, 'public_key_match': True, 'verified_date': '2026-01-01'},
-        ])
-        self.assertEqual(two['holdout_state'], 'SEALED_NOT_CONSUMED')
-        self.assertNotIn('outstanding_action', two)
-        self.assertTrue(custody_is_satisfied(two))
-        duplicate = build_custody_record(commitment, [
-            {'custodian_id': 'a', 'private_key_sha256': 'c' * 64, 'public_key_match': True, 'verified_date': '2026-01-01'},
-            {'custodian_id': 'a', 'private_key_sha256': 'c' * 64, 'public_key_match': True, 'verified_date': '2026-01-01'},
-        ])
-        self.assertEqual(duplicate['holdout_state'], 'SEALED_CUSTODY_INCOMPLETE')
-        missing_date = dict(two)
-        missing_date['custodians'] = [dict(row) for row in two['custodians']]
-        missing_date['custodians'][1]['verified_date'] = None
-        self.assertFalse(custody_is_satisfied(missing_date))
+        from issue74_methodology import sha256_file
+        with tempfile.TemporaryDirectory() as temp:
+            certificate = Path(temp) / 'recipient.pem'
+            key = Path(temp) / 'recipient.key'
+            subprocess.run(['openssl', 'req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', str(key), '-out', str(certificate), '-subj', '/CN=issue109-test', '-days', '1'], check=True, capture_output=True)
+            commitment = {'ciphertext_sha256': 'a' * 64, 'recipient_certificate_sha256': sha256_file(certificate)}
+            one = build_custody_record(commitment, [
+                {'custodian_id': 'a', 'host': 'host-a', 'location': '/a', 'private_key_sha256': 'c' * 64, 'public_key_match': True, 'verified_date': '2026-01-01'},
+            ], certificate)
+            self.assertEqual(one['holdout_state'], 'SEALED_CUSTODY_INCOMPLETE')
+            self.assertIn('outstanding_action', one)
+            self.assertFalse(custody_is_satisfied(one))
+            two = build_custody_record(commitment, [
+                {'custodian_id': 'a', 'host': 'host-a', 'location': '/a', 'private_key_sha256': 'c' * 64, 'public_key_match': True, 'verified_date': '2026-01-01'},
+                {'custodian_id': 'b', 'host': 'host-b', 'location': '/b', 'private_key_sha256': 'c' * 64, 'public_key_match': True, 'verified_date': '2026-01-01'},
+            ], certificate)
+            self.assertEqual(two['holdout_state'], 'SEALED_NOT_CONSUMED')
+            self.assertNotIn('outstanding_action', two)
+            self.assertTrue(custody_is_satisfied(two))
+            same_boundary = dict(two)
+            same_boundary['custodians'] = [dict(row) for row in two['custodians']]
+            same_boundary['custodians'][1]['host'] = 'host-a'
+            same_boundary['custodians'][1]['location'] = '/a'
+            self.assertFalse(custody_is_satisfied(same_boundary))
+            duplicate = build_custody_record(commitment, [
+                {'custodian_id': 'a', 'host': 'host-a', 'location': '/a', 'private_key_sha256': 'c' * 64, 'public_key_match': True, 'verified_date': '2026-01-01'},
+                {'custodian_id': 'a', 'host': 'host-b', 'location': '/b', 'private_key_sha256': 'c' * 64, 'public_key_match': True, 'verified_date': '2026-01-01'},
+            ], certificate)
+            self.assertEqual(duplicate['holdout_state'], 'SEALED_CUSTODY_INCOMPLETE')
+            missing_date = dict(two)
+            missing_date['custodians'] = [dict(row) for row in two['custodians']]
+            missing_date['custodians'][1]['verified_date'] = None
+            self.assertFalse(custody_is_satisfied(missing_date))
 
     def test_cpu_static_sources_do_not_import_runtime_stack(self):
         forbidden = {'torch', 'transformers', 'triton', 'cuda'}

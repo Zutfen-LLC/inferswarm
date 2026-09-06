@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Build issue #109 public prompt/token hash disjointness proof; CPU-only."""
+"""Build issue #109 historical-exclusion and collision audit; CPU-only.
+
+Predictive calibration and holdout draws are IID draws. Their realized prompt
+or token identities can repeat. This tool proves historical exclusion and
+records predictive collisions without rejecting or replacing a draw.
+"""
 import json
 from pathlib import Path
 from issue74_methodology import canonical_json_bytes
@@ -14,6 +19,17 @@ def cases(path: Path, key: str = 'cases'):
 
 def hashes(rows):
     return ({x['prompt_sha256'] for x in rows}, {x['token_ids_sha256'] for x in rows})
+
+
+def collision_count(rows):
+    prompts, tokens = hashes(rows)
+    return {
+        'draw_count': len(rows),
+        'distinct_prompt_sha256_count': len(prompts),
+        'distinct_token_ids_sha256_count': len(tokens),
+        'repeated_prompt_draw_count': len(rows) - len(prompts),
+        'repeated_token_ids_draw_count': len(rows) - len(tokens),
+    }
 
 
 def main():
@@ -44,17 +60,28 @@ def main():
             if row['prompt_sha256_overlap'] or row['token_ids_sha256_overlap']:
                 raise SystemExit(f'OVERLAP {row}')
             rows.append(row)
-    for left, right in [('c109-calibration', 'p109-stress'), ('c109-calibration', 'h109-holdout'),
-                         ('p109-stress', 'h109-holdout')]:
+    # The stress pool is non-predictive and deliberately distinct. Do not use
+    # this convenience property to alter or reject predictive draws.
+    for left, right in [('c109-calibration', 'p109-stress'), ('p109-stress', 'h109-holdout')]:
         lp, lt = hashes(v5[left])
         rp, rt = hashes(v5[right])
         if lp & rp or lt & rt:
             raise SystemExit(f'INTERNAL_OVERLAP {left} {right}')
     (V5 / 'disjointness-proof.json').write_bytes(canonical_json_bytes({
-        'schema': 'inferswarm.issue109.v5-disjointness-proof/1',
-        'method': 'public prompt_sha256 and token_ids_sha256 set intersections',
-        'comparisons': rows,
-        'verdict': 'MECHANICALLY_DISJOINT',
+        'schema': 'inferswarm.issue109.v5-disjointness-proof/2',
+        'method': 'fixed historical identity exclusion plus audit-only predictive collision counts',
+        'historical_comparisons': rows,
+        'predictive_collision_audit': {
+            'calibration': collision_count(v5['c109-calibration']),
+            'holdout': collision_count(v5['h109-holdout']),
+            'calibration_holdout': {
+                'prompt_sha256_overlap': len(hashes(v5['c109-calibration'])[0] & hashes(v5['h109-holdout'])[0]),
+                'token_ids_sha256_overlap': len(hashes(v5['c109-calibration'])[1] & hashes(v5['h109-holdout'])[1]),
+                'handling': 'RETAINED_IID_AUDIT_ONLY',
+            },
+        },
+        'stress_distinctness_checked': True,
+        'verdict': 'HISTORICAL_EXCLUSION_PASS_PREDICTIVE_COLLISIONS_RETAINED',
     }))
 
 

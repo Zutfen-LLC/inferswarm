@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from issue74_methodology import canonical_json_bytes, sha256_bytes, sha256_file
+from generate_issue109_corpora import realized_component_counts
 from issue109_v5_contract import comparator_tier_contract, predictive_design
 from issue109_v5_methodology import (
     ASSUMPTION_PROFILE,
@@ -27,6 +28,7 @@ from issue109_v5_methodology import (
     physical_subject_contract,
 )
 from commit_issue109_holdout import custody_is_satisfied
+from validate_issue109_prerequisites import MANIFEST as PREREQUISITES_MANIFEST, validate_prerequisites
 
 import issue108_post_v4_statistical_metric_doctrine as doctrine
 
@@ -81,16 +83,19 @@ def verify_doctrine_compliance() -> dict[str, Any]:
 
 def verify_disjointness(proof: dict[str, Any] | None = None) -> dict[str, Any]:
     proof = proof if proof is not None else _load("disjointness-proof.json")
-    if proof.get("schema") != "inferswarm.issue109.v5-disjointness-proof/1":
+    if proof.get("schema") != "inferswarm.issue109.v5-disjointness-proof/2":
         raise MethodologyFreezeError("v5 disjointness proof schema mismatch")
-    if proof.get("verdict") != "MECHANICALLY_DISJOINT":
-        raise MethodologyFreezeError("v5 corpora are not mechanically disjoint")
-    comparisons = proof.get("comparisons")
+    if proof.get("verdict") != "HISTORICAL_EXCLUSION_PASS_PREDICTIVE_COLLISIONS_RETAINED":
+        raise MethodologyFreezeError("v5 historical exclusion proof is not valid")
+    comparisons = proof.get("historical_comparisons")
     if not isinstance(comparisons, list) or not comparisons:
         raise MethodologyFreezeError("v5 disjointness proof has no comparisons")
     for row in comparisons:
         if row.get("prompt_sha256_overlap") or row.get("token_ids_sha256_overlap"):
-            raise MethodologyFreezeError("v5 disjointness proof records a nonzero overlap")
+            raise MethodologyFreezeError("v5 historical exclusion proof records a nonzero overlap")
+    audit = proof.get("predictive_collision_audit")
+    if not isinstance(audit, dict) or audit.get("calibration_holdout", {}).get("handling") != "RETAINED_IID_AUDIT_ONLY":
+        raise MethodologyFreezeError("v5 predictive collision audit does not retain IID draws")
     return proof
 
 
@@ -113,9 +118,12 @@ def verify_corpora() -> dict[str, Any]:
     if len(calibration.get("cases", [])) != 1416:
         raise MethodologyFreezeError("v5 calibration corpus must contain exactly 1416 cases")
     case_ids = {case["case_id"] for case in calibration["cases"]}
-    prompt_hashes = {case["prompt_sha256"] for case in calibration["cases"]}
-    if len(case_ids) != 1416 or len(prompt_hashes) != 1416:
-        raise MethodologyFreezeError("v5 calibration corpus contains non-unique cases")
+    if len(case_ids) != 1416:
+        raise MethodologyFreezeError("v5 calibration corpus contains non-unique draw IDs")
+    if "cases_per_cell" in calibration or calibration.get("realized_component_counts_role") != "OBSERVATIONAL_NOT_QUOTAS_OR_STRATA":
+        raise MethodologyFreezeError("v5 predictive calibration must not use balanced quotas or strata")
+    if calibration.get("realized_component_counts") != realized_component_counts(calibration["cases"]):
+        raise MethodologyFreezeError("v5 calibration realized component counts are not derived from draws")
     if stress.get("schema") != "inferswarm.issue109.v5-stress-pool/1":
         raise MethodologyFreezeError("v5 stress pool schema mismatch")
     if len(stress.get("cases", [])) != 48:
@@ -165,6 +173,21 @@ def verify_holdout_and_custody(
         raise MethodologyFreezeError("v5 custody record does not bind the committed ciphertext")
     if custody.get("unseal_authorized") is not False:
         raise MethodologyFreezeError("v5 custody record must not authorize unseal at freeze time")
+    if commitment.get("realized_component_counts_role") != "OBSERVATIONAL_NOT_QUOTAS_OR_STRATA":
+        raise MethodologyFreezeError("v5 holdout component counts are not audit-only")
+    if commitment.get("realized_component_counts") != realized_component_counts(commitment.get("draws", [])):
+        raise MethodologyFreezeError("v5 holdout realized component counts are not derived from draws")
+    tainted = _load("tainted-pre-freeze-holdout-attempt.json")
+    if tainted.get("schema") != "inferswarm.issue109.v5-tainted-pre-freeze-holdout-attempt/1":
+        raise MethodologyFreezeError("v5 tainted pre-freeze holdout audit schema mismatch")
+    if tainted.get("disposition") != "TAINTED_AND_PERMANENTLY_INELIGIBLE_FOR_ISSUE109":
+        raise MethodologyFreezeError("v5 tainted pre-freeze holdout disposition mismatch")
+    for field, current in (
+        ("ciphertext_sha256", commitment.get("ciphertext_sha256")),
+        ("certificate_sha256", commitment.get("recipient_certificate_sha256")),
+    ):
+        if tainted.get(field) == current:
+            raise MethodologyFreezeError("v5 replacement holdout reused tainted material")
     return {
         "commitment": commitment,
         "custody": custody,
@@ -173,6 +196,7 @@ def verify_holdout_and_custody(
 
 
 def build_record() -> dict[str, Any]:
+    prerequisites = validate_prerequisites()
     contract = verify_doctrine_compliance()
     disjointness = verify_disjointness()
     mixture = verify_mixture_population()
@@ -189,6 +213,7 @@ def build_record() -> dict[str, Any]:
             "disjointness-proof.json", "comparator-tier-contract.json",
             "statistical-derivation.json", "sealed-holdout-commitment.json",
             "holdout-custody-record.json", "stress-selection-commitment.json",
+            "tainted-pre-freeze-holdout-attempt.json", "prerequisite-bindings.json",
         )
     }
 
@@ -198,6 +223,8 @@ def build_record() -> dict[str, Any]:
         "contract_id": CONTRACT_ID,
         "terminal_classification": TERMINAL_DISPOSITION,
         "issue108_statistical_contract_sha256": sha256_bytes(canonical_json_bytes(contract)),
+        "prerequisite_bindings_sha256": sha256_file(PREREQUISITES_MANIFEST),
+        "prerequisite_bindings": prerequisites,
         "prospective_methodology": prospective_methodology(),
         "predictive_design": derivation,
         "comparator_tier_contract": comparator,

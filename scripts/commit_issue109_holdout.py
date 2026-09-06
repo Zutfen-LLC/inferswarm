@@ -24,6 +24,7 @@ verified.
 from __future__ import annotations
 
 import argparse
+import subprocess
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -37,6 +38,7 @@ from issue109_v5_methodology import (
     mixture_components,
 )
 from issue74_methodology import canonical_json_bytes, sha256_bytes, sha256_file
+from generate_issue109_corpora import realized_component_counts
 
 SEALED_NOT_CONSUMED = "SEALED_NOT_CONSUMED"
 SEALED_CUSTODY_INCOMPLETE = "SEALED_CUSTODY_INCOMPLETE"
@@ -81,9 +83,14 @@ def build_commitment(
                 "prompt_sha256": row["prompt_sha256"],
                 "token_ids_sha256": row["token_ids_sha256"],
                 "case_sha256": row["case_sha256"],
+                "draw_index": row["draw_index"],
+                "historical_rejection_attempt": row["historical_rejection_attempt"],
             }
             for row in cases
         ],
+        "realized_component_counts": realized_component_counts(cases),
+        "realized_component_counts_role": "OBSERVATIONAL_NOT_QUOTAS_OR_STRATA",
+        "historical_rejection_rule": plaintext_holdout["historical_rejection_rule"],
         "secret_seed_sha256": plaintext_holdout["secret_seed_sha256"],
         "historical_exclusion_inventory_sha256": plaintext_holdout[
             "historical_exclusion_inventory_sha256"
@@ -112,14 +119,39 @@ def custody_is_satisfied(record: dict[str, Any]) -> bool:
     ids = {c.get("custodian_id") for c in custodians}
     if len(ids) != len(custodians):
         return False
+    # Copies of one key are expected. Independence concerns control of the
+    # storage boundary, so copied entries on one host/location do not count.
+    boundaries = {(c.get("host"), c.get("location")) for c in custodians}
+    if len(boundaries) != len(custodians) or any(not host or not location for host, location in boundaries):
+        return False
     return all(
         c.get("public_key_match") is True and c.get("verified_date") for c in custodians
     )
 
 
+def recipient_public_key_der_sha256(certificate: Path) -> str:
+    """Derive the recipient public-key DER identity from the public certificate."""
+    try:
+        public_pem = subprocess.run(
+            ["openssl", "x509", "-in", str(certificate), "-pubkey", "-noout"],
+            check=True, capture_output=True,
+        ).stdout
+        public_der = subprocess.run(
+            ["openssl", "pkey", "-pubin", "-outform", "DER"], input=public_pem,
+            check=True, capture_output=True,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise ValueError("recipient certificate public key cannot be derived") from exc
+    if not public_der:
+        raise ValueError("recipient certificate public key cannot be derived")
+    return sha256_bytes(public_der)
+
+
 def build_custody_record(
-    commitment: dict[str, Any], custodians: Sequence[dict[str, Any]]
+    commitment: dict[str, Any], custodians: Sequence[dict[str, Any]], certificate: Path
 ) -> dict[str, Any]:
+    if sha256_file(certificate) != commitment.get("recipient_certificate_sha256"):
+        raise ValueError("recipient certificate does not match holdout commitment")
     for custodian in custodians:
         if not is_sha256(custodian.get("private_key_sha256")):
             raise ValueError("custodian entries must pin the private-key SHA-256")
@@ -128,17 +160,15 @@ def build_custody_record(
         if custodian.get("verified_date") is None:
             raise ValueError("custodian entries must record a verification date")
     custodian_ids = {custodian.get("custodian_id") for custodian in custodians}
-    state = (
-        SEALED_NOT_CONSUMED
-        if len(custodians) >= 2 and len(custodian_ids) == len(custodians)
-        else SEALED_CUSTODY_INCOMPLETE
-    )
+    provisional = {"holdout_state": SEALED_NOT_CONSUMED, "custodians": list(custodians)}
+    state = SEALED_NOT_CONSUMED if custody_is_satisfied(provisional) else SEALED_CUSTODY_INCOMPLETE
     record = {
         "schema": V5_HOLDOUT_CUSTODY_SCHEMA,
         "contract_id": CONTRACT_ID,
         "custodians": list(custodians),
         "holdout_ciphertext_sha256": commitment["ciphertext_sha256"],
         "recipient_certificate_sha256": commitment["recipient_certificate_sha256"],
+        "recipient_public_key_der_sha256": recipient_public_key_der_sha256(certificate),
         "holdout_state": state,
         "private_material_in_repository": "PROHIBITED",
         "fail_closed_rule": (
@@ -147,6 +177,11 @@ def build_custody_record(
             "never regenerate a key for the existing ciphertext"
         ),
         "unseal_authorized": False,
+        "custody_history": (
+            "Replacement holdout key and secret seed were generated fresh after "
+            "the prior CMS round-trip attempt was classified tainted. One local "
+            "custodian copy was verified by non-decrypting public-key DER match."
+        ),
         "verification_method": (
             "openssl pkey -pubout -outform DER from the private key vs "
             "openssl x509 -pubkey from the committed certificate; "
