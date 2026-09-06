@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from issue74_methodology import MethodologyError, sha256_bytes, sha256_file
+from commit_issue109_holdout import custody_is_satisfied
 
 ROOT = Path(__file__).resolve().parents[1]
 V5 = ROOT / 'docs/qualification/gemma4-12b-it-v5'
@@ -75,7 +76,9 @@ def validate_unseal_preconditions(*, core_threshold_path: Path, expected_core_th
     provenance = threshold.get('provenance')
     if not isinstance(provenance, dict) or provenance.get('holdout_custody_record_sha256') != expected_custody_record_sha256:
         raise MethodologyError('THRESHOLD_CUSTODY_IDENTITY_MISMATCH')
-    if custody.get('schema') != 'inferswarm.issue109.v5-holdout-custody-record/1' or custody.get('holdout_state') != 'SEALED_NOT_CONSUMED' or custody.get('unseal_authorized') is not False:
+    if (custody.get('schema') != 'inferswarm.issue109.v5-holdout-custody-record/1'
+            or not custody_is_satisfied(custody)
+            or custody.get('unseal_authorized') is not False):
         raise MethodologyError('HOLDOUT_CUSTODY_NOT_VERIFIED')
     if sha256_file(ciphertext) != commitment.get('ciphertext_sha256') or sha256_file(certificate) != commitment.get('recipient_certificate_sha256'):
         raise MethodologyError('HOLDOUT_MATERIAL_MISMATCH')
@@ -84,8 +87,6 @@ def validate_unseal_preconditions(*, core_threshold_path: Path, expected_core_th
     key = _external_regular_readable(private_key_path)
     key_sha = sha256_file(key)
     custodians = custody.get('custodians', [])
-    if len(custodians) < 2 or len({c.get('custodian_id') for c in custodians}) != len(custodians) or not all(c.get('public_key_match') is True for c in custodians):
-        raise MethodologyError('HOLDOUT_CUSTODY_NOT_VERIFIED')
     if not any(c.get('private_key_sha256') == key_sha for c in custodians):
         raise MethodologyError('PRIVATE_KEY_CUSTODY_HASH_MISMATCH')
     private_der, certificate_der = _private_public_der(key), _certificate_public_der(certificate)

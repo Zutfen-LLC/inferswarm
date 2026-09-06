@@ -127,7 +127,12 @@ def build_custody_record(
             raise ValueError("custodian public_key_match must be verified true")
         if custodian.get("verified_date") is None:
             raise ValueError("custodian entries must record a verification date")
-    state = SEALED_NOT_CONSUMED if len(custodians) >= 2 else SEALED_CUSTODY_INCOMPLETE
+    custodian_ids = {custodian.get("custodian_id") for custodian in custodians}
+    state = (
+        SEALED_NOT_CONSUMED
+        if len(custodians) >= 2 and len(custodian_ids) == len(custodians)
+        else SEALED_CUSTODY_INCOMPLETE
+    )
     record = {
         "schema": V5_HOLDOUT_CUSTODY_SCHEMA,
         "contract_id": CONTRACT_ID,

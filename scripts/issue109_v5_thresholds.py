@@ -15,6 +15,7 @@ from typing import Any, Iterable
 
 from issue74_methodology import ENVELOPES, MethodologyError, canonical_json_bytes, sha256_bytes, sha256_file
 from issue109_v5_contract import comparator_tier_contract
+from commit_issue109_holdout import custody_is_satisfied
 from issue109_v5_methodology import (
     CONTRACT_ID,
     MARGIN_DEFINITION,
@@ -247,7 +248,7 @@ def derive_v5_threshold_artifacts(*, calibration_corpus: dict[str, Any], stress_
     _require_frozen(holdout_custody_record, sha=V5_HOLDOUT_CUSTODY_RECORD_SHA256, schema="inferswarm.issue109.v5-holdout-custody-record/1", label="holdout custody record")
     if holdout_commitment.get("state") != "SEALED_NOT_CONSUMED":
         raise MethodologyError("v5 holdout is not sealed and unconsumed")
-    if holdout_custody_record.get("holdout_state") != "SEALED_NOT_CONSUMED":
+    if not custody_is_satisfied(holdout_custody_record):
         raise MethodologyError(
             "v5 holdout custody is not complete (>=2 verified independent "
             "custodians required); physical execution must not proceed"

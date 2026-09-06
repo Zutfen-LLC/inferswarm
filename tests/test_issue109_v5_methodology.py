@@ -193,6 +193,15 @@ class Issue109V5MethodologyTests(unittest.TestCase):
         self.assertEqual(two['holdout_state'], 'SEALED_NOT_CONSUMED')
         self.assertNotIn('outstanding_action', two)
         self.assertTrue(custody_is_satisfied(two))
+        duplicate = build_custody_record(commitment, [
+            {'custodian_id': 'a', 'private_key_sha256': 'c' * 64, 'public_key_match': True, 'verified_date': '2026-01-01'},
+            {'custodian_id': 'a', 'private_key_sha256': 'c' * 64, 'public_key_match': True, 'verified_date': '2026-01-01'},
+        ])
+        self.assertEqual(duplicate['holdout_state'], 'SEALED_CUSTODY_INCOMPLETE')
+        missing_date = dict(two)
+        missing_date['custodians'] = [dict(row) for row in two['custodians']]
+        missing_date['custodians'][1]['verified_date'] = None
+        self.assertFalse(custody_is_satisfied(missing_date))
 
     def test_cpu_static_sources_do_not_import_runtime_stack(self):
         forbidden = {'torch', 'transformers', 'triton', 'cuda'}
