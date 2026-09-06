@@ -249,9 +249,9 @@
   "ordinary_tail_supported": true,
   "single_case_dominates": true
  },
- "classification_statement": "MIXED: ordinary heavy-tail behavior (the physical phenomenon \u2014 a single cross-cell tail draw, extreme-but-in-family on all four near-collinear core families) COMBINED WITH two design-level contributors that made the tail terminal: the p99 order-statistic knife edge and the frozen prediction theorem's unbounded non-max-cell path. No execution anomaly; no prospective applicability split.",
+ "classification_statement": "MIXED: ordinary heavy-tail behavior (the physical phenomenon \u2014 a single cross-cell tail draw, extreme-but-in-family on all four near-collinear core families) COMBINED WITH two design-level contributors that made the tail terminal: the p99 order-statistic knife edge and the frozen prediction theorem's assumption gap (its 4/80 = 5% statement is exact only under full cross-cell exchangeability, while the methodology assumes only within-cell exchangeability, leaving the observed non-max-cell failure path unbounded). No execution anomaly; no prospective applicability split.",
  "cross_campaign_comparison": {
-  "qualitative_similarity": "Both terminals are single-case tail draws that exceed EVERY retained calibration value (v3: 585th of 585; v4: 1897th of 1897 on p99), with small exceedances (+2.56% v3, +0.75% v4) and the holdout runner-up far below (2.33x v3, 3.19x v4). Different cells, different families, different arms of the methodology (15-envelope telemetry family vs 4-family core). Three consecutive single-case-dominated terminals across different cells/families support a generic heavy-tail interpretation over a fixed applicability split.",
+  "qualitative_similarity": "Both v3 and v4 holdout terminals were dominated by one extreme case, in different cells and different numerical families; each failing value exceeds EVERY retained calibration value (v3: 585th of 585; v4: 1897th of 1897 on p99), with small exceedances (+2.56% v3, +0.75% v4) and the holdout runner-up far below (2.33x v3, 3.19x v4). Different cells, different families, different arms of the methodology (15-envelope telemetry family vs 4-family core). Two independent physical holdout terminals with this shape support a generic heavy-tail interpretation over a fixed applicability split. (#81 was a broad calibration semantic failure and #90 a diagnosis of #88, not additional physical holdout terminals; historical classifications are unchanged.)",
   "same_cell": false,
   "same_family": false,
   "v3_failing": {
@@ -275,7 +275,7 @@
    "runner_up_ratio": 3.193452380952381
   },
   "what_90_got_right": "#90's ordinary-tail classification and its warning that reliance on an observed calibration maximum is operationally brittle for heavy/discrete distributions were correct and are now materially strengthened: v4 was deliberately prediction-aligned and still failed through exactly the single-case tail path #90 described.",
-  "what_90_left_unresolved": "#90 could not distinguish estimator-brittleness from metric design because v3's failing family was a telemetry envelope. #97's failure is in the acceptance-bearing core, and this diagnosis additionally identifies (a) the p99 order-statistic knife edge (fails iff >1% of the vocabulary exceeds the limit) and (b) a genuine gap in the frozen prediction theorem (Section 6): only the max-cell record path was bounded, while the observed failure arrived through a non-max cell."
+  "what_90_left_unresolved": "#90 could not distinguish estimator-brittleness from metric design because v3's failing family was a telemetry envelope. #97's failure is in the acceptance-bearing core, and this diagnosis additionally identifies (a) the p99 order-statistic knife edge (fails iff >1% of the vocabulary exceeds the limit) and (b) a genuine assumption gap in the frozen prediction theorem (Section 6): its 4/80 = 5% Bonferroni statement is exact only under full cross-cell exchangeability, but the methodology assumes only within-cell exchangeability, under which the observed cross-cell failure path (a non-max-cell draw) was left unbounded."
  },
  "downstream_trace": {
   "case_e_d": 20.875,
@@ -909,7 +909,7 @@
    "tail_min_increment": 0.000244140625
   },
   "finite_sample_definition": "ascending sort of all 262144 full-vocab float64 absolute errors; one-based nearest-rank/higher index ceil(0.99*262144)=259523 (0-based 259522); per-case family value = max over frozen capture positions (0,1,3,7) of 8 decisions",
-  "independent_information": "Materially none at case level: spearman 0.98-0.99 with the other core families, and the case that failed p99 also carries the holdout maxima of max-abs, rms, and E_D. Under the frozen 4-position capture design the same case would ALSO have failed max-absolute-difference had decision 2 (27.0625 > 26.625) been a capture position; the single-family failure is partly a position-subsampling artifact. p99's distinct failure threshold is an order-statistic knife edge, not independent evidence.",
+  "independent_information": "Materially none at case level: spearman 0.98-0.99 with the other core families, and the case that failed p99 also carries the holdout maxima of max-abs, rms, and E_D. p99's distinct failure threshold is an order-statistic knife edge, not independent evidence.",
   "knife_edge_mechanism": "p99 fails exactly when more than 1% of the vocabulary exceeds the limit; here 2854 elements (1.0887%) did, while max-absolute-difference on the same rows passed with 12.4% headroom. The failing value sits on a 10-element plateau.",
   "p99_over_maxabs_ratio": {
    "failing_case": 0.7196512407780014,
@@ -918,15 +918,16 @@
    "p90": 0.5903905979951607
   },
   "position_subsampling_note": {
+   "decision2_exceeds_current_max_abs_limit": true,
    "decision2_max_abs": 27.0625,
-   "decision2_would_exceed_max_abs_limit": true,
    "frozen_positions": [
     0,
     1,
     3,
     7
    ],
-   "max_abs_limit": 26.625
+   "max_abs_limit": 26.625,
+   "statement": "Position subsampling omitted a larger max-abs error (27.0625, decision 2) than any retained capture-position max-abs observation for this case (envelope 23.296875 vs frozen limit 26.625); capture-position selection materially affects which core family becomes binding. NO pass/fail claim is made for all-position or alternate-position designs: such a methodology would derive its calibration thresholds from all positions and could produce different limits; it requires prospective methodology review and fresh calibration."
   }
  },
  "provenance": {
@@ -1003,10 +1004,12 @@
    "cases_per_cell_needed_distribution_free_95": 1919,
    "distribution_free_bound_vacuous": true,
    "familywise_distribution_free": 1.2,
-   "familywise_full_cross_cell_homogeneity": 0.050606220347917764,
-   "homogeneity_claim_marginally_invalid": true,
+   "familywise_full_exchangeability_bonferroni": 0.05,
+   "frozen_actual_assumption": "within-cell exchangeability only",
+   "full_exchangeability_reproduces_frozen_claim": true,
+   "hypothetical_stronger_assumption": "full cross-cell exchangeability (all 24 cells one population)",
    "per_family_distribution_free_union": 0.3,
-   "per_family_full_cross_cell_homogeneity": 0.012651555086979441
+   "per_family_full_exchangeability_exact": 0.0125
   },
   "frozen_replay_reproduced": true,
   "frozen_statement": {
@@ -1037,7 +1040,7 @@
    },
    "observed_path": "cross-cell draw in a non-max cell"
   },
-  "reconciliation": "One observed exceedance is NOT inconsistent with a correct >=95% prospective statement (a 5% event occurred), and the terminal failure does not invalidate exchangeability. But the frozen proof did not establish the >=95% claim it asserted: it bounded only the max-cell record path (1/80) and ignored the other 23 cells' record paths, each <=1/80, whose union is 24/80=30% per family distribution-free (96/80 familywise, vacuous). The observed failure arrived exactly through the unbounded path: the failing case's own cell maximum was 11.0078 (14th of 24), far below the global limit 16.6406. Even under full cross-cell homogeneity the familywise bound is 96/1897 = 5.06% > 5%. Reliance on an observed calibration maximum is operationally brittle for this heavy, lattice-discretized distribution even where the coverage statement is mathematically correct; a different tolerance construction would change the claim's shape, not remove the tail risk."
+  "reconciliation": "One observed exceedance is NOT inconsistent with a correct >=95% prospective statement (a 5% event occurred), and the terminal failure does not invalidate exchangeability. But the frozen proof established its >=95% claim only under the STRONGER full-cross-cell-exchangeability assumption, while the methodology actually assumes only WITHIN-cell exchangeability. Under the actual assumption the correct distribution-free bound is the union over all 24 cells' record paths: 24/80 = 30% per family (96/80 familywise, vacuous; ~1919 cases/cell would be needed for <=5%). Under the stronger hypothetical assumption the exact per-family probability is 24/1920 = 1/80 and the four-family Bonferroni bound is exactly 4/80 = 5%, reproducing the intended statement. The observed failure arrived exactly through the path the actual assumption leaves unbounded: a cross-cell draw in a non-max cell (own-cell max 11.0078, 14th of 24, far below the global limit 16.6406). Reliance on an observed calibration maximum is operationally brittle for this heavy, lattice-discretized distribution even where a coverage statement is mathematically correct; a different tolerance construction would change the claim's shape, not remove the tail risk."
  },
  "successor_directions": {
   "directions": [
@@ -1048,7 +1051,7 @@
     "evidence_backing": "statistical_contract_audit gap analysis",
     "name": "retain v4 design unchanged",
     "sample_burden": "unchanged (79/cell)",
-    "supported_claim": "as frozen: not actually >=95% (correct distribution-free bound is vacuous; homogeneous bound 5.06%)"
+    "supported_claim": "as frozen: the >=95% statement holds only under full cross-cell exchangeability; under the actual within-cell assumption the distribution-free bound is vacuous (96/80)"
    },
    {
     "assumptions": "within-cell exchangeability retained; the multi-cell record union is bounded correctly (or a parametric/quantile tolerance bound is adopted)",

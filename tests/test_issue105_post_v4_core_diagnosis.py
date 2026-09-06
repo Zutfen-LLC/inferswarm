@@ -131,13 +131,37 @@ class RealEvidenceTests(unittest.TestCase):
     def test_contract_audit_numbers(self):
         audit = self.record["statistical_contract_audit"]
         self.assertTrue(audit["frozen_replay_reproduced"])
-        self.assertTrue(audit["correct_bounds"]["distribution_free_bound_vacuous"])
-        self.assertAlmostEqual(
-            audit["correct_bounds"]["familywise_full_cross_cell_homogeneity"],
-            96.0 / 1897.0, places=12)
+        bounds = audit["correct_bounds"]
+        # Frozen ACTUAL assumption: within-cell exchangeability only.
         self.assertEqual(
-            audit["correct_bounds"]
-            ["cases_per_cell_needed_distribution_free_95"], 1919)
+            bounds["frozen_actual_assumption"],
+            "within-cell exchangeability only")
+        self.assertEqual(
+            bounds["per_family_distribution_free_union"], 24.0 / 80.0)
+        self.assertEqual(
+            bounds["familywise_distribution_free"], 96.0 / 80.0)
+        self.assertTrue(bounds["distribution_free_bound_vacuous"])
+        self.assertEqual(
+            bounds["cases_per_cell_needed_distribution_free_95"], 1919)
+        # Stronger HYPOTHETICAL assumption: full cross-cell
+        # exchangeability -> 1920 exchangeable draws; the overall max
+        # falls among the 24 holdout draws with P = 24/1920 = 1/80.
+        self.assertEqual(
+            bounds["hypothetical_stronger_assumption"],
+            "full cross-cell exchangeability (all 24 cells one population)")
+        self.assertEqual(
+            bounds["per_family_full_exchangeability_exact"],
+            24.0 / 1920.0)
+        self.assertEqual(bounds["per_family_full_exchangeability_exact"],
+                         1.0 / 80.0)
+        self.assertEqual(
+            bounds["familywise_full_exchangeability_bonferroni"],
+            4.0 / 80.0)
+        self.assertEqual(
+            bounds["familywise_full_exchangeability_bonferroni"], 0.05)
+        # The intended >=95% statement is exact ONLY under the stronger
+        # assumption, not the frozen actual one.
+        self.assertTrue(bounds["full_exchangeability_reproduces_frozen_claim"])
         gap = audit["gap_analysis"]
         self.assertEqual(gap["failing_cell_max_rank_of_24"], 14)
         self.assertEqual(gap["global_p99_max_cell"]["content_class"],
@@ -153,9 +177,14 @@ class RealEvidenceTests(unittest.TestCase):
             audit["discretization"]["tail_min_increment"], 0.000244140625)
         self.assertEqual(
             audit["discretization"]["p99_magnitude_lattice_spacing"], 0.125)
-        self.assertTrue(
-            audit["position_subsampling_note"]
-            ["decision2_would_exceed_max_abs_limit"])
+        note = audit["position_subsampling_note"]
+        self.assertTrue(note["decision2_exceeds_current_max_abs_limit"])
+        self.assertEqual(note["decision2_max_abs"], 27.0625)
+        self.assertEqual(note["max_abs_limit"], 26.625)
+        # narrow statement only: no all-position pass/fail claim
+        self.assertIn("NO pass/fail claim", note["statement"])
+        self.assertNotIn("would have failed", note["statement"])
+        self.assertNotIn("would ALSO", note["statement"])
         self.assertGreater(audit["correlations"]["vs_max_abs"], 0.98)
 
     def test_cross_campaign(self):
@@ -167,6 +196,15 @@ class RealEvidenceTests(unittest.TestCase):
         self.assertEqual(cross["v3_failing"]["calibration_n"], 584)
         self.assertAlmostEqual(
             cross["v4_failing"]["runner_up_ratio"], 16.765625 / 5.25)
+        # corrected framing: exactly TWO independent physical holdout
+        # terminals (v3 #88 and v4 #97); #81 was a broad calibration
+        # semantic failure and #90 a diagnosis, not physical terminals.
+        sim = cross["qualitative_similarity"]
+        self.assertIn("Both v3 and v4 holdout terminals", sim)
+        self.assertIn("Two "
+                      "independent physical holdout terminals", sim)
+        self.assertNotIn("Three consecutive", sim)
+        self.assertIn("#81 was a broad calibration semantic", sim)
 
     def test_non_claims_present(self):
         self.assertEqual(len(self.record["non_claims"]), 6)

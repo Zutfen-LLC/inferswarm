@@ -21,8 +21,10 @@ Classification basis (all machine-derived in
 - ordinary heavy-tail behavior: SUPPORTED (single cross-cell tail draw,
   no prospective split);
 - metric/reducer mismatch: CONTRIBUTING (p99 order-statistic knife edge);
-- statistical-contract defect: PRESENT (the frozen theorem did not bound
-  the path the failure actually took);
+- statistical-contract defect: PRESENT (the frozen theorem's ≥95%
+  statement is exact only under full cross-cell exchangeability, but the
+  methodology assumes only within-cell exchangeability, leaving the
+  observed non-max-cell failure path unbounded);
 - execution anomaly: ABSENT (integrity PASS; all 15 failing-case
   envelopes reproduce byte-exact through the frozen reducer);
 - applicability regime: ABSENT (no pre-observable split explains more
@@ -128,43 +130,55 @@ Different cells (repetitive-low-entropy [36,40] vs ordinary-prose [4,8]),
 different families (telemetry hidden-state RMS vs core p99), same shape:
 each terminal failing value ranks above EVERY retained calibration case
 (v3: 1 of 584; v4: 1 of 1897), small exceedance (+2.56% / +0.75%), holdout
-runner-up far below (2.33x / 3.19x). Three consecutive single-case-dominated
-terminals across different cells, families, and methodology generations
-support a generic heavy-tail interpretation over any fixed applicability
-split. #90's ordinary-tail classification and its brittleness warning were
-correct and are materially strengthened. What #90 could not resolve —
-whether the estimator or the metric design was at fault — this diagnosis
-answers for v4: both contributed (Sections 6 and 7).
+runner-up far below (2.33x / 3.19x). Both v3 and v4 holdout terminals
+were dominated by one extreme case, in different cells and different
+numerical families; two independent physical holdout terminals with this
+shape support a generic heavy-tail interpretation over any fixed
+applicability split. (#81 was a broad calibration semantic failure and
+#90 a diagnosis of #88, not additional physical holdout terminals; all
+historical classifications are unchanged.) #90's ordinary-tail
+classification and its brittleness warning were correct and are
+materially strengthened. What #90 could not resolve — whether the
+estimator or the metric design was at fault — this diagnosis answers for
+v4: both contributed (Sections 6 and 7).
 
-## 6. Statistical-contract audit: the frozen theorem had a real gap
+## 6. Statistical-contract audit: the frozen theorem had an assumption gap
 
 Mechanically reproduced the frozen derivation (79/cell, 1/80, 4/80
 Bonferroni, ≥95% claim, stress contributes zero predictive sample) — the
-replay matches. The defect is in what the theorem bounded:
+replay matches. The defect is a mismatch between the assumption the
+methodology makes and the assumption its probability statement needs:
 
-- The frozen argument bounds ONLY the strict-record path within the single
+- **Frozen actual assumption: within-cell exchangeability only.** The
+  frozen argument bounds ONLY the strict-record path within the single
   cell holding the global maximum (1/80). But a holdout exceedance can
   arrive as a record in ANY cell that crosses the global max; each cell's
   record probability is ≤ 1/80 distribution-free, so the correct
   distribution-free per-family bound is the union 24/80 = 30%
-  (familywise 96/80 — vacuous). A distribution-free 95% familywise claim
-  needs ~1919 cases/cell (45,976 cases), not 79.
-- **The observed failure arrived exactly through the unbounded path**:
-  the failing case's own-cell max is 11.0078 (14th of 24), far below the
-  global limit 16.6406; the case is a cross-cell draw, not a max-cell
-  record.
-- Even under full cross-cell homogeneity (all cells one distribution) —
-  the most favorable reading — the correct union bound is 24/1897 per
-  family, 96/1897 = 5.06% familywise: the "≥95%" claim was marginally
-  invalid even under its best-case assumption.
+  (familywise 96/80 — vacuous). A distribution-free ≤5% four-family
+  claim needs ~1919 cases/cell (45,976 cases), not 79.
+- **Stronger hypothetical assumption: full cross-cell exchangeability**
+  (all 24 cells one population). Then the 1896 calibration and 24 holdout
+  draws are 1920 fully exchangeable draws, and "any holdout exceeds the
+  calibration maximum" is exactly "the overall maximum of the 1920 draws
+  lies among the 24 holdout draws": P = 24/1920 = 1/80 per family, and
+  the four-family Bonferroni bound is exactly 4/80 = 5%. The intended
+  ≥95% statement therefore holds exactly — but only under this stronger
+  assumption.
+- **The frozen proof failed by using the full-homogeneity-style result
+  (1/80 per family, 4/80 familywise) while assuming only within-cell
+  exchangeability.** The observed failure arrived exactly through the
+  path the actual assumption leaves unbounded: the failing case's
+  own-cell max is 11.0078 (14th of 24), far below the global limit
+  16.6406; the case is a cross-cell draw, not a max-cell record.
 - One observed exceedance is not inconsistent with a correct ≥95%
   statement, and the terminal failure does not invalidate exchangeability
-  or the #97 verdict. But the ≥95% number was never established by the
-  frozen proof. Reliance on an observed calibration maximum is
-  operationally brittle for this heavy, lattice-discretized distribution
-  even where a coverage statement is mathematically correct; a different
-  tolerance construction would change the claim's shape, not remove the
-  tail risk.
+  or the #97 verdict. But the ≥95% number is only as strong as the
+  full-exchangeability assumption the proof did not state. Reliance on an
+  observed calibration maximum is operationally brittle for this heavy,
+  lattice-discretized distribution even where a coverage statement is
+  mathematically correct; a different tolerance construction would change
+  the claim's shape, not remove the tail risk.
 
 ## 7. p99 reducer audit: REQUIRE_DOCTRINE_REVIEW (diagnostic only)
 
@@ -177,11 +191,17 @@ replay matches. The defect is in what the theorem bounded:
   max-absolute-difference does not have.
 - Correlation with max-abs 0.984, rms 0.993, E_D 0.944 across 1896
   cases: no materially independent case-level correctness information.
-- Position subsampling note: decision 2 (not a frozen capture position)
-  has max-abs 27.0625 > the max-abs limit 26.625 — under a
-  all-8-position capture design the SAME case would have failed
-  max-absolute-difference too. The single-family failure is partly an
-  artifact of which 4 of 8 decisions the frozen design samples.
+- Position subsampling note: decision 2 (not one of the frozen envelope
+  capture positions) has max-abs 27.0625, above the current frozen max-abs
+  limit 26.625 and above every retained capture-position max-abs
+  observation for this case (envelope 23.296875). Position subsampling
+  therefore omitted a larger error than any retained observation, which
+  demonstrates that capture-position selection materially affects which
+  core family becomes binding. No pass/fail claim is made for
+  all-position or alternate-position designs: such a methodology would
+  derive its calibration thresholds from all positions and could produce
+  different limits; it requires prospective methodology review and fresh
+  calibration before any pass/fail claim.
 - Allowed conclusion: p99's acceptance-bearing status is unchanged by
   this diagnosis; any tier/reducer change requires a separate prospective
   doctrine gate.
@@ -190,8 +210,8 @@ replay matches. The defect is in what the theorem bounded:
 
 | direction | supported claim | conservatism | sample burden | avoids tuning to h95 |
 |---|---|---|---|---|
-| retain v4 unchanged | as frozen — but the real familywise rate is ≥5.06% (vacuous distribution-free), so "≥95%" was never established | miscalibrated, not conservative | unchanged (79/cell) | yes |
-| corrected prediction/tolerance construction | honest ≥(1−α) zero-exceedance statement bounding the multi-cell union | distribution-free union needs ~1919/cell (infeasible); homogeneity/parametric assumptions trade rigor for size | large unless assumptions added | yes if prospective |
+| retain v4 design unchanged | ≥95% holds only under full cross-cell exchangeability; under the actual within-cell assumption the distribution-free bound is vacuous (96/80) | miscalibrated relative to its stated assumption | unchanged (79/cell) | yes |
+| corrected prediction/tolerance construction | honest ≥(1−α) zero-exceedance statement bounding the multi-cell union | distribution-free union needs ~1919/cell (infeasible); full-exchangeability or parametric assumptions trade rigor for size | large unless assumptions added | yes if prospective |
 | prospective stratification | none — no split demonstrated (failing cell ranks 14/24; ρ=0.11) | n/a | multiplies per-stratum needs | a post-hoc key is forbidden |
 | p99 reducer/domain revision | removes knife edge only if independently justified from the >1% mechanism | neutral | unchanged | must not use the 0.125 overage |
 | backend investigation | none — integrity PASS, byte-exact reproduction, divergence consistent with #71-localized device-class bf16 GEMM residual | n/a | n/a | n/a |

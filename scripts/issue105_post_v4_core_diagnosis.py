@@ -714,15 +714,19 @@ def cross_campaign_comparison(evidence):
         "same_cell": False,
         "same_family": False,
         "qualitative_similarity": (
-            "Both terminals are single-case tail draws that exceed EVERY "
-            "retained calibration value (v3: 585th of 585; v4: 1897th of "
-            "1897 on p99), with small exceedances (+2.56% v3, +0.75% v4) "
-            "and the holdout runner-up far below (2.33x v3, 3.19x v4). "
-            "Different cells, different families, different arms of the "
-            "methodology (15-envelope telemetry family vs 4-family core). "
-            "Three consecutive single-case-dominated terminals across "
-            "different cells/families support a generic heavy-tail "
-            "interpretation over a fixed applicability split."
+            "Both v3 and v4 holdout terminals were dominated by one "
+            "extreme case, in different cells and different numerical "
+            "families; each failing value exceeds EVERY retained "
+            "calibration value (v3: 585th of 585; v4: 1897th of 1897 on "
+            "p99), with small exceedances (+2.56% v3, +0.75% v4) and the "
+            "holdout runner-up far below (2.33x v3, 3.19x v4). Different "
+            "cells, different families, different arms of the methodology "
+            "(15-envelope telemetry family vs 4-family core). Two "
+            "independent physical holdout terminals with this shape "
+            "support a generic heavy-tail interpretation over a fixed "
+            "applicability split. (#81 was a broad calibration semantic "
+            "failure and #90 a diagnosis of #88, not additional physical "
+            "holdout terminals; historical classifications are unchanged.)"
         ),
         "what_90_got_right": (
             "#90's ordinary-tail classification and its warning that "
@@ -738,10 +742,13 @@ def cross_campaign_comparison(evidence):
             "#97's failure is in the acceptance-bearing core, and this "
             "diagnosis additionally identifies (a) the p99 order-statistic "
             "knife edge (fails iff >1% of the vocabulary exceeds the "
-            "limit) and (b) a genuine gap in the frozen prediction "
-            "theorem (Section 6): only the max-cell record path was "
-            "bounded, while the observed failure arrived through a "
-            "non-max cell."
+            "limit) and (b) a genuine assumption gap in the frozen "
+            "prediction theorem (Section 6): its 4/80 = 5% Bonferroni "
+            "statement is exact only under full cross-cell "
+            "exchangeability, but the methodology assumes only "
+            "within-cell exchangeability, under which the observed "
+            "cross-cell failure path (a non-max-cell draw) was left "
+            "unbounded."
         ),
     }
 
@@ -778,14 +785,16 @@ def statistical_contract_audit(evidence):
     per_family_distribution_free = cells / (r + 1)
     familywise_distribution_free = families * per_family_distribution_free
     # Under full cross-cell exchangeability (all cells share one
-    # distribution), the correct per-family probability that any of the 24
-    # holdout draws exceeds the global max of 1896 is 24/1897.
+    # distribution) the exact per-family probability is 24/1920 = 1/80
+    # (the 1920-draw overall maximum falls among the 24 holdout draws).
     n_total = cells * r
-    # Under full cross-cell homogeneity, the correct union bound for "any
-    # of the 24 holdout draws exceeds the global calibration max of 1896":
-    # each holdout draw is exchangeable with 1896+1 samples -> P(new max)
-    # = 1/1897 per cell; union over 24 cells = 24/1897.
-    per_family_homogeneous = cells / (n_total + 1)
+    # Under the STRONGER hypothetical assumption of full cross-cell
+    # exchangeability (all cells one population), the 1896 calibration and
+    # 24 holdout draws are 1920 fully exchangeable draws; "any holdout
+    # exceeds the calibration maximum" is exactly "the overall maximum of
+    # the 1920 draws lies among the 24 holdout draws":
+    #   P = 24/1920 = 1/80 per family; Bonferroni over 4 families = 4/80.
+    per_family_homogeneous = cells / (n_total + cells)
     familywise_homogeneous = families * per_family_homogeneous
     # cases per cell required for a distribution-free 95% familywise bound:
     # familywise failure P <= families*cells/(r+1) must be <= 5%.
@@ -835,33 +844,41 @@ def statistical_contract_audit(evidence):
             ),
         },
         "correct_bounds": {
+            "frozen_actual_assumption": "within-cell exchangeability only",
             "per_family_distribution_free_union": per_family_distribution_free,
             "familywise_distribution_free": familywise_distribution_free,
             "distribution_free_bound_vacuous": familywise_distribution_free >= 1.0,
-            "per_family_full_cross_cell_homogeneity": per_family_homogeneous,
-            "familywise_full_cross_cell_homogeneity": familywise_homogeneous,
-            "homogeneity_claim_marginally_invalid":
-                familywise_homogeneous > 0.05,
+            "hypothetical_stronger_assumption":
+                "full cross-cell exchangeability (all 24 cells one population)",
+            "per_family_full_exchangeability_exact": per_family_homogeneous,
+            "familywise_full_exchangeability_bonferroni": familywise_homogeneous,
+            "full_exchangeability_reproduces_frozen_claim":
+                abs(familywise_homogeneous - 0.05) < 1e-12,
             "cases_per_cell_needed_distribution_free_95": need,
         },
         "reconciliation": (
             "One observed exceedance is NOT inconsistent with a correct "
             ">=95% prospective statement (a 5% event occurred), and the "
-            "terminal failure does not invalidate exchangeability. But the "
-            "frozen proof did not establish the >=95% claim it asserted: "
-            "it bounded only the max-cell record path (1/80) and ignored "
-            "the other 23 cells' record paths, each <=1/80, whose union is "
-            "24/80=30% per family distribution-free (96/80 familywise, "
-            "vacuous). The observed failure arrived exactly through the "
-            "unbounded path: the failing case's own cell maximum was "
-            "11.0078 (14th of 24), far below the global limit 16.6406. "
-            "Even under full cross-cell homogeneity the familywise bound "
-            "is 96/1897 = 5.06% > 5%. Reliance on an observed calibration "
-            "maximum is operationally brittle for this heavy, "
-            "lattice-discretized distribution even where the coverage "
-            "statement is mathematically correct; a different tolerance "
-            "construction would change the claim's shape, not remove the "
-            "tail risk."
+            "terminal failure does not invalidate exchangeability. But "
+            "the frozen proof established its >=95% claim only under the "
+            "STRONGER full-cross-cell-exchangeability assumption, while "
+            "the methodology actually assumes only WITHIN-cell "
+            "exchangeability. Under the actual assumption the correct "
+            "distribution-free bound is the union over all 24 cells' "
+            "record paths: 24/80 = 30% per family (96/80 familywise, "
+            "vacuous; ~1919 cases/cell would be needed for <=5%). Under "
+            "the stronger hypothetical assumption the exact per-family "
+            "probability is 24/1920 = 1/80 and the four-family Bonferroni "
+            "bound is exactly 4/80 = 5%, reproducing the intended "
+            "statement. The observed failure arrived exactly through the "
+            "path the actual assumption leaves unbounded: a cross-cell "
+            "draw in a non-max cell (own-cell max 11.0078, 14th of 24, "
+            "far below the global limit 16.6406). Reliance on an "
+            "observed calibration maximum is operationally brittle for "
+            "this heavy, lattice-discretized distribution even where a "
+            "coverage statement is mathematically correct; a different "
+            "tolerance construction would change the claim's shape, not "
+            "remove the tail risk."
         ),
     }
 
@@ -925,19 +942,29 @@ def p99_reducer_audit(evidence, reconstruction):
         "independent_information": (
             "Materially none at case level: spearman 0.98-0.99 with the "
             "other core families, and the case that failed p99 also "
-            "carries the holdout maxima of max-abs, rms, and E_D. Under "
-            "the frozen 4-position capture design the same case would "
-            "ALSO have failed max-absolute-difference had decision 2 "
-            f"({dec2_max} > {limit_maxabs}) been a capture position; the "
-            "single-family failure is partly a position-subsampling "
-            "artifact. p99's distinct failure threshold is an "
-            "order-statistic knife edge, not independent evidence."
+            "carries the holdout maxima of max-abs, rms, and E_D. p99's "
+            "distinct failure threshold is an order-statistic knife "
+            "edge, not independent evidence."
         ),
         "position_subsampling_note": {
             "frozen_positions": reconstruction["envelope_positions"],
             "decision2_max_abs": dec2_max,
             "max_abs_limit": limit_maxabs,
-            "decision2_would_exceed_max_abs_limit": dec2_max > limit_maxabs,
+            "decision2_exceeds_current_max_abs_limit":
+                dec2_max > limit_maxabs,
+            "statement": (
+                "Position subsampling omitted a larger max-abs error "
+                f"({dec2_max}, decision 2) than any retained "
+                "capture-position max-abs observation for this case "
+                f"(envelope {reconstruction['max_abs_envelope_reproduced']} "
+                f"vs frozen limit {limit_maxabs}); capture-position "
+                "selection materially affects which core family becomes "
+                "binding. NO pass/fail claim is made for all-position or "
+                "alternate-position designs: such a methodology would "
+                "derive its calibration thresholds from all positions and "
+                "could produce different limits; it requires prospective "
+                "methodology review and fresh calibration."
+            ),
         },
         "diagnostic_conclusion": (
             "REQUIRE_DOCTRINE_REVIEW (diagnostic only): p99 as reduced "
@@ -961,9 +988,12 @@ def successor_directions(evidence, contract_audit):
                 "name": "retain v4 design unchanged",
                 "assumptions": "occasional valid campaign failures at the "
                                "real familywise rate are acceptable",
-                "supported_claim": "as frozen: not actually >=95% "
-                                   "(correct distribution-free bound is "
-                                   "vacuous; homogeneous bound 5.06%)",
+                "supported_claim": "as frozen: the >=95% statement holds "
+                                   "only under full cross-cell "
+                                   "exchangeability; under the actual "
+                                   "within-cell assumption the "
+                                   "distribution-free bound is vacuous "
+                                   "(96/80)",
                 "conservatism": "n/a (miscalibrated, not conservative)",
                 "sample_burden": "unchanged (79/cell)",
                 "avoids_tuning_to_h95": "yes",
@@ -1088,8 +1118,11 @@ def classify(reconstruction, split_audit, contract_audit, reducer_audit):
             "four near-collinear core families) COMBINED WITH two "
             "design-level contributors that made the tail terminal: the "
             "p99 order-statistic knife edge and the frozen prediction "
-            "theorem's unbounded non-max-cell path. No execution anomaly; "
-            "no prospective applicability split."
+            "theorem's assumption gap (its 4/80 = 5% statement is exact "
+            "only under full cross-cell exchangeability, while the "
+            "methodology assumes only within-cell exchangeability, "
+            "leaving the observed non-max-cell failure path unbounded). "
+            "No execution anomaly; no prospective applicability split."
         ),
     }
 
