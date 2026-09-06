@@ -1,0 +1,31 @@
+{
+  "schema": "inferswarm.issue97b.v4-holdout-unseal-record/1",
+  "contract_id": "inferswarm.gemma4-prediction-aligned-qualification/1",
+  "unseal_authorized_by": "maintainer Phase B authorization (issue #97, 2026-09-06)",
+  "authority_record": "docs/qualification/gemma4-12b-it-v4-campaign-97/PHASE-B-EXECUTION-AUTHORITY.json",
+  "authority_head": "77064804d38122efeb2e05a98156a8df2dabdda3",
+  "phase_a_producer": "57dfcb7289efac8f66de5b3abbe8de04f2580f75",
+  "phase_b_producer": "c60a4b7080913eba90585de8e8602460a7f5b1a7",
+  "decrypt": {
+    "command": "openssl cms -decrypt -inform DER -in sealed/holdout.cms -inkey <custodian key> -recip sealed/recipient-certificate.pem",
+    "ciphertext_sha256": "17757acb091fd5b3b1a4ef7b8fcd392b448e91eee39c04003afd9a4ccac4a844",
+    "certificate_sha256": "99bb4eb992d3a38eb54f6821c4477edc7ad30df977333d39a5b120dac8e57430",
+    "custodian": "orchestrator-local (~/.local/share/inferswarm/issue95-holdout-v4)",
+    "performed_at": "2026-09-06"
+  },
+  "commitment_verification": {
+    "schema": "inferswarm.issue95.v4-holdout/1",
+    "case_count": 24,
+    "result": "ALL_PASS",
+    "checks": [
+      "plaintext schema + contract_id",
+      "secret_seed_sha256 (raw seed string) == commitment",
+      "generator identity + generator_sha256 == current scripts/generate_issue95_corpora.py bytes",
+      "tokenizer_json_sha256 == commitment",
+      "per-case recomputed prompt_sha256/token_ids_sha256/case_sha256 (canonical JSON) all match",
+      "case_id set == exactly the 24 committed cells; one case per 6x4 cell grid"
+    ]
+  },
+  "plaintext_retention": "PROHIBITED_IN_REPOSITORY — plaintext and derived execution corpus stay only in 0700 orchestrator staging and node-local run dirs; never committed",
+  "post_unseal_state": "h95 CONSUMED (single use); no reseal, no replacement holdout, no rerun"
+}

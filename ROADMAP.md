@@ -399,11 +399,15 @@ holdout rule. It binds ADR 0011's four acceptance-bearing scalar families
 (three FP32 consumer-logit metrics plus `E_D`) separately from twelve retained
 telemetry identities.
 
-Issue #97 is the authorized physical calibration campaign. It must first bind
-an applicability census to the frozen subject, then retain reference and
-teacher-forced candidate calibration evidence. The h95 holdout remains sealed:
-its unseal and execution require a later explicit maintainer authorization
-following the retained `V4_HOLDOUT_UNSEAL_READY` checkpoint.
+Issue #97 executed to a terminal verdict. Physical calibration (Phase A,
+producer `57dfcb72…`) passed completely; the h95 holdout was unsealed once
+under explicit maintainer Phase B authorization (producer `c60a4b70…`) and
+produced the terminal result `V4_HOLDOUT_CORE_FAIL`: the frozen
+`fp32-consumer-logits:p99-absolute-error` limit was exceeded by a single
+holdout case (16.765625 vs 16.640625, +0.75%) with the semantic layer passing
+192/192 and zero integrity failures. Historical #88 `V3_HOLDOUT_FAIL` remains
+immutable and is not reinterpreted by this result. Full record:
+`docs/qualification/gemma4-12b-it-v4-campaign-97/b/`.
 
 Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) is complete. It
 established the durable FreeToken `inferswarm-research` implementation line
