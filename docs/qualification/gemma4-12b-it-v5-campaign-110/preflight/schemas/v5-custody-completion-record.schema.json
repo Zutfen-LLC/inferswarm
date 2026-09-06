@@ -1,0 +1,74 @@
+{
+  "$id": "https://inferswarm.dev/schema/issue110/v5-custody-completion-record-1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "inferswarm.issue110.v5-custody-completion-record/1"},
+    "contract_id": {"const": "inferswarm.gemma4-mixture-population-qualification/1"},
+    "record_type": {"const": "PRE_EXECUTION_CUSTODY_HANDOFF_TOOLING_REPAIR"},
+    "accepted_issue109_merge": {"const": "bc6f0ec657d025702d5928771bf8f51aa563a8be"},
+    "accepted_baseline_custody_record_sha256": {"const": "6adaa4e5743cdee65f659806d81039dca499c7997cf0240ce92d48cfc2a23b46"},
+    "accepted_holdout_commitment_sha256": {"const": "b0dcff2a241b20cbd24f1b54f30e77a33512d8ceb12f79afc6c1761b2c994fd2"},
+    "accepted_identities": {
+      "additionalProperties": false,
+      "properties": {
+        "holdout_ciphertext_sha256": {"const": "93f75078875af163334fdfc7b74b3347f86b6948416b7dd8e603bd52863221b9"},
+        "recipient_certificate_sha256": {"const": "072a211370b7ddbd352b8d8f9fccb60bc01b6835567b34d08cbbbac147e284eb"},
+        "recipient_public_key_der_sha256": {"const": "62ded0e04b2e800c85bae9b5c499faa29f8fb21956c3f40dee23efdcf5d5f9e6"}
+      },
+      "required": ["holdout_ciphertext_sha256", "recipient_certificate_sha256", "recipient_public_key_der_sha256"],
+      "type": "object"
+    },
+    "custodians": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "custodian_id": {"type": "string", "minLength": 1},
+          "host": {"type": "string", "minLength": 1},
+          "location": {"type": "string", "minLength": 1},
+          "ownership": {"const": "zutfen"},
+          "directory_mode": {"const": "0700"},
+          "file_mode": {"const": "0600"},
+          "backing_storage": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {"const": "local"},
+              "filesystem": {"type": "string", "minLength": 1},
+              "device": {"type": "string", "pattern": "^/dev/[a-zA-Z0-9]+$"}
+            },
+            "required": ["kind", "filesystem", "device"],
+            "type": "object"
+          },
+          "private_key_sha256": {"const": "6e472dc13c550bbb59542179a04eab5988a60bb4a8746210049215c23a4a87e8"},
+          "normalized_secret_seed_sha256": {"const": "c4c3d3821f6830933ff748f999a8b47bb113b820c8f31ad172c99f5d53eb1854"},
+          "public_key_der_sha256": {"const": "62ded0e04b2e800c85bae9b5c499faa29f8fb21956c3f40dee23efdcf5d5f9e6"},
+          "verified_date": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"}
+        },
+        "required": ["custodian_id", "host", "location", "ownership", "directory_mode", "file_mode", "backing_storage", "private_key_sha256", "normalized_secret_seed_sha256", "public_key_der_sha256", "verified_date"],
+        "type": "object"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "type": "array"
+    },
+    "additional_observed_copy": {
+      "additionalProperties": false,
+      "properties": {
+        "host": {"const": "inferswarm00"},
+        "location": {"const": "/home/zutfen/.local/share/inferswarm/issue109-holdout-v5-corrected-final"},
+        "relied_upon_for_proof": {"const": false},
+        "note": {"type": "string", "minLength": 1}
+      },
+      "required": ["host", "location", "relied_upon_for_proof", "note"],
+      "type": "object"
+    },
+    "decrypt_performed": {"const": false},
+    "private_material_in_repository": {"const": false},
+    "verification_date": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "verification_method": {"type": "string", "minLength": 1},
+    "verification_result": {"const": "SECOND_INDEPENDENT_CUSTODY_VERIFIED"}
+  },
+  "required": ["schema", "contract_id", "record_type", "accepted_issue109_merge", "accepted_baseline_custody_record_sha256", "accepted_holdout_commitment_sha256", "accepted_identities", "custodians", "additional_observed_copy", "decrypt_performed", "private_material_in_repository", "verification_date", "verification_method", "verification_result"],
+  "title": "InferSwarm issue #110 v5 custody completion record (non-secret metadata only)",
+  "type": "object"
+}
