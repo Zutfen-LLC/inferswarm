@@ -39,7 +39,8 @@ from issue103_planner import (
     account_transfer_events,
     purity_audit,
 )
-from issue99_artifact_core import self_digest, validate_self_identity
+from issue74_methodology import canonical_json_bytes
+from issue99_artifact_core import digest_of_bytes, validate_self_identity
 
 QUALIFICATION_POLICY_STRICT = "REQUIRE_ACCEPTED_EXECUTION_QUALIFICATION"
 
@@ -51,6 +52,7 @@ REASON_NO_ACCEPTED_EVIDENCE = "NO_ACCEPTED_QUALIFICATION_EVIDENCE"
 REASON_SUBJECT_MISMATCH = "QUALIFICATION_SUBJECT_MISMATCH"
 REASON_EVIDENCE_NOT_TERMINAL_PASS = "QUALIFICATION_EVIDENCE_NOT_TERMINAL_PASS"
 REASON_MALFORMED_RECORD = "MALFORMED_QUALIFICATION_RECORD"
+REASON_RECORD_NOT_BOUND_TO_ACCEPTED_AUTHORITY = "RECORD_NOT_BOUND_TO_ACCEPTED_AUTHORITY"
 
 GATE_TECHNICAL = "technical_feasibility"
 GATE_HARD_POLICY = "hard_policy_eligible"
@@ -67,20 +69,61 @@ class PlannerError(RuntimeError):
 # ---------------------------------------------------------------------------
 
 
-def _validate_qualification_record(record: Mapping[str, Any]) -> dict[str, Any]:
+def _validate_qualification_record(record: Mapping[str, Any], *,
+                                   accepted_adjudication_sha256: str) -> tuple[dict[str, Any] | None, str | None]:
+    """Validate one record against its own subject and the accepted authority.
+
+    Returns ``(record, None)`` when the record is usable evidence, else
+    ``(None, reason)``. A record is trusted only when it is self-consistent
+    (its subject digest recomputes from its subject) AND its terminal
+    adjudication identity equals the policy's accepted identity.
+    """
     for field in ("schema", "qualification_record_id", "authority",
                   "qualification_subject", "qualification_subject_digest",
                   "record_digest"):
         if field not in record:
-            raise PlannerError(f"qualification record missing {field}")
+            return None, REASON_MALFORMED_RECORD
     try:
         validate_self_identity(dict(record), identity_field="record_digest")
-    except Exception as error:
-        raise PlannerError(f"qualification record self-identity mismatch: {error}") from error
+    except Exception:
+        return None, REASON_MALFORMED_RECORD
     authority = record["authority"]
-    if "terminal_disposition" not in authority:
-        raise PlannerError("qualification record authority has no terminal disposition")
-    return dict(record)
+    if not isinstance(authority, Mapping) or "terminal_disposition" not in authority:
+        return None, REASON_MALFORMED_RECORD
+    subject = record["qualification_subject"]
+    if not isinstance(subject, Mapping):
+        return None, REASON_MALFORMED_RECORD
+    try:
+        recomputed = digest_of_bytes(canonical_json_bytes(subject))
+    except Exception:
+        return None, REASON_MALFORMED_RECORD
+    if recomputed != record["qualification_subject_digest"]:
+        return None, REASON_MALFORMED_RECORD
+    if authority.get("terminal_adjudication_sha256") != accepted_adjudication_sha256:
+        return None, REASON_RECORD_NOT_BOUND_TO_ACCEPTED_AUTHORITY
+    return dict(record), None
+
+
+def _candidate_subject_digest(candidate: Mapping[str, Any]) -> str:
+    """Recompute a candidate's subject digest from its own subject.
+
+    The caller-supplied ``qualification_subject_digest`` is never trusted:
+    the digest used for qualification is always recomputed from the exact
+    subject the candidate carries.
+    """
+    subject = candidate.get("qualification_subject")
+    if not isinstance(subject, Mapping):
+        raise PlannerError(
+            f"candidate {candidate.get('candidate_id')!r} carries no "
+            "qualification subject; applicability cannot be derived")
+    recomputed = digest_of_bytes(canonical_json_bytes(subject))
+    declared = candidate.get("qualification_subject_digest")
+    if declared != recomputed:
+        raise PlannerError(
+            f"candidate {candidate.get('candidate_id')!r} declared subject "
+            f"digest {declared!r} does not match its own subject "
+            f"({recomputed!r})")
+    return recomputed
 
 
 def evaluate_qualification_applicability(
@@ -90,37 +133,60 @@ def evaluate_qualification_applicability(
 ) -> dict[str, Any]:
     """Mechanically derive whether a candidate may inherit accepted evidence.
 
-    A candidate is applicable when its declared qualification-subject digest
-    equals the subject digest of an accepted terminal-pass record. Nothing
-    about the candidate's content is interpreted here: the digest comparison
-    is the whole gate, so any material change of subject (geometry, device,
+    A candidate is applicable when its qualification-subject digest — always
+    recomputed from the candidate's own subject — equals the subject digest
+    of an accepted terminal-pass record whose terminal adjudication identity
+    is bound to the policy's accepted authority. Nothing about the
+    candidate's content is interpreted here: the digest comparison is the
+    whole gate, so any material change of subject (geometry, device,
     backend, weights, representation) breaks applicability mechanically.
     """
     if policy["policy"] != QUALIFICATION_POLICY_STRICT:
         raise PlannerError(f"unsupported qualification policy {policy['policy']!r}")
+    accepted_authority = policy.get("accepted_adjudication_sha256")
+    if not (isinstance(accepted_authority, str) and accepted_authority.strip()):
+        raise PlannerError(
+            "qualification policy carries no accepted adjudication identity")
+    candidate_digest = _candidate_subject_digest(candidate)
     valid_records = []
+    malformed_record_ids = []
+    unbound_record_ids = []
     for record in qualification_records:
-        try:
-            valid_records.append(_validate_qualification_record(record))
-        except PlannerError:
+        validated, reason = _validate_qualification_record(
+            record, accepted_adjudication_sha256=accepted_authority)
+        if validated is None:
+            if reason == REASON_RECORD_NOT_BOUND_TO_ACCEPTED_AUTHORITY:
+                unbound_record_ids.append(
+                    str(record.get("qualification_record_id", "<unidentified>")))
+            else:
+                malformed_record_ids.append(
+                    str(record.get("qualification_record_id", "<unidentified>")))
             continue
+        valid_records.append(validated)
     accepted = set(policy.get("accepted_dispositions", ()))
     passing = [record for record in valid_records
                if record["authority"]["terminal_disposition"] in accepted]
     if not passing:
+        reason = (REASON_EVIDENCE_NOT_TERMINAL_PASS if valid_records
+                  else REASON_NO_ACCEPTED_EVIDENCE)
         return {"status": QUALIFICATION_NOT_APPLICABLE,
-                "reason": REASON_NO_ACCEPTED_EVIDENCE, "matched_record_ids": []}
+                "reason": reason, "matched_record_ids": [],
+                "malformed_record_ids": sorted(malformed_record_ids),
+                "unbound_record_ids": sorted(unbound_record_ids)}
     matched = [record for record in passing
-               if record["qualification_subject_digest"]
-               == candidate["qualification_subject_digest"]]
+               if record["qualification_subject_digest"] == candidate_digest]
     if not matched:
         return {"status": QUALIFICATION_NOT_APPLICABLE,
-                "reason": REASON_SUBJECT_MISMATCH, "matched_record_ids": []}
+                "reason": REASON_SUBJECT_MISMATCH, "matched_record_ids": [],
+                "malformed_record_ids": sorted(malformed_record_ids),
+                "unbound_record_ids": sorted(unbound_record_ids)}
     return {
         "status": QUALIFICATION_APPLICABLE,
         "reason": REASON_MATCHED_ACCEPTED_RECORD,
         "matched_record_ids": sorted(
             record["qualification_record_id"] for record in matched),
+        "malformed_record_ids": sorted(malformed_record_ids),
+        "unbound_record_ids": sorted(unbound_record_ids),
     }
 
 
@@ -401,6 +467,70 @@ def planner_purity_audit(path, forbidden_tokens) -> dict[str, Any]:
 # Result fencing (session / epoch / realization / plan / operation / position)
 # ---------------------------------------------------------------------------
 
+#: Derived counter names for invalid results found in the committed ledger.
+FENCE_DERIVED_COUNTERS = (
+    "stale_result_committed",
+    "wrong_session_result_committed",
+    "wrong_epoch_result_committed",
+    "wrong_realization_result_committed",
+    "wrong_plan_result_committed",
+    "wrong_contract_result_committed",
+    "wrong_position_result_committed",
+    "malformed_position_result_committed",
+)
+
+
+def derive_fence_counters(committed_results: Sequence[Mapping[str, Any]], *,
+                          authority: Mapping[str, Any]) -> dict[str, Any]:
+    """Derive the invalid-commit counters from the committed-result ledger.
+
+    Every admitted result is retained with its full identity. The counters
+    are computed by re-inspecting that ledger against the fencing authority
+    and the per-operation position sequence — they are never constants. If
+    an invalid result were ever admitted (or the ledger were poisoned), the
+    corresponding counter would become nonzero here.
+    """
+    counters = {name: 0 for name in FENCE_DERIVED_COUNTERS}
+    pointers: dict[str, int] = {}
+    committed_by_operation: dict[str, int] = {}
+    for entry in committed_results:
+        operation = entry.get("operation")
+        invalid: list[str] = []
+        if not isinstance(operation, str) or not operation:
+            counters["malformed_position_result_committed"] += 1
+            continue
+        if entry.get("session_id") != authority.get("session_id"):
+            invalid.append("wrong_session_result_committed")
+        if entry.get("epoch") != authority.get("epoch"):
+            invalid.append("wrong_epoch_result_committed")
+        if entry.get("realization_id") != authority.get("realization_id"):
+            invalid.append("wrong_realization_result_committed")
+        if entry.get("plan_digest") != authority.get("plan_digest"):
+            invalid.append("wrong_plan_result_committed")
+        if entry.get("contract_id") != authority.get("contract_id"):
+            invalid.append("wrong_contract_result_committed")
+        position = entry.get("position")
+        if not isinstance(position, int) or isinstance(position, bool):
+            invalid.append("malformed_position_result_committed")
+        else:
+            expected = pointers.get(operation, 0)
+            if position < expected:
+                invalid.append("stale_result_committed")
+            elif position != expected:
+                invalid.append("wrong_position_result_committed")
+        if invalid:
+            for name in invalid:
+                counters[name] += 1
+        else:
+            pointers[operation] = position + 1
+            committed_by_operation[operation] = pointers[operation]
+    return {
+        "committed_by_operation": {
+            operation: committed_by_operation.get(operation, 0)
+            for operation in sorted(committed_by_operation)},
+        **counters,
+    }
+
 
 class ResultFence:
     """Fail-closed result attribution for the ordinary serving path.
@@ -408,7 +538,9 @@ class ResultFence:
     Every committed result must carry the exact session, epoch, realization,
     plan digest, operation, and the next expected commit position for that
     operation. Any mismatch is refused and counted; nothing stale can ever be
-    attributed to the current authority.
+    attributed to the current authority. Every attempted result — committed
+    or rejected — is retained, and the zero-invariant counters are derived
+    from the committed-result ledger, never asserted.
     """
 
     def __init__(self, *, contract_id: str, session_id: str, epoch: int,
@@ -421,8 +553,9 @@ class ResultFence:
             "realization_id": realization_id,
             "plan_digest": plan_digest,
         }
-        self._operations = {operation: {"next_position": 0, "committed": 0}
+        self._operations = {operation: {"next_position": 0}
                             for operation in operations}
+        self.committed_results: list[dict[str, Any]] = []
         self.rejections: list[dict[str, Any]] = []
 
     def commit(self, result: Mapping[str, Any]) -> dict[str, Any]:
@@ -449,32 +582,46 @@ class ResultFence:
             return self._reject(result, "MALFORMED_POSITION")
         if position != state["next_position"]:
             return self._reject(result, "WRONG_POSITION")
+        self.committed_results.append({
+            "contract_id": result.get("contract_id"),
+            "session_id": result.get("session_id"),
+            "epoch": result.get("epoch"),
+            "realization_id": result.get("realization_id"),
+            "plan_digest": result.get("plan_digest"),
+            "operation": operation,
+            "position": position,
+            "request_identity": result.get("request_identity"),
+            "expected_position": state["next_position"],
+        })
         state["next_position"] += 1
-        state["committed"] += 1
         return {"committed": True, "operation": operation, "position": position,
                 "authority": dict(expected)}
 
     def _reject(self, result: Mapping[str, Any], reason: str) -> dict[str, Any]:
         self.rejections.append({
             "reason": reason,
-            "operation": result.get("operation"),
-            "position": result.get("position"),
+            "result": {
+                "contract_id": result.get("contract_id"),
+                "session_id": result.get("session_id"),
+                "epoch": result.get("epoch"),
+                "realization_id": result.get("realization_id"),
+                "plan_digest": result.get("plan_digest"),
+                "operation": result.get("operation"),
+                "position": result.get("position"),
+                "request_identity": result.get("request_identity"),
+            },
         })
         raise PlannerError(f"{reason}: fenced result rejected")
 
     def summary(self) -> dict[str, Any]:
-        """Zero-invariant counters plus the non-vacuity evidence."""
+        """Zero-invariant counters derived from the retained result records."""
+        derived = derive_fence_counters(self.committed_results,
+                                        authority=self.authority)
         return {
             "authority": dict(self.authority),
-            "committed_by_operation": {
-                operation: state["committed"]
-                for operation, state in sorted(self._operations.items())
-            },
-            "stale_result_committed": 0,
-            "wrong_session_result_committed": 0,
-            "wrong_plan_result_committed": 0,
-            "wrong_epoch_result_committed": 0,
-            "wrong_position_result_committed": 0,
+            "attempted_result_count":
+                len(self.committed_results) + len(self.rejections),
+            **derived,
             "fence_rejections": len(self.rejections),
             "rejection_reasons": sorted({entry["reason"] for entry in self.rejections}),
         }

@@ -9,32 +9,43 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 import issue117_gemma_strategy as strategy  # noqa: E402
-from issue99_artifact_core import derive_participant_requirements  # noqa: E402
+from issue74_methodology import canonical_json_bytes  # noqa: E402
+from issue99_artifact_core import derive_participant_requirements, digest_of_bytes  # noqa: E402
 
 
-def build_strategy(temp: Path):
+def build_strategy(temp: Path, *, seed: str = "issue117-synthetic-gemma-v1"):
     repo = temp / "checkpoint"
-    config, objects = strategy.build_synthetic_gemma_repository(repo)
+    config, objects = strategy.build_synthetic_gemma_repository(repo, seed=seed)
     catalog = strategy.catalog_from_repository(repo, config=config)
     source_bytes = {name: data for name, data in objects.items()}
 
     def provider(name: str) -> bytes:
         return source_bytes[name]
 
-    return strategy.GemmaDenseStrategy(catalog=catalog, source_bytes=provider), catalog, config
+    manifest = strategy.build_source_manifest(catalog, source_bytes=provider)
+    subject = strategy.subject_from_catalog(
+        catalog, execution=strategy.SYNTHETIC_SUBJECT_EXECUTION,
+        backend=strategy.SYNTHETIC_SUBJECT_BACKEND)
+    instance = strategy.GemmaDenseStrategy(catalog=catalog, subject=subject,
+                                           source_manifest=manifest)
+    return instance, catalog, config, manifest, subject
 
 
 def capacity_model_for(catalog):
     """Synthetic capacity model with the real topology's feasibility shape.
 
     Declared per-CU usable weight bytes as a fraction of the synthetic
-    checkpoint: a 16-layer stage fits a 3060-class CU, a 24-layer stage does
-    not, and the whole checkpoint fits only the reference 3090-class CU.
+    checkpoint. The fraction window is derived from the exact
+    participant-requirement accounting: a 16-layer stage with its
+    embedding/shared-head state needs 42.9% of the checkpoint, a 24-layer
+    stage needs 57.1%; 0.50 lies strictly between, so accepted-geometry
+    stages are feasible and 24-layer stages are not. The whole checkpoint
+    fits only the reference CU (1.06).
     """
     total = strategy.checkpoint_weight_bytes(catalog)
     usable = {}
     for cu in strategy.RESOURCE_SNAPSHOT["compute_units"]:
-        fraction = 1.06 if "3090" in cu["product"] else 0.36
+        fraction = 1.06 if "3090" in cu["product"] else 0.50
         usable[cu["cu_id"]] = int(total * fraction)
     return usable
 
@@ -43,7 +54,8 @@ class CatalogTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory(prefix="issue117-strategy-")
-        cls.strategy, cls.catalog, cls.config = build_strategy(Path(cls.temp.name))
+        (cls.strategy, cls.catalog, cls.config,
+         cls.manifest, cls.subject) = build_strategy(Path(cls.temp.name))
 
     def test_catalog_covers_all_weight_state_units(self):
         units = strategy.weight_unit_ids(self.catalog)
@@ -52,6 +64,30 @@ class CatalogTests(unittest.TestCase):
         self.assertIn("state.output_head", units)
         for layer in range(48):
             self.assertIn(f"state.layer.{layer}", units)
+
+    def test_catalog_carries_mechanical_checkpoint_identity(self):
+        digest = self.catalog["checkpoint_sha256"]
+        self.assertTrue(digest.startswith("sha256:"))
+        # the identity binds the checkpoint content, not just the model id:
+        # a materially different checkpoint carries a different identity
+        other_temp = tempfile.TemporaryDirectory(prefix="issue117-strategy-other-")
+        self.addCleanup(other_temp.cleanup)
+        _, other_catalog, _, _, other_subject = build_strategy(
+            Path(other_temp.name), seed="a-materially-different-checkpoint")
+        self.assertNotEqual(digest, other_catalog["checkpoint_sha256"])
+        self.assertNotEqual(self.subject["checkpoint_sha256"],
+                            other_subject["checkpoint_sha256"])
+
+    def test_catalog_records_source_side_bytes_hashed(self):
+        weight = strategy.checkpoint_weight_bytes(self.catalog)
+        self.assertGreater(self.catalog["source_bytes_hashed"], 0)
+        # whole safetensors objects are hashed source-side, including the
+        # safetensors headers, so at least every weight byte was read
+        self.assertGreaterEqual(self.catalog["source_bytes_hashed"], weight)
+        self.assertEqual(
+            self.catalog["source_bytes_hashed"],
+            sum(path.stat().st_size for path in
+                (Path(self.temp.name) / "checkpoint").glob("*.safetensors")))
 
     def test_shard_boundary_crosses_the_accepted_stage_boundary(self):
         tensors = self.catalog["tensors"]
@@ -75,11 +111,45 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual(self.catalog, again)
 
 
+class SourceManifestTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.temp = tempfile.TemporaryDirectory(prefix="issue117-strategy-")
+        (cls.strategy, cls.catalog, _,
+         cls.manifest, _) = build_strategy(Path(cls.temp.name))
+
+    def test_manifest_is_self_consistent_and_bound_to_catalog(self):
+        self.assertEqual(self.manifest["model"], self.catalog["model"])
+        self.assertEqual(self.manifest["checkpoint_sha256"],
+                         self.catalog["checkpoint_sha256"])
+        self.assertEqual(
+            self.manifest["manifest_digest"],
+            strategy.self_digest(self.manifest, identity_field="manifest_digest"))
+
+    def test_manifest_records_source_side_reads(self):
+        self.assertGreater(self.manifest["source_bytes_read"], 0)
+
+    def test_resolve_serves_records_without_byte_access(self):
+        records = self.strategy.resolve("assigned_logical_state", "state.layer.0")
+        self.assertTrue(records)
+        for record in records:
+            self.assertNotIn(b"", record.values())
+            self.assertEqual(record["requirement_class"], "assigned_logical_state")
+
+    def test_resolve_refuses_illegal_combinations(self):
+        # a tied head is declared shared state only; no assigned record exists
+        with self.assertRaises(strategy.StrategyError):
+            self.strategy.resolve("assigned_logical_state", "state.output_head")
+        with self.assertRaises(strategy.StrategyError):
+            self.strategy.resolve("assigned_logical_state", "state.nonexistent")
+
+
 class CandidateEnumerationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory(prefix="issue117-strategy-")
-        cls.strategy, cls.catalog, _ = build_strategy(Path(cls.temp.name))
+        (cls.strategy, cls.catalog, _,
+         _, _) = build_strategy(Path(cls.temp.name))
         cls.capacity = capacity_model_for(cls.catalog)
         cls.candidates = cls.strategy.legal_candidates(capacity_model=cls.capacity)
 
@@ -109,14 +179,16 @@ class CandidateEnumerationTests(unittest.TestCase):
 
     def test_missing_v5_geometry_fails_closed(self):
         trimmed = strategy.GemmaDenseStrategy(
-            catalog=self.catalog,
+            catalog=self.catalog, subject=self.strategy.subject,
+            source_manifest=self.strategy.source_manifest,
             snapshot={**strategy.RESOURCE_SNAPSHOT,
                       "chain_order": strategy.RESOURCE_SNAPSHOT["chain_order"][:3]})
         candidates = trimmed.legal_candidates(capacity_model=self.capacity)
         # chain of three 3060 CUs still produces the accepted geometry
         self.strategy.accepted_v5_candidate(candidates)
         two_node = strategy.GemmaDenseStrategy(
-            catalog=self.catalog,
+            catalog=self.catalog, subject=self.strategy.subject,
+            source_manifest=self.strategy.source_manifest,
             snapshot={**strategy.RESOURCE_SNAPSHOT,
                       "chain_order": ["inferswarm01/gpu-0", "inferswarm01/gpu-1"]})
         with self.assertRaisesRegex(strategy.StrategyError, "missing"):
@@ -128,12 +200,15 @@ class CandidateEnumerationTests(unittest.TestCase):
         again = self.strategy.legal_candidates(capacity_model=self.capacity)
         self.assertEqual(ids, [c["candidate_id"] for c in again])
 
-    def test_qualification_subject_binds_checkpoint_backend_and_geometry(self):
+    def test_qualification_subject_binds_catalog_backend_and_geometry(self):
         v5 = self.strategy.accepted_v5_candidate(self.candidates)
         subject = v5["qualification_subject"]
+        # the subject's checkpoint identity is the CATALOG's mechanical
+        # identity, never an externally supplied constant
         self.assertEqual(subject["checkpoint_sha256"],
-                         strategy.MODEL_SUBJECT["checkpoint_sha256"])
-        self.assertEqual(subject["backend"]["triton"], "3.6.0")
+                         self.catalog["checkpoint_sha256"])
+        self.assertEqual(subject["backend"]["triton"],
+                         strategy.SYNTHETIC_SUBJECT_BACKEND["triton"])
         self.assertEqual(subject["stage_structure"][0]["layer_end"], 16)
 
     def test_any_geometry_change_changes_the_subject_digest(self):
@@ -144,15 +219,93 @@ class CandidateEnumerationTests(unittest.TestCase):
         mutated_subject = self.strategy.qualification_subject(mutated)
         self.assertNotEqual(
             v5["qualification_subject_digest"],
-            strategy.digest_of_bytes(
-                __import__("issue74_methodology").canonical_json_bytes(mutated_subject)))
+            digest_of_bytes(canonical_json_bytes(mutated_subject)))
+
+
+class SubjectBindingTests(unittest.TestCase):
+    """P0-2: the qualification subject is inseparable from the catalog."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.temp = tempfile.TemporaryDirectory(prefix="issue117-strategy-")
+        (cls.strategy, cls.catalog, _,
+         cls.manifest, cls.subject) = build_strategy(Path(cls.temp.name))
+
+    def test_subject_from_catalog_is_catalog_derived(self):
+        self.assertEqual(self.subject["model_id"], self.catalog["model"]["model_id"])
+        self.assertEqual(self.subject["revision"], self.catalog["model"]["revision"])
+        self.assertEqual(self.subject["checkpoint_sha256"],
+                         self.catalog["checkpoint_sha256"])
+        self.assertNotEqual(self.subject["checkpoint_sha256"],
+                            strategy.MODEL_SUBJECT["checkpoint_sha256"])
+
+    def test_strategy_refuses_foreign_checkpoint_subject(self):
+        # the accepted real Gemma subject cannot qualify a synthetic catalog
+        with self.assertRaisesRegex(strategy.StrategyError, "catalog identity"):
+            strategy.GemmaDenseStrategy(
+                catalog=self.catalog, subject=strategy.MODEL_SUBJECT,
+                source_manifest=self.manifest)
+
+    def test_strategy_refuses_tampered_checkpoint_identity(self):
+        tampered = dict(self.subject)
+        tampered["checkpoint_sha256"] = "sha256:" + "f" * 64
+        with self.assertRaisesRegex(strategy.StrategyError, "catalog identity"):
+            strategy.GemmaDenseStrategy(catalog=self.catalog, subject=tampered,
+                                        source_manifest=self.manifest)
+
+    def test_strategy_refuses_tampered_revision(self):
+        tampered = dict(self.subject)
+        tampered["revision"] = "some-other-revision"
+        with self.assertRaisesRegex(strategy.StrategyError, "catalog identity"):
+            strategy.GemmaDenseStrategy(catalog=self.catalog, subject=tampered,
+                                        source_manifest=self.manifest)
+
+    def test_strategy_refuses_tampered_backend(self):
+        with self.assertRaisesRegex(strategy.StrategyError, "backend field"):
+            strategy.subject_from_catalog(
+                self.catalog, execution="e", backend={})
+        tampered = dict(self.subject)
+        tampered["backend"] = {**self.subject["backend"], "triton": ""}
+        with self.assertRaisesRegex(strategy.StrategyError, "backend field"):
+            strategy.GemmaDenseStrategy(catalog=self.catalog, subject=tampered,
+                                        source_manifest=self.manifest)
+
+    def test_strategy_refuses_missing_subject_or_manifest(self):
+        with self.assertRaises(strategy.StrategyError):
+            strategy.GemmaDenseStrategy(catalog=self.catalog, subject=None,
+                                        source_manifest=self.manifest)
+        with self.assertRaisesRegex(strategy.StrategyError, "manifest"):
+            strategy.GemmaDenseStrategy(catalog=self.catalog, subject=self.subject,
+                                        source_manifest=None)
+
+    def test_plan_refuses_foreign_candidate_subject(self):
+        v5 = self.strategy.accepted_v5_candidate(
+            self.strategy.legal_candidates())
+        foreign = json.loads(json.dumps(v5))
+        foreign["qualification_subject"]["revision"] = "another-revision"
+        foreign["qualification_subject_digest"] = digest_of_bytes(
+            canonical_json_bytes(foreign["qualification_subject"]))
+        with self.assertRaisesRegex(strategy.StrategyError, "foreign subject"):
+            self.strategy.plan(foreign)
+
+    def test_plan_embeds_the_bound_subject(self):
+        v5 = self.strategy.accepted_v5_candidate(
+            self.strategy.legal_candidates())
+        plan = self.strategy.plan(v5)
+        self.assertEqual(plan["qualification_subject"], v5["qualification_subject"])
+        self.assertEqual(plan["qualification_subject_digest"],
+                         v5["qualification_subject_digest"])
+        self.assertEqual(plan["model"]["checkpoint_sha256"],
+                         self.catalog["checkpoint_sha256"])
+        self.assertEqual(plan["model"]["layer_count"], strategy.LAYER_COUNT)
 
 
 class FeasibilityAndPolicyTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory(prefix="issue117-strategy-")
-        cls.strategy, cls.catalog, _ = build_strategy(Path(cls.temp.name))
+        (cls.strategy, cls.catalog, _,
+         _, _) = build_strategy(Path(cls.temp.name))
         cls.capacity = capacity_model_for(cls.catalog)
         cls.candidates = cls.strategy.legal_candidates(capacity_model=cls.capacity)
 
@@ -165,6 +318,37 @@ class FeasibilityAndPolicyTests(unittest.TestCase):
             if has == contains_3090:
                 matches.append(candidate)
         return matches
+
+    def test_stage_bytes_come_from_exact_participant_requirements(self):
+        from issue99_artifact_core import derive_participant_requirements
+        v5 = self.strategy.accepted_v5_candidate(self.candidates)
+        requirements = derive_participant_requirements(
+            self.strategy.plan(v5), self.strategy.resolve)
+        for index, participant in enumerate(requirements["participants"]):
+            exact = sum(record["length"] for record in participant["required_artifacts"]
+                        if record["requirement_class"] != "required_metadata")
+            self.assertEqual(self.strategy.stage_weight_bytes(v5, index), exact)
+
+    def test_feasibility_accounting_includes_embedding_and_shared_head(self):
+        v5 = self.strategy.accepted_v5_candidate(self.candidates)
+        layer_bytes = strategy.checkpoint_weight_bytes(self.catalog) \
+            - strategy.checkpoint_weight_bytes(self.catalog)  # placeholder; computed below
+        tensors = self.catalog["tensors"]
+        per_layer = sum(t["byte_count"] for name, t in tensors.items()
+                        if strategy.layer_of_tensor(name) is not None)
+        embed = tensors["model.embed_tokens.weight"]["byte_count"]
+        norm = tensors["model.norm.weight"]["byte_count"]
+        # stage 1: 16 layers + the embedding state it owns
+        self.assertEqual(self.strategy.stage_weight_bytes(v5, 0),
+                         16 * per_layer // 48 + embed)
+        # stage 3: 16 layers + final norm + the shared tied-head state
+        self.assertEqual(self.strategy.stage_weight_bytes(v5, 2),
+                         16 * per_layer // 48 + norm + embed)
+        # the legacy layers-only accounting would have missed both
+        self.assertGreater(self.strategy.stage_weight_bytes(v5, 0),
+                           per_layer // 3)
+        self.assertGreater(self.strategy.stage_weight_bytes(v5, 2),
+                           per_layer // 3 + norm)
 
     def test_single_3090_reference_candidate_is_technically_feasible(self):
         single = self._find(stage_count=1, contains_3090=True)[0]
@@ -187,6 +371,8 @@ class FeasibilityAndPolicyTests(unittest.TestCase):
         feasibility = self.strategy.feasibility(v5, capacity_model=self.capacity)
         self.assertTrue(feasibility["technical_feasibility"])
         self.assertTrue(feasibility["hard_policy_eligible"])
+        self.assertEqual(feasibility["accounting_source"],
+                         "exact_participant_requirements")
 
     def test_three_stage_candidates_on_reference_path_are_policy_excluded(self):
         for candidate in self._find(stage_count=3, contains_3090=True):
@@ -200,40 +386,72 @@ class FeasibilityAndPolicyTests(unittest.TestCase):
         self.assertFalse(feasibility["technical_feasibility"])
         self.assertFalse(feasibility["technical_feasibility_known"])
 
+    def test_missing_shared_state_would_change_the_feasibility_input(self):
+        # the accounting derives from requirements: a requirement set without
+        # the shared tied-head state yields strictly fewer bytes than the
+        # true plan, so a strategy that dropped shared state would not match
+        # the exact participant requirements (regression guard for P0-3)
+        v5 = self.strategy.accepted_v5_candidate(self.candidates)
+        requirements = self.strategy.stage_requirements(v5)
+        stage_three = requirements["participants"][2]
+        without_shared = sum(
+            record["length"] for record in stage_three["required_artifacts"]
+            if record["requirement_class"] not in ("required_metadata",
+                                                   "declared_shared_state"))
+        self.assertLess(without_shared, self.strategy.stage_weight_bytes(v5, 2))
+        shared_records = [record for record in stage_three["required_artifacts"]
+                          if record["requirement_class"] == "declared_shared_state"]
+        self.assertTrue(shared_records)
+
 
 class QualificationRecordTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory(prefix="issue117-strategy-")
-        cls.strategy, cls.catalog, _ = build_strategy(Path(cls.temp.name))
+        (cls.strategy, cls.catalog, _,
+         _, _) = build_strategy(Path(cls.temp.name))
         cls.capacity = capacity_model_for(cls.catalog)
         cls.candidates = cls.strategy.legal_candidates(capacity_model=cls.capacity)
-        cls.record = cls.strategy.accepted_v5_qualification_record()
+        cls.record = strategy.accepted_v5_qualification_record()
 
-    def test_record_binds_terminal_v5_disposition_and_subject(self):
+    def test_record_binds_terminal_v5_disposition_and_accepted_authority(self):
+        from issue117_applicability import ACCEPTED_TERMINAL_ADJUDICATION_SHA256
         self.assertEqual(
             self.record["authority"]["terminal_disposition"], "V5_QUALIFICATION_PASS")
-        v5 = self.strategy.accepted_v5_candidate(self.candidates)
-        self.assertEqual(self.record["qualification_subject_digest"],
-                         v5["qualification_subject_digest"])
+        self.assertEqual(self.record["authority"]["terminal_adjudication_sha256"],
+                         ACCEPTED_TERMINAL_ADJUDICATION_SHA256)
+        self.assertEqual(self.record["scope"], "accepted-authority")
 
-    def test_non_v5_candidates_do_not_match_the_qualified_subject(self):
-        v5 = self.strategy.accepted_v5_candidate(self.candidates)
+    def test_record_subject_digest_recomputes_from_its_subject(self):
+        self.assertEqual(
+            self.record["qualification_subject_digest"],
+            digest_of_bytes(canonical_json_bytes(
+                self.record["qualification_subject"])))
+
+    def test_no_fixture_candidate_matches_the_accepted_subject(self):
         for candidate in self.candidates:
-            if candidate["candidate_id"] == v5["candidate_id"]:
-                continue
             self.assertNotEqual(self.record["qualification_subject_digest"],
                                 candidate["qualification_subject_digest"])
 
     def test_record_is_deterministic(self):
-        self.assertEqual(self.record, self.strategy.accepted_v5_qualification_record())
+        self.assertEqual(self.record, strategy.accepted_v5_qualification_record())
+
+    def test_tampered_record_digest_is_detectable(self):
+        tampered = json.loads(json.dumps(self.record))
+        tampered["qualification_subject"]["revision"] = "forged"
+        # the record's subject digest no longer recomputes from its subject:
+        # exactly the inconsistency the generic gate rejects
+        self.assertNotEqual(
+            tampered["qualification_subject_digest"],
+            digest_of_bytes(canonical_json_bytes(tampered["qualification_subject"])))
 
 
 class PlanAndRequirementsTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.temp = tempfile.TemporaryDirectory(prefix="issue117-strategy-")
-        cls.strategy, cls.catalog, _ = build_strategy(Path(cls.temp.name))
+        (cls.strategy, cls.catalog, _,
+         _, _) = build_strategy(Path(cls.temp.name))
         cls.capacity = capacity_model_for(cls.catalog)
         cls.candidates = cls.strategy.legal_candidates(capacity_model=cls.capacity)
         cls.v5 = cls.strategy.accepted_v5_candidate(cls.candidates)

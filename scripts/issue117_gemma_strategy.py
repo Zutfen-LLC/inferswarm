@@ -5,9 +5,9 @@ This module is the ONLY place where model-family and accepted-campaign nouns
 for the #117 integration live (the strategy/constrains side of the accepted
 "strategy constrains; planner chooses" rule). It provides:
 
-1. **Frozen subject identity** carried over unchanged from the accepted V5
-   physical subject (model, revision, checkpoint, representation, backend,
-   execution semantics).
+1. **Frozen accepted subject identity** carried over unchanged from the
+   accepted V5 physical subject (model, revision, checkpoint, representation,
+   backend, execution semantics).
 2. **Frozen resource identity** for the Compute Units retained by the
    accepted V5 evidence (inferswarm01 GPU-0/GPU-1, inferswarm03 GPU-0 as the
    serving chain; inferswarm04 GPU-0 as the reference-reserved RTX 3090 path;
@@ -16,16 +16,22 @@ for the #117 integration live (the strategy/constrains side of the accepted
    stage structures over the frozen Compute Unit chain, for declared legal
    stage counts. Capacity data comes from an operator-supplied capacity
    model; this module never invents hardware capacities.
-4. **Checkpoint catalog mapping**: exact tensor -> logical-state -> byte-range
-   artifact records derived from the real checkpoint layout (config.json +
-   safetensors headers), including the tied-output-head shared-state rule.
-5. **Qualification subjects**: the canonical opaque descriptor of what would
-   have to match accepted qualification evidence for a candidate to inherit
-   it; the accepted V5 evidence is bound as a deterministic record.
+4. **Checkpoint catalog mapping** (SOURCE side): exact tensor -> logical
+   state -> byte-range artifact records derived from the real checkpoint
+   layout. Reading and hashing model bytes happens only here and only in
+   ``catalog_from_repository`` / ``build_source_manifest``; the planning
+   waist (``GemmaDenseStrategy``) consumes the resulting small immutable
+   descriptor manifest and has no byte-access path at all.
+5. **Qualification subjects bound to catalog/plan identity**: a candidate's
+   qualification subject is derived mechanically from the exact
+   catalog/plan that would be executed — never from parallel constants.
+   Constructing a strategy whose subject disagrees with its catalog fails
+   closed, so a synthetic fixture catalog cannot produce (or inherit from)
+   the accepted Gemma qualification subject.
 
 The generic planner (``issue117_planner``) must never import this module.
 
-Pure stdlib; reads at most safetensors headers and config JSON — never
+Pure stdlib. Only the SOURCE-side builder touches model bytes; it never
 initializes a model runtime.
 """
 from __future__ import annotations
@@ -41,12 +47,15 @@ from issue99_artifact_core import (
     digest_of_bytes,
     freeze_artifact_record,
     self_digest,
+    validate_artifact_record,
+    validate_self_identity,
 )
 
-STRATEGY_SCHEMA = "inferswarm.issue117.gemma-dense-strategy/1"
-CATALOG_SCHEMA = "inferswarm.issue117.checkpoint-catalog/1"
-PLAN_SCHEMA = "inferswarm.issue117.execution-plan/1"
-QUALIFICATION_RECORD_SCHEMA = "inferswarm.issue117.qualification-record/1"
+STRATEGY_SCHEMA = "inferswarm.issue117.gemma-dense-strategy/2"
+CATALOG_SCHEMA = "inferswarm.issue117.checkpoint-catalog/2"
+PLAN_SCHEMA = "inferswarm.issue117.execution-plan/2"
+QUALIFICATION_RECORD_SCHEMA = "inferswarm.issue117.qualification-record/2"
+SOURCE_MANIFEST_SCHEMA = "inferswarm.issue117.source-artifact-manifest/1"
 
 #: Layer count of the frozen physical subject, exactly as qualified by the
 #: accepted V5 three-stage geometry [0,16) / [16,32) / [32,48).
@@ -59,6 +68,16 @@ ALLOWED_STAGE_COUNTS = (1, 2, 3)
 CONFIG_OBJECT = "config.json"
 TOKENIZER_META_OBJECT = "tokenizer-metadata.json"
 
+#: Backend fields every subject must declare (validated, never optional).
+REQUIRED_SUBJECT_BACKEND_KEYS = (
+    "torch", "cuda_runtime", "nvidia_driver", "triton", "flashinfer")
+
+#: The accepted V5 physical subject identity (retained accepted evidence; the
+#: authority constants the accepted qualification record binds). The
+#: ``checkpoint_sha256`` is the accepted external checkpoint digest from the
+#: retained V5 manifests. This dict is an authority record — it is never
+#: injectable into a strategy whose catalog does not mechanically carry the
+#: same identity.
 MODEL_SUBJECT: dict[str, Any] = {
     "model_id": "google/gemma-4-12B-it",
     "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
@@ -72,6 +91,20 @@ MODEL_SUBJECT: dict[str, Any] = {
         "triton": "3.6.0",
         "flashinfer": "0.6.17",
     },
+}
+
+#: Execution/backend semantics for the synthetic fixture world. They are
+#: fixture constants so the synthetic subject is internally truthful and can
+#: never be confused with the accepted Gemma subject above.
+SYNTHETIC_SUBJECT_EXECUTION = (
+    "fixture analog of the accepted execution semantics; synthetic BF32 "
+    "text execution; fixture attention; one <=64-row replay chunk")
+SYNTHETIC_SUBJECT_BACKEND = {
+    "torch": "fixture-torch-0.0",
+    "cuda_runtime": "fixture-cuda-0.0",
+    "nvidia_driver": "fixture-driver-0.0",
+    "triton": "fixture-triton-0.0",
+    "flashinfer": "fixture-flashinfer-0.0",
 }
 
 #: Compute Unit identities retained by the accepted V5 evidence, in canonical
@@ -124,7 +157,8 @@ class StrategyError(RuntimeError):
 
 
 # ---------------------------------------------------------------------------
-# Checkpoint catalog (source-side knowledge; exact byte layout, no weights)
+# Checkpoint catalog (SOURCE side; the only component that reads model bytes
+# to build descriptors)
 # ---------------------------------------------------------------------------
 
 
@@ -146,21 +180,29 @@ def read_safetensors_header(path: Path) -> tuple[dict[str, Any], int, int]:
 
 
 def digest_file(path: Path) -> str:
+    """SOURCE-side whole-object hashing (reads every byte of ``path``)."""
     return "sha256:" + sha256_file(path)
 
 
 def catalog_from_repository(root: Path, *, config: Mapping[str, Any]) -> dict[str, Any]:
-    """Build the exact checkpoint catalog from a real/synthetic repository.
+    """SOURCE-side exact checkpoint catalog from a real/synthetic repository.
 
-    Reads config JSON, every ``*.safetensors`` file's header (never weight
-    bytes), and hashes every object byte-exactly. Tensor byte ranges are
-    absolute file offsets, which is what exact Range acquisition consumes.
+    This builder is the SOURCE role: it reads config JSON, every
+    ``*.safetensors`` file's header, hashes every object byte-exactly, and
+    derives the mechanical checkpoint identity. Everything it returns is a
+    small immutable descriptor; the Coordinator/planning waist never runs
+    this code. Tensor byte ranges are absolute file offsets, which is what
+    exact Range acquisition consumes. ``source_bytes_hashed`` records the
+    model bytes this SOURCE-side builder read, separately from any
+    Coordinator/control-plane traffic.
     """
     objects: dict[str, dict[str, Any]] = {}
     tensors: dict[str, dict[str, Any]] = {}
+    source_bytes_hashed = 0
     for path in sorted(root.glob("*.safetensors")):
         header, data_start, file_length = read_safetensors_header(path)
         objects[path.name] = {"length": file_length, "digest": digest_file(path)}
+        source_bytes_hashed += file_length
         for key in sorted(header):
             spec = header[key]
             start, end = spec["data_offsets"]
@@ -189,9 +231,32 @@ def catalog_from_repository(root: Path, *, config: Mapping[str, Any]) -> dict[st
         },
         "objects": objects,
         "tensors": tensors,
+        "source_bytes_hashed": source_bytes_hashed,
     }
+    catalog["checkpoint_sha256"] = checkpoint_identity_digest(catalog)
     catalog["catalog_digest"] = self_digest(catalog, identity_field="catalog_digest")
     return catalog
+
+
+def checkpoint_identity_digest(catalog: Mapping[str, Any]) -> str:
+    """Mechanical checkpoint identity over the exact weight-bearing content.
+
+    Binds model identity, every weight object's digest/length, and the
+    complete tensor table (layout, dtype, ranges) into one digest. A
+    materially different checkpoint cannot carry the same identity.
+    """
+    weight_objects = {
+        name: {"length": spec["length"], "digest": spec["digest"]}
+        for name, spec in sorted(catalog["objects"].items())
+        if name.endswith(".safetensors")
+    }
+    identity = {
+        "model": dict(catalog["model"]),
+        "config": dict(catalog["config"]),
+        "objects": weight_objects,
+        "tensors": {name: catalog["tensors"][name] for name in sorted(catalog["tensors"])},
+    }
+    return digest_of_bytes(canonical_json_bytes(identity))
 
 
 def layer_of_tensor(name: str) -> int | None:
@@ -243,6 +308,270 @@ def checkpoint_weight_bytes(catalog: Mapping[str, Any]) -> int:
 
 
 # ---------------------------------------------------------------------------
+# SOURCE-side artifact manifest builder (the only byte reader below the
+# catalog)
+# ---------------------------------------------------------------------------
+
+
+class SourceManifestBuilder:
+    """Build the frozen artifact-record manifest from source object bytes.
+
+    SOURCE role only: this is the single place below the catalog where model
+    bytes are read or hashed. Its output is a small immutable set of
+    artifact descriptors (digests, lengths, byte ranges); the strategy
+    planning waist consumes the manifest and has no byte-access path.
+    """
+
+    def __init__(self, catalog: Mapping[str, Any], *,
+                 source_bytes: Callable[[str], bytes]):
+        self.catalog = catalog
+        self._source_bytes = source_bytes
+        self.bytes_read = 0
+        self._object_cache: dict[str, bytes] = {}
+        self._records: dict[str, list[dict[str, Any]]] = {}
+
+    def _object_bytes(self, name: str) -> bytes:
+        if name not in self._object_cache:
+            data = self._source_bytes(name)
+            expected = self.catalog["objects"].get(name, {}).get("digest")
+            if expected is not None and digest_of_bytes(data) != expected:
+                raise StrategyError(f"source object {name!r} drifted from catalog digest")
+            self._object_cache[name] = data
+            self.bytes_read += len(data)
+        return self._object_cache[name]
+
+    def _range_bytes(self, tensor: Mapping[str, Any]) -> bytes:
+        data = self._object_bytes(tensor["object"])
+        return bytes(data[tensor["byte_start"]:tensor["byte_end"]])
+
+    def _tensor_records(self, names: Sequence[str], *, requirement_class: str,
+                        extra_satisfies: Sequence[str] = ()) -> list[dict[str, Any]]:
+        records = []
+        for name in names:
+            tensor = self.catalog["tensors"][name]
+            content = self._range_bytes(tensor)
+            state_id = logical_state_of_tensor(name)
+            satisfies_set: set[str] = set(extra_satisfies)
+            if state_id is not None:
+                satisfies_set.add(state_id)
+            satisfies = sorted(satisfies_set)
+            records.append(freeze_artifact_record(
+                kind="byte_range", content=content,
+                model_id=self.catalog["model"]["model_id"],
+                revision=self.catalog["model"]["revision"],
+                representation=self.catalog["model"]["representation"],
+                satisfies_logical_state_ids=satisfies,
+                requirement_class=requirement_class,
+                origin={
+                    "source_object": tensor["object"],
+                    "source_object_digest": self.catalog["objects"][tensor["object"]]["digest"],
+                    "source_object_length": self.catalog["objects"][tensor["object"]]["length"],
+                    "byte_start": tensor["byte_start"],
+                    "byte_end": tensor["byte_end"],
+                },
+            ))
+        return records
+
+    def _metadata_record(self, object_name: str, requirement_id: str) -> dict[str, Any]:
+        content = self._object_bytes(object_name)
+        return freeze_artifact_record(
+            kind="whole_object", content=content,
+            model_id=self.catalog["model"]["model_id"],
+            revision=self.catalog["model"]["revision"],
+            representation=self.catalog["model"]["representation"],
+            satisfies_logical_state_ids=[requirement_id],
+            requirement_class="required_metadata",
+            origin={"source_object": object_name,
+                    "source_object_digest": digest_of_bytes(content),
+                    "source_object_length": len(content)},
+        )
+
+    def build(self) -> dict[str, Any]:
+        """Resolve every legal (requirement class, requirement id) pair."""
+        catalog = self.catalog
+        layers = int(catalog["config"]["num_hidden_layers"])
+        tied = bool(catalog["config"]["tie_word_embeddings"])
+
+        def put(requirement_class: str, requirement_id: str,
+                records: list[dict[str, Any]]) -> None:
+            if records:
+                self._records[f"{requirement_class}|{requirement_id}"] = records
+
+        for layer in range(layers):
+            names = sorted(name for name in catalog["tensors"]
+                           if layer_of_tensor(name) == layer)
+            if not names:
+                raise StrategyError(f"no checkpoint tensors for state.layer.{layer}")
+            put("assigned_logical_state", f"state.layer.{layer}",
+                self._tensor_records(names, requirement_class="assigned_logical_state"))
+        if "model.embed_tokens.weight" in catalog["tensors"]:
+            put("assigned_logical_state", "state.embedding", self._tensor_records(
+                ["model.embed_tokens.weight"], requirement_class="assigned_logical_state"))
+            put("declared_shared_state", "state.embedding", self._tensor_records(
+                ["model.embed_tokens.weight"], requirement_class="declared_shared_state",
+                extra_satisfies=["state.output_head"]))
+        put("assigned_logical_state", "state.final_norm", self._tensor_records(
+            ["model.norm.weight"], requirement_class="assigned_logical_state"))
+        if tied:
+            # a tied output head is only ever declared shared state; the
+            # record content is the shared embedding state
+            put("declared_shared_state", "state.output_head", self._tensor_records(
+                ["model.embed_tokens.weight"], requirement_class="declared_shared_state",
+                extra_satisfies=["state.output_head"]))
+        else:
+            put("assigned_logical_state", "state.output_head", self._tensor_records(
+                ["model.lm_head.weight"], requirement_class="assigned_logical_state"))
+        put("required_metadata", f"metadata.{CONFIG_OBJECT}",
+            [self._metadata_record(CONFIG_OBJECT, f"metadata.{CONFIG_OBJECT}")])
+        put("required_metadata", f"metadata.{TOKENIZER_META_OBJECT}",
+            [self._metadata_record(TOKENIZER_META_OBJECT,
+                                   f"metadata.{TOKENIZER_META_OBJECT}")])
+
+        manifest = {
+            "schema": SOURCE_MANIFEST_SCHEMA,
+            "model": dict(catalog["model"]),
+            "checkpoint_sha256": catalog["checkpoint_sha256"],
+            "records": {key: self._records[key] for key in sorted(self._records)},
+            "source_bytes_read": self.bytes_read,
+        }
+        manifest["manifest_digest"] = self_digest(
+            manifest, identity_field="manifest_digest")
+        return manifest
+
+
+def build_source_manifest(catalog: Mapping[str, Any], *,
+                          source_bytes: Callable[[str], bytes]) -> dict[str, Any]:
+    """SOURCE-side entry point: build the frozen artifact-record manifest."""
+    return SourceManifestBuilder(catalog, source_bytes=source_bytes).build()
+
+
+# ---------------------------------------------------------------------------
+# Qualification subjects and records
+# ---------------------------------------------------------------------------
+
+
+def _validate_subject_fields(subject: Mapping[str, Any]) -> None:
+    for field in ("model_id", "revision", "checkpoint_sha256",
+                  "representation", "execution"):
+        value = subject.get(field)
+        if not (isinstance(value, str) and value.strip()):
+            raise StrategyError(f"subject field {field!r} missing or empty")
+    backend = subject.get("backend")
+    if not isinstance(backend, Mapping):
+        raise StrategyError("subject backend identity missing")
+    for key in REQUIRED_SUBJECT_BACKEND_KEYS:
+        if not str(backend.get(key, "")).strip():
+            raise StrategyError(f"subject backend field {key!r} missing")
+
+
+def subject_from_catalog(catalog: Mapping[str, Any], *, execution: str,
+                         backend: Mapping[str, str]) -> dict[str, Any]:
+    """Derive a strategy subject mechanically from the exact catalog.
+
+    The subject's model/revision/representation and checkpoint identity are
+    the catalog's own; execution/backend are the operator-declared semantics.
+    A subject can therefore never disagree with the catalog it qualifies.
+    """
+    _validate_subject_fields({"model_id": catalog["model"]["model_id"],
+                              "revision": catalog["model"]["revision"],
+                              "checkpoint_sha256": catalog["checkpoint_sha256"],
+                              "representation": catalog["model"]["representation"],
+                              "execution": execution, "backend": backend})
+    return {
+        "model_id": catalog["model"]["model_id"],
+        "revision": catalog["model"]["revision"],
+        "checkpoint_sha256": catalog["checkpoint_sha256"],
+        "representation": catalog["model"]["representation"],
+        "execution": execution,
+        "backend": dict(backend),
+    }
+
+
+def build_qualification_record(*, qualification_record_id: str,
+                               terminal_disposition: str,
+                               terminal_adjudication_sha256: str,
+                               qualification_subject: Mapping[str, Any],
+                               authority_extra: Mapping[str, Any] | None = None,
+                               scope: str = "accepted-authority") -> dict[str, Any]:
+    """Build one self-consistent qualification record for an exact subject."""
+    _validate_subject_fields(qualification_subject)
+    record = {
+        "schema": QUALIFICATION_RECORD_SCHEMA,
+        "qualification_record_id": qualification_record_id,
+        "scope": scope,
+        "authority": {
+            "terminal_disposition": terminal_disposition,
+            "terminal_adjudication_sha256": terminal_adjudication_sha256,
+            **(dict(authority_extra) if authority_extra else {}),
+        },
+        "qualification_subject": dict(qualification_subject),
+    }
+    record["qualification_subject_digest"] = digest_of_bytes(
+        canonical_json_bytes(record["qualification_subject"]))
+    record["record_digest"] = self_digest(record, identity_field="record_digest")
+    return record
+
+
+def accepted_v5_subject() -> dict[str, Any]:
+    """The exact accepted V5 qualification subject (retained constants).
+
+    This subject carries the accepted external checkpoint digest. A strategy
+    subject derived from an actual catalog carries that catalog's mechanical
+    checkpoint identity instead, so no catalog but the real accepted one can
+    ever produce a matching subject.
+    """
+    stages = [
+        {
+            "cu_id": stage["cu_id"],
+            "node": next(cu["node"] for cu in RESOURCE_SNAPSHOT["compute_units"]
+                         if cu["cu_id"] == stage["cu_id"]),
+            "layer_start": stage["layer_start"],
+            "layer_end": stage["layer_end"],
+        }
+        for stage in ACCEPTED_V5_GEOMETRY
+    ]
+    subject = {
+        "model_id": MODEL_SUBJECT["model_id"],
+        "revision": MODEL_SUBJECT["revision"],
+        "checkpoint_sha256": MODEL_SUBJECT["checkpoint_sha256"],
+        "representation": MODEL_SUBJECT["representation"],
+        "execution": MODEL_SUBJECT["execution"],
+        "backend": dict(MODEL_SUBJECT["backend"]),
+        "layer_count": LAYER_COUNT,
+        "stage_structure": stages,
+    }
+    _validate_subject_fields(subject)
+    return subject
+
+
+def accepted_v5_qualification_record() -> dict[str, Any]:
+    """Deterministic accepted qualification evidence record.
+
+    Binds the accepted V5 terminal result to the exact qualified subject.
+    Built from the retained accepted constants only — never from a strategy
+    instance — so a synthetic catalog cannot fabricate or reshape it.
+    """
+    from issue117_applicability import (
+        ACCEPTED_FREETOKEN_CALIBRATION_PRODUCER,
+        ACCEPTED_FREETOKEN_HOLDOUT_PRODUCER,
+        ACCEPTED_V5_METHODOLOGY,
+        ACCEPTED_TERMINAL_ADJUDICATION_SHA256,
+    )
+    return build_qualification_record(
+        qualification_record_id="inferswarm.issue117.v5-qualification/1",
+        terminal_disposition="V5_QUALIFICATION_PASS",
+        terminal_adjudication_sha256=ACCEPTED_TERMINAL_ADJUDICATION_SHA256,
+        qualification_subject=accepted_v5_subject(),
+        authority_extra={
+            "accepted_v5_methodology": ACCEPTED_V5_METHODOLOGY,
+            "accepted_freetoken_calibration_producer":
+                ACCEPTED_FREETOKEN_CALIBRATION_PRODUCER,
+            "accepted_freetoken_holdout_producer": ACCEPTED_FREETOKEN_HOLDOUT_PRODUCER,
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
 # Strategy
 # ---------------------------------------------------------------------------
 
@@ -258,27 +587,66 @@ def _candidate_id(stages: Sequence[Mapping[str, Any]]) -> str:
 
 
 class GemmaDenseStrategy:
-    """Expose legal opaque dense candidates and exact requirement mappings."""
+    """Expose legal opaque dense candidates and exact requirement mappings.
 
-    def __init__(self, *, catalog: Mapping[str, Any],
-                 snapshot: Mapping[str, Any] = RESOURCE_SNAPSHOT,
-                 subject: Mapping[str, Any] = MODEL_SUBJECT,
-                 source_bytes: Callable[[str], bytes] | None = None):
+    The strategy is a pure planning-waist consumer of descriptors: it holds
+    a catalog, a subject, and a SOURCE-built artifact manifest, and never
+    reads or hashes model bytes.
+    """
+
+    def __init__(self, *, catalog: Mapping[str, Any], subject: Mapping[str, Any],
+                 source_manifest: Mapping[str, Any],
+                 snapshot: Mapping[str, Any] = RESOURCE_SNAPSHOT):
         if catalog["schema"] != CATALOG_SCHEMA:
             raise StrategyError("catalog schema mismatch")
+        if subject is None:
+            raise StrategyError(
+                "a strategy subject is required; it must be derived from the "
+                "exact catalog via subject_from_catalog")
+        _validate_subject_fields(subject)
         self.catalog = catalog
+        self.subject = dict(subject)
         self.snapshot = snapshot
-        self.subject = subject
         self.layers = int(catalog["config"]["num_hidden_layers"])
         self.tied = bool(catalog["config"]["tie_word_embeddings"])
         if self.layers != LAYER_COUNT:
             raise StrategyError(
                 f"catalog layer count {self.layers} != frozen subject {LAYER_COUNT}")
+        # subject/catalog inseparability: the qualification subject is only
+        # constructible from the exact plan/catalog identity
+        for field, catalog_value in (
+                ("model_id", catalog["model"]["model_id"]),
+                ("revision", catalog["model"]["revision"]),
+                ("representation", catalog["model"]["representation"]),
+                ("checkpoint_sha256", catalog["checkpoint_sha256"])):
+            if self.subject[field] != catalog_value:
+                raise StrategyError(
+                    f"subject {field} {self.subject[field]!r} != catalog identity "
+                    f"{catalog_value!r}; qualification is not constructible for a "
+                    "foreign catalog")
+        if source_manifest is None:
+            raise StrategyError(
+                "a SOURCE-built artifact manifest is required; the planning "
+                "waist has no byte-access path")
+        self._validate_manifest(source_manifest)
+        self.source_manifest = source_manifest
         self._cu_by_id = {cu["cu_id"]: cu for cu in snapshot["compute_units"]}
         self._chain = list(snapshot["chain_order"])
-        self._source_bytes = source_bytes or (lambda name: _missing_source(name))
         self._plan_cache: dict[str, dict[str, Any]] = {}
-        self._records: dict[tuple[str, str], list[dict[str, Any]]] = {}
+        self._requirements_cache: dict[str, dict[str, Any]] = {}
+
+    def _validate_manifest(self, manifest: Mapping[str, Any]) -> None:
+        from issue99_artifact_core import validate_self_identity
+        if manifest.get("schema") != SOURCE_MANIFEST_SCHEMA:
+            raise StrategyError("source manifest schema mismatch")
+        try:
+            validate_self_identity(dict(manifest), identity_field="manifest_digest")
+        except Exception as error:
+            raise StrategyError(f"source manifest self-identity mismatch: {error}")
+        if manifest.get("model") != dict(self.catalog["model"]):
+            raise StrategyError("source manifest model identity != catalog")
+        if manifest.get("checkpoint_sha256") != self.catalog["checkpoint_sha256"]:
+            raise StrategyError("source manifest checkpoint identity != catalog")
 
     # -- candidate enumeration -------------------------------------------------
 
@@ -329,20 +697,33 @@ class GemmaDenseStrategy:
         candidates.sort(key=lambda candidate: candidate["candidate_id"])
         return candidates
 
+    # -- exact participant requirements (the feasibility input) ----------------
+
+    def stage_requirements(self, candidate: Mapping[str, Any]) -> dict[str, Any]:
+        """The exact frozen participant requirements for one candidate."""
+        key = candidate["candidate_id"]
+        if key not in self._requirements_cache:
+            from issue99_artifact_core import derive_participant_requirements
+            self._requirements_cache[key] = derive_participant_requirements(
+                self.plan(candidate), self.resolve)
+        return self._requirements_cache[key]
+
     def stage_weight_bytes(self, candidate: Mapping[str, Any], stage_index: int) -> int:
-        """Exact checkpoint weight bytes assigned to one candidate stage."""
-        stage = candidate["stages"][stage_index]
-        total = 0
-        for name, tensor in self.catalog["tensors"].items():
-            layer = layer_of_tensor(name)
-            if layer is None or not (stage["layer_start"] <= layer < stage["layer_end"]):
-                continue
-            total += tensor["byte_count"]
-        for name in ("model.norm.weight", "model.lm_head.weight"):
-            tensor = self.catalog["tensors"].get(name)
-            if tensor is not None and stage_index == len(candidate["stages"]) - 1:
-                total += tensor["byte_count"]
-        return total
+        """Exact model-state bytes one candidate stage must materialize.
+
+        Derived from the exact frozen participant requirements: assigned
+        state plus declared shared state, excluding only declared metadata,
+        deduplicated only by artifact identity within the participant (a
+        shared state is one artifact on that participant).
+        """
+        requirements = self.stage_requirements(candidate)
+        participant_id = f"{candidate['candidate_id']}.stage-{stage_index + 1}"
+        matches = [p for p in requirements["participants"]
+                   if p["participant_id"] == participant_id]
+        if len(matches) != 1:
+            raise StrategyError(f"no frozen requirements for {participant_id}")
+        return sum(record["length"] for record in matches[0]["required_artifacts"]
+                   if record["requirement_class"] != "required_metadata")
 
     # -- strategy-owned feasibility and policy inputs --------------------------
 
@@ -350,8 +731,9 @@ class GemmaDenseStrategy:
                     capacity_model: Mapping[str, int] | None = None) -> dict[str, Any]:
         """Technical feasibility + hard operator policy + integrity inputs.
 
-        Technical feasibility requires an operator capacity model; without one
-        it is declared unknown and must fail closed in the planner.
+        Stage bytes come from the exact participant requirements. Technical
+        feasibility requires an operator capacity model; without one it is
+        declared unknown and must fail closed in the planner.
         """
         if capacity_model is None:
             return {"technical_feasibility": False, "technical_feasibility_known": False,
@@ -364,6 +746,7 @@ class GemmaDenseStrategy:
                    for weight, limit in zip(per_stage, usable))
         return {"technical_feasibility": bool(fits), "technical_feasibility_known": True,
                 "stage_weight_bytes": per_stage, "usable_weight_bytes": usable,
+                "accounting_source": "exact_participant_requirements",
                 "hard_policy_eligible": self._serving_policy_eligible(candidate),
                 "integrity_eligible": True}
 
@@ -376,7 +759,13 @@ class GemmaDenseStrategy:
     # -- qualification subjects ------------------------------------------------
 
     def qualification_subject(self, candidate: Mapping[str, Any]) -> dict[str, Any]:
-        """Opaque descriptor of everything qualification evidence must bind."""
+        """Opaque descriptor of everything qualification evidence must bind.
+
+        Derived mechanically from the exact catalog/plan identity (model,
+        revision, checkpoint, representation, layer count) plus the frozen
+        execution/backend semantics and the candidate's stage geometry and
+        device assignment.
+        """
         return {
             "model_id": self.subject["model_id"],
             "revision": self.subject["revision"],
@@ -410,39 +799,15 @@ class GemmaDenseStrategy:
                 return candidate
         raise StrategyError("accepted V5 geometry missing from the legal candidate set")
 
-    def accepted_v5_qualification_record(self) -> dict[str, Any]:
-        """Deterministic qualification evidence record binding the accepted V5
-        terminal result to the exact qualified subject."""
-        from issue117_applicability import (
-            ACCEPTED_FREETOKEN_CALIBRATION_PRODUCER,
-            ACCEPTED_FREETOKEN_HOLDOUT_PRODUCER,
-            ACCEPTED_V5_METHODOLOGY,
-            ACCEPTED_TERMINAL_ADJUDICATION_SHA256,
-        )
-        probe = {"candidate_id": "accepted-v5",
-                 "stages": [dict(stage) for stage in ACCEPTED_V5_GEOMETRY],
-                 "stage_count": len(ACCEPTED_V5_GEOMETRY)}
-        subject = self.qualification_subject(probe)
-        record = {
-            "schema": QUALIFICATION_RECORD_SCHEMA,
-            "qualification_record_id": "inferswarm.issue117.v5-qualification/1",
-            "authority": {
-                "terminal_disposition": "V5_QUALIFICATION_PASS",
-                "terminal_adjudication_sha256": ACCEPTED_TERMINAL_ADJUDICATION_SHA256,
-                "accepted_v5_methodology": ACCEPTED_V5_METHODOLOGY,
-                "accepted_freetoken_calibration_producer": ACCEPTED_FREETOKEN_CALIBRATION_PRODUCER,
-                "accepted_freetoken_holdout_producer": ACCEPTED_FREETOKEN_HOLDOUT_PRODUCER,
-            },
-            "qualification_subject": subject,
-        }
-        record["qualification_subject_digest"] = digest_of_bytes(
-            canonical_json_bytes(subject))
-        record["record_digest"] = self_digest(record, identity_field="record_digest")
-        return record
-
     # -- frozen plan + requirement resolver (strategy adapter boundary) --------
 
     def plan(self, candidate: Mapping[str, Any], *, epoch: int = 1) -> dict[str, Any]:
+        embedded = candidate.get("qualification_subject")
+        derived = self.qualification_subject(candidate)
+        if embedded is not None and embedded != derived:
+            raise StrategyError(
+                "candidate qualification subject does not match the strategy's "
+                "catalog/plan identity; refusing to plan a foreign subject")
         key = f"{candidate['candidate_id']}#{epoch}"
         if key in self._plan_cache:
             return self._plan_cache[key]
@@ -458,9 +823,11 @@ class GemmaDenseStrategy:
                 assigned.insert(0, "state.embedding")
             if index == stage_count - 1:
                 assigned.append("state.final_norm")
-                if self.tied:
+                if self.tied and stage_count > 1:
+                    # a tied head is shared across stages; a single-stage
+                    # participant already owns the embedding state outright
                     shared.extend(["state.embedding", "state.output_head"])
-                else:
+                elif not self.tied:
                     assigned.append("state.output_head")
             participants.append({
                 "participant_id": f"{candidate['candidate_id']}.stage-{index + 1}",
@@ -476,7 +843,16 @@ class GemmaDenseStrategy:
             "schema": PLAN_SCHEMA,
             "epoch": epoch,
             "candidate_id": candidate["candidate_id"],
-            "model": dict(self.catalog["model"]),
+            "model": {
+                **dict(self.catalog["model"]),
+                "checkpoint_sha256": self.catalog["checkpoint_sha256"],
+                "layer_count": self.layers,
+                "execution": self.subject["execution"],
+                "backend": dict(self.subject["backend"]),
+            },
+            "qualification_subject": derived,
+            "qualification_subject_digest": digest_of_bytes(
+                canonical_json_bytes(derived)),
             "logical_state_units": [{"id": unit} for unit in self.logical_state_units()],
             "participants": participants,
         }
@@ -492,90 +868,16 @@ class GemmaDenseStrategy:
     def resolve(self, requirement_class: str, requirement_id: str) -> list[dict[str, Any]]:
         """Strategy adapter: logical state requirement -> exact artifact records.
 
-        The only place where checkpoint tensor names and byte ranges become
-        plan-driven artifact identities.
+        Serves frozen descriptors from the SOURCE-built manifest; there is no
+        byte-access path here.
         """
-        key = (requirement_class, requirement_id)
-        if key in self._records:
-            return list(self._records[key])
-        produced: list[dict[str, Any]] = []
-        if requirement_id.startswith("metadata."):
-            object_name = requirement_id[len("metadata."):]
-            content = self._source_bytes(object_name)
-            produced.append(freeze_artifact_record(
-                kind="whole_object", content=content,
-                model_id=self.catalog["model"]["model_id"],
-                revision=self.catalog["model"]["revision"],
-                representation=self.catalog["model"]["representation"],
-                satisfies_logical_state_ids=[requirement_id],
-                requirement_class="required_metadata",
-                origin={"source_object": object_name,
-                        "source_object_digest": digest_of_bytes(content),
-                        "source_object_length": len(content)},
-            ))
-        elif requirement_id == "state.embedding":
-            produced.extend(self._tensor_records(
-                ["model.embed_tokens.weight"], requirement_class=requirement_class,
-                extra_satisfies=(["state.output_head"]
-                                 if requirement_class == "declared_shared_state" else [])))
-        elif requirement_id == "state.final_norm":
-            produced.extend(self._tensor_records(
-                ["model.norm.weight"], requirement_class=requirement_class))
-        elif requirement_id == "state.output_head":
-            if self.tied:
-                if requirement_class != "declared_shared_state":
-                    raise StrategyError("tied output head is declared shared state only")
-                produced.extend(self._tensor_records(
-                    ["model.embed_tokens.weight"], requirement_class=requirement_class,
-                    extra_satisfies=["state.output_head"]))
-            else:
-                produced.extend(self._tensor_records(
-                    ["model.lm_head.weight"], requirement_class=requirement_class))
-        elif requirement_id.startswith("state.layer."):
-            layer = int(requirement_id[len("state.layer."):])
-            names = sorted(
-                name for name in self.catalog["tensors"]
-                if layer_of_tensor(name) == layer
-            )
-            if not names:
-                raise StrategyError(f"no checkpoint tensors for {requirement_id}")
-            produced.extend(self._tensor_records(names, requirement_class=requirement_class))
-        else:
-            raise StrategyError(f"unknown logical state requirement {requirement_id!r}")
-        self._records[key] = produced
-        return list(produced)
-
-    def _tensor_records(self, names: Sequence[str], *, requirement_class: str,
-                        extra_satisfies: Sequence[str] = ()) -> list[dict[str, Any]]:
-        records = []
-        for name in names:
-            tensor = self.catalog["tensors"][name]
-            content = self._range_bytes(tensor)
-            state_id = logical_state_of_tensor(name)
-            satisfies_set: set[str] = set(extra_satisfies)
-            if state_id is not None:
-                satisfies_set.add(state_id)
-            satisfies = sorted(satisfies_set)
-            records.append(freeze_artifact_record(
-                kind="byte_range", content=content,
-                model_id=self.catalog["model"]["model_id"],
-                revision=self.catalog["model"]["revision"],
-                representation=self.catalog["model"]["representation"],
-                satisfies_logical_state_ids=satisfies,
-                requirement_class=requirement_class,
-                origin={
-                    "source_object": tensor["object"],
-                    "source_object_digest": self.catalog["objects"][tensor["object"]]["digest"],
-                    "source_object_length": self.catalog["objects"][tensor["object"]]["length"],
-                    "byte_start": tensor["byte_start"],
-                    "byte_end": tensor["byte_end"],
-                },
-            ))
-        return records
-
-    def _range_bytes(self, tensor: Mapping[str, Any]) -> bytes:
-        data = self._source_bytes(tensor["object"])
-        return bytes(data[tensor["byte_start"]:tensor["byte_end"]])
+        key = f"{requirement_class}|{requirement_id}"
+        records = self.source_manifest["records"].get(key)
+        if not records:
+            raise StrategyError(
+                f"no source artifact record for {requirement_id!r} as "
+                f"{requirement_class!r}")
+        return [validate_artifact_record(record) for record in records]
 
     def frozen_document(self, candidates: Sequence[Mapping[str, Any]], *,
                         capacity_model: Mapping[str, int] | None = None) -> dict[str, Any]:
@@ -604,8 +906,9 @@ class GemmaDenseStrategy:
         return document
 
 
-def _missing_source(name: str) -> bytes:
-    raise StrategyError(f"strategy has no source bytes for {name!r}")
+# ---------------------------------------------------------------------------
+# Synthetic fixture checkpoint (SOURCE side)
+# ---------------------------------------------------------------------------
 
 
 def build_synthetic_gemma_repository(
@@ -697,8 +1000,8 @@ def build_synthetic_gemma_repository(
     objects[CONFIG_OBJECT] = canonical_json_bytes(config)
     (root / CONFIG_OBJECT).write_bytes(objects[CONFIG_OBJECT])
     tokenizer_meta = {
-        "tokenizer_identity": "accepted-v5-tokenizer",
-        "note": "metadata only; never weight bytes",
+        "tokenizer_identity": "fixture-analog-tokenizer",
+        "note": "metadata only; synthetic fixture bytes",
     }
     objects[TOKENIZER_META_OBJECT] = canonical_json_bytes(tokenizer_meta)
     (root / TOKENIZER_META_OBJECT).write_bytes(objects[TOKENIZER_META_OBJECT])

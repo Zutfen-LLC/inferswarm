@@ -25,7 +25,7 @@ def normalize_volatile(value):
     if isinstance(value, list):
         return [normalize_volatile(item) for item in value]
     if isinstance(value, str):
-        return re.sub(r"/tmp/issue117-cpu-[^/]+", "<temporary>", value)
+        return re.sub(r"/tmp/[^/\"]+", "<temporary>", value)
     return value
 
 
@@ -41,7 +41,7 @@ class ProofCampaignTests(unittest.TestCase):
         self.assertEqual(self.summary["terminal_disposition"],
                          "ISSUE117_IMPLEMENTATION_FREEZE_PASS")
 
-    def test_v5_candidate_selected_through_ordinary_gates(self):
+    def test_accepted_v5_geometry_selected_through_ordinary_gates(self):
         decision = self.documents["planner-decision.json"]
         record = self.documents["qualification-record.json"]
         v5_row = next(row for row in decision["candidates"]
@@ -52,6 +52,20 @@ class ProofCampaignTests(unittest.TestCase):
                          [record["qualification_record_id"]])
         self.assertTrue(v5_row["gates"]["technical_feasibility"]["passed"])
         self.assertTrue(v5_row["gates"]["hard_policy_eligible"]["passed"])
+
+    def test_qualification_record_is_fixture_scoped(self):
+        record = self.documents["qualification-record.json"]
+        self.assertEqual(record["scope"], "issue117-cpu-fixture")
+        self.assertNotEqual(
+            record["authority"]["terminal_adjudication_sha256"],
+            applicability.ACCEPTED_TERMINAL_ADJUDICATION_SHA256)
+        self.assertNotEqual(
+            record["qualification_subject_digest"],
+            strategy.accepted_v5_qualification_record()["qualification_subject_digest"])
+        expected = proof.fixture_adjudication_identity(
+            self.summary["fixture_digest"],
+            record["qualification_subject_digest"])
+        self.assertEqual(record["authority"]["terminal_adjudication_sha256"], expected)
 
     def test_every_other_candidate_is_excluded_with_reasons(self):
         decision = self.documents["planner-decision.json"]
@@ -83,9 +97,11 @@ class ProofCampaignTests(unittest.TestCase):
                 self.assertEqual(transfer["source_id"], "issue117-origin")
                 self.assertEqual(transfer["endpoint_scheme"], "file")
 
-    def test_coordinator_bulk_bytes_are_zero(self):
+    def test_coordinator_bulk_bytes_are_zero_and_source_side_is_accounted(self):
         cold = self.documents["cold-acquisition.json"]
         self.assertEqual(cold["coordinator_bytes_observed"], 0)
+        summary = self.summary
+        self.assertGreater(summary["source_side_model_bytes_hashed"], 0)
 
     def test_warm_restart_reacquires_zero_weight_bytes(self):
         warm = self.documents["warm-restart.json"]
@@ -106,13 +122,31 @@ class ProofCampaignTests(unittest.TestCase):
         self.assertTrue(zero)
         for name, value in zero.items():
             self.assertEqual(value, 0, name)
+        # the fencing counters are part of the derived zero-invariants
+        for name in ("stale_result_committed", "wrong_session_result_committed",
+                     "wrong_epoch_result_committed", "wrong_realization_result_committed",
+                     "wrong_plan_result_committed", "wrong_contract_result_committed",
+                     "wrong_position_result_committed",
+                     "malformed_position_result_committed"):
+            self.assertIn(name, zero)
+        # the host-mirror/movement and control-plane byte invariants are derived
+        self.assertIn("unexplained_persistent_host_mirror_bytes", zero)
+        self.assertIn("unplanned_steady_state_model_state_movement_bytes", zero)
+        self.assertIn("control_plane_document_byte_payloads", zero)
 
     def test_negative_controls_all_failed_closed(self):
         controls = self.documents["negative-controls.json"]["controls"]
-        self.assertGreaterEqual(len(controls), 10)
+        self.assertGreaterEqual(len(controls), 15)
         for entry in controls:
             self.assertTrue(entry["failed_closed"], entry["control"])
             self.assertTrue(entry["matched"], entry["control"])
+        names = {entry["control"] for entry in controls}
+        self.assertIn("changed_execution_producer_requires_requalification", names)
+        self.assertIn("fence_ledger_derivation_is_non_vacuous", names)
+        self.assertIn("staging_ledger_derivation_is_non_vacuous", names)
+        self.assertIn("fixture_subject_cannot_inherit_real_v5_record", names)
+        self.assertIn("lying_subject_digest_is_control_plane_misuse", names)
+        self.assertIn("v5_authority_byte_tampering_is_fail_closed", names)
 
     def test_fencing_negatives_failed_closed(self):
         fencing = self.documents["fencing.json"]
@@ -125,6 +159,11 @@ class ProofCampaignTests(unittest.TestCase):
                      "wrong_position_result_committed"):
             self.assertEqual(summary[name], 0, name)
         self.assertGreaterEqual(summary["fence_rejections"], 5)
+        # every attempted result is retained (committed records + rejections)
+        self.assertEqual(len(fencing["committed_result_records"]),
+                         fencing["committed_results"])
+        self.assertEqual(len(fencing["rejected_attempt_records"]),
+                         summary["fence_rejections"])
 
     def test_witnesses_are_stable_across_restart(self):
         warm = self.documents["warm-restart.json"]
@@ -138,9 +177,11 @@ class ProofCampaignTests(unittest.TestCase):
 
     def test_applicability_audit_is_frozen_and_clean(self):
         audit = self.documents["applicability-audit.json"]
-        self.assertEqual(audit, applicability.canonical_issue117_audit())
+        self.assertEqual(audit, applicability.canonical_issue117_audit(ROOT))
         self.assertEqual(audit["overall_result"],
                          applicability.DELTA_CONTROL_ARTIFACT_MATERIALIZATION_ONLY)
+        self.assertEqual(audit["authority"]["integration_producer"],
+                         applicability.FROZEN_INTEGRATION_PRODUCER)
 
     def test_strategy_document_records_candidates_and_subjects(self):
         strategy_doc = self.documents["strategy.json"]
@@ -150,6 +191,8 @@ class ProofCampaignTests(unittest.TestCase):
         for candidate in strategy_doc["candidates"]:
             self.assertIn("qualification_subject_digest", candidate)
             self.assertIn("feasibility", candidate)
+            self.assertEqual(candidate["feasibility"]["accounting_source"],
+                             "exact_participant_requirements")
 
     def test_campaign_is_deterministic(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -165,6 +208,10 @@ class ProofCampaignTests(unittest.TestCase):
         self.assertIn("canonical-summary.json", manifest)
         for name in proof.COMMITTED_EVIDENCE_FILES:
             self.assertIn(name, manifest)
+        # the frozen methodology is hash-bound (P2)
+        self.assertIn(
+            "docs/implementation/r6-successor-dense-full-integration-117/METHODOLOGY.md",
+            manifest)
 
     def test_committed_documentation_synchronization_record(self):
         path = (ROOT / proof.AREA / "evidence"
@@ -182,10 +229,8 @@ class CampaignFixtureBindingTests(unittest.TestCase):
         fixture.validate_fixture_document(document)
         self.assertEqual(document["case_count"], 24)
 
-    def test_qualification_record_binds_terminal_evidence(self):
-        with tempfile.TemporaryDirectory() as temp:
-            world = proof.build_world(Path(temp))
-            record = world["qualification_record"]
+    def test_real_v5_record_binds_terminal_evidence(self):
+        record = strategy.accepted_v5_qualification_record()
         self.assertEqual(record["authority"]["terminal_disposition"],
                          "V5_QUALIFICATION_PASS")
         self.assertEqual(record["authority"]["terminal_adjudication_sha256"],

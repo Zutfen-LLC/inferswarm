@@ -9,7 +9,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import issue117_planner as planner  # noqa: E402
 from issue103_planner import EXCLUDED, FEASIBLE_UNRANKED, RANKED, purity_audit  # noqa: E402
 from issue74_methodology import canonical_json_bytes  # noqa: E402
-from issue99_artifact_core import self_digest  # noqa: E402
+from issue99_artifact_core import digest_of_bytes, self_digest  # noqa: E402
 
 PLANNER_PATH = ROOT / "scripts" / "issue117_planner.py"
 
@@ -21,19 +21,39 @@ FORBIDDEN_TOKENS = (
     "safetensors", "tokenizer", "checkpoint",
 )
 
+ACCEPTED_ADJUDICATION = "a" * 64
+
 
 def make_record(record_id: str, subject_digest: str, *,
-                disposition: str = "V5_QUALIFICATION_PASS") -> dict:
+                subject: dict | None = None,
+                disposition: str = "V5_QUALIFICATION_PASS",
+                adjudication: str = ACCEPTED_ADJUDICATION) -> dict:
+    subject = subject if subject is not None else {"opaque": record_id}
     record = {
-        "schema": "inferswarm.issue117.qualification-record/1",
+        "schema": "inferswarm.issue117.qualification-record/2",
         "qualification_record_id": record_id,
+        "scope": "test",
         "authority": {"terminal_disposition": disposition,
-                      "terminal_adjudication_sha256": "f" * 64},
-        "qualification_subject": {"opaque": record_id},
-        "qualification_subject_digest": subject_digest,
+                      "terminal_adjudication_sha256": adjudication},
+        "qualification_subject": subject,
     }
+    # the record digest must recompute from the subject; a mismatched
+    # caller-supplied digest produces a malformed record
+    recomputed = digest_of_bytes(canonical_json_bytes(subject))
+    record["qualification_subject_digest"] = (subject_digest
+                                              if subject_digest is not None
+                                              else recomputed)
     record["record_digest"] = self_digest(record, identity_field="record_digest")
     return record
+
+
+def policy(**overrides) -> dict:
+    base = {"policy": planner.QUALIFICATION_POLICY_STRICT,
+            "accepted_dispositions": ("V5_QUALIFICATION_PASS",),
+            "accepted_adjudication_sha256": ACCEPTED_ADJUDICATION,
+            "required_for_admission": True}
+    base.update(overrides)
+    return base
 
 
 def make_requirements(spec: dict[str, list[tuple[str, int]]], plan_digest: str) -> dict:
@@ -99,6 +119,16 @@ class World:
         return self.planner.rank()
 
 
+def subject_for(name: str) -> dict:
+    return {"model_id": "m", "revision": name, "checkpoint_sha256": name * 2,
+            "representation": "rep", "execution": "exec", "backend": {"k": "v"},
+            "layer_count": 48, "stage_structure": [{"cu_id": name}]}
+
+
+def subject_digest(subject: dict) -> str:
+    return digest_of_bytes(canonical_json_bytes(subject))
+
+
 def build_world(*, local_for_v5=(), v5_subject="digest-v5", other_subject="digest-other",
                 path_bandwidth=None) -> World:
     plan_digest = "plan-" + "0" * 60
@@ -115,9 +145,11 @@ def build_world(*, local_for_v5=(), v5_subject="digest-v5", other_subject="diges
     })
     candidates = [
         {"candidate_id": "cand-a", "stage_count": 2,
-         "qualification_subject_digest": v5_subject},
+         "qualification_subject": subject_for("v5"),
+         "qualification_subject_digest": subject_digest(subject_for("v5"))},
         {"candidate_id": "cand-b", "stage_count": 1,
-         "qualification_subject_digest": other_subject},
+         "qualification_subject": subject_for("other"),
+         "qualification_subject_digest": subject_digest(subject_for("other"))},
     ]
     feasibility = {
         "cand-a": {"technical_feasibility": True, "technical_feasibility_known": True,
@@ -125,10 +157,8 @@ def build_world(*, local_for_v5=(), v5_subject="digest-v5", other_subject="diges
         "cand-b": {"technical_feasibility": True, "technical_feasibility_known": True,
                    "hard_policy_eligible": True, "integrity_eligible": True},
     }
-    records = [make_record("rec-v5", v5_subject)]
-    policy = {"policy": planner.QUALIFICATION_POLICY_STRICT,
-              "accepted_dispositions": ("V5_QUALIFICATION_PASS",),
-              "required_for_admission": True}
+    records = [make_record("rec-v5", subject_digest(subject_for("v5")),
+                           subject=subject_for("v5"))]
     requirements_by_candidate = {
         "cand-a": slice_requirements(requirements, ("cand-a.stage-1", "cand-a.stage-2")),
         "cand-b": slice_requirements(requirements, ("cand-b.stage-1",)),
@@ -156,7 +186,7 @@ def build_world(*, local_for_v5=(), v5_subject="digest-v5", other_subject="diges
             ]
     planner_obj = planner.AdmissionPlanner(
         candidates=candidates, feasibility=feasibility,
-        qualification_records=records, qualification_policy=policy,
+        qualification_records=records, qualification_policy=policy(),
         requirements_by_candidate=requirements_by_candidate,
         path_evidence_by_candidate=path_evidence_by_candidate,
         evidence_contract=make_contract(),
@@ -206,52 +236,91 @@ def make_path_evidence(*, stage_candidate_id, participant_id, node_id, artifact_
 
 
 class QualificationGateTests(unittest.TestCase):
+    def v5_candidate(self) -> dict:
+        return {"candidate_id": "cand",
+                "qualification_subject": subject_for("v5"),
+                "qualification_subject_digest": subject_digest(subject_for("v5"))}
+
+    def v5_record(self, record_id="rec-v5", **kwargs) -> dict:
+        return make_record(record_id, subject_digest(subject_for("v5")),
+                           subject=subject_for("v5"), **kwargs)
+
     def test_matching_subject_is_applicable(self):
         result = planner.evaluate_qualification_applicability(
-            {"qualification_subject_digest": "digest-v5"},
-            [make_record("rec-v5", "digest-v5")],
-            {"policy": planner.QUALIFICATION_POLICY_STRICT,
-             "accepted_dispositions": ("V5_QUALIFICATION_PASS",)})
+            self.v5_candidate(), [self.v5_record()], policy())
         self.assertEqual(result["status"], planner.QUALIFICATION_APPLICABLE)
         self.assertEqual(result["matched_record_ids"], ["rec-v5"])
 
     def test_materially_changed_subject_cannot_inherit(self):
+        changed = {"candidate_id": "cand",
+                   "qualification_subject": subject_for("CHANGED"),
+                   "qualification_subject_digest": subject_digest(subject_for("CHANGED"))}
         result = planner.evaluate_qualification_applicability(
-            {"qualification_subject_digest": "digest-CHANGED"},
-            [make_record("rec-v5", "digest-v5")],
-            {"policy": planner.QUALIFICATION_POLICY_STRICT,
-             "accepted_dispositions": ("V5_QUALIFICATION_PASS",)})
+            changed, [self.v5_record()], policy())
         self.assertEqual(result["status"], planner.QUALIFICATION_NOT_APPLICABLE)
         self.assertEqual(result["reason"], planner.REASON_SUBJECT_MISMATCH)
 
     def test_no_accepted_evidence_is_not_applicable(self):
         result = planner.evaluate_qualification_applicability(
-            {"qualification_subject_digest": "digest-v5"}, [],
-            {"policy": planner.QUALIFICATION_POLICY_STRICT,
-             "accepted_dispositions": ("V5_QUALIFICATION_PASS",)})
+            self.v5_candidate(), [], policy())
         self.assertEqual(result["reason"], planner.REASON_NO_ACCEPTED_EVIDENCE)
 
     def test_non_terminal_disposition_is_not_evidence(self):
         result = planner.evaluate_qualification_applicability(
-            {"qualification_subject_digest": "digest-v5"},
-            [make_record("rec-v5", "digest-v5", disposition="SOMETHING_ELSE")],
-            {"policy": planner.QUALIFICATION_POLICY_STRICT,
-             "accepted_dispositions": ("V5_QUALIFICATION_PASS",)})
-        self.assertEqual(result["reason"], planner.REASON_NO_ACCEPTED_EVIDENCE)
+            self.v5_candidate(),
+            [self.v5_record(disposition="SOMETHING_ELSE")], policy())
+        self.assertEqual(result["reason"], planner.REASON_EVIDENCE_NOT_TERMINAL_PASS)
 
-    def test_malformed_record_is_ignored_not_trusted(self):
-        bad = make_record("rec-v5", "digest-v5")
+    def test_malformed_subject_digest_is_rejected_not_trusted(self):
+        bad = self.v5_record()
         bad["qualification_subject_digest"] = "tampered"
+        bad["record_digest"] = self_digest(bad, identity_field="record_digest")
         result = planner.evaluate_qualification_applicability(
-            {"qualification_subject_digest": "digest-v5"}, [bad],
-            {"policy": planner.QUALIFICATION_POLICY_STRICT,
-             "accepted_dispositions": ("V5_QUALIFICATION_PASS",)})
+            self.v5_candidate(), [bad], policy())
         self.assertEqual(result["reason"], planner.REASON_NO_ACCEPTED_EVIDENCE)
+        self.assertEqual(result["malformed_record_ids"], ["rec-v5"])
+
+    def test_record_bound_to_foreign_adjudication_is_rejected(self):
+        foreign = self.v5_record(adjudication="b" * 64)
+        result = planner.evaluate_qualification_applicability(
+            self.v5_candidate(), [foreign], policy())
+        self.assertEqual(result["status"], planner.QUALIFICATION_NOT_APPLICABLE)
+        self.assertEqual(result["unbound_record_ids"], ["rec-v5"])
+
+    def test_self_inconsistent_record_is_never_promoted(self):
+        # a record whose subject digest does not recompute cannot be made
+        # usable by ALSO tampering the adjudication identity or disposition
+        bad = self.v5_record(disposition="OTHER")
+        bad["qualification_subject_digest"] = "tampered"
+        bad["record_digest"] = self_digest(bad, identity_field="record_digest")
+        result = planner.evaluate_qualification_applicability(
+            self.v5_candidate(), [bad], policy())
+        self.assertEqual(result["status"], planner.QUALIFICATION_NOT_APPLICABLE)
+        self.assertEqual(result["malformed_record_ids"], ["rec-v5"])
+
+    def test_candidate_lying_subject_digest_is_hard_error(self):
+        liar = {"candidate_id": "cand",
+                "qualification_subject": subject_for("v5"),
+                "qualification_subject_digest": subject_digest(subject_for("OTHER"))}
+        with self.assertRaises(planner.PlannerError):
+            planner.evaluate_qualification_applicability(liar, [self.v5_record()], policy())
+
+    def test_candidate_without_subject_is_hard_error(self):
+        with self.assertRaises(planner.PlannerError):
+            planner.evaluate_qualification_applicability(
+                {"candidate_id": "cand", "qualification_subject_digest": "x"},
+                [self.v5_record()], policy())
+
+    def test_missing_accepted_adjudication_in_policy_rejected(self):
+        with self.assertRaises(planner.PlannerError):
+            planner.evaluate_qualification_applicability(
+                self.v5_candidate(), [self.v5_record()],
+                policy(accepted_adjudication_sha256="  "))
 
     def test_unknown_policy_rejected(self):
         with self.assertRaises(planner.PlannerError):
             planner.evaluate_qualification_applicability(
-                {"qualification_subject_digest": "x"}, [], {"policy": "YOLO"})
+                self.v5_candidate(), [], {"policy": "YOLO"})
 
 
 class PlannerPurityTests(unittest.TestCase):
@@ -392,6 +461,8 @@ class ResultFenceTests(unittest.TestCase):
         self.assertEqual(summary["committed_by_operation"]["decode"], 3)
         self.assertEqual(summary["stale_result_committed"], 0)
         self.assertEqual(summary["wrong_position_result_committed"], 0)
+        self.assertEqual(summary["attempted_result_count"], 3)
+        self.assertEqual(len(fence.committed_results), 3)
 
     def test_wrong_session_fails_closed(self):
         fence = self.make_fence()
@@ -401,6 +472,8 @@ class ResultFenceTests(unittest.TestCase):
             fence.commit(result)
         self.assertEqual(fence.summary()["wrong_session_result_committed"], 0)
         self.assertEqual(fence.summary()["fence_rejections"], 1)
+        # the full refused attempt is retained, not just a reason
+        self.assertEqual(fence.rejections[0]["result"]["session_id"], "session-2")
 
     def test_stale_epoch_fails_closed(self):
         fence = self.make_fence()
@@ -438,6 +511,50 @@ class ResultFenceTests(unittest.TestCase):
         fence = self.make_fence()
         with self.assertRaisesRegex(planner.PlannerError, "UNKNOWN_OPERATION"):
             fence.commit(self.base_result(operation="speculative"))
+
+    def test_counters_are_derived_not_asserted(self):
+        fence = self.make_fence()
+        for position in range(4):
+            fence.commit(self.base_result(position=position))
+        # the ledger is the sole input to the counters: an admitted entry
+        # that would violate the authority shows up as a nonzero counter
+        fence.committed_results.append({**fence.committed_results[0],
+                                        "session_id": "other-session"})
+        summary = fence.summary()
+        self.assertEqual(summary["wrong_session_result_committed"], 1)
+        self.assertEqual(summary["wrong_session_result_committed"],
+                         planner.derive_fence_counters(
+                             fence.committed_results,
+                             authority=fence.authority)["wrong_session_result_committed"])
+
+    def test_stale_entry_derivation(self):
+        fence = self.make_fence()
+        fence.commit(self.base_result(position=0))
+        fence.commit(self.base_result(position=1))
+        ledger = list(fence.committed_results)
+        ledger.insert(0, {**ledger[0], "position": 99})
+        derived = planner.derive_fence_counters(ledger, authority=fence.authority)
+        # the forged leading entry is out of sequence; the genuine entries
+        # that follow revalidate in ledger order
+        self.assertEqual(derived["wrong_position_result_committed"], 1)
+        self.assertEqual(derived["stale_result_committed"], 0)
+        self.assertNotIn("wrong_session_result_committed",
+                         [name for name, value in derived.items() if value])
+
+    def test_stale_ledger_entry_detection(self):
+        fence = self.make_fence()
+        fence.commit(self.base_result(position=0))
+        fence.commit(self.base_result(position=1))
+        ledger = list(fence.committed_results)
+        # replaying position 0 after it was consumed is stale
+        ledger.append(dict(ledger[0]))
+        derived = planner.derive_fence_counters(ledger, authority=fence.authority)
+        self.assertEqual(derived["stale_result_committed"], 1)
+
+    def test_every_derived_counter_exists(self):
+        fence = self.make_fence()
+        for name in planner.FENCE_DERIVED_COUNTERS:
+            self.assertIn(name, fence.summary())
 
 
 if __name__ == "__main__":

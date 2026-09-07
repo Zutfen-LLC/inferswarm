@@ -32,6 +32,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from issue101_orchestration import Coordinator, Node  # noqa: E402
+from issue74_methodology import canonical_json_bytes  # noqa: E402
 from issue99_artifact_core import (  # noqa: E402
     LocalFileSource,
     NodeArtifactCache,
@@ -42,23 +43,33 @@ from issue99_artifact_core import (  # noqa: E402
 from issue117_applicability import (  # noqa: E402
     ACCEPTED_INFERSWARM_BASE,
     canonical_issue117_audit,
+    load_producer_delta,
     verify_v5_authority,
 )
 from issue117_gemma_strategy import (  # noqa: E402
+    SYNTHETIC_SUBJECT_BACKEND,
+    SYNTHETIC_SUBJECT_EXECUTION,
     GemmaDenseStrategy,
+    accepted_v5_qualification_record,
+    build_qualification_record,
+    build_source_manifest,
     build_synthetic_gemma_repository,
     catalog_from_repository,
     checkpoint_weight_bytes,
+    subject_from_catalog,
 )
 from issue117_integration_fixture import validate_fixture_document  # noqa: E402
 from issue117_planner import (  # noqa: E402
+    FENCE_DERIVED_COUNTERS,
     QUALIFICATION_APPLICABLE,
     QUALIFICATION_POLICY_STRICT,
     AdmissionPlanner,
     ResultFence,
+    derive_fence_counters,
     guard_participant_exact,
     planner_purity_audit,
 )
+from issue117_applicability import FROZEN_INTEGRATION_PRODUCER  # noqa: E402
 
 AREA = Path("docs/implementation/r6-successor-dense-full-integration-117")
 FIXTURE_PATH = ROOT / AREA / "evidence" / "integration-fixture.json"
@@ -95,6 +106,7 @@ EVIDENCE_FILES = {
 COMMITTED_EVIDENCE_FILES = {
     "documentation-synchronization.json",
     "integration-fixture.json",
+    "producer-delta.json",
 }
 PURITY_TOKENS = (
     "gemma", "rtx", "3060", "3090", "bf16", "triton", "flashinfer", "cuda",
@@ -102,12 +114,18 @@ PURITY_TOKENS = (
     "safetensors", "tokenizer", "checkpoint",
 )
 #: Synthetic capacity model: usable weight bytes as a fraction of the
-#: synthetic checkpoint, mirroring the real topology's feasibility shape
-#: (a 16-layer stage fits a 3060-class CU, 24 layers do not, the whole
-#: checkpoint fits only the reference 3090-class CU). Physical capacity
+#: synthetic checkpoint, mirroring the real topology's feasibility shape.
+#: The fractions are chosen against the exact participant-requirement
+#: accounting (assigned + declared shared state per stage): a 16-layer stage
+#: with its embedding/shared-head state needs 98,368 bytes (42.9% of the
+#: 229,440-byte synthetic checkpoint) and a 24-layer stage needs 131,072
+#: bytes (57.1%), so any 3060-class fraction in [42.9%, 57.1%) makes the
+#: accepted V5 candidate feasible and every 24-layer stage infeasible; 0.50
+#: sits inside that window. A whole-checkpoint single stage (229,440 unique
+#: bytes) fits only the reference 3090-class CU at 1.06. Physical capacity
 #: truth is re-frozen by the physical preflight; this is a labeled fixture
 #: model, not a hardware claim.
-CAPACITY_FRACTIONS = {"NVIDIA GeForce RTX 3060": 0.36, "NVIDIA GeForce RTX 3090": 1.06}
+CAPACITY_FRACTIONS = {"NVIDIA GeForce RTX 3060": 0.50, "NVIDIA GeForce RTX 3090": 1.06}
 #: Declared fixture path bandwidth (bytes/second) for transition economics.
 FIXTURE_BANDWIDTH_BYTES_PER_SECOND = 125_000_000
 NODE_IDS = ("inferswarm01", "inferswarm03")
@@ -116,6 +134,7 @@ PLANNING_EVIDENCE_CONTRACT = {
              "evidence_identity": "path-band-v1",
              "applicability_context": {"fixture": "cpu-only", "arm": "planning"}},
 }
+FIXTURE_QUALIFICATION_RECORD_ID = "inferswarm.issue117.fixture-qualification/1"
 
 
 def require(condition: Any, message: str) -> None:
@@ -127,15 +146,35 @@ def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def fixture_adjudication_identity(fixture_digest: str,
+                                  qualification_subject_digest: str) -> str:
+    """The fixture-scoped terminal adjudication identity.
+
+    The CPU fixture world's qualification authority is the fixture contract
+    itself: the digest binds the frozen fixture document and the exact
+    subject. It is labeled fixture-scoped everywhere and is never the
+    accepted V5 adjudication identity.
+    """
+    payload = canonical_json_bytes({
+        "scope": "issue117-cpu-fixture",
+        "fixture_digest": fixture_digest,
+        "qualification_subject_digest": qualification_subject_digest,
+    })
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
 def synthetic_capacity_model(strategy: GemmaDenseStrategy) -> tuple[dict[str, int], dict[str, Any]]:
     total = checkpoint_weight_bytes(strategy.catalog)
     usable = {}
     for cu in strategy.snapshot["compute_units"]:
         usable[cu["cu_id"]] = int(total * CAPACITY_FRACTIONS[cu["product"]])
     model = {
-        "model": "synthetic-scaled-capacity-v1",
-        "note": "fixture-only capacity fractions; physical capacities are re-frozen "
-                "by the physical preflight",
+        "model": "synthetic-scaled-capacity-v2",
+        "note": "fixture-only capacity fractions chosen against the exact "
+                "participant-requirement accounting (16-layer stage with "
+                "embedding/shared-head state feasible, 24-layer stages "
+                "infeasible, whole checkpoint only on the reference CU); "
+                "physical capacities are re-frozen by the physical preflight",
         "usable_weight_bytes": usable,
         "synthetic_checkpoint_weight_bytes": total,
     }
@@ -143,18 +182,41 @@ def synthetic_capacity_model(strategy: GemmaDenseStrategy) -> tuple[dict[str, in
 
 
 def build_world(temp: Path):
-    """Frozen strategy, plan, coordinator, nodes, and one authorized Source."""
+    """Frozen strategy, plan, coordinator, nodes, and one authorized Source.
+
+    The SOURCE side builds the catalog and artifact manifest (the only
+    byte-reading steps); the strategy/planning waist consumes the resulting
+    descriptors. The qualification subject is derived from the exact
+    synthetic catalog, so the fixture world can never claim the accepted
+    Gemma checkpoint identity.
+    """
     repo = temp / "source-repository"
     config, objects = build_synthetic_gemma_repository(repo)
     catalog = catalog_from_repository(repo, config=config)
+
     def source_bytes(name: str) -> bytes:
         return objects[name]
 
-    strategy = GemmaDenseStrategy(catalog=catalog, source_bytes=source_bytes)
+    manifest = build_source_manifest(catalog, source_bytes=source_bytes)
+    subject = subject_from_catalog(
+        catalog, execution=SYNTHETIC_SUBJECT_EXECUTION, backend=SYNTHETIC_SUBJECT_BACKEND)
+    strategy = GemmaDenseStrategy(catalog=catalog, subject=subject,
+                                  source_manifest=manifest)
     capacity, capacity_model = synthetic_capacity_model(strategy)
     candidates = strategy.legal_candidates(capacity_model=capacity)
     v5 = strategy.accepted_v5_candidate(candidates)
-    qualification_record = strategy.accepted_v5_qualification_record()
+
+    fixture_digest_document = json.loads(FIXTURE_PATH.read_text())
+    fixture_digest = fixture_digest_document["fixture_digest"]
+    subject_digest = digest_of_bytes(canonical_json_bytes(v5["qualification_subject"]))
+    adjudication = fixture_adjudication_identity(fixture_digest, subject_digest)
+    qualification_record = build_qualification_record(
+        qualification_record_id=FIXTURE_QUALIFICATION_RECORD_ID,
+        terminal_disposition="V5_QUALIFICATION_PASS",
+        terminal_adjudication_sha256=adjudication,
+        qualification_subject=v5["qualification_subject"],
+        authority_extra={"fixture_digest": fixture_digest},
+        scope="issue117-cpu-fixture")
 
     origin = LocalFileSource(source_id=ORIGIN_SOURCE_ID, root=repo)
     nodes = {node_id: Node(node_id, NodeArtifactCache(temp / "issue117-caches" / node_id))
@@ -168,8 +230,10 @@ def build_world(temp: Path):
         coordinator.ingest(node.inventory())
     return {
         "temp": temp, "repo": repo, "objects": objects, "config": config,
-        "catalog": catalog, "strategy": strategy, "capacity": capacity,
+        "catalog": catalog, "manifest": manifest, "subject": subject,
+        "strategy": strategy, "capacity": capacity,
         "capacity_model": capacity_model, "candidates": candidates, "v5": v5,
+        "fixture_digest": fixture_digest, "adjudication": adjudication,
         "qualification_record": qualification_record, "origin": origin,
         "nodes": nodes, "coordinator": coordinator, "plan": plan,
         "requirements": requirements,
@@ -216,18 +280,20 @@ def build_path_evidence(world) -> list[dict[str, Any]]:
 
 
 def build_admission_planner(world, *, requirements_by_candidate=None,
-                            candidate_subject_overrides=None,
+                            candidate_overrides=None,
                             path_evidence_by_candidate=None,
                             evidence_contract=None,
                             coordinators_by_candidate=None) -> AdmissionPlanner:
     strategy = world["strategy"]
     candidates = world["candidates"]
-    if candidate_subject_overrides:
+    if candidate_overrides:
+        # control-plane misuse simulations supply fully-formed candidates;
+        # the planner recomputes every subject digest from the subject itself
         candidates = [dict(candidate) for candidate in candidates]
         for candidate in candidates:
-            override = candidate_subject_overrides.get(candidate["candidate_id"])
+            override = candidate_overrides.get(candidate["candidate_id"])
             if override is not None:
-                candidate["qualification_subject_digest"] = override
+                candidate.update(override)
     feasibility = {
         candidate["candidate_id"]: strategy.feasibility(candidate, capacity_model=world["capacity"])
         for candidate in candidates
@@ -239,6 +305,7 @@ def build_admission_planner(world, *, requirements_by_candidate=None,
         qualification_policy={
             "policy": QUALIFICATION_POLICY_STRICT,
             "accepted_dispositions": ("V5_QUALIFICATION_PASS",),
+            "accepted_adjudication_sha256": world["adjudication"],
             "required_for_admission": True,
         },
         requirements_by_candidate=requirements_by_candidate or {
@@ -421,27 +488,116 @@ def locality_mutation(world, decision_cold) -> dict[str, Any]:
     }
 
 
+#: Ledger event classes that would indicate out-of-band model-state movement
+#: or host-RAM mirror staging. None exist on the accepted ordinary path;
+#: the accounting below sums them from retained records, so poisoning the
+#: records makes the derived invariants nonzero.
+HOST_MIRROR_STAGING_EVENT = "HOST_MIRROR_STAGE"
+HOST_MIRROR_RELEASE_EVENT = "HOST_MIRROR_RELEASE"
+UNPLANNED_MODEL_STATE_MOVEMENT_EVENT = "MODEL_STATE_MOVE"
+
+
 def staging_accounting(world) -> dict[str, Any]:
-    """Accepted #53 host-staging semantics: no persistent staging remains."""
+    """Accepted #53 host-staging semantics derived from retained records.
+
+    Persistent partials, verified cache bytes, host-mirror bytes, and
+    out-of-band model-state movement are summed from the nodes' inventories
+    and acquisition ledgers. No acceptance zero is written here: an empty
+    record set sums to zero, and the negative controls poison the records to
+    prove the derivations are non-vacuous.
+    """
+    required_artifact_ids = {
+        record["artifact_id"]
+        for participant in world["requirements"]["participants"]
+        for record in participant["required_artifacts"]
+    }
     persistent_partials = 0
     verified_cache_bytes = 0
+    mirror_staged_bytes = 0
+    mirror_released_bytes = 0
+    unplanned_movement_bytes = 0
     for node in world["nodes"].values():
-        for participant in world["requirements"]["participants"]:
-            if participant["node_id"] != node.node_id:
-                continue
-            for record in participant["required_artifacts"]:
-                if node.cache.partial_state(record["artifact_id"]) is not None:
-                    persistent_partials += 1
-        for obj in node.cache.inventory()["verified_objects"]:
-            if obj["byte_digest_verified"]:
-                verified_cache_bytes += obj["length"]
+        inventory = node.cache.inventory()
+        persistent_partials += len(inventory["partial_transfers"])
+        verified_cache_bytes += sum(
+            obj["length"] for obj in inventory["verified_objects"]
+            if obj["byte_digest_verified"])
+        for event in node.ledger.events:
+            if event["event"] == HOST_MIRROR_STAGING_EVENT:
+                mirror_staged_bytes += event.get("bytes", 0)
+            elif event["event"] == HOST_MIRROR_RELEASE_EVENT:
+                mirror_released_bytes += event.get("bytes", 0)
+            elif event["event"] == UNPLANNED_MODEL_STATE_MOVEMENT_EVENT \
+                    and event.get("artifact_id") not in required_artifact_ids:
+                unplanned_movement_bytes += event.get("bytes", 0)
     return {
         "persistent_partial_states": persistent_partials,
         "verified_cache_bytes": verified_cache_bytes,
-        "unexplained_persistent_host_mirror_bytes": 0,
-        "unplanned_steady_state_model_state_movement_bytes": 0,
+        "unexplained_persistent_host_mirror_bytes":
+            mirror_staged_bytes - mirror_released_bytes,
+        "unplanned_steady_state_model_state_movement_bytes": unplanned_movement_bytes,
         "note": "a durable verified artifact cache on local storage is not a "
                 "host-RAM mirror; it may remain after realization",
+    }
+
+
+def count_bytes_payloads(value: Any) -> int:
+    """Count raw ``bytes`` payloads embedded in control-plane documents.
+
+    The Coordinator/planning waist must only ever see small immutable
+    descriptors; this derivation records any bytes payload that leaked into
+    the retained control-plane documents.
+    """
+    if isinstance(value, (bytes, bytearray)):
+        return 1
+    if isinstance(value, Mapping):
+        return sum(count_bytes_payloads(item) for item in value.values())
+    if isinstance(value, (list, tuple, set)):
+        return sum(count_bytes_payloads(item) for item in value)
+    return 0
+
+
+def derive_coverage_invariants(requirements: Mapping[str, Any], *,
+                               objects: Mapping[str, bytes],
+                               total_weight: int) -> dict[str, int]:
+    """Derive the whole-model-dependency invariants from retained records.
+
+    ``unexplained_full_model_dependency`` counts upstream objects fully
+    covered by byte-range requirements without being declared whole-object
+    metadata; ``participant_requires_complete_model_repository`` counts
+    participants whose weight bytes are not a proper subset of the
+    checkpoint. Both are computed from the requirements document, so
+    poisoning the requirements makes them nonzero.
+    """
+    whole_metadata_objects = {
+        record["origin"]["source_object"]
+        for participant in requirements["participants"]
+        for record in participant["required_artifacts"]
+        if record["kind"] == "whole_object"
+    }
+    full_object_bytes = 0
+    for name, data in objects.items():
+        if name in whole_metadata_objects:
+            continue
+        covered = bytearray(len(data))
+        for participant in requirements["participants"]:
+            for record in participant["required_artifacts"]:
+                if record["origin"]["source_object"] != name \
+                        or record["kind"] != "byte_range":
+                    continue
+                start, end = record["origin"]["byte_start"], record["origin"]["byte_end"]
+                covered[start:end] = b"\x01" * (end - start)
+        if all(covered):
+            full_object_bytes += len(data)
+    complete_participants = 0
+    for participant in requirements["participants"]:
+        weight = sum(record["length"] for record in participant["required_artifacts"]
+                     if record["kind"] == "byte_range")
+        if total_weight and weight >= total_weight:
+            complete_participants += 1
+    return {
+        "unexplained_full_model_dependency": full_object_bytes,
+        "participant_requires_complete_model_repository": complete_participants,
     }
 
 
@@ -464,36 +620,9 @@ def derive_zero_invariants(world, *, decision, accounting, cold, warm, mutation,
     unrelated = sum(event["bytes"] for event in acquired
                     if event["artifact_id"] not in required_artifact_ids)
 
-    # exact range coverage: no upstream object may be fully covered unless it
-    # is a declared whole-object metadata requirement
-    whole_metadata_objects = {
-        record["origin"]["source_object"]
-        for participant in world["requirements"]["participants"]
-        for record in participant["required_artifacts"]
-        if record["kind"] == "whole_object"
-    }
-    full_object_bytes = 0
-    for name, data in world["objects"].items():
-        if name in whole_metadata_objects:
-            continue
-        covered = bytearray(len(data))
-        for participant in world["requirements"]["participants"]:
-            for record in participant["required_artifacts"]:
-                if record["origin"]["source_object"] != name \
-                        or record["kind"] != "byte_range":
-                    continue
-                start, end = record["origin"]["byte_start"], record["origin"]["byte_end"]
-                covered[start:end] = b"\x01" * (end - start)
-        if all(covered):
-            full_object_bytes += len(data)
-
-    total_weight = checkpoint_weight_bytes(catalog)
-    complete_participants = 0
-    for participant in world["requirements"]["participants"]:
-        weight = sum(record["length"] for record in participant["required_artifacts"]
-                     if record["kind"] == "byte_range")
-        if weight >= total_weight:
-            complete_participants += 1
+    coverage = derive_coverage_invariants(
+        world["requirements"], objects=world["objects"],
+        total_weight=checkpoint_weight_bytes(catalog))
 
     executed_ids = {decision["selected_candidate_id"]} if decision["selected_candidate_id"] else set()
     inapplicable_executed = sum(
@@ -511,11 +640,20 @@ def derive_zero_invariants(world, *, decision, accounting, cold, warm, mutation,
             if not set(record["satisfies_logical_state_ids"]) & (declared & weight_units):
                 unassigned += record["length"]
 
-    plan_digests = {cold["plan_digest"], warm["plan_digest"]}
+    plan_digests = {world["plan"]["plan_digest"], cold["plan_digest"], warm["plan_digest"]}
     fallback_states = sum(
         1 for node in world["nodes"].values() for event in node.lifecycle
         if event.get("state") not in (None, "MISSING", "AUTHORIZED", "ACQUIRING",
                                       "VERIFIED_AVAILABLE"))
+    control_plane_documents = {
+        "plan": world["plan"],
+        "requirements": world["requirements"],
+        "qualification_record": world["qualification_record"],
+        "source_manifest": world["manifest"],
+        "decision": decision,
+        "strategy": strategy.frozen_document(world["candidates"],
+                                             capacity_model=world["capacity"]),
+    }
     return {
         "planner_model_specific_branches": purity["planner_model_specific_branches"],
         "qualification_inapplicable_candidate_executed": inapplicable_executed,
@@ -524,9 +662,14 @@ def derive_zero_invariants(world, *, decision, accounting, cold, warm, mutation,
             else 1),
         "unrelated_model_bytes_acquired_for_realization": unrelated,
         "unassigned_model_weight_bytes_acquired": unassigned,
-        "unexplained_full_model_dependency": full_object_bytes,
-        "participant_requires_complete_model_repository": complete_participants,
+        "unexplained_full_model_dependency":
+            coverage["unexplained_full_model_dependency"],
+        "participant_requires_complete_model_repository":
+            coverage["participant_requires_complete_model_repository"],
         "coordinator_bulk_artifact_bytes_observed": world["coordinator"].bytes_observed,
+        "control_plane_document_byte_payloads": sum(
+            count_bytes_payloads(document)
+            for document in control_plane_documents.values()),
         "unverified_state_used_as_locality_evidence": sum(
             1 for node in world["nodes"].values()
             for obj in node.cache.inventory()["verified_objects"]
@@ -540,11 +683,7 @@ def derive_zero_invariants(world, *, decision, accounting, cold, warm, mutation,
             staging["unplanned_steady_state_model_state_movement_bytes"],
         "runtime_fallback_events": fallback_states,
         "silent_plan_substitution_events": len(plan_digests) - 1,
-        "stale_result_committed": fence_summary["stale_result_committed"],
-        "wrong_session_result_committed": fence_summary["wrong_session_result_committed"],
-        "wrong_plan_result_committed": fence_summary["wrong_plan_result_committed"],
-        "wrong_epoch_result_committed": fence_summary["wrong_epoch_result_committed"],
-        "wrong_position_result_committed": fence_summary["wrong_position_result_committed"],
+        **{name: fence_summary[name] for name in FENCE_DERIVED_COUNTERS},
         "warm_restart_model_weight_transfer_bytes":
             warm["warm_restart_model_weight_transfer_bytes"],
     }
@@ -714,6 +853,7 @@ def run_negative_controls(world, fixture_path: Path) -> NegativeControls:
             qualification_records=[world["qualification_record"]],
             qualification_policy={"policy": QUALIFICATION_POLICY_STRICT,
                                   "accepted_dispositions": ("V5_QUALIFICATION_PASS",),
+                                  "accepted_adjudication_sha256": world["adjudication"],
                                   "required_for_admission": True},
             requirements_by_candidate={world["v5"]["candidate_id"]: world["requirements"]},
             path_evidence_by_candidate={},
@@ -732,8 +872,17 @@ def run_negative_controls(world, fixture_path: Path) -> NegativeControls:
             raise AssertionError("control world has no missing bytes")
 
     def changed_executor_cannot_inherit():
+        # a materially changed execution-bearing subject (new geometry and
+        # producer identity) recomputes to a different subject digest and
+        # must resolve QUALIFICATION_NOT_APPLICABLE
+        mutated = json.loads(json.dumps(world["v5"]))
+        mutated["stages"][0]["layer_end"] = 17
+        mutated["stages"][1]["layer_start"] = 17
+        mutated["qualification_subject"] = world["strategy"].qualification_subject(mutated)
+        mutated["qualification_subject_digest"] = digest_of_bytes(
+            canonical_json_bytes(mutated["qualification_subject"]))
         planner = build_admission_planner(
-            world, candidate_subject_overrides={world["v5"]["candidate_id"]: "digest-CHANGED"})
+            world, candidate_overrides={world["v5"]["candidate_id"]: mutated})
         decision = planner.rank()
         if decision["selected_candidate_id"] is not None:
             raise AssertionError("changed executor inherited qualification")
@@ -742,14 +891,141 @@ def run_negative_controls(world, fixture_path: Path) -> NegativeControls:
         if row["gates"]["qualification_applicability"]["status"] == QUALIFICATION_APPLICABLE:
             raise AssertionError("subject mismatch not detected")
 
+    def lying_subject_digest_is_refused():
+        # a candidate whose declared subject digest does not recompute from
+        # its own subject is control-plane misuse and fails loudly
+        lying = json.loads(json.dumps(world["v5"]))
+        lying["qualification_subject_digest"] = "sha256:" + "0" * 64
+        planner = build_admission_planner(
+            world, candidate_overrides={world["v5"]["candidate_id"]: lying})
+        planner.rank()
+
+    def fixture_subject_cannot_inherit_real_v5_record():
+        # the accepted V5 record binds the accepted Gemma checkpoint subject;
+        # no synthetic fixture subject digest may match it
+        from issue117_planner import evaluate_qualification_applicability
+        record = accepted_v5_qualification_record()
+        require(record["qualification_subject_digest"]
+                != digest_of_bytes(canonical_json_bytes(world["v5"]["qualification_subject"])),
+                "fixture subject must never equal the accepted V5 subject digest")
+        for candidate in world["candidates"]:
+            result = evaluate_qualification_applicability(
+                candidate, [record],
+                {"policy": QUALIFICATION_POLICY_STRICT,
+                 "accepted_dispositions": ("V5_QUALIFICATION_PASS",),
+                 "accepted_adjudication_sha256":
+                     record["authority"]["terminal_adjudication_sha256"]})
+            if result["status"] == QUALIFICATION_APPLICABLE:
+                raise AssertionError(
+                    f"synthetic candidate inherited the real V5 record: "
+                    f"{candidate['candidate_id']}")
+
+    def changed_execution_producer_cannot_reapply_audit():
+        # poison the frozen producer delta: one execution-bearing zone file
+        # changes bytes in the integration producer -> building the audit
+        # must stop with R6_SUCCESSOR_REQUALIFICATION_REQUIRED, never DELTA_
+        import issue117_applicability as applicability
+        poisoned = load_producer_delta(ROOT)
+        math_file = next(entry for entry in poisoned["zone_files"]
+                         if "dense_stage_model_math" in entry["surfaces"]
+                         and entry["delta"] == applicability.DELTA_IDENTICAL)
+        math_file["integration_sha256"] = "sha256:" + "f" * 64
+        math_file["delta"] = applicability.DELTA_CHANGED
+        poisoned.pop("producer_delta_digest")
+        poisoned["producer_delta_digest"] = self_digest(
+            poisoned, identity_field="producer_delta_digest")
+        applicability.build_audit_document(
+            poisoned, authority={"integration_producer":
+                                 applicability.FROZEN_INTEGRATION_PRODUCER,
+                                 "execution_authority":
+                                 applicability.ACCEPTED_FREETOKEN_EXECUTION_AUTHORITY})
+
+    def fence_derivation_is_non_vacuous():
+        # poison the committed-result ledger with a forged wrong-session
+        # result: the derived counter must become nonzero
+        import issue117_planner as planner_module
+        fencing = run_fencing(world, json.loads(FIXTURE_PATH.read_text()))
+        authority = fencing["summary"]["authority"]
+        poisoned_ledger = list(fencing["committed_result_records"]) + [{
+            "contract_id": authority["contract_id"],
+            "session_id": "other-session",
+            "epoch": authority["epoch"],
+            "realization_id": authority["realization_id"],
+            "plan_digest": authority["plan_digest"],
+            "operation": "decode",
+            "position": len(fencing["committed_result_records"]) // 2,
+        }]
+        derived = planner_module.derive_fence_counters(poisoned_ledger, authority=authority)
+        if derived["wrong_session_result_committed"] < 1:
+            raise AssertionError("poisoned fence ledger derived zero invalid results")
+
+    def staging_derivation_is_non_vacuous():
+        # poison a scratch node ledger with host-mirror staging and an
+        # unplanned model-state movement: the derived accounting must see it
+        scratch = Node("scratch", NodeArtifactCache(world["temp"] / "poison-cache"))
+        scratch.ledger.record({"event": HOST_MIRROR_STAGING_EVENT,
+                               "participant_id": "scratch",
+                               "artifact_id": "mirrored-state", "bytes": 8192})
+        scratch.ledger.record({"event": UNPLANNED_MODEL_STATE_MOVEMENT_EVENT,
+                               "participant_id": "scratch",
+                               "artifact_id": "unplanned-state", "bytes": 4096})
+        poisoned = dict(world)
+        poisoned["nodes"] = {**world["nodes"], "scratch": scratch}
+        accounting = staging_accounting(poisoned)
+        if accounting["unexplained_persistent_host_mirror_bytes"] < 8192 \
+                or accounting["unplanned_steady_state_model_state_movement_bytes"] < 4096:
+            raise AssertionError("poisoned staging records derived zero")
+
+    def coverage_derivation_is_non_vacuous():
+        # poison a requirements copy so one participant requires both whole
+        # upstream shards: the derived coverage invariants must go nonzero
+        poisoned = json.loads(json.dumps(world["requirements"]))
+        shards = sorted(name for name in world["objects"]
+                        if name.endswith(".safetensors"))
+        participant = poisoned["participants"][0]
+        participant["required_artifacts"] = [
+            record for record in participant["required_artifacts"]
+            if record["origin"].get("source_object") not in shards
+        ] + [{
+            "kind": "byte_range",
+            "content_digest": "sha256:" + "0" * 64,
+            "length": len(world["objects"][shard]),
+            "requirement_class": "assigned_logical_state",
+            "satisfies_logical_state_ids": ["state.layer.0"],
+            "origin": {"source_object": shard, "byte_start": 0,
+                       "byte_end": len(world["objects"][shard])},
+        } for shard in shards]
+        derived = derive_coverage_invariants(
+            poisoned, objects=world["objects"],
+            total_weight=checkpoint_weight_bytes(world["catalog"]))
+        if derived["unexplained_full_model_dependency"] <= 0:
+            raise AssertionError("poisoned coverage derived zero full-model bytes")
+        if derived["participant_requires_complete_model_repository"] < 1:
+            raise AssertionError("poisoned coverage derived zero complete participants")
+
     def locality_cannot_override_qualification():
         planner = build_admission_planner(world)
         for candidate_id, entry in planner.gate_ledger().items():
             if candidate_id != world["v5"]["candidate_id"] and entry["admissible"]:
                 raise AssertionError(f"inapplicable candidate admitted: {candidate_id}")
 
-    def v5_identity_drift():
-        verify_v5_authority(ROOT / "docs")
+    def v5_authority_tamper_is_fail_closed():
+        # byte-tamper a pinned authority file in a throwaway repo root: the
+        # verification must detect the drift (never a path artifact)
+        import shutil
+        import tempfile as _tempfile
+        import issue117_applicability as applicability
+        with _tempfile.TemporaryDirectory() as temp:
+            relative = ("docs/qualification/gemma4-12b-it-v5-campaign-110/b/"
+                        "holdout-adjudication.json")
+            target = Path(temp) / relative
+            target.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / relative, target)
+            data = json.loads(target.read_text())
+            data["tampered"] = True
+            target.write_text(json.dumps(data))
+            verify_v5_authority(Path(temp), files={
+                relative: applicability.V5_AUTHORITY_FILES[relative]})
 
     def fixture_digest_drift():
         tampered = json.loads(fixture_path.read_text())
@@ -786,13 +1062,33 @@ def run_negative_controls(world, fixture_path: Path) -> NegativeControls:
         "changed_executor_cannot_inherit_qualification",
         changed_executor_cannot_inherit,
         "changed executor resolves QUALIFICATION_NOT_APPLICABLE and is not admitted")
+    controls.expect_failure(
+        "lying_subject_digest_is_control_plane_misuse", lying_subject_digest_is_refused,
+        "does not match its own subject")
+    controls.expect_pass(
+        "fixture_subject_cannot_inherit_real_v5_record",
+        fixture_subject_cannot_inherit_real_v5_record,
+        "no synthetic candidate subject matches the accepted V5 record")
+    controls.expect_failure(
+        "changed_execution_producer_requires_requalification",
+        changed_execution_producer_cannot_reapply_audit,
+        "R6_SUCCESSOR_REQUALIFICATION_REQUIRED")
+    controls.expect_pass(
+        "fence_ledger_derivation_is_non_vacuous", fence_derivation_is_non_vacuous,
+        "poisoned committed-result ledger derives a nonzero invalid counter")
+    controls.expect_pass(
+        "staging_ledger_derivation_is_non_vacuous", staging_derivation_is_non_vacuous,
+        "poisoned staging records derive nonzero mirror/movement bytes")
+    controls.expect_pass(
+        "coverage_derivation_is_non_vacuous", coverage_derivation_is_non_vacuous,
+        "poisoned requirements derive nonzero whole-model dependency invariants")
     controls.expect_pass(
         "locality_cannot_override_qualification",
         locality_cannot_override_qualification,
         "no inapplicable candidate is ever admitted")
     controls.expect_failure(
-        "v5_authority_byte_identity_is_fail_closed", v5_identity_drift,
-        "accepted V5 authority file missing")
+        "v5_authority_byte_tampering_is_fail_closed", v5_authority_tamper_is_fail_closed,
+        "drifted")
     controls.expect_failure(
         "fixture_integrity_is_fail_closed", fixture_digest_drift, "mismatch")
     return controls
@@ -849,6 +1145,8 @@ def run_fencing(world, fixture_document) -> dict[str, Any]:
     return {
         "authority": fence.authority,
         "committed_results": committed,
+        "committed_result_records": list(fence.committed_results),
+        "rejected_attempt_records": list(fence.rejections),
         "fixture_case_count": len(case_ids),
         "summary": fence.summary(),
         "negative_controls": negatives,
@@ -863,10 +1161,18 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
     validate_fixture_document(fixture_document)
 
     authority = verify_v5_authority(ROOT)
-    audit = canonical_issue117_audit()
+    audit = canonical_issue117_audit(ROOT)
 
-    with tempfile.TemporaryDirectory(prefix="issue117-cpu-") as temp:
-        world = build_world(Path(temp))
+    import shutil
+    # A fixed working root keeps the retained evidence byte-deterministic:
+    # source endpoints and cache paths enter the frozen documents, so a
+    # random temp path would change evidence bytes per machine. The campaign
+    # is a serial orchestrator process and is not concurrency-safe by design.
+    working = Path(tempfile.gettempdir()) / "issue117-cpu-campaign"
+    shutil.rmtree(working, ignore_errors=True)
+    working.mkdir(parents=True)
+    try:
+        world = build_world(working)
         strategy = world["strategy"]
 
         guard_participant_exact(
@@ -905,20 +1211,29 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
 
         strategy_doc = strategy.frozen_document(
             world["candidates"], capacity_model=world["capacity"])
+        source_side_bytes = (world["catalog"]["source_bytes_hashed"]
+                             + world["manifest"]["source_bytes_read"])
         summary = {
-            "schema": "inferswarm.issue117.canonical-summary/1",
+            "schema": "inferswarm.issue117.canonical-summary/2",
             "gate": "issue #117 implementation freeze (CPU/static)",
             "accepted_inferswarm_base": BASE,
             "accepted_freetoken_research_head": authority["accepted_freetoken_research_head"],
+            "frozen_integration_producer": FROZEN_INTEGRATION_PRODUCER,
             "fixture_digest": fixture_document["fixture_digest"],
             "fixture_case_count": fixture_document["case_count"],
             "candidate_count": len(world["candidates"]),
             "selected_candidate_id": decision["selected_candidate_id"],
             "qualification_record_id": world["qualification_record"]["qualification_record_id"],
+            "qualification_record_scope": world["qualification_record"]["scope"],
+            "qualification_adjudication_identity":
+                world["qualification_record"]["authority"]["terminal_adjudication_sha256"],
+            "accepted_v5_qualification_record_id":
+                accepted_v5_qualification_record()["qualification_record_id"],
+            "source_side_model_bytes_hashed": source_side_bytes,
+            "coordinator_bulk_bytes_observed": cold["coordinator_bytes_observed"],
             "cold_transferred_bytes": {
                 participant: entry["transferred_bytes"]
                 for participant, entry in cold["per_participant"].items()},
-            "coordinator_bulk_bytes_observed": cold["coordinator_bytes_observed"],
             "warm_restart_model_weight_transfer_bytes":
                 warm["warm_restart_model_weight_transfer_bytes"],
             "witness_digests": {participant: entry["witness_digest"]
@@ -933,7 +1248,7 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
                 "Arm B: physical cold acquisition/realization on inferswarm01/inferswarm03",
                 "Arm C: ordinary external-Coordinator serving vs direct control",
                 "Arm D: physical warm restart with zero model-weight transfer",
-                "physical preflight with real GPU/runtime identities",
+                "physical preflight with real per-CU GPU/runtime identities",
             ],
             "non_claims": [
                 "No statistical qualification claim; V5 thresholds are not reused.",
@@ -941,6 +1256,13 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
                 "No public planner, artifact, path, or wire schema is frozen.",
                 "No consumed h109 holdout material is used as new evidence.",
                 "The synthetic capacity model proves machinery, not hardware limits.",
+                "The qualification record here is fixture-scoped: it binds the "
+                "synthetic fixture subject, not the accepted Gemma checkpoint; "
+                "the accepted V5 record is exercised fail-closed (negative "
+                "control) and can never match a synthetic subject.",
+                "The producer-delta zone closure is provable up to the recorded "
+                "dynamic-import loaders (byte-pinned, identical); dynamically "
+                "loaded out-of-zone files are not hash-covered by the closure.",
             ],
         }
         documents = {
@@ -963,6 +1285,8 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
             "canonical-summary.json": summary,
         }
         documents["producer-hashes.json"] = {path: sha(ROOT / path) for path in PRODUCERS}
+    finally:
+        shutil.rmtree(working, ignore_errors=True)
     if out_dir is not None:
         for name, document in documents.items():
             write_canonical_json(out_dir / name, document)
@@ -978,7 +1302,7 @@ def write_manifest(out_dir: Path) -> None:
         if committed.is_file():
             entries[str(AREA / "evidence" / name)] = sha(committed)
     entries.update({path: sha(ROOT / path) for path in PRODUCERS})
-    for path in (str(AREA / "methodology.md"), str(AREA / "README.md"),
+    for path in (str(AREA / "METHODOLOGY.md"), str(AREA / "README.md"),
                  ".github/workflows/ci.yml"):
         if (ROOT / path).is_file():
             entries[path] = sha(ROOT / path)
