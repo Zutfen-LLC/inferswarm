@@ -33,9 +33,6 @@ from issue117_gemma_strategy import (
 PREFLIGHT_SCHEMA = "inferswarm.issue117.physical-preflight/1"
 
 REQUIRED_BACKEND_KEYS = ("torch", "cuda_runtime", "nvidia_driver", "triton", "flashinfer")
-REQUIRED_PARTICIPANT_ROLES = (
-    "stage-1", "stage-2", "stage-3",
-)
 
 
 class PreflightBlocked(RuntimeError):

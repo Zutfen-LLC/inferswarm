@@ -36,7 +36,7 @@ import struct
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
-from issue74_methodology import canonical_json_bytes
+from issue74_methodology import canonical_json_bytes, sha256_file
 from issue99_artifact_core import (
     digest_of_bytes,
     freeze_artifact_record,
@@ -146,11 +146,7 @@ def read_safetensors_header(path: Path) -> tuple[dict[str, Any], int, int]:
 
 
 def digest_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1 << 20), b""):
-            digest.update(chunk)
-    return "sha256:" + digest.hexdigest()
+    return "sha256:" + sha256_file(path)
 
 
 def catalog_from_repository(root: Path, *, config: Mapping[str, Any]) -> dict[str, Any]:
@@ -210,7 +206,7 @@ def layer_of_tensor(name: str) -> int | None:
     return int(head)
 
 
-def logical_state_of_tensor(name: str, *, tie_word_embeddings: bool) -> str | None:
+def logical_state_of_tensor(name: str) -> str | None:
     """Map one checkpoint tensor to its Logical State Unit id."""
     if name == "model.embed_tokens.weight":
         return "state.embedding"
@@ -226,13 +222,12 @@ def logical_state_of_tensor(name: str, *, tie_word_embeddings: bool) -> str | No
 
 def weight_unit_ids(catalog: Mapping[str, Any]) -> list[str]:
     """Every logical state unit carried by checkpoint weight bytes."""
-    tied = bool(catalog["config"]["tie_word_embeddings"])
     units = set()
     for name in catalog["tensors"]:
-        unit = logical_state_of_tensor(name, tie_word_embeddings=tied)
+        unit = logical_state_of_tensor(name)
         if unit is not None:
             units.add(unit)
-    if tied:
+    if bool(catalog["config"]["tie_word_embeddings"]):
         # the output head is the shared embedding state
         units.add("state.output_head")
     return sorted(units)
@@ -242,8 +237,7 @@ def checkpoint_weight_bytes(catalog: Mapping[str, Any]) -> int:
     """Total checkpoint weight bytes (excluding non-weight objects)."""
     total = 0
     for name in catalog["tensors"]:
-        if logical_state_of_tensor(
-                name, tie_word_embeddings=bool(catalog["config"]["tie_word_embeddings"])):
+        if logical_state_of_tensor(name):
             total += catalog["tensors"][name]["byte_count"]
     return total
 
@@ -557,7 +551,7 @@ class GemmaDenseStrategy:
         for name in names:
             tensor = self.catalog["tensors"][name]
             content = self._range_bytes(tensor)
-            state_id = logical_state_of_tensor(name, tie_word_embeddings=self.tied)
+            state_id = logical_state_of_tensor(name)
             satisfies_set: set[str] = set(extra_satisfies)
             if state_id is not None:
                 satisfies_set.add(state_id)

@@ -2,7 +2,7 @@
 
 Status: **`ISSUE117_IMPLEMENTATION_FREEZE_PASS`** (CPU/static phase).
 Physical Arms A–D and the physical preflight are **pending** on the fabric;
-see [METHODOLOGY.md](methodology.md) for the frozen execution plan.
+see [METHODOLOGY.md](METHODOLOGY.md) for the frozen execution plan.
 
 This phase proves, before any physical correctness-bearing execution, that
 the accepted architecture seams compose exactly as the #117 gate requires —
@@ -60,11 +60,12 @@ with digest `sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba
 Reproduce everything with `python3 scripts/issue117_proof.py` (deterministic;
 wall times excluded).
 
-- [Frozen methodology](methodology.md)
+- [Frozen methodology](METHODOLOGY.md)
 - [Canonical summary](evidence/canonical-summary.json)
 - [Integration fixture](evidence/integration-fixture.json)
 - [Strategy: legal candidates, feasibility, subjects](evidence/strategy.json)
 - [Qualification record binding V5](evidence/qualification-record.json)
+- [Documentation synchronization record](evidence/documentation-synchronization.json)
 - [Applicability audit](evidence/applicability-audit.json)
 - [Planner decision and explanations](evidence/planner-decision.json)
 - [Frozen requirements](evidence/requirements.json)

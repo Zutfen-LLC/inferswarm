@@ -357,10 +357,8 @@ class AdmissionPlanner:
         artifact, bytes, authorized source).
         """
         decision = self.rank()
-        admissible_ids = {candidate["candidate_id"] for candidate in self.candidates
-                          if next(row for row in decision["candidates"]
-                                  if row["candidate_id"] == candidate["candidate_id"])
-                          ["admissible"]}
+        admissible_ids = {row["candidate_id"] for row in decision["candidates"]
+                          if row["admissible"]}
         stage_rows = []
         for candidate in self.candidates:
             if candidate["candidate_id"] not in admissible_ids:

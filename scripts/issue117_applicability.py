@@ -24,11 +24,11 @@ Pure stdlib; never initializes a model runtime.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import sys
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from issue74_methodology import sha256_file
 from issue99_artifact_core import self_digest, write_canonical_json
 
 AUDIT_SCHEMA = "inferswarm.issue117.applicability-audit/1"
@@ -119,14 +119,6 @@ class ApplicabilityBlocked(RuntimeError):
     """A fail-closed applicability condition fired; stop before execution."""
 
 
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
-        for chunk in iter(lambda: stream.read(1 << 20), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def verify_v5_authority(root: Path, *, files: Mapping[str, str] | None = None) -> dict[str, Any]:
     """Prove every accepted V5 authority file is byte-identical; fail closed."""
     pinned = dict(V5_AUTHORITY_FILES if files is None else files)
@@ -172,7 +164,6 @@ def build_audit_document(entries: Sequence[Mapping[str, Any]], *,
             for entry in entries
         ],
     }
-    document["audit_digest"] = self_digest(document, identity_field="audit_digest")
     verdict = evaluate_audit(document)
     document["overall_result"] = verdict
     document["audit_digest"] = self_digest(document, identity_field="audit_digest")

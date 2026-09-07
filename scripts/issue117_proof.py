@@ -90,6 +90,12 @@ EVIDENCE_FILES = {
     "applicability-audit.json", "qualification-record.json",
     "canonical-summary.json", "producer-hashes.json",
 }
+#: committed inputs the campaign does not regenerate but the retained
+#: manifest must cover
+COMMITTED_EVIDENCE_FILES = {
+    "documentation-synchronization.json",
+    "integration-fixture.json",
+}
 PURITY_TOKENS = (
     "gemma", "rtx", "3060", "3090", "bf16", "triton", "flashinfer", "cuda",
     "inferswarm00", "inferswarm01", "inferswarm03", "inferswarm04",
@@ -105,6 +111,11 @@ CAPACITY_FRACTIONS = {"NVIDIA GeForce RTX 3060": 0.36, "NVIDIA GeForce RTX 3090"
 #: Declared fixture path bandwidth (bytes/second) for transition economics.
 FIXTURE_BANDWIDTH_BYTES_PER_SECOND = 125_000_000
 NODE_IDS = ("inferswarm01", "inferswarm03")
+PLANNING_EVIDENCE_CONTRACT = {
+    "path": {"evidence_version": "issue117-evidence-v1",
+             "evidence_identity": "path-band-v1",
+             "applicability_context": {"fixture": "cpu-only", "arm": "planning"}},
+}
 
 
 def require(condition: Any, message: str) -> None:
@@ -205,7 +216,10 @@ def build_path_evidence(world) -> list[dict[str, Any]]:
 
 
 def build_admission_planner(world, *, requirements_by_candidate=None,
-                            candidate_subject_overrides=None) -> AdmissionPlanner:
+                            candidate_subject_overrides=None,
+                            path_evidence_by_candidate=None,
+                            evidence_contract=None,
+                            coordinators_by_candidate=None) -> AdmissionPlanner:
     strategy = world["strategy"]
     candidates = world["candidates"]
     if candidate_subject_overrides:
@@ -229,12 +243,13 @@ def build_admission_planner(world, *, requirements_by_candidate=None,
         },
         requirements_by_candidate=requirements_by_candidate or {
             world["v5"]["candidate_id"]: world["requirements"]},
-        path_evidence_by_candidate={world["v5"]["candidate_id"]: build_path_evidence(world)},
-        evidence_contract={"path": {"evidence_version": "issue117-evidence-v1",
-                                    "evidence_identity": "path-band-v1",
-                                    "applicability_context": {"fixture": "cpu-only",
-                                                              "arm": "planning"}}},
-        coordinators_by_candidate={world["v5"]["candidate_id"]: world["coordinator"]},
+        path_evidence_by_candidate=path_evidence_by_candidate
+        if path_evidence_by_candidate is not None
+        else {world["v5"]["candidate_id"]: build_path_evidence(world)},
+        evidence_contract=evidence_contract or PLANNING_EVIDENCE_CONTRACT,
+        coordinators_by_candidate=coordinators_by_candidate
+        if coordinators_by_candidate is not None
+        else {world["v5"]["candidate_id"]: world["coordinator"]},
     )
 
 
@@ -247,7 +262,6 @@ def cold_acquisition(world) -> dict[str, Any]:
         node = nodes[participant["node_id"]]
         delta = coordinator.delta(participant["participant_id"])
         transfers = []
-        cache_hit_bytes = 0
         for artifact_id in delta["missing_artifact_ids"]:
             ticket = coordinator.authorize(delta, artifact_id)
             record = next(r for r in participant["required_artifacts"]
@@ -258,7 +272,6 @@ def cold_acquisition(world) -> dict[str, Any]:
             # a content-identical shared-state variant is a verified cache
             # hit, not a transfer: declared shared state is acquired once
             transferred = result["bytes"] if result["status"] == "ACQUIRED" else 0
-            cache_hit_bytes += result["bytes"] if result["status"] == "CACHE_HIT" else 0
             transfers.append({
                 "artifact_id": artifact_id,
                 "length": record["length"],
@@ -267,11 +280,12 @@ def cold_acquisition(world) -> dict[str, Any]:
                 "status": result["status"],
                 "bytes": transferred,
             })
-        del cache_hit_bytes
         per_participant[participant["participant_id"]] = {
             "node_id": participant["node_id"],
             "required_bytes": participant["required_artifact_bytes"],
             "transferred_bytes": sum(t["bytes"] for t in transfers),
+            "cache_hit_bytes": sum(t["length"] for t in transfers
+                                   if t["status"] == "CACHE_HIT"),
             "transfer_count": len(transfers),
             "transfers": transfers,
         }
@@ -703,10 +717,7 @@ def run_negative_controls(world, fixture_path: Path) -> NegativeControls:
                                   "required_for_admission": True},
             requirements_by_candidate={world["v5"]["candidate_id"]: world["requirements"]},
             path_evidence_by_candidate={},
-            evidence_contract={"path": {"evidence_version": "issue117-evidence-v1",
-                                        "evidence_identity": "path-band-v1",
-                                        "applicability_context": {"fixture": "cpu-only",
-                                                                  "arm": "planning"}}},
+            evidence_contract=PLANNING_EVIDENCE_CONTRACT,
             coordinators_by_candidate={world["v5"]["candidate_id"]: clean})
         decision = planner.rank()
         if decision["selected_candidate_id"] is not None:
@@ -962,6 +973,10 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
 def write_manifest(out_dir: Path) -> None:
     entries = {str(AREA / "evidence" / name): sha(out_dir / name)
                for name in EVIDENCE_FILES if (out_dir / name).is_file()}
+    for name in COMMITTED_EVIDENCE_FILES:
+        committed = ROOT / AREA / "evidence" / name
+        if committed.is_file():
+            entries[str(AREA / "evidence" / name)] = sha(committed)
     entries.update({path: sha(ROOT / path) for path in PRODUCERS})
     for path in (str(AREA / "methodology.md"), str(AREA / "README.md"),
                  ".github/workflows/ci.yml"):

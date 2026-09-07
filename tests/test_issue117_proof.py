@@ -163,6 +163,17 @@ class ProofCampaignTests(unittest.TestCase):
             self.assertTrue((self.out / name).is_file(), name)
         manifest = (self.out / "MANIFEST.sha256").read_text()
         self.assertIn("canonical-summary.json", manifest)
+        for name in proof.COMMITTED_EVIDENCE_FILES:
+            self.assertIn(name, manifest)
+
+    def test_committed_documentation_synchronization_record(self):
+        path = (ROOT / proof.AREA / "evidence"
+                / "documentation-synchronization.json")
+        record = json.loads(path.read_text())
+        self.assertEqual(
+            record["record_digest"],
+            proof.self_digest(record, identity_field="record_digest"))
+        self.assertEqual(len(record["facts_recorded"]), 8)
 
 
 class CampaignFixtureBindingTests(unittest.TestCase):

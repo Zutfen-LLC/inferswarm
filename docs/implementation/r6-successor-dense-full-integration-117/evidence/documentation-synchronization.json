@@ -1,0 +1,21 @@
+{
+  "base": "d37bd301a5ea361644160f92427aa75bff658b61",
+  "constraint": "historical evidence documents were not rewritten; only current-state sequencing wording was synchronized",
+  "facts_recorded": [
+    "historical R6 / issue #65 remains R6_DENSE_ARCHITECTURE_FALSIFICATION_FAIL",
+    "issue #108 doctrine complete (POST_V4_STATISTICAL_METRIC_DOCTRINE_ACCEPTED)",
+    "issue #109 methodology complete (GEMMA_V5_CORRECTED_QUALIFICATION_METHODOLOGY_FROZEN)",
+    "issue #110 terminal V5_QUALIFICATION_PASS",
+    "issue #115 cleanup complete",
+    "applicable V5 qualification evidence unblocks the successor full-integration gate",
+    "issue #117 is the current architecture-integration frontier",
+    "GLM-5.3 / issue #13 remains a later large-model falsifier, not this gate"
+  ],
+  "record_digest": "sha256:fae6c550c551b5e29f073e6675e9a9e0975cf8984c87a8d3b35d418c4045fdc2",
+  "schema": "inferswarm.issue117.documentation-synchronization/1",
+  "synced_files": [
+    "ROADMAP.md",
+    "README.md",
+    "ARCHITECTURE.md"
+  ]
+}
