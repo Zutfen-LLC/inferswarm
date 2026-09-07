@@ -596,12 +596,18 @@ single-versus-distributed numerical difference as `BACKEND_EXECUTION_LOCAL`
 while retaining exact transport and state evidence. It did not set a tolerance
 or reinterpret R6.
 
-ADR 0010 / issue #72 established the heterogeneous correctness contract. Issue
-[#74](https://github.com/Zutfen-LLC/inferswarm/issues/74) freezes the first
-prospective calibration and sealed-holdout methodology. It does not execute
-calibration. Only a later, separately authorized gate can run calibration,
-freeze derived thresholds, and open the sealed holdout. A still-later R6
-successor remains an independent full integration attempt.
+ADR 0010 / issue #72 established the heterogeneous correctness contract, and
+the subsequent prospective methodology gates (#74, #86, #95, #109) culminated
+in issue #110's terminal `V5_QUALIFICATION_PASS` on the qualified dense Gemma
+subject (with #115 completing the audited raw-evidence cleanup). That
+applicable qualification evidence is what unblocked the successor full
+integration attempt: issue #117 is the current architecture-integration
+frontier, composing automatic planning, participant-exact plan-driven
+artifact distribution, and ordinary fenced serving around the unchanged
+qualified execution math. The CPU/static implementation freeze is retained
+under `docs/implementation/r6-successor-dense-full-integration-117/`; the
+physical preflight and fabric arms are governed by that issue's narrow stop
+states.
 
 FreeToken remains the initial validation/integration vehicle, not the permanent
 product boundary. Reusable runtime functionality should eventually live behind

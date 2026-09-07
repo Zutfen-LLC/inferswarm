@@ -93,27 +93,35 @@ The detailed Phase1R record is maintained in
 
 ## Current research direction
 
-The resource/residency/planner Wayfinder and runtime gates R0-R5B are complete.
-The old N1-N3 coarse multi-node sequence remains retired historical scaffolding.
+The resource/residency/planner Wayfinder, runtime gates R0–R5B, and the
+correctness-qualification sequence are complete. The historical R6 attempt
+(#65) remains permanently `R6_DENSE_ARCHITECTURE_FALSIFICATION_FAIL`; it is
+never reinterpreted.
 
-The next implementation prerequisite is:
+The qualification lane then closed honestly on the same subject: after the
+post-v4 doctrine (#105/#108) and the prospective v5 methodology freeze
+(#109), issue #110 consumed its single-use holdout once under maintainer
+authorization and terminated `V5_QUALIFICATION_PASS` (192/192 semantic
+identities, zero invalid attempts). Issue #115 retained a compact hash-bound
+raw-evidence archive and completed the audited cleanup. Applicable V5
+qualification evidence now unblocks the successor dense full-integration
+gate.
 
-> **[#64 — Pre-R6: refresh the durable FreeToken integration line after
-> accepted R5B](https://github.com/Zutfen-LLC/inferswarm/issues/64)**
+The current architecture-integration frontier is:
 
-The current successor evidence gate is:
+> **[#117 — R6 successor: integrate V5-qualified dense Gemma through
+> automatic planning, selective artifact distribution, and ordinary
+> serving](https://github.com/Zutfen-LLC/inferswarm/issues/117)**
 
-> **[#65 — R6: falsify the generic Model Execution Strategy API with Gemma 4
-> 12B](https://github.com/Zutfen-LLC/inferswarm/issues/65)** — blocked by #64.
-
-R5B / #62 is complete with accepted disposition
-`R5B_PLAN_EPOCH_RECOVERY_PASS` and accepted FreeToken merge head
-`00ccd01fede8d2ad21ee83104f3b998c89ff9d1f`. Issue #64 now refreshes that
-durable implementation line against the frozen upstream target before R6 may
-start.
-
-R6 remains an API-falsification evidence gate against a materially different
-model architecture. It is not production feature shipping.
+Its CPU/static implementation freeze is complete
+(`ISSUE117_IMPLEMENTATION_FREEZE_PASS`): the qualification-applicability
+barrier, the strategy/planner composition, participant-exact plan-driven
+artifact distribution, the physical preflight tooling, and the frozen 24-case
+integration fixture — with all acceptance zero-invariants derived, not
+asserted. The physical preflight and fabric arms (execution-math bridge,
+cold acquisition, ordinary serving equivalence, warm restart) are pending.
+GLM-5.3-Flash / issue #13 remains a later large-model falsifier, not this
+gate.
 
 See [ROADMAP.md](ROADMAP.md) for the exact gates.
 
