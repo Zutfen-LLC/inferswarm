@@ -1,8 +1,9 @@
 # Issue #115 — post-V5 raw-evidence retention & expungement
 
-Status: Phase A complete (manifest committed); Phase B executed after all
-deletion gates passed. See `RAW-EVIDENCE-RETENTION.json` (Phase A) and
-`RAW-EVIDENCE-EXPUNGEMENT.json` (Phase B audit).
+Status: Phase A (retention manifest) and Phase B (executed expungement)
+complete. See `RAW-EVIDENCE-RETENTION.json` (Phase A) and
+`RAW-EVIDENCE-EXPUNGEMENT.json` (Phase B audit). PR open for maintainer
+review.
 
 ## What this is
 
@@ -80,3 +81,28 @@ remain committed in the repository.
 Deletion is path-specific and manifest-driven; campaign roots
 (`/srv/models/issue110`, `/srv/inferswarm/state/issue110`) are never
 deletion targets themselves.
+
+## Phase B outcome (executed 2026-09-07)
+
+All pre-delete gates passed mechanically (manifest byte-refetched at head
+`9573e50`, exact-head CI green, two-copy archive SHA-exact, 384-row and
+provenance recomputation complete, repository evidence byte-identical).
+Then, per-host path-specific deletion:
+
+- inferswarm01: 46 targets, 405,023,975,759 bytes (`df` 1,538,585,759,744
+  → 1,943,652,454,400 available);
+- inferswarm03: 3 targets, 241,564,907,761 bytes (`df` 1,623,625,936,896
+  → 1,865,199,624,192);
+- inferswarm04: 6 targets, 135,696,473,216 bytes (`df` 36,996,796,416 →
+  172,705,628,160);
+- orchestrator: `~/is110` scratch + local custody secrets;
+- inferswarm00: custody secrets.
+
+Total reclaimed: **782,349,309,891 bytes ≈ 728.6 GiB**. Every authorized
+path verified gone; both archive copies re-hashed 516/516 exact after
+deletion; the restricted h109 diagnostic copy verified intact; all
+custody private-key/secret-seed copies destroyed (0 survive) so the
+consumed holdout can never be freshly decrypted or regenerated; accepted
+repository evidence re-verified byte-identical; `V5_QUALIFICATION_PASS`
+unchanged; zero model/CUDA execution throughout.
+
