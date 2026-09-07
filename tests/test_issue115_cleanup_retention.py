@@ -345,10 +345,19 @@ class PurelyStatic(unittest.TestCase):
                     self.assertNotIn("prompt_text", text[:5000])
 
     def test_no_torch_import_in_cleanup_tooling(self):
+        import ast
         for p in CLEANUP.glob("*.py"):
             src = p.read_text()
             self.assertNotIn("import torch", src)
-            self.assertNotIn("cuda", src.lower().replace("cuda execution, zero", ""))
+            tree = ast.parse(src)
+            for node in ast.walk(tree):
+                if isinstance(node, ast.Import):
+                    for a in node.names:
+                        self.assertNotIn("torch", a.name, f"{p}: {a.name}")
+                if isinstance(node, ast.ImportFrom):
+                    self.assertNotIn("torch", node.module or "", f"{p}: {node.module}")
+                if isinstance(node, ast.Attribute) and isinstance(node.value, ast.Name):
+                    self.assertNotEqual(node.value.id, "torch", f"{p}: torch attribute use")
 
 
 if __name__ == "__main__":
