@@ -48,11 +48,25 @@ after the freeze.
 
 Core observed maxima vs frozen limits (inclusive `observed <= limit`):
 
-| family | observed | limit | margin | verdict |
+| family | observed | limit | headroom | verdict |
 |---|---|---|---|---|
-| fp32-consumer-logits:max-absolute-difference | 0x1.b48p+3 (14.28125) | 0x1.d2p+4 (14.625) | 2.4% | PASS |
-| fp32-consumer-logits:rms-difference | 0x1.44dcfa4242a7ap+1 (2.5564) | 0x1.7790ef6766a33p+3 (11.879) | 78% | PASS |
-| decision_local_E_D | 0x1.49p+3 (10.28125) | 0x1.d2p+4 (14.625) | 30% | PASS |
+| fp32-consumer-logits:max-absolute-difference | 0x1.b48p+3 (13.640625) | 0x1.d2p+4 (29.125) | 53.17% | PASS |
+| fp32-consumer-logits:rms-difference | 0x1.44dcfa4242a7ap+1 (2.537993700364777) | 0x1.7790ef6766a33p+3 (11.736442281680047) | 78.38% | PASS |
+| decision_local_E_D | 0x1.49p+3 (10.28125) | 0x1.d2p+4 (29.125) | 64.70% | PASS |
+
+> **Correction 2026-09-07 (evidence-documentation only).** The decimal
+> conversions and headroom percentages in the original table of this report
+> were mistranscribed (`0x1.d2p+4` = 29.125, not 14.625; `0x1.b48p+3` =
+> 13.640625, not 14.28125; `0x1.44dcfa4242a7ap+1` = 2.537993700364777, not
+> 2.5564; `0x1.7790ef6766a33p+3` = 11.736442281680047, not 11.879). The
+> hexadecimal values in `b/holdout-adjudication.json` were and remain the
+> authoritative record and are byte/content unchanged; every machine-readable
+> value, threshold, and adjudication result is unaffected (the pass verdicts
+> were derived from the hex, not the prose). A regression test
+> (`tests/test_issue110_terminal_report_decimals.py`) now derives every
+> displayed decimal and headroom from the exact hex strings via standard
+> hex-float conversion so this class of transcription error cannot recur.
+
 
 Semantic adjudication (192 decisions, frozen v5 gate order, frozen GLOBAL
 calibration E_D = 0x1.d2p+4):
