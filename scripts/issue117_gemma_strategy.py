@@ -6,8 +6,8 @@ for the #117 integration live (the strategy/constrains side of the accepted
 "strategy constrains; planner chooses" rule). It provides:
 
 1. **Frozen accepted subject identity** carried over unchanged from the
-   accepted V5 physical subject (model, revision, checkpoint, representation,
-   backend, execution semantics).
+   accepted V5 physical subject (model, revision, checkpoint authority,
+   representation, backend, execution semantics).
 2. **Frozen resource identity** for the Compute Units retained by the
    accepted V5 evidence (inferswarm01 GPU-0/GPU-1, inferswarm03 GPU-0 as the
    serving chain; inferswarm04 GPU-0 as the reference-reserved RTX 3090 path;
@@ -22,12 +22,26 @@ for the #117 integration live (the strategy/constrains side of the accepted
    ``catalog_from_repository`` / ``build_source_manifest``; the planning
    waist (``GemmaDenseStrategy``) consumes the resulting small immutable
    descriptor manifest and has no byte-access path at all.
-5. **Qualification subjects bound to catalog/plan identity**: a candidate's
+5. **Two explicitly separated checkpoint identities.** The catalog carries
+   ``checkpoint_authority_sha256`` — the accepted external/model checkpoint
+   identity (for canonical Gemma exactly the retained accepted value, bound
+   to the byte-pinned retained V5 authority evidence, never an unchecked
+   config field) — and ``catalog_content_digest``, a mechanically derived
+   digest over the exact repository/catalog content. The former is what the
+   accepted qualification evidence binds for execution equality; the latter
+   is the drift binding of the exact bytes this machinery observed. Neither
+   may masquerade as the other.
+6. **Qualification subjects bound to catalog/plan identity**: a candidate's
    qualification subject is derived mechanically from the exact
    catalog/plan that would be executed — never from parallel constants.
    Constructing a strategy whose subject disagrees with its catalog fails
    closed, so a synthetic fixture catalog cannot produce (or inherit from)
-   the accepted Gemma qualification subject.
+   the accepted Gemma qualification subject. The accepted V5 subject is
+   itself constructed through the same machinery from a canonical
+   authority-descriptor catalog (``canonical_authority_catalog``), whose
+   authority is loaded from the byte-pinned retained evidence files — so
+   the accepted qualification record is matchable by exactly the canonical
+   candidate the real strategy/catalog machinery produces.
 
 The generic planner (``issue117_planner``) must never import this module.
 
@@ -47,15 +61,23 @@ from issue99_artifact_core import (
     digest_of_bytes,
     freeze_artifact_record,
     self_digest,
+    subject_digest,
     validate_artifact_record,
     validate_self_identity,
 )
 
 STRATEGY_SCHEMA = "inferswarm.issue117.gemma-dense-strategy/2"
-CATALOG_SCHEMA = "inferswarm.issue117.checkpoint-catalog/2"
+CATALOG_SCHEMA = "inferswarm.issue117.checkpoint-catalog/3"
 PLAN_SCHEMA = "inferswarm.issue117.execution-plan/2"
 QUALIFICATION_RECORD_SCHEMA = "inferswarm.issue117.qualification-record/2"
-SOURCE_MANIFEST_SCHEMA = "inferswarm.issue117.source-artifact-manifest/1"
+SOURCE_MANIFEST_SCHEMA = "inferswarm.issue117.source-artifact-manifest/2"
+CHECKPOINT_AUTHORITY_ATTESTATION_SCHEMA = (
+    "inferswarm.issue117.checkpoint-authority-attestation/1")
+
+#: The checkpoint repository document that attests the observed object set
+#: to the accepted external checkpoint authority identity. Required by
+#: ``catalog_from_repository``; byte-verified object-by-object.
+AUTHORITY_ATTESTATION_OBJECT = "checkpoint-authority.json"
 
 #: Layer count of the frozen physical subject, exactly as qualified by the
 #: accepted V5 three-stage geometry [0,16) / [16,32) / [32,48).
@@ -73,15 +95,20 @@ REQUIRED_SUBJECT_BACKEND_KEYS = (
     "torch", "cuda_runtime", "nvidia_driver", "triton", "flashinfer")
 
 #: The accepted V5 physical subject identity (retained accepted evidence; the
-#: authority constants the accepted qualification record binds). The
-#: ``checkpoint_sha256`` is the accepted external checkpoint digest from the
-#: retained V5 manifests. This dict is an authority record — it is never
-#: injectable into a strategy whose catalog does not mechanically carry the
-#: same identity.
+#: authority constants the accepted qualification record binds).
+#: ``checkpoint_authority_sha256`` is the accepted external/model checkpoint
+#: identity from the retained V5 manifests — the identity execution equality
+#: is bound to. It is cross-verified against the byte-pinned retained
+#: authority evidence files (see ``canonical_authority_catalog`` /
+#: ``accepted_checkpoint_authority_from_evidence``); a catalog may only carry
+#: it through that evidence-backed binding, never as an unchecked config
+#: field. This dict is an authority record — it is never injectable into a
+#: strategy whose catalog does not mechanically carry the same identity.
 MODEL_SUBJECT: dict[str, Any] = {
     "model_id": "google/gemma-4-12B-it",
     "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
-    "checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "checkpoint_authority_sha256": (
+        "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d"),
     "representation": "checkpoint-safetensors",
     "execution": "native BF16 text execution; Triton attention; one <=64-row replay chunk",
     "backend": {
@@ -184,20 +211,30 @@ def digest_file(path: Path) -> str:
     return "sha256:" + sha256_file(path)
 
 
-def catalog_from_repository(root: Path, *, config: Mapping[str, Any]) -> dict[str, Any]:
+def catalog_from_repository(root: Path, *, config: Mapping[str, Any],
+                            inferswarm_root: Path | None = None) -> dict[str, Any]:
     """SOURCE-side exact checkpoint catalog from a real/synthetic repository.
 
     This builder is the SOURCE role: it reads config JSON, every
     ``*.safetensors`` file's header, hashes every object byte-exactly, and
-    derives the mechanical checkpoint identity. Everything it returns is a
-    small immutable descriptor; the Coordinator/planning waist never runs
-    this code. Tensor byte ranges are absolute file offsets, which is what
-    exact Range acquisition consumes. ``source_bytes_hashed`` records the
-    model bytes this SOURCE-side builder read, separately from any
-    Coordinator/control-plane traffic.
+    derives the mechanical ``catalog_content_digest``. It also binds the
+    catalog to its external checkpoint authority identity
+    (``checkpoint_authority_sha256``) through the repository's
+    ``checkpoint-authority.json`` attestation, which is validated
+    object-by-object against the observed bytes; for repositories claiming
+    the canonical Gemma identity the attested authority must equal the
+    accepted authority loaded from the byte-pinned retained V5 evidence, and
+    the observed structure must match the accepted representation. Everything
+    the builder returns is a small immutable descriptor; the
+    Coordinator/planning waist never runs this code. Tensor byte ranges are
+    absolute file offsets, which is what exact Range acquisition consumes.
+    ``source_bytes_hashed`` records the model bytes this SOURCE-side builder
+    read, separately from any Coordinator/control-plane traffic.
     """
+    root = Path(root)
+    attestation = _load_authority_attestation(root)
     objects: dict[str, dict[str, Any]] = {}
-    tensors: dict[str, dict[str, Any]] = {}
+    tensors: dict[str, Any] = {}
     source_bytes_hashed = 0
     for path in sorted(root.glob("*.safetensors")):
         header, data_start, file_length = read_safetensors_header(path)
@@ -215,7 +252,10 @@ def catalog_from_repository(root: Path, *, config: Mapping[str, Any]) -> dict[st
                 "byte_count": end - start,
             }
     for extra in sorted(root.glob("*.json")):
-        objects[extra.name] = {"length": extra.stat().st_size}
+        if extra.name == AUTHORITY_ATTESTATION_OBJECT:
+            continue
+        objects[extra.name] = {"length": extra.stat().st_size,
+                               "digest": digest_file(extra)}
     if CONFIG_OBJECT not in objects:
         raise StrategyError("checkpoint repository has no config.json")
     catalog = {
@@ -233,17 +273,148 @@ def catalog_from_repository(root: Path, *, config: Mapping[str, Any]) -> dict[st
         "tensors": tensors,
         "source_bytes_hashed": source_bytes_hashed,
     }
-    catalog["checkpoint_sha256"] = checkpoint_identity_digest(catalog)
-    catalog["catalog_digest"] = self_digest(catalog, identity_field="catalog_digest")
+    _validate_authority_attestation(
+        root, attestation, catalog, inferswarm_root=inferswarm_root)
+    catalog["checkpoint_authority_sha256"] = \
+        attestation["checkpoint_authority_sha256"]
+    catalog["authority_attestation_digest"] = digest_of_bytes(
+        (root / AUTHORITY_ATTESTATION_OBJECT).read_bytes())
+    catalog["catalog_content_digest"] = catalog_content_digest(catalog)
     return catalog
 
 
-def checkpoint_identity_digest(catalog: Mapping[str, Any]) -> str:
-    """Mechanical checkpoint identity over the exact weight-bearing content.
+def _load_authority_attestation(root: Path) -> dict[str, Any]:
+    """Read and structurally validate the checkpoint authority attestation."""
+    path = root / AUTHORITY_ATTESTATION_OBJECT
+    if not path.is_file():
+        raise StrategyError(
+            f"checkpoint repository carries no {AUTHORITY_ATTESTATION_OBJECT}; "
+            "the checkpoint authority identity cannot be established")
+    try:
+        attestation = json.loads(path.read_text())
+    except ValueError as error:
+        raise StrategyError(f"unreadable checkpoint authority attestation: {error}")
+    for field in ("schema", "model_id", "revision",
+                  "checkpoint_authority_sha256", "authority_evidence", "objects"):
+        if field not in attestation:
+            raise StrategyError(
+                f"checkpoint authority attestation missing {field!r}")
+    if attestation["schema"] != CHECKPOINT_AUTHORITY_ATTESTATION_SCHEMA:
+        raise StrategyError(
+            f"unexpected attestation schema {attestation['schema']!r}")
+    authority = attestation["checkpoint_authority_sha256"]
+    if not (isinstance(authority, str) and len(authority) == 64
+            and all(char in "0123456789abcdef" for char in authority)):
+        raise StrategyError(
+            "attested checkpoint_authority_sha256 is not a bare 64-hex SHA-256")
+    if not isinstance(attestation["objects"], Mapping):
+        raise StrategyError("attestation objects manifest is not a mapping")
+    return attestation
+
+
+def _validate_authority_attestation(root: Path, attestation: Mapping[str, Any],
+                                    catalog: Mapping[str, Any], *,
+                                    inferswarm_root: Path | None) -> None:
+    """Prove the attestation against the observed repository and the retained
+    accepted evidence. This is the evidence-backed binding between the
+    observed bytes and the external checkpoint authority identity.
+    """
+    if attestation["model_id"] != catalog["model"]["model_id"] \
+            or attestation["revision"] != catalog["model"]["revision"]:
+        raise StrategyError(
+            "attestation model identity does not match the repository config")
+    attested_objects = attestation["objects"]
+    observed_objects = {
+        name: {"length": spec["length"], "sha256": spec["digest"].split(":", 1)[1]}
+        for name, spec in sorted(catalog["objects"].items())
+    }
+    if dict(attested_objects) != observed_objects:
+        raise StrategyError(
+            "checkpoint authority attestation does not match the observed "
+            "object set; the repository bytes drifted from the attested "
+            "checkpoint")
+    claims_canonical = (
+        catalog["model"]["model_id"] == MODEL_SUBJECT["model_id"]
+        and catalog["model"]["revision"] == MODEL_SUBJECT["revision"])
+    if not claims_canonical:
+        return
+    # A repository claiming the canonical Gemma identity is held to the
+    # accepted authority and the accepted representation structure.
+    from issue117_applicability import accepted_checkpoint_authority_from_evidence
+    accepted_authority = accepted_checkpoint_authority_from_evidence(
+        inferswarm_root or Path(__file__).resolve().parents[1])
+    if attestation["checkpoint_authority_sha256"] != accepted_authority:
+        raise StrategyError(
+            "attested checkpoint authority is not the accepted authority "
+            "retained by the V5 evidence for the canonical Gemma identity; "
+            "refusing a forged or foreign authority claim")
+    if catalog["config"]["num_hidden_layers"] != LAYER_COUNT \
+            or not catalog["config"]["tie_word_embeddings"]:
+        raise StrategyError(
+            "canonical checkpoint structure drift: layer count/tied-embedding "
+            "config does not match the accepted subject")
+    dtypes = {tensor["dtype"] for tensor in catalog["tensors"].values()}
+    if dtypes != {"BF16"}:
+        raise StrategyError(
+            "canonical checkpoint representation drift: observed dtypes "
+            f"{sorted(dtypes)!r} are not the accepted native-BF16 representation")
+    for required in ("model.embed_tokens.weight", "model.norm.weight"):
+        if required not in catalog["tensors"]:
+            raise StrategyError(
+                f"canonical checkpoint structure drift: missing {required!r}")
+    if "model.lm_head.weight" in catalog["tensors"]:
+        raise StrategyError(
+            "canonical checkpoint structure drift: untied output head tensor "
+            "present in a tied-embedding checkpoint")
+
+
+def build_checkpoint_authority_attestation(
+        root: Path, *, model_id: str, revision: str,
+        checkpoint_authority_sha256: str,
+        authority_evidence: str) -> dict[str, Any]:
+    """SOURCE-side tool: attest an observed checkpoint repository to an
+    external checkpoint authority identity.
+
+    The fabric operator runs this once per acquired checkpoint repository;
+    the attested object manifest is what ``catalog_from_repository``
+    re-verifies byte-exactly at every later construction.
+    """
+    root = Path(root)
+    if not (isinstance(checkpoint_authority_sha256, str)
+            and len(checkpoint_authority_sha256) == 64
+            and all(char in "0123456789abcdef"
+                    for char in checkpoint_authority_sha256)):
+        raise StrategyError(
+            "checkpoint_authority_sha256 must be a bare 64-hex SHA-256")
+    objects: dict[str, Any] = {}
+    for path in sorted(root.glob("*.safetensors")) + sorted(root.glob("*.json")):
+        if path.name == AUTHORITY_ATTESTATION_OBJECT:
+            continue
+        objects[path.name] = {
+            "length": path.stat().st_size,
+            "sha256": sha256_file(path),
+        }
+    if CONFIG_OBJECT not in objects:
+        raise StrategyError("checkpoint repository has no config.json")
+    return {
+        "schema": CHECKPOINT_AUTHORITY_ATTESTATION_SCHEMA,
+        "model_id": model_id,
+        "revision": revision,
+        "checkpoint_authority_sha256": checkpoint_authority_sha256,
+        "authority_evidence": authority_evidence,
+        "objects": objects,
+    }
+
+
+def catalog_content_digest(catalog: Mapping[str, Any]) -> str:
+    """Mechanical content identity over the exact weight-bearing content.
 
     Binds model identity, every weight object's digest/length, and the
     complete tensor table (layout, dtype, ranges) into one digest. A
-    materially different checkpoint cannot carry the same identity.
+    materially different checkpoint cannot carry the same identity. This is
+    the drift binding of the exact bytes this machinery observed; it is a
+    different identity from the external ``checkpoint_authority_sha256`` and
+    must never be presented as the accepted checkpoint authority.
     """
     weight_objects = {
         name: {"length": spec["length"], "digest": spec["digest"]}
@@ -430,7 +601,8 @@ class SourceManifestBuilder:
         manifest = {
             "schema": SOURCE_MANIFEST_SCHEMA,
             "model": dict(catalog["model"]),
-            "checkpoint_sha256": catalog["checkpoint_sha256"],
+            "checkpoint_authority_sha256": catalog["checkpoint_authority_sha256"],
+            "catalog_content_digest": catalog["catalog_content_digest"],
             "records": {key: self._records[key] for key in sorted(self._records)},
             "source_bytes_read": self.bytes_read,
         }
@@ -451,11 +623,21 @@ def build_source_manifest(catalog: Mapping[str, Any], *,
 
 
 def _validate_subject_fields(subject: Mapping[str, Any]) -> None:
-    for field in ("model_id", "revision", "checkpoint_sha256",
+    for field in ("model_id", "revision", "checkpoint_authority_sha256",
                   "representation", "execution"):
         value = subject.get(field)
         if not (isinstance(value, str) and value.strip()):
             raise StrategyError(f"subject field {field!r} missing or empty")
+    authority = subject["checkpoint_authority_sha256"]
+    if not (len(authority) == 64
+            and all(char in "0123456789abcdef" for char in authority)):
+        raise StrategyError(
+            "subject checkpoint_authority_sha256 is not a bare 64-hex SHA-256")
+    content = subject.get("catalog_content_digest")
+    if content is not None \
+            and not (isinstance(content, str) and content.startswith("sha256:")):
+        raise StrategyError(
+            "subject catalog_content_digest must be a sha256:-prefixed digest")
     backend = subject.get("backend")
     if not isinstance(backend, Mapping):
         raise StrategyError("subject backend identity missing")
@@ -468,19 +650,25 @@ def subject_from_catalog(catalog: Mapping[str, Any], *, execution: str,
                          backend: Mapping[str, str]) -> dict[str, Any]:
     """Derive a strategy subject mechanically from the exact catalog.
 
-    The subject's model/revision/representation and checkpoint identity are
-    the catalog's own; execution/backend are the operator-declared semantics.
-    A subject can therefore never disagree with the catalog it qualifies.
+    The subject's model/revision/representation, checkpoint authority
+    identity, and catalog content identity are the catalog's own; execution
+    and backend are the operator-declared semantics. A subject can therefore
+    never disagree with the catalog it qualifies, and it binds BOTH the
+    accepted external checkpoint authority identity and the mechanical
+    catalog content identity explicitly and separately.
     """
-    _validate_subject_fields({"model_id": catalog["model"]["model_id"],
-                              "revision": catalog["model"]["revision"],
-                              "checkpoint_sha256": catalog["checkpoint_sha256"],
-                              "representation": catalog["model"]["representation"],
-                              "execution": execution, "backend": backend})
+    _validate_subject_fields({
+        "model_id": catalog["model"]["model_id"],
+        "revision": catalog["model"]["revision"],
+        "checkpoint_authority_sha256": catalog["checkpoint_authority_sha256"],
+        "catalog_content_digest": catalog["catalog_content_digest"],
+        "representation": catalog["model"]["representation"],
+        "execution": execution, "backend": backend})
     return {
         "model_id": catalog["model"]["model_id"],
         "revision": catalog["model"]["revision"],
-        "checkpoint_sha256": catalog["checkpoint_sha256"],
+        "checkpoint_authority_sha256": catalog["checkpoint_authority_sha256"],
+        "catalog_content_digest": catalog["catalog_content_digest"],
         "representation": catalog["model"]["representation"],
         "execution": execution,
         "backend": dict(backend),
@@ -493,7 +681,14 @@ def build_qualification_record(*, qualification_record_id: str,
                                qualification_subject: Mapping[str, Any],
                                authority_extra: Mapping[str, Any] | None = None,
                                scope: str = "accepted-authority") -> dict[str, Any]:
-    """Build one self-consistent qualification record for an exact subject."""
+    """Build one self-consistent qualification record for an exact subject.
+
+    The record's subject digest follows the shared execution-equality
+    convention (``issue99_artifact_core.subject_digest``): machinery-local
+    content identities carried on the subject are bound by the machinery and
+    projected out of the matched digest on both the record and candidate
+    sides.
+    """
     _validate_subject_fields(qualification_subject)
     record = {
         "schema": QUALIFICATION_RECORD_SCHEMA,
@@ -506,50 +701,119 @@ def build_qualification_record(*, qualification_record_id: str,
         },
         "qualification_subject": dict(qualification_subject),
     }
-    record["qualification_subject_digest"] = digest_of_bytes(
-        canonical_json_bytes(record["qualification_subject"]))
+    record["qualification_subject_digest"] = subject_digest(
+        record["qualification_subject"])
     record["record_digest"] = self_digest(record, identity_field="record_digest")
     return record
 
 
-def accepted_v5_subject() -> dict[str, Any]:
-    """The exact accepted V5 qualification subject (retained constants).
+def canonical_authority_catalog(*, inferswarm_root: Path | None = None) -> dict[str, Any]:
+    """The canonical accepted Gemma authority-descriptor catalog.
 
-    This subject carries the accepted external checkpoint digest. A strategy
-    subject derived from an actual catalog carries that catalog's mechanical
-    checkpoint identity instead, so no catalog but the real accepted one can
-    ever produce a matching subject.
+    This is the catalog-identity construction for the canonical accepted V5
+    subject: it carries the accepted model identity and the accepted
+    ``checkpoint_authority_sha256`` loaded mechanically from the byte-pinned
+    retained V5 authority evidence files (never restated here), plus the
+    frozen doctrine layer count. It is a *descriptor-only* catalog: it
+    contains no tensor table because the canonical checkpoint bytes live on
+    the fabric, and any strategy built on it refuses the byte-level planning
+    surface. Physical construction uses ``catalog_from_repository`` over the
+    real attested checkpoint repository instead; its byte-derived catalog
+    must carry the same authority identity, enforced by the authority
+    attestation adapter.
     """
-    stages = [
-        {
-            "cu_id": stage["cu_id"],
-            "node": next(cu["node"] for cu in RESOURCE_SNAPSHOT["compute_units"]
-                         if cu["cu_id"] == stage["cu_id"]),
-            "layer_start": stage["layer_start"],
-            "layer_end": stage["layer_end"],
-        }
-        for stage in ACCEPTED_V5_GEOMETRY
-    ]
-    subject = {
-        "model_id": MODEL_SUBJECT["model_id"],
-        "revision": MODEL_SUBJECT["revision"],
-        "checkpoint_sha256": MODEL_SUBJECT["checkpoint_sha256"],
-        "representation": MODEL_SUBJECT["representation"],
-        "execution": MODEL_SUBJECT["execution"],
-        "backend": dict(MODEL_SUBJECT["backend"]),
-        "layer_count": LAYER_COUNT,
-        "stage_structure": stages,
+    from issue117_applicability import accepted_checkpoint_authority_from_evidence
+    root = Path(inferswarm_root or Path(__file__).resolve().parents[1])
+    accepted_authority = accepted_checkpoint_authority_from_evidence(root)
+    if accepted_authority != MODEL_SUBJECT["checkpoint_authority_sha256"]:
+        raise StrategyError(
+            "accepted checkpoint authority evidence does not agree with the "
+            "frozen subject identity")
+    catalog = {
+        "schema": CATALOG_SCHEMA,
+        "model": {
+            "model_id": MODEL_SUBJECT["model_id"],
+            "revision": MODEL_SUBJECT["revision"],
+            "representation": MODEL_SUBJECT["representation"],
+        },
+        "config": {
+            "num_hidden_layers": LAYER_COUNT,
+            # tied output head: the accepted canonical serving layout the
+            # exact-mapping derivation is frozen against
+            "tie_word_embeddings": True,
+        },
+        "objects": {},
+        "tensors": {},
+        "descriptor_only": True,
+        "checkpoint_authority_sha256": accepted_authority,
+        "authority_basis": {
+            "source": "retained accepted V5 checkpoint authority evidence",
+            "authority_evidence_files": sorted(
+                {"docs/qualification/gemma4-12b-it-v4-campaign-97/EXECUTION-AUTHORITY.json",
+                 "docs/qualification/gemma4-12b-it-v2-campaign-81/preflight-applicability.json"}),
+            "source_field": "checkpoint_sha256",
+        },
+        "source_bytes_hashed": 0,
     }
-    _validate_subject_fields(subject)
-    return subject
+    catalog["catalog_content_digest"] = catalog_content_digest(catalog)
+    return catalog
+
+
+def canonical_v5_candidate(*, inferswarm_root: Path | None = None) -> Mapping[str, Any]:
+    """The canonical accepted V5 candidate, constructed through the ordinary
+    strategy machinery.
+
+    Builds the canonical authority-descriptor catalog, derives its subject
+    with ``subject_from_catalog``, enumerates the legal dense candidates with
+    ``GemmaDenseStrategy``, and returns the candidate whose geometry is the
+    accepted V5 geometry. This — not a parallel constant — is the subject the
+    accepted V5 qualification record binds; it is exactly the candidate the
+    physical execution machinery produces for the canonical checkpoint.
+    """
+    catalog = canonical_authority_catalog(inferswarm_root=inferswarm_root)
+    subject = subject_from_catalog(
+        catalog, execution=MODEL_SUBJECT["execution"],
+        backend=MODEL_SUBJECT["backend"])
+    instance = GemmaDenseStrategy(catalog=catalog, subject=subject,
+                                  source_manifest=None)
+    candidates = instance.legal_candidates()
+    return instance.accepted_v5_candidate(candidates)
+
+
+def accepted_v5_subject() -> dict[str, Any]:
+    """The exact accepted V5 qualification subject.
+
+    Constructed through the canonical strategy machinery
+    (``canonical_v5_candidate``), not glued from parallel constants: the
+    subject is ``subject_from_catalog`` applied to the canonical
+    authority-descriptor catalog, extended with the accepted V5 stage
+    geometry by ordinary candidate enumeration.
+
+    The subject carries the accepted external ``checkpoint_authority_sha256``
+    — the identity execution equality is bound to. Its machinery-local
+    ``catalog_content_digest`` is projected out (the shared subject-identity
+    convention in ``issue99_artifact_core``): the accepted V5 evidence
+    predates the #117 catalog machinery and retains no canonical catalog
+    content identity, so binding one would fabricate evidence. Candidate
+    subjects DO carry their catalog content identity (drift binding); the
+    generic qualification evaluator compares execution-equality subjects, and
+    the candidate's content identity is bound at physical construction by the
+    authority attestation adapter and by the plan/manifest digests.
+    """
+    from issue99_artifact_core import execution_equality_subject
+    return execution_equality_subject(
+        canonical_v5_candidate()["qualification_subject"])
 
 
 def accepted_v5_qualification_record() -> dict[str, Any]:
     """Deterministic accepted qualification evidence record.
 
-    Binds the accepted V5 terminal result to the exact qualified subject.
-    Built from the retained accepted constants only — never from a strategy
-    instance — so a synthetic catalog cannot fabricate or reshape it.
+    Binds the accepted V5 terminal result to the exact qualified subject —
+    the subject constructed by :func:`canonical_v5_candidate` through the
+    ordinary strategy/catalog machinery, so the record is matchable by
+    exactly the canonical candidate the real machinery produces, and by no
+    synthetic fixture subject. The record's authority block is retained
+    accepted evidence.
     """
     from issue117_applicability import (
         ACCEPTED_FREETOKEN_CALIBRATION_PRODUCER,
@@ -595,7 +859,7 @@ class GemmaDenseStrategy:
     """
 
     def __init__(self, *, catalog: Mapping[str, Any], subject: Mapping[str, Any],
-                 source_manifest: Mapping[str, Any],
+                 source_manifest: Mapping[str, Any] | None,
                  snapshot: Mapping[str, Any] = RESOURCE_SNAPSHOT):
         if catalog["schema"] != CATALOG_SCHEMA:
             raise StrategyError("catalog schema mismatch")
@@ -607,33 +871,49 @@ class GemmaDenseStrategy:
         self.catalog = catalog
         self.subject = dict(subject)
         self.snapshot = snapshot
+        self.descriptor_only = bool(catalog.get("descriptor_only"))
         self.layers = int(catalog["config"]["num_hidden_layers"])
         self.tied = bool(catalog["config"]["tie_word_embeddings"])
         if self.layers != LAYER_COUNT:
             raise StrategyError(
                 f"catalog layer count {self.layers} != frozen subject {LAYER_COUNT}")
         # subject/catalog inseparability: the qualification subject is only
-        # constructible from the exact plan/catalog identity
+        # constructible from the exact plan/catalog identity, on BOTH the
+        # accepted checkpoint authority identity and the mechanical catalog
+        # content identity
         for field, catalog_value in (
                 ("model_id", catalog["model"]["model_id"]),
                 ("revision", catalog["model"]["revision"]),
                 ("representation", catalog["model"]["representation"]),
-                ("checkpoint_sha256", catalog["checkpoint_sha256"])):
-            if self.subject[field] != catalog_value:
+                ("checkpoint_authority_sha256",
+                 catalog["checkpoint_authority_sha256"]),
+                ("catalog_content_digest", catalog["catalog_content_digest"])):
+            if self.subject.get(field) != catalog_value:
                 raise StrategyError(
-                    f"subject {field} {self.subject[field]!r} != catalog identity "
+                    f"subject {field} {self.subject.get(field)!r} != catalog identity "
                     f"{catalog_value!r}; qualification is not constructible for a "
                     "foreign catalog")
         if source_manifest is None:
-            raise StrategyError(
-                "a SOURCE-built artifact manifest is required; the planning "
-                "waist has no byte-access path")
-        self._validate_manifest(source_manifest)
+            if not self.descriptor_only:
+                raise StrategyError(
+                    "a SOURCE-built artifact manifest is required; the planning "
+                    "waist has no byte-access path")
+        else:
+            if self.descriptor_only:
+                raise StrategyError(
+                    "a descriptor-only authority catalog takes no source manifest")
+            self._validate_manifest(source_manifest)
         self.source_manifest = source_manifest
         self._cu_by_id = {cu["cu_id"]: cu for cu in snapshot["compute_units"]}
         self._chain = list(snapshot["chain_order"])
         self._plan_cache: dict[str, dict[str, Any]] = {}
-        self._requirements_cache: dict[str, dict[str, Any]] = {}
+        self._requirements_cache: dict[str, Any] = {}
+
+    def _require_byte_catalog(self, operation: str) -> None:
+        if self.descriptor_only:
+            raise StrategyError(
+                f"{operation} requires a byte-level checkpoint catalog; the "
+                "canonical authority descriptor catalog carries identity only")
 
     def _validate_manifest(self, manifest: Mapping[str, Any]) -> None:
         from issue99_artifact_core import validate_self_identity
@@ -645,7 +925,10 @@ class GemmaDenseStrategy:
             raise StrategyError(f"source manifest self-identity mismatch: {error}")
         if manifest.get("model") != dict(self.catalog["model"]):
             raise StrategyError("source manifest model identity != catalog")
-        if manifest.get("checkpoint_sha256") != self.catalog["checkpoint_sha256"]:
+        if manifest.get("checkpoint_authority_sha256") \
+                != self.catalog["checkpoint_authority_sha256"] \
+                or manifest.get("catalog_content_digest") \
+                != self.catalog["catalog_content_digest"]:
             raise StrategyError("source manifest checkpoint identity != catalog")
 
     # -- candidate enumeration -------------------------------------------------
@@ -680,8 +963,8 @@ class GemmaDenseStrategy:
                     "stages": stages,
                 }
                 candidate["qualification_subject"] = self.qualification_subject(candidate)
-                candidate["qualification_subject_digest"] = digest_of_bytes(
-                    canonical_json_bytes(candidate["qualification_subject"]))
+                candidate["qualification_subject_digest"] = subject_digest(
+                    candidate["qualification_subject"])
                 capacity = None
                 if capacity_model is not None:
                     capacity = {
@@ -701,6 +984,7 @@ class GemmaDenseStrategy:
 
     def stage_requirements(self, candidate: Mapping[str, Any]) -> dict[str, Any]:
         """The exact frozen participant requirements for one candidate."""
+        self._require_byte_catalog("stage_requirements")
         key = candidate["candidate_id"]
         if key not in self._requirements_cache:
             from issue99_artifact_core import derive_participant_requirements
@@ -716,6 +1000,7 @@ class GemmaDenseStrategy:
         deduplicated only by artifact identity within the participant (a
         shared state is one artifact on that participant).
         """
+        self._require_byte_catalog("stage_weight_bytes")
         requirements = self.stage_requirements(candidate)
         participant_id = f"{candidate['candidate_id']}.stage-{stage_index + 1}"
         matches = [p for p in requirements["participants"]
@@ -762,14 +1047,20 @@ class GemmaDenseStrategy:
         """Opaque descriptor of everything qualification evidence must bind.
 
         Derived mechanically from the exact catalog/plan identity (model,
-        revision, checkpoint, representation, layer count) plus the frozen
-        execution/backend semantics and the candidate's stage geometry and
-        device assignment.
+        revision, checkpoint authority, catalog content, representation,
+        layer count) plus the frozen execution/backend semantics and the
+        candidate's stage geometry and device assignment. The subject binds
+        BOTH checkpoint identities explicitly: the accepted external
+        ``checkpoint_authority_sha256`` and the machinery-local
+        ``catalog_content_digest``. The shared subject-identity convention
+        (``issue99_artifact_core.subject_digest``) defines the matched
+        qualification digest over the execution-equality projection.
         """
         return {
             "model_id": self.subject["model_id"],
             "revision": self.subject["revision"],
-            "checkpoint_sha256": self.subject["checkpoint_sha256"],
+            "checkpoint_authority_sha256": self.subject["checkpoint_authority_sha256"],
+            "catalog_content_digest": self.subject["catalog_content_digest"],
             "representation": self.subject["representation"],
             "execution": self.subject["execution"],
             "backend": dict(self.subject["backend"]),
@@ -845,14 +1136,14 @@ class GemmaDenseStrategy:
             "candidate_id": candidate["candidate_id"],
             "model": {
                 **dict(self.catalog["model"]),
-                "checkpoint_sha256": self.catalog["checkpoint_sha256"],
+                "checkpoint_authority_sha256": self.catalog["checkpoint_authority_sha256"],
+                "catalog_content_digest": self.catalog["catalog_content_digest"],
                 "layer_count": self.layers,
                 "execution": self.subject["execution"],
                 "backend": dict(self.subject["backend"]),
             },
             "qualification_subject": derived,
-            "qualification_subject_digest": digest_of_bytes(
-                canonical_json_bytes(derived)),
+            "qualification_subject_digest": subject_digest(derived),
             "logical_state_units": [{"id": unit} for unit in self.logical_state_units()],
             "participants": participants,
         }
@@ -861,6 +1152,7 @@ class GemmaDenseStrategy:
         return plan
 
     def logical_state_units(self) -> list[str]:
+        self._require_byte_catalog("logical_state_units")
         units = weight_unit_ids(self.catalog)
         units.extend([f"metadata.{CONFIG_OBJECT}", f"metadata.{TOKENIZER_META_OBJECT}"])
         return sorted(units)
@@ -871,6 +1163,7 @@ class GemmaDenseStrategy:
         Serves frozen descriptors from the SOURCE-built manifest; there is no
         byte-access path here.
         """
+        self._require_byte_catalog("resolve")
         key = f"{requirement_class}|{requirement_id}"
         records = self.source_manifest["records"].get(key)
         if not records:
@@ -1005,4 +1298,18 @@ def build_synthetic_gemma_repository(
     }
     objects[TOKENIZER_META_OBJECT] = canonical_json_bytes(tokenizer_meta)
     (root / TOKENIZER_META_OBJECT).write_bytes(objects[TOKENIZER_META_OBJECT])
+    # the fixture world carries its own synthetic authority identity: it is
+    # derived from the fixture seed, labeled fixture-only, and can never
+    # equal — or be exchanged for — the accepted Gemma checkpoint authority
+    synthetic_authority = hashlib.sha256(
+        f"issue117-synthetic-checkpoint-authority:{seed}".encode()).hexdigest()
+    attestation = build_checkpoint_authority_attestation(
+        root, model_id=config["model_id"], revision=config["revision"],
+        checkpoint_authority_sha256=synthetic_authority,
+        authority_evidence=(
+            "synthetic fixture world; no external checkpoint authority; "
+            "never valid for the canonical Gemma identity"))
+    attestation_bytes = canonical_json_bytes(attestation)
+    (root / AUTHORITY_ATTESTATION_OBJECT).write_bytes(attestation_bytes)
+    objects[AUTHORITY_ATTESTATION_OBJECT] = attestation_bytes
     return config, objects

@@ -120,7 +120,7 @@ class ProducerDeltaCollectorTests(unittest.TestCase):
 class ProducerDeltaValidationTests(unittest.TestCase):
     def test_valid_frozen_delta_loads(self):
         self.assertEqual(applicability.load_producer_delta(ROOT)["schema"],
-                         "inferswarm.issue117.producer-delta/1")
+                         "inferswarm.issue117.producer-delta/2")
 
     def test_wrong_producer_binding_is_refused(self):
         delta = poisoned_delta(integration_producer="b" * 40)
@@ -143,6 +143,118 @@ class ProducerDeltaValidationTests(unittest.TestCase):
         delta = poisoned_delta(unbound_zone_files=["python/freetoken/new_math.py"])
         with self.assertRaisesRegex(applicability.ApplicabilityBlocked, "UNKNOWN"):
             applicability.validate_producer_delta(delta)
+
+
+class DynamicImportClosureTests(unittest.TestCase):
+    """Finding 5: dynamic import coverage is closed or fails closed."""
+
+    def test_frozen_closure_resolves_every_dynamic_target(self):
+        frozen = applicability.load_producer_delta(ROOT)
+        for closure_name in ("authority_closure", "integration_closure"):
+            closure = frozen[closure_name]
+            self.assertEqual(closure["unresolved_dynamic_targets"], [])
+            self.assertEqual(closure["unresolved_in_repository_imports"], [])
+            self.assertTrue(closure["dynamic_import_targets"])
+        zone = {entry["path"] for entry in frozen["zone_files"]}
+        resolved = {entry["resolution"] for entry in
+                    frozen["authority_closure"]["dynamic_import_targets"]
+                    if entry["classification"] == "IN_REPOSITORY"}
+        self.assertTrue(resolved <= zone, resolved - zone)
+
+    def test_external_module_targets_carry_accepted_runtime_bindings(self):
+        frozen = applicability.load_producer_delta(ROOT)
+        bound = {entry["target"]: entry["binding"] for entry in
+                 frozen["authority_closure"]["dynamic_import_targets"]
+                 if entry["classification"] == "EXTERNAL_BOUND"}
+        self.assertIn("torch", bound)
+        self.assertIn("torch 2.11.0+cu130", bound["torch"])
+        probes = {entry["target"] for entry in
+                  frozen["authority_closure"]["dynamic_import_targets"]
+                  if entry["classification"] == "EXTERNAL_PROBE"}
+        self.assertLessEqual(
+            probes, set(applicability.EXTERNAL_AVAILABILITY_PROBE_ALLOWLIST))
+
+    def test_unresolved_dynamic_target_fails_closed(self):
+        delta = poisoned_delta()
+        closure = delta["authority_closure"]
+        closure["dynamic_import_targets"][0]["classification"] = "UNRESOLVED"
+        closure["unresolved_dynamic_targets"] = [
+            closure["dynamic_import_targets"][0]]
+        delta["producer_delta_digest"] = applicability.self_digest(
+            delta, identity_field="producer_delta_digest")
+        with self.assertRaisesRegex(applicability.ApplicabilityBlocked,
+                                    "unresolved dynamic execution targets"):
+            applicability.validate_producer_delta(delta)
+
+    def test_non_literal_dynamic_target_fails_closed(self):
+        delta = poisoned_delta()
+        closure = delta["authority_closure"]
+        closure["dynamic_import_targets"].append({
+            "file": "python/freetoken/models/loader.py", "target": None,
+            "mechanism": "module_import", "classification": "UNRESOLVED",
+            "resolution": None, "binding": "non-literal dynamic import target"})
+        closure["unresolved_dynamic_targets"] = [closure["dynamic_import_targets"][-1]]
+        delta["producer_delta_digest"] = applicability.self_digest(
+            delta, identity_field="producer_delta_digest")
+        with self.assertRaisesRegex(applicability.ApplicabilityBlocked,
+                                    "unresolved dynamic execution targets"):
+            applicability.validate_producer_delta(delta)
+
+    def test_unresolved_in_repository_module_import_fails_closed(self):
+        delta = poisoned_delta()
+        delta["authority_closure"]["unresolved_in_repository_imports"] = [
+            "freetoken.models.unresolved_module"]
+        delta["producer_delta_digest"] = applicability.self_digest(
+            delta, identity_field="producer_delta_digest")
+        with self.assertRaisesRegex(applicability.ApplicabilityBlocked,
+                                    "unresolved in-repository module"):
+            applicability.validate_producer_delta(delta)
+
+    def test_changed_dynamically_loaded_target_requires_requalification(self):
+        # the compiled-extension build source of the pinned.py dynamic import
+        # is a zone member; changing it is changed execution math
+        delta = poisoned_delta()
+        entry = next(entry for entry in delta["zone_files"]
+                     if entry["path"] ==
+                     "python/freetoken/kernel/csrc/pinned_tensor.cpp")
+        self.assertEqual(entry["delta"], applicability.DELTA_IDENTICAL)
+        entry["integration_sha256"] = "sha256:" + "d" * 64
+        entry["delta"] = applicability.DELTA_CHANGED
+        delta.pop("producer_delta_digest")
+        delta["producer_delta_digest"] = applicability.self_digest(
+            delta, identity_field="producer_delta_digest")
+        with self.assertRaisesRegex(
+                applicability.ApplicabilityBlocked,
+                applicability.R6_SUCCESSOR_REQUALIFICATION_REQUIRED):
+            applicability.build_audit_document(delta, authority=authority_for())
+
+    def test_newly_introduced_dynamic_target_blocks_the_closure(self):
+        # a producer that adds a dynamic import the execution authority does
+        # not have has an unprovable zone: the closure sets differ
+        delta = poisoned_delta()
+        delta["integration_closure"]["dynamic_import_targets"] = \
+            delta["integration_closure"]["dynamic_import_targets"] + [{
+                "file": "python/freetoken/models/loader.py",
+                "target": "freetoken.models.gemma4.dynamic_math",
+                "mechanism": "module_import",
+                "classification": "IN_REPOSITORY",
+                "resolution": "python/freetoken/models/gemma4/dynamic_math.py",
+                "binding": None}]
+        delta["producer_delta_digest"] = applicability.self_digest(
+            delta, identity_field="producer_delta_digest")
+        with self.assertRaisesRegex(applicability.ApplicabilityBlocked,
+                                    "dynamic-import usage differs"):
+            applicability.validate_producer_delta(delta)
+
+    def test_symbol_imports_are_harmless_telemetry(self):
+        # `from X import symbol` names must not appear as unresolved modules:
+        # the collector distinguishes them mechanically
+        frozen = applicability.load_producer_delta(ROOT)
+        closure = frozen["authority_closure"]
+        unresolved = set(closure["unresolved_in_repository_imports"])
+        for symbol in closure["imported_symbols"]:
+            name = symbol.rsplit(": ", 1)[-1]
+            self.assertNotIn(name, unresolved)
 
 
 class AuditDocumentTests(unittest.TestCase):

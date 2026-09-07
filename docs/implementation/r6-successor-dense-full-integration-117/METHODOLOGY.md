@@ -49,32 +49,65 @@ queries (house rule; enforced by review and CI).
   authority producer (`7e5c8521`) and the integration producer; every zone
   file is hashed at both refs; the whole tree is compared for out-of-zone
   changes. Each of the seventeen execution-relevant surfaces is classified
-  from the observed per-file deltas of the files bound to it. Any changed,
-  missing, extra, or unprovable execution-math surface — or any zone file
-  matching no surface binding — mechanically yields
+  from the observed per-file deltas of the files bound to it. Every dynamic
+  import mechanism on the zone is statically classified: resolved
+  in-repository targets (the `_pinned_tensor` extension build source, the
+  in-tree `freetoken_kernel_cache` subpackage, the model registry's literal
+  module paths) join the zone and are hashed at both refs; external module
+  imports (`torch`, `time`) are bound to accepted runtime identities;
+  `find_spec` probes are limited to the allowlisted availability probes
+  (`flashinfer`, `sgl_kernel`, `vllm`) that execute no target bytes; plain
+  symbol imports are distinguished from module imports and recorded as
+  telemetry; declared-optional imports (`try`/`ModuleNotFoundError`) are
+  telemetry; and any unresolved dynamic target or actual unresolved
+  in-repository module import fails the closure. Any changed, missing,
+  extra, or unprovable execution-math surface — or any zone file matching no
+  surface binding — mechanically yields
   `R6_SUCCESSOR_REQUALIFICATION_REQUIRED` and stops the gate before
   correctness-bearing execution. Only the holdout admission wrappers
   (`benchmarks/inferswarm_110b/`, accepted as "admission wiring ONLY, zero
   execution/model math") and the InferSwarm-side control plane are admissible
   change surfaces. The module also byte-pins the retained physical-identity
-  evidence files and freezes the exact per-Compute-Unit GPU identities
+  evidence files, freezes the exact per-Compute-Unit GPU identities
   (node, index, UUID, product, measured compute capability, role) that the
-  physical preflight must match.
+  physical preflight must match, and provides
+  `accepted_checkpoint_authority_from_evidence` — the only admissible source
+  of the canonical checkpoint authority identity, loaded from the byte-pinned
+  retained V5 authority evidence files.
 - `scripts/issue117_gemma_strategy.py` — the strategy side of "strategy
   constrains; planner chooses". Responsibilities are split by role:
   the SOURCE side (`catalog_from_repository`, `build_source_manifest`) is the
   only component that reads or hashes model bytes — whole-object hashing for
   the catalog, exact tensor ranges for artifact records — and its output is
-  the small immutable descriptor manifest. The planning waist
+  the small immutable descriptor manifest. The catalog carries two
+  explicitly separated checkpoint identities: `checkpoint_authority_sha256`
+  (the accepted external/model checkpoint identity; for canonical Gemma
+  exactly the retained accepted value `5a84cb31…`, bound through the
+  repository's byte-verified `checkpoint-authority.json` attestation and
+  cross-checked against `accepted_checkpoint_authority_from_evidence` — never
+  an unchecked config field) and `catalog_content_digest` (mechanically
+  derived from the exact observed content: object digests, lengths, tensor
+  layout, config). A repository claiming the canonical Gemma identity is
+  additionally refused unless the attested object set matches the observed
+  bytes exactly and the observed structure matches the accepted native-BF16
+  48-layer tied-embedding representation. The planning waist
   (`GemmaDenseStrategy`) consumes catalog + subject + manifest and has no
   byte-access path at all; a candidate's qualification subject is derived
-  mechanically from the exact catalog/plan identity (model id, revision,
-  mechanical checkpoint identity, representation, backend, execution
-  semantics, layer count, stage geometry/device assignment), and constructing
-  a strategy whose subject disagrees with its catalog fails closed — so a
-  synthetic fixture catalog can never produce or inherit the accepted Gemma
-  subject. The accepted V5 qualification record is built from the retained
-  accepted constants only.
+  mechanically from the exact catalog/plan identity and binds BOTH checkpoint
+  identities, and constructing a strategy whose subject disagrees with its
+  catalog fails closed — so a synthetic fixture catalog (with its own
+  synthetic authority identity) can never produce or inherit the accepted
+  Gemma subject. The accepted V5 qualification record's subject is
+  constructed through the ordinary machinery (`canonical_v5_candidate`:
+  canonical authority-descriptor catalog → `subject_from_catalog` → candidate
+  enumeration), so the record is matched by exactly the canonical candidate
+  the real machinery produces and by no synthetic subject; the descriptor
+  catalog is evidence-derived and descriptor-only (it refuses the byte-level
+  planning surface). The shared execution-equality subject convention
+  (`issue99_artifact_core.subject_digest`) projects the machinery-local
+  `catalog_content_digest` out of the matched digest on both record and
+  candidate sides; the content identity is enforced at construction by the
+  attestation adapter and bound by plan/manifest identity.
 - `scripts/issue117_planner.py` — the generic planner: technical feasibility
   (operator capacity model; unknown capacity fails closed; stage bytes
   derived from the exact frozen participant requirements), hard operator
@@ -86,27 +119,46 @@ queries (house rule; enforced by review and CI).
   the compact `ResultFence` authority (contract/session/epoch/realization/
   plan/operation/position) whose invalid-commit counters are derived from
   the retained committed-result ledger, never asserted. The qualification
-  gate recomputes every subject digest from its own subject (a lying
-  caller-supplied digest is control-plane misuse), validates each trusted
+  gate recomputes every subject digest from its own subject over the shared
+  execution-equality convention (a lying caller-supplied digest is
+  control-plane misuse, and machinery-local subject keys declared by the
+  policy must be present on the candidate subject), validates each trusted
   record against its own subject, and binds trusted records to the policy's
   accepted terminal adjudication identity; malformed or self-inconsistent
   records are counted and never promoted. The module contains no
   model-family, product, layer-index, or campaign nouns (statically audited)
   and never imports the strategy module.
 - `scripts/issue117_preflight.py` — the required physical preflight record
-  and its fail-closed validator. The record binds the EXACT FreeToken
-  integration producer the frozen applicability audit was built for (a
-  random syntactically valid SHA cannot pass), one Compute Unit record per
-  GPU — never one per node — carrying node, GPU index, the exact retained V5
-  GPU UUID, exact product, exact measured compute capability, role, and
-  runtime identity, all from the accepted retained evidence; plus the
-  digest-bound source descriptor set and candidate set, digest-bound
-  qualification-applicability records with subject digests that recompute,
-  full validation (not merely digest equality) of the committed fixture,
-  and mechanically collected cold-cache proofs: walked entry listings with
-  lstat facts (count, bytes, symlink and hardlink aliases) whose aggregates
-  the validator re-derives, with source possession proven disjoint from the
-  participant cold roots.
+  and its fail-closed validator. Repository identities are mechanically
+  collected Git evidence (`collect_repository_identity`: `git rev-parse
+  HEAD`, `git status --porcelain`, branch telemetry only), never caller
+  booleans; the validator re-checks the InferSwarm record against the actual
+  checkout and the FreeToken record against its repository when supplied,
+  requires the FreeToken HEAD to equal the EXACT producer the frozen
+  applicability audit was built for (a random syntactically valid SHA cannot
+  pass), and refuses edited records (self-identity), dirty worktrees, and
+  heads that merely look valid but do not equal the observed checkout. The
+  record binds one Compute Unit record per GPU — never one per node —
+  carrying node, GPU index, the exact retained V5 GPU UUID, exact product,
+  exact measured compute capability, role, and runtime identity, all from
+  the accepted retained evidence; plus the digest-bound source descriptor
+  set (each descriptor declaring an explicit local/remote source-kind) and
+  candidate set, full validation (not merely digest equality) of the
+  committed fixture, and mechanically collected cold-cache proofs: walked
+  entry listings with lstat facts (count, bytes, symlink and hardlink
+  aliases) whose aggregates the validator re-derives. Qualification
+  applicability is derived, never trusted: the validator recomputes every
+  candidate's execution-equality subject digest, evaluates it against
+  `accepted_v5_qualification_record()` and the accepted terminal adjudication
+  identity via the generic planner evaluator, and refuses any retained
+  record that mismatches the independently derived verdict, any duplicated
+  or conflicting records, any missing evidence, and any fabricated
+  `QUALIFICATION_APPLICABLE`. Source possession is proven, not asserted:
+  every local (`file://`) Source must carry a mechanically collected
+  possession record whose root exists, is not a symlink, and is disjoint
+  from every participant cache and materialized root; an empty possession
+  set with local Sources present cannot pass, and remote Sources must carry
+  an explicit remote source-kind identity.
 - `scripts/issue117_proof.py` — the orchestrating CPU campaign that produced
   `evidence/` (see README). Deterministic; wall times excluded.
 
@@ -135,10 +187,14 @@ queries (house rule; enforced by review and CI).
   binds `V5_QUALIFICATION_PASS` to the exact synthetic subject with a
   fixture-scoped adjudication identity, and is labeled as fixture evidence.
   The accepted V5 record (accepted terminal adjudication identity, accepted
-  checkpoint subject) is exercised fail-closed: no synthetic candidate
-  subject can match it. Applicability is pure subject-digest equality plus
-  terminal-pass authority binding: any material subject change (geometry,
-  device, backend, weights, representation) mechanically breaks it.
+  checkpoint authority subject constructed through the canonical machinery)
+  matches exactly one canonical candidate — the machinery-produced V5-geometry
+  candidate — and no synthetic candidate subject. Applicability is pure
+  execution-equality subject-digest equality plus terminal-pass authority
+  binding: any material subject change (geometry, device, backend, checkpoint
+  authority, representation) mechanically breaks it, and the candidate's
+  catalog content identity is enforced separately at construction by the
+  authority attestation adapter.
 - Cold acquisition uses the accepted #99/#101 machinery with one authorized
   file Source, empty dedicated per-node caches, exact-range artifact
   records, verify-then-publish, planned materializations, and Coordinator
@@ -168,19 +224,23 @@ queries (house rule; enforced by review and CI).
 Executed from the orchestrator with node access, in this order, each arm
 gated on the previous:
 
-0. **Preflight.** Freeze the physical preflight record (exact InferSwarm
-   implementation SHA and clean worktree; the exact FreeToken integration
-   producer SHA the applicability audit was rebuilt for, with clean
-   worktree — the audit must be mechanically re-earned for that producer
-   first; V5 authority + physical identity byte pins via
+0. **Preflight.** Freeze the physical preflight record: mechanically
+   collected InferSwarm repository identity (HEAD `rev-parse` equal to the
+   accepted implementation SHA, clean `status --porcelain`) and FreeToken
+   repository identity (HEAD equal to the exact integration producer SHA the
+   applicability audit was rebuilt for, clean worktree — the audit must be
+   mechanically re-earned for that producer first); V5 authority + physical
+   identity byte pins via
    `issue117_applicability.verify_v5_authority`; exact per-CU GPU UUID/
    product/compute-capability/role/runtime records; torch 2.11.0+cu130 /
    CUDA 13.0 / driver 610.57.04 / Triton 3.6.0 / flashinfer 0.6.17;
-   digest-bound candidate set and qualification applicability; Source
-   descriptors; mechanically collected empty
+   digest-bound candidate set with independently derived qualification
+   applicability (retained records must equal the derived verdicts); Source
+   descriptors with explicit source kinds and mechanically collected source
+   possession disjoint from every cold root; mechanically collected empty
    `/srv/inferswarm/{cache,materialized}/issue117/` root proofs with no
-   symlink/hardlink aliasing and disjoint source possession; full fixture
-   validation; producer-bound applicability audit). Validate with
+   symlink/hardlink aliasing; full fixture validation; producer-bound
+   applicability audit. Validate with
    `scripts/issue117_preflight.py`. Any identity drift stops the gate.
 1. **Fixture binding.** The 24-case fixture manifest is committed here
    (`evidence/integration-fixture.json`, digest

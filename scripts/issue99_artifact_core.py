@@ -118,6 +118,47 @@ def write_canonical_json(path: Path, document: Mapping[str, Any]) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Qualification-subject identity convention (shared, model-independent)
+# ---------------------------------------------------------------------------
+
+
+#: Subject fields that are machinery-local content bindings rather than
+#: execution-equality identity. They ride on candidate subjects and are bound
+#: by plans/manifests/preflight records, but the qualification-subject digest
+#: — the identity accepted qualification evidence is matched against — is
+#: defined over the execution-equality subject with these keys removed.
+MACHINERY_LOCAL_SUBJECT_KEYS = ("catalog_content_digest",)
+
+
+def execution_equality_subject(
+        subject: Mapping[str, Any], *,
+        machinery_local_subject_keys: Sequence[str] = MACHINERY_LOCAL_SUBJECT_KEYS,
+) -> dict[str, Any]:
+    """Project a qualification subject to its execution-equality identity.
+
+    The projection is the shared convention for both sides of qualification
+    matching: accepted evidence records and candidate subjects digest to the
+    same identity exactly when their execution-equality identity (model,
+    revision, checkpoint authority, representation, execution semantics,
+    backend, geometry) is equal. Machinery-local content identities remain
+    carried on the subject and are enforced by the strategy/catalog binding,
+    but they do not enter the matched digest.
+    """
+    local = set(machinery_local_subject_keys)
+    return {key: value for key, value in subject.items() if key not in local}
+
+
+def subject_digest(subject: Mapping[str, Any], *,
+                   machinery_local_subject_keys: Sequence[str] =
+                   MACHINERY_LOCAL_SUBJECT_KEYS) -> str:
+    """The qualification-subject digest: digest of the execution-equality
+    subject (see :func:`execution_equality_subject`)."""
+    return digest_of_bytes(canonical_json_bytes(
+        execution_equality_subject(
+            subject, machinery_local_subject_keys=machinery_local_subject_keys)))
+
+
+# ---------------------------------------------------------------------------
 # Artifact records (internal, unfrozen representation)
 # ---------------------------------------------------------------------------
 

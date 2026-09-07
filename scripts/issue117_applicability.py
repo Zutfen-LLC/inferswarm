@@ -18,9 +18,15 @@ execution:
    producer and the integration producer; every zone file is hashed at both
    refs; the whole tree is compared for out-of-zone changes. A surface is
    provably unchanged only when every bound file is observed byte-identical.
-   Any changed, missing, extra, or unknown execution-math surface — or any
-   unprovable closure — yields ``R6_SUCCESSOR_REQUALIFICATION_REQUIRED`` and
-   must stop the gate before correctness-bearing integrated execution.
+   Every dynamic import mechanism on the zone is statically classified:
+   resolved in-repository targets join the zone (hashed at both refs),
+   external module imports must be on the accepted runtime binding list,
+   ``find_spec`` probes are limited to the probe allowlist, and any
+   unresolved dynamic target — or any actual unresolved in-repository module
+   import — fails the closure. Any changed, missing, extra, or unknown
+   execution-math surface — or any unprovable closure — yields
+   ``R6_SUCCESSOR_REQUALIFICATION_REQUIRED`` and must stop the gate before
+   correctness-bearing integrated execution.
    Control/artifact/materialization/observability changes remain admissible
    only on the closed set of surfaces whose bound files are admission /
    decision-row evidence wiring (``benchmarks/inferswarm_110b/``) or
@@ -50,8 +56,8 @@ from issue74_methodology import sha256_file
 from issue99_artifact_core import self_digest, write_canonical_json
 
 AUDIT_SCHEMA = "inferswarm.issue117.applicability-audit/2"
-PRODUCER_DELTA_SCHEMA = "inferswarm.issue117.producer-delta/1"
-COLLECTOR_ID = "issue117.producer-delta-collector/1"
+PRODUCER_DELTA_SCHEMA = "inferswarm.issue117.producer-delta/2"
+COLLECTOR_ID = "issue117.producer-delta-collector/2"
 
 CONTROL_ONLY = "CONTROL_ONLY"
 ARTIFACT_ACQUISITION_ONLY = "ARTIFACT_ACQUISITION_ONLY"
@@ -183,6 +189,41 @@ V5_EXECUTION_ENTRYPOINTS: tuple[str, ...] = (
     "benchmarks/inferswarm_110b/chain_runner_holdout.py",
     "benchmarks/inferswarm_110b/reference_runner_holdout.py",
 )
+
+#: Mechanical classification of dynamic-import mechanisms. ``module_import``
+#: executes the target module's bytes; ``availability_probe`` (``find_spec``)
+#: only locates a package and executes none of its bytes.
+DYNAMIC_MECHANISM_IMPORT = "module_import"
+DYNAMIC_MECHANISM_PROBE = "availability_probe"
+
+#: Dynamic targets that resolve INSIDE the repository. Resolved targets are
+#: pulled into the execution zone and hashed at both producers, so a changed
+#: dynamically loaded file is an observed zone delta like any other.
+#: ``EXTENSION_MODULE_SOURCES`` maps compiled extension module names to their
+#: in-repository build sources (the compiled artifact itself is produced at
+#: install time and bound by the accepted runtime identity).
+EXTENSION_MODULE_SOURCES: dict[str, str] = {
+    "freetoken.kernel._pinned_tensor": "python/freetoken/kernel/csrc/pinned_tensor.cpp",
+}
+
+#: Additional repository-relative search prefixes for module resolution
+#: (in-tree installable subpackages outside ``python/``).
+MODULE_SEARCH_PREFIXES = ("python/", "", "freetoken-kernel-cache/")
+
+#: Dynamic targets that are external to the repository and bound to an
+#: already accepted physical runtime identity. A ``module_import`` of an
+#: external target is only admissible on this closed list.
+ACCEPTED_EXTERNAL_MODULE_BINDINGS: dict[str, str] = {
+    "torch": "accepted physical runtime identity: torch 2.11.0+cu130",
+    "time": "python standard library",
+}
+
+#: External packages an ``availability_probe`` (``find_spec``) may name.
+#: A probe executes no target bytes; the accepted V5 dense Gemma path never
+#: selects a backend gated by these probes beyond the accepted Triton path
+#: (documented residual: probe-gated backend selection is admission logic,
+#: not execution math).
+EXTERNAL_AVAILABILITY_PROBE_ALLOWLIST = ("flashinfer", "sgl_kernel", "vllm")
 
 #: Closed execution-relevant surface list from the issue #117 applicability
 #: barrier. Every surface is classified exactly once, from observed deltas.
@@ -353,6 +394,8 @@ SURFACE_BINDINGS: dict[str, tuple[str, ...]] = {
         "python/freetoken/version.py",
         "python/freetoken/kernel/_toolchain.py",
         "python/freetoken/utils/",
+        # the in-tree kernel-cache subpackage (JIT cache directory wiring)
+        "freetoken-kernel-cache/",
     ),
     "checkpoint_interpretation": (
         "python/freetoken/checkpoint/",
@@ -397,57 +440,223 @@ def _git_blob(root: Path, ref: str, path: str) -> bytes | None:
 
 def _resolve_import(root: Path, ref: str, module: str) -> str | None:
     base = module.replace(".", "/")
-    for candidate in (f"python/{base}.py", f"python/{base}/__init__.py",
-                      f"{base}.py", f"{base}/__init__.py"):
-        if _git_blob(root, ref, candidate) is not None:
-            return candidate
+    for prefix in MODULE_SEARCH_PREFIXES:
+        for candidate in (f"{prefix}{base}.py", f"{prefix}{base}/__init__.py"):
+            if _git_blob(root, ref, candidate) is not None:
+                return candidate
+    source = EXTENSION_MODULE_SOURCES.get(module)
+    if source is not None and _git_blob(root, ref, source) is not None:
+        return source
     return None
 
 
-def _imports_of(source: bytes, path: str) -> set[str]:
-    """In-repository modules referenced by one file's import statements."""
+def _dotted_name(node: ast.AST) -> str | None:
+    """Dotted name of an Attribute/Name chain (``importlib.import_module``)."""
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute) and isinstance(node.value, ast.AST):
+        parent = _dotted_name(node.value)
+        return f"{parent}.{node.attr}" if parent else None
+    return None
+
+
+def _module_string_constants(tree: ast.Module) -> dict[str, str]:
+    """UPPER_CASE module-level string constants (candidate dynamic targets)."""
+    constants: dict[str, str] = {}
+    for node in tree.body:
+        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
+            continue
+        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+        names = [t.id for t in targets
+                 if isinstance(t, ast.Name) and t.id.isupper()]
+        if not names or node.value is None:
+            continue
+        strings = [sub.value for sub in ast.walk(node.value)
+                   if isinstance(sub, ast.Constant) and isinstance(sub.value, str)]
+        for name in names:
+            for text in strings:
+                if text.startswith("freetoken") and "=" not in text:
+                    constants[name] = text
+    return constants
+
+
+_DYNAMIC_CALL_NAMES = ("importlib.import_module", "builtins.__import__",
+                       "__import__", "importlib.util.find_spec",
+                       "importlib.machinery.find_spec")
+
+
+def _mechanism_of(dotted: str | None) -> str | None:
+    if dotted in ("importlib.import_module", "builtins.__import__", "__import__"):
+        return DYNAMIC_MECHANISM_IMPORT
+    if dotted in ("importlib.util.find_spec", "importlib.machinery.find_spec"):
+        return DYNAMIC_MECHANISM_PROBE
+    return None
+
+
+def _local_dynamic_helpers(tree: ast.Module) -> dict[str, str]:
+    """Module-level functions that dynamically import/probe a bare parameter.
+
+    Returns ``{function_name: mechanism}``; their literal call sites within
+    the same file are the statically resolvable dynamic requests.
+    """
+    helpers: dict[str, str] = {}
+    for node in tree.body:
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        params = {a.arg for a in node.args.args}
+        for sub in ast.walk(node):
+            if isinstance(sub, ast.Call) and sub.args:
+                mechanism = _mechanism_of(_dotted_name(sub.func))
+                if mechanism and isinstance(sub.args[0], ast.Name) \
+                        and sub.args[0].id in params:
+                    helpers[node.name] = mechanism
+    return helpers
+
+
+def _dynamic_import_requests(source: bytes) -> list[tuple[str, str | None]]:
+    """Literal dynamic-import requests in one file.
+
+    Returns ``(mechanism, target-or-None)`` pairs. Targets resolve from
+    literal call arguments, UPPER_CASE module constants feeding those
+    arguments, or literal call sites of local dynamic-helper functions. A
+    ``None`` target is a non-literal argument that static analysis cannot
+    resolve and fails validation.
+    """
     tree = ast.parse(source)
-    modules: set[str] = set()
+    constants = _module_string_constants(tree)
+    helpers = _local_dynamic_helpers(tree)
+    helper_params = {a.arg for function in tree.body
+                     if isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef))
+                     and function.name in helpers
+                     for a in function.args.args}
+    requests: list[tuple[str, str | None]] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not node.args:
+            continue
+        # literal call sites of a local dynamic helper carry the target
+        if isinstance(node.func, ast.Name) and node.func.id in helpers \
+                and isinstance(node.args[0], ast.Constant) \
+                and isinstance(node.args[0].value, str):
+            requests.append((helpers[node.func.id], node.args[0].value))
+            continue
+        mechanism = _mechanism_of(_dotted_name(node.func))
+        if mechanism is None:
+            continue
+        arg = node.args[0]
+        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+            requests.append((mechanism, arg.value))
+        elif isinstance(arg, ast.Name) and arg.id in constants:
+            requests.append((mechanism, constants[arg.id]))
+        elif isinstance(arg, ast.Name) and arg.id in helper_params:
+            continue  # covered by the helper's literal call sites
+        else:
+            requests.append((mechanism, None))
+    return requests
+
+
+def _classify_dynamic_target(root: Path, ref: str, mechanism: str,
+                             target: str) -> tuple[str, str | None, str | None]:
+    """Classify one literal dynamic-import target at ``ref``.
+
+    Returns ``(classification, resolution, binding)`` where classification is
+    IN_REPOSITORY, EXTERNAL_BOUND, EXTERNAL_PROBE, or UNRESOLVED.
+    """
+    resolved = _resolve_import(root, ref, target)
+    if resolved is not None:
+        return "IN_REPOSITORY", resolved, None
+    if mechanism == DYNAMIC_MECHANISM_PROBE \
+            and target in EXTERNAL_AVAILABILITY_PROBE_ALLOWLIST:
+        return "EXTERNAL_PROBE", None, "availability probe; executes no target bytes"
+    if target in ACCEPTED_EXTERNAL_MODULE_BINDINGS:
+        return "EXTERNAL_BOUND", None, ACCEPTED_EXTERNAL_MODULE_BINDINGS[target]
+    return "UNRESOLVED", None, None
+
+
+def _imports_of(source: bytes, path: str) -> list[tuple[str, str, bool, bool]]:
+    """Import requests made by one file.
+
+    Returns ``(kind, dotted-path, optional, relative)`` tuples: ``("module",
+    ...)`` for import statements whose target must be a real module and
+    ``("attr", ...)`` for ``from X import a`` names that may be either
+    submodules or plain symbols. ``optional`` marks requests lexically
+    enclosed in a ``try`` with a ``ModuleNotFoundError``/``ImportError``
+    handler (a declared-optional import); ``relative`` marks requests whose
+    base is the importing file's own package, where the on-disk directory is
+    not always the package name and resolution may need the relative
+    fallback.
+    """
+    tree = ast.parse(source)
+    optional_nodes: set[int] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Try):
+            continue
+        guards = any(isinstance(handler.type, (ast.Name, ast.Attribute))
+                     and _dotted_name(handler.type) in ("ModuleNotFoundError",
+                                                        "ImportError",
+                                                        "builtins.ModuleNotFoundError",
+                                                        "builtins.ImportError")
+                     for handler in node.handlers)
+        if guards:
+            for sub in ast.walk(node):
+                if isinstance(sub, (ast.Import, ast.ImportFrom)):
+                    optional_nodes.add(id(sub))
+    requests: list[tuple[str, str, bool, bool]] = []
     package: str | None = None
     if "/" in path:
         package = path.rsplit("/", 1)[0].replace("/", ".")
 
-    def add(module: str) -> None:
+    def add(kind: str, module: str, optional: bool, relative: bool) -> None:
         if module:
-            modules.add(module)
+            requests.append((kind, module, optional, relative))
 
     for node in ast.walk(tree):
+        if not isinstance(node, (ast.Import, ast.ImportFrom)):
+            continue
+        optional = id(node) in optional_nodes
         if isinstance(node, ast.Import):
             for alias in node.names:
-                add(alias.name)
-        elif isinstance(node, ast.ImportFrom):
-            prefix = ""
-            if node.level:
-                if package is None:
-                    continue
-                parts = package.split(".")
-                base_parts = (parts[:len(parts) - (node.level - 1)]
-                              if node.level > 1 else parts)
-                prefix = ".".join(base_parts)
-            name = node.module or ""
-            add(f"{prefix}.{name}" if prefix and name else (prefix or name))
-            # `from pkg import submodule` also imports (and executes) the
-            # submodule; record every alias as a potential module path.
-            if name or prefix:
-                base = f"{prefix}.{name}" if prefix and name else (prefix or name)
-                for alias in node.names:
-                    if alias.name != "*":
-                        add(f"{base}.{alias.name}")
-    return modules
+                add("module", alias.name, optional, False)
+            continue
+        prefix = ""
+        if node.level:
+            if package is None:
+                continue
+            parts = package.split(".")
+            base_parts = (parts[:len(parts) - (node.level - 1)]
+                          if node.level > 1 else parts)
+            prefix = ".".join(base_parts)
+        name = node.module or ""
+        base = f"{prefix}.{name}" if prefix and name else (prefix or name)
+        add("module", base, optional, bool(node.level))
+        # `from pkg import name` may import a submodule or bind a symbol;
+        # the closure resolver disambiguates mechanically by path lookup.
+        for alias in node.names:
+            if alias.name != "*":
+                add("attr", f"{base}.{alias.name}" if base else alias.name,
+                    optional, bool(node.level))
+    return requests
 
 
 def _import_closure(root: Path, ref: str,
                     entrypoints: Sequence[str]) -> dict[str, Any]:
-    """Transitive in-repository import closure of the V5 entrypoints at ref."""
+    """Transitive in-repository import closure of the V5 entrypoints at ref.
+
+    The closure statically resolves every import request, distinguishing
+    real module imports from harmless symbol imports; actual unresolved
+    in-repository modules are recorded (and fail validation), while
+    declared-optional imports (``try``/``ModuleNotFoundError``) are telemetry
+    only. Every dynamic import mechanism is classified: resolved
+    in-repository dynamic targets join the zone and are hashed at both refs;
+    external targets must be on the accepted binding/probe allowlists; and
+    anything unresolved or non-literal is recorded as an unresolved dynamic
+    target and fails validation.
+    """
     zone: set[str] = set()
     queue: list[str] = list(entrypoints)
     unresolved: set[str] = set()
-    dynamic_import_files: set[str] = set()
+    optional_imports: set[str] = set()
+    imported_symbols: set[str] = set()
+    dynamic_targets: list[dict[str, Any]] = []
     syntax_errors: list[str] = []
     while queue:
         path = queue.pop()
@@ -457,25 +666,84 @@ def _import_closure(root: Path, ref: str,
         blob = _git_blob(root, ref, path)
         if blob is None:
             continue
-        if b"importlib" in blob or b"__import__" in blob:
-            dynamic_import_files.add(path)
+        if not path.endswith(".py"):
+            # non-Python zone members (e.g. the compiled-extension build
+            # source of a dynamic import target) are hashed, never parsed
+            continue
+        is_dynamic = b"importlib" in blob or b"__import__" in blob
         try:
-            modules = sorted(_imports_of(blob, path))
+            ast.parse(blob)
         except SyntaxError as error:
             syntax_errors.append(f"{path}: {error}")
             continue
-        for module in modules:
-            resolved = _resolve_import(root, ref, module)
-            if resolved is None:
-                if module.startswith(("freetoken", "benchmarks")):
-                    unresolved.add(module)
+        if is_dynamic:
+            for mechanism, target in _dynamic_import_requests(blob):
+                if target is None:
+                    dynamic_targets.append({
+                        "file": path, "target": None, "mechanism": mechanism,
+                        "classification": "UNRESOLVED", "resolution": None,
+                        "binding": "non-literal dynamic import target"})
+                    continue
+                classification, resolution, binding = _classify_dynamic_target(
+                    root, ref, mechanism, target)
+                dynamic_targets.append({
+                    "file": path, "target": target, "mechanism": mechanism,
+                    "classification": classification,
+                    "resolution": resolution, "binding": binding})
+                if classification == "IN_REPOSITORY" and resolution \
+                        and resolution not in zone:
+                    queue.append(resolution)
+        for kind, requested, optional, relative in _imports_of(blob, path):
+            resolved = _resolve_import(root, ref, requested)
+            if resolved is None and relative:
+                # a relative import inside a directory whose on-disk path is
+                # not its package name (e.g. the in-tree kernel-cache
+                # subpackage): resolve by dotted-suffix path lookup
+                parts = requested.split(".")
+                for index in range(1, len(parts)):
+                    resolved = _resolve_import(
+                        root, ref, ".".join(parts[index:]))
+                    if resolved is not None:
+                        break
+            if resolved is None and optional:
+                optional_imports.add(f"{path}: {requested}")
                 continue
-            if resolved not in zone:
-                queue.append(resolved)
+            if resolved is not None:
+                if resolved not in zone:
+                    queue.append(resolved)
+                continue
+            if kind == "attr":
+                # a from-import name: a real submodule must resolve as a
+                # file; otherwise it is a plain symbol bound from the parent
+                # module (which itself must have resolved above)
+                parent = requested.rsplit(".", 1)[0]
+                if requested.startswith(("freetoken", "benchmarks")) and \
+                        _resolve_import(root, ref, parent) is None:
+                    unresolved.add(parent)
+                else:
+                    imported_symbols.add(f"{path}: {requested}")
+            elif requested.startswith(("freetoken", "benchmarks")):
+                unresolved.add(requested)
+            else:
+                # a plain external package import (numpy, torch, stdlib...)
+                # executes no repository bytes and is recorded as telemetry
+                imported_symbols.add(f"{path}: {requested}")
     return {
         "zone_files": sorted(zone),
-        "dynamic_import_files": sorted(dynamic_import_files),
+        "dynamic_import_files": sorted({entry["file"] for entry in dynamic_targets}),
+        "dynamic_import_targets": sorted(
+            {json.dumps(entry, sort_keys=True): entry
+             for entry in dynamic_targets}.values(),
+            key=lambda entry: (entry["file"], entry["mechanism"],
+                               entry["target"] or "")),
+        "imported_symbols": sorted(imported_symbols),
+        "optional_imports": sorted(optional_imports),
         "unresolved_in_repository_imports": sorted(unresolved),
+        "unresolved_dynamic_targets": [
+            dict(entry) for entry in sorted(
+                (e for e in dynamic_targets if e["classification"] == "UNRESOLVED"),
+                key=lambda entry: (entry["file"], entry["mechanism"],
+                                   entry["target"] or ""))],
         "syntax_errors": sorted(syntax_errors),
     }
 
@@ -583,7 +851,14 @@ def load_producer_delta(root: Path | None = None) -> dict[str, Any]:
 
 def validate_producer_delta(document: Mapping[str, Any]) -> None:
     """Fail closed unless the delta document is self-consistent and bound to
-    the frozen integration producer with a provable zone."""
+    the frozen integration producer with a provable zone.
+
+    The zone is provable only when every dynamic import mechanism is
+    classified: resolved in-repository dynamic targets are zone members
+    (hashed at both refs), external targets are bound to accepted runtime
+    identities or probe-only allowlist entries, and there are no unresolved
+    dynamic targets and no actual unresolved in-repository module imports.
+    """
     if document.get("schema") != PRODUCER_DELTA_SCHEMA:
         raise ApplicabilityBlocked(
             f"unexpected producer-delta schema {document.get('schema')!r}")
@@ -602,8 +877,19 @@ def validate_producer_delta(document: Mapping[str, Any]) -> None:
         if closure.get("syntax_errors"):
             raise ApplicabilityBlocked(
                 f"{closure_name} unparsable: {closure['syntax_errors'][:3]}")
+        if closure.get("unresolved_in_repository_imports"):
+            raise ApplicabilityBlocked(
+                f"{closure_name} has actual unresolved in-repository module "
+                f"imports: {closure['unresolved_in_repository_imports'][:5]}")
+        if closure.get("unresolved_dynamic_targets"):
+            raise ApplicabilityBlocked(
+                f"{closure_name} has unresolved dynamic execution targets; "
+                "the execution zone is not provable: "
+                f"{closure['unresolved_dynamic_targets'][:3]}")
     if (document.get("authority_closure", {}).get("dynamic_import_files")
-            != document.get("integration_closure", {}).get("dynamic_import_files")):
+            != document.get("integration_closure", {}).get("dynamic_import_files")
+            or document.get("authority_closure", {}).get("dynamic_import_targets")
+            != document.get("integration_closure", {}).get("dynamic_import_targets")):
         raise ApplicabilityBlocked(
             "dynamic-import usage differs between the execution authority and "
             "the integration producer; the execution zone is not provable")
@@ -664,6 +950,11 @@ def build_audit_document(delta: Mapping[str, Any], *,
             "delta_summary": summary,
             "evidence_ref": PRODUCER_DELTA_RELATIVE_PATH,
         })
+    dynamic_targets = delta["authority_closure"]["dynamic_import_targets"]
+    dynamic_summary: dict[str, int] = {}
+    for entry in dynamic_targets:
+        dynamic_summary[entry["classification"]] = \
+            dynamic_summary.get(entry["classification"], 0) + 1
     document = {
         "schema": AUDIT_SCHEMA,
         "authority": dict(authority),
@@ -675,6 +966,14 @@ def build_audit_document(delta: Mapping[str, Any], *,
             "zone_delta_summary": _delta_summary(zone_files),
             "out_of_zone_change_count": sum(
                 len(paths) for paths in delta["out_of_zone_changes"].values()),
+        },
+        "dynamic_import_coverage": {
+            "target_count": len(dynamic_targets),
+            "classification_summary": dynamic_summary,
+            "all_targets_classified": "UNRESOLVED" not in dynamic_summary,
+            "resolved_in_zone": sorted(
+                entry["resolution"] for entry in dynamic_targets
+                if entry["classification"] == "IN_REPOSITORY"),
         },
         "entries": entries,
     }
@@ -834,6 +1133,50 @@ def verify_v5_authority(root: Path, *, files: Mapping[str, str] | None = None) -
         "verified_file_count": len(results),
         "verified_physical_identity_files": physical,
     }
+
+
+#: Retained evidence files that record the accepted checkpoint authority
+#: identity (``checkpoint_sha256`` of the accepted V5 physical subject). The
+#: canonical checkpoint authority is loaded mechanically from exactly these
+#: byte-pinned files — never restated as an unchecked config field.
+CHECKPOINT_AUTHORITY_EVIDENCE_FILES: dict[str, str] = {
+    "docs/qualification/gemma4-12b-it-v4-campaign-97/EXECUTION-AUTHORITY.json":
+        ACCEPTED_PHYSICAL_IDENTITY_FILES[
+            "docs/qualification/gemma4-12b-it-v4-campaign-97/EXECUTION-AUTHORITY.json"],
+    "docs/qualification/gemma4-12b-it-v2-campaign-81/preflight-applicability.json":
+        ACCEPTED_PHYSICAL_IDENTITY_FILES[
+            "docs/qualification/gemma4-12b-it-v2-campaign-81/preflight-applicability.json"],
+}
+
+
+def accepted_checkpoint_authority_from_evidence(root: Path | None = None) -> str:
+    """Load the accepted checkpoint authority SHA from the retained evidence.
+
+    Verifies the byte pins of every authority evidence file, then reads the
+    accepted checkpoint identity from each and requires them to agree. This
+    is the only admissible source of the canonical checkpoint authority
+    identity for strategy/catalog construction.
+    """
+    root = Path(root or Path(__file__).resolve().parents[1])
+    _verify_pinned_files(root, CHECKPOINT_AUTHORITY_EVIDENCE_FILES,
+                         "checkpoint authority evidence")
+    authorities = []
+    for relative in sorted(CHECKPOINT_AUTHORITY_EVIDENCE_FILES):
+        document = json.loads((root / relative).read_text())
+        authority = document.get("subject", {}).get(
+            "checkpoint_sha256") if "subject" in document else document.get(
+            "checkpoint_sha256")
+        if not (isinstance(authority, str)
+                and all(char in "0123456789abcdef" for char in authority)):
+            raise ApplicabilityBlocked(
+                f"checkpoint authority evidence has no usable identity: "
+                f"{relative}")
+        authorities.append(authority)
+    if len(set(authorities)) != 1:
+        raise ApplicabilityBlocked(
+            "retained checkpoint authority evidence disagrees: "
+            f"{sorted(set(authorities))}")
+    return authorities[0]
 
 
 def main(argv: Sequence[str] | None = None) -> int:

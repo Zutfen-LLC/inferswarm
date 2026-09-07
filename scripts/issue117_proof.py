@@ -54,6 +54,7 @@ from issue117_gemma_strategy import (  # noqa: E402
     build_qualification_record,
     build_source_manifest,
     build_synthetic_gemma_repository,
+    canonical_v5_candidate,
     catalog_from_repository,
     checkpoint_weight_bytes,
     subject_from_catalog,
@@ -142,6 +143,12 @@ def require(condition: Any, message: str) -> None:
         raise AssertionError(message)
 
 
+def subject_identity_digest(subject: Mapping[str, Any]) -> str:
+    """The shared execution-equality subject digest (issue99 convention)."""
+    from issue99_artifact_core import subject_digest
+    return subject_digest(subject)
+
+
 def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -152,8 +159,8 @@ def fixture_adjudication_identity(fixture_digest: str,
 
     The CPU fixture world's qualification authority is the fixture contract
     itself: the digest binds the frozen fixture document and the exact
-    subject. It is labeled fixture-scoped everywhere and is never the
-    accepted V5 adjudication identity.
+    execution-equality subject identity. It is labeled fixture-scoped
+    everywhere and is never the accepted V5 adjudication identity.
     """
     payload = canonical_json_bytes({
         "scope": "issue117-cpu-fixture",
@@ -208,7 +215,7 @@ def build_world(temp: Path):
 
     fixture_digest_document = json.loads(FIXTURE_PATH.read_text())
     fixture_digest = fixture_digest_document["fixture_digest"]
-    subject_digest = digest_of_bytes(canonical_json_bytes(v5["qualification_subject"]))
+    subject_digest = subject_identity_digest(v5["qualification_subject"])
     adjudication = fixture_adjudication_identity(fixture_digest, subject_digest)
     qualification_record = build_qualification_record(
         qualification_record_id=FIXTURE_QUALIFICATION_RECORD_ID,
@@ -302,12 +309,7 @@ def build_admission_planner(world, *, requirements_by_candidate=None,
         candidates=candidates,
         feasibility=feasibility,
         qualification_records=[world["qualification_record"]],
-        qualification_policy={
-            "policy": QUALIFICATION_POLICY_STRICT,
-            "accepted_dispositions": ("V5_QUALIFICATION_PASS",),
-            "accepted_adjudication_sha256": world["adjudication"],
-            "required_for_admission": True,
-        },
+        qualification_policy=fixture_qualification_policy(world),
         requirements_by_candidate=requirements_by_candidate or {
             world["v5"]["candidate_id"]: world["requirements"]},
         path_evidence_by_candidate=path_evidence_by_candidate
@@ -318,6 +320,23 @@ def build_admission_planner(world, *, requirements_by_candidate=None,
         if coordinators_by_candidate is not None
         else {world["v5"]["candidate_id"]: world["coordinator"]},
     )
+
+
+def fixture_qualification_policy(world) -> dict[str, Any]:
+    """The fixture world's strict qualification policy.
+
+    Declares the shared machinery-local subject keys so the evaluator
+    compares execution-equality subject identities, exactly as the physical
+    preflight policy does for the accepted V5 record.
+    """
+    from issue99_artifact_core import MACHINERY_LOCAL_SUBJECT_KEYS
+    return {
+        "policy": QUALIFICATION_POLICY_STRICT,
+        "accepted_dispositions": ("V5_QUALIFICATION_PASS",),
+        "accepted_adjudication_sha256": world["adjudication"],
+        "machinery_local_subject_keys": MACHINERY_LOCAL_SUBJECT_KEYS,
+        "required_for_admission": True,
+    }
 
 
 def cold_acquisition(world) -> dict[str, Any]:
@@ -851,10 +870,7 @@ def run_negative_controls(world, fixture_path: Path) -> NegativeControls:
             feasibility={c["candidate_id"]: strategy.feasibility(
                 c, capacity_model=world["capacity"]) for c in world["candidates"]},
             qualification_records=[world["qualification_record"]],
-            qualification_policy={"policy": QUALIFICATION_POLICY_STRICT,
-                                  "accepted_dispositions": ("V5_QUALIFICATION_PASS",),
-                                  "accepted_adjudication_sha256": world["adjudication"],
-                                  "required_for_admission": True},
+            qualification_policy=fixture_qualification_policy(world),
             requirements_by_candidate={world["v5"]["candidate_id"]: world["requirements"]},
             path_evidence_by_candidate={},
             evidence_contract=PLANNING_EVIDENCE_CONTRACT,
@@ -875,12 +891,13 @@ def run_negative_controls(world, fixture_path: Path) -> NegativeControls:
         # a materially changed execution-bearing subject (new geometry and
         # producer identity) recomputes to a different subject digest and
         # must resolve QUALIFICATION_NOT_APPLICABLE
+        from issue99_artifact_core import subject_digest
         mutated = json.loads(json.dumps(world["v5"]))
         mutated["stages"][0]["layer_end"] = 17
         mutated["stages"][1]["layer_start"] = 17
         mutated["qualification_subject"] = world["strategy"].qualification_subject(mutated)
-        mutated["qualification_subject_digest"] = digest_of_bytes(
-            canonical_json_bytes(mutated["qualification_subject"]))
+        mutated["qualification_subject_digest"] = subject_digest(
+            mutated["qualification_subject"])
         planner = build_admission_planner(
             world, candidate_overrides={world["v5"]["candidate_id"]: mutated})
         decision = planner.rank()
@@ -901,20 +918,33 @@ def run_negative_controls(world, fixture_path: Path) -> NegativeControls:
         planner.rank()
 
     def fixture_subject_cannot_inherit_real_v5_record():
-        # the accepted V5 record binds the accepted Gemma checkpoint subject;
-        # no synthetic fixture subject digest may match it
+        # the accepted V5 record binds the canonical Gemma authority subject;
+        # no synthetic fixture subject may match it, and the canonical
+        # machinery candidate is the one subject that does
+        from issue99_artifact_core import MACHINERY_LOCAL_SUBJECT_KEYS, subject_digest
         from issue117_planner import evaluate_qualification_applicability
+        from issue117_gemma_strategy import canonical_v5_candidate
         record = accepted_v5_qualification_record()
-        require(record["qualification_subject_digest"]
-                != digest_of_bytes(canonical_json_bytes(world["v5"]["qualification_subject"])),
-                "fixture subject must never equal the accepted V5 subject digest")
+        policy = {"policy": QUALIFICATION_POLICY_STRICT,
+                  "accepted_dispositions": ("V5_QUALIFICATION_PASS",),
+                  "accepted_adjudication_sha256":
+                      record["authority"]["terminal_adjudication_sha256"],
+                  "machinery_local_subject_keys": MACHINERY_LOCAL_SUBJECT_KEYS}
+        fixture_digests = {
+            subject_digest(candidate["qualification_subject"],
+                           machinery_local_subject_keys=MACHINERY_LOCAL_SUBJECT_KEYS)
+            for candidate in world["candidates"]}
+        canonical_subject = canonical_v5_candidate()["qualification_subject"]
+        canonical_digest = subject_digest(
+            canonical_subject, machinery_local_subject_keys=MACHINERY_LOCAL_SUBJECT_KEYS)
+        require(record["qualification_subject_digest"] == canonical_digest,
+                "the accepted V5 record must match the canonical machinery "
+                "candidate constructed through the ordinary strategy path")
+        require(record["qualification_subject_digest"] not in fixture_digests,
+                "fixture subjects must never equal the accepted V5 subject digest")
         for candidate in world["candidates"]:
             result = evaluate_qualification_applicability(
-                candidate, [record],
-                {"policy": QUALIFICATION_POLICY_STRICT,
-                 "accepted_dispositions": ("V5_QUALIFICATION_PASS",),
-                 "accepted_adjudication_sha256":
-                     record["authority"]["terminal_adjudication_sha256"]})
+                candidate, [record], policy)
             if result["status"] == QUALIFICATION_APPLICABLE:
                 raise AssertionError(
                     f"synthetic candidate inherited the real V5 record: "
@@ -1214,7 +1244,7 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
         source_side_bytes = (world["catalog"]["source_bytes_hashed"]
                              + world["manifest"]["source_bytes_read"])
         summary = {
-            "schema": "inferswarm.issue117.canonical-summary/2",
+            "schema": "inferswarm.issue117.canonical-summary/3",
             "gate": "issue #117 implementation freeze (CPU/static)",
             "accepted_inferswarm_base": BASE,
             "accepted_freetoken_research_head": authority["accepted_freetoken_research_head"],
@@ -1229,6 +1259,15 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
                 world["qualification_record"]["authority"]["terminal_adjudication_sha256"],
             "accepted_v5_qualification_record_id":
                 accepted_v5_qualification_record()["qualification_record_id"],
+            "accepted_v5_qualification_matches_canonical_candidate":
+                accepted_v5_qualification_record()["qualification_subject_digest"]
+                == subject_identity_digest(
+                    canonical_v5_candidate()["qualification_subject"]),
+            "checkpoint_identity_model": (
+                "checkpoint_authority_sha256 (accepted external checkpoint "
+                "identity, evidence-bound) and catalog_content_digest "
+                "(mechanical content identity) are separate named identities; "
+                "candidate subjects carry both"),
             "source_side_model_bytes_hashed": source_side_bytes,
             "coordinator_bulk_bytes_observed": cold["coordinator_bytes_observed"],
             "cold_transferred_bytes": {
@@ -1258,11 +1297,31 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
                 "The synthetic capacity model proves machinery, not hardware limits.",
                 "The qualification record here is fixture-scoped: it binds the "
                 "synthetic fixture subject, not the accepted Gemma checkpoint; "
-                "the accepted V5 record is exercised fail-closed (negative "
-                "control) and can never match a synthetic subject.",
-                "The producer-delta zone closure is provable up to the recorded "
-                "dynamic-import loaders (byte-pinned, identical); dynamically "
-                "loaded out-of-zone files are not hash-covered by the closure.",
+                "the accepted V5 record is matched only by the canonical "
+                "authority-descriptor candidate and can never match a "
+                "synthetic subject.",
+                "The accepted V5 record binds checkpoint execution equality by "
+                "the retained checkpoint_authority_sha256; the retained "
+                "evidence records no canonical catalog content identity and "
+                "no content-to-authority derivation rule, so the candidate's "
+                "catalog_content_digest is a machinery drift binding enforced "
+                "at construction (authority attestation) and by plan/manifest "
+                "identity, not a matched record field. The canonical "
+                "checkpoint authority attestation for the fabric-resident "
+                "repository is generated at physical acquisition time.",
+                "The producer-delta zone closure statically resolves every "
+                "dynamic import mechanism: resolved in-repository targets are "
+                "zone members hashed at both producers; external module "
+                "imports are bound to accepted runtime identities; find_spec "
+                "probes are allowlisted availability probes that execute no "
+                "target bytes. Unresolved dynamic targets or actual "
+                "unresolved in-repository module imports fail the closure "
+                "closed. Residual non-claim: probe-gated backend selection "
+                "(sgl_kernel/vllm) is admission logic; the accepted V5 dense "
+                "path selects none of the probed backends.",
+                "Source-side catalog/manifest construction hashes and reads "
+                "model bytes by design; only the Coordinator/planning waist "
+                "is zero-bulk-byte.",
             ],
         }
         documents = {

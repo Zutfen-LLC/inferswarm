@@ -65,18 +65,23 @@ class CatalogTests(unittest.TestCase):
         for layer in range(48):
             self.assertIn(f"state.layer.{layer}", units)
 
-    def test_catalog_carries_mechanical_checkpoint_identity(self):
-        digest = self.catalog["checkpoint_sha256"]
-        self.assertTrue(digest.startswith("sha256:"))
-        # the identity binds the checkpoint content, not just the model id:
-        # a materially different checkpoint carries a different identity
+    def test_catalog_carries_two_separate_checkpoint_identities(self):
+        content_digest = self.catalog["catalog_content_digest"]
+        authority = self.catalog["checkpoint_authority_sha256"]
+        self.assertTrue(content_digest.startswith("sha256:"))
+        self.assertEqual(len(authority), 64)
+        self.assertNotIn(authority, content_digest)
+        # the content identity binds the checkpoint content, not just the
+        # model id: a materially different checkpoint carries a different
+        # content identity while its (synthetic) authority also differs
         other_temp = tempfile.TemporaryDirectory(prefix="issue117-strategy-other-")
         self.addCleanup(other_temp.cleanup)
         _, other_catalog, _, _, other_subject = build_strategy(
             Path(other_temp.name), seed="a-materially-different-checkpoint")
-        self.assertNotEqual(digest, other_catalog["checkpoint_sha256"])
-        self.assertNotEqual(self.subject["checkpoint_sha256"],
-                            other_subject["checkpoint_sha256"])
+        self.assertNotEqual(content_digest, other_catalog["catalog_content_digest"])
+        self.assertNotEqual(authority, other_catalog["checkpoint_authority_sha256"])
+        self.assertNotEqual(self.subject["catalog_content_digest"],
+                            other_subject["catalog_content_digest"])
 
     def test_catalog_records_source_side_bytes_hashed(self):
         weight = strategy.checkpoint_weight_bytes(self.catalog)
@@ -120,8 +125,10 @@ class SourceManifestTests(unittest.TestCase):
 
     def test_manifest_is_self_consistent_and_bound_to_catalog(self):
         self.assertEqual(self.manifest["model"], self.catalog["model"])
-        self.assertEqual(self.manifest["checkpoint_sha256"],
-                         self.catalog["checkpoint_sha256"])
+        self.assertEqual(self.manifest["checkpoint_authority_sha256"],
+                         self.catalog["checkpoint_authority_sha256"])
+        self.assertEqual(self.manifest["catalog_content_digest"],
+                         self.catalog["catalog_content_digest"])
         self.assertEqual(
             self.manifest["manifest_digest"],
             strategy.self_digest(self.manifest, identity_field="manifest_digest"))
@@ -203,10 +210,13 @@ class CandidateEnumerationTests(unittest.TestCase):
     def test_qualification_subject_binds_catalog_backend_and_geometry(self):
         v5 = self.strategy.accepted_v5_candidate(self.candidates)
         subject = v5["qualification_subject"]
-        # the subject's checkpoint identity is the CATALOG's mechanical
-        # identity, never an externally supplied constant
-        self.assertEqual(subject["checkpoint_sha256"],
-                         self.catalog["checkpoint_sha256"])
+        # the subject's checkpoint identities are the CATALOG's own, both the
+        # synthetic authority identity and the mechanical content identity —
+        # never an externally supplied constant
+        self.assertEqual(subject["checkpoint_authority_sha256"],
+                         self.catalog["checkpoint_authority_sha256"])
+        self.assertEqual(subject["catalog_content_digest"],
+                         self.catalog["catalog_content_digest"])
         self.assertEqual(subject["backend"]["triton"],
                          strategy.SYNTHETIC_SUBJECT_BACKEND["triton"])
         self.assertEqual(subject["stage_structure"][0]["layer_end"], 16)
@@ -234,23 +244,34 @@ class SubjectBindingTests(unittest.TestCase):
     def test_subject_from_catalog_is_catalog_derived(self):
         self.assertEqual(self.subject["model_id"], self.catalog["model"]["model_id"])
         self.assertEqual(self.subject["revision"], self.catalog["model"]["revision"])
-        self.assertEqual(self.subject["checkpoint_sha256"],
-                         self.catalog["checkpoint_sha256"])
-        self.assertNotEqual(self.subject["checkpoint_sha256"],
-                            strategy.MODEL_SUBJECT["checkpoint_sha256"])
+        self.assertEqual(self.subject["checkpoint_authority_sha256"],
+                         self.catalog["checkpoint_authority_sha256"])
+        self.assertEqual(self.subject["catalog_content_digest"],
+                         self.catalog["catalog_content_digest"])
+        self.assertNotEqual(self.subject["checkpoint_authority_sha256"],
+                            strategy.MODEL_SUBJECT["checkpoint_authority_sha256"])
 
     def test_strategy_refuses_foreign_checkpoint_subject(self):
         # the accepted real Gemma subject cannot qualify a synthetic catalog
         with self.assertRaisesRegex(strategy.StrategyError, "catalog identity"):
             strategy.GemmaDenseStrategy(
-                catalog=self.catalog, subject=strategy.MODEL_SUBJECT,
+                catalog=self.catalog,
+                subject={**strategy.accepted_v5_subject(),
+                         "catalog_content_digest":
+                             self.catalog["catalog_content_digest"]},
                 source_manifest=self.manifest)
 
-    def test_strategy_refuses_tampered_checkpoint_identity(self):
+    def test_strategy_refuses_tampered_checkpoint_identities(self):
         tampered = dict(self.subject)
-        tampered["checkpoint_sha256"] = "sha256:" + "f" * 64
+        tampered["checkpoint_authority_sha256"] = "f" * 64
         with self.assertRaisesRegex(strategy.StrategyError, "catalog identity"):
             strategy.GemmaDenseStrategy(catalog=self.catalog, subject=tampered,
+                                        source_manifest=self.manifest)
+        content_tampered = dict(self.subject)
+        content_tampered["catalog_content_digest"] = "sha256:" + "f" * 64
+        with self.assertRaisesRegex(strategy.StrategyError, "catalog identity"):
+            strategy.GemmaDenseStrategy(catalog=self.catalog,
+                                        subject=content_tampered,
                                         source_manifest=self.manifest)
 
     def test_strategy_refuses_tampered_revision(self):
@@ -295,8 +316,10 @@ class SubjectBindingTests(unittest.TestCase):
         self.assertEqual(plan["qualification_subject"], v5["qualification_subject"])
         self.assertEqual(plan["qualification_subject_digest"],
                          v5["qualification_subject_digest"])
-        self.assertEqual(plan["model"]["checkpoint_sha256"],
-                         self.catalog["checkpoint_sha256"])
+        self.assertEqual(plan["model"]["checkpoint_authority_sha256"],
+                         self.catalog["checkpoint_authority_sha256"])
+        self.assertEqual(plan["model"]["catalog_content_digest"],
+                         self.catalog["catalog_content_digest"])
         self.assertEqual(plan["model"]["layer_count"], strategy.LAYER_COUNT)
 
 
@@ -423,10 +446,10 @@ class QualificationRecordTests(unittest.TestCase):
         self.assertEqual(self.record["scope"], "accepted-authority")
 
     def test_record_subject_digest_recomputes_from_its_subject(self):
+        from issue99_artifact_core import subject_digest
         self.assertEqual(
             self.record["qualification_subject_digest"],
-            digest_of_bytes(canonical_json_bytes(
-                self.record["qualification_subject"])))
+            subject_digest(self.record["qualification_subject"]))
 
     def test_no_fixture_candidate_matches_the_accepted_subject(self):
         for candidate in self.candidates:
@@ -441,9 +464,10 @@ class QualificationRecordTests(unittest.TestCase):
         tampered["qualification_subject"]["revision"] = "forged"
         # the record's subject digest no longer recomputes from its subject:
         # exactly the inconsistency the generic gate rejects
+        from issue99_artifact_core import subject_digest
         self.assertNotEqual(
             tampered["qualification_subject_digest"],
-            digest_of_bytes(canonical_json_bytes(tampered["qualification_subject"])))
+            subject_digest(tampered["qualification_subject"]))
 
 
 class PlanAndRequirementsTests(unittest.TestCase):
@@ -530,6 +554,235 @@ class PlanAndRequirementsTests(unittest.TestCase):
         self.assertEqual(self.plan, self.strategy.plan(self.v5))
         other = self.strategy.plan(self.v5, epoch=2)
         self.assertNotEqual(self.plan["plan_digest"], other["plan_digest"])
+
+
+class CanonicalAcceptedV5Tests(unittest.TestCase):
+    """Finding 1: the accepted V5 record is matched by the real machinery."""
+
+    def test_accepted_record_matches_exactly_one_canonical_candidate(self):
+        # MANDATORY: accepted_v5_qualification_record() must match exactly
+        # one canonical V5 candidate produced by the same strategy/catalog
+        # machinery intended for physical execution
+        from issue117_planner import (
+            QUALIFICATION_POLICY_STRICT,
+            evaluate_qualification_applicability,
+        )
+        from issue117_applicability import ACCEPTED_TERMINAL_ADJUDICATION_SHA256
+        from issue99_artifact_core import MACHINERY_LOCAL_SUBJECT_KEYS
+        record = strategy.accepted_v5_qualification_record()
+        policy = {
+            "policy": QUALIFICATION_POLICY_STRICT,
+            "accepted_dispositions": ("V5_QUALIFICATION_PASS",),
+            "accepted_adjudication_sha256":
+                record["authority"]["terminal_adjudication_sha256"],
+            "machinery_local_subject_keys": MACHINERY_LOCAL_SUBJECT_KEYS,
+            "required_for_admission": True,
+        }
+        self.assertEqual(
+            policy["accepted_adjudication_sha256"],
+            ACCEPTED_TERMINAL_ADJUDICATION_SHA256)
+        candidates = strategy.canonical_authority_catalog() and None
+        catalog = strategy.canonical_authority_catalog()
+        subject = strategy.subject_from_catalog(
+            catalog, execution=strategy.MODEL_SUBJECT["execution"],
+            backend=strategy.MODEL_SUBJECT["backend"])
+        instance = strategy.GemmaDenseStrategy(
+            catalog=catalog, subject=subject, source_manifest=None)
+        enumerated = instance.legal_candidates()
+        matches = [candidate for candidate in enumerated
+                   if evaluate_qualification_applicability(
+                       candidate, [record], policy)["status"]
+                   == "QUALIFICATION_APPLICABLE"]
+        self.assertEqual(len(matches), 1)
+        self.assertEqual(matches[0]["candidate_id"],
+                         instance.accepted_v5_candidate(enumerated)["candidate_id"])
+        # the record's bound subject IS the machinery subject, projected
+        self.assertEqual(
+            record["qualification_subject_digest"],
+            matches[0]["qualification_subject_digest"])
+
+    def test_accepted_v5_subject_is_constructed_through_machinery(self):
+        # test 6: the accepted V5 subject digest is constructible from the
+        # actual canonical strategy path, not only from constants
+        from issue99_artifact_core import subject_digest
+        subject = strategy.accepted_v5_subject()
+        candidate = strategy.canonical_v5_candidate()
+        self.assertEqual(
+            subject,
+            {key: value for key, value in
+             candidate["qualification_subject"].items()
+             if key != "catalog_content_digest"})
+        self.assertEqual(strategy.accepted_v5_subject(), subject)
+        self.assertEqual(
+            record_digest_of(strategy.accepted_v5_qualification_record()),
+            record_digest_of(strategy.accepted_v5_qualification_record()))
+        self.assertEqual(
+            strategy.MODEL_SUBJECT["checkpoint_authority_sha256"],
+            subject["checkpoint_authority_sha256"])
+        self.assertNotIn("catalog_content_digest", subject)
+        self.assertTrue(subject_digest(subject).startswith("sha256:"))
+
+    def test_canonical_authority_is_evidence_bound_not_a_config_field(self):
+        # the canonical catalog's authority is loaded from the byte-pinned
+        # retained evidence; tampering with the evidence fails construction
+        from issue117_applicability import (
+            accepted_checkpoint_authority_from_evidence,
+        )
+        self.assertEqual(
+            accepted_checkpoint_authority_from_evidence(ROOT),
+            strategy.MODEL_SUBJECT["checkpoint_authority_sha256"])
+        catalog = strategy.canonical_authority_catalog(inferswarm_root=ROOT)
+        self.assertEqual(
+            catalog["checkpoint_authority_sha256"],
+            strategy.MODEL_SUBJECT["checkpoint_authority_sha256"])
+
+    def test_descriptor_only_catalog_refuses_byte_level_planning(self):
+        catalog = strategy.canonical_authority_catalog()
+        subject = strategy.subject_from_catalog(
+            catalog, execution=strategy.MODEL_SUBJECT["execution"],
+            backend=strategy.MODEL_SUBJECT["backend"])
+        instance = strategy.GemmaDenseStrategy(
+            catalog=catalog, subject=subject, source_manifest=None)
+        with self.assertRaisesRegex(strategy.StrategyError, "byte-level"):
+            instance.plan(instance.accepted_v5_candidate(
+                instance.legal_candidates()))
+        with self.assertRaisesRegex(strategy.StrategyError, "byte-level"):
+            instance.resolve("assigned_logical_state", "state.layer.0")
+
+
+def record_digest_of(record):
+    return record["record_digest"]
+
+
+class CheckpointAuthorityAttestationTests(unittest.TestCase):
+    """Finding 1: the repository-to-authority binding is evidence-backed."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="issue117-attest-")
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name) / "checkpoint"
+        self.config, self.objects = strategy.build_synthetic_gemma_repository(
+            self.root)
+
+    def write_attestation(self, *, model_id, revision, authority,
+                          evidence="test attestation"):
+        from issue74_methodology import canonical_json_bytes
+        attestation = strategy.build_checkpoint_authority_attestation(
+            self.root, model_id=model_id, revision=revision,
+            checkpoint_authority_sha256=authority, authority_evidence=evidence)
+        (self.root / strategy.AUTHORITY_ATTESTATION_OBJECT).write_bytes(
+            canonical_json_bytes(attestation))
+        return attestation
+
+    def rebuild_catalog(self, *, model_id=None, revision=None):
+        config = {**self.config,
+                  "model_id": model_id or self.config["model_id"],
+                  "revision": revision or self.config["revision"]}
+        return strategy.catalog_from_repository(self.root, config=config,
+                                                inferswarm_root=ROOT)
+
+    def test_materially_changed_bytes_change_content_digest_and_break(self):
+        catalog = self.rebuild_catalog()
+        # mutate one weight byte in place, keeping the attestation stale
+        shard = self.root / "model-00001-of-00002.safetensors"
+        data = bytearray(shard.read_bytes())
+        data[-1] ^= 0xFF
+        shard.write_bytes(bytes(data))
+        with self.assertRaisesRegex(strategy.StrategyError, "drifted"):
+            strategy.catalog_from_repository(self.root, config=self.config,
+                                             inferswarm_root=ROOT)
+        # with a fresh (honest) attestation the construction succeeds but
+        # the mechanical content identity has materially changed
+        self.write_attestation(model_id=self.config["model_id"],
+                               revision=self.config["revision"],
+                               authority="b" * 64,
+                               evidence="re-attested after byte change")
+        drifted = strategy.catalog_from_repository(self.root, config=self.config,
+                                                   inferswarm_root=ROOT)
+        self.assertNotEqual(drifted["catalog_content_digest"],
+                            catalog["catalog_content_digest"])
+        self.assertNotEqual(drifted["checkpoint_authority_sha256"],
+                            catalog["checkpoint_authority_sha256"])
+
+    def test_same_model_revision_with_foreign_authority_is_refused(self):
+        # a repository claiming the canonical Gemma identity must carry the
+        # accepted authority; a foreign authority claim is a forgery
+        self.write_attestation(model_id=strategy.MODEL_SUBJECT["model_id"],
+                               revision=strategy.MODEL_SUBJECT["revision"],
+                               authority="c" * 64,
+                               evidence="foreign checkpoint authority")
+        with self.assertRaisesRegex(strategy.StrategyError, "accepted authority"):
+            self.rebuild_catalog(model_id=strategy.MODEL_SUBJECT["model_id"],
+                                 revision=strategy.MODEL_SUBJECT["revision"])
+
+    def test_forged_accepted_authority_over_foreign_content_is_refused(self):
+        # foreign (synthetic F32 fixture) content fronting the accepted
+        # authority SHA under the canonical model identity: the observed
+        # structure (dtypes/layout) is mechanically unlike the accepted
+        # native-BF16 checkpoint, and construction fails closed
+        self.write_attestation(
+            model_id=strategy.MODEL_SUBJECT["model_id"],
+            revision=strategy.MODEL_SUBJECT["revision"],
+            authority=strategy.MODEL_SUBJECT["checkpoint_authority_sha256"],
+            evidence="forged")
+        with self.assertRaisesRegex(strategy.StrategyError, "representation drift"):
+            self.rebuild_catalog(model_id=strategy.MODEL_SUBJECT["model_id"],
+                                 revision=strategy.MODEL_SUBJECT["revision"])
+
+    def test_missing_or_tampered_attestation_is_refused(self):
+        (self.root / strategy.AUTHORITY_ATTESTATION_OBJECT).unlink()
+        with self.assertRaisesRegex(
+                strategy.StrategyError,
+                "carries no checkpoint-authority.json"):
+            strategy.catalog_from_repository(self.root, config=self.config)
+        strategy.build_synthetic_gemma_repository(self.root)
+        attestation = json.loads(
+            (self.root / strategy.AUTHORITY_ATTESTATION_OBJECT).read_text())
+        attestation["objects"]["model-00002-of-00002.safetensors"]["sha256"] = "0" * 64
+        from issue74_methodology import canonical_json_bytes
+        (self.root / strategy.AUTHORITY_ATTESTATION_OBJECT).write_bytes(
+            canonical_json_bytes(attestation))
+        with self.assertRaisesRegex(strategy.StrategyError, "object set"):
+            strategy.catalog_from_repository(self.root, config=self.config)
+        strategy.build_synthetic_gemma_repository(self.root)
+        attestation = json.loads(
+            (self.root / strategy.AUTHORITY_ATTESTATION_OBJECT).read_text())
+        attestation["objects"]["model-00002-of-00002.safetensors"]["sha256"] = "0" * 64
+        from issue74_methodology import canonical_json_bytes
+        (self.root / strategy.AUTHORITY_ATTESTATION_OBJECT).write_bytes(
+            canonical_json_bytes(attestation))
+        with self.assertRaisesRegex(strategy.StrategyError, "object set"):
+            strategy.catalog_from_repository(self.root, config=self.config)
+
+    def test_synthetic_fixture_cannot_inherit_accepted_v5(self):
+        from issue117_planner import (
+            QUALIFICATION_POLICY_STRICT,
+            evaluate_qualification_applicability,
+        )
+        from issue99_artifact_core import MACHINERY_LOCAL_SUBJECT_KEYS
+        catalog = self.rebuild_catalog()
+        manifest = strategy.build_source_manifest(
+            catalog, source_bytes=lambda name: self.objects[name])
+        subject = strategy.subject_from_catalog(
+            catalog, execution=strategy.SYNTHETIC_SUBJECT_EXECUTION,
+            backend=strategy.SYNTHETIC_SUBJECT_BACKEND)
+        instance = strategy.GemmaDenseStrategy(
+            catalog=catalog, subject=subject, source_manifest=manifest)
+        record = strategy.accepted_v5_qualification_record()
+        policy = {
+            "policy": QUALIFICATION_POLICY_STRICT,
+            "accepted_dispositions": ("V5_QUALIFICATION_PASS",),
+            "accepted_adjudication_sha256":
+                record["authority"]["terminal_adjudication_sha256"],
+            "machinery_local_subject_keys": MACHINERY_LOCAL_SUBJECT_KEYS,
+            "required_for_admission": True,
+        }
+        for candidate in instance.legal_candidates():
+            self.assertEqual(
+                evaluate_qualification_applicability(
+                    candidate, [record], policy)["status"],
+                "QUALIFICATION_NOT_APPLICABLE",
+                candidate["candidate_id"])
 
 
 if __name__ == "__main__":

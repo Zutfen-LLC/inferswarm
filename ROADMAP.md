@@ -865,8 +865,8 @@ The CPU/static implementation freeze is complete with disposition
 24-case public integration fixture (digest `180185cd…`), the V5 authority
 byte-pinning and integration-delta applicability audit, the Gemma strategy /
 generic planner composition with qualification applicability as a distinct
-gate, the physical preflight tooling, and a retained CPU campaign whose 21
-derived zero-invariants are mechanically zero with 12 negative controls and
+gate, the physical preflight tooling, and a retained CPU campaign whose 25
+derived zero-invariants are mechanically zero with 18 negative controls and
 6 fencing negatives failing closed. Implementation and evidence:
 `scripts/issue117_*.py`, `tests/test_issue117_*.py`, and the retained record
 under `docs/implementation/r6-successor-dense-full-integration-117/`.

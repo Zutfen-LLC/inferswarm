@@ -14,27 +14,41 @@ ranking work:
   integration producer SHA, derived from mechanically collected per-file
   delta evidence over the import-closed correctness-bearing execution zone
   (`evidence/producer-delta.json`): all fifteen execution-bearing surfaces
-  are provably byte-identical, and the only observed zone delta is the
-  accepted holdout admission wrappers; any changed, missing, extra, or
-  unknown execution-math surface mechanically yields
+  are provably byte-identical, every dynamic import mechanism on the zone is
+  statically classified (resolved in-repository targets are zone members
+  hashed at both producers; external module imports are bound to accepted
+  runtime identities; `find_spec` probes are allowlisted availability
+  probes), and the only observed zone delta is the accepted holdout admission
+  wrappers; any changed, missing, extra, unknown, or dynamically unresolved
+  execution-math surface mechanically yields
   `R6_SUCCESSOR_REQUALIFICATION_REQUIRED`;
 - the generic admission planner extends the accepted R3 rule with the #117
   qualification-applicability barrier as a distinct recorded gate; every
-  subject digest is recomputed from its own subject and every trusted record
-  is bound to the accepted terminal adjudication identity;
+  subject digest is recomputed from its own subject over the shared
+  execution-equality convention and every trusted record is bound to the
+  accepted terminal adjudication identity;
 - the accepted-V5-geometry candidate is selected through ordinary
   feasibility / policy / evidence gates — never hard-coded — while materially
   different candidates stay `TECHNICALLY_FEASIBLE` and/or policy-eligible but
-  `QUALIFICATION_NOT_APPLICABLE`;
+  `QUALIFICATION_NOT_APPLICABLE`. The accepted V5 qualification record binds
+  the canonical candidate produced by the ordinary strategy/catalog machinery
+  (`canonical_v5_candidate` over the evidence-derived authority descriptor)
+  and matches exactly that candidate — no synthetic fixture subject;
+  checkpoint identity is carried as two separated, explicitly named
+  identities: the accepted external `checkpoint_authority_sha256`
+  (evidence-bound) and the mechanical `catalog_content_digest` (drift
+  binding, enforced by the byte-verified authority attestation at
+  construction);
 - feasibility bytes are the exact frozen participant requirements (assigned
   plus declared shared state), so the capacity proof is truthful about the
   embedding and shared tied-head state each stage must materialize;
 - participant-exact cold acquisition, verified materialization, warm restart,
   and planning-only locality mutation hold every acceptance zero-invariant;
-- seventeen negative controls and six fencing negatives fail closed —
+- eighteen negative controls and six fencing negatives fail closed —
   including poisoning controls proving the derived zero-invariants (fence
   counters, host-mirror/movement bytes) become nonzero when the retained
-  records are forged.
+  records are forged, and the canonical-match control proving the accepted
+  V5 record matches exactly the machinery-produced canonical candidate.
 
 | CPU fixture accounting | Value |
 |---|---:|
@@ -51,7 +65,7 @@ ranking work:
 | Warm restart model-weight transfer bytes | 0 |
 | Fenced committed results / rejected fence violations | 48 / 6 |
 | Derived zero-invariants | 25, all mechanically zero |
-| Negative controls | 17 + 6, all fail closed |
+| Negative controls | 18 + 6, all fail closed |
 
 The applicability audit is bound to `FROZEN_INTEGRATION_PRODUCER`
 (`924cd22ea081f6d4ed471016faf01d427fc5b0d2`, the terminal accepted producer
@@ -71,16 +85,30 @@ frozen with digest
 - No statistical qualification claim; no V5 threshold is reused or relaxed.
 - The CPU qualification record is fixture-scoped: it binds the synthetic
   fixture subject with a fixture-scoped adjudication identity and never
-  claims the accepted Gemma checkpoint. The accepted V5 record is exercised
-  fail-closed (no synthetic subject matches it).
+  claims the accepted Gemma checkpoint. The accepted V5 record matches
+  exactly the canonical authority-descriptor candidate produced by the
+  ordinary strategy machinery — and no synthetic subject.
+- The accepted V5 record binds checkpoint execution equality by the retained
+  accepted `checkpoint_authority_sha256`; the retained evidence records no
+  canonical catalog content identity and no content-to-authority derivation
+  rule, so the candidate's `catalog_content_digest` is a machinery drift
+  binding — enforced at construction by the byte-verified authority
+  attestation and by plan/manifest identity — not a matched record field.
+  The canonical checkpoint authority attestation for the fabric-resident
+  repository is generated at physical acquisition time.
 - The synthetic capacity model proves planner machinery, not hardware
   limits; the physical preflight re-freezes real capacities.
 - Source-side catalog/manifest building reads and hashes model bytes by
   design; that accounting is kept separate and is never Coordinator
   traffic. Coordinator/control-plane documents carry descriptors only.
-- The producer-delta zone closure is provable up to the recorded
-  dynamic-import loaders (byte-pinned, identical between producers);
-  dynamically loaded out-of-zone files are not hash-covered by the closure.
+- The producer-delta zone closure statically resolves every dynamic import
+  mechanism: resolved in-repository targets are zone members hashed at both
+  producers; external module imports are bound to accepted runtime
+  identities; `find_spec` probes are allowlisted availability probes that
+  execute no target bytes; unresolved dynamic targets or actual unresolved
+  in-repository module imports fail the closure closed. Residual non-claim:
+  probe-gated backend selection (`sgl_kernel`/`vllm`) is admission logic;
+  the accepted V5 dense path selects none of the probed backends.
 - No public planner, artifact, path, or wire schema is frozen.
 - No consumed `h109-*` material is used; the fixture uses only public
   `c109-*` cases and the fixture manifest commits no model weights.

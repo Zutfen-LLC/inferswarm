@@ -39,8 +39,11 @@ from issue103_planner import (
     account_transfer_events,
     purity_audit,
 )
-from issue74_methodology import canonical_json_bytes
-from issue99_artifact_core import digest_of_bytes, validate_self_identity
+from issue99_artifact_core import (
+    MACHINERY_LOCAL_SUBJECT_KEYS,
+    subject_digest,
+    validate_self_identity,
+)
 
 QUALIFICATION_POLICY_STRICT = "REQUIRE_ACCEPTED_EXECUTION_QUALIFICATION"
 
@@ -94,7 +97,7 @@ def _validate_qualification_record(record: Mapping[str, Any], *,
     if not isinstance(subject, Mapping):
         return None, REASON_MALFORMED_RECORD
     try:
-        recomputed = digest_of_bytes(canonical_json_bytes(subject))
+        recomputed = subject_digest(subject)
     except Exception:
         return None, REASON_MALFORMED_RECORD
     if recomputed != record["qualification_subject_digest"]:
@@ -104,19 +107,32 @@ def _validate_qualification_record(record: Mapping[str, Any], *,
     return dict(record), None
 
 
-def _candidate_subject_digest(candidate: Mapping[str, Any]) -> str:
-    """Recompute a candidate's subject digest from its own subject.
+def _candidate_subject_digest(candidate: Mapping[str, Any], *,
+                              machinery_local_subject_keys: Sequence[str] = ()) -> str:
+    """Recompute a candidate's qualification-subject digest from its subject.
 
     The caller-supplied ``qualification_subject_digest`` is never trusted:
     the digest used for qualification is always recomputed from the exact
-    subject the candidate carries.
+    subject the candidate carries, over the shared execution-equality
+    projection (``issue99_artifact_core.subject_digest``). Machinery-local
+    subject keys declared by the policy (e.g. content bindings that are
+    enforced by the strategy/catalog machinery rather than by the accepted
+    evidence) must be present on the candidate subject and are projected out
+    of the matched digest on BOTH sides.
     """
     subject = candidate.get("qualification_subject")
     if not isinstance(subject, Mapping):
         raise PlannerError(
             f"candidate {candidate.get('candidate_id')!r} carries no "
             "qualification subject; applicability cannot be derived")
-    recomputed = digest_of_bytes(canonical_json_bytes(subject))
+    for key in machinery_local_subject_keys:
+        if key not in subject:
+            raise PlannerError(
+                f"candidate {candidate.get('candidate_id')!r} subject is "
+                f"missing the machinery-local identity field {key!r}; "
+                "applicability cannot be derived")
+    recomputed = subject_digest(
+        subject, machinery_local_subject_keys=machinery_local_subject_keys)
     declared = candidate.get("qualification_subject_digest")
     if declared != recomputed:
         raise PlannerError(
@@ -133,13 +149,15 @@ def evaluate_qualification_applicability(
 ) -> dict[str, Any]:
     """Mechanically derive whether a candidate may inherit accepted evidence.
 
-    A candidate is applicable when its qualification-subject digest — always
-    recomputed from the candidate's own subject — equals the subject digest
-    of an accepted terminal-pass record whose terminal adjudication identity
-    is bound to the policy's accepted authority. Nothing about the
-    candidate's content is interpreted here: the digest comparison is the
-    whole gate, so any material change of subject (geometry, device,
-    backend, weights, representation) breaks applicability mechanically.
+    A candidate is applicable when its execution-equality subject digest —
+    always recomputed from the candidate's own subject over the shared
+    projection convention — equals the subject digest of an accepted
+    terminal-pass record whose terminal adjudication identity is bound to
+    the policy's accepted authority. Nothing about the candidate's content
+    is interpreted here: the digest comparison is the whole gate, so any
+    material change of execution-equality identity (geometry, device,
+    backend, weights authority, representation) breaks applicability
+    mechanically.
     """
     if policy["policy"] != QUALIFICATION_POLICY_STRICT:
         raise PlannerError(f"unsupported qualification policy {policy['policy']!r}")
@@ -147,7 +165,16 @@ def evaluate_qualification_applicability(
     if not (isinstance(accepted_authority, str) and accepted_authority.strip()):
         raise PlannerError(
             "qualification policy carries no accepted adjudication identity")
-    candidate_digest = _candidate_subject_digest(candidate)
+    machinery_local_subject_keys = tuple(
+        policy.get("machinery_local_subject_keys", ()))
+    unknown_local_keys = sorted(
+        set(machinery_local_subject_keys) - set(MACHINERY_LOCAL_SUBJECT_KEYS))
+    if unknown_local_keys:
+        raise PlannerError(
+            f"qualification policy declares unknown machinery-local subject "
+            f"keys {unknown_local_keys}")
+    candidate_digest = _candidate_subject_digest(
+        candidate, machinery_local_subject_keys=machinery_local_subject_keys)
     valid_records = []
     malformed_record_ids = []
     unbound_record_ids = []
