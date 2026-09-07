@@ -1,0 +1,71 @@
+{
+ "schema": "inferswarm.issue110.v5-holdout-execution-authority/1",
+ "issue": 110,
+ "state": "HOLDOUT_EXECUTION_AUTHORITY_CLOSED_UNDER_MAINTAINER_UNSEAL_AUTHORIZATION",
+ "authorization": {
+  "granted_by": "maintainer (ezutfen) comment on Zutfen-LLC/inferswarm#114, 2026-09-07T12:14:41Z",
+  "verdict": "V5_HOLDOUT_UNSEAL_AUTHORIZED",
+  "bound_identities": {
+   "inferswarm_campaign_head": "fc62c4323f1f4dbea55f83a3bb17e3c00c46dad7",
+   "calibration_producer": "7e5c852163afd9aadfccc406be267e8d060e79ef",
+   "accepted_methodology": "bc6f0ec657d025702d5928771bf8f51aa563a8be",
+   "effective_custody_record": "5a1a8756a2330e7ef6658dd9114a599d165741fc7e951482a630811b755e8b6c",
+   "core_threshold_manifest": "a19db78e2d2dfacad7bf933bab69381cc004b532e3516a2b82a29013abb3c0fb"
+  }
+ },
+ "calibration_producer": {
+  "repository": "Zutfen-LLC/FreeToken",
+  "branch": "inferswarm-110-v5-physical",
+  "commit": "7e5c852163afd9aadfccc406be267e8d060e79ef",
+  "role": "v5 calibration producer (c109/p109 only); immutable historical identity",
+  "pr": "Zutfen-LLC/FreeToken#32",
+  "change_scope": "none; every frozen inferswarm_110 file remains byte-identical (sha256 asserted below and by the holdout test suite)"
+ },
+ "holdout_producer": {
+  "repository": "Zutfen-LLC/FreeToken",
+  "branch": "inferswarm-110-v5-physical",
+  "commit": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "parent": "7e5c852163afd9aadfccc406be267e8d060e79ef",
+  "role": "holdout-only execution authority: h109 admission entrypoints + equivalence tests; adds ZERO execution/model math",
+  "pr": "Zutfen-LLC/FreeToken#32",
+  "launch_argument": "--expected-producer-sha 924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "requirement": "every participating worktree must be clean and exactly at commit before any runtime/CUDA initialization",
+  "added_files_sha256": {
+   "benchmarks/inferswarm_110b/__init__.py": "d2e1243ad5c83728c67f462a3db98756ecfb5e9ca9e8d849c24dfca2cc709011",
+   "benchmarks/inferswarm_110b/reference_runner_holdout.py": "e6738195fe866f984e85edb375b2cc50735e620b901cbb8905feced90d245d87",
+   "benchmarks/inferswarm_110b/chain_runner_holdout.py": "10278f98ea8005c7984e65037aefe4e3fc4f2353961f1b1ccb7107a3d2de2e34",
+   "tests/research/test_inferswarm_110b_holdout_authority.py": "db33ec5d3e57dfd204040fe04b0ecea26b691d53915676d3af74552d7475b9f3"
+  },
+  "design": "Holdout-only entrypoints in a NEW benchmarks/inferswarm_110b/ package accept exactly the 24 committed h109 case IDs (public commitment identities, no plaintext) and delegate to the frozen calibration runner main() with ONLY the module-level admission callable swapped. The frozen runners' main() resolves validate_campaign_case_ids from its own module globals, so the swap redirects namespace admission and nothing else. No holdout plaintext was read while creating or testing this path; fixtures are synthetic.",
+  "equivalence_scope": [
+   "model math",
+   "execution math",
+   "topology",
+   "layer partitioning",
+   "canonical-prefix teacher forcing",
+   "eight-decision behavior",
+   "decision-row retention",
+   "FP32 consumer-logit capture",
+   "argmax/tie semantics",
+   "integrity checks",
+   "finite-output behavior",
+   "evidence semantics"
+  ],
+  "equivalence_proof": "14-test CPU-only suite tests/research/test_inferswarm_110b_holdout_authority.py: calibration-file byte-identity vs the 7e5c852 freeze sha256; admission matrix (exactly the 24 committed h109 IDs; calibration/historical/unknown/duplicate rejection); exec-as-__main__ delegation with sentinel rc and admission-identity assertion; no-torch/no-execution-math source audit. All green at 924cd22; existing 110/97/97b suites (35 tests) green.",
+  "commitment_source": "docs/qualification/gemma4-12b-it-v5/manifests/sealed-holdout-commitment.json @ fc62c4323f1f4dbea55f83a3bb17e3c00c46dad7"
+ },
+ "adjudication_bindings": {
+  "threshold_manifest_sha256": "a19db78e2d2dfacad7bf933bab69381cc004b532e3516a2b82a29013abb3c0fb",
+  "telemetry_reference_bands_sha256": "4797a682d60d0a2f1ee1f2e3a48d4b324dccdc301a24050c0ede63b0257538b0",
+  "calibration_summary_sha256": "fa0d11389dde53768fc55c3c5eab9d494211e15c0783f0e3f7e083fc1fbab0d5",
+  "semantic_accounting_sha256": "cac6712b108c6ff092ccb8bbab4af133819eefeff2ec23779c11a48d01381046",
+  "decision_domain_manifest_sha256": "a4b89997d74ab49835a624c7d21b36eb569f2ed889ee854b52f7dad148d056b7",
+  "selected_stress_eighth_sha256": "86ab5f0f0e67b039730ed7d0cd3125feafc0fb96fe1a23d1d05b984345803f49",
+  "effective_custody_record_sha256": "5a1a8756a2330e7ef6658dd9114a599d165741fc7e951482a630811b755e8b6c",
+  "holdout_ciphertext_sha256": "93f75078875af163334fdfc7b74b3347f86b6948416b7dd8e603bd52863221b9",
+  "recipient_certificate_sha256": "072a211370b7ddbd352b8d8f9fccb60bc01b6835567b34d08cbbbac147e284eb",
+  "recipient_public_key_der_sha256": "62ded0e04b2e800c85bae9b5c499faa29f8fb21956c3f40dee23efdcf5d5f9e6",
+  "checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d"
+ },
+ "plaintext_policy": "PROHIBITED_IN_REPOSITORY: h109 plaintext and the derived execution corpus live only in 0700 orchestrator staging and node-local run dirs, never in either repository"
+}

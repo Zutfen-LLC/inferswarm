@@ -1,0 +1,2666 @@
+[
+  {
+    "case_id": "h109-01-01-001",
+    "case_sha256": "a829ba376cb1597119902ac0650bd9f1d682401af1395fe8a9e279001ca081c5",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.6000000000000p-1",
+        "domain_membership_sha256": "87038cc64cebc6348ec9257dce0add8a794655fcb089fb9bddd0c5a5a63ca86e",
+        "domain_size": 1032,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.3000000000000p-1",
+        "domain_membership_sha256": "11009bce82aa44c9297ae514aafac6cc708ad848162d87e3e5d53cf01480ded6",
+        "domain_size": 1025,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.0400000000000p+0",
+        "domain_membership_sha256": "e9020285b8540144706ee74c15c61c1e67b201d00ebbda8da907dcc27212289f",
+        "domain_size": 1025,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.a000000000000p-1",
+        "domain_membership_sha256": "7199a56662adf4c3408e6069faf4efdaecd32339ff4a6648bf8a174fae090518",
+        "domain_size": 1027,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.7000000000000p-1",
+        "domain_membership_sha256": "176739b297d8b42b6cd51f314e06b84b4088554409f8660d3e40c2ff111b9031",
+        "domain_size": 1032,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.4000000000000p-1",
+        "domain_membership_sha256": "e4f88e5c203dc3d6caacf8e388dab2837bc46a95fc5aaff1b9588f7bfc3c17ab",
+        "domain_size": 1026,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.2000000000000p-1",
+        "domain_membership_sha256": "dac1a1ee9f8f302ba8a3ce457cddb43ee1693fc6a832f71183445c306e411d85",
+        "domain_size": 1026,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.1000000000000p-1",
+        "domain_membership_sha256": "ce19cb1f2291a934d5b59aae488b2eb679bdbe8f28935182c4327e8b9bc1e85d",
+        "domain_size": 1027,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.0400000000000p+0",
+      "bf16-logits:p99-absolute-error": "0x1.1e40000000000p-1",
+      "bf16-logits:rms-difference": "0x1.bac3c151c9707p-3",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.6000000000000p+1",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.e400000000000p-2",
+      "final-normalized-hidden-state:rms-difference": "0x1.4e80614fb65e7p-3",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.0400000000000p+0",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.1e40000000000p-1",
+      "fp32-consumer-logits:rms-difference": "0x1.bac3c151c9707p-3",
+      "hidden-residual-stream:max-absolute-difference": "0x1.0000000000000p+1",
+      "hidden-residual-stream:p99-absolute-error": "0x1.8000000000000p-3",
+      "hidden-residual-stream:rms-difference": "0x1.eb21b31f45472p-5",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.8000000000000p+1",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.9400000000000p-3",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.5659f1f4e947ap-4"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.0400000000000p+0",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.1f00000000000p+0",
+      "fp32-consumer-logits:rms-difference": "0x1.d67b7b101afecp-3"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-01-01-002",
+    "case_sha256": "64a6fad9546a48c17e7213b074186d9bac02e8b440b7d024104c9317118e055b",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.4000000000000p-1",
+        "domain_membership_sha256": "2bd776e4fab0b7bc7b6cc65f585ea907c1ff19890aaeeb092a5122963330edc4",
+        "domain_size": 1026,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.2000000000000p-1",
+        "domain_membership_sha256": "eddd1425d0ca8e10da7ac18a1f0985fb317e121cd88d417d755478b1408ed05f",
+        "domain_size": 1027,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.3000000000000p-1",
+        "domain_membership_sha256": "ffa864ef2fface87e4291451b01a48c8473eb6dbd848c240d8906c294f48501d",
+        "domain_size": 1025,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.e400000000000p+1",
+        "domain_membership_sha256": "a22b5011b46a3433edf81af6f127c3690d42f0e92d014b3582b51bb8351433dc",
+        "domain_size": 1028,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.0500000000000p+2",
+        "domain_membership_sha256": "595839a9f04e4e541ad4bee3e02139b51cda9f9f8f63d42a0db8b1a2c6583a1d",
+        "domain_size": 1025,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.d600000000000p+1",
+        "domain_membership_sha256": "a67c356127f36d5952f6ba8d8967905d73da6a27a4cc9f8e5747657a79c57a93",
+        "domain_size": 1025,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.6c00000000000p+1",
+        "domain_membership_sha256": "e6af888a66807163677ec28f8e3a3ecf75c906ba6aff036a0ea52a4f020c5bd7",
+        "domain_size": 1027,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.0200000000000p+1",
+        "domain_membership_sha256": "4938e5fb9c5a9726c2909da254fa8db91ca79e841eb0f3b29f1130994ef9ab5b",
+        "domain_size": 1024,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.6100000000000p+2",
+      "bf16-logits:p99-absolute-error": "0x1.8000000000000p+1",
+      "bf16-logits:rms-difference": "0x1.23429a4d32eb6p+0",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.2400000000000p+3",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.d800000000000p+0",
+      "final-normalized-hidden-state:rms-difference": "0x1.d0405b6e23b71p-2",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.6100000000000p+2",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.8000000000000p+1",
+      "fp32-consumer-logits:rms-difference": "0x1.23429a4d32eb6p+0",
+      "hidden-residual-stream:max-absolute-difference": "0x1.f000000000000p+2",
+      "hidden-residual-stream:p99-absolute-error": "0x1.c300000000000p-1",
+      "hidden-residual-stream:rms-difference": "0x1.a9cf2ffd7af57p-3",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.a000000000000p+0",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.6000000000000p-3",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.0c437cfcb102bp-4"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.0500000000000p+2",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.6100000000000p+2",
+      "fp32-consumer-logits:rms-difference": "0x1.23429a4d32eb6p+0"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-01-02-001",
+    "case_sha256": "d4765fea2d183f648dfe653debb9f5408f466404855fc03239de5d84cf38f6ee",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236779",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.9000000000000p+0",
+        "domain_membership_sha256": "996657e8cfbaaa74a7f65df915ef460c2cabf35944d990611f09eae3f3ff1356",
+        "domain_size": 1051,
+        "reference_winner_identity": "236779",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.3000000000000p+0",
+        "domain_membership_sha256": "fe6837b7a582ad9eaa0dabb3135bf97246151cba73f7ac5a014aa9a2ce130434",
+        "domain_size": 1032,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.0000000000000p+0",
+        "domain_membership_sha256": "becba8a3f35cffa133729a126e6f54132b2915e675f5106034385b24f3ea0d4f",
+        "domain_size": 1050,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.8000000000000p-1",
+        "domain_membership_sha256": "465586d64bc8e02a7300a5d7297452407924bbe41a269d37d4a9df7595daede9",
+        "domain_size": 1039,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.8000000000000p-1",
+        "domain_membership_sha256": "5eec0c68034e8cac855186382a7742948526c345089b5de30e13c985bc16902c",
+        "domain_size": 1031,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236779",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.6000000000000p-1",
+        "domain_membership_sha256": "26eb30d8e790b659b69ab59032f0139811735c50f990b7c919cca98c9a770450",
+        "domain_size": 1035,
+        "reference_winner_identity": "236779",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236779",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.c000000000000p-1",
+        "domain_membership_sha256": "a82d36758a44d1719bff765fe0a425c1a66005102baa6a1b2f315b4e6fd3f9e9",
+        "domain_size": 1053,
+        "reference_winner_identity": "236779",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236779",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.3800000000000p+0",
+        "domain_membership_sha256": "31ff5d1a28890045e428986342958aec642d84a5298b8fe94a03810f50665b59",
+        "domain_size": 1031,
+        "reference_winner_identity": "236779",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.6200000000000p+1",
+      "bf16-logits:p99-absolute-error": "0x1.8e00000000000p+0",
+      "bf16-logits:rms-difference": "0x1.39fa50033456cp-1",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.a800000000000p+2",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.a7c0000000000p-1",
+      "final-normalized-hidden-state:rms-difference": "0x1.1fad402a546adp-2",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.6200000000000p+1",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.8e00000000000p+0",
+      "fp32-consumer-logits:rms-difference": "0x1.39fa50033456cp-1",
+      "hidden-residual-stream:max-absolute-difference": "0x1.e500000000000p+1",
+      "hidden-residual-stream:p99-absolute-error": "0x1.b000000000000p-2",
+      "hidden-residual-stream:rms-difference": "0x1.1842e6d6c63cbp-3",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.0000000000000p+1",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.0000000000000p-3",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.bdee36c972b90p-5"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.9000000000000p+0",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.6200000000000p+1",
+      "fp32-consumer-logits:rms-difference": "0x1.39fa50033456cp-1"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-01-02-002",
+    "case_sha256": "d04b2b7797c297a72f4a981acfbc8c003e437316af77bab907063dad8004c38a",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.3000000000000p+0",
+        "domain_membership_sha256": "6210c80571370ecfce965eced4c306c40377827be557ae413262c4e18cd48680",
+        "domain_size": 1029,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.5800000000000p-1",
+        "domain_membership_sha256": "2e39b43dbd905fc2cc8f13ce731f3a9d3a70bcfe917a87549da4a4658cdd1e7f",
+        "domain_size": 1025,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.c000000000000p-1",
+        "domain_membership_sha256": "25bc9aaa3eb170e4eababdd18db3fcf593d924a8ec27b550174081c708f10899",
+        "domain_size": 1026,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.2000000000000p+0",
+        "domain_membership_sha256": "c9c99758185beace20722833400c3a747196549cd4dc92d0abe6b417afabc467",
+        "domain_size": 1028,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.3800000000000p+0",
+        "domain_membership_sha256": "dd0717d399a45c4b1db506505c2280e942b2bb6df42458391133e2a8c8b9c1f9",
+        "domain_size": 1027,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.6000000000000p-1",
+        "domain_membership_sha256": "ad42d5d1c3ed723fd75a11b592ec40f783447e38c400749a0cd7c2b4247919ea",
+        "domain_size": 1053,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.1000000000000p+0",
+        "domain_membership_sha256": "04cbb5123bf428d577710caed0c3886e5e7a48dee99c937e2a9398aaa426ba08",
+        "domain_size": 1025,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.6800000000000p+0",
+        "domain_membership_sha256": "84868d9954e9de3c99c856c035ea376ada7157a7348d9b9220503789fd085fde",
+        "domain_size": 1027,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.c800000000000p+0",
+      "bf16-logits:p99-absolute-error": "0x1.d000000000000p-1",
+      "bf16-logits:rms-difference": "0x1.6e8112293a3c2p-2",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.8000000000000p+1",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.6c00000000000p-1",
+      "final-normalized-hidden-state:rms-difference": "0x1.d8e0a786844e1p-3",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.c800000000000p+0",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.d000000000000p-1",
+      "fp32-consumer-logits:rms-difference": "0x1.6e8112293a3c2p-2",
+      "hidden-residual-stream:max-absolute-difference": "0x1.b9a0000000000p+2",
+      "hidden-residual-stream:p99-absolute-error": "0x1.1400000000000p-1",
+      "hidden-residual-stream:rms-difference": "0x1.0cfffea57737dp-3",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.8000000000000p+2",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.4000000000000p-2",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.1945ef537707cp-3"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.6800000000000p+0",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.c800000000000p+0",
+      "fp32-consumer-logits:rms-difference": "0x1.6e8112293a3c2p-2"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-01-06-001",
+    "case_sha256": "5b3389e6d940613b32a280630d1b166f08e561802b4772e6ffeca028b92918da",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.5c80000000000p+0",
+        "domain_membership_sha256": "2ff95a11fa671e11f7d1b61c2e82d7459177eb459f4c377e9a57530b33894ba5",
+        "domain_size": 1024,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.1800000000000p+0",
+        "domain_membership_sha256": "690946e4b40887404bfd316f2b21a5252229bd1d4296b62a8acb6b5523803fa3",
+        "domain_size": 1024,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.b400000000000p-1",
+        "domain_membership_sha256": "005485840f48fdfce266ed51df2ebd2151e65d9c9ed2cb2af5177375b2c9e3b7",
+        "domain_size": 1027,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.2400000000000p+1",
+        "domain_membership_sha256": "256983893c613fabfad3d3061caa872cc0c4011b73fda4fa0e81c2f3b779e623",
+        "domain_size": 1029,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.4c00000000000p+0",
+        "domain_membership_sha256": "032ad45bf9504a25d89eb55db0a7058965aa299cba36c11d53278ca4feb59d86",
+        "domain_size": 1041,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.2400000000000p+0",
+        "domain_membership_sha256": "1428f8ba99c734df272b8fb5523fe14c90e57473aa804f7725e3c380fb5175be",
+        "domain_size": 1031,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.2c00000000000p+0",
+        "domain_membership_sha256": "3d5079002c88437fd8ecd8ed5b312d6cff226cef8dd2ab0d3e8311c5249fff40",
+        "domain_size": 1025,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.1400000000000p+0",
+        "domain_membership_sha256": "690f1fac41cd3ec68529aaf2df96eeebf2468dd655d3999cc935ac8131698f3d",
+        "domain_size": 1024,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.2800000000000p+2",
+      "bf16-logits:p99-absolute-error": "0x1.9000000000000p+0",
+      "bf16-logits:rms-difference": "0x1.3297beb2ebb96p-1",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.6000000000000p+2",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.f000000000000p-1",
+      "final-normalized-hidden-state:rms-difference": "0x1.3647670a4ed9bp-2",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.2800000000000p+2",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.9000000000000p+0",
+      "fp32-consumer-logits:rms-difference": "0x1.3297beb2ebb96p-1",
+      "hidden-residual-stream:max-absolute-difference": "0x1.6000000000000p+1",
+      "hidden-residual-stream:p99-absolute-error": "0x1.8600000000000p-2",
+      "hidden-residual-stream:rms-difference": "0x1.d7585e0ec9847p-4",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.8000000000000p+2",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.d800000000000p-3",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.ccfb8a7537af8p-4"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.2400000000000p+1",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.2800000000000p+2",
+      "fp32-consumer-logits:rms-difference": "0x1.3297beb2ebb96p-1"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-01-06-002",
+    "case_sha256": "bb1da3db4f3705a4eff6129e11c54d7bb756f3f4dd263c4ce386ed412e038568",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.0800000000000p-1",
+        "domain_membership_sha256": "df1a46a85d557db3834064388ff94b19e8c5163c822a5b1a355df56c5619a93d",
+        "domain_size": 1024,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.1c00000000000p-1",
+        "domain_membership_sha256": "67c606edd621226fc98f8a168165f13139afe77bd1b041bed5e0dee6da9d4548",
+        "domain_size": 1025,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.f600000000000p+0",
+        "domain_membership_sha256": "4fcd0792d36ce52c6e3f7e70a4691f113a83d4d3fe63ffd9753e2bafbf830733",
+        "domain_size": 1024,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.6000000000000p+0",
+        "domain_membership_sha256": "5eb2e4138d0e4c7b66afd2d57663b195dde4031986218d168de30c532153f2cd",
+        "domain_size": 1027,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.3400000000000p+0",
+        "domain_membership_sha256": "067986fd84be5e9d59d9b41c9587f7e4997011e4574bf1f33ade567b1e7333b0",
+        "domain_size": 1024,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.8000000000000p+0",
+        "domain_membership_sha256": "92dd65115a2701f2ce0667eb04756eded9dd0423039b49709095834c4252ffeb",
+        "domain_size": 1032,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.a800000000000p+0",
+        "domain_membership_sha256": "0455a800ca6ed153584736fd2405690f6aaaf669e46b0292f5e7630659f378da",
+        "domain_size": 1034,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.0800000000000p+0",
+        "domain_membership_sha256": "03dbc919e9728d9702fd7da4ddcbba3cce46c5b6511dfabbd8e29f6a1de492e3",
+        "domain_size": 1035,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.18e0000000000p+1",
+      "bf16-logits:p99-absolute-error": "0x1.3000000000000p+0",
+      "bf16-logits:rms-difference": "0x1.06108c464dbbdp-1",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.9000000000000p+2",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.8c00000000000p-1",
+      "final-normalized-hidden-state:rms-difference": "0x1.f9c0a35e9c93ap-3",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.18e0000000000p+1",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.3000000000000p+0",
+      "fp32-consumer-logits:rms-difference": "0x1.06108c464dbbdp-1",
+      "hidden-residual-stream:max-absolute-difference": "0x1.4000000000000p+2",
+      "hidden-residual-stream:p99-absolute-error": "0x1.60c0000000000p-1",
+      "hidden-residual-stream:rms-difference": "0x1.66288227ce94fp-3",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.0000000000000p+1",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.8000000000000p-3",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.3414c180ea894p-4"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.f600000000000p+0",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.3800000000000p+1",
+      "fp32-consumer-logits:rms-difference": "0x1.51a3cf5a0d59fp-1"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-02-02-001",
+    "case_sha256": "14d50e9e773311430f4fe274e77e309a563844b94305328304c060d9bc9195ab",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.6f08000000000p+2",
+        "domain_membership_sha256": "fb72a484dfb4d20997c4f464b8cc15b473a63b351195a030147a653a79197075",
+        "domain_size": 1032,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.4000000000000p+3",
+        "domain_membership_sha256": "cf7e6c4ce8afd0413ced42c7b1dc5e97f6f4992afe86e81645af1bf5b34e732a",
+        "domain_size": 1029,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.1f00000000000p+3",
+        "domain_membership_sha256": "376f56bf4f98533e0c4fcf3bc875b8fb1755e19626c0b472ffe938ac897182f3",
+        "domain_size": 1039,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.d400000000000p+1",
+        "domain_membership_sha256": "5810bb6188c8def65d2b0401079ddb3ebfa8682db0bc314db5af7f7653da1e5f",
+        "domain_size": 1027,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.6c40000000000p+2",
+        "domain_membership_sha256": "09f9a2cb5c6ef4b3fc2b6d922fd05d6c4645c89cb85398165167b61e41da364a",
+        "domain_size": 1035,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.4c80000000000p+2",
+        "domain_membership_sha256": "6f7f1c04ef2d3addf08e79a59f92972a2a14eb37a9145a2ade9a808926d19851",
+        "domain_size": 1029,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.9ec0000000000p+2",
+        "domain_membership_sha256": "d8d4f00267e8dc66b06aa68a83540c6605b58475bd687bb784fda52226730a14",
+        "domain_size": 1036,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.4900000000000p+3",
+        "domain_membership_sha256": "e1144fc9121ab97ab701e044492ed5c81fd16eb9f39fe010bdf9dcca2a390e29",
+        "domain_size": 1029,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.b480000000000p+3",
+      "bf16-logits:p99-absolute-error": "0x1.aa00000000000p+2",
+      "bf16-logits:rms-difference": "0x1.44dcfa4242a7ap+1",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.2a00000000000p+4",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.cb00000000000p+1",
+      "final-normalized-hidden-state:rms-difference": "0x1.cc0fb2ebc393fp-1",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.b480000000000p+3",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.aa00000000000p+2",
+      "fp32-consumer-logits:rms-difference": "0x1.44dcfa4242a7ap+1",
+      "hidden-residual-stream:max-absolute-difference": "0x1.3600000000000p+4",
+      "hidden-residual-stream:p99-absolute-error": "0x1.5000000000000p+0",
+      "hidden-residual-stream:rms-difference": "0x1.9980cdfe7f518p-2",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.4000000000000p+3",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.8800000000000p-1",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.18fa9181f4a04p-2"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.4900000000000p+3",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.b480000000000p+3",
+      "fp32-consumer-logits:rms-difference": "0x1.44dcfa4242a7ap+1"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-02-04-001",
+    "case_sha256": "e9ab7fbd6ed8182b69094fd44032579642f217293ab979f27b0f2d173339f6f7",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.6c00000000000p+1",
+        "domain_membership_sha256": "5b301edbd6bc04592529f5ea2f95fc3c0ff85d1c7da04ac88e658d42ed866497",
+        "domain_size": 1035,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.4200000000000p+1",
+        "domain_membership_sha256": "3cdb6187fb13eb44a805403aa5aa467e73e798cf61554ec6eebfa50e58a73efa",
+        "domain_size": 1026,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.a480000000000p+1",
+        "domain_membership_sha256": "7378efb0dfd6f6002c57818540aaecfc3688cd071edacc6ae9ef891181598962",
+        "domain_size": 1026,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.4000000000000p+0",
+        "domain_membership_sha256": "472449abef1daa4e839aa32ba6517db1ffee3d2f96f1246530cf0b129ff9e3ff",
+        "domain_size": 1035,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.0c00000000000p+0",
+        "domain_membership_sha256": "97869300859bdf9385b508066009a4d39458385ca6e7b580c5d1b0f852764d73",
+        "domain_size": 1036,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.5000000000000p+0",
+        "domain_membership_sha256": "a0b7e25b605638c5091bbe73ff76029d1af98c1dfc1aa5426197e60f0002155b",
+        "domain_size": 1026,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.d000000000000p-1",
+        "domain_membership_sha256": "b5c13734cca4fa320bea52f8e515e887980eba2654aeaea2bec5b40802cd4cb7",
+        "domain_size": 1029,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.d800000000000p-1",
+        "domain_membership_sha256": "e4c0509f387c5b2092d9bd035b9c9ac60846a2f55f9f43d57056441034d8cc4b",
+        "domain_size": 1024,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.1b00000000000p+2",
+      "bf16-logits:p99-absolute-error": "0x1.1200000000000p+1",
+      "bf16-logits:rms-difference": "0x1.9f58fbbd1822dp-1",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.0000000000000p+3",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.5400000000000p+0",
+      "final-normalized-hidden-state:rms-difference": "0x1.8b08edcc33c0ep-2",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.1b00000000000p+2",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.1200000000000p+1",
+      "fp32-consumer-logits:rms-difference": "0x1.9f58fbbd1822dp-1",
+      "hidden-residual-stream:max-absolute-difference": "0x1.4000000000000p+2",
+      "hidden-residual-stream:p99-absolute-error": "0x1.2000000000000p-1",
+      "hidden-residual-stream:rms-difference": "0x1.4e9b259db8b90p-3",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.0000000000000p+1",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.f000000000000p-4",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.6fd5d2041fb30p-5"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.a480000000000p+1",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.1b00000000000p+2",
+      "fp32-consumer-logits:rms-difference": "0x1.9f58fbbd1822dp-1"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-02-05-001",
+    "case_sha256": "e07b19aa17b8f19ccc3b04f337cbb08bc5bbce69e90a5d0d28649d3e2b12c6af",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.4800000000000p-1",
+        "domain_membership_sha256": "43cac1c3db4edd72a347b8dd09910c55b69a61b93ad6bfdad7968b0dc17373b4",
+        "domain_size": 1039,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.8000000000000p-1",
+        "domain_membership_sha256": "3a04d5715376b3e0d93cc3f4fd0efd8750b0426ab4306f52cd6c8ac839cd1092",
+        "domain_size": 1047,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.3000000000000p-1",
+        "domain_membership_sha256": "3092dc31dcaa37e32960c3aac5dd3025b20cd08eba428090b142dbce4fa3b491",
+        "domain_size": 1034,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.a000000000000p-1",
+        "domain_membership_sha256": "14b64afa043ca3bd9a7ef0c972e6ed26e81dd3491e022e6f6d5b5c3cc4278941",
+        "domain_size": 1056,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.d000000000000p-1",
+        "domain_membership_sha256": "b06c0b82966d3efc27b7e9aa4e516300e859b65d1a520b27a77a2f7520c14327",
+        "domain_size": 1055,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.0000000000000p+0",
+        "domain_membership_sha256": "08a40721c5983ca0c607f2f11c7c85e87cc154c12ea29ca33f9e0ceb831587bf",
+        "domain_size": 1080,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.1000000000000p+0",
+        "domain_membership_sha256": "f8b25b4c59a12fb0cd13012494ebaa3ad3a1c05e2d5273418d8d9812d16c9544",
+        "domain_size": 1033,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.3000000000000p+0",
+        "domain_membership_sha256": "73ad2bee7cc2ae4b0a6717b482414289780abc7bb2fb25654ea4a54354e992a6",
+        "domain_size": 1060,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.8800000000000p+0",
+      "bf16-logits:p99-absolute-error": "0x1.9000000000000p-1",
+      "bf16-logits:rms-difference": "0x1.349f696826e4bp-2",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.a000000000000p+2",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.1f00000000000p+0",
+      "final-normalized-hidden-state:rms-difference": "0x1.4e9be9a03a11fp-2",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.8800000000000p+0",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.9000000000000p-1",
+      "fp32-consumer-logits:rms-difference": "0x1.349f696826e4bp-2",
+      "hidden-residual-stream:max-absolute-difference": "0x1.6000000000000p+2",
+      "hidden-residual-stream:p99-absolute-error": "0x1.7000000000000p-2",
+      "hidden-residual-stream:rms-difference": "0x1.be3bb33bb82e3p-4",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.0000000000000p+2",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.0000000000000p-3",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.073b6dc87cacfp-4"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.3000000000000p+0",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.b000000000000p+0",
+      "fp32-consumer-logits:rms-difference": "0x1.c147b92a46ca2p-2"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-02-05-002",
+    "case_sha256": "2d5a3c3057a293b3bf4869cba2644df657c80318b3991cd70bab418a8624c74c",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.0000000000000p+2",
+        "domain_membership_sha256": "0d2802e9042386d676d7ef67a5517ac4f959d639d9d69e51ee75081573d89280",
+        "domain_size": 1029,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.0c00000000000p+2",
+        "domain_membership_sha256": "9985c4ee73acf4838b25314023628a2e4fd6db19c3cb2e368d2a640d3e1390f5",
+        "domain_size": 1032,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.0300000000000p+2",
+        "domain_membership_sha256": "b7309ae2fb789e5d5c2cf71c994e6477065898285f3baf55047e824f1b8fde4b",
+        "domain_size": 1031,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.2a00000000000p+2",
+        "domain_membership_sha256": "4e132e8e7a6fbee6c18648dac83b785afca0bf2a8f040ea3c25354aa5394f009",
+        "domain_size": 1025,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.0c00000000000p+2",
+        "domain_membership_sha256": "ef1e270c28d909b3ee54fbf13dea5b262009650dca615b7757f819261bfa9e6c",
+        "domain_size": 1033,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.0400000000000p+0",
+        "domain_membership_sha256": "a130f34bca00e9695287648b0500f7401b9a13cddca0985509ab815502a7529d",
+        "domain_size": 1029,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.0800000000000p+0",
+        "domain_membership_sha256": "b123607ab9b0dfab00900ae759729b067b126d1a2407f7ac4e28c7641c959090",
+        "domain_size": 1037,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.3000000000000p+0",
+        "domain_membership_sha256": "0be1a9287c25daf075dbf3735e8e864be1293167bee842357d9b30a7523150b8",
+        "domain_size": 1024,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.9400000000000p+2",
+      "bf16-logits:p99-absolute-error": "0x1.2e00000000000p+1",
+      "bf16-logits:rms-difference": "0x1.b6012843d14c3p-1",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.8800000000000p+3",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.f400000000000p+0",
+      "final-normalized-hidden-state:rms-difference": "0x1.4b854bf0a3843p-1",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.9400000000000p+2",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.2e00000000000p+1",
+      "fp32-consumer-logits:rms-difference": "0x1.b6012843d14c3p-1",
+      "hidden-residual-stream:max-absolute-difference": "0x1.7500000000000p+3",
+      "hidden-residual-stream:p99-absolute-error": "0x1.0460000000000p+0",
+      "hidden-residual-stream:rms-difference": "0x1.5a638b2ed1b14p-2",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.0000000000000p+2",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.2000000000000p-3",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.ceb21d8c97fe3p-5"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.2a00000000000p+2",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.9400000000000p+2",
+      "fp32-consumer-logits:rms-difference": "0x1.b6012843d14c3p-1"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-02-06-001",
+    "case_sha256": "86a586df44209af79e5aa86c684525d19865ab3ea10a52d4deb790cc81cb0be7",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.ba00000000000p+1",
+        "domain_membership_sha256": "99fa383f4b28fec812c421abe13e18fad82fd03cb2a38f4f342672ba8e0ba5a7",
+        "domain_size": 1028,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.6780000000000p+1",
+        "domain_membership_sha256": "6f724a58b8dc85e35c70e0fb8f953c5f16c7240d29e0621dc22104dd6a225eac",
+        "domain_size": 1027,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.dfc0000000000p+1",
+        "domain_membership_sha256": "bf437fe2be035df64c0dd2aa19c83b98787a3fe8bc5f5a3fa508a982cb1d6e59",
+        "domain_size": 1034,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.fb80000000000p+1",
+        "domain_membership_sha256": "9acc29ea4cd49d432d781e8a78ebb6ae83f32d303dc2c62a51618fff1a9d17ae",
+        "domain_size": 1036,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.47a0000000000p+2",
+        "domain_membership_sha256": "6ce4919f1137ea49fad14aea5de232413e78c0bd5b7905acb0723e0ad0c47e0d",
+        "domain_size": 1031,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.2a80000000000p+2",
+        "domain_membership_sha256": "9a68563ff7cfaea3daa976c86b3b06f385242d2b0fdd65483b9d5613c79c7250",
+        "domain_size": 1027,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.03c0000000000p+2",
+        "domain_membership_sha256": "2bb812bb8d84f08f393d7c866f12978d168b8b7115e6e0276ebd9114d9e606c0",
+        "domain_size": 1046,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.7f00000000000p+1",
+        "domain_membership_sha256": "dcd73e01c1b9a7e14f84d057214514f0ae2029de861f7816b8718ee8c5c3cba3",
+        "domain_size": 1032,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.b200000000000p+2",
+      "bf16-logits:p99-absolute-error": "0x1.8600000000000p+1",
+      "bf16-logits:rms-difference": "0x1.30f0b9163fa77p+0",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.f100000000000p+4",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.3000000000000p+1",
+      "final-normalized-hidden-state:rms-difference": "0x1.9c28a5319c0d5p-1",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.b200000000000p+2",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.8600000000000p+1",
+      "fp32-consumer-logits:rms-difference": "0x1.30f0b9163fa77p+0",
+      "hidden-residual-stream:max-absolute-difference": "0x1.9400000000000p+3",
+      "hidden-residual-stream:p99-absolute-error": "0x1.2980000000000p+0",
+      "hidden-residual-stream:rms-difference": "0x1.6a8a3c48ac71ep-2",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.7000000000000p+2",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.0700000000000p+0",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.8200b6aeb62cdp-2"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.47a0000000000p+2",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.d800000000000p+2",
+      "fp32-consumer-logits:rms-difference": "0x1.5e53c226eb056p+0"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-02-06-002",
+    "case_sha256": "439e44a6eb13fffa1e85270489b160850b7dfa57173673bf855155679fb0a8f7",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.e000000000000p-1",
+        "domain_membership_sha256": "0067f9b58cb9550395cf9ed3cbfbdf99c9d26ab0aaa2aecd37854495eb82f038",
+        "domain_size": 1029,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.1400000000000p+0",
+        "domain_membership_sha256": "c7a5984102387f7e98bf7cab8eb02e0beeac6b3b3b1f97d9a13f7febaed2d838",
+        "domain_size": 1032,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.e800000000000p-1",
+        "domain_membership_sha256": "f4a355a97c4bbf2d12aa47a6db3a56979852f4758da9fb3dba86cc18a3c45d86",
+        "domain_size": 1024,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.f000000000000p-1",
+        "domain_membership_sha256": "b7878f94d24812bedb6009be90b7fd88aeb66550167c7b25385f74941537f746",
+        "domain_size": 1027,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.4800000000000p+0",
+        "domain_membership_sha256": "5fefdc64fd5c20ab451f84a26bf4ba8b1d3cc1b30fb07434cfa989e89a31206c",
+        "domain_size": 1026,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.7000000000000p+0",
+        "domain_membership_sha256": "c0a1b0e846f47fcf57b53f52feffc68fbdffd6966b8e5873eb96b1402f39715d",
+        "domain_size": 1025,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.8b80000000000p+1",
+        "domain_membership_sha256": "78c0f01ab813c18bbd5038183c284e0231fe45134702e398aa74c0c6546bdb48",
+        "domain_size": 1033,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.3000000000000p+0",
+        "domain_membership_sha256": "8421bbcb051bf28eb314cffc161544ad0658f9e1b8a0f9ce9a6912cea413003a",
+        "domain_size": 1031,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.b800000000000p+0",
+      "bf16-logits:p99-absolute-error": "0x1.e000000000000p-1",
+      "bf16-logits:rms-difference": "0x1.a87c9b8f2c78ep-2",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.1000000000000p+3",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.c000000000000p-1",
+      "final-normalized-hidden-state:rms-difference": "0x1.1aa6e6bd1cda2p-2",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.b800000000000p+0",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.e000000000000p-1",
+      "fp32-consumer-logits:rms-difference": "0x1.a87c9b8f2c78ep-2",
+      "hidden-residual-stream:max-absolute-difference": "0x1.6b00000000000p+1",
+      "hidden-residual-stream:p99-absolute-error": "0x1.7800000000000p-2",
+      "hidden-residual-stream:rms-difference": "0x1.aeef89cc2c45fp-4",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.0000000000000p+1",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.3000000000000p-3",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.b7957efbc0af9p-5"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.8b80000000000p+1",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.8b80000000000p+1",
+      "fp32-consumer-logits:rms-difference": "0x1.09ec975a30b92p-1"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-03-02-001",
+    "case_sha256": "f953f8c045172977816f12e55958979bd5d58cff1a79f1a092dc63db4d9d8865",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.7180000000000p+1",
+        "domain_membership_sha256": "44474d72436b3d8f9ddac92b6e59e1be03350bbf17695368cfcfa6a19e674a31",
+        "domain_size": 1033,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.1800000000000p+1",
+        "domain_membership_sha256": "43f1f4e8fe87298472e32305b8c50c0fd1d049243bbfa0c9f66d187a2fc58dbb",
+        "domain_size": 1033,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.9400000000000p+0",
+        "domain_membership_sha256": "ac36894f43cf6f9c62c66d5c7a6ce87b8ee44fd3b1a4dcb1aded4454824a7378",
+        "domain_size": 1029,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.b000000000000p+0",
+        "domain_membership_sha256": "75072eea24909ba19042ad078d0dfb7b9c7a143685dda276c90141711a491468",
+        "domain_size": 1035,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.8800000000000p+0",
+        "domain_membership_sha256": "0bda88e010b0eb9c83f6db26764dbe4f1f664e397ee38b2a5fe34875781d480b",
+        "domain_size": 1026,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.5c00000000000p+0",
+        "domain_membership_sha256": "65c4955ddeb9a20a1f08ddfc67caedb310f72f73caaf6007965e37fc085653df",
+        "domain_size": 1028,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.b000000000000p+0",
+        "domain_membership_sha256": "035577c693564c5ad320a554b09a6919eb9ccd2b4fe7f7d664a8972d680201b1",
+        "domain_size": 1025,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.b000000000000p+0",
+        "domain_membership_sha256": "001e171f21a0075858bcb79db7092007fb6689e9a24a2d2fc5dcf0a4493a3b31",
+        "domain_size": 1025,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.8200000000000p+1",
+      "bf16-logits:p99-absolute-error": "0x1.7800000000000p+0",
+      "bf16-logits:rms-difference": "0x1.1cba7f1cbb0a4p-1",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.ac00000000000p+3",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.b200000000000p+0",
+      "final-normalized-hidden-state:rms-difference": "0x1.1a033689affc8p-1",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.8200000000000p+1",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.7800000000000p+0",
+      "fp32-consumer-logits:rms-difference": "0x1.1cba7f1cbb0a4p-1",
+      "hidden-residual-stream:max-absolute-difference": "0x1.9800000000000p+3",
+      "hidden-residual-stream:p99-absolute-error": "0x1.15c0000000000p+0",
+      "hidden-residual-stream:rms-difference": "0x1.59896fab4a956p-2",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.0000000000000p+1",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.6000000000000p-3",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.ee68900bc5cd0p-5"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.7180000000000p+1",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.8200000000000p+1",
+      "fp32-consumer-logits:rms-difference": "0x1.1cba7f1cbb0a4p-1"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-03-03-001",
+    "case_sha256": "00204e50adc96d241b45b502cecab95d8fb3ca7e7588a80094c003af26e727b2",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.cc00000000000p+0",
+        "domain_membership_sha256": "fe63d0e186011a03d21474f8b6f8b428658d371ecc99e94bc9c553e8f9876d7b",
+        "domain_size": 1024,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.3000000000000p+1",
+        "domain_membership_sha256": "51c52c281a1a0509c8b23d2d588080c83829859b5e021078bd4134986ad11807",
+        "domain_size": 1033,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.0e00000000000p+2",
+        "domain_membership_sha256": "324b97c8fcb7567cc5d96e1ec2afed654302bcae03a11cf18661de9b80d2eeda",
+        "domain_size": 1028,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.ce00000000000p+1",
+        "domain_membership_sha256": "68c5007ca9037ba88c492a3904432eb78cc7b4c96075743eeb7c1683f60e475c",
+        "domain_size": 1045,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.d400000000000p+1",
+        "domain_membership_sha256": "1edadc05f1f3d53f151eee8643b16ce6fac4eda0361633bbb0e81a9a0716904d",
+        "domain_size": 1025,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.2a00000000000p+1",
+        "domain_membership_sha256": "6a691baf2950aa0d4816775249ca6aaf316f89114dc46e20a610e0d75db9b52c",
+        "domain_size": 1046,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.1000000000000p+0",
+        "domain_membership_sha256": "b527e7b0e5c54620a42dd09f984f2d898e8ccdb00ecef298f6bb364b01a24646",
+        "domain_size": 1037,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.2000000000000p+0",
+        "domain_membership_sha256": "c3b9a1c38a564274f6dcaf4104edeced6e3cd138dfc73e058d88f81ce5e34df7",
+        "domain_size": 1024,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.3980000000000p+2",
+      "bf16-logits:p99-absolute-error": "0x1.0c00000000000p+1",
+      "bf16-logits:rms-difference": "0x1.931abe429727dp-1",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.b000000000000p+2",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.4400000000000p+0",
+      "final-normalized-hidden-state:rms-difference": "0x1.7475712098255p-2",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.3980000000000p+2",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.0c00000000000p+1",
+      "fp32-consumer-logits:rms-difference": "0x1.931abe429727dp-1",
+      "hidden-residual-stream:max-absolute-difference": "0x1.d800000000000p+1",
+      "hidden-residual-stream:p99-absolute-error": "0x1.fa00000000000p-2",
+      "hidden-residual-stream:rms-difference": "0x1.3bdfa59b54736p-3",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.8000000000000p+1",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.2000000000000p-3",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.ba18ac4ba3cdfp-5"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.0e00000000000p+2",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.6238000000000p+2",
+      "fp32-consumer-logits:rms-difference": "0x1.dd7b7da95760fp-1"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-03-04-001",
+    "case_sha256": "337ff57bd7adf50ada05bf64a80071188aef32a27fdabd485e1bc8fee30d6198",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.3000000000000p-1",
+        "domain_membership_sha256": "eae9efde04f0d9a7d240445cee46d84463816f65e6b8f23e5e08d23095916d27",
+        "domain_size": 1030,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "107",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.4000000000000p+0",
+        "domain_membership_sha256": "81eb8002c3abf770f62c81f6fa27d372850213a0d674a991099730adcb92c735",
+        "domain_size": 1045,
+        "reference_winner_identity": "107",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.2000000000000p+0",
+        "domain_membership_sha256": "d67af6bf5e0b71c02a9365dfdbe0792b7b6ac6ad08f9ae0d1e4b4a65e39cd659",
+        "domain_size": 1041,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "107",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.3000000000000p+0",
+        "domain_membership_sha256": "e7a7a659d439d52b5bb8682ff9b82a1bda2c9ed7f684a3cf78b7de5944d406fc",
+        "domain_size": 1036,
+        "reference_winner_identity": "107",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.6000000000000p-1",
+        "domain_membership_sha256": "6abcd468d9f6149fca6c3abae5d96a88d2373a65b5f591c258e3fcfa3755d333",
+        "domain_size": 1038,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "107",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.4000000000000p-1",
+        "domain_membership_sha256": "0b2c730dfe30eddcea19f96c22d4b08d0f7ee05b1db13aff0b4950d403c4a6ff",
+        "domain_size": 1029,
+        "reference_winner_identity": "107",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.a800000000000p-1",
+        "domain_membership_sha256": "12206cca953ec80b1fee01ec0bb4cb9ddf2761c9c82a91861daf1f47566d2667",
+        "domain_size": 1043,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "107",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.6000000000000p-1",
+        "domain_membership_sha256": "883beead47f390563542f80ecff48a3f4b97fb84cc51532b0767eba83ea7e924",
+        "domain_size": 1025,
+        "reference_winner_identity": "107",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.e400000000000p+0",
+      "bf16-logits:p99-absolute-error": "0x1.0440000000000p+0",
+      "bf16-logits:rms-difference": "0x1.9a3656be3a6a9p-2",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.f000000000000p+2",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.4800000000000p-1",
+      "final-normalized-hidden-state:rms-difference": "0x1.bb16c3b516d7cp-3",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.e400000000000p+0",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.0440000000000p+0",
+      "fp32-consumer-logits:rms-difference": "0x1.9a3656be3a6a9p-2",
+      "hidden-residual-stream:max-absolute-difference": "0x1.a000000000000p+1",
+      "hidden-residual-stream:p99-absolute-error": "0x1.3400000000000p-2",
+      "hidden-residual-stream:rms-difference": "0x1.83df3cdc129bcp-4",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.0000000000000p+1",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.0000000000000p-3",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.732060813fbbap-5"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.4000000000000p+0",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.e400000000000p+0",
+      "fp32-consumer-logits:rms-difference": "0x1.b5dca47035b53p-2"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-03-04-002",
+    "case_sha256": "5ed9a8a46a1a0b7f20f625e8816031e7f5013d9d91bbb7a8104ddee385b2c767",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.a000000000000p-1",
+        "domain_membership_sha256": "5e0c273debe53bd2f968dfd2f3217c972e5f37b1ddb8a83b2b05fc7fccdc9c1a",
+        "domain_size": 1031,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.e800000000000p-1",
+        "domain_membership_sha256": "2810f9e2f3fc5f368c1275ad349c7d75360fb69a70e8a133a663e79eb420c909",
+        "domain_size": 1025,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.0800000000000p+0",
+        "domain_membership_sha256": "686f5985f7793bcdfdfb6401ac2eca39674cff70b3335c5c18f73a1bf9165865",
+        "domain_size": 1035,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.5200000000000p+0",
+        "domain_membership_sha256": "44c09da33297141d34f7ebaf3e858a1132655619492bdd294211368dbecce96a",
+        "domain_size": 1024,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.e800000000000p-1",
+        "domain_membership_sha256": "04b343dc37f92ab8faf94dc471697cb0491947d5065c1ca02ca11335025135eb",
+        "domain_size": 1031,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.4000000000000p-1",
+        "domain_membership_sha256": "fbad08c10c4bf7364892335fb33cff536c21259c4cc91e4b2a4ed1b1628dafb3",
+        "domain_size": 1038,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.e000000000000p-1",
+        "domain_membership_sha256": "168afad9f14a00eb01d5a836807e1886472f33fdb057825ad9b2e7e632e685ae",
+        "domain_size": 1039,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.2400000000000p+0",
+        "domain_membership_sha256": "b19f471fd0b75068ba8f66f38e6ef8dd7b4d6487b99abcb4a80356bb70e43466",
+        "domain_size": 1026,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.ba00000000000p+0",
+      "bf16-logits:p99-absolute-error": "0x1.e000000000000p-1",
+      "bf16-logits:rms-difference": "0x1.a639d290ef5cdp-2",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.3000000000000p+3",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.5000000000000p-1",
+      "final-normalized-hidden-state:rms-difference": "0x1.ca9b6377db3aap-3",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.ba00000000000p+0",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.e000000000000p-1",
+      "fp32-consumer-logits:rms-difference": "0x1.a639d290ef5cdp-2",
+      "hidden-residual-stream:max-absolute-difference": "0x1.6000000000000p+2",
+      "hidden-residual-stream:p99-absolute-error": "0x1.8000000000000p-2",
+      "hidden-residual-stream:rms-difference": "0x1.06088fa1f1462p-3",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.0000000000000p+1",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.0000000000000p-3",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.87fec5e8432f8p-5"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.5200000000000p+0",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.ba00000000000p+0",
+      "fp32-consumer-logits:rms-difference": "0x1.a639d290ef5cdp-2"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-03-05-001",
+    "case_sha256": "e2ab3aa5444cff640bce43f5af82d06c87ea535d04baac2f9cf0be5864785f2b",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.2600000000000p+0",
+        "domain_membership_sha256": "60c7ca621bacd4dd20667199e15f4d349f4121c4b2217819c14bec288888b8d8",
+        "domain_size": 1025,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.c400000000000p-1",
+        "domain_membership_sha256": "d7e7a3ead3663de12ca9ccce321c17740bbb6a10fb8b3c3d289bb631a6dedb88",
+        "domain_size": 1025,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.e000000000000p-1",
+        "domain_membership_sha256": "8c1ba3ecf98c17e1c0126e7bcce215c69eed76114337cc2370feaa2fd39bfa76",
+        "domain_size": 1034,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236779",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.c400000000000p+0",
+        "domain_membership_sha256": "f65043d3fb9031d58c5431881da6f0a065c49c654fae87041229ed8b912fe24a",
+        "domain_size": 1027,
+        "reference_winner_identity": "236779",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236779",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.c000000000000p+0",
+        "domain_membership_sha256": "cba1cc7084242f4e7d2d1ed868fd2ad0fe7df1ea631ed2d302f40a57c7cbf7e8",
+        "domain_size": 1033,
+        "reference_winner_identity": "236779",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236779",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.0000000000000p+1",
+        "domain_membership_sha256": "156e645d7a34008a889d386ffa53d57254c448085412652a02b249cd7b56279c",
+        "domain_size": 1044,
+        "reference_winner_identity": "236779",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236779",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.5000000000000p+0",
+        "domain_membership_sha256": "0b21de30c94a8ff73fadd326da7428e79d71c514a9795d6092204ac47c779af4",
+        "domain_size": 1033,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236779",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.c000000000000p+0",
+        "domain_membership_sha256": "acbf600bd4149f68908282bbaa2446361f8a17f5d3a7ecefb1d46d0b9904d785",
+        "domain_size": 1030,
+        "reference_winner_identity": "236779",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.6dc0000000000p+1",
+      "bf16-logits:p99-absolute-error": "0x1.6000000000000p+0",
+      "bf16-logits:rms-difference": "0x1.2c5978d1d8355p-1",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.4400000000000p+3",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.2000000000000p+0",
+      "final-normalized-hidden-state:rms-difference": "0x1.8b556fd20958ap-2",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.6dc0000000000p+1",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.6000000000000p+0",
+      "fp32-consumer-logits:rms-difference": "0x1.2c5978d1d8355p-1",
+      "hidden-residual-stream:max-absolute-difference": "0x1.8000000000000p+1",
+      "hidden-residual-stream:p99-absolute-error": "0x1.7e60000000000p-2",
+      "hidden-residual-stream:rms-difference": "0x1.cb9ad6d5afa86p-4",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.4000000000000p+2",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.0000000000000p-3",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.b0e0bda0f8f8fp-5"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.0000000000000p+1",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.7800000000000p+1",
+      "fp32-consumer-logits:rms-difference": "0x1.5cf2e2dc17295p-1"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-03-05-002",
+    "case_sha256": "b708ea18a512148666ba9ca80f171e833513ba74212c0e342f91ec9667897773",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236779",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.c000000000000p+0",
+        "domain_membership_sha256": "b53e5ea9a0ac30c826f33c16682b43f1bc69cdc12dd52a6ea3dffc1c5f828ce1",
+        "domain_size": 1047,
+        "reference_winner_identity": "236779",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236779",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.8c00000000000p+1",
+        "domain_membership_sha256": "99c06d5e91d972029d916891942998ab03477be6a08d700347104d7a2087055b",
+        "domain_size": 1042,
+        "reference_winner_identity": "236779",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236779",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.9000000000000p+1",
+        "domain_membership_sha256": "9fc375ed234f575c8c23bef577dcbc420bce338361947347d13d5178439fddec",
+        "domain_size": 1041,
+        "reference_winner_identity": "236779",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236779",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.8400000000000p+1",
+        "domain_membership_sha256": "8845e4876ef3fe3166d8714d7f5461ab2ab1efdb82567bc3913f8d10a57d39d6",
+        "domain_size": 1035,
+        "reference_winner_identity": "236779",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.0c00000000000p+1",
+        "domain_membership_sha256": "ca5f05b241ebd4684884353826bf8f8c5a114ebe54de80df861ea4cdcddaa4a6",
+        "domain_size": 1033,
+        "reference_winner_identity": "236779",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.1400000000000p+1",
+        "domain_membership_sha256": "a16758b58d859dca87ff6e93fb154552d5d7dde9893ec50d628ad920023c3825",
+        "domain_size": 1024,
+        "reference_winner_identity": "236779",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236779",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.9000000000000p+0",
+        "domain_membership_sha256": "06d9f7ec201a746447f62b9c602f414163a1b143d3eb3afbb34cc922f0a52e5d",
+        "domain_size": 1034,
+        "reference_winner_identity": "236779",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236779",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.7800000000000p+0",
+        "domain_membership_sha256": "c18b0db56747d633110bc8124af8029128295aff1e1deccd555bb7bccba65269",
+        "domain_size": 1036,
+        "reference_winner_identity": "236779",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.8c00000000000p+1",
+      "bf16-logits:p99-absolute-error": "0x1.8c00000000000p+0",
+      "bf16-logits:rms-difference": "0x1.219a98a6c46fcp-1",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.1c00000000000p+3",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.2a40000000000p+0",
+      "final-normalized-hidden-state:rms-difference": "0x1.71e340cfb346dp-2",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.8c00000000000p+1",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.8c00000000000p+0",
+      "fp32-consumer-logits:rms-difference": "0x1.219a98a6c46fcp-1",
+      "hidden-residual-stream:max-absolute-difference": "0x1.e000000000000p+1",
+      "hidden-residual-stream:p99-absolute-error": "0x1.6b00000000000p-2",
+      "hidden-residual-stream:rms-difference": "0x1.9df87a35fee78p-4",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.0000000000000p+2",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.b000000000000p-3",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.30ea2b98509abp-4"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.9000000000000p+1",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.a100000000000p+1",
+      "fp32-consumer-logits:rms-difference": "0x1.58409ba6a7987p-1"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-03-06-001",
+    "case_sha256": "6219f229dca7b390a160f8588c639e5c2ef3ed72477b780fe5c113693b014298",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.1400000000000p+1",
+        "domain_membership_sha256": "980d534873aff317b7ff9da8d056b1f48a14644077d2f539e9e5956c3fceb753",
+        "domain_size": 1028,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.2000000000000p+0",
+        "domain_membership_sha256": "15e86d14ab467aa99e54e82fbb9436ac91885286f89fe4d17cd66c4ec27a123e",
+        "domain_size": 1024,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.9800000000000p+0",
+        "domain_membership_sha256": "24c253e49e8604b9e62074f78d274527e5f95a9cc22147151e4a4518efca7c9d",
+        "domain_size": 1038,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.1c00000000000p+1",
+        "domain_membership_sha256": "ddacebf38193149329707f37c2f61b78d1857a32860b40042c3ec20a1ec2889a",
+        "domain_size": 1027,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.c000000000000p+0",
+        "domain_membership_sha256": "49c1331997b26ccf658d5db452fde281bad5bef470c31c0611a6f91d08143325",
+        "domain_size": 1040,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.1000000000000p+1",
+        "domain_membership_sha256": "ed9e5a30b18dc244ed919d3492e95c6d9fd01d521fb70524ab13bde61bf408ad",
+        "domain_size": 1040,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.e800000000000p+0",
+        "domain_membership_sha256": "490ebafe66dfdb50ee72bb66ef88b034a9a06c80526da4551c5417667d450e33",
+        "domain_size": 1039,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.f000000000000p+0",
+        "domain_membership_sha256": "fbc3ae79ce35d6124e9801c2793bc7c67156f57f91f4ddbba6b63fe3ec6d0c6e",
+        "domain_size": 1033,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.3410000000000p+1",
+      "bf16-logits:p99-absolute-error": "0x1.2800000000000p+0",
+      "bf16-logits:rms-difference": "0x1.b7a58570e9d6ap-2",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.4400000000000p+3",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.2600000000000p+0",
+      "final-normalized-hidden-state:rms-difference": "0x1.7f7568c29250ep-2",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.3410000000000p+1",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.2800000000000p+0",
+      "fp32-consumer-logits:rms-difference": "0x1.b7a58570e9d6ap-2",
+      "hidden-residual-stream:max-absolute-difference": "0x1.6000000000000p+2",
+      "hidden-residual-stream:p99-absolute-error": "0x1.1840000000000p-1",
+      "hidden-residual-stream:rms-difference": "0x1.51fc6022daaeep-3",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.0000000000000p+1",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.8000000000000p-4",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.55c8c3d042e4dp-5"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.1c00000000000p+1",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.8b40000000000p+1",
+      "fp32-consumer-logits:rms-difference": "0x1.2dd580755097ep-1"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-03-06-002",
+    "case_sha256": "a5c070f5584141b8b7a260d5a89ea89545f04b9bea5b1ea57e76e20fff87171d",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.d900000000000p+0",
+        "domain_membership_sha256": "f55d543e48adcce5a388a35f849d8fbe41252f3dafbc539bdda6da4f64431c3d",
+        "domain_size": 1027,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.ec00000000000p+0",
+        "domain_membership_sha256": "3576ecacebf7b51cfe647ec1dc9298e5b1b874ec7cec4aff3e6200184632a1c3",
+        "domain_size": 1027,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.1700000000000p+1",
+        "domain_membership_sha256": "47aceaf3403f7301a3a1733811e0e0ee83c9cc9055086af79a3070b7e3bc0aa7",
+        "domain_size": 1034,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.a800000000000p+0",
+        "domain_membership_sha256": "24a926ba555da6a0e9ba2d20b6a828e2a901587d4af083bc087caea000fcbe00",
+        "domain_size": 1025,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.d000000000000p+0",
+        "domain_membership_sha256": "9db517c7491dfd6e3d1d52fac83598d14cbbeeba2d6437aa6b355c2d384dc277",
+        "domain_size": 1032,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.7000000000000p+0",
+        "domain_membership_sha256": "ce13b74677c9d74da3a58aa0b8a27c1903d1c4225315304c6c3caa517dc985b1",
+        "domain_size": 1034,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.7400000000000p+0",
+        "domain_membership_sha256": "022200fb9930e0326b0bd6cc60b2c0c367ce5ee2fba0e49af1fe3c9ff252f7de",
+        "domain_size": 1031,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.9c00000000000p+0",
+        "domain_membership_sha256": "34652c5fd6fd89665580198dcdc1f5dcca790bf788b2a22a26a700c30a837592",
+        "domain_size": 1026,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.b800000000000p+1",
+      "bf16-logits:p99-absolute-error": "0x1.9000000000000p+0",
+      "bf16-logits:rms-difference": "0x1.3126cd2a44791p-1",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.d300000000000p+3",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.0800000000000p+1",
+      "final-normalized-hidden-state:rms-difference": "0x1.2d15ce0a45b5cp-1",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.b800000000000p+1",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.9000000000000p+0",
+      "fp32-consumer-logits:rms-difference": "0x1.3126cd2a44791p-1",
+      "hidden-residual-stream:max-absolute-difference": "0x1.8000000000000p+3",
+      "hidden-residual-stream:p99-absolute-error": "0x1.018c000000000p+0",
+      "hidden-residual-stream:rms-difference": "0x1.27d1aac0999b8p-2",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.4000000000000p+3",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.ec00000000000p-2",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.83eab8b29c072p-3"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.1700000000000p+1",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.b800000000000p+1",
+      "fp32-consumer-logits:rms-difference": "0x1.3126cd2a44791p-1"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-03-06-003",
+    "case_sha256": "95019a5910b77508d7b36cb2abe04fc069b625a0d52fb8dd104bec1b06159989",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.8c00000000000p+1",
+        "domain_membership_sha256": "c20dda9e4f35e7c511d483ebfb17a17cbd760b3549fa92acb1c424d10f15bd2f",
+        "domain_size": 1034,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.f000000000000p+0",
+        "domain_membership_sha256": "14ca944061c07a55cfb82dac010445c9536c6213bbce9f2feded20f3f1a24ff0",
+        "domain_size": 1026,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.c800000000000p+0",
+        "domain_membership_sha256": "ae0420ae941a02b8a61d47bebea8b4d2bdfd7a2047d77dd4f6698b6d62c2b852",
+        "domain_size": 1026,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.2800000000000p+1",
+        "domain_membership_sha256": "eeba852b7bf18482bf7a2ee84f97af04a5db8bc5f129b186c624267648376dce",
+        "domain_size": 1030,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.3800000000000p+1",
+        "domain_membership_sha256": "e6ab9a612d2bed22eb17e789d4eefe0db1f951f943c51a7d0759094020a2b349",
+        "domain_size": 1028,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.0800000000000p+1",
+        "domain_membership_sha256": "33beb0800201dcdc458a282016eb68801c4f5546692e2dc1375751203bd168e8",
+        "domain_size": 1038,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.c000000000000p+0",
+        "domain_membership_sha256": "02cad8ad70dfe04dfe69f4442c30f0182bbf908894a58fd82560ec875724703b",
+        "domain_size": 1030,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.e800000000000p+0",
+        "domain_membership_sha256": "d87ce1f115e2d64a19ba98810d4bee87026de1ad25f7e55d5dcb17ef1571f585",
+        "domain_size": 1027,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.3000000000000p+2",
+      "bf16-logits:p99-absolute-error": "0x1.1400000000000p+1",
+      "bf16-logits:rms-difference": "0x1.9b770154ea913p-1",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.7800000000000p+3",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.6800000000000p+0",
+      "final-normalized-hidden-state:rms-difference": "0x1.d2ce6e3ba43eep-2",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.3000000000000p+2",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.1400000000000p+1",
+      "fp32-consumer-logits:rms-difference": "0x1.9b770154ea913p-1",
+      "hidden-residual-stream:max-absolute-difference": "0x1.d400000000000p+2",
+      "hidden-residual-stream:p99-absolute-error": "0x1.8c00000000000p-1",
+      "hidden-residual-stream:rms-difference": "0x1.cbdf747a4f732p-3",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.8000000000000p+2",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.7e00000000000p-2",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.265143a6f79c8p-3"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.8c00000000000p+1",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.3000000000000p+2",
+      "fp32-consumer-logits:rms-difference": "0x1.9b770154ea913p-1"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-04-01-001",
+    "case_sha256": "bc644fc806287d7e8d92c9653e714be2c19138f78780fafb613c5268e593c602",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.2800000000000p+0",
+        "domain_membership_sha256": "7947fd7da31cce4e45b192bdfd09c09e6d7c7b999b4cceccb4d4d4e7fbaa61f7",
+        "domain_size": 1029,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.5800000000000p-1",
+        "domain_membership_sha256": "e677d954411a216f5d2db3a676a9f7d725a683ada84d1438dc5ecea3c3715758",
+        "domain_size": 1032,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.1800000000000p+0",
+        "domain_membership_sha256": "40e4b3b6ce17d615c8b1943adb83bdac8796d9094cef554fcbedd0841d77e980",
+        "domain_size": 1037,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.3800000000000p+0",
+        "domain_membership_sha256": "855fab7ec5ce29a2a1857192d1e6df202d8a256129677b2f137f19b677b88506",
+        "domain_size": 1025,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.c000000000000p-1",
+        "domain_membership_sha256": "069231bdea68d848c81978f4a7b60b02ccc52304531379173fb90443bd4469e4",
+        "domain_size": 1031,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.3800000000000p+0",
+        "domain_membership_sha256": "50d3dbbffd1c49ddfcdc6d942412181d4534ad7ece30ec6338a9a32116214099",
+        "domain_size": 1026,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.c000000000000p-1",
+        "domain_membership_sha256": "38be92c9f361ca75cde51f54751345152c1bb0752b06ff9391a4888c69e7989b",
+        "domain_size": 1027,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.5000000000000p-1",
+        "domain_membership_sha256": "730dea8426b44fa89ba8cb2755b35957e9c68e9e47bf2694ba05666cfcfe4b45",
+        "domain_size": 1039,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.9800000000000p+0",
+      "bf16-logits:p99-absolute-error": "0x1.a000000000000p-1",
+      "bf16-logits:rms-difference": "0x1.4256e5e4fd03bp-2",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.5000000000000p+2",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.4080000000000p-1",
+      "final-normalized-hidden-state:rms-difference": "0x1.9f201d8aa327bp-3",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.9800000000000p+0",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.a000000000000p-1",
+      "fp32-consumer-logits:rms-difference": "0x1.4256e5e4fd03bp-2",
+      "hidden-residual-stream:max-absolute-difference": "0x1.a000000000000p+1",
+      "hidden-residual-stream:p99-absolute-error": "0x1.9400000000000p-2",
+      "hidden-residual-stream:rms-difference": "0x1.cf30a8b9bce6ap-4",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.8000000000000p+2",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.c000000000000p-4",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.6bae4461179efp-5"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.3800000000000p+0",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.9800000000000p+0",
+      "fp32-consumer-logits:rms-difference": "0x1.6baa3d71ed15ap-2"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-04-04-001",
+    "case_sha256": "c480043bb199256cef44cbbd4e3a01aea4a95fcd80589f47c1498838aeda6e7d",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.8000000000000p+0",
+        "domain_membership_sha256": "aeddf03a2db1dc2c3ba181ec56b683be6f1854a3f45862e2a141d52d76df1a24",
+        "domain_size": 1024,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "107",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.1000000000000p+0",
+        "domain_membership_sha256": "aba212ecca3acad5f31003f2837c476cfa35cfb75921992936ebd9748d5c59f1",
+        "domain_size": 1054,
+        "reference_winner_identity": "107",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.1000000000000p+0",
+        "domain_membership_sha256": "41d97d57fc01ec8a79ef3bb72ea6bb424cab6a1309ce8b0394598dea02c2089b",
+        "domain_size": 1033,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "107",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.8000000000000p-1",
+        "domain_membership_sha256": "eac9a4c07e978a32df00aec428856257934dab5c9f9a0efbd39c1080e210f691",
+        "domain_size": 1036,
+        "reference_winner_identity": "107",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.3000000000000p-1",
+        "domain_membership_sha256": "29de9ff0cb3730b9249502f0988657527355d16a7d3ef1c9e7a9c5a4f3de3017",
+        "domain_size": 1045,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "107",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.0000000000000p-1",
+        "domain_membership_sha256": "6bef29889c652458825a1cfd129e72fa69da529f1f4814fd5296247feb75cd76",
+        "domain_size": 1038,
+        "reference_winner_identity": "107",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236761",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.4000000000000p-1",
+        "domain_membership_sha256": "b1600022c7b1b86b9004f476a652ef7b54f16c1bdbb09ecd9cbe3437c7c95a2b",
+        "domain_size": 1042,
+        "reference_winner_identity": "236761",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "107",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.0000000000000p-1",
+        "domain_membership_sha256": "b94d78c4eb06378ffca8af2a24fba2e342e4b213e6aa6a96ba542376640a79fc",
+        "domain_size": 1046,
+        "reference_winner_identity": "107",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.ac80000000000p+0",
+      "bf16-logits:p99-absolute-error": "0x1.0000000000000p+0",
+      "bf16-logits:rms-difference": "0x1.a77eec4da912bp-2",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.4000000000000p+2",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.7c00000000000p-1",
+      "final-normalized-hidden-state:rms-difference": "0x1.f2f37306f7f35p-3",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.ac80000000000p+0",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.0000000000000p+0",
+      "fp32-consumer-logits:rms-difference": "0x1.a77eec4da912bp-2",
+      "hidden-residual-stream:max-absolute-difference": "0x1.c380000000000p+1",
+      "hidden-residual-stream:p99-absolute-error": "0x1.0800000000000p-1",
+      "hidden-residual-stream:rms-difference": "0x1.1c78287ca02ffp-3",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.0000000000000p+2",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.7000000000000p-3",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.17c07ed38eb58p-4"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.8000000000000p+0",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.ac80000000000p+0",
+      "fp32-consumer-logits:rms-difference": "0x1.a77eec4da912bp-2"
+    },
+    "telemetry_alerts": []
+  },
+  {
+    "case_id": "h109-04-04-002",
+    "case_sha256": "333ab4f0a9ca8007778a3eb314902a659066403ac408b9eeee732127383ab238",
+    "decisions": [
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 0,
+        "decision_local_error_hex": "0x1.b000000000000p-1",
+        "domain_membership_sha256": "2e577fa70cd5a1b45c92f4d7a304c5c617d28f682e9b6c2ac112578aa91e9fad",
+        "domain_size": 1033,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 1,
+        "decision_local_error_hex": "0x1.1400000000000p+0",
+        "domain_membership_sha256": "daa1e5d6f605de36d395788dccdbbdee18a12ad53b2da7eec69c60d164edba14",
+        "domain_size": 1028,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 2,
+        "decision_local_error_hex": "0x1.8000000000000p-1",
+        "domain_membership_sha256": "f07b1cce15b2cf710e5f5e812020d72c86bb732e8511706b8494900bb4f04c30",
+        "domain_size": 1035,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 3,
+        "decision_local_error_hex": "0x1.a800000000000p-1",
+        "domain_membership_sha256": "3b16b56c5780d2f4cdb600ce002319e294a36d4efbc0381fb7cbba01f232b1d2",
+        "domain_size": 1032,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 4,
+        "decision_local_error_hex": "0x1.d000000000000p-1",
+        "domain_membership_sha256": "d3d3ca7842eab70dc3dc84fcd735661ead9a272a619deaef1b0c8c322aff6b00",
+        "domain_size": 1026,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 5,
+        "decision_local_error_hex": "0x1.5000000000000p-1",
+        "domain_membership_sha256": "a58e10ae58615dafb2ea7564ce28176acbc9288f968aaf6bcd0b36f94f40baca",
+        "domain_size": 1025,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 6,
+        "decision_local_error_hex": "0x1.c000000000000p-1",
+        "domain_membership_sha256": "017a3c1c00d30691fe1ae76eea986550eeae64fdbefa0e22e2b6137b062b6cdb",
+        "domain_size": 1028,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      },
+      {
+        "candidate_winner_identity": "236770",
+        "decision_index": 7,
+        "decision_local_error_hex": "0x1.7000000000000p-1",
+        "domain_membership_sha256": "59fe299aa899ed4428d2b13b382ff95fb641eaa56b74fe41600b72a4dbffaf0f",
+        "domain_size": 1029,
+        "reference_winner_identity": "236770",
+        "stability": "UNSTABLE",
+        "verdict": "SEMANTIC_PASS"
+      }
+    ],
+    "envelopes": {
+      "bf16-logits:max-absolute-difference": "0x1.3000000000000p+0",
+      "bf16-logits:p99-absolute-error": "0x1.4000000000000p-1",
+      "bf16-logits:rms-difference": "0x1.05d6b49f9ae24p-2",
+      "final-normalized-hidden-state:max-absolute-difference": "0x1.6000000000000p+2",
+      "final-normalized-hidden-state:p99-absolute-error": "0x1.8800000000000p-1",
+      "final-normalized-hidden-state:rms-difference": "0x1.f8eebc6f618ecp-3",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.3000000000000p+0",
+      "fp32-consumer-logits:p99-absolute-error": "0x1.4000000000000p-1",
+      "fp32-consumer-logits:rms-difference": "0x1.05d6b49f9ae24p-2",
+      "hidden-residual-stream:max-absolute-difference": "0x1.6000000000000p+3",
+      "hidden-residual-stream:p99-absolute-error": "0x1.1d80000000000p-1",
+      "hidden-residual-stream:rms-difference": "0x1.397c7c11524dap-3",
+      "local-bf16-backend-operation-output:max-absolute-difference": "0x1.8000000000000p+1",
+      "local-bf16-backend-operation-output:p99-absolute-error": "0x1.1000000000000p-3",
+      "local-bf16-backend-operation-output:rms-difference": "0x1.b2986f5248f11p-5"
+    },
+    "exact_integrity": "PASS",
+    "finite": true,
+    "observed_core": {
+      "decision_local_E_D": "0x1.1400000000000p+0",
+      "fp32-consumer-logits:max-absolute-difference": "0x1.3000000000000p+0",
+      "fp32-consumer-logits:rms-difference": "0x1.05d6b49f9ae24p-2"
+    },
+    "telemetry_alerts": []
+  }
+]

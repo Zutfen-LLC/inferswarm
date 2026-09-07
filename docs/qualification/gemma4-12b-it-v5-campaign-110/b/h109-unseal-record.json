@@ -1,0 +1,36 @@
+{
+  "schema": "inferswarm.issue110.v5-holdout-unseal-record/1",
+  "contract_id": "inferswarm.gemma4-mixture-population-qualification/1",
+  "unseal_authorized_by": "maintainer (ezutfen) comment on Zutfen-LLC/inferswarm#114, 2026-09-07T12:14:41Z (V5_HOLDOUT_UNSEAL_AUTHORIZED)",
+  "authority_record": "docs/qualification/gemma4-12b-it-v5-campaign-110/preflight/HOLDOUT-EXECUTION-AUTHORITY.json",
+  "authority_head_at_authorization": "fc62c4323f1f4dbea55f83a3bb17e3c00c46dad7",
+  "calibration_producer": "7e5c852163afd9aadfccc406be267e8d060e79ef",
+  "holdout_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "decrypt": {
+    "command": "openssl cms -decrypt -inform DER -in sealed/holdout.cms -inkey <custodian key> -recip sealed/recipient-certificate.pem",
+    "count": 1,
+    "ciphertext_sha256": "93f75078875af163334fdfc7b74b3347f86b6948416b7dd8e603bd52863221b9",
+    "certificate_sha256": "072a211370b7ddbd352b8d8f9fccb60bc01b6835567b34d08cbbbac147e284eb",
+    "recipient_public_key_der_sha256": "62ded0e04b2e800c85bae9b5c499faa29f8fb21956c3f40dee23efdcf5d5f9e6",
+    "custodian": "orchestrator-local (~/.local/share/inferswarm/issue109-holdout-v5-custody)",
+    "effective_custody_record_sha256": "5a1a8756a2330e7ef6658dd9114a599d165741fc7e951482a630811b755e8b6c",
+    "non_decrypting_preflight": "PRECONDITIONS_PASS_STOP_BEFORE_DECRYPT re-run twice immediately before decrypt, byte-identical",
+    "performed_at": "2026-09-07"
+  },
+  "commitment_verification": {
+    "schema": "inferswarm.issue109.v5-holdout/1",
+    "case_count": 24,
+    "result": "ALL_PASS",
+    "checks": [
+      "plaintext schema + contract_id",
+      "secret_seed_sha256 (raw newline-stripped seed string) == commitment",
+      "generator identity + generator_sha256 == current scripts/generate_issue109_corpora.py bytes",
+      "tokenizer_json_sha256 == commitment",
+      "historical_exclusion_inventory_sha256 == commitment",
+      "per-case recomputed prompt_sha256/token_ids_sha256/case_sha256 (canonical JSON) all match",
+      "case_id set == exactly the 24 committed draws; historical exclusion/non-reuse honored"
+    ]
+  },
+  "plaintext_retention": "PROHIBITED_IN_REPOSITORY — plaintext and derived execution corpus live only in 0700 orchestrator staging and node-local run dirs; never committed",
+  "post_unseal_state": "h109 CONSUMED (single use); no reseal, no replacement holdout, no rerun"
+}

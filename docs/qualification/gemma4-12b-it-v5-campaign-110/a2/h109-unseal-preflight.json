@@ -1,0 +1,16 @@
+{
+  "schema": "inferswarm.issue109.v5-unseal-preflight/1",
+  "contract_id": "inferswarm.gemma4-mixture-population-qualification/1",
+  "verdict": "PRECONDITIONS_PASS_STOP_BEFORE_DECRYPT",
+  "threshold_sha256": "a19db78e2d2dfacad7bf933bab69381cc004b532e3516a2b82a29013abb3c0fb",
+  "custody_record_sha256": "5a1a8756a2330e7ef6658dd9114a599d165741fc7e951482a630811b755e8b6c",
+  "ciphertext_sha256": "93f75078875af163334fdfc7b74b3347f86b6948416b7dd8e603bd52863221b9",
+  "certificate_sha256": "072a211370b7ddbd352b8d8f9fccb60bc01b6835567b34d08cbbbac147e284eb",
+  "recipient_public_key_der_sha256": "62ded0e04b2e800c85bae9b5c499faa29f8fb21956c3f40dee23efdcf5d5f9e6",
+  "bound_identities": {
+    "core_threshold_sha256": "a19db78e2d2dfacad7bf933bab69381cc004b532e3516a2b82a29013abb3c0fb",
+    "holdout_custody_record_sha256": "5a1a8756a2330e7ef6658dd9114a599d165741fc7e951482a630811b755e8b6c",
+    "holdout_ciphertext_sha256": "93f75078875af163334fdfc7b74b3347f86b6948416b7dd8e603bd52863221b9",
+    "recipient_certificate_sha256": "072a211370b7ddbd352b8d8f9fccb60bc01b6835567b34d08cbbbac147e284eb"
+  }
+}

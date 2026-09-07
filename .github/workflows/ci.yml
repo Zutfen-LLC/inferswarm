@@ -92,6 +92,9 @@ jobs:
       - name: Check issue 110 v5 custody handoff repair (CPU-only)
         run: python3 -m unittest tests.test_issue110_v5_custody_handoff -v
 
+      - name: Check issue 110 terminal-report decimal derivation (CPU-only)
+        run: python3 -m unittest tests.test_issue110_terminal_report_decimals -v
+
       - name: Check issue 99 plan-driven artifact acquisition (CPU-only)
         run: python3 -m unittest tests.test_issue99_artifact_core tests.test_issue99_proof -v
 
