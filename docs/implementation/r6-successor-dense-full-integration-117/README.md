@@ -20,7 +20,71 @@ dedicated cold roots remain empty and untouched. No holdout material was
 used.  Arm A is ACCEPTED by the maintainer via merge
 `6774474941d7ce2a0252c8c1e148f8bce61a8d6d` (PR #122); the current
 authorized gate is Arm B — canonical cold acquisition + realization
-(authority: Issue #117) — and it is not yet executed.
+(authority: Issue #117) — observed 2026-09-08, see the Arm B section
+below.
+
+## Arm B — canonical cold acquisition + realization — OBSERVED PASS
+
+Arm B was executed on the fabric 2026-09-08 from accepted main
+`5179c41232051e7455b778ddb8876a6539f4cb04` (delta from the accepted Arm-A
+merge audited as non-execution-substrate / Arm-B-semantics-neutral:
+docs/status/tests/manifest rows only). FreeToken producer per participant:
+`924cd22ea081f6d4ed471016faf01d427fc5b0d2` (clean checkouts on
+inferswarm01/03). Observed terminal classification:
+
+`ISSUE117_ARM_B_COLD_REALIZATION_PASS`
+
+(observation only; maintainer acceptance pending; Arm C NOT executed).
+
+Physical flow (all evidence under `evidence/arm-b/`, reduced by
+`scripts/issue117_arm_b_evidence.py`, mutation-tested by
+`tests/test_issue117_arm_b_retention.py`):
+
+1. canonical cold roots proven empty/symlink-free/hardlink-free/
+   device-disjoint from `/srv/models/gemma-r6` on both participants
+   before any byte moved;
+2. exact participant requirements derived mechanically from the real
+   checkpoint census + accepted R6 block plan (structural identity with
+   the accepted Arm-A runtime plan verified): stage-1 224 artifacts /
+   9,256,819,047 bytes, stage-2 222 / 7,278,943,591, stage-3 225 /
+   11,305,483,111 (declared shared tied-embedding 2,013,265,920 bytes
+   duplicated on first+last stage by policy);
+3. one authorized Source (`file:///srv/models/gemma-r6`, possession
+   proven on both hosts); CPU-only external Coordinator (inferswarm00)
+   froze the plan/requirements and issued 671 exact acquisition tickets
+   with zero bulk bytes observed;
+4. acquisition ran ONLY through the accepted #99 engine
+   (`acquire_artifact` + `NodeArtifactCache`, byte-pinned
+   `issue99_artifact_core`/`issue74_methodology` from accepted main):
+   local-file transport on inferswarm01, operator-local-http Range
+   transport inferswarm01→inferswarm03; verify-then-publish into
+   `/srv/inferswarm/cache/issue117` (411 verified objects / 16.5 GiB on
+   01; 218 / 8.65 GiB on 03; content-dedup'd shared state);
+5. participant-exact materialization from verified cache objects only:
+   per-participant shard + config.json under
+   `/srv/inferswarm/materialized/issue117/<participant>/` with every
+   object digest re-verified at assembly;
+6. realization through the frozen producer seam (`GemmaDenseStage`,
+   selective bounded reader): fetched bytes 9,256,814,624 /
+   7,278,939,168 / 9,292,212,768 and resident device bytes
+   9,264,678,944 / 7,290,735,648 / 9,304,009,248 — the stage-3 figures
+   byte-exact equal the accepted Arm-A `ready.json` observation;
+   persistent host model bytes 0 on every stage; whole-shard sentinel
+   never fired;
+7. runtime-read proof via `strace -f -e trace=file` over every
+   realization subprocess: zero reads of
+   `/srv/models/gemma-r6/model.safetensors` (or any whole-model weight
+   path) after acquisition authority; all model-state reads from the
+   materialized participant path; config/tokenizer metadata reads
+   classified explicitly;
+8. every mandatory zero invariant mechanically re-derived from the
+   retained records by the reducer (no stored zero is authority);
+   coordinator counters re-collected post-campaign: CUDA 0, model
+   bytes received/materialized 0.
+
+No PREFILL/decode/generate was executed. No holdout material was used.
+Arm C/D/E were not executed. The observation awaits maintainer review;
+the PR is not merged.
 
 Retention/provenance correction (PR #122, same day, no physical execution):
 the terminal classification is now INDEPENDENTLY re-derivable from low-level
@@ -207,6 +271,17 @@ wall times excluded).
 - [Planner purity audit](evidence/purity-audit.json)
 - [Producer hashes](evidence/producer-hashes.json)
 - [Integrity manifest](evidence/MANIFEST.sha256)
+
+Arm B (physical, fabric 2026-09-08) evidence under
+[evidence/arm-b/](evidence/arm-b/): cold-root prestates, source
+census/block-plan/execution-plan/requirements, coordinator record/deltas/
+counters, per-host acquisition ledgers, post-acquisition verified
+inventories, per-stage assemble/realize reports, runtime-read audits, and
+the 6774474→5179c41 delta audit — reduced by
+`scripts/issue117_arm_b_evidence.py` (fails closed; derives every zero
+invariant from low-level records) and mutation-tested by
+`tests/test_issue117_arm_b_retention.py` (28 one-mutation negative
+controls + the unmutated PASS baseline).
 
 Internal record, digest, cache-layout, and descriptor choices remain
 unfrozen and implementation details.

@@ -84,6 +84,8 @@ PRODUCERS = [
     "scripts/issue117_preflight.py",
     "scripts/issue117_proof.py",
     "scripts/issue117_checkpoint_authority.py",
+    "scripts/issue117_arm_a_evidence.py",
+    "scripts/issue117_arm_b_evidence.py",
     "scripts/issue117_subject_identity.py",
     "scripts/issue99_artifact_core.py",
     "scripts/issue101_orchestration.py",
@@ -101,6 +103,8 @@ PRODUCERS = [
     "tests/test_issue117_physical_retention.py",
     "tests/test_issue117_arm_a_retention.py",
     "scripts/issue117_arm_a_evidence.py",
+    "tests/test_issue117_arm_b_retention.py",
+    "scripts/issue117_arm_b_evidence.py",
     "scripts/sync_project_status.py",
     "tests/test_project_status.py",
 ]
@@ -166,6 +170,37 @@ COMMITTED_EVIDENCE_FILES = {
     # no execution.
     "arm-a/checkpoint-continuity.json",
     "arm-a/run-device-bindings.json",
+    # retained Arm B cold-acquisition + realization PASS artifacts
+    # (executed on the fabric 2026-09-08; see evidence/arm-b/ records:
+    # cold-root prestates, source census/plan/requirements, coordinator
+    # authorization, per-host acquisition ledgers, per-stage
+    # assemble/realize reports, runtime-read audits, post-inventories,
+    # coordinator counters, and the 6774474->5179c41 delta audit).
+    # Fabric-produced compact evidence; the CPU campaign never regenerates
+    # these. Reduced by scripts/issue117_arm_b_evidence.py.
+    "arm-b/cold-root-prestate-inferswarm01.json",
+    "arm-b/cold-root-prestate-inferswarm03.json",
+    "arm-b/source-census.json",
+    "arm-b/source-block-plan.json",
+    "arm-b/execution-plan.json",
+    "arm-b/requirements.json",
+    "arm-b/delta-audit.json",
+    "arm-b/coordinator-record.json",
+    "arm-b/coordinator-deltas.json",
+    "arm-b/coordinator-counters.json",
+    "arm-b/acquisition-ledger-inferswarm01.json",
+    "arm-b/acquisition-ledger-inferswarm03.json",
+    "arm-b/inventory-post-inferswarm01.json",
+    "arm-b/inventory-post-inferswarm03.json",
+    "arm-b/assemble-stage-1.json",
+    "arm-b/assemble-stage-2.json",
+    "arm-b/assemble-stage-3.json",
+    "arm-b/realize-stage-1.json",
+    "arm-b/realize-stage-2.json",
+    "arm-b/realize-stage-3.json",
+    "arm-b/read-audit-stage-1.json",
+    "arm-b/read-audit-stage-2.json",
+    "arm-b/read-audit-stage-3.json",
 }
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the
