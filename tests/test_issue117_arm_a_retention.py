@@ -1,41 +1,64 @@
 """Retention regressions for the Issue #117 Arm A execution-equivalence PASS.
 
-Pins the retained ``evidence/arm-a/`` artifacts inside the repository's
-integrity boundary and re-derives the terminal accounting from the retained
-bytes:
+PR #122 retention/provenance correction: the terminal classification must be
+INDEPENDENTLY RE-DERIVABLE from low-level retained records by
+``scripts/issue117_arm_a_evidence.py`` (the reducer). No stored PASS boolean,
+aggregate counter, or ``all_*_identical`` convenience field may substitute for
+the derivations, and every trust boundary is exercised by a negative control
+that applies exactly ONE mutation to a copy of the retained evidence in a
+throwaway directory and asserts the reducer FAILS on exactly that dimension.
+The reducer never runs against mutated repository bytes; mutations live only
+in tmp fixtures.
 
-- every Arm A artifact exists, is byte-exact against the retained MANIFEST,
-  and the physical-retention manifest convention (proof.COMMITTED_EVIDENCE_
-  FILES) covers exactly the expected set;
-- the witness carries ``ISSUE117_ARM_A_EXECUTION_EQUIVALENCE_PASS`` with
-  192/192 decisions compared and zero FP32 row mismatches, bound to exactly
-  the control (``7e5c8521``) and integrated (``924cd22e``) producers;
-- the decision table independently re-derives 192 rows with every row SHA,
-  prefix SHA, and rule proof identical across arms;
-- the raw-row verification records prove 192/192 byte-identical candidate
-  rows on the last-stage node and 192/192 byte-identical + summary-bound
-  reference rows on the reference node;
-- the run record binds the accepted starting main, the accepted physical
-  preflight digest, the frozen fixture identity, per-run indexes/producers,
-  and retains both invalid attempts with reasons;
-- tampering any retained Arm A artifact (or forging a PASS from mismatched
-  content) fails the regressions.
+Covers (issue review, required tests 1-20 plus mutation tests):
+1  exact 24-case fixture identity;
+2  unique complete (case, decision) keyspace = 192;
+3  separate control/integrated prefix values;
+4  separate control/integrated trajectory/token values;
+5  separate control/integrated rule proofs;
+6  separate control/integrated boundary records;
+7  exact row SHA equality;
+8  raw-row manifest -> decision-table SHA binding;
+9  exact per-row candidate raw-byte verification;
+10 exact per-row reference raw-byte + summary binding;
+11 four run indexes bind exact producers;
+12 all valid run indexes clean;
+13 pre-Arm-A InferSwarm identity exact;
+14 per-host control/integrated FreeToken identities exact and clean;
+15 exact CU/runtime/checkpoint identity;
+16 Arm-B cold roots untouched;
+17 invalid attempts distinct and zero correctness-bearing observations;
+18 accepted physical preflight bytes/digest unchanged;
+19 #118 canonical summary unchanged;
+20 Arm A manifest coverage complete.
 """
+import ast
 import copy
 import hashlib
 import json
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-import sys  # noqa: E402
-
 sys.path.insert(0, str(ROOT / "scripts"))
-import issue117_proof as proof  # noqa: E402
 
-ARM_A = (ROOT / "docs/implementation/r6-successor-dense-full-integration-117"
-         / "evidence" / "arm-a")
-ARM_A_ARTIFACTS = (
+import issue117_proof as proof  # noqa: E402
+import issue117_arm_a_evidence as ev  # noqa: E402
+
+ARM_A = ev.ARM_A
+CONTROL_PRODUCER = ev.CONTROL_PRODUCER
+INTEGRATED_PRODUCER = ev.INTEGRATED_PRODUCER
+NEW_ARM_A_ARTIFACTS = (
+    "paired-decision-records.json",
+    "capture-manifest-records.json",
+    "raw-row-manifest-laststage03.json",
+    "raw-row-manifest-reference04.json",
+    "attempt-lineage.json",
+    "prerun-revalidation.json",
+)
+LEGACY_ARM_A_ARTIFACTS = (
     "witness.json",
     "run-record.json",
     "decision-table.json",
@@ -47,10 +70,6 @@ ARM_A_ARTIFACTS = (
     "verify-rows-laststage03.json",
     "verify-rows-reference04.json",
 )
-CONTROL_PRODUCER = "7e5c852163afd9aadfccc406be267e8d060e79ef"
-INTEGRATED_PRODUCER = "924cd22ea081f6d4ed471016faf01d427fc5b0d2"
-STARTING_MAIN = "51c8adeeedf6d6f0a16db994ca0a0cf259bed52f"
-FIXTURE_DIGEST = "sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba36f2"
 
 
 def sha256_file(path: Path) -> str:
@@ -58,7 +77,7 @@ def sha256_file(path: Path) -> str:
 
 
 def manifest_entries() -> dict:
-    manifest = ROOT / "docs/implementation/r6-successor-dense-full-integration-117" / "evidence" / "MANIFEST.sha256"
+    manifest = ev.EVIDENCE / "MANIFEST.sha256"
     entries = {}
     for line in manifest.read_text().splitlines():
         digest, _, relative = line.partition("  ")
@@ -66,10 +85,453 @@ def manifest_entries() -> dict:
     return entries
 
 
-class ArmARetentionTests(unittest.TestCase):
+def _expect_reducer_failure(mutation):
+    """Copy retained evidence to a throwaway tree, apply ONE mutation, and
+    require the reducer to fail closed. Restores the reducer's paths."""
+    with tempfile.TemporaryDirectory(prefix="i117a-mut-") as temp:
+        root = Path(temp)
+        arm_a = root / ARM_A.relative_to(ROOT)
+        arm_a.mkdir(parents=True)
+        for name in (*NEW_ARM_A_ARTIFACTS, *LEGACY_ARM_A_ARTIFACTS):
+            (arm_a / name).write_bytes((ARM_A / name).read_bytes())
+        evidence = arm_a.parent
+        for name in ("physical-preflight.json", "canonical-summary.json"):
+            (evidence / name).write_bytes((ev.EVIDENCE / name).read_bytes())
+        mutation(root, arm_a, evidence)
+        saved = (ev.ROOT, ev.ARM_A, ev.EVIDENCE)
+        ev.ROOT, ev.ARM_A, ev.EVIDENCE = root, arm_a, evidence
+        try:
+            ev.derive()
+        except ev.EvidenceError:
+            return
+        finally:
+            ev.ROOT, ev.ARM_A, ev.EVIDENCE = saved
+        raise AssertionError("reducer derived PASS from mutated evidence")
+
+
+def _load(path: Path):
+    return json.loads(path.read_text())
+
+
+def _store(path: Path, doc) -> None:
+    path.write_text(json.dumps(doc, indent=1, sort_keys=True) + "\n")
+
+
+class IndependentDerivationTests(unittest.TestCase):
+    """Positive derivations: the reducer re-derives PASS from retained bytes."""
+
+    def test_reducer_derives_pass_from_retained_evidence(self):
+        report = ev.derive()
+        self.assertEqual(report["terminal_classification"], ev.TERMINAL_PASS)
+        d = report["derivation"]
+        self.assertEqual(d["fixture"]["case_count"], 24)
+        self.assertEqual(d["fixture"]["decision_keyspace"], 192)
+        self.assertFalse(d["fixture"]["holdout_material"])
+        self.assertEqual(
+            set(d["run_indexes"]),
+            {"control_reference", "control_candidate",
+             "integrated_reference", "integrated_candidate"})
+        self.assertEqual(d["run_indexes"]["control_reference"]["producer"], CONTROL_PRODUCER)
+        self.assertEqual(d["run_indexes"]["control_candidate"]["producer"], CONTROL_PRODUCER)
+        self.assertEqual(d["run_indexes"]["integrated_reference"]["producer"], INTEGRATED_PRODUCER)
+        self.assertEqual(d["run_indexes"]["integrated_candidate"]["producer"], INTEGRATED_PRODUCER)
+        for run, info in d["run_indexes"].items():
+            self.assertEqual(info["cases"], 24, run)
+            self.assertEqual(info["nan_inf"], 0, run)
+        for label in ("candidate_rows", "reference_rows"):
+            stats = d["paired_identity"][label]
+            self.assertEqual(stats["rows"], 192, label)
+            for field in ("prefix_len_mismatches", "prefix_sha_mismatches",
+                          "emitted_token_mismatches", "argmax_rule_mismatches",
+                          "rule_proof_mismatches", "row_sha_mismatches",
+                          "element_count_mismatches"):
+                self.assertEqual(stats[field], 0, f"{label}.{field}")
+        self.assertEqual(d["stage_boundary_comparisons"], 72)  # 24 cases x 3 stages
+        for label in ("candidate_raw_rows", "reference_raw_rows"):
+            self.assertEqual(d[label]["rows_compared"], 192, label)
+            self.assertEqual(d[label]["byte_identical"], 192, label)
+            self.assertEqual(d[label]["summary_bound"], 192, label)
+        self.assertEqual(d["attempt_lineage"]["valid"], "i117-arm-a-integrated-cand-1.valid")
+        self.assertEqual(sorted(d["attempt_lineage"]["invalid"]),
+                         ["i117-arm-a-integrated-cand-1.launch-1",
+                          "i117-arm-a-integrated-cand-1.launch-2"])
+
+    def test_paired_records_retain_both_sides_not_booleans(self):
+        paired = _load(ARM_A / "paired-decision-records.json")
+        for label in ("candidate_rows", "reference_rows"):
+            rows = paired[label]
+            self.assertEqual(len(rows), 192, label)
+            for row in rows:
+                for side in ("control", "integrated"):
+                    self.assertIn(f"{side}_prefix_sha256", row)
+                    self.assertIn(f"{side}_prefix_len", row)
+                    self.assertIn(f"{side}_row_f32_sha256", row)
+                    self.assertIn(f"{side}_emitted_token", row)
+                for banned in ("prefix_sha_identical", "row_sha_identical",
+                               "trajectory_identical", "rule_proof_identical",
+                               "prefix_identical"):
+                    self.assertNotIn(banned, row)
+
+    def test_boundary_records_retain_both_lists(self):
+        records = _load(ARM_A / "capture-manifest-records.json")
+        self.assertEqual(len(records["cases"]), 24)
+        for case in records["cases"]:
+            for stage in ("stage1", "stage2", "stage3"):
+                for side in ("control", "integrated"):
+                    manifest = case[side][stage]
+                    self.assertIn("record_count", manifest)
+                    self.assertIn("record_sha256", manifest)
+                    self.assertIsInstance(manifest["record_sha256"], list)
+                    self.assertGreater(manifest["record_count"], 0)
+
+    def test_raw_row_manifests_are_per_decision(self):
+        for name in ("raw-row-manifest-laststage03.json",
+                     "raw-row-manifest-reference04.json"):
+            manifest = _load(ARM_A / name)
+            rows = manifest["rows"]
+            self.assertEqual(len(rows), 192, name)
+            keys = {(r["case_id"], r["decision_index"]) for r in rows}
+            self.assertEqual(len(keys), 192, name)
+            for row in rows:
+                for field in ("control_raw_row_sha256", "integrated_raw_row_sha256",
+                              "control_raw_row_size", "integrated_raw_row_size",
+                              "control_raw_row_path", "integrated_raw_row_path"):
+                    self.assertIn(field, row, name)
+
+    def test_invalid_attempts_distinct_with_zero_correctness(self):
+        lineage = _load(ARM_A / "attempt-lineage.json")
+        ids = [a["attempt_id"] for a in lineage["attempts"]]
+        self.assertEqual(len(ids), len(set(ids)))
+        self.assertEqual(len(ids), 3)
+        for attempt in lineage["attempts"]:
+            if attempt["validity"] == "INVALID":
+                self.assertEqual(attempt["correctness_bearing_observation_count"], 0)
+                for marker in ("CASE_ARM", "CASE_BEGIN", "PREFILL"):
+                    self.assertIn(marker, attempt["harness_semantics_termination_proof"])
+        valid = [a for a in lineage["attempts"] if a["validity"] == "VALID"]
+        self.assertEqual(len(valid), 1)
+        self.assertEqual(valid[0]["correctness_bearing_observation_count"], 192)
+        # every cleanup excerpt digest binds its verbatim excerpt
+        cl = lineage["cleanup_lineage"]
+        for key in list(cl):
+            if key.endswith("_digest") and isinstance(cl.get(key[:-7] + "_verbatim"), str):
+                self.assertEqual(
+                    cl[key],
+                    "sha256:" + hashlib.sha256(cl[key[:-7] + "_verbatim"].encode()).hexdigest(),
+                    key)
+
+    def test_prerun_revalidation_is_mechanical(self):
+        reval = _load(ARM_A / "prerun-revalidation.json")
+        self.assertEqual(reval["orchestrator_inferswarm"]["head"], ev.STARTING_MAIN)
+        self.assertTrue(reval["orchestrator_inferswarm"]["clean"])
+        self.assertNotIn("12:1x", json.dumps(reval))  # no approximate timestamps
+        hosts = {r["host"] for r in reval["freetoken_identities"]}
+        self.assertEqual(hosts, {"inferswarm01", "inferswarm03", "inferswarm04"})
+        for rec in reval["freetoken_identities"]:
+            roles = {c["role"]: c for c in rec["checkout_paths"]}
+            self.assertEqual(roles["integrated"]["head_at_probe"], INTEGRATED_PRODUCER)
+            self.assertEqual(roles["control"]["head_after_p0b_checkout"], CONTROL_PRODUCER)
+            self.assertTrue(roles["control"]["clean_after_p0b_checkout"])
+        cold = reval["arm_b_cold_roots"]
+        self.assertIn("EMPTY", cold["pre_arm_a_state"])
+        self.assertIn("NOT historical proof", cold["present_day_corroboration"]["label"])
+        self.assertTrue(reval["collector"]["raw_output_digest"].startswith("sha256:"))
+
+    def test_run_record_points_at_mechanical_records(self):
+        rr = _load(ARM_A / "run-record.json")
+        self.assertEqual(rr["invalid_attempts"]["mechanical_record"], "arm-a/attempt-lineage.json")
+        self.assertEqual(len(rr["invalid_attempts"]["distinct_attempt_ids"]), 3)
+        self.assertEqual(rr["fabric_revalidation"]["mechanical_record"], "arm-a/prerun-revalidation.json")
+        self.assertNotIn("12:1x", rr["fabric_revalidation_utc_window"])
+
+
+class MutationNegativeControls(unittest.TestCase):
+    """One mutation per trust boundary; the reducer must fail closed."""
+
+    def test_mutation_integrated_prefix_sha_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "paired-decision-records.json")
+            doc["candidate_rows"][7]["integrated_prefix_sha256"] = "f" * 64
+            _store(arm_a / "paired-decision-records.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_integrated_prefix_len_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "paired-decision-records.json")
+            doc["candidate_rows"][7]["integrated_prefix_len"] += 1
+            _store(arm_a / "paired-decision-records.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_integrated_emitted_token_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "paired-decision-records.json")
+            doc["candidate_rows"][9]["integrated_emitted_token"] += 1
+            _store(arm_a / "paired-decision-records.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_rule_proof_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "paired-decision-records.json")
+            doc["candidate_rows"][3]["integrated_rule_proof"]["tie_count"] = 99
+            _store(arm_a / "paired-decision-records.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_integrated_row_sha_only_in_paired_fails(self):
+        # change the integrated row SHA in the paired records but ALSO in the
+        # raw manifest consistently: must still fail because equality is
+        # derived, not stored (and the decision-table cross-binding holds
+        # only if BOTH sides change, which here they do not — index side fails)
+        def mutation(root, arm_a, evidence):
+            paired = _load(arm_a / "paired-decision-records.json")
+            paired["candidate_rows"][21]["integrated_row_f32_sha256"] = "c" * 64
+            _store(arm_a / "paired-decision-records.json", paired)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_stage_boundary_identity_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "capture-manifest-records.json")
+            doc["cases"][5]["integrated"]["stage2"]["record_sha256"][0] = "0" * 64
+            _store(arm_a / "capture-manifest-records.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_stage_boundary_count_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "capture-manifest-records.json")
+            doc["cases"][5]["integrated"]["stage1"]["record_count"] += 1
+            _store(arm_a / "capture-manifest-records.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_deleted_boundary_record_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "capture-manifest-records.json")
+            del doc["cases"][11]["control"]["stage3"]
+            _store(arm_a / "capture-manifest-records.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_duplicate_decision_key_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "paired-decision-records.json")
+            row = copy.deepcopy(doc["candidate_rows"][10])
+            doc["candidate_rows"][11] = row  # duplicate (case_id, decision_index)
+            doc["candidate_rows"].pop()
+            _store(arm_a / "paired-decision-records.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_removed_decision_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "paired-decision-records.json")
+            doc["candidate_rows"].pop(42)
+            _store(arm_a / "paired-decision-records.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_added_193rd_decision_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "paired-decision-records.json")
+            extra = copy.deepcopy(doc["candidate_rows"][0])
+            extra["decision_index"] = 8
+            doc["candidate_rows"].append(extra)
+            _store(arm_a / "paired-decision-records.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_wrong_raw_row_sha_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "raw-row-manifest-laststage03.json")
+            doc["rows"][100]["integrated_raw_row_sha256"] = "a" * 64
+            _store(arm_a / "raw-row-manifest-laststage03.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_row_mapped_to_wrong_case_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "raw-row-manifest-laststage03.json")
+            doc["rows"][4]["case_id"] = doc["rows"][4]["case_id"][:-1] + "9"
+            _store(arm_a / "raw-row-manifest-laststage03.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_row_mapped_to_wrong_decision_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "raw-row-manifest-laststage03.json")
+            doc["rows"][4]["decision_index"] = 7
+            _store(arm_a / "raw-row-manifest-laststage03.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_missing_raw_verification_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "raw-row-manifest-laststage03.json")
+            doc["rows"].pop(55)
+            _store(arm_a / "raw-row-manifest-laststage03.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_duplicate_raw_verification_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "raw-row-manifest-laststage03.json")
+            row = copy.deepcopy(doc["rows"][60])
+            doc["rows"][61] = row
+            doc["rows"].pop()
+            _store(arm_a / "raw-row-manifest-laststage03.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_decision_table_sha_not_matching_raw_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "raw-row-manifest-laststage03.json")
+            doc["rows"][30]["control_raw_row_sha256"] = "b" * 64
+            doc["rows"][30]["integrated_raw_row_sha256"] = "b" * 64
+            _store(arm_a / "raw-row-manifest-laststage03.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_reference_row_lacking_summary_binding_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "raw-row-manifest-reference04.json")
+            doc["rows"][17]["control_summary_bound"] = False
+            _store(arm_a / "raw-row-manifest-reference04.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_forged_aggregate_with_191_rows_fails(self):
+        # aggregate counters forged to 192 while only 191 valid rows exist:
+        # the reducer never reads aggregates, so the missing row must fail
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "raw-row-manifest-reference04.json")
+            doc["rows"].pop(3)
+            doc["files_compared"] = 192
+            doc["byte_identical"] = 192
+            doc["summary_bound_ok"] = 192
+            _store(arm_a / "raw-row-manifest-reference04.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_producer_substitution_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "index-integrated-candidate.json")
+            doc["producer"]["commit"] = CONTROL_PRODUCER
+            _store(arm_a / "index-integrated-candidate.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_dirty_run_index_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "index-control-reference.json")
+            doc["producer"]["dirty"] = True
+            _store(arm_a / "index-control-reference.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_nan_inf_nonzero_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "index-integrated-candidate.json")
+            doc["cases"][5]["nan_inf_count"] = 1
+            _store(arm_a / "index-integrated-candidate.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_wrong_checkpoint_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "index-control-candidate.json")
+            doc["subject"]["checkpoint_sha256"] = "0" * 64
+            _store(arm_a / "index-control-candidate.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_prerun_wrong_inferswarm_head_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "prerun-revalidation.json")
+            doc["orchestrator_inferswarm"]["head"] = "0" * 40
+            _store(arm_a / "prerun-revalidation.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_prerun_dirty_inferswarm_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "prerun-revalidation.json")
+            doc["orchestrator_inferswarm"]["clean"] = False
+            _store(arm_a / "prerun-revalidation.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_prerun_wrong_control_checkout_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "prerun-revalidation.json")
+            doc["freetoken_identities"][0]["checkout_paths"][1]["head_after_p0b_checkout"] = "0" * 40
+            _store(arm_a / "prerun-revalidation.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_prerun_wrong_integrated_checkout_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "prerun-revalidation.json")
+            doc["freetoken_identities"][2]["checkout_paths"][0]["head_at_probe"] = "0" * 40
+            _store(arm_a / "prerun-revalidation.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_prerun_wrong_topology_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "prerun-revalidation.json")
+            doc["compute_unit_identity"][2]["uuid"] = "GPU-0000"
+            _store(arm_a / "prerun-revalidation.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_prerun_missing_host_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "prerun-revalidation.json")
+            doc["freetoken_identities"].pop()  # drop inferswarm04
+            _store(arm_a / "prerun-revalidation.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_invalid_attempt_claims_observations_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "attempt-lineage.json")
+            doc["attempts"][0]["correctness_bearing_observation_count"] = 8
+            _store(arm_a / "attempt-lineage.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_invalid_attempt_ids_remerged_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "attempt-lineage.json")
+            doc["attempts"][2]["attempt_id"] = doc["attempts"][0]["attempt_id"]
+            _store(arm_a / "attempt-lineage.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_second_valid_attempt_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "attempt-lineage.json")
+            doc["attempts"][0]["validity"] = "VALID"
+            _store(arm_a / "attempt-lineage.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_missing_artifact_fails(self):
+        def mutation(root, arm_a, evidence):
+            (arm_a / "attempt-lineage.json").unlink()
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_malformed_artifact_fails(self):
+        def mutation(root, arm_a, evidence):
+            (arm_a / "prerun-revalidation.json").write_text("{not json")
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_physical_preflight_bytes_fails(self):
+        def mutation(root, arm_a, evidence):
+            target = evidence / "physical-preflight.json"
+            target.write_bytes(target.read_bytes() + b" ")
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_canonical_summary_bytes_fails(self):
+        def mutation(root, arm_a, evidence):
+            target = evidence / "canonical-summary.json"
+            doc = _load(target)
+            doc["mutation"] = True
+            _store(target, doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_holdout_case_in_fixture_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "fixture-corpus.json")
+            doc["cases"][0]["case_id"] = "h109-01-01-045"
+            _store(arm_a / "fixture-corpus.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_fixture_bytes_drift_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "fixture-corpus.json")
+            doc["cases"][0]["token_count"] = doc["cases"][0].get("token_count", 0) + 1 \
+                if isinstance(doc["cases"][0].get("token_count"), int) else doc["cases"][0]
+            _store(arm_a / "fixture-corpus.json", doc)
+        _expect_reducer_failure(mutation)
+
+
+class ManifestCoverageTests(unittest.TestCase):
     def test_arm_a_artifacts_exist_and_are_manifest_exact(self):
         entries = manifest_entries()
-        for name in ARM_A_ARTIFACTS:
+        for name in (*NEW_ARM_A_ARTIFACTS, *LEGACY_ARM_A_ARTIFACTS):
             path = ARM_A / name
             self.assertTrue(path.is_file(), f"missing Arm A artifact {name}")
             relative = str(path.relative_to(ROOT))
@@ -78,127 +540,36 @@ class ArmARetentionTests(unittest.TestCase):
                              f"{name} bytes drift from MANIFEST")
 
     def test_committed_evidence_convention_covers_arm_a(self):
-        expected = {f"arm-a/{name}" for name in ARM_A_ARTIFACTS}
         covered = {name for name in proof.COMMITTED_EVIDENCE_FILES
                    if name.startswith("arm-a/")}
+        expected = {f"arm-a/{name}" for name in (*NEW_ARM_A_ARTIFACTS, *LEGACY_ARM_A_ARTIFACTS)}
         self.assertEqual(covered, expected)
+        for name in expected:
+            self.assertTrue((ev.EVIDENCE / name).is_file(), name)
 
-    def test_witness_pass_accounting(self):
-        w = json.loads((ARM_A / "witness.json").read_text())
-        self.assertEqual(w["status"], "ISSUE117_ARM_A_EXECUTION_EQUIVALENCE_PASS")
-        self.assertEqual(w["control_producer"], CONTROL_PRODUCER)
-        self.assertEqual(w["integrated_producer"], INTEGRATED_PRODUCER)
-        self.assertEqual(w["case_count"], 24)
-        self.assertEqual(w["decisions_compared"], 192)
-        self.assertEqual(w["fp32_row_sha_matches"], 192)
-        self.assertEqual(w["fp32_row_sha_mismatches"], [])
-        self.assertEqual(w["mismatches"], {})
-        # every case contributes exactly 8 decisions and no mismatch fields
-        for case in w["cases"]:
-            self.assertEqual(case["decisions_checked"], 8)
-            self.assertTrue(case["identity_fields_match"])
-            self.assertEqual(case["mismatches"], [])
+    def test_accepted_118_and_preflight_pins_hold(self):
+        self.assertEqual(sha256_file(ev.EVIDENCE / "canonical-summary.json"),
+                         ev.CANONICAL_SUMMARY_118_SHA256)
+        self.assertEqual(sha256_file(ev.EVIDENCE / "physical-preflight.json"),
+                         ev.PHYSICAL_PREFLIGHT_FILE_SHA256)
 
-    def test_decision_table_rederives_192_identities(self):
-        t = json.loads((ARM_A / "decision-table.json").read_text())
-        self.assertEqual(t["row_count"], 192)
-        self.assertTrue(t["all_row_sha_identical"])
-        self.assertTrue(t["all_prefix_sha_identical"])
-        self.assertTrue(t["all_rule_proofs_identical"])
-        self.assertEqual(len(t["rows"]), 192)
-        self.assertEqual(len({(r["case_id"], r["decision_index"]) for r in t["rows"]}), 192)
-        for row in t["rows"]:
-            self.assertTrue(row["row_sha_identical"])
-            self.assertTrue(row["prefix_sha_identical"])
-            self.assertTrue(row["rule_proof_identical"])
-            self.assertEqual(row["row_f32_sha256_ctrl"], row["row_f32_sha256_integrated"])
-            self.assertEqual(len(row["row_f32_sha256_ctrl"]), 64)
-
-    def test_raw_row_verification_records(self):
-        v03 = json.loads((ARM_A / "verify-rows-laststage03.json").read_text())
-        self.assertEqual(v03["files_compared"], 192)
-        self.assertEqual(v03["byte_identical"], 192)
-        self.assertEqual(v03["problems"], [])
-        v04 = json.loads((ARM_A / "verify-rows-reference04.json").read_text())
-        self.assertEqual(v04["files_compared"], 192)
-        self.assertEqual(v04["byte_identical"], 192)
-        self.assertEqual(v04["summary_bound_ok"], 192)
-        self.assertEqual(v04["problems"], [])
-
-    def test_run_record_bindings(self):
-        r = json.loads((ARM_A / "run-record.json").read_text())
-        self.assertEqual(r["terminal_classification"],
-                         "ISSUE117_ARM_A_EXECUTION_EQUIVALENCE_PASS")
-        self.assertEqual(r["starting_inferwarm_main"], STARTING_MAIN)
-        self.assertEqual(r["frozen_integration_producer"], INTEGRATED_PRODUCER)
-        self.assertEqual(r["accepted_v5_calibration_producer_control"], CONTROL_PRODUCER)
-        self.assertEqual(r["fixture"]["fixture_digest"], FIXTURE_DIGEST)
-        self.assertEqual(r["fixture"]["case_count"], 24)
-        self.assertTrue(r["fixture"]["no_holdout_material"])
-        runs = r["runs"]
-        self.assertEqual(runs["control_reference"]["producer"], CONTROL_PRODUCER)
-        self.assertEqual(runs["control_candidate_chain"]["producer"], CONTROL_PRODUCER)
-        self.assertEqual(runs["integrated_reference"]["producer"], INTEGRATED_PRODUCER)
-        self.assertEqual(runs["integrated_candidate_chain"]["producer"], INTEGRATED_PRODUCER)
-        for name, run in runs.items():
-            self.assertEqual(run["case_count"], 24, name)
-            self.assertEqual(run["nan_inf_total"], 0, name)
-        self.assertEqual(len(r["invalid_attempts"]), 2)
-        for attempt in r["invalid_attempts"]:
-            self.assertIn("INVALID", attempt["validity"])
-            self.assertTrue(attempt["reason"])
-        # non-claims must preserve the Arm-B/C/D/E boundaries
-        joined = " ".join(r["non_claims"])
-        for marker in ("Arm B", "Arm C", "holdout"):
-            self.assertIn(marker, joined)
-
-    def test_run_indexes_match_retained_bytes(self):
-        for name, expected_producer, tag_field in (
-            ("index-control-reference.json", CONTROL_PRODUCER, "i117a-ctrl-ref"),
-            ("index-control-candidate.json", CONTROL_PRODUCER, "i117a-ctrl-cand"),
-            ("index-integrated-reference.json", INTEGRATED_PRODUCER, "i117a-int-ref"),
-            ("index-integrated-candidate.json", INTEGRATED_PRODUCER, "i117a-int-cand"),
-        ):
-            d = json.loads((ARM_A / name).read_text())
-            self.assertEqual(d["producer"]["commit"], expected_producer, name)
-            self.assertFalse(d["producer"]["dirty"], name)
-            self.assertEqual(d["tag"], tag_field, name)
-            self.assertEqual(d["case_count"], 24, name)
-            self.assertEqual(len(d["cases"]), 24, name)
-
-    def test_fixture_corpus_identity(self):
-        c = json.loads((ARM_A / "fixture-corpus.json").read_text())
-        self.assertEqual(c["schema"], "inferswarm.issue117.arm-a-fixture-corpus/1")
-        self.assertEqual(c["case_count"], 24)
-        self.assertEqual(c["source_fixture_digest"], FIXTURE_DIGEST)
-        self.assertEqual(
-            c["source_corpus_sha256"],
-            "b35f1915231d455cd964e9b645e58269ec63cdf483742907af39cc850f9fdb35")
-        ids = [case["case_id"] for case in c["cases"]]
-        self.assertEqual(len(ids), 24)
-        self.assertTrue(all(i.startswith("c109-") for i in ids))
-        self.assertFalse(any(i.startswith("h109-") for i in ids))
-
-    def test_tampered_witness_fails(self):
-        w = json.loads((ARM_A / "witness.json").read_text())
-        forged = copy.deepcopy(w)
-        forged["fp32_row_sha_matches"] = 191
-        self.assertNotEqual(forged["fp32_row_sha_matches"], w["fp32_row_sha_matches"])
-        # a forged PASS must be detectable: mismatch list must be consistent
-        # with the claimed count
-        self.assertNotEqual(
-            len(forged["fp32_row_sha_mismatches"]) + forged["fp32_row_sha_matches"],
-            forged["decisions_compared"])
-
-    def test_tampered_decision_table_fails(self):
-        t = json.loads((ARM_A / "decision-table.json").read_text())
-        forged = copy.deepcopy(t)
-        forged["rows"][0]["row_f32_sha256_integrated"] = "0" * 64
-        mismatched = [r for r in forged["rows"]
-                      if r["row_f32_sha256_ctrl"] != r["row_f32_sha256_integrated"]]
-        self.assertEqual(len(mismatched), 1)
-        self.assertNotEqual(forged["all_row_sha_identical"],
-                            not mismatched)
+    def test_reducer_module_is_pure_stdlib_and_execution_free(self):
+        source = (ROOT / "scripts" / "issue117_arm_a_evidence.py").read_text()
+        tree = ast.parse(source)
+        imported = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imported.update(a.name.split(".")[0] for a in node.names)
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                imported.add(node.module.split(".")[0])
+        allowed = {"hashlib", "json", "pathlib", "typing", "__future__"}
+        self.assertTrue(imported <= allowed, f"unexpected imports: {imported - allowed}")
+        # no stored-boolean authority: the reducer must not read the witness
+        # status or any all_*_identical aggregate as evidence
+        self.assertNotIn('"witness.json"', source)
+        self.assertNotIn("all_row_sha_identical", source)
+        self.assertNotIn("all_prefix_sha_identical", source)
+        self.assertNotIn("files_compared", source)
 
 
 if __name__ == "__main__":

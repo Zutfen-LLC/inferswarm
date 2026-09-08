@@ -17,7 +17,33 @@ reference, summary-SHA-bound). Two invalid launch attempts (staging
 error; dead last-stage service) produced no correctness-bearing
 observation and are retained with reasons. Arm B was NOT executed; the
 dedicated cold roots remain empty and untouched. No holdout material was
-used. STOPPED for maintainer review before Arm B.
+used.  STOPPED for maintainer review before Arm B.
+
+Retention/provenance correction (PR #122, same day, no physical execution):
+the terminal classification is now INDEPENDENTLY re-derivable from low-level
+retained records by `scripts/issue117_arm_a_evidence.py` (the Arm-A evidence
+reducer — pure stdlib, fails closed). New retained evidence under
+`evidence/arm-a/`: `paired-decision-records.json` (independently sourced
+control/integrated values for all 192 candidate + 192 reference decisions —
+prefix length/SHA, emitted token, argmax rule, rule proof, row SHA, element
+count; equality is only ever DERIVED from the two retained sides),
+`capture-manifest-records.json` (the full frozen stage-boundary
+capture-record lists for all 24 cases, both arms, stages 1-3),
+`raw-row-manifest-laststage03.json` and `raw-row-manifest-reference04.json`
+(per-decision raw FP32 byte verification: paths, sizes, SHA-256s, byte
+identity, and mechanical binding to the decision-table row SHAs and the
+reference summaries), `attempt-lineage.json` (distinct retained logical
+identities for the two invalid integrated launches and the valid run, with
+digest-bound transcript excerpts, harness-semantics termination proofs,
+mechanically derived zero-correctness counts, and honest cleanup lineage),
+and `prerun-revalidation.json` (the pre-Arm-A fabric/repository revalidation
+as a digest-bound machine record with exact observed timestamps, replacing
+the prior prose summary). 33 mutation negative-controls exercise every trust
+boundary against the reducer. The historical Arm-A evidence bytes (witness,
+decision table, run indexes, fixture, verify-rows aggregates) are unchanged;
+`run-record.json` gained pointers to the mechanical records and exact
+timestamps. Accepted #118 canonical-summary and physical-preflight bytes are
+pinned unchanged.
 
 Prior state: **`ISSUE117_PHYSICAL_PREFLIGHT_PASS`** (retained physical
 preflight record: `evidence/physical-preflight.json` and

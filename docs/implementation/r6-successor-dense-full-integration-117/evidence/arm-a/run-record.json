@@ -7,6 +7,18 @@
     "decisions_compared": 192,
     "fp32_row_sha_matches": 192,
     "fp32_row_sha_mismatches": [],
+    "independent_derivation": {
+      "additional_records": [
+        "arm-a/paired-decision-records.json",
+        "arm-a/capture-manifest-records.json",
+        "arm-a/raw-row-manifest-laststage03.json",
+        "arm-a/raw-row-manifest-reference04.json",
+        "arm-a/attempt-lineage.json",
+        "arm-a/prerun-revalidation.json"
+      ],
+      "module": "scripts/issue117_arm_a_evidence.py",
+      "note": "terminal classification re-derivable from low-level retained records (paired-decision-records, capture-manifest-records, raw-row manifests, indexes, attempt-lineage, prerun-revalidation); the aggregates in this run-record are convenience copies, not authority"
+    },
     "raw_row_byte_verification_laststage03": {
       "byte_identical": 192,
       "files_compared": 192,
@@ -21,28 +33,33 @@
     },
     "witness_sha256": "sha256:1606b00ac4f360c6bdb2c1636182431fca0948fb3ec54a4368c630ad1b5df279"
   },
+  "correction_note": "PR #122 retention/provenance correction (2026-09-08): recovered separate control/integrated per-decision identity records, per-row raw-byte verification manifests, distinct invalid-attempt lineage, and the mechanical pre-run revalidation record; no physical execution occurred during the correction and no original observation was altered.",
   "fabric_revalidation": {
-    "checkpoint": "/srv/models/gemma-r6/model.safetensors regular file 23919549408 bytes on 01/03/04 (authority sha 5a84cb31\u2026ff18d retained from accepted preflight; content re-verified per-run by frozen_subject_record)",
-    "cold_roots_issue117": "still empty on 01+03 (untouched by Arm A)",
-    "gpus_idle_pre_execution": true,
-    "inferswarm01": {
-      "freetoken": "924cd22e clean (FreeToken) / 7e5c8521 clean (FreeToken-110 control)",
-      "gpus": [
-        "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099 [0,16)",
-        "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55 [16,32)"
-      ],
-      "runtime": "torch 2.11.0+cu130, cuda 13.0, driver 610.57.04, triton 3.6.0, flashinfer 0.6.17"
-    },
-    "inferswarm03": {
-      "freetoken": "924cd22e clean (FreeToken) / 7e5c8521 clean (FreeToken-110 control)",
-      "gpu": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176 [32,48) last stage"
-    },
-    "inferswarm04": {
-      "freetoken": "924cd22e clean (FreeToken) / 7e5c8521 clean (FreeToken-110 control)",
-      "gpu": "GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03 RTX 3090 reference"
+    "mechanical_record": "arm-a/prerun-revalidation.json",
+    "note": "digest-bound, host-bound pre-Arm-A revalidation retained as a machine record (verbatim collector output, exact observed orchestrator timestamps); the prose summary below is derived convenience, not authority",
+    "prose_summary": {
+      "checkpoint": "/srv/models/gemma-r6/model.safetensors regular file 23919549408 bytes on 01/03/04 (authority sha 5a84cb31\u2026ff18d retained from accepted preflight; content re-verified per-run by frozen_subject_record)",
+      "cold_roots_issue117": "still empty on 01+03 (untouched by Arm A)",
+      "gpus_idle_pre_execution": true,
+      "inferswarm01": {
+        "freetoken": "924cd22e clean (FreeToken) / 7e5c8521 clean (FreeToken-110 control)",
+        "gpus": [
+          "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099 [0,16)",
+          "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55 [16,32)"
+        ],
+        "runtime": "torch 2.11.0+cu130, cuda 13.0, driver 610.57.04, triton 3.6.0, flashinfer 0.6.17"
+      },
+      "inferswarm03": {
+        "freetoken": "924cd22e clean (FreeToken) / 7e5c8521 clean (FreeToken-110 control)",
+        "gpu": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176 [32,48) last stage"
+      },
+      "inferswarm04": {
+        "freetoken": "924cd22e clean (FreeToken) / 7e5c8521 clean (FreeToken-110 control)",
+        "gpu": "GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03 RTX 3090 reference"
+      }
     }
   },
-  "fabric_revalidation_utc_window": "2026-09-08T12:1xZ revalidation immediately before Arm A execution (P0 record below)",
+  "fabric_revalidation_utc_window": "probe dispatched 2026-09-08T12:17:30Z, result observed 2026-09-08T12:17:44Z (exact orchestrator message timestamps; mechanical record: arm-a/prerun-revalidation.json)",
   "fixture": {
     "case_count": 24,
     "fixture_corpus_sha256": "sha256:22ffa8a906e9470f2ddbe5b46bddf3d99fd94aba35d1c126d2bb19354761e306",
@@ -50,22 +67,31 @@
     "no_holdout_material": true
   },
   "frozen_integration_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
-  "invalid_attempts": [
-    {
-      "attempt": "i117-arm-a-integrated-cand-1 (first)",
-      "phase": "integrated chain launch #1",
-      "reason": "staging error: reference summaries tar extracted with nested absolute path; chain runner FileNotFoundError before any prefill request",
-      "remediation": "re-staged per-case dirs; removed partial case dir; relaunched",
-      "validity": "INVALID \u2014 no correctness-bearing observation (no CASE_ARM/CASE_BEGIN/PREFILL issued; producer/clean gates passed but zero cases executed)"
-    },
-    {
-      "attempt": "i117-arm-a-integrated-cand-1 (second)",
-      "phase": "integrated chain launch #2",
-      "reason": "last-stage service on inferswarm03 had died from the abrupt teardown of launch #1 (WireError disconnect mid-frame); chain runner ConnectionRefused before any prefill",
-      "remediation": "relaunched last-stage service (ready.json verified), cleaned partial output, relaunched chain",
-      "validity": "INVALID \u2014 no correctness-bearing observation"
-    }
-  ],
+  "invalid_attempts": {
+    "distinct_attempt_ids": [
+      "i117-arm-a-integrated-cand-1.launch-1 (INVALID, correctness_bearing_observation_count = 0)",
+      "i117-arm-a-integrated-cand-1.launch-2 (INVALID, correctness_bearing_observation_count = 0)",
+      "i117-arm-a-integrated-cand-1.valid (VALID, 192 correctness-bearing observations)"
+    ],
+    "historical_prose": [
+      {
+        "attempt": "i117-arm-a-integrated-cand-1 (first)",
+        "phase": "integrated chain launch #1",
+        "reason": "staging error: reference summaries tar extracted with nested absolute path; chain runner FileNotFoundError before any prefill request",
+        "remediation": "re-staged per-case dirs; removed partial case dir; relaunched",
+        "validity": "INVALID \u2014 no correctness-bearing observation (no CASE_ARM/CASE_BEGIN/PREFILL issued; producer/clean gates passed but zero cases executed)"
+      },
+      {
+        "attempt": "i117-arm-a-integrated-cand-1 (second)",
+        "phase": "integrated chain launch #2",
+        "reason": "last-stage service on inferswarm03 had died from the abrupt teardown of launch #1 (WireError disconnect mid-frame); chain runner ConnectionRefused before any prefill",
+        "remediation": "relaunched last-stage service (ready.json verified), cleaned partial output, relaunched chain",
+        "validity": "INVALID \u2014 no correctness-bearing observation"
+      }
+    ],
+    "mechanical_record": "arm-a/attempt-lineage.json",
+    "note": "the historical process reused one --attempt-id label (i117-arm-a-integrated-cand-1) across three integrated-candidate launches; distinct retained logical identities (launch-1 INVALID / launch-2 INVALID / valid VALID) with digest-bound transcript excerpts, harness-semantics termination proofs, cleanup lineage, and mechanically derived zero-observation counts live in arm-a/attempt-lineage.json"
+  },
   "non_claims": [
     "No claim about participant-exact cold artifact acquisition (Arm B not executed; cold roots untouched).",
     "No ordinary external-Coordinator serving claim (Arm C not executed).",
@@ -95,6 +121,15 @@
     },
     "integrated_candidate_chain": {
       "attempt": "i117-arm-a-integrated-cand-1",
+      "attempt_lineage": {
+        "invalid_launches": [
+          "i117-arm-a-integrated-cand-1.launch-1",
+          "i117-arm-a-integrated-cand-1.launch-2"
+        ],
+        "mechanical_record": "arm-a/attempt-lineage.json",
+        "note": "the index attempt_id is the historical label shared by all three launches; this retained index binds exclusively to the valid launch (see attempt-lineage.json ordering proofs)",
+        "valid_logical_attempt_id": "i117-arm-a-integrated-cand-1.valid"
+      },
       "case_count": 24,
       "hosts": "inferswarm01 GPU-0/GPU-1 + inferswarm03 GPU-0",
       "index_sha256": "sha256:e081f84f6bcd39de2c43e99288a1243239fd64321bae027afaad6010f681728f",

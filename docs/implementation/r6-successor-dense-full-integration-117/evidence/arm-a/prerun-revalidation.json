@@ -1,0 +1,187 @@
+{
+ "arm_b_cold_roots": {
+  "arm_a_non_contamination": "Arm A never touched either root: all Arm-A outputs live under /srv/models/issue117/ and /srv/inferswarm/state/issue117/ (different trees, different st_dev in the accepted preflight accounting); probe-at-launch and post-run observations recorded no writes",
+  "pre_arm_a_state": "both roots EMPTY on inferswarm01 and inferswarm03 (probe: total 8, only . and .. entries, 0 files), absent on inferswarm04 (not an Arm-B participant); created 2026-09-08T05:20Z per the accepted physical-preflight record (prior nonexistent, creation retained as pre-execution preparation)",
+  "present_day_corroboration": {
+   "label": "RECONSTRUCTED_CORROBORATION_ONLY \u2014 present-day read-only observation, NOT historical proof; the historical fact rests on the P0 probe excerpt + accepted preflight record",
+   "observed_utc": "2026-09-08T14:28:32Z",
+   "result": "both roots still empty (0 files) on inferswarm01 and inferswarm03; directory mtimes unchanged since 2026-09-08 01:20 local (creation)"
+  },
+  "roots": [
+   "/srv/inferswarm/cache/issue117",
+   "/srv/inferswarm/materialized/issue117"
+  ]
+ },
+ "checkout_switch_evidence": {
+  "clean_command_digest": "sha256:09543ca2081b0e67fa2e4421ab839acc62bc01c50f14021d6aa1f61b92e9869a",
+  "clean_output_digest": "sha256:47ac97bea5c0c5320c87536d887a61f8e9b2c079f7b5b364284962685c66c73b",
+  "clean_output_verbatim_excerpt": "### inferswarm01\nHEAD=7e5c852163afd9aadfccc406be267e8d060e79ef\nclean=yes\n(identical on inferswarm03 and inferswarm04)",
+  "note": "P0b ordering proof: the switch+clean verification (12:21:40Z/12:21:51Z) strictly precedes the first control-arm launch (12:24:51Z, msg 223081) and all integrated-arm launches (12:46Z+).",
+  "switch_command_digest": "sha256:bfe33c5c43bfbcd724555f179f3d30988d52d105c812fdb7d72dd6156c8710da",
+  "switch_output_digest": "sha256:97d4f91952e85a5d8e69eb66a9170fa0067c771e4cf7c83b3f46746550149884",
+  "switch_output_verbatim_excerpt": "### inferswarm01\ncur=924cd22ea081f6d4ed471016faf01d427fc5b0d2\n... DETACHED to 7e5c8521\n?? benchmarks/inferswarm_110b/  (leftover root-owned untracked dir, removed immediately after)",
+  "timestamps": {
+   "clean_verified_utc": "2026-09-08T12:21:51Z",
+   "switch_observed_utc": "2026-09-08T12:21:40Z"
+  }
+ },
+ "checkpoint": {
+  "authority_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+  "content_binding_note": "the P0 probe validated kind/size/regularity per host; byte-level checkpoint identity is enforced by the frozen harness itself at every run: frozen_subject_record pins the authority sha and last_stage_service computes row-level sha256 over executed outputs; the full 23,919,549,408-byte content sha was last observed per-host in the accepted physical preflight (see arm-a/run-record.json accepted_physical_preflight_*).",
+  "file_kind": "plain regular file (lstat: is_reg true, is_symlink false)",
+  "hosts_validated": [
+   "inferswarm01",
+   "inferswarm03",
+   "inferswarm04"
+  ],
+  "path": "/srv/models/gemma-r6/model.safetensors",
+  "size_bytes": 23919549408
+ },
+ "collected_window": {
+  "label": "observed_orchestrator_utc (message timestamps of the session that ran Arm A)",
+  "probe_dispatched_utc": "2026-09-08T12:17:30Z",
+  "probe_result_observed_utc": "2026-09-08T12:17:44Z"
+ },
+ "collector": {
+  "dispatch_command_verbatim": "{\"command\":\"for h in inferswarm01 inferswarm03 inferswarm04; do echo \\\"######## $h\\\"; scp -q /tmp/i117_revalidate.sh $h:/tmp/ && ssh $h 'sudo -n bash /tmp/i117_revalidate.sh' 2>&1; done\",\"timeout\":300}",
+  "note": "read-only probe: nvidia-smi queries, git rev-parse/status per worktree, venv import-version probe, checkpoint lstat, cold-root ls, GPU idle/compute-app counts",
+  "raw_output_digest": "sha256:e05419754ac0152619bd7ed37dc6f94bf4f6a4c6defd3f19ac0c727165541add",
+  "script_sha256": "sha256:d6a7b4af542fcba766d69e7b023545336b197a6085db14565cfa02f77bb40684"
+ },
+ "compute_unit_identity": [
+  {
+   "compute_cap": "8.6",
+   "host": "inferswarm01",
+   "layers": "[0,16)",
+   "product": "NVIDIA GeForce RTX 3060",
+   "role": "candidate stage 1",
+   "slot": "gpu-0",
+   "uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"
+  },
+  {
+   "compute_cap": "8.6",
+   "host": "inferswarm01",
+   "layers": "[16,32)",
+   "product": "NVIDIA GeForce RTX 3060",
+   "role": "candidate stage 2",
+   "slot": "gpu-1",
+   "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+  },
+  {
+   "compute_cap": "8.6",
+   "host": "inferswarm03",
+   "layers": "[32,48)",
+   "product": "NVIDIA GeForce RTX 3060",
+   "role": "candidate last stage",
+   "slot": "gpu-0",
+   "uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176"
+  },
+  {
+   "compute_cap": "8.6",
+   "host": "inferswarm04",
+   "layers": "reference",
+   "product": "NVIDIA GeForce RTX 3090",
+   "role": "reference executor",
+   "slot": "gpu-0",
+   "uuid": "GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03"
+  }
+ ],
+ "freetoken_identities": [
+  {
+   "checkout_paths": [
+    {
+     "head_at_probe": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+     "path": "/home/zutfen/FreeToken",
+     "porcelain_at_probe": "empty (DIRTY=0)",
+     "role": "integrated",
+     "validity": "exact frozen integrated producer, clean, at probe time and at every launch (require_producer_identity re-verified per launch)"
+    },
+    {
+     "clean_after_p0b_checkout": true,
+     "head_after_p0b_checkout": "7e5c852163afd9aadfccc406be267e8d060e79ef",
+     "head_at_probe": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+     "path": "/home/zutfen/FreeToken-110",
+     "porcelain_at_probe": "empty (DIRTY=0)",
+     "role": "control",
+     "validity": "CONTROL WORKTREE IDENTITY WINDOW: at P0 probe time this worktree still carried the integrated producer (left over from the V5 campaign); during P0b (staging phase, BEFORE any model execution) it was checked out to the exact accepted control producer 7e5c8521 and verified clean. All CONTROL-arm executions (reference 12:24Z launch, chain 12:42Z) ran strictly after this window with require_producer_identity(7e5c8521) passing per launch. No model execution occurred while this worktree was at 924cd22e under the control role."
+    }
+   ],
+   "collected_utc_probe": "2026-09-08T12:17:44Z",
+   "collector_evidence_digest": "sha256:031e56809648fd0a47114331a19c543c550e36d708200c4b41a90c6003712c34",
+   "host": "inferswarm01"
+  },
+  {
+   "checkout_paths": [
+    {
+     "head_at_probe": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+     "path": "/home/zutfen/FreeToken",
+     "porcelain_at_probe": "empty (DIRTY=0)",
+     "role": "integrated",
+     "validity": "exact frozen integrated producer, clean, at probe time and at every launch (require_producer_identity re-verified per launch)"
+    },
+    {
+     "clean_after_p0b_checkout": true,
+     "head_after_p0b_checkout": "7e5c852163afd9aadfccc406be267e8d060e79ef",
+     "head_at_probe": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+     "path": "/home/zutfen/FreeToken-110",
+     "porcelain_at_probe": "empty (DIRTY=0)",
+     "role": "control",
+     "validity": "CONTROL WORKTREE IDENTITY WINDOW: at P0 probe time this worktree still carried the integrated producer (left over from the V5 campaign); during P0b (staging phase, BEFORE any model execution) it was checked out to the exact accepted control producer 7e5c8521 and verified clean. All CONTROL-arm executions (reference 12:24Z launch, chain 12:42Z) ran strictly after this window with require_producer_identity(7e5c8521) passing per launch. No model execution occurred while this worktree was at 924cd22e under the control role."
+    }
+   ],
+   "collected_utc_probe": "2026-09-08T12:17:44Z",
+   "collector_evidence_digest": "sha256:035fd28125ff52b86b59a0f8648c4da97ed0246c141bfe7a91513d496400730c",
+   "host": "inferswarm03"
+  },
+  {
+   "checkout_paths": [
+    {
+     "head_at_probe": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+     "path": "/home/zutfen/FreeToken",
+     "porcelain_at_probe": "empty (DIRTY=0)",
+     "role": "integrated",
+     "validity": "exact frozen integrated producer, clean, at probe time and at every launch (require_producer_identity re-verified per launch)"
+    },
+    {
+     "clean_after_p0b_checkout": true,
+     "head_after_p0b_checkout": "7e5c852163afd9aadfccc406be267e8d060e79ef",
+     "head_at_probe": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+     "path": "/home/zutfen/FreeToken-110",
+     "porcelain_at_probe": "empty (DIRTY=0)",
+     "role": "control",
+     "validity": "CONTROL WORKTREE IDENTITY WINDOW: at P0 probe time this worktree still carried the integrated producer (left over from the V5 campaign); during P0b (staging phase, BEFORE any model execution) it was checked out to the exact accepted control producer 7e5c8521 and verified clean. All CONTROL-arm executions (reference 12:24Z launch, chain 12:42Z) ran strictly after this window with require_producer_identity(7e5c8521) passing per launch. No model execution occurred while this worktree was at 924cd22e under the control role."
+    }
+   ],
+   "collected_utc_probe": "2026-09-08T12:17:44Z",
+   "collector_evidence_digest": "sha256:48c321aabe9769bbb9468615e3ba9b2fef345976633a53c7d55d5cfc9936b574",
+   "host": "inferswarm04"
+  }
+ ],
+ "gpu_idle_pre_execution": "all topology GPUs at 1 MiB / 0-1% with 0 compute apps on 01/03/04 at probe time",
+ "note_on_inferswarm03_second_gpu": "GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0 (RTX 3060) also reported by the probe; it is NOT part of the frozen topology and no Arm-A process used it (idle 1 MiB at probe time).",
+ "orchestrator_inferswarm": {
+  "clean": true,
+  "collected_utc": "2026-09-08T12:16:09Z",
+  "excerpt_digest": "sha256:1da8d980c5e0950b8fcce87df91b23879e70a0fb0917bd0a39872ea871d11341",
+  "git_status_porcelain": "empty (clean; git status --porcelain printed nothing before Arm A; branch main in sync with origin/main at 51c8adee)",
+  "head": "51c8adeeedf6d6f0a16db994ca0a0cf259bed52f",
+  "preflight_bytes_pinned": "sha256(evidence/physical-preflight.json) = e9711969a4443f9ea6f3287a06383b8e0d9ef2478f65059acce0e787f8fe0a06, embedded preflight digest sha256:bf7e0b312c8cb34ba5ced1c205039374dc018dbbbeba3cd9d2652a7b23a49e93 (verified in the same message)",
+  "repo_root": "/home/zutfen/src/inferswarm"
+ },
+ "provenance_note": "The pre-Arm-A P0 fabric/repository revalidation that authorized Arm A to proceed after accepted PR #121, mechanically retained from the contemporaneous orchestrator session (20260908_073733_03d718): verbatim collector outputs with digests, exact observed timestamps, and the collector command. NO present-day SSH state is used as historical proof anywhere in this record; the single present-day corroboration below is explicitly labeled.",
+ "runtime_identity": {
+  "cuda_runtime": "13.0",
+  "flashinfer": "0.6.17",
+  "note": "identical probe output on all three participating compute hosts (venv import-version probe at /home/zutfen/FreeToken/.venv)",
+  "nvidia_driver": "610.57.04",
+  "observed_hosts": [
+   "inferswarm01",
+   "inferswarm03",
+   "inferswarm04"
+  ],
+  "torch": "2.11.0+cu130",
+  "triton": "3.6.0"
+ },
+ "schema": "inferswarm.issue117.arm-a.prerun-revalidation/1",
+ "timestamp_note": "All timestamps in this record are directly observed orchestrator session/DB timestamps, not reconstructed; the prior run-record's minute-level approximation of the probe window has been superseded by the exact values in collected_window."
+}
