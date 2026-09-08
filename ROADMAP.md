@@ -493,6 +493,20 @@ has begun: no model execution, no CUDA, no calibration, no stress or
 candidate execution, and no holdout decrypt occurred. Record:
 `docs/qualification/gemma4-12b-it-v5-campaign-110/`.
 
+Issue #110 then executed to the terminal verdict `V5_QUALIFICATION_PASS`
+(accepted merge `546ff9d`): after maintainer unseal authorization, the
+single-use h109 holdout was consumed exactly once and produced 24/24
+reference and 24/24 candidate teacher-forced passes with 192/192 semantic
+identities and zero invalid attempts, within the frozen #109 limits
+(adjudication SHA-256
+`f024f8b3394686ff098459b657ce6dba62d7f190972663e3929ef4a574ab7a70`).
+Issue #115 subsequently retained a hash-bound two-copy durable raw-evidence
+archive, expunged ~729 GiB of node-local campaign scratch, and completed the
+audited cleanup (accepted merge `d37bd30`). The correctness-qualification
+lane therefore no longer blocks a successor dense full-integration attempt.
+Records: `docs/qualification/gemma4-12b-it-v5-campaign-110/` and its
+`cleanup/` area.
+
 Issue #99 is complete on the orthogonal distribution lane: the minimum
 plan-driven model artifact acquisition proof required by ADR 0009 terminated
 `PLAN_DRIVEN_ARTIFACT_ACQUISITION_PASS` (see its section under the successor
@@ -826,11 +840,43 @@ digests, cache layout, and source descriptors remain unfrozen; no public
 CAS/manifest or peer protocol was introduced, and no physical FreeToken
 integration is claimed. The #97 physical qualification lane was not touched.
 
-### R6 successor full integration attempt — future independent gate
+### R6 successor full integration attempt
 
-A new dense full-integration attempt remains blocked on applicable successor
-qualification evidence. Do not reuse the historical R6 verdict, back-fit new
-limits to R6/#81/#88 evidence, or treat any failed campaign as a pass.
+Historical issue #65 remains permanently
+`R6_DENSE_ARCHITECTURE_FALSIFICATION_FAIL` and is never reinterpreted. A new
+successor attempt became admissible only through later correctness doctrine
+(#108/#109) and terminal V5 qualification evidence (#110) plus the #115
+cleanup — not by revisiting the failed campaign.
+
+#### Issue #117 — physical full-integration gate — CURRENT ARCHITECTURE-INTEGRATION FRONTIER
+
+Issue [#117](https://github.com/Zutfen-LLC/inferswarm/issues/117) is the
+first post-V5 architecture-integration gate: prove that a normal client
+request can automatically realize and serve the V5-qualified dense Gemma
+plan through the doctrine-shaped architecture (external CPU-only
+Coordinator → strategy → generic planner → qualification-applicability
+barrier → plan-driven participant-exact artifact acquisition → selective
+materialization → ordinary fenced serving), with no manual whole-model
+distribution, no model-specific planner branches, and no change to the
+execution math V5 qualified.
+
+The synthetic CPU fixture campaign passed with disposition
+`ISSUE117_CPU_FIXTURE_PASS` (base `d37bd30`). The implementation-freeze
+terminal state is `ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`. Retained V5
+evidence does not provide a mechanical checkpoint-byte derivation or a
+complete independently reconstructable qualification subject. The fixture,
+producer-delta audit, strategy/planner composition, and physical-preflight
+tooling remain useful CPU/static results. They do not make the physical gate
+applicable. Implementation and evidence:
+`scripts/issue117_*.py`, `tests/test_issue117_*.py`, and the retained record
+under `docs/implementation/r6-successor-dense-full-integration-117/`.
+
+Blocked pending retained authority evidence, then the physical preflight and Arms A–E on the fabric (V5 execution-math
+bridge 192/192; canonical cold acquisition/realization; ordinary
+Coordinator-serving versus direct-control equivalence; physical warm restart;
+locality mutation), each governed by the narrow stop states the issue
+defines. GLM-5.3 / issue #13 remains a later large-model falsifier, not this
+gate.
 
 ---
 

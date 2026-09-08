@@ -1,0 +1,21 @@
+{
+  "base": "d37bd301a5ea361644160f92427aa75bff658b61",
+  "constraint": "historical evidence documents were not rewritten; current Issue #117 status is synchronized as blocked",
+  "facts_recorded": [
+    "historical R6 / issue #65 remains R6_DENSE_ARCHITECTURE_FALSIFICATION_FAIL",
+    "issue #108 doctrine complete (POST_V4_STATISTICAL_METRIC_DOCTRINE_ACCEPTED)",
+    "issue #109 methodology complete (GEMMA_V5_CORRECTED_QUALIFICATION_METHODOLOGY_FROZEN)",
+    "issue #110 terminal V5_QUALIFICATION_PASS",
+    "issue #115 cleanup complete",
+    "retained V5 evidence does not reconstruct a non-forgeable checkpoint authority or accepted qualification subject",
+    "issue #117 implementation freeze is blocked; the CPU fixture result is scoped to ISSUE117_CPU_FIXTURE_PASS",
+    "GLM-5.3 / issue #13 remains a later large-model falsifier, not this gate"
+  ],
+  "record_digest": "sha256:cf3fb86ff878394ea631329ad9960953e0f4675432d7f78740c19f37ff68e81e",
+  "schema": "inferswarm.issue117.documentation-synchronization/1",
+  "synced_files": [
+    "ROADMAP.md",
+    "README.md",
+    "ARCHITECTURE.md"
+  ]
+}
