@@ -22,7 +22,7 @@ The first is not a test to relax. See the frozen-producer rule in
 | `jsonschema` | `test_issue74_methodology`, `test_issue79_v2_threshold_tooling`, `test_issue86_v3_methodology`, `test_issue110_v5_custody_handoff`, and the v2/v3 unseal preflights |
 | `numpy` | `test_analyze_phase1_p6` only |
 | `pyyaml` | the CI YAML check, not the test suite |
-| `openssl` on `PATH` | the sealing/preflight tools, not the test suite |
+| `openssl` on `PATH` | the sealing/preflight tools and the synthetic certificate/custody tests in `test_issue109_v5_methodology` and `test_issue110_v5_custody_handoff` |
 
 Everything else is standard library. No test imports `torch`, initializes
 CUDA, or contacts a GPU node — `test_issue115_cleanup_retention` mechanically
