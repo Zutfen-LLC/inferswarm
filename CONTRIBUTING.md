@@ -40,6 +40,28 @@ temporary internal structure.
    [pull request template](.github/pull_request_template.md).
 5. Respond to review feedback.
 
+## Running the checks locally
+
+The repository is documentation plus CPU-only evidence tooling. Nothing here
+needs a GPU.
+
+```bash
+python3 -m pip install --user jsonschema numpy
+python3 scripts/check_phase0_workloads.py
+python3 -m unittest $(ls tests/test_*.py | sed 's#tests/#tests.#; s#\.py$##')
+```
+
+On a clean working tree the suite passes with five skips, all of them
+host-local resources this repository deliberately does not carry. A dirty
+working tree adds a sixth skip — commit or stash before treating
+`test_issue117_preflight` as having run. Details, including which modules CI
+runs, are in [`tests/README.md`](tests/README.md).
+
+Before editing anything under `scripts/`, read the frozen-producer rule in
+[`scripts/README.md`](scripts/README.md). Most of those files are hash-pinned
+by retained evidence, and even a docstring fix invalidates the record that
+cites them.
+
 ## Tests and benchmarks
 
 - **Tests are required where applicable.** Documentation-only changes don't

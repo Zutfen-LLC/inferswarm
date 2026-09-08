@@ -605,9 +605,10 @@ integration attempt: issue #117 is the current architecture-integration
 frontier, composing automatic planning, participant-exact plan-driven
 artifact distribution, and ordinary fenced serving around the unchanged
 qualified execution math. The CPU/static implementation freeze is retained
-under `docs/implementation/r6-successor-dense-full-integration-117/`; the
-physical preflight and fabric arms are governed by that issue's narrow stop
-states.
+under `docs/implementation/r6-successor-dense-full-integration-117/`. The
+physical preflight has been executed on the real fabric and retained
+`ISSUE117_PHYSICAL_PREFLIGHT_PASS`; Arms A-E remain pending and are governed by
+that issue's narrow stop states.
 
 FreeToken remains the initial validation/integration vehicle, not the permanent
 product boundary. Reusable runtime functionality should eventually live behind

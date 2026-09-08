@@ -253,17 +253,26 @@ See [`docs/integrations/freetoken.md`](docs/integrations/freetoken.md).
 
 ```text
 .github/             issue templates, pull request template, CI
+docs/                documentation map and reading rules
 docs/adr/            architecture decision records
-docs/architecture/   normative Fabric Doctrine
+docs/architecture/   normative Fabric Doctrine and its supplements
 docs/benchmarks/     benchmark methodology/results
 docs/investigations/ research inputs and feasibility work
 docs/implementation/ active/historical experiment plans and handoffs
 docs/protocols/      semantic-boundary and transport design notes
+docs/qualification/  heterogeneous correctness-qualification lane (v1-v5)
 docs/integrations/   host-engine integration notes
+scripts/             CPU-only, deterministic, fail-closed evidence tooling
+tests/               tests that guard the retained evidence
 ARCHITECTURE.md      derived architecture overview
 BENCHMARKING.md      benchmark/evidence contract
 ROADMAP.md           evidence-gated successor roadmap
 ```
+
+[`docs/README.md`](docs/README.md) maps the whole documentation tree and states
+the rules for reading retained evidence. [`scripts/README.md`](scripts/README.md)
+and [`tests/README.md`](tests/README.md) cover the tooling and how to verify the
+repository locally.
 
 ## License
 

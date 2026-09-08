@@ -749,10 +749,20 @@ exceeded its frozen limit by 2.56%. Evidence PR #89 and FreeToken producer PR
 #30 are merged; the failure is immutable and does not authorize threshold
 tuning or rerun.
 
-### Post-v3 numerical-envelope diagnosis — issue #90 — COMPLETE (pending maintainer acceptance)
+### Post-v3 numerical-envelope diagnosis — issue #90 — COMPLETE — accepted
 
-Issue #90 is complete. Terminal classification:
+Issue #90 is complete and **maintainer-accepted**. Terminal classification:
 `V3_ENVELOPE_DIAGNOSIS_ORDINARY_TAIL`.
+
+Acceptance record: PR #92, merged as
+[`b3562c48c45d97375a815ff68cc8d7bc28802906`](https://github.com/Zutfen-LLC/inferswarm/commit/b3562c48c45d97375a815ff68cc8d7bc28802906)
+("accept post-v3 envelope diagnosis"), after maintainer statistical
+corrections.
+
+Accepting the *diagnosis* changes nothing about the *verdict* it diagnoses.
+Issue #88 remains permanently `V3_HOLDOUT_FAIL`, and the `h86-*` observations
+remain permanently diagnostic-only. An accepted ordinary-tail explanation is
+not a waiver, a tolerance, or grounds for a rerun.
 
 Delivered via branch `issue-90-post-v3-diagnosis`: fail-closed CPU-only
 diagnosis tool `scripts/issue90_post_v3_diagnosis.py` (hash-pinned to the
@@ -840,6 +850,49 @@ digests, cache layout, and source descriptors remain unfrozen; no public
 CAS/manifest or peer protocol was introduced, and no physical FreeToken
 integration is claimed. The #97 physical qualification lane was not touched.
 
+### Plan-driven artifact orchestration — issue #101 — COMPLETE
+
+Issue [#101](https://github.com/Zutfen-LLC/inferswarm/issues/101) extended the
+accepted #99 acquisition core to multiple participants. Terminal disposition:
+
+`PLAN_DRIVEN_ARTIFACT_ORCHESTRATION_PASS`
+
+Proven on a CPU-only three-Node fixture across two frozen plan epochs: verified
+Node inventory, deterministic source selection, exact acquisition
+authorization, peer publication, and replacement-plan deltas. Node C first
+acquires from Nodes A and B and the origin; A then acquires newly published
+state from C; C later acquires newly published state from A. The independent
+execution references match in both epochs, and participant IDs are deliberately
+distinct from Node IDs so the two are not conflated.
+
+Implementation and evidence: `scripts/issue101_*.py`, tests
+`tests/test_issue101_orchestration.py` / `tests/test_issue101_proof.py`, and the
+retained record under
+[`docs/implementation/plan-driven-artifact-orchestration-101/`](docs/implementation/plan-driven-artifact-orchestration-101/README.md).
+No public CAS/manifest or peer protocol was frozen.
+
+### Artifact-locality transition planning — issue #103 — COMPLETE
+
+Issue [#103](https://github.com/Zutfen-LLC/inferswarm/issues/103) answered
+whether already-acquired artifact locality may influence planning. Terminal
+disposition:
+
+`ARTIFACT_LOCALITY_TRANSITION_PLANNING_PASS`
+
+Locality is **ranking evidence**, not a technical feasibility rule and not an
+unconditional candidate preference. The canonical two-arm CPU campaign changes
+only verified local inventory between arms — the legal candidate set,
+technical feasibility, and the path/execution evidence stay byte-identical —
+and the transition winner changes while the execution winner does not. The
+planner keeps technical feasibility, policy eligibility, and integrity
+eligibility separate, excludes a candidate before ranking work when a gate
+fails, and leaves a feasible candidate `FEASIBLE_UNRANKED` when its ranking
+evidence is missing, inapplicable, invalid, or ambiguous.
+
+Implementation and evidence: `scripts/issue103_*.py`, tests
+`tests/test_issue103_planner.py`, and the retained record under
+[`docs/implementation/artifact-locality-transition-planning-103/`](docs/implementation/artifact-locality-transition-planning-103/README.md).
+
 ### R6 successor full integration attempt
 
 Historical issue #65 remains permanently
@@ -879,18 +932,23 @@ may now be re-evaluated: the current state is recorded additively in
 historical record. The physical preflight now mechanically requires the
 canonical V5-geometry candidate to derive `QUALIFICATION_APPLICABLE`
 against exactly the accepted evidence-derived record; an honest
-`QUALIFICATION_NOT_APPLICABLE` for that candidate fails the preflight. The physical preflight has still not run and
-Arms A-E remain pending; the physical gate is not unblocked until the
-repaired preflight is itself reviewed/accepted. Implementation and evidence:
+`QUALIFICATION_NOT_APPLICABLE` for that candidate fails the preflight.
+
+The repaired preflight has since been executed on the real fabric (`inferswarm00/01/03/04`) at the accepted base
+`d127879a` with FreeToken at the frozen integration producer `924cd22e`,
+observed `PREFLIGHT_VALID` with zero failures, and retained
+`ISSUE117_PHYSICAL_PREFLIGHT_PASS` (PR #121). Arms A-E remain pending; the
+physical gate is not unblocked until that preflight PASS is itself
+reviewed/accepted. Implementation and evidence:
 `scripts/issue117_*.py`, `tests/test_issue117_*.py`, and the retained record
 under `docs/implementation/r6-successor-dense-full-integration-117/`.
 
-Pending maintainer acceptance of the repaired preflight, then the physical preflight and Arms A–E on the fabric (V5 execution-math
-bridge 192/192; canonical cold acquisition/realization; ordinary
-Coordinator-serving versus direct-control equivalence; physical warm restart;
-locality mutation), each governed by the narrow stop states the issue
-defines. GLM-5.3 / issue #13 remains a later large-model falsifier, not this
-gate.
+Pending maintainer acceptance of the retained preflight PASS, then Arms A-E on
+the fabric (V5 execution-math bridge 192/192; canonical cold
+acquisition/realization; ordinary Coordinator-serving versus direct-control
+equivalence; physical warm restart; locality mutation), each governed by the
+narrow stop states the issue defines. GLM-5.3 / issue #13 remains a later
+large-model falsifier, not this gate.
 
 ---
 
@@ -949,8 +1007,8 @@ simplicity/coverage benefit is worth any measured performance cost.
 ### Adaptive Demand Profiles
 
 Demand-profile learning from model-wide, profile/Swarm history, and live
-structural demand is doctrine-approved but does not block the completed R0-R4
-gates or current R5A.
+structural demand is doctrine-approved. It did not block the completed R0-R5B
+gates and does not block the current issue #117 integration gate.
 
 Introduce it only when a strategy exposes a meaningful demand signal and there
 are enough legal placement alternatives for adaptation to matter. It should be
@@ -975,7 +1033,7 @@ NVMe tier or assume it belongs on the latency-critical hot path.
 
 The Gen3 x8 third-GPU retest remains useful hardware-causality evidence. Its
 result can refine applicable resource/path evidence but does not define a
-universal link-class policy or block the current R5A serving gate.
+universal link-class policy or block the current issue #117 integration gate.
 
 ---
 
