@@ -1,0 +1,62 @@
+{
+  "classification": "RECOVERED_FROM_CONTEMPORANEOUS_EVIDENCE",
+  "freetoken_checkouts": {
+    "inferswarm01": {
+      "checkout_path": "/home/zutfen/FreeToken",
+      "clean": true,
+      "collected_utc": "2026-09-08T05:29:00Z",
+      "collected_utc_note": "approximate, reconstructed from transcript context (assembler activity at 05:29:00Z); the mechanical fields are digest-bound via the frozen embedded record, which carries no timestamp",
+      "collector_command_identity": "frozen collector issue117.preflight.repository-identity-collector/1, embedded in physical-preflight.json implementation.freetoken_identity (repo_root /home/zutfen/FreeToken, repository_identity_digest sha256:d7f124993e2dd809e87e3f80b9a3eb68b1cf1473f95e290283930f6fe8fe1796)",
+      "evidence_source": "evidence/physical-preflight.json (frozen preflight record) + PREPARED_OK transcript msg 222401 + git reflog 2026-09-08T05:19:20Z checkout to 924cd22",
+      "host": "inferswarm01",
+      "mechanical_digest": "sha256:d7f124993e2dd809e87e3f80b9a3eb68b1cf1473f95e290283930f6fe8fe1796",
+      "observed_head": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+      "status_porcelain": ""
+    },
+    "inferswarm03": {
+      "checkout_path": "/home/zutfen/FreeToken",
+      "clean": true,
+      "collected_utc": "2026-09-08T05:19:23Z",
+      "collector_command_identity": "prepare_freetoken.sh (sha256 37786c85e035a3658aceb65472648d66b8a99a342f05f3f4a9a02ce759a369e5): git fetch origin; branch -r --contains verified; post-state rev-parse == producer asserted; test -z \"$(git status --porcelain)\" asserted under set -euo pipefail",
+      "evidence_sha256": "sha256:f50a86cf43babf76bb4aaa108ba0822f4d32562dd7dd85c15e662de5f2da90f3",
+      "evidence_source": "PREPARED_OK transcript msg 222401 (03 section: post-state 924cd22..., PREPARED_OK) + git reflog 2026-09-08T05:19:23Z checkout: moving from main to 924cd22...",
+      "host": "inferswarm03",
+      "observed_head": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+      "status_porcelain": ""
+    },
+    "inferswarm04": {
+      "checkout_path": "/home/zutfen/FreeToken",
+      "clean": true,
+      "collected_utc": "2026-09-08T05:19:25Z",
+      "collector_command_identity": "prepare_freetoken.sh (sha256 37786c85...): identical fail-closed assertions; post-state asserted, porcelain-empty asserted",
+      "evidence_sha256": "sha256:f50a86cf43babf76bb4aaa108ba0822f4d32562dd7dd85c15e662de5f2da90f3",
+      "evidence_source": "PREPARED_OK transcript msg 222401 (04 section: post-state 924cd22..., PREPARED_OK line) + git reflog 2026-09-08T05:19:25Z checkout: moving from inferswarm-r6 to 924cd22...",
+      "host": "inferswarm04",
+      "observed_head": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+      "status_porcelain": ""
+    },
+    "orchestrator": {
+      "checkout_path": "/home/zutfen/src/FreeToken",
+      "clean": true,
+      "collected_utc": "2026-09-08T05:02:05Z",
+      "collector_command_identity": "git -C ~/src/FreeToken rev-parse HEAD && git status --porcelain | wc -l (session terminal msg 222348; porcelain count 0; verified pre-preparation and unchanged through the window; the checkout was never modified during the preflight)",
+      "evidence_sha256": "sha256:4fc507ca330491d30c7e716b1886a39bfd78773b7ad349135edfcc5f221d5d8c",
+      "evidence_source": "Hermes session 20260908_005756_11cb3d message 222348 (verbatim command output); corroborated by the orchestrator repo reflog (latest entry 2026-09-07T08:29:29-04:00 \u2014 no reflog activity on 2026-09-08, mechanically consistent with no modification during the window)",
+      "host": "zutfen",
+      "observed_head": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+      "status_porcelain": ""
+    }
+  },
+  "frozen_integration_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "non_claims": [
+    "Collected post-preparation, pre-verdict. Current-state re-observation was NOT used as historical proof; git reflogs and verbatim session transcript output from the preflight window are the retained authority.",
+    "inferswarm01's identity additionally carries the frozen collector's mechanical repository_identity_digest from inside the frozen preflight record itself."
+  ],
+  "preflight_window": {
+    "end": "2026-09-08T05:31:00Z",
+    "start": "2026-09-08T05:19:17Z"
+  },
+  "record_digest": "sha256:8beacfb20bba4500cdcf395461dc934332b801f741880e917455301e0e01d492",
+  "recovered_utc": "2026-09-08T06:12:00Z",
+  "schema": "inferswarm.issue117.physical-preflight-freetoken-identities/1"
+}

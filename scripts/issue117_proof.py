@@ -98,6 +98,7 @@ PRODUCERS = [
     "tests/test_issue117_provenance.py",
     "tests/test_issue117_checkpoint_authority.py",
     "tests/test_issue117_accepted_subject.py",
+    "tests/test_issue117_physical_retention.py",
 ]
 EVIDENCE_FILES = {
     "strategy.json", "planner-decision.json", "requirements.json",
@@ -120,6 +121,14 @@ COMMITTED_EVIDENCE_FILES = {
     # disposition stands as the accurate record of the #118 state);
     # current state lives only in the additive recovery record above
     "canonical-summary.json",
+    # retained physical-preflight PASS artifacts (executed on the fabric
+    # 2026-09-08; see evidence/physical-preflight-record.json). The frozen
+    # record and the compact retention/coordinator/FreeToken-identity
+    # evidence are committed inputs the CPU campaign never regenerates.
+    "physical-preflight.json",
+    "physical-preflight-record.json",
+    "physical-preflight-freetoken-identities.json",
+    "physical-preflight-coordinator-accounting.json",
 }
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the

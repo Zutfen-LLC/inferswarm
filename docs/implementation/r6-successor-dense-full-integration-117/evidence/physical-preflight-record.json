@@ -33,6 +33,11 @@
       "/srv/inferswarm/materialized/issue117"
     ]
   },
+  "coordinator_accounting_evidence": {
+    "record": "evidence/physical-preflight-coordinator-accounting.json",
+    "record_digest": "sha256:429fa6d234f3d918559306f05574d84a9de6f61d3f4e87f9940ee1d4932b7661",
+    "source": "verbatim in-window collector output retained in external staging, digest-bound"
+  },
   "coordinator_counters": {
     "coordinator_cuda_initialized": 0,
     "coordinator_model_weight_bytes_materialized": 0,
@@ -46,6 +51,17 @@
     "inferswarm03",
     "inferswarm04"
   ],
+  "freetoken_identity_evidence": {
+    "hosts": [
+      "orchestrator(zutfen)",
+      "inferswarm01",
+      "inferswarm03",
+      "inferswarm04"
+    ],
+    "record": "evidence/physical-preflight-freetoken-identities.json",
+    "record_digest": "sha256:8beacfb20bba4500cdcf395461dc934332b801f741880e917455301e0e01d492",
+    "source": "recovered from contemporaneous preflight-window evidence (session transcript, git reflogs, frozen-collector record embedded in physical-preflight.json); no current-state substitution"
+  },
   "frozen_integration_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
   "non_claims": [
     "This PASS does not authorize Arm A; the fabric is eligible for maintainer review before correctness-bearing physical execution.",
@@ -81,6 +97,7 @@
       ]
     }
   ],
+  "retention_record_digest": "sha256:2fed1cc9568607bc81b126e113d014a28d6d4e1f53fea4f6755bd1077a1169b5",
   "schema": "inferswarm.issue117.physical-preflight-record/1",
   "source_possession": {
     "collected_on": "inferswarm01",
