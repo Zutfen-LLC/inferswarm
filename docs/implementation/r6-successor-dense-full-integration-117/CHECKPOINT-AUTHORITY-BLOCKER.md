@@ -75,3 +75,39 @@ independent authority instead of failing closed.
 
 Historical note preserved: the original blocker text above stands as the
 accurate record of the pre-recovery state. No old evidence was rewritten.
+
+## Resolution (2026-09-07, second gate): `V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED`
+
+The remaining blocker — the absent independently reconstructed accepted V5
+qualification subject — is resolved. The complete accepted
+execution-equality subject was reconstructed purely from byte-pinned
+accepted historical evidence by `scripts/issue117_accepted_subject.py`:
+
+- model / revision / checkpoint authority / execution semantics:
+  `docs/qualification/gemma4-12b-it-v5/manifests/physical-subject.json`
+  (the #109 frozen physical subject, unchanged by #110);
+- stage structure and per-stage GPU UUIDs/layer ranges:
+  `docs/qualification/gemma4-12b-it-v4-campaign-97/EXECUTION-AUTHORITY.json`
+  (the #97 execution authority, carried unchanged into V5; corroborated by
+  the calibration producer's frozen chain plan at FreeToken `7e5c852`);
+- Compute Unit identities (node/index/product/compute capability) and the
+  five-field backend/runtime stack:
+  `docs/qualification/gemma4-12b-it-v2-campaign-81/preflight-applicability.json`,
+  cross-checked field-by-field against
+  `docs/qualification/gemma4-12b-it-v4-campaign-97/PREFLIGHT-APPLICABILITY.json`
+  and the #110 TERMINAL-REPORT runtime identity line;
+- representation (`checkpoint-safetensors`, the single-file safetensors
+  checkpoint whose sha256 is the authority): the PR #119 recovery record;
+- terminal adjudication identity: the pinned
+  `b/holdout-adjudication.json` file's own SHA-256 (`f024f8b3...b7a70`,
+  `V5_QUALIFICATION_PASS`).
+
+The mechanically derived accepted subject digest is
+`sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f7f1d7994ffd`.
+The retained provenance record is
+`evidence/accepted-v5-qualification-subject.json`; the reconstruction is
+independent of all current candidate machinery (enforced structurally and
+by a mutation regression). Physical applicability now evaluates candidates
+against this independently reconstructed subject through the ordinary
+generic digest-equality gate. The physical preflight has still NOT run and
+Arms A-E remain pending.

@@ -147,10 +147,13 @@ queries (house rule; enforced by review and CI).
   entry listings with lstat facts (count, bytes, symlink and hardlink
   aliases) whose aggregates the validator re-derives. Qualification
   applicability is derived, never trusted: the validator recomputes every
-  candidate's execution-equality subject digest, sees that the retained V5
-  qualification subject is unavailable, and derives
-  `QUALIFICATION_NOT_APPLICABLE`. It refuses any retained record that claims
-  `QUALIFICATION_APPLICABLE`. Source possession is proven, not asserted:
+  candidate's execution-equality subject digest and compares it against the
+  accepted V5 qualification subject independently reconstructed from
+  byte-pinned historical evidence
+  (`V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED`), deriving
+  `QUALIFICATION_APPLICABLE` only on ordinary subject-digest equality. It
+  refuses any retained record that disagrees with the independently derived
+  verdict and fails closed whenever the evidence is missing or drifted. Source possession is proven, not asserted:
   every local (`file://`) Source must carry a mechanically collected
   possession record whose root exists, is not a symlink, and is disjoint
   from every participant cache and materialized root; an empty possession

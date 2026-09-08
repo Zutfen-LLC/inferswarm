@@ -172,7 +172,11 @@ class StrategyError(RuntimeError):
 
 
 class QualificationAuthorityUnavailable(StrategyError):
-    """Retained evidence cannot reconstruct an accepted V5 subject."""
+    """Retained evidence cannot reconstruct an accepted V5 subject.
+
+    Raised when the byte-pinned historical evidence is missing, drifted,
+    contradictory, or disagrees with the frozen #117 subject identity.
+    """
 
 
 # ---------------------------------------------------------------------------
@@ -709,8 +713,9 @@ def canonical_authority_catalog(*, inferswarm_root: Path | None = None) -> dict[
     contains no tensor table. A strategy built from it refuses the byte-level
     planning surface. Physical construction requires
     ``catalog_from_repository`` over a real checkpoint repository and an
-    independent authority derivation. The retained evidence does not supply
-    that derivation.
+    independent authority derivation (recovered: PR #119 provenance record;
+    see ``issue117_checkpoint_authority`` and
+    ``issue117_accepted_subject``).
     """
     from issue117_applicability import accepted_checkpoint_authority_from_evidence
     root = Path(inferswarm_root or Path(__file__).resolve().parents[1])
@@ -768,12 +773,43 @@ def canonical_v5_candidate(*, inferswarm_root: Path | None = None) -> Mapping[st
     return instance.accepted_v5_candidate(candidates)
 
 
-def retained_v5_qualification_authority() -> None:
-    """Refuse qualification inheritance until retained authority is complete."""
-    raise QualificationAuthorityUnavailable(
-        "accepted V5 qualification subject is unavailable: retained evidence "
-        "does not contain an independent checkpoint derivation and complete "
-        "subject identity")
+def retained_v5_qualification_authority(
+        inferswarm_root: Path | None = None) -> dict[str, Any]:
+    """Load the accepted V5 qualification record from retained evidence.
+
+    Recovered 2026-09-07 (``V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED``):
+    the accepted subject is reconstructed by
+    ``issue117_accepted_subject.accepted_v5_qualification_record`` purely
+    from byte-pinned accepted historical evidence (V5 physical subject, V4
+    execution authority, V2/V4 preflights, #110 terminal adjudication, and
+    the PR #119 checkpoint-authority provenance). That module imports no
+    candidate-construction machinery; this loader adds only a consistency
+    requirement that the record agree with the frozen model-subject strings
+    this strategy already carries. It still raises
+    ``QualificationAuthorityUnavailable`` when retained evidence is missing,
+    drifted, contradictory, or tampered.
+    """
+    from issue117_accepted_subject import (
+        SubjectReconstructionError,
+        accepted_v5_qualification_record,
+    )
+    try:
+        record = accepted_v5_qualification_record(inferswarm_root)
+    except SubjectReconstructionError as error:
+        raise QualificationAuthorityUnavailable(str(error)) from error
+    subject = record["qualification_subject"]
+    for field in ("model_id", "revision", "checkpoint_authority_sha256",
+                  "representation", "execution"):
+        if subject.get(field) != MODEL_SUBJECT[field]:
+            raise QualificationAuthorityUnavailable(
+                f"reconstructed accepted subject field {field!r} disagrees "
+                "with the frozen #117 subject identity "
+                f"({subject.get(field)!r} != {MODEL_SUBJECT[field]!r})")
+    if subject.get("backend") != MODEL_SUBJECT["backend"]:
+        raise QualificationAuthorityUnavailable(
+            "reconstructed accepted subject backend disagrees with the "
+            "frozen #117 subject identity")
+    return record
 
 
 # ---------------------------------------------------------------------------

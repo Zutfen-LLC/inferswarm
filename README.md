@@ -114,10 +114,12 @@ The current architecture-integration frontier is:
 > serving](https://github.com/Zutfen-LLC/inferswarm/issues/117)**
 
 Its synthetic CPU fixture campaign passed
-(`ISSUE117_CPU_FIXTURE_PASS`). The Issue #117 implementation freeze is
-`ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED` because retained evidence cannot
-reconstruct a non-forgeable V5 checkpoint authority or accepted qualification
-subject. The physical preflight and fabric arms remain pending.
+(`ISSUE117_CPU_FIXTURE_PASS`). Both retained-evidence blockers are
+recovered: the V5 checkpoint-authority provenance (PR #119) and the accepted
+V5 qualification subject
+(`V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED`, reconstructed from
+byte-pinned historical evidence). The implementation freeze may now be
+re-evaluated; the physical preflight and fabric arms remain pending.
 GLM-5.3-Flash / issue #13 remains a later large-model falsifier, not this
 gate.
 

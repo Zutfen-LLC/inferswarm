@@ -37,9 +37,9 @@ class ProofCampaignTests(unittest.TestCase):
         cls.documents = proof.run_campaign(cls.out, fixture_path=FIXTURE_PATH)
         cls.summary = cls.documents["canonical-summary.json"]
 
-    def test_terminal_disposition_is_implementation_freeze_blocked(self):
+    def test_terminal_disposition_is_subject_recovery_complete(self):
         self.assertEqual(self.summary["terminal_disposition"],
-                         "ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED")
+                         "ISSUE117_IMPLEMENTATION_FREEZE_PENDING_RE_EVALUATION")
         self.assertEqual(self.summary["cpu_fixture_disposition"],
                          "ISSUE117_CPU_FIXTURE_PASS")
 
@@ -143,7 +143,10 @@ class ProofCampaignTests(unittest.TestCase):
         self.assertIn("changed_execution_producer_requires_requalification", names)
         self.assertIn("fence_ledger_derivation_is_non_vacuous", names)
         self.assertIn("staging_ledger_derivation_is_non_vacuous", names)
-        self.assertIn("accepted_v5_qualification_authority_is_unavailable", names)
+        self.assertIn(
+            "accepted_v5_qualification_subject_provenance_recovered", names)
+        self.assertIn(
+            "accepted_subject_evidence_tampering_is_fail_closed", names)
         self.assertIn("lying_subject_digest_is_control_plane_misuse", names)
         self.assertIn("v5_authority_byte_tampering_is_fail_closed", names)
 
@@ -242,7 +245,7 @@ class ProofCampaignTests(unittest.TestCase):
         self.assertEqual(
             record["record_digest"],
             proof.self_digest(record, identity_field="record_digest"))
-        self.assertEqual(len(record["facts_recorded"]), 8)
+        self.assertEqual(len(record["facts_recorded"]), 10)
 
 
 class CampaignFixtureBindingTests(unittest.TestCase):
@@ -251,9 +254,13 @@ class CampaignFixtureBindingTests(unittest.TestCase):
         fixture.validate_fixture_document(document)
         self.assertEqual(document["case_count"], 24)
 
-    def test_retained_v5_qualification_authority_is_unavailable(self):
-        with self.assertRaises(strategy.QualificationAuthorityUnavailable):
-            strategy.retained_v5_qualification_authority()
+    def test_retained_v5_qualification_authority_is_recovered(self):
+        record = strategy.retained_v5_qualification_authority()
+        self.assertEqual(record["authority"]["terminal_disposition"],
+                         "V5_QUALIFICATION_PASS")
+        self.assertEqual(
+            record["authority"]["terminal_adjudication_sha256"],
+            applicability.ACCEPTED_TERMINAL_ADJUDICATION_SHA256)
 
     def test_guard_rejects_complete_repository_requirement(self):
         with tempfile.TemporaryDirectory() as temp:

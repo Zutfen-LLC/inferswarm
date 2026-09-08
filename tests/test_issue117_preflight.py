@@ -295,7 +295,7 @@ class PreflightTests(unittest.TestCase):
                          {cid: result["status"]
                           for cid, result in derived.items()})
         v5 = strategy.canonical_v5_candidate()["candidate_id"]
-        self.assertEqual(statuses[v5], "QUALIFICATION_NOT_APPLICABLE")
+        self.assertEqual(statuses[v5], "QUALIFICATION_APPLICABLE")
 
     def test_valid_preflight_is_deterministic(self):
         import re
@@ -542,11 +542,15 @@ class QualificationDerivationTests(unittest.TestCase):
             canonical, [foreign_record], policy)
         self.assertEqual(result["status"], "QUALIFICATION_NOT_APPLICABLE")
         self.assertEqual(result["unbound_record_ids"], ["foreign/1"])
-        # and the preflight derivation hardwires the accepted record, so a
-        # foreign record can never enter it at all
+        # and the preflight derivation hardwires the accepted record (loaded
+        # from pinned evidence on every call), so a foreign record supplied
+        # by a caller can never enter it at all
         derived = preflight.derive_candidate_applicability([canonical])
         self.assertEqual(derived[canonical["candidate_id"]]["status"],
-                         "QUALIFICATION_NOT_APPLICABLE")
+                         "QUALIFICATION_APPLICABLE")
+        self.assertEqual(
+            derived[canonical["candidate_id"]]["matched_record_ids"],
+            ["inferswarm.issue117.accepted-v5-qualification/1"])
 
     def test_self_consistent_fabricated_record_cannot_make_candidate_applicable(self):
         # a stored applicability record claiming APPLICABLE for a candidate

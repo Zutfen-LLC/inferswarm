@@ -42,6 +42,7 @@ from issue99_artifact_core import (  # noqa: E402
 )
 from issue117_applicability import (  # noqa: E402
     ACCEPTED_INFERSWARM_BASE,
+    ACCEPTED_TERMINAL_ADJUDICATION_SHA256,
     canonical_issue117_audit,
     load_producer_delta,
     verify_v5_authority,
@@ -77,6 +78,7 @@ ORIGIN_SOURCE_ID = "issue117-origin"
 PRODUCERS = [
     "scripts/issue117_integration_fixture.py",
     "scripts/issue117_applicability.py",
+    "scripts/issue117_accepted_subject.py",
     "scripts/issue117_gemma_strategy.py",
     "scripts/issue117_planner.py",
     "scripts/issue117_preflight.py",
@@ -95,6 +97,7 @@ PRODUCERS = [
     "tests/test_issue117_proof.py",
     "tests/test_issue117_provenance.py",
     "tests/test_issue117_checkpoint_authority.py",
+    "tests/test_issue117_accepted_subject.py",
 ]
 EVIDENCE_FILES = {
     "strategy.json", "planner-decision.json", "requirements.json",
@@ -111,6 +114,7 @@ COMMITTED_EVIDENCE_FILES = {
     "integration-fixture.json",
     "producer-delta.json",
     "checkpoint-authority-provenance.json",
+    "accepted-v5-qualification-subject.json",
 }
 PURITY_TOKENS = (
     "gemma", "rtx", "3060", "3090", "bf16", "triton", "flashinfer", "cuda",
@@ -920,9 +924,46 @@ def run_negative_controls(world, fixture_path: Path) -> NegativeControls:
             world, candidate_overrides={world["v5"]["candidate_id"]: lying})
         planner.rank()
 
-    def qualification_authority_is_unavailable():
-        from issue117_gemma_strategy import retained_v5_qualification_authority
-        retained_v5_qualification_authority()
+    def accepted_subject_recovery_is_loadable_and_independent():
+        # positive control: the accepted V5 qualification subject now loads
+        # from byte-pinned historical evidence, with the exact accepted
+        # terminal adjudication identity, WITHOUT any candidate machinery
+        # (the reconstruction module imports no strategy/planner modules)
+        from issue117_accepted_subject import accepted_v5_qualification_record
+        record = accepted_v5_qualification_record(ROOT)
+        assert record["authority"]["terminal_adjudication_sha256"] == (
+            ACCEPTED_TERMINAL_ADJUDICATION_SHA256), (
+            "recovered record is not bound to the accepted adjudication")
+        import issue117_accepted_subject as accepted_subject
+        import sys as _sys
+        banned = ("issue117_gemma_strategy", "issue117_planner",
+                  "issue117_preflight", "issue117_proof",
+                  "issue117_integration_fixture")
+        loaded = {name for name in _sys.modules if name in banned}
+        source = _sys.modules[accepted_subject.__name__].__dict__
+        assert not any(source.get(name) for name in banned), (
+            "reconstruction module binds candidate machinery")
+        assert not loaded or all(
+            not accepted_subject.__dict__.get(name) for name in banned), (
+            "reconstruction depends on candidate machinery")
+
+    def accepted_subject_evidence_tampering_is_fail_closed():
+        # byte-tamper the pinned physical-subject evidence in a throwaway
+        # root: the reconstruction must fail closed (drift detection)
+        import shutil
+        import tempfile as _tempfile
+        import issue117_accepted_subject as accepted_subject
+        with _tempfile.TemporaryDirectory() as temp:
+            relative = ("docs/qualification/gemma4-12b-it-v5/manifests/"
+                        "physical-subject.json")
+            target = Path(temp) / relative
+            target.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / relative, target)
+            data = json.loads(target.read_text())
+            data["execution"] = "tampered execution semantics"
+            target.write_text(json.dumps(data))
+            accepted_subject.accepted_v5_qualification_record(Path(temp))
+        raise AssertionError("tampered evidence did not fail closed")
 
     def changed_execution_producer_cannot_reapply_audit():
         # poison the frozen producer delta: one execution-bearing zone file
@@ -1069,10 +1110,15 @@ def run_negative_controls(world, fixture_path: Path) -> NegativeControls:
     controls.expect_failure(
         "lying_subject_digest_is_control_plane_misuse", lying_subject_digest_is_refused,
         "does not match its own subject")
+    controls.expect_pass(
+        "accepted_v5_qualification_subject_provenance_recovered",
+        accepted_subject_recovery_is_loadable_and_independent,
+        "accepted subject loads from byte-pinned historical evidence with the "
+        "accepted terminal adjudication identity and no candidate machinery")
     controls.expect_failure(
-        "accepted_v5_qualification_authority_is_unavailable",
-        qualification_authority_is_unavailable,
-        "accepted V5 qualification subject is unavailable")
+        "accepted_subject_evidence_tampering_is_fail_closed",
+        accepted_subject_evidence_tampering_is_fail_closed,
+        "drifted")
     controls.expect_failure(
         "changed_execution_producer_requires_requalification",
         changed_execution_producer_cannot_reapply_audit,
@@ -1251,7 +1297,7 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
             "fence_rejections": fence["summary"]["fence_rejections"],
             "zero_invariant_count": len(zero),
             "cpu_fixture_disposition": "ISSUE117_CPU_FIXTURE_PASS",
-            "terminal_disposition": "ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED",
+            "terminal_disposition": "ISSUE117_IMPLEMENTATION_FREEZE_PENDING_RE_EVALUATION",
             "physical_arms_pending": [
                 "Arm A: V5 execution-math bridge on the fabric (192/192 FP32 row identity)",
                 "Arm B: physical cold acquisition/realization on inferswarm01/inferswarm03",
@@ -1265,9 +1311,11 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
                 "No public planner, artifact, path, or wire schema is frozen.",
                 "No consumed h109 holdout material is used as new evidence.",
                 "The synthetic capacity model proves machinery, not hardware limits.",
-                "The qualification record is fixture-scoped. Retained V5 "
-                "evidence cannot reconstruct an accepted qualification subject. "
-                "The implementation-freeze terminal state is blocked.",
+                "The qualification record is fixture-scoped. The accepted V5 "
+                "qualification subject was recovered independently from "
+                "byte-pinned historical evidence "
+                "(V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED); the CPU "
+                "fixture does not use or depend on it.",
                 "The producer-delta zone closure statically resolves every "
                 "dynamic import mechanism: resolved in-repository targets are "
                 "zone members hashed at both producers; external module "

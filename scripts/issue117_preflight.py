@@ -28,9 +28,13 @@ Bindings enforced here (fail-closed):
 - **qualification applicability is derived, never trusted.** Every stored
   applicability record is compared against an independently derived verdict:
   the validator recomputes each candidate's execution-equality subject
-  digest and derives ``QUALIFICATION_NOT_APPLICABLE`` while the retained V5
-  qualification subject is unavailable. It refuses any fabricated
-  ``QUALIFICATION_APPLICABLE``;
+  digest and compares it against the accepted V5 qualification subject
+  independently reconstructed from byte-pinned historical evidence
+  (``V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED``; the record is loaded
+  and its evidence pins re-verified on every derivation). It refuses any
+  fabricated ``QUALIFICATION_APPLICABLE`` and fails closed to
+  ``QUALIFICATION_NOT_APPLICABLE`` whenever the evidence is missing,
+  drifted, or tampered;
 - the committed fixture is validated in full, not merely digest-compared;
 - cold-cache proofs are mechanically collected filesystem facts (walked
   entries with lstat facts), not caller-supplied booleans; symlink and
@@ -330,15 +334,28 @@ def _qualification_policy() -> dict[str, Any]:
 
 def derive_candidate_applicability(
         candidates: Sequence[Mapping[str, Any]],
+        *, inferswarm_root: Path | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Independently derive qualification applicability for every candidate.
 
-    Retained evidence cannot reconstruct an accepted V5 qualification subject.
-    Therefore every candidate is derived as NOT_APPLICABLE. No caller record
-    can promote a candidate until the blocker is resolved.
+    The accepted V5 qualification subject was recovered from retained
+    historical evidence (``V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED``,
+    2026-09-07; see ``issue117_accepted_subject``). Applicability is the
+    ordinary generic-gate verdict: the candidate's execution-equality
+    subject digest must equal the accepted record's subject digest, where
+    the accepted record is loaded (and byte-pinned evidence re-verified) on
+    every call — never trusted from a stored record. A candidate cannot
+    self-author authority: only the independently reconstructed accepted
+    record enters the gate. Missing, drifted, or tampered evidence makes
+    every candidate NOT_APPLICABLE.
     """
     policy = _qualification_policy()
     records: list[Mapping[str, Any]] = []
+    try:
+        from issue117_gemma_strategy import retained_v5_qualification_authority
+        records.append(retained_v5_qualification_authority(inferswarm_root))
+    except Exception:
+        pass  # fail closed below: no accepted evidence -> NOT_APPLICABLE
     derived: dict[str, dict[str, Any]] = {}
     for candidate in candidates:
         candidate_id = str(candidate.get("candidate_id"))
@@ -433,6 +450,16 @@ def _self_digest(document: Mapping[str, Any]) -> str:
 def _stage_triples(candidate: Mapping[str, Any]) -> list[tuple[str, int, int]]:
     return [(stage.get("cu_id"), stage.get("layer_start"), stage.get("layer_end"))
             for stage in candidate.get("stage_structure", [])]
+
+
+def _accepted_subject_available(repo_root: Path) -> bool:
+    """Whether the accepted V5 qualification subject loads from evidence."""
+    try:
+        from issue117_gemma_strategy import retained_v5_qualification_authority
+        retained_v5_qualification_authority(repo_root)
+        return True
+    except Exception:
+        return False
 
 
 def _validate_preflight(document: Mapping[str, Any], *, repo_root: Path,
@@ -651,7 +678,7 @@ def _validate_preflight(document: Mapping[str, Any], *, repo_root: Path,
     # Qualification applicability is DERIVED, never trusted: evaluate every
     # candidate against the accepted V5 evidence with the strict policy and
     # refuse any mismatch with the retained records.
-    derived = derive_candidate_applicability(candidates)
+    derived = derive_candidate_applicability(candidates, inferswarm_root=repo_root)
     v5_triples = [(stage["cu_id"], stage["layer_start"], stage["layer_end"])
                   for stage in ACCEPTED_V5_GEOMETRY]
     v5_seen = False
@@ -694,7 +721,8 @@ def _validate_preflight(document: Mapping[str, Any], *, repo_root: Path,
                 f"{derived.get(candidate_id, {}).get('reason')!r})")
         if _stage_triples(candidate) == v5_triples:
             v5_seen = True
-            if expected_status == QUALIFICATION_APPLICABLE:
+            if expected_status == QUALIFICATION_APPLICABLE and not (
+                    _accepted_subject_available(repo_root)):
                 failures.append(
                     "candidate derived QUALIFICATION_APPLICABLE without a "
                     "retained accepted V5 qualification subject")
