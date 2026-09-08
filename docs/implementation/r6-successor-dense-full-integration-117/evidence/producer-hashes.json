@@ -27,5 +27,5 @@
  "tests/test_issue117_preflight.py": "a4cfb127bfaa7f4a393173b23bbdfa1c2c8419719f529a9787c1ce85f3f8a99e",
  "tests/test_issue117_proof.py": "9649b9b7d8c60e0f9299ae599e25419b7ebb54d2a36acdc87587b058de08b370",
  "tests/test_issue117_provenance.py": "d6ed718dbb41f427e9b000d3e16cfb4678b44e82590f77e6eede73d7e3ece1ee",
- "tests/test_project_status.py": "943a03b5dd3ede005ad9d4646ca484643b4a4f970abc863adb15760f36584b65"
+ "tests/test_project_status.py": "7a411feeb9fb5e059915fdba3eeaf821ebff54a19a3534c9f748afba3883cdb0"
 }

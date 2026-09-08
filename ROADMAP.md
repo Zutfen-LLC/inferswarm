@@ -908,13 +908,13 @@ cleanup — not by revisiting the failed campaign.
 
 Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.
 
-- **Arm A — V5 execution-math bridge observation:** [`ISSUE117_ARM_A_EXECUTION_EQUIVALENCE_PASS`](https://github.com/Zutfen-LLC/inferswarm/pull/122).
-- **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/commit/6774474941d7ce2a0252c8c1e148f8bce61a8d6d).
-- **Recorded execution authorization:** authorized — Arm B — canonical cold acquisition + realization. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
+- **Arm B — canonical cold acquisition + realization observation:** [`ISSUE117_ARM_B_COLD_REALIZATION_PASS`](https://github.com/Zutfen-LLC/inferswarm/pull/127).
+- **Maintainer acceptance:** pending maintainer acceptance.
+- **Recorded execution authorization:** blocked — Arm C — ordinary external-Coordinator serving (blocked on Arm-B maintainer acceptance). [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
 
-- Arm A is accepted at merge 6774474941d7ce2a0252c8c1e148f8bce61a8d6d with 192/192 exact FP32 consumer-row identities on the frozen public fixture.
-- Arm B is the only authorized live physical gate and must stop for maintainer review before Arm C.
-- Do not rerun accepted Arm A or the accepted physical preflight merely to begin Arm B.
+- Arm B is observed ISSUE117_ARM_B_COLD_REALIZATION_PASS pending maintainer acceptance; Arm C must not begin before acceptance.
+- Arm A is accepted at merge 6774474941d7ce2a0252c8c1e148f8bce61a8d6d; the Arm-B observation executed from accepted main 5179c41232051e7455b778ddb8876a6539f4cb04.
+- Do not rerun accepted Arm A, the accepted physical preflight, or the observed Arm-B campaign.
 - Use the exact producer, checkpoint, Compute Unit, cold-root, Source, and zero-invariant requirements specified in issue #117.
 - No consumed h109 holdout material may be used as new evidence.
 <!-- project-status:frontier:end -->

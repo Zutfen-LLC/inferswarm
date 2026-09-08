@@ -115,15 +115,15 @@ class ProjectStatusTests(unittest.TestCase):
                 self.assertEqual(self.run_main(root, '--write'), 1)
                 self.assertEqual(self.snapshot(root), before)
 
-    def test_current_record_accepts_arm_a_and_authorizes_arm_b(self):
+    def test_current_record_observes_arm_b_and_blocks_arm_c(self):
         output = sync.render(self.record)['frontier']
-        self.assertIn('ISSUE117_ARM_A_EXECUTION_EQUIVALENCE_PASS', output)
-        self.assertIn('Maintainer acceptance:** [accepted]', output)
-        self.assertIn('authorization:** authorized', output)
-        self.assertIn('Arm B', output)
+        self.assertIn('ISSUE117_ARM_B_COLD_REALIZATION_PASS', output)
+        self.assertIn('pending maintainer acceptance', output)
+        self.assertIn('blocked — Arm C', output)
+        self.assertIn('Arm C', output)
         capabilities = sync.render(self.record)['capabilities']
-        self.assertNotIn('ISSUE117_ARM_A_EXECUTION_EQUIVALENCE_PASS', capabilities)
-        self.assertNotIn('Arm A', capabilities)
+        self.assertNotIn('ISSUE117_ARM_B_COLD_REALIZATION_PASS', capabilities)
+        self.assertNotIn('Arm B', capabilities)
 
     def test_accepted_prerequisite_does_not_authorize_execution(self):
         self.record['frontier']['execution']['state'] = 'blocked'
@@ -132,8 +132,8 @@ class ProjectStatusTests(unittest.TestCase):
 
     def test_missing_or_inconsistent_authority_fails(self):
         mutations = [
-            lambda r: r['frontier']['execution'].update(reference=None),
-            lambda r: r['frontier']['prerequisite']['acceptance'].update(reference=None),
+            lambda r: r['frontier']['execution'].update(state='maybe'),
+            lambda r: r['frontier']['prerequisite']['observation'].update(reference=None),
             lambda r: r['capabilities'][0]['acceptance'].update(reference=None),
             lambda r: r['capabilities'][0]['observation'].update(result=None, reference=None),
         ]
