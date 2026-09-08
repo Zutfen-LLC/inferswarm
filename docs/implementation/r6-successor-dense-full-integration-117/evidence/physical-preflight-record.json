@@ -1,0 +1,97 @@
+{
+  "accepted_inferswarm_base": "d127879a17ae933799c5cbbbaa9fb291bfe7a408",
+  "checkpoint_validation": {
+    "file_kind": "plain regular file (validator-refused symlink indirection)",
+    "hosts_validated": [
+      "inferswarm01",
+      "inferswarm03",
+      "inferswarm04"
+    ],
+    "per_host_records_sha256": {
+      "inferswarm01": "sha256:084c877e60e7ded974e0eaaacedb7ceb2a0ef8a645d4f07378b9f600872ba6c5",
+      "inferswarm03": "sha256:084c877e60e7ded974e0eaaacedb7ceb2a0ef8a645d4f07378b9f600872ba6c5",
+      "inferswarm04": "sha256:084c877e60e7ded974e0eaaacedb7ceb2a0ef8a645d4f07378b9f600872ba6c5"
+    },
+    "root": "/srv/models/gemma-r6",
+    "sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "size_bytes": 23919549408,
+    "status": "CHECKPOINT_AUTHORITY_DERIVED",
+    "validator": "scripts/issue117_checkpoint_authority.py (PR #119 merged validator)",
+    "weights_file": "model.safetensors"
+  },
+  "classification": "ISSUE117_PHYSICAL_PREFLIGHT_PASS",
+  "cold_roots": {
+    "participants": [
+      "inferswarm01",
+      "inferswarm03"
+    ],
+    "preparation": "root creation only, 2026-09-08T05:20Z, classified as pre-execution preparation; prior nonexistent state, creation action, and resulting empty state all retained in the external staging record",
+    "prior_state": "roots did not exist (no stale issue-117 cache/materialization data present)",
+    "resulting_state": "both roots empty (0 entries, 0 bytes), plain directories, not symlinks, st_dev 2066 distinct from /srv/models st_dev 2049 (no bind-mount/device alias)",
+    "roots": [
+      "/srv/inferswarm/cache/issue117",
+      "/srv/inferswarm/materialized/issue117"
+    ]
+  },
+  "coordinator_counters": {
+    "coordinator_cuda_initialized": 0,
+    "coordinator_model_weight_bytes_materialized": 0,
+    "coordinator_model_weight_bytes_received": 0,
+    "derivation": "mechanically derived: no /dev/nvidia* nodes, no process CUDA fds, coordinator venv cannot import torch; weight bytes summed over issue-117-dedicated coordinator roots",
+    "node": "inferswarm00"
+  },
+  "fabric_hosts_inspected": [
+    "inferswarm00",
+    "inferswarm01",
+    "inferswarm03",
+    "inferswarm04"
+  ],
+  "frozen_integration_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "non_claims": [
+    "This PASS does not authorize Arm A; the fabric is eligible for maintainer review before correctness-bearing physical execution.",
+    "No model inference, no CUDA context creation, no Arms B-E, no holdout consumption, no model-byte modification occurred.",
+    "The runtime identity probe imported torch/triton/flashinfer in the FreeToken venv on each GPU node to read version strings only; no tensor op, no CUDA context, no model load."
+  ],
+  "observed_utc_end": "2026-09-08T05:31:00Z",
+  "observed_utc_start": "2026-09-08T05:19:17Z",
+  "orchestrator_host": "zutfen",
+  "physical_arms_executed": false,
+  "physical_preflight_executed": true,
+  "physical_preflight_result": "ISSUE117_PHYSICAL_PREFLIGHT_PASS",
+  "preflight_file_sha256": "sha256:e9711969a4443f9ea6f3287a06383b8e0d9ef2478f65059acce0e787f8fe0a06",
+  "preflight_record_digest": "sha256:bf7e0b312c8cb34ba5ced1c205039374dc018dbbbeba3cd9d2652a7b23a49e93",
+  "preparation_actions": [
+    {
+      "action": "freetoken-producer-preparation",
+      "classification": "pre-execution preparation (producer checkout, no correctness-bearing observation preceded it)",
+      "detail": "node ~/FreeToken checkouts moved to the exact frozen producer 924cd22ea081f6d4ed471016faf01d427fc5b0d2 via fetch + remote-verified detach; inferswarm01 pre-existing uncommitted modifications to benchmarks/inferswarm_n1/{run_local,runtime,service}.py preserved as labeled stash 'issue117-preflight-preparation 20260908T051917Z', not deleted",
+      "hosts": [
+        "inferswarm01",
+        "inferswarm03",
+        "inferswarm04"
+      ]
+    },
+    {
+      "action": "cold-root-establishment",
+      "classification": "pre-execution preparation",
+      "detail": "dedicated empty roots created; full prior/mount/st_dev/symlink facts retained externally",
+      "hosts": [
+        "inferswarm01",
+        "inferswarm03"
+      ]
+    }
+  ],
+  "schema": "inferswarm.issue117.physical-preflight-record/1",
+  "source_possession": {
+    "collected_on": "inferswarm01",
+    "entry_count": 9,
+    "possession_digest": "sha256:37b9ea0707a61bd4d2c3a6b360b28337fae19487992c03007c826283fd172f3c",
+    "possession_root": "/srv/models/gemma-r6",
+    "source_id": "issue117-origin"
+  },
+  "terminal_verdict": {
+    "failure_list": [],
+    "result": "PREFLIGHT_VALID",
+    "source": "scripts/issue117_preflight.py (frozen validator, physical=True)"
+  }
+}

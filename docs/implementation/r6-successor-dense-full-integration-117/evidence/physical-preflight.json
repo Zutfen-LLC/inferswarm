@@ -1,0 +1,824 @@
+{
+  "applicability_audit": {
+    "audit_digest": "sha256:f34d1eae75a97f3daad61ac54aec40c3e4320fe16e23fbb5e059e133d92092be",
+    "overall_result": "DELTA_CONTROL_ARTIFACT_MATERIALIZATION_ONLY"
+  },
+  "candidate_set": {
+    "candidate_set_digest": "sha256:bfaca264e7ebd07ff24249ac03357be5ac56a52b28863a6415f0317435f59b90",
+    "candidates": [
+      {
+        "candidate_id": "dense.3b8644d360a3",
+        "qualification_subject": {
+          "backend": {
+            "cuda_runtime": "13.0",
+            "flashinfer": "0.6.17",
+            "nvidia_driver": "610.57.04",
+            "torch": "2.11.0+cu130",
+            "triton": "3.6.0"
+          },
+          "catalog_content_digest": "sha256:9108bc8721c34c1be43771bf829bbbb0dfe2369bb452a53229fcda322d5dcd18",
+          "checkpoint_authority_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+          "execution": "native BF16 text execution; Triton attention; one <=64-row replay chunk",
+          "layer_count": 48,
+          "model_id": "google/gemma-4-12B-it",
+          "representation": "checkpoint-safetensors",
+          "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+          "stage_structure": [
+            {
+              "cu_id": "inferswarm03/gpu-0",
+              "layer_end": 48,
+              "layer_start": 0,
+              "node": "inferswarm03"
+            }
+          ]
+        },
+        "qualification_subject_digest": "sha256:fa24bd7f0db9e6781c462ec207410dbbbfbcbe7a2d20128f507e5117a851c39e",
+        "stage_count": 1,
+        "stage_structure": [
+          {
+            "cu_id": "inferswarm03/gpu-0",
+            "layer_end": 48,
+            "layer_start": 0,
+            "node": "inferswarm03"
+          }
+        ]
+      },
+      {
+        "candidate_id": "dense.6171f32b4413",
+        "qualification_subject": {
+          "backend": {
+            "cuda_runtime": "13.0",
+            "flashinfer": "0.6.17",
+            "nvidia_driver": "610.57.04",
+            "torch": "2.11.0+cu130",
+            "triton": "3.6.0"
+          },
+          "catalog_content_digest": "sha256:9108bc8721c34c1be43771bf829bbbb0dfe2369bb452a53229fcda322d5dcd18",
+          "checkpoint_authority_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+          "execution": "native BF16 text execution; Triton attention; one <=64-row replay chunk",
+          "layer_count": 48,
+          "model_id": "google/gemma-4-12B-it",
+          "representation": "checkpoint-safetensors",
+          "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+          "stage_structure": [
+            {
+              "cu_id": "inferswarm01/gpu-0",
+              "layer_end": 16,
+              "layer_start": 0,
+              "node": "inferswarm01"
+            },
+            {
+              "cu_id": "inferswarm01/gpu-1",
+              "layer_end": 32,
+              "layer_start": 16,
+              "node": "inferswarm01"
+            },
+            {
+              "cu_id": "inferswarm03/gpu-0",
+              "layer_end": 48,
+              "layer_start": 32,
+              "node": "inferswarm03"
+            }
+          ]
+        },
+        "qualification_subject_digest": "sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f7f1d7994ffd",
+        "stage_count": 3,
+        "stage_structure": [
+          {
+            "cu_id": "inferswarm01/gpu-0",
+            "layer_end": 16,
+            "layer_start": 0,
+            "node": "inferswarm01"
+          },
+          {
+            "cu_id": "inferswarm01/gpu-1",
+            "layer_end": 32,
+            "layer_start": 16,
+            "node": "inferswarm01"
+          },
+          {
+            "cu_id": "inferswarm03/gpu-0",
+            "layer_end": 48,
+            "layer_start": 32,
+            "node": "inferswarm03"
+          }
+        ]
+      },
+      {
+        "candidate_id": "dense.720a017663e4",
+        "qualification_subject": {
+          "backend": {
+            "cuda_runtime": "13.0",
+            "flashinfer": "0.6.17",
+            "nvidia_driver": "610.57.04",
+            "torch": "2.11.0+cu130",
+            "triton": "3.6.0"
+          },
+          "catalog_content_digest": "sha256:9108bc8721c34c1be43771bf829bbbb0dfe2369bb452a53229fcda322d5dcd18",
+          "checkpoint_authority_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+          "execution": "native BF16 text execution; Triton attention; one <=64-row replay chunk",
+          "layer_count": 48,
+          "model_id": "google/gemma-4-12B-it",
+          "representation": "checkpoint-safetensors",
+          "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+          "stage_structure": [
+            {
+              "cu_id": "inferswarm04/gpu-0",
+              "layer_end": 48,
+              "layer_start": 0,
+              "node": "inferswarm04"
+            }
+          ]
+        },
+        "qualification_subject_digest": "sha256:5917671b9c8c866bdaa16fb7a1ba03661745998bc00e439c4f3ff35c893d0377",
+        "stage_count": 1,
+        "stage_structure": [
+          {
+            "cu_id": "inferswarm04/gpu-0",
+            "layer_end": 48,
+            "layer_start": 0,
+            "node": "inferswarm04"
+          }
+        ]
+      },
+      {
+        "candidate_id": "dense.97c6513e854b",
+        "qualification_subject": {
+          "backend": {
+            "cuda_runtime": "13.0",
+            "flashinfer": "0.6.17",
+            "nvidia_driver": "610.57.04",
+            "torch": "2.11.0+cu130",
+            "triton": "3.6.0"
+          },
+          "catalog_content_digest": "sha256:9108bc8721c34c1be43771bf829bbbb0dfe2369bb452a53229fcda322d5dcd18",
+          "checkpoint_authority_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+          "execution": "native BF16 text execution; Triton attention; one <=64-row replay chunk",
+          "layer_count": 48,
+          "model_id": "google/gemma-4-12B-it",
+          "representation": "checkpoint-safetensors",
+          "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+          "stage_structure": [
+            {
+              "cu_id": "inferswarm03/gpu-0",
+              "layer_end": 24,
+              "layer_start": 0,
+              "node": "inferswarm03"
+            },
+            {
+              "cu_id": "inferswarm04/gpu-0",
+              "layer_end": 48,
+              "layer_start": 24,
+              "node": "inferswarm04"
+            }
+          ]
+        },
+        "qualification_subject_digest": "sha256:3633f61f0235aa5a80dc1446bcd1bf670f8cea7d45223813e05c523d2ac2a7e2",
+        "stage_count": 2,
+        "stage_structure": [
+          {
+            "cu_id": "inferswarm03/gpu-0",
+            "layer_end": 24,
+            "layer_start": 0,
+            "node": "inferswarm03"
+          },
+          {
+            "cu_id": "inferswarm04/gpu-0",
+            "layer_end": 48,
+            "layer_start": 24,
+            "node": "inferswarm04"
+          }
+        ]
+      },
+      {
+        "candidate_id": "dense.9dd68b5adfa3",
+        "qualification_subject": {
+          "backend": {
+            "cuda_runtime": "13.0",
+            "flashinfer": "0.6.17",
+            "nvidia_driver": "610.57.04",
+            "torch": "2.11.0+cu130",
+            "triton": "3.6.0"
+          },
+          "catalog_content_digest": "sha256:9108bc8721c34c1be43771bf829bbbb0dfe2369bb452a53229fcda322d5dcd18",
+          "checkpoint_authority_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+          "execution": "native BF16 text execution; Triton attention; one <=64-row replay chunk",
+          "layer_count": 48,
+          "model_id": "google/gemma-4-12B-it",
+          "representation": "checkpoint-safetensors",
+          "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+          "stage_structure": [
+            {
+              "cu_id": "inferswarm01/gpu-1",
+              "layer_end": 24,
+              "layer_start": 0,
+              "node": "inferswarm01"
+            },
+            {
+              "cu_id": "inferswarm03/gpu-0",
+              "layer_end": 48,
+              "layer_start": 24,
+              "node": "inferswarm03"
+            }
+          ]
+        },
+        "qualification_subject_digest": "sha256:a43595f1db376a4c446653dd442ff5f9f12cfa9bad326bfe5f25d7e6763f0aae",
+        "stage_count": 2,
+        "stage_structure": [
+          {
+            "cu_id": "inferswarm01/gpu-1",
+            "layer_end": 24,
+            "layer_start": 0,
+            "node": "inferswarm01"
+          },
+          {
+            "cu_id": "inferswarm03/gpu-0",
+            "layer_end": 48,
+            "layer_start": 24,
+            "node": "inferswarm03"
+          }
+        ]
+      },
+      {
+        "candidate_id": "dense.b1fb60400bc3",
+        "qualification_subject": {
+          "backend": {
+            "cuda_runtime": "13.0",
+            "flashinfer": "0.6.17",
+            "nvidia_driver": "610.57.04",
+            "torch": "2.11.0+cu130",
+            "triton": "3.6.0"
+          },
+          "catalog_content_digest": "sha256:9108bc8721c34c1be43771bf829bbbb0dfe2369bb452a53229fcda322d5dcd18",
+          "checkpoint_authority_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+          "execution": "native BF16 text execution; Triton attention; one <=64-row replay chunk",
+          "layer_count": 48,
+          "model_id": "google/gemma-4-12B-it",
+          "representation": "checkpoint-safetensors",
+          "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+          "stage_structure": [
+            {
+              "cu_id": "inferswarm01/gpu-0",
+              "layer_end": 24,
+              "layer_start": 0,
+              "node": "inferswarm01"
+            },
+            {
+              "cu_id": "inferswarm01/gpu-1",
+              "layer_end": 48,
+              "layer_start": 24,
+              "node": "inferswarm01"
+            }
+          ]
+        },
+        "qualification_subject_digest": "sha256:048808f9827d999c980ffb827c4ebcb78fd3f7327d9fb44acdc99b2c9f89cdbb",
+        "stage_count": 2,
+        "stage_structure": [
+          {
+            "cu_id": "inferswarm01/gpu-0",
+            "layer_end": 24,
+            "layer_start": 0,
+            "node": "inferswarm01"
+          },
+          {
+            "cu_id": "inferswarm01/gpu-1",
+            "layer_end": 48,
+            "layer_start": 24,
+            "node": "inferswarm01"
+          }
+        ]
+      },
+      {
+        "candidate_id": "dense.b3c4d8a8929e",
+        "qualification_subject": {
+          "backend": {
+            "cuda_runtime": "13.0",
+            "flashinfer": "0.6.17",
+            "nvidia_driver": "610.57.04",
+            "torch": "2.11.0+cu130",
+            "triton": "3.6.0"
+          },
+          "catalog_content_digest": "sha256:9108bc8721c34c1be43771bf829bbbb0dfe2369bb452a53229fcda322d5dcd18",
+          "checkpoint_authority_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+          "execution": "native BF16 text execution; Triton attention; one <=64-row replay chunk",
+          "layer_count": 48,
+          "model_id": "google/gemma-4-12B-it",
+          "representation": "checkpoint-safetensors",
+          "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+          "stage_structure": [
+            {
+              "cu_id": "inferswarm01/gpu-0",
+              "layer_end": 48,
+              "layer_start": 0,
+              "node": "inferswarm01"
+            }
+          ]
+        },
+        "qualification_subject_digest": "sha256:a9dcead388fc892c6efe2bf25ff94288c0b719ab64f35d2ff2861d4bc0c4c5c5",
+        "stage_count": 1,
+        "stage_structure": [
+          {
+            "cu_id": "inferswarm01/gpu-0",
+            "layer_end": 48,
+            "layer_start": 0,
+            "node": "inferswarm01"
+          }
+        ]
+      },
+      {
+        "candidate_id": "dense.e3a5ae183953",
+        "qualification_subject": {
+          "backend": {
+            "cuda_runtime": "13.0",
+            "flashinfer": "0.6.17",
+            "nvidia_driver": "610.57.04",
+            "torch": "2.11.0+cu130",
+            "triton": "3.6.0"
+          },
+          "catalog_content_digest": "sha256:9108bc8721c34c1be43771bf829bbbb0dfe2369bb452a53229fcda322d5dcd18",
+          "checkpoint_authority_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+          "execution": "native BF16 text execution; Triton attention; one <=64-row replay chunk",
+          "layer_count": 48,
+          "model_id": "google/gemma-4-12B-it",
+          "representation": "checkpoint-safetensors",
+          "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+          "stage_structure": [
+            {
+              "cu_id": "inferswarm01/gpu-1",
+              "layer_end": 48,
+              "layer_start": 0,
+              "node": "inferswarm01"
+            }
+          ]
+        },
+        "qualification_subject_digest": "sha256:1a6dff5fb598ae73c17f42fe53b3ef79ea275d68cb78e71b1b88a1e33ac9efd2",
+        "stage_count": 1,
+        "stage_structure": [
+          {
+            "cu_id": "inferswarm01/gpu-1",
+            "layer_end": 48,
+            "layer_start": 0,
+            "node": "inferswarm01"
+          }
+        ]
+      },
+      {
+        "candidate_id": "dense.ede4c4376efe",
+        "qualification_subject": {
+          "backend": {
+            "cuda_runtime": "13.0",
+            "flashinfer": "0.6.17",
+            "nvidia_driver": "610.57.04",
+            "torch": "2.11.0+cu130",
+            "triton": "3.6.0"
+          },
+          "catalog_content_digest": "sha256:9108bc8721c34c1be43771bf829bbbb0dfe2369bb452a53229fcda322d5dcd18",
+          "checkpoint_authority_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+          "execution": "native BF16 text execution; Triton attention; one <=64-row replay chunk",
+          "layer_count": 48,
+          "model_id": "google/gemma-4-12B-it",
+          "representation": "checkpoint-safetensors",
+          "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+          "stage_structure": [
+            {
+              "cu_id": "inferswarm01/gpu-1",
+              "layer_end": 16,
+              "layer_start": 0,
+              "node": "inferswarm01"
+            },
+            {
+              "cu_id": "inferswarm03/gpu-0",
+              "layer_end": 32,
+              "layer_start": 16,
+              "node": "inferswarm03"
+            },
+            {
+              "cu_id": "inferswarm04/gpu-0",
+              "layer_end": 48,
+              "layer_start": 32,
+              "node": "inferswarm04"
+            }
+          ]
+        },
+        "qualification_subject_digest": "sha256:544e4325f683489bf2882774ced70b5fe8bd9a99bdf07018ad45d5f6f326b928",
+        "stage_count": 3,
+        "stage_structure": [
+          {
+            "cu_id": "inferswarm01/gpu-1",
+            "layer_end": 16,
+            "layer_start": 0,
+            "node": "inferswarm01"
+          },
+          {
+            "cu_id": "inferswarm03/gpu-0",
+            "layer_end": 32,
+            "layer_start": 16,
+            "node": "inferswarm03"
+          },
+          {
+            "cu_id": "inferswarm04/gpu-0",
+            "layer_end": 48,
+            "layer_start": 32,
+            "node": "inferswarm04"
+          }
+        ]
+      }
+    ]
+  },
+  "cold_cache_proofs": [
+    {
+      "cache_facts": {
+        "entries": [],
+        "entry_count": 0,
+        "hardlink_entries": [],
+        "root": "/srv/inferswarm/cache/issue117",
+        "root_exists": true,
+        "root_is_symlink": false,
+        "symlink_entries": [],
+        "total_bytes": 0
+      },
+      "collector": "issue117.preflight.cold-cache-collector/1",
+      "materialized_facts": {
+        "entries": [],
+        "entry_count": 0,
+        "hardlink_entries": [],
+        "root": "/srv/inferswarm/materialized/issue117",
+        "root_exists": true,
+        "root_is_symlink": false,
+        "symlink_entries": [],
+        "total_bytes": 0
+      },
+      "participant_id": "inferswarm01",
+      "proof_digest": "sha256:a233e631b710e298eaceaecdbdf6f1a5d1c8a0cc72c2711f243a475de32e08d2",
+      "schema": "inferswarm.issue117.cold-cache-proof/1"
+    },
+    {
+      "cache_facts": {
+        "entries": [],
+        "entry_count": 0,
+        "hardlink_entries": [],
+        "root": "/srv/inferswarm/cache/issue117",
+        "root_exists": true,
+        "root_is_symlink": false,
+        "symlink_entries": [],
+        "total_bytes": 0
+      },
+      "collector": "issue117.preflight.cold-cache-collector/1",
+      "materialized_facts": {
+        "entries": [],
+        "entry_count": 0,
+        "hardlink_entries": [],
+        "root": "/srv/inferswarm/materialized/issue117",
+        "root_exists": true,
+        "root_is_symlink": false,
+        "symlink_entries": [],
+        "total_bytes": 0
+      },
+      "participant_id": "inferswarm03",
+      "proof_digest": "sha256:8dba458672e6d330612d0e344e418b904acf1690f51ff0d597f61899acccc36d",
+      "schema": "inferswarm.issue117.cold-cache-proof/1"
+    }
+  ],
+  "compute_units": [
+    {
+      "compute_capability": "8.6",
+      "cu_id": "inferswarm01/gpu-0",
+      "gpu_index": 0,
+      "gpu_product": "NVIDIA GeForce RTX 3060",
+      "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+      "node": "inferswarm01",
+      "node_identity": {
+        "collected_utc": "2026-09-08T05:23:29Z",
+        "kernel": "6.12.105+deb13-amd64",
+        "machine_id_sha256": "0d2e5af735419b17ac5736f8049542404cd382dc1007f642e64d36c08dffbf14",
+        "node_fingerprint": "d17984fe8d97a6f7ff918cb99d4a05ae286e066d159240286c8a53c3663d03a4",
+        "node_id": "inferswarm01"
+      },
+      "role": "serving-candidate",
+      "runtime": {
+        "cuda_runtime": "13.0",
+        "flashinfer": "0.6.17",
+        "nvidia_driver": "610.57.04",
+        "torch": "2.11.0+cu130",
+        "triton": "3.6.0"
+      }
+    },
+    {
+      "compute_capability": "8.6",
+      "cu_id": "inferswarm01/gpu-1",
+      "gpu_index": 1,
+      "gpu_product": "NVIDIA GeForce RTX 3060",
+      "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+      "node": "inferswarm01",
+      "node_identity": {
+        "collected_utc": "2026-09-08T05:23:29Z",
+        "kernel": "6.12.105+deb13-amd64",
+        "machine_id_sha256": "0d2e5af735419b17ac5736f8049542404cd382dc1007f642e64d36c08dffbf14",
+        "node_fingerprint": "d17984fe8d97a6f7ff918cb99d4a05ae286e066d159240286c8a53c3663d03a4",
+        "node_id": "inferswarm01"
+      },
+      "role": "serving-candidate",
+      "runtime": {
+        "cuda_runtime": "13.0",
+        "flashinfer": "0.6.17",
+        "nvidia_driver": "610.57.04",
+        "torch": "2.11.0+cu130",
+        "triton": "3.6.0"
+      }
+    },
+    {
+      "compute_capability": "8.6",
+      "cu_id": "inferswarm03/gpu-0",
+      "gpu_index": 0,
+      "gpu_product": "NVIDIA GeForce RTX 3060",
+      "gpu_uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176",
+      "node": "inferswarm03",
+      "node_identity": {
+        "collected_utc": "2026-09-08T05:23:35Z",
+        "kernel": "6.12.107+deb13-amd64",
+        "machine_id_sha256": "474b4baefd19ebf6769708f229082900835ed47b7f29a50e367b91419dcfc9a0",
+        "node_fingerprint": "5d12f233a89b7fd488b1f2cd630777beb78144b5c87e0d67e77a372bf362bc86",
+        "node_id": "inferswarm03"
+      },
+      "role": "serving-candidate",
+      "runtime": {
+        "cuda_runtime": "13.0",
+        "flashinfer": "0.6.17",
+        "nvidia_driver": "610.57.04",
+        "torch": "2.11.0+cu130",
+        "triton": "3.6.0"
+      }
+    },
+    {
+      "compute_capability": "8.6",
+      "cu_id": "inferswarm04/gpu-0",
+      "gpu_index": 0,
+      "gpu_product": "NVIDIA GeForce RTX 3090",
+      "gpu_uuid": "GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03",
+      "node": "inferswarm04",
+      "node_identity": {
+        "collected_utc": "2026-09-08T05:23:38Z",
+        "kernel": "6.12.107+deb13-amd64",
+        "machine_id_sha256": "c10df8280e25f953fcb71e4f9e55a2b8a4ee786d0d371162a7584699cf3e9161",
+        "node_fingerprint": "6883f8c163f52bf1931765b5c6d501fe4f8111d19a1bec353898727c078d1060",
+        "node_id": "inferswarm04"
+      },
+      "role": "reference-reserved",
+      "runtime": {
+        "cuda_runtime": "13.0",
+        "flashinfer": "0.6.17",
+        "nvidia_driver": "610.57.04",
+        "torch": "2.11.0+cu130",
+        "triton": "3.6.0"
+      }
+    }
+  ],
+  "implementation": {
+    "accepted_inferswarm_base": "d37bd301a5ea361644160f92427aa75bff658b61",
+    "freetoken_identity": {
+      "branch": "HEAD",
+      "clean": true,
+      "collector": "issue117.preflight.repository-identity-collector/1",
+      "head": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+      "integration_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+      "porcelain": "",
+      "repo_root": "/home/zutfen/FreeToken",
+      "repository_identity_digest": "sha256:d7f124993e2dd809e87e3f80b9a3eb68b1cf1473f95e290283930f6fe8fe1796",
+      "role": "freetoken-integration-producer",
+      "schema": "inferswarm.issue117.repository-identity/1"
+    },
+    "inferswarm_identity": {
+      "branch": "HEAD",
+      "clean": true,
+      "collector": "issue117.preflight.repository-identity-collector/1",
+      "head": "d127879a17ae933799c5cbbbaa9fb291bfe7a408",
+      "porcelain": "",
+      "repo_root": "/home/zutfen/issue117-preflight/repo",
+      "repository_identity_digest": "sha256:ea9f1c2d16cd7fd65b96fec57db229841c03b2d963e663236d3068b74f63aa38",
+      "role": "inferswarm",
+      "schema": "inferswarm.issue117.repository-identity/1"
+    }
+  },
+  "integration_fixture_digest": "sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba36f2",
+  "model_subject": {
+    "backend": {
+      "cuda_runtime": "13.0",
+      "flashinfer": "0.6.17",
+      "nvidia_driver": "610.57.04",
+      "torch": "2.11.0+cu130",
+      "triton": "3.6.0"
+    },
+    "checkpoint_authority_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "execution": "native BF16 text execution; Triton attention; one <=64-row replay chunk",
+    "model_id": "google/gemma-4-12B-it",
+    "representation": "checkpoint-safetensors",
+    "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7"
+  },
+  "preflight_digest": "sha256:bf7e0b312c8cb34ba5ced1c205039374dc018dbbbeba3cd9d2652a7b23a49e93",
+  "qualification_applicability": [
+    {
+      "applicability": "QUALIFICATION_NOT_APPLICABLE",
+      "candidate_id": "dense.3b8644d360a3",
+      "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+      "record_digest": "sha256:d394a38705f244808b5e1699dd224b72adbd27be67dd01a9e9b4c0ade090fa1c"
+    },
+    {
+      "applicability": "QUALIFICATION_APPLICABLE",
+      "candidate_id": "dense.6171f32b4413",
+      "matched_record_ids": [
+        "inferswarm.issue117.accepted-v5-qualification/1"
+      ],
+      "reason": "MATCHED_ACCEPTED_QUALIFICATION_RECORD",
+      "record_digest": "sha256:1b8ce99ecbda2cbcb9a678ef93e625d861c2c0172ced0b86eff79999178672b2"
+    },
+    {
+      "applicability": "QUALIFICATION_NOT_APPLICABLE",
+      "candidate_id": "dense.720a017663e4",
+      "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+      "record_digest": "sha256:6ec4ff1b4795268599545995ad9861b40acebbb62c7f0dfce8b0fe98d15aa642"
+    },
+    {
+      "applicability": "QUALIFICATION_NOT_APPLICABLE",
+      "candidate_id": "dense.97c6513e854b",
+      "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+      "record_digest": "sha256:c5165d12bca7d3e5466d87ba8e0796f339d8fabdbf81cd36e4450183140ce482"
+    },
+    {
+      "applicability": "QUALIFICATION_NOT_APPLICABLE",
+      "candidate_id": "dense.9dd68b5adfa3",
+      "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+      "record_digest": "sha256:5cbd6b758dfa6477ce4aec93015cb8b5334c7aa26e7c0d43ea1273d0892059c8"
+    },
+    {
+      "applicability": "QUALIFICATION_NOT_APPLICABLE",
+      "candidate_id": "dense.b1fb60400bc3",
+      "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+      "record_digest": "sha256:3cd91b6d3e0d1396c6e4e52287f15c9080ee0281dce9d8d94dc838ba00d5367f"
+    },
+    {
+      "applicability": "QUALIFICATION_NOT_APPLICABLE",
+      "candidate_id": "dense.b3c4d8a8929e",
+      "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+      "record_digest": "sha256:14476d28c53cbb500a5044a6df718265409985f62896b0ba573d4efed67173d5"
+    },
+    {
+      "applicability": "QUALIFICATION_NOT_APPLICABLE",
+      "candidate_id": "dense.e3a5ae183953",
+      "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+      "record_digest": "sha256:99069b56a43c68cb29a4b1128483f8465c8387f31e96e9650fe7b02969973670"
+    },
+    {
+      "applicability": "QUALIFICATION_NOT_APPLICABLE",
+      "candidate_id": "dense.ede4c4376efe",
+      "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+      "record_digest": "sha256:67db6fd3342014fd8e3d258c194fadd2a12e937432ac19eca39b1d3229a2a93b"
+    }
+  ],
+  "resource_identity": {
+    "compute_units": [
+      {
+        "cu_id": "inferswarm01/gpu-0",
+        "gpu_index": 0,
+        "node": "inferswarm01",
+        "product": "NVIDIA GeForce RTX 3060",
+        "role": "serving-candidate"
+      },
+      {
+        "cu_id": "inferswarm01/gpu-1",
+        "gpu_index": 1,
+        "node": "inferswarm01",
+        "product": "NVIDIA GeForce RTX 3060",
+        "role": "serving-candidate"
+      },
+      {
+        "cu_id": "inferswarm03/gpu-0",
+        "gpu_index": 0,
+        "node": "inferswarm03",
+        "product": "NVIDIA GeForce RTX 3060",
+        "role": "serving-candidate"
+      },
+      {
+        "cu_id": "inferswarm04/gpu-0",
+        "gpu_index": 0,
+        "node": "inferswarm04",
+        "product": "NVIDIA GeForce RTX 3090",
+        "role": "reference-reserved"
+      }
+    ],
+    "coordinator": {
+      "cpu_only": true,
+      "node": "inferswarm00"
+    },
+    "coordinator_cuda_initialized": 0,
+    "coordinator_model_weight_bytes_materialized": 0,
+    "coordinator_model_weight_bytes_received": 0
+  },
+  "schema": "inferswarm.issue117.physical-preflight/3",
+  "source_descriptors": {
+    "descriptors": [
+      {
+        "endpoint": "file:///srv/models/gemma-r6",
+        "possession_root": "/srv/models/gemma-r6",
+        "source_id": "issue117-origin",
+        "source_kind": "local_file"
+      },
+      {
+        "endpoint": "https://huggingface.co/google/gemma-4-12B-it/resolve/707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7/model.safetensors",
+        "source_id": "issue117-remote-mirror",
+        "source_kind": "remote_object"
+      }
+    ],
+    "descriptors_digest": "sha256:551dcf49d1df417160651b7b18cae26af0938b975d14e139081501de2e3780e3"
+  },
+  "source_possession_records": [
+    {
+      "collector": "issue117.preflight.cold-cache-collector/1",
+      "facts": {
+        "entries": [
+          {
+            "hardlink_count": 1,
+            "is_symlink": false,
+            "path": ".gitattributes",
+            "size": 1624
+          },
+          {
+            "hardlink_count": 1,
+            "is_symlink": false,
+            "path": "README.md",
+            "size": 28484
+          },
+          {
+            "hardlink_count": 1,
+            "is_symlink": false,
+            "path": "chat_template.jinja",
+            "size": 18683
+          },
+          {
+            "hardlink_count": 1,
+            "is_symlink": false,
+            "path": "config.json",
+            "size": 4423
+          },
+          {
+            "hardlink_count": 1,
+            "is_symlink": false,
+            "path": "generation_config.json",
+            "size": 260
+          },
+          {
+            "hardlink_count": 1,
+            "is_symlink": false,
+            "path": "model.safetensors",
+            "size": 23919549408
+          },
+          {
+            "hardlink_count": 1,
+            "is_symlink": false,
+            "path": "processor_config.json",
+            "size": 1382
+          },
+          {
+            "hardlink_count": 1,
+            "is_symlink": false,
+            "path": "tokenizer.json",
+            "size": 32169626
+          },
+          {
+            "hardlink_count": 1,
+            "is_symlink": false,
+            "path": "tokenizer_config.json",
+            "size": 3089
+          }
+        ],
+        "entry_count": 9,
+        "hardlink_entries": [],
+        "root": "/srv/models/gemma-r6",
+        "root_exists": true,
+        "root_is_symlink": false,
+        "symlink_entries": [],
+        "total_bytes": 23951776979
+      },
+      "possession_digest": "sha256:37b9ea0707a61bd4d2c3a6b360b28337fae19487992c03007c826283fd172f3c",
+      "schema": "inferswarm.issue117.source-possession/1",
+      "source_id": "issue117-origin"
+    }
+  ],
+  "v5_authority_sha256": {
+    "docs/benchmarks/results/phase0/p0c-hardware-profile.json": "806421cf5753cad7e2b52748ecb0bed54e8803eba20191a4829d141b7aea33fd",
+    "docs/qualification/gemma4-12b-it-v2-campaign-81/preflight-applicability.json": "f2c3590da2a16a11889bbb164df73c9aee334453b6bccf0ead27a9c3265b9313",
+    "docs/qualification/gemma4-12b-it-v4-campaign-97/EXECUTION-AUTHORITY.json": "bb6a084fb448f8804c268273d222ece7ed50a2d4da03413edfab4ae9e136b585",
+    "docs/qualification/gemma4-12b-it-v5-campaign-110/b/TERMINAL-REPORT.md": "d7f5e4954bded41e03208018c4887abb40c301f78d115e233104f265ac9882c6",
+    "docs/qualification/gemma4-12b-it-v5-campaign-110/b/h109-unseal-record.json": "0150a363be3d8898c6b69b82e5f8c4455591bf8a7095f31ae36c3ad082791145",
+    "docs/qualification/gemma4-12b-it-v5-campaign-110/b/holdout-adjudication.json": "f024f8b3394686ff098459b657ce6dba62d7f190972663e3929ef4a574ab7a70",
+    "docs/qualification/gemma4-12b-it-v5-campaign-110/b/holdout-rows.json": "de553f6c1b06e39ea69f2a526fc4b36dac76eb239ce1a09de776d0df1dfd4eb6",
+    "docs/qualification/gemma4-12b-it-v5-campaign-110/preflight/HOLDOUT-EXECUTION-AUTHORITY.json": "6f6c583f656ee28fde6d1094c47033374657929ae7d623615bd7e81753f8b492",
+    "docs/qualification/gemma4-12b-it-v5/METHODOLOGY.md": "d058c2da578c33504816d24d43aa57b3b5c43176dfb57f6819578edf3be46c71",
+    "docs/qualification/gemma4-12b-it-v5/TOOLING.md": "9dd0b2ce2e4df553561cd39de0950744bd5fd4d59824d99568a3569dd03b960a",
+    "docs/qualification/gemma4-12b-it-v5/manifests/calibration-corpus.json": "b35f1915231d455cd964e9b645e58269ec63cdf483742907af39cc850f9fdb35",
+    "docs/qualification/gemma4-12b-it-v5/manifests/comparator-tier-contract.json": "ebba447573ea7af9faeab91e1036a780db453661fbc5eb067f6acfd78a1df5af",
+    "docs/qualification/gemma4-12b-it-v5/manifests/mixture-population.json": "c272c08e475ce576fe3f314ef091f81f05fd2839753cfaa0b95923307a66ee25",
+    "docs/qualification/gemma4-12b-it-v5/manifests/physical-subject.json": "8b840eed2b858623be6abd1bfbac1bc7f3bf3637ac7acfa383ce039137226aee",
+    "docs/qualification/gemma4-12b-it-v5/manifests/sealed-holdout-commitment.json": "b0dcff2a241b20cbd24f1b54f30e77a33512d8ceb12f79afc6c1761b2c994fd2",
+    "docs/qualification/gemma4-12b-it-v5/manifests/statistical-derivation.json": "97fcb4c968e76d067f156d52c97124f1b52ae209ebc92d7f975c46df3e0720b5"
+  }
+}
