@@ -1,0 +1,97 @@
+{
+  "classification": "RESTRUCTURED_FROM_IN_WINDOW_COLLECTOR_OUTPUT_VALUES_VERBATIM_STRUCTURE_DERIVED",
+  "collected_utc": "2026-09-08T05:23:42Z",
+  "context_inventory_non_issue117": {
+    "/srv/inferswarm/models": {
+      "entry_count": 13,
+      "weight_object_bytes": 0
+    },
+    "/srv/inferswarm/run": {
+      "entry_count": 174,
+      "weight_object_bytes": 0
+    },
+    "/srv/inferswarm/state": {
+      "entry_count": 30,
+      "weight_object_bytes": 0
+    }
+  },
+  "cuda_initialization_evidence": {
+    "coordinator_venv_torch_importable": false,
+    "dev_nvidia_nodes": [],
+    "nvidia_smi_present": false,
+    "processes_with_cuda_device_fds": []
+  },
+  "derived_coordinator_cuda_initialized": 0,
+  "non_claims": [
+    "The context inventory covers historical non-#117 campaign state and is not #117 coordinator traffic.",
+    "Verbatim in-window collector output; no current-state re-observation was used."
+  ],
+  "record_digest": "sha256:429fa6d234f3d918559306f05574d84a9de6f61d3f4e87f9940ee1d4932b7661",
+  "recovered_into_repo_utc": "2026-09-08T06:15:00Z",
+  "schema": "inferswarm.issue117.physical-preflight-coordinator-accounting/1",
+  "source_collector": "inferswarm.issue117.physical.coordinator-counter-collector/1",
+  "source_evidence": "external staging observed-facts/coordinator-counters-inferswarm00.json (verbatim collector output, file sha256 a5272e569a28f41b7d5364e5cb901728eb7c272b6dc8f156c606b0a9532f0085)",
+  "verbatim_collector_output": {
+    "collected_utc": "2026-09-08T05:23:42Z",
+    "collector": "inferswarm.issue117.physical.coordinator-counter-collector/1",
+    "context_inventory_non_issue117": {
+      "/srv/inferswarm/models": {
+        "entry_count": 13,
+        "weight_object_bytes": 0
+      },
+      "/srv/inferswarm/run": {
+        "entry_count": 174,
+        "weight_object_bytes": 0
+      },
+      "/srv/inferswarm/state": {
+        "entry_count": 30,
+        "weight_object_bytes": 0
+      }
+    },
+    "coordinator_cuda_initialized": 0,
+    "coordinator_model_weight_bytes_materialized": 0,
+    "coordinator_model_weight_bytes_received": 0,
+    "counter_derivation": "cuda_initialized := any(/dev/nvidia* present OR process holds a /dev/nvidia fd OR coordinator venv can import torch); weight bytes := sum of weight-object bytes under the issue-117-dedicated coordinator roots (none exist / all empty => 0)",
+    "cuda_observations": {
+      "coordinator_venv_torch_importable": false,
+      "dev_nvidia_nodes": [],
+      "nvidia_smi_present": false,
+      "processes_with_cuda_device_fds": []
+    },
+    "issue117_root_observations": {
+      "/srv/inferswarm/cache/issue117": {
+        "entries": [],
+        "entry_count": 0,
+        "weight_object_bytes": 0
+      },
+      "/srv/inferswarm/materialized/issue117": {
+        "entries": [],
+        "entry_count": 0,
+        "weight_object_bytes": 0
+      }
+    },
+    "node": "inferswarm00",
+    "schema": "inferswarm.issue117.physical.coordinator-counters/1"
+  },
+  "weight_byte_accounting": {
+    "derivation_rule": "cuda_initialized := any(/dev/nvidia* present OR process holds a /dev/nvidia fd OR coordinator venv can import torch); weight bytes := sum of weight-object bytes under the issue-117-dedicated coordinator roots (none exist / all empty => 0)",
+    "per_root": {
+      "/srv/inferswarm/cache/issue117": {
+        "entries": [],
+        "entry_count": 0,
+        "weight_object_bytes": 0
+      },
+      "/srv/inferswarm/materialized/issue117": {
+        "entries": [],
+        "entry_count": 0,
+        "weight_object_bytes": 0
+      }
+    },
+    "roots_scanned": [
+      "/srv/inferswarm/cache/issue117",
+      "/srv/inferswarm/materialized/issue117"
+    ],
+    "total_materialized_bytes": 0,
+    "total_received_bytes": 0
+  }
+}

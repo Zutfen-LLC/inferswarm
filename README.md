@@ -118,11 +118,12 @@ Its synthetic CPU fixture campaign passed
 recovered: the V5 checkpoint-authority provenance (PR #119) and the accepted
 V5 qualification subject
 (`V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED`, reconstructed from
-byte-pinned historical evidence). The implementation freeze may now be
-re-evaluated (current state recorded additively in
-`evidence/v5-qualification-subject-recovery.json`; the accepted #118
-terminal `canonical-summary.json` is preserved byte-exact as historical
-evidence); the physical preflight and fabric arms remain pending.
+byte-pinned historical evidence). The physical preflight has since been
+executed on the real fabric and retained
+`ISSUE117_PHYSICAL_PREFLIGHT_PASS` (PR #121; the accepted #118 terminal
+`canonical-summary.json` remains preserved byte-exact as historical
+evidence); the fabric arms (A-E) remain pending and are not authorized
+until the preflight PASS is maintainer-accepted.
 GLM-5.3-Flash / issue #13 remains a later large-model falsifier, not this
 gate.
 

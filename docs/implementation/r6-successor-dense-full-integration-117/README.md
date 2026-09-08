@@ -1,17 +1,20 @@
 # R6 successor dense full integration — issue #117
 
-Current state: **`ISSUE117_IMPLEMENTATION_FREEZE_PENDING_RE_EVALUATION`**
-(additive current-state record:
-`evidence/v5-qualification-subject-recovery.json`). Both retained-evidence
-blockers are recovered — `V5_CHECKPOINT_AUTHORITY_PROVENANCE_RECOVERED`
-(PR #119) and `V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED` (see
+Current state: **`ISSUE117_PHYSICAL_PREFLIGHT_PASS`** (retained physical
+preflight record: `evidence/physical-preflight.json` and
+`evidence/physical-preflight-record.json`). Both retained-evidence blockers
+were recovered — `V5_CHECKPOINT_AUTHORITY_PROVENANCE_RECOVERED` (PR #119)
+and `V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED` (PR #120; see
 [CHECKPOINT-AUTHORITY-BLOCKER.md](CHECKPOINT-AUTHORITY-BLOCKER.md) for both
 resolution sections). The accepted #118 terminal evidence
 (`evidence/canonical-summary.json`, `ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`)
 is preserved byte-for-byte as the accurate historical record of the state
-when #118 was accepted; it is never rewritten. Physical preflight and Arms
-A-E remain pending and were NOT executed; the physical gate is not
-unblocked until the repaired preflight itself is reviewed/accepted.
+when #118 was accepted; it is never rewritten. The physical preflight was
+executed on the real fabric (inferswarm00/01/03/04) at the exact accepted
+base `d127879a` with FreeToken at the frozen integration producer
+`924cd22e` and observed `PREFLIGHT_VALID` with zero failures; Arms A-E were
+NOT executed. The physical execution gate is not unblocked until this
+preflight PASS is reviewed/accepted by the maintainer.
 
 This phase proves, before any physical correctness-bearing execution, that
 the accepted architecture seams compose exactly as the #117 gate requires —
@@ -105,12 +108,15 @@ frozen with digest
   fixture subject with a fixture-scoped adjudication identity and never
   claims the accepted Gemma checkpoint. The V5-shaped diagnostic candidate
   does not supply qualification authority.
-- The retained `checkpoint_authority_sha256` has no independent
-  content-to-authority derivation rule. The candidate's
-  `catalog_content_digest` is a machinery drift binding. It cannot replace
-  retained authority evidence. A physical checkpoint attestation can act as
-  an adapter only after an independent retained derivation validates it. The
-  retained evidence does not provide that derivation.
+- The retained `checkpoint_authority_sha256` has a recovered independent
+  content-to-authority derivation rule (PR #119:
+  `V5_CHECKPOINT_AUTHORITY_PROVENANCE_RECOVERED`): the authority is exactly
+  `sha256(model.safetensors bytes)` at the checkpoint repository root,
+  mechanically derived by `scripts/issue117_checkpoint_authority.py` over
+  the actual bytes. The candidate's `catalog_content_digest` remains a
+  machinery-local drift binding over the exact bytes the machinery observed
+  — a different identity that must never be presented as, or substituted
+  for, the recovered external checkpoint authority.
 - The synthetic capacity model proves planner machinery, not hardware
   limits; the physical preflight re-freezes real capacities.
 - Source-side catalog/manifest building reads and hashes model bytes by
