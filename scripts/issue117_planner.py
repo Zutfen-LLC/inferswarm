@@ -40,10 +40,9 @@ from issue103_planner import (
     purity_audit,
 )
 from issue99_artifact_core import (
-    MACHINERY_LOCAL_SUBJECT_KEYS,
-    subject_digest,
     validate_self_identity,
 )
+from issue117_subject_identity import MACHINERY_LOCAL_SUBJECT_KEYS, subject_digest
 
 QUALIFICATION_POLICY_STRICT = "REQUIRE_ACCEPTED_EXECUTION_QUALIFICATION"
 

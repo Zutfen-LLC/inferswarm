@@ -61,10 +61,10 @@ from issue99_artifact_core import (
     digest_of_bytes,
     freeze_artifact_record,
     self_digest,
-    subject_digest,
     validate_artifact_record,
     validate_self_identity,
 )
+from issue117_subject_identity import execution_equality_subject, subject_digest
 
 STRATEGY_SCHEMA = "inferswarm.issue117.gemma-dense-strategy/2"
 CATALOG_SCHEMA = "inferswarm.issue117.checkpoint-catalog/3"
@@ -800,7 +800,6 @@ def accepted_v5_subject() -> dict[str, Any]:
     the candidate's content identity is bound at physical construction by the
     authority attestation adapter and by the plan/manifest digests.
     """
-    from issue99_artifact_core import execution_equality_subject
     return execution_equality_subject(
         canonical_v5_candidate()["qualification_subject"])
 

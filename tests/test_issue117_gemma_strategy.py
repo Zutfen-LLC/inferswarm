@@ -11,6 +11,10 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import issue117_gemma_strategy as strategy  # noqa: E402
 from issue74_methodology import canonical_json_bytes  # noqa: E402
 from issue99_artifact_core import derive_participant_requirements, digest_of_bytes  # noqa: E402
+from issue117_subject_identity import (  # noqa: E402
+    MACHINERY_LOCAL_SUBJECT_KEYS,
+    subject_digest,
+)
 
 
 def build_strategy(temp: Path, *, seed: str = "issue117-synthetic-gemma-v1"):
@@ -446,7 +450,6 @@ class QualificationRecordTests(unittest.TestCase):
         self.assertEqual(self.record["scope"], "accepted-authority")
 
     def test_record_subject_digest_recomputes_from_its_subject(self):
-        from issue99_artifact_core import subject_digest
         self.assertEqual(
             self.record["qualification_subject_digest"],
             subject_digest(self.record["qualification_subject"]))
@@ -464,7 +467,6 @@ class QualificationRecordTests(unittest.TestCase):
         tampered["qualification_subject"]["revision"] = "forged"
         # the record's subject digest no longer recomputes from its subject:
         # exactly the inconsistency the generic gate rejects
-        from issue99_artifact_core import subject_digest
         self.assertNotEqual(
             tampered["qualification_subject_digest"],
             subject_digest(tampered["qualification_subject"]))
@@ -568,7 +570,6 @@ class CanonicalAcceptedV5Tests(unittest.TestCase):
             evaluate_qualification_applicability,
         )
         from issue117_applicability import ACCEPTED_TERMINAL_ADJUDICATION_SHA256
-        from issue99_artifact_core import MACHINERY_LOCAL_SUBJECT_KEYS
         record = strategy.accepted_v5_qualification_record()
         policy = {
             "policy": QUALIFICATION_POLICY_STRICT,
@@ -604,7 +605,6 @@ class CanonicalAcceptedV5Tests(unittest.TestCase):
     def test_accepted_v5_subject_is_constructed_through_machinery(self):
         # test 6: the accepted V5 subject digest is constructible from the
         # actual canonical strategy path, not only from constants
-        from issue99_artifact_core import subject_digest
         subject = strategy.accepted_v5_subject()
         candidate = strategy.canonical_v5_candidate()
         self.assertEqual(
@@ -759,7 +759,6 @@ class CheckpointAuthorityAttestationTests(unittest.TestCase):
             QUALIFICATION_POLICY_STRICT,
             evaluate_qualification_applicability,
         )
-        from issue99_artifact_core import MACHINERY_LOCAL_SUBJECT_KEYS
         catalog = self.rebuild_catalog()
         manifest = strategy.build_source_manifest(
             catalog, source_bytes=lambda name: self.objects[name])

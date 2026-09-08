@@ -1,10 +1,10 @@
 # Issue #117 — R6 successor dense full integration — methodology
 
-Frozen before any physical correctness-bearing result. This document is the
-execution plan for the gate; it is retained unmodified as physical evidence
-lands. Evidence documents produced before physical work carry the disposition
-`ISSUE117_IMPLEMENTATION_FREEZE_PASS`; that disposition is not the terminal
-gate verdict.
+Blocked before any physical correctness-bearing result. See
+[CHECKPOINT-AUTHORITY-BLOCKER.md](CHECKPOINT-AUTHORITY-BLOCKER.md). The
+previous CPU/static freeze claim does not establish a non-forgeable
+checkpoint-to-authority binding. Physical preflight and Arms A-E remain
+pending and were not executed.
 
 ## Starting state (bound)
 

@@ -144,8 +144,8 @@ def require(condition: Any, message: str) -> None:
 
 
 def subject_identity_digest(subject: Mapping[str, Any]) -> str:
-    """The shared execution-equality subject digest (issue99 convention)."""
-    from issue99_artifact_core import subject_digest
+    """The Issue #117 execution-equality subject digest."""
+    from issue117_subject_identity import subject_digest
     return subject_digest(subject)
 
 
@@ -329,7 +329,7 @@ def fixture_qualification_policy(world) -> dict[str, Any]:
     compares execution-equality subject identities, exactly as the physical
     preflight policy does for the accepted V5 record.
     """
-    from issue99_artifact_core import MACHINERY_LOCAL_SUBJECT_KEYS
+    from issue117_subject_identity import MACHINERY_LOCAL_SUBJECT_KEYS
     return {
         "policy": QUALIFICATION_POLICY_STRICT,
         "accepted_dispositions": ("V5_QUALIFICATION_PASS",),
@@ -891,7 +891,7 @@ def run_negative_controls(world, fixture_path: Path) -> NegativeControls:
         # a materially changed execution-bearing subject (new geometry and
         # producer identity) recomputes to a different subject digest and
         # must resolve QUALIFICATION_NOT_APPLICABLE
-        from issue99_artifact_core import subject_digest
+        from issue117_subject_identity import subject_digest
         mutated = json.loads(json.dumps(world["v5"]))
         mutated["stages"][0]["layer_end"] = 17
         mutated["stages"][1]["layer_start"] = 17
@@ -921,7 +921,7 @@ def run_negative_controls(world, fixture_path: Path) -> NegativeControls:
         # the accepted V5 record binds the canonical Gemma authority subject;
         # no synthetic fixture subject may match it, and the canonical
         # machinery candidate is the one subject that does
-        from issue99_artifact_core import MACHINERY_LOCAL_SUBJECT_KEYS, subject_digest
+        from issue117_subject_identity import MACHINERY_LOCAL_SUBJECT_KEYS, subject_digest
         from issue117_planner import evaluate_qualification_applicability
         from issue117_gemma_strategy import canonical_v5_candidate
         record = accepted_v5_qualification_record()

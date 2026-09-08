@@ -1,8 +1,9 @@
 # R6 successor dense full integration — issue #117
 
-Status: **`ISSUE117_IMPLEMENTATION_FREEZE_PASS`** (CPU/static phase).
-Physical Arms A–D and the physical preflight are **pending** on the fabric;
-see [METHODOLOGY.md](METHODOLOGY.md) for the frozen execution plan.
+Status: **`ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`**.
+The previous CPU/static freeze claim is superseded by the retained
+[checkpoint-authority blocker](CHECKPOINT-AUTHORITY-BLOCKER.md). Physical
+preflight and Arms A-E are pending and were not executed.
 
 This phase proves, before any physical correctness-bearing execution, that
 the accepted architecture seams compose exactly as the #117 gate requires —

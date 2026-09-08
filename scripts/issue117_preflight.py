@@ -441,15 +441,17 @@ def _stage_triples(candidate: Mapping[str, Any]) -> list[tuple[str, int, int]]:
             for stage in candidate.get("stage_structure", [])]
 
 
-def validate_preflight(document: Mapping[str, Any], *, repo_root: Path,
-                       fixture_path: Path | None = None,
-                       freetoken_root: Path | None = None) -> list[str]:
+def _validate_preflight(document: Mapping[str, Any], *, repo_root: Path,
+                        fixture_path: Path | None, freetoken_root: Path | None,
+                        checkpoint_root: Path | None, physical: bool) -> list[str]:
     """Re-derive every derivable identity; return all failures (empty = pass).
 
     ``fixture_path`` defaults to the committed integration fixture under
     ``repo_root``; the committed fixture is always fully validated, never
-    merely digest-compared. ``freetoken_root``, when supplied and present,
-    is used to independently re-check the FreeToken identity record.
+    merely digest-compared. A physical preflight requires accessible
+    FreeToken and checkpoint checkouts. It independently re-checks the
+    FreeToken identity record. It fails closed until retained checkpoint
+    authority evidence supplies a mechanical byte-to-authority derivation.
     """
     failures: list[str] = []
     if fixture_path is None:
@@ -487,7 +489,24 @@ def validate_preflight(document: Mapping[str, Any], *, repo_root: Path,
         failures.append("freetoken worktree is not clean (collected evidence)")
     _recheck_repository_identity(inferswarm_identity, root=repo_root,
                                  role="inferswarm", failures=failures)
-    if freetoken_root is not None and Path(freetoken_root).exists():
+    if physical:
+        if freetoken_root is None:
+            failures.append("physical preflight requires a FreeToken checkout path")
+        elif not Path(freetoken_root).is_dir():
+            failures.append("physical preflight FreeToken checkout path is inaccessible")
+        else:
+            _recheck_repository_identity(freetoken_identity,
+                                         root=Path(freetoken_root), role="freetoken",
+                                         failures=failures)
+        if checkpoint_root is None:
+            failures.append("physical preflight requires the checkpoint checkout path")
+        elif not Path(checkpoint_root).is_dir():
+            failures.append("physical preflight checkpoint checkout path is inaccessible")
+        else:
+            failures.append(
+                "checkpoint authority derivation is unavailable from retained "
+                "accepted evidence; refusing self-attested checkpoint identity")
+    elif freetoken_root is not None and Path(freetoken_root).is_dir():
         _recheck_repository_identity(freetoken_identity,
                                      root=Path(freetoken_root), role="freetoken",
                                      failures=failures)
@@ -640,7 +659,8 @@ def validate_preflight(document: Mapping[str, Any], *, repo_root: Path,
                 "identity")
             continue
         from issue74_methodology import canonical_json_bytes
-        from issue99_artifact_core import execution_equality_subject, digest_of_bytes
+        from issue99_artifact_core import digest_of_bytes
+        from issue117_subject_identity import execution_equality_subject
         if digest_of_bytes(canonical_json_bytes(execution_equality_subject(
                 subject_result))) != subject_digest:
             failures.append(
@@ -816,12 +836,38 @@ def validate_preflight(document: Mapping[str, Any], *, repo_root: Path,
     return failures
 
 
+def validate_fixture_preflight(document: Mapping[str, Any], *, repo_root: Path,
+                               fixture_path: Path | None = None,
+                               freetoken_root: Path | None = None) -> list[str]:
+    """Validate a CPU fixture preflight record.
+
+    This test-only path does not inspect physical repositories. It cannot
+    report or produce a physical-preflight pass.
+    """
+    return _validate_preflight(document, repo_root=repo_root,
+                               fixture_path=fixture_path, freetoken_root=freetoken_root,
+                               checkpoint_root=None, physical=False)
+
+
+def validate_preflight(document: Mapping[str, Any], *, repo_root: Path,
+                       fixture_path: Path | None = None,
+                       freetoken_root: Path | None = None,
+                       checkpoint_root: Path | None = None) -> list[str]:
+    """Validate a physical preflight from actual repository checkouts."""
+    return _validate_preflight(document, repo_root=repo_root,
+                               fixture_path=fixture_path,
+                               freetoken_root=freetoken_root,
+                               checkpoint_root=checkpoint_root, physical=True)
+
+
 def require_preflight_valid(document: Mapping[str, Any], *, repo_root: Path,
                             fixture_path: Path | None = None,
-                            freetoken_root: Path | None = None) -> None:
+                            freetoken_root: Path | None = None,
+                            checkpoint_root: Path | None = None) -> None:
     failures = validate_preflight(document, repo_root=repo_root,
                                   fixture_path=fixture_path,
-                                  freetoken_root=freetoken_root)
+                                  freetoken_root=freetoken_root,
+                                  checkpoint_root=checkpoint_root)
     if failures:
         raise PreflightBlocked(
             "physical preflight failed:\n" + "\n".join(f"  - {f}" for f in failures))
@@ -833,12 +879,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--repo-root", type=Path,
                         default=Path(__file__).resolve().parents[1])
     parser.add_argument("--freetoken-root", type=Path, default=None)
+    parser.add_argument("--checkpoint-root", type=Path, default=None)
     parser.add_argument("--fixture", type=Path, default=None)
     args = parser.parse_args(argv)
     document = json.loads(args.preflight.read_text())
     failures = validate_preflight(document, repo_root=args.repo_root,
                                   fixture_path=args.fixture,
-                                  freetoken_root=args.freetoken_root)
+                                  freetoken_root=args.freetoken_root,
+                                  checkpoint_root=args.checkpoint_root)
     if failures:
         print("PREFLIGHT_INVALID")
         for failure in failures:

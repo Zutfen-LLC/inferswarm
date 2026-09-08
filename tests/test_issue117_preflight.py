@@ -13,6 +13,10 @@ import issue117_applicability as applicability  # noqa: E402
 import issue117_gemma_strategy as strategy  # noqa: E402
 import issue117_preflight as preflight  # noqa: E402
 from issue99_artifact_core import self_digest  # noqa: E402
+from issue117_subject_identity import (  # noqa: E402
+    MACHINERY_LOCAL_SUBJECT_KEYS,
+    subject_digest,
+)
 
 MODEL_BACKEND = {key: strategy.MODEL_SUBJECT["backend"][key]
                  for key in preflight.REQUIRED_BACKEND_KEYS}
@@ -239,9 +243,38 @@ class PreflightTests(unittest.TestCase):
         if not _repo_worktree_is_clean():
             self.skipTest("test repository working tree is dirty")
         checkout = freetoken_producer_checkout()
-        failures = preflight.validate_preflight(
+        failures = preflight.validate_fixture_preflight(
             self.valid, repo_root=ROOT, freetoken_root=checkout)
         self.assertEqual(failures, [])
+
+    def test_physical_preflight_requires_actual_freetoken_and_checkpoint_checkouts(self):
+        with tempfile.TemporaryDirectory() as checkpoint:
+            failures = preflight.validate_preflight(
+                self.valid, repo_root=ROOT, checkpoint_root=Path(checkpoint))
+        self.assertTrue(any("requires a FreeToken checkout" in failure
+                            for failure in failures))
+
+        failures = preflight.validate_preflight(
+            self.valid, repo_root=ROOT,
+            freetoken_root=Path("/nonexistent/issue117-freetoken"),
+            checkpoint_root=Path("/nonexistent/issue117-checkpoint"))
+        self.assertTrue(any("FreeToken checkout path is inaccessible" in failure
+                            for failure in failures))
+        self.assertTrue(any("checkpoint checkout path is inaccessible" in failure
+                            for failure in failures))
+
+    def test_physical_preflight_rechecks_actual_freetoken_checkout(self):
+        with tempfile.TemporaryDirectory() as checkpoint:
+            failures = preflight.validate_preflight(
+                self.valid, repo_root=ROOT, freetoken_root=ROOT,
+                checkpoint_root=Path(checkpoint))
+        self.assertTrue(any("does not equal the observed checkout" in failure
+                            for failure in failures))
+
+    def test_fabricated_freetoken_identity_cannot_replace_a_checkout(self):
+        failures = preflight.validate_preflight(self.valid, repo_root=ROOT)
+        self.assertTrue(any("requires a FreeToken checkout" in failure
+                            for failure in failures))
 
     def test_valid_preflight_binds_the_real_test_repository_head(self):
         observed = subprocess.run(
@@ -287,14 +320,14 @@ class PreflightTests(unittest.TestCase):
         identity["repository_identity_digest"] = self_digest(
             identity, identity_field="repository_identity_digest")
         broken = build_valid_preflight(freetoken_identity=identity)
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("exact producer" in failure for failure in failures))
 
     def test_missing_field_fails(self):
         broken = json.loads(json.dumps(self.valid))
         del broken["integration_fixture_digest"]
         broken["preflight_digest"] = preflight._self_digest(broken)
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("fixture" in failure for failure in failures))
 
     def test_sha_fields_must_be_real_shas(self):
@@ -303,7 +336,7 @@ class PreflightTests(unittest.TestCase):
         identity["repository_identity_digest"] = self_digest(
             identity, identity_field="repository_identity_digest")
         broken = build_valid_preflight(freetoken_identity=identity)
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("not a git SHA" in failure for failure in failures))
 
     def test_dirty_worktree_evidence_fails(self):
@@ -313,7 +346,7 @@ class PreflightTests(unittest.TestCase):
         identity["repository_identity_digest"] = self_digest(
             identity, identity_field="repository_identity_digest")
         broken = build_valid_preflight(inferswarm_identity=identity)
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("worktree" in failure for failure in failures))
 
     def test_cleanliness_must_be_derived_from_porcelain(self):
@@ -322,14 +355,14 @@ class PreflightTests(unittest.TestCase):
         identity["repository_identity_digest"] = self_digest(
             identity, identity_field="repository_identity_digest")
         broken = build_valid_preflight(freetoken_identity=identity)
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("not derived from" in failure for failure in failures))
 
     def test_edited_collector_record_fails(self):
         identity = inferswarm_identity_record()
         identity["head"] = "0" * 40  # edit without re-digesting
         broken = build_valid_preflight(inferswarm_identity=identity)
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("edited" in failure for failure in failures))
 
     def test_head_that_merely_looks_valid_fails(self):
@@ -339,7 +372,7 @@ class PreflightTests(unittest.TestCase):
         identity["repository_identity_digest"] = self_digest(
             identity, identity_field="repository_identity_digest")
         broken = build_valid_preflight(inferswarm_identity=identity)
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("does not equal the observed checkout" in failure
                             for failure in failures))
 
@@ -349,7 +382,7 @@ class PreflightTests(unittest.TestCase):
         identity["repository_identity_digest"] = self_digest(
             identity, identity_field="repository_identity_digest")
         broken = build_valid_preflight(freetoken_identity=identity)
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any(
             "HEAD does not equal the producer bound" in failure
             for failure in failures))
@@ -360,14 +393,14 @@ class PreflightTests(unittest.TestCase):
         relative = "docs/qualification/gemma4-12b-it-v5/manifests/physical-subject.json"
         pins[relative] = "0" * 64
         broken = build_valid_preflight(v5_authority_sha256=pins)
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("authority" in failure for failure in failures))
 
     def test_runtime_drift_fails(self):
         units = physical_compute_units()
         units[0]["runtime"] = {**MODEL_BACKEND, "torch": "2.4.0"}
         broken = build_valid_preflight(compute_units=units)
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("torch drift" in failure for failure in failures))
 
     def test_nonzero_coordinator_observation_fails(self):
@@ -375,7 +408,7 @@ class PreflightTests(unittest.TestCase):
         # constants; a nonzero observation is recorded and then refused
         broken = build_valid_preflight(
             coordinator_model_weight_bytes_received=1024)
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("coordinator_model_weight_bytes_received" in failure
                             for failure in failures))
 
@@ -383,14 +416,14 @@ class PreflightTests(unittest.TestCase):
         units = physical_compute_units()
         units[0]["node_identity"] = {"node_id": units[0]["node"]}
         broken = build_valid_preflight(compute_units=units)
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("node_fingerprint" in failure for failure in failures))
 
     def test_fixture_validation_is_mandatory(self):
         # even with no explicit fixture path the committed fixture is fully
         # validated: a record binding a bogus digest cannot pass
         broken = build_valid_preflight(fixture_digest="sha256:" + "c" * 64)
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("fixture digest mismatch" in failure
                             for failure in failures))
 
@@ -400,7 +433,7 @@ class PreflightTests(unittest.TestCase):
         broken = json.loads(json.dumps(self.valid))
         broken["model_subject"] = subject
         broken["preflight_digest"] = preflight._self_digest(broken)
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("checkpoint_authority_sha256 drift" in failure
                             for failure in failures))
 
@@ -425,7 +458,7 @@ class QualificationDerivationTests(unittest.TestCase):
 
     def foreign_subject_candidate(self, candidate_id="dense.foreignsubject00"):
         from issue74_methodology import canonical_json_bytes
-        from issue99_artifact_core import digest_of_bytes, subject_digest
+        from issue99_artifact_core import digest_of_bytes
         subject = {
             "model_id": strategy.MODEL_SUBJECT["model_id"],
             "revision": strategy.MODEL_SUBJECT["revision"],
@@ -461,7 +494,7 @@ class QualificationDerivationTests(unittest.TestCase):
             candidate_set,
             [entry for entry in entries
              if entry["candidate_id"] != foreign["candidate_id"]] + [forged])
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any(
             "does not equal the independently derived verdict" in failure
             for failure in failures), failures)
@@ -477,7 +510,7 @@ class QualificationDerivationTests(unittest.TestCase):
             candidate_set["candidates"])
         entries = derived_applicability_entries(candidate_set)
         broken = self.valid_with(candidate_set, entries)
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("does not recompute" in failure
                             for failure in failures))
 
@@ -490,7 +523,6 @@ class QualificationDerivationTests(unittest.TestCase):
             QUALIFICATION_POLICY_STRICT,
             evaluate_qualification_applicability,
         )
-        from issue99_artifact_core import MACHINERY_LOCAL_SUBJECT_KEYS
         canonical = strategy.canonical_v5_candidate()
         foreign_record = build_qualification_record(
             qualification_record_id="foreign/1",
@@ -538,7 +570,7 @@ class QualificationDerivationTests(unittest.TestCase):
             candidate_set,
             [entry for entry in entries
              if entry["candidate_id"] != other["candidate_id"]] + [fabricated])
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any(
             "does not equal the independently derived verdict" in failure
             for failure in failures))
@@ -551,7 +583,7 @@ class QualificationDerivationTests(unittest.TestCase):
         broken = build_valid_preflight(
             Path(self.temp.name), candidate_set=candidate_set,
             qualification_applicability=entries + [conflicting])
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("duplicated/conflicting" in failure
                             for failure in failures))
 
@@ -559,7 +591,7 @@ class QualificationDerivationTests(unittest.TestCase):
         broken = build_valid_preflight(
             Path(self.temp.name),
             qualification_applicability=[])
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("no qualification-applicability record" in failure
                             for failure in failures))
 
@@ -573,7 +605,7 @@ class QualificationDerivationTests(unittest.TestCase):
         broken = build_valid_preflight(
             Path(self.temp.name), candidate_set=reduced,
             qualification_applicability=derived_applicability_entries(reduced))
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("V5 geometry" in failure for failure in failures))
 
 
@@ -597,7 +629,7 @@ class ComputeUnitIdentityTests(unittest.TestCase):
         units = physical_compute_units()
         units[1]["gpu_uuid"] = "GPU-00000000-0000-0000-0000-000000000000"
         broken = build_valid_preflight(compute_units=units)
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("inferswarm01/gpu-1" in failure and "gpu_uuid" in failure
                             for failure in failures))
 
@@ -607,7 +639,7 @@ class ComputeUnitIdentityTests(unittest.TestCase):
             units = physical_compute_units()
             units[0]["compute_capability"] = fabricated
             broken = build_valid_preflight(compute_units=units)
-            failures = preflight.validate_preflight(broken, repo_root=ROOT)
+            failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
             self.assertTrue(any("compute_capability" in failure for failure in failures),
                             fabricated)
 
@@ -615,7 +647,7 @@ class ComputeUnitIdentityTests(unittest.TestCase):
         units = physical_compute_units()
         units[3]["gpu_product"] = "NVIDIA GeForce RTX 4090"
         broken = build_valid_preflight(compute_units=units)
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("gpu_product" in failure for failure in failures))
 
     def test_one_record_per_node_is_not_enough(self):
@@ -623,7 +655,7 @@ class ComputeUnitIdentityTests(unittest.TestCase):
         units = [record for record in physical_compute_units()
                  if record["cu_id"] != "inferswarm01/gpu-1"]
         broken = build_valid_preflight(compute_units=units)
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("exactly one Compute Unit record" in failure
                             for failure in failures))
 
@@ -661,7 +693,7 @@ class SourcePossessionTests(unittest.TestCase):
 
     def test_empty_possession_with_file_source_fails(self):
         broken = build_valid_preflight(source_possession_records=[])
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("no source-possession evidence" in failure
                             for failure in failures))
 
@@ -673,7 +705,7 @@ class SourcePossessionTests(unittest.TestCase):
         broken = build_valid_preflight(
             source_descriptors=descriptors,
             source_possession_records=[])
-        failures = preflight.validate_preflight(broken, repo_root=ROOT)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
         self.assertTrue(any("carries no source-possession record" in failure
                             for failure in failures))
 
@@ -701,7 +733,7 @@ class SourcePossessionTests(unittest.TestCase):
                 cold_cache_proofs=proofs)
 
     def _failures_for(self, document):
-        return preflight.validate_preflight(document, repo_root=ROOT)
+        return preflight.validate_fixture_preflight(document, repo_root=ROOT)
 
     def test_source_root_equal_to_cache_root_fails(self):
         document = self.possession_valid_preflight(
@@ -774,8 +806,9 @@ class SourcePossessionTests(unittest.TestCase):
         # the possession record must be collected from exactly the Source's
         # authorized possession root, not any disjoint directory
         records = source_possession_records()
-        foreign = preflight.collect_source_possession_record(
-            source_id="issue117-origin", root=Path(tempfile.gettempdir()))
+        with tempfile.TemporaryDirectory() as foreign_root:
+            foreign = preflight.collect_source_possession_record(
+                source_id="issue117-origin", root=Path(foreign_root))
         self.assertNotEqual(foreign["facts"]["root"],
                             records[0]["facts"]["root"])
         broken = build_valid_preflight(source_possession_records=[foreign])
