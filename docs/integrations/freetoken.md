@@ -59,9 +59,9 @@ The generic concepts remain Swarm, Coordinator, Node, Compute Unit, Memory
 Resource, Link, Logical State Unit/Materialization, Model Execution Strategy,
 planner evidence/policy, and versioned Execution Plans/epochs.
 
-## Accepted runtime lineage through R4
+## Historical runtime lineage through R4
 
-The corrected post-Wayfinder FreeToken research line has now proven:
+The corrected post-Wayfinder FreeToken research line established:
 
 - R0 / #48 — `P48_ACCELERATOR_RESIDENCY_PASS`;
 - R1 / #50 — `R1_FROZEN_PLAN_REALIZATION_PASS`;
@@ -123,46 +123,39 @@ An **integration branch** carries the coherent current downstream implementation
 used for continuing InferSwarm work. It is a new implementation context, not a
 retroactive replacement for historical evidence.
 
-R4 exposed a real need for this distinction: FreeToken PR #20 contains a valid
-R3→R4 evidence lineage, but current FreeToken `main` has diverged such that the
-PR is not a sane direct long-term merge surface.
+Issue #59 established the durable integration line while preserving the
+accepted R4 lineage and deliberately integrating upstream changes. Accepted
+R5A/R5B execution followed on that line. The historical PR #20 lineage was not
+a reason to merge experimental code directly into upstream-tracking `main`.
 
-InferSwarm issue
-[#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) therefore establishes
-a durable branch such as `inferswarm/research` before R5A. The intended method
-is to preserve the accepted R4 lineage and deliberately integrate current
-upstream-tracking `main`, with dependency-scoped regression/requalification,
-rather than rebasing or rewriting accepted evidence.
-
-Do **not** merge PR #20 directly into FreeToken `main` merely to close it.
+<!-- project-status:runtime:start -->
+The [FreeToken fork](https://github.com/Zutfen-LLC/FreeToken) is the initial runtime vehicle.
+Its durable integration branch is `inferswarm-research` ([established by #59](https://github.com/Zutfen-LLC/inferswarm/issues/59)).
+Upstream-tracking `main` and immutable evidence branches have separate roles.
+Execution uses the exact producer named by the current gate authority,
+never an unreviewed branch tip. FreeToken is not the permanent product boundary.
+<!-- project-status:runtime:end -->
 
 ## Current implementation direction
 
-The current successor evidence gate is
-[#60 — R5A: static end-to-end multi-node serving from a planner-selected
-plan](https://github.com/Zutfen-LLC/inferswarm/issues/60), blocked on the #59
-integration-line prerequisite.
+<!-- project-status:frontier:start -->
+**[Issue #117 — R6 successor dense full integration](https://github.com/Zutfen-LLC/inferswarm/issues/117)**
 
-R5A must move the accepted R0-R4 substrate out of separately invoked POC stages
-and through a normal host-runtime serving request:
+Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.
 
-```text
-request
-  -> strategy legal candidates
-  -> generic planner + applicable evidence/policy
-  -> frozen Execution Plan
-  -> multi-Node realization
-  -> backend-native execution
-  -> response
-```
+- **Physical preflight observation:** [`ISSUE117_PHYSICAL_PREFLIGHT_PASS`](https://github.com/Zutfen-LLC/inferswarm/pull/121).
+- **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/commit/51c8adeeedf6d6f0a16db994ca0a0cf259bed52f).
+- **Recorded execution authorization:** authorized — Arm A — V5 execution-math bridge. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
 
-Accepted R4 network measurements can now be ingested as context-valid planner
-evidence. The planner must still evaluate alternatives honestly; R5A must not
-hard-code the network split merely because the gate is testing multi-Node
-serving.
+- Arm A must establish 192/192 exact FP32 consumer-row identities on the frozen public fixture; no Arm A result is claimed yet.
+- Stop for maintainer review after Arm A. Arms B–E require their own preceding accepted gates.
+- Use the exact producer and identity checks specified in #117. Any InferSwarm revision after its accepted 51c8adee base requires an explicit delta audit before execution.
+- Do not rerun accepted preflight merely to start Arm A; do not use consumed h109 holdout material.
+<!-- project-status:frontier:end -->
 
-Live plan-epoch transitions, scale-up/down, and failure recovery remain R5B work
-after static serving passes.
+The [project capability summary](../../README.md#what-the-research-has-established)
+distinguishes accepted physical serving/recovery and qualification from CPU
+artifact-distribution proofs awaiting physical integration.
 
 ## Evidence branch versus integration branch versus `main`
 
@@ -185,10 +178,10 @@ experiments establish stable resource/planner/strategy/runtime boundaries,
 reusable InferSwarm components should move behind that seam rather than forcing
 a permanently deep FreeToken fork.
 
-R5A/R5B should continue to keep temporary first-model and first-backend details
-behind research/strategy seams. Before public strategy/planner APIs are treated
-as stable, R6 must attempt to falsify them against a materially different model
-architecture.
+Continuing integration must keep temporary model and backend details behind
+research/strategy seams. The historical R6 attempt failed; the accepted
+qualification and current successor integration preserve that result while
+testing the later design. Public strategy/planner APIs remain unfrozen.
 
 Upstream FreeToken and FlashML are not involved in InferSwarm; nothing here
 implies their endorsement.

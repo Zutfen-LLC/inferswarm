@@ -40,6 +40,46 @@ temporary internal structure.
    [pull request template](.github/pull_request_template.md).
 5. Respond to review feedback.
 
+## Running the checks locally
+
+The repository is documentation plus CPU-only evidence tooling. Nothing here
+needs a GPU.
+
+```bash
+python3 -m pip install --user jsonschema numpy
+python3 scripts/check_phase0_workloads.py
+python3 -m unittest $(ls tests/test_*.py | sed 's#tests/#tests.#; s#\.py$##')
+```
+
+On a clean working tree the suite passes with five skips, all of them
+host-local resources this repository deliberately does not carry. A dirty
+working tree adds a sixth skip — commit or stash before treating
+`test_issue117_preflight` as having run. Details, including which modules CI
+runs, are in [`tests/README.md`](tests/README.md).
+
+Before editing anything under `scripts/`, read the frozen-producer rule in
+[`scripts/README.md`](scripts/README.md). Most of those files are hash-pinned
+by retained evidence, and even a docstring fix invalidates the record that
+cites them.
+
+## Keep project status synchronized
+
+Changes to capabilities, architecture, integration branches, gate results,
+acceptance, or execution authorization require a documentation-impact review
+in the same PR. Update `docs/project-status.json` from recorded evidence and
+maintainer decisions, then run:
+
+```bash
+python3 scripts/sync_project_status.py --write
+python3 scripts/sync_project_status.py --check
+```
+
+Review prose outside generated sections as well. In the PR description, list
+updated documents or explain why the change has no documentation impact.
+Follow [status maintenance](docs/status-maintenance.md), including the separate
+observation, acceptance, and execution-authorization records. Issue-only and
+merge-time decisions need a subsequent status update; CI does not infer them.
+
 ## Tests and benchmarks
 
 - **Tests are required where applicable.** Documentation-only changes don't

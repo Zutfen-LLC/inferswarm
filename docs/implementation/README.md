@@ -39,6 +39,12 @@ Those terms are not current generic doctrine unless reaffirmed by ADR
 | R4 — physical two-Node boundary | issue #57 | **Complete: `R4_MULTI_NODE_BOUNDARY_PASS`; 1-GbE arm `R4_1GBE_PRIMITIVE_CAPACITY_VIABLE`.** |
 | Plan-driven artifact acquisition | issue #99 | **Complete: `PLAN_DRIVEN_ARTIFACT_ACQUISITION_PASS`.** Minimum ADR 0009 acquisition seam; record under [plan-driven-artifact-acquisition-99/](plan-driven-artifact-acquisition-99/). |
 | Plan-driven artifact orchestration | issue #101 | **Complete: `PLAN_DRIVEN_ARTIFACT_ORCHESTRATION_PASS`.** CPU inventory, peer reuse, and replacement deltas; [retained record](plan-driven-artifact-orchestration-101/README.md). |
+| Artifact-locality transition planning | issue #103 | **Complete: `ARTIFACT_LOCALITY_TRANSITION_PLANNING_PASS`.** Locality as ranking evidence, not a feasibility rule; [retained record](artifact-locality-transition-planning-103/README.md). |
+| R5A — static end-to-end multi-node serving | issue #60 | **Complete: `R5A_STATIC_MULTI_NODE_SERVING_PASS`.** One static serving path through strategy, planner, frozen plan, multi-Node realization, and backend-native execution. |
+| R5B — plan epochs, scale-up/down, recovery | issue #62 | **Complete: `R5B_PLAN_EPOCH_RECOVERY_PASS`.** |
+| Pre-R6 integration refresh | issue #64 | **Complete: `PRE_R6_INTEGRATION_REQUALIFICATION_PASS`.** |
+| Pre-R6 external Coordinator separation | issue #67 | **Complete: `EXTERNAL_COORDINATOR_SEPARATION_PASS`.** |
+| Correctness-qualification lane | issues #72-#115 | **Complete: `V5_QUALIFICATION_PASS`** on the dense Gemma subject, after terminal v2/v3/v4 failures. Lane index: [`../qualification/README.md`](../qualification/README.md). |
 
 The Phase-1 placement/correctness correction documents and retired N-series
 records remain historical methodology/provenance.
@@ -61,64 +67,33 @@ physical two-Node proof.
 
 ## Current implementation work
 
-### Pre-R5 integration-line prerequisite — issue #59
+<!-- project-status:frontier:start -->
+**[Issue #117 — R6 successor dense full integration](https://github.com/Zutfen-LLC/inferswarm/issues/117)**
 
-Before R5A, establish a durable FreeToken InferSwarm integration line that
-preserves the accepted R0-R4 evidence lineage while deliberately integrating
-current upstream-tracking FreeToken `main`.
+Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.
 
-Issue [#59](https://github.com/Zutfen-LLC/inferswarm/issues/59) is an
-implementation-line prerequisite, not a new architecture gate.
+- **Physical preflight observation:** [`ISSUE117_PHYSICAL_PREFLIGHT_PASS`](https://github.com/Zutfen-LLC/inferswarm/pull/121).
+- **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/commit/51c8adeeedf6d6f0a16db994ca0a0cf259bed52f).
+- **Recorded execution authorization:** authorized — Arm A — V5 execution-math bridge. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
 
-Do not rebase/rewrite accepted evidence merely to obtain a cleaner branch graph,
-and do not merge FreeToken PR #20 directly into upstream-tracking `main` merely
-to close the PR.
+- Arm A must establish 192/192 exact FP32 consumer-row identities on the frozen public fixture; no Arm A result is claimed yet.
+- Stop for maintainer review after Arm A. Arms B–E require their own preceding accepted gates.
+- Use the exact producer and identity checks specified in #117. Any InferSwarm revision after its accepted 51c8adee base requires an explicit delta audit before execution.
+- Do not rerun accepted preflight merely to start Arm A; do not use consumed h109 holdout material.
+<!-- project-status:frontier:end -->
 
-### R5A — static end-to-end multi-node serving — issue #60
-
-Issue [#60](https://github.com/Zutfen-LLC/inferswarm/issues/60) is the current
-successor evidence gate, blocked by #59.
-
-R5A must integrate the separately proven R0-R4 seams through a normal serving
-request rather than a benchmark-only manual split runner:
-
-```text
-request
-  -> Model Execution Strategy legal candidates
-  -> generic planner + current applicable evidence/policy
-  -> frozen Execution Plan
-  -> multi-Node realization
-  -> backend-native distributed execution
-  -> response
-```
-
-Accepted R4 evidence may now participate in planner ranking when its frozen
-context matches. The network candidate must not be hard-coded as preferred just
-because the gate tests multi-Node serving.
-
-R5A measures correctness, TTFT, prefill, decode, complete request wall time,
-network contribution, memory/materialization lifecycle, plan explanation, and a
-bounded concurrency arm.
-
-Live plan transitions, scale-up/down, and failure recovery are intentionally
-**R5B**, not R5A.
+The [retained #117 record](r6-successor-dense-full-integration-117/README.md)
+preserves the CPU fixture, earlier blocked implementation freeze, additive
+provenance recoveries, and accepted physical preflight.
 
 ## Successor planning rule
 
 Do not pre-write a speculative implementation ladder beyond what predecessor
-evidence makes concrete.
+evidence makes concrete. Follow the current gate's explicit review stops;
+completion of one arm does not authorize the next arm. Public interfaces remain
+unfrozen until real integration establishes their boundaries.
 
-The current intended order is:
-
-1. #59 — establish the durable FreeToken integration implementation base;
-2. R5A / #60 — static planner-selected end-to-end multi-Node serving;
-3. R5B — real execution-plan epochs, scale-up/down, and truthful recovery under
-   the semantics already decided by #43;
-4. R6 — materially different model architecture validation before stabilizing
-   public planner/strategy APIs.
-
-GLM-5.3-Flash remains a later large heterogeneous-capacity validation target
-under issue #13, not a prerequisite for R5A.
+See [ROADMAP.md](../../ROADMAP.md) for the gate sequence and accepted results.
 
 ## Planning discipline
 

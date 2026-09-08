@@ -600,14 +600,23 @@ ADR 0010 / issue #72 established the heterogeneous correctness contract, and
 the subsequent prospective methodology gates (#74, #86, #95, #109) culminated
 in issue #110's terminal `V5_QUALIFICATION_PASS` on the qualified dense Gemma
 subject (with #115 completing the audited raw-evidence cleanup). That
-applicable qualification evidence is what unblocked the successor full
-integration attempt: issue #117 is the current architecture-integration
-frontier, composing automatic planning, participant-exact plan-driven
-artifact distribution, and ordinary fenced serving around the unchanged
-qualified execution math. The CPU/static implementation freeze is retained
-under `docs/implementation/r6-successor-dense-full-integration-117/`; the
-physical preflight and fabric arms are governed by that issue's narrow stop
-states.
+applicable qualification evidence enabled a separate successor full-integration
+attempt. Current execution scope is recorded below.
+
+<!-- project-status:frontier:start -->
+**[Issue #117 — R6 successor dense full integration](https://github.com/Zutfen-LLC/inferswarm/issues/117)**
+
+Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.
+
+- **Physical preflight observation:** [`ISSUE117_PHYSICAL_PREFLIGHT_PASS`](https://github.com/Zutfen-LLC/inferswarm/pull/121).
+- **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/commit/51c8adeeedf6d6f0a16db994ca0a0cf259bed52f).
+- **Recorded execution authorization:** authorized — Arm A — V5 execution-math bridge. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
+
+- Arm A must establish 192/192 exact FP32 consumer-row identities on the frozen public fixture; no Arm A result is claimed yet.
+- Stop for maintainer review after Arm A. Arms B–E require their own preceding accepted gates.
+- Use the exact producer and identity checks specified in #117. Any InferSwarm revision after its accepted 51c8adee base requires an explicit delta audit before execution.
+- Do not rerun accepted preflight merely to start Arm A; do not use consumed h109 holdout material.
+<!-- project-status:frontier:end -->
 
 FreeToken remains the initial validation/integration vehicle, not the permanent
 product boundary. Reusable runtime functionality should eventually live behind

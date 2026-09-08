@@ -34,8 +34,10 @@ from a retired epoch cannot mutate current state or contribute to current
 outputs.
 
 This does not freeze an `epoch_id` field name or wire encoding; it is a
-correctness requirement the eventual protocol must satisfy. R5B is the first
-planned physical execution of these epoch/recovery semantics.
+correctness requirement the eventual protocol must satisfy. R5B / issue #62 was
+the first physical execution of these epoch/recovery semantics and terminated
+`R5B_PLAN_EPOCH_RECOVERY_PASS`, preserving epoch attribution and retired-work
+fencing without freezing a public encoding.
 
 ## State authority and recovery
 
@@ -185,9 +187,10 @@ specific Execution Plan/strategy implementation safely, for example:
 - correctness/equivalence contract;
 - transport/runtime compatibility.
 
-The exact schema remains deliberately unfrozen. R5A should reuse the smallest
-proven research seams necessary for static serving without promoting the R4
-wire frame into a product protocol.
+The exact schema remains deliberately unfrozen. R5A reused the smallest proven
+research seams necessary for static serving and did not promote the R4 wire
+frame into a product protocol; the same restraint applies to the issue #117
+integration.
 
 ## Transport is subordinate to semantics
 
@@ -245,10 +248,33 @@ protocol-level epoch attribution and retired-work fencing without freezing a
 public universal wire protocol or `epoch_id` encoding.
 
 Issues [#64](https://github.com/Zutfen-LLC/inferswarm/issues/64) and #67 are
-complete. Historical R6 / issue
+complete; #67 additionally proved the Coordinator is a replaceable
+control-plane role rather than an implicit compute host, over a bounded
+research-internal realization wire. Historical R6 / issue
 [#65](https://github.com/Zutfen-LLC/inferswarm/issues/65) remains
 `R6_DENSE_ARCHITECTURE_FALSIFICATION_FAIL`. Issue #71 localized the observed
 numerical difference as `BACKEND_EXECUTION_LOCAL` without changing that verdict.
-ADR 0010 defines the new correctness contract. Issue #74 freezes the first
-qualification methodology. Only a separate accepted successor can execute
-calibration, freeze thresholds, and open the sealed holdout.
+
+ADR 0010 defines the correctness contract that followed. The
+[qualification lane](../qualification/README.md) then ran v1 through v5 and
+terminated `V5_QUALIFICATION_PASS` at issue #110, with the single-use holdout
+consumed exactly once and the #115 cleanup completed. That closed the
+correctness prerequisite; it froze no protocol.
+
+<!-- project-status:frontier:start -->
+**[Issue #117 — R6 successor dense full integration](https://github.com/Zutfen-LLC/inferswarm/issues/117)**
+
+Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.
+
+- **Physical preflight observation:** [`ISSUE117_PHYSICAL_PREFLIGHT_PASS`](https://github.com/Zutfen-LLC/inferswarm/pull/121).
+- **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/commit/51c8adeeedf6d6f0a16db994ca0a0cf259bed52f).
+- **Recorded execution authorization:** authorized — Arm A — V5 execution-math bridge. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
+
+- Arm A must establish 192/192 exact FP32 consumer-row identities on the frozen public fixture; no Arm A result is claimed yet.
+- Stop for maintainer review after Arm A. Arms B–E require their own preceding accepted gates.
+- Use the exact producer and identity checks specified in #117. Any InferSwarm revision after its accepted 51c8adee base requires an explicit delta audit before execution.
+- Do not rerun accepted preflight merely to start Arm A; do not use consumed h109 holdout material.
+<!-- project-status:frontier:end -->
+
+No research frame becomes a public wire protocol merely because a physical
+gate passes; the semantics above remain subordinate to the adopted doctrine.
