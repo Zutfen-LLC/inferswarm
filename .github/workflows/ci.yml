@@ -104,7 +104,7 @@ jobs:
         run: python3 -m unittest tests.test_issue115_cleanup_retention -v
 
       - name: Check issue 117 R6 successor integration freeze (CPU-only)
-        run: python3 -m unittest tests.test_issue117_integration_fixture tests.test_issue117_applicability tests.test_issue117_gemma_strategy tests.test_issue117_planner tests.test_issue117_preflight tests.test_issue117_proof tests.test_issue117_provenance tests.test_issue117_checkpoint_authority tests.test_issue117_accepted_subject tests.test_issue117_physical_retention -v
+        run: python3 -m unittest tests.test_issue117_integration_fixture tests.test_issue117_applicability tests.test_issue117_gemma_strategy tests.test_issue117_planner tests.test_issue117_preflight tests.test_issue117_proof tests.test_issue117_provenance tests.test_issue117_checkpoint_authority tests.test_issue117_accepted_subject tests.test_issue117_physical_retention tests.test_issue117_arm_a_retention -v
 
       - name: Check issue 99 plan-driven artifact acquisition (CPU-only)
         run: python3 -m unittest tests.test_issue99_artifact_core tests.test_issue99_proof -v

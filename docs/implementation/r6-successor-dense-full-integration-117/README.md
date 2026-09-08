@@ -1,6 +1,51 @@
 # R6 successor dense full integration — issue #117
 
-Current state: **`ISSUE117_PHYSICAL_PREFLIGHT_PASS`** (retained physical
+Current state: **`ISSUE117_ARM_A_EXECUTION_EQUIVALENCE_PASS`** (retained
+Arm A evidence: `evidence/arm-a/`, bounded by `evidence/MANIFEST.sha256`;
+see `evidence/arm-a/run-record.json`). Arm A executed 2026-09-08 on the
+fabric from accepted main `51c8adee` with the frozen integration producer
+`924cd22e`: the 24-case public fixture ran through BOTH the accepted V5
+control authority (FreeToken `7e5c8521`: reference on inferswarm04 RTX
+3090 + teacher-forced three-stage chain 01 GPU-0/GPU-1 → 03) AND the
+integrated producer `924cd22e` (same topology), and all
+**192/192 FP32 consumer-row identities matched exactly** — plus prefix
+identity at every decision, trajectory identity, argmax/tie rule outputs
+and rule proofs, stage-boundary capture-record identities, finite-output
+accounting (0 NaN/Inf both arms both paths), and byte-identical raw
+decision rows re-verified on the nodes (192/192 last-stage, 192/192
+reference, summary-SHA-bound). Two invalid launch attempts (staging
+error; dead last-stage service) produced no correctness-bearing
+observation and are retained with reasons. Arm B was NOT executed; the
+dedicated cold roots remain empty and untouched. No holdout material was
+used.  STOPPED for maintainer review before Arm B.
+
+Retention/provenance correction (PR #122, same day, no physical execution):
+the terminal classification is now INDEPENDENTLY re-derivable from low-level
+retained records by `scripts/issue117_arm_a_evidence.py` (the Arm-A evidence
+reducer — pure stdlib, fails closed). New retained evidence under
+`evidence/arm-a/`: `paired-decision-records.json` (independently sourced
+control/integrated values for all 192 candidate + 192 reference decisions —
+prefix length/SHA, emitted token, argmax rule, rule proof, row SHA, element
+count; equality is only ever DERIVED from the two retained sides),
+`capture-manifest-records.json` (the full frozen stage-boundary
+capture-record lists for all 24 cases, both arms, stages 1-3),
+`raw-row-manifest-laststage03.json` and `raw-row-manifest-reference04.json`
+(per-decision raw FP32 byte verification: paths, sizes, SHA-256s, byte
+identity, and mechanical binding to the decision-table row SHAs and the
+reference summaries), `attempt-lineage.json` (distinct retained logical
+identities for the two invalid integrated launches and the valid run, with
+digest-bound transcript excerpts, harness-semantics termination proofs,
+mechanically derived zero-correctness counts, and honest cleanup lineage),
+and `prerun-revalidation.json` (the pre-Arm-A fabric/repository revalidation
+as a digest-bound machine record with exact observed timestamps, replacing
+the prior prose summary). 33 mutation negative-controls exercise every trust
+boundary against the reducer. The historical Arm-A evidence bytes (witness,
+decision table, run indexes, fixture, verify-rows aggregates) are unchanged;
+`run-record.json` gained pointers to the mechanical records and exact
+timestamps. Accepted #118 canonical-summary and physical-preflight bytes are
+pinned unchanged.
+
+Prior state: **`ISSUE117_PHYSICAL_PREFLIGHT_PASS`** (retained physical
 preflight record: `evidence/physical-preflight.json` and
 `evidence/physical-preflight-record.json`). Both retained-evidence blockers
 were recovered — `V5_CHECKPOINT_AUTHORITY_PROVENANCE_RECOVERED` (PR #119)

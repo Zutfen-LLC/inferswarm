@@ -1,0 +1,119 @@
+{
+ "attempts": [
+  {
+   "attempt_id": "i117-arm-a-integrated-cand-1.launch-1",
+   "correctness_bearing_observation_count": 0,
+   "correctness_bearing_observation_count_derivation": "0 CASE_ARM / 0 CASE_BEGIN / 0 PREFILL / 0 decision rows: the only output was one empty partial case dir /srv/models/issue117/arm-a/integrated/candidate/cases/c109-01-01-045 created by case_dir.mkdir BEFORE the failed open; it contained no files (cleanup listing showed the dir name only, and grep 'refusing to overwrite' on chain.log counted 0)",
+   "ended_utc_observed": "2026-09-08T12:57:34Z",
+   "evidence": {
+    "launch_command_digest": "sha256:0fd46c830d890b3f6d455400c67bd662efe576b6dc798fbd10115707576ab30c",
+    "result_excerpt_digest": "sha256:007fb2e0989572cf711c482b00c9baa6260bbae14dc3932023a20609da0dc66a",
+    "result_excerpt_verbatim": "{\"output\": \"reference summaries: 24\\nLAUNCHED\\n    return io.open(self, mode, buffering, encoding, errors, newline)\\n           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nFileNotFoundError: [Errno 2] No such file or directory: '/srv/models/issue117/arm-a/integrated/reference/c109-01-01-045/reference-case-i117a-int-ref.json'\\n1\\n1 MiB\\n1 MiB\", \"exit_code\": 0, \"error\": null}",
+    "transcript_refs": [
+     "session 20260908_073733_03d718 msg 223152 (launch)",
+     "msg 223153 (result, FileNotFoundError traceback)"
+    ]
+   },
+   "failure_reason": "reference summaries tar extracted into a nested path; the runner found 24 summary files but not at the expected per-case dirs",
+   "harness_semantics_termination_proof": "In the frozen chain_runner at 924cd22e the failing call is _load_reference_case at the TOP of the per-case loop (chain_runner.py line 150 in main's case iteration), strictly BEFORE the first CASE_ARM (line 169), CASE_BEGIN (line 175), assert_teacher_forcing/PREFILL (later in the loop), and before any decision-row observation. The retained launch-1 result contains no CASE_COMMITTED line and no case output dir other than the staging artifact below.",
+   "hosts": [
+    "inferswarm01"
+   ],
+   "parent_campaign": "issue-117-arm-a / integrated candidate chain",
+   "phase_reached": "pre-case staging: producer/clean gate passed, corpus resolved, stage workers started, then _load_reference_case(open) raised FileNotFoundError for /srv/models/issue117/arm-a/integrated/reference/c109-01-01-045/reference-case-i117a-int-ref.json before the first iteration of the per-case loop",
+   "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+   "side_effect": "its abrupt teardown disconnected from the integrated last-stage service mid-frame, killing service instance 1 on inferswarm03 (WireError: disconnect mid-frame after 0/16 bytes, corroborated 2026-09-08 by service.log instance-2 header retained below)",
+   "started_utc_observed": "2026-09-08T12:56:54Z",
+   "validity": "INVALID"
+  },
+  {
+   "attempt_id": "i117-arm-a-integrated-cand-1.launch-2",
+   "correctness_bearing_observation_count": 0,
+   "correctness_bearing_observation_count_derivation": "0 CASE_ARM / 0 CASE_BEGIN / 0 PREFILL / 0 decision rows (died in stage-client construction); 01 candidate cases root contains 0 files older than the valid run",
+   "ended_utc_observed": "2026-09-08T12:58:52Z",
+   "evidence": {
+    "result_excerpt_digest": "sha256:59916020a2b0fed603fe3374f2a32acdb9ebabc7844179a8ad60c87a12b54338",
+    "result_excerpt_verbatim": "{\"output\": \"reference summaries: 24\\nLAUNCHED\\n    sock.connect(sa)\\n    ~~~~~~~~~~~~^^^^\\nConnectionRefusedError: [Errno 111] Connection refused\\n1\\n1 MiB\\n1 MiB\", \"exit_code\": 0, \"error\": null}",
+    "service_state_excerpt_digest": "sha256:da86feb4c4f4f5d9fd36d7748ee54befefcaec1d1ae3d7a6e8184e271b5d56a7",
+    "service_state_excerpt_verbatim": "{\"output\": \"PORT_FREE\\n    ...<9 lines>...\\n        model_revision=args.model_revision,\\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n    )\\n    ^\\n  File \\\"/home/zutfen/FreeToken/benchmarks/inferswarm_110/last_stage_service.py\\\", line 153, in serve\\n    header, payload = recv_frame(conn, identity)\\n                      ~~~~~~~~~~^^^^^^^^^^^^^^^^\\n  File \\\"/home/zutfen/FreeToken/python/freetoken/research/r4_wire.py\\\", line 153, in recv_frame\\n    prefix = read_exact(sock, HEADER_STRUCT.size)\\n  File \\\"/home/zutfen/FreeToken/python/freetoken/research/r4_wire.py\\\", line 94, in read_exact\\n    raise WireError(\\n        f\\\"disconnect mid-frame after {filled}/{count} bytes\\\"\\n    )\\nfreetoken.research.r4_wire.WireError: disconnect mid-frame after 0/16 bytes\", \"exit_code\": 0, \"error\": null}",
+    "transcript_refs": [
+     "session 20260908_073733_03d718 msg 223158 (relaunch)",
+     "msg 223159 (ConnectionRefused traceback)",
+     "msg 223161 (03 port free + service.log WireError)"
+    ]
+   },
+   "failure_reason": "ConnectionRefusedError [Errno 111] connecting to the last-stage service on inferswarm03:18485",
+   "harness_semantics_termination_proof": "In the frozen chain_runner the I76LastStageClient is constructed during stage setup, BEFORE the per-case loop; zero CASE_ARM / CASE_BEGIN / PREFILL / decision-row ops were issued. Corroborated: 03's integrated last-stage output root contains exactly 192 decision-*.f32 files, ALL with mtimes inside the valid-run window (2026-09-08 13:06:56Z-13:08:07Z UTC), i.e. zero rows from this attempt.",
+   "hosts": [
+    "inferswarm01"
+   ],
+   "parent_campaign": "issue-117-arm-a / integrated candidate chain",
+   "phase_reached": "pre-case staging: reference summaries verified (24), producer/clean gate passed, then I76LastStageClient.__init__ raised ConnectionRefusedError at sock.connect to 10.0.0.219:18485 because the integrated last-stage service (killed by launch-1's mid-frame disconnect) was not listening",
+   "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+   "started_utc_observed": "2026-09-08T12:58:07Z",
+   "validity": "INVALID"
+  },
+  {
+   "attempt_id": "i117-arm-a-integrated-cand-1.valid",
+   "correctness_bearing_observation_count": 192,
+   "ended_utc_observed": "2026-09-08T13:08:07Z (index-i117a-int-cand.json mtime 09:08:07.958 -0400, corroborated 2026-09-08 read-only)",
+   "evidence": {
+    "launch_command_digest": "sha256:0c6158d9317f8611a834106a6cdb5088946db5ada2f4a852a4469ca1b42b15da",
+    "result_excerpt_digest": "sha256:4207227199403bea9816f29391267e0bcd7662222f9e27d8fdc0d91ed69c6227",
+    "result_excerpt_verbatim": "{\"output\": \"schema: inferswarm.issue110.v5-chain-run-index/1 cases: 24 producer: 924cd22ea081 attempt: i117-arm-a-integrated-cand-1\\nnan_inf total: 0\", \"exit_code\": 0, \"error\": null}",
+    "transcript_refs": [
+     "session 20260908_073733_03d718 msg 223166 (cleanup+relaunch)",
+     "msg 223167 (RUN_COMPLETE)",
+     "msg 223169 (index verify: 24 cases, producer 924cd22e, nan_inf 0)"
+    ]
+   },
+   "failure_reason": null,
+   "hosts": [
+    "inferswarm01 (GPU-0 [0,16), GPU-1 [16,32))",
+    "inferswarm03 (GPU-0 [32,48), last-stage service instance 2, ready 2026-09-08T12:59:24Z)"
+   ],
+   "index_identity": {
+    "attempt_id": "i117-arm-a-integrated-cand-1",
+    "producer_commit": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+    "retained_as": "arm-a/index-integrated-candidate.json",
+    "schema": "inferswarm.issue110.v5-chain-run-index/1"
+   },
+   "parent_campaign": "issue-117-arm-a / integrated candidate chain",
+   "phase_reached": "RUN_COMPLETE: 24/24 CASE_COMMITTED, 192 decisions, 0 NaN/Inf (retained index, nan_inf_total 0)",
+   "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+   "started_utc_observed": "2026-09-08T13:06:06Z",
+   "validity": "VALID"
+  }
+ ],
+ "cleanup_lineage": {
+  "cleanup_action_utc_observed": "2026-09-08T13:08:41Z",
+  "cleanup_excerpt_digest": "sha256:7cf5a682a220ecbbb2fb359a289d3df2ef009e73d41adc3b1a13d94ad95a0aea",
+  "cleanup_excerpt_verbatim": "Service restored and listening. Also note: the failed chain attempt left a partial case dir on 01 (`refusing to overwrite` risk). Cleaning it, then relaunching the chain:",
+  "cleanup_result_excerpt_digest": "sha256:e8193f2d94c8cff805d13c2c474965306116194829bf40e84853ff4b96aa8f53",
+  "cleanup_result_excerpt_verbatim": "{\"output\": \"0\\nc109-01-01-045\\nCLEANED\\nreference summaries: 24\\nLAUNCHED\\n{\\\"case_id\\\": \\\"c109-04-05-043\\\", \\\"status\\\": \\\"CASE_COMMITTED\\\", \\\"nan_inf\\\": 0}\\n{\\\"case_id\\\": \\\"c109-04-06-074\\\", \\\"status\\\": \\\"CASE_COMMITTED\\\", \\\"nan_inf\\\": 0}\\n{\\\"status\\\": \\\"RUN_COMPLETE\\\", \\\"cases\\\": 24}\\n25\\n1 MiB\\n1 MiB\", \"exit_code\": 0, \"error\": null}",
+  "deleted_by_attempt": {
+   "i117-arm-a-integrated-cand-1.launch-1": [
+    {
+     "what": "partial empty case dir /srv/models/issue117/arm-a/integrated/candidate/cases/c109-01-01-045 (created by mkdir before the failed open; contained no files)",
+     "why_safe": "the runner persisted nothing into it (no CASE_ARM/CASE_BEGIN/PREFILL had been issued); the listing retained in the cleanup excerpt shows the dir name with no contents and 0 'refusing to overwrite' hits in chain.log"
+    },
+    {
+     "what": "mis-extracted nested reference tree /srv/models/issue117/arm-a/integrated/reference/srv/... (24 summary JSONs at wrong paths)",
+     "why_safe": "staging copies of the accepted reference summaries; originals intact on inferswarm04; re-staged correctly immediately after"
+    }
+   ],
+   "i117-arm-a-integrated-cand-1.launch-2": [
+    {
+     "what": "none (this attempt created no outputs)",
+     "why_safe": "n/a"
+    }
+   ]
+  },
+  "proof_no_correctness_result_discarded": "Both deleted items predate any correctness-bearing op: launch-1 died at _load_reference_case before its first CASE_ARM; launch-2 died at client construction. Mechanical corroboration recovered 2026-09-08: inferswarm01 integrated candidate cases root holds 0 files older than the valid run; inferswarm03 integrated last-stage root holds exactly 192 decision-*.f32 files all inside the valid-run mtime window; the retained chain.log (sha256 99e307523563387167f54f64d7f622fd0d86a32ba3fb150244609ca18ffa06b8) contains 24 CASE_COMMITTED lines + RUN_COMPLETE and 0 'refusing to overwrite'. The claim is NOT that invalid attempts were preserved on the filesystem: their partial outputs were deleted (recorded above); what is preserved is this audit record with digest-bound transcript excerpts."
+ },
+ "historical_attempt_id_label": "i117-arm-a-integrated-cand-1",
+ "provenance_note": "Distinct retained logical attempt identities for the integrated-candidate launches, recovered 2026-09-08 from the contemporaneous orchestrator session transcript (Hermes session 20260908_073733_03d718, message ids below) and cross-corroborated read-only against node evidence (file mtimes, retained chain.log/service.log on 01/03). The historical process used one --attempt-id label (i117-arm-a-integrated-cand-1) for all three launches; these are RETAINED LOGICAL identities assigned during recovery, not historical labels. Each excerpt is verbatim and digest-bound; timestamps are the orchestrator message times (label: observed_orchestrator_utc).",
+ "schema": "inferswarm.issue117.arm-a.attempt-lineage/1",
+ "valid_attempt_logical_id": "i117-arm-a-integrated-cand-1.valid",
+ "valid_run_distinct_from_invalid": "The valid run is the only launch that reached the per-case loop; the retained outputs on 01/03 bind exclusively to it by mtime and by the runners' refusing-to-overwrite guards (chain_runner.py:267/290, last_stage_service.py:248), which make it impossible for a later launch to reuse or silently replace earlier outputs."
+}

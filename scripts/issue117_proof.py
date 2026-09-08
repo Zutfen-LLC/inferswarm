@@ -99,6 +99,10 @@ PRODUCERS = [
     "tests/test_issue117_checkpoint_authority.py",
     "tests/test_issue117_accepted_subject.py",
     "tests/test_issue117_physical_retention.py",
+    "tests/test_issue117_arm_a_retention.py",
+    "scripts/issue117_arm_a_evidence.py",
+    "scripts/sync_project_status.py",
+    "tests/test_project_status.py",
 ]
 EVIDENCE_FILES = {
     "strategy.json", "planner-decision.json", "requirements.json",
@@ -129,6 +133,39 @@ COMMITTED_EVIDENCE_FILES = {
     "physical-preflight-record.json",
     "physical-preflight-freetoken-identities.json",
     "physical-preflight-coordinator-accounting.json",
+    # retained Arm A execution-equivalence PASS artifacts (executed on the
+    # fabric 2026-09-08; see evidence/arm-a/run-record.json). Fabric-produced
+    # compact evidence; the CPU campaign never regenerates these.
+    "arm-a/witness.json",
+    "arm-a/run-record.json",
+    "arm-a/decision-table.json",
+    "arm-a/fixture-corpus.json",
+    "arm-a/index-control-candidate.json",
+    "arm-a/index-control-reference.json",
+    "arm-a/index-integrated-candidate.json",
+    "arm-a/index-integrated-reference.json",
+    "arm-a/verify-rows-laststage03.json",
+    "arm-a/verify-rows-reference04.json",
+    # PR #122 retention/provenance correction (2026-09-08): recovered
+    # independently sourced control/integrated per-decision identity records,
+    # full stage-boundary capture-manifest records (both arms), per-decision
+    # raw-row verification manifests bound to the decision-table rows, the
+    # distinct invalid-attempt lineage record, and the mechanical pre-run
+    # revalidation record. Recovered read-only; no execution.
+    "arm-a/paired-decision-records.json",
+    "arm-a/capture-manifest-records.json",
+    "arm-a/raw-row-manifest-laststage03.json",
+    "arm-a/raw-row-manifest-reference04.json",
+    "arm-a/attempt-lineage.json",
+    "arm-a/prerun-revalidation.json",
+    # PR #122 review-correction pass (2026-09-08, findings 1-2): the
+    # accepted-checkpoint byte-continuity proof (inode/ctime/mtime/full-sha
+    # per host + launch-path bindings) and the exact valid-run Compute Unit
+    # bindings (per-stage observed GPU UUIDs from run-side capture/service/
+    # reference records + verbatim launch commands). Recovered read-only;
+    # no execution.
+    "arm-a/checkpoint-continuity.json",
+    "arm-a/run-device-bindings.json",
 }
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the

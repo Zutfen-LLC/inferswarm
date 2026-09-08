@@ -608,14 +608,15 @@ attempt. Current execution scope is recorded below.
 
 Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.
 
-- **Physical preflight observation:** [`ISSUE117_PHYSICAL_PREFLIGHT_PASS`](https://github.com/Zutfen-LLC/inferswarm/pull/121).
-- **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/commit/51c8adeeedf6d6f0a16db994ca0a0cf259bed52f).
-- **Recorded execution authorization:** authorized — Arm A — V5 execution-math bridge. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
+- **Arm A — V5 execution-math bridge observation:** [`ISSUE117_ARM_A_EXECUTION_EQUIVALENCE_PASS`](https://github.com/Zutfen-LLC/inferswarm/pull/122).
+- **Maintainer acceptance:** pending maintainer acceptance.
+- **Recorded execution authorization:** blocked — Arm B — canonical cold acquisition + realization. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
 
-- Arm A must establish 192/192 exact FP32 consumer-row identities on the frozen public fixture; no Arm A result is claimed yet.
-- Stop for maintainer review after Arm A. Arms B–E require their own preceding accepted gates.
-- Use the exact producer and identity checks specified in #117. Any InferSwarm revision after its accepted 51c8adee base requires an explicit delta audit before execution.
-- Do not rerun accepted preflight merely to start Arm A; do not use consumed h109 holdout material.
+- Arm A has an observed 192/192 PASS (PR #122) but is awaiting maintainer acceptance; it is not yet an accepted capability.
+- Arm B is not authorized until Arm A is reviewed and accepted/merged.
+- No Arm-A rerun is authorized by this status update.
+- Arms C-E remain sequential later gates and are not authorized.
+- No consumed h109 holdout material may be used as new evidence.
 <!-- project-status:frontier:end -->
 
 FreeToken remains the initial validation/integration vehicle, not the permanent

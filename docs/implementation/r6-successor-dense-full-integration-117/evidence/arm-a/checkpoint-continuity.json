@@ -1,0 +1,202 @@
+{
+ "accepted_checkpoint": {
+  "authority_sources": [
+   "docs/implementation/r6-successor-dense-full-integration-117/evidence/checkpoint-authority-provenance.json (PR #119 recovery, fabric_verification_2026_09_07: full-file sha256 per host, hash windows, inode, mtime)",
+   "docs/implementation/r6-successor-dense-full-integration-117/evidence/physical-preflight-record.json (accepted #121 preflight: scripts/issue117_checkpoint_authority.py computed the full-file sha256 ON each host \u2014 per-host validation-record digests identical across 01/03/04, status CHECKPOINT_AUTHORITY_DERIVED, window 2026-09-08T05:19:17Z..05:31:00Z)",
+   "arm-a/prerun-revalidation.json (Arm-A P0 probe, 2026-09-08T12:17:30Z..12:17:44Z: lstat kind/size/regularity per host)"
+  ],
+  "path": "/srv/models/gemma-r6/model.safetensors",
+  "sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+  "size_bytes": 23919549408
+ },
+ "continuity_derivation": {
+  "chain_plan_binding": {
+   "model.checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+   "model_path": "/srv/models/gemma-r6",
+   "plan": "/srv/inferswarm/state/issue97/participant-plan.json (chain) / /tmp/participant-plan-i110.json (last-stage services; sha256 a91e3f71353905d4af3722408327a9f9bda0f2655061ae9e44f51d9a3edf28fc, digest field sha256:ee845188d3328bdec29bf4b09d71f7ccda0701ff5758cb1d8a70460a40fecfb1 \u2014 the two are the same accepted #97/#110 frozen plan)"
+  },
+  "conclusion": "For each of inferswarm01/03/04 the exact file at the exact path used by every valid Arm-A run is mechanically shown to be unmodified since before the accepted full-file hash observations: same inode as at the accepted hash, ctime strictly predating all accepted hash observations (so no write/metadata-change/replacement occurred inside the continuity interval or since), unchanged mtime, exact size, plain regular non-symlink file, and a present-day full-file sha256 equal to the accepted authority. A current matching hash alone would be mere corroboration; the inode+ctime+mtime continuity makes post-observation modification incompatible with the observed filesystem facts.",
+  "filesystem_semantics": "ext4 (all hosts): any write to file data updates mtime AND ctime; any metadata change (chmod/chown/link/rename/replace) updates ctime; creating a replacement file at the same path yields a NEW inode and updates the parent-directory mtime/ctime of the observed file's ctime. ctime cannot be set backward by unprivileged or ordinary privileged tooling (only via filesystem-image offline editing or the debugfs-style direct inode surgery on an unmounted device).",
+  "launch_path_binding": "Every valid Arm-A launch used exactly /srv/models/gemma-r6 as the model root: the retained launch scripts (recovered verbatim from the execution hosts, digests below) pass --model /srv/models/gemma-r6 to all four runner invocations (control chain, integrated chain on inferswarm01; control reference, integrated reference on inferswarm04) and to both last-stage services on inferswarm03; the frozen chain plan (/srv/inferswarm/state/issue97/participant-plan.json, digest sha256:ee845188...fecfb1) records model_path=/srv/models/gemma-r6; every ready.json and index binds subject.checkpoint_sha256=5a84cb31...ff18d; the runner itself validates require_producer_identity and frozen_subject_record(checkpoint_sha256=...) against the frozen constants before any CUDA/model work. The canonical file /srv/models/gemma-r6/model.safetensors continuity-proven above is the only authority-bearing weights object in that root (9-entry possession record, no symlinks, no hardlinks).",
+  "launch_path_evidence": [
+   {
+    "checkpoint_arg": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "host": "inferswarm01",
+    "model_arg": "--model /srv/models/gemma-r6",
+    "path": "/tmp/i117a_launch_chain_control.sh",
+    "sha256": "905e6a9b0b0ff24dbe8a844161e9b2ddea7e61694c9c32ddaf7fb96fc607aca0"
+   },
+   {
+    "checkpoint_arg": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "host": "inferswarm01",
+    "model_arg": "--model /srv/models/gemma-r6",
+    "path": "/tmp/i117a_launch_chain_integrated.sh",
+    "sha256": "6afb7db0673b8250f03e7fb6faed19c2197c322fa1131170802b568254575206"
+   },
+   {
+    "checkpoint_arg": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "host": "inferswarm03",
+    "model_arg": "--model /srv/models/gemma-r6",
+    "path": "/tmp/i117a_launch_laststage_control.sh",
+    "sha256": "7f3eccbe8a835c32261504573f5629a79f142f55bcd97c28d992eb6ba24a78c5"
+   },
+   {
+    "checkpoint_arg": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "host": "inferswarm03",
+    "model_arg": "--model /srv/models/gemma-r6",
+    "path": "/tmp/i117a_launch_laststage_integrated.sh",
+    "sha256": "c9bc08a875d6c4fca04250cf9351a8a49fd238c518d0ff08b66fb388d55f1d12"
+   },
+   {
+    "checkpoint_arg": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "host": "inferswarm04",
+    "model_arg": "--model /srv/models/gemma-r6",
+    "path": "/tmp/i117a_launch_ref_control.sh",
+    "sha256": "2a8ac5e3b0451fe4dfde9903d5056a64545335a9956041e95482c8f85b3af44c"
+   },
+   {
+    "checkpoint_arg": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "host": "inferswarm04",
+    "model_arg": "--model /srv/models/gemma-r6",
+    "path": "/tmp/i117a_launch_ref_integrated.sh",
+    "sha256": "80ef86797e80f35f0faa1dcc28c790f1dfc3d2e4cf92822f5df19d99a2bd8547"
+   }
+  ],
+  "per_host_chain": [
+   "inferswarm01: st_ino today 2359303 == inode recorded at the accepted #119 full-file hash (2026-09-08T01:56Z window); st_ctime_ns 1788388157229452336 (2026-09-02T22:29:17Z) strictly predates the #119 hash window start (2026-09-08T01:56:28Z), the #121 preflight window, and the entire Arm-A window; st_mtime_ns unchanged at 1788386411000000000 (2026-09-02T22:00:11Z, the acquisition mtime) == #119-recorded mtime; size exact; plain regular file, nlink 1, no symlink. Therefore no data write, no metadata change, and no replacement could have occurred between the accepted hash observation and today without either bumping ctime past its observed 2026-09-02 value (impossible for a past-dated ctime to survive a later write) or changing the inode. The bytes hashed by #119/#121 are therefore the same physical file bytes present during Arm A and today; the current full-file sha256 (5a84cb31...ff18d, hashed 2026-09-08T17:07-17:09Z) re-confirms the content independently.",
+   "inferswarm03: st_ino today 42467335 == #119-recorded inode; st_ctime_ns 1788387625486260743 (2026-09-02T22:20:25Z) strictly predates every hash observation and the Arm-A window; mtime/size/regularity identical reasoning as inferswarm01; current full-file sha256 re-confirmed 2026-09-08T17:09-17:10Z.",
+   "inferswarm04: st_ino today 12189703 == #119-recorded inode; st_ctime_ns 1788445480232458515 (2026-09-03T14:24:40Z) strictly predates the #119 hash window (2026-09-08T01:59Z), #121, and Arm A; mtime/size/regularity identical reasoning; current full-file sha256 re-confirmed 2026-09-08T17:10-17:11Z."
+  ]
+ },
+ "continuity_interval": {
+  "definition": "accepted #121 full-file hash observation (on-host validator) through the final valid Arm-A run completion (integrated chain RUN_COMPLETE, index mtime 2026-09-08T13:08:07Z)",
+  "end_utc": "2026-09-08T13:08:07Z",
+  "preceding_anchors": [
+   "2026-09-02T22:00:09Z \u2014 xet download log final record on inferswarm01 (file reconstruction completed, 23919549408 bytes scheduled)",
+   "2026-09-08T01:56:28Z..02:00:09Z \u2014 #119 forensic full-file sha256 windows per host (all = 5a84cb31...ff18d)"
+  ],
+  "start_utc": "2026-09-08T05:19:17Z"
+ },
+ "continuity_result": "CHECKPOINT_CONTENT_CONTINUITY_ESTABLISHED",
+ "hosts": [
+  {
+   "accepted_hash_observation": {
+    "corroborated_by": "#121 on-host full-file validator (identical per-host record digest, window 2026-09-08T05:19:17Z..05:31:00Z)",
+    "observer": "#119 forensic verification (fabric_verification_2026_09_07)",
+    "recorded_inode": 2359303,
+    "recorded_mtime": "2026-09-02 18:00:11 -0400",
+    "sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "window_utc": "2026-09-08T01:56:28.183880Z..2026-09-08T01:58:11.799662Z"
+   },
+   "host": "inferswarm01",
+   "is_symlink": false,
+   "mount": {
+    "fstype": "ext4",
+    "source": "/dev/sda1",
+    "st_dev": 2049,
+    "target": "/srv/models"
+   },
+   "path": "/srv/models/gemma-r6/model.safetensors",
+   "plain_regular_file": true,
+   "present_day_observation": {
+    "full_file_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "hash_command": "sudo -n sha256sum /srv/models/gemma-r6/model.safetensors",
+    "hash_window_utc": "2026-09-08T17:07:37.184747Z..2026-09-08T17:09:14.715027Z",
+    "label": "PRESENT_DAY_OBSERVATION_2026-09-08 \u2014 read-only",
+    "stat_observed_utc_window": "2026-09-08T17:17:30.949275Z..2026-09-08T17:17:31.014180Z"
+   },
+   "realpath": "/srv/models/gemma-r6/model.safetensors",
+   "st_ctime_ns": 1788388157229452336,
+   "st_ctime_utc": "2026-09-02T22:29:17.229452336Z",
+   "st_dev": 2049,
+   "st_ino": 2359303,
+   "st_mode": "0o100664",
+   "st_mtime_ns": 1788386411000000000,
+   "st_mtime_utc": "2026-09-02T22:00:11Z",
+   "st_nlink": 1,
+   "st_size": 23919549408
+  },
+  {
+   "accepted_hash_observation": {
+    "corroborated_by": "#121 on-host full-file validator (identical per-host record digest, window 2026-09-08T05:19:17Z..05:31:00Z)",
+    "observer": "#119 forensic verification (fabric_verification_2026_09_07)",
+    "recorded_inode": 42467335,
+    "recorded_mtime": "2026-09-02 18:00:11 -0400",
+    "sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "window_utc": "2026-09-08T01:58:12.138910Z..2026-09-08T01:59:07.442203Z"
+   },
+   "host": "inferswarm03",
+   "is_symlink": false,
+   "mount": {
+    "fstype": "ext4",
+    "source": "/dev/sda1",
+    "st_dev": 2049,
+    "target": "/srv/models"
+   },
+   "path": "/srv/models/gemma-r6/model.safetensors",
+   "plain_regular_file": true,
+   "present_day_observation": {
+    "full_file_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "hash_command": "sudo -n sha256sum /srv/models/gemma-r6/model.safetensors",
+    "hash_window_utc": "2026-09-08T17:09:15.100303Z..2026-09-08T17:10:11.938328Z",
+    "label": "PRESENT_DAY_OBSERVATION_2026-09-08 \u2014 read-only",
+    "stat_observed_utc_window": "2026-09-08T17:17:31.319277Z..2026-09-08T17:17:31.387994Z"
+   },
+   "realpath": "/srv/models/gemma-r6/model.safetensors",
+   "st_ctime_ns": 1788387625486260743,
+   "st_ctime_utc": "2026-09-02T22:20:25.486260743Z",
+   "st_dev": 2049,
+   "st_ino": 42467335,
+   "st_mode": "0o100664",
+   "st_mtime_ns": 1788386411000000000,
+   "st_mtime_utc": "2026-09-02T22:00:11Z",
+   "st_nlink": 1,
+   "st_size": 23919549408
+  },
+  {
+   "accepted_hash_observation": {
+    "corroborated_by": "#121 on-host full-file validator (identical per-host record digest, window 2026-09-08T05:19:17Z..05:31:00Z)",
+    "observer": "#119 forensic verification (fabric_verification_2026_09_07)",
+    "recorded_inode": 12189703,
+    "recorded_mtime": "2026-09-02 18:00:11 -0400",
+    "sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "window_utc": "2026-09-08T01:59:07.772236Z..2026-09-08T02:00:09.353076Z"
+   },
+   "host": "inferswarm04",
+   "is_symlink": false,
+   "mount": {
+    "fstype": "ext4",
+    "source": "/dev/sda2",
+    "st_dev": 2050,
+    "target": "/"
+   },
+   "path": "/srv/models/gemma-r6/model.safetensors",
+   "plain_regular_file": true,
+   "present_day_observation": {
+    "full_file_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "hash_command": "sudo -n sha256sum /srv/models/gemma-r6/model.safetensors",
+    "hash_window_utc": "2026-09-08T17:10:12.260259Z..2026-09-08T17:11:13.629572Z",
+    "label": "PRESENT_DAY_OBSERVATION_2026-09-08 \u2014 read-only",
+    "stat_observed_utc_window": "2026-09-08T17:17:31.730740Z..2026-09-08T17:17:31.762582Z"
+   },
+   "realpath": "/srv/models/gemma-r6/model.safetensors",
+   "st_ctime_ns": 1788445480232458515,
+   "st_ctime_utc": "2026-09-03T14:24:40.232458515Z",
+   "st_dev": 2050,
+   "st_ino": 12189703,
+   "st_mode": "0o100664",
+   "st_mtime_ns": 1788386411000000000,
+   "st_mtime_utc": "2026-09-02T22:00:11Z",
+   "st_nlink": 1,
+   "st_size": 23919549408
+  }
+ ],
+ "non_claims": [
+  "This record does not claim cold acquisition (Arm B not executed).",
+  "No holdout material was consulted.",
+  "The continuity proof covers the checkpoint weights file only; runner/producer identities are proven by the run indexes, ready.json files, and prerun-revalidation record."
+ ],
+ "provenance_note": "Recovered read-only 2026-09-08 during the PR #122 in-place correction. Facts sourced from: on-host sudo stat/sha256sum (timestamped windows recorded above), the retained #119 checkpoint-authority-provenance.json (accepted forensic record with per-host inode/mtime/full-file sha256/hash windows), the accepted #121 physical-preflight record (on-host full-file validator, identical per-host record digests), the retained Arm-A prerun-revalidation P0 probe, and the verbatim launch scripts recovered from the execution hosts (digests above; full verbatim text of the runner invocations retained in arm-a/run-device-bindings.json). No physical/model execution was performed for this recovery; no model bytes were modified.",
+ "purpose": "Mechanically establish that the exact checkpoint bytes hashed during the accepted #121 physical preflight (and earlier, during the accepted #119 authority recovery) are the same physical file bytes present at /srv/models/gemma-r6/model.safetensors throughout the Arm-A execution window and today. Read-only recovery; no model execution, no PREFILL/decode, no model-byte modification.",
+ "schema": "inferswarm.issue117.arm-a.checkpoint-continuity/1"
+}

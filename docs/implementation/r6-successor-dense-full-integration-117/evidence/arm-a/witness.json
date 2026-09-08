@@ -1,0 +1,163 @@
+{
+  "case_count": 24,
+  "cases": [
+    {
+      "case_id": "c109-01-01-045",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-01-02-076",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-01-03-009",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-01-04-036",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-01-05-017",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-01-06-006",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-02-01-030",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-02-02-020",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-02-03-011",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-02-04-033",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-02-05-024",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-02-06-049",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-03-01-044",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-03-02-054",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-03-03-031",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-03-04-003",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-03-05-044",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-03-06-016",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-04-01-026",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-04-02-047",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-04-03-040",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-04-04-024",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-04-05-043",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    },
+    {
+      "case_id": "c109-04-06-074",
+      "decisions_checked": 8,
+      "identity_fields_match": true,
+      "mismatches": []
+    }
+  ],
+  "control_producer": "7e5c852163afd9aadfccc406be267e8d060e79ef",
+  "decisions_compared": 192,
+  "fp32_row_sha_matches": 192,
+  "fp32_row_sha_mismatches": [],
+  "integrated_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "mismatches": {},
+  "schema": "inferswarm.issue117.arm-a.execution-equivalence-witness/1",
+  "status": "ISSUE117_ARM_A_EXECUTION_EQUIVALENCE_PASS",
+  "subject_identity": {
+    "checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "contract_id": "inferswarm.gemma4-mixture-population-qualification/1",
+    "methodology_commit": "bc6f0ec657d025702d5928771bf8f51aa563a8be",
+    "model_revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7"
+  }
+}

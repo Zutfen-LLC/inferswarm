@@ -1,0 +1,206 @@
+{
+ "accepted_compute_units": {
+  "noncanonical_excluded": {
+   "gpu_uuid": "GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0",
+   "note": "inferswarm03's second RTX 3060 (index 1) is NOT part of the accepted topology; excluded mechanically below.",
+   "product": "NVIDIA GeForce RTX 3060",
+   "slot": "inferswarm03/gpu-1"
+  },
+  "reference": {
+   "compute_cap": "8.6",
+   "gpu_uuid": "GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03",
+   "layers": "reference",
+   "product": "NVIDIA GeForce RTX 3090",
+   "slot": "inferswarm04/gpu-0"
+  },
+  "stage1": {
+   "compute_cap": "8.6",
+   "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+   "layers": "[0,16)",
+   "product": "NVIDIA GeForce RTX 3060",
+   "slot": "inferswarm01/gpu-0"
+  },
+  "stage2": {
+   "compute_cap": "8.6",
+   "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+   "layers": "[16,32)",
+   "product": "NVIDIA GeForce RTX 3060",
+   "slot": "inferswarm01/gpu-1"
+  },
+  "stage3": {
+   "compute_cap": "8.6",
+   "gpu_uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176",
+   "layers": "[32,48)",
+   "product": "NVIDIA GeForce RTX 3060",
+   "slot": "inferswarm03/gpu-0"
+  }
+ },
+ "binding_result": "ALL_VALID_RUNS_BOUND_TO_ACCEPTED_COMPUTE_UNITS",
+ "bindings": [
+  {
+   "binding_result": "BOUND",
+   "host_stage12": "inferswarm01",
+   "host_stage3": "inferswarm03",
+   "producer": "7e5c852163afd9aadfccc406be267e8d060e79ef",
+   "run": "control_candidate_chain",
+   "stage1": {
+    "evidence": "/srv/models/issue117/arm-a/control/candidate/cases/*/capture-i117a-ctrl-cand-stage1.pt meta.gpu_uuid (all records); selection: frozen chain_runner spawns I76StageClient(role=first, gpu_index=0) => CUDA_VISIBLE_DEVICES=0 on inferswarm01; launch script 905e6a9b0b0ff24d...",
+    "expected_gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "observed_gpu_uuids": [
+     "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"
+    ],
+    "records": 1152
+   },
+   "stage2": {
+    "evidence": "/srv/models/issue117/arm-a/control/candidate/cases/*/capture-i117a-ctrl-cand-stage2.pt meta.gpu_uuid (all records); selection: I76StageClient(role=middle, gpu_index=1) => CUDA_VISIBLE_DEVICES=1 on inferswarm01",
+    "expected_gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+    "observed_gpu_uuids": [
+     "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+    ],
+    "records": 576
+   },
+   "stage3": {
+    "evidence": "/srv/models/issue117/arm-a/control/candidate-laststage/*/capture-i117a-ctrl-cand.pt meta.gpu_uuid (960 records) + retained ready.json (gpu_uuid GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176, plan digest sha256:ee845188..., producer 7e5c8521) + launch script --gpu-uuid GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176 (sha256 7f3eccbe8a835c32...)",
+    "expected_gpu_uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176",
+    "observed_gpu_uuids": [
+     "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176"
+    ],
+    "records": 960
+   }
+  },
+  {
+   "binding_result": "BOUND",
+   "host_stage12": "inferswarm01",
+   "host_stage3": "inferswarm03",
+   "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+   "run": "integrated_candidate_chain",
+   "stage1": {
+    "evidence": "/srv/models/issue117/arm-a/integrated/candidate/cases/*/capture-i117a-int-cand-stage1.pt meta.gpu_uuid (all records); selection: frozen chain_runner spawns I76StageClient(role=first, gpu_index=0) => CUDA_VISIBLE_DEVICES=0 on inferswarm01; launch script 6afb7db0673b8250...",
+    "expected_gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+    "observed_gpu_uuids": [
+     "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"
+    ],
+    "records": 1152
+   },
+   "stage2": {
+    "evidence": "/srv/models/issue117/arm-a/integrated/candidate/cases/*/capture-i117a-int-cand-stage2.pt meta.gpu_uuid (all records); selection: I76StageClient(role=middle, gpu_index=1) => CUDA_VISIBLE_DEVICES=1 on inferswarm01",
+    "expected_gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+    "observed_gpu_uuids": [
+     "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+    ],
+    "records": 576
+   },
+   "stage3": {
+    "evidence": "/srv/models/issue117/arm-a/integrated/candidate-laststage/*/capture-i117a-int-cand.pt meta.gpu_uuid (960 records) + retained ready.json (gpu_uuid GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176, plan digest sha256:ee845188..., producer 924cd22e) + launch script --gpu-uuid GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176 (sha256 c9bc08a875d6c4fc...)",
+    "expected_gpu_uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176",
+    "observed_gpu_uuids": [
+     "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176"
+    ],
+    "records": 960
+   }
+  },
+  {
+   "binding_result": "BOUND",
+   "host": "inferswarm04",
+   "producer": "7e5c852163afd9aadfccc406be267e8d060e79ef",
+   "reference": {
+    "cases": 24,
+    "evidence": "/srv/inferswarm/state/issue117/arm-a/control/reference/cases/*/reference-case-i117a-ctrl-ref.json gpu_uuid field (written by the reference runner itself; nvidia-smi -i 0 under CUDA_VISIBLE_DEVICES=0; host has exactly one GPU: the RTX 3090 GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03); row_f32_sha256 lists byte-equal the retained paired-decision reference rows (768/768); launch script sha256 2a8ac5e3b0451fe4...",
+    "expected_gpu_uuid": "GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03",
+    "observed_gpu_uuids": [
+     "GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03"
+    ]
+   },
+   "run": "control_reference"
+  },
+  {
+   "binding_result": "BOUND",
+   "host": "inferswarm04",
+   "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+   "reference": {
+    "cases": 24,
+    "evidence": "/srv/inferswarm/state/issue117/arm-a/integrated/reference/cases/*/reference-case-i117a-int-ref.json gpu_uuid field (written by the reference runner itself; nvidia-smi -i 0 under CUDA_VISIBLE_DEVICES=0; host has exactly one GPU: the RTX 3090 GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03); row_f32_sha256 lists byte-equal the retained paired-decision reference rows (768/768); launch script sha256 80ef86797e80f35f...",
+    "expected_gpu_uuid": "GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03",
+    "observed_gpu_uuids": [
+     "GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03"
+    ]
+   },
+   "run": "integrated_reference"
+  }
+ ],
+ "capture_to_retained_binding": {
+  "reference": "reference-case summaries row_f32_sha256 == arm-a/paired-decision-records.json reference_rows control/integrated row_f32_sha256 for all 192 decisions both arms (0 mismatches)",
+  "stage12": "capture-*.pt record_sha256 lists == arm-a/capture-manifest-records.json control/integrated stage1/stage2 record_sha256 for all 24 cases both arms (0 mismatches)",
+  "stage3": "last-stage capture-*.pt record_sha256 lists == arm-a/capture-manifest-records.json stage3 record_sha256 for all 24 cases both arms (0 mismatches)"
+ },
+ "evidence_sources": {
+  "launch_commands": "The six verbatim launch scripts recovered from the execution hosts (digests below; full text retained). The chain scripts set CUDA_VISIBLE_DEVICES implicitly per spawn (frozen chain_runner I76StageClient gpu_index=0/1 -> env CUDA_VISIBLE_DEVICES), the last-stage scripts pin --gpu-uuid, the reference scripts pin CUDA_VISIBLE_DEVICES=0 + --gpu 0.",
+  "prerun_topology_probe": "arm-a/prerun-revalidation.json compute_unit_identity: pre-run nvidia-smi per host confirmed the four accepted UUIDs eligible and idle (roles: candidate stage 1/2/last, reference executor).",
+  "reference_sidecars": "Per-case reference-case-<tag>.json summaries on inferswarm04 (24 per arm), each carrying the gpu_uuid queried by the reference runner itself (nvidia-smi -i 0 after CUDA_VISIBLE_DEVICES=0). Their row_f32_sha256 lists equal the retained paired-decision-records.json reference rows for all 192 decisions x 2 arms (verified during recovery).",
+  "stage12_captures": "Per-case capture-<tag>-stage{1,2}.pt bundles on inferswarm01 (48 per arm; torch.save archives written by the frozen RowPruningSink during the runs). Every record's meta carries the gpu_uuid observed by nvidia-smi at CASE_ARM time by the frozen producer itself. Their record_sha256 lists equal the retained in-repo arm-a/capture-manifest-records.json lists for all 24 cases x 2 stages x 2 arms (verified byte-for-byte during recovery).",
+  "stage3_captures_and_service": "Per-case capture-<tag>.pt bundles written by the last-stage service on inferswarm03 (48 total; meta gpu_uuid from the service's own RowPruningSink) plus both retained ready.json files (control producer 7e5c8521 pid 3917999; integrated producer 924cd22e pid 3930106), each binding gpu_uuid, plan digest sha256:ee845188...fecfb1, subject checkpoint 5a84cb31...ff18d, and listen 0.0.0.0:18485."
+ },
+ "launch_scripts": {
+  "chain_control": {
+   "host": "inferswarm01",
+   "path": "/tmp/i117a_launch_chain_control.sh",
+   "sha256": "905e6a9b0b0ff24dbe8a844161e9b2ddea7e61694c9c32ddaf7fb96fc607aca0",
+   "verbatim": "#!/bin/bash\n# Issue #117 Arm A CONTROL chain run on inferswarm01 (V5 producer 7e5c8521),\n# teacher-forced against the control reference produced on inferswarm04.\nset -euo pipefail\nWT=/home/zutfen/FreeToken-110\nVENV=/home/zutfen/FreeToken/.venv\nOUT=/srv/models/issue117/arm-a/control/candidate\nREF=/srv/models/issue117/arm-a/control/reference\nmkdir -p \"$OUT/logs\"\n# reference case summaries were relayed 04 -> 01 during staging; verify count\nN=$(find \"$REF\" -name 'reference-case-*.json' | wc -l)\nif [ \"$N\" -ne 24 ]; then echo \"EXPECTED 24 reference summaries, found $N\"; exit 1; fi\necho \"reference summaries: $N\"\ncd \"$WT\"\nsudo -n -u zutfen bash -c \"cd $WT && env HOME=/home/zutfen TMPDIR=/var/tmp \\\n  PYTHONPATH=$WT:$WT/python:$WT/benchmarks \\\n  PATH=$VENV/bin:\\$PATH HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \\\n  nohup $VENV/bin/python -m benchmarks.inferswarm_110.chain_runner \\\n    --model /srv/models/gemma-r6 \\\n    --plan /srv/inferswarm/state/issue97/participant-plan.json \\\n    --corpus /tmp/i117-fixture-corpus.json \\\n    --reference-dir $REF \\\n    --reference-tag i117a-ctrl-ref \\\n    --last-stage-host 10.0.0.219 \\\n    --last-stage-port 18485 \\\n    --out-dir $OUT/cases \\\n    --tag i117a-ctrl-cand \\\n    --attempt-id i117-arm-a-control-cand-1 \\\n    --expected-producer-sha 7e5c852163afd9aadfccc406be267e8d060e79ef \\\n    --checkpoint-sha256 5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d \\\n    --model-revision 707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7 \\\n    > $OUT/logs/chain.log 2>&1 &\"\necho LAUNCHED\nsleep 10\ntail -3 \"$OUT/logs/chain.log\" 2>/dev/null || true\n"
+  },
+  "chain_integrated": {
+   "host": "inferswarm01",
+   "path": "/tmp/i117a_launch_chain_integrated.sh",
+   "sha256": "6afb7db0673b8250f03e7fb6faed19c2197c322fa1131170802b568254575206",
+   "verbatim": "#!/bin/bash\n# Issue #117 Arm A INTEGRATED chain run on inferswarm01 (producer 924cd22e),\n# teacher-forced against the INTEGRATED reference produced on inferswarm04.\nset -euo pipefail\nWT=/home/zutfen/FreeToken\nVENV=/home/zutfen/FreeToken/.venv\nOUT=/srv/models/issue117/arm-a/integrated/candidate\nREF=/srv/models/issue117/arm-a/integrated/reference\nsudo -n mkdir -p \"$OUT/logs\" \"$REF\" && sudo -n chown -R zutfen:zutfen /srv/models/issue117/arm-a/integrated\nN=$(find \"$REF\" -name 'reference-case-*.json' | wc -l)\nif [ \"$N\" -ne 24 ]; then echo \"EXPECTED 24 reference summaries, found $N\"; exit 1; fi\necho \"reference summaries: $N\"\ncd \"$WT\"\nsudo -n -u zutfen bash -c \"cd $WT && env HOME=/home/zutfen TMPDIR=/var/tmp \\\n  PYTHONPATH=$WT:$WT/python:$WT/benchmarks \\\n  PATH=$VENV/bin:\\$PATH HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \\\n  nohup $VENV/bin/python -m benchmarks.inferswarm_110.chain_runner \\\n    --model /srv/models/gemma-r6 \\\n    --plan /srv/inferswarm/state/issue97/participant-plan.json \\\n    --corpus /tmp/i117-fixture-corpus.json \\\n    --reference-dir $REF \\\n    --reference-tag i117a-int-ref \\\n    --last-stage-host 10.0.0.219 \\\n    --last-stage-port 18485 \\\n    --out-dir $OUT/cases \\\n    --tag i117a-int-cand \\\n    --attempt-id i117-arm-a-integrated-cand-1 \\\n    --expected-producer-sha 924cd22ea081f6d4ed471016faf01d427fc5b0d2 \\\n    --checkpoint-sha256 5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d \\\n    --model-revision 707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7 \\\n    > $OUT/logs/chain.log 2>&1 &\"\necho LAUNCHED\n"
+  },
+  "laststage_control": {
+   "host": "inferswarm03",
+   "path": "/tmp/i117a_launch_laststage_control.sh",
+   "sha256": "7f3eccbe8a835c32261504573f5629a79f142f55bcd97c28d992eb6ba24a78c5",
+   "verbatim": "#!/bin/bash\n# Issue #117 Arm A CONTROL last-stage service on inferswarm03 (V5 producer 7e5c8521).\nset -euo pipefail\nWT=/home/zutfen/FreeToken-110\nVENV=/home/zutfen/FreeToken/.venv\nOUT=/srv/models/issue117/arm-a/control/candidate-laststage\nmkdir -p \"$OUT\"\npkill -f 'inferswarm_110.last_stage_service' 2>/dev/null || true\nsleep 2\ncd \"$WT\"\nsudo -n -u zutfen bash -c \"cd $WT && env HOME=/home/zutfen TMPDIR=/var/tmp \\\n  PYTHONPATH=$WT:$WT/python:$WT/benchmarks \\\n  PATH=$VENV/bin:\\$PATH HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \\\n  nohup $VENV/bin/python -m benchmarks.inferswarm_110.last_stage_service \\\n    --listen-port 18485 \\\n    --participant-plan /tmp/participant-plan-i110.json \\\n    --model /srv/models/gemma-r6 \\\n    --gpu-uuid GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176 \\\n    --out-dir $OUT \\\n    --checkpoint-sha256 5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d \\\n    --model-revision 707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7 \\\n    --expected-producer-sha 7e5c852163afd9aadfccc406be267e8d060e79ef \\\n    --ready-file $OUT/ready.json \\\n    > $OUT/service.log 2>&1 &\"\necho LAUNCHED\nfor i in $(seq 1 60); do\n  if [ -f \"$OUT/ready.json\" ]; then echo READY; head -c 400 \"$OUT/ready.json\"; break; fi\n  sleep 10\ndone\nss -tln | grep 18485 || echo PORT_NOT_LISTENING\n"
+  },
+  "laststage_integrated": {
+   "host": "inferswarm03",
+   "path": "/tmp/i117a_launch_laststage_integrated.sh",
+   "sha256": "c9bc08a875d6c4fca04250cf9351a8a49fd238c518d0ff08b66fb388d55f1d12",
+   "verbatim": "#!/bin/bash\n# Issue #117 Arm A INTEGRATED last-stage service on inferswarm03 (producer 924cd22e).\nset -euo pipefail\nWT=/home/zutfen/FreeToken\nVENV=/home/zutfen/FreeToken/.venv\nOUT=/srv/models/issue117/arm-a/integrated/candidate-laststage\nsudo -n mkdir -p \"$OUT\" && sudo -n chown -R zutfen:zutfen /srv/models/issue117/arm-a/integrated\npkill -f 'inferswarm_110.last_stage_[s]ervice' 2>/dev/null || true\nsleep 2\ncd \"$WT\"\nsudo -n -u zutfen bash -c \"cd $WT && env HOME=/home/zutfen TMPDIR=/var/tmp \\\n  PYTHONPATH=$WT:$WT/python:$WT/benchmarks \\\n  PATH=$VENV/bin:\\$PATH HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \\\n  nohup $VENV/bin/python -m benchmarks.inferswarm_110.last_stage_service \\\n    --listen-port 18485 \\\n    --participant-plan /tmp/participant-plan-i110.json \\\n    --model /srv/models/gemma-r6 \\\n    --gpu-uuid GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176 \\\n    --out-dir $OUT \\\n    --checkpoint-sha256 5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d \\\n    --model-revision 707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7 \\\n    --expected-producer-sha 924cd22ea081f6d4ed471016faf01d427fc5b0d2 \\\n    --ready-file $OUT/ready.json \\\n    > $OUT/service.log 2>&1 &\"\necho LAUNCHED\n"
+  },
+  "ref_control": {
+   "host": "inferswarm04",
+   "path": "/tmp/i117a_launch_ref_control.sh",
+   "sha256": "2a8ac5e3b0451fe4dfde9903d5056a64545335a9956041e95482c8f85b3af44c",
+   "verbatim": "#!/bin/bash\n# Issue #117 Arm A CONTROL reference run: 24 fixture cases on inferswarm04 RTX 3090\n# at the accepted V5 calibration producer 7e5c8521.\nset -euo pipefail\nWT=/home/zutfen/FreeToken-110\nVENV=/home/zutfen/FreeToken/.venv\nOUT=/srv/inferswarm/state/issue117/arm-a/control/reference\nmkdir -p \"$OUT/logs\"\ncd \"$WT\"\nsudo -n -u zutfen bash -c \"cd $WT && env HOME=/home/zutfen TMPDIR=/var/tmp \\\n  PYTHONPATH=$WT:$WT/python:$WT/benchmarks \\\n  PATH=$VENV/bin:\\$PATH HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 CUDA_VISIBLE_DEVICES=0 \\\n  nohup $VENV/bin/python -m benchmarks.inferswarm_110.reference_runner \\\n    --model /srv/models/gemma-r6 \\\n    --corpus /tmp/i117-fixture-corpus.json \\\n    --out-dir $OUT/cases \\\n    --tag i117a-ctrl-ref \\\n    --gpu 0 \\\n    --attempt-id i117-arm-a-control-ref-1 \\\n    --expected-producer-sha 7e5c852163afd9aadfccc406be267e8d060e79ef \\\n    --checkpoint-sha256 5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d \\\n    --model-revision 707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7 \\\n    > $OUT/logs/ref.log 2>&1 &\"\necho LAUNCHED\nsleep 8\npgrep -af 'reference_runner' | head -2 || true\ntail -3 \"$OUT/logs/ref.log\" 2>/dev/null || true\n"
+  },
+  "ref_integrated": {
+   "host": "inferswarm04",
+   "path": "/tmp/i117a_launch_ref_integrated.sh",
+   "sha256": "80ef86797e80f35f0faa1dcc28c790f1dfc3d2e4cf92822f5df19d99a2bd8547",
+   "verbatim": "#!/bin/bash\n# Issue #117 Arm A INTEGRATED reference run: 24 fixture cases on inferswarm04 RTX 3090\n# at the frozen integration producer 924cd22e.\nset -euo pipefail\nWT=/home/zutfen/FreeToken\nVENV=/home/zutfen/FreeToken/.venv\nOUT=/srv/inferswarm/state/issue117/arm-a/integrated/reference\nsudo -n mkdir -p \"$OUT/logs\" && sudo -n chown -R zutfen:zutfen \"$OUT\"\ncd \"$WT\"\nsudo -n -u zutfen bash -c \"cd $WT && env HOME=/home/zutfen TMPDIR=/var/tmp \\\n  PYTHONPATH=$WT:$WT/python:$WT/benchmarks \\\n  PATH=$VENV/bin:\\$PATH HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 CUDA_VISIBLE_DEVICES=0 \\\n  nohup $VENV/bin/python -m benchmarks.inferswarm_110.reference_runner \\\n    --model /srv/models/gemma-r6 \\\n    --corpus /tmp/i117-fixture-corpus.json \\\n    --out-dir $OUT/cases \\\n    --tag i117a-int-ref \\\n    --gpu 0 \\\n    --attempt-id i117-arm-a-integrated-ref-1 \\\n    --expected-producer-sha 924cd22ea081f6d4ed471016faf01d427fc5b0d2 \\\n    --checkpoint-sha256 5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d \\\n    --model-revision 707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7 \\\n    > $OUT/logs/ref.log 2>&1 &\"\necho LAUNCHED\n"
+  }
+ },
+ "noncanonical_gpu_exclusion": {
+  "exclusion_result": "NONCANONICAL_GPU_EXCLUDED_BY_RUN_EVIDENCE",
+  "host": "inferswarm03",
+  "mechanical_exclusion": [
+   "Both retained ready.json files pin --gpu-uuid GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176 and the last_stage_service sets CUDA_VISIBLE_DEVICES to that exact UUID before any torch/CUDA import (frozen source line: os.environ['CUDA_VISIBLE_DEVICES'] = gpu_uuid), so the noncanonical index-1 GPU was invisible to the service process.",
+   "All 48 last-stage capture .pt bundles (both arms, 1920 records total) carry meta gpu_uuid == GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176 exclusively; zero records reference GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0.",
+   "The chain runner's per-case CASE_ARM gpu_uuids are queried via nvidia-smi -i 0 / -i 1 ON inferswarm01 only (the stage-1/2 host); no inferswarm03 GPU is addressed by index from the chain side \u2014 stage 3 is reachable only through the single-connection wire service on 10.0.0.219:18485 that is itself UUID-pinned.",
+   "The pre-run topology probe (arm-a/prerun-revalidation.json) enumerated inferswarm03 with exactly the accepted B0 UUID in the compute_unit_identity list; the noncanonical second GPU was not granted any role."
+  ],
+  "present_gpus": [
+   {
+    "index": 0,
+    "role": "accepted stage-3 CU",
+    "uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176"
+   },
+   {
+    "index": 1,
+    "role": "NOT in accepted topology",
+    "uuid": "GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0"
+   }
+  ]
+ },
+ "provenance_note": "Recovered read-only 2026-09-08 during the PR #122 in-place correction. CPU-only .pt metadata inspection (torch.load map_location='cpu', records metas only; no tensor compute, no CUDA, no model execution). Present-day UUID scans (nvidia-smi) re-confirm the accepted UUID->slot map. No stored device_binding aggregate in any retained artifact was treated as authority; every binding above is derived from run-side records written by the frozen producers during the runs themselves.",
+ "purpose": "Mechanically bind every VALID Arm-A execution (both arms' candidate chain stages and both reference runs) to the exact accepted physical Compute Units, from contemporaneous run-side evidence only. Read-only recovery; no model execution, no CUDA/model code run (capture .pt files were inspected CPU-only with map_location='cpu').",
+ "schema": "inferswarm.issue117.arm-a.run-device-bindings/1"
+}
