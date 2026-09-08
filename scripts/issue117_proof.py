@@ -50,11 +50,9 @@ from issue117_gemma_strategy import (  # noqa: E402
     SYNTHETIC_SUBJECT_BACKEND,
     SYNTHETIC_SUBJECT_EXECUTION,
     GemmaDenseStrategy,
-    accepted_v5_qualification_record,
     build_qualification_record,
     build_source_manifest,
     build_synthetic_gemma_repository,
-    canonical_v5_candidate,
     catalog_from_repository,
     checkpoint_weight_bytes,
     subject_from_catalog,
@@ -83,6 +81,7 @@ PRODUCERS = [
     "scripts/issue117_planner.py",
     "scripts/issue117_preflight.py",
     "scripts/issue117_proof.py",
+    "scripts/issue117_subject_identity.py",
     "scripts/issue99_artifact_core.py",
     "scripts/issue101_orchestration.py",
     "scripts/issue103_planner.py",
@@ -93,6 +92,7 @@ PRODUCERS = [
     "tests/test_issue117_planner.py",
     "tests/test_issue117_preflight.py",
     "tests/test_issue117_proof.py",
+    "tests/test_issue117_provenance.py",
 ]
 EVIDENCE_FILES = {
     "strategy.json", "planner-decision.json", "requirements.json",
@@ -326,8 +326,8 @@ def fixture_qualification_policy(world) -> dict[str, Any]:
     """The fixture world's strict qualification policy.
 
     Declares the shared machinery-local subject keys so the evaluator
-    compares execution-equality subject identities, exactly as the physical
-    preflight policy does for the accepted V5 record.
+    compares execution-equality subject identities. The physical preflight
+    has no accepted V5 record while the authority blocker remains unresolved.
     """
     from issue117_subject_identity import MACHINERY_LOCAL_SUBJECT_KEYS
     return {
@@ -917,38 +917,9 @@ def run_negative_controls(world, fixture_path: Path) -> NegativeControls:
             world, candidate_overrides={world["v5"]["candidate_id"]: lying})
         planner.rank()
 
-    def fixture_subject_cannot_inherit_real_v5_record():
-        # the accepted V5 record binds the canonical Gemma authority subject;
-        # no synthetic fixture subject may match it, and the canonical
-        # machinery candidate is the one subject that does
-        from issue117_subject_identity import MACHINERY_LOCAL_SUBJECT_KEYS, subject_digest
-        from issue117_planner import evaluate_qualification_applicability
-        from issue117_gemma_strategy import canonical_v5_candidate
-        record = accepted_v5_qualification_record()
-        policy = {"policy": QUALIFICATION_POLICY_STRICT,
-                  "accepted_dispositions": ("V5_QUALIFICATION_PASS",),
-                  "accepted_adjudication_sha256":
-                      record["authority"]["terminal_adjudication_sha256"],
-                  "machinery_local_subject_keys": MACHINERY_LOCAL_SUBJECT_KEYS}
-        fixture_digests = {
-            subject_digest(candidate["qualification_subject"],
-                           machinery_local_subject_keys=MACHINERY_LOCAL_SUBJECT_KEYS)
-            for candidate in world["candidates"]}
-        canonical_subject = canonical_v5_candidate()["qualification_subject"]
-        canonical_digest = subject_digest(
-            canonical_subject, machinery_local_subject_keys=MACHINERY_LOCAL_SUBJECT_KEYS)
-        require(record["qualification_subject_digest"] == canonical_digest,
-                "the accepted V5 record must match the canonical machinery "
-                "candidate constructed through the ordinary strategy path")
-        require(record["qualification_subject_digest"] not in fixture_digests,
-                "fixture subjects must never equal the accepted V5 subject digest")
-        for candidate in world["candidates"]:
-            result = evaluate_qualification_applicability(
-                candidate, [record], policy)
-            if result["status"] == QUALIFICATION_APPLICABLE:
-                raise AssertionError(
-                    f"synthetic candidate inherited the real V5 record: "
-                    f"{candidate['candidate_id']}")
+    def qualification_authority_is_unavailable():
+        from issue117_gemma_strategy import retained_v5_qualification_authority
+        retained_v5_qualification_authority()
 
     def changed_execution_producer_cannot_reapply_audit():
         # poison the frozen producer delta: one execution-bearing zone file
@@ -1095,10 +1066,10 @@ def run_negative_controls(world, fixture_path: Path) -> NegativeControls:
     controls.expect_failure(
         "lying_subject_digest_is_control_plane_misuse", lying_subject_digest_is_refused,
         "does not match its own subject")
-    controls.expect_pass(
-        "fixture_subject_cannot_inherit_real_v5_record",
-        fixture_subject_cannot_inherit_real_v5_record,
-        "no synthetic candidate subject matches the accepted V5 record")
+    controls.expect_failure(
+        "accepted_v5_qualification_authority_is_unavailable",
+        qualification_authority_is_unavailable,
+        "accepted V5 qualification subject is unavailable")
     controls.expect_failure(
         "changed_execution_producer_requires_requalification",
         changed_execution_producer_cannot_reapply_audit,
@@ -1245,7 +1216,7 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
                              + world["manifest"]["source_bytes_read"])
         summary = {
             "schema": "inferswarm.issue117.canonical-summary/3",
-            "gate": "issue #117 implementation freeze (CPU/static)",
+            "gate": "issue #117 CPU fixture campaign",
             "accepted_inferswarm_base": BASE,
             "accepted_freetoken_research_head": authority["accepted_freetoken_research_head"],
             "frozen_integration_producer": FROZEN_INTEGRATION_PRODUCER,
@@ -1257,17 +1228,12 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
             "qualification_record_scope": world["qualification_record"]["scope"],
             "qualification_adjudication_identity":
                 world["qualification_record"]["authority"]["terminal_adjudication_sha256"],
-            "accepted_v5_qualification_record_id":
-                accepted_v5_qualification_record()["qualification_record_id"],
-            "accepted_v5_qualification_matches_canonical_candidate":
-                accepted_v5_qualification_record()["qualification_subject_digest"]
-                == subject_identity_digest(
-                    canonical_v5_candidate()["qualification_subject"]),
+            "accepted_v5_qualification_authority": "UNAVAILABLE",
             "checkpoint_identity_model": (
-                "checkpoint_authority_sha256 (accepted external checkpoint "
-                "identity, evidence-bound) and catalog_content_digest "
-                "(mechanical content identity) are separate named identities; "
-                "candidate subjects carry both"),
+                "checkpoint_authority_sha256 is a retained repeated value and "
+                "catalog_content_digest is a mechanical content identity; "
+                "they are separate named identities, neither establishes an "
+                "independent qualification authority"),
             "source_side_model_bytes_hashed": source_side_bytes,
             "coordinator_bulk_bytes_observed": cold["coordinator_bytes_observed"],
             "cold_transferred_bytes": {
@@ -1281,7 +1247,8 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
             "fence_committed_results": fence["committed_results"],
             "fence_rejections": fence["summary"]["fence_rejections"],
             "zero_invariant_count": len(zero),
-            "terminal_disposition": "ISSUE117_IMPLEMENTATION_FREEZE_PASS",
+            "cpu_fixture_disposition": "ISSUE117_CPU_FIXTURE_PASS",
+            "terminal_disposition": "ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED",
             "physical_arms_pending": [
                 "Arm A: V5 execution-math bridge on the fabric (192/192 FP32 row identity)",
                 "Arm B: physical cold acquisition/realization on inferswarm01/inferswarm03",
@@ -1295,20 +1262,9 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
                 "No public planner, artifact, path, or wire schema is frozen.",
                 "No consumed h109 holdout material is used as new evidence.",
                 "The synthetic capacity model proves machinery, not hardware limits.",
-                "The qualification record here is fixture-scoped: it binds the "
-                "synthetic fixture subject, not the accepted Gemma checkpoint; "
-                "the accepted V5 record is matched only by the canonical "
-                "authority-descriptor candidate and can never match a "
-                "synthetic subject.",
-                "The accepted V5 record binds checkpoint execution equality by "
-                "the retained checkpoint_authority_sha256; the retained "
-                "evidence records no canonical catalog content identity and "
-                "no content-to-authority derivation rule, so the candidate's "
-                "catalog_content_digest is a machinery drift binding enforced "
-                "at construction (authority attestation) and by plan/manifest "
-                "identity, not a matched record field. The canonical "
-                "checkpoint authority attestation for the fabric-resident "
-                "repository is generated at physical acquisition time.",
+                "The qualification record is fixture-scoped. Retained V5 "
+                "evidence cannot reconstruct an accepted qualification subject. "
+                "The implementation-freeze terminal state is blocked.",
                 "The producer-delta zone closure statically resolves every "
                 "dynamic import mechanism: resolved in-repository targets are "
                 "zone members hashed at both producers; external module "
@@ -1362,6 +1318,7 @@ def write_manifest(out_dir: Path) -> None:
             entries[str(AREA / "evidence" / name)] = sha(committed)
     entries.update({path: sha(ROOT / path) for path in PRODUCERS})
     for path in (str(AREA / "METHODOLOGY.md"), str(AREA / "README.md"),
+                 str(AREA / "CHECKPOINT-AUTHORITY-BLOCKER.md"),
                  ".github/workflows/ci.yml"):
         if (ROOT / path).is_file():
             entries[path] = sha(ROOT / path)

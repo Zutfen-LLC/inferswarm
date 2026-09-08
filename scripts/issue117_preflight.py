@@ -28,10 +28,9 @@ Bindings enforced here (fail-closed):
 - **qualification applicability is derived, never trusted.** Every stored
   applicability record is compared against an independently derived verdict:
   the validator recomputes each candidate's execution-equality subject
-  digest, evaluates it against ``accepted_v5_qualification_record()`` and
-  the accepted terminal adjudication identity with the strict policy via the
-  generic planner evaluator, and refuses any mismatch, duplicate, conflict,
-  or fabricated ``QUALIFICATION_APPLICABLE``;
+  digest and derives ``QUALIFICATION_NOT_APPLICABLE`` while the retained V5
+  qualification subject is unavailable. It refuses any fabricated
+  ``QUALIFICATION_APPLICABLE``;
 - the committed fixture is validated in full, not merely digest-compared;
 - cold-cache proofs are mechanically collected filesystem facts (walked
   entries with lstat facts), not caller-supplied booleans; symlink and
@@ -334,17 +333,12 @@ def derive_candidate_applicability(
 ) -> dict[str, dict[str, Any]]:
     """Independently derive qualification applicability for every candidate.
 
-    The stored applicability records in a preflight document are retained
-    evidence only; the verdict is always re-derived here from the exact
-    candidate subjects, ``accepted_v5_qualification_record()``, and the
-    accepted terminal adjudication identity, via the generic planner
-    evaluator. Any candidate whose subject is malformed or whose digest does
-    not recompute yields a derived NOT_APPLICABLE-with-misuse record rather
-    than a pass.
+    Retained evidence cannot reconstruct an accepted V5 qualification subject.
+    Therefore every candidate is derived as NOT_APPLICABLE. No caller record
+    can promote a candidate until the blocker is resolved.
     """
-    from issue117_gemma_strategy import accepted_v5_qualification_record
     policy = _qualification_policy()
-    records = [accepted_v5_qualification_record()]
+    records: list[Mapping[str, Any]] = []
     derived: dict[str, dict[str, Any]] = {}
     for candidate in candidates:
         candidate_id = str(candidate.get("candidate_id"))
@@ -688,10 +682,10 @@ def _validate_preflight(document: Mapping[str, Any], *, repo_root: Path,
                 f"{derived.get(candidate_id, {}).get('reason')!r})")
         if _stage_triples(candidate) == v5_triples:
             v5_seen = True
-            if expected_status != QUALIFICATION_APPLICABLE:
+            if expected_status == QUALIFICATION_APPLICABLE:
                 failures.append(
-                    "accepted V5 candidate did not derive "
-                    f"QUALIFICATION_APPLICABLE ({expected_status!r})")
+                    "candidate derived QUALIFICATION_APPLICABLE without a "
+                    "retained accepted V5 qualification subject")
     if not v5_seen:
         failures.append("candidate set does not contain the accepted V5 geometry")
 

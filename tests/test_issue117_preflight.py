@@ -295,7 +295,7 @@ class PreflightTests(unittest.TestCase):
                          {cid: result["status"]
                           for cid, result in derived.items()})
         v5 = strategy.canonical_v5_candidate()["candidate_id"]
-        self.assertEqual(statuses[v5], "QUALIFICATION_APPLICABLE")
+        self.assertEqual(statuses[v5], "QUALIFICATION_NOT_APPLICABLE")
 
     def test_valid_preflight_is_deterministic(self):
         import re
@@ -534,8 +534,7 @@ class QualificationDerivationTests(unittest.TestCase):
             "policy": QUALIFICATION_POLICY_STRICT,
             "accepted_dispositions": ("V5_QUALIFICATION_PASS",),
             "accepted_adjudication_sha256":
-                strategy.accepted_v5_qualification_record()
-                ["authority"]["terminal_adjudication_sha256"],
+                applicability.ACCEPTED_TERMINAL_ADJUDICATION_SHA256,
             "machinery_local_subject_keys": MACHINERY_LOCAL_SUBJECT_KEYS,
             "required_for_admission": True,
         }
@@ -547,7 +546,7 @@ class QualificationDerivationTests(unittest.TestCase):
         # foreign record can never enter it at all
         derived = preflight.derive_candidate_applicability([canonical])
         self.assertEqual(derived[canonical["candidate_id"]]["status"],
-                         "QUALIFICATION_APPLICABLE")
+                         "QUALIFICATION_NOT_APPLICABLE")
 
     def test_self_consistent_fabricated_record_cannot_make_candidate_applicable(self):
         # a stored applicability record claiming APPLICABLE for a candidate

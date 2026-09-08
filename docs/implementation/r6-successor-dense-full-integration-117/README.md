@@ -28,18 +28,14 @@ ranking work:
   subject digest is recomputed from its own subject over the shared
   execution-equality convention and every trusted record is bound to the
   accepted terminal adjudication identity;
-- the accepted-V5-geometry candidate is selected through ordinary
-  feasibility / policy / evidence gates — never hard-coded — while materially
-  different candidates stay `TECHNICALLY_FEASIBLE` and/or policy-eligible but
-  `QUALIFICATION_NOT_APPLICABLE`. The accepted V5 qualification record binds
-  the canonical candidate produced by the ordinary strategy/catalog machinery
-  (`canonical_v5_candidate` over the evidence-derived authority descriptor)
-  and matches exactly that candidate — no synthetic fixture subject;
-  checkpoint identity is carried as two separated, explicitly named
-  identities: the accepted external `checkpoint_authority_sha256`
-  (evidence-bound) and the mechanical `catalog_content_digest` (drift
-  binding, enforced by the byte-verified authority attestation at
-  construction);
+- the V5-shaped candidate is a candidate-construction diagnostic. It is
+  selected through the ordinary strategy machinery. It does not establish
+  qualification authority. The retained evidence cannot reconstruct an
+  accepted qualification subject. Therefore every physical candidate is
+  `QUALIFICATION_NOT_APPLICABLE` until the checkpoint-authority blocker is
+  resolved. Checkpoint identity has two named values: the retained repeated
+  `checkpoint_authority_sha256` and the mechanical `catalog_content_digest`.
+  Neither value supplies an independent authority derivation;
 - feasibility bytes are the exact frozen participant requirements (assigned
   plus declared shared state), so the capacity proof is truthful about the
   embedding and shared tied-head state each stage must materialize;
@@ -86,17 +82,14 @@ frozen with digest
 - No statistical qualification claim; no V5 threshold is reused or relaxed.
 - The CPU qualification record is fixture-scoped: it binds the synthetic
   fixture subject with a fixture-scoped adjudication identity and never
-  claims the accepted Gemma checkpoint. The accepted V5 record matches
-  exactly the canonical authority-descriptor candidate produced by the
-  ordinary strategy machinery — and no synthetic subject.
-- The accepted V5 record binds checkpoint execution equality by the retained
-  accepted `checkpoint_authority_sha256`; the retained evidence records no
-  canonical catalog content identity and no content-to-authority derivation
-  rule, so the candidate's `catalog_content_digest` is a machinery drift
-  binding — enforced at construction by the byte-verified authority
-  attestation and by plan/manifest identity — not a matched record field.
-  The canonical checkpoint authority attestation for the fabric-resident
-  repository is generated at physical acquisition time.
+  claims the accepted Gemma checkpoint. The V5-shaped diagnostic candidate
+  does not supply qualification authority.
+- The retained `checkpoint_authority_sha256` has no independent
+  content-to-authority derivation rule. The candidate's
+  `catalog_content_digest` is a machinery drift binding. It cannot replace
+  retained authority evidence. A physical checkpoint attestation can act as
+  an adapter only after an independent retained derivation validates it. The
+  retained evidence does not provide that derivation.
 - The synthetic capacity model proves planner machinery, not hardware
   limits; the physical preflight re-freezes real capacities.
 - Source-side catalog/manifest building reads and hashes model bytes by

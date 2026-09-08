@@ -260,7 +260,7 @@ class SubjectBindingTests(unittest.TestCase):
         with self.assertRaisesRegex(strategy.StrategyError, "catalog identity"):
             strategy.GemmaDenseStrategy(
                 catalog=self.catalog,
-                subject={**strategy.accepted_v5_subject(),
+                subject={**strategy.MODEL_SUBJECT,
                          "catalog_content_digest":
                              self.catalog["catalog_content_digest"]},
                 source_manifest=self.manifest)
@@ -431,46 +431,12 @@ class FeasibilityAndPolicyTests(unittest.TestCase):
         self.assertTrue(shared_records)
 
 
-class QualificationRecordTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.temp = tempfile.TemporaryDirectory(prefix="issue117-strategy-")
-        (cls.strategy, cls.catalog, _,
-         _, _) = build_strategy(Path(cls.temp.name))
-        cls.capacity = capacity_model_for(cls.catalog)
-        cls.candidates = cls.strategy.legal_candidates(capacity_model=cls.capacity)
-        cls.record = strategy.accepted_v5_qualification_record()
-
-    def test_record_binds_terminal_v5_disposition_and_accepted_authority(self):
-        from issue117_applicability import ACCEPTED_TERMINAL_ADJUDICATION_SHA256
-        self.assertEqual(
-            self.record["authority"]["terminal_disposition"], "V5_QUALIFICATION_PASS")
-        self.assertEqual(self.record["authority"]["terminal_adjudication_sha256"],
-                         ACCEPTED_TERMINAL_ADJUDICATION_SHA256)
-        self.assertEqual(self.record["scope"], "accepted-authority")
-
-    def test_record_subject_digest_recomputes_from_its_subject(self):
-        self.assertEqual(
-            self.record["qualification_subject_digest"],
-            subject_digest(self.record["qualification_subject"]))
-
-    def test_no_fixture_candidate_matches_the_accepted_subject(self):
-        for candidate in self.candidates:
-            self.assertNotEqual(self.record["qualification_subject_digest"],
-                                candidate["qualification_subject_digest"])
-
-    def test_record_is_deterministic(self):
-        self.assertEqual(self.record, strategy.accepted_v5_qualification_record())
-
-    def test_tampered_record_digest_is_detectable(self):
-        tampered = json.loads(json.dumps(self.record))
-        tampered["qualification_subject"]["revision"] = "forged"
-        # the record's subject digest no longer recomputes from its subject:
-        # exactly the inconsistency the generic gate rejects
-        self.assertNotEqual(
-            tampered["qualification_subject_digest"],
-            subject_digest(tampered["qualification_subject"]))
-
+class QualificationAuthorityTests(unittest.TestCase):
+    def test_retained_v5_authority_is_unavailable(self):
+        with self.assertRaisesRegex(
+                strategy.QualificationAuthorityUnavailable,
+                "accepted V5 qualification subject is unavailable"):
+            strategy.retained_v5_qualification_authority()
 
 class PlanAndRequirementsTests(unittest.TestCase):
     @classmethod
@@ -558,79 +524,14 @@ class PlanAndRequirementsTests(unittest.TestCase):
         self.assertNotEqual(self.plan["plan_digest"], other["plan_digest"])
 
 
-class CanonicalAcceptedV5Tests(unittest.TestCase):
-    """Finding 1: the accepted V5 record is matched by the real machinery."""
-
-    def test_accepted_record_matches_exactly_one_canonical_candidate(self):
-        # MANDATORY: accepted_v5_qualification_record() must match exactly
-        # one canonical V5 candidate produced by the same strategy/catalog
-        # machinery intended for physical execution
-        from issue117_planner import (
-            QUALIFICATION_POLICY_STRICT,
-            evaluate_qualification_applicability,
-        )
-        from issue117_applicability import ACCEPTED_TERMINAL_ADJUDICATION_SHA256
-        record = strategy.accepted_v5_qualification_record()
-        policy = {
-            "policy": QUALIFICATION_POLICY_STRICT,
-            "accepted_dispositions": ("V5_QUALIFICATION_PASS",),
-            "accepted_adjudication_sha256":
-                record["authority"]["terminal_adjudication_sha256"],
-            "machinery_local_subject_keys": MACHINERY_LOCAL_SUBJECT_KEYS,
-            "required_for_admission": True,
-        }
-        self.assertEqual(
-            policy["accepted_adjudication_sha256"],
-            ACCEPTED_TERMINAL_ADJUDICATION_SHA256)
-        candidates = strategy.canonical_authority_catalog() and None
-        catalog = strategy.canonical_authority_catalog()
-        subject = strategy.subject_from_catalog(
-            catalog, execution=strategy.MODEL_SUBJECT["execution"],
-            backend=strategy.MODEL_SUBJECT["backend"])
-        instance = strategy.GemmaDenseStrategy(
-            catalog=catalog, subject=subject, source_manifest=None)
-        enumerated = instance.legal_candidates()
-        matches = [candidate for candidate in enumerated
-                   if evaluate_qualification_applicability(
-                       candidate, [record], policy)["status"]
-                   == "QUALIFICATION_APPLICABLE"]
-        self.assertEqual(len(matches), 1)
-        self.assertEqual(matches[0]["candidate_id"],
-                         instance.accepted_v5_candidate(enumerated)["candidate_id"])
-        # the record's bound subject IS the machinery subject, projected
-        self.assertEqual(
-            record["qualification_subject_digest"],
-            matches[0]["qualification_subject_digest"])
-
-    def test_accepted_v5_subject_is_constructed_through_machinery(self):
-        # test 6: the accepted V5 subject digest is constructible from the
-        # actual canonical strategy path, not only from constants
-        subject = strategy.accepted_v5_subject()
+class CanonicalCandidateDiagnosticTests(unittest.TestCase):
+    def test_canonical_candidate_is_a_diagnostic_not_accepted_authority(self):
         candidate = strategy.canonical_v5_candidate()
-        self.assertEqual(
-            subject,
-            {key: value for key, value in
-             candidate["qualification_subject"].items()
-             if key != "catalog_content_digest"})
-        self.assertEqual(strategy.accepted_v5_subject(), subject)
-        self.assertEqual(
-            record_digest_of(strategy.accepted_v5_qualification_record()),
-            record_digest_of(strategy.accepted_v5_qualification_record()))
-        self.assertEqual(
-            strategy.MODEL_SUBJECT["checkpoint_authority_sha256"],
-            subject["checkpoint_authority_sha256"])
-        self.assertNotIn("catalog_content_digest", subject)
-        self.assertTrue(subject_digest(subject).startswith("sha256:"))
+        self.assertIn("qualification_subject", candidate)
+        with self.assertRaises(strategy.QualificationAuthorityUnavailable):
+            strategy.retained_v5_qualification_authority()
 
     def test_canonical_authority_is_evidence_bound_not_a_config_field(self):
-        # the canonical catalog's authority is loaded from the byte-pinned
-        # retained evidence; tampering with the evidence fails construction
-        from issue117_applicability import (
-            accepted_checkpoint_authority_from_evidence,
-        )
-        self.assertEqual(
-            accepted_checkpoint_authority_from_evidence(ROOT),
-            strategy.MODEL_SUBJECT["checkpoint_authority_sha256"])
         catalog = strategy.canonical_authority_catalog(inferswarm_root=ROOT)
         self.assertEqual(
             catalog["checkpoint_authority_sha256"],
@@ -646,13 +547,6 @@ class CanonicalAcceptedV5Tests(unittest.TestCase):
         with self.assertRaisesRegex(strategy.StrategyError, "byte-level"):
             instance.plan(instance.accepted_v5_candidate(
                 instance.legal_candidates()))
-        with self.assertRaisesRegex(strategy.StrategyError, "byte-level"):
-            instance.resolve("assigned_logical_state", "state.layer.0")
-
-
-def record_digest_of(record):
-    return record["record_digest"]
-
 
 class CheckpointAuthorityAttestationTests(unittest.TestCase):
     """Finding 1: the repository-to-authority binding is evidence-backed."""
@@ -754,34 +648,9 @@ class CheckpointAuthorityAttestationTests(unittest.TestCase):
         with self.assertRaisesRegex(strategy.StrategyError, "object set"):
             strategy.catalog_from_repository(self.root, config=self.config)
 
-    def test_synthetic_fixture_cannot_inherit_accepted_v5(self):
-        from issue117_planner import (
-            QUALIFICATION_POLICY_STRICT,
-            evaluate_qualification_applicability,
-        )
-        catalog = self.rebuild_catalog()
-        manifest = strategy.build_source_manifest(
-            catalog, source_bytes=lambda name: self.objects[name])
-        subject = strategy.subject_from_catalog(
-            catalog, execution=strategy.SYNTHETIC_SUBJECT_EXECUTION,
-            backend=strategy.SYNTHETIC_SUBJECT_BACKEND)
-        instance = strategy.GemmaDenseStrategy(
-            catalog=catalog, subject=subject, source_manifest=manifest)
-        record = strategy.accepted_v5_qualification_record()
-        policy = {
-            "policy": QUALIFICATION_POLICY_STRICT,
-            "accepted_dispositions": ("V5_QUALIFICATION_PASS",),
-            "accepted_adjudication_sha256":
-                record["authority"]["terminal_adjudication_sha256"],
-            "machinery_local_subject_keys": MACHINERY_LOCAL_SUBJECT_KEYS,
-            "required_for_admission": True,
-        }
-        for candidate in instance.legal_candidates():
-            self.assertEqual(
-                evaluate_qualification_applicability(
-                    candidate, [record], policy)["status"],
-                "QUALIFICATION_NOT_APPLICABLE",
-                candidate["candidate_id"])
+    def test_synthetic_fixture_cannot_inherit_unavailable_v5_authority(self):
+        with self.assertRaises(strategy.QualificationAuthorityUnavailable):
+            strategy.retained_v5_qualification_authority()
 
 
 if __name__ == "__main__":

@@ -113,7 +113,7 @@ def _candidate_subject_digest(candidate: Mapping[str, Any], *,
     The caller-supplied ``qualification_subject_digest`` is never trusted:
     the digest used for qualification is always recomputed from the exact
     subject the candidate carries, over the shared execution-equality
-    projection (``issue99_artifact_core.subject_digest``). Machinery-local
+    projection (``issue117_subject_identity.subject_digest``). Machinery-local
     subject keys declared by the policy (e.g. content bindings that are
     enforced by the strategy/catalog machinery rather than by the accepted
     evidence) must be present on the candidate subject and are projected out

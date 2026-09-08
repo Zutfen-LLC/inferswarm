@@ -860,18 +860,18 @@ materialization → ordinary fenced serving), with no manual whole-model
 distribution, no model-specific planner branches, and no change to the
 execution math V5 qualified.
 
-The CPU/static implementation freeze is complete with disposition
-`ISSUE117_IMPLEMENTATION_FREEZE_PASS` (base `d37bd30`): the prospective
-24-case public integration fixture (digest `180185cd…`), the V5 authority
-byte-pinning and integration-delta applicability audit, the Gemma strategy /
-generic planner composition with qualification applicability as a distinct
-gate, the physical preflight tooling, and a retained CPU campaign whose 25
-derived zero-invariants are mechanically zero with 18 negative controls and
-6 fencing negatives failing closed. Implementation and evidence:
+The synthetic CPU fixture campaign passed with disposition
+`ISSUE117_CPU_FIXTURE_PASS` (base `d37bd30`). The implementation-freeze
+terminal state is `ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`. Retained V5
+evidence does not provide a mechanical checkpoint-byte derivation or a
+complete independently reconstructable qualification subject. The fixture,
+producer-delta audit, strategy/planner composition, and physical-preflight
+tooling remain useful CPU/static results. They do not make the physical gate
+applicable. Implementation and evidence:
 `scripts/issue117_*.py`, `tests/test_issue117_*.py`, and the retained record
 under `docs/implementation/r6-successor-dense-full-integration-117/`.
 
-Pending: the physical preflight and Arms A–E on the fabric (V5 execution-math
+Blocked pending retained authority evidence, then the physical preflight and Arms A–E on the fabric (V5 execution-math
 bridge 192/192; canonical cold acquisition/realization; ordinary
 Coordinator-serving versus direct-control equivalence; physical warm restart;
 locality mutation), each governed by the narrow stop states the issue

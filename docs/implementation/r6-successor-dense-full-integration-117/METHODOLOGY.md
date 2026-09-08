@@ -96,18 +96,17 @@ queries (house rule; enforced by review and CI).
   mechanically from the exact catalog/plan identity and binds BOTH checkpoint
   identities, and constructing a strategy whose subject disagrees with its
   catalog fails closed — so a synthetic fixture catalog (with its own
-  synthetic authority identity) can never produce or inherit the accepted
-  Gemma subject. The accepted V5 qualification record's subject is
-  constructed through the ordinary machinery (`canonical_v5_candidate`:
-  canonical authority-descriptor catalog → `subject_from_catalog` → candidate
-  enumeration), so the record is matched by exactly the canonical candidate
-  the real machinery produces and by no synthetic subject; the descriptor
-  catalog is evidence-derived and descriptor-only (it refuses the byte-level
-  planning surface). The shared execution-equality subject convention
-  (`issue99_artifact_core.subject_digest`) projects the machinery-local
-  `catalog_content_digest` out of the matched digest on both record and
-  candidate sides; the content identity is enforced at construction by the
-  attestation adapter and bound by plan/manifest identity.
+  synthetic authority identity) can never produce an authority subject. The
+  V5-shaped candidate from `canonical_v5_candidate` is a construction
+  diagnostic only. The descriptor catalog is evidence-derived and
+  descriptor-only. It refuses the byte-level planning surface. The shared
+  execution-equality subject convention
+  (`issue117_subject_identity.subject_digest`) projects the machinery-local
+  `catalog_content_digest` out of the candidate digest. The retained V5
+  evidence repeats a SHA but does not provide an independent checkpoint
+  derivation or a complete qualification subject. The evaluator therefore
+  derives `QUALIFICATION_NOT_APPLICABLE` for every physical candidate. It
+  cannot admit a candidate until the checkpoint-authority blocker is resolved.
 - `scripts/issue117_planner.py` — the generic planner: technical feasibility
   (operator capacity model; unknown capacity fails closed; stage bytes
   derived from the exact frozen participant requirements), hard operator
@@ -148,11 +147,9 @@ queries (house rule; enforced by review and CI).
   entry listings with lstat facts (count, bytes, symlink and hardlink
   aliases) whose aggregates the validator re-derives. Qualification
   applicability is derived, never trusted: the validator recomputes every
-  candidate's execution-equality subject digest, evaluates it against
-  `accepted_v5_qualification_record()` and the accepted terminal adjudication
-  identity via the generic planner evaluator, and refuses any retained
-  record that mismatches the independently derived verdict, any duplicated
-  or conflicting records, any missing evidence, and any fabricated
+  candidate's execution-equality subject digest, sees that the retained V5
+  qualification subject is unavailable, and derives
+  `QUALIFICATION_NOT_APPLICABLE`. It refuses any retained record that claims
   `QUALIFICATION_APPLICABLE`. Source possession is proven, not asserted:
   every local (`file://`) Source must carry a mechanically collected
   possession record whose root exists, is not a symlink, and is disjoint
@@ -186,15 +183,11 @@ queries (house rule; enforced by review and CI).
 - Qualification evidence in the CPU campaign is a fixture-scoped record: it
   binds `V5_QUALIFICATION_PASS` to the exact synthetic subject with a
   fixture-scoped adjudication identity, and is labeled as fixture evidence.
-  The accepted V5 record (accepted terminal adjudication identity, accepted
-  checkpoint authority subject constructed through the canonical machinery)
-  matches exactly one canonical candidate — the machinery-produced V5-geometry
-  candidate — and no synthetic candidate subject. Applicability is pure
-  execution-equality subject-digest equality plus terminal-pass authority
-  binding: any material subject change (geometry, device, backend, checkpoint
-  authority, representation) mechanically breaks it, and the candidate's
-  catalog content identity is enforced separately at construction by the
-  authority attestation adapter.
+  The V5-shaped candidate is a diagnostic. It does not establish an accepted
+  qualification subject. Retained evidence lacks an independent checkpoint
+  derivation and complete subject identity. Physical applicability therefore
+  derives `QUALIFICATION_NOT_APPLICABLE` for every candidate. Any record that
+  claims `QUALIFICATION_APPLICABLE` fails closed.
 - Cold acquisition uses the accepted #99/#101 machinery with one authorized
   file Source, empty dedicated per-node caches, exact-range artifact
   records, verify-then-publish, planned materializations, and Coordinator

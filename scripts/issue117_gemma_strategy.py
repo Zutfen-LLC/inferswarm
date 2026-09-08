@@ -183,6 +183,10 @@ class StrategyError(RuntimeError):
     """Fail-closed strategy construction/mapping error."""
 
 
+class QualificationAuthorityUnavailable(StrategyError):
+    """Retained evidence cannot reconstruct an accepted V5 subject."""
+
+
 # ---------------------------------------------------------------------------
 # Checkpoint catalog (SOURCE side; the only component that reads model bytes
 # to build descriptors)
@@ -684,7 +688,7 @@ def build_qualification_record(*, qualification_record_id: str,
     """Build one self-consistent qualification record for an exact subject.
 
     The record's subject digest follows the shared execution-equality
-    convention (``issue99_artifact_core.subject_digest``): machinery-local
+    convention (``issue117_subject_identity.subject_digest``): machinery-local
     content identities carried on the subject are bound by the machinery and
     projected out of the matched digest on both the record and candidate
     sides.
@@ -708,19 +712,16 @@ def build_qualification_record(*, qualification_record_id: str,
 
 
 def canonical_authority_catalog(*, inferswarm_root: Path | None = None) -> dict[str, Any]:
-    """The canonical accepted Gemma authority-descriptor catalog.
+    """Build a V5-shaped diagnostic descriptor catalog.
 
-    This is the catalog-identity construction for the canonical accepted V5
-    subject: it carries the accepted model identity and the accepted
-    ``checkpoint_authority_sha256`` loaded mechanically from the byte-pinned
-    retained V5 authority evidence files (never restated here), plus the
-    frozen doctrine layer count. It is a *descriptor-only* catalog: it
-    contains no tensor table because the canonical checkpoint bytes live on
-    the fabric, and any strategy built on it refuses the byte-level planning
-    surface. Physical construction uses ``catalog_from_repository`` over the
-    real attested checkpoint repository instead; its byte-derived catalog
-    must carry the same authority identity, enforced by the authority
-    attestation adapter.
+    The catalog carries retained model strings and a repeated
+    ``checkpoint_authority_sha256`` value. It cannot establish checkpoint
+    authority or an accepted qualification subject. It is descriptor-only and
+    contains no tensor table. A strategy built from it refuses the byte-level
+    planning surface. Physical construction requires
+    ``catalog_from_repository`` over a real checkpoint repository and an
+    independent authority derivation. The retained evidence does not supply
+    that derivation.
     """
     from issue117_applicability import accepted_checkpoint_authority_from_evidence
     root = Path(inferswarm_root or Path(__file__).resolve().parents[1])
@@ -760,15 +761,13 @@ def canonical_authority_catalog(*, inferswarm_root: Path | None = None) -> dict[
 
 
 def canonical_v5_candidate(*, inferswarm_root: Path | None = None) -> Mapping[str, Any]:
-    """The canonical accepted V5 candidate, constructed through the ordinary
-    strategy machinery.
+    """Build a V5-shaped candidate-construction diagnostic.
 
-    Builds the canonical authority-descriptor catalog, derives its subject
+    Builds the diagnostic descriptor catalog, derives its subject
     with ``subject_from_catalog``, enumerates the legal dense candidates with
-    ``GemmaDenseStrategy``, and returns the candidate whose geometry is the
-    accepted V5 geometry. This — not a parallel constant — is the subject the
-    accepted V5 qualification record binds; it is exactly the candidate the
-    physical execution machinery produces for the canonical checkpoint.
+    ``GemmaDenseStrategy``, and returns the candidate whose geometry matches
+    the retained V5-shaped geometry. It does not establish an accepted V5
+    qualification subject or checkpoint authority.
     """
     catalog = canonical_authority_catalog(inferswarm_root=inferswarm_root)
     subject = subject_from_catalog(
@@ -780,58 +779,12 @@ def canonical_v5_candidate(*, inferswarm_root: Path | None = None) -> Mapping[st
     return instance.accepted_v5_candidate(candidates)
 
 
-def accepted_v5_subject() -> dict[str, Any]:
-    """The exact accepted V5 qualification subject.
-
-    Constructed through the canonical strategy machinery
-    (``canonical_v5_candidate``), not glued from parallel constants: the
-    subject is ``subject_from_catalog`` applied to the canonical
-    authority-descriptor catalog, extended with the accepted V5 stage
-    geometry by ordinary candidate enumeration.
-
-    The subject carries the accepted external ``checkpoint_authority_sha256``
-    — the identity execution equality is bound to. Its machinery-local
-    ``catalog_content_digest`` is projected out (the shared subject-identity
-    convention in ``issue99_artifact_core``): the accepted V5 evidence
-    predates the #117 catalog machinery and retains no canonical catalog
-    content identity, so binding one would fabricate evidence. Candidate
-    subjects DO carry their catalog content identity (drift binding); the
-    generic qualification evaluator compares execution-equality subjects, and
-    the candidate's content identity is bound at physical construction by the
-    authority attestation adapter and by the plan/manifest digests.
-    """
-    return execution_equality_subject(
-        canonical_v5_candidate()["qualification_subject"])
-
-
-def accepted_v5_qualification_record() -> dict[str, Any]:
-    """Deterministic accepted qualification evidence record.
-
-    Binds the accepted V5 terminal result to the exact qualified subject —
-    the subject constructed by :func:`canonical_v5_candidate` through the
-    ordinary strategy/catalog machinery, so the record is matchable by
-    exactly the canonical candidate the real machinery produces, and by no
-    synthetic fixture subject. The record's authority block is retained
-    accepted evidence.
-    """
-    from issue117_applicability import (
-        ACCEPTED_FREETOKEN_CALIBRATION_PRODUCER,
-        ACCEPTED_FREETOKEN_HOLDOUT_PRODUCER,
-        ACCEPTED_V5_METHODOLOGY,
-        ACCEPTED_TERMINAL_ADJUDICATION_SHA256,
-    )
-    return build_qualification_record(
-        qualification_record_id="inferswarm.issue117.v5-qualification/1",
-        terminal_disposition="V5_QUALIFICATION_PASS",
-        terminal_adjudication_sha256=ACCEPTED_TERMINAL_ADJUDICATION_SHA256,
-        qualification_subject=accepted_v5_subject(),
-        authority_extra={
-            "accepted_v5_methodology": ACCEPTED_V5_METHODOLOGY,
-            "accepted_freetoken_calibration_producer":
-                ACCEPTED_FREETOKEN_CALIBRATION_PRODUCER,
-            "accepted_freetoken_holdout_producer": ACCEPTED_FREETOKEN_HOLDOUT_PRODUCER,
-        },
-    )
+def retained_v5_qualification_authority() -> None:
+    """Refuse qualification inheritance until retained authority is complete."""
+    raise QualificationAuthorityUnavailable(
+        "accepted V5 qualification subject is unavailable: retained evidence "
+        "does not contain an independent checkpoint derivation and complete "
+        "subject identity")
 
 
 # ---------------------------------------------------------------------------
@@ -1052,7 +1005,7 @@ class GemmaDenseStrategy:
         BOTH checkpoint identities explicitly: the accepted external
         ``checkpoint_authority_sha256`` and the machinery-local
         ``catalog_content_digest``. The shared subject-identity convention
-        (``issue99_artifact_core.subject_digest``) defines the matched
+        (``issue117_subject_identity.subject_digest``) defines the matched
         qualification digest over the execution-equality projection.
         """
         return {

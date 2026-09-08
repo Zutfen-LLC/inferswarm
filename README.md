@@ -113,13 +113,11 @@ The current architecture-integration frontier is:
 > automatic planning, selective artifact distribution, and ordinary
 > serving](https://github.com/Zutfen-LLC/inferswarm/issues/117)**
 
-Its CPU/static implementation freeze is complete
-(`ISSUE117_IMPLEMENTATION_FREEZE_PASS`): the qualification-applicability
-barrier, the strategy/planner composition, participant-exact plan-driven
-artifact distribution, the physical preflight tooling, and the frozen 24-case
-integration fixture — with all acceptance zero-invariants derived, not
-asserted. The physical preflight and fabric arms (execution-math bridge,
-cold acquisition, ordinary serving equivalence, warm restart) are pending.
+Its synthetic CPU fixture campaign passed
+(`ISSUE117_CPU_FIXTURE_PASS`). The Issue #117 implementation freeze is
+`ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED` because retained evidence cannot
+reconstruct a non-forgeable V5 checkpoint authority or accepted qualification
+subject. The physical preflight and fabric arms remain pending.
 GLM-5.3-Flash / issue #13 remains a later large-model falsifier, not this
 gate.
 

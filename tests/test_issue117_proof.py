@@ -37,9 +37,11 @@ class ProofCampaignTests(unittest.TestCase):
         cls.documents = proof.run_campaign(cls.out, fixture_path=FIXTURE_PATH)
         cls.summary = cls.documents["canonical-summary.json"]
 
-    def test_terminal_disposition_is_implementation_freeze_pass(self):
+    def test_terminal_disposition_is_implementation_freeze_blocked(self):
         self.assertEqual(self.summary["terminal_disposition"],
-                         "ISSUE117_IMPLEMENTATION_FREEZE_PASS")
+                         "ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED")
+        self.assertEqual(self.summary["cpu_fixture_disposition"],
+                         "ISSUE117_CPU_FIXTURE_PASS")
 
     def test_accepted_v5_geometry_selected_through_ordinary_gates(self):
         decision = self.documents["planner-decision.json"]
@@ -59,9 +61,6 @@ class ProofCampaignTests(unittest.TestCase):
         self.assertNotEqual(
             record["authority"]["terminal_adjudication_sha256"],
             applicability.ACCEPTED_TERMINAL_ADJUDICATION_SHA256)
-        self.assertNotEqual(
-            record["qualification_subject_digest"],
-            strategy.accepted_v5_qualification_record()["qualification_subject_digest"])
         expected = proof.fixture_adjudication_identity(
             self.summary["fixture_digest"],
             record["qualification_subject_digest"])
@@ -144,7 +143,7 @@ class ProofCampaignTests(unittest.TestCase):
         self.assertIn("changed_execution_producer_requires_requalification", names)
         self.assertIn("fence_ledger_derivation_is_non_vacuous", names)
         self.assertIn("staging_ledger_derivation_is_non_vacuous", names)
-        self.assertIn("fixture_subject_cannot_inherit_real_v5_record", names)
+        self.assertIn("accepted_v5_qualification_authority_is_unavailable", names)
         self.assertIn("lying_subject_digest_is_control_plane_misuse", names)
         self.assertIn("v5_authority_byte_tampering_is_fail_closed", names)
 
@@ -213,6 +212,29 @@ class ProofCampaignTests(unittest.TestCase):
             "docs/implementation/r6-successor-dense-full-integration-117/METHODOLOGY.md",
             manifest)
 
+    def test_committed_retention_manifest_and_producer_hashes_match_checkout(self):
+        evidence_root = ROOT / proof.AREA / "evidence"
+        entries = {}
+        for line in (evidence_root / "MANIFEST.sha256").read_text().splitlines():
+            digest, relative = line.split("  ", 1)
+            entries[relative] = digest
+        expected_paths = {
+            *(str(proof.AREA / "evidence" / name) for name in proof.EVIDENCE_FILES),
+            *(str(proof.AREA / "evidence" / name)
+              for name in proof.COMMITTED_EVIDENCE_FILES),
+            *proof.PRODUCERS,
+            str(proof.AREA / "METHODOLOGY.md"),
+            str(proof.AREA / "README.md"),
+            str(proof.AREA / "CHECKPOINT-AUTHORITY-BLOCKER.md"),
+            ".github/workflows/ci.yml",
+        }
+        self.assertEqual(set(entries), expected_paths)
+        for relative, digest in entries.items():
+            self.assertEqual(digest, proof.sha(ROOT / relative), relative)
+        producer_hashes = json.loads((evidence_root / "producer-hashes.json").read_text())
+        self.assertEqual(producer_hashes,
+                         {path: proof.sha(ROOT / path) for path in proof.PRODUCERS})
+
     def test_committed_documentation_synchronization_record(self):
         path = (ROOT / proof.AREA / "evidence"
                 / "documentation-synchronization.json")
@@ -229,12 +251,9 @@ class CampaignFixtureBindingTests(unittest.TestCase):
         fixture.validate_fixture_document(document)
         self.assertEqual(document["case_count"], 24)
 
-    def test_real_v5_record_binds_terminal_evidence(self):
-        record = strategy.accepted_v5_qualification_record()
-        self.assertEqual(record["authority"]["terminal_disposition"],
-                         "V5_QUALIFICATION_PASS")
-        self.assertEqual(record["authority"]["terminal_adjudication_sha256"],
-                         applicability.ACCEPTED_TERMINAL_ADJUDICATION_SHA256)
+    def test_retained_v5_qualification_authority_is_unavailable(self):
+        with self.assertRaises(strategy.QualificationAuthorityUnavailable):
+            strategy.retained_v5_qualification_authority()
 
     def test_guard_rejects_complete_repository_requirement(self):
         with tempfile.TemporaryDirectory() as temp:
