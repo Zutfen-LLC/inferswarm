@@ -61,6 +61,11 @@ MODEL_REVISION = "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7"
 ACCEPTED_SUBJECT_DIGEST = (
     "sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f7f1d7994ffd")
 CHECKPOINT_SIZE = 23919549408
+#: exact launch-path model argument and its occurrence inside a verbatim
+#: launcher script (word boundary: the root followed by whitespace, never a
+#: longer sibling path like /srv/models/gemma-r6-evil)
+_MODEL_ROOT_ARG = __import__("re").compile(r"--model /srv/models/gemma-r6")
+_MODEL_ROOT_VERBATIM = __import__("re").compile(r"--model /srv/models/gemma-r6(?=\s)")
 FIXTURE_DIGEST = "sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba36f2"
 FIXTURE_CORPUS_SHA256 = (
     "22ffa8a906e9470f2ddbe5b46bddf3d99fd94aba35d1c126d2bb19354761e306")
@@ -449,7 +454,10 @@ def _check_checkpoint_continuity() -> dict[str, Any]:
     interval = record.get("continuity_interval", {})
     if (interval.get("start_utc"), interval.get("end_utc")) != CONTINUITY_INTERVAL:
         raise EvidenceError("checkpoint continuity: interval mismatch")
-    hosts = {entry.get("host"): entry for entry in record.get("hosts", [])}
+    host_list = record.get("hosts", [])
+    hosts = {entry.get("host"): entry for entry in host_list}
+    if len(host_list) != len(hosts) or len(host_list) != len(CONTINUITY_HOSTS):
+        raise EvidenceError("checkpoint continuity: duplicated or extra host entries")
     if set(hosts) != set(CONTINUITY_HOSTS):
         missing = set(CONTINUITY_HOSTS) - set(hosts)
         raise EvidenceError(f"checkpoint continuity: missing host(s) {sorted(missing)}")
@@ -461,9 +469,9 @@ def _check_checkpoint_continuity() -> dict[str, Any]:
         if item.get("checkpoint_arg") != CHECKPOINT_AUTHORITY:
             raise EvidenceError(
                 f"checkpoint continuity: launcher {item.get('path')} wrong checkpoint arg")
-        if not text.startswith("--model ") or "/srv/models/gemma-r6" not in text:
+        if _MODEL_ROOT_ARG.fullmatch(text) is None:
             raise EvidenceError(
-                f"checkpoint continuity: launcher {item.get('path')} model path unbound")
+                f"checkpoint continuity: launcher {item.get('path')} model path not the exact continuity-proven root")
         by_sha[item.get("sha256")] = item
     if len(launch_evidence) != 6 or len(by_sha) != 6:
         raise EvidenceError("checkpoint continuity: launch-path binding set incomplete")
@@ -477,12 +485,16 @@ def _check_checkpoint_continuity() -> dict[str, Any]:
             raise EvidenceError(
                 f"checkpoint continuity: launcher {name} absent from continuity record")
         verbatim = str(script.get("verbatim", ""))
-        if "--model /srv/models/gemma-r6" not in verbatim:
+        if _MODEL_ROOT_VERBATIM.search(verbatim) is None:
             raise EvidenceError(
-                f"checkpoint continuity: launcher {name} verbatim lacks model path")
+                f"checkpoint continuity: launcher {name} verbatim lacks the exact model root")
         if CHECKPOINT_AUTHORITY not in verbatim:
             raise EvidenceError(
                 f"checkpoint continuity: launcher {name} verbatim lacks checkpoint sha")
+        # R3: the retained digest must be recomputed from the retained bytes
+        if hashlib.sha256(verbatim.encode()).hexdigest() != script.get("sha256"):
+            raise EvidenceError(
+                f"checkpoint continuity: launcher {name} verbatim/digest mismatch")
     for host, entry in sorted(hosts.items()):
         anchors = CONTINUITY_HOSTS[host]
         window_start = ACCEPTED_HASH_WINDOWS[host][0]
@@ -598,6 +610,8 @@ def _check_run_device_bindings() -> dict[str, Any]:
             if observed != [expected_reference]:
                 raise EvidenceError(
                     f"device bindings: {run} observed {observed} != [{expected_reference}]")
+            if not str(node.get("evidence", "")).strip():
+                raise EvidenceError(f"device bindings: {run} no evidence")
         else:
             raise EvidenceError(f"device bindings: unknown run {run}")
     if seen != {"control_candidate_chain", "integrated_candidate_chain",

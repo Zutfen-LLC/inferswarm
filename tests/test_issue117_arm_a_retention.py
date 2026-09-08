@@ -617,6 +617,35 @@ class CheckpointContinuityMutationTests(unittest.TestCase):
             _store(arm_a / "checkpoint-continuity.json", doc)
         _expect_reducer_failure(mutation)
 
+    def test_mutation_launch_model_path_sibling_prefix_fails(self):
+        # a LONGER path sharing the prefix must not satisfy a substring match
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "checkpoint-continuity.json")
+            item = doc["continuity_derivation"]["launch_path_evidence"][0]
+            item["model_arg"] = "--model /srv/models/gemma-r6-evil"
+            _store(arm_a / "checkpoint-continuity.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_launch_verbatim_edited_digest_stale_fails(self):
+        # editing retained launcher text without refreshing its digest
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "run-device-bindings.json")
+            doc["launch_scripts"]["chain_control"]["verbatim"] = \
+                doc["launch_scripts"]["chain_control"]["verbatim"].replace(
+                    "/srv/models/gemma-r6", "/srv/models/gemma-r6-x", 1)
+            _store(arm_a / "run-device-bindings.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_duplicated_host_entry_fails(self):
+        # a poisoned duplicate host entry must not silently collapse away
+        def mutation(root, arm_a, evidence):
+            import copy as _copy
+            doc = _load(arm_a / "checkpoint-continuity.json")
+            doc["hosts"].append(_copy.deepcopy(doc["hosts"][0]))
+            doc["hosts"][0]["st_ino"] = 999999
+            _store(arm_a / "checkpoint-continuity.json", doc)
+        _expect_reducer_failure(mutation)
+
 
 class SubjectMutationTests(unittest.TestCase):
     """Finding 2 (P1) negative controls: complete frozen subject."""
@@ -695,6 +724,14 @@ class DeviceBindingMutationTests(unittest.TestCase):
             doc = _load(arm_a / "run-device-bindings.json")
             self._binding(doc, "integrated_reference")["reference"]["observed_gpu_uuids"] = [
                 "GPU-0000"]
+            _store(arm_a / "run-device-bindings.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_reference_evidence_blanked_fails(self):
+        # the reference binding must cite non-empty run-side evidence too
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "run-device-bindings.json")
+            self._binding(doc, "control_reference")["reference"]["evidence"] = "  "
             _store(arm_a / "run-device-bindings.json", doc)
         _expect_reducer_failure(mutation)
 
