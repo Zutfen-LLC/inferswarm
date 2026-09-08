@@ -703,3 +703,59 @@ class RepositoryDependencyMutations(MutationTestCase):
         self.assertFails(self.mutate_and_run(
             "read-audit-stage-2.json", m),
             needle="whole-repository dependency")
+
+
+class ReviewFixMutations(MutationTestCase):
+    """Independent-review findings (round 1) turned into permanent
+    negative controls."""
+
+    def test_validity_third_state_escapes_partition(self):
+        # a 'PENDING' label with an admitted publication must fail, not
+        # dodge the per-invalid enforcement
+        def m(p):
+            d = json.loads(p.read_text())
+            d["attempts"][3]["validity"] = "PENDING"
+            d["attempts"][3]["verified_publications"] = 5
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("attempt-lineage.json", m),
+                         needle="not explicitly VALID/INVALID")
+
+    def test_excerpt_digest_does_not_bind_verbatim(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            for a in d["attempts"]:
+                if a["attempt_id"].endswith("launch-2"):
+                    a["evidence"]["excerpt_verbatim"] = a["evidence"][
+                        "excerpt_verbatim"].replace(
+                        "MALFORMED_ARTIFACT_RECORD",
+                        "AUTHORIZATION_BYPASSED_RECORD")
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("attempt-lineage.json", m),
+                         needle="bind its verbatim content")
+
+    def test_coordinator_payload_file_in_listing(self):
+        # payload bytes hidden in the record's own file listing while
+        # the stored summary stays zero
+        def m(p):
+            d = json.loads(p.read_text())
+            d["low_level_observations"]["coordinator_state_tree"][
+                "files"]["models/payload.safetensors"] = [
+                    23919549408, "sha256:" + "0" * 64]
+            d["low_level_observations"]["coordinator_state_tree"][
+                "total_bytes_under_state_arm_b"] += 23919549408
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "coordinator-transport-accounting.json", m),
+            needle="payload bytes disagree")
+
+    def test_self_test_bucket_absorbs_coordinator_requests(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["low_level_observations"]["source_server_log"][
+                "client_ip_histogram"]["10.0.0.141"] = 4
+            d["low_level_observations"]["source_server_log"][
+                "total_get_requests"] = 431
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "coordinator-transport-accounting.json", m),
+            needle="total request count drift")

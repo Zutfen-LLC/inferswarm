@@ -103,6 +103,10 @@ def _sha256(path):
     return h.hexdigest()
 
 
+def _sha256_text(text):
+    return hashlib.sha256(text.encode()).hexdigest()
+
+
 def main():
     failures = []
 
@@ -384,6 +388,23 @@ def main():
             "enumeration (missing or extra attempt)")
     valid = [a for a in attempts if a.get("validity") == "VALID"]
     invalid = [a for a in attempts if a.get("validity") == "INVALID"]
+    # fail closed on any third validity state: every retained attempt must
+    # be explicitly VALID or INVALID (a 'PENDING'/missing label must not
+    # dodge the per-invalid enforcement below)
+    unlabeled = [a.get("attempt_id") for a in attempts
+                 if a.get("validity") not in ("VALID", "INVALID")]
+    if unlabeled:
+        failures.append(
+            f"attempt lineage: attempts not explicitly VALID/INVALID: "
+            f"{unlabeled}")
+    # the frozen enumeration pins the per-id validity labels too
+    expected_validity = dict(zip(EXPECTED_ATTEMPT_IDS,
+                                 ("INVALID",) * 6 + ("VALID",)))
+    for a in attempts:
+        if a.get("validity") != expected_validity.get(a.get("attempt_id")):
+            failures.append(
+                f"attempt lineage: {a.get('attempt_id')} validity label "
+                f"differs from the frozen campaign enumeration")
     if len(valid) != 1:
         failures.append(
             f"attempt lineage: expected exactly one VALID attempt, "
@@ -399,6 +420,41 @@ def main():
     if valid and invalid and valid[0].get("ordering") != max(orderings):
         failures.append("attempt lineage: valid attempt does not follow "
                         "every invalid attempt")
+    for a in attempts:
+        # every digest-bound transcript excerpt must re-verify: the
+        # reducer recomputes sha256 over each excerpt_verbatim and
+        # compares it to the recorded excerpt_digest (a tampered
+        # excerpt with a stale digest fails closed)
+        ev = a.get("evidence")
+        blocks = ev if isinstance(ev, list) else ([ev] if ev else [])
+        if not blocks:
+            failures.append(
+                f"attempt {a.get('attempt_id')} retains no evidence block")
+        for b in blocks:
+            if not isinstance(b, dict):
+                failures.append(
+                    f"attempt {a.get('attempt_id')} malformed evidence block")
+                continue
+            verbatim = b.get("excerpt_verbatim")
+            digest = b.get("excerpt_digest", "")
+            if not isinstance(verbatim, str) or not verbatim:
+                failures.append(
+                    f"attempt {a.get('attempt_id')} evidence lacks a "
+                    f"verbatim excerpt")
+            elif "sha256:" + _sha256_text(verbatim) != digest:
+                failures.append(
+                    f"attempt {a.get('attempt_id')} excerpt digest does "
+                    f"not bind its verbatim content")
+        # per-invalid zero enforcement (see below) also covers the
+        # diagnosis_output block where present
+        diag = a.get("diagnosis_output")
+        if isinstance(diag, dict) and "sha256:" + _sha256_text(
+                diag.get("excerpt_verbatim", "")) != \
+                diag.get("excerpt_digest", "\x00"):
+            failures.append(
+                f"attempt {a.get('attempt_id')} diagnosis digest does not "
+                f"bind its verbatim content")
+
     for a in invalid:
         aid = a.get("attempt_id")
         if a.get("verified_publications", 1) != 0:
@@ -461,11 +517,9 @@ def main():
             failures.append("valid attempt materialization/realization "
                             "count drift")
     # no hidden cleanup/reset transition between invalid and valid
-    # attempts: every invalid attempt's cleanup is accounted above; the
-    # campaign_boundary_note must not reference any root reset
-    if "reset" in json.dumps(lineage.get("campaign_boundary_note", "")).lower()\
-            .replace("no per-launch", ""):
-        pass  # free-text note; structural checks above carry the proof
+    # attempts: the structural guarantees above (per-attempt cleanup
+    # accounting, inode continuity vs the retained prestates) carry the
+    # proof.
 
     # -- coordinator metadata-only ------------------------------------------
     # Counters are DERIVED from the retained low-level observations, never
@@ -604,6 +658,25 @@ def main():
         failures.append("source-server request histogram does not sum")
     if cstate.get("model_payload_bytes_under_state_arm_b", -1) != 0:
         failures.append("coordinator state tree holds model payload bytes")
+    # R2 fix: the storage dimension is DERIVED from the record's own
+    # per-file listing, never from the stored summary alone — payload
+    # extensions summed must equal the claimed payload total, and the
+    # listing's byte sum must equal the claimed tree total
+    payload_exts = (".safetensors", ".bin", ".gguf", ".pt", ".pth")
+    files = cstate.get("files", {})
+    derived_payload = sum(int(v[0]) for k, v in files.items()
+                          if str(k).endswith(payload_exts))
+    derived_total = sum(int(v[0]) for v in files.values())
+    if derived_payload != cstate.get("model_payload_bytes_under_state_arm_b", -1):
+        failures.append(
+            "coordinator payload bytes disagree with the per-file listing")
+    if derived_total != cstate.get("total_bytes_under_state_arm_b", -1):
+        failures.append(
+            "coordinator state tree total disagrees with the per-file listing")
+    # R5 fix: pin the total request count so the self-test bucket cannot
+    # silently absorb coordinator requests
+    if srv.get("total_get_requests", -1) != 428:
+        failures.append("source-server total request count drift")
     derived_rx = derived_tx = derived_writes = derived_proxy = 0
     if srv.get("coordinator_get_requests") == 0 and \
             cstate.get("model_payload_bytes_under_state_arm_b") == 0:

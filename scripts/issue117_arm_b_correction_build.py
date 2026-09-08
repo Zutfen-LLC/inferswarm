@@ -178,10 +178,10 @@ def main():
             "source/arm-b-requirements.json": [493354,
                 "8fe8854a0ba118c9ba598655834d9177b4d1bc9f1ef99a5259834b389e02dde3"],
         },
-        "total_bytes_under_state_arm_b": 34887199,
+        "total_bytes_under_state_arm_b": 35399067,
         "model_payload_bytes_under_state_arm_b": 0,
         "note": ("every file is a JSON ticket/plan/requirements document "
-                 "(33.8 MiB of metadata, digests byte-equal the Source-side "
+                 "(33.8 MiB of ticket metadata — sum 35,399,067 bytes, digests byte-equal the Source-side "
                  "copies retained in the repo evidence); zero safetensors/"
                  "bin/gguf/pt payload bytes exist under any coordinator path"),
     }
