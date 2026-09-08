@@ -1,0 +1,93 @@
+{
+ "definition": "A runtime fallback event is any automatic runtime substitution from the frozen intended execution substrate observed at realization time: GPU->CPU model-state execution, wrong-GPU/CU substitution, backend fallback, compatibility fallback changing the execution substrate, undeclared host execution of assigned layers/model state, or an automatic alternate implementation selected after the realization request. Acquisition-ledger integrity failures are NOT fallback evidence: a clean ledger can coexist with a runtime fallback, and a dirty ledger proves nothing about the runtime substrate.",
+ "derivation_sources": [
+  "realize-stage-{1,2,3}.json (frozen runtime report fields)",
+  "read-audit-stage-{1,2,3}.json (strace file audit)",
+  "pinned realize-strace.log scans (see steady-state-movement.json strace facts)"
+ ],
+ "per_stage": {
+  "dense.6171f32b4413.stage-1": {
+   "backend_or_compat_fallback": false,
+   "cpu_model_state_fallback": false,
+   "cpu_owned_decoder_layers": 0,
+   "cuda_allocated_bytes": 10117708288,
+   "cuda_execution_path_established": true,
+   "fetched_bytes": 9256814624,
+   "host_resident_tensor_keys_count": 0,
+   "host_staging_current_bytes": 0,
+   "nvidia_device_nodes_opened": [
+    "/dev/nvidia-caps/nvidia-cap2",
+    "/dev/nvidia-uvm",
+    "/dev/nvidia0",
+    "/dev/nvidia1",
+    "/dev/nvidiactl"
+   ],
+   "observed_gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+   "persistent_host_model_bytes": 0,
+   "plan_gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+   "requested_cu": "inferswarm01/gpu-0",
+   "requested_gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+   "resident_device_bytes": 9264678944,
+   "runtime_fallback_events_stage": 0,
+   "undeclared_host_execution": false,
+   "whole_shard_sentinel_calls": 0,
+   "wrong_gpu_substitution": false
+  },
+  "dense.6171f32b4413.stage-2": {
+   "backend_or_compat_fallback": false,
+   "cpu_model_state_fallback": false,
+   "cpu_owned_decoder_layers": 0,
+   "cuda_allocated_bytes": 8144289280,
+   "cuda_execution_path_established": true,
+   "fetched_bytes": 7278939168,
+   "host_resident_tensor_keys_count": 0,
+   "host_staging_current_bytes": 0,
+   "nvidia_device_nodes_opened": [
+    "/dev/nvidia-caps/nvidia-cap2",
+    "/dev/nvidia-uvm",
+    "/dev/nvidia0",
+    "/dev/nvidia1",
+    "/dev/nvidiactl"
+   ],
+   "observed_gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+   "persistent_host_model_bytes": 0,
+   "plan_gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+   "requested_cu": "inferswarm01/gpu-1",
+   "requested_gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+   "resident_device_bytes": 7290735648,
+   "runtime_fallback_events_stage": 0,
+   "undeclared_host_execution": false,
+   "whole_shard_sentinel_calls": 0,
+   "wrong_gpu_substitution": false
+  },
+  "dense.6171f32b4413.stage-3": {
+   "backend_or_compat_fallback": false,
+   "cpu_model_state_fallback": false,
+   "cpu_owned_decoder_layers": 0,
+   "cuda_allocated_bytes": 10155990016,
+   "cuda_execution_path_established": true,
+   "fetched_bytes": 9292212768,
+   "host_resident_tensor_keys_count": 0,
+   "host_staging_current_bytes": 0,
+   "nvidia_device_nodes_opened": [
+    "/dev/nvidia-caps/nvidia-cap2",
+    "/dev/nvidia-uvm",
+    "/dev/nvidia0",
+    "/dev/nvidia1",
+    "/dev/nvidiactl"
+   ],
+   "observed_gpu_uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176",
+   "persistent_host_model_bytes": 0,
+   "plan_gpu_uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176",
+   "requested_cu": "inferswarm03/gpu-0",
+   "requested_gpu_uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176",
+   "resident_device_bytes": 9304009248,
+   "runtime_fallback_events_stage": 0,
+   "undeclared_host_execution": false,
+   "whole_shard_sentinel_calls": 0,
+   "wrong_gpu_substitution": false
+  }
+ },
+ "schema": "inferswarm.issue117.arm-b.runtime-fallback-accounting/1",
+ "total_runtime_fallback_events": 0
+}

@@ -1,0 +1,120 @@
+{
+ "derivation_sources": [
+  "realize-strace.log per stage (sha256-pinned openat scans)",
+  "realize-stage-{1,2,3}.json staging counters",
+  "read-audit-stage-{1,2,3}.json classified paths"
+ ],
+ "per_stage": {
+  "dense.6171f32b4413.stage-1": {
+   "cache_root_opens": 0,
+   "host": "inferswarm01",
+   "planned_initial_materialization_bytes": 9256814624,
+   "post_materialization_cache_fetch_bytes": 0,
+   "post_materialization_device_to_host_model_bytes": 0,
+   "post_materialization_host_to_device_model_bytes": 0,
+   "post_materialization_model_state_read_bytes": 0,
+   "post_materialization_rematerialization_bytes": 0,
+   "post_materialization_source_fetch_bytes": 0,
+   "shard_open_count": 671,
+   "source_tree_opens": 0,
+   "strace_lines": 65246,
+   "strace_sha256": "36c8845b35e2387c383e9a53ca8d943eaa448ad432ad69a385b33a2ed8a73b13",
+   "unexplained_movement_bytes": 0,
+   "zero_derivation": "model_state_opens_after_last_shard_open == [] : the openat scan over the full pinned strace log found ZERO model-state path accesses (cache root, source tree, participant shard) after the last shard openat line; additionally source_tree_opens == 0 and cache_root_opens == 0 across the ENTIRE log, so no unplanned fetch could occur in any phase; host staging current bytes == 0 at report time"
+  },
+  "dense.6171f32b4413.stage-2": {
+   "cache_root_opens": 0,
+   "host": "inferswarm01",
+   "planned_initial_materialization_bytes": 7278939168,
+   "post_materialization_cache_fetch_bytes": 0,
+   "post_materialization_device_to_host_model_bytes": 0,
+   "post_materialization_host_to_device_model_bytes": 0,
+   "post_materialization_model_state_read_bytes": 0,
+   "post_materialization_rematerialization_bytes": 0,
+   "post_materialization_source_fetch_bytes": 0,
+   "shard_open_count": 665,
+   "source_tree_opens": 0,
+   "strace_lines": 65238,
+   "strace_sha256": "ffbf4ddbe1bea8efdcbb11fe5a983e096284cd083193c0b2da07954a4f195d9f",
+   "unexplained_movement_bytes": 0,
+   "zero_derivation": "model_state_opens_after_last_shard_open == [] : the openat scan over the full pinned strace log found ZERO model-state path accesses (cache root, source tree, participant shard) after the last shard openat line; additionally source_tree_opens == 0 and cache_root_opens == 0 across the ENTIRE log, so no unplanned fetch could occur in any phase; host staging current bytes == 0 at report time"
+  },
+  "dense.6171f32b4413.stage-3": {
+   "cache_root_opens": 0,
+   "host": "inferswarm03",
+   "planned_initial_materialization_bytes": 9292212768,
+   "post_materialization_cache_fetch_bytes": 0,
+   "post_materialization_device_to_host_model_bytes": 0,
+   "post_materialization_host_to_device_model_bytes": 0,
+   "post_materialization_model_state_read_bytes": 0,
+   "post_materialization_rematerialization_bytes": 0,
+   "post_materialization_source_fetch_bytes": 0,
+   "shard_open_count": 671,
+   "source_tree_opens": 0,
+   "strace_lines": 64009,
+   "strace_sha256": "5703a180438172626f7c6585fbe99ba5253c8fff31aed3af894ce25b0d30c033",
+   "unexplained_movement_bytes": 0,
+   "zero_derivation": "model_state_opens_after_last_shard_open == [] : the openat scan over the full pinned strace log found ZERO model-state path accesses (cache root, source tree, participant shard) after the last shard openat line; additionally source_tree_opens == 0 and cache_root_opens == 0 across the ENTIRE log, so no unplanned fetch could occur in any phase; host staging current bytes == 0 at report time"
+  }
+ },
+ "phase_boundary_definition": "Steady-state interval per stage = [last openat of the participant shard during realization, process exit], pinned by line position in the retained realize-strace.log. All shard openat/mmap activity up to and including the last shard open is the planned initial materialization/realization transfer, excluded by this mechanical line-ordering boundary. Any model-state byte access after the last shard open is post-finalization movement.",
+ "schema": "inferswarm.issue117.arm-b.steady-state-movement/1",
+ "strace_facts": {
+  "mechanism": "read-only openat scan over the retained realize-strace.log on each participant host, sha256-pinned below",
+  "observation_utc": "2026-09-08T22:12:00Z",
+  "stages": {
+   "dense.6171f32b4413.stage-1": {
+    "cache_root_opens": 0,
+    "host": "inferswarm01",
+    "lines": 65246,
+    "model_state_opens_after_last_shard_open": [],
+    "model_state_opens_total": 671,
+    "nvidia_nodes_opened": [
+     "/dev/nvidia-caps/nvidia-cap2",
+     "/dev/nvidia-uvm",
+     "/dev/nvidia0",
+     "/dev/nvidia1",
+     "/dev/nvidiactl"
+    ],
+    "shard_open_count": 671,
+    "source_tree_opens": 0,
+    "strace_sha256": "36c8845b35e2387c383e9a53ca8d943eaa448ad432ad69a385b33a2ed8a73b13"
+   },
+   "dense.6171f32b4413.stage-2": {
+    "cache_root_opens": 0,
+    "host": "inferswarm01",
+    "lines": 65238,
+    "model_state_opens_after_last_shard_open": [],
+    "model_state_opens_total": 665,
+    "nvidia_nodes_opened": [
+     "/dev/nvidia-caps/nvidia-cap2",
+     "/dev/nvidia-uvm",
+     "/dev/nvidia0",
+     "/dev/nvidia1",
+     "/dev/nvidiactl"
+    ],
+    "shard_open_count": 665,
+    "source_tree_opens": 0,
+    "strace_sha256": "ffbf4ddbe1bea8efdcbb11fe5a983e096284cd083193c0b2da07954a4f195d9f"
+   },
+   "dense.6171f32b4413.stage-3": {
+    "cache_root_opens": 0,
+    "host": "inferswarm03",
+    "lines": 64009,
+    "model_state_opens_after_last_shard_open": [],
+    "model_state_opens_total": 671,
+    "nvidia_nodes_opened": [
+     "/dev/nvidia-caps/nvidia-cap2",
+     "/dev/nvidia-uvm",
+     "/dev/nvidia0",
+     "/dev/nvidia1",
+     "/dev/nvidiactl"
+    ],
+    "shard_open_count": 671,
+    "source_tree_opens": 0,
+    "strace_sha256": "5703a180438172626f7c6585fbe99ba5253c8fff31aed3af894ce25b0d30c033"
+   }
+  }
+ },
+ "unplanned_steady_state_model_state_movement_bytes": 0
+}

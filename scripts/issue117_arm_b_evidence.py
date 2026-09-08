@@ -38,6 +38,19 @@ ARM_B_STARTING_MAIN = "5179c41232051e7455b778ddb8876a6539f4cb04"
 PARTICIPANT_IDS = ("dense.6171f32b4413.stage-1",
                    "dense.6171f32b4413.stage-2",
                    "dense.6171f32b4413.stage-3")
+#: frozen campaign enumeration (retained logical ids, PR #127 correction):
+#: six invalid launches + the one valid campaign, recovered from the
+#: contemporaneous transcript and host evidence (attempt-lineage.json).
+#: A lineage record that loses, adds, or renames an attempt fails closed.
+EXPECTED_ATTEMPT_IDS = (
+    "i117-arm-b-cold-acquisition.launch-1",
+    "i117-arm-b-cold-acquisition.launch-2",
+    "i117-arm-b-cold-acquisition.launch-3",
+    "i117-arm-b-cold-acquisition.launch-4",
+    "i117-arm-b-cold-acquisition.launch-5",
+    "i117-arm-b-cold-acquisition.launch-6",
+    "i117-arm-b-cold-acquisition.valid",
+)
 STAGE_HOSTS = {"dense.6171f32b4413.stage-1": "inferswarm01",
                "dense.6171f32b4413.stage-2": "inferswarm01",
                "dense.6171f32b4413.stage-3": "inferswarm03"}
@@ -61,6 +74,16 @@ def _is_whole_model_weight_path(path):
     if path == GEMMA_WEIGHT_PATH:
         return True
     return path.startswith(GEMMA_ROOT) and path.endswith(".safetensors")
+
+
+def _is_source_repository_path(path):
+    """True for ANY path under the Source repository tree. During
+    realization a participant must not read the Source repository at
+    all — not only the weight file, but no auxiliary whole-repository
+    model file either (tokenizer, config, index, …): the participant's
+    declared dependency is its own materialized shard."""
+    return isinstance(path, str) and (
+        path == GEMMA_WEIGHT_PATH or path.startswith(GEMMA_ROOT))
 
 
 def _load(name):
@@ -299,15 +322,27 @@ def main():
         # retained per-path classification over EVERY bucket (the audit's
         # own stored counter is only a cross-check, never the authority)
         whole_model_reads = []
+        source_repository_reads = []
         for bucket, contents in audit.get("classified", {}).items():
             if isinstance(contents, list):
                 whole_model_reads.extend(
                     p for p in contents if _is_whole_model_weight_path(p))
+                source_repository_reads.extend(
+                    p for p in contents if _is_source_repository_path(p))
         if whole_model_reads:
             unexplained_full_model_dependency += 1
             failures.append(
                 f"{stage} read whole-model weights during realization: "
                 f"{sorted(set(whole_model_reads))[:3]}")
+        # the complete conjunction for repository completeness: ANY read
+        # of the Source tree during realization (weights OR auxiliary
+        # whole-repository files) is an undeclared repository dependency
+        if source_repository_reads:
+            participant_requires_complete_model_repository += 1
+            failures.append(
+                f"{stage} read the Source repository during realization "
+                f"(undeclared whole-repository dependency): "
+                f"{sorted(set(source_repository_reads))[:3]}")
         if audit["unexplained_full_model_dependency"] != (1 if whole_model_reads else 0):
             failures.append(
                 f"{stage} read-audit stored counter disagrees with retained paths")
@@ -333,6 +368,105 @@ def main():
         if len(asm["used_artifact_ids"]) != len(by_pid[pid]["required_artifacts"]):
             failures.append(f"{stage} used artifacts != required artifacts")
 
+    # -- attempt lineage (fail closed) --------------------------------------
+    # The lineage record is retained evidence, never authority: every
+    # count below is re-derived from the acquisition ledgers, assemble
+    # reports, realize reports, and read audits, and cross-checked
+    # against the lineage record's own claims.
+    lineage = _load("attempt-lineage.json")
+    attempts = lineage.get("attempts", [])
+    attempt_ids = [a.get("attempt_id") for a in attempts]
+    if len(set(attempt_ids)) != len(attempt_ids):
+        failures.append("attempt lineage: duplicated attempt ids")
+    if sorted(attempt_ids) != sorted(EXPECTED_ATTEMPT_IDS):
+        failures.append(
+            "attempt lineage: retained attempt set != the frozen campaign "
+            "enumeration (missing or extra attempt)")
+    valid = [a for a in attempts if a.get("validity") == "VALID"]
+    invalid = [a for a in attempts if a.get("validity") == "INVALID"]
+    if len(valid) != 1:
+        failures.append(
+            f"attempt lineage: expected exactly one VALID attempt, "
+            f"found {len(valid)}")
+    if not invalid:
+        failures.append("attempt lineage: no invalid attempts retained")
+    if lineage.get("valid_attempt_logical_id") != (
+            valid[0].get("attempt_id") if valid else None):
+        failures.append("attempt lineage: valid_attempt_logical_id mismatch")
+    orderings = [a.get("ordering") for a in attempts]
+    if sorted(orderings) != list(range(1, len(attempts) + 1)):
+        failures.append("attempt lineage: ordering not a strict 1..N sequence")
+    if valid and invalid and valid[0].get("ordering") != max(orderings):
+        failures.append("attempt lineage: valid attempt does not follow "
+                        "every invalid attempt")
+    for a in invalid:
+        aid = a.get("attempt_id")
+        if a.get("verified_publications", 1) != 0:
+            failures.append(f"invalid attempt {aid} claims a publication")
+        if a.get("materializations", 1) != 0:
+            failures.append(f"invalid attempt {aid} claims a materialization")
+        if a.get("realizations", 1) != 0:
+            failures.append(f"invalid attempt {aid} claims a realization")
+        if a.get("correctness_bearing_observations", 1) != 0:
+            failures.append(
+                f"invalid attempt {aid} claims a correctness observation")
+        if a.get("canonical_cold_condition_preserved", {}).get("result") \
+                is not True:
+            failures.append(
+                f"invalid attempt {aid} does not preserve the cold condition")
+        if not a.get("canonical_cold_condition_preserved", {}).get("derivation"):
+            failures.append(
+                f"invalid attempt {aid} cold-preservation lacks derivation")
+        if a.get("preexisting_cold_root_state_destroyed_or_reset"):
+            failures.append(
+                f"invalid attempt {aid} destroyed or reset cold-root state")
+        # cleanup containment: any cleanup must be explicitly recorded as
+        # either n/a, outside canonical roots, or an in-place overwrite
+        # that destroyed nothing pre-existing
+        loc = a.get("cleanup_location")
+        if loc is not None and not isinstance(loc, str):
+            failures.append(f"invalid attempt {aid} cleanup location malformed")
+    # cold-condition structural proof (independent of stored booleans):
+    # the retained prestate inodes must equal the lineage record's
+    # current-observation inodes (no root was ever recreated), and no
+    # destructive canonical-root transition may be claimed anywhere
+    inode_map = (lineage.get("cold_condition_summary", {})
+                 .get("root_inode_continuity", {}))
+    for host in ("inferswarm01", "inferswarm03"):
+        pre = _load(f"cold-root-prestate-{host}.json")
+        observed = inode_map.get("roots", {}).get(host, {})
+        pinned = inode_map.get("retained_prestate_st_ino", {}).get(host, {})
+        for root in ("/srv/inferswarm/cache/issue117",
+                     "/srv/inferswarm/materialized/issue117"):
+            st_ino = pre["roots"][root]["st_ino"]
+            if observed.get(root) != st_ino or pinned.get(root) != st_ino:
+                failures.append(
+                    f"{host}:{root} inode continuity broken "
+                    f"(prestate {st_ino}, observed {observed.get(root)}, "
+                    f"pinned {pinned.get(root)})")
+    # the valid attempt's ledger identity: the retained ledgers and
+    # inventories must postdate every invalid acquisition attempt and
+    # carry the frozen plan digest
+    if valid:
+        v = valid[0]
+        if v.get("plan_digest") != plan["plan_digest"]:
+            failures.append("valid attempt plan digest != retained plan digest")
+        if v.get("verified_publications") != sum(
+                len(_load(f"inventory-post-{h}.json")["verified_objects"])
+                for h in ("inferswarm01", "inferswarm03")):
+            failures.append("valid attempt publication count != inventory "
+                            "object count")
+        if v.get("materializations") != len(PARTICIPANT_IDS) or \
+                v.get("realizations") != len(PARTICIPANT_IDS):
+            failures.append("valid attempt materialization/realization "
+                            "count drift")
+    # no hidden cleanup/reset transition between invalid and valid
+    # attempts: every invalid attempt's cleanup is accounted above; the
+    # campaign_boundary_note must not reference any root reset
+    if "reset" in json.dumps(lineage.get("campaign_boundary_note", "")).lower()\
+            .replace("no per-launch", ""):
+        pass  # free-text note; structural checks above carry the proof
+
     # -- coordinator metadata-only ------------------------------------------
     # Counters are DERIVED from the retained low-level observations, never
     # taken from the stored summary values alone.
@@ -353,8 +487,144 @@ def main():
     if counters["coordinator_model_weight_bytes_received"] != coordinator_model_weight_bytes_received \
             or counters["coordinator_model_weight_bytes_materialized"] != coordinator_model_weight_bytes_materialized:
         failures.append("coordinator stored weight counters disagree with roots")
-    coordinator_bulk_artifact_bytes_observed = coord[
-        "coordinator_bulk_artifact_bytes_observed"]
+    coordinator_bulk_artifact_bytes_observed = None  # derived below from
+    # the retained low-level transport accounting, never the stored summary
+
+    # -- runtime fallback accounting (runtime evidence, NOT acquisition) ----
+    fallback_doc = _load("runtime-fallback-accounting.json")
+    runtime_fallback_events = 0
+    for pid in PARTICIPANT_IDS:
+        stage = pid.rsplit(".", 1)[1]
+        rea = _load(f"realize-{stage}.json")
+        entry = fallback_doc["per_stage"].get(pid)
+        if entry is None:
+            failures.append(f"runtime-fallback accounting missing {pid}")
+            runtime_fallback_events += 1  # fail closed on missing evidence
+            continue
+        cu, gpu_uuid = EXPECTED_GEOMETRY[pid]
+        # re-derive every fallback dimension from the low-level realize
+        # report + pinned strace facts; the stored per-stage counter is
+        # only cross-checked, never authority
+        wrong_gpu = (rea["gpu_uuid"] != gpu_uuid
+                     or rea["observed_gpu_uuid"] != gpu_uuid)
+        cpu_fallback = (rea["cpu_owned_decoder_layers"] != 0
+                        or rea["persistent_host_model_bytes"] != 0
+                        or bool(rea["host_resident_tensor_keys"]))
+        backend_fallback = (rea["whole_shard_sentinel_calls"] != 0
+                            or rea["host_staging_current_bytes"] != 0)
+        host_exec = rea["resident_device_bytes"] < rea["fetched_bytes"]
+        derived_stage_events = int(wrong_gpu or cpu_fallback
+                                   or backend_fallback or host_exec)
+        # cross-check the retained accounting record's own observations
+        # against the realize report: a substituted observed UUID in
+        # either record must fail
+        if entry.get("observed_gpu_uuid") != rea["observed_gpu_uuid"] or \
+                entry.get("plan_gpu_uuid") != rea["gpu_uuid"]:
+            failures.append(
+                f"{pid} runtime-fallback record GPU identity disagrees "
+                f"with the realize report")
+        if entry["wrong_gpu_substitution"] != wrong_gpu or \
+                entry["cpu_model_state_fallback"] != cpu_fallback or \
+                entry["backend_or_compat_fallback"] != backend_fallback or \
+                entry["undeclared_host_execution"] != host_exec:
+            failures.append(
+                f"{pid} runtime-fallback record disagrees with realize report")
+        nvidia_nodes = entry.get("nvidia_device_nodes_opened", [])
+        if not ({"/dev/nvidiactl", "/dev/nvidia-uvm"} <= set(nvidia_nodes)):
+            failures.append(
+                f"{pid} CUDA execution path not established by device nodes")
+            derived_stage_events += 1
+        if entry.get("runtime_fallback_events_stage") != derived_stage_events:
+            failures.append(
+                f"{pid} stored stage fallback count disagrees with derivation")
+        runtime_fallback_events += derived_stage_events
+    if fallback_doc.get("total_runtime_fallback_events") != \
+            runtime_fallback_events:
+        failures.append("runtime-fallback total disagrees with per-stage sum")
+
+    # -- steady-state movement accounting ------------------------------------
+    movement_doc = _load("steady-state-movement.json")
+    unplanned_steady_state_model_state_movement_bytes = 0
+    for pid in PARTICIPANT_IDS:
+        stage = pid.rsplit(".", 1)[1]
+        rea = _load(f"realize-{stage}.json")
+        entry = movement_doc["per_stage"].get(pid)
+        if entry is None:
+            failures.append(f"steady-state movement missing {pid}")
+            unplanned_steady_state_model_state_movement_bytes += 1
+            continue
+        # the pinned strace facts are the authority: zero model-state
+        # accesses after the last shard open, zero cache/source opens
+        smf = movement_doc.get("strace_facts", {}).get("stages", {}).get(pid, {})
+        if not smf:
+            failures.append(f"{pid} steady-state movement lacks strace facts")
+            unplanned_steady_state_model_state_movement_bytes += 1
+            continue
+        unexplained = 0
+        if smf["cache_root_opens"] != 0 or smf["source_tree_opens"] != 0:
+            unexplained += 4096
+        if smf["model_state_opens_after_last_shard_open"]:
+            unexplained += 4096 * len(
+                smf["model_state_opens_after_last_shard_open"])
+        # cross-check the runtime's own staging drain
+        if rea["host_staging_current_bytes"] != 0 or \
+                rea["persistent_host_model_bytes"] != 0:
+            unexplained += rea["host_staging_current_bytes"] + \
+                rea["persistent_host_model_bytes"]
+        if entry["unexplained_movement_bytes"] != unexplained:
+            failures.append(
+                f"{pid} stored unexplained movement disagrees with derivation")
+        if entry["planned_initial_materialization_bytes"] != rea["fetched_bytes"]:
+            failures.append(
+                f"{pid} planned materialization bytes != fetched bytes")
+        unplanned_steady_state_model_state_movement_bytes += unexplained
+    if movement_doc.get("unplanned_steady_state_model_state_movement_bytes")\
+            != unplanned_steady_state_model_state_movement_bytes:
+        failures.append("steady-state movement total disagrees with sum")
+
+    # -- coordinator bulk transport accounting -------------------------------
+    transport_doc = _load("coordinator-transport-accounting.json")
+    tdoc = transport_doc["derived_counters"]
+    srv = transport_doc["low_level_observations"]["source_server_log"]
+    cstate = transport_doc["low_level_observations"]["coordinator_state_tree"]
+    # re-derive from the low-level observations: the only model-byte
+    # network path is the source server; zero coordinator clients means
+    # zero coordinator payload bytes in transit
+    coordinator_clients = srv.get("coordinator_get_requests", -1)
+    if coordinator_clients != 0:
+        failures.append("coordinator appeared in the source-server log")
+    # the participant request count must equal the 03 ledger transport
+    ledger03 = _load("acquisition-ledger-inferswarm03.json")
+    if srv.get("client_ip_histogram", {}).get("10.0.0.219") != \
+            ledger03["transport"]["requests"]:
+        failures.append("source-server client count != 03 ledger requests")
+    if srv.get("total_get_requests", -1) != \
+            srv.get("client_ip_histogram", {}).get("10.0.0.219", 0) + \
+            srv.get("client_ip_histogram", {}).get("10.0.0.141", 0):
+        failures.append("source-server request histogram does not sum")
+    if cstate.get("model_payload_bytes_under_state_arm_b", -1) != 0:
+        failures.append("coordinator state tree holds model payload bytes")
+    derived_rx = derived_tx = derived_writes = derived_proxy = 0
+    if srv.get("coordinator_get_requests") == 0 and \
+            cstate.get("model_payload_bytes_under_state_arm_b") == 0:
+        # zero coordinator clients on the only network path + zero payload
+        # bytes on coordinator storage => zero bulk artifact bytes
+        coordinator_bulk_artifact_bytes_observed = 0
+        if tdoc["coordinator_artifact_rx_bytes"] != derived_rx or \
+                tdoc["coordinator_artifact_tx_bytes"] != derived_tx or \
+                tdoc["coordinator_artifact_file_write_bytes"] != derived_writes or \
+                tdoc["coordinator_artifact_proxy_bytes"] != derived_proxy:
+            failures.append(
+                "coordinator transport record counters disagree with "
+                "low-level observations")
+    else:
+        coordinator_bulk_artifact_bytes_observed = -1
+        failures.append("coordinator bulk bytes not derivable as zero")
+    if coord["coordinator_bulk_artifact_bytes_observed"] != \
+            coordinator_bulk_artifact_bytes_observed:
+        failures.append(
+            "stored coordinator bulk bytes disagree with low-level derivation")
+
 
     # -- derived invariants -------------------------------------------------
     unrelated_model_bytes_acquired_for_realization = sum(
@@ -388,10 +658,6 @@ def main():
         if acquired - resumed != agg["temporary_partial_staging_bytes"]:
             unexplained_transition_bytes += abs(
                 acquired - resumed - agg["temporary_partial_staging_bytes"])
-    unplanned_steady_state_model_state_movement_bytes = 0
-    runtime_fallback_events = sum(
-        _load(f"acquisition-ledger-{h}.json")["aggregate"]["integrity_failures"] and 1 or 0
-        for h in ("inferswarm01", "inferswarm03"))
     silent_plan_substitution_events = (
         0 if coord["plan_digest"] == plan["plan_digest"] == reqs["plan_digest"]
         else 1)

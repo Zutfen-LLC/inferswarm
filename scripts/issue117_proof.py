@@ -86,6 +86,7 @@ PRODUCERS = [
     "scripts/issue117_checkpoint_authority.py",
     "scripts/issue117_arm_a_evidence.py",
     "scripts/issue117_arm_b_evidence.py",
+    "scripts/issue117_arm_b_correction_build.py",
     "scripts/issue117_subject_identity.py",
     "scripts/issue99_artifact_core.py",
     "scripts/issue101_orchestration.py",
@@ -201,6 +202,15 @@ COMMITTED_EVIDENCE_FILES = {
     "arm-b/read-audit-stage-1.json",
     "arm-b/read-audit-stage-2.json",
     "arm-b/read-audit-stage-3.json",
+    # PR #127 correction (retention/derivation only, no rerun): the
+    # attempt-lineage record (six invalid launches + the valid campaign,
+    # recovered from contemporaneous transcript/host evidence) and the
+    # three low-level accounting records backing the corrected zero
+    # invariants
+    "arm-b/attempt-lineage.json",
+    "arm-b/runtime-fallback-accounting.json",
+    "arm-b/steady-state-movement.json",
+    "arm-b/coordinator-transport-accounting.json",
 }
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the

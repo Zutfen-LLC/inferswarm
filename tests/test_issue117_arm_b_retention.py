@@ -259,14 +259,14 @@ class MaterializationMutations(MutationTestCase):
             p.write_text(json.dumps(d))
         self.assertFails(self.mutate_and_run("realize-stage-2.json", m))
 
-    def test_runtime_fallback_event(self):
+    def test_runtime_fallback_cpu_layers(self):
+        # a real runtime fallback: CPU-owned decoder layers with a
+        # perfectly clean acquisition ledger
         def m(p):
             d = json.loads(p.read_text())
-            d["aggregate"]["integrity_failures"] = [
-                {"reason": "TRANSFER_INTERRUPTED"}]
+            d["cpu_owned_decoder_layers"] = 1
             p.write_text(json.dumps(d))
-        self.assertFails(self.mutate_and_run(
-            "acquisition-ledger-inferswarm01.json", m))
+        self.assertFails(self.mutate_and_run("realize-stage-1.json", m))
 
     def test_wrong_gpu_binding(self):
         def m(p):
@@ -436,3 +436,270 @@ class ReviewHardeningMutations(MutationTestCase):
             d["porcelain_empty"] = False
             p.write_text(json.dumps(d))
         self.assertFails(self.mutate_and_run("delta-audit.json", m))
+
+
+class AttemptLineageMutations(MutationTestCase):
+    """PR #127 correction: the reducer must fail closed on any attempt-
+    lineage corruption. The lineage record is evidence, never authority:
+    each mutation also mutates the underlying records where the reducer
+    cross-checks them."""
+
+    def test_missing_invalid_attempt(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["attempts"] = [a for a in d["attempts"]
+                             if a["ordering"] != 2]
+            # renumber to keep the strict 1..N sequence intact so the
+            # failure is the MISSING attempt, not the ordering
+            for i, a in enumerate(
+                    sorted(d["attempts"], key=lambda x: x["ordering"]), 1):
+                a["ordering"] = i
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("attempt-lineage.json", m),
+                         needle="frozen campaign enumeration")
+
+    def test_invalid_attempt_claims_publication(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["attempts"][0]["verified_publications"] = 1
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("attempt-lineage.json", m),
+                         needle="claims a publication")
+
+    def test_invalid_attempt_claims_correctness_observation(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["attempts"][0]["correctness_bearing_observations"] = 1
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("attempt-lineage.json", m),
+                         needle="correctness observation")
+
+    def test_invalid_attempt_claims_materialization(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["attempts"][3]["materializations"] = 1
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("attempt-lineage.json", m),
+                         needle="claims a materialization")
+
+    def test_invalid_attempt_claims_realization(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["attempts"][4]["realizations"] = 1
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("attempt-lineage.json", m),
+                         needle="claims a realization")
+
+    def test_cleanup_resets_canonical_root(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["attempts"][0]["preexisting_cold_root_state_destroyed_or_reset"] = True
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("attempt-lineage.json", m),
+                         needle="destroyed or reset")
+
+    def test_cold_condition_inode_reset(self):
+        # simulate a root delete/recreate: the lineage's observed inode
+        # no longer matches the retained prestate inode
+        def m(p):
+            d = json.loads(p.read_text())
+            d["cold_condition_summary"]["root_inode_continuity"]["roots"][
+                "inferswarm03"]["/srv/inferswarm/cache/issue117"] = 424242
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("attempt-lineage.json", m),
+                         needle="inode continuity broken")
+
+    def test_wrong_attempt_ordering(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["attempts"][0]["ordering"] = 9
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("attempt-lineage.json", m),
+                         needle="strict 1..N")
+
+    def test_valid_ledger_bound_to_wrong_attempt(self):
+        # the valid attempt's plan digest no longer matches the retained
+        # plan: the acquisition ledger cannot belong to this attempt
+        def m(p):
+            d = json.loads(p.read_text())
+            for a in d["attempts"]:
+                if a["validity"] == "VALID":
+                    a["plan_digest"] = "sha256:" + "0" * 64
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("attempt-lineage.json", m),
+                         needle="plan digest")
+
+    def test_duplicate_valid_attempt(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            dup = json.loads(json.dumps(d["attempts"][-1]))
+            dup["attempt_id"] = dup["attempt_id"] + ".mirror"
+            d["attempts"].append(dup)
+            for i, a in enumerate(d["attempts"], 1):
+                a["ordering"] = i
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("attempt-lineage.json", m),
+                         needle="exactly one VALID")
+
+    def test_all_invalid_attempts_removed(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["attempts"] = [a for a in d["attempts"]
+                             if a["validity"] == "VALID"]
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("attempt-lineage.json", m),
+                         needle="no invalid attempts")
+
+
+class RuntimeFallbackMutations(MutationTestCase):
+    """runtime_fallback_events must derive from runtime evidence, not
+    acquisition-ledger integrity."""
+
+    def test_alternate_gpu_substitution(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["per_stage"]["dense.6171f32b4413.stage-3"][
+                "observed_gpu_uuid"] = "GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0"
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "runtime-fallback-accounting.json", m))
+
+    def test_runtime_fallback_with_clean_acquisition_ledger(self):
+        # inject an actual fallback event while the acquisition ledger
+        # stays perfectly clean — the old derivation would have passed
+        def m(p):
+            d = json.loads(p.read_text())
+            d["per_stage"]["dense.6171f32b4413.stage-2"][
+                "cpu_model_state_fallback"] = True
+            d["per_stage"]["dense.6171f32b4413.stage-2"][
+                "runtime_fallback_events_stage"] = 1
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "runtime-fallback-accounting.json", m))
+
+    def test_backend_fallback(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["per_stage"]["dense.6171f32b4413.stage-1"][
+                "backend_or_compat_fallback"] = True
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "runtime-fallback-accounting.json", m))
+
+    def test_cuda_path_establishment_removed(self):
+        # no nvidia device nodes opened: CUDA execution path unproven
+        def m(p):
+            d = json.loads(p.read_text())
+            d["per_stage"]["dense.6171f32b4413.stage-1"][
+                "nvidia_device_nodes_opened"] = []
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "runtime-fallback-accounting.json", m))
+
+
+class SteadyStateMovementMutations(MutationTestCase):
+    """unplanned steady-state movement must derive from the pinned
+    strace facts, not from a stored zero."""
+
+    def test_post_finalization_cache_read(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["strace_facts"]["stages"][
+                "dense.6171f32b4413.stage-2"]["cache_root_opens"] = 1
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "steady-state-movement.json", m))
+
+    def test_post_finalization_model_state_access(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["strace_facts"]["stages"][
+                "dense.6171f32b4413.stage-3"][
+                "model_state_opens_after_last_shard_open"] = [
+                    "/srv/inferswarm/cache/issue117/objects/x"]
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "steady-state-movement.json", m))
+
+    def test_source_fetch_after_finalization(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["strace_facts"]["stages"][
+                "dense.6171f32b4413.stage-1"]["source_tree_opens"] = 1
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "steady-state-movement.json", m))
+
+    def test_stored_movement_zero_diverges(self):
+        # keep the byte accounting unchanged but claim unexplained
+        # movement exists in the stored summary fields
+        def m(p):
+            d = json.loads(p.read_text())
+            d["per_stage"]["dense.6171f32b4413.stage-1"][
+                "unexplained_movement_bytes"] = 4096
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "steady-state-movement.json", m))
+
+
+class CoordinatorTransportMutations(MutationTestCase):
+    """coordinator bulk bytes must derive from low-level transport
+    observations, not the stored summary zero."""
+
+    def test_coordinator_model_payload_rx(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["low_level_observations"]["source_server_log"][
+                "coordinator_get_requests"] = 1
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "coordinator-transport-accounting.json", m))
+
+    def test_coordinator_summary_zero_diverges(self):
+        # low-level traffic nonzero while the stored summary still says
+        # zero: the reducer must catch the disagreement
+        def m(p):
+            d = json.loads(p.read_text())
+            d["low_level_observations"]["source_server_log"][
+                "client_ip_histogram"]["10.0.0.206"] = 3
+            d["low_level_observations"]["source_server_log"][
+                "coordinator_get_requests"] = 3
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "coordinator-transport-accounting.json", m))
+
+    def test_coordinator_state_holds_payload_bytes(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["low_level_observations"]["coordinator_state_tree"][
+                "model_payload_bytes_under_state_arm_b"] = 1024
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "coordinator-transport-accounting.json", m))
+
+    def test_participant_request_identity_broken(self):
+        # the server-log client count no longer equals the 03 ledger's
+        # transport request count: the transport binding is broken
+        def m(p):
+            d = json.loads(p.read_text())
+            d["low_level_observations"]["source_server_log"][
+                "client_ip_histogram"]["10.0.0.219"] = 400
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "coordinator-transport-accounting.json", m))
+
+
+class RepositoryDependencyMutations(MutationTestCase):
+    """Section-8 conjunction: an auxiliary whole-repository file read
+    during realization is a repository dependency even when the shard
+    stays participant-sized."""
+
+    def test_auxiliary_repository_file_read(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["classified"]["other_reads"].append(
+                "/srv/models/gemma-r6/tokenizer.json")
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "read-audit-stage-2.json", m),
+            needle="whole-repository dependency")

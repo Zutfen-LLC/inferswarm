@@ -91,6 +91,35 @@ Physical flow (all evidence under `evidence/arm-b/`, reduced by
    coordinator counters re-collected post-campaign: CUDA 0, model
    bytes received/materialized 0.
 
+Attempt lineage (PR #127 correction, retention/derivation only — no
+rerun): the campaign required SIX invalid launches before the valid
+one, all individually retained with verbatim digest-bound transcript
+excerpts and host-side corroboration in
+[evidence/arm-b/attempt-lineage.json](evidence/arm-b/attempt-lineage.json):
+three pre-publication acquisition-driver failures (missing driver file
+on inferswarm03; canonical-JSON artifact_id self-identity mismatch from
+a non-canonical serialization form; a KeyError on the frozen ticket
+authorization shape) — all three died strictly before transfer begin in
+the byte-pinned #99 engine's call order — and three post-acquisition
+phase failures (assembler content-dedupe bug; realize-child interpreter
+path; realize-child report-key KeyError after full device residency).
+Every invalid attempt mechanically retains 0 verified publications, 0
+materializations, 0 realizations, and 0 correctness-bearing
+observations, and the canonical cold condition is proven preserved per
+attempt (no canonical-root destruction; the prestate root inodes are
+unchanged to this day, proving no root was ever reset). The corrected
+zero invariants are derived from new low-level accounting records:
+[runtime-fallback-accounting.json](evidence/arm-b/runtime-fallback-accounting.json)
+(requested vs observed execution substrate per stage; device-node
+proven CUDA path),
+[steady-state-movement.json](evidence/arm-b/steady-state-movement.json)
+(phase boundary = last shard openat per pinned strace log; zero
+model-state accesses after it), and
+[coordinator-transport-accounting.json](evidence/arm-b/coordinator-transport-accounting.json)
+(source-server client histogram pins every model-byte network request;
+zero coordinator clients; coordinator state tree holds only ticket
+metadata).
+
 No PREFILL/decode/generate was executed. No holdout material was used.
 Arm C/D/E were not executed. The observation awaits maintainer review;
 the PR is not merged.
@@ -289,7 +318,7 @@ inventories, per-stage assemble/realize reports, runtime-read audits, and
 the 6774474→5179c41 delta audit — reduced by
 `scripts/issue117_arm_b_evidence.py` (fails closed; derives every zero
 invariant from low-level records) and mutation-tested by
-`tests/test_issue117_arm_b_retention.py` (42 one-mutation negative
+`tests/test_issue117_arm_b_retention.py` (66 one-mutation negative
 controls + the unmutated PASS baseline). Provenance attribution: the
 cold-root prestates and coordinator counters carry explicit
 host/collector/schema stamps (on-host observations); the source-side
