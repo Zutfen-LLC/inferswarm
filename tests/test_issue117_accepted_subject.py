@@ -268,6 +268,31 @@ class IndependenceTests(unittest.TestCase):
                             accepted_subject.SubjectReconstructionError):
                         accepted_subject.accepted_v5_qualification_record(root)
 
+    def test_terminal_report_drift_fails_even_with_runtime_strings_intact(self):
+        """MANDATORY regression (PR #120 correction, P1).
+
+        Modify TERMINAL-REPORT.md while preserving every expected
+        runtime/backend version string: accepted-subject reconstruction
+        must fail specifically on BYTE DRIFT. Semantic-string presence
+        can never substitute for the declared file pin.
+        """
+        with tempfile.TemporaryDirectory() as temp:
+            root = copy_evidence_root(Path(temp))
+            path = root / ("docs/qualification/gemma4-12b-it-v5-campaign-110"
+                           "/b/TERMINAL-REPORT.md")
+            text = path.read_text()
+            # the corroboration strings must all still be present after the
+            # edit, so the failure cannot come from string absence
+            drifted = text + "\n<!-- incidental prose edit -->\n"
+            for value in ("2.11.0+cu130", "13.0", "610.57.04",
+                          "3.6.0", "0.6.17"):
+                self.assertIn(value, drifted)
+            path.write_text(drifted)
+            with self.assertRaisesRegex(
+                    accepted_subject.SubjectReconstructionError,
+                    "TERMINAL-REPORT.md.*drifted|drifted.*TERMINAL-REPORT"):
+                accepted_subject.accepted_v5_qualification_record(root)
+
     def test_byte_drift_of_any_pinned_source_fails_closed(self):
         # control 11: accepted evidence source hash drift
         with tempfile.TemporaryDirectory() as temp:

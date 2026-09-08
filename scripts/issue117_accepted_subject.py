@@ -150,6 +150,32 @@ def _load_pinned(root: Path, relative: str) -> dict[str, Any]:
     return document
 
 
+def _load_pinned_text(root: Path, relative: str) -> str:
+    """Load a pinned non-JSON evidence file, verifying its exact bytes first.
+
+    Same fail-closed contract as ``_load_pinned``: the file must exist, its
+    SHA-256 over exact bytes must equal the declared pin in
+    ``ACCEPTED_SUBJECT_EVIDENCE_FILES`` (never a semantic-string check),
+    and only then is the text decoded. A modified file that still happens
+    to contain the expected strings fails on byte drift.
+    """
+    path = root / relative
+    if not path.is_file():
+        raise SubjectReconstructionError(
+            f"accepted subject evidence missing: {relative}")
+    observed = _sha256_file(path)
+    expected = ACCEPTED_SUBJECT_EVIDENCE_FILES[relative]
+    if observed != expected:
+        raise SubjectReconstructionError(
+            f"accepted subject evidence drifted: {relative} "
+            f"expected {expected} observed {observed}")
+    try:
+        return path.read_text()
+    except UnicodeDecodeError as error:
+        raise SubjectReconstructionError(
+            f"accepted subject evidence is not text: {relative}: {error}") from error
+
+
 def _require(mapping: Mapping[str, Any], key: str, source: str) -> Any:
     if key not in mapping:
         raise SubjectReconstructionError(f"{source}: missing {key!r}")
@@ -189,8 +215,9 @@ def reconstruct_accepted_v5_subject(
         root, "docs/qualification/gemma4-12b-it-v4-campaign-97/PREFLIGHT-APPLICABILITY.json")
     adjudication = _load_pinned(
         root, "docs/qualification/gemma4-12b-it-v5-campaign-110/b/holdout-adjudication.json")
-    terminal_report_text = (root / "docs/qualification/"
-                            "gemma4-12b-it-v5-campaign-110/b/TERMINAL-REPORT.md").read_text()
+    terminal_report_text = _load_pinned_text(
+        root, "docs/qualification/gemma4-12b-it-v5-campaign-110/b/"
+              "TERMINAL-REPORT.md")
     authority_provenance = _load_pinned(
         root, "docs/implementation/r6-successor-dense-full-integration-117"
               "/evidence/checkpoint-authority-provenance.json")

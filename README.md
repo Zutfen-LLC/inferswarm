@@ -119,7 +119,10 @@ recovered: the V5 checkpoint-authority provenance (PR #119) and the accepted
 V5 qualification subject
 (`V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED`, reconstructed from
 byte-pinned historical evidence). The implementation freeze may now be
-re-evaluated; the physical preflight and fabric arms remain pending.
+re-evaluated (current state recorded additively in
+`evidence/v5-qualification-subject-recovery.json`; the accepted #118
+terminal `canonical-summary.json` is preserved byte-exact as historical
+evidence); the physical preflight and fabric arms remain pending.
 GLM-5.3-Flash / issue #13 remains a later large-model falsifier, not this
 gate.
 

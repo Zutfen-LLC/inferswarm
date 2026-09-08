@@ -105,7 +105,7 @@ EVIDENCE_FILES = {
     "warm-restart.json", "locality-mutation.json", "fencing.json",
     "negative-controls.json", "zero-invariants.json", "purity-audit.json",
     "applicability-audit.json", "qualification-record.json",
-    "canonical-summary.json", "producer-hashes.json",
+    "v5-qualification-subject-recovery.json", "producer-hashes.json",
 }
 #: committed inputs the campaign does not regenerate but the retained
 #: manifest must cover
@@ -115,7 +115,17 @@ COMMITTED_EVIDENCE_FILES = {
     "producer-delta.json",
     "checkpoint-authority-provenance.json",
     "accepted-v5-qualification-subject.json",
+    # the accepted #118 terminal record: preserved byte-for-byte as
+    # historical evidence (its ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED
+    # disposition stands as the accurate record of the #118 state);
+    # current state lives only in the additive recovery record above
+    "canonical-summary.json",
 }
+#: preservation pin: the accepted #118 canonical summary's exact bytes.
+#: The campaign never rewrites this file; a preservation regression and the
+#: retained MANIFEST enforce the pin.
+ACCEPTED_118_CANONICAL_SUMMARY_SHA256 = (
+    "26520e1608d9b12b5ac9e2667e55b9a8f5342818e3c701abaaaafb4319c57d4a")
 PURITY_TOKENS = (
     "gemma", "rtx", "3060", "3090", "bf16", "triton", "flashinfer", "cuda",
     "inferswarm00", "inferswarm01", "inferswarm03", "inferswarm04",
@@ -1263,8 +1273,37 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
             world["candidates"], capacity_model=world["capacity"])
         source_side_bytes = (world["catalog"]["source_bytes_hashed"]
                              + world["manifest"]["source_bytes_read"])
+        from issue117_accepted_subject import accepted_v5_qualification_record
+        accepted_record = accepted_v5_qualification_record(ROOT)
+        # Preservation guard: the accepted #118 canonical summary is
+        # immutable historical terminal evidence. The campaign never writes
+        # it; it must exist and be byte-exact the accepted #118 state
+        # (deletion is also refused here, not just drift).
+        committed_summary = (ROOT / AREA / "evidence" / "canonical-summary.json")
+        if not committed_summary.is_file():
+            raise AssertionError(
+                "the accepted #118 canonical-summary.json is missing; "
+                "historical terminal evidence cannot be deleted")
+        if sha(committed_summary) != ACCEPTED_118_CANONICAL_SUMMARY_SHA256:
+            raise AssertionError(
+                "the accepted #118 canonical-summary.json has drifted from "
+                "its preserved historical bytes; current state belongs in "
+                "the additive recovery record, never in a rewrite")
+        # Additive current-state record (PR #120): states the recovered
+        # provenance WITHOUT rewriting the accepted #118 terminal evidence.
         summary = {
-            "schema": "inferswarm.issue117.canonical-summary/3",
+            "schema": "inferswarm.issue117.current-gate-state/1",
+            "classification": "V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED",
+            "accepted_subject_digest":
+                accepted_record["qualification_subject_digest"],
+            "checkpoint_authority": "RECOVERED",
+            "qualification_subject": "RECOVERED",
+            "issue117_previous_freeze_disposition":
+                "ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED",
+            "current_issue117_state":
+                "ISSUE117_IMPLEMENTATION_FREEZE_PENDING_RE_EVALUATION",
+            "physical_preflight_executed": False,
+            "physical_arms_executed": False,
             "gate": "issue #117 CPU fixture campaign",
             "accepted_inferswarm_base": BASE,
             "accepted_freetoken_research_head": authority["accepted_freetoken_research_head"],
@@ -1277,7 +1316,8 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
             "qualification_record_scope": world["qualification_record"]["scope"],
             "qualification_adjudication_identity":
                 world["qualification_record"]["authority"]["terminal_adjudication_sha256"],
-            "accepted_v5_qualification_authority": "UNAVAILABLE",
+            "accepted_118_canonical_summary_sha256":
+                "sha256:" + ACCEPTED_118_CANONICAL_SUMMARY_SHA256,
             "checkpoint_identity_model": (
                 "checkpoint_authority_sha256 is a retained repeated value and "
                 "catalog_content_digest is a mechanical content identity; "
@@ -1297,7 +1337,6 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
             "fence_rejections": fence["summary"]["fence_rejections"],
             "zero_invariant_count": len(zero),
             "cpu_fixture_disposition": "ISSUE117_CPU_FIXTURE_PASS",
-            "terminal_disposition": "ISSUE117_IMPLEMENTATION_FREEZE_PENDING_RE_EVALUATION",
             "physical_arms_pending": [
                 "Arm A: V5 execution-math bridge on the fabric (192/192 FP32 row identity)",
                 "Arm B: physical cold acquisition/realization on inferswarm01/inferswarm03",
@@ -1348,7 +1387,7 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
                 ROOT / "scripts" / "issue117_planner.py", PURITY_TOKENS),
             "applicability-audit.json": audit,
             "qualification-record.json": world["qualification_record"],
-            "canonical-summary.json": summary,
+            "v5-qualification-subject-recovery.json": summary,
         }
         documents["producer-hashes.json"] = {path: sha(ROOT / path) for path in PRODUCERS}
     finally:
@@ -1383,7 +1422,8 @@ def main():
     parser.add_argument("--fixture", type=Path, default=None)
     args = parser.parse_args()
     documents = run_campaign(args.out, fixture_path=args.fixture)
-    print(documents["canonical-summary.json"]["terminal_disposition"])
+    print(documents["v5-qualification-subject-recovery.json"]
+          ["current_issue117_state"])
     return 0
 
 

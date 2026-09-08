@@ -1,13 +1,17 @@
 # R6 successor dense full integration — issue #117
 
-Status: **`ISSUE117_CPU_FIXTURE_PASS` with the qualification-subject
-blocker recovered** (`V5_CHECKPOINT_AUTHORITY_PROVENANCE_RECOVERED`,
-`V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED`; see
+Current state: **`ISSUE117_IMPLEMENTATION_FREEZE_PENDING_RE_EVALUATION`**
+(additive current-state record:
+`evidence/v5-qualification-subject-recovery.json`). Both retained-evidence
+blockers are recovered — `V5_CHECKPOINT_AUTHORITY_PROVENANCE_RECOVERED`
+(PR #119) and `V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED` (see
 [CHECKPOINT-AUTHORITY-BLOCKER.md](CHECKPOINT-AUTHORITY-BLOCKER.md) for both
-resolution sections). The implementation freeze may now be re-evaluated.
-Physical preflight and Arms A-E remain pending and were NOT executed; the
-physical gate is not unblocked until the repaired preflight itself is
-reviewed/accepted.
+resolution sections). The accepted #118 terminal evidence
+(`evidence/canonical-summary.json`, `ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`)
+is preserved byte-for-byte as the accurate historical record of the state
+when #118 was accepted; it is never rewritten. Physical preflight and Arms
+A-E remain pending and were NOT executed; the physical gate is not
+unblocked until the repaired preflight itself is reviewed/accepted.
 
 This phase proves, before any physical correctness-bearing execution, that
 the accepted architecture seams compose exactly as the #117 gate requires —
@@ -49,6 +53,13 @@ ranking work:
   embedding and shared tied-head state each stage must materialize;
 - participant-exact cold acquisition, verified materialization, warm restart,
   and planning-only locality mutation hold every acceptance zero-invariant;
+- physical preflight (P0 correction) mechanically REQUIRES the canonical
+  V5-geometry candidate to independently derive `QUALIFICATION_APPLICABLE`
+  with reason `MATCHED_ACCEPTED_QUALIFICATION_RECORD` against exactly the
+  accepted evidence-derived record: an honestly regenerated
+  `QUALIFICATION_NOT_APPLICABLE` for the V5 candidate, missing/drifted
+  subject evidence, zero or duplicate V5-geometry candidates, and foreign
+  record-id claims all fail the preflight;
 - nineteen negative controls and six fencing negatives fail closed —
   including poisoning controls proving the derived zero-invariants (fence
   counters, host-mirror/movement bytes) become nonzero when the retained

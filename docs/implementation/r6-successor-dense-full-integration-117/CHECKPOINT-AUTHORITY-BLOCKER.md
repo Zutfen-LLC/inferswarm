@@ -1,6 +1,12 @@
 # Issue #117 checkpoint-authority blocker
 
-Status: `ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`.
+Status (historical, at the time of the original blocker):
+`ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`.
+
+Current state (additive record,
+`evidence/v5-qualification-subject-recovery.json`):
+`ISSUE117_IMPLEMENTATION_FREEZE_PENDING_RE_EVALUATION` — both blockers
+below are resolved; the physical preflight and Arms A-E have NOT run.
 
 ## Finding
 
@@ -111,3 +117,34 @@ by a mutation regression). Physical applicability now evaluates candidates
 against this independently reconstructed subject through the ordinary
 generic digest-equality gate. The physical preflight has still NOT run and
 Arms A-E remain pending.
+
+## PR #120 correction: historical/current-state hierarchy
+
+The accepted #118 canonical summary
+(`evidence/canonical-summary.json`) is historical terminal evidence for
+the state that existed when PR #118 was accepted
+(`ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`, authority and subject
+provenance unavailable at that time). It is preserved byte-for-byte and
+is never rewritten by later recovery work. The current state after both
+recoveries lives only in the additive record
+`evidence/v5-qualification-subject-recovery.json`:
+
+- classification: `V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED`;
+- accepted subject digest:
+  `sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f7f1d7994ffd`;
+- checkpoint authority / qualification subject: `RECOVERED`;
+- previous #118 disposition: `ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`
+  (historical, preserved);
+- current Issue #117 state:
+  `ISSUE117_IMPLEMENTATION_FREEZE_PENDING_RE_EVALUATION`;
+- `physical_preflight_executed == false`, `physical_arms_executed == false`.
+
+The PR #120 correction also hardened the physical preflight: it now
+mechanically requires the canonical V5-geometry candidate to
+independently derive `QUALIFICATION_APPLICABLE` (reason
+`MATCHED_ACCEPTED_QUALIFICATION_RECORD`, matched record exactly
+`inferswarm.issue117.accepted-v5-qualification/1`) and verifies every
+declared accepted-subject evidence pin — including the #110 terminal
+report — before any of its data contributes to the reconstructed
+subject. An honestly regenerated `QUALIFICATION_NOT_APPLICABLE` for the
+V5 candidate fails the preflight.

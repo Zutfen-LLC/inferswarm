@@ -876,5 +876,258 @@ class SourcePossessionTests(unittest.TestCase):
         self.assertTrue(any("mechanically collected" in failure for failure in failures))
 
 
+
+
+class PreflightQualificationAuthorityTests(unittest.TestCase):
+    """P0: physical preflight REQUIRES canonical V5 applicability.
+
+    An honestly regenerated NOT_APPLICABLE verdict for the V5 candidate is
+    never a valid physical-preflight state: the V5 candidate must
+    independently derive QUALIFICATION_APPLICABLE against the accepted
+    record loaded from byte-pinned evidence, be the unique V5-geometry
+    candidate, and match exactly the accepted evidence-derived record.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.temp = tempfile.TemporaryDirectory(prefix="issue117-preflight-auth-")
+        cls.valid = build_valid_preflight(Path(cls.temp.name))
+
+    def valid_with(self, candidate_set, applicability_entries):
+        return build_valid_preflight(
+            Path(self.temp.name), candidate_set=candidate_set,
+            qualification_applicability=applicability_entries)
+
+    def _entries_with_matched_ids(self, candidate_set, matched_ids_for):
+        """Honest retained entries, with matched_record_ids recorded."""
+        derived = preflight.derive_candidate_applicability(
+            candidate_set["candidates"])
+        entries = []
+        for candidate in candidate_set["candidates"]:
+            candidate_id = candidate["candidate_id"]
+            result = derived[candidate_id]
+            entry = {"candidate_id": candidate_id,
+                     "applicability": result["status"],
+                     "reason": result["reason"]}
+            if candidate_id in matched_ids_for:
+                entry["matched_record_ids"] = matched_ids_for[candidate_id]
+            entry["record_digest"] = self_digest(
+                entry, identity_field="record_digest")
+            entries.append(entry)
+        return entries
+
+    def test_drifted_subject_evidence_fails_even_with_honest_not_applicable(self):
+        """MANDATORY negative test.
+
+        Copy the accepted subject evidence to a temp root, drift one required
+        source, regenerate applicability honestly (so the V5 candidate
+        records QUALIFICATION_NOT_APPLICABLE), and validate: the physical
+        preflight must FAIL with a qualification-authority reason that is
+        NOT merely a stale-record mismatch.
+        """
+        import shutil
+        with tempfile.TemporaryDirectory(prefix="issue117-drifted-root-") as temp:
+            root = Path(temp)
+            # minimal repo root: evidence the reconstruction reads
+            for relative in ("docs/qualification/gemma4-12b-it-v5/manifests"
+                             "/physical-subject.json",):
+                target = root / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(ROOT / relative, target)
+            # drift the (missing everywhere else) evidence: remove the
+            # v2 preflight so reconstruction cannot succeed at all
+            # (already absent) AND drift the one file we copied
+            data = json.loads((root / "docs/qualification/gemma4-12b-it-v5"
+                               "/manifests/physical-subject.json").read_text())
+            data["execution"] = "drifted execution semantics"
+            (root / "docs/qualification/gemma4-12b-it-v5/manifests"
+             / "physical-subject.json").write_text(json.dumps(data))
+            # the derivation fails closed: every candidate NOT_APPLICABLE
+            candidates = self.valid["candidate_set"]["candidates"]
+            derived = preflight.derive_candidate_applicability(
+                candidates, inferswarm_root=root)
+            v5_id = strategy.canonical_v5_candidate()["candidate_id"]
+            self.assertEqual(derived[v5_id]["status"],
+                             "QUALIFICATION_NOT_APPLICABLE")
+            # regenerate the retained records honestly from that derivation
+            entries = []
+            for candidate in candidates:
+                candidate_id = candidate["candidate_id"]
+                result = derived[candidate_id]
+                entry = {"candidate_id": candidate_id,
+                         "applicability": result["status"],
+                         "reason": result["reason"]}
+                entry["record_digest"] = self_digest(
+                    entry, identity_field="record_digest")
+                entries.append(entry)
+            candidate_set = {"candidates": candidates,
+                             "candidate_set_digest":
+                                 preflight.candidate_set_digest(candidates)}
+            honest = self.valid_with(candidate_set, entries)
+            # the retained records equal the independently derived verdicts,
+            # so no stale-record mismatch fires: the failure must come from
+            # the qualification-authority requirement itself
+            failures = preflight.validate_preflight(
+                honest, repo_root=root, checkpoint_root=root,
+                freetoken_root=root)
+            authority_failures = [failure for failure in failures
+                                  if failure.startswith("qualification authority")]
+            self.assertTrue(authority_failures, failures)
+            # and specifically: the accepted record no longer loads
+            self.assertTrue(any("does not load from byte-pinned evidence"
+                                in failure
+                                for failure in authority_failures),
+                            authority_failures)
+            # prove the failure is not merely a stale-record mismatch:
+            # no "does not equal the independently derived verdict" failure
+            # is present for the V5 candidate
+            self.assertFalse(any(
+                "does not equal the independently derived verdict" in failure
+                for failure in failures), failures)
+
+    def test_missing_subject_evidence_fails_even_with_honest_not_applicable(self):
+        """Removal (not just drift) of one required accepted-subject source."""
+        import tempfile as _tempfile
+        with _tempfile.TemporaryDirectory(prefix="issue117-missing-root-") as temp:
+            root = Path(temp)  # no evidence at all
+            candidates = self.valid["candidate_set"]["candidates"]
+            derived = preflight.derive_candidate_applicability(
+                candidates, inferswarm_root=root)
+            entries = []
+            for candidate in candidates:
+                result = derived[candidate["candidate_id"]]
+                entry = {"candidate_id": candidate["candidate_id"],
+                         "applicability": result["status"],
+                         "reason": result["reason"]}
+                entry["record_digest"] = self_digest(
+                    entry, identity_field="record_digest")
+                entries.append(entry)
+            candidate_set = {"candidates": candidates,
+                             "candidate_set_digest":
+                                 preflight.candidate_set_digest(candidates)}
+            honest = self.valid_with(candidate_set, entries)
+            failures = preflight.validate_preflight(
+                honest, repo_root=root, checkpoint_root=root,
+                freetoken_root=root)
+            self.assertTrue(any(
+                "qualification authority: the accepted V5 qualification "
+                "record does not load" in failure for failure in failures),
+                failures)
+            self.assertTrue(any(
+                "does not independently derive QUALIFICATION_APPLICABLE"
+                in failure for failure in failures), failures)
+
+    def test_zero_v5_geometry_candidates_fail(self):
+        candidate_set = candidate_set_document_cache()
+        v5_id = strategy.canonical_v5_candidate()["candidate_id"]
+        # remove the V5 candidate AND every candidate sharing its geometry
+        v5_triples = [(s["cu_id"], s["layer_start"], s["layer_end"])
+                      for s in strategy.ACCEPTED_V5_GEOMETRY]
+        candidates = [c for c in candidate_set["candidates"]
+                      if [(s["cu_id"], s["layer_start"], s["layer_end"])
+                          for s in c["stage_structure"]] != v5_triples]
+        reduced = {"candidates": candidates,
+                   "candidate_set_digest":
+                       preflight.candidate_set_digest(candidates)}
+        broken = self.valid_with(
+            reduced, derived_applicability_entries(reduced))
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
+        self.assertTrue(any(
+            "must contain exactly one candidate with the accepted V5 "
+            "physical geometry" in failure and "found 0" in failure
+            for failure in failures), failures)
+
+    def test_duplicate_v5_geometry_candidates_fail(self):
+        candidate_set = candidate_set_document_cache()
+        v5_id = strategy.canonical_v5_candidate()["candidate_id"]
+        v5 = next(c for c in candidate_set["candidates"]
+                  if c["candidate_id"] == v5_id)
+        duplicate = json.loads(json.dumps(v5))
+        duplicate["candidate_id"] = "dense.duplicatev500"
+        candidates = candidate_set["candidates"] + [duplicate]
+        doubled = {"candidates": candidates,
+                   "candidate_set_digest":
+                       preflight.candidate_set_digest(candidates)}
+        broken = self.valid_with(
+            doubled, derived_applicability_entries(doubled))
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
+        self.assertTrue(any(
+            "must contain exactly one candidate with the accepted V5 "
+            "physical geometry" in failure and "found 2" in failure
+            for failure in failures), failures)
+
+    def test_v5_candidate_matching_a_foreign_record_id_fails(self):
+        # honest derivation, but the retained V5 entry claims a foreign
+        # additional record id alongside the accepted one
+        candidate_set = candidate_set_document_cache()
+        v5_id = strategy.canonical_v5_candidate()["candidate_id"]
+        entries = self._entries_with_matched_ids(
+            candidate_set, {v5_id: [
+                "inferswarm.issue117.accepted-v5-qualification/1",
+                "foreign/extra/1"]})
+        broken = self.valid_with(candidate_set, entries)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
+        self.assertTrue(any(
+            "claims accepted qualification record(s)" in failure
+            and "foreign/extra/1" in failure
+            for failure in failures), failures)
+
+    def test_foreign_candidate_claiming_the_accepted_record_fails(self):
+        # a non-V5-geometry candidate whose stored entry claims the accepted
+        # record id without execution-equality entitlement
+        candidate_set = candidate_set_document_cache()
+        v5_id = strategy.canonical_v5_candidate()["candidate_id"]
+        other = next(c for c in candidate_set["candidates"]
+                     if c["candidate_id"] != v5_id)
+        entries = self._entries_with_matched_ids(
+            candidate_set, {other["candidate_id"]: [
+                "inferswarm.issue117.accepted-v5-qualification/1"]})
+        broken = self.valid_with(candidate_set, entries)
+        failures = preflight.validate_fixture_preflight(broken, repo_root=ROOT)
+        self.assertTrue(any(
+            "claims accepted qualification record(s)" in failure
+            and other["candidate_id"] in failure
+            for failure in failures), failures)
+
+    def test_v5_candidate_applicable_with_accepted_record_unavailable_fails(self):
+        # the stored V5 entry says APPLICABLE while the accepted record
+        # cannot be reconstructed from the (empty) evidence root
+        import tempfile as _tempfile
+        with _tempfile.TemporaryDirectory(prefix="issue117-unavail-root-") as temp:
+            root = Path(temp)
+            candidate_set = candidate_set_document_cache()
+            v5_id = strategy.canonical_v5_candidate()["candidate_id"]
+            entries = []
+            for candidate in candidate_set["candidates"]:
+                entry = {"candidate_id": candidate["candidate_id"],
+                         "applicability": "QUALIFICATION_NOT_APPLICABLE",
+                         "reason": "NO_ACCEPTED_QUALIFICATION_EVIDENCE"}
+                if candidate["candidate_id"] == v5_id:
+                    entry = {"candidate_id": v5_id,
+                             "applicability": "QUALIFICATION_APPLICABLE",
+                             "reason": "MATCHED_ACCEPTED_QUALIFICATION_RECORD",
+                             "matched_record_ids": [
+                                 "inferswarm.issue117.accepted-v5-qualification/1"]}
+                entry["record_digest"] = self_digest(
+                    entry, identity_field="record_digest")
+                entries.append(entry)
+            broken = self.valid_with(candidate_set, entries)
+            failures = preflight.validate_preflight(
+                broken, repo_root=root, checkpoint_root=root,
+                freetoken_root=root)
+            self.assertTrue(any(
+                "qualification authority: the accepted V5 qualification "
+                "record does not load" in failure for failure in failures),
+                failures)
+
+    def test_valid_preflight_now_requires_v5_authority_section(self):
+        # the honest valid record passes AND its V5 verdict carries the
+        # exact accepted record identity
+        v5_id = strategy.canonical_v5_candidate()["candidate_id"]
+        derived = preflight.derive_candidate_applicability(
+            self.valid["candidate_set"]["candidates"])
+        self.assertEqual(derived[v5_id]["matched_record_ids"],
+                         ["inferswarm.issue117.accepted-v5-qualification/1"])
+
 if __name__ == "__main__":
     unittest.main()

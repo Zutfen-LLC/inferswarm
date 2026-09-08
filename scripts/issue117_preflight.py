@@ -729,6 +729,90 @@ def _validate_preflight(document: Mapping[str, Any], *, repo_root: Path,
     if not v5_seen:
         failures.append("candidate set does not contain the accepted V5 geometry")
 
+    # Physical-preflight qualification-authority requirement (P0): the
+    # canonical V5 candidate is REQUIRED to inherit the accepted record.
+    # NOT_APPLICABLE is never a preflight success state for it: the V5
+    # candidate must (a) be the only V5-geometry candidate, (b) independently
+    # derive QUALIFICATION_APPLICABLE against the record loaded from
+    # byte-pinned evidence, (c) match exactly the accepted record with reason
+    # MATCHED_ACCEPTED_QUALIFICATION_RECORD, and (d) be the only candidate
+    # entitled to that record unless another candidate's full
+    # execution-equality subject digest is byte-equal to the accepted one.
+    from issue117_accepted_subject import (
+        ACCEPTED_RECORD_ID,
+        accepted_v5_qualification_record,
+    )
+
+    def _candidate_digest_of(candidate: Mapping[str, Any]) -> str | None:
+        from issue74_methodology import canonical_json_bytes
+        from issue99_artifact_core import digest_of_bytes
+        from issue117_subject_identity import execution_equality_subject
+        subject_result = candidate.get("qualification_subject")
+        if not isinstance(subject_result, Mapping):
+            return None
+        return digest_of_bytes(canonical_json_bytes(execution_equality_subject(
+            subject_result)))
+
+    accepted_digest: str | None = None
+    try:
+        accepted_digest = accepted_v5_qualification_record(repo_root)[
+            "qualification_subject_digest"]
+    except Exception as error:
+        failures.append(
+            "qualification authority: the accepted V5 qualification record "
+            f"does not load from byte-pinned evidence: {error}")
+    v5_geometry_candidates = [
+        candidate for candidate in candidates
+        if _stage_triples(candidate) == v5_triples]
+    if len(v5_geometry_candidates) != 1:
+        failures.append(
+            "qualification authority: the candidate set must contain exactly "
+            f"one candidate with the accepted V5 physical geometry; found "
+            f"{len(v5_geometry_candidates)}")
+    for candidate in candidates:
+        candidate_id = str(candidate.get("candidate_id"))
+        entries = stored.get(candidate_id, [])
+        if entries and entries[0].get("matched_record_ids"):
+            candidate_digest = _candidate_digest_of(candidate)
+            entitled = (
+                accepted_digest is not None
+                and candidate_id in {str(c.get("candidate_id"))
+                                     for c in v5_geometry_candidates}
+                and candidate_digest == accepted_digest)
+            extra = sorted(set(entries[0]["matched_record_ids"])
+                           - {ACCEPTED_RECORD_ID})
+            if extra or not entitled:
+                failures.append(
+                    f"qualification authority: candidate {candidate_id!r} "
+                    f"claims accepted qualification record(s) "
+                    f"{sorted(entries[0]['matched_record_ids'])} it is not "
+                    "entitled to (entitlement requires the full "
+                    "execution-equality subject digest to equal the accepted "
+                    "digest)")
+        if candidate not in v5_geometry_candidates:
+            continue
+        verdict = derived.get(candidate_id, {})
+        if verdict.get("status") != QUALIFICATION_APPLICABLE:
+            failures.append(
+                f"qualification authority: the canonical V5 candidate "
+                f"{candidate_id!r} does not independently derive "
+                f"{QUALIFICATION_APPLICABLE} (got "
+                f"{verdict.get('status')!r}; reason {verdict.get('reason')!r})")
+            continue
+        if verdict.get("reason") != "MATCHED_ACCEPTED_QUALIFICATION_RECORD":
+            failures.append(
+                f"qualification authority: the canonical V5 candidate "
+                f"{candidate_id!r} derived APPLICABLE with reason "
+                f"{verdict.get('reason')!r}, not "
+                "'MATCHED_ACCEPTED_QUALIFICATION_RECORD'")
+        if verdict.get("matched_record_ids") != [ACCEPTED_RECORD_ID]:
+            failures.append(
+                f"qualification authority: the canonical V5 candidate "
+                f"{candidate_id!r} matched record ids "
+                f"{verdict.get('matched_record_ids')!r}, not exactly "
+                f"[{ACCEPTED_RECORD_ID!r}] (foreign or additional record ids "
+                "refused)")
+
     # Applicability audit: frozen, producer-bound, and consistent with the
     # producer identity this record binds
     audit = document.get("applicability_audit", {})

@@ -35,13 +35,40 @@ class ProofCampaignTests(unittest.TestCase):
         cls.temp = tempfile.TemporaryDirectory(prefix="issue117-proof-test-")
         cls.out = Path(cls.temp.name) / "evidence"
         cls.documents = proof.run_campaign(cls.out, fixture_path=FIXTURE_PATH)
-        cls.summary = cls.documents["canonical-summary.json"]
+        cls.summary = cls.documents["v5-qualification-subject-recovery.json"]
 
-    def test_terminal_disposition_is_subject_recovery_complete(self):
-        self.assertEqual(self.summary["terminal_disposition"],
+    def test_current_state_record_is_the_additive_recovery_record(self):
+        self.assertEqual(self.summary["schema"],
+                         "inferswarm.issue117.current-gate-state/1")
+        self.assertEqual(self.summary["classification"],
+                         "V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED")
+        self.assertEqual(self.summary["checkpoint_authority"], "RECOVERED")
+        self.assertEqual(self.summary["qualification_subject"], "RECOVERED")
+        self.assertEqual(self.summary["current_issue117_state"],
                          "ISSUE117_IMPLEMENTATION_FREEZE_PENDING_RE_EVALUATION")
         self.assertEqual(self.summary["cpu_fixture_disposition"],
                          "ISSUE117_CPU_FIXTURE_PASS")
+        self.assertFalse(self.summary["physical_preflight_executed"])
+        self.assertFalse(self.summary["physical_arms_executed"])
+
+    def test_accepted_118_canonical_summary_is_preserved_byte_exact(self):
+        import hashlib
+        committed = (ROOT / proof.AREA / "evidence" / "canonical-summary.json")
+        self.assertEqual(
+            hashlib.sha256(committed.read_bytes()).hexdigest(),
+            proof.ACCEPTED_118_CANONICAL_SUMMARY_SHA256)
+        historical = json.loads(committed.read_text())
+        self.assertEqual(historical["terminal_disposition"],
+                         "ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED")
+        # the additive record names the historical disposition it supersedes
+        self.assertEqual(self.summary["issue117_previous_freeze_disposition"],
+                         historical["terminal_disposition"])
+        self.assertEqual(
+            self.summary["accepted_118_canonical_summary_sha256"],
+            "sha256:" + proof.ACCEPTED_118_CANONICAL_SUMMARY_SHA256)
+        # the campaign never writes the historical file
+        self.assertNotIn("canonical-summary.json", proof.EVIDENCE_FILES)
+        self.assertIn("canonical-summary.json", proof.COMMITTED_EVIDENCE_FILES)
 
     def test_accepted_v5_geometry_selected_through_ordinary_gates(self):
         decision = self.documents["planner-decision.json"]
@@ -207,7 +234,7 @@ class ProofCampaignTests(unittest.TestCase):
         for name in proof.EVIDENCE_FILES:
             self.assertTrue((self.out / name).is_file(), name)
         manifest = (self.out / "MANIFEST.sha256").read_text()
-        self.assertIn("canonical-summary.json", manifest)
+        self.assertIn("v5-qualification-subject-recovery.json", manifest)
         for name in proof.COMMITTED_EVIDENCE_FILES:
             self.assertIn(name, manifest)
         # the frozen methodology is hash-bound (P2)
@@ -238,6 +265,22 @@ class ProofCampaignTests(unittest.TestCase):
         self.assertEqual(producer_hashes,
                          {path: proof.sha(ROOT / path) for path in proof.PRODUCERS})
 
+    def test_future_state_updates_cannot_rewrite_the_historical_summary(self):
+        # a mutated working-tree canonical-summary must abort the campaign:
+        # current state belongs in the additive record only
+        with tempfile.TemporaryDirectory() as temp:
+            committed = (ROOT / proof.AREA / "evidence"
+                         / "canonical-summary.json")
+            original = committed.read_bytes()
+            drifted = json.loads(original)
+            drifted["terminal_disposition"] = "MUTATED"
+            try:
+                committed.write_text(json.dumps(drifted))
+                with self.assertRaisesRegex(AssertionError, "drifted"):
+                    proof.run_campaign(Path(temp), fixture_path=FIXTURE_PATH)
+            finally:
+                committed.write_bytes(original)
+
     def test_committed_documentation_synchronization_record(self):
         path = (ROOT / proof.AREA / "evidence"
                 / "documentation-synchronization.json")
@@ -245,7 +288,7 @@ class ProofCampaignTests(unittest.TestCase):
         self.assertEqual(
             record["record_digest"],
             proof.self_digest(record, identity_field="record_digest"))
-        self.assertEqual(len(record["facts_recorded"]), 10)
+        self.assertEqual(len(record["facts_recorded"]), 12)
 
 
 class CampaignFixtureBindingTests(unittest.TestCase):

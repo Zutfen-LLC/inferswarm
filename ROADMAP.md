@@ -871,7 +871,15 @@ byte-pinned historical evidence, digest
 The canonical V5 physical candidate now derives `QUALIFICATION_APPLICABLE`
 through ordinary subject-digest equality; every materially different
 candidate stays `QUALIFICATION_NOT_APPLICABLE`. The implementation freeze
-may now be re-evaluated. The physical preflight has still not run and
+may now be re-evaluated: the current state is recorded additively in
+`evidence/v5-qualification-subject-recovery.json`
+(`ISSUE117_IMPLEMENTATION_FREEZE_PENDING_RE_EVALUATION`) while the accepted
+#118 terminal evidence (`evidence/canonical-summary.json`,
+`ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`) is preserved byte-for-byte as
+historical record. The physical preflight now mechanically requires the
+canonical V5-geometry candidate to derive `QUALIFICATION_APPLICABLE`
+against exactly the accepted evidence-derived record; an honest
+`QUALIFICATION_NOT_APPLICABLE` for that candidate fails the preflight. The physical preflight has still not run and
 Arms A-E remain pending; the physical gate is not unblocked until the
 repaired preflight is itself reviewed/accepted. Implementation and evidence:
 `scripts/issue117_*.py`, `tests/test_issue117_*.py`, and the retained record
