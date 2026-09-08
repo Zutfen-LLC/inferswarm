@@ -609,13 +609,13 @@ attempt. Current execution scope is recorded below.
 Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.
 
 - **Arm A — V5 execution-math bridge observation:** [`ISSUE117_ARM_A_EXECUTION_EQUIVALENCE_PASS`](https://github.com/Zutfen-LLC/inferswarm/pull/122).
-- **Maintainer acceptance:** pending maintainer acceptance.
-- **Recorded execution authorization:** blocked — Arm B — canonical cold acquisition + realization. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
+- **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/commit/6774474941d7ce2a0252c8c1e148f8bce61a8d6d).
+- **Recorded execution authorization:** authorized — Arm B — canonical cold acquisition + realization. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
 
-- Arm A has an observed 192/192 PASS (PR #122) but is awaiting maintainer acceptance; it is not yet an accepted capability.
-- Arm B is not authorized until Arm A is reviewed and accepted/merged.
-- No Arm-A rerun is authorized by this status update.
-- Arms C-E remain sequential later gates and are not authorized.
+- Arm A is accepted at merge 6774474941d7ce2a0252c8c1e148f8bce61a8d6d with 192/192 exact FP32 consumer-row identities on the frozen public fixture.
+- Arm B is the only authorized live physical gate and must stop for maintainer review before Arm C.
+- Do not rerun accepted Arm A or the accepted physical preflight merely to begin Arm B.
+- Use the exact producer, checkpoint, Compute Unit, cold-root, Source, and zero-invariant requirements specified in issue #117.
 - No consumed h109 holdout material may be used as new evidence.
 <!-- project-status:frontier:end -->
 

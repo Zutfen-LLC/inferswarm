@@ -115,14 +115,11 @@ class ProjectStatusTests(unittest.TestCase):
                 self.assertEqual(self.run_main(root, '--write'), 1)
                 self.assertEqual(self.snapshot(root), before)
 
-    def test_observed_pass_does_not_imply_acceptance_or_authorization(self):
-        # The current record observes the Arm-A PASS but keeps acceptance
-        # pending and execution blocked; a PASS must never leak into the
-        # capabilities list or an authorization.
+    def test_current_record_accepts_arm_a_and_authorizes_arm_b(self):
         output = sync.render(self.record)['frontier']
         self.assertIn('ISSUE117_ARM_A_EXECUTION_EQUIVALENCE_PASS', output)
-        self.assertIn('pending maintainer acceptance', output)
-        self.assertIn('authorization:** blocked', output)
+        self.assertIn('Maintainer acceptance:** [accepted]', output)
+        self.assertIn('authorization:** authorized', output)
         self.assertIn('Arm B', output)
         capabilities = sync.render(self.record)['capabilities']
         self.assertNotIn('ISSUE117_ARM_A_EXECUTION_EQUIVALENCE_PASS', capabilities)
@@ -135,8 +132,8 @@ class ProjectStatusTests(unittest.TestCase):
 
     def test_missing_or_inconsistent_authority_fails(self):
         mutations = [
-            lambda r: r['frontier']['execution'].update(state='authorized'),
-            lambda r: r['frontier']['prerequisite']['acceptance'].update(state='accepted'),
+            lambda r: r['frontier']['execution'].update(reference=None),
+            lambda r: r['frontier']['prerequisite']['acceptance'].update(reference=None),
             lambda r: r['capabilities'][0]['acceptance'].update(reference=None),
             lambda r: r['capabilities'][0]['observation'].update(result=None, reference=None),
         ]
