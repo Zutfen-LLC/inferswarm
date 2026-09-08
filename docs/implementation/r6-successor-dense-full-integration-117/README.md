@@ -58,8 +58,9 @@ Physical flow (all evidence under `evidence/arm-b/`, reduced by
    `issue99_artifact_core`/`issue74_methodology` from accepted main):
    local-file transport on inferswarm01, operator-local-http Range
    transport inferswarm01→inferswarm03; verify-then-publish into
-   `/srv/inferswarm/cache/issue117` (411 verified objects / 16.5 GiB on
-   01; 218 / 8.65 GiB on 03; content-dedup'd shared state);
+   `/srv/inferswarm/cache/issue117` (411 verified objects /
+   16,535,741,313 B on 01; 218 / 9,292,214,629 B on 03;
+   content-dedup'd shared state);
 5. participant-exact materialization from verified cache objects only:
    per-participant shard + config.json under
    `/srv/inferswarm/materialized/issue117/<participant>/` with every
@@ -75,8 +76,16 @@ Physical flow (all evidence under `evidence/arm-b/`, reduced by
    realization subprocess: zero reads of
    `/srv/models/gemma-r6/model.safetensors` (or any whole-model weight
    path) after acquisition authority; all model-state reads from the
-   materialized participant path; config/tokenizer metadata reads
-   classified explicitly;
+   materialized participant path; participant config/shard metadata reads
+   are retained in the classified materialized-reads bucket (the
+   Source-tree metadata bucket is empty — no Source-tree file of any kind
+   was opened during realization). Retention note: the RAW strace logs and
+   the 671 ticket objects were deliberately NOT committed (bulk/size);
+   the retained read-audit records carry the classified per-path lists,
+   and the ledgers carry every ticket's `attempt_digest` — the raw logs
+   remain on the participant hosts under
+   `/srv/inferswarm/materialized/issue117/<participant>/realize-strace.log`;
+
 8. every mandatory zero invariant mechanically re-derived from the
    retained records by the reducer (no stored zero is authority);
    coordinator counters re-collected post-campaign: CUDA 0, model
@@ -280,8 +289,16 @@ inventories, per-stage assemble/realize reports, runtime-read audits, and
 the 6774474→5179c41 delta audit — reduced by
 `scripts/issue117_arm_b_evidence.py` (fails closed; derives every zero
 invariant from low-level records) and mutation-tested by
-`tests/test_issue117_arm_b_retention.py` (28 one-mutation negative
-controls + the unmutated PASS baseline).
+`tests/test_issue117_arm_b_retention.py` (42 one-mutation negative
+controls + the unmutated PASS baseline). Provenance attribution: the
+cold-root prestates and coordinator counters carry explicit
+host/collector/schema stamps (on-host observations); the source-side
+census/block-plan/plan/requirements were produced on inferswarm01 (the
+SOURCE host) and the ledgers/inventories/assemble/realize/read-audit
+records on their participant hosts — these files identify their host by
+participant/filename convention and the reducer's frozen geometry map
+rather than an embedded host field, which is a retained-record-only
+binding.
 
 Internal record, digest, cache-layout, and descriptor choices remain
 unfrozen and implementation details.

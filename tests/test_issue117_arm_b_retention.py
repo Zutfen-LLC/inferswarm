@@ -315,3 +315,124 @@ class Baseline(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReviewHardeningMutations(MutationTestCase):
+    """One-mutation negative controls for the review-demonstrated derivation
+    gaps (PR #127 reviews, 2026-09-08): inflated cache-hit bytes, whole-model
+    reads hidden in other buckets, resume-flag byte bypass, staging retained
+    after realization, stored coordinator counters diverging from
+    observations, materialized-object path substitution, and aggregate/event
+    reconciliation."""
+
+    def test_cache_hit_bytes_inflated(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            for e in d["events"]:
+                if e["event"] == "CACHE_HIT" and e["bytes"] > 1024:
+                    e["bytes"] += 999999
+                    break
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "acquisition-ledger-inferswarm03.json", m))
+
+    def test_whole_model_read_in_other_bucket(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["classified"]["other_reads"].append(
+                "/srv/models/gemma-r6/model.safetensors")
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("read-audit-stage-2.json", m))
+
+    def test_resume_flag_byte_bypass(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            for e in d["events"]:
+                if e["event"] == "ACQUIRED" and e["bytes"] > 1024:
+                    e["bytes"] += 4096
+                    e["resumed_from_bytes"] = 1
+                    break
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "acquisition-ledger-inferswarm01.json", m))
+
+    def test_host_staging_retained_after_realization(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["host_staging_current_bytes"] = 5000000000
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("realize-stage-1.json", m))
+
+    def test_stored_mirror_zero_diverges(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["unexplained_persistent_host_mirror_bytes"] = 8192
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("realize-stage-2.json", m))
+
+    def test_coordinator_counter_diverges_from_observations(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["coordinator_cuda_initialized"] = 0  # stays zero...
+            d["cuda_observations"]["dev_nvidia_nodes"] = ["nvidia0"]
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("coordinator-counters.json", m))
+
+    def test_coordinator_weight_roots_diverge(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["weight_roots_bytes"]["/srv/inferswarm/cache/issue117"] = 1024
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("coordinator-counters.json", m))
+
+    def test_materialized_object_path_substitution(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["objects_written"][0]["object"] = \
+                "/srv/models/gemma-r6/model.safetensors"
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("assemble-stage-1.json", m))
+
+    def test_aggregate_acquired_bytes_diverge(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["aggregate"]["newly_acquired_bytes"] += 512
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "acquisition-ledger-inferswarm03.json", m))
+
+    def test_aggregate_cache_hit_bytes_diverge(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["aggregate"]["verified_cache_hit_bytes"] += 512
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "acquisition-ledger-inferswarm01.json", m))
+
+    def test_read_audit_counter_diverges(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["unexplained_full_model_dependency"] = 1
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("read-audit-stage-3.json", m))
+
+    def test_delta_requirements_digest_drift(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["deltas"][0]["participant_requirements_digest"] = "sha256:" + "7" * 64
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("coordinator-deltas.json", m))
+
+    def test_assemble_execution_unit_drift(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["execution_unit_id"] = "inferswarm03/gpu-1"
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("assemble-stage-2.json", m))
+
+    def test_dirty_tree_in_delta_audit(self):
+        def m(p):
+            d = json.loads(p.read_text())
+            d["porcelain_empty"] = False
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("delta-audit.json", m))

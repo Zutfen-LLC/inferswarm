@@ -50,6 +50,17 @@ EXPECTED_GEOMETRY = {
                                    "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176"),
 }
 GEMMA_WEIGHT_PATH = "/srv/models/gemma-r6/model.safetensors"
+GEMMA_ROOT = "/srv/models/gemma-r6/"
+
+
+def _is_whole_model_weight_path(path):
+    """True for any whole-model weight object under the Source tree (the
+    canonical weights file itself; sharded variants included by pattern)."""
+    if not isinstance(path, str):
+        return False
+    if path == GEMMA_WEIGHT_PATH:
+        return True
+    return path.startswith(GEMMA_ROOT) and path.endswith(".safetensors")
 
 
 def _load(name):
@@ -84,8 +95,15 @@ def main():
         failures.append("delta audit not bound to the accepted starting main")
     if delta["head"] != ARM_B_STARTING_MAIN:
         failures.append("delta audit head drift")
+    if ACCEPTED_ARM_A_MERGE not in " ".join(delta["delta_commits"]) + \
+            delta.get("audited_range", ACCEPTED_ARM_A_MERGE + ".." + ARM_B_STARTING_MAIN):
+        failures.append("delta audit range not anchored at the accepted Arm-A merge")
+    if delta.get("arm_a_merge_ancestor") not in (None, "0"):
+        failures.append("delta audit ancestor field drift")
     if "neutral" not in delta["delta_classification"]:
         failures.append("delta audit not classified neutral")
+    if not delta["porcelain_empty"]:
+        failures.append("delta audit recorded a dirty tree")
 
     # -- cold prestate ----------------------------------------------------
     for host in ("inferswarm01", "inferswarm03"):
@@ -131,45 +149,84 @@ def main():
     deltas = _load("coordinator-deltas.json")["deltas"]
     if len(deltas) != 3:
         failures.append("delta count drift")
+    delta_digests = {d["participant_id"]: d["participant_requirements_digest"]
+                     for d in deltas}
+    for pid, p in by_pid.items():
+        if delta_digests.get(pid) != p["participant_requirements_digest"]:
+            failures.append(f"{pid} coordinator delta requirements digest drift")
     for d in deltas:
         if d["local_artifact_ids"]:
             failures.append(f"{d['participant_id']} delta had local objects at cold start")
+        if d["required_artifact_ids"] != sorted(
+                r["artifact_id"] for r in by_pid[d["participant_id"]]["required_artifacts"]):
+            failures.append(f"{d['participant_id']} delta required set drift")
 
     # -- acquisition ledgers ----------------------------------------------
+    # Per-event byte identity is enforced for BOTH outcomes: an ACQUIRED
+    # event must transfer exactly length minus any resumed prefix, and a
+    # CACHE_HIT must claim exactly the record length. Aggregate fields are
+    # reconciled against the event-derived sums (never trusted alone).
+    records_by_pid = {pid: {r["artifact_id"]: r for r in p["required_artifacts"]}
+                      for pid, p in by_pid.items()}
     acquired_by_participant = {}
     cache_hit_by_participant = {}
+    resumed_total_by_host = {}
     for host in ("inferswarm01", "inferswarm03"):
         ledger = _load(f"acquisition-ledger-{host}.json")
         agg = ledger["aggregate"]
+        acquired_sum = cache_sum = resumed_sum = 0
         for event in ledger["events"]:
             if event["event"] == "ACQUIRED":
                 if event["source_id"] != "issue117-origin":
                     failures.append(f"{host} unauthorized source {event['source_id']}")
                 acquired_by_participant.setdefault(event["participant_id"], 0)
                 acquired_by_participant[event["participant_id"]] += event["bytes"]
+                acquired_sum += event["bytes"]
+                resumed_sum += int(event.get("resumed_from_bytes") or 0)
             elif event["event"] == "CACHE_HIT":
                 cache_hit_by_participant.setdefault(event["participant_id"], 0)
                 cache_hit_by_participant[event["participant_id"]] += event["bytes"]
+                cache_sum += event["bytes"]
+            else:
+                continue
+            pid = event["participant_id"]
+            rec = records_by_pid[pid].get(event["artifact_id"])
+            if rec is None:
+                failures.append(
+                    f"{host} event artifact outside plan: {event['artifact_id'][:20]}")
+                continue
+            resumed = int(event.get("resumed_from_bytes") or 0)
+            if resumed < 0 or event["bytes"] + resumed != rec["length"]:
+                failures.append(
+                    f"{host} byte identity mismatch for {event['artifact_id'][:20]}: "
+                    f"{event['bytes']}+{resumed} != {rec['length']}")
+        resumed_total_by_host[host] = resumed_sum
         if agg["integrity_failures"]:
             failures.append(f"{host} integrity failures present")
         if agg["unrelated_model_bytes_acquired_for_realization"] != 0:
             failures.append(f"{host} unrelated model bytes acquired")
         if agg["unexplained_full_model_dependency"] != 0:
             failures.append(f"{host} ledger full-model dependency")
-    # every acquired byte maps to a required artifact of that participant
-    records_by_pid = {pid: {r["artifact_id"]: r for r in p["required_artifacts"]}
-                      for pid, p in by_pid.items()}
-    for host in ("inferswarm01", "inferswarm03"):
-        ledger = _load(f"acquisition-ledger-{host}.json")
-        for event in ledger["events"]:
-            if event["event"] != "ACQUIRED":
-                continue
-            pid = event["participant_id"]
-            rec = records_by_pid[pid].get(event["artifact_id"])
-            if rec is None:
-                failures.append(f"{host} acquired artifact outside plan: {event['artifact_id'][:20]}")
-            elif rec["length"] != event["bytes"] and not event.get("resumed_from_bytes"):
-                failures.append(f"{host} byte mismatch for {event['artifact_id'][:20]}")
+        if agg["newly_acquired_bytes"] != acquired_sum:
+            failures.append(
+                f"{host} aggregate newly_acquired_bytes {agg['newly_acquired_bytes']}"
+                f" != event sum {acquired_sum}")
+        if agg["verified_cache_hit_bytes"] != cache_sum:
+            failures.append(
+                f"{host} aggregate cache-hit bytes {agg['verified_cache_hit_bytes']}"
+                f" != event sum {cache_sum}")
+        if agg["resume_reused_prefix_bytes"] != resumed_sum:
+            failures.append(
+                f"{host} aggregate resume bytes {agg['resume_reused_prefix_bytes']}"
+                f" != event sum {resumed_sum}")
+    # per-participant byte equation: required == acquired + cache hits
+    for pid, p in by_pid.items():
+        observed = (acquired_by_participant.get(pid, 0)
+                    + cache_hit_by_participant.get(pid, 0))
+        if observed != p["required_artifact_bytes"]:
+            failures.append(
+                f"{pid} byte equation: acquired+cache {observed} != required "
+                f"{p['required_artifact_bytes']}")
 
     # every required artifact has an acquisition-ledger outcome event
     seen_outcomes = set()
@@ -219,24 +276,45 @@ def main():
         # exact byte identity: realized bytes == assembled tensor bytes
         if rea["fetched_bytes"] != asm["tensor_bytes"]:
             failures.append(f"{stage} fetched {rea['fetched_bytes']} != assembled {asm['tensor_bytes']}")
-        # CU binding
+        # CU binding (plan-side execution unit and observed runtime identity)
         cu, gpu_uuid = EXPECTED_GEOMETRY[pid]
-        if rea["execution_unit_id"] if False else rea["gpu_uuid"] != gpu_uuid:
+        if by_pid[pid]["execution_unit_id"] != cu:
+            failures.append(f"{stage} plan execution unit drift")
+        if asm["execution_unit_id"] != cu:
+            failures.append(f"{stage} assemble execution unit drift")
+        if rea["gpu_uuid"] != gpu_uuid or rea["observed_gpu_uuid"] != gpu_uuid:
             failures.append(f"{stage} realized on wrong GPU")
-        if rea["observed_gpu_uuid"] != gpu_uuid:
-            failures.append(f"{stage} observed GPU UUID drift")
-        # host mirror
+        # host mirror: derived from the runtime's own low-level staging
+        # fields AND cross-checked against its stored summary zero
         if rea["persistent_host_model_bytes"] != 0:
             unexplained_persistent_host_mirror_bytes += rea["persistent_host_model_bytes"]
         if rea["host_resident_tensor_keys"]:
             failures.append(f"{stage} host-resident weight tensors remain")
-        # runtime-read audit
-        unexplained_full_model_dependency += audit["unexplained_full_model_dependency"]
-        if GEMMA_WEIGHT_PATH in audit.get("classified", {}).get(
-                "gemma_whole_model_reads", []):
-            failures.append(f"{stage} read the whole-model weights during realization")
+        if rea.get("host_staging_current_bytes", 0) != 0:
+            failures.append(f"{stage} reader retained host staging after realization")
+        if rea.get("unexplained_persistent_host_mirror_bytes", 0) != \
+                rea["persistent_host_model_bytes"]:
+            failures.append(f"{stage} stored mirror zero disagrees with accounting")
+        # runtime-read audit: derive whole-model-weight reads from the
+        # retained per-path classification over EVERY bucket (the audit's
+        # own stored counter is only a cross-check, never the authority)
+        whole_model_reads = []
+        for bucket, contents in audit.get("classified", {}).items():
+            if isinstance(contents, list):
+                whole_model_reads.extend(
+                    p for p in contents if _is_whole_model_weight_path(p))
+        if whole_model_reads:
+            unexplained_full_model_dependency += 1
+            failures.append(
+                f"{stage} read whole-model weights during realization: "
+                f"{sorted(set(whole_model_reads))[:3]}")
+        if audit["unexplained_full_model_dependency"] != (1 if whole_model_reads else 0):
+            failures.append(
+                f"{stage} read-audit stored counter disagrees with retained paths")
         # whole-repository dependency: the materialized tree must contain
-        # exactly the participant shard + config, never a full repository
+        # exactly the participant shard + config, never a full repository,
+        # and every written object must be a relative name under the
+        # participant materialization root (no Source-tree path aliasing)
         shard_ok = any(o["object"].endswith(".safetensors")
                        for o in asm["objects_written"])
         total_shard = sum(o["bytes"] for o in asm["objects_written"])
@@ -244,17 +322,37 @@ def main():
             participant_requires_complete_model_repository += 1
         if not shard_ok:
             failures.append(f"{stage} no shard object written")
+        for o in asm["objects_written"]:
+            name = o["object"]
+            if name.startswith("/") or name.startswith("..") or "/" in name.replace(
+                    "armb-participant.safetensors", "") and GEMMA_ROOT in name:
+                failures.append(f"{stage} materialized object escapes root: {name}")
+            if name.startswith(GEMMA_ROOT):
+                failures.append(f"{stage} materialized object aliases the Source tree: {name}")
         # no unplanned post-materialization movement beyond assemble writes
         if len(asm["used_artifact_ids"]) != len(by_pid[pid]["required_artifacts"]):
             failures.append(f"{stage} used artifacts != required artifacts")
 
     # -- coordinator metadata-only ------------------------------------------
+    # Counters are DERIVED from the retained low-level observations, never
+    # taken from the stored summary values alone.
     counters = _load("coordinator-counters.json")
-    coordinator_cuda_initialized = counters["coordinator_cuda_initialized"]
-    coordinator_model_weight_bytes_received = counters[
-        "coordinator_model_weight_bytes_received"]
-    coordinator_model_weight_bytes_materialized = counters[
-        "coordinator_model_weight_bytes_materialized"]
+    cuda_obs = counters["cuda_observations"]
+    coordinator_cuda_initialized = int(
+        bool(cuda_obs["dev_nvidia_nodes"]) or cuda_obs["nvidia_smi_present"]
+        or cuda_obs["processes_with_cuda_device_fds"]
+        or cuda_obs["coordinator_venv_torch_importable"])
+    if coordinator_cuda_initialized != counters["coordinator_cuda_initialized"]:
+        failures.append("coordinator stored cuda counter disagrees with observations")
+    weight_roots = counters["weight_roots_bytes"]
+    coordinator_model_weight_bytes_received = weight_roots[
+        "/srv/inferswarm/cache/issue117"]
+    coordinator_model_weight_bytes_materialized = (
+        weight_roots["/srv/inferswarm/materialized/issue117"]
+        + weight_roots["/srv/inferswarm/models"])
+    if counters["coordinator_model_weight_bytes_received"] != coordinator_model_weight_bytes_received \
+            or counters["coordinator_model_weight_bytes_materialized"] != coordinator_model_weight_bytes_materialized:
+        failures.append("coordinator stored weight counters disagree with roots")
     coordinator_bulk_artifact_bytes_observed = coord[
         "coordinator_bulk_artifact_bytes_observed"]
 
