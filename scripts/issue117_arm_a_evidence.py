@@ -14,6 +14,22 @@ raw-row-unbound / wrong-checkpoint / wrong-topology / dirty-or-wrong-checkout
 evidence, and on any stored-boolean/aggregate that disagrees with the
 re-derived value.
 
+TRUST-BOUNDARY SCOPE (documented per the trust-boundary review): the
+retained Arm-A evidence set is self-contained in this repository. The
+reducer verifies INTERNAL consistency of the retained records against each
+other and against the SHA-hardcoded anchors in this module (preserved
+physical-preflight / #118 canonical-summary bytes, fixture corpus, producer
+and checkpoint identities); it cannot verify recorded row SHAs against the
+physical FP32 bytes, which are deliberately not retained in git. A
+repo-committing adversary able to mutate every retained artifact
+consistently (including MANIFEST.sha256) could therefore fabricate an
+internally-consistent PASS; the anchors against that adversary are the
+SHA constants below and the immutable git history of the original
+observation commits (2e5a68e / 140f6ef), against which any post-hoc
+forgery remains diffable. This module's contract is independent
+re-derivation from retained records, not tamper-evidence against a
+malicious committer.
+
 CPU-pure (stdlib only). No model execution, ever.
 """
 
@@ -149,9 +165,9 @@ def _check_paired_records(keyspace: set[tuple[str, int]]) -> dict[str, int]:
                 prefix_len += 1
             if row["control_prefix_sha256"] != row["integrated_prefix_sha256"]:
                 prefix_sha += 1
+            if row["control_emitted_token"] != row["integrated_emitted_token"]:
+                token += 1
             if label == "candidate_rows":
-                if row["control_emitted_token"] != row["integrated_emitted_token"]:
-                    token += 1
                 if row["control_argmax_rule"] != row["integrated_argmax_rule"]:
                     rule += 1
                 if row["control_rule_proof"] != row["integrated_rule_proof"]:
@@ -322,6 +338,14 @@ def _check_prerun_revalidation() -> None:
         raise EvidenceError("pre-run revalidation: checkpoint size mismatch")
     if set(checkpoint.get("hosts_validated", [])) != {"inferswarm01", "inferswarm03", "inferswarm04"}:
         raise EvidenceError("pre-run revalidation: checkpoint host set mismatch")
+    if "regular file" not in str(checkpoint.get("file_kind", "")):
+        raise EvidenceError("pre-run revalidation: checkpoint not a plain regular file")
+    cold = reval.get("arm_b_cold_roots", {})
+    if set(cold.get("roots", [])) != {
+            "/srv/inferswarm/cache/issue117", "/srv/inferswarm/materialized/issue117"}:
+        raise EvidenceError("pre-run revalidation: Arm-B cold-root set mismatch")
+    if "EMPTY" not in str(cold.get("pre_arm_a_state", "")):
+        raise EvidenceError("pre-run revalidation: Arm-B cold roots not empty pre-execution")
 
 
 def _check_preserved_history() -> None:
