@@ -23,25 +23,17 @@ for the #117 integration live (the strategy/constrains side of the accepted
    waist (``GemmaDenseStrategy``) consumes the resulting small immutable
    descriptor manifest and has no byte-access path at all.
 5. **Two explicitly separated checkpoint identities.** The catalog carries
-   ``checkpoint_authority_sha256`` — the accepted external/model checkpoint
-   identity (for canonical Gemma exactly the retained accepted value, bound
-   to the byte-pinned retained V5 authority evidence, never an unchecked
-   config field) — and ``catalog_content_digest``, a mechanically derived
-   digest over the exact repository/catalog content. The former is what the
-   accepted qualification evidence binds for execution equality; the latter
-   is the drift binding of the exact bytes this machinery observed. Neither
-   may masquerade as the other.
+   the retained repeated ``checkpoint_authority_sha256`` value and
+   ``catalog_content_digest``, a mechanically derived digest over the exact
+   repository/catalog content. Neither value is an independent
+   byte-to-checkpoint derivation. Neither may masquerade as the other.
 6. **Qualification subjects bound to catalog/plan identity**: a candidate's
    qualification subject is derived mechanically from the exact
    catalog/plan that would be executed — never from parallel constants.
    Constructing a strategy whose subject disagrees with its catalog fails
-   closed, so a synthetic fixture catalog cannot produce (or inherit from)
-   the accepted Gemma qualification subject. The accepted V5 subject is
-   itself constructed through the same machinery from a canonical
-   authority-descriptor catalog (``canonical_authority_catalog``), whose
-   authority is loaded from the byte-pinned retained evidence files — so
-   the accepted qualification record is matchable by exactly the canonical
-   candidate the real strategy/catalog machinery produces.
+   closed. A synthetic fixture catalog cannot inherit physical qualification.
+   The V5-shaped descriptor catalog is a candidate-construction diagnostic.
+   It does not reconstruct an accepted V5 qualification subject.
 
 The generic planner (``issue117_planner``) must never import this module.
 
@@ -94,16 +86,12 @@ TOKENIZER_META_OBJECT = "tokenizer-metadata.json"
 REQUIRED_SUBJECT_BACKEND_KEYS = (
     "torch", "cuda_runtime", "nvidia_driver", "triton", "flashinfer")
 
-#: The accepted V5 physical subject identity (retained accepted evidence; the
-#: authority constants the accepted qualification record binds).
-#: ``checkpoint_authority_sha256`` is the accepted external/model checkpoint
-#: identity from the retained V5 manifests — the identity execution equality
-#: is bound to. It is cross-verified against the byte-pinned retained
-#: authority evidence files (see ``canonical_authority_catalog`` /
-#: ``accepted_checkpoint_authority_from_evidence``); a catalog may only carry
-#: it through that evidence-backed binding, never as an unchecked config
-#: field. This dict is an authority record — it is never injectable into a
-#: strategy whose catalog does not mechanically carry the same identity.
+#: Retained V5-shaped identity values for fixture construction. The repeated
+#: ``checkpoint_authority_sha256`` value is not an independent
+#: byte-to-checkpoint derivation. A catalog can carry it only through the
+#: retained evidence reader, never as an unchecked config field. This
+#: prevents simple config injection. It does not establish qualification
+#: authority for observed checkpoint bytes.
 MODEL_SUBJECT: dict[str, Any] = {
     "model_id": "google/gemma-4-12B-it",
     "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
@@ -170,8 +158,8 @@ SERVING_POLICY = {
     "serving_eligible_roles": ("serving-candidate",),
 }
 
-#: The exact accepted V5 candidate geometry (retained accepted evidence; a
-#: historical constant, not a planner input).
+#: The retained V5 geometry. It is a historical fixture constant, not a
+#: planner input or physical qualification authority.
 ACCEPTED_V5_GEOMETRY: tuple[dict[str, Any], ...] = (
     {"cu_id": "inferswarm01/gpu-0", "layer_start": 0, "layer_end": 16},
     {"cu_id": "inferswarm01/gpu-1", "layer_start": 16, "layer_end": 32},
@@ -319,9 +307,10 @@ def _load_authority_attestation(root: Path) -> dict[str, Any]:
 def _validate_authority_attestation(root: Path, attestation: Mapping[str, Any],
                                     catalog: Mapping[str, Any], *,
                                     inferswarm_root: Path | None) -> None:
-    """Prove the attestation against the observed repository and the retained
-    accepted evidence. This is the evidence-backed binding between the
-    observed bytes and the external checkpoint authority identity.
+    """Validate attestation consistency with observed repository bytes.
+
+    This check detects attestation drift. It does not independently bind the
+    observed bytes to the retained checkpoint authority value.
     """
     if attestation["model_id"] != catalog["model"]["model_id"] \
             or attestation["revision"] != catalog["model"]["revision"]:

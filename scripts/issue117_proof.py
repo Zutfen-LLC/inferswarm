@@ -2,12 +2,12 @@
 """Produce the isolated issue #117 CPU integration-freeze evidence.
 
 This campaign proves, on a Gemma-shaped synthetic checkpoint at fixture
-scale, that the accepted seams compose exactly as the #117 gate requires:
+scale, that the retained seams compose as the #117 fixture gate requires:
 
     frozen strategy candidates -> generic admission planner with the
-    qualification-applicability barrier -> the accepted V5 candidate is the
-    only admissible correctness-bearing candidate, selected through ordinary
-    feasibility/policy/evidence gates -> plan-driven participant-exact cold
+    qualification-applicability barrier -> the V5-shaped fixture candidate is
+    selected through ordinary fixture-only feasibility, policy, and evidence
+    gates -> plan-driven participant-exact cold
     acquisition from the one authorized Source into empty dedicated caches ->
     verified materialization -> reconciliation -> warm restart with zero
     reacquired model-weight bytes -> planning-only locality mutation -> all
@@ -121,7 +121,7 @@ PURITY_TOKENS = (
 #: with its embedding/shared-head state needs 98,368 bytes (42.9% of the
 #: 229,440-byte synthetic checkpoint) and a 24-layer stage needs 131,072
 #: bytes (57.1%), so any 3060-class fraction in [42.9%, 57.1%) makes the
-#: accepted V5 candidate feasible and every 24-layer stage infeasible; 0.50
+#: V5-shaped fixture candidate feasible and every 24-layer stage infeasible; 0.50
 #: sits inside that window. A whole-checkpoint single stage (229,440 unique
 #: bytes) fits only the reference 3090-class CU at 1.06. Physical capacity
 #: truth is re-frozen by the physical preflight; this is a labeled fixture
@@ -1184,7 +1184,7 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
         decision = cold_planner.rank()
         accounting = cold_planner.account_transfer_events()
         require(decision["selected_candidate_id"] == world["v5"]["candidate_id"],
-                "the accepted V5 candidate must win through the ordinary gates")
+                "the V5-shaped fixture candidate must win through the ordinary gates")
 
         cold = cold_acquisition(world)
         witnesses = materialize_and_reconcile(world, coordinator=world["coordinator"],

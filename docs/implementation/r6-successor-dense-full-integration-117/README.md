@@ -44,8 +44,8 @@ ranking work:
 - eighteen negative controls and six fencing negatives fail closed —
   including poisoning controls proving the derived zero-invariants (fence
   counters, host-mirror/movement bytes) become nonzero when the retained
-  records are forged, and the canonical-match control proving the accepted
-  V5 record matches exactly the machinery-produced canonical candidate.
+  records are forged, and the authority-unavailable control proving retained
+  evidence cannot reconstruct an accepted V5 qualification subject.
 
 | CPU fixture accounting | Value |
 |---|---:|
