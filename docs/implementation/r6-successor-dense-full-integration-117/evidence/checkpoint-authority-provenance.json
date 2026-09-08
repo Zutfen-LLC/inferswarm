@@ -1,0 +1,116 @@
+{
+  "schema": "inferswarm.issue117.checkpoint-authority-provenance/1",
+  "status": "RECOVERED",
+  "recovered_by": "forensic investigation commissioned by the maintainer, 2026-09-07",
+  "classification": "V5_CHECKPOINT_AUTHORITY_PROVENANCE_RECOVERED",
+  "subject": {
+    "model_id": "google/gemma-4-12B-it",
+    "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+    "checkpoint_authority_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d"
+  },
+  "derivation_rule": {
+    "algorithm": "sha256",
+    "input": "the complete byte stream of the single file 'model.safetensors' at the root of the checkpoint repository",
+    "path_convention": "checkpoint-root-relative filename, no path normalization, no concatenation, no manifest construction, no directory-tree digest",
+    "historical_statement": "checkpoint sha256 == sha256(model.safetensors bytes)",
+    "note": "The value is NOT a whole-repository digest, NOT a canonical-manifest digest, and NOT an HF commit hash. It is exactly the LFS oid (sha256) of model.safetensors at revision 707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7."
+  },
+  "independent_trust_anchors": {
+    "huggingface_remote_authority": {
+      "method": "live hub tree API for the pinned revision (fetched 2026-09-07)",
+      "url": "https://huggingface.co/api/models/google/gemma-4-12B-it/tree/707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+      "observed": {
+        "model.safetensors": {
+          "type": "file",
+          "size": 23919549408,
+          "git_blob_oid": "85441e32a8ab9f7cf6b2ed9b2f2a70e9b59dbb0b",
+          "lfs_oid": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+          "xet_hash": "995e4fbffbb9eebd186cd702cedbc2a63c1b268037b50c69254320ecaffadc70"
+        },
+        "tokenizer.json": {
+          "lfs_oid": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+          "size": 32169626,
+          "git_blob_oid": "1ff9f3e3439a939b971f9919e821bf87e835a503"
+        }
+      },
+      "trust": "independent of all local state: the pinned revision is server-side immutable (HF revisions are content-addressed commits); its LFS pointer names sha256 5a84... as the object identity"
+    },
+    "hf_local_cache_authority": {
+      "host": "inferswarm01",
+      "tree_manifest": "/srv/models/hf_cache/hub/models--google--gemma-4-12B-it/trees/707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7.json",
+      "tree_manifest_sha256": "cc4e281f2586808e5f52ba90b15589448eeaa53ac5bed80e032cf6de56239efc",
+      "snapshot_dir": "/srv/models/hf_cache/hub/models--google--gemma-4-12B-it/snapshots/707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+      "binding": "snapshot/model.safetensors -> ../../blobs/5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d (hash-named blob, the hub's own content-addressing)",
+      "tree_manifest_model_entry": {
+        "size": 23919549408,
+        "blob_id": "85441e32a8ab9f7cf6b2ed9b2f2a70e9b59dbb0b",
+        "lfs_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+        "lfs_size": 23919549408,
+        "xet_hash": "995e4fbffbb9eebd186cd702cedbc2a63c1b268037b50c69254320ecaffadc70"
+      },
+      "download_log": "/srv/models/hf_cache/xet/logs/xet_20260902T175506851-0400_9634.log",
+      "download_log_final_record": {
+        "message": "File reconstruction completed successfully",
+        "file_hash": "995e4fbffbb9eebd186cd702cedbc2a63c1b268037b50c69254320ecaffadc70",
+        "total_bytes_scheduled": 23919549408,
+        "timestamp": "2026-09-02T22:00:19.245350Z"
+      },
+      "acquisition_command": "HF_HOME=/srv/models/hf_cache snapshot_download(\"google/gemma-4-12B-it\", revision=\"707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7\") on inferswarm01, 2026-09-02"
+    },
+    "first_local_derivation": {
+      "when": "2026-09-02 (R6/issue-#65 census)",
+      "host": "inferswarm01",
+      "command": "cd /srv/models/hf_cache/hub/models--google--gemma-4-12B-it/snapshots/707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7 && sha256sum model.safetensors config.json",
+      "result": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d  model.safetensors / 478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9  config.json",
+      "first_committed_record": "FreeToken a68ed8dbe490fef6726d1df65593faf9d73011d9 'R6: freeze METHODOLOGY before canonical results' (docs/inferswarm_r6/METHODOLOGY.md): 'google/gemma-4-12B-it @ 707f0a3b..., text-only, native BF16 single safetensors, sha256 5a84cb31...ff18d'"
+    }
+  },
+  "fabric_verification_2026_09_07": {
+    "method": "sudo -n sha256sum on each node, full 23,919,549,408-byte read, timestamps recorded around each hash",
+    "nodes": {
+      "inferswarm01": {
+        "path": "/srv/models/gemma-r6/model.safetensors",
+        "size_bytes": 23919549408,
+        "inode": 2359303,
+        "mtime": "2026-09-02 18:00:11 -0400",
+        "sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+        "hash_window": "2026-09-07T21:56:28.183880460-04:00 .. 2026-09-07T21:58:11.799662206-04:00"
+      },
+      "inferswarm03": {
+        "path": "/srv/models/gemma-r6/model.safetensors",
+        "size_bytes": 23919549408,
+        "inode": 42467335,
+        "mtime": "2026-09-02 18:00:11 -0400",
+        "sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+        "hash_window": "2026-09-07T21:58:12.138910217-04:00 .. 2026-09-07T21:59:07.442203661-04:00"
+      },
+      "inferswarm04": {
+        "path": "/srv/models/gemma-r6/model.safetensors",
+        "size_bytes": 23919549408,
+        "inode": 12189703,
+        "mtime": "2026-09-02 18:00:11 -0400",
+        "sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+        "hash_window": "2026-09-07T21:59:07.772236098-04:00 .. 2026-09-07T22:00:09.353076981-04:00"
+      }
+    },
+    "byte_identical_across_nodes": true,
+    "supplemental_file_hashes_all_nodes_equal": {
+      "config.json": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9",
+      "tokenizer.json": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+      "tokenizer_config.json": "a62f4e85a47c0c136edaaa3a4f591fd6783717299a9def47e5ad03a49f6a5eb9",
+      "generation_config.json": "a8349d9bd64cc5841297fcb5002f0fdc4749c473c8f1b10ea337f9ce4ee7014e"
+    }
+  },
+  "recovered_object_manifest": [
+    {"path": ".gitattributes", "size": 1624, "git_blob_oid": "1763cfcfbcad0bb3448a815389cf87a1246ab0b4", "sha256": "c9aff01d02fd1b5f365056bc5360431b6fef35c3dd8b22bffa9cc27361b22062"},
+    {"path": "README.md", "size": 28484, "git_blob_oid": "99f6f1ce7651f7c7436612f82038ddc7258542c1", "sha256": "04a06469e3d83b941eaa776a3647b8690b5a7cc5c833af2381e5345bb1bb45c0"},
+    {"path": "chat_template.jinja", "size": 18683, "git_blob_oid": "4741bf6e4132ba23a5537f9d6e74e9a6d613d7cd", "sha256": "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4"},
+    {"path": "config.json", "size": 4423, "git_blob_oid": "324c841b79e36f42e27f08c572c327533469c859", "sha256": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9"},
+    {"path": "generation_config.json", "size": 260, "git_blob_oid": "d09dccf1b9aee197ef72a6e88a1ceff74b842ff3", "sha256": "a8349d9bd64cc5841297fcb5002f0fdc4749c473c8f1b10ea337f9ce4ee7014e"},
+    {"path": "model.safetensors", "size": 23919549408, "git_blob_oid": "lfs-pointer 85441e32a8ab9f7cf6b2ed9b2f2a70e9b59dbb0b", "lfs_oid_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d", "xet_hash": "995e4fbffbb9eebd186cd702cedbc2a63c1b268037b50c69254320ecaffadc70"},
+    {"path": "processor_config.json", "size": 1382, "git_blob_oid": "b889adcd78015bf5a0139438c5fb0b7067529a61", "sha256": "6b938e76555b3e9946890770e1abcd442a4718f34041a58e8139dc8ad34545c9"},
+    {"path": "tokenizer.json", "size": 32169626, "git_blob_oid": "lfs-pointer 1ff9f3e3439a939b971f9919e821bf87e835a503", "lfs_oid_sha256": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f", "xet_hash": "c62336ad134cad6f154d84eb0e5a5fa9ca17cd665ef3ba5ac4fd02b1486760b4"},
+    {"path": "tokenizer_config.json", "size": 3089, "git_blob_oid": "6520cdc25462a5eba96fdac6d8cf3caa461feb35", "sha256": "a62f4e85a47c0c136edaaa3a4f591fd6783717299a9def47e5ad03a49f6a5eb9"}
+  ],
+  "negative_control_principle": "sha256 is collision-resistant over the full 23,919,549,408-byte input; any altered weight byte changes the digest. The rule binds exactly one file's bytes; a foreign repository whose model.safetensors is byte-different cannot inherit 5a84... The unit tests prove this mechanically on synthetic fixtures."
+}

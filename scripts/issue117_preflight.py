@@ -497,9 +497,21 @@ def _validate_preflight(document: Mapping[str, Any], *, repo_root: Path,
         elif not Path(checkpoint_root).is_dir():
             failures.append("physical preflight checkpoint checkout path is inaccessible")
         else:
-            failures.append(
-                "checkpoint authority derivation is unavailable from retained "
-                "accepted evidence; refusing self-attested checkpoint identity")
+            try:
+                from issue117_checkpoint_authority import (
+                    validate_checkpoint_repository,
+                )
+                record = validate_checkpoint_repository(Path(checkpoint_root),
+                                                        root=repo_root)
+                if record.get("weights_sha256") != document.get(
+                        "model_subject", {}).get("checkpoint_authority_sha256"):
+                    failures.append(
+                        "model_subject.checkpoint_authority_sha256 does not match "
+                        "the mechanically derived checkpoint authority")
+            except Exception as error:
+                failures.append(
+                    "checkpoint authority derivation failed for the candidate "
+                    f"repository: {error}")
     elif freetoken_root is not None and Path(freetoken_root).is_dir():
         _recheck_repository_identity(freetoken_identity,
                                      root=Path(freetoken_root), role="freetoken",
