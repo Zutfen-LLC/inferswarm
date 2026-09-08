@@ -32,6 +32,13 @@ An investigation is evidence in, not a decision or doctrine update out.
   secondary-GPU MoE feasibility investigation that preceded the standalone
   InferSwarm repository. Historical research input; not the architecture
   contract.
+- [p0i-qwen36-routing-residency.md](p0i-qwen36-routing-residency.md) — the P0-I
+  Qwen3.6 routing and residency investigation. Its sanitized outputs are the
+  frozen inputs to the Phase-1 and Phase1R placement derivations.
+- [data/](data/README.md) — the byte-preserved derivation outputs and their
+  `.sha256.txt` companions: sanitized P0-I routing evidence, the Phase-1 v1/v2
+  placements, and the Phase1R D3/D4/D7 placements. The tools that produce them
+  are listed in [`../../scripts/README.md`](../../scripts/README.md).
 
 ## Where new research artifacts go
 
