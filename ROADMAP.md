@@ -901,54 +901,28 @@ successor attempt became admissible only through later correctness doctrine
 (#108/#109) and terminal V5 qualification evidence (#110) plus the #115
 cleanup — not by revisiting the failed campaign.
 
-#### Issue #117 — physical full-integration gate — CURRENT ARCHITECTURE-INTEGRATION FRONTIER
+#### Current architecture-integration frontier
 
-Issue [#117](https://github.com/Zutfen-LLC/inferswarm/issues/117) is the
-first post-V5 architecture-integration gate: prove that a normal client
-request can automatically realize and serve the V5-qualified dense Gemma
-plan through the doctrine-shaped architecture (external CPU-only
-Coordinator → strategy → generic planner → qualification-applicability
-barrier → plan-driven participant-exact artifact acquisition → selective
-materialization → ordinary fenced serving), with no manual whole-model
-distribution, no model-specific planner branches, and no change to the
-execution math V5 qualified.
+<!-- project-status:frontier:start -->
+**[Issue #117 — R6 successor dense full integration](https://github.com/Zutfen-LLC/inferswarm/issues/117)**
 
-The synthetic CPU fixture campaign passed with disposition
-`ISSUE117_CPU_FIXTURE_PASS` (base `d37bd30`). The two retained-evidence
-blockers are now recovered: the checkpoint-authority provenance
-(`V5_CHECKPOINT_AUTHORITY_PROVENANCE_RECOVERED`, PR #119) and the accepted
-V5 qualification subject
-(`V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED`; reconstructed purely from
-byte-pinned historical evidence, digest
-`sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f7f1d7994ffd`).
-The canonical V5 physical candidate now derives `QUALIFICATION_APPLICABLE`
-through ordinary subject-digest equality; every materially different
-candidate stays `QUALIFICATION_NOT_APPLICABLE`. The implementation freeze
-may now be re-evaluated: the current state is recorded additively in
-`evidence/v5-qualification-subject-recovery.json`
-(`ISSUE117_IMPLEMENTATION_FREEZE_PENDING_RE_EVALUATION`) while the accepted
-#118 terminal evidence (`evidence/canonical-summary.json`,
-`ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`) is preserved byte-for-byte as
-historical record. The physical preflight now mechanically requires the
-canonical V5-geometry candidate to derive `QUALIFICATION_APPLICABLE`
-against exactly the accepted evidence-derived record; an honest
-`QUALIFICATION_NOT_APPLICABLE` for that candidate fails the preflight.
+Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.
 
-The repaired preflight has since been executed on the real fabric (`inferswarm00/01/03/04`) at the accepted base
-`d127879a` with FreeToken at the frozen integration producer `924cd22e`,
-observed `PREFLIGHT_VALID` with zero failures, and retained
-`ISSUE117_PHYSICAL_PREFLIGHT_PASS` (PR #121). Arms A-E remain pending; the
-physical gate is not unblocked until that preflight PASS is itself
-reviewed/accepted. Implementation and evidence:
-`scripts/issue117_*.py`, `tests/test_issue117_*.py`, and the retained record
-under `docs/implementation/r6-successor-dense-full-integration-117/`.
+- **Physical preflight observation:** [`ISSUE117_PHYSICAL_PREFLIGHT_PASS`](https://github.com/Zutfen-LLC/inferswarm/pull/121).
+- **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/commit/51c8adeeedf6d6f0a16db994ca0a0cf259bed52f).
+- **Recorded execution authorization:** authorized — Arm A — V5 execution-math bridge. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
 
-Pending maintainer acceptance of the retained preflight PASS, then Arms A-E on
-the fabric (V5 execution-math bridge 192/192; canonical cold
-acquisition/realization; ordinary Coordinator-serving versus direct-control
-equivalence; physical warm restart; locality mutation), each governed by the
-narrow stop states the issue defines. GLM-5.3 / issue #13 remains a later
-large-model falsifier, not this gate.
+- Arm A must establish 192/192 exact FP32 consumer-row identities on the frozen public fixture; no Arm A result is claimed yet.
+- Stop for maintainer review after Arm A. Arms B–E require their own preceding accepted gates.
+- Use the exact producer and identity checks specified in #117. Any InferSwarm revision after its accepted 51c8adee base requires an explicit delta audit before execution.
+- Do not rerun accepted preflight merely to start Arm A; do not use consumed h109 holdout material.
+<!-- project-status:frontier:end -->
+
+The retained implementation and preflight evidence is under
+[`r6-successor-dense-full-integration-117/`](docs/implementation/r6-successor-dense-full-integration-117/README.md).
+The earlier #118 `ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED` record remains
+historical truth. The #119/#120 provenance recoveries and #121 accepted physical
+preflight are additive records; they do not rewrite that result.
 
 ---
 

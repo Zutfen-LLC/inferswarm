@@ -73,6 +73,14 @@ those diagnoses produced. This lane terminated `V5_QUALIFICATION_PASS`.
 The frozen Phase-1 acceptance criteria, retained as historical provenance for
 the canonical `NO-GO` verdict.
 
+## Living project status
+
+[Status maintenance](status-maintenance.md) describes the shared
+[status record](project-status.json), generated sections, CI drift check, and
+the documentation-impact review required for changes to project capabilities
+or execution scope. The record summarizes linked authority; it does not issue
+execution permission.
+
 ## Reading rules
 
 These apply to every directory above.
