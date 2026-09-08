@@ -81,6 +81,7 @@ PRODUCERS = [
     "scripts/issue117_planner.py",
     "scripts/issue117_preflight.py",
     "scripts/issue117_proof.py",
+    "scripts/issue117_checkpoint_authority.py",
     "scripts/issue117_subject_identity.py",
     "scripts/issue99_artifact_core.py",
     "scripts/issue101_orchestration.py",
@@ -93,6 +94,7 @@ PRODUCERS = [
     "tests/test_issue117_preflight.py",
     "tests/test_issue117_proof.py",
     "tests/test_issue117_provenance.py",
+    "tests/test_issue117_checkpoint_authority.py",
 ]
 EVIDENCE_FILES = {
     "strategy.json", "planner-decision.json", "requirements.json",
@@ -108,6 +110,7 @@ COMMITTED_EVIDENCE_FILES = {
     "documentation-synchronization.json",
     "integration-fixture.json",
     "producer-delta.json",
+    "checkpoint-authority-provenance.json",
 }
 PURITY_TOKENS = (
     "gemma", "rtx", "3060", "3090", "bf16", "triton", "flashinfer", "cuda",
