@@ -14,6 +14,13 @@
 <!-- The reasoning behind the change; what problem it solves or what question
      it answers. -->
 
+## Documentation impact
+
+<!-- For capability, architecture, integration-branch, gate-result, acceptance,
+     or authorization changes: identify the updated status record/generated
+     sections and explanatory prose. Otherwise explain why there is no impact.
+     See docs/status-maintenance.md. Do not record prospective acceptance. -->
+
 ## Tests run
 
 <!-- What you ran to validate the change. "None (docs-only)" is an

@@ -1,6 +1,8 @@
 # Tooling
 
-Every executable in this directory is **evidence tooling**, not product code.
+Most executables in this directory are **evidence tooling**, not product code.
+`sync_project_status.py` is living documentation-maintenance tooling; its
+[maintenance contract](../docs/status-maintenance.md) permits reviewed updates.
 InferSwarm has no released runtime; these scripts derive, freeze, verify, or
 diagnose the retained records under [`docs/`](../docs/). The runtime
 experiments themselves live in the
@@ -102,6 +104,7 @@ python3 scripts/check_phase0_workloads.py
 
 | Script | Purpose |
 |---|---|
+| `sync_project_status.py` | Renders living status sections and checks for drift; refreshes only explicitly maintained documentation/CI manifest rows. Does not grant execution authority. |
 | `check_phase0_workloads.py` | Validates the frozen Phase-0 workload manifest without model or GPU access. Wired into CI. |
 
 ### Phase 0 / Phase 1 / Phase1R derivation and analysis

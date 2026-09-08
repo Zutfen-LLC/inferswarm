@@ -19,8 +19,8 @@ look like the same kind of worker.
 
 There is no released production InferSwarm runtime today. The repository is the
 canonical home for architecture decisions, the normative Fabric Doctrine,
-benchmark/evidence records, and the current evidence-gated roadmap. Early
-runtime experiments continue in the
+benchmark/evidence records, and the current evidence-gated roadmap. Runtime
+experiments continue in the
 [Zutfen FreeToken fork](#current-implementation-vehicle).
 
 ## Canonical docs
@@ -43,91 +43,48 @@ until real implementations prove the seam.
 
 ## What the research has established
 
-The first research track used Qwen3.6-35B-A3B-NVFP4 and NVIDIA hardware to test
-resident sparse/MoE execution and then selective model-block loading.
+<!-- project-status:capabilities:start -->
+| Capability | Evidence scope | Demonstrated result |
+|---|---|---|
+| Automatic planning | Physical | Strategy-constrained selection among legal local plans using applicable evidence and operator policy. [Evidence](https://github.com/Zutfen-LLC/inferswarm/issues/55#issuecomment-5495529413); [acceptance](https://github.com/Zutfen-LLC/inferswarm/issues/55#issuecomment-5495529413). |
+| Distributed serving | Physical | A normal request drives planning, multi-Node realization, and backend-native execution on the tested Qwen path. [Evidence](https://github.com/Zutfen-LLC/inferswarm/issues/60#issuecomment-5504161037); [acceptance](https://github.com/Zutfen-LLC/inferswarm/issues/60#issuecomment-5504161037). |
+| Plan epochs and recovery | Physical | Resource changes and recovery preserve plan-epoch authority and reject retired work on the tested serving path. [Evidence](https://github.com/Zutfen-LLC/inferswarm/issues/62#issuecomment-5508822299); [acceptance](https://github.com/Zutfen-LLC/inferswarm/issues/62#issuecomment-5508822299). |
+| Separate Coordinator | Physical | A CPU-only Coordinator handles ingress, planning, epoch coordination, and committed output without hosting model execution. [Evidence](https://github.com/Zutfen-LLC/inferswarm/issues/67#issuecomment-5516608982); [acceptance](https://github.com/Zutfen-LLC/inferswarm/issues/67#issuecomment-5516608982). |
+| Selective artifact acquisition | CPU fixture | Participants acquire only required model artifacts in the model-independent acquisition proof. [Evidence](https://github.com/Zutfen-LLC/inferswarm/blob/53fb8f4c7ba3108a21f983712e5cbdb747a26600/docs/implementation/plan-driven-artifact-acquisition-99/README.md); [acceptance](https://github.com/Zutfen-LLC/inferswarm/commit/53fb8f4c7ba3108a21f983712e5cbdb747a26600). |
+| Peer reuse and replacement deltas | CPU fixture | Verified inventory, source selection, peer publication, and replacement-plan acquisition work across participants. [Evidence](https://github.com/Zutfen-LLC/inferswarm/blob/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da/docs/implementation/plan-driven-artifact-orchestration-101/README.md); [acceptance](https://github.com/Zutfen-LLC/inferswarm/commit/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da). |
+| Locality-aware transition planning | CPU fixture | Verified artifact locality affects transition ranking without changing technical feasibility or execution ranking. [Evidence](https://github.com/Zutfen-LLC/inferswarm/blob/47624abe14a84d27188018200a48a8652f93bfd6/docs/implementation/artifact-locality-transition-planning-103/README.md); [acceptance](https://github.com/Zutfen-LLC/inferswarm/commit/47624abe14a84d27188018200a48a8652f93bfd6). |
+| Dense Gemma numerical qualification | Physical | The frozen Gemma subject passed V5 numerical and semantic qualification; applicability remains specific to that subject. [Evidence](https://github.com/Zutfen-LLC/inferswarm/blob/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76/docs/qualification/gemma4-12b-it-v5-campaign-110/b/TERMINAL-REPORT.md); [acceptance](https://github.com/Zutfen-LLC/inferswarm/commit/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76). |
 
-- **Phase 0** established a reproducible baseline, correctness reference, and
-  routing/cache-pressure evidence.
-- **Canonical Phase 1** proved its resident remote-expert mechanism correct but
-  produced an immutable `NO-GO` performance verdict for the exact tested
-  host-orchestrated two-GPU candidate.
-- **Phase1R D1-D7** established that backend-native fast execution matters
-  enormously on the tested FreeToken/CUDA stack and measured the effects of
-  physical work, PCIe topology, transport volume, placement, and fan-in. A
-  healthy Gen3 x16 RTX 3060 was performance-positive on the tested path; the
-  available Gen2 x1 RTX 3060 was capacity-positive but throughput-negative.
-  That is topology/runtime-specific evidence, not a universal PCIe cutoff.
-- **N0** completed with `N0_SELECTIVE_BLOCK_PASS`, proving selective checkpoint
-  loading, block-only ownership, bounded block-scoped loading, and exact
-  isolated-block correctness on the frozen Qwen proving ground.
-- **R0 / #48** completed with `P48_ACCELERATOR_RESIDENCY_PASS`, proving that the
-  tested final accelerator materialization did not require an equivalent
-  persistent host-RAM mirror after bounded staging completed.
-- **R1 / #50** completed with `R1_FROZEN_PLAN_REALIZATION_PASS`, proving that a
-  versioned doctrine-shaped frozen plan could drive realization,
-  reconciliation, authority/accounting, and correct execution.
-- **R2 / #51** completed with `R2_LOCAL_SPLIT_EXECUTION_PASS`, proving the frozen
-  `[0,19) / [19,40)` split across two real Compute Units with byte-exact
-  corrected-methodology correctness, captured backend-native execution, and
-  zero steady-state model-state movement.
-- **#53** completed with `HOST_STAGING_RECLAMATION_PASS`, proving physical host
-  staging reclamation after final residency for the accepted RELEASE lifecycle.
-- **R3 / #55** completed with `R3_MINIMUM_AUTOMATIC_PLANNING_PASS`, proving the
-  first automatic strategy-constrained, generic-planner selection across
-  multiple legal local candidates using context-valid evidence and operator
-  policy. The selected plan remained immutable and auditable before
-  heavyweight realization/execution.
-- **R4 / #57** completed with `R4_MULTI_NODE_BOUNDARY_PASS`, proving the accepted
-  contiguous Qwen split across two physical Nodes over persistent ordinary TCP
-  while preserving byte-exact correctness, backend-native residency/execution,
-  #53 staging release, and complete boundary/wire accounting. The canonical
-  1-GbE arm is `R4_1GBE_PRIMITIVE_CAPACITY_VIABLE`: peak measured clean-arm
-  application demand was about `2.947 Mb/s` A→B against a frozen `747.12 Mb/s`
-  80%-margin limit on the measured path.
+- Research / proof of concept; no released production runtime.
+- Physical results apply to their tested model, backend, hardware, and topology. CPU fixture proofs do not establish physical integration.
+- Public planner/strategy APIs, wire formats, and storage schemas remain unfrozen; broad vendor support remains an objective.
+- Historical Phase 1 NO-GO and R6 failure remain unchanged. GLM-5.3-Flash / #13 is a later falsifier.
+<!-- project-status:capabilities:end -->
 
-Historical evidence remains historical and scope-qualified; the project does
-not rewrite old results simply because the architecture vocabulary improved.
-
-The detailed Phase1R record is maintained in
-[`docs/implementation/phase1r-architecture-search-handoff.md`](docs/implementation/phase1r-architecture-search-handoff.md).
+Earlier work established selective loading, accelerator residency without an
+unexplained persistent host mirror, and local/multi-Node execution on Qwen.
+Canonical Phase 1 retained a scoped `NO-GO` performance verdict; subsequent
+Phase1R experiments established topology-dependent performance and capacity
+tradeoffs. See [ROADMAP.md](ROADMAP.md) and the
+[historical Phase1R record](docs/implementation/phase1r-architecture-search-handoff.md)
+for the exact experiments and immutable results.
 
 ## Current research direction
 
-The resource/residency/planner Wayfinder, runtime gates R0–R5B, and the
-correctness-qualification sequence are complete. The historical R6 attempt
-(#65) remains permanently `R6_DENSE_ARCHITECTURE_FALSIFICATION_FAIL`; it is
-never reinterpreted.
+<!-- project-status:frontier:start -->
+**[Issue #117 — R6 successor dense full integration](https://github.com/Zutfen-LLC/inferswarm/issues/117)**
 
-The qualification lane then closed honestly on the same subject: after the
-post-v4 doctrine (#105/#108) and the prospective v5 methodology freeze
-(#109), issue #110 consumed its single-use holdout once under maintainer
-authorization and terminated `V5_QUALIFICATION_PASS` (192/192 semantic
-identities, zero invalid attempts). Issue #115 retained a compact hash-bound
-raw-evidence archive and completed the audited cleanup. Applicable V5
-qualification evidence now unblocks the successor dense full-integration
-gate.
+Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.
 
-The current architecture-integration frontier is:
+- **Physical preflight observation:** [`ISSUE117_PHYSICAL_PREFLIGHT_PASS`](https://github.com/Zutfen-LLC/inferswarm/pull/121).
+- **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/commit/51c8adeeedf6d6f0a16db994ca0a0cf259bed52f).
+- **Recorded execution authorization:** authorized — Arm A — V5 execution-math bridge. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
 
-> **[#117 — R6 successor: integrate V5-qualified dense Gemma through
-> automatic planning, selective artifact distribution, and ordinary
-> serving](https://github.com/Zutfen-LLC/inferswarm/issues/117)**
-
-Its synthetic CPU fixture campaign passed
-(`ISSUE117_CPU_FIXTURE_PASS`). Both retained-evidence blockers are
-recovered: the V5 checkpoint-authority provenance (PR #119) and the accepted
-V5 qualification subject
-(`V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED`, reconstructed from
-byte-pinned historical evidence). The physical preflight has since been
-executed on the real fabric and retained
-`ISSUE117_PHYSICAL_PREFLIGHT_PASS` (PR #121; the accepted #118 terminal
-`canonical-summary.json` remains preserved byte-exact as historical
-evidence); the fabric arms (A-E) remain pending and are not authorized
-until the preflight PASS is maintainer-accepted.
-GLM-5.3-Flash / issue #13 remains a later large-model falsifier, not this
-gate.
-
-See [ROADMAP.md](ROADMAP.md) for the exact gates.
+- Arm A must establish 192/192 exact FP32 consumer-row identities on the frozen public fixture; no Arm A result is claimed yet.
+- Stop for maintainer review after Arm A. Arms B–E require their own preceding accepted gates.
+- Use the exact producer and identity checks specified in #117. Any InferSwarm revision after its accepted 51c8adee base requires an explicit delta audit before execution.
+- Do not rerun accepted preflight merely to start Arm A; do not use consumed h109 holdout material.
+<!-- project-status:frontier:end -->
 
 ## Long-term objective
 
@@ -233,19 +190,13 @@ intra/inter-node granularity when measurements justify it.
 
 ## Current implementation vehicle
 
-The experimental host/runtime vehicle is the Zutfen fork of FreeToken:
-
-> **<https://github.com/Zutfen-LLC/FreeToken>**
-
-Focused `poc/*` branches answer bounded questions. InferSwarm issues and this
-repository remain canonical for architecture, methodology, acceptance criteria,
-and retained evidence. A positive experiment does not automatically become a
-permanent FreeToken fork feature or a public InferSwarm API.
-
-Accepted R4 evidence remains immutable on its R3-descended research lineage.
-Issue #59 establishes a durable integration branch before R5A so continuing
-FreeToken development does not require rebasing or rewriting that evidence
-history.
+<!-- project-status:runtime:start -->
+The [FreeToken fork](https://github.com/Zutfen-LLC/FreeToken) is the initial runtime vehicle.
+Its durable integration branch is `inferswarm-research` ([established by #59](https://github.com/Zutfen-LLC/inferswarm/issues/59)).
+Upstream-tracking `main` and immutable evidence branches have separate roles.
+Execution uses the exact producer named by the current gate authority,
+never an unreviewed branch tip. FreeToken is not the permanent product boundary.
+<!-- project-status:runtime:end -->
 
 See [`docs/integrations/freetoken.md`](docs/integrations/freetoken.md).
 

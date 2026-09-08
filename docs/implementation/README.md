@@ -67,63 +67,33 @@ physical two-Node proof.
 
 ## Current implementation work
 
-### R6 successor dense full integration — issue #117
+<!-- project-status:frontier:start -->
+**[Issue #117 — R6 successor dense full integration](https://github.com/Zutfen-LLC/inferswarm/issues/117)**
 
-Issue [#117](https://github.com/Zutfen-LLC/inferswarm/issues/117) is the
-current architecture-integration frontier. It asks whether a normal client
-request can automatically realize and serve the V5-qualified dense Gemma plan
-through the doctrine-shaped architecture:
+Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.
 
-```text
-external CPU-only Coordinator
-  -> Model Execution Strategy legal candidates
-  -> generic planner
-  -> qualification-applicability barrier
-  -> plan-driven participant-exact artifact acquisition
-  -> selective materialization
-  -> ordinary fenced serving
-```
+- **Physical preflight observation:** [`ISSUE117_PHYSICAL_PREFLIGHT_PASS`](https://github.com/Zutfen-LLC/inferswarm/pull/121).
+- **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/commit/51c8adeeedf6d6f0a16db994ca0a0cf259bed52f).
+- **Recorded execution authorization:** authorized — Arm A — V5 execution-math bridge. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
 
-with no manual whole-model distribution, no model-specific planner branches,
-and no change to the execution math V5 qualified.
+- Arm A must establish 192/192 exact FP32 consumer-row identities on the frozen public fixture; no Arm A result is claimed yet.
+- Stop for maintainer review after Arm A. Arms B–E require their own preceding accepted gates.
+- Use the exact producer and identity checks specified in #117. Any InferSwarm revision after its accepted 51c8adee base requires an explicit delta audit before execution.
+- Do not rerun accepted preflight merely to start Arm A; do not use consumed h109 holdout material.
+<!-- project-status:frontier:end -->
 
-State, in order:
-
-1. `ISSUE117_CPU_FIXTURE_PASS` — the synthetic CPU fixture campaign passed.
-2. Two retained-evidence blockers were then found and recovered:
-   `V5_CHECKPOINT_AUTHORITY_PROVENANCE_RECOVERED` (PR #119) and
-   `V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED` (PR #120), the latter
-   reconstructed purely from byte-pinned historical evidence.
-3. `ISSUE117_PHYSICAL_PREFLIGHT_PASS` (PR #121) — the preflight was executed
-   on the real fabric and observed `PREFLIGHT_VALID` with zero failures.
-
-Arms A-E have **not** run. The physical execution gate is not unblocked until
-the preflight PASS is maintainer-accepted. The retained record is
-[`r6-successor-dense-full-integration-117/`](r6-successor-dense-full-integration-117/README.md);
-the accepted #118 terminal evidence in that area is preserved byte-for-byte as
-historical record and is never rewritten.
-
-GLM-5.3-Flash / issue #13 remains a later large-model falsifier, not this gate.
+The [retained #117 record](r6-successor-dense-full-integration-117/README.md)
+preserves the CPU fixture, earlier blocked implementation freeze, additive
+provenance recoveries, and accepted physical preflight.
 
 ## Successor planning rule
 
 Do not pre-write a speculative implementation ladder beyond what predecessor
-evidence makes concrete.
+evidence makes concrete. Follow the current gate's explicit review stops;
+completion of one arm does not authorize the next arm. Public interfaces remain
+unfrozen until real integration establishes their boundaries.
 
-The runtime ladder through R5B is complete, as is the correctness-
-qualification lane it depended on. What remains concrete is:
-
-1. #117 — maintainer acceptance of the physical preflight, then Arms A-E on
-   the fabric, each governed by the narrow stop states the issue defines;
-2. stabilizing public planner/strategy APIs only after that integration
-   identifies which internal seams were accidental first-model artifacts.
-
-Anything beyond that is not yet knowable enough to freeze. GLM-5.3-Flash
-remains a later large heterogeneous-capacity validation target under issue
-#13, not a prerequisite for #117.
-
-For the authoritative gate sequence and every accepted disposition, see
-[ROADMAP.md](../../ROADMAP.md).
+See [ROADMAP.md](../../ROADMAP.md) for the gate sequence and accepted results.
 
 ## Planning discipline
 

@@ -261,11 +261,20 @@ terminated `V5_QUALIFICATION_PASS` at issue #110, with the single-use holdout
 consumed exactly once and the #115 cleanup completed. That closed the
 correctness prerequisite; it froze no protocol.
 
-The current frontier, issue
-[#117](https://github.com/Zutfen-LLC/inferswarm/issues/117), composes the
-external Coordinator, generic planning, the qualification-applicability
-barrier, plan-driven participant-exact artifact acquisition, and ordinary
-fenced serving. It has retained `ISSUE117_PHYSICAL_PREFLIGHT_PASS`; the fabric
-arms remain pending. Nothing in it authorizes promoting any research frame into
-a public wire protocol — the seams above stay unfrozen until real
-implementations prove them.
+<!-- project-status:frontier:start -->
+**[Issue #117 — R6 successor dense full integration](https://github.com/Zutfen-LLC/inferswarm/issues/117)**
+
+Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.
+
+- **Physical preflight observation:** [`ISSUE117_PHYSICAL_PREFLIGHT_PASS`](https://github.com/Zutfen-LLC/inferswarm/pull/121).
+- **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/commit/51c8adeeedf6d6f0a16db994ca0a0cf259bed52f).
+- **Recorded execution authorization:** authorized — Arm A — V5 execution-math bridge. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
+
+- Arm A must establish 192/192 exact FP32 consumer-row identities on the frozen public fixture; no Arm A result is claimed yet.
+- Stop for maintainer review after Arm A. Arms B–E require their own preceding accepted gates.
+- Use the exact producer and identity checks specified in #117. Any InferSwarm revision after its accepted 51c8adee base requires an explicit delta audit before execution.
+- Do not rerun accepted preflight merely to start Arm A; do not use consumed h109 holdout material.
+<!-- project-status:frontier:end -->
+
+No research frame becomes a public wire protocol merely because a physical
+gate passes; the semantics above remain subordinate to the adopted doctrine.

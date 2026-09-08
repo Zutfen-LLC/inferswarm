@@ -62,6 +62,24 @@ Before editing anything under `scripts/`, read the frozen-producer rule in
 by retained evidence, and even a docstring fix invalidates the record that
 cites them.
 
+## Keep project status synchronized
+
+Changes to capabilities, architecture, integration branches, gate results,
+acceptance, or execution authorization require a documentation-impact review
+in the same PR. Update `docs/project-status.json` from recorded evidence and
+maintainer decisions, then run:
+
+```bash
+python3 scripts/sync_project_status.py --write
+python3 scripts/sync_project_status.py --check
+```
+
+Review prose outside generated sections as well. In the PR description, list
+updated documents or explain why the change has no documentation impact.
+Follow [status maintenance](docs/status-maintenance.md), including the separate
+observation, acceptance, and execution-authorization records. Issue-only and
+merge-time decisions need a subsequent status update; CI does not infer them.
+
 ## Tests and benchmarks
 
 - **Tests are required where applicable.** Documentation-only changes don't
