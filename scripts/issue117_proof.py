@@ -99,6 +99,7 @@ PRODUCERS = [
     "tests/test_issue117_checkpoint_authority.py",
     "tests/test_issue117_accepted_subject.py",
     "tests/test_issue117_physical_retention.py",
+    "tests/test_issue117_arm_a_retention.py",
 ]
 EVIDENCE_FILES = {
     "strategy.json", "planner-decision.json", "requirements.json",
@@ -129,6 +130,19 @@ COMMITTED_EVIDENCE_FILES = {
     "physical-preflight-record.json",
     "physical-preflight-freetoken-identities.json",
     "physical-preflight-coordinator-accounting.json",
+    # retained Arm A execution-equivalence PASS artifacts (executed on the
+    # fabric 2026-09-08; see evidence/arm-a/run-record.json). Fabric-produced
+    # compact evidence; the CPU campaign never regenerates these.
+    "arm-a/witness.json",
+    "arm-a/run-record.json",
+    "arm-a/decision-table.json",
+    "arm-a/fixture-corpus.json",
+    "arm-a/index-control-candidate.json",
+    "arm-a/index-control-reference.json",
+    "arm-a/index-integrated-candidate.json",
+    "arm-a/index-integrated-reference.json",
+    "arm-a/verify-rows-laststage03.json",
+    "arm-a/verify-rows-reference04.json",
 }
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the

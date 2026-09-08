@@ -1,6 +1,25 @@
 # R6 successor dense full integration — issue #117
 
-Current state: **`ISSUE117_PHYSICAL_PREFLIGHT_PASS`** (retained physical
+Current state: **`ISSUE117_ARM_A_EXECUTION_EQUIVALENCE_PASS`** (retained
+Arm A evidence: `evidence/arm-a/`, bounded by `evidence/MANIFEST.sha256`;
+see `evidence/arm-a/run-record.json`). Arm A executed 2026-09-08 on the
+fabric from accepted main `51c8adee` with the frozen integration producer
+`924cd22e`: the 24-case public fixture ran through BOTH the accepted V5
+control authority (FreeToken `7e5c8521`: reference on inferswarm04 RTX
+3090 + teacher-forced three-stage chain 01 GPU-0/GPU-1 → 03) AND the
+integrated producer `924cd22e` (same topology), and all
+**192/192 FP32 consumer-row identities matched exactly** — plus prefix
+identity at every decision, trajectory identity, argmax/tie rule outputs
+and rule proofs, stage-boundary capture-record identities, finite-output
+accounting (0 NaN/Inf both arms both paths), and byte-identical raw
+decision rows re-verified on the nodes (192/192 last-stage, 192/192
+reference, summary-SHA-bound). Two invalid launch attempts (staging
+error; dead last-stage service) produced no correctness-bearing
+observation and are retained with reasons. Arm B was NOT executed; the
+dedicated cold roots remain empty and untouched. No holdout material was
+used. STOPPED for maintainer review before Arm B.
+
+Prior state: **`ISSUE117_PHYSICAL_PREFLIGHT_PASS`** (retained physical
 preflight record: `evidence/physical-preflight.json` and
 `evidence/physical-preflight-record.json`). Both retained-evidence blockers
 were recovered — `V5_CHECKPOINT_AUTHORITY_PROVENANCE_RECOVERED` (PR #119)
