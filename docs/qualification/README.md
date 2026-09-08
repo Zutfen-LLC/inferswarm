@@ -24,18 +24,25 @@ Correctness is the conjunction of three layers:
 1. **exact integrity** — model state, inputs, and transport are byte-exact;
 2. **qualified numerical execution equivalence** — declared metric families
    stay inside limits derived *before* the deciding evidence is seen;
-3. **strategy-declared semantic output correctness** — the greedy decision
-   sequence is stable.
+3. **strategy-declared semantic output correctness** — execution satisfies
+   the selected semantic profile. For greedy generation, the strict profile
+   requires exact token identity; the decision-stability profile requires
+   identity at stable canonical-prefix decisions and permits only bounded
+   ambiguity at unstable decisions, after the decision-local bound and domain
+   containment checks pass. It does not promise identical free-running token
+   sequences.
 
 All three must hold. Matching output never waives a numerical failure, and a
 passing numerical envelope never waives a semantic one.
 
 ## The rules that make this record trustworthy
 
-- **Prospective freeze.** Corpora, metric families, sample sizes, thresholds,
-  and the acceptance rule are frozen and committed *before* physical
-  execution. A methodology directory describes itself at freeze time and is
-  never updated with its outcome.
+- **Prospective freeze.** Corpora, metric families, sample sizes, the
+  threshold-derivation procedure, and the acceptance rule are frozen and
+  committed *before* physical calibration. Threshold values are then derived
+  only from complete calibration evidence under that procedure and committed
+  *before* holdout unsealing. A methodology directory describes itself at
+  freeze time and is never updated with its outcome.
 - **Single-use sealed holdout.** Each version's holdout is generated once,
   CMS-sealed, its plaintext discarded, and opened at most once under explicit
   maintainer authorization. Once consumed, its observations are permanently
@@ -72,9 +79,10 @@ Read top to bottom; each row is caused by the one above it.
 
 ## Why each attempt failed, in one line each
 
-- **v2 / #81** — the standard was wrong: strict exact-token equality is not a
-  reasonable correctness contract for heterogeneous floating point. Fixed by
-  the #83 decision-stability contract.
+- **v2 / #81** — execution failed the selected strict exact-token profile.
+  Issue #83 introduced the decision-stability profile as a prospective
+  alternative for qualified heterogeneous variation. Both profiles remain
+  valid; #81 remains `CALIBRATION_SEMANTIC_FAIL` under its frozen contract.
 - **v3 / #88** — the *metric set* was wrong: an internal checkpoint family was
   acceptance-bearing without evidence that it gated a real correctness path.
   Fixed by the #93 core/telemetry split. Accepting the #90 diagnosis explained
