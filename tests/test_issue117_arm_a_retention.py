@@ -57,6 +57,8 @@ NEW_ARM_A_ARTIFACTS = (
     "raw-row-manifest-reference04.json",
     "attempt-lineage.json",
     "prerun-revalidation.json",
+    "checkpoint-continuity.json",
+    "run-device-bindings.json",
 )
 LEGACY_ARM_A_ARTIFACTS = (
     "witness.json",
@@ -528,6 +530,199 @@ class MutationNegativeControls(unittest.TestCase):
         _expect_reducer_failure(mutation)
 
 
+class CheckpointContinuityMutationTests(unittest.TestCase):
+    """Finding 1 (P0) negative controls: accepted-byte continuity."""
+
+    def test_mutation_current_full_sha_wrong_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "checkpoint-continuity.json")
+            doc["hosts"][0]["present_day_observation"]["full_file_sha256"] = "0" * 64
+            _store(arm_a / "checkpoint-continuity.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_continuity_path_wrong_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "checkpoint-continuity.json")
+            doc["hosts"][1]["path"] = "/srv/models/gemma-r6-other/model.safetensors"
+            _store(arm_a / "checkpoint-continuity.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_wrong_size_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "checkpoint-continuity.json")
+            doc["hosts"][2]["st_size"] = 23919549407
+            _store(arm_a / "checkpoint-continuity.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_nonregular_symlink_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "checkpoint-continuity.json")
+            doc["hosts"][0]["is_symlink"] = True
+            _store(arm_a / "checkpoint-continuity.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_inode_drift_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "checkpoint-continuity.json")
+            doc["hosts"][0]["st_ino"] = 999999
+            _store(arm_a / "checkpoint-continuity.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_ctime_postdates_accepted_hash_fails(self):
+        # ctime moved INSIDE the accepted hash window: replacement/write
+        # during the continuity interval would look exactly like this
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "checkpoint-continuity.json")
+            # 2026-09-08T12:00:00Z is after the #119 window start and inside
+            # the Arm-A continuity interval
+            doc["hosts"][0]["st_ctime_ns"] = 1788868800 * 1_000_000_000
+            _store(arm_a / "checkpoint-continuity.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_interval_violation_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "checkpoint-continuity.json")
+            doc["continuity_interval"]["end_utc"] = "2026-09-07T00:00:00Z"
+            _store(arm_a / "checkpoint-continuity.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_missing_host_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "checkpoint-continuity.json")
+            doc["hosts"] = [h for h in doc["hosts"] if h["host"] != "inferswarm03"]
+            _store(arm_a / "checkpoint-continuity.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_result_true_but_derivation_fails(self):
+        # the stored continuity_result string must not be authority: with the
+        # derivation facts broken the record must still fail closed
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "checkpoint-continuity.json")
+            doc["hosts"][0]["st_mtime_ns"] = doc["hosts"][0]["st_ctime_ns"] + 10**9
+            _store(arm_a / "checkpoint-continuity.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_launch_path_binding_removed_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "checkpoint-continuity.json")
+            doc["continuity_derivation"]["launch_path_evidence"].pop()
+            _store(arm_a / "checkpoint-continuity.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_launch_model_path_substituted_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "checkpoint-continuity.json")
+            item = doc["continuity_derivation"]["launch_path_evidence"][0]
+            item["model_arg"] = "--model /srv/models/gemma-r7"
+            _store(arm_a / "checkpoint-continuity.json", doc)
+        _expect_reducer_failure(mutation)
+
+
+class SubjectMutationTests(unittest.TestCase):
+    """Finding 2 (P1) negative controls: complete frozen subject."""
+
+    def test_mutation_contract_id_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "index-integrated-candidate.json")
+            doc["subject"]["contract_id"] = "inferswarm.other/2"
+            _store(arm_a / "index-integrated-candidate.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_methodology_commit_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "index-control-candidate.json")
+            doc["subject"]["methodology_commit"] = "0" * 40
+            _store(arm_a / "index-control-candidate.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_model_revision_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "index-control-reference.json")
+            doc["subject"]["model_revision"] = "0" * 40
+            _store(arm_a / "index-control-reference.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_expected_producer_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "index-integrated-reference.json")
+            doc["producer"]["expected_commit"] = CONTROL_PRODUCER
+            _store(arm_a / "index-integrated-reference.json", doc)
+        _expect_reducer_failure(mutation)
+
+
+class DeviceBindingMutationTests(unittest.TestCase):
+    """Finding 2 (P1) negative controls: exact valid-run CU bindings."""
+
+    @staticmethod
+    def _binding(doc, run):
+        return next(b for b in doc["bindings"] if b["run"] == run)
+
+    def test_mutation_stage1_uuid_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "run-device-bindings.json")
+            self._binding(doc, "control_candidate_chain")["stage1"]["observed_gpu_uuids"] = [
+                "GPU-0000"]
+            _store(arm_a / "run-device-bindings.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_stage2_uuid_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "run-device-bindings.json")
+            self._binding(doc, "integrated_candidate_chain")["stage2"]["observed_gpu_uuids"] = [
+                "GPU-0000"]
+            _store(arm_a / "run-device-bindings.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_stage3_uuid_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "run-device-bindings.json")
+            self._binding(doc, "control_candidate_chain")["stage3"]["observed_gpu_uuids"] = [
+                "GPU-0000"]
+            _store(arm_a / "run-device-bindings.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_noncanonical_gpu_substituted_fails(self):
+        # inferswarm03's second (noncanonical) RTX 3060 swapped in as stage 3
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "run-device-bindings.json")
+            self._binding(doc, "integrated_candidate_chain")["stage3"]["observed_gpu_uuids"] = [
+                "GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0"]
+            _store(arm_a / "run-device-bindings.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_reference_uuid_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "run-device-bindings.json")
+            self._binding(doc, "integrated_reference")["reference"]["observed_gpu_uuids"] = [
+                "GPU-0000"]
+            _store(arm_a / "run-device-bindings.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_missing_run_binding_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "run-device-bindings.json")
+            doc["bindings"] = [b for b in doc["bindings"]
+                               if b["run"] != "control_reference"]
+            _store(arm_a / "run-device-bindings.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_topology_probe_right_but_binding_wrong_fails(self):
+        # prerun topology untouched; only the actual run binding is wrong
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "run-device-bindings.json")
+            self._binding(doc, "control_candidate_chain")["stage1"]["observed_gpu_uuids"] = [
+                "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"]
+            _store(arm_a / "run-device-bindings.json", doc)
+        _expect_reducer_failure(mutation)
+
+    def test_mutation_exclusion_erased_fails(self):
+        def mutation(root, arm_a, evidence):
+            doc = _load(arm_a / "run-device-bindings.json")
+            doc["noncanonical_gpu_exclusion"] = {}
+            _store(arm_a / "run-device-bindings.json", doc)
+        _expect_reducer_failure(mutation)
+
+
 class ManifestCoverageTests(unittest.TestCase):
     def test_arm_a_artifacts_exist_and_are_manifest_exact(self):
         entries = manifest_entries()
@@ -562,7 +757,8 @@ class ManifestCoverageTests(unittest.TestCase):
                 imported.update(a.name.split(".")[0] for a in node.names)
             elif isinstance(node, ast.ImportFrom) and node.module:
                 imported.add(node.module.split(".")[0])
-        allowed = {"hashlib", "json", "pathlib", "typing", "__future__"}
+        allowed = {"hashlib", "json", "pathlib", "typing", "__future__",
+                   "datetime", "importlib", "sys"}
         self.assertTrue(imported <= allowed, f"unexpected imports: {imported - allowed}")
         # no stored-boolean authority: the reducer must not read the witness
         # status or any all_*_identical aggregate as evidence

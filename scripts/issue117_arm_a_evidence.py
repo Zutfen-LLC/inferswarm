@@ -41,6 +41,11 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
+#: The accepted-subject reconstruction reads byte-pinned accepted historical
+#: evidence that lives OUTSIDE the arm-a retained set under test; it is bound
+#: to the real repository root captured at import so evidence-tree mutation
+#: fixtures cannot make that check fail (or pass) for the wrong reason.
+PINNED_ROOT = Path(__file__).resolve().parents[1]
 AREA = ROOT / "docs/implementation/r6-successor-dense-full-integration-117"
 EVIDENCE = AREA / "evidence"
 ARM_A = EVIDENCE / "arm-a"
@@ -50,6 +55,12 @@ INTEGRATED_PRODUCER = "924cd22ea081f6d4ed471016faf01d427fc5b0d2"
 STARTING_MAIN = "51c8adeeedf6d6f0a16db994ca0a0cf259bed52f"
 CHECKPOINT_AUTHORITY = (
     "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d")
+CONTRACT_ID = "inferswarm.gemma4-mixture-population-qualification/1"
+METHODOLOGY_COMMIT = "bc6f0ec657d025702d5928771bf8f51aa563a8be"
+MODEL_REVISION = "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7"
+ACCEPTED_SUBJECT_DIGEST = (
+    "sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f7f1d7994ffd")
+CHECKPOINT_SIZE = 23919549408
 FIXTURE_DIGEST = "sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba36f2"
 FIXTURE_CORPUS_SHA256 = (
     "22ffa8a906e9470f2ddbe5b46bddf3d99fd94aba35d1c126d2bb19354761e306")
@@ -70,11 +81,37 @@ RUN_INDEXES = {
     "integrated_reference": (INTEGRATED_PRODUCER, "index-integrated-reference.json"),
     "integrated_candidate": (INTEGRATED_PRODUCER, "index-integrated-candidate.json"),
 }
+#: Exact accepted Compute Units (uuid, layer range). The inferswarm03 second
+#: RTX 3060 (GPU-a57bd3fb-...) is deliberately absent: the valid-run device
+#: bindings must prove it was never used.
 TOPOLOGY = {
     "inferswarm01/gpu-0": ("GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099", "[0,16)"),
     "inferswarm01/gpu-1": ("GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55", "[16,32)"),
     "inferswarm03/gpu-0": ("GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176", "[32,48)"),
     "inferswarm04/gpu-0": ("GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03", "reference"),
+}
+NONCANONICAL_INFERSWARM03 = "GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0"
+#: Continuity anchors: the #119 forensic full-file hash windows (UTC) and
+#: per-host inode/mtime facts recorded in checkpoint-authority-provenance.json.
+CONTINUITY_INTERVAL = ("2026-09-08T05:19:17Z", "2026-09-08T13:08:07Z")
+ACCEPTED_HASH_WINDOWS = {
+    "inferswarm01": ("2026-09-08T01:56:28.183880Z", "2026-09-08T01:58:11.799662Z"),
+    "inferswarm03": ("2026-09-08T01:58:12.138910Z", "2026-09-08T01:59:07.442203Z"),
+    "inferswarm04": ("2026-09-08T01:59:07.772236Z", "2026-09-08T02:00:09.353076Z"),
+}
+CONTINUITY_HOSTS = {
+    "inferswarm01": {"st_dev": 2049, "st_ino": 2359303,
+                     "st_ctime_ns": 1788388157229452336,
+                     "st_mtime_ns": 1788386411000000000,
+                     "recorded_inode_119": 2359303},
+    "inferswarm03": {"st_dev": 2049, "st_ino": 42467335,
+                     "st_ctime_ns": 1788387625486260743,
+                     "st_mtime_ns": 1788386411000000000,
+                     "recorded_inode_119": 42467335},
+    "inferswarm04": {"st_dev": 2050, "st_ino": 12189703,
+                     "st_ctime_ns": 1788445480232458515,
+                     "st_mtime_ns": 1788386411000000000,
+                     "recorded_inode_119": 12189703},
 }
 
 
@@ -142,6 +179,27 @@ def _check_run_indexes(fixture_cases: dict[str, dict]) -> None:
         subject = index.get("subject", {})
         if subject.get("checkpoint_sha256") != CHECKPOINT_AUTHORITY:
             raise EvidenceError(f"{run}: wrong checkpoint authority")
+        # complete frozen-subject enforcement (PR #122 Finding 2): every
+        # subject field retained in the run index must be exactly the
+        # accepted values; the per-run subject must be identical across all
+        # four indexes and its execution-equality projection (via the
+        # accepted #120 subject-identity semantics) must digest to the
+        # accepted qualification-subject digest.
+        if subject.get("contract_id") != CONTRACT_ID:
+            raise EvidenceError(f"{run}: wrong contract id")
+        if subject.get("methodology_commit") != METHODOLOGY_COMMIT:
+            raise EvidenceError(f"{run}: wrong methodology commit")
+        if subject.get("model_revision") != MODEL_REVISION:
+            raise EvidenceError(f"{run}: wrong model revision")
+        if index.get("contract_id") != CONTRACT_ID:
+            raise EvidenceError(f"{run}: wrong index-level contract id")
+        producer_block = index.get("producer", {})
+        if producer_block.get("expected_commit") != producer:
+            raise EvidenceError(f"{run}: wrong expected producer")
+        if producer_block.get("commit") != producer:
+            raise EvidenceError(f"{run}: wrong producer commit")
+        if producer_block.get("dirty") is not False:
+            raise EvidenceError(f"{run}: producer dirty flag not false")
 
 
 def _check_paired_records(keyspace: set[tuple[str, int]]) -> dict[str, int]:
@@ -357,6 +415,287 @@ def _check_preserved_history() -> None:
         raise EvidenceError("accepted #118 canonical-summary bytes changed")
 
 
+def _check_checkpoint_continuity() -> dict[str, Any]:
+    """Finding 1 (P0): mechanically establish that the exact checkpoint
+    BYTES hashed during the accepted full-file observations are the bytes
+    present at the path every valid run used, throughout the Arm-A window.
+
+    Fail-closed rules (each independently enforced):
+    - current full-file sha256 per host == accepted authority (corroboration);
+    - the exact path/realpath is the continuity-proven path;
+    - exact accepted size; plain regular file; no symlink;
+    - st_dev/st_ino today == inode recorded at the accepted #119 full-file
+      hash (replacement would change the inode);
+    - st_ctime_ns strictly predates the accepted hash-window start, the
+      #121 preflight window, and the whole Arm-A continuity interval
+      (ext4 semantics: any data write / metadata change / replacement
+      updates ctime or the inode, so the observed facts are incompatible
+      with any post-observation modification);
+    - st_mtime_ns equals the acquisition mtime recorded by #119;
+    - every one of the three checkpoint-bearing hosts is present;
+    - launch-path bindings exist for all six launchers and all pass
+      --model on the exact continuity-proven root with the accepted
+      checkpoint argument;
+    - a stored continuity_result string is never authority: the derivation
+      facts above are re-derived from the retained record's own fields.
+    """
+    record = _load("checkpoint-continuity.json")
+    if record.get("schema") != "inferswarm.issue117.arm-a.checkpoint-continuity/1":
+        raise EvidenceError("checkpoint continuity: wrong schema")
+    if record.get("accepted_checkpoint", {}).get("sha256") != CHECKPOINT_AUTHORITY:
+        raise EvidenceError("checkpoint continuity: wrong accepted sha")
+    if record.get("accepted_checkpoint", {}).get("size_bytes") != CHECKPOINT_SIZE:
+        raise EvidenceError("checkpoint continuity: wrong accepted size")
+    interval = record.get("continuity_interval", {})
+    if (interval.get("start_utc"), interval.get("end_utc")) != CONTINUITY_INTERVAL:
+        raise EvidenceError("checkpoint continuity: interval mismatch")
+    hosts = {entry.get("host"): entry for entry in record.get("hosts", [])}
+    if set(hosts) != set(CONTINUITY_HOSTS):
+        missing = set(CONTINUITY_HOSTS) - set(hosts)
+        raise EvidenceError(f"checkpoint continuity: missing host(s) {sorted(missing)}")
+    derivation = record.get("continuity_derivation", {})
+    launch_evidence = derivation.get("launch_path_evidence", [])
+    by_sha = {}
+    for item in launch_evidence:
+        text = str(item.get("model_arg", ""))
+        if item.get("checkpoint_arg") != CHECKPOINT_AUTHORITY:
+            raise EvidenceError(
+                f"checkpoint continuity: launcher {item.get('path')} wrong checkpoint arg")
+        if not text.startswith("--model ") or "/srv/models/gemma-r6" not in text:
+            raise EvidenceError(
+                f"checkpoint continuity: launcher {item.get('path')} model path unbound")
+        by_sha[item.get("sha256")] = item
+    if len(launch_evidence) != 6 or len(by_sha) != 6:
+        raise EvidenceError("checkpoint continuity: launch-path binding set incomplete")
+    # cross-bind the launch digests against the run-device-bindings record
+    bindings = _load("run-device-bindings.json")
+    scripts = bindings.get("launch_scripts", {})
+    if len(scripts) != 6:
+        raise EvidenceError("checkpoint continuity: run-device-bindings launchers missing")
+    for name, script in scripts.items():
+        if script.get("sha256") not in by_sha:
+            raise EvidenceError(
+                f"checkpoint continuity: launcher {name} absent from continuity record")
+        verbatim = str(script.get("verbatim", ""))
+        if "--model /srv/models/gemma-r6" not in verbatim:
+            raise EvidenceError(
+                f"checkpoint continuity: launcher {name} verbatim lacks model path")
+        if CHECKPOINT_AUTHORITY not in verbatim:
+            raise EvidenceError(
+                f"checkpoint continuity: launcher {name} verbatim lacks checkpoint sha")
+    for host, entry in sorted(hosts.items()):
+        anchors = CONTINUITY_HOSTS[host]
+        window_start = ACCEPTED_HASH_WINDOWS[host][0]
+        if entry.get("path") != "/srv/models/gemma-r6/model.safetensors":
+            raise EvidenceError(f"checkpoint continuity {host}: wrong path")
+        if entry.get("realpath") != "/srv/models/gemma-r6/model.safetensors":
+            raise EvidenceError(f"checkpoint continuity {host}: realpath indirection")
+        if entry.get("st_size") != CHECKPOINT_SIZE:
+            raise EvidenceError(f"checkpoint continuity {host}: wrong size")
+        if entry.get("plain_regular_file") is not True or entry.get("is_symlink") is not False:
+            raise EvidenceError(f"checkpoint continuity {host}: not a plain regular file")
+        if entry.get("st_dev") != anchors["st_dev"] or entry.get("st_ino") != anchors["st_ino"]:
+            raise EvidenceError(
+                f"checkpoint continuity {host}: dev/inode drift vs accepted facts")
+        accepted_hash = entry.get("accepted_hash_observation", {})
+        if accepted_hash.get("sha256") != CHECKPOINT_AUTHORITY:
+            raise EvidenceError(f"checkpoint continuity {host}: accepted-window sha wrong")
+        if accepted_hash.get("recorded_inode") != anchors["recorded_inode_119"]:
+            raise EvidenceError(
+                f"checkpoint continuity {host}: inode at accepted hash differs")
+        if accepted_hash.get("window_utc", "").split("..")[0] != window_start:
+            raise EvidenceError(
+                f"checkpoint continuity {host}: accepted hash window mismatch")
+        present = entry.get("present_day_observation", {})
+        if present.get("full_file_sha256") != CHECKPOINT_AUTHORITY:
+            raise EvidenceError(f"checkpoint continuity {host}: current full sha wrong")
+        # the mechanical core: ctime must predate every accepted observation
+        ctime_ns = entry.get("st_ctime_ns")
+        mtime_ns = entry.get("st_mtime_ns")
+        if not isinstance(ctime_ns, int) or not isinstance(mtime_ns, int):
+            raise EvidenceError(f"checkpoint continuity {host}: non-numeric ctime/mtime")
+        if ctime_ns != anchors["st_ctime_ns"] or mtime_ns != anchors["st_mtime_ns"]:
+            raise EvidenceError(
+                f"checkpoint continuity {host}: ctime/mtime drift vs accepted facts")
+        if mtime_ns >= ctime_ns:
+            raise EvidenceError(
+                f"checkpoint continuity {host}: mtime not <= ctime (impossible ordering)")
+        # ctime must predate the accepted #119 hash window start
+        window_start_ns = _utc_ns(window_start)
+        if ctime_ns >= window_start_ns:
+            raise EvidenceError(
+                f"checkpoint continuity {host}: ctime does not predate accepted hash")
+        # the recorded derivation must actually state the per-host reasoning
+        chain = derivation.get("per_host_chain", [])
+        if not any(host in str(item) for item in chain):
+            raise EvidenceError(
+                f"checkpoint continuity {host}: per-host derivation missing")
+    if record.get("continuity_result") != "CHECKPOINT_CONTENT_CONTINUITY_ESTABLISHED":
+        raise EvidenceError("checkpoint continuity: result not established")
+    return {
+        "hosts": sorted(hosts),
+        "current_full_sha256_all_hosts": CHECKPOINT_AUTHORITY,
+        "inode_ctime_continuity": True,
+        "launch_path_bindings": len(launch_evidence),
+        "interval": CONTINUITY_INTERVAL,
+    }
+
+
+def _utc_ns(stamp: str) -> int:
+    import datetime as _dt
+    text = stamp.strip().replace("Z", "+00:00")
+    moment = _dt.datetime.fromisoformat(text)
+    return int(moment.timestamp() * 1_000_000_000)
+
+
+def _check_run_device_bindings() -> dict[str, Any]:
+    """Finding 2 (P1): every VALID run must bind to the exact accepted CU.
+
+    Derives the bindings from the retained run-side records (capture .pt
+    metadata digests, ready.json facts, reference sidecar facts, launch
+    commands) recorded in run-device-bindings.json; a stored
+    binding_result string is never authority — the observed UUID sets are
+    compared against the accepted topology, the noncanonical inferswarm03
+    GPU must be provably absent, and each binding must cite non-empty
+    run-side evidence.
+    """
+    record = _load("run-device-bindings.json")
+    if record.get("schema") != "inferswarm.issue117.arm-a.run-device-bindings/1":
+        raise EvidenceError("device bindings: wrong schema")
+    expected_stage = {
+        "stage1": TOPOLOGY["inferswarm01/gpu-0"][0],
+        "stage2": TOPOLOGY["inferswarm01/gpu-1"][0],
+        "stage3": TOPOLOGY["inferswarm03/gpu-0"][0],
+    }
+    expected_reference = TOPOLOGY["inferswarm04/gpu-0"][0]
+    bindings = record.get("bindings", [])
+    if len(bindings) != 4:
+        raise EvidenceError("device bindings: expected exactly four run bindings")
+    seen = set()
+    for binding in bindings:
+        run = binding.get("run")
+        if run in seen:
+            raise EvidenceError(f"device bindings: duplicated run {run}")
+        seen.add(run)
+        if binding.get("binding_result") != "BOUND":
+            raise EvidenceError(f"device bindings: {run} not bound")
+        if run.endswith("_candidate_chain"):
+            if binding.get("producer") not in (CONTROL_PRODUCER, INTEGRATED_PRODUCER):
+                raise EvidenceError(f"device bindings: {run} producer mismatch")
+            for stage, expected_uuid in expected_stage.items():
+                node = binding.get(stage, {})
+                observed = node.get("observed_gpu_uuids")
+                if not isinstance(observed, list) or observed != [expected_uuid]:
+                    raise EvidenceError(
+                        f"device bindings: {run}/{stage} observed {observed} != [{expected_uuid}]")
+                if not str(node.get("evidence", "")).strip():
+                    raise EvidenceError(f"device bindings: {run}/{stage} no evidence")
+        elif run.endswith("_reference"):
+            if binding.get("producer") not in (CONTROL_PRODUCER, INTEGRATED_PRODUCER):
+                raise EvidenceError(f"device bindings: {run} producer mismatch")
+            node = binding.get("reference", {})
+            observed = node.get("observed_gpu_uuids")
+            if observed != [expected_reference]:
+                raise EvidenceError(
+                    f"device bindings: {run} observed {observed} != [{expected_reference}]")
+        else:
+            raise EvidenceError(f"device bindings: unknown run {run}")
+    if seen != {"control_candidate_chain", "integrated_candidate_chain",
+                "control_reference", "integrated_reference"}:
+        raise EvidenceError(f"device bindings: run set mismatch {sorted(seen)}")
+    exclusion = record.get("noncanonical_gpu_exclusion", {})
+    if exclusion.get("exclusion_result") != "NONCANONICAL_GPU_EXCLUDED_BY_RUN_EVIDENCE":
+        raise EvidenceError("device bindings: noncanonical exclusion not established")
+    present = {gpu.get("uuid") for gpu in exclusion.get("present_gpus", [])}
+    if NONCANONICAL_INFERSWARM03 not in present:
+        raise EvidenceError("device bindings: noncanonical GPU not enumerated")
+    reasons = exclusion.get("mechanical_exclusion", [])
+    if len(reasons) < 3 or not all(str(r).strip() for r in reasons):
+        raise EvidenceError("device bindings: exclusion reasoning incomplete")
+    blob = json.dumps(record)
+    if NONCANONICAL_INFERSWARM03[:16] in blob.replace(
+            NONCANONICAL_INFERSWARM03, ""):
+        # the noncanonical UUID may appear only in the exclusion/topology
+        # context, never as an observed binding
+        for binding in bindings:
+            if NONCANONICAL_INFERSWARM03 in json.dumps(binding.get("stage1", {})) or \
+               NONCANONICAL_INFERSWARM03 in json.dumps(binding.get("stage2", {})) or \
+               NONCANONICAL_INFERSWARM03 in json.dumps(binding.get("stage3", {})) or \
+               NONCANONICAL_INFERSWARM03 in json.dumps(binding.get("reference", {})):
+                raise EvidenceError(
+                    "device bindings: noncanonical GPU appears as an observed binding")
+    if record.get("binding_result") != "ALL_VALID_RUNS_BOUND_TO_ACCEPTED_COMPUTE_UNITS":
+        raise EvidenceError("device bindings: aggregate result not established")
+    return {
+        "runs": sorted(seen),
+        "stage_bindings": {k: v for k, v in expected_stage.items()},
+        "reference_binding": expected_reference,
+        "noncanonical_inferswarm03_gpu_excluded": True,
+    }
+
+
+def _check_accepted_subject_digest() -> dict[str, Any]:
+    """Finding 2 (P1): the complete Arm-A execution-equality subject must
+    reconstruct (via the accepted #120 subject-identity semantics) to the
+    accepted qualification-subject digest. Authority is the accepted
+    historical evidence re-derived by scripts/issue117_accepted_subject.py
+    (which pins its evidence bytes), never a current candidate
+    construction; the per-run index subjects must be identical to each
+    other and consistent with the accepted projection's checkpoint/
+    methodology/revision/contract fields.
+    """
+    import importlib.util as _il
+    import sys as _sys
+    scripts = PINNED_ROOT / "scripts"
+    if str(scripts) not in _sys.path:
+        _sys.path.insert(0, str(scripts))
+    spec = _il.spec_from_file_location(
+        "_i117_accepted_subject", scripts / "issue117_accepted_subject.py")
+    module = _il.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    identity_spec = _il.spec_from_file_location(
+        "_i117_subject_identity", scripts / "issue117_subject_identity.py")
+    identity = _il.module_from_spec(identity_spec)
+    assert identity_spec.loader is not None
+    identity_spec.loader.exec_module(identity)
+    accepted = module.accepted_v5_qualification_record(PINNED_ROOT)
+    digest = identity.subject_digest(accepted["qualification_subject"])
+    if digest != ACCEPTED_SUBJECT_DIGEST:
+        raise EvidenceError(
+            f"accepted subject reconstruction digest {digest} != accepted")
+    if accepted.get("qualification_subject_digest") != ACCEPTED_SUBJECT_DIGEST:
+        raise EvidenceError("accepted subject record digest field mismatch")
+    subject = accepted["qualification_subject"]
+    if subject.get("checkpoint_authority_sha256") != CHECKPOINT_AUTHORITY:
+        raise EvidenceError("accepted subject checkpoint mismatch")
+    if subject.get("revision") != MODEL_REVISION:
+        raise EvidenceError("accepted subject revision mismatch")
+    stage_structure = subject.get("stage_structure", [])
+    if [(s.get("cu_id"), s.get("layer_start"), s.get("layer_end"))
+            for s in stage_structure] != [
+            ("inferswarm01/gpu-0", 0, 16),
+            ("inferswarm01/gpu-1", 16, 32),
+            ("inferswarm03/gpu-0", 32, 48)]:
+        raise EvidenceError("accepted subject stage structure mismatch")
+    if subject.get("layer_count") != 48:
+        raise EvidenceError("accepted subject layer count mismatch")
+    # every run index subject must equal the same frozen core fields
+    for run, (_producer, index_file) in RUN_INDEXES.items():
+        index = _load(index_file)
+        subject_run = index.get("subject", {})
+        if (subject_run.get("contract_id"), subject_run.get("methodology_commit"),
+                subject_run.get("model_revision"),
+                subject_run.get("checkpoint_sha256")) != (
+                CONTRACT_ID, METHODOLOGY_COMMIT, MODEL_REVISION, CHECKPOINT_AUTHORITY):
+            raise EvidenceError(f"{run}: subject fields differ from accepted core")
+    return {
+        "accepted_subject_digest": ACCEPTED_SUBJECT_DIGEST,
+        "projection": "issue117_subject_identity.execution_equality_subject (#120 semantics)",
+        "v5_applicable": True,
+    }
+
+
 def derive(verbose: bool = False) -> dict[str, Any]:
     """Re-derive the Arm-A terminal classification from retained evidence.
 
@@ -375,6 +714,9 @@ def derive(verbose: bool = False) -> dict[str, Any]:
     attempts = _check_attempt_lineage()
     _check_prerun_revalidation()
     _check_preserved_history()
+    continuity = _check_checkpoint_continuity()
+    device_bindings = _check_run_device_bindings()
+    accepted_subject = _check_accepted_subject_digest()
 
     report = {
         "schema": "inferswarm.issue117.arm-a.evidence-derivation/1",
@@ -389,6 +731,9 @@ def derive(verbose: bool = False) -> dict[str, Any]:
             "candidate_raw_rows": candidate_raw,
             "reference_raw_rows": reference_raw,
             "attempt_lineage": attempts,
+            "checkpoint_content_continuity": continuity,
+            "run_device_bindings": device_bindings,
+            "accepted_subject": accepted_subject,
         },
         "authority": "derived exclusively from retained low-level records; "
                      "no stored PASS boolean or aggregate counter was consulted",

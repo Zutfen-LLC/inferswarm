@@ -101,6 +101,8 @@ PRODUCERS = [
     "tests/test_issue117_physical_retention.py",
     "tests/test_issue117_arm_a_retention.py",
     "scripts/issue117_arm_a_evidence.py",
+    "scripts/sync_project_status.py",
+    "tests/test_project_status.py",
 ]
 EVIDENCE_FILES = {
     "strategy.json", "planner-decision.json", "requirements.json",
@@ -156,6 +158,14 @@ COMMITTED_EVIDENCE_FILES = {
     "arm-a/raw-row-manifest-reference04.json",
     "arm-a/attempt-lineage.json",
     "arm-a/prerun-revalidation.json",
+    # PR #122 review-correction pass (2026-09-08, findings 1-2): the
+    # accepted-checkpoint byte-continuity proof (inode/ctime/mtime/full-sha
+    # per host + launch-path bindings) and the exact valid-run Compute Unit
+    # bindings (per-stage observed GPU UUIDs from run-side capture/service/
+    # reference records + verbatim launch commands). Recovered read-only;
+    # no execution.
+    "arm-a/checkpoint-continuity.json",
+    "arm-a/run-device-bindings.json",
 }
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the

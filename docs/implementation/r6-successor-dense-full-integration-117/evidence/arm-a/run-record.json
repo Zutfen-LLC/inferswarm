@@ -33,12 +33,12 @@
     },
     "witness_sha256": "sha256:1606b00ac4f360c6bdb2c1636182431fca0948fb3ec54a4368c630ad1b5df279"
   },
-  "correction_note": "PR #122 retention/provenance correction (2026-09-08): recovered separate control/integrated per-decision identity records, per-row raw-byte verification manifests, distinct invalid-attempt lineage, and the mechanical pre-run revalidation record; no physical execution occurred during the correction and no original observation was altered.",
+  "correction_note": "PR #122 retention/provenance correction (2026-09-08): recovered separate control/integrated per-decision identity records, per-row raw-byte verification manifests, distinct invalid-attempt lineage, and the mechanical pre-run revalidation record; no physical execution occurred during the correction and no original observation was altered. Second correction pass (2026-09-08, review findings 1-3): added arm-a/checkpoint-continuity.json (accepted-byte continuity proof), arm-a/run-device-bindings.json (exact valid-run CU bindings incl. mechanical exclusion of inferswarm03's noncanonical second RTX 3060), complete frozen-subject enforcement in the reducer, and synchronized docs/project-status.json to observed/pending/blocked. No physical execution occurred during either correction; no original observation was altered.",
   "fabric_revalidation": {
     "mechanical_record": "arm-a/prerun-revalidation.json",
     "note": "digest-bound, host-bound pre-Arm-A revalidation retained as a machine record (verbatim collector output, exact observed orchestrator timestamps); the prose summary below is derived convenience, not authority",
     "prose_summary": {
-      "checkpoint": "/srv/models/gemma-r6/model.safetensors regular file 23919549408 bytes on 01/03/04 (authority sha 5a84cb31\u2026ff18d retained from accepted preflight; content re-verified per-run by frozen_subject_record)",
+      "checkpoint": "/srv/models/gemma-r6/model.safetensors regular file 23919549408 bytes on 01/03/04 (authority sha 5a84cb31\u2026ff18d retained from accepted preflight; byte-level continuity across the Arm-A window is proven mechanically by arm-a/checkpoint-continuity.json \u2014 frozen_subject_record validates the caller-supplied digest against the frozen constant and does NOT hash the file; the accepted full-file observations are the #119/#121 records)",
       "cold_roots_issue117": "still empty on 01+03 (untouched by Arm A)",
       "gpus_idle_pre_execution": true,
       "inferswarm01": {
