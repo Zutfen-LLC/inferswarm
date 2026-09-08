@@ -75,7 +75,10 @@ test as having run.
 the Phase-0 workload check, the Markdown internal-link check, repository
 hygiene, project-naming consistency, and a named list of test modules.
 
-Six modules in this directory are **not** in that list:
+Every module guarding live evidence is in that list, including
+`test_issue117_physical_retention`, which runs in the issue #117 CPU-only step.
+
+Five modules are deliberately out:
 
 | Module | Why it is out of CI |
 |---|---|
@@ -84,13 +87,9 @@ Six modules in this directory are **not** in that list:
 | `test_derive_phase1r_d3_placement` | historical Phase1R derivation |
 | `test_derive_phase1r_d4_placement` | historical Phase1R derivation |
 | `test_derive_phase1r_d7_placement` | historical Phase1R derivation |
-| `test_issue117_physical_retention` | **unintentional** — added with the issue #117 physical-preflight retention work and not wired into `ci.yml` |
 
-The four historical placement modules and `test_analyze_phase1_p6` guard
-records that are frozen and no longer change; running them locally before
-touching anything under `docs/investigations/data/` is still worthwhile.
-`test_issue117_physical_retention` guards live evidence and should be added to
-the CI list.
+These five guard records that are frozen and no longer change. Run them locally
+before touching anything under `docs/investigations/data/`.
 
 ## Adding a test
 

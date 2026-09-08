@@ -749,10 +749,20 @@ exceeded its frozen limit by 2.56%. Evidence PR #89 and FreeToken producer PR
 #30 are merged; the failure is immutable and does not authorize threshold
 tuning or rerun.
 
-### Post-v3 numerical-envelope diagnosis — issue #90 — COMPLETE (pending maintainer acceptance)
+### Post-v3 numerical-envelope diagnosis — issue #90 — COMPLETE — accepted
 
-Issue #90 is complete. Terminal classification:
+Issue #90 is complete and **maintainer-accepted**. Terminal classification:
 `V3_ENVELOPE_DIAGNOSIS_ORDINARY_TAIL`.
+
+Acceptance record: PR #92, merged as
+[`b3562c48c45d97375a815ff68cc8d7bc28802906`](https://github.com/Zutfen-LLC/inferswarm/commit/b3562c48c45d97375a815ff68cc8d7bc28802906)
+("accept post-v3 envelope diagnosis"), after maintainer statistical
+corrections.
+
+Accepting the *diagnosis* changes nothing about the *verdict* it diagnoses.
+Issue #88 remains permanently `V3_HOLDOUT_FAIL`, and the `h86-*` observations
+remain permanently diagnostic-only. An accepted ordinary-tail explanation is
+not a waiver, a tolerance, or grounds for a rerun.
 
 Delivered via branch `issue-90-post-v3-diagnosis`: fail-closed CPU-only
 diagnosis tool `scripts/issue90_post_v3_diagnosis.py` (hash-pinned to the

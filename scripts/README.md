@@ -58,12 +58,33 @@ Consequences in practice:
   (`select_issue74_margin_stress.py` alongside its v2/v3/v4/v5 successors).
   The old file is the provenance of the old result.
 
-Known cosmetic defects that are deliberately **not** fixed for this reason:
-`generate_issue95_corpora.py`, `commit_issue95_stress_selection.py`, and
-`select_issue95_margin_stress_v4.py` each carry a docstring naming issue #86
-where the frozen artifact is v4 / issue #95. The behavior is correct and
-matches the accepted v4 methodology; only the prose attribution is wrong, and
-correcting it would break the pinned hashes.
+### Preserved docstring misattributions
+
+Three v4 tools carry a docstring that names issue #86 where the artifact they
+freeze is v4 / issue #95. The **behavior** is correct and matches the accepted
+v4 methodology in every case; only the prose attribution is wrong.
+
+| Script | Its docstring says | Correct attribution |
+|---|---|---|
+| `generate_issue95_corpora.py` | "the deterministic v4 corpora frozen by InferSwarm issue #86" | the v4 corpora are frozen by **issue #95**; the corpus-generation *machinery* is what is inherited unchanged from issue #74/v1, not the freeze |
+| `select_issue95_margin_stress_v4.py` | "Select the eight v4 stress cases from reference-only margins (issue #86)" | the v4 selection is frozen by **issue #95**; the eligibility *rule* it applies is the one prospectively established in issue #86 section 2 |
+| `commit_issue95_stress_selection.py` | "InferSwarm issue #86: freeze the v4 stress-selection commitment" | the commitment is frozen by **issue #95** |
+
+In each case the misattribution appears to be inherited text from the v3
+predecessor that was not updated when the v4 tool was derived from it. The
+reference to #86 is not meaningless — the v4 eligibility rule genuinely comes
+from #86 — but the freeze these tools implement is #95's.
+
+**These docstrings are deliberately not corrected.** All three files are
+hash-pinned by accepted v4 evidence. Editing a byte would change the SHA-256
+that evidence records, forcing an update to accepted manifests purely to repair
+historical prose — provenance churn with no correctness benefit, in a
+repository whose entire value rests on those hashes meaning what they say.
+
+The rule for successors: **a new tool carries a corrected description.** When a
+v6 generator, selector, or commitment tool is derived from one of these, write
+its docstring to name its own gate, and inherit only the machinery. Do not
+propagate the misattribution, and do not retroactively repair the frozen ones.
 
 ## Running them
 

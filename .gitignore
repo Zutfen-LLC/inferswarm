@@ -30,6 +30,12 @@ dist/
 *.key
 *.pem
 
+# Exception: a sealed-holdout recipient certificate is a PUBLIC certificate and
+# is committed evidence (it identifies the holdout recipient key so a custody
+# claim can be verified). Only that exact filename is re-included — every other
+# PEM, including any private key that happens to sit beside it, stays ignored.
+!docs/qualification/*/sealed/recipient-certificate.pem
+
 # Local scratch notes and benchmark working dirs (results are committed
 # under docs/benchmarks/ with provenance; scratch is not)
 scratch/

@@ -61,7 +61,7 @@ Read top to bottom; each row is caused by the one above it.
 | [`gemma4-12b-it-semantic-83/`](gemma4-12b-it-semantic-83/README.md) | #83 | contract adjudication | decision-stability semantic contract accepted: canonical-prefix replay separated from free-running behavior, mandatory `E_full`, supplemental decision-local `E_D`, frozen argmax tie-break |
 | [`gemma4-12b-it-v3/`](gemma4-12b-it-v3/README.md) | #86 | methodology freeze | first executable implementation of the #83 contract; fresh corpora and sealed v3 holdout |
 | [`gemma4-12b-it-v3-campaign-88/`](gemma4-12b-it-v3-campaign-88/TERMINAL-REPORT.md) | #88 | physical campaign | terminal **`V3_HOLDOUT_FAIL`** — the semantic layer passed everywhere (4672/4672 calibration, 192/192 holdout), but one inherited `final-normalized-hidden-state:rms-difference` envelope exceeded its frozen limit by 2.56% |
-| [`gemma4-12b-it-post-v3-envelope-diagnosis/`](gemma4-12b-it-post-v3-envelope-diagnosis/DIAGNOSIS.md) | #90 | diagnosis | **`V3_ENVELOPE_DIAGNOSIS_ORDINARY_TAIL`** — an ordinary heavy-tail draw, no pre-observable applicability split; the v3 acceptance rule was stricter than the statistical statement it was built on |
+| [`gemma4-12b-it-post-v3-envelope-diagnosis/`](gemma4-12b-it-post-v3-envelope-diagnosis/DIAGNOSIS.md) | #90 | diagnosis | **`V3_ENVELOPE_DIAGNOSIS_ORDINARY_TAIL`**, maintainer-accepted (PR #92, `b3562c48`) — an ordinary heavy-tail draw, no pre-observable applicability split; the v3 acceptance rule was stricter than the statistical statement it was built on |
 | [`post-v3-numerical-core-doctrine/`](post-v3-numerical-core-doctrine/DECISION.md) | #93 / ADR 0011 | doctrine | **`NUMERICAL_CORE_TWO_TIER_DOCTRINE_ACCEPTED`** — a comparator must declare an acceptance-bearing core and mandatory retained telemetry before physical calibration |
 | [`gemma4-12b-it-v4/`](gemma4-12b-it-v4/METHODOLOGY.md) | #95 | methodology freeze | **`GEMMA_V4_PREDICTION_ALIGNED_METHODOLOGY_FROZEN`** — 24 cells × 79 cases, four acceptance-bearing scalar families separated from twelve telemetry identities |
 | [`gemma4-12b-it-v4-campaign-97/`](gemma4-12b-it-v4-campaign-97/b/TERMINAL-REPORT.md) | #97 | physical campaign | terminal **`V4_HOLDOUT_CORE_FAIL`** — calibration passed completely; one holdout case exceeded the `fp32-consumer-logits:p99-absolute-error` limit by 0.75% (16.765625 vs 16.640625), semantic layer 192/192 |
@@ -77,7 +77,8 @@ Read top to bottom; each row is caused by the one above it.
   the #83 decision-stability contract.
 - **v3 / #88** — the *metric set* was wrong: an internal checkpoint family was
   acceptance-bearing without evidence that it gated a real correctness path.
-  Fixed by the #93 core/telemetry split.
+  Fixed by the #93 core/telemetry split. Accepting the #90 diagnosis explained
+  the failure; it did not reclassify it — #88 remains `V3_HOLDOUT_FAIL`.
 - **v4 / #97** — the *statistics* were wrong: the prediction theorem assumed an
   exchangeability the balanced-cell design did not establish, and p99 added an
   order-statistic knife edge. Fixed by the #108 doctrine and the v5 mixture
