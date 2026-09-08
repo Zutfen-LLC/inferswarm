@@ -1,9 +1,17 @@
 # R6 successor dense full integration — issue #117
 
-Status: **`ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`**.
-The previous CPU/static freeze claim is superseded by the retained
-[checkpoint-authority blocker](CHECKPOINT-AUTHORITY-BLOCKER.md). Physical
-preflight and Arms A-E are pending and were not executed.
+Current state: **`ISSUE117_IMPLEMENTATION_FREEZE_PENDING_RE_EVALUATION`**
+(additive current-state record:
+`evidence/v5-qualification-subject-recovery.json`). Both retained-evidence
+blockers are recovered — `V5_CHECKPOINT_AUTHORITY_PROVENANCE_RECOVERED`
+(PR #119) and `V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED` (see
+[CHECKPOINT-AUTHORITY-BLOCKER.md](CHECKPOINT-AUTHORITY-BLOCKER.md) for both
+resolution sections). The accepted #118 terminal evidence
+(`evidence/canonical-summary.json`, `ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`)
+is preserved byte-for-byte as the accurate historical record of the state
+when #118 was accepted; it is never rewritten. Physical preflight and Arms
+A-E remain pending and were NOT executed; the physical gate is not
+unblocked until the repaired preflight itself is reviewed/accepted.
 
 This phase proves, before any physical correctness-bearing execution, that
 the accepted architecture seams compose exactly as the #117 gate requires —
@@ -28,24 +36,37 @@ ranking work:
   subject digest is recomputed from its own subject over the shared
   execution-equality convention and every trusted record is bound to the
   accepted terminal adjudication identity;
-- the V5-shaped candidate is a candidate-construction diagnostic. It is
-  selected through the ordinary strategy machinery. It does not establish
-  qualification authority. The retained evidence cannot reconstruct an
-  accepted qualification subject. Therefore every physical candidate is
-  `QUALIFICATION_NOT_APPLICABLE` until the checkpoint-authority blocker is
-  resolved. Checkpoint identity has two named values: the retained repeated
-  `checkpoint_authority_sha256` and the mechanical `catalog_content_digest`.
-  Neither value supplies an independent authority derivation;
+- the accepted V5 qualification subject is independently reconstructed
+  from byte-pinned historical evidence
+  (`V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED`;
+  `evidence/accepted-v5-qualification-subject.json`,
+  `scripts/issue117_accepted_subject.py`). The canonical V5 candidate is
+  `QUALIFICATION_APPLICABLE` through ordinary subject-digest equality with
+  that recovered subject — not candidate ID, geometry name, or hard-coded
+  selection — and every materially different candidate stays
+  `QUALIFICATION_NOT_APPLICABLE`. Checkpoint identity keeps its two named
+  values: the accepted external `checkpoint_authority_sha256` (bound by the
+  retained evidence + PR #119 recovery) and the machinery-local
+  `catalog_content_digest`;
 - feasibility bytes are the exact frozen participant requirements (assigned
   plus declared shared state), so the capacity proof is truthful about the
   embedding and shared tied-head state each stage must materialize;
 - participant-exact cold acquisition, verified materialization, warm restart,
   and planning-only locality mutation hold every acceptance zero-invariant;
-- eighteen negative controls and six fencing negatives fail closed —
+- physical preflight (P0 correction) mechanically REQUIRES the canonical
+  V5-geometry candidate to independently derive `QUALIFICATION_APPLICABLE`
+  with reason `MATCHED_ACCEPTED_QUALIFICATION_RECORD` against exactly the
+  accepted evidence-derived record: an honestly regenerated
+  `QUALIFICATION_NOT_APPLICABLE` for the V5 candidate, missing/drifted
+  subject evidence, zero or duplicate V5-geometry candidates, and foreign
+  record-id claims all fail the preflight;
+- nineteen negative controls and six fencing negatives fail closed —
   including poisoning controls proving the derived zero-invariants (fence
   counters, host-mirror/movement bytes) become nonzero when the retained
-  records are forged, and the authority-unavailable control proving retained
-  evidence cannot reconstruct an accepted V5 qualification subject.
+  records are forged, the subject-provenance-recovered control proving the
+  accepted subject loads from byte-pinned evidence with no candidate
+  machinery, and the subject-evidence-tampering control proving drifted
+  evidence fails closed.
 
 | CPU fixture accounting | Value |
 |---|---:|

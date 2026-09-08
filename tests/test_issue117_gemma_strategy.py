@@ -432,11 +432,16 @@ class FeasibilityAndPolicyTests(unittest.TestCase):
 
 
 class QualificationAuthorityTests(unittest.TestCase):
-    def test_retained_v5_authority_is_unavailable(self):
-        with self.assertRaisesRegex(
-                strategy.QualificationAuthorityUnavailable,
-                "accepted V5 qualification subject is unavailable"):
-            strategy.retained_v5_qualification_authority()
+    def test_retained_v5_authority_is_recovered_from_evidence(self):
+        record = strategy.retained_v5_qualification_authority()
+        self.assertEqual(
+            record["authority"]["terminal_adjudication_sha256"],
+            "f024f8b3394686ff098459b657ce6dba62d7f190972663e3929ef4a574ab7a70")
+        self.assertEqual(record["authority"]["terminal_disposition"],
+                         "V5_QUALIFICATION_PASS")
+        self.assertEqual(
+            record["qualification_subject"]["checkpoint_authority_sha256"],
+            strategy.MODEL_SUBJECT["checkpoint_authority_sha256"])
 
 class PlanAndRequirementsTests(unittest.TestCase):
     @classmethod
@@ -528,8 +533,12 @@ class CanonicalCandidateDiagnosticTests(unittest.TestCase):
     def test_canonical_candidate_is_a_diagnostic_not_accepted_authority(self):
         candidate = strategy.canonical_v5_candidate()
         self.assertIn("qualification_subject", candidate)
-        with self.assertRaises(strategy.QualificationAuthorityUnavailable):
-            strategy.retained_v5_qualification_authority()
+        # the accepted authority loads independently of the diagnostic
+        # candidate: it comes from pinned evidence, not from the candidate
+        record = strategy.retained_v5_qualification_authority()
+        self.assertEqual(
+            record["qualification_subject_digest"],
+            candidate["qualification_subject_digest"])
 
     def test_canonical_authority_is_evidence_bound_not_a_config_field(self):
         catalog = strategy.canonical_authority_catalog(inferswarm_root=ROOT)
@@ -648,9 +657,18 @@ class CheckpointAuthorityAttestationTests(unittest.TestCase):
         with self.assertRaisesRegex(strategy.StrategyError, "object set"):
             strategy.catalog_from_repository(self.root, config=self.config)
 
-    def test_synthetic_fixture_cannot_inherit_unavailable_v5_authority(self):
-        with self.assertRaises(strategy.QualificationAuthorityUnavailable):
-            strategy.retained_v5_qualification_authority()
+    def test_synthetic_fixture_cannot_inherit_v5_authority(self):
+        # the accepted authority is bound to the accepted Gemma subject
+        # recovered from pinned evidence; a synthetic fixture subject (model
+        # id, execution, backend all fixture-scoped) can never equal it
+        record = strategy.retained_v5_qualification_authority()
+        fixture_subject = strategy.subject_from_catalog(
+            strategy.canonical_authority_catalog(inferswarm_root=ROOT),
+            execution=strategy.SYNTHETIC_SUBJECT_EXECUTION,
+            backend=strategy.SYNTHETIC_SUBJECT_BACKEND)
+        self.assertNotEqual(
+            strategy.subject_digest(dict(fixture_subject)),
+            record["qualification_subject_digest"])
 
 
 if __name__ == "__main__":

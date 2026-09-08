@@ -147,10 +147,24 @@ queries (house rule; enforced by review and CI).
   entry listings with lstat facts (count, bytes, symlink and hardlink
   aliases) whose aggregates the validator re-derives. Qualification
   applicability is derived, never trusted: the validator recomputes every
-  candidate's execution-equality subject digest, sees that the retained V5
-  qualification subject is unavailable, and derives
-  `QUALIFICATION_NOT_APPLICABLE`. It refuses any retained record that claims
-  `QUALIFICATION_APPLICABLE`. Source possession is proven, not asserted:
+  candidate's execution-equality subject digest and compares it against the
+  accepted V5 qualification subject independently reconstructed from
+  byte-pinned historical evidence
+  (`V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED`), deriving
+  `QUALIFICATION_APPLICABLE` only on ordinary subject-digest equality. It
+  refuses any retained record that disagrees with the independently derived
+  verdict and fails closed whenever the evidence is missing or drifted.
+  Additionally (P0 correction), the physical preflight REQUIRES the
+  qualification authority: the candidate set must contain exactly one
+  V5-geometry candidate, that candidate must independently derive
+  `QUALIFICATION_APPLICABLE` with reason
+  `MATCHED_ACCEPTED_QUALIFICATION_RECORD` against exactly the accepted
+  evidence-derived record, no other candidate may claim that record without
+  full execution-equality subject-digest equality, and missing, drifted,
+  contradictory, or invalid accepted-subject evidence fails the preflight
+  regardless of what the stored applicability records honestly say —
+  `QUALIFICATION_NOT_APPLICABLE` for the V5 candidate is never a preflight
+  success state. Source possession is proven, not asserted:
   every local (`file://`) Source must carry a mechanically collected
   possession record whose root exists, is not a symlink, and is disjoint
   from every participant cache and materialized root; an empty possession

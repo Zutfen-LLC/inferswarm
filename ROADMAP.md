@@ -861,17 +861,31 @@ distribution, no model-specific planner branches, and no change to the
 execution math V5 qualified.
 
 The synthetic CPU fixture campaign passed with disposition
-`ISSUE117_CPU_FIXTURE_PASS` (base `d37bd30`). The implementation-freeze
-terminal state is `ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`. Retained V5
-evidence does not provide a mechanical checkpoint-byte derivation or a
-complete independently reconstructable qualification subject. The fixture,
-producer-delta audit, strategy/planner composition, and physical-preflight
-tooling remain useful CPU/static results. They do not make the physical gate
-applicable. Implementation and evidence:
+`ISSUE117_CPU_FIXTURE_PASS` (base `d37bd30`). The two retained-evidence
+blockers are now recovered: the checkpoint-authority provenance
+(`V5_CHECKPOINT_AUTHORITY_PROVENANCE_RECOVERED`, PR #119) and the accepted
+V5 qualification subject
+(`V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED`; reconstructed purely from
+byte-pinned historical evidence, digest
+`sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f7f1d7994ffd`).
+The canonical V5 physical candidate now derives `QUALIFICATION_APPLICABLE`
+through ordinary subject-digest equality; every materially different
+candidate stays `QUALIFICATION_NOT_APPLICABLE`. The implementation freeze
+may now be re-evaluated: the current state is recorded additively in
+`evidence/v5-qualification-subject-recovery.json`
+(`ISSUE117_IMPLEMENTATION_FREEZE_PENDING_RE_EVALUATION`) while the accepted
+#118 terminal evidence (`evidence/canonical-summary.json`,
+`ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`) is preserved byte-for-byte as
+historical record. The physical preflight now mechanically requires the
+canonical V5-geometry candidate to derive `QUALIFICATION_APPLICABLE`
+against exactly the accepted evidence-derived record; an honest
+`QUALIFICATION_NOT_APPLICABLE` for that candidate fails the preflight. The physical preflight has still not run and
+Arms A-E remain pending; the physical gate is not unblocked until the
+repaired preflight is itself reviewed/accepted. Implementation and evidence:
 `scripts/issue117_*.py`, `tests/test_issue117_*.py`, and the retained record
 under `docs/implementation/r6-successor-dense-full-integration-117/`.
 
-Blocked pending retained authority evidence, then the physical preflight and Arms A–E on the fabric (V5 execution-math
+Pending maintainer acceptance of the repaired preflight, then the physical preflight and Arms A–E on the fabric (V5 execution-math
 bridge 192/192; canonical cold acquisition/realization; ordinary
 Coordinator-serving versus direct-control equivalence; physical warm restart;
 locality mutation), each governed by the narrow stop states the issue

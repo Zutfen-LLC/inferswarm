@@ -1,6 +1,12 @@
 # Issue #117 checkpoint-authority blocker
 
-Status: `ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`.
+Status (historical, at the time of the original blocker):
+`ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`.
+
+Current state (additive record,
+`evidence/v5-qualification-subject-recovery.json`):
+`ISSUE117_IMPLEMENTATION_FREEZE_PENDING_RE_EVALUATION` — both blockers
+below are resolved; the physical preflight and Arms A-E have NOT run.
 
 ## Finding
 
@@ -75,3 +81,70 @@ independent authority instead of failing closed.
 
 Historical note preserved: the original blocker text above stands as the
 accurate record of the pre-recovery state. No old evidence was rewritten.
+
+## Resolution (2026-09-07, second gate): `V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED`
+
+The remaining blocker — the absent independently reconstructed accepted V5
+qualification subject — is resolved. The complete accepted
+execution-equality subject was reconstructed purely from byte-pinned
+accepted historical evidence by `scripts/issue117_accepted_subject.py`:
+
+- model / revision / checkpoint authority / execution semantics:
+  `docs/qualification/gemma4-12b-it-v5/manifests/physical-subject.json`
+  (the #109 frozen physical subject, unchanged by #110);
+- stage structure and per-stage GPU UUIDs/layer ranges:
+  `docs/qualification/gemma4-12b-it-v4-campaign-97/EXECUTION-AUTHORITY.json`
+  (the #97 execution authority, carried unchanged into V5; corroborated by
+  the calibration producer's frozen chain plan at FreeToken `7e5c852`);
+- Compute Unit identities (node/index/product/compute capability) and the
+  five-field backend/runtime stack:
+  `docs/qualification/gemma4-12b-it-v2-campaign-81/preflight-applicability.json`,
+  cross-checked field-by-field against
+  `docs/qualification/gemma4-12b-it-v4-campaign-97/PREFLIGHT-APPLICABILITY.json`
+  and the #110 TERMINAL-REPORT runtime identity line;
+- representation (`checkpoint-safetensors`, the single-file safetensors
+  checkpoint whose sha256 is the authority): the PR #119 recovery record;
+- terminal adjudication identity: the pinned
+  `b/holdout-adjudication.json` file's own SHA-256 (`f024f8b3...b7a70`,
+  `V5_QUALIFICATION_PASS`).
+
+The mechanically derived accepted subject digest is
+`sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f7f1d7994ffd`.
+The retained provenance record is
+`evidence/accepted-v5-qualification-subject.json`; the reconstruction is
+independent of all current candidate machinery (enforced structurally and
+by a mutation regression). Physical applicability now evaluates candidates
+against this independently reconstructed subject through the ordinary
+generic digest-equality gate. The physical preflight has still NOT run and
+Arms A-E remain pending.
+
+## PR #120 correction: historical/current-state hierarchy
+
+The accepted #118 canonical summary
+(`evidence/canonical-summary.json`) is historical terminal evidence for
+the state that existed when PR #118 was accepted
+(`ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`, authority and subject
+provenance unavailable at that time). It is preserved byte-for-byte and
+is never rewritten by later recovery work. The current state after both
+recoveries lives only in the additive record
+`evidence/v5-qualification-subject-recovery.json`:
+
+- classification: `V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED`;
+- accepted subject digest:
+  `sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f7f1d7994ffd`;
+- checkpoint authority / qualification subject: `RECOVERED`;
+- previous #118 disposition: `ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`
+  (historical, preserved);
+- current Issue #117 state:
+  `ISSUE117_IMPLEMENTATION_FREEZE_PENDING_RE_EVALUATION`;
+- `physical_preflight_executed == false`, `physical_arms_executed == false`.
+
+The PR #120 correction also hardened the physical preflight: it now
+mechanically requires the canonical V5-geometry candidate to
+independently derive `QUALIFICATION_APPLICABLE` (reason
+`MATCHED_ACCEPTED_QUALIFICATION_RECORD`, matched record exactly
+`inferswarm.issue117.accepted-v5-qualification/1`) and verifies every
+declared accepted-subject evidence pin — including the #110 terminal
+report — before any of its data contributes to the reconstructed
+subject. An honestly regenerated `QUALIFICATION_NOT_APPLICABLE` for the
+V5 candidate fails the preflight.
