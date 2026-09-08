@@ -17,7 +17,10 @@ reference, summary-SHA-bound). Two invalid launch attempts (staging
 error; dead last-stage service) produced no correctness-bearing
 observation and are retained with reasons. Arm B was NOT executed; the
 dedicated cold roots remain empty and untouched. No holdout material was
-used.  STOPPED for maintainer review before Arm B.
+used.  Arm A is ACCEPTED by the maintainer via merge
+`6774474941d7ce2a0252c8c1e148f8bce61a8d6d` (PR #122); the current
+authorized gate is Arm B — canonical cold acquisition + realization
+(authority: Issue #117) — and it is not yet executed.
 
 Retention/provenance correction (PR #122, same day, no physical execution):
 the terminal classification is now INDEPENDENTLY re-derivable from low-level
