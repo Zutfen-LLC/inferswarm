@@ -1,157 +1,157 @@
 {
-  "schema": "inferswarm.project-status/1",
   "capabilities": [
     {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/55#issuecomment-5495529413",
+        "state": "accepted"
+      },
       "id": "planning",
-      "title": "Automatic planning",
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/55#issuecomment-5495529413",
+        "result": "R3_MINIMUM_AUTOMATIC_PLANNING_PASS"
+      },
       "scope": "physical",
       "summary": "Strategy-constrained selection among legal local plans using applicable evidence and operator policy.",
-      "observation": {
-        "result": "R3_MINIMUM_AUTOMATIC_PLANNING_PASS",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/55#issuecomment-5495529413"
-      },
-      "acceptance": {
-        "state": "accepted",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/55#issuecomment-5495529413"
-      }
+      "title": "Automatic planning"
     },
     {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/60#issuecomment-5504161037",
+        "state": "accepted"
+      },
       "id": "serving",
-      "title": "Distributed serving",
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/60#issuecomment-5504161037",
+        "result": "R5A_STATIC_MULTI_NODE_SERVING_PASS"
+      },
       "scope": "physical",
       "summary": "A normal request drives planning, multi-Node realization, and backend-native execution on the tested Qwen path.",
-      "observation": {
-        "result": "R5A_STATIC_MULTI_NODE_SERVING_PASS",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/60#issuecomment-5504161037"
-      },
-      "acceptance": {
-        "state": "accepted",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/60#issuecomment-5504161037"
-      }
+      "title": "Distributed serving"
     },
     {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/62#issuecomment-5508822299",
+        "state": "accepted"
+      },
       "id": "recovery",
-      "title": "Plan epochs and recovery",
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/62#issuecomment-5508822299",
+        "result": "R5B_PLAN_EPOCH_RECOVERY_PASS"
+      },
       "scope": "physical",
       "summary": "Resource changes and recovery preserve plan-epoch authority and reject retired work on the tested serving path.",
-      "observation": {
-        "result": "R5B_PLAN_EPOCH_RECOVERY_PASS",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/62#issuecomment-5508822299"
-      },
-      "acceptance": {
-        "state": "accepted",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/62#issuecomment-5508822299"
-      }
+      "title": "Plan epochs and recovery"
     },
     {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/67#issuecomment-5516608982",
+        "state": "accepted"
+      },
       "id": "coordinator",
-      "title": "Separate Coordinator",
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/67#issuecomment-5516608982",
+        "result": "EXTERNAL_COORDINATOR_SEPARATION_PASS"
+      },
       "scope": "physical",
       "summary": "A CPU-only Coordinator handles ingress, planning, epoch coordination, and committed output without hosting model execution.",
-      "observation": {
-        "result": "EXTERNAL_COORDINATOR_SEPARATION_PASS",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/67#issuecomment-5516608982"
-      },
-      "acceptance": {
-        "state": "accepted",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/67#issuecomment-5516608982"
-      }
+      "title": "Separate Coordinator"
     },
     {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/53fb8f4c7ba3108a21f983712e5cbdb747a26600",
+        "state": "accepted"
+      },
       "id": "acquisition",
-      "title": "Selective artifact acquisition",
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/53fb8f4c7ba3108a21f983712e5cbdb747a26600/docs/implementation/plan-driven-artifact-acquisition-99/README.md",
+        "result": "PLAN_DRIVEN_ARTIFACT_ACQUISITION_PASS"
+      },
       "scope": "cpu-fixture",
       "summary": "Participants acquire only required model artifacts in the model-independent acquisition proof.",
-      "observation": {
-        "result": "PLAN_DRIVEN_ARTIFACT_ACQUISITION_PASS",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/53fb8f4c7ba3108a21f983712e5cbdb747a26600/docs/implementation/plan-driven-artifact-acquisition-99/README.md"
-      },
-      "acceptance": {
-        "state": "accepted",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/53fb8f4c7ba3108a21f983712e5cbdb747a26600"
-      }
+      "title": "Selective artifact acquisition"
     },
     {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da",
+        "state": "accepted"
+      },
       "id": "orchestration",
-      "title": "Peer reuse and replacement deltas",
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da/docs/implementation/plan-driven-artifact-orchestration-101/README.md",
+        "result": "PLAN_DRIVEN_ARTIFACT_ORCHESTRATION_PASS"
+      },
       "scope": "cpu-fixture",
       "summary": "Verified inventory, source selection, peer publication, and replacement-plan acquisition work across participants.",
-      "observation": {
-        "result": "PLAN_DRIVEN_ARTIFACT_ORCHESTRATION_PASS",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da/docs/implementation/plan-driven-artifact-orchestration-101/README.md"
-      },
-      "acceptance": {
-        "state": "accepted",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da"
-      }
+      "title": "Peer reuse and replacement deltas"
     },
     {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/47624abe14a84d27188018200a48a8652f93bfd6",
+        "state": "accepted"
+      },
       "id": "locality",
-      "title": "Locality-aware transition planning",
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/47624abe14a84d27188018200a48a8652f93bfd6/docs/implementation/artifact-locality-transition-planning-103/README.md",
+        "result": "ARTIFACT_LOCALITY_TRANSITION_PLANNING_PASS"
+      },
       "scope": "cpu-fixture",
       "summary": "Verified artifact locality affects transition ranking without changing technical feasibility or execution ranking.",
-      "observation": {
-        "result": "ARTIFACT_LOCALITY_TRANSITION_PLANNING_PASS",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/47624abe14a84d27188018200a48a8652f93bfd6/docs/implementation/artifact-locality-transition-planning-103/README.md"
-      },
-      "acceptance": {
-        "state": "accepted",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/47624abe14a84d27188018200a48a8652f93bfd6"
-      }
+      "title": "Locality-aware transition planning"
     },
     {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76",
+        "state": "accepted"
+      },
       "id": "qualification",
-      "title": "Dense Gemma numerical qualification",
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76/docs/qualification/gemma4-12b-it-v5-campaign-110/b/TERMINAL-REPORT.md",
+        "result": "V5_QUALIFICATION_PASS"
+      },
       "scope": "physical",
       "summary": "The frozen Gemma subject passed V5 numerical and semantic qualification; applicability remains specific to that subject.",
-      "observation": {
-        "result": "V5_QUALIFICATION_PASS",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76/docs/qualification/gemma4-12b-it-v5-campaign-110/b/TERMINAL-REPORT.md"
-      },
-      "acceptance": {
-        "state": "accepted",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76"
-      }
+      "title": "Dense Gemma numerical qualification"
     }
   ],
   "frontier": {
-    "title": "Issue #117 \u2014 R6 successor dense full integration",
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/117",
-    "objective": "Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.",
-    "prerequisite": {
-      "title": "Arm B \u2014 canonical cold acquisition + realization",
-      "observation": {
-        "result": "ISSUE117_ARM_B_COLD_REALIZATION_PASS",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/pull/127"
-      },
-      "acceptance": {
-        "state": "accepted",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/fed87d1b71a0794374dd58c921e31606a56a242f"
-      }
-    },
     "execution": {
-      "state": "blocked",
-      "step": "Arm C observed ISSUE117_ARM_C_EVIDENCE_BLOCKER (post-correctness-bearing methodology / evidence-admissibility failure; physical observations retained as diagnostic; pending maintainer review); Arm D blocked",
-      "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/117",
       "constraints": [
         "Arm B is accepted at merge fed87d1b71a0794374dd58c921e31606a56a242f (ISSUE117_ARM_B_COLD_REALIZATION_PASS, PR #127).",
-        "Arm C executed 2026-09-09 from accepted main fed87d1b71a0794374dd58c921e31606a56a242f: the campaign is methodology/evidence-blocked (ISSUE117_ARM_C_EVIDENCE_BLOCKER, post-correctness-bearing methodology / evidence-admissibility failure). The frozen pre-execution authority (5e2c83a) binds the single-shot direct comparator; the driver and reducer were modified after correctness-bearing execution (disclosed in evidence/arm-c/pre-execution-authority-audit.json). armc-direct-6 (invalid, 24 correctness-bearing results, frozen invocation) triggered the mandatory \u00a710 stop; armc-direct-7/8/9 and armc-ordinary-1 are post-stop diagnostic observations. The retained 18/24 comparison and six regime-4 divergences are diagnostic evidence for a follow-up hypothesis, not an accepted FAIL. Four tokenizer-metadata /srv/models/ reads are retained and counted under the frozen zero-Source rule. No ordinary-serving semantic PASS or FAIL exists from this campaign.",
+        "Arm C executed 2026-09-09 from accepted main fed87d1b71a0794374dd58c921e31606a56a242f: the campaign is methodology/evidence-blocked (ISSUE117_ARM_C_EVIDENCE_BLOCKER, post-correctness-bearing methodology / evidence-admissibility failure; correction /2). The actual frozen defect: the frozen direct comparator (single-shot max_new_tokens=8, one prefill per case) and the frozen ordinary path (FreeToken 924cd22e EpochServingController replay-prefix loop: max_new_tokens=2 per committed position, commit step zero, discard the speculative second token; bytes retained sha256-pinned under evidence/arm-c/frozen-freetoken/) differed in runtime invocation semantics in addition to control-plane routing, so the frozen campaign could not establish ordinary-vs-direct equivalence or semantic failure as designed. direct-6 is a correctness-bearing observation with unknown/not-retained exact driver bytes (staged overwrite 10:43Z placed after its 10:28Z completion); ordinary-1 (10:38Z) is a correctness-bearing ordinary-path observation inadmissible to a semantic verdict; direct-7/8/9 (10:49/10:56/11:09Z) are post-revision diagnostics. Both histories of the \u00a710 stop-rule ambiguity converge on the blocker. The retained 18/24 comparison and six regime-4 divergences remain follow-up-hypothesis diagnostics. Four tokenizer-metadata /srv/models/ reads + one Source-root stat are retained under the frozen zero-Source rule. No ordinary-serving semantic PASS or FAIL exists from this campaign.",
         "Do not rerun the accepted physical preflight, Arm A, or the accepted Arm-B campaign.",
         "Arm D must not begin before Arm-C maintainer review.",
         "Preserve the frozen producer 924cd22ea081f6d4ed471016faf01d427fc5b0d2, checkpoint 5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d, canonical candidate geometry dense.6171f32b4413, and the accepted Arm-B participant materialized state.",
         "No consumed h109-* holdout material may be used as new evidence."
-      ]
-    }
-  },
-  "runtime": {
-    "repository": "https://github.com/Zutfen-LLC/FreeToken",
-    "integration_branch": "inferswarm-research",
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/59"
+      ],
+      "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/117",
+      "state": "blocked",
+      "step": "Arm C observed ISSUE117_ARM_C_EVIDENCE_BLOCKER (post-correctness-bearing methodology / evidence-admissibility failure; physical observations retained as diagnostic; pending maintainer review); Arm D blocked"
+    },
+    "objective": "Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.",
+    "prerequisite": {
+      "acceptance": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/fed87d1b71a0794374dd58c921e31606a56a242f",
+        "state": "accepted"
+      },
+      "observation": {
+        "reference": "https://github.com/Zutfen-LLC/inferswarm/pull/127",
+        "result": "ISSUE117_ARM_B_COLD_REALIZATION_PASS"
+      },
+      "title": "Arm B \u2014 canonical cold acquisition + realization"
+    },
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/117",
+    "title": "Issue #117 \u2014 R6 successor dense full integration"
   },
   "limits": [
     "Research / proof of concept; no released production runtime.",
     "Physical results apply to their tested model, backend, hardware, and topology. CPU fixture proofs do not establish physical integration.",
     "Public planner/strategy APIs, wire formats, and storage schemas remain unfrozen; broad vendor support remains an objective.",
     "Historical Phase 1 NO-GO and R6 failure remain unchanged. GLM-5.3-Flash / #13 is a later falsifier."
-  ]
+  ],
+  "runtime": {
+    "integration_branch": "inferswarm-research",
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/59",
+    "repository": "https://github.com/Zutfen-LLC/FreeToken"
+  },
+  "schema": "inferswarm.project-status/1"
 }

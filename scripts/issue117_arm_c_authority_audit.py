@@ -2,6 +2,12 @@
 """Issue #117 Arm C — pre-execution authority audit + attempt-lineage
 recovery builder (retention/derivation only; CPU-only; no rerun).
 
+Correction /2 (blocker-derivation correction pass): the audit gains the
+mechanically derived frozen-comparator defect statement, the
+comparator-modification forensics the blocker reducer cross-checks, and
+the FAIL-CLOSED post-audit correction allowlist (exact sha256 per
+corrected file; the frozen methodology/driver are never allowable).
+
 Builds two retained evidence documents from mechanically verifiable
 sources only:
 
@@ -15,23 +21,16 @@ sources only:
    declared freeze — i.e. the final current scripts are NOT the scripts
    frozen by ``pre_execution_inferwarm_sha``.
 
-2. ``attempt-lineage.json`` (schema /2)
+2. ``attempt-lineage.json`` (schema /3)
    Recovers the methodology §10 lineage dimensions from existing
-   contemporaneous evidence only: the retained Hermes execution-session
-   transcript (session ``20260909_004724_7f3f1e``, read-only against
-   ``~/.hermes/state.db``, digest-bound), retained per-attempt evidence
-   documents (``completed_at_ns``), host file mtimes (recorded as
-   observed), and the retained git state. No timestamp or worktree
-   identity is invented: unrecoverable fields carry an explicit
-   ``unknown / not retained`` marker with an explanation.
-
-The classifier derives (does not assert) the correctness-bearing stop
-boundary: ``armc-direct-6`` physically completed 24 cases with
-GPU residency and emitted correctness-bearing results using the frozen
-single-shot ``max_new_tokens=8`` invocation, and is retained as
-INVALID — under METHODOLOGY-ARM-C §10 that is a mandatory STOP for
-maintainer review, and every later attempt is post-stop diagnostic
-evidence, inadmissible to the Arm-C terminal serving claim.
+   contemporaneous evidence only. Schema /3 supersedes /2: attempt
+   classifications are corrected to the mechanically derived campaign
+   disposition (the frozen comparator's invocation-semantics defect),
+   physical chronology is carried separately from the authored logical
+   order, and every previously authored validity flag is retained
+   verbatim as historical/post-hoc classification. No timestamp or
+   worktree identity is invented: unrecoverable fields carry an
+   explicit ``unknown / not retained`` marker with an explanation.
 
 Run from the repo root:  python3 scripts/issue117_arm_c_authority_audit.py
 """
@@ -203,7 +202,7 @@ def build_authority_audit(head: str) -> dict:
 
     audit = {
         "schema": "inferswarm.issue117.arm-c."
-                  "pre-execution-authority-audit/1",
+                  "pre-execution-authority-audit/2",
         "claimed_pre_execution_inferswarm_sha": FREEZE_SHA,
         "freeze_commit_committed_utc": utc(float(git([
             "log", "-1", "--format=%ct", FREEZE_SHA]))),
@@ -216,14 +215,36 @@ def build_authority_audit(head: str) -> dict:
             "direct comparator as one generate(session_id=i, "
             "prompt_token_ids=<rendered ids>, max_new_tokens=8) per case",
             "scripts/issue117_arm_c_direct.py at 5e2c83a implements "
-            "exactly that single-shot invocation",
+            "exactly that single-shot invocation — the single-shot "
+            "invocation is what the frozen methodology told the direct "
+            "arm to use",
+            "the frozen ordinary path is NOT a single-shot generate: "
+            "the frozen FreeToken producer 924cd22e's "
+            "EpochServingController.serve_tokens (retained verbatim, "
+            "sha256-pinned, under evidence/arm-c/frozen-freetoken/"
+            "924cd22e/) invokes the runtime per committed position with "
+            "the full replay prefix and max_new_tokens=2, commits only "
+            "step zero, discards the speculative second token, and "
+            "repeats; the ordinary HTTP Coordinator dispatches every "
+            "/v1/chat/completions request through exactly this call",
+            "MECHANICALLY DERIVED COMPARATOR DEFECT: the frozen Arm-C "
+            "methodology failed its own comparator-isolation "
+            "requirement — the direct arm and the ordinary arm "
+            "differed in runtime invocation semantics in addition to "
+            "differing in control-plane routing, so the frozen "
+            "campaign could not establish ordinary-vs-direct serving "
+            "equivalence or semantic failure as designed",
             "the direct driver was modified after correctness-bearing "
             "execution: the staged driver on inferswarm01 was overwritten "
             "in place at 2026-09-09T10:43:04Z (between armc-direct-6 "
-            "completion 10:28:36Z and armc-direct-9 completion "
-            "11:09:05Z) and first committed (per-token replay-prefill, "
-            "max_new_tokens=2, single-shot declared invalid) at "
-            "dd4154d",
+            "completion 10:28:36Z and armc-direct-7 observation "
+            "10:49:28Z) and first committed (per-token replay-prefill, "
+            "max_new_tokens=2) at dd4154d",
+            "the exact staged driver bytes used by armc-direct-1..6 "
+            "are unknown / not retained (the staged copy was "
+            "overwritten in place; no direct-6-era copy exists); the "
+            "unrecoverability independently strengthens the evidence "
+            "blocker",
             "therefore the current scripts/issue117_arm_c_direct.py is "
             "NOT the direct driver frozen by "
             "pre_execution_inferwarm_sha; armc-direct-9's replay-prefill "
@@ -232,10 +253,24 @@ def build_authority_audit(head: str) -> dict:
             "the reducer (scripts/issue117_arm_c_evidence.py) was "
             "similarly modified after observation (fail-closed invalid-"
             "attempt rule weakened to a review list; /srv/models/ "
-            "tokenizer-metadata exemption added); this audit and the "
-            "corrected reducer restore fail-closed semantics bound to "
-            "the pre-execution methodology",
+            "tokenizer-metadata exemption added); the blocker reducer "
+            "restores fail-closed semantics bound to the pre-execution "
+            "methodology",
         ],
+        "comparator_modification_forensics": {
+            "direct6_completed_utc": "2026-09-09T10:28:36.248255+00:00",
+            "staged_driver_mtime_utc": STAGED_DRIVER_MTIME_UTC,
+            "direct7_first_observed_utc":
+                "2026-09-09T10:49:28.249147+00:00",
+            "source": (
+                "retained completion evidence "
+                "(invalid-attempt-6/direct-run.json completed_at_ns), "
+                "the host-observed staged-driver stat recorded during "
+                "the /2 correction pass, and the retained "
+                "execution-session transcript first observation of the "
+                "armc-direct-7 launch"),
+        },
+        "post_audit_correction_allowlist": {},  # filled by caller
         "execution_code_identity_disclosure": {
             "armc-direct-1..armc-direct-6": {
                 "driver_bytes": "unknown / not retained",
@@ -292,8 +327,13 @@ def build_lineage(transcript: dict, lss_utc: str) -> dict:
                 cb_emitted: bool, reached_coord: bool, commit: bool,
                 cleanup: str, evidence: dict, first_observed: str,
                 code_identity: dict, valid: bool,
-                classification: str) -> dict:
-        return {
+                classification: str,
+                historical_validity: str | None = None) -> dict:
+        stamps = {"transcript_first_observed_utc": first_observed}
+        completion = evidence.get("completed_utc_from_evidence")
+        if completion:
+            stamps["completion_evidence_utc"] = completion
+        entry = {
             "attempt_id": aid, "order": order, "hosts": hosts,
             "phase_reached": phase, "failure": failure,
             "realization_request_made": realization,
@@ -303,14 +343,16 @@ def build_lineage(transcript: dict, lss_utc: str) -> dict:
             "coordinator_commit_occurred": commit,
             "accepted_arm_b_state_changed": False,
             "cleanup_containment": cleanup,
-            "observed_timestamps": {
-                "transcript_first_observed_utc": first_observed,
-            },
+            "observed_timestamps": stamps,
             "code_identity": code_identity,
             "evidence_bindings": evidence,
             "retained_validity_flag": valid,
             "campaign_classification": classification,
         }
+        if historical_validity is not None:
+            entry["historical_validity_classification"] = (
+                historical_validity)
+        return entry
 
     staged = {
         "inferswarm_inferwarm_worktree_sha": unknown,
@@ -376,67 +418,51 @@ def build_lineage(transcript: dict, lss_utc: str) -> dict:
                 transcript.get("armc-direct-5", unknown), driver_unknown,
                 False, "pre-stop infrastructure (non-correctness-bearing)"),
         attempt("armc-direct-6", 7, ["inferswarm01", "inferswarm03"],
-                "completed 24 cases (frozen single-shot "
-                "max_new_tokens=8 invocation)",
-                "INVALID COMPARATOR: single-shot max_new_tokens=8 "
-                "incremental decode (documented anomalous KV-append "
-                "path), invocation differs from the ordinary contract",
+                "completed 24 cases (invocation consistent with the "
+                "frozen single-shot max_new_tokens=8 comparator; exact "
+                "staged driver bytes unknown / not retained)",
+                "INVALID COMPARATOR (historical/post-hoc classification, "
+                "authored after the observation): single-shot "
+                "max_new_tokens=8 incremental decode (documented "
+                "anomalous KV-append path); the mechanically derived "
+                "defect is in the frozen comparator's design, not in "
+                "this attempt's use of the invocation the methodology "
+                "prescribed",
                 True, True, True, False, False,
-                "retained under invalid-attempt-6/ for divergence "
-                "diagnostics; NOT admissible as terminal comparator "
-                "evidence",
+                "retained under invalid-attempt-6/; part of the "
+                "evidence that exposes the frozen comparator defect; "
+                "NOT accepted terminal comparator evidence",
                 {"results": "invalid-attempt-6/direct-run.json",
                  "execution_plan": "invalid-attempt-6/execution-plan.json",
                  "planner_ranking_record_derived": (
-                     "serving-evidence.json (the ordinary arm's planner "
-                     "record cites attempt_id armc-direct-6)"),
+                     "coordinator-report.json (the ordinary arm's "
+                     "planner record cites attempt_id armc-direct-6)"),
                  "transcript": SESSION_ID,
                  "completed_utc_from_evidence": direct6_done},
                 transcript.get("armc-direct-6", unknown), driver_unknown,
                 False,
-                "correctness_bearing_stop_trigger: retained invalid "
-                "attempt that physically completed all 24 cases with "
-                "GPU residency and emitted correctness-bearing results "
-                "using the FROZEN single-shot invocation — mandatory "
-                "STOP for maintainer review (METHODOLOGY-ARM-C §10)"),
-        attempt("armc-direct-7", 8, ["inferswarm01", "inferswarm03"],
-                "output write",
-                "PermissionError (root-owned out dir)", False, False,
-                False, False, False, "ownership fixed",
-                {"transcript": SESSION_ID},
-                transcript.get("armc-direct-7", unknown), staged_late,
-                False,
-                "post-stop diagnostic / inadmissible to the Arm-C "
-                "terminal serving claim"),
-        attempt("armc-direct-8", 9, ["inferswarm01", "inferswarm03"],
-                "first replay prefill",
-                "r4 wire 30s timeout (page cache evicted; 9.29GB cold "
-                "shard read)", True, True, False, False, False,
-                "processes killed; page-cache warm reads issued "
-                "(read-only cat > /dev/null)", {"transcript": SESSION_ID},
-                transcript.get("armc-direct-8", unknown), staged_late,
-                False,
-                "post-stop diagnostic / inadmissible to the Arm-C "
-                "terminal serving claim"),
-        attempt("armc-direct-9", 10, ["inferswarm01", "inferswarm03"],
-                "completed 24 cases (per-token replay-prefill "
-                "comparator — POST-FREEZE, POST-STOP revised diagnostic "
-                "invocation; NOT the comparator frozen at 5e2c83a)",
-                None, True, True, True, False, False,
-                "retained as diagnostic comparison side",
-                {"results": "direct-run.json (= direct/direct-run.json)",
-                 "execution_plan": "direct/execution-plan.json",
-                 "completed_utc_from_evidence": direct9_done},
-                transcript.get("armc-direct-9", unknown), staged_late,
-                True,
-                "post-stop diagnostic / inadmissible to the Arm-C "
-                "terminal serving claim"),
-        attempt("armc-ordinary-1", 11,
+                "correctness-bearing physical observation; invocation "
+                "consistent with the frozen single-shot comparator; "
+                "exact staged driver bytes unknown / not retained; "
+                "part of the evidence that exposes the frozen "
+                "comparator defect (the arms differed in runtime "
+                "invocation semantics by frozen design); NOT accepted "
+                "terminal comparator evidence",
+                historical_validity=(
+                    "invalid (authored post-hoc classification retained "
+                    "verbatim; the exact moment of the operator's "
+                    "invalid-comparator judgment is not independently "
+                    "retained — see the blocker reducer's branch "
+                    "analysis)"),
+        ),
+        attempt("armc-ordinary-1", 8,
                 ["inferswarm00", "inferswarm01", "inferswarm03"],
                 "24 cases + fencing request through the ordinary path "
-                "(launched AFTER the direct-6 stop boundary; its "
-                "planner consumed a ranking record measured by "
-                "armc-direct-6)",
+                "(its planner consumed a ranking record measured by "
+                "armc-direct-6; retained completion evidence places it "
+                "at 10:38 UTC, after direct-6 at 10:28 UTC and before "
+                "the replay-prefill rewrite reached a completed direct "
+                "run)",
                 None, True, True, True, True, True,
                 "coordinator/agent/service stopped gracefully",
                 {"records": "ordinary-campaign.json",
@@ -445,18 +471,75 @@ def build_lineage(transcript: dict, lss_utc: str) -> dict:
                  "fencing": "fencing-arm.json",
                  "completed_utc_from_evidence": ordinary_done},
                 transcript.get("armc-ordinary-1", unknown),
-                {"coordinator_producer": ("924cd22ea081f6d4ed471016faf01"
-                                          "d427fc5b0d2 (clean)"),
+                {"coordinator_producer": ("924cd22ea081f6d4ed4710"
+                                          "16faf01d427fc5b0d2 (clean)"),
                  "inferswarm_inferwarm_worktree_sha": unknown},
                 True,
-                "post-stop diagnostic / inadmissible to the Arm-C "
-                "terminal serving claim"),
+                "correctness-bearing ordinary-path observation; part of "
+                "the frozen-methodology campaign evidence; inadmissible "
+                "to a semantic PASS/FAIL because the comparator "
+                "methodology was defective",
+                historical_validity=(
+                    "valid (authored classification retained verbatim; "
+                    "the §10 stop-rule consequence of the historical "
+                    "direct-6 validity question is analyzed, not "
+                    "resolved, by the blocker reducer)"),
+        ),
+        attempt("armc-direct-7", 9, ["inferswarm01", "inferswarm03"],
+                "output write",
+                "PermissionError (root-owned out dir)", False, False,
+                False, False, False, "ownership fixed",
+                {"transcript": SESSION_ID},
+                transcript.get("armc-direct-7", unknown), staged_late,
+                False,
+                "post-observation/post-methodology-revision diagnostic "
+                "(timestamp evidence places it at 10:49 UTC, after the "
+                "staged-driver overwrite at 10:43 UTC); inadmissible "
+                "to the terminal campaign"),
+        attempt("armc-direct-8", 10, ["inferswarm01", "inferswarm03"],
+                "first replay prefill",
+                "r4 wire 30s timeout (page cache evicted; 9.29GB cold "
+                "shard read)", True, True, False, False, False,
+                "processes killed; page-cache warm reads issued "
+                "(read-only cat > /dev/null)", {"transcript": SESSION_ID},
+                transcript.get("armc-direct-8", unknown), staged_late,
+                False,
+                "post-observation/post-methodology-revision diagnostic; "
+                "inadmissible to the terminal campaign"),
+        attempt("armc-direct-9", 11, ["inferswarm01", "inferswarm03"],
+                "completed 24 cases (per-token replay-prefill "
+                "comparator — POST-FREEZE, POST-OBSERVATION revised "
+                "diagnostic invocation; NOT the comparator frozen at "
+                "5e2c83a)",
+                None, True, True, True, False, False,
+                "retained as diagnostic comparison side",
+                {"results": "direct-run.json (= direct/direct-run.json)",
+                 "execution_plan": "direct/execution-plan.json",
+                 "completed_utc_from_evidence": direct9_done},
+                transcript.get("armc-direct-9", unknown), staged_late,
+                True,
+                "post-observation/post-methodology-revision diagnostic "
+                "(replay-prefill side of the retained 18/24 comparison); "
+                "inadmissible to the terminal campaign"),
     ]
     return {
-        "schema": "inferswarm.issue117.arm-c.attempt-lineage/2",
-        "supersedes": "inferswarm.issue117.arm-c.attempt-lineage/1 "
-                      "(retained fields preserved; /2 adds recovered "
-                      "dimensions; no attempt added or removed)",
+        "schema": "inferswarm.issue117.arm-c.attempt-lineage/3",
+        "supersedes": (
+            "inferswarm.issue117.arm-c.attempt-lineage/2 (all retained "
+            "fields preserved; /3 corrects the campaign classifications "
+            "to the mechanically derived disposition, separates "
+            "physical chronology from the authored logical order, and "
+            "retains the previously authored validity flags verbatim "
+            "under historical_validity_classification; no attempt "
+            "added or removed)"),
+        "chronology_note": (
+            "physical chronology is derived only from retained "
+            "completion-evidence and transcript timestamps "
+            "(direct-6 10:28:36Z < ordinary-1 10:38:52Z < direct-7 "
+            "10:49:28Z < direct-8 10:56:57Z < direct-9 11:09:05Z); the "
+            "logical 'order' field is an authored narrative ordering, "
+            "retained separately and never used as physical "
+            "chronology where timestamp evidence exists"),
         "execution_session": {
             "session_id": SESSION_ID,
             "started_utc": utc(1788929244.675144),
@@ -524,6 +607,118 @@ def main() -> int:
     transcript, lss_utc, chain = transcript_launch_observations()
     lineage = build_lineage(transcript, lss_utc)
     lineage["execution_session"]["transcript_census_chain_sha256"] = chain
+    # FAIL-CLOSED post-audit correction allowlist: every file that
+    # differs between the audited head (head_classified = the reviewed
+    # base this correction builds on) and the FINAL correction commit
+    # must be listed here with its exact final sha256. The correction
+    # commit does not exist yet at build time, so the working tree
+    # bytes ARE the final bytes: re-run this builder after staging the
+    # correction (before committing) so the allowlist pins exactly the
+    # committed content. The frozen methodology/driver are never
+    # allowable (enforced by the blocker reducer, not just here).
+    audit["post_audit_correction_allowlist"] = {
+        str(path): {
+            "role": role,
+            "sha256": hashlib.sha256(
+                (ROOT / path).read_bytes()).hexdigest(),
+        }
+        for path, role in (
+            ("scripts/issue117_arm_c_blocker_reducer.py",
+             "correction /2 blocker reducer (this pass)"),
+            ("scripts/issue117_arm_c_frozen_pins.py",
+             "correction /2 frozen FreeToken invocation-semantics "
+             "derivation (new)"),
+            ("scripts/issue117_arm_c_blocker_fakeroot.py",
+             "correction /2 blocker mutation-suite fakeroot"),
+            ("tests/test_issue117_arm_c_blocker.py",
+             "correction /2 blocker mutation suite"),
+            ("scripts/issue117_arm_c_authority_audit.py",
+             "correction /2 authority-audit/lineage builder (this "
+             "file; self-pinned role only — the audit document's own "
+             "integrity is bound by the retention MANIFEST row)"),
+            ("docs/implementation/r6-successor-dense-full-"
+             "integration-117/evidence/arm-c/attempt-lineage.json",
+             "retained lineage, schema /3 (rebuilt by this builder)"),
+            ("docs/implementation/r6-successor-dense-full-"
+             "integration-117/evidence/arm-c/pre-execution-"
+             "authority-audit.json",
+             "retained authority audit, schema /2 (self-referential; "
+             "MANIFEST-bound)"),
+            ("docs/implementation/r6-successor-dense-full-"
+             "integration-117/evidence/arm-c/blocker-reduction.json",
+             "retained blocker reduction record, schema /2 (regenerated "
+             "by the corrected reducer)"),
+            ("scripts/issue117_proof.py",
+             "correction /2: PRODUCERS list gains the frozen-pins "
+             "module (manifest/producer-hash coverage)"),
+            ("docs/project-status.json",
+             "correction /2: Arm-C constraint rewritten to the "
+             "comparator-semantics derivation"),
+            # sync --write living sections + refreshed live manifest
+            # rows (derived maintenance, verified by sync --check)
+            ("README.md", "derived: sync living section (frontier)"),
+            ("ROADMAP.md", "derived: sync living section (frontier)"),
+            ("ARCHITECTURE.md", "derived: sync living section (frontier)"),
+            ("docs/implementation/README.md",
+             "derived: sync living section (frontier)"),
+            ("docs/integrations/freetoken.md",
+             "derived: sync living sections (frontier, runtime)"),
+            ("docs/protocols/README.md",
+             "derived: sync living section (frontier)"),
+            ("docs/qualification/gemma4-12b-it-v1/MANIFEST.sha256",
+             "derived: sync live manifest row"),
+            ("docs/implementation/plan-driven-artifact-acquisition-99/"
+             "evidence/MANIFEST.sha256",
+             "derived: sync live manifest row"),
+            ("docs/implementation/r6-successor-dense-full-"
+             "integration-117/README.md",
+             "correction /2: Arm-C section rewritten to the "
+             "comparator-semantics derivation (MANIFEST-row bound)"),
+            # frozen FreeToken producer bytes retained verbatim
+            # (correction /2); sha256-pinned by
+            # scripts/issue117_arm_c_frozen_pins.py AND by the
+            # retention MANIFEST — pinned here too so the exact-head
+            # audit admitlists exactly these bytes
+            ("docs/implementation/r6-successor-dense-full-"
+             "integration-117/evidence/arm-c/frozen-freetoken/"
+             "924cd22e/python/freetoken/research/r5b_epochs.py",
+             "frozen FreeToken producer bytes @ 924cd22e (verbatim)"),
+            ("docs/implementation/r6-successor-dense-full-"
+             "integration-117/evidence/arm-c/frozen-freetoken/"
+             "924cd22e/benchmarks/inferswarm_r6/coordinator.py",
+             "frozen FreeToken producer bytes @ 924cd22e (verbatim)"),
+            ("docs/implementation/r6-successor-dense-full-"
+             "integration-117/evidence/arm-c/frozen-freetoken/"
+             "924cd22e/benchmarks/inferswarm_r6/xc_strategy.py",
+             "frozen FreeToken producer bytes @ 924cd22e (verbatim)"),
+            # derived maintenance artifacts: pure functions of the
+            # final tree, regenerated last; sha-pinning them is
+            # circular (the manifest covers the audit itself), so
+            # they are allowlisted as derived and their integrity is
+            # enforced by the retention manifest suites (every row
+            # verified against bytes) + sync --check
+            ("docs/implementation/r6-successor-dense-full-"
+             "integration-117/evidence/producer-hashes.json",
+             "derived: producer hash ledger (regenerated last)"),
+            ("docs/implementation/r6-successor-dense-full-"
+             "integration-117/evidence/MANIFEST.sha256",
+             "derived: retention manifest (regenerated last)"),
+        )
+    }
+    for entry in audit["post_audit_correction_allowlist"].values():
+        if entry["role"].startswith("derived:"):
+            entry["derived"] = True
+    # the two evidence documents the builder itself writes cannot be
+    # pre-pinned by content (they are being written now); mark them
+    # self-referential so the reducer binds them via the MANIFEST row
+    for rel in (
+        "docs/implementation/r6-successor-dense-full-integration-117/"
+        "evidence/arm-c/attempt-lineage.json",
+        "docs/implementation/r6-successor-dense-full-integration-117/"
+        "evidence/arm-c/pre-execution-authority-audit.json",
+    ):
+        audit["post_audit_correction_allowlist"][rel]["self"] = True
+        audit["post_audit_correction_allowlist"][rel].pop("sha256", None)
     (ARM_C / "pre-execution-authority-audit.json").write_text(
         json.dumps(audit, indent=2, sort_keys=True) + "\n")
     (ARM_C / "attempt-lineage.json").write_text(
@@ -534,6 +729,8 @@ def main() -> int:
         "lineage": str(ARM_C / "attempt-lineage.json"),
         "transcript_chain": chain,
         "first_observed": transcript,
+        "allowlist": sorted(
+            audit["post_audit_correction_allowlist"]),
     }, indent=2))
     return 0
 

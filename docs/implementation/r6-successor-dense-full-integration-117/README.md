@@ -266,56 +266,100 @@ reclassified the campaign:
 failure**, mechanically derived by
 `scripts/issue117_arm_c_blocker_reducer.py` from
 [`evidence/arm-c/blocker-reduction.json`](evidence/arm-c/blocker-reduction.json).
+Correction /2 (2026-09-09, retention/derivation only) replaced the
+earlier post-hoc "direct-6 used an invalid invocation" derivation
+with the actual frozen-methodology defect: the frozen comparator's
+two arms differed in runtime invocation semantics by design (see
+finding 1).
 
 What the frozen pre-execution authority actually establishes
 (`pre_execution_inferwarm_sha` = `5e2c83a…`; bound by git blob SHA and
 sha256 in
 [`evidence/arm-c/pre-execution-authority-audit.json`](evidence/arm-c/pre-execution-authority-audit.json)):
 
-1. **Frozen comparator replaced after correctness-bearing execution.**
-   `METHODOLOGY-ARM-C.md` §4 @ `5e2c83a` froze the direct comparator
-   as one `generate(session_id=i, prompt_token_ids=<rendered ids>,
-   max_new_tokens=8)` per case, and the direct driver at `5e2c83a`
-   implemented exactly that. The driver was then modified during the
-   campaign (the staged copy on inferswarm01 was overwritten in place
-   at 2026-09-09T10:43Z, between the direct-6 and direct-9 completions)
-   and committed at `dd4154d` as per-token replay-prefill
-   (`max_new_tokens=2`), with single-shot declared invalid. The current
-   scripts are NOT the scripts frozen by `pre_execution_inferwarm_sha`
-   — the audit discloses every post-freeze change.
-2. **`armc-direct-6` is a mandatory stop boundary.** It physically
-   completed all 24 cases with GPU residency and emitted
-   correctness-bearing results using the FROZEN single-shot invocation,
-   and is retained INVALID. Frozen §10: an invalid attempt with a
-   correctness-bearing observation is NOT harmless — STOP for
-   maintainer review. `armc-direct-7/8/9` and `armc-ordinary-1` ran
-   after that stop (the ordinary campaign's planner even consumed a
-   ranking record measured by direct-6): they are retained as
-   **post-stop diagnostic** observations, inadmissible to the Arm-C
-   terminal serving claim.
-3. **Post-observation reducer weakening reverted.** The reducer was
-   changed after physical execution (fail-closed invalid-attempt rule
-   weakened to a review list; `/srv/models/` tokenizer-metadata
-   exemption added). The terminal campaign reducer is now bound to the
-   pre-execution methodology; the corrected legacy reducer
-   (`scripts/issue117_arm_c_evidence.py`) fails closed on an invalid
-   correctness-bearing stop-trigger and maps it to the blocker, never
-   to ordinary semantic FAIL.
-4. **Four Source-tree metadata reads under the frozen zero-Source
+1. **The frozen comparator failed its own comparator-isolation
+   requirement (the actual defect, correction /2).** The frozen
+   methodology §4 @ `5e2c83a` defines the direct comparator as one
+   `generate(session_id=i, prompt_token_ids=<rendered ids>,
+   max_new_tokens=8)` per case — a single-shot invocation with one
+   prefill per case — while the frozen ordinary path (FreeToken
+   producer `924cd22e…`, whose bytes are retained verbatim and
+   sha256-pinned under
+   [`evidence/arm-c/frozen-freetoken/924cd22e/`](evidence/arm-c/frozen-freetoken/924cd22e/))
+   dispatches every `/v1/chat/completions` request through
+   `EpochServingController.serve_tokens`: a per-committed-position
+   loop that re-feeds the full replay prefix (prompt + committed
+   tokens, per `GemmaTokenBoundaryStrategy.replay_input`), invokes the
+   runtime with `max_new_tokens=2`, commits only step/token zero, and
+   discards the speculative second token. The arms therefore differed
+   in **runtime invocation semantics** in addition to differing in
+   control-plane routing, violating the frozen "The ONLY intended
+   difference is the control-plane path" requirement **by design**.
+   The frozen campaign could not establish ordinary-vs-direct serving
+   equivalence or semantic failure as designed. The direct arm's
+   single-shot invocation is NOT itself the error — it is what the
+   frozen methodology told the direct arm to use.
+2. **The exact staged driver bytes used by direct-1..6 are
+   `unknown / not retained`.** The staged copy on inferswarm01 was
+   overwritten in place at 2026-09-09T10:43Z — mechanically placed
+   AFTER direct-6 completed (10:28:36Z) and BEFORE direct-7 was
+   observed (10:49:28Z) — and committed at `dd4154d` as per-token
+   replay-prefill (`max_new_tokens=2`). The direct-6 rows are
+   consistent with the single-shot invocation (no replay marker), but
+   absence of a marker introduced later cannot alone prove exact
+   producer-script identity; the unrecoverability independently
+   strengthens the evidence blocker.
+3. **The §10 stop-rule ambiguity is reported, not resolved — both
+   histories converge on the blocker.** The exact moment at which the
+   operator first regarded direct-6 as an invalid comparator is not
+   independently retained. If direct-6 was still regarded as valid
+   when ordinary-1 ran, the campaign followed the frozen methodology
+   but the frozen comparator itself was defective (finding 1). If
+   direct-6 had already been regarded as invalid, frozen §10 required
+   STOP after its correctness-bearing output (retained timestamps:
+   direct-6 10:28 UTC < ordinary-1 10:38 UTC) and ordinary-1
+   improperly ran afterward. Both branches derive
+   `ISSUE117_ARM_C_EVIDENCE_BLOCKER`; the reducer never needs the
+   post-hoc validity judgment to obtain the terminal.
+4. **Post-observation reducer weakening reverted; exact-head audit
+   fail-closed.** The reducer was changed after physical execution
+   (fail-closed invalid-attempt rule weakened to a review list;
+   `/srv/models/` tokenizer-metadata exemption added). The blocker
+   reducer is bound to the pre-execution methodology, and correction
+   /2 closes the exact-head audit loophole: a frozen
+   methodology/driver change after the audited head ALWAYS fails, and
+   every other post-audit file change must be individually allowlisted
+   with its exact sha256 (methodology+reducer, driver+reducer, and
+   methodology+driver+reducer combinations all fail).
+5. **Four Source-tree metadata reads under the frozen zero-Source
    rule.** The direct window shows four tokenizer-metadata file opens
    under `/srv/models/` (plus one directory stat; zero model-weight
    reads). The frozen §9 rule admits no exemption; the four reads are
-   retained and counted, never zeroed. A future methodology may
-   pre-declare an immutable-tokenizer-metadata exception, but only
-   frozen BEFORE a new correctness-bearing campaign — it cannot be
-   backported to this one.
+   retained and counted, never zeroed. They independently bar PASS. A
+   future methodology may pre-declare an immutable-tokenizer-metadata
+   exception, but only frozen BEFORE a new correctness-bearing
+   campaign — it cannot be backported to this one.
 
-**Disposition of the physical observations (all retained, none
-erased):**
+**Disposition of the physical observations (all 11 attempts
+retained, none erased; authored validity flags retained verbatim as
+historical/post-hoc classification):**
 
+- `armc-direct-6`: correctness-bearing physical observation;
+  invocation consistent with the frozen single-shot comparator; exact
+  staged driver bytes unknown / not retained; part of the evidence
+  that exposes the frozen comparator defect; NOT accepted terminal
+  comparator evidence;
+- `armc-ordinary-1`: correctness-bearing ordinary-path observation
+  (24 cases + fencing, 10:38 UTC, after direct-6 and before the
+  replay-prefill rewrite reached a completed direct run); part of the
+  frozen-methodology campaign evidence; inadmissible to a semantic
+  PASS/FAIL because the comparator methodology was defective;
+- `armc-direct-7/8/9` (10:49/10:56/11:09 UTC): post-observation /
+  post-methodology-revision diagnostics; inadmissible to the terminal
+  campaign;
 - the 18/24 ordinary-vs-direct comparison (replay-prefill comparator,
-  post-stop) is retained as **diagnostic evidence**; it does NOT
-  establish the terminal Arm-C ordinary-serving result;
+  post-revision) is retained as **diagnostic evidence only**; it does
+  NOT establish the terminal Arm-C ordinary-serving result;
 - the six regime-4 divergences (rendered prompt 65–67 ids) are
   retained as diagnostic evidence strongly suggesting a real
   multi-chunk/KV nondeterminism defect — a **follow-up hypothesis**,
@@ -324,15 +368,22 @@ erased):**
   ordinary trajectory, fencing/coordinator/data-path zeros, straces,
   censuses, and the recovered attempt lineage
   ([`evidence/arm-c/attempt-lineage.json`](evidence/arm-c/attempt-lineage.json),
-  schema /2: per-attempt timestamps recovered digest-bound from the
-  retained execution-session transcript; unrecoverable fields carry
-  explicit `unknown / not retained` markers — including the exact
-  driver bytes used by direct-1..6, which were overwritten in place
-  and are part of the evidence blocker).
+  schema /3: per-attempt timestamps recovered digest-bound from the
+  retained execution-session transcript; physical chronology is
+  derived only from retained timestamp evidence — direct-6 10:28:36Z
+  < ordinary-1 10:38:52Z < direct-7 10:49:28Z < direct-8 10:56:57Z <
+  direct-9 11:09:05Z — while the authored logical `order` field is
+  retained separately and must not contradict it; unrecoverable
+  fields carry explicit `unknown / not retained` markers — including
+  the exact driver bytes used by direct-1..6, which were overwritten
+  in place and are part of the evidence blocker).
 
 Canonical reducers: `scripts/issue117_arm_c_blocker_reducer.py`
-(frozen-evidence terminal derivation; 17-control mutation suite in
-`tests/test_issue117_arm_c_blocker.py`) and
+(frozen-evidence terminal derivation, correction /2; 31-control
+mutation suite + frozen-source pin suite in
+`tests/test_issue117_arm_c_blocker.py`; the ordinary-path invocation
+semantics are derived from the sha256-pinned FreeToken bytes by
+`scripts/issue117_arm_c_frozen_pins.py`) and
 `scripts/issue117_arm_c_evidence.py` (retained-equality derivation;
 34-control suite in `tests/test_issue117_arm_c_retention.py`).
 

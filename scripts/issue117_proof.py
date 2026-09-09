@@ -91,6 +91,7 @@ PRODUCERS = [
     "scripts/issue117_arm_c_authority_audit.py",
     "scripts/issue117_arm_c_blocker_reducer.py",
     "scripts/issue117_arm_c_blocker_fakeroot.py",
+    "scripts/issue117_arm_c_frozen_pins.py",
     "scripts/issue117_arm_b_transport_audit_build.py",
     "scripts/issue117_parsers/__init__.py",
     "scripts/issue117_parsers/source_server_log.py",
@@ -275,6 +276,15 @@ COMMITTED_EVIDENCE_FILES = {
     # bytes.
     "arm-c/run-record.json",
     "arm-c/attempt-lineage.json",
+    # frozen FreeToken producer bytes @ 924cd22e retained verbatim and
+    # sha256-pinned: the ordinary-path invocation-semantics derivation
+    # (correction /2) reads these; never regenerated
+    "arm-c/frozen-freetoken/924cd22e/python/freetoken/research/"
+    "r5b_epochs.py",
+    "arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/"
+    "coordinator.py",
+    "arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/"
+    "xc_strategy.py",
     "arm-c/reconciliation.json",
     "arm-c/chain-plan.json",
     "arm-c/plan-verification.json",

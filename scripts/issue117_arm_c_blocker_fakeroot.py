@@ -1,15 +1,26 @@
 #!/usr/bin/env python3
-"""Issue #117 Arm C — extend the synthetic fakeroot with the three
-retention/derivation-correctness documents consumed by the frozen-
-evidence blocker reducer (CPU-only, tests). Adds:
-  pre-execution-authority-audit.json (synthetic frozen identities),
-  attempt-lineage.json (/2 schema with the stop boundary),
+"""Issue #117 Arm C — extend the synthetic fakeroot with the documents
+consumed by the frozen-evidence blocker reducer, correction /2 (CPU-only
+tests). Adds:
+
+  pre-execution-authority-audit.json (synthetic frozen identities,
+      comparator-modification forensics, fail-closed correction
+      allowlist, frozen-rule source-read accounting),
+  attempt-lineage.json (/3 schema: separated chronology, historical
+      validity classifications),
+  frozen-freetoken/924cd22e/ synthetic ordinary-path sources (the
+      replay-prefix controller, the dispatching coordinator, the
+      replay-input strategy),
   invalid-attempt-6/ + direct-run.json + strace-audit.json + run-record
-synthetic stand-ins bound to the blocker reducer's inputs.
-The synthetic baseline mirrors the retained campaign shape: an invalid
-stop-trigger attempt (24 result rows under invalid-attempt-6/) followed
-by post-stop diagnostic attempts, and four tokenizer-metadata Source
-reads under the frozen zero-Source rule.
+  synthetic stand-ins bound to the blocker reducer's inputs.
+
+The synthetic baseline mirrors the retained campaign shape: a
+correctness-bearing direct-6 observation whose single-shot invocation
+matches the frozen comparator (exact driver bytes unknown / not
+retained), a correctness-bearing ordinary-1 observation whose planner
+provenance cites direct-6, three post-revision diagnostics in
+timestamp-supported chronology, and four tokenizer-metadata Source file
+reads + one Source-root stat under the frozen zero-Source rule.
 """
 from __future__ import annotations
 
@@ -20,8 +31,9 @@ from pathlib import Path
 PRODUCER = "924cd22ea081f6d4ed471016faf01d427fc5b0d2"
 FREEZE_SHA = "5e2c83a09031d68784c3098fc9dad319b684f0da"
 CASES = [f"c109-{i:02d}" for i in range(1, 25)]
-STOP_TRIGGER = "armc-direct-6"
+DIRECT_ATTEMPT = "armc-direct-6"
 REPLAY_MARKER = "per-token-replay-prefill/1"
+UNKNOWN = "unknown / not retained"
 TOKENIZER_METADATA_PATHS = [
     "/srv/models/gemma-r6/chat_template.jinja",
     "/srv/models/gemma-r6/config.json",
@@ -29,13 +41,90 @@ TOKENIZER_METADATA_PATHS = [
     "/srv/models/gemma-r6/tokenizer_config.json",
 ]
 
+#: synthetic ordinary-path FreeToken sources (shape-faithful to the
+#: retained 924cd22e bytes; the REAL pinned bytes live in the repo and
+#: are exercised by the real-evidence test + the frozen-pins suite)
+SYNTHETIC_EPOCHS = '''# synthetic r5b_epochs.py (shape-faithful stand-in)
+    def replay_input(self, *, session):
+        return list(session.prompt_token_ids) + list(session.committed_token_ids)
+
+    def serve_tokens(self, *, session_id, prompt_token_ids,
+                     max_new_tokens, sampling_inputs,
+                     on_token=None, after_commit=None):
+        while session.committed_position < max_new_tokens:
+            replay_input = list(self.transition_strategy.replay_input(session=session))
+            def capture(_step, token, boundary):
+                if _step == 0:
+                    token_holder.append(int(token))
+            result = dict(epoch.runtime.generate(
+                session_id=runtime_session_id,
+                prompt_token_ids=replay_input,
+                # decode interval. Commit only step zero; step one is
+                # explicitly speculative and discarded before replay.
+                max_new_tokens=2,
+                on_token=capture,
+            ))
+            commit = {
+                "committed_at_ns": session.committed_at_ns[-1],
+                "replay_input_token_count": len(replay_input),
+                "speculative_uncommitted_tokens_discarded": 1,
+            }
+'''
+SYNTHETIC_COORDINATOR = '''# synthetic inferswarm_r6/coordinator.py (shape-faithful stand-in)
+from freetoken.research.r5b_epochs import EpochServingController
+        return EpochServingController(
+            transition_strategy=GemmaTokenBoundaryStrategy(),
+        )
+        completed = self.controller.serve_tokens(
+            session_id=session_id,
+            prompt_token_ids=prompt_ids,
+            max_new_tokens=maximum,
+            sampling_inputs=sampling,
+            on_token=on_token,
+        )
+'''
+SYNTHETIC_STRATEGY = '''# synthetic xc_strategy.py (shape-faithful stand-in)
+class GemmaTokenBoundaryStrategy:
+    def replay_input(self, *, session):
+        return list(session.prompt_token_ids) + list(session.committed_token_ids)
+'''
+
 
 def w(path: Path, doc: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n")
 
 
-def build(out: Path) -> None:
+def synthetic_frozen_sources(out: Path) -> dict[str, str]:
+    """Write the synthetic frozen FreeToken sources; return {rel:
+    sha256} computed AFTER write (the mutation suite binds these pins
+    into the frozen-pins seam). Paths arefakeroot-relative (out IS the
+    arm-c evidence dir; rel paths keep their full repo-relative form
+    so they can be bound directly into the pins seam)."""
+    import hashlib
+    prefix = ("docs/implementation/r6-successor-dense-full-integration-"
+              "117/evidence/arm-c/")
+    files = {
+        f"{prefix}frozen-freetoken/924cd22e/python/freetoken/"
+        "research/r5b_epochs.py": SYNTHETIC_EPOCHS,
+        f"{prefix}frozen-freetoken/924cd22e/benchmarks/"
+        "inferswarm_r6/coordinator.py": SYNTHETIC_COORDINATOR,
+        f"{prefix}frozen-freetoken/924cd22e/benchmarks/"
+        "inferswarm_r6/xc_strategy.py": SYNTHETIC_STRATEGY,
+    }
+    pins = {}
+    for rel, text in files.items():
+        assert rel.startswith(prefix)
+        path = out / rel[len(prefix):]
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+        pins[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return pins
+
+
+def build(out: Path) -> dict:
+    """Builds the fakeroot evidence; returns the frozen-source pins so
+    callers (the mutation suite) can install them into the seam."""
     frozen_file_entry = {
         "git_blob_sha_at_freeze": "0" * 40,
         "sha256_at_freeze": "1" * 64,
@@ -45,7 +134,7 @@ def build(out: Path) -> None:
     }
     w(out / "pre-execution-authority-audit.json", {
         "schema": "inferswarm.issue117.arm-c."
-                  "pre-execution-authority-audit/1",
+                  "pre-execution-authority-audit/2",
         "claimed_pre_execution_inferswarm_sha": FREEZE_SHA,
         "head_classified": "synthetic-head",
         "frozen_correctness_bearing_files": {
@@ -69,6 +158,20 @@ def build(out: Path) -> None:
              "classification": "disclosed post-freeze change",
              "note": "POST-FREEZE REDUCER CHANGE (synthetic)"},
         ],
+        "comparator_modification_forensics": {
+            "direct6_completed_utc":
+                "2026-09-09T10:28:36.248255+00:00",
+            "staged_driver_mtime_utc":
+                "2026-09-09T10:43:07.698991040+00:00",
+            "direct7_first_observed_utc":
+                "2026-09-09T10:49:28.249147+00:00",
+            "source": "synthetic",
+        },
+        "post_audit_correction_allowlist": {
+            "scripts/issue117_arm_c_blocker_reducer.py": {
+                "role": "correction /2 blocker reducer (synthetic)",
+                "sha256": "3" * 64},
+        },
         "source_read_accounting_frozen_rule": {
             "frozen_rule": "zero /srv/models/ opens (synthetic)",
             "total_opens_counted": 5,
@@ -85,8 +188,9 @@ def build(out: Path) -> None:
         },
     })
 
-    def attempt(aid, order, cb_emitted, gpu, valid, classification):
-        return {
+    def attempt(aid, order, cb_emitted, gpu, valid, classification,
+                timestamps, code_identity=None, historical=None):
+        entry = {
             "attempt_id": aid, "order": order,
             "hosts": ["inferswarm01"],
             "phase_reached": "synthetic",
@@ -98,40 +202,65 @@ def build(out: Path) -> None:
             "coordinator_commit_occurred": False,
             "accepted_arm_b_state_changed": False,
             "cleanup_containment": "synthetic",
-            "observed_timestamps": {},
-            "code_identity": {},
+            "observed_timestamps": timestamps,
+            "code_identity": code_identity or {},
             "evidence_bindings": {},
             "retained_validity_flag": valid,
             "campaign_classification": classification,
         }
+        if historical:
+            entry["historical_validity_classification"] = historical
+        return entry
 
+    ts = lambda h, m=0: (  # noqa: E731 - synthetic timestamp helper
+        f"2026-09-09T{h:02d}:{m:02d}:00.000000+00:00")
     attempts = [
         attempt("armc-direct-5", 6, False, True, False,
-                "pre-stop infrastructure (non-correctness-bearing)"),
-        attempt(STOP_TRIGGER, 7, True, True, False,
-                "correctness_bearing_stop_trigger: retained invalid "
-                "attempt (synthetic) — mandatory STOP for maintainer "
-                "review (METHODOLOGY-ARM-C §10)"),
-        attempt("armc-direct-7", 8, False, False, False,
-                "post-stop diagnostic / inadmissible to the Arm-C "
-                "terminal serving claim"),
-        attempt("armc-direct-8", 9, False, True, False,
-                "post-stop diagnostic / inadmissible to the Arm-C "
-                "terminal serving claim"),
-        attempt("armc-direct-9", 10, True, True, True,
-                "post-stop diagnostic / inadmissible to the Arm-C "
-                "terminal serving claim"),
-        attempt("armc-ordinary-1", 11, True, True, True,
-                "post-stop diagnostic / inadmissible to the Arm-C "
-                "terminal serving claim"),
+                "pre-stop infrastructure (non-correctness-bearing)",
+                {"transcript_first_observed_utc": ts(8, 26)}),
+        attempt(DIRECT_ATTEMPT, 7, True, True, False,
+                "correctness-bearing physical observation; invocation "
+                "consistent with the frozen single-shot comparator; "
+                "exact staged driver bytes unknown / not retained; "
+                "part of the evidence that exposes the frozen "
+                "comparator defect; NOT accepted terminal comparator "
+                "evidence",
+                {"transcript_first_observed_utc": ts(10, 28),
+                 "completion_evidence_utc":
+                     "2026-09-09T10:28:36.248255+00:00"},
+                code_identity={"driver_bytes": UNKNOWN},
+                historical="invalid (synthetic post-hoc classification)"),
+        attempt("armc-ordinary-1", 8, True, True, True,
+                "correctness-bearing ordinary-path observation; part of "
+                "the frozen-methodology campaign evidence; inadmissible "
+                "to a semantic PASS/FAIL because the comparator "
+                "methodology was defective",
+                {"transcript_first_observed_utc": ts(10, 38),
+                 "completion_evidence_utc":
+                     "2026-09-09T10:38:52.091031+00:00"},
+                historical="valid (synthetic authored classification)"),
+        attempt("armc-direct-7", 9, False, False, False,
+                "post-observation/post-methodology-revision diagnostic; "
+                "inadmissible to the terminal campaign",
+                {"transcript_first_observed_utc": ts(10, 49)}),
+        attempt("armc-direct-8", 10, False, True, False,
+                "post-observation/post-methodology-revision diagnostic; "
+                "inadmissible to the terminal campaign",
+                {"transcript_first_observed_utc": ts(10, 56)}),
+        attempt("armc-direct-9", 11, True, True, True,
+                "post-observation/post-methodology-revision diagnostic; "
+                "inadmissible to the terminal campaign",
+                {"transcript_first_observed_utc": ts(11, 9),
+                 "completion_evidence_utc":
+                     "2026-09-09T11:09:05.413012+00:00"}),
     ]
     w(out / "attempt-lineage.json", {
-        "schema": "inferswarm.issue117.arm-c.attempt-lineage/2",
+        "schema": "inferswarm.issue117.arm-c.attempt-lineage/3",
         "attempts": attempts,
     })
     w(out / "invalid-attempt-6" / "direct-run.json", {
         "schema": "inferswarm.issue117.arm-c.direct-run/1",
-        "attempt_id": STOP_TRIGGER,
+        "attempt_id": DIRECT_ATTEMPT,
         "case_count": 24,
         "results": [{"case_id": c, "generated_token_ids": [1] * 8}
                     for c in CASES],
@@ -143,6 +272,32 @@ def build(out: Path) -> None:
         "results": [{"case_id": c, "generated_token_ids": [1] * 8,
                      "invocation": REPLAY_MARKER}
                     for c in CASES],
+    })
+    # ordinary-path physical shape: 24 sessions, each an 8-position
+    # committed ledger with per-position attribution; the epoch's plan
+    # provenance cites the direct-6 ranking record
+    w(out / "ordinary-campaign.json", {
+        "schema": "inferswarm.issue117.arm-c.ordinary-campaign/1",
+        "attempt_id": "armc-ordinary-1",
+        "case_count": 24,
+        "ok_count": 24,
+        "completed_at_ns": 1788950332091031330,
+        "records": [],
+    })
+    w(out / "coordinator-report.json", {
+        "schema": "inferswarm.r6.coordinator-report/1 (synthetic)",
+        "epochs": [{
+            "epoch_id": "research-generation-0:synthetic",
+            "execution_plan": {"evidence_audit": [{
+                "provenance": {"attempt_id": DIRECT_ATTEMPT}}]},
+        }],
+        "sessions": [
+            {"session_id": i,
+             "generated_token_ids": [1] * 8,
+             "committed_epoch_ids": ["e"] * 8,
+             "committed_plan_digests": ["p"] * 8,
+             "latest_committed_boundary": {"committed_position": 8}}
+            for i in range(1, 25)],
     })
     w(out / "strace-audit.json", {
         "schema": "inferswarm.issue117.arm-c.strace-audit/1",
@@ -163,14 +318,16 @@ def build(out: Path) -> None:
             "coordinator_destructive_operations": 0,
         },
     })
+    return synthetic_frozen_sources(out)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", required=True)
     args = parser.parse_args()
-    build(Path(args.out))
-    print(json.dumps({"built": args.out}))
+    pins = build(Path(args.out))
+    print(json.dumps({"built": args.out,
+                      "frozen_source_pins": pins}, indent=2))
     return 0
 
 
