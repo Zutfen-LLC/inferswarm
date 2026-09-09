@@ -4,6 +4,20 @@
 
 **Observed terminals (latest first):**
 
+- Issue #129 (2026-09-09, pending maintainer review):
+  `ISSUE117_ARM_C_RETRY_METHODOLOGY_READY` — CPU-only Arm-C retry
+  methodology remediation. The corrected comparator contract (per
+  committed position: replay prefix, `max_new_tokens=2`, commit step
+  zero, discard the speculative second token), the frozen 24-case
+  rendered prompt-token fixture, the CPU recording-runtime transcript
+  comparator (24/24 exact equivalence between the real frozen
+  EpochServingController ordinary path and the corrected direct
+  comparator), the fail-closed reducer with all mandatory negative
+  controls, the executable attempt/STOP state machine, and the exact
+  deployed-script identity contract are frozen in
+  [METHODOLOGY-ARM-C-RETRY.md](METHODOLOGY-ARM-C-RETRY.md) with evidence
+  under `evidence/arm-c-retry/`. No physical execution; the physical
+  Arm-C retry itself is NOT yet authorized.
 - Arm C (2026-09-09, corrected 2026-09-09): physical observations
   exist, but the campaign is **methodology/evidence-blocked** —
   `ISSUE117_ARM_C_EVIDENCE_BLOCKER` (post-correctness-bearing

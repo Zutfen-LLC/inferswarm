@@ -1,0 +1,241 @@
+{
+  "authority": {
+    "accepted_arm_b_merge": "fed87d1b71a0794374dd58c921e31606a56a242f",
+    "accepted_arm_b_result": "ISSUE117_ARM_B_COLD_REALIZATION_PASS",
+    "accepted_arm_c_blocker": "ISSUE117_ARM_C_EVIDENCE_BLOCKER",
+    "accepted_arm_c_blocker_merge": "718efbf5770b31c6e44eb3a8c4d0b81fd1dc9c22",
+    "accepted_fixture_digest": "sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba36f2",
+    "checkpoint_authority": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "frozen_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+    "issue": "https://github.com/Zutfen-LLC/inferswarm/issues/129"
+  },
+  "cpu_only": {
+    "gpu_execution_occurred": false,
+    "model_execution_occurred": false,
+    "note": "recording fake runtime; no model bytes; CPU-only host"
+  },
+  "direct_summary": {
+    "arm": "direct",
+    "candidate_id": "resident-two-node-three-slot[slot-stage-1=gpu.node-a.0,slot-stage-2=gpu.node-a.1,slot-stage-3=gpu.node-b.0]",
+    "generate_argument_names": [
+      "max_new_tokens",
+      "on_token",
+      "prompt_token_ids",
+      "session_id"
+    ],
+    "mapping": {
+      "slot-stage-1": "gpu.node-a.0",
+      "slot-stage-2": "gpu.node-a.1",
+      "slot-stage-3": "gpu.node-b.0"
+    },
+    "plan_digest": "sha256:6911c00283cdb4169acaae4e8c25955476cd96b2b469d5cdc56e6d626fdcca1b",
+    "plan_digest_source": "real freeze_execution_plan via frozen producer bytes",
+    "sampling_inputs": {
+      "temperature": 0.0,
+      "top_k": -1,
+      "top_p": 1.0
+    },
+    "selection_authorization": {
+      "automatic_selection_preserved": true,
+      "candidate_id": "resident-two-node-three-slot[slot-stage-1=gpu.node-a.0,slot-stage-2=gpu.node-a.1,slot-stage-3=gpu.node-b.0]",
+      "mode": "CONTROLLED_EVIDENCE_COLLECTION_OVERRIDE",
+      "planner_selected_candidate_id": "resident-two-node-three-slot[slot-stage-1=gpu.node-a.0,slot-stage-2=gpu.node-a.1,slot-stage-3=gpu.node-b.0]"
+    },
+    "stopping_policy": {
+      "committed_tokens": 8,
+      "kind": "length"
+    },
+    "variant": "corrected"
+  },
+  "fixture": {
+    "case_count": 24,
+    "fixture_digest": "sha256:6046d4796a5d9cc888030c6b3f07304c20ce117d93905c3000d7aae7c0ae01c7"
+  },
+  "frozen_control_plane_digests": {
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/strategy.py": "ca31f0999cb4fcf46d73c83f8b3ee7bbe2636792bcfc1824b15946aaac53906b",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/xc_strategy.py": "8d33b4b297a20511448ab78909d2f528eef62c2b7943acae167668ec9ff0f26f",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken/research/r3_planner.py": "080e8b64fbb9fbc0f6df390d5714d0dbc691dd601e2bd13fe4ff71596e2d0856",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken/research/r5a_serving.py": "f61adc3201f5c2c9d23afcc90da3135ca89b3ed7eb3213d68a41b08fc242b105",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken/research/r5b_epochs.py": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805"
+  },
+  "ordinary_summary": {
+    "arm": "ordinary",
+    "candidate_id": "resident-two-node-three-slot[slot-stage-1=gpu.node-a.0,slot-stage-2=gpu.node-a.1,slot-stage-3=gpu.node-b.0]",
+    "generate_argument_names": [
+      "max_new_tokens",
+      "on_token",
+      "prompt_token_ids",
+      "session_id"
+    ],
+    "mapping": {
+      "slot-stage-1": "gpu.node-a.0",
+      "slot-stage-2": "gpu.node-a.1",
+      "slot-stage-3": "gpu.node-b.0"
+    },
+    "plan_digest": "sha256:98938bf6d44baa0c35360dc38d3b210490260c7a93094a1fe7250a2a55adc7dd",
+    "plan_digest_source": "real freeze_execution_plan via frozen producer bytes",
+    "sampling_inputs": {
+      "temperature": 0.0,
+      "top_k": -1,
+      "top_p": 1.0
+    },
+    "selection_authorization": {
+      "candidate_id": "resident-two-node-three-slot[slot-stage-1=gpu.node-a.0,slot-stage-2=gpu.node-a.1,slot-stage-3=gpu.node-b.0]",
+      "mode": "AUTOMATIC_PLANNER_SELECTION",
+      "planner_selected_candidate_id": "resident-two-node-three-slot[slot-stage-1=gpu.node-a.0,slot-stage-2=gpu.node-a.1,slot-stage-3=gpu.node-b.0]"
+    },
+    "stopping_policy": {
+      "committed_tokens": 8,
+      "kind": "length"
+    },
+    "variant": "corrected"
+  },
+  "per_case_reduction": {
+    "case_count": 24,
+    "control_plane_only_fields": [
+      "runtime_session_id",
+      "epoch_id",
+      "generation",
+      "realization_id",
+      "plan_digest_value",
+      "logical_session_id",
+      "wall_ns"
+    ],
+    "control_plane_only_proof": "control-plane-only fields never appear among generate() arguments: the recording runtime captures the exact keyword set per call and the reducer requires it to equal the frozen contract on both arms; equality is computed only over the recorded model-execution inputs",
+    "equal_count": 24,
+    "global_problems": [],
+    "passed": true,
+    "rows": [
+      {
+        "case_id": "c109-01-01-045",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-01-02-076",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-01-03-009",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-01-04-036",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-01-05-017",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-01-06-006",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-02-01-030",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-02-02-020",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-02-03-011",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-02-04-033",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-02-05-024",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-02-06-049",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-03-01-044",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-03-02-054",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-03-03-031",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-03-04-003",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-03-05-044",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-03-06-016",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-04-01-026",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-04-02-047",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-04-03-040",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-04-04-024",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-04-05-043",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-04-06-074",
+        "equal": true,
+        "problems": []
+      }
+    ],
+    "schema": "inferswarm.issue129.transcript-reduction/1",
+    "terminal": "ISSUE117_ARM_C_RETRY_METHODOLOGY_READY"
+  },
+  "schema": "inferswarm.issue129.methodology-run/1",
+  "terminal": "ISSUE117_ARM_C_RETRY_METHODOLOGY_READY",
+  "tokenizer_seam": {
+    "seam": "frozen rendered prompt ids consumed by the direct comparator; no tokenizer metadata access exists in either arm's observation window; decoded-output reconstruction would be a separate pinned CPU evidence step outside the observation window (not required for transcript equivalence)",
+    "source_reads_during_observation": 0,
+    "tokenizer_object_constructed": false,
+    "transformers_imported": false
+  }
+}

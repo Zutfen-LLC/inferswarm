@@ -255,6 +255,7 @@ class ProofCampaignTests(unittest.TestCase):
             *proof.PRODUCERS,
             str(proof.AREA / "METHODOLOGY.md"),
             str(proof.AREA / "README.md"),
+            str(proof.AREA / "METHODOLOGY-ARM-C-RETRY.md"),
             str(proof.AREA / "CHECKPOINT-AUTHORITY-BLOCKER.md"),
             ".github/workflows/ci.yml",
         }
