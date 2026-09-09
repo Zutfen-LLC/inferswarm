@@ -554,6 +554,35 @@ class TestMandatoryControls(BlockerCase):
         self.save("pre-execution-authority-audit.json", audit)
         self.require_fails_closed("c31-frozen-direct-8-to-2")
 
+    # 32. a high-similarity RENAME of the frozen methodology after
+    #     the audited head must fail even though plain `git diff
+    #     --name-only` would list only the new path (review P1:
+    #     rename-detection loophole; the reducer diffs with
+    #     --no-renames so the deleted frozen path is enumerated)
+    def test_c32_rename_frozen_methodology(self) -> None:
+        moved = METHODOLOGY_REL + "-renamed.md"
+        source = subprocess.check_output(
+            ["git", "-C", str(self.repo), "cat-file", "blob",
+             f"{self.audited_head}:{METHODOLOGY_REL}"], text=True)
+        # near-identical content + a tuned line: rename detection
+        # would classify this as R100/R09x against the deletion
+        (self.repo / moved).write_text(source + "\n# tuned late\n")
+        (self.repo / METHODOLOGY_REL).unlink()
+        subprocess.run(["git", "-C", str(self.repo), "add", "-A"],
+                       check=True)
+        subprocess.run(
+            ["git", "-C", str(self.repo), "commit", "-q", "-m",
+             "rename frozen methodology"], check=True, env=self.git_env)
+        # prove the attack premise: WITH rename detection the frozen
+        # path disappears from the diff (only the new path shows)
+        with_renames = subprocess.check_output(
+            ["git", "-C", str(self.repo), "diff", "--name-only",
+             f"{self.audited_head}..HEAD"], text=True).strip().splitlines()
+        self.assertNotIn(METHODOLOGY_REL, with_renames)
+        self.assertIn(moved, with_renames)
+        # the reducer must still fail closed (deleted frozen path)
+        self.require_fails_closed("c32-rename-frozen-methodology")
+
 
 class TestRealEvidence(unittest.TestCase):
     """The retained physical evidence must derive the blocker through

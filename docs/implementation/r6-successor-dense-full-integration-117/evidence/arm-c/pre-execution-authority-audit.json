@@ -5,7 +5,7 @@
     "scripts/issue117_arm_c_direct.py at 5e2c83a implements exactly that single-shot invocation \u2014 the single-shot invocation is what the frozen methodology told the direct arm to use",
     "the frozen ordinary path is NOT a single-shot generate: the frozen FreeToken producer 924cd22e's EpochServingController.serve_tokens (retained verbatim, sha256-pinned, under evidence/arm-c/frozen-freetoken/924cd22e/) invokes the runtime per committed position with the full replay prefix and max_new_tokens=2, commits only step zero, discards the speculative second token, and repeats; the ordinary HTTP Coordinator dispatches every /v1/chat/completions request through exactly this call",
     "MECHANICALLY DERIVED COMPARATOR DEFECT: the frozen Arm-C methodology failed its own comparator-isolation requirement \u2014 the direct arm and the ordinary arm differed in runtime invocation semantics in addition to differing in control-plane routing, so the frozen campaign could not establish ordinary-vs-direct serving equivalence or semantic failure as designed",
-    "the direct driver was modified after correctness-bearing execution: the staged driver on inferswarm01 was overwritten in place at 2026-09-09T10:43:04Z (between armc-direct-6 completion 10:28:36Z and armc-direct-7 observation 10:49:28Z) and first committed (per-token replay-prefill, max_new_tokens=2) at dd4154d",
+    "the direct driver was modified after correctness-bearing execution: the staged driver on inferswarm01 was overwritten in place at 2026-09-09T10:43:07Z (between armc-direct-6 completion 10:28:36Z and armc-direct-7 observation 10:49:28Z) and first committed (per-token replay-prefill, max_new_tokens=2) at dd4154d",
     "the exact staged driver bytes used by armc-direct-1..6 are unknown / not retained (the staged copy was overwritten in place; no direct-6-era copy exists); the unrecoverability independently strengthens the evidence blocker",
     "therefore the current scripts/issue117_arm_c_direct.py is NOT the direct driver frozen by pre_execution_inferwarm_sha; armc-direct-9's replay-prefill comparator is a post-stop revised diagnostic invocation, not the frozen comparator",
     "the reducer (scripts/issue117_arm_c_evidence.py) was similarly modified after observation (fail-closed invalid-attempt rule weakened to a review list; /srv/models/ tokenizer-metadata exemption added); the blocker reducer restores fail-closed semantics bound to the pre-execution methodology"
@@ -19,11 +19,11 @@
   "execution_code_identity_disclosure": {
     "armc-direct-1..armc-direct-6": {
       "driver_bytes": "unknown / not retained",
-      "explanation": "the direct driver executed from a staged copy at /srv/inferswarm/state/arm-c/scripts/issue117_arm_c_direct.py on inferswarm01 which was modified in place during the campaign; its current bytes (sha256 c0f03ef5\u2026, mtime 2026-09-09T10:43:04Z) postdate armc-direct-6, and no copy of the direct-6-era bytes was retained; the earliest staged-copy mtime observable is 2026-09-09T03:45Z (setup), so the exact driver identity used by direct-1..6 cannot be recovered \u2014 this is part of the evidence blocker"
+      "explanation": "the direct driver executed from a staged copy at /srv/inferswarm/state/arm-c/scripts/issue117_arm_c_direct.py on inferswarm01 which was modified in place during the campaign; its current bytes (sha256 c0f03ef5\u2026, mtime 2026-09-09T10:43:07Z) postdate armc-direct-6, and no copy of the direct-6-era bytes was retained; the earliest staged-copy mtime observable is 2026-09-09T03:45Z (setup), so the exact driver identity used by direct-1..6 cannot be recovered \u2014 this is part of the evidence blocker"
     },
     "armc-direct-7..armc-direct-9": {
       "driver_sha256": "c0f03ef5d5b7aaba1e36cdee3ca310d29ce9d1bd70b9b1bfa4f947ddeefa204a",
-      "evidence": "staged-copy bytes on inferswarm01 equal the driver first committed at dd4154d (replay-prefill revision); staged mtime 2026-09-09T10:43:04Z precedes the direct-7/8/9 launches"
+      "evidence": "staged-copy bytes on inferswarm01 equal the driver first committed at dd4154d (replay-prefill revision); staged mtime 2026-09-09T10:43:07Z precedes the direct-7/8/9 launches"
     },
     "armc-ordinary-1": {
       "client": "scripts/issue117_arm_c_client.py @ 5e2c83a (unchanged since freeze; sha256 17d2896385e939cb7ef5381a5d5093a743f40ef95ce4efdd10fb0bc1db6a2b98)",
@@ -90,7 +90,7 @@
       "status_at_head": "changed_after_freeze"
     }
   },
-  "head_classified": "e5a522360338d1f91ca9b577f1b6aefc881c888f",
+  "head_classified": "5a56eb5c5df6289d25b2ae8fcff0497deda881c6",
   "physical_campaign_commit": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
   "post_audit_correction_allowlist": {
     "ARCHITECTURE.md": {
@@ -125,7 +125,7 @@
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256": {
       "derived": true,
       "role": "derived: retention manifest (regenerated last)",
-      "sha256": "197f50fa17cfdb47d4ba613635acb738391c175cd954cf5522995594314a7fa9"
+      "sha256": "68f7cd0ca9370c83d1ffb9c2e63ea003b40d02785455d45b099f08fb154dd0db"
     },
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/attempt-lineage.json": {
       "role": "retained lineage, schema /3 (rebuilt by this builder)",
@@ -133,7 +133,7 @@
     },
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/blocker-reduction.json": {
       "role": "retained blocker reduction record, schema /2 (regenerated by the corrected reducer)",
-      "sha256": "5a77694a7f0ad01986331221337a4a3ad5f8f0c8c9c5d549fa6dc1331ab01d5e"
+      "sha256": "68eec37ddd6ec7781711c8529c86262681472df29c36789d165927c3c9c740e4"
     },
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/coordinator.py": {
       "role": "frozen FreeToken producer bytes @ 924cd22e (verbatim)",
@@ -154,7 +154,7 @@
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json": {
       "derived": true,
       "role": "derived: producer hash ledger (regenerated last)",
-      "sha256": "fa49970d151a43cf076c699912bd662c811612ce431bb2026276ff3051e459dd"
+      "sha256": "720e8f1940e84ecb0e70621ec977a142681297f6be64a76e1a4ee82409535b48"
     },
     "docs/integrations/freetoken.md": {
       "derived": true,
@@ -177,7 +177,7 @@
     },
     "scripts/issue117_arm_c_authority_audit.py": {
       "role": "correction /2 authority-audit/lineage builder (this file; self-pinned role only \u2014 the audit document's own integrity is bound by the retention MANIFEST row)",
-      "sha256": "782c7d45cdbf1129b7293dcfed37ffc508f7c02f56e859e04bf1ab8dd02f20b5"
+      "sha256": "1bf9726f2eaf8e6d64b606e7f5da6e5863916241b3179d4fd10fc9020c3174dc"
     },
     "scripts/issue117_arm_c_blocker_fakeroot.py": {
       "role": "correction /2 blocker mutation-suite fakeroot",
@@ -185,7 +185,7 @@
     },
     "scripts/issue117_arm_c_blocker_reducer.py": {
       "role": "correction /2 blocker reducer (this pass)",
-      "sha256": "27baae1845cb2202c0665986d479a5c8aa8bbb2cf769cba7a11c94f8c0d3e692"
+      "sha256": "00cdcf96de5578794f26c7a5f0f2594824b514b5766bd516d38b857e7b1ba10b"
     },
     "scripts/issue117_arm_c_frozen_pins.py": {
       "role": "correction /2 frozen FreeToken invocation-semantics derivation (new)",
@@ -197,7 +197,7 @@
     },
     "tests/test_issue117_arm_c_blocker.py": {
       "role": "correction /2 blocker mutation suite",
-      "sha256": "d7931f044f7c731d4aa7ed87871d1ea366519e4ac399784fd12865bda9480579"
+      "sha256": "e5c8305c4951f4a77942373acbc6f3426ef8e7bd6f0b1da9c372320d3153dad3"
     }
   },
   "post_freeze_changes": [
@@ -361,6 +361,27 @@
       "git_status": "A",
       "note": "added after the declared pre-execution freeze (not frozen authority)",
       "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/fencing-arm.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "5a56eb5c5df6289d25b2ae8fcff0497deda881c6",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/coordinator.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "5a56eb5c5df6289d25b2ae8fcff0497deda881c6",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/xc_strategy.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "5a56eb5c5df6289d25b2ae8fcff0497deda881c6",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken/research/r5b_epochs.py"
     },
     {
       "classification": "disclosed post-freeze change",
@@ -767,6 +788,13 @@
       "git_status": "M",
       "note": "modified after the declared pre-execution freeze",
       "path": "scripts/issue117_arm_c_fakeroot.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "5a56eb5c5df6289d25b2ae8fcff0497deda881c6",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "scripts/issue117_arm_c_frozen_pins.py"
     },
     {
       "classification": "disclosed post-freeze change",

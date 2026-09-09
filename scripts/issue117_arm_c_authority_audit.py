@@ -77,9 +77,11 @@ SESSION_DB = Path.home() / ".hermes" / "state.db"
 
 #: Host-observed identity of the staged direct driver on inferswarm01
 #: (``/srv/inferswarm/state/arm-c/scripts/issue117_arm_c_direct.py``),
-#: recorded during the correction pass (2026-09-09, read-only ssh):
-#: sha256 c0f03ef5…, mtime 2026-09-09T10:43:04Z — i.e. AFTER direct-6
-#: completed (10:28:36Z) and BEFORE direct-9 completed (11:09:05Z).
+#: recorded during the correction pass (2026-09-09, read-only ssh) and
+#: RE-OBSERVED live (read-only stat + sha256sum) during the correction
+#: /2 review hardening: sha256 c0f03ef5…, mtime
+#: 2026-09-09T10:43:07.698991040Z — i.e. AFTER direct-6 completed
+#: (10:28:36Z) and BEFORE direct-7 was observed (10:49:28Z).
 STAGED_DRIVER_SHA256 = (
     "c0f03ef5d5b7aaba1e36cdee3ca310d29ce9d1bd70b9b1bfa4f947ddeefa204a")
 STAGED_DRIVER_MTIME_UTC = "2026-09-09T10:43:07.698991040Z"  # stat(2) ns
@@ -236,7 +238,7 @@ def build_authority_audit(head: str) -> dict:
             "equivalence or semantic failure as designed",
             "the direct driver was modified after correctness-bearing "
             "execution: the staged driver on inferswarm01 was overwritten "
-            "in place at 2026-09-09T10:43:04Z (between armc-direct-6 "
+            "in place at 2026-09-09T10:43:07Z (between armc-direct-6 "
             "completion 10:28:36Z and armc-direct-7 observation "
             "10:49:28Z) and first committed (per-token replay-prefill, "
             "max_new_tokens=2) at dd4154d",
@@ -279,7 +281,7 @@ def build_authority_audit(head: str) -> dict:
                     "/srv/inferswarm/state/arm-c/scripts/"
                     "issue117_arm_c_direct.py on inferswarm01 which was "
                     "modified in place during the campaign; its current "
-                    "bytes (sha256 c0f03ef5…, mtime 2026-09-09T10:43:04Z) "
+                    "bytes (sha256 c0f03ef5…, mtime 2026-09-09T10:43:07Z) "
                     "postdate armc-direct-6, and no copy of the "
                     "direct-6-era bytes was retained; the earliest "
                     "staged-copy mtime observable is 2026-09-09T03:45Z "
@@ -292,7 +294,7 @@ def build_authority_audit(head: str) -> dict:
                 "evidence": ("staged-copy bytes on inferswarm01 equal the "
                              "driver first committed at dd4154d "
                              "(replay-prefill revision); staged mtime "
-                             "2026-09-09T10:43:04Z precedes the "
+                             "2026-09-09T10:43:07Z precedes the "
                              "direct-7/8/9 launches"),
             },
             "armc-ordinary-1": {

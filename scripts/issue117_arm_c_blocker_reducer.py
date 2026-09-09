@@ -57,7 +57,7 @@ Authority ladder (each step mechanically verified, never asserted):
      retained result rows, GPU residency) whose invocation is
      consistent with the frozen single-shot comparator and whose exact
      staged driver bytes are ``unknown / not retained`` (the staged
-     driver was overwritten in place at 2026-09-09T10:43:04Z, after
+     driver was overwritten in place at 2026-09-09T10:43:07Z, after
      direct-6 completed at 10:28:36Z and before direct-7 was observed
      at 10:49:28Z — mechanically checked against the audit's
      comparator-modification forensics);
@@ -209,9 +209,15 @@ def git_show(rev: str, path: str) -> bytes:
 
 def git_diff_names(rev_a: str, rev_b: str) -> list[str]:
     try:
+        # --no-renames is SECURITY-CRITICAL: with rename detection a
+        # high-similarity rename of a frozen file would list only the
+        # NEW path, escaping the frozen-path hard fail; --no-renames
+        # always enumerates both the deleted frozen path and the new
+        # path (review P1, correction /2)
         return subprocess.check_output(
             ["git", "-c", f"safe.directory={ROOT}", "-C", str(ROOT),
-             "diff", "--name-only", f"{rev_a}..{rev_b}"],
+             "diff", "--no-renames", "--name-only",
+             f"{rev_a}..{rev_b}"],
             text=True).strip().splitlines()
     except subprocess.CalledProcessError as error:
         raise ReductionError(
@@ -619,6 +625,17 @@ def derive_observations(lineage: dict) -> dict:
                 f"retained timestamp chronology violated: {earlier} "
                 f"({chronology[earlier].isoformat()}) is not before "
                 f"{later} ({chronology[later].isoformat()})")
+    # every correctness-bearing attempt MUST be in the derived
+    # chronology (no correctness-bearing attempt escapes timestamp
+    # scrutiny); non-correctness-bearing attempts without completion
+    # evidence (e.g. armc-lss-1, whose transcript value is a first
+    # MENTION that postdates the campaign due to census-query
+    # semantics) are excluded by design and documented in the lineage
+    for attempt_id, entry in attempts.items():
+        if entry.get("correctness_bearing_result_emitted"):
+            require(attempt_id in chronology,
+                    f"correctness-bearing attempt {attempt_id} lacks "
+                    "timestamp-derived chronology")
     # the authored logical order field must not contradict the
     # timestamp-supported chronology
     for earlier, later in zip(order_keys, order_keys[1:]):
