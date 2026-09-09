@@ -1,0 +1,199 @@
+{
+  "case_count": 24,
+  "rows": [
+    {
+      "case_id": "c109-01-01-045",
+      "direct_decode_sha256": "8fc31fe9a1c4cb8c82f967ca6316fe48b490d8999e67944055ba8fda8e0a61b1",
+      "ordinary_decode_sha256": "8fc31fe9a1c4cb8c82f967ca6316fe48b490d8999e67944055ba8fda8e0a61b1",
+      "ordinary_http_content_len": 153,
+      "ordinary_http_content_sha256": "8fc31fe9a1c4cb8c82f967ca6316fe48b490d8999e67944055ba8fda8e0a61b1",
+      "session_id": 1
+    },
+    {
+      "case_id": "c109-01-02-076",
+      "direct_decode_sha256": "0111f10f3237e5e63d76a512f8cdbb46b76c95674f3a66ebb0964585f903a249",
+      "ordinary_decode_sha256": "0111f10f3237e5e63d76a512f8cdbb46b76c95674f3a66ebb0964585f903a249",
+      "ordinary_http_content_len": 128,
+      "ordinary_http_content_sha256": "0111f10f3237e5e63d76a512f8cdbb46b76c95674f3a66ebb0964585f903a249",
+      "session_id": 2
+    },
+    {
+      "case_id": "c109-01-03-009",
+      "direct_decode_sha256": "6bc2e9f9896d17eca4c435ece9b62676effb8e16e5de6ab27976c681b400bcc8",
+      "ordinary_decode_sha256": "6bc2e9f9896d17eca4c435ece9b62676effb8e16e5de6ab27976c681b400bcc8",
+      "ordinary_http_content_len": 121,
+      "ordinary_http_content_sha256": "6bc2e9f9896d17eca4c435ece9b62676effb8e16e5de6ab27976c681b400bcc8",
+      "session_id": 3
+    },
+    {
+      "case_id": "c109-01-04-036",
+      "direct_decode_sha256": "2b290f6fa923545a58831d1789c30298795e672d55e53313a09595510fb07fa3",
+      "ordinary_decode_sha256": "2b290f6fa923545a58831d1789c30298795e672d55e53313a09595510fb07fa3",
+      "ordinary_http_content_len": 143,
+      "ordinary_http_content_sha256": "2b290f6fa923545a58831d1789c30298795e672d55e53313a09595510fb07fa3",
+      "session_id": 4
+    },
+    {
+      "case_id": "c109-01-05-017",
+      "direct_decode_sha256": "a3794c5de29545309f715306bd47ae9b5bbfa310f8918e6b8b4dba095697740d",
+      "ordinary_decode_sha256": "a3794c5de29545309f715306bd47ae9b5bbfa310f8918e6b8b4dba095697740d",
+      "ordinary_http_content_len": 127,
+      "ordinary_http_content_sha256": "a3794c5de29545309f715306bd47ae9b5bbfa310f8918e6b8b4dba095697740d",
+      "session_id": 5
+    },
+    {
+      "case_id": "c109-01-06-006",
+      "direct_decode_sha256": "59c63bc430edd940972612cf0561a004cfa7132d0a382f5e3e0500b46e37d381",
+      "ordinary_decode_sha256": "59c63bc430edd940972612cf0561a004cfa7132d0a382f5e3e0500b46e37d381",
+      "ordinary_http_content_len": 110,
+      "ordinary_http_content_sha256": "59c63bc430edd940972612cf0561a004cfa7132d0a382f5e3e0500b46e37d381",
+      "session_id": 6
+    },
+    {
+      "case_id": "c109-02-01-030",
+      "direct_decode_sha256": "d860844834ea7249beba34bcfdadd0e733c3241a6ab68e5c7b437cb29be16739",
+      "ordinary_decode_sha256": "d860844834ea7249beba34bcfdadd0e733c3241a6ab68e5c7b437cb29be16739",
+      "ordinary_http_content_len": 266,
+      "ordinary_http_content_sha256": "d860844834ea7249beba34bcfdadd0e733c3241a6ab68e5c7b437cb29be16739",
+      "session_id": 7
+    },
+    {
+      "case_id": "c109-02-02-020",
+      "direct_decode_sha256": "41cc2dcce326815eeb6fb2be9b37781ed3de93255a4084be912ed42f8305145b",
+      "ordinary_decode_sha256": "41cc2dcce326815eeb6fb2be9b37781ed3de93255a4084be912ed42f8305145b",
+      "ordinary_http_content_len": 234,
+      "ordinary_http_content_sha256": "41cc2dcce326815eeb6fb2be9b37781ed3de93255a4084be912ed42f8305145b",
+      "session_id": 8
+    },
+    {
+      "case_id": "c109-02-03-011",
+      "direct_decode_sha256": "937a4a802208de241c9e502d3989e49dfaa058ab21cf7ee04ab80ae61e09b22b",
+      "ordinary_decode_sha256": "937a4a802208de241c9e502d3989e49dfaa058ab21cf7ee04ab80ae61e09b22b",
+      "ordinary_http_content_len": 155,
+      "ordinary_http_content_sha256": "937a4a802208de241c9e502d3989e49dfaa058ab21cf7ee04ab80ae61e09b22b",
+      "session_id": 9
+    },
+    {
+      "case_id": "c109-02-04-033",
+      "direct_decode_sha256": "141049381ad0e95ecd50ed940c4fff92985eda20c850d493597280c89742a904",
+      "ordinary_decode_sha256": "141049381ad0e95ecd50ed940c4fff92985eda20c850d493597280c89742a904",
+      "ordinary_http_content_len": 236,
+      "ordinary_http_content_sha256": "141049381ad0e95ecd50ed940c4fff92985eda20c850d493597280c89742a904",
+      "session_id": 10
+    },
+    {
+      "case_id": "c109-02-05-024",
+      "direct_decode_sha256": "dc2e8d6fda7818a543aac63eec520df6a0394de5470c3adf1937893bb348951b",
+      "ordinary_decode_sha256": "dc2e8d6fda7818a543aac63eec520df6a0394de5470c3adf1937893bb348951b",
+      "ordinary_http_content_len": 211,
+      "ordinary_http_content_sha256": "dc2e8d6fda7818a543aac63eec520df6a0394de5470c3adf1937893bb348951b",
+      "session_id": 11
+    },
+    {
+      "case_id": "c109-02-06-049",
+      "direct_decode_sha256": "010ada0652ee78cede756912ad8f3ca8a749b8f5ab187a0c8343226eb429ca29",
+      "ordinary_decode_sha256": "010ada0652ee78cede756912ad8f3ca8a749b8f5ab187a0c8343226eb429ca29",
+      "ordinary_http_content_len": 161,
+      "ordinary_http_content_sha256": "010ada0652ee78cede756912ad8f3ca8a749b8f5ab187a0c8343226eb429ca29",
+      "session_id": 12
+    },
+    {
+      "case_id": "c109-03-01-044",
+      "direct_decode_sha256": "197eaaf821fb99f7d29e14b864e42b19b601a74204fc36642555caef27351ae3",
+      "ordinary_decode_sha256": "197eaaf821fb99f7d29e14b864e42b19b601a74204fc36642555caef27351ae3",
+      "ordinary_http_content_len": 334,
+      "ordinary_http_content_sha256": "197eaaf821fb99f7d29e14b864e42b19b601a74204fc36642555caef27351ae3",
+      "session_id": 13
+    },
+    {
+      "case_id": "c109-03-02-054",
+      "direct_decode_sha256": "b640569590ca92e789961335942c1fd436b12f9c0821c4edd6b1884b09031012",
+      "ordinary_decode_sha256": "b640569590ca92e789961335942c1fd436b12f9c0821c4edd6b1884b09031012",
+      "ordinary_http_content_len": 255,
+      "ordinary_http_content_sha256": "b640569590ca92e789961335942c1fd436b12f9c0821c4edd6b1884b09031012",
+      "session_id": 14
+    },
+    {
+      "case_id": "c109-03-03-031",
+      "direct_decode_sha256": "7679062c118c0cd21ff7ab4cf2f754a958c3f848ad2acd4c4f535415820ac782",
+      "ordinary_decode_sha256": "7679062c118c0cd21ff7ab4cf2f754a958c3f848ad2acd4c4f535415820ac782",
+      "ordinary_http_content_len": 180,
+      "ordinary_http_content_sha256": "7679062c118c0cd21ff7ab4cf2f754a958c3f848ad2acd4c4f535415820ac782",
+      "session_id": 15
+    },
+    {
+      "case_id": "c109-03-04-003",
+      "direct_decode_sha256": "c9d819fb542722dc17843e3e292e7307e0798c2e184b579d901b57fdb9eec29a",
+      "ordinary_decode_sha256": "c9d819fb542722dc17843e3e292e7307e0798c2e184b579d901b57fdb9eec29a",
+      "ordinary_http_content_len": 433,
+      "ordinary_http_content_sha256": "c9d819fb542722dc17843e3e292e7307e0798c2e184b579d901b57fdb9eec29a",
+      "session_id": 16
+    },
+    {
+      "case_id": "c109-03-05-044",
+      "direct_decode_sha256": "a4f79997524393efda5f66ae649dcd3d4ebfaee9b091a90dabb0a3ed0c9f859c",
+      "ordinary_decode_sha256": "a4f79997524393efda5f66ae649dcd3d4ebfaee9b091a90dabb0a3ed0c9f859c",
+      "ordinary_http_content_len": 264,
+      "ordinary_http_content_sha256": "a4f79997524393efda5f66ae649dcd3d4ebfaee9b091a90dabb0a3ed0c9f859c",
+      "session_id": 17
+    },
+    {
+      "case_id": "c109-03-06-016",
+      "direct_decode_sha256": "4d3231c590e61e6d22de13d2f1410f438809023866425ad65db8b4aae26a1fd1",
+      "ordinary_decode_sha256": "4d3231c590e61e6d22de13d2f1410f438809023866425ad65db8b4aae26a1fd1",
+      "ordinary_http_content_len": 194,
+      "ordinary_http_content_sha256": "4d3231c590e61e6d22de13d2f1410f438809023866425ad65db8b4aae26a1fd1",
+      "session_id": 18
+    },
+    {
+      "case_id": "c109-04-01-026",
+      "direct_decode_sha256": "f39171c5720c7f2eae9455a5ff71013abe5abc4b8b5364267c1f8f9be355e471",
+      "ordinary_decode_sha256": "f5bdba34484b9aa5ffbd0500a5bbb5930052b8cc2d9eaef160a35e61e1f867b4",
+      "ordinary_http_content_len": 396,
+      "ordinary_http_content_sha256": "f5bdba34484b9aa5ffbd0500a5bbb5930052b8cc2d9eaef160a35e61e1f867b4",
+      "session_id": 19
+    },
+    {
+      "case_id": "c109-04-02-047",
+      "direct_decode_sha256": "d60bae507169813fcfef640ca9d2935b927fc9cff2c2e87d6fc957df67c7711e",
+      "ordinary_decode_sha256": "2672c4fb3c1dda88c3f882e91f9e097b91faff5d3847ed2958aeeaa8f5c3e03a",
+      "ordinary_http_content_len": 302,
+      "ordinary_http_content_sha256": "2672c4fb3c1dda88c3f882e91f9e097b91faff5d3847ed2958aeeaa8f5c3e03a",
+      "session_id": 20
+    },
+    {
+      "case_id": "c109-04-03-040",
+      "direct_decode_sha256": "31f790af1e810dfc3f7dff5c377a7309f3f14d9db9b3361daac29011d41d3636",
+      "ordinary_decode_sha256": "3debcd37b81990894777c35c79a454dc5746aeb2e0196f8466221d60c1543df2",
+      "ordinary_http_content_len": 196,
+      "ordinary_http_content_sha256": "3debcd37b81990894777c35c79a454dc5746aeb2e0196f8466221d60c1543df2",
+      "session_id": 21
+    },
+    {
+      "case_id": "c109-04-04-024",
+      "direct_decode_sha256": "e7a0d490314bb3cd5849282fdf148189978308af95e99cab9862505bff48f436",
+      "ordinary_decode_sha256": "e8931cc18b98d6444642ec4afbf68f4c5ab1c877c8e0382831f9b24264f32b6e",
+      "ordinary_http_content_len": 549,
+      "ordinary_http_content_sha256": "f4e456f594797332eca710276c5eb1350c2104aad66f07e9b001e4857951fab1",
+      "session_id": 22
+    },
+    {
+      "case_id": "c109-04-05-043",
+      "direct_decode_sha256": "a2d2baf139a43af763732cd3720f3dfa330e65804c9bd495c9aca048f7f51790",
+      "ordinary_decode_sha256": "828260edcb497c2bdd7c72256d6b769b86f0c80328d85e295f4849476ec01193",
+      "ordinary_http_content_len": 376,
+      "ordinary_http_content_sha256": "286feda3fadb84b646dd7b76fcaec1cb43f33925424d9154817db7e2e7ac07cd",
+      "session_id": 23
+    },
+    {
+      "case_id": "c109-04-06-074",
+      "direct_decode_sha256": "c321dd7cf912d1c63598a2032e757fa82adb75559221ce98c50ba5c6dd0fd5ef",
+      "ordinary_decode_sha256": "45a6579722b1ba68aa6c4f2adf84456acb1a24a76b5c8bd3d5d0c39b2a2d3fec",
+      "ordinary_http_content_len": 290,
+      "ordinary_http_content_sha256": "69a2198e7d340394fae9c863512fb40c33c8a7498746d38dfc936e25af56412b",
+      "session_id": 24
+    }
+  ],
+  "schema": "inferswarm.issue117.arm-c.decoded-bytes/1",
+  "tokenizer": "/srv/models/gemma-r6"
+}

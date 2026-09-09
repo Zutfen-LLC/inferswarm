@@ -1,0 +1,863 @@
+{
+  "claimed_pre_execution_inferswarm_sha": "5e2c83a09031d68784c3098fc9dad319b684f0da",
+  "comparator_freeze_findings": [
+    "METHODOLOGY-ARM-C.md \u00a74 (frozen at 5e2c83a) defines the direct comparator as one generate(session_id=i, prompt_token_ids=<rendered ids>, max_new_tokens=8) per case",
+    "scripts/issue117_arm_c_direct.py at 5e2c83a implements exactly that single-shot invocation \u2014 the single-shot invocation is what the frozen methodology told the direct arm to use",
+    "the frozen ordinary path is NOT a single-shot generate: the frozen FreeToken producer 924cd22e's EpochServingController.serve_tokens (retained verbatim, sha256-pinned, under evidence/arm-c/frozen-freetoken/924cd22e/) invokes the runtime per committed position with the full replay prefix and max_new_tokens=2, commits only step zero, discards the speculative second token, and repeats; the ordinary HTTP Coordinator dispatches every /v1/chat/completions request through exactly this call",
+    "MECHANICALLY DERIVED COMPARATOR DEFECT: the frozen Arm-C methodology failed its own comparator-isolation requirement \u2014 the direct arm and the ordinary arm differed in runtime invocation semantics in addition to differing in control-plane routing, so the frozen campaign could not establish ordinary-vs-direct serving equivalence or semantic failure as designed",
+    "the direct driver was modified after correctness-bearing execution: the staged driver on inferswarm01 was overwritten in place at 2026-09-09T10:43:07Z (between armc-direct-6 completion 10:28:36Z and armc-direct-7 observation 10:49:28Z) and first committed (per-token replay-prefill, max_new_tokens=2) at dd4154d",
+    "the exact staged driver bytes used by armc-direct-1..6 are unknown / not retained (the staged copy was overwritten in place; no direct-6-era copy exists); the unrecoverability independently strengthens the evidence blocker",
+    "therefore the current scripts/issue117_arm_c_direct.py is NOT the direct driver frozen by pre_execution_inferwarm_sha; armc-direct-9's replay-prefill comparator is a post-stop revised diagnostic invocation, not the frozen comparator",
+    "the reducer (scripts/issue117_arm_c_evidence.py) was similarly modified after observation (fail-closed invalid-attempt rule weakened to a review list; /srv/models/ tokenizer-metadata exemption added); the blocker reducer restores fail-closed semantics bound to the pre-execution methodology"
+  ],
+  "comparator_modification_forensics": {
+    "direct6_completed_utc": "2026-09-09T10:28:36.248255+00:00",
+    "direct7_first_observed_utc": "2026-09-09T10:49:28.249147+00:00",
+    "source": "retained completion evidence (invalid-attempt-6/direct-run.json completed_at_ns), the host-observed staged-driver stat recorded during the /2 correction pass, and the retained execution-session transcript first observation of the armc-direct-7 launch",
+    "staged_driver_mtime_utc": "2026-09-09T10:43:07.698991040Z"
+  },
+  "execution_code_identity_disclosure": {
+    "armc-direct-1..armc-direct-6": {
+      "driver_bytes": "unknown / not retained",
+      "explanation": "the direct driver executed from a staged copy at /srv/inferswarm/state/arm-c/scripts/issue117_arm_c_direct.py on inferswarm01 which was modified in place during the campaign; its current bytes (sha256 c0f03ef5\u2026, mtime 2026-09-09T10:43:07Z) postdate armc-direct-6, and no copy of the direct-6-era bytes was retained; the earliest staged-copy mtime observable is 2026-09-09T03:45Z (setup), so the exact driver identity used by direct-1..6 cannot be recovered \u2014 this is part of the evidence blocker"
+    },
+    "armc-direct-7..armc-direct-9": {
+      "driver_sha256": "c0f03ef5d5b7aaba1e36cdee3ca310d29ce9d1bd70b9b1bfa4f947ddeefa204a",
+      "evidence": "staged-copy bytes on inferswarm01 equal the driver first committed at dd4154d (replay-prefill revision); staged mtime 2026-09-09T10:43:07Z precedes the direct-7/8/9 launches"
+    },
+    "armc-ordinary-1": {
+      "client": "scripts/issue117_arm_c_client.py @ 5e2c83a (unchanged since freeze; sha256 17d2896385e939cb7ef5381a5d5093a743f40ef95ce4efdd10fb0bc1db6a2b98)",
+      "coordinator_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2 (clean worktree on inferswarm00, /srv/inferswarm/repos/FreeToken)",
+      "participant_producers": "924cd22e\u2026 clean on inferswarm01 and inferswarm03 (/home/zutfen/FreeToken)"
+    }
+  },
+  "freeze_commit_committed_utc": "2026-09-09T07:40:19+00:00",
+  "frozen_correctness_bearing_files": {
+    "docs/implementation/r6-successor-dense-full-integration-117/METHODOLOGY-ARM-C.md": {
+      "git_blob_sha_at_freeze": "36b05326f9acb9085342f9a256cb245c1adde43b",
+      "sha256_at_campaign_commit": "fdb9362f272c41e4752bb1b21b13b569a3b256f3d8caa6ead1c42fb64ae4fb6f",
+      "sha256_at_freeze": "fdb9362f272c41e4752bb1b21b13b569a3b256f3d8caa6ead1c42fb64ae4fb6f",
+      "sha256_current_head": "fdb9362f272c41e4752bb1b21b13b569a3b256f3d8caa6ead1c42fb64ae4fb6f",
+      "status_at_head": "unchanged_since_freeze"
+    },
+    "scripts/issue117_arm_c_client.py": {
+      "git_blob_sha_at_freeze": "36b65456e82917eccd99250b211c477e3d4839dc",
+      "sha256_at_campaign_commit": "17d2896385e939cb7ef5381a5d5093a743f40ef95ce4efdd10fb0bc1db6a2b98",
+      "sha256_at_freeze": "17d2896385e939cb7ef5381a5d5093a743f40ef95ce4efdd10fb0bc1db6a2b98",
+      "sha256_current_head": "17d2896385e939cb7ef5381a5d5093a743f40ef95ce4efdd10fb0bc1db6a2b98",
+      "status_at_head": "unchanged_since_freeze"
+    },
+    "scripts/issue117_arm_c_direct.py": {
+      "git_blob_sha_at_freeze": "65b4587ce32e8fbe113d04aa4eeb8f6b9a29cb0c",
+      "sha256_at_campaign_commit": "c0f03ef5d5b7aaba1e36cdee3ca310d29ce9d1bd70b9b1bfa4f947ddeefa204a",
+      "sha256_at_freeze": "81f16fa75630a0826d1ef1a318920c43d3980c66066a010172b1174b1ed47f74",
+      "sha256_current_head": "c0f03ef5d5b7aaba1e36cdee3ca310d29ce9d1bd70b9b1bfa4f947ddeefa204a",
+      "status_at_head": "changed_after_freeze"
+    },
+    "scripts/issue117_arm_c_evidence.py": {
+      "git_blob_sha_at_freeze": "c33494d265b7832fdf350ac032eedd8d01ce1fb3",
+      "sha256_at_campaign_commit": "2bcf75c04dd9464078d6754e4ab104301b4c623f37dc6277be133a4346258fde",
+      "sha256_at_freeze": "249310ce3b9be1e1a24b47dcc379b81739da2a30dc2ec277fab6c03776aeb93e",
+      "sha256_current_head": "c1032d334fe5fc31aa30326ce26d984abcad5b8a7662fe2f74ca1c59d012e11e",
+      "status_at_head": "changed_after_freeze"
+    },
+    "scripts/issue117_arm_c_fakeroot.py": {
+      "git_blob_sha_at_freeze": "98b512777c61dcac4ca002a311a1024e23d7e38d",
+      "sha256_at_campaign_commit": "c813e75d6cc2a7b3cdd7fec5d5be98dcc28e4d09ad58f6c5abc52b18a95cd140",
+      "sha256_at_freeze": "90549f77cdaa7a5007d27ec947fc8745be1ab13bdb7d8f04f3b8c747391115b6",
+      "sha256_current_head": "94a87bd9594be60ae6e3f8bba44f4d051bd1515c197bb8868d0a5f1ba5fccc80",
+      "status_at_head": "changed_after_freeze"
+    },
+    "scripts/issue117_arm_c_observe.py": {
+      "git_blob_sha_at_freeze": "185bcaf7256311e441b764f5871ed938512d1e97",
+      "sha256_at_campaign_commit": "fdacff7c1c3f204844b547bb9087177b223d529349b51ac9cd5b02dcfe1f8835",
+      "sha256_at_freeze": "fdacff7c1c3f204844b547bb9087177b223d529349b51ac9cd5b02dcfe1f8835",
+      "sha256_current_head": "fdacff7c1c3f204844b547bb9087177b223d529349b51ac9cd5b02dcfe1f8835",
+      "status_at_head": "unchanged_since_freeze"
+    },
+    "scripts/issue117_arm_c_plan.py": {
+      "git_blob_sha_at_freeze": "44ac115cfb09ca739af1d290d419a4c8cba0f2e8",
+      "sha256_at_campaign_commit": "bc879b1ecd96fb2f8dc2694e23d6aa28d943ab545a33479898b0d460f694afec",
+      "sha256_at_freeze": "139bb066427c4a1165c64ec5bdbc0057daa252b61aec46a85cc10f183879690a",
+      "sha256_current_head": "bc879b1ecd96fb2f8dc2694e23d6aa28d943ab545a33479898b0d460f694afec",
+      "status_at_head": "changed_after_freeze"
+    },
+    "tests/test_issue117_arm_c_retention.py": {
+      "git_blob_sha_at_freeze": "f1c61456ba75c43384c5bdda6875161733a644f2",
+      "sha256_at_campaign_commit": "e0a6df6c28f6a023b9e7378a2217b847959dca5e2b497aeb648a0abe55517ab8",
+      "sha256_at_freeze": "ac63a4a63de95579f7fa5bcb3e20b3c0342549c2adbc7042a002edda3f51e578",
+      "sha256_current_head": "e0a6df6c28f6a023b9e7378a2217b847959dca5e2b497aeb648a0abe55517ab8",
+      "status_at_head": "changed_after_freeze"
+    }
+  },
+  "head_classified": "5a56eb5c5df6289d25b2ae8fcff0497deda881c6",
+  "physical_campaign_commit": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+  "post_audit_correction_allowlist": {
+    "ARCHITECTURE.md": {
+      "derived": true,
+      "role": "derived: sync living section (frontier)",
+      "sha256": "5f7be062d9e79c08d02e02ac7f11952600a27b69fee6162c1f83d210ec92fe43"
+    },
+    "README.md": {
+      "derived": true,
+      "role": "derived: sync living section (frontier)",
+      "sha256": "86b9c119de534a7c645d89f4c625c7c62d275a743380f1790dc7ef071acc28ef"
+    },
+    "ROADMAP.md": {
+      "derived": true,
+      "role": "derived: sync living section (frontier)",
+      "sha256": "07b0306fccbbbb71e87a321e41755c2b44239f11e9eee46b7c3b09235c3cc5e1"
+    },
+    "docs/implementation/README.md": {
+      "derived": true,
+      "role": "derived: sync living section (frontier)",
+      "sha256": "3607cdfa30219d5884e97a6c98ddc6937ac2ccaeb8af8fc7f61c10cde81034f7"
+    },
+    "docs/implementation/plan-driven-artifact-acquisition-99/evidence/MANIFEST.sha256": {
+      "derived": true,
+      "role": "derived: sync live manifest row",
+      "sha256": "d7214efe141a0119c1e9f932b0553b6c72fd2802b0a8d4ec656c5b74a87d45db"
+    },
+    "docs/implementation/r6-successor-dense-full-integration-117/README.md": {
+      "role": "correction /2: Arm-C section rewritten to the comparator-semantics derivation (MANIFEST-row bound)",
+      "sha256": "5abafd228886dfcecc73e4d5de048f1505b6eeba5367d6767dc4ed7cb9fa4d0c"
+    },
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256": {
+      "derived": true,
+      "role": "derived: retention manifest (regenerated last)",
+      "sha256": "68f7cd0ca9370c83d1ffb9c2e63ea003b40d02785455d45b099f08fb154dd0db"
+    },
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/attempt-lineage.json": {
+      "role": "retained lineage, schema /3 (rebuilt by this builder)",
+      "self": true
+    },
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/blocker-reduction.json": {
+      "role": "retained blocker reduction record, schema /2 (regenerated by the corrected reducer)",
+      "sha256": "68eec37ddd6ec7781711c8529c86262681472df29c36789d165927c3c9c740e4"
+    },
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/coordinator.py": {
+      "role": "frozen FreeToken producer bytes @ 924cd22e (verbatim)",
+      "sha256": "189548dc4f87f5f40c05f7796a2be7af0446ea05f95a0cf7bafcd3b79bec5d77"
+    },
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/xc_strategy.py": {
+      "role": "frozen FreeToken producer bytes @ 924cd22e (verbatim)",
+      "sha256": "8d33b4b297a20511448ab78909d2f528eef62c2b7943acae167668ec9ff0f26f"
+    },
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken/research/r5b_epochs.py": {
+      "role": "frozen FreeToken producer bytes @ 924cd22e (verbatim)",
+      "sha256": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805"
+    },
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/pre-execution-authority-audit.json": {
+      "role": "retained authority audit, schema /2 (self-referential; MANIFEST-bound)",
+      "self": true
+    },
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json": {
+      "derived": true,
+      "role": "derived: producer hash ledger (regenerated last)",
+      "sha256": "720e8f1940e84ecb0e70621ec977a142681297f6be64a76e1a4ee82409535b48"
+    },
+    "docs/integrations/freetoken.md": {
+      "derived": true,
+      "role": "derived: sync living sections (frontier, runtime)",
+      "sha256": "ea83e2f920a732c35924d558f694ae847ee2cb6b2f86e00b8d1edb0be9bc3c35"
+    },
+    "docs/project-status.json": {
+      "role": "correction /2: Arm-C constraint rewritten to the comparator-semantics derivation",
+      "sha256": "38d7df353b2a4b1ac9f3fabae514f052635c804dcea3b53d4f0294141fdb5985"
+    },
+    "docs/protocols/README.md": {
+      "derived": true,
+      "role": "derived: sync living section (frontier)",
+      "sha256": "aa22ea5ae47dc3e948305a4cd12bf1e8730288f46b0547f3ebb666586787c0c5"
+    },
+    "docs/qualification/gemma4-12b-it-v1/MANIFEST.sha256": {
+      "derived": true,
+      "role": "derived: sync live manifest row",
+      "sha256": "3d227c8ad5f3160702743cde1e011bf483e456a5bb62d18a45f782e5cbb1eea6"
+    },
+    "scripts/issue117_arm_c_authority_audit.py": {
+      "role": "correction /2 authority-audit/lineage builder (this file; self-pinned role only \u2014 the audit document's own integrity is bound by the retention MANIFEST row)",
+      "sha256": "1bf9726f2eaf8e6d64b606e7f5da6e5863916241b3179d4fd10fc9020c3174dc"
+    },
+    "scripts/issue117_arm_c_blocker_fakeroot.py": {
+      "role": "correction /2 blocker mutation-suite fakeroot",
+      "sha256": "c008074ea8ce3c90a10567b1d2a9d3353f9362e068bbe2a4cd3640a54b2fba9c"
+    },
+    "scripts/issue117_arm_c_blocker_reducer.py": {
+      "role": "correction /2 blocker reducer (this pass)",
+      "sha256": "00cdcf96de5578794f26c7a5f0f2594824b514b5766bd516d38b857e7b1ba10b"
+    },
+    "scripts/issue117_arm_c_frozen_pins.py": {
+      "role": "correction /2 frozen FreeToken invocation-semantics derivation (new)",
+      "sha256": "e9b5a14eaaa4a3539b6df1a08dc1f20ef540151dfc542783c59c0d2188c47ac3"
+    },
+    "scripts/issue117_proof.py": {
+      "role": "correction /2: PRODUCERS list gains the frozen-pins module (manifest/producer-hash coverage)",
+      "sha256": "ec17256bd59b255d0a6f6291ee535038ef9386c83d6dc770be13b70415ab5bee"
+    },
+    "tests/test_issue117_arm_c_blocker.py": {
+      "role": "correction /2 blocker mutation suite",
+      "sha256": "e5c8305c4951f4a77942373acbc6f3426ef8e7bd6f0b1da9c372320d3153dad3"
+    }
+  },
+  "post_freeze_changes": [
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5a522360338d1f91ca9b577f1b6aefc881c888f",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": ".github/workflows/ci.yml"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5e29004e388fbb7de702a3a963ff109ab86d1b9",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "ARCHITECTURE.md"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5e29004e388fbb7de702a3a963ff109ab86d1b9",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "README.md"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5e29004e388fbb7de702a3a963ff109ab86d1b9",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "ROADMAP.md"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5e29004e388fbb7de702a3a963ff109ab86d1b9",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "docs/implementation/README.md"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5a522360338d1f91ca9b577f1b6aefc881c888f",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "docs/implementation/artifact-locality-transition-planning-103/evidence/MANIFEST.sha256"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5e29004e388fbb7de702a3a963ff109ab86d1b9",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "docs/implementation/plan-driven-artifact-acquisition-99/evidence/MANIFEST.sha256"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5a522360338d1f91ca9b577f1b6aefc881c888f",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "docs/implementation/plan-driven-artifact-orchestration-101/evidence/MANIFEST.sha256"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5e29004e388fbb7de702a3a963ff109ab86d1b9",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/README.md"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/attempt-lineage.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5a522360338d1f91ca9b577f1b6aefc881c888f",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/blocker-reduction.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/chain-plan.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/coordinator-census-post.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/coordinator-census-pre.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/coordinator-env.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/coordinator-report.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/decoded-bytes.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/direct-run.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/direct/direct-run.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/direct/execution-plan.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/equality.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/fencing-arm.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "5a56eb5c5df6289d25b2ae8fcff0497deda881c6",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/coordinator.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "5a56eb5c5df6289d25b2ae8fcff0497deda881c6",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/xc_strategy.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "5a56eb5c5df6289d25b2ae8fcff0497deda881c6",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken/research/r5b_epochs.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/host-census-post-01.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/host-census-post-03.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/host-census-pre-01.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/host-census-pre-03.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/invalid-attempt-6/direct-run.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/invalid-attempt-6/execution-plan.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/last-stage-direct.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/last-stage-ordinary.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/lifecycle-serving-report.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-campaign.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/fencing-arm.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-01-01-045.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-01-02-076.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-01-03-009.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-01-04-036.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-01-05-017.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-01-06-006.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-02-01-030.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-02-02-020.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-02-03-011.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-02-04-033.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-02-05-024.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-02-06-049.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-03-01-044.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-03-02-054.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-03-03-031.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-03-04-003.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-03-05-044.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-03-06-016.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-04-01-026.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-04-02-047.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-04-03-040.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-04-04-024.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-04-05-043.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-c109-04-06-074.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-http/ordinary-campaign.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/plan-verification.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5a522360338d1f91ca9b577f1b6aefc881c888f",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/pre-execution-authority-audit.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/reconciliation.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/run-record.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/strace-audit.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/strace/direct.strace.gz"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/strace/last-stage-direct.strace.gz"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/strace/last-stage-ordinary.strace.gz"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/strace/node-agent.strace.gz"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/zero-invariants.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5e29004e388fbb7de702a3a963ff109ab86d1b9",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "docs/integrations/freetoken.md"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5e29004e388fbb7de702a3a963ff109ab86d1b9",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "docs/project-status.json"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5e29004e388fbb7de702a3a963ff109ab86d1b9",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "docs/protocols/README.md"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5e29004e388fbb7de702a3a963ff109ab86d1b9",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "docs/qualification/gemma4-12b-it-v1/MANIFEST.sha256"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5a522360338d1f91ca9b577f1b6aefc881c888f",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "scripts/issue117_arm_c_authority_audit.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5a522360338d1f91ca9b577f1b6aefc881c888f",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "scripts/issue117_arm_c_blocker_fakeroot.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5a522360338d1f91ca9b577f1b6aefc881c888f",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "scripts/issue117_arm_c_blocker_reducer.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "scripts/issue117_arm_c_decoded_bytes.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "M",
+      "note": "POST-FREEZE COMPARATOR CHANGE: the direct driver at the freeze implemented the frozen single-shot generate(..., max_new_tokens=8) comparator; the committed post-campaign version implements per-token replay-prefill generate(..., max_new_tokens=2) and declares the single-shot invocation invalid",
+      "path": "scripts/issue117_arm_c_direct.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "M",
+      "note": "POST-FREEZE REDUCER CHANGE: the reducer at the freeze failed closed on any invalid attempt with a correctness-bearing result and counted every /srv/models/ open toward participant_source_tree_reads; the post-campaign version accumulated such attempts into a maintainer-review list and exempted tokenizer/config metadata reads \u2014 reducer semantics changed after observation",
+      "path": "scripts/issue117_arm_c_evidence.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "scripts/issue117_arm_c_fakeroot.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "5a56eb5c5df6289d25b2ae8fcff0497deda881c6",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "scripts/issue117_arm_c_frozen_pins.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "scripts/issue117_arm_c_plan.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "scripts/issue117_arm_c_serving_evidence.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "scripts/issue117_proof.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "e5a522360338d1f91ca9b577f1b6aefc881c888f",
+      "git_status": "A",
+      "note": "added after the declared pre-execution freeze (not frozen authority)",
+      "path": "tests/test_issue117_arm_c_blocker.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "tests/test_issue117_arm_c_retention.py"
+    },
+    {
+      "classification": "disclosed post-freeze change",
+      "first_commit_after_freeze": "2af36709f16f48ef212d815ae63bcf04583f263c",
+      "git_status": "M",
+      "note": "modified after the declared pre-execution freeze",
+      "path": "tests/test_project_status.py"
+    }
+  ],
+  "schema": "inferswarm.issue117.arm-c.pre-execution-authority-audit/2",
+  "source_read_accounting_frozen_rule": {
+    "frozen_rule": "METHODOLOGY-ARM-C \u00a79 @ 5e2c83a: the retained trace must show no open of any path under /srv/models/ \u2014 no exemption existed at the freeze; tokenizer metadata reads are counted toward participant_source_tree_reads and are separately disclosed, never zeroed",
+    "historical_classification": "the four tokenizer-metadata file opens violate the frozen zero-Source rule for this campaign; they are retained, counted, and disclosed \u2014 a future methodology may pre-declare an immutable-tokenizer-metadata exception, but only if frozen BEFORE a new correctness-bearing campaign; it cannot be backported to this one",
+    "model_weight_file_reads": 0,
+    "observed_paths": {
+      "directory_stats": [
+        "direct:/srv/models/gemma-r6"
+      ],
+      "model_weight_files": [],
+      "tokenizer_metadata_files": [
+        "direct:/srv/models/gemma-r6/chat_template.jinja",
+        "direct:/srv/models/gemma-r6/config.json",
+        "direct:/srv/models/gemma-r6/tokenizer.json",
+        "direct:/srv/models/gemma-r6/tokenizer_config.json"
+      ]
+    },
+    "source_root_directory_stats": 1,
+    "tokenizer_metadata_file_reads": 4,
+    "total_opens_counted": 5
+  }
+}

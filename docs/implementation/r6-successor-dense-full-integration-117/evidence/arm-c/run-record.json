@@ -1,0 +1,19 @@
+{
+  "completed_utc": "2026-09-09T11:15:00Z",
+  "frozen_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "hosts": {
+    "coordinator": "inferswarm00",
+    "participants": [
+      "inferswarm01",
+      "inferswarm03"
+    ]
+  },
+  "orchestration_audit": {
+    "coordinator_destructive_operations": 0,
+    "coordinator_model_byte_cotargeting_commands": 0,
+    "note": "all host operations via ssh; model bytes never copied to/from the coordinator; no canonical-root destructive ops"
+  },
+  "pre_execution_inferwarm_sha": "5e2c83a09031d68784c3098fc9dad319b684f0da",
+  "schema": "inferswarm.issue117.arm-c.run-record/1",
+  "started_utc": "2026-09-09T07:00:00Z"
+}

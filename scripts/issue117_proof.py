@@ -88,6 +88,10 @@ PRODUCERS = [
     "scripts/issue117_arm_b_evidence.py",
     "scripts/issue117_arm_b_correction_build.py",
     "scripts/issue117_arm_b_observe_hosts.py",
+    "scripts/issue117_arm_c_authority_audit.py",
+    "scripts/issue117_arm_c_blocker_reducer.py",
+    "scripts/issue117_arm_c_blocker_fakeroot.py",
+    "scripts/issue117_arm_c_frozen_pins.py",
     "scripts/issue117_arm_b_transport_audit_build.py",
     "scripts/issue117_parsers/__init__.py",
     "scripts/issue117_parsers/source_server_log.py",
@@ -265,6 +269,54 @@ COMMITTED_EVIDENCE_FILES = {
     "arm-b/raw/coordinator/scripts/__pycache__/armb_coordinator.cpython-313.pyc",
     "arm-b/raw/coordinator/scripts/__pycache__/armb_plan_core.cpython-313.pyc",
     "arm-b/observations/coordinator-transport-audit.json",
+    # retained Arm C ordinary-serving campaign artifacts (executed on the
+    # fabric 2026-09-09; see evidence/arm-c/run-record.json). Fabric-produced
+    # compact evidence; the CPU campaign never regenerates these. The gzip
+    # strace captures are retained compressed; digests pin the compressed
+    # bytes.
+    "arm-c/run-record.json",
+    "arm-c/attempt-lineage.json",
+    # frozen FreeToken producer bytes @ 924cd22e retained verbatim and
+    # sha256-pinned: the ordinary-path invocation-semantics derivation
+    # (correction /2) reads these; never regenerated
+    "arm-c/frozen-freetoken/924cd22e/python/freetoken/research/"
+    "r5b_epochs.py",
+    "arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/"
+    "coordinator.py",
+    "arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/"
+    "xc_strategy.py",
+    "arm-c/reconciliation.json",
+    "arm-c/chain-plan.json",
+    "arm-c/plan-verification.json",
+    "arm-c/direct-run.json",
+    "arm-c/direct/execution-plan.json",
+    "arm-c/ordinary-campaign.json",
+    "arm-c/fencing-arm.json",
+    "arm-c/coordinator-report.json",
+    "arm-c/lifecycle-serving-report.json",
+    "arm-c/coordinator-env.json",
+    "arm-c/coordinator-census-pre.json",
+    "arm-c/coordinator-census-post.json",
+    "arm-c/host-census-pre-01.json",
+    "arm-c/host-census-post-01.json",
+    "arm-c/host-census-pre-03.json",
+    "arm-c/host-census-post-03.json",
+    "arm-c/strace-audit.json",
+    "arm-c/strace/direct.strace.gz",
+    "arm-c/strace/node-agent.strace.gz",
+    "arm-c/strace/last-stage-direct.strace.gz",
+    "arm-c/strace/last-stage-ordinary.strace.gz",
+    "arm-c/last-stage-direct.json",
+    "arm-c/last-stage-ordinary.json",
+    "arm-c/decoded-bytes.json",
+    "arm-c/equality.json",
+    "arm-c/zero-invariants.json",
+    "arm-c/invalid-attempt-6/direct-run.json",
+    # retention/derivation correction pass (2026-09-09, no rerun):
+    # frozen-authority audit, recovered /2 lineage, and the derived
+    # blocker terminal
+    "arm-c/pre-execution-authority-audit.json",
+    "arm-c/blocker-reduction.json",
 }
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the

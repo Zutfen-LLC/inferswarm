@@ -1,0 +1,9 @@
+{
+  "collected_at_ns": 1788940833341177728,
+  "interpreter": "/srv/inferswarm/venv/bin/python3",
+  "nvidia_device_nodes_present": false,
+  "pip_torch_absent": true,
+  "schema": "inferswarm.issue117.arm-c.coordinator-env/1",
+  "torch_importable": false,
+  "triton_importable": false
+}

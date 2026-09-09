@@ -1,0 +1,38 @@
+{
+  "case_id": "c109-02-02-020",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "def null ( class _tmp lambda else yield true class while return true false map list for : true lambda lambda [ ] ) map ) for",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 8,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\ndef null ( class _tmp lambda else yield true class while return true false map list for : true lambda lambda [ ] ) map ) for<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you have provided a collection of",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-8d788b586822",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 41,
+      "total_tokens": 49
+    }
+  },
+  "schema": "inferswarm.issue117.arm-c.ordinary-case/1",
+  "wall_ns": 2525307693
+}

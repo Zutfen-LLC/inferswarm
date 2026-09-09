@@ -2,16 +2,23 @@
 
 ## Current state
 
-**Observed terminal:** `ISSUE117_ARM_B_COLD_REALIZATION_PASS`
+**Observed terminals (latest first):**
 
-Arm B — canonical cold acquisition + realization — was executed on the
-fabric on 2026-09-08 from accepted InferSwarm main
-`5179c41232051e7455b778ddb8876a6539f4cb04` with the frozen integration
-producer `924cd22ea081f6d4ed471016faf01d427fc5b0d2`.
+- Arm C (2026-09-09, corrected 2026-09-09): physical observations
+  exist, but the campaign is **methodology/evidence-blocked** —
+  `ISSUE117_ARM_C_EVIDENCE_BLOCKER` (post-correctness-bearing
+  methodology / evidence-admissibility failure); no accepted
+  ordinary-serving semantic PASS or FAIL exists from this campaign
+  (see the Arm C section below).
+- Arm B (2026-09-08, ACCEPTED at merge
+  `fed87d1b71a0794374dd58c921e31606a56a242f`, PR #127):
+  `ISSUE117_ARM_B_COLD_REALIZATION_PASS` — executed from historical
+  accepted main `5179c41232051e7455b778ddb8876a6539f4cb04` with the frozen
+  integration producer `924cd22ea081f6d4ed471016faf01d427fc5b0d2`. No
+  holdout material was used.
 
-The Arm-B observation is retained in PR #127 and is pending maintainer
-acceptance. **Arm C is blocked until that acceptance.** Arms C/D/E have not
-been executed. No holdout material was used.
+Arm D has NOT been executed and remains blocked pending maintainer review
+of the Arm-C observation.
 
 Accepted predecessor gates remain historical authority:
 
@@ -244,8 +251,153 @@ At PR #127 round-4 head `dfaee1722f2407d843be940b84905d77d4b6a636`:
 
 Two independent exact-head reviews completed with zero P0/P1 findings.
 
-## Non-claims
+## Arm C — methodology/evidence-blocked campaign (2026-09-09)
 
+Arm C executed physically on the fabric from accepted main
+`fed87d1b…` + status-sync, with the frozen integration producer
+`924cd22e…` byte-identical and clean on inferswarm00/01/03. Physical
+observations exist and are ALL retained unchanged; the campaign
+terminal, however, is NOT an ordinary-serving PASS or FAIL. The
+retention/derivation correction pass (2026-09-09, no rerun)
+reclassified the campaign:
+
+**Terminal: `ISSUE117_ARM_C_EVIDENCE_BLOCKER`** — qualified as a
+**post-correctness-bearing methodology / evidence-admissibility
+failure**, mechanically derived by
+`scripts/issue117_arm_c_blocker_reducer.py` from
+[`evidence/arm-c/blocker-reduction.json`](evidence/arm-c/blocker-reduction.json).
+Correction /2 (2026-09-09, retention/derivation only) replaced the
+earlier post-hoc "direct-6 used an invalid invocation" derivation
+with the actual frozen-methodology defect: the frozen comparator's
+two arms differed in runtime invocation semantics by design (see
+finding 1).
+
+What the frozen pre-execution authority actually establishes
+(`pre_execution_inferwarm_sha` = `5e2c83a…`; bound by git blob SHA and
+sha256 in
+[`evidence/arm-c/pre-execution-authority-audit.json`](evidence/arm-c/pre-execution-authority-audit.json)):
+
+1. **The frozen comparator failed its own comparator-isolation
+   requirement (the actual defect, correction /2).** The frozen
+   methodology §4 @ `5e2c83a` defines the direct comparator as one
+   `generate(session_id=i, prompt_token_ids=<rendered ids>,
+   max_new_tokens=8)` per case — a single-shot invocation with one
+   prefill per case — while the frozen ordinary path (FreeToken
+   producer `924cd22e…`, whose bytes are retained verbatim and
+   sha256-pinned under
+   [`evidence/arm-c/frozen-freetoken/924cd22e/`](evidence/arm-c/frozen-freetoken/924cd22e/))
+   dispatches every `/v1/chat/completions` request through
+   `EpochServingController.serve_tokens`: a per-committed-position
+   loop that re-feeds the full replay prefix (prompt + committed
+   tokens, per `GemmaTokenBoundaryStrategy.replay_input`), invokes the
+   runtime with `max_new_tokens=2`, commits only step/token zero, and
+   discards the speculative second token. The arms therefore differed
+   in **runtime invocation semantics** in addition to differing in
+   control-plane routing, violating the frozen "The ONLY intended
+   difference is the control-plane path" requirement **by design**.
+   The frozen campaign could not establish ordinary-vs-direct serving
+   equivalence or semantic failure as designed. The direct arm's
+   single-shot invocation is NOT itself the error — it is what the
+   frozen methodology told the direct arm to use.
+2. **The exact staged driver bytes used by direct-1..6 are
+   `unknown / not retained`.** The staged copy on inferswarm01 was
+   overwritten in place at 2026-09-09T10:43Z — mechanically placed
+   AFTER direct-6 completed (10:28:36Z) and BEFORE direct-7 was
+   observed (10:49:28Z) — and committed at `dd4154d` as per-token
+   replay-prefill (`max_new_tokens=2`). The direct-6 rows are
+   consistent with the single-shot invocation (no replay marker), but
+   absence of a marker introduced later cannot alone prove exact
+   producer-script identity; the unrecoverability independently
+   strengthens the evidence blocker.
+3. **The §10 stop-rule ambiguity is reported, not resolved — both
+   histories converge on the blocker.** The exact moment at which the
+   operator first regarded direct-6 as an invalid comparator is not
+   independently retained. If direct-6 was still regarded as valid
+   when ordinary-1 ran, the campaign followed the frozen methodology
+   but the frozen comparator itself was defective (finding 1). If
+   direct-6 had already been regarded as invalid, frozen §10 required
+   STOP after its correctness-bearing output (retained timestamps:
+   direct-6 10:28 UTC < ordinary-1 10:38 UTC) and ordinary-1
+   improperly ran afterward. Both branches derive
+   `ISSUE117_ARM_C_EVIDENCE_BLOCKER`; the reducer never needs the
+   post-hoc validity judgment to obtain the terminal.
+4. **Post-observation reducer weakening reverted; exact-head audit
+   fail-closed.** The reducer was changed after physical execution
+   (fail-closed invalid-attempt rule weakened to a review list;
+   `/srv/models/` tokenizer-metadata exemption added). The blocker
+   reducer is bound to the pre-execution methodology, and correction
+   /2 closes the exact-head audit loophole: a frozen
+   methodology/driver change after the audited head ALWAYS fails, and
+   every other post-audit file change must be individually allowlisted
+   with its exact sha256 (methodology+reducer, driver+reducer, and
+   methodology+driver+reducer combinations all fail).
+5. **Four Source-tree metadata reads under the frozen zero-Source
+   rule.** The direct window shows four tokenizer-metadata file opens
+   under `/srv/models/` (plus one directory stat; zero model-weight
+   reads). The frozen §9 rule admits no exemption; the four reads are
+   retained and counted, never zeroed. They independently bar PASS. A
+   future methodology may pre-declare an immutable-tokenizer-metadata
+   exception, but only frozen BEFORE a new correctness-bearing
+   campaign — it cannot be backported to this one.
+
+**Disposition of the physical observations (all 11 attempts
+retained, none erased; authored validity flags retained verbatim as
+historical/post-hoc classification):**
+
+- `armc-direct-6`: correctness-bearing physical observation;
+  invocation consistent with the frozen single-shot comparator; exact
+  staged driver bytes unknown / not retained; part of the evidence
+  that exposes the frozen comparator defect; NOT accepted terminal
+  comparator evidence;
+- `armc-ordinary-1`: correctness-bearing ordinary-path observation
+  (24 cases + fencing, 10:38 UTC, after direct-6 and before the
+  replay-prefill rewrite reached a completed direct run); part of the
+  frozen-methodology campaign evidence; inadmissible to a semantic
+  PASS/FAIL because the comparator methodology was defective;
+- `armc-direct-7/8/9` (10:49/10:56/11:09 UTC): post-observation /
+  post-methodology-revision diagnostics; inadmissible to the terminal
+  campaign;
+- the 18/24 ordinary-vs-direct comparison (replay-prefill comparator,
+  post-revision) is retained as **diagnostic evidence only**; it does
+  NOT establish the terminal Arm-C ordinary-serving result;
+- the six regime-4 divergences (rendered prompt 65–67 ids) are
+  retained as diagnostic evidence strongly suggesting a real
+  multi-chunk/KV nondeterminism defect — a **follow-up hypothesis**,
+  not the accepted result of this campaign;
+- direct-6 single-shot trajectory, direct-9 replay-prefill trajectory,
+  ordinary trajectory, fencing/coordinator/data-path zeros, straces,
+  censuses, and the recovered attempt lineage
+  ([`evidence/arm-c/attempt-lineage.json`](evidence/arm-c/attempt-lineage.json),
+  schema /3: per-attempt timestamps recovered digest-bound from the
+  retained execution-session transcript; physical chronology is
+  derived only from retained timestamp evidence — direct-6 10:28:36Z
+  < ordinary-1 10:38:52Z < direct-7 10:49:28Z < direct-8 10:56:57Z <
+  direct-9 11:09:05Z — while the authored logical `order` field is
+  retained separately and must not contradict it; unrecoverable
+  fields carry explicit `unknown / not retained` markers — including
+  the exact driver bytes used by direct-1..6, which were overwritten
+  in place and are part of the evidence blocker).
+
+Canonical reducers: `scripts/issue117_arm_c_blocker_reducer.py`
+(frozen-evidence terminal derivation, correction /2; 31-control
+mutation suite + frozen-source pin suite in
+`tests/test_issue117_arm_c_blocker.py`; the ordinary-path invocation
+semantics are derived from the sha256-pinned FreeToken bytes by
+`scripts/issue117_arm_c_frozen_pins.py`) and
+`scripts/issue117_arm_c_evidence.py` (retained-equality derivation;
+34-control suite in `tests/test_issue117_arm_c_retention.py`).
+
+Arm D has NOT been executed and remains blocked.
+
+## Non-claims (Arm C)
+
+- Arm C claims NO ordinary-serving semantic PASS or FAIL: the retained
+  18/24 comparison used a post-stop, post-freeze replay-prefill
+  comparator and is diagnostic only.
+- The six regime-4 divergences are diagnostic evidence for a follow-up
+  hypothesis (multi-chunk/KV nondeterminism), not an accepted result.
+- No Arm-D warm-restart or Arm-E locality claim; Arm D remains blocked.
+- No new Arm-C physical campaign is authorized by this record.
 - Arm B does not claim ordinary external-Coordinator serving; that is Arm C.
 - No PREFILL/decode/generate or fixture serving was executed as part of Arm B.
 - Arms C/D/E have not been executed.

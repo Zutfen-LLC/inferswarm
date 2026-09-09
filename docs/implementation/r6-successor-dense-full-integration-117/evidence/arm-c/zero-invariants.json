@@ -1,0 +1,28 @@
+{
+  "coordinator": {
+    "coordinator_bulk_artifact_bytes_observed": 0,
+    "coordinator_cuda_initialized": 0,
+    "coordinator_model_weight_bytes_materialized": 0,
+    "coordinator_model_weight_bytes_received": 0
+  },
+  "fence": {
+    "stale_epoch_commits": 0,
+    "stale_plan_commits": 0,
+    "stale_session_commits": 0,
+    "unattributed_correctness_bearing_commits": 0,
+    "wrong_epoch_commits": 0,
+    "wrong_plan_commits": 0,
+    "wrong_position_commits": 0,
+    "wrong_session_commits": 0
+  },
+  "fencing_arm_proven_on_real_path": true,
+  "participant": {
+    "participant_cache_reacquisition_events": 0,
+    "participant_rematerialization_events": 0,
+    "participant_source_tokenizer_metadata_reads": 4,
+    "participant_source_tree_reads": 0,
+    "unexplained_persistent_host_mirror_bytes": 0,
+    "unplanned_model_state_movement_bytes": 0
+  },
+  "schema": "inferswarm.issue117.arm-c.zero-invariants/1"
+}

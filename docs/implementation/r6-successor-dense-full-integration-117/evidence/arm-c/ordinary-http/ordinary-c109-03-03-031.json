@@ -1,0 +1,38 @@
+{
+  "case_id": "c109-03-03-031",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": ") squared z mean ratio prime 2 squared 55 34 = 55 + 13 third 2 21 8 5 13",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 15,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\n) squared z mean ratio prime 2 squared 55 34 = 55 + 13 third 2 21 8 5 13<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you are providing a sequence of",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-8d788b586822",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 49,
+      "total_tokens": 57
+    }
+  },
+  "schema": "inferswarm.issue117.arm-c.ordinary-case/1",
+  "wall_ns": 2437462840
+}

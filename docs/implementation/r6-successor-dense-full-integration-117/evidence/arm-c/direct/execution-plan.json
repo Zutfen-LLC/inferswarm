@@ -1,0 +1,219 @@
+{
+  "admission_evidence_used": [],
+  "backend_choices": [
+    {
+      "backend": "freetoken-dense-stage-native",
+      "participant": "node.inferswarm01"
+    },
+    {
+      "backend": "freetoken-dense-stage-native",
+      "participant": "node.inferswarm03"
+    }
+  ],
+  "candidate_id": "resident-two-node-three-slot[slot-stage-1=gpu.node-a.0,slot-stage-2=gpu.node-a.1,slot-stage-3=gpu.node-b.0]",
+  "compute_units": [
+    "gpu.node-a.0",
+    "gpu.node-a.1",
+    "gpu.node-b.0"
+  ],
+  "digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+  "evidence_audit": [],
+  "evidence_used": [],
+  "exclusions": [],
+  "expected_resource_accounting": {
+    "gpu.node-a.0.vram": {
+      "available_after_reservation_bytes": 12884901888,
+      "persistent_optional_bytes": 0,
+      "persistent_required_bytes": 9256814624,
+      "realization_peak_occupied_bytes": 9256814624,
+      "released_after_lifecycle_boundary_bytes": 0,
+      "steady_occupied_bytes": 9256814624,
+      "transient_realization_peak_bytes": 0
+    },
+    "gpu.node-a.1.vram": {
+      "available_after_reservation_bytes": 12884901888,
+      "persistent_optional_bytes": 0,
+      "persistent_required_bytes": 7278939168,
+      "realization_peak_occupied_bytes": 7278939168,
+      "released_after_lifecycle_boundary_bytes": 0,
+      "steady_occupied_bytes": 7278939168,
+      "transient_realization_peak_bytes": 0
+    },
+    "gpu.node-b.0.vram": {
+      "available_after_reservation_bytes": 12884901888,
+      "persistent_optional_bytes": 0,
+      "persistent_required_bytes": 9292678688,
+      "realization_peak_occupied_bytes": 9292678688,
+      "released_after_lifecycle_boundary_bytes": 0,
+      "steady_occupied_bytes": 9292678688,
+      "transient_realization_peak_bytes": 0
+    },
+    "strategy_host_lifecycle": {
+      "declared_shared_state_bytes": 2013265920,
+      "dense_stream_staging": "no persistent host mirror; per-tensor streamed device-ward loads released after each stage realizes",
+      "release_after_final_residency": true
+    }
+  },
+  "frozen_before_heavyweight_realization": true,
+  "lower_ranked_feasible_candidates": [],
+  "mapping": {
+    "slot-stage-1": "gpu.node-a.0",
+    "slot-stage-2": "gpu.node-a.1",
+    "slot-stage-3": "gpu.node-b.0"
+  },
+  "model_identity": {
+    "repository": "google/gemma-4-12B-it",
+    "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7"
+  },
+  "objective": {
+    "digest": "sha256:71524aecc2bcb6788868981a2e4ef3210525404dd5039e69bd706155791d5286",
+    "direction": "MINIMIZE",
+    "evidence_context": {
+      "model_revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+      "workload_geometry": "r6-dense-3stage-chain"
+    },
+    "id": "r6-dense-serving-ttft_ms",
+    "implementation_commit": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+    "metric": "ttft_ms",
+    "schema": "inferswarm.r6.objective/1",
+    "statistic": "single-run",
+    "unit": "ms"
+  },
+  "participants": [
+    "node.inferswarm01",
+    "node.inferswarm03"
+  ],
+  "planner_decision_digest": "sha256:6010ad19b4498c8f382a10c576b4573301c9158b206bdd382f98b2466c23fe0f",
+  "policy_inputs": {
+    "digest": "sha256:7f11f33ec04bd185a375d96a5d52ae337583a30f7d97767768bd2be267845b51",
+    "epoch_reconfiguration": true,
+    "excluded_compute_unit_ids": [],
+    "implementation_commit": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+    "integrity_policy": "quarantined-resources-cannot-participate",
+    "reservations_bytes": {},
+    "schema": "inferswarm.r6.operator-policy/1",
+    "static_plan_only": false
+  },
+  "representations": [
+    {
+      "logical_state_id": "state.stage-1.immutable",
+      "representation": "freetoken-dense-selective-bf16"
+    },
+    {
+      "logical_state_id": "state.stage-2.immutable",
+      "representation": "freetoken-dense-selective-bf16"
+    },
+    {
+      "logical_state_id": "state.stage-3.immutable",
+      "representation": "freetoken-dense-selective-bf16"
+    }
+  ],
+  "schema": "inferswarm.r5a.static-execution-plan/1",
+  "selection_authorization": {
+    "automatic_selection_preserved": true,
+    "candidate_id": "resident-two-node-three-slot[slot-stage-1=gpu.node-a.0,slot-stage-2=gpu.node-a.1,slot-stage-3=gpu.node-b.0]",
+    "mode": "CONTROLLED_EVIDENCE_COLLECTION_OVERRIDE",
+    "planner_selected_candidate_id": null,
+    "reason": "direct-control comparator compiles the only legal shape before any ranking evidence exists; the ordinary arm selects the same candidate automatically from measured evidence"
+  },
+  "semantic_boundaries": [
+    {
+      "from_compute_unit_id": "gpu.node-a.0",
+      "id": "boundary.0",
+      "semantic_contract": {
+        "decode_bytes": 7680,
+        "dtype": "bfloat16",
+        "layout": "plane-major-contiguous",
+        "planes": 1,
+        "prefill_bytes": 491520,
+        "prefill_chunk_rows": 64,
+        "row_width": 3840
+      },
+      "to_compute_unit_id": "gpu.node-a.1"
+    },
+    {
+      "from_compute_unit_id": "gpu.node-a.1",
+      "id": "boundary.1",
+      "semantic_contract": {
+        "decode_bytes": 7680,
+        "dtype": "bfloat16",
+        "layout": "plane-major-contiguous",
+        "planes": 1,
+        "prefill_bytes": 491520,
+        "prefill_chunk_rows": 64,
+        "row_width": 3840
+      },
+      "to_compute_unit_id": "gpu.node-b.0"
+    }
+  ],
+  "state_authority": [
+    {
+      "lineage": "r6-dense-replay-prefill",
+      "logical_state_id": "state.stage-1.mutable-kv",
+      "participant": "node.inferswarm01"
+    },
+    {
+      "lineage": "r6-dense-replay-prefill",
+      "logical_state_id": "state.stage-2.mutable-kv",
+      "participant": "node.inferswarm01"
+    },
+    {
+      "lineage": "r6-dense-replay-prefill",
+      "logical_state_id": "state.stage-3.mutable-kv",
+      "participant": "node.inferswarm03"
+    }
+  ],
+  "state_placement": [
+    {
+      "compute_unit_id": "gpu.node-a.0",
+      "logical_state_id": "state.stage-1.immutable",
+      "role": "required_residency"
+    },
+    {
+      "compute_unit_id": "gpu.node-a.0",
+      "logical_state_id": "state.stage-1.mutable-kv",
+      "role": "mutable_authority"
+    },
+    {
+      "compute_unit_id": "gpu.node-a.1",
+      "logical_state_id": "state.stage-2.immutable",
+      "role": "required_residency"
+    },
+    {
+      "compute_unit_id": "gpu.node-a.1",
+      "logical_state_id": "state.stage-2.mutable-kv",
+      "role": "mutable_authority"
+    },
+    {
+      "compute_unit_id": "gpu.node-b.0",
+      "logical_state_id": "state.stage-3.immutable",
+      "role": "required_residency"
+    },
+    {
+      "compute_unit_id": "gpu.node-b.0",
+      "logical_state_id": "state.stage-3.mutable-kv",
+      "role": "mutable_authority"
+    }
+  ],
+  "strategy_identity": {
+    "id": "freetoken.gemma4-dense-serving/1"
+  },
+  "strategy_realization": {
+    "participant_plan_digest": "sha256:a71a3129b8764d7108f51ed30fb230b42fcd69646a20bcd6806b6ee53b9bc51f",
+    "realization": "r6-dense-three-stage-chain"
+  },
+  "unused_resources": [
+    {
+      "compute_unit_id": "gpu.node-a.0",
+      "reason": "not needed by the highest-ranked candidate"
+    },
+    {
+      "compute_unit_id": "gpu.node-a.1",
+      "reason": "not needed by the highest-ranked candidate"
+    },
+    {
+      "compute_unit_id": "gpu.node-b.0",
+      "reason": "not needed by the highest-ranked candidate"
+    }
+  ]
+}

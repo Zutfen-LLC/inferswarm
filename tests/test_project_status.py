@@ -115,15 +115,20 @@ class ProjectStatusTests(unittest.TestCase):
                 self.assertEqual(self.run_main(root, '--write'), 1)
                 self.assertEqual(self.snapshot(root), before)
 
-    def test_current_record_observes_arm_b_and_blocks_arm_c(self):
+    def test_current_record_observes_arm_c_blocker_and_blocks_arm_d(self):
         output = sync.render(self.record)['frontier']
         self.assertIn('ISSUE117_ARM_B_COLD_REALIZATION_PASS', output)
-        self.assertIn('pending maintainer acceptance', output)
-        self.assertIn('blocked — Arm C', output)
-        self.assertIn('Arm C', output)
+        self.assertIn('ISSUE117_ARM_C_EVIDENCE_BLOCKER', output)
+        self.assertIn('pending maintainer review', output)
+        self.assertIn('Arm D', output)
+        # the withdrawn terminal must not be presented as the observed state
+        self.assertNotIn('observed ISSUE117_ARM_C_ORDINARY_SERVING_FAIL',
+                         output)
         capabilities = sync.render(self.record)['capabilities']
         self.assertNotIn('ISSUE117_ARM_B_COLD_REALIZATION_PASS', capabilities)
         self.assertNotIn('Arm B', capabilities)
+        self.assertNotIn('ISSUE117_ARM_C_ORDINARY_SERVING_FAIL', capabilities)
+        self.assertNotIn('ISSUE117_ARM_C_EVIDENCE_BLOCKER', capabilities)
 
     def test_accepted_prerequisite_does_not_authorize_execution(self):
         self.record['frontier']['execution']['state'] = 'blocked'

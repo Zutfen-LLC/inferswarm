@@ -1,0 +1,38 @@
+{
+  "case_id": "c109-04-03-040",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "2 1 5 5 34 third = 3 8 mean z ) ) z mean + 1 + 21 ( 55 - - + delta 3 8 prime sum third prime 13 8 ratio 21 ",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 21,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\n2 1 5 5 34 third = 3 8 mean z ) ) z mean + 1 + 21 ( 55 - - + delta 3 8 prime sum third prime 13 8 ratio 21<turn|>\n<|turn>model\n<|channel>thought\n<channel|>I'm a tool for the third",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-8d788b586822",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 67,
+      "total_tokens": 75
+    }
+  },
+  "schema": "inferswarm.issue117.arm-c.ordinary-case/1",
+  "wall_ns": 3736115714
+}

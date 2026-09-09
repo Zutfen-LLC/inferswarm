@@ -1,0 +1,184 @@
+{
+  "arm_c_retry_authorized": false,
+  "arm_d": "blocked",
+  "attempt_dispositions": {
+    "armc-direct-6": "correctness-bearing physical observation; invocation consistent with the frozen single-shot comparator; exact staged driver bytes unknown / not retained; part of the evidence that exposes the frozen comparator defect; NOT accepted terminal comparator evidence",
+    "armc-direct-7": "post-observation/post-methodology-revision diagnostic; inadmissible to the terminal campaign",
+    "armc-direct-8": "post-observation/post-methodology-revision diagnostic; inadmissible to the terminal campaign",
+    "armc-direct-9": "post-observation/post-methodology-revision diagnostic (replay-prefill side of the retained 18/24 comparison); inadmissible to the terminal campaign",
+    "armc-ordinary-1": "correctness-bearing ordinary-path observation, executed after direct-6 and before the replay-prefill rewrite reached a completed direct run; part of the frozen-methodology campaign evidence; inadmissible to a semantic PASS/FAIL because the comparator methodology was defective"
+  },
+  "authority": {
+    "audited_head": "5a56eb5c5df6289d25b2ae8fcff0497deda881c6",
+    "disclosure": "the direct driver and the reducer committed at the final head are NOT the scripts frozen by pre_execution_inferwarm_sha; every post-freeze change is classified in pre-execution-authority-audit.json and every post-audit correction file is individually pinned in its correction allowlist",
+    "driver_changed_after_freeze": true,
+    "exact_head_policy": "fail-closed: frozen methodology/driver may never change after the audited head; every other post-audit change must be individually allowlisted with its exact sha256",
+    "frozen_direct_driver": {
+      "git_blob_sha": "65b4587ce32e8fbe113d04aa4eeb8f6b9a29cb0c",
+      "sha256": "81f16fa75630a0826d1ef1a318920c43d3980c66066a010172b1174b1ed47f74"
+    },
+    "frozen_methodology": {
+      "git_blob_sha": "36b05326f9acb9085342f9a256cb245c1adde43b",
+      "sha256": "fdb9362f272c41e4752bb1b21b13b569a3b256f3d8caa6ead1c42fb64ae4fb6f"
+    },
+    "frozen_reducer": {
+      "git_blob_sha": "c33494d265b7832fdf350ac032eedd8d01ce1fb3",
+      "sha256": "249310ce3b9be1e1a24b47dcc379b81739da2a30dc2ec277fab6c03776aeb93e"
+    },
+    "head": "5a56eb5c5df6289d25b2ae8fcff0497deda881c6",
+    "post_freeze_change_count": 91,
+    "pre_execution_inferwarm_sha": "5e2c83a09031d68784c3098fc9dad319b684f0da",
+    "reducer_changed_after_freeze": true
+  },
+  "branch_analysis": {
+    "branches": [
+      {
+        "condition": "direct-6 was regarded as valid when ordinary-1 ran",
+        "derivable": false,
+        "derivation": "direct-6 + ordinary-1 followed the frozen campaign, but the frozen comparator itself was defective: the arms differed in runtime invocation semantics by design (single-shot max_new_tokens=8 vs replay-prefix max_new_tokens=2 per-position commit loop)",
+        "terminal": "ISSUE117_ARM_C_EVIDENCE_BLOCKER"
+      },
+      {
+        "condition": "direct-6 had already been regarded as invalid before ordinary-1 ran",
+        "derivable": true,
+        "derivation": "frozen methodology \u00a710 required STOP for maintainer review after direct-6's correctness-bearing output (2026-09-09T10:28:36.248255+00:00 precedes ordinary-1 at 2026-09-09T10:38:52.091031+00:00 per retained timestamp evidence), and ordinary-1 improperly ran afterward",
+        "terminal": "ISSUE117_ARM_C_EVIDENCE_BLOCKER"
+      }
+    ],
+    "convergence": "ISSUE117_ARM_C_EVIDENCE_BLOCKER",
+    "historical_ambiguity": "the exact moment at which the operator first regarded direct-6 as an invalid comparator is not independently retained; both exhaustive possibilities are derived and both converge on the blocker",
+    "note": "the \u00a710 stop-rule ambiguity is REPORTED but never REQUIRED to derive the terminal: the comparator-methods defect alone establishes the blocker",
+    "stop_rule_ambiguity_reported": true
+  },
+  "comparator_defect": {
+    "authority_statement": "The frozen Arm-C methodology failed its own comparator-isolation requirement. The direct arm and ordinary arm differed in runtime invocation semantics in addition to differing in control-plane routing. Therefore the frozen campaign could not establish ordinary-vs-direct serving equivalence or semantic failure as designed.",
+    "defect": true,
+    "frozen_requirement": "The ONLY intended difference is the",
+    "note": "the direct arm's single-shot invocation is NOT itself an error: it is exactly what the frozen methodology told the direct arm to use; the defect is in the frozen comparator's design, established before any execution",
+    "violation": "the frozen direct arm invokes the runtime single-shot (max_new_tokens=8, one prefill per case) while the frozen ordinary path invokes the runtime as a replay-prefix per-position loop (max_new_tokens=2 per committed token, full prefix re-fed, only the first of two speculative tokens committed) \u2014 a runtime invocation semantics difference in addition to the control-plane routing difference"
+  },
+  "frozen_invocation_semantics": {
+    "direct": {
+      "invocation": "single-shot",
+      "max_new_tokens": 8,
+      "prefill": "case prompt only, once per case",
+      "runtime_generate_calls_per_case": 1,
+      "source": "METHODOLOGY-ARM-C \u00a74 + scripts/issue117_arm_c_direct.py, both pinned by git at 5e2c83a09031d68784c3098fc9dad319b684f0da"
+    },
+    "ordinary": {
+      "citations": {
+        "coordinator_calls_serve_tokens": {
+          "line": 401,
+          "text": "completed = self.controller.serve_tokens("
+        },
+        "coordinator_import": {
+          "line": 22,
+          "text": "from freetoken.research.r5b_epochs import EpochServingController"
+        },
+        "epochs_loop": {
+          "line": 740,
+          "text": "while session.committed_position < max_new_tokens:"
+        },
+        "epochs_max_new_tokens_2": {
+          "line": 763,
+          "text": "max_new_tokens=2,"
+        },
+        "epochs_replay_arg": {
+          "line": 759,
+          "text": "prompt_token_ids=replay_input,"
+        },
+        "epochs_replay_derive": {
+          "line": 744,
+          "text": "replay_input = list(self.transition_strategy.replay_input(session=session))"
+        },
+        "epochs_speculative_discard": {
+          "line": 798,
+          "text": "speculative_uncommitted_tokens_discarded\": 1,"
+        },
+        "epochs_step_zero_only": {
+          "line": 749,
+          "text": "if _step == 0:"
+        },
+        "strategy_replay_input": {
+          "line": 54,
+          "text": "return list(session.prompt_token_ids) + list(session.committed_token_ids)"
+        }
+      },
+      "commit": "step/token zero only",
+      "derivation": "EpochServingController.serve_tokens (r5b_epochs.py @ 924cd22e, sha256-pinned) loops per committed position: replay_input = strategy.replay_input(session) (= prompt + committed ids, xc_strategy.py @ 924cd22e), generate(prompt_token_ids=replay_input, max_new_tokens=2), commit step zero, discard the speculative second token; the ordinary HTTP Coordinator (inferswarm_r6/coordinator.py @ 924cd22e) dispatches /v1/chat/completions through exactly this controller.serve_tokens call",
+      "invocation": "replay-prefix per-token commit loop",
+      "max_new_tokens": 2,
+      "prefill": "full replay prefix (prompt + committed tokens) re-fed on every per-position call",
+      "runtime_generate_calls_per_case": 8,
+      "speculative_second_token": "discarded before replay"
+    }
+  },
+  "head_audited": "5a56eb5c5df6289d25b2ae8fcff0497deda881c6",
+  "observations": {
+    "chronology_note": "physical chronology is derived only from retained completion-evidence and transcript timestamps; the authored logical order field is retained separately and must agree with it",
+    "chronology_utc": {
+      "armc-direct-6": "2026-09-09T10:28:36.248255+00:00",
+      "armc-direct-7": "2026-09-09T10:49:28.249147+00:00",
+      "armc-direct-8": "2026-09-09T10:56:57.544666+00:00",
+      "armc-direct-9": "2026-09-09T11:09:05.413012+00:00",
+      "armc-ordinary-1": "2026-09-09T10:38:52.091031+00:00"
+    },
+    "comparator_modification": {
+      "direct6_completed_utc": "2026-09-09T10:28:36.248255+00:00",
+      "direct7_first_observed_utc": "2026-09-09T10:49:28.249147+00:00",
+      "staged_driver_overwrite_utc": "2026-09-09T10:43:07.698991+00:00"
+    },
+    "diagnostics_789": {
+      "armc-direct-7": "2026-09-09T10:49:28.249147+00:00",
+      "armc-direct-8": "2026-09-09T10:56:57.544666+00:00",
+      "armc-direct-9": "2026-09-09T11:09:05.413012+00:00"
+    },
+    "direct6": {
+      "completed_utc": "2026-09-09T10:28:36.248255+00:00",
+      "correctness_bearing": true,
+      "exact_staged_driver_bytes": "unknown / not retained",
+      "gpu_residency": true,
+      "invocation": "consistent with the frozen single-shot comparator (no replay marker in any retained row; the marker was introduced by the post-observation driver revision)",
+      "retained_result_rows": 24
+    },
+    "direct9_is_frozen_comparator": false,
+    "direct9_note": "armc-direct-9 used the post-freeze, post-observation replay-prefill invocation (its result rows carry per-token-replay-prefill/1); it is a revised diagnostic invocation, not the comparator frozen at 5e2c83a09031d68784c3098fc9dad319b684f0da",
+    "historical_validity_flag_direct6": false,
+    "ordinary1": {
+      "cases": 24,
+      "committed_ledger_sessions": 25,
+      "completed_utc": "2026-09-09T10:38:52.091031+00:00",
+      "correctness_bearing": true,
+      "planner_provenance_attempt_id": "armc-direct-6"
+    }
+  },
+  "physical_execution_performed_by_this_correction": false,
+  "retained_diagnostic_value": {
+    "equality_18_of_24": "retained as diagnostic evidence only (post-revision replay-prefill comparator); it does NOT establish the terminal Arm-C ordinary-serving result",
+    "six_regime_4_divergences": "retained as diagnostic evidence; a FOLLOW-UP KV/multi-chunk hypothesis, not the accepted result of this campaign"
+  },
+  "schema": "inferswarm.issue117.arm-c.blocker-reduction/2",
+  "source_reads_frozen_rule": {
+    "classification": "the four tokenizer-metadata opens and one Source-root stat are retained and counted under the frozen rule (no post-hoc exemption); they independently bar PASS and reinforce the methodology/evidence blocker",
+    "frozen_rule": "zero /srv/models/ opens in the serving windows",
+    "model_weight_file_reads": 0,
+    "participant_source_tree_reads_under_frozen_rule": 4,
+    "source_root_directory_stats": 1,
+    "tokenizer_metadata_file_reads": 4
+  },
+  "terminal": "ISSUE117_ARM_C_EVIDENCE_BLOCKER",
+  "terminal_derivation": [
+    "claimed pre-execution SHA verified: 5e2c83a\u2026",
+    "frozen methodology/driver/reducer digests pinned by git blob SHA + sha256; exact-head audit fail-closed",
+    "frozen direct invocation semantics derived from git: single-shot max_new_tokens=8 (what the methodology told the direct arm to use)",
+    "frozen ordinary invocation semantics derived from the sha256-pinned FreeToken bytes at 924cd22e: replay-prefix per-position loop, max_new_tokens=2 per call, commit step zero, discard the speculative second token",
+    "frozen same-substrate / same-generation-semantics / only-control-plane-difference requirement violated by design \u2192 comparator-methodology defect",
+    "correctness-bearing direct and ordinary observations verified retained (24 rows each; 24-session committed ledger)",
+    "comparator-script identity for direct-6 verified NOT fully retained (unknown / not retained) \u2014 unrecoverability independently strengthens the blocker",
+    "later comparator modification verified to occur only after the correctness-bearing observation (staged overwrite 10:43 UTC between direct-6 completion 10:28 UTC and direct-7 observation 10:49 UTC)",
+    "four tokenizer-metadata Source file reads + one Source-root stat retained under the frozen zero-Source rule \u2192 PASS impossible",
+    "both exhaustive histories (direct-6 valid or already invalid when ordinary-1 ran) converge on the blocker \u2192 semantic ordinary-serving FAIL inadmissible",
+    "terminal is the Arm-C evidence/methodology blocker (post-correctness-bearing methodology / evidence-admissibility failure)"
+  ],
+  "terminal_qualification": "post-correctness-bearing methodology / evidence-admissibility failure"
+}

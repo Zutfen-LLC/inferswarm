@@ -1,0 +1,1802 @@
+{
+  "gpu": {
+    "available": true,
+    "compute_apps": ""
+  },
+  "host": "inferswarm03",
+  "observed_at_ns": 1788940167979460697,
+  "roots": {
+    "/srv/inferswarm/cache/issue117": {
+      "entries": [
+        {
+          "ino": 9962014,
+          "mtime_ns": 1788901754225532755,
+          "path": "/srv/inferswarm/cache/issue117/objects",
+          "size": 24576,
+          "type": "d"
+        },
+        {
+          "ino": 9962015,
+          "mtime_ns": 1788901754237532617,
+          "path": "/srv/inferswarm/cache/issue117/partial",
+          "size": 4096,
+          "type": "d"
+        },
+        {
+          "ino": 9962182,
+          "mtime_ns": 1788901704542099823,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-001c4f439fc3d0c6eb6f62f5e302ff53657e0635b49eca7b4d4e08a12e05ed5d",
+          "sha256": "001c4f439fc3d0c6eb6f62f5e302ff53657e0635b49eca7b4d4e08a12e05ed5d",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962139,
+          "mtime_ns": 1788901692058241893,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-013e399e2bdc47e53ec192a4ec3380a6bf94af5dbbdf1b08bb243992d88b7705",
+          "sha256": "013e399e2bdc47e53ec192a4ec3380a6bf94af5dbbdf1b08bb243992d88b7705",
+          "size": 62914560,
+          "type": "f"
+        },
+        {
+          "ino": 9962158,
+          "mtime_ns": 1788901696978185923,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-0142b93ec743d022133249842d8e766ad1cf904026e6549247be1de6709c77dd",
+          "sha256": "0142b93ec743d022133249842d8e766ad1cf904026e6549247be1de6709c77dd",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962138,
+          "mtime_ns": 1788901691138252355,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-015f2be81fdf45692a218bf5c04f4890693a8eabcc85232dea688d9d7aaa7b7f",
+          "sha256": "015f2be81fdf45692a218bf5c04f4890693a8eabcc85232dea688d9d7aaa7b7f",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962043,
+          "mtime_ns": 1788901608055193076,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-02e582a43a079d0fe3814f07c3428da5c7ec213136032659eca4cbba9ce11277",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962142,
+          "mtime_ns": 1788901693170229244,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-0341b239ba28b019e63fbec18c231e813af4b3ba0d845682bfe970737b8d653c",
+          "sha256": "0341b239ba28b019e63fbec18c231e813af4b3ba0d845682bfe970737b8d653c",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962230,
+          "mtime_ns": 1788901739973695684,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-0669613d160971e010e07809b6140bdb4c59ef7695798a799178f4cb90c5be13",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962073,
+          "mtime_ns": 1788901661074593725,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-06a550d7c0926c55990273fc47b2fee12ea9c65a2e16332482ac46da47022c51",
+          "sha256": "06a550d7c0926c55990273fc47b2fee12ea9c65a2e16332482ac46da47022c51",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962122,
+          "mtime_ns": 1788901682550349975,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-07a56f88212b5eb2909e8ce2d9fc9440c5ef2f2af76c862a46e73229f9ae3a3c",
+          "sha256": "07a56f88212b5eb2909e8ce2d9fc9440c5ef2f2af76c862a46e73229f9ae3a3c",
+          "size": 2,
+          "type": "f"
+        },
+        {
+          "ino": 9962151,
+          "mtime_ns": 1788901696182194979,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-090091428989f3e390212c85aa7d2497ec67c3a140e34c9027e2ddcf60edee88",
+          "sha256": "090091428989f3e390212c85aa7d2497ec67c3a140e34c9027e2ddcf60edee88",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962097,
+          "mtime_ns": 1788901671402476570,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-09100bf1756efda26892e335f943ebe25473c669e5a9a23493823f6cf2b84a6f",
+          "sha256": "09100bf1756efda26892e335f943ebe25473c669e5a9a23493823f6cf2b84a6f",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962032,
+          "mtime_ns": 1788901605107226296,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-0ad8ab870b05de5455b9b50a4a49363eba478271694a7f8224e7ec8b3840cfb9",
+          "sha256": "0ad8ab870b05de5455b9b50a4a49363eba478271694a7f8224e7ec8b3840cfb9",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962067,
+          "mtime_ns": 1788901656490645683,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-0bd5dcc8c06cad01bcf137cec08d60d7f4f662d9c2569ddb774d3f856ada4fb7",
+          "sha256": "0bd5dcc8c06cad01bcf137cec08d60d7f4f662d9c2569ddb774d3f856ada4fb7",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962071,
+          "mtime_ns": 1788901658802619480,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-0bde516abec8fa96910c87a766c5dbbb126fcd370a49d359e78c99d0f7f64887",
+          "sha256": "0bde516abec8fa96910c87a766c5dbbb126fcd370a49d359e78c99d0f7f64887",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962200,
+          "mtime_ns": 1788901716405964650,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-0c0032efe8833c32ab6bf5ba5e1e98465d7f8e8cc33d8a258a53bce6f0a8b5e4",
+          "sha256": "0c0032efe8833c32ab6bf5ba5e1e98465d7f8e8cc33d8a258a53bce6f0a8b5e4",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962134,
+          "mtime_ns": 1788901690106264090,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-0ceb48c85ef6e12ed1af8dd104a71710292640a7fa236ad1444bb0958e0bd570",
+          "sha256": "0ceb48c85ef6e12ed1af8dd104a71710292640a7fa236ad1444bb0958e0bd570",
+          "size": 62914560,
+          "type": "f"
+        },
+        {
+          "ino": 9962241,
+          "mtime_ns": 1788901750273577956,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-0e2fc68b846a6cdf69d3bbd0cb5d858cd42054df2e71c01b161bc2b91f735cfd",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962074,
+          "mtime_ns": 1788901661158592773,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-11a53ad6f7dd76e8ffbeb9c19e6153023a06b44f934234744681e384440d96ec",
+          "sha256": "11a53ad6f7dd76e8ffbeb9c19e6153023a06b44f934234744681e384440d96ec",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962239,
+          "mtime_ns": 1788901746905616464,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-13b3764e6bf242adfe5d331585797c772f2ac78380d4370e4d9e508f81eb9baf",
+          "sha256": "13b3764e6bf242adfe5d331585797c772f2ac78380d4370e4d9e508f81eb9baf",
+          "size": 3932160,
+          "type": "f"
+        },
+        {
+          "ino": 9962083,
+          "mtime_ns": 1788901664182558482,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-14aca5b2d60c848a964903d93b2c18e8ba6379f2f50eecd669398880efa5d188",
+          "sha256": "14aca5b2d60c848a964903d93b2c18e8ba6379f2f50eecd669398880efa5d188",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962123,
+          "mtime_ns": 1788901682942345522,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-159be66fe3d44df9aca02480ced6ff73804e4b47c7c70ad6dd252c64ba6f3bfa",
+          "sha256": "159be66fe3d44df9aca02480ced6ff73804e4b47c7c70ad6dd252c64ba6f3bfa",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962215,
+          "mtime_ns": 1788901733581768689,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-160c65bdcb6b38361448e34b1b744ea7acc440b070d6006d0d028380e4873bb6",
+          "sha256": "160c65bdcb6b38361448e34b1b744ea7acc440b070d6006d0d028380e4873bb6",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962136,
+          "mtime_ns": 1788901690766256585,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-1807ee8b84702c102afcc4439748ecc57a93efb6629e8249dae8fdb000a9edc7",
+          "sha256": "1807ee8b84702c102afcc4439748ecc57a93efb6629e8249dae8fdb000a9edc7",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962092,
+          "mtime_ns": 1788901670802483381,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-19d9dc73964ee7eb5be3a6d3659b7e27fe4a6806071ce9ec923bd07ee71dc43a",
+          "sha256": "19d9dc73964ee7eb5be3a6d3659b7e27fe4a6806071ce9ec923bd07ee71dc43a",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962149,
+          "mtime_ns": 1788901695902198166,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-1aacfb100715613a9bff1917f7344cae9850cec741e225acfbc90f2b97427e7b",
+          "sha256": "1aacfb100715613a9bff1917f7344cae9850cec741e225acfbc90f2b97427e7b",
+          "size": 2,
+          "type": "f"
+        },
+        {
+          "ino": 9962085,
+          "mtime_ns": 1788901665746540745,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-1b3d1d91c82ddc253f9b80887e97ce07c9c8ff8f1bf7a375c3128959a316a220",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962091,
+          "mtime_ns": 1788901670798483426,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-1bb56127cc07854ae4b1821c8dedc50953018a297bf2c8e1f36eb8129b568da2",
+          "sha256": "1bb56127cc07854ae4b1821c8dedc50953018a297bf2c8e1f36eb8129b568da2",
+          "size": 2,
+          "type": "f"
+        },
+        {
+          "ino": 9962065,
+          "mtime_ns": 1788901656002651213,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-1c00415ca3b29caaf8ffea9538ca9c2019f7df0ffd8b38d851589d18889ca557",
+          "sha256": "1c00415ca3b29caaf8ffea9538ca9c2019f7df0ffd8b38d851589d18889ca557",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962163,
+          "mtime_ns": 1788901696998185696,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-1ff40740985cfdf4432fdae73fb12742ad676d56745a533afbaf6c4a793996da",
+          "sha256": "1ff40740985cfdf4432fdae73fb12742ad676d56745a533afbaf6c4a793996da",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962162,
+          "mtime_ns": 1788901696994185741,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-200ba939ccd1ca621323ce908cfff7f0ebfabb105e5a3b592f81ce83e0e7f8af",
+          "sha256": "200ba939ccd1ca621323ce908cfff7f0ebfabb105e5a3b592f81ce83e0e7f8af",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962141,
+          "mtime_ns": 1788901692702234568,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-206c8c10969b0bf17fdc07ba125db189fd3dcb9a24d122f81dbf2a93dbf2c6d2",
+          "sha256": "206c8c10969b0bf17fdc07ba125db189fd3dcb9a24d122f81dbf2a93dbf2c6d2",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962206,
+          "mtime_ns": 1788901722057900201,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-222a91134b8ed0c635fcd0439e2b93ee3c1933ce7391873896d3cb92b843f67e",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962168,
+          "mtime_ns": 1788901699626155788,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-23cc10c7446b6d584bc07d783053ab5e5333657dbf0c37b72355db131fcb1452",
+          "sha256": "23cc10c7446b6d584bc07d783053ab5e5333657dbf0c37b72355db131fcb1452",
+          "size": 62914560,
+          "type": "f"
+        },
+        {
+          "ino": 9962046,
+          "mtime_ns": 1788901609863172698,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-262bef95e143ca29b458edbf47fc856f5ab8091ec1b478ae2831f4caba948d92",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962041,
+          "mtime_ns": 1788901606131214759,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-28a23401670eaa5b3eaf3df9850711f4eb13789c0a914f7c23e10d974f74d654",
+          "sha256": "28a23401670eaa5b3eaf3df9850711f4eb13789c0a914f7c23e10d974f74d654",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962105,
+          "mtime_ns": 1788901673254455549,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-2d716e34787960e35b5116a20340a723dcda4c77b885702d46c13c07d25f9d85",
+          "sha256": "2d716e34787960e35b5116a20340a723dcda4c77b885702d46c13c07d25f9d85",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962042,
+          "mtime_ns": 1788901606539210162,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-2fab02c353485e5b87c328e1ae4e5ca5795d9c41c7aae8d302c536e333009725",
+          "sha256": "2fab02c353485e5b87c328e1ae4e5ca5795d9c41c7aae8d302c536e333009725",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962053,
+          "mtime_ns": 1788901614563119701,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-3356e65b611d22724f5ade6e31104732ebae6fc7f4efd54bc006ff622728c8af",
+          "sha256": "3356e65b611d22724f5ade6e31104732ebae6fc7f4efd54bc006ff622728c8af",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962214,
+          "mtime_ns": 1788901732941775997,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-34a31f6b958e5a2da84a1f9f68a4f6cef642b3f2d609bd5832b9679006153a0c",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962118,
+          "mtime_ns": 1788901682182354157,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-35c3f75037e50e74beb9e081bdb6017e28d77ee4391f897e64c6530730c95fea",
+          "sha256": "35c3f75037e50e74beb9e081bdb6017e28d77ee4391f897e64c6530730c95fea",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962027,
+          "mtime_ns": 1788901601231269954,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-36c2e91547f901a3594c056de7f331cee70582483b86985e5b217d4c226912c8",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962231,
+          "mtime_ns": 1788901740477689927,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-390a49fd61ce786672fffe6f03786c58aeef89c353fcca09ed551a1ef2433e88",
+          "sha256": "390a49fd61ce786672fffe6f03786c58aeef89c353fcca09ed551a1ef2433e88",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962110,
+          "mtime_ns": 1788901675742427304,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-3986b56af00b8036f4b17a808575da6855aa19b048ff93bfb733fbf2dee692eb",
+          "sha256": "3986b56af00b8036f4b17a808575da6855aa19b048ff93bfb733fbf2dee692eb",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962128,
+          "mtime_ns": 1788901685390317702,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-3a42014d190d717ec8ecf55e96aa1e60a457ea030d889bcd002ea09ce7810332",
+          "sha256": "3a42014d190d717ec8ecf55e96aa1e60a457ea030d889bcd002ea09ce7810332",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962029,
+          "mtime_ns": 1788901601587265943,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-3d6b83d33b5807914d1b7a5283284435cef268e4f2ff5516bf119499d6106563",
+          "sha256": "3d6b83d33b5807914d1b7a5283284435cef268e4f2ff5516bf119499d6106563",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962207,
+          "mtime_ns": 1788901727141842199,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-3da2e68d794f8026c3861773b57cbc4c76b81da569f87e47eec0556db4982b5f",
+          "sha256": "3da2e68d794f8026c3861773b57cbc4c76b81da569f87e47eec0556db4982b5f",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962213,
+          "mtime_ns": 1788901731053797551,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-3e2582fcc16dc127ddebba87973b2b738d1ebe3117356443ba6d32ee6d80a359",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962216,
+          "mtime_ns": 1788901733661767776,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-3ff4164fb4244b11ef76cf11bd95056ba5b4b260714399c4aad1c4f62f2649c4",
+          "sha256": "3ff4164fb4244b11ef76cf11bd95056ba5b4b260714399c4aad1c4f62f2649c4",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962103,
+          "mtime_ns": 1788901673242455686,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-413b2ba7bf77fa218d37584fa11db8958185ddb76e38f5d647bbcfd9b4925ca3",
+          "sha256": "413b2ba7bf77fa218d37584fa11db8958185ddb76e38f5d647bbcfd9b4925ca3",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962243,
+          "mtime_ns": 1788901752385553800,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-431691f4976699cd06a067b1740bad8452acb33d9d558ae94fe0661f632162dd",
+          "sha256": "431691f4976699cd06a067b1740bad8452acb33d9d558ae94fe0661f632162dd",
+          "size": 2,
+          "type": "f"
+        },
+        {
+          "ino": 9962076,
+          "mtime_ns": 1788901661166592682,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9",
+          "sha256": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9",
+          "size": 4423,
+          "type": "f"
+        },
+        {
+          "ino": 9962198,
+          "mtime_ns": 1788901716109968024,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-482bacb7454577bbee7311b4b8df999be809fc57ae2ac6a3055ae08321555728",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962117,
+          "mtime_ns": 1788901682154354475,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-48913e9b0853c9504d007dff4796fe2c35b0c10751b1f20619d67f6662905703",
+          "sha256": "48913e9b0853c9504d007dff4796fe2c35b0c10751b1f20619d67f6662905703",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962028,
+          "mtime_ns": 1788901601519266711,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-48ba5b2bdd65dd8f52d831f540780c3a8c722390679df78f6d37b06b55425a78",
+          "sha256": "48ba5b2bdd65dd8f52d831f540780c3a8c722390679df78f6d37b06b55425a78",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962098,
+          "mtime_ns": 1788901671406476526,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-49fa60bb76920a08e5ca642e802db23c7195761fdf98f9837cd4686e287a0cf1",
+          "sha256": "49fa60bb76920a08e5ca642e802db23c7195761fdf98f9837cd4686e287a0cf1",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962155,
+          "mtime_ns": 1788901696690189200,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-4a482459f8dcc8e38739439117c92dbfa7c21a000d13af7715ab0f4c80a9480b",
+          "sha256": "4a482459f8dcc8e38739439117c92dbfa7c21a000d13af7715ab0f4c80a9480b",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962219,
+          "mtime_ns": 1788901733901765037,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-4bd91fc6b53b93b479ea17dc83014f916b91194e3b2cf983b7b41ddcf27fc2f2",
+          "sha256": "4bd91fc6b53b93b479ea17dc83014f916b91194e3b2cf983b7b41ddcf27fc2f2",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962066,
+          "mtime_ns": 1788901656070650444,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-4bfe9f411d232671d1a3685403104c11f94db9843e80f17f5a4a1d9694521e57",
+          "sha256": "4bfe9f411d232671d1a3685403104c11f94db9843e80f17f5a4a1d9694521e57",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962120,
+          "mtime_ns": 1788901682242353476,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-4f37d674d0ef9230f562c03ffbf284d09082a1102702251f532a73b4ec83e8fe",
+          "sha256": "4f37d674d0ef9230f562c03ffbf284d09082a1102702251f532a73b4ec83e8fe",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962150,
+          "mtime_ns": 1788901696138195481,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-4f4e9675b851bcd4fdd210d4fecd921a572b668cb847c9d69af6d70ef8c58725",
+          "sha256": "4f4e9675b851bcd4fdd210d4fecd921a572b668cb847c9d69af6d70ef8c58725",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962094,
+          "mtime_ns": 1788901670806483335,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-4ff196fbe606df4125dfd24915009639fa98be9e89372a15b76165a70ea09585",
+          "sha256": "4ff196fbe606df4125dfd24915009639fa98be9e89372a15b76165a70ea09585",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962167,
+          "mtime_ns": 1788901698798165212,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-5006becc64cd5fe68384277f40ac425704557ef47e10b069f277c302a573fdc9",
+          "sha256": "5006becc64cd5fe68384277f40ac425704557ef47e10b069f277c302a573fdc9",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962237,
+          "mtime_ns": 1788901746257623871,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-5403d60b0d9aceb14c5dd23dfd6d8042bd6a4e62883e3b1cd31b7da1164ebdf3",
+          "sha256": "5403d60b0d9aceb14c5dd23dfd6d8042bd6a4e62883e3b1cd31b7da1164ebdf3",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962107,
+          "mtime_ns": 1788901673262455459,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-549638e7f6c9c34314822669be69ba9c01cb644c70761ec65b56482185056e2f",
+          "sha256": "549638e7f6c9c34314822669be69ba9c01cb644c70761ec65b56482185056e2f",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962054,
+          "mtime_ns": 1788901614607119205,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-550d8279289393cd4bcad6cea48794b30e345172a72cce9db34f9aba56c74c0a",
+          "sha256": "550d8279289393cd4bcad6cea48794b30e345172a72cce9db34f9aba56c74c0a",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962156,
+          "mtime_ns": 1788901696930186469,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-5aeaec1a71b91307f99631fc0cf22103fdf5a159b2007cde7c3b600c1e746663",
+          "sha256": "5aeaec1a71b91307f99631fc0cf22103fdf5a159b2007cde7c3b600c1e746663",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962078,
+          "mtime_ns": 1788901663070571093,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-5b9d4c06bf842c5268a0966f2ae7a23619e746223f1baca9a5f959942829f74d",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962044,
+          "mtime_ns": 1788901608435188790,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-5c836f5b4fb0ee11c4b8b300ae19d79bad90d6bd6827358382e9067498ec3ec0",
+          "sha256": "5c836f5b4fb0ee11c4b8b300ae19d79bad90d6bd6827358382e9067498ec3ec0",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962045,
+          "mtime_ns": 1788901608439188745,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-5dcd66c7e779324ec39d4b32a5ffdb511205adc64aac8b9c868a92c0a92dc2ac",
+          "sha256": "5dcd66c7e779324ec39d4b32a5ffdb511205adc64aac8b9c868a92c0a92dc2ac",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962194,
+          "mtime_ns": 1788901714285988816,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-5e43392ffe6b446a8b657a64141e321b60797c1990695a73fbb8fb7119f24f8c",
+          "sha256": "5e43392ffe6b446a8b657a64141e321b60797c1990695a73fbb8fb7119f24f8c",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962049,
+          "mtime_ns": 1788901612403144061,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-602843ecdb4585b1371c1e4f28cca55313287ce9375a157a56d0e6641ab7dd7d",
+          "sha256": "602843ecdb4585b1371c1e4f28cca55313287ce9375a157a56d0e6641ab7dd7d",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962148,
+          "mtime_ns": 1788901695834198939,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-603c23723b1928bbca2818c67cf35e0e059954371c6cc23d2c66b2db0286f1e6",
+          "sha256": "603c23723b1928bbca2818c67cf35e0e059954371c6cc23d2c66b2db0286f1e6",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962224,
+          "mtime_ns": 1788901736581734431,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-606e37499b1ba906843ec2ddf5bedd7fb656b627fa7c9cecc034ed1b95794bdb",
+          "sha256": "606e37499b1ba906843ec2ddf5bedd7fb656b627fa7c9cecc034ed1b95794bdb",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962217,
+          "mtime_ns": 1788901733665767730,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-626d2837d8926e88ac61d1d53ea00a998ed1384aea5bf039c04f190274703768",
+          "sha256": "626d2837d8926e88ac61d1d53ea00a998ed1384aea5bf039c04f190274703768",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962132,
+          "mtime_ns": 1788901687290296106,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-6350ede606640f8a6f3449437ae0f4ef421f14036891b99755d46b4bad5510ae",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962031,
+          "mtime_ns": 1788901604811229630,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-639c4275ff9fde42e209334a4673cc30afbdaa86191bbcc221d2108eda4f16b8",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962068,
+          "mtime_ns": 1788901656794642238,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-63d1dc028b87bd1974e2fd5ff92e8bbd8e0a288f7b89fb3170916bb5636a1c64",
+          "sha256": "63d1dc028b87bd1974e2fd5ff92e8bbd8e0a288f7b89fb3170916bb5636a1c64",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962227,
+          "mtime_ns": 1788901737757721000,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-64013119fad2fee4008f3e0346b5f0eeb1e35cedfeb921c2b269f1f588f9ef55",
+          "sha256": "64013119fad2fee4008f3e0346b5f0eeb1e35cedfeb921c2b269f1f588f9ef55",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962221,
+          "mtime_ns": 1788901735661744939,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-64e7f170f1a6339c3d6774855ede76223afb835b5ceff7b329687b5b4ed3ace1",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962109,
+          "mtime_ns": 1788901675078434843,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-654d2852bca523282b8c882bd96c147a930a60d8ddd08101f496110cf954b270",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962203,
+          "mtime_ns": 1788901718705938427,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-676a4fdafaecccbc92848a046d99611f642bfd24adaf736816e1ae4d0b8409bd",
+          "sha256": "676a4fdafaecccbc92848a046d99611f642bfd24adaf736816e1ae4d0b8409bd",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962033,
+          "mtime_ns": 1788901605111226251,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-67fe932a899eecae71cc32b455bdce8aa729e67f20475a566389a8770877549a",
+          "sha256": "67fe932a899eecae71cc32b455bdce8aa729e67f20475a566389a8770877549a",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962063,
+          "mtime_ns": 1788901654102672739,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-686bbdde68c3d9a9005a5b87cf7268e5fcf43c3ae3486f2d7eda153443625bbd",
+          "sha256": "686bbdde68c3d9a9005a5b87cf7268e5fcf43c3ae3486f2d7eda153443625bbd",
+          "size": 1024,
+          "type": "f"
+        },
+        {
+          "ino": 9962124,
+          "mtime_ns": 1788901684534327431,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-6a85ae8ead9fe5ac88c879ea413073db9f0c14307065ec0ce6a83147f968365e",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962088,
+          "mtime_ns": 1788901668862505395,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-6bd4ac971528380f1c1bfdf054c2b916b95fe11b366dd18211ccc943f9baed1a",
+          "sha256": "6bd4ac971528380f1c1bfdf054c2b916b95fe11b366dd18211ccc943f9baed1a",
+          "size": 62914560,
+          "type": "f"
+        },
+        {
+          "ino": 9962057,
+          "mtime_ns": 1788901616167101608,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-6c14f642252aa372e8744882894a81ea6cbc759cc1eded3bcf27e9ea9ed34050",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962035,
+          "mtime_ns": 1788901605119226161,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-6cedd063a3550b706c63ae88f4b080ede9a1a355f00f5270abe0c9a1d79cab96",
+          "sha256": "6cedd063a3550b706c63ae88f4b080ede9a1a355f00f5270abe0c9a1d79cab96",
+          "size": 2,
+          "type": "f"
+        },
+        {
+          "ino": 9962090,
+          "mtime_ns": 1788901670794483472,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-6d029533b7beec82060518dd8421f1723b6753672c03eaaf455bbc5666de7748",
+          "sha256": "6d029533b7beec82060518dd8421f1723b6753672c03eaaf455bbc5666de7748",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962235,
+          "mtime_ns": 1788901745881628169,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-6e59820f833930cfee5c8c5df23539542e5026606010a8929a69d3e48df5f203",
+          "sha256": "6e59820f833930cfee5c8c5df23539542e5026606010a8929a69d3e48df5f203",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962204,
+          "mtime_ns": 1788901718769937697,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-6e839e93f92ac18a4cb6b94bf88da2dc0fff2d9e3e41b75f8b3768dfe35d364b",
+          "sha256": "6e839e93f92ac18a4cb6b94bf88da2dc0fff2d9e3e41b75f8b3768dfe35d364b",
+          "size": 1024,
+          "type": "f"
+        },
+        {
+          "ino": 9962137,
+          "mtime_ns": 1788901690770256540,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-6f2e0dae18cf66af5fd5d699d9ba34705f8f3ffb56ea8cbdfdd68c418b73e0b0",
+          "sha256": "6f2e0dae18cf66af5fd5d699d9ba34705f8f3ffb56ea8cbdfdd68c418b73e0b0",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962100,
+          "mtime_ns": 1788901671410476481,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-6f4fe1277551d71b7aeaaca8c1cd4f9b3cf1312ea5dca30cf17c5ec3ee82b85c",
+          "sha256": "6f4fe1277551d71b7aeaaca8c1cd4f9b3cf1312ea5dca30cf17c5ec3ee82b85c",
+          "size": 1024,
+          "type": "f"
+        },
+        {
+          "ino": 9962095,
+          "mtime_ns": 1788901671318477525,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-70481a6e90b904b5824ef894c234d2b7b1bd4742d5241e04959046cc6ff0e541",
+          "sha256": "70481a6e90b904b5824ef894c234d2b7b1bd4742d5241e04959046cc6ff0e541",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962108,
+          "mtime_ns": 1788901673494452826,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-71a6c63de16d9d63cb8ccc87b0a53a86fec3b75283a9c7bd290b4e811e70a91f",
+          "sha256": "71a6c63de16d9d63cb8ccc87b0a53a86fec3b75283a9c7bd290b4e811e70a91f",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962242,
+          "mtime_ns": 1788901752041557737,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-7255f33cecfe0640cfaeac8196ec58e79a357a07d717b69040582054f1992176",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962205,
+          "mtime_ns": 1788901720237920958,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-73f783fb9fbfbd2d9d6c4bcc25b4a552d2a19ccee83fa6117a6a824ed172aa7c",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962102,
+          "mtime_ns": 1788901673234455777,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-74988638039fa441a0970fecc4001f117175fca76fb90cca5e8cb12c979ad7a6",
+          "sha256": "74988638039fa441a0970fecc4001f117175fca76fb90cca5e8cb12c979ad7a6",
+          "size": 2,
+          "type": "f"
+        },
+        {
+          "ino": 9962234,
+          "mtime_ns": 1788901745569631736,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-74d59820f796cc3a6d3bef3923f5833c5f1ae2033f7da1e1aff81a214f297cbb",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962147,
+          "mtime_ns": 1788901695538202307,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-777f491b47977a20739a1fdff13801bd0c1fa96587b333bb8f014e968875f2d6",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962064,
+          "mtime_ns": 1788901655710654522,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-78474d650c54919ac10645066c7ca26a073f8c27359f21c081ef24ca7c7d0b3c",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962048,
+          "mtime_ns": 1788901611979148842,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-7a09129e0a667691b0c3056d6fe2cacd2fa8a43d7d7e7da0bebb77d3404dcd24",
+          "sha256": "7a09129e0a667691b0c3056d6fe2cacd2fa8a43d7d7e7da0bebb77d3404dcd24",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962176,
+          "mtime_ns": 1788901702146127103,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-7a18bc8df96221f05c7d8965720898b50280d95b34924217ac039e3a19c8e81c",
+          "sha256": "7a18bc8df96221f05c7d8965720898b50280d95b34924217ac039e3a19c8e81c",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962113,
+          "mtime_ns": 1788901679242387556,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-81d8b688a9df8e21fcae987c1912eeab6d8d68ca98009d1b398c47d5ccfa797c",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962055,
+          "mtime_ns": 1788901614611119159,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-82dbd230fa6158cdafdf769a7ed09db864b9b957b379d356408db8c75496b1b4",
+          "sha256": "82dbd230fa6158cdafdf769a7ed09db864b9b957b379d356408db8c75496b1b4",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962226,
+          "mtime_ns": 1788901737697721684,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-83df74d36533b0907c770c1a6af792fff6338af97567af9c2e386a0f21f5b1ad",
+          "sha256": "83df74d36533b0907c770c1a6af792fff6338af97567af9c2e386a0f21f5b1ad",
+          "size": 3932160,
+          "type": "f"
+        },
+        {
+          "ino": 9962060,
+          "mtime_ns": 1788901617219089739,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-846e7f67c412b39de191a9b48a3759da299cd12abc43c286d47970ab6d665f98",
+          "sha256": "846e7f67c412b39de191a9b48a3759da299cd12abc43c286d47970ab6d665f98",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962188,
+          "mtime_ns": 1788901710342033759,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-85e8f84f8409682bbaff3cc69ecd37bce629aff1a733c4e1b33ce287645a2f28",
+          "sha256": "85e8f84f8409682bbaff3cc69ecd37bce629aff1a733c4e1b33ce287645a2f28",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962209,
+          "mtime_ns": 1788901728917821931,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-85f3a37d61b76d6daa4660fcbe75f961a4be9c4fae8101301a7f7b20ed6040b9",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962190,
+          "mtime_ns": 1788901711958015346,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-864dbaad0d64c0a7b277cb0e566e41ec79a8981862eeb3fd764ceb3cf3c77af5",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962047,
+          "mtime_ns": 1788901611675152270,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-86926e30c569d172e26dbcdc1478ba1d66307b48f7d568ff5095f44a18a9768a",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962143,
+          "mtime_ns": 1788901693486225650,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-877437068a3503b0dce82476f332bb532af3072391255064832df41254e6047a",
+          "sha256": "877437068a3503b0dce82476f332bb532af3072391255064832df41254e6047a",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962072,
+          "mtime_ns": 1788901660286602659,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-88e1c8a5d582827152bbd33a970dbbc851329eb40219cace40f8c582844b82eb",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962133,
+          "mtime_ns": 1788901689086275688,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-895720fbf76920d9ca6dd0ecfd173a6104b1fccdef59d04a5c254b00387bac76",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962232,
+          "mtime_ns": 1788901742009672421,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-8a18a2e0747ff006c82ef3d8373401775657b25ff208524680c2bcdd2722bdba",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962034,
+          "mtime_ns": 1788901605115226207,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-8a453cbc2445ad49549dbe10e5065b50c8320bb9ff531f4a5e952955b5f834b5",
+          "sha256": "8a453cbc2445ad49549dbe10e5065b50c8320bb9ff531f4a5e952955b5f834b5",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962236,
+          "mtime_ns": 1788901745901627940,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-8a848d71caed8cc7b79c52b5c98a3d089c65beb7b82553ee98e366601bf02dd3",
+          "sha256": "8a848d71caed8cc7b79c52b5c98a3d089c65beb7b82553ee98e366601bf02dd3",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962160,
+          "mtime_ns": 1788901696986185832,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-8dea18c8c4fb14f16eda721e865a8ea14634dd538620943c1c62206329812acd",
+          "sha256": "8dea18c8c4fb14f16eda721e865a8ea14634dd538620943c1c62206329812acd",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962056,
+          "mtime_ns": 1788901614615119115,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-8e4873d462b9f26278f9d6d15f702ef47b6e7fb4f98773bdf3ffb9db1bf95ab6",
+          "sha256": "8e4873d462b9f26278f9d6d15f702ef47b6e7fb4f98773bdf3ffb9db1bf95ab6",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962157,
+          "mtime_ns": 1788901696974185969,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-8e7079f64aa326d12cef38b5169e4e4bea7d370632601259f837c713ab4d7f81",
+          "sha256": "8e7079f64aa326d12cef38b5169e4e4bea7d370632601259f837c713ab4d7f81",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962220,
+          "mtime_ns": 1788901734105762706,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-8eb4b5129de46981c34f4775546fac03ae1d6ec924a56a2929ebadf89f84f145",
+          "sha256": "8eb4b5129de46981c34f4775546fac03ae1d6ec924a56a2929ebadf89f84f145",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962079,
+          "mtime_ns": 1788901663358567828,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-8faf838e27d8b53956614af56e7a87d24d0bc8b650eeea9864009dcad461c6d4",
+          "sha256": "8faf838e27d8b53956614af56e7a87d24d0bc8b650eeea9864009dcad461c6d4",
+          "size": 2,
+          "type": "f"
+        },
+        {
+          "ino": 9962211,
+          "mtime_ns": 1788901729209818599,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-92c130583fb274d9e3823ff15af0720d197ab80ed83547bfa02a376454119724",
+          "sha256": "92c130583fb274d9e3823ff15af0720d197ab80ed83547bfa02a376454119724",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962173,
+          "mtime_ns": 1788901701898129927,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-9482f87d310bc135d05b200ca8b36274124849308a471e4d5e6afef596e0ff30",
+          "sha256": "9482f87d310bc135d05b200ca8b36274124849308a471e4d5e6afef596e0ff30",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962177,
+          "mtime_ns": 1788901702190126602,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-94d301774a1cab4d3e7e645e78944c1dcd0525a9328e21ba6a8b1f439965c926",
+          "sha256": "94d301774a1cab4d3e7e645e78944c1dcd0525a9328e21ba6a8b1f439965c926",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962180,
+          "mtime_ns": 1788901703826107976,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-95539bc51b605e43002f22663d06ac295a806a8d420759b19ea2064cc07da777",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962175,
+          "mtime_ns": 1788901701910129790,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-95da67d379b4679b48353ceef61fe83db346afdedf4bad270b010b57b89b7e6f",
+          "sha256": "95da67d379b4679b48353ceef61fe83db346afdedf4bad270b010b57b89b7e6f",
+          "size": 1024,
+          "type": "f"
+        },
+        {
+          "ino": 9962062,
+          "mtime_ns": 1788901645942765137,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-9619fd670a4074367c72f2cf09d777970ad1eafa511bff605a82c8558dcc24d4",
+          "size": 2013265920,
+          "type": "f"
+        },
+        {
+          "ino": 9962218,
+          "mtime_ns": 1788901733857765538,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-97c2d082fb0c328d294166d8e9f6ebcc55068f20d92daa24264f36dd265c7d0b",
+          "sha256": "97c2d082fb0c328d294166d8e9f6ebcc55068f20d92daa24264f36dd265c7d0b",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962140,
+          "mtime_ns": 1788901692454237387,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-97d8e1448f4b5e0771f5ff835e3de5d9bec4b7ac38a0fdc68852244384af660a",
+          "sha256": "97d8e1448f4b5e0771f5ff835e3de5d9bec4b7ac38a0fdc68852244384af660a",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962229,
+          "mtime_ns": 1788901738445713140,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-98077883798f15c4958fd887c626ed43776530707431c2f09ef3ec9ab4d3e892",
+          "sha256": "98077883798f15c4958fd887c626ed43776530707431c2f09ef3ec9ab4d3e892",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962129,
+          "mtime_ns": 1788901685394317657,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-9932b6d16932f7744ff7a65aa6a73d87d63e375a2b03867f9497490c03ff0aac",
+          "sha256": "9932b6d16932f7744ff7a65aa6a73d87d63e375a2b03867f9497490c03ff0aac",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962077,
+          "mtime_ns": 1788901661526588600,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-9a6135254860ef52d847114a2b77dafc57e3d762926e09f83b8809340c7c48ab",
+          "sha256": "9a6135254860ef52d847114a2b77dafc57e3d762926e09f83b8809340c7c48ab",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962135,
+          "mtime_ns": 1788901690686257495,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-9adb7379fb2ebe2e3321bbc4cf0ba99ac36f028e87aaa89eb432fc1505474e5f",
+          "sha256": "9adb7379fb2ebe2e3321bbc4cf0ba99ac36f028e87aaa89eb432fc1505474e5f",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962096,
+          "mtime_ns": 1788901671398476616,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-9d58a24868c61752f91227b745a01835c0be6ea24518af4a0d916a4375252ed4",
+          "sha256": "9d58a24868c61752f91227b745a01835c0be6ea24518af4a0d916a4375252ed4",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962126,
+          "mtime_ns": 1788901684890323385,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-9ecd54eba376f8b03b274330175c85b235b3be67648220ca08997c9e24579b4a",
+          "sha256": "9ecd54eba376f8b03b274330175c85b235b3be67648220ca08997c9e24579b4a",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962208,
+          "mtime_ns": 1788901727397839278,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-a3127c35390ccb4f0481d52bc2505ce58d57647c821a73110914fad00e66b3dc",
+          "sha256": "a3127c35390ccb4f0481d52bc2505ce58d57647c821a73110914fad00e66b3dc",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962069,
+          "mtime_ns": 1788901656838641739,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-a51891d7784ded18001721a9e86a5bc4415c51a4d81d597b514a20cc36d8157e",
+          "sha256": "a51891d7784ded18001721a9e86a5bc4415c51a4d81d597b514a20cc36d8157e",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962185,
+          "mtime_ns": 1788901708274057319,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-a65cbdbd5ee0a3d7f2f0a1752900854f19043bd7229ceed763d6df807ba4c645",
+          "sha256": "a65cbdbd5ee0a3d7f2f0a1752900854f19043bd7229ceed763d6df807ba4c645",
+          "size": 3932160,
+          "type": "f"
+        },
+        {
+          "ino": 9962223,
+          "mtime_ns": 1788901736225738496,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-a7b09cd9a36eb06c0476805a1b05c5797635bd1408e078de6cfb0f0b22562ed0",
+          "sha256": "a7b09cd9a36eb06c0476805a1b05c5797635bd1408e078de6cfb0f0b22562ed0",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962050,
+          "mtime_ns": 1788901612483143158,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-a80f3176d8c4e9c8d113aee90863711847acaf9bc112dc49f85690fd355c7866",
+          "sha256": "a80f3176d8c4e9c8d113aee90863711847acaf9bc112dc49f85690fd355c7866",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962178,
+          "mtime_ns": 1788901702194126557,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-a8df4e9ced7d0dacba747fa81e47edf0de2c85cc78adf73602e1dfe7fc6c1e6d",
+          "sha256": "a8df4e9ced7d0dacba747fa81e47edf0de2c85cc78adf73602e1dfe7fc6c1e6d",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962186,
+          "mtime_ns": 1788901708334056634,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-a8e642382fae2d2ed231eeffd76996a12116b60ba4fa37c3c4fcfa7e98d26124",
+          "sha256": "a8e642382fae2d2ed231eeffd76996a12116b60ba4fa37c3c4fcfa7e98d26124",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962171,
+          "mtime_ns": 1788901701654132704,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-a8e8f66906d0197a1999b417eaf31ecd0a95670c9fe595b4aeb8e3980d0d982b",
+          "sha256": "a8e8f66906d0197a1999b417eaf31ecd0a95670c9fe595b4aeb8e3980d0d982b",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962087,
+          "mtime_ns": 1788901668078514290,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-abd22c0044ea110995b8f9606554cf45b1174f9287a72711f94f11e2bc63ad3f",
+          "sha256": "abd22c0044ea110995b8f9606554cf45b1174f9287a72711f94f11e2bc63ad3f",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962179,
+          "mtime_ns": 1788901702198126511,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-ad755ff209a358c0a9891662926947d163a48a087efa7da7b8ce9348cfe8c2d1",
+          "sha256": "ad755ff209a358c0a9891662926947d163a48a087efa7da7b8ce9348cfe8c2d1",
+          "size": 1024,
+          "type": "f"
+        },
+        {
+          "ino": 9962145,
+          "mtime_ns": 1788901693946220418,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-ad80c8bccfdd28e7627cfeda6acf638c1ce534989579ec09d48a2db50166422a",
+          "sha256": "ad80c8bccfdd28e7627cfeda6acf638c1ce534989579ec09d48a2db50166422a",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962199,
+          "mtime_ns": 1788901716393964786,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-ae8a951f3c5cc4891994ec304df387c5cd15c60b05bd3a0a27711987d66a6c90",
+          "sha256": "ae8a951f3c5cc4891994ec304df387c5cd15c60b05bd3a0a27711987d66a6c90",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962130,
+          "mtime_ns": 1788901685398317610,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-b1d92f8c179e501dc57bd7618e954f6ac5c9d4f1aeb0a4d2776661601c09252b",
+          "sha256": "b1d92f8c179e501dc57bd7618e954f6ac5c9d4f1aeb0a4d2776661601c09252b",
+          "size": 2,
+          "type": "f"
+        },
+        {
+          "ino": 9962125,
+          "mtime_ns": 1788901684822324158,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-b579c1a6059123b14582b861c41e475232ed0f2c182af52d84d6c83403d37b2b",
+          "sha256": "b579c1a6059123b14582b861c41e475232ed0f2c182af52d84d6c83403d37b2b",
+          "size": 2,
+          "type": "f"
+        },
+        {
+          "ino": 9962202,
+          "mtime_ns": 1788901718421941666,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-b70c3f2ae475c6113523a4544362e74b1dc9bbb71667a151dc13aec7b595df33",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962051,
+          "mtime_ns": 1788901613995126108,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-b8315ad900b79c01a26240e7669dd2d7c9f859037a36989c9a4d518a527a93f8",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962030,
+          "mtime_ns": 1788901603067249277,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-b886c58f6a9feb8c5a859334f07564ed250ac6b81874186ec09411fe1e7637eb",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962146,
+          "mtime_ns": 1788901694034219417,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-b91bbace3108f483e2c403c4c99bbdddec6f457ff092e8a70cd48e584d14ec22",
+          "sha256": "b91bbace3108f483e2c403c4c99bbdddec6f457ff092e8a70cd48e584d14ec22",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962196,
+          "mtime_ns": 1788901714305988587,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-b953fcfe5a3c960b6daaed63cfae9b778252614b79e68dd45002b11429c445a4",
+          "sha256": "b953fcfe5a3c960b6daaed63cfae9b778252614b79e68dd45002b11429c445a4",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962070,
+          "mtime_ns": 1788901658314625012,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-ba5da6511e7b5e5b9701eda582de445a23159cc7c6a981267b1bc4aa6b3e349c",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962082,
+          "mtime_ns": 1788901664098559436,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-bb643f7339ec64167da54cffecf3df147892857d012eed4a20f9dfd5d388f784",
+          "sha256": "bb643f7339ec64167da54cffecf3df147892857d012eed4a20f9dfd5d388f784",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962115,
+          "mtime_ns": 1788901681038367155,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-be1cd8140a4753618bfb1656b7bb7ea9f6f9d15b8c62480ec0ab2ff849e0bee2",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962233,
+          "mtime_ns": 1788901743833651577,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-c092666728504a7086057b19372db9fc3d22d0cf08451e18364b080031f71052",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962127,
+          "mtime_ns": 1788901685314318566,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-c14fe13852603697ff98c399e1bbee5035a976efaffec2c482d48734736876cc",
+          "sha256": "c14fe13852603697ff98c399e1bbee5035a976efaffec2c482d48734736876cc",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962040,
+          "mtime_ns": 1788901606051215661,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-c1627adac4b261bae2b0c504c599abf2a3fee120c735637a70a2799dc801e485",
+          "sha256": "c1627adac4b261bae2b0c504c599abf2a3fee120c735637a70a2799dc801e485",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962039,
+          "mtime_ns": 1788901605615220572,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-c22044bc268fd4b5fc4b76e2c99a731ac87630846a05395543ccbcb87bb3e7af",
+          "sha256": "c22044bc268fd4b5fc4b76e2c99a731ac87630846a05395543ccbcb87bb3e7af",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962212,
+          "mtime_ns": 1788901729449815859,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-c24388b2ec1bc8af74dc606cbd32c5fe790b71c131f34cf3f5092f5874efe6df",
+          "sha256": "c24388b2ec1bc8af74dc606cbd32c5fe790b71c131f34cf3f5092f5874efe6df",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962093,
+          "mtime_ns": 1788901670806483335,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-c2ab02c0ef44810fd6f65b2cc781adadeebb00860c9fc1acc81325dbd3c09522",
+          "sha256": "c2ab02c0ef44810fd6f65b2cc781adadeebb00860c9fc1acc81325dbd3c09522",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962183,
+          "mtime_ns": 1788901706106082011,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-c302edb6083757c385a77416a67e02a5eb58c75d7a76fbfa6128c83452c7d461",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962195,
+          "mtime_ns": 1788901714297988679,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-c323d89149b19127d02578ba214e97b95120ab5241ed1836712588dd85aba065",
+          "sha256": "c323d89149b19127d02578ba214e97b95120ab5241ed1836712588dd85aba065",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962101,
+          "mtime_ns": 1788901672938459137,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-c4228c80f4ef79b1c3aa819beae9e7e4e4c1d3498145fb2d0da88dc670937e36",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962119,
+          "mtime_ns": 1788901682222353702,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-c424595c3a6be32deabfab999ef5828e97c4a684cc8ca64aaba525bf2f10a3a2",
+          "sha256": "c424595c3a6be32deabfab999ef5828e97c4a684cc8ca64aaba525bf2f10a3a2",
+          "size": 2,
+          "type": "f"
+        },
+        {
+          "ino": 9962225,
+          "mtime_ns": 1788901737497723968,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-c630d1a1169b8c786b036361a03d2b5625f88af462f2ee740b954e80ac58871b",
+          "sha256": "c630d1a1169b8c786b036361a03d2b5625f88af462f2ee740b954e80ac58871b",
+          "size": 62914560,
+          "type": "f"
+        },
+        {
+          "ino": 9962174,
+          "mtime_ns": 1788901701906129835,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-c63ba38737fea97f8a2f088d5faaf53a6a29fa119bc12c4f2d2192a5e5fdffa6",
+          "sha256": "c63ba38737fea97f8a2f088d5faaf53a6a29fa119bc12c4f2d2192a5e5fdffa6",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962099,
+          "mtime_ns": 1788901671410476481,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-c70c4050a6201cf3abd16a1fbd315df5a71729bd56b7f4e6e304065b404d70c8",
+          "sha256": "c70c4050a6201cf3abd16a1fbd315df5a71729bd56b7f4e6e304065b404d70c8",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962192,
+          "mtime_ns": 1788901712486009330,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-c9755376032646cb2ab6772c20d69ffdb7cefba6a507c8888af33f2c7e54f42a",
+          "sha256": "c9755376032646cb2ab6772c20d69ffdb7cefba6a507c8888af33f2c7e54f42a",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962121,
+          "mtime_ns": 1788901682498350567,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-ce8f071c920f986583c776a5c48db65deb0bdcadee95f5bac4943a73ef693d05",
+          "sha256": "ce8f071c920f986583c776a5c48db65deb0bdcadee95f5bac4943a73ef693d05",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962201,
+          "mtime_ns": 1788901716801960136,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-cfeedd764e9bed54967d2e239770d32cc3b15f4d00368d0fc312f3c14e1a4af0",
+          "sha256": "cfeedd764e9bed54967d2e239770d32cc3b15f4d00368d0fc312f3c14e1a4af0",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962161,
+          "mtime_ns": 1788901696990185787,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-d059a0bcfebeba413a5fd8d62968af4fb59f4d60645d93e3af528e3c3dcf23a7",
+          "sha256": "d059a0bcfebeba413a5fd8d62968af4fb59f4d60645d93e3af528e3c3dcf23a7",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962154,
+          "mtime_ns": 1788901696686189245,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-d0f055d7a7c0e37bc84748dff1136f5c2d0ffbcac5eb17bbe9bed10f7e818fda",
+          "sha256": "d0f055d7a7c0e37bc84748dff1136f5c2d0ffbcac5eb17bbe9bed10f7e818fda",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962089,
+          "mtime_ns": 1788901670502486785,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-d18b7500a6fbf9db8d36f1f2bc05d896d2778f2effbb73c73b6dc8aa5216cb16",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962166,
+          "mtime_ns": 1788901698498168626,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-d1ce943c6ce107a45ccbddbb3fedfffdc31f1c9bc6c3dfe04622da1dfd7cd595",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962165,
+          "mtime_ns": 1788901697006185604,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-d251bff1977ad031feb2e6aa5500482140eb20525b30f2b4021206d620b7983f",
+          "sha256": "d251bff1977ad031feb2e6aa5500482140eb20525b30f2b4021206d620b7983f",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962036,
+          "mtime_ns": 1788901605119226161,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-d3e929c114ed83958dace5322def1c1521c8accd5220f2a55b3ca1c7b9e87528",
+          "sha256": "d3e929c114ed83958dace5322def1c1521c8accd5220f2a55b3ca1c7b9e87528",
+          "size": 2,
+          "type": "f"
+        },
+        {
+          "ino": 9962080,
+          "mtime_ns": 1788901663626564787,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-d5813e1727414c3991c04cbef264b329678a8788868a308e6ef520fd9f0bea94",
+          "sha256": "d5813e1727414c3991c04cbef264b329678a8788868a308e6ef520fd9f0bea94",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962159,
+          "mtime_ns": 1788901696982185878,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-d7f105f5d714600de6b4745383b9e95732b579e1c551b49d3d31077b23958acd",
+          "sha256": "d7f105f5d714600de6b4745383b9e95732b579e1c551b49d3d31077b23958acd",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962153,
+          "mtime_ns": 1788901696606190155,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-d8ae889b478ef7a42026f3f5d6bb13de591fa3fa60d1c46a82ed27ebbcfe821b",
+          "sha256": "d8ae889b478ef7a42026f3f5d6bb13de591fa3fa60d1c46a82ed27ebbcfe821b",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962106,
+          "mtime_ns": 1788901673258455505,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-d955aa83eb915af48f2b78c268a0b2efa1ab3e750dc4a9914a694f95d6f5b309",
+          "sha256": "d955aa83eb915af48f2b78c268a0b2efa1ab3e750dc4a9914a694f95d6f5b309",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962240,
+          "mtime_ns": 1788901748521597990,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-d95e3ab512daf5ccb0671eef551812f785bfd743fdcad178200427cc2b5b6e44",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962189,
+          "mtime_ns": 1788901710386033258,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-da63be56e46956e64035c2a2ffa1fab0e28801b559e95e93b70d5e72e23bb515",
+          "sha256": "da63be56e46956e64035c2a2ffa1fab0e28801b559e95e93b70d5e72e23bb515",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962061,
+          "mtime_ns": 1788901618019080713,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-da6b9e2a367ad64163785acd4e13f1176a995594cc4b17530087e4103a97bc8a",
+          "sha256": "da6b9e2a367ad64163785acd4e13f1176a995594cc4b17530087e4103a97bc8a",
+          "size": 62914560,
+          "type": "f"
+        },
+        {
+          "ino": 9962052,
+          "mtime_ns": 1788901614303122634,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-db41a27d5d73006dbeb517ee64d3d2887a33ff7d8dab4ec6e552ef6b191ba91b",
+          "sha256": "db41a27d5d73006dbeb517ee64d3d2887a33ff7d8dab4ec6e552ef6b191ba91b",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962172,
+          "mtime_ns": 1788901701850130473,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-db4e3acbefaf6da2c3f38e7581fadc830756226cef9e33d47562eb2ce1192e86",
+          "sha256": "db4e3acbefaf6da2c3f38e7581fadc830756226cef9e33d47562eb2ce1192e86",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962244,
+          "mtime_ns": 1788901753937536049,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-dd4018fa0d7488048b288b8928ae88811c07d2e901c8e088a57dceade5cd0679",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962075,
+          "mtime_ns": 1788901661162592727,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-df84e7a7b6437014310f17db213b83960abdcb0682743f74c0ab46939628ec92",
+          "sha256": "df84e7a7b6437014310f17db213b83960abdcb0682743f74c0ab46939628ec92",
+          "size": 2,
+          "type": "f"
+        },
+        {
+          "ino": 9962131,
+          "mtime_ns": 1788901685638314884,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-dfaddb3c0a9efd355ec3053720bccd1d174ffe83d39501488028661018925b57",
+          "sha256": "dfaddb3c0a9efd355ec3053720bccd1d174ffe83d39501488028661018925b57",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962197,
+          "mtime_ns": 1788901714541985898,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-e01ba928a23cd6252ea4081c5f14bdea3811a1edb269cb4bf3b8b7c8057f7ef6",
+          "sha256": "e01ba928a23cd6252ea4081c5f14bdea3811a1edb269cb4bf3b8b7c8057f7ef6",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962193,
+          "mtime_ns": 1788901713997992098,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-e1dc4fba1b2c6a1268cdbbdb8f0c143f0f81d33c400fc4408053f8e90d5852e7",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962081,
+          "mtime_ns": 1788901663674564244,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-e3fa77e10964fa48b8532242f8dbc3ecc5f2658721657a53bca4dce4578f3fd4",
+          "sha256": "e3fa77e10964fa48b8532242f8dbc3ecc5f2658721657a53bca4dce4578f3fd4",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962210,
+          "mtime_ns": 1788901729205818645,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-e4760c2d2685bced6c75b0e3aba591ad5d24eeb158d9beab6e1a87fa4218bfb6",
+          "sha256": "e4760c2d2685bced6c75b0e3aba591ad5d24eeb158d9beab6e1a87fa4218bfb6",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962228,
+          "mtime_ns": 1788901738181716157,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-e522a55653dbc65d93ded1f8e21760836faf0088f8ecfb4a15caff02757a6a7b",
+          "sha256": "e522a55653dbc65d93ded1f8e21760836faf0088f8ecfb4a15caff02757a6a7b",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962238,
+          "mtime_ns": 1788901746761618110,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-e655af0e19fd60d6a9e484c87288b7fbd9cb0d0412bf2027048820bae3f30424",
+          "sha256": "e655af0e19fd60d6a9e484c87288b7fbd9cb0d0412bf2027048820bae3f30424",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962112,
+          "mtime_ns": 1788901677698405092,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-e8e7bfea1aeb3bc7a145ef83065e84c11b388b67487a17c834d91b42f3214962",
+          "sha256": "e8e7bfea1aeb3bc7a145ef83065e84c11b388b67487a17c834d91b42f3214962",
+          "size": 2,
+          "type": "f"
+        },
+        {
+          "ino": 9962104,
+          "mtime_ns": 1788901673246455641,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-e96b893bf96bc881accd120bccb31a6229d28d2bd53faf43c0283f587ccdc442",
+          "sha256": "e96b893bf96bc881accd120bccb31a6229d28d2bd53faf43c0283f587ccdc442",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962086,
+          "mtime_ns": 1788901667606519644,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-ea09090d94a60329668fc0f46435800165b449c8eba465375853ad1b9de246b7",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962187,
+          "mtime_ns": 1788901709882039000,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-eb1c439afd7f57e4f92bf5df7d54c68888c15ee9b82da7858f84b414cebc0de9",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962084,
+          "mtime_ns": 1788901664182558482,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-eb6c93b043e900111a1e408f0e990bd36bf9a8adb1951342f444091fb1672dd4",
+          "sha256": "eb6c93b043e900111a1e408f0e990bd36bf9a8adb1951342f444091fb1672dd4",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962116,
+          "mtime_ns": 1788901681330363837,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-ee7dd7cc0a8dc59f9c949d4f68339615574aeaab57a1111fa9aef64d52943d4f",
+          "sha256": "ee7dd7cc0a8dc59f9c949d4f68339615574aeaab57a1111fa9aef64d52943d4f",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962111,
+          "mtime_ns": 1788901677406408408,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-ef7107709da02522c382c4c58aa8994c68dd780727cdccde533b89026b437960",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962038,
+          "mtime_ns": 1788901605535221474,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-f1334efcb29c0f5e2364cebf7026553708e1295cb265ef4f898c543021f41b98",
+          "sha256": "f1334efcb29c0f5e2364cebf7026553708e1295cb265ef4f898c543021f41b98",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962184,
+          "mtime_ns": 1788901707946061055,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-f2e2c306761e4c195932f460afb17a176c28ef9fde57fdb1036a6c0ec27e9926",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962222,
+          "mtime_ns": 1788901736177739044,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-f37b424f4954840dc4a246cf5cdda3cbe90dc82982db5487ba3a58d8201cbe1d",
+          "sha256": "f37b424f4954840dc4a246cf5cdda3cbe90dc82982db5487ba3a58d8201cbe1d",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962059,
+          "mtime_ns": 1788901617139090643,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-f604f88dce7b14a5668894b14ca3dccc9fa59051eb72b7a2341c6fdb67c707bf",
+          "sha256": "f604f88dce7b14a5668894b14ca3dccc9fa59051eb72b7a2341c6fdb67c707bf",
+          "size": 31457280,
+          "type": "f"
+        },
+        {
+          "ino": 9962152,
+          "mtime_ns": 1788901696186194935,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-f61fdbd186eef23e0bac25c4736abeb3c04060bec2417b07c63105bab4ddf999",
+          "sha256": "f61fdbd186eef23e0bac25c4736abeb3c04060bec2417b07c63105bab4ddf999",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962181,
+          "mtime_ns": 1788901704118104651,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-f638eccb0f8b18393c4aa55a965651ef41bcc5f71052db619a0762bfc288161f",
+          "sha256": "f638eccb0f8b18393c4aa55a965651ef41bcc5f71052db619a0762bfc288161f",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962191,
+          "mtime_ns": 1788901712254011973,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-f83156f0efe14cc78c2bb56f8b45ce38af2e0cecf37a45f01ab40e65bdd4f4a3",
+          "sha256": "f83156f0efe14cc78c2bb56f8b45ce38af2e0cecf37a45f01ab40e65bdd4f4a3",
+          "size": 512,
+          "type": "f"
+        },
+        {
+          "ino": 9962114,
+          "mtime_ns": 1788901679550384057,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-f83457e0629846ad6abc505b19acb3e109dacc7be55ea276e2015dc88975ae3b",
+          "sha256": "f83457e0629846ad6abc505b19acb3e109dacc7be55ea276e2015dc88975ae3b",
+          "size": 2,
+          "type": "f"
+        },
+        {
+          "ino": 9962170,
+          "mtime_ns": 1788901701642132841,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-f8b45fdce886dc29d41807c8e03cfe85a43ad18abec0efa104821d2612f242e1",
+          "sha256": "f8b45fdce886dc29d41807c8e03cfe85a43ad18abec0efa104821d2612f242e1",
+          "size": 7680,
+          "type": "f"
+        },
+        {
+          "ino": 9962164,
+          "mtime_ns": 1788901697002185650,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-f95343f3c3baf8e1b5809b5fe27b0793ebb5f408c1f903118a5be4f848e007b3",
+          "sha256": "f95343f3c3baf8e1b5809b5fe27b0793ebb5f408c1f903118a5be4f848e007b3",
+          "size": 1024,
+          "type": "f"
+        },
+        {
+          "ino": 9962169,
+          "mtime_ns": 1788901701342136256,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-fca79b5cb9da2a8717bbf4940c54dfb90bc0657a127d7477bc1d216d7cecff3c",
+          "size": 117964800,
+          "type": "f"
+        },
+        {
+          "ino": 9962144,
+          "mtime_ns": 1788901693530225150,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-feac43d406182d15ad4f519bb80df187fe615b5d78e84f8231eefb49a409f696",
+          "sha256": "feac43d406182d15ad4f519bb80df187fe615b5d78e84f8231eefb49a409f696",
+          "size": 2,
+          "type": "f"
+        },
+        {
+          "ino": 9962058,
+          "mtime_ns": 1788901616675095877,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-fef13085141005eecc3af4a8c9218f1483f0a5186e8b5c7d10de4ba646db0d7b",
+          "sha256": "fef13085141005eecc3af4a8c9218f1483f0a5186e8b5c7d10de4ba646db0d7b",
+          "size": 15728640,
+          "type": "f"
+        },
+        {
+          "ino": 9962037,
+          "mtime_ns": 1788901605123226116,
+          "path": "/srv/inferswarm/cache/issue117/objects/sha256-fef9d66716090346269195381edb911d8f5f264816b2c1b4bbd8b87c0e36e040",
+          "sha256": "fef9d66716090346269195381edb911d8f5f264816b2c1b4bbd8b87c0e36e040",
+          "size": 7680,
+          "type": "f"
+        }
+      ],
+      "entry_count": 220,
+      "exists": true
+    },
+    "/srv/inferswarm/materialized/issue117": {
+      "entries": [
+        {
+          "ino": 10092553,
+          "mtime_ns": 1788902402941917865,
+          "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3",
+          "size": 4096,
+          "type": "d"
+        },
+        {
+          "ino": 10092555,
+          "mtime_ns": 1788902306183635581,
+          "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3/armb-participant.safetensors",
+          "size": 9292241800,
+          "type": "f"
+        },
+        {
+          "ino": 10092556,
+          "mtime_ns": 1788902309451576188,
+          "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3/assemble-report.json",
+          "sha256": "831a4e6a63212a10bb1765c6067e80d1c8508663ac25e98413cc63a6cf62106f",
+          "size": 17782,
+          "type": "f"
+        },
+        {
+          "ino": 10092554,
+          "mtime_ns": 1788902234628963018,
+          "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3/config.json",
+          "sha256": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9",
+          "size": 4423,
+          "type": "f"
+        },
+        {
+          "ino": 10092559,
+          "mtime_ns": 1788902402941917865,
+          "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3/realize-report-wrapped.json",
+          "sha256": "b6e06a96cb9810ef5449c2edaa2b78f8e288731e5ac5d1ec6fadb16937694328",
+          "size": 14618,
+          "type": "f"
+        },
+        {
+          "ino": 10092558,
+          "mtime_ns": 1788902402085932711,
+          "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3/realize-report.json",
+          "sha256": "1eef7736ba6f0b5ddb7195668d64b80971c1ba3dd43a1bf2049ccde8f83036c2",
+          "size": 15515,
+          "type": "f"
+        },
+        {
+          "ino": 10092557,
+          "mtime_ns": 1788902402101932434,
+          "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3/realize-strace.log",
+          "sha256": "5703a180438172626f7c6585fbe99ba5253c8fff31aed3af894ce25b0d30c033",
+          "size": 9996518,
+          "type": "f"
+        }
+      ],
+      "entry_count": 7,
+      "exists": true
+    },
+    "/srv/inferswarm/state/arm-c": {
+      "entries": [
+        {
+          "ino": 10092561,
+          "mtime_ns": 1788940167939463716,
+          "path": "/srv/inferswarm/state/arm-c/observe.py",
+          "sha256": "fdacff7c1c3f204844b547bb9087177b223d529349b51ac9cd5b02dcfe1f8835",
+          "size": 3532,
+          "type": "f"
+        }
+      ],
+      "entry_count": 1,
+      "exists": true
+    }
+  },
+  "schema": "inferswarm.issue117.arm-c.host-census/1",
+  "source_tree_present": true,
+  "tag": "pre"
+}

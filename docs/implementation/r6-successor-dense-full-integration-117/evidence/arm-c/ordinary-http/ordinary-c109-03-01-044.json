@@ -1,0 +1,38 @@
+{
+  "case_id": "c109-03-01-044",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "river light path east island hill morning stone east travels morning light wind gentle joins wind open travels amber wind calm hill joins young calm amber valley morning hill amber gentle bird near light joins morning light stone young",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 13,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\nriver light path east island hill morning stone east travels morning light wind gentle joins wind open travels amber wind calm hill joins young calm amber valley morning hill amber gentle bird near light joins morning light stone young<turn|>\n<|turn>model\n<|channel>thought\n<channel|>To make sense of this word cloud,",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-8d788b586822",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 52,
+      "total_tokens": 60
+    }
+  },
+  "schema": "inferswarm.issue117.arm-c.ordinary-case/1",
+  "wall_ns": 2566479734
+}

@@ -1,0 +1,4464 @@
+{
+  "attempt_id": "armc-direct-9",
+  "case_count": 24,
+  "chain_plan_digest": "sha256:a71a3129b8764d7108f51ed30fb230b42fcd69646a20bcd6806b6ee53b9bc51f",
+  "completed_at_ns": 1788952145413011427,
+  "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+  "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "realization_wall_ns": 20795386706,
+  "results": [
+    {
+      "case_id": "c109-01-01-045",
+      "decoded_output": "The phrase you provided has a beautiful,",
+      "decoded_output_sha256": "7de2a4a2a0edda19d26cf4b57ddc2580a47058fa65c6eda6ea787bd9878cec9c",
+      "generated_token_ids": [
+        818,
+        20412,
+        611,
+        3847,
+        815,
+        496,
+        4148,
+        236764
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        156492,
+        9884,
+        5597,
+        6573,
+        129317,
+        9884,
+        23844,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 1,
+      "wall_ns": 18874786805
+    },
+    {
+      "case_id": "c109-01-02-076",
+      "decoded_output": "In most programming languages, the statement `",
+      "decoded_output_sha256": "feeedb2d2c6fcae154ecb994d1fb14049b3abea410f191b1aca876c278e7a4d2",
+      "generated_token_ids": [
+        902,
+        1346,
+        14929,
+        15579,
+        236764,
+        506,
+        5456,
+        2165
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        2063,
+        1663,
+        578,
+        1651,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 2,
+      "wall_ns": 2602815848
+    },
+    {
+      "case_id": "c109-01-03-009",
+      "decoded_output": "It appears your input was cut off or",
+      "decoded_output_sha256": "a417dee003d02f49fb5824af28536ad9843d477ea59c4328c92f9c799a64377b",
+      "generated_token_ids": [
+        1509,
+        7412,
+        822,
+        2744,
+        691,
+        3463,
+        1135,
+        653
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        236769,
+        753,
+        8355,
+        900,
+        20218,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 3,
+      "wall_ns": 2537662832
+    },
+    {
+      "case_id": "c109-01-04-036",
+      "decoded_output": "It looks like you are listing greetings and",
+      "decoded_output_sha256": "77222c23f39c2cb6dee3056481bba72fbb8f0471b622679c5e13d55624f7e920",
+      "generated_token_ids": [
+        1509,
+        5724,
+        1133,
+        611,
+        659,
+        20104,
+        75927,
+        532
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        236753,
+        85501,
+        136942,
+        668,
+        236804,
+        117874,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 4,
+      "wall_ns": 2455579518
+    },
+    {
+      "case_id": "c109-01-05-017",
+      "decoded_output": "It sounds like you're frustrated because",
+      "decoded_output_sha256": "a319859bdcf52fe2d420f8b9825b2daee8ee9d4da46f57f3ff8f1391c102e0b0",
+      "generated_token_ids": [
+        1509,
+        12054,
+        1133,
+        611,
+        236789,
+        500,
+        39742,
+        1547
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        2118,
+        7202,
+        759,
+        1570,
+        1638,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 5,
+      "wall_ns": 2555438495
+    },
+    {
+      "case_id": "c109-01-06-006",
+      "decoded_output": "It looks like you\u2019ve provided a",
+      "decoded_output_sha256": "15ec6f9dcbb5592e0ed3cb02e3ac51fc35c9a5357272299d9a4cc9a79054ca0a",
+      "generated_token_ids": [
+        1509,
+        5724,
+        1133,
+        611,
+        236858,
+        560,
+        3847,
+        496
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        239422,
+        973,
+        8201,
+        1392,
+        682,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 6,
+      "wall_ns": 2574867657
+    },
+    {
+      "case_id": "c109-02-01-030",
+      "decoded_output": "This appears to be a **word cloud",
+      "decoded_output_sha256": "facdb7b8a7b1c9d4f21c0eb0680a3fdce89c8103428b04294882fc195ae0729d",
+      "generated_token_ids": [
+        2094,
+        7412,
+        531,
+        577,
+        496,
+        5213,
+        3017,
+        6425
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        156492,
+        2135,
+        13512,
+        10810,
+        2214,
+        3541,
+        3184,
+        3184,
+        8001,
+        16680,
+        10810,
+        36572,
+        3184,
+        129317,
+        17971,
+        23844,
+        8001,
+        1932,
+        33036,
+        3184,
+        1208,
+        10810,
+        67706,
+        1208,
+        23844,
+        12010,
+        129317,
+        12010,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 7,
+      "wall_ns": 2583159719
+    },
+    {
+      "case_id": "c109-02-02-020",
+      "decoded_output": "It appears you have provided a collection of",
+      "decoded_output_sha256": "ee2799b26672de1a81dbcf55246df14f3a72fd42d9321080244a32c9d0cfb021",
+      "generated_token_ids": [
+        1509,
+        7412,
+        611,
+        735,
+        3847,
+        496,
+        5249,
+        529
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        2063,
+        2303,
+        568,
+        1012,
+        2222,
+        11935,
+        32147,
+        1663,
+        6422,
+        1847,
+        1012,
+        1651,
+        994,
+        1847,
+        2416,
+        4187,
+        1694,
+        573,
+        1017,
+        1847,
+        32147,
+        32147,
+        870,
+        4422,
+        1732,
+        4187,
+        1732,
+        573,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 8,
+      "wall_ns": 2608231908
+    },
+    {
+      "case_id": "c109-02-03-011",
+      "decoded_output": "It appears you are providing a string of",
+      "decoded_output_sha256": "967dc5847d71d40f7f7300f23204f8e51a3e11e7d09d52b6aef6b3bc64c1b42f",
+      "generated_token_ids": [
+        1509,
+        7412,
+        611,
+        659,
+        6655,
+        496,
+        2483,
+        529
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        10520,
+        236743,
+        236778,
+        236770,
+        236743,
+        236810,
+        236810,
+        236743,
+        236770,
+        578,
+        236743,
+        236771,
+        1123,
+        3550,
+        236743,
+        236778,
+        236743,
+        236828,
+        1123,
+        3746,
+        904,
+        4168,
+        236743,
+        236778,
+        236770,
+        900,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 9,
+      "wall_ns": 2583423588
+    },
+    {
+      "case_id": "c109-02-04-033",
+      "decoded_output": "It looks like you have compiled a list",
+      "decoded_output_sha256": "a2ef53ddf65809a8a9e54dfdb6409c932355baeef47cb0d49c80a8942fef8bec",
+      "generated_token_ids": [
+        1509,
+        5724,
+        1133,
+        611,
+        735,
+        28725,
+        496,
+        1694
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        116755,
+        671,
+        14677,
+        58562,
+        150423,
+        4527,
+        5737,
+        668,
+        236804,
+        114303,
+        22150,
+        114303,
+        4527,
+        5737,
+        132518,
+        132518,
+        98156,
+        4356,
+        58562,
+        67195,
+        4276,
+        236898,
+        86746,
+        34866,
+        100116,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 10,
+      "wall_ns": 2625502573
+    },
+    {
+      "case_id": "c109-02-05-024",
+      "decoded_output": "It sounds like you are describing a **",
+      "decoded_output_sha256": "b87664398cda30afae22607e61ab1f3649e2845dc9086f5d011ad084228c6f1c",
+      "generated_token_ids": [
+        1509,
+        12054,
+        1133,
+        611,
+        659,
+        22454,
+        496,
+        5213
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        13321,
+        1784,
+        678,
+        9263,
+        7350,
+        678,
+        5743,
+        678,
+        678,
+        759,
+        9263,
+        1570,
+        1570,
+        5743,
+        7202,
+        531,
+        932,
+        5743,
+        1784,
+        678,
+        7350,
+        1638,
+        1570,
+        1784,
+        759,
+        7350,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 11,
+      "wall_ns": 2405826884
+    },
+    {
+      "case_id": "c109-02-06-049",
+      "decoded_output": "It appears you have provided a string of",
+      "decoded_output_sha256": "c37fd54168ddb54aa7ac99a511eb25f4f7b077b78d02a950a7266cbbd35d824c",
+      "generated_token_ids": [
+        1509,
+        7412,
+        611,
+        735,
+        3847,
+        496,
+        2483,
+        529
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        715,
+        40834,
+        973,
+        8201,
+        609,
+        833,
+        973,
+        2895,
+        900,
+        34304,
+        997,
+        900,
+        228408,
+        2144,
+        609,
+        8807,
+        236743,
+        236832,
+        236760,
+        655,
+        997,
+        997,
+        20254,
+        621,
+        236745,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 12,
+      "wall_ns": 2620948964
+    },
+    {
+      "case_id": "c109-03-01-044",
+      "decoded_output": "To make sense of this word cloud,",
+      "decoded_output_sha256": "91a394f3406c45e5d80f71edc120114f7ee94691dd727f4b3b5e8695ba056ba5",
+      "generated_token_ids": [
+        2021,
+        1386,
+        5113,
+        529,
+        672,
+        3658,
+        6425,
+        236764
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        7195,
+        2214,
+        2479,
+        13512,
+        9884,
+        17971,
+        5597,
+        10810,
+        13512,
+        33036,
+        5597,
+        2214,
+        6573,
+        14617,
+        36572,
+        6573,
+        1932,
+        33036,
+        67706,
+        6573,
+        16680,
+        17971,
+        36572,
+        3184,
+        16680,
+        67706,
+        23844,
+        5597,
+        17971,
+        67706,
+        14617,
+        8001,
+        3541,
+        2214,
+        36572,
+        5597,
+        2214,
+        10810,
+        3184,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 13,
+      "wall_ns": 2708830905
+    },
+    {
+      "case_id": "c109-03-02-054",
+      "decoded_output": "It appears you have provided a collection of",
+      "decoded_output_sha256": "ee2799b26672de1a81dbcf55246df14f3a72fd42d9321080244a32c9d0cfb021",
+      "generated_token_ids": [
+        1509,
+        7412,
+        611,
+        735,
+        3847,
+        496,
+        5249,
+        529
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        236783,
+        32147,
+        1847,
+        1012,
+        1550,
+        2541,
+        32147,
+        1031,
+        682,
+        1663,
+        1012,
+        2416,
+        4187,
+        642,
+        32147,
+        578,
+        682,
+        642,
+        1663,
+        573,
+        870,
+        900,
+        4422,
+        528,
+        994,
+        2416,
+        1017,
+        578,
+        1694,
+        1651,
+        642,
+        528,
+        568,
+        900,
+        1651,
+        573,
+        568,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 14,
+      "wall_ns": 2468268488
+    },
+    {
+      "case_id": "c109-03-03-031",
+      "decoded_output": "It appears you are providing a sequence of",
+      "decoded_output_sha256": "0e1be50e416f8a924c3821c6552ef652fe00155125249255d8ed03ce4d8ea941",
+      "generated_token_ids": [
+        1509,
+        7412,
+        611,
+        659,
+        6655,
+        496,
+        7501,
+        529
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        236768,
+        20218,
+        904,
+        2689,
+        7232,
+        8355,
+        236743,
+        236778,
+        20218,
+        236743,
+        236810,
+        236810,
+        236743,
+        236800,
+        236812,
+        578,
+        236743,
+        236810,
+        236810,
+        900,
+        236743,
+        236770,
+        236800,
+        4168,
+        236743,
+        236778,
+        236743,
+        236778,
+        236770,
+        236743,
+        236828,
+        236743,
+        236810,
+        236743,
+        236770,
+        236800,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 15,
+      "wall_ns": 2452380624
+    },
+    {
+      "case_id": "c109-03-04-003",
+      "decoded_output": "It looks like you have shared a beautiful",
+      "decoded_output_sha256": "9fffb4256d6e70caa2f059036294485d5fadf24af63a7dddc346c49941fed5e7",
+      "generated_token_ids": [
+        1509,
+        5724,
+        1133,
+        611,
+        735,
+        7659,
+        496,
+        4148
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        85141,
+        117874,
+        114303,
+        36097,
+        117874,
+        22150,
+        212794,
+        67195,
+        100116,
+        39583,
+        14677,
+        125062,
+        505,
+        20275,
+        14677,
+        505,
+        20275,
+        114303,
+        69086,
+        36132,
+        36097,
+        117874,
+        63251,
+        39583,
+        132518,
+        69086,
+        13812,
+        67195,
+        150423,
+        125062,
+        36132,
+        13812,
+        39583,
+        67195,
+        150423,
+        36097,
+        136942,
+        36097,
+        150423,
+        668,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 16,
+      "wall_ns": 2379318761
+    },
+    {
+      "case_id": "c109-03-05-044",
+      "decoded_output": "It sounds like you are describing a **",
+      "decoded_output_sha256": "b87664398cda30afae22607e61ab1f3649e2845dc9086f5d011ad084228c6f1c",
+      "generated_token_ids": [
+        1509,
+        12054,
+        1133,
+        611,
+        659,
+        22454,
+        496,
+        5213
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        13321,
+        9263,
+        678,
+        5743,
+        7202,
+        1784,
+        7202,
+        1570,
+        759,
+        678,
+        678,
+        1570,
+        1638,
+        5743,
+        1784,
+        7350,
+        7202,
+        678,
+        1570,
+        759,
+        7202,
+        1638,
+        678,
+        1638,
+        1570,
+        1784,
+        7202,
+        5743,
+        7350,
+        678,
+        531,
+        932,
+        1570,
+        7350,
+        9263,
+        5743,
+        678,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 17,
+      "wall_ns": 2543227805
+    },
+    {
+      "case_id": "c109-03-06-016",
+      "decoded_output": "It appears you have provided a string of",
+      "decoded_output_sha256": "c37fd54168ddb54aa7ac99a511eb25f4f7b077b78d02a950a7266cbbd35d824c",
+      "generated_token_ids": [
+        1509,
+        7412,
+        611,
+        735,
+        3847,
+        496,
+        2483,
+        529
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        239995,
+        1109,
+        621,
+        236745,
+        1890,
+        833,
+        682,
+        1717,
+        76858,
+        8201,
+        642,
+        34304,
+        2222,
+        34304,
+        2144,
+        76858,
+        2360,
+        609,
+        1890,
+        40834,
+        973,
+        2360,
+        2578,
+        23706,
+        997,
+        40834,
+        7215,
+        34304,
+        609,
+        900,
+        2895,
+        1392,
+        2222,
+        146502,
+        1109,
+        609,
+        682,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 18,
+      "wall_ns": 2489836318
+    },
+    {
+      "case_id": "c109-04-01-026",
+      "decoded_output": "amber morning. light.\n\nunder under",
+      "decoded_output_sha256": "a57a04cdd1d923e874b9666f32ab3de58f2d0c4039c4fc59bfb0e240c1852c31",
+      "generated_token_ids": [
+        11513,
+        5597,
+        236761,
+        2214,
+        236761,
+        108,
+        6460,
+        1208
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        6460,
+        36572,
+        1208,
+        67706,
+        5597,
+        2214,
+        2712,
+        2712,
+        2214,
+        129317,
+        1208,
+        1208,
+        17971,
+        2479,
+        3184,
+        17971,
+        67706,
+        36572,
+        6573,
+        1208,
+        1932,
+        3541,
+        1208,
+        3541,
+        14617,
+        5597,
+        8001,
+        33036,
+        5597,
+        33036,
+        12010,
+        6573,
+        16680,
+        2214,
+        8001,
+        13512,
+        9884,
+        8858,
+        6573,
+        13512,
+        23844,
+        33036,
+        2214,
+        6573,
+        2479,
+        1932,
+        13512,
+        1932,
+        23844,
+        16680,
+        13512,
+        17971,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 19,
+      "wall_ns": 3720134047
+    },
+    {
+      "case_id": "c109-04-02-047",
+      "decoded_output": "/<turn|><|channel>/p\n<|channel>thought",
+      "decoded_output_sha256": "3254ae289de746334528227f508e579a3096a82e580d6e51193e4cbd49f20f71",
+      "generated_token_ids": [
+        236786,
+        106,
+        100,
+        236786,
+        236758,
+        107,
+        100,
+        45518
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        236782,
+        1663,
+        1651,
+        1847,
+        768,
+        1663,
+        1017,
+        1096,
+        1550,
+        1663,
+        1663,
+        568,
+        573,
+        753,
+        1012,
+        4188,
+        4187,
+        528,
+        768,
+        2222,
+        11935,
+        528,
+        753,
+        4422,
+        1012,
+        768,
+        2541,
+        4188,
+        528,
+        1096,
+        2303,
+        578,
+        870,
+        32147,
+        2541,
+        4188,
+        1847,
+        2303,
+        1694,
+        1012,
+        900,
+        994,
+        768,
+        870,
+        2222,
+        11935,
+        2541,
+        753,
+        870,
+        4187,
+        2541,
+        768,
+        2222,
+        11935,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 20,
+      "wall_ns": 3633768046
+    },
+    {
+      "case_id": "c109-04-03-040",
+      "decoded_output": "<channel|><|channel>\n<|channel>thought\n<|channel>thought",
+      "decoded_output_sha256": "2f05faad3eacf6632cfc6a2d996a8607a37b0920918cc0ba0187f3cdc1b71096",
+      "generated_token_ids": [
+        101,
+        100,
+        107,
+        100,
+        45518,
+        107,
+        100,
+        45518
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        236778,
+        236743,
+        236770,
+        236743,
+        236810,
+        236743,
+        236810,
+        236743,
+        236800,
+        236812,
+        4168,
+        578,
+        236743,
+        236800,
+        236743,
+        236828,
+        2689,
+        904,
+        1732,
+        1732,
+        904,
+        2689,
+        900,
+        236743,
+        236770,
+        900,
+        236743,
+        236778,
+        236770,
+        568,
+        236743,
+        236810,
+        236810,
+        753,
+        753,
+        900,
+        19649,
+        236743,
+        236800,
+        236743,
+        236828,
+        8355,
+        2324,
+        4168,
+        8355,
+        236743,
+        236770,
+        236800,
+        236743,
+        236828,
+        7232,
+        236743,
+        236778,
+        236770,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 21,
+      "wall_ns": 3794570881
+    },
+    {
+      "case_id": "c109-04-04-024",
+      "decoded_output": ".\n<|channel>thought\n.\nThe",
+      "decoded_output_sha256": "e17bc1cca5b2c5ce4463750b816c2e392cce384d6e5e5c59d1a84899f59becbc",
+      "generated_token_ids": [
+        236761,
+        107,
+        100,
+        45518,
+        107,
+        236761,
+        107,
+        818
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        3419,
+        893,
+        69086,
+        58562,
+        98156,
+        4356,
+        58562,
+        84679,
+        13812,
+        505,
+        20275,
+        4527,
+        5737,
+        39583,
+        505,
+        20275,
+        513,
+        45638,
+        84679,
+        67195,
+        36132,
+        11967,
+        236748,
+        34866,
+        67195,
+        136942,
+        100116,
+        79433,
+        4527,
+        5737,
+        132518,
+        150423,
+        136942,
+        513,
+        45638,
+        98156,
+        4356,
+        513,
+        45638,
+        136942,
+        13812,
+        84679,
+        69086,
+        212794,
+        136942,
+        86746,
+        100116,
+        36097,
+        39583,
+        114303,
+        114303,
+        513,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 22,
+      "wall_ns": 3749499079
+    },
+    {
+      "case_id": "c109-04-05-043",
+      "decoded_output": "/ entitled_the_word_the",
+      "decoded_output_sha256": "554c7b1ccee2bb99f6fbdd8f583056a60c4e25fd307bf632e889b17e90e4f4a0",
+      "generated_token_ids": [
+        236786,
+        13481,
+        236779,
+        1437,
+        236779,
+        3017,
+        236779,
+        1437
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        37268,
+        9263,
+        5743,
+        678,
+        9263,
+        678,
+        1570,
+        678,
+        1784,
+        531,
+        932,
+        1784,
+        678,
+        9263,
+        1570,
+        1570,
+        1570,
+        9263,
+        678,
+        759,
+        1638,
+        9263,
+        678,
+        1638,
+        5743,
+        1784,
+        759,
+        1784,
+        7350,
+        1570,
+        7202,
+        7350,
+        7202,
+        531,
+        932,
+        1638,
+        5743,
+        678,
+        1570,
+        1784,
+        1570,
+        1570,
+        1638,
+        678,
+        678,
+        1570,
+        1784,
+        5743,
+        1638,
+        9263,
+        759,
+        531,
+        932,
+        7350,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 23,
+      "wall_ns": 3808387074
+    },
+    {
+      "case_id": "c109-04-06-074",
+      "decoded_output": "\n<|channel>thought\n<|channel>thought\n<channel|>",
+      "decoded_output_sha256": "f293068730845f3bb91bda4d349912375ce7e50cd77ccda401ed6db2d3e41509",
+      "generated_token_ids": [
+        107,
+        100,
+        45518,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "invocation": "per-token-replay-prefill/1",
+      "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "prompt_token_ids": [
+        2,
+        105,
+        2364,
+        107,
+        236862,
+        34304,
+        236743,
+        236771,
+        236781,
+        808,
+        621,
+        236745,
+        900,
+        236743,
+        236771,
+        236781,
+        2578,
+        1717,
+        1717,
+        2895,
+        23706,
+        621,
+        236745,
+        20254,
+        8201,
+        34304,
+        40834,
+        833,
+        655,
+        8201,
+        642,
+        2144,
+        40834,
+        642,
+        76858,
+        2144,
+        973,
+        973,
+        236743,
+        236832,
+        236760,
+        23706,
+        900,
+        833,
+        997,
+        655,
+        236743,
+        236771,
+        236781,
+        578,
+        965,
+        8201,
+        642,
+        2360,
+        40834,
+        4422,
+        2222,
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "schema": "inferswarm.issue117.arm-c.direct-case/1",
+      "session_id": 24,
+      "wall_ns": 3759196636
+    }
+  ],
+  "runtime_report": {
+    "boundary_geometry": {
+      "dtype": "bfloat16",
+      "layout": "plane-major-contiguous",
+      "planes": 1,
+      "row_width": 3840
+    },
+    "sessions": [
+      {
+        "complete_request_wall_ns": 16674398728,
+        "decode_ns": 404399136,
+        "generated_token_ids": [
+          818,
+          818
+        ],
+        "inter_token_p50_ns": 404387687,
+        "prompt_len": 20,
+        "session_id": 1,
+        "ttft_ns": 16269986919
+      },
+      {
+        "complete_request_wall_ns": 283842609,
+        "decode_ns": 132976071,
+        "generated_token_ids": [
+          20412,
+          9884
+        ],
+        "inter_token_p50_ns": 132967561,
+        "prompt_len": 21,
+        "session_id": 1,
+        "ttft_ns": 150855973
+      },
+      {
+        "complete_request_wall_ns": 313646899,
+        "decode_ns": 151455011,
+        "generated_token_ids": [
+          611,
+          23844
+        ],
+        "inter_token_p50_ns": 151449394,
+        "prompt_len": 22,
+        "session_id": 1,
+        "ttft_ns": 162184421
+      },
+      {
+        "complete_request_wall_ns": 333005659,
+        "decode_ns": 160125184,
+        "generated_token_ids": [
+          3847,
+          9884
+        ],
+        "inter_token_p50_ns": 160119449,
+        "prompt_len": 23,
+        "session_id": 1,
+        "ttft_ns": 172873022
+      },
+      {
+        "complete_request_wall_ns": 309041248,
+        "decode_ns": 132292814,
+        "generated_token_ids": [
+          815,
+          496
+        ],
+        "inter_token_p50_ns": 132287489,
+        "prompt_len": 24,
+        "session_id": 1,
+        "ttft_ns": 176741036
+      },
+      {
+        "complete_request_wall_ns": 322570663,
+        "decode_ns": 153639055,
+        "generated_token_ids": [
+          496,
+          23844
+        ],
+        "inter_token_p50_ns": 153633422,
+        "prompt_len": 25,
+        "session_id": 1,
+        "ttft_ns": 168924428
+      },
+      {
+        "complete_request_wall_ns": 325246413,
+        "decode_ns": 148487177,
+        "generated_token_ids": [
+          4148,
+          532
+        ],
+        "inter_token_p50_ns": 148481433,
+        "prompt_len": 26,
+        "session_id": 1,
+        "ttft_ns": 176751967
+      },
+      {
+        "complete_request_wall_ns": 312036488,
+        "decode_ns": 132750388,
+        "generated_token_ids": [
+          236764,
+          23844
+        ],
+        "inter_token_p50_ns": 132744970,
+        "prompt_len": 27,
+        "session_id": 1,
+        "ttft_ns": 179278780
+      },
+      {
+        "complete_request_wall_ns": 313313299,
+        "decode_ns": 154246825,
+        "generated_token_ids": [
+          902,
+          902
+        ],
+        "inter_token_p50_ns": 154241312,
+        "prompt_len": 17,
+        "session_id": 2,
+        "ttft_ns": 159059168
+      },
+      {
+        "complete_request_wall_ns": 329793339,
+        "decode_ns": 160377059,
+        "generated_token_ids": [
+          1346,
+          1346
+        ],
+        "inter_token_p50_ns": 160371503,
+        "prompt_len": 18,
+        "session_id": 2,
+        "ttft_ns": 169409012
+      },
+      {
+        "complete_request_wall_ns": 323257691,
+        "decode_ns": 147573575,
+        "generated_token_ids": [
+          14929,
+          51062
+        ],
+        "inter_token_p50_ns": 147567865,
+        "prompt_len": 19,
+        "session_id": 2,
+        "ttft_ns": 175676509
+      },
+      {
+        "complete_request_wall_ns": 334406025,
+        "decode_ns": 160769114,
+        "generated_token_ids": [
+          15579,
+          1663
+        ],
+        "inter_token_p50_ns": 160763398,
+        "prompt_len": 20,
+        "session_id": 2,
+        "ttft_ns": 173629260
+      },
+      {
+        "complete_request_wall_ns": 333644428,
+        "decode_ns": 157794161,
+        "generated_token_ids": [
+          236764,
+          2063
+        ],
+        "inter_token_p50_ns": 157788280,
+        "prompt_len": 21,
+        "session_id": 2,
+        "ttft_ns": 175842767
+      },
+      {
+        "complete_request_wall_ns": 331665282,
+        "decode_ns": 157607834,
+        "generated_token_ids": [
+          506,
+          1663
+        ],
+        "inter_token_p50_ns": 157601907,
+        "prompt_len": 22,
+        "session_id": 2,
+        "ttft_ns": 174049980
+      },
+      {
+        "complete_request_wall_ns": 300204967,
+        "decode_ns": 151823735,
+        "generated_token_ids": [
+          5456,
+          1663
+        ],
+        "inter_token_p50_ns": 151817883,
+        "prompt_len": 23,
+        "session_id": 2,
+        "ttft_ns": 148373762
+      },
+      {
+        "complete_request_wall_ns": 335603058,
+        "decode_ns": 160275007,
+        "generated_token_ids": [
+          2165,
+          2165
+        ],
+        "inter_token_p50_ns": 160269299,
+        "prompt_len": 24,
+        "session_id": 2,
+        "ttft_ns": 175320356
+      },
+      {
+        "complete_request_wall_ns": 335227042,
+        "decode_ns": 159577049,
+        "generated_token_ids": [
+          1509,
+          236761
+        ],
+        "inter_token_p50_ns": 159571443,
+        "prompt_len": 18,
+        "session_id": 3,
+        "ttft_ns": 175642409
+      },
+      {
+        "complete_request_wall_ns": 340356955,
+        "decode_ns": 162310340,
+        "generated_token_ids": [
+          7412,
+          236761
+        ],
+        "inter_token_p50_ns": 162304644,
+        "prompt_len": 19,
+        "session_id": 3,
+        "ttft_ns": 178039475
+      },
+      {
+        "complete_request_wall_ns": 340047442,
+        "decode_ns": 162293664,
+        "generated_token_ids": [
+          822,
+          8355
+        ],
+        "inter_token_p50_ns": 162288251,
+        "prompt_len": 20,
+        "session_id": 3,
+        "ttft_ns": 177746350
+      },
+      {
+        "complete_request_wall_ns": 340420202,
+        "decode_ns": 161398805,
+        "generated_token_ids": [
+          2744,
+          20218
+        ],
+        "inter_token_p50_ns": 161393248,
+        "prompt_len": 21,
+        "session_id": 3,
+        "ttft_ns": 179014034
+      },
+      {
+        "complete_request_wall_ns": 284667858,
+        "decode_ns": 134302351,
+        "generated_token_ids": [
+          691,
+          691
+        ],
+        "inter_token_p50_ns": 134296843,
+        "prompt_len": 22,
+        "session_id": 3,
+        "ttft_ns": 150358195
+      },
+      {
+        "complete_request_wall_ns": 293558628,
+        "decode_ns": 142878730,
+        "generated_token_ids": [
+          3463,
+          236772
+        ],
+        "inter_token_p50_ns": 142873074,
+        "prompt_len": 23,
+        "session_id": 3,
+        "ttft_ns": 150672553
+      },
+      {
+        "complete_request_wall_ns": 317232183,
+        "decode_ns": 148665943,
+        "generated_token_ids": [
+          1135,
+          8355
+        ],
+        "inter_token_p50_ns": 148660250,
+        "prompt_len": 24,
+        "session_id": 3,
+        "ttft_ns": 168559118
+      },
+      {
+        "complete_request_wall_ns": 285241558,
+        "decode_ns": 134255818,
+        "generated_token_ids": [
+          653,
+          8355
+        ],
+        "inter_token_p50_ns": 134250095,
+        "prompt_len": 25,
+        "session_id": 3,
+        "ttft_ns": 150978367
+      },
+      {
+        "complete_request_wall_ns": 279832883,
+        "decode_ns": 132108514,
+        "generated_token_ids": [
+          1509,
+          236770
+        ],
+        "inter_token_p50_ns": 132102815,
+        "prompt_len": 19,
+        "session_id": 4,
+        "ttft_ns": 147716866
+      },
+      {
+        "complete_request_wall_ns": 279810748,
+        "decode_ns": 132183839,
+        "generated_token_ids": [
+          5724,
+          657
+        ],
+        "inter_token_p50_ns": 132178183,
+        "prompt_len": 20,
+        "session_id": 4,
+        "ttft_ns": 147619669
+      },
+      {
+        "complete_request_wall_ns": 292619055,
+        "decode_ns": 138706173,
+        "generated_token_ids": [
+          1133,
+          117874
+        ],
+        "inter_token_p50_ns": 138700249,
+        "prompt_len": 21,
+        "session_id": 4,
+        "ttft_ns": 153905438
+      },
+      {
+        "complete_request_wall_ns": 302714777,
+        "decode_ns": 151683308,
+        "generated_token_ids": [
+          611,
+          532
+        ],
+        "inter_token_p50_ns": 151677397,
+        "prompt_len": 22,
+        "session_id": 4,
+        "ttft_ns": 151024085
+      },
+      {
+        "complete_request_wall_ns": 333924683,
+        "decode_ns": 159711906,
+        "generated_token_ids": [
+          659,
+          659
+        ],
+        "inter_token_p50_ns": 159705946,
+        "prompt_len": 23,
+        "session_id": 4,
+        "ttft_ns": 174205310
+      },
+      {
+        "complete_request_wall_ns": 332021243,
+        "decode_ns": 161355062,
+        "generated_token_ids": [
+          20104,
+          1902
+        ],
+        "inter_token_p50_ns": 161349105,
+        "prompt_len": 24,
+        "session_id": 4,
+        "ttft_ns": 170658910
+      },
+      {
+        "complete_request_wall_ns": 299558679,
+        "decode_ns": 144989238,
+        "generated_token_ids": [
+          75927,
+          75927
+        ],
+        "inter_token_p50_ns": 144982824,
+        "prompt_len": 25,
+        "session_id": 4,
+        "ttft_ns": 154560667
+      },
+      {
+        "complete_request_wall_ns": 334134691,
+        "decode_ns": 159225758,
+        "generated_token_ids": [
+          532,
+          136942
+        ],
+        "inter_token_p50_ns": 159219816,
+        "prompt_len": 26,
+        "session_id": 4,
+        "ttft_ns": 174901413
+      },
+      {
+        "complete_request_wall_ns": 337126890,
+        "decode_ns": 160756584,
+        "generated_token_ids": [
+          1509,
+          236761
+        ],
+        "inter_token_p50_ns": 160750838,
+        "prompt_len": 18,
+        "session_id": 5,
+        "ttft_ns": 176362678
+      },
+      {
+        "complete_request_wall_ns": 328329892,
+        "decode_ns": 156451730,
+        "generated_token_ids": [
+          12054,
+          12054
+        ],
+        "inter_token_p50_ns": 156445875,
+        "prompt_len": 19,
+        "session_id": 5,
+        "ttft_ns": 171870828
+      },
+      {
+        "complete_request_wall_ns": 335200537,
+        "decode_ns": 160674035,
+        "generated_token_ids": [
+          1133,
+          1570
+        ],
+        "inter_token_p50_ns": 160668135,
+        "prompt_len": 20,
+        "session_id": 5,
+        "ttft_ns": 174519118
+      },
+      {
+        "complete_request_wall_ns": 332944933,
+        "decode_ns": 156700694,
+        "generated_token_ids": [
+          611,
+          7202
+        ],
+        "inter_token_p50_ns": 156695007,
+        "prompt_len": 21,
+        "session_id": 5,
+        "ttft_ns": 176237123
+      },
+      {
+        "complete_request_wall_ns": 280820629,
+        "decode_ns": 132109716,
+        "generated_token_ids": [
+          236789,
+          500
+        ],
+        "inter_token_p50_ns": 132103859,
+        "prompt_len": 22,
+        "session_id": 5,
+        "ttft_ns": 148703372
+      },
+      {
+        "complete_request_wall_ns": 316627647,
+        "decode_ns": 153018056,
+        "generated_token_ids": [
+          500,
+          236786
+        ],
+        "inter_token_p50_ns": 153012209,
+        "prompt_len": 23,
+        "session_id": 5,
+        "ttft_ns": 163602413
+      },
+      {
+        "complete_request_wall_ns": 336624443,
+        "decode_ns": 161025529,
+        "generated_token_ids": [
+          39742,
+          496
+        ],
+        "inter_token_p50_ns": 161019454,
+        "prompt_len": 24,
+        "session_id": 5,
+        "ttft_ns": 175591377
+      },
+      {
+        "complete_request_wall_ns": 286846964,
+        "decode_ns": 137743986,
+        "generated_token_ids": [
+          1547,
+          1638
+        ],
+        "inter_token_p50_ns": 137737829,
+        "prompt_len": 25,
+        "session_id": 5,
+        "ttft_ns": 149095109
+      },
+      {
+        "complete_request_wall_ns": 326337838,
+        "decode_ns": 155953889,
+        "generated_token_ids": [
+          1509,
+          236929
+        ],
+        "inter_token_p50_ns": 155947791,
+        "prompt_len": 18,
+        "session_id": 6,
+        "ttft_ns": 170376549
+      },
+      {
+        "complete_request_wall_ns": 331429484,
+        "decode_ns": 156342767,
+        "generated_token_ids": [
+          5724,
+          657
+        ],
+        "inter_token_p50_ns": 156336707,
+        "prompt_len": 19,
+        "session_id": 6,
+        "ttft_ns": 175079323
+      },
+      {
+        "complete_request_wall_ns": 327879727,
+        "decode_ns": 153194972,
+        "generated_token_ids": [
+          1133,
+          8201
+        ],
+        "inter_token_p50_ns": 153189175,
+        "prompt_len": 20,
+        "session_id": 6,
+        "ttft_ns": 174677629
+      },
+      {
+        "complete_request_wall_ns": 335713848,
+        "decode_ns": 160295559,
+        "generated_token_ids": [
+          611,
+          659
+        ],
+        "inter_token_p50_ns": 160289872,
+        "prompt_len": 21,
+        "session_id": 6,
+        "ttft_ns": 175411136
+      },
+      {
+        "complete_request_wall_ns": 335197423,
+        "decode_ns": 160810866,
+        "generated_token_ids": [
+          236858,
+          560
+        ],
+        "inter_token_p50_ns": 160804604,
+        "prompt_len": 22,
+        "session_id": 6,
+        "ttft_ns": 174378997
+      },
+      {
+        "complete_request_wall_ns": 306609102,
+        "decode_ns": 132032160,
+        "generated_token_ids": [
+          560,
+          560
+        ],
+        "inter_token_p50_ns": 132026357,
+        "prompt_len": 23,
+        "session_id": 6,
+        "ttft_ns": 174569394
+      },
+      {
+        "complete_request_wall_ns": 285245307,
+        "decode_ns": 136832281,
+        "generated_token_ids": [
+          3847,
+          1392
+        ],
+        "inter_token_p50_ns": 136826489,
+        "prompt_len": 24,
+        "session_id": 6,
+        "ttft_ns": 148405468
+      },
+      {
+        "complete_request_wall_ns": 325539573,
+        "decode_ns": 151712524,
+        "generated_token_ids": [
+          496,
+          682
+        ],
+        "inter_token_p50_ns": 151706740,
+        "prompt_len": 25,
+        "session_id": 6,
+        "ttft_ns": 173818877
+      },
+      {
+        "complete_request_wall_ns": 319168370,
+        "decode_ns": 134306386,
+        "generated_token_ids": [
+          2094,
+          15565
+        ],
+        "inter_token_p50_ns": 134300515,
+        "prompt_len": 41,
+        "session_id": 7,
+        "ttft_ns": 184854410
+      },
+      {
+        "complete_request_wall_ns": 303979826,
+        "decode_ns": 145548166,
+        "generated_token_ids": [
+          7412,
+          236761
+        ],
+        "inter_token_p50_ns": 145542487,
+        "prompt_len": 42,
+        "session_id": 7,
+        "ttft_ns": 158424275
+      },
+      {
+        "complete_request_wall_ns": 345006195,
+        "decode_ns": 162936090,
+        "generated_token_ids": [
+          531,
+          23844
+        ],
+        "inter_token_p50_ns": 162930446,
+        "prompt_len": 43,
+        "session_id": 7,
+        "ttft_ns": 182062622
+      },
+      {
+        "complete_request_wall_ns": 317022994,
+        "decode_ns": 134052755,
+        "generated_token_ids": [
+          577,
+          3184
+        ],
+        "inter_token_p50_ns": 134047058,
+        "prompt_len": 44,
+        "session_id": 7,
+        "ttft_ns": 182963259
+      },
+      {
+        "complete_request_wall_ns": 293487904,
+        "decode_ns": 134753769,
+        "generated_token_ids": [
+          496,
+          10810
+        ],
+        "inter_token_p50_ns": 134748275,
+        "prompt_len": 45,
+        "session_id": 7,
+        "ttft_ns": 158726880
+      },
+      {
+        "complete_request_wall_ns": 336510724,
+        "decode_ns": 155187345,
+        "generated_token_ids": [
+          5213,
+          5213
+        ],
+        "inter_token_p50_ns": 155181596,
+        "prompt_len": 46,
+        "session_id": 7,
+        "ttft_ns": 181316233
+      },
+      {
+        "complete_request_wall_ns": 339051137,
+        "decode_ns": 149517388,
+        "generated_token_ids": [
+          3017,
+          18140
+        ],
+        "inter_token_p50_ns": 149511570,
+        "prompt_len": 47,
+        "session_id": 7,
+        "ttft_ns": 189526240
+      },
+      {
+        "complete_request_wall_ns": 328009565,
+        "decode_ns": 153762258,
+        "generated_token_ids": [
+          6425,
+          67706
+        ],
+        "inter_token_p50_ns": 153756337,
+        "prompt_len": 48,
+        "session_id": 7,
+        "ttft_ns": 174240094
+      },
+      {
+        "complete_request_wall_ns": 339649317,
+        "decode_ns": 160504883,
+        "generated_token_ids": [
+          1509,
+          9277
+        ],
+        "inter_token_p50_ns": 160499226,
+        "prompt_len": 41,
+        "session_id": 8,
+        "ttft_ns": 179137041
+      },
+      {
+        "complete_request_wall_ns": 339893519,
+        "decode_ns": 160719090,
+        "generated_token_ids": [
+          7412,
+          236770
+        ],
+        "inter_token_p50_ns": 160713477,
+        "prompt_len": 42,
+        "session_id": 8,
+        "ttft_ns": 179166875
+      },
+      {
+        "complete_request_wall_ns": 292271531,
+        "decode_ns": 136782936,
+        "generated_token_ids": [
+          611,
+          32147
+        ],
+        "inter_token_p50_ns": 136777320,
+        "prompt_len": 43,
+        "session_id": 8,
+        "ttft_ns": 155481589
+      },
+      {
+        "complete_request_wall_ns": 330435089,
+        "decode_ns": 152802190,
+        "generated_token_ids": [
+          735,
+          735
+        ],
+        "inter_token_p50_ns": 152796576,
+        "prompt_len": 44,
+        "session_id": 8,
+        "ttft_ns": 177626001
+      },
+      {
+        "complete_request_wall_ns": 335599487,
+        "decode_ns": 159827901,
+        "generated_token_ids": [
+          3847,
+          1847
+        ],
+        "inter_token_p50_ns": 159822145,
+        "prompt_len": 45,
+        "session_id": 8,
+        "ttft_ns": 175764673
+      },
+      {
+        "complete_request_wall_ns": 290104662,
+        "decode_ns": 134782172,
+        "generated_token_ids": [
+          496,
+          32147
+        ],
+        "inter_token_p50_ns": 134776613,
+        "prompt_len": 46,
+        "session_id": 8,
+        "ttft_ns": 155315623
+      },
+      {
+        "complete_request_wall_ns": 339994685,
+        "decode_ns": 160376773,
+        "generated_token_ids": [
+          5249,
+          4187
+        ],
+        "inter_token_p50_ns": 160370649,
+        "prompt_len": 47,
+        "session_id": 8,
+        "ttft_ns": 179609907
+      },
+      {
+        "complete_request_wall_ns": 339353667,
+        "decode_ns": 161105483,
+        "generated_token_ids": [
+          529,
+          1847
+        ],
+        "inter_token_p50_ns": 161099409,
+        "prompt_len": 48,
+        "session_id": 8,
+        "ttft_ns": 178240319
+      },
+      {
+        "complete_request_wall_ns": 300091293,
+        "decode_ns": 141522204,
+        "generated_token_ids": [
+          1509,
+          236761
+        ],
+        "inter_token_p50_ns": 141516771,
+        "prompt_len": 39,
+        "session_id": 9,
+        "ttft_ns": 158562167
+      },
+      {
+        "complete_request_wall_ns": 339311624,
+        "decode_ns": 159360674,
+        "generated_token_ids": [
+          7412,
+          236761
+        ],
+        "inter_token_p50_ns": 159355065,
+        "prompt_len": 40,
+        "session_id": 9,
+        "ttft_ns": 179943796
+      },
+      {
+        "complete_request_wall_ns": 341735112,
+        "decode_ns": 161544252,
+        "generated_token_ids": [
+          611,
+          3550
+        ],
+        "inter_token_p50_ns": 161538688,
+        "prompt_len": 41,
+        "session_id": 9,
+        "ttft_ns": 180183664
+      },
+      {
+        "complete_request_wall_ns": 289229837,
+        "decode_ns": 132485971,
+        "generated_token_ids": [
+          659,
+          1123
+        ],
+        "inter_token_p50_ns": 132480324,
+        "prompt_len": 42,
+        "session_id": 9,
+        "ttft_ns": 156736803
+      },
+      {
+        "complete_request_wall_ns": 340579757,
+        "decode_ns": 160945391,
+        "generated_token_ids": [
+          6655,
+          3550
+        ],
+        "inter_token_p50_ns": 160939779,
+        "prompt_len": 43,
+        "session_id": 9,
+        "ttft_ns": 179627132
+      },
+      {
+        "complete_request_wall_ns": 334502160,
+        "decode_ns": 154580632,
+        "generated_token_ids": [
+          496,
+          3550
+        ],
+        "inter_token_p50_ns": 154574751,
+        "prompt_len": 44,
+        "session_id": 9,
+        "ttft_ns": 179914273
+      },
+      {
+        "complete_request_wall_ns": 296759513,
+        "decode_ns": 132796239,
+        "generated_token_ids": [
+          2483,
+          236743
+        ],
+        "inter_token_p50_ns": 132790679,
+        "prompt_len": 45,
+        "session_id": 9,
+        "ttft_ns": 163956215
+      },
+      {
+        "complete_request_wall_ns": 340285505,
+        "decode_ns": 161172433,
+        "generated_token_ids": [
+          529,
+          2689
+        ],
+        "inter_token_p50_ns": 161166912,
+        "prompt_len": 46,
+        "session_id": 9,
+        "ttft_ns": 179105947
+      },
+      {
+        "complete_request_wall_ns": 327132771,
+        "decode_ns": 148665124,
+        "generated_token_ids": [
+          1509,
+          1281
+        ],
+        "inter_token_p50_ns": 148659798,
+        "prompt_len": 38,
+        "session_id": 10,
+        "ttft_ns": 178460074
+      },
+      {
+        "complete_request_wall_ns": 311020424,
+        "decode_ns": 133853231,
+        "generated_token_ids": [
+          5724,
+          657
+        ],
+        "inter_token_p50_ns": 133847690,
+        "prompt_len": 39,
+        "session_id": 10,
+        "ttft_ns": 177160163
+      },
+      {
+        "complete_request_wall_ns": 331658380,
+        "decode_ns": 153966922,
+        "generated_token_ids": [
+          1133,
+          6840
+        ],
+        "inter_token_p50_ns": 153961389,
+        "prompt_len": 40,
+        "session_id": 10,
+        "ttft_ns": 177684331
+      },
+      {
+        "complete_request_wall_ns": 338815377,
+        "decode_ns": 159524882,
+        "generated_token_ids": [
+          611,
+          1902
+        ],
+        "inter_token_p50_ns": 159519142,
+        "prompt_len": 41,
+        "session_id": 10,
+        "ttft_ns": 179283322
+      },
+      {
+        "complete_request_wall_ns": 336815406,
+        "decode_ns": 157669039,
+        "generated_token_ids": [
+          735,
+          735
+        ],
+        "inter_token_p50_ns": 157663246,
+        "prompt_len": 42,
+        "session_id": 10,
+        "ttft_ns": 179138903
+      },
+      {
+        "complete_request_wall_ns": 338510732,
+        "decode_ns": 160290057,
+        "generated_token_ids": [
+          28725,
+          236772
+        ],
+        "inter_token_p50_ns": 160284293,
+        "prompt_len": 43,
+        "session_id": 10,
+        "ttft_ns": 178213301
+      },
+      {
+        "complete_request_wall_ns": 328679905,
+        "decode_ns": 148872399,
+        "generated_token_ids": [
+          496,
+          6840
+        ],
+        "inter_token_p50_ns": 148866419,
+        "prompt_len": 44,
+        "session_id": 10,
+        "ttft_ns": 179799972
+      },
+      {
+        "complete_request_wall_ns": 311957889,
+        "decode_ns": 132500189,
+        "generated_token_ids": [
+          1694,
+          1902
+        ],
+        "inter_token_p50_ns": 132494539,
+        "prompt_len": 45,
+        "session_id": 10,
+        "ttft_ns": 179450313
+      },
+      {
+        "complete_request_wall_ns": 291029396,
+        "decode_ns": 133138482,
+        "generated_token_ids": [
+          1509,
+          236761
+        ],
+        "inter_token_p50_ns": 133132676,
+        "prompt_len": 39,
+        "session_id": 11,
+        "ttft_ns": 157883300
+      },
+      {
+        "complete_request_wall_ns": 290827732,
+        "decode_ns": 134363792,
+        "generated_token_ids": [
+          12054,
+          5743
+        ],
+        "inter_token_p50_ns": 134358109,
+        "prompt_len": 40,
+        "session_id": 11,
+        "ttft_ns": 156456223
+      },
+      {
+        "complete_request_wall_ns": 316846585,
+        "decode_ns": 141214724,
+        "generated_token_ids": [
+          1133,
+          5743
+        ],
+        "inter_token_p50_ns": 141209010,
+        "prompt_len": 41,
+        "session_id": 11,
+        "ttft_ns": 175624514
+      },
+      {
+        "complete_request_wall_ns": 291747442,
+        "decode_ns": 134530519,
+        "generated_token_ids": [
+          611,
+          678
+        ],
+        "inter_token_p50_ns": 134524673,
+        "prompt_len": 42,
+        "session_id": 11,
+        "ttft_ns": 157209596
+      },
+      {
+        "complete_request_wall_ns": 292437688,
+        "decode_ns": 134639628,
+        "generated_token_ids": [
+          659,
+          678
+        ],
+        "inter_token_p50_ns": 134633732,
+        "prompt_len": 43,
+        "session_id": 11,
+        "ttft_ns": 157790801
+      },
+      {
+        "complete_request_wall_ns": 292900294,
+        "decode_ns": 134809357,
+        "generated_token_ids": [
+          22454,
+          22454
+        ],
+        "inter_token_p50_ns": 134803714,
+        "prompt_len": 44,
+        "session_id": 11,
+        "ttft_ns": 158082837
+      },
+      {
+        "complete_request_wall_ns": 293207590,
+        "decode_ns": 134881823,
+        "generated_token_ids": [
+          496,
+          678
+        ],
+        "inter_token_p50_ns": 134876147,
+        "prompt_len": 45,
+        "session_id": 11,
+        "ttft_ns": 158318424
+      },
+      {
+        "complete_request_wall_ns": 335872696,
+        "decode_ns": 159236797,
+        "generated_token_ids": [
+          5213,
+          5213
+        ],
+        "inter_token_p50_ns": 159231076,
+        "prompt_len": 46,
+        "session_id": 11,
+        "ttft_ns": 176628602
+      },
+      {
+        "complete_request_wall_ns": 349647168,
+        "decode_ns": 170107906,
+        "generated_token_ids": [
+          1509,
+          715
+        ],
+        "inter_token_p50_ns": 170101922,
+        "prompt_len": 38,
+        "session_id": 12,
+        "ttft_ns": 179531859
+      },
+      {
+        "complete_request_wall_ns": 296436935,
+        "decode_ns": 134374017,
+        "generated_token_ids": [
+          7412,
+          107
+        ],
+        "inter_token_p50_ns": 134368863,
+        "prompt_len": 39,
+        "session_id": 12,
+        "ttft_ns": 162055888
+      },
+      {
+        "complete_request_wall_ns": 295848493,
+        "decode_ns": 138924220,
+        "generated_token_ids": [
+          611,
+          609
+        ],
+        "inter_token_p50_ns": 138918651,
+        "prompt_len": 40,
+        "session_id": 12,
+        "ttft_ns": 156917005
+      },
+      {
+        "complete_request_wall_ns": 342964131,
+        "decode_ns": 162760088,
+        "generated_token_ids": [
+          735,
+          735
+        ],
+        "inter_token_p50_ns": 162754027,
+        "prompt_len": 41,
+        "session_id": 12,
+        "ttft_ns": 180196877
+      },
+      {
+        "complete_request_wall_ns": 341245287,
+        "decode_ns": 159442044,
+        "generated_token_ids": [
+          3847,
+          609
+        ],
+        "inter_token_p50_ns": 159436344,
+        "prompt_len": 42,
+        "session_id": 12,
+        "ttft_ns": 181796203
+      },
+      {
+        "complete_request_wall_ns": 333412258,
+        "decode_ns": 151201091,
+        "generated_token_ids": [
+          496,
+          8201
+        ],
+        "inter_token_p50_ns": 151195836,
+        "prompt_len": 43,
+        "session_id": 12,
+        "ttft_ns": 182204006
+      },
+      {
+        "complete_request_wall_ns": 344636690,
+        "decode_ns": 162555522,
+        "generated_token_ids": [
+          2483,
+          8201
+        ],
+        "inter_token_p50_ns": 162549659,
+        "prompt_len": 44,
+        "session_id": 12,
+        "ttft_ns": 182073518
+      },
+      {
+        "complete_request_wall_ns": 315831241,
+        "decode_ns": 134513027,
+        "generated_token_ids": [
+          529,
+          973
+        ],
+        "inter_token_p50_ns": 134506943,
+        "prompt_len": 45,
+        "session_id": 12,
+        "ttft_ns": 181311154
+      },
+      {
+        "complete_request_wall_ns": 351289624,
+        "decode_ns": 163018006,
+        "generated_token_ids": [
+          2021,
+          67706
+        ],
+        "inter_token_p50_ns": 163012223,
+        "prompt_len": 52,
+        "session_id": 13,
+        "ttft_ns": 188264574
+      },
+      {
+        "complete_request_wall_ns": 349577618,
+        "decode_ns": 163898115,
+        "generated_token_ids": [
+          1386,
+          10810
+        ],
+        "inter_token_p50_ns": 163892164,
+        "prompt_len": 53,
+        "session_id": 13,
+        "ttft_ns": 185672083
+      },
+      {
+        "complete_request_wall_ns": 317356439,
+        "decode_ns": 140535313,
+        "generated_token_ids": [
+          5113,
+          33036
+        ],
+        "inter_token_p50_ns": 140529431,
+        "prompt_len": 54,
+        "session_id": 13,
+        "ttft_ns": 176813980
+      },
+      {
+        "complete_request_wall_ns": 348017986,
+        "decode_ns": 163475294,
+        "generated_token_ids": [
+          529,
+          9884
+        ],
+        "inter_token_p50_ns": 163469519,
+        "prompt_len": 55,
+        "session_id": 13,
+        "ttft_ns": 184535496
+      },
+      {
+        "complete_request_wall_ns": 336836281,
+        "decode_ns": 150974564,
+        "generated_token_ids": [
+          672,
+          5597
+        ],
+        "inter_token_p50_ns": 150968657,
+        "prompt_len": 56,
+        "session_id": 13,
+        "ttft_ns": 185854353
+      },
+      {
+        "complete_request_wall_ns": 322547091,
+        "decode_ns": 144634589,
+        "generated_token_ids": [
+          3658,
+          2214
+        ],
+        "inter_token_p50_ns": 144628852,
+        "prompt_len": 57,
+        "session_id": 13,
+        "ttft_ns": 177905071
+      },
+      {
+        "complete_request_wall_ns": 346115282,
+        "decode_ns": 161696734,
+        "generated_token_ids": [
+          6425,
+          67706
+        ],
+        "inter_token_p50_ns": 161691122,
+        "prompt_len": 58,
+        "session_id": 13,
+        "ttft_ns": 184411244
+      },
+      {
+        "complete_request_wall_ns": 336176332,
+        "decode_ns": 150757959,
+        "generated_token_ids": [
+          236764,
+          8858
+        ],
+        "inter_token_p50_ns": 150751988,
+        "prompt_len": 59,
+        "session_id": 13,
+        "ttft_ns": 185411199
+      },
+      {
+        "complete_request_wall_ns": 310212501,
+        "decode_ns": 134385782,
+        "generated_token_ids": [
+          1509,
+          3485
+        ],
+        "inter_token_p50_ns": 134380019,
+        "prompt_len": 50,
+        "session_id": 14,
+        "ttft_ns": 175819334
+      },
+      {
+        "complete_request_wall_ns": 296618248,
+        "decode_ns": 137044521,
+        "generated_token_ids": [
+          7412,
+          107
+        ],
+        "inter_token_p50_ns": 137038791,
+        "prompt_len": 51,
+        "session_id": 14,
+        "ttft_ns": 159566527
+      },
+      {
+        "complete_request_wall_ns": 344287604,
+        "decode_ns": 162612614,
+        "generated_token_ids": [
+          611,
+          2541
+        ],
+        "inter_token_p50_ns": 162606866,
+        "prompt_len": 52,
+        "session_id": 14,
+        "ttft_ns": 181667484
+      },
+      {
+        "complete_request_wall_ns": 318786993,
+        "decode_ns": 135246277,
+        "generated_token_ids": [
+          735,
+          735
+        ],
+        "inter_token_p50_ns": 135240096,
+        "prompt_len": 53,
+        "session_id": 14,
+        "ttft_ns": 183532761
+      },
+      {
+        "complete_request_wall_ns": 287222539,
+        "decode_ns": 134509441,
+        "generated_token_ids": [
+          3847,
+          4187
+        ],
+        "inter_token_p50_ns": 134503266,
+        "prompt_len": 54,
+        "session_id": 14,
+        "ttft_ns": 152705434
+      },
+      {
+        "complete_request_wall_ns": 296177583,
+        "decode_ns": 135454260,
+        "generated_token_ids": [
+          496,
+          1847
+        ],
+        "inter_token_p50_ns": 135448490,
+        "prompt_len": 55,
+        "session_id": 14,
+        "ttft_ns": 160715805
+      },
+      {
+        "complete_request_wall_ns": 322797723,
+        "decode_ns": 141975581,
+        "generated_token_ids": [
+          5249,
+          2416
+        ],
+        "inter_token_p50_ns": 141969741,
+        "prompt_len": 56,
+        "session_id": 14,
+        "ttft_ns": 180814316
+      },
+      {
+        "complete_request_wall_ns": 291237977,
+        "decode_ns": 134422461,
+        "generated_token_ids": [
+          529,
+          32147
+        ],
+        "inter_token_p50_ns": 134416805,
+        "prompt_len": 57,
+        "session_id": 14,
+        "ttft_ns": 156808089
+      },
+      {
+        "complete_request_wall_ns": 335293769,
+        "decode_ns": 160348139,
+        "generated_token_ids": [
+          1509,
+          144236
+        ],
+        "inter_token_p50_ns": 160342373,
+        "prompt_len": 49,
+        "session_id": 15,
+        "ttft_ns": 174938448
+      },
+      {
+        "complete_request_wall_ns": 335235448,
+        "decode_ns": 157367734,
+        "generated_token_ids": [
+          7412,
+          236770
+        ],
+        "inter_token_p50_ns": 157362040,
+        "prompt_len": 50,
+        "session_id": 15,
+        "ttft_ns": 177860377
+      },
+      {
+        "complete_request_wall_ns": 284249287,
+        "decode_ns": 131200368,
+        "generated_token_ids": [
+          611,
+          20218
+        ],
+        "inter_token_p50_ns": 131194904,
+        "prompt_len": 51,
+        "session_id": 15,
+        "ttft_ns": 153041858
+      },
+      {
+        "complete_request_wall_ns": 279150062,
+        "decode_ns": 128174441,
+        "generated_token_ids": [
+          659,
+          20218
+        ],
+        "inter_token_p50_ns": 128168791,
+        "prompt_len": 52,
+        "session_id": 15,
+        "ttft_ns": 150968730
+      },
+      {
+        "complete_request_wall_ns": 282867710,
+        "decode_ns": 131873247,
+        "generated_token_ids": [
+          6655,
+          20218
+        ],
+        "inter_token_p50_ns": 131867613,
+        "prompt_len": 53,
+        "session_id": 15,
+        "ttft_ns": 150987179
+      },
+      {
+        "complete_request_wall_ns": 283183987,
+        "decode_ns": 130715562,
+        "generated_token_ids": [
+          496,
+          20218
+        ],
+        "inter_token_p50_ns": 130709779,
+        "prompt_len": 54,
+        "session_id": 15,
+        "ttft_ns": 152461500
+      },
+      {
+        "complete_request_wall_ns": 316489926,
+        "decode_ns": 154549273,
+        "generated_token_ids": [
+          7501,
+          8355
+        ],
+        "inter_token_p50_ns": 154543487,
+        "prompt_len": 55,
+        "session_id": 15,
+        "ttft_ns": 161933338
+      },
+      {
+        "complete_request_wall_ns": 334993781,
+        "decode_ns": 157717589,
+        "generated_token_ids": [
+          529,
+          20218
+        ],
+        "inter_token_p50_ns": 157712003,
+        "prompt_len": 56,
+        "session_id": 15,
+        "ttft_ns": 177268758
+      },
+      {
+        "complete_request_wall_ns": 306284568,
+        "decode_ns": 129686278,
+        "generated_token_ids": [
+          1509,
+          236770
+        ],
+        "inter_token_p50_ns": 129680677,
+        "prompt_len": 53,
+        "session_id": 16,
+        "ttft_ns": 176591149
+      },
+      {
+        "complete_request_wall_ns": 294008965,
+        "decode_ns": 144826464,
+        "generated_token_ids": [
+          5724,
+          657
+        ],
+        "inter_token_p50_ns": 144820921,
+        "prompt_len": 54,
+        "session_id": 16,
+        "ttft_ns": 149175545
+      },
+      {
+        "complete_request_wall_ns": 321505527,
+        "decode_ns": 145493860,
+        "generated_token_ids": [
+          1133,
+          117874
+        ],
+        "inter_token_p50_ns": 145488365,
+        "prompt_len": 55,
+        "session_id": 16,
+        "ttft_ns": 176004605
+      },
+      {
+        "complete_request_wall_ns": 332463074,
+        "decode_ns": 156305904,
+        "generated_token_ids": [
+          611,
+          117874
+        ],
+        "inter_token_p50_ns": 156300108,
+        "prompt_len": 56,
+        "session_id": 16,
+        "ttft_ns": 176149983
+      },
+      {
+        "complete_request_wall_ns": 283474822,
+        "decode_ns": 129844050,
+        "generated_token_ids": [
+          735,
+          735
+        ],
+        "inter_token_p50_ns": 129838604,
+        "prompt_len": 57,
+        "session_id": 16,
+        "ttft_ns": 153623971
+      },
+      {
+        "complete_request_wall_ns": 259483706,
+        "decode_ns": 123962512,
+        "generated_token_ids": [
+          7659,
+          13812
+        ],
+        "inter_token_p50_ns": 123956659,
+        "prompt_len": 58,
+        "session_id": 16,
+        "ttft_ns": 135512391
+      },
+      {
+        "complete_request_wall_ns": 284032912,
+        "decode_ns": 134702023,
+        "generated_token_ids": [
+          496,
+          117874
+        ],
+        "inter_token_p50_ns": 134695050,
+        "prompt_len": 59,
+        "session_id": 16,
+        "ttft_ns": 149323125
+      },
+      {
+        "complete_request_wall_ns": 297138627,
+        "decode_ns": 130989973,
+        "generated_token_ids": [
+          4148,
+          1902
+        ],
+        "inter_token_p50_ns": 130984086,
+        "prompt_len": 60,
+        "session_id": 16,
+        "ttft_ns": 166141645
+      },
+      {
+        "complete_request_wall_ns": 307054229,
+        "decode_ns": 153341027,
+        "generated_token_ids": [
+          1509,
+          1570
+        ],
+        "inter_token_p50_ns": 153335508,
+        "prompt_len": 50,
+        "session_id": 17,
+        "ttft_ns": 153705999
+      },
+      {
+        "complete_request_wall_ns": 336508891,
+        "decode_ns": 159859406,
+        "generated_token_ids": [
+          12054,
+          5743
+        ],
+        "inter_token_p50_ns": 159853251,
+        "prompt_len": 51,
+        "session_id": 17,
+        "ttft_ns": 176641630
+      },
+      {
+        "complete_request_wall_ns": 308636100,
+        "decode_ns": 132059676,
+        "generated_token_ids": [
+          1133,
+          678
+        ],
+        "inter_token_p50_ns": 132053748,
+        "prompt_len": 52,
+        "session_id": 17,
+        "ttft_ns": 176569272
+      },
+      {
+        "complete_request_wall_ns": 284894077,
+        "decode_ns": 134463327,
+        "generated_token_ids": [
+          611,
+          678
+        ],
+        "inter_token_p50_ns": 134457584,
+        "prompt_len": 53,
+        "session_id": 17,
+        "ttft_ns": 150423470
+      },
+      {
+        "complete_request_wall_ns": 317899830,
+        "decode_ns": 144566510,
+        "generated_token_ids": [
+          659,
+          678
+        ],
+        "inter_token_p50_ns": 144560608,
+        "prompt_len": 54,
+        "session_id": 17,
+        "ttft_ns": 173326230
+      },
+      {
+        "complete_request_wall_ns": 327599705,
+        "decode_ns": 150365967,
+        "generated_token_ids": [
+          22454,
+          22454
+        ],
+        "inter_token_p50_ns": 150359829,
+        "prompt_len": 55,
+        "session_id": 17,
+        "ttft_ns": 177225788
+      },
+      {
+        "complete_request_wall_ns": 334159901,
+        "decode_ns": 159235675,
+        "generated_token_ids": [
+          496,
+          5743
+        ],
+        "inter_token_p50_ns": 159230042,
+        "prompt_len": 56,
+        "session_id": 17,
+        "ttft_ns": 174916969
+      },
+      {
+        "complete_request_wall_ns": 325550831,
+        "decode_ns": 147605683,
+        "generated_token_ids": [
+          5213,
+          5213
+        ],
+        "inter_token_p50_ns": 147599997,
+        "prompt_len": 57,
+        "session_id": 17,
+        "ttft_ns": 177938112
+      },
+      {
+        "complete_request_wall_ns": 340441536,
+        "decode_ns": 159514789,
+        "generated_token_ids": [
+          1509,
+          236761
+        ],
+        "inter_token_p50_ns": 159508825,
+        "prompt_len": 50,
+        "session_id": 18,
+        "ttft_ns": 180919080
+      },
+      {
+        "complete_request_wall_ns": 291222969,
+        "decode_ns": 132998667,
+        "generated_token_ids": [
+          7412,
+          236761
+        ],
+        "inter_token_p50_ns": 132993107,
+        "prompt_len": 51,
+        "session_id": 18,
+        "ttft_ns": 158217275
+      },
+      {
+        "complete_request_wall_ns": 298346836,
+        "decode_ns": 138502395,
+        "generated_token_ids": [
+          611,
+          833
+        ],
+        "inter_token_p50_ns": 138496932,
+        "prompt_len": 52,
+        "session_id": 18,
+        "ttft_ns": 159837443
+      },
+      {
+        "complete_request_wall_ns": 290379828,
+        "decode_ns": 138308897,
+        "generated_token_ids": [
+          735,
+          735
+        ],
+        "inter_token_p50_ns": 138303034,
+        "prompt_len": 53,
+        "session_id": 18,
+        "ttft_ns": 152063848
+      },
+      {
+        "complete_request_wall_ns": 292216360,
+        "decode_ns": 133185645,
+        "generated_token_ids": [
+          3847,
+          833
+        ],
+        "inter_token_p50_ns": 133179945,
+        "prompt_len": 54,
+        "session_id": 18,
+        "ttft_ns": 159023706
+      },
+      {
+        "complete_request_wall_ns": 323287902,
+        "decode_ns": 144726948,
+        "generated_token_ids": [
+          496,
+          833
+        ],
+        "inter_token_p50_ns": 144721378,
+        "prompt_len": 55,
+        "session_id": 18,
+        "ttft_ns": 178553925
+      },
+      {
+        "complete_request_wall_ns": 344226960,
+        "decode_ns": 162321809,
+        "generated_token_ids": [
+          2483,
+          833
+        ],
+        "inter_token_p50_ns": 162316093,
+        "prompt_len": 56,
+        "session_id": 18,
+        "ttft_ns": 181898079
+      },
+      {
+        "complete_request_wall_ns": 308768975,
+        "decode_ns": 132884621,
+        "generated_token_ids": [
+          529,
+          2360
+        ],
+        "inter_token_p50_ns": 132879275,
+        "prompt_len": 57,
+        "session_id": 18,
+        "ttft_ns": 175877238
+      },
+      {
+        "complete_request_wall_ns": 501553386,
+        "decode_ns": 161941224,
+        "generated_token_ids": [
+          11513,
+          3223
+        ],
+        "inter_token_p50_ns": 161935520,
+        "prompt_len": 65,
+        "session_id": 19,
+        "ttft_ns": 339604995
+      },
+      {
+        "complete_request_wall_ns": 478518056,
+        "decode_ns": 133682610,
+        "generated_token_ids": [
+          5597,
+          2214
+        ],
+        "inter_token_p50_ns": 133676526,
+        "prompt_len": 66,
+        "session_id": 19,
+        "ttft_ns": 344827683
+      },
+      {
+        "complete_request_wall_ns": 506269457,
+        "decode_ns": 161222729,
+        "generated_token_ids": [
+          236761,
+          1208
+        ],
+        "inter_token_p50_ns": 161216889,
+        "prompt_len": 67,
+        "session_id": 19,
+        "ttft_ns": 345038843
+      },
+      {
+        "complete_request_wall_ns": 493959104,
+        "decode_ns": 132988594,
+        "generated_token_ids": [
+          2214,
+          8001
+        ],
+        "inter_token_p50_ns": 132982442,
+        "prompt_len": 68,
+        "session_id": 19,
+        "ttft_ns": 360962843
+      },
+      {
+        "complete_request_wall_ns": 435744625,
+        "decode_ns": 132748612,
+        "generated_token_ids": [
+          236761,
+          67706
+        ],
+        "inter_token_p50_ns": 132742361,
+        "prompt_len": 69,
+        "session_id": 19,
+        "ttft_ns": 302988091
+      },
+      {
+        "complete_request_wall_ns": 436416637,
+        "decode_ns": 132511547,
+        "generated_token_ids": [
+          108,
+          236786
+        ],
+        "inter_token_p50_ns": 132505012,
+        "prompt_len": 70,
+        "session_id": 19,
+        "ttft_ns": 303896594
+      },
+      {
+        "complete_request_wall_ns": 436892928,
+        "decode_ns": 132920341,
+        "generated_token_ids": [
+          6460,
+          6460
+        ],
+        "inter_token_p50_ns": 132914333,
+        "prompt_len": 71,
+        "session_id": 19,
+        "ttft_ns": 303964863
+      },
+      {
+        "complete_request_wall_ns": 429835516,
+        "decode_ns": 127465184,
+        "generated_token_ids": [
+          1208,
+          17971
+        ],
+        "inter_token_p50_ns": 127458786,
+        "prompt_len": 72,
+        "session_id": 19,
+        "ttft_ns": 302362039
+      },
+      {
+        "complete_request_wall_ns": 432013916,
+        "decode_ns": 130292494,
+        "generated_token_ids": [
+          236786,
+          11935
+        ],
+        "inter_token_p50_ns": 130286487,
+        "prompt_len": 67,
+        "session_id": 20,
+        "ttft_ns": 301713817
+      },
+      {
+        "complete_request_wall_ns": 418597030,
+        "decode_ns": 129499557,
+        "generated_token_ids": [
+          106,
+          255999
+        ],
+        "inter_token_p50_ns": 129493689,
+        "prompt_len": 68,
+        "session_id": 20,
+        "ttft_ns": 289089639
+      },
+      {
+        "complete_request_wall_ns": 410176247,
+        "decode_ns": 129018378,
+        "generated_token_ids": [
+          100,
+          107
+        ],
+        "inter_token_p50_ns": 129011515,
+        "prompt_len": 69,
+        "session_id": 20,
+        "ttft_ns": 281148768
+      },
+      {
+        "complete_request_wall_ns": 493014473,
+        "decode_ns": 155941288,
+        "generated_token_ids": [
+          236786,
+          236745
+        ],
+        "inter_token_p50_ns": 155935569,
+        "prompt_len": 70,
+        "session_id": 20,
+        "ttft_ns": 337065445
+      },
+      {
+        "complete_request_wall_ns": 472779329,
+        "decode_ns": 131166564,
+        "generated_token_ids": [
+          236758,
+          236786
+        ],
+        "inter_token_p50_ns": 131160296,
+        "prompt_len": 71,
+        "session_id": 20,
+        "ttft_ns": 341604699
+      },
+      {
+        "complete_request_wall_ns": 480446155,
+        "decode_ns": 158005574,
+        "generated_token_ids": [
+          107,
+          2063
+        ],
+        "inter_token_p50_ns": 158000160,
+        "prompt_len": 72,
+        "session_id": 20,
+        "ttft_ns": 322433808
+      },
+      {
+        "complete_request_wall_ns": 478946411,
+        "decode_ns": 131925469,
+        "generated_token_ids": [
+          100,
+          45518
+        ],
+        "inter_token_p50_ns": 131920070,
+        "prompt_len": 73,
+        "session_id": 20,
+        "ttft_ns": 347013405
+      },
+      {
+        "complete_request_wall_ns": 446846930,
+        "decode_ns": 154020270,
+        "generated_token_ids": [
+          45518,
+          236779
+        ],
+        "inter_token_p50_ns": 154014243,
+        "prompt_len": 74,
+        "session_id": 20,
+        "ttft_ns": 292818981
+      },
+      {
+        "complete_request_wall_ns": 517079788,
+        "decode_ns": 163507670,
+        "generated_token_ids": [
+          101,
+          236800
+        ],
+        "inter_token_p50_ns": 163501363,
+        "prompt_len": 67,
+        "session_id": 21,
+        "ttft_ns": 353564076
+      },
+      {
+        "complete_request_wall_ns": 458155919,
+        "decode_ns": 153102233,
+        "generated_token_ids": [
+          100,
+          107
+        ],
+        "inter_token_p50_ns": 153096495,
+        "prompt_len": 68,
+        "session_id": 21,
+        "ttft_ns": 305046176
+      },
+      {
+        "complete_request_wall_ns": 514396305,
+        "decode_ns": 159389369,
+        "generated_token_ids": [
+          107,
+          236800
+        ],
+        "inter_token_p50_ns": 159383325,
+        "prompt_len": 69,
+        "session_id": 21,
+        "ttft_ns": 354997766
+      },
+      {
+        "complete_request_wall_ns": 474564807,
+        "decode_ns": 155174601,
+        "generated_token_ids": [
+          100,
+          236743
+        ],
+        "inter_token_p50_ns": 155168636,
+        "prompt_len": 70,
+        "session_id": 21,
+        "ttft_ns": 319382412
+      },
+      {
+        "complete_request_wall_ns": 507104612,
+        "decode_ns": 159348131,
+        "generated_token_ids": [
+          45518,
+          45518
+        ],
+        "inter_token_p50_ns": 159342348,
+        "prompt_len": 71,
+        "session_id": 21,
+        "ttft_ns": 347748409
+      },
+      {
+        "complete_request_wall_ns": 442139876,
+        "decode_ns": 135202084,
+        "generated_token_ids": [
+          107,
+          236800
+        ],
+        "inter_token_p50_ns": 135196353,
+        "prompt_len": 72,
+        "session_id": 21,
+        "ttft_ns": 306929783
+      },
+      {
+        "complete_request_wall_ns": 440399929,
+        "decode_ns": 134670472,
+        "generated_token_ids": [
+          100,
+          236800
+        ],
+        "inter_token_p50_ns": 134664865,
+        "prompt_len": 73,
+        "session_id": 21,
+        "ttft_ns": 305721407
+      },
+      {
+        "complete_request_wall_ns": 439793914,
+        "decode_ns": 134298032,
+        "generated_token_ids": [
+          45518,
+          45518
+        ],
+        "inter_token_p50_ns": 134292194,
+        "prompt_len": 74,
+        "session_id": 21,
+        "ttft_ns": 305488010
+      },
+      {
+        "complete_request_wall_ns": 461418752,
+        "decode_ns": 155274068,
+        "generated_token_ids": [
+          236761,
+          236753
+        ],
+        "inter_token_p50_ns": 155268260,
+        "prompt_len": 65,
+        "session_id": 22,
+        "ttft_ns": 306136094
+      },
+      {
+        "complete_request_wall_ns": 455008938,
+        "decode_ns": 134464444,
+        "generated_token_ids": [
+          107,
+          12811
+        ],
+        "inter_token_p50_ns": 134458707,
+        "prompt_len": 66,
+        "session_id": 22,
+        "ttft_ns": 320537017
+      },
+      {
+        "complete_request_wall_ns": 462987297,
+        "decode_ns": 152768940,
+        "generated_token_ids": [
+          100,
+          236761
+        ],
+        "inter_token_p50_ns": 152763269,
+        "prompt_len": 67,
+        "session_id": 22,
+        "ttft_ns": 310210654
+      },
+      {
+        "complete_request_wall_ns": 486449886,
+        "decode_ns": 134109286,
+        "generated_token_ids": [
+          45518,
+          45518
+        ],
+        "inter_token_p50_ns": 134103658,
+        "prompt_len": 68,
+        "session_id": 22,
+        "ttft_ns": 352332596
+      },
+      {
+        "complete_request_wall_ns": 438949330,
+        "decode_ns": 134260574,
+        "generated_token_ids": [
+          107,
+          12811
+        ],
+        "inter_token_p50_ns": 134254831,
+        "prompt_len": 69,
+        "session_id": 22,
+        "ttft_ns": 304681340
+      },
+      {
+        "complete_request_wall_ns": 440373167,
+        "decode_ns": 134547460,
+        "generated_token_ids": [
+          236761,
+          236757
+        ],
+        "inter_token_p50_ns": 134541617,
+        "prompt_len": 70,
+        "session_id": 22,
+        "ttft_ns": 305817541
+      },
+      {
+        "complete_request_wall_ns": 502827979,
+        "decode_ns": 161841341,
+        "generated_token_ids": [
+          107,
+          12811
+        ],
+        "inter_token_p50_ns": 161835621,
+        "prompt_len": 71,
+        "session_id": 22,
+        "ttft_ns": 340979164
+      },
+      {
+        "complete_request_wall_ns": 500540430,
+        "decode_ns": 145688460,
+        "generated_token_ids": [
+          818,
+          818
+        ],
+        "inter_token_p50_ns": 145682088,
+        "prompt_len": 72,
+        "session_id": 22,
+        "ttft_ns": 354844080
+      },
+      {
+        "complete_request_wall_ns": 440275438,
+        "decode_ns": 134646657,
+        "generated_token_ids": [
+          236786,
+          2118
+        ],
+        "inter_token_p50_ns": 134640132,
+        "prompt_len": 67,
+        "session_id": 23,
+        "ttft_ns": 305619252
+      },
+      {
+        "complete_request_wall_ns": 490581550,
+        "decode_ns": 158679363,
+        "generated_token_ids": [
+          13481,
+          678
+        ],
+        "inter_token_p50_ns": 158672477,
+        "prompt_len": 68,
+        "session_id": 23,
+        "ttft_ns": 331893877
+      },
+      {
+        "complete_request_wall_ns": 442163030,
+        "decode_ns": 136462180,
+        "generated_token_ids": [
+          236779,
+          2118
+        ],
+        "inter_token_p50_ns": 136455899,
+        "prompt_len": 69,
+        "session_id": 23,
+        "ttft_ns": 305693047
+      },
+      {
+        "complete_request_wall_ns": 514437013,
+        "decode_ns": 162860119,
+        "generated_token_ids": [
+          1437,
+          2118
+        ],
+        "inter_token_p50_ns": 162854515,
+        "prompt_len": 70,
+        "session_id": 23,
+        "ttft_ns": 351569481
+      },
+      {
+        "complete_request_wall_ns": 441170799,
+        "decode_ns": 135382206,
+        "generated_token_ids": [
+          236779,
+          2118
+        ],
+        "inter_token_p50_ns": 135376359,
+        "prompt_len": 71,
+        "session_id": 23,
+        "ttft_ns": 305780999
+      },
+      {
+        "complete_request_wall_ns": 516407782,
+        "decode_ns": 161911184,
+        "generated_token_ids": [
+          3017,
+          3017
+        ],
+        "inter_token_p50_ns": 161905136,
+        "prompt_len": 72,
+        "session_id": 23,
+        "ttft_ns": 354488727
+      },
+      {
+        "complete_request_wall_ns": 454838517,
+        "decode_ns": 141111273,
+        "generated_token_ids": [
+          236779,
+          2118
+        ],
+        "inter_token_p50_ns": 141105543,
+        "prompt_len": 73,
+        "session_id": 23,
+        "ttft_ns": 313719296
+      },
+      {
+        "complete_request_wall_ns": 507533955,
+        "decode_ns": 158782487,
+        "generated_token_ids": [
+          1437,
+          1437
+        ],
+        "inter_token_p50_ns": 158776631,
+        "prompt_len": 74,
+        "session_id": 23,
+        "ttft_ns": 348743632
+      },
+      {
+        "complete_request_wall_ns": 460651753,
+        "decode_ns": 134597702,
+        "generated_token_ids": [
+          107,
+          236862
+        ],
+        "inter_token_p50_ns": 134591801,
+        "prompt_len": 66,
+        "session_id": 24,
+        "ttft_ns": 326046377
+      },
+      {
+        "complete_request_wall_ns": 508063251,
+        "decode_ns": 162835201,
+        "generated_token_ids": [
+          100,
+          236781
+        ],
+        "inter_token_p50_ns": 162829491,
+        "prompt_len": 67,
+        "session_id": 24,
+        "ttft_ns": 345220064
+      },
+      {
+        "complete_request_wall_ns": 462683737,
+        "decode_ns": 134666843,
+        "generated_token_ids": [
+          45518,
+          45518
+        ],
+        "inter_token_p50_ns": 134660966,
+        "prompt_len": 68,
+        "session_id": 24,
+        "ttft_ns": 328009059
+      },
+      {
+        "complete_request_wall_ns": 461154266,
+        "decode_ns": 155596798,
+        "generated_token_ids": [
+          107,
+          236862
+        ],
+        "inter_token_p50_ns": 155590430,
+        "prompt_len": 69,
+        "session_id": 24,
+        "ttft_ns": 305549188
+      },
+      {
+        "complete_request_wall_ns": 455697532,
+        "decode_ns": 133286262,
+        "generated_token_ids": [
+          100,
+          236781
+        ],
+        "inter_token_p50_ns": 133280047,
+        "prompt_len": 70,
+        "session_id": 24,
+        "ttft_ns": 322403723
+      },
+      {
+        "complete_request_wall_ns": 499175142,
+        "decode_ns": 159144058,
+        "generated_token_ids": [
+          45518,
+          45518
+        ],
+        "inter_token_p50_ns": 159138508,
+        "prompt_len": 71,
+        "session_id": 24,
+        "ttft_ns": 340023337
+      },
+      {
+        "complete_request_wall_ns": 475609724,
+        "decode_ns": 132723124,
+        "generated_token_ids": [
+          107,
+          236862
+        ],
+        "inter_token_p50_ns": 132717518,
+        "prompt_len": 72,
+        "session_id": 24,
+        "ttft_ns": 342878295
+      },
+      {
+        "complete_request_wall_ns": 435219955,
+        "decode_ns": 133198508,
+        "generated_token_ids": [
+          101,
+          236743
+        ],
+        "inter_token_p50_ns": 133192687,
+        "prompt_len": 73,
+        "session_id": 24,
+        "ttft_ns": 302013860
+      }
+    ],
+    "stages": [
+      {
+        "attention_backend": "triton",
+        "checkpoint_bytes_processed": 9256814624,
+        "checkpoint_bytes_selected": 9256814624,
+        "cpu_owned_decoder_layers": 0,
+        "cpu_weight_offload": false,
+        "cuda_allocated_after_runtime_initialization_bytes": 10117708288,
+        "cuda_allocated_after_weights_bytes": 10087294976,
+        "cuda_allocated_before_load_bytes": 0,
+        "cuda_allocated_bytes": 10126245376,
+        "cuda_free_after_runtime_initialization_bytes": 2137128960,
+        "cuda_free_before_load_bytes": 12367036416,
+        "cuda_peak_bytes": 10133622784,
+        "cuda_total_memory_bytes": 12485525504,
+        "fetched_bytes": 9256814624,
+        "fetched_keys": 223,
+        "fusion_source_peak_live_bytes": 117964800,
+        "global_layer_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15
+        ],
+        "host_lifecycle_snapshots": {
+          "P0_fresh_worker": {
+            "pid": 506616,
+            "process_smaps_rollup_bytes": {
+              "Anonymous": 405544960,
+              "Locked": 0,
+              "Private_Clean": 851968,
+              "Private_Dirty": 405544960,
+              "Pss": 497291264,
+              "Rss": 685756416,
+              "Shared_Clean": 279359488,
+              "Shared_Dirty": 0,
+              "Swap": 0,
+              "SwapPss": 0
+            },
+            "process_status_bytes": {
+              "RssAnon": 405544960,
+              "RssFile": 280211456,
+              "RssShmem": 0,
+              "VmHWM": 685756416,
+              "VmLck": 0,
+              "VmRSS": 685756416,
+              "VmSwap": 0
+            },
+            "system_meminfo_bytes": {
+              "Cached": 65665662976,
+              "MemAvailable": 129074241536,
+              "MemFree": 64364572672,
+              "Mlocked": 0,
+              "Shmem": 1448366080,
+              "SwapFree": 12299268096
+            },
+            "worker_alive": true
+          },
+          "P1_source_load_complete": {
+            "pid": 506616,
+            "process_smaps_rollup_bytes": {
+              "Anonymous": 636080128,
+              "Locked": 0,
+              "Private_Clean": 62787584,
+              "Private_Dirty": 650170368,
+              "Pss": 868414464,
+              "Rss": 1122168832,
+              "Shared_Clean": 409210880,
+              "Shared_Dirty": 0,
+              "Swap": 0,
+              "SwapPss": 0
+            },
+            "process_status_bytes": {
+              "RssAnon": 636080128,
+              "RssFile": 475602944,
+              "RssShmem": 10485760,
+              "VmHWM": 3132653568,
+              "VmLck": 0,
+              "VmRSS": 1122168832,
+              "VmSwap": 0
+            },
+            "system_meminfo_bytes": {
+              "Cached": 65691762688,
+              "MemAvailable": 128373874688,
+              "MemFree": 63658708992,
+              "Mlocked": 0,
+              "Shmem": 1469337600,
+              "SwapFree": 12299268096
+            },
+            "worker_alive": true
+          },
+          "P4_ready_for_resident_execution": {
+            "pid": 506616,
+            "process_smaps_rollup_bytes": {
+              "Anonymous": 636301312,
+              "Locked": 0,
+              "Private_Clean": 62775296,
+              "Private_Dirty": 650403840,
+              "Pss": 868801536,
+              "Rss": 1122721792,
+              "Shared_Clean": 409542656,
+              "Shared_Dirty": 0,
+              "Swap": 0,
+              "SwapPss": 0
+            },
+            "process_status_bytes": {
+              "RssAnon": 636301312,
+              "RssFile": 475934720,
+              "RssShmem": 10485760,
+              "VmHWM": 3132653568,
+              "VmLck": 0,
+              "VmRSS": 1122721792,
+              "VmSwap": 0
+            },
+            "system_meminfo_bytes": {
+              "Cached": 65691766784,
+              "MemAvailable": 128373874688,
+              "MemFree": 63658708992,
+              "Mlocked": 0,
+              "Shmem": 1469337600,
+              "SwapFree": 12299268096
+            },
+            "worker_alive": true
+          },
+          "P5_repeated_resident_decode": {
+            "pid": 506616,
+            "process_smaps_rollup_bytes": {
+              "Anonymous": 1043501056,
+              "Locked": 0,
+              "Private_Clean": 59781120,
+              "Private_Dirty": 1060696064,
+              "Pss": 1323009024,
+              "Rss": 1624731648,
+              "Shared_Clean": 504254464,
+              "Shared_Dirty": 0,
+              "Swap": 0,
+              "SwapPss": 0
+            },
+            "process_status_bytes": {
+              "RssAnon": 1043501056,
+              "RssFile": 570744832,
+              "RssShmem": 10485760,
+              "VmHWM": 3132653568,
+              "VmLck": 0,
+              "VmRSS": 1624731648,
+              "VmSwap": 0
+            },
+            "system_meminfo_bytes": {
+              "Cached": 65693384704,
+              "MemAvailable": 127798853632,
+              "MemFree": 63081902080,
+              "Mlocked": 0,
+              "Shmem": 1469345792,
+              "SwapFree": 12299268096
+            },
+            "worker_alive": true
+          }
+        },
+        "host_peak_staging_bytes": 2013265920,
+        "host_resident_tensor_keys": [],
+        "host_staging_current_bytes": 0,
+        "host_staging_peak_live_tensor_bytes": 2013265920,
+        "host_staging_total_bytes_processed": 9256814624,
+        "kv_state_bytes": 3084,
+        "largest_individual_raw_tensor_bytes": 2013265920,
+        "load_elapsed_seconds": 8.087692367960699,
+        "page_cache_advisory_calls": 223,
+        "persistent_host_model_bytes": 0,
+        "pid": 506616,
+        "process_after_realization": {
+          "RssAnon_kib": 621388,
+          "RssFile_kib": 464780,
+          "RssShmem_kib": 10240,
+          "VmHWM_kib": 3059232,
+          "VmPeak_kib": 47467372,
+          "VmRSS_kib": 1096408,
+          "VmSwap_kib": 0
+        },
+        "process_after_source_load": {
+          "RssAnon_kib": 621172,
+          "RssFile_kib": 464456,
+          "RssShmem_kib": 10240,
+          "VmHWM_kib": 3059232,
+          "VmPeak_kib": 47467372,
+          "VmRSS_kib": 1095868,
+          "VmSwap_kib": 0
+        },
+        "process_before": {
+          "RssAnon_kib": 396040,
+          "RssFile_kib": 273644,
+          "RssShmem_kib": 0,
+          "VmHWM_kib": 669684,
+          "VmPeak_kib": 4607532,
+          "VmRSS_kib": 669684,
+          "VmSwap_kib": 0
+        },
+        "process_current": {
+          "RssAnon_kib": 1019044,
+          "RssFile_kib": 557368,
+          "RssShmem_kib": 10240,
+          "VmHWM_kib": 3059232,
+          "VmPeak_kib": 47467372,
+          "VmRSS_kib": 1586652,
+          "VmSwap_kib": 0
+        },
+        "process_fault_swap_delta": {
+          "major_page_faults": 0,
+          "minor_page_faults": 265457,
+          "swaps": 0
+        },
+        "resident_device_bytes": 9264678944,
+        "resident_only": true,
+        "role": "first",
+        "ru_maxrss_kib": 3059232,
+        "safetensors_mapping_close_count": 223,
+        "safetensors_mapping_open_count": 223,
+        "semantic_boundaries": null,
+        "single_tied_embedding_storage": false,
+        "state_ownership": {
+          "kv_cache_allocated_bytes": 3084,
+          "kv_global_layer_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "kv_local_layer_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "total_block_local_state_bytes": 3084
+        },
+        "tied_embedding_materializations": 1,
+        "unexpected_checkpoint_keys": [],
+        "unexplained_persistent_host_mirror_bytes": 0,
+        "vmstat_delta": {
+          "pgmajfault": 0,
+          "pswpin": 0,
+          "pswpout": 0
+        },
+        "whole_shard_sentinel_calls": 0
+      },
+      {
+        "attention_backend": "triton",
+        "checkpoint_bytes_processed": 7278939168,
+        "checkpoint_bytes_selected": 7278939168,
+        "cpu_owned_decoder_layers": 0,
+        "cpu_weight_offload": false,
+        "cuda_allocated_after_runtime_initialization_bytes": 8144289280,
+        "cuda_allocated_after_weights_bytes": 8115448832,
+        "cuda_allocated_before_load_bytes": 0,
+        "cuda_allocated_bytes": 8152826368,
+        "cuda_free_after_runtime_initialization_bytes": 4146200576,
+        "cuda_free_before_load_bytes": 12369133568,
+        "cuda_peak_bytes": 8160203776,
+        "cuda_total_memory_bytes": 12487622656,
+        "fetched_bytes": 7278939168,
+        "fetched_keys": 221,
+        "fusion_source_peak_live_bytes": 117964800,
+        "global_layer_ids": [
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31
+        ],
+        "host_lifecycle_snapshots": {
+          "P0_fresh_worker": {
+            "pid": 506617,
+            "process_smaps_rollup_bytes": {
+              "Anonymous": 405544960,
+              "Locked": 0,
+              "Private_Clean": 16384,
+              "Private_Dirty": 405544960,
+              "Pss": 496925696,
+              "Rss": 685764608,
+              "Shared_Clean": 280203264,
+              "Shared_Dirty": 0,
+              "Swap": 0,
+              "SwapPss": 0
+            },
+            "process_status_bytes": {
+              "RssAnon": 405544960,
+              "RssFile": 280219648,
+              "RssShmem": 0,
+              "VmHWM": 685764608,
+              "VmLck": 0,
+              "VmRSS": 685764608,
+              "VmSwap": 0
+            },
+            "system_meminfo_bytes": {
+              "Cached": 65665769472,
+              "MemAvailable": 129039429632,
+              "MemFree": 64329633792,
+              "Mlocked": 0,
+              "Shmem": 1448366080,
+              "SwapFree": 12299268096
+            },
+            "worker_alive": true
+          },
+          "P1_source_load_complete": {
+            "pid": 506617,
+            "process_smaps_rollup_bytes": {
+              "Anonymous": 635936768,
+              "Locked": 0,
+              "Private_Clean": 62787584,
+              "Private_Dirty": 650027008,
+              "Pss": 868283392,
+              "Rss": 1121955840,
+              "Shared_Clean": 409141248,
+              "Shared_Dirty": 0,
+              "Swap": 0,
+              "SwapPss": 0
+            },
+            "process_status_bytes": {
+              "RssAnon": 635936768,
+              "RssFile": 475533312,
+              "RssShmem": 10485760,
+              "VmHWM": 1237803008,
+              "VmLck": 0,
+              "VmRSS": 1121955840,
+              "VmSwap": 0
+            },
+            "system_meminfo_bytes": {
+              "Cached": 65691717632,
+              "MemAvailable": 128373243904,
+              "MemFree": 63658127360,
+              "Mlocked": 0,
+              "Shmem": 1469337600,
+              "SwapFree": 12299268096
+            },
+            "worker_alive": true
+          },
+          "P4_ready_for_resident_execution": {
+            "pid": 506617,
+            "process_smaps_rollup_bytes": {
+              "Anonymous": 636174336,
+              "Locked": 0,
+              "Private_Clean": 63102976,
+              "Private_Dirty": 650280960,
+              "Pss": 868852736,
+              "Rss": 1122525184,
+              "Shared_Clean": 409141248,
+              "Shared_Dirty": 0,
+              "Swap": 0,
+              "SwapPss": 0
+            },
+            "process_status_bytes": {
+              "RssAnon": 636174336,
+              "RssFile": 475865088,
+              "RssShmem": 10485760,
+              "VmHWM": 1237803008,
+              "VmLck": 0,
+              "VmRSS": 1122525184,
+              "VmSwap": 0
+            },
+            "system_meminfo_bytes": {
+              "Cached": 65691725824,
+              "MemAvailable": 128372994048,
+              "MemFree": 63657869312,
+              "Mlocked": 0,
+              "Shmem": 1469337600,
+              "SwapFree": 12299268096
+            },
+            "worker_alive": true
+          },
+          "P5_repeated_resident_decode": {
+            "pid": 506617,
+            "process_smaps_rollup_bytes": {
+              "Anonymous": 1043017728,
+              "Locked": 0,
+              "Private_Clean": 59715584,
+              "Private_Dirty": 1060212736,
+              "Pss": 1322471424,
+              "Rss": 1624109056,
+              "Shared_Clean": 504180736,
+              "Shared_Dirty": 0,
+              "Swap": 0,
+              "SwapPss": 0
+            },
+            "process_status_bytes": {
+              "RssAnon": 1043017728,
+              "RssFile": 570605568,
+              "RssShmem": 10485760,
+              "VmHWM": 1624109056,
+              "VmLck": 0,
+              "VmRSS": 1624109056,
+              "VmSwap": 0
+            },
+            "system_meminfo_bytes": {
+              "Cached": 65693384704,
+              "MemAvailable": 127798853632,
+              "MemFree": 63081902080,
+              "Mlocked": 0,
+              "Shmem": 1469345792,
+              "SwapFree": 12299268096
+            },
+            "worker_alive": true
+          }
+        },
+        "host_peak_staging_bytes": 117964800,
+        "host_resident_tensor_keys": [],
+        "host_staging_current_bytes": 0,
+        "host_staging_peak_live_tensor_bytes": 117964800,
+        "host_staging_total_bytes_processed": 7278939168,
+        "kv_state_bytes": 3084,
+        "largest_individual_raw_tensor_bytes": 117964800,
+        "load_elapsed_seconds": 7.194916998036206,
+        "page_cache_advisory_calls": 221,
+        "persistent_host_model_bytes": 0,
+        "pid": 506617,
+        "process_after_realization": {
+          "RssAnon_kib": 621260,
+          "RssFile_kib": 464712,
+          "RssShmem_kib": 10240,
+          "VmHWM_kib": 1208792,
+          "VmPeak_kib": 39806076,
+          "VmRSS_kib": 1096212,
+          "VmSwap_kib": 0
+        },
+        "process_after_source_load": {
+          "RssAnon_kib": 621032,
+          "RssFile_kib": 464388,
+          "RssShmem_kib": 10240,
+          "VmHWM_kib": 1208792,
+          "VmPeak_kib": 39806076,
+          "VmRSS_kib": 1095660,
+          "VmSwap_kib": 0
+        },
+        "process_before": {
+          "RssAnon_kib": 396044,
+          "RssFile_kib": 273652,
+          "RssShmem_kib": 0,
+          "VmHWM_kib": 669696,
+          "VmPeak_kib": 4607548,
+          "VmRSS_kib": 669696,
+          "VmSwap_kib": 0
+        },
+        "process_current": {
+          "RssAnon_kib": 1018572,
+          "RssFile_kib": 557232,
+          "RssShmem_kib": 10240,
+          "VmHWM_kib": 1586044,
+          "VmPeak_kib": 39806076,
+          "VmRSS_kib": 1586044,
+          "VmSwap_kib": 0
+        },
+        "process_fault_swap_delta": {
+          "major_page_faults": 0,
+          "minor_page_faults": 239207,
+          "swaps": 0
+        },
+        "resident_device_bytes": 7290735648,
+        "resident_only": true,
+        "role": "middle",
+        "ru_maxrss_kib": 1582832,
+        "safetensors_mapping_close_count": 221,
+        "safetensors_mapping_open_count": 221,
+        "semantic_boundaries": null,
+        "single_tied_embedding_storage": false,
+        "state_ownership": {
+          "kv_cache_allocated_bytes": 3084,
+          "kv_global_layer_ids": [
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ],
+          "kv_local_layer_ids": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15
+          ],
+          "total_block_local_state_bytes": 3084
+        },
+        "tied_embedding_materializations": 0,
+        "unexpected_checkpoint_keys": [],
+        "unexplained_persistent_host_mirror_bytes": 0,
+        "vmstat_delta": {
+          "pgmajfault": 0,
+          "pswpin": 0,
+          "pswpout": 0
+        },
+        "whole_shard_sentinel_calls": 0
+      },
+      {
+        "remote": true
+      }
+    ]
+  },
+  "schema": "inferswarm.issue117.arm-c.direct-run/1"
+}
