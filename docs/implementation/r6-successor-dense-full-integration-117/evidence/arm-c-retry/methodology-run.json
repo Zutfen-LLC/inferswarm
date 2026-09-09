@@ -234,8 +234,10 @@
   "terminal": "ISSUE117_ARM_C_RETRY_METHODOLOGY_READY",
   "tokenizer_seam": {
     "seam": "frozen rendered prompt ids consumed by the direct comparator; no tokenizer metadata access exists in either arm's observation window; decoded-output reconstruction would be a separate pinned CPU evidence step outside the observation window (not required for transcript equivalence)",
+    "source_reads_derivation": "attestation: neither arm opens any filesystem path during the observation window (both arms consume only the frozen fixture document already in memory); the mechanical import check plus the absence of any file-opening call in the two arm runners back this attestation",
     "source_reads_during_observation": 0,
     "tokenizer_object_constructed": false,
+    "tokenizer_object_constructed_derivation": "attestation: no tokenizer object is constructed anywhere in this module (mechanically re-checkable by import/AST audit); the only mechanical observation in-process is the transformers import check",
     "transformers_imported": false
   }
 }
