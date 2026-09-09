@@ -9,7 +9,7 @@
     "armc-ordinary-1": "correctness-bearing ordinary-path observation, executed after direct-6 and before the replay-prefill rewrite reached a completed direct run; part of the frozen-methodology campaign evidence; inadmissible to a semantic PASS/FAIL because the comparator methodology was defective"
   },
   "authority": {
-    "audited_head": "5a56eb5c5df6289d25b2ae8fcff0497deda881c6",
+    "audited_head": "acb81562ae6075604d70193321c7d473ef17e879",
     "disclosure": "the direct driver and the reducer committed at the final head are NOT the scripts frozen by pre_execution_inferwarm_sha; every post-freeze change is classified in pre-execution-authority-audit.json and every post-audit correction file is individually pinned in its correction allowlist",
     "driver_changed_after_freeze": true,
     "exact_head_policy": "fail-closed: frozen methodology/driver may never change after the audited head; every other post-audit change must be individually allowlisted with its exact sha256",
@@ -25,8 +25,8 @@
       "git_blob_sha": "c33494d265b7832fdf350ac032eedd8d01ce1fb3",
       "sha256": "249310ce3b9be1e1a24b47dcc379b81739da2a30dc2ec277fab6c03776aeb93e"
     },
-    "head": "5a56eb5c5df6289d25b2ae8fcff0497deda881c6",
-    "post_freeze_change_count": 91,
+    "head": "acb81562ae6075604d70193321c7d473ef17e879",
+    "post_freeze_change_count": 101,
     "pre_execution_inferwarm_sha": "5e2c83a09031d68784c3098fc9dad319b684f0da",
     "reducer_changed_after_freeze": true
   },
@@ -113,7 +113,7 @@
       "speculative_second_token": "discarded before replay"
     }
   },
-  "head_audited": "5a56eb5c5df6289d25b2ae8fcff0497deda881c6",
+  "head_audited": "acb81562ae6075604d70193321c7d473ef17e879",
   "observations": {
     "chronology_note": "physical chronology is derived only from retained completion-evidence and transcript timestamps; the authored logical order field is retained separately and must agree with it",
     "chronology_utc": {
