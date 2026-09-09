@@ -112,10 +112,15 @@ def derive_equality(direct: Mapping, ordinary: Mapping,
         # stop semantics: length-only at 8 on both sides
         stop_equal = (len(c_tokens) == 8
                       and choices[0].get("finish_reason") == "length")
-        # decoded bytes: the ordinary HTTP content must decode to the same
-        # bytes as decoding the committed ids (both sides' ids equal above).
+        # decoded bytes: ordinary HTTP content bytes vs the direct side's
+        # independently retained decode of the same committed ids.
         content = ((choices[0].get("message") or {}).get("content")) or ""
         decoded_bytes = content.encode("utf-8", errors="surrogatepass")
+        direct_decoded_sha = d.get("decoded_output_sha256")
+        decoded_equal = (
+            direct_decoded_sha is not None
+            and hashlib.sha256(decoded_bytes).hexdigest() == direct_decoded_sha
+        )
         # session identity: the ordinary record's session index must equal
         # the coordinator's own session numbering for that request.
         session_ok = c["session_id"] == session_index
@@ -136,6 +141,7 @@ def derive_equality(direct: Mapping, ordinary: Mapping,
             "token_step_equality": token_steps_equal,
             "committed_count_equality": count_equal,
             "stop_semantics_equality": stop_equal,
+            "decoded_bytes_equality": decoded_equal,
             "decoded_bytes_len": len(decoded_bytes),
             "decoded_bytes_sha256": hashlib.sha256(decoded_bytes).hexdigest(),
             "session_identity_ok": session_ok,
@@ -147,6 +153,7 @@ def derive_equality(direct: Mapping, ordinary: Mapping,
                 json.dumps(c_tokens, separators=(",", ":")).encode()
             ).hexdigest(),
             "equal": bool(token_steps_equal and count_equal and stop_equal
+                          and decoded_equal
                           and session_ok and attribution_ok),
         })
     return {
@@ -368,12 +375,23 @@ def reduce_all() -> dict:
     reconciliation = load("reconciliation.json")
     require(reconciliation.get("reconciled") is True,
             "pre-run participant-state reconciliation failed")
+    require(reconciliation.get("armb_pins_verified") is True,
+            "accepted Arm-B evidence pins not verified at reconciliation")
     plan_verification = load("plan-verification.json")
     require(plan_verification.get("equality_beyond_provenance_model_path")
             is True, "Arm-C plan not equal to accepted plan")
+    require(plan_verification.get("running_producer")
+            == "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+            "Arm-C plan producer drift")
     direct = load("direct-run.json")
+    require(direct.get("producer")
+            == "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+            "direct-control side producer drift (different substrate)")
     ordinary = load("ordinary-campaign.json")
     coordinator = load("coordinator-report.json")
+    require(direct.get("plan_digest") == coordinator.get("active_plan_digest"),
+            "direct-control side plan digest differs from the ordinary "
+            "side's active plan (substrate or plan substitution)")
     fencing = None
     if (ARM_C / "fencing-arm.json").is_file():
         fencing = load("fencing-arm.json")

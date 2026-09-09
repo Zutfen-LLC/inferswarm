@@ -18,6 +18,7 @@ strace -f -e trace=file. No torch import before producer verification.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 import sys
@@ -101,6 +102,10 @@ def main() -> int:
             "session_id": index,
             "prompt_token_ids": rendered[case_id],
             "generated_token_ids": list(result["generated_token_ids"]),
+            "decoded_output": tok.decode(list(result["generated_token_ids"])),
+            "decoded_output_sha256": hashlib.sha256(
+                tok.decode(list(result["generated_token_ids"])).encode(
+                    "utf-8", errors="surrogatepass")).hexdigest(),
             "plan_digest": result.get("plan_digest"),
             "wall_ns": time.time_ns() - t0,
         })
