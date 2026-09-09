@@ -158,7 +158,12 @@ from an authored validity label:
 
 A correctness-bearing attempt following a mandatory STOP without an
 intervening terminal attempt fails closed
-(`post_stop_continuation_without_terminal`).
+(`post_stop_continuation_without_terminal`) — including attempts that
+label themselves diagnostic: after-stop classification derives from the
+reducer's own stop-event history, never from an authored
+``stop_occurred`` label. Post-stop diagnostics without any terminal
+attempt may be retained, but they are never verdict authority and a
+terminal attempt is mandatory before any new authorization.
 
 ## 7. Preserved Arm-C trust boundaries (future retry requirements)
 

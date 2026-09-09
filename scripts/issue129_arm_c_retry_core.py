@@ -329,6 +329,18 @@ def derive_prompt_fixture(repo_root: Path | None = None) -> dict[str, Any]:
                 json.dumps(body, sort_keys=True).encode()),
         })
     rows.sort(key=lambda r: (r["session_index"], r["case_id"]))
+    # prefix-disambiguation property the recording runtime relies on: no
+    # frozen rendered prompt may be a prefix of another (else longest-
+    # prefix replay-stream matching could be ambiguous). Mechanical,
+    # fail-closed.
+    prompts = [tuple(row["rendered_prompt_token_ids"]) for row in rows]
+    for i, a in enumerate(prompts):
+        for j, b in enumerate(prompts):
+            if i != j and len(a) <= len(b) and list(a) == list(b)[:len(a)]:
+                raise RuntimeError(
+                    f"frozen rendered prompt {rows[i]['case_id']} is a "
+                    f"prefix of {rows[j]['case_id']} (ambiguous replay "
+                    "matching)")
     return {
         "schema": "inferswarm.issue129.prompt-fixture/1",
         "authority": {
@@ -1084,8 +1096,17 @@ STOP_RULES = {
 }
 
 
-def classify_attempt(facts: Mapping[str, Any]) -> str:
-    """Mechanically classify one attempt from observed facts only."""
+def classify_attempt(facts: Mapping[str, Any],
+                     *, stop_already_fired: bool = False) -> str:
+    """Mechanically classify one attempt from observed facts only.
+
+    ``stop_already_fired`` is the reducer's OWN derived stop state —
+    the ONLY authority for after-stop classification. The authored
+    ``stop_occurred`` fact field is a disclosure input the reducer
+    records but never trusts: a correctness-bearing attempt claiming
+    ``stop_occurred`` when the reducer's own history shows no STOP
+    classifies as CORRECTNESS_BEARING_* (an authored diagnostic label
+    cannot launder a continuation)."""
     missing = set(ATTEMPT_FACT_FIELDS) - set(facts)
     if missing:
         raise ValueError(f"attempt facts lack {sorted(missing)}")
@@ -1095,7 +1116,10 @@ def classify_attempt(facts: Mapping[str, Any]) -> str:
     identity_ok = bool(
         facts["frozen_identity_verified_pre_launch"]
         and facts["frozen_identity_verified_post_run"])
-    if correctness_bearing and facts.get("stop_occurred"):
+    prior_stop = stop_already_fired
+    if correctness_bearing and prior_stop and not identity_ok:
+        return "CORRECTNESS_BEARING_INVALID"
+    if correctness_bearing and prior_stop:
         return "DIAGNOSTIC_ONLY_AFTER_STOP"
     if correctness_bearing and not identity_ok:
         return "CORRECTNESS_BEARING_INVALID"
@@ -1109,28 +1133,42 @@ def classify_attempt(facts: Mapping[str, Any]) -> str:
 def reduce_attempts(attempts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     """Mechanically decide attempt classes and mandatory STOPs; fail closed
     when an invalid correctness-bearing attempt continued without the
-    state machine authorizing it."""
+    state machine authorizing it.
+
+    The after-stop classification is derived from THIS reducer's own stop
+    event history (a stop fires here exactly when the
+    invalid_correctness_bearing_observation rule fires, or when an
+    attempt discloses a prior stop it can prove). A sequence whose every
+    correctness-bearing attempt merely CLAIMS stop_occurred with no
+    genuine STOP in history fails closed: the first such attempt
+    classifies CORRECTNESS_BEARING (not diagnostic), and if it also
+    carries an identity defect it fires the STOP rule; if it is fully
+    valid while a LATER genuine stop exists, the continuation rule
+    applies. Any correctness-bearing attempt after a genuine STOP
+    without an intervening terminal attempt is a problem."""
     stop_fired = False
     terminal_seen = False
     events = []
     problems = []
     for order, facts in enumerate(attempts, start=1):
-        classification = classify_attempt(facts)
+        classification = classify_attempt(facts, stop_already_fired=stop_fired)
         rule = None
         if classification == "CORRECTNESS_BEARING_INVALID":
             stop_fired = True
             rule = "invalid_correctness_bearing_observation"
         elif classification == "TERMINAL_CAMPAIGN_ATTEMPT":
             terminal_seen = True
-        elif classification == "CORRECTNESS_BEARING_VALID" and stop_fired \
-                and not terminal_seen:
+        elif classification in ("CORRECTNESS_BEARING_VALID",
+                                "DIAGNOSTIC_ONLY_AFTER_STOP") \
+                and stop_fired and not terminal_seen:
+            # a correctness-bearing continuation after a genuine STOP with
+            # no intervening terminal attempt is unauthorized, whether it
+            # labels itself valid or diagnostic
             rule = "post_stop_continuation_without_terminal"
             problems.append(
                 f"attempt {order} ({facts['attempt_id']}) is "
                 "correctness-bearing after a STOP without a terminal "
                 "campaign attempt authorizing it")
-        elif classification == "DIAGNOSTIC_ONLY_AFTER_STOP":
-            pass  # legal post-stop diagnostics
         events.append({
             "order": order,
             "attempt_id": facts["attempt_id"],
@@ -1185,8 +1223,14 @@ def verify_deployment_identity(record: Mapping[str, Any]) -> dict[str, Any]:
         return {"ok": False, "reason": "pre-launch verification absent"}
     if record["post_run_verified"] is not True:
         return {"ok": False, "reason": "post-run verification absent"}
+    # the byte-level post-run check is MANDATORY, not optional: an ok
+    # verdict must prove the deployed bytes did not change after freeze
     post_run_sha = record.get("post_run_file_sha256")
-    if post_run_sha is not None and post_run_sha != record["file_sha256"]:
+    if not (isinstance(post_run_sha, str) and len(post_run_sha) == 64
+            and all(c in "0123456789abcdef" for c in post_run_sha)):
+        return {"ok": False,
+                "reason": "post-run file sha256 is absent or malformed"}
+    if post_run_sha != record["file_sha256"]:
         return {"ok": False,
                 "reason": "correctness-bearing script changed after freeze"}
     return {"ok": True}
@@ -1202,7 +1246,18 @@ def _tokenizer_seam_facts() -> dict[str, Any]:
             name == "transformers" or name.startswith("transformers.")
             for name in sys.modules),
         "tokenizer_object_constructed": False,
+        "tokenizer_object_constructed_derivation": (
+            "attestation: no tokenizer object is constructed anywhere in "
+            "this module (mechanically re-checkable by import/AST audit); "
+            "the only mechanical observation in-process is the "
+            "transformers import check"),
         "source_reads_during_observation": 0,
+        "source_reads_derivation": (
+            "attestation: neither arm opens any filesystem path during "
+            "the observation window (both arms consume only the frozen "
+            "fixture document already in memory); the mechanical import "
+            "check plus the absence of any file-opening call in the two "
+            "arm runners back this attestation"),
         "seam": (
             "frozen rendered prompt ids consumed by the direct comparator; "
             "no tokenizer metadata access exists in either arm's "

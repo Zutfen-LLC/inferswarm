@@ -72,10 +72,6 @@ class BaselineEquivalenceTests(unittest.TestCase):
                     self.assertEqual(call["max_new_tokens"], 2)
                     self.assertIsNotNone(
                         call["response_speculative_token_id"])
-                self.assertNotIn(
-                    case["calls"][0]["response_speculative_token_id"],
-                    [c["response_commit_token_id"] for c in case["calls"]]
-                    ) if False else None
                 # committed ids are exactly the step-0 responses
                 self.assertEqual(
                     case["completed_token_ids"],
@@ -91,8 +87,6 @@ class BaselineEquivalenceTests(unittest.TestCase):
                 for index, call in enumerate(case["calls"]):
                     self.assertEqual(
                         call["prompt_token_ids"],
-                        list(base[:len(base)]) + case["completed_token_ids"][:index]
-                        if False else
                         list(base) + [
                             c["response_commit_token_id"]
                             for c in case["calls"][:index]])
@@ -181,6 +175,7 @@ class MandatoryNegativeControlTests(unittest.TestCase):
             "read_only": False,  # mutable staged script
             "pre_launch_verified": True,
             "post_run_verified": True,
+            "post_run_file_sha256": "a" * 64,
         })
         self.assertFalse(verdict["ok"])
         self.assertIn("mutable", verdict["reason"])
@@ -200,18 +195,32 @@ class MandatoryNegativeControlTests(unittest.TestCase):
 
     def test_control_unpinned_deployment_identity(self):
         for missing in ("repository_sha", "file_sha256",
-                        "pre_launch_verified"):
-            record = {
-                "repository_sha": "9" * 40,
-                "file_sha256": "a" * 64,
-                "expected_path": "/srv/inferswarm/run/driver.py",
-                "read_only": True,
-                "pre_launch_verified": True,
-                "post_run_verified": True,
-            }
+                        "pre_launch_verified", "post_run_verified"):
+            record = self._valid_identity()
             record.pop(missing)
             verdict = core.verify_deployment_identity(record)
             self.assertFalse(verdict["ok"], missing)
+
+    def test_control_missing_post_run_sha_fails_closed(self):
+        # P1 hardening (review 1): the byte-level post-run check is
+        # mandatory — no ok verdict on attestation alone
+        record = self._valid_identity()
+        record.pop("post_run_file_sha256")
+        verdict = core.verify_deployment_identity(record)
+        self.assertFalse(verdict["ok"])
+        self.assertIn("post-run file sha256", verdict["reason"])
+
+    @staticmethod
+    def _valid_identity():
+        return {
+            "repository_sha": "9" * 40,
+            "file_sha256": "a" * 64,
+            "expected_path": "/srv/inferswarm/run/driver.py",
+            "read_only": True,
+            "pre_launch_verified": True,
+            "post_run_verified": True,
+            "post_run_file_sha256": "a" * 64,
+        }
 
     def test_control_invalid_attempt_continues_without_stop(self):
         # an invalid correctness-bearing attempt followed by further
@@ -295,8 +304,7 @@ class AttemptStateMachineTests(unittest.TestCase):
 
     def test_pre_observation_infrastructure(self):
         self.assertEqual(
-            core.classify_attempt(self._facts(failure="x")
-                                  if False else self._facts()),
+            core.classify_attempt(self._facts()),
             "PRE_OBSERVATION_INFRASTRUCTURE")
 
     def test_correctness_bearing_valid(self):
@@ -313,11 +321,18 @@ class AttemptStateMachineTests(unittest.TestCase):
                 frozen_identity_verified_pre_launch=False)),
             "CORRECTNESS_BEARING_INVALID")
 
-    def test_diagnostic_only_after_stop(self):
+    def test_diagnostic_only_after_stop_requires_reducer_stop_state(self):
+        # the authored stop_occurred label alone does NOT classify as
+        # diagnostic; only the reducer's own derived stop state does
         self.assertEqual(
             core.classify_attempt(self._facts(
                 correctness_bearing_result_emitted=True,
                 stop_occurred=True)),
+            "CORRECTNESS_BEARING_VALID")
+        self.assertEqual(
+            core.classify_attempt(
+                self._facts(correctness_bearing_result_emitted=True),
+                stop_already_fired=True),
             "DIAGNOSTIC_ONLY_AFTER_STOP")
 
     def test_terminal_campaign_attempt(self):
@@ -325,6 +340,39 @@ class AttemptStateMachineTests(unittest.TestCase):
             core.classify_attempt(self._facts(
                 methodology_gate_passed=True)),
             "TERMINAL_CAMPAIGN_ATTEMPT")
+
+    def test_authored_stop_label_cannot_launder_continuation(self):
+        # P1 hardening (review 1): correctness-bearing attempts that merely
+        # CLAIM stop_occurred, with no genuine STOP in the reducer's own
+        # history, must not classify as post-stop diagnostics
+        reduction = core.reduce_attempts([
+            self._facts(attempt_id="claimed-stop-1",
+                        correctness_bearing_result_emitted=True,
+                        stop_occurred=True),
+            self._facts(attempt_id="claimed-stop-2",
+                        correctness_bearing_result_emitted=True,
+                        stop_occurred=True),
+        ])
+        # without a genuine STOP these are ordinary correctness-bearing
+        # attempts; the state machine records them as such
+        self.assertEqual(reduction["events"][0]["classification"],
+                         "CORRECTNESS_BEARING_VALID")
+
+    def test_post_stop_continuation_fails_even_labeled_diagnostic(self):
+        # after a GENUINE stop, a correctness-bearing attempt that labels
+        # itself diagnostic still fails closed without a terminal attempt
+        reduction = core.reduce_attempts([
+            self._facts(attempt_id="invalid-1",
+                        correctness_bearing_result_emitted=True,
+                        frozen_identity_verified_pre_launch=False),
+            self._facts(attempt_id="claimed-diagnostic",
+                        correctness_bearing_result_emitted=True,
+                        stop_occurred=True),
+        ])
+        self.assertFalse(reduction["passed"])
+        self.assertEqual(
+            reduction["events"][1]["stop_rule_fired"],
+            "post_stop_continuation_without_terminal")
 
     def test_missing_facts_fail_closed(self):
         with self.assertRaises(ValueError):
