@@ -1,0 +1,100 @@
+{
+  "entries": [
+    {
+      "ino": 0,
+      "mtime_ns": 0,
+      "path": "/srv/inferswarm/state/arm-c/coordinator-config.json",
+      "sha256": "9f9a18292b6261be0fdd5f1f80dc6cd9eb18beaf7fc772375d0b158cdfc10c8b",
+      "size": 409,
+      "type": "f"
+    },
+    {
+      "ino": 0,
+      "mtime_ns": 0,
+      "path": "/srv/inferswarm/state/arm-c/coordinator-env.json",
+      "sha256": "a5c82e81e176654325af28cd6c722f001201670faa669b17c8ceef0064ff7c05",
+      "size": 284,
+      "type": "f"
+    },
+    {
+      "ino": 0,
+      "mtime_ns": 0,
+      "path": "/srv/inferswarm/state/arm-c/environment.json",
+      "sha256": "98c04387215915acf54a9ff769492e3f7cb7b0266d36649631a531a9b5edbf67",
+      "size": 1593,
+      "type": "f"
+    },
+    {
+      "ino": 0,
+      "mtime_ns": 0,
+      "path": "/srv/inferswarm/state/arm-c/environment.json.sha256",
+      "sha256": "1ebf9bc1a1e26329bf1af1a5906c1d7102d32f6ae37795d69b32cbd02f9cc46d",
+      "size": 83,
+      "type": "f"
+    },
+    {
+      "ino": 0,
+      "mtime_ns": 0,
+      "path": "/srv/inferswarm/state/arm-c/serving-evidence.json",
+      "sha256": "c6b92c3f8d55883d579e1ae3c2690e0009ab59ac5cf61fdec3026bf88f9d8e98",
+      "size": 1437,
+      "type": "f"
+    },
+    {
+      "ino": 0,
+      "mtime_ns": 0,
+      "path": "/srv/inferswarm/state/arm-c/serving-evidence.json.sha256",
+      "sha256": "c37c4d2bed4cabbe665bb5712f8eebd20459eb047c4980dbed92c7e26b8e0f8c",
+      "size": 88,
+      "type": "f"
+    },
+    {
+      "ino": 0,
+      "mtime_ns": 0,
+      "path": "/srv/inferswarm/state/arm-c/tokenizer/chat_template.jinja",
+      "sha256": "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4",
+      "size": 18683,
+      "type": "f"
+    },
+    {
+      "ino": 0,
+      "mtime_ns": 0,
+      "path": "/srv/inferswarm/state/arm-c/tokenizer/config.json",
+      "sha256": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9",
+      "size": 4423,
+      "type": "f"
+    },
+    {
+      "ino": 0,
+      "mtime_ns": 0,
+      "path": "/srv/inferswarm/state/arm-c/tokenizer/generation_config.json",
+      "sha256": "a8349d9bd64cc5841297fcb5002f0fdc4749c473c8f1b10ea337f9ce4ee7014e",
+      "size": 260,
+      "type": "f"
+    },
+    {
+      "ino": 0,
+      "mtime_ns": 0,
+      "path": "/srv/inferswarm/state/arm-c/tokenizer/processor_config.json",
+      "sha256": "6b938e76555b3e9946890770e1abcd442a4718f34041a58e8139dc8ad34545c9",
+      "size": 1382,
+      "type": "f"
+    },
+    {
+      "ino": 0,
+      "mtime_ns": 0,
+      "path": "/srv/inferswarm/state/arm-c/tokenizer/tokenizer_config.json",
+      "sha256": "a62f4e85a47c0c136edaaa3a4f591fd6783717299a9def47e5ad03a49f6a5eb9",
+      "size": 3089,
+      "type": "f"
+    },
+    {
+      "ino": 0,
+      "mtime_ns": 0,
+      "path": "/srv/inferswarm/state/arm-c/tokenizer/tokenizer.json",
+      "sha256": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+      "size": 32169626,
+      "type": "f"
+    }
+  ]
+}

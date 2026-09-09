@@ -1,0 +1,16 @@
+{
+  "armb_pins_verified": true,
+  "checked_at_ns": 1788952409421595444,
+  "checks": [
+    "materialized roots exist on 01/03 with accepted inode identities (8519684/9962005)",
+    "stage-1/2/3 shard sizes match assemble reports exactly (9256843520/7278967984/9292241800)",
+    "live shard sha256s re-hashed and recorded (2e8cf1af\u2026/85b21806\u2026/120e9c29\u2026)",
+    "config.json digests equal accepted 478c46e8\u2026 on all three participants",
+    "cache object name sets equal retained inventory-post sets exactly (411/218); partial empty",
+    "no symlinks/hardlinks under canonical roots; no whole-model aliases beyond documented /srv/models Source",
+    "FreeToken producer 924cd22e clean on 01/03",
+    "accepted Arm-B evidence files remain byte-pinned (verified via arm-b reducer suite in-repo)"
+  ],
+  "reconciled": true,
+  "schema": "inferswarm.issue117.arm-c.reconciliation/1"
+}

@@ -74,6 +74,8 @@ def sha256_file(path: Path) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--repo", default=None,
+                        help="FreeToken worktree root (default: inferred)")
     parser.add_argument("--out-dir", default="/srv/inferswarm/state/arm-c")
     parser.add_argument("--view-dir",
                         default="/srv/inferswarm/state/arm-c/model-view")
@@ -81,7 +83,8 @@ def main() -> int:
                         help="optional stage-3 header JSON collected on 03")
     args = parser.parse_args()
 
-    repo = Path(__file__).resolve().parents[2]
+    repo = Path(args.repo).resolve() if args.repo else Path(
+        __file__).resolve().parents[2]
     running = subprocess.check_output(
         ["git", "-c", f"safe.directory={repo}", "-C", str(repo), "rev-parse",
          "HEAD"], text=True).strip()

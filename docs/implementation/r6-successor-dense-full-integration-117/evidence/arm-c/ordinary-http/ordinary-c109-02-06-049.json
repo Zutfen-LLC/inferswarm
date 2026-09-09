@@ -1,0 +1,38 @@
+{
+  "case_id": "c109-02-06-049",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "// \u00b6 // ^ $ & // ; + \u203b # + \u25c7 % $ :: 7f < # # \u03bb \\t",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 12,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\n// \u00b6 // ^ $ & // ; + \u203b # + \u25c7 % $ :: 7f < # # \u03bb \\t<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you have provided a string of",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-8d788b586822",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 38,
+      "total_tokens": 46
+    }
+  },
+  "schema": "inferswarm.issue117.arm-c.ordinary-case/1",
+  "wall_ns": 2587708802
+}

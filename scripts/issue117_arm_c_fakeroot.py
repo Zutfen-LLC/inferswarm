@@ -20,6 +20,7 @@ from pathlib import Path
 
 PRODUCER = "924cd22ea081f6d4ed471016faf01d427fc5b0d2"
 PLAN_DIGEST = "sha256:" + "ab" * 32
+CHAIN_DIGEST = "sha256:" + "cd" * 32
 EPOCH = "research-generation-0:c0ffee123456"
 CASES = [f"c109-{i:02d}" for i in range(1, 25)]
 
@@ -101,9 +102,47 @@ def build(out: Path) -> None:
     w(out / "direct-run.json", {
         "schema": "inferswarm.issue117.arm-c.direct-run/1",
         "producer": PRODUCER, "plan_digest": PLAN_DIGEST,
+        "chain_plan_digest": CHAIN_DIGEST,
         "case_count": 24,
         "results": [direct_case(i, c) for i, c in enumerate(CASES, 1)],
         "runtime_report": {},
+    })
+    import hashlib as _h
+    (out / "direct").mkdir(parents=True, exist_ok=True)
+    w(out / "direct/execution-plan.json", {
+        "schema": "inferswarm.r5a.static-execution-plan/1",
+        "digest": PLAN_DIGEST,
+        "selection_authorization": {
+            "mode": "CONTROLLED_EVIDENCE_COLLECTION_OVERRIDE",
+            "candidate_id": "dense.6171f32b4413",
+        },
+        "strategy_realization": {
+            "participant_plan_digest": CHAIN_DIGEST,
+            "realization": "r6-dense-three-stage-chain",
+        },
+        "participants": ["node.inferswarm01", "node.inferswarm03"],
+        "compute_units": ["gpu.node-a.0", "gpu.node-a.1", "gpu.node-b.0"],
+        "semantic_boundaries": [],
+        "mapping": {"slot-stage-1": "gpu.node-a.0",
+                    "slot-stage-2": "gpu.node-a.1",
+                    "slot-stage-3": "gpu.node-b.0"},
+        "representations": [],
+        "backend_choices": [],
+        "state_placement": [],
+        "state_authority": [],
+    })
+    content = "xxxxxxxx"
+    content_sha = _h.sha256(content.encode()).hexdigest()
+    w(out / "decoded-bytes.json", {
+        "schema": "inferswarm.issue117.arm-c.decoded-bytes/1",
+        "case_count": 24,
+        "rows": [{
+            "case_id": c, "session_id": i,
+            "ordinary_decode_sha256": content_sha,
+            "direct_decode_sha256": content_sha,
+            "ordinary_http_content_sha256": content_sha,
+            "ordinary_http_content_len": len(content),
+        } for i, c in enumerate(CASES, 1)],
     })
     w(out / "ordinary-campaign.json", {
         "schema": "inferswarm.issue117.arm-c.ordinary-campaign/1",
@@ -116,6 +155,32 @@ def build(out: Path) -> None:
         "active_epoch_id": EPOCH,
         "active_plan_digest": PLAN_DIGEST,
         "active_realization_id": "realization-1-abc",
+        "epochs": [{
+            "epoch_id": EPOCH,
+            "state": "RECLAIMED",
+            "execution_plan": {
+                "digest": PLAN_DIGEST,
+                "selection_authorization": {
+                    "mode": "AUTOMATIC_PLANNER_SELECTION",
+                    "candidate_id": "dense.6171f32b4413",
+                },
+                "strategy_realization": {
+                    "participant_plan_digest": CHAIN_DIGEST,
+                    "realization": "r6-dense-three-stage-chain",
+                },
+                "participants": ["node.inferswarm01", "node.inferswarm03"],
+                "compute_units": ["gpu.node-a.0", "gpu.node-a.1",
+                                  "gpu.node-b.0"],
+                "semantic_boundaries": [],
+                "mapping": {"slot-stage-1": "gpu.node-a.0",
+                            "slot-stage-2": "gpu.node-a.1",
+                            "slot-stage-3": "gpu.node-b.0"},
+                "representations": [],
+                "backend_choices": [],
+                "state_placement": [],
+                "state_authority": [],
+            },
+        }],
         "coordinator_scope": {
             "requests": [request(i, c) for i, c in enumerate(CASES, 1)],
         },

@@ -265,6 +265,40 @@ COMMITTED_EVIDENCE_FILES = {
     "arm-b/raw/coordinator/scripts/__pycache__/armb_coordinator.cpython-313.pyc",
     "arm-b/raw/coordinator/scripts/__pycache__/armb_plan_core.cpython-313.pyc",
     "arm-b/observations/coordinator-transport-audit.json",
+    # retained Arm C ordinary-serving campaign artifacts (executed on the
+    # fabric 2026-09-09; see evidence/arm-c/run-record.json). Fabric-produced
+    # compact evidence; the CPU campaign never regenerates these. The gzip
+    # strace captures are retained compressed; digests pin the compressed
+    # bytes.
+    "arm-c/run-record.json",
+    "arm-c/attempt-lineage.json",
+    "arm-c/reconciliation.json",
+    "arm-c/chain-plan.json",
+    "arm-c/plan-verification.json",
+    "arm-c/direct-run.json",
+    "arm-c/direct/execution-plan.json",
+    "arm-c/ordinary-campaign.json",
+    "arm-c/fencing-arm.json",
+    "arm-c/coordinator-report.json",
+    "arm-c/lifecycle-serving-report.json",
+    "arm-c/coordinator-env.json",
+    "arm-c/coordinator-census-pre.json",
+    "arm-c/coordinator-census-post.json",
+    "arm-c/host-census-pre-01.json",
+    "arm-c/host-census-post-01.json",
+    "arm-c/host-census-pre-03.json",
+    "arm-c/host-census-post-03.json",
+    "arm-c/strace-audit.json",
+    "arm-c/strace/direct.strace.gz",
+    "arm-c/strace/node-agent.strace.gz",
+    "arm-c/strace/last-stage-direct.strace.gz",
+    "arm-c/strace/last-stage-ordinary.strace.gz",
+    "arm-c/last-stage-direct.json",
+    "arm-c/last-stage-ordinary.json",
+    "arm-c/decoded-bytes.json",
+    "arm-c/equality.json",
+    "arm-c/zero-invariants.json",
+    "arm-c/invalid-attempt-6/direct-run.json",
 }
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the

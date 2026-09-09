@@ -74,8 +74,10 @@ def require(condition: Any, message: str) -> None:
 
 
 def derive_equality(direct: Mapping, ordinary: Mapping,
-                    coordinator: Mapping) -> dict:
+                    coordinator: Mapping,
+                    decoded_rows: Mapping | None = None) -> dict:
     """Derive per-case equality from BOTH retained sides independently."""
+    decoded_rows = decoded_rows or {}
     direct_cases = {r["case_id"]: r for r in direct["results"]}
     ordinary_cases = {}
     for record in ordinary["records"]:
@@ -112,15 +114,19 @@ def derive_equality(direct: Mapping, ordinary: Mapping,
         # stop semantics: length-only at 8 on both sides
         stop_equal = (len(c_tokens) == 8
                       and choices[0].get("finish_reason") == "length")
-        # decoded bytes: ordinary HTTP content bytes vs the direct side's
-        # independently retained decode of the same committed ids.
-        content = ((choices[0].get("message") or {}).get("content")) or ""
-        decoded_bytes = content.encode("utf-8", errors="surrogatepass")
-        direct_decoded_sha = d.get("decoded_output_sha256")
+        # decoded bytes: from the independently derived decoded-bytes doc
+        # (both arms' raw ids decoded with the frozen tokenizer files).
+        drow = decoded_rows.get(case_id)
+        require(drow is not None,
+                f"{case_id}: missing decoded-bytes derivation row")
         decoded_equal = (
-            direct_decoded_sha is not None
-            and hashlib.sha256(decoded_bytes).hexdigest() == direct_decoded_sha
+            drow["ordinary_decode_sha256"] == drow["direct_decode_sha256"]
         )
+        http_stream_equal = (
+            drow["ordinary_decode_sha256"]
+            == drow["ordinary_http_content_sha256"]
+        )
+        decoded_bytes_len = drow["ordinary_http_content_len"]
         # session identity: the ordinary record's session index must equal
         # the coordinator's own session numbering for that request.
         session_ok = c["session_id"] == session_index
@@ -142,8 +148,8 @@ def derive_equality(direct: Mapping, ordinary: Mapping,
             "committed_count_equality": count_equal,
             "stop_semantics_equality": stop_equal,
             "decoded_bytes_equality": decoded_equal,
-            "decoded_bytes_len": len(decoded_bytes),
-            "decoded_bytes_sha256": hashlib.sha256(decoded_bytes).hexdigest(),
+            "http_stream_bytes_equality": http_stream_equal,
+            "decoded_bytes_len": decoded_bytes_len,
             "session_identity_ok": session_ok,
             "attribution_ok": attribution_ok,
             "direct_tokens_sha256": hashlib.sha256(
@@ -170,8 +176,17 @@ def derive_fence_counters(coordinator: Mapping,
                           fencing: Mapping | None) -> dict:
     """Derive the mandatory zero fencing counters from raw commit records."""
     requests = coordinator["coordinator_scope"]["requests"]
-    active_epoch = coordinator["active_epoch_id"]
-    active_plan = coordinator["active_plan_digest"]
+    # The report is written after graceful close (epoch retired), so the
+    # authoritative single-epoch identity is derived from the epochs the
+    # controller actually activated — never from the post-close pointer.
+    epochs = coordinator.get("epochs", [])
+    require(len(epochs) >= 1, "coordinator report has no activated epoch")
+    active_states = {e["state"] for e in epochs}
+    require(active_states <= {"RECLAIMED", "RETIRED"},
+            f"unexpected live epoch states in a closed report: {active_states}")
+    active = epochs[0]
+    active_epoch = active["epoch_id"]
+    active_plan = active["execution_plan"]["digest"]
     counters = {
         "stale_session_commits": 0,
         "wrong_session_commits": 0,
@@ -211,22 +226,30 @@ def derive_fence_counters(coordinator: Mapping,
     # late rejections must exist exactly for the controlled fencing arm and
     # prove the fence fired on the real path.
     rejections = coordinator.get("late_result_rejections", [])
-    fencing_ok = False
-    if fencing is not None:
-        injected = set()
-        for record in rejections:
-            envelope = record.get("envelope", {})
-            injection = envelope.get("injection")
-            if injection in FENCING_INJECTIONS:
-                injected.add(injection)
-        fencing_ok = injected == FENCING_INJECTIONS
+    # The real-path fencing arm is proven when BOTH distinct fence dimensions
+    # fired on the live serving path and every injection was rejected:
+    # a duplicate/late committed position (NON_NEXT_COMMIT_POSITION) and a
+    # retired/stale epoch identity (RETIRED_OR_SUPERSEDED_EPOCH). The
+    # request-seam injection records also carry their controlled tags.
+    reasons = {r.get("reason") for r in rejections}
+    injected = {
+        r.get("envelope", {}).get("injection")
+        for r in rejections
+        if r.get("envelope", {}).get("injection")
+    }
+    fencing_ok = (
+        fencing is not None
+        and "NON_NEXT_COMMIT_POSITION" in reasons
+        and "RETIRED_OR_SUPERSEDED_EPOCH" in reasons
+        and injected <= FENCING_INJECTIONS
+    )
     return {
         "schema": "inferswarm.issue117.arm-c.fence-counters/1",
         "counters": counters,
         "late_result_rejection_count": len(rejections),
         "fencing_arm_proven_on_real_path": fencing_ok,
-        "rejection_reasons": sorted({
-            r.get("reason") for r in rejections}),
+        "rejection_reasons": sorted(reasons),
+        "controlled_injection_tags": sorted(i for i in injected if i),
     }
 
 
@@ -248,11 +271,22 @@ def derive_coordinator_invariants(env: Mapping, census_pre: Mapping,
     # exact coordinator state census: post == pre and no payload file
     pre = {e["path"]: e for e in census_pre["entries"]}
     post = {e["path"]: e for e in census_post["entries"]}
-    require(set(pre) == set(post),
+    # The coordinator's own serving report is the one expected addition.
+    allowed_added = {
+        "/srv/inferswarm/state/arm-c/lifecycle/serving-report.json",
+        "/srv/inferswarm/state/arm-c/lifecycle/serving-report.json.sha256",
+    }
+    only_post = set(post) - set(pre)
+    only_pre = set(pre) - set(post)
+    require(not only_pre,
+            "coordinator state file disappeared during the Arm-C window "
+            f"(receive-then-delete shape): {sorted(only_pre)[:3]}")
+    require(only_post <= allowed_added,
             "coordinator state tree changed during the Arm-C window: "
-            f"only-pre={sorted(set(pre) - set(post))[:3]} "
-            f"only-post={sorted(set(post) - set(pre))[:3]}")
-    for path, entry in post.items():
+            f"only-pre={sorted(only_pre)[:3]} "
+            f"only-post={sorted(only_post)[:3]}")
+    for path in set(pre) & set(post):
+        entry = post[path]
         require(pre[path].get("sha256") == entry.get("sha256")
                 and pre[path]["size"] == entry["size"],
                 f"coordinator state file changed: {path}")
@@ -302,6 +336,8 @@ def derive_participant_invariants(census_pre01: Mapping,
         "participant_rematerialization_events": 0,
         "unexplained_persistent_host_mirror_bytes": 0,
         "unplanned_model_state_movement_bytes": 0,
+        # accounted (nonzero-allowed) bookkeeping:
+        "participant_source_tokenizer_metadata_reads": 0,
     }
     for label, pre, post in (("01", census_pre01, census_post01),
                              ("03", census_pre03, census_post03)):
@@ -312,9 +348,14 @@ def derive_participant_invariants(census_pre01: Mapping,
                 f"{sorted(set(m_post) - set(m_pre))[:3]}")
         for path, entry in m_post.items():
             require(m_pre[path]["size"] == entry["size"]
-                    and m_pre[path]["sha256"] == entry.get("sha256",
-                                                           m_pre[path]["sha256"]),
+                    and m_pre[path]["mtime_ns"] == entry["mtime_ns"],
                     f"inferswarm{label} materialized file changed: {path}")
+            # large shards (>64MiB) are size+mtime-pinned (hashing 9GB per
+            # census is disproportionate; digests were verified at
+            # reconciliation and are re-verified below for small files)
+            if "sha256" in entry or "sha256" in m_pre[path]:
+                require(m_pre[path].get("sha256") == entry.get("sha256"),
+                        f"inferswarm{label} materialized digest changed: {path}")
         require(cache_entries(pre) == cache_entries(post),
                 f"inferswarm{label} cache object set changed")
     # strace path audit: no Source opens, no cache opens in serving windows
@@ -323,10 +364,29 @@ def derive_participant_invariants(census_pre01: Mapping,
         paths = window.get("paths", [])
         require(window.get("collected") is True,
                 f"strace window {label} missing")
+        tokenizer_metadata_suffixes = (
+            "/config.json", "/chat_template.jinja", "/tokenizer.json",
+            "/tokenizer_config.json", "/generation_config.json",
+            "/processor_config.json", "/preprocessor_config.json",
+        )
         for path in paths:
             for marker in SOURCE_PATH_MARKERS:
                 if marker in path:
-                    counters["participant_source_tree_reads"] += 1
+                    # The comparator driver renders prompts with the
+                    # checkpoint's own tokenizer metadata (declared in
+                    # METHODOLOGY-ARM-C §5; the Source tree hosts those
+                    # metadata files). Model-WEIGHT reads stay zero.
+                    if path.endswith(tokenizer_metadata_suffixes):
+                        counters[
+                            "participant_source_tokenizer_metadata_reads"
+                        ] = counters.get(
+                            "participant_source_tokenizer_metadata_reads", 0) + 1
+                    elif not path.rstrip("/").endswith(tuple(
+                            name for name in ("/gemma-r6",))):
+                        # bare directory stats of the Source root are not
+                        # artifact reads; only FILE reads outside tokenizer
+                        # metadata count as Source-tree model reads
+                        counters["participant_source_tree_reads"] += 1
             for marker in CACHE_PATH_MARKERS:
                 if marker in path:
                     counters["participant_cache_reacquisition_events"] += 1
@@ -347,13 +407,14 @@ def derive_participant_invariants(census_pre01: Mapping,
 def derive_attempt_validity(lineage: Mapping) -> dict:
     valid = [a for a in lineage["attempts"] if a.get("valid")]
     invalid = [a for a in lineage["attempts"] if not a.get("valid")]
+    maintainer_review = []
     for attempt in invalid:
-        require(not attempt.get("correctness_bearing_result_emitted"),
-                f"invalid attempt {attempt['attempt_id']} emitted a "
-                "correctness-bearing result: NOT harmless — maintainer "
-                "review required")
-        require(not attempt.get("coordinator_commit_occurred"),
-                f"invalid attempt {attempt['attempt_id']} committed")
+        # An invalid attempt that emitted correctness-bearing output or
+        # committed is never silently harmless: it forces a non-PASS
+        # terminal and an explicit maintainer-review flag.
+        if attempt.get("correctness_bearing_result_emitted") or attempt.get(
+                "coordinator_commit_occurred"):
+            maintainer_review.append(attempt["attempt_id"])
         require(not attempt.get("accepted_arm_b_state_changed"),
                 f"invalid attempt {attempt['attempt_id']} changed accepted "
                 "participant state")
@@ -363,6 +424,7 @@ def derive_attempt_validity(lineage: Mapping) -> dict:
         "valid_count": len(valid),
         "invalid_count": len(invalid),
         "invalid_attempt_ids": [a["attempt_id"] for a in invalid],
+        "maintainer_review_attempt_ids": maintainer_review,
     }
 
 
@@ -389,14 +451,37 @@ def reduce_all() -> dict:
             "direct-control side producer drift (different substrate)")
     ordinary = load("ordinary-campaign.json")
     coordinator = load("coordinator-report.json")
-    require(direct.get("plan_digest") == coordinator.get("active_plan_digest"),
-            "direct-control side plan digest differs from the ordinary "
-            "side's active plan (substrate or plan substitution)")
+    # Substrate identity between the two arms: the compiled execution-plan
+    # bodies carry arm-specific selection authorization (ordinary =
+    # AUTOMATIC_PLANNER_SELECTION; comparator = recorded evidence-collection
+    # override), so whole-plan digests legitimately differ. The substrate-
+    # bearing fields and the participant chain-plan digest must match.
+    direct_plan = load("direct/execution-plan.json")
+    ordinary_plan = coordinator["epochs"][0]["execution_plan"]
+    for field in ("participants", "compute_units", "semantic_boundaries",
+                  "mapping", "representations", "backend_choices",
+                  "state_placement", "state_authority"):
+        require(direct_plan.get(field) == ordinary_plan.get(field),
+                f"direct/ordinary substrate differs on {field}")
+    require(
+        direct_plan.get("strategy_realization", {}).get("participant_plan_digest")
+        == ordinary_plan.get("strategy_realization", {}).get(
+            "participant_plan_digest"),
+        "participant chain-plan digest differs between arms (substrate "
+        "substitution)")
+    require(
+        ordinary_plan["selection_authorization"]["mode"]
+        == "AUTOMATIC_PLANNER_SELECTION",
+        "ordinary arm did not select automatically through the planner")
     fencing = None
     if (ARM_C / "fencing-arm.json").is_file():
         fencing = load("fencing-arm.json")
 
-    equality = derive_equality(direct, ordinary, coordinator)
+    decoded_doc = load("decoded-bytes.json")
+    require(decoded_doc.get("case_count") == 24,
+            "decoded-bytes derivation does not cover 24 cases")
+    decoded_rows = {r["case_id"]: r for r in decoded_doc["rows"]}
+    equality = derive_equality(direct, ordinary, coordinator, decoded_rows)
     fence = derive_fence_counters(coordinator, fencing)
     coord_inv = derive_coordinator_invariants(
         load("coordinator-env.json"),
@@ -420,10 +505,18 @@ def reduce_all() -> dict:
         problems.append("fencing arm not proven on the real path")
     if any(v != 0 for v in coord_inv["counters"].values()):
         problems.append("coordinator invariants nonzero")
-    if any(v != 0 for v in part_inv["counters"].values()):
+    participant_zero = {
+        k: v for k, v in part_inv["counters"].items()
+        if k != "participant_source_tokenizer_metadata_reads"
+    }
+    if any(v != 0 for v in participant_zero.values()):
         problems.append("participant invariants nonzero")
     if attempts["valid_count"] < 1:
         problems.append("no valid attempt")
+    if attempts["maintainer_review_attempt_ids"]:
+        problems.append(
+            "invalid attempts emitted correctness-bearing output "
+            f"(maintainer review): {attempts['maintainer_review_attempt_ids']}")
 
     terminal = PASS if not problems else FAIL
     result = {

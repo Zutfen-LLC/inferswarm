@@ -1,0 +1,38 @@
+{
+  "case_id": "c109-01-04-036",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "duniya \u3042\u308a\u304c\u3068\u3046 hej bonjour",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 4,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\nduniya \u3042\u308a\u304c\u3068\u3046 hej bonjour<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It looks like you are listing greetings and",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-8d788b586822",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 19,
+      "total_tokens": 27
+    }
+  },
+  "schema": "inferswarm.issue117.arm-c.ordinary-case/1",
+  "wall_ns": 2454440438
+}

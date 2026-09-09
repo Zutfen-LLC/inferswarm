@@ -1,0 +1,38 @@
+{
+  "case_id": "c109-01-01-045",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "valley island morning wind drifts island valley",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 1,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\nvalley island morning wind drifts island valley<turn|>\n<|turn>model\n<|channel>thought\n<channel|>The phrase you provided has a beautiful,",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-8d788b586822",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 20,
+      "total_tokens": 28
+    }
+  },
+  "schema": "inferswarm.issue117.arm-c.ordinary-case/1",
+  "wall_ns": 22453310530
+}

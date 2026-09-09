@@ -1,0 +1,38 @@
+{
+  "case_id": "c109-02-01-030",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "valley field east stone light near young young bird calm stone joins young drifts hill valley bird open travels young under stone amber under valley quiet drifts quiet",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 7,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\nvalley field east stone light near young young bird calm stone joins young drifts hill valley bird open travels young under stone amber under valley quiet drifts quiet<turn|>\n<|turn>model\n<|channel>thought\n<channel|>This appears to be a **word cloud",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-8d788b586822",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 41,
+      "total_tokens": 49
+    }
+  },
+  "schema": "inferswarm.issue117.arm-c.ordinary-case/1",
+  "wall_ns": 2536290401
+}

@@ -105,20 +105,39 @@ class TestEqualityMutations(FakerootCase):
         self._mutate_direct("direct-producer-drift", fn)
 
     def test_direct_plan_substitution(self) -> None:
-        def fn(doc):
-            doc["plan_digest"] = "sha256:" + "99" * 32
-        self._mutate_direct("direct-plan-substitution", fn)
+        doc = self.load("direct/execution-plan.json")
+        doc["strategy_realization"]["participant_plan_digest"] = (
+            "sha256:" + "99" * 32)
+        self.save("direct/execution-plan.json", doc)
+        self.require_mutated_fails("direct-plan-substitution")
+
+    def test_direct_substrate_field_drift(self) -> None:
+        doc = self.load("direct/execution-plan.json")
+        doc["compute_units"] = ["gpu.other.0"]
+        self.save("direct/execution-plan.json", doc)
+        self.require_mutated_fails("direct-substrate-field-drift")
+
+    def test_ordinary_not_automatic_selection(self) -> None:
+        doc = self.load("coordinator-report.json")
+        doc["epochs"][0]["execution_plan"]["selection_authorization"][
+            "mode"] = "CONTROLLED_INITIAL_STATE_OVERRIDE"
+        self.save("coordinator-report.json", doc)
+        self.require_mutated_fails("ordinary-not-automatic")
+
+    def test_http_stream_byte_mismatch(self) -> None:
+        doc = self.load("decoded-bytes.json")
+        doc["rows"][3]["ordinary_http_content_sha256"] = "ee" * 32
+        self.save("decoded-bytes.json", doc)
+        # http stream divergence is retained evidence, not a mandatory
+        # equality dimension (presentation layer); assert it is VISIBLE
+        result = self.reduce()
+        row = result["equality"]["rows"][3]
+        self.assertFalse(row["http_stream_bytes_equality"])
 
     def test_decoded_byte_mismatch(self) -> None:
-        doc = self.load("ordinary-campaign.json")
-        doc["records"][7]["response"]["choices"][0]["message"][
-            "content"] = "different!"
-        self.save("ordinary-campaign.json", doc)
-        # decoded bytes differ from the identical-token baseline only in
-        # length bookkeeping; force inequality via content change captured
-        # by hash — verify the reducer noticed via stop/bytes dimensions
-        # (this mutation is caught by decoded_bytes equality in the
-        # physical reducer once content-hash comparison is enforced)
+        doc = self.load("decoded-bytes.json")
+        doc["rows"][7]["direct_decode_sha256"] = "ff" * 32
+        self.save("decoded-bytes.json", doc)
         self.require_mutated_fails("decoded-byte-mismatch")
 
     def test_stop_reason_mismatch(self) -> None:
