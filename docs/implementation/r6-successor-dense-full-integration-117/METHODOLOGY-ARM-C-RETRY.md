@@ -83,7 +83,8 @@ controller's runtime invocation contract. For each committed position:
 A single-shot `max_new_tokens=8` direct comparator is prohibited (frozen
 negative control `single_shot_8`), as is any session-allocation change
 with everything else identical (frozen negative control
-`session_sequence_shift`).
+`session_sequence_shift`, implemented by the `direct_session_sequence_start`
+seam).
 
 ## 3. CPU-only transcript-equivalence proof (the gate this issue runs)
 
@@ -148,8 +149,9 @@ the Coordinator's render/tokenize seam first. The CPU proof:
 
 1. reconstructs the exact ordinary request body per case (single user
    message carrying the frozen `prompt_text`, `max_tokens=8`,
-   `temperature=0.0`) and verifies it byte-equal against the retained
-   accepted `evidence/arm-c/ordinary-http/ordinary-*.json` records;
+   `temperature=0.0`) and verifies it equal (parsed-JSON equality)
+   against the retained accepted `evidence/arm-c/ordinary-http/
+   ordinary-*.json` records;
 2. executes `_render_and_tokenize` and `_sampling_of` VERBATIM —
    AST-extracted (with fail-closed structural verification and line
    citations of the `handle_chat` ingress statements: session
@@ -185,7 +187,10 @@ uses a tokenizer):
   `tokenizer.json`, `tokenizer_config.json`, with the sha256
   identities pinned from the accepted checkpoint-authority
   provenance — to a dedicated non-Source location
-  (e.g. `/srv/inferswarm/tokenizers/gemma-r6-frozen`);
+  (e.g. `/srv/inferswarm/tokenizers/gemma-r6-frozen`), containing
+  EXACTLY that pinned asset set and nothing else (an unlisted extra
+  file `AutoTokenizer` could consume — `special_tokens_map.json`,
+  `added_tokens.json`, … — violates the contract);
 - configure the Coordinator's `tokenizer_path` to that location
   (never at, or under, `/srv/models/`);
 - verify the exact tokenizer asset identities before execution;
@@ -226,33 +231,42 @@ deployment identity validity, and the mandatory STOP / terminal state:
   commit occurred;
 - `CORRECTNESS_BEARING_VALID` — correctness-bearing result/commit with
   verified frozen identity (pre-launch AND post-run), accepted
-  methodology readiness, physical-retry authorization, and no prior
-  unresolved STOP;
+  methodology readiness, and physical-retry authorization; a VALID-
+  classified attempt that nevertheless follows an unresolved STOP is
+  recorded NON-authoritative and fails closed as an unauthorized
+  continuation (`post_stop_continuation_without_terminal`);
 - `CORRECTNESS_BEARING_INVALID` — correctness-bearing result/commit
-  without any of those (mandatory STOP:
+  without any of those authorities, OR an UNDISCLOSED
+  correctness-bearing continuation after the campaign's terminal
+  observation (mandatory STOP:
   `invalid_correctness_bearing_observation`, with the failing reason:
   identity defect / methodology readiness false / physical
-  authorization false);
-- `DIAGNOSTIC_ONLY_AFTER_STOP` — a disclosed diagnostic observation
+  authorization false / post-terminal continuation without a
+  diagnostic disclosure);
+- `DIAGNOSTIC_ONLY_AFTER_STOP` — a DISCLOSED diagnostic observation
   after a STOP or terminal: retained, never verdict authority, clears
   neither the STOP nor the terminal requirement;
 - `TERMINAL_CAMPAIGN_ATTEMPT` — a terminal observation that IS
   correctness-bearing and fully authorized: representable,
-  authoritative, and the ONLY transition that clears a mandatory STOP;
+  authoritative, and the ONLY transition that clears a mandatory STOP
+  (it resolves every stop fired in the campaign so far);
 - `TERMINAL_MARKER_NON_CORRECTNESS_BEARING` — a non-correctness-bearing
   terminal marker: never clears a STOP; while a STOP is active it
   fails closed (`non_correctness_bearing_terminal_cannot_clear_stop`).
 
 The dynamics are frozen in an explicit LEGAL_TRANSITIONS table (per
 class: terminal effect, STOP-clearing effect, mandatory-STOP flag,
-authoritativeness). A sequence "passes" only with no unauthorized
-continuation AND no unresolved mandatory STOP: a correctness-bearing
-attempt after a STOP without an intervening authorized terminal
-attempt fails closed (`post_stop_continuation_without_terminal`);
-authored `stop_occurred` or diagnostic labels never launder authority.
-`methodology_gate_passed` is load-bearing: a correctness-bearing
-attempt without accepted methodology readiness is INVALID regardless
-of deployment identity.
+authoritativeness; an event that fires a continuation stop rule is
+recorded non-authoritative whatever its class label). A sequence
+"passes" only with no unauthorized continuation AND no unresolved
+mandatory STOP: a correctness-bearing attempt after a STOP without an
+intervening authorized terminal attempt fails closed
+(`post_stop_continuation_without_terminal`), and an undisclosed
+correctness-bearing attempt after the terminal observation fails
+closed the same way; authored `stop_occurred` or diagnostic labels
+never launder authority. `methodology_gate_passed` is load-bearing: a
+correctness-bearing attempt without accepted methodology readiness is
+INVALID regardless of deployment identity.
 
 ## 7. Preserved Arm-C trust boundaries (future retry requirements)
 

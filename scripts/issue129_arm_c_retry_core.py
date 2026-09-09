@@ -29,14 +29,18 @@ issue #129 before any future Arm-C physical retry can be authorized:
     (``R6CoordinatorRuntime.handle_chat``): the render/tokenize and
     sampling functions are MECHANICALLY EXTRACTED, verbatim, from the
     sha256-pinned frozen Coordinator bytes (AST extraction with
-    fail-closed structural verification and line citations of the
-    ingress statements). The exact ordinary request bodies are
-    reconstructed and verified byte-equal against the retained accepted
-    ordinary-http records; rendering runs through the extracted frozen
-    function against a pinned CPU stand-in tokenizer whose chat-template
-    wrapper and content encodings are cross-derived from BOTH accepted
-    campaign sides; the derived prompt ids must equal the frozen
-    fixture 24/24 before the ordinary arm may serve them.
+    fail-closed structural verification), and the ``handle_chat``
+    ingress statements (session allocation, max-token derivation,
+    sampling derivation, the ``serve_tokens(prompt_token_ids=…)``
+    dispatch) are needle-verified in the pinned bytes with recorded
+    line citations. The exact ordinary request bodies are reconstructed
+    and verified equal (parsed-JSON equality) against the retained
+    accepted ordinary-http records; rendering runs through the
+    extracted frozen function against a pinned CPU stand-in tokenizer
+    whose chat-template wrapper and content encodings are
+    cross-derived from BOTH accepted campaign sides; the derived
+    prompt ids must equal the frozen fixture 24/24 before the ordinary
+    arm may serve them.
 
 4.  Runs, entirely on CPU with a recording/fake runtime, both arms over
     all 24 frozen cases:
@@ -1888,7 +1892,8 @@ STOP_RULES = {
         "verified frozen deployment identity (pre-launch AND post-run), "
         "or while methodology readiness was not accepted, or while "
         "physical retry execution was not authorized by the accepted "
-        "gate state",
+        "gate state — including an UNDISCLOSED correctness-bearing "
+        "continuation after the campaign's terminal observation",
     "post_stop_continuation_without_terminal":
         "a correctness-bearing attempt follows a mandatory STOP without "
         "an intervening authorized terminal campaign attempt",
@@ -1970,10 +1975,15 @@ def classify_attempt(facts: Mapping[str, Any],
     if correctness_bearing:
         if not authority_ok:
             return "CORRECTNESS_BEARING_INVALID"
+        if terminal_seen and not facts["diagnostic_only_disclosure"]:
+            # the campaign already reached its terminal observation:
+            # further correctness-bearing work in the SAME campaign is
+            # unauthorized unless explicitly disclosed as diagnostic
+            # (review 1 P1: an undisclosed post-terminal continuation
+            # must never silently pass as a diagnostic)
+            return "CORRECTNESS_BEARING_INVALID"
         if stop_already_fired or terminal_seen:
             if facts["diagnostic_only_disclosure"]:
-                return "DIAGNOSTIC_ONLY_AFTER_STOP"
-            if terminal_seen:
                 return "DIAGNOSTIC_ONLY_AFTER_STOP"
             return "CORRECTNESS_BEARING_VALID"
         return "CORRECTNESS_BEARING_VALID"
@@ -1996,22 +2006,29 @@ def reduce_attempts(attempts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     Rules (all mechanical, from the reducer's OWN state — an authored
     ``stop_occurred`` or diagnostic label never launders authority):
     - CORRECTNESS_BEARING_INVALID fires the mandatory STOP (recorded
-      as a stop event, with its reason).
+      as a stop event, with its reason). Post-terminal correctness-
+      bearing continuations WITHOUT a diagnostic disclosure are
+      INVALID: the campaign concluded; undisclosed follow-on
+      correctness-bearing work is unauthorized.
     - Only TERMINAL_CAMPAIGN_ATTEMPT (correctness-bearing, fully
-      authorized) clears a STOP / sets the terminal state.
+      authorized) clears a STOP / sets the terminal state, resolving
+      EVERY stop fired in the campaign so far.
     - A non-correctness-bearing terminal marker never clears a STOP;
       while a STOP is active it fires
       ``non_correctness_bearing_terminal_cannot_clear_stop``.
     - A correctness-bearing attempt after a STOP without an
       intervening authorized terminal attempt fires
       ``post_stop_continuation_without_terminal`` unless it is a
-      disclosed diagnostic (retained, non-authoritative, powerless).
+      disclosed diagnostic (retained, non-authoritative, powerless);
+      an event firing a continuation stop rule is recorded
+      non-authoritative whatever its class label.
     """
     state = _attempt_state()
     events = []
     problems = []
     stop_events = []
     for order, facts in enumerate(attempts, start=1):
+        prior_terminal = state["terminal_seen"]
         classification = classify_attempt(
             facts, stop_already_fired=state["stop_fired"],
             terminal_seen=state["terminal_seen"])
@@ -2019,13 +2036,18 @@ def reduce_attempts(attempts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         rule = None
         non_authoritative_note = None
         if classification == "CORRECTNESS_BEARING_INVALID":
-            reason = (
-                "deployment identity defect"
-                if not (facts["frozen_identity_verified_pre_launch"]
-                        and facts["frozen_identity_verified_post_run"])
-                else "methodology readiness not accepted"
-                if not facts["methodology_gate_passed"]
-                else "physical retry not authorized")
+            if not (facts["frozen_identity_verified_pre_launch"]
+                    and facts["frozen_identity_verified_post_run"]):
+                reason = "deployment identity defect"
+            elif not facts["methodology_gate_passed"]:
+                reason = "methodology readiness not accepted"
+            elif not facts["physical_retry_authorized"]:
+                reason = "physical retry not authorized"
+            elif prior_terminal:
+                reason = ("post-terminal continuation without a "
+                          "diagnostic disclosure")
+            else:
+                reason = "physical retry not authorized"
             rule = "invalid_correctness_bearing_observation"
             stop_events.append(
                 f"attempt {order} ({facts['attempt_id']}) is "
@@ -2056,17 +2078,23 @@ def reduce_attempts(attempts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             state["terminal_seen"] = True
         if transition["clears_stop"]:
             state["stop_fired"] = False
-            if stop_events:
-                stop_events = stop_events[:-1] + [
-                    event + " — cleared by the authorized terminal "
-                    "campaign attempt "
-                    f"{facts['attempt_id']}" for event in stop_events]
+            # an authorized terminal campaign attempt resolves EVERY
+            # stop fired in the campaign so far, not only the last one
+            # (review 1 P2: the boolean state and the event log must
+            # agree)
+            stop_events = [
+                event if "— cleared by" in event else
+                event + " — cleared by the authorized terminal campaign "
+                f"attempt {facts['attempt_id']}"
+                for event in stop_events]
         events.append({
             "order": order,
             "attempt_id": facts["attempt_id"],
             "classification": classification,
             "stop_rule_fired": rule,
-            "authoritative": transition["authoritative"],
+            # an event that fired a continuation stop rule is never
+            # verdict authority, whatever its class label (review 1 P2)
+            "authoritative": bool(transition["authoritative"] and rule is None),
             **({"non_authoritative_note": non_authoritative_note}
                if non_authoritative_note else {}),
             "state_after": dict(state),
@@ -2164,6 +2192,8 @@ TOKENIZER_ASSET_CONTRACT_FIELDS = (
     "tokenizer_path",
     "asset_dir",
     "assets",
+    "asset_dir_exhaustive",
+    "asset_dir_extra_entries",
     "digests_verified_pre_window",
     "forbidden_root",
     "observation_window_source_opens",
@@ -2199,9 +2229,18 @@ def tokenizer_asset_contract_record(
                 "closed")
         assets.append({"name": name, "sha256": digest})
     return {
+        "status": (
+            "future-retry-obligation: this record freezes the contract "
+            "the future physical retry must satisfy and verify; the "
+            "digest/verification fields are the contract's requirements, "
+            "not observations performed by this CPU-only run (the only "
+            "in-run mechanical observation is the audit-hook monitor "
+            "result)"),
         "tokenizer_path": tokenizer_path,
         "asset_dir": asset_dir or tokenizer_path,
         "assets": assets,
+        "asset_dir_exhaustive": True,
+        "asset_dir_extra_entries": [],
         "digests_verified_pre_window": digests_verified_pre_window,
         "forbidden_root": FORBIDDEN_SOURCE_ROOT,
         "observation_window_source_opens": observation_window_source_opens,
@@ -2261,6 +2300,20 @@ def verify_tokenizer_asset_contract(
         if name not in seen:
             return {"ok": False,
                     "reason": f"required tokenizer asset missing: {name}"}
+    # exhaustive-directory rule (review 1 P2): the pinned set must be
+    # EXACTLY what the asset directory contains — an unlisted extra
+    # file AutoTokenizer could consume (special_tokens_map.json,
+    # added_tokens.json, …) would change tokenizer behavior without
+    # touching any pinned digest
+    if record.get("asset_dir_exhaustive") is not True:
+        return {"ok": False,
+                "reason": "asset directory listing is not exhaustive "
+                "(unlisted tokenizer files could alter behavior)"}
+    extras = record.get("asset_dir_extra_entries")
+    if extras:
+        return {"ok": False,
+                "reason": f"asset directory carries unlisted entries: "
+                f"{sorted(extras)}"}
     if record["digests_verified_pre_window"] is not True:
         return {"ok": False,
                 "reason": "asset digests were not verified before the "
@@ -2426,6 +2479,27 @@ ATTEMPT_STATE_SELF_CHECKS = (
       {"cb": True, "readiness": True, "authorized": True}],
      False,
      ["CORRECTNESS_BEARING_INVALID", "CORRECTNESS_BEARING_VALID"]),
+    ("post_terminal_undisclosed_continuation_fails_closed",
+     [{"cb": True, "readiness": True, "authorized": True,
+       "terminal": True},
+      {"cb": True, "readiness": True, "authorized": True}],
+     False,
+     ["TERMINAL_CAMPAIGN_ATTEMPT", "CORRECTNESS_BEARING_INVALID"]),
+    ("post_terminal_disclosed_diagnostic_stays_powerless",
+     [{"cb": True, "readiness": True, "authorized": True,
+       "terminal": True},
+      {"cb": True, "readiness": True, "authorized": True,
+       "diagnostic": True}],
+     True,
+     ["TERMINAL_CAMPAIGN_ATTEMPT", "DIAGNOSTIC_ONLY_AFTER_STOP"]),
+    ("terminal_clears_every_fired_stop",
+     [{"cb": True, "readiness": True, "authorized": False},
+      {"cb": True, "readiness": True, "authorized": False},
+      {"cb": True, "readiness": True, "authorized": True,
+       "terminal": True}],
+     True,
+     ["CORRECTNESS_BEARING_INVALID", "CORRECTNESS_BEARING_INVALID",
+      "TERMINAL_CAMPAIGN_ATTEMPT"]),
 )
 
 
@@ -2507,7 +2581,8 @@ def _runtime_session_cross_check(
             "the ordinary arm's per-call runtime session ids equal the "
             "allocator mechanically extracted from the pinned "
             "r5b_epochs.py bytes, replayed in ordinary case order "
-            "(logical_session_id * 1_000_000 + global call sequence)"),
+            f"(logical_session_id * {extracted.facts['multiplier']} "
+            "+ global call sequence, per the extracted method)"),
     }
 
 

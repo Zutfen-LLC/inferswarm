@@ -89,6 +89,50 @@
         ],
         "observed_passed": false,
         "ok": true
+      },
+      {
+        "control": "post_terminal_undisclosed_continuation_fails_closed",
+        "expected_classifications": [
+          "TERMINAL_CAMPAIGN_ATTEMPT",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "TERMINAL_CAMPAIGN_ATTEMPT",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
+        "control": "post_terminal_disclosed_diagnostic_stays_powerless",
+        "expected_classifications": [
+          "TERMINAL_CAMPAIGN_ATTEMPT",
+          "DIAGNOSTIC_ONLY_AFTER_STOP"
+        ],
+        "expected_passed": true,
+        "observed_classifications": [
+          "TERMINAL_CAMPAIGN_ATTEMPT",
+          "DIAGNOSTIC_ONLY_AFTER_STOP"
+        ],
+        "observed_passed": true,
+        "ok": true
+      },
+      {
+        "control": "terminal_clears_every_fired_stop",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "CORRECTNESS_BEARING_INVALID",
+          "TERMINAL_CAMPAIGN_ATTEMPT"
+        ],
+        "expected_passed": true,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "CORRECTNESS_BEARING_INVALID",
+          "TERMINAL_CAMPAIGN_ATTEMPT"
+        ],
+        "observed_passed": true,
+        "ok": true
       }
     ]
   },
@@ -454,7 +498,7 @@
     "source_sha256": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805"
   },
   "runtime_session_cross_check": {
-    "derivation": "the ordinary arm's per-call runtime session ids equal the allocator mechanically extracted from the pinned r5b_epochs.py bytes, replayed in ordinary case order (logical_session_id * 1_000_000 + global call sequence)",
+    "derivation": "the ordinary arm's per-call runtime session ids equal the allocator mechanically extracted from the pinned r5b_epochs.py bytes, replayed in ordinary case order (logical_session_id * 1000000 + global call sequence, per the extracted method)",
     "ok": true,
     "problems": [],
     "representative_sequences": {
@@ -511,6 +555,8 @@
     },
     "record": {
       "asset_dir": "/srv/inferswarm/tokenizers/gemma-r6-frozen",
+      "asset_dir_exhaustive": true,
+      "asset_dir_extra_entries": [],
       "assets": [
         {
           "name": "chat_template.jinja",
@@ -536,6 +582,7 @@
       "digests_verified_pre_window": true,
       "forbidden_root": "/srv/models/",
       "observation_window_source_opens": 0,
+      "status": "future-retry-obligation: this record freezes the contract the future physical retry must satisfy and verify; the digest/verification fields are the contract's requirements, not observations performed by this CPU-only run (the only in-run mechanical observation is the audit-hook monitor result)",
       "tokenizer_path": "/srv/inferswarm/tokenizers/gemma-r6-frozen"
     },
     "rule": "the future physical retry must publish the exact sha256-pinned tokenizer/config assets to a dedicated non-Source location, point tokenizer_path there, verify digests pre-window, and open nothing under /srv/models/ during the observation window; the Coordinator legitimately uses a tokenizer \u2014 the gate never hinges on transformers being absent",

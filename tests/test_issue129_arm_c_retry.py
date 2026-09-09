@@ -308,6 +308,29 @@ class TokenizerSourceContractTests(unittest.TestCase):
         verdict = core.verify_tokenizer_asset_contract(record)
         self.assertFalse(verdict["ok"])
 
+    def test_control_unlisted_asset_dir_entry(self):
+        # review 1 P2: an unlisted extra file in the tokenizer asset
+        # directory (one AutoTokenizer could consume) violates the
+        # contract even when every pinned digest matches
+        record = core.tokenizer_asset_contract_record(ROOT)
+        record["asset_dir_extra_entries"] = ["special_tokens_map.json"]
+        verdict = core.verify_tokenizer_asset_contract(record)
+        self.assertFalse(verdict["ok"])
+        self.assertIn("unlisted entries", verdict["reason"])
+
+    def test_control_non_exhaustive_asset_dir_listing(self):
+        record = core.tokenizer_asset_contract_record(ROOT)
+        record["asset_dir_exhaustive"] = False
+        verdict = core.verify_tokenizer_asset_contract(record)
+        self.assertFalse(verdict["ok"])
+        self.assertIn("not exhaustive", verdict["reason"])
+
+    def test_contract_record_labels_future_retry_obligation(self):
+        # review 1/2: the record is a frozen contract for the future
+        # retry, not a performed verification
+        record = core.tokenizer_asset_contract_record(ROOT)
+        self.assertIn("future-retry-obligation", record["status"])
+
     def test_control_forbidden_source_open_during_window(self):
         with tempfile.TemporaryDirectory() as tmp:
             run = core.run_methodology(ROOT, simulated_forbidden_root=tmp)
@@ -807,7 +830,82 @@ class AttemptStateMachineTests(unittest.TestCase):
     def test_self_checks_pass(self):
         result = core.run_attempt_state_self_checks()
         self.assertTrue(result["ok"])
-        self.assertEqual(len(result["rows"]), 6)
+        self.assertEqual(len(result["rows"]), 9)
+
+    def test_control_post_terminal_undisclosed_continuation(self):
+        # review 1 P1: a correctness-bearing attempt after the
+        # campaign's terminal observation, WITHOUT a diagnostic
+        # disclosure, must fail closed (never silently auto-labeled
+        # diagnostic)
+        reduction = core.reduce_attempts([
+            self._facts(attempt_id="terminal-1",
+                        correctness_bearing_result_emitted=True,
+                        terminal_observation=True),
+            self._facts(attempt_id="undisclosed-continuation",
+                        correctness_bearing_result_emitted=True),
+            self._facts(attempt_id="undisclosed-continuation-2",
+                        correctness_bearing_result_emitted=True),
+        ])
+        self.assertFalse(reduction["passed"])
+        self.assertEqual(
+            reduction["events"][1]["classification"],
+            "CORRECTNESS_BEARING_INVALID")
+        self.assertEqual(
+            reduction["events"][2]["classification"],
+            "CORRECTNESS_BEARING_INVALID")
+        self.assertIn("post-terminal continuation",
+                      reduction["mandatory_stop_events"][0])
+
+    def test_post_terminal_disclosed_diagnostic_is_powerless(self):
+        reduction = core.reduce_attempts([
+            self._facts(attempt_id="terminal-1",
+                        correctness_bearing_result_emitted=True,
+                        terminal_observation=True),
+            self._facts(attempt_id="disclosed-diagnostic",
+                        correctness_bearing_result_emitted=True,
+                        diagnostic_only_disclosure=True),
+        ])
+        self.assertEqual(
+            reduction["events"][1]["classification"],
+            "DIAGNOSTIC_ONLY_AFTER_STOP")
+        self.assertFalse(reduction["events"][1]["authoritative"])
+        self.assertTrue(reduction["passed"])
+
+    def test_control_terminal_clears_every_fired_stop(self):
+        # review 1 P2: the boolean STOP state and the stop-event log
+        # must agree — an authorized terminal resolves EVERY stop
+        # fired in the campaign so far
+        reduction = core.reduce_attempts([
+            self._facts(attempt_id="invalid-1",
+                        correctness_bearing_result_emitted=True,
+                        physical_retry_authorized=False),
+            self._facts(attempt_id="invalid-2",
+                        correctness_bearing_result_emitted=True,
+                        methodology_gate_passed=False),
+            self._facts(attempt_id="terminal-1",
+                        correctness_bearing_result_emitted=True,
+                        terminal_observation=True),
+        ])
+        self.assertTrue(reduction["passed"])
+        self.assertFalse(reduction["final_state"]["stop_fired"])
+        self.assertEqual(reduction["unresolved_mandatory_stops"], [])
+        self.assertTrue(all("— cleared by" in event
+                            for event in reduction["mandatory_stop_events"]))
+
+    def test_continuation_event_firing_a_rule_is_non_authoritative(self):
+        # review 1 P2: an event that fires a continuation stop rule is
+        # recorded non-authoritative whatever its class label
+        reduction = core.reduce_attempts([
+            self._facts(attempt_id="invalid-1",
+                        correctness_bearing_result_emitted=True,
+                        physical_retry_authorized=False),
+            self._facts(attempt_id="continuation-1",
+                        correctness_bearing_result_emitted=True),
+        ])
+        self.assertEqual(
+            reduction["events"][1]["classification"],
+            "CORRECTNESS_BEARING_VALID")
+        self.assertFalse(reduction["events"][1]["authoritative"])
 
 
 class FrozenPinTests(unittest.TestCase):
