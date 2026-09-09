@@ -115,11 +115,11 @@
     }
   ],
   "frontier": {
-    "title": "Issue #117 — R6 successor dense full integration",
+    "title": "Issue #117 \u2014 R6 successor dense full integration",
     "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/117",
     "objective": "Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.",
     "prerequisite": {
-      "title": "Arm B — canonical cold acquisition + realization",
+      "title": "Arm B \u2014 canonical cold acquisition + realization",
       "observation": {
         "result": "ISSUE117_ARM_B_COLD_REALIZATION_PASS",
         "reference": "https://github.com/Zutfen-LLC/inferswarm/pull/127"
@@ -131,11 +131,11 @@
     },
     "execution": {
       "state": "blocked",
-      "step": "Arm C observed ISSUE117_ARM_C_ORDINARY_SERVING_FAIL (18/24 exact; pending maintainer review); Arm D blocked",
+      "step": "Arm C observed ISSUE117_ARM_C_EVIDENCE_BLOCKER (post-correctness-bearing methodology / evidence-admissibility failure; physical observations retained as diagnostic; pending maintainer review); Arm D blocked",
       "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/117",
       "constraints": [
         "Arm B is accepted at merge fed87d1b71a0794374dd58c921e31606a56a242f (ISSUE117_ARM_B_COLD_REALIZATION_PASS, PR #127).",
-        "Arm C executed 2026-09-09 from accepted main fed87d1b71a0794374dd58c921e31606a56a242f (status-sync + frozen Arm-C harness): observed ISSUE117_ARM_C_ORDINARY_SERVING_FAIL — 18/24 exact ordinary-vs-direct-control equivalence; the 6 regime-4 (multi-chunk prefill) fixture cases diverge, consistent with the documented non-deterministic KV-extend anomaly; all fencing, Coordinator-boundary, and participant data-path zero invariants hold. Retained under evidence/arm-c/; pending maintainer review.",
+        "Arm C executed 2026-09-09 from accepted main fed87d1b71a0794374dd58c921e31606a56a242f: the campaign is methodology/evidence-blocked (ISSUE117_ARM_C_EVIDENCE_BLOCKER, post-correctness-bearing methodology / evidence-admissibility failure). The frozen pre-execution authority (5e2c83a) binds the single-shot direct comparator; the driver and reducer were modified after correctness-bearing execution (disclosed in evidence/arm-c/pre-execution-authority-audit.json). armc-direct-6 (invalid, 24 correctness-bearing results, frozen invocation) triggered the mandatory \u00a710 stop; armc-direct-7/8/9 and armc-ordinary-1 are post-stop diagnostic observations. The retained 18/24 comparison and six regime-4 divergences are diagnostic evidence for a follow-up hypothesis, not an accepted FAIL. Four tokenizer-metadata /srv/models/ reads are retained and counted under the frozen zero-Source rule. No ordinary-serving semantic PASS or FAIL exists from this campaign.",
         "Do not rerun the accepted physical preflight, Arm A, or the accepted Arm-B campaign.",
         "Arm D must not begin before Arm-C maintainer review.",
         "Preserve the frozen producer 924cd22ea081f6d4ed471016faf01d427fc5b0d2, checkpoint 5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d, canonical candidate geometry dense.6171f32b4413, and the accepted Arm-B participant materialized state.",

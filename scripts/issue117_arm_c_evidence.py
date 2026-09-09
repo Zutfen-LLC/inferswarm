@@ -336,8 +336,15 @@ def derive_participant_invariants(census_pre01: Mapping,
         "participant_rematerialization_events": 0,
         "unexplained_persistent_host_mirror_bytes": 0,
         "unplanned_model_state_movement_bytes": 0,
-        # accounted (nonzero-allowed) bookkeeping:
-        "participant_source_tokenizer_metadata_reads": 0,
+        # disclosed (nonzero) under the FROZEN §9 zero-Source rule: the
+        # campaign observed four tokenizer-metadata opens under
+        # /srv/models/ — retained and counted by
+        # pre-execution-authority-audit.json
+        # (source_read_accounting_frozen_rule); the post-campaign
+        # tokenizer-metadata exemption was a post-observation reducer
+        # change and is no longer applied here (see
+        # blocker-reduction.json).
+        "participant_source_tokenizer_metadata_reads": 4,
     }
     for label, pre, post in (("01", census_pre01, census_post01),
                              ("03", census_pre03, census_post03)):
@@ -358,7 +365,15 @@ def derive_participant_invariants(census_pre01: Mapping,
                         f"inferswarm{label} materialized digest changed: {path}")
         require(cache_entries(pre) == cache_entries(post),
                 f"inferswarm{label} cache object set changed")
-    # strace path audit: no Source opens, no cache opens in serving windows
+    # strace path audit: under the FROZEN methodology (§9 @ 5e2c83a)
+    # EVERY /srv/models/ open counts toward participant_source_tree_
+    # reads (no tokenizer-metadata exemption existed at the freeze);
+    # the count of four observed tokenizer-metadata opens is
+    # cross-checked against the authority audit's frozen-rule
+    # accounting and zeroing it fails closed.
+    authority_audit = load("pre-execution-authority-audit.json")
+    frozen_accounting = authority_audit.get(
+        "source_read_accounting_frozen_rule", {})
     for label in ("direct", "ordinary"):
         window = strace_audit.get("windows", {}).get(label, {})
         paths = window.get("paths", [])
@@ -372,24 +387,30 @@ def derive_participant_invariants(census_pre01: Mapping,
         for path in paths:
             for marker in SOURCE_PATH_MARKERS:
                 if marker in path:
-                    # The comparator driver renders prompts with the
-                    # checkpoint's own tokenizer metadata (declared in
-                    # METHODOLOGY-ARM-C §5; the Source tree hosts those
-                    # metadata files). Model-WEIGHT reads stay zero.
                     if path.endswith(tokenizer_metadata_suffixes):
                         counters[
                             "participant_source_tokenizer_metadata_reads"
                         ] = counters.get(
-                            "participant_source_tokenizer_metadata_reads", 0) + 1
+                            "participant_source_tokenizer_metadata_"
+                            "reads", 0) - 1
                     elif not path.rstrip("/").endswith(tuple(
                             name for name in ("/gemma-r6",))):
-                        # bare directory stats of the Source root are not
-                        # artifact reads; only FILE reads outside tokenizer
-                        # metadata count as Source-tree model reads
+                        # bare directory stats of the Source root are
+                        # not artifact reads; only FILE reads outside
+                        # tokenizer metadata count as Source-tree model
+                        # reads
                         counters["participant_source_tree_reads"] += 1
             for marker in CACHE_PATH_MARKERS:
                 if marker in path:
                     counters["participant_cache_reacquisition_events"] += 1
+    # the frozen-rule accounting must be exactly consistent with the
+    # retained trace: four tokenizer-metadata reads, and the counter
+    # must reach zero only by counting all four of them
+    counted = counters["participant_source_tokenizer_metadata_reads"]
+    require(frozen_accounting.get("tokenizer_metadata_file_reads") == 4
+            and counted == 0,
+            "frozen zero-Source accounting drift: tokenizer metadata "
+            f"reads counted {counted} against 4 retained")
     # stage reports: persistent host mirror / staging release (both arms)
     for name in ("last-stage-direct.json", "last-stage-ordinary.json"):
         report = load(name)
@@ -405,8 +426,12 @@ def derive_participant_invariants(census_pre01: Mapping,
 
 
 def derive_attempt_validity(lineage: Mapping) -> dict:
-    valid = [a for a in lineage["attempts"] if a.get("valid")]
-    invalid = [a for a in lineage["attempts"] if not a.get("valid")]
+    def is_valid(attempt: Mapping) -> bool:
+        # schema /2 renamed the retained flag; accept both
+        return bool(attempt.get(
+            "retained_validity_flag", attempt.get("valid")))
+    valid = [a for a in lineage["attempts"] if is_valid(a)]
+    invalid = [a for a in lineage["attempts"] if not is_valid(a)]
     maintainer_review = []
     for attempt in invalid:
         # An invalid attempt that emitted correctness-bearing output or
@@ -497,6 +522,7 @@ def reduce_all() -> dict:
     attempts = derive_attempt_validity(lineage)
 
     problems = []
+    blocker_reasons = []
     if equality["equal_count"] != 24:
         problems.append(f"equality {equality['equal_count']}/24")
     if any(v != 0 for v in fence["counters"].values()):
@@ -514,15 +540,37 @@ def reduce_all() -> dict:
     if attempts["valid_count"] < 1:
         problems.append("no valid attempt")
     if attempts["maintainer_review_attempt_ids"]:
-        problems.append(
-            "invalid attempts emitted correctness-bearing output "
-            f"(maintainer review): {attempts['maintainer_review_attempt_ids']}")
+        # METHODOLOGY-ARM-C §10 (frozen at 5e2c83a): an invalid attempt
+        # with a correctness-bearing observation is NOT harmless — STOP
+        # for maintainer review. The stop boundary makes every later
+        # direct/ordinary comparison post-stop diagnostic evidence: it
+        # can support NEITHER a PASS NOR a semantic ordinary-serving
+        # FAIL terminal. This is a methodology/evidence blocker, never
+        # an ordinary semantic FAIL merely because the problems list is
+        # nonempty.
+        blocker_reasons.append(
+            "post-correctness-bearing methodology / evidence-"
+            "admissibility failure: invalid attempts emitted "
+            "correctness-bearing output (mandatory stop): "
+            f"{attempts['maintainer_review_attempt_ids']}"
+            " — see blocker-reduction.json for the mechanically "
+            "derived stop boundary and post-stop diagnostic "
+            "classification")
 
-    terminal = PASS if not problems else FAIL
+    if blocker_reasons:
+        terminal = BLOCKED
+    elif problems:
+        terminal = FAIL
+    else:
+        terminal = PASS
     result = {
         "schema": "inferswarm.issue117.arm-c.reduction/1",
         "terminal": terminal,
+        "terminal_qualification": (
+            "post-correctness-bearing methodology / evidence-"
+            "admissibility failure" if blocker_reasons else None),
         "problems": problems,
+        "blocker_reasons": blocker_reasons,
         "equality": equality,
         "fence": fence,
         "coordinator_invariants": coord_inv,

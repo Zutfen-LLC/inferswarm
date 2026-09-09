@@ -1,0 +1,63 @@
+{
+  "arm_d": "blocked",
+  "authority": {
+    "disclosure": "the direct driver and the reducer committed at the final head are NOT the scripts frozen by pre_execution_inferwarm_sha; every post-freeze change is classified in pre-execution-authority-audit.json",
+    "driver_changed_after_freeze": true,
+    "frozen_direct_driver": {
+      "git_blob_sha": "65b4587ce32e8fbe113d04aa4eeb8f6b9a29cb0c",
+      "sha256": "81f16fa75630a0826d1ef1a318920c43d3980c66066a010172b1174b1ed47f74"
+    },
+    "frozen_methodology": {
+      "git_blob_sha": "36b05326f9acb9085342f9a256cb245c1adde43b",
+      "sha256": "fdb9362f272c41e4752bb1b21b13b569a3b256f3d8caa6ead1c42fb64ae4fb6f"
+    },
+    "frozen_reducer": {
+      "git_blob_sha": "c33494d265b7832fdf350ac032eedd8d01ce1fb3",
+      "sha256": "249310ce3b9be1e1a24b47dcc379b81739da2a30dc2ec277fab6c03776aeb93e"
+    },
+    "post_freeze_change_count": 78,
+    "pre_execution_inferwarm_sha": "5e2c83a09031d68784c3098fc9dad319b684f0da",
+    "reducer_changed_after_freeze": true
+  },
+  "head": "39e9a0c8e0a1320c996cd5c5e4966787cd0e1a91",
+  "retained_diagnostic_value": {
+    "equality_18_of_24": "retained as diagnostic evidence (post-stop, replay-prefill comparator); it does NOT establish the terminal Arm-C ordinary-serving result",
+    "six_regime_4_divergences": "retained as diagnostic evidence; they strongly suggest a real multi-chunk/KV nondeterminism defect, which is a FOLLOW-UP HYPOTHESIS, not the accepted result of this campaign"
+  },
+  "schema": "inferswarm.issue117.arm-c.blocker-reduction/1",
+  "source_reads_frozen_rule": {
+    "classification": "the four tokenizer-metadata opens are retained and counted under the frozen rule (no post-hoc exemption); they contribute to the evidence blocker and independently bar PASS",
+    "frozen_rule": "zero /srv/models/ opens in the serving windows",
+    "model_weight_file_reads": 0,
+    "participant_source_tree_reads_under_frozen_rule": 4,
+    "tokenizer_metadata_file_reads": 4
+  },
+  "stop_boundary": {
+    "correctness_bearing_stop_trigger": true,
+    "derivation": "armc-direct-6 physically completed 24 cases with GPU residency and emitted correctness-bearing results using the frozen single-shot max_new_tokens=8 invocation, and is retained invalid \u2192 METHODOLOGY-ARM-C \u00a710: STOP for maintainer review",
+    "direct9_is_frozen_comparator": false,
+    "direct9_note": "armc-direct-9 used the post-freeze, post-stop replay-prefill invocation (its result rows carry per-token-replay-prefill/1); it is a revised diagnostic invocation, not the comparator frozen at 5e2c83a",
+    "post_stop_attempts_admissible_to_terminal": false,
+    "post_stop_attempts_retained": true,
+    "post_stop_diagnostic_attempts": [
+      "armc-direct-7",
+      "armc-direct-8",
+      "armc-direct-9",
+      "armc-ordinary-1"
+    ],
+    "stop_trigger_attempt": "armc-direct-6"
+  },
+  "terminal": "ISSUE117_ARM_C_EVIDENCE_BLOCKER",
+  "terminal_derivation": [
+    "claimed pre-execution SHA verified: 5e2c83a\u2026",
+    "frozen methodology/driver/reducer digests pinned by git blob SHA + sha256",
+    "post-freeze driver/reducer deltas mechanically disclosed",
+    "armc-direct-6 emitted correctness-bearing results (24-case retained run), GPU-resident, frozen single-shot invocation",
+    "armc-direct-6 is retained invalid \u2192 mandatory STOP",
+    "armc-direct-7/8/9 and armc-ordinary-1 exist after the stop \u2192 diagnostic only, inadmissible as terminal evidence",
+    "four tokenizer-metadata Source opens occurred under the frozen zero-Source rule \u2192 terminal cannot be PASS",
+    "no admissible frozen-comparator vs ordinary comparison exists \u2192 terminal cannot be semantic ordinary-serving FAIL",
+    "terminal is the Arm-C evidence/methodology blocker (post-correctness-bearing methodology / evidence-admissibility failure)"
+  ],
+  "terminal_qualification": "post-correctness-bearing methodology / evidence-admissibility failure"
+}

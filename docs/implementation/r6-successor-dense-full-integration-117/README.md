@@ -4,8 +4,12 @@
 
 **Observed terminals (latest first):**
 
-- Arm C (2026-09-09): `ISSUE117_ARM_C_ORDINARY_SERVING_FAIL` — observed,
-  pending maintainer review (see the Arm C section below).
+- Arm C (2026-09-09, corrected 2026-09-09): physical observations
+  exist, but the campaign is **methodology/evidence-blocked** —
+  `ISSUE117_ARM_C_EVIDENCE_BLOCKER` (post-correctness-bearing
+  methodology / evidence-admissibility failure); no accepted
+  ordinary-serving semantic PASS or FAIL exists from this campaign
+  (see the Arm C section below).
 - Arm B (2026-09-08, ACCEPTED at merge
   `fed87d1b71a0794374dd58c921e31606a56a242f`, PR #127):
   `ISSUE117_ARM_B_COLD_REALIZATION_PASS` — executed from historical
@@ -247,75 +251,102 @@ At PR #127 round-4 head `dfaee1722f2407d843be940b84905d77d4b6a636`:
 
 Two independent exact-head reviews completed with zero P0/P1 findings.
 
-## Arm C — observed ordinary external-Coordinator serving FAIL (2026-09-09)
+## Arm C — methodology/evidence-blocked campaign (2026-09-09)
 
-Arm C executed on the fabric from accepted main `fed87d1b…` + status-sync,
-with the frozen integration producer `924cd22e…` byte-identical on
-inferswarm00/01/03 (no FreeToken changes: the r6/serving surfaces are
-execution-math-bound by the applicability audit).
+Arm C executed physically on the fabric from accepted main
+`fed87d1b…` + status-sync, with the frozen integration producer
+`924cd22e…` byte-identical and clean on inferswarm00/01/03. Physical
+observations exist and are ALL retained unchanged; the campaign
+terminal, however, is NOT an ordinary-serving PASS or FAIL. The
+retention/derivation correction pass (2026-09-09, no rerun)
+reclassified the campaign:
 
-Observed terminal:
+**Terminal: `ISSUE117_ARM_C_EVIDENCE_BLOCKER`** — qualified as a
+**post-correctness-bearing methodology / evidence-admissibility
+failure**, mechanically derived by
+`scripts/issue117_arm_c_blocker_reducer.py` from
+[`evidence/arm-c/blocker-reduction.json`](evidence/arm-c/blocker-reduction.json).
 
-`ISSUE117_ARM_C_ORDINARY_SERVING_FAIL`
+What the frozen pre-execution authority actually establishes
+(`pre_execution_inferwarm_sha` = `5e2c83a…`; bound by git blob SHA and
+sha256 in
+[`evidence/arm-c/pre-execution-authority-audit.json`](evidence/arm-c/pre-execution-authority-audit.json)):
 
-The 24-case frozen public fixture ran through BOTH arms:
+1. **Frozen comparator replaced after correctness-bearing execution.**
+   `METHODOLOGY-ARM-C.md` §4 @ `5e2c83a` froze the direct comparator
+   as one `generate(session_id=i, prompt_token_ids=<rendered ids>,
+   max_new_tokens=8)` per case, and the direct driver at `5e2c83a`
+   implemented exactly that. The driver was then modified during the
+   campaign (the staged copy on inferswarm01 was overwritten in place
+   at 2026-09-09T10:43Z, between the direct-6 and direct-9 completions)
+   and committed at `dd4154d` as per-token replay-prefill
+   (`max_new_tokens=2`), with single-shot declared invalid. The current
+   scripts are NOT the scripts frozen by `pre_execution_inferwarm_sha`
+   — the audit discloses every post-freeze change.
+2. **`armc-direct-6` is a mandatory stop boundary.** It physically
+   completed all 24 cases with GPU residency and emitted
+   correctness-bearing results using the FROZEN single-shot invocation,
+   and is retained INVALID. Frozen §10: an invalid attempt with a
+   correctness-bearing observation is NOT harmless — STOP for
+   maintainer review. `armc-direct-7/8/9` and `armc-ordinary-1` ran
+   after that stop (the ordinary campaign's planner even consumed a
+   ranking record measured by direct-6): they are retained as
+   **post-stop diagnostic** observations, inadmissible to the Arm-C
+   terminal serving claim.
+3. **Post-observation reducer weakening reverted.** The reducer was
+   changed after physical execution (fail-closed invalid-attempt rule
+   weakened to a review list; `/srv/models/` tokenizer-metadata
+   exemption added). The terminal campaign reducer is now bound to the
+   pre-execution methodology; the corrected legacy reducer
+   (`scripts/issue117_arm_c_evidence.py`) fails closed on an invalid
+   correctness-bearing stop-trigger and maps it to the blocker, never
+   to ordinary semantic FAIL.
+4. **Four Source-tree metadata reads under the frozen zero-Source
+   rule.** The direct window shows four tokenizer-metadata file opens
+   under `/srv/models/` (plus one directory stat; zero model-weight
+   reads). The frozen §9 rule admits no exemption; the four reads are
+   retained and counted, never zeroed. A future methodology may
+   pre-declare an immutable-tokenizer-metadata exception, but only
+   frozen BEFORE a new correctness-bearing campaign — it cannot be
+   backported to this one.
 
-- **ordinary arm**: client → HTTP `/v1/chat/completions` on the CPU-only
-  Coordinator (inferswarm00, the accepted #67 R6 coordinator waist) →
-  strategy → generic planner (`AUTOMATIC_PLANNER_SELECTION` from an
-  `EXACT_CONTEXT` record measured by the direct arm) → frozen execution
-  plan → xc-wire REALIZE → node agent on inferswarm01 → 3-stage chain
-  (stages 1–2 local, stage 3 over the accepted R4 wire to inferswarm03,
-  all realized from the accepted Arm-B materialized participant state via
-  a zero-byte symlink view) → fenced commits; plus the real-path fencing
-  request (both controlled injections rejected on the live path).
-- **direct-control comparator**: the same integrated substrate
-  (`ChainEpochRuntime` exactly as the node agent builds it, same chain
-  plan, same participant state, same last-stage service) invoked directly
-  on inferswarm01 with the control plane bypassed, per-token
-  replay-prefill (the accepted canonical-prefix invocation).
+**Disposition of the physical observations (all retained, none
+erased):**
 
-**Result: 18/24 cases exactly equal on every mandatory dimension**
-(per-step token ids, committed count, stop semantics, decoded bytes,
-session/epoch/plan/position attribution). **The 6 regime-4 cases
-(rendered prompt 65–67 ids > the 64-row single-chunk boundary) diverge
-between the arms.** Three independently retained execution trajectories
-(ordinary, direct replay-prefill, direct single-shot) disagree run-to-run
-exactly on those cases, consistent with the documented non-deterministic
-multi-chunk KV-extend anomaly (`anomaly-incremental-decode.md`): any
-ordinary serving request whose chat-rendered prompt exceeds 64 tokens
-crosses the known-broken incremental-append path. No tuning or rerun was
-performed after the correctness-bearing observation; the mismatch is
-recorded as a valid Arm-C failure, cause retained as diagnostic evidence.
+- the 18/24 ordinary-vs-direct comparison (replay-prefill comparator,
+  post-stop) is retained as **diagnostic evidence**; it does NOT
+  establish the terminal Arm-C ordinary-serving result;
+- the six regime-4 divergences (rendered prompt 65–67 ids) are
+  retained as diagnostic evidence strongly suggesting a real
+  multi-chunk/KV nondeterminism defect — a **follow-up hypothesis**,
+  not the accepted result of this campaign;
+- direct-6 single-shot trajectory, direct-9 replay-prefill trajectory,
+  ordinary trajectory, fencing/coordinator/data-path zeros, straces,
+  censuses, and the recovered attempt lineage
+  ([`evidence/arm-c/attempt-lineage.json`](evidence/arm-c/attempt-lineage.json),
+  schema /2: per-attempt timestamps recovered digest-bound from the
+  retained execution-session transcript; unrecoverable fields carry
+  explicit `unknown / not retained` markers — including the exact
+  driver bytes used by direct-1..6, which were overwritten in place
+  and are part of the evidence blocker).
 
-All other mandatory dimensions hold with exact zeros:
-fencing (8 counters, both real-path rejections fired), Coordinator
-boundary (no NVIDIA nodes, torch/triton uninstallable, exact state
-census, no model bytes), participant data path (zero Source-model reads,
-zero cache reacquisition, zero rematerialization, materialized state
-byte-preserved; the comparator driver's four tokenizer-metadata reads
-are declared and accounted).
+Canonical reducers: `scripts/issue117_arm_c_blocker_reducer.py`
+(frozen-evidence terminal derivation; 17-control mutation suite in
+`tests/test_issue117_arm_c_blocker.py`) and
+`scripts/issue117_arm_c_evidence.py` (retained-equality derivation;
+34-control suite in `tests/test_issue117_arm_c_retention.py`).
 
-Nine invalid launches are retained in
-[`evidence/arm-c/attempt-lineage.json`](evidence/arm-c/attempt-lineage.json);
-one (`armc-direct-6`, an invocation-pattern-defective comparator run)
-emitted 24 correctness-bearing results that are retained as anomaly
-corroboration and flagged for maintainer review — it never reached the
-Coordinator and changed no accepted state.
-
-The canonical reducer is `scripts/issue117_arm_c_evidence.py`
-(34-control mutation suite: `tests/test_issue117_arm_c_retention.py`).
-
-Arm D has NOT been executed and remains blocked pending maintainer
-review of this observation.
+Arm D has NOT been executed and remains blocked.
 
 ## Non-claims (Arm C)
 
-- Arm C does not claim ordinary-serving correctness for the 6 regime-4
-  cases; the FAIL stands as observed.
-- No Arm-D warm-restart or Arm-E locality claim.
-- The multi-chunk anomaly attribution is diagnostic evidence, not a
-  root-cause proof; maintainer review decides disposition.
+- Arm C claims NO ordinary-serving semantic PASS or FAIL: the retained
+  18/24 comparison used a post-stop, post-freeze replay-prefill
+  comparator and is diagnostic only.
+- The six regime-4 divergences are diagnostic evidence for a follow-up
+  hypothesis (multi-chunk/KV nondeterminism), not an accepted result.
+- No Arm-D warm-restart or Arm-E locality claim; Arm D remains blocked.
+- No new Arm-C physical campaign is authorized by this record.
 - Arm B does not claim ordinary external-Coordinator serving; that is Arm C.
 - No PREFILL/decode/generate or fixture serving was executed as part of Arm B.
 - Arms C/D/E have not been executed.

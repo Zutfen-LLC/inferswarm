@@ -243,11 +243,39 @@ def build(out: Path) -> None:
         "schema": "inferswarm.issue117.arm-c.strace-audit/1",
         "windows": {
             "direct": {"collected": True,
-                       "paths": ["/srv/inferswarm/state/arm-c/model-view/"
-                                 "stage-1.safetensors"]},
+                       "paths": [
+                           "/srv/models/gemma-r6/config.json",
+                           "/srv/models/gemma-r6/chat_template.jinja",
+                           "/srv/models/gemma-r6/tokenizer.json",
+                           "/srv/models/gemma-r6/tokenizer_config.json",
+                           "/srv/inferswarm/state/arm-c/model-view/"
+                           "stage-1.safetensors"]},
             "ordinary": {"collected": True,
                          "paths": ["/srv/inferswarm/state/arm-c/model-view/"
                                    "stage-2.safetensors"]},
+        },
+    })
+    # pre-execution authority audit (frozen-rule Source accounting): a
+    # clean synthetic campaign that still discloses the four retained
+    # tokenizer-metadata reads counted under the frozen zero-Source rule
+    w(out / "pre-execution-authority-audit.json", {
+        "schema": "inferswarm.issue117.arm-c."
+                  "pre-execution-authority-audit/1",
+        "claimed_pre_execution_inferswarm_sha":
+            "5e2c83a09031d68784c3098fc9dad319b684f0da",
+        "source_read_accounting_frozen_rule": {
+            "frozen_rule": "zero /srv/models/ opens (synthetic)",
+            "total_opens_counted": 4,
+            "tokenizer_metadata_file_reads": 4,
+            "source_root_directory_stats": 0,
+            "model_weight_file_reads": 0,
+            "observed_paths": {"tokenizer_metadata_files": [
+                "direct:/srv/models/gemma-r6/config.json",
+                "direct:/srv/models/gemma-r6/chat_template.jinja",
+                "direct:/srv/models/gemma-r6/tokenizer.json",
+                "direct:/srv/models/gemma-r6/tokenizer_config.json"],
+                "directory_stats": [], "model_weight_files": []},
+            "historical_classification": "synthetic",
         },
     })
     for name in ("last-stage-direct.json", "last-stage-ordinary.json"):

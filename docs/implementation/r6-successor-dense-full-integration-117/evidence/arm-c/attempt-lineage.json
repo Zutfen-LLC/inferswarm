@@ -3,156 +3,358 @@
     {
       "accepted_arm_b_state_changed": false,
       "attempt_id": "armc-lss-1",
-      "cleanup": "process exited; restarted",
+      "campaign_classification": "pre-stop infrastructure (non-correctness-bearing)",
+      "cleanup_containment": "process exited; restarted",
+      "code_identity": {
+        "freetoken_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+        "inferswarm_inferwarm_worktree_sha": "unknown / not retained",
+        "worktree_note": "no commit was made on issue-117-arm-c-ordinary-serving between the freeze 5e2c83a and the campaign commit dd4154d; the working tree during the campaign carried uncommitted modifications (disclosed in pre-execution-authority-audit.json)"
+      },
       "coordinator_commit_occurred": false,
       "correctness_bearing_result_emitted": false,
+      "evidence_bindings": {
+        "transcript": "20260909_004724_7f3f1e"
+      },
       "failure": "FileNotFoundError participant-plan",
       "gpu_residency_achieved": false,
+      "hosts": [
+        "inferswarm03"
+      ],
+      "observed_timestamps": {
+        "transcript_first_observed_utc": "2026-09-09T12:52:03.594399+00:00"
+      },
       "order": 1,
-      "phase": "last-stage startup (plan file not yet staged)",
+      "phase_reached": "last-stage startup (plan file not yet staged)",
       "realization_request_made": false,
       "result_reached_coordinator": false,
-      "valid": false
+      "retained_validity_flag": false
     },
     {
       "accepted_arm_b_state_changed": false,
       "attempt_id": "armc-direct-1",
-      "cleanup": "none needed",
+      "campaign_classification": "pre-stop infrastructure (non-correctness-bearing)",
+      "cleanup_containment": "none needed",
+      "code_identity": {
+        "driver_bytes": "unknown / not retained",
+        "freetoken_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+        "inferswarm_inferwarm_worktree_sha": "unknown / not retained",
+        "worktree_note": "no commit was made on issue-117-arm-c-ordinary-serving between the freeze 5e2c83a and the campaign commit dd4154d; the working tree during the campaign carried uncommitted modifications (disclosed in pre-execution-authority-audit.json)"
+      },
       "coordinator_commit_occurred": false,
       "correctness_bearing_result_emitted": false,
+      "evidence_bindings": {
+        "transcript": "20260909_004724_7f3f1e"
+      },
       "failure": "repo path inferred from scripts dir (not a git repo)",
       "gpu_residency_achieved": false,
+      "hosts": [
+        "inferswarm01"
+      ],
+      "observed_timestamps": {
+        "transcript_first_observed_utc": "2026-09-09T07:53:49.924784+00:00"
+      },
       "order": 2,
-      "phase": "git verification",
+      "phase_reached": "git verification",
       "realization_request_made": false,
       "result_reached_coordinator": false,
-      "valid": false
+      "retained_validity_flag": false
     },
     {
       "accepted_arm_b_state_changed": false,
       "attempt_id": "armc-direct-2",
-      "cleanup": "--repo flag added",
+      "campaign_classification": "pre-stop infrastructure (non-correctness-bearing)",
+      "cleanup_containment": "--repo flag added",
+      "code_identity": {
+        "driver_bytes": "unknown / not retained",
+        "freetoken_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+        "inferswarm_inferwarm_worktree_sha": "unknown / not retained",
+        "worktree_note": "no commit was made on issue-117-arm-c-ordinary-serving between the freeze 5e2c83a and the campaign commit dd4154d; the working tree during the campaign carried uncommitted modifications (disclosed in pre-execution-authority-audit.json)"
+      },
       "coordinator_commit_occurred": false,
       "correctness_bearing_result_emitted": false,
+      "evidence_bindings": {
+        "transcript": "20260909_004724_7f3f1e"
+      },
       "failure": "CalledProcessError git rev-parse",
       "gpu_residency_achieved": false,
+      "hosts": [
+        "inferswarm01"
+      ],
+      "observed_timestamps": {
+        "transcript_first_observed_utc": "2026-09-09T07:58:30.737655+00:00"
+      },
       "order": 3,
-      "phase": "git verification (same path defect)",
+      "phase_reached": "git verification (same path defect)",
       "realization_request_made": false,
       "result_reached_coordinator": false,
-      "valid": false
+      "retained_validity_flag": false
     },
     {
       "accepted_arm_b_state_changed": false,
       "attempt_id": "armc-direct-3",
-      "cleanup": "stage processes killed; GPUs cleared",
+      "campaign_classification": "pre-stop infrastructure (non-correctness-bearing)",
+      "cleanup_containment": "stage processes killed; GPUs cleared",
+      "code_identity": {
+        "driver_bytes": "unknown / not retained",
+        "freetoken_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+        "inferswarm_inferwarm_worktree_sha": "unknown / not retained",
+        "worktree_note": "no commit was made on issue-117-arm-c-ordinary-serving between the freeze 5e2c83a and the campaign commit dd4154d; the working tree during the campaign carried uncommitted modifications (disclosed in pre-execution-authority-audit.json)"
+      },
       "coordinator_commit_occurred": false,
       "correctness_bearing_result_emitted": false,
+      "evidence_bindings": {
+        "strace_window": "the retained direct.strace.gz (mtime 2026-09-09T08:16:38Z) covers this era of direct-window attempts; window-attribution to a single attempt is not recoverable from retained bytes",
+        "transcript": "20260909_004724_7f3f1e"
+      },
       "failure": "KeyError participants (execution-plan body incomplete)",
       "gpu_residency_achieved": true,
+      "hosts": [
+        "inferswarm01",
+        "inferswarm03"
+      ],
+      "observed_timestamps": {
+        "transcript_first_observed_utc": "2026-09-09T08:04:19.708167+00:00"
+      },
       "order": 4,
-      "phase": "chain construction",
+      "phase_reached": "chain construction",
       "realization_request_made": false,
       "result_reached_coordinator": false,
-      "valid": false
+      "retained_validity_flag": false
     },
     {
       "accepted_arm_b_state_changed": false,
       "attempt_id": "armc-direct-4",
-      "cleanup": "service restarted",
+      "campaign_classification": "pre-stop infrastructure (non-correctness-bearing)",
+      "cleanup_containment": "service restarted",
+      "code_identity": {
+        "driver_bytes": "unknown / not retained",
+        "freetoken_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+        "inferswarm_inferwarm_worktree_sha": "unknown / not retained",
+        "worktree_note": "no commit was made on issue-117-arm-c-ordinary-serving between the freeze 5e2c83a and the campaign commit dd4154d; the working tree during the campaign carried uncommitted modifications (disclosed in pre-execution-authority-audit.json)"
+      },
       "coordinator_commit_occurred": false,
       "correctness_bearing_result_emitted": false,
+      "evidence_bindings": {
+        "transcript": "20260909_004724_7f3f1e"
+      },
       "failure": "ConnectionRefused (service had exited after prior disconnect)",
       "gpu_residency_achieved": false,
+      "hosts": [
+        "inferswarm01",
+        "inferswarm03"
+      ],
+      "observed_timestamps": {
+        "transcript_first_observed_utc": "2026-09-09T08:22:49.196361+00:00"
+      },
       "order": 5,
-      "phase": "last-stage connect",
+      "phase_reached": "last-stage connect",
       "realization_request_made": false,
       "result_reached_coordinator": false,
-      "valid": false
+      "retained_validity_flag": false
     },
     {
       "accepted_arm_b_state_changed": false,
       "attempt_id": "armc-direct-5",
-      "cleanup": "processes killed; switched to zutfen user with warm caches",
+      "campaign_classification": "pre-stop infrastructure (non-correctness-bearing)",
+      "cleanup_containment": "processes killed; switched to zutfen user with warm caches",
+      "code_identity": {
+        "driver_bytes": "unknown / not retained",
+        "freetoken_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+        "inferswarm_inferwarm_worktree_sha": "unknown / not retained",
+        "worktree_note": "no commit was made on issue-117-arm-c-ordinary-serving between the freeze 5e2c83a and the campaign commit dd4154d; the working tree during the campaign carried uncommitted modifications (disclosed in pre-execution-authority-audit.json)"
+      },
       "coordinator_commit_occurred": false,
       "correctness_bearing_result_emitted": false,
+      "evidence_bindings": {
+        "transcript": "20260909_004724_7f3f1e"
+      },
       "failure": "r4 wire 30s timeout (cold page cache + JIT under strace, run as root)",
       "gpu_residency_achieved": true,
+      "hosts": [
+        "inferswarm01",
+        "inferswarm03"
+      ],
+      "observed_timestamps": {
+        "transcript_first_observed_utc": "2026-09-09T08:26:08.956523+00:00"
+      },
       "order": 6,
-      "phase": "first prefill",
+      "phase_reached": "first prefill",
       "realization_request_made": true,
       "result_reached_coordinator": false,
-      "valid": false
+      "retained_validity_flag": false
     },
     {
       "accepted_arm_b_state_changed": false,
       "attempt_id": "armc-direct-6",
-      "cleanup": "retained under invalid-attempt-6/ for divergence diagnostics; NOT used as comparator evidence except as documented anomaly corroboration",
+      "campaign_classification": "correctness_bearing_stop_trigger: retained invalid attempt that physically completed all 24 cases with GPU residency and emitted correctness-bearing results using the FROZEN single-shot invocation \u2014 mandatory STOP for maintainer review (METHODOLOGY-ARM-C \u00a710)",
+      "cleanup_containment": "retained under invalid-attempt-6/ for divergence diagnostics; NOT admissible as terminal comparator evidence",
+      "code_identity": {
+        "driver_bytes": "unknown / not retained",
+        "freetoken_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+        "inferswarm_inferwarm_worktree_sha": "unknown / not retained",
+        "worktree_note": "no commit was made on issue-117-arm-c-ordinary-serving between the freeze 5e2c83a and the campaign commit dd4154d; the working tree during the campaign carried uncommitted modifications (disclosed in pre-execution-authority-audit.json)"
+      },
       "coordinator_commit_occurred": false,
       "correctness_bearing_result_emitted": true,
+      "evidence_bindings": {
+        "completed_utc_from_evidence": "2026-09-09T10:28:36.248255+00:00",
+        "execution_plan": "invalid-attempt-6/execution-plan.json",
+        "planner_ranking_record_derived": "serving-evidence.json (the ordinary arm's planner record cites attempt_id armc-direct-6)",
+        "results": "invalid-attempt-6/direct-run.json",
+        "transcript": "20260909_004724_7f3f1e"
+      },
       "failure": "INVALID COMPARATOR: single-shot max_new_tokens=8 incremental decode (documented anomalous KV-append path), invocation differs from the ordinary contract",
       "gpu_residency_achieved": true,
+      "hosts": [
+        "inferswarm01",
+        "inferswarm03"
+      ],
+      "observed_timestamps": {
+        "transcript_first_observed_utc": "2026-09-09T10:28:37.276670+00:00"
+      },
       "order": 7,
-      "phase": "completed 24 cases",
+      "phase_reached": "completed 24 cases (frozen single-shot max_new_tokens=8 invocation)",
       "realization_request_made": true,
       "result_reached_coordinator": false,
-      "valid": false
+      "retained_validity_flag": false
     },
     {
       "accepted_arm_b_state_changed": false,
       "attempt_id": "armc-direct-7",
-      "cleanup": "ownership fixed",
+      "campaign_classification": "post-stop diagnostic / inadmissible to the Arm-C terminal serving claim",
+      "cleanup_containment": "ownership fixed",
+      "code_identity": {
+        "driver_sha256": "c0f03ef5d5b7aaba1e36cdee3ca310d29ce9d1bd70b9b1bfa4f947ddeefa204a",
+        "freetoken_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+        "inferswarm_inferwarm_worktree_sha": "unknown / not retained",
+        "worktree_note": "no commit was made on issue-117-arm-c-ordinary-serving between the freeze 5e2c83a and the campaign commit dd4154d; the working tree during the campaign carried uncommitted modifications (disclosed in pre-execution-authority-audit.json)"
+      },
       "coordinator_commit_occurred": false,
       "correctness_bearing_result_emitted": false,
+      "evidence_bindings": {
+        "transcript": "20260909_004724_7f3f1e"
+      },
       "failure": "PermissionError (root-owned out dir)",
       "gpu_residency_achieved": false,
+      "hosts": [
+        "inferswarm01",
+        "inferswarm03"
+      ],
+      "observed_timestamps": {
+        "transcript_first_observed_utc": "2026-09-09T10:49:28.249147+00:00"
+      },
       "order": 8,
-      "phase": "output write",
+      "phase_reached": "output write",
       "realization_request_made": false,
       "result_reached_coordinator": false,
-      "valid": false
+      "retained_validity_flag": false
     },
     {
       "accepted_arm_b_state_changed": false,
       "attempt_id": "armc-direct-8",
-      "cleanup": "processes killed; page-cache warm reads issued (read-only cat > /dev/null)",
+      "campaign_classification": "post-stop diagnostic / inadmissible to the Arm-C terminal serving claim",
+      "cleanup_containment": "processes killed; page-cache warm reads issued (read-only cat > /dev/null)",
+      "code_identity": {
+        "driver_sha256": "c0f03ef5d5b7aaba1e36cdee3ca310d29ce9d1bd70b9b1bfa4f947ddeefa204a",
+        "freetoken_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+        "inferswarm_inferwarm_worktree_sha": "unknown / not retained",
+        "worktree_note": "no commit was made on issue-117-arm-c-ordinary-serving between the freeze 5e2c83a and the campaign commit dd4154d; the working tree during the campaign carried uncommitted modifications (disclosed in pre-execution-authority-audit.json)"
+      },
       "coordinator_commit_occurred": false,
       "correctness_bearing_result_emitted": false,
+      "evidence_bindings": {
+        "transcript": "20260909_004724_7f3f1e"
+      },
       "failure": "r4 wire 30s timeout (page cache evicted; 9.29GB cold shard read)",
       "gpu_residency_achieved": true,
+      "hosts": [
+        "inferswarm01",
+        "inferswarm03"
+      ],
+      "observed_timestamps": {
+        "transcript_first_observed_utc": "2026-09-09T10:56:57.544666+00:00"
+      },
       "order": 9,
-      "phase": "first replay prefill",
+      "phase_reached": "first replay prefill",
       "realization_request_made": true,
       "result_reached_coordinator": false,
-      "valid": false
+      "retained_validity_flag": false
     },
     {
       "accepted_arm_b_state_changed": false,
       "attempt_id": "armc-direct-9",
-      "cleanup": "none (valid)",
+      "campaign_classification": "post-stop diagnostic / inadmissible to the Arm-C terminal serving claim",
+      "cleanup_containment": "retained as diagnostic comparison side",
+      "code_identity": {
+        "driver_sha256": "c0f03ef5d5b7aaba1e36cdee3ca310d29ce9d1bd70b9b1bfa4f947ddeefa204a",
+        "freetoken_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+        "inferswarm_inferwarm_worktree_sha": "unknown / not retained",
+        "worktree_note": "no commit was made on issue-117-arm-c-ordinary-serving between the freeze 5e2c83a and the campaign commit dd4154d; the working tree during the campaign carried uncommitted modifications (disclosed in pre-execution-authority-audit.json)"
+      },
       "coordinator_commit_occurred": false,
       "correctness_bearing_result_emitted": true,
+      "evidence_bindings": {
+        "completed_utc_from_evidence": "2026-09-09T11:09:05.413012+00:00",
+        "execution_plan": "direct/execution-plan.json",
+        "results": "direct-run.json (= direct/direct-run.json)"
+      },
+      "failure": null,
       "gpu_residency_achieved": true,
+      "hosts": [
+        "inferswarm01",
+        "inferswarm03"
+      ],
+      "observed_timestamps": {
+        "transcript_first_observed_utc": "2026-09-09T11:09:06.394426+00:00"
+      },
       "order": 10,
-      "phase": "completed 24 cases (per-token replay-prefill comparator)",
+      "phase_reached": "completed 24 cases (per-token replay-prefill comparator \u2014 POST-FREEZE, POST-STOP revised diagnostic invocation; NOT the comparator frozen at 5e2c83a)",
       "realization_request_made": true,
       "result_reached_coordinator": false,
-      "valid": true
+      "retained_validity_flag": true
     },
     {
       "accepted_arm_b_state_changed": false,
       "attempt_id": "armc-ordinary-1",
-      "cleanup": "coordinator/agent/service stopped gracefully",
+      "campaign_classification": "post-stop diagnostic / inadmissible to the Arm-C terminal serving claim",
+      "cleanup_containment": "coordinator/agent/service stopped gracefully",
+      "code_identity": {
+        "coordinator_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2 (clean)",
+        "inferswarm_inferwarm_worktree_sha": "unknown / not retained"
+      },
       "coordinator_commit_occurred": true,
       "correctness_bearing_result_emitted": true,
+      "evidence_bindings": {
+        "completed_utc_from_evidence": "2026-09-09T10:38:52.091031+00:00",
+        "coordinator_report": "coordinator-report.json",
+        "fencing": "fencing-arm.json",
+        "per_case_http": "ordinary-http/",
+        "records": "ordinary-campaign.json"
+      },
       "failure": null,
       "gpu_residency_achieved": true,
+      "hosts": [
+        "inferswarm00",
+        "inferswarm01",
+        "inferswarm03"
+      ],
+      "observed_timestamps": {
+        "transcript_first_observed_utc": "2026-09-09T10:38:52.116649+00:00"
+      },
       "order": 11,
-      "phase": "24 cases + fencing request through ordinary path",
+      "phase_reached": "24 cases + fencing request through the ordinary path (launched AFTER the direct-6 stop boundary; its planner consumed a ranking record measured by armc-direct-6)",
       "realization_request_made": true,
       "result_reached_coordinator": true,
-      "valid": true
+      "retained_validity_flag": true
     }
   ],
-  "schema": "inferswarm.issue117.arm-c.attempt-lineage/1"
+  "execution_session": {
+    "ended_utc": "2026-09-09T12:52:04.979750+00:00",
+    "note": "retained Hermes session database (read-only)",
+    "session_id": "20260909_004724_7f3f1e",
+    "started_utc": "2026-09-09T04:47:24.675144+00:00",
+    "transcript_census_chain_sha256": "8851944a67cd9a2b65e47dec0d9d42f124a3b3590d8c76890b3aef51abd873ed"
+  },
+  "schema": "inferswarm.issue117.arm-c.attempt-lineage/2",
+  "supersedes": "inferswarm.issue117.arm-c.attempt-lineage/1 (retained fields preserved; /2 adds recovered dimensions; no attempt added or removed)"
 }

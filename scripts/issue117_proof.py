@@ -88,6 +88,9 @@ PRODUCERS = [
     "scripts/issue117_arm_b_evidence.py",
     "scripts/issue117_arm_b_correction_build.py",
     "scripts/issue117_arm_b_observe_hosts.py",
+    "scripts/issue117_arm_c_authority_audit.py",
+    "scripts/issue117_arm_c_blocker_reducer.py",
+    "scripts/issue117_arm_c_blocker_fakeroot.py",
     "scripts/issue117_arm_b_transport_audit_build.py",
     "scripts/issue117_parsers/__init__.py",
     "scripts/issue117_parsers/source_server_log.py",
@@ -299,6 +302,11 @@ COMMITTED_EVIDENCE_FILES = {
     "arm-c/equality.json",
     "arm-c/zero-invariants.json",
     "arm-c/invalid-attempt-6/direct-run.json",
+    # retention/derivation correction pass (2026-09-09, no rerun):
+    # frozen-authority audit, recovered /2 lineage, and the derived
+    # blocker terminal
+    "arm-c/pre-execution-authority-audit.json",
+    "arm-c/blocker-reduction.json",
 }
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the
