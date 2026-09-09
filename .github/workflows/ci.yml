@@ -35,7 +35,9 @@ jobs:
           python-version: "3.12"
 
       - name: Install check dependencies
-        run: python3 -m pip install --user pyyaml jsonschema
+        run: |
+          python3 -m pip install --user pyyaml jsonschema
+          python3 -m pip install --user -r docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/frozen-tokenizer/requirements.txt
 
       - name: Validate YAML files
         run: |

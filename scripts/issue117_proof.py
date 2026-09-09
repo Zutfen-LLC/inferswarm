@@ -288,13 +288,12 @@ COMMITTED_EVIDENCE_FILES = {
     "arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/"
     "xc_strategy.py",
     # issue #129: additional frozen control-plane bytes retained verbatim
-    # from the same producer (imported by the retry methodology harness;
-    # sha256-pinned by scripts/issue129_arm_c_retry_core.py)
-    "arm-c/frozen-freetoken/924cd22e/python/freetoken/research/"
+    # from the same producer. These bytes stay in the additive #129 area.
+    "arm-c-retry/frozen-source/924cd22e/python/freetoken/research/"
     "r3_planner.py",
-    "arm-c/frozen-freetoken/924cd22e/python/freetoken/research/"
+    "arm-c-retry/frozen-source/924cd22e/python/freetoken/research/"
     "r5a_serving.py",
-    "arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/"
+    "arm-c-retry/frozen-source/924cd22e/benchmarks/inferswarm_r6/"
     "strategy.py",
     "arm-c/reconciliation.json",
     "arm-c/chain-plan.json",
@@ -338,6 +337,13 @@ COMMITTED_EVIDENCE_FILES = {
     "arm-c-retry/methodology-run.json",
     "arm-c-retry/authority.json",
     "arm-c-retry/integrity.json",
+    "arm-c-retry/frozen-tokenizer/assets/chat_template.jinja",
+    "arm-c-retry/frozen-tokenizer/assets/config.json",
+    "arm-c-retry/frozen-tokenizer/assets/generation_config.json",
+    "arm-c-retry/frozen-tokenizer/assets/tokenizer.json",
+    "arm-c-retry/frozen-tokenizer/assets/tokenizer_config.json",
+    "arm-c-retry/frozen-tokenizer/requirements.txt",
+    "arm-c-retry/frozen-tokenizer/software-identity.json",
 }
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the

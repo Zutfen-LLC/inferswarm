@@ -1,0 +1,16 @@
+{
+  "asset_source": {
+    "repository": "google/gemma-4-12B-it",
+    "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7"
+  },
+  "historical_version_recovery": "No retained accepted environment record identifies the Transformers version that produced the accepted Arm-C requests.",
+  "packages": {
+    "Jinja2": "3.1.6",
+    "MarkupSafe": "3.0.3",
+    "tokenizers": "0.23.2",
+    "transformers": "5.17.0"
+  },
+  "python": "3.12",
+  "schema": "inferswarm.issue129.tokenizer-software-identity/1",
+  "status": "Frozen explicit retry-methodology identity. A future physical retry must use this identity unless maintainers accept a new methodology freeze."
+}

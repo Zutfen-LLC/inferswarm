@@ -7,6 +7,7 @@
   },
   "accepted_blocker_preservation": {
     "accepted_blocker_merge": "718efbf5770b31c6e44eb3a8c4d0b81fd1dc9c22",
+    "current_path_count": 62,
     "digests": {
       "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/attempt-lineage.json": "0bb3a3b63384effb307330143d9392b007a97a3f3688c9216e80bd082ca0954c",
       "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/blocker-reduction.json": "68eec37ddd6ec7781711c8529c86262681472df29c36789d165927c3c9c740e4",
@@ -71,17 +72,20 @@
       "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/strace/node-agent.strace.gz": "9358f92b02cdba339005a44443b724c2adc216ae682d93e0ee74b3b1b3661199",
       "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/zero-invariants.json": "d80402b84974f2750102e8bb875908b755aa5fd7ec628bf66d06f59e55e53a2b"
     },
+    "new_paths": [],
+    "no_new_paths": true,
     "path_count": 62,
     "preserved": true,
     "preserved_paths_digest": "sha256:873bbcc9aca16f2a20883bf268d175b9c7335d4d0a9611590d73a64d6015e260",
-    "rule": "every evidence path under evidence/arm-c/ that existed at the accepted merge is byte-identical in the working tree; all issue-#129 authority lives additively under evidence/arm-c-retry/",
+    "rule": "every evidence path under evidence/arm-c/ that existed at the accepted merge is byte-identical in the working tree; the current namespace contains no additional path; all issue-#129 authority lives under evidence/arm-c-retry/",
     "schema": "inferswarm.issue129.accepted-blocker-preservation/1"
   },
   "issue": "https://github.com/Zutfen-LLC/inferswarm/issues/129",
   "policy": {
     "additive_history": "accepted #128 evidence paths are never modified, re-derived, or re-classified at later heads; all #129 authority, integrity pins, and derived methodology outputs live under evidence/arm-c-retry/",
+    "campaign_stop": "a correctness-bearing invalid observation permanently blocks its campaign_id; a later attempt in that campaign cannot clear the STOP or produce a verdict; a new campaign requires a fresh physical authorization and lineage root issued after maintainer review",
     "historical_blocker_mode": "the accepted #128 blocker reducer runs only in its historical-verification mode pinned to the accepted merge (scripts/issue117_arm_c_blocker_reducer.py reduce_all(head=...) / ARM_C_BLOCKER_HEAD); the live head is never re-classified",
     "physical_authorization": "this PR authorizes NO physical Arm-C retry, no GPU execution, no model execution, no Arm D/E, no holdout use, and no accepted Arm-B participant-state mutation"
   },
-  "schema": "inferswarm.issue129.arm-c-retry-authority/1"
+  "schema": "inferswarm.issue129.arm-c-retry-authority/2"
 }

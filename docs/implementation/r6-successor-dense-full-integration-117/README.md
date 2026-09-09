@@ -10,20 +10,22 @@
   committed position: replay prefix, `max_new_tokens=2`, commit step
   zero, discard the speculative second token; runtime-session
   allocation mechanically extracted from the pinned controller bytes),
-  the frozen 24-case rendered prompt-token fixture, the ordinary
-  Coordinator ingress/tokenizer seam (exact request bodies rendered
-  through the AST-extracted frozen functions to exactly the frozen
-  fixture ids, 24/24), the CPU recording-runtime transcript comparator
-  (24/24 exact equivalence — complete generate() argument values,
-  runtime session ids included — between the real frozen
-  EpochServingController ordinary path and the corrected direct
-  comparator), the tokenizer Source contract (pinned non-Source
-  assets; zero forbidden-root opens in the observation window), the
-  accepted-#128 byte-preservation regression (all `evidence/arm-c/`
-  paths byte-exact from merge `718efbf…`; additive history only), the
-  fail-closed reducer with all mandatory negative controls, the
-  executable attempt/STOP/physical-authorization state machine, and
-  the exact deployed-script identity contract are frozen in
+  and the frozen 24-case rendered prompt-token fixture are frozen. Five
+  exact tokenizer assets and the tokenizer software identity are
+  retained outside the accepted Arm-C namespace. The real local-only
+  tokenizer renders the exact request bodies through the AST-extracted
+  Coordinator function to the frozen fixture IDs, 24/24. The CPU
+  recording-runtime comparator gives 24/24 exact equivalence. It
+  compares all `generate()` argument values, including runtime session
+  IDs, between the real frozen `EpochServingController` path and the
+  corrected direct comparator. The tokenizer Source contract requires
+  pinned non-Source assets and zero forbidden-root opens. The accepted
+  #128 preservation regression proves all `evidence/arm-c/`
+  paths are byte-exact from merge `718efbf…` and no new path exists in
+  that namespace. The campaign reducer makes a correctness-bearing STOP
+  permanent within one campaign. A new campaign requires a fresh
+  post-review authorization and lineage root. All mandatory negative
+  controls and the exact deployed-script identity contract are frozen in
   [METHODOLOGY-ARM-C-RETRY.md](METHODOLOGY-ARM-C-RETRY.md) with evidence
   under `evidence/arm-c-retry/` (`methodology-run.json`,
   `prompt-fixture.json`, `authority.json`, `integrity.json`). No

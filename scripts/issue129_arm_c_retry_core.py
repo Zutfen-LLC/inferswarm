@@ -4,9 +4,11 @@
 Implements the control-plane-only comparator-equivalence proof required by
 issue #129 before any future Arm-C physical retry can be authorized:
 
-1.  Imports the REAL frozen control-plane modules verbatim from the
-    retained producer bytes under ``evidence/arm-c/frozen-freetoken/
-    924cd22e/`` (the generic planner ``freetoken.research.r3_planner``,
+1.  Imports the REAL frozen control-plane modules verbatim from retained
+    producer bytes. The accepted #128 bytes stay under
+    ``evidence/arm-c/frozen-freetoken/924cd22e/``. The three #129-only
+    bytes stay under ``evidence/arm-c-retry/frozen-source/924cd22e/``.
+    These modules include the generic planner ``freetoken.research.r3_planner``,
     the plan/realization machinery ``freetoken.research.r5a_serving``,
     the epoch controller ``freetoken.research.r5b_epochs``, and the R6
     dense strategy adapters ``benchmarks.inferswarm_r6.{strategy,
@@ -36,11 +38,11 @@ issue #129 before any future Arm-C physical retry can be authorized:
     line citations. The exact ordinary request bodies are reconstructed
     and verified equal (parsed-JSON equality) against the retained
     accepted ordinary-http records; rendering runs through the
-    extracted frozen function against a pinned CPU stand-in tokenizer
-    whose chat-template wrapper and content encodings are
-    cross-derived from BOTH accepted campaign sides; the derived
-    prompt ids must equal the frozen fixture 24/24 before the ordinary
-    arm may serve them.
+    extracted frozen function against the real tokenizer loaded by
+    ``AutoTokenizer.from_pretrained`` from five retained local assets.
+    The exact package versions are frozen. The derived prompt ids must
+    equal the frozen fixture 24/24 before the ordinary arm may serve
+    them. A reconstructed tokenizer remains only as a mutation helper.
 
 4.  Runs, entirely on CPU with a recording/fake runtime, both arms over
     all 24 frozen cases:
@@ -83,12 +85,13 @@ issue #129 before any future Arm-C physical retry can be authorized:
     (``classify_attempt`` / ``reduce_attempts``) that mechanically
     separates methodology readiness, physical-retry authorization,
     correctness-bearing state, deployment-identity validity, the
-    mandatory STOP state, and terminal campaign observations, with an
-    explicit frozen legal-transition table. A correctness-bearing
-    attempt is invalid unless physical execution was authorized by the
-    accepted gate state; only an authorized correctness-bearing
-    terminal attempt clears a mandatory STOP; a non-correctness-bearing
-    terminal marker never does.
+    mandatory STOP state, and terminal campaign observations. Each
+    attempt carries campaign, physical authorization, methodology, and
+    execution-freeze identities. A correctness-bearing invalid attempt
+    permanently blocks its campaign. Later observations in that
+    campaign are diagnostic only and cannot clear the STOP. A new
+    campaign needs a fresh lineage root and an authorization issued
+    after the recorded STOP and maintainer review.
 
 7.  Exposes the exact deployed-script identity contract
     (``verify_deployment_identity``): repository SHA + file sha256 +
@@ -125,12 +128,14 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import importlib.metadata
 import importlib.util
 import json
 import os
 import subprocess
 import sys
 import types
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -138,7 +143,10 @@ ROOT = Path(__file__).resolve().parents[1]
 AREA = ROOT / "docs/implementation/r6-successor-dense-full-integration-117"
 ARM_C_EVIDENCE = AREA / "evidence" / "arm-c"
 ARM_C_RETRY_EVIDENCE = AREA / "evidence" / "arm-c-retry"
-FROZEN_PREFIX = "frozen-freetoken/924cd22e/"
+ACCEPTED_FROZEN_PREFIX = "frozen-freetoken/924cd22e/"
+RETRY_FROZEN_PREFIX = "frozen-source/924cd22e/"
+TOKENIZER_ROOT = ARM_C_RETRY_EVIDENCE / "frozen-tokenizer"
+TOKENIZER_ASSET_DIR = TOKENIZER_ROOT / "assets"
 
 FROZEN_PRODUCER_SHA = "924cd22ea081f6d4ed471016faf01d427fc5b0d2"
 ACCEPTED_BLOCKER_MERGE = "718efbf5770b31c6e44eb3a8c4d0b81fd1dc9c22"
@@ -217,9 +225,10 @@ def write_canonical_json(path: Path, value: Any) -> None:
 # 1. Frozen producer bytes: fail-closed pins + import
 # ---------------------------------------------------------------------------
 
-#: every frozen control-plane byte this methodology touches, retained
-#: verbatim under evidence/arm-c/frozen-freetoken/924cd22e/. ``None``
-#: pins are DELEGATED to the accepted #128 pins module
+#: Every frozen control-plane byte this methodology touches. A local pin
+#: identifies a #129-only byte retained under the additive retry area.
+#: ``None`` identifies an accepted #128 byte that stays in its historical
+#: namespace and delegates its pin to the accepted #128 pins module.
 #: (scripts/issue117_arm_c_frozen_pins.py): the key must exist there,
 #: the value must be a valid sha256, and the retained bytes must equal
 #: it. Any import failure, missing key, malformed digest, or mismatch
@@ -245,6 +254,11 @@ _SHA256_HEX = set("0123456789abcdef")
 
 def _is_sha256(value: object) -> bool:
     return (isinstance(value, str) and len(value) == 64
+            and all(c in _SHA256_HEX for c in value))
+
+
+def _is_git_sha(value: object) -> bool:
+    return (isinstance(value, str) and len(value) == 40
             and all(c in _SHA256_HEX for c in value))
 
 
@@ -287,17 +301,22 @@ def verify_frozen_bytes(repo_root: Path | None = None) -> dict[str, str]:
 
     Returns {retained-relative-path: sha256}."""
     root = repo_root or _repo_override()
-    base = root / ARM_C_EVIDENCE.relative_to(ROOT) / FROZEN_PREFIX
     pins_128 = load_inherited_pins(root)
     digests = {}
     for rel, local_pin in FROZEN_CONTROL_PLANE_FILES.items():
-        path = base / rel
+        if local_pin is None:
+            evidence_root = ARM_C_EVIDENCE
+            prefix = ACCEPTED_FROZEN_PREFIX
+        else:
+            evidence_root = ARM_C_RETRY_EVIDENCE
+            prefix = RETRY_FROZEN_PREFIX
+        path = root / evidence_root.relative_to(ROOT) / prefix / rel
         if not path.is_file():
             raise FileNotFoundError(f"missing frozen producer byte: {path}")
         digest = sha256_file(path)
         if local_pin is not None and digest != local_pin:
             raise RuntimeError(f"frozen byte drift against #129 pin: {rel}")
-        repo_rel = str((ARM_C_EVIDENCE / FROZEN_PREFIX / rel).relative_to(ROOT))
+        repo_rel = str((evidence_root / prefix / rel).relative_to(ROOT))
         if local_pin is None:
             # delegated to the accepted #128 pins module: the key must
             # exist, be a valid sha256 (enforced at load), and match
@@ -349,7 +368,10 @@ def load_frozen_control_plane(repo_root: Path | None = None):
     root = repo_root or _repo_override()
     digests = verify_frozen_bytes(root)
     del digests
-    base = root / ARM_C_EVIDENCE.relative_to(ROOT) / FROZEN_PREFIX
+    accepted_base = (root / ARM_C_EVIDENCE.relative_to(ROOT)
+                     / ACCEPTED_FROZEN_PREFIX)
+    retry_base = (root / ARM_C_RETRY_EVIDENCE.relative_to(ROOT)
+                  / RETRY_FROZEN_PREFIX)
     if _LOADED:
         return (
             sys.modules["freetoken.research.r3_planner"],
@@ -363,19 +385,19 @@ def load_frozen_control_plane(repo_root: Path | None = None):
         _register_package(package)
     planner = _load_module(
         "freetoken.research.r3_planner",
-        base / "python/freetoken/research/r3_planner.py")
+        retry_base / "python/freetoken/research/r3_planner.py")
     serving = _load_module(
         "freetoken.research.r5a_serving",
-        base / "python/freetoken/research/r5a_serving.py")
+        retry_base / "python/freetoken/research/r5a_serving.py")
     epochs = _load_module(
         "freetoken.research.r5b_epochs",
-        base / "python/freetoken/research/r5b_epochs.py")
+        accepted_base / "python/freetoken/research/r5b_epochs.py")
     strategy = _load_module(
         "benchmarks.inferswarm_r6.strategy",
-        base / "benchmarks/inferswarm_r6/strategy.py")
+        retry_base / "benchmarks/inferswarm_r6/strategy.py")
     xc_strategy = _load_module(
         "benchmarks.inferswarm_r6.xc_strategy",
-        base / "benchmarks/inferswarm_r6/xc_strategy.py")
+        accepted_base / "benchmarks/inferswarm_r6/xc_strategy.py")
     _LOADED = True
     return planner, serving, epochs, strategy, xc_strategy
 
@@ -428,7 +450,8 @@ def extract_runtime_session_allocator(
     pinned ``r5b_epochs.py`` bytes; return the executing allocator."""
     root = repo_root or _repo_override()
     verify_frozen_bytes(root)  # fail closed before reading
-    source_path = (root / ARM_C_EVIDENCE.relative_to(ROOT) / FROZEN_PREFIX
+    source_path = (root / ARM_C_EVIDENCE.relative_to(ROOT)
+                   / ACCEPTED_FROZEN_PREFIX
                    / "python/freetoken/research/r5b_epochs.py")
     source = source_path.read_text()
     tree = ast.parse(source)
@@ -840,7 +863,8 @@ def extract_coordinator_ingress(
     seam plus citations. Fail-closed on any drift."""
     root = repo_root or _repo_override()
     verify_frozen_bytes(root)
-    source_path = (root / ARM_C_EVIDENCE.relative_to(ROOT) / FROZEN_PREFIX
+    source_path = (root / ARM_C_EVIDENCE.relative_to(ROOT)
+                   / ACCEPTED_FROZEN_PREFIX
                    / "benchmarks/inferswarm_r6/coordinator.py")
     source = source_path.read_text()
     tree = ast.parse(source)
@@ -967,20 +991,15 @@ def _retained_ordinary_bodies(
     return records
 
 
-def run_ordinary_ingress_proof(
+def run_stand_in_ingress_proof(
         repo_root: Path | None = None, *,
         footer_mutator=None, content_mutator=None,
         body_mutator=None) -> dict[str, Any]:
-    """CPU-only ordinary-ingress proof (issue #129 Finding 3).
+    """Run the reconstructed tokenizer only as a mutation helper.
 
     For all 24 frozen ``c109-*`` requests: reconstruct the exact
-    ordinary request body; render/tokenize through the MECHANICALLY
-    EXTRACTED frozen Coordinator functions against the pinned stand-in
-    tokenizer; require the derived ``prompt_token_ids`` equal the
-    frozen prompt fixture exactly; verify the frozen ``handle_chat``
-    ingress session allocation, max-token derivation, and sampling
-    derivation. Fail-closed controls: ``footer_mutator`` /
-    ``content_mutator`` / ``body_mutator`` each force a mismatch."""
+    This helper is not authority for methodology readiness. It remains
+    available for focused wrapper, content, and request-body mutations."""
     root = repo_root or _repo_override()
     fixture = derive_prompt_fixture(root)
     template = derive_template_contract(root)
@@ -1093,7 +1112,133 @@ def run_ordinary_ingress_proof(
             "exact ordinary request bodies; bodies verified byte-equal "
             "against the retained ordinary-http records; the stand-in "
             "tokenizer applies the cross-derived chat-template wrapper "
-            "and the pinned accepted content encodings"),
+                "and the pinned accepted content encodings"),
+    }
+
+
+def run_ordinary_ingress_proof(
+        repo_root: Path | None = None, *,
+        asset_dir: Path | None = None,
+        body_mutator=None,
+        rendered_ids_mutator=None,
+        installed_versions: Mapping[str, str] | None = None,
+        stand_in_footer_mutator=None,
+        stand_in_content_mutator=None) -> dict[str, Any]:
+    """Prove the frozen Coordinator rendering with the real tokenizer.
+
+    The proof loads only the five retained assets. It uses local-only
+    loading and disables remote code. It executes the mechanically
+    extracted frozen ``_render_and_tokenize`` function for all 24 exact
+    retained request bodies. The reconstructed tokenizer is used only
+    when a caller requests one of its mutation controls.
+    """
+    root = repo_root or _repo_override()
+    load_directory = asset_dir or (
+        root / TOKENIZER_ASSET_DIR.relative_to(ROOT))
+    assets = verify_retained_tokenizer_assets(
+        root, asset_dir=load_directory)
+    software = verify_tokenizer_software_identity(
+        root, installed_versions=installed_versions)
+    try:
+        from transformers import AutoTokenizer
+    except ImportError as error:
+        raise RuntimeError(
+            "the frozen tokenizer software is not installed") from error
+
+    fixture = derive_prompt_fixture(root)
+    retained = _retained_ordinary_bodies(root)
+    extracted = extract_coordinator_ingress(root)
+    tokenizer = AutoTokenizer.from_pretrained(
+        str(load_directory),
+        local_files_only=True,
+        trust_remote_code=False,
+    )
+    ingress = extracted["seam_class"](tokenizer)
+    problems: list[str] = []
+    rows = []
+    request_log: list[int] = []
+    for row in sorted(fixture["cases"], key=lambda c: c["session_index"]):
+        case_id = row["case_id"]
+        retained_record = retained.get(case_id)
+        if retained_record is None:
+            problems.append(f"{case_id}: no retained ordinary-http record")
+            continue
+        body = json.loads(json.dumps(retained_record["request_body"]))
+        if body_mutator is not None:
+            body = dict(body_mutator(case_id, body))
+        if body != retained_record["request_body"]:
+            problems.append(
+                f"{case_id}: request-body drift from retained exact body")
+        session_id = len(request_log) + 1
+        request_log.append(session_id)
+        if session_id != row["session_index"]:
+            problems.append(
+                f"{case_id}: frozen session allocation drift")
+        maximum = int(body.get("max_tokens")
+                      or extracted["default_max_output_tokens"])
+        sampling = ingress._sampling_of(body)
+        if maximum != ORDINARY_REQUEST_MAX_TOKENS:
+            problems.append(f"{case_id}: max-token derivation drift")
+        if sampling != SAMPLING_INPUTS:
+            problems.append(f"{case_id}: sampling derivation drift")
+        derived = list(ingress._render_and_tokenize(body))
+        if rendered_ids_mutator is not None:
+            derived = list(rendered_ids_mutator(case_id, derived))
+        expected = list(row["rendered_prompt_token_ids"])
+        equal = derived == expected
+        if not equal:
+            problems.append(
+                f"{case_id}: real tokenizer output differs from frozen fixture")
+        rows.append({
+            "case_id": case_id,
+            "session_index": session_id,
+            "derived_equals_fixture": equal,
+            "derived_prompt_token_ids": derived,
+            "derived_len": len(derived),
+            "fixture_len": len(expected),
+        })
+
+    stand_in_control = None
+    if (stand_in_footer_mutator is not None
+            or stand_in_content_mutator is not None):
+        stand_in_control = run_stand_in_ingress_proof(
+            root,
+            footer_mutator=stand_in_footer_mutator,
+            content_mutator=stand_in_content_mutator)
+        if not stand_in_control["passed"]:
+            problems.append(
+                "reconstructed-tokenizer mutation control failed closed")
+
+    equal_count = sum(1 for row in rows if row["derived_equals_fixture"])
+    return {
+        "schema": "inferswarm.issue129.real-tokenizer-ingress/1",
+        "case_count": CASE_COUNT,
+        "equal_count": equal_count,
+        "rows": rows,
+        "problems": problems,
+        "passed": not problems and equal_count == CASE_COUNT,
+        "tokenizer": {
+            "loader": "AutoTokenizer.from_pretrained",
+            "local_files_only": True,
+            "trust_remote_code": False,
+            "class": f"{type(tokenizer).__module__}.{type(tokenizer).__name__}",
+            "assets": assets,
+            "software": software,
+        },
+        "coordinator_ingress_citations": extracted["citations"],
+        "coordinator_source_sha256":
+            extracted["coordinator_source_sha256"],
+        "default_max_output_tokens":
+            extracted["default_max_output_tokens"],
+        "stand_in_authority": False,
+        **({"stand_in_mutation_control": {
+            "passed": stand_in_control["passed"],
+            "problems": stand_in_control["problems"],
+        }} if stand_in_control is not None else {}),
+        "derivation": (
+            "five retained sha256-pinned assets -> AutoTokenizer.from_pretrained"
+            "(local_files_only=True, trust_remote_code=False) -> frozen "
+            "Coordinator _render_and_tokenize -> exact 24-case prompt fixture"),
     }
 
 
@@ -1871,7 +2016,18 @@ ATTEMPT_CLASSES = (
 )
 
 ATTEMPT_FACT_FIELDS = (
+    "campaign_id",
+    "physical_authorization_id",
+    "methodology_ready_identity",
+    "execution_freeze_identity",
     "attempt_id",
+    "observed_at",
+    "campaign_lineage_root",
+    "physical_authorization_issued_at",
+    "prior_stopped_campaign_id",
+    "prior_stop_attempt_id",
+    "prior_stop_review_id",
+    "prior_stop_reviewed_at",
     "gpu_execution_occurred",
     "model_execution_occurred",
     "correctness_bearing_result_emitted",
@@ -1894,9 +2050,10 @@ STOP_RULES = {
         "physical retry execution was not authorized by the accepted "
         "gate state — including an UNDISCLOSED correctness-bearing "
         "continuation after the campaign's terminal observation",
-    "post_stop_continuation_without_terminal":
-        "a correctness-bearing attempt follows a mandatory STOP without "
-        "an intervening authorized terminal campaign attempt",
+    "permanent_campaign_stop":
+        "after a correctness-bearing invalid attempt, all later "
+        "observations in that campaign are diagnostic only and cannot "
+        "produce a verdict",
     "non_correctness_bearing_terminal_cannot_clear_stop":
         "a non-correctness-bearing terminal marker attempted to clear a "
         "mandatory STOP and authorize further correctness-bearing "
@@ -1922,18 +2079,65 @@ LEGAL_TRANSITIONS = {
         "sets_terminal": False, "clears_stop": False,
         "mandatory_stop": False, "authoritative": False},
     "TERMINAL_CAMPAIGN_ATTEMPT": {
-        "sets_terminal": True, "clears_stop": True,
+        "sets_terminal": True, "clears_stop": False,
         "mandatory_stop": False, "authoritative": True},
     "TERMINAL_MARKER_NON_CORRECTNESS_BEARING": {
-        "sets_terminal": True, "clears_stop": False,
+        "sets_terminal": False, "clears_stop": False,
         "mandatory_stop": False, "authoritative": False,
         "stop_rule_if_stop_active":
             "non_correctness_bearing_terminal_cannot_clear_stop"},
 }
 
 
-def _attempt_state() -> dict[str, bool]:
-    return {"stop_fired": False, "terminal_seen": False}
+CAMPAIGN_AUTHORITY_FIELDS = (
+    "physical_authorization_id",
+    "methodology_ready_identity",
+    "execution_freeze_identity",
+    "campaign_lineage_root",
+    "physical_authorization_issued_at",
+    "prior_stopped_campaign_id",
+    "prior_stop_attempt_id",
+    "prior_stop_review_id",
+    "prior_stop_reviewed_at",
+)
+
+
+def _attempt_state() -> dict[str, Any]:
+    return {
+        "stop_fired": False,
+        "terminal_seen": False,
+        "first_stop_attempt_id": None,
+        "first_stop_observed_at": None,
+    }
+
+
+def _parse_utc(value: object, field: str) -> datetime:
+    if not isinstance(value, str):
+        raise ValueError(f"{field} must be a UTC timestamp")
+    try:
+        return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError as error:
+        raise ValueError(
+            f"{field} must use YYYY-MM-DDTHH:MM:SSZ") from error
+
+
+def _validate_attempt_identity(facts: Mapping[str, Any]) -> None:
+    for field in ("campaign_id", "physical_authorization_id", "attempt_id",
+                  "campaign_lineage_root"):
+        if not isinstance(facts[field], str) or not facts[field].strip():
+            raise ValueError(f"{field} must be a non-empty identity")
+    if not _is_git_sha(facts["methodology_ready_identity"]):
+        raise ValueError("methodology_ready_identity must be an accepted SHA")
+    if not _is_sha256(facts["execution_freeze_identity"]):
+        raise ValueError("execution_freeze_identity must be a sha256")
+    _parse_utc(facts["observed_at"], "observed_at")
+    issued_at = _parse_utc(
+        facts["physical_authorization_issued_at"],
+        "physical_authorization_issued_at")
+    observed_at = _parse_utc(facts["observed_at"], "observed_at")
+    if issued_at >= observed_at:
+        raise ValueError(
+            "physical authorization must be issued before the attempt")
 
 
 def classify_attempt(facts: Mapping[str, Any],
@@ -1954,6 +2158,7 @@ def classify_attempt(facts: Mapping[str, Any],
     missing = set(ATTEMPT_FACT_FIELDS) - set(facts)
     if missing:
         raise ValueError(f"attempt facts lack {sorted(missing)}")
+    _validate_attempt_identity(facts)
     correctness_bearing = bool(
         facts["correctness_bearing_result_emitted"]
         or facts["coordinator_commit_occurred"])
@@ -1964,6 +2169,10 @@ def classify_attempt(facts: Mapping[str, Any],
         identity_ok
         and facts["methodology_gate_passed"]
         and facts["physical_retry_authorized"])
+    if correctness_bearing and (stop_already_fired or terminal_seen):
+        if facts["diagnostic_only_disclosure"]:
+            return "DIAGNOSTIC_ONLY_AFTER_STOP"
+        return "CORRECTNESS_BEARING_INVALID"
     if facts["terminal_observation"]:
         if not correctness_bearing:
             return "TERMINAL_MARKER_NON_CORRECTNESS_BEARING"
@@ -1975,17 +2184,6 @@ def classify_attempt(facts: Mapping[str, Any],
     if correctness_bearing:
         if not authority_ok:
             return "CORRECTNESS_BEARING_INVALID"
-        if terminal_seen and not facts["diagnostic_only_disclosure"]:
-            # the campaign already reached its terminal observation:
-            # further correctness-bearing work in the SAME campaign is
-            # unauthorized unless explicitly disclosed as diagnostic
-            # (review 1 P1: an undisclosed post-terminal continuation
-            # must never silently pass as a diagnostic)
-            return "CORRECTNESS_BEARING_INVALID"
-        if stop_already_fired or terminal_seen:
-            if facts["diagnostic_only_disclosure"]:
-                return "DIAGNOSTIC_ONLY_AFTER_STOP"
-            return "CORRECTNESS_BEARING_VALID"
         return "CORRECTNESS_BEARING_VALID"
     return "PRE_OBSERVATION_INFRASTRUCTURE"
 
@@ -1996,12 +2194,10 @@ def reduce_attempts(attempts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     correctness-bearing attempt continues without the state machine
     authorizing it.
 
-    ``passed`` means: no unauthorized continuation AND no unresolved
-    mandatory STOP. A fired STOP is resolved ONLY by a later
-    authorized correctness-bearing TERMINAL_CAMPAIGN_ATTEMPT (which
-    clears it); a sequence that simply ends stopped — like the accepted
-    #128 blocker campaign — is NOT passed, exactly as a mandatory STOP
-    demands.
+    One ``campaign_id`` defines one authority domain. A mandatory STOP
+    is permanent in that domain. The latest campaign can pass even when
+    an earlier campaign stays blocked, but the historical blocked state
+    is never rewritten.
 
     Rules (all mechanical, from the reducer's OWN state — an authored
     ``stop_occurred`` or diagnostic label never launders authority):
@@ -2010,24 +2206,102 @@ def reduce_attempts(attempts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
       bearing continuations WITHOUT a diagnostic disclosure are
       INVALID: the campaign concluded; undisclosed follow-on
       correctness-bearing work is unauthorized.
-    - Only TERMINAL_CAMPAIGN_ATTEMPT (correctness-bearing, fully
-      authorized) clears a STOP / sets the terminal state, resolving
-      EVERY stop fired in the campaign so far.
+    - TERMINAL_CAMPAIGN_ATTEMPT is possible only when the campaign has
+      never fired a STOP.
     - A non-correctness-bearing terminal marker never clears a STOP;
       while a STOP is active it fires
       ``non_correctness_bearing_terminal_cannot_clear_stop``.
-    - A correctness-bearing attempt after a STOP without an
-      intervening authorized terminal attempt fires
-      ``post_stop_continuation_without_terminal`` unless it is a
-      disclosed diagnostic (retained, non-authoritative, powerless);
-      an event firing a continuation stop rule is recorded
-      non-authoritative whatever its class label.
+    - A new campaign after a STOP needs a new campaign id, physical
+      authorization id, and lineage root. Its authorization timestamp
+      must follow the prior STOP and the recorded maintainer review.
     """
-    state = _attempt_state()
     events = []
     problems = []
     stop_events = []
+    campaign_states: dict[str, dict[str, Any]] = {}
+    campaign_order: list[str] = []
+    seen_authorizations: dict[str, str] = {}
+    seen_lineage_roots: dict[str, str] = {}
+    seen_attempt_ids: set[str] = set()
     for order, facts in enumerate(attempts, start=1):
+        attempt_problem_count = len(problems)
+        missing = set(ATTEMPT_FACT_FIELDS) - set(facts)
+        if missing:
+            raise ValueError(f"attempt facts lack {sorted(missing)}")
+        _validate_attempt_identity(facts)
+        campaign_id = facts["campaign_id"]
+        if campaign_id in campaign_states and campaign_id != campaign_order[-1]:
+            problems.append(
+                f"campaign {campaign_id} resumed after a later campaign; "
+                "a fresh reducer lineage cannot interleave campaigns")
+        if facts["attempt_id"] in seen_attempt_ids:
+            problems.append(f"duplicate attempt id: {facts['attempt_id']}")
+        seen_attempt_ids.add(facts["attempt_id"])
+        if campaign_id not in campaign_states:
+            state = _attempt_state()
+            state["authority_valid"] = True
+            state["authority"] = {
+                field: facts[field] for field in CAMPAIGN_AUTHORITY_FIELDS}
+            state["events"] = []
+            campaign_states[campaign_id] = state
+            campaign_order.append(campaign_id)
+            authorization_id = facts["physical_authorization_id"]
+            lineage_root = facts["campaign_lineage_root"]
+            if authorization_id in seen_authorizations:
+                problems.append(
+                    f"campaign {campaign_id} reuses physical authorization "
+                    f"{authorization_id} from campaign "
+                    f"{seen_authorizations[authorization_id]}")
+            if lineage_root in seen_lineage_roots:
+                problems.append(
+                    f"campaign {campaign_id} reuses lineage root "
+                    f"from campaign {seen_lineage_roots[lineage_root]}")
+            seen_authorizations[authorization_id] = campaign_id
+            seen_lineage_roots[lineage_root] = campaign_id
+            prior_id = campaign_order[-2] if len(campaign_order) > 1 else None
+            if prior_id is not None and campaign_states[prior_id]["stop_fired"]:
+                prior = campaign_states[prior_id]
+                if facts["prior_stopped_campaign_id"] != prior_id:
+                    problems.append(
+                        f"campaign {campaign_id} does not link to prior "
+                        f"stopped campaign {prior_id}")
+                if facts["prior_stop_attempt_id"] != \
+                        prior["first_stop_attempt_id"]:
+                    problems.append(
+                        f"campaign {campaign_id} does not link to the prior "
+                        "STOP attempt")
+                review_id = facts["prior_stop_review_id"]
+                if not isinstance(review_id, str) or not review_id.strip():
+                    problems.append(
+                        f"campaign {campaign_id} has no maintainer review id")
+                try:
+                    stopped_at = _parse_utc(
+                        prior["first_stop_observed_at"], "prior STOP")
+                    reviewed_at = _parse_utc(
+                        facts["prior_stop_reviewed_at"],
+                        "prior_stop_reviewed_at")
+                    issued_at = _parse_utc(
+                        facts["physical_authorization_issued_at"],
+                        "physical_authorization_issued_at")
+                    if not stopped_at < reviewed_at < issued_at:
+                        problems.append(
+                            f"campaign {campaign_id} authorization was not "
+                            "issued after the prior STOP and review")
+                except ValueError as error:
+                    problems.append(str(error))
+            elif any(facts[field] is not None for field in (
+                    "prior_stopped_campaign_id", "prior_stop_attempt_id",
+                    "prior_stop_review_id", "prior_stop_reviewed_at")):
+                problems.append(
+                    f"campaign {campaign_id} claims a prior STOP review "
+                    "when no prior campaign is stopped")
+        state = campaign_states[campaign_id]
+        for field in CAMPAIGN_AUTHORITY_FIELDS:
+            if facts[field] != state["authority"][field]:
+                problems.append(
+                    f"campaign {campaign_id} changed authority field {field}")
+        if len(problems) != attempt_problem_count:
+            state["authority_valid"] = False
         prior_terminal = state["terminal_seen"]
         classification = classify_attempt(
             facts, stop_already_fired=state["stop_fired"],
@@ -2046,11 +2320,14 @@ def reduce_attempts(attempts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             elif prior_terminal:
                 reason = ("post-terminal continuation without a "
                           "diagnostic disclosure")
+            elif state["stop_fired"]:
+                reason = "campaign already has a permanent mandatory STOP"
             else:
                 reason = "physical retry not authorized"
             rule = "invalid_correctness_bearing_observation"
             stop_events.append(
-                f"attempt {order} ({facts['attempt_id']}) is "
+                f"campaign {campaign_id} attempt {order} "
+                f"({facts['attempt_id']}) is "
                 f"correctness-bearing INVALID ({reason}); mandatory STOP "
                 "fired")
         elif classification == "TERMINAL_MARKER_NON_CORRECTNESS_BEARING":
@@ -2060,13 +2337,6 @@ def reduce_attempts(attempts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
                     f"attempt {order} ({facts['attempt_id']}) is a "
                     "non-correctness-bearing terminal marker attempting to "
                     "clear a mandatory STOP")
-        elif classification == "CORRECTNESS_BEARING_VALID":
-            if state["stop_fired"] and not state["terminal_seen"]:
-                rule = "post_stop_continuation_without_terminal"
-                problems.append(
-                    f"attempt {order} ({facts['attempt_id']}) is "
-                    "correctness-bearing after a STOP without an "
-                    "authorized terminal campaign attempt")
         elif classification == "DIAGNOSTIC_ONLY_AFTER_STOP":
             non_authoritative_note = (
                 "retained as diagnostic only; never verdict authority; "
@@ -2074,41 +2344,60 @@ def reduce_attempts(attempts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         # apply the frozen transition
         if transition["mandatory_stop"]:
             state["stop_fired"] = True
+            if state["first_stop_attempt_id"] is None:
+                state["first_stop_attempt_id"] = facts["attempt_id"]
+                state["first_stop_observed_at"] = facts["observed_at"]
         if transition["sets_terminal"]:
             state["terminal_seen"] = True
-        if transition["clears_stop"]:
-            state["stop_fired"] = False
-            # an authorized terminal campaign attempt resolves EVERY
-            # stop fired in the campaign so far, not only the last one
-            # (review 1 P2: the boolean state and the event log must
-            # agree)
-            stop_events = [
-                event if "— cleared by" in event else
-                event + " — cleared by the authorized terminal campaign "
-                f"attempt {facts['attempt_id']}"
-                for event in stop_events]
-        events.append({
+        event = {
             "order": order,
+            "campaign_id": campaign_id,
+            "physical_authorization_id": facts["physical_authorization_id"],
+            "methodology_ready_identity": facts["methodology_ready_identity"],
+            "execution_freeze_identity": facts["execution_freeze_identity"],
             "attempt_id": facts["attempt_id"],
             "classification": classification,
             "stop_rule_fired": rule,
             # an event that fired a continuation stop rule is never
             # verdict authority, whatever its class label (review 1 P2)
-            "authoritative": bool(transition["authoritative"] and rule is None),
+            "authoritative": bool(
+                transition["authoritative"] and rule is None
+                and state["authority_valid"]),
             **({"non_authoritative_note": non_authoritative_note}
                if non_authoritative_note else {}),
-            "state_after": dict(state),
-        })
-    unresolved = [
-        event for event in stop_events if "— cleared by" not in event]
+            "state_after": {
+                key: value for key, value in state.items()
+                if key not in ("authority", "events")},
+        }
+        events.append(event)
+        state["events"].append(event)
+    campaign_results = {}
+    for campaign_id in campaign_order:
+        state = campaign_states[campaign_id]
+        campaign_results[campaign_id] = {
+            "authority": state["authority"],
+            "blocked": state["stop_fired"],
+            "authority_valid": state["authority_valid"],
+            "terminal_seen": state["terminal_seen"],
+            "passed": not state["stop_fired"] and state["authority_valid"],
+            "first_stop_attempt_id": state["first_stop_attempt_id"],
+            "event_count": len(state["events"]),
+        }
+    latest = campaign_order[-1] if campaign_order else None
+    final_state = (_attempt_state() if latest is None else {
+        key: value for key, value in campaign_states[latest].items()
+        if key not in ("authority", "events")})
     return {
-        "schema": "inferswarm.issue129.attempt-reduction/2",
+        "schema": "inferswarm.issue129.attempt-reduction/3",
         "events": events,
         "problems": problems,
         "mandatory_stop_events": stop_events,
-        "unresolved_mandatory_stops": unresolved,
-        "passed": not problems and not unresolved,
-        "final_state": dict(state),
+        "unresolved_mandatory_stops": list(stop_events),
+        "campaigns": campaign_results,
+        "latest_campaign_id": latest,
+        "passed": bool(latest) and not problems
+                  and campaign_results[latest]["passed"],
+        "final_state": final_state,
         "stop_rules": STOP_RULES,
         "legal_transitions": LEGAL_TRANSITIONS,
     }
@@ -2170,6 +2459,22 @@ def verify_deployment_identity(record: Mapping[str, Any]) -> dict[str, Any]:
 # 6b. Tokenizer Source rule: asset contract + observation monitor
 # ---------------------------------------------------------------------------
 
+#: The accepted physical environment did not retain a package inventory
+#: that identifies its Transformers version. Issue #129 therefore freezes
+#: this explicit software identity for the independent retry proof and for
+#: any future physical retry authorized from this methodology.
+REQUIRED_TOKENIZER_SOFTWARE = {
+    "transformers": "5.17.0",
+    "tokenizers": "0.23.2",
+    "Jinja2": "3.1.6",
+    "MarkupSafe": "3.0.3",
+}
+TOKENIZER_PYTHON = "3.12"
+TOKENIZER_REQUIREMENTS_SHA256 = (
+    "793616a40ed5902d8387b964347f6d391e95f52c046ac21e939f53938f5b308e")
+TOKENIZER_SOFTWARE_IDENTITY_SHA256 = (
+    "8133ae80ca8925f246d86a9bca1356ee46dc27d95201cf043261fd164e5b87a4")
+
 #: the exact immutable tokenizer/config assets the frozen Coordinator
 #: needs, with sha256 identities derived from the accepted
 #: checkpoint-authority provenance (recovered_object_manifest). The
@@ -2187,6 +2492,109 @@ REQUIRED_TOKENIZER_ASSETS = {
     "tokenizer_config.json":
         "a62f4e85a47c0c136edaaa3a4f591fd6783717299a9def47e5ad03a49f6a5eb9",
 }
+
+
+def verify_retained_tokenizer_assets(
+        repo_root: Path | None = None, *,
+        asset_dir: Path | None = None) -> dict[str, Any]:
+    """Verify the retained real-tokenizer directory byte for byte."""
+    root = repo_root or _repo_override()
+    directory = asset_dir or (
+        root / TOKENIZER_ASSET_DIR.relative_to(ROOT))
+    resolved = directory.resolve()
+    forbidden = Path(FORBIDDEN_SOURCE_ROOT).resolve()
+    if resolved == forbidden or forbidden in resolved.parents:
+        raise RuntimeError(
+            "retained tokenizer path is under the forbidden /srv/models/ "
+            "Source root")
+    if directory.is_symlink():
+        raise RuntimeError("retained tokenizer asset directory is a symlink")
+    if not directory.is_dir():
+        raise FileNotFoundError(
+            f"retained tokenizer asset directory is missing: {directory}")
+    entries = sorted(path.name for path in directory.iterdir())
+    required = sorted(REQUIRED_TOKENIZER_ASSETS)
+    if entries != required:
+        missing = sorted(set(required) - set(entries))
+        extra = sorted(set(entries) - set(required))
+        raise RuntimeError(
+            "retained tokenizer asset directory is not exhaustive: "
+            f"missing={missing}, extra={extra}")
+    digests = {}
+    sizes = {}
+    for name, expected in sorted(REQUIRED_TOKENIZER_ASSETS.items()):
+        path = directory / name
+        if not path.is_file() or path.is_symlink():
+            raise RuntimeError(
+                f"retained tokenizer asset is not a regular file: {name}")
+        digest = sha256_file(path)
+        if digest != expected:
+            raise RuntimeError(f"retained tokenizer asset drift: {name}")
+        digests[name] = digest
+        sizes[name] = path.stat().st_size
+    try:
+        recorded_directory = str(resolved.relative_to(root.resolve()))
+    except ValueError:
+        recorded_directory = str(resolved)
+    return {
+        "asset_dir": recorded_directory,
+        "asset_dir_exhaustive": True,
+        "asset_count": len(digests),
+        "digests": digests,
+        "sizes": sizes,
+    }
+
+
+def verify_tokenizer_software_identity(
+        repo_root: Path | None = None, *,
+        installed_versions: Mapping[str, str] | None = None
+        ) -> dict[str, Any]:
+    """Verify the retained identity files and active package versions."""
+    root = repo_root or _repo_override()
+    identity_path = (root / TOKENIZER_ROOT.relative_to(ROOT)
+                     / "software-identity.json")
+    requirements_path = (root / TOKENIZER_ROOT.relative_to(ROOT)
+                         / "requirements.txt")
+    if sha256_file(identity_path) != TOKENIZER_SOFTWARE_IDENTITY_SHA256:
+        raise RuntimeError("tokenizer software identity file drift")
+    if sha256_file(requirements_path) != TOKENIZER_REQUIREMENTS_SHA256:
+        raise RuntimeError("tokenizer requirements file drift")
+    identity = json.loads(identity_path.read_text())
+    if identity.get("schema") != \
+            "inferswarm.issue129.tokenizer-software-identity/1":
+        raise RuntimeError("tokenizer software identity schema drift")
+    if identity.get("packages") != REQUIRED_TOKENIZER_SOFTWARE:
+        raise RuntimeError("tokenizer software package identity drift")
+    if identity.get("python") != TOKENIZER_PYTHON:
+        raise RuntimeError("tokenizer Python identity drift")
+    live_environment = installed_versions is None
+    if live_environment:
+        installed_versions = {}
+        for package in REQUIRED_TOKENIZER_SOFTWARE:
+            try:
+                installed_versions[package] = importlib.metadata.version(
+                    package)
+            except importlib.metadata.PackageNotFoundError as error:
+                raise RuntimeError(
+                    f"required tokenizer package is missing: {package}") \
+                    from error
+    observed = dict(installed_versions)
+    for package, expected in REQUIRED_TOKENIZER_SOFTWARE.items():
+        if observed.get(package) != expected:
+            raise RuntimeError(
+                f"tokenizer package/version drift: {package} "
+                f"{observed.get(package)!r} != {expected!r}")
+    python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+    if live_environment and python_version != TOKENIZER_PYTHON:
+        raise RuntimeError(
+            f"tokenizer Python version drift: {python_version} != "
+            f"{TOKENIZER_PYTHON}")
+    return {
+        "python": TOKENIZER_PYTHON,
+        "packages": observed,
+        "requirements_sha256": TOKENIZER_REQUIREMENTS_SHA256,
+        "software_identity_sha256": TOKENIZER_SOFTWARE_IDENTITY_SHA256,
+    }
 
 TOKENIZER_ASSET_CONTRACT_FIELDS = (
     "tokenizer_path",
@@ -2422,19 +2830,35 @@ def verify_accepted_blocker_preservation(
                 f"{rel} (worktree {worktree_sha} != accepted "
                 f"{blob_sha})")
         digests[rel] = worktree_sha
+    accepted_set = set(paths)
+    arm_c_root = root / ARM_C_EVIDENCE.relative_to(ROOT)
+    current_paths = {
+        str(path.relative_to(root))
+        for path in arm_c_root.rglob("*")
+        if path.is_file() and "__pycache__" not in path.parts
+        and path.suffix != ".pyc"
+    }
+    new_paths = sorted(current_paths - accepted_set)
+    if new_paths:
+        raise RuntimeError(
+            "issue #129 introduced paths inside the accepted evidence/arm-c/ "
+            f"namespace: {new_paths}")
     ordered = ";".join(f"{rel}:{digests[rel]}" for rel in sorted(digests))
     return {
         "schema": "inferswarm.issue129.accepted-blocker-preservation/1",
         "accepted_blocker_merge": merge,
         "path_count": len(paths),
+        "current_path_count": len(current_paths),
         "preserved": True,
+        "no_new_paths": True,
+        "new_paths": [],
         "preserved_paths_digest": "sha256:" + sha256_bytes(ordered.encode()),
         "digests": digests,
         "rule": (
             "every evidence path under evidence/arm-c/ that existed at "
             "the accepted merge is byte-identical in the working tree; "
-            "all issue-#129 authority lives additively under "
-            "evidence/arm-c-retry/"),
+            "the current namespace contains no additional path; all "
+            "issue-#129 authority lives under evidence/arm-c-retry/"),
     }
 
 
@@ -2448,64 +2872,68 @@ def verify_accepted_blocker_preservation(
 #: sequence, expected passed, expected classifications).
 ATTEMPT_STATE_SELF_CHECKS = (
     ("correctness_bearing_without_methodology_readiness",
-     [{"cb": True, "readiness": False, "authorized": True}],
-     False,
+     [{"id": "a-1", "cb": True, "readiness": False}], False,
      ["CORRECTNESS_BEARING_INVALID"]),
     ("correctness_bearing_without_physical_authorization",
-     [{"cb": True, "readiness": True, "authorized": False}],
-     False,
+     [{"id": "a-1", "cb": True, "authorized": False}], False,
      ["CORRECTNESS_BEARING_INVALID"]),
-    ("authorized_terminal_clears_stop",
-     [{"cb": True, "readiness": True, "authorized": False},
-      {"cb": True, "readiness": True, "authorized": True,
-       "terminal": True}],
-     True,
-     ["CORRECTNESS_BEARING_INVALID", "TERMINAL_CAMPAIGN_ATTEMPT"]),
+    ("same_campaign_terminal_cannot_clear_stop",
+     [{"id": "a-1", "cb": True, "authorized": False},
+      {"id": "a-2", "cb": True, "terminal": True}], False,
+     ["CORRECTNESS_BEARING_INVALID", "CORRECTNESS_BEARING_INVALID"]),
+    ("same_campaign_boolean_flip_cannot_clear_stop",
+     [{"id": "a-1", "cb": True, "authorized": False},
+      {"id": "a-2", "cb": True, "authorized": True}], False,
+     ["CORRECTNESS_BEARING_INVALID", "CORRECTNESS_BEARING_INVALID"]),
     ("post_stop_diagnostic_remains_non_authoritative",
-     [{"cb": True, "readiness": True, "authorized": False},
-      {"cb": True, "readiness": True, "authorized": True,
-       "diagnostic": True}],
-     False,
+     [{"id": "a-1", "cb": True, "authorized": False},
+      {"id": "a-2", "cb": True, "diagnostic": True}], False,
      ["CORRECTNESS_BEARING_INVALID", "DIAGNOSTIC_ONLY_AFTER_STOP"]),
-    ("non_correctness_bearing_marker_cannot_clear_stop",
-     [{"cb": True, "readiness": True, "authorized": False},
-      {"cb": False, "terminal": True, "readiness": True,
-       "authorized": True}],
-     False,
-     ["CORRECTNESS_BEARING_INVALID",
-      "TERMINAL_MARKER_NON_CORRECTNESS_BEARING"]),
-    ("continuation_after_stop_without_authorized_terminal",
-     [{"cb": True, "readiness": True, "authorized": False},
-      {"cb": True, "readiness": True, "authorized": True}],
-     False,
-     ["CORRECTNESS_BEARING_INVALID", "CORRECTNESS_BEARING_VALID"]),
     ("post_terminal_undisclosed_continuation_fails_closed",
-     [{"cb": True, "readiness": True, "authorized": True,
-       "terminal": True},
-      {"cb": True, "readiness": True, "authorized": True}],
-     False,
+     [{"id": "a-1", "cb": True, "terminal": True},
+      {"id": "a-2", "cb": True}], False,
      ["TERMINAL_CAMPAIGN_ATTEMPT", "CORRECTNESS_BEARING_INVALID"]),
-    ("post_terminal_disclosed_diagnostic_stays_powerless",
-     [{"cb": True, "readiness": True, "authorized": True,
-       "terminal": True},
-      {"cb": True, "readiness": True, "authorized": True,
-       "diagnostic": True}],
-     True,
-     ["TERMINAL_CAMPAIGN_ATTEMPT", "DIAGNOSTIC_ONLY_AFTER_STOP"]),
-    ("terminal_clears_every_fired_stop",
-     [{"cb": True, "readiness": True, "authorized": False},
-      {"cb": True, "readiness": True, "authorized": False},
-      {"cb": True, "readiness": True, "authorized": True,
-       "terminal": True}],
-     True,
-     ["CORRECTNESS_BEARING_INVALID", "CORRECTNESS_BEARING_INVALID",
-      "TERMINAL_CAMPAIGN_ATTEMPT"]),
+    ("terminal_without_stop_passes",
+     [{"id": "a-1", "cb": True, "terminal": True}], True,
+     ["TERMINAL_CAMPAIGN_ATTEMPT"]),
+    ("fresh_post_review_campaign_is_independent",
+     [{"id": "a-1", "cb": True, "authorized": False},
+      {"id": "b-1", "campaign": "campaign-B", "cb": True,
+       "terminal": True}], True,
+     ["CORRECTNESS_BEARING_INVALID", "TERMINAL_CAMPAIGN_ATTEMPT"]),
 )
 
 
 def _self_check_facts(overrides: Mapping[str, Any]) -> dict[str, Any]:
+    campaign = overrides.get("campaign", "campaign-A")
+    is_b = campaign == "campaign-B"
     return {
         "attempt_id": overrides.get("id", "self-check"),
+        "campaign_id": campaign,
+        "physical_authorization_id": overrides.get(
+            "authorization_id", "authorization-B" if is_b else
+            "authorization-A"),
+        "methodology_ready_identity": "a" * 40,
+        "execution_freeze_identity": "b" * 64,
+        "campaign_lineage_root": overrides.get(
+            "lineage_root", "lineage-B" if is_b else "lineage-A"),
+        "physical_authorization_issued_at": overrides.get(
+            "issued_at", "2026-09-09T00:00:04Z" if is_b else
+            "2026-09-09T00:00:00Z"),
+        "prior_stopped_campaign_id": (
+            overrides.get("prior_campaign", "campaign-A") if is_b else None),
+        "prior_stop_attempt_id": (
+            overrides.get("prior_attempt", "a-1") if is_b else None),
+        "prior_stop_review_id": (
+            overrides.get("review_id", "maintainer-review-A")
+            if is_b else None),
+        "prior_stop_reviewed_at": (
+            overrides.get("reviewed_at", "2026-09-09T00:00:03Z")
+            if is_b else None),
+        "observed_at": overrides.get(
+            "observed_at", "2026-09-09T00:00:05Z" if is_b else
+            ("2026-09-09T00:00:02Z" if overrides.get("id") == "a-2"
+             else "2026-09-09T00:00:01Z")),
         "gpu_execution_occurred": False,
         "model_execution_occurred": False,
         "correctness_bearing_result_emitted": bool(overrides.get("cb")),
@@ -2513,8 +2941,8 @@ def _self_check_facts(overrides: Mapping[str, Any]) -> dict[str, Any]:
         "coordinator_commit_occurred": False,
         "frozen_identity_verified_pre_launch": True,
         "frozen_identity_verified_post_run": True,
-        "methodology_gate_passed": bool(overrides.get("readiness")),
-        "physical_retry_authorized": bool(overrides.get("authorized")),
+        "methodology_gate_passed": bool(overrides.get("readiness", True)),
+        "physical_retry_authorized": bool(overrides.get("authorized", True)),
         "terminal_observation": bool(overrides.get("terminal")),
         "diagnostic_only_disclosure": bool(overrides.get("diagnostic")),
         "stop_occurred": False,
@@ -2537,6 +2965,11 @@ def run_attempt_state_self_checks() -> dict[str, Any]:
             verdict = verdict and all(
                 not event["authoritative"]
                 for event in reduction["events"][1:])
+        if name == "fresh_post_review_campaign_is_independent":
+            verdict = verdict and (
+                reduction["campaigns"]["campaign-A"]["blocked"]
+                and reduction["campaigns"]["campaign-B"]["passed"]
+                and reduction["latest_campaign_id"] == "campaign-B")
         ok = ok and verdict
         rows.append({
             "control": name,
@@ -2623,8 +3056,8 @@ def run_methodology(repo_root: Path | None = None, *,
 
     # Finding 3: the ordinary Coordinator ingress/tokenizer seam
     ingress = run_ordinary_ingress_proof(
-        root, footer_mutator=ingress_footer_mutator,
-        content_mutator=ingress_content_mutator,
+        root, stand_in_footer_mutator=ingress_footer_mutator,
+        stand_in_content_mutator=ingress_content_mutator,
         body_mutator=ingress_body_mutator)
 
     tokenizer_contract = tokenizer_asset_contract_record(root)
@@ -2701,7 +3134,7 @@ def run_methodology(repo_root: Path | None = None, *,
               and not global_problems)
     terminal = METHODOLOGY_READY if passed else METHODOLOGY_BLOCKED
     document = {
-        "schema": "inferswarm.issue129.methodology-run/2",
+        "schema": "inferswarm.issue129.methodology-run/3",
         "authority": {
             "issue": "https://github.com/Zutfen-LLC/inferswarm/issues/129",
             "accepted_arm_c_blocker": "ISSUE117_ARM_C_EVIDENCE_BLOCKER",
@@ -2728,7 +3161,7 @@ def run_methodology(repo_root: Path | None = None, *,
             "record": tokenizer_contract,
             "verification": tokenizer_verdict,
             "observation_monitor": monitor_report,
-            "transformers_imported_in_observation_process": any(
+            "transformers_imported_for_pre_window_proof": any(
                 name == "transformers" or name.startswith("transformers.")
                 for name in sys.modules),
             "rule": (
@@ -2780,7 +3213,7 @@ def build_authority_record(repo_root: Path | None = None) -> dict[str, Any]:
     root = repo_root or _repo_override()
     preservation = verify_accepted_blocker_preservation(root)
     return {
-        "schema": "inferswarm.issue129.arm-c-retry-authority/1",
+        "schema": "inferswarm.issue129.arm-c-retry-authority/2",
         "issue": "https://github.com/Zutfen-LLC/inferswarm/issues/129",
         "accepted_base": {
             "arm_c_blocker": "ISSUE117_ARM_C_EVIDENCE_BLOCKER",
@@ -2804,6 +3237,12 @@ def build_authority_record(repo_root: Path | None = None) -> dict[str, Any]:
                 "this PR authorizes NO physical Arm-C retry, no GPU "
                 "execution, no model execution, no Arm D/E, no holdout "
                 "use, and no accepted Arm-B participant-state mutation"),
+            "campaign_stop": (
+                "a correctness-bearing invalid observation permanently "
+                "blocks its campaign_id; a later attempt in that campaign "
+                "cannot clear the STOP or produce a verdict; a new campaign "
+                "requires a fresh physical authorization and lineage root "
+                "issued after maintainer review"),
         },
         "accepted_blocker_preservation": preservation,
     }
@@ -2827,8 +3266,9 @@ def build_integrity_record(repo_root: Path | None = None) -> dict[str, Any]:
     content_encodings = {
         prompt_texts[row["case_id"]]: list(row["raw_fixture_token_ids"])
         for row in fixture["cases"]}
+    real_tokenizer = run_ordinary_ingress_proof(root)
     return {
-        "schema": "inferswarm.issue129.arm-c-retry-integrity/1",
+        "schema": "inferswarm.issue129.arm-c-retry-integrity/2",
         "frozen_control_plane_pins": digests,
         "pin_policy": (
             "r5b_epochs.py, xc_strategy.py, and coordinator.py pins are "
@@ -2844,6 +3284,21 @@ def build_integrity_record(repo_root: Path | None = None) -> dict[str, Any]:
         "content_encodings_pin": "sha256:" + sha256_bytes(json.dumps(
             content_encodings, sort_keys=True).encode()),
         "tokenizer_asset_pins": REQUIRED_TOKENIZER_ASSETS,
+        "tokenizer_software_identity":
+            real_tokenizer["tokenizer"]["software"],
+        "real_tokenizer_proof": {
+            "schema": real_tokenizer["schema"],
+            "case_count": real_tokenizer["case_count"],
+            "equal_count": real_tokenizer["equal_count"],
+            "passed": real_tokenizer["passed"],
+            "tokenizer_class": real_tokenizer["tokenizer"]["class"],
+            "loader": real_tokenizer["tokenizer"]["loader"],
+            "local_files_only":
+                real_tokenizer["tokenizer"]["local_files_only"],
+            "trust_remote_code":
+                real_tokenizer["tokenizer"]["trust_remote_code"],
+            "derivation": real_tokenizer["derivation"],
+        },
     }
 
 

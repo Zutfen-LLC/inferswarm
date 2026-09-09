@@ -32,10 +32,11 @@ not decide methodology.
 - **Non-decrypting.** No `verify_*_unseal.py` preflight contains or can reach
   a CMS decrypt operation. Only `seal_issue74_holdout.py` has an `unseal`
   subcommand, and it is gated by the campaign's own authorization rules.
-- **Pure standard library, with two exceptions.** `analyze_phase1_p6.py`
+- **Pure standard library, with three exceptions.** `analyze_phase1_p6.py`
   needs `numpy`; `verify_issue79_v2_unseal.py` and
   `verify_issue86_v3_unseal.py` need `jsonschema`. Some tools shell out to
-  `openssl` for public-key DER derivation only.
+  `openssl` for public-key DER derivation only. The Issue #129 real-tokenizer
+  proof needs the exact packages in its retained `requirements.txt`.
 
 ## The frozen-producer rule — read before editing anything here
 
@@ -236,6 +237,7 @@ byte-preserved records under
 | `issue117_integration_fixture.py` | Selects one public case per frozen mixture component from the accepted `c109-*` corpus. |
 | `issue117_preflight.py` | The physical preflight record schema and its fail-closed validation, required before any correctness-bearing arm. |
 | `issue117_proof.py` | Runs the CPU integration-freeze campaign and emits its evidence. |
+| `issue129_arm_c_retry_core.py` | Runs the CPU-only Arm-C retry methodology. It proves the real frozen tokenizer and Coordinator rendering, exact runtime-call equality, immutable accepted history, and campaign-scoped STOP behavior. |
 
 ## Adding a script
 

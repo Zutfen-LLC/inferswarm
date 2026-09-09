@@ -1,10 +1,13 @@
 {
   "accepted_blocker_preservation": {
     "accepted_blocker_merge": "718efbf5770b31c6e44eb3a8c4d0b81fd1dc9c22",
+    "current_path_count": 62,
+    "new_paths": [],
+    "no_new_paths": true,
     "path_count": 62,
     "preserved": true,
     "preserved_paths_digest": "sha256:873bbcc9aca16f2a20883bf268d175b9c7335d4d0a9611590d73a64d6015e260",
-    "rule": "every evidence path under evidence/arm-c/ that existed at the accepted merge is byte-identical in the working tree; all issue-#129 authority lives additively under evidence/arm-c-retry/",
+    "rule": "every evidence path under evidence/arm-c/ that existed at the accepted merge is byte-identical in the working tree; the current namespace contains no additional path; all issue-#129 authority lives under evidence/arm-c-retry/",
     "schema": "inferswarm.issue129.accepted-blocker-preservation/1"
   },
   "attempt_state_machine_self_checks": {
@@ -35,17 +38,31 @@
         "ok": true
       },
       {
-        "control": "authorized_terminal_clears_stop",
+        "control": "same_campaign_terminal_cannot_clear_stop",
         "expected_classifications": [
           "CORRECTNESS_BEARING_INVALID",
-          "TERMINAL_CAMPAIGN_ATTEMPT"
+          "CORRECTNESS_BEARING_INVALID"
         ],
-        "expected_passed": true,
+        "expected_passed": false,
         "observed_classifications": [
           "CORRECTNESS_BEARING_INVALID",
-          "TERMINAL_CAMPAIGN_ATTEMPT"
+          "CORRECTNESS_BEARING_INVALID"
         ],
-        "observed_passed": true,
+        "observed_passed": false,
+        "ok": true
+      },
+      {
+        "control": "same_campaign_boolean_flip_cannot_clear_stop",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "observed_passed": false,
         "ok": true
       },
       {
@@ -58,34 +75,6 @@
         "observed_classifications": [
           "CORRECTNESS_BEARING_INVALID",
           "DIAGNOSTIC_ONLY_AFTER_STOP"
-        ],
-        "observed_passed": false,
-        "ok": true
-      },
-      {
-        "control": "non_correctness_bearing_marker_cannot_clear_stop",
-        "expected_classifications": [
-          "CORRECTNESS_BEARING_INVALID",
-          "TERMINAL_MARKER_NON_CORRECTNESS_BEARING"
-        ],
-        "expected_passed": false,
-        "observed_classifications": [
-          "CORRECTNESS_BEARING_INVALID",
-          "TERMINAL_MARKER_NON_CORRECTNESS_BEARING"
-        ],
-        "observed_passed": false,
-        "ok": true
-      },
-      {
-        "control": "continuation_after_stop_without_authorized_terminal",
-        "expected_classifications": [
-          "CORRECTNESS_BEARING_INVALID",
-          "CORRECTNESS_BEARING_VALID"
-        ],
-        "expected_passed": false,
-        "observed_classifications": [
-          "CORRECTNESS_BEARING_INVALID",
-          "CORRECTNESS_BEARING_VALID"
         ],
         "observed_passed": false,
         "ok": true
@@ -105,29 +94,25 @@
         "ok": true
       },
       {
-        "control": "post_terminal_disclosed_diagnostic_stays_powerless",
+        "control": "terminal_without_stop_passes",
         "expected_classifications": [
-          "TERMINAL_CAMPAIGN_ATTEMPT",
-          "DIAGNOSTIC_ONLY_AFTER_STOP"
+          "TERMINAL_CAMPAIGN_ATTEMPT"
         ],
         "expected_passed": true,
         "observed_classifications": [
-          "TERMINAL_CAMPAIGN_ATTEMPT",
-          "DIAGNOSTIC_ONLY_AFTER_STOP"
+          "TERMINAL_CAMPAIGN_ATTEMPT"
         ],
         "observed_passed": true,
         "ok": true
       },
       {
-        "control": "terminal_clears_every_fired_stop",
+        "control": "fresh_post_review_campaign_is_independent",
         "expected_classifications": [
-          "CORRECTNESS_BEARING_INVALID",
           "CORRECTNESS_BEARING_INVALID",
           "TERMINAL_CAMPAIGN_ATTEMPT"
         ],
         "expected_passed": true,
         "observed_classifications": [
-          "CORRECTNESS_BEARING_INVALID",
           "CORRECTNESS_BEARING_INVALID",
           "TERMINAL_CAMPAIGN_ATTEMPT"
         ],
@@ -197,11 +182,11 @@
     "fixture_digest": "sha256:6046d4796a5d9cc888030c6b3f07304c20ce117d93905c3000d7aae7c0ae01c7"
   },
   "frozen_control_plane_digests": {
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/frozen-source/924cd22e/benchmarks/inferswarm_r6/strategy.py": "ca31f0999cb4fcf46d73c83f8b3ee7bbe2636792bcfc1824b15946aaac53906b",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/frozen-source/924cd22e/python/freetoken/research/r3_planner.py": "080e8b64fbb9fbc0f6df390d5714d0dbc691dd601e2bd13fe4ff71596e2d0856",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/frozen-source/924cd22e/python/freetoken/research/r5a_serving.py": "f61adc3201f5c2c9d23afcc90da3135ca89b3ed7eb3213d68a41b08fc242b105",
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/coordinator.py": "189548dc4f87f5f40c05f7796a2be7af0446ea05f95a0cf7bafcd3b79bec5d77",
-    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/strategy.py": "ca31f0999cb4fcf46d73c83f8b3ee7bbe2636792bcfc1824b15946aaac53906b",
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/xc_strategy.py": "8d33b4b297a20511448ab78909d2f528eef62c2b7943acae167668ec9ff0f26f",
-    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken/research/r3_planner.py": "080e8b64fbb9fbc0f6df390d5714d0dbc691dd601e2bd13fe4ff71596e2d0856",
-    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken/research/r5a_serving.py": "f61adc3201f5c2c9d23afcc90da3135ca89b3ed7eb3213d68a41b08fc242b105",
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken/research/r5b_epochs.py": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805"
   },
   "global_problems": [],
@@ -263,42 +248,47 @@
     },
     "coordinator_source_sha256": "189548dc4f87f5f40c05f7796a2be7af0446ea05f95a0cf7bafcd3b79bec5d77",
     "default_max_output_tokens": 32768,
-    "derivation": "the frozen Coordinator's _render_and_tokenize and _sampling_of are executed VERBATIM (AST-extracted from the sha256-pinned coordinator.py bytes) over the reconstructed exact ordinary request bodies; bodies verified byte-equal against the retained ordinary-http records; the stand-in tokenizer applies the cross-derived chat-template wrapper and the pinned accepted content encodings",
+    "derivation": "five retained sha256-pinned assets -> AutoTokenizer.from_pretrained(local_files_only=True, trust_remote_code=False) -> frozen Coordinator _render_and_tokenize -> exact 24-case prompt fixture",
     "equal_count": 24,
     "passed": true,
     "problems": [],
-    "schema": "inferswarm.issue129.ordinary-ingress/1",
-    "template_contract": {
-      "contract_sha256": "sha256:249462bfe2dbe05c425081d031eb17c1c7779de4dd1273ec73cfc908e22dc28d",
-      "derivation": "cross-derived from BOTH retained accepted sides: every case's rendered ids equal HEADER + content + FOOTER with content = accepted fixture ids (trailing-space piece absorbed at the template boundary iff the content string ends with a space); identical on the direct and ordinary sides",
-      "footer_token_ids": [
-        106,
-        107,
-        105,
-        4368,
-        107,
-        100,
-        45518,
-        107,
-        101
-      ],
-      "header_token_ids": [
-        2,
-        105,
-        2364,
-        107
-      ],
-      "trailing_space_cases": [
-        "c109-04-03-040"
-      ],
-      "trailing_space_piece": 236743
-    },
-    "tokenizer_stand_in": {
-      "asset_identities_pinned_by": "tokenizer_asset_contract (accepted checkpoint-authority provenance sha256 pins; bytes never read CPU-only)",
-      "class": "FrozenSourceTokenizerStandIn",
-      "content_encodings_pin": "accepted integration-fixture text->ids pairs; encode fails closed on any text outside the pin",
-      "encode_failures": [],
-      "stands_for": "AutoTokenizer.from_pretrained(/srv/models/gemma-r6)"
+    "schema": "inferswarm.issue129.real-tokenizer-ingress/1",
+    "stand_in_authority": false,
+    "tokenizer": {
+      "assets": {
+        "asset_count": 5,
+        "asset_dir": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/frozen-tokenizer/assets",
+        "asset_dir_exhaustive": true,
+        "digests": {
+          "chat_template.jinja": "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4",
+          "config.json": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9",
+          "generation_config.json": "a8349d9bd64cc5841297fcb5002f0fdc4749c473c8f1b10ea337f9ce4ee7014e",
+          "tokenizer.json": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+          "tokenizer_config.json": "a62f4e85a47c0c136edaaa3a4f591fd6783717299a9def47e5ad03a49f6a5eb9"
+        },
+        "sizes": {
+          "chat_template.jinja": 18683,
+          "config.json": 4423,
+          "generation_config.json": 260,
+          "tokenizer.json": 32169626,
+          "tokenizer_config.json": 3089
+        }
+      },
+      "class": "transformers.models.gemma.tokenization_gemma.GemmaTokenizer",
+      "loader": "AutoTokenizer.from_pretrained",
+      "local_files_only": true,
+      "software": {
+        "packages": {
+          "Jinja2": "3.1.6",
+          "MarkupSafe": "3.0.3",
+          "tokenizers": "0.23.2",
+          "transformers": "5.17.0"
+        },
+        "python": "3.12",
+        "requirements_sha256": "793616a40ed5902d8387b964347f6d391e95f52c046ac21e939f53938f5b308e",
+        "software_identity_sha256": "8133ae80ca8925f246d86a9bca1356ee46dc27d95201cf043261fd164e5b87a4"
+      },
+      "trust_remote_code": false
     }
   },
   "ordinary_summary": {
@@ -543,7 +533,7 @@
       }
     }
   },
-  "schema": "inferswarm.issue129.methodology-run/2",
+  "schema": "inferswarm.issue129.methodology-run/3",
   "terminal": "ISSUE117_ARM_C_RETRY_METHODOLOGY_READY",
   "tokenizer_source_contract": {
     "observation_monitor": {
@@ -586,7 +576,7 @@
       "tokenizer_path": "/srv/inferswarm/tokenizers/gemma-r6-frozen"
     },
     "rule": "the future physical retry must publish the exact sha256-pinned tokenizer/config assets to a dedicated non-Source location, point tokenizer_path there, verify digests pre-window, and open nothing under /srv/models/ during the observation window; the Coordinator legitimately uses a tokenizer \u2014 the gate never hinges on transformers being absent",
-    "transformers_imported_in_observation_process": false,
+    "transformers_imported_for_pre_window_proof": true,
     "verification": {
       "ok": true
     }

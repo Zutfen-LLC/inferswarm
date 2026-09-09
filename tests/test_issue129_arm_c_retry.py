@@ -4,7 +4,7 @@ Exercises scripts/issue129_arm_c_retry_core.py end to end:
 
 - BASELINE: 24/24 exact runtime-call transcript equivalence between the
   ORDINARY arm (the REAL frozen EpochServingController, planner, and
-  strategy bytes retained under evidence/arm-c/frozen-freetoken/924cd22e/,
+  strategy bytes retained under the accepted and additive frozen areas,
   fed by the ordinary Coordinator ingress/tokenizer seam) and the corrected
   DIRECT comparator (which allocates runtime session ids through the
   allocator mechanically extracted from the pinned r5b_epochs.py bytes),
@@ -46,6 +46,45 @@ ARM_C = AREA / "evidence" / "arm-c"
 
 def _arms(**kwargs):
     return core.run_both_arms(ROOT, **kwargs)
+
+
+def _attempt_facts(**overrides):
+    campaign = overrides.get("campaign_id", "campaign-A")
+    is_b = campaign == "campaign-B"
+    facts = {
+        "campaign_id": campaign,
+        "physical_authorization_id": (
+            "authorization-B" if is_b else "authorization-A"),
+        "methodology_ready_identity": "a" * 40,
+        "execution_freeze_identity": "b" * 64,
+        "attempt_id": "a",
+        "observed_at": (
+            "2026-09-09T00:00:05Z" if is_b else
+            "2026-09-09T00:00:01Z"),
+        "campaign_lineage_root": "lineage-B" if is_b else "lineage-A",
+        "physical_authorization_issued_at": (
+            "2026-09-09T00:00:04Z" if is_b else
+            "2026-09-09T00:00:00Z"),
+        "prior_stopped_campaign_id": "campaign-A" if is_b else None,
+        "prior_stop_attempt_id": "invalid-1" if is_b else None,
+        "prior_stop_review_id": "maintainer-review-A" if is_b else None,
+        "prior_stop_reviewed_at": (
+            "2026-09-09T00:00:03Z" if is_b else None),
+        "gpu_execution_occurred": False,
+        "model_execution_occurred": False,
+        "correctness_bearing_result_emitted": False,
+        "result_reached_coordinator": False,
+        "coordinator_commit_occurred": False,
+        "frozen_identity_verified_pre_launch": True,
+        "frozen_identity_verified_post_run": True,
+        "methodology_gate_passed": True,
+        "physical_retry_authorized": True,
+        "terminal_observation": False,
+        "diagnostic_only_disclosure": False,
+        "stop_occurred": False,
+    }
+    facts.update(overrides)
+    return facts
 
 
 def _scratch_mirror(tmp: str) -> Path:
@@ -171,7 +210,7 @@ class BaselineEquivalenceTests(unittest.TestCase):
         self.assertFalse(run["cpu_only"]["gpu_execution_occurred"])
         self.assertFalse(run["cpu_only"]["model_execution_occurred"])
         self.assertEqual(run["schema"],
-                         "inferswarm.issue129.methodology-run/2")
+                         "inferswarm.issue129.methodology-run/3")
         self.assertTrue(run["runtime_session_cross_check"]["ok"])
         self.assertTrue(run["attempt_state_machine_self_checks"]["ok"])
 
@@ -217,7 +256,7 @@ class OrdinaryIngressTests(unittest.TestCase):
         self.assertEqual(indices, list(range(1, 25)))
 
     def test_template_contract_cross_derived_from_both_sides(self):
-        template = self.ingress["template_contract"]
+        template = core.derive_template_contract(ROOT)
         self.assertEqual(template["header_token_ids"],
                          list(core.CHAT_TEMPLATE_HEADER_TOKEN_IDS))
         self.assertEqual(template["footer_token_ids"],
@@ -351,20 +390,76 @@ class TokenizerSourceContractTests(unittest.TestCase):
         self.assertEqual(report["observation_window_source_opens"], 0)
         self.assertTrue(report["observation_window_clean"])
 
-    def test_gate_does_not_hinge_on_transformers_absence(self):
-        # the corrected rule is the real invariant (pinned non-Source
-        # assets + zero forbidden opens); a transformers import in the
-        # process must NOT by itself block the corrected gate
-        saved = sys.modules.get("transformers")
-        sys.modules["transformers"] = type(sys)("transformers")
-        try:
-            run = core.run_methodology(ROOT)
-        finally:
-            if saved is None:
-                sys.modules.pop("transformers", None)
-            else:
-                sys.modules["transformers"] = saved
+    def test_gate_requires_real_transformers(self):
+        run = core.run_methodology(ROOT)
         self.assertEqual(run["terminal"], core.METHODOLOGY_READY)
+        self.assertEqual(
+            run["ordinary_ingress"]["tokenizer"]["software"]["packages"],
+            core.REQUIRED_TOKENIZER_SOFTWARE)
+
+
+class RealTokenizerProofTests(unittest.TestCase):
+    """The real retained tokenizer is methodology authority."""
+
+    def test_real_tokenizer_renders_24_of_24(self):
+        proof = core.run_ordinary_ingress_proof(ROOT)
+        self.assertTrue(proof["passed"])
+        self.assertEqual(proof["equal_count"], 24)
+        self.assertFalse(proof["stand_in_authority"])
+        self.assertEqual(
+            proof["tokenizer"]["loader"],
+            "AutoTokenizer.from_pretrained")
+        self.assertTrue(proof["tokenizer"]["local_files_only"])
+        self.assertFalse(proof["tokenizer"]["trust_remote_code"])
+
+    def test_control_each_tokenizer_asset_byte_mutation(self):
+        import shutil
+        for name in sorted(core.REQUIRED_TOKENIZER_ASSETS):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as tmp:
+                assets = Path(tmp) / "assets"
+                shutil.copytree(core.TOKENIZER_ASSET_DIR, assets)
+                target = assets / name
+                target.write_bytes(target.read_bytes() + b"\n")
+                with self.assertRaisesRegex(RuntimeError, "asset drift"):
+                    core.verify_retained_tokenizer_assets(
+                        ROOT, asset_dir=assets)
+
+    def test_control_missing_tokenizer_asset(self):
+        import shutil
+        with tempfile.TemporaryDirectory() as tmp:
+            assets = Path(tmp) / "assets"
+            shutil.copytree(core.TOKENIZER_ASSET_DIR, assets)
+            (assets / "chat_template.jinja").unlink()
+            with self.assertRaisesRegex(RuntimeError, "not exhaustive"):
+                core.verify_retained_tokenizer_assets(ROOT, asset_dir=assets)
+
+    def test_control_unlisted_tokenizer_asset(self):
+        import shutil
+        with tempfile.TemporaryDirectory() as tmp:
+            assets = Path(tmp) / "assets"
+            shutil.copytree(core.TOKENIZER_ASSET_DIR, assets)
+            (assets / "special_tokens_map.json").write_text("{}\n")
+            with self.assertRaisesRegex(RuntimeError, "not exhaustive"):
+                core.verify_retained_tokenizer_assets(ROOT, asset_dir=assets)
+
+    def test_control_tokenizer_package_version_drift(self):
+        versions = dict(core.REQUIRED_TOKENIZER_SOFTWARE)
+        versions["transformers"] = "5.17.1"
+        with self.assertRaisesRegex(RuntimeError, "package/version drift"):
+            core.verify_tokenizer_software_identity(
+                ROOT, installed_versions=versions)
+
+    def test_control_rendered_ids_differ_from_fixture(self):
+        proof = core.run_ordinary_ingress_proof(
+            ROOT,
+            rendered_ids_mutator=lambda case_id, ids: ids[:-1])
+        self.assertFalse(proof["passed"])
+        self.assertEqual(proof["equal_count"], 0)
+
+    def test_control_tokenizer_path_under_source_root(self):
+        with self.assertRaisesRegex(RuntimeError, "forbidden"):
+            core.verify_retained_tokenizer_assets(
+                ROOT, asset_dir=Path("/srv/models/gemma-r6"))
 
 
 class AcceptedBlockerPreservationTests(unittest.TestCase):
@@ -378,6 +473,8 @@ class AcceptedBlockerPreservationTests(unittest.TestCase):
         self.assertTrue(result["preserved"])
         self.assertEqual(result["accepted_blocker_merge"], self.MERGE)
         self.assertGreaterEqual(result["path_count"], 60)
+        self.assertTrue(result["no_new_paths"])
+        self.assertEqual(result["new_paths"], [])
         # the two previously-modified files are byte-exact again
         for name in ("pre-execution-authority-audit.json",
                      "blocker-reduction.json"):
@@ -432,6 +529,38 @@ class AcceptedBlockerPreservationTests(unittest.TestCase):
                         os.environ.pop(key, None)
                     else:
                         os.environ[key] = value
+
+    def test_control_new_path_in_accepted_namespace_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            import os
+            mirror = _scratch_mirror(tmp)
+            subprocess.run(["git", "-C", str(mirror), "init", "-q"],
+                           check=True)
+            subprocess.run(["git", "-C", str(mirror), "config",
+                            "user.email", "t@example.com"], check=True)
+            subprocess.run(["git", "-C", str(mirror), "config",
+                            "user.name", "t"], check=True)
+            subprocess.run(["git", "-C", str(mirror), "add", "-A"],
+                           check=True)
+            subprocess.run(["git", "-C", str(mirror), "commit", "-qm",
+                            "accepted base"], check=True)
+            head = subprocess.run(
+                ["git", "-C", str(mirror), "rev-parse", "HEAD"],
+                check=True, capture_output=True, text=True).stdout.strip()
+            extra = (mirror / AREA.relative_to(ROOT) / "evidence" / "arm-c"
+                     / "issue129-extra.txt")
+            extra.write_text("not allowed\n")
+            old_merge = os.environ.get("ARM_C_RETRY_ACCEPTED_MERGE")
+            os.environ["ARM_C_RETRY_ACCEPTED_MERGE"] = head
+            try:
+                with self.assertRaisesRegex(RuntimeError,
+                                            "introduced paths"):
+                    core.verify_accepted_blocker_preservation(mirror)
+            finally:
+                if old_merge is None:
+                    os.environ.pop("ARM_C_RETRY_ACCEPTED_MERGE", None)
+                else:
+                    os.environ["ARM_C_RETRY_ACCEPTED_MERGE"] = old_merge
 
     def test_blocker_reducer_historical_mode_available(self):
         # the accepted #128 reducer derives the blocker at the accepted
@@ -603,7 +732,7 @@ class MandatoryNegativeControlTests(unittest.TestCase):
             "invalid_correctness_bearing_observation")
         self.assertEqual(
             reduction["events"][1]["stop_rule_fired"],
-            "post_stop_continuation_without_terminal")
+            "invalid_correctness_bearing_observation")
 
     def test_control_stored_equal_substitutes_for_derivation(self):
         # the reducer must re-derive: feeding doctored documents whose
@@ -620,44 +749,12 @@ class MandatoryNegativeControlTests(unittest.TestCase):
 
     @staticmethod
     def _facts(**overrides):
-        facts = {
-            "attempt_id": "a",
-            "gpu_execution_occurred": False,
-            "model_execution_occurred": False,
-            "correctness_bearing_result_emitted": False,
-            "result_reached_coordinator": False,
-            "coordinator_commit_occurred": False,
-            "frozen_identity_verified_pre_launch": True,
-            "frozen_identity_verified_post_run": True,
-            "methodology_gate_passed": True,
-            "physical_retry_authorized": True,
-            "terminal_observation": False,
-            "diagnostic_only_disclosure": False,
-            "stop_occurred": False,
-        }
-        facts.update(overrides)
-        return facts
+        return _attempt_facts(**overrides)
 
 
 class AttemptStateMachineTests(unittest.TestCase):
     def _facts(self, **overrides):
-        facts = {
-            "attempt_id": "a",
-            "gpu_execution_occurred": False,
-            "model_execution_occurred": False,
-            "correctness_bearing_result_emitted": False,
-            "result_reached_coordinator": False,
-            "coordinator_commit_occurred": False,
-            "frozen_identity_verified_pre_launch": True,
-            "frozen_identity_verified_post_run": True,
-            "methodology_gate_passed": True,
-            "physical_retry_authorized": True,
-            "terminal_observation": False,
-            "diagnostic_only_disclosure": False,
-            "stop_occurred": False,
-        }
-        facts.update(overrides)
-        return facts
+        return _attempt_facts(**overrides)
 
     def test_pre_observation_infrastructure(self):
         self.assertEqual(
@@ -699,9 +796,8 @@ class AttemptStateMachineTests(unittest.TestCase):
         self.assertIn("physical retry not authorized",
                       reduction["mandatory_stop_events"][0])
 
-    def test_control_correctness_bearing_terminal_with_valid_authorization(
+    def test_control_same_campaign_terminal_cannot_clear_stop(
             self):
-        # representable, authoritative, and it CLEARS a prior STOP
         reduction = core.reduce_attempts([
             self._facts(attempt_id="invalid-1",
                         correctness_bearing_result_emitted=True,
@@ -712,11 +808,11 @@ class AttemptStateMachineTests(unittest.TestCase):
         ])
         self.assertEqual(
             reduction["events"][1]["classification"],
-            "TERMINAL_CAMPAIGN_ATTEMPT")
-        self.assertTrue(reduction["events"][1]["authoritative"])
-        self.assertTrue(reduction["passed"])
-        self.assertFalse(reduction["final_state"]["stop_fired"])
-        self.assertTrue(reduction["final_state"]["terminal_seen"])
+            "CORRECTNESS_BEARING_INVALID")
+        self.assertFalse(reduction["events"][1]["authoritative"])
+        self.assertFalse(reduction["passed"])
+        self.assertTrue(reduction["final_state"]["stop_fired"])
+        self.assertFalse(reduction["final_state"]["terminal_seen"])
 
     def test_control_post_stop_diagnostic_remains_non_authoritative(self):
         reduction = core.reduce_attempts([
@@ -767,7 +863,7 @@ class AttemptStateMachineTests(unittest.TestCase):
         self.assertFalse(reduction["passed"])
         self.assertEqual(
             reduction["events"][1]["stop_rule_fired"],
-            "post_stop_continuation_without_terminal")
+            "invalid_correctness_bearing_observation")
 
     def test_terminal_without_prior_stop_passes(self):
         reduction = core.reduce_attempts([
@@ -830,7 +926,7 @@ class AttemptStateMachineTests(unittest.TestCase):
     def test_self_checks_pass(self):
         result = core.run_attempt_state_self_checks()
         self.assertTrue(result["ok"])
-        self.assertEqual(len(result["rows"]), 9)
+        self.assertEqual(len(result["rows"]), 8)
 
     def test_control_post_terminal_undisclosed_continuation(self):
         # review 1 P1: a correctness-bearing attempt after the
@@ -871,10 +967,7 @@ class AttemptStateMachineTests(unittest.TestCase):
         self.assertFalse(reduction["events"][1]["authoritative"])
         self.assertTrue(reduction["passed"])
 
-    def test_control_terminal_clears_every_fired_stop(self):
-        # review 1 P2: the boolean STOP state and the stop-event log
-        # must agree — an authorized terminal resolves EVERY stop
-        # fired in the campaign so far
+    def test_control_terminal_clears_no_fired_stop(self):
         reduction = core.reduce_attempts([
             self._facts(attempt_id="invalid-1",
                         correctness_bearing_result_emitted=True,
@@ -886,10 +979,10 @@ class AttemptStateMachineTests(unittest.TestCase):
                         correctness_bearing_result_emitted=True,
                         terminal_observation=True),
         ])
-        self.assertTrue(reduction["passed"])
-        self.assertFalse(reduction["final_state"]["stop_fired"])
-        self.assertEqual(reduction["unresolved_mandatory_stops"], [])
-        self.assertTrue(all("— cleared by" in event
+        self.assertFalse(reduction["passed"])
+        self.assertTrue(reduction["final_state"]["stop_fired"])
+        self.assertEqual(len(reduction["unresolved_mandatory_stops"]), 3)
+        self.assertTrue(all("cleared by" not in event
                             for event in reduction["mandatory_stop_events"]))
 
     def test_continuation_event_firing_a_rule_is_non_authoritative(self):
@@ -902,10 +995,79 @@ class AttemptStateMachineTests(unittest.TestCase):
             self._facts(attempt_id="continuation-1",
                         correctness_bearing_result_emitted=True),
         ])
-        self.assertEqual(
-            reduction["events"][1]["classification"],
-            "CORRECTNESS_BEARING_VALID")
+        self.assertEqual(reduction["events"][1]["classification"],
+                         "CORRECTNESS_BEARING_INVALID")
         self.assertFalse(reduction["events"][1]["authoritative"])
+
+    def test_control_authorization_id_change_without_campaign_change(self):
+        reduction = core.reduce_attempts([
+            self._facts(attempt_id="a-1"),
+            self._facts(attempt_id="a-2",
+                        physical_authorization_id="authorization-other",
+                        observed_at="2026-09-09T00:00:02Z"),
+        ])
+        self.assertFalse(reduction["passed"])
+        self.assertTrue(any("changed authority field" in problem
+                            for problem in reduction["problems"]))
+        self.assertFalse(reduction["events"][1]["authoritative"])
+
+    def test_control_reused_authorization_for_new_campaign(self):
+        reduction = core.reduce_attempts([
+            self._facts(attempt_id="invalid-1",
+                        correctness_bearing_result_emitted=True,
+                        physical_retry_authorized=False),
+            self._facts(campaign_id="campaign-B", attempt_id="b-1",
+                        correctness_bearing_result_emitted=True,
+                        terminal_observation=True,
+                        physical_authorization_id="authorization-A"),
+        ])
+        self.assertFalse(reduction["passed"])
+        self.assertTrue(any("reuses physical authorization" in problem
+                            for problem in reduction["problems"]))
+        self.assertFalse(reduction["events"][1]["authoritative"])
+
+    def test_control_new_campaign_authorization_predates_review(self):
+        reduction = core.reduce_attempts([
+            self._facts(attempt_id="invalid-1",
+                        correctness_bearing_result_emitted=True,
+                        physical_retry_authorized=False),
+            self._facts(campaign_id="campaign-B", attempt_id="b-1",
+                        correctness_bearing_result_emitted=True,
+                        terminal_observation=True,
+                        physical_authorization_issued_at=
+                        "2026-09-09T00:00:02Z"),
+        ])
+        self.assertFalse(reduction["passed"])
+        self.assertTrue(any("not issued after" in problem
+                            for problem in reduction["problems"]))
+
+    def test_fresh_post_review_campaign_is_independent(self):
+        reduction = core.reduce_attempts([
+            self._facts(attempt_id="invalid-1",
+                        correctness_bearing_result_emitted=True,
+                        physical_retry_authorized=False),
+            self._facts(campaign_id="campaign-B", attempt_id="b-1",
+                        correctness_bearing_result_emitted=True,
+                        terminal_observation=True),
+        ])
+        self.assertTrue(reduction["passed"])
+        self.assertTrue(reduction["campaigns"]["campaign-A"]["blocked"])
+        self.assertFalse(
+            reduction["campaigns"]["campaign-A"]["terminal_seen"])
+        self.assertTrue(reduction["campaigns"]["campaign-B"]["passed"])
+        self.assertTrue(reduction["campaigns"]["campaign-B"]["terminal_seen"])
+
+    def test_all_attempts_carry_campaign_authority_identities(self):
+        reduction = core.reduce_attempts([
+            self._facts(attempt_id="terminal-1",
+                        correctness_bearing_result_emitted=True,
+                        terminal_observation=True),
+        ])
+        event = reduction["events"][0]
+        for field in ("campaign_id", "physical_authorization_id",
+                      "methodology_ready_identity",
+                      "execution_freeze_identity", "attempt_id"):
+            self.assertTrue(event[field])
 
 
 class FrozenPinTests(unittest.TestCase):
@@ -926,7 +1088,7 @@ class FrozenPinTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             mirror = _scratch_mirror(tmp)
             target = (mirror / AREA.relative_to(ROOT) / "evidence"
-                      / "arm-c" / "frozen-freetoken" / "924cd22e"
+                      / "arm-c-retry" / "frozen-source" / "924cd22e"
                       / "python" / "freetoken" / "research"
                       / "r3_planner.py")
             original = target.read_bytes()
@@ -1079,7 +1241,7 @@ class RetainedEvidenceTests(unittest.TestCase):
         self.assertTrue(path.is_file(), "methodology-run.json not retained")
         document = json.loads(path.read_text())
         self.assertEqual(document["schema"],
-                         "inferswarm.issue129.methodology-run/2")
+                         "inferswarm.issue129.methodology-run/3")
         self.assertEqual(document["terminal"], core.METHODOLOGY_READY)
         fresh = core.run_methodology(ROOT)
         self.assertEqual(document["terminal"], fresh["terminal"])
@@ -1095,16 +1257,18 @@ class RetainedEvidenceTests(unittest.TestCase):
             (RETRY_EVIDENCE / "authority.json").read_text())
         self.assertEqual(
             authority["schema"],
-            "inferswarm.issue129.arm-c-retry-authority/1")
+            "inferswarm.issue129.arm-c-retry-authority/2")
         self.assertTrue(
             authority["accepted_blocker_preservation"]["preserved"])
         integrity = json.loads(
             (RETRY_EVIDENCE / "integrity.json").read_text())
         self.assertEqual(
             integrity["schema"],
-            "inferswarm.issue129.arm-c-retry-integrity/1")
+            "inferswarm.issue129.arm-c-retry-integrity/2")
         self.assertIn("runtime_session_allocation", integrity)
         self.assertIn("content_encodings_pin", integrity)
+        self.assertEqual(integrity["real_tokenizer_proof"]["equal_count"], 24)
+        self.assertTrue(integrity["real_tokenizer_proof"]["passed"])
 
 
 if __name__ == "__main__":
