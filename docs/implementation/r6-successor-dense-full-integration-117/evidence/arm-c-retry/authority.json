@@ -83,9 +83,9 @@
   "issue": "https://github.com/Zutfen-LLC/inferswarm/issues/129",
   "policy": {
     "additive_history": "accepted #128 evidence paths are never modified, re-derived, or re-classified at later heads; all #129 authority, integrity pins, and derived methodology outputs live under evidence/arm-c-retry/",
-    "campaign_stop": "a correctness-bearing invalid observation permanently blocks its campaign_id; a later attempt in that campaign cannot clear the STOP or produce a verdict; a new campaign requires a fresh physical authorization and lineage root issued after maintainer review",
+    "campaign_stop": "a correctness-bearing invalid observation permanently blocks its campaign_id; a later attempt in that campaign cannot clear the STOP or produce a verdict; a new campaign requires a fresh physical authorization and lineage root issued after maintainer review; the reducer binds every campaign to a separate accepted authority record, requires an authoritative terminal to pass, and rejects diagnostic authority or an intermediate-campaign review bypass",
     "historical_blocker_mode": "the accepted #128 blocker reducer runs only in its historical-verification mode pinned to the accepted merge (scripts/issue117_arm_c_blocker_reducer.py reduce_all(head=...) / ARM_C_BLOCKER_HEAD); the live head is never re-classified",
     "physical_authorization": "this PR authorizes NO physical Arm-C retry, no GPU execution, no model execution, no Arm D/E, no holdout use, and no accepted Arm-B participant-state mutation"
   },
-  "schema": "inferswarm.issue129.arm-c-retry-authority/2"
+  "schema": "inferswarm.issue129.arm-c-retry-authority/3"
 }

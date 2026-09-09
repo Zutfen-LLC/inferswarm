@@ -54,13 +54,13 @@
       {
         "control": "same_campaign_boolean_flip_cannot_clear_stop",
         "expected_classifications": [
-          "CORRECTNESS_BEARING_INVALID",
-          "CORRECTNESS_BEARING_INVALID"
+          "PRE_OBSERVATION_INFRASTRUCTURE",
+          "TERMINAL_CAMPAIGN_ATTEMPT"
         ],
         "expected_passed": false,
         "observed_classifications": [
-          "CORRECTNESS_BEARING_INVALID",
-          "CORRECTNESS_BEARING_INVALID"
+          "PRE_OBSERVATION_INFRASTRUCTURE",
+          "TERMINAL_CAMPAIGN_ATTEMPT"
         ],
         "observed_passed": false,
         "ok": true
@@ -106,6 +106,30 @@
         "ok": true
       },
       {
+        "control": "nonterminal_campaign_cannot_pass",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_VALID"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_VALID"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
+        "control": "diagnostic_disclosure_is_never_authority",
+        "expected_classifications": [
+          "DIAGNOSTIC_ONLY"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "DIAGNOSTIC_ONLY"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
         "control": "fresh_post_review_campaign_is_independent",
         "expected_classifications": [
           "CORRECTNESS_BEARING_INVALID",
@@ -117,6 +141,22 @@
           "TERMINAL_CAMPAIGN_ATTEMPT"
         ],
         "observed_passed": true,
+        "ok": true
+      },
+      {
+        "control": "intermediate_campaign_cannot_bypass_stop_review",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "PRE_OBSERVATION_INFRASTRUCTURE",
+          "TERMINAL_CAMPAIGN_ATTEMPT"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "PRE_OBSERVATION_INFRASTRUCTURE",
+          "TERMINAL_CAMPAIGN_ATTEMPT"
+        ],
+        "observed_passed": false,
         "ok": true
       }
     ]
@@ -533,7 +573,7 @@
       }
     }
   },
-  "schema": "inferswarm.issue129.methodology-run/3",
+  "schema": "inferswarm.issue129.methodology-run/4",
   "terminal": "ISSUE117_ARM_C_RETRY_METHODOLOGY_READY",
   "tokenizer_source_contract": {
     "observation_monitor": {

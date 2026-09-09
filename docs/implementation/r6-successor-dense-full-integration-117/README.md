@@ -24,7 +24,9 @@
   paths are byte-exact from merge `718efbf…` and no new path exists in
   that namespace. The campaign reducer makes a correctness-bearing STOP
   permanent within one campaign. A new campaign requires a fresh
-  post-review authorization and lineage root. All mandatory negative
+  post-review authorization and lineage root. A separate accepted authority
+  record binds every campaign. A campaign passes only after an authoritative
+  terminal attempt. Diagnostics remain non-authoritative. All mandatory negative
   controls and the exact deployed-script identity contract are frozen in
   [METHODOLOGY-ARM-C-RETRY.md](METHODOLOGY-ARM-C-RETRY.md) with evidence
   under `evidence/arm-c-retry/` (`methodology-run.json`,

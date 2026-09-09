@@ -237,7 +237,7 @@ byte-preserved records under
 | `issue117_integration_fixture.py` | Selects one public case per frozen mixture component from the accepted `c109-*` corpus. |
 | `issue117_preflight.py` | The physical preflight record schema and its fail-closed validation, required before any correctness-bearing arm. |
 | `issue117_proof.py` | Runs the CPU integration-freeze campaign and emits its evidence. |
-| `issue129_arm_c_retry_core.py` | Runs the CPU-only Arm-C retry methodology. It proves the real frozen tokenizer and Coordinator rendering, exact runtime-call equality, immutable accepted history, and campaign-scoped STOP behavior. |
+| `issue129_arm_c_retry_core.py` | Runs the CPU-only Arm-C retry methodology. It proves the real frozen tokenizer and Coordinator rendering, exact runtime-call equality, immutable accepted history, campaign-scoped STOP behavior, and separate accepted-authority binding. |
 
 ## Adding a script
 

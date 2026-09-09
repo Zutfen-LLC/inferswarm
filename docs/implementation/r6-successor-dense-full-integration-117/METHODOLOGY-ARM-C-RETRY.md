@@ -199,13 +199,23 @@ The attempt also records its observation time and the campaign authority issue
 time. The reducer binds one stable authorization identity and one fresh lineage
 root to each campaign.
 
+The reducer also requires a separate accepted campaign-authority registry.
+Each campaign record in that registry contains all campaign authority fields,
+including `physical_retry_authorized`. The reducer compares every attempt with
+that accepted record. Attempt facts cannot establish their own methodology or
+physical execution authority. The CPU-only self-checks use explicit synthetic
+authority records. Those records are not physical execution authority.
+
 An invalid correctness-bearing observation fires a permanent mandatory STOP
 for that campaign. No later attempt in that campaign can clear the STOP. Later
 observations can be retained only as disclosed diagnostics. They are never
 verdict authority.
 
 `TERMINAL_CAMPAIGN_ATTEMPT` is valid only when the campaign has never fired a
-mandatory STOP. A non-correctness-bearing terminal marker is not authority.
+mandatory STOP. A campaign passes only after an authoritative terminal attempt.
+A valid nonterminal attempt does not make a campaign pass. A
+non-correctness-bearing terminal marker is not authority. An explicitly
+disclosed diagnostic is never authority, including in a fresh campaign.
 
 A new campaign after review must have:
 
@@ -218,7 +228,10 @@ A new campaign after review must have:
 
 The reducer rejects a Boolean-only authorization change, an authorization ID
 change within one campaign, authorization reuse, lineage-root reuse, a missing
-review link, or an authorization that predates the STOP or review.
+review link, or an authorization that predates the STOP or review. It also
+rejects a new campaign when the immediately prior campaign has neither a STOP
+nor an authoritative terminal. An intermediate nonterminal campaign cannot
+bypass a prior STOP and review boundary.
 
 The positive lineage control keeps campaign A blocked after an invalid
 correctness-bearing attempt. It then evaluates a separately constructed
@@ -268,6 +281,13 @@ The suite covers these campaign mutations:
 31. Post-STOP diagnostic used as verdict authority.
 32. Non-correctness-bearing terminal marker used as authority.
 33. Undisclosed correctness-bearing continuation after STOP or terminal.
+34. Infrastructure-only or valid nonterminal campaign used as a PASS.
+35. Intermediate nonterminal campaign used to bypass a prior STOP and review.
+36. Explicit diagnostic disclosure used as verdict authority in a fresh
+    campaign.
+37. Attempt methodology or execution identity different from the separate
+    accepted campaign authority record.
+38. Missing accepted campaign authority record.
 
 ## Retained outputs
 

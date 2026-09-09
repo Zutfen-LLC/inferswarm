@@ -91,7 +91,9 @@ issue #129 before any future Arm-C physical retry can be authorized:
     permanently blocks its campaign. Later observations in that
     campaign are diagnostic only and cannot clear the STOP. A new
     campaign needs a fresh lineage root and an authorization issued
-    after the recorded STOP and maintainer review.
+    after the recorded STOP and maintainer review. The reducer binds
+    every campaign to a separate accepted authority record. It requires
+    an authoritative terminal attempt before the campaign can pass.
 
 7.  Exposes the exact deployed-script identity contract
     (``verify_deployment_identity``): repository SHA + file sha256 +
@@ -2010,6 +2012,7 @@ ATTEMPT_CLASSES = (
     "PRE_OBSERVATION_INFRASTRUCTURE",
     "CORRECTNESS_BEARING_VALID",
     "CORRECTNESS_BEARING_INVALID",
+    "DIAGNOSTIC_ONLY",
     "DIAGNOSTIC_ONLY_AFTER_STOP",
     "TERMINAL_CAMPAIGN_ATTEMPT",
     "TERMINAL_MARKER_NON_CORRECTNESS_BEARING",
@@ -2075,6 +2078,9 @@ LEGAL_TRANSITIONS = {
         "sets_terminal": False, "clears_stop": False,
         "mandatory_stop": True, "authoritative": False,
         "stop_rule": "invalid_correctness_bearing_observation"},
+    "DIAGNOSTIC_ONLY": {
+        "sets_terminal": False, "clears_stop": False,
+        "mandatory_stop": False, "authoritative": False},
     "DIAGNOSTIC_ONLY_AFTER_STOP": {
         "sets_terminal": False, "clears_stop": False,
         "mandatory_stop": False, "authoritative": False},
@@ -2090,6 +2096,7 @@ LEGAL_TRANSITIONS = {
 
 
 CAMPAIGN_AUTHORITY_FIELDS = (
+    "physical_retry_authorized",
     "physical_authorization_id",
     "methodology_ready_identity",
     "execution_freeze_identity",
@@ -2106,6 +2113,7 @@ def _attempt_state() -> dict[str, Any]:
     return {
         "stop_fired": False,
         "terminal_seen": False,
+        "terminal_authoritative": False,
         "first_stop_attempt_id": None,
         "first_stop_observed_at": None,
     }
@@ -2169,9 +2177,11 @@ def classify_attempt(facts: Mapping[str, Any],
         identity_ok
         and facts["methodology_gate_passed"]
         and facts["physical_retry_authorized"])
-    if correctness_bearing and (stop_already_fired or terminal_seen):
-        if facts["diagnostic_only_disclosure"]:
+    if correctness_bearing and facts["diagnostic_only_disclosure"]:
+        if stop_already_fired or terminal_seen:
             return "DIAGNOSTIC_ONLY_AFTER_STOP"
+        return "DIAGNOSTIC_ONLY"
+    if correctness_bearing and (stop_already_fired or terminal_seen):
         return "CORRECTNESS_BEARING_INVALID"
     if facts["terminal_observation"]:
         if not correctness_bearing:
@@ -2188,13 +2198,18 @@ def classify_attempt(facts: Mapping[str, Any],
     return "PRE_OBSERVATION_INFRASTRUCTURE"
 
 
-def reduce_attempts(attempts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+def reduce_attempts(
+        attempts: Sequence[Mapping[str, Any]], *,
+        accepted_campaign_authorities: Mapping[str, Mapping[str, Any]],
+        ) -> dict[str, Any]:
     """Mechanically decide attempt classes and mandatory STOPs through
     the frozen LEGAL_TRANSITIONS table; fail closed when a
     correctness-bearing attempt continues without the state machine
     authorizing it.
 
-    One ``campaign_id`` defines one authority domain. A mandatory STOP
+    One ``campaign_id`` defines one authority domain. The required
+    ``accepted_campaign_authorities`` input is a separate accepted-authority
+    registry. Attempt facts cannot authorize themselves. A mandatory STOP
     is permanent in that domain. The latest campaign can pass even when
     an earlier campaign stays blocked, but the historical blocked state
     is never rewritten.
@@ -2207,13 +2222,17 @@ def reduce_attempts(attempts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
       INVALID: the campaign concluded; undisclosed follow-on
       correctness-bearing work is unauthorized.
     - TERMINAL_CAMPAIGN_ATTEMPT is possible only when the campaign has
-      never fired a STOP.
+      never fired a STOP. Only an authoritative terminal lets the campaign
+      pass.
+    - An explicitly disclosed diagnostic is never verdict authority.
     - A non-correctness-bearing terminal marker never clears a STOP;
       while a STOP is active it fires
       ``non_correctness_bearing_terminal_cannot_clear_stop``.
     - A new campaign after a STOP needs a new campaign id, physical
       authorization id, and lineage root. Its authorization timestamp
       must follow the prior STOP and the recorded maintainer review.
+    - A new campaign cannot follow an intermediate nonterminal campaign.
+      This rule prevents a STOP/review linkage bypass.
     """
     events = []
     problems = []
@@ -2223,6 +2242,10 @@ def reduce_attempts(attempts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     seen_authorizations: dict[str, str] = {}
     seen_lineage_roots: dict[str, str] = {}
     seen_attempt_ids: set[str] = set()
+    if not isinstance(accepted_campaign_authorities, Mapping):
+        raise ValueError(
+            "accepted_campaign_authorities must be an accepted-authority "
+            "mapping")
     for order, facts in enumerate(attempts, start=1):
         attempt_problem_count = len(problems)
         missing = set(ATTEMPT_FACT_FIELDS) - set(facts)
@@ -2242,6 +2265,26 @@ def reduce_attempts(attempts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             state["authority_valid"] = True
             state["authority"] = {
                 field: facts[field] for field in CAMPAIGN_AUTHORITY_FIELDS}
+            accepted_record = accepted_campaign_authorities.get(campaign_id)
+            if not isinstance(accepted_record, Mapping):
+                state["accepted_authority_record"] = None
+                problems.append(
+                    f"campaign {campaign_id} has no accepted campaign "
+                    "authority record")
+            else:
+                state["accepted_authority_record"] = dict(accepted_record)
+                missing_authority = (
+                    set(CAMPAIGN_AUTHORITY_FIELDS) - set(accepted_record))
+                if missing_authority:
+                    problems.append(
+                        f"campaign {campaign_id} accepted authority record "
+                        f"lacks {sorted(missing_authority)}")
+                else:
+                    for field in CAMPAIGN_AUTHORITY_FIELDS:
+                        if facts[field] != accepted_record[field]:
+                            problems.append(
+                                f"campaign {campaign_id} attempt authority "
+                                f"does not match accepted field {field}")
             state["events"] = []
             campaign_states[campaign_id] = state
             campaign_order.append(campaign_id)
@@ -2289,6 +2332,12 @@ def reduce_attempts(attempts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
                             "issued after the prior STOP and review")
                 except ValueError as error:
                     problems.append(str(error))
+            elif prior_id is not None and not campaign_states[prior_id][
+                    "terminal_authoritative"]:
+                problems.append(
+                    f"campaign {campaign_id} started before prior campaign "
+                    f"{prior_id} reached an authoritative terminal; an "
+                    "intermediate campaign cannot bypass a prior STOP/review")
             elif any(facts[field] is not None for field in (
                     "prior_stopped_campaign_id", "prior_stop_attempt_id",
                     "prior_stop_review_id", "prior_stop_reviewed_at")):
@@ -2337,9 +2386,11 @@ def reduce_attempts(attempts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
                     f"attempt {order} ({facts['attempt_id']}) is a "
                     "non-correctness-bearing terminal marker attempting to "
                     "clear a mandatory STOP")
-        elif classification == "DIAGNOSTIC_ONLY_AFTER_STOP":
+        elif classification in ("DIAGNOSTIC_ONLY",
+                                 "DIAGNOSTIC_ONLY_AFTER_STOP"):
             non_authoritative_note = (
-                "retained as diagnostic only; never verdict authority; "
+                "explicitly disclosed and retained as diagnostic only; "
+                "never verdict authority; "
                 "clears neither the STOP nor the terminal requirement")
         # apply the frozen transition
         if transition["mandatory_stop"]:
@@ -2349,6 +2400,9 @@ def reduce_attempts(attempts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
                 state["first_stop_observed_at"] = facts["observed_at"]
         if transition["sets_terminal"]:
             state["terminal_seen"] = True
+            state["terminal_authoritative"] = bool(
+                transition["authoritative"] and rule is None
+                and state["authority_valid"])
         event = {
             "order": order,
             "campaign_id": campaign_id,
@@ -2376,19 +2430,24 @@ def reduce_attempts(attempts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         state = campaign_states[campaign_id]
         campaign_results[campaign_id] = {
             "authority": state["authority"],
+            "accepted_authority_record":
+                state["accepted_authority_record"],
             "blocked": state["stop_fired"],
             "authority_valid": state["authority_valid"],
             "terminal_seen": state["terminal_seen"],
-            "passed": not state["stop_fired"] and state["authority_valid"],
+            "terminal_authoritative": state["terminal_authoritative"],
+            "passed": (not state["stop_fired"]
+                       and state["authority_valid"]
+                       and state["terminal_authoritative"]),
             "first_stop_attempt_id": state["first_stop_attempt_id"],
             "event_count": len(state["events"]),
         }
     latest = campaign_order[-1] if campaign_order else None
     final_state = (_attempt_state() if latest is None else {
         key: value for key, value in campaign_states[latest].items()
-        if key not in ("authority", "events")})
+        if key not in ("authority", "accepted_authority_record", "events")})
     return {
-        "schema": "inferswarm.issue129.attempt-reduction/3",
+        "schema": "inferswarm.issue129.attempt-reduction/4",
         "events": events,
         "problems": problems,
         "mandatory_stop_events": stop_events,
@@ -2400,6 +2459,10 @@ def reduce_attempts(attempts: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         "final_state": final_state,
         "stop_rules": STOP_RULES,
         "legal_transitions": LEGAL_TRANSITIONS,
+        "authority_binding_rule": (
+            "every campaign must match a separate accepted campaign "
+            "authority record; attempt facts never establish their own "
+            "methodology or physical execution authority"),
     }
 
 
@@ -2882,12 +2945,14 @@ ATTEMPT_STATE_SELF_CHECKS = (
       {"id": "a-2", "cb": True, "terminal": True}], False,
      ["CORRECTNESS_BEARING_INVALID", "CORRECTNESS_BEARING_INVALID"]),
     ("same_campaign_boolean_flip_cannot_clear_stop",
-     [{"id": "a-1", "cb": True, "authorized": False},
-      {"id": "a-2", "cb": True, "authorized": True}], False,
-     ["CORRECTNESS_BEARING_INVALID", "CORRECTNESS_BEARING_INVALID"]),
+     [{"id": "a-1", "authorized": False},
+      {"id": "a-2", "cb": True, "terminal": True,
+       "authorized": True}], False,
+     ["PRE_OBSERVATION_INFRASTRUCTURE", "TERMINAL_CAMPAIGN_ATTEMPT"]),
     ("post_stop_diagnostic_remains_non_authoritative",
      [{"id": "a-1", "cb": True, "authorized": False},
-      {"id": "a-2", "cb": True, "diagnostic": True}], False,
+      {"id": "a-2", "cb": True, "diagnostic": True,
+       "authorized": False}], False,
      ["CORRECTNESS_BEARING_INVALID", "DIAGNOSTIC_ONLY_AFTER_STOP"]),
     ("post_terminal_undisclosed_continuation_fails_closed",
      [{"id": "a-1", "cb": True, "terminal": True},
@@ -2896,27 +2961,50 @@ ATTEMPT_STATE_SELF_CHECKS = (
     ("terminal_without_stop_passes",
      [{"id": "a-1", "cb": True, "terminal": True}], True,
      ["TERMINAL_CAMPAIGN_ATTEMPT"]),
+    ("nonterminal_campaign_cannot_pass",
+     [{"id": "a-1", "cb": True}], False,
+     ["CORRECTNESS_BEARING_VALID"]),
+    ("diagnostic_disclosure_is_never_authority",
+     [{"id": "a-1", "cb": True, "terminal": True,
+       "diagnostic": True}], False,
+     ["DIAGNOSTIC_ONLY"]),
     ("fresh_post_review_campaign_is_independent",
      [{"id": "a-1", "cb": True, "authorized": False},
       {"id": "b-1", "campaign": "campaign-B", "cb": True,
        "terminal": True}], True,
      ["CORRECTNESS_BEARING_INVALID", "TERMINAL_CAMPAIGN_ATTEMPT"]),
+    ("intermediate_campaign_cannot_bypass_stop_review",
+     [{"id": "a-1", "cb": True, "authorized": False},
+      {"id": "b-1", "campaign": "campaign-B"},
+      {"id": "c-1", "campaign": "campaign-C", "cb": True,
+       "terminal": True}], False,
+     ["CORRECTNESS_BEARING_INVALID", "PRE_OBSERVATION_INFRASTRUCTURE",
+      "TERMINAL_CAMPAIGN_ATTEMPT"]),
 )
 
 
 def _self_check_facts(overrides: Mapping[str, Any]) -> dict[str, Any]:
     campaign = overrides.get("campaign", "campaign-A")
     is_b = campaign == "campaign-B"
+    is_c = campaign == "campaign-C"
+    suffix = "C" if is_c else ("B" if is_b else "A")
+    if is_c:
+        default_observed_at = "2026-09-09T00:00:06Z"
+    elif is_b:
+        default_observed_at = "2026-09-09T00:00:05Z"
+    elif overrides.get("id") == "a-2":
+        default_observed_at = "2026-09-09T00:00:02Z"
+    else:
+        default_observed_at = "2026-09-09T00:00:01Z"
     return {
         "attempt_id": overrides.get("id", "self-check"),
         "campaign_id": campaign,
         "physical_authorization_id": overrides.get(
-            "authorization_id", "authorization-B" if is_b else
-            "authorization-A"),
+            "authorization_id", f"authorization-{suffix}"),
         "methodology_ready_identity": "a" * 40,
         "execution_freeze_identity": "b" * 64,
         "campaign_lineage_root": overrides.get(
-            "lineage_root", "lineage-B" if is_b else "lineage-A"),
+            "lineage_root", f"lineage-{suffix}"),
         "physical_authorization_issued_at": overrides.get(
             "issued_at", "2026-09-09T00:00:04Z" if is_b else
             "2026-09-09T00:00:00Z"),
@@ -2930,10 +3018,7 @@ def _self_check_facts(overrides: Mapping[str, Any]) -> dict[str, Any]:
         "prior_stop_reviewed_at": (
             overrides.get("reviewed_at", "2026-09-09T00:00:03Z")
             if is_b else None),
-        "observed_at": overrides.get(
-            "observed_at", "2026-09-09T00:00:05Z" if is_b else
-            ("2026-09-09T00:00:02Z" if overrides.get("id") == "a-2"
-             else "2026-09-09T00:00:01Z")),
+        "observed_at": overrides.get("observed_at", default_observed_at),
         "gpu_execution_occurred": False,
         "model_execution_occurred": False,
         "correctness_bearing_result_emitted": bool(overrides.get("cb")),
@@ -2949,13 +3034,32 @@ def _self_check_facts(overrides: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
+def _self_check_authority_records(
+        attempts: Sequence[Mapping[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Build explicit synthetic authority records for CPU-only controls.
+
+    These records test reducer mechanics. They are not physical execution
+    authority. A physical reducer caller must supply records from accepted
+    project authority, separate from observed attempt facts.
+    """
+    records: dict[str, dict[str, Any]] = {}
+    for facts in attempts:
+        campaign_id = facts["campaign_id"]
+        records.setdefault(campaign_id, {
+            field: facts[field] for field in CAMPAIGN_AUTHORITY_FIELDS})
+    return records
+
+
 def run_attempt_state_self_checks() -> dict[str, Any]:
     rows = []
     ok = True
     for name, sequence, expect_passed, expect_classes \
             in ATTEMPT_STATE_SELF_CHECKS:
         attempts = [_self_check_facts(spec) for spec in sequence]
-        reduction = reduce_attempts(attempts)
+        reduction = reduce_attempts(
+            attempts,
+            accepted_campaign_authorities=
+                _self_check_authority_records(attempts))
         classifications = [
             event["classification"] for event in reduction["events"]]
         verdict = (
@@ -3134,7 +3238,7 @@ def run_methodology(repo_root: Path | None = None, *,
               and not global_problems)
     terminal = METHODOLOGY_READY if passed else METHODOLOGY_BLOCKED
     document = {
-        "schema": "inferswarm.issue129.methodology-run/3",
+        "schema": "inferswarm.issue129.methodology-run/4",
         "authority": {
             "issue": "https://github.com/Zutfen-LLC/inferswarm/issues/129",
             "accepted_arm_c_blocker": "ISSUE117_ARM_C_EVIDENCE_BLOCKER",
@@ -3213,7 +3317,7 @@ def build_authority_record(repo_root: Path | None = None) -> dict[str, Any]:
     root = repo_root or _repo_override()
     preservation = verify_accepted_blocker_preservation(root)
     return {
-        "schema": "inferswarm.issue129.arm-c-retry-authority/2",
+        "schema": "inferswarm.issue129.arm-c-retry-authority/3",
         "issue": "https://github.com/Zutfen-LLC/inferswarm/issues/129",
         "accepted_base": {
             "arm_c_blocker": "ISSUE117_ARM_C_EVIDENCE_BLOCKER",
@@ -3242,7 +3346,10 @@ def build_authority_record(repo_root: Path | None = None) -> dict[str, Any]:
                 "blocks its campaign_id; a later attempt in that campaign "
                 "cannot clear the STOP or produce a verdict; a new campaign "
                 "requires a fresh physical authorization and lineage root "
-                "issued after maintainer review"),
+                "issued after maintainer review; the reducer binds every "
+                "campaign to a separate accepted authority record, requires "
+                "an authoritative terminal to pass, and rejects diagnostic "
+                "authority or an intermediate-campaign review bypass"),
         },
         "accepted_blocker_preservation": preservation,
     }

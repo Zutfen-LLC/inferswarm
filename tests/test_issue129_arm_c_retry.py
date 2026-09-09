@@ -19,8 +19,8 @@ Exercises scripts/issue129_arm_c_retry_core.py end to end:
 - frozen-byte pinning fails closed (including the inherited #128 pins);
 - every mandatory negative control of issue #129 fails closed through
   the same real derivation;
-- the attempt/STOP/physical-authorization state machine classifies,
-  stops, and clears mechanically;
+- the attempt/STOP/physical-authorization state machine classifies attempts
+  and preserves mandatory STOPs mechanically;
 - the deployed-script identity contract rejects mutable/unpinned/changed
   scripts;
 - stored ``equal`` flags or terminal strings never substitute for
@@ -85,6 +85,25 @@ def _attempt_facts(**overrides):
     }
     facts.update(overrides)
     return facts
+
+
+def _accepted_authority_records(attempts):
+    """Build explicit synthetic accepted-authority records for tests."""
+    records = {}
+    for facts in attempts:
+        campaign_id = facts["campaign_id"]
+        records.setdefault(campaign_id, {
+            field: facts[field] for field in core.CAMPAIGN_AUTHORITY_FIELDS})
+    return records
+
+
+def _reduce(attempts, *, accepted_authorities=None):
+    """Reduce test facts against authority that is separate from them."""
+    attempts = list(attempts)
+    authorities = (accepted_authorities if accepted_authorities is not None
+                   else _accepted_authority_records(attempts))
+    return core.reduce_attempts(
+        attempts, accepted_campaign_authorities=authorities)
 
 
 def _scratch_mirror(tmp: str) -> Path:
@@ -210,7 +229,7 @@ class BaselineEquivalenceTests(unittest.TestCase):
         self.assertFalse(run["cpu_only"]["gpu_execution_occurred"])
         self.assertFalse(run["cpu_only"]["model_execution_occurred"])
         self.assertEqual(run["schema"],
-                         "inferswarm.issue129.methodology-run/3")
+                         "inferswarm.issue129.methodology-run/4")
         self.assertTrue(run["runtime_session_cross_check"]["ok"])
         self.assertTrue(run["attempt_state_machine_self_checks"]["ok"])
 
@@ -722,7 +741,7 @@ class MandatoryNegativeControlTests(unittest.TestCase):
             self._facts(attempt_id="retry-2",
                         correctness_bearing_result_emitted=True),
         ]
-        reduction = core.reduce_attempts(attempts)
+        reduction = _reduce(attempts)
         self.assertFalse(reduction["passed"])
         self.assertEqual(
             reduction["events"][0]["classification"],
@@ -773,7 +792,7 @@ class AttemptStateMachineTests(unittest.TestCase):
             correctness_bearing_result_emitted=True,
             methodology_gate_passed=False))
         self.assertEqual(classification, "CORRECTNESS_BEARING_INVALID")
-        reduction = core.reduce_attempts([self._facts(
+        reduction = _reduce([self._facts(
             attempt_id="no-readiness",
             correctness_bearing_result_emitted=True,
             methodology_gate_passed=False)])
@@ -788,7 +807,7 @@ class AttemptStateMachineTests(unittest.TestCase):
             correctness_bearing_result_emitted=True,
             physical_retry_authorized=False))
         self.assertEqual(classification, "CORRECTNESS_BEARING_INVALID")
-        reduction = core.reduce_attempts([self._facts(
+        reduction = _reduce([self._facts(
             attempt_id="no-authorization",
             correctness_bearing_result_emitted=True,
             physical_retry_authorized=False)])
@@ -798,7 +817,7 @@ class AttemptStateMachineTests(unittest.TestCase):
 
     def test_control_same_campaign_terminal_cannot_clear_stop(
             self):
-        reduction = core.reduce_attempts([
+        reduction = _reduce([
             self._facts(attempt_id="invalid-1",
                         correctness_bearing_result_emitted=True,
                         physical_retry_authorized=False),
@@ -815,13 +834,14 @@ class AttemptStateMachineTests(unittest.TestCase):
         self.assertFalse(reduction["final_state"]["terminal_seen"])
 
     def test_control_post_stop_diagnostic_remains_non_authoritative(self):
-        reduction = core.reduce_attempts([
+        reduction = _reduce([
             self._facts(attempt_id="invalid-1",
                         correctness_bearing_result_emitted=True,
                         physical_retry_authorized=False),
             self._facts(attempt_id="diagnostic-1",
                         correctness_bearing_result_emitted=True,
-                        diagnostic_only_disclosure=True),
+                        diagnostic_only_disclosure=True,
+                        physical_retry_authorized=False),
         ])
         self.assertEqual(
             reduction["events"][1]["classification"],
@@ -835,7 +855,7 @@ class AttemptStateMachineTests(unittest.TestCase):
         self.assertEqual(reduction["problems"], [])
 
     def test_control_non_cb_marker_cannot_clear_stop(self):
-        reduction = core.reduce_attempts([
+        reduction = _reduce([
             self._facts(attempt_id="invalid-1",
                         correctness_bearing_result_emitted=True,
                         physical_retry_authorized=False),
@@ -853,7 +873,7 @@ class AttemptStateMachineTests(unittest.TestCase):
 
     def test_control_continuation_after_stop_without_authorized_terminal(
             self):
-        reduction = core.reduce_attempts([
+        reduction = _reduce([
             self._facts(attempt_id="invalid-1",
                         correctness_bearing_result_emitted=True,
                         physical_retry_authorized=False),
@@ -866,7 +886,7 @@ class AttemptStateMachineTests(unittest.TestCase):
             "invalid_correctness_bearing_observation")
 
     def test_terminal_without_prior_stop_passes(self):
-        reduction = core.reduce_attempts([
+        reduction = _reduce([
             self._facts(attempt_id="terminal-1",
                         correctness_bearing_result_emitted=True,
                         terminal_observation=True),
@@ -876,20 +896,20 @@ class AttemptStateMachineTests(unittest.TestCase):
     def test_authored_stop_label_cannot_launder_continuation(self):
         # an authored stop_occurred disclosure with no genuine STOP in
         # the reducer's own history is an ordinary correctness-bearing
-        # attempt (here: valid, authorized, no problems)
-        reduction = core.reduce_attempts([
+        # attempt (here: valid and authorized, but not terminal)
+        reduction = _reduce([
             self._facts(attempt_id="claimed-stop",
                         correctness_bearing_result_emitted=True,
                         stop_occurred=True),
         ])
         self.assertEqual(reduction["events"][0]["classification"],
                          "CORRECTNESS_BEARING_VALID")
-        self.assertTrue(reduction["passed"])
+        self.assertFalse(reduction["passed"])
 
     def test_unauthorized_terminal_claim_is_invalid(self):
         # a terminal attempt claiming correctness-bearing output
         # without authorization stays INVALID (fires the STOP)
-        reduction = core.reduce_attempts([
+        reduction = _reduce([
             self._facts(attempt_id="terminal-unauthorized",
                         correctness_bearing_result_emitted=True,
                         terminal_observation=True,
@@ -905,11 +925,12 @@ class AttemptStateMachineTests(unittest.TestCase):
             core.classify_attempt({"attempt_id": "a"})
 
     def test_legal_sequence_passes(self):
-        reduction = core.reduce_attempts([
+        reduction = _reduce([
             self._facts(attempt_id="infra-1", gpu_execution_occurred=True),
             self._facts(attempt_id="valid-1",
                         correctness_bearing_result_emitted=True,
-                        coordinator_commit_occurred=True),
+                        coordinator_commit_occurred=True,
+                        terminal_observation=True),
         ])
         self.assertTrue(reduction["passed"])
 
@@ -926,14 +947,114 @@ class AttemptStateMachineTests(unittest.TestCase):
     def test_self_checks_pass(self):
         result = core.run_attempt_state_self_checks()
         self.assertTrue(result["ok"])
-        self.assertEqual(len(result["rows"]), 8)
+        self.assertEqual(len(result["rows"]), 11)
+
+    def test_control_boolean_only_authorization_change_is_rejected(self):
+        attempts = [
+            self._facts(attempt_id="infra-not-authorized",
+                        physical_retry_authorized=False),
+            self._facts(attempt_id="terminal-boolean-flip",
+                        observed_at="2026-09-09T00:00:02Z",
+                        correctness_bearing_result_emitted=True,
+                        terminal_observation=True,
+                        physical_retry_authorized=True),
+        ]
+        reduction = _reduce(attempts)
+        self.assertFalse(reduction["passed"])
+        self.assertFalse(reduction["events"][1]["authoritative"])
+        self.assertTrue(any(
+            "accepted field physical_retry_authorized" in problem
+            or "changed authority field physical_retry_authorized" in problem
+            for problem in reduction["problems"]))
+
+    def test_control_campaign_requires_authoritative_terminal(self):
+        infrastructure = _reduce([
+            self._facts(attempt_id="infra-only")])
+        nonterminal = _reduce([
+            self._facts(attempt_id="valid-nonterminal",
+                        correctness_bearing_result_emitted=True)])
+        self.assertFalse(infrastructure["passed"])
+        self.assertFalse(nonterminal["passed"])
+        self.assertFalse(
+            infrastructure["campaigns"]["campaign-A"]
+            ["terminal_authoritative"])
+        self.assertFalse(
+            nonterminal["campaigns"]["campaign-A"]
+            ["terminal_authoritative"])
+
+    def test_control_intermediate_campaign_cannot_bypass_stop_review(self):
+        attempts = [
+            self._facts(attempt_id="invalid-1",
+                        correctness_bearing_result_emitted=True,
+                        physical_retry_authorized=False),
+            self._facts(campaign_id="campaign-B", attempt_id="b-infra"),
+            self._facts(
+                campaign_id="campaign-C", attempt_id="c-terminal",
+                observed_at="2026-09-09T00:00:06Z",
+                physical_authorization_id="authorization-C",
+                campaign_lineage_root="lineage-C",
+                physical_authorization_issued_at="2026-09-09T00:00:00Z",
+                prior_stopped_campaign_id=None,
+                prior_stop_attempt_id=None,
+                prior_stop_review_id=None,
+                prior_stop_reviewed_at=None,
+                correctness_bearing_result_emitted=True,
+                terminal_observation=True),
+        ]
+        reduction = _reduce(attempts)
+        self.assertFalse(reduction["passed"])
+        self.assertTrue(any(
+            "intermediate campaign cannot bypass" in problem
+            for problem in reduction["problems"]))
+
+    def test_control_diagnostic_disclosure_is_never_verdict_authority(self):
+        reduction = _reduce([
+            self._facts(attempt_id="diagnostic-terminal",
+                        correctness_bearing_result_emitted=True,
+                        terminal_observation=True,
+                        diagnostic_only_disclosure=True),
+        ])
+        self.assertFalse(reduction["passed"])
+        self.assertEqual(
+            reduction["events"][0]["classification"], "DIAGNOSTIC_ONLY")
+        self.assertFalse(reduction["events"][0]["authoritative"])
+        self.assertFalse(reduction["final_state"]["terminal_seen"])
+
+    def test_control_attempt_identity_must_match_accepted_authority(self):
+        accepted_attempt = self._facts(
+            attempt_id="accepted-terminal",
+            correctness_bearing_result_emitted=True,
+            terminal_observation=True)
+        hostile_attempt = dict(accepted_attempt)
+        hostile_attempt["methodology_ready_identity"] = "0" * 40
+        reduction = _reduce(
+            [hostile_attempt],
+            accepted_authorities=
+                _accepted_authority_records([accepted_attempt]))
+        self.assertFalse(reduction["passed"])
+        self.assertFalse(reduction["events"][0]["authoritative"])
+        self.assertTrue(any(
+            "accepted field methodology_ready_identity" in problem
+            for problem in reduction["problems"]))
+
+    def test_control_missing_accepted_authority_fails_closed(self):
+        reduction = _reduce([
+            self._facts(attempt_id="terminal-without-authority",
+                        correctness_bearing_result_emitted=True,
+                        terminal_observation=True),
+        ], accepted_authorities={})
+        self.assertFalse(reduction["passed"])
+        self.assertFalse(reduction["events"][0]["authoritative"])
+        self.assertTrue(any(
+            "no accepted campaign authority record" in problem
+            for problem in reduction["problems"]))
 
     def test_control_post_terminal_undisclosed_continuation(self):
         # review 1 P1: a correctness-bearing attempt after the
         # campaign's terminal observation, WITHOUT a diagnostic
         # disclosure, must fail closed (never silently auto-labeled
         # diagnostic)
-        reduction = core.reduce_attempts([
+        reduction = _reduce([
             self._facts(attempt_id="terminal-1",
                         correctness_bearing_result_emitted=True,
                         terminal_observation=True),
@@ -953,7 +1074,7 @@ class AttemptStateMachineTests(unittest.TestCase):
                       reduction["mandatory_stop_events"][0])
 
     def test_post_terminal_disclosed_diagnostic_is_powerless(self):
-        reduction = core.reduce_attempts([
+        reduction = _reduce([
             self._facts(attempt_id="terminal-1",
                         correctness_bearing_result_emitted=True,
                         terminal_observation=True),
@@ -968,7 +1089,7 @@ class AttemptStateMachineTests(unittest.TestCase):
         self.assertTrue(reduction["passed"])
 
     def test_control_terminal_clears_no_fired_stop(self):
-        reduction = core.reduce_attempts([
+        reduction = _reduce([
             self._facts(attempt_id="invalid-1",
                         correctness_bearing_result_emitted=True,
                         physical_retry_authorized=False),
@@ -988,7 +1109,7 @@ class AttemptStateMachineTests(unittest.TestCase):
     def test_continuation_event_firing_a_rule_is_non_authoritative(self):
         # review 1 P2: an event that fires a continuation stop rule is
         # recorded non-authoritative whatever its class label
-        reduction = core.reduce_attempts([
+        reduction = _reduce([
             self._facts(attempt_id="invalid-1",
                         correctness_bearing_result_emitted=True,
                         physical_retry_authorized=False),
@@ -1000,7 +1121,7 @@ class AttemptStateMachineTests(unittest.TestCase):
         self.assertFalse(reduction["events"][1]["authoritative"])
 
     def test_control_authorization_id_change_without_campaign_change(self):
-        reduction = core.reduce_attempts([
+        reduction = _reduce([
             self._facts(attempt_id="a-1"),
             self._facts(attempt_id="a-2",
                         physical_authorization_id="authorization-other",
@@ -1012,7 +1133,7 @@ class AttemptStateMachineTests(unittest.TestCase):
         self.assertFalse(reduction["events"][1]["authoritative"])
 
     def test_control_reused_authorization_for_new_campaign(self):
-        reduction = core.reduce_attempts([
+        reduction = _reduce([
             self._facts(attempt_id="invalid-1",
                         correctness_bearing_result_emitted=True,
                         physical_retry_authorized=False),
@@ -1027,7 +1148,7 @@ class AttemptStateMachineTests(unittest.TestCase):
         self.assertFalse(reduction["events"][1]["authoritative"])
 
     def test_control_new_campaign_authorization_predates_review(self):
-        reduction = core.reduce_attempts([
+        reduction = _reduce([
             self._facts(attempt_id="invalid-1",
                         correctness_bearing_result_emitted=True,
                         physical_retry_authorized=False),
@@ -1042,7 +1163,7 @@ class AttemptStateMachineTests(unittest.TestCase):
                             for problem in reduction["problems"]))
 
     def test_fresh_post_review_campaign_is_independent(self):
-        reduction = core.reduce_attempts([
+        reduction = _reduce([
             self._facts(attempt_id="invalid-1",
                         correctness_bearing_result_emitted=True,
                         physical_retry_authorized=False),
@@ -1058,7 +1179,7 @@ class AttemptStateMachineTests(unittest.TestCase):
         self.assertTrue(reduction["campaigns"]["campaign-B"]["terminal_seen"])
 
     def test_all_attempts_carry_campaign_authority_identities(self):
-        reduction = core.reduce_attempts([
+        reduction = _reduce([
             self._facts(attempt_id="terminal-1",
                         correctness_bearing_result_emitted=True,
                         terminal_observation=True),
@@ -1241,7 +1362,7 @@ class RetainedEvidenceTests(unittest.TestCase):
         self.assertTrue(path.is_file(), "methodology-run.json not retained")
         document = json.loads(path.read_text())
         self.assertEqual(document["schema"],
-                         "inferswarm.issue129.methodology-run/3")
+                         "inferswarm.issue129.methodology-run/4")
         self.assertEqual(document["terminal"], core.METHODOLOGY_READY)
         fresh = core.run_methodology(ROOT)
         self.assertEqual(document["terminal"], fresh["terminal"])
@@ -1257,7 +1378,7 @@ class RetainedEvidenceTests(unittest.TestCase):
             (RETRY_EVIDENCE / "authority.json").read_text())
         self.assertEqual(
             authority["schema"],
-            "inferswarm.issue129.arm-c-retry-authority/2")
+            "inferswarm.issue129.arm-c-retry-authority/3")
         self.assertTrue(
             authority["accepted_blocker_preservation"]["preserved"])
         integrity = json.loads(
