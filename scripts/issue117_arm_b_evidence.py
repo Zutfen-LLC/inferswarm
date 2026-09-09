@@ -51,6 +51,25 @@ EXPECTED_ATTEMPT_IDS = (
     "i117-arm-b-cold-acquisition.launch-6",
     "i117-arm-b-cold-acquisition.valid",
 )
+#: frozen allowlist of the coordinator (inferswarm00) Arm-B state tree,
+#: observed read-only 2026-09-08: the tree may contain EXACTLY these JSON
+#: metadata files (name -> (bytes, sha256)). Any other entry — whatever
+#: its extension or name — is unexplained coordinator-held state and
+#: fails closed (an extension blocklist could be defeated by rename).
+EXPECTED_COORDINATOR_STATE_FILES = {
+    "authorization/coordinator-deltas.json": (
+        100764, "a15e6cee1efb30dd390bf132ba447c14ee7a2edd6a8b22c69645dd6340b9e7cc"),
+    "authorization/coordinator-record.json": (
+        303, "f28c64f5aa2eef660a5f93183a6d4a16d2f0a80eccd916212f386515f3ec3de7"),
+    "authorization/tickets-inferswarm01.json": (
+        23131326, "ca53c3560593f75156e6d101900b487210d3e950dc987494bfc92a0cdca9c9f2"),
+    "authorization/tickets-inferswarm03.json": (
+        11669777, "ab12b934b9483c960a67a0f0b1d5c8a53da5fcca599749917811bad6da3966bb"),
+    "source/arm-b-plan.json": (
+        3543, "e8416564d63b2f3b114fa70fca8593c88b42a3f666ff7959a91dac20512d3bff"),
+    "source/arm-b-requirements.json": (
+        493354, "8fe8854a0ba118c9ba598655834d9177b4d1bc9f1ef99a5259834b389e02dde3"),
+}
 STAGE_HOSTS = {"dense.6171f32b4413.stage-1": "inferswarm01",
                "dense.6171f32b4413.stage-2": "inferswarm01",
                "dense.6171f32b4413.stage-3": "inferswarm03"}
@@ -420,6 +439,46 @@ def main():
     if valid and invalid and valid[0].get("ordering") != max(orderings):
         failures.append("attempt lineage: valid attempt does not follow "
                         "every invalid attempt")
+    # observed timestamps must be consistent with the retained ordering.
+    # Semantics: launches 1-3 are serial pre-campaign iterations (starts
+    # monotonic by ordering); launches 4-6 are in-campaign phase failures
+    # that occur INSIDE the valid campaign's interval; the valid campaign
+    # therefore starts no later than every invalid launch and ends no
+    # earlier than every invalid launch. Reordering attempts without
+    # moving their observed timestamps fails closed.
+    if invalid:
+        inv_seq = sorted(invalid, key=lambda a: a.get("ordering") or 0)
+        prev_start = None
+        for a in inv_seq:
+            started = a.get("started_utc_observed")
+            if not isinstance(started, str):
+                failures.append(
+                    f"attempt {a.get('attempt_id')} lacks observed start")
+                continue
+            if prev_start is not None and started < prev_start:
+                failures.append(
+                    f"attempt lineage: timestamp ordering contradicts "
+                    f"retained ordering at {a.get('attempt_id')} "
+                    f"(started {started} after-ordering but before "
+                    f"{prev_start})")
+            prev_start = started
+        if valid:
+            v = valid[0]
+            v_started = v.get("started_utc_observed")
+            v_ended = v.get("ended_utc_observed")
+            for a in inv_seq:
+                s = a.get("started_utc_observed")
+                e = a.get("ended_utc_observed")
+                if isinstance(s, str) and isinstance(v_started, str) \
+                        and s < v_started:
+                    failures.append(
+                        f"invalid attempt {a.get('attempt_id')} started "
+                        f"before the valid campaign began")
+                if isinstance(e, str) and isinstance(v_ended, str) \
+                        and e > v_ended:
+                    failures.append(
+                        f"invalid attempt {a.get('attempt_id')} ended "
+                        f"after the valid campaign completed")
     for a in attempts:
         # every digest-bound transcript excerpt must re-verify: the
         # reducer recomputes sha256 over each excerpt_verbatim and
@@ -659,20 +718,46 @@ def main():
     if cstate.get("model_payload_bytes_under_state_arm_b", -1) != 0:
         failures.append("coordinator state tree holds model payload bytes")
     # R2 fix: the storage dimension is DERIVED from the record's own
-    # per-file listing, never from the stored summary alone — payload
-    # extensions summed must equal the claimed payload total, and the
-    # listing's byte sum must equal the claimed tree total
-    payload_exts = (".safetensors", ".bin", ".gguf", ".pt", ".pth")
+    # per-file listing against a FROZEN ALLOWLIST (an extension blocklist
+    # could be defeated by renaming a payload file): the listing must be
+    # exactly the six known JSON metadata files with exact bytes+digests;
+    # any other entry is unexplained coordinator-held state
     files = cstate.get("files", {})
-    derived_payload = sum(int(v[0]) for k, v in files.items()
-                          if str(k).endswith(payload_exts))
-    derived_total = sum(int(v[0]) for v in files.values())
-    if derived_payload != cstate.get("model_payload_bytes_under_state_arm_b", -1):
+    if set(files) != set(EXPECTED_COORDINATOR_STATE_FILES):
         failures.append(
-            "coordinator payload bytes disagree with the per-file listing")
+            "coordinator state tree file set != the frozen allowlist "
+            "(unexpected or missing file)")
+    else:
+        for name, (size, digest) in EXPECTED_COORDINATOR_STATE_FILES.items():
+            got = files.get(name)
+            if not isinstance(got, list) or len(got) < 2 or \
+                    got[0] != size or got[1] != digest:
+                failures.append(
+                    f"coordinator state file {name} identity drift")
+    derived_total = sum(int(v[0]) for v in files.values())
     if derived_total != cstate.get("total_bytes_under_state_arm_b", -1):
         failures.append(
             "coordinator state tree total disagrees with the per-file listing")
+    # cross-bind the allowlisted ticket/plan/requirements digests to the
+    # repo-retained copies (byte sizes; the coordinator-held copies must
+    # equal the retained evidence copies)
+    try:
+        retained_sizes = {
+            "source/arm-b-plan.json":
+                (ARM_B / "execution-plan.json").stat().st_size,
+            "source/arm-b-requirements.json":
+                (ARM_B / "requirements.json").stat().st_size,
+            "authorization/coordinator-deltas.json":
+                (ARM_B / "coordinator-deltas.json").stat().st_size,
+            "authorization/coordinator-record.json":
+                (ARM_B / "coordinator-record.json").stat().st_size,
+        }
+        for name, size in retained_sizes.items():
+            if EXPECTED_COORDINATOR_STATE_FILES[name][0] != size:
+                failures.append(
+                    f"coordinator-held {name} size != repo-retained copy")
+    except OSError as exc:
+        failures.append(f"repo-retained coordinator copy unreadable: {exc}")
     # R5 fix: pin the total request count so the self-test bucket cannot
     # silently absorb coordinator requests
     if srv.get("total_get_requests", -1) != 428:

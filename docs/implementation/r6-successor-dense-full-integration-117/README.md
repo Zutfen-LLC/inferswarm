@@ -318,7 +318,7 @@ inventories, per-stage assemble/realize reports, runtime-read audits, and
 the 6774474→5179c41 delta audit — reduced by
 `scripts/issue117_arm_b_evidence.py` (fails closed; derives every zero
 invariant from low-level records) and mutation-tested by
-`tests/test_issue117_arm_b_retention.py` (70 one-mutation negative
+`tests/test_issue117_arm_b_retention.py` (72 one-mutation negative
 controls + the unmutated PASS baseline). Provenance attribution: the
 cold-root prestates and coordinator counters carry explicit
 host/collector/schema stamps (on-host observations); the source-side

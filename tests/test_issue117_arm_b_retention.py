@@ -746,7 +746,7 @@ class ReviewFixMutations(MutationTestCase):
             p.write_text(json.dumps(d))
         self.assertFails(self.mutate_and_run(
             "coordinator-transport-accounting.json", m),
-            needle="payload bytes disagree")
+            needle="frozen allowlist")
 
     def test_self_test_bucket_absorbs_coordinator_requests(self):
         def m(p):
@@ -759,3 +759,36 @@ class ReviewFixMutations(MutationTestCase):
         self.assertFails(self.mutate_and_run(
             "coordinator-transport-accounting.json", m),
             needle="total request count drift")
+
+
+class Round2ReviewMutations(MutationTestCase):
+    """Round-2 review findings (B1, B3) as permanent controls."""
+
+    def test_payload_hidden_by_extension_rename(self):
+        # B1: a payload file under an unlisted extension (or no
+        # extension) with consistent totals must fail via the frozen
+        # file-set allowlist
+        def m(p):
+            d = json.loads(p.read_text())
+            d["low_level_observations"]["coordinator_state_tree"][
+                "files"]["models/payload"] = [23919549408,
+                                              "sha256:" + "0" * 64]
+            d["low_level_observations"]["coordinator_state_tree"][
+                "total_bytes_under_state_arm_b"] += 23919549408
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "coordinator-transport-accounting.json", m),
+            needle="frozen allowlist")
+
+    def test_invalid_attempt_reordering_vs_timestamps(self):
+        # B3: swapping the orderings of two invalid attempts must fail
+        # because their observed timestamps contradict the new sequence
+        def m(p):
+            d = json.loads(p.read_text())
+            by_id = {a["attempt_id"]: a for a in d["attempts"]}
+            a, b = (by_id["i117-arm-b-cold-acquisition.launch-1"],
+                    by_id["i117-arm-b-cold-acquisition.launch-2"])
+            a["ordering"], b["ordering"] = b["ordering"], a["ordering"]
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("attempt-lineage.json", m),
+                         needle="timestamp ordering")
