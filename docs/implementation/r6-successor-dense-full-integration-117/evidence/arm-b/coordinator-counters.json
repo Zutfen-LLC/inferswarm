@@ -1,0 +1,20 @@
+{
+ "collector": "armb.coordinator-counter-collector/1 (stdlib only)",
+ "coordinator_cuda_initialized": 0,
+ "coordinator_model_weight_bytes_materialized": 0,
+ "coordinator_model_weight_bytes_received": 0,
+ "counter_derivation": "cuda_initialized := any(/dev/nvidia* OR nvidia-smi OR cuda fds OR venv torch importable); weight bytes := safetensors/pt/bin/gguf bytes under the issue-117-dedicated coordinator roots and the coordinator models root (coordinator must proxy/receive none)",
+ "cuda_observations": {
+  "coordinator_venv_torch_importable": false,
+  "dev_nvidia_nodes": [],
+  "nvidia_smi_present": false,
+  "processes_with_cuda_device_fds": []
+ },
+ "host": "inferswarm00",
+ "schema": "inferswarm.issue117.arm-b.coordinator-counters/1",
+ "weight_roots_bytes": {
+  "/srv/inferswarm/cache/issue117": 0,
+  "/srv/inferswarm/materialized/issue117": 0,
+  "/srv/inferswarm/models": 0
+ }
+}

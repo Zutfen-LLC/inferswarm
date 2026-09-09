@@ -1,0 +1,472 @@
+{
+ "attempts": [
+  {
+   "acquisition_authorization_reached": false,
+   "attempt_id": "i117-arm-b-cold-acquisition.launch-1",
+   "attempt_kind": "acquisition launch",
+   "bytes_requested": 0,
+   "bytes_transferred": 0,
+   "canonical_cold_condition_preserved": {
+    "derivation": "the launch never resolved an executable, so no process ever opened the canonical roots; the 03 cache root at that moment contained only the empty objects/ and partial/ dirs created at 16:59 local by pre-launch inventory collection (session msg 225510, total 0 bytes); root inode 9962003 is unchanged from the retained cold prestate",
+    "result": true
+   },
+   "canonical_paths_touched": [],
+   "cleanup_actions": "none required",
+   "cleanup_location": "n/a",
+   "correctness_bearing_observations": 0,
+   "correctness_bearing_realization_records": 0,
+   "device_residency_achieved": false,
+   "driver_version_identity": "armb_node_acquire.py @ /srv/inferswarm/state/arm-b/scripts/ with byte-pinned issue99_artifact_core.py 8b88af5b\u2026 / issue74_methodology.py e075c099\u2026",
+   "ended_utc_observed": "2026-09-08T21:00:56Z",
+   "evidence": {
+    "excerpt_digest": "sha256:1ffceb0065d833f789808b0d64a5b26565a65ef75904b21d392e95c2ff38daea",
+    "excerpt_verbatim": "{\"session_id\": \"proc_531122107aa5\", \"command\": \"ssh -o BatchMode=yes inferswarm03 'sudo -u zutfen python3 /srv/inferswarm/state/arm-b/scripts/armb_node_acquire.py --tickets /srv/inferswarm/state/arm-b/armb-tickets.json --requirements /srv/inferswarm/state/arm-b/arm-b-requirements.json --cache-root /srv/inferswarm/cache/issue117 --transport http --http-endpoint http://10.0.0.141:18486 --node-id inferswarm03 --out /tmp/armb-acquire-ledger-03.json' 2>&1 | tail -8\", \"status\": \"exited\", \"pid\": 94535, \"uptime_seconds\": 61, \"output_preview\": \"python3: can't open file '/srv/inferswarm/state/arm-b/scripts/armb_node_acquire.py': [Errno 2] No such file or directory\\n\", \"exit_code\": 0, \"completion_reason\": \"exited\", \"termination_source\": \"\"}",
+    "observed_utc": "2026-09-08T21:00:56Z",
+    "transcript_refs": [
+     "session 20260908_150616_c57910 msg 225514 (INV-1 result: FileNotFoundError armb_node_acquire.py)"
+    ]
+   },
+   "exception": {
+    "class": "FileNotFoundError (python3 launcher)",
+    "message": "python3: can't open file '/srv/inferswarm/state/arm-b/scripts/armb_node_acquire.py': [Errno 2] No such file or directory"
+   },
+   "failure_reason": "driver distribution omission: armb_node_acquire.py absent on inferswarm03 at launch time",
+   "historical_runtime_label": null,
+   "hosts": [
+    "inferswarm03"
+   ],
+   "materializations": 0,
+   "ordering": 1,
+   "parent_campaign_id": null,
+   "phase_reached": "driver script resolution \u2014 the acquisition driver had not yet been copied to inferswarm03 when the launch command was issued",
+   "plan_digest": null,
+   "preexisting_cold_root_state_destroyed_or_reset": false,
+   "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+   "realization_execution_reached": false,
+   "realization_request_made": false,
+   "started_utc_observed": "2026-09-08T21:00:56Z",
+   "subattempt_of": null,
+   "temporary_staging_bytes_created": 0,
+   "validity": "INVALID",
+   "verified_publications": 0
+  },
+  {
+   "acquisition_authorization_reached": false,
+   "attempt_id": "i117-arm-b-cold-acquisition.launch-2",
+   "attempt_kind": "acquisition launch",
+   "bytes_requested": 0,
+   "bytes_transferred": 0,
+   "canonical_cold_condition_preserved": {
+    "derivation": "validate_artifact_record is the first call inside acquire_artifact (issue99_artifact_core line 932, byte-pinned 8b88af5b), strictly before authorization, cache lookup, and transfer begin; it raised on the first record before any byte moved or any cache path was opened",
+    "result": true
+   },
+   "canonical_paths_touched": [],
+   "cleanup_actions": "none required",
+   "cleanup_location": "n/a",
+   "correctness_bearing_observations": 0,
+   "correctness_bearing_realization_records": 0,
+   "device_residency_achieved": false,
+   "diagnosis_output": {
+    "excerpt_digest": "sha256:6cfe5336afb9495834ecf74316cb53ea010ad75f1473333bc63f68494120d209",
+    "excerpt_verbatim": "{\"status\": \"success\", \"output\": \"stored    : sha256:000afe959bc6f4299b984f75ce1d9c3916d39130aeaf40b9c101b8b5885da9a5\\nrecomputed: sha256:3593c8889ed7b5647582abb266960b3ed2e3b9b62c704e0b2900826383e2f0f5\\nmine      : sha256:000afe959bc6f4299b984f75ce1d9c3916d39130aeaf40b9c101b8b5885da9a5\\ncanonical sample: {\\\"artifact_id\\\":\\\"sha256:000afe959bc6f4299b984f75ce1d9c3916d39130aeaf40b9c101b8b5885da9a5\\\",\\\"content_digest\\\":\\\"sha256:fb41dc\\n\", \"exit_code\": 0, \"tool_calls_made\": 1, \"duration_seconds\": 0.57, \"kernel\": {\"mode\": \"session\", \"reused\": true, \"execution_count\": 95, \"state_reset\": false}, \"stdout_truncated\": false, \"stdout_bytes_captured\": 391, \"stdout_bytes_total\": 391, \"stdout_bytes_omitted\": 0}",
+    "observed_utc": "2026-09-08T21:01:33Z",
+    "transcript_refs": [
+     "session 20260908_150616_c57910 msg 225533 (INV-2 diagnosis: stored/recomputed artifact_id digests)"
+    ]
+   },
+   "driver_version_identity": "armb_node_acquire.py + pinned #99 core",
+   "ended_utc_observed": "2026-09-08T21:01:13Z",
+   "evidence": {
+    "excerpt_digest": "sha256:3d2530dfc6a487ca47ceada52e2318ff89a46577624b5e1df35a6c4988b071c7",
+    "excerpt_verbatim": "{\"status\": \"exited\", \"command\": \"ssh -o BatchMode=yes inferswarm03 'sudo -u zutfen python3 /srv/inferswarm/state/arm-b/scripts/armb_node_acquire.py --tickets /srv/inferswarm/state/arm-b/armb-tickets.json --requirements /srv/inferswarm/state/arm-b/arm-b-requirements.json --cache-root /srv/inferswarm/cache/issue117 --transport http --http-endpoint http://10.0.0.141:18486 --node-id inferswarm03 --out /tmp/armb-acquire-ledger-03.json' 2>&1 | tail -8\", \"exit_code\": 0, \"completion_reason\": \"exited\", \"termination_source\": \"\", \"output\": \"        authorization=authority, participant_id=ticket[\\\"participant_id\\\"],\\n        ledger=ledger, chunk_bytes=args.chunk_bytes)\\n  File \\\"/srv/inferswarm/state/arm-b/scripts/issue99_artifact_core.py\\\", line 932, in acquire_artifact\\n    validate_artifact_record(record)\\n    ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^\\n  File \\\"/srv/inferswarm/state/arm-b/scripts/issue99_artifact_core.py\\\", line 220, in validate_artifact_record\\n    raise _fail(\\\"MALFORMED_ARTIFACT_RECORD\\\", \\\"artifact_id self-identity mismatch\\\")\\nissue99_artifact_core.AcquisitionError: MALFORMED_ARTIFACT_RECORD: artifact_id self-identity mismatch\\n\"}",
+    "observed_utc": "2026-09-08T21:01:13Z",
+    "transcript_refs": [
+     "session 20260908_150616_c57910 msg 225520 (INV-2 result: MALFORMED_ARTIFACT_RECORD artifact_id self-identity mismatch)"
+    ]
+   },
+   "exception": {
+    "class": "issue99_artifact_core.AcquisitionError",
+    "message": "MALFORMED_ARTIFACT_RECORD: artifact_id self-identity mismatch"
+   },
+   "failure_reason": "canonical-JSON digest mismatch: the plan-core module serialized requirement records with the wrong canonical form (non-compact separators, no trailing newline), so every stored artifact_id self-digest mismatched its recomputation",
+   "historical_runtime_label": null,
+   "hosts": [
+    "inferswarm03"
+   ],
+   "materializations": 0,
+   "ordering": 2,
+   "parent_campaign_id": null,
+   "phase_reached": "ticket validation \u2014 validate_artifact_record failed on the first record before any network transfer or cache mutation",
+   "plan_digest": null,
+   "preexisting_cold_root_state_destroyed_or_reset": false,
+   "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+   "realization_execution_reached": false,
+   "realization_request_made": false,
+   "started_utc_observed": "2026-09-08T21:01:08Z",
+   "subattempt_of": null,
+   "temporary_staging_bytes_created": 0,
+   "validity": "INVALID",
+   "verified_publications": 0
+  },
+  {
+   "acquisition_authorization_reached": true,
+   "attempt_id": "i117-arm-b-cold-acquisition.launch-3",
+   "attempt_kind": "acquisition launch",
+   "bytes_requested": 0,
+   "bytes_transferred": 0,
+   "canonical_cold_condition_preserved": {
+    "derivation": "the KeyError fired in check_acquisition (armb_node_acquire.py line 126), which the pinned engine calls strictly before cache lookup and transfer begin (source order verified read-only on the retained driver); zero bytes requested/moved and no canonical path opened",
+    "result": true
+   },
+   "canonical_paths_touched": [],
+   "cleanup_actions": "none required",
+   "cleanup_location": "n/a",
+   "correctness_bearing_observations": 0,
+   "correctness_bearing_realization_records": 0,
+   "device_residency_achieved": false,
+   "driver_version_identity": "armb_node_acquire.py against the frozen coordinator authorization (digest sha256:008072ba\u2026, session msg 225590)",
+   "ended_utc_observed": "2026-09-08T21:06:12Z",
+   "evidence": {
+    "excerpt_digest": "sha256:1754f3838914ef59f514e8f912160e4aeb4ae1186d36e7ed3cbd9fde8eb5ef36",
+    "excerpt_verbatim": "{\"status\": \"exited\", \"command\": \"ssh -o BatchMode=yes inferswarm03 'sudo -u zutfen python3 /srv/inferswarm/state/arm-b/scripts/armb_node_acquire.py --tickets /srv/inferswarm/state/arm-b/armb-tickets.json --requirements /srv/inferswarm/state/arm-b/arm-b-requirements.json --cache-root /srv/inferswarm/cache/issue117 --transport http --http-endpoint http://10.0.0.141:18486 --node-id inferswarm03 --out /tmp/armb-acquire-ledger-03.json' 2>&1 | tail -6\", \"exit_code\": 0, \"completion_reason\": \"exited\", \"termination_source\": \"\", \"output\": \"        source_descriptor=source.descriptor())\\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \\\"/srv/inferswarm/state/arm-b/scripts/armb_node_acquire.py\\\", line 126, in check_acquisition\\n    self.ticket[\\\"authorization\\\"][\\\"eligible_source_ids\\\"]:\\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^\\nKeyError: 'eligible_source_ids'\\n\"}",
+    "observed_utc": "2026-09-08T21:06:12Z",
+    "transcript_refs": [
+     "session 20260908_150616_c57910 msg 225588 (INV-3 result: KeyError 'eligible_source_ids')"
+    ]
+   },
+   "exception": {
+    "class": "KeyError",
+    "message": "'eligible_source_ids'"
+   },
+   "failure_reason": "KeyError on the ticket authorization shape (eligible_source_ids vs eligible_sources): driver bug against the frozen ticket schema",
+   "historical_runtime_label": null,
+   "hosts": [
+    "inferswarm03"
+   ],
+   "materializations": 0,
+   "ordering": 3,
+   "parent_campaign_id": null,
+   "phase_reached": "acquisition authorization \u2014 node-side TicketAuthority.check_acquisition raised on the authorization dict shape before transfer begin",
+   "plan_digest": "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad",
+   "preexisting_cold_root_state_destroyed_or_reset": false,
+   "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+   "realization_execution_reached": false,
+   "realization_request_made": false,
+   "started_utc_observed": "2026-09-08T21:06:08Z",
+   "subattempt_of": null,
+   "temporary_staging_bytes_created": 0,
+   "validity": "INVALID",
+   "verified_publications": 0
+  },
+  {
+   "acquisition_authorization_reached": true,
+   "attempt_id": "i117-arm-b-cold-acquisition.launch-4",
+   "attempt_kind": "nested campaign phase attempt (materialization)",
+   "bytes_requested": 0,
+   "bytes_transferred": 0,
+   "canonical_cold_condition_preserved": {
+    "derivation": "the cold condition governs the acquisition boundary (verified cache publications); this attempt added no verified publications and no materialized shard. Its only canonical footprint is a pre-shard config.json inside its own fresh participant dir, overwritten in place by the valid campaign's assemble. Materialized-root inode 9962005 unchanged; nothing pre-existing was destroyed",
+    "result": true
+   },
+   "canonical_paths_touched": [
+    "/srv/inferswarm/cache/issue117 (read-only object re-verification)",
+    "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3/config.json (written; overwritten in place by the valid campaign's assemble)"
+   ],
+   "cleanup_actions": "none on canonical roots \u2014 the failed writer left the pre-shard config.json; the valid campaign's assemble overwrote it in place (retained config.json mtime 2026-09-08 17:17:14 local)",
+   "cleanup_location": "inside (in-place overwrite by the valid campaign; no deletion of pre-existing state \u2014 the participant dir did not exist before this campaign)",
+   "correctness_bearing_observations": 0,
+   "correctness_bearing_realization_records": 0,
+   "device_residency_achieved": false,
+   "driver_version_identity": "armb_materialize.py (pre-dedupe-fix)",
+   "ended_utc_observed": "2026-09-08T21:14:23Z",
+   "evidence": {
+    "excerpt_digest": "sha256:f31bc45a7e3706d5b4ab37a39d5caab64ce8c41880f4691c5745d27a80d7b878",
+    "excerpt_verbatim": "{\"status\": \"exited\", \"command\": \"ssh -o BatchMode=yes inferswarm03 'sudo -u zutfen python3 /srv/inferswarm/state/arm-b/scripts/armb_materialize.py --phase assemble --participant dense.6171f32b4413.stage-3 --gpu-uuid GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176 --cache-root /srv/inferswarm/cache/issue117 --out-dir /srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3' 2>&1 | tail -5\", \"exit_code\": 0, \"completion_reason\": \"exited\", \"termination_source\": \"\", \"output\": \"shared-state content maps to two keys: model.language_model.layers.38.self_attn.q_norm.weight vs model.language_model.layers.37.self_attn.q_norm.weight\\n\"}",
+    "observed_utc": "2026-09-08T21:14:23Z",
+    "transcript_refs": [
+     "session 20260908_150616_c57910 msg 225690 (INV-4 result: shared-state content maps to two keys)"
+    ]
+   },
+   "exception": {
+    "class": "SystemExit",
+    "message": "shared-state content maps to two keys: model.language_model.layers.38.self_attn.q_norm.weight vs model.language_model.layers.37.self_attn.q_norm.weight"
+   },
+   "failure_reason": "dedupe-by-content bug in the assembler: content-identical but key-distinct tensors (layers.37 vs layers.38 self_attn.q_norm.weight) were wrongly treated as the same shared state",
+   "historical_runtime_label": null,
+   "hosts": [
+    "inferswarm03"
+   ],
+   "materializations": 0,
+   "ordering": 4,
+   "parent_campaign_id": "i117-arm-b-cold-acquisition.campaign-1",
+   "phase_reached": "shard assembly \u2014 read and re-verified every cached tensor object for stage-3, wrote config.json, then the shard writer aborted on the dedupe conflict before any shard bytes were written",
+   "plan_digest": "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad",
+   "preexisting_cold_root_state_destroyed_or_reset": false,
+   "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+   "realization_execution_reached": false,
+   "realization_request_made": false,
+   "started_utc_observed": "2026-09-08T21:13:35Z",
+   "subattempt_of": "i117-arm-b-cold-acquisition.campaign-1",
+   "temporary_staging_bytes_created": 0,
+   "validity": "INVALID",
+   "verified_publications": 0
+  },
+  {
+   "acquisition_authorization_reached": true,
+   "attempt_id": "i117-arm-b-cold-acquisition.launch-5",
+   "attempt_kind": "nested campaign phase attempt (realization)",
+   "bytes_requested": 0,
+   "bytes_transferred": 0,
+   "canonical_cold_condition_preserved": {
+    "derivation": "the import error fired before model_path was opened for weight loading (the failing import precedes GemmaDenseStage construction in the retained child source); no canonical path touched",
+    "result": true
+   },
+   "canonical_paths_touched": [],
+   "cleanup_actions": "none required",
+   "cleanup_location": "n/a",
+   "correctness_bearing_observations": 0,
+   "correctness_bearing_realization_records": 0,
+   "device_residency_achieved": false,
+   "driver_version_identity": "armb_realize_child.py via armb_materialize.py --phase realize (pre-path-fix)",
+   "ended_utc_observed": "2026-09-08T21:19:04Z",
+   "evidence": {
+    "excerpt_digest": "sha256:ef87a1ef7b29658c2abe72df7c0fa6d23d9b9839cdc48a770d38f67dcf58e0fd",
+    "excerpt_verbatim": "{\"status\": \"exited\", \"command\": \"ssh -o BatchMode=yes inferswarm03 'sudo -u zutfen TMPDIR=/var/tmp python3 /srv/inferswarm/state/arm-b/scripts/armb_materialize.py --phase realize --participant dense.6171f32b4413.stage-3 --gpu-uuid GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176 --cache-root /srv/inferswarm/cache/issue117 --out-dir /srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3' 2>&1 | tail -8\", \"exit_code\": 0, \"completion_reason\": \"exited\", \"termination_source\": \"\", \"output\": \"    raise SystemExit(main())\\n                     ~~~~^^\\n  File \\\"/srv/inferswarm/state/arm-b/scripts/armb_realize_child.py\\\", line 44, in main\\n    from benchmarks.inferswarm_r6.stage_runtime import GemmaDenseStage  # noqa: E402\\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\nModuleNotFoundError: No module named 'benchmarks'\\n\\nrealization subprocess failed rc=1\\n\"}",
+    "observed_utc": "2026-09-08T21:19:04Z",
+    "transcript_refs": [
+     "session 20260908_150616_c57910 msg 225742 (INV-5 result: ModuleNotFoundError 'benchmarks')"
+    ]
+   },
+   "exception": {
+    "class": "ModuleNotFoundError",
+    "message": "No module named 'benchmarks'"
+   },
+   "failure_reason": "realize-child interpreter path: sys.executable (system python3) lacks the producer's benchmarks/ package; fixed by pinning the FreeToken venv python",
+   "historical_runtime_label": null,
+   "hosts": [
+    "inferswarm03"
+   ],
+   "materializations": 0,
+   "ordering": 5,
+   "parent_campaign_id": "i117-arm-b-cold-acquisition.campaign-1",
+   "phase_reached": "realize child import \u2014 the child interpreter could not import the producer's benchmarks package before any model-state access",
+   "plan_digest": "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad",
+   "preexisting_cold_root_state_destroyed_or_reset": false,
+   "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+   "realization_execution_reached": false,
+   "realization_request_made": true,
+   "started_utc_observed": "2026-09-08T21:18:55Z",
+   "subattempt_of": "i117-arm-b-cold-acquisition.campaign-1",
+   "temporary_staging_bytes_created": 0,
+   "validity": "INVALID",
+   "verified_publications": 0
+  },
+  {
+   "acquisition_authorization_reached": true,
+   "attempt_id": "i117-arm-b-cold-acquisition.launch-6",
+   "attempt_kind": "nested campaign phase attempt (realization)",
+   "bytes_requested": 0,
+   "bytes_transferred": 0,
+   "canonical_cold_condition_preserved": {
+    "derivation": "this launch occurred inside the valid campaign: acquisition/publication were already complete and are untouched by a realization crash; the failed launch consumed no correctness-bearing observation (its report never serialized), read only the participant's own materialized shard, and left no persistent host state (host staging current 0 / persistent host mirror 0 are enforced again by the valid campaign's retained report)",
+    "result": true
+   },
+   "canonical_paths_touched": [
+    "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3 (participant shard read for realization; truncated realize-report.json overwritten in place by the valid campaign)"
+   ],
+   "cleanup_actions": "none \u2014 the crash left a truncated realize-report.json which the valid campaign overwrote (retained report mtime 2026-09-08 17:20:02 local)",
+   "cleanup_location": "inside (in-place overwrite by the valid campaign; no deletion of pre-existing state)",
+   "correctness_bearing_observations": 0,
+   "correctness_bearing_realization_records": 0,
+   "correctness_observation_note": "the crashed launch's report never serialized, so it retained no correctness-bearing record; the retained realize-stage-3 evidence binds exclusively to the valid campaign's re-launch by its 17:20:02 mtime. Physical execution DID occur (device residency was reached before the serialization crash) \u2014 this is exactly the execution-vs-retention distinction the schema v2 fields keep separate.",
+   "device_residency_achieved": true,
+   "driver_version_identity": "armb_realize_child.py via armb_materialize.py --phase realize (pre report-key fix)",
+   "ended_utc_observed": "2026-09-08T21:19:43Z",
+   "evidence": {
+    "excerpt_digest": "sha256:9b84d5f95f90f61e30676f208ddea2000988ad60ed172e626fb460fdfdb4fd56",
+    "excerpt_verbatim": "{\"status\": \"exited\", \"command\": \"ssh -o BatchMode=yes inferswarm03 'sudo -u zutfen TMPDIR=/var/tmp python3 /srv/inferswarm/state/arm-b/scripts/armb_materialize.py --phase realize --participant dense.6171f32b4413.stage-3 --gpu-uuid GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176 --cache-root /srv/inferswarm/cache/issue117 --out-dir /srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3' 2>&1 | tail -8\", \"exit_code\": 0, \"completion_reason\": \"exited\", \"termination_source\": \"\", \"output\": \"    raise SystemExit(main())\\n                     ~~~~^^\\n  File \\\"/srv/inferswarm/state/arm-b/scripts/armb_realize_child.py\\\", line 82, in main\\n    \\\"plan_digest\\\": plan[\\\"digest\\\"],\\n                   ~~~~^^^^^^^^^^\\nKeyError: 'digest'\\n\\nrealization subprocess failed rc=1\\n\"}",
+    "observed_utc": "2026-09-08T21:19:43Z",
+    "transcript_refs": [
+     "session 20260908_150616_c57910 msg 225750 (INV-6 result: KeyError 'digest' after device residency)"
+    ]
+   },
+   "exception": {
+    "class": "KeyError",
+    "message": "'digest'"
+   },
+   "failure_reason": "report-dict KeyError on 'digest': the child read plan['digest'] but the retained block plan stores the key plan_digest",
+   "historical_runtime_label": null,
+   "hosts": [
+    "inferswarm03"
+   ],
+   "materializations": 0,
+   "ordering": 6,
+   "parent_campaign_id": "i117-arm-b-cold-acquisition.campaign-1",
+   "phase_reached": "realization EXECUTION COMPLETE: full device residency achieved from the participant materialized shard; the process crashed at report-dict serialization, so NO correctness-bearing record was retained",
+   "plan_digest": "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad",
+   "preexisting_cold_root_state_destroyed_or_reset": false,
+   "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+   "realization_execution_reached": true,
+   "realization_request_made": true,
+   "started_utc_observed": "2026-09-08T21:19:23Z",
+   "subattempt_of": "i117-arm-b-cold-acquisition.campaign-1",
+   "temporary_staging_bytes_created": 0,
+   "validity": "INVALID",
+   "verified_publications": 0
+  },
+  {
+   "acquisition_authorization_reached": true,
+   "acquisition_validity_established_utc": "2026-09-08T21:09:20Z",
+   "acquisition_validity_evidence": {
+    "excerpt_digest": "sha256:dcde8c6f4ea9d54988b9bc07a88dad68ff6e7ac508bb3779fe9476e0070fdb01",
+    "excerpt_verbatim": "inferswarm03 acquisition complete. Verifying totals, then launching 01's two participants (local transport):",
+    "observed_utc": "2026-09-08T21:09:20Z",
+    "transcript_refs": [
+     "session 20260908_150616_c57910 msg 225625 (03 acquisition complete (valid))"
+    ]
+   },
+   "attempt_id": "i117-arm-b-cold-acquisition.campaign-1",
+   "attempt_kind": "valid encompassing campaign (authorization + acquisition + publication + materialization + realization + read audits)",
+   "bytes_requested": 25827958492,
+   "bytes_transferred": 25827958492,
+   "bytes_transferred_breakdown": {
+    "inferswarm01 (local-file transport)": 16535741313,
+    "inferswarm03 (operator-local-http transport)": 9292214629
+   },
+   "campaign_interval_utc_observed": [
+    "2026-09-08T20:59:55Z",
+    "2026-09-08T21:24:38Z"
+   ],
+   "canonical_cold_condition_preserved": {
+    "derivation": "this campaign IS the canonical cold attempt: the retained cold-root prestates (empty, inode-pinned) bound the campaign start; all six invalid attempts are mechanically zero on publications/materializations/correctness-bearing records/observations with no canonical-root destruction; the observed root inodes equal the prestate records",
+    "result": true
+   },
+   "canonical_paths_touched": [
+    "/srv/inferswarm/cache/issue117 (verified publications)",
+    "/srv/inferswarm/materialized/issue117 (participant shards)"
+   ],
+   "cleanup_actions": "source server stopped (port freed); no canonical-root cleanup performed or needed",
+   "cleanup_location": "n/a (no cleanup of canonical state)",
+   "correctness_bearing_observation_kind": "per-stage realization reports binding fetched/resident bytes and exact CU UUIDs (the retained realize-stage-N evidence)",
+   "correctness_bearing_observations": 3,
+   "correctness_bearing_realization_records": 3,
+   "device_residency_achieved": true,
+   "driver_version_identity": "armb drivers final form; pinned #99 core 8b88af5b\u2026 / #74 methodology e075c099\u2026 (byte-pinned copies retained under raw/producer/)",
+   "evidence": [
+    {
+     "excerpt_digest": "sha256:62f551da435f568ed89f19990f1b2ab282b445075b24f69046e8149d0ac4d90c",
+     "excerpt_verbatim": "Source server live with Range support. Now the correctness-bearing acquisition. Starting with inferswarm03 (remote participant, HTTP transport \u2014 the strongest proof), then 01:",
+     "observed_utc": "2026-09-08T20:59:55Z",
+     "transcript_refs": [
+      "session 20260908_150616_c57910 msg 225492 (campaign launch: source server live, correctness-bearing acquisition starting)"
+     ]
+    },
+    {
+     "excerpt_digest": "sha256:2b5ecb1f0cea9af0dbcd804f77cc1eacf450533a5296088200c367ed59143ad8",
+     "excerpt_verbatim": "Authorization frozen: 671 tickets, plan digest sha256:8646e00c\u2026. Now the correctness-bearing acquisition \u2014 inferswarm03 first (remote, HTTP):",
+     "observed_utc": "2026-09-08T21:06:08Z",
+     "transcript_refs": [
+      "session 20260908_150616_c57910 msg 225585 (authorization frozen (671 tickets))"
+     ]
+    },
+    {
+     "excerpt_digest": "sha256:dcde8c6f4ea9d54988b9bc07a88dad68ff6e7ac508bb3779fe9476e0070fdb01",
+     "excerpt_verbatim": "inferswarm03 acquisition complete. Verifying totals, then launching 01's two participants (local transport):",
+     "observed_utc": "2026-09-08T21:09:20Z",
+     "transcript_refs": [
+      "session 20260908_150616_c57910 msg 225625 (03 acquisition complete (valid))"
+     ]
+    },
+    {
+     "excerpt_digest": "sha256:48b3ee9ecb54d39bace60d8374ffb148af09919774b5701bdf5dfe0e24a6d04d",
+     "excerpt_verbatim": "All acquisitions complete and verified. 01: 16.5GB acquired (411 objects); 03: 9.3GB (224 objects). Zero integrity failures, zero unrelated bytes, coordinator bulk bytes 0. Now stopping the source server and running participant-exact materialization \u2014 stage-3 on 03 first:",
+     "observed_utc": "2026-09-08T21:12:56Z",
+     "transcript_refs": [
+      "session 20260908_150616_c57910 msg 225661 (all acquisitions complete; source server stopping)"
+     ]
+    },
+    {
+     "excerpt_digest": "sha256:4122378b44aede62dc472a7b55b6398b27abd5644d97b404539b5d0520f0cfb7",
+     "excerpt_verbatim": "STAGE-3 REALIZED \u2014 fetched_bytes 9,292,212,768 and resident_device_bytes 9,304,009,248 both EXACTLY match Arm-A's retained ready.json. Running the runtime-read audit:",
+     "observed_utc": "2026-09-08T21:20:10Z",
+     "transcript_refs": [
+      "session 20260908_150616_c57910 msg 225757 (stage-3 realized (valid))"
+     ]
+    },
+    {
+     "excerpt_digest": "sha256:5130d0d53e82675cce892b537a7434fa51085ea7b92c470461d6d28df332b261",
+     "excerpt_verbatim": "{\"status\": \"success\", \"output\": \"stage-1 fetched: 9256814624 resident: 9264678944 uuid: GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099 keys: 223 persistent_host: 0\\nstage-2 fetched: 7278939168 resident: 7290735648 uuid: GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55 keys: 221 persistent_host: 0\\nstage-3 uuid: GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176\\n\", \"exit_code\": 0, \"tool_calls_made\": 0, \"duration_seconds\": 0.47, \"kernel\": {\"mode\": \"session\", \"reused\": true, \"execution_count\": 129, \"state_reset\": false}, \"stdout_truncated\": false, \"stdout_bytes_captured\": 305, \"stdout_bytes_total\": 305, \"stdout_bytes_omitted\": 0}",
+     "observed_utc": "2026-09-08T21:24:38Z",
+     "transcript_refs": [
+      "session 20260908_150616_c57910 msg 225778 (stage-1/2 realize summaries (valid))"
+     ]
+    }
+   ],
+   "exception": null,
+   "failure_reason": null,
+   "historical_runtime_label": null,
+   "hosts": [
+    "inferswarm00",
+    "inferswarm01",
+    "inferswarm03"
+   ],
+   "materializations": 3,
+   "nested_phase_summary": "the campaign's own chronological launch order over actual process launches is: launch-1 (21:00:56Z), launch-2 (21:01:08Z), launch-3 (21:06:08Z), [campaign acquisition phase 21:06\u201321:13], launch-4 (21:13:35Z), launch-5 (21:18:55Z), launch-6 (21:19:23Z), [valid stage-3 realize re-launch ~21:19:50Z, stage-1/2 realize 21:20\u201321:24]. Launches 1-3 are pre-acquisition-validity failures OUTSIDE the campaign; launches 4-6 are nested phase attempts INSIDE the campaign interval.",
+   "ordering": 7,
+   "ordering_semantics": "campaign completion record \u2014 the LAST retained record by completion, NOT the 7th chronologically-started launch: the campaign interval (20:59:55Z\u201321:24:38Z) ENCOMPASSES nested phase attempts launch-4/5/6",
+   "parent_campaign_id": null,
+   "phase_reached": "COMPLETE: authorization \u2192 acquisition \u2192 publication \u2192 materialization \u2192 realization \u2192 read audits",
+   "plan_digest": "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad",
+   "preexisting_cold_root_state_destroyed_or_reset": false,
+   "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+   "realization_execution_reached": true,
+   "realization_request_made": true,
+   "subattempt_ids": [
+    "i117-arm-b-cold-acquisition.launch-4",
+    "i117-arm-b-cold-acquisition.launch-5",
+    "i117-arm-b-cold-acquisition.launch-6"
+   ],
+   "temporary_staging_bytes_created": 25827958492,
+   "validity": "VALID",
+   "verified_publications": 629,
+   "verified_publications_note": "411 objects on inferswarm01 + 218 on inferswarm03 (retained post-acquisition inventories); 671 issued tickets resolved as 629 ACQUIRED publications plus 42 CACHE_HIT ledger events for the declared shared tied-embedding state"
+  }
+ ],
+ "campaign_boundary_note": "The valid campaign is bounded by the orchestrator's campaign-launch decision at 20:59:55Z (session msg 225492: 'Source server live \u2026 Now the correctness-bearing acquisition') and the final read audits at ~21:24:45Z (session msg 225780). Launches 1-3 are pre-boundary acquisition-driver iterations OUTSIDE the campaign; launches 4-6 are in-campaign materialization/realization-phase failures INSIDE the campaign interval. One additional in-campaign realize-only re-run of stage-1/stage-2 on inferswarm01 (21:23:52Z, session msgs 225769-225778) repaired a proof-field observer defect (observed_gpu_uuid resolution) with no new acquisition; it is part of the valid campaign, not a separate attempt.",
+ "cold_condition_summary": {
+  "derived": true,
+  "no_reset_scan": "a full regex scan of every tool output and assistant message in the execution session for destructive filesystem operations (rm -r, rmtree, unlink, rmdir) matched zero canonical-root targets; the single regex hit was the unrelated string 'gh pr create --head issue-117-arm-a-execution-eq\u2026'",
+  "prestate_binding": "retained cold-root-prestate-{inferswarm01,03}.json (empty roots, entry_count 0, inode-pinned) collected at 20:05-20:08Z, before any launch",
+  "root_inode_continuity": {
+   "mechanism": "read-only ssh stat of the canonical roots",
+   "observation_utc": "2026-09-09T00:46:17Z",
+   "result": "current st_ino equals the retained prestate st_ino for all four canonical roots on both hosts (observation 2026-09-09T00:46:17Z): no root was deleted, recreated, or reset at any point since prestate collection",
+   "retained_prestate_st_ino": {
+    "inferswarm01": {
+     "/srv/inferswarm/cache/issue117": 8519682,
+     "/srv/inferswarm/materialized/issue117": 8519684
+    },
+    "inferswarm03": {
+     "/srv/inferswarm/cache/issue117": 9962003,
+     "/srv/inferswarm/materialized/issue117": 9962005
+    }
+   },
+   "roots": {
+    "inferswarm01": {
+     "/srv/inferswarm/cache/issue117": 8519682,
+     "/srv/inferswarm/materialized/issue117": 8519684
+    },
+    "inferswarm03": {
+     "/srv/inferswarm/cache/issue117": 9962003,
+     "/srv/inferswarm/materialized/issue117": 9962005
+    }
+   }
+  }
+ },
+ "provenance_note": "All transcript excerpts below are VERBATIM slices of the contemporaneous orchestrator session transcript (Hermes session 20260908_150616_c57910, the Arm-B execution session), extracted programmatically from the retained session store by message id; each is digest-bound. Timestamps are the orchestrator's observation times (UTC).",
+ "recovery_note": "Recovered 2026-09-08 (PR #127 correction) from contemporaneous evidence only: the orchestrator session transcript (verbatim, digest-bound excerpts), retained host-side files (driver scripts, source-server log, ledgers, strace logs, file mtimes/inodes), and the retained repo evidence tree. The attempt_ids are RETAINED LOGICAL identities assigned during recovery; the historical runtime used no per-launch labels. No historical timestamps beyond the transcript observation times and host mtimes are claimed.",
+ "report_correction_note": "The PR previously reported 'four invalid pre-publication driver defects'. The contemporaneous evidence shows SIX invalid launches: three pre-acquisition-validity launch failures (INV-1 missing driver file, INV-2 canonical-JSON artifact_id self-identity mismatch, INV-3 KeyError on authorization shape) and three nested in-campaign phase failures (INV-4 assembler dedupe bug, INV-5 realize-child import path, INV-6 report-key KeyError after device residency). None consumed the cold condition or produced a correctness-bearing observation; see per-attempt derivations.",
+ "schema": "inferswarm.issue117.arm-b.attempt-lineage/2",
+ "schema_note": "Schema v2 (maintainer review round 3): physical execution and correctness-bearing retention are SEPARATE dimensions. realization_execution_reached / device_residency_achieved describe what physically executed; correctness_bearing_realization_records / correctness_bearing_observations count retained proof records. An invalid attempt MAY have physically executed a realization path (launch-6 reached full device residency) while retaining ZERO correctness-bearing records. The campaign is an explicit encompassing container (parent_campaign_id), never 'launch #7': nested phase attempts carry their own chronological launch ordering.",
+ "valid_attempt_logical_id": "i117-arm-b-cold-acquisition.campaign-1"
+}

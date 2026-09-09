@@ -1,212 +1,298 @@
 # R6 successor dense full integration — issue #117
 
-Current state: **`ISSUE117_ARM_A_EXECUTION_EQUIVALENCE_PASS`** (retained
-Arm A evidence: `evidence/arm-a/`, bounded by `evidence/MANIFEST.sha256`;
-see `evidence/arm-a/run-record.json`). Arm A executed 2026-09-08 on the
-fabric from accepted main `51c8adee` with the frozen integration producer
-`924cd22e`: the 24-case public fixture ran through BOTH the accepted V5
-control authority (FreeToken `7e5c8521`: reference on inferswarm04 RTX
-3090 + teacher-forced three-stage chain 01 GPU-0/GPU-1 → 03) AND the
-integrated producer `924cd22e` (same topology), and all
-**192/192 FP32 consumer-row identities matched exactly** — plus prefix
-identity at every decision, trajectory identity, argmax/tie rule outputs
-and rule proofs, stage-boundary capture-record identities, finite-output
-accounting (0 NaN/Inf both arms both paths), and byte-identical raw
-decision rows re-verified on the nodes (192/192 last-stage, 192/192
-reference, summary-SHA-bound). Two invalid launch attempts (staging
-error; dead last-stage service) produced no correctness-bearing
-observation and are retained with reasons. Arm B was NOT executed; the
-dedicated cold roots remain empty and untouched. No holdout material was
-used.  Arm A is ACCEPTED by the maintainer via merge
-`6774474941d7ce2a0252c8c1e148f8bce61a8d6d` (PR #122); the current
-authorized gate is Arm B — canonical cold acquisition + realization
-(authority: Issue #117) — and it is not yet executed.
+## Current state
 
-Retention/provenance correction (PR #122, same day, no physical execution):
-the terminal classification is now INDEPENDENTLY re-derivable from low-level
-retained records by `scripts/issue117_arm_a_evidence.py` (the Arm-A evidence
-reducer — pure stdlib, fails closed). New retained evidence under
-`evidence/arm-a/`: `paired-decision-records.json` (independently sourced
-control/integrated values for all 192 candidate + 192 reference decisions —
-prefix length/SHA, emitted token, argmax rule, rule proof, row SHA, element
-count; equality is only ever DERIVED from the two retained sides),
-`capture-manifest-records.json` (the full frozen stage-boundary
-capture-record lists for all 24 cases, both arms, stages 1-3),
-`raw-row-manifest-laststage03.json` and `raw-row-manifest-reference04.json`
-(per-decision raw FP32 byte verification: paths, sizes, SHA-256s, byte
-identity, and mechanical binding to the decision-table row SHAs and the
-reference summaries), `attempt-lineage.json` (distinct retained logical
-identities for the two invalid integrated launches and the valid run, with
-digest-bound transcript excerpts, harness-semantics termination proofs,
-mechanically derived zero-correctness counts, and honest cleanup lineage),
-and `prerun-revalidation.json` (the pre-Arm-A fabric/repository revalidation
-as a digest-bound machine record with exact observed timestamps, replacing
-the prior prose summary). 33 mutation negative-controls exercise every trust
-boundary against the reducer. The historical Arm-A evidence bytes (witness,
-decision table, run indexes, fixture, verify-rows aggregates) are unchanged;
-`run-record.json` gained pointers to the mechanical records and exact
-timestamps. Accepted #118 canonical-summary and physical-preflight bytes are
-pinned unchanged.
+**Observed terminal:** `ISSUE117_ARM_B_COLD_REALIZATION_PASS`
 
-Prior state: **`ISSUE117_PHYSICAL_PREFLIGHT_PASS`** (retained physical
-preflight record: `evidence/physical-preflight.json` and
-`evidence/physical-preflight-record.json`). Both retained-evidence blockers
-were recovered — `V5_CHECKPOINT_AUTHORITY_PROVENANCE_RECOVERED` (PR #119)
-and `V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED` (PR #120; see
-[CHECKPOINT-AUTHORITY-BLOCKER.md](CHECKPOINT-AUTHORITY-BLOCKER.md) for both
-resolution sections). The accepted #118 terminal evidence
-(`evidence/canonical-summary.json`, `ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED`)
-is preserved byte-for-byte as the accurate historical record of the state
-when #118 was accepted; it is never rewritten. The physical preflight was
-executed on the real fabric (inferswarm00/01/03/04) at the exact accepted
-base `d127879a` with FreeToken at the frozen integration producer
-`924cd22e` and observed `PREFLIGHT_VALID` with zero failures; Arms A-E were
-NOT executed. The physical execution gate is not unblocked until this
-preflight PASS is reviewed/accepted by the maintainer.
+Arm B — canonical cold acquisition + realization — was executed on the
+fabric on 2026-09-08 from accepted InferSwarm main
+`5179c41232051e7455b778ddb8876a6539f4cb04` with the frozen integration
+producer `924cd22ea081f6d4ed471016faf01d427fc5b0d2`.
 
-This phase proves, before any physical correctness-bearing execution, that
-the accepted architecture seams compose exactly as the #117 gate requires —
-on a Gemma-shaped synthetic checkpoint at fixture scale, with the accepted
-#99/#101/#103 machinery doing the real acquisition, orchestration, and
-ranking work:
+The Arm-B observation is retained in PR #127 and is pending maintainer
+acceptance. **Arm C is blocked until that acceptance.** Arms C/D/E have not
+been executed. No holdout material was used.
 
-- the producer-bound applicability audit covers exactly one FreeToken
-  integration producer SHA, derived from mechanically collected per-file
-  delta evidence over the import-closed correctness-bearing execution zone
-  (`evidence/producer-delta.json`): all fifteen execution-bearing surfaces
-  are provably byte-identical, every dynamic import mechanism on the zone is
-  statically classified (resolved in-repository targets are zone members
-  hashed at both producers; external module imports are bound to accepted
-  runtime identities; `find_spec` probes are allowlisted availability
-  probes), and the only observed zone delta is the accepted holdout admission
-  wrappers; any changed, missing, extra, unknown, or dynamically unresolved
-  execution-math surface mechanically yields
-  `R6_SUCCESSOR_REQUALIFICATION_REQUIRED`;
-- the generic admission planner extends the accepted R3 rule with the #117
-  qualification-applicability barrier as a distinct recorded gate; every
-  subject digest is recomputed from its own subject over the shared
-  execution-equality convention and every trusted record is bound to the
-  accepted terminal adjudication identity;
-- the accepted V5 qualification subject is independently reconstructed
-  from byte-pinned historical evidence
-  (`V5_QUALIFICATION_SUBJECT_PROVENANCE_RECOVERED`;
-  `evidence/accepted-v5-qualification-subject.json`,
-  `scripts/issue117_accepted_subject.py`). The canonical V5 candidate is
-  `QUALIFICATION_APPLICABLE` through ordinary subject-digest equality with
-  that recovered subject — not candidate ID, geometry name, or hard-coded
-  selection — and every materially different candidate stays
-  `QUALIFICATION_NOT_APPLICABLE`. Checkpoint identity keeps its two named
-  values: the accepted external `checkpoint_authority_sha256` (bound by the
-  retained evidence + PR #119 recovery) and the machinery-local
-  `catalog_content_digest`;
-- feasibility bytes are the exact frozen participant requirements (assigned
-  plus declared shared state), so the capacity proof is truthful about the
-  embedding and shared tied-head state each stage must materialize;
-- participant-exact cold acquisition, verified materialization, warm restart,
-  and planning-only locality mutation hold every acceptance zero-invariant;
-- physical preflight (P0 correction) mechanically REQUIRES the canonical
-  V5-geometry candidate to independently derive `QUALIFICATION_APPLICABLE`
-  with reason `MATCHED_ACCEPTED_QUALIFICATION_RECORD` against exactly the
-  accepted evidence-derived record: an honestly regenerated
-  `QUALIFICATION_NOT_APPLICABLE` for the V5 candidate, missing/drifted
-  subject evidence, zero or duplicate V5-geometry candidates, and foreign
-  record-id claims all fail the preflight;
-- nineteen negative controls and six fencing negatives fail closed —
-  including poisoning controls proving the derived zero-invariants (fence
-  counters, host-mirror/movement bytes) become nonzero when the retained
-  records are forged, the subject-provenance-recovered control proving the
-  accepted subject loads from byte-pinned evidence with no candidate
-  machinery, and the subject-evidence-tampering control proving drifted
-  evidence fails closed.
+Accepted predecessor gates remain historical authority:
 
-| CPU fixture accounting | Value |
-|---|---:|
-| Frozen fixture cases | 24 (one per mixture component) |
-| Legal candidates enumerated | 9 |
-| Admissible + selected (the accepted-V5-geometry candidate, fixture-scoped record) | 1 |
-| Excluded: capacity-infeasible (exact participant-requirement bytes) | 6 |
-| Excluded: hard policy (reference-reserved path) | 3 |
-| Excluded: qualification not applicable (subject-digest mismatch) | 8 (overlaps above) |
-| Cold transferred bytes (stage-1 / stage-2 / stage-3) | 98,668 / 65,536 / 98,732 |
-| Cold cache-hit bytes (declared shared state, acquired once) | 364 |
-| Source-side model bytes read for catalog/manifest building | 498,604 |
-| Coordinator bulk artifact bytes observed | 0 |
-| Warm restart model-weight transfer bytes | 0 |
-| Fenced committed results / rejected fence violations | 48 / 6 |
-| Derived zero-invariants | 25, all mechanically zero |
-| Negative controls | 18 + 6, all fail closed |
+- physical preflight: `ISSUE117_PHYSICAL_PREFLIGHT_PASS`;
+- Arm A: `ISSUE117_ARM_A_EXECUTION_EQUIVALENCE_PASS`, accepted at merge
+  `6774474941d7ce2a0252c8c1e148f8bce61a8d6d`;
+- accepted #118 blocked/static record remains preserved byte-for-byte as the
+  correct historical record for its point in time.
 
-The applicability audit is bound to `FROZEN_INTEGRATION_PRODUCER`
-(`924cd22ea081f6d4ed471016faf01d427fc5b0d2`, the terminal accepted producer
-state); any future #117 integration producer requires mechanically
-re-collecting the producer-delta evidence and re-earning the audit for that
-exact SHA before the physical preflight can pass. The thirteen accepted V5
-authority files and the three retained physical-identity evidence files are
-pinned byte-exact; drift is a hard stop. The 24-case integration fixture is
-frozen with digest
-`sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba36f2`.
+## Frozen subject and execution identity
+
+Model: `google/gemma-4-12B-it`
+
+Revision: `707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7`
+
+Checkpoint authority SHA-256:
+
+`5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d`
+
+Accepted qualification subject:
+
+`sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f7f1d7994ffd`
+
+Canonical candidate geometry:
+
+```text
+inferswarm01/gpu-0  [0,16)
+inferswarm01/gpu-1  [16,32)
+inferswarm03/gpu-0  [32,48)
+```
+
+Candidate ID: `dense.6171f32b4413`
+
+## Arm A — accepted execution-equivalence bridge
+
+Arm A proved the frozen integrated producer remained execution-equivalent to
+the accepted V5 authority on the public Issue #117 fixture:
+
+- 24 public cases × 8 decisions = **192/192 exact FP32 consumer-row
+  identities**;
+- exact prefix/trajectory/token/rule-proof identity;
+- 72/72 stage-boundary comparisons;
+- exact accepted checkpoint and qualification-subject continuity;
+- exact Compute Unit bindings;
+- zero NaN/Inf observations;
+- no holdout use;
+- no Arm-B acquisition/materialization claim.
+
+Arm-A evidence is retained under [`evidence/arm-a/`](evidence/arm-a/) and is
+bounded by [`evidence/MANIFEST.sha256`](evidence/MANIFEST.sha256).
+
+## Arm B — observed canonical cold acquisition + realization PASS
+
+Arm B proves the artifact/data-path half of the successor architecture
+physically.
+
+The retained physical flow establishes:
+
+1. canonical Issue #117 participant roots were cold and non-aliased before
+   acquisition;
+2. exact participant requirements were derived from the real checkpoint and
+   frozen selected plan;
+3. the CPU-only external Coordinator issued exact acquisition authority while
+   carrying no bulk model bytes;
+4. model-state acquisition used the accepted plan-driven artifact path only;
+5. every object was verified before cache publication;
+6. only participant-planned state was materialized;
+7. realization loaded the participant shards onto the exact planned GPUs with
+   no persistent host model mirror or CPU-owned decoder layers;
+8. runtime-read evidence established no hidden Source-repository dependency;
+9. all mandatory Arm-B zero invariants reduce to zero from retained evidence.
+
+Participant realization totals:
+
+| Participant | Fetched bytes | Resident device bytes |
+|---|---:|---:|
+| stage-1 / inferswarm01 gpu-0 | 9,256,814,624 | 9,264,678,944 |
+| stage-2 / inferswarm01 gpu-1 | 7,278,939,168 | 7,290,735,648 |
+| stage-3 / inferswarm03 gpu-0 | 9,292,212,768 | 9,304,009,248 |
+
+The realization substrate retained zero persistent host model bytes on every
+stage.
+
+## Arm-B attempt lineage
+
+The authoritative retained lineage is
+[`evidence/arm-b/attempt-lineage.json`](evidence/arm-b/attempt-lineage.json),
+schema `/2`.
+
+Six invalid launches are retained before completion of the valid encompassing
+campaign:
+
+- launches 1–3 were pre-acquisition-validity failures and transferred no
+  model bytes;
+- launches 4–6 were nested campaign phase attempts;
+- launch 6 physically reached full device residency, but its report failed
+  during serialization and therefore retained **zero correctness-bearing
+  realization records**.
+
+Physical execution and correctness-bearing retention are intentionally
+separate dimensions. Do not reinterpret launch 6 as "no realization
+occurred."
+
+The valid record is `campaign-1`, an encompassing campaign interval, not a
+chronologically-started "launch #7". Nested attempts are explicitly bound
+through `parent_campaign_id` / `subattempt_of`.
+
+No invalid attempt produced a correctness-bearing observation or destroyed or
+reset the canonical cold roots.
+
+## Raw evidence and finalization-boundary movement proof
+
+Round 3 retained the previously host-only raw evidence:
+
+- `evidence/arm-b/raw/source-server-access.log`;
+- `evidence/arm-b/raw/realize-strace.stage-{1,2,3}.log`;
+- byte-pinned historical producer sources under `evidence/arm-b/raw/producer/`;
+- read-only machine observations under `evidence/arm-b/observations/`.
+
+The historical realization trace was:
+
+`strace -f -qq -e trace=file`
+
+It is therefore **path-level support, not byte-traffic measurement**.
+
+`unplanned_steady_state_model_state_movement_bytes == 0` is established at
+the runtime finalization boundary using the pinned producer semantics plus the
+retained realization counters:
+
+- every planned model-state mapping is scoped through
+  `BoundedSafetensorsReader`;
+- mapping open count equals mapping close count on every stage;
+- `host_staging_current_bytes == 0`;
+- staging bytes processed equal fetched bytes;
+- persistent host model bytes are zero;
+- the raw traces show no cache/Source opens and no model-state path opens
+  after the final shard-open boundary.
+
+The trace corroborates the finalized-state invariant; no byte count is
+invented from `openat` events.
+
+## Exact Coordinator state proof
+
+Round 4 removed prefix/extension-based admission.
+
+The observed Coordinator Arm-B state must equal an exact frozen set of
+**14 regular files / 35,445,075 bytes**:
+
+- 6 campaign data files: **35,399,067 bytes**;
+- 8 operational files: **46,008 bytes**.
+
+Every file is pinned by exact relative path, size, and SHA-256. Byte-exact
+copies of all eight operational files are retained under
+[`evidence/arm-b/raw/coordinator/`](evidence/arm-b/raw/coordinator/).
+
+Unknown, renamed, added, removed, or digest-changed files fail closed
+regardless of filename or extension.
+
+## Coordinator receipt and materialization semantics
+
+`coordinator_model_weight_bytes_received == 0` is **not** derived from final
+filesystem occupancy.
+
+It is derived from absence of any permitted or observed receipt path:
+
+- zero Coordinator requests in the raw Source-server log;
+- frozen ledger topology: inferswarm01 used local-file transport and
+  inferswarm03 used operator-local HTTP from the Source host;
+- every `ACQUIRED` event is participant-bound;
+- the digest-bound contemporaneous execution-session transport audit records
+  zero Coordinator/model-byte co-targeting commands and zero destructive
+  Coordinator/canonical-root operations;
+- the exact observed Coordinator state contains no model payload;
+- the pinned historical producer/coordinator semantics contain no Coordinator
+  model-byte acquisition path.
+
+The transport audit is retained at
+[`evidence/arm-b/observations/coordinator-transport-audit.json`](evidence/arm-b/observations/coordinator-transport-audit.json).
+
+A receive-then-delete history therefore cannot be converted into a zero merely
+by observing empty roots afterward.
+
+`coordinator_model_weight_bytes_materialized == 0` derives from received ==
+zero, the accepted pre-campaign Coordinator state, the exact observed
+post-campaign state, and the pinned execution semantics. Final occupancy is
+only a cross-check.
+
+## Mandatory Arm-B zero invariants
+
+The retained reducer must derive all of these as exactly zero:
+
+```text
+unrelated_model_bytes_acquired_for_realization
+unassigned_model_weight_bytes_acquired
+unexplained_full_model_dependency
+participant_requires_complete_model_repository
+coordinator_bulk_artifact_bytes_observed
+unverified_state_used_as_locality_evidence
+unauthorized_source_used
+unexplained_transition_bytes
+unexplained_persistent_host_mirror_bytes
+unplanned_steady_state_model_state_movement_bytes
+runtime_fallback_events
+silent_plan_substitution_events
+coordinator_cuda_initialized
+coordinator_model_weight_bytes_received
+coordinator_model_weight_bytes_materialized
+```
+
+The canonical reducer is:
+
+`scripts/issue117_arm_b_evidence.py`
+
+Stored summary zeros are cross-checks, not authority.
+
+## Current validation
+
+At PR #127 round-4 head `dfaee1722f2407d843be940b84905d77d4b6a636`:
+
+- Arm-B retention suite: **112 passed**;
+- reducer terminal: `ISSUE117_ARM_B_COLD_REALIZATION_PASS`;
+- all 15 mandatory zero invariants: `0`;
+- proof / Arm-A / physical-retention focused suites: passed;
+- manifest verification: passed;
+- project-status synchronization/check: passed;
+- Markdown links: passed;
+- `py_compile`: passed;
+- `git diff --check`: passed;
+- hosted CI run `34309763106`: success.
+
+Two independent exact-head reviews completed with zero P0/P1 findings.
 
 ## Non-claims
 
-- No physical execution, transfer, serving, or performance claim. The fabric
-  arms require the orchestrator and inferswarm01/03/04; this phase was
-  produced without fabric access by design (CPU/static freeze first).
-- No statistical qualification claim; no V5 threshold is reused or relaxed.
-- The CPU qualification record is fixture-scoped: it binds the synthetic
-  fixture subject with a fixture-scoped adjudication identity and never
-  claims the accepted Gemma checkpoint. The V5-shaped diagnostic candidate
-  does not supply qualification authority.
-- The retained `checkpoint_authority_sha256` has a recovered independent
-  content-to-authority derivation rule (PR #119:
-  `V5_CHECKPOINT_AUTHORITY_PROVENANCE_RECOVERED`): the authority is exactly
-  `sha256(model.safetensors bytes)` at the checkpoint repository root,
-  mechanically derived by `scripts/issue117_checkpoint_authority.py` over
-  the actual bytes. The candidate's `catalog_content_digest` remains a
-  machinery-local drift binding over the exact bytes the machinery observed
-  — a different identity that must never be presented as, or substituted
-  for, the recovered external checkpoint authority.
-- The synthetic capacity model proves planner machinery, not hardware
-  limits; the physical preflight re-freezes real capacities.
-- Source-side catalog/manifest building reads and hashes model bytes by
-  design; that accounting is kept separate and is never Coordinator
-  traffic. Coordinator/control-plane documents carry descriptors only.
-- The producer-delta zone closure statically resolves every dynamic import
-  mechanism: resolved in-repository targets are zone members hashed at both
-  producers; external module imports are bound to accepted runtime
-  identities; `find_spec` probes are allowlisted availability probes that
-  execute no target bytes; unresolved dynamic targets or actual unresolved
-  in-repository module imports fail the closure closed. Residual non-claim:
-  probe-gated backend selection (`sgl_kernel`/`vllm`) is admission logic;
-  the accepted V5 dense path selects none of the probed backends.
-- No public planner, artifact, path, or wire schema is frozen.
-- No consumed `h109-*` material is used; the fixture uses only public
-  `c109-*` cases and the fixture manifest commits no model weights.
+- Arm B does not claim ordinary external-Coordinator serving; that is Arm C.
+- No PREFILL/decode/generate or fixture serving was executed as part of Arm B.
+- Arms C/D/E have not been executed.
+- No consumed `h109-*` holdout material is used as Arm-B evidence.
+- No public planner, artifact, path, or wire schema is frozen by this record.
+- Historical accepted failures/blockers remain historical truth; later
+  recovery/pass evidence is additive.
 
-## Evidence
+## Next gate
 
-Reproduce everything with `python3 scripts/issue117_proof.py` (deterministic;
-wall times excluded).
+Arm C — ordinary external-Coordinator serving — remains blocked until
+maintainer acceptance/merge of the Arm-B observation.
+
+Do not rerun accepted Arm A, the accepted physical preflight, or Arm B merely
+to begin Arm C.
+
+## Evidence index
+
+Core Issue #117 records:
 
 - [Frozen methodology](METHODOLOGY.md)
-- [Canonical summary](evidence/canonical-summary.json)
-- [Integration fixture](evidence/integration-fixture.json)
-- [Producer delta (mechanically collected)](evidence/producer-delta.json)
-- [Strategy: legal candidates, feasibility, subjects](evidence/strategy.json)
-- [Qualification record binding the fixture subject](evidence/qualification-record.json)
-- [Documentation synchronization record](evidence/documentation-synchronization.json)
+- [Canonical #118 historical summary](evidence/canonical-summary.json)
+- [Physical preflight](evidence/physical-preflight.json)
 - [Applicability audit](evidence/applicability-audit.json)
-- [Planner decision and explanations](evidence/planner-decision.json)
-- [Frozen requirements](evidence/requirements.json)
-- [Cold acquisition + accounting](evidence/cold-acquisition.json)
-- [Materialization witnesses](evidence/materialization-witnesses.json)
-- [Warm restart](evidence/warm-restart.json)
-- [Locality mutation (planning-only)](evidence/locality-mutation.json)
-- [Fencing record](evidence/fencing.json)
-- [Negative controls](evidence/negative-controls.json)
-- [Zero-invariants](evidence/zero-invariants.json)
-- [Planner purity audit](evidence/purity-audit.json)
+- [Planner decision](evidence/planner-decision.json)
 - [Producer hashes](evidence/producer-hashes.json)
 - [Integrity manifest](evidence/MANIFEST.sha256)
 
-Internal record, digest, cache-layout, and descriptor choices remain
-unfrozen and implementation details.
+Arm A:
+
+- [Arm-A evidence](evidence/arm-a/)
+- [Arm-A run record](evidence/arm-a/run-record.json)
+- [Arm-A attempt lineage](evidence/arm-a/attempt-lineage.json)
+
+Arm B:
+
+- [Arm-B evidence](evidence/arm-b/)
+- [Attempt lineage](evidence/arm-b/attempt-lineage.json)
+- [Execution plan](evidence/arm-b/execution-plan.json)
+- [Requirements](evidence/arm-b/requirements.json)
+- [Coordinator record](evidence/arm-b/coordinator-record.json)
+- [Coordinator transport accounting](evidence/arm-b/coordinator-transport-accounting.json)
+- [Coordinator transport audit](evidence/arm-b/observations/coordinator-transport-audit.json)
+- [Steady-state movement](evidence/arm-b/steady-state-movement.json)
+- [Runtime fallback accounting](evidence/arm-b/runtime-fallback-accounting.json)
+- [Raw retained evidence](evidence/arm-b/raw/)
+
+Internal record, digest, cache-layout, and descriptor choices remain unfrozen
+implementation details unless another accepted doctrine explicitly freezes
+them.

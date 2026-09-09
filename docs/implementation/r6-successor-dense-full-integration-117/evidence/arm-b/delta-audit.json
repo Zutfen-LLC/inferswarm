@@ -1,0 +1,28 @@
+{
+ "arm_a_merge_ancestor": "0",
+ "delta_classification": "non-execution-substrate / Arm-B-semantics-neutral (docs/status/tests/manifest only)",
+ "delta_commits": [
+  "5179c41 Merge PR #126: Issue #117 Arm A acceptance status synchronization",
+  "83d856e issue #117 PR #126: post-acceptance status synchronization",
+  "89993df test: record accepted Arm A status transition",
+  "4d85aba docs: record Arm A acceptance and authorize Arm B"
+ ],
+ "delta_files": [
+  "ARCHITECTURE.md",
+  "README.md",
+  "ROADMAP.md",
+  "docs/implementation/README.md",
+  "docs/implementation/plan-driven-artifact-acquisition-99/evidence/MANIFEST.sha256",
+  "docs/implementation/r6-successor-dense-full-integration-117/README.md",
+  "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+  "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json",
+  "docs/integrations/freetoken.md",
+  "docs/project-status.json",
+  "docs/protocols/README.md",
+  "docs/qualification/gemma4-12b-it-v1/MANIFEST.sha256",
+  "tests/test_project_status.py"
+ ],
+ "head": "5179c41232051e7455b778ddb8876a6539f4cb04",
+ "origin_main": "5179c41232051e7455b778ddb8876a6539f4cb04",
+ "porcelain_empty": true
+}

@@ -1,0 +1,136 @@
+{
+ "census_coordinator_directed_transfer_commands": {
+  "definition": "every issued command (execute_code/terminal tool calls) whose text mentions the coordinator AND matches a file-transfer shape (scp/rsync/sftp/curl/wget/nc/dd/cp/mv/install/tee/git/pip/tar)",
+  "entries": [
+   {
+    "command_kind": "execute_code:execute_code",
+    "message_id": 225441,
+    "observed_utc": "2026-09-08T20:58:09Z",
+    "sha256": "adcd07f40574a367b3b0f7364f0f6cb4d4d030db65d4effb0e33ab4a0c50f88b",
+    "verbatim": "{\"code\":\"from hermes_tools import terminal\\nfrom hermes_tools import shell_quote\\nimport os\\n# push coordinator driver + scripts to 00\\nfor f in ('armb_coordinator.py', 'armb_plan_core.py', 'armb_common.py', 'armb_inventory.py'):\\n    os.system(f\\\"scp -q /tmp/armb/{f} inferswarm00:/tmp/{f}\\\")\\nout = terminal(\\\"ssh -o BatchMode=yes inferswarm00 'sudo mkdir -p /srv/inferswarm/state/arm-b/scripts && sudo cp /tmp/armb_coordinator.py /tmp/armb_plan_core.py /tmp/armb_common.py /tmp/armb_inventory.py /srv/inferswarm/state/arm-b/scripts/ && sudo ls /srv/inferswarm/state/arm-b/scripts/'\\\")\\nprint(out['output'])\\n# push plan+requirements+manifest (metadata documents) to 00\\nos.system(\\\"scp -q inferswarm01:/dev/null /dev/null 2>/dev/null; true\\\")\\nout2 = terminal(\\\"ssh -o BatchMode=yes inferswarm01 'sudo cat /srv/inferswarm/state/arm-b/source/arm-b-plan.json' > /tmp/armb/arm-b-plan.json && ssh -o BatchMode=yes inferswarm01 'sudo cat /srv/inferswarm/state/arm-b/source/arm-b-requirements.json' > /tmp/armb/arm-b-requirements.json && wc -c /tmp/armb/arm-b-plan.json /tmp/armb/arm-b-requirements.json\\\")\\nprint(out2['output'])\\nos.system(\\\"scp -q /tmp/armb/arm-b-plan.json /tmp/armb/arm-b-requirements.json inferswarm00:/tmp/\\\")\\nout3 = terminal(\\\"ssh -o BatchMode=yes inferswarm00 'sudo mkdir -p /srv/inferswarm/state/arm-b/source && sudo cp /tmp/armb-plan.json /tmp/armb-requirements.json /srv/inferswarm/state/arm-b/source/ && sudo ls -la /srv/inferswarm/state/arm-b/source/'\\\")\\nprint(out3['output'])\"}"
+   },
+   {
+    "command_kind": "execute_code:execute_code",
+    "message_id": 225445,
+    "observed_utc": "2026-09-08T20:58:19Z",
+    "sha256": "11e8b4598091ca8c920e04774f686f081c5b5e7350d00fdc5427d7908449d1e1",
+    "verbatim": "{\"code\":\"from hermes_tools import terminal\\nout = terminal(\\\"ssh -o BatchMode=yes inferswarm00 'ls /tmp/armb* 2>/dev/null; sudo mkdir -p /srv/inferswarm/state/arm-b/source && sudo cp /tmp/armb/arm-b-plan.json /tmp/armb/arm-b-requirements.json /srv/inferswarm/state/arm-b/source/ 2>/dev/null || (cp /tmp/armb-plan.json /tmp/armb-requirements.json /tmp/ 2>/dev/null; true); sudo ls /srv/inferswarm/state/arm-b/source/ 2>/dev/null'\\\")\\nprint(out['output'])\\n# the scp earlier placed them where? check local names\\nimport os\\nprint(os.path.exists('/tmp/armb/arm-b-plan.json'))\"}"
+   },
+   {
+    "command_kind": "execute_code:execute_code",
+    "message_id": 225447,
+    "observed_utc": "2026-09-08T20:58:26Z",
+    "sha256": "6ee9dfc21d1cdbc370265fd7da82a21a4c414ea172da1cc7bf236e351214bdf9",
+    "verbatim": "{\"code\":\"from hermes_tools import terminal\\nimport os\\nos.system(\\\"scp -q /tmp/armb/arm-b-plan.json inferswarm00:/tmp/arm-b-plan.json && scp -q /tmp/armb/arm-b-requirements.json inferswarm00:/tmp/arm-b-requirements.json\\\")\\nout = terminal(\\\"ssh -o BatchMode=yes inferswarm00 'sudo mkdir -p /srv/inferswarm/state/arm-b/source && sudo cp /tmp/arm-b-plan.json /tmp/arm-b-requirements.json /srv/inferswarm/state/arm-b/source/ && sudo ls -la /srv/inferswarm/state/arm-b/source/ && sha256sum /srv/inferswarm/state/arm-b/source/*'\\\")\\nprint(out['output'])\\nout2 = terminal(\\\"ssh -o BatchMode=yes inferswarm01 'sha256sum /srv/inferswarm/state/arm-b/source/arm-b-plan.json /srv/inferswarm/state/arm-b/source/arm-b-requirements.json'\\\")\\nprint(out2['output'])\"}"
+   },
+   {
+    "command_kind": "execute_code:execute_code",
+    "message_id": 225457,
+    "observed_utc": "2026-09-08T20:58:41Z",
+    "sha256": "88328db85347a76c8cba05d6dfce256423feaaf8ca2ef29160b277710e30c475",
+    "verbatim": "{\"code\":\"from hermes_tools import terminal\\nfrom hermes_tools import shell_quote\\n# empty inventory snapshots on both nodes (run as zutfen since roots are zutfen-owned)\\nfor host, node in ((\\\"inferswarm01\\\",\\\"inferswarm01\\\"),(\\\"inferswarm03\\\",\\\"inferswarm03\\\")):\\n    cmd = \\\"sudo -u zutfen python3 /srv/inferswarm/state/arm-b/scripts/armb_inventory.py --cache-root /srv/inferswarm/cache/issue117 --node-id %s --sequence 1 --out /tmp/armb-inventory-%s.json\\\" % (node, node)\\n    out = terminal(f\\\"ssh -o BatchMode=yes {host} \\\" + shell_quote(cmd))\\n    print(host, out['output'].strip())\\n    os.system(f\\\"scp -q {host}:/tmp/armb-inventory-{node}.json /tmp/armb/inventory-{node}.json\\\" if False else f\\\"ssh -o BatchMode=yes {host} 'sudo cat /tmp/armb-inventory-{node}.json' > /tmp/armb/inventory-{node}.json\\\")\\nos.system(\\\"scp -q /tmp/armb/inventory-inferswarm01.json /tmp/armb/inventory-inferswarm03.json inferswarm00:/tmp/\\\")\\nout = terminal(\\\"ssh -o BatchMode=yes inferswarm00 'ls -la /tmp/inventory-*.json'\\\")\\nprint(out['output'])\"}"
+   },
+   {
+    "command_kind": "execute_code:execute_code",
+    "message_id": 225474,
+    "observed_utc": "2026-09-08T20:59:14Z",
+    "sha256": "892c4b98dc7bd32c693ec469ffc9870db39e600f6365a6b42ba94615ac7e3d0c",
+    "verbatim": "{\"code\":\"from hermes_tools import terminal\\nfrom hermes_tools import shell_quote\\nimport os\\nos.system(\\\"scp -q /tmp/armb/inventory-inferswarm01.json /tmp/armb/inventory-inferswarm03.json inferswarm00:/tmp/\\\")\\nout = terminal(\\\"ssh -o BatchMode=yes inferswarm00 'sudo cp /tmp/inventory-inferswarm01.json /tmp/inventory-inferswarm03.json /srv/inferswarm/state/arm-b/ && sudo python3 /srv/inferswarm/state/arm-b/scripts/armb_coordinator.py --plan /srv/inferswarm/state/arm-b/source/arm-b-plan.json --requirements /srv/inferswarm/state/arm-b/source/arm-b-requirements.json --inventories /srv/inferswarm/state/arm-b/inventory-inferswarm01.json /srv/inferswarm/state/arm-b/inventory-inferswarm03.json --out /srv/inferswarm/state/arm-b/authorization'\\\")\\nprint(out['output'][:3000])\"}"
+   },
+   {
+    "command_kind": "execute_code:execute_code",
+    "message_id": 225480,
+    "observed_utc": "2026-09-08T20:59:23Z",
+    "sha256": "5eaad7d64bfed6669187610533f8e6a841547eae2be452ed2b569e7fe1252225",
+    "verbatim": "{\"code\":\"from hermes_tools import terminal\\nfrom hermes_tools import shell_quote\\nimport os, json\\n# transfer tickets + requirements to participants\\nfor host in (\\\"inferswarm01\\\",\\\"inferswarm03\\\"):\\n    os.system(f\\\"ssh -o BatchMode=yes inferswarm00 'sudo cat /srv/inferswarm/state/arm-b/authorization/tickets-{host}.json' > /tmp/armb/tickets-{host}.json\\\")\\n    os.system(f\\\"scp -q /tmp/armb/tickets-{host}.json {host}:/tmp/armb-tickets.json\\\")\\n    out = terminal(f\\\"ssh -o BatchMode=yes {host} 'wc -c /tmp/armb-tickets.json; sudo cp /tmp/armb-tickets.json /srv/inferswarm/state/arm-b/; true'\\\")\\n    print(host, out['output'].strip())\\nos.system(\\\"scp -q /tmp/armb/arm-b-requirements.json inferswarm03:/tmp/arm-b-requirements.json\\\")\\nout = terminal(\\\"ssh -o BatchMode=yes inferswarm03 'sudo cp /tmp/arm-b-requirements.json /srv/inferswarm/state/arm-b/' ; ssh -o BatchMode=yes inferswarm01 'sudo cp /srv/inferswarm/state/arm-b/source/arm-b-requirements.json /srv/inferswarm/state/arm-b/arm-b-requirements.json 2>/dev/null; ls /srv/inferswarm/state/arm-b/'\\\")\\nprint(out['output'])\"}"
+   },
+   {
+    "command_kind": "execute_code:execute_code",
+    "message_id": 225538,
+    "observed_utc": "2026-09-08T21:01:56Z",
+    "sha256": "2e8cec955a243ce4b13e6281a8de7e93d7d41c12c46d386b0896b0487b167690",
+    "verbatim": "{\"code\":\"from hermes_tools import terminal\\nfrom hermes_tools import shell_quote\\nimport os, json, hashlib\\n# Rebuild requirements with the fixed canonical form: the source build's digests change.\\n# The plan/requirements/manifest were written with OLD canonical bytes; regenerate digests by re-running source build? The artifact records embed artifact_id over canonical bytes \u2014 simplest: re-run the requirements derivation locally (records already have digests of ranges; only IDs change).\\n# Actually records were built in memory then written; artifact_id was computed with old canonical. Need full re-derivation on 01. The tensor content digests are unchanged; only self-digest fields change.\\nos.system(\\\"scp -q /tmp/armb/armb_plan_core.py inferswarm01:/tmp/armb_plan_core.py && scp -q /tmp/armb/armb_plan_core.py inferswarm03:/tmp/armb_plan_core.py && scp -q /tmp/armb/armb_plan_core.py inferswarm00:/tmp/armb_plan_core.py\\\")\\nfor h in (\\\"inferswarm01\\\",\\\"inferswarm03\\\",\\\"inferswarm00\\\"):\\n    out = terminal(f\\\"ssh -o BatchMode=yes {h} 'sudo cp /tmp/armb_plan_core.py /srv/inferswarm/state/arm-b/scripts/'\\\")\\n    print(h, out['output'].strip() or 'ok')\"}"
+   },
+   {
+    "command_kind": "execute_code:execute_code",
+    "message_id": 225581,
+    "observed_utc": "2026-09-08T21:05:56Z",
+    "sha256": "6e9b66c1f69b52ad7aa214101435eab0220960fec9616e559eda1f3cdc1d6d3b",
+    "verbatim": "{\"code\":\"from hermes_tools import terminal\\nfrom hermes_tools import shell_quote\\nimport os, json\\n# plan + requirements -> 00 (new digests)\\nos.system(\\\"ssh -o BatchMode=yes inferswarm01 'sudo cat /srv/inferswarm/state/arm-b/source/arm-b-plan.json' > /tmp/armb/arm-b-plan.json\\\")\\nos.system(\\\"ssh -o BatchMode=yes inferswarm01 'sudo cat /srv/inferswarm/state/arm-b/source/arm-b-requirements.json' > /tmp/armb/arm-b-requirements.json\\\")\\nfor f in (\\\"arm-b-plan.json\\\",\\\"arm-b-requirements.json\\\"):\\n    os.system(f\\\"scp -q /tmp/armb/{f} inferswarm00:/tmp/{f}\\\")\\n    os.system(f\\\"scp -q /tmp/armb/{f} inferswarm03:/tmp/{f}\\\")\\n    os.system(f\\\"scp -q /tmp/armb/{f} inferswarm01:/tmp/{f}\\\")\\nout = terminal(\\\"ssh -o BatchMode=yes inferswarm00 'sudo cp /tmp/arm-b-plan.json /tmp/arm-b-requirements.json /srv/inferswarm/state/arm-b/source/ && sudo python3 /srv/inferswarm/state/arm-b/scripts/armb_coordinator.py --plan /srv/inferswarm/state/arm-b/source/arm-b-plan.json --requirements /srv/inferswarm/state/arm-b/source/arm-b-requirements.json --inventories /srv/inferswarm/state/arm-b/inventory-inferswarm01.json /srv/inferswarm/state/arm-b/inventory-inferswarm03.json --out /srv/inferswarm/state/arm-b/authorization'\\\")\\nprint(out['output'][:1500])\\n# refresh tickets to nodes\\nfor host in (\\\"inferswarm01\\\",\\\"inferswarm03\\\"):\\n    os.system(f\\\"ssh -o BatchMode=yes inferswarm00 'sudo cat /srv/inferswarm/state/arm-b/authorization/tickets-{host}.json' > /tmp/armb/tickets-{host}.json\\\")\\n    os.system(f\\\"scp -q /tmp/armb/tickets-{host}.json {host}:/tmp/armb-tickets.json\\\")\\n    out2 = terminal(f\\\"ssh -o BatchMode=yes {host} 'sudo cp /tmp/armb-tickets.json /srv/inferswarm/state/arm-b/armb-tickets.json; true'\\\")\\n# refresh requirements on nodes' state dir\\nout3 = terminal(\\\"ssh -o BatchMode=yes inferswarm01 'sudo cp /tmp/arm-b-requirements.json /srv/inferswarm/state/arm-b/' && ssh -o BatchMode=yes inferswarm03 'sudo cp /tmp/arm-b-requirements.json /srv/inferswarm/state/arm-b/'\\\")\\nprint(\\\"refreshed\\\")\"}"
+   },
+   {
+    "command_kind": "execute_code:execute_code",
+    "message_id": 225785,
+    "observed_utc": "2026-09-08T21:25:18Z",
+    "sha256": "cafc387f0a00e271ebddf5251ebcf05d1bd6db8c6b16f3e4f501859acc9dab01",
+    "verbatim": "{\"code\":\"from hermes_tools import terminal\\nfrom hermes_tools import shell_quote\\nimport os, json\\nos.system(\\\"scp -q /tmp/armb/gen/coordinator_counters.py inferswarm00:/tmp/cc.py\\\")\\nout = terminal(\\\"ssh -o BatchMode=yes inferswarm00 'sudo python3 /tmp/cc.py' > /tmp/armb/coordinator-counters.json 2>&1; cat /tmp/armb/coordinator-counters.json | head -40\\\")\\nprint(out['output'][:2500])\"}"
+   }
+  ],
+  "entry_count": 9,
+  "message_ids": [
+   225441,
+   225445,
+   225447,
+   225457,
+   225474,
+   225480,
+   225538,
+   225581,
+   225785
+  ]
+ },
+ "derived_verdicts": {
+  "every_coordinator_transfer_is_metadata_or_script": true,
+  "zero_destructive_coordinator_or_root_targeting": true,
+  "zero_model_byte_cotargeting_commands": true
+ },
+ "destructive_operation_scan": {
+  "coordinator_or_canonical_root_targeted": 0,
+  "definition": "full-session regex scan (all roles, tool calls and outputs) for rm/rmtree/unlink/rmdir shapes; every hit classified for coordinator/canonical-root targeting",
+  "hit_count": 2,
+  "hits": [
+   {
+    "matched_operator": "unlink",
+    "message_id": 225278,
+    "sha256": "82bb8a0c33b9777d1a5f5d20ff9380aabe5cad37f38605a20815216f30b344ef",
+    "targets_canonical_root": false,
+    "targets_coordinator": false,
+    "verbatim_excerpt": "ite_bytes(data)\\n            if digest_of_bytes(temp.read_bytes()) != record[\\\"content_digest\\\"]:\\n                temp.unlink(missing_ok=True)\\n                raise _fail(\\\"INTEGRITY_DIGEST_MISMATCH\\\", \\\"read-back verification failed\\\")\\n      ",
+    "where": "tool:execute_code"
+   },
+   {
+    "matched_operator": "rm -f",
+    "message_id": 225789,
+    "sha256": "5e34dd35d0646bf909015c893a35738ae1781a5b00888ea87b09b49244e2169a",
+    "targets_canonical_root": false,
+    "targets_coordinator": false,
+    "verbatim_excerpt": "n\\\")\\nprint(os.path.getsize('/tmp/armb/evidence/read-audit-stage-3.json'))\\n# remove duplicate-name copies\\nos.system(\\\"rm -f /tmp/armb/evidence/coldroot_inferswarm01.json /tmp/armb/evidence/coldroot_inferswarm03.json\\\")\"}",
+    "where": "execute_code:execute_code"
+   }
+  ]
+ },
+ "model_byte_cotargeting_commands": {
+  "count": 0,
+  "definition": "issued commands whose text mentions BOTH the coordinator and a model-byte path token (/srv/models, gemma-r6, *.safetensors, *.gguf, *.ckpt, *.pt, *.pth, model.bin)",
+  "entries": []
+ },
+ "provenance": {
+  "campaign_interval_utc": [
+   "2026-09-08T20:59:55Z",
+   "2026-09-08T21:24:38Z"
+  ],
+  "chain_definition": "sha256 over, for each session message in id order, sha256('id|role|tool_name|' ++ sha256(tool_calls) ++ sha256(content))",
+  "message_count": 819,
+  "session_db": "/home/zutfen/.hermes/state.db",
+  "session_id": "20260908_150616_c57910",
+  "session_interval_utc": [
+   "2026-09-08T19:06:19Z",
+   "2026-09-08T22:18:30Z"
+  ],
+  "session_superset_of_campaign": true,
+  "source": "contemporaneous Hermes execution-session transcript (the operator channel that issued every fabric command of the Arm-B campaign)",
+  "transcript_chain_sha256": "89f1444af700c4d0b1305dc8824c317f1f2bf2f131d8106066fb81bdc35eb682"
+ },
+ "schema": "inferswarm.issue117.arm-b.coordinator-transport-audit/1",
+ "subject": "coordinator inferswarm00 (10.0.0.206 / 100.92.108.68) model-byte receipt path audit"
+}

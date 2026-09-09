@@ -1,0 +1,51 @@
+{
+ "collector": "armb.cold-root-collector/1 (stdlib only)",
+ "gemma_r6_relationship": {
+  "any_root_is_symlink_into_gemma": false,
+  "gemma_root": "/srv/models/gemma-r6",
+  "gemma_root_st_dev": 2049,
+  "gemma_root_st_ino": 42467329,
+  "roots_on_different_device_than_gemma": true,
+  "srv_models_mount": "/dev/sda1 /srv/models ext4 rw,noatime 0 0"
+ },
+ "host": "inferswarm03",
+ "roots": {
+  "/srv/inferswarm/cache/issue117": {
+   "entry_count": 0,
+   "gid": 1000,
+   "hardlink_entries": [],
+   "is_symlink": false,
+   "mode": "0o755",
+   "mount_line": "",
+   "realpath": "/srv/inferswarm/cache/issue117",
+   "regular_file_count": 0,
+   "root": "/srv/inferswarm/cache/issue117",
+   "root_exists": true,
+   "st_dev": 2066,
+   "st_ino": 9962003,
+   "symlink_entries": [],
+   "total_bytes": 0,
+   "uid": 1000,
+   "unexpected_content": []
+  },
+  "/srv/inferswarm/materialized/issue117": {
+   "entry_count": 0,
+   "gid": 1000,
+   "hardlink_entries": [],
+   "is_symlink": false,
+   "mode": "0o755",
+   "mount_line": "",
+   "realpath": "/srv/inferswarm/materialized/issue117",
+   "regular_file_count": 0,
+   "root": "/srv/inferswarm/materialized/issue117",
+   "root_exists": true,
+   "st_dev": 2066,
+   "st_ino": 9962005,
+   "symlink_entries": [],
+   "total_bytes": 0,
+   "uid": 1000,
+   "unexpected_content": []
+  }
+ },
+ "schema": "inferswarm.issue117.arm-b.cold-root-prestate/1"
+}

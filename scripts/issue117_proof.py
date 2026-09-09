@@ -84,6 +84,17 @@ PRODUCERS = [
     "scripts/issue117_preflight.py",
     "scripts/issue117_proof.py",
     "scripts/issue117_checkpoint_authority.py",
+    "scripts/issue117_arm_a_evidence.py",
+    "scripts/issue117_arm_b_evidence.py",
+    "scripts/issue117_arm_b_correction_build.py",
+    "scripts/issue117_arm_b_observe_hosts.py",
+    "scripts/issue117_arm_b_transport_audit_build.py",
+    "scripts/issue117_parsers/__init__.py",
+    "scripts/issue117_parsers/source_server_log.py",
+    "scripts/issue117_parsers/realize_strace.py",
+    "scripts/issue117_parsers/coordinator_state.py",
+    "scripts/issue117_parsers/producer_pins.py",
+    "scripts/issue117_parsers/transport_audit.py",
     "scripts/issue117_subject_identity.py",
     "scripts/issue99_artifact_core.py",
     "scripts/issue101_orchestration.py",
@@ -101,6 +112,8 @@ PRODUCERS = [
     "tests/test_issue117_physical_retention.py",
     "tests/test_issue117_arm_a_retention.py",
     "scripts/issue117_arm_a_evidence.py",
+    "tests/test_issue117_arm_b_retention.py",
+    "scripts/issue117_arm_b_evidence.py",
     "scripts/sync_project_status.py",
     "tests/test_project_status.py",
 ]
@@ -166,6 +179,92 @@ COMMITTED_EVIDENCE_FILES = {
     # no execution.
     "arm-a/checkpoint-continuity.json",
     "arm-a/run-device-bindings.json",
+    # retained Arm B cold-acquisition + realization PASS artifacts
+    # (executed on the fabric 2026-09-08; see evidence/arm-b/ records:
+    # cold-root prestates, source census/plan/requirements, coordinator
+    # authorization, per-host acquisition ledgers, per-stage
+    # assemble/realize reports, runtime-read audits, post-inventories,
+    # coordinator counters, and the 6774474->5179c41 delta audit).
+    # Fabric-produced compact evidence; the CPU campaign never regenerates
+    # these. Reduced by scripts/issue117_arm_b_evidence.py.
+    "arm-b/cold-root-prestate-inferswarm01.json",
+    "arm-b/cold-root-prestate-inferswarm03.json",
+    "arm-b/source-census.json",
+    "arm-b/source-block-plan.json",
+    "arm-b/execution-plan.json",
+    "arm-b/requirements.json",
+    "arm-b/delta-audit.json",
+    "arm-b/coordinator-record.json",
+    "arm-b/coordinator-deltas.json",
+    "arm-b/coordinator-counters.json",
+    "arm-b/acquisition-ledger-inferswarm01.json",
+    "arm-b/acquisition-ledger-inferswarm03.json",
+    "arm-b/inventory-post-inferswarm01.json",
+    "arm-b/inventory-post-inferswarm03.json",
+    "arm-b/assemble-stage-1.json",
+    "arm-b/assemble-stage-2.json",
+    "arm-b/assemble-stage-3.json",
+    "arm-b/realize-stage-1.json",
+    "arm-b/realize-stage-2.json",
+    "arm-b/realize-stage-3.json",
+    "arm-b/read-audit-stage-1.json",
+    "arm-b/read-audit-stage-2.json",
+    "arm-b/read-audit-stage-3.json",
+    # PR #127 correction (retention/derivation only, no rerun): the
+    # attempt-lineage record (six invalid launches + the valid campaign,
+    # recovered from contemporaneous transcript/host evidence) and the
+    # three low-level accounting records backing the corrected zero
+    # invariants
+    "arm-b/attempt-lineage.json",
+    "arm-b/runtime-fallback-accounting.json",
+    "arm-b/steady-state-movement.json",
+    "arm-b/coordinator-transport-accounting.json",
+    # PR #127 round-3 correction (maintainer findings 1-5): the RAW
+    # retained evidence the reducer now parses directly — the byte-exact
+    # source-server access log, the three realize-strace logs, the
+    # byte-pinned producer sources (participant driver scripts + the
+    # frozen FreeToken worktree files that fix lifecycle-counter
+    # semantics) — and the machine-readable read-only host observations
+    # (coordinator state-tree inventory, root-inode continuity, host
+    # raw-log pins)
+    "arm-b/raw/source-server-access.log",
+    "arm-b/raw/realize-strace.stage-1.log",
+    "arm-b/raw/realize-strace.stage-2.log",
+    "arm-b/raw/realize-strace.stage-3.log",
+    "arm-b/raw/producer/armb_common.py",
+    "arm-b/raw/producer/armb_inventory.py",
+    "arm-b/raw/producer/armb_materialize.py",
+    "arm-b/raw/producer/armb_node_acquire.py",
+    "arm-b/raw/producer/armb_plan_core.py",
+    "arm-b/raw/producer/armb_read_audit.py",
+    "arm-b/raw/producer/armb_realize_child.py",
+    "arm-b/raw/producer/armb_realize_child.inferswarm03.py",
+    "arm-b/raw/producer/armb_source_server.py",
+    "arm-b/raw/producer/issue74_methodology.py",
+    "arm-b/raw/producer/issue99_artifact_core.py",
+    "arm-b/raw/producer/stage_runtime.py",
+    "arm-b/raw/producer/stage_runtime.inferswarm03.py",
+    "arm-b/raw/producer/loader.py",
+    "arm-b/raw/producer/loader.inferswarm03.py",
+    "arm-b/raw/producer/r6_dense_census.py",
+    "arm-b/raw/producer/SHA256SUMS",
+    "arm-b/observations/coordinator-state-inventory.json",
+    "arm-b/observations/root-inode-continuity.json",
+    "arm-b/observations/host-raw-log-pins.json",
+    # PR #127 round-4 correction (P1-1/P1-2): byte-exact raw copies of
+    # all eight coordinator operational files (cross-bound to the
+    # observed inventory by exact path/size/sha256) and the
+    # digest-bound execution-session transport audit backing the
+    # receipt-path derivation of the coordinator zero invariants
+    "arm-b/raw/coordinator/inventory-inferswarm01.json",
+    "arm-b/raw/coordinator/inventory-inferswarm03.json",
+    "arm-b/raw/coordinator/scripts/armb_common.py",
+    "arm-b/raw/coordinator/scripts/armb_coordinator.py",
+    "arm-b/raw/coordinator/scripts/armb_inventory.py",
+    "arm-b/raw/coordinator/scripts/armb_plan_core.py",
+    "arm-b/raw/coordinator/scripts/__pycache__/armb_coordinator.cpython-313.pyc",
+    "arm-b/raw/coordinator/scripts/__pycache__/armb_plan_core.cpython-313.pyc",
+    "arm-b/observations/coordinator-transport-audit.json",
 }
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the
