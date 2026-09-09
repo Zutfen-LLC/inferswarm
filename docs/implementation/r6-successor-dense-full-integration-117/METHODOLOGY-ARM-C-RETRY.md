@@ -199,12 +199,19 @@ The attempt also records its observation time and the campaign authority issue
 time. The reducer binds one stable authorization identity and one fresh lineage
 root to each campaign.
 
-The reducer also requires a separate accepted campaign-authority registry.
-Each campaign record in that registry contains all campaign authority fields,
-including `physical_retry_authorized`. The reducer compares every attempt with
-that accepted record. Attempt facts cannot establish their own methodology or
-physical execution authority. The CPU-only self-checks use explicit synthetic
-authority records. Those records are not physical execution authority.
+The public physical-evidence reducer loads its campaign-authority registry from
+the fixed `evidence/arm-c-retry/physical-campaign-authority.json` path at an
+exact accepted Git commit. That commit must be an ancestor of
+`refs/remotes/origin/main`. The reducer loads the bytes with `git show`. It
+requires canonical JSON, a strict schema, a Git blob identity, a SHA-256, a
+methodology-acceptance reference, and a separate physical-execution
+authorization reference. A merge does not imply physical execution authority.
+Each campaign record contains all campaign authority fields, including
+`physical_retry_authorized`. The reducer compares every attempt with that
+accepted record. Attempt facts cannot establish their own methodology or
+physical execution authority. No such physical authority record exists in this
+PR. The CPU-only self-checks use a private synthetic-record reducer. Its output
+is not physical execution authority.
 
 An invalid correctness-bearing observation fires a permanent mandatory STOP
 for that campaign. No later attempt in that campaign can clear the STOP. Later
@@ -231,7 +238,9 @@ change within one campaign, authorization reuse, lineage-root reuse, a missing
 review link, or an authorization that predates the STOP or review. It also
 rejects a new campaign when the immediately prior campaign has neither a STOP
 nor an authoritative terminal. An intermediate nonterminal campaign cannot
-bypass a prior STOP and review boundary.
+bypass a prior STOP and review boundary. The latest STOP and review time remain
+a global authorization watermark for all later campaigns. A successful
+intermediate campaign does not remove that watermark.
 
 The positive lineage control keeps campaign A blocked after an invalid
 correctness-bearing attempt. It then evaluates a separately constructed
@@ -288,6 +297,15 @@ The suite covers these campaign mutations:
 37. Attempt methodology or execution identity different from the separate
     accepted campaign authority record.
 38. Missing accepted campaign authority record.
+39. Diagnostic disclosure used to hide missing methodology readiness.
+40. Diagnostic disclosure used to hide invalid deployment identity.
+41. Attempt facts copied into a caller-supplied authority mapping.
+42. Missing fixed-path authority file at an accepted commit.
+43. Merge or methodology acceptance used without separate physical execution
+    authorization.
+44. Successful intermediate campaign used to erase the latest STOP/review
+    authorization watermark.
+45. Authority commit not present on `refs/remotes/origin/main`.
 
 ## Retained outputs
 

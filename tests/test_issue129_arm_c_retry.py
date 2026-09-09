@@ -102,8 +102,54 @@ def _reduce(attempts, *, accepted_authorities=None):
     attempts = list(attempts)
     authorities = (accepted_authorities if accepted_authorities is not None
                    else _accepted_authority_records(attempts))
-    return core.reduce_attempts(
+    return core._reduce_attempts_with_authority_records(
         attempts, accepted_campaign_authorities=authorities)
+
+
+def _physical_authority_document(attempts):
+    """Build a strict synthetic document for authority-parser tests."""
+    return {
+        "schema": core.PHYSICAL_AUTHORITY_SCHEMA,
+        "acceptance": {
+            "methodology_terminal": core.METHODOLOGY_READY,
+            "methodology_accepted": True,
+            "methodology_acceptance_reference": "review-accepted-129",
+            "methodology_accepted_at": "2026-09-08T23:59:58Z",
+        },
+        "execution_authorization": {
+            "physical_retry_authorized": True,
+            "authorization_reference": "issue-117-physical-authorization",
+            "authorized_at": "2026-09-08T23:59:59Z",
+            "scope": "ISSUE117_ARM_C_RETRY",
+        },
+        "campaigns": _accepted_authority_records(attempts),
+    }
+
+
+def _init_scratch_authority_repo(root, document):
+    """Commit canonical authority bytes and set the accepted main ref."""
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    subprocess.run(
+        ["git", "config", "user.name", "Issue 129 Test"],
+        cwd=root, check=True)
+    subprocess.run(
+        ["git", "config", "user.email", "issue129@example.invalid"],
+        cwd=root, check=True)
+    path = root / core.PHYSICAL_CAMPAIGN_AUTHORITY_PATH
+    path.parent.mkdir(parents=True)
+    raw = (json.dumps(document, indent=2, sort_keys=True) + "\n").encode()
+    path.write_bytes(raw)
+    subprocess.run(["git", "add", str(path.relative_to(root))],
+                   cwd=root, check=True)
+    subprocess.run(["git", "commit", "-q", "-m", "test: authority"],
+                   cwd=root, check=True)
+    commit = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=root, check=True,
+        capture_output=True, text=True).stdout.strip()
+    subprocess.run(
+        ["git", "update-ref", "refs/remotes/origin/main", commit],
+        cwd=root, check=True)
+    return commit, raw
 
 
 def _scratch_mirror(tmp: str) -> Path:
@@ -947,7 +993,7 @@ class AttemptStateMachineTests(unittest.TestCase):
     def test_self_checks_pass(self):
         result = core.run_attempt_state_self_checks()
         self.assertTrue(result["ok"])
-        self.assertEqual(len(result["rows"]), 11)
+        self.assertEqual(len(result["rows"]), 13)
 
     def test_control_boolean_only_authorization_change_is_rejected(self):
         attempts = [
@@ -1020,6 +1066,40 @@ class AttemptStateMachineTests(unittest.TestCase):
         self.assertFalse(reduction["events"][0]["authoritative"])
         self.assertFalse(reduction["final_state"]["terminal_seen"])
 
+    def test_control_diagnostic_cannot_hide_methodology_failure(self):
+        reduction = _reduce([
+            self._facts(attempt_id="diagnostic-no-methodology",
+                        correctness_bearing_result_emitted=True,
+                        diagnostic_only_disclosure=True,
+                        methodology_gate_passed=False),
+            self._facts(attempt_id="terminal-after-laundering",
+                        observed_at="2026-09-09T00:00:02Z",
+                        correctness_bearing_result_emitted=True,
+                        terminal_observation=True),
+        ])
+        self.assertFalse(reduction["passed"])
+        self.assertEqual(
+            reduction["events"][0]["classification"],
+            "CORRECTNESS_BEARING_INVALID")
+        self.assertTrue(reduction["campaigns"]["campaign-A"]["blocked"])
+
+    def test_control_diagnostic_cannot_hide_deployment_failure(self):
+        reduction = _reduce([
+            self._facts(attempt_id="diagnostic-bad-deployment",
+                        correctness_bearing_result_emitted=True,
+                        diagnostic_only_disclosure=True,
+                        frozen_identity_verified_pre_launch=False),
+            self._facts(attempt_id="terminal-after-laundering",
+                        observed_at="2026-09-09T00:00:02Z",
+                        correctness_bearing_result_emitted=True,
+                        terminal_observation=True),
+        ])
+        self.assertFalse(reduction["passed"])
+        self.assertEqual(
+            reduction["events"][0]["classification"],
+            "CORRECTNESS_BEARING_INVALID")
+        self.assertTrue(reduction["campaigns"]["campaign-A"]["blocked"])
+
     def test_control_attempt_identity_must_match_accepted_authority(self):
         accepted_attempt = self._facts(
             attempt_id="accepted-terminal",
@@ -1033,6 +1113,7 @@ class AttemptStateMachineTests(unittest.TestCase):
                 _accepted_authority_records([accepted_attempt]))
         self.assertFalse(reduction["passed"])
         self.assertFalse(reduction["events"][0]["authoritative"])
+        self.assertTrue(reduction["campaigns"]["campaign-A"]["blocked"])
         self.assertTrue(any(
             "accepted field methodology_ready_identity" in problem
             for problem in reduction["problems"]))
@@ -1047,6 +1128,120 @@ class AttemptStateMachineTests(unittest.TestCase):
         self.assertFalse(reduction["events"][0]["authoritative"])
         self.assertTrue(any(
             "no accepted campaign authority record" in problem
+            for problem in reduction["problems"]))
+
+    def test_control_attempt_facts_cannot_supply_public_authority(self):
+        attempts = [self._facts(
+            attempt_id="self-authorized-terminal",
+            correctness_bearing_result_emitted=True,
+            terminal_observation=True)]
+        with self.assertRaises(TypeError):
+            core.reduce_attempts(
+                attempts,
+                accepted_campaign_authorities=
+                    _accepted_authority_records(attempts))
+
+    def test_public_reducer_fails_closed_without_accepted_authority_file(self):
+        attempts = [self._facts(
+            attempt_id="terminal-without-recorded-authority",
+            correctness_bearing_result_emitted=True,
+            terminal_observation=True)]
+        with self.assertRaises(RuntimeError):
+            core.reduce_attempts(
+                attempts,
+                accepted_authority_commit=core.ACCEPTED_BLOCKER_MERGE,
+                repo_root=ROOT)
+
+    def test_strict_physical_authority_document_binds_campaign(self):
+        attempts = [self._facts(
+            attempt_id="synthetic-terminal",
+            correctness_bearing_result_emitted=True,
+            terminal_observation=True)]
+        records = core._parse_accepted_campaign_authority_document(
+            _physical_authority_document(attempts))
+        self.assertEqual(records, _accepted_authority_records(attempts))
+
+    def test_control_merge_does_not_imply_execution_authorization(self):
+        attempts = [self._facts(
+            attempt_id="synthetic-terminal",
+            correctness_bearing_result_emitted=True,
+            terminal_observation=True)]
+        document = _physical_authority_document(attempts)
+        document["execution_authorization"][
+            "physical_retry_authorized"] = False
+        with self.assertRaisesRegex(RuntimeError, "not authorized"):
+            core._parse_accepted_campaign_authority_document(document)
+
+    def test_public_reducer_loads_authority_from_accepted_git_bytes(self):
+        attempts = [self._facts(
+            attempt_id="accepted-terminal",
+            correctness_bearing_result_emitted=True,
+            terminal_observation=True)]
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            commit, raw = _init_scratch_authority_repo(
+                root, _physical_authority_document(attempts))
+            reduction = core.reduce_attempts(
+                attempts, accepted_authority_commit=commit, repo_root=root)
+            blob_oid = subprocess.run(
+                ["git", "rev-parse",
+                 f"{commit}:{core.PHYSICAL_CAMPAIGN_AUTHORITY_PATH}"],
+                cwd=root, check=True, capture_output=True,
+                text=True).stdout.strip()
+        self.assertTrue(reduction["passed"])
+        self.assertEqual(
+            reduction["accepted_authority_source"]["commit"], commit)
+        self.assertEqual(
+            reduction["accepted_authority_source"]["sha256"],
+            core.sha256_bytes(raw))
+        self.assertEqual(
+            reduction["accepted_authority_source"]["git_blob_oid"], blob_oid)
+
+    def test_control_public_reducer_rejects_nonaccepted_commit(self):
+        attempts = [self._facts(
+            attempt_id="unaccepted-terminal",
+            correctness_bearing_result_emitted=True,
+            terminal_observation=True)]
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            _, _ = _init_scratch_authority_repo(
+                root, _physical_authority_document(attempts))
+            subprocess.run(
+                ["git", "commit", "-q", "--allow-empty", "-m",
+                 "test: unaccepted descendant"], cwd=root, check=True)
+            unaccepted_commit = subprocess.run(
+                ["git", "rev-parse", "HEAD"], cwd=root, check=True,
+                capture_output=True, text=True).stdout.strip()
+            with self.assertRaisesRegex(RuntimeError, "not on"):
+                core.reduce_attempts(
+                    attempts, accepted_authority_commit=unaccepted_commit,
+                    repo_root=root)
+
+    def test_control_stop_review_watermark_survives_terminal_campaign(self):
+        attempts = [
+            self._facts(attempt_id="invalid-1",
+                        correctness_bearing_result_emitted=True,
+                        physical_retry_authorized=False),
+            self._facts(campaign_id="campaign-B", attempt_id="b-terminal",
+                        correctness_bearing_result_emitted=True,
+                        terminal_observation=True),
+            self._facts(
+                campaign_id="campaign-C", attempt_id="c-terminal",
+                observed_at="2026-09-09T00:00:06Z",
+                physical_authorization_id="authorization-C",
+                campaign_lineage_root="lineage-C",
+                physical_authorization_issued_at="2026-09-09T00:00:00Z",
+                prior_stopped_campaign_id="campaign-A",
+                prior_stop_attempt_id="invalid-1",
+                prior_stop_review_id="maintainer-review-A",
+                prior_stop_reviewed_at="2026-09-09T00:00:03Z",
+                correctness_bearing_result_emitted=True,
+                terminal_observation=True),
+        ]
+        reduction = _reduce(attempts)
+        self.assertFalse(reduction["passed"])
+        self.assertTrue(any(
+            "not issued after the prior STOP and review" in problem
             for problem in reduction["problems"]))
 
     def test_control_post_terminal_undisclosed_continuation(self):

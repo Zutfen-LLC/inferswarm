@@ -91,9 +91,11 @@ issue #129 before any future Arm-C physical retry can be authorized:
     permanently blocks its campaign. Later observations in that
     campaign are diagnostic only and cannot clear the STOP. A new
     campaign needs a fresh lineage root and an authorization issued
-    after the recorded STOP and maintainer review. The reducer binds
-    every campaign to a separate accepted authority record. It requires
-    an authoritative terminal attempt before the campaign can pass.
+    after the recorded STOP and maintainer review. The public reducer loads
+    campaign authority from a fixed path at an accepted Git commit. It
+    requires separate methodology acceptance and physical execution
+    authorization. It requires an authoritative terminal attempt before the
+    campaign can pass.
 
 7.  Exposes the exact deployed-script identity contract
     (``verify_deployment_identity``): repository SHA + file sha256 +
@@ -145,6 +147,9 @@ ROOT = Path(__file__).resolve().parents[1]
 AREA = ROOT / "docs/implementation/r6-successor-dense-full-integration-117"
 ARM_C_EVIDENCE = AREA / "evidence" / "arm-c"
 ARM_C_RETRY_EVIDENCE = AREA / "evidence" / "arm-c-retry"
+PHYSICAL_CAMPAIGN_AUTHORITY_PATH = Path(
+    "docs/implementation/r6-successor-dense-full-integration-117/"
+    "evidence/arm-c-retry/physical-campaign-authority.json")
 ACCEPTED_FROZEN_PREFIX = "frozen-freetoken/924cd22e/"
 RETRY_FROZEN_PREFIX = "frozen-source/924cd22e/"
 TOKENIZER_ROOT = ARM_C_RETRY_EVIDENCE / "frozen-tokenizer"
@@ -2150,7 +2155,8 @@ def _validate_attempt_identity(facts: Mapping[str, Any]) -> None:
 
 def classify_attempt(facts: Mapping[str, Any],
                      *, stop_already_fired: bool = False,
-                     terminal_seen: bool = False) -> str:
+                     terminal_seen: bool = False,
+                     campaign_authority_valid: bool = True) -> str:
     """Mechanically classify one attempt from observed facts only.
 
     The classification separates, mechanically: methodology readiness
@@ -2176,10 +2182,13 @@ def classify_attempt(facts: Mapping[str, Any],
     authority_ok = bool(
         identity_ok
         and facts["methodology_gate_passed"]
-        and facts["physical_retry_authorized"])
+        and facts["physical_retry_authorized"]
+        and campaign_authority_valid)
     if correctness_bearing and facts["diagnostic_only_disclosure"]:
         if stop_already_fired or terminal_seen:
             return "DIAGNOSTIC_ONLY_AFTER_STOP"
+        if not authority_ok:
+            return "CORRECTNESS_BEARING_INVALID"
         return "DIAGNOSTIC_ONLY"
     if correctness_bearing and (stop_already_fired or terminal_seen):
         return "CORRECTNESS_BEARING_INVALID"
@@ -2198,14 +2207,15 @@ def classify_attempt(facts: Mapping[str, Any],
     return "PRE_OBSERVATION_INFRASTRUCTURE"
 
 
-def reduce_attempts(
+def _reduce_attempts_with_authority_records(
         attempts: Sequence[Mapping[str, Any]], *,
         accepted_campaign_authorities: Mapping[str, Mapping[str, Any]],
         ) -> dict[str, Any]:
-    """Mechanically decide attempt classes and mandatory STOPs through
-    the frozen LEGAL_TRANSITIONS table; fail closed when a
-    correctness-bearing attempt continues without the state machine
-    authorizing it.
+    """Exercise reducer mechanics with already-verified authority records.
+
+    This private function supports CPU-only synthetic controls. It does not
+    load or establish accepted physical execution authority. The public
+    ``reduce_attempts`` function is the only physical-evidence entry point.
 
     One ``campaign_id`` defines one authority domain. The required
     ``accepted_campaign_authorities`` input is a separate accepted-authority
@@ -2302,16 +2312,20 @@ def reduce_attempts(
             seen_authorizations[authorization_id] = campaign_id
             seen_lineage_roots[lineage_root] = campaign_id
             prior_id = campaign_order[-2] if len(campaign_order) > 1 else None
-            if prior_id is not None and campaign_states[prior_id]["stop_fired"]:
-                prior = campaign_states[prior_id]
-                if facts["prior_stopped_campaign_id"] != prior_id:
+            stopped_ids = [
+                prior_campaign_id for prior_campaign_id in campaign_order[:-1]
+                if campaign_states[prior_campaign_id]["stop_fired"]]
+            latest_stopped_id = stopped_ids[-1] if stopped_ids else None
+            if latest_stopped_id is not None:
+                stopped = campaign_states[latest_stopped_id]
+                if facts["prior_stopped_campaign_id"] != latest_stopped_id:
                     problems.append(
-                        f"campaign {campaign_id} does not link to prior "
-                        f"stopped campaign {prior_id}")
+                        f"campaign {campaign_id} does not link to latest "
+                        f"stopped campaign {latest_stopped_id}")
                 if facts["prior_stop_attempt_id"] != \
-                        prior["first_stop_attempt_id"]:
+                        stopped["first_stop_attempt_id"]:
                     problems.append(
-                        f"campaign {campaign_id} does not link to the prior "
+                        f"campaign {campaign_id} does not link to the latest "
                         "STOP attempt")
                 review_id = facts["prior_stop_review_id"]
                 if not isinstance(review_id, str) or not review_id.strip():
@@ -2319,7 +2333,7 @@ def reduce_attempts(
                         f"campaign {campaign_id} has no maintainer review id")
                 try:
                     stopped_at = _parse_utc(
-                        prior["first_stop_observed_at"], "prior STOP")
+                        stopped["first_stop_observed_at"], "prior STOP")
                     reviewed_at = _parse_utc(
                         facts["prior_stop_reviewed_at"],
                         "prior_stop_reviewed_at")
@@ -2332,18 +2346,19 @@ def reduce_attempts(
                             "issued after the prior STOP and review")
                 except ValueError as error:
                     problems.append(str(error))
-            elif prior_id is not None and not campaign_states[prior_id][
-                    "terminal_authoritative"]:
-                problems.append(
-                    f"campaign {campaign_id} started before prior campaign "
-                    f"{prior_id} reached an authoritative terminal; an "
-                    "intermediate campaign cannot bypass a prior STOP/review")
             elif any(facts[field] is not None for field in (
                     "prior_stopped_campaign_id", "prior_stop_attempt_id",
                     "prior_stop_review_id", "prior_stop_reviewed_at")):
                 problems.append(
                     f"campaign {campaign_id} claims a prior STOP review "
-                    "when no prior campaign is stopped")
+                    "when no earlier campaign is stopped")
+            if prior_id is not None and not campaign_states[prior_id][
+                    "stop_fired"] and not campaign_states[prior_id][
+                    "terminal_authoritative"]:
+                problems.append(
+                    f"campaign {campaign_id} started before prior campaign "
+                    f"{prior_id} reached an authoritative terminal; an "
+                    "intermediate campaign cannot bypass a prior STOP/review")
         state = campaign_states[campaign_id]
         for field in CAMPAIGN_AUTHORITY_FIELDS:
             if facts[field] != state["authority"][field]:
@@ -2354,7 +2369,8 @@ def reduce_attempts(
         prior_terminal = state["terminal_seen"]
         classification = classify_attempt(
             facts, stop_already_fired=state["stop_fired"],
-            terminal_seen=state["terminal_seen"])
+            terminal_seen=state["terminal_seen"],
+            campaign_authority_valid=state["authority_valid"])
         transition = LEGAL_TRANSITIONS[classification]
         rule = None
         non_authoritative_note = None
@@ -2464,6 +2480,153 @@ def reduce_attempts(
             "authority record; attempt facts never establish their own "
             "methodology or physical execution authority"),
     }
+
+
+PHYSICAL_AUTHORITY_SCHEMA = (
+    "inferswarm.issue129.physical-campaign-authority/1")
+PHYSICAL_AUTHORITY_TOP_FIELDS = {
+    "schema", "acceptance", "execution_authorization", "campaigns"}
+PHYSICAL_AUTHORITY_ACCEPTANCE_FIELDS = {
+    "methodology_terminal", "methodology_accepted",
+    "methodology_acceptance_reference", "methodology_accepted_at"}
+PHYSICAL_AUTHORITY_EXECUTION_FIELDS = {
+    "physical_retry_authorized", "authorization_reference",
+    "authorized_at", "scope"}
+
+
+def _parse_accepted_campaign_authority_document(
+        document: object) -> Mapping[str, Mapping[str, Any]]:
+    """Validate the strict accepted physical-authority document schema."""
+    if not isinstance(document, Mapping):
+        raise RuntimeError("accepted physical authority is not an object")
+    if set(document) != PHYSICAL_AUTHORITY_TOP_FIELDS:
+        raise RuntimeError(
+            "accepted physical authority has non-exhaustive top-level fields")
+    if document["schema"] != PHYSICAL_AUTHORITY_SCHEMA:
+        raise RuntimeError("accepted physical authority schema drift")
+    acceptance = document["acceptance"]
+    execution = document["execution_authorization"]
+    campaigns = document["campaigns"]
+    if not isinstance(acceptance, Mapping) or set(acceptance) != \
+            PHYSICAL_AUTHORITY_ACCEPTANCE_FIELDS:
+        raise RuntimeError(
+            "accepted physical authority has invalid acceptance fields")
+    if not isinstance(execution, Mapping) or set(execution) != \
+            PHYSICAL_AUTHORITY_EXECUTION_FIELDS:
+        raise RuntimeError(
+            "accepted physical authority has invalid execution fields")
+    if acceptance["methodology_terminal"] != METHODOLOGY_READY:
+        raise RuntimeError("accepted methodology terminal is not ready")
+    if acceptance["methodology_accepted"] is not True:
+        raise RuntimeError("methodology acceptance is absent")
+    acceptance_reference = acceptance["methodology_acceptance_reference"]
+    if not isinstance(acceptance_reference, str) or not \
+            acceptance_reference.strip():
+        raise RuntimeError("methodology acceptance reference is absent")
+    accepted_at = _parse_utc(
+        acceptance["methodology_accepted_at"], "methodology_accepted_at")
+    if execution["physical_retry_authorized"] is not True:
+        raise RuntimeError("physical retry execution is not authorized")
+    authorization_reference = execution["authorization_reference"]
+    if not isinstance(authorization_reference, str) or not \
+            authorization_reference.strip():
+        raise RuntimeError("physical authorization reference is absent")
+    if execution["scope"] != "ISSUE117_ARM_C_RETRY":
+        raise RuntimeError("physical authorization scope is not Arm-C retry")
+    authorized_at = _parse_utc(execution["authorized_at"], "authorized_at")
+    if authorized_at <= accepted_at:
+        raise RuntimeError(
+            "physical authorization must follow methodology acceptance")
+    if not isinstance(campaigns, Mapping) or not campaigns:
+        raise RuntimeError("accepted physical authority has no campaigns")
+    verified: dict[str, Mapping[str, Any]] = {}
+    for campaign_id, record in campaigns.items():
+        if not isinstance(campaign_id, str) or not campaign_id.strip():
+            raise RuntimeError("accepted campaign id is invalid")
+        if not isinstance(record, Mapping) or set(record) != \
+                set(CAMPAIGN_AUTHORITY_FIELDS):
+            raise RuntimeError(
+                f"accepted campaign {campaign_id} has non-exhaustive fields")
+        if record["physical_retry_authorized"] is not True:
+            raise RuntimeError(
+                f"accepted campaign {campaign_id} is not physically authorized")
+        _validate_attempt_identity({
+            **record,
+            "campaign_id": campaign_id,
+            "attempt_id": "accepted-authority-schema-check",
+            "observed_at": "9999-12-31T23:59:59Z",
+        })
+        campaign_issued_at = _parse_utc(
+            record["physical_authorization_issued_at"],
+            "physical_authorization_issued_at")
+        if campaign_issued_at < authorized_at:
+            raise RuntimeError(
+                f"campaign {campaign_id} authorization predates the accepted "
+                "physical authorization")
+        verified[campaign_id] = dict(record)
+    return verified
+
+
+def _git_output(repo_root: Path, *args: str) -> bytes:
+    completed = subprocess.run(
+        ["git", *args], cwd=repo_root, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, check=False)
+    if completed.returncode != 0:
+        detail = completed.stderr.decode("utf-8", errors="replace").strip()
+        raise RuntimeError(f"git authority lookup failed: {detail}")
+    return completed.stdout
+
+
+def reduce_attempts(
+        attempts: Sequence[Mapping[str, Any]], *,
+        accepted_authority_commit: str,
+        repo_root: Path | None = None) -> dict[str, Any]:
+    """Reduce physical attempts against authority from accepted Git history.
+
+    The fixed authority path is loaded from an exact commit. The commit must
+    be an ancestor of ``refs/remotes/origin/main``. A merge alone is not
+    execution authority. The retained document must separately record
+    methodology acceptance and explicit physical execution authorization.
+    """
+    if not _is_git_sha(accepted_authority_commit):
+        raise RuntimeError("accepted authority commit must be a full SHA")
+    root = (repo_root or ROOT).resolve()
+    _git_output(root, "cat-file", "-e", f"{accepted_authority_commit}^{{commit}}")
+    ancestry = subprocess.run(
+        ["git", "merge-base", "--is-ancestor", accepted_authority_commit,
+         "refs/remotes/origin/main"], cwd=root, stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE, check=False)
+    if ancestry.returncode != 0:
+        raise RuntimeError(
+            "accepted authority commit is not on refs/remotes/origin/main")
+    authority_spec = (
+        f"{accepted_authority_commit}:{PHYSICAL_CAMPAIGN_AUTHORITY_PATH}")
+    raw = _git_output(root, "show", authority_spec)
+    try:
+        document = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise RuntimeError("accepted physical authority is not valid JSON") \
+            from error
+    canonical = (json.dumps(document, indent=2, sort_keys=True) + "\n").encode()
+    if raw != canonical:
+        raise RuntimeError("accepted physical authority is not canonical JSON")
+    records = _parse_accepted_campaign_authority_document(document)
+    reduction = _reduce_attempts_with_authority_records(
+        attempts, accepted_campaign_authorities=records)
+    blob_oid = _git_output(
+        root, "rev-parse", authority_spec).decode().strip()
+    reduction["accepted_authority_source"] = {
+        "commit": accepted_authority_commit,
+        "path": str(PHYSICAL_CAMPAIGN_AUTHORITY_PATH),
+        "sha256": sha256_bytes(raw),
+        "git_blob_oid": blob_oid,
+        "accepted_ref": "refs/remotes/origin/main",
+        "methodology_acceptance_reference":
+            document["acceptance"]["methodology_acceptance_reference"],
+        "physical_authorization_reference":
+            document["execution_authorization"]["authorization_reference"],
+    }
+    return reduction
 
 
 # ---------------------------------------------------------------------------
@@ -2948,7 +3111,7 @@ ATTEMPT_STATE_SELF_CHECKS = (
      [{"id": "a-1", "authorized": False},
       {"id": "a-2", "cb": True, "terminal": True,
        "authorized": True}], False,
-     ["PRE_OBSERVATION_INFRASTRUCTURE", "TERMINAL_CAMPAIGN_ATTEMPT"]),
+     ["PRE_OBSERVATION_INFRASTRUCTURE", "CORRECTNESS_BEARING_INVALID"]),
     ("post_stop_diagnostic_remains_non_authoritative",
      [{"id": "a-1", "cb": True, "authorized": False},
       {"id": "a-2", "cb": True, "diagnostic": True,
@@ -2968,6 +3131,16 @@ ATTEMPT_STATE_SELF_CHECKS = (
      [{"id": "a-1", "cb": True, "terminal": True,
        "diagnostic": True}], False,
      ["DIAGNOSTIC_ONLY"]),
+    ("diagnostic_cannot_hide_methodology_failure",
+     [{"id": "a-1", "cb": True, "diagnostic": True,
+       "readiness": False},
+      {"id": "a-2", "cb": True, "terminal": True}], False,
+     ["CORRECTNESS_BEARING_INVALID", "CORRECTNESS_BEARING_INVALID"]),
+    ("diagnostic_cannot_hide_deployment_failure",
+     [{"id": "a-1", "cb": True, "diagnostic": True,
+       "pre_launch": False},
+      {"id": "a-2", "cb": True, "terminal": True}], False,
+     ["CORRECTNESS_BEARING_INVALID", "CORRECTNESS_BEARING_INVALID"]),
     ("fresh_post_review_campaign_is_independent",
      [{"id": "a-1", "cb": True, "authorized": False},
       {"id": "b-1", "campaign": "campaign-B", "cb": True,
@@ -2979,7 +3152,7 @@ ATTEMPT_STATE_SELF_CHECKS = (
       {"id": "c-1", "campaign": "campaign-C", "cb": True,
        "terminal": True}], False,
      ["CORRECTNESS_BEARING_INVALID", "PRE_OBSERVATION_INFRASTRUCTURE",
-      "TERMINAL_CAMPAIGN_ATTEMPT"]),
+      "CORRECTNESS_BEARING_INVALID"]),
 )
 
 
@@ -3024,8 +3197,10 @@ def _self_check_facts(overrides: Mapping[str, Any]) -> dict[str, Any]:
         "correctness_bearing_result_emitted": bool(overrides.get("cb")),
         "result_reached_coordinator": bool(overrides.get("cb")),
         "coordinator_commit_occurred": False,
-        "frozen_identity_verified_pre_launch": True,
-        "frozen_identity_verified_post_run": True,
+        "frozen_identity_verified_pre_launch": bool(
+            overrides.get("pre_launch", True)),
+        "frozen_identity_verified_post_run": bool(
+            overrides.get("post_run", True)),
         "methodology_gate_passed": bool(overrides.get("readiness", True)),
         "physical_retry_authorized": bool(overrides.get("authorized", True)),
         "terminal_observation": bool(overrides.get("terminal")),
@@ -3056,7 +3231,7 @@ def run_attempt_state_self_checks() -> dict[str, Any]:
     for name, sequence, expect_passed, expect_classes \
             in ATTEMPT_STATE_SELF_CHECKS:
         attempts = [_self_check_facts(spec) for spec in sequence]
-        reduction = reduce_attempts(
+        reduction = _reduce_attempts_with_authority_records(
             attempts,
             accepted_campaign_authorities=
                 _self_check_authority_records(attempts))
@@ -3346,10 +3521,12 @@ def build_authority_record(repo_root: Path | None = None) -> dict[str, Any]:
                 "blocks its campaign_id; a later attempt in that campaign "
                 "cannot clear the STOP or produce a verdict; a new campaign "
                 "requires a fresh physical authorization and lineage root "
-                "issued after maintainer review; the reducer binds every "
-                "campaign to a separate accepted authority record, requires "
-                "an authoritative terminal to pass, and rejects diagnostic "
-                "authority or an intermediate-campaign review bypass"),
+                "issued after maintainer review; the public reducer loads "
+                "authority from a fixed path at an accepted Git commit, "
+                "requires separate methodology acceptance and physical "
+                "execution authorization, preserves the latest STOP/review "
+                "watermark, requires an authoritative terminal to pass, and "
+                "rejects diagnostic authority or a campaign review bypass"),
         },
         "accepted_blocker_preservation": preservation,
     }

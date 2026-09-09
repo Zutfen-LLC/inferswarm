@@ -55,12 +55,12 @@
         "control": "same_campaign_boolean_flip_cannot_clear_stop",
         "expected_classifications": [
           "PRE_OBSERVATION_INFRASTRUCTURE",
-          "TERMINAL_CAMPAIGN_ATTEMPT"
+          "CORRECTNESS_BEARING_INVALID"
         ],
         "expected_passed": false,
         "observed_classifications": [
           "PRE_OBSERVATION_INFRASTRUCTURE",
-          "TERMINAL_CAMPAIGN_ATTEMPT"
+          "CORRECTNESS_BEARING_INVALID"
         ],
         "observed_passed": false,
         "ok": true
@@ -130,6 +130,34 @@
         "ok": true
       },
       {
+        "control": "diagnostic_cannot_hide_methodology_failure",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
+        "control": "diagnostic_cannot_hide_deployment_failure",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
         "control": "fresh_post_review_campaign_is_independent",
         "expected_classifications": [
           "CORRECTNESS_BEARING_INVALID",
@@ -148,13 +176,13 @@
         "expected_classifications": [
           "CORRECTNESS_BEARING_INVALID",
           "PRE_OBSERVATION_INFRASTRUCTURE",
-          "TERMINAL_CAMPAIGN_ATTEMPT"
+          "CORRECTNESS_BEARING_INVALID"
         ],
         "expected_passed": false,
         "observed_classifications": [
           "CORRECTNESS_BEARING_INVALID",
           "PRE_OBSERVATION_INFRASTRUCTURE",
-          "TERMINAL_CAMPAIGN_ATTEMPT"
+          "CORRECTNESS_BEARING_INVALID"
         ],
         "observed_passed": false,
         "ok": true
