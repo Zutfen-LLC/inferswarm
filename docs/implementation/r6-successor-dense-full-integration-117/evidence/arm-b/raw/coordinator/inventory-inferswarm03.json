@@ -1,0 +1,11 @@
+{
+  "collected_utc": "2026-09-08T20:59:09Z",
+  "node_id": "inferswarm03",
+  "schema": "inferswarm.issue101.node-inventory-snapshot/1",
+  "sequence": 1,
+  "source": {
+    "endpoint": "file:///srv/inferswarm/cache/issue117",
+    "source_id": "inferswarm03"
+  },
+  "verified_objects": []
+}

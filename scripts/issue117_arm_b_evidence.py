@@ -64,8 +64,22 @@ invariant; stored summaries appear only as cross-checks:
   coordinator_cuda_initialized
       coordinator-counters cuda_observations (derived there from
       device nodes/smi/process fds/importability)
-  coordinator_model_weight_bytes_received / _materialized
-      coordinator-counters weight_roots_bytes
+  coordinator_model_weight_bytes_received
+      RECEIPT-PATH derivation (round 4): zero coordinator requests in
+      the RAW source-server log + the Source HTTP server as the only
+      authorized remote model-byte path (frozen ledger transports) +
+      every ACQUIRED event belonging to a participant + the
+      digest-bound execution-session transport audit (zero
+      coordinator/model-byte co-targeting commands; zero destructive
+      ops on the coordinator or canonical roots) + the exact observed
+      coordinator state set (no payload) + pinned producer semantics.
+      Final occupancy is a cross-check, NEVER the derivation — a
+      receive-then-delete history cannot derive zero.
+  coordinator_model_weight_bytes_materialized
+      received == 0 + accepted pre-campaign preflight coordinator
+      model-state inventory zero + exact observed state holds no
+      payload + pinned execution semantics have no coordinator
+      materialization path. Occupancy-independent by construction.
 
 Fail-closed states: any pin drift, any derivation disagreement, or any
 missing raw/low-level input yields ISSUE117_ARM_B_EVIDENCE_DERIVATION_
@@ -86,6 +100,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from issue117_parsers import realize_strace, source_server_log  # noqa: E402
 from issue117_parsers import coordinator_state, producer_pins   # noqa: E402
+from issue117_parsers import transport_audit                    # noqa: E402
 
 AREA = ROOT / "docs" / "implementation" / "r6-successor-dense-full-integration-117"
 EVIDENCE = Path(os.environ.get("PINS_ROOT") or (AREA / "evidence"))
@@ -250,6 +265,13 @@ def _derive_coordinator_inventory():
     if derived["problems"]:
         _fail("coordinator state inventory derivation failed: "
               + "; ".join(derived["problems"]))
+    # round-4 (P1-1): the eight operational files are retained
+    # byte-exact under raw/coordinator/ and cross-bound to the frozen
+    # pins — a substituted or drifted operational file fails closed
+    raw_problems = coordinator_state.verify_raw_retention(RAW / "coordinator")
+    if raw_problems:
+        _fail("retained raw coordinator copies failed pin verification: "
+              + "; ".join(raw_problems))
     return inventory, derived
 
 
@@ -376,6 +398,14 @@ def main():
             else:
                 continue
             pid = event["participant_id"]
+            if pid not in records_by_pid:
+                # round-4: a ledger event bound to a non-participant
+                # (e.g. the coordinator) is a receipt-path violation —
+                # report and fail closed instead of crashing
+                failures.append(
+                    f"{host} event participant {pid} is not a campaign "
+                    "participant (coordinator receipt?)")
+                continue
             rec = records_by_pid[pid].get(event["artifact_id"])
             if rec is None:
                 failures.append(
@@ -839,15 +869,25 @@ def main():
         or cuda_obs["coordinator_venv_torch_importable"])
     if coordinator_cuda_initialized != counters["coordinator_cuda_initialized"]:
         failures.append("coordinator stored cuda counter disagrees with observations")
+    # Round-4 (P1-2): received/materialized are RECEIPT-PATH semantics,
+    # NOT final-occupancy semantics. Final weight-root occupancy is a
+    # cross-check only — a receive-then-delete history would leave the
+    # roots empty, so zero occupancy alone can NEVER establish zero
+    # received. The derivation lives in the transport section below
+    # (raw log + ledgers + frozen topology + transport audit +
+    # exact-set coordinator state + pinned execution semantics).
     weight_roots = counters["weight_roots_bytes"]
-    coordinator_model_weight_bytes_received = weight_roots[
-        "/srv/inferswarm/cache/issue117"]
-    coordinator_model_weight_bytes_materialized = (
-        weight_roots["/srv/inferswarm/materialized/issue117"]
-        + weight_roots["/srv/inferswarm/models"])
-    if counters["coordinator_model_weight_bytes_received"] != coordinator_model_weight_bytes_received \
-            or counters["coordinator_model_weight_bytes_materialized"] != coordinator_model_weight_bytes_materialized:
-        failures.append("coordinator stored weight counters disagree with roots")
+    if set(weight_roots) != {
+            "/srv/inferswarm/cache/issue117",
+            "/srv/inferswarm/materialized/issue117",
+            "/srv/inferswarm/models"}:
+        failures.append("coordinator weight-roots key set drift")
+    if any(v != 0 for v in weight_roots.values()):
+        failures.append(
+            "coordinator weight roots nonzero: final occupancy alone "
+            "cannot carry the invariants (see receipt-path derivation)")
+    coordinator_model_weight_bytes_received = None  # derived below
+    coordinator_model_weight_bytes_materialized = None  # derived below
     coordinator_bulk_artifact_bytes_observed = None  # derived below from
     # the RAW source-server log + observed coordinator inventory
 
@@ -1124,6 +1164,184 @@ def main():
     except (OSError, KeyError, json.JSONDecodeError) as exc:
         failures.append(f"host raw-log pins unusable: {exc}")
     derived_rx = derived_tx = derived_writes = derived_proxy = 0
+    # -- coordinator receipt-path derivation (round-4 P1-2) -----------------
+    # coordinator_model_weight_bytes_received == 0 is derived from the
+    # ABSENCE OF ANY PERMITTED OR OBSERVED RECEIPT PATH, never from
+    # final occupancy (which receive-then-delete would also satisfy):
+    #   (a) zero coordinator requests in the retained RAW Source HTTP
+    #       log, and the Source HTTP server was the only authorized
+    #       remote model-byte path (frozen transport topology: the
+    #       01 participant used local-file transport, the 03
+    #       participant used operator-local-http from the Source host,
+    #       both bound to their acquisition ledgers);
+    #   (b) every ledger ACQUIRED event's participant is one of the two
+    #       participants (never the coordinator);
+    #   (c) the digest-bound command/transport audit of the
+    #       contemporaneous execution session transcript: zero issued
+    #       commands co-target the coordinator and a model-byte path,
+    #       and zero destructive ops target the coordinator or any
+    #       canonical root (so nothing was received-then-deleted by a
+    #       session-issued command);
+    #   (d) the exact observed coordinator state set (P1-1) contains no
+    #       model payload;
+    #   (e) the pinned producer sources fix the execution semantics:
+    #       the acquisition engine (issue99_artifact_core) transfers
+    #       bytes only Source->participant cache, and the coordinator
+    #       driver (armb_coordinator.py, retained byte-exact under
+    #       raw/coordinator/) issues tickets only — no byte path.
+    ledger01 = _load("acquisition-ledger-inferswarm01.json")
+    receipt_path_ok = True
+    # (a) raw Source log: zero coordinator requests (checked against the
+    # RAW parse above in the bulk-transport section; re-assert here as
+    # a receipt-path condition)
+    if server["coordinator_get_requests"] != 0:
+        receipt_path_ok = False
+    # frozen topology: only two transports exist in the ledgers
+    if ledger01["transport"]["kind"] != "local-file":
+        receipt_path_ok = False
+        failures.append(
+            "01 ledger transport kind drift: "
+            f"{ledger01['transport'].get('kind')}")
+    if ledger03["transport"]["kind"] != "operator-local-http":
+        receipt_path_ok = False
+        failures.append(
+            "03 ledger transport kind drift: "
+            f"{ledger03['transport'].get('kind')}")
+    for led in (ledger01, ledger03):
+        if led["transport"]["descriptor"]["source_id"] != "issue117-origin":
+            receipt_path_ok = False
+            failures.append("ledger source_id drift")
+        if led["transport"]["descriptor"]["endpoint"] != \
+                "file:///srv/models/gemma-r6":
+            receipt_path_ok = False
+            failures.append("ledger source endpoint drift")
+    # 03's HTTP request count must equal the raw-log client count
+    # (binding already enforced in the bulk-transport section; assert
+    # as a receipt-path condition)
+    if server["client_ip_histogram"].get("10.0.0.219") != \
+            ledger03["transport"]["requests"]:
+        receipt_path_ok = False
+    # (b) every ACQUIRED event belongs to a participant
+    for host in ("inferswarm01", "inferswarm03"):
+        for event in _load(f"acquisition-ledger-{host}.json")["events"]:
+            if event["event"] == "ACQUIRED" and event.get(
+                    "participant_id") not in PARTICIPANT_IDS:
+                receipt_path_ok = False
+                failures.append(
+                    f"ACQUIRED event participant {event.get('participant_id')}"
+                    " is not a campaign participant (coordinator receipt?)")
+    # (c) transport audit of the execution-session transcript
+    try:
+        audit = json.loads(
+            (OBS / "coordinator-transport-audit.json").read_bytes())
+        taudit = transport_audit.derive(audit)
+        if taudit["problems"]:
+            receipt_path_ok = False
+            failures.extend(
+                "transport-audit: " + p for p in taudit["problems"])
+        if not taudit["zero_model_byte_cotargeting_commands"]:
+            receipt_path_ok = False
+            failures.append(
+                "transport audit: a session-issued command co-targets the "
+                "coordinator and a model-byte path")
+        if not taudit["zero_destructive_coordinator_or_root_targeting"]:
+            receipt_path_ok = False
+            failures.append(
+                "transport audit: destructive op targets the coordinator "
+                "or a canonical root")
+    except (OSError, json.JSONDecodeError) as exc:
+        receipt_path_ok = False
+        failures.append(f"coordinator transport audit unusable: {exc}")
+    # (d) exact-set coordinator state carries no payload (P1-1)
+    if coord_tree["problems"]:
+        receipt_path_ok = False  # already failed closed in _derive step
+    if coord_tree["model_payload_bytes_under_state_arm_b"] != 0 or \
+            coord_tree["model_payload_files"]:
+        receipt_path_ok = False
+        failures.append(
+            "coordinator state tree holds model payload bytes "
+            f"({coord_tree['model_payload_files']})")
+    # (e) pinned producer semantics: the byte-pinned acquisition engine
+    # + the retained coordinator driver admit no coordinator byte path
+    # (pins verified above via producer_pins + the retained raw
+    # coordinator copies verified via coordinator_state pins)
+    if receipt_path_ok:
+        # no permitted path was used and no observed path exists: the
+        # coordinator received zero model-weight bytes during the
+        # campaign. Final occupancy (weight_roots all zero) is an
+        # additional cross-check, never the derivation.
+        coordinator_model_weight_bytes_received = 0
+    else:
+        coordinator_model_weight_bytes_received = -1
+        failures.append(
+            "coordinator receipt path not provably empty: received-bytes "
+            "invariant NOT derivable (fail closed)")
+    # -- materialization semantics (round-4 P1-2) ---------------------------
+    # coordinator_model_weight_bytes_materialized == 0 is derived from:
+    #   (1) received == 0 above (nothing arrived that could be stored);
+    #   (2) the accepted pre-campaign physical preflight froze the
+    #       coordinator as CPU-only with pre-campaign model-state
+    #       inventory zero (resource_identity), so no usable Issue #117
+    #       model source pre-existed on the coordinator;
+    #   (3) the exact observed coordinator state set contains no model
+    #       payload (P1-1 exact identity, not extension scanning);
+    #   (4) the pinned execution semantics contain no coordinator
+    #       materialization path (coordinator runs ticket issuance
+    #       only; materialization is participant-side per the frozen
+    #       plan/requirements and the pinned producer sources).
+    # Clearing the final materialized directory alone cannot establish
+    # this: (1)-(4) are all occupancy-independent.
+    try:
+        preflight = json.loads((EVIDENCE / "physical-preflight.json")
+                               .read_bytes())
+        ri = preflight["resource_identity"]
+        preflight_coord_zero = (
+            ri.get("coordinator", {}).get("node") == "inferswarm00"
+            and ri.get("coordinator", {}).get("cpu_only") is True
+            and ri.get("coordinator_model_weight_bytes_received") == 0
+            and ri.get("coordinator_model_weight_bytes_materialized") == 0
+            and ri.get("coordinator_cuda_initialized") == 0)
+    except (OSError, KeyError, json.JSONDecodeError) as exc:
+        preflight_coord_zero = False
+        failures.append(f"physical preflight coordinator facts unusable: {exc}")
+    if coordinator_model_weight_bytes_received == 0 \
+            and preflight_coord_zero \
+            and coord_tree["model_payload_bytes_under_state_arm_b"] == 0 \
+            and not coord_tree["problems"]:
+        coordinator_model_weight_bytes_materialized = 0
+    else:
+        coordinator_model_weight_bytes_materialized = -1
+        if coordinator_model_weight_bytes_received != 0:
+            failures.append(
+                "materialized-zero cannot be derived: received-bytes "
+                "derivation itself failed (occupancy is not authority)")
+        else:
+            failures.append(
+                "materialized-zero derivation failed: pre-campaign "
+                "coordinator inventory or exact observed state not "
+                "established")
+    # stored counters must equal the derived values
+    if counters["coordinator_model_weight_bytes_received"] != \
+            coordinator_model_weight_bytes_received:
+        failures.append(
+            "coordinator stored received-bytes counter disagrees with the "
+            "receipt-path derivation")
+    if counters["coordinator_model_weight_bytes_materialized"] != \
+            coordinator_model_weight_bytes_materialized:
+        failures.append(
+            "coordinator stored materialized-bytes counter disagrees with "
+            "the materialization derivation")
+    # the transport-accounting record must describe the round-4
+    # semantics (a record still claiming occupancy-based derivation
+    # fails closed)
+    if "occupancy" in transport_doc.get(
+            "received_bytes_derivation", "occupancy") and \
+            "receipt" not in transport_doc.get(
+                "received_bytes_derivation", ""):
+        failures.append(
+            "transport record retains occupancy-based received-bytes "
+            "derivation text")
+
     if server["coordinator_get_requests"] == 0 and \
             coord_tree["model_payload_bytes_under_state_arm_b"] == 0:
         # zero coordinator clients on the only network path + zero payload
@@ -1253,6 +1471,32 @@ def main():
             "finalization-boundary lifecycle counters (mapping open==close, "
             "staging drained) + zero post-boundary model-state opens in the "
             "raw trace; see scripts/issue117_arm_b_evidence.py docstring",
+        "coordinator_receipt_derivation": {
+            "received": "receipt-path absence: zero coordinator requests "
+                        "in the RAW source-server log; frozen ledger "
+                        "transports (local-file on 01, operator-local-http "
+                        "from the Source host on 03); every ACQUIRED event "
+                        "participant-bound; execution-session transport "
+                        "audit (zero model-byte co-targeting commands, "
+                        "zero coordinator/root-targeting destructive ops); "
+                        "exact observed coordinator state holds no payload; "
+                        "pinned producer semantics. Final occupancy is a "
+                        "cross-check only (receive-then-delete cannot "
+                        "derive zero received).",
+            "materialized": "received == 0 AND accepted pre-campaign "
+                            "preflight coordinator model-state inventory "
+                            "== 0 AND exact observed coordinator state "
+                            "contains no model payload AND pinned "
+                            "execution semantics contain no coordinator "
+                            "materialization path.",
+            "transport_audit_record":
+                "observations/coordinator-transport-audit.json",
+            "exact_coordinator_file_set":
+                "14 files: 6 data (35,399,067 B) + 8 operational "
+                "(46,008 B), each pinned by exact path/size/sha256; raw "
+                "copies of all 8 operational files retained under "
+                "raw/coordinator/",
+        },
         "per_participant": {
             pid: {
                 "assigned_artifact_count": len(by_pid[pid]["required_artifacts"]),

@@ -43,7 +43,7 @@ def run_reducer(env_root: Path):
 class MutationTestCase(unittest.TestCase):
     """Base: copy evidence, apply mutation, require derivation failure."""
 
-    def mutate_and_run(self, filename, mutator):
+    def mutate_and_run(self, filename, mutator, extra_mutations=None):
         tmp = Path(tempfile.mkdtemp(prefix="armb-mut-",
                                     dir=os.environ.get("ARMB_MUT_TMP")
                                     or None))
@@ -58,6 +58,8 @@ class MutationTestCase(unittest.TestCase):
                    "r6-successor-dense-full-integration-117" / "evidence" / pin)
             shutil.copy(src, root.parent / pin)
         mutator(root / "arm-b" / filename)
+        for extra_name, extra_mutator in (extra_mutations or {}).items():
+            extra_mutator(root / "arm-b" / extra_name)
         return run_reducer(root)
 
     def assertFails(self, result, needle=None):
@@ -1083,6 +1085,336 @@ class Round3LineageSemanticsMutations(MutationTestCase):
             p.write_text(json.dumps(d))
         self.assertFails(self.mutate_and_run("attempt-lineage.json", m),
                          needle="backdated phase attempt")
+
+
+class CoordinatorExactFileSetMutations(MutationTestCase):
+    """Round-4 P1-1: admission is exact set equality over all 14
+    observed files — prefix/extension tricks must fail closed."""
+
+    def _add_file(self, p, rel, size, digest="0" * 64):
+        d = json.loads(p.read_text())
+        d["entries"].append({"path": rel, "type": "f", "size": size,
+                             "symlink_target": None})
+        d["regular_file_digests"][rel] = digest
+        d["total_file_count"] += 1
+        d["total_bytes"] += size
+        p.write_text(json.dumps(d))
+
+    def test_scripts_payload_py_bypass(self):
+        # mandated control: a payload named as a .py under scripts/
+        # (previously admitted by the scripts/ prefix) must fail
+        def m(p):
+            self._add_file(p, "scripts/payload.py", 4096)
+        self.assertFails(self.mutate_and_run(
+            "observations/coordinator-state-inventory.json", m),
+            needle="unexpected coordinator-held files")
+
+    def test_scripts_payload_extensionless_bypass(self):
+        # mandated control: an extensionless payload under scripts/
+        def m(p):
+            self._add_file(p, "scripts/payload", 4096)
+        self.assertFails(self.mutate_and_run(
+            "observations/coordinator-state-inventory.json", m),
+            needle="unexpected coordinator-held files")
+
+    def test_scripts_random_json_bypass(self):
+        # mandated control: an unknown json under scripts/ (previously
+        # admitted by the prefix, not a known data file)
+        def m(p):
+            self._add_file(p, "scripts/random.json", 512)
+        self.assertFails(self.mutate_and_run(
+            "observations/coordinator-state-inventory.json", m),
+            needle="unexpected coordinator-held files")
+
+    def test_unknown_file_with_payload_extension(self):
+        # mandated control: an unknown file bearing a KNOWN payload
+        # extension anywhere in the tree
+        def m(p):
+            self._add_file(p, "models/model.safetensors", 23919549408)
+        self.assertFails(self.mutate_and_run(
+            "observations/coordinator-state-inventory.json", m),
+            needle="unexpected coordinator-held files")
+
+    def test_known_operational_path_digest_change(self):
+        # mandated control: a known operational path with changed
+        # bytes/digest (size kept) must fail closed — operational files
+        # are pinned, not prefix-admitted
+        def m(p):
+            d = json.loads(p.read_text())
+            d["regular_file_digests"]["scripts/armb_coordinator.py"] = \
+                "e" * 64
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "observations/coordinator-state-inventory.json", m),
+            needle="digest drift")
+
+    def test_extra_operational_file_consistent_totals(self):
+        # mandated control: an extra operational-looking file WITH all
+        # inventory totals updated consistently must still fail — the
+        # exact observed file identity is frozen
+        def m(p):
+            self._add_file(p, "scripts/armb_extra.py", 1234)
+            # totals are already updated consistently by _add_file;
+            # also update the downstream accounting summary so the
+            # mutation exercises the frozen-identity property alone
+        self.assertFails(self.mutate_and_run(
+            "observations/coordinator-state-inventory.json", m),
+            needle="unexpected coordinator-held files")
+
+    def test_extra_operational_file_regenerated_accounting(self):
+        # mandated control: extra operational-looking file PLUS a
+        # regenerated coordinator accounting summary whose observed
+        # counts/totals match the mutated inventory — must still fail
+        # because exact file identity (not totals) is frozen
+        def m_inv(p):
+            self._add_file(p, "scripts/armb_extra.py", 1234)
+        def m_acc(p):
+            d = json.loads(p.read_text())
+            ctree = d["low_level_observations"]["coordinator_state_tree"]
+            ctree["observed_file_count"] = 15
+            ctree["observed_total_bytes"] = 35446309
+            ctree["operational_file_total_bytes"] = 47242
+            p.write_text(json.dumps(d))
+        result = self.mutate_and_run(
+            "observations/coordinator-state-inventory.json", m_inv,
+            extra_mutations={
+                "coordinator-transport-accounting.json": m_acc})
+        self.assertFails(result,
+                         needle="unexpected coordinator-held files")
+
+    def test_known_file_removed(self):
+        # set-equality: removing a known operational file also fails
+        def m(p):
+            d = json.loads(p.read_text())
+            d["entries"] = [e for e in d["entries"]
+                            if e["path"] != "scripts/armb_inventory.py"]
+            del d["regular_file_digests"]["scripts/armb_inventory.py"]
+            d["total_file_count"] -= 1
+            d["total_bytes"] -= 1771
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "observations/coordinator-state-inventory.json", m),
+            needle="known coordinator files missing")
+
+    def test_retained_raw_operational_copy_drift(self):
+        # the byte-exact raw copies under raw/coordinator/ are pinned:
+        # a drifted retained copy fails closed
+        def m(p):
+            data = bytearray(p.read_bytes())
+            data[0] ^= 0xFF
+            p.write_bytes(bytes(data))
+        self.assertFails(self.mutate_and_run(
+            "raw/coordinator/scripts/armb_coordinator.py", m))
+
+
+class CoordinatorReceiptPathMutations(MutationTestCase):
+    """Round-4 P1-2: received/materialized are receipt-path
+    derivations — occupancy-only mutations cannot erase a receipt."""
+
+    def test_synthetic_coordinator_receipt_event(self):
+        # mandated control: final coordinator roots remain zero while a
+        # synthetic coordinator receipt event (an ACQUIRED event whose
+        # participant is the coordinator) causes failure
+        def m(p):
+            d = json.loads(p.read_text())
+            d["events"].append({
+                "event": "ACQUIRED",
+                "participant_id": "inferswarm00",
+                "artifact_id": "sha256:" + "a" * 64,
+                "bytes": 1024,
+                "source_id": "issue117-origin"})
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "acquisition-ledger-inferswarm01.json", m),
+            needle="not a campaign participant")
+
+    def test_receive_then_delete_history_cannot_derive_zero(self):
+        # mandated control: a synthetic receive-then-delete history —
+        # receipt recorded in the transport audit census while the
+        # final roots stay zero — must fail: the audit's frozen census
+        # detects the added command
+        def m(p):
+            import copy
+            d = json.loads(p.read_text())
+            entry = copy.deepcopy(
+                d["census_coordinator_directed_transfer_commands"]
+                ["entries"][0])
+            entry["message_id"] = 226999
+            entry["verbatim"] = (
+                "os.system(\"scp -q inferswarm01:/srv/models/gemma-r6/"
+                "model.safetensors inferswarm00:/tmp/weights.bin && "
+                "ssh inferswarm00 'rm -f /tmp/weights.bin'\")")
+            import hashlib
+            entry["sha256"] = hashlib.sha256(
+                entry["verbatim"].encode()).hexdigest()
+            d["census_coordinator_directed_transfer_commands"
+              ]["entries"].append(entry)
+            d["census_coordinator_directed_transfer_commands"
+              ]["entry_count"] += 1
+            d["census_coordinator_directed_transfer_commands"
+              ]["message_ids"].append(226999)
+            # a receive-then-delete command also co-targets model bytes
+            d["model_byte_cotargeting_commands"]["count"] = 1
+            d["model_byte_cotargeting_commands"]["entries"].append(
+                {"message_id": 226999, "command_kind":
+                 "execute_code:execute_code",
+                 "verbatim": entry["verbatim"],
+                 "sha256": entry["sha256"]})
+            d["derived_verdicts"][
+                "zero_model_byte_cotargeting_commands"] = False
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "observations/coordinator-transport-audit.json", m),
+            needle="census message-id set drift")
+
+    def test_coordinator_scp_event_causes_failure(self):
+        # mandated control: a coordinator SCP/copy event appended to
+        # the transport-audit census fails (unknown census entry)
+        def m(p):
+            import copy, hashlib
+            d = json.loads(p.read_text())
+            entry = copy.deepcopy(
+                d["census_coordinator_directed_transfer_commands"]
+                ["entries"][0])
+            entry["message_id"] = 226998
+            entry["verbatim"] = (
+                "os.system(\"scp -q big.bin inferswarm00:/tmp/big.bin\")")
+            entry["sha256"] = hashlib.sha256(
+                entry["verbatim"].encode()).hexdigest()
+            d["census_coordinator_directed_transfer_commands"
+              ]["entries"].append(entry)
+            d["census_coordinator_directed_transfer_commands"
+              ]["entry_count"] += 1
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "observations/coordinator-transport-audit.json", m),
+            needle="census message-id set drift")
+
+    def test_alternate_coordinator_http_transfer(self):
+        # mandated control: an alternate coordinator HTTP/artifact
+        # transfer — the raw source-server log gains a coordinator
+        # client — fails (sha pin on the raw log + receipt-path check)
+        def m(p):
+            text = p.read_text()
+            # same-length client substitution keeps the file parseable
+            # but changes bytes: sha pin catches it; if the pin were
+            # removed, the histogram/coordinator-count check catches it
+            p.write_text(text.replace("10.0.0.219", "10.0.0.206", 1))
+        self.assertFails(self.mutate_and_run(
+            "raw/source-server-access.log", m))
+
+    def test_receipt_cannot_be_erased_by_clearing_occupancy(self):
+        # mandated control: changing ONLY final occupancy cannot erase
+        # a previously introduced receipt — here: introduce a receipt
+        # via the audit census AND set all weight roots to zero; the
+        # census pin still fails the derivation
+        def m_audit(p):
+            import copy, hashlib
+            d = json.loads(p.read_text())
+            entry = copy.deepcopy(
+                d["census_coordinator_directed_transfer_commands"]
+                ["entries"][0])
+            entry["message_id"] = 226997
+            entry["verbatim"] = (
+                "os.system(\"rsync -a inferswarm01:/srv/models/gemma-r6/ "
+                "inferswarm00:/srv/inferswarm/models/\")")
+            entry["sha256"] = hashlib.sha256(
+                entry["verbatim"].encode()).hexdigest()
+            d["census_coordinator_directed_transfer_commands"
+              ]["entries"].append(entry)
+            p.write_text(json.dumps(d))
+        def m_counters(p):
+            d = json.loads(p.read_text())
+            # final occupancy stays zero (nothing changed) — the point
+            # is that zero occupancy does not clear the receipt
+            d["coordinator_model_weight_bytes_received"] = 0
+            p.write_text(json.dumps(d))
+        result = self.mutate_and_run(
+            "observations/coordinator-transport-audit.json", m_audit,
+            extra_mutations={"coordinator-counters.json": m_counters})
+        self.assertFails(result, needle="census message-id set drift")
+
+    def test_materialized_zero_by_clearing_directory_only(self):
+        # mandated control: materialized-zero cannot be established
+        # solely by clearing the final materialized state — mutate the
+        # preflight's coordinator pre-campaign facts away while roots
+        # stay empty: the conjunction fails
+        def m(p):
+            import json as _json
+            d = _json.loads(p.read_text())
+            d["resource_identity"][
+                "coordinator_model_weight_bytes_materialized"] = 512
+            p.write_text(_json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "../../physical-preflight.json", m),
+            needle="preservation pin")
+
+    def test_audit_transcript_chain_drift(self):
+        # the audit is bound to the exact session transcript: a chain
+        # digest change fails closed
+        def m(p):
+            d = json.loads(p.read_text())
+            d["provenance"]["transcript_chain_sha256"] = "f" * 64
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "observations/coordinator-transport-audit.json", m),
+            needle="transcript chain digest drift")
+
+    def test_audit_census_entry_verbatim_edit(self):
+        # editing a census entry's verbatim command (digest pin) fails
+        def m(p):
+            d = json.loads(p.read_text())
+            e = d["census_coordinator_directed_transfer_commands"
+                  ]["entries"][0]
+            e["verbatim"] += "\n# extra"
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run(
+            "observations/coordinator-transport-audit.json", m),
+            needle="verbatim digest drift")
+
+    def test_occupancy_only_cannot_derive_received(self):
+        # structural control: the stored received counter claiming
+        # zero while the receipt-path derivation input (raw log) is
+        # REMOVED must fail closed rather than fall back to occupancy
+        def m(p):
+            p.unlink()
+        self.assertFails(self.mutate_and_run(
+            "raw/source-server-access.log", m))
+
+
+class SourceServerLogSizeCheck(MutationTestCase):
+    """Round-4 P2: explicit size-drift regression for the raw-log
+    size check (the sha check alone catches byte changes; the size
+    check must exist in its own right)."""
+
+    def test_size_drift_regression(self):
+        # parse_file must reject a wrong-size file explicitly. The sha
+        # check fires first on real byte changes; to exercise the size
+        # check in its own right, monkeypatch the digest pin to match
+        # the synthetic bytes so ONLY the size differs.
+        import hashlib
+        import importlib.util
+        import tempfile
+        import unittest.mock as mock
+        spec = importlib.util.spec_from_file_location(
+            "ssl_mod", ROOT / "scripts" / "issue117_parsers" /
+            "source_server_log.py")
+        assert spec is not None and spec.loader is not None
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        data = b"x" * (mod.RAW_LOG_BYTES + 1)
+        with tempfile.NamedTemporaryFile(suffix=".log",
+                                         delete=False) as f:
+            f.write(data)
+            path = f.name
+        try:
+            with mock.patch.object(mod, "RAW_LOG_SHA256",
+                                   hashlib.sha256(data).hexdigest()):
+                with self.assertRaises(ValueError) as cm:
+                    mod.parse_file(path)
+            self.assertIn("size drift", str(cm.exception))
+        finally:
+            Path(path).unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

@@ -88,11 +88,13 @@ PRODUCERS = [
     "scripts/issue117_arm_b_evidence.py",
     "scripts/issue117_arm_b_correction_build.py",
     "scripts/issue117_arm_b_observe_hosts.py",
+    "scripts/issue117_arm_b_transport_audit_build.py",
     "scripts/issue117_parsers/__init__.py",
     "scripts/issue117_parsers/source_server_log.py",
     "scripts/issue117_parsers/realize_strace.py",
     "scripts/issue117_parsers/coordinator_state.py",
     "scripts/issue117_parsers/producer_pins.py",
+    "scripts/issue117_parsers/transport_audit.py",
     "scripts/issue117_subject_identity.py",
     "scripts/issue99_artifact_core.py",
     "scripts/issue101_orchestration.py",
@@ -249,6 +251,20 @@ COMMITTED_EVIDENCE_FILES = {
     "arm-b/observations/coordinator-state-inventory.json",
     "arm-b/observations/root-inode-continuity.json",
     "arm-b/observations/host-raw-log-pins.json",
+    # PR #127 round-4 correction (P1-1/P1-2): byte-exact raw copies of
+    # all eight coordinator operational files (cross-bound to the
+    # observed inventory by exact path/size/sha256) and the
+    # digest-bound execution-session transport audit backing the
+    # receipt-path derivation of the coordinator zero invariants
+    "arm-b/raw/coordinator/inventory-inferswarm01.json",
+    "arm-b/raw/coordinator/inventory-inferswarm03.json",
+    "arm-b/raw/coordinator/scripts/armb_common.py",
+    "arm-b/raw/coordinator/scripts/armb_coordinator.py",
+    "arm-b/raw/coordinator/scripts/armb_inventory.py",
+    "arm-b/raw/coordinator/scripts/armb_plan_core.py",
+    "arm-b/raw/coordinator/scripts/__pycache__/armb_coordinator.cpython-313.pyc",
+    "arm-b/raw/coordinator/scripts/__pycache__/armb_plan_core.cpython-313.pyc",
+    "arm-b/observations/coordinator-transport-audit.json",
 }
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the

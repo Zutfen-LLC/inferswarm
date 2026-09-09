@@ -185,6 +185,55 @@ model-state accesses after it), and
 zero coordinator clients; coordinator state tree holds only ticket
 metadata).
 
+Round-4 correction (maintainer findings P1-1/P1-2/P2, retention and
+derivation only — no rerun, no physical execution):
+
+- **Exact coordinator file set (P1-1).** Coordinator admission is no
+  longer prefix-based. The observed state tree must equal an exact
+  frozen set of 14 files — 6 data files (35,399,067 bytes of
+  ticket/plan/requirements metadata) and 8 operational files (46,008
+  bytes: two participant inventory stubs, four coordinator driver
+  scripts, two CPython bytecode caches) — with every file pinned by
+  exact relative path, exact byte size, and exact sha256. Byte-exact
+  raw copies of all eight operational files are retained under
+  [evidence/arm-b/raw/coordinator/](evidence/arm-b/raw/coordinator/)
+  and cross-bound to the observed inventory, so a substituted or
+  edited operational file fails closed. `PAYLOAD_EXTENSIONS` is
+  diagnostic only; zero payload bytes is an identity property of the
+  classified set. Filename tricks (`scripts/payload.py`,
+  `scripts/payload`, `scripts/random.json`, unknown
+  payload-extension files), digest drift at known operational paths,
+  and consistently-retotaled extra files all fail closed
+  (mutation-tested).
+- **Receipt-path semantics for the coordinator zero invariants
+  (P1-2).** `coordinator_model_weight_bytes_received == 0` is derived
+  from the absence of any permitted or observed receipt path — zero
+  coordinator requests in the RAW Source log, the Source HTTP server
+  as the only authorized remote model-byte path (both ledger
+  transports frozen: 01 local-file, 03 operator-local-http with 427
+  requests == raw-log client count), every ACQUIRED event
+  participant-bound, a digest-bound command/transport audit of the
+  contemporaneous execution session
+  ([observations/coordinator-transport-audit.json](evidence/arm-b/observations/coordinator-transport-audit.json):
+  819 messages chain-sha256-bound; 9 coordinator-directed transfer
+  commands, all metadata/scripts; zero model-byte co-targeting
+  commands; zero coordinator/root-targeting destructive operations),
+  the exact coordinator state set holding no payload, and pinned
+  producer semantics admitting no coordinator byte path. Final
+  weight-root occupancy is a cross-check only — a receive-then-delete
+  history cannot derive zero. `coordinator_model_weight_bytes_
+  materialized == 0` is derived from received == 0 AND the accepted
+  pre-campaign preflight coordinator inventory AND the exact observed
+  state AND pinned execution semantics — occupancy-independent by
+  construction. Mutation-tested with synthetic receipt events,
+  receive-then-delete census entries, occupancy-clearing attempts,
+  and preflight-fact removal.
+- **Source-log size check (P2).** The size test in
+  `scripts/issue117_parsers/source_server_log.py` now compares against
+  `RAW_LOG_BYTES` explicitly (previously `len(data) != RAW_LOG_SHA256
+  and len(data) != RAW_LOG_BYTES`); regression test added. The
+  validated raw log SHA is unchanged.
+
 No PREFILL/decode/generate was executed. No holdout material was used.
 Arm C/D/E were not executed. The observation awaits maintainer review;
 the PR is not merged.

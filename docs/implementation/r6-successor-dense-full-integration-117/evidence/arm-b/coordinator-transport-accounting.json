@@ -1,7 +1,7 @@
 {
  "coordinator_bulk_artifact_bytes_observed": 0,
  "definition": "coordinator_bulk_artifact_bytes_observed = coordinator model-payload RX + TX/proxy + file-write bytes on the coordinator host, derived from the retained RAW source-server access log and the observed coordinator state-tree inventory, never from a stored summary zero",
- "derivation": "(1) The retained RAW source-server access log pins every model-byte HTTP request: 428 GETs total \u2014 427 from 10.0.0.219 (inferswarm03, exactly equal to the 03 ledger's transport.requests == 427) and 1 from 10.0.0.141 itself (the operator self-test). Zero requests from the coordinator address 10.0.0.206, so the coordinator carried zero payload RX/TX over the only model-byte network path. (2) The 01 participant used local-file transport (no network path at all). (3) The observed coordinator state-tree inventory (14 files / 35445075 bytes) contains zero model payload bytes: the six allowlisted JSON data files total 35399067 bytes and the remaining entries are regenerable driver/operational state. Therefore all model-state transfer paths were Source -> participant, never Source -> inferswarm00 -> participant.",
+ "derivation": "(1) The retained RAW source-server access log pins every model-byte HTTP request: 428 GETs total — 427 from 10.0.0.219 (inferswarm03, exactly equal to the 03 ledger's transport.requests == 427) and 1 from 10.0.0.141 itself (the operator self-test). Zero requests from the coordinator address 10.0.0.206, so the coordinator carried zero payload RX/TX over the only model-byte network path. (2) The 01 participant used local-file transport (no network path at all). (3) The observed coordinator state-tree inventory (14 files / 35445075 bytes) contains zero model payload bytes: the six allowlisted JSON data files total 35399067 bytes and the remaining entries are regenerable driver/operational state. Therefore all model-state transfer paths were Source -> participant, never Source -> inferswarm00 -> participant.",
  "derived_counters": {
   "coordinator_artifact_file_write_bytes": 0,
   "coordinator_artifact_proxy_bytes": 0,
@@ -16,17 +16,24 @@
    "inventory_record": "evidence/arm-b/observations/coordinator-state-inventory.json",
    "model_payload_bytes_under_state_arm_b": 0,
    "model_payload_files": [],
-   "note": "the observed tree holds 14 files / 35445075 bytes: the six allowlisted JSON data files (35399067 bytes of ticket/plan/requirements metadata, digests byte-equal the repo-retained copies) plus regenerable operational state (participant inventory stubs and the coordinator-side driver scripts with their CPython bytecode caches); zero model payload bytes under any coordinator path",
+   "note": "round-4 exact-file-set enforcement: the observed tree holds exactly 14 files / 35445075 bytes — six allowlisted JSON data files (35399067 bytes of ticket/plan/requirements metadata, digests byte-equal the repo-retained copies) and eight operational files (46008 bytes: participant inventory stubs and the coordinator-side driver scripts with their CPython bytecode caches), EVERY file classified and pinned by exact relative path, byte size, and sha256; raw byte-exact copies of all eight operational files are retained under raw/coordinator/ and cross-bound to the observed inventory. Admission is exact set equality — never prefix or extension — so zero payload bytes is an identity property of the classified set, and any added, removed, renamed, or digest-changed file fails closed.",
    "observation_utc": "2026-09-09T00:46:34Z",
    "observed_file_count": 14,
    "observed_total_bytes": 35445075,
    "operational_file_total_bytes": 46008,
    "path_on_inferswarm00": "/srv/inferswarm/state/arm-b/"
   },
+  "coordinator_transport_audit": {
+   "builder": "scripts/issue117_arm_b_transport_audit_build.py",
+   "census": "9 coordinator-directed transfer commands, all campaign metadata or driver/collector scripts; zero model-byte co-targeting commands; zero destructive operations targeting the coordinator or canonical roots",
+   "parser": "scripts/issue117_parsers/transport_audit.py",
+   "provenance": "contemporaneous Hermes execution-session transcript (session 20260908_150616_c57910, 819 messages, chain-sha256 bound)",
+   "record": "observations/coordinator-transport-audit.json"
+  },
   "source_server_log": {
    "client_identity": {
-    "10.0.0.141": "inferswarm01 eno1 \u2014 the Source host itself; the single request is the operator curl self-test observed at session msg 225491",
-    "10.0.0.219": "inferswarm03 enp5s0 \u2014 the remote participant; equals the 03 acquisition ledger's transport.requests"
+    "10.0.0.141": "inferswarm01 eno1 — the Source host itself; the single request is the operator curl self-test observed at session msg 225491",
+    "10.0.0.219": "inferswarm03 enp5s0 — the remote participant; equals the 03 acquisition ledger's transport.requests"
    },
    "client_ip_histogram": {
     "10.0.0.141": 1,
@@ -45,10 +52,12 @@
    "total_get_requests": 428
   }
  },
+ "materialized_bytes_derivation": "coordinator_model_weight_bytes_materialized == 0 is derived from received == 0 (above) AND the accepted pre-campaign physical preflight resource_identity (coordinator CPU-only, pre-campaign model-state inventory zero) AND the exact observed coordinator state containing no model payload AND pinned execution semantics with no coordinator materialization path. Clearing the final materialized directory alone cannot establish this invariant.",
  "preserved_cross_checks": [
   "coordinator-record.json tickets_issued == 671 == total required-artifact count",
   "coordinator-counters.json cuda/weight-root derivations (unchanged, still enforced by the reducer)"
  ],
+ "received_bytes_derivation": "coordinator_model_weight_bytes_received == 0 is derived from receipt-path absence, NOT final occupancy: (1) zero coordinator requests in the retained RAW source-server access log; (2) the Source HTTP server (inferswarm01:18486) was the only authorized remote model-byte path, and both acquisition ledgers freeze their transports (inferswarm01 local-file; inferswarm03 operator-local-http from the Source host, 427 requests == raw-log client count); (3) every ledger ACQUIRED event is participant-bound; (4) the digest-bound command/transport audit of the contemporaneous execution session (observations/coordinator-transport-audit.json) shows zero issued commands co-targeting the coordinator and a model-byte path and zero destructive operations targeting the coordinator or any canonical root, so a receive-then-delete history via any session-issued command is excluded; (5) the exact observed coordinator state set (14 files, each pinned by path/size/sha256; raw copies of all 8 operational files retained under raw/coordinator/) contains no model payload; (6) the pinned producer sources admit no coordinator byte path. Final weight-root occupancy is an additional cross-check only.",
  "schema": "inferswarm.issue117.arm-b.coordinator-transport-accounting/2",
  "transport_topology_binding": {
   "coordinator": "inferswarm00 (10.0.0.206 ens18)",

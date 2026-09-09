@@ -63,6 +63,7 @@ def parse_file(path) -> dict:
         raise ValueError(
             f"raw source-server log sha256 drift: {path} is not the "
             f"retained raw log (expected {RAW_LOG_SHA256[:16]}…)")
-    if len(data) != RAW_LOG_SHA256 and len(data) != RAW_LOG_BYTES:
-        raise ValueError(f"raw source-server log size drift: {len(data)}")
+    if len(data) != RAW_LOG_BYTES:
+        raise ValueError(f"raw source-server log size drift: {len(data)} "
+                         f"(expected {RAW_LOG_BYTES})")
     return parse(data.decode())

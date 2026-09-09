@@ -1007,22 +1007,84 @@ def main():
                 "model_payload_bytes_under_state_arm_b": coord_tree[
                     "model_payload_bytes_under_state_arm_b"],
                 "note": (
-                    "the observed tree holds 14 files / "
-                    f"{coord_tree['observed_total_bytes']} bytes: the "
-                    "six allowlisted JSON data files "
-                    f"({coord_tree['data_file_total_bytes']} bytes of "
+                    "round-4 exact-file-set enforcement: the observed "
+                    "tree holds exactly 14 files / "
+                    f"{coord_tree['observed_total_bytes']} bytes — six "
+                    "allowlisted JSON data files ("
+                    f"{coord_tree['data_file_total_bytes']} bytes of "
                     "ticket/plan/requirements metadata, digests "
-                    "byte-equal the repo-retained copies) plus "
-                    "regenerable operational state (participant "
-                    "inventory stubs and the coordinator-side driver "
-                    "scripts with their CPython bytecode caches); zero "
-                    "model payload bytes under any coordinator path"),
+                    "byte-equal the repo-retained copies) and eight "
+                    "operational files ("
+                    f"{coord_tree['operational_file_total_bytes']} "
+                    "bytes: participant inventory stubs and the "
+                    "coordinator-side driver scripts with their CPython "
+                    "bytecode caches), EVERY file classified and pinned "
+                    "by exact relative path, byte size, and sha256; raw "
+                    "byte-exact copies of all eight operational files "
+                    "are retained under raw/coordinator/ and "
+                    "cross-bound to the observed inventory. Admission "
+                    "is exact set equality — never prefix or extension "
+                    "— so zero payload bytes is an identity property "
+                    "of the classified set, and any added, removed, "
+                    "renamed, or digest-changed file fails closed."),
             },
             "coordinator_counters_weight_roots": (
                 "coordinator-counters.json weight_roots_bytes all zero "
                 "(/srv/inferswarm/cache/issue117, /srv/inferswarm/"
                 "materialized/issue117, /srv/inferswarm/models)"),
+            "coordinator_transport_audit": {
+                "record":
+                    "observations/coordinator-transport-audit.json",
+                "parser":
+                    "scripts/issue117_parsers/transport_audit.py",
+                "builder": (
+                    "scripts/issue117_arm_b_transport_audit_build.py"),
+                "provenance": (
+                    "contemporaneous Hermes execution-session "
+                    "transcript (session 20260908_150616_c57910, 819 "
+                    "messages, chain-sha256 bound)"),
+                "census": (
+                    "9 coordinator-directed transfer commands, all "
+                    "campaign metadata or driver/collector scripts; "
+                    "zero model-byte co-targeting commands; zero "
+                    "destructive operations targeting the coordinator "
+                    "or canonical roots"),
+            },
         },
+        "received_bytes_derivation": (
+            "coordinator_model_weight_bytes_received == 0 is derived "
+            "from receipt-path absence, NOT final occupancy: (1) zero "
+            "coordinator requests in the retained RAW source-server "
+            "access log; (2) the Source HTTP server "
+            "(inferswarm01:18486) was the only authorized remote "
+            "model-byte path, and both acquisition ledgers freeze "
+            "their transports (inferswarm01 local-file; inferswarm03 "
+            "operator-local-http from the Source host, 427 requests "
+            "== raw-log client count); (3) every ledger ACQUIRED "
+            "event is participant-bound; (4) the digest-bound "
+            "command/transport audit of the contemporaneous execution "
+            "session (observations/coordinator-transport-audit.json) "
+            "shows zero issued commands co-targeting the coordinator "
+            "and a model-byte path and zero destructive operations "
+            "targeting the coordinator or any canonical root, so a "
+            "receive-then-delete history via any session-issued "
+            "command is excluded; (5) the exact observed coordinator "
+            "state set (14 files, each pinned by path/size/sha256; "
+            "raw copies of all 8 operational files retained under "
+            "raw/coordinator/) contains no model payload; (6) the "
+            "pinned producer sources admit no coordinator byte path. "
+            "Final weight-root occupancy is an additional "
+            "cross-check only."),
+        "materialized_bytes_derivation": (
+            "coordinator_model_weight_bytes_materialized == 0 is "
+            "derived from received == 0 (above) AND the accepted "
+            "pre-campaign physical preflight resource_identity "
+            "(coordinator CPU-only, pre-campaign model-state "
+            "inventory zero) AND the exact observed coordinator "
+            "state containing no model payload AND pinned execution "
+            "semantics with no coordinator materialization path. "
+            "Clearing the final materialized directory alone cannot "
+            "establish this invariant."),
         "derived_counters": {
             "coordinator_artifact_rx_bytes": 0,
             "coordinator_artifact_tx_bytes": 0,
