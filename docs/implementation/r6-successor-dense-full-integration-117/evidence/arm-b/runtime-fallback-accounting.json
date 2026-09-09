@@ -3,7 +3,7 @@
  "derivation_sources": [
   "realize-stage-{1,2,3}.json (frozen runtime report fields)",
   "read-audit-stage-{1,2,3}.json (strace file audit)",
-  "pinned realize-strace.log scans (see steady-state-movement.json strace facts)"
+  "raw/realize-strace.stage-{1,2,3}.log parsed by scripts/issue117_parsers/realize_strace.py (sha256-pinned)"
  ],
  "per_stage": {
   "dense.6171f32b4413.stage-1": {
@@ -88,6 +88,6 @@
    "wrong_gpu_substitution": false
   }
  },
- "schema": "inferswarm.issue117.arm-b.runtime-fallback-accounting/1",
+ "schema": "inferswarm.issue117.arm-b.runtime-fallback-accounting/2",
  "total_runtime_fallback_events": 0
 }

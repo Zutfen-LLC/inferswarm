@@ -72,24 +72,89 @@ Physical flow (all evidence under `evidence/arm-b/`, reduced by
    byte-exact equal the accepted Arm-A `ready.json` observation;
    persistent host model bytes 0 on every stage; whole-shard sentinel
    never fired;
-7. runtime-read proof via `strace -f -e trace=file` over every
+7. runtime-read proof via `strace -f -qq -e trace=file` over every
    realization subprocess: zero reads of
    `/srv/models/gemma-r6/model.safetensors` (or any whole-model weight
    path) after acquisition authority; all model-state reads from the
    materialized participant path; participant config/shard metadata reads
    are retained in the classified materialized-reads bucket (the
    Source-tree metadata bucket is empty — no Source-tree file of any kind
-   was opened during realization). Retention note: the RAW strace logs and
-   the 671 ticket objects were deliberately NOT committed (bulk/size);
-   the retained read-audit records carry the classified per-path lists,
-   and the ledgers carry every ticket's `attempt_digest` — the raw logs
-   remain on the participant hosts under
-   `/srv/inferswarm/materialized/issue117/<participant>/realize-strace.log`;
+   was opened during realization). Retention (round-3 correction): the
+   RAW strace logs ARE NOW COMMITTED byte-exact under
+   `evidence/arm-b/raw/realize-strace.stage-{1,2,3}.log`
+   (10.1/10.1/10.0 MB, sha256-pinned, parsed directly by
+   `scripts/issue117_parsers/realize_strace.py`), together with the RAW
+   source-server access log
+   (`raw/source-server-access.log`, 21,872 bytes) and the byte-pinned
+   producer sources under `raw/producer/` (driver scripts + the frozen
+   FreeToken worktree files that fix the lifecycle-counter semantics).
+   Machine-readable read-only host observations live under
+   `evidence/arm-b/observations/` (coordinator state-tree inventory,
+   root-inode continuity, host raw-log pins); regenerate with
+   `scripts/issue117_arm_b_observe_hosts.py` (read-only).
 
 8. every mandatory zero invariant mechanically re-derived from the
    retained records by the reducer (no stored zero is authority);
    coordinator counters re-collected post-campaign: CUDA 0, model
-   bytes received/materialized 0.
+   bytes received/materialized 0. The steady-state movement invariant is
+   established at the runtime FINALIZATION BOUNDARY: the pinned producer
+   sources show every model-state byte enters only through
+   `BoundedSafetensorsReader.open_tensor/open_group` context managers
+   that close each mapping on transfer completion, the stage runtime
+   hard-fails if host staging is retained after realization, and the
+   realize child only serializes its report after construction; the
+   retained reports therefore record mapping open == close per stage
+   (223/221/223) with host staging current == 0 and staging processed
+   == fetched — the finalized host model-state inventory is empty, and
+   the raw trace confirms zero model-state path opens after the last
+   shard open and zero cache/source opens across each entire log. This
+   is a finalized-state invariant plus path-open support, NOT a byte
+   measurement (the historical trace was `-e trace=file` only and
+   contains no data-class syscall lines).
+
+Attempt lineage (PR #127 correction, retention/derivation only — no
+rerun; schema /2): the campaign required SIX invalid launches before
+the valid encompassing campaign, all individually retained with
+verbatim digest-bound transcript excerpts and host-side corroboration
+in
+[evidence/arm-b/attempt-lineage.json](evidence/arm-b/attempt-lineage.json):
+three pre-acquisition-validity launch failures (missing driver file
+on inferswarm03; canonical-JSON artifact_id self-identity mismatch from
+a non-canonical serialization form; a KeyError on the frozen ticket
+authorization shape) — all three died strictly before transfer begin in
+the byte-pinned #99 engine's call order — and three nested in-campaign
+phase failures (assembler content-dedupe bug; realize-child interpreter
+path; realize-child report-key KeyError after full device residency).
+Schema /2 keeps physical execution and correctness-bearing retention
+SEPARATE: launch-6 physically executed the realization path to full
+device residency yet retained ZERO correctness-bearing records (its
+report never serialized) — both facts are represented without
+contradiction via `realization_execution_reached`,
+`device_residency_achieved`,
+`correctness_bearing_realization_records`, and
+`correctness_bearing_observations`. The valid campaign is an explicit
+encompassing container (`campaign-1`, interval 20:59:55Z–21:24:38Z,
+acquisition validity established 21:09:20Z) with `parent_campaign_id`/
+`subattempt_of` links for the nested phase attempts — never a
+chronologically-started "launch #7". Every invalid attempt mechanically
+retains 0 verified publications, 0 materializations, 0 correctness-
+bearing realization records, and 0 correctness-bearing observations,
+and the canonical cold condition is proven preserved per attempt (no
+canonical-root destruction; the prestate root inodes are unchanged to
+this day, proving no root was ever reset). The corrected zero
+invariants are derived from low-level accounting records backed by the
+RAW retained evidence:
+[runtime-fallback-accounting.json](evidence/arm-b/runtime-fallback-accounting.json)
+(requested vs observed execution substrate per stage; device-node
+proven CUDA path),
+[steady-state-movement.json](evidence/arm-b/steady-state-movement.json)
+(finalization-boundary counters + raw-trace post-boundary opens), and
+[coordinator-transport-accounting.json](evidence/arm-b/coordinator-transport-accounting.json)
+(RAW source-server log client histogram pins every model-byte network
+request; zero coordinator clients; the OBSERVED coordinator state-tree
+inventory — 14 files / 35,445,075 bytes, of which the six allowlisted
+JSON data files total 35,399,067 bytes and the rest is regenerable
+driver/operational state — holds zero model payload bytes).
 
 Attempt lineage (PR #127 correction, retention/derivation only — no
 rerun): the campaign required SIX invalid launches before the valid
@@ -318,7 +383,7 @@ inventories, per-stage assemble/realize reports, runtime-read audits, and
 the 6774474→5179c41 delta audit — reduced by
 `scripts/issue117_arm_b_evidence.py` (fails closed; derives every zero
 invariant from low-level records) and mutation-tested by
-`tests/test_issue117_arm_b_retention.py` (72 one-mutation negative
+`tests/test_issue117_arm_b_retention.py` (91 one-mutation negative
 controls + the unmutated PASS baseline). Provenance attribution: the
 cold-root prestates and coordinator counters carry explicit
 host/collector/schema stamps (on-host observations); the source-side

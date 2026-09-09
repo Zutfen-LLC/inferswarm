@@ -1,0 +1,135 @@
+{
+ "entries": [
+  {
+   "path": "authorization",
+   "size": 4096,
+   "symlink_target": null,
+   "type": "d"
+  },
+  {
+   "path": "authorization/coordinator-deltas.json",
+   "size": 100764,
+   "symlink_target": null,
+   "type": "f"
+  },
+  {
+   "path": "authorization/coordinator-record.json",
+   "size": 303,
+   "symlink_target": null,
+   "type": "f"
+  },
+  {
+   "path": "authorization/tickets-inferswarm01.json",
+   "size": 23131326,
+   "symlink_target": null,
+   "type": "f"
+  },
+  {
+   "path": "authorization/tickets-inferswarm03.json",
+   "size": 11669777,
+   "symlink_target": null,
+   "type": "f"
+  },
+  {
+   "path": "inventory-inferswarm01.json",
+   "size": 286,
+   "symlink_target": null,
+   "type": "f"
+  },
+  {
+   "path": "inventory-inferswarm03.json",
+   "size": 286,
+   "symlink_target": null,
+   "type": "f"
+  },
+  {
+   "path": "scripts",
+   "size": 4096,
+   "symlink_target": null,
+   "type": "d"
+  },
+  {
+   "path": "scripts/__pycache__",
+   "size": 4096,
+   "symlink_target": null,
+   "type": "d"
+  },
+  {
+   "path": "scripts/__pycache__/armb_coordinator.cpython-313.pyc",
+   "size": 9836,
+   "symlink_target": null,
+   "type": "f"
+  },
+  {
+   "path": "scripts/__pycache__/armb_plan_core.cpython-313.pyc",
+   "size": 11912,
+   "symlink_target": null,
+   "type": "f"
+  },
+  {
+   "path": "scripts/armb_common.py",
+   "size": 4032,
+   "symlink_target": null,
+   "type": "f"
+  },
+  {
+   "path": "scripts/armb_coordinator.py",
+   "size": 7569,
+   "symlink_target": null,
+   "type": "f"
+  },
+  {
+   "path": "scripts/armb_inventory.py",
+   "size": 1771,
+   "symlink_target": null,
+   "type": "f"
+  },
+  {
+   "path": "scripts/armb_plan_core.py",
+   "size": 10316,
+   "symlink_target": null,
+   "type": "f"
+  },
+  {
+   "path": "source",
+   "size": 4096,
+   "symlink_target": null,
+   "type": "d"
+  },
+  {
+   "path": "source/arm-b-plan.json",
+   "size": 3543,
+   "symlink_target": null,
+   "type": "f"
+  },
+  {
+   "path": "source/arm-b-requirements.json",
+   "size": 493354,
+   "symlink_target": null,
+   "type": "f"
+  }
+ ],
+ "mechanism": "read-only ssh find/stat/sha256sum over the coordinator state tree (no writes)",
+ "observation_utc": "2026-09-09T00:46:34Z",
+ "path_on_inferswarm00": "/srv/inferswarm/state/arm-b/",
+ "regular_file_digests": {
+  "authorization/coordinator-deltas.json": "a15e6cee1efb30dd390bf132ba447c14ee7a2edd6a8b22c69645dd6340b9e7cc",
+  "authorization/coordinator-record.json": "f28c64f5aa2eef660a5f93183a6d4a16d2f0a80eccd916212f386515f3ec3de7",
+  "authorization/tickets-inferswarm01.json": "ca53c3560593f75156e6d101900b487210d3e950dc987494bfc92a0cdca9c9f2",
+  "authorization/tickets-inferswarm03.json": "ab12b934b9483c960a67a0f0b1d5c8a53da5fcca599749917811bad6da3966bb",
+  "inventory-inferswarm01.json": "48db5b83afaa3c434170d5a88a1c5cf2c81b6826313e02024c76f9df472570aa",
+  "inventory-inferswarm03.json": "3fb8ff2e8dd11d7eb8d099ff57eefebe32d0785f8d0d3ea4fbbc44b799033b19",
+  "scripts/__pycache__/armb_coordinator.cpython-313.pyc": "8f8cfb8a3a7b867106d69eb54a47a852ed5cd59ad401cb578f13ecbbf39dc2ef",
+  "scripts/__pycache__/armb_plan_core.cpython-313.pyc": "a397ef1ff49651bb30e704897151ba4d6be5103ed01c7c389e768d25d564f07a",
+  "scripts/armb_common.py": "2f344c118691d17deb714086260206f71c6f990bd1cbb5def86e5f0dd1297c3c",
+  "scripts/armb_coordinator.py": "3912974effdf6e8e1472d95a755a866765fc62968027285259d6f50888353a91",
+  "scripts/armb_inventory.py": "51e9b764540ea81cc1096c32024853614a41beccd7d7eb5a56b7bf48606df373",
+  "scripts/armb_plan_core.py": "9c8360f4fb308b816e6abd6735bc592bfb67113b623e118c675b4d40cf8271bf",
+  "source/arm-b-plan.json": "e8416564d63b2f3b114fa70fca8593c88b42a3f662ff7959a91dac20512d3bff",
+  "source/arm-b-requirements.json": "8fe8854a0ba118c9ba598655834d9177b4d1bc9f1ef99a5259834b389e02dde3"
+ },
+ "schema": "inferswarm.issue117.arm-b.coordinator-state-inventory/1",
+ "symlink_count": 0,
+ "total_bytes": 35445075,
+ "total_file_count": 14
+}

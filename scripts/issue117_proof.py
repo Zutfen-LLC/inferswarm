@@ -87,6 +87,12 @@ PRODUCERS = [
     "scripts/issue117_arm_a_evidence.py",
     "scripts/issue117_arm_b_evidence.py",
     "scripts/issue117_arm_b_correction_build.py",
+    "scripts/issue117_arm_b_observe_hosts.py",
+    "scripts/issue117_parsers/__init__.py",
+    "scripts/issue117_parsers/source_server_log.py",
+    "scripts/issue117_parsers/realize_strace.py",
+    "scripts/issue117_parsers/coordinator_state.py",
+    "scripts/issue117_parsers/producer_pins.py",
     "scripts/issue117_subject_identity.py",
     "scripts/issue99_artifact_core.py",
     "scripts/issue101_orchestration.py",
@@ -211,6 +217,38 @@ COMMITTED_EVIDENCE_FILES = {
     "arm-b/runtime-fallback-accounting.json",
     "arm-b/steady-state-movement.json",
     "arm-b/coordinator-transport-accounting.json",
+    # PR #127 round-3 correction (maintainer findings 1-5): the RAW
+    # retained evidence the reducer now parses directly — the byte-exact
+    # source-server access log, the three realize-strace logs, the
+    # byte-pinned producer sources (participant driver scripts + the
+    # frozen FreeToken worktree files that fix lifecycle-counter
+    # semantics) — and the machine-readable read-only host observations
+    # (coordinator state-tree inventory, root-inode continuity, host
+    # raw-log pins)
+    "arm-b/raw/source-server-access.log",
+    "arm-b/raw/realize-strace.stage-1.log",
+    "arm-b/raw/realize-strace.stage-2.log",
+    "arm-b/raw/realize-strace.stage-3.log",
+    "arm-b/raw/producer/armb_common.py",
+    "arm-b/raw/producer/armb_inventory.py",
+    "arm-b/raw/producer/armb_materialize.py",
+    "arm-b/raw/producer/armb_node_acquire.py",
+    "arm-b/raw/producer/armb_plan_core.py",
+    "arm-b/raw/producer/armb_read_audit.py",
+    "arm-b/raw/producer/armb_realize_child.py",
+    "arm-b/raw/producer/armb_realize_child.inferswarm03.py",
+    "arm-b/raw/producer/armb_source_server.py",
+    "arm-b/raw/producer/issue74_methodology.py",
+    "arm-b/raw/producer/issue99_artifact_core.py",
+    "arm-b/raw/producer/stage_runtime.py",
+    "arm-b/raw/producer/stage_runtime.inferswarm03.py",
+    "arm-b/raw/producer/loader.py",
+    "arm-b/raw/producer/loader.inferswarm03.py",
+    "arm-b/raw/producer/r6_dense_census.py",
+    "arm-b/raw/producer/SHA256SUMS",
+    "arm-b/observations/coordinator-state-inventory.json",
+    "arm-b/observations/root-inode-continuity.json",
+    "arm-b/observations/host-raw-log-pins.json",
 }
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the

@@ -1,0 +1,27 @@
+{
+ "mechanism": "read-only ssh stat of the canonical roots",
+ "observation_utc": "2026-09-09T00:46:17Z",
+ "roots": {
+  "inferswarm01": {
+   "/srv/inferswarm/cache/issue117": {
+    "st_ino": 8519682,
+    "type": "directory"
+   },
+   "/srv/inferswarm/materialized/issue117": {
+    "st_ino": 8519684,
+    "type": "directory"
+   }
+  },
+  "inferswarm03": {
+   "/srv/inferswarm/cache/issue117": {
+    "st_ino": 9962003,
+    "type": "directory"
+   },
+   "/srv/inferswarm/materialized/issue117": {
+    "st_ino": 9962005,
+    "type": "directory"
+   }
+  }
+ },
+ "schema": "inferswarm.issue117.arm-b.root-inode-observation/1"
+}

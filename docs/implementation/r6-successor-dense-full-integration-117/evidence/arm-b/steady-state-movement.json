@@ -1,74 +1,88 @@
 {
  "derivation_sources": [
-  "realize-strace.log per stage (sha256-pinned openat scans)",
-  "realize-stage-{1,2,3}.json staging counters",
-  "read-audit-stage-{1,2,3}.json classified paths"
+  "raw/realize-strace.stage-{1,2,3}.log parsed by scripts/issue117_parsers/realize_strace.py",
+  "realize-stage-{1,2,3}.json finalization counters",
+  "raw/producer/ pinned sources (loader.py, stage_runtime.py, armb_realize_child.py)"
  ],
+ "historical_tracing_command": "strace -f -qq -e trace=file -o <out_dir>/realize-strace.log <child python> armb_realize_child.py --role \u2026 --model-path <out_dir> \u2026",
+ "movement_proof_method": "The pinned producer source (raw/producer/, sha256-bound) shows every model-state byte enters the process ONLY through BoundedSafetensorsReader.open_tensor/open_group (freetoken/models/loader.py), whose context managers close the safetensors mapping when the caller's transfer completes; GemmaDenseStage.__init__ runs the selective load, context setup, and finalization, then hard-fails if host staging is retained (RuntimeError at stage_runtime.py:393-394); the realize child (armb_realize_child.py) arms the whole-shard sentinel AFTER construction and then only serializes the report. The report's counters are therefore taken at the finalization boundary: safetensors_mapping_open_count == safetensors_mapping_close_count (every mapping opened during load is closed) and host_staging_current_bytes == 0 (no model-state bytes remain staged on the host). Because the finalization-time host model-state inventory is empty and no further model-state path is opened before exit (raw trace: zero model-state opens after the last shard open, zero cache/source opens across the entire log), the unplanned steady-state movement is exactly zero BY INVARIANT OF THE FINALIZED STATE, not by byte measurement.",
  "per_stage": {
   "dense.6171f32b4413.stage-1": {
-   "cache_root_opens": 0,
+   "finalization_counters": {
+    "fetched_bytes": 9256814624,
+    "host_staging_current_bytes": 0,
+    "host_staging_total_bytes_processed": 9256814624,
+    "page_cache_advisory_calls": 223,
+    "safetensors_mapping_close_count": 223,
+    "safetensors_mapping_open_count": 223,
+    "whole_shard_sentinel_calls": 0
+   },
    "host": "inferswarm01",
    "planned_initial_materialization_bytes": 9256814624,
+   "post_finalization_model_state_path_opens": [],
    "post_materialization_cache_fetch_bytes": 0,
-   "post_materialization_device_to_host_model_bytes": 0,
-   "post_materialization_host_to_device_model_bytes": 0,
-   "post_materialization_model_state_read_bytes": 0,
    "post_materialization_rematerialization_bytes": 0,
    "post_materialization_source_fetch_bytes": 0,
-   "shard_open_count": 671,
-   "source_tree_opens": 0,
    "strace_lines": 65246,
    "strace_sha256": "36c8845b35e2387c383e9a53ca8d943eaa448ad432ad69a385b33a2ed8a73b13",
    "unexplained_movement_bytes": 0,
-   "zero_derivation": "model_state_opens_after_last_shard_open == [] : the openat scan over the full pinned strace log found ZERO model-state path accesses (cache root, source tree, participant shard) after the last shard openat line; additionally source_tree_opens == 0 and cache_root_opens == 0 across the ENTIRE log, so no unplanned fetch could occur in any phase; host staging current bytes == 0 at report time"
+   "zero_derivation": "finalization-boundary counters: mapping open == close == 223, host staging current == 0, staging processed == fetched == 9256814624; raw trace: zero model-state opens after the last shard open (line 64915), zero cache/source opens across the entire log; whole-shard sentinel never fired after finalization (0 calls)"
   },
   "dense.6171f32b4413.stage-2": {
-   "cache_root_opens": 0,
+   "finalization_counters": {
+    "fetched_bytes": 7278939168,
+    "host_staging_current_bytes": 0,
+    "host_staging_total_bytes_processed": 7278939168,
+    "page_cache_advisory_calls": 221,
+    "safetensors_mapping_close_count": 221,
+    "safetensors_mapping_open_count": 221,
+    "whole_shard_sentinel_calls": 0
+   },
    "host": "inferswarm01",
    "planned_initial_materialization_bytes": 7278939168,
+   "post_finalization_model_state_path_opens": [],
    "post_materialization_cache_fetch_bytes": 0,
-   "post_materialization_device_to_host_model_bytes": 0,
-   "post_materialization_host_to_device_model_bytes": 0,
-   "post_materialization_model_state_read_bytes": 0,
    "post_materialization_rematerialization_bytes": 0,
    "post_materialization_source_fetch_bytes": 0,
-   "shard_open_count": 665,
-   "source_tree_opens": 0,
    "strace_lines": 65238,
    "strace_sha256": "ffbf4ddbe1bea8efdcbb11fe5a983e096284cd083193c0b2da07954a4f195d9f",
    "unexplained_movement_bytes": 0,
-   "zero_derivation": "model_state_opens_after_last_shard_open == [] : the openat scan over the full pinned strace log found ZERO model-state path accesses (cache root, source tree, participant shard) after the last shard openat line; additionally source_tree_opens == 0 and cache_root_opens == 0 across the ENTIRE log, so no unplanned fetch could occur in any phase; host staging current bytes == 0 at report time"
+   "zero_derivation": "finalization-boundary counters: mapping open == close == 221, host staging current == 0, staging processed == fetched == 7278939168; raw trace: zero model-state opens after the last shard open (line 64907), zero cache/source opens across the entire log; whole-shard sentinel never fired after finalization (0 calls)"
   },
   "dense.6171f32b4413.stage-3": {
-   "cache_root_opens": 0,
+   "finalization_counters": {
+    "fetched_bytes": 9292212768,
+    "host_staging_current_bytes": 0,
+    "host_staging_total_bytes_processed": 9292212768,
+    "page_cache_advisory_calls": 223,
+    "safetensors_mapping_close_count": 223,
+    "safetensors_mapping_open_count": 223,
+    "whole_shard_sentinel_calls": 0
+   },
    "host": "inferswarm03",
    "planned_initial_materialization_bytes": 9292212768,
+   "post_finalization_model_state_path_opens": [],
    "post_materialization_cache_fetch_bytes": 0,
-   "post_materialization_device_to_host_model_bytes": 0,
-   "post_materialization_host_to_device_model_bytes": 0,
-   "post_materialization_model_state_read_bytes": 0,
    "post_materialization_rematerialization_bytes": 0,
    "post_materialization_source_fetch_bytes": 0,
-   "shard_open_count": 671,
-   "source_tree_opens": 0,
    "strace_lines": 64009,
    "strace_sha256": "5703a180438172626f7c6585fbe99ba5253c8fff31aed3af894ce25b0d30c033",
    "unexplained_movement_bytes": 0,
-   "zero_derivation": "model_state_opens_after_last_shard_open == [] : the openat scan over the full pinned strace log found ZERO model-state path accesses (cache root, source tree, participant shard) after the last shard openat line; additionally source_tree_opens == 0 and cache_root_opens == 0 across the ENTIRE log, so no unplanned fetch could occur in any phase; host staging current bytes == 0 at report time"
+   "zero_derivation": "finalization-boundary counters: mapping open == close == 223, host staging current == 0, staging processed == fetched == 9292212768; raw trace: zero model-state opens after the last shard open (line 63692), zero cache/source opens across the entire log; whole-shard sentinel never fired after finalization (0 calls)"
   }
  },
- "phase_boundary_definition": "Steady-state interval per stage = [last openat of the participant shard during realization, process exit], pinned by line position in the retained realize-strace.log. All shard openat/mmap activity up to and including the last shard open is the planned initial materialization/realization transfer, excluded by this mechanical line-ordering boundary. Any model-state byte access after the last shard open is post-finalization movement.",
- "schema": "inferswarm.issue117.arm-b.steady-state-movement/1",
+ "phase_boundary_definition": "Steady-state interval per stage = [runtime finalization boundary (construction complete, staging drained, mappings closed), process exit]. Supporting trace boundary: last openat of the participant shard object (armb-participant.safetensors) by line position in the retained raw realize-strace log; post-boundary model-state path opens other than the child's own report write are counted as violations.",
+ "schema": "inferswarm.issue117.arm-b.steady-state-movement/2",
  "strace_facts": {
-  "mechanism": "read-only openat scan over the retained realize-strace.log on each participant host, sha256-pinned below",
-  "observation_utc": "2026-09-08T22:12:00Z",
+  "mechanism": "direct parse of the retained raw strace logs (sha256-pinned); see scripts/issue117_parsers/realize_strace.py",
   "stages": {
    "dense.6171f32b4413.stage-1": {
     "cache_root_opens": 0,
-    "host": "inferswarm01",
+    "data_class_syscall_lines_observed": 0,
+    "last_shard_open_line": 64915,
     "lines": 65246,
     "model_state_opens_after_last_shard_open": [],
-    "model_state_opens_total": 671,
+    "model_state_opens_total": 674,
     "nvidia_nodes_opened": [
      "/dev/nvidia-caps/nvidia-cap2",
      "/dev/nvidia-uvm",
@@ -76,16 +90,18 @@
      "/dev/nvidia1",
      "/dev/nvidiactl"
     ],
-    "shard_open_count": 671,
+    "raw_log": "realize-strace.stage-1.log",
+    "shard_open_count": 674,
     "source_tree_opens": 0,
     "strace_sha256": "36c8845b35e2387c383e9a53ca8d943eaa448ad432ad69a385b33a2ed8a73b13"
    },
    "dense.6171f32b4413.stage-2": {
     "cache_root_opens": 0,
-    "host": "inferswarm01",
+    "data_class_syscall_lines_observed": 0,
+    "last_shard_open_line": 64907,
     "lines": 65238,
     "model_state_opens_after_last_shard_open": [],
-    "model_state_opens_total": 665,
+    "model_state_opens_total": 668,
     "nvidia_nodes_opened": [
      "/dev/nvidia-caps/nvidia-cap2",
      "/dev/nvidia-uvm",
@@ -93,16 +109,18 @@
      "/dev/nvidia1",
      "/dev/nvidiactl"
     ],
-    "shard_open_count": 665,
+    "raw_log": "realize-strace.stage-2.log",
+    "shard_open_count": 668,
     "source_tree_opens": 0,
     "strace_sha256": "ffbf4ddbe1bea8efdcbb11fe5a983e096284cd083193c0b2da07954a4f195d9f"
    },
    "dense.6171f32b4413.stage-3": {
     "cache_root_opens": 0,
-    "host": "inferswarm03",
+    "data_class_syscall_lines_observed": 0,
+    "last_shard_open_line": 63692,
     "lines": 64009,
     "model_state_opens_after_last_shard_open": [],
-    "model_state_opens_total": 671,
+    "model_state_opens_total": 674,
     "nvidia_nodes_opened": [
      "/dev/nvidia-caps/nvidia-cap2",
      "/dev/nvidia-uvm",
@@ -110,11 +128,13 @@
      "/dev/nvidia1",
      "/dev/nvidiactl"
     ],
-    "shard_open_count": 671,
+    "raw_log": "realize-strace.stage-3.log",
+    "shard_open_count": 674,
     "source_tree_opens": 0,
     "strace_sha256": "5703a180438172626f7c6585fbe99ba5253c8fff31aed3af894ce25b0d30c033"
    }
   }
  },
+ "trace_scope_limitation": "The retained trace captured file-class syscalls only (strace -f -qq -e trace=file). By itself it CANNOT measure read/pread64/mmap byte traffic; the raw logs contain zero data-class syscall lines (verified by the parser), so no byte counts are inferred from them. The movement invariant is instead established at the RUNTIME FINALIZATION BOUNDARY from the producer's own lifecycle counters (see movement_proof_method), with the trace supplying the supporting path-open facts.",
  "unplanned_steady_state_model_state_movement_bytes": 0
 }

@@ -1,0 +1,34 @@
+{
+ "logs": {
+  "realize-strace.stage-1.log": {
+   "host": "inferswarm01",
+   "mtime": "2026-09-08 17:24:11.258225337 -0400",
+   "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-1/realize-strace.log",
+   "sha256": "36c8845b35e2387c383e9a53ca8d943eaa448ad432ad69a385b33a2ed8a73b13",
+   "size_bytes": 10111092
+  },
+  "realize-strace.stage-2.log": {
+   "host": "inferswarm01",
+   "mtime": "2026-09-08 17:24:30.858516384 -0400",
+   "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-2/realize-strace.log",
+   "sha256": "ffbf4ddbe1bea8efdcbb11fe5a983e096284cd083193c0b2da07954a4f195d9f",
+   "size_bytes": 10109879
+  },
+  "realize-strace.stage-3.log": {
+   "host": "inferswarm03",
+   "mtime": "2026-09-08 17:20:02.101932434 -0400",
+   "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3/realize-strace.log",
+   "sha256": "5703a180438172626f7c6585fbe99ba5253c8fff31aed3af894ce25b0d30c033",
+   "size_bytes": 9996518
+  },
+  "source-server-access.log": {
+   "host": "inferswarm01",
+   "mtime": "2026-09-08 17:09:13.483429155 -0400",
+   "path": "/tmp/armb-source-server.log",
+   "sha256": "8b09e9575a51fdcf39b2a360d228140b7d314ac1b657f85d459a701e73c342e2",
+   "size_bytes": 21872
+  }
+ },
+ "observation_utc": "2026-09-09T00:46:17Z",
+ "schema": "inferswarm.issue117.arm-b.host-raw-log-pins/1"
+}
