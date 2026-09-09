@@ -78,13 +78,13 @@ Integrate V5-qualified dense Gemma with automatic planning, participant-exact ar
 
 - **Arm B — canonical cold acquisition + realization observation:** [`ISSUE117_ARM_B_COLD_REALIZATION_PASS`](https://github.com/Zutfen-LLC/inferswarm/pull/127).
 - **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/commit/fed87d1b71a0794374dd58c921e31606a56a242f).
-- **Recorded execution authorization:** authorized — Arm C — ordinary external-Coordinator serving. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
+- **Recorded execution authorization:** blocked — Arm C observed ISSUE117_ARM_C_ORDINARY_SERVING_FAIL (18/24 exact; pending maintainer review); Arm D blocked. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
 
 - Arm B is accepted at merge fed87d1b71a0794374dd58c921e31606a56a242f (ISSUE117_ARM_B_COLD_REALIZATION_PASS, PR #127).
-- Arm C — ordinary external-Coordinator serving — is the only authorized physical frontier.
+- Arm C executed 2026-09-09 from accepted main fed87d1b71a0794374dd58c921e31606a56a242f (status-sync + frozen Arm-C harness): observed ISSUE117_ARM_C_ORDINARY_SERVING_FAIL — 18/24 exact ordinary-vs-direct-control equivalence; the 6 regime-4 (multi-chunk prefill) fixture cases diverge, consistent with the documented non-deterministic KV-extend anomaly; all fencing, Coordinator-boundary, and participant data-path zero invariants hold. Retained under evidence/arm-c/; pending maintainer review.
 - Do not rerun the accepted physical preflight, Arm A, or the accepted Arm-B campaign.
-- Arm D must not begin before Arm-C maintainer acceptance.
-- Preserve the exact frozen producer 924cd22ea081f6d4ed471016faf01d427fc5b0d2, checkpoint 5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d, canonical candidate geometry dense.6171f32b4413, and the accepted Arm-B participant materialized state; do not clean, reset, or reacquire it.
+- Arm D must not begin before Arm-C maintainer review.
+- Preserve the frozen producer 924cd22ea081f6d4ed471016faf01d427fc5b0d2, checkpoint 5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d, canonical candidate geometry dense.6171f32b4413, and the accepted Arm-B participant materialized state.
 - No consumed h109-* holdout material may be used as new evidence.
 <!-- project-status:frontier:end -->
 

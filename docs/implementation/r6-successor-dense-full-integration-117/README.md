@@ -2,16 +2,19 @@
 
 ## Current state
 
-**Observed terminal:** `ISSUE117_ARM_B_COLD_REALIZATION_PASS`
+**Observed terminals (latest first):**
 
-Arm B — canonical cold acquisition + realization — was executed on the
-fabric on 2026-09-08 from accepted InferSwarm main
-`5179c41232051e7455b778ddb8876a6539f4cb04` with the frozen integration
-producer `924cd22ea081f6d4ed471016faf01d427fc5b0d2`.
+- Arm C (2026-09-09): `ISSUE117_ARM_C_ORDINARY_SERVING_FAIL` — observed,
+  pending maintainer review (see the Arm C section below).
+- Arm B (2026-09-08, ACCEPTED at merge
+  `fed87d1b71a0794374dd58c921e31606a56a242f`, PR #127):
+  `ISSUE117_ARM_B_COLD_REALIZATION_PASS` — executed from historical
+  accepted main `5179c41232051e7455b778ddb8876a6539f4cb04` with the frozen
+  integration producer `924cd22ea081f6d4ed471016faf01d427fc5b0d2`. No
+  holdout material was used.
 
-The Arm-B observation is retained in PR #127 and is pending maintainer
-acceptance. **Arm C is blocked until that acceptance.** Arms C/D/E have not
-been executed. No holdout material was used.
+Arm D has NOT been executed and remains blocked pending maintainer review
+of the Arm-C observation.
 
 Accepted predecessor gates remain historical authority:
 
@@ -244,8 +247,75 @@ At PR #127 round-4 head `dfaee1722f2407d843be940b84905d77d4b6a636`:
 
 Two independent exact-head reviews completed with zero P0/P1 findings.
 
-## Non-claims
+## Arm C — observed ordinary external-Coordinator serving FAIL (2026-09-09)
 
+Arm C executed on the fabric from accepted main `fed87d1b…` + status-sync,
+with the frozen integration producer `924cd22e…` byte-identical on
+inferswarm00/01/03 (no FreeToken changes: the r6/serving surfaces are
+execution-math-bound by the applicability audit).
+
+Observed terminal:
+
+`ISSUE117_ARM_C_ORDINARY_SERVING_FAIL`
+
+The 24-case frozen public fixture ran through BOTH arms:
+
+- **ordinary arm**: client → HTTP `/v1/chat/completions` on the CPU-only
+  Coordinator (inferswarm00, the accepted #67 R6 coordinator waist) →
+  strategy → generic planner (`AUTOMATIC_PLANNER_SELECTION` from an
+  `EXACT_CONTEXT` record measured by the direct arm) → frozen execution
+  plan → xc-wire REALIZE → node agent on inferswarm01 → 3-stage chain
+  (stages 1–2 local, stage 3 over the accepted R4 wire to inferswarm03,
+  all realized from the accepted Arm-B materialized participant state via
+  a zero-byte symlink view) → fenced commits; plus the real-path fencing
+  request (both controlled injections rejected on the live path).
+- **direct-control comparator**: the same integrated substrate
+  (`ChainEpochRuntime` exactly as the node agent builds it, same chain
+  plan, same participant state, same last-stage service) invoked directly
+  on inferswarm01 with the control plane bypassed, per-token
+  replay-prefill (the accepted canonical-prefix invocation).
+
+**Result: 18/24 cases exactly equal on every mandatory dimension**
+(per-step token ids, committed count, stop semantics, decoded bytes,
+session/epoch/plan/position attribution). **The 6 regime-4 cases
+(rendered prompt 65–67 ids > the 64-row single-chunk boundary) diverge
+between the arms.** Three independently retained execution trajectories
+(ordinary, direct replay-prefill, direct single-shot) disagree run-to-run
+exactly on those cases, consistent with the documented non-deterministic
+multi-chunk KV-extend anomaly (`anomaly-incremental-decode.md`): any
+ordinary serving request whose chat-rendered prompt exceeds 64 tokens
+crosses the known-broken incremental-append path. No tuning or rerun was
+performed after the correctness-bearing observation; the mismatch is
+recorded as a valid Arm-C failure, cause retained as diagnostic evidence.
+
+All other mandatory dimensions hold with exact zeros:
+fencing (8 counters, both real-path rejections fired), Coordinator
+boundary (no NVIDIA nodes, torch/triton uninstallable, exact state
+census, no model bytes), participant data path (zero Source-model reads,
+zero cache reacquisition, zero rematerialization, materialized state
+byte-preserved; the comparator driver's four tokenizer-metadata reads
+are declared and accounted).
+
+Nine invalid launches are retained in
+[`evidence/arm-c/attempt-lineage.json`](evidence/arm-c/attempt-lineage.json);
+one (`armc-direct-6`, an invocation-pattern-defective comparator run)
+emitted 24 correctness-bearing results that are retained as anomaly
+corroboration and flagged for maintainer review — it never reached the
+Coordinator and changed no accepted state.
+
+The canonical reducer is `scripts/issue117_arm_c_evidence.py`
+(34-control mutation suite: `tests/test_issue117_arm_c_retention.py`).
+
+Arm D has NOT been executed and remains blocked pending maintainer
+review of this observation.
+
+## Non-claims (Arm C)
+
+- Arm C does not claim ordinary-serving correctness for the 6 regime-4
+  cases; the FAIL stands as observed.
+- No Arm-D warm-restart or Arm-E locality claim.
+- The multi-chunk anomaly attribution is diagnostic evidence, not a
+  root-cause proof; maintainer review decides disposition.
 - Arm B does not claim ordinary external-Coordinator serving; that is Arm C.
 - No PREFILL/decode/generate or fixture serving was executed as part of Arm B.
 - Arms C/D/E have not been executed.
