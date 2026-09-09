@@ -657,11 +657,22 @@ def main():
                 nested = EXPECTED_PARENTS.get(aid) == v.get("attempt_id")
                 if nested:
                     # nested phase attempt: must fall INSIDE the interval
+                    # AND must start after acquisition validity was
+                    # established (nested attempts are post-acquisition
+                    # phase attempts by declared kind — a backdated
+                    # start would silently re-label a pre-validity
+                    # failure as an in-campaign one)
                     if isinstance(s, str) and isinstance(v_started, str) \
                             and s < v_started:
                         failures.append(
                             f"nested attempt {aid} started before the "
                             f"campaign interval began")
+                    if isinstance(s, str) and isinstance(validity_ts, str) \
+                            and s < validity_ts:
+                        failures.append(
+                            f"nested attempt {aid} started before the "
+                            f"campaign's acquisition validity was "
+                            f"established (backdated phase attempt)")
                     if isinstance(e, str) and isinstance(v_ended, str) \
                             and e > v_ended:
                         failures.append(

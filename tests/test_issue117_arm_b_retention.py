@@ -1068,6 +1068,22 @@ class Round3LineageSemanticsMutations(MutationTestCase):
         self.assertFails(self.mutate_and_run("attempt-lineage.json", m),
                          needle="after the campaign's acquisition validity")
 
+    def test_nested_attempt_backdated_before_validity(self):
+        # independent-reviewer finding: a nested phase attempt backdated
+        # to before acquisition validity was established (still inside
+        # the campaign interval, timestamps monotone) must fail closed —
+        # it would silently re-label a pre-validity failure as an
+        # in-campaign phase attempt
+        def m(p):
+            d = json.loads(p.read_text())
+            for a in d["attempts"]:
+                if a["attempt_id"].endswith("launch-4"):
+                    a["started_utc_observed"] = "2026-09-08T21:07:00Z"
+                    a["ended_utc_observed"] = "2026-09-08T21:07:30Z"
+            p.write_text(json.dumps(d))
+        self.assertFails(self.mutate_and_run("attempt-lineage.json", m),
+                         needle="backdated phase attempt")
+
 
 if __name__ == "__main__":
     unittest.main()
