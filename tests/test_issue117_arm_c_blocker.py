@@ -586,14 +586,28 @@ class TestMandatoryControls(BlockerCase):
 
 class TestRealEvidence(unittest.TestCase):
     """The retained physical evidence must derive the blocker through
-    the REAL reducer against the REAL repository (no fakeroot)."""
+    the REAL reducer against the REAL repository (no fakeroot).
+
+    Issue #129 preservation rule: the accepted blocker authority is
+    immutable history classified at the audited head inside the
+    accepted merge ``718efbf…``. The reducer is therefore run in its
+    historical-verification mode (``reduce_all(head=…)``) pinned to
+    that merge, never re-classified at the live head; live-tree
+    preservation of every accepted arm-c evidence byte is proven
+    separately by the byte-preservation regression in
+    tests/test_issue129_arm_c_retry.py.
+    """
+
+    ACCEPTED_BLOCKER_MERGE = (
+        "718efbf5770b31c6e44eb3a8c4d0b81fd1dc9c22")
 
     def test_retained_campaign_derives_blocker(self) -> None:
         os.environ.pop("ARM_C_BLOCKER_REPO", None)
         os.environ.pop("ARM_C_BLOCKER_FREEZE_SHA", None)
         os.environ.pop("ARM_C_BLOCKER_FROZEN_PINS", None)
+        os.environ.pop("ARM_C_BLOCKER_HEAD", None)
         br = load_reducer()
-        result = br.reduce_all()
+        result = br.reduce_all(head=self.ACCEPTED_BLOCKER_MERGE)
         self.assertEqual(result["terminal"], br.BLOCKED)
         sem = result["frozen_invocation_semantics"]
         self.assertEqual(sem["direct"]["max_new_tokens"], 8)
@@ -611,6 +625,18 @@ class TestRealEvidence(unittest.TestCase):
                 "tokenizer_metadata_file_reads"], 4)
         self.assertFalse(result["observations"][
             "direct9_is_frozen_comparator"])
+
+    def test_live_head_is_not_reclassified(self) -> None:
+        # issue #129 Finding 1: the live head (carrying additive #129
+        # work with no allowlist entries) must NOT be classifiable —
+        # re-classification would rewrite the accepted audit
+        os.environ.pop("ARM_C_BLOCKER_REPO", None)
+        os.environ.pop("ARM_C_BLOCKER_FREEZE_SHA", None)
+        os.environ.pop("ARM_C_BLOCKER_FROZEN_PINS", None)
+        os.environ.pop("ARM_C_BLOCKER_HEAD", None)
+        br = load_reducer()
+        with self.assertRaises(br.ReductionError):
+            br.reduce_all()
 
 
 class TestFrozenPinsRealBytes(unittest.TestCase):

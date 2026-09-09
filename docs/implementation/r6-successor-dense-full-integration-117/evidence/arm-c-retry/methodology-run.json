@@ -1,10 +1,104 @@
 {
+  "accepted_blocker_preservation": {
+    "accepted_blocker_merge": "718efbf5770b31c6e44eb3a8c4d0b81fd1dc9c22",
+    "path_count": 62,
+    "preserved": true,
+    "preserved_paths_digest": "sha256:873bbcc9aca16f2a20883bf268d175b9c7335d4d0a9611590d73a64d6015e260",
+    "rule": "every evidence path under evidence/arm-c/ that existed at the accepted merge is byte-identical in the working tree; all issue-#129 authority lives additively under evidence/arm-c-retry/",
+    "schema": "inferswarm.issue129.accepted-blocker-preservation/1"
+  },
+  "attempt_state_machine_self_checks": {
+    "ok": true,
+    "rows": [
+      {
+        "control": "correctness_bearing_without_methodology_readiness",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
+        "control": "correctness_bearing_without_physical_authorization",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
+        "control": "authorized_terminal_clears_stop",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "TERMINAL_CAMPAIGN_ATTEMPT"
+        ],
+        "expected_passed": true,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "TERMINAL_CAMPAIGN_ATTEMPT"
+        ],
+        "observed_passed": true,
+        "ok": true
+      },
+      {
+        "control": "post_stop_diagnostic_remains_non_authoritative",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "DIAGNOSTIC_ONLY_AFTER_STOP"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "DIAGNOSTIC_ONLY_AFTER_STOP"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
+        "control": "non_correctness_bearing_marker_cannot_clear_stop",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "TERMINAL_MARKER_NON_CORRECTNESS_BEARING"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "TERMINAL_MARKER_NON_CORRECTNESS_BEARING"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
+        "control": "continuation_after_stop_without_authorized_terminal",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "CORRECTNESS_BEARING_VALID"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "CORRECTNESS_BEARING_VALID"
+        ],
+        "observed_passed": false,
+        "ok": true
+      }
+    ]
+  },
   "authority": {
     "accepted_arm_b_merge": "fed87d1b71a0794374dd58c921e31606a56a242f",
     "accepted_arm_b_result": "ISSUE117_ARM_B_COLD_REALIZATION_PASS",
     "accepted_arm_c_blocker": "ISSUE117_ARM_C_EVIDENCE_BLOCKER",
     "accepted_arm_c_blocker_merge": "718efbf5770b31c6e44eb3a8c4d0b81fd1dc9c22",
     "accepted_fixture_digest": "sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba36f2",
+    "additive_history_rule": "the accepted #128 blocker evidence under evidence/arm-c/ is immutable history preserved byte-exact; every #129 authority, pin, and derived methodology output lives additively under evidence/arm-c-retry/",
     "checkpoint_authority": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
     "frozen_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
     "issue": "https://github.com/Zutfen-LLC/inferswarm/issues/129"
@@ -30,6 +124,13 @@
     },
     "plan_digest": "sha256:6911c00283cdb4169acaae4e8c25955476cd96b2b469d5cdc56e6d626fdcca1b",
     "plan_digest_source": "real freeze_execution_plan via frozen producer bytes",
+    "runtime_session_allocation": {
+      "derivation": "verbatim AST extraction of EpochServingController._runtime_session_id from the sha256-pinned r5b_epochs.py bytes (structure verified: one sequence increment; return logical_session_id * 1000000 + sequence; sequence zeroed in __init__); the direct comparator allocates through this extracted method, never through a hand-copied formula",
+      "method_line": 417,
+      "method_sha256": "94276b21597f22795af28ee4d3566dc15a903abadfd9a5c00a3d527f2b892f6c",
+      "multiplier": 1000000,
+      "source_sha256": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805"
+    },
     "sampling_inputs": {
       "temperature": 0.0,
       "top_k": -1,
@@ -52,11 +153,109 @@
     "fixture_digest": "sha256:6046d4796a5d9cc888030c6b3f07304c20ce117d93905c3000d7aae7c0ae01c7"
   },
   "frozen_control_plane_digests": {
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/coordinator.py": "189548dc4f87f5f40c05f7796a2be7af0446ea05f95a0cf7bafcd3b79bec5d77",
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/strategy.py": "ca31f0999cb4fcf46d73c83f8b3ee7bbe2636792bcfc1824b15946aaac53906b",
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/xc_strategy.py": "8d33b4b297a20511448ab78909d2f528eef62c2b7943acae167668ec9ff0f26f",
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken/research/r3_planner.py": "080e8b64fbb9fbc0f6df390d5714d0dbc691dd601e2bd13fe4ff71596e2d0856",
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken/research/r5a_serving.py": "f61adc3201f5c2c9d23afcc90da3135ca89b3ed7eb3213d68a41b08fc242b105",
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken/research/r5b_epochs.py": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805"
+  },
+  "global_problems": [],
+  "ordinary_ingress": {
+    "case_count": 24,
+    "coordinator_ingress_citations": {
+      "_render_and_tokenize": {
+        "decorators": [],
+        "line": 302,
+        "source_sha256": "9ec92ab0959bbba5efb02735453f2137d2e366b1567ca5bf601dd9a5e3db5e52"
+      },
+      "_sampling_of": {
+        "decorators": [
+          "staticmethod"
+        ],
+        "line": 312,
+        "source_sha256": "30b35785fbfc451d955a23aef1946b5e2991490283d084848aefb872971b3ced"
+      },
+      "max_tokens_derivation": {
+        "line": 341,
+        "text": "maximum = int(body.get(\"max_tokens\") or DEFAULT_MAX_OUTPUT_TOKENS)"
+      },
+      "max_tokens_guard": {
+        "line": 342,
+        "text": "if maximum < 1:"
+      },
+      "render_call": {
+        "line": 340,
+        "text": "prompt_ids = self._render_and_tokenize(body)"
+      },
+      "sampling_call": {
+        "line": 344,
+        "text": "sampling = self._sampling_of(body)"
+      },
+      "serve_dispatch": {
+        "line": 401,
+        "text": "completed = self.controller.serve_tokens("
+      },
+      "serve_max_arg": {
+        "line": 404,
+        "text": "max_new_tokens=maximum,"
+      },
+      "serve_prompt_arg": {
+        "line": 403,
+        "text": "prompt_token_ids=prompt_ids,"
+      },
+      "serve_sampling_arg": {
+        "line": 405,
+        "text": "sampling_inputs=sampling,"
+      },
+      "serve_session_arg": {
+        "line": 402,
+        "text": "session_id=session_id,"
+      },
+      "session_allocation": {
+        "line": 345,
+        "text": "session_id = len(self.request_log) + 1"
+      }
+    },
+    "coordinator_source_sha256": "189548dc4f87f5f40c05f7796a2be7af0446ea05f95a0cf7bafcd3b79bec5d77",
+    "default_max_output_tokens": 32768,
+    "derivation": "the frozen Coordinator's _render_and_tokenize and _sampling_of are executed VERBATIM (AST-extracted from the sha256-pinned coordinator.py bytes) over the reconstructed exact ordinary request bodies; bodies verified byte-equal against the retained ordinary-http records; the stand-in tokenizer applies the cross-derived chat-template wrapper and the pinned accepted content encodings",
+    "equal_count": 24,
+    "passed": true,
+    "problems": [],
+    "schema": "inferswarm.issue129.ordinary-ingress/1",
+    "template_contract": {
+      "contract_sha256": "sha256:249462bfe2dbe05c425081d031eb17c1c7779de4dd1273ec73cfc908e22dc28d",
+      "derivation": "cross-derived from BOTH retained accepted sides: every case's rendered ids equal HEADER + content + FOOTER with content = accepted fixture ids (trailing-space piece absorbed at the template boundary iff the content string ends with a space); identical on the direct and ordinary sides",
+      "footer_token_ids": [
+        106,
+        107,
+        105,
+        4368,
+        107,
+        100,
+        45518,
+        107,
+        101
+      ],
+      "header_token_ids": [
+        2,
+        105,
+        2364,
+        107
+      ],
+      "trailing_space_cases": [
+        "c109-04-03-040"
+      ],
+      "trailing_space_piece": 236743
+    },
+    "tokenizer_stand_in": {
+      "asset_identities_pinned_by": "tokenizer_asset_contract (accepted checkpoint-authority provenance sha256 pins; bytes never read CPU-only)",
+      "class": "FrozenSourceTokenizerStandIn",
+      "content_encodings_pin": "accepted integration-fixture text->ids pairs; encode fails closed on any text outside the pin",
+      "encode_failures": [],
+      "stands_for": "AutoTokenizer.from_pretrained(/srv/models/gemma-r6)"
+    }
   },
   "ordinary_summary": {
     "arm": "ordinary",
@@ -74,6 +273,13 @@
     },
     "plan_digest": "sha256:98938bf6d44baa0c35360dc38d3b210490260c7a93094a1fe7250a2a55adc7dd",
     "plan_digest_source": "real freeze_execution_plan via frozen producer bytes",
+    "runtime_session_allocation": {
+      "derivation": "verbatim AST extraction of EpochServingController._runtime_session_id from the sha256-pinned r5b_epochs.py bytes (structure verified: one sequence increment; return logical_session_id * 1000000 + sequence; sequence zeroed in __init__); the direct comparator allocates through this extracted method, never through a hand-copied formula",
+      "method_line": 417,
+      "method_sha256": "94276b21597f22795af28ee4d3566dc15a903abadfd9a5c00a3d527f2b892f6c",
+      "multiplier": 1000000,
+      "source_sha256": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805"
+    },
     "sampling_inputs": {
       "temperature": 0.0,
       "top_k": -1,
@@ -92,8 +298,18 @@
   },
   "per_case_reduction": {
     "case_count": 24,
-    "control_plane_only_fields": [
+    "compared_runtime_call_fields": [
+      "case_id",
+      "call_index",
       "runtime_session_id",
+      "prompt_token_ids",
+      "max_new_tokens",
+      "on_token_present",
+      "response_commit_token_id",
+      "response_speculative_token_id",
+      "response_token_ids"
+    ],
+    "control_plane_only_fields": [
       "epoch_id",
       "generation",
       "realization_id",
@@ -101,7 +317,7 @@
       "logical_session_id",
       "wall_ns"
     ],
-    "control_plane_only_proof": "control-plane-only fields never appear among generate() arguments: the recording runtime captures the exact keyword set per call and the reducer requires it to equal the frozen contract on both arms; equality is computed only over the recorded model-execution inputs",
+    "control_plane_only_proof": "control-plane-only fields never appear among generate() arguments: the recording runtime captures the exact keyword set per call and the reducer requires it to equal the frozen contract on both arms; the runtime session_id IS a generate() argument value and is compared exactly per call; equality is computed only over the recorded runtime-invocation inputs",
     "equal_count": 24,
     "global_problems": [],
     "passed": true,
@@ -227,17 +443,105 @@
         "problems": []
       }
     ],
-    "schema": "inferswarm.issue129.transcript-reduction/1",
+    "schema": "inferswarm.issue129.transcript-reduction/2",
     "terminal": "ISSUE117_ARM_C_RETRY_METHODOLOGY_READY"
   },
-  "schema": "inferswarm.issue129.methodology-run/1",
+  "runtime_session_allocation": {
+    "derivation": "verbatim AST extraction of EpochServingController._runtime_session_id from the sha256-pinned r5b_epochs.py bytes (structure verified: one sequence increment; return logical_session_id * 1000000 + sequence; sequence zeroed in __init__); the direct comparator allocates through this extracted method, never through a hand-copied formula",
+    "method_line": 417,
+    "method_sha256": "94276b21597f22795af28ee4d3566dc15a903abadfd9a5c00a3d527f2b892f6c",
+    "multiplier": 1000000,
+    "source_sha256": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805"
+  },
+  "runtime_session_cross_check": {
+    "derivation": "the ordinary arm's per-call runtime session ids equal the allocator mechanically extracted from the pinned r5b_epochs.py bytes, replayed in ordinary case order (logical_session_id * 1_000_000 + global call sequence)",
+    "ok": true,
+    "problems": [],
+    "representative_sequences": {
+      "c109-01-01-045": {
+        "logical_session_id": 1,
+        "runtime_session_ids": [
+          1000001,
+          1000002,
+          1000003,
+          1000004,
+          1000005,
+          1000006,
+          1000007,
+          1000008
+        ]
+      },
+      "c109-01-02-076": {
+        "logical_session_id": 2,
+        "runtime_session_ids": [
+          2000009,
+          2000010,
+          2000011,
+          2000012,
+          2000013,
+          2000014,
+          2000015,
+          2000016
+        ]
+      },
+      "c109-01-03-009": {
+        "logical_session_id": 3,
+        "runtime_session_ids": [
+          3000017,
+          3000018,
+          3000019,
+          3000020,
+          3000021,
+          3000022,
+          3000023,
+          3000024
+        ]
+      }
+    }
+  },
+  "schema": "inferswarm.issue129.methodology-run/2",
   "terminal": "ISSUE117_ARM_C_RETRY_METHODOLOGY_READY",
-  "tokenizer_seam": {
-    "seam": "frozen rendered prompt ids consumed by the direct comparator; no tokenizer metadata access exists in either arm's observation window; decoded-output reconstruction would be a separate pinned CPU evidence step outside the observation window (not required for transcript equivalence)",
-    "source_reads_derivation": "attestation: neither arm opens any filesystem path during the observation window (both arms consume only the frozen fixture document already in memory); the mechanical import check plus the absence of any file-opening call in the two arm runners back this attestation",
-    "source_reads_during_observation": 0,
-    "tokenizer_object_constructed": false,
-    "tokenizer_object_constructed_derivation": "attestation: no tokenizer object is constructed anywhere in this module (mechanically re-checkable by import/AST audit); the only mechanical observation in-process is the transformers import check",
-    "transformers_imported": false
+  "tokenizer_source_contract": {
+    "observation_monitor": {
+      "forbidden_opens": [],
+      "forbidden_root": "/srv/models/",
+      "frozen_rule_forbidden_root": "/srv/models/",
+      "observation_window_clean": true,
+      "observation_window_source_opens": 0
+    },
+    "record": {
+      "asset_dir": "/srv/inferswarm/tokenizers/gemma-r6-frozen",
+      "assets": [
+        {
+          "name": "chat_template.jinja",
+          "sha256": "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4"
+        },
+        {
+          "name": "config.json",
+          "sha256": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9"
+        },
+        {
+          "name": "generation_config.json",
+          "sha256": "a8349d9bd64cc5841297fcb5002f0fdc4749c473c8f1b10ea337f9ce4ee7014e"
+        },
+        {
+          "name": "tokenizer.json",
+          "sha256": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f"
+        },
+        {
+          "name": "tokenizer_config.json",
+          "sha256": "a62f4e85a47c0c136edaaa3a4f591fd6783717299a9def47e5ad03a49f6a5eb9"
+        }
+      ],
+      "digests_verified_pre_window": true,
+      "forbidden_root": "/srv/models/",
+      "observation_window_source_opens": 0,
+      "tokenizer_path": "/srv/inferswarm/tokenizers/gemma-r6-frozen"
+    },
+    "rule": "the future physical retry must publish the exact sha256-pinned tokenizer/config assets to a dedicated non-Source location, point tokenizer_path there, verify digests pre-window, and open nothing under /srv/models/ during the observation window; the Coordinator legitimately uses a tokenizer \u2014 the gate never hinges on transformers being absent",
+    "transformers_imported_in_observation_process": false,
+    "verification": {
+      "ok": true
+    }
   }
 }

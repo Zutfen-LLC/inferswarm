@@ -4,20 +4,31 @@
 
 **Observed terminals (latest first):**
 
-- Issue #129 (2026-09-09, pending maintainer review):
+- Issue #129 (2026-09-09, review-corrected, pending maintainer review):
   `ISSUE117_ARM_C_RETRY_METHODOLOGY_READY` — CPU-only Arm-C retry
   methodology remediation. The corrected comparator contract (per
   committed position: replay prefix, `max_new_tokens=2`, commit step
-  zero, discard the speculative second token), the frozen 24-case
-  rendered prompt-token fixture, the CPU recording-runtime transcript
-  comparator (24/24 exact equivalence between the real frozen
+  zero, discard the speculative second token; runtime-session
+  allocation mechanically extracted from the pinned controller bytes),
+  the frozen 24-case rendered prompt-token fixture, the ordinary
+  Coordinator ingress/tokenizer seam (exact request bodies rendered
+  through the AST-extracted frozen functions to exactly the frozen
+  fixture ids, 24/24), the CPU recording-runtime transcript comparator
+  (24/24 exact equivalence — complete generate() argument values,
+  runtime session ids included — between the real frozen
   EpochServingController ordinary path and the corrected direct
-  comparator), the fail-closed reducer with all mandatory negative
-  controls, the executable attempt/STOP state machine, and the exact
-  deployed-script identity contract are frozen in
+  comparator), the tokenizer Source contract (pinned non-Source
+  assets; zero forbidden-root opens in the observation window), the
+  accepted-#128 byte-preservation regression (all `evidence/arm-c/`
+  paths byte-exact from merge `718efbf…`; additive history only), the
+  fail-closed reducer with all mandatory negative controls, the
+  executable attempt/STOP/physical-authorization state machine, and
+  the exact deployed-script identity contract are frozen in
   [METHODOLOGY-ARM-C-RETRY.md](METHODOLOGY-ARM-C-RETRY.md) with evidence
-  under `evidence/arm-c-retry/`. No physical execution; the physical
-  Arm-C retry itself is NOT yet authorized.
+  under `evidence/arm-c-retry/` (`methodology-run.json`,
+  `prompt-fixture.json`, `authority.json`, `integrity.json`). No
+  physical execution; the physical Arm-C retry itself is NOT yet
+  authorized.
 - Arm C (2026-09-09, corrected 2026-09-09): physical observations
   exist, but the campaign is **methodology/evidence-blocked** —
   `ISSUE117_ARM_C_EVIDENCE_BLOCKER` (post-correctness-bearing

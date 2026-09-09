@@ -4,21 +4,33 @@ Exercises scripts/issue129_arm_c_retry_core.py end to end:
 
 - BASELINE: 24/24 exact runtime-call transcript equivalence between the
   ORDINARY arm (the REAL frozen EpochServingController, planner, and
-  strategy bytes retained under evidence/arm-c/frozen-freetoken/924cd22e/)
-  and the corrected DIRECT comparator, on the recording fake runtime;
-- every mandatory negative control of issue #129 fails closed through the
-  same real derivation;
-- the attempt/STOP state machine classifies and stops mechanically;
+  strategy bytes retained under evidence/arm-c/frozen-freetoken/924cd22e/,
+  fed by the ordinary Coordinator ingress/tokenizer seam) and the corrected
+  DIRECT comparator (which allocates runtime session ids through the
+  allocator mechanically extracted from the pinned r5b_epochs.py bytes),
+  on the recording fake runtime;
+- the ordinary Coordinator ingress/tokenizer seam renders the exact
+  ordinary request bodies to exactly the frozen prompt-token fixture
+  (24/24) through the MECHANICALLY EXTRACTED frozen functions;
+- the tokenizer Source contract (non-Source pinned assets; zero
+  forbidden-root opens during the observation window);
+- the accepted #128 blocker evidence is preserved byte-exact from the
+  accepted merge 718efbf…;
+- frozen-byte pinning fails closed (including the inherited #128 pins);
+- every mandatory negative control of issue #129 fails closed through
+  the same real derivation;
+- the attempt/STOP/physical-authorization state machine classifies,
+  stops, and clears mechanically;
 - the deployed-script identity contract rejects mutable/unpinned/changed
   scripts;
-- the tokenizer/Source seam stays frozen (no transformers import; the
-  direct comparator consumes frozen rendered prompt ids);
 - stored ``equal`` flags or terminal strings never substitute for
   derivation.
 """
 import copy
 import json
+import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -29,10 +41,23 @@ import issue129_arm_c_retry_core as core  # noqa: E402
 
 AREA = core.AREA
 RETRY_EVIDENCE = AREA / "evidence" / "arm-c-retry"
+ARM_C = AREA / "evidence" / "arm-c"
 
 
 def _arms(**kwargs):
     return core.run_both_arms(ROOT, **kwargs)
+
+
+def _scratch_mirror(tmp: str) -> Path:
+    """A scratch mirror of scripts/ + the issue-117 area (for
+    frozen-byte/pins mutation controls; carries no git history)."""
+    import shutil
+    mirror = Path(tmp) / "repo"
+    mirror.mkdir()
+    shutil.copytree(ROOT / "scripts", mirror / "scripts")
+    area = mirror / AREA.relative_to(ROOT)
+    shutil.copytree(AREA, area, ignore=shutil.ignore_patterns())
+    return mirror
 
 
 class BaselineEquivalenceTests(unittest.TestCase):
@@ -63,6 +88,8 @@ class BaselineEquivalenceTests(unittest.TestCase):
             self.assertEqual(len(case["committed_epoch_ids"]), 8)
             self.assertTrue(all(case["committed_epoch_ids"]))
             self.assertEqual(len(set(case["committed_plan_digests"])), 1)
+            self.assertEqual(case["prompt_ids_source"],
+                             "ordinary-ingress derivation")
 
     def test_every_case_is_eight_calls_max2_with_speculative_discard(self):
         for arm_name in ("ordinary", "direct"):
@@ -91,28 +118,316 @@ class BaselineEquivalenceTests(unittest.TestCase):
                             c["response_commit_token_id"]
                             for c in case["calls"][:index]])
 
+    def test_runtime_session_id_is_compared_and_equal(self):
+        # Finding 2: the runtime session_id is a generate() keyword
+        # value and is compared exactly per call, per case, all 8 calls
+        for case_id in sorted(self.arms["ordinary"]["per_case"]):
+            o = self.arms["ordinary"]["per_case"][case_id]
+            d = self.arms["direct"]["per_case"][case_id]
+            self.assertEqual(
+                [c["runtime_session_id"] for c in o["calls"]],
+                [c["runtime_session_id"] for c in d["calls"]],
+                f"{case_id}: runtime session id sequences differ")
+        self.assertIn("runtime_session_id",
+                      self.reduction["compared_runtime_call_fields"])
+        self.assertNotIn("runtime_session_id",
+                         self.reduction["control_plane_only_fields"])
+
+    def test_runtime_session_ids_follow_the_frozen_allocation(self):
+        # logical_session_id * 1_000_000 + global call sequence, one
+        # global sequence across all cases in ordinary order — exactly
+        # what the frozen controller's own allocation produces
+        for case_id in sorted(self.arms["ordinary"]["per_case"]):
+            case = self.arms["ordinary"]["per_case"][case_id]
+            logical = case["logical_session_id"]
+            offset = (logical - 1) * 8
+            self.assertEqual(
+                [c["runtime_session_id"] for c in case["calls"]],
+                [logical * 1_000_000 + offset + i + 1
+                 for i in range(8)])
+
+    def test_direct_allocation_is_derived_from_pinned_source(self):
+        facts = self.arms["direct"]["runtime_session_allocation"]
+        self.assertEqual(facts["multiplier"], 1_000_000)
+        self.assertIn("verbatim AST extraction", facts["derivation"])
+        digests = core.verify_frozen_bytes(ROOT)
+        epochs_rel = ("docs/implementation/r6-successor-dense-full-"
+                      "integration-117/evidence/arm-c/frozen-freetoken/"
+                      "924cd22e/python/freetoken/research/r5b_epochs.py")
+        self.assertEqual(facts["source_sha256"], digests[epochs_rel])
+
     def test_control_plane_only_fields_are_outside_model_inputs(self):
         reduction = self.reduction
-        self.assertIn("runtime_session_id",
-                      reduction["control_plane_only_fields"])
-        # the recorded generate argument set excludes every control-plane
-        # field on both arms
+        # the recorded generate argument set excludes every
+        # control-plane-only field on both arms
         for arm_name in ("ordinary", "direct"):
             names = self.arms[arm_name]["generate_argument_names"]
             for field in reduction["control_plane_only_fields"]:
                 self.assertNotIn(field, names)
-
-    def test_tokenizer_seam_is_frozen(self):
-        run = core.run_methodology(ROOT)
-        seam = run["tokenizer_seam"]
-        self.assertFalse(seam["transformers_imported"])
-        self.assertEqual(seam["source_reads_during_observation"], 0)
 
     def test_top_level_methodology_run_passes(self):
         run = core.run_methodology(ROOT)
         self.assertEqual(run["terminal"], core.METHODOLOGY_READY)
         self.assertFalse(run["cpu_only"]["gpu_execution_occurred"])
         self.assertFalse(run["cpu_only"]["model_execution_occurred"])
+        self.assertEqual(run["schema"],
+                         "inferswarm.issue129.methodology-run/2")
+        self.assertTrue(run["runtime_session_cross_check"]["ok"])
+        self.assertTrue(run["attempt_state_machine_self_checks"]["ok"])
+
+
+class OrdinaryIngressTests(unittest.TestCase):
+    """Finding 3: the actual ordinary Coordinator ingress/tokenizer
+    seam is exercised and equals the frozen prompt-token fixture."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.ingress = core.run_ordinary_ingress_proof(ROOT)
+
+    def test_renders_equal_frozen_fixture_24_of_24(self):
+        self.assertEqual(self.ingress["case_count"], 24)
+        self.assertEqual(self.ingress["equal_count"], 24)
+        self.assertTrue(self.ingress["passed"])
+        self.assertEqual(self.ingress["problems"], [])
+
+    def test_request_bodies_equal_retained_accepted_records(self):
+        # the body-reconstruction equality is part of the proof (any
+        # drift surfaces as an ingress problem)
+        self.assertTrue(self.ingress["passed"])
+
+    def test_ingress_functions_are_extracted_from_pinned_bytes(self):
+        citations = self.ingress["coordinator_ingress_citations"]
+        for key in ("_render_and_tokenize", "_sampling_of"):
+            self.assertIn(key, citations)
+            self.assertIn("source_sha256", citations[key])
+        for key in core.COORDINATOR_INGRESS_LINES:
+            self.assertIn(key, citations)
+            self.assertIn("line", citations[key])
+        digests = core.verify_frozen_bytes(ROOT)
+        coordinator_rel = ("docs/implementation/r6-successor-dense-full-"
+                           "integration-117/evidence/arm-c/frozen-freetoken/"
+                           "924cd22e/benchmarks/inferswarm_r6/coordinator.py")
+        self.assertEqual(self.ingress["coordinator_source_sha256"],
+                         digests[coordinator_rel])
+
+    def test_frozen_session_allocation_matches_request_log_order(self):
+        # len(request_log) + 1 in ascending ordinary order reproduces
+        # the frozen session indices 1..24
+        indices = [row["session_index"] for row in self.ingress["rows"]]
+        self.assertEqual(indices, list(range(1, 25)))
+
+    def test_template_contract_cross_derived_from_both_sides(self):
+        template = self.ingress["template_contract"]
+        self.assertEqual(template["header_token_ids"],
+                         list(core.CHAT_TEMPLATE_HEADER_TOKEN_IDS))
+        self.assertEqual(template["footer_token_ids"],
+                         list(core.CHAT_TEMPLATE_FOOTER_TOKEN_IDS))
+        self.assertEqual(template["trailing_space_cases"],
+                         ["c109-04-03-040"])
+
+    def test_control_ordinary_rendering_mismatch_footer(self):
+        run = core.run_methodology(
+            ROOT,
+            ingress_footer_mutator=lambda footer: footer[:-1] + [footer[-1] + 1])
+        self.assertEqual(run["terminal"], core.METHODOLOGY_BLOCKED)
+        self.assertFalse(run["ordinary_ingress"]["passed"])
+
+    def test_control_ordinary_rendering_mismatch_content(self):
+        run = core.run_methodology(
+            ROOT,
+            ingress_content_mutator=lambda case_id, ids: ids[:-1] + [ids[-1] + 1])
+        self.assertEqual(run["terminal"], core.METHODOLOGY_BLOCKED)
+        self.assertFalse(run["ordinary_ingress"]["passed"])
+
+    def test_control_ordinary_request_body_drift(self):
+        def mangle(case_id, body):
+            body = dict(body)
+            body["temperature"] = 0.5
+            return body
+        run = core.run_methodology(ROOT, ingress_body_mutator=mangle)
+        self.assertEqual(run["terminal"], core.METHODOLOGY_BLOCKED)
+
+    def test_control_unpinned_content_fails_closed(self):
+        # the stand-in tokenizer must refuse text outside the accepted
+        # encodings (a mutated prompt cannot silently re-render)
+        template = core.derive_template_contract(ROOT)
+        tokenizer = core.FrozenSourceTokenizerStandIn(template, {})
+        composed = tokenizer.apply_chat_template(
+            [{"role": "user", "content": "never seen text"}])
+        with self.assertRaises(RuntimeError):
+            tokenizer.encode(composed, add_special_tokens=False)
+        with self.assertRaises(RuntimeError):
+            tokenizer.encode("not the frozen composition",
+                             add_special_tokens=False)
+
+
+class TokenizerSourceContractTests(unittest.TestCase):
+    """The tokenizer Source rule: pinned non-Source assets; no
+    forbidden-root opens during the observation window."""
+
+    def test_contract_record_derives_from_accepted_provenance(self):
+        record = core.tokenizer_asset_contract_record(ROOT)
+        verdict = core.verify_tokenizer_asset_contract(record)
+        self.assertTrue(verdict["ok"])
+        names = {asset["name"] for asset in record["assets"]}
+        self.assertEqual(names, set(core.REQUIRED_TOKENIZER_ASSETS))
+        for asset in record["assets"]:
+            self.assertEqual(asset["sha256"],
+                             core.REQUIRED_TOKENIZER_ASSETS[asset["name"]])
+
+    def test_control_tokenizer_path_points_at_source(self):
+        for field in ("tokenizer_path", "asset_dir"):
+            record = core.tokenizer_asset_contract_record(ROOT)
+            record[field] = "/srv/models/gemma-r6"
+            verdict = core.verify_tokenizer_asset_contract(record)
+            self.assertFalse(verdict["ok"])
+            self.assertIn("forbidden Source root", verdict["reason"])
+
+    def test_control_tokenizer_asset_digest_drift(self):
+        record = core.tokenizer_asset_contract_record(ROOT)
+        record["assets"] = [
+            {**asset, "sha256": "0" * 64}
+            if asset["name"] == "tokenizer.json" else asset
+            for asset in record["assets"]]
+        verdict = core.verify_tokenizer_asset_contract(record)
+        self.assertFalse(verdict["ok"])
+        self.assertIn("digest drift", verdict["reason"])
+
+    def test_control_missing_required_asset(self):
+        record = core.tokenizer_asset_contract_record(ROOT)
+        record["assets"] = [
+            asset for asset in record["assets"]
+            if asset["name"] != "chat_template.jinja"]
+        verdict = core.verify_tokenizer_asset_contract(record)
+        self.assertFalse(verdict["ok"])
+        self.assertIn("missing", verdict["reason"])
+
+    def test_control_digests_not_verified_pre_window(self):
+        record = core.tokenizer_asset_contract_record(ROOT)
+        record["digests_verified_pre_window"] = False
+        verdict = core.verify_tokenizer_asset_contract(record)
+        self.assertFalse(verdict["ok"])
+
+    def test_control_forbidden_source_open_during_window(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            run = core.run_methodology(ROOT, simulated_forbidden_root=tmp)
+        self.assertEqual(run["terminal"], core.METHODOLOGY_BLOCKED)
+        monitor = run["tokenizer_source_contract"]["observation_monitor"]
+        self.assertEqual(monitor["observation_window_source_opens"], 1)
+        self.assertFalse(monitor["observation_window_clean"])
+
+    def test_observation_monitor_ignores_non_source_opens(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "benign.txt"
+            target.write_text("x")
+            monitor = core.SourceAccessMonitor()
+            with monitor:
+                with target.open("rb"):
+                    pass
+            report = monitor.report()
+        self.assertEqual(report["observation_window_source_opens"], 0)
+        self.assertTrue(report["observation_window_clean"])
+
+    def test_gate_does_not_hinge_on_transformers_absence(self):
+        # the corrected rule is the real invariant (pinned non-Source
+        # assets + zero forbidden opens); a transformers import in the
+        # process must NOT by itself block the corrected gate
+        saved = sys.modules.get("transformers")
+        sys.modules["transformers"] = type(sys)("transformers")
+        try:
+            run = core.run_methodology(ROOT)
+        finally:
+            if saved is None:
+                sys.modules.pop("transformers", None)
+            else:
+                sys.modules["transformers"] = saved
+        self.assertEqual(run["terminal"], core.METHODOLOGY_READY)
+
+
+class AcceptedBlockerPreservationTests(unittest.TestCase):
+    """Finding 1: accepted #128 blocker evidence is byte-exact from the
+    accepted merge; #129 authority is additive only."""
+
+    MERGE = core.ACCEPTED_BLOCKER_MERGE
+
+    def test_all_accepted_arm_c_paths_byte_exact(self):
+        result = core.verify_accepted_blocker_preservation(ROOT)
+        self.assertTrue(result["preserved"])
+        self.assertEqual(result["accepted_blocker_merge"], self.MERGE)
+        self.assertGreaterEqual(result["path_count"], 60)
+        # the two previously-modified files are byte-exact again
+        for name in ("pre-execution-authority-audit.json",
+                     "blocker-reduction.json"):
+            rel = str((ARM_C / name).relative_to(ROOT))
+            self.assertIn(rel, result["digests"])
+
+    def test_accepted_audit_head_is_never_advanced(self):
+        audit = json.loads(
+            (ARM_C / "pre-execution-authority-audit.json").read_text())
+        self.assertEqual(audit["head_classified"],
+                         "5a56eb5c5df6289d25b2ae8fcff0497deda881c6")
+        self.assertNotIn("head_classified_note", audit)
+        reduction = json.loads(
+            (ARM_C / "blocker-reduction.json").read_text())
+        self.assertEqual(reduction["head_audited"],
+                         "5a56eb5c5df6289d25b2ae8fcff0497deda881c6")
+
+    def test_control_drifted_accepted_evidence_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            import shutil
+            import os
+            repo = Path(tmp) / "repo"
+            repo.mkdir()
+            # minimal git repo: commit the arm-c evidence tree at one
+            # commit, point the accepted-merge override at it, then
+            # drift one file
+            def git(*args):
+                subprocess.run(["git", "-C", str(repo), *args],
+                               check=True, capture_output=True)
+            git("init", "-q")
+            git("config", "user.email", "t@example.com")
+            git("config", "user.name", "t")
+            area = repo / AREA.relative_to(ROOT)
+            shutil.copytree(ARM_C, area)
+            git("add", "-A")
+            git("commit", "-qm", "accepted base")
+            head = subprocess.run(
+                ["git", "-C", str(repo), "rev-parse", "HEAD"],
+                check=True, capture_output=True, text=True).stdout.strip()
+            target = area / "blocker-reduction.json"
+            target.write_text(target.read_text() + "\n")
+            env_updates = {"ARM_C_RETRY_ACCEPTED_MERGE": head,
+                           "ARM_C_RETRY_REPO": str(repo)}
+            old = {k: os.environ.get(k) for k in env_updates}
+            os.environ.update(env_updates)
+            try:
+                with self.assertRaises(RuntimeError):
+                    core.verify_accepted_blocker_preservation(repo)
+            finally:
+                for key, value in old.items():
+                    if value is None:
+                        os.environ.pop(key, None)
+                    else:
+                        os.environ[key] = value
+
+    def test_blocker_reducer_historical_mode_available(self):
+        # the accepted #128 reducer derives the blocker at the accepted
+        # merge (historical-verification mode); the audited head stays
+        # the accepted audit's own head_classified (never advanced)
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "issue117_arm_c_blocker_reducer",
+            ROOT / "scripts/issue117_arm_c_blocker_reducer.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        result = module.reduce_all(head=self.MERGE)
+        self.assertEqual(result["terminal"], module.BLOCKED)
+        retained = json.loads(
+            (ARM_C / "blocker-reduction.json").read_text())
+        self.assertEqual(result["head_audited"],
+                         retained["head_audited"])
+        self.assertEqual(result["authority"]["audited_head"],
+                         retained["authority"]["audited_head"])
 
 
 class MandatoryNegativeControlTests(unittest.TestCase):
@@ -140,6 +455,31 @@ class MandatoryNegativeControlTests(unittest.TestCase):
 
     def test_control_commit_speculative_second_token(self):
         arms = _arms(direct_variant="commit_speculative")
+        self._require_blocked(core.reduce_transcripts(
+            arms["ordinary"], arms["direct"]))
+
+    def test_control_runtime_session_allocation_only_change(self):
+        # Finding 2 negative control: ONLY the runtime-session ID
+        # allocation/sequence differs (shift by one); replay ids,
+        # outputs, max tokens, and everything else stay identical
+        arms = _arms(direct_session_sequence_start=1)
+        ordinary = arms["ordinary"]["per_case"]
+        direct = arms["direct"]["per_case"]
+        for case_id in sorted(ordinary):
+            self.assertNotEqual(
+                [c["runtime_session_id"] for c in ordinary[case_id]["calls"]],
+                [c["runtime_session_id"] for c in direct[case_id]["calls"]],
+                f"{case_id}: control must change the session sequence")
+            self.assertEqual(
+                [c["prompt_token_ids"] for c in ordinary[case_id]["calls"]],
+                [c["prompt_token_ids"] for c in direct[case_id]["calls"]],
+                f"{case_id}: control must leave replay prefixes identical")
+            self.assertEqual(
+                [c["response_commit_token_id"]
+                 for c in ordinary[case_id]["calls"]],
+                [c["response_commit_token_id"]
+                 for c in direct[case_id]["calls"]],
+                f"{case_id}: control must leave outputs identical")
         self._require_blocked(core.reduce_transcripts(
             arms["ordinary"], arms["direct"]))
 
@@ -223,29 +563,12 @@ class MandatoryNegativeControlTests(unittest.TestCase):
         }
 
     def test_control_invalid_attempt_continues_without_stop(self):
-        # an invalid correctness-bearing attempt followed by further
-        # correctness-bearing attempts without a terminal authorization
         attempts = [
-            {"attempt_id": "retry-1",
-             "gpu_execution_occurred": False,
-             "model_execution_occurred": False,
-             "correctness_bearing_result_emitted": True,
-             "result_reached_coordinator": True,
-             "coordinator_commit_occurred": True,
-             "frozen_identity_verified_pre_launch": False,
-             "frozen_identity_verified_post_run": True,
-             "methodology_gate_passed": False,
-             "stop_occurred": False},
-            {"attempt_id": "retry-2",
-             "gpu_execution_occurred": False,
-             "model_execution_occurred": False,
-             "correctness_bearing_result_emitted": True,
-             "result_reached_coordinator": True,
-             "coordinator_commit_occurred": True,
-             "frozen_identity_verified_pre_launch": True,
-             "frozen_identity_verified_post_run": True,
-             "methodology_gate_passed": False,
-             "stop_occurred": False},
+            self._facts(attempt_id="retry-1",
+                        correctness_bearing_result_emitted=True,
+                        frozen_identity_verified_pre_launch=False),
+            self._facts(attempt_id="retry-2",
+                        correctness_bearing_result_emitted=True),
         ]
         reduction = core.reduce_attempts(attempts)
         self.assertFalse(reduction["passed"])
@@ -255,21 +578,9 @@ class MandatoryNegativeControlTests(unittest.TestCase):
         self.assertEqual(
             reduction["events"][0]["stop_rule_fired"],
             "invalid_correctness_bearing_observation")
-
-    def test_control_tokenizer_source_access_violates_frozen_rule(self):
-        # simulate transformers having been imported in the observation
-        # process; the methodology run must downgrade to BLOCKED
-        saved = sys.modules.get("transformers")
-        sys.modules["transformers"] = type(sys)("transformers")
-        try:
-            run = core.run_methodology(ROOT)
-        finally:
-            if saved is None:
-                sys.modules.pop("transformers", None)
-            else:
-                sys.modules["transformers"] = saved
-        self.assertEqual(run["terminal"], core.METHODOLOGY_BLOCKED)
-        self.assertFalse(run["per_case_reduction"]["passed"])
+        self.assertEqual(
+            reduction["events"][1]["stop_rule_fired"],
+            "post_stop_continuation_without_terminal")
 
     def test_control_stored_equal_substitutes_for_derivation(self):
         # the reducer must re-derive: feeding doctored documents whose
@@ -284,6 +595,26 @@ class MandatoryNegativeControlTests(unittest.TestCase):
         self.assertFalse(reduction["passed"])
         self.assertEqual(reduction["terminal"], core.METHODOLOGY_BLOCKED)
 
+    @staticmethod
+    def _facts(**overrides):
+        facts = {
+            "attempt_id": "a",
+            "gpu_execution_occurred": False,
+            "model_execution_occurred": False,
+            "correctness_bearing_result_emitted": False,
+            "result_reached_coordinator": False,
+            "coordinator_commit_occurred": False,
+            "frozen_identity_verified_pre_launch": True,
+            "frozen_identity_verified_post_run": True,
+            "methodology_gate_passed": True,
+            "physical_retry_authorized": True,
+            "terminal_observation": False,
+            "diagnostic_only_disclosure": False,
+            "stop_occurred": False,
+        }
+        facts.update(overrides)
+        return facts
+
 
 class AttemptStateMachineTests(unittest.TestCase):
     def _facts(self, **overrides):
@@ -296,7 +627,10 @@ class AttemptStateMachineTests(unittest.TestCase):
             "coordinator_commit_occurred": False,
             "frozen_identity_verified_pre_launch": True,
             "frozen_identity_verified_post_run": True,
-            "methodology_gate_passed": False,
+            "methodology_gate_passed": True,
+            "physical_retry_authorized": True,
+            "terminal_observation": False,
+            "diagnostic_only_disclosure": False,
             "stop_occurred": False,
         }
         facts.update(overrides)
@@ -314,65 +648,138 @@ class AttemptStateMachineTests(unittest.TestCase):
                 coordinator_commit_occurred=True)),
             "CORRECTNESS_BEARING_VALID")
 
-    def test_correctness_bearing_invalid_on_identity_defect(self):
-        self.assertEqual(
-            core.classify_attempt(self._facts(
-                correctness_bearing_result_emitted=True,
-                frozen_identity_verified_pre_launch=False)),
-            "CORRECTNESS_BEARING_INVALID")
+    def test_control_cb_while_methodology_readiness_false(self):
+        classification = core.classify_attempt(self._facts(
+            correctness_bearing_result_emitted=True,
+            methodology_gate_passed=False))
+        self.assertEqual(classification, "CORRECTNESS_BEARING_INVALID")
+        reduction = core.reduce_attempts([self._facts(
+            attempt_id="no-readiness",
+            correctness_bearing_result_emitted=True,
+            methodology_gate_passed=False)])
+        self.assertFalse(reduction["passed"])
+        self.assertEqual(reduction["events"][0]["stop_rule_fired"],
+                         "invalid_correctness_bearing_observation")
+        self.assertIn("methodology readiness",
+                      reduction["mandatory_stop_events"][0])
 
-    def test_diagnostic_only_after_stop_requires_reducer_stop_state(self):
-        # the authored stop_occurred label alone does NOT classify as
-        # diagnostic; only the reducer's own derived stop state does
-        self.assertEqual(
-            core.classify_attempt(self._facts(
-                correctness_bearing_result_emitted=True,
-                stop_occurred=True)),
-            "CORRECTNESS_BEARING_VALID")
-        self.assertEqual(
-            core.classify_attempt(
-                self._facts(correctness_bearing_result_emitted=True),
-                stop_already_fired=True),
-            "DIAGNOSTIC_ONLY_AFTER_STOP")
+    def test_control_cb_while_physical_authorization_false(self):
+        classification = core.classify_attempt(self._facts(
+            correctness_bearing_result_emitted=True,
+            physical_retry_authorized=False))
+        self.assertEqual(classification, "CORRECTNESS_BEARING_INVALID")
+        reduction = core.reduce_attempts([self._facts(
+            attempt_id="no-authorization",
+            correctness_bearing_result_emitted=True,
+            physical_retry_authorized=False)])
+        self.assertFalse(reduction["passed"])
+        self.assertIn("physical retry not authorized",
+                      reduction["mandatory_stop_events"][0])
 
-    def test_terminal_campaign_attempt(self):
-        self.assertEqual(
-            core.classify_attempt(self._facts(
-                methodology_gate_passed=True)),
-            "TERMINAL_CAMPAIGN_ATTEMPT")
-
-    def test_authored_stop_label_cannot_launder_continuation(self):
-        # P1 hardening (review 1): correctness-bearing attempts that merely
-        # CLAIM stop_occurred, with no genuine STOP in the reducer's own
-        # history, must not classify as post-stop diagnostics
-        reduction = core.reduce_attempts([
-            self._facts(attempt_id="claimed-stop-1",
-                        correctness_bearing_result_emitted=True,
-                        stop_occurred=True),
-            self._facts(attempt_id="claimed-stop-2",
-                        correctness_bearing_result_emitted=True,
-                        stop_occurred=True),
-        ])
-        # without a genuine STOP these are ordinary correctness-bearing
-        # attempts; the state machine records them as such
-        self.assertEqual(reduction["events"][0]["classification"],
-                         "CORRECTNESS_BEARING_VALID")
-
-    def test_post_stop_continuation_fails_even_labeled_diagnostic(self):
-        # after a GENUINE stop, a correctness-bearing attempt that labels
-        # itself diagnostic still fails closed without a terminal attempt
+    def test_control_correctness_bearing_terminal_with_valid_authorization(
+            self):
+        # representable, authoritative, and it CLEARS a prior STOP
         reduction = core.reduce_attempts([
             self._facts(attempt_id="invalid-1",
                         correctness_bearing_result_emitted=True,
-                        frozen_identity_verified_pre_launch=False),
-            self._facts(attempt_id="claimed-diagnostic",
+                        physical_retry_authorized=False),
+            self._facts(attempt_id="terminal-1",
                         correctness_bearing_result_emitted=True,
-                        stop_occurred=True),
+                        terminal_observation=True),
+        ])
+        self.assertEqual(
+            reduction["events"][1]["classification"],
+            "TERMINAL_CAMPAIGN_ATTEMPT")
+        self.assertTrue(reduction["events"][1]["authoritative"])
+        self.assertTrue(reduction["passed"])
+        self.assertFalse(reduction["final_state"]["stop_fired"])
+        self.assertTrue(reduction["final_state"]["terminal_seen"])
+
+    def test_control_post_stop_diagnostic_remains_non_authoritative(self):
+        reduction = core.reduce_attempts([
+            self._facts(attempt_id="invalid-1",
+                        correctness_bearing_result_emitted=True,
+                        physical_retry_authorized=False),
+            self._facts(attempt_id="diagnostic-1",
+                        correctness_bearing_result_emitted=True,
+                        diagnostic_only_disclosure=True),
+        ])
+        self.assertEqual(
+            reduction["events"][1]["classification"],
+            "DIAGNOSTIC_ONLY_AFTER_STOP")
+        self.assertFalse(reduction["events"][1]["authoritative"])
+        # the diagnostic cleared neither the STOP nor the terminal
+        # requirement; the campaign remains stopped (not passed)
+        self.assertTrue(reduction["final_state"]["stop_fired"])
+        self.assertFalse(reduction["final_state"]["terminal_seen"])
+        self.assertFalse(reduction["passed"])
+        self.assertEqual(reduction["problems"], [])
+
+    def test_control_non_cb_marker_cannot_clear_stop(self):
+        reduction = core.reduce_attempts([
+            self._facts(attempt_id="invalid-1",
+                        correctness_bearing_result_emitted=True,
+                        physical_retry_authorized=False),
+            self._facts(attempt_id="marker-1",
+                        terminal_observation=True),
+        ])
+        self.assertEqual(
+            reduction["events"][1]["classification"],
+            "TERMINAL_MARKER_NON_CORRECTNESS_BEARING")
+        self.assertEqual(
+            reduction["events"][1]["stop_rule_fired"],
+            "non_correctness_bearing_terminal_cannot_clear_stop")
+        self.assertFalse(reduction["passed"])
+        self.assertTrue(reduction["final_state"]["stop_fired"])
+
+    def test_control_continuation_after_stop_without_authorized_terminal(
+            self):
+        reduction = core.reduce_attempts([
+            self._facts(attempt_id="invalid-1",
+                        correctness_bearing_result_emitted=True,
+                        physical_retry_authorized=False),
+            self._facts(attempt_id="continuation-1",
+                        correctness_bearing_result_emitted=True),
         ])
         self.assertFalse(reduction["passed"])
         self.assertEqual(
             reduction["events"][1]["stop_rule_fired"],
             "post_stop_continuation_without_terminal")
+
+    def test_terminal_without_prior_stop_passes(self):
+        reduction = core.reduce_attempts([
+            self._facts(attempt_id="terminal-1",
+                        correctness_bearing_result_emitted=True,
+                        terminal_observation=True),
+        ])
+        self.assertTrue(reduction["passed"])
+
+    def test_authored_stop_label_cannot_launder_continuation(self):
+        # an authored stop_occurred disclosure with no genuine STOP in
+        # the reducer's own history is an ordinary correctness-bearing
+        # attempt (here: valid, authorized, no problems)
+        reduction = core.reduce_attempts([
+            self._facts(attempt_id="claimed-stop",
+                        correctness_bearing_result_emitted=True,
+                        stop_occurred=True),
+        ])
+        self.assertEqual(reduction["events"][0]["classification"],
+                         "CORRECTNESS_BEARING_VALID")
+        self.assertTrue(reduction["passed"])
+
+    def test_unauthorized_terminal_claim_is_invalid(self):
+        # a terminal attempt claiming correctness-bearing output
+        # without authorization stays INVALID (fires the STOP)
+        reduction = core.reduce_attempts([
+            self._facts(attempt_id="terminal-unauthorized",
+                        correctness_bearing_result_emitted=True,
+                        terminal_observation=True,
+                        physical_retry_authorized=False),
+        ])
+        self.assertEqual(
+            reduction["events"][0]["classification"],
+            "CORRECTNESS_BEARING_INVALID")
+        self.assertFalse(reduction["passed"])
 
     def test_missing_facts_fail_closed(self):
         with self.assertRaises(ValueError):
@@ -387,60 +794,150 @@ class AttemptStateMachineTests(unittest.TestCase):
         ])
         self.assertTrue(reduction["passed"])
 
-    def test_post_stop_terminal_then_valid_passes(self):
-        reduction = core.reduce_attempts([
-            self._facts(attempt_id="invalid-1",
-                        correctness_bearing_result_emitted=True,
-                        frozen_identity_verified_pre_launch=False),
-            self._facts(attempt_id="terminal-1",
-                        methodology_gate_passed=True),
-            self._facts(attempt_id="diagnostic-1",
-                        correctness_bearing_result_emitted=True,
-                        stop_occurred=True),
-        ])
-        self.assertTrue(reduction["passed"])
+    def test_methodology_gate_passed_is_load_bearing(self):
+        # the field gates correctness-bearing validity directly (it is
+        # not inert): with readiness false even a fully-authorized,
+        # identity-clean attempt is INVALID
         self.assertEqual(
-            reduction["events"][0]["stop_rule_fired"],
-            "invalid_correctness_bearing_observation")
+            core.classify_attempt(self._facts(
+                correctness_bearing_result_emitted=True,
+                methodology_gate_passed=False)),
+            "CORRECTNESS_BEARING_INVALID")
+
+    def test_self_checks_pass(self):
+        result = core.run_attempt_state_self_checks()
+        self.assertTrue(result["ok"])
+        self.assertEqual(len(result["rows"]), 6)
 
 
 class FrozenPinTests(unittest.TestCase):
+    """Finding 4: frozen-byte pinning fails closed, inherited #128 pins
+    included."""
+
     def test_every_frozen_control_plane_byte_matches_its_pin(self):
         digests = core.verify_frozen_bytes(ROOT)
-        self.assertEqual(len(digests), len(core.FROZEN_CONTROL_PLANE_FILES))
+        self.assertEqual(
+            len(digests), len(core.FROZEN_CONTROL_PLANE_FILES))
+        # the inherited files are covered by the accepted #128 pins too
+        pins = core.load_inherited_pins(ROOT)
+        for rel, digest in digests.items():
+            if rel in pins:
+                self.assertEqual(pins[rel], digest)
 
     def test_mutated_frozen_byte_fails_closed(self):
-        import tempfile
         with tempfile.TemporaryDirectory() as tmp:
-            import shutil
-            mirror = Path(tmp) / "repo"
-            mirror.mkdir()
-            shutil.copytree(ROOT / "scripts", mirror / "scripts")
-            area = mirror / AREA.relative_to(ROOT)
-            shutil.copytree(AREA, area)
-            target = (area / "evidence" / "arm-c" / "frozen-freetoken"
-                      / "924cd22e" / "python" / "freetoken" / "research"
+            mirror = _scratch_mirror(tmp)
+            target = (mirror / AREA.relative_to(ROOT) / "evidence"
+                      / "arm-c" / "frozen-freetoken" / "924cd22e"
+                      / "python" / "freetoken" / "research"
                       / "r3_planner.py")
             original = target.read_bytes()
             target.write_bytes(original + b"\n# mutation\n")
             with self.assertRaises(RuntimeError):
                 core.verify_frozen_bytes(mirror)
 
-    def test_missing_frozen_byte_fails_closed(self):
-        import tempfile
-        import shutil
+    def test_mutated_r5b_epochs_fails_closed(self):
         with tempfile.TemporaryDirectory() as tmp:
-            mirror = Path(tmp) / "repo"
-            mirror.mkdir()
-            shutil.copytree(ROOT / "scripts", mirror / "scripts")
-            area = mirror / AREA.relative_to(ROOT)
-            shutil.copytree(AREA, area)
-            target = (area / "evidence" / "arm-c" / "frozen-freetoken"
-                      / "924cd22e" / "python" / "freetoken" / "research"
+            mirror = _scratch_mirror(tmp)
+            target = (mirror / AREA.relative_to(ROOT) / "evidence"
+                      / "arm-c" / "frozen-freetoken" / "924cd22e"
+                      / "python" / "freetoken" / "research"
+                      / "r5b_epochs.py")
+            original = target.read_bytes()
+            target.write_bytes(original + b"\n# mutation\n")
+            with self.assertRaises(RuntimeError):
+                core.verify_frozen_bytes(mirror)
+
+    def test_mutated_xc_strategy_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mirror = _scratch_mirror(tmp)
+            target = (mirror / AREA.relative_to(ROOT) / "evidence"
+                      / "arm-c" / "frozen-freetoken" / "924cd22e"
+                      / "benchmarks" / "inferswarm_r6"
+                      / "xc_strategy.py")
+            original = target.read_bytes()
+            target.write_bytes(original + b"\n# mutation\n")
+            with self.assertRaises(RuntimeError):
+                core.verify_frozen_bytes(mirror)
+
+    def test_missing_frozen_byte_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mirror = _scratch_mirror(tmp)
+            target = (mirror / AREA.relative_to(ROOT) / "evidence"
+                      / "arm-c" / "frozen-freetoken" / "924cd22e"
+                      / "python" / "freetoken" / "research"
                       / "r5b_epochs.py")
             target.unlink()
             with self.assertRaises(FileNotFoundError):
                 core.verify_frozen_bytes(mirror)
+
+    def test_control_missing_pins_module_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mirror = _scratch_mirror(tmp)
+            (mirror / "scripts" / "issue117_arm_c_frozen_pins.py").unlink()
+            with self.assertRaises(FileNotFoundError):
+                core.verify_frozen_bytes(mirror)
+
+    def test_control_broken_pins_module_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mirror = _scratch_mirror(tmp)
+            (mirror / "scripts" / "issue117_arm_c_frozen_pins.py").write_text(
+                "def broken(:\n")
+            with self.assertRaises(SyntaxError):
+                core.verify_frozen_bytes(mirror)
+
+    def test_control_missing_inherited_pin_key_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mirror = _scratch_mirror(tmp)
+            pins_path = mirror / "scripts" / "issue117_arm_c_frozen_pins.py"
+            pins = core.load_inherited_pins(ROOT)
+            epochs_rel = ("docs/implementation/r6-successor-dense-full-"
+                          "integration-117/evidence/arm-c/frozen-freetoken/"
+                          "924cd22e/python/freetoken/research/r5b_epochs.py")
+            # rewrite the pins module WITHOUT the inherited r5b_epochs
+            # key (the delegated pin vanishes; verification must fail
+            # closed rather than silently skip the file)
+            reduced = {k: v for k, v in pins.items() if k != epochs_rel}
+            pins_path.write_text(
+                "FROZEN_SHA256 = " + json.dumps(reduced, indent=2) + "\n")
+            with self.assertRaises(RuntimeError):
+                core.verify_frozen_bytes(mirror)
+
+    def test_control_malformed_inherited_pin_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mirror = _scratch_mirror(tmp)
+            pins_path = mirror / "scripts" / "issue117_arm_c_frozen_pins.py"
+            source = pins_path.read_text()
+            # replace one hex half of the xc_strategy pin with 'z's
+            mutated = source.replace(
+                "8d33b4b297a20511448ab78909d2f528",
+                "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", 1)
+            self.assertNotEqual(mutated, source)
+            pins_path.write_text(mutated)
+            with self.assertRaises(RuntimeError):
+                core.verify_frozen_bytes(mirror)
+
+
+class RuntimeSessionAllocatorTests(unittest.TestCase):
+    def test_allocator_extraction_facts(self):
+        allocator = core.extract_runtime_session_allocator(ROOT)
+        self.assertEqual(allocator.facts["multiplier"], 1_000_000)
+        self.assertEqual(
+            allocator.allocate(1), 1_000_001)
+        self.assertEqual(allocator.allocate(1), 1_000_002)
+        self.assertEqual(allocator.allocate(7), 7_000_003)
+
+    def test_control_drifted_epochs_source_fails_extraction(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            mirror = _scratch_mirror(tmp)
+            target = (mirror / AREA.relative_to(ROOT) / "evidence"
+                      / "arm-c" / "frozen-freetoken" / "924cd22e"
+                      / "python" / "freetoken" / "research"
+                      / "r5b_epochs.py")
+            original = target.read_bytes()
+            target.write_bytes(original + b"\n# mutation\n")
+            with self.assertRaises(RuntimeError):
+                core.extract_runtime_session_allocator(mirror)
 
 
 class PromptFixtureTests(unittest.TestCase):
@@ -459,16 +956,10 @@ class PromptFixtureTests(unittest.TestCase):
                              for cid in case_ids))
 
     def test_derivation_fails_closed_on_render_equality_break(self):
-        import tempfile
-        import shutil
         with tempfile.TemporaryDirectory() as tmp:
-            mirror = Path(tmp) / "repo"
-            mirror.mkdir()
-            shutil.copytree(ROOT / "scripts", mirror / "scripts")
-            area = mirror / AREA.relative_to(ROOT)
-            shutil.copytree(AREA, area)
-            report_path = (area / "evidence" / "arm-c"
-                           / "coordinator-report.json")
+            mirror = _scratch_mirror(tmp)
+            report_path = (mirror / AREA.relative_to(ROOT) / "evidence"
+                           / "arm-c" / "coordinator-report.json")
             report = json.loads(report_path.read_text())
             report["coordinator_scope"]["requests"][0][
                 "prompt_token_ids"][0] += 1
@@ -490,12 +981,32 @@ class RetainedEvidenceTests(unittest.TestCase):
         self.assertTrue(path.is_file(), "methodology-run.json not retained")
         document = json.loads(path.read_text())
         self.assertEqual(document["schema"],
-                         "inferswarm.issue129.methodology-run/1")
+                         "inferswarm.issue129.methodology-run/2")
         self.assertEqual(document["terminal"], core.METHODOLOGY_READY)
         fresh = core.run_methodology(ROOT)
+        self.assertEqual(document["terminal"], fresh["terminal"])
         self.assertEqual(document["fixture"]["fixture_digest"],
                          fresh["fixture"]["fixture_digest"])
         self.assertEqual(document["per_case_reduction"]["equal_count"], 24)
+        self.assertEqual(document["ordinary_ingress"]["equal_count"], 24)
+        self.assertTrue(
+            document["accepted_blocker_preservation"]["preserved"])
+
+    def test_authority_and_integrity_records_retained(self):
+        authority = json.loads(
+            (RETRY_EVIDENCE / "authority.json").read_text())
+        self.assertEqual(
+            authority["schema"],
+            "inferswarm.issue129.arm-c-retry-authority/1")
+        self.assertTrue(
+            authority["accepted_blocker_preservation"]["preserved"])
+        integrity = json.loads(
+            (RETRY_EVIDENCE / "integrity.json").read_text())
+        self.assertEqual(
+            integrity["schema"],
+            "inferswarm.issue129.arm-c-retry-integrity/1")
+        self.assertIn("runtime_session_allocation", integrity)
+        self.assertIn("content_encodings_pin", integrity)
 
 
 if __name__ == "__main__":

@@ -331,9 +331,13 @@ COMMITTED_EVIDENCE_FILES = {
     # issue #129 CPU-only Arm-C retry methodology artifacts (2026-09-09):
     # frozen rendered prompt-token fixture + full methodology reduction,
     # derived from retained accepted evidence; the accepted arm-c/ blocker
-    # bytes above are read-only input and are never regenerated here
+    # bytes above are read-only input and are never regenerated here —
+    # they are preserved byte-exact from the accepted merge by the
+    # regression in tests/test_issue129_arm_c_retry.py
     "arm-c-retry/prompt-fixture.json",
     "arm-c-retry/methodology-run.json",
+    "arm-c-retry/authority.json",
+    "arm-c-retry/integrity.json",
 }
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the

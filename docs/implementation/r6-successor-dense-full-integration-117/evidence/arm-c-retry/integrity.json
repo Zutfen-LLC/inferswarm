@@ -1,0 +1,106 @@
+{
+  "content_encodings_pin": "sha256:ed96a0ff377dd911629d053ce7da916ab66e51021f5933de5da44a7dc3f41ebc",
+  "coordinator_ingress_citations": {
+    "_render_and_tokenize": {
+      "decorators": [],
+      "line": 302,
+      "source_sha256": "9ec92ab0959bbba5efb02735453f2137d2e366b1567ca5bf601dd9a5e3db5e52"
+    },
+    "_sampling_of": {
+      "decorators": [
+        "staticmethod"
+      ],
+      "line": 312,
+      "source_sha256": "30b35785fbfc451d955a23aef1946b5e2991490283d084848aefb872971b3ced"
+    },
+    "max_tokens_derivation": {
+      "line": 341,
+      "text": "maximum = int(body.get(\"max_tokens\") or DEFAULT_MAX_OUTPUT_TOKENS)"
+    },
+    "max_tokens_guard": {
+      "line": 342,
+      "text": "if maximum < 1:"
+    },
+    "render_call": {
+      "line": 340,
+      "text": "prompt_ids = self._render_and_tokenize(body)"
+    },
+    "sampling_call": {
+      "line": 344,
+      "text": "sampling = self._sampling_of(body)"
+    },
+    "serve_dispatch": {
+      "line": 401,
+      "text": "completed = self.controller.serve_tokens("
+    },
+    "serve_max_arg": {
+      "line": 404,
+      "text": "max_new_tokens=maximum,"
+    },
+    "serve_prompt_arg": {
+      "line": 403,
+      "text": "prompt_token_ids=prompt_ids,"
+    },
+    "serve_sampling_arg": {
+      "line": 405,
+      "text": "sampling_inputs=sampling,"
+    },
+    "serve_session_arg": {
+      "line": 402,
+      "text": "session_id=session_id,"
+    },
+    "session_allocation": {
+      "line": 345,
+      "text": "session_id = len(self.request_log) + 1"
+    }
+  },
+  "frozen_control_plane_pins": {
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/coordinator.py": "189548dc4f87f5f40c05f7796a2be7af0446ea05f95a0cf7bafcd3b79bec5d77",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/strategy.py": "ca31f0999cb4fcf46d73c83f8b3ee7bbe2636792bcfc1824b15946aaac53906b",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/xc_strategy.py": "8d33b4b297a20511448ab78909d2f528eef62c2b7943acae167668ec9ff0f26f",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken/research/r3_planner.py": "080e8b64fbb9fbc0f6df390d5714d0dbc691dd601e2bd13fe4ff71596e2d0856",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken/research/r5a_serving.py": "f61adc3201f5c2c9d23afcc90da3135ca89b3ed7eb3213d68a41b08fc242b105",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken/research/r5b_epochs.py": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805"
+  },
+  "pin_policy": "r5b_epochs.py, xc_strategy.py, and coordinator.py pins are delegated to scripts/issue117_arm_c_frozen_pins.py (accepted #128 authority; the key must exist, be a valid sha256, and match the retained bytes \u2014 fail closed); r3_planner.py, r5a_serving.py, and strategy.py are pinned locally by scripts/issue129_arm_c_retry_core.py",
+  "runtime_session_allocation": {
+    "derivation": "verbatim AST extraction of EpochServingController._runtime_session_id from the sha256-pinned r5b_epochs.py bytes (structure verified: one sequence increment; return logical_session_id * 1000000 + sequence; sequence zeroed in __init__); the direct comparator allocates through this extracted method, never through a hand-copied formula",
+    "method_line": 417,
+    "method_sha256": "94276b21597f22795af28ee4d3566dc15a903abadfd9a5c00a3d527f2b892f6c",
+    "multiplier": 1000000,
+    "source_sha256": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805"
+  },
+  "schema": "inferswarm.issue129.arm-c-retry-integrity/1",
+  "template_contract": {
+    "contract_sha256": "sha256:249462bfe2dbe05c425081d031eb17c1c7779de4dd1273ec73cfc908e22dc28d",
+    "derivation": "cross-derived from BOTH retained accepted sides: every case's rendered ids equal HEADER + content + FOOTER with content = accepted fixture ids (trailing-space piece absorbed at the template boundary iff the content string ends with a space); identical on the direct and ordinary sides",
+    "footer_token_ids": [
+      106,
+      107,
+      105,
+      4368,
+      107,
+      100,
+      45518,
+      107,
+      101
+    ],
+    "header_token_ids": [
+      2,
+      105,
+      2364,
+      107
+    ],
+    "trailing_space_cases": [
+      "c109-04-03-040"
+    ],
+    "trailing_space_piece": 236743
+  },
+  "tokenizer_asset_pins": {
+    "chat_template.jinja": "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4",
+    "config.json": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9",
+    "generation_config.json": "a8349d9bd64cc5841297fcb5002f0fdc4749c473c8f1b10ea337f9ce4ee7014e",
+    "tokenizer.json": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+    "tokenizer_config.json": "a62f4e85a47c0c136edaaa3a4f591fd6783717299a9def47e5ad03a49f6a5eb9"
+  }
+}
