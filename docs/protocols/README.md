@@ -267,14 +267,15 @@ correctness prerequisite; it froze no protocol.
 Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.
 
 - **Arm B — canonical cold acquisition + realization observation:** [`ISSUE117_ARM_B_COLD_REALIZATION_PASS`](https://github.com/Zutfen-LLC/inferswarm/pull/127).
-- **Maintainer acceptance:** pending maintainer acceptance.
-- **Recorded execution authorization:** blocked — Arm C — ordinary external-Coordinator serving (blocked on Arm-B maintainer acceptance). [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
+- **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/commit/fed87d1b71a0794374dd58c921e31606a56a242f).
+- **Recorded execution authorization:** authorized — Arm C — ordinary external-Coordinator serving. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
 
-- Arm B is observed ISSUE117_ARM_B_COLD_REALIZATION_PASS pending maintainer acceptance; Arm C must not begin before acceptance.
-- Arm A is accepted at merge 6774474941d7ce2a0252c8c1e148f8bce61a8d6d; the Arm-B observation executed from accepted main 5179c41232051e7455b778ddb8876a6539f4cb04.
-- Do not rerun accepted Arm A, the accepted physical preflight, or the observed Arm-B campaign.
-- Use the exact producer, checkpoint, Compute Unit, cold-root, Source, and zero-invariant requirements specified in issue #117.
-- No consumed h109 holdout material may be used as new evidence.
+- Arm B is accepted at merge fed87d1b71a0794374dd58c921e31606a56a242f (ISSUE117_ARM_B_COLD_REALIZATION_PASS, PR #127).
+- Arm C — ordinary external-Coordinator serving — is the only authorized physical frontier.
+- Do not rerun the accepted physical preflight, Arm A, or the accepted Arm-B campaign.
+- Arm D must not begin before Arm-C maintainer acceptance.
+- Preserve the exact frozen producer 924cd22ea081f6d4ed471016faf01d427fc5b0d2, checkpoint 5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d, canonical candidate geometry dense.6171f32b4413, and the accepted Arm-B participant materialized state; do not clean, reset, or reacquire it.
+- No consumed h109-* holdout material may be used as new evidence.
 <!-- project-status:frontier:end -->
 
 No research frame becomes a public wire protocol merely because a physical
