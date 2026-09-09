@@ -86,7 +86,7 @@ de3961bfc20193322c12544e6405dab71cb1d87f8ee2ecfbaec6fac944a33a68  docs/implement
 bc3d005ab720371e5c6f00911cc65f7763f64ffca1773a7ce3f025a308681e79  docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/methodology-run.json
 e68dfaafe661f2f6cc5f5be3a51128c7e7abf0b5c81978cbdb45e9788fd88cd0  docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/prompt-fixture.json
 0bb3a3b63384effb307330143d9392b007a97a3f3688c9216e80bd082ca0954c  docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/attempt-lineage.json
-e2ba4b340ee140ee689e303bb7ba90988bc18fd2fffcaacc1ca6e8d3e077cecb  docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/blocker-reduction.json
+431b9b4fa1c9f9d4703da79943f29089ce07dd407d03db885e810b0d2af616b8  docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/blocker-reduction.json
 6d9a4859af5b686a321458fe50c86189244b7d0d41e2cbb0df28147552f709ab  docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/chain-plan.json
 200eeb5efb2f582cbf6549f8a4a432278f6c9378c6a259ae46ddf29509f3d3a6  docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/coordinator-census-post.json
 4a11f35cd0ac16de5e6d14fa6ef025e0526f5230f6e62fa8e632249c743abfd5  docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/coordinator-census-pre.json
@@ -113,7 +113,7 @@ bd3f4c342ae38e5bb1184674946225dd0944e00e127df895fa3e6bf188289459  docs/implement
 852a9768b353a6605f3fa31ce0fc94dd199fe8bb9d9e6adbb1f6bad6a2862ea8  docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/lifecycle-serving-report.json
 30c4a65b4768fd02545b6a5bbe9d53957a769f8d820d566d26ebcc3043de1949  docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/ordinary-campaign.json
 045b0631bb5e1d5a030981e3fcdfe5fc7ae65e09b2842474a7580932988fa078  docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/plan-verification.json
-7c0fb21163855d560dbd0d4dc22b50d0f8d206586257e220d140734eb76af32e  docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/pre-execution-authority-audit.json
+af0adc28cf40e6da41c87849bc2a20456cc7575c1001b630167a86594ef81f4b  docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/pre-execution-authority-audit.json
 276741d817928a2a62db6023e845aa112a32fd54b19d9ad0b2d6cefd6c1e6cde  docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/reconciliation.json
 b5d96133b384985c3c41e0895dbf6c2d1ba47b5f19b0eb189d27ccd8e9974599  docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/run-record.json
 c1e35601487c495f45256b08883ac60c9caf15cbcbd98fd7487c3dafa325583f  docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/strace-audit.json

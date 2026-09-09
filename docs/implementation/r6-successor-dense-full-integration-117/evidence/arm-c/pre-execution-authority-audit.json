@@ -90,7 +90,7 @@
       "status_at_head": "changed_after_freeze"
     }
   },
-  "head_classified": "df5390f29e151e8008c9d286741859c20d33b32e",
+  "head_classified": "77e2593b8ffe76efdc363099f419699428e82231",
   "head_classified_note": "re-classified for the issue #129 CPU-only methodology slice (no physical execution; the arm C blocker evidence is read-only input)",
   "physical_campaign_commit": "dd4154dbc4109a0966490e5b1137ef55fd6c9306",
   "post_audit_correction_allowlist": {
@@ -149,7 +149,7 @@
     },
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/methodology-run.json": {
       "role": "issue #129 methodology evidence (new; MANIFEST-bound)",
-      "sha256": "d63f34e67cd5bd287f5c04f31284cc9942be59768ad175760980fc70de9809d5"
+      "sha256": "bc3d005ab720371e5c6f00911cc65f7763f64ffca1773a7ce3f025a308681e79"
     },
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/prompt-fixture.json": {
       "role": "issue #129 methodology evidence (new; MANIFEST-bound)",
@@ -161,7 +161,7 @@
     },
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/blocker-reduction.json": {
       "role": "issue #129 review-hardening pass (review 1 P1/P2 resolutions)",
-      "sha256": "e2ba4b340ee140ee689e303bb7ba90988bc18fd2fffcaacc1ca6e8d3e077cecb"
+      "sha256": "431b9b4fa1c9f9d4703da79943f29089ce07dd407d03db885e810b0d2af616b8"
     },
     "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/coordinator.py": {
       "role": "frozen FreeToken producer bytes @ 924cd22e (verbatim)",
