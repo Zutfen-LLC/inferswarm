@@ -115,12 +115,16 @@ class ProjectStatusTests(unittest.TestCase):
                 self.assertEqual(self.run_main(root, '--write'), 1)
                 self.assertEqual(self.snapshot(root), before)
 
-    def test_current_record_observes_arm_c_blocker_and_blocks_arm_d(self):
+    def test_current_record_observes_arm_c_blocker_and_authorizes_issue_129(self):
         output = sync.render(self.record)['frontier']
-        self.assertIn('ISSUE117_ARM_B_COLD_REALIZATION_PASS', output)
+        # the accepted #128 blocker is the recorded prerequisite observation
         self.assertIn('ISSUE117_ARM_C_EVIDENCE_BLOCKER', output)
-        self.assertIn('pending maintainer review', output)
-        self.assertIn('Arm D', output)
+        self.assertIn('accepted](https://github.com/Zutfen-LLC/inferswarm/'
+                      'commit/718efbf5770b31c6e44eb3a8c4d0b81fd1dc9c22)', output)
+        # the only authorized slice is the CPU-only #129 methodology
+        self.assertIn('Issue #129', output)
+        self.assertIn('physical Arm-C retry NOT authorized', output)
+        self.assertIn('Arm D blocked', output)
         # the withdrawn terminal must not be presented as the observed state
         self.assertNotIn('observed ISSUE117_ARM_C_ORDINARY_SERVING_FAIL',
                          output)
