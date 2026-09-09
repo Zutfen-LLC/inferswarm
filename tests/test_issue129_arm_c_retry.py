@@ -1149,6 +1149,16 @@ class AttemptStateMachineTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             core.reduce_attempts(
                 attempts,
+                accepted_authority_commit=core.ACCEPTED_BLOCKER_MERGE)
+
+    def test_control_public_authority_root_is_not_configurable(self):
+        attempts = [self._facts(
+            attempt_id="terminal-with-caller-root",
+            correctness_bearing_result_emitted=True,
+            terminal_observation=True)]
+        with self.assertRaises(TypeError):
+            core.reduce_attempts(
+                attempts,
                 accepted_authority_commit=core.ACCEPTED_BLOCKER_MERGE,
                 repo_root=ROOT)
 
@@ -1172,6 +1182,17 @@ class AttemptStateMachineTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "not authorized"):
             core._parse_accepted_campaign_authority_document(document)
 
+    def test_control_acceptance_and_authorization_references_are_distinct(self):
+        attempts = [self._facts(
+            attempt_id="synthetic-terminal",
+            correctness_bearing_result_emitted=True,
+            terminal_observation=True)]
+        document = _physical_authority_document(attempts)
+        document["execution_authorization"]["authorization_reference"] = \
+            document["acceptance"]["methodology_acceptance_reference"]
+        with self.assertRaisesRegex(RuntimeError, "must be distinct"):
+            core._parse_accepted_campaign_authority_document(document)
+
     def test_public_reducer_loads_authority_from_accepted_git_bytes(self):
         attempts = [self._facts(
             attempt_id="accepted-terminal",
@@ -1181,7 +1202,7 @@ class AttemptStateMachineTests(unittest.TestCase):
             root = Path(temp)
             commit, raw = _init_scratch_authority_repo(
                 root, _physical_authority_document(attempts))
-            reduction = core.reduce_attempts(
+            reduction = core._reduce_attempts_from_accepted_git(
                 attempts, accepted_authority_commit=commit, repo_root=root)
             blob_oid = subprocess.run(
                 ["git", "rev-parse",
@@ -1213,7 +1234,7 @@ class AttemptStateMachineTests(unittest.TestCase):
                 ["git", "rev-parse", "HEAD"], cwd=root, check=True,
                 capture_output=True, text=True).stdout.strip()
             with self.assertRaisesRegex(RuntimeError, "not on"):
-                core.reduce_attempts(
+                core._reduce_attempts_from_accepted_git(
                     attempts, accepted_authority_commit=unaccepted_commit,
                     repo_root=root)
 

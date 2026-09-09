@@ -2531,6 +2531,10 @@ def _parse_accepted_campaign_authority_document(
     if not isinstance(authorization_reference, str) or not \
             authorization_reference.strip():
         raise RuntimeError("physical authorization reference is absent")
+    if authorization_reference == acceptance_reference:
+        raise RuntimeError(
+            "methodology acceptance and physical authorization references "
+            "must be distinct")
     if execution["scope"] != "ISSUE117_ARM_C_RETRY":
         raise RuntimeError("physical authorization scope is not Arm-C retry")
     authorized_at = _parse_utc(execution["authorized_at"], "authorized_at")
@@ -2577,11 +2581,11 @@ def _git_output(repo_root: Path, *args: str) -> bytes:
     return completed.stdout
 
 
-def reduce_attempts(
+def _reduce_attempts_from_accepted_git(
         attempts: Sequence[Mapping[str, Any]], *,
         accepted_authority_commit: str,
-        repo_root: Path | None = None) -> dict[str, Any]:
-    """Reduce physical attempts against authority from accepted Git history.
+        repo_root: Path) -> dict[str, Any]:
+    """Load Git authority for private tests and the bound public reducer.
 
     The fixed authority path is loaded from an exact commit. The commit must
     be an ancestor of ``refs/remotes/origin/main``. A merge alone is not
@@ -2590,7 +2594,7 @@ def reduce_attempts(
     """
     if not _is_git_sha(accepted_authority_commit):
         raise RuntimeError("accepted authority commit must be a full SHA")
-    root = (repo_root or ROOT).resolve()
+    root = repo_root.resolve()
     _git_output(root, "cat-file", "-e", f"{accepted_authority_commit}^{{commit}}")
     ancestry = subprocess.run(
         ["git", "merge-base", "--is-ancestor", accepted_authority_commit,
@@ -2627,6 +2631,19 @@ def reduce_attempts(
             document["execution_authorization"]["authorization_reference"],
     }
     return reduction
+
+
+def reduce_attempts(
+        attempts: Sequence[Mapping[str, Any]], *,
+        accepted_authority_commit: str) -> dict[str, Any]:
+    """Reduce physical attempts against this repository's accepted history.
+
+    The repository root is not caller-configurable. This prevents a caller
+    from fabricating an alternate ``origin/main`` authority domain.
+    """
+    return _reduce_attempts_from_accepted_git(
+        attempts, accepted_authority_commit=accepted_authority_commit,
+        repo_root=ROOT)
 
 
 # ---------------------------------------------------------------------------

@@ -203,9 +203,12 @@ The public physical-evidence reducer loads its campaign-authority registry from
 the fixed `evidence/arm-c-retry/physical-campaign-authority.json` path at an
 exact accepted Git commit. That commit must be an ancestor of
 `refs/remotes/origin/main`. The reducer loads the bytes with `git show`. It
+binds the public entry point to the canonical repository root. A caller cannot
+provide an alternate repository or `origin/main` authority domain. It
 requires canonical JSON, a strict schema, a Git blob identity, a SHA-256, a
 methodology-acceptance reference, and a separate physical-execution
-authorization reference. A merge does not imply physical execution authority.
+authorization reference. The two references must be distinct. A merge does not
+imply physical execution authority.
 Each campaign record contains all campaign authority fields, including
 `physical_retry_authorized`. The reducer compares every attempt with that
 accepted record. Attempt facts cannot establish their own methodology or
@@ -306,6 +309,9 @@ The suite covers these campaign mutations:
 44. Successful intermediate campaign used to erase the latest STOP/review
     authorization watermark.
 45. Authority commit not present on `refs/remotes/origin/main`.
+46. Caller-controlled repository root or `origin/main` authority domain.
+47. One reference used as both methodology acceptance and physical execution
+    authorization.
 
 ## Retained outputs
 
