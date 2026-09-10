@@ -17,9 +17,9 @@
       ],
       "campaign_retention_at_correction": {
         "campaign_id": "armc-retry-afcdc4428f95d50c",
-        "retained": true,
         "rationale": "No physical attempt, terminal, or STOP existed. The same fresh campaign therefore rebound the first corrected freeze before physical execution.",
-        "rebound_execution_freeze_identity": "9face9f3b72913ce87543afe9c33ff4a969dd1c706c835a52a3834cd29271e5e"
+        "rebound_execution_freeze_identity": "9face9f3b72913ce87543afe9c33ff4a969dd1c706c835a52a3834cd29271e5e",
+        "retained": true
       },
       "code_commit": "b78d71f3d7f97d1347d05482b1d3a3a122b3485f",
       "corrected_direct_driver": {
@@ -94,6 +94,36 @@
       "intermediate_evidence_commit": "e23f5de52acf1b36fd127b9fae36bea69bb33b02",
       "intermediate_freeze_identity": "dc4a370bee3c99b1fa7dc488dae0b3e2e95e9a831c2a798b8af534f0c365c3eb",
       "review_id": "5162086233",
+      "status": "SUPERSEDED_BEFORE_PHYSICAL_EXECUTION"
+    },
+    {
+      "code_commit": "d59823e615cd3c8619beb537f88a4a1f71817e70",
+      "corrected_direct_driver": {
+        "file_sha256": "5f9ccb36975848142a70826e2f11aa45acceef5c802497bd2ade2f7e697f2c77",
+        "path": "scripts/issue133_arm_c_retry_direct.py",
+        "repository_sha": "d59823e615cd3c8619beb537f88a4a1f71817e70"
+      },
+      "findings_fixed": [
+        "The direct driver's tokenizer pre-realization verification now mechanically matches the accepted issue #129 verify_retained_tokenizer_assets Source semantics: the supplied pathname must equal the authorized deployment path exactly, the tokenizer directory is resolved with Path.resolve(), and validation rejects when the resolved directory equals /srv/models/, rejects when /srv/models/ is any parent of the resolved directory, rejects when the directory itself is a symlink, and rejects when it is not an existing directory.",
+        "The authorization decision depends on the resolved filesystem location, never a lexical string-prefix comparison against /srv/models/; symlinked tokenizer roots and lexical .. traversal cannot evade the Source boundary.",
+        "The exhaustive exact-five-file check, per-asset symlink rejection, exact per-asset SHA-256 pins, Python/package identity checks, and local_files_only/trust_remote_code loading are retained unchanged.",
+        "Behavioral negative controls prove zero realize_dense_chain and zero runtime.generate calls for every tokenizer rejection reachable through main(); an ordinary real directory outside /srv/models/ containing exactly the five pinned regular files passes the complete verification."
+      ],
+      "freeze": {
+        "identity": "5af9aee314fdd742cdb75d903d47e2f3c43296ee887e507ef335b8f614e7a19e",
+        "ordering": [
+          "The corrected direct driver and tests were implemented and committed before the freeze.",
+          "The freeze was regenerated from the exact code commit and the exact committed direct-driver SHA-256.",
+          "The canonical execution-freeze identity was computed.",
+          "The physical-campaign authority rebound the regenerated freeze.",
+          "The superseded d1a0ee53 identity was recorded in the freeze lineage as superseded before physical execution.",
+          "The canonical MANIFEST and producer-hash records were regenerated."
+        ],
+        "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/execution-freeze.json",
+        "schema": "inferswarm.issue133.execution-freeze/3",
+        "superseded_identity": "d1a0ee53cfb19f6c4346493f699f43e092364eb4e834b7cf27456d5d79979678"
+      },
+      "review_id": "5162428111",
       "status": "CURRENT_PHASE_A_CORRECTION"
     }
   ],
@@ -112,6 +142,10 @@
     },
     {
       "identity": "d1a0ee53cfb19f6c4346493f699f43e092364eb4e834b7cf27456d5d79979678",
+      "status": "SUPERSEDED_BY_REVIEW_5162428111_BEFORE_PHYSICAL_EXECUTION"
+    },
+    {
+      "identity": "5af9aee314fdd742cdb75d903d47e2f3c43296ee887e507ef335b8f614e7a19e",
       "status": "CURRENT_PHASE_A_FREEZE"
     }
   ],
@@ -121,8 +155,8 @@
     "participant_state_modified": false,
     "phase_b_or_c_begun": false,
     "physical_execution_occurred": false,
-    "pre_launch_verification_claimed": false,
-    "post_run_verification_claimed": false
+    "post_run_verification_claimed": false,
+    "pre_launch_verification_claimed": false
   },
   "pr": "https://github.com/Zutfen-LLC/inferswarm/pull/134",
   "schema": "inferswarm.issue133.arm-c-retry.phase-a-correction/2"

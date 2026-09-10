@@ -74,9 +74,9 @@
   "drivers": {
     "direct": {
       "expected_path": "/srv/inferswarm/state/arm-c-retry/scripts/issue133_arm_c_retry_direct.py",
-      "file_sha256": "eae4899c690b5ab1feff73f559d63a96fce2ea835e9321e751cf4e301a129151",
+      "file_sha256": "5f9ccb36975848142a70826e2f11aa45acceef5c802497bd2ade2f7e697f2c77",
       "read_only": true,
-      "repository_sha": "ff51098e94d80e2c13b5dccbdc90e998127b7296"
+      "repository_sha": "d59823e615cd3c8619beb537f88a4a1f71817e70"
     }
   },
   "execution_plan_digest": "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad",
