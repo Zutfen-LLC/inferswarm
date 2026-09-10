@@ -502,9 +502,17 @@ class MutationControls(unittest.TestCase):
                 r["committed_ids_equal"] = True
         edit_json(scratch.pe / "equality-reduction.json", fn)
         # terminal must not become a PASS: the mismatched ids are
-        # re-derived from raw bytes elsewhere; a forged summary is not
-        # authority.  The /2 reducer re-runs the equality derivation in
-        # the mutation harness below to prove the forgery is detectable.
+        # re-derived from raw bytes by the terminal reducer itself; a
+        # forged verdict field is an invariant failure, never authority.
+        doc = scratch.run_terminal()
+        self.assertNotEqual(doc.get("terminal"), self.SEMANTIC)
+        self.assertNotEqual(
+            doc.get("terminal"), "ISSUE117_ARM_C_ORDINARY_SERVING_PASS")
+        self.assertTrue(
+            any("contradicts raw committed ids" in p
+                for p in doc["problems"]))
+        # and the /2 equality reducer re-derives the true counts from
+        # raw bytes, proving the forgery detectable at that layer too
         eq = scratch.run_equality()
         self.assertEqual(eq["equal_count"], 18)  # re-derived, not forged
         self.assertFalse(eq["passed"])

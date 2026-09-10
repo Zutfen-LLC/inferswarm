@@ -523,9 +523,14 @@ if not http_char.get("all_bind_frozen_incremental_decode"):
     problems.append(
         "ordinary HTTP content not characterized against the frozen "
         "incremental decoding algorithm")
-# cross-bind the equality rows to the raw per-case evidence: the row's
-# direct committed ids must be the direct case file's ids, and its
-# ordinary committed ids must be the coordinator request record's ids.
+# cross-bind the equality rows to the raw per-case evidence AND derive
+# the semantic comparison from the raw id lists in hand (review-2 P1
+# hardening: the authored equality verdict fields — passed,
+# committed_ids_equal, equal_count — are NOT authority; the reducer
+# recomputes them from the direct case file and the coordinator request
+# record it loads itself).
+derived_equal_count = 0
+derived_mismatched = []
 for row in equality.get("rows", []):
     cid = row.get("case_id")
     dcase_path = COLLECTED / "direct" / f"direct-{cid}.json"
@@ -546,7 +551,24 @@ for row in equality.get("rows", []):
             req["generated_token_ids"]):
         problems.append(
             f"equality row {cid}: ordinary ids not bound to request")
-mismatched = [r for r in equality["rows"] if not r["committed_ids_equal"]]
+    row_equal = (list(dcase["generated_token_ids"])
+                 == list(req["generated_token_ids"]))
+    if row_equal:
+        derived_equal_count += 1
+    else:
+        derived_mismatched.append(cid)
+    # an authored row verdict that contradicts the raw bytes is an
+    # evidence-integrity problem, never silently accepted
+    if bool(row.get("committed_ids_equal")) != row_equal:
+        problems.append(
+            f"equality row {cid}: authored committed_ids_equal "
+            "contradicts raw committed ids")
+if equality.get("equal_count") != derived_equal_count:
+    problems.append(
+        "authored equal_count contradicts raw committed-id comparison")
+mismatched = [{"case_id": c} for c in derived_mismatched]
+equality_all_equal = (derived_equal_count == len(equality.get("rows", []))
+                      and len(equality.get("rows", [])) == 24)
 regime4 = all(r["case_id"].startswith("c109-04") for r in mismatched)
 
 # ---- 8. terminal classification ----------------------------------------------
@@ -565,7 +587,7 @@ elif any("HTTP content not characterized" in p for p in problems):
                              "DEFECT")
 elif problems:
     terminal = blocker_class("ISSUE117_ARM_C_INVARIANT_FAILURE")
-elif equality.get("passed"):
+elif equality_all_equal:
     terminal = "ISSUE117_ARM_C_ORDINARY_SERVING_PASS"
 else:
     terminal = "ISSUE117_ARM_C_ORDINARY_SERVING_FAIL"
@@ -601,7 +623,7 @@ result = {
         "ModuleNotFoundError(tvm_ffi) + execution-plan.launch1.json + "
         "zero launch-1-attributed case/commit observations",
     },
-    "equality": {"equal": equality.get("equal_count"),
+    "equality": {"equal": derived_equal_count,
                  "of": equality.get("case_count"),
                  "mismatched_cases": [r["case_id"] for r in mismatched],
                  "all_mismatches_regime_4": regime4,
