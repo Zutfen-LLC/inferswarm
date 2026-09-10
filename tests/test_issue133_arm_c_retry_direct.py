@@ -77,7 +77,8 @@ def _accepted_chain_plan() -> dict:
 
 
 def _accepted_environment() -> dict:
-    return core._frozen_environment(core._repo_override())
+    import issue133_canonical_environment as ice
+    return ice.issue133_physical_environment()
 
 
 class FrozenAllocatorTests(unittest.TestCase):
@@ -186,9 +187,12 @@ class PlanAuthorizationFenceTests(unittest.TestCase):
 
     def test_frozen_digest_constant_is_the_issue133_authorization(self):
         self.assertEqual(
-            drv.AUTHORIZED_EXECUTION_PLAN_DIGEST,
+            drv.ARM_B_PARTICIPANT_PLAN_DIGEST,
             "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d"
             "0962eea565bdad")
+        self.assertEqual(
+            drv.ARM_B_PARTICIPANT_PLAN_SCHEMA,
+            "inferswarm.issue117.execution-plan/2")
         # and it equals the accepted Arm-B plan digest re-derived from the
         # retained accepted execution-plan document
         arm_b = json.loads(
@@ -198,18 +202,20 @@ class PlanAuthorizationFenceTests(unittest.TestCase):
         recomputed = "sha256:" + hashlib.sha256(json.dumps(
             body, sort_keys=True, separators=(",", ":")).encode()
             + b"\n").hexdigest()
-        self.assertEqual(recomputed, drv.AUTHORIZED_EXECUTION_PLAN_DIGEST)
+        self.assertEqual(recomputed, drv.ARM_B_PARTICIPANT_PLAN_DIGEST)
 
     def test_fence_passes_on_authorized_digest(self):
         drv.verify_plan_authorization_fence(
-            {"digest": drv.AUTHORIZED_EXECUTION_PLAN_DIGEST})
+            {"schema": drv.AUTHORIZED_R5A_STATIC_PLAN_SCHEMA,
+             "digest": drv.AUTHORIZED_R5A_STATIC_PLAN_DIGEST})
 
     def test_control_fence_rejects_unauthorized_built_plan(self):
         with self.assertRaises(SystemExit) as caught:
             drv.verify_plan_authorization_fence(
-                {"digest": "sha256:" + "9" * 64})
+                {"schema": drv.AUTHORIZED_R5A_STATIC_PLAN_SCHEMA,
+                 "digest": "sha256:" + "9" * 64})
         self.assertIn(
-            "authorized issue #133 Arm-B execution-plan digest",
+            "authorized issue #133 r5a",
             str(caught.exception))
 
     def test_control_fence_rejects_missing_digest(self):
@@ -429,7 +435,7 @@ class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
                 on_token(0, 7, None)
                 return {
                     "generated_token_ids": [7, 8],
-                    "plan_digest": drv.AUTHORIZED_EXECUTION_PLAN_DIGEST,
+                    "plan_digest": drv.AUTHORIZED_R5A_STATIC_PLAN_DIGEST,
                 }
 
             @staticmethod
@@ -499,8 +505,9 @@ class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
                               return_value=fake_chain_runtime),
             mock.patch.object(
                 drv, "build_execution_plan", return_value={
+                    "schema": drv.AUTHORIZED_R5A_STATIC_PLAN_SCHEMA,
                     "digest": built_plan_digest
-                    or drv.AUTHORIZED_EXECUTION_PLAN_DIGEST}),
+                    or drv.AUTHORIZED_R5A_STATIC_PLAN_DIGEST}),
         ]
         if real_tokenizer_verification:
             # the REAL Source-location/asset verification runs; only the
@@ -707,7 +714,7 @@ class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
                 built_plan_digest="sha256:" + "9" * 64)
             self.assertEqual(counters["realize"], 0)
             self.assertEqual(counters["generate"], 0)
-            self.assertIn("locally built execution plan", counters.get("exit", ""))
+            self.assertIn("locally built", counters.get("exit", ""))
 
     def test_accepted_inputs_reach_realization_and_generation(self):
         with tempfile.TemporaryDirectory() as tmp_name:

@@ -57,9 +57,13 @@ def _scratch_repo(tmp: str) -> Path:
     _git(repo, "config", "user.name", "Issue 133 Test")
     _git(repo, "config", "user.email", "issue133@example.invalid")
     # base history WITHOUT the authority path (so a side-branch authority
-    # commit is the only commit carrying those bytes when tests want it)
+    # commit is the only commit carrying those bytes when tests want it).
+    # The gate-tooling closure is committed with the base so the
+    # accepted-authority commit carries every gate blob (review
+    # 5166773760).
     (repo / "README.marker").write_text("scratch fixture\n")
     _git(repo, "add", "README.marker")
+    _git(repo, "add", "scripts")
     _git(repo, "commit", "-q", "-m", "scratch base")
     return repo
 
@@ -241,10 +245,29 @@ class ExecutionFreezeTests(unittest.TestCase):
     def test_freeze_record_binds_all_issue133_identities(self):
         record = self._record()
         for field in ("frozen_producer", "checkpoint_sha256",
-                      "candidate", "geometry", "execution_plan_digest",
+                      "candidate", "geometry",
                       "participant_identity", "fixture_digest"):
             self.assertEqual(record[field], camp.ISSUE133[field])
+        self.assertEqual(record["arm_b_participant_plan_digest"],
+                         camp.ISSUE133["execution_plan_digest"])
         self.assertEqual(record["schema"], camp.FREEZE_SCHEMA)
+        self.assertEqual(record["arm_b_participant_plan_schema"],
+                         "inferswarm.issue117.execution-plan/2")
+        self.assertEqual(record["r5a_static_plan_schema"],
+                         camp.AUTHORIZED_R5A_STATIC_PLAN_SCHEMA)
+        self.assertEqual(record["r5a_static_plan_digest"],
+                         camp.AUTHORIZED_R5A_STATIC_PLAN_DIGEST)
+        self.assertEqual(record["chain_plan_digest"],
+                         camp.AUTHORIZED_REALIZATION_INPUTS[
+                             "chain_plan"]["digest"])
+        self.assertNotEqual(record["arm_b_participant_plan_digest"],
+                            record["r5a_static_plan_digest"])
+        self.assertEqual(record["real_builder_dry_run"]["required"], True)
+        self.assertEqual(
+            record["superseded_freeze_lineage"][0]
+            ["execution_freeze_identity"],
+            "5af9aee314fdd742cdb75d903d47e2f3c43296ee887e50"
+            "7ef335b8f614e7a19e")
         self.assertEqual(
             record["authorized_realization_inputs"],
             camp.AUTHORIZED_REALIZATION_INPUTS)
@@ -495,7 +518,28 @@ class AcceptedHistoryGateTests(unittest.TestCase):
     def test_pre_execution_gate_passes_in_accepted_history_fixture(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = self._repo(tmp)
-            merged = _commit_authority(repo, "authority merged into main")
+            _commit_authority(repo, "authority merged into main")
+            # production ordering: regenerate the /6 freeze from the
+            # fixture bytes and fold it into the authority-bearing
+            # commit before declaring accepted history
+            env = dict(os.environ,
+                       GIT_AUTHOR_NAME="Issue 133 Test",
+                       GIT_AUTHOR_EMAIL="issue133@example.invalid",
+                       GIT_COMMITTER_NAME="Issue 133 Test",
+                       GIT_COMMITTER_EMAIL="issue133@example.invalid")
+            env.pop("PYTHONPATH", None)
+            regenerate = subprocess.run(
+                [sys.executable,
+                 str(repo / "scripts"
+                     / "issue133_regenerate_corrected_freeze.py")],
+                cwd=str(repo), capture_output=True, text=True, env=env)
+            self.assertEqual(
+                regenerate.returncode, 0, regenerate.stderr)
+            _git(repo, "add", str(camp.AUTHORITY_PATH.relative_to(ROOT)))
+            _git(repo, "add", str(
+                camp.EXECUTION_FREEZE_RECORD.relative_to(ROOT)))
+            _git(repo, "commit", "--amend", "--no-edit", "-q")
+            merged = _git(repo, "rev-parse", "HEAD").stdout.strip()
             _git(repo, "update-ref", "refs/remotes/origin/main", merged)
             verdict = camp.verify_pre_execution_authority_gate(
                 repo_root=repo, repo_path=repo)

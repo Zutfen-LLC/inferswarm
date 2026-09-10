@@ -96,8 +96,15 @@ PRODUCERS = [
     "tests/test_issue129_arm_c_retry.py",
     "scripts/issue133_arm_c_retry_campaign.py",
     "scripts/issue133_arm_c_retry_direct.py",
+    "scripts/issue133_canonical_environment.py",
+    "scripts/issue133_real_builder_dry_run.py",
+    "scripts/issue133_regenerate_corrected_freeze.py",
+    "scripts/issue133_physical_prelaunch_gate.py",
     "tests/test_issue133_arm_c_retry_campaign.py",
     "tests/test_issue133_arm_c_retry_direct.py",
+    "tests/test_issue133_corrected_freeze.py",
+    "tests/test_issue133_gate_tooling_drift.py",
+    "tests/test_issue133_prelaunch_bootstrap.py",
     "scripts/issue117_arm_b_transport_audit_build.py",
     "scripts/issue117_parsers/__init__.py",
     "scripts/issue117_parsers/source_server_log.py",
@@ -355,6 +362,11 @@ COMMITTED_EVIDENCE_FILES = {
     "arm-c-retry/physical-campaign-authority.json",
     "arm-c-retry/execution-freeze.json",
     "arm-c-retry/phase-a-correction.json",
+    # issue #133 Phase-B corrected freeze (2026-09-10): live GPU identity
+    # observation (read-only), corrected canonical environment support,
+    # and the phase-B correction record
+    "arm-c-retry/gpu-identity-observation.json",
+    "arm-c-retry/phase-b-correction.json",
 }
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the

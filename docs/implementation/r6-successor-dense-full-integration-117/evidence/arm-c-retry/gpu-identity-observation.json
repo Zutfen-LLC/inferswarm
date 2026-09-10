@@ -1,0 +1,56 @@
+{
+  "bdf_authority": "live physical re-observation (this record); supersedes the #129 _frozen_environment control-plane-only BDF literals per maintainer decision issuecomment-5617122680",
+  "consistency_with_accepted_preflight": "every authorized unit's UUID/product/index equals the accepted physical-preflight compute_units entry; only BDF fields are re-observed",
+  "gpu_identity_authority": "docs/implementation/r6-successor-dense-full-integration-117/evidence/physical-preflight.json compute_units (accepted UUID/product/index authority, retained verbatim)",
+  "hosts": {
+    "inferswarm01": {
+      "gpus": [
+        {
+          "gpu_product": "NVIDIA GeForce RTX 3060",
+          "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+          "in_authorized_geometry": true,
+          "index": 0,
+          "logical_authorized_gpu_identity": "inferswarm01/gpu-0",
+          "pci_bdf": "00000000:02:00.0"
+        },
+        {
+          "gpu_product": "NVIDIA GeForce RTX 3060",
+          "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+          "in_authorized_geometry": true,
+          "index": 1,
+          "logical_authorized_gpu_identity": "inferswarm01/gpu-1",
+          "pci_bdf": "00000000:03:00.0"
+        }
+      ],
+      "observed_at_utc": "2026-09-10T10:38:07Z"
+    },
+    "inferswarm03": {
+      "gpus": [
+        {
+          "gpu_product": "NVIDIA GeForce RTX 3060",
+          "gpu_uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176",
+          "in_authorized_geometry": true,
+          "index": 0,
+          "logical_authorized_gpu_identity": "inferswarm03/gpu-0",
+          "pci_bdf": "00000000:01:00.0"
+        },
+        {
+          "disposition": "observed-but-unused: outside the issue #133 authorized geometry; not added to the environment or candidate",
+          "gpu_product": "NVIDIA GeForce RTX 3060",
+          "gpu_uuid": "GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0",
+          "in_authorized_geometry": false,
+          "index": 1,
+          "logical_authorized_gpu_identity": "inferswarm03/gpu-1",
+          "pci_bdf": "00000000:03:00.0"
+        }
+      ],
+      "observed_at_utc": "2026-09-10T10:38:08Z"
+    }
+  },
+  "non_observations": "no model initialization, no CUDA context creation, no participant-state mutation, no shard access",
+  "observation_command": "ssh inferswarm0N 'nvidia-smi --query-gpu=index,uuid,name,pci.bus_id --format=csv'",
+  "observation_timestamp_utc": "2026-09-10T10:38:07Z",
+  "observer": "hermes-orchestrator (issue #133 corrected-freeze slice; read-only observation; no GPU initialization, no CUDA context, no model load)",
+  "producer_current_accepted_authority": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "schema": "inferswarm.issue133.physical-gpu-identity-observation/1"
+}
