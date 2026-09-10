@@ -79,11 +79,23 @@
       "expected_path": "/srv/inferswarm/state/arm-c-retry/scripts/issue133_arm_c_retry_direct.py",
       "file_sha256": "02ec9cf7e5c3ac471fead0c37fdf59a981895628e0da64c8266a2d2d195eb43e",
       "read_only": true,
-      "repository_sha": "8255189c4c4db881ec895ae19d4e9816ec687b97"
+      "repository_sha": "5459d2bbb604dd0ad74926a779a5fddeb081bc22"
     }
   },
   "fixture_digest": "sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba36f2",
   "frozen_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "gate_tooling_closure": {
+    "binding": "the COMPLETE fixed set of repository-side Python files able to affect the pre-execution authorization decision; before any gate module is imported or executed, every file is verified byte-for-byte against git show <accepted_authority_commit>:<path> (regular non-symlink working-tree file; missing blob, missing file, symlink, or byte mismatch fails closed). A later-main commit leaving every gate byte identical remains compatible; any gate byte change requires review/re-freeze",
+    "paths": [
+      "scripts/issue133_arm_c_retry_campaign.py",
+      "scripts/issue133_real_builder_dry_run.py",
+      "scripts/issue133_canonical_environment.py",
+      "scripts/issue133_arm_c_retry_direct.py",
+      "scripts/issue129_arm_c_retry_core.py",
+      "scripts/issue117_arm_c_frozen_pins.py"
+    ],
+    "required": true
+  },
   "geometry": "inferswarm01/gpu-0 [0,16)\ninferswarm01/gpu-1 [16,32)\ninferswarm03/gpu-0 [32,48)",
   "issue": "https://github.com/Zutfen-LLC/inferswarm/issues/133",
   "methodology_ready_head": "808b77c45f0b4e5d52a202c1a931f43447ff93a6",
@@ -94,17 +106,30 @@
   "r5a_static_plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
   "r5a_static_plan_schema": "inferswarm.r5a.static-execution-plan/1",
   "real_builder_dry_run": {
+    "authority_binding": "review 5166773760: the verdict is bound to THIS authority-bound freeze record's own values \u2014 r5a_static_plan_schema, r5a_static_plan_digest, arm_b_participant_plan_schema, arm_b_participant_plan_digest, chain_plan_digest, and authorized_realization_inputs.environment.canonical_sha256 are taken from the loaded, byte-verified record and cross-checked against the executing module constants and the really-built plan; ANY disagreement fails closed before physical execution",
+    "bound_verdict_fields": [
+      "r5a_static_plan_schema",
+      "r5a_static_plan_digest",
+      "arm_b_participant_plan_schema",
+      "arm_b_participant_plan_digest",
+      "chain_plan_digest"
+    ],
     "gate": "ISSUE133_REAL_BUILDER_CPU_DRY_RUN_BOUND",
     "required": true,
     "script": "scripts/issue133_real_builder_dry_run.py",
     "semantics": "before any physical launch, the ACTUAL unmocked frozen producer build path must produce an r5a static plan (inferswarm.r5a.static-execution-plan/1) whose digest equals r5a_static_plan_digest; the Arm-B participant-plan digest (issue117.execution-plan/2) must fail the same fence (wrong-family negative control)"
   },
   "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
-  "schema": "inferswarm.issue133.execution-freeze/4",
+  "schema": "inferswarm.issue133.execution-freeze/5",
   "superseded_freeze_lineage": [
     {
       "execution_freeze_identity": "5af9aee314fdd742cdb75d903d47e2f3c43296ee887e507ef335b8f614e7a19e",
       "reason": "Phase-B preflight STOP issuecomment-5613617497: Blocker A (unsatisfiable plan-family conflation in the authorization fence) and Blocker B (frozen environment embedded non-physical node_a BDF literals); maintainer disposition issuecomment-5617122680 authorized this corrected freeze. Zero physical attempts occurred under the superseded freeze.",
+      "status": "INVALIDATED_BEFORE_PHYSICAL_EXECUTION"
+    },
+    {
+      "execution_freeze_identity": "1f5ef48b314b721a8370404f34dee2e934e2bbc2f140724b9793a856f9b9a218",
+      "reason": "maintainer review 5166773760 on head e0661c385505e2a240ac59b809c7429f66ad924f: the mandatory pre-execution real-builder authority path was not itself identity-bound (launch-gate dependency-closure hole). This /5 freeze adds the complete accepted-authority-commit gate-tooling byte closure and binds the real-builder verdict to the freeze record's own identities. Zero physical attempts occurred under the superseded freeze.",
       "status": "INVALIDATED_BEFORE_PHYSICAL_EXECUTION"
     }
   ],
