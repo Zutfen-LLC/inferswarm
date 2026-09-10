@@ -1,0 +1,652 @@
+{
+  "accepted_blocker_preservation": {
+    "accepted_blocker_merge": "718efbf5770b31c6e44eb3a8c4d0b81fd1dc9c22",
+    "current_path_count": 62,
+    "new_paths": [],
+    "no_new_paths": true,
+    "path_count": 62,
+    "preserved": true,
+    "preserved_paths_digest": "sha256:873bbcc9aca16f2a20883bf268d175b9c7335d4d0a9611590d73a64d6015e260",
+    "rule": "every evidence path under evidence/arm-c/ that existed at the accepted merge is byte-identical in the working tree; the current namespace contains no additional path; all issue-#129 authority lives under evidence/arm-c-retry/",
+    "schema": "inferswarm.issue129.accepted-blocker-preservation/1"
+  },
+  "attempt_state_machine_self_checks": {
+    "ok": true,
+    "rows": [
+      {
+        "control": "correctness_bearing_without_methodology_readiness",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
+        "control": "correctness_bearing_without_physical_authorization",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
+        "control": "same_campaign_terminal_cannot_clear_stop",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
+        "control": "same_campaign_boolean_flip_cannot_clear_stop",
+        "expected_classifications": [
+          "PRE_OBSERVATION_INFRASTRUCTURE",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "PRE_OBSERVATION_INFRASTRUCTURE",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
+        "control": "post_stop_diagnostic_remains_non_authoritative",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "DIAGNOSTIC_ONLY_AFTER_STOP"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "DIAGNOSTIC_ONLY_AFTER_STOP"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
+        "control": "post_terminal_undisclosed_continuation_fails_closed",
+        "expected_classifications": [
+          "TERMINAL_CAMPAIGN_ATTEMPT",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "TERMINAL_CAMPAIGN_ATTEMPT",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
+        "control": "terminal_without_stop_passes",
+        "expected_classifications": [
+          "TERMINAL_CAMPAIGN_ATTEMPT"
+        ],
+        "expected_passed": true,
+        "observed_classifications": [
+          "TERMINAL_CAMPAIGN_ATTEMPT"
+        ],
+        "observed_passed": true,
+        "ok": true
+      },
+      {
+        "control": "nonterminal_campaign_cannot_pass",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_VALID"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_VALID"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
+        "control": "diagnostic_disclosure_is_never_authority",
+        "expected_classifications": [
+          "DIAGNOSTIC_ONLY"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "DIAGNOSTIC_ONLY"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
+        "control": "diagnostic_cannot_hide_methodology_failure",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
+        "control": "diagnostic_cannot_hide_deployment_failure",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "observed_passed": false,
+        "ok": true
+      },
+      {
+        "control": "fresh_post_review_campaign_is_independent",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "TERMINAL_CAMPAIGN_ATTEMPT"
+        ],
+        "expected_passed": true,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "TERMINAL_CAMPAIGN_ATTEMPT"
+        ],
+        "observed_passed": true,
+        "ok": true
+      },
+      {
+        "control": "intermediate_campaign_cannot_bypass_stop_review",
+        "expected_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "PRE_OBSERVATION_INFRASTRUCTURE",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "expected_passed": false,
+        "observed_classifications": [
+          "CORRECTNESS_BEARING_INVALID",
+          "PRE_OBSERVATION_INFRASTRUCTURE",
+          "CORRECTNESS_BEARING_INVALID"
+        ],
+        "observed_passed": false,
+        "ok": true
+      }
+    ]
+  },
+  "authority": {
+    "accepted_arm_b_merge": "fed87d1b71a0794374dd58c921e31606a56a242f",
+    "accepted_arm_b_result": "ISSUE117_ARM_B_COLD_REALIZATION_PASS",
+    "accepted_arm_c_blocker": "ISSUE117_ARM_C_EVIDENCE_BLOCKER",
+    "accepted_arm_c_blocker_merge": "718efbf5770b31c6e44eb3a8c4d0b81fd1dc9c22",
+    "accepted_fixture_digest": "sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba36f2",
+    "additive_history_rule": "the accepted #128 blocker evidence under evidence/arm-c/ is immutable history preserved byte-exact; every #129 authority, pin, and derived methodology output lives additively under evidence/arm-c-retry/",
+    "checkpoint_authority": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "frozen_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+    "issue": "https://github.com/Zutfen-LLC/inferswarm/issues/129"
+  },
+  "cpu_only": {
+    "gpu_execution_occurred": false,
+    "model_execution_occurred": false,
+    "note": "recording fake runtime; no model bytes; CPU-only host"
+  },
+  "direct_summary": {
+    "arm": "direct",
+    "candidate_id": "resident-two-node-three-slot[slot-stage-1=gpu.node-a.0,slot-stage-2=gpu.node-a.1,slot-stage-3=gpu.node-b.0]",
+    "generate_argument_names": [
+      "max_new_tokens",
+      "on_token",
+      "prompt_token_ids",
+      "session_id"
+    ],
+    "mapping": {
+      "slot-stage-1": "gpu.node-a.0",
+      "slot-stage-2": "gpu.node-a.1",
+      "slot-stage-3": "gpu.node-b.0"
+    },
+    "plan_digest": "sha256:6911c00283cdb4169acaae4e8c25955476cd96b2b469d5cdc56e6d626fdcca1b",
+    "plan_digest_source": "real freeze_execution_plan via frozen producer bytes",
+    "runtime_session_allocation": {
+      "derivation": "verbatim AST extraction of EpochServingController._runtime_session_id from the sha256-pinned r5b_epochs.py bytes (structure verified: one sequence increment; return logical_session_id * 1000000 + sequence; sequence zeroed in __init__); the direct comparator allocates through this extracted method, never through a hand-copied formula",
+      "method_line": 417,
+      "method_sha256": "94276b21597f22795af28ee4d3566dc15a903abadfd9a5c00a3d527f2b892f6c",
+      "multiplier": 1000000,
+      "source_sha256": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805"
+    },
+    "sampling_inputs": {
+      "temperature": 0.0,
+      "top_k": -1,
+      "top_p": 1.0
+    },
+    "selection_authorization": {
+      "automatic_selection_preserved": true,
+      "candidate_id": "resident-two-node-three-slot[slot-stage-1=gpu.node-a.0,slot-stage-2=gpu.node-a.1,slot-stage-3=gpu.node-b.0]",
+      "mode": "CONTROLLED_EVIDENCE_COLLECTION_OVERRIDE",
+      "planner_selected_candidate_id": "resident-two-node-three-slot[slot-stage-1=gpu.node-a.0,slot-stage-2=gpu.node-a.1,slot-stage-3=gpu.node-b.0]"
+    },
+    "stopping_policy": {
+      "committed_tokens": 8,
+      "kind": "length"
+    },
+    "variant": "corrected"
+  },
+  "fixture": {
+    "case_count": 24,
+    "fixture_digest": "sha256:6046d4796a5d9cc888030c6b3f07304c20ce117d93905c3000d7aae7c0ae01c7"
+  },
+  "frozen_control_plane_digests": {
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/frozen-source/924cd22e/benchmarks/inferswarm_r6/strategy.py": "ca31f0999cb4fcf46d73c83f8b3ee7bbe2636792bcfc1824b15946aaac53906b",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/frozen-source/924cd22e/python/freetoken/research/r3_planner.py": "080e8b64fbb9fbc0f6df390d5714d0dbc691dd601e2bd13fe4ff71596e2d0856",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/frozen-source/924cd22e/python/freetoken/research/r5a_serving.py": "f61adc3201f5c2c9d23afcc90da3135ca89b3ed7eb3213d68a41b08fc242b105",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/coordinator.py": "189548dc4f87f5f40c05f7796a2be7af0446ea05f95a0cf7bafcd3b79bec5d77",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/xc_strategy.py": "8d33b4b297a20511448ab78909d2f528eef62c2b7943acae167668ec9ff0f26f",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken/research/r5b_epochs.py": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805"
+  },
+  "global_problems": [],
+  "ordinary_ingress": {
+    "case_count": 24,
+    "coordinator_ingress_citations": {
+      "_render_and_tokenize": {
+        "decorators": [],
+        "line": 302,
+        "source_sha256": "9ec92ab0959bbba5efb02735453f2137d2e366b1567ca5bf601dd9a5e3db5e52"
+      },
+      "_sampling_of": {
+        "decorators": [
+          "staticmethod"
+        ],
+        "line": 312,
+        "source_sha256": "30b35785fbfc451d955a23aef1946b5e2991490283d084848aefb872971b3ced"
+      },
+      "max_tokens_derivation": {
+        "line": 341,
+        "text": "maximum = int(body.get(\"max_tokens\") or DEFAULT_MAX_OUTPUT_TOKENS)"
+      },
+      "max_tokens_guard": {
+        "line": 342,
+        "text": "if maximum < 1:"
+      },
+      "render_call": {
+        "line": 340,
+        "text": "prompt_ids = self._render_and_tokenize(body)"
+      },
+      "sampling_call": {
+        "line": 344,
+        "text": "sampling = self._sampling_of(body)"
+      },
+      "serve_dispatch": {
+        "line": 401,
+        "text": "completed = self.controller.serve_tokens("
+      },
+      "serve_max_arg": {
+        "line": 404,
+        "text": "max_new_tokens=maximum,"
+      },
+      "serve_prompt_arg": {
+        "line": 403,
+        "text": "prompt_token_ids=prompt_ids,"
+      },
+      "serve_sampling_arg": {
+        "line": 405,
+        "text": "sampling_inputs=sampling,"
+      },
+      "serve_session_arg": {
+        "line": 402,
+        "text": "session_id=session_id,"
+      },
+      "session_allocation": {
+        "line": 345,
+        "text": "session_id = len(self.request_log) + 1"
+      }
+    },
+    "coordinator_source_sha256": "189548dc4f87f5f40c05f7796a2be7af0446ea05f95a0cf7bafcd3b79bec5d77",
+    "default_max_output_tokens": 32768,
+    "derivation": "five retained sha256-pinned assets -> AutoTokenizer.from_pretrained(local_files_only=True, trust_remote_code=False) -> frozen Coordinator _render_and_tokenize -> exact 24-case prompt fixture",
+    "equal_count": 24,
+    "passed": true,
+    "problems": [],
+    "schema": "inferswarm.issue129.real-tokenizer-ingress/1",
+    "stand_in_authority": false,
+    "tokenizer": {
+      "assets": {
+        "asset_count": 5,
+        "asset_dir": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/frozen-tokenizer/assets",
+        "asset_dir_exhaustive": true,
+        "digests": {
+          "chat_template.jinja": "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4",
+          "config.json": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9",
+          "generation_config.json": "a8349d9bd64cc5841297fcb5002f0fdc4749c473c8f1b10ea337f9ce4ee7014e",
+          "tokenizer.json": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+          "tokenizer_config.json": "a62f4e85a47c0c136edaaa3a4f591fd6783717299a9def47e5ad03a49f6a5eb9"
+        },
+        "sizes": {
+          "chat_template.jinja": 18683,
+          "config.json": 4423,
+          "generation_config.json": 260,
+          "tokenizer.json": 32169626,
+          "tokenizer_config.json": 3089
+        }
+      },
+      "class": "transformers.models.gemma.tokenization_gemma.GemmaTokenizer",
+      "loader": "AutoTokenizer.from_pretrained",
+      "local_files_only": true,
+      "software": {
+        "packages": {
+          "Jinja2": "3.1.6",
+          "MarkupSafe": "3.0.3",
+          "tokenizers": "0.23.2",
+          "transformers": "5.17.0"
+        },
+        "python": "3.12",
+        "requirements_sha256": "793616a40ed5902d8387b964347f6d391e95f52c046ac21e939f53938f5b308e",
+        "software_identity_sha256": "8133ae80ca8925f246d86a9bca1356ee46dc27d95201cf043261fd164e5b87a4"
+      },
+      "trust_remote_code": false
+    }
+  },
+  "ordinary_summary": {
+    "arm": "ordinary",
+    "candidate_id": "resident-two-node-three-slot[slot-stage-1=gpu.node-a.0,slot-stage-2=gpu.node-a.1,slot-stage-3=gpu.node-b.0]",
+    "generate_argument_names": [
+      "max_new_tokens",
+      "on_token",
+      "prompt_token_ids",
+      "session_id"
+    ],
+    "mapping": {
+      "slot-stage-1": "gpu.node-a.0",
+      "slot-stage-2": "gpu.node-a.1",
+      "slot-stage-3": "gpu.node-b.0"
+    },
+    "plan_digest": "sha256:98938bf6d44baa0c35360dc38d3b210490260c7a93094a1fe7250a2a55adc7dd",
+    "plan_digest_source": "real freeze_execution_plan via frozen producer bytes",
+    "runtime_session_allocation": {
+      "derivation": "verbatim AST extraction of EpochServingController._runtime_session_id from the sha256-pinned r5b_epochs.py bytes (structure verified: one sequence increment; return logical_session_id * 1000000 + sequence; sequence zeroed in __init__); the direct comparator allocates through this extracted method, never through a hand-copied formula",
+      "method_line": 417,
+      "method_sha256": "94276b21597f22795af28ee4d3566dc15a903abadfd9a5c00a3d527f2b892f6c",
+      "multiplier": 1000000,
+      "source_sha256": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805"
+    },
+    "sampling_inputs": {
+      "temperature": 0.0,
+      "top_k": -1,
+      "top_p": 1.0
+    },
+    "selection_authorization": {
+      "candidate_id": "resident-two-node-three-slot[slot-stage-1=gpu.node-a.0,slot-stage-2=gpu.node-a.1,slot-stage-3=gpu.node-b.0]",
+      "mode": "AUTOMATIC_PLANNER_SELECTION",
+      "planner_selected_candidate_id": "resident-two-node-three-slot[slot-stage-1=gpu.node-a.0,slot-stage-2=gpu.node-a.1,slot-stage-3=gpu.node-b.0]"
+    },
+    "stopping_policy": {
+      "committed_tokens": 8,
+      "kind": "length"
+    },
+    "variant": "corrected"
+  },
+  "per_case_reduction": {
+    "case_count": 24,
+    "compared_runtime_call_fields": [
+      "case_id",
+      "call_index",
+      "runtime_session_id",
+      "prompt_token_ids",
+      "max_new_tokens",
+      "on_token_present",
+      "response_commit_token_id",
+      "response_speculative_token_id",
+      "response_token_ids"
+    ],
+    "control_plane_only_fields": [
+      "epoch_id",
+      "generation",
+      "realization_id",
+      "plan_digest_value",
+      "logical_session_id",
+      "wall_ns"
+    ],
+    "control_plane_only_proof": "control-plane-only fields never appear among generate() arguments: the recording runtime captures the exact keyword set per call and the reducer requires it to equal the frozen contract on both arms; the runtime session_id IS a generate() argument value and is compared exactly per call; equality is computed only over the recorded runtime-invocation inputs",
+    "equal_count": 24,
+    "global_problems": [],
+    "passed": true,
+    "rows": [
+      {
+        "case_id": "c109-01-01-045",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-01-02-076",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-01-03-009",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-01-04-036",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-01-05-017",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-01-06-006",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-02-01-030",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-02-02-020",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-02-03-011",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-02-04-033",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-02-05-024",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-02-06-049",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-03-01-044",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-03-02-054",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-03-03-031",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-03-04-003",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-03-05-044",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-03-06-016",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-04-01-026",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-04-02-047",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-04-03-040",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-04-04-024",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-04-05-043",
+        "equal": true,
+        "problems": []
+      },
+      {
+        "case_id": "c109-04-06-074",
+        "equal": true,
+        "problems": []
+      }
+    ],
+    "schema": "inferswarm.issue129.transcript-reduction/2",
+    "terminal": "ISSUE117_ARM_C_RETRY_METHODOLOGY_READY"
+  },
+  "runtime_session_allocation": {
+    "derivation": "verbatim AST extraction of EpochServingController._runtime_session_id from the sha256-pinned r5b_epochs.py bytes (structure verified: one sequence increment; return logical_session_id * 1000000 + sequence; sequence zeroed in __init__); the direct comparator allocates through this extracted method, never through a hand-copied formula",
+    "method_line": 417,
+    "method_sha256": "94276b21597f22795af28ee4d3566dc15a903abadfd9a5c00a3d527f2b892f6c",
+    "multiplier": 1000000,
+    "source_sha256": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805"
+  },
+  "runtime_session_cross_check": {
+    "derivation": "the ordinary arm's per-call runtime session ids equal the allocator mechanically extracted from the pinned r5b_epochs.py bytes, replayed in ordinary case order (logical_session_id * 1000000 + global call sequence, per the extracted method)",
+    "ok": true,
+    "problems": [],
+    "representative_sequences": {
+      "c109-01-01-045": {
+        "logical_session_id": 1,
+        "runtime_session_ids": [
+          1000001,
+          1000002,
+          1000003,
+          1000004,
+          1000005,
+          1000006,
+          1000007,
+          1000008
+        ]
+      },
+      "c109-01-02-076": {
+        "logical_session_id": 2,
+        "runtime_session_ids": [
+          2000009,
+          2000010,
+          2000011,
+          2000012,
+          2000013,
+          2000014,
+          2000015,
+          2000016
+        ]
+      },
+      "c109-01-03-009": {
+        "logical_session_id": 3,
+        "runtime_session_ids": [
+          3000017,
+          3000018,
+          3000019,
+          3000020,
+          3000021,
+          3000022,
+          3000023,
+          3000024
+        ]
+      }
+    }
+  },
+  "schema": "inferswarm.issue129.methodology-run/4",
+  "terminal": "ISSUE117_ARM_C_RETRY_METHODOLOGY_READY",
+  "tokenizer_source_contract": {
+    "observation_monitor": {
+      "forbidden_opens": [],
+      "forbidden_root": "/srv/models/",
+      "frozen_rule_forbidden_root": "/srv/models/",
+      "observation_window_clean": true,
+      "observation_window_source_opens": 0
+    },
+    "record": {
+      "asset_dir": "/srv/inferswarm/tokenizers/gemma-r6-frozen",
+      "asset_dir_exhaustive": true,
+      "asset_dir_extra_entries": [],
+      "assets": [
+        {
+          "name": "chat_template.jinja",
+          "sha256": "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4"
+        },
+        {
+          "name": "config.json",
+          "sha256": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9"
+        },
+        {
+          "name": "generation_config.json",
+          "sha256": "a8349d9bd64cc5841297fcb5002f0fdc4749c473c8f1b10ea337f9ce4ee7014e"
+        },
+        {
+          "name": "tokenizer.json",
+          "sha256": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f"
+        },
+        {
+          "name": "tokenizer_config.json",
+          "sha256": "a62f4e85a47c0c136edaaa3a4f591fd6783717299a9def47e5ad03a49f6a5eb9"
+        }
+      ],
+      "digests_verified_pre_window": true,
+      "forbidden_root": "/srv/models/",
+      "observation_window_source_opens": 0,
+      "status": "future-retry-obligation: this record freezes the contract the future physical retry must satisfy and verify; the digest/verification fields are the contract's requirements, not observations performed by this CPU-only run (the only in-run mechanical observation is the audit-hook monitor result)",
+      "tokenizer_path": "/srv/inferswarm/tokenizers/gemma-r6-frozen"
+    },
+    "rule": "the future physical retry must publish the exact sha256-pinned tokenizer/config assets to a dedicated non-Source location, point tokenizer_path there, verify digests pre-window, and open nothing under /srv/models/ during the observation window; the Coordinator legitimately uses a tokenizer \u2014 the gate never hinges on transformers being absent",
+    "transformers_imported_for_pre_window_proof": true,
+    "verification": {
+      "ok": true
+    }
+  }
+}

@@ -4,6 +4,37 @@
 
 **Observed terminals (latest first):**
 
+- Issue #129 (2026-09-09, review-corrected, pending maintainer review):
+  `ISSUE117_ARM_C_RETRY_METHODOLOGY_READY` — CPU-only Arm-C retry
+  methodology remediation. The corrected comparator contract (per
+  committed position: replay prefix, `max_new_tokens=2`, commit step
+  zero, discard the speculative second token; runtime-session
+  allocation mechanically extracted from the pinned controller bytes),
+  and the frozen 24-case rendered prompt-token fixture are frozen. Five
+  exact tokenizer assets and the tokenizer software identity are
+  retained outside the accepted Arm-C namespace. The real local-only
+  tokenizer renders the exact request bodies through the AST-extracted
+  Coordinator function to the frozen fixture IDs, 24/24. The CPU
+  recording-runtime comparator gives 24/24 exact equivalence. It
+  compares all `generate()` argument values, including runtime session
+  IDs, between the real frozen `EpochServingController` path and the
+  corrected direct comparator. The tokenizer Source contract requires
+  pinned non-Source assets and zero forbidden-root opens. The accepted
+  #128 preservation regression proves all `evidence/arm-c/`
+  paths are byte-exact from merge `718efbf…` and no new path exists in
+  that namespace. The campaign reducer makes a correctness-bearing STOP
+  permanent within one campaign. A new campaign requires a fresh
+  post-review authorization and lineage root. A separate accepted authority
+  record binds every campaign. A campaign passes only after an authoritative
+  terminal attempt. The public reducer loads that authority from a fixed path at
+  an accepted Git commit. A separate physical-execution authorization is
+  required. Diagnostics remain non-authoritative. All mandatory negative
+  controls and the exact deployed-script identity contract are frozen in
+  [METHODOLOGY-ARM-C-RETRY.md](METHODOLOGY-ARM-C-RETRY.md) with evidence
+  under `evidence/arm-c-retry/` (`methodology-run.json`,
+  `prompt-fixture.json`, `authority.json`, `integrity.json`). No
+  physical execution; the physical Arm-C retry itself is NOT yet
+  authorized.
 - Arm C (2026-09-09, corrected 2026-09-09): physical observations
   exist, but the campaign is **methodology/evidence-blocked** —
   `ISSUE117_ARM_C_EVIDENCE_BLOCKER` (post-correctness-bearing

@@ -143,16 +143,16 @@ never an unreviewed branch tip. FreeToken is not the permanent product boundary.
 
 Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.
 
-- **Arm B — canonical cold acquisition + realization observation:** [`ISSUE117_ARM_B_COLD_REALIZATION_PASS`](https://github.com/Zutfen-LLC/inferswarm/pull/127).
-- **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/commit/fed87d1b71a0794374dd58c921e31606a56a242f).
-- **Recorded execution authorization:** blocked — Arm C observed ISSUE117_ARM_C_EVIDENCE_BLOCKER (post-correctness-bearing methodology / evidence-admissibility failure; physical observations retained as diagnostic; pending maintainer review); Arm D blocked. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/117).
+- **Arm C — ordinary external-Coordinator serving (methodology/evidence-blocked) observation:** [`ISSUE117_ARM_C_EVIDENCE_BLOCKER`](https://github.com/Zutfen-LLC/inferswarm/pull/128).
+- **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/commit/718efbf5770b31c6e44eb3a8c4d0b81fd1dc9c22).
+- **Recorded execution authorization:** authorized — Issue #129 — CPU-only Arm-C retry methodology remediation (control-plane-only comparator equivalence); physical Arm-C retry NOT authorized; Arm D blocked. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/129).
 
-- Arm B is accepted at merge fed87d1b71a0794374dd58c921e31606a56a242f (ISSUE117_ARM_B_COLD_REALIZATION_PASS, PR #127).
-- Arm C executed 2026-09-09 from accepted main fed87d1b71a0794374dd58c921e31606a56a242f: the campaign is methodology/evidence-blocked (ISSUE117_ARM_C_EVIDENCE_BLOCKER, post-correctness-bearing methodology / evidence-admissibility failure; correction /2). The actual frozen defect: the frozen direct comparator (single-shot max_new_tokens=8, one prefill per case) and the frozen ordinary path (FreeToken 924cd22e EpochServingController replay-prefix loop: max_new_tokens=2 per committed position, commit step zero, discard the speculative second token; bytes retained sha256-pinned under evidence/arm-c/frozen-freetoken/) differed in runtime invocation semantics in addition to control-plane routing, so the frozen campaign could not establish ordinary-vs-direct equivalence or semantic failure as designed. direct-6 is a correctness-bearing observation with unknown/not-retained exact driver bytes (staged overwrite 10:43Z placed after its 10:28Z completion); ordinary-1 (10:38Z) is a correctness-bearing ordinary-path observation inadmissible to a semantic verdict; direct-7/8/9 (10:49/10:56/11:09Z) are post-revision diagnostics. Both histories of the §10 stop-rule ambiguity converge on the blocker. The retained 18/24 comparison and six regime-4 divergences remain follow-up-hypothesis diagnostics. Four tokenizer-metadata /srv/models/ reads + one Source-root stat are retained under the frozen zero-Source rule. No ordinary-serving semantic PASS or FAIL exists from this campaign.
-- Do not rerun the accepted physical preflight, Arm A, or the accepted Arm-B campaign.
-- Arm D must not begin before Arm-C maintainer review.
-- Preserve the frozen producer 924cd22ea081f6d4ed471016faf01d427fc5b0d2, checkpoint 5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d, canonical candidate geometry dense.6171f32b4413, and the accepted Arm-B participant materialized state.
-- No consumed h109-* holdout material may be used as new evidence.
+- Arm C is accepted-blocked at merge 718efbf5770b31c6e44eb3a8c4d0b81fd1dc9c22 (ISSUE117_ARM_C_EVIDENCE_BLOCKER, PR #128); the retained 18/24 comparison and six regime-4 divergences remain diagnostic only and must not be tuned against.
+- Issue #129 authorizes CPU-only methodology remediation: no GPU execution, no model execution, no Arm D/E, no holdout use, no mutation of accepted Arm-B participant state.
+- The retry direct comparator must mechanically reproduce the ordinary controller's runtime invocation contract (per committed position: replay prefix prompt+committed, max_new_tokens=2, commit step zero, discard the speculative second token; repeat until 8 committed). No single-shot max_new_tokens=8 direct comparator.
+- Before any physical retry authorization, the methodology must prove on CPU with a recording/fake runtime that both arms issue the same ordered runtime-call transcript for all 24 frozen c109 cases.
+- Preserve the frozen producer 924cd22ea081f6d4ed471016faf01d427fc5b0d2, checkpoint 5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d, canonical candidate geometry dense.6171f32b4413, and the accepted Arm-B participant state.
+- No consumed h109-* holdout material may be used as new evidence; no h109-* material may be created.
 <!-- project-status:frontier:end -->
 
 The [project capability summary](../../README.md#what-the-research-has-established)

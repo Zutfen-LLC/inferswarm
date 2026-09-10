@@ -92,6 +92,8 @@ PRODUCERS = [
     "scripts/issue117_arm_c_blocker_reducer.py",
     "scripts/issue117_arm_c_blocker_fakeroot.py",
     "scripts/issue117_arm_c_frozen_pins.py",
+    "scripts/issue129_arm_c_retry_core.py",
+    "tests/test_issue129_arm_c_retry.py",
     "scripts/issue117_arm_b_transport_audit_build.py",
     "scripts/issue117_parsers/__init__.py",
     "scripts/issue117_parsers/source_server_log.py",
@@ -285,6 +287,14 @@ COMMITTED_EVIDENCE_FILES = {
     "coordinator.py",
     "arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/"
     "xc_strategy.py",
+    # issue #129: additional frozen control-plane bytes retained verbatim
+    # from the same producer. These bytes stay in the additive #129 area.
+    "arm-c-retry/frozen-source/924cd22e/python/freetoken/research/"
+    "r3_planner.py",
+    "arm-c-retry/frozen-source/924cd22e/python/freetoken/research/"
+    "r5a_serving.py",
+    "arm-c-retry/frozen-source/924cd22e/benchmarks/inferswarm_r6/"
+    "strategy.py",
     "arm-c/reconciliation.json",
     "arm-c/chain-plan.json",
     "arm-c/plan-verification.json",
@@ -317,6 +327,23 @@ COMMITTED_EVIDENCE_FILES = {
     # blocker terminal
     "arm-c/pre-execution-authority-audit.json",
     "arm-c/blocker-reduction.json",
+    # issue #129 CPU-only Arm-C retry methodology artifacts (2026-09-09):
+    # frozen rendered prompt-token fixture + full methodology reduction,
+    # derived from retained accepted evidence; the accepted arm-c/ blocker
+    # bytes above are read-only input and are never regenerated here —
+    # they are preserved byte-exact from the accepted merge by the
+    # regression in tests/test_issue129_arm_c_retry.py
+    "arm-c-retry/prompt-fixture.json",
+    "arm-c-retry/methodology-run.json",
+    "arm-c-retry/authority.json",
+    "arm-c-retry/integrity.json",
+    "arm-c-retry/frozen-tokenizer/assets/chat_template.jinja",
+    "arm-c-retry/frozen-tokenizer/assets/config.json",
+    "arm-c-retry/frozen-tokenizer/assets/generation_config.json",
+    "arm-c-retry/frozen-tokenizer/assets/tokenizer.json",
+    "arm-c-retry/frozen-tokenizer/assets/tokenizer_config.json",
+    "arm-c-retry/frozen-tokenizer/requirements.txt",
+    "arm-c-retry/frozen-tokenizer/software-identity.json",
 }
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the
@@ -1605,6 +1632,7 @@ def write_manifest(out_dir: Path) -> None:
             entries[str(AREA / "evidence" / name)] = sha(committed)
     entries.update({path: sha(ROOT / path) for path in PRODUCERS})
     for path in (str(AREA / "METHODOLOGY.md"), str(AREA / "README.md"),
+                 str(AREA / "METHODOLOGY-ARM-C-RETRY.md"),
                  str(AREA / "CHECKPOINT-AUTHORITY-BLOCKER.md"),
                  ".github/workflows/ci.yml"):
         if (ROOT / path).is_file():

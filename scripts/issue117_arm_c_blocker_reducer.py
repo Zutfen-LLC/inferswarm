@@ -837,8 +837,19 @@ def derive_source_read_violation() -> dict:
 # terminal
 # ---------------------------------------------------------------------------
 
-def reduce_all() -> dict:
-    head = subprocess.check_output(
+#: historical-verification seam (issue #129): when set, the reducer
+#: classifies this exact historical head instead of the live HEAD. The
+#: accepted blocker authority (merge 718efbf…) is immutable history: it
+#: is never re-classified at later heads — later repository states are
+#: covered by the byte-preservation regression in
+#: scripts/issue129_arm_c_retry_core.py instead. The default (live
+#: HEAD) remains fail-closed: any file changing after the audited head
+#: without an exact allowlist entry still refuses to derive.
+_HEAD_OVERRIDE = os.environ.get("ARM_C_BLOCKER_HEAD")
+
+
+def reduce_all(head: str | None = None) -> dict:
+    head = head or _HEAD_OVERRIDE or subprocess.check_output(
         ["git", "-c", f"safe.directory={ROOT}", "-C", str(ROOT),
          "rev-parse", "HEAD"], text=True).strip()
     authority = verify_frozen_identities(head)
