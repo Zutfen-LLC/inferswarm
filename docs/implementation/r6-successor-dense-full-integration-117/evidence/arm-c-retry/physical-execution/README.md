@@ -1,7 +1,8 @@
 # Issue #133 Arm-C physical retry — physical-execution evidence
 
-Status: `ISSUE117_ARM_C_ORDINARY_SERVING_FAIL` (observed; pending maintainer
-review). Arm D remains blocked.
+Status: `ISSUE117_ARM_C_ORDINARY_SERVING_FAIL` (re-derived under the
+review-5172615768 fail-closed correction /2 from the unchanged retained
+observations; pending maintainer re-review). Arm D remains blocked.
 
 Campaign `armc-retry-afcdc4428f95d50c`, attempt `armc-retry-physical-1`,
 execution freeze `88389598…` (schema /7), authority commit `c42a0ea3`
@@ -47,27 +48,52 @@ read-only against the accepted censuses, pre and post).
 
 ## Result (independently re-derived, not authored)
 
-`equality-reduction.json` re-derives committed tokens for BOTH arms from
-raw retained evidence (serving-report runtime_sessions step-0 ids under
-the frozen allocator vs direct per-case ids) and decoded bytes:
-
+`equality-reduction.json` (correction /2, maintainer review 5172615768)
+re-derives committed tokens for BOTH arms from raw retained evidence
+(serving-report runtime_sessions step-0 ids under the frozen allocator
+vs direct per-case ids) and decoded bytes, and mechanically proves the
+physical invocation seam through first divergence: for every case the
+ordinary Coordinator's per-position replay prefix
+(`coordinator_scope.requests[i].prompt_token_ids + committed ids before
+the position`), the frozen-allocator runtime session id,
+`max_new_tokens=2`, commit-step-zero and discard-step-one semantics are
+compared against the direct invocation transcript call by call —
 - 18/24 cases exact on committed token IDs at every position, committed
-  count, stop semantics, and decoded output bytes.
+  count, stop semantics, and decoded output bytes, with all eight calls
+  equivalent;
 - 6 legitimate mismatches, all regime-4 (`c109-04-01-026`,
   `c109-04-02-047`, `c109-04-03-040`, `c109-04-04-024`,
   `c109-04-05-043`, `c109-04-06-074`) — committed-token divergence
   between the direct comparator and the ordinary path, on freshly
   executed arms in this campaign (the direct arm reproduces the 18
   regime-1/2/3 historical outputs byte-exactly; regime-4 divergences
-  re-observe, not replay, the historical Arm-C blocker signature).
+  re-observe, not replay, the historical Arm-C blocker signature);
+  mechanically derived first-divergence positions: 4, 0, 2, 3, 0, 0 —
+  with complete model-input equivalence proven through the divergent
+  call in every case (post-divergence prefixes differ by construction);
+- HTTP content: all 24 contents (including the four regime-4 cases
+  where a naive `decode(prompt+committed)` check fails) are
+  byte-reproducible from the frozen Coordinator's incremental decoding
+  (`cpu_only.printable_increment` holdback + `_decode_incremental`
+  prefix diff); the four discrepancies are retained as non-prefix-stable
+  incremental decoding, a distinct ordinary-serving semantic
+  observation, not an evidence defect;
 - One mismatch is a semantic FAIL under the frozen methodology. No
   rerun, no tuning, no relabeling.
 
-Terminal reduction (`terminal-reduction.json`): all mandatory zeros hold
-(stale/wrong session/plan/epoch/position commits = 0, unattributed = 0;
-two controlled fencing injections REJECTED pre-commit at
-NON_NEXT_COMMIT_POSITION; coordinator CUDA/model-weight/bulk-byte
-counters all 0). The FAIL is classified semantic, not infrastructure.
+Terminal reduction (`terminal-reduction.json`, correction /2): every
+mandatory zero is mechanically derived from retained observations
+(fencing/attribution counters from
+`coordinator_scope.requests[*].token_events` + session ledgers +
+dual-retained injection rejection records; Coordinator counters from
+pre/post process observations, state censuses, and the strace audit);
+stale/wrong session/plan/epoch/position commits = 0, unattributed = 0;
+two controlled fencing injections REJECTED pre-commit
+(NON_NEXT_COMMIT_POSITION / RETIRED_OR_SUPERSEDED_EPOCH); coordinator
+CUDA/model-weight/bulk-byte counters all 0; launch 1's
+PRE_OBSERVATION_INFRASTRUCTURE classification is derived from the
+retained launch-1 failure log + plan + the absence of launch-1 case
+observations. The FAIL is classified semantic, not infrastructure.
 
 ## Data-path and identity invariants
 

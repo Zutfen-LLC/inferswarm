@@ -1,31 +1,40 @@
 {
   "case_count": 24,
   "equal_count": 18,
+  "http_content_characterization": {
+    "algorithm": "cpu_only.printable_increment prefix-holdback + coordinator._decode_incremental prefix diff + finished tail (vendored frozen producer bytes)",
+    "all_bind_frozen_incremental_decode": true,
+    "binding": "frozen-coordinator-incremental-decode/1",
+    "cases_differing_from_one_shot_decode": [
+      "c109-04-02-047",
+      "c109-04-03-040",
+      "c109-04-04-024",
+      "c109-04-05-043"
+    ],
+    "classification": "distinct ordinary-serving semantic observation: non-prefix-stable incremental decoding"
+  },
+  "invocation_equivalence": {
+    "first_divergent_positions": {
+      "c109-04-01-026": 4,
+      "c109-04-02-047": 0,
+      "c109-04-03-040": 2,
+      "c109-04-04-024": 3,
+      "c109-04-05-043": 0,
+      "c109-04-06-074": 0
+    },
+    "holds": true,
+    "post_divergence_note": "after a committed-token divergence the replay prefixes differ by construction; equality of inputs is not required past the first divergent position",
+    "premise": "ordinary and direct model-execution inputs identical through the call producing each case's first divergent committed token (frozen #129/#133 comparator contract)"
+  },
   "passed": false,
-  "problems": [
-    "c109-04-01-026: committed ids differ: ordinary=[11513, 5597, 236761, 107, 140, 818, 3768, 1390] direct=[11513, 5597, 236761, 107, 6460, 1208, 17971, 67706]",
-    "c109-04-01-026: decoded(prompt+committed) differ",
-    "c109-04-02-047: committed ids differ: ordinary=[236772, 107, 100, 45518, 107, 100, 36764, 236787] direct=[6264, 236761, 107, 100, 45518, 107, 101, 45518]",
-    "c109-04-02-047: decoded(prompt+committed) differ",
-    "c109-04-02-047: HTTP content != decode(prompt+ordinary_committed)",
-    "c109-04-03-040: committed ids differ: ordinary=[101, 100, 106, 236758, 236813, 107, 100, 236813] direct=[101, 100, 100, 45518, 107, 100, 45518, 236786]",
-    "c109-04-03-040: decoded(prompt+committed) differ",
-    "c109-04-03-040: HTTP content != decode(prompt+ordinary_committed)",
-    "c109-04-04-024: committed ids differ: ordinary=[236761, 107, 100, 45518, 107, 100, 100, 100] direct=[236761, 107, 100, 107, 100, 236761, 107, 236761]",
-    "c109-04-04-024: decoded(prompt+committed) differ",
-    "c109-04-04-024: HTTP content != decode(prompt+ordinary_committed)",
-    "c109-04-05-043: committed ids differ: ordinary=[45352, 107, 100, 45518, 107, 45518, 107, 101] direct=[236770, 236771, 236771, 236908, 107, 100, 236908, 107]",
-    "c109-04-05-043: decoded(prompt+committed) differ",
-    "c109-04-05-043: HTTP content != decode(prompt+ordinary_committed)",
-    "c109-04-06-074: committed ids differ: ordinary=[236777, 1006, 573, 506, 623, 258882, 236761, 564] direct=[100, 236781, 236785, 236781, 236829, 100, 107, 100]",
-    "c109-04-06-074: decoded(prompt+committed) differ"
-  ],
+  "problems": [],
   "rows": [
     {
       "case_id": "c109-01-01-045",
       "committed_count": 8,
       "committed_ids_equal": true,
-      "committed_token_ids": [
+      "decoded_equal": true,
+      "direct_committed_token_ids": [
         818,
         20412,
         611,
@@ -35,11 +44,183 @@
         4148,
         236764
       ],
-      "decoded_equal": true,
-      "decoded_sha256": "8fc31fe9a1c4cb8c82f967ca6316fe48b490d8999e67944055ba8fda8e0a61b1",
+      "direct_full_decode_sha256": "8fc31fe9a1c4cb8c82f967ca6316fe48b490d8999e67944055ba8fda8e0a61b1",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": null,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 818,
+          "direct_discarded_step1": [
+            818
+          ],
+          "direct_runtime_session_id": 1000001,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "3f79cc00f9033e6f0d6ba28935096f06e780db7614fdac67bc2e5c2df60b3d39",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 1000001,
+          "ordinary_step0_runtime": 818,
+          "ordinary_step1_discarded_runtime": 818,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 20412,
+          "direct_discarded_step1": [
+            9884
+          ],
+          "direct_runtime_session_id": 1000002,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "b00cf65d2b30c164e6f98847d94f683c65c93c3382779be4eeed83a9375c8203",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 1000002,
+          "ordinary_step0_runtime": 20412,
+          "ordinary_step1_discarded_runtime": 9884,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 611,
+          "direct_discarded_step1": [
+            23844
+          ],
+          "direct_runtime_session_id": 1000003,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "a00f47d693f876dfcdeebea5e558967ec0eb5fba461efab2948cbcea77059bf3",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 1000003,
+          "ordinary_step0_runtime": 611,
+          "ordinary_step1_discarded_runtime": 23844,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 3847,
+          "direct_discarded_step1": [
+            9884
+          ],
+          "direct_runtime_session_id": 1000004,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "dc4163837372ca7117ca3d6df814c60505d38c3523727e4693798ff073849e2b",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 1000004,
+          "ordinary_step0_runtime": 3847,
+          "ordinary_step1_discarded_runtime": 9884,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 815,
+          "direct_discarded_step1": [
+            496
+          ],
+          "direct_runtime_session_id": 1000005,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "2975e5593e33ab12ae3ee3038c0ff582d1a1d5374b57a6b0deb4527fc805c04b",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 1000005,
+          "ordinary_step0_runtime": 815,
+          "ordinary_step1_discarded_runtime": 496,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 496,
+          "direct_discarded_step1": [
+            23844
+          ],
+          "direct_runtime_session_id": 1000006,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "e5b551f8a18a96c25691322ceb2792d4c80d1d48432ee4acdc0e4ce6323f0c6e",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 1000006,
+          "ordinary_step0_runtime": 496,
+          "ordinary_step1_discarded_runtime": 23844,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 4148,
+          "direct_discarded_step1": [
+            532
+          ],
+          "direct_runtime_session_id": 1000007,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "7b6d84078e071b0db587644d34830f5d17abb5212d88ba88d3355539e7a6f3cb",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 1000007,
+          "ordinary_step0_runtime": 4148,
+          "ordinary_step1_discarded_runtime": 532,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236764,
+          "direct_discarded_step1": [
+            23844
+          ],
+          "direct_runtime_session_id": 1000008,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "e1fde501598ae1708fdc6012795b2296ab487a6a7695cfcb993be07840367c84",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 1000008,
+          "ordinary_step0_runtime": 236764,
+          "ordinary_step1_discarded_runtime": 23844,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 1,
+      "ordinary_committed_token_ids": [
+        818,
+        20412,
+        611,
+        3847,
+        815,
+        496,
+        4148,
+        236764
+      ],
+      "ordinary_full_decode_sha256": "8fc31fe9a1c4cb8c82f967ca6316fe48b490d8999e67944055ba8fda8e0a61b1",
+      "ordinary_http_content_sha256": "8fc31fe9a1c4cb8c82f967ca6316fe48b490d8999e67944055ba8fda8e0a61b1",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         1000001,
         1000002,
@@ -55,7 +236,8 @@
       "case_id": "c109-01-02-076",
       "committed_count": 8,
       "committed_ids_equal": true,
-      "committed_token_ids": [
+      "decoded_equal": true,
+      "direct_committed_token_ids": [
         902,
         1346,
         14929,
@@ -65,11 +247,183 @@
         5456,
         2165
       ],
-      "decoded_equal": true,
-      "decoded_sha256": "0111f10f3237e5e63d76a512f8cdbb46b76c95674f3a66ebb0964585f903a249",
+      "direct_full_decode_sha256": "0111f10f3237e5e63d76a512f8cdbb46b76c95674f3a66ebb0964585f903a249",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": null,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 902,
+          "direct_discarded_step1": [
+            902
+          ],
+          "direct_runtime_session_id": 2000009,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "bc70e70d32bc4f20f28d583df18ab04b3ae2646d9120dcec49a41d88f131e189",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 2000009,
+          "ordinary_step0_runtime": 902,
+          "ordinary_step1_discarded_runtime": 902,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1346,
+          "direct_discarded_step1": [
+            1346
+          ],
+          "direct_runtime_session_id": 2000010,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "6c46c41af04ec997932fca530c01faf817e50b0ef4c6338d966224963a0f53cb",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 2000010,
+          "ordinary_step0_runtime": 1346,
+          "ordinary_step1_discarded_runtime": 1346,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 14929,
+          "direct_discarded_step1": [
+            51062
+          ],
+          "direct_runtime_session_id": 2000011,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "b3d5bd6edff39e58563b8390c4ab41d676813de48aca131af9ee01d3632754b2",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 2000011,
+          "ordinary_step0_runtime": 14929,
+          "ordinary_step1_discarded_runtime": 51062,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 15579,
+          "direct_discarded_step1": [
+            1663
+          ],
+          "direct_runtime_session_id": 2000012,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "adcd613271891940e9cd72d402380fe34a73e7147be1873d5fc56b515850b86b",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 2000012,
+          "ordinary_step0_runtime": 15579,
+          "ordinary_step1_discarded_runtime": 1663,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236764,
+          "direct_discarded_step1": [
+            2063
+          ],
+          "direct_runtime_session_id": 2000013,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "ac21f9782a6a7c35fd39aa32ce693c898f2ba882e525a53b7c98e882b55589e7",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 2000013,
+          "ordinary_step0_runtime": 236764,
+          "ordinary_step1_discarded_runtime": 2063,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 506,
+          "direct_discarded_step1": [
+            1663
+          ],
+          "direct_runtime_session_id": 2000014,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "9a3f9d023525713fbb589377486d7d97ca2de416409950ac291141d0edd71df7",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 2000014,
+          "ordinary_step0_runtime": 506,
+          "ordinary_step1_discarded_runtime": 1663,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 5456,
+          "direct_discarded_step1": [
+            1663
+          ],
+          "direct_runtime_session_id": 2000015,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "dd69a895961b2c359c82119866b23d47bdaa67d0dc10c616343f52433798dd38",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 2000015,
+          "ordinary_step0_runtime": 5456,
+          "ordinary_step1_discarded_runtime": 1663,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 2165,
+          "direct_discarded_step1": [
+            2165
+          ],
+          "direct_runtime_session_id": 2000016,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "4411ab9b46ef747e5939f55ade1586631fc711178e66e2c9e884d4e9175f15ad",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 2000016,
+          "ordinary_step0_runtime": 2165,
+          "ordinary_step1_discarded_runtime": 2165,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 2,
+      "ordinary_committed_token_ids": [
+        902,
+        1346,
+        14929,
+        15579,
+        236764,
+        506,
+        5456,
+        2165
+      ],
+      "ordinary_full_decode_sha256": "0111f10f3237e5e63d76a512f8cdbb46b76c95674f3a66ebb0964585f903a249",
+      "ordinary_http_content_sha256": "0111f10f3237e5e63d76a512f8cdbb46b76c95674f3a66ebb0964585f903a249",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         2000009,
         2000010,
@@ -85,7 +439,8 @@
       "case_id": "c109-01-03-009",
       "committed_count": 8,
       "committed_ids_equal": true,
-      "committed_token_ids": [
+      "decoded_equal": true,
+      "direct_committed_token_ids": [
         1509,
         7412,
         822,
@@ -95,11 +450,183 @@
         1135,
         653
       ],
-      "decoded_equal": true,
-      "decoded_sha256": "6bc2e9f9896d17eca4c435ece9b62676effb8e16e5de6ab27976c681b400bcc8",
+      "direct_full_decode_sha256": "6bc2e9f9896d17eca4c435ece9b62676effb8e16e5de6ab27976c681b400bcc8",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": null,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1509,
+          "direct_discarded_step1": [
+            236761
+          ],
+          "direct_runtime_session_id": 3000017,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "6a38c8fbbe3c39634f6cc6b05ea8c6210a4435399a63e8295a44c44eac5df034",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 3000017,
+          "ordinary_step0_runtime": 1509,
+          "ordinary_step1_discarded_runtime": 236761,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 7412,
+          "direct_discarded_step1": [
+            236761
+          ],
+          "direct_runtime_session_id": 3000018,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "b943fd20edaf4a6f7c9f4b615ef89ed015a3860ea66621f5a0764043a5fd02a0",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 3000018,
+          "ordinary_step0_runtime": 7412,
+          "ordinary_step1_discarded_runtime": 236761,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 822,
+          "direct_discarded_step1": [
+            8355
+          ],
+          "direct_runtime_session_id": 3000019,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "93d84ea81a3c8a7f84be937fc53431656178a553535808e21addecf5ba0f1f3c",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 3000019,
+          "ordinary_step0_runtime": 822,
+          "ordinary_step1_discarded_runtime": 8355,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 2744,
+          "direct_discarded_step1": [
+            20218
+          ],
+          "direct_runtime_session_id": 3000020,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "0a6ff67450b5ee73c7fdcba521195798c491101ca25c5b73cdb2045bd4acbc2b",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 3000020,
+          "ordinary_step0_runtime": 2744,
+          "ordinary_step1_discarded_runtime": 20218,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 691,
+          "direct_discarded_step1": [
+            691
+          ],
+          "direct_runtime_session_id": 3000021,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "d97c72eecf285401a324435a8030632e196dce13cd078d920e0890bda0d811e2",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 3000021,
+          "ordinary_step0_runtime": 691,
+          "ordinary_step1_discarded_runtime": 691,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 3463,
+          "direct_discarded_step1": [
+            236772
+          ],
+          "direct_runtime_session_id": 3000022,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "3ddf0e339348b1a151bc7ef99f84ab6cdd85e2802fc87e65bf5c76f5efc32dae",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 3000022,
+          "ordinary_step0_runtime": 3463,
+          "ordinary_step1_discarded_runtime": 236772,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1135,
+          "direct_discarded_step1": [
+            8355
+          ],
+          "direct_runtime_session_id": 3000023,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "b46ec2af428340b6948cfbac8b8c33993acb1885e1676cb965d09aa728340503",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 3000023,
+          "ordinary_step0_runtime": 1135,
+          "ordinary_step1_discarded_runtime": 8355,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 653,
+          "direct_discarded_step1": [
+            8355
+          ],
+          "direct_runtime_session_id": 3000024,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "7419b0bc20d17fbf0b660ed73f0411782a4fbd13dfd7d7b4dbca9b3e6a603823",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 3000024,
+          "ordinary_step0_runtime": 653,
+          "ordinary_step1_discarded_runtime": 8355,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 3,
+      "ordinary_committed_token_ids": [
+        1509,
+        7412,
+        822,
+        2744,
+        691,
+        3463,
+        1135,
+        653
+      ],
+      "ordinary_full_decode_sha256": "6bc2e9f9896d17eca4c435ece9b62676effb8e16e5de6ab27976c681b400bcc8",
+      "ordinary_http_content_sha256": "6bc2e9f9896d17eca4c435ece9b62676effb8e16e5de6ab27976c681b400bcc8",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         3000017,
         3000018,
@@ -115,7 +642,8 @@
       "case_id": "c109-01-04-036",
       "committed_count": 8,
       "committed_ids_equal": true,
-      "committed_token_ids": [
+      "decoded_equal": true,
+      "direct_committed_token_ids": [
         1509,
         5724,
         1133,
@@ -125,11 +653,183 @@
         75927,
         532
       ],
-      "decoded_equal": true,
-      "decoded_sha256": "2b290f6fa923545a58831d1789c30298795e672d55e53313a09595510fb07fa3",
+      "direct_full_decode_sha256": "2b290f6fa923545a58831d1789c30298795e672d55e53313a09595510fb07fa3",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": null,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1509,
+          "direct_discarded_step1": [
+            3048
+          ],
+          "direct_runtime_session_id": 4000025,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "c167dabc51ed96a497277ccadb099378c03c355149371991e5d481f85f5463ef",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 4000025,
+          "ordinary_step0_runtime": 1509,
+          "ordinary_step1_discarded_runtime": 3048,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 5724,
+          "direct_discarded_step1": [
+            657
+          ],
+          "direct_runtime_session_id": 4000026,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "68dcb4d68717bd4aaf350a4ee2a0bbe9e3278edc33ddfc443fd4b56d38c5526d",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 4000026,
+          "ordinary_step0_runtime": 5724,
+          "ordinary_step1_discarded_runtime": 657,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1133,
+          "direct_discarded_step1": [
+            117874
+          ],
+          "direct_runtime_session_id": 4000027,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "df5863b1250a28bbb02261b50cca626871f7cc94ec55b5af423c8513b7028734",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 4000027,
+          "ordinary_step0_runtime": 1133,
+          "ordinary_step1_discarded_runtime": 117874,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 611,
+          "direct_discarded_step1": [
+            532
+          ],
+          "direct_runtime_session_id": 4000028,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "0628fc7aeedb303860d523ed13f6f880b44c28d6b2c4132b811d47aa26becd9f",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 4000028,
+          "ordinary_step0_runtime": 611,
+          "ordinary_step1_discarded_runtime": 532,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 659,
+          "direct_discarded_step1": [
+            659
+          ],
+          "direct_runtime_session_id": 4000029,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "10d4770d5bdb6fb4631aa56592476216ef4e55b712c1154e039f97ec8f8e607f",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 4000029,
+          "ordinary_step0_runtime": 659,
+          "ordinary_step1_discarded_runtime": 659,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 20104,
+          "direct_discarded_step1": [
+            1902
+          ],
+          "direct_runtime_session_id": 4000030,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "7f65409f7118664ae5ca998af4ef3543f982701a1d29bc5742ff713eeaebabab",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 4000030,
+          "ordinary_step0_runtime": 20104,
+          "ordinary_step1_discarded_runtime": 1902,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 75927,
+          "direct_discarded_step1": [
+            75927
+          ],
+          "direct_runtime_session_id": 4000031,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "05b61155b295b5295defe3f685bc29cf1b9e1fc8f19095e8df79c6b334f9f6c7",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 4000031,
+          "ordinary_step0_runtime": 75927,
+          "ordinary_step1_discarded_runtime": 75927,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 532,
+          "direct_discarded_step1": [
+            136942
+          ],
+          "direct_runtime_session_id": 4000032,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "daa8efd3d3043ba1fac0ff5da5f13ba1588d4be73dec0e52e3214452db9ee0b2",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 4000032,
+          "ordinary_step0_runtime": 532,
+          "ordinary_step1_discarded_runtime": 136942,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 4,
+      "ordinary_committed_token_ids": [
+        1509,
+        5724,
+        1133,
+        611,
+        659,
+        20104,
+        75927,
+        532
+      ],
+      "ordinary_full_decode_sha256": "2b290f6fa923545a58831d1789c30298795e672d55e53313a09595510fb07fa3",
+      "ordinary_http_content_sha256": "2b290f6fa923545a58831d1789c30298795e672d55e53313a09595510fb07fa3",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         4000025,
         4000026,
@@ -145,7 +845,8 @@
       "case_id": "c109-01-05-017",
       "committed_count": 8,
       "committed_ids_equal": true,
-      "committed_token_ids": [
+      "decoded_equal": true,
+      "direct_committed_token_ids": [
         1509,
         12054,
         1133,
@@ -155,11 +856,183 @@
         39742,
         1547
       ],
-      "decoded_equal": true,
-      "decoded_sha256": "a3794c5de29545309f715306bd47ae9b5bbfa310f8918e6b8b4dba095697740d",
+      "direct_full_decode_sha256": "a3794c5de29545309f715306bd47ae9b5bbfa310f8918e6b8b4dba095697740d",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": null,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1509,
+          "direct_discarded_step1": [
+            236761
+          ],
+          "direct_runtime_session_id": 5000033,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "6bf67975bac5d8473ac2c1873dece7b7dfea02e10a8425d80deed99bf808d95e",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 5000033,
+          "ordinary_step0_runtime": 1509,
+          "ordinary_step1_discarded_runtime": 236761,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 12054,
+          "direct_discarded_step1": [
+            12054
+          ],
+          "direct_runtime_session_id": 5000034,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "9e817c2bb529edc87f7bd958c05e58c3741d2905ba354eed3872114db68071b7",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 5000034,
+          "ordinary_step0_runtime": 12054,
+          "ordinary_step1_discarded_runtime": 12054,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1133,
+          "direct_discarded_step1": [
+            1638
+          ],
+          "direct_runtime_session_id": 5000035,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "16f1ddcfa140e23c3dec784f0453a347b14ca4d7302da44f0d011fbdc2b380d5",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 5000035,
+          "ordinary_step0_runtime": 1133,
+          "ordinary_step1_discarded_runtime": 1638,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 611,
+          "direct_discarded_step1": [
+            496
+          ],
+          "direct_runtime_session_id": 5000036,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "2dcdc1a8925eef1af6962646e6acf5e289ce2b9b741375a18efbb7e20902e0e3",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 5000036,
+          "ordinary_step0_runtime": 611,
+          "ordinary_step1_discarded_runtime": 496,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236789,
+          "direct_discarded_step1": [
+            500
+          ],
+          "direct_runtime_session_id": 5000037,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "196d11d3d6361e02cd60bf899aea82d75079f71c19ab92b94244cfa3aff2d3ea",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 5000037,
+          "ordinary_step0_runtime": 236789,
+          "ordinary_step1_discarded_runtime": 500,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 500,
+          "direct_discarded_step1": [
+            236786
+          ],
+          "direct_runtime_session_id": 5000038,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "86a09b0d6272cdf5db8c38d55e36665c99496025326e4db3f662394f145e0b7f",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 5000038,
+          "ordinary_step0_runtime": 500,
+          "ordinary_step1_discarded_runtime": 236786,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 39742,
+          "direct_discarded_step1": [
+            496
+          ],
+          "direct_runtime_session_id": 5000039,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "79d4dff7a1e572fb01c7b472f6b57a40daea75c6cf3432decc312a03bd236a3d",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 5000039,
+          "ordinary_step0_runtime": 39742,
+          "ordinary_step1_discarded_runtime": 496,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1547,
+          "direct_discarded_step1": [
+            1638
+          ],
+          "direct_runtime_session_id": 5000040,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "8a3c4bbed4318c555cabe4e45f5578fb7ee243b4636a0a41f8ca3678cf188860",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 5000040,
+          "ordinary_step0_runtime": 1547,
+          "ordinary_step1_discarded_runtime": 1638,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 5,
+      "ordinary_committed_token_ids": [
+        1509,
+        12054,
+        1133,
+        611,
+        236789,
+        500,
+        39742,
+        1547
+      ],
+      "ordinary_full_decode_sha256": "a3794c5de29545309f715306bd47ae9b5bbfa310f8918e6b8b4dba095697740d",
+      "ordinary_http_content_sha256": "a3794c5de29545309f715306bd47ae9b5bbfa310f8918e6b8b4dba095697740d",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         5000033,
         5000034,
@@ -175,7 +1048,8 @@
       "case_id": "c109-01-06-006",
       "committed_count": 8,
       "committed_ids_equal": true,
-      "committed_token_ids": [
+      "decoded_equal": true,
+      "direct_committed_token_ids": [
         1509,
         5724,
         1133,
@@ -185,11 +1059,183 @@
         3847,
         496
       ],
-      "decoded_equal": true,
-      "decoded_sha256": "59c63bc430edd940972612cf0561a004cfa7132d0a382f5e3e0500b46e37d381",
+      "direct_full_decode_sha256": "59c63bc430edd940972612cf0561a004cfa7132d0a382f5e3e0500b46e37d381",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": null,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1509,
+          "direct_discarded_step1": [
+            236929
+          ],
+          "direct_runtime_session_id": 6000041,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "c78c75d971d7f64b24f7b8315ece3d5b5441910b2bfc869288eacaa6d3ea433b",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 6000041,
+          "ordinary_step0_runtime": 1509,
+          "ordinary_step1_discarded_runtime": 236929,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 5724,
+          "direct_discarded_step1": [
+            657
+          ],
+          "direct_runtime_session_id": 6000042,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "f8fd0ab2c5f938c9271c039f7f75330f2cdd88af656a00bf3ac9f684a4127286",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 6000042,
+          "ordinary_step0_runtime": 5724,
+          "ordinary_step1_discarded_runtime": 657,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1133,
+          "direct_discarded_step1": [
+            8201
+          ],
+          "direct_runtime_session_id": 6000043,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "43f127ebff94c164cd610803ecfd4a85ffd881065e50859621c6100cc6b98fcb",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 6000043,
+          "ordinary_step0_runtime": 1133,
+          "ordinary_step1_discarded_runtime": 8201,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 611,
+          "direct_discarded_step1": [
+            659
+          ],
+          "direct_runtime_session_id": 6000044,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "4d52cbfdc878c751f8493d3c4d60f21db3b47c02a2a022268fa5c58807061cd8",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 6000044,
+          "ordinary_step0_runtime": 611,
+          "ordinary_step1_discarded_runtime": 659,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236858,
+          "direct_discarded_step1": [
+            560
+          ],
+          "direct_runtime_session_id": 6000045,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "b0f0448122e0cac48185b7e77563dafb076bc5f342ab9183cd3e083107ac0704",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 6000045,
+          "ordinary_step0_runtime": 236858,
+          "ordinary_step1_discarded_runtime": 560,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 560,
+          "direct_discarded_step1": [
+            560
+          ],
+          "direct_runtime_session_id": 6000046,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "a13cf6f69ebfdbf58decd90b0157c29370e9806af946dccd476473180ba7e35e",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 6000046,
+          "ordinary_step0_runtime": 560,
+          "ordinary_step1_discarded_runtime": 560,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 3847,
+          "direct_discarded_step1": [
+            1392
+          ],
+          "direct_runtime_session_id": 6000047,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "d84832ffa32bbe8c3a98faaaf6f025133b16cc407aaadc4739695807da5c9d48",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 6000047,
+          "ordinary_step0_runtime": 3847,
+          "ordinary_step1_discarded_runtime": 1392,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 496,
+          "direct_discarded_step1": [
+            682
+          ],
+          "direct_runtime_session_id": 6000048,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "bc23c6f94e382ec3504fc133137056f466af9ef5b48c53c5cd3080b67a31dde6",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 6000048,
+          "ordinary_step0_runtime": 496,
+          "ordinary_step1_discarded_runtime": 682,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 6,
+      "ordinary_committed_token_ids": [
+        1509,
+        5724,
+        1133,
+        611,
+        236858,
+        560,
+        3847,
+        496
+      ],
+      "ordinary_full_decode_sha256": "59c63bc430edd940972612cf0561a004cfa7132d0a382f5e3e0500b46e37d381",
+      "ordinary_http_content_sha256": "59c63bc430edd940972612cf0561a004cfa7132d0a382f5e3e0500b46e37d381",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         6000041,
         6000042,
@@ -205,7 +1251,8 @@
       "case_id": "c109-02-01-030",
       "committed_count": 8,
       "committed_ids_equal": true,
-      "committed_token_ids": [
+      "decoded_equal": true,
+      "direct_committed_token_ids": [
         2094,
         7412,
         531,
@@ -215,11 +1262,183 @@
         3017,
         6425
       ],
-      "decoded_equal": true,
-      "decoded_sha256": "d860844834ea7249beba34bcfdadd0e733c3241a6ab68e5c7b437cb29be16739",
+      "direct_full_decode_sha256": "d860844834ea7249beba34bcfdadd0e733c3241a6ab68e5c7b437cb29be16739",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": null,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 2094,
+          "direct_discarded_step1": [
+            15565
+          ],
+          "direct_runtime_session_id": 7000049,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "857e20ac1f36b8eee70e48dc7421cee663181129a62b2aec716b540999a28f19",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 7000049,
+          "ordinary_step0_runtime": 2094,
+          "ordinary_step1_discarded_runtime": 15565,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 7412,
+          "direct_discarded_step1": [
+            236761
+          ],
+          "direct_runtime_session_id": 7000050,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "79bce9f55294970e8a0ed72785e47c303e8ad1475638da9172eacb4a32e5675b",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 7000050,
+          "ordinary_step0_runtime": 7412,
+          "ordinary_step1_discarded_runtime": 236761,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 531,
+          "direct_discarded_step1": [
+            23844
+          ],
+          "direct_runtime_session_id": 7000051,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "7c56231f4d94e00b7cc64d090ce486d3dd8ef091ad001a1dbb3ee263090b436e",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 7000051,
+          "ordinary_step0_runtime": 531,
+          "ordinary_step1_discarded_runtime": 23844,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 577,
+          "direct_discarded_step1": [
+            3184
+          ],
+          "direct_runtime_session_id": 7000052,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "f09866b6c83900ef4b6f545d997064667668dd65749dead49f5085b0f04d0819",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 7000052,
+          "ordinary_step0_runtime": 577,
+          "ordinary_step1_discarded_runtime": 3184,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 496,
+          "direct_discarded_step1": [
+            10810
+          ],
+          "direct_runtime_session_id": 7000053,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "c60dea8e806b2b00707c732f7defb20d89d7e57982a1e3cb4e599f58abe22602",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 7000053,
+          "ordinary_step0_runtime": 496,
+          "ordinary_step1_discarded_runtime": 10810,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 5213,
+          "direct_discarded_step1": [
+            5213
+          ],
+          "direct_runtime_session_id": 7000054,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "743c4eb7a1b8bbd7e64c71328e53e0e3673c4f0df5e37c02897fb280cb871787",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 7000054,
+          "ordinary_step0_runtime": 5213,
+          "ordinary_step1_discarded_runtime": 5213,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 3017,
+          "direct_discarded_step1": [
+            18140
+          ],
+          "direct_runtime_session_id": 7000055,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "3565942a3ba57b08e864f1ac5c27d91483074afb9f8576cd3723fff1589ac59b",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 7000055,
+          "ordinary_step0_runtime": 3017,
+          "ordinary_step1_discarded_runtime": 18140,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 6425,
+          "direct_discarded_step1": [
+            67706
+          ],
+          "direct_runtime_session_id": 7000056,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "d1ff1f463b834b1a0b2ec101bd5e88e1f29c853ba5504c3d0c57e5f1dcf7aa7d",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 7000056,
+          "ordinary_step0_runtime": 6425,
+          "ordinary_step1_discarded_runtime": 67706,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 7,
+      "ordinary_committed_token_ids": [
+        2094,
+        7412,
+        531,
+        577,
+        496,
+        5213,
+        3017,
+        6425
+      ],
+      "ordinary_full_decode_sha256": "d860844834ea7249beba34bcfdadd0e733c3241a6ab68e5c7b437cb29be16739",
+      "ordinary_http_content_sha256": "d860844834ea7249beba34bcfdadd0e733c3241a6ab68e5c7b437cb29be16739",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         7000049,
         7000050,
@@ -235,7 +1454,8 @@
       "case_id": "c109-02-02-020",
       "committed_count": 8,
       "committed_ids_equal": true,
-      "committed_token_ids": [
+      "decoded_equal": true,
+      "direct_committed_token_ids": [
         1509,
         7412,
         611,
@@ -245,11 +1465,183 @@
         5249,
         529
       ],
-      "decoded_equal": true,
-      "decoded_sha256": "41cc2dcce326815eeb6fb2be9b37781ed3de93255a4084be912ed42f8305145b",
+      "direct_full_decode_sha256": "41cc2dcce326815eeb6fb2be9b37781ed3de93255a4084be912ed42f8305145b",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": null,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1509,
+          "direct_discarded_step1": [
+            9277
+          ],
+          "direct_runtime_session_id": 8000057,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "232a9048b2b98c4b01f79b3f4e5cf76f3a679774055228096bbfeb283cb38fe5",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 8000057,
+          "ordinary_step0_runtime": 1509,
+          "ordinary_step1_discarded_runtime": 9277,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 7412,
+          "direct_discarded_step1": [
+            236770
+          ],
+          "direct_runtime_session_id": 8000058,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "5d77caf76dee3ffd29e643c567a42755c58a4b5045a2eff5268fcdb8e99ad0cf",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 8000058,
+          "ordinary_step0_runtime": 7412,
+          "ordinary_step1_discarded_runtime": 236770,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 611,
+          "direct_discarded_step1": [
+            32147
+          ],
+          "direct_runtime_session_id": 8000059,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "97e9d375c870e951c768e1cd37d6ddd2a65ba29db906a1672f7c06de0186cd31",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 8000059,
+          "ordinary_step0_runtime": 611,
+          "ordinary_step1_discarded_runtime": 32147,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 735,
+          "direct_discarded_step1": [
+            735
+          ],
+          "direct_runtime_session_id": 8000060,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "543f2b6b353874e51258a43827e6bf649ef0f782949d85173e66f20952722d0e",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 8000060,
+          "ordinary_step0_runtime": 735,
+          "ordinary_step1_discarded_runtime": 735,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 3847,
+          "direct_discarded_step1": [
+            1847
+          ],
+          "direct_runtime_session_id": 8000061,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "f52bbadc63f2b12b7033c5c3dc524a10ca5fc07f301ed721b5e2a00a5d54296a",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 8000061,
+          "ordinary_step0_runtime": 3847,
+          "ordinary_step1_discarded_runtime": 1847,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 496,
+          "direct_discarded_step1": [
+            32147
+          ],
+          "direct_runtime_session_id": 8000062,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "a964a732ccb37e032676eb94c67c8248208a1e85358ef7ed0e17f507ba47c589",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 8000062,
+          "ordinary_step0_runtime": 496,
+          "ordinary_step1_discarded_runtime": 32147,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 5249,
+          "direct_discarded_step1": [
+            4187
+          ],
+          "direct_runtime_session_id": 8000063,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "fe2f1648770cc03a80d5138d9641c9dcd7238eda8170522c86e8a9b42c911f03",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 8000063,
+          "ordinary_step0_runtime": 5249,
+          "ordinary_step1_discarded_runtime": 4187,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 529,
+          "direct_discarded_step1": [
+            1847
+          ],
+          "direct_runtime_session_id": 8000064,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "4be9a9ac7c11a19c1431a40aa379893aca5fcd2a54bac7debc51fe6b9e26306b",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 8000064,
+          "ordinary_step0_runtime": 529,
+          "ordinary_step1_discarded_runtime": 1847,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 8,
+      "ordinary_committed_token_ids": [
+        1509,
+        7412,
+        611,
+        735,
+        3847,
+        496,
+        5249,
+        529
+      ],
+      "ordinary_full_decode_sha256": "41cc2dcce326815eeb6fb2be9b37781ed3de93255a4084be912ed42f8305145b",
+      "ordinary_http_content_sha256": "41cc2dcce326815eeb6fb2be9b37781ed3de93255a4084be912ed42f8305145b",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         8000057,
         8000058,
@@ -265,7 +1657,8 @@
       "case_id": "c109-02-03-011",
       "committed_count": 8,
       "committed_ids_equal": true,
-      "committed_token_ids": [
+      "decoded_equal": true,
+      "direct_committed_token_ids": [
         1509,
         7412,
         611,
@@ -275,11 +1668,183 @@
         2483,
         529
       ],
-      "decoded_equal": true,
-      "decoded_sha256": "937a4a802208de241c9e502d3989e49dfaa058ab21cf7ee04ab80ae61e09b22b",
+      "direct_full_decode_sha256": "937a4a802208de241c9e502d3989e49dfaa058ab21cf7ee04ab80ae61e09b22b",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": null,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1509,
+          "direct_discarded_step1": [
+            3771
+          ],
+          "direct_runtime_session_id": 9000065,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "0e12992bfd102697013124dee29fe3c075a5229cab9cebb0a74884d24cb214c0",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 9000065,
+          "ordinary_step0_runtime": 1509,
+          "ordinary_step1_discarded_runtime": 3771,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 7412,
+          "direct_discarded_step1": [
+            236761
+          ],
+          "direct_runtime_session_id": 9000066,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "0aa1f6c7a87336744e2647b0c817ec61bbcc2d8639c6eeb0a694717728667b3c",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 9000066,
+          "ordinary_step0_runtime": 7412,
+          "ordinary_step1_discarded_runtime": 236761,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 611,
+          "direct_discarded_step1": [
+            3550
+          ],
+          "direct_runtime_session_id": 9000067,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "7b3d6731d2d2f6f3da5a8b21c6ff9e25081caa5e528dbadb0824937f674c05b6",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 9000067,
+          "ordinary_step0_runtime": 611,
+          "ordinary_step1_discarded_runtime": 3550,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 659,
+          "direct_discarded_step1": [
+            1123
+          ],
+          "direct_runtime_session_id": 9000068,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "de3d992da41e5d8ee11585be1ccbe80703c26bd3c3bebed627436e4adfa46f7b",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 9000068,
+          "ordinary_step0_runtime": 659,
+          "ordinary_step1_discarded_runtime": 1123,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 6655,
+          "direct_discarded_step1": [
+            2689
+          ],
+          "direct_runtime_session_id": 9000069,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "bbe8baca12c4fd6ad055abacc100c610c7e2e9dd02f9f4ad2b91a5f558b48a5c",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 9000069,
+          "ordinary_step0_runtime": 6655,
+          "ordinary_step1_discarded_runtime": 2689,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 496,
+          "direct_discarded_step1": [
+            3550
+          ],
+          "direct_runtime_session_id": 9000070,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "63e4319115376ed1dbe5782667947f9222e9cdecf1fccd810ef742fb383d4ac4",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 9000070,
+          "ordinary_step0_runtime": 496,
+          "ordinary_step1_discarded_runtime": 3550,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 2483,
+          "direct_discarded_step1": [
+            236743
+          ],
+          "direct_runtime_session_id": 9000071,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "6e36976f9e41d9eaabb9fa0dbe955f9eb7a37007eb1ac7dcb342151c3309909f",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 9000071,
+          "ordinary_step0_runtime": 2483,
+          "ordinary_step1_discarded_runtime": 236743,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 529,
+          "direct_discarded_step1": [
+            2689
+          ],
+          "direct_runtime_session_id": 9000072,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "15fb55b8f45c594224ed36116f0f7d0dd1fdb6f2e71579db7885e14141af7f4b",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 9000072,
+          "ordinary_step0_runtime": 529,
+          "ordinary_step1_discarded_runtime": 2689,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 9,
+      "ordinary_committed_token_ids": [
+        1509,
+        7412,
+        611,
+        659,
+        6655,
+        496,
+        2483,
+        529
+      ],
+      "ordinary_full_decode_sha256": "937a4a802208de241c9e502d3989e49dfaa058ab21cf7ee04ab80ae61e09b22b",
+      "ordinary_http_content_sha256": "937a4a802208de241c9e502d3989e49dfaa058ab21cf7ee04ab80ae61e09b22b",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         9000065,
         9000066,
@@ -295,7 +1860,8 @@
       "case_id": "c109-02-04-033",
       "committed_count": 8,
       "committed_ids_equal": true,
-      "committed_token_ids": [
+      "decoded_equal": true,
+      "direct_committed_token_ids": [
         1509,
         5724,
         1133,
@@ -305,11 +1871,183 @@
         496,
         1694
       ],
-      "decoded_equal": true,
-      "decoded_sha256": "141049381ad0e95ecd50ed940c4fff92985eda20c850d493597280c89742a904",
+      "direct_full_decode_sha256": "141049381ad0e95ecd50ed940c4fff92985eda20c850d493597280c89742a904",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": null,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1509,
+          "direct_discarded_step1": [
+            236770
+          ],
+          "direct_runtime_session_id": 10000073,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "203d71df4011917325638ef0548627f8663ca7a58b1899d575cd29c339f38831",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 10000073,
+          "ordinary_step0_runtime": 1509,
+          "ordinary_step1_discarded_runtime": 236770,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 5724,
+          "direct_discarded_step1": [
+            657
+          ],
+          "direct_runtime_session_id": 10000074,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "3d9c1828e5727aabc763ec70d2cbd5b545af5219c0507b9f77ae04bc7cf7613c",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 10000074,
+          "ordinary_step0_runtime": 5724,
+          "ordinary_step1_discarded_runtime": 657,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1133,
+          "direct_discarded_step1": [
+            6840
+          ],
+          "direct_runtime_session_id": 10000075,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "cb07903f4c719b97a7d6a6d58c6a0862c06ff64c7fe74d0727d861ba8b292fa9",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 10000075,
+          "ordinary_step0_runtime": 1133,
+          "ordinary_step1_discarded_runtime": 6840,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 611,
+          "direct_discarded_step1": [
+            1902
+          ],
+          "direct_runtime_session_id": 10000076,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "800e12c8131977e00fa920681641901d765edd80aa8c235a477de5b5da5069e9",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 10000076,
+          "ordinary_step0_runtime": 611,
+          "ordinary_step1_discarded_runtime": 1902,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 735,
+          "direct_discarded_step1": [
+            735
+          ],
+          "direct_runtime_session_id": 10000077,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "53b19640e6ad93d5a837b96771103ec8877e2d559e3095c0b972846f5626d176",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 10000077,
+          "ordinary_step0_runtime": 735,
+          "ordinary_step1_discarded_runtime": 735,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 28725,
+          "direct_discarded_step1": [
+            236772
+          ],
+          "direct_runtime_session_id": 10000078,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "c31d45c79ed063430f58d3a638f2e73e5921b0249e2d02eeb1c6f9a01d767cc7",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 10000078,
+          "ordinary_step0_runtime": 28725,
+          "ordinary_step1_discarded_runtime": 236772,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 496,
+          "direct_discarded_step1": [
+            6840
+          ],
+          "direct_runtime_session_id": 10000079,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "5991ec5830f86ced1c53db233e7d9073d62d87a95109f7cdcf1884e9dc7b0fdb",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 10000079,
+          "ordinary_step0_runtime": 496,
+          "ordinary_step1_discarded_runtime": 6840,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1694,
+          "direct_discarded_step1": [
+            1902
+          ],
+          "direct_runtime_session_id": 10000080,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "a331825858a0713c241e8700b62d4dfffb2e19589ce727ea89f3c1848b1f8873",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 10000080,
+          "ordinary_step0_runtime": 1694,
+          "ordinary_step1_discarded_runtime": 1902,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 10,
+      "ordinary_committed_token_ids": [
+        1509,
+        5724,
+        1133,
+        611,
+        735,
+        28725,
+        496,
+        1694
+      ],
+      "ordinary_full_decode_sha256": "141049381ad0e95ecd50ed940c4fff92985eda20c850d493597280c89742a904",
+      "ordinary_http_content_sha256": "141049381ad0e95ecd50ed940c4fff92985eda20c850d493597280c89742a904",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         10000073,
         10000074,
@@ -325,7 +2063,8 @@
       "case_id": "c109-02-05-024",
       "committed_count": 8,
       "committed_ids_equal": true,
-      "committed_token_ids": [
+      "decoded_equal": true,
+      "direct_committed_token_ids": [
         1509,
         12054,
         1133,
@@ -335,11 +2074,183 @@
         496,
         5213
       ],
-      "decoded_equal": true,
-      "decoded_sha256": "dc2e8d6fda7818a543aac63eec520df6a0394de5470c3adf1937893bb348951b",
+      "direct_full_decode_sha256": "dc2e8d6fda7818a543aac63eec520df6a0394de5470c3adf1937893bb348951b",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": null,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1509,
+          "direct_discarded_step1": [
+            1133
+          ],
+          "direct_runtime_session_id": 11000081,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "6b7b7d99aeb8adb0781cf7a452c46c4d0cb8663d78f258fc783a6f59c53ccdc8",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 11000081,
+          "ordinary_step0_runtime": 1509,
+          "ordinary_step1_discarded_runtime": 1133,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 12054,
+          "direct_discarded_step1": [
+            5743
+          ],
+          "direct_runtime_session_id": 11000082,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "7d8155615004a8834a2de0adbc9b2b5ed96c02e36b1af55ce86d786cf59d919e",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 11000082,
+          "ordinary_step0_runtime": 12054,
+          "ordinary_step1_discarded_runtime": 5743,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1133,
+          "direct_discarded_step1": [
+            5743
+          ],
+          "direct_runtime_session_id": 11000083,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "d3eef004b42866ee6add9976b7572a4840e0e45c10a24b88423191f1cbaddb8b",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 11000083,
+          "ordinary_step0_runtime": 1133,
+          "ordinary_step1_discarded_runtime": 5743,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 611,
+          "direct_discarded_step1": [
+            678
+          ],
+          "direct_runtime_session_id": 11000084,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "94b9f39edb7d1f9b2b9d3e03805a7db872747d9edfc7c83c20211b57a649d121",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 11000084,
+          "ordinary_step0_runtime": 611,
+          "ordinary_step1_discarded_runtime": 678,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 659,
+          "direct_discarded_step1": [
+            678
+          ],
+          "direct_runtime_session_id": 11000085,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "3b8313ce8efd827f81dbaccec12faabcc4b950ec7edc50fe230bd48dbbac5265",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 11000085,
+          "ordinary_step0_runtime": 659,
+          "ordinary_step1_discarded_runtime": 678,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 22454,
+          "direct_discarded_step1": [
+            22454
+          ],
+          "direct_runtime_session_id": 11000086,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "e889b5432e8fca45c7bf7e2bb77a18fa25c60d7d471fa027a17c40e0337b6a89",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 11000086,
+          "ordinary_step0_runtime": 22454,
+          "ordinary_step1_discarded_runtime": 22454,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 496,
+          "direct_discarded_step1": [
+            678
+          ],
+          "direct_runtime_session_id": 11000087,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "0a5ba733b75636116f1a1492bb0ff5df5be7da9c6b62b7da2c4a0ccd571688db",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 11000087,
+          "ordinary_step0_runtime": 496,
+          "ordinary_step1_discarded_runtime": 678,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 5213,
+          "direct_discarded_step1": [
+            5213
+          ],
+          "direct_runtime_session_id": 11000088,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "ee51fe0914dd04f290a15b93388b3cb7671dbe4e4a1c86d26c98662e6426d2f0",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 11000088,
+          "ordinary_step0_runtime": 5213,
+          "ordinary_step1_discarded_runtime": 5213,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 11,
+      "ordinary_committed_token_ids": [
+        1509,
+        12054,
+        1133,
+        611,
+        659,
+        22454,
+        496,
+        5213
+      ],
+      "ordinary_full_decode_sha256": "dc2e8d6fda7818a543aac63eec520df6a0394de5470c3adf1937893bb348951b",
+      "ordinary_http_content_sha256": "dc2e8d6fda7818a543aac63eec520df6a0394de5470c3adf1937893bb348951b",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         11000081,
         11000082,
@@ -355,7 +2266,8 @@
       "case_id": "c109-02-06-049",
       "committed_count": 8,
       "committed_ids_equal": true,
-      "committed_token_ids": [
+      "decoded_equal": true,
+      "direct_committed_token_ids": [
         1509,
         7412,
         611,
@@ -365,11 +2277,183 @@
         2483,
         529
       ],
-      "decoded_equal": true,
-      "decoded_sha256": "010ada0652ee78cede756912ad8f3ca8a749b8f5ab187a0c8343226eb429ca29",
+      "direct_full_decode_sha256": "010ada0652ee78cede756912ad8f3ca8a749b8f5ab187a0c8343226eb429ca29",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": null,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1509,
+          "direct_discarded_step1": [
+            715
+          ],
+          "direct_runtime_session_id": 12000089,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "2321395a8ac05c8285f1671a034cda59fc3228b18bee4d4adbe7d638d22845e7",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 12000089,
+          "ordinary_step0_runtime": 1509,
+          "ordinary_step1_discarded_runtime": 715,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 7412,
+          "direct_discarded_step1": [
+            107
+          ],
+          "direct_runtime_session_id": 12000090,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "35a0e690556769b839d0788a6f22cb1f4bdef425155858b0272e260e4533e8c5",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 12000090,
+          "ordinary_step0_runtime": 7412,
+          "ordinary_step1_discarded_runtime": 107,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 611,
+          "direct_discarded_step1": [
+            609
+          ],
+          "direct_runtime_session_id": 12000091,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "18ff74bb46bf1698ffdd912e86ea7caf0b9aebc17cc319a9f993f010c60efb4e",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 12000091,
+          "ordinary_step0_runtime": 611,
+          "ordinary_step1_discarded_runtime": 609,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 735,
+          "direct_discarded_step1": [
+            735
+          ],
+          "direct_runtime_session_id": 12000092,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "44bd11d1d907830797baefb5545809183abe54d68a4077e6b7976141a30f49fe",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 12000092,
+          "ordinary_step0_runtime": 735,
+          "ordinary_step1_discarded_runtime": 735,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 3847,
+          "direct_discarded_step1": [
+            609
+          ],
+          "direct_runtime_session_id": 12000093,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "a408ee67a3cae1e4a8c308cbda7b82f33b8c72d621fdc7a1acdae3337e9e44db",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 12000093,
+          "ordinary_step0_runtime": 3847,
+          "ordinary_step1_discarded_runtime": 609,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 496,
+          "direct_discarded_step1": [
+            8201
+          ],
+          "direct_runtime_session_id": 12000094,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "eb4c79b01f792c65d323c51aa34ca13f7776f984f73ed2778453c7b0920f94da",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 12000094,
+          "ordinary_step0_runtime": 496,
+          "ordinary_step1_discarded_runtime": 8201,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 2483,
+          "direct_discarded_step1": [
+            8201
+          ],
+          "direct_runtime_session_id": 12000095,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "f7a787b1f44a65aff4139466074da4be8ace4034156c4654c4dea1b995d718a0",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 12000095,
+          "ordinary_step0_runtime": 2483,
+          "ordinary_step1_discarded_runtime": 8201,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 529,
+          "direct_discarded_step1": [
+            973
+          ],
+          "direct_runtime_session_id": 12000096,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "1c1186203c9235fc68b7e098cb0c2b79f5cebc016e53d21a42e44404c81f21f6",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 12000096,
+          "ordinary_step0_runtime": 529,
+          "ordinary_step1_discarded_runtime": 973,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 12,
+      "ordinary_committed_token_ids": [
+        1509,
+        7412,
+        611,
+        735,
+        3847,
+        496,
+        2483,
+        529
+      ],
+      "ordinary_full_decode_sha256": "010ada0652ee78cede756912ad8f3ca8a749b8f5ab187a0c8343226eb429ca29",
+      "ordinary_http_content_sha256": "010ada0652ee78cede756912ad8f3ca8a749b8f5ab187a0c8343226eb429ca29",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         12000089,
         12000090,
@@ -385,7 +2469,8 @@
       "case_id": "c109-03-01-044",
       "committed_count": 8,
       "committed_ids_equal": true,
-      "committed_token_ids": [
+      "decoded_equal": true,
+      "direct_committed_token_ids": [
         2021,
         1386,
         5113,
@@ -395,11 +2480,183 @@
         6425,
         236764
       ],
-      "decoded_equal": true,
-      "decoded_sha256": "197eaaf821fb99f7d29e14b864e42b19b601a74204fc36642555caef27351ae3",
+      "direct_full_decode_sha256": "197eaaf821fb99f7d29e14b864e42b19b601a74204fc36642555caef27351ae3",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": null,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 2021,
+          "direct_discarded_step1": [
+            161404
+          ],
+          "direct_runtime_session_id": 13000097,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "0d9d1ccd6cdac15bee85fe94c7291a05ffb8874b8c44c164eade136c8c51d83c",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 13000097,
+          "ordinary_step0_runtime": 2021,
+          "ordinary_step1_discarded_runtime": 161404,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1386,
+          "direct_discarded_step1": [
+            10810
+          ],
+          "direct_runtime_session_id": 13000098,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "e44a8a559b6fc8ef591ed83d549a81c8472177b656da3909c579c06d3d01288c",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 13000098,
+          "ordinary_step0_runtime": 1386,
+          "ordinary_step1_discarded_runtime": 10810,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 5113,
+          "direct_discarded_step1": [
+            33036
+          ],
+          "direct_runtime_session_id": 13000099,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "6b8b05aaea9d72e536588d59468ced8a56d98c4084d704a29c00a907a561d3a7",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 13000099,
+          "ordinary_step0_runtime": 5113,
+          "ordinary_step1_discarded_runtime": 33036,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 529,
+          "direct_discarded_step1": [
+            9884
+          ],
+          "direct_runtime_session_id": 13000100,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "f5960af852f1a945a9cb5cb739b37a875622baa75512078ec8156ab608c61195",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 13000100,
+          "ordinary_step0_runtime": 529,
+          "ordinary_step1_discarded_runtime": 9884,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 672,
+          "direct_discarded_step1": [
+            5597
+          ],
+          "direct_runtime_session_id": 13000101,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "9576e0a5fba50a1fb3f0c74118f0052f296851865f5583ffe020f041e89309cc",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 13000101,
+          "ordinary_step0_runtime": 672,
+          "ordinary_step1_discarded_runtime": 5597,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 3658,
+          "direct_discarded_step1": [
+            2214
+          ],
+          "direct_runtime_session_id": 13000102,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "6c46cc9f8451f82a793a9017b3ff7b3f38dbd3efac8f418d92cb60564727383d",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 13000102,
+          "ordinary_step0_runtime": 3658,
+          "ordinary_step1_discarded_runtime": 2214,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 6425,
+          "direct_discarded_step1": [
+            67706
+          ],
+          "direct_runtime_session_id": 13000103,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "1a63ad2af33f4f0b9ef61876058e567a53ef9a11952186052b0c5146934fb0ff",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 13000103,
+          "ordinary_step0_runtime": 6425,
+          "ordinary_step1_discarded_runtime": 67706,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236764,
+          "direct_discarded_step1": [
+            8858
+          ],
+          "direct_runtime_session_id": 13000104,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "e48f7e1768009482f48f11b56f11af7a84920b91075adae9554112c6aea0ea4f",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 13000104,
+          "ordinary_step0_runtime": 236764,
+          "ordinary_step1_discarded_runtime": 8858,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 13,
+      "ordinary_committed_token_ids": [
+        2021,
+        1386,
+        5113,
+        529,
+        672,
+        3658,
+        6425,
+        236764
+      ],
+      "ordinary_full_decode_sha256": "197eaaf821fb99f7d29e14b864e42b19b601a74204fc36642555caef27351ae3",
+      "ordinary_http_content_sha256": "197eaaf821fb99f7d29e14b864e42b19b601a74204fc36642555caef27351ae3",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         13000097,
         13000098,
@@ -415,7 +2672,8 @@
       "case_id": "c109-03-02-054",
       "committed_count": 8,
       "committed_ids_equal": true,
-      "committed_token_ids": [
+      "decoded_equal": true,
+      "direct_committed_token_ids": [
         1509,
         7412,
         611,
@@ -425,11 +2683,183 @@
         5249,
         529
       ],
-      "decoded_equal": true,
-      "decoded_sha256": "b640569590ca92e789961335942c1fd436b12f9c0821c4edd6b1884b09031012",
+      "direct_full_decode_sha256": "b640569590ca92e789961335942c1fd436b12f9c0821c4edd6b1884b09031012",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": null,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1509,
+          "direct_discarded_step1": [
+            3485
+          ],
+          "direct_runtime_session_id": 14000105,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "6d889e31f0171eccc4d914e8553c8d7365d664e7c2fb42601223f9cbaa2e8685",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 14000105,
+          "ordinary_step0_runtime": 1509,
+          "ordinary_step1_discarded_runtime": 3485,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 7412,
+          "direct_discarded_step1": [
+            107
+          ],
+          "direct_runtime_session_id": 14000106,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "ca9350ba5efa8325df4c7891d8da49f7bb456f0e8b489332c0c31589fedd511d",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 14000106,
+          "ordinary_step0_runtime": 7412,
+          "ordinary_step1_discarded_runtime": 107,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 611,
+          "direct_discarded_step1": [
+            2541
+          ],
+          "direct_runtime_session_id": 14000107,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "26e4d9b85b2e0d3dc6d89a3f8a332654c47ce2428866ef3e391677f4b39965c5",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 14000107,
+          "ordinary_step0_runtime": 611,
+          "ordinary_step1_discarded_runtime": 2541,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 735,
+          "direct_discarded_step1": [
+            735
+          ],
+          "direct_runtime_session_id": 14000108,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "a72f69f52b59e5365e0e1fe53fe4d688e1e9595b4c3e4f3fa4a2aaea8e4d35a0",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 14000108,
+          "ordinary_step0_runtime": 735,
+          "ordinary_step1_discarded_runtime": 735,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 3847,
+          "direct_discarded_step1": [
+            4187
+          ],
+          "direct_runtime_session_id": 14000109,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "d9d6409d5d24e60f74245310d8a377821dcb8c5613f63c6fa2cf3b5e9cab15f5",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 14000109,
+          "ordinary_step0_runtime": 3847,
+          "ordinary_step1_discarded_runtime": 4187,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 496,
+          "direct_discarded_step1": [
+            1847
+          ],
+          "direct_runtime_session_id": 14000110,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "4666079f0cbf155cf156ac885853c07c2df3cc5d8facc34032588dd9d7020714",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 14000110,
+          "ordinary_step0_runtime": 496,
+          "ordinary_step1_discarded_runtime": 1847,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 5249,
+          "direct_discarded_step1": [
+            2416
+          ],
+          "direct_runtime_session_id": 14000111,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "ad64ef1bca98317540b2b9df5a5eaaba8296b49d70e6fe98bcb101aa392c5523",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 14000111,
+          "ordinary_step0_runtime": 5249,
+          "ordinary_step1_discarded_runtime": 2416,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 529,
+          "direct_discarded_step1": [
+            32147
+          ],
+          "direct_runtime_session_id": 14000112,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "4fc6b4050a319db163cc63040ac10187c4fcba9144949446df5876154a3bb05e",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 14000112,
+          "ordinary_step0_runtime": 529,
+          "ordinary_step1_discarded_runtime": 32147,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 14,
+      "ordinary_committed_token_ids": [
+        1509,
+        7412,
+        611,
+        735,
+        3847,
+        496,
+        5249,
+        529
+      ],
+      "ordinary_full_decode_sha256": "b640569590ca92e789961335942c1fd436b12f9c0821c4edd6b1884b09031012",
+      "ordinary_http_content_sha256": "b640569590ca92e789961335942c1fd436b12f9c0821c4edd6b1884b09031012",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         14000105,
         14000106,
@@ -445,7 +2875,8 @@
       "case_id": "c109-03-03-031",
       "committed_count": 8,
       "committed_ids_equal": true,
-      "committed_token_ids": [
+      "decoded_equal": true,
+      "direct_committed_token_ids": [
         1509,
         7412,
         611,
@@ -455,11 +2886,183 @@
         7501,
         529
       ],
-      "decoded_equal": true,
-      "decoded_sha256": "7679062c118c0cd21ff7ab4cf2f754a958c3f848ad2acd4c4f535415820ac782",
+      "direct_full_decode_sha256": "7679062c118c0cd21ff7ab4cf2f754a958c3f848ad2acd4c4f535415820ac782",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": null,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1509,
+          "direct_discarded_step1": [
+            144236
+          ],
+          "direct_runtime_session_id": 15000113,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "a225201b0e88fd42524dde817653245fdc2c434fd79c1e4f608eb2748739d957",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 15000113,
+          "ordinary_step0_runtime": 1509,
+          "ordinary_step1_discarded_runtime": 144236,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 7412,
+          "direct_discarded_step1": [
+            236770
+          ],
+          "direct_runtime_session_id": 15000114,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "0314d5e32ad78c77c9abffef21f6d13ed55da12e386c6bef70f59059a926e5e4",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 15000114,
+          "ordinary_step0_runtime": 7412,
+          "ordinary_step1_discarded_runtime": 236770,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 611,
+          "direct_discarded_step1": [
+            20218
+          ],
+          "direct_runtime_session_id": 15000115,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "98fed95aa4c644bebe7b4d6926c151e2d6946fd74f654208e94a2addf97015e4",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 15000115,
+          "ordinary_step0_runtime": 611,
+          "ordinary_step1_discarded_runtime": 20218,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 659,
+          "direct_discarded_step1": [
+            20218
+          ],
+          "direct_runtime_session_id": 15000116,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "69ec2d818b6c54ea4cee8df9beefa3d637d7d8bde8c2de773621b6f5058471d7",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 15000116,
+          "ordinary_step0_runtime": 659,
+          "ordinary_step1_discarded_runtime": 20218,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 6655,
+          "direct_discarded_step1": [
+            20218
+          ],
+          "direct_runtime_session_id": 15000117,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "c3699ec7ec65a04924377ec149b487f50837946491a2f4667289552522cde263",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 15000117,
+          "ordinary_step0_runtime": 6655,
+          "ordinary_step1_discarded_runtime": 20218,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 496,
+          "direct_discarded_step1": [
+            20218
+          ],
+          "direct_runtime_session_id": 15000118,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "b7174a9c34d2e177ecc8a93fffc475833166f4a17bd6fecb5d602bfe3a77c014",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 15000118,
+          "ordinary_step0_runtime": 496,
+          "ordinary_step1_discarded_runtime": 20218,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 7501,
+          "direct_discarded_step1": [
+            8355
+          ],
+          "direct_runtime_session_id": 15000119,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "e134b0767653c86c45534cc43703683f4b632783aa92dab345de8b6e5ac4baae",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 15000119,
+          "ordinary_step0_runtime": 7501,
+          "ordinary_step1_discarded_runtime": 8355,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 529,
+          "direct_discarded_step1": [
+            20218
+          ],
+          "direct_runtime_session_id": 15000120,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "944f6e0f664fed394442731293978dfac6f34f6cb801dd96687998f17c743a2a",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 15000120,
+          "ordinary_step0_runtime": 529,
+          "ordinary_step1_discarded_runtime": 20218,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 15,
+      "ordinary_committed_token_ids": [
+        1509,
+        7412,
+        611,
+        659,
+        6655,
+        496,
+        7501,
+        529
+      ],
+      "ordinary_full_decode_sha256": "7679062c118c0cd21ff7ab4cf2f754a958c3f848ad2acd4c4f535415820ac782",
+      "ordinary_http_content_sha256": "7679062c118c0cd21ff7ab4cf2f754a958c3f848ad2acd4c4f535415820ac782",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         15000113,
         15000114,
@@ -475,7 +3078,8 @@
       "case_id": "c109-03-04-003",
       "committed_count": 8,
       "committed_ids_equal": true,
-      "committed_token_ids": [
+      "decoded_equal": true,
+      "direct_committed_token_ids": [
         1509,
         5724,
         1133,
@@ -485,11 +3089,183 @@
         496,
         4148
       ],
-      "decoded_equal": true,
-      "decoded_sha256": "c9d819fb542722dc17843e3e292e7307e0798c2e184b579d901b57fdb9eec29a",
+      "direct_full_decode_sha256": "c9d819fb542722dc17843e3e292e7307e0798c2e184b579d901b57fdb9eec29a",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": null,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1509,
+          "direct_discarded_step1": [
+            236770
+          ],
+          "direct_runtime_session_id": 16000121,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "bee75fddb24603a0d60ebfb67176801b074c6075db0ee2d6b684e2dfb96a80ec",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 16000121,
+          "ordinary_step0_runtime": 1509,
+          "ordinary_step1_discarded_runtime": 236770,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 5724,
+          "direct_discarded_step1": [
+            657
+          ],
+          "direct_runtime_session_id": 16000122,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "3fbf89e0d8dc05327e631f4d12f1dcdf1f8e7b043106e2530b44a43673c5bc1e",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 16000122,
+          "ordinary_step0_runtime": 5724,
+          "ordinary_step1_discarded_runtime": 657,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1133,
+          "direct_discarded_step1": [
+            117874
+          ],
+          "direct_runtime_session_id": 16000123,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "4d3959a92287cef6e8f513bf0387b7864f899765ff4fa01411ec06e0df647e12",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 16000123,
+          "ordinary_step0_runtime": 1133,
+          "ordinary_step1_discarded_runtime": 117874,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 611,
+          "direct_discarded_step1": [
+            117874
+          ],
+          "direct_runtime_session_id": 16000124,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "6d4a10133e986444eb591ccb88b96fd56acea9e500736d1638ffbcd7f081e40f",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 16000124,
+          "ordinary_step0_runtime": 611,
+          "ordinary_step1_discarded_runtime": 117874,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 735,
+          "direct_discarded_step1": [
+            735
+          ],
+          "direct_runtime_session_id": 16000125,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "2cbb700f4e75cdd49bd6433670214d65ba9a0823e034b742ba9e1efc7b22df66",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 16000125,
+          "ordinary_step0_runtime": 735,
+          "ordinary_step1_discarded_runtime": 735,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 7659,
+          "direct_discarded_step1": [
+            13812
+          ],
+          "direct_runtime_session_id": 16000126,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "a1d4ed403a9a9b29ccfee44d1cadc275806804f9163e32a4e6f2c0f5b70e7954",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 16000126,
+          "ordinary_step0_runtime": 7659,
+          "ordinary_step1_discarded_runtime": 13812,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 496,
+          "direct_discarded_step1": [
+            117874
+          ],
+          "direct_runtime_session_id": 16000127,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "4ff7c9f602fcea0033b6df3d157fa01e40bb8528ade46600341416e63b4a3d77",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 16000127,
+          "ordinary_step0_runtime": 496,
+          "ordinary_step1_discarded_runtime": 117874,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 4148,
+          "direct_discarded_step1": [
+            1902
+          ],
+          "direct_runtime_session_id": 16000128,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "63ff6b297959c16fec1bdd37b65e0499cdbaf6eaca6f4c2d7a9d3abbcd98c821",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 16000128,
+          "ordinary_step0_runtime": 4148,
+          "ordinary_step1_discarded_runtime": 1902,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 16,
+      "ordinary_committed_token_ids": [
+        1509,
+        5724,
+        1133,
+        611,
+        735,
+        7659,
+        496,
+        4148
+      ],
+      "ordinary_full_decode_sha256": "c9d819fb542722dc17843e3e292e7307e0798c2e184b579d901b57fdb9eec29a",
+      "ordinary_http_content_sha256": "c9d819fb542722dc17843e3e292e7307e0798c2e184b579d901b57fdb9eec29a",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         16000121,
         16000122,
@@ -505,7 +3281,8 @@
       "case_id": "c109-03-05-044",
       "committed_count": 8,
       "committed_ids_equal": true,
-      "committed_token_ids": [
+      "decoded_equal": true,
+      "direct_committed_token_ids": [
         1509,
         12054,
         1133,
@@ -515,11 +3292,183 @@
         496,
         5213
       ],
-      "decoded_equal": true,
-      "decoded_sha256": "a4f79997524393efda5f66ae649dcd3d4ebfaee9b091a90dabb0a3ed0c9f859c",
+      "direct_full_decode_sha256": "a4f79997524393efda5f66ae649dcd3d4ebfaee9b091a90dabb0a3ed0c9f859c",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": null,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1509,
+          "direct_discarded_step1": [
+            1570
+          ],
+          "direct_runtime_session_id": 17000129,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "c42a423c7c00190125f1a4eae84f8511e71cc21294e6aad66103c2496afd59e1",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 17000129,
+          "ordinary_step0_runtime": 1509,
+          "ordinary_step1_discarded_runtime": 1570,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 12054,
+          "direct_discarded_step1": [
+            5743
+          ],
+          "direct_runtime_session_id": 17000130,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "7cb0cc009be475125282ec70768b48d2190e67b697b1920b08d99f17e6b932f8",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 17000130,
+          "ordinary_step0_runtime": 12054,
+          "ordinary_step1_discarded_runtime": 5743,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1133,
+          "direct_discarded_step1": [
+            678
+          ],
+          "direct_runtime_session_id": 17000131,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "d8c03201afe74cf1ac64892f4185cd940b495dcfcb17adcac5866d82c425484a",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 17000131,
+          "ordinary_step0_runtime": 1133,
+          "ordinary_step1_discarded_runtime": 678,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 611,
+          "direct_discarded_step1": [
+            678
+          ],
+          "direct_runtime_session_id": 17000132,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "c47f79432c04ab4310c75f3aa0a8874176bafbd1af31a69054d96f4ee80fd526",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 17000132,
+          "ordinary_step0_runtime": 611,
+          "ordinary_step1_discarded_runtime": 678,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 659,
+          "direct_discarded_step1": [
+            7202
+          ],
+          "direct_runtime_session_id": 17000133,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "7dc9de6c5e81ad23caf60bca480708b0ea2ca1123913831cdeffc9150ff536a2",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 17000133,
+          "ordinary_step0_runtime": 659,
+          "ordinary_step1_discarded_runtime": 7202,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 22454,
+          "direct_discarded_step1": [
+            22454
+          ],
+          "direct_runtime_session_id": 17000134,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "02f70f259245712934c96d2549f814fac5fc5fb2c140d936292e9a71a9f00e5f",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 17000134,
+          "ordinary_step0_runtime": 22454,
+          "ordinary_step1_discarded_runtime": 22454,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 496,
+          "direct_discarded_step1": [
+            5743
+          ],
+          "direct_runtime_session_id": 17000135,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "e4fe7e91957a8e5a1c5bf3a0fd137db247dfa37c3a5c1440631ac07e7de32dbc",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 17000135,
+          "ordinary_step0_runtime": 496,
+          "ordinary_step1_discarded_runtime": 5743,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 5213,
+          "direct_discarded_step1": [
+            5213
+          ],
+          "direct_runtime_session_id": 17000136,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "237494047bb3f5613a29317862e06efda6252a50218de4ac4afa5ea9c0639c81",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 17000136,
+          "ordinary_step0_runtime": 5213,
+          "ordinary_step1_discarded_runtime": 5213,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 17,
+      "ordinary_committed_token_ids": [
+        1509,
+        12054,
+        1133,
+        611,
+        659,
+        22454,
+        496,
+        5213
+      ],
+      "ordinary_full_decode_sha256": "a4f79997524393efda5f66ae649dcd3d4ebfaee9b091a90dabb0a3ed0c9f859c",
+      "ordinary_http_content_sha256": "a4f79997524393efda5f66ae649dcd3d4ebfaee9b091a90dabb0a3ed0c9f859c",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         17000129,
         17000130,
@@ -535,7 +3484,8 @@
       "case_id": "c109-03-06-016",
       "committed_count": 8,
       "committed_ids_equal": true,
-      "committed_token_ids": [
+      "decoded_equal": true,
+      "direct_committed_token_ids": [
         1509,
         7412,
         611,
@@ -545,11 +3495,183 @@
         2483,
         529
       ],
-      "decoded_equal": true,
-      "decoded_sha256": "4d3231c590e61e6d22de13d2f1410f438809023866425ad65db8b4aae26a1fd1",
+      "direct_full_decode_sha256": "4d3231c590e61e6d22de13d2f1410f438809023866425ad65db8b4aae26a1fd1",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": null,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1509,
+          "direct_discarded_step1": [
+            236761
+          ],
+          "direct_runtime_session_id": 18000137,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "ad7f1e628431229203b16ad23edc0289e44deb300bd8575f5305247e69900fc5",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 18000137,
+          "ordinary_step0_runtime": 1509,
+          "ordinary_step1_discarded_runtime": 236761,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 7412,
+          "direct_discarded_step1": [
+            236761
+          ],
+          "direct_runtime_session_id": 18000138,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "7b6cab042c8190e8c777d85a685b637145d928bf2f17b5f0f1731d21be66e998",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 18000138,
+          "ordinary_step0_runtime": 7412,
+          "ordinary_step1_discarded_runtime": 236761,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 611,
+          "direct_discarded_step1": [
+            833
+          ],
+          "direct_runtime_session_id": 18000139,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "88e252390751a1977013448472a4a1b3d13bbcef03d5649e77446c1676a4aef9",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 18000139,
+          "ordinary_step0_runtime": 611,
+          "ordinary_step1_discarded_runtime": 833,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 735,
+          "direct_discarded_step1": [
+            735
+          ],
+          "direct_runtime_session_id": 18000140,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "42247b811e299f926ef3072e5b257bf52755032b51501d91d3436afdcce2d554",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 18000140,
+          "ordinary_step0_runtime": 735,
+          "ordinary_step1_discarded_runtime": 735,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 3847,
+          "direct_discarded_step1": [
+            833
+          ],
+          "direct_runtime_session_id": 18000141,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "e75f1a501049275b41c679e2ba5abd92f8fd317455f4df5d6bf77ed6945d5cdc",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 18000141,
+          "ordinary_step0_runtime": 3847,
+          "ordinary_step1_discarded_runtime": 833,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 496,
+          "direct_discarded_step1": [
+            833
+          ],
+          "direct_runtime_session_id": 18000142,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "b9c4dd050089924191fdd67f4be2cc232bd241b7a877f70f075309f69a803aa7",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 18000142,
+          "ordinary_step0_runtime": 496,
+          "ordinary_step1_discarded_runtime": 833,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 2483,
+          "direct_discarded_step1": [
+            833
+          ],
+          "direct_runtime_session_id": 18000143,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "9a4492e45b9162b2ba9742924702fa89b01de8c1d76b0588e5507fb988d140d9",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 18000143,
+          "ordinary_step0_runtime": 2483,
+          "ordinary_step1_discarded_runtime": 833,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 529,
+          "direct_discarded_step1": [
+            2360
+          ],
+          "direct_runtime_session_id": 18000144,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "d216418bf7568ce48cc171740500a9f59d7c88c2b947d4902f302fe2467befaf",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 18000144,
+          "ordinary_step0_runtime": 529,
+          "ordinary_step1_discarded_runtime": 2360,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 18,
+      "ordinary_committed_token_ids": [
+        1509,
+        7412,
+        611,
+        735,
+        3847,
+        496,
+        2483,
+        529
+      ],
+      "ordinary_full_decode_sha256": "4d3231c590e61e6d22de13d2f1410f438809023866425ad65db8b4aae26a1fd1",
+      "ordinary_http_content_sha256": "4d3231c590e61e6d22de13d2f1410f438809023866425ad65db8b4aae26a1fd1",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         18000137,
         18000138,
@@ -565,7 +3687,8 @@
       "case_id": "c109-04-01-026",
       "committed_count": 8,
       "committed_ids_equal": false,
-      "committed_token_ids": [
+      "decoded_equal": false,
+      "direct_committed_token_ids": [
         11513,
         5597,
         236761,
@@ -575,11 +3698,183 @@
         17971,
         67706
       ],
-      "decoded_equal": false,
-      "decoded_sha256": "4c444eb5d619b15893f939e5e0010a24a63fd322afffe0676b9624858c6ede98",
+      "direct_full_decode_sha256": "4c444eb5d619b15893f939e5e0010a24a63fd322afffe0676b9624858c6ede98",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": 4,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 11513,
+          "direct_discarded_step1": [
+            3223
+          ],
+          "direct_runtime_session_id": 19000145,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "7daae6754525a487bc9d3efe7f90a3f7a25467d6050aa84c8d5e9002e83a67a8",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 19000145,
+          "ordinary_step0_runtime": 11513,
+          "ordinary_step1_discarded_runtime": 3223,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 5597,
+          "direct_discarded_step1": [
+            2214
+          ],
+          "direct_runtime_session_id": 19000146,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "a476b9ea58a6d3e5becbdc838a58346e00e36297f143fd4e2d44dce1433305e8",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 19000146,
+          "ordinary_step0_runtime": 5597,
+          "ordinary_step1_discarded_runtime": 2214,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236761,
+          "direct_discarded_step1": [
+            1208
+          ],
+          "direct_runtime_session_id": 19000147,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "6c8bbf715813bc65b35c203d4319f5597bbb7c8a70a7b918661d44effb9501e3",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 19000147,
+          "ordinary_step0_runtime": 236761,
+          "ordinary_step1_discarded_runtime": 1208,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 107,
+          "direct_discarded_step1": [
+            6460
+          ],
+          "direct_runtime_session_id": 19000148,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "b3ca35d57aa2ce754316769365174d2e22c4b6273c5524498bb6715327716cd6",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 19000148,
+          "ordinary_step0_runtime": 107,
+          "ordinary_step1_discarded_runtime": 6460,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 6460,
+          "direct_discarded_step1": [
+            6460
+          ],
+          "direct_runtime_session_id": 19000149,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "e8cef62b4e68f2c6099ddf2464ad03988a7a5116d882da598182edca1e76645b",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 19000149,
+          "ordinary_step0_runtime": 140,
+          "ordinary_step1_discarded_runtime": 6460,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 1208,
+          "direct_discarded_step1": [
+            17971
+          ],
+          "direct_runtime_session_id": 19000150,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "cdce0594fead83daa2541a52032a0e687d720ae17750f39d936402742150a4ef",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 19000150,
+          "ordinary_step0_runtime": 818,
+          "ordinary_step1_discarded_runtime": 36572,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 17971,
+          "direct_discarded_step1": [
+            67706
+          ],
+          "direct_runtime_session_id": 19000151,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "bb60da52884510acdf1608c4e888a4ece952ab5e4b60ebc8981994788925d818",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 19000151,
+          "ordinary_step0_runtime": 3768,
+          "ordinary_step1_discarded_runtime": 67706,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 67706,
+          "direct_discarded_step1": [
+            2214
+          ],
+          "direct_runtime_session_id": 19000152,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "bd55b9ecd928aa048f0c66f1c27684af9431b70f6be9c4c6317500d10f896b27",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 19000152,
+          "ordinary_step0_runtime": 1390,
+          "ordinary_step1_discarded_runtime": 6460,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 19,
+      "ordinary_committed_token_ids": [
+        11513,
+        5597,
+        236761,
+        107,
+        140,
+        818,
+        3768,
+        1390
+      ],
+      "ordinary_full_decode_sha256": "2fd0af135350c03352932cb39b683cef3af9a02ee8a2713ccc0f21c4368abf5b",
+      "ordinary_http_content_sha256": "2fd0af135350c03352932cb39b683cef3af9a02ee8a2713ccc0f21c4368abf5b",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         19000145,
         19000146,
@@ -595,7 +3890,8 @@
       "case_id": "c109-04-02-047",
       "committed_count": 8,
       "committed_ids_equal": false,
-      "committed_token_ids": [
+      "decoded_equal": false,
+      "direct_committed_token_ids": [
         6264,
         236761,
         107,
@@ -605,11 +3901,183 @@
         101,
         45518
       ],
-      "decoded_equal": false,
-      "decoded_sha256": "0322b8a69ca06a40ff61ed5fc346363d3eeb437d9695ae2f46c3a7a3b9ec53dd",
+      "direct_full_decode_sha256": "0322b8a69ca06a40ff61ed5fc346363d3eeb437d9695ae2f46c3a7a3b9ec53dd",
       "finish_reason": "length",
-      "http_content_bind": false,
+      "first_divergent_position": 0,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": false
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 6264,
+          "direct_discarded_step1": [
+            236772
+          ],
+          "direct_runtime_session_id": 20000153,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "f06635ad2b27126e88cb2a76494c1e15e21795609d50d5b567a893b8bd0bcca4",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 20000153,
+          "ordinary_step0_runtime": 236772,
+          "ordinary_step1_discarded_runtime": 11935,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236761,
+          "direct_discarded_step1": [
+            870
+          ],
+          "direct_runtime_session_id": 20000154,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "4676d80f53f64054bcb6b57ef07bdcdad32e0c46c76328e8f56a16fe1b68e4e1",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 20000154,
+          "ordinary_step0_runtime": 107,
+          "ordinary_step1_discarded_runtime": 2063,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 107,
+          "direct_discarded_step1": [
+            2063
+          ],
+          "direct_runtime_session_id": 20000155,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "40cdf1541192433932caccb8df907cd6b88c8f3089ed23c6aba06e7383aa67e8",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 20000155,
+          "ordinary_step0_runtime": 100,
+          "ordinary_step1_discarded_runtime": 45518,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 100,
+          "direct_discarded_step1": [
+            236761
+          ],
+          "direct_runtime_session_id": 20000156,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "c69baa4b99f6995ec0a008b3c7be2e62c5d594134628094feff9e98f700351d4",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 20000156,
+          "ordinary_step0_runtime": 45518,
+          "ordinary_step1_discarded_runtime": 45518,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 45518,
+          "direct_discarded_step1": [
+            236761
+          ],
+          "direct_runtime_session_id": 20000157,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "150d2013d7e4a4749d05daa930c7a8e990a94f27655bc10f18522b784c5bb10b",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 20000157,
+          "ordinary_step0_runtime": 107,
+          "ordinary_step1_discarded_runtime": 2063,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 107,
+          "direct_discarded_step1": [
+            2063
+          ],
+          "direct_runtime_session_id": 20000158,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "778268b4e0d752b19bc36e41b6e63ad5e77b67fe3d303cec5ae95544b49c0486",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 20000158,
+          "ordinary_step0_runtime": 100,
+          "ordinary_step1_discarded_runtime": 236772,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 101,
+          "direct_discarded_step1": [
+            7284
+          ],
+          "direct_runtime_session_id": 20000159,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "80adecf8cfeddbd853c798f4c8e9f5e3ede80530b926aa335e545b618c8c077f",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 20000159,
+          "ordinary_step0_runtime": 36764,
+          "ordinary_step1_discarded_runtime": 4188,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 45518,
+          "direct_discarded_step1": [
+            45518
+          ],
+          "direct_runtime_session_id": 20000160,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "6f61f294e4cf844e4a9f0149248518ab031566cdf7582e6db2f411ed9d77b897",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 20000160,
+          "ordinary_step0_runtime": 236787,
+          "ordinary_step1_discarded_runtime": 870,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 20,
+      "ordinary_committed_token_ids": [
+        236772,
+        107,
+        100,
+        45518,
+        107,
+        100,
+        36764,
+        236787
+      ],
+      "ordinary_full_decode_sha256": "ed61195008778f66b8f9262627c544dcfc35600b87832d4b36bfd9129fcf6926",
+      "ordinary_http_content_sha256": "e3cca0fb0647e5a16f7bf8c69ec6c3a3ec62e67bba8a2d0d236bf6333fa10b76",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         20000153,
         20000154,
@@ -625,7 +4093,8 @@
       "case_id": "c109-04-03-040",
       "committed_count": 8,
       "committed_ids_equal": false,
-      "committed_token_ids": [
+      "decoded_equal": false,
+      "direct_committed_token_ids": [
         101,
         100,
         100,
@@ -635,11 +4104,183 @@
         45518,
         236786
       ],
-      "decoded_equal": false,
-      "decoded_sha256": "a2357c6305a1933ae446c6618e9d780487b0ced1fb1d2c289076275f6a3b7b32",
+      "direct_full_decode_sha256": "a2357c6305a1933ae446c6618e9d780487b0ced1fb1d2c289076275f6a3b7b32",
       "finish_reason": "length",
-      "http_content_bind": false,
+      "first_divergent_position": 2,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": false
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 101,
+          "direct_discarded_step1": [
+            236800
+          ],
+          "direct_runtime_session_id": 21000161,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "3de02b153db2ff26b26edc8b2d88b1d2260a927ce051d139d7540d712bed7f03",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 21000161,
+          "ordinary_step0_runtime": 101,
+          "ordinary_step1_discarded_runtime": 236800,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 100,
+          "direct_discarded_step1": [
+            236800
+          ],
+          "direct_runtime_session_id": 21000162,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "c0566d1cb3a4cfb86d9e3533f45a8012d1a80e7c778f9a6b9a4592b498c72050",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 21000162,
+          "ordinary_step0_runtime": 100,
+          "ordinary_step1_discarded_runtime": 107,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 100,
+          "direct_discarded_step1": [
+            107
+          ],
+          "direct_runtime_session_id": 21000163,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "a88238c1dbc93ee8758518ee91eae756ac3dc2670b99581cd0c555c385d88053",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 21000163,
+          "ordinary_step0_runtime": 106,
+          "ordinary_step1_discarded_runtime": 236761,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 45518,
+          "direct_discarded_step1": [
+            1437
+          ],
+          "direct_runtime_session_id": 21000164,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "8105994df16f8aab64626e7b25dd512bb10d5021692e034faf396d5470569eb7",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 21000164,
+          "ordinary_step0_runtime": 236758,
+          "ordinary_step1_discarded_runtime": 8355,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 107,
+          "direct_discarded_step1": [
+            236800
+          ],
+          "direct_runtime_session_id": 21000165,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "58e3ff586b5bdb57d5b10f0c5ed8c01ade4e7aa68e609fcd8397c89fd6a39868",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 21000165,
+          "ordinary_step0_runtime": 236813,
+          "ordinary_step1_discarded_runtime": 236802,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 100,
+          "direct_discarded_step1": [
+            107
+          ],
+          "direct_runtime_session_id": 21000166,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "6a636467d50091f708b4f1908c5666b678ff21fac014fb3f6b342dd36064a51c",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 21000166,
+          "ordinary_step0_runtime": 107,
+          "ordinary_step1_discarded_runtime": 236802,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 45518,
+          "direct_discarded_step1": [
+            45518
+          ],
+          "direct_runtime_session_id": 21000167,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "6581959270a67f8386883b8ed491c312b2490d90b2779e753d86ce28c04de437",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 21000167,
+          "ordinary_step0_runtime": 100,
+          "ordinary_step1_discarded_runtime": 2497,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236786,
+          "direct_discarded_step1": [
+            236802
+          ],
+          "direct_runtime_session_id": 21000168,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "180faec9c8cba142cf1f1db234758d7292696c78fb3c8628c679234120c54361",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 21000168,
+          "ordinary_step0_runtime": 236813,
+          "ordinary_step1_discarded_runtime": 236802,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 21,
+      "ordinary_committed_token_ids": [
+        101,
+        100,
+        106,
+        236758,
+        236813,
+        107,
+        100,
+        236813
+      ],
+      "ordinary_full_decode_sha256": "9981d98a708e61725aa39a862cde1bce8527639190312c12cd5eef7c9da10f41",
+      "ordinary_http_content_sha256": "af22e670927560373798ac986e95674ddc844309e90298f006c08b1003327231",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         21000161,
         21000162,
@@ -655,7 +4296,8 @@
       "case_id": "c109-04-04-024",
       "committed_count": 8,
       "committed_ids_equal": false,
-      "committed_token_ids": [
+      "decoded_equal": false,
+      "direct_committed_token_ids": [
         236761,
         107,
         100,
@@ -665,11 +4307,183 @@
         107,
         236761
       ],
-      "decoded_equal": false,
-      "decoded_sha256": "dcbff7d9abfdc6b340c43d6d0483ce7d7925aebd8d63b8c15c0e15e8b1dc3817",
+      "direct_full_decode_sha256": "dcbff7d9abfdc6b340c43d6d0483ce7d7925aebd8d63b8c15c0e15e8b1dc3817",
       "finish_reason": "length",
-      "http_content_bind": false,
+      "first_divergent_position": 3,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": false
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236761,
+          "direct_discarded_step1": [
+            236753
+          ],
+          "direct_runtime_session_id": 22000169,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "04ccb48da9990c45bab4fb083d89b49f06a2eb76ea6afef10656173605300be2",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 22000169,
+          "ordinary_step0_runtime": 236761,
+          "ordinary_step1_discarded_runtime": 236753,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 107,
+          "direct_discarded_step1": [
+            12811
+          ],
+          "direct_runtime_session_id": 22000170,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "94d4a9c2731fefc5d2c5f7ddfac4bdc901abc824ba3190b7192ed5a34e541172",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 22000170,
+          "ordinary_step0_runtime": 107,
+          "ordinary_step1_discarded_runtime": 236753,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 100,
+          "direct_discarded_step1": [
+            236761
+          ],
+          "direct_runtime_session_id": 22000171,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "32ac9ee131d69c925f1d66c17629c7a92b348c8761794e88075df94193bb444b",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 22000171,
+          "ordinary_step0_runtime": 100,
+          "ordinary_step1_discarded_runtime": 236761,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 107,
+          "direct_discarded_step1": [
+            236761
+          ],
+          "direct_runtime_session_id": 22000172,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "e683d18bddf22f43ae760ebd9b32b8c95b50c4098b3efa45505805463dbc7e4f",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 22000172,
+          "ordinary_step0_runtime": 45518,
+          "ordinary_step1_discarded_runtime": 45518,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 100,
+          "direct_discarded_step1": [
+            236761
+          ],
+          "direct_runtime_session_id": 22000173,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "032d725dbcca76785dfcb8b69a6ef70fdb60d856b43096a5ffe3722bef1ef797",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 22000173,
+          "ordinary_step0_runtime": 107,
+          "ordinary_step1_discarded_runtime": 107,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236761,
+          "direct_discarded_step1": [
+            236753
+          ],
+          "direct_runtime_session_id": 22000174,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "abd81557eed7471e001474054e943ad23314d7b1fa5ec40449bfbb3a146ef7b5",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 22000174,
+          "ordinary_step0_runtime": 100,
+          "ordinary_step1_discarded_runtime": 236757,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 107,
+          "direct_discarded_step1": [
+            236786
+          ],
+          "direct_runtime_session_id": 22000175,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "b5108793608763398090959774eac67594d5a02117a3f3a677acec900143b960",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 22000175,
+          "ordinary_step0_runtime": 100,
+          "ordinary_step1_discarded_runtime": 236761,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236761,
+          "direct_discarded_step1": [
+            107
+          ],
+          "direct_runtime_session_id": 22000176,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "dfe46b7933d8f3d64461dec705bfa13b9fbc49942fc6360601ec64c587560779",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 22000176,
+          "ordinary_step0_runtime": 100,
+          "ordinary_step1_discarded_runtime": 236761,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 22,
+      "ordinary_committed_token_ids": [
+        236761,
+        107,
+        100,
+        45518,
+        107,
+        100,
+        100,
+        100
+      ],
+      "ordinary_full_decode_sha256": "4a362174940790388ee63b0df9956a8f9206ec253470dc959179c241af78a520",
+      "ordinary_http_content_sha256": "a6126e96c48deb19e83e11e52349341854da419d34b480dda37687576a0257c6",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         22000169,
         22000170,
@@ -685,7 +4499,8 @@
       "case_id": "c109-04-05-043",
       "committed_count": 8,
       "committed_ids_equal": false,
-      "committed_token_ids": [
+      "decoded_equal": false,
+      "direct_committed_token_ids": [
         236770,
         236771,
         236771,
@@ -695,11 +4510,183 @@
         236908,
         107
       ],
-      "decoded_equal": false,
-      "decoded_sha256": "883cb83275ebe1e995e91669121dbf9365a089f709ddf60c64361ffdb604929c",
+      "direct_full_decode_sha256": "883cb83275ebe1e995e91669121dbf9365a089f709ddf60c64361ffdb604929c",
       "finish_reason": "length",
-      "http_content_bind": false,
+      "first_divergent_position": 0,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": false
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236770,
+          "direct_discarded_step1": [
+            236786
+          ],
+          "direct_runtime_session_id": 23000177,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "f411cefd3cefe8ffd6c2fa0f75a77fa36b531641f8d55c7a2e4366c2ccd44005",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 23000177,
+          "ordinary_step0_runtime": 45352,
+          "ordinary_step1_discarded_runtime": 236744,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236771,
+          "direct_discarded_step1": [
+            236771
+          ],
+          "direct_runtime_session_id": 23000178,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "b0328dd8b02523e05c5fd308e213a7aca94bf2b95a7c4cc3e90c3d5c2e7c353c",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 23000178,
+          "ordinary_step0_runtime": 107,
+          "ordinary_step1_discarded_runtime": 37268,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236771,
+          "direct_discarded_step1": [
+            236771
+          ],
+          "direct_runtime_session_id": 23000179,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "13985c33975f90e8500d6c5360145c13e1678cca1e780e0b6cdbf1113b67d316",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 23000179,
+          "ordinary_step0_runtime": 100,
+          "ordinary_step1_discarded_runtime": 678,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236908,
+          "direct_discarded_step1": [
+            2118
+          ],
+          "direct_runtime_session_id": 23000180,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "23926b5010241e5feca48a50db39227b728f99a200d41e508ec304601487664c",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 23000180,
+          "ordinary_step0_runtime": 45518,
+          "ordinary_step1_discarded_runtime": 37268,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 107,
+          "direct_discarded_step1": [
+            37268
+          ],
+          "direct_runtime_session_id": 23000181,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "0bc9a05bf0312ace7aa07b2b909b97b7a3d9b73141a9533463af87bf4e6f0d4c",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 23000181,
+          "ordinary_step0_runtime": 107,
+          "ordinary_step1_discarded_runtime": 37268,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 100,
+          "direct_discarded_step1": [
+            678
+          ],
+          "direct_runtime_session_id": 23000182,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "e475ae82bfa9a62c5eddabf6efb981ebdd4f906b217471a08309beebaa1365f2",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 23000182,
+          "ordinary_step0_runtime": 45518,
+          "ordinary_step1_discarded_runtime": 45518,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236908,
+          "direct_discarded_step1": [
+            2118
+          ],
+          "direct_runtime_session_id": 23000183,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "8db3fdfd91df478dafb0128594d77e1406ccf11c0b56dd1685159653a2cc110f",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 23000183,
+          "ordinary_step0_runtime": 107,
+          "ordinary_step1_discarded_runtime": 37268,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 107,
+          "direct_discarded_step1": [
+            2118
+          ],
+          "direct_runtime_session_id": 23000184,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "04a1bda4eda2b60c9ae99129f625896cc8c6be5dbe6575616a1e1b54097e659e",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 23000184,
+          "ordinary_step0_runtime": 101,
+          "ordinary_step1_discarded_runtime": 678,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 23,
+      "ordinary_committed_token_ids": [
+        45352,
+        107,
+        100,
+        45518,
+        107,
+        45518,
+        107,
+        101
+      ],
+      "ordinary_full_decode_sha256": "23344e8f2762ba9ed1269bac8b9b56e1a90d5e0da8748851ed097f0ddcf801cf",
+      "ordinary_http_content_sha256": "3145b2f3661d6176c1a21a37b94e0d2e25a66d59185017ca44d74e24e4dd1675",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         23000177,
         23000178,
@@ -715,7 +4702,8 @@
       "case_id": "c109-04-06-074",
       "committed_count": 8,
       "committed_ids_equal": false,
-      "committed_token_ids": [
+      "decoded_equal": false,
+      "direct_committed_token_ids": [
         100,
         236781,
         236785,
@@ -725,11 +4713,183 @@
         107,
         100
       ],
-      "decoded_equal": false,
-      "decoded_sha256": "f982d994af595fb0f29bb355bec8aa1169c40b73b2cd425794907703525ec8f3",
+      "direct_full_decode_sha256": "f982d994af595fb0f29bb355bec8aa1169c40b73b2cd425794907703525ec8f3",
       "finish_reason": "length",
-      "http_content_bind": true,
+      "first_divergent_position": 0,
+      "http_content": {
+        "binding": "frozen-coordinator-incremental-decode/1",
+        "binds_frozen_incremental_decode": true,
+        "binds_one_shot_full_decode": true
+      },
+      "invocation_seam": [
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 100,
+          "direct_discarded_step1": [
+            236781
+          ],
+          "direct_runtime_session_id": 24000185,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "b115ba88ee56f9cb38851822cf13847680a6b2e3f258c616ee6af1343321a00c",
+          "inputs_equal": true,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 24000185,
+          "ordinary_step0_runtime": 236777,
+          "ordinary_step1_discarded_runtime": 236888,
+          "position": 0,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236781,
+          "direct_discarded_step1": [
+            621
+          ],
+          "direct_runtime_session_id": 24000186,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "27b2596b5192c642b3a4034c1e668b9d610da453f8a7184c61c29b5bb2ad0c45",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 24000186,
+          "ordinary_step0_runtime": 1006,
+          "ordinary_step1_discarded_runtime": 236743,
+          "position": 1,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236785,
+          "direct_discarded_step1": [
+            236781
+          ],
+          "direct_runtime_session_id": 24000187,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "c6f9e594069788430b647be5e0a315abfb734e2cf0818bff4f892d494bf18faf",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 24000187,
+          "ordinary_step0_runtime": 573,
+          "ordinary_step1_discarded_runtime": 236743,
+          "position": 2,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236781,
+          "direct_discarded_step1": [
+            621
+          ],
+          "direct_runtime_session_id": 24000188,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "3812e76c09a6e79ddbe58589ab1bc263884e463be34a8b068d53f58a57634f0b",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 24000188,
+          "ordinary_step0_runtime": 506,
+          "ordinary_step1_discarded_runtime": 236743,
+          "position": 3,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 236829,
+          "direct_discarded_step1": [
+            621
+          ],
+          "direct_runtime_session_id": 24000189,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "638dcc2ae5020682eb151da2b2e61d00f0db10bf55e5fc447553358e86c198d4",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 24000189,
+          "ordinary_step0_runtime": 623,
+          "ordinary_step1_discarded_runtime": 621,
+          "position": 4,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 100,
+          "direct_discarded_step1": [
+            236781
+          ],
+          "direct_runtime_session_id": 24000190,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "bf75a1adeac5a6f3b7972c219faca1ed2f66aa55f3e756d21e60c3347fed51c6",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 24000190,
+          "ordinary_step0_runtime": 258882,
+          "ordinary_step1_discarded_runtime": 236761,
+          "position": 5,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 107,
+          "direct_discarded_step1": [
+            236862
+          ],
+          "direct_runtime_session_id": 24000191,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "6e2aec8927734174a3572501958dc8bc074f24b6808ca7d5c5c3bd53fcd702d8",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 24000191,
+          "ordinary_step0_runtime": 236761,
+          "ordinary_step1_discarded_runtime": 900,
+          "position": 6,
+          "session_ids_equal": true
+        },
+        {
+          "call_shape_equal": true,
+          "commit_step_zero_semantics": true,
+          "direct_committed_step0": 100,
+          "direct_discarded_step1": [
+            236785
+          ],
+          "direct_runtime_session_id": 24000192,
+          "discard_step_one_semantics": true,
+          "input_ids_sha256": "1e7fe76d5b9f05dd34ca342a3d7e86cd31dbbc4ddac6e0faecbf8831f0b98d8e",
+          "inputs_equal": false,
+          "max_new_tokens": 2,
+          "on_token_present": true,
+          "ordinary_runtime_session_id": 24000192,
+          "ordinary_step0_runtime": 564,
+          "ordinary_step1_discarded_runtime": 2895,
+          "position": 7,
+          "session_ids_equal": true
+        }
+      ],
       "logical_session": 24,
+      "ordinary_committed_token_ids": [
+        236777,
+        1006,
+        573,
+        506,
+        623,
+        258882,
+        236761,
+        564
+      ],
+      "ordinary_full_decode_sha256": "0d0957a5bf7986c40b80c72ac1d3c0438769d56c7269ac7a69152495a28aa31d",
+      "ordinary_http_content_sha256": "0d0957a5bf7986c40b80c72ac1d3c0438769d56c7269ac7a69152495a28aa31d",
+      "pre_divergence_inputs_equivalent": true,
+      "prompts_equal_across_sources": true,
       "runtime_session_ids": [
         24000185,
         24000186,
@@ -742,6 +4902,6 @@
       ]
     }
   ],
-  "schema": "inferswarm.issue133.arm-c-retry.equality-reduction/1",
+  "schema": "inferswarm.issue133.arm-c-retry.equality-reduction/2",
   "serving_plan_digest": "sha256:d9c4e295e1a480683ecdcf3ab672a07655650043e5438a5a8803159194426cf9"
 }

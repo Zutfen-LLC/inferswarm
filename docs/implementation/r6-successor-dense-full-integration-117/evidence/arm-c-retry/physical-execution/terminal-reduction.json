@@ -1,7 +1,7 @@
 {
   "attempt_id": "armc-retry-physical-1",
   "campaign_id": "armc-retry-afcdc4428f95d50c",
-  "derivation": "all values re-derived from retained raw evidence in this repository; no authored summary consumed",
+  "derivation": "all values re-derived from retained raw evidence in this repository; no authored summary consumed; no terminal-authority value is an assigned constant",
   "direct_arm": {
     "cases": 24,
     "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625"
@@ -9,6 +9,14 @@
   "equality": {
     "all_mismatches_regime_4": true,
     "equal": 18,
+    "first_divergent_positions": {
+      "c109-04-01-026": 4,
+      "c109-04-02-047": 0,
+      "c109-04-03-040": 2,
+      "c109-04-04-024": 3,
+      "c109-04-05-043": 0,
+      "c109-04-06-074": 0
+    },
     "mismatched_cases": [
       "c109-04-01-026",
       "c109-04-02-047",
@@ -17,15 +25,50 @@
       "c109-04-05-043",
       "c109-04-06-074"
     ],
-    "of": 24
+    "of": 24,
+    "pre_divergence_invocation_equivalence": true
   },
   "execution_freeze_identity": "88389598ac485f82aa3ec00caadcebcb3cafb56cf967751262e8ab5bc9bf9a1c",
+  "http_content": {
+    "all_bind_frozen_incremental_decode": true,
+    "cases_differing_from_one_shot_decode": [
+      "c109-04-02-047",
+      "c109-04-03-040",
+      "c109-04-04-024",
+      "c109-04-05-043"
+    ],
+    "classification": "distinct ordinary-serving semantic observation: non-prefix-stable incremental decoding"
+  },
+  "invariant_evidence": {
+    "coordinator": "coordinator-observation-{pre,post}.json processes/devices/state_census + strace-audit.json participant traces",
+    "fencing_attribution": "coordinator_scope.requests[*].token_events + sessions[*].latest_committed_boundary + dual-retained injection rejection records",
+    "prelaunch": "prelaunch-verdict-{run1,immediate-prelaunch}.json",
+    "substrate": "substrate-reconciliation-{01,03}.json",
+    "tokenizer": "tokenizer-deployment-proof.json + frozen asset pins"
+  },
+  "launch_lineage": {
+    "launch1_case_observations": [],
+    "launch1_dependency_failure": true,
+    "launch1_derivation": "attempts/launch1-failure.log retained ModuleNotFoundError(tvm_ffi) + execution-plan.launch1.json + zero launch-1-attributed case/commit observations",
+    "launch1_derived_classification": "PRE_OBSERVATION_INFRASTRUCTURE"
+  },
   "ordinary_arm": {
     "cases": 24,
     "epoch_state": "RECLAIMED"
   },
   "problems": [],
-  "schema": "inferswarm.issue133.arm-c-retry.terminal-reduction/1",
+  "review_correction": {
+    "corrections": [
+      "terminal gates on every mandatory #133 invariant family",
+      "all zero counters derived from retained observations",
+      "launch-1 PRE_OBSERVATION_INFRASTRUCTURE derived from bytes",
+      "equality /2 with mechanical pre-divergence invocation equivalence required for semantic FAIL",
+      "HTTP-content discrepancy characterized from frozen bytes"
+    ],
+    "maintainer_review": 5172615768,
+    "reviewed_head": "51980fb78006699bfc460e68c0b7b646ddc26d74"
+  },
+  "schema": "inferswarm.issue133.arm-c-retry.terminal-reduction/2",
   "terminal": "ISSUE117_ARM_C_ORDINARY_SERVING_FAIL",
   "zero_invariants": {
     "controlled_fencing_injections_rejected": 2,
