@@ -149,7 +149,7 @@ TOKENIZER_PYTHON = _frozen.TOKENIZER_PYTHON
 #: physical attempt and their presence in a pre-execution freeze fails
 #: closed (a pre-run record may not masquerade as completed post-run
 #: verification).
-FREEZE_SCHEMA = "inferswarm.issue133.execution-freeze/2"
+FREEZE_SCHEMA = "inferswarm.issue133.execution-freeze/3"
 FREEZE_DRIVER_STATIC_FIELDS = (
     "repository_sha",
     "file_sha256",
@@ -694,6 +694,79 @@ def execution_freeze_identity(record: Mapping[str, Any]) -> str:
     bound into the authority document's campaign record."""
     return sha256_bytes(
         (json.dumps(record, indent=2, sort_keys=True) + "\n").encode())
+
+
+def verify_campaign_retention_legality(
+        repo_root: Path | None = None) -> dict[str, Any]:
+    """Prove that the fresh campaign has no attempt, terminal, or STOP.
+
+    The proof scans the complete retry evidence area. It does not trust the
+    authored zero counters in ``phase-a-correction.json``.
+    """
+    root = Path(repo_root) if repo_root else ROOT
+    area = (root / "docs/implementation/r6-successor-dense-full-integration-117"
+            / "evidence/arm-c-retry")
+    authority = load_authority_document(root)
+    campaigns = authority["campaigns"]
+    if len(campaigns) != 1:
+        raise RuntimeError("campaign-retention proof requires one campaign")
+    campaign_id = next(iter(campaigns))
+    campaign = campaigns[campaign_id]
+    prior_stop_fields = (
+        "prior_stopped_campaign_id", "prior_stop_attempt_id",
+        "prior_stop_review_id", "prior_stop_reviewed_at",
+    )
+    if any(campaign.get(field) is not None for field in prior_stop_fields):
+        raise RuntimeError(
+            "campaign-retention proof found a prior STOP binding")
+
+    attempt_records: list[str] = []
+    terminal_records: list[str] = []
+    stop_records: list[str] = []
+    for path in sorted(area.rglob("*.json")):
+        relative = str(path.relative_to(area))
+        if relative in {
+                "physical-campaign-authority.json",
+                "phase-a-correction.json"}:
+            continue
+        try:
+            value = json.loads(path.read_text())
+        except (UnicodeDecodeError, json.JSONDecodeError) as error:
+            raise RuntimeError(
+                f"campaign-retention proof cannot parse {relative}") from error
+
+        def walk(node: Any) -> None:
+            if isinstance(node, Mapping):
+                if node.get("campaign_id") == campaign_id:
+                    if "attempt_id" in node:
+                        attempt_records.append(relative)
+                    if node.get("terminal_observation") is True or \
+                            "terminal_classification" in node:
+                        terminal_records.append(relative)
+                    if node.get("stop_occurred") is True or \
+                            "stop_attempt_id" in node:
+                        stop_records.append(relative)
+                for nested in node.values():
+                    walk(nested)
+            elif isinstance(node, list):
+                for nested in node:
+                    walk(nested)
+
+        walk(value)
+    if attempt_records or terminal_records or stop_records:
+        raise RuntimeError(
+            "campaign-retention proof found physical campaign records: "
+            f"attempts={sorted(set(attempt_records))}, "
+            f"terminals={sorted(set(terminal_records))}, "
+            f"stops={sorted(set(stop_records))}")
+    return {
+        "campaign_id": campaign_id,
+        "attempt_count": 0,
+        "terminal_count": 0,
+        "stop_count": 0,
+        "prior_stop_fields_all_null": True,
+        "same_campaign_rebinding_legal": True,
+    }
 
 
 def emit_attempt_facts(

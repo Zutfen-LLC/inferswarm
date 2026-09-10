@@ -201,6 +201,17 @@ class AttemptFactsTests(unittest.TestCase):
                 frozen_identity_verified_post_run=True)
 
 
+class CampaignRetentionTests(unittest.TestCase):
+    def test_current_campaign_has_zero_attempts_terminals_and_stops(self):
+        proof = camp.verify_campaign_retention_legality()
+        self.assertEqual(proof["campaign_id"], "armc-retry-afcdc4428f95d50c")
+        self.assertEqual(proof["attempt_count"], 0)
+        self.assertEqual(proof["terminal_count"], 0)
+        self.assertEqual(proof["stop_count"], 0)
+        self.assertTrue(proof["prior_stop_fields_all_null"])
+        self.assertTrue(proof["same_campaign_rebinding_legal"])
+
+
 class ExecutionFreezeTests(unittest.TestCase):
     def _driver(self, **overrides):
         driver = {
