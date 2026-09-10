@@ -1,0 +1,29 @@
+{
+  "acceptance": {
+    "methodology_acceptance_reference": "https://github.com/Zutfen-LLC/inferswarm/pull/132",
+    "methodology_accepted": true,
+    "methodology_accepted_at": "2026-09-10T00:00:50Z",
+    "methodology_terminal": "ISSUE117_ARM_C_RETRY_METHODOLOGY_READY"
+  },
+  "campaigns": {
+    "armc-retry-afcdc4428f95d50c": {
+      "campaign_lineage_root": "sha256:6596a054cc7a3b5ab52508ae009a4669f4abe2ed131db7baa1f698c231958e31",
+      "execution_freeze_identity": "0000000000000000000000000000000000000000000000000000000000000000",
+      "methodology_ready_identity": "808b77c45f0b4e5d52a202c1a931f43447ff93a6",
+      "physical_authorization_id": "phys-auth-5999233cb494888b",
+      "physical_authorization_issued_at": "2026-09-10T00:25:00Z",
+      "physical_retry_authorized": true,
+      "prior_stop_attempt_id": null,
+      "prior_stop_review_id": null,
+      "prior_stop_reviewed_at": null,
+      "prior_stopped_campaign_id": null
+    }
+  },
+  "execution_authorization": {
+    "authorization_reference": "https://github.com/Zutfen-LLC/inferswarm/issues/133",
+    "authorized_at": "2026-09-10T00:25:00Z",
+    "physical_retry_authorized": true,
+    "scope": "ISSUE117_ARM_C_RETRY"
+  },
+  "schema": "inferswarm.issue129.physical-campaign-authority/1"
+}
