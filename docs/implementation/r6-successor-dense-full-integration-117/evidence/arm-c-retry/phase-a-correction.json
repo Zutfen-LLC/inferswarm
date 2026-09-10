@@ -1,0 +1,163 @@
+{
+  "campaign_retention": {
+    "campaign_id": "armc-retry-afcdc4428f95d50c",
+    "mechanical_proof": {
+      "attempt_count": 0,
+      "prior_stop_fields_all_null": true,
+      "stop_count": 0,
+      "terminal_count": 0
+    },
+    "rationale": "The complete retry evidence namespace contains no record for a physical attempt, terminal, or STOP. The campaign authority has null prior-STOP fields. The Issue #129 doctrine requires a fresh campaign only after a mandatory STOP or an intermediate terminal. Issue #133 permits a new reviewed freeze before the first physical attempt. The same fresh campaign can therefore bind the corrected freeze.",
+    "retained": true
+  },
+  "corrections": [
+    {
+      "additional_defect_fixed": [
+        "The reviewed driver's frozen-rendered-fixture digest constant was a 63-hex-character transcription. The correction restored the exact 64-character digest retained in evidence/arm-c-retry/prompt-fixture.json."
+      ],
+      "campaign_retention_at_correction": {
+        "campaign_id": "armc-retry-afcdc4428f95d50c",
+        "rationale": "No physical attempt, terminal, or STOP existed. The same fresh campaign therefore rebound the first corrected freeze before physical execution.",
+        "rebound_execution_freeze_identity": "9face9f3b72913ce87543afe9c33ff4a969dd1c706c835a52a3834cd29271e5e",
+        "retained": true
+      },
+      "code_commit": "b78d71f3d7f97d1347d05482b1d3a3a122b3485f",
+      "corrected_direct_driver": {
+        "file_sha256": "7b4b5c3d38c872b9e4e53f88849c6f10c104bfe39ee7ccb2ca6eb8ea6523bec8",
+        "path": "scripts/issue133_arm_c_retry_direct.py",
+        "repository_sha": "b78d71f3d7f97d1347d05482b1d3a3a122b3485f"
+      },
+      "findings_fixed": [
+        "The accepted-history check became a pre-execution ancestor gate against refs/remotes/origin/main.",
+        "The physical authority became bound to the canonical execution-freeze bytes.",
+        "The static freeze removed pre-authored post-run observations.",
+        "The direct comparator became fenced to the authorized plan, chain plan, participant identity, and environment before realization."
+      ],
+      "freeze": {
+        "identity": "9face9f3b72913ce87543afe9c33ff4a969dd1c706c835a52a3834cd29271e5e",
+        "ordering": [
+          "The corrected direct driver was implemented and tested with CPU-only tests.",
+          "The corrected direct driver was committed at b78d71f3d7f97d1347d05482b1d3a3a122b3485f.",
+          "The freeze was regenerated from that commit and the exact corrected file SHA-256.",
+          "The canonical execution-freeze identity was computed.",
+          "The physical-campaign authority rebound the regenerated freeze.",
+          "The canonical MANIFEST and producer-hash records were regenerated."
+        ],
+        "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/execution-freeze.json",
+        "schema": "inferswarm.issue133.execution-freeze/2",
+        "superseded_identity": "177e83919d2668f9b4e98f406863884a6163a415258f2cd76d5855a8d4f7378b"
+      },
+      "review_id": "5161630985",
+      "status": "SUPERSEDED_BEFORE_PHYSICAL_EXECUTION"
+    },
+    {
+      "code_commits": [
+        "b628da6bd58bee57799e1362d912abc3663a1ef7",
+        "24b05e6da8adfd25639948f0d261c4c4d0685ea4",
+        "ff51098e94d80e2c13b5dccbdc90e998127b7296"
+      ],
+      "corrected_direct_driver": {
+        "file_sha256": "eae4899c690b5ab1feff73f559d63a96fce2ea835e9321e751cf4e301a129151",
+        "path": "scripts/issue133_arm_c_retry_direct.py",
+        "repository_sha": "ff51098e94d80e2c13b5dccbdc90e998127b7296"
+      },
+      "dependency_closure": {
+        "separately_deployed": {
+          "runtime_session_allocator_source": {
+            "expected_path": "/srv/inferswarm/state/arm-c-retry/scripts/r5b_epochs.py",
+            "file_sha256": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805",
+            "repository_sha": "781d6b688b29c149837f2ad217b4455dea269eeb"
+          }
+        },
+        "transitive_producer_worktree": "The driver rejects preloaded producer modules outside the clean exact worktree at 924cd22ea081f6d4ed471016faf01d427fc5b0d2. It puts the verified worktree roots first and checks each imported producer module against its expected tracked path before use.",
+        "untrusted_dynamic_methodology_module_eliminated": true
+      },
+      "findings_fixed": [
+        "The static freeze rejects pre_launch_verified, post_run_verified, and post_run_file_sha256 at every nesting level.",
+        "The direct driver validates the model-view path, last-stage host, last-stage port, tokenizer path, all deployed input paths, and all correctness-bearing input bytes before realization.",
+        "The direct driver validates the accepted environment by its Phase-A canonical digest. It does not import issue129_arm_c_retry_core.py at run time.",
+        "The freeze covers the complete separately deployed code dependency closure."
+      ],
+      "freeze": {
+        "identity": "d1a0ee53cfb19f6c4346493f699f43e092364eb4e834b7cf27456d5d79979678",
+        "ordering": [
+          "The direct-driver and retention-proof code and tests were committed before the freeze.",
+          "The final freeze was generated from commit ff51098e94d80e2c13b5dccbdc90e998127b7296 and the exact direct-driver SHA-256.",
+          "The canonical execution-freeze identity was computed.",
+          "The physical-campaign authority rebound the regenerated freeze.",
+          "The canonical MANIFEST and producer-hash records were regenerated."
+        ],
+        "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/execution-freeze.json",
+        "schema": "inferswarm.issue133.execution-freeze/3",
+        "superseded_identity": "dc4a370bee3c99b1fa7dc488dae0b3e2e95e9a831c2a798b8af534f0c365c3eb"
+      },
+      "intermediate_evidence_commit": "e23f5de52acf1b36fd127b9fae36bea69bb33b02",
+      "intermediate_freeze_identity": "dc4a370bee3c99b1fa7dc488dae0b3e2e95e9a831c2a798b8af534f0c365c3eb",
+      "review_id": "5162086233",
+      "status": "SUPERSEDED_BEFORE_PHYSICAL_EXECUTION"
+    },
+    {
+      "code_commit": "d59823e615cd3c8619beb537f88a4a1f71817e70",
+      "corrected_direct_driver": {
+        "file_sha256": "5f9ccb36975848142a70826e2f11aa45acceef5c802497bd2ade2f7e697f2c77",
+        "path": "scripts/issue133_arm_c_retry_direct.py",
+        "repository_sha": "d59823e615cd3c8619beb537f88a4a1f71817e70"
+      },
+      "findings_fixed": [
+        "The direct driver's tokenizer pre-realization verification now mechanically matches the accepted issue #129 verify_retained_tokenizer_assets Source semantics: the supplied pathname must equal the authorized deployment path exactly, the tokenizer directory is resolved with Path.resolve(), and validation rejects when the resolved directory equals /srv/models/, rejects when /srv/models/ is any parent of the resolved directory, rejects when the directory itself is a symlink, and rejects when it is not an existing directory.",
+        "The authorization decision depends on the resolved filesystem location, never a lexical string-prefix comparison against /srv/models/; symlinked tokenizer roots and lexical .. traversal cannot evade the Source boundary.",
+        "The exhaustive exact-five-file check, per-asset symlink rejection, exact per-asset SHA-256 pins, Python/package identity checks, and local_files_only/trust_remote_code loading are retained unchanged.",
+        "Behavioral negative controls prove zero realize_dense_chain and zero runtime.generate calls for every tokenizer rejection reachable through main(); an ordinary real directory outside /srv/models/ containing exactly the five pinned regular files passes the complete verification."
+      ],
+      "freeze": {
+        "identity": "5af9aee314fdd742cdb75d903d47e2f3c43296ee887e507ef335b8f614e7a19e",
+        "ordering": [
+          "The corrected direct driver and tests were implemented and committed before the freeze.",
+          "The freeze was regenerated from the exact code commit and the exact committed direct-driver SHA-256.",
+          "The canonical execution-freeze identity was computed.",
+          "The physical-campaign authority rebound the regenerated freeze.",
+          "The superseded d1a0ee53 identity was recorded in the freeze lineage as superseded before physical execution.",
+          "The canonical MANIFEST and producer-hash records were regenerated."
+        ],
+        "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/execution-freeze.json",
+        "schema": "inferswarm.issue133.execution-freeze/3",
+        "superseded_identity": "d1a0ee53cfb19f6c4346493f699f43e092364eb4e834b7cf27456d5d79979678"
+      },
+      "review_id": "5162428111",
+      "status": "CURRENT_PHASE_A_CORRECTION"
+    }
+  ],
+  "freeze_lineage": [
+    {
+      "identity": "177e83919d2668f9b4e98f406863884a6163a415258f2cd76d5855a8d4f7378b",
+      "status": "SUPERSEDED_BEFORE_PHYSICAL_EXECUTION"
+    },
+    {
+      "identity": "9face9f3b72913ce87543afe9c33ff4a969dd1c706c835a52a3834cd29271e5e",
+      "status": "SUPERSEDED_BY_REVIEW_5162086233_BEFORE_PHYSICAL_EXECUTION"
+    },
+    {
+      "identity": "dc4a370bee3c99b1fa7dc488dae0b3e2e95e9a831c2a798b8af534f0c365c3eb",
+      "status": "SUPERSEDED_BY_IMPORT_CLOSURE_AUDIT_BEFORE_PHYSICAL_EXECUTION"
+    },
+    {
+      "identity": "d1a0ee53cfb19f6c4346493f699f43e092364eb4e834b7cf27456d5d79979678",
+      "status": "SUPERSEDED_BY_REVIEW_5162428111_BEFORE_PHYSICAL_EXECUTION"
+    },
+    {
+      "identity": "5af9aee314fdd742cdb75d903d47e2f3c43296ee887e507ef335b8f614e7a19e",
+      "status": "CURRENT_PHASE_A_FREEZE"
+    }
+  ],
+  "non_claims": {
+    "gpu_execution_occurred": false,
+    "model_execution_occurred": false,
+    "participant_state_modified": false,
+    "phase_b_or_c_begun": false,
+    "physical_execution_occurred": false,
+    "post_run_verification_claimed": false,
+    "pre_launch_verification_claimed": false
+  },
+  "pr": "https://github.com/Zutfen-LLC/inferswarm/pull/134",
+  "schema": "inferswarm.issue133.arm-c-retry.phase-a-correction/2"
+}

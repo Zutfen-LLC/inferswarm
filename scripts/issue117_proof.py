@@ -94,6 +94,10 @@ PRODUCERS = [
     "scripts/issue117_arm_c_frozen_pins.py",
     "scripts/issue129_arm_c_retry_core.py",
     "tests/test_issue129_arm_c_retry.py",
+    "scripts/issue133_arm_c_retry_campaign.py",
+    "scripts/issue133_arm_c_retry_direct.py",
+    "tests/test_issue133_arm_c_retry_campaign.py",
+    "tests/test_issue133_arm_c_retry_direct.py",
     "scripts/issue117_arm_b_transport_audit_build.py",
     "scripts/issue117_parsers/__init__.py",
     "scripts/issue117_parsers/source_server_log.py",
@@ -344,6 +348,13 @@ COMMITTED_EVIDENCE_FILES = {
     "arm-c-retry/frozen-tokenizer/assets/tokenizer_config.json",
     "arm-c-retry/frozen-tokenizer/requirements.txt",
     "arm-c-retry/frozen-tokenizer/software-identity.json",
+    # issue #133 physical Arm-C retry campaign (2026-09-10): the reviewed
+    # physical-campaign authority document binding the fresh campaign and
+    # the execution-freeze record pinning the correctness-bearing driver
+    # bytes before the first launch
+    "arm-c-retry/physical-campaign-authority.json",
+    "arm-c-retry/execution-freeze.json",
+    "arm-c-retry/phase-a-correction.json",
 }
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the

@@ -1,0 +1,108 @@
+{
+  "accepted_main_merge": "781d6b688b29c149837f2ad217b4455dea269eeb",
+  "authorized_realization_inputs": {
+    "chain_plan": {
+      "digest": "sha256:a71a3129b8764d7108f51ed30fb230b42fcd69646a20bcd6806b6ee53b9bc51f",
+      "expected_path": "/srv/inferswarm/state/arm-c/chain-plan.json",
+      "file_sha256": "6d9a4859af5b686a321458fe50c86189244b7d0d41e2cbb0df28147552f709ab",
+      "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/chain-plan.json"
+    },
+    "environment": {
+      "canonical_sha256": "182b950e844c078fd0a9d91c321cd67097c81d3d4fd704a86618407b6399b274",
+      "derivation_authority": "scripts/issue129_arm_c_retry_core.py:_frozen_environment at methodology head 808b77c45f0b4e5d52a202c1a931f43447ff93a6",
+      "expected_path": "/srv/inferswarm/state/arm-c/environment.json",
+      "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/physical-preflight.json"
+    },
+    "integration_fixture": {
+      "expected_path": "/srv/inferswarm/state/arm-c-retry/integration-fixture.json",
+      "file_sha256": "b9c2bb7f7416b10dcee284aaf9b6c591644292550e1dced70a315c08eba120a3",
+      "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/integration-fixture.json"
+    },
+    "last_stage_host": {
+      "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-a/run-device-bindings.json",
+      "value": "10.0.0.219"
+    },
+    "last_stage_port": {
+      "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-a/run-device-bindings.json",
+      "value": 18485
+    },
+    "model_view_path": {
+      "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/chain-plan.json:model_path",
+      "value": "/srv/inferswarm/state/arm-c/model-view"
+    },
+    "prompt_fixture": {
+      "expected_path": "/srv/inferswarm/state/arm-c-retry/prompt-fixture.json",
+      "file_sha256": "e68dfaafe661f2f6cc5f5be3a51128c7e7abf0b5c81978cbdb45e9788fd88cd0",
+      "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/prompt-fixture.json"
+    },
+    "tokenizer_path": {
+      "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/methodology-run.json:tokenizer_source_contract",
+      "value": "/srv/inferswarm/tokenizers/gemma-r6-frozen"
+    }
+  },
+  "candidate": "dense.6171f32b4413",
+  "case_count": 24,
+  "checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+  "comparator_contract": {
+    "commit": "generated step zero only",
+    "generate_argument_names": [
+      "max_new_tokens",
+      "on_token",
+      "prompt_token_ids",
+      "session_id"
+    ],
+    "max_new_tokens": 2,
+    "replay_input": "frozen rendered prompt ids + already committed generated ids",
+    "runtime_session_allocation": "the exact frozen controller allocation derived and proven by issue #129 (verbatim AST extraction from the pinned r5b_epochs.py; multiplier 1000000; global call sequence from zero)",
+    "single_shot_forbidden": "single-shot max_new_tokens=8 is forbidden",
+    "speculative": "step one discarded before replay",
+    "stopping": "repeat until the frozen stopping condition is met (8 committed tokens per case unless the frozen stopping contract mechanically terminates earlier)"
+  },
+  "dependencies": {
+    "runtime_session_allocator_source": {
+      "expected_path": "/srv/inferswarm/state/arm-c-retry/scripts/r5b_epochs.py",
+      "file_sha256": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805",
+      "read_only": true,
+      "repository_sha": "781d6b688b29c149837f2ad217b4455dea269eeb"
+    }
+  },
+  "deployment_verification_requirements": {
+    "post_run_verification_required": true,
+    "pre_launch_verification_required": true,
+    "semantics": "pre_launch_verified / post_run_verified / post_run_file_sha256 are OBSERVATIONAL evidence produced around a physical attempt and evaluated with the frozen issue-#129 verify_deployment_identity() semantics after execution; this static pre-execution freeze only pins expected identities and may never claim a future post-run observation as an accomplished fact"
+  },
+  "drivers": {
+    "direct": {
+      "expected_path": "/srv/inferswarm/state/arm-c-retry/scripts/issue133_arm_c_retry_direct.py",
+      "file_sha256": "5f9ccb36975848142a70826e2f11aa45acceef5c802497bd2ade2f7e697f2c77",
+      "read_only": true,
+      "repository_sha": "d59823e615cd3c8619beb537f88a4a1f71817e70"
+    }
+  },
+  "execution_plan_digest": "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad",
+  "fixture_digest": "sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba36f2",
+  "frozen_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "geometry": "inferswarm01/gpu-0 [0,16)\ninferswarm01/gpu-1 [16,32)\ninferswarm03/gpu-0 [32,48)",
+  "issue": "https://github.com/Zutfen-LLC/inferswarm/issues/133",
+  "methodology_ready_head": "808b77c45f0b4e5d52a202c1a931f43447ff93a6",
+  "model": "google/gemma-4-12B-it",
+  "participant_identity": "sha256:ee845188d3328bdec29bf4b09d71f7ccda0701ff5758cb1d8a70460a40fecfb1",
+  "physical_scope": "ISSUE117_ARM_C_RETRY",
+  "qualification_subject": "sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f7f1d7994ffd",
+  "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+  "schema": "inferswarm.issue133.execution-freeze/3",
+  "tokenizer_asset_pins": {
+    "chat_template.jinja": "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4",
+    "config.json": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9",
+    "generation_config.json": "a8349d9bd64cc5841297fcb5002f0fdc4749c473c8f1b10ea337f9ce4ee7014e",
+    "tokenizer.json": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+    "tokenizer_config.json": "a62f4e85a47c0c136edaaa3a4f591fd6783717299a9def47e5ad03a49f6a5eb9"
+  },
+  "tokenizer_python": "3.12",
+  "tokenizer_software_identity": {
+    "Jinja2": "3.1.6",
+    "MarkupSafe": "3.0.3",
+    "tokenizers": "0.23.2",
+    "transformers": "5.17.0"
+  }
+}
