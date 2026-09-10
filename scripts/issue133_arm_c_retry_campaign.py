@@ -127,8 +127,7 @@ COMPARATOR_CONTRACT = {
     "commit": "generated step zero only",
     "speculative": "step one discarded before replay",
     "single_shot_forbidden": "single-shot max_new_tokens=8 is forbidden",
-    "generate_argument_names": tuple(
-        _frozen.GENERATE_ARGUMENT_NAMES),
+    "generate_argument_names": tuple(_frozen.GENERATE_ARGUMENT_NAMES),
     "stopping": (
         "repeat until the frozen stopping condition is met (8 committed "
         "tokens per case unless the frozen stopping contract mechanically "
@@ -156,8 +155,75 @@ FREEZE_DRIVER_STATIC_FIELDS = (
     "file_sha256",
     "expected_path",
     "read_only",
-    "pre_launch_verified",
 )
+OBSERVATIONAL_DEPLOYMENT_FIELDS = frozenset({
+    "pre_launch_verified", "post_run_verified", "post_run_file_sha256",
+})
+AUTHORIZED_REALIZATION_INPUTS = {
+    "environment": {
+        "canonical_sha256": (
+            "182b950e844c078fd0a9d91c321cd67097c81d3d4fd704a86618407b6399b274"),
+        "expected_path": "/srv/inferswarm/state/arm-c/environment.json",
+        "source_evidence": (
+            "docs/implementation/r6-successor-dense-full-integration-117/"
+            "evidence/physical-preflight.json"),
+        "derivation_authority": (
+            "scripts/issue129_arm_c_retry_core.py:_frozen_environment at "
+            "methodology head 808b77c45f0b4e5d52a202c1a931f43447ff93a6"),
+    },
+    "chain_plan": {
+        "digest": (
+            "sha256:a71a3129b8764d7108f51ed30fb230b42fcd69646a20bcd6806b6ee53b9bc51f"),
+        "file_sha256": (
+            "6d9a4859af5b686a321458fe50c86189244b7d0d41e2cbb0df28147552f709ab"),
+        "expected_path": "/srv/inferswarm/state/arm-c/chain-plan.json",
+        "source_evidence": (
+            "docs/implementation/r6-successor-dense-full-integration-117/"
+            "evidence/arm-c/chain-plan.json"),
+    },
+    "model_view_path": {
+        "value": "/srv/inferswarm/state/arm-c/model-view",
+        "source_evidence": (
+            "docs/implementation/r6-successor-dense-full-integration-117/"
+            "evidence/arm-c/chain-plan.json:model_path"),
+    },
+    "last_stage_host": {
+        "value": "10.0.0.219",
+        "source_evidence": (
+            "docs/implementation/r6-successor-dense-full-integration-117/"
+            "evidence/arm-a/run-device-bindings.json"),
+    },
+    "last_stage_port": {
+        "value": 18485,
+        "source_evidence": (
+            "docs/implementation/r6-successor-dense-full-integration-117/"
+            "evidence/arm-a/run-device-bindings.json"),
+    },
+    "prompt_fixture": {
+        "file_sha256": (
+            "e68dfaafe661f2f6cc5f5be3a51128c7e7abf0b5c81978cbdb45e9788fd88cd0"),
+        "expected_path": (
+            "/srv/inferswarm/state/arm-c-retry/prompt-fixture.json"),
+        "source_evidence": (
+            "docs/implementation/r6-successor-dense-full-integration-117/"
+            "evidence/arm-c-retry/prompt-fixture.json"),
+    },
+    "integration_fixture": {
+        "file_sha256": (
+            "b9c2bb7f7416b10dcee284aaf9b6c591644292550e1dced70a315c08eba120a3"),
+        "expected_path": (
+            "/srv/inferswarm/state/arm-c-retry/integration-fixture.json"),
+        "source_evidence": (
+            "docs/implementation/r6-successor-dense-full-integration-117/"
+            "evidence/integration-fixture.json"),
+    },
+    "tokenizer_path": {
+        "value": "/srv/inferswarm/tokenizers/gemma-r6-frozen",
+        "source_evidence": (
+            "docs/implementation/r6-successor-dense-full-integration-117/"
+            "evidence/arm-c-retry/methodology-run.json:tokenizer_source_contract"),
+    },
+}
 FREEZE_TOP_FIELDS = frozenset({
     "schema", "issue", "physical_scope", "methodology_ready_head",
     "accepted_main_merge", "frozen_producer", "model", "revision",
@@ -165,6 +231,7 @@ FREEZE_TOP_FIELDS = frozenset({
     "execution_plan_digest", "participant_identity", "fixture_digest",
     "case_count", "comparator_contract", "tokenizer_asset_pins",
     "tokenizer_software_identity", "tokenizer_python", "drivers",
+    "dependencies", "authorized_realization_inputs",
     "deployment_verification_requirements",
 })
 
@@ -416,15 +483,25 @@ def verify_freeze_static_shape(record: Mapping[str, Any]) -> None:
     closed: those facts cannot exist before a physical attempt."""
     if not isinstance(record, Mapping):
         raise RuntimeError("execution-freeze record is not an object")
-    # post-run observational claims are checked FIRST: a pre-run record
-    # may never masquerade as completed post-run verification, whatever
-    # else it carries
-    if "post_run_verified" in record or \
-            "post_run_file_sha256" in record:
+    def observational_fields(value: Any) -> set[str]:
+        if isinstance(value, Mapping):
+            found = set(value).intersection(OBSERVATIONAL_DEPLOYMENT_FIELDS)
+            for nested in value.values():
+                found.update(observational_fields(nested))
+            return found
+        if isinstance(value, (list, tuple)):
+            found: set[str] = set()
+            for nested in value:
+                found.update(observational_fields(nested))
+            return found
+        return set()
+
+    observed = sorted(observational_fields(record))
+    if observed:
         raise RuntimeError(
-            "static pre-execution freeze claims post-run evidence that "
-            "cannot exist before a physical attempt "
-            "(post_run_verified/post_run_file_sha256 at top level)")
+            "static pre-execution freeze carries observational deployment "
+            f"fields {observed}; these facts can exist only in per-attempt "
+            "evidence")
     if record.get("schema") != FREEZE_SCHEMA:
         raise RuntimeError(
             f"execution-freeze schema drift: expected {FREEZE_SCHEMA}, "
@@ -442,24 +519,20 @@ def verify_freeze_static_shape(record: Mapping[str, Any]) -> None:
         raise RuntimeError(
             "execution-freeze record must REQUIRE pre-launch and post-run "
             "deployment verification")
-    if "post_run_verified" in record or \
-            "post_run_file_sha256" in record:
-        raise RuntimeError(
-            "static pre-execution freeze claims post-run evidence that "
-            "cannot exist before a physical attempt "
-            "(post_run_verified/post_run_file_sha256 at top level)")
-    drivers = record["drivers"]
-    if not isinstance(drivers, Mapping) or not drivers:
-        raise RuntimeError("execution-freeze record carries no drivers")
-    for name, driver in drivers.items():
-        if not isinstance(driver, Mapping):
-            raise RuntimeError(f"driver {name} entry is not an object")
-        extra = sorted(set(driver) - set(FREEZE_DRIVER_STATIC_FIELDS))
-        if extra:
+    for category in ("drivers", "dependencies"):
+        entries = record[category]
+        if not isinstance(entries, Mapping) or not entries:
             raise RuntimeError(
-                f"driver {name} carries non-static fields {extra}; a "
-                "pre-execution freeze may not pre-author post-run "
-                "verification observations")
+                f"execution-freeze record carries no {category}")
+        for name, entry in entries.items():
+            if not isinstance(entry, Mapping):
+                raise RuntimeError(
+                    f"{category} entry {name} is not an object")
+            verdict = verify_static_deployment_identity(entry)
+            if not verdict["ok"]:
+                raise RuntimeError(
+                    f"{category} entry {name} fails the static identity "
+                    f"contract: {verdict['reason']}")
 
 
 def verify_execution_freeze_binding(
@@ -517,14 +590,14 @@ def verify_execution_freeze_binding(
 # ---------------------------------------------------------------------------
 
 def build_execution_freeze_record(
-        drivers: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+        drivers: Mapping[str, Mapping[str, Any]],
+        dependencies: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
     """Build the canonical STATIC execution-freeze record binding every
     correctness-bearing driver's frozen identity (repository SHA + file
-    sha256 + expected absolute deployed path + read-only deployment +
-    pre-launch verification), plus the issue-133 identity block and the
-    REQUIREMENT that pre-launch and post-run deployment verification
-    occur. The record's own sha256 (canonical JSON) becomes the
-    campaign's `execution_freeze_identity`.
+    sha256 + expected absolute deployed path + read-only requirement), plus
+    the issue-133 identity block and the REQUIREMENT that pre-launch and
+    post-run deployment verification occur. The record's own sha256 becomes
+    the campaign's `execution_freeze_identity`.
 
     Deliberately does NOT contain `post_run_verified` or
     `post_run_file_sha256`: no physical execution has occurred, so those
@@ -534,12 +607,16 @@ def build_execution_freeze_record(
     `verify_deployment_identity()` semantics. Static drivers here pass
     the STATIC subset of that contract only.
     """
-    for name, driver in drivers.items():
-        verdict = verify_static_deployment_identity(driver)
-        if not verdict["ok"]:
-            raise ValueError(
-                f"driver {name} fails the static deployment-identity "
-                f"contract: {verdict['reason']}")
+    for category, entries in (("driver", drivers),
+                              ("dependency", dependencies)):
+        if not entries:
+            raise ValueError(f"execution freeze has no {category} entries")
+        for name, entry in entries.items():
+            verdict = verify_static_deployment_identity(entry)
+            if not verdict["ok"]:
+                raise ValueError(
+                    f"{category} {name} fails the static deployment-identity "
+                    f"contract: {verdict['reason']}")
     record = {
         "schema": FREEZE_SCHEMA,
         "issue": ISSUE133["issue_reference"],
@@ -561,6 +638,7 @@ def build_execution_freeze_record(
         "tokenizer_asset_pins": dict(TOKENIZER_ASSET_PINS),
         "tokenizer_software_identity": dict(TOKENIZER_SOFTWARE_IDENTITY),
         "tokenizer_python": TOKENIZER_PYTHON,
+        "authorized_realization_inputs": dict(AUTHORIZED_REALIZATION_INPUTS),
         "deployment_verification_requirements": {
             "pre_launch_verification_required": True,
             "post_run_verification_required": True,
@@ -574,6 +652,10 @@ def build_execution_freeze_record(
                 "post-run observation as an accomplished fact"),
         },
         "drivers": {name: dict(driver) for name, driver in drivers.items()},
+        "dependencies": {
+            name: dict(dependency)
+            for name, dependency in dependencies.items()
+        },
     }
     return record
 
@@ -585,9 +667,11 @@ def verify_static_deployment_identity(
     contract — including `post_run_verified` and byte-level post-run
     equality — is applied by Phase B/C to actual observations after an
     attempt, through `_frozen.verify_deployment_identity` verbatim."""
-    missing = [f for f in FREEZE_DRIVER_STATIC_FIELDS if f not in record]
-    if missing:
-        return {"ok": False, "reason": f"missing fields {missing}"}
+    missing = sorted(set(FREEZE_DRIVER_STATIC_FIELDS) - set(record))
+    extra = sorted(set(record) - set(FREEZE_DRIVER_STATIC_FIELDS))
+    if missing or extra:
+        return {"ok": False,
+                "reason": f"field mismatch missing={missing}, extra={extra}"}
 
     def _hex(value, length):
         return (isinstance(value, str) and len(value) == length
@@ -602,9 +686,6 @@ def verify_static_deployment_identity(
         return {"ok": False, "reason": "expected_path is not absolute"}
     if record["read_only"] is not True:
         return {"ok": False, "reason": "deployment is mutable (not read-only)"}
-    if record["pre_launch_verified"] is not True:
-        return {"ok": False,
-                "reason": "pre-launch verification absent"}
     return {"ok": True}
 
 

@@ -32,7 +32,9 @@ import hashlib
 import json
 import shutil
 import sys
+import tempfile
 import unittest
+import unittest.mock as mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,6 +42,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import issue133_arm_c_retry_direct as drv  # noqa: E402
 import issue129_arm_c_retry_core as core  # noqa: E402
+import issue133_arm_c_retry_campaign as camp  # noqa: E402
 
 PINNED = (ROOT / "docs/implementation/r6-successor-dense-full-integration-117"
           / "evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken"
@@ -215,6 +218,34 @@ class PlanAuthorizationFenceTests(unittest.TestCase):
     def test_derived_environment_passes_the_environment_fence(self):
         drv.verify_environment_authorization(_accepted_environment())
 
+    def test_environment_identity_is_derived_from_accepted_evidence(self):
+        actual = hashlib.sha256(
+            drv.canonical_bytes(_accepted_environment())).hexdigest()
+        self.assertEqual(
+            actual, drv.AUTHORIZED_ENVIRONMENT_CANONICAL_SHA256)
+
+    def test_direct_driver_does_not_load_issue129_core_at_runtime(self):
+        self.assertNotIn("_load_methodology_core", DRIVER_SOURCE)
+        self.assertNotIn("issue129_arm_c_retry_core.py", DRIVER_SOURCE)
+
+    def test_campaign_and_driver_realization_inputs_match(self):
+        frozen = camp.AUTHORIZED_REALIZATION_INPUTS
+        self.assertEqual(
+            drv.AUTHORIZED_ENVIRONMENT_CANONICAL_SHA256,
+            frozen["environment"]["canonical_sha256"])
+        self.assertEqual(
+            drv.AUTHORIZED_MODEL_VIEW_PATH,
+            frozen["model_view_path"]["value"])
+        self.assertEqual(
+            drv.AUTHORIZED_LAST_STAGE_HOST,
+            frozen["last_stage_host"]["value"])
+        self.assertEqual(
+            drv.AUTHORIZED_LAST_STAGE_PORT,
+            frozen["last_stage_port"]["value"])
+        self.assertEqual(
+            drv.AUTHORIZED_TOKENIZER_PATH,
+            frozen["tokenizer_path"]["value"])
+
     def test_control_substituted_environment_rejected_before_realization(self):
         env = _accepted_environment()
         env["node_b"]["gpus"][0]["uuid"] = "GPU-substituted-0000"
@@ -277,8 +308,12 @@ class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
     model/runtime execution: neither realize_dense_chain nor
     runtime.generate is ever reached."""
 
-    def _run_main_with_fences(self, tmp: Path, *, chain_plan: dict,
-                              environment: dict) -> dict:
+    def _run_main_with_fences(
+            self, tmp: Path, *, chain_plan: dict, environment: dict,
+            overrides: dict | None = None,
+            built_plan_digest: str | None = None,
+            allow_realization: bool = False,
+            permissive_methodology_core: bool = False) -> dict:
         """Invoke the REAL main(argv) flow up to (and including) the
         authorization fences with fake plan files; count any attempt to
         touch realization. Returns counters."""
@@ -299,18 +334,30 @@ class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
             ROOT / "docs/implementation/r6-successor-dense-full"
             "-integration-117/evidence/integration-fixture.json",
             corpus_path)
+        output_root = tmp / "attempts"
+        tokenizer_path = tmp / "tokenizer"
+        argv_values = {
+            "repo": str(tmp / "fakewt"),
+            "plan": str(plan_path),
+            "environment": str(env_path),
+            "view-dir": drv.AUTHORIZED_MODEL_VIEW_PATH,
+            "last-stage-host": drv.AUTHORIZED_LAST_STAGE_HOST,
+            "last-stage-port": str(drv.AUTHORIZED_LAST_STAGE_PORT),
+            "fixture": str(fixture_path),
+            "corpus": str(corpus_path),
+            "pinned-r5b-epochs": str(PINNED),
+            "tokenizer": str(tokenizer_path),
+            "out-dir": str(output_root / "fake" / "direct"),
+            "attempt-id": "fake",
+        }
+        argv_values.update(overrides or {})
         argv = [
             "--repo", str(tmp / "fakewt"),
-            "--plan", str(plan_path),
-            "--environment", str(env_path),
-            "--fixture", str(fixture_path),
-            "--corpus", str(corpus_path),
-            "--pinned-r5b-epochs", str(PINNED),
-            "--tokenizer", str(tmp / "missing-tokenizer"),
-            "--out-dir", str(tmp / "out"),
-            "--attempt-id", "fake",
         ]
-        import unittest.mock as mock
+        for name, value in argv_values.items():
+            if name == "repo":
+                continue
+            argv.extend((f"--{name}", str(value)))
         # a render-faithful fake tokenizer: reproduces each case's frozen
         # rendered ids, so the 24/24 render-equality gate passes and the
         # flow proceeds to the plan/environment fences
@@ -335,16 +382,38 @@ class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
             def encode(self, text, *, add_special_tokens=False):
                 return rendered_by_text[text]
 
+            def decode(self, token_ids):
+                return " ".join(str(token) for token in token_ids)
+
         fake_transformers = type(sys)("transformers")
         fake_transformers.AutoTokenizer = _FakeTok
         fake_chain_runtime = type(sys)(
             "benchmarks.inferswarm_r6.chain_runtime")
 
+        class _FakeRuntime:
+            def generate(self, *, session_id, prompt_token_ids,
+                         max_new_tokens, on_token):
+                counters["generate"] += 1
+                on_token(0, 7, None)
+                return {
+                    "generated_token_ids": [7, 8],
+                    "plan_digest": drv.AUTHORIZED_EXECUTION_PLAN_DIGEST,
+                }
+
+            @staticmethod
+            def report():
+                return {}
+
+            @staticmethod
+            def close():
+                return None
+
         def _realize(*args, **kwargs):
             counters["realize"] += 1
-            raise AssertionError(
-                "realize_dense_chain reached despite failed "
-                "authorization")
+            if allow_realization:
+                return _FakeRuntime()
+            raise AssertionError("realize_dense_chain reached despite failed "
+                                 "authorization")
 
         fake_chain_runtime.realize_dense_chain = _realize
 
@@ -358,12 +427,45 @@ class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
                 return ""
             raise AssertionError(f"unexpected subprocess call: {cmd}")
 
-        with mock.patch.dict(sys.modules, {
+        authorized_paths = {
+            "plan": str(plan_path),
+            "environment": str(env_path),
+            "fixture": str(fixture_path),
+            "corpus": str(corpus_path),
+            "pinned_r5b_epochs": str(PINNED),
+        }
+        authorized_hashes = {
+            "plan": hashlib.sha256(plan_path.read_bytes()).hexdigest(),
+            "fixture": hashlib.sha256(fixture_path.read_bytes()).hexdigest(),
+            "corpus": hashlib.sha256(corpus_path.read_bytes()).hexdigest(),
+            "pinned_r5b_epochs": hashlib.sha256(PINNED.read_bytes()).hexdigest(),
+        }
+        fake_core = type(sys)("issue129_arm_c_retry_core")
+        fake_core._frozen_environment = lambda *_: environment
+        fake_core._repo_override = lambda: tmp
+        modules = {
                 "transformers": fake_transformers,
                 "benchmarks.inferswarm_r6.chain_runtime":
-                    fake_chain_runtime}), \
+                    fake_chain_runtime,
+        }
+        if permissive_methodology_core:
+            modules["issue129_arm_c_retry_core"] = fake_core
+        with mock.patch.dict(sys.modules, modules), \
                 mock.patch.object(drv.subprocess, "check_output",
-                                  side_effect=_fake_check_output):
+                                  side_effect=_fake_check_output), \
+                mock.patch.object(drv, "AUTHORIZED_INPUT_PATHS",
+                                  authorized_paths), \
+                mock.patch.object(drv, "AUTHORIZED_INPUT_FILE_SHA256",
+                                  authorized_hashes), \
+                mock.patch.object(drv, "AUTHORIZED_TOKENIZER_PATH",
+                                  str(tokenizer_path)), \
+                mock.patch.object(drv, "AUTHORIZED_OUTPUT_ROOT",
+                                  str(output_root)), \
+                mock.patch.object(drv, "verify_tokenizer_authorization"), \
+                mock.patch.object(
+                    drv, "build_execution_plan", return_value={
+                        "digest": built_plan_digest
+                        or drv.AUTHORIZED_EXECUTION_PLAN_DIGEST}):
             try:
                 drv.main(argv)
             except SystemExit as exit_error:
@@ -371,7 +473,6 @@ class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
         return counters
 
     def test_substituted_environment_never_reaches_realization(self):
-        import tempfile
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
             env = _accepted_environment()
@@ -379,10 +480,10 @@ class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
             counters = self._run_main_with_fences(
                 tmp, chain_plan=_accepted_chain_plan(), environment=env)
             self.assertEqual(counters["realize"], 0)
+            self.assertEqual(counters["generate"], 0)
             self.assertIn("environment", counters.get("exit", ""))
 
     def test_substituted_chain_plan_never_reaches_realization(self):
-        import tempfile
         with tempfile.TemporaryDirectory() as tmp_name:
             tmp = Path(tmp_name)
             plan = _accepted_chain_plan()
@@ -400,9 +501,80 @@ class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
                 tmp, chain_plan=plan,
                 environment=_accepted_environment())
             self.assertEqual(counters["realize"], 0)
+            self.assertEqual(counters["generate"], 0)
             self.assertIn(
                 "accepted Arm-B participant identity",
                 counters.get("exit", ""))
+
+    def test_changed_model_view_rejects_before_realization(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            counters = self._run_main_with_fences(
+                Path(tmp_name), chain_plan=_accepted_chain_plan(),
+                environment=_accepted_environment(),
+                overrides={"view-dir": "/tmp/substituted-model-view"})
+            self.assertEqual(counters["realize"], 0)
+            self.assertEqual(counters["generate"], 0)
+            self.assertIn("--view-dir", counters.get("exit", ""))
+
+    def test_changed_last_stage_host_rejects_before_realization(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            counters = self._run_main_with_fences(
+                Path(tmp_name), chain_plan=_accepted_chain_plan(),
+                environment=_accepted_environment(),
+                overrides={"last-stage-host": "10.0.0.218"})
+            self.assertEqual(counters["realize"], 0)
+            self.assertEqual(counters["generate"], 0)
+            self.assertIn("--last-stage-host", counters.get("exit", ""))
+
+    def test_changed_last_stage_port_rejects_before_realization(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            counters = self._run_main_with_fences(
+                Path(tmp_name), chain_plan=_accepted_chain_plan(),
+                environment=_accepted_environment(),
+                overrides={"last-stage-port": "18486"})
+            self.assertEqual(counters["realize"], 0)
+            self.assertEqual(counters["generate"], 0)
+            self.assertIn("--last-stage-port", counters.get("exit", ""))
+
+    def test_changed_tokenizer_path_rejects_before_realization(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            counters = self._run_main_with_fences(
+                Path(tmp_name), chain_plan=_accepted_chain_plan(),
+                environment=_accepted_environment(),
+                overrides={"tokenizer": "/tmp/substituted-tokenizer"})
+            self.assertEqual(counters["realize"], 0)
+            self.assertEqual(counters["generate"], 0)
+            self.assertIn("--tokenizer", counters.get("exit", ""))
+
+    def test_changed_environment_authority_module_cannot_authorize_input(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            environment = _accepted_environment()
+            environment["node_b"]["gpus"][0]["uuid"] = "GPU-substituted"
+            counters = self._run_main_with_fences(
+                Path(tmp_name), chain_plan=_accepted_chain_plan(),
+                environment=environment, permissive_methodology_core=True)
+            self.assertEqual(counters["realize"], 0)
+            self.assertEqual(counters["generate"], 0)
+            self.assertIn("environment", counters.get("exit", ""))
+
+    def test_unauthorized_locally_built_plan_rejects_before_realization(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            counters = self._run_main_with_fences(
+                Path(tmp_name), chain_plan=_accepted_chain_plan(),
+                environment=_accepted_environment(),
+                built_plan_digest="sha256:" + "9" * 64)
+            self.assertEqual(counters["realize"], 0)
+            self.assertEqual(counters["generate"], 0)
+            self.assertIn("locally built execution plan", counters.get("exit", ""))
+
+    def test_accepted_inputs_reach_realization_and_generation(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            counters = self._run_main_with_fences(
+                Path(tmp_name), chain_plan=_accepted_chain_plan(),
+                environment=_accepted_environment(), allow_realization=True)
+            self.assertEqual(counters["realize"], 1)
+            self.assertEqual(counters["generate"], 24 * 8)
+            self.assertNotIn("exit", counters)
 
 
 if __name__ == "__main__":

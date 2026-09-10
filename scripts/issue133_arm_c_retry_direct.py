@@ -48,7 +48,9 @@ from __future__ import annotations
 import argparse
 import ast
 import hashlib
+import importlib.metadata
 import json
+import re
 import subprocess
 import sys
 import time
@@ -75,6 +77,54 @@ AUTHORIZED_CHAIN_PLAN_DIGEST = (
     "sha256:a71a3129b8764d7108f51ed30fb230b42fcd69646a20bcd6806b6ee53b9bc51f")
 AUTHORIZED_PARTICIPANT_IDENTITY = (
     "sha256:ee845188d3328bdec29bf4b09d71f7ccda0701ff5758cb1d8a70460a40fecfb1")
+
+#: The accepted environment is derived by the Issue #129 methodology from
+#: ``evidence/physical-preflight.json``. Phase A retains its canonical digest
+#: here. The direct driver does not load or execute a mutable methodology
+#: module to decide which environment is authorized.
+AUTHORIZED_ENVIRONMENT_CANONICAL_SHA256 = (
+    "182b950e844c078fd0a9d91c321cd67097c81d3d4fd704a86618407b6399b274")
+
+#: Every realization-affecting location and endpoint is fixed before the
+#: authorization fence. The source records are retained accepted evidence.
+AUTHORIZED_MODEL_VIEW_PATH = "/srv/inferswarm/state/arm-c/model-view"
+AUTHORIZED_LAST_STAGE_HOST = "10.0.0.219"
+AUTHORIZED_LAST_STAGE_PORT = 18485
+AUTHORIZED_TOKENIZER_PATH = "/srv/inferswarm/tokenizers/gemma-r6-frozen"
+AUTHORIZED_INPUT_PATHS = {
+    "plan": "/srv/inferswarm/state/arm-c/chain-plan.json",
+    "environment": "/srv/inferswarm/state/arm-c/environment.json",
+    "fixture": "/srv/inferswarm/state/arm-c-retry/prompt-fixture.json",
+    "corpus": "/srv/inferswarm/state/arm-c-retry/integration-fixture.json",
+    "pinned_r5b_epochs": (
+        "/srv/inferswarm/state/arm-c-retry/scripts/r5b_epochs.py"),
+}
+AUTHORIZED_INPUT_FILE_SHA256 = {
+    "plan": "6d9a4859af5b686a321458fe50c86189244b7d0d41e2cbb0df28147552f709ab",
+    "fixture": "e68dfaafe661f2f6cc5f5be3a51128c7e7abf0b5c81978cbdb45e9788fd88cd0",
+    "corpus": "b9c2bb7f7416b10dcee284aaf9b6c591644292550e1dced70a315c08eba120a3",
+    "pinned_r5b_epochs": R5B_EPOCHS_SHA256,
+}
+AUTHORIZED_OUTPUT_ROOT = "/srv/inferswarm/state/arm-c-retry/attempts"
+TOKENIZER_ASSET_PINS = {
+    "chat_template.jinja": (
+        "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4"),
+    "config.json": (
+        "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9"),
+    "generation_config.json": (
+        "a8349d9bd64cc5841297fcb5002f0fdc4749c473c8f1b10ea337f9ce4ee7014e"),
+    "tokenizer.json": (
+        "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f"),
+    "tokenizer_config.json": (
+        "a62f4e85a47c0c136edaaa3a4f591fd6783717299a9def47e5ad03a49f6a5eb9"),
+}
+TOKENIZER_SOFTWARE_IDENTITY = {
+    "transformers": "5.17.0",
+    "tokenizers": "0.23.2",
+    "Jinja2": "3.1.6",
+    "MarkupSafe": "3.0.3",
+}
+TOKENIZER_PYTHON = "3.12"
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -222,53 +272,110 @@ def build_execution_plan(env: dict, chain_plan: dict) -> dict:
     )
 
 
-def _load_methodology_core():
-    """Load the frozen #129 methodology core (fail-closed). On the node it
-    is deployed read-only next to this driver (same directory); in a
-    repository checkout it lives in scripts/. The environment
-    authorization derives the accepted environment freeze from retained
-    accepted evidence through THIS module verbatim — never a hand-copy."""
-    candidates = [
-        Path(__file__).resolve().parent / "issue129_arm_c_retry_core.py",
-        Path(__file__).resolve().parents[1] / "scripts"
-        / "issue129_arm_c_retry_core.py",
-    ]
-    for path in candidates:
-        if path.is_file():
-            import importlib.util
-            spec = importlib.util.spec_from_file_location(
-                "_issue129_core_for_authorization", path)
-            if spec is None or spec.loader is None:
-                raise SystemExit(
-                    "ARM_C_RETRY_DIRECT_FAIL: cannot load the frozen #129 "
-                    f"methodology core at {path}; failing closed")
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            return module
-    raise SystemExit(
-        "ARM_C_RETRY_DIRECT_FAIL: the frozen #129 methodology core "
-        "(issue129_arm_c_retry_core.py) is required for environment "
-        "authorization and is neither deployed next to this driver nor "
-        "present in a repository scripts/ directory; failing closed "
-        "before realization")
-
-
 def verify_environment_authorization(environment: dict) -> None:
-    """Bind the execution-plan-producing environment input to the accepted
-    Arm-C environment freeze, reconstructed from retained accepted
-    evidence (physical-preflight compute-unit identities) by the frozen
-    #129 methodology core verbatim. Any drift (a substituted GPU, node,
-    link, or producer commit — anything that could change the built plan
-    or the physical substrate) fails closed BEFORE realization."""
-    core = _load_methodology_core()
-    expected = core._frozen_environment(core._repo_override())
-    if canonical_bytes(environment) != canonical_bytes(expected):
+    """Bind the environment to its Phase-A canonical identity.
+
+    Issue #129 derived this identity from retained accepted physical-preflight
+    evidence. The direct driver compares the canonical bytes to that frozen
+    identity. It does not import another Python module to decide the expected
+    environment at run time.
+    """
+    actual = sha256_bytes(canonical_bytes(environment))
+    if actual != AUTHORIZED_ENVIRONMENT_CANONICAL_SHA256:
         raise SystemExit(
             "ARM_C_RETRY_DIRECT_FAIL: --environment is not the accepted "
-            "Arm-C environment freeze (canonical-JSON inequality against "
-            "the identity derived from retained accepted physical-"
-            "preflight evidence); substituted environment inputs are "
-            "rejected before realization")
+            "Arm-C environment freeze (canonical sha256 "
+            f"{actual} != {AUTHORIZED_ENVIRONMENT_CANONICAL_SHA256}); "
+            "substituted environment inputs are rejected before realization")
+
+
+def verify_realization_input_authorization(args: argparse.Namespace) -> None:
+    """Reject every mutable realization input before realization."""
+    observed = {
+        "view-dir": args.view_dir,
+        "last-stage-host": args.last_stage_host,
+        "last-stage-port": args.last_stage_port,
+        "tokenizer": args.tokenizer,
+    }
+    expected = {
+        "view-dir": AUTHORIZED_MODEL_VIEW_PATH,
+        "last-stage-host": AUTHORIZED_LAST_STAGE_HOST,
+        "last-stage-port": AUTHORIZED_LAST_STAGE_PORT,
+        "tokenizer": AUTHORIZED_TOKENIZER_PATH,
+    }
+    for name in expected:
+        if observed[name] != expected[name]:
+            raise SystemExit(
+                f"ARM_C_RETRY_DIRECT_FAIL: --{name} {observed[name]!r} is "
+                f"not the authorized value {expected[name]!r}; rejected "
+                "before realization")
+    for name, authorized_path in AUTHORIZED_INPUT_PATHS.items():
+        supplied = getattr(args, name)
+        if supplied != authorized_path:
+            option = name.replace("_", "-")
+            raise SystemExit(
+                f"ARM_C_RETRY_DIRECT_FAIL: --{option} {supplied!r} is not "
+                f"the authorized deployment path {authorized_path!r}; "
+                "rejected before realization")
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", args.attempt_id):
+        raise SystemExit(
+            "ARM_C_RETRY_DIRECT_FAIL: --attempt-id has an unauthorized shape")
+    expected_out = str(
+        Path(AUTHORIZED_OUTPUT_ROOT) / args.attempt_id / "direct")
+    if args.out_dir != expected_out:
+        raise SystemExit(
+            f"ARM_C_RETRY_DIRECT_FAIL: --out-dir {args.out_dir!r} is not "
+            f"the attempt-bound path {expected_out!r}; rejected before "
+            "realization")
+
+
+def verify_pinned_file(path: str, expected_sha256: str, label: str) -> bytes:
+    """Load one separately deployed input by exact byte identity."""
+    raw = Path(path).read_bytes()
+    actual = sha256_bytes(raw)
+    if actual != expected_sha256:
+        raise SystemExit(
+            f"ARM_C_RETRY_DIRECT_FAIL: {label} sha256 drift: {actual} != "
+            f"{expected_sha256}")
+    return raw
+
+
+def verify_tokenizer_authorization(path: str) -> None:
+    """Verify the fixed tokenizer directory, exact assets, and software."""
+    asset_dir = Path(path)
+    try:
+        entries = {entry.name: entry for entry in asset_dir.iterdir()}
+    except OSError as error:
+        raise SystemExit(
+            f"ARM_C_RETRY_DIRECT_FAIL: cannot inspect tokenizer directory: "
+            f"{error}") from error
+    if set(entries) != set(TOKENIZER_ASSET_PINS):
+        raise SystemExit(
+            "ARM_C_RETRY_DIRECT_FAIL: tokenizer directory is not exhaustive; "
+            f"entries={sorted(entries)}")
+    for name, expected in TOKENIZER_ASSET_PINS.items():
+        entry = entries[name]
+        if entry.is_symlink() or not entry.is_file():
+            raise SystemExit(
+                f"ARM_C_RETRY_DIRECT_FAIL: tokenizer asset {name} is not an "
+                "immutable regular-file deployment")
+        verify_pinned_file(str(entry), expected, f"tokenizer asset {name}")
+    python_version = f"{sys.version_info.major}.{sys.version_info.minor}"
+    if python_version != TOKENIZER_PYTHON:
+        raise SystemExit(
+            f"ARM_C_RETRY_DIRECT_FAIL: tokenizer Python {python_version} != "
+            f"{TOKENIZER_PYTHON}")
+    for package, expected in TOKENIZER_SOFTWARE_IDENTITY.items():
+        try:
+            actual = importlib.metadata.version(package)
+        except importlib.metadata.PackageNotFoundError as error:
+            raise SystemExit(
+                f"ARM_C_RETRY_DIRECT_FAIL: tokenizer package {package} is "
+                "not installed") from error
+        if actual != expected:
+            raise SystemExit(
+                f"ARM_C_RETRY_DIRECT_FAIL: tokenizer package {package} "
+                f"version {actual} != {expected}")
 
 
 def verify_chain_plan_authorization(chain_plan: dict) -> None:
@@ -344,14 +451,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", default=None,
                         help="FreeToken worktree root (default: inferred)")
-    parser.add_argument("--plan", required=True,
-                        default="/srv/inferswarm/state/arm-c/chain-plan.json")
-    parser.add_argument("--environment", required=True,
-                        default="/srv/inferswarm/state/arm-c/environment.json")
+    parser.add_argument("--plan", required=True)
+    parser.add_argument("--environment", required=True)
     parser.add_argument("--view-dir",
-                        default="/srv/inferswarm/state/arm-c/model-view")
-    parser.add_argument("--last-stage-host", default="10.0.0.219")
-    parser.add_argument("--last-stage-port", type=int, default=18485)
+                        default=AUTHORIZED_MODEL_VIEW_PATH)
+    parser.add_argument("--last-stage-host",
+                        default=AUTHORIZED_LAST_STAGE_HOST)
+    parser.add_argument("--last-stage-port", type=int,
+                        default=AUTHORIZED_LAST_STAGE_PORT)
     parser.add_argument("--fixture", required=True,
                         help="the #129 frozen rendered prompt-token fixture")
     parser.add_argument("--corpus", required=True,
@@ -379,14 +486,21 @@ def main(argv: list[str] | None = None) -> int:
             f"ARM_C_RETRY_DIRECT_FAIL: producer {running} != "
             f"{FREETOKEN_PRODUCER}")
 
-    # the frozen allocator derivation (fail-closed on byte drift)
-    pinned_source = Path(args.pinned_r5b_epochs).read_text()
-    if sha256_bytes(pinned_source.encode()) != R5B_EPOCHS_SHA256:
-        raise SystemExit(
-            "ARM_C_RETRY_DIRECT_FAIL: pinned r5b_epochs.py sha256 drift")
+    # Reject every caller-controlled realization and deployed-input path
+    # before loading tokenizer or plan code and before physical realization.
+    verify_realization_input_authorization(args)
+
+    # The frozen allocator derivation fails closed on path or byte drift.
+    pinned_raw = verify_pinned_file(
+        args.pinned_r5b_epochs,
+        AUTHORIZED_INPUT_FILE_SHA256["pinned_r5b_epochs"],
+        "pinned r5b_epochs.py")
+    pinned_source = pinned_raw.decode("utf-8")
     allocator = FrozenRuntimeSessionAllocator(pinned_source)
 
-    fixture = json.loads(Path(args.fixture).read_text())
+    fixture = json.loads(verify_pinned_file(
+        args.fixture, AUTHORIZED_INPUT_FILE_SHA256["fixture"],
+        "prompt fixture"))
     if fixture.get("fixture_digest") != (
             "sha256:6046d4796a5d9cc888030c6b3f07304c20ce117d93905c30"
             "00d7aae7c0ae01c7"):
@@ -397,7 +511,9 @@ def main(argv: list[str] | None = None) -> int:
     if len(rows) != 24:
         raise SystemExit("ARM_C_RETRY_DIRECT_FAIL: expected 24 cases")
 
-    corpus = json.loads(Path(args.corpus).read_text())
+    corpus = json.loads(verify_pinned_file(
+        args.corpus, AUTHORIZED_INPUT_FILE_SHA256["corpus"],
+        "integration fixture"))
     if corpus.get("fixture_digest") != (
             "sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a"
             "64f4508b2ba36f2"):
@@ -408,9 +524,12 @@ def main(argv: list[str] | None = None) -> int:
         row["case"]["case_id"]: row["case"]["prompt_text"]
         for row in corpus["cases"]}
 
-    # render equality with the REAL tokenizer (24/24 mechanical check)
+    # Verify and load the exact non-Source tokenizer deployment. No network
+    # acquisition or remote-code path is available.
+    verify_tokenizer_authorization(args.tokenizer)
     from transformers import AutoTokenizer
-    tok = AutoTokenizer.from_pretrained(args.tokenizer, trust_remote_code=False)
+    tok = AutoTokenizer.from_pretrained(
+        args.tokenizer, trust_remote_code=False, local_files_only=True)
     for row in rows:
         prompt = tok.apply_chat_template(
             [{"role": "user", "content": prompt_texts[row["case_id"]]}],
@@ -421,7 +540,8 @@ def main(argv: list[str] | None = None) -> int:
                 f"ARM_C_RETRY_DIRECT_FAIL: real-tokenizer render mismatch "
                 f"for {row['case_id']}")
 
-    chain_plan = json.loads(Path(args.plan).read_text())
+    chain_plan = json.loads(verify_pinned_file(
+        args.plan, AUTHORIZED_INPUT_FILE_SHA256["plan"], "chain plan"))
     environment = json.loads(Path(args.environment).read_text())
 
     # ---- AUTHORIZATION FENCE: bind external plan/substrate inputs and ---
@@ -437,9 +557,9 @@ def main(argv: list[str] | None = None) -> int:
     runtime = realize_dense_chain(
         dict(execution_plan),
         chain_plan_path=args.plan,
-        model_path=args.view_dir,
-        last_stage_host=args.last_stage_host,
-        last_stage_port=args.last_stage_port,
+        model_path=AUTHORIZED_MODEL_VIEW_PATH,
+        last_stage_host=AUTHORIZED_LAST_STAGE_HOST,
+        last_stage_port=AUTHORIZED_LAST_STAGE_PORT,
     )
     realized_ns = time.time_ns()
 

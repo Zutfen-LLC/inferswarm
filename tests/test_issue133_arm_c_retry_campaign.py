@@ -208,65 +208,80 @@ class ExecutionFreezeTests(unittest.TestCase):
             "file_sha256": "b" * 64,
             "expected_path": "/srv/inferswarm/state/arm-c-retry/direct.py",
             "read_only": True,
-            "pre_launch_verified": True,
         }
         driver.update(overrides)
         return driver
 
+    def _dependencies(self):
+        return {
+            "runtime_session_allocator_source": {
+                "repository_sha": "c" * 40,
+                "file_sha256": "d" * 64,
+                "expected_path": (
+                    "/srv/inferswarm/state/arm-c-retry/scripts/r5b_epochs.py"),
+                "read_only": True,
+            }
+        }
+
+    def _record(self):
+        return camp.build_execution_freeze_record(
+            {"direct": self._driver()}, self._dependencies())
+
     def test_freeze_record_binds_all_issue133_identities(self):
-        record = camp.build_execution_freeze_record(
-            {"direct": self._driver()})
+        record = self._record()
         for field in ("frozen_producer", "checkpoint_sha256",
                       "candidate", "geometry", "execution_plan_digest",
                       "participant_identity", "fixture_digest"):
             self.assertEqual(record[field], camp.ISSUE133[field])
         self.assertEqual(record["schema"], camp.FREEZE_SCHEMA)
+        self.assertEqual(
+            record["authorized_realization_inputs"],
+            camp.AUTHORIZED_REALIZATION_INPUTS)
+        self.assertIn("runtime_session_allocator_source",
+                      record["dependencies"])
 
     def test_control_mutable_driver_rejected_before_freeze(self):
         with self.assertRaisesRegex(ValueError, "static deployment-identity"):
             camp.build_execution_freeze_record(
-                {"direct": self._driver(read_only=False)})
+                {"direct": self._driver(read_only=False)},
+                self._dependencies())
 
-    def test_control_unverified_driver_rejected_before_freeze(self):
+    def test_control_observational_driver_field_rejected_before_freeze(self):
         with self.assertRaisesRegex(ValueError, "static deployment-identity"):
             camp.build_execution_freeze_record(
-                {"direct": self._driver(pre_launch_verified=False)})
+                {"direct": self._driver(pre_launch_verified=True)},
+                self._dependencies())
 
-    def test_freeze_record_contains_no_post_run_claims(self):
-        record = camp.build_execution_freeze_record(
-            {"direct": self._driver()})
-        self.assertNotIn("post_run_verified", record)
-        self.assertNotIn("post_run_file_sha256", record)
-        for driver in record["drivers"].values():
-            self.assertNotIn("post_run_verified", driver)
-            self.assertNotIn("post_run_file_sha256", driver)
+    def test_freeze_record_contains_no_observational_claims(self):
+        record = self._record()
+        encoded = json.dumps(record)
+        for field in camp.OBSERVATIONAL_DEPLOYMENT_FIELDS:
+            self.assertNotIn(f'"{field}"', encoded)
         requirements = record["deployment_verification_requirements"]
         self.assertTrue(requirements["pre_launch_verification_required"])
         self.assertTrue(requirements["post_run_verification_required"])
 
-    def test_control_pre_run_freeze_cannot_masquerade_as_post_run_verified(self):
-        # a pre-run record carrying observational post-run fields fails
-        # the static shape verification fail-closed
-        record = camp.build_execution_freeze_record(
-            {"direct": self._driver()})
-        with self.assertRaisesRegex(RuntimeError, "post-run"):
-            camp.verify_freeze_static_shape(
-                {**record, "post_run_verified": True})
-        with self.assertRaisesRegex(RuntimeError, "post-run"):
-            camp.verify_freeze_static_shape(
-                {**record, "post_run_file_sha256": "b" * 64})
-        masquerading_driver = dict(record["drivers"]["direct"])
-        masquerading_driver["post_run_verified"] = True
-        masquerading_driver["post_run_file_sha256"] = "b" * 64
-        with self.assertRaisesRegex(RuntimeError, "non-static fields"):
-            camp.verify_freeze_static_shape(
-                {**record, "drivers": {"direct": masquerading_driver}})
+    def test_control_all_observational_fields_rejected_from_static_freeze(self):
+        record = self._record()
+        values = {
+            "pre_launch_verified": True,
+            "post_run_verified": True,
+            "post_run_file_sha256": "b" * 64,
+        }
+        for field, value in values.items():
+            with self.subTest(field=field), self.assertRaisesRegex(
+                    RuntimeError, "observational deployment fields"):
+                driver = dict(record["drivers"]["direct"])
+                driver[field] = value
+                camp.verify_freeze_static_shape({
+                    **record,
+                    "drivers": {**record["drivers"], "direct": driver},
+                })
 
     def test_control_old_v1_pre_authored_freeze_shape_rejected(self):
         # the corrected (#134 review finding 3) shape: the OLD v1 record
         # with pre-authored post_run fields must fail the static check
-        record = camp.build_execution_freeze_record(
-            {"direct": self._driver()})
+        record = self._record()
         legacy_driver = dict(record["drivers"]["direct"])
         legacy_driver["post_run_verified"] = True
         legacy_driver["post_run_file_sha256"] = legacy_driver["file_sha256"]
@@ -274,12 +289,11 @@ class ExecutionFreezeTests(unittest.TestCase):
         legacy["schema"] = "inferswarm.issue133.execution-freeze/1"
         legacy.pop("deployment_verification_requirements")
         legacy["drivers"] = {"direct": legacy_driver}
-        with self.assertRaisesRegex(RuntimeError, "schema drift"):
+        with self.assertRaisesRegex(RuntimeError, "observational"):
             camp.verify_freeze_static_shape(legacy)
 
     def test_freeze_identity_is_canonical_sha256(self):
-        record = camp.build_execution_freeze_record(
-            {"direct": self._driver()})
+        record = self._record()
         identity = camp.execution_freeze_identity(record)
         self.assertEqual(len(identity), 64)
         recomputed = camp.execution_freeze_identity(
