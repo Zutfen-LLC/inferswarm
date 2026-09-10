@@ -79,7 +79,7 @@
       "expected_path": "/srv/inferswarm/state/arm-c-retry/scripts/issue133_arm_c_retry_direct.py",
       "file_sha256": "02ec9cf7e5c3ac471fead0c37fdf59a981895628e0da64c8266a2d2d195eb43e",
       "read_only": true,
-      "repository_sha": "35f8749918196d29a348503c9b142009f33551f6"
+      "repository_sha": "2843d293d62155ad62297b1e7b10a762973ec803"
     }
   },
   "fixture_digest": "sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba36f2",
