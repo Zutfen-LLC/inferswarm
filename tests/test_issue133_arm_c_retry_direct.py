@@ -205,7 +205,7 @@ class PlanAuthorizationFenceTests(unittest.TestCase):
         fence = body.index("verify_plan_authorization_fence(")
         chain_fence = body.index("verify_chain_plan_authorization(")
         env_fence = body.index("verify_environment_authorization(")
-        realize = body.index("runtime = realize_dense_chain(")
+        realize = body.index("runtime = chain_runtime.realize_dense_chain(")
         self.assertLess(chain_fence, realize)
         self.assertLess(env_fence, realize)
         self.assertLess(fence, realize)
@@ -461,7 +461,10 @@ class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
                                   str(tokenizer_path)), \
                 mock.patch.object(drv, "AUTHORIZED_OUTPUT_ROOT",
                                   str(output_root)), \
+                mock.patch.object(drv, "activate_producer_worktree"), \
                 mock.patch.object(drv, "verify_tokenizer_authorization"), \
+                mock.patch.object(drv, "require_producer_module",
+                                  return_value=fake_chain_runtime), \
                 mock.patch.object(
                     drv, "build_execution_plan", return_value={
                         "digest": built_plan_digest
@@ -575,6 +578,31 @@ class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
             self.assertEqual(counters["realize"], 1)
             self.assertEqual(counters["generate"], 24 * 8)
             self.assertNotIn("exit", counters)
+
+
+class ProducerImportClosureTests(unittest.TestCase):
+    def test_preloaded_module_outside_verified_worktree_fails_closed(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            repo = Path(tmp_name) / "producer"
+            (repo / "python").mkdir(parents=True)
+            (repo / "benchmarks").mkdir()
+            substituted = type(sys)("freetoken")
+            substituted.__file__ = "/tmp/substituted/freetoken/__init__.py"
+            with mock.patch.dict(sys.modules, {"freetoken": substituted}):
+                with self.assertRaisesRegex(
+                        SystemExit, "outside the verified worktree"):
+                    drv.activate_producer_worktree(repo)
+
+    def test_producer_module_origin_must_match_expected_file(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            repo = Path(tmp_name)
+            substituted = type(sys)("shadowed_module")
+            substituted.__file__ = str(repo / "wrong.py")
+            with mock.patch.object(
+                    drv.importlib, "import_module", return_value=substituted):
+                with self.assertRaisesRegex(SystemExit, "not verified worktree"):
+                    drv.require_producer_module(
+                        repo, "shadowed_module", "expected.py")
 
 
 if __name__ == "__main__":

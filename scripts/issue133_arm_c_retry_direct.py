@@ -48,6 +48,7 @@ from __future__ import annotations
 import argparse
 import ast
 import hashlib
+import importlib
 import importlib.metadata
 import json
 import re
@@ -219,27 +220,71 @@ class FrozenRuntimeSessionAllocator:
         return int(self._impl._runtime_session_id(int(logical_session_id)))
 
 
-def build_execution_plan(env: dict, chain_plan: dict) -> dict:
+def _within(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return True
+
+
+def activate_producer_worktree(repo: Path) -> None:
+    """Make the verified producer worktree authoritative for its modules."""
+    producer_namespaces = ("benchmarks", "freetoken")
+    for name, module in tuple(sys.modules.items()):
+        if not any(name == prefix or name.startswith(prefix + ".")
+                   for prefix in producer_namespaces):
+            continue
+        origin = getattr(module, "__file__", None)
+        if origin is not None and not _within(Path(origin).resolve(), repo):
+            raise SystemExit(
+                "ARM_C_RETRY_DIRECT_FAIL: preloaded producer module "
+                f"{name} resolves outside the verified worktree: {origin}")
+    roots = (repo, repo / "python", repo / "benchmarks")
+    for root in reversed(roots):
+        if not root.is_dir():
+            raise SystemExit(
+                f"ARM_C_RETRY_DIRECT_FAIL: verified producer import root "
+                f"is missing: {root}")
+        value = str(root)
+        sys.path[:] = [entry for entry in sys.path if entry != value]
+        sys.path.insert(0, value)
+
+
+def require_producer_module(repo: Path, name: str, relative: str):
+    """Import one producer module only from its expected tracked path."""
+    module = importlib.import_module(name)
+    origin = getattr(module, "__file__", None)
+    expected = (repo / relative).resolve()
+    if origin is None or Path(origin).resolve() != expected:
+        raise SystemExit(
+            f"ARM_C_RETRY_DIRECT_FAIL: producer module {name} resolved to "
+            f"{origin!r}, not verified worktree file {expected}")
+    return module
+
+
+def build_execution_plan(repo: Path, env: dict, chain_plan: dict) -> dict:
     """Compile the frozen execution plan via the producer's own machinery
     (identical to the accepted historical Arm-C construction)."""
-    from benchmarks.inferswarm_r6.xc_strategy import (
-        compile_candidate,
-        operator_policy,
-        planning_problem,
-    )
-    from benchmarks.inferswarm_r6.coordinator import (
-        _r6_objective,
-        _r6_snapshot,
-    )
-    from freetoken.research.r3_planner import freeze, plan as r3plan
-    from freetoken.research.r5a_serving import freeze_execution_plan
+    strategy = require_producer_module(
+        repo, "benchmarks.inferswarm_r6.xc_strategy",
+        "benchmarks/inferswarm_r6/xc_strategy.py")
+    coordinator = require_producer_module(
+        repo, "benchmarks.inferswarm_r6.coordinator",
+        "benchmarks/inferswarm_r6/coordinator.py")
+    planner = require_producer_module(
+        repo, "freetoken.research.r3_planner",
+        "python/freetoken/research/r3_planner.py")
+    serving = require_producer_module(
+        repo, "freetoken.research.r5a_serving",
+        "python/freetoken/research/r5a_serving.py")
 
     sha = env["implementation_commit"]
-    decision = r3plan(
-        planning_problem(sha), _r6_snapshot(env), operator_policy(sha),
-        _r6_objective(sha),
-        freeze({"schema": "inferswarm.r6.evidence-catalog/1",
-                "implementation_commit": sha, "records": []}),
+    decision = planner.plan(
+        strategy.planning_problem(sha), coordinator._r6_snapshot(env),
+        strategy.operator_policy(sha), coordinator._r6_objective(sha),
+        planner.freeze({"schema": "inferswarm.r6.evidence-catalog/1",
+                        "implementation_commit": sha, "records": []}),
     )
     evaluations = {item["id"]: item for item in decision["evaluations"]}
     if len(evaluations) != 1:
@@ -261,14 +306,14 @@ def build_execution_plan(env: dict, chain_plan: dict) -> dict:
                   "selects the same candidate automatically from measured "
                   "evidence",
     }
-    return freeze_execution_plan(
+    return serving.freeze_execution_plan(
         decision=decision,
         evaluation=evaluation,
         authorization=authorization,
-        compiled_body=compile_candidate(dict(evaluation),
-                                        chain_plan=dict(chain_plan)),
-        objective=_r6_objective(sha),
-        policy=operator_policy(sha),
+        compiled_body=strategy.compile_candidate(
+            dict(evaluation), chain_plan=dict(chain_plan)),
+        objective=coordinator._r6_objective(sha),
+        policy=strategy.operator_policy(sha),
     )
 
 
@@ -485,6 +530,7 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(
             f"ARM_C_RETRY_DIRECT_FAIL: producer {running} != "
             f"{FREETOKEN_PRODUCER}")
+    activate_producer_worktree(repo)
 
     # Reject every caller-controlled realization and deployed-input path
     # before loading tokenizer or plan code and before physical realization.
@@ -549,12 +595,14 @@ def main(argv: list[str] | None = None) -> int:
     # ---- BEFORE realize_dense_chain()/any model execution.             ---
     verify_chain_plan_authorization(chain_plan)
     verify_environment_authorization(environment)
-    execution_plan = build_execution_plan(environment, chain_plan)
+    execution_plan = build_execution_plan(repo, environment, chain_plan)
     verify_plan_authorization_fence(execution_plan)
 
-    from benchmarks.inferswarm_r6.chain_runtime import realize_dense_chain
+    chain_runtime = require_producer_module(
+        repo, "benchmarks.inferswarm_r6.chain_runtime",
+        "benchmarks/inferswarm_r6/chain_runtime.py")
     started_ns = time.time_ns()
-    runtime = realize_dense_chain(
+    runtime = chain_runtime.realize_dense_chain(
         dict(execution_plan),
         chain_plan_path=args.plan,
         model_path=AUTHORIZED_MODEL_VIEW_PATH,
