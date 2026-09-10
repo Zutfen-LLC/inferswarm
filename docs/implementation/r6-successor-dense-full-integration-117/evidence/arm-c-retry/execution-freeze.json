@@ -18,15 +18,18 @@
     "speculative": "step one discarded before replay",
     "stopping": "repeat until the frozen stopping condition is met (8 committed tokens per case unless the frozen stopping contract mechanically terminates earlier)"
   },
+  "deployment_verification_requirements": {
+    "post_run_verification_required": true,
+    "pre_launch_verification_required": true,
+    "semantics": "pre_launch_verified / post_run_verified / post_run_file_sha256 are OBSERVATIONAL evidence produced around a physical attempt and evaluated with the frozen issue-#129 verify_deployment_identity() semantics after execution; this static pre-execution freeze only pins expected identities and may never claim a future post-run observation as an accomplished fact"
+  },
   "drivers": {
     "direct": {
       "expected_path": "/srv/inferswarm/state/arm-c-retry/scripts/issue133_arm_c_retry_direct.py",
-      "file_sha256": "a369fc5a024d52273655b5fe8ae683c032540acc67d7fcbeda376539f24e7b80",
-      "post_run_file_sha256": "a369fc5a024d52273655b5fe8ae683c032540acc67d7fcbeda376539f24e7b80",
-      "post_run_verified": true,
+      "file_sha256": "7b4b5c3d38c872b9e4e53f88849c6f10c104bfe39ee7ccb2ca6eb8ea6523bec8",
       "pre_launch_verified": true,
       "read_only": true,
-      "repository_sha": "c9b6d16167fc43dcd15e63ec609dfaf5ad58a9b6"
+      "repository_sha": "b78d71f3d7f97d1347d05482b1d3a3a122b3485f"
     }
   },
   "execution_plan_digest": "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad",
@@ -40,7 +43,7 @@
   "physical_scope": "ISSUE117_ARM_C_RETRY",
   "qualification_subject": "sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f7f1d7994ffd",
   "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
-  "schema": "inferswarm.issue133.execution-freeze/1",
+  "schema": "inferswarm.issue133.execution-freeze/2",
   "tokenizer_asset_pins": {
     "chat_template.jinja": "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4",
     "config.json": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9",
