@@ -213,8 +213,15 @@ class BootstrapAdversarialControls(unittest.TestCase):
                     entry["accepted_blob_sha256"], relative)
             self.assertIn("scripts/issue133_physical_prelaunch_gate.py",
                           provenance)
-            # the executing bootstrap equals the accepted blob here
-            self.assertTrue(verdict["bootstrap_execution"]["equal"])
+            # The authorization bootstrap itself runs from the accepted
+            # materialization, never from this checkout's invocation path.
+            bootstrap_execution = verdict["bootstrap_execution"]
+            self.assertTrue(bootstrap_execution["equal"])
+            self.assertNotEqual(
+                Path(bootstrap_execution["executed_path"]).resolve(),
+                BOOTSTRAP.resolve())
+            self.assertIn("issue133-bootstrap-loader-",
+                          bootstrap_execution["executed_path"])
             # identity fields required by the review
             authority = json.loads(
                 (fixture.repo / AUTHORITY_REL).read_text())
@@ -360,7 +367,7 @@ class BootstrapMechanicsTests(unittest.TestCase):
         tree = ast.parse(BOOTSTRAP.read_text())
         allowed = {
             "__future__", "argparse", "hashlib", "json", "os",
-            "subprocess", "sys", "tempfile", "pathlib", "typing",
+            "subprocess", "sys", "tarfile", "tempfile", "pathlib", "typing",
             "shutil",
         }
         found = set()
@@ -409,6 +416,29 @@ class BootstrapMechanicsTests(unittest.TestCase):
             {"PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP",
              "PYTHONUSERBASE"},
             set(module._SCRUBBED_ENV_KEYS))
+    def test_bootstrap_materializes_without_tar_executable(self):
+        """The pre-authorization bootstrap is stdlib/Git-only: archive
+        extraction uses tarfile, never a PATH-resolved tar program."""
+        import ast
+        tree = ast.parse(BOOTSTRAP.read_text())
+        self.assertIn("import tarfile", BOOTSTRAP.read_text())
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            if not (isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "run") or not node.args:
+                continue
+            command = node.args[0]
+            if isinstance(command, (ast.List, ast.Tuple)) and command.elts:
+                first = command.elts[0]
+                if isinstance(first, ast.Constant) and first.value == "tar":
+                    self.fail("bootstrap must not execute external tar")
+
+    def test_accepted_gate_uses_isolated_no_site_interpreter(self):
+        """Accepted gate execution must reject PYTHONPATH and system
+        sitecustomize/.pth import injection before campaign imports."""
+        source = BOOTSTRAP.read_text()
+        self.assertIn("sys.executable, \"-I\", \"-S\"", source)
 
 
 if __name__ == "__main__":

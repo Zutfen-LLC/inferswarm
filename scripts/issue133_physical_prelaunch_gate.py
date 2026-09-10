@@ -66,8 +66,10 @@ import argparse
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 from pathlib import Path
 from typing import NoReturn
@@ -228,14 +230,20 @@ def materialize_accepted_tree(repo: Path, commit: str,
         raise RuntimeError(
             f"git archive failed for accepted commit {commit}: "
             + archive.stderr.decode(errors="replace").strip())
-    extract = subprocess.run(
-        ["tar", "-xf", str(tarball), "-C", str(destination)],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    tarball.unlink(missing_ok=True)
-    if extract.returncode != 0:
+    try:
+        with tarfile.open(tarball, mode="r:") as archive_file:
+            for member in archive_file.getmembers():
+                member_path = (destination / member.name).resolve()
+                if not member_path.is_relative_to(destination.resolve()):
+                    raise RuntimeError(
+                        "git archive contains a path outside the accepted "
+                        "materialization; failing closed")
+            archive_file.extractall(destination, filter="data")
+    except (tarfile.TarError, OSError) as error:
         raise RuntimeError(
-            f"accepted-tree materialization failed: "
-            + extract.stderr.decode(errors="replace").strip())
+            f"accepted-tree materialization failed: {error}") from error
+    finally:
+        tarball.unlink(missing_ok=True)
 
 
 def verify_closure_bytes(repo: Path, commit: str,
@@ -298,8 +306,8 @@ def execute_accepted_gate(materialization: Path,
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     env["PYTHONNOUSERSITE"] = "1"
     completed = subprocess.run(
-        [sys.executable, str(entry), "--verify-pre-execution-gate",
-         "--git-repo", str(repo.resolve())],
+        [sys.executable, "-I", "-S", str(entry),
+         "--verify-pre-execution-gate", "--git-repo", str(repo.resolve())],
         cwd=str(materialization), env=env, stdout=subprocess.PIPE,
         stderr=subprocess.PIPE, timeout=3600)
     stdout = completed.stdout.decode(errors="replace")
@@ -469,6 +477,69 @@ def run_prelaunch_gate(repo: Path,
             shutil.rmtree(materialization_parent, ignore_errors=True)
 
 
+def launch_accepted_bootstrap(repo: Path,
+                              keep_materialization: bool = False) -> dict:
+    """External, non-authorizing Git bootstrap.
+
+    This loader does only Git-rooted authority-tree selection and byte-checks
+    the accepted bootstrap before starting it.  It never evaluates authority,
+    imports a gate module, or emits a passing authorization verdict.  The
+    first Python code that performs authorization is this same script from the
+    accepted materialization, under ``-I -S``.
+    """
+    loader_verdict = {
+        "schema": _VERDICT_SCHEMA,
+        "gate": "ACCEPTED_GIT_MATERIALIZATION_PRE_EXECUTION_GATE",
+        "trust_root": f"{ACCEPTED_REMOTE_REF} (Git object database)",
+        "source_mode": "accepted_git_materialization",
+        "repository": str(repo.resolve()),
+    }
+    try:
+        resolution = resolve_accepted_authority_commit(repo)
+    except RuntimeError as error:
+        _fail(loader_verdict, str(error))
+    commit = resolution["accepted_authority_commit"]
+    parent = Path(tempfile.mkdtemp(prefix="issue133-bootstrap-loader-"))
+    materialization = parent / "tree"
+    materialization.mkdir()
+    try:
+        materialize_accepted_tree(repo, commit, materialization)
+        accepted_bootstrap = materialization / BOOTSTRAP_REL_PATH
+        expected = _accepted_blob(repo, commit, BOOTSTRAP_REL_PATH)
+        if expected is None or accepted_bootstrap.is_symlink() \
+                or not accepted_bootstrap.is_file() \
+                or _sha256_bytes(accepted_bootstrap.read_bytes()) != \
+                _sha256_bytes(expected):
+            _fail(loader_verdict,
+                  "accepted bootstrap bytes could not be materialized and "
+                  "verified before authorization")
+        env = {key: value for key, value in os.environ.items()
+               if key not in _SCRUBBED_ENV_KEYS}
+        env["PYTHONDONTWRITEBYTECODE"] = "1"
+        env["PYTHONNOUSERSITE"] = "1"
+        completed = subprocess.run(
+            [sys.executable, "-I", "-S", str(accepted_bootstrap),
+             "--accepted-bootstrap", "--repo", str(repo.resolve())],
+            cwd=str(materialization), env=env, stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE, timeout=3600)
+        if completed.returncode != 0:
+            _fail(loader_verdict,
+                  "the accepted Git-materialized authorization bootstrap "
+                  f"REJECTED (exit {completed.returncode}): "
+                  + (completed.stderr.decode(errors="replace").strip()
+                     or completed.stdout.decode(errors="replace").strip())[-2000:])
+        try:
+            return json.loads(completed.stdout)
+        except json.JSONDecodeError as error:
+            _fail(loader_verdict,
+                  "the accepted authorization bootstrap produced no "
+                  "parseable verdict; failing closed")
+            raise AssertionError("unreachable") from error
+    finally:
+        if not keep_materialization:
+            shutil.rmtree(parent, ignore_errors=True)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -478,6 +549,8 @@ def main(argv: list[str] | None = None) -> int:
         help="the InferSwarm Git repository whose "
              f"{ACCEPTED_REMOTE_REF} / object database is the trust "
              "root (default: the repository containing this script)")
+    parser.add_argument(
+        "--accepted-bootstrap", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument(
         "--keep-materialization", action="store_true",
         help="retain the accepted materialization tree for "
@@ -493,7 +566,10 @@ def main(argv: list[str] | None = None) -> int:
             "repository; the Git object database is the trust root",
             file=sys.stderr)
         return 1
-    verdict = run_prelaunch_gate(repo, args.keep_materialization)
+    if args.accepted_bootstrap:
+        verdict = run_prelaunch_gate(repo, args.keep_materialization)
+    else:
+        verdict = launch_accepted_bootstrap(repo, args.keep_materialization)
     print(json.dumps(verdict, indent=2, sort_keys=True))
     return 0
 
