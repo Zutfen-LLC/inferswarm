@@ -354,6 +354,7 @@ COMMITTED_EVIDENCE_FILES = {
     # bytes before the first launch
     "arm-c-retry/physical-campaign-authority.json",
     "arm-c-retry/execution-freeze.json",
+    "arm-c-retry/phase-a-correction.json",
 }
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the

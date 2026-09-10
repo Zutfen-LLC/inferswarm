@@ -1,5 +1,45 @@
 {
   "accepted_main_merge": "781d6b688b29c149837f2ad217b4455dea269eeb",
+  "authorized_realization_inputs": {
+    "chain_plan": {
+      "digest": "sha256:a71a3129b8764d7108f51ed30fb230b42fcd69646a20bcd6806b6ee53b9bc51f",
+      "expected_path": "/srv/inferswarm/state/arm-c/chain-plan.json",
+      "file_sha256": "6d9a4859af5b686a321458fe50c86189244b7d0d41e2cbb0df28147552f709ab",
+      "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/chain-plan.json"
+    },
+    "environment": {
+      "canonical_sha256": "182b950e844c078fd0a9d91c321cd67097c81d3d4fd704a86618407b6399b274",
+      "derivation_authority": "scripts/issue129_arm_c_retry_core.py:_frozen_environment at methodology head 808b77c45f0b4e5d52a202c1a931f43447ff93a6",
+      "expected_path": "/srv/inferswarm/state/arm-c/environment.json",
+      "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/physical-preflight.json"
+    },
+    "integration_fixture": {
+      "expected_path": "/srv/inferswarm/state/arm-c-retry/integration-fixture.json",
+      "file_sha256": "b9c2bb7f7416b10dcee284aaf9b6c591644292550e1dced70a315c08eba120a3",
+      "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/integration-fixture.json"
+    },
+    "last_stage_host": {
+      "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-a/run-device-bindings.json",
+      "value": "10.0.0.219"
+    },
+    "last_stage_port": {
+      "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-a/run-device-bindings.json",
+      "value": 18485
+    },
+    "model_view_path": {
+      "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/chain-plan.json:model_path",
+      "value": "/srv/inferswarm/state/arm-c/model-view"
+    },
+    "prompt_fixture": {
+      "expected_path": "/srv/inferswarm/state/arm-c-retry/prompt-fixture.json",
+      "file_sha256": "e68dfaafe661f2f6cc5f5be3a51128c7e7abf0b5c81978cbdb45e9788fd88cd0",
+      "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/prompt-fixture.json"
+    },
+    "tokenizer_path": {
+      "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/methodology-run.json:tokenizer_source_contract",
+      "value": "/srv/inferswarm/tokenizers/gemma-r6-frozen"
+    }
+  },
   "candidate": "dense.6171f32b4413",
   "case_count": 24,
   "checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
@@ -18,6 +58,14 @@
     "speculative": "step one discarded before replay",
     "stopping": "repeat until the frozen stopping condition is met (8 committed tokens per case unless the frozen stopping contract mechanically terminates earlier)"
   },
+  "dependencies": {
+    "runtime_session_allocator_source": {
+      "expected_path": "/srv/inferswarm/state/arm-c-retry/scripts/r5b_epochs.py",
+      "file_sha256": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805",
+      "read_only": true,
+      "repository_sha": "781d6b688b29c149837f2ad217b4455dea269eeb"
+    }
+  },
   "deployment_verification_requirements": {
     "post_run_verification_required": true,
     "pre_launch_verification_required": true,
@@ -26,10 +74,9 @@
   "drivers": {
     "direct": {
       "expected_path": "/srv/inferswarm/state/arm-c-retry/scripts/issue133_arm_c_retry_direct.py",
-      "file_sha256": "7b4b5c3d38c872b9e4e53f88849c6f10c104bfe39ee7ccb2ca6eb8ea6523bec8",
-      "pre_launch_verified": true,
+      "file_sha256": "f2f907c202b012f4a5bcb3f8e2f8f8d50664737e34b9c98e8e3604e2ce9c982d",
       "read_only": true,
-      "repository_sha": "b78d71f3d7f97d1347d05482b1d3a3a122b3485f"
+      "repository_sha": "24b05e6da8adfd25639948f0d261c4c4d0685ea4"
     }
   },
   "execution_plan_digest": "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad",
@@ -43,7 +90,7 @@
   "physical_scope": "ISSUE117_ARM_C_RETRY",
   "qualification_subject": "sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f7f1d7994ffd",
   "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
-  "schema": "inferswarm.issue133.execution-freeze/2",
+  "schema": "inferswarm.issue133.execution-freeze/3",
   "tokenizer_asset_pins": {
     "chat_template.jinja": "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4",
     "config.json": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9",

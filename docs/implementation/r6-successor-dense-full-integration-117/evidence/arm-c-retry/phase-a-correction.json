@@ -1,50 +1,122 @@
 {
-  "schema": "inferswarm.issue133.arm-c-retry.phase-a-correction/1",
-  "pr": "https://github.com/Zutfen-LLC/inferswarm/pull/134",
-  "review": {
-    "review_id": "5161630985",
-    "findings_fixed": [
-      "1. accepted-history verification is now a real pre-execution gate (ancestor of refs/remotes/origin/main, fail-closed)",
-      "2. physical authority is mechanically bound to the exact execution-freeze bytes (canonical sha256 equality)",
-      "3. pre-authored post-run evidence removed from the pre-execution freeze (static schema /2; pre/post verification are requirements, not claims)",
-      "4. the direct comparator is fenced to the authorized plan: authorized frozen digest == locally built digest == runtime-returned digest, with chain-plan/participant/environment inputs bound to accepted evidence before realization"
-    ],
-    "additional_defect_fixed": [
-      "the reviewed driver's frozen-rendered-fixture digest constant was a 63-hex-character transcription (one '0' dropped from sha256:6046d479…01c7); the driver would have failed closed at the fixture pin on every launch — corrected to the exact 64-character digest retained in evidence/arm-c-retry/prompt-fixture.json"
-    ]
-  },
-  "correction_commit": "b78d71f3d7f97d1347d05482b1d3a3a122b3485f",
-  "corrected_direct_driver": {
-    "path": "scripts/issue133_arm_c_retry_direct.py",
-    "repository_sha": "b78d71f3d7f97d1347d05482b1d3a3a122b3485f",
-    "file_sha256": "7b4b5c3d38c872b9e4e53f88849c6f10c104bfe39ee7ccb2ca6eb8ea6523bec8"
-  },
-  "regenerated_execution_freeze": {
-    "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/execution-freeze.json",
-    "file_sha256": "9face9f3b72913ce87543afe9c33ff4a969dd1c706c835a52a3834cd29271e5e",
-    "schema": "inferswarm.issue133.execution-freeze/2",
-    "supersedes_freeze_sha256": "177e83919d2668f9b4e98f406863884a6163a415258f2cd76d5855a8d4f7378b",
-    "ordering": [
-      "corrected direct driver implemented and tested (CPU-only)",
-      "corrected correctness-bearing driver committed at b78d71f3d7f97d1347d05482b1d3a3a122b3485f",
-      "freeze regenerated from that exact commit SHA + the exact corrected file SHA-256 (no circular repository-SHA binding: the freeze pins the driver commit, the authority pins the freeze bytes, and neither the freeze nor the authority is pinned by the commit that carries them)",
-      "execution_freeze_identity recomputed over the retained canonical bytes",
-      "physical-campaign authority rebound to the regenerated freeze",
-      "MANIFEST/producer-hash rows regenerated canonically via scripts/issue117_proof.py"
-    ]
-  },
   "campaign_retention": {
     "campaign_id": "armc-retry-afcdc4428f95d50c",
-    "retained": true,
-    "rationale": "no physical attempt of any kind has occurred for this campaign: the retry evidence area contains zero attempt-lineage/direct-run/ordinary observations (mechanically enumerated: no attempt-bearing file exists under evidence/arm-c-retry/), the campaign record carries prior_stop_* = null, no GPU/model execution has ever run under this campaign id, and the #129 authority doctrine requires a fresh campaign identity only after a mandatory STOP or an intermediate terminal — neither exists. The #133 issue text authorizes rebinding the execution freeze before the first correctness-bearing physical attempt, and the accepted-history pre-execution gate still requires the corrected authority to be reviewed and merged into origin/main before any launch. The correctness-bearing change therefore legally rebinds the SAME fresh campaign's execution_freeze_identity rather than creating a new campaign.",
-    "rebound_execution_freeze_identity": "9face9f3b72913ce87543afe9c33ff4a969dd1c706c835a52a3834cd29271e5e"
+    "mechanical_proof": {
+      "attempt_count": 0,
+      "prior_stop_fields_all_null": true,
+      "stop_count": 0,
+      "terminal_count": 0
+    },
+    "rationale": "The complete retry evidence namespace contains no record for a physical attempt, terminal, or STOP. The campaign authority has null prior-STOP fields. The Issue #129 doctrine requires a fresh campaign only after a mandatory STOP or an intermediate terminal. Issue #133 permits a new reviewed freeze before the first physical attempt. The same fresh campaign can therefore bind the corrected freeze.",
+    "retained": true
   },
+  "corrections": [
+    {
+      "additional_defect_fixed": [
+        "The reviewed driver's frozen-rendered-fixture digest constant was a 63-hex-character transcription. The correction restored the exact 64-character digest retained in evidence/arm-c-retry/prompt-fixture.json."
+      ],
+      "campaign_retention_at_correction": {
+        "campaign_id": "armc-retry-afcdc4428f95d50c",
+        "retained": true,
+        "rationale": "No physical attempt, terminal, or STOP existed. The same fresh campaign therefore rebound the first corrected freeze before physical execution.",
+        "rebound_execution_freeze_identity": "9face9f3b72913ce87543afe9c33ff4a969dd1c706c835a52a3834cd29271e5e"
+      },
+      "code_commit": "b78d71f3d7f97d1347d05482b1d3a3a122b3485f",
+      "corrected_direct_driver": {
+        "file_sha256": "7b4b5c3d38c872b9e4e53f88849c6f10c104bfe39ee7ccb2ca6eb8ea6523bec8",
+        "path": "scripts/issue133_arm_c_retry_direct.py",
+        "repository_sha": "b78d71f3d7f97d1347d05482b1d3a3a122b3485f"
+      },
+      "findings_fixed": [
+        "The accepted-history check became a pre-execution ancestor gate against refs/remotes/origin/main.",
+        "The physical authority became bound to the canonical execution-freeze bytes.",
+        "The static freeze removed pre-authored post-run observations.",
+        "The direct comparator became fenced to the authorized plan, chain plan, participant identity, and environment before realization."
+      ],
+      "freeze": {
+        "identity": "9face9f3b72913ce87543afe9c33ff4a969dd1c706c835a52a3834cd29271e5e",
+        "ordering": [
+          "The corrected direct driver was implemented and tested with CPU-only tests.",
+          "The corrected direct driver was committed at b78d71f3d7f97d1347d05482b1d3a3a122b3485f.",
+          "The freeze was regenerated from that commit and the exact corrected file SHA-256.",
+          "The canonical execution-freeze identity was computed.",
+          "The physical-campaign authority rebound the regenerated freeze.",
+          "The canonical MANIFEST and producer-hash records were regenerated."
+        ],
+        "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/execution-freeze.json",
+        "schema": "inferswarm.issue133.execution-freeze/2",
+        "superseded_identity": "177e83919d2668f9b4e98f406863884a6163a415258f2cd76d5855a8d4f7378b"
+      },
+      "review_id": "5161630985",
+      "status": "SUPERSEDED_BEFORE_PHYSICAL_EXECUTION"
+    },
+    {
+      "code_commits": [
+        "b628da6bd58bee57799e1362d912abc3663a1ef7",
+        "24b05e6da8adfd25639948f0d261c4c4d0685ea4"
+      ],
+      "corrected_direct_driver": {
+        "file_sha256": "f2f907c202b012f4a5bcb3f8e2f8f8d50664737e34b9c98e8e3604e2ce9c982d",
+        "path": "scripts/issue133_arm_c_retry_direct.py",
+        "repository_sha": "24b05e6da8adfd25639948f0d261c4c4d0685ea4"
+      },
+      "dependency_closure": {
+        "separately_deployed": {
+          "runtime_session_allocator_source": {
+            "expected_path": "/srv/inferswarm/state/arm-c-retry/scripts/r5b_epochs.py",
+            "file_sha256": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805",
+            "repository_sha": "781d6b688b29c149837f2ad217b4455dea269eeb"
+          }
+        },
+        "transitive_producer_worktree": "All imported FreeToken runtime and planner modules are in the clean exact producer worktree at 924cd22ea081f6d4ed471016faf01d427fc5b0d2.",
+        "untrusted_dynamic_methodology_module_eliminated": true
+      },
+      "findings_fixed": [
+        "The static freeze rejects pre_launch_verified, post_run_verified, and post_run_file_sha256 at every nesting level.",
+        "The direct driver validates the model-view path, last-stage host, last-stage port, tokenizer path, all deployed input paths, and all correctness-bearing input bytes before realization.",
+        "The direct driver validates the accepted environment by its Phase-A canonical digest. It does not import issue129_arm_c_retry_core.py at run time.",
+        "The freeze covers the complete separately deployed code dependency closure."
+      ],
+      "freeze": {
+        "identity": "dc4a370bee3c99b1fa7dc488dae0b3e2e95e9a831c2a798b8af534f0c365c3eb",
+        "ordering": [
+          "The direct-driver and retention-proof code and tests were committed before the freeze.",
+          "The freeze was generated from commit 24b05e6da8adfd25639948f0d261c4c4d0685ea4 and the exact direct-driver SHA-256.",
+          "The canonical execution-freeze identity was computed.",
+          "The physical-campaign authority rebound the regenerated freeze.",
+          "The canonical MANIFEST and producer-hash records were regenerated."
+        ],
+        "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/execution-freeze.json",
+        "schema": "inferswarm.issue133.execution-freeze/3",
+        "superseded_identity": "9face9f3b72913ce87543afe9c33ff4a969dd1c706c835a52a3834cd29271e5e"
+      },
+      "review_id": "5162086233",
+      "status": "CURRENT_PHASE_A_CORRECTION"
+    }
+  ],
+  "freeze_lineage": [
+    {
+      "identity": "177e83919d2668f9b4e98f406863884a6163a415258f2cd76d5855a8d4f7378b",
+      "status": "SUPERSEDED_BEFORE_PHYSICAL_EXECUTION"
+    },
+    {
+      "identity": "9face9f3b72913ce87543afe9c33ff4a969dd1c706c835a52a3834cd29271e5e",
+      "status": "SUPERSEDED_BY_REVIEW_5162086233_BEFORE_PHYSICAL_EXECUTION"
+    },
+    {
+      "identity": "dc4a370bee3c99b1fa7dc488dae0b3e2e95e9a831c2a798b8af534f0c365c3eb",
+      "status": "CURRENT_PHASE_A_FREEZE"
+    }
+  ],
   "non_claims": {
-    "physical_execution_occurred": false,
     "gpu_execution_occurred": false,
     "model_execution_occurred": false,
     "participant_state_modified": false,
-    "post_run_verification_claimed": false,
-    "phase_b_or_c_begun": false
-  }
+    "phase_b_or_c_begun": false,
+    "physical_execution_occurred": false,
+    "pre_launch_verification_claimed": false,
+    "post_run_verification_claimed": false
+  },
+  "pr": "https://github.com/Zutfen-LLC/inferswarm/pull/134",
+  "schema": "inferswarm.issue133.arm-c-retry.phase-a-correction/2"
 }
