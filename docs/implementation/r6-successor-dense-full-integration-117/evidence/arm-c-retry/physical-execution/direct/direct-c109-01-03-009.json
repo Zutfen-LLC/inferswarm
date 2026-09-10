@@ -1,0 +1,40 @@
+{
+  "case_id": "c109-01-03-009",
+  "decoded_output": "It appears your input was cut off or",
+  "decoded_output_sha256": "a417dee003d02f49fb5824af28536ad9843d477ea59c4328c92f9c799a64377b",
+  "generated_token_ids": [
+    1509,
+    7412,
+    822,
+    2744,
+    691,
+    3463,
+    1135,
+    653
+  ],
+  "invocation": "per-token-replay-prefill/frozen-allocator/1",
+  "logical_session_id": 3,
+  "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+  "prompt_token_ids": [
+    2,
+    105,
+    2364,
+    107,
+    236769,
+    753,
+    8355,
+    900,
+    20218,
+    106,
+    107,
+    105,
+    4368,
+    107,
+    100,
+    45518,
+    107,
+    101
+  ],
+  "schema": "inferswarm.issue133.arm-c-retry.direct-case/1",
+  "wall_ns": 2961001645
+}

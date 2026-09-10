@@ -1,0 +1,38 @@
+{
+  "case_id": "c109-04-01-026",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "under joins under amber morning light kind kind light drifts under under hill path young hill amber joins wind under open near under near gentle morning bird travels morning travels quiet wind calm light bird east island river wind east valley travels light wind path open east open valley calm east hill",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 19,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\nunder joins under amber morning light kind kind light drifts under under hill path young hill amber joins wind under open near under near gentle morning bird travels morning travels quiet wind calm light bird east island river wind east valley travels light wind path open east open valley calm east hill<turn|>\n<|turn>model\n<|channel>thought\n<channel|>amber morning.\n    The sun...",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-aa076f27a602",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 65,
+      "total_tokens": 73
+    }
+  },
+  "schema": "inferswarm.issue117.arm-c.ordinary-case/1",
+  "wall_ns": 4337149173
+}

@@ -1,0 +1,46 @@
+{
+  "census": "/tmp/census-03.json",
+  "file_count": 6,
+  "passed": true,
+  "problems": [],
+  "root": "/srv/inferswarm/materialized/issue117",
+  "rows": [
+    {
+      "live_sha256": "120e9c29173e91419fe1cfd355651bede6bf195f331e9dac2fd682c4420e6036",
+      "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3/armb-participant.safetensors",
+      "sha256_ok": true,
+      "size_ok": true
+    },
+    {
+      "live_sha256": "831a4e6a63212a10bb1765c6067e80d1c8508663ac25e98413cc63a6cf62106f",
+      "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3/assemble-report.json",
+      "sha256_ok": true,
+      "size_ok": true
+    },
+    {
+      "live_sha256": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9",
+      "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3/config.json",
+      "sha256_ok": true,
+      "size_ok": true
+    },
+    {
+      "live_sha256": "b6e06a96cb9810ef5449c2edaa2b78f8e288731e5ac5d1ec6fadb16937694328",
+      "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3/realize-report-wrapped.json",
+      "sha256_ok": true,
+      "size_ok": true
+    },
+    {
+      "live_sha256": "1eef7736ba6f0b5ddb7195668d64b80971c1ba3dd43a1bf2049ccde8f83036c2",
+      "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3/realize-report.json",
+      "sha256_ok": true,
+      "size_ok": true
+    },
+    {
+      "live_sha256": "5703a180438172626f7c6585fbe99ba5253c8fff31aed3af894ce25b0d30c033",
+      "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3/realize-strace.log",
+      "sha256_ok": true,
+      "size_ok": true
+    }
+  ],
+  "schema": "inferswarm.issue133.phase-b.participant-substrate-reconciliation/1"
+}

@@ -1,0 +1,37 @@
+{
+  "nvidia_devices_present": false,
+  "observed_at": "2026-09-10T20:03:21Z",
+  "phase": "pre",
+  "processes": [
+    {
+      "cuda_env_keys": [],
+      "maps_libtorch": 0,
+      "maps_mentions_cuda_or_nvidia": 0,
+      "pid": "530508"
+    },
+    {
+      "cuda_env_keys": [],
+      "maps_libtorch": 0,
+      "maps_mentions_cuda_or_nvidia": 0,
+      "pid": "530601"
+    },
+    {
+      "cuda_env_keys": [],
+      "maps_libtorch": 0,
+      "maps_mentions_cuda_or_nvidia": 0,
+      "pid": "530603"
+    }
+  ],
+  "schema": "inferswarm.issue133.coordinator-observation/1",
+  "state_census": {
+    "/srv/inferswarm/state/arm-c-retry-ordinary/coordinator-config.json": {
+      "size": 556
+    },
+    "/srv/inferswarm/state/arm-c-retry-ordinary/coordinator.log": {
+      "size": 150
+    },
+    "/srv/inferswarm/state/arm-c-retry-ordinary/serving-evidence.json": {
+      "size": 1437
+    }
+  }
+}

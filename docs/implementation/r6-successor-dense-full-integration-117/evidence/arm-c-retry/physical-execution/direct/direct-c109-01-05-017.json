@@ -1,0 +1,40 @@
+{
+  "case_id": "c109-01-05-017",
+  "decoded_output": "It sounds like you're frustrated because",
+  "decoded_output_sha256": "a319859bdcf52fe2d420f8b9825b2daee8ee9d4da46f57f3ff8f1391c102e0b0",
+  "generated_token_ids": [
+    1509,
+    12054,
+    1133,
+    611,
+    236789,
+    500,
+    39742,
+    1547
+  ],
+  "invocation": "per-token-replay-prefill/frozen-allocator/1",
+  "logical_session_id": 5,
+  "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+  "prompt_token_ids": [
+    2,
+    105,
+    2364,
+    107,
+    2118,
+    7202,
+    759,
+    1570,
+    1638,
+    106,
+    107,
+    105,
+    4368,
+    107,
+    100,
+    45518,
+    107,
+    101
+  ],
+  "schema": "inferswarm.issue133.arm-c-retry.direct-case/1",
+  "wall_ns": 3007062307
+}

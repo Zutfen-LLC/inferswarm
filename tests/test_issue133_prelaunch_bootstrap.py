@@ -592,14 +592,16 @@ class CanonicalLauncherControls(unittest.TestCase):
             self.assertTrue(
                 "REJECT" in combined, combined[-500:])
 
-    def test_control_real_premerge_repository_rejects(self):
-        """In THIS repository (PR branch, unmerged authority bytes) the
-        canonical launch must fail closed: origin/main carries no
-        bootstrap blob at an authority-bearing commit (or no authority
-        history compatible with the current campaign)."""
+    def test_control_real_repository_now_authorizes(self):
+        """Since PR #135 merged (origin/main c4a8911 carrying authority
+        commit c42a0ea), the canonical launch in THIS repository must
+        SUCCEED: the bootstrap blob at the authority-bearing commit is
+        accepted history and the campaign freeze binding is intact.
+        (Pre-merge this control asserted rejection; the physical
+        campaign has since executed under this exact launch.)"""
         result = run_canonical_launch(ROOT)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("REJECT", result.stderr)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("accepted_git_materialization", result.stdout)
 
     def test_control_later_unrelated_main_commit_remains_compatible(self):
         """Later-main semantics: an unrelated accepted commit after

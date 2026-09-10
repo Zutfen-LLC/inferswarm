@@ -1,0 +1,47 @@
+{
+  "attempt_id": "armc-retry-physical-1",
+  "campaign_id": "armc-retry-afcdc4428f95d50c",
+  "derivation": "all values re-derived from retained raw evidence in this repository; no authored summary consumed",
+  "direct_arm": {
+    "cases": 24,
+    "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625"
+  },
+  "equality": {
+    "all_mismatches_regime_4": true,
+    "equal": 18,
+    "mismatched_cases": [
+      "c109-04-01-026",
+      "c109-04-02-047",
+      "c109-04-03-040",
+      "c109-04-04-024",
+      "c109-04-05-043",
+      "c109-04-06-074"
+    ],
+    "of": 24
+  },
+  "execution_freeze_identity": "88389598ac485f82aa3ec00caadcebcb3cafb56cf967751262e8ab5bc9bf9a1c",
+  "ordinary_arm": {
+    "cases": 24,
+    "epoch_state": "RECLAIMED"
+  },
+  "problems": [],
+  "schema": "inferswarm.issue133.arm-c-retry.terminal-reduction/1",
+  "terminal": "ISSUE117_ARM_C_ORDINARY_SERVING_FAIL",
+  "zero_invariants": {
+    "controlled_fencing_injections_rejected": 2,
+    "coordinator_bulk_artifact_bytes_observed": 0,
+    "coordinator_cuda_initialized": 0,
+    "coordinator_model_weight_bytes_materialized": 0,
+    "coordinator_model_weight_bytes_received": 0,
+    "direct_comparator": "per-token-replay max_new_tokens=2, step-0 commit, step-1 discard",
+    "direct_invocations": 192,
+    "stale_epoch_commits": 0,
+    "stale_plan_commits": 0,
+    "stale_session_commits": 0,
+    "unattributed_correctness_bearing_commits": 0,
+    "wrong_epoch_commits": 0,
+    "wrong_plan_commits": 0,
+    "wrong_position_commits": 0,
+    "wrong_session_commits": 0
+  }
+}

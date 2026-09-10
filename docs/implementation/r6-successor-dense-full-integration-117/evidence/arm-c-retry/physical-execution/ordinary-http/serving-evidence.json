@@ -1,0 +1,39 @@
+{
+  "records": [
+    {
+      "confidence": "EXACT_CONTEXT",
+      "evidence_class": "MEASURED_ISSUE117_ARM_C_DIRECT_CHAIN",
+      "evidence_identity": "issue117-arm-c-direct-chain-validation",
+      "freshness": "CURRENT",
+      "id": "armc-direct-measured-chain-ttft",
+      "mapping": {
+        "slot-stage-1": "gpu.node-a.0",
+        "slot-stage-2": "gpu.node-a.1",
+        "slot-stage-3": "gpu.node-b.0"
+      },
+      "measurement_status": "MEASURED",
+      "metric": {
+        "name": "ttft_ms",
+        "statistic": "single-run",
+        "unit": "ms",
+        "value": 1249.9601175
+      },
+      "producer_identity": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+      "provenance": {
+        "attempt_id": "armc-direct-6",
+        "case_count": 24,
+        "chain_plan_digest": "sha256:a71a3129b8764d7108f51ed30fb230b42fcd69646a20bcd6806b6ee53b9bc51f",
+        "source": "issue117-arm-c direct-control comparator run",
+        "wall_ns_sha256": "e3d4cc9cc5dd7683c8344af1d9bf9e282e5a8bfd1321fb0557b8e2b96a4bd627"
+      },
+      "required_context": {
+        "model_revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+        "network_context": "1GbE-LAN-MTU1500-node-a-to-node-b",
+        "runtime_context": "r6-dense-producer:924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+        "workload_geometry": "r6-dense-3stage-chain"
+      },
+      "role": "RANKING_OBJECTIVE",
+      "shape_id": "resident-two-node-three-slot"
+    }
+  ]
+}

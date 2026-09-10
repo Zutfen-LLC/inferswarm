@@ -1,0 +1,32 @@
+{
+  "classification_at_emission": "PRE_OBSERVATION_INFRASTRUCTURE",
+  "classification_final": "TERMINAL_CAMPAIGN_ATTEMPT",
+  "facts": {
+    "attempt_id": "armc-retry-physical-1",
+    "campaign_id": "armc-retry-afcdc4428f95d50c",
+    "campaign_lineage_root": "sha256:6596a054cc7a3b5ab52508ae009a4669f4abe2ed131db7baa1f698c231958e31",
+    "coordinator_commit_occurred": false,
+    "correctness_bearing_result_emitted": true,
+    "diagnostic_only_disclosure": false,
+    "execution_freeze_identity": "88389598ac485f82aa3ec00caadcebcb3cafb56cf967751262e8ab5bc9bf9a1c",
+    "frozen_identity_verified_post_run": true,
+    "frozen_identity_verified_pre_launch": true,
+    "gpu_execution_occurred": true,
+    "methodology_gate_passed": true,
+    "methodology_ready_identity": "808b77c45f0b4e5d52a202c1a931f43447ff93a6",
+    "model_execution_occurred": true,
+    "observed_at": "2026-09-10T19:35:05Z",
+    "physical_authorization_id": "phys-auth-5999233cb494888b",
+    "physical_authorization_issued_at": "2026-09-10T00:25:00Z",
+    "physical_retry_authorized": true,
+    "prior_stop_attempt_id": null,
+    "prior_stop_review_id": null,
+    "prior_stop_reviewed_at": null,
+    "prior_stopped_campaign_id": null,
+    "result_reached_coordinator": false,
+    "stop_occurred": false,
+    "terminal_observation": true
+  },
+  "phase": "launch",
+  "schema": "inferswarm.issue133.arm-c-retry.attempt-lineage/1"
+}

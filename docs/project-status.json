@@ -115,8 +115,8 @@
   ],
   "frontier": {
     "execution": {
-      "state": "authorized",
-      "step": "Issue #133 — physical Arm-C retry campaign under the accepted #129 methodology (ISSUE117_ARM_C_RETRY_METHODOLOGY_READY at 808b77c45f0b4e5d52a202c1a931f43447ff93a6, accepted PR #132 merge 781d6b688b29c149837f2ad217b4455dea269eeb); one fresh campaign; Arm D blocked",
+      "state": "blocked",
+      "step": "Issue #133 \u2014 physical Arm-C retry campaign TERMINAL observed: ISSUE117_ARM_C_ORDINARY_SERVING_FAIL (attempt armc-retry-physical-1, campaign armc-retry-afcdc4428f95d50c, execution freeze 88389598ac485f82aa3ec00caadcebcb3cafb56cf967751262e8ab5bc9bf9a1c; 18/24 exact equality, six regime-4 committed-token divergences re-observed on freshly executed arms; all Coordinator-zero, fencing, participant data-path, and deployment-identity invariants held); maintainer review required \u2014 Arm D blocked by terminal FAIL",
       "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/133",
       "constraints": [
         "The accepted Arm-C historical result remains ISSUE117_ARM_C_EVIDENCE_BLOCKER (PR #128, merge 718efbf5770b31c6e44eb3a8c4d0b81fd1dc9c22); the retry is a fresh campaign that does not erase, reinterpret, or continue it.",
@@ -132,7 +132,7 @@
     },
     "objective": "Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.",
     "prerequisite": {
-      "title": "Arm C — ordinary external-Coordinator serving (methodology/evidence-blocked)",
+      "title": "Arm C \u2014 ordinary external-Coordinator serving (methodology/evidence-blocked)",
       "observation": {
         "result": "ISSUE117_ARM_C_EVIDENCE_BLOCKER",
         "reference": "https://github.com/Zutfen-LLC/inferswarm/pull/128"
@@ -143,7 +143,7 @@
       }
     },
     "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/117",
-    "title": "Issue #117 — R6 successor dense full integration"
+    "title": "Issue #117 \u2014 R6 successor dense full integration"
   },
   "limits": [
     "Research / proof of concept; no released production runtime.",

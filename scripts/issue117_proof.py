@@ -105,6 +105,9 @@ PRODUCERS = [
     "tests/test_issue133_corrected_freeze.py",
     "tests/test_issue133_gate_tooling_drift.py",
     "tests/test_issue133_prelaunch_bootstrap.py",
+    "scripts/issue133_equality_reduction.py",
+    "scripts/issue133_terminal_reduction.py",
+    "tests/test_issue133_physical_execution_retention.py",
     "scripts/issue117_arm_b_transport_audit_build.py",
     "scripts/issue117_parsers/__init__.py",
     "scripts/issue117_parsers/source_server_log.py",
@@ -367,7 +370,32 @@ COMMITTED_EVIDENCE_FILES = {
     # and the phase-B correction record
     "arm-c-retry/gpu-identity-observation.json",
     "arm-c-retry/phase-b-correction.json",
+    # issue #133 physical execution (2026-09-10): the first physical Arm-C
+    # retry campaign's retained evidence — terminal FAIL
+    # ISSUE117_ARM_C_ORDINARY_SERVING_FAIL (18/24; six regime-4
+    # committed-token divergences re-observed on freshly executed arms;
+    # all Coordinator-zero/fencing/data-path/deployment-identity
+    # invariants held; no STOP fired)
+    "arm-c-retry/physical-execution/README.md",
+    "arm-c-retry/physical-execution/terminal-reduction.json",
+    "arm-c-retry/physical-execution/equality-reduction.json",
+    "arm-c-retry/physical-execution/strace-audit.json",
+    "arm-c-retry/physical-execution/strace-raw-pins.json",
+    "arm-c-retry/physical-execution/substrate-reconciliation-01.json",
+    "arm-c-retry/physical-execution/substrate-reconciliation-03.json",
+    "arm-c-retry/physical-execution/last-stage-direct.json",
+    "arm-c-retry/physical-execution/last-stage-ordinary.json",
+    "arm-c-retry/physical-execution/attempts/armc-retry-physical-1.json",
+    "arm-c-retry/physical-execution/attempts/execution-plan.launch1.json",
+    "arm-c-retry/physical-execution/preflight/prelaunch-verdict-run1.json",
+    "arm-c-retry/physical-execution/preflight/"
+    "prelaunch-verdict-immediate-prelaunch.json",
+    "arm-c-retry/physical-execution/preflight/"
+    "tokenizer-deployment-proof.json",
+    "arm-c-retry/physical-execution/preflight/host-preflight-01.json",
+    "arm-c-retry/physical-execution/preflight/host-preflight-03.json",
 }
+
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
 #: The campaign never rewrites this file; a preservation regression and the
 #: retained MANIFEST enforce the pin.

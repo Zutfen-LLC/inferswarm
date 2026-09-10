@@ -1,0 +1,747 @@
+{
+  "case_count": 24,
+  "equal_count": 18,
+  "passed": false,
+  "problems": [
+    "c109-04-01-026: committed ids differ: ordinary=[11513, 5597, 236761, 107, 140, 818, 3768, 1390] direct=[11513, 5597, 236761, 107, 6460, 1208, 17971, 67706]",
+    "c109-04-01-026: decoded(prompt+committed) differ",
+    "c109-04-02-047: committed ids differ: ordinary=[236772, 107, 100, 45518, 107, 100, 36764, 236787] direct=[6264, 236761, 107, 100, 45518, 107, 101, 45518]",
+    "c109-04-02-047: decoded(prompt+committed) differ",
+    "c109-04-02-047: HTTP content != decode(prompt+ordinary_committed)",
+    "c109-04-03-040: committed ids differ: ordinary=[101, 100, 106, 236758, 236813, 107, 100, 236813] direct=[101, 100, 100, 45518, 107, 100, 45518, 236786]",
+    "c109-04-03-040: decoded(prompt+committed) differ",
+    "c109-04-03-040: HTTP content != decode(prompt+ordinary_committed)",
+    "c109-04-04-024: committed ids differ: ordinary=[236761, 107, 100, 45518, 107, 100, 100, 100] direct=[236761, 107, 100, 107, 100, 236761, 107, 236761]",
+    "c109-04-04-024: decoded(prompt+committed) differ",
+    "c109-04-04-024: HTTP content != decode(prompt+ordinary_committed)",
+    "c109-04-05-043: committed ids differ: ordinary=[45352, 107, 100, 45518, 107, 45518, 107, 101] direct=[236770, 236771, 236771, 236908, 107, 100, 236908, 107]",
+    "c109-04-05-043: decoded(prompt+committed) differ",
+    "c109-04-05-043: HTTP content != decode(prompt+ordinary_committed)",
+    "c109-04-06-074: committed ids differ: ordinary=[236777, 1006, 573, 506, 623, 258882, 236761, 564] direct=[100, 236781, 236785, 236781, 236829, 100, 107, 100]",
+    "c109-04-06-074: decoded(prompt+committed) differ"
+  ],
+  "rows": [
+    {
+      "case_id": "c109-01-01-045",
+      "committed_count": 8,
+      "committed_ids_equal": true,
+      "committed_token_ids": [
+        818,
+        20412,
+        611,
+        3847,
+        815,
+        496,
+        4148,
+        236764
+      ],
+      "decoded_equal": true,
+      "decoded_sha256": "8fc31fe9a1c4cb8c82f967ca6316fe48b490d8999e67944055ba8fda8e0a61b1",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 1,
+      "runtime_session_ids": [
+        1000001,
+        1000002,
+        1000003,
+        1000004,
+        1000005,
+        1000006,
+        1000007,
+        1000008
+      ]
+    },
+    {
+      "case_id": "c109-01-02-076",
+      "committed_count": 8,
+      "committed_ids_equal": true,
+      "committed_token_ids": [
+        902,
+        1346,
+        14929,
+        15579,
+        236764,
+        506,
+        5456,
+        2165
+      ],
+      "decoded_equal": true,
+      "decoded_sha256": "0111f10f3237e5e63d76a512f8cdbb46b76c95674f3a66ebb0964585f903a249",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 2,
+      "runtime_session_ids": [
+        2000009,
+        2000010,
+        2000011,
+        2000012,
+        2000013,
+        2000014,
+        2000015,
+        2000016
+      ]
+    },
+    {
+      "case_id": "c109-01-03-009",
+      "committed_count": 8,
+      "committed_ids_equal": true,
+      "committed_token_ids": [
+        1509,
+        7412,
+        822,
+        2744,
+        691,
+        3463,
+        1135,
+        653
+      ],
+      "decoded_equal": true,
+      "decoded_sha256": "6bc2e9f9896d17eca4c435ece9b62676effb8e16e5de6ab27976c681b400bcc8",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 3,
+      "runtime_session_ids": [
+        3000017,
+        3000018,
+        3000019,
+        3000020,
+        3000021,
+        3000022,
+        3000023,
+        3000024
+      ]
+    },
+    {
+      "case_id": "c109-01-04-036",
+      "committed_count": 8,
+      "committed_ids_equal": true,
+      "committed_token_ids": [
+        1509,
+        5724,
+        1133,
+        611,
+        659,
+        20104,
+        75927,
+        532
+      ],
+      "decoded_equal": true,
+      "decoded_sha256": "2b290f6fa923545a58831d1789c30298795e672d55e53313a09595510fb07fa3",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 4,
+      "runtime_session_ids": [
+        4000025,
+        4000026,
+        4000027,
+        4000028,
+        4000029,
+        4000030,
+        4000031,
+        4000032
+      ]
+    },
+    {
+      "case_id": "c109-01-05-017",
+      "committed_count": 8,
+      "committed_ids_equal": true,
+      "committed_token_ids": [
+        1509,
+        12054,
+        1133,
+        611,
+        236789,
+        500,
+        39742,
+        1547
+      ],
+      "decoded_equal": true,
+      "decoded_sha256": "a3794c5de29545309f715306bd47ae9b5bbfa310f8918e6b8b4dba095697740d",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 5,
+      "runtime_session_ids": [
+        5000033,
+        5000034,
+        5000035,
+        5000036,
+        5000037,
+        5000038,
+        5000039,
+        5000040
+      ]
+    },
+    {
+      "case_id": "c109-01-06-006",
+      "committed_count": 8,
+      "committed_ids_equal": true,
+      "committed_token_ids": [
+        1509,
+        5724,
+        1133,
+        611,
+        236858,
+        560,
+        3847,
+        496
+      ],
+      "decoded_equal": true,
+      "decoded_sha256": "59c63bc430edd940972612cf0561a004cfa7132d0a382f5e3e0500b46e37d381",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 6,
+      "runtime_session_ids": [
+        6000041,
+        6000042,
+        6000043,
+        6000044,
+        6000045,
+        6000046,
+        6000047,
+        6000048
+      ]
+    },
+    {
+      "case_id": "c109-02-01-030",
+      "committed_count": 8,
+      "committed_ids_equal": true,
+      "committed_token_ids": [
+        2094,
+        7412,
+        531,
+        577,
+        496,
+        5213,
+        3017,
+        6425
+      ],
+      "decoded_equal": true,
+      "decoded_sha256": "d860844834ea7249beba34bcfdadd0e733c3241a6ab68e5c7b437cb29be16739",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 7,
+      "runtime_session_ids": [
+        7000049,
+        7000050,
+        7000051,
+        7000052,
+        7000053,
+        7000054,
+        7000055,
+        7000056
+      ]
+    },
+    {
+      "case_id": "c109-02-02-020",
+      "committed_count": 8,
+      "committed_ids_equal": true,
+      "committed_token_ids": [
+        1509,
+        7412,
+        611,
+        735,
+        3847,
+        496,
+        5249,
+        529
+      ],
+      "decoded_equal": true,
+      "decoded_sha256": "41cc2dcce326815eeb6fb2be9b37781ed3de93255a4084be912ed42f8305145b",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 8,
+      "runtime_session_ids": [
+        8000057,
+        8000058,
+        8000059,
+        8000060,
+        8000061,
+        8000062,
+        8000063,
+        8000064
+      ]
+    },
+    {
+      "case_id": "c109-02-03-011",
+      "committed_count": 8,
+      "committed_ids_equal": true,
+      "committed_token_ids": [
+        1509,
+        7412,
+        611,
+        659,
+        6655,
+        496,
+        2483,
+        529
+      ],
+      "decoded_equal": true,
+      "decoded_sha256": "937a4a802208de241c9e502d3989e49dfaa058ab21cf7ee04ab80ae61e09b22b",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 9,
+      "runtime_session_ids": [
+        9000065,
+        9000066,
+        9000067,
+        9000068,
+        9000069,
+        9000070,
+        9000071,
+        9000072
+      ]
+    },
+    {
+      "case_id": "c109-02-04-033",
+      "committed_count": 8,
+      "committed_ids_equal": true,
+      "committed_token_ids": [
+        1509,
+        5724,
+        1133,
+        611,
+        735,
+        28725,
+        496,
+        1694
+      ],
+      "decoded_equal": true,
+      "decoded_sha256": "141049381ad0e95ecd50ed940c4fff92985eda20c850d493597280c89742a904",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 10,
+      "runtime_session_ids": [
+        10000073,
+        10000074,
+        10000075,
+        10000076,
+        10000077,
+        10000078,
+        10000079,
+        10000080
+      ]
+    },
+    {
+      "case_id": "c109-02-05-024",
+      "committed_count": 8,
+      "committed_ids_equal": true,
+      "committed_token_ids": [
+        1509,
+        12054,
+        1133,
+        611,
+        659,
+        22454,
+        496,
+        5213
+      ],
+      "decoded_equal": true,
+      "decoded_sha256": "dc2e8d6fda7818a543aac63eec520df6a0394de5470c3adf1937893bb348951b",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 11,
+      "runtime_session_ids": [
+        11000081,
+        11000082,
+        11000083,
+        11000084,
+        11000085,
+        11000086,
+        11000087,
+        11000088
+      ]
+    },
+    {
+      "case_id": "c109-02-06-049",
+      "committed_count": 8,
+      "committed_ids_equal": true,
+      "committed_token_ids": [
+        1509,
+        7412,
+        611,
+        735,
+        3847,
+        496,
+        2483,
+        529
+      ],
+      "decoded_equal": true,
+      "decoded_sha256": "010ada0652ee78cede756912ad8f3ca8a749b8f5ab187a0c8343226eb429ca29",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 12,
+      "runtime_session_ids": [
+        12000089,
+        12000090,
+        12000091,
+        12000092,
+        12000093,
+        12000094,
+        12000095,
+        12000096
+      ]
+    },
+    {
+      "case_id": "c109-03-01-044",
+      "committed_count": 8,
+      "committed_ids_equal": true,
+      "committed_token_ids": [
+        2021,
+        1386,
+        5113,
+        529,
+        672,
+        3658,
+        6425,
+        236764
+      ],
+      "decoded_equal": true,
+      "decoded_sha256": "197eaaf821fb99f7d29e14b864e42b19b601a74204fc36642555caef27351ae3",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 13,
+      "runtime_session_ids": [
+        13000097,
+        13000098,
+        13000099,
+        13000100,
+        13000101,
+        13000102,
+        13000103,
+        13000104
+      ]
+    },
+    {
+      "case_id": "c109-03-02-054",
+      "committed_count": 8,
+      "committed_ids_equal": true,
+      "committed_token_ids": [
+        1509,
+        7412,
+        611,
+        735,
+        3847,
+        496,
+        5249,
+        529
+      ],
+      "decoded_equal": true,
+      "decoded_sha256": "b640569590ca92e789961335942c1fd436b12f9c0821c4edd6b1884b09031012",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 14,
+      "runtime_session_ids": [
+        14000105,
+        14000106,
+        14000107,
+        14000108,
+        14000109,
+        14000110,
+        14000111,
+        14000112
+      ]
+    },
+    {
+      "case_id": "c109-03-03-031",
+      "committed_count": 8,
+      "committed_ids_equal": true,
+      "committed_token_ids": [
+        1509,
+        7412,
+        611,
+        659,
+        6655,
+        496,
+        7501,
+        529
+      ],
+      "decoded_equal": true,
+      "decoded_sha256": "7679062c118c0cd21ff7ab4cf2f754a958c3f848ad2acd4c4f535415820ac782",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 15,
+      "runtime_session_ids": [
+        15000113,
+        15000114,
+        15000115,
+        15000116,
+        15000117,
+        15000118,
+        15000119,
+        15000120
+      ]
+    },
+    {
+      "case_id": "c109-03-04-003",
+      "committed_count": 8,
+      "committed_ids_equal": true,
+      "committed_token_ids": [
+        1509,
+        5724,
+        1133,
+        611,
+        735,
+        7659,
+        496,
+        4148
+      ],
+      "decoded_equal": true,
+      "decoded_sha256": "c9d819fb542722dc17843e3e292e7307e0798c2e184b579d901b57fdb9eec29a",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 16,
+      "runtime_session_ids": [
+        16000121,
+        16000122,
+        16000123,
+        16000124,
+        16000125,
+        16000126,
+        16000127,
+        16000128
+      ]
+    },
+    {
+      "case_id": "c109-03-05-044",
+      "committed_count": 8,
+      "committed_ids_equal": true,
+      "committed_token_ids": [
+        1509,
+        12054,
+        1133,
+        611,
+        659,
+        22454,
+        496,
+        5213
+      ],
+      "decoded_equal": true,
+      "decoded_sha256": "a4f79997524393efda5f66ae649dcd3d4ebfaee9b091a90dabb0a3ed0c9f859c",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 17,
+      "runtime_session_ids": [
+        17000129,
+        17000130,
+        17000131,
+        17000132,
+        17000133,
+        17000134,
+        17000135,
+        17000136
+      ]
+    },
+    {
+      "case_id": "c109-03-06-016",
+      "committed_count": 8,
+      "committed_ids_equal": true,
+      "committed_token_ids": [
+        1509,
+        7412,
+        611,
+        735,
+        3847,
+        496,
+        2483,
+        529
+      ],
+      "decoded_equal": true,
+      "decoded_sha256": "4d3231c590e61e6d22de13d2f1410f438809023866425ad65db8b4aae26a1fd1",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 18,
+      "runtime_session_ids": [
+        18000137,
+        18000138,
+        18000139,
+        18000140,
+        18000141,
+        18000142,
+        18000143,
+        18000144
+      ]
+    },
+    {
+      "case_id": "c109-04-01-026",
+      "committed_count": 8,
+      "committed_ids_equal": false,
+      "committed_token_ids": [
+        11513,
+        5597,
+        236761,
+        107,
+        6460,
+        1208,
+        17971,
+        67706
+      ],
+      "decoded_equal": false,
+      "decoded_sha256": "4c444eb5d619b15893f939e5e0010a24a63fd322afffe0676b9624858c6ede98",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 19,
+      "runtime_session_ids": [
+        19000145,
+        19000146,
+        19000147,
+        19000148,
+        19000149,
+        19000150,
+        19000151,
+        19000152
+      ]
+    },
+    {
+      "case_id": "c109-04-02-047",
+      "committed_count": 8,
+      "committed_ids_equal": false,
+      "committed_token_ids": [
+        6264,
+        236761,
+        107,
+        100,
+        45518,
+        107,
+        101,
+        45518
+      ],
+      "decoded_equal": false,
+      "decoded_sha256": "0322b8a69ca06a40ff61ed5fc346363d3eeb437d9695ae2f46c3a7a3b9ec53dd",
+      "finish_reason": "length",
+      "http_content_bind": false,
+      "logical_session": 20,
+      "runtime_session_ids": [
+        20000153,
+        20000154,
+        20000155,
+        20000156,
+        20000157,
+        20000158,
+        20000159,
+        20000160
+      ]
+    },
+    {
+      "case_id": "c109-04-03-040",
+      "committed_count": 8,
+      "committed_ids_equal": false,
+      "committed_token_ids": [
+        101,
+        100,
+        100,
+        45518,
+        107,
+        100,
+        45518,
+        236786
+      ],
+      "decoded_equal": false,
+      "decoded_sha256": "a2357c6305a1933ae446c6618e9d780487b0ced1fb1d2c289076275f6a3b7b32",
+      "finish_reason": "length",
+      "http_content_bind": false,
+      "logical_session": 21,
+      "runtime_session_ids": [
+        21000161,
+        21000162,
+        21000163,
+        21000164,
+        21000165,
+        21000166,
+        21000167,
+        21000168
+      ]
+    },
+    {
+      "case_id": "c109-04-04-024",
+      "committed_count": 8,
+      "committed_ids_equal": false,
+      "committed_token_ids": [
+        236761,
+        107,
+        100,
+        107,
+        100,
+        236761,
+        107,
+        236761
+      ],
+      "decoded_equal": false,
+      "decoded_sha256": "dcbff7d9abfdc6b340c43d6d0483ce7d7925aebd8d63b8c15c0e15e8b1dc3817",
+      "finish_reason": "length",
+      "http_content_bind": false,
+      "logical_session": 22,
+      "runtime_session_ids": [
+        22000169,
+        22000170,
+        22000171,
+        22000172,
+        22000173,
+        22000174,
+        22000175,
+        22000176
+      ]
+    },
+    {
+      "case_id": "c109-04-05-043",
+      "committed_count": 8,
+      "committed_ids_equal": false,
+      "committed_token_ids": [
+        236770,
+        236771,
+        236771,
+        236908,
+        107,
+        100,
+        236908,
+        107
+      ],
+      "decoded_equal": false,
+      "decoded_sha256": "883cb83275ebe1e995e91669121dbf9365a089f709ddf60c64361ffdb604929c",
+      "finish_reason": "length",
+      "http_content_bind": false,
+      "logical_session": 23,
+      "runtime_session_ids": [
+        23000177,
+        23000178,
+        23000179,
+        23000180,
+        23000181,
+        23000182,
+        23000183,
+        23000184
+      ]
+    },
+    {
+      "case_id": "c109-04-06-074",
+      "committed_count": 8,
+      "committed_ids_equal": false,
+      "committed_token_ids": [
+        100,
+        236781,
+        236785,
+        236781,
+        236829,
+        100,
+        107,
+        100
+      ],
+      "decoded_equal": false,
+      "decoded_sha256": "f982d994af595fb0f29bb355bec8aa1169c40b73b2cd425794907703525ec8f3",
+      "finish_reason": "length",
+      "http_content_bind": true,
+      "logical_session": 24,
+      "runtime_session_ids": [
+        24000185,
+        24000186,
+        24000187,
+        24000188,
+        24000189,
+        24000190,
+        24000191,
+        24000192
+      ]
+    }
+  ],
+  "schema": "inferswarm.issue133.arm-c-retry.equality-reduction/1",
+  "serving_plan_digest": "sha256:d9c4e295e1a480683ecdcf3ab672a07655650043e5438a5a8803159194426cf9"
+}

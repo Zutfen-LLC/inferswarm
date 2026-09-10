@@ -1,0 +1,46 @@
+{
+  "nvidia_devices_present": false,
+  "observed_at": "2026-09-10T20:05:18Z",
+  "phase": "post",
+  "processes": [
+    {
+      "cuda_env_keys": [],
+      "maps_libtorch": 0,
+      "maps_mentions_cuda_or_nvidia": 0,
+      "pid": "530508"
+    },
+    {
+      "cuda_env_keys": [],
+      "maps_libtorch": 0,
+      "maps_mentions_cuda_or_nvidia": 0,
+      "pid": "530724"
+    },
+    {
+      "cuda_env_keys": [],
+      "maps_libtorch": 0,
+      "maps_mentions_cuda_or_nvidia": 0,
+      "pid": "530726"
+    }
+  ],
+  "schema": "inferswarm.issue133.coordinator-observation/1",
+  "state_census": {
+    "/srv/inferswarm/state/arm-c-retry-ordinary/coordinator-config.json": {
+      "size": 556
+    },
+    "/srv/inferswarm/state/arm-c-retry-ordinary/coordinator-observation-pre.json": {
+      "size": 884
+    },
+    "/srv/inferswarm/state/arm-c-retry-ordinary/coordinator.log": {
+      "size": 286
+    },
+    "/srv/inferswarm/state/arm-c-retry-ordinary/lifecycle/serving-report.json": {
+      "size": 307073
+    },
+    "/srv/inferswarm/state/arm-c-retry-ordinary/lifecycle/serving-report.json.sha256": {
+      "size": 86
+    },
+    "/srv/inferswarm/state/arm-c-retry-ordinary/serving-evidence.json": {
+      "size": 1437
+    }
+  }
+}
