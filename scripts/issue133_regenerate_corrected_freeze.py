@@ -8,8 +8,8 @@ Executes the exact ordering required by the correction contract:
    correctness-bearing byte (the corrected direct driver);
 3. mechanically re-derive the final r5a static execution plan via the
    REAL unmocked builder (already done; this script re-verifies);
-4. regenerate `execution-freeze.json` (schema /4) from the corrected
-   identities;
+4. regenerate `execution-freeze.json` (schema /5, review 5166773760)
+   from the corrected identities + gate-tooling closure;
 5. compute its canonical SHA-256;
 6. rebind `physical-campaign-authority.json`'s sole campaign
    `execution_freeze_identity` to the regenerated freeze (additive
@@ -17,8 +17,9 @@ Executes the exact ordering required by the correction contract:
 7. verify the binding mechanically.
 
 No GPU, no model execution, no participant-state mutation, no
-repository-history rewriting. The previous freeze 5af9aee3… is retained
-in `superseded_freeze_lineage` as invalidated before physical execution.
+repository-history rewriting. The superseded freezes (5af9aee3… and
+the reviewed-head 1f5ef48b…) are retained in
+`superseded_freeze_lineage` as invalidated before physical execution.
 """
 from __future__ import annotations
 
@@ -38,8 +39,16 @@ DRIVER_DEPLOY_PATH = ("/srv/inferswarm/state/arm-c-retry/scripts/"
                       "issue133_arm_c_retry_direct.py")
 FREEZE_PATH = EV / "execution-freeze.json"
 AUTHORITY_PATH = EV / "physical-campaign-authority.json"
-SUPERSEDED_IDENTITY = ("5af9aee314fdd742cdb75d903d47e2f3c43296ee887e50"
-                       "7ef335b8f614e7a19e")
+#: freeze identities superseded by earlier correction rounds (retained
+#: INSIDE the freeze document's superseded_freeze_lineage)
+SUPERSEDED_PHASE_B_IDENTITY = ("5af9aee314fdd742cdb75d903d47e2f3c43296ee"
+                               "887e507ef335b8f614e7a19e")
+#: the reviewed-head freeze (schema /4, review 5166773760) — superseded
+#: ADDITIVELY by this /5 regeneration before any physical execution
+REVIEWED_FREEZE_IDENTITY = ("1f5ef48b314b721a8370404f34dee2e934e2bbc2f1"
+                            "40724b9793a856f9b9a218")
+REVIEW_REFERENCE = "maintainer review 5166773760 on head " \
+                   "e0661c385505e2a240ac59b809c7429f66ad924f"
 
 
 def main() -> int:
@@ -76,6 +85,20 @@ def main() -> int:
     #         the campaign module and re-proven by the dry run) --------
     record = camp.build_execution_freeze_record(drivers, dependencies)
 
+    # --- retain the reviewed /4 freeze additively as superseded -------
+    record["superseded_freeze_lineage"].append({
+        "execution_freeze_identity": REVIEWED_FREEZE_IDENTITY,
+        "status": "INVALIDATED_BEFORE_PHYSICAL_EXECUTION",
+        "reason": (
+            REVIEW_REFERENCE + ": the mandatory pre-execution "
+            "real-builder authority path was not itself identity-bound "
+            "(launch-gate dependency-closure hole). This /5 freeze adds "
+            "the complete accepted-authority-commit gate-tooling byte "
+            "closure and binds the real-builder verdict to the freeze "
+            "record's own identities. Zero physical attempts occurred "
+            "under the superseded freeze."),
+    })
+
     # --- 5. canonical identity ---------------------------------------
     identity = camp.execution_freeze_identity(record)
     raw = (json.dumps(record, indent=2, sort_keys=True) + "\n").encode()
@@ -101,7 +124,8 @@ def main() -> int:
     print(json.dumps({
         "campaign_id": campaign_id,
         "execution_freeze_identity": identity,
-        "superseded": SUPERSEDED_IDENTITY,
+        "superseded": [SUPERSEDED_PHASE_B_IDENTITY,
+                       REVIEWED_FREEZE_IDENTITY],
         "driver_repository_sha": repo_sha,
         "driver_file_sha256": driver_sha,
     }, indent=2, sort_keys=True))

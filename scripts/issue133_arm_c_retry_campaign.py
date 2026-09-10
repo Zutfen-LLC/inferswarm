@@ -138,6 +138,11 @@ AUTHORIZED_R5A_STATIC_PLAN_DIGEST = (
     "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625")
 AUTHORIZED_R5A_STATIC_PLAN_SCHEMA = (
     "inferswarm.r5a.static-execution-plan/1")
+#: the accepted Arm-B PARTICIPANT execution-plan document family
+#: (distinct from the r5a static family; asserted distinct at import
+#: time above and re-asserted against the authority-bound freeze record
+#: by the real-builder verdict cross-checks)
+ARM_B_PARTICIPANT_PLAN_SCHEMA = "inferswarm.issue117.execution-plan/2"
 #: the corrected canonical Issue-133 physical environment identity
 #: (scripts/issue133_canonical_environment.py; identical to the #129
 #: derivation except the three pci_bdf values are the freshly observed
@@ -192,7 +197,11 @@ TOKENIZER_PYTHON = _frozen.TOKENIZER_PYTHON
 #: physical attempt and their presence in a pre-execution freeze fails
 #: closed (a pre-run record may not masquerade as completed post-run
 #: verification).
-FREEZE_SCHEMA = "inferswarm.issue133.execution-freeze/4"
+#: freeze schema /5 (review 5166773760): adds the complete
+#: pre-execution gate-tooling closure (accepted-authority-commit
+#: byte binding) and the authority-bound verdict-field set to
+#: real_builder_dry_run.
+FREEZE_SCHEMA = "inferswarm.issue133.execution-freeze/5"
 FREEZE_DRIVER_STATIC_FIELDS = (
     "repository_sha",
     "file_sha256",
@@ -283,6 +292,7 @@ FREEZE_TOP_FIELDS = frozenset({
     "dependencies", "authorized_realization_inputs",
     "real_builder_dry_run", "superseded_freeze_lineage",
     "deployment_verification_requirements",
+    "gate_tooling_closure",
 })
 
 
@@ -462,6 +472,130 @@ def accepted_authority_commit(repo_root: Path | None = None,
         "any correctness-bearing physical attempt")
 
 
+#: ---------------------------------------------------------------------------
+#: PRE-EXECUTION GATE-TOOLING CLOSURE (maintainer review 5166773760).
+#:
+#: The exhaustive fixed set of repository-side Python files whose bytes
+#: can affect the pre-execution authorization decision. Derived by
+#: auditing the ACTUAL import graph of the gate:
+#:
+#: - scripts/issue133_arm_c_retry_campaign.py  (this module - the gate
+#:   itself: authority loading, accepted-history resolution, freeze
+#:   binding, dry-run invocation);
+#: - scripts/issue133_real_builder_dry_run.py   (dynamically executed by
+#:   verify_real_builder_dry_run);
+#: - scripts/issue133_canonical_environment.py  (imported by the dry run;
+#:   derives the corrected canonical physical environment);
+#: - scripts/issue133_arm_c_retry_direct.py     (imported by the dry run;
+#:   the corrected direct driver whose r5a fence and vendored
+#:   byte-pinned producer closure build the plan);
+#: - scripts/issue129_arm_c_retry_core.py       (imported by every module
+#:   above; the frozen #129 authority/state-machine core -
+#:   load_authority_document, accepted-authority semantics, campaign
+#:   state classification, frozen control-plane loading);
+#: - scripts/issue117_arm_c_frozen_pins.py      (loaded by the #129 core
+#:   at authority/parse time - derive_invocation_semantics and the
+#:   frozen tokenizer-asset pin table the authority parser consults).
+#:
+#: The frozen producer closure (frozen-source/924cd22e/*) is NOT
+#: working-tree code: the dry run byte-pins every vendored file through
+#: the #129 core's frozen loader and the direct driver's vendored-file
+#: pin table before import, so it needs no accepted-commit binding here.
+GATE_TOOLING_CLOSURE = (
+    "scripts/issue133_arm_c_retry_campaign.py",
+    "scripts/issue133_real_builder_dry_run.py",
+    "scripts/issue133_canonical_environment.py",
+    "scripts/issue133_arm_c_retry_direct.py",
+    "scripts/issue129_arm_c_retry_core.py",
+    "scripts/issue117_arm_c_frozen_pins.py",
+)
+
+#: freeze record fields the real-builder verdict is cross-checked against
+#: (taken from the authority-bound execution-freeze record itself, never
+#: from a mutable module constant alone).
+FREEZE_BOUND_VERDICT_FIELDS = (
+    "r5a_static_plan_schema",
+    "r5a_static_plan_digest",
+    "arm_b_participant_plan_schema",
+    "arm_b_participant_plan_digest",
+    "chain_plan_digest",
+)
+
+
+def _accepted_commit_blob(repo_path: Path, commit: str,
+                          relative: str) -> bytes | None:
+    """Exact blob bytes at ``commit:relative`` (raw bytes, never text
+    transcoding); None when the path does not exist at that commit."""
+    import subprocess
+    completed = subprocess.run(
+        ["git", "-C", str(repo_path), "show", f"{commit}:{relative}"],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    if completed.returncode != 0:
+        return None
+    return completed.stdout
+
+
+def verify_gate_tooling_closure(
+        accepted_commit: str,
+        repo_root: Path | None = None,
+        repo_path: Path | None = None) -> dict[str, Any]:
+    """Fail-closed byte binding of the COMPLETE pre-execution
+    gate-tooling closure against the accepted authority commit
+    (maintainer review 5166773760): before any gate module is
+    imported/executed, every file in ``GATE_TOOLING_CLOSURE`` must be a
+    regular non-symlink working-tree file whose EXACT bytes equal the
+    blob at the accepted authority commit.
+
+    This closes the dependency hole where a working-tree edit or a
+    later-main change could alter the launch gate while the
+    authority-bound execution-freeze bytes still verify: gate tooling
+    drift now rejects BEFORE the dry run executes.
+
+    A later-main commit that leaves every gate byte identical to the
+    accepted authority commit remains compatible (allowed); any gate
+    byte change requires review/re-freeze (rejected here)."""
+    bytes_root = Path(repo_root) if repo_root else ROOT
+    git_root = Path(repo_path) if repo_path else bytes_root
+    if not _frozen._is_git_sha(accepted_commit):
+        raise RuntimeError(
+            "gate-tooling closure: malformed accepted authority commit "
+            f"{accepted_commit!r}; failing closed")
+    verified: dict[str, str] = {}
+    problems: list[str] = []
+    for relative in GATE_TOOLING_CLOSURE:
+        local = bytes_root / relative
+        if local.is_symlink() or not local.is_file():
+            problems.append(
+                f"{relative} is not a regular non-symlink working-tree "
+                "file")
+            continue
+        accepted_bytes = _accepted_commit_blob(
+            git_root, accepted_commit, relative)
+        if accepted_bytes is None:
+            problems.append(
+                f"no blob at {relative} in accepted authority commit "
+                f"{accepted_commit}")
+            continue
+        local_sha = sha256_bytes(local.read_bytes())
+        accepted_sha = sha256_bytes(accepted_bytes)
+        if local_sha != accepted_sha:
+            problems.append(
+                f"gate tooling byte drift for {relative}: working tree "
+                f"{local_sha} != accepted {accepted_sha}")
+        else:
+            verified[relative] = local_sha
+    if problems:
+        raise RuntimeError(
+            "gate-tooling closure FAILED against accepted authority "
+            f"commit {accepted_commit}: " + "; ".join(problems))
+    return {
+        "schema": "inferswarm.issue133.gate-tooling-closure/1",
+        "accepted_authority_commit": accepted_commit,
+        "bound_paths": sorted(GATE_TOOLING_CLOSURE),
+        "verified": verified,
+    }
+
+
 def verify_pre_execution_authority_gate(
         repo_root: Path | None = None,
         repo_path: Path | None = None) -> dict[str, Any]:
@@ -472,12 +606,21 @@ def verify_pre_execution_authority_gate(
     - the authority document is bound to the exact issue #133 identities;
     - the selected authority commit is an ancestor of
       ``refs/remotes/origin/main`` (accepted history);
+    - the COMPLETE pre-execution gate-tooling closure (every
+      repository-side Python file able to affect this decision) is
+      byte-identical to the accepted authority commit - verified
+      BEFORE any gate module is imported/executed (fail closed on any
+      working-tree drift, symlink, missing path, or later-main gate
+      byte change);
     - the retained execution-freeze bytes hash EXACTLY to the sole
       authorized campaign's ``execution_freeze_identity``;
-    - MANDATORY REAL-BUILDER CPU DRY RUN: the actual unmocked frozen
-      producer build path (no GPU/model work) reproduces exactly the
-      frozen r5a static-plan digest (same-family), and the Arm-B
-      participant-plan digest cannot satisfy that fence.
+    - MANDATORY REAL-BUILDER CPU DRY RUN, bound to the authority-loaded
+      freeze record's OWN identities (never a mutable module constant
+      alone): the actual unmocked frozen producer build path (no
+      GPU/model work) reproduces exactly the freeze record's r5a
+      static-plan digest, the freeze record, the campaign module
+      constant, and the direct-driver constant all agree exactly, and
+      the Arm-B participant-plan digest cannot satisfy that fence.
 
     Any failure raises (fail closed). A passing verdict is a precondition,
     never physical-execution authority by itself.
@@ -491,45 +634,136 @@ def verify_pre_execution_authority_gate(
             "pre-execution gate: authority bindings failed: "
             + "; ".join(binding["problems"]))
     commit = accepted_authority_commit(root, git_root)
+    # ---- review 5166773760: bind the executing gate-tooling bytes to
+    # ---- the accepted authority commit BEFORE importing/executing any
+    # ---- gate module.
+    tooling = verify_gate_tooling_closure(commit, root, git_root)
     freeze = verify_execution_freeze_binding(document, root)
-    dry_run = verify_real_builder_dry_run(root)
+    dry_run = verify_real_builder_dry_run(
+        root, freeze_record=freeze["record"])
     return {
-        "schema": "inferswarm.issue133.pre-execution-gate/2",
-        "gate": "ACCEPTED_HISTORY_FREEZE_AND_REAL_BUILDER_BOUND",
+        "schema": "inferswarm.issue133.pre-execution-gate/3",
+        "gate": "ACCEPTED_HISTORY_TOOLING_FREEZE_AND_REAL_BUILDER_BOUND",
         "accepted_authority_commit": commit,
         "accepted_ref": ACCEPTED_REMOTE_REF,
         "campaign_ids": binding["campaign_ids"],
+        "gate_tooling_closure": tooling,
         "execution_freeze_binding": freeze,
         "real_builder_dry_run": dry_run,
     }
 
 
 def verify_real_builder_dry_run(
-        repo_root: Path | None = None) -> dict[str, Any]:
+        repo_root: Path | None = None,
+        freeze_record: Mapping[str, Any] | None = None) -> dict[str, Any]:
     """MANDATORY pre-launch check (maintainer disposition
-    issuecomment-5617122680): from the exact repository bytes, the ACTUAL
-    unmocked frozen producer build path must produce an r5a static
-    execution plan whose digest equals the frozen authority digest.
-    No GPU, no model realization — pure CPU build path. The wrong-family
-    negative control must also hold."""
+    issuecomment-5617122680 + review 5166773760): from the exact
+    repository bytes, the ACTUAL unmocked frozen producer build path
+    must produce an r5a static execution plan whose digest equals the
+    digest authorized by the RETAINED, authority-bound
+    execution-freeze record itself (``freeze_record``; loaded and
+    byte-verified here when not supplied). No GPU, no model
+    realization — pure CPU build path. The freeze record's r5a
+    schema/digest, the Arm-B participant identity, the chain-plan
+    digest, and the authorized environment canonical sha256 are
+    cross-checked against the executing module constants and the
+    really-built plan; ANY disagreement fails closed before physical
+    execution. The wrong-family negative control must also hold."""
     root = Path(repo_root) if repo_root else ROOT
     import importlib
     import importlib.util
+    # ---- review 5166773760: the dry run is bound to the AUTHORITY-
+    # ---- LOADED, byte-verified execution-freeze record's own
+    # ---- identities, never to a mutable module constant alone.
+    if freeze_record is None:
+        record, _raw = load_execution_freeze_record(root)
+        verify_freeze_static_shape(record)
+    else:
+        record = freeze_record
+    for field in FREEZE_BOUND_VERDICT_FIELDS:
+        if field not in record:
+            raise RuntimeError(
+                f"authority-bound freeze record lacks field {field!r}; "
+                "the real-builder verdict cannot be bound to authority")
+    bound = {field: record[field] for field in FREEZE_BOUND_VERDICT_FIELDS}
+    bound_environment_sha = record["authorized_realization_inputs"][
+        "environment"]["canonical_sha256"]
     script = root / "scripts" / "issue133_real_builder_dry_run.py"
     spec = importlib.util.spec_from_file_location(
         "_issue133_real_builder_dry_run", script)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    result = module.run_real_builder_dry_run()
+    result = module.run_real_builder_dry_run(freeze_bound=bound)
     plan = result["plan"]
-    verdict = module.verify_dry_run(plan)
+    verdict = module.verify_dry_run(plan, freeze_bound=bound)
     module.verify_wrong_family_negative_control(plan)
     module.verify_arm_b_participant_authority()
-    if verdict["digest"] != AUTHORIZED_R5A_STATIC_PLAN_DIGEST:
+    problems: list[str] = []
+    # 1. the really-built plan equals the AUTHORITY-BOUND freeze values
+    if plan.get("schema") != bound["r5a_static_plan_schema"]:
+        problems.append(
+            f"built plan schema {plan.get('schema')!r} != freeze record "
+            f"{bound['r5a_static_plan_schema']!r}")
+    if plan.get("digest") != bound["r5a_static_plan_digest"]:
+        problems.append(
+            f"built r5a digest {plan.get('digest')!r} != freeze record "
+            f"{bound['r5a_static_plan_digest']!r}")
+    # 2. the freeze record, the campaign constant, and the direct-driver
+    #    constant must agree EXACTLY (any disagreement fails before
+    #    physical execution)
+    if bound["r5a_static_plan_digest"] != AUTHORIZED_R5A_STATIC_PLAN_DIGEST:
+        problems.append(
+            "freeze record r5a digest != campaign constant "
+            f"{AUTHORIZED_R5A_STATIC_PLAN_DIGEST!r}")
+    if bound["r5a_static_plan_schema"] != AUTHORIZED_R5A_STATIC_PLAN_SCHEMA:
+        problems.append("freeze record r5a schema != campaign constant")
+    if bound["arm_b_participant_plan_digest"] != \
+            ISSUE133["execution_plan_digest"]:
+        problems.append(
+            "freeze record Arm-B participant digest != campaign constant")
+    if bound["arm_b_participant_plan_schema"] != \
+            ARM_B_PARTICIPANT_PLAN_SCHEMA:
+        problems.append(
+            "freeze record Arm-B participant schema != campaign constant")
+    if bound["chain_plan_digest"] != \
+            AUTHORIZED_REALIZATION_INPUTS["chain_plan"]["digest"]:
+        problems.append(
+            "freeze record chain-plan digest != campaign constant")
+    if verdict["digest"] != bound["r5a_static_plan_digest"]:
+        problems.append("dry-run verdict digest != freeze record digest")
+    # 3. the corrected environment identity is the freeze record's own
+    built_environment_sha = result.get("environment_canonical_sha256")
+    if built_environment_sha != bound_environment_sha:
+        problems.append(
+            "built environment canonical sha256 "
+            f"{built_environment_sha!r} != freeze record "
+            f"{bound_environment_sha!r}")
+    # 4. the direct-driver module constant agrees too (imported lazily
+    #    so, inside the pre-execution gate, the gate's own byte binding
+    #    has already been verified before this import)
+    import issue133_arm_c_retry_direct as _driver
+    if _driver.AUTHORIZED_R5A_STATIC_PLAN_DIGEST != \
+            bound["r5a_static_plan_digest"]:
+        problems.append(
+            "direct-driver r5a digest constant != freeze record digest")
+    if _driver.AUTHORIZED_R5A_STATIC_PLAN_SCHEMA != \
+            bound["r5a_static_plan_schema"]:
+        problems.append(
+            "direct-driver r5a schema constant != freeze record schema")
+    if _driver.AUTHORIZED_ENVIRONMENT_CANONICAL_SHA256 != \
+            bound_environment_sha:
+        problems.append(
+            "direct-driver environment constant != freeze record "
+            "environment identity")
+    if problems:
         raise RuntimeError(
-            "real-builder dry run digest does not equal the frozen r5a "
-            "authority digest; physical launch is rejected")
+            "REAL-BUILDER DRY RUN authority binding FAILED: "
+            + "; ".join(problems)
+            + "; physical launch is rejected")
+    verdict = dict(verdict)
+    verdict["freeze_bound_verdict_fields"] = dict(bound)
+    verdict["environment_canonical_sha256"] = built_environment_sha
     return verdict
 
 
@@ -687,6 +921,10 @@ def verify_execution_freeze_binding(
         "authorized_execution_freeze_identity": authorized,
         "retained_bytes_sha256": actual,
         "bound": True,
+        # the LOADED, byte-verified freeze record itself: the
+        # authority-bound source of every identity the real-builder
+        # verdict is cross-checked against (review 5166773760)
+        "record": record,
     }
 
 
@@ -780,6 +1018,34 @@ def build_execution_freeze_record(
                 "participant-plan digest (issue117.execution-plan/2) "
                 "must fail the same fence (wrong-family negative "
                 "control)"),
+            "authority_binding": (
+                "review 5166773760: the verdict is bound to THIS "
+                "authority-bound freeze record's own values — "
+                "r5a_static_plan_schema, r5a_static_plan_digest, "
+                "arm_b_participant_plan_schema, "
+                "arm_b_participant_plan_digest, chain_plan_digest, and "
+                "authorized_realization_inputs.environment."
+                "canonical_sha256 are taken from the loaded, "
+                "byte-verified record and cross-checked against the "
+                "executing module constants and the really-built plan; "
+                "ANY disagreement fails closed before physical "
+                "execution"),
+            "bound_verdict_fields": list(FREEZE_BOUND_VERDICT_FIELDS),
+        },
+        "gate_tooling_closure": {
+            "required": True,
+            "binding": (
+                "the COMPLETE fixed set of repository-side Python files "
+                "able to affect the pre-execution authorization "
+                "decision; before any gate module is imported or "
+                "executed, every file is verified byte-for-byte against "
+                "git show <accepted_authority_commit>:<path> (regular "
+                "non-symlink working-tree file; missing blob, missing "
+                "file, symlink, or byte mismatch fails closed). A "
+                "later-main commit leaving every gate byte identical "
+                "remains compatible; any gate byte change requires "
+                "review/re-freeze"),
+            "paths": list(GATE_TOOLING_CLOSURE),
         },
         "superseded_freeze_lineage": [
             {

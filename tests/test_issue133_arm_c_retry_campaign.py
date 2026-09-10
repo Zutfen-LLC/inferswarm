@@ -57,9 +57,13 @@ def _scratch_repo(tmp: str) -> Path:
     _git(repo, "config", "user.name", "Issue 133 Test")
     _git(repo, "config", "user.email", "issue133@example.invalid")
     # base history WITHOUT the authority path (so a side-branch authority
-    # commit is the only commit carrying those bytes when tests want it)
+    # commit is the only commit carrying those bytes when tests want it).
+    # The gate-tooling closure is committed with the base so the
+    # accepted-authority commit carries every gate blob (review
+    # 5166773760).
     (repo / "README.marker").write_text("scratch fixture\n")
     _git(repo, "add", "README.marker")
+    _git(repo, "add", "scripts")
     _git(repo, "commit", "-q", "-m", "scratch base")
     return repo
 
