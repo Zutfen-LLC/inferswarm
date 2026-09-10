@@ -53,12 +53,13 @@
     {
       "code_commits": [
         "b628da6bd58bee57799e1362d912abc3663a1ef7",
-        "24b05e6da8adfd25639948f0d261c4c4d0685ea4"
+        "24b05e6da8adfd25639948f0d261c4c4d0685ea4",
+        "ff51098e94d80e2c13b5dccbdc90e998127b7296"
       ],
       "corrected_direct_driver": {
-        "file_sha256": "f2f907c202b012f4a5bcb3f8e2f8f8d50664737e34b9c98e8e3604e2ce9c982d",
+        "file_sha256": "eae4899c690b5ab1feff73f559d63a96fce2ea835e9321e751cf4e301a129151",
         "path": "scripts/issue133_arm_c_retry_direct.py",
-        "repository_sha": "24b05e6da8adfd25639948f0d261c4c4d0685ea4"
+        "repository_sha": "ff51098e94d80e2c13b5dccbdc90e998127b7296"
       },
       "dependency_closure": {
         "separately_deployed": {
@@ -68,7 +69,7 @@
             "repository_sha": "781d6b688b29c149837f2ad217b4455dea269eeb"
           }
         },
-        "transitive_producer_worktree": "All imported FreeToken runtime and planner modules are in the clean exact producer worktree at 924cd22ea081f6d4ed471016faf01d427fc5b0d2.",
+        "transitive_producer_worktree": "The driver rejects preloaded producer modules outside the clean exact worktree at 924cd22ea081f6d4ed471016faf01d427fc5b0d2. It puts the verified worktree roots first and checks each imported producer module against its expected tracked path before use.",
         "untrusted_dynamic_methodology_module_eliminated": true
       },
       "findings_fixed": [
@@ -78,18 +79,20 @@
         "The freeze covers the complete separately deployed code dependency closure."
       ],
       "freeze": {
-        "identity": "dc4a370bee3c99b1fa7dc488dae0b3e2e95e9a831c2a798b8af534f0c365c3eb",
+        "identity": "d1a0ee53cfb19f6c4346493f699f43e092364eb4e834b7cf27456d5d79979678",
         "ordering": [
           "The direct-driver and retention-proof code and tests were committed before the freeze.",
-          "The freeze was generated from commit 24b05e6da8adfd25639948f0d261c4c4d0685ea4 and the exact direct-driver SHA-256.",
+          "The final freeze was generated from commit ff51098e94d80e2c13b5dccbdc90e998127b7296 and the exact direct-driver SHA-256.",
           "The canonical execution-freeze identity was computed.",
           "The physical-campaign authority rebound the regenerated freeze.",
           "The canonical MANIFEST and producer-hash records were regenerated."
         ],
         "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/execution-freeze.json",
         "schema": "inferswarm.issue133.execution-freeze/3",
-        "superseded_identity": "9face9f3b72913ce87543afe9c33ff4a969dd1c706c835a52a3834cd29271e5e"
+        "superseded_identity": "dc4a370bee3c99b1fa7dc488dae0b3e2e95e9a831c2a798b8af534f0c365c3eb"
       },
+      "intermediate_evidence_commit": "e23f5de52acf1b36fd127b9fae36bea69bb33b02",
+      "intermediate_freeze_identity": "dc4a370bee3c99b1fa7dc488dae0b3e2e95e9a831c2a798b8af534f0c365c3eb",
       "review_id": "5162086233",
       "status": "CURRENT_PHASE_A_CORRECTION"
     }
@@ -105,6 +108,10 @@
     },
     {
       "identity": "dc4a370bee3c99b1fa7dc488dae0b3e2e95e9a831c2a798b8af534f0c365c3eb",
+      "status": "SUPERSEDED_BY_IMPORT_CLOSURE_AUDIT_BEFORE_PHYSICAL_EXECUTION"
+    },
+    {
+      "identity": "d1a0ee53cfb19f6c4346493f699f43e092364eb4e834b7cf27456d5d79979678",
       "status": "CURRENT_PHASE_A_FREEZE"
     }
   ],
