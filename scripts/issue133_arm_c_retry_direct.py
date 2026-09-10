@@ -33,6 +33,10 @@ is mechanically bound to accepted evidence BEFORE realization:
   the accepted Arm-C chain plan re-frozen from the accepted Arm-B
   participant plan (its digest is pinned, and its provenance must carry
   the accepted participant identity sha256:ee845188…);
+- `--tokenizer` must equal the authorized deployment path exactly, and
+  its RESOLVED filesystem location must satisfy the accepted #129
+  tokenizer Source rule: a real non-symlink directory that neither is
+  nor resides beneath the forbidden /srv/models/ Source root;
 - the pinned r5b_epochs.py bytes are sha256-pinned;
 - the producer worktree must be clean at exactly 924cd22e…;
 - the fixture/corpus digests are pinned.
@@ -92,6 +96,11 @@ AUTHORIZED_MODEL_VIEW_PATH = "/srv/inferswarm/state/arm-c/model-view"
 AUTHORIZED_LAST_STAGE_HOST = "10.0.0.219"
 AUTHORIZED_LAST_STAGE_PORT = 18485
 AUTHORIZED_TOKENIZER_PATH = "/srv/inferswarm/tokenizers/gemma-r6-frozen"
+#: the forbidden Source root of the accepted issue #129 tokenizer Source
+#: rule: the tokenizer deployment may never BE or RESOLVE INTO /srv/models/
+#: (compared on the resolved filesystem location, never as a lexical
+#: string-prefix, so symlinks and `..` traversal cannot evade it)
+FORBIDDEN_SOURCE_ROOT = "/srv/models/"
 AUTHORIZED_INPUT_PATHS = {
     "plan": "/srv/inferswarm/state/arm-c/chain-plan.json",
     "environment": "/srv/inferswarm/state/arm-c/environment.json",
@@ -385,8 +394,59 @@ def verify_pinned_file(path: str, expected_sha256: str, label: str) -> bytes:
     return raw
 
 
+def verify_tokenizer_source_location(path: str) -> Path:
+    """Enforce the accepted #129 tokenizer Source-location rule on the
+    RESOLVED filesystem location (matching #129's
+    verify_retained_tokenizer_assets semantics; never a lexical
+    string-prefix comparison against /srv/models/):
+
+    - resolve the tokenizer directory with Path.resolve();
+    - resolve the forbidden Source root /srv/models/;
+    - reject if the resolved tokenizer directory equals the forbidden
+      Source root;
+    - reject if the forbidden Source root is any parent of the resolved
+      tokenizer directory;
+    - reject if the tokenizer directory itself is a symlink;
+    - reject if the tokenizer directory is not an existing directory.
+    """
+    asset_dir = Path(path)
+    resolved = asset_dir.resolve()
+    forbidden = Path(FORBIDDEN_SOURCE_ROOT).resolve()
+    if resolved == forbidden:
+        raise SystemExit(
+            "ARM_C_RETRY_DIRECT_FAIL: tokenizer path resolves to the "
+            "forbidden /srv/models/ Source root; the authorized tokenizer "
+            "deployment must be a real non-Source directory")
+    if forbidden in resolved.parents:
+        raise SystemExit(
+            "ARM_C_RETRY_DIRECT_FAIL: tokenizer path resolves beneath the "
+            "forbidden /srv/models/ Source root; the authorized tokenizer "
+            "deployment must be a real non-Source directory")
+    if asset_dir.is_symlink():
+        raise SystemExit(
+            "ARM_C_RETRY_DIRECT_FAIL: tokenizer directory itself is a "
+            "symlink; the authorized tokenizer deployment is a real "
+            "directory, not a link into any other location")
+    if not asset_dir.is_dir():
+        raise SystemExit(
+            "ARM_C_RETRY_DIRECT_FAIL: tokenizer path is not an existing "
+            "directory")
+    return resolved
+
+
 def verify_tokenizer_authorization(path: str) -> None:
-    """Verify the fixed tokenizer directory, exact assets, and software."""
+    """Verify the fixed tokenizer directory, exact assets, and software.
+
+    Before any asset inspection/loading: the supplied pathname must
+    equal the authorized deployment path exactly, and the accepted #129
+    tokenizer Source rule must hold on the resolved filesystem location
+    (real non-symlink directory that neither is nor resides beneath the
+    forbidden /srv/models/ Source root)."""
+    if path != AUTHORIZED_TOKENIZER_PATH:
+        raise SystemExit(
+            f"ARM_C_RETRY_DIRECT_FAIL: tokenizer path {path!r} is not the "
+            f"authorized deployment path {AUTHORIZED_TOKENIZER_PATH!r}")
+    verify_tokenizer_source_location(path)
     asset_dir = Path(path)
     try:
         entries = {entry.name: entry for entry in asset_dir.iterdir()}

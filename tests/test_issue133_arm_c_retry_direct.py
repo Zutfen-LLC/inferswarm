@@ -26,8 +26,23 @@ any runtime.generate() call:
 - the authorization fence (built plan == authorized digest) and the
   runtime-substitution fence (result digest == built plan digest) are
   both present in source.
+
+Tokenizer Source rule (accepted #129 semantics), proven BEHAVIORALLY:
+
+- a tokenizer root that is a symlink to an otherwise valid five-file
+  directory is rejected;
+- a tokenizer root that is a symlink resolving beneath /srv/models/ is
+  rejected;
+- a tokenizer path that resolves exactly to /srv/models/ or to any
+  descendant of /srv/models/ is rejected;
+- lexical `..` traversal cannot evade the resolved-location decision;
+- an ordinary real directory outside /srv/models/ containing exactly
+  the five pinned regular files passes validation;
+- every rejection reachable through main() means ZERO realize_dense_chain
+  and ZERO runtime.generate calls.
 """
 import ast
+import contextlib
 import hashlib
 import json
 import shutil
@@ -50,6 +65,11 @@ PINNED = (ROOT / "docs/implementation/r6-successor-dense-full-integration-117"
 DRIVER_SOURCE = (ROOT / "scripts/issue133_arm_c_retry_direct.py").read_text()
 CHAIN_PLAN = (ROOT / "docs/implementation/r6-successor-dense-full-integration-117"
               / "evidence/arm-c/chain-plan.json")
+#: the retained byte-pinned tokenizer assets (the exact five files the
+#: authorized deployment must reproduce byte-for-byte)
+TOKENIZER_ASSETS = (ROOT / "docs/implementation/r6-successor-dense-full"
+                    "-integration-117/evidence/arm-c-retry/frozen-tokenizer"
+                    "/assets")
 
 
 def _accepted_chain_plan() -> dict:
@@ -313,10 +333,19 @@ class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
             overrides: dict | None = None,
             built_plan_digest: str | None = None,
             allow_realization: bool = False,
-            permissive_methodology_core: bool = False) -> dict:
+            permissive_methodology_core: bool = False,
+            tokenizer_value: str | None = None,
+            real_tokenizer_verification: bool = False) -> dict:
         """Invoke the REAL main(argv) flow up to (and including) the
         authorization fences with fake plan files; count any attempt to
-        touch realization. Returns counters."""
+        touch realization. Returns counters.
+
+        ``tokenizer_value`` overrides both the patched
+        AUTHORIZED_TOKENIZER_PATH and the --tokenizer argument (default:
+        a scratch path under ``tmp``). ``real_tokenizer_verification``
+        stops mocking verify_tokenizer_authorization so the REAL
+        tokenizer Source/asset verification executes (the software
+        identity is faked so the location/asset contract is what runs)."""
         counters = {"realize": 0, "generate": 0}
         plan_path = tmp / "chain-plan.json"
         env_path = tmp / "environment.json"
@@ -336,6 +365,9 @@ class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
             corpus_path)
         output_root = tmp / "attempts"
         tokenizer_path = tmp / "tokenizer"
+        tokenizer_arg = (
+            tokenizer_value if tokenizer_value is not None
+            else str(tokenizer_path))
         argv_values = {
             "repo": str(tmp / "fakewt"),
             "plan": str(plan_path),
@@ -346,7 +378,7 @@ class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
             "fixture": str(fixture_path),
             "corpus": str(corpus_path),
             "pinned-r5b-epochs": str(PINNED),
-            "tokenizer": str(tokenizer_path),
+            "tokenizer": tokenizer_arg,
             "out-dir": str(output_root / "fake" / "direct"),
             "attempt-id": "fake",
         }
@@ -450,25 +482,46 @@ class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
         }
         if permissive_methodology_core:
             modules["issue129_arm_c_retry_core"] = fake_core
-        with mock.patch.dict(sys.modules, modules), \
-                mock.patch.object(drv.subprocess, "check_output",
-                                  side_effect=_fake_check_output), \
-                mock.patch.object(drv, "AUTHORIZED_INPUT_PATHS",
-                                  authorized_paths), \
-                mock.patch.object(drv, "AUTHORIZED_INPUT_FILE_SHA256",
-                                  authorized_hashes), \
-                mock.patch.object(drv, "AUTHORIZED_TOKENIZER_PATH",
-                                  str(tokenizer_path)), \
-                mock.patch.object(drv, "AUTHORIZED_OUTPUT_ROOT",
-                                  str(output_root)), \
-                mock.patch.object(drv, "activate_producer_worktree"), \
-                mock.patch.object(drv, "verify_tokenizer_authorization"), \
-                mock.patch.object(drv, "require_producer_module",
-                                  return_value=fake_chain_runtime), \
-                mock.patch.object(
-                    drv, "build_execution_plan", return_value={
-                        "digest": built_plan_digest
-                        or drv.AUTHORIZED_EXECUTION_PLAN_DIGEST}):
+        patches = [
+            mock.patch.dict(sys.modules, modules),
+            mock.patch.object(drv.subprocess, "check_output",
+                              side_effect=_fake_check_output),
+            mock.patch.object(drv, "AUTHORIZED_INPUT_PATHS",
+                              authorized_paths),
+            mock.patch.object(drv, "AUTHORIZED_INPUT_FILE_SHA256",
+                              authorized_hashes),
+            mock.patch.object(drv, "AUTHORIZED_TOKENIZER_PATH",
+                              tokenizer_arg),
+            mock.patch.object(drv, "AUTHORIZED_OUTPUT_ROOT",
+                              str(output_root)),
+            mock.patch.object(drv, "activate_producer_worktree"),
+            mock.patch.object(drv, "require_producer_module",
+                              return_value=fake_chain_runtime),
+            mock.patch.object(
+                drv, "build_execution_plan", return_value={
+                    "digest": built_plan_digest
+                    or drv.AUTHORIZED_EXECUTION_PLAN_DIGEST}),
+        ]
+        if real_tokenizer_verification:
+            # the REAL Source-location/asset verification runs; only the
+            # software identity (interpreter + installed packages) is
+            # faked so the contract under test is the location rule
+            py_major, py_minor = drv.TOKENIZER_PYTHON.split(".")
+            version_info = type(
+                "VersionInfo", (), {"major": int(py_major),
+                                    "minor": int(py_minor)})()
+            patches.append(mock.patch.object(
+                drv.importlib.metadata, "version",
+                side_effect=lambda name: (
+                    drv.TOKENIZER_SOFTWARE_IDENTITY[name])))
+            patches.append(mock.patch.object(
+                drv.sys, "version_info", version_info))
+        else:
+            patches.append(mock.patch.object(
+                drv, "verify_tokenizer_authorization"))
+        with contextlib.ExitStack() as stack:
+            for patch in patches:
+                stack.enter_context(patch)
             try:
                 drv.main(argv)
             except SystemExit as exit_error:
@@ -549,6 +602,92 @@ class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
             self.assertEqual(counters["generate"], 0)
             self.assertIn("--tokenizer", counters.get("exit", ""))
 
+    @staticmethod
+    def _pinned_asset_dir(tmp: Path) -> Path:
+        """A real directory outside /srv/models/ holding exactly the five
+        byte-pinned tokenizer assets (an otherwise valid deployment)."""
+        real = tmp / "real-five-file-tokenizer"
+        real.mkdir()
+        for name in drv.TOKENIZER_ASSET_PINS:
+            shutil.copy(TOKENIZER_ASSETS / name, real / name)
+        return real
+
+    def test_tokenizer_root_symlink_never_reaches_realization(self):
+        # the root is a symlink to an OTHERWISE VALID five-file pinned
+        # directory: rejected because the deployment itself must be real
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            real = self._pinned_asset_dir(tmp)
+            link = tmp / "tokenizer"
+            link.symlink_to(real)
+            counters = self._run_main_with_fences(
+                tmp, chain_plan=_accepted_chain_plan(),
+                environment=_accepted_environment(),
+                tokenizer_value=str(link),
+                real_tokenizer_verification=True)
+            self.assertEqual(counters["realize"], 0)
+            self.assertEqual(counters["generate"], 0)
+            self.assertIn("symlink", counters.get("exit", ""))
+
+    def test_tokenizer_symlink_into_srv_models_never_reaches_realization(
+            self):
+        # the root is a symlink specifically resolving beneath /srv/models/
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            link = tmp / "tokenizer"
+            link.symlink_to("/srv/models/gemma-r6-frozen")
+            counters = self._run_main_with_fences(
+                tmp, chain_plan=_accepted_chain_plan(),
+                environment=_accepted_environment(),
+                tokenizer_value=str(link),
+                real_tokenizer_verification=True)
+            self.assertEqual(counters["realize"], 0)
+            self.assertEqual(counters["generate"], 0)
+            self.assertIn("Source root", counters.get("exit", ""))
+
+    def test_tokenizer_path_resolving_to_srv_models_never_reaches_realization(
+            self):
+        # the direct tokenizer path itself resolves to /srv/models/
+        with tempfile.TemporaryDirectory() as tmp_name:
+            counters = self._run_main_with_fences(
+                Path(tmp_name), chain_plan=_accepted_chain_plan(),
+                environment=_accepted_environment(),
+                tokenizer_value="/srv/models",
+                real_tokenizer_verification=True)
+            self.assertEqual(counters["realize"], 0)
+            self.assertEqual(counters["generate"], 0)
+            self.assertIn("Source root", counters.get("exit", ""))
+
+    def test_tokenizer_descendant_of_srv_models_never_reaches_realization(
+            self):
+        # the direct tokenizer path resolves to a descendant of /srv/models/
+        with tempfile.TemporaryDirectory() as tmp_name:
+            counters = self._run_main_with_fences(
+                Path(tmp_name), chain_plan=_accepted_chain_plan(),
+                environment=_accepted_environment(),
+                tokenizer_value="/srv/models/gemma-r6-frozen",
+                real_tokenizer_verification=True)
+            self.assertEqual(counters["realize"], 0)
+            self.assertEqual(counters["generate"], 0)
+            self.assertIn("Source root", counters.get("exit", ""))
+
+    def test_real_pinned_tokenizer_directory_reaches_realization(self):
+        # positive control: an ordinary REAL directory outside
+        # /srv/models/ with exactly the five pinned regular files passes
+        # the real verification and the flow proceeds normally
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            real = self._pinned_asset_dir(tmp)
+            counters = self._run_main_with_fences(
+                tmp, chain_plan=_accepted_chain_plan(),
+                environment=_accepted_environment(),
+                tokenizer_value=str(real),
+                real_tokenizer_verification=True,
+                allow_realization=True)
+            self.assertEqual(counters["realize"], 1)
+            self.assertEqual(counters["generate"], 24 * 8)
+            self.assertNotIn("exit", counters)
+
     def test_changed_environment_authority_module_cannot_authorize_input(self):
         with tempfile.TemporaryDirectory() as tmp_name:
             environment = _accepted_environment()
@@ -578,6 +717,126 @@ class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
             self.assertEqual(counters["realize"], 1)
             self.assertEqual(counters["generate"], 24 * 8)
             self.assertNotIn("exit", counters)
+
+
+class TokenizerSourceLocationTests(unittest.TestCase):
+    """Behavioral proof of the tokenizer Source rule with the accepted
+    #129 semantics: the authorization decision depends on the RESOLVED
+    filesystem location, never a lexical string-prefix comparison
+    against /srv/models/ (so symlinks and `..` traversal cannot evade
+    the Source boundary)."""
+
+    @staticmethod
+    def _pinned_asset_dir(tmp: Path) -> Path:
+        real = tmp / "real-five-file-tokenizer"
+        real.mkdir()
+        for name in drv.TOKENIZER_ASSET_PINS:
+            shutil.copy(TOKENIZER_ASSETS / name, real / name)
+        return real
+
+    def test_real_directory_outside_source_passes_location(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            real = self._pinned_asset_dir(Path(tmp_name))
+            resolved = drv.verify_tokenizer_source_location(str(real))
+            self.assertEqual(resolved, real.resolve())
+
+    def test_control_root_symlink_to_valid_five_file_dir_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            real = self._pinned_asset_dir(tmp)
+            link = tmp / "tokenizer"
+            link.symlink_to(real)
+            with self.assertRaises(SystemExit) as caught:
+                drv.verify_tokenizer_source_location(str(link))
+            self.assertIn("symlink", str(caught.exception))
+            # the FULL verifier also rejects it, before any asset
+            # inspection, even when the path is nominally authorized
+            with mock.patch.object(drv, "AUTHORIZED_TOKENIZER_PATH",
+                                   str(link)):
+                with self.assertRaises(SystemExit) as full:
+                    drv.verify_tokenizer_authorization(str(link))
+                self.assertIn("symlink", str(full.exception))
+
+    def test_control_root_symlink_beneath_srv_models_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp_name:
+            link = Path(tmp_name) / "tokenizer"
+            link.symlink_to("/srv/models/gemma-r6-frozen")
+            with self.assertRaises(SystemExit) as caught:
+                drv.verify_tokenizer_source_location(str(link))
+            self.assertIn("Source root", str(caught.exception))
+
+    def test_control_path_equal_to_srv_models_rejected(self):
+        with self.assertRaises(SystemExit) as caught:
+            drv.verify_tokenizer_source_location("/srv/models")
+        self.assertIn("Source root", str(caught.exception))
+
+    def test_control_path_descendant_of_srv_models_rejected(self):
+        with self.assertRaises(SystemExit) as caught:
+            drv.verify_tokenizer_source_location("/srv/models/gemma-r6-frozen")
+        self.assertIn("Source root", str(caught.exception))
+
+    def test_control_lexical_traversal_into_srv_models_rejected(self):
+        # /srv/inferswarm/tokenizers/../../models/... RESOLVES into
+        # /srv/models/... — rejected on the resolved location, so the
+        # lexical `..` spelling cannot evade the Source boundary
+        with self.assertRaises(SystemExit) as caught:
+            drv.verify_tokenizer_source_location(
+                "/srv/inferswarm/tokenizers/../../models/gemma-r6-frozen")
+        self.assertIn("Source root", str(caught.exception))
+
+    def test_control_decision_is_resolution_based_not_string_prefix(self):
+        # a path whose lexical spelling CONTAINS a "models" component
+        # but RESOLVES outside it is not a Source-root violation: the
+        # rule decides on the resolved location, never a string prefix
+        # (mirror of the /srv/models/../inferswarm/... shape, which is
+        # unbuildable in a test sandbox)
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            lexical_root = tmp / "srv"
+            (lexical_root / "models").mkdir(parents=True)
+            target = lexical_root / "inferswarm" / "tokenizers" / \
+                "gemma-r6-frozen"
+            target.mkdir(parents=True)
+            lexical = lexical_root / "models" / ".." / "inferswarm" / \
+                "tokenizers" / "gemma-r6-frozen"
+            resolved = drv.verify_tokenizer_source_location(str(lexical))
+            self.assertEqual(resolved, target.resolve())
+
+    def test_control_missing_directory_rejected(self):
+        with self.assertRaises(SystemExit) as caught:
+            drv.verify_tokenizer_source_location(
+                "/nonexistent-tokenizer-directory")
+        self.assertIn("not an existing directory", str(caught.exception))
+
+    def test_full_verification_passes_for_real_pinned_directory(self):
+        # an ordinary real directory outside /srv/models/ containing
+        # exactly the five pinned regular files passes the COMPLETE
+        # tokenizer authorization (software identity faked to the pins)
+        with tempfile.TemporaryDirectory() as tmp_name:
+            real = self._pinned_asset_dir(Path(tmp_name))
+            py_major, py_minor = drv.TOKENIZER_PYTHON.split(".")
+            version_info = type(
+                "VersionInfo", (), {"major": int(py_major),
+                                    "minor": int(py_minor)})()
+            with mock.patch.object(drv, "AUTHORIZED_TOKENIZER_PATH",
+                                   str(real)), \
+                    mock.patch.object(
+                        drv.importlib.metadata, "version",
+                        side_effect=lambda name:
+                            drv.TOKENIZER_SOFTWARE_IDENTITY[name]), \
+                    mock.patch.object(drv.sys, "version_info",
+                                      version_info):
+                drv.verify_tokenizer_authorization(str(real))
+
+    def test_control_substituted_pathname_rejected_before_location(self):
+        # any pathname other than the exact authorized deployment path
+        # is rejected before location/asset inspection
+        with tempfile.TemporaryDirectory() as tmp_name:
+            real = self._pinned_asset_dir(Path(tmp_name))
+            with self.assertRaises(SystemExit) as caught:
+                drv.verify_tokenizer_authorization(str(real))
+            self.assertIn("authorized deployment path",
+                          str(caught.exception))
 
 
 class ProducerImportClosureTests(unittest.TestCase):
