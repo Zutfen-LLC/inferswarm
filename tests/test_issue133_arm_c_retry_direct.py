@@ -13,10 +13,24 @@ that its invocation contract matches the frozen #129/#133 contract:
 - the fixture digest pins fail closed on drift;
 - the driver source contains no single-shot max_new_tokens=8 call and no
   plan-digest bypass (AST-checked).
+
+Authorization-fence behavior (review finding 4), proven BEHAVIORALLY with
+fakes — every negative case fails before realize_dense_chain() and before
+any runtime.generate() call:
+
+- a substituted execution-plan-producing environment input is rejected;
+- a substituted chain-plan/participant input is rejected;
+- a locally built plan whose digest differs from the authorized frozen
+  digest is rejected before realization;
+- the exact retained chain plan / derived environment pass;
+- the authorization fence (built plan == authorized digest) and the
+  runtime-substitution fence (result digest == built plan digest) are
+  both present in source.
 """
 import ast
 import hashlib
 import json
+import shutil
 import sys
 import unittest
 from pathlib import Path
@@ -31,6 +45,16 @@ PINNED = (ROOT / "docs/implementation/r6-successor-dense-full-integration-117"
           / "evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken"
           / "research/r5b_epochs.py")
 DRIVER_SOURCE = (ROOT / "scripts/issue133_arm_c_retry_direct.py").read_text()
+CHAIN_PLAN = (ROOT / "docs/implementation/r6-successor-dense-full-integration-117"
+              / "evidence/arm-c/chain-plan.json")
+
+
+def _accepted_chain_plan() -> dict:
+    return json.loads(CHAIN_PLAN.read_text())
+
+
+def _accepted_environment() -> dict:
+    return core._frozen_environment(core._repo_override())
 
 
 class FrozenAllocatorTests(unittest.TestCase):
@@ -115,9 +139,6 @@ class ComparatorContractSourceTests(unittest.TestCase):
                             kw.value, ast.Constant):
                         self.assertEqual(kw.value.value, 2)
 
-    def test_plan_digest_check_present(self):
-        self.assertIn('result.get("plan_digest")', DRIVER_SOURCE)
-
     def test_argument_contract_matches_frozen_129(self):
         self.assertEqual(
             tuple(drv.GENERATE_ARGUMENT_NAMES),
@@ -132,6 +153,256 @@ class ComparatorContractSourceTests(unittest.TestCase):
     def test_producer_pin(self):
         self.assertIn("924cd22ea081f6d4ed471016faf01d427fc5b0d2",
                       DRIVER_SOURCE)
+
+
+class PlanAuthorizationFenceTests(unittest.TestCase):
+    """Behavioral proof of the authorization fence (review finding 4):
+    authorized frozen digest == locally built plan digest ==
+    runtime-returned digest, with every external input bound to accepted
+    evidence BEFORE realize_dense_chain() / any generate() call."""
+
+    def test_frozen_digest_constant_is_the_issue133_authorization(self):
+        self.assertEqual(
+            drv.AUTHORIZED_EXECUTION_PLAN_DIGEST,
+            "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d"
+            "0962eea565bdad")
+        # and it equals the accepted Arm-B plan digest re-derived from the
+        # retained accepted execution-plan document
+        arm_b = json.loads(
+            (ROOT / "docs/implementation/r6-successor-dense-full-integration-117"
+             / "evidence/arm-b/execution-plan.json").read_text())
+        body = {k: v for k, v in arm_b.items() if k != "plan_digest"}
+        recomputed = "sha256:" + hashlib.sha256(json.dumps(
+            body, sort_keys=True, separators=(",", ":")).encode()
+            + b"\n").hexdigest()
+        self.assertEqual(recomputed, drv.AUTHORIZED_EXECUTION_PLAN_DIGEST)
+
+    def test_fence_passes_on_authorized_digest(self):
+        drv.verify_plan_authorization_fence(
+            {"digest": drv.AUTHORIZED_EXECUTION_PLAN_DIGEST})
+
+    def test_control_fence_rejects_unauthorized_built_plan(self):
+        with self.assertRaises(SystemExit) as caught:
+            drv.verify_plan_authorization_fence(
+                {"digest": "sha256:" + "9" * 64})
+        self.assertIn(
+            "authorized issue #133 Arm-B execution-plan digest",
+            str(caught.exception))
+
+    def test_control_fence_rejects_missing_digest(self):
+        with self.assertRaises(SystemExit):
+            drv.verify_plan_authorization_fence({})
+
+    def test_fence_precedes_realization_in_source(self):
+        # inside main(), the authorization fences must appear BEFORE the
+        # realize_dense_chain CALL SITE (not the import) — fail before
+        # any runtime construction
+        main_start = DRIVER_SOURCE.index("def main(")
+        body = DRIVER_SOURCE[main_start:]
+        fence = body.index("verify_plan_authorization_fence(")
+        chain_fence = body.index("verify_chain_plan_authorization(")
+        env_fence = body.index("verify_environment_authorization(")
+        realize = body.index("runtime = realize_dense_chain(")
+        self.assertLess(chain_fence, realize)
+        self.assertLess(env_fence, realize)
+        self.assertLess(fence, realize)
+        # runtime-substitution fence stays too
+        self.assertIn('result.get("plan_digest")', DRIVER_SOURCE)
+
+    def test_retained_chain_plan_passes_the_participant_fence(self):
+        drv.verify_chain_plan_authorization(_accepted_chain_plan())
+
+    def test_derived_environment_passes_the_environment_fence(self):
+        drv.verify_environment_authorization(_accepted_environment())
+
+    def test_control_substituted_environment_rejected_before_realization(self):
+        env = _accepted_environment()
+        env["node_b"]["gpus"][0]["uuid"] = "GPU-substituted-0000"
+        with self.assertRaises(SystemExit) as caught:
+            drv.verify_environment_authorization(env)
+        self.assertIn("environment", str(caught.exception))
+
+    def test_control_environment_producer_drift_rejected(self):
+        env = _accepted_environment()
+        env["implementation_commit"] = "0" * 40
+        with self.assertRaises(SystemExit):
+            drv.verify_environment_authorization(env)
+
+    def test_control_substituted_chain_plan_digest_rejected(self):
+        plan = _accepted_chain_plan()
+        plan["digest"] = "sha256:" + "9" * 64
+        with self.assertRaises(SystemExit) as caught:
+            drv.verify_chain_plan_authorization(plan)
+        self.assertIn("chain plan digest", str(caught.exception))
+
+    def test_control_substituted_participant_identity_rejected(self):
+        plan = _accepted_chain_plan()
+        # mutate BOTH the provenance and re-freeze the digest, so the
+        # digest stays self-consistent and the rejection is attributable
+        # to the PARTICIPANT identity, not to content mutation
+        plan["provenance"]["issue117_arm_c"][
+            "accepted_plan_digest"] = "sha256:" + "0" * 64
+        body = {k: v for k, v in plan.items() if k != "digest"}
+        plan["digest"] = "sha256:" + hashlib.sha256(
+            (json.dumps(body, sort_keys=True,
+                        separators=(",", ":")) + "\n").encode()).hexdigest()
+        with self.assertRaises(SystemExit) as caught:
+            drv.verify_chain_plan_authorization(plan)
+        self.assertIn(
+            "accepted Arm-B participant identity", str(caught.exception))
+
+    def test_control_chain_plan_producer_drift_rejected(self):
+        plan = _accepted_chain_plan()
+        plan["provenance"]["r6"]["producer_sha"] = "0" * 40
+        with self.assertRaises(SystemExit):
+            drv.verify_chain_plan_authorization(plan)
+
+    def test_control_geometry_mutated_chain_plan_rejected(self):
+        # geometry lives inside the chain plan; any real content change
+        # breaks the digest pin even with provenance intact
+        plan = _accepted_chain_plan()
+        plan["number_of_layers"] = plan.get("number_of_layers", 48) + 1
+        with self.assertRaises(SystemExit):
+            drv.verify_chain_plan_authorization(plan)
+
+    def test_control_missing_provenance_rejected(self):
+        plan = _accepted_chain_plan()
+        plan.pop("provenance")
+        with self.assertRaises(SystemExit):
+            drv.verify_chain_plan_authorization(plan)
+
+
+class ZeroModelExecutionAfterFailedAuthorizationTests(unittest.TestCase):
+    """Prove with fakes that a failed authorization check means ZERO
+    model/runtime execution: neither realize_dense_chain nor
+    runtime.generate is ever reached."""
+
+    def _run_main_with_fences(self, tmp: Path, *, chain_plan: dict,
+                              environment: dict) -> dict:
+        """Invoke the REAL main(argv) flow up to (and including) the
+        authorization fences with fake plan files; count any attempt to
+        touch realization. Returns counters."""
+        counters = {"realize": 0, "generate": 0}
+        plan_path = tmp / "chain-plan.json"
+        env_path = tmp / "environment.json"
+        fixture_path = tmp / "fixture.json"
+        corpus_path = tmp / "corpus.json"
+        plan_path.write_text(json.dumps(chain_plan))
+        env_path.write_text(json.dumps(environment))
+        # the REAL retained frozen fixture/corpus (digest-pinned by the
+        # driver); only the tokenizer is faked
+        shutil.copy(
+            ROOT / "docs/implementation/r6-successor-dense-full"
+            "-integration-117/evidence/arm-c-retry/prompt-fixture.json",
+            fixture_path)
+        shutil.copy(
+            ROOT / "docs/implementation/r6-successor-dense-full"
+            "-integration-117/evidence/integration-fixture.json",
+            corpus_path)
+        argv = [
+            "--repo", str(tmp / "fakewt"),
+            "--plan", str(plan_path),
+            "--environment", str(env_path),
+            "--fixture", str(fixture_path),
+            "--corpus", str(corpus_path),
+            "--pinned-r5b-epochs", str(PINNED),
+            "--tokenizer", str(tmp / "missing-tokenizer"),
+            "--out-dir", str(tmp / "out"),
+            "--attempt-id", "fake",
+        ]
+        import unittest.mock as mock
+        # a render-faithful fake tokenizer: reproduces each case's frozen
+        # rendered ids, so the 24/24 render-equality gate passes and the
+        # flow proceeds to the plan/environment fences
+        fixture = json.loads(fixture_path.read_text())
+        corpus = json.loads(corpus_path.read_text())
+        rendered_by_text = {}
+        for case in fixture["cases"]:
+            text = next(
+                row["case"]["prompt_text"] for row in corpus["cases"]
+                if row["case"]["case_id"] == case["case_id"])
+            rendered_by_text[text] = list(case["rendered_prompt_token_ids"])
+
+        class _FakeTok:
+            @staticmethod
+            def from_pretrained(path, **kwargs):
+                return _FakeTok()
+
+            def apply_chat_template(self, messages, *, tokenize=False,
+                                    add_generation_prompt=True, **ctk):
+                return messages[0]["content"]
+
+            def encode(self, text, *, add_special_tokens=False):
+                return rendered_by_text[text]
+
+        fake_transformers = type(sys)("transformers")
+        fake_transformers.AutoTokenizer = _FakeTok
+        fake_chain_runtime = type(sys)(
+            "benchmarks.inferswarm_r6.chain_runtime")
+
+        def _realize(*args, **kwargs):
+            counters["realize"] += 1
+            raise AssertionError(
+                "realize_dense_chain reached despite failed "
+                "authorization")
+
+        fake_chain_runtime.realize_dense_chain = _realize
+
+        # satisfy the producer-worktree shape check: the worktree
+        # identity check is upstream of (and independent from) the
+        # authorization fences under test here
+        def _fake_check_output(cmd, *args, **kwargs):
+            if "rev-parse" in cmd:
+                return drv.FREETOKEN_PRODUCER + "\n"
+            if "status" in cmd:
+                return ""
+            raise AssertionError(f"unexpected subprocess call: {cmd}")
+
+        with mock.patch.dict(sys.modules, {
+                "transformers": fake_transformers,
+                "benchmarks.inferswarm_r6.chain_runtime":
+                    fake_chain_runtime}), \
+                mock.patch.object(drv.subprocess, "check_output",
+                                  side_effect=_fake_check_output):
+            try:
+                drv.main(argv)
+            except SystemExit as exit_error:
+                counters["exit"] = str(exit_error)
+        return counters
+
+    def test_substituted_environment_never_reaches_realization(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            env = _accepted_environment()
+            env["node_a"]["gpus"][0]["uuid"] = "GPU-substituted-1111"
+            counters = self._run_main_with_fences(
+                tmp, chain_plan=_accepted_chain_plan(), environment=env)
+            self.assertEqual(counters["realize"], 0)
+            self.assertIn("environment", counters.get("exit", ""))
+
+    def test_substituted_chain_plan_never_reaches_realization(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp_name:
+            tmp = Path(tmp_name)
+            plan = _accepted_chain_plan()
+            # substituted PARTICIPANT provenance, digest honestly
+            # re-frozen so the failure is attributable to the identity
+            # binding, not to content mutation
+            plan["provenance"]["issue117_arm_c"][
+                "accepted_plan_digest"] = "sha256:" + "0" * 64
+            body = {k: v for k, v in plan.items() if k != "digest"}
+            plan["digest"] = "sha256:" + hashlib.sha256(
+                (json.dumps(body, sort_keys=True,
+                            separators=(",", ":")) + "\n")
+                .encode()).hexdigest()
+            counters = self._run_main_with_fences(
+                tmp, chain_plan=plan,
+                environment=_accepted_environment())
+            self.assertEqual(counters["realize"], 0)
+            self.assertIn(
+                "accepted Arm-B participant identity",
+                counters.get("exit", ""))
 
 
 if __name__ == "__main__":

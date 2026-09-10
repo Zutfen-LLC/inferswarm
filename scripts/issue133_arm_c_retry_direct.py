@@ -17,11 +17,30 @@ comparator contract:
 
 Single-shot max_new_tokens=8 is FORBIDDEN and not used.
 
-Runs on inferswarm01 inside the frozen FreeToken worktree at 924cd22e…
-(clean), under strace -f -e trace=file. The driver records the complete
-per-call invocation transcript so the terminal reducer can compare the
-direct arm against the ordinary arm's retained coordinator records
-without trusting any authored equality label.
+AUTHORIZATION FENCE (before realize_dense_chain and before any
+model/runtime generation can occur): the locally built execution plan
+must equal the issue #133 authorized Arm-B execution-plan digest
+
+    sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad
+
+and every external input capable of changing the physical plan/substrate
+is mechanically bound to accepted evidence BEFORE realization:
+
+- `--environment` must equal the accepted Arm-C environment freeze
+  (canonical-JSON equality against the identity retained in the accepted
+  run record);
+- `--plan` (the chain plan) must equal, byte-for-byte in canonical JSON,
+  the accepted Arm-C chain plan re-frozen from the accepted Arm-B
+  participant plan (its digest is pinned, and its provenance must carry
+  the accepted participant identity sha256:ee845188…);
+- the pinned r5b_epochs.py bytes are sha256-pinned;
+- the producer worktree must be clean at exactly 924cd22e…;
+- the fixture/corpus digests are pinned.
+
+authorized frozen digest == locally built plan digest ==
+runtime-returned digest: the runtime-substitution fence
+(`result["plan_digest"]`) remains AND the authorization fence is added
+before realization.
 """
 
 from __future__ import annotations
@@ -42,9 +61,28 @@ R5B_EPOCHS_SHA256 = (
 GENERATE_ARGUMENT_NAMES = (
     "max_new_tokens", "on_token", "prompt_token_ids", "session_id")
 
+#: ---------------------------------------------------------------------------
+#: Authorized plan/participant identities (issue #133; the participant
+#: identity sha256:ee845188… is the ACCEPTED Arm-B participant-plan
+#: digest — proven from the accepted retained Arm-C plan-verification
+#: record and the retained chain plan's provenance, which bind
+#: accepted_plan_digest == sha256:ee845188… and arm_c_plan_digest ==
+#: sha256:a71a3129… as the exact relationship between the accepted
+#: participant plan and the supplied chain plan).
+AUTHORIZED_EXECUTION_PLAN_DIGEST = (
+    "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad")
+AUTHORIZED_CHAIN_PLAN_DIGEST = (
+    "sha256:a71a3129b8764d7108f51ed30fb230b42fcd69646a20bcd6806b6ee53b9bc51f")
+AUTHORIZED_PARTICIPANT_IDENTITY = (
+    "sha256:ee845188d3328bdec29bf4b09d71f7ccda0701ff5758cb1d8a70460a40fecfb1")
+
 
 def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def canonical_bytes(value) -> bytes:
+    return (json.dumps(value, indent=2, sort_keys=True) + "\n").encode()
 
 
 def extract_runtime_session_allocation(pinned_source: str) -> dict:
@@ -110,13 +148,13 @@ class FrozenRuntimeSessionAllocator:
         fn = None
         tree = ast.parse(pinned_source)
         cls = next(
-            n for n in tree.body
-            if isinstance(n, ast.ClassDef)
-            and n.name == "EpochServingController")
+            (n for n in tree.body
+             if isinstance(n, ast.ClassDef)
+             and n.name == "EpochServingController"))
         fn = next(
-            n for n in cls.body
-            if isinstance(n, ast.FunctionDef)
-            and n.name == "_runtime_session_id")
+            (n for n in cls.body
+             if isinstance(n, ast.FunctionDef)
+             and n.name == "_runtime_session_id"))
         segment = ast.get_source_segment(pinned_source, fn)
         text = (
             "class _Alloc:\n"
@@ -156,7 +194,7 @@ def build_execution_plan(env: dict, chain_plan: dict) -> dict:
     evaluations = {item["id"]: item for item in decision["evaluations"]}
     if len(evaluations) != 1:
         raise SystemExit(
-            f"ARM_C_RETRY_DIRECT_FAIL: expected one legal shape, got "
+            f"ARM_C_RETRY_DIRECT_FAIL: expected one legal shape. got "
             f"{evaluations}")
     evaluation = next(iter(evaluations.values()))
     if evaluation["state"] != "FEASIBLE_UNRANKED":
@@ -184,7 +222,125 @@ def build_execution_plan(env: dict, chain_plan: dict) -> dict:
     )
 
 
-def main() -> int:
+def _load_methodology_core():
+    """Load the frozen #129 methodology core (fail-closed). On the node it
+    is deployed read-only next to this driver (same directory); in a
+    repository checkout it lives in scripts/. The environment
+    authorization derives the accepted environment freeze from retained
+    accepted evidence through THIS module verbatim — never a hand-copy."""
+    candidates = [
+        Path(__file__).resolve().parent / "issue129_arm_c_retry_core.py",
+        Path(__file__).resolve().parents[1] / "scripts"
+        / "issue129_arm_c_retry_core.py",
+    ]
+    for path in candidates:
+        if path.is_file():
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(
+                "_issue129_core_for_authorization", path)
+            if spec is None or spec.loader is None:
+                raise SystemExit(
+                    "ARM_C_RETRY_DIRECT_FAIL: cannot load the frozen #129 "
+                    f"methodology core at {path}; failing closed")
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return module
+    raise SystemExit(
+        "ARM_C_RETRY_DIRECT_FAIL: the frozen #129 methodology core "
+        "(issue129_arm_c_retry_core.py) is required for environment "
+        "authorization and is neither deployed next to this driver nor "
+        "present in a repository scripts/ directory; failing closed "
+        "before realization")
+
+
+def verify_environment_authorization(environment: dict) -> None:
+    """Bind the execution-plan-producing environment input to the accepted
+    Arm-C environment freeze, reconstructed from retained accepted
+    evidence (physical-preflight compute-unit identities) by the frozen
+    #129 methodology core verbatim. Any drift (a substituted GPU, node,
+    link, or producer commit — anything that could change the built plan
+    or the physical substrate) fails closed BEFORE realization."""
+    core = _load_methodology_core()
+    expected = core._frozen_environment(core._repo_override())
+    if canonical_bytes(environment) != canonical_bytes(expected):
+        raise SystemExit(
+            "ARM_C_RETRY_DIRECT_FAIL: --environment is not the accepted "
+            "Arm-C environment freeze (canonical-JSON inequality against "
+            "the identity derived from retained accepted physical-"
+            "preflight evidence); substituted environment inputs are "
+            "rejected before realization")
+
+
+def verify_chain_plan_authorization(chain_plan: dict) -> None:
+    """Bind the chain-plan/participant input to the accepted Arm-B evidence:
+
+    - the chain plan's digest must be SELF-CONSISTENT (recomputed from
+      the canonical bytes over the document minus `digest`) AND equal the
+      accepted Arm-C chain-plan digest sha256:a71a3129… (the re-freeze of
+      the accepted Arm-B participant plan under the frozen producer,
+      retained byte-exact in accepted evidence) — so ANY content
+      mutation (geometry, blocks, shared state, capacity) fails closed;
+    - the chain plan's provenance must carry the ACCEPTED participant
+      identity sha256:ee845188… as `accepted_plan_digest` — the exact
+      relationship retained accepted evidence establishes between the
+      supplied chain plan and the accepted Arm-B participant plan
+      (plan-verification.json: arm_c_plan_digest == a71a3129… derived
+      from accepted_plan_digest == ee845188…);
+    - the producer binding must be the frozen producer 924cd22e….
+
+    Any substituted chain plan/participant materialization fails closed
+    BEFORE realization."""
+    digest = chain_plan.get("digest")
+    body = {k: v for k, v in chain_plan.items() if k != "digest"}
+    recomputed = "sha256:" + sha256_bytes(
+        (json.dumps(body, sort_keys=True,
+                    separators=(",", ":")) + "\n").encode())
+    if digest != recomputed:
+        raise SystemExit(
+            f"ARM_C_RETRY_DIRECT_FAIL: chain plan digest {digest} is not "
+            f"self-consistent (recomputed {recomputed}); mutated plan "
+            "content is rejected before realization")
+    provenance = chain_plan.get("provenance", {})
+    arm_c = provenance.get("issue117_arm_c", {})
+    accepted_plan_digest = arm_c.get("accepted_plan_digest")
+    if accepted_plan_digest != AUTHORIZED_PARTICIPANT_IDENTITY:
+        raise SystemExit(
+            "ARM_C_RETRY_DIRECT_FAIL: chain plan does not derive from the "
+            f"accepted Arm-B participant identity {AUTHORIZED_PARTICIPANT_IDENTITY} "
+            f"(provenance accepted_plan_digest={accepted_plan_digest!r}); "
+            "the supplied plan/materialization is not the accepted "
+            "participant state")
+    if digest != AUTHORIZED_CHAIN_PLAN_DIGEST:
+        raise SystemExit(
+            f"ARM_C_RETRY_DIRECT_FAIL: chain plan digest {digest} is not "
+            f"the authorized Arm-C chain plan {AUTHORIZED_CHAIN_PLAN_DIGEST} "
+            "(the accepted re-freeze of the accepted Arm-B participant "
+            "plan); substituted plan inputs are rejected before "
+            "realization")
+    producer_sha = provenance.get("r6", {}).get("producer_sha")
+    if producer_sha != FREETOKEN_PRODUCER:
+        raise SystemExit(
+            f"ARM_C_RETRY_DIRECT_FAIL: chain plan producer {producer_sha!r} "
+            f"is not the frozen producer {FREETOKEN_PRODUCER}")
+
+
+def verify_plan_authorization_fence(built_plan: dict) -> None:
+    """THE authorization fence: the locally built execution plan must
+    equal the issue #133 authorized Arm-B execution-plan digest. This is
+    independent of (and prior to) the runtime-substitution fence on
+    `result["plan_digest"]`: an unintended chain-plan/environment input
+    producing a different locally built plan is rejected here, before
+    realize_dense_chain() and before any model/runtime generation."""
+    digest = built_plan.get("digest")
+    if digest != AUTHORIZED_EXECUTION_PLAN_DIGEST:
+        raise SystemExit(
+            "ARM_C_RETRY_DIRECT_FAIL: locally built execution plan digest "
+            f"{digest} != authorized issue #133 Arm-B execution-plan "
+            f"digest {AUTHORIZED_EXECUTION_PLAN_DIGEST}; refusing to "
+            "realize an unauthorized plan")
+
+
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", default=None,
                         help="FreeToken worktree root (default: inferred)")
@@ -206,7 +362,7 @@ def main() -> int:
     parser.add_argument("--tokenizer", required=True)
     parser.add_argument("--out-dir", required=True)
     parser.add_argument("--attempt-id", required=True)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     repo = Path(args.repo).resolve() if args.repo else Path(
         __file__).resolve().parents[2]
@@ -232,7 +388,7 @@ def main() -> int:
 
     fixture = json.loads(Path(args.fixture).read_text())
     if fixture.get("fixture_digest") != (
-            "sha256:6046d4796a5d9cc888030c6b3f07304c20ce117d93905c3"
+            "sha256:6046d4796a5d9cc888030c6b3f07304c20ce117d93905c30"
             "00d7aae7c0ae01c7"):
         raise SystemExit(
             "ARM_C_RETRY_DIRECT_FAIL: fixture digest drift against the "
@@ -267,7 +423,14 @@ def main() -> int:
 
     chain_plan = json.loads(Path(args.plan).read_text())
     environment = json.loads(Path(args.environment).read_text())
+
+    # ---- AUTHORIZATION FENCE: bind external plan/substrate inputs and ---
+    # ---- require the built plan to equal the authorized digest, all  ---
+    # ---- BEFORE realize_dense_chain()/any model execution.             ---
+    verify_chain_plan_authorization(chain_plan)
+    verify_environment_authorization(environment)
     execution_plan = build_execution_plan(environment, chain_plan)
+    verify_plan_authorization_fence(execution_plan)
 
     from benchmarks.inferswarm_r6.chain_runtime import realize_dense_chain
     started_ns = time.time_ns()
