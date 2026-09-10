@@ -8,9 +8,9 @@ Executes the exact ordering required by the correction contract:
    correctness-bearing byte (the corrected direct driver);
 3. mechanically re-derive the final r5a static execution plan via the
    REAL unmocked builder (already done; this script re-verifies);
-4. regenerate `execution-freeze.json` (schema /6, review 5167622668)
-   from the corrected identities + gate-tooling closure + the external
-   Git-rooted bootstrap closure;
+4. regenerate `execution-freeze.json` (schema /7, review 5169777338)
+   from the corrected identities + gate-tooling closure + the canonical
+   Git-rooted launcher/bootstrap closure;
 5. compute its canonical SHA-256;
 6. rebind `physical-campaign-authority.json`'s sole campaign
    `execution_freeze_identity` to the regenerated freeze (additive
@@ -19,8 +19,11 @@ Executes the exact ordering required by the correction contract:
 
 No GPU, no model execution, no participant-state mutation, no
 repository-history rewriting. The superseded freezes (5af9aee3…,
-1f5ef48b…, and the reviewed-head 27f03b49…) are retained in
-`superseded_freeze_lineage` as invalidated before physical execution.
+1f5ef48b…, 27f03b49…, and the reviewed-head 8d7fbebd…) are retained
+in `superseded_freeze_lineage` as invalidated before physical
+execution. The round-3 intermediate 289f6e60… (pushed but never the
+reviewed head) is retained as a disclosed non-authoritative lineage
+entry for complete history.
 """
 from __future__ import annotations
 
@@ -55,6 +58,19 @@ SUPERSEDED_5166773760_ROUND2_FREEZE_IDENTITY = (
     "27f03b491ff41b76b8ff11384f68469676be5a8dc716ade09f31cfa5b062d934")
 REVIEW_REFERENCE = "maintainer review 5167622668 on head " \
                    "f1d4f870e1ef35c0e6e46b54f568c8e50f2a4135"
+#: the round-5 review driving THIS regeneration
+REVIEW_5169777338_REFERENCE = (
+    "maintainer review 5169777338 on head "
+    "424922d7d6c5a3c98e5c8fd59f8a51c817c7fa1f")
+#: the round-4 reviewed-head freeze (schema /6, head 424922d) —
+#: superseded ADDITIVELY by this /7 regeneration
+SUPERSEDED_5169777338_ROUND4_FREEZE_IDENTITY = (
+    "8d7fbebd9524e09acf560a2a0372b4e1f9f5614c124b0d46e99e66edb352299a")
+#: the round-3 intermediate freeze (head a4010f0, pushed but never
+#: reviewed; the branch was restarted from 35f8749 for round 4) —
+#: retained as a DISCLOSED non-authoritative lineage entry
+DISCLOSED_ROUND3_INTERMEDIATE_FREEZE_IDENTITY = (
+    "289f6e6061e25bae0d49faaee3537dba6b0897d486edf7f6d52799fae6a0d768")
 
 
 def main() -> int:
@@ -124,6 +140,39 @@ def main() -> int:
             "under the superseded freeze."),
     })
 
+    record["superseded_freeze_lineage"].append({
+        "execution_freeze_identity":
+            DISCLOSED_ROUND3_INTERMEDIATE_FREEZE_IDENTITY,
+        "status": (
+            "DISCLOSED_INTERMEDIATE_NEVER_REVIEWED_HEAD"),
+        "reason": (
+            "round-3 regeneration intermediate (commit a4010f0): pushed "
+            "to the PR branch but superseded before maintainer review — "
+            "the branch was restarted from 35f8749 for the round-4 "
+            "correction, so this identity was never a reviewed head. "
+            "Retained for complete freeze-history disclosure. Zero "
+            "physical attempts occurred under this freeze."),
+    })
+    record["superseded_freeze_lineage"].append({
+        "execution_freeze_identity":
+            SUPERSEDED_5169777338_ROUND4_FREEZE_IDENTITY,
+        "status": "INVALIDATED_BEFORE_PHYSICAL_EXECUTION",
+        "reason": (
+            REVIEW_5169777338_REFERENCE + ": the round-4 canonical "
+            "command still executed scripts/issue133_physical_"
+            "prelaunch_gate.py from the mutable invocation working "
+            "tree first; that outer process resolved the authority "
+            "commit, materialized accepted Git bytes, launched the "
+            "accepted bootstrap, parsed its output, and returned the "
+            "final verdict, so a modified invocation-stage bootstrap "
+            "could fabricate a passing verdict. This /7 freeze makes "
+            "the canonical launch shell+Git-only (the bootstrap blob "
+            "is extracted from the accepted authority-bearing commit "
+            "with git show before any Python executes) and removes "
+            "the working-tree loader mode entirely. Zero physical "
+            "attempts occurred under the superseded freeze."),
+    })
+
     # --- 5. canonical identity ---------------------------------------
     identity = camp.execution_freeze_identity(record)
     raw = (json.dumps(record, indent=2, sort_keys=True) + "\n").encode()
@@ -151,7 +200,9 @@ def main() -> int:
         "execution_freeze_identity": identity,
         "superseded": [SUPERSEDED_PHASE_B_IDENTITY,
                        REVIEWED_5166773760_ROUND1_FREEZE_IDENTITY,
-                       SUPERSEDED_5166773760_ROUND2_FREEZE_IDENTITY],
+                       SUPERSEDED_5166773760_ROUND2_FREEZE_IDENTITY,
+                       DISCLOSED_ROUND3_INTERMEDIATE_FREEZE_IDENTITY,
+                       SUPERSEDED_5169777338_ROUND4_FREEZE_IDENTITY],
         "driver_repository_sha": repo_sha,
         "driver_file_sha256": driver_sha,
     }, indent=2, sort_keys=True))

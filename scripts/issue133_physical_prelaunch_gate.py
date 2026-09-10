@@ -1,61 +1,76 @@
 #!/usr/bin/env python3
-"""Issue #133 — canonical physical pre-execution entrypoint: the
-external Git-rooted bootstrap (maintainer review 5167622668).
+"""Issue #133 — the ACCEPTED authorization bootstrap (review 5169777338).
 
-TRUST MODEL — the defect this module closes (review 5167622668): the
-round-2 gate-tooling closure was verified by the very working-tree
-modules it was supposed to distrust. ``issue133_arm_c_retry_campaign``
-imported ``issue129_arm_c_retry_core`` at module-import time, so the
-code that established "the gate tooling equals accepted history" was
-itself already unverified working-tree Python. A modified working-tree
-campaign/#129 module could alter or bypass ``verify_gate_tooling_closure``
-before the closure check ran.
+TRUST MODEL — the defect this revision closes (review 5169777338 on head
+424922d7d6c5a3c98e5c8fd59f8a51c817c7fa1f): the round-4 canonical command
+still executed this file from the MUTABLE INVOCATION WORKING TREE first.
+That outer process resolved ``origin/main``, selected the accepted
+authority-bearing commit, materialized accepted Git bytes, launched the
+accepted bootstrap, parsed its output, and returned the final verdict —
+so a modified invocation-stage bootstrap could bypass every inner
+protection and simply fabricate a passing verdict. The invocation-stage
+bootstrap was part of the effective authorization root even though it
+described itself as "non-authorizing".
 
-This bootstrap is STDLIB/GIT-ONLY. It NEVER imports any repository
-Python module — not the Issue-133 campaign code, not the Issue-129
-methodology core, not the direct driver, canonical-environment, or
-frozen-pins code — before OR after the accepted materialization
-exists. Authorization is decided exclusively by code whose bytes come
-from the accepted Git object database:
+The corrected architecture (this file, round 5):
 
-1. resolve ``refs/remotes/origin/main`` — the external trust root
-   (a missing remote ref fails closed);
-2. identify the accepted AUTHORITY-BEARING commit from that history:
-   the oldest commit in accepted history carrying the NEWEST accepted
-   blob at the fixed authority-document path (later-main semantics:
-   a later accepted authority document legitimately redefines
-   authority after review — its own freeze binding must then hold —
-   while a later accepted commit that leaves the authority bytes
-   unchanged keeps the SAME authority-bearing anchor);
-3. materialize that commit's COMPLETE tree into a fresh temporary
-   directory via ``git archive`` (an isolated accepted tree; never a
-   checkout over the working tree);
-4. byte-verify the COMPLETE pre-execution closure — every gate-tooling
-   file PLUS this bootstrap itself — against the accepted blobs
-   BEFORE executing any gate code;
-5. execute the pre-execution gate from the materialization only, in a
-   subprocess whose PYTHONPATH/PYTHONHOME/PYTHONSTARTUP/PYTHONUSERBASE
-   are scrubbed so the materialized modules cannot accidentally
-   resolve same-named working-tree modules;
-6. emit a verdict that proves the execution origin MECHANICALLY: the
-   sha256 of every gate file actually executed, and the accepted blob
-   sha256 it must equal, the accepted authority commit, the observed
-   origin/main SHA, the source mode, the exact execution-freeze
-   identity, the r5a static-plan schema/digest, the canonical
-   environment identity, and the real-builder verdict.
+- The CANONICAL physical prelaunch launch is SHELL + GIT ONLY before
+  Python. The exact operator recipe is codified in
+  ``METHODOLOGY-ARM-C-RETRY.md`` ("Canonical physical-prelaunch launch
+  contract") and is executed VERBATIM by
+  ``tests/test_issue133_prelaunch_bootstrap.py``: standard shell resolves
+  ``refs/remotes/origin/main`` (fail closed when missing), selects the
+  newest accepted commit carrying the current physical-campaign
+  authority document with ``git log -1``/``git rev-parse`` (fail closed
+  when the authority path has no accepted history), extracts
+  ``scripts/issue133_physical_prelaunch_gate.py`` from THAT commit with
+  ``git show`` into a fresh ``mktemp -d`` directory (fail closed when
+  the blob is missing, when the target is not a regular non-symlink
+  file, or when the extracted bytes' sha256 differs from the selected
+  Git blob), and only then executes::
 
-Working-tree copies of gate files are NEVER executed as
-authorization authority. Their drift versus the accepted bytes is
-REPORTED as a secondary defense-in-depth integrity check only — it
-does not establish trust and does not by itself authorize anything.
+      python3 -I -S <extracted-bootstrap> --accepted-bootstrap --repo <repository>
+
+- NO Python file read from the mutable working tree executes before the
+  accepted bootstrap. This module — the bytes Git itself returned — is
+  the FIRST Python executed for the physical prelaunch decision.
+
+- WORKING-TREE INVOCATION FAILS CLOSED. When this file detects that it
+  is executing from inside a Git working tree (``git rev-parse --show-
+  toplevel`` around the executing file succeeds and contains it), or
+  when it is invoked without the ``--accepted-bootstrap`` flag, it
+  rejects with instructions to use the canonical Git-rooted launcher
+  and exits nonzero. Direct ``python scripts/issue133_physical_
+  prelaunch_gate.py`` from a checkout can NEVER produce an
+  authoritative PASS.
+
+- The accepted bootstrap verifies its OWN bytes equal the accepted Git
+  blob at the resolved authority commit before evaluating anything
+  else (an extracted-but-tampered or replaced/symlinked copy fails
+  closed), then materializes that commit's COMPLETE tree via
+  ``git archive``, byte-binds the COMPLETE pre-execution closure —
+  every gate-tooling file PLUS this bootstrap — against the accepted
+  blobs, and executes the pre-execution gate from the materialization
+  only, in a subprocess whose PYTHONPATH/PYTHONHOME/PYTHONSTARTUP/
+  PYTHONUSERBASE/PYTHONEXECUTABLE/PYTHONWARNINGS are scrubbed.
+
+- The emitted verdict proves the execution origin MECHANICALLY: the
+  observed ``origin/main`` SHA, the accepted authority-bearing commit,
+  ``source_mode = accepted_git_materialization``, the accepted bootstrap
+  Git blob identity AND the actually-executed bootstrap sha256 (required
+  equal), the sha256 of every gate file actually executed with the
+  accepted blob sha256 it must equal, the exact execution-freeze
+  identity, the campaign ID, the r5a static-plan schema/digest, the
+  Arm-B participant-plan and chain-plan digests, the canonical
+  environment identity, and the real-builder verdict.
 
 Adversarial property (proven by tests/test_issue133_prelaunch_bootstrap.py):
-a working-tree ``issue133_arm_c_retry_campaign.py`` or
-``issue129_arm_c_retry_core.py`` whose
-``verify_gate_tooling_closure`` returns success unconditionally (or
-which bypasses the gate entirely) can NEVER cause a PASS — the
-substituted module is never imported; the accepted Git-materialized
-gate alone evaluates authorization.
+a working-tree ``scripts/issue133_physical_prelaunch_gate.py`` replaced
+with hostile Python — one that never invokes Git, prints a structurally
+valid PASS verdict, writes an execution marker, and exits 0 (or exits 0
+immediately with no output) — can NEVER affect the canonical launch:
+the launcher extracts the bootstrap bytes from the Git object database
+and the hostile file is never executed.
 
 CPU-only. No GPU, no model execution, no tokenizer work, no
 participant-state mutation, no h109-* consumption, no Arm D.
@@ -86,8 +101,8 @@ ACCEPTED_REMOTE_REF = "refs/remotes/origin/main"
 GATE_ENTRY_REL_PATH = "scripts/issue133_arm_c_retry_campaign.py"
 
 #: this bootstrap's own repository path (bound to the accepted commit
-#: like every other closure member — a working-tree copy that drifted
-#: from the accepted bytes fails closed before anything executes)
+#: like every other closure member — the executed bootstrap's bytes
+#: must equal this path's accepted blob before anything evaluates)
 BOOTSTRAP_REL_PATH = "scripts/issue133_physical_prelaunch_gate.py"
 
 #: the COMPLETE physical-prelaunch closure: the gate-tooling closure
@@ -109,14 +124,28 @@ PHYSICAL_PRELAUNCH_CLOSURE = (
 
 #: subprocess environment keys removed before executing the accepted
 #: gate: anything able to inject a module-search path or startup code
-#: into the materialized interpreter (review requirement: audit
-#: subprocess/environment/PYTHONPATH behavior)
+#: into the materialized interpreter
 _SCRUBBED_ENV_KEYS = frozenset({
     "PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP", "PYTHONUSERBASE",
     "PYTHONEXECUTABLE", "PYTHONWARNINGS",
 })
 
-_VERDICT_SCHEMA = "inferswarm.issue133.physical-prelaunch-bootstrap/1"
+_VERDICT_SCHEMA = "inferswarm.issue133.physical-prelaunch-bootstrap/2"
+
+_CANONICAL_LAUNCHER_INSTRUCTIONS = (
+    "Working-tree invocation of the physical prelaunch bootstrap is "
+    "NON-AUTHORIZING (maintainer review 5169777338): the first Python "
+    "executed for the physical prelaunch decision must come directly "
+    "from accepted Git history, not from the mutable working tree. Use "
+    "the canonical Git-rooted launcher codified in "
+    "docs/implementation/r6-successor-dense-full-integration-117/"
+    "METHODOLOGY-ARM-C-RETRY.md ('Canonical physical-prelaunch launch "
+    "contract'): resolve the accepted authority-bearing commit from "
+    "refs/remotes/origin/main with git log/rev-parse, extract "
+    f"{BOOTSTRAP_REL_PATH} from THAT commit with git show into a fresh "
+    "mktemp directory, verify the extracted bytes equal the selected "
+    "Git blob, then execute `python3 -I -S <extracted-bootstrap> "
+    "--accepted-bootstrap --repo <repository>`.")
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -149,6 +178,28 @@ def _accepted_blob(repo: Path, commit: str,
     if completed.returncode != 0:
         return None
     return completed.stdout
+
+
+def executing_working_tree_root() -> Path | None:
+    """The toplevel of the Git working tree this file is executing
+    from, or None when the executing file is not inside any working
+    tree (a ``git show`` extraction or a ``git archive``
+    materialization in a fresh temporary directory — the only
+    authorization-capable execution origins)."""
+    here = Path(__file__).resolve()
+    probe = subprocess.run(
+        ["git", "-C", str(here.parent), "rev-parse", "--show-toplevel"],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    if probe.returncode != 0:
+        return None
+    top = Path(probe.stdout.decode(errors="replace").strip())
+    if not top.is_absolute():
+        return None
+    try:
+        here.relative_to(top)
+    except ValueError:
+        return None
+    return top
 
 
 def resolve_accepted_authority_commit(repo: Path) -> dict:
@@ -357,7 +408,11 @@ def working_tree_drift_report(repo: Path, commit: str) -> dict:
 
 def run_prelaunch_gate(repo: Path,
                        keep_materialization: bool = False) -> dict:
-    """The canonical physical pre-execution entrypoint body."""
+    """The accepted-bootstrap authorization body. ONLY reachable when
+    this file's own bytes have been extracted/materialized from the
+    accepted Git object database by the canonical launcher (the
+    working-tree invocation guard in ``main`` rejects everything
+    else); step 0 below re-proves that mechanically."""
     verdict: dict = {
         "schema": _VERDICT_SCHEMA,
         "gate": "ACCEPTED_GIT_MATERIALIZATION_PRE_EXECUTION_GATE",
@@ -378,6 +433,39 @@ def run_prelaunch_gate(repo: Path,
         "authority_document_blob_sha1":
             resolution["authority_blob_sha1"],
     })
+
+    # ---- 0. the EXECUTING bootstrap's bytes must equal the accepted
+    # ----    blob (an extracted-but-tampered, replaced, or symlinked
+    # ----    copy fails closed BEFORE any authorization runs) ------
+    executing_bytes = Path(__file__).resolve().read_bytes()
+    executing_sha = _sha256_bytes(executing_bytes)
+    accepted_bootstrap_bytes = _accepted_blob(
+        repo, commit, BOOTSTRAP_REL_PATH)
+    if accepted_bootstrap_bytes is None:
+        _fail(
+            verdict,
+            f"no accepted blob at {BOOTSTRAP_REL_PATH} in authority "
+            f"commit {commit}; the executing bootstrap cannot prove "
+            "its bytes are accepted history — failing closed")
+    accepted_bootstrap_sha = _sha256_bytes(accepted_bootstrap_bytes)
+    verdict["bootstrap_execution"] = {
+        "executed_path": str(Path(__file__).resolve()),
+        "executed_sha256": executing_sha,
+        "accepted_blob_sha256": accepted_bootstrap_sha,
+        "equal": executing_sha == accepted_bootstrap_sha,
+        "requirement": (
+            "accepted bootstrap bytes == executed bootstrap bytes "
+            "(review 5169777338)"),
+    }
+    if executing_sha != accepted_bootstrap_sha:
+        _fail(
+            verdict,
+            f"the EXECUTING bootstrap bytes (sha256 {executing_sha}) "
+            f"are not the accepted blob at {BOOTSTRAP_REL_PATH} in "
+            f"authority commit {commit} (sha256 "
+            f"{accepted_bootstrap_sha}); only Git-materialized "
+            "accepted bytes may evaluate authorization — failing "
+            "closed")
 
     # ---- 3. materialize the accepted tree (isolated; git archive) --
     materialization_parent = Path(
@@ -403,22 +491,6 @@ def run_prelaunch_gate(repo: Path,
             _fail(verdict, str(error))
         verdict["gate_tooling_execution_provenance"] = provenance
 
-        # the executing bootstrap's own provenance (the bootstrap is
-        # the one closure member that runs from the invocation site;
-        # report its identity against the accepted blob — a drifted
-        # working-tree bootstrap is surfaced here and in the drift
-        # report, never silently trusted)
-        bootstrap_executed = _sha256_bytes(
-            Path(__file__).resolve().read_bytes())
-        bootstrap_accepted = provenance.get(
-            BOOTSTRAP_REL_PATH, {}).get("accepted_blob_sha256")
-        verdict["bootstrap_execution"] = {
-            "executed_path": str(Path(__file__).resolve()),
-            "executed_sha256": bootstrap_executed,
-            "accepted_blob_sha256": bootstrap_accepted,
-            "equal": bootstrap_executed == bootstrap_accepted,
-        }
-
         # ---- 5. execute the gate from accepted bytes only ----------
         try:
             gate_verdict = execute_accepted_gate(
@@ -433,8 +505,8 @@ def run_prelaunch_gate(repo: Path,
                 f"!= bootstrap resolution {commit!r}); failing closed")
         verdict["pre_execution_gate_verdict"] = gate_verdict
 
-        # ---- requirement-6 identity fields, taken from the accepted
-        # ---- gate verdict itself (never from working-tree code)
+        # ---- identity fields, taken from the accepted gate verdict
+        # ---- itself (never from working-tree code)
         binding = gate_verdict.get("execution_freeze_binding", {})
         dry = gate_verdict.get("real_builder_dry_run", {})
         verdict["execution_freeze_identity"] = binding.get(
@@ -477,69 +549,6 @@ def run_prelaunch_gate(repo: Path,
             shutil.rmtree(materialization_parent, ignore_errors=True)
 
 
-def launch_accepted_bootstrap(repo: Path,
-                              keep_materialization: bool = False) -> dict:
-    """External, non-authorizing Git bootstrap.
-
-    This loader does only Git-rooted authority-tree selection and byte-checks
-    the accepted bootstrap before starting it.  It never evaluates authority,
-    imports a gate module, or emits a passing authorization verdict.  The
-    first Python code that performs authorization is this same script from the
-    accepted materialization, under ``-I -S``.
-    """
-    loader_verdict = {
-        "schema": _VERDICT_SCHEMA,
-        "gate": "ACCEPTED_GIT_MATERIALIZATION_PRE_EXECUTION_GATE",
-        "trust_root": f"{ACCEPTED_REMOTE_REF} (Git object database)",
-        "source_mode": "accepted_git_materialization",
-        "repository": str(repo.resolve()),
-    }
-    try:
-        resolution = resolve_accepted_authority_commit(repo)
-    except RuntimeError as error:
-        _fail(loader_verdict, str(error))
-    commit = resolution["accepted_authority_commit"]
-    parent = Path(tempfile.mkdtemp(prefix="issue133-bootstrap-loader-"))
-    materialization = parent / "tree"
-    materialization.mkdir()
-    try:
-        materialize_accepted_tree(repo, commit, materialization)
-        accepted_bootstrap = materialization / BOOTSTRAP_REL_PATH
-        expected = _accepted_blob(repo, commit, BOOTSTRAP_REL_PATH)
-        if expected is None or accepted_bootstrap.is_symlink() \
-                or not accepted_bootstrap.is_file() \
-                or _sha256_bytes(accepted_bootstrap.read_bytes()) != \
-                _sha256_bytes(expected):
-            _fail(loader_verdict,
-                  "accepted bootstrap bytes could not be materialized and "
-                  "verified before authorization")
-        env = {key: value for key, value in os.environ.items()
-               if key not in _SCRUBBED_ENV_KEYS}
-        env["PYTHONDONTWRITEBYTECODE"] = "1"
-        env["PYTHONNOUSERSITE"] = "1"
-        completed = subprocess.run(
-            [sys.executable, "-I", "-S", str(accepted_bootstrap),
-             "--accepted-bootstrap", "--repo", str(repo.resolve())],
-            cwd=str(materialization), env=env, stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE, timeout=3600)
-        if completed.returncode != 0:
-            _fail(loader_verdict,
-                  "the accepted Git-materialized authorization bootstrap "
-                  f"REJECTED (exit {completed.returncode}): "
-                  + (completed.stderr.decode(errors="replace").strip()
-                     or completed.stdout.decode(errors="replace").strip())[-2000:])
-        try:
-            return json.loads(completed.stdout)
-        except json.JSONDecodeError as error:
-            _fail(loader_verdict,
-                  "the accepted authorization bootstrap produced no "
-                  "parseable verdict; failing closed")
-            raise AssertionError("unreachable") from error
-    finally:
-        if not keep_materialization:
-            shutil.rmtree(parent, ignore_errors=True)
-
-
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -556,6 +565,31 @@ def main(argv: list[str] | None = None) -> int:
         help="retain the accepted materialization tree for "
              "inspection (path recorded in the verdict)")
     args = parser.parse_args(argv)
+
+    # ---- working-tree invocation FAILS CLOSED (review 5169777338) --
+    working_tree = executing_working_tree_root()
+    if working_tree is not None:
+        print(
+            "PHYSICAL_PRELAUNCH_GATE_REJECT: this bootstrap is "
+            f"executing from the mutable repository working tree at "
+            f"{working_tree}; working-tree invocation is "
+            "NON-AUTHORIZING. " + _CANONICAL_LAUNCHER_INSTRUCTIONS,
+            file=sys.stderr)
+        return 1
+    if not args.accepted_bootstrap:
+        print(
+            "PHYSICAL_PRELAUNCH_GATE_REJECT: the invocation-stage "
+            "loader mode has been REMOVED (maintainer review "
+            "5169777338) — an outer working-tree process that "
+            "resolves, materializes, launches, and parses the "
+            "accepted bootstrap could fabricate the final verdict. "
+            "The authorization-capable mode (--accepted-bootstrap) "
+            "is intended ONLY for the Git-materialized bootstrap "
+            "extracted by the canonical launcher. "
+            + _CANONICAL_LAUNCHER_INSTRUCTIONS,
+            file=sys.stderr)
+        return 1
+
     repo = args.repo
     if repo is None:
         repo = Path(__file__).resolve().parents[1]
@@ -566,10 +600,7 @@ def main(argv: list[str] | None = None) -> int:
             "repository; the Git object database is the trust root",
             file=sys.stderr)
         return 1
-    if args.accepted_bootstrap:
-        verdict = run_prelaunch_gate(repo, args.keep_materialization)
-    else:
-        verdict = launch_accepted_bootstrap(repo, args.keep_materialization)
+    verdict = run_prelaunch_gate(repo, args.keep_materialization)
     print(json.dumps(verdict, indent=2, sort_keys=True))
     return 0
 

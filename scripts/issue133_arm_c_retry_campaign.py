@@ -219,8 +219,13 @@ TOKENIZER_PYTHON = _frozen.TOKENIZER_PYTHON
 #: scrubbed-environment subprocess. Working-tree Python never
 #: establishes its own authority. Schema /5 (review 5166773760)
 #: fields retained; this /6 record adds the bootstrap provenance and
-#: verdict-field contract.
-FREEZE_SCHEMA = "inferswarm.issue133.execution-freeze/6"
+#: verdict-field contract. Schema /7 (review 5169777338) re-binds the
+#: bootstrap to the CANONICAL GIT-ROOTED LAUNCHER: the first Python
+#: executed for the physical prelaunch decision is the bootstrap blob
+#: extracted from the accepted authority-bearing commit by shell+Git
+#: alone (no working-tree loader), working-tree invocation fails
+#: closed, and the verdict schema advances to /2.
+FREEZE_SCHEMA = "inferswarm.issue133.execution-freeze/7"
 FREEZE_DRIVER_STATIC_FIELDS = (
     "repository_sha",
     "file_sha256",
@@ -1063,33 +1068,46 @@ def build_execution_freeze_record(
         "gate_tooling_closure": {
             "required": True,
             "binding": (
-                "review 5167622668: the canonical physical prelaunch "
-                "entrypoint is the EXTERNAL stdlib/Git-only bootstrap "
-                "(scripts/issue133_physical_prelaunch_gate.py), which "
-                "resolves the accepted authority-bearing commit from "
-                "refs/remotes/origin/main + the Git object database, "
+                "review 5169777338: the canonical physical prelaunch "
+                "launch is SHELL + GIT ONLY before Python (codified "
+                "in METHODOLOGY-ARM-C-RETRY.md, 'Canonical "
+                "physical-prelaunch launch contract'): the operator "
+                "recipe resolves refs/remotes/origin/main, selects "
+                "the newest accepted commit carrying the current "
+                "physical-campaign authority document with Git "
+                "plumbing, extracts scripts/issue133_physical_"
+                "prelaunch_gate.py from THAT commit with git show "
+                "into a fresh temporary directory, verifies the "
+                "extracted bytes equal the selected Git blob, and "
+                "executes `python3 -I -S <extracted-bootstrap> "
+                "--accepted-bootstrap --repo <repository>`. NO "
+                "Python file read from the mutable working tree "
+                "executes before the accepted bootstrap; the "
+                "working-tree invocation of the bootstrap FAILS "
+                "CLOSED (non-authorizing). The accepted bootstrap "
+                "verifies its own bytes equal the accepted blob, "
                 "materializes that commit's complete tree via git "
                 "archive into an isolated temporary directory, "
                 "byte-binds the COMPLETE physical-prelaunch closure "
                 "(the gate-tooling closure below PLUS the bootstrap "
-                "itself) against the accepted blobs, and executes the "
-                "pre-execution gate from that accepted materialization "
-                "only — in a subprocess with PYTHONPATH/PYTHONHOME/"
-                "PYTHONSTARTUP/PYTHONUSERBASE scrubbed so materialized "
-                "modules cannot resolve same-named working-tree "
-                "modules. Current-working-tree Python never "
-                "establishes its own authority; working-tree copies "
-                "are compared with the accepted bytes only as a "
-                "secondary defense-in-depth integrity report. A "
-                "later-main commit leaving every closure byte "
-                "identical remains compatible; any closure byte "
-                "change requires review/re-freeze."),
+                "itself) against the accepted blobs, and executes "
+                "the pre-execution gate from that accepted "
+                "materialization only — in a subprocess with "
+                "PYTHONPATH/PYTHONHOME/PYTHONSTARTUP/PYTHONUSERBASE "
+                "scrubbed so materialized modules cannot resolve "
+                "same-named working-tree modules. Current-working-"
+                "tree Python never establishes its own authority; "
+                "working-tree copies are compared with the accepted "
+                "bytes only as a secondary defense-in-depth "
+                "integrity report. A later-main commit leaving every "
+                "closure byte identical remains compatible; any "
+                "closure byte change requires review/re-freeze."),
             "paths": list(GATE_TOOLING_CLOSURE),
             "external_bootstrap": EXTERNAL_BOOTSTRAP_REL_PATH,
             "bootstrap_closure": list(GATE_TOOLING_CLOSURE) + [
                 EXTERNAL_BOOTSTRAP_REL_PATH],
             "bootstrap_verdict_schema": (
-                "inferswarm.issue133.physical-prelaunch-bootstrap/1"),
+                "inferswarm.issue133.physical-prelaunch-bootstrap/2"),
         },
         "superseded_freeze_lineage": [
             {

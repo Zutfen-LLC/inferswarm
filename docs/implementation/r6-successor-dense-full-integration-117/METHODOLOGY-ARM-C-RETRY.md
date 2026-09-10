@@ -170,6 +170,64 @@ The future contract requires:
 The CPU proof uses an audit hook to test the zero-Source observation rule. The
 presence or absence of a Transformers import is not the invariant.
 
+## Canonical physical-prelaunch launch contract
+
+The physical prelaunch decision (review 5169777338) must begin with
+Python bytes that come DIRECTLY from accepted Git history. No Python
+file read from the mutable working tree may execute before the
+accepted bootstrap. The executable logic before Python is exclusively
+standard shell plus Git plumbing:
+
+```sh
+REPO=/path/to/inferswarm                 # the repository whose
+                                         # refs/remotes/origin/main +
+                                         # object database is the
+                                         # external trust root
+AUTH_PATH='docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/physical-campaign-authority.json'
+BOOTSTRAP_PATH='scripts/issue133_physical_prelaunch_gate.py'
+
+git -C "$REPO" rev-parse --verify --quiet refs/remotes/origin/main >/dev/null \
+  || { echo 'REJECT: refs/remotes/origin/main is missing' >&2; exit 1; }
+AUTH_COMMIT=$(git -C "$REPO" log -1 --format=%H refs/remotes/origin/main -- "$AUTH_PATH") \
+  || { echo 'REJECT: authority-path lookup failed' >&2; exit 1; }
+[ -n "$AUTH_COMMIT" ] \
+  || { echo 'REJECT: no accepted commit carries the authority document' >&2; exit 1; }
+TMP=$(mktemp -d) || exit 1
+trap 'rm -rf "$TMP"' EXIT
+git -C "$REPO" show "$AUTH_COMMIT:$BOOTSTRAP_PATH" > "$TMP/bootstrap.py" \
+  || { echo 'REJECT: accepted bootstrap blob missing' >&2; exit 1; }
+[ -f "$TMP/bootstrap.py" ] && [ ! -L "$TMP/bootstrap.py" ] \
+  || { echo 'REJECT: extracted bootstrap not a regular file' >&2; exit 1; }
+EXPECTED=$(git -C "$REPO" rev-parse "$AUTH_COMMIT:$BOOTSTRAP_PATH")
+ACTUAL=$(git hash-object "$TMP/bootstrap.py")
+[ "$EXPECTED" = "$ACTUAL" ] \
+  || { echo 'REJECT: extracted bytes differ from the selected Git blob' >&2; exit 1; }
+python3 -I -S "$TMP/bootstrap.py" --accepted-bootstrap --repo "$REPO"
+```
+
+Notes:
+
+- `git log -1 --format=%H refs/remotes/origin/main -- <path>` selects
+  the newest accepted commit that changed/carries the authority path.
+  (The accepted bootstrap's own history resolution additionally
+  requires the newest commit carrying the NEWEST accepted authority
+  blob, keeping later-main semantics: unrelated later accepted
+  commits coexist with the frozen campaign, and a change to
+  correctness-bearing gate/bootstrap code requires reviewed
+  re-freeze.)
+- The extracted bootstrap is a secure-temporary copy of the Git blob
+  (mode 0600 from mktemp); `git hash-object` re-hashes the extracted
+  bytes so a truncated/corrupted extraction fails closed. The
+  bootstrap re-verifies its own bytes against the accepted blob again
+  from inside, and rejects execution from any repository working
+  tree. Working-tree invocation
+  (`python scripts/issue133_physical_prelaunch_gate.py`) is
+  non-authorizing and fails closed with launcher instructions.
+- The launcher is shell + Git only; no repository Python participates
+  in selecting or certifying the trusted Python. The bootstrap's
+  authorization-capable mode (`--accepted-bootstrap`) is intended
+  only for the Git-materialized file.
+
 ## Deployment identity
 
 Each correctness-bearing driver must record:
