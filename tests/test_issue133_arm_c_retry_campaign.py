@@ -241,10 +241,29 @@ class ExecutionFreezeTests(unittest.TestCase):
     def test_freeze_record_binds_all_issue133_identities(self):
         record = self._record()
         for field in ("frozen_producer", "checkpoint_sha256",
-                      "candidate", "geometry", "execution_plan_digest",
+                      "candidate", "geometry",
                       "participant_identity", "fixture_digest"):
             self.assertEqual(record[field], camp.ISSUE133[field])
+        self.assertEqual(record["arm_b_participant_plan_digest"],
+                         camp.ISSUE133["execution_plan_digest"])
         self.assertEqual(record["schema"], camp.FREEZE_SCHEMA)
+        self.assertEqual(record["arm_b_participant_plan_schema"],
+                         "inferswarm.issue117.execution-plan/2")
+        self.assertEqual(record["r5a_static_plan_schema"],
+                         camp.AUTHORIZED_R5A_STATIC_PLAN_SCHEMA)
+        self.assertEqual(record["r5a_static_plan_digest"],
+                         camp.AUTHORIZED_R5A_STATIC_PLAN_DIGEST)
+        self.assertEqual(record["chain_plan_digest"],
+                         camp.AUTHORIZED_REALIZATION_INPUTS[
+                             "chain_plan"]["digest"])
+        self.assertNotEqual(record["arm_b_participant_plan_digest"],
+                            record["r5a_static_plan_digest"])
+        self.assertEqual(record["real_builder_dry_run"]["required"], True)
+        self.assertEqual(
+            record["superseded_freeze_lineage"][0]
+            ["execution_freeze_identity"],
+            "5af9aee314fdd742cdb75d903d47e2f3c43296ee887e50"
+            "7ef335b8f614e7a19e")
         self.assertEqual(
             record["authorized_realization_inputs"],
             camp.AUTHORIZED_REALIZATION_INPUTS)

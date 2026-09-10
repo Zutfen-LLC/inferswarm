@@ -18,12 +18,30 @@ comparator contract:
 Single-shot max_new_tokens=8 is FORBIDDEN and not used.
 
 AUTHORIZATION FENCE (before realize_dense_chain and before any
-model/runtime generation can occur): the locally built execution plan
-must equal the issue #133 authorized Arm-B execution-plan digest
+model/runtime generation can occur), in two DISTINCT document families:
 
-    sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad
+1. the locally built r5a STATIC execution plan (schema
+   ``inferswarm.r5a.static-execution-plan/1``, produced by
+   ``serving.freeze_execution_plan(...)`` through this driver's
+   ``build_execution_plan``) must equal the frozen authorized Issue-133
+   r5a static-plan digest — mechanically derived at freeze time from the
+   real builder over the corrected canonical physical environment and
+   the authorized chain plan, and re-provable pre-launch by the CPU-only
+   real-builder dry run (scripts/issue133_real_builder_dry_run.py);
 
-and every external input capable of changing the physical plan/substrate
+2. the accepted Arm-B PARTICIPANT execution-plan identity (schema
+   ``inferswarm.issue117.execution-plan/2``, digest
+   sha256:8646e00c…) remains an independently checked preserved
+   participant/substrate authority invariant — it is NOT the digest
+   family ``build_execution_plan()`` produces and can never satisfy the
+   r5a fence (wrong-family negative control in the dry-run suite).
+
+An issue117.execution-plan/2 digest can never again be substituted for
+an r5a.static-execution-plan/1 digest: the r5a fence asserts BOTH the
+exact schema and the digest, and the two frozen authority constants are
+asserted distinct at import time.
+
+Every external input capable of changing the physical plan/substrate
 is mechanically bound to accepted evidence BEFORE realization:
 
 - `--environment` must equal the accepted Arm-C environment freeze
@@ -69,26 +87,51 @@ GENERATE_ARGUMENT_NAMES = (
     "max_new_tokens", "on_token", "prompt_token_ids", "session_id")
 
 #: ---------------------------------------------------------------------------
-#: Authorized plan/participant identities (issue #133; the participant
-#: identity sha256:ee845188… is the ACCEPTED Arm-B participant-plan
-#: digest — proven from the accepted retained Arm-C plan-verification
-#: record and the retained chain plan's provenance, which bind
-#: accepted_plan_digest == sha256:ee845188… and arm_c_plan_digest ==
-#: sha256:a71a3129… as the exact relationship between the accepted
-#: participant plan and the supplied chain plan).
-AUTHORIZED_EXECUTION_PLAN_DIGEST = (
+#: Authorized plan/participant identities (issue #133), in TWO DISTINCT
+#: document families (corrected per the maintainer disposition on the
+#: Phase-B preflight STOP, issuecomment-5617122680):
+#:
+#: ARM_B_PARTICIPANT_PLAN_DIGEST is the accepted Issue-117/Arm-B
+#: PARTICIPANT execution-plan identity (schema
+#: ``inferswarm.issue117.execution-plan/2``; proven from the retained
+#: Arm-B execution-plan document). It is a preserved participant/
+#: substrate authority invariant — it is NOT the digest family
+#: ``build_execution_plan()`` produces.
+ARM_B_PARTICIPANT_PLAN_DIGEST = (
     "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad")
+ARM_B_PARTICIPANT_PLAN_SCHEMA = "inferswarm.issue117.execution-plan/2"
+#: AUTHORIZED_R5A_STATIC_PLAN_DIGEST is the corrected Issue-133 r5a
+#: STATIC execution-plan identity (schema
+#: ``inferswarm.r5a.static-execution-plan/1``), mechanically derived at
+#: freeze time by the REAL unmocked builder over the corrected canonical
+#: physical environment (canonical sha256 98c04387…) and the authorized
+#: chain plan a71a3129…, and proven by the mandatory CPU-only
+#: real-builder dry run (scripts/issue133_real_builder_dry_run.py).
+#: Copied programmatically from the dry-run output at freeze time —
+#: never hand-transcribed.
+AUTHORIZED_R5A_STATIC_PLAN_DIGEST = (
+    "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625")
+AUTHORIZED_R5A_STATIC_PLAN_SCHEMA = (
+    "inferswarm.r5a.static-execution-plan/1")
+if ARM_B_PARTICIPANT_PLAN_DIGEST == AUTHORIZED_R5A_STATIC_PLAN_DIGEST:
+    raise SystemExit(
+        "ARM_C_RETRY_DIRECT_FAIL: plan-family conflation — the Arm-B "
+        "participant-plan digest and the r5a static-plan digest must "
+        "never be the same value")
 AUTHORIZED_CHAIN_PLAN_DIGEST = (
     "sha256:a71a3129b8764d7108f51ed30fb230b42fcd69646a20bcd6806b6ee53b9bc51f")
 AUTHORIZED_PARTICIPANT_IDENTITY = (
     "sha256:ee845188d3328bdec29bf4b09d71f7ccda0701ff5758cb1d8a70460a40fecfb1")
 
-#: The accepted environment is derived by the Issue #129 methodology from
-#: ``evidence/physical-preflight.json``. Phase A retains its canonical digest
-#: here. The direct driver does not load or execute a mutable methodology
-#: module to decide which environment is authorized.
+#: The accepted environment is the corrected canonical Issue-133 physical
+#: environment: identical to the #129 derivation except the three pci_bdf
+#: values are the freshly observed physical BDFs (maintainer decision
+#: issuecomment-5617122680: physical topology is authoritative) and the
+#: narrative-only provenance_note is not an authorization input. Derived
+#: by scripts/issue133_canonical_environment.py from the retained live
+#: observation record gpu-identity-observation.json.
 AUTHORIZED_ENVIRONMENT_CANONICAL_SHA256 = (
-    "182b950e844c078fd0a9d91c321cd67097c81d3d4fd704a86618407b6399b274")
+    "98c04387215915acf54a9ff769492e3f7cb7b0266d36649631a531a9b5edbf67")
 
 #: Every realization-affecting location and endpoint is fixed before the
 #: authorization fence. The source records are retained accepted evidence.
@@ -273,8 +316,13 @@ def require_producer_module(repo: Path, name: str, relative: str):
 
 
 def build_execution_plan(repo: Path, env: dict, chain_plan: dict) -> dict:
-    """Compile the frozen execution plan via the producer's own machinery
-    (identical to the accepted historical Arm-C construction)."""
+    """Compile the frozen r5a STATIC execution plan (schema
+    inferswarm.r5a.static-execution-plan/1) via the producer's own
+    machinery (identical construction to the accepted historical Arm-C
+    build). ``repo`` is only used when it IS the verified producer
+    worktree (node deployment); the CPU-only dry run passes a
+    non-worktree path and the vendored frozen bytes are used instead —
+    both resolve to the same sha256-pinned producer closure."""
     strategy = require_producer_module(
         repo, "benchmarks.inferswarm_r6.xc_strategy",
         "benchmarks/inferswarm_r6/xc_strategy.py")
@@ -288,6 +336,28 @@ def build_execution_plan(repo: Path, env: dict, chain_plan: dict) -> dict:
         repo, "freetoken.research.r5a_serving",
         "python/freetoken/research/r5a_serving.py")
 
+    return _compile_r5a_static_plan(
+        strategy=strategy, coordinator=coordinator, planner=planner,
+        serving=serving, env=env, chain_plan=chain_plan)
+
+
+def build_execution_plan_from_environment(env: dict) -> dict:
+    """CPU-only entry: build the r5a static execution plan through the
+    REAL frozen producer bytes vendored under
+    evidence/arm-c-retry/frozen-source/924cd22e/ (verified against the
+    accepted pins by the #129 core before any import). No producer
+    worktree, no GPU, no model execution — the mandatory real-builder
+    dry-run path."""
+    repo = Path(__file__).resolve().parents[1]
+    frozen = _load_vendored_producer_control_plane(repo)
+    return _compile_r5a_static_plan(
+        strategy=frozen["xc_strategy"], coordinator=frozen["coordinator"],
+        planner=frozen["r3_planner"], serving=frozen["r5a_serving"],
+        env=env, chain_plan=_retained_chain_plan())
+
+
+def _compile_r5a_static_plan(*, strategy, coordinator, planner, serving,
+                             env: dict, chain_plan: dict) -> dict:
     sha = env["implementation_commit"]
     decision = planner.plan(
         strategy.planning_problem(sha), coordinator._r6_snapshot(env),
@@ -315,7 +385,7 @@ def build_execution_plan(repo: Path, env: dict, chain_plan: dict) -> dict:
                   "selects the same candidate automatically from measured "
                   "evidence",
     }
-    return serving.freeze_execution_plan(
+    plan = serving.freeze_execution_plan(
         decision=decision,
         evaluation=evaluation,
         authorization=authorization,
@@ -324,6 +394,93 @@ def build_execution_plan(repo: Path, env: dict, chain_plan: dict) -> dict:
         objective=coordinator._r6_objective(sha),
         policy=strategy.operator_policy(sha),
     )
+    if plan.get("schema") != AUTHORIZED_R5A_STATIC_PLAN_SCHEMA:
+        raise SystemExit(
+            f"ARM_C_RETRY_DIRECT_FAIL: builder produced plan family "
+            f"{plan.get('schema')!r}, expected "
+            f"{AUTHORIZED_R5A_STATIC_PLAN_SCHEMA!r}; a wrong-family "
+            "document can never satisfy the r5a authorization fence")
+    return plan
+
+
+def _load_vendored_producer_control_plane(repo: Path) -> dict:
+    """Import the sha256-pinned frozen producer bytes vendored under
+    evidence/arm-c-retry/frozen-source/924cd22e/ under their REAL module
+    names (reusing the frozen #129 loader for every byte it already
+    pins; loading the vendored coordinator + its closure directly, with
+    byte verification, for the files the #129 loader does not pin)."""
+    import importlib
+    import importlib.util
+    vendored_root = (repo / "docs/implementation"
+                     / "r6-successor-dense-full-integration-117"
+                     / "evidence/arm-c-retry/frozen-source/924cd22e")
+    import hashlib as _hashlib
+    vendored_files = {
+        "benchmarks/inferswarm_r6/coordinator.py":
+            "189548dc4f87f5f40c05f7796a2be7af0446ea05f95a0cf7bafcd3b79bec5d77",
+        "python/freetoken/research/xc_coordinator.py":
+            "d0a4cd3f784cb1272069f6f4f5453391df9655e32b46b6129d02be3b92a36aa2",
+        "python/freetoken/research/xc_wire.py":
+            "71e9a37039d74c46505242504ca272127b033664af51d2aa16f965f97f8178de",
+        "benchmarks/inferswarm_xc/cpu_only.py":
+            "32dd1b33ffcff653da2d40624f84921b4873ae405335769dc25bb8b582b00eeb",
+    }
+    for rel, expected in vendored_files.items():
+        path = vendored_root / rel
+        actual = _hashlib.sha256(path.read_bytes()).hexdigest()
+        if actual != expected:
+            raise SystemExit(
+                f"ARM_C_RETRY_DIRECT_FAIL: vendored producer byte drift "
+                f"for {rel}: {actual} != {expected}")
+    # reuse the frozen #129 loader for the modules it already pins
+    sys.path.insert(0, str(repo / "scripts"))
+    import issue129_arm_c_retry_core as _frozen129
+    planner, serving, _epochs, _strategy, xc_strategy = \
+        _frozen129.load_frozen_control_plane(repo)
+
+    def _register(name: str) -> None:
+        if name not in sys.modules:
+            module = importlib.import_module("types")
+            placeholder = module.ModuleType(name)
+            placeholder.__path__ = []
+            sys.modules[name] = placeholder
+
+    for package in ("benchmarks", "benchmarks.inferswarm_xc",
+                    "freetoken", "freetoken.research"):
+        _register(package)
+
+    def _load(name: str, rel: str):
+        spec = importlib.util.spec_from_file_location(
+            name, vendored_root / rel)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+        return module
+
+    # load dependencies FIRST (coordinator imports xc_coordinator at
+    # module level; xc_coordinator imports xc_wire and r5a_serving)
+    _load("freetoken.research.xc_wire",
+          "python/freetoken/research/xc_wire.py")
+    _load("benchmarks.inferswarm_xc.cpu_only",
+          "benchmarks/inferswarm_xc/cpu_only.py")
+    _load("freetoken.research.xc_coordinator",
+          "python/freetoken/research/xc_coordinator.py")
+    coordinator = _load(
+        "benchmarks.inferswarm_r6.coordinator",
+        "benchmarks/inferswarm_r6/coordinator.py")
+    return {"r3_planner": planner, "r5a_serving": serving,
+            "xc_strategy": xc_strategy, "coordinator": coordinator}
+
+
+def _retained_chain_plan() -> dict:
+    import json as _json
+    path = Path(__file__).resolve().parents[1] / (
+        "docs/implementation/r6-successor-dense-full-integration-117"
+        "/evidence/arm-c/chain-plan.json")
+    chain_plan = _json.loads(path.read_text())
+    verify_chain_plan_authorization(chain_plan)
+    return chain_plan
 
 
 def verify_environment_authorization(environment: dict) -> None:
@@ -536,20 +693,52 @@ def verify_chain_plan_authorization(chain_plan: dict) -> None:
             f"is not the frozen producer {FREETOKEN_PRODUCER}")
 
 
-def verify_plan_authorization_fence(built_plan: dict) -> None:
-    """THE authorization fence: the locally built execution plan must
-    equal the issue #133 authorized Arm-B execution-plan digest. This is
-    independent of (and prior to) the runtime-substitution fence on
-    `result["plan_digest"]`: an unintended chain-plan/environment input
-    producing a different locally built plan is rejected here, before
-    realize_dense_chain() and before any model/runtime generation."""
-    digest = built_plan.get("digest")
-    if digest != AUTHORIZED_EXECUTION_PLAN_DIGEST:
+def verify_r5a_plan_authorization_fence(built_plan: dict) -> None:
+    """THE r5a authorization fence: the locally built STATIC execution
+    plan must be of the exact r5a document family (schema
+    ``inferswarm.r5a.static-execution-plan/1``) AND its digest must equal
+    the frozen authorized Issue-133 r5a static-plan digest (mechanically
+    derived at freeze time from the real builder over the corrected
+    canonical physical environment + authorized chain plan).
+
+    The accepted Arm-B PARTICIPANT execution-plan digest
+    (``inferswarm.issue117.execution-plan/2``,
+    sha256:8646e00c…) is a DIFFERENT document family: it is checked
+    independently as preserved participant/substrate authority
+    (verify_chain_plan_authorization binds the chain plan to the
+    accepted participant identity ee845188… whose re-freeze a71a3129…
+    this driver pins) and can NEVER satisfy this fence — the schema
+    assertion alone rejects any issue117.execution-plan/2 document, and
+    the two frozen constants are asserted distinct at import time.
+
+    This is independent of (and prior to) the runtime-substitution fence
+    on ``result["plan_digest"]``: an unintended chain-plan/environment
+    input producing a different locally built plan is rejected here,
+    before realize_dense_chain() and before any model/runtime
+    generation."""
+    schema = built_plan.get("schema")
+    if schema != AUTHORIZED_R5A_STATIC_PLAN_SCHEMA:
         raise SystemExit(
-            "ARM_C_RETRY_DIRECT_FAIL: locally built execution plan digest "
-            f"{digest} != authorized issue #133 Arm-B execution-plan "
-            f"digest {AUTHORIZED_EXECUTION_PLAN_DIGEST}; refusing to "
-            "realize an unauthorized plan")
+            "ARM_C_RETRY_DIRECT_FAIL: locally built plan is of the wrong "
+            f"document family {schema!r}; the r5a authorization fence "
+            f"accepts only {AUTHORIZED_R5A_STATIC_PLAN_SCHEMA!r} (an "
+            "inferswarm.issue117.execution-plan/2 digest can never be "
+            "substituted here)")
+    digest = built_plan.get("digest")
+    if digest != AUTHORIZED_R5A_STATIC_PLAN_DIGEST:
+        raise SystemExit(
+            "ARM_C_RETRY_DIRECT_FAIL: locally built r5a static execution "
+            f"plan digest {digest} != authorized issue #133 r5a "
+            f"static-plan digest {AUTHORIZED_R5A_STATIC_PLAN_DIGEST}; "
+            "refusing to realize an unauthorized plan")
+
+
+#: retained for source-compatibility with the accepted Phase-A tests
+#: only where they verify the WRONG-family constant is NOT the fence:
+#: the Arm-B identity is authority, never the r5a fence expectation.
+def verify_plan_authorization_fence(built_plan: dict) -> None:
+    """Back-compat shim: the fence IS the r5a static-plan fence."""
+    verify_r5a_plan_authorization_fence(built_plan)
 
 
 def main(argv: list[str] | None = None) -> int:

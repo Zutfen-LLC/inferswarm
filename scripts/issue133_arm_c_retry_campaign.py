@@ -116,6 +116,49 @@ ISSUE133 = {
     "participant_hosts": ("inferswarm01", "inferswarm03"),
 }
 
+#: ---------------------------------------------------------------------------
+#: Corrected freeze identities (Phase-B pre-execution correction, per the
+#: maintainer disposition issuecomment-5617122680). Three DISTINCT plan
+#: identities are now maintained separately:
+#:
+#: 1. the accepted Arm-B participant execution-plan identity — schema
+#:    ``inferswarm.issue117.execution-plan/2`` (ISSUE133 above,
+#:    "execution_plan_digest"): preserved participant/substrate authority
+#:    only, NEVER the r5a fence expectation;
+#: 2. the accepted/re-frozen Arm-C chain-plan identity
+#:    a71a3129b8764d7108f51ed30fb230b42fcd69646a20bcd6806b6ee53b9bc51f;
+#: 3. the corrected Issue-133 r5a STATIC execution-plan identity (schema
+#:    ``inferswarm.r5a.static-execution-plan/1``) below — mechanically
+#:    derived by the REAL unmocked frozen producer builder over the
+#:    corrected canonical physical environment (98c04387…) and the
+#:    authorized chain plan; proven by the mandatory CPU-only
+#:    real-builder dry run (scripts/issue133_real_builder_dry_run.py).
+#:    Copied programmatically from the dry-run output at freeze time.
+AUTHORIZED_R5A_STATIC_PLAN_DIGEST = (
+    "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625")
+AUTHORIZED_R5A_STATIC_PLAN_SCHEMA = (
+    "inferswarm.r5a.static-execution-plan/1")
+#: the corrected canonical Issue-133 physical environment identity
+#: (scripts/issue133_canonical_environment.py; identical to the #129
+#: derivation except the three pci_bdf values are the freshly observed
+#: physical BDFs and the narrative-only provenance_note is dropped)
+AUTHORIZED_ENVIRONMENT_CANONICAL_SHA256 = (
+    "98c04387215915acf54a9ff769492e3f7cb7b0266d36649631a531a9b5edbf67")
+#: expected r5a plan semantics (asserted by the dry run against the
+#: really-built plan)
+ISSUE133_R5A_EXPECTED_CANDIDATE_ID = (
+    "resident-two-node-three-slot[slot-stage-1=gpu.node-a.0,"
+    "slot-stage-2=gpu.node-a.1,slot-stage-3=gpu.node-b.0]")
+ISSUE133_R5A_EXPECTED_MAPPING = {
+    "slot-stage-1": "gpu.node-a.0",
+    "slot-stage-2": "gpu.node-a.1",
+    "slot-stage-3": "gpu.node-b.0",
+}
+if ISSUE133["execution_plan_digest"] == AUTHORIZED_R5A_STATIC_PLAN_DIGEST:
+    raise SystemExit(
+        "plan-family conflation: the Arm-B participant-plan digest and "
+        "the r5a static-plan digest must never be the same value")
+
 #: the corrected comparator contract, as data (issue #133 mandatory section)
 COMPARATOR_CONTRACT = {
     "replay_input": "frozen rendered prompt ids + already committed generated ids",
@@ -149,7 +192,7 @@ TOKENIZER_PYTHON = _frozen.TOKENIZER_PYTHON
 #: physical attempt and their presence in a pre-execution freeze fails
 #: closed (a pre-run record may not masquerade as completed post-run
 #: verification).
-FREEZE_SCHEMA = "inferswarm.issue133.execution-freeze/3"
+FREEZE_SCHEMA = "inferswarm.issue133.execution-freeze/4"
 FREEZE_DRIVER_STATIC_FIELDS = (
     "repository_sha",
     "file_sha256",
@@ -162,14 +205,18 @@ OBSERVATIONAL_DEPLOYMENT_FIELDS = frozenset({
 AUTHORIZED_REALIZATION_INPUTS = {
     "environment": {
         "canonical_sha256": (
-            "182b950e844c078fd0a9d91c321cd67097c81d3d4fd704a86618407b6399b274"),
+            "98c04387215915acf54a9ff769492e3f7cb7b0266d36649631a531a9b5edbf67"),
         "expected_path": "/srv/inferswarm/state/arm-c/environment.json",
+        "derivation": (
+            "scripts/issue133_canonical_environment.py — the #129 "
+            "derivation with the three pci_bdf values re-observed live "
+            "(gpu-identity-observation.json) per maintainer decision "
+            "issuecomment-5617122680, and the narrative-only "
+            "provenance_note excluded from physical authorization"),
         "source_evidence": (
             "docs/implementation/r6-successor-dense-full-integration-117/"
-            "evidence/physical-preflight.json"),
-        "derivation_authority": (
-            "scripts/issue129_arm_c_retry_core.py:_frozen_environment at "
-            "methodology head 808b77c45f0b4e5d52a202c1a931f43447ff93a6"),
+            "evidence/physical-preflight.json + "
+            "evidence/arm-c-retry/gpu-identity-observation.json"),
     },
     "chain_plan": {
         "digest": (
@@ -228,10 +275,13 @@ FREEZE_TOP_FIELDS = frozenset({
     "schema", "issue", "physical_scope", "methodology_ready_head",
     "accepted_main_merge", "frozen_producer", "model", "revision",
     "checkpoint_sha256", "qualification_subject", "candidate", "geometry",
-    "execution_plan_digest", "participant_identity", "fixture_digest",
+    "arm_b_participant_plan_digest", "arm_b_participant_plan_schema",
+    "chain_plan_digest", "r5a_static_plan_digest",
+    "r5a_static_plan_schema", "participant_identity", "fixture_digest",
     "case_count", "comparator_contract", "tokenizer_asset_pins",
     "tokenizer_software_identity", "tokenizer_python", "drivers",
     "dependencies", "authorized_realization_inputs",
+    "real_builder_dry_run", "superseded_freeze_lineage",
     "deployment_verification_requirements",
 })
 
@@ -423,7 +473,11 @@ def verify_pre_execution_authority_gate(
     - the selected authority commit is an ancestor of
       ``refs/remotes/origin/main`` (accepted history);
     - the retained execution-freeze bytes hash EXACTLY to the sole
-      authorized campaign's ``execution_freeze_identity``.
+      authorized campaign's ``execution_freeze_identity``;
+    - MANDATORY REAL-BUILDER CPU DRY RUN: the actual unmocked frozen
+      producer build path (no GPU/model work) reproduces exactly the
+      frozen r5a static-plan digest (same-family), and the Arm-B
+      participant-plan digest cannot satisfy that fence.
 
     Any failure raises (fail closed). A passing verdict is a precondition,
     never physical-execution authority by itself.
@@ -438,14 +492,45 @@ def verify_pre_execution_authority_gate(
             + "; ".join(binding["problems"]))
     commit = accepted_authority_commit(root, git_root)
     freeze = verify_execution_freeze_binding(document, root)
+    dry_run = verify_real_builder_dry_run(root)
     return {
-        "schema": "inferswarm.issue133.pre-execution-gate/1",
-        "gate": "ACCEPTED_HISTORY_AND_FREEZE_BOUND",
+        "schema": "inferswarm.issue133.pre-execution-gate/2",
+        "gate": "ACCEPTED_HISTORY_FREEZE_AND_REAL_BUILDER_BOUND",
         "accepted_authority_commit": commit,
         "accepted_ref": ACCEPTED_REMOTE_REF,
         "campaign_ids": binding["campaign_ids"],
         "execution_freeze_binding": freeze,
+        "real_builder_dry_run": dry_run,
     }
+
+
+def verify_real_builder_dry_run(
+        repo_root: Path | None = None) -> dict[str, Any]:
+    """MANDATORY pre-launch check (maintainer disposition
+    issuecomment-5617122680): from the exact repository bytes, the ACTUAL
+    unmocked frozen producer build path must produce an r5a static
+    execution plan whose digest equals the frozen authority digest.
+    No GPU, no model realization — pure CPU build path. The wrong-family
+    negative control must also hold."""
+    root = Path(repo_root) if repo_root else ROOT
+    import importlib
+    import importlib.util
+    script = root / "scripts" / "issue133_real_builder_dry_run.py"
+    spec = importlib.util.spec_from_file_location(
+        "_issue133_real_builder_dry_run", script)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    result = module.run_real_builder_dry_run()
+    plan = result["plan"]
+    verdict = module.verify_dry_run(plan)
+    module.verify_wrong_family_negative_control(plan)
+    module.verify_arm_b_participant_authority()
+    if verdict["digest"] != AUTHORIZED_R5A_STATIC_PLAN_DIGEST:
+        raise RuntimeError(
+            "real-builder dry run digest does not equal the frozen r5a "
+            "authority digest; physical launch is rejected")
+    return verdict
 
 
 # ---------------------------------------------------------------------------
@@ -512,6 +597,26 @@ def verify_freeze_static_shape(record: Mapping[str, Any]) -> None:
         raise RuntimeError(
             "execution-freeze record has non-exhaustive fields "
             f"(missing={missing}, extra={extra})")
+    # plan-family separation (corrected Phase-B): the Arm-B participant
+    # plan (issue117.execution-plan/2) and the r5a static plan
+    # (r5a.static-execution-plan/1) are DISTINCT document families with
+    # DISTINCT digests; conflation fails closed
+    if record["arm_b_participant_plan_schema"] != (
+            "inferswarm.issue117.execution-plan/2"):
+        raise RuntimeError(
+            "Arm-B participant plan schema drift: expected "
+            "inferswarm.issue117.execution-plan/2")
+    if record["r5a_static_plan_schema"] != (
+            "inferswarm.r5a.static-execution-plan/1"):
+        raise RuntimeError(
+            "r5a static plan schema drift: expected "
+            "inferswarm.r5a.static-execution-plan/1")
+    if record["arm_b_participant_plan_digest"] == record[
+            "r5a_static_plan_digest"]:
+        raise RuntimeError(
+            "plan-family conflation in the execution freeze: the Arm-B "
+            "participant-plan digest and the r5a static-plan digest are "
+            "different document families and must never be equal")
     requirements = record["deployment_verification_requirements"]
     if not isinstance(requirements, Mapping) or \
             not requirements.get("pre_launch_verification_required") or \
@@ -630,7 +735,14 @@ def build_execution_freeze_record(
         "qualification_subject": ISSUE133["qualification_subject"],
         "candidate": ISSUE133["candidate"],
         "geometry": ISSUE133["geometry"],
-        "execution_plan_digest": ISSUE133["execution_plan_digest"],
+        "arm_b_participant_plan_digest": ISSUE133["execution_plan_digest"],
+        "arm_b_participant_plan_schema": (
+            "inferswarm.issue117.execution-plan/2"),
+        "chain_plan_digest": (
+            "sha256:a71a3129b8764d7108f51ed30fb230b42fcd69646"
+            "a20bcd6806b6ee53b9bc51f"),
+        "r5a_static_plan_digest": AUTHORIZED_R5A_STATIC_PLAN_DIGEST,
+        "r5a_static_plan_schema": AUTHORIZED_R5A_STATIC_PLAN_SCHEMA,
         "participant_identity": ISSUE133["participant_identity"],
         "fixture_digest": ISSUE133["fixture_digest"],
         "case_count": ISSUE133["case_count"],
@@ -656,6 +768,36 @@ def build_execution_freeze_record(
             name: dict(dependency)
             for name, dependency in dependencies.items()
         },
+        "real_builder_dry_run": {
+            "required": True,
+            "gate": "ISSUE133_REAL_BUILDER_CPU_DRY_RUN_BOUND",
+            "script": "scripts/issue133_real_builder_dry_run.py",
+            "semantics": (
+                "before any physical launch, the ACTUAL unmocked frozen "
+                "producer build path must produce an r5a static plan "
+                "(inferswarm.r5a.static-execution-plan/1) whose digest "
+                "equals r5a_static_plan_digest; the Arm-B "
+                "participant-plan digest (issue117.execution-plan/2) "
+                "must fail the same fence (wrong-family negative "
+                "control)"),
+        },
+        "superseded_freeze_lineage": [
+            {
+                "execution_freeze_identity": (
+                    "5af9aee314fdd742cdb75d903d47e2f3c43296ee887e50"
+                    "7ef335b8f614e7a19e"),
+                "status": "INVALIDATED_BEFORE_PHYSICAL_EXECUTION",
+                "reason": (
+                    "Phase-B preflight STOP issuecomment-5613617497: "
+                    "Blocker A (unsatisfiable plan-family conflation in "
+                    "the authorization fence) and Blocker B (frozen "
+                    "environment embedded non-physical node_a BDF "
+                    "literals); maintainer disposition "
+                    "issuecomment-5617122680 authorized this corrected "
+                    "freeze. Zero physical attempts occurred under the "
+                    "superseded freeze."),
+            },
+        ],
     }
     return record
 
