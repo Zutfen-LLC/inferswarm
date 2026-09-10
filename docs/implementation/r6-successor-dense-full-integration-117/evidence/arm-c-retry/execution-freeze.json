@@ -1,0 +1,58 @@
+{
+  "accepted_main_merge": "781d6b688b29c149837f2ad217b4455dea269eeb",
+  "candidate": "dense.6171f32b4413",
+  "case_count": 24,
+  "checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+  "comparator_contract": {
+    "commit": "generated step zero only",
+    "generate_argument_names": [
+      "max_new_tokens",
+      "on_token",
+      "prompt_token_ids",
+      "session_id"
+    ],
+    "max_new_tokens": 2,
+    "replay_input": "frozen rendered prompt ids + already committed generated ids",
+    "runtime_session_allocation": "the exact frozen controller allocation derived and proven by issue #129 (verbatim AST extraction from the pinned r5b_epochs.py; multiplier 1000000; global call sequence from zero)",
+    "single_shot_forbidden": "single-shot max_new_tokens=8 is forbidden",
+    "speculative": "step one discarded before replay",
+    "stopping": "repeat until the frozen stopping condition is met (8 committed tokens per case unless the frozen stopping contract mechanically terminates earlier)"
+  },
+  "drivers": {
+    "direct": {
+      "expected_path": "/srv/inferswarm/state/arm-c-retry/scripts/issue133_arm_c_retry_direct.py",
+      "file_sha256": "a369fc5a024d52273655b5fe8ae683c032540acc67d7fcbeda376539f24e7b80",
+      "post_run_file_sha256": "a369fc5a024d52273655b5fe8ae683c032540acc67d7fcbeda376539f24e7b80",
+      "post_run_verified": true,
+      "pre_launch_verified": true,
+      "read_only": true,
+      "repository_sha": "c9b6d16167fc43dcd15e63ec609dfaf5ad58a9b6"
+    }
+  },
+  "execution_plan_digest": "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad",
+  "fixture_digest": "sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba36f2",
+  "frozen_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "geometry": "inferswarm01/gpu-0 [0,16)\ninferswarm01/gpu-1 [16,32)\ninferswarm03/gpu-0 [32,48)",
+  "issue": "https://github.com/Zutfen-LLC/inferswarm/issues/133",
+  "methodology_ready_head": "808b77c45f0b4e5d52a202c1a931f43447ff93a6",
+  "model": "google/gemma-4-12B-it",
+  "participant_identity": "sha256:ee845188d3328bdec29bf4b09d71f7ccda0701ff5758cb1d8a70460a40fecfb1",
+  "physical_scope": "ISSUE117_ARM_C_RETRY",
+  "qualification_subject": "sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f7f1d7994ffd",
+  "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
+  "schema": "inferswarm.issue133.execution-freeze/1",
+  "tokenizer_asset_pins": {
+    "chat_template.jinja": "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4",
+    "config.json": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9",
+    "generation_config.json": "a8349d9bd64cc5841297fcb5002f0fdc4749c473c8f1b10ea337f9ce4ee7014e",
+    "tokenizer.json": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+    "tokenizer_config.json": "a62f4e85a47c0c136edaaa3a4f591fd6783717299a9def47e5ad03a49f6a5eb9"
+  },
+  "tokenizer_python": "3.12",
+  "tokenizer_software_identity": {
+    "Jinja2": "3.1.6",
+    "MarkupSafe": "3.0.3",
+    "tokenizers": "0.23.2",
+    "transformers": "5.17.0"
+  }
+}
