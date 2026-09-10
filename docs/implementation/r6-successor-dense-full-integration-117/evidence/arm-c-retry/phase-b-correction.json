@@ -175,6 +175,78 @@
     "schema": "inferswarm.issue133.arm-c-retry.review-correction/1",
     "terminal": "STOPPED_AT_CORRECTED_PHASE_A_PREFLIGHT_REVIEW_GATE"
   },
+  "review_correction_round_3": {
+    "blocker": "bootstrap trust-root defect: the /5 gate-tooling closure was verified by the very current-working-tree modules it was supposed to distrust \u2014 the canonical probe imported issue129_arm_c_retry_core before verify_gate_tooling_closure had established that either file equals accepted history, so working-tree Python established its own authority and the statement 'gate tooling is verified before any gate module is imported/executed' was false",
+    "campaign_retention_recheck": {
+      "campaign_id": "armc-retry-afcdc4428f95d50c",
+      "mechanical_proof": {
+        "attempt_count": 0,
+        "prior_stop_fields_all_null": true,
+        "stop_count": 0,
+        "terminal_count": 0
+      },
+      "rationale": "verified by verify_campaign_retention_legality over the complete retry evidence namespace immediately before this round-3 regeneration; zero attempts/terminals/STOPs",
+      "retained": true
+    },
+    "freeze_regeneration": {
+      "corrected_environment_canonical_sha256": "98c04387215915acf54a9ff769492e3f7cb7b0266d36649631a531a9b5edbf67",
+      "correctness_bearing_code_commit": "35f8749918196d29a348503c9b142009f33551f6",
+      "new_execution_freeze_identity": "289f6e6061e25bae0d49faaee3537dba6b0897d486edf7f6d52799fae6a0d768",
+      "new_freeze_schema": "inferswarm.issue133.execution-freeze/6",
+      "ordering": [
+        "bootstrap/gate/tests implemented (external Git-rooted bootstrap + adversarial substitution controls)",
+        "focused CPU tests green",
+        "correctness-bearing code/tests committed (35f87499)",
+        "real unmocked builder re-executed; expected r5a plan re-proven (inside the regeneration, via the trusted accepted-materialization fixtures of the bootstrap suite)",
+        "campaign retention re-proven (zero attempts/terminals/STOPs) before any edit",
+        "execution freeze regenerated (schema /6)",
+        "campaign authority rebound; 27f03b49 retained additively as superseded (INVALIDATED_BEFORE_PHYSICAL_EXECUTION)",
+        "producer-hashes/MANIFESTs regenerated"
+      ],
+      "r5a_static_plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+      "r5a_static_plan_schema": "inferswarm.r5a.static-execution-plan/1",
+      "superseded_execution_freeze_identity": "27f03b491ff41b76b8ff11384f68469676be5a8dc716ade09f31cfa5b062d934",
+      "superseded_status": "INVALIDATED_BEFORE_PHYSICAL_EXECUTION",
+      "unchanged_physical_identities": {
+        "arm_b_participant_plan": "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad",
+        "arm_c_chain_plan": "sha256:a71a3129b8764d7108f51ed30fb230b42fcd69646a20bcd6806b6ee53b9bc51f",
+        "physical_environment": "98c04387215915acf54a9ff769492e3f7cb7b0266d36649631a531a9b5edbf67"
+      }
+    },
+    "non_execution_attestation": {
+      "basis": "all round-3 operations were CPU-only repository edits; no launch path, no SSH, no GPU, no model execution",
+      "zero_arm_d": true,
+      "zero_gpu_or_model_execution": true,
+      "zero_h109_material": true,
+      "zero_participant_state_mutation": true
+    },
+    "resolution": {
+      "adversarial_controls": {
+        "controls": [
+          "working-tree campaign module whose verify_gate_tooling_closure returns success unconditionally can never cause a PASS on its own authority: the substituted module is never executed (import-time marker proves it), the accepted Git-materialized gate produces the verdict",
+          "working-tree campaign module that bypasses the gate entirely and spoofs a PASS verdict: never executed; the verdict authority commit is the accepted one",
+          "equivalent substitution control for a hostile working-tree issue129_arm_c_retry_core.py: never executed; surfaced only in the drift report",
+          "missing refs/remotes/origin/main rejects",
+          "the real pre-merge repository rejects (authority bytes not yet accepted history)",
+          "the accepted-history pass case proves executed-file hashes == accepted blob hashes for all 7 closure members and the identity fields"
+        ],
+        "inert_byte_controls_retained": "tests/test_issue133_gate_tooling_drift.py retained (17 tests) as the accepted-materialization drift seam beneath the bootstrap",
+        "suite": "tests/test_issue133_prelaunch_bootstrap.py (9 tests; every canonical-entrypoint invocation runs the real bootstrap in a fresh subprocess)"
+      },
+      "bootstrap_dependency_audit": "the bootstrap imports only argparse/hashlib/json/os/subprocess/sys/tempfile/pathlib/typing/shutil (AST-audit test); it shells out to git and tar only; the executed campaign module re-scrubs the same environment keys at import time and keeps scripts/ first on sys.path so materialized modules cannot resolve same-named working-tree modules",
+      "execution_origin_proof": "the bootstrap verdict records the accepted authority commit, the observed origin/main SHA, source_mode=accepted_git_materialization, the sha256 of every gate-tooling file actually executed with the expected accepted blob sha256 for each (required equal), the executing bootstrap's own sha vs its accepted blob, the exact execution-freeze identity, the r5a static-plan schema/digest, the canonical environment identity, and the real-builder verdict",
+      "external_bootstrap": {
+        "canonical_entrypoint": "python3 scripts/issue133_physical_prelaunch_gate.py --repo <repository>",
+        "later_main_semantics": "a later accepted commit leaving every closure byte identical remains compatible; a later accepted authority document redefines authority through its own freeze binding; any closure-byte change rejects until review/re-freeze",
+        "mechanism": "resolve the accepted authority-bearing commit from accepted history (newest accepted blob at the fixed authority path; newest accepted commit carrying it); materialize that commit's COMPLETE tree via git archive into an isolated temporary directory; byte-bind the COMPLETE physical-prelaunch closure (gate tooling + the bootstrap itself) against the accepted blobs; execute the gate from the materialization only, in a subprocess with PYTHONPATH/PYTHONHOME/PYTHONSTARTUP/PYTHONUSERBASE/PYTHONEXECUTABLE/PYTHONWARNINGS scrubbed and PYTHONDONTWRITEBYTECODE=1 PYTHONNOUSERSITE=1, the original repository passed solely as the --git-repo history target",
+        "path": "scripts/issue133_physical_prelaunch_gate.py",
+        "trust_root": "refs/remotes/origin/main + the Git object database; no repository Python module is imported by the bootstrap at any point (stdlib/Git-only, proven by an AST-import audit test)",
+        "working_tree_status": "never executed as authorization authority; compared with accepted bytes only as a SECONDARY defense-in-depth drift report in the verdict"
+      }
+    },
+    "review_reference": "maintainer review 5167622668",
+    "reviewed_head": "f1d4f870e1ef35c0e6e46b54f568c8e50f2a4135"
+  },
   "schema": "inferswarm.issue133.arm-c-retry.phase-b-correction/1",
   "starting_accepted_main": "31d46667db3da22625b2cb25ee19de5f63dc1ac8",
   "terminal": "STOPPED_AT_CORRECTED_PHASE_A_PREFLIGHT_REVIEW_GATE"

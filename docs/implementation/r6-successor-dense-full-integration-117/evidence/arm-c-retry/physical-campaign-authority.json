@@ -8,7 +8,7 @@
   "campaigns": {
     "armc-retry-afcdc4428f95d50c": {
       "campaign_lineage_root": "sha256:6596a054cc7a3b5ab52508ae009a4669f4abe2ed131db7baa1f698c231958e31",
-      "execution_freeze_identity": "27f03b491ff41b76b8ff11384f68469676be5a8dc716ade09f31cfa5b062d934",
+      "execution_freeze_identity": "289f6e6061e25bae0d49faaee3537dba6b0897d486edf7f6d52799fae6a0d768",
       "methodology_ready_identity": "808b77c45f0b4e5d52a202c1a931f43447ff93a6",
       "physical_authorization_id": "phys-auth-5999233cb494888b",
       "physical_authorization_issued_at": "2026-09-10T00:25:00Z",
