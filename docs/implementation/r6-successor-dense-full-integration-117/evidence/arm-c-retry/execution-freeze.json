@@ -1,5 +1,7 @@
 {
   "accepted_main_merge": "781d6b688b29c149837f2ad217b4455dea269eeb",
+  "arm_b_participant_plan_digest": "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad",
+  "arm_b_participant_plan_schema": "inferswarm.issue117.execution-plan/2",
   "authorized_realization_inputs": {
     "chain_plan": {
       "digest": "sha256:a71a3129b8764d7108f51ed30fb230b42fcd69646a20bcd6806b6ee53b9bc51f",
@@ -8,10 +10,10 @@
       "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/chain-plan.json"
     },
     "environment": {
-      "canonical_sha256": "182b950e844c078fd0a9d91c321cd67097c81d3d4fd704a86618407b6399b274",
-      "derivation_authority": "scripts/issue129_arm_c_retry_core.py:_frozen_environment at methodology head 808b77c45f0b4e5d52a202c1a931f43447ff93a6",
+      "canonical_sha256": "98c04387215915acf54a9ff769492e3f7cb7b0266d36649631a531a9b5edbf67",
+      "derivation": "scripts/issue133_canonical_environment.py \u2014 the #129 derivation with the three pci_bdf values re-observed live (gpu-identity-observation.json) per maintainer decision issuecomment-5617122680, and the narrative-only provenance_note excluded from physical authorization",
       "expected_path": "/srv/inferswarm/state/arm-c/environment.json",
-      "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/physical-preflight.json"
+      "source_evidence": "docs/implementation/r6-successor-dense-full-integration-117/evidence/physical-preflight.json + evidence/arm-c-retry/gpu-identity-observation.json"
     },
     "integration_fixture": {
       "expected_path": "/srv/inferswarm/state/arm-c-retry/integration-fixture.json",
@@ -42,6 +44,7 @@
   },
   "candidate": "dense.6171f32b4413",
   "case_count": 24,
+  "chain_plan_digest": "sha256:a71a3129b8764d7108f51ed30fb230b42fcd69646a20bcd6806b6ee53b9bc51f",
   "checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
   "comparator_contract": {
     "commit": "generated step zero only",
@@ -74,12 +77,11 @@
   "drivers": {
     "direct": {
       "expected_path": "/srv/inferswarm/state/arm-c-retry/scripts/issue133_arm_c_retry_direct.py",
-      "file_sha256": "5f9ccb36975848142a70826e2f11aa45acceef5c802497bd2ade2f7e697f2c77",
+      "file_sha256": "02ec9cf7e5c3ac471fead0c37fdf59a981895628e0da64c8266a2d2d195eb43e",
       "read_only": true,
-      "repository_sha": "d59823e615cd3c8619beb537f88a4a1f71817e70"
+      "repository_sha": "8255189c4c4db881ec895ae19d4e9816ec687b97"
     }
   },
-  "execution_plan_digest": "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad",
   "fixture_digest": "sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba36f2",
   "frozen_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
   "geometry": "inferswarm01/gpu-0 [0,16)\ninferswarm01/gpu-1 [16,32)\ninferswarm03/gpu-0 [32,48)",
@@ -89,8 +91,23 @@
   "participant_identity": "sha256:ee845188d3328bdec29bf4b09d71f7ccda0701ff5758cb1d8a70460a40fecfb1",
   "physical_scope": "ISSUE117_ARM_C_RETRY",
   "qualification_subject": "sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f7f1d7994ffd",
+  "r5a_static_plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+  "r5a_static_plan_schema": "inferswarm.r5a.static-execution-plan/1",
+  "real_builder_dry_run": {
+    "gate": "ISSUE133_REAL_BUILDER_CPU_DRY_RUN_BOUND",
+    "required": true,
+    "script": "scripts/issue133_real_builder_dry_run.py",
+    "semantics": "before any physical launch, the ACTUAL unmocked frozen producer build path must produce an r5a static plan (inferswarm.r5a.static-execution-plan/1) whose digest equals r5a_static_plan_digest; the Arm-B participant-plan digest (issue117.execution-plan/2) must fail the same fence (wrong-family negative control)"
+  },
   "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7",
-  "schema": "inferswarm.issue133.execution-freeze/3",
+  "schema": "inferswarm.issue133.execution-freeze/4",
+  "superseded_freeze_lineage": [
+    {
+      "execution_freeze_identity": "5af9aee314fdd742cdb75d903d47e2f3c43296ee887e507ef335b8f614e7a19e",
+      "reason": "Phase-B preflight STOP issuecomment-5613617497: Blocker A (unsatisfiable plan-family conflation in the authorization fence) and Blocker B (frozen environment embedded non-physical node_a BDF literals); maintainer disposition issuecomment-5617122680 authorized this corrected freeze. Zero physical attempts occurred under the superseded freeze.",
+      "status": "INVALIDATED_BEFORE_PHYSICAL_EXECUTION"
+    }
+  ],
   "tokenizer_asset_pins": {
     "chat_template.jinja": "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4",
     "config.json": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9",

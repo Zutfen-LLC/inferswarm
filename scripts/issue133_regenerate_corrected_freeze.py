@@ -65,7 +65,7 @@ def main() -> int:
         "runtime_session_allocator_source": {
             "repository_sha": camp.ISSUE133["accepted_main_merge"],
             "file_sha256": ("388678971eb608741bd7dd4ad31a34e2e63c45fd"
-                            "d0807e01065d077d9202805"),
+                            "2d0807e01065d077d9202805"),
             "expected_path": ("/srv/inferswarm/state/arm-c-retry/scripts/"
                               "r5b_epochs.py"),
             "read_only": True,

@@ -1,0 +1,87 @@
+{
+  "schema": "inferswarm.issue133.arm-c-retry.phase-b-correction/1",
+  "issue": "https://github.com/Zutfen-LLC/inferswarm/issues/133",
+  "preflight_stop_reference": "issuecomment-5613617497",
+  "maintainer_disposition_reference": "issuecomment-5617122680",
+  "starting_accepted_main": "31d46667db3da22625b2cb25ee19de5f63dc1ac8",
+  "campaign_retention": {
+    "campaign_id": "armc-retry-afcdc4428f95d50c",
+    "mechanical_proof": {
+      "attempt_count": 0,
+      "terminal_count": 0,
+      "stop_count": 0,
+      "prior_stop_fields_all_null": true
+    },
+    "rationale": "The Phase-B pre-execution STOP launched no correctness-bearing execution, so the campaign remains attempt-free (verified by verify_campaign_retention_legality over the complete retry evidence namespace before any edit). Per the maintainer disposition the same fresh campaign may rebind the corrected reviewed freeze.",
+    "retained": true
+  },
+  "blocker_a_resolution": {
+    "root_cause": "plan-family conflation: the accepted Phase-A driver treated the Arm-B participant execution-plan digest (inferswarm.issue117.execution-plan/2, sha256:8646e00c...) as the digest expected from build_execution_plan(), which actually produces inferswarm.r5a.static-execution-plan/1 documents via serving.freeze_execution_plan",
+    "fix": [
+      "the r5a authorization fence now asserts BOTH the exact r5a schema and the digest against the mechanically derived frozen r5a static-plan digest",
+      "the Arm-B participant-plan identity remains an independently verified preserved-substrate authority invariant (recomputed from the retained accepted Arm-B execution-plan document)",
+      "import-time and freeze-shape assertions make an issue117.execution-plan/2 digest equal to an r5a.static-execution-plan/1 digest fail closed",
+      "the real-builder CPU dry run executes the ACTUAL unmocked frozen producer build path and is a mandatory part of the pre-execution gate",
+      "the Phase-A positive-path gap (mocked build_execution_plan) is closed by tests/test_issue133_corrected_freeze.py"
+    ],
+    "r5a_static_plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+    "r5a_static_plan_schema": "inferswarm.r5a.static-execution-plan/1",
+    "arm_b_participant_plan_digest": "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad",
+    "arm_b_participant_plan_schema": "inferswarm.issue117.execution-plan/2",
+    "arm_c_chain_plan_digest": "sha256:a71a3129b8764d7108f51ed30fb230b42fcd69646a20bcd6806b6ee53b9bc51f",
+    "derivation": "mechanically derived by the real unmocked frozen producer builder (vendored byte-pinned 924cd22e closure) over the corrected canonical physical environment and the authorized chain plan; gate ISSUE133_REAL_BUILDER_CPU_DRY_RUN_BOUND; retained in scripts/issue133_real_builder_dry_run.py output and never hand-copied into authority"
+  },
+  "blocker_b_resolution": {
+    "decision": "current physical topology is authoritative over the stale #129 hard-coded BDF literals (maintainer decision, issuecomment-5617122680)",
+    "observation_evidence": "arm-c-retry/gpu-identity-observation.json (read-only nvidia-smi query on inferswarm01/03, 2026-09-10T10:38:07Z; host, logical authorized GPU identity, UUID, product, index, PCI BDF, command, timestamp retained; every authorized unit's UUID/product/index equals the accepted physical-preflight compute-unit entry)",
+    "corrected_environment_canonical_sha256": "98c04387215915acf54a9ff769492e3f7cb7b0266d36649631a531a9b5edbf67",
+    "derivation": "scripts/issue133_canonical_environment.py: the frozen #129 derivation with exactly the three pci_bdf values re-observed live and the narrative-only provenance_note excluded from physical authorization inputs",
+    "deployed_state_validation": "the corrected canonical environment is byte-identical to the historically deployed /srv/inferswarm/state/arm-c/environment.json (canonical 98c04387...), independently confirming the deployed BDFs were the physical truth; the historical deployed file was NOT adopted wholesale - only its BDF truth was re-observed live and re-derived",
+    "extra_inferswarm03_gpu": {
+      "gpu_uuid": "GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0",
+      "pci_bdf": "00000000:03:00.0",
+      "disposition": "observed-but-unused; outside the issue #133 authorized geometry; recorded in the observation record and excluded from the environment/candidate"
+    }
+  },
+  "freeze_regeneration": {
+    "superseded_execution_freeze_identity": "5af9aee314fdd742cdb75d903d47e2f3c43296ee887e507ef335b8f614e7a19e",
+    "superseded_status": "INVALIDATED_BEFORE_PHYSICAL_EXECUTION",
+    "new_execution_freeze_identity": "1f5ef48b314b721a8370404f34dee2e934e2bbc2f140724b9793a856f9b9a218",
+    "new_freeze_schema": "inferswarm.issue133.execution-freeze/4",
+    "corrected_direct_driver": {
+      "path": "scripts/issue133_arm_c_retry_direct.py",
+      "repository_sha": "8255189c4c4db881ec895ae19d4e9816ec687b97",
+      "file_sha256": "02ec9cf7e5c3ac471fead0c37fdf59a981895628e0da64c8266a2d2d195eb43e"
+    },
+    "authority_binding": "physical-campaign-authority.json sole campaign execution_freeze_identity rebound to the regenerated freeze; binding re-verified mechanically (verify_execution_freeze_binding over the retained canonical bytes)",
+    "ordering": [
+      "corrected code/tests implemented and committed",
+      "CPU-only focused tests run green",
+      "real unmocked builder dry run executed (ISSUE133_REAL_BUILDER_CPU_DRY_RUN_BOUND)",
+      "correctness-bearing code/tests + canonical environment derivation committed",
+      "exact repository commit SHA obtained",
+      "exact SHA-256 of every separately deployed correctness-bearing byte computed",
+      "final r5a static execution plan mechanically re-derived and verified",
+      "execution-freeze.json regenerated (schema /4)",
+      "canonical SHA-256 computed",
+      "physical-campaign-authority.json rebound",
+      "previous 5af9aee3... freeze retained in superseded_freeze_lineage as invalidated before physical execution",
+      "MANIFEST/producer hashes regenerated",
+      "authority/evidence committed separately"
+    ]
+  },
+  "phase_b_deployment_gaps_documented_not_executed": {
+    "tokenizer_publication": "/srv/inferswarm/tokenizers/gemma-r6-frozen must be published as the exact exhaustive five-file non-Source deployment (assets pinned in the freeze) before launch - ordinary Phase-B setup work after this corrected freeze is accepted",
+    "producer_redeployment": "read-only exact producer 924cd22e worktrees must be redeployed to inferswarm01/03 before launch (none remain post-campaign cleanup; inferswarm00 retains a clean worktree verified at exactly 924cd22e during this correction)",
+    "note": "deterministic deployment instructions only; no deployment executed in this slice"
+  },
+  "non_execution_attestation": {
+    "zero_gpu_or_model_execution": true,
+    "zero_participant_state_mutation": true,
+    "zero_h109_material": true,
+    "zero_arm_d": true,
+    "observation_reads_only": "nvidia-smi query and /srv read-only inspection on inferswarm00/01/03; no CUDA context, no model load, no shard access",
+    "basis": "all operations in this correction were CPU-only repository edits plus read-only SSH observation; no launch path was invoked"
+  },
+  "terminal": "STOPPED_AT_CORRECTED_PHASE_A_PREFLIGHT_REVIEW_GATE"
+}
