@@ -72,6 +72,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -79,6 +80,16 @@ from typing import Any, Mapping, Sequence
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
+# review 5166773760/5167622668: when this module executes from the
+# ACCEPTED Git materialization (its canonical deployment for physical
+# authorization), ROOT is the materialization root; keep scripts/ the
+# FIRST entry so same-named working-tree modules can never shadow the
+# accepted bytes, and seal the interpreter against environment
+# module-search injections (the external bootstrap additionally
+# scrubs PYTHONPATH et al. from the subprocess environment itself).
+for _injected in ("PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP",
+                  "PYTHONUSERBASE"):
+    os.environ.pop(_injected, None)
 
 import issue129_arm_c_retry_core as _frozen  # noqa: E402
 
@@ -197,11 +208,19 @@ TOKENIZER_PYTHON = _frozen.TOKENIZER_PYTHON
 #: physical attempt and their presence in a pre-execution freeze fails
 #: closed (a pre-run record may not masquerade as completed post-run
 #: verification).
-#: freeze schema /5 (review 5166773760): adds the complete
-#: pre-execution gate-tooling closure (accepted-authority-commit
-#: byte binding) and the authority-bound verdict-field set to
-#: real_builder_dry_run.
-FREEZE_SCHEMA = "inferswarm.issue133.execution-freeze/5"
+#: freeze schema /6 (review 5167622668): the pre-execution trust
+#: bootstrap is now EXTERNAL to the working tree —
+#: scripts/issue133_physical_prelaunch_gate.py (stdlib/Git-only)
+#: resolves the accepted authority-bearing commit from
+#: refs/remotes/origin/main, materializes that commit's complete tree
+#: via git archive, byte-binds the complete physical-prelaunch
+#: closure (gate tooling + the bootstrap itself) against the accepted
+#: blobs, and executes the gate from that materialization only, in a
+#: scrubbed-environment subprocess. Working-tree Python never
+#: establishes its own authority. Schema /5 (review 5166773760)
+#: fields retained; this /6 record adds the bootstrap provenance and
+#: verdict-field contract.
+FREEZE_SCHEMA = "inferswarm.issue133.execution-freeze/6"
 FREEZE_DRIVER_STATIC_FIELDS = (
     "repository_sha",
     "file_sha256",
@@ -509,6 +528,15 @@ GATE_TOOLING_CLOSURE = (
     "scripts/issue129_arm_c_retry_core.py",
     "scripts/issue117_arm_c_frozen_pins.py",
 )
+#: the external Git-rooted bootstrap (maintainer review 5167622668)
+#: binds this closure PLUS itself to the accepted authority commit
+#: and executes this module from a ``git archive`` materialization of
+#: that commit — current-working-tree Python never establishes its
+#: own authority. The bootstrap's PHYSICAL_PRELAUNCH_CLOSURE must
+#: equal this closure plus the bootstrap path; asserted by
+#: tests/test_issue133_prelaunch_bootstrap.py.
+EXTERNAL_BOOTSTRAP_REL_PATH = (
+    "scripts/issue133_physical_prelaunch_gate.py")
 
 #: freeze record fields the real-builder verdict is cross-checked against
 #: (taken from the authority-bound execution-freeze record itself, never
@@ -1035,17 +1063,33 @@ def build_execution_freeze_record(
         "gate_tooling_closure": {
             "required": True,
             "binding": (
-                "the COMPLETE fixed set of repository-side Python files "
-                "able to affect the pre-execution authorization "
-                "decision; before any gate module is imported or "
-                "executed, every file is verified byte-for-byte against "
-                "git show <accepted_authority_commit>:<path> (regular "
-                "non-symlink working-tree file; missing blob, missing "
-                "file, symlink, or byte mismatch fails closed). A "
-                "later-main commit leaving every gate byte identical "
-                "remains compatible; any gate byte change requires "
-                "review/re-freeze"),
+                "review 5167622668: the canonical physical prelaunch "
+                "entrypoint is the EXTERNAL stdlib/Git-only bootstrap "
+                "(scripts/issue133_physical_prelaunch_gate.py), which "
+                "resolves the accepted authority-bearing commit from "
+                "refs/remotes/origin/main + the Git object database, "
+                "materializes that commit's complete tree via git "
+                "archive into an isolated temporary directory, "
+                "byte-binds the COMPLETE physical-prelaunch closure "
+                "(the gate-tooling closure below PLUS the bootstrap "
+                "itself) against the accepted blobs, and executes the "
+                "pre-execution gate from that accepted materialization "
+                "only — in a subprocess with PYTHONPATH/PYTHONHOME/"
+                "PYTHONSTARTUP/PYTHONUSERBASE scrubbed so materialized "
+                "modules cannot resolve same-named working-tree "
+                "modules. Current-working-tree Python never "
+                "establishes its own authority; working-tree copies "
+                "are compared with the accepted bytes only as a "
+                "secondary defense-in-depth integrity report. A "
+                "later-main commit leaving every closure byte "
+                "identical remains compatible; any closure byte "
+                "change requires review/re-freeze."),
             "paths": list(GATE_TOOLING_CLOSURE),
+            "external_bootstrap": EXTERNAL_BOOTSTRAP_REL_PATH,
+            "bootstrap_closure": list(GATE_TOOLING_CLOSURE) + [
+                EXTERNAL_BOOTSTRAP_REL_PATH],
+            "bootstrap_verdict_schema": (
+                "inferswarm.issue133.physical-prelaunch-bootstrap/1"),
         },
         "superseded_freeze_lineage": [
             {
@@ -1244,14 +1288,36 @@ def main(argv: list[str] | None = None) -> int:
         help="mechanically verify the full pre-execution gate "
              "(accepted-history ancestry + freeze binding); Phase B must "
              "invoke this before any physical launch")
+    parser.add_argument(
+        "--git-repo", type=Path, default=None,
+        help="the Git repository whose refs/remotes/origin/main and "
+             "object database prove accepted history when this module "
+             "executes from an accepted Git materialization (the "
+             "canonical physical-prelaunch deployment, review "
+             "5167622668); defaults to the repository containing this "
+             "file. The working tree of that repository is consulted "
+             "for Git metadata only, never for executable code")
+    parser.add_argument(
+        "--print-gate-tooling-closure", action="store_true",
+        help="print the gate-tooling closure paths (used by the "
+             "external bootstrap and its closure-agreement tests; "
+             "performs no verification)")
     args = parser.parse_args(argv)
+    if args.print_gate_tooling_closure:
+        print(json.dumps(
+            {"gate_tooling_closure": list(GATE_TOOLING_CLOSURE),
+             "external_bootstrap": EXTERNAL_BOOTSTRAP_REL_PATH}))
+        return 0
     if args.validate_authority:
         document = load_authority_document()
         verdict = validate_authority_bindings(document)
         print(json.dumps(verdict, indent=2, sort_keys=True))
         return 0 if verdict["bound"] else 1
     if args.verify_pre_execution_gate:
-        verdict = verify_pre_execution_authority_gate()
+        repo_path = args.git_repo
+        verdict = verify_pre_execution_authority_gate(
+            repo_path=repo_path) if repo_path is not None else \
+            verify_pre_execution_authority_gate()
         print(json.dumps(verdict, indent=2, sort_keys=True))
         return 0
     parser.print_help()

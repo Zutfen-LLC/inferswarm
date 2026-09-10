@@ -518,7 +518,28 @@ class AcceptedHistoryGateTests(unittest.TestCase):
     def test_pre_execution_gate_passes_in_accepted_history_fixture(self):
         with tempfile.TemporaryDirectory() as tmp:
             repo = self._repo(tmp)
-            merged = _commit_authority(repo, "authority merged into main")
+            _commit_authority(repo, "authority merged into main")
+            # production ordering: regenerate the /6 freeze from the
+            # fixture bytes and fold it into the authority-bearing
+            # commit before declaring accepted history
+            env = dict(os.environ,
+                       GIT_AUTHOR_NAME="Issue 133 Test",
+                       GIT_AUTHOR_EMAIL="issue133@example.invalid",
+                       GIT_COMMITTER_NAME="Issue 133 Test",
+                       GIT_COMMITTER_EMAIL="issue133@example.invalid")
+            env.pop("PYTHONPATH", None)
+            regenerate = subprocess.run(
+                [sys.executable,
+                 str(repo / "scripts"
+                     / "issue133_regenerate_corrected_freeze.py")],
+                cwd=str(repo), capture_output=True, text=True, env=env)
+            self.assertEqual(
+                regenerate.returncode, 0, regenerate.stderr)
+            _git(repo, "add", str(camp.AUTHORITY_PATH.relative_to(ROOT)))
+            _git(repo, "add", str(
+                camp.EXECUTION_FREEZE_RECORD.relative_to(ROOT)))
+            _git(repo, "commit", "--amend", "--no-edit", "-q")
+            merged = _git(repo, "rev-parse", "HEAD").stdout.strip()
             _git(repo, "update-ref", "refs/remotes/origin/main", merged)
             verdict = camp.verify_pre_execution_authority_gate(
                 repo_root=repo, repo_path=repo)
