@@ -121,7 +121,7 @@ def run_once(arm: str, run_id: str, out_dir: Path,
 
     argv = [
         str(binary), "-m", str(MODEL), "-ngl", "99",
-        "--device", spec["device"], "-lv", "3",
+        "--device", spec["device"], "-lv", "4",
     ]
     out_dir.mkdir(parents=True, exist_ok=True)
 

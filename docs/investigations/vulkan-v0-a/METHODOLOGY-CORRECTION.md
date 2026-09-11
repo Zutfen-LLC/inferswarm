@@ -204,6 +204,34 @@ generation but NO stderr device-proof lines; it is recorded as a
 diagnostic, is NOT canonical, and is superseded by the canonical
 campaign below.
 
+## Addendum B — verbosity 4 (device list) replaces Addendum A's `-lv 3`
+
+Empirical bring-up with `-lv 3` showed this CLI build routes model load
+and inference through its embedded server layer and, at verbosity 3,
+still prints NO device enumeration on stderr — only server/timing logs.
+Reading the pinned source (`common.cpp`, `common_params_print_info`)
+shows the per-device `device_info` list, the
+`using device <DEV> (...) (<BDF>) - N MiB free` line, and the
+`load_tensors: offloaded X/Y layers` summary all print at verbosity
+>= 4 (TRACE).
+
+Canonical runs therefore use `-lv 4`. As with Addendum A, this flag
+changes ONLY the tool's log verbosity; model bytes, prompt, sampling,
+seed, token count, device pin, binaries, and libraries are unchanged.
+At `-lv 4` the retained stderr proves, from the tool itself: the full
+device enumeration, the exact physical device used including its PCI
+BDF (`using device Vulkan1 (AMD Radeon RX 580 Series (RADV POLARIS10))
+(0000:02:00.0)`), offload counts (`offloaded 37/37 layers to GPU`),
+and per-device model/KV/compute buffer sizes.
+
+Known cosmetic limitation, recorded rather than hidden: the interactive
+TUI repaints output with backspace sequences, so the canonicalized-
+generation digest is a canonicalization of the repainted stream.
+Per-run repeatability, device proof, and exit status are unaffected;
+cross-backend text comparison is performed on the visible text after
+control-character stripping, and each run.json retains stdout verbatim
+for audit.
+
 ## Scope guards
 
 No new heterogeneous numerical threshold is authorized. No throughput

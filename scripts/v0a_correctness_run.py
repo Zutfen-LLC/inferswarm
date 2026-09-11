@@ -67,13 +67,17 @@ ARMS = {
 }
 
 # Strings that must appear in the run's stderr to prove the intended
-# device/backend executed (device-identity proof chain).
+# device/backend executed (device-identity proof chain), per Addendum B:
+# `llama_prepare_model_devices: using device <DEV> (...) (<BDF>)`.
 VULKAN_DEVICE_PROOF = {
-    "Vulkan1": "1 = AMD Radeon RX 580 Series (RADV POLARIS10)",
-    "Vulkan2": "2 = AMD Radeon RX 580 Series (RADV POLARIS10)",
-    "Vulkan3": "3 = NVIDIA GeForce RTX 3060 Ti",
+    "Vulkan1": "using device Vulkan1 (AMD Radeon RX 580 Series "
+               "(RADV POLARIS10)) (0000:02:00.0)",
+    "Vulkan2": "using device Vulkan2 (AMD Radeon RX 580 Series "
+               "(RADV POLARIS10)) (0000:03:00.0)",
+    "Vulkan3": "using device Vulkan3 (NVIDIA GeForce RTX 3060 Ti) "
+               "(0000:04:00.0)",
 }
-CUDA_DEVICE_PROOF = "CUDA0 = NVIDIA GeForce RTX 3060 Ti"
+CUDA_DEVICE_PROOF = "using device CUDA0 (NVIDIA GeForce RTX 3060 Ti)"
 
 WARN_PATTERNS = (
     "failed", "error", "fallback", "nan", "inf", "unsupported",
@@ -131,7 +135,7 @@ def run_fixture(arm: str, run_id: str, out_dir: Path) -> dict:
     argv = [
         str(binary), "-m", str(model), "--temp", "0", "--seed", "42",
         "-n", "48", "-ngl", "99", "--device", spec["device"],
-        "-lv", "3", "-p", PROMPT, "-st",
+        "-lv", "4", "-p", PROMPT, "-st",
     ]
     env = dict(os.environ)
     relevant_env = {
