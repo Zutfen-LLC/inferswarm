@@ -609,33 +609,58 @@ def _callable_guard(root: Path, sandbox: Path, stage_id: str, role: str,
                 "and no declared writes from this pass were applied")
 
 
+def _is_scripts_module(module: object) -> bool:
+    file = getattr(module, "__file__", None)
+    if not file:
+        return False
+    try:
+        path = Path(file).resolve()
+    except OSError:
+        return False
+    return path != Path(__file__).resolve() and path.parent.name == "scripts"
+
+
 def _purge_script_modules(sandbox: Path | None) -> None:
     """Drop imported ``scripts/`` modules so imports bind to the sandbox.
 
     Producer modules (issue117_proof, sync_project_status, ...) derive
-    their repository ROOT from their import location.  Before a pass they
-    are purged unless already bound to this sandbox, so the campaign and
-    its authority verification read the sandbox copies; after a pass the
-    sandbox-bound copies are purged so later imports (tests, other
-    tooling) rebind to a real checkout.  This module itself is never
-    purged.
+    their repository ROOT from their import location.  Before a pass any
+    module the ENGINE imported (bound to the sandbox or to another
+    checkout) is purged so the campaign and its authority verification
+    read the sandbox copies; after a pass the engine-imported copies are
+    purged so later imports rebind to a real checkout.
+
+    Modules that were ALREADY imported before the first engine call are
+    never purged: other suites in the same process hold references to
+    their classes, and a purge would re-import a second class object and
+    silently break isinstance/assertIs identity for code that did
+    nothing wrong.  Those pre-existing bindings read the real tree, whose
+    declared-input bytes are identical to the sandbox copies; any write
+    attempt is still caught by the callable guard.
     """
-    self_path = Path(__file__).resolve()
     sandbox_scripts = (sandbox / "scripts").resolve() if sandbox else None
     for name, module in list(sys.modules.items()):
+        if name in _import_baseline or not _is_scripts_module(module):
+            continue
         file = getattr(module, "__file__", None)
-        if not file:
-            continue
-        try:
-            path = Path(file).resolve()
-        except OSError:
-            continue
-        if path == self_path or path.parent.name != "scripts":
-            continue
+        assert file is not None
+        path = Path(file).resolve()
         if sandbox_scripts is not None and path.parent == sandbox_scripts:
             continue
         del sys.modules[name]
     importlib.invalidate_caches()
+
+
+_import_baseline: frozenset[str] = frozenset()
+
+
+def _mark_import_baseline() -> None:
+    """Record (once per process) which scripts modules predate the engine."""
+    global _import_baseline
+    if not _import_baseline:
+        _import_baseline = frozenset(
+            name for name, module in sys.modules.items()
+            if _is_scripts_module(module))
 
 
 # ---------------------------------------------------------------------------
@@ -672,6 +697,7 @@ def _execute_pass(root: Path, stages: tuple[Stage, ...], workroot: Path,
     by_id = {stage.id: stage for stage in stages}
     validate_order(stages, order_ids)
     sandbox = _prepare_sandbox(root, _sandbox_inputs(stages), workroot)
+    _mark_import_baseline()
     _purge_script_modules(sandbox)
     run = Run(sandbox, workroot)
     for stage_id in order_ids:
