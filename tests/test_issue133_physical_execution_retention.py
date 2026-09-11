@@ -677,6 +677,35 @@ class MutationControls(unittest.TestCase):
         doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
         self.assertTrue(any("code-derived cap" in p for p in doc["problems"]))
 
+    # 14o. numeric payload chunked into nested sub-4096 lists
+    #      (review finding F1): the aggregate numeric-leaf count must
+    #      trip the unknown rule even when no single list exceeds 4096
+    def test_control_nested_numeric_chunks(self) -> None:
+        def mutate(scratch):
+            def fn(doc):
+                doc["epochs"][0]["runtime_sessions"][0][
+                    "weights_chunked"] = [list(range(4096))
+                                          for _ in range(25)]
+            edit_json(scratch.pe / "ordinary-http/serving-report.json", fn)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertGreater(
+            doc["zero_invariants"]
+            ["coordinator_unclassified_wire_bytes"], 0)
+
+    # 14p. payload hidden as base64-charset dict KEYS (review finding
+    #      F2): keys are classified, not ignored
+    def test_control_payload_as_dict_keys(self) -> None:
+        def mutate(scratch):
+            def fn(doc):
+                sess = doc["epochs"][0]["runtime_sessions"][0]
+                for i in range(64):
+                    sess["QUFB" * 100 + str(i)] = 0
+            edit_json(scratch.pe / "ordinary-http/serving-report.json", fn)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertGreater(
+            doc["zero_invariants"]
+            ["coordinator_model_weight_bytes_received"], 0)
+
     # 15. Launch 1 contains a correctness-bearing observation
     def test_control_launch1_correctness_bearing(self) -> None:
         def mutate(scratch):

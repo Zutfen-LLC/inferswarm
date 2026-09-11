@@ -753,29 +753,59 @@ def _classify_leaf(value, stats):
         stats["unknown"] += 1
 
 
+def _classify_key(key, stats):
+    """Dict keys are classified too: a payload hidden as a long or
+    base64-charset JSON object key is counted, never ignored (review
+    finding F2 — previously keys were never visited at all)."""
+    if not isinstance(key, str):
+        stats["unknown"] += 1
+        return
+    if len(key) > 512:
+        stats["unknown"] += len(key.encode())
+    elif len(key) > 256 and _B64_RE.fullmatch(key):
+        stats["model_payload"] += len(key.encode())
+
+
 def _classify_tree(value, stats):
+    """Classify one subtree; returns the count of numeric leaves
+    visited (including inside lists), so chunking a numeric payload
+    into nested sub-4096 lists cannot evade the aggregate shape rule
+    (review finding F1)."""
     if isinstance(value, dict):
-        for v in value.values():
-            _classify_tree(v, stats)
-    elif isinstance(value, list):
+        n = 0
+        for k, v in value.items():
+            _classify_key(k, stats)
+            n += _classify_tree(v, stats)
+        return n
+    if isinstance(value, list):
         numeric = all(isinstance(v, (int, float))
                       and not isinstance(v, bool) for v in value)
-        if numeric and len(value) > 4096:
-            stats["unknown"] += len(value) * 8
-        else:
-            for v in value:
-                _classify_tree(v, stats)
-    else:
-        _classify_leaf(value, stats)
+        if numeric:
+            return len(value)
+        n = 0
+        for v in value:
+            n += _classify_tree(v, stats)
+        return n
+    _classify_leaf(value, stats)
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return 1
+    return 0
+
+
+_NUMERIC_AGGREGATE_LIMIT = 4096
 
 
 def _account_envelope(envelope):
     """Exact canonical wire bytes (mirrors xc_wire.canonical_body +
-    header) and per-class byte accounting of one retained envelope."""
+    header) and per-class byte accounting of one retained envelope.
+    A numeric-leaf aggregate over the limit is unknown potentially-bulk
+    even when chunked into nested sub-4096 lists."""
     data = json.dumps(envelope, sort_keys=True,
                       separators=(",", ":")).encode()
     stats = {"control_metadata": 0, "model_payload": 0, "unknown": 0}
-    _classify_tree(envelope, stats)
+    numeric_total = _classify_tree(envelope, stats)
+    if numeric_total > _NUMERIC_AGGREGATE_LIMIT:
+        stats["unknown"] += numeric_total * 8
     return _WIRE_HEADER_BYTES + len(data), stats
 
 
