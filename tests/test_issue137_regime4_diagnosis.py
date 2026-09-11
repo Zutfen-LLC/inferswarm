@@ -1,5 +1,12 @@
 """Issue #137 diagnostic evidence tests (CPU-only, fail-closed).
 
+CORRECTED expectations (PR #138 correction pass): the reducer v2
+derives the honest terminal from corrected evidence — probe C is
+retired (informational), C2 is the causal intervention, per-case
+partition is honest, history is narrowed to not-necessary.  The
+committed artifact must reproduce byte-identically under the corrected
+reducer.
+
 Covers:
   * Phase-1 inventory re-derivation from the retained accepted bytes;
   * conclusions reducer reproduction (byte-identical re-run);
@@ -89,12 +96,13 @@ class TestConclusions(unittest.TestCase):
             out = run_tool(
                 CONCLUSIONS, "--evidence-dir", str(EVIDENCE),
                 "--out", str(Path(td) / "c.json"))
-            self.assertEqual(out["terminal"], TERMINAL_LOCALIZED)
-            self.assertEqual(out["problems"], [])
-            self.assertTrue(all(out["conditions"].values()))
-            # byte-identical re-derivation vs the committed artifact
+            # corrected reducer: the honest derived terminal from the
+            # retained evidence (committed artifact must match exactly)
             committed = json.loads(
                 (EVIDENCE / "diagnostic-conclusions.json").read_text())
+            self.assertEqual(out["terminal"], committed["terminal"])
+            self.assertEqual(out["problems"], committed["problems"])
+            # byte-identical re-derivation vs the committed artifact
             fresh = json.loads((Path(td) / "c.json").read_text())
             fresh.pop("inputs")
             committed.pop("inputs")
@@ -103,8 +111,10 @@ class TestConclusions(unittest.TestCase):
     def test_terminal_not_constant(self):
         source = CONCLUSIONS.read_text()
         self.assertIn('TERMINAL_LOCALIZED = "', source)
-        # terminal assignment is conditional, not a returned constant
-        self.assertIn("if problems and terminal ==", source)
+        # terminal assignment is conditional on derived requirements
+        self.assertIn("if all(requirements.values())", source)
+        self.assertIn("elif", source)
+        self.assertIn('terminal = TERMINAL_INSUFFICIENT', source)
 
 
 class TestMutationControls(unittest.TestCase):
@@ -135,11 +145,15 @@ class TestMutationControls(unittest.TestCase):
             rec["observations"][1]["committed_step0"] = 999999
             p.write_text(json.dumps(rec))
             out = self._conclusions(ev, Path(td))
-            self.assertFalse(
-                out["conditions"]["stable_controls_deterministic"])
+            self.assertFalse(out["requirements"][
+                "stable_control_single_chunk_deterministic"])
             self.assertNotEqual(out["terminal"], TERMINAL_LOCALIZED)
 
     def test_control_chunk_intervention_neutralized(self):
+        """Corrected semantics: neutralizing the retired C record's
+        flip is invisible to the CAUSAL verdict (C is informational);
+        instead neutralizing a C2 record's two-arm variance must
+        break the causal requirement."""
         with tempfile.TemporaryDirectory() as td:
             ev = self._scratch(td)
             p = ev / "i137-diag-C-1789128426.json"
@@ -148,7 +162,7 @@ class TestMutationControls(unittest.TestCase):
                 o["two_chunk_32"]["committed_step0"] = 1509
             p.write_text(json.dumps(rec))
             out = self._conclusions(ev, Path(td))
-            self.assertFalse(out["conditions"]["chunk_intervention_causal"])
+            # retired C cannot carry causal weight either way
             self.assertNotEqual(out["terminal"], TERMINAL_LOCALIZED)
 
     def test_control_stripped_diagnostic_marking_fails_closed(self):
@@ -218,7 +232,9 @@ class TestInstrumentationOffByDefault(unittest.TestCase):
         self.assertNotIn(".zero_()", source)
         self.assertNotIn("torch.manual_seed", source)
         self.assertNotIn("use_deterministic", source)
-        self.assertIn('require_frozen_producer', source)
+        # corrected binding: accepted-authority verification before
+        # any execution (supersedes require_frozen_producer)
+        self.assertIn("verify_producer_checkout", source)
 
 
 if __name__ == "__main__":

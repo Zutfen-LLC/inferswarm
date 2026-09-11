@@ -1,38 +1,13 @@
 {
   "causal_factor": {
-    "chunk_intervention": {
-      "case": "c109-03-04-003",
-      "prompt_len": 53,
-      "single_chunk_deterministic": true,
-      "single_chunk_values": [
-        1509,
-        1509,
-        1509,
-        1509
-      ],
-      "two_chunk_deterministic": false,
-      "two_chunk_values": [
-        238631,
-        1509,
-        9259,
-        236777
-      ]
-    },
-    "verdict": "two_chunk_extend_prefill_execution_is_causal_independent_of_prompt_length"
+    "c2_measurements": null,
+    "corrected_intervention_c2": {
+      "design": "retired cumulative fixed-order (informational only)",
+      "verdict": "no causal claim derivable"
+    }
   },
   "classification": "DIAGNOSTIC_ONLY",
   "determinism": {
-    "deterministic_controls": [
-      "c109-01-01-045",
-      "c109-04-03-040",
-      "c109-04-04-024",
-      "c109-04-06-074"
-    ],
-    "nondeterministic_cases": [
-      "c109-04-01-026",
-      "c109-04-02-047",
-      "c109-04-05-043"
-    ],
     "per_case_realization_distributions": {
       "c109-01-01-045": [
         818,
@@ -78,24 +53,157 @@
         107
       ]
     },
+    "stable_control_cases": [
+      "c109-01-01-045"
+    ],
     "within_realization_tail_stabilization": 3,
     "within_realization_variance": true
   },
   "earliest_divergence": {
-    "earliest_varying_checkpoint": "after_layer_31",
+    "earliest_varying_checkpoint": "after_layer_0",
     "embedding_stable": true,
-    "localization": "model execution, stage 1 (first GPU), second prefill chunk: embedding deterministic, first varying observable inside the owned decoder-layer stack at or before the earliest captured after-layer checkpoint",
+    "localization_scope": "demonstrated for c109-04-02-047 (the only case with retained D/D2 captures); other cases inherit the necessary-path partition, not the layer evidence",
+    "observed_transition": "stable embedding_output \u2192 varying after_layer_0",
     "stage1_chunk1_boundary_stable": true,
     "stage1_chunk2_boundary_varies": true
   },
   "history_sensitivity": {
-    "fresh_equals_after_stable_history": true,
+    "after_divergent_history_mismatches": [
+      {
+        "after_divergent_history": 100,
+        "fresh": 107,
+        "realization": 0
+      }
+    ],
+    "conclusion": "prior request history is NOT NECESSARY for divergence (fresh-first calls on fresh substrates vary \u2014 probe A); fresh == after-stable-history in 3/3 realizations; the cumulative after-divergent-history arm produced 1 differing value(s) of 3 \u2014 retained and NOT interpreted as history having no causal influence (single differing observation under demonstrated per-execution nondeterminism cannot establish or exclude a history effect)",
+    "fresh_vs_after_stable_history": true,
     "probe_b_retained": true
   },
+  "informational_observations": {
+    "cross_campaign_all_four_distinct": {
+      "c109-04-01-026": true,
+      "c109-04-02-047": true,
+      "c109-04-03-040": true,
+      "c109-04-04-024": true,
+      "c109-04-05-043": true,
+      "c109-04-06-074": true
+    },
+    "legacy_v1_binding_gaps": [
+      {
+        "consequence": "module identity rests on the producer commit + clean tree assertion at run start (unique bytes by git content addressing) instead of per-module hashes; numerical-mode flags were not captured for this run",
+        "not_retained": [
+          "per-module sha256 pins",
+          "torch numerical-mode flags",
+          "interpreter absolute path",
+          "stage/last-stage pids"
+        ],
+        "record": "i137-diag-A-1789127822.json"
+      },
+      {
+        "consequence": "module identity rests on the producer commit + clean tree assertion at run start (unique bytes by git content addressing) instead of per-module hashes; numerical-mode flags were not captured for this run",
+        "not_retained": [
+          "per-module sha256 pins",
+          "torch numerical-mode flags",
+          "interpreter absolute path",
+          "stage/last-stage pids"
+        ],
+        "record": "i137-diag-A-1789129558.json"
+      },
+      {
+        "consequence": "module identity rests on the producer commit + clean tree assertion at run start (unique bytes by git content addressing) instead of per-module hashes; numerical-mode flags were not captured for this run",
+        "not_retained": [
+          "per-module sha256 pins",
+          "torch numerical-mode flags",
+          "interpreter absolute path",
+          "stage/last-stage pids"
+        ],
+        "record": "i137-diag-A-1789129893.json"
+      },
+      {
+        "consequence": "module identity rests on the producer commit + clean tree assertion at run start (unique bytes by git content addressing) instead of per-module hashes; numerical-mode flags were not captured for this run",
+        "not_retained": [
+          "per-module sha256 pins",
+          "torch numerical-mode flags",
+          "interpreter absolute path",
+          "stage/last-stage pids"
+        ],
+        "record": "i137-diag-A-1789130927.json"
+      },
+      {
+        "consequence": "module identity rests on the producer commit + clean tree assertion at run start (unique bytes by git content addressing) instead of per-module hashes; numerical-mode flags were not captured for this run",
+        "not_retained": [
+          "per-module sha256 pins",
+          "torch numerical-mode flags",
+          "interpreter absolute path",
+          "stage/last-stage pids"
+        ],
+        "record": "i137-diag-A-1789131013.json"
+      },
+      {
+        "consequence": "module identity rests on the producer commit + clean tree assertion at run start (unique bytes by git content addressing) instead of per-module hashes; numerical-mode flags were not captured for this run",
+        "not_retained": [
+          "per-module sha256 pins",
+          "torch numerical-mode flags",
+          "interpreter absolute path",
+          "stage/last-stage pids"
+        ],
+        "record": "i137-diag-A-1789131099.json"
+      },
+      {
+        "consequence": "module identity rests on the producer commit + clean tree assertion at run start (unique bytes by git content addressing) instead of per-module hashes; numerical-mode flags were not captured for this run",
+        "not_retained": [
+          "per-module sha256 pins",
+          "torch numerical-mode flags",
+          "interpreter absolute path",
+          "stage/last-stage pids"
+        ],
+        "record": "i137-diag-A-1789131186.json"
+      },
+      {
+        "consequence": "module identity rests on the producer commit + clean tree assertion at run start (unique bytes by git content addressing) instead of per-module hashes; numerical-mode flags were not captured for this run",
+        "not_retained": [
+          "per-module sha256 pins",
+          "torch numerical-mode flags",
+          "interpreter absolute path",
+          "stage/last-stage pids"
+        ],
+        "record": "i137-diag-A2-1789128152.json"
+      },
+      {
+        "consequence": "module identity rests on the producer commit + clean tree assertion at run start (unique bytes by git content addressing) instead of per-module hashes; numerical-mode flags were not captured for this run",
+        "not_retained": [
+          "per-module sha256 pins",
+          "torch numerical-mode flags",
+          "interpreter absolute path",
+          "stage/last-stage pids"
+        ],
+        "record": "i137-diag-B-1789130217.json"
+      }
+    ],
+    "probe_b_after_divergent_history_mismatches": [
+      {
+        "after_divergent_history": 100,
+        "fresh": 107,
+        "realization": 0
+      }
+    ],
+    "probe_c_retired": {
+      "note": "cumulative single-then-two in one realization, fixed order \u2014 cannot isolate chunk partition",
+      "single_chunk_values": [
+        1509,
+        1509,
+        1509,
+        1509
+      ],
+      "two_chunk_values": [
+        238631,
+        1509,
+        9259,
+        236777
+      ]
+    }
+  },
   "inputs": {
-    "METHODOLOGY.md": "81f35246064ca0b2d8577326369da3f54680503afe1f3713784a1b76502b54f9",
-    "README.md": "4ce996997e22e722270b928b06e9a7b6c8a255343b73bfcea30da2e4bb55e157",
-    "diagnostic-conclusions.json": "49562ce63eb39cfdbc972a212057e7a7de2485536e000faee42b11b974866514",
     "i137-diag-A-1789127822.json": "abb06092fe3e94a1a54abcee24dc267fb2c81687706744fb8532b443d098a5f4",
     "i137-diag-A-1789129558.json": "3037e32c5a41191d31dc90d5ca527bc1198a2c4e831da3b708b57a87c1cd2fcf",
     "i137-diag-A-1789129893.json": "d05562e6470d88c3f43bf48977bc453b8da632760cbc20cb74cb16fa9f849d79",
@@ -111,112 +219,132 @@
     "i137-diag-D2-1789130625.json": "ba9db53850b3428d29a2e5940ef0fb78e0bf4445617293cb73e7be8ae9513056",
     "manifest-first-stage1-d2b.json": "29db1c7c176762067c9c2b109e20fc3a3a08c255888fbd57f54e747419fcdd62",
     "manifest-middle-stage2-d2b.json": "fcf82ac828c50f98bad951e00aa520ec1cda6f599f7e55a3a8dc7661a24e2cc7",
-    "phase1-inventory.json": "879bd5bfba525214434fa344550d1cecb2b110c8ffdb51bef0cd74d2652ad4b9"
+    "phase1-inventory.json": "1420c3481b9629b1899cf88ba6eb85e3f4a82cdf486dfc4ca1df4f1f8e094493"
   },
-  "one_mechanism_or_families": {
-    "expected_divergent": [
-      "c109-04-01-026",
-      "c109-04-02-047",
-      "c109-04-03-040",
-      "c109-04-04-024",
-      "c109-04-05-043",
-      "c109-04-06-074"
-    ],
-    "measured_nondeterministic": [
-      "c109-04-01-026",
-      "c109-04-02-047",
-      "c109-04-03-040",
-      "c109-04-04-024",
-      "c109-04-05-043",
-      "c109-04-06-074"
-    ],
-    "partition": "single family: two-chunk (>PREFILL_CHUNK=64 replay) extend-prefill execution is nondeterministic per-execution at small extend-row counts; all six regime-4 cases share it; single-chunk executions are bit-deterministic across realizations and repeats",
-    "per_case": {
-      "c109-04-01-026": {
-        "cross_campaign_all_four_distinct": true,
-        "in_session_values": [
-          140,
-          100,
-          106,
-          140
-        ],
-        "matches_an_accepted_value": true,
-        "varies_in_session": true
-      },
-      "c109-04-02-047": {
-        "cross_campaign_all_four_distinct": true,
-        "in_session_values": [
-          107,
-          818,
-          3771,
-          1437,
-          107
-        ],
-        "matches_an_accepted_value": false,
-        "varies_in_session": true
-      },
-      "c109-04-03-040": {
-        "cross_campaign_all_four_distinct": true,
-        "in_session_values": [
-          45518,
-          45518,
-          45518,
-          45518
-        ],
-        "matches_an_accepted_value": false,
-        "varies_in_session": false
-      },
-      "c109-04-04-024": {
-        "cross_campaign_all_four_distinct": true,
-        "in_session_values": [
-          236761,
-          236761,
-          236761,
-          236761
-        ],
-        "matches_an_accepted_value": false,
-        "varies_in_session": false
-      },
-      "c109-04-05-043": {
-        "cross_campaign_all_four_distinct": true,
-        "in_session_values": [
-          818,
-          2118,
-          107,
-          20470
-        ],
-        "matches_an_accepted_value": false,
-        "varies_in_session": true
-      },
-      "c109-04-06-074": {
-        "cross_campaign_all_four_distinct": true,
-        "in_session_values": [
-          107,
-          107,
-          107,
-          107
-        ],
-        "matches_an_accepted_value": false,
-        "varies_in_session": false
-      }
+  "per_case_causal_families": {
+    "c109-04-01-026": {
+      "cross_campaign_all_four_distinct": true,
+      "in_session_values": [
+        140,
+        100,
+        106,
+        140
+      ],
+      "layer_localization_evidence": "no per-case D/D2 captures retained",
+      "matches_an_accepted_value": true,
+      "varies_in_session": true,
+      "within_realization_values": []
     },
-    "single_mechanism_supported": true,
-    "stable_controls": [
-      "c109-01-01-045"
+    "c109-04-02-047": {
+      "cross_campaign_all_four_distinct": true,
+      "in_session_values": [
+        107,
+        818,
+        3771,
+        1437,
+        107
+      ],
+      "layer_localization_evidence": "D/D2 captures cover this case",
+      "matches_an_accepted_value": false,
+      "varies_in_session": true,
+      "within_realization_values": [
+        107,
+        9366,
+        2918,
+        107,
+        107,
+        107
+      ]
+    },
+    "c109-04-03-040": {
+      "cross_campaign_all_four_distinct": true,
+      "in_session_values": [
+        45518,
+        45518,
+        45518,
+        45518
+      ],
+      "layer_localization_evidence": "no per-case D/D2 captures retained",
+      "matches_an_accepted_value": false,
+      "varies_in_session": false,
+      "within_realization_values": []
+    },
+    "c109-04-04-024": {
+      "cross_campaign_all_four_distinct": true,
+      "in_session_values": [
+        236761,
+        236761,
+        236761,
+        236761
+      ],
+      "layer_localization_evidence": "no per-case D/D2 captures retained",
+      "matches_an_accepted_value": false,
+      "varies_in_session": false,
+      "within_realization_values": []
+    },
+    "c109-04-05-043": {
+      "cross_campaign_all_four_distinct": true,
+      "in_session_values": [
+        818,
+        2118,
+        107,
+        20470
+      ],
+      "layer_localization_evidence": "no per-case D/D2 captures retained",
+      "matches_an_accepted_value": false,
+      "varies_in_session": true,
+      "within_realization_values": []
+    },
+    "c109-04-06-074": {
+      "cross_campaign_all_four_distinct": true,
+      "in_session_values": [
+        107,
+        107,
+        107,
+        107
+      ],
+      "layer_localization_evidence": "no per-case D/D2 captures retained",
+      "matches_an_accepted_value": false,
+      "varies_in_session": false,
+      "within_realization_values": []
+    }
+  },
+  "problems": [
+    "missing probe family C2"
+  ],
+  "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "remediation_hypothesis": "NOT IMPLEMENTED (separate remediation authority required). Hypothesis from the corrected evidence: the small-extend-chunk attention/execution path over a resident 64-row prefix returns per-execution-varying bits; earliest observed variation between embedding_output (stable) and after_layer_0 (varying) on the captured case. A remediation issue should reproduce the layer-0 divergence with a standalone kernel harness across all six cases before proposing a fix.",
+  "schema": "inferswarm.issue137.diagnostic-conclusions/2",
+  "single_mechanism_or_families": {
+    "claim": "shared necessary path (two-chunk extend-prefill) established for all six; identical numerical mechanism demonstrated only for c109-04-02-047 (D/D2); three cases vary in-session, three are session-stable but match no accepted value \u2014 a single identical numerical mechanism for all six is NOT established",
+    "common_necessary_path": false,
+    "identical_numerical_mechanism_proven_for": [
+      "c109-04-02-047"
+    ],
+    "session_stable_but_matches_no_accepted_value": [
+      "c109-04-03-040",
+      "c109-04-04-024",
+      "c109-04-06-074"
+    ],
+    "varies_in_session": [
+      "c109-04-01-026",
+      "c109-04-02-047",
+      "c109-04-05-043"
     ]
   },
-  "problems": [],
-  "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
-  "remediation_hypothesis": "NOT IMPLEMENTED (separate remediation authority required). Narrowest hypothesis from evidence: the small-extend-chunk attention/execution path over a resident 64-row prefix (extend_paged_attention with 1-3 query rows, or a scratch/reduction buffer it reads uninitialized) returns per-execution-varying bits on these GPUs; identical inputs then amplify to argmax flips. A remediation issue should first reproduce the layer-0 divergence with a standalone kernel harness, then determine whether deterministic initialization of the involved scratch (or an explicit deterministic path for sub-tile extend rows) removes the variance without altering frozen serving semantics.",
-  "schema": "inferswarm.issue137.diagnostic-conclusions/1",
-  "terminal": "ISSUE117_ARM_C_REGIME4_DIAGNOSIS_LOCALIZED",
-  "terminal_conditions": {
-    "all_six_cases_nondeterministic": true,
-    "chunk_intervention_causal": true,
+  "terminal": "ISSUE117_ARM_C_REGIME4_DIAGNOSIS_PARTIAL",
+  "terminal_requirements": {
+    "all_records_bound_to_accepted_authority": true,
+    "all_required_probe_families_present": false,
+    "corrected_chunk_intervention_causal": false,
     "earliest_boundary_localized": true,
-    "history_not_causal": true,
-    "layer_level_localized": true,
-    "stable_controls_deterministic": true,
+    "earliest_varying_checkpoint_derived": true,
+    "every_divergent_case_shows_instability": false,
+    "history_conclusion_narrowed_correctly": true,
+    "manifests_validated": true,
+    "no_fatally_inconsistent_evidence": true,
+    "record_binding_valid": true,
+    "stable_control_single_chunk_deterministic": true,
     "within_realization_variance_proven": true
   }
 }

@@ -34,13 +34,23 @@ import json
 import re
 from pathlib import Path
 
-SCHEMA = "inferswarm.issue137.phase1-causal-inventory/1"
+SCHEMA = "inferswarm.issue137.phase1-causal-inventory/2"
 
 EVIDENCE_ROOT = (
     "docs/implementation/r6-successor-dense-full-integration-117/evidence"
 )
 RETRY_PHYS = f"{EVIDENCE_ROOT}/arm-c-retry/physical-execution"
 HIST_PHYS = f"{EVIDENCE_ROOT}/arm-c"
+
+# Accepted-authority pins (correction C6): every Phase-1 input is
+# pinned against the accepted MANIFEST.sha256 frozen at the PR #136
+# merge 1b83bca… (git blob identity).  Values are the manifest rows;
+# derive() verifies the working-tree bytes still match before use.
+AUTHORITY_MANIFEST = f"{EVIDENCE_ROOT}/MANIFEST.sha256"
+AUTHORITY_SOURCE = (
+    "accepted MANIFEST.sha256 @ PR #136 merge "
+    "1b83bcab0a5e682a438ca0554f71dd0ace15be55"
+)
 
 # Frozen producer identity (PR #136 merge 1b83bca…; accepted #133).
 PRODUCER = "924cd22ea081f6d4ed471016faf01d427fc5b0d2"
@@ -106,6 +116,52 @@ def first_diff(a: list[int], b: list[int]):
 
 
 def derive(repo: Path) -> dict:
+    # -- accepted-authority pinning (C6): fail closed before any
+    # derivation unless every Phase-1 input byte-matches the accepted
+    # MANIFEST row frozen at the PR #136 merge.
+    manifest_rows = {}
+    for line in (repo / AUTHORITY_MANIFEST).read_text().splitlines():
+        if not line.strip():
+            continue
+        digest, _, rel = line.partition("  ")
+        manifest_rows[rel.strip()] = digest
+    # Authority for inputs not covered by MANIFEST rows (the
+    # per-case direct/ordinary run bytes): the git blob at the PR
+    # #136 merge — byte-exact by git's content addressing.
+    import subprocess as _sp
+
+    def _merge_blob_sha(rel: str) -> str:
+        return _sp.check_output(
+            ["git", "-C", str(repo), "rev-parse",
+             f"1b83bcab0a5e682a438ca0554f71dd0ace15be55:{rel}"],
+            text=True).strip()
+
+    def authority_pin(rel: str) -> str:
+        path = repo / rel
+        if not path.is_file():
+            raise SystemExit(f"PHASE1_FAIL: pinned input missing {rel}")
+        observed = sha256_file(path)
+        accepted = manifest_rows.get(rel)
+        if accepted is None:
+            # fall back to the merge-commit git blob identity
+            try:
+                blob = _merge_blob_sha(rel)
+            except Exception:
+                raise SystemExit(
+                    f"PHASE1_FAIL: {rel} is covered by neither the "
+                    f"accepted authority manifest nor the PR #136 "
+                    f"merge tree")
+            import hashlib as _h
+            blob_bytes = _sp.check_output(
+                ["git", "-C", str(repo), "cat-file", "blob",
+                 f"1b83bcab0a5e682a438ca0554f71dd0ace15be55:{rel}"])
+            accepted = _h.sha256(blob_bytes).hexdigest()
+        if observed != accepted:
+            raise SystemExit(
+                f"PHASE1_FAIL: {rel} sha256 {observed} != accepted "
+                f"authority {accepted}")
+        return observed
+
     loads = {}
     for name, (rel, _pin) in PINNED_INPUTS.items():
         if rel.startswith("frozen producer"):
@@ -114,6 +170,7 @@ def derive(repo: Path) -> dict:
         p = repo / rel
         if not p.is_file():
             raise SystemExit(f"PHASE1_FAIL: missing pinned input {rel}")
+        authority_pin(rel)
         loads[name] = json.loads(p.read_text())
 
     er = loads["retry_equality"]
@@ -306,6 +363,169 @@ def derive(repo: Path) -> dict:
     pos0 = [d for d in divergences
             if d["first_divergent_position_rederived"] == 0]
 
+    # -- runtime / lifecycle difference inventory (C6) ------------------
+    # Machine-readable inventory over the issue's required categories.
+    # Every row states: status (derived | unavailable | not_retained),
+    # the mechanical source of the fact, direct-vs-ordinary delta, and
+    # for non-derived rows the consequence.  Authored hypothesis prose
+    # lives only in hypothesis_matrix.
+    r4 = json.loads((repo / f"{HIST_PHYS}/arm-c-retry-physical-"
+                     "preflight-freetoken-identities.json"
+                     ).read_text()) if (repo / f"{HIST_PHYS}/"
+                        "arm-c-retry-physical-preflight-freetoken-"
+                        "identities.json").is_file() else None
+    def _preflight(section: str):
+        if not isinstance(r4, dict):
+            return None
+        for key in (section, "identities", "sections"):
+            if key in r4 and isinstance(r4[key], dict):
+                return r4[key]
+        return None
+
+    environment = loads.get("retry_serving_report", {}).get(
+        "environment") or loads.get("retry_serving_report", {})
+    def _fact(status, source, delta, consequence=None):
+        row = {"status": status, "source": source,
+               "direct_vs_ordinary": delta}
+        if consequence:
+            row["consequence"] = consequence
+        return row
+
+    runtime_lifecycle_inventory = {
+        "process_creation_runtime_realization_path": _fact(
+            "derived",
+            "frozen stage_chain.py construction + accepted #133 "
+            "invocation transcripts: direct arm realizes the chain "
+            "once per campaign via GemmaStageChainRuntime; ordinary "
+            "arm realizes via the serving coordinator per request",
+            "different realization entry path; identical stage "
+            "process construction (same spawn context, same "
+            "adapter_data, same model path)",
+        ),
+        "process_lifetime_request_history": _fact(
+            "derived",
+            "history_identity above + accepted serving reports: both "
+            "arms process the identical 24-case order with 8 calls "
+            "per case; direct keeps one substrate for the whole "
+            "campaign, ordinary substrate per campaign as well",
+            "same request history shape; lifetime differs only in "
+            "driver process identity",
+        ),
+        "case_order": _fact(
+            "derived",
+            "direct_case_order + ordinary session id sequence: "
+            "identical order retained",
+            "identical",
+        ),
+        "runtime_object_reuse": _fact(
+            "derived",
+            "probes A/A2 (accepted #137 records): per-execution "
+            "results vary on one substrate (A2) and across fresh "
+            "substrates (A) for the divergent population; object "
+            "reuse is therefore not sufficient to explain the "
+            "variance direction",
+            "not discriminated by reuse alone",
+        ),
+        "session_reset_lifecycle": _fact(
+            "derived",
+            "frozen replay_call RESET discipline + probe B: RESET "
+            "precedes every call on both arms; fresh vs "
+            "after-stable-history produce equal tokens (3/3) while "
+            "the cumulative after-divergent-history arm produced one "
+            "differing value (1/3) — retained, informational",
+            "RESET-does-not-fully-condition-state is NOT excluded by "
+            "the cumulative arm (single observation, confounded by "
+            "per-execution nondeterminism demonstrated by A2)",
+        ),
+        "speculative_generation_cleanup": _fact(
+            "derived",
+            "speculative_consistency above: discarded step-1 token "
+            "equals next call's prefill-committed token for the "
+            "stable population (mechanically verified per case)",
+            "cleanup contract honored on both arms",
+        ),
+        "kv_state_allocation_reset": _fact(
+            "not_retained",
+            "no accepted artifact captures KV allocator identity "
+            "across the arms; RESET is observed behaviorally only",
+            "KV allocator identity not comparable between arms",
+            "bounded instead by boundary digests (probe D/D2): "
+            "stage-1 chunk-1 boundary byte-identical across "
+            "realizations, so pre-divergence state at the observed "
+            "boundary is equal",
+        ),
+        "realization_epoch_lifecycle": _fact(
+            "unavailable",
+            "no epoch lifecycle exists in the frozen dense-chain "
+            "runtime for these calls (single realization per arm; "
+            "epoch notion belongs to the serving coordinator path)",
+            "no epoch lifecycle to compare",
+            "no comparison possible; not implicated by any retained "
+            "observation",
+        ),
+        "stage_startup_order": _fact(
+            "derived",
+            "frozen _Chain construction: stages spawn in plan order "
+            "(first, middle) then remote last-stage connect; same "
+            "order on both arms",
+            "identical",
+        ),
+        "cuda_device_runtime_configuration": _fact(
+            "derived",
+            "driver software snapshot + stage READY runtime reports "
+            "retained in accepted #137 records: CUDA_VISIBLE_DEVICES "
+            "per stage gpu_index; same devices, same torch/CUDA "
+            "build on both arms",
+            "identical",
+        ),
+        "deterministic_nondeterministic_backend_flags": _fact(
+            "derived",
+            "driver authority.software flags: "
+            "deterministic_algorithms=False, cudnn knobs, TF32 "
+            "state retained; no flag changed between arms",
+            "identical (and never enabled — enabling would be an "
+            "intervention per the issue)",
+        ),
+        "planner_realizer_side_effects": _fact(
+            "derived",
+            "the direct arm bypasses the planner entirely yet "
+            "fails to reproduce its own historical outputs "
+            "(cross-campaign matrix: all four observations distinct "
+            "per divergent case)",
+            "planner not necessary for divergence",
+        ),
+        "local_remote_stage_connection_lifecycle": _fact(
+            "derived",
+            "frozen wire client: one connection per realization, "
+            "hello/session handshake resets last-stage session "
+            "state; identical protocol on both arms",
+            "identical",
+        ),
+        "mutable_module_global_class_state": _fact(
+            "partially_retained",
+            "frozen producer closure grep: stage runtime keeps "
+            "per-instance counters only; module-level mutables are "
+            "config constants (HIDDEN_SIZE etc.); the localization "
+            "capture sink is None unless ARM_CAPTURE is issued "
+            "(probes D/D2 only)",
+            "no mutable global implicated; capture arming is "
+            "diagnostic-only and was not active for A/A2/B/C",
+            "module-global enumeration is source-derived, not "
+            "runtime-observed; a runtime-only mutation would not "
+            "appear here",
+        ),
+        "pre_call_state_not_in_comparator": _fact(
+            "derived",
+            "accepted #133 comparator field set vs probe evidence: "
+            "the comparator binds public generate() inputs; probe "
+            "D2 shows the earliest differing observable is INSIDE "
+            "stage-1 layer execution (after_layer_0), downstream of "
+            "byte-identical inputs at every compared seam",
+            "no pre-call state difference is necessary to explain "
+            "the divergence (fresh-first calls vary — probe A)",
+        ),
+    }
+
     # -- hypothesis matrix ------------------------------------------------
     matrix = {
         "realization_initialization_lifecycle": {
@@ -479,6 +699,11 @@ def derive(repo: Path) -> dict:
         "position0_prefill_divergence_cases": [
             d["case_id"] for d in pos0
         ],
+        "runtime_lifecycle_inventory": runtime_lifecycle_inventory,
+        "authority": {
+            "source": AUTHORITY_SOURCE,
+            "manifest_sha256": sha256_file(repo / AUTHORITY_MANIFEST),
+        },
         "hypothesis_matrix": matrix,
         "families": FAMILIES,
     }

@@ -1,5 +1,10 @@
 # Issue #137 diagnostic methodology — Arm-C regime-4 semantic divergence
 
+CORRECTION PASS (PR #138, reviewed head a9922547…).  This document
+describes the corrected methodology; where the executed probes differ
+from the corrected standard, the divergence is stated and the evidence
+consequences flow through the conclusions reducer.
+
 DIAGNOSTIC_ONLY. This issue diagnoses the accepted #133 terminal
 `ISSUE117_ARM_C_ORDINARY_SERVING_FAIL` (18/24 equality, six regime-4
 committed-token divergences). It does not reopen #133, does not retry
@@ -20,6 +25,54 @@ unblock Arm D.
 - The six accepted divergent cases and first-divergence positions
   (4/0/2/3/0/0) are re-derived from raw committed-id lists by the
   Phase-1 inventory tool; authored verdict fields are not authority.
+
+## Corrections applied to the reviewed-head methodology
+
+1. **Probe C retired as causal evidence.**  The reviewed-head probe C
+   executed the single-chunk arm and then the two-chunk arm
+   cumulatively on the SAME realization in a FIXED order.  Probe A2
+   proved execution order / process-lifetime state can affect results
+   despite RESET, so C is not a one-variable intervention.  The
+   retained C bytes stay (informational observation, labeled
+   `retired_cumulative_fixed_order`); the causal chunk-partition
+   evidence is the corrected probe **C2**: per trial, two FRESH
+   equivalent substrates; the target call is the FIRST
+   correctness-bearing call on each; arm launch order counterbalanced
+   across trials; >= 6 trials; every substrate bound by stage pids and
+   remote last-stage launch identity.  Chunk partition is the only
+   changed factor.
+2. **History conclusion narrowed.**  Probe B's
+   `after_divergent_history` arm produced one mismatch (realization 0:
+   100 vs fresh 107).  This observation is retained and evaluated.  The
+   only history conclusion supported by the evidence is: prior request
+   history is NOT NECESSARY for divergence (fresh-first calls vary).
+   The reducer and prose never claim history "has no causal
+   influence."
+3. **Per-case causal families.**  Three cases (04-01-026, 04-02-047,
+   04-05-043) vary in-session; three (04-03-040, 04-04-024, 04-06-074)
+   are session-stable but match no accepted value (cross-session
+   drift).  Layer localization (D/D2) covers only c109-04-02-047.
+   The corrected conclusions derive the shared necessary path
+   (two-chunk extend-prefill population == divergent population) but
+   do NOT claim one identical numerical mechanism for all six.
+4. **Reducer v2.**  Terminal requirements are explicit, separated from
+   informational observations, each independently controlling;
+   manifests ordered by stage/role, checkpoints by numeric global
+   layer; earliest varying checkpoint selected globally and
+   deterministically; evidence-dir scan is an explicit allowlist
+   (output file and docs excluded); every input record validated
+   against the accepted-authority binding.
+5. **Provenance binding.**  All corrected probes verify, BEFORE any
+   GPU work: exact frozen producer commit + clean tree + per-module
+   sha256 pins (`scripts/issue137_binding.py`), accepted #133 baseline
+   input digests, executing interpreter identity, torch/CUDA
+   numerical-mode flags, and GPU geometry — each compared against
+   immutable accepted values, never merely recorded.
+6. **Phase-1 inventory v2.**  Machine-readable runtime/lifecycle
+   difference inventory over all 15 issue-required categories, with
+   explicit derived/unavailable/not_retained status and consequences;
+   all inputs pinned against the accepted MANIFEST frozen at the PR
+   #136 merge.
 
 ## Phase ordering (as executed)
 

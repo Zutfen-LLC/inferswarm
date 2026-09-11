@@ -1,4 +1,8 @@
 {
+  "authority": {
+    "manifest_sha256": "ec26a49cfee4534443d85ac7f55f3c3fbece2221d280be3381cd7b4f8e7b2f8e",
+    "source": "accepted MANIFEST.sha256 @ PR #136 merge 1b83bcab0a5e682a438ca0554f71dd0ace15be55"
+  },
   "chunk_partition": {
     "cases": {
       "c109-01-01-045": {
@@ -659,7 +663,87 @@
     "c109-04-06-074"
   ],
   "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
-  "schema": "inferswarm.issue137.phase1-causal-inventory/1",
+  "runtime_lifecycle_inventory": {
+    "case_order": {
+      "direct_vs_ordinary": "identical",
+      "source": "direct_case_order + ordinary session id sequence: identical order retained",
+      "status": "derived"
+    },
+    "cuda_device_runtime_configuration": {
+      "direct_vs_ordinary": "identical",
+      "source": "driver software snapshot + stage READY runtime reports retained in accepted #137 records: CUDA_VISIBLE_DEVICES per stage gpu_index; same devices, same torch/CUDA build on both arms",
+      "status": "derived"
+    },
+    "deterministic_nondeterministic_backend_flags": {
+      "direct_vs_ordinary": "identical (and never enabled \u2014 enabling would be an intervention per the issue)",
+      "source": "driver authority.software flags: deterministic_algorithms=False, cudnn knobs, TF32 state retained; no flag changed between arms",
+      "status": "derived"
+    },
+    "kv_state_allocation_reset": {
+      "consequence": "bounded instead by boundary digests (probe D/D2): stage-1 chunk-1 boundary byte-identical across realizations, so pre-divergence state at the observed boundary is equal",
+      "direct_vs_ordinary": "KV allocator identity not comparable between arms",
+      "source": "no accepted artifact captures KV allocator identity across the arms; RESET is observed behaviorally only",
+      "status": "not_retained"
+    },
+    "local_remote_stage_connection_lifecycle": {
+      "direct_vs_ordinary": "identical",
+      "source": "frozen wire client: one connection per realization, hello/session handshake resets last-stage session state; identical protocol on both arms",
+      "status": "derived"
+    },
+    "mutable_module_global_class_state": {
+      "consequence": "module-global enumeration is source-derived, not runtime-observed; a runtime-only mutation would not appear here",
+      "direct_vs_ordinary": "no mutable global implicated; capture arming is diagnostic-only and was not active for A/A2/B/C",
+      "source": "frozen producer closure grep: stage runtime keeps per-instance counters only; module-level mutables are config constants (HIDDEN_SIZE etc.); the localization capture sink is None unless ARM_CAPTURE is issued (probes D/D2 only)",
+      "status": "partially_retained"
+    },
+    "planner_realizer_side_effects": {
+      "direct_vs_ordinary": "planner not necessary for divergence",
+      "source": "the direct arm bypasses the planner entirely yet fails to reproduce its own historical outputs (cross-campaign matrix: all four observations distinct per divergent case)",
+      "status": "derived"
+    },
+    "pre_call_state_not_in_comparator": {
+      "direct_vs_ordinary": "no pre-call state difference is necessary to explain the divergence (fresh-first calls vary \u2014 probe A)",
+      "source": "accepted #133 comparator field set vs probe evidence: the comparator binds public generate() inputs; probe D2 shows the earliest differing observable is INSIDE stage-1 layer execution (after_layer_0), downstream of byte-identical inputs at every compared seam",
+      "status": "derived"
+    },
+    "process_creation_runtime_realization_path": {
+      "direct_vs_ordinary": "different realization entry path; identical stage process construction (same spawn context, same adapter_data, same model path)",
+      "source": "frozen stage_chain.py construction + accepted #133 invocation transcripts: direct arm realizes the chain once per campaign via GemmaStageChainRuntime; ordinary arm realizes via the serving coordinator per request",
+      "status": "derived"
+    },
+    "process_lifetime_request_history": {
+      "direct_vs_ordinary": "same request history shape; lifetime differs only in driver process identity",
+      "source": "history_identity above + accepted serving reports: both arms process the identical 24-case order with 8 calls per case; direct keeps one substrate for the whole campaign, ordinary substrate per campaign as well",
+      "status": "derived"
+    },
+    "realization_epoch_lifecycle": {
+      "consequence": "no comparison possible; not implicated by any retained observation",
+      "direct_vs_ordinary": "no epoch lifecycle to compare",
+      "source": "no epoch lifecycle exists in the frozen dense-chain runtime for these calls (single realization per arm; epoch notion belongs to the serving coordinator path)",
+      "status": "unavailable"
+    },
+    "runtime_object_reuse": {
+      "direct_vs_ordinary": "not discriminated by reuse alone",
+      "source": "probes A/A2 (accepted #137 records): per-execution results vary on one substrate (A2) and across fresh substrates (A) for the divergent population; object reuse is therefore not sufficient to explain the variance direction",
+      "status": "derived"
+    },
+    "session_reset_lifecycle": {
+      "direct_vs_ordinary": "RESET-does-not-fully-condition-state is NOT excluded by the cumulative arm (single observation, confounded by per-execution nondeterminism demonstrated by A2)",
+      "source": "frozen replay_call RESET discipline + probe B: RESET precedes every call on both arms; fresh vs after-stable-history produce equal tokens (3/3) while the cumulative after-divergent-history arm produced one differing value (1/3) \u2014 retained, informational",
+      "status": "derived"
+    },
+    "speculative_generation_cleanup": {
+      "direct_vs_ordinary": "cleanup contract honored on both arms",
+      "source": "speculative_consistency above: discarded step-1 token equals next call's prefill-committed token for the stable population (mechanically verified per case)",
+      "status": "derived"
+    },
+    "stage_startup_order": {
+      "direct_vs_ordinary": "identical",
+      "source": "frozen _Chain construction: stages spawn in plan order (first, middle) then remote last-stage connect; same order on both arms",
+      "status": "derived"
+    }
+  },
+  "schema": "inferswarm.issue137.phase1-causal-inventory/2",
   "speculative_consistency": {
     "divergent_population": {
       "matches": 7,
