@@ -134,7 +134,6 @@ def run_fixture(arm: str, run_id: str, out_dir: Path) -> dict:
         "-no-cnv", "-p", PROMPT, "-st",
     ]
     env = dict(os.environ)
-    env["GGML_VK_VISIBLE_DEVICES"] = env.get("GGML_VK_VISIBLE_DEVICES", "")
     relevant_env = {
         k: env[k] for k in sorted(env)
         if k.startswith(("GGML_", "HIP_", "CUDA_VISIBLE", "LD_LIBRARY_PATH"))
