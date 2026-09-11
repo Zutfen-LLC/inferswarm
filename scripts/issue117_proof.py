@@ -434,6 +434,22 @@ COMMITTED_EVIDENCE_FILES = {
     "arm-c-regime4-diagnosis-137/i137-diag-D2-1789130625.json",
     "arm-c-regime4-diagnosis-137/manifest-first-stage1-d2b.json",
     "arm-c-regime4-diagnosis-137/manifest-middle-stage2-d2b.json",
+    "arm-c-regime4-diagnosis-137/i137-diag-C2-1789141057.json",
+    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/"
+    "launcher-loop.log",
+    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-101.json",
+    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-102.json",
+    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-103.json",
+    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-104.json",
+    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-105.json",
+    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-106.json",
+    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-107.json",
+    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-108.json",
+    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-109.json",
+    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-110.json",
+    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-111.json",
+    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-112.json",
+    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-113.json",
     "arm-c-regime4-diagnosis-137/diagnostic-conclusions.json",
 }
 

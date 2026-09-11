@@ -1,9 +1,66 @@
 {
   "causal_factor": {
-    "c2_measurements": null,
+    "c2_measurements": {
+      "design": {
+        "arms": [
+          "single_chunk_64",
+          "two_chunk_32_21"
+        ],
+        "one_variable": "chunk partition of an identical total input (single 53-row chunk vs 32+21)",
+        "order": "counterbalanced by trial parity (even: single-first, odd: two-first)",
+        "substrate": "fresh per arm per trial (stage processes spawned new; remote last stage relaunched between arms by the launcher loop)",
+        "target_call_position": "first correctness-bearing call on each substrate",
+        "trials": 6
+      },
+      "launch_orders": [
+        [
+          "single",
+          "two"
+        ],
+        [
+          "two",
+          "single"
+        ],
+        [
+          "single",
+          "two"
+        ],
+        [
+          "two",
+          "single"
+        ],
+        [
+          "single",
+          "two"
+        ],
+        [
+          "two",
+          "single"
+        ]
+      ],
+      "single_chunk_deterministic": true,
+      "single_chunk_values": [
+        1509,
+        1509,
+        1509,
+        1509,
+        1509,
+        1509
+      ],
+      "trials": 6,
+      "two_chunk_values": [
+        9259,
+        116130,
+        9259,
+        236777,
+        9259,
+        9259
+      ],
+      "two_chunk_varies": true
+    },
     "corrected_intervention_c2": {
-      "design": "retired cumulative fixed-order (informational only)",
-      "verdict": "no causal claim derivable"
+      "design": "fresh paired substrates per trial, target call first on each, counterbalanced arm order (probe C2)",
+      "verdict": "chunk partition is the only changed factor and two-chunk execution flips/destabilizes the committed token while the single-chunk path is deterministic \u2014 multi-chunk extend-prefill execution is sufficient for instability on this input"
     }
   },
   "classification": "DIAGNOSTIC_ONLY",
@@ -214,6 +271,7 @@
     "i137-diag-A2-1789128152.json": "352449f2ee47bc0b5005234c88aa878c74750ef1dcb12f8b44e3b6879eec593e",
     "i137-diag-B-1789130217.json": "80303c26fc59bc78ed9aebe0e5f9368d7461fc63a911f1613dfc68d71ddc1221",
     "i137-diag-C-1789128426.json": "ac969f277c435dcc3d23bd6dde52681c2146bcc6a4af6b33f27c4fa282cafda3",
+    "i137-diag-C2-1789141057.json": "409c534cd76edc7d61b1e63f1d9fa9ad03390185f5447d34c06490663fcfe993",
     "i137-diag-D-1789128772.json": "87cb72130ca49297aca2ae003c64f7f72e5aacf69ef8e35102d6ad706c7e635c",
     "i137-diag-D2-1789129163.json": "39e1df4df6b1748e36285ebd382385003579785bd7fcaa9849c77ab7449005bc",
     "i137-diag-D2-1789130625.json": "ba9db53850b3428d29a2e5940ef0fb78e0bf4445617293cb73e7be8ae9513056",
@@ -309,15 +367,13 @@
       "within_realization_values": []
     }
   },
-  "problems": [
-    "missing probe family C2"
-  ],
+  "problems": [],
   "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
   "remediation_hypothesis": "NOT IMPLEMENTED (separate remediation authority required). Hypothesis from the corrected evidence: the small-extend-chunk attention/execution path over a resident 64-row prefix returns per-execution-varying bits; earliest observed variation between embedding_output (stable) and after_layer_0 (varying) on the captured case. A remediation issue should reproduce the layer-0 divergence with a standalone kernel harness across all six cases before proposing a fix.",
   "schema": "inferswarm.issue137.diagnostic-conclusions/2",
   "single_mechanism_or_families": {
     "claim": "shared necessary path (two-chunk extend-prefill) established for all six; identical numerical mechanism demonstrated only for c109-04-02-047 (D/D2); three cases vary in-session, three are session-stable but match no accepted value \u2014 a single identical numerical mechanism for all six is NOT established",
-    "common_necessary_path": false,
+    "common_necessary_path": true,
     "identical_numerical_mechanism_proven_for": [
       "c109-04-02-047"
     ],
@@ -335,8 +391,8 @@
   "terminal": "ISSUE117_ARM_C_REGIME4_DIAGNOSIS_PARTIAL",
   "terminal_requirements": {
     "all_records_bound_to_accepted_authority": true,
-    "all_required_probe_families_present": false,
-    "corrected_chunk_intervention_causal": false,
+    "all_required_probe_families_present": true,
+    "corrected_chunk_intervention_causal": true,
     "earliest_boundary_localized": true,
     "earliest_varying_checkpoint_derived": true,
     "every_divergent_case_shows_instability": false,

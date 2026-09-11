@@ -233,8 +233,15 @@ def verify_software(snapshot: dict, *, interpreter_path: str | None) -> dict:
 
 
 def verify_geometry(observed_uuids: dict[str, list[str]]) -> dict:
-    for host, expected in BASELINE_GEOMETRY.items():
-        got = observed_uuids.get(host)
+    """Validate every OBSERVED host entry against the baseline; the
+    remote host (inferswarm03) is validated separately via the launch
+    ledger (each ready entry carries its gpu_uuid)."""
+    if not observed_uuids:
+        raise BindError("BIND_FAIL: no GPU geometry observed")
+    for host, got in observed_uuids.items():
+        expected = BASELINE_GEOMETRY.get(host)
+        if expected is None:
+            raise BindError(f"BIND_FAIL: unexpected host {host}")
         if got != expected:
             raise BindError(
                 f"BIND_FAIL: GPU geometry for {host}: {got} != {expected}")

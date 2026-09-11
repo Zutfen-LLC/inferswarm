@@ -1,9 +1,13 @@
 # Issue #137 — Arm-C regime-4 semantic divergence diagnosis
 
-Status: `ISSUE117_ARM_C_REGIME4_DIAGNOSIS_LOCALIZED` (derived by
-`scripts/issue137_conclusions.py` from the retained probe records; all
-seven terminal conditions true, zero problems). DIAGNOSTIC_ONLY. The
-accepted #133 terminal `ISSUE117_ARM_C_ORDINARY_SERVING_FAIL` is
+CORRECTED (PR #138 correction pass). Status:
+`ISSUE117_ARM_C_REGIME4_DIAGNOSIS_PARTIAL` (derived by the corrected
+`scripts/issue137_conclusions.py` v2 from the retained probe records
+under the corrected methodology; zero problems; every load-bearing
+terminal requirement except one is satisfied — per-case instability is
+demonstrated for three of the six cases only, so a single identical
+numerical mechanism for all six is NOT established). DIAGNOSTIC_ONLY.
+The accepted #133 terminal `ISSUE117_ARM_C_ORDINARY_SERVING_FAIL` is
 unchanged historical evidence. Arm D remains blocked.
 
 ## Fact classes (kept strictly separated)
@@ -34,10 +38,23 @@ from its retained inputs (sha256-pinned in each record).
 3. Probe A2 (within ONE realization, 6 repeats): 107/9366/2918/107/107/
    107 — per-EXECUTION nondeterminism, tending to stabilize on a mode
    after repeated execution of the same shape.
-4. Probe C (intervention): stable case c109-03-04-003 (53 tokens)
-   driven as a single chunk: 1509 in 4/4 realizations (bit-stable);
-   the SAME input driven as 32+21 chunks: 238631/1509/9259/236777 —
-   the two-chunk extend path is causal INDEPENDENT of prompt length.
+4. Probe C — RETIRED as causal evidence (correction): both arms ran
+   cumulatively in one realization in a fixed order; the retained
+   bytes (single 1509 in 4/4; two-chunk 238631/1509/9259/236777) are
+   kept as an INFORMATIONAL observation only.
+4b. Probe C2 (corrected one-variable intervention, run
+   i137-diag-C2-1789141057): stable case c109-03-04-003 (53 tokens);
+   per trial TWO fresh equivalent substrates, the target call FIRST
+   on each, arm launch order counterbalanced by trial parity; chunk
+   partition is the only changed factor. Single-chunk arm: 1509 in
+   6/6 trials (deterministic, equals the accepted stable value).
+   Two-chunk (32+21) arm: 9259/116130/9259/236777/9259/9259 — three
+   distinct values in six trials. CONCLUSION: multi-chunk
+   extend-prefill execution is SUFFICIENT for committed-token
+   instability on an otherwise stable input; the single-chunk path is
+   bit-deterministic. This is the corrected causal evidence
+   (freshness bound by per-arm stage pids; remote last-stage launches
+   101-113 retained in remote-last-stage-ledger-c2/).
 5. Probe D (cross-realization boundaries): chunk-1 (64-row) stage-1
    and stage-2 outputs byte-identical across realizations; the 3-row
    chunk-2 stage-1 output differs in every realization.
@@ -50,7 +67,13 @@ from its retained inputs (sha256-pinned in each record).
    produced different final tokens (818 vs 3771) — the last stage's
    small-extend execution varies too.
 7. Probe B (history): fresh == after-stable-history in 3/3
-   realizations; request history is not causal.
+   realizations; the cumulative after-divergent-history arm produced
+   ONE differing value (100 vs fresh 107, realization 0) — retained
+   and NOT interpreted away. Corrected conclusion: prior request
+   history is NOT NECESSARY for divergence (fresh-first calls vary —
+   probe A); history having no causal influence is NOT established
+   (a single mismatch under demonstrated per-execution
+   nondeterminism cannot decide it).
 
 ### Demonstrated causal conclusions
 
@@ -62,14 +85,20 @@ from its retained inputs (sha256-pinned in each record).
   per-realization state), mode-stabilizing with repeated same-shape
   execution; single-chunk executions are bit-deterministic across
   realizations and repeats.
-- Causal/necessary factor: executing a prefill as MULTIPLE chunks
-  (second chunk with sub-64 rows through the extend path) — proven
-  sufficient on a stable input (probe C) and present in every
-  divergent case (all six are the >64 population).
-- One mechanism explains all six cases: same partition, same probe
-  behavior (in-session variance or cross-session drift from every
-  accepted observation), same localization. Per-case mode structure
-  retained in diagnostic-conclusions.json (per_case rows).
+- Causal factor (corrected, probe C2): executing a prefill as
+  MULTIPLE chunks (second chunk with sub-64 rows through the extend
+  path) is SUFFICIENT for instability on a stable input — proven
+  under the corrected one-variable design — and the multi-chunk
+  population is exactly the divergent population (shared NECESSARY
+  path for all six cases).
+- One mechanism for all six: NOT established. Three cases
+  (04-01-026, 04-02-047, 04-05-043) vary in-session on fresh
+  substrates; three (04-03-040, 04-04-024, 04-06-074) are
+  session-stable while matching NO accepted value (cross-session
+  drift). Layer-level localization (D/D2) covers c109-04-02-047
+  only. Path selection is common; earliest observed divergence and
+  the hypothesized kernel defect are demonstrated for one case.
+  Per-case rows in diagnostic-conclusions.json.
 
 ### Inference / hypotheses (NOT conclusions)
 
@@ -94,8 +123,15 @@ from its retained inputs (sha256-pinned in each record).
 - `phase1-inventory.json` — CPU-only causal inventory + hypothesis
   matrix (re-derives the six divergences and the chunk partition from
   raw retained bytes).
-- `i137-diag-*.json` — probe records (A/A2/B/C/D/D2), each
-  DIAGNOSTIC_ONLY, producer-pinned, inputs sha256-bound.
+- `i137-diag-*.json` — probe records (A/A2/B/C/C2/D/D2), each
+  DIAGNOSTIC_ONLY, producer-pinned, inputs sha256-bound; v2 records
+  (C2) additionally carry the full accepted-authority binding block
+  (per-module producer pins, interpreter, torch numerical-mode flags,
+  GPU geometry, driver sha + invocation, per-substrate realization
+  identities).
+- `remote-last-stage-ledger-c2/` — inferswarm03 last-stage launch
+  ledger (ready-*.json + launcher loop log) for the corrected C2 run;
+  each entry binds pid/launch-counter/gpu-uuid/frozen producer.
 - `manifest-*-d2b.json` — per-layer capture manifests (stage 1 and
   stage 2) for the final D2 bisection run; the raw `.pt` capture
   bundles are byte-hashed in these manifests
@@ -107,7 +143,7 @@ from its retained inputs (sha256-pinned in each record).
 
 ## Reproduce
 
-- Phase 1: `python3 scripts/issue137_phase1_inventory.py --repo . --out <path>`
+- Phase 1: `python3 scripts/issue137_phase1_inventory.py --repo . --out <path>` (v2: authority-pinned inputs + runtime/lifecycle inventory)
 - Conclusions: `python3 scripts/issue137_conclusions.py --evidence-dir
   <this dir> --out <path>` (requires the probe records present).
 - Tests: `python -m unittest discover -s tests -p "test_issue137*"`

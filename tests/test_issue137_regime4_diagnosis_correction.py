@@ -321,12 +321,15 @@ class TestConclusionsV2(unittest.TestCase):
     the inventory regenerated, LOCALIZED requires every requirement."""
 
     def _scratch(self, td: str, *, with_c2: bool = False,
-                 c2_kwargs=None) -> Path:
+                 c2_kwargs=None, keep_real_c2: bool = True) -> Path:
         scratch = Path(td) / "ev"
         shutil.copytree(EVIDENCE, scratch)
         # regenerate inventory v2 into the scratch
         run_tool(PHASE1, "--repo", str(REPO),
                  "--out", str(scratch / "phase1-inventory.json"))
+        if not keep_real_c2:
+            for c2f in scratch.glob("i137-diag-C2-*.json"):
+                c2f.unlink()
         if with_c2:
             rec = make_c2_record(**(c2_kwargs or {}))
             (scratch / f"{rec['run_id']}.json").write_text(
@@ -334,8 +337,20 @@ class TestConclusionsV2(unittest.TestCase):
         return scratch
 
     def test_current_evidence_derives_partial_not_localized(self):
+        """With the corrected C2 executed and retained, the honest
+        derived terminal is PARTIAL: every requirement holds except
+        per-case instability (three cases session-stable)."""
         with tempfile.TemporaryDirectory() as td:
             ev = self._scratch(td)
+            out = run_reducer(ev, Path(td) / "c.json")
+            self.assertEqual(out["terminal"], TERMINAL_PARTIAL)
+            self.assertEqual(out["problems"], [])
+            self.assertFalse(out["requirements"][
+                "every_divergent_case_shows_instability"])
+            self.assertTrue(out["requirements"][
+                "corrected_chunk_intervention_causal"])
+        with tempfile.TemporaryDirectory() as td:
+            ev = self._scratch(td, keep_real_c2=False)
             out = run_reducer(ev, Path(td) / "c.json")
             self.assertEqual(out["terminal"], TERMINAL_PARTIAL)
             self.assertIn("missing probe family C2", out["problems"])
@@ -403,37 +418,38 @@ class TestConclusionsV2(unittest.TestCase):
     def test_each_requirement_independently_controls(self):
         # 1: C2 with deterministic two-arm -> not causal
         with tempfile.TemporaryDirectory() as td:
-            ev = self._scratch(td, with_c2=True, c2_kwargs=dict(
-                two_values=[42] * 6))
+            ev = self._scratch(td, with_c2=True, keep_real_c2=False,
+                               c2_kwargs=dict(two_values=[42] * 6))
             out = run_reducer(ev, Path(td) / "c.json")
             self.assertFalse(out["requirements"][
                 "corrected_chunk_intervention_causal"])
             self.assertNotEqual(out["terminal"], TERMINAL_LOCALIZED)
         # 2: fixed (non-counterbalanced) arm order -> problem + downgrade
         with tempfile.TemporaryDirectory() as td:
-            ev = self._scratch(td, with_c2=True, c2_kwargs=dict(
-                orders=[["single", "two"]] * 6))
+            ev = self._scratch(td, with_c2=True, keep_real_c2=False,
+                               c2_kwargs=dict(
+                                   orders=[["single", "two"]] * 6))
             out = run_reducer(ev, Path(td) / "c.json")
             self.assertTrue(any("counterbalanced" in p
                                 for p in out["problems"]))
             self.assertNotEqual(out["terminal"], TERMINAL_LOCALIZED)
         # 3: shared substrate between arms (freshness broken)
         with tempfile.TemporaryDirectory() as td:
-            ev = self._scratch(td, with_c2=True, c2_kwargs=dict(
-                fresh=False))
+            ev = self._scratch(td, with_c2=True, keep_real_c2=False,
+                               c2_kwargs=dict(fresh=False))
             out = run_reducer(ev, Path(td) / "c.json")
             self.assertTrue(any("freshness" in p for p in out["problems"]))
             self.assertNotEqual(out["terminal"], TERMINAL_LOCALIZED)
         # 4: too few trials
         with tempfile.TemporaryDirectory() as td:
-            ev = self._scratch(td, with_c2=True, c2_kwargs=dict(
-                trials=3))
+            ev = self._scratch(td, with_c2=True, keep_real_c2=False,
+                               c2_kwargs=dict(trials=3))
             out = run_reducer(ev, Path(td) / "c.json")
             self.assertTrue(any("trials" in p for p in out["problems"]))
             self.assertNotEqual(out["terminal"], TERMINAL_LOCALIZED)
         # 5: missing probe family D
         with tempfile.TemporaryDirectory() as td:
-            ev = self._scratch(td, with_c2=True)
+            ev = self._scratch(td, with_c2=True, keep_real_c2=False)
             (ev / "i137-diag-D-1789128772.json").unlink()
             out = run_reducer(ev, Path(td) / "c.json")
             self.assertIn("missing probe family D", out["problems"])
@@ -443,7 +459,7 @@ class TestConclusionsV2(unittest.TestCase):
         """Even with the retired C bytes showing a flip, no C2 means
         no causal claim (C's cumulative fixed-order design)."""
         with tempfile.TemporaryDirectory() as td:
-            ev = self._scratch(td)  # C record present, no C2
+            ev = self._scratch(td, keep_real_c2=False)  # C only, no C2
             out = run_reducer(ev, Path(td) / "c.json")
             self.assertNotEqual(out["terminal"], TERMINAL_LOCALIZED)
             doc = json.loads((Path(td) / "c.json").read_text())
