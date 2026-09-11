@@ -1,0 +1,6 @@
+ggml_cuda_init: found 1 CUDA devices (Total VRAM: 7893 MiB):
+  Device 0: NVIDIA GeForce RTX 3060 Ti, compute capability 8.6, VMM: yes, VRAM: 7893 MiB
+ggml_cuda_init: found 1 CUDA devices (Total VRAM: 7893 MiB):
+  Device 0: NVIDIA GeForce RTX 3060 Ti, compute capability 8.6, VMM: yes, VRAM: 7893 MiB
+ggml_cuda_init: found 1 CUDA devices (Total VRAM: 7893 MiB):
+  Device 0: NVIDIA GeForce RTX 3060 Ti, compute capability 8.6, VMM: yes, VRAM: 7893 MiB
