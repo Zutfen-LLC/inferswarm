@@ -326,6 +326,18 @@ def verify_capture_manifest_binding(
         problems.append("manifest-schema-drift")
     if manifest.get("producer_sha") != PRODUCER:
         problems.append("manifest-producer-drift")
+    # bundle identity: the referenced bundle must be named, sized, and
+    # digest-shaped; record_count must equal the records list length.
+    bundle = manifest.get("bundle")
+    if not isinstance(bundle, str) or not bundle:
+        problems.append("manifest-bundle-unbound")
+    bundle_sha = manifest.get("bundle_sha256")
+    if not isinstance(bundle_sha, str) or len(bundle_sha) != 64 \
+            or set(bundle_sha) - set("0123456789abcdef"):
+        problems.append("manifest-bundle-digest-malformed")
+    if not isinstance(manifest.get("bundle_bytes"), int) \
+            or manifest["bundle_bytes"] <= 0:
+        problems.append("manifest-bundle-bytes-malformed")
     binding = manifest.get("diagnostic_run_binding", {})
     run_id = binding.get("run_id")
     if not run_id:
@@ -337,6 +349,8 @@ def verify_capture_manifest_binding(
         problems.append("manifest-capture-dir-unbound")
     elif expected_capture_dir is not None and cap_dir != expected_capture_dir:
         problems.append("manifest-capture-dir-mismatch")
+    if binding.get("classification") not in (None, "DIAGNOSTIC_ONLY"):
+        problems.append("manifest-binding-classification-drift")
     if not manifest.get("records"):
         problems.append("manifest-records-empty")
     if not isinstance(manifest.get("record_count"), int) \

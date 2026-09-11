@@ -260,10 +260,6 @@ def main(argv=None) -> int:
         entry["committed_step0"].extend(
             o["committed_step0"] for o in rec["observations"])
 
-    observed_cases = set(case_distributions)
-    if observed_cases - set(DIVERGENT_CASES) == set():
-        stable_controls_obs = observed_cases & (
-            set(case_distributions) - set(DIVERGENT_CASES))
     stable_controls = {
         c for c in case_distributions if c not in DIVERGENT_CASES
     }
@@ -323,11 +319,13 @@ def main(argv=None) -> int:
             twos.append(arms["two"]["committed_step0"])
             orders.append(obs.get("launch_order"))
         trials = len(singles)
-        # design validation: counterbalanced order, fresh substrates
+        # design validation: counterbalanced order across the WHOLE
+        # sequence (adjacent trials must alternate), fresh substrates
         if trials >= 4 and orders:
-            balanced = (orders[:2] == [["single", "two"],
-                                       ["two", "single"]]) or (
-                orders[0] != orders[1])
+            balanced = all(
+                orders[i] is not None and orders[i + 1] is not None
+                and orders[i] != orders[i + 1]
+                for i in range(len(orders) - 1))
             if not balanced:
                 problems.append(
                     "probe C2 arm order not counterbalanced — "
@@ -336,6 +334,8 @@ def main(argv=None) -> int:
             problems.append(
                 f"probe C2 has only {trials} trials (>=4 required)")
         # freshness binding: distinct realization identities per arm
+        # WITHIN a trial and across trials (no substrate reuse)
+        seen_pid_sets = set()
         for obs in rec["observations"]:
             ids = [arm.get("realization_identity")
                    for arm in obs.get("arms", {}).values()]
@@ -345,6 +345,25 @@ def main(argv=None) -> int:
                 problems.append(
                     f"probe C2 trial {obs.get('trial')}: arms share a "
                     f"substrate — freshness violated")
+            for pid_set in stage_pid_sets:
+                if pid_set in seen_pid_sets:
+                    problems.append(
+                        "probe C2: substrate reused across trials — "
+                        "freshness violated")
+                seen_pid_sets.add(pid_set)
+        # v2 record environment validation (review R2 finding): the
+        # authority block's geometry and the record hostname must
+        # match the accepted baseline — a tampered authority block
+        # must fail closed even when the load-bearing pins match.
+        if rec.get("schema") == PROBE_SCHEMA_V2:
+            auth = rec.get("authority", {})
+            if auth.get("geometry", {}).get("inferswarm01") != \
+                    issue137_binding.BASELINE_GEOMETRY["inferswarm01"]:
+                problems.append(
+                    f"{rec['_file']}: authority geometry drift")
+            if rec.get("hostname") != "inferswarm01":
+                problems.append(
+                    f"{rec['_file']}: hostname drift")
         single_det = len(set(singles)) == 1 and trials >= 4
         two_varies = len(set(twos)) > 1 and trials >= 4
         c2_causal = {
@@ -381,6 +400,81 @@ def main(argv=None) -> int:
     chunk_causal_established = bool(
         c2_causal and chunk_intervention["verdict"].startswith(
             "chunk partition is the only changed factor"))
+
+    # -- remote last-stage ledger reconciliation (review R1/R2) -------
+    # The corrected C2 design requires a FRESH remote last-stage per
+    # arm.  The launch ledger retained under
+    # remote-last-stage-ledger-c2/ (ready-N.json + launcher-loop.log)
+    # is machine-validated here: every ledger entry in the C2 run
+    # window must be on inferswarm03, on the accepted gpu-uuid, at
+    # the frozen producer; launches must be strictly ordered; and the
+    # count must be consistent with the per-arm substrate realizations
+    # (>= 1 launch per arm; extra launches allowed — the launcher
+    # overshoots; each arm's wall-clock must be covered).
+    ledger_problems = []
+    ledger_dir = ev / "remote-last-stage-ledger-c2"
+    load_bearing = c2_records[0] if c2_records else None
+    if c2_records:
+        if not ledger_dir.is_dir():
+            ledger_problems.append(
+                "C2 remote last-stage launch ledger not retained")
+        else:
+            entries = []
+            for rf in sorted(ledger_dir.glob("ready-*.json")):
+                try:
+                    entry = json.loads(rf.read_text())
+                except (OSError, ValueError):
+                    ledger_problems.append(
+                        f"ledger entry {rf.name} unreadable")
+                    continue
+                num = rf.stem.split("-")[1]
+                if not num.isdigit():
+                    ledger_problems.append(
+                        f"ledger entry {rf.name} counter malformed")
+                entries.append({
+                    "counter": int(num) if num.isdigit() else None,
+                    "pid": entry.get("pid"),
+                    "gpu_uuid": entry.get("gpu_uuid"),
+                    "producer": entry.get("producer_freetoken_sha"),
+                    "mtime_ns": rf.stat().st_mtime_ns,
+                })
+            if not entries:
+                ledger_problems.append(
+                    "C2 remote last-stage launch ledger empty")
+            for e in entries:
+                if e["gpu_uuid"] != issue137_binding.BASELINE_GEOMETRY[
+                        "inferswarm03"][0]:
+                    ledger_problems.append(
+                        "ledger launch on wrong gpu-uuid")
+                    break
+                if e["producer"] != PRODUCER:
+                    ledger_problems.append(
+                        "ledger launch producer drift")
+                    break
+            counters = [e["counter"] for e in entries]
+            if any(c is None for c in counters) or (
+                    sorted(counters) != list(range(min(counters),
+                                                   max(counters) + 1))):
+                ledger_problems.append(
+                    "ledger launch counters not contiguous")
+            mtimes = [e["mtime_ns"] for e in entries]
+            if mtimes != sorted(mtimes):
+                ledger_problems.append(
+                    "ledger launch order contradicts file order")
+            run_lo = load_bearing.get("started_at_ns", 0)
+            run_hi = load_bearing.get("completed_at_ns", 0)
+            in_window = [e for e in entries
+                         if run_lo - 120_000_000_000 <= e["mtime_ns"]
+                         <= run_hi + 120_000_000_000]
+            arm_count = sum(
+                len(o.get("arms", {}))
+                for o in load_bearing["observations"])
+            if len(in_window) < arm_count:
+                ledger_problems.append(
+                    f"ledger shows {len(in_window)} launches in the C2 "
+                    f"window but the run realized {arm_count} arm "
+                    f"substrates — remote freshness unproven")
+    problems.extend(ledger_problems)
 
     # informational: retired probe C retained bytes
     c_info = None

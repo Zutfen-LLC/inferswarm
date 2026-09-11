@@ -654,6 +654,117 @@ class TestConclusionsV2(unittest.TestCase):
             'terminal = TERMINAL_LOCALIZED', ""))
 
 
+class TestReviewHardeningControls(unittest.TestCase):
+    """Permanent controls for adversarial-review findings (R1 P2s,
+    R2 transcript finding) — each mutates one thing and asserts
+    fail-closed/downgrade."""
+
+    def _scratch(self, td) -> Path:
+        scratch = Path(td) / "ev"
+        shutil.copytree(EVIDENCE, scratch)
+        run_tool(PHASE1, "--repo", str(REPO),
+                 "--out", str(scratch / "phase1-inventory.json"))
+        return scratch
+
+    def _scratch_no_c2(self, td) -> Path:
+        scratch = self._scratch(td)
+        for c2f in scratch.glob("i137-diag-C2-*.json"):
+            c2f.unlink()
+        return scratch
+
+    def test_partial_counterbalance_then_fixed_order_rejected(self):
+        """R1-P2: alternating once then fixed for 4+ trials must not
+        pass the counterbalance guard (whole-sequence check)."""
+        with tempfile.TemporaryDirectory() as td:
+            ev = self._scratch_no_c2(td)
+            rec = make_c2_record(
+                orders=[["single", "two"], ["two", "single"],
+                        ["single", "two"], ["single", "two"],
+                        ["single", "two"], ["single", "two"]])
+            (ev / f"{rec['run_id']}.json").write_text(
+                json.dumps(rec))
+            out = run_reducer(ev, Path(td) / "c.json")
+            self.assertTrue(any("counterbalanced" in p
+                                for p in out["problems"]))
+
+    def test_substrate_reuse_across_trials_rejected(self):
+        """R1-P3 hardened: same stage-pid set in a later trial is a
+        freshness violation."""
+        with tempfile.TemporaryDirectory() as td:
+            ev = self._scratch_no_c2(td)
+            rec = make_c2_record()
+            obs = rec["observations"]
+            obs[3]["arms"]["single"]["realization_identity"] = dict(
+                obs[0]["arms"]["single"]["realization_identity"])
+            (ev / f"{rec['run_id']}.json").write_text(
+                json.dumps(rec))
+            out = run_reducer(ev, Path(td) / "c.json")
+            self.assertTrue(any("reused across trials" in p
+                                for p in out["problems"]))
+
+    def test_v2_authority_geometry_tamper_fails_closed(self):
+        """R2: tampering geometry or hostname inside a v2 authority
+        block must fail closed even when load-bearing pins match."""
+        with tempfile.TemporaryDirectory() as td:
+            ev = self._scratch(td)
+            p = next(ev.glob("i137-diag-C2-*.json"))
+            rec = json.loads(p.read_text())
+            rec["authority"]["geometry"]["inferswarm01"] = [
+                "GPU-fake", "GPU-fake2"]
+            p.write_text(json.dumps(rec))
+            out = run_reducer(ev, Path(td) / "c.json")
+            self.assertTrue(any("geometry drift" in q
+                                for q in out["problems"]))
+
+    def test_ledger_drift_fails_closed(self):
+        """R1-P2: the retained remote-last-stage ledger is validated;
+        deleting it, drifting a gpu-uuid, or making launches
+        insufficient must each fail closed."""
+        with tempfile.TemporaryDirectory() as td:
+            ev = self._scratch(td)
+            shutil.rmtree(ev / "remote-last-stage-ledger-c2")
+            out = run_reducer(ev, Path(td) / "c.json")
+            self.assertTrue(any("ledger" in q for q in out["problems"]))
+        with tempfile.TemporaryDirectory() as td:
+            ev = self._scratch(td)
+            lf = next(
+                (ev / "remote-last-stage-ledger-c2").glob("ready-*.json"))
+            entry = json.loads(lf.read_text())
+            entry["gpu_uuid"] = "GPU-wrong"
+            lf.write_text(json.dumps(entry))
+            out = run_reducer(ev, Path(td) / "c.json")
+            self.assertTrue(any("wrong gpu-uuid" in q
+                                for q in out["problems"]))
+        with tempfile.TemporaryDirectory() as td:
+            ev = self._scratch(td)
+            # keep only 2 launches (< 12 arm substrates)
+            keep = sorted(
+                (ev / "remote-last-stage-ledger-c2").glob(
+                    "ready-*.json"))[:2]
+            for lf in sorted(
+                    (ev / "remote-last-stage-ledger-c2").glob(
+                        "ready-*.json")):
+                if lf not in keep:
+                    lf.unlink()
+            out = run_reducer(ev, Path(td) / "c.json")
+            self.assertTrue(any("remote freshness unproven" in q
+                                for q in out["problems"]))
+
+    def test_manifest_bundle_identity_validated(self):
+        """R2: malformed bundle identity fails closed."""
+        import issue137_binding as b
+        man = json.loads(
+            (EVIDENCE / "manifest-first-stage1-d2b.json").read_text())
+        for field, value in (
+            ("bundle", ""), ("bundle_sha256", "xyz"),
+            ("bundle_bytes", 0),
+        ):
+            tampered = json.loads(json.dumps(man))
+            tampered[field] = value
+            problems = b.verify_capture_manifest_binding(tampered)
+            self.assertTrue(problems, field)
+
+
 class TestDriverStaticControls(unittest.TestCase):
     """CPU-only static proofs on the corrected driver (no GPU)."""
 
