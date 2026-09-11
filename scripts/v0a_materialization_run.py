@@ -121,7 +121,7 @@ def run_once(arm: str, run_id: str, out_dir: Path,
 
     argv = [
         str(binary), "-m", str(MODEL), "-ngl", "99",
-        "--device", spec["device"], "-no-cnv", "-st",
+        "--device", spec["device"], "-lv", "3",
     ]
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -174,8 +174,7 @@ def run_once(arm: str, run_id: str, out_dir: Path,
             transcript.extend(chunk)
         if ready_t is None:
             text = transcript.decode("utf-8", errors="replace")
-            if READY_MARKER in text and text.rstrip().endswith(
-                    READY_PROMPT):
+            if READY_MARKER in text and text.rstrip().endswith(">"):
                 entry = sample("ready_boundary")
                 ready_t = time.monotonic()
                 ready_sample = entry

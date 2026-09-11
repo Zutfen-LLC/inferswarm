@@ -131,7 +131,7 @@ def run_fixture(arm: str, run_id: str, out_dir: Path) -> dict:
     argv = [
         str(binary), "-m", str(model), "--temp", "0", "--seed", "42",
         "-n", "48", "-ngl", "99", "--device", spec["device"],
-        "-p", PROMPT, "-st",
+        "-lv", "3", "-p", PROMPT, "-st",
     ]
     env = dict(os.environ)
     relevant_env = {

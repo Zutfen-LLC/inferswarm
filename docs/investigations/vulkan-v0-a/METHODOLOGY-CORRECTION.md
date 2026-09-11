@@ -179,6 +179,31 @@ windows are frozen by this document before the first corrected physical run
 executes. Deviations discovered mid-campaign invalidate the affected runs
 and require a new correction document; they are never absorbed silently.
 
+## Addendum A — logging verbosity flag (pre-canonical, before any successful run)
+
+Producer bring-up exposed that llama-cli at the pinned commit sets
+`params.verbosity = LOG_LEVEL_ERROR` (1) in `tools/cli/cli.cpp`, and
+`common_params_parse_ex` applies it as the log threshold BEFORE flag
+parsing. At verbosity 1 the tool suppresses all `LOG_INF` output on
+stderr — including the `ggml_vulkan: N = <device>` enumeration and the
+`offloaded X/Y layers` summary that this correction REQUIRES as
+device-identity proof. (`llama-bench` uses a different default, which is
+why the retained `results/bench-*.err` carries its banners.)
+
+Every corrected run therefore adds `-lv 3` (logging verbosity 3 =
+info) to the llama-cli invocation. This flag changes ONLY which log
+lines the tool prints; it does not touch model bytes, prompt, sampling,
+seed, token count, device selection, backend, binaries, or libraries.
+The unchanged identity section above still holds byte-for-byte.
+
+Three producer defects were repaired before any successful physical run
+under this authority (commits `10eed90`, `b6584b6`, `179d3ed`); the
+verbosity repair is Addendum A itself. The one diagnostic AMD-A run
+retained before this addendum (`correction-cor-amdavk-01`) produced a
+generation but NO stderr device-proof lines; it is recorded as a
+diagnostic, is NOT canonical, and is superseded by the canonical
+campaign below.
+
 ## Scope guards
 
 No new heterogeneous numerical threshold is authorized. No throughput
