@@ -58,15 +58,17 @@ class ProjectStatusTests(unittest.TestCase):
             root = Path(directory)
             self.fixture(root)
             self.assertEqual(self.run_main(root, '--write'), 0)
-            self.record['frontier']['execution']['state'] = 'blocked'
-            self.record['frontier']['execution']['reference'] = None
+            self.record['frontier']['execution']['state'] = 'authorized'
+            self.record['frontier']['execution']['reference'] = (
+                'https://github.com/Zutfen-LLC/inferswarm/issues/999')
             (root / sync.SOURCE).write_text(json.dumps(self.record))
             updates = sync.prepare_updates(root)
             for path in sync.TARGETS:
-                self.assertIn(b'authorization:** blocked', updates[path])
+                self.assertIn(b'authorization:** authorized', updates[path])
             self.assertEqual(self.run_main(root, '--write'), 0)
             target = root / 'README.md'
-            target.write_text(target.read_text().replace('authorization:** blocked', 'authorization:** authorized'))
+            target.write_text(target.read_text().replace(
+                'authorization:** authorized', 'authorization:** blocked'))
             before = target.read_bytes()
             self.assertEqual(self.run_main(root), 1)
             self.assertEqual(target.read_bytes(), before)
@@ -95,22 +97,21 @@ class ProjectStatusTests(unittest.TestCase):
                 self.assertEqual(self.run_main(root, '--write'), 1)
                 self.assertEqual(self.snapshot(root), before)
 
-    def test_current_record_observes_arm_c_blocker_and_authorizes_issue_133(self):
+    def test_current_record_accepts_arm_c_fail_and_blocks_execution(self):
         output = sync.render(self.record)['frontier']
-        # the accepted #128 blocker is the recorded prerequisite observation
-        self.assertIn('ISSUE117_ARM_C_EVIDENCE_BLOCKER', output)
-        self.assertIn('accepted](https://github.com/Zutfen-LLC/inferswarm/'
-                      'commit/718efbf5770b31c6e44eb3a8c4d0b81fd1dc9c22)', output)
-        # the authorized slice is the #133 physical retry campaign under
-        # the accepted #129 methodology
-        self.assertIn('Issue #133', output)
-        # the physical campaign concluded: the observed terminal FAIL is
-        # presented (2026-09-10 retry, attempt armc-retry-physical-1)
+        # The corrected #133 campaign is the current accepted Arm-C result.
         self.assertIn('ISSUE117_ARM_C_ORDINARY_SERVING_FAIL', output)
-        self.assertIn('armc-retry-physical-1', output)
-        self.assertIn('Arm D blocked', output)
-        # the historical CPU-only #129 authorization is superseded by the
-        # #133 physical authorization and must not still be presented
+        self.assertIn('accepted](https://github.com/Zutfen-LLC/inferswarm/'
+                      'commit/1b83bcab0a5e682a438ca0554f71dd0ace15be55)', output)
+        # The accepted #137 diagnosis narrows the failure without authorizing
+        # remediation, requalification, or Arm D.
+        self.assertIn('ISSUE117_ARM_C_REGIME4_DIAGNOSIS_PARTIAL', output)
+        self.assertIn('cdc23d0e8fa9d3b1b27bab5749939a5ad69b9610', output)
+        self.assertIn('authorization:** blocked', output)
+        self.assertIn('no live execution slice is authorized', output)
+        self.assertIn('Arm D remains blocked', output)
+        self.assertNotIn('PR remains open', output)
+        self.assertNotIn('not yet recorded', output)
         self.assertNotIn('physical Arm-C retry NOT authorized', output)
         capabilities = sync.render(self.record)['capabilities']
         self.assertNotIn('ISSUE117_ARM_B_COLD_REALIZATION_PASS', capabilities)
