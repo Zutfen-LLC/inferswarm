@@ -50,7 +50,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -81,6 +83,7 @@ DIVERGENT_CASES = [
 # EXCLUDED — output file, docs, unrelated content).
 INVENTORY_NAME = "phase1-inventory.json"
 CONCLUSIONS_NAME = "diagnostic-conclusions.json"
+MANIFEST_NAME = "MANIFEST.sha256"
 DOC_NAMES = {"METHODOLOGY.md", "README.md"}
 
 
@@ -143,7 +146,7 @@ def main(argv=None) -> int:
     for p in sorted(ev.iterdir()):
         if not p.is_file():
             continue
-        if p.name in (CONCLUSIONS_NAME, *DOC_NAMES):
+        if p.name in (CONCLUSIONS_NAME, MANIFEST_NAME, *DOC_NAMES):
             continue
         if p.name == INVENTORY_NAME:
             inventory = json.loads(p.read_text())
@@ -410,7 +413,9 @@ def main(argv=None) -> int:
     # the frozen producer; launches must be strictly ordered; and the
     # count must be consistent with the per-arm substrate realizations
     # (>= 1 launch per arm; extra launches allowed — the launcher
-    # overshoots; each arm's wall-clock must be covered).
+    # overshoots; each arm's wall-clock must be covered). Git does not
+    # retain filesystem mtimes, so timing is derived exclusively from
+    # the retained launcher log bytes.
     ledger_problems = []
     ledger_dir = ev / "remote-last-stage-ledger-c2"
     load_bearing = c2_records[0] if c2_records else None
@@ -419,6 +424,31 @@ def main(argv=None) -> int:
             ledger_problems.append(
                 "C2 remote last-stage launch ledger not retained")
         else:
+            ready_times = {}
+            log_path = ledger_dir / "launcher-loop.log"
+            if not log_path.is_file():
+                ledger_problems.append(
+                    "C2 remote last-stage launcher log not retained")
+            else:
+                for line in log_path.read_text().splitlines():
+                    match = re.fullmatch(
+                        r"\[loop\] ready ([0-9]+) (\S+)", line)
+                    if match is None:
+                        continue
+                    counter = int(match.group(1))
+                    try:
+                        ready_ns = int(
+                            datetime.fromisoformat(match.group(2))
+                            .timestamp() * 1_000_000_000)
+                    except ValueError:
+                        ledger_problems.append(
+                            f"ledger ready timestamp malformed for {counter}")
+                        continue
+                    if counter in ready_times:
+                        ledger_problems.append(
+                            f"ledger ready counter duplicated: {counter}")
+                        continue
+                    ready_times[counter] = ready_ns
             entries = []
             for rf in sorted(ledger_dir.glob("ready-*.json")):
                 try:
@@ -436,7 +466,8 @@ def main(argv=None) -> int:
                     "pid": entry.get("pid"),
                     "gpu_uuid": entry.get("gpu_uuid"),
                     "producer": entry.get("producer_freetoken_sha"),
-                    "mtime_ns": rf.stat().st_mtime_ns,
+                    "ready_at_ns": ready_times.get(
+                        int(num) if num.isdigit() else None),
                 })
             if not entries:
                 ledger_problems.append(
@@ -457,14 +488,20 @@ def main(argv=None) -> int:
                                                    max(counters) + 1))):
                 ledger_problems.append(
                     "ledger launch counters not contiguous")
-            mtimes = [e["mtime_ns"] for e in entries]
-            if mtimes != sorted(mtimes):
+            ready_at = [e["ready_at_ns"] for e in entries]
+            if any(value is None for value in ready_at):
                 ledger_problems.append(
-                    "ledger launch order contradicts file order")
+                    "ledger ready timestamp missing")
+            elif (ready_at != sorted(ready_at)
+                  or len(set(ready_at)) != len(ready_at)):
+                ledger_problems.append(
+                    "ledger launch time contradicts counter order")
             run_lo = load_bearing.get("started_at_ns", 0)
             run_hi = load_bearing.get("completed_at_ns", 0)
             in_window = [e for e in entries
-                         if run_lo - 120_000_000_000 <= e["mtime_ns"]
+                         if e["ready_at_ns"] is not None
+                         and run_lo - 120_000_000_000
+                         <= e["ready_at_ns"]
                          <= run_hi + 120_000_000_000]
             arm_count = sum(
                 len(o.get("arms", {}))
@@ -777,7 +814,7 @@ def main(argv=None) -> int:
         "inputs": {
             p.name: sha256_file(p) for p in sorted(ev.iterdir())
             if p.is_file() and p.name not in (
-                CONCLUSIONS_NAME, *DOC_NAMES)
+                CONCLUSIONS_NAME, MANIFEST_NAME, *DOC_NAMES)
         },
         "informational_observations": {
             "legacy_v1_binding_gaps": legacy_gaps,

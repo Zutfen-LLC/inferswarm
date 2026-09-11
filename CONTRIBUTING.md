@@ -62,6 +62,11 @@ Before editing anything under `scripts/`, read the frozen-producer rule in
 by retained evidence, and even a docstring fix invalidates the record that
 cites them.
 
+Before creating or extending retained evidence, follow the
+[evidence manifest lifecycle](docs/evidence-manifests.md). New evidence slices
+receive bundle-local immutable manifests; living repository status and CI files
+never belong in an evidence manifest.
+
 ## Keep project status synchronized
 
 Changes to capabilities, architecture, integration branches, gate results,

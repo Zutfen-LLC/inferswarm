@@ -12,6 +12,7 @@ and asserts the reducer's derived outcome changes or fails closed.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -32,6 +33,7 @@ BINDING = REPO / "scripts" / "issue137_binding.py"
 
 sys.path.insert(0, str(REPO / "scripts"))
 import issue137_binding  # noqa: E402
+import issue137_phase1_inventory  # noqa: E402
 
 DIAGNOSTIC_ONLY = "DIAGNOSTIC_ONLY"
 PRODUCER = "924cd22ea081f6d4ed471016faf01d427fc5b0d2"
@@ -289,15 +291,22 @@ class TestPhase1InventoryV2(unittest.TestCase):
                 if row["status"] != "derived":
                     self.assertIn("consequence", row)
             self.assertIn("1b83bca", record["authority"]["source"])
+            self.assertEqual(
+                record["authority"]["manifest_sha256"],
+                issue137_phase1_inventory.AUTHORITY_MANIFEST_SHA256)
+            self.assertEqual(
+                (Path(td) / "inv.json").read_bytes(),
+                (EVIDENCE / "phase1-inventory.json").read_bytes())
 
     def test_tampered_accepted_input_fails_closed(self):
         with tempfile.TemporaryDirectory() as td:
             repo = Path(td)
             ev_root = ("docs/implementation/"
                        "r6-successor-dense-full-integration-117/evidence")
-            # minimal copy: only the files the inventory reads + manifest
+            # Minimal copy: the first retained input is deliberately
+            # corrupted.  Authority bytes come from the immutable accepted
+            # Git object, never from this scratch working tree.
             needed = [
-                f"{ev_root}/MANIFEST.sha256",
                 f"{ev_root}/arm-c-retry/physical-execution/"
                 f"equality-reduction.json",
             ]
@@ -306,12 +315,13 @@ class TestPhase1InventoryV2(unittest.TestCase):
                 dst.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(REPO / rel, dst)
             doc = json.loads(
-                (repo / needed[1]).read_text())
+                (repo / needed[0]).read_text())
             doc["rows"][0]["direct_committed_token_ids"][0] += 1
-            (repo / needed[1]).write_text(json.dumps(doc))
-            with self.assertRaises(AssertionError):
-                run_tool(PHASE1, "--repo", str(repo),
-                         "--out", str(Path(td) / "inv.json"))
+            (repo / needed[0]).write_text(json.dumps(doc))
+            accepted = issue137_phase1_inventory.accepted_manifest_bytes(REPO)
+            with self.assertRaises(SystemExit):
+                issue137_phase1_inventory.derive(
+                    repo, authority_bytes=accepted)
 
 
 class TestConclusionsV2(unittest.TestCase):
@@ -380,6 +390,7 @@ class TestConclusionsV2(unittest.TestCase):
             # inputs map excludes the output file by name
             self.assertNotIn("diagnostic-conclusions.json",
                              doc["inputs"])
+            self.assertNotIn("MANIFEST.sha256", doc["inputs"])
             # and a stale output file inside the evidence dir is
             # excluded too
             shutil.copy2(out, ev / "diagnostic-conclusions.json")
@@ -388,6 +399,7 @@ class TestConclusionsV2(unittest.TestCase):
             doc2 = json.loads(out2.read_text())
             self.assertNotIn("diagnostic-conclusions.json",
                              doc2["inputs"])
+            self.assertNotIn("MANIFEST.sha256", doc2["inputs"])
 
     def test_valid_c2_with_all_varying_evidence_reaches_localized(self):
         """The ladder must reach LOCALIZED when (and only when) every
@@ -749,6 +761,16 @@ class TestReviewHardeningControls(unittest.TestCase):
             out = run_reducer(ev, Path(td) / "c.json")
             self.assertTrue(any("remote freshness unproven" in q
                                 for q in out["problems"]))
+
+    def test_ledger_validation_does_not_depend_on_git_lost_mtimes(self):
+        with tempfile.TemporaryDirectory() as td:
+            ev = self._scratch(td)
+            for ready in (ev / "remote-last-stage-ledger-c2").glob(
+                    "ready-*.json"):
+                os.utime(ready, ns=(1, 1))
+            out = run_reducer(ev, Path(td) / "c.json")
+            self.assertFalse(any("ledger" in problem
+                                 for problem in out["problems"]))
 
     def test_manifest_bundle_identity_validated(self):
         """R2: malformed bundle identity fails closed."""

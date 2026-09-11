@@ -134,8 +134,6 @@ PRODUCERS = [
     "scripts/issue117_arm_a_evidence.py",
     "tests/test_issue117_arm_b_retention.py",
     "scripts/issue117_arm_b_evidence.py",
-    "scripts/sync_project_status.py",
-    "tests/test_project_status.py",
 ]
 EVIDENCE_FILES = {
     "strategy.json", "planner-decision.json", "requirements.json",
@@ -410,47 +408,9 @@ COMMITTED_EVIDENCE_FILES = {
     "xc_wire.py",
     "arm-c-retry/frozen-source/924cd22e/python/freetoken/research/"
     "xc_coordinator.py",
-    # issue #137 Arm-C regime-4 diagnosis (2026-09-11,
-    # DIAGNOSTIC_ONLY): CPU-only causal inventory, physical diagnostic
-    # probe records (fresh i137-diag-* run identity), per-layer capture
-    # manifests, and the fail-closed conclusions reduction deriving
-    # ISSUE117_ARM_C_REGIME4_DIAGNOSIS_LOCALIZED; the accepted #133
-    # terminal FAIL is unchanged historical evidence
-    "arm-c-regime4-diagnosis-137/METHODOLOGY.md",
-    "arm-c-regime4-diagnosis-137/README.md",
-    "arm-c-regime4-diagnosis-137/phase1-inventory.json",
-    "arm-c-regime4-diagnosis-137/i137-diag-A-1789127822.json",
-    "arm-c-regime4-diagnosis-137/i137-diag-A-1789129558.json",
-    "arm-c-regime4-diagnosis-137/i137-diag-A-1789129893.json",
-    "arm-c-regime4-diagnosis-137/i137-diag-A-1789130927.json",
-    "arm-c-regime4-diagnosis-137/i137-diag-A-1789131013.json",
-    "arm-c-regime4-diagnosis-137/i137-diag-A-1789131099.json",
-    "arm-c-regime4-diagnosis-137/i137-diag-A-1789131186.json",
-    "arm-c-regime4-diagnosis-137/i137-diag-A2-1789128152.json",
-    "arm-c-regime4-diagnosis-137/i137-diag-B-1789130217.json",
-    "arm-c-regime4-diagnosis-137/i137-diag-C-1789128426.json",
-    "arm-c-regime4-diagnosis-137/i137-diag-D-1789128772.json",
-    "arm-c-regime4-diagnosis-137/i137-diag-D2-1789129163.json",
-    "arm-c-regime4-diagnosis-137/i137-diag-D2-1789130625.json",
-    "arm-c-regime4-diagnosis-137/manifest-first-stage1-d2b.json",
-    "arm-c-regime4-diagnosis-137/manifest-middle-stage2-d2b.json",
-    "arm-c-regime4-diagnosis-137/i137-diag-C2-1789141057.json",
-    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/"
-    "launcher-loop.log",
-    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-101.json",
-    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-102.json",
-    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-103.json",
-    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-104.json",
-    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-105.json",
-    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-106.json",
-    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-107.json",
-    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-108.json",
-    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-109.json",
-    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-110.json",
-    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-111.json",
-    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-112.json",
-    "arm-c-regime4-diagnosis-137/remote-last-stage-ledger-c2/ready-113.json",
-    "arm-c-regime4-diagnosis-137/diagnostic-conclusions.json",
+    # Later diagnostic/remediation slices use bundle-local manifests.  They
+    # must not reopen this retained parent manifest or mutate its producer
+    # inventory merely to extend evidence coverage.
 }
 
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
@@ -1739,10 +1699,9 @@ def write_manifest(out_dir: Path) -> None:
         if committed.is_file():
             entries[str(AREA / "evidence" / name)] = sha(committed)
     entries.update({path: sha(ROOT / path) for path in PRODUCERS})
-    for path in (str(AREA / "METHODOLOGY.md"), str(AREA / "README.md"),
+    for path in (str(AREA / "METHODOLOGY.md"),
                  str(AREA / "METHODOLOGY-ARM-C-RETRY.md"),
-                 str(AREA / "CHECKPOINT-AUTHORITY-BLOCKER.md"),
-                 ".github/workflows/ci.yml"):
+                 str(AREA / "CHECKPOINT-AUTHORITY-BLOCKER.md")):
         if (ROOT / path).is_file():
             entries[path] = sha(ROOT / path)
     (out_dir / "MANIFEST.sha256").write_text(

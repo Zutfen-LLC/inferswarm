@@ -1,6 +1,6 @@
 {
   "authority": {
-    "manifest_sha256": "ec26a49cfee4534443d85ac7f55f3c3fbece2221d280be3381cd7b4f8e7b2f8e",
+    "manifest_sha256": "62652fa521ccb8f15e4d1ac5606c8afd67f376d2be16e9d4811f6834c4dc7905",
     "source": "accepted MANIFEST.sha256 @ PR #136 merge 1b83bcab0a5e682a438ca0554f71dd0ace15be55"
   },
   "chunk_partition": {

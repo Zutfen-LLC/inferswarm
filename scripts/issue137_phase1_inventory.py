@@ -32,6 +32,7 @@ import argparse
 import hashlib
 import json
 import re
+import subprocess
 from pathlib import Path
 
 SCHEMA = "inferswarm.issue137.phase1-causal-inventory/2"
@@ -45,11 +46,15 @@ HIST_PHYS = f"{EVIDENCE_ROOT}/arm-c"
 # Accepted-authority pins (correction C6): every Phase-1 input is
 # pinned against the accepted MANIFEST.sha256 frozen at the PR #136
 # merge 1b83bca… (git blob identity).  Values are the manifest rows;
-# derive() verifies the working-tree bytes still match before use.
+# derive() loads those accepted bytes directly from the immutable Git tree.
 AUTHORITY_MANIFEST = f"{EVIDENCE_ROOT}/MANIFEST.sha256"
+AUTHORITY_COMMIT = "1b83bcab0a5e682a438ca0554f71dd0ace15be55"
+AUTHORITY_MANIFEST_SHA256 = (
+    "62652fa521ccb8f15e4d1ac5606c8afd67f376d2be16e9d4811f6834c4dc7905"
+)
 AUTHORITY_SOURCE = (
     "accepted MANIFEST.sha256 @ PR #136 merge "
-    "1b83bcab0a5e682a438ca0554f71dd0ace15be55"
+    f"{AUTHORITY_COMMIT}"
 )
 
 # Frozen producer identity (PR #136 merge 1b83bca…; accepted #133).
@@ -115,12 +120,39 @@ def first_diff(a: list[int], b: list[int]):
     return None
 
 
-def derive(repo: Path) -> dict:
+def accepted_manifest_bytes(repo: Path) -> bytes:
+    """Load the authority from the accepted Git tree, never the live path."""
+    try:
+        data = subprocess.check_output(
+            ["git", "-C", str(repo), "show",
+             f"{AUTHORITY_COMMIT}:{AUTHORITY_MANIFEST}"])
+    except (OSError, subprocess.CalledProcessError) as error:
+        raise SystemExit(
+            "PHASE1_FAIL: accepted PR #136 authority manifest is unavailable"
+        ) from error
+    observed = hashlib.sha256(data).hexdigest()
+    if observed != AUTHORITY_MANIFEST_SHA256:
+        raise SystemExit(
+            "PHASE1_FAIL: accepted PR #136 authority manifest sha256 "
+            f"{observed} != {AUTHORITY_MANIFEST_SHA256}")
+    return data
+
+
+def derive(repo: Path, *, authority_bytes: bytes | None = None) -> dict:
     # -- accepted-authority pinning (C6): fail closed before any
     # derivation unless every Phase-1 input byte-matches the accepted
-    # MANIFEST row frozen at the PR #136 merge.
+    # MANIFEST row frozen at the PR #136 merge.  The working-tree
+    # MANIFEST is deliberately not an input: it is a descendant index
+    # that covers this output and would create a hash cycle.
+    authority_bytes = (accepted_manifest_bytes(repo)
+                       if authority_bytes is None else authority_bytes)
+    authority_sha256 = hashlib.sha256(authority_bytes).hexdigest()
+    if authority_sha256 != AUTHORITY_MANIFEST_SHA256:
+        raise SystemExit(
+            "PHASE1_FAIL: supplied authority manifest sha256 "
+            f"{authority_sha256} != {AUTHORITY_MANIFEST_SHA256}")
     manifest_rows = {}
-    for line in (repo / AUTHORITY_MANIFEST).read_text().splitlines():
+    for line in authority_bytes.decode("utf-8").splitlines():
         if not line.strip():
             continue
         digest, _, rel = line.partition("  ")
@@ -128,12 +160,10 @@ def derive(repo: Path) -> dict:
     # Authority for inputs not covered by MANIFEST rows (the
     # per-case direct/ordinary run bytes): the git blob at the PR
     # #136 merge — byte-exact by git's content addressing.
-    import subprocess as _sp
-
     def _merge_blob_sha(rel: str) -> str:
-        return _sp.check_output(
+        return subprocess.check_output(
             ["git", "-C", str(repo), "rev-parse",
-             f"1b83bcab0a5e682a438ca0554f71dd0ace15be55:{rel}"],
+             f"{AUTHORITY_COMMIT}:{rel}"],
             text=True).strip()
 
     def authority_pin(rel: str) -> str:
@@ -151,11 +181,10 @@ def derive(repo: Path) -> dict:
                     f"PHASE1_FAIL: {rel} is covered by neither the "
                     f"accepted authority manifest nor the PR #136 "
                     f"merge tree")
-            import hashlib as _h
-            blob_bytes = _sp.check_output(
+            blob_bytes = subprocess.check_output(
                 ["git", "-C", str(repo), "cat-file", "blob",
-                 f"1b83bcab0a5e682a438ca0554f71dd0ace15be55:{rel}"])
-            accepted = _h.sha256(blob_bytes).hexdigest()
+                 f"{AUTHORITY_COMMIT}:{rel}"])
+            accepted = hashlib.sha256(blob_bytes).hexdigest()
         if observed != accepted:
             raise SystemExit(
                 f"PHASE1_FAIL: {rel} sha256 {observed} != accepted "
@@ -702,7 +731,7 @@ def derive(repo: Path) -> dict:
         "runtime_lifecycle_inventory": runtime_lifecycle_inventory,
         "authority": {
             "source": AUTHORITY_SOURCE,
-            "manifest_sha256": sha256_file(repo / AUTHORITY_MANIFEST),
+            "manifest_sha256": authority_sha256,
         },
         "hypothesis_matrix": matrix,
         "families": FAMILIES,

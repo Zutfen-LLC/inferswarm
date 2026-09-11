@@ -60,6 +60,11 @@ jobs:
           python3 scripts/sync_project_status.py --check
           python3 -m unittest tests.test_project_status -v
 
+      - name: Check evidence manifest lifecycle
+        run: |
+          python3 scripts/issue137_manifest.py --check
+          python3 -m unittest tests.test_evidence_manifest_lifecycle -v
+
       - name: Check frozen Phase-0 workloads
         run: python3 scripts/check_phase0_workloads.py
 

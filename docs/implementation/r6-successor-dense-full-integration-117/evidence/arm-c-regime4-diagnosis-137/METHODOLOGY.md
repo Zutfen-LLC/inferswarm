@@ -71,8 +71,9 @@ unblock Arm D.
 6. **Phase-1 inventory v2.**  Machine-readable runtime/lifecycle
    difference inventory over all 15 issue-required categories, with
    explicit derived/unavailable/not_retained status and consequences;
-   all inputs pinned against the accepted MANIFEST frozen at the PR
-   #136 merge.
+   all inputs pinned against the accepted MANIFEST Git object frozen at
+   the PR #136 merge. The mutable working-tree copy is never an authority
+   input and cannot create a child/parent manifest hash cycle.
 
 ## Phase ordering (as executed)
 

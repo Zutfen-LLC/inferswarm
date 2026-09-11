@@ -140,10 +140,16 @@ from its retained inputs (sha256-pinned in each record).
   i137-diag-D2-1789130625-captures/` (out-of-repo by size; identity
   and role verifiable from the manifests).
 - `diagnostic-conclusions.json` — fail-closed terminal derivation.
+- `MANIFEST.sha256` — immutable bundle-local coverage of this evidence,
+  its exact producers, reducers, verifiers, and tests. It deliberately excludes
+  living status/CI files and the mutable working-tree parent manifest.
 
 ## Reproduce
 
 - Phase 1: `python3 scripts/issue137_phase1_inventory.py --repo . --out <path>` (v2: authority-pinned inputs + runtime/lifecycle inventory)
 - Conclusions: `python3 scripts/issue137_conclusions.py --evidence-dir
   <this dir> --out <path>` (requires the probe records present).
+- Manifest: `python3 scripts/issue137_manifest.py --check` (use `--write`
+  only while assembling this bundle, after every authored and derived file is
+  final).
 - Tests: `python -m unittest discover -s tests -p "test_issue137*"`

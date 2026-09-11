@@ -74,8 +74,8 @@ class PhysicalPreflightManifestTests(unittest.TestCase):
                          self_digest(document, identity_field="preflight_digest"))
 
     def test_manifest_covers_exactly_the_expected_entry_set(self):
-        # the regenerated manifest (proof.write_manifest convention) must
-        # still match the checkout exactly, now including the physical rows
+        # The closed parent manifest covers retained evidence and its exact
+        # producers, but not living CI or index documentation.
         entries = manifest_entries()
         expected = {
             *(str(proof.AREA / "evidence" / name) for name in proof.EVIDENCE_FILES),
@@ -83,10 +83,8 @@ class PhysicalPreflightManifestTests(unittest.TestCase):
               for name in proof.COMMITTED_EVIDENCE_FILES),
             *proof.PRODUCERS,
             str(proof.AREA / "METHODOLOGY.md"),
-            str(proof.AREA / "README.md"),
             str(proof.AREA / "METHODOLOGY-ARM-C-RETRY.md"),
             str(proof.AREA / "CHECKPOINT-AUTHORITY-BLOCKER.md"),
-            ".github/workflows/ci.yml",
         }
         self.assertEqual(set(entries), expected)
         for relative, digest in entries.items():

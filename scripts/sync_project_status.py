@@ -7,7 +7,6 @@ It renders recorded decisions; it never infers acceptance from a PASS or merge.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 from pathlib import Path
 import re
@@ -24,24 +23,6 @@ TARGETS = {
     'docs/integrations/freetoken.md': ('frontier', 'runtime'),
     'docs/protocols/README.md': ('frontier',),
 }
-# Only these already-maintained documentation/CI rows may be refreshed.
-# Never regenerate a historical evidence directory or expand this by glob.
-LIVE_ROWS = {
-    'docs/qualification/gemma4-12b-it-v1/MANIFEST.sha256': (
-        '.github/workflows/ci.yml', 'ARCHITECTURE.md', 'ROADMAP.md',
-        'docs/protocols/README.md'),
-    'docs/implementation/plan-driven-artifact-acquisition-99/evidence/MANIFEST.sha256': (
-        '.github/workflows/ci.yml', 'ARCHITECTURE.md', 'ROADMAP.md',
-        'docs/implementation/README.md'),
-    'docs/implementation/plan-driven-artifact-orchestration-101/evidence/MANIFEST.sha256': (
-        '.github/workflows/ci.yml',),
-    'docs/implementation/artifact-locality-transition-planning-103/evidence/MANIFEST.sha256': (
-        '.github/workflows/ci.yml',),
-    'docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256': (
-        '.github/workflows/ci.yml',),
-}
-
-
 def fields(value, names):
     if not isinstance(value, dict) or set(value) != set(names):
         raise ValueError(f'expected fields: {", ".join(names)}')
@@ -200,22 +181,6 @@ def prepare_updates(root):
         for name in names:
             content = replace_section(content, name, sections[name])
         rendered[relative] = content.encode('utf-8')
-    for relative, allowed in LIVE_ROWS.items():
-        original = (root / relative).read_text(encoding='utf-8')
-        seen = set()
-        rows = []
-        for line in original.splitlines(keepends=True):
-            digest, path = line.rstrip('\n').split('  ', 1)
-            if not re.fullmatch('[0-9a-f]{64}', digest) or path in seen:
-                raise ValueError(f'{relative}: malformed or duplicate manifest row')
-            seen.add(path)
-            if path in allowed:
-                data = rendered[path] if path in rendered else (root / path).read_bytes()
-                line = hashlib.sha256(data).hexdigest() + '  ' + path + '\n'
-            rows.append(line)
-        if not set(allowed) <= seen:
-            raise ValueError(f'{relative}: missing maintained manifest row')
-        rendered[relative] = ''.join(rows).encode('utf-8')
     return {path: data for path, data in rendered.items()
             if (root / path).read_bytes() != data}
 
@@ -237,7 +202,7 @@ def main(argv=None):
             print('Run python3 scripts/sync_project_status.py --write', file=sys.stderr)
             return 1
         else:
-            print('Project status sections and maintained manifest rows are current')
+            print('Project status sections are current')
     except (OSError, ValueError, KeyError, TypeError) as exc:
         print(f'Project status check failed: {exc}', file=sys.stderr)
         return 1

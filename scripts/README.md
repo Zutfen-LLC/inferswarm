@@ -46,6 +46,10 @@ recorded inside retained evidence (`producer-hashes.json`,
 tests assert those exact values. Editing one silently invalidates the
 evidence that cites it.
 
+The [evidence manifest lifecycle](../docs/evidence-manifests.md) keeps each
+accepted bundle closed. Living status/CI files are never manifest inputs, and
+later evidence uses a new bundle rather than extending an accepted manifest.
+
 Consequences in practice:
 
 - **Do not reformat, retype, or "fix" a pinned script** — including a
@@ -105,7 +109,8 @@ python3 scripts/check_phase0_workloads.py
 
 | Script | Purpose |
 |---|---|
-| `sync_project_status.py` | Renders living status sections and checks for drift; refreshes only explicitly maintained documentation/CI manifest rows. Does not grant execution authority. |
+| `sync_project_status.py` | Renders living status sections and checks for drift. It never reads or writes evidence manifests and does not grant execution authority. |
+| `issue137_manifest.py` | Builds or verifies the immutable bundle-local Issue #137 evidence manifest. |
 | `check_phase0_workloads.py` | Validates the frozen Phase-0 workload manifest without model or GPU access. Wired into CI. |
 
 ### Phase 0 / Phase 1 / Phase1R derivation and analysis

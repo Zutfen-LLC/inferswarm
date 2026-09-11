@@ -24,9 +24,9 @@ execution authorization, or the integration branch:
    `python3 -m unittest tests.test_project_status -v`.
 
 The existing CI workflow runs the drift check and tests on every PR update and
-push to `main`. It fails when regeneration would change a managed section or
-maintained manifest row. It does not push commits or run an external AI agent.
-The contributing coding agent generates and commits the updates before review.
+push to `main`. It fails when regeneration would change a managed section. It
+does not push commits or run an external AI agent. The contributing coding
+agent generates and commits the updates before review.
 
 A maintainer decision made at merge time, or an issue-only authorization change,
 needs a subsequent documentation PR to record the decision and regenerate the
@@ -47,15 +47,12 @@ Do not hand-edit or remove the markers. Missing, duplicate, nested, reversed,
 or unexpected markers fail validation before writes begin. The same source
 produces byte-identical output; there are no timestamps or network queries.
 
-The generator also updates only the explicit `LIVE_ROWS` allowlist in five
-existing review manifests: living documentation and CI references already
-maintained by earlier documentation changes. It leaves all other manifest
-rows byte-for-byte untouched. It never regenerates historical evidence,
-changes producer hashes, or modifies frozen methodology/campaign files.
-
-This script is maintenance tooling, not a hash-pinned experimental producer.
-Future changes to it require review and regression tests. A new generated
-section or manifest exception requires an explicit code and test change.
+The generator never reads or writes an evidence manifest. Living project status
+and immutable evidence have separate lifecycles; see
+[Evidence manifest lifecycle](evidence-manifests.md). This script is maintenance
+tooling, not a hash-pinned experimental producer. Future changes to it require
+review and regression tests. A new generated section requires an explicit code
+and test change.
 
 ## What CI can establish
 
