@@ -1,0 +1,29 @@
+{
+  "schema": "inferswarm.issue133.arm-c-retry.strace-audit/1",
+  "traces": {
+    "direct-01": {
+      "lines": 365098,
+      "source_models_opens": 0,
+      "materialized_writes": 0
+    },
+    "node-agent-01": {
+      "lines": 203511,
+      "source_models_opens": 0,
+      "materialized_writes": 0
+    },
+    "last-stage-direct-03": {
+      "lines": 154383,
+      "source_models_opens": 0,
+      "materialized_writes": 0
+    },
+    "last-stage-ordinary-03": {
+      "lines": 62559,
+      "source_models_opens": 0,
+      "materialized_writes": 0
+    }
+  },
+  "scan_rule": "open()/openat() with a path argument under /srv/models counted as Source opens; open with O_WRONLY/O_RDWR or rename/unlink under /srv/inferswarm/materialized counted as participant-state writes",
+  "retained_raw": "the four raw strace files are retained out-of-repo by size (91 MB total); sha256 pins are recorded in this directory's MANIFEST row set via the repo MANIFEST regeneration",
+  "problems": [],
+  "passed": true
+}

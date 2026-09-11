@@ -1,0 +1,27 @@
+{
+  "checks": {
+    "chain_plan_sha256": "6d9a4859af5b686a321458fe50c86189244b7d0d41e2cbb0df28147552f709ab",
+    "gpu_compute_apps": "none",
+    "gpus": [
+      {
+        "bdf": "00000000:01:00.0",
+        "index": 0,
+        "uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176"
+      },
+      {
+        "bdf": "00000000:03:00.0",
+        "index": 1,
+        "uuid": "GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0"
+      }
+    ],
+    "producer": {
+      "clean": true,
+      "head": "924cd22ea081f6d4ed471016faf01d427fc5b0d2"
+    },
+    "substrate_reconciled": true
+  },
+  "host": "inferswarm03",
+  "passed": true,
+  "problems": [],
+  "schema": "inferswarm.issue133.phase-b.host-preflight.laststage/1"
+}

@@ -1,0 +1,42 @@
+{
+  "case_id": "c109-01-01-045",
+  "decoded_output": "The phrase you provided has a beautiful,",
+  "decoded_output_sha256": "7de2a4a2a0edda19d26cf4b57ddc2580a47058fa65c6eda6ea787bd9878cec9c",
+  "generated_token_ids": [
+    818,
+    20412,
+    611,
+    3847,
+    815,
+    496,
+    4148,
+    236764
+  ],
+  "invocation": "per-token-replay-prefill/frozen-allocator/1",
+  "logical_session_id": 1,
+  "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+  "prompt_token_ids": [
+    2,
+    105,
+    2364,
+    107,
+    156492,
+    9884,
+    5597,
+    6573,
+    129317,
+    9884,
+    23844,
+    106,
+    107,
+    105,
+    4368,
+    107,
+    100,
+    45518,
+    107,
+    101
+  ],
+  "schema": "inferswarm.issue133.arm-c-retry.direct-case/1",
+  "wall_ns": 87431256648
+}

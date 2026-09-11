@@ -1,0 +1,38 @@
+{
+  "case_id": "c109-02-05-024",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "zero na ha echo loop ha zero ha ha la echo again again zero tick tock zero na ha loop same again na la loop",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 11,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\nzero na ha echo loop ha zero ha ha la echo again again zero tick tock zero na ha loop same again na la loop<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It sounds like you are describing a **",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-aa076f27a602",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 39,
+      "total_tokens": 47
+    }
+  },
+  "schema": "inferswarm.issue117.arm-c.ordinary-case/1",
+  "wall_ns": 2910889262
+}

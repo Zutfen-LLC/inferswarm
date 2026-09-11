@@ -1,0 +1,19 @@
+Traceback (most recent call last):
+  File "/srv/inferswarm/state/arm-c-retry/scripts/issue133_arm_c_retry_direct.py", line 975, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/srv/inferswarm/state/arm-c-retry/scripts/issue133_arm_c_retry_direct.py", line 886, in main
+    result = runtime.generate(
+             ^^^^^^^^^^^^^^^^^
+  File "/srv/inferswarm/repos/FreeToken/benchmarks/inferswarm_r6/chain_runtime.py", line 121, in generate
+    result = self._chain.generate(
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/srv/inferswarm/repos/FreeToken/benchmarks/inferswarm_r6/stage_chain.py", line 316, in generate
+    _, token_id = self._chain_prefill(
+                  ^^^^^^^^^^^^^^^^^^^^
+  File "/srv/inferswarm/repos/FreeToken/benchmarks/inferswarm_r6/stage_chain.py", line 265, in _chain_prefill
+    response = stage.request(
+               ^^^^^^^^^^^^^^
+  File "/srv/inferswarm/repos/FreeToken/benchmarks/inferswarm_r6/stage_chain.py", line 59, in request
+    raise RuntimeError(f"stage {self.role} error: {response}")
+RuntimeError: stage first error: {'op': 'ERROR', 'type': 'ModuleNotFoundError', 'message': "No module named 'tvm_ffi'", 'traceback': 'Traceback (most recent call last):\n  File "/srv/inferswarm/repos/FreeToken/benchmarks/inferswarm_r6/stage_chain.py", line 145, in _stage_entry\n    hidden, _ = runtime.prefill(\n                ^^^^^^^^^^^^^^^^\n  File "/srv/inferswarm/repos/FreeToken/.venv/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context\n    return func(*args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^\n  File "/srv/inferswarm/repos/FreeToken/benchmarks/inferswarm_r6/stage_runtime.py", line 919, in prefill\n    hidden = self.embed(batch.input_ids)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/srv/inferswarm/repos/FreeToken/benchmarks/inferswarm_r6/stage_runtime.py", line 829, in embed\n    return self.block.embed_tokens.forward(input_ids)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/srv/inferswarm/repos/FreeToken/python/freetoken/utils/torch_utils.py", line 33, in wrapper\n    return fn(self, *args, **kwargs)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/srv/inferswarm/repos/FreeToken/python/freetoken/layers/embedding.py", line 43, in forward\n    y = indexing(\n        ^^^^^^^^^\n  File "/srv/inferswarm/repos/FreeToken/python/freetoken/kernel/index.py", line 52, in indexing\n    module = _jit_index_module(element_size, num_splits=num_splits_for(element_size))\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File "/srv/inferswarm/repos/FreeToken/python/freetoken/kernel/index.py", line 23, in _jit_index_module\n    return load_jit(\n           ^^^^^^^^^\n  File "/srv/inferswarm/repos/FreeToken/python/freetoken/kernel/utils.py", line 254, in load_jit\n    from tvm_ffi.cpp import load_inline\nModuleNotFoundError: No module named \'tvm_ffi\'\n'}

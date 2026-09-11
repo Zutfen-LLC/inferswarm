@@ -1,0 +1,41 @@
+{
+  "case_id": "c109-01-04-036",
+  "decoded_output": "It looks like you are listing greetings and",
+  "decoded_output_sha256": "77222c23f39c2cb6dee3056481bba72fbb8f0471b622679c5e13d55624f7e920",
+  "generated_token_ids": [
+    1509,
+    5724,
+    1133,
+    611,
+    659,
+    20104,
+    75927,
+    532
+  ],
+  "invocation": "per-token-replay-prefill/frozen-allocator/1",
+  "logical_session_id": 4,
+  "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+  "prompt_token_ids": [
+    2,
+    105,
+    2364,
+    107,
+    236753,
+    85501,
+    136942,
+    668,
+    236804,
+    117874,
+    106,
+    107,
+    105,
+    4368,
+    107,
+    100,
+    45518,
+    107,
+    101
+  ],
+  "schema": "inferswarm.issue133.arm-c-retry.direct-case/1",
+  "wall_ns": 2916446790
+}

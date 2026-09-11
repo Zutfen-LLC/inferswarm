@@ -1,0 +1,38 @@
+{
+  "case_id": "c109-01-03-009",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "( - prime + squared",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 3,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\n( - prime + squared<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears your input was cut off or",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-aa076f27a602",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 18,
+      "total_tokens": 26
+    }
+  },
+  "schema": "inferswarm.issue117.arm-c.ordinary-case/1",
+  "wall_ns": 2737437019
+}

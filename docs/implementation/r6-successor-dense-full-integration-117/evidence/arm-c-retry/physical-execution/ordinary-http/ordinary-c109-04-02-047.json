@@ -1,0 +1,38 @@
+{
+  "case_id": "c109-04-02-047",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "{ else while true if else : def value else else ( for - class item map in if _tmp in - ] class if break item in def null = [ lambda break item true null list class + return if [ _tmp break - [ map break if _tmp",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 20,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\n{ else while true if else : def value else else ( for - class item map in if _tmp in - ] class if break item in def null = [ lambda break item true null list class + return if [ _tmp break - [ map break if _tmp<turn|>\n<|turn>model\n<|channel>thought\n<channel|>-\n_tmp<turn|>\n<|turn>model\n<|channel>thought\n<channel|>-\n<|channel>thought\n_tmp<turn|>\n<|turn>model\n<|channel>thought\n<channel|>-\n<|channel>thought\n<|channel> subspace:",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-aa076f27a602",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 67,
+      "total_tokens": 75
+    }
+  },
+  "schema": "inferswarm.issue117.arm-c.ordinary-case/1",
+  "wall_ns": 4075627049
+}

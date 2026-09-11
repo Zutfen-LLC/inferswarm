@@ -1,0 +1,17 @@
+{
+  "pins": {
+    "direct.strace": {
+      "sha256": "1e37e3f3c39144b4d0f51717340af2ab1f454ff8bf1985981478da40abb0eb64"
+    },
+    "last-stage-direct.strace": {
+      "sha256": "96d05cb243e7025a6541ccb2adcd1baaadcc7286f09151a4da698c5a5354820c"
+    },
+    "last-stage-ordinary.strace": {
+      "sha256": "82b3fd36c80d49dd236c635f4c8e7789f76f4fae401df68a3b20cb93ab88fc4a"
+    },
+    "node-agent.strace": {
+      "sha256": "048883f80a1a64fe85e79876550c36e794d1ba9a9d4bde85f2d73240fb771c32"
+    }
+  },
+  "schema": "inferswarm.issue133.arm-c-retry.strace-raw-pins/1"
+}

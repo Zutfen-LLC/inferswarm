@@ -1,0 +1,38 @@
+{
+  "case_id": "c109-03-04-003",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "\u3053\u3093\u306b\u3061\u306f bonjour hola \u043f\u0440\u0438\u0432\u0435\u0442 bonjour monde v\u00e4rld \uc138\uacc4 \uac10\uc0ac mondo tack \u0441\u043f\u0430\u0441\u0438\u0431\u043e ciao tack ciao hola welt \u0627\u0644\u0639\u0627\u0644\u0645 \u043f\u0440\u0438\u0432\u0435\u0442 bonjour grazie mondo obrigado welt mundo \uc138\uacc4 \u0645\u0631\u062d\u0628\u0627 \u0441\u043f\u0430\u0441\u0438\u0431\u043e \u0627\u0644\u0639\u0627\u0644\u0645 mundo mondo \uc138\uacc4 \u0645\u0631\u062d\u0628\u0627 \u043f\u0440\u0438\u0432\u0435\u0442 \u3042\u308a\u304c\u3068\u3046 \u043f\u0440\u0438\u0432\u0435\u0442 \u0645\u0631\u062d\u0628\u0627 he",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 16,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\n\u3053\u3093\u306b\u3061\u306f bonjour hola \u043f\u0440\u0438\u0432\u0435\u0442 bonjour monde v\u00e4rld \uc138\uacc4 \uac10\uc0ac mondo tack \u0441\u043f\u0430\u0441\u0438\u0431\u043e ciao tack ciao hola welt \u0627\u0644\u0639\u0627\u0644\u0645 \u043f\u0440\u0438\u0432\u0435\u0442 bonjour grazie mondo obrigado welt mundo \uc138\uacc4 \u0645\u0631\u062d\u0628\u0627 \u0441\u043f\u0430\u0441\u0438\u0431\u043e \u0627\u0644\u0639\u0627\u0644\u0645 mundo mondo \uc138\uacc4 \u0645\u0631\u062d\u0628\u0627 \u043f\u0440\u0438\u0432\u0435\u0442 \u3042\u308a\u304c\u3068\u3046 \u043f\u0440\u0438\u0432\u0435\u0442 \u0645\u0631\u062d\u0628\u0627 he<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It looks like you have shared a beautiful",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-aa076f27a602",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 53,
+      "total_tokens": 61
+    }
+  },
+  "schema": "inferswarm.issue117.arm-c.ordinary-case/1",
+  "wall_ns": 2985422776
+}

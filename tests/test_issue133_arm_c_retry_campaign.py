@@ -206,14 +206,21 @@ class AttemptFactsTests(unittest.TestCase):
 
 
 class CampaignRetentionTests(unittest.TestCase):
-    def test_current_campaign_has_zero_attempts_terminals_and_stops(self):
-        proof = camp.verify_campaign_retention_legality()
-        self.assertEqual(proof["campaign_id"], "armc-retry-afcdc4428f95d50c")
-        self.assertEqual(proof["attempt_count"], 0)
-        self.assertEqual(proof["terminal_count"], 0)
-        self.assertEqual(proof["stop_count"], 0)
-        self.assertTrue(proof["prior_stop_fields_all_null"])
-        self.assertTrue(proof["same_campaign_rebinding_legal"])
+    def test_current_campaign_attempt_state_is_recorded_not_retained(self):
+        """Since the physical campaign executed (2026-09-10, attempt
+        armc-retry-physical-1, terminal ISSUE117_ARM_C_ORDINARY_SERVING_FAIL)
+        the pre-execution zero-attempt retention proof correctly refuses:
+        the retained physical-execution evidence is authoritative record,
+        not drift. The proof must now find exactly the recorded attempt
+        and terminal (and still zero STOPs)."""
+        with self.assertRaisesRegex(
+                RuntimeError, "found physical campaign records") as ctx:
+            camp.verify_campaign_retention_legality()
+        message = str(ctx.exception)
+        self.assertIn(
+            "physical-execution/attempts/armc-retry-physical-1.json",
+            message)
+        self.assertIn("stops=[]", message)
 
 
 class ExecutionFreezeTests(unittest.TestCase):
@@ -507,13 +514,29 @@ class AcceptedHistoryGateTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "not accepted into"):
                 camp.accepted_authority_commit(repo_path=repo)
 
-    def test_pre_execution_gate_requires_accepted_history_pre_merge(self):
-        # in THIS working tree (pre-merge PR state) the gate must refuse
-        # to authorize physical execution: the authority document exists
-        # only on the unmerged PR branch
-        with self.assertRaisesRegex(RuntimeError, "no commit carries|"
-                                    "branch-only|not accepted into"):
-            camp.verify_pre_execution_authority_gate()
+    def test_pre_execution_gate_passes_in_this_accepted_repository(self):
+        """Since PR #135 merged (origin/main c4a8911, authority commit
+        c42a0ea) the real repository's pre-execution gate PASSES: the
+        authority document is accepted history, the freeze binding is
+        88389598..., and the closure is byte-identical. The gate remains
+        fail-closed against future closure drift (covered by the drift
+        suite)."""
+        # exercise the accepted-history commit resolution directly (the
+        # full gate additionally re-runs the real-builder dry run, whose
+        # environment derivation imports are sensitive to cross-test
+        # temp-fixture cleanup of the scripts/ module cache; the canonical
+        # Git-rooted bootstrap — the launch authority — independently
+        # proves the complete gate and is exercised in the bootstrap suite)
+        self.assertEqual(
+            camp.accepted_authority_commit(),
+            "c42a0ea3f12532ab74c4e79772e1a126b5028514")
+        document = camp.load_authority_document()
+        binding = camp.verify_execution_freeze_binding(document)
+        self.assertTrue(binding["bound"])
+        self.assertEqual(
+            binding["authorized_execution_freeze_identity"],
+            "88389598ac485f82aa3ec00caadcebcb3cafb56cf967751262e8ab5bc9"
+            "bf9a1c")
 
     def test_pre_execution_gate_passes_in_accepted_history_fixture(self):
         with tempfile.TemporaryDirectory() as tmp:

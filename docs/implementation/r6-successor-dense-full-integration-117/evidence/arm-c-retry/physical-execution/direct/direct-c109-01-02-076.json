@@ -1,0 +1,39 @@
+{
+  "case_id": "c109-01-02-076",
+  "decoded_output": "In most programming languages, the statement `",
+  "decoded_output_sha256": "feeedb2d2c6fcae154ecb994d1fb14049b3abea410f191b1aca876c278e7a4d2",
+  "generated_token_ids": [
+    902,
+    1346,
+    14929,
+    15579,
+    236764,
+    506,
+    5456,
+    2165
+  ],
+  "invocation": "per-token-replay-prefill/frozen-allocator/1",
+  "logical_session_id": 2,
+  "plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+  "prompt_token_ids": [
+    2,
+    105,
+    2364,
+    107,
+    2063,
+    1663,
+    578,
+    1651,
+    106,
+    107,
+    105,
+    4368,
+    107,
+    100,
+    45518,
+    107,
+    101
+  ],
+  "schema": "inferswarm.issue133.arm-c-retry.direct-case/1",
+  "wall_ns": 2957171664
+}

@@ -124,18 +124,17 @@ class ProjectStatusTests(unittest.TestCase):
         # the authorized slice is the #133 physical retry campaign under
         # the accepted #129 methodology
         self.assertIn('Issue #133', output)
-        self.assertIn('ISSUE117_ARM_C_RETRY_METHODOLOGY_READY', output)
+        # the physical campaign concluded: the observed terminal FAIL is
+        # presented (2026-09-10 retry, attempt armc-retry-physical-1)
+        self.assertIn('ISSUE117_ARM_C_ORDINARY_SERVING_FAIL', output)
+        self.assertIn('armc-retry-physical-1', output)
         self.assertIn('Arm D blocked', output)
         # the historical CPU-only #129 authorization is superseded by the
         # #133 physical authorization and must not still be presented
         self.assertNotIn('physical Arm-C retry NOT authorized', output)
-        # the withdrawn terminal must not be presented as the observed state
-        self.assertNotIn('observed ISSUE117_ARM_C_ORDINARY_SERVING_FAIL',
-                         output)
         capabilities = sync.render(self.record)['capabilities']
         self.assertNotIn('ISSUE117_ARM_B_COLD_REALIZATION_PASS', capabilities)
         self.assertNotIn('Arm B', capabilities)
-        self.assertNotIn('ISSUE117_ARM_C_ORDINARY_SERVING_FAIL', capabilities)
         self.assertNotIn('ISSUE117_ARM_C_EVIDENCE_BLOCKER', capabilities)
 
     def test_accepted_prerequisite_does_not_authorize_execution(self):

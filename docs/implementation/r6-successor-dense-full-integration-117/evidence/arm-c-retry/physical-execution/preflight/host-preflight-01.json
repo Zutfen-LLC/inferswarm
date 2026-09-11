@@ -1,0 +1,67 @@
+{
+  "checks": {
+    "chain_plan": {
+      "ok": true,
+      "path": "/srv/inferswarm/state/arm-c/chain-plan.json",
+      "sha256": "6d9a4859af5b686a321458fe50c86189244b7d0d41e2cbb0df28147552f709ab"
+    },
+    "corpus": {
+      "ok": true,
+      "path": "/srv/inferswarm/state/arm-c-retry/integration-fixture.json",
+      "sha256": "b9c2bb7f7416b10dcee284aaf9b6c591644292550e1dced70a315c08eba120a3"
+    },
+    "driver": {
+      "ok": true,
+      "path": "/srv/inferswarm/state/arm-c-retry/scripts/issue133_arm_c_retry_direct.py",
+      "sha256": "02ec9cf7e5c3ac471fead0c37fdf59a981895628e0da64c8266a2d2d195eb43e"
+    },
+    "environment": {
+      "ok": true,
+      "path": "/srv/inferswarm/state/arm-c-retry/environment.json",
+      "sha256": "98c04387215915acf54a9ff769492e3f7cb7b0266d36649631a531a9b5edbf67"
+    },
+    "fixture": {
+      "ok": true,
+      "path": "/srv/inferswarm/state/arm-c-retry/prompt-fixture.json",
+      "sha256": "e68dfaafe661f2f6cc5f5be3a51128c7e7abf0b5c81978cbdb45e9788fd88cd0"
+    },
+    "gpu_compute_apps": "none",
+    "gpus": [
+      {
+        "bdf": "00000000:02:00.0",
+        "index": 0,
+        "name": "NVIDIA GeForce RTX 3060",
+        "uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"
+      },
+      {
+        "bdf": "00000000:03:00.0",
+        "index": 1,
+        "name": "NVIDIA GeForce RTX 3060",
+        "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+      }
+    ],
+    "producer": {
+      "clean": true,
+      "head": "924cd22ea081f6d4ed471016faf01d427fc5b0d2"
+    },
+    "r5b_epochs": {
+      "ok": true,
+      "path": "/srv/inferswarm/state/arm-c-retry/scripts/r5b_epochs.py",
+      "sha256": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805"
+    },
+    "tokenizer_dir": {
+      "entries": [
+        "chat_template.jinja",
+        "config.json",
+        "generation_config.json",
+        "tokenizer.json",
+        "tokenizer_config.json"
+      ],
+      "path": "/srv/inferswarm/tokenizers/gemma-r6-frozen"
+    }
+  },
+  "host": "inferswarm01",
+  "passed": true,
+  "problems": [],
+  "schema": "inferswarm.issue133.phase-b.host-preflight/1"
+}
