@@ -28,17 +28,19 @@ class Issue117ProvenanceTests(unittest.TestCase):
         for relative, expected in IMMUTABLE_ACCEPTED_FILES.items():
             self.assertEqual(sha256(relative), expected, relative)
 
-    def test_historical_manifests_keep_only_documented_living_rows(self):
+    def test_historical_manifests_keep_legacy_snapshot_rows_closed(self):
         manifests = {
             "docs/implementation/plan-driven-artifact-acquisition-99/evidence/MANIFEST.sha256": {
-                ".github/workflows/ci.yml", "ARCHITECTURE.md", "ROADMAP.md"},
+                ".github/workflows/ci.yml", "ARCHITECTURE.md", "ROADMAP.md",
+                "docs/implementation/README.md", "tests/test_issue99_proof.py"},
             "docs/implementation/plan-driven-artifact-orchestration-101/evidence/MANIFEST.sha256": {
-                ".github/workflows/ci.yml"},
+                ".github/workflows/ci.yml", "tests/test_issue101_proof.py"},
             "docs/implementation/artifact-locality-transition-planning-103/evidence/MANIFEST.sha256": {
-                ".github/workflows/ci.yml"},
+                ".github/workflows/ci.yml", "tests/test_issue103_planner.py"},
         }
-        for relative, living_rows in manifests.items():
+        for relative, snapshot_rows in manifests.items():
             for line in (ROOT / relative).read_text().splitlines():
                 expected, path = line.split("  ", 1)
-                if path not in living_rows:
-                    self.assertEqual(sha256(path), expected, f"{relative}: {path}")
+                if path not in snapshot_rows:
+                    self.assertEqual(
+                        sha256(path), expected, f"{relative}: {path}")

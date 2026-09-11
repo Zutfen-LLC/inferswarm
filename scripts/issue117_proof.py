@@ -134,8 +134,6 @@ PRODUCERS = [
     "scripts/issue117_arm_a_evidence.py",
     "tests/test_issue117_arm_b_retention.py",
     "scripts/issue117_arm_b_evidence.py",
-    "scripts/sync_project_status.py",
-    "tests/test_project_status.py",
 ]
 EVIDENCE_FILES = {
     "strategy.json", "planner-decision.json", "requirements.json",
@@ -410,6 +408,9 @@ COMMITTED_EVIDENCE_FILES = {
     "xc_wire.py",
     "arm-c-retry/frozen-source/924cd22e/python/freetoken/research/"
     "xc_coordinator.py",
+    # Later diagnostic/remediation slices use bundle-local manifests.  They
+    # must not reopen this retained parent manifest or mutate its producer
+    # inventory merely to extend evidence coverage.
 }
 
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
@@ -1698,10 +1699,9 @@ def write_manifest(out_dir: Path) -> None:
         if committed.is_file():
             entries[str(AREA / "evidence" / name)] = sha(committed)
     entries.update({path: sha(ROOT / path) for path in PRODUCERS})
-    for path in (str(AREA / "METHODOLOGY.md"), str(AREA / "README.md"),
+    for path in (str(AREA / "METHODOLOGY.md"),
                  str(AREA / "METHODOLOGY-ARM-C-RETRY.md"),
-                 str(AREA / "CHECKPOINT-AUTHORITY-BLOCKER.md"),
-                 ".github/workflows/ci.yml"):
+                 str(AREA / "CHECKPOINT-AUTHORITY-BLOCKER.md")):
         if (ROOT / path).is_file():
             entries[path] = sha(ROOT / path)
     (out_dir / "MANIFEST.sha256").write_text(

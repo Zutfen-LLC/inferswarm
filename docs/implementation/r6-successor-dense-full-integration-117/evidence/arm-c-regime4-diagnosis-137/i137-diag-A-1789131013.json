@@ -1,0 +1,49 @@
+{
+  "classification": "DIAGNOSTIC_ONLY",
+  "completed_at_ns": 1789131097296503017,
+  "hostname": "inferswarm01",
+  "inputs": {
+    "accepted_direct_run_sha256": "08807407784be47e40b5051e4de152a42c8248b81e6ee70ae253c7a3ca623ebf",
+    "chain_plan_sha256": "6d9a4859af5b686a321458fe50c86189244b7d0d41e2cbb0df28147552f709ab",
+    "environment_sha256": "98c04387215915acf54a9ff769492e3f7cb7b0266d36649631a531a9b5edbf67",
+    "fixture_sha256": "e68dfaafe661f2f6cc5f5be3a51128c7e7abf0b5c81978cbdb45e9788fd88cd0"
+  },
+  "observations": [
+    {
+      "committed_step0": 236761,
+      "realization": 0,
+      "speculative_step1": 236753
+    },
+    {
+      "committed_step0": 236761,
+      "realization": 1,
+      "speculative_step1": 236753
+    },
+    {
+      "committed_step0": 236761,
+      "realization": 2,
+      "speculative_step1": 236753
+    },
+    {
+      "committed_step0": 236761,
+      "realization": 3,
+      "speculative_step1": 236753
+    }
+  ],
+  "probe": "A",
+  "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "run_id": "i137-diag-A-1789131013",
+  "schema": "inferswarm.issue137.diagnostic-probe/1",
+  "software": {
+    "cuda": "13.0",
+    "python": "3.12.13 (main, Apr 14 2026, 14:29:00) [Clang 22.1.3 ]",
+    "torch": "2.11.0+cu130"
+  },
+  "started_at_ns": 1789131013792656605,
+  "target_call": {
+    "case_id": "c109-04-04-024",
+    "first_divergent_position": 3,
+    "replay_len": 68,
+    "replay_sha256": "e683d18bddf22f43ae760ebd9b32b8c95b50c4098b3efa45505805463dbc7e4f"
+  }
+}

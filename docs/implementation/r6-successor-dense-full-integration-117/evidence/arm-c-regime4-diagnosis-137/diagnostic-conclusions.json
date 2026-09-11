@@ -1,0 +1,406 @@
+{
+  "causal_factor": {
+    "c2_measurements": {
+      "design": {
+        "arms": [
+          "single_chunk_64",
+          "two_chunk_32_21"
+        ],
+        "one_variable": "chunk partition of an identical total input (single 53-row chunk vs 32+21)",
+        "order": "counterbalanced by trial parity (even: single-first, odd: two-first)",
+        "substrate": "fresh per arm per trial (stage processes spawned new; remote last stage relaunched between arms by the launcher loop)",
+        "target_call_position": "first correctness-bearing call on each substrate",
+        "trials": 6
+      },
+      "launch_orders": [
+        [
+          "single",
+          "two"
+        ],
+        [
+          "two",
+          "single"
+        ],
+        [
+          "single",
+          "two"
+        ],
+        [
+          "two",
+          "single"
+        ],
+        [
+          "single",
+          "two"
+        ],
+        [
+          "two",
+          "single"
+        ]
+      ],
+      "single_chunk_deterministic": true,
+      "single_chunk_values": [
+        1509,
+        1509,
+        1509,
+        1509,
+        1509,
+        1509
+      ],
+      "trials": 6,
+      "two_chunk_values": [
+        9259,
+        116130,
+        9259,
+        236777,
+        9259,
+        9259
+      ],
+      "two_chunk_varies": true
+    },
+    "corrected_intervention_c2": {
+      "design": "fresh paired substrates per trial, target call first on each, counterbalanced arm order (probe C2)",
+      "verdict": "chunk partition is the only changed factor and two-chunk execution flips/destabilizes the committed token while the single-chunk path is deterministic \u2014 multi-chunk extend-prefill execution is sufficient for instability on this input"
+    }
+  },
+  "classification": "DIAGNOSTIC_ONLY",
+  "determinism": {
+    "per_case_realization_distributions": {
+      "c109-01-01-045": [
+        818,
+        818,
+        818,
+        818
+      ],
+      "c109-04-01-026": [
+        140,
+        100,
+        106,
+        140
+      ],
+      "c109-04-02-047": [
+        107,
+        818,
+        3771,
+        1437,
+        107
+      ],
+      "c109-04-03-040": [
+        45518,
+        45518,
+        45518,
+        45518
+      ],
+      "c109-04-04-024": [
+        236761,
+        236761,
+        236761,
+        236761
+      ],
+      "c109-04-05-043": [
+        818,
+        2118,
+        107,
+        20470
+      ],
+      "c109-04-06-074": [
+        107,
+        107,
+        107,
+        107
+      ]
+    },
+    "stable_control_cases": [
+      "c109-01-01-045"
+    ],
+    "within_realization_tail_stabilization": 3,
+    "within_realization_variance": true
+  },
+  "earliest_divergence": {
+    "earliest_varying_checkpoint": "after_layer_0",
+    "embedding_stable": true,
+    "localization_scope": "demonstrated for c109-04-02-047 (the only case with retained D/D2 captures); other cases inherit the necessary-path partition, not the layer evidence",
+    "observed_transition": "stable embedding_output \u2192 varying after_layer_0",
+    "stage1_chunk1_boundary_stable": true,
+    "stage1_chunk2_boundary_varies": true
+  },
+  "history_sensitivity": {
+    "after_divergent_history_mismatches": [
+      {
+        "after_divergent_history": 100,
+        "fresh": 107,
+        "realization": 0
+      }
+    ],
+    "conclusion": "prior request history is NOT NECESSARY for divergence (fresh-first calls on fresh substrates vary \u2014 probe A); fresh == after-stable-history in 3/3 realizations; the cumulative after-divergent-history arm produced 1 differing value(s) of 3 \u2014 retained and NOT interpreted as history having no causal influence (single differing observation under demonstrated per-execution nondeterminism cannot establish or exclude a history effect)",
+    "fresh_vs_after_stable_history": true,
+    "probe_b_retained": true
+  },
+  "informational_observations": {
+    "cross_campaign_all_four_distinct": {
+      "c109-04-01-026": true,
+      "c109-04-02-047": true,
+      "c109-04-03-040": true,
+      "c109-04-04-024": true,
+      "c109-04-05-043": true,
+      "c109-04-06-074": true
+    },
+    "legacy_v1_binding_gaps": [
+      {
+        "consequence": "module identity rests on the producer commit + clean tree assertion at run start (unique bytes by git content addressing) instead of per-module hashes; numerical-mode flags were not captured for this run",
+        "not_retained": [
+          "per-module sha256 pins",
+          "torch numerical-mode flags",
+          "interpreter absolute path",
+          "stage/last-stage pids"
+        ],
+        "record": "i137-diag-A-1789127822.json"
+      },
+      {
+        "consequence": "module identity rests on the producer commit + clean tree assertion at run start (unique bytes by git content addressing) instead of per-module hashes; numerical-mode flags were not captured for this run",
+        "not_retained": [
+          "per-module sha256 pins",
+          "torch numerical-mode flags",
+          "interpreter absolute path",
+          "stage/last-stage pids"
+        ],
+        "record": "i137-diag-A-1789129558.json"
+      },
+      {
+        "consequence": "module identity rests on the producer commit + clean tree assertion at run start (unique bytes by git content addressing) instead of per-module hashes; numerical-mode flags were not captured for this run",
+        "not_retained": [
+          "per-module sha256 pins",
+          "torch numerical-mode flags",
+          "interpreter absolute path",
+          "stage/last-stage pids"
+        ],
+        "record": "i137-diag-A-1789129893.json"
+      },
+      {
+        "consequence": "module identity rests on the producer commit + clean tree assertion at run start (unique bytes by git content addressing) instead of per-module hashes; numerical-mode flags were not captured for this run",
+        "not_retained": [
+          "per-module sha256 pins",
+          "torch numerical-mode flags",
+          "interpreter absolute path",
+          "stage/last-stage pids"
+        ],
+        "record": "i137-diag-A-1789130927.json"
+      },
+      {
+        "consequence": "module identity rests on the producer commit + clean tree assertion at run start (unique bytes by git content addressing) instead of per-module hashes; numerical-mode flags were not captured for this run",
+        "not_retained": [
+          "per-module sha256 pins",
+          "torch numerical-mode flags",
+          "interpreter absolute path",
+          "stage/last-stage pids"
+        ],
+        "record": "i137-diag-A-1789131013.json"
+      },
+      {
+        "consequence": "module identity rests on the producer commit + clean tree assertion at run start (unique bytes by git content addressing) instead of per-module hashes; numerical-mode flags were not captured for this run",
+        "not_retained": [
+          "per-module sha256 pins",
+          "torch numerical-mode flags",
+          "interpreter absolute path",
+          "stage/last-stage pids"
+        ],
+        "record": "i137-diag-A-1789131099.json"
+      },
+      {
+        "consequence": "module identity rests on the producer commit + clean tree assertion at run start (unique bytes by git content addressing) instead of per-module hashes; numerical-mode flags were not captured for this run",
+        "not_retained": [
+          "per-module sha256 pins",
+          "torch numerical-mode flags",
+          "interpreter absolute path",
+          "stage/last-stage pids"
+        ],
+        "record": "i137-diag-A-1789131186.json"
+      },
+      {
+        "consequence": "module identity rests on the producer commit + clean tree assertion at run start (unique bytes by git content addressing) instead of per-module hashes; numerical-mode flags were not captured for this run",
+        "not_retained": [
+          "per-module sha256 pins",
+          "torch numerical-mode flags",
+          "interpreter absolute path",
+          "stage/last-stage pids"
+        ],
+        "record": "i137-diag-A2-1789128152.json"
+      },
+      {
+        "consequence": "module identity rests on the producer commit + clean tree assertion at run start (unique bytes by git content addressing) instead of per-module hashes; numerical-mode flags were not captured for this run",
+        "not_retained": [
+          "per-module sha256 pins",
+          "torch numerical-mode flags",
+          "interpreter absolute path",
+          "stage/last-stage pids"
+        ],
+        "record": "i137-diag-B-1789130217.json"
+      }
+    ],
+    "probe_b_after_divergent_history_mismatches": [
+      {
+        "after_divergent_history": 100,
+        "fresh": 107,
+        "realization": 0
+      }
+    ],
+    "probe_c_retired": {
+      "note": "cumulative single-then-two in one realization, fixed order \u2014 cannot isolate chunk partition",
+      "single_chunk_values": [
+        1509,
+        1509,
+        1509,
+        1509
+      ],
+      "two_chunk_values": [
+        238631,
+        1509,
+        9259,
+        236777
+      ]
+    }
+  },
+  "inputs": {
+    "i137-diag-A-1789127822.json": "abb06092fe3e94a1a54abcee24dc267fb2c81687706744fb8532b443d098a5f4",
+    "i137-diag-A-1789129558.json": "3037e32c5a41191d31dc90d5ca527bc1198a2c4e831da3b708b57a87c1cd2fcf",
+    "i137-diag-A-1789129893.json": "d05562e6470d88c3f43bf48977bc453b8da632760cbc20cb74cb16fa9f849d79",
+    "i137-diag-A-1789130927.json": "39121d55c13d58a60a0f923fa54f30e217a9aada93914f2b1a52457f920d031e",
+    "i137-diag-A-1789131013.json": "f80c25d31cb959d9ed51831994a50a848ef002a95faaf884b04434e019153939",
+    "i137-diag-A-1789131099.json": "d7bcd1470064fc996caff897718b4ae8dc1f4f83f24bc42c111b449dfdec201d",
+    "i137-diag-A-1789131186.json": "32a46b0bdd69823d5946465dc817e21f33c0f1807befe8c74611052225faaabd",
+    "i137-diag-A2-1789128152.json": "352449f2ee47bc0b5005234c88aa878c74750ef1dcb12f8b44e3b6879eec593e",
+    "i137-diag-B-1789130217.json": "80303c26fc59bc78ed9aebe0e5f9368d7461fc63a911f1613dfc68d71ddc1221",
+    "i137-diag-C-1789128426.json": "ac969f277c435dcc3d23bd6dde52681c2146bcc6a4af6b33f27c4fa282cafda3",
+    "i137-diag-C2-1789141057.json": "409c534cd76edc7d61b1e63f1d9fa9ad03390185f5447d34c06490663fcfe993",
+    "i137-diag-D-1789128772.json": "87cb72130ca49297aca2ae003c64f7f72e5aacf69ef8e35102d6ad706c7e635c",
+    "i137-diag-D2-1789129163.json": "39e1df4df6b1748e36285ebd382385003579785bd7fcaa9849c77ab7449005bc",
+    "i137-diag-D2-1789130625.json": "ba9db53850b3428d29a2e5940ef0fb78e0bf4445617293cb73e7be8ae9513056",
+    "manifest-first-stage1-d2b.json": "29db1c7c176762067c9c2b109e20fc3a3a08c255888fbd57f54e747419fcdd62",
+    "manifest-middle-stage2-d2b.json": "fcf82ac828c50f98bad951e00aa520ec1cda6f599f7e55a3a8dc7661a24e2cc7",
+    "phase1-inventory.json": "369b2c81faf8ed1b2a68b1e1d039d6e6e7924d02254443c4707ad1b006ac7b3f"
+  },
+  "per_case_causal_families": {
+    "c109-04-01-026": {
+      "cross_campaign_all_four_distinct": true,
+      "in_session_values": [
+        140,
+        100,
+        106,
+        140
+      ],
+      "layer_localization_evidence": "no per-case D/D2 captures retained",
+      "matches_an_accepted_value": true,
+      "varies_in_session": true,
+      "within_realization_values": []
+    },
+    "c109-04-02-047": {
+      "cross_campaign_all_four_distinct": true,
+      "in_session_values": [
+        107,
+        818,
+        3771,
+        1437,
+        107
+      ],
+      "layer_localization_evidence": "D/D2 captures cover this case",
+      "matches_an_accepted_value": false,
+      "varies_in_session": true,
+      "within_realization_values": [
+        107,
+        9366,
+        2918,
+        107,
+        107,
+        107
+      ]
+    },
+    "c109-04-03-040": {
+      "cross_campaign_all_four_distinct": true,
+      "in_session_values": [
+        45518,
+        45518,
+        45518,
+        45518
+      ],
+      "layer_localization_evidence": "no per-case D/D2 captures retained",
+      "matches_an_accepted_value": false,
+      "varies_in_session": false,
+      "within_realization_values": []
+    },
+    "c109-04-04-024": {
+      "cross_campaign_all_four_distinct": true,
+      "in_session_values": [
+        236761,
+        236761,
+        236761,
+        236761
+      ],
+      "layer_localization_evidence": "no per-case D/D2 captures retained",
+      "matches_an_accepted_value": false,
+      "varies_in_session": false,
+      "within_realization_values": []
+    },
+    "c109-04-05-043": {
+      "cross_campaign_all_four_distinct": true,
+      "in_session_values": [
+        818,
+        2118,
+        107,
+        20470
+      ],
+      "layer_localization_evidence": "no per-case D/D2 captures retained",
+      "matches_an_accepted_value": false,
+      "varies_in_session": true,
+      "within_realization_values": []
+    },
+    "c109-04-06-074": {
+      "cross_campaign_all_four_distinct": true,
+      "in_session_values": [
+        107,
+        107,
+        107,
+        107
+      ],
+      "layer_localization_evidence": "no per-case D/D2 captures retained",
+      "matches_an_accepted_value": false,
+      "varies_in_session": false,
+      "within_realization_values": []
+    }
+  },
+  "problems": [],
+  "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "remediation_hypothesis": "NOT IMPLEMENTED (separate remediation authority required). Hypothesis from the corrected evidence: the small-extend-chunk attention/execution path over a resident 64-row prefix returns per-execution-varying bits; earliest observed variation between embedding_output (stable) and after_layer_0 (varying) on the captured case. A remediation issue should reproduce the layer-0 divergence with a standalone kernel harness across all six cases before proposing a fix.",
+  "schema": "inferswarm.issue137.diagnostic-conclusions/2",
+  "single_mechanism_or_families": {
+    "claim": "shared necessary path (two-chunk extend-prefill) established for all six; identical numerical mechanism demonstrated only for c109-04-02-047 (D/D2); three cases vary in-session, three are session-stable but match no accepted value \u2014 a single identical numerical mechanism for all six is NOT established",
+    "common_necessary_path": true,
+    "identical_numerical_mechanism_proven_for": [
+      "c109-04-02-047"
+    ],
+    "session_stable_but_matches_no_accepted_value": [
+      "c109-04-03-040",
+      "c109-04-04-024",
+      "c109-04-06-074"
+    ],
+    "varies_in_session": [
+      "c109-04-01-026",
+      "c109-04-02-047",
+      "c109-04-05-043"
+    ]
+  },
+  "terminal": "ISSUE117_ARM_C_REGIME4_DIAGNOSIS_PARTIAL",
+  "terminal_requirements": {
+    "all_records_bound_to_accepted_authority": true,
+    "all_required_probe_families_present": true,
+    "corrected_chunk_intervention_causal": true,
+    "earliest_boundary_localized": true,
+    "earliest_varying_checkpoint_derived": true,
+    "every_divergent_case_shows_instability": false,
+    "history_conclusion_narrowed_correctly": true,
+    "manifests_validated": true,
+    "no_fatally_inconsistent_evidence": true,
+    "record_binding_valid": true,
+    "stable_control_single_chunk_deterministic": true,
+    "within_realization_variance_proven": true
+  }
+}

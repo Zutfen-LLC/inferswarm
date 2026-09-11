@@ -1,0 +1,1071 @@
+{
+  "authority": {
+    "manifest_sha256": "62652fa521ccb8f15e4d1ac5606c8afd67f376d2be16e9d4811f6834c4dc7905",
+    "source": "accepted MANIFEST.sha256 @ PR #136 merge 1b83bcab0a5e682a438ca0554f71dd0ace15be55"
+  },
+  "chunk_partition": {
+    "cases": {
+      "c109-01-01-045": {
+        "chunks": 1,
+        "prompt_len": 20,
+        "second_chunk_rows": null
+      },
+      "c109-01-02-076": {
+        "chunks": 1,
+        "prompt_len": 17,
+        "second_chunk_rows": null
+      },
+      "c109-01-03-009": {
+        "chunks": 1,
+        "prompt_len": 18,
+        "second_chunk_rows": null
+      },
+      "c109-01-04-036": {
+        "chunks": 1,
+        "prompt_len": 19,
+        "second_chunk_rows": null
+      },
+      "c109-01-05-017": {
+        "chunks": 1,
+        "prompt_len": 18,
+        "second_chunk_rows": null
+      },
+      "c109-01-06-006": {
+        "chunks": 1,
+        "prompt_len": 18,
+        "second_chunk_rows": null
+      },
+      "c109-02-01-030": {
+        "chunks": 1,
+        "prompt_len": 41,
+        "second_chunk_rows": null
+      },
+      "c109-02-02-020": {
+        "chunks": 1,
+        "prompt_len": 41,
+        "second_chunk_rows": null
+      },
+      "c109-02-03-011": {
+        "chunks": 1,
+        "prompt_len": 39,
+        "second_chunk_rows": null
+      },
+      "c109-02-04-033": {
+        "chunks": 1,
+        "prompt_len": 38,
+        "second_chunk_rows": null
+      },
+      "c109-02-05-024": {
+        "chunks": 1,
+        "prompt_len": 39,
+        "second_chunk_rows": null
+      },
+      "c109-02-06-049": {
+        "chunks": 1,
+        "prompt_len": 38,
+        "second_chunk_rows": null
+      },
+      "c109-03-01-044": {
+        "chunks": 1,
+        "prompt_len": 52,
+        "second_chunk_rows": null
+      },
+      "c109-03-02-054": {
+        "chunks": 1,
+        "prompt_len": 50,
+        "second_chunk_rows": null
+      },
+      "c109-03-03-031": {
+        "chunks": 1,
+        "prompt_len": 49,
+        "second_chunk_rows": null
+      },
+      "c109-03-04-003": {
+        "chunks": 1,
+        "prompt_len": 53,
+        "second_chunk_rows": null
+      },
+      "c109-03-05-044": {
+        "chunks": 1,
+        "prompt_len": 50,
+        "second_chunk_rows": null
+      },
+      "c109-03-06-016": {
+        "chunks": 1,
+        "prompt_len": 50,
+        "second_chunk_rows": null
+      },
+      "c109-04-01-026": {
+        "chunks": 2,
+        "prompt_len": 65,
+        "second_chunk_rows": 1
+      },
+      "c109-04-02-047": {
+        "chunks": 2,
+        "prompt_len": 67,
+        "second_chunk_rows": 3
+      },
+      "c109-04-03-040": {
+        "chunks": 2,
+        "prompt_len": 67,
+        "second_chunk_rows": 3
+      },
+      "c109-04-04-024": {
+        "chunks": 2,
+        "prompt_len": 65,
+        "second_chunk_rows": 1
+      },
+      "c109-04-05-043": {
+        "chunks": 2,
+        "prompt_len": 67,
+        "second_chunk_rows": 3
+      },
+      "c109-04-06-074": {
+        "chunks": 2,
+        "prompt_len": 66,
+        "second_chunk_rows": 2
+      }
+    },
+    "max_single_chunk_len": 53,
+    "min_two_chunk_len": 65,
+    "prefill_chunk": 64,
+    "two_chunk_equals_divergent_population": true,
+    "two_chunk_population": [
+      "c109-04-01-026",
+      "c109-04-02-047",
+      "c109-04-03-040",
+      "c109-04-04-024",
+      "c109-04-05-043",
+      "c109-04-06-074"
+    ]
+  },
+  "cross_campaign": {
+    "divergent_cases": [
+      {
+        "all_four_distinct": true,
+        "case_id": "c109-04-01-026",
+        "pairwise": {
+          "hist_direct__hist_ordinary": {
+            "equal": false,
+            "first_diff": 3
+          },
+          "hist_direct__retry_direct": {
+            "equal": false,
+            "first_diff": 3
+          },
+          "hist_direct__retry_ordinary": {
+            "equal": false,
+            "first_diff": 3
+          },
+          "hist_ordinary__retry_direct": {
+            "equal": false,
+            "first_diff": 4
+          },
+          "hist_ordinary__retry_ordinary": {
+            "equal": false,
+            "first_diff": 5
+          },
+          "retry_direct__retry_ordinary": {
+            "equal": false,
+            "first_diff": 4
+          }
+        }
+      },
+      {
+        "all_four_distinct": true,
+        "case_id": "c109-04-02-047",
+        "pairwise": {
+          "hist_direct__hist_ordinary": {
+            "equal": false,
+            "first_diff": 0
+          },
+          "hist_direct__retry_direct": {
+            "equal": false,
+            "first_diff": 0
+          },
+          "hist_direct__retry_ordinary": {
+            "equal": false,
+            "first_diff": 0
+          },
+          "hist_ordinary__retry_direct": {
+            "equal": false,
+            "first_diff": 0
+          },
+          "hist_ordinary__retry_ordinary": {
+            "equal": false,
+            "first_diff": 0
+          },
+          "retry_direct__retry_ordinary": {
+            "equal": false,
+            "first_diff": 0
+          }
+        }
+      },
+      {
+        "all_four_distinct": true,
+        "case_id": "c109-04-03-040",
+        "pairwise": {
+          "hist_direct__hist_ordinary": {
+            "equal": false,
+            "first_diff": 0
+          },
+          "hist_direct__retry_direct": {
+            "equal": false,
+            "first_diff": 2
+          },
+          "hist_direct__retry_ordinary": {
+            "equal": false,
+            "first_diff": 2
+          },
+          "hist_ordinary__retry_direct": {
+            "equal": false,
+            "first_diff": 0
+          },
+          "hist_ordinary__retry_ordinary": {
+            "equal": false,
+            "first_diff": 0
+          },
+          "retry_direct__retry_ordinary": {
+            "equal": false,
+            "first_diff": 2
+          }
+        }
+      },
+      {
+        "all_four_distinct": true,
+        "case_id": "c109-04-04-024",
+        "pairwise": {
+          "hist_direct__hist_ordinary": {
+            "equal": false,
+            "first_diff": 5
+          },
+          "hist_direct__retry_direct": {
+            "equal": false,
+            "first_diff": 3
+          },
+          "hist_direct__retry_ordinary": {
+            "equal": false,
+            "first_diff": 5
+          },
+          "hist_ordinary__retry_direct": {
+            "equal": false,
+            "first_diff": 3
+          },
+          "hist_ordinary__retry_ordinary": {
+            "equal": false,
+            "first_diff": 6
+          },
+          "retry_direct__retry_ordinary": {
+            "equal": false,
+            "first_diff": 3
+          }
+        }
+      },
+      {
+        "all_four_distinct": true,
+        "case_id": "c109-04-05-043",
+        "pairwise": {
+          "hist_direct__hist_ordinary": {
+            "equal": false,
+            "first_diff": 0
+          },
+          "hist_direct__retry_direct": {
+            "equal": false,
+            "first_diff": 0
+          },
+          "hist_direct__retry_ordinary": {
+            "equal": false,
+            "first_diff": 0
+          },
+          "hist_ordinary__retry_direct": {
+            "equal": false,
+            "first_diff": 0
+          },
+          "hist_ordinary__retry_ordinary": {
+            "equal": false,
+            "first_diff": 0
+          },
+          "retry_direct__retry_ordinary": {
+            "equal": false,
+            "first_diff": 0
+          }
+        }
+      },
+      {
+        "all_four_distinct": true,
+        "case_id": "c109-04-06-074",
+        "pairwise": {
+          "hist_direct__hist_ordinary": {
+            "equal": false,
+            "first_diff": 0
+          },
+          "hist_direct__retry_direct": {
+            "equal": false,
+            "first_diff": 0
+          },
+          "hist_direct__retry_ordinary": {
+            "equal": false,
+            "first_diff": 0
+          },
+          "hist_ordinary__retry_direct": {
+            "equal": false,
+            "first_diff": 1
+          },
+          "hist_ordinary__retry_ordinary": {
+            "equal": false,
+            "first_diff": 0
+          },
+          "retry_direct__retry_ordinary": {
+            "equal": false,
+            "first_diff": 0
+          }
+        }
+      }
+    ],
+    "stable_case_distinct_value_counts": {
+      "c109-01-01-045": 1,
+      "c109-01-02-076": 1,
+      "c109-01-03-009": 1,
+      "c109-01-04-036": 1,
+      "c109-01-05-017": 1,
+      "c109-01-06-006": 1,
+      "c109-02-01-030": 1,
+      "c109-02-02-020": 1,
+      "c109-02-03-011": 1,
+      "c109-02-04-033": 1,
+      "c109-02-05-024": 1,
+      "c109-02-06-049": 1,
+      "c109-03-01-044": 1,
+      "c109-03-02-054": 1,
+      "c109-03-03-031": 1,
+      "c109-03-04-003": 1,
+      "c109-03-05-044": 1,
+      "c109-03-06-016": 1
+    },
+    "stable_cases_all_identical_across_four_observations": true
+  },
+  "divergences": [
+    {
+      "case_id": "c109-04-01-026",
+      "direct_ids": [
+        11513,
+        5597,
+        236761,
+        107,
+        6460,
+        1208,
+        17971,
+        67706
+      ],
+      "first_divergent_position_authored": 4,
+      "first_divergent_position_rederived": 4,
+      "ordinary_ids": [
+        11513,
+        5597,
+        236761,
+        107,
+        140,
+        818,
+        3768,
+        1390
+      ],
+      "prompt_len": 65
+    },
+    {
+      "case_id": "c109-04-02-047",
+      "direct_ids": [
+        6264,
+        236761,
+        107,
+        100,
+        45518,
+        107,
+        101,
+        45518
+      ],
+      "first_divergent_position_authored": 0,
+      "first_divergent_position_rederived": 0,
+      "ordinary_ids": [
+        236772,
+        107,
+        100,
+        45518,
+        107,
+        100,
+        36764,
+        236787
+      ],
+      "prompt_len": 67
+    },
+    {
+      "case_id": "c109-04-03-040",
+      "direct_ids": [
+        101,
+        100,
+        100,
+        45518,
+        107,
+        100,
+        45518,
+        236786
+      ],
+      "first_divergent_position_authored": 2,
+      "first_divergent_position_rederived": 2,
+      "ordinary_ids": [
+        101,
+        100,
+        106,
+        236758,
+        236813,
+        107,
+        100,
+        236813
+      ],
+      "prompt_len": 67
+    },
+    {
+      "case_id": "c109-04-04-024",
+      "direct_ids": [
+        236761,
+        107,
+        100,
+        107,
+        100,
+        236761,
+        107,
+        236761
+      ],
+      "first_divergent_position_authored": 3,
+      "first_divergent_position_rederived": 3,
+      "ordinary_ids": [
+        236761,
+        107,
+        100,
+        45518,
+        107,
+        100,
+        100,
+        100
+      ],
+      "prompt_len": 65
+    },
+    {
+      "case_id": "c109-04-05-043",
+      "direct_ids": [
+        236770,
+        236771,
+        236771,
+        236908,
+        107,
+        100,
+        236908,
+        107
+      ],
+      "first_divergent_position_authored": 0,
+      "first_divergent_position_rederived": 0,
+      "ordinary_ids": [
+        45352,
+        107,
+        100,
+        45518,
+        107,
+        45518,
+        107,
+        101
+      ],
+      "prompt_len": 67
+    },
+    {
+      "case_id": "c109-04-06-074",
+      "direct_ids": [
+        100,
+        236781,
+        236785,
+        236781,
+        236829,
+        100,
+        107,
+        100
+      ],
+      "first_divergent_position_authored": 0,
+      "first_divergent_position_rederived": 0,
+      "ordinary_ids": [
+        236777,
+        1006,
+        573,
+        506,
+        623,
+        258882,
+        236761,
+        564
+      ],
+      "prompt_len": 66
+    }
+  ],
+  "families": [
+    "realization_initialization_lifecycle",
+    "request_history_session_state_leakage",
+    "distributed_boundary_divergence",
+    "kernel_numerical_nondeterminism",
+    "planner_realization_side_effect_unrepresented_in_comparator",
+    "another_mechanically_demonstrated_cause"
+  ],
+  "history_identity": {
+    "direct_case_order": [
+      "c109-01-01-045",
+      "c109-01-02-076",
+      "c109-01-03-009",
+      "c109-01-04-036",
+      "c109-01-05-017",
+      "c109-01-06-006",
+      "c109-02-01-030",
+      "c109-02-02-020",
+      "c109-02-03-011",
+      "c109-02-04-033",
+      "c109-02-05-024",
+      "c109-02-06-049",
+      "c109-03-01-044",
+      "c109-03-02-054",
+      "c109-03-03-031",
+      "c109-03-04-003",
+      "c109-03-05-044",
+      "c109-03-06-016",
+      "c109-04-01-026",
+      "c109-04-02-047",
+      "c109-04-03-040",
+      "c109-04-04-024",
+      "c109-04-05-043",
+      "c109-04-06-074"
+    ],
+    "ordinary_session_sequences_equal": true,
+    "per_case_call_counts_uniform": true,
+    "per_case_calls": 8,
+    "session_ids": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25
+    ]
+  },
+  "hypothesis_matrix": {
+    "another_mechanically_demonstrated_cause": {
+      "contradicting": [],
+      "smallest_discriminating_probe": "chunk-partition probe C: drive one historically stable short case through TWO sub-64 chunks (identical total input, only the chunk boundary moved); divergence appearing there demonstrates the two-chunk prefill path is causal alone, divergence not appearing bounds the cause to the >64-row shapes themselves",
+      "supporting": [
+        "structural fact: the divergent population is exactly the prompt_len > PREFILL_CHUNK (64) population \u2014 the only input-correlated partition that separates 6/24"
+      ]
+    },
+    "distributed_boundary_divergence": {
+      "contradicting": [
+        "#133 proved transport accounting integrity (wire payload checksums, boundary byte identity within a run); the divergence is between separately realized runs, not a transport corruption signature"
+      ],
+      "smallest_discriminating_probe": "boundary capture on the divergent call across fresh realizations (stage1 out, stage2 out, stage3 final-row logits): earliest differing boundary localizes the stage",
+      "supporting": [
+        "not yet localized: no retained artifact compares stage boundary bytes across realizations"
+      ]
+    },
+    "kernel_numerical_nondeterminism": {
+      "contradicting": [
+        "the same kernels run deterministic (bit-identical) on the single-chunk population across four realizations"
+      ],
+      "smallest_discriminating_probe": "probe A repeatability distribution + probe D boundary localization: identical captured boundary inputs with diverging outputs isolates compute nondeterminism; a differing stage-1 output moves it upstream",
+      "supporting": [
+        "all four observations distinct implies some per-realization or per-execution numerical variance amplified to argmax flips exclusively on the two-chunk population",
+        "3 of 6 cases diverge at position 0 \u2014 the two-chunk PREFILL argmax itself, before any speculative decode",
+        "the second prefill chunk exercises shapes no single-chunk case reaches (1-3 query rows against a 64-row prefix through the extend/paged paths)"
+      ]
+    },
+    "planner_realization_side_effect_unrepresented_in_comparator": {
+      "contradicting": [
+        "the direct arm bypasses the planner entirely yet also fails to reproduce its own historical outputs on regime-4 \u2014 the planner cannot be necessary to the divergence",
+        "18/24 equality with the planner in the loop on the ordinary side"
+      ],
+      "smallest_discriminating_probe": "already falsified as NECESSARY by retained evidence (direct-vs-direct instability); no probe required, recorded for completeness",
+      "supporting": [
+        "none retained: #133 proved per-call model-execution input equivalence through each first divergent call (inputs_equal on every seam step)"
+      ]
+    },
+    "realization_initialization_lifecycle": {
+      "contradicting": [
+        "the 18 stable cases share the identical realization lifecycle (same drivers, same spawn order, same RESET discipline) yet never diverge"
+      ],
+      "smallest_discriminating_probe": "fresh-realization repeatability probe A: execute the exact first-divergent call from N>=3 freshly realized equivalent substrates; if outputs vary across realizations with identical inputs, realization-sourced state is implicated and chunking narrows where it enters",
+      "supporting": [
+        "all four cross-campaign observations are pairwise distinct for every regime-4 case while producer, model, plan, geometry, and per-call inputs are identical",
+        "18/18 single-chunk cases are byte-identical across the same four realizations, so any realization-lifecycle difference that exists is not by itself sufficient"
+      ]
+    },
+    "request_history_session_state_leakage": {
+      "contradicting": [
+        "ordinary session id sequence == historical sequence; direct/ordinary allocator ids differ in the historical campaign yet 18/24 equal \u2014 session/object identity is not causal for the stable population",
+        "first-divergence at position 0 for three cases: no intra-case prior request exists before the divergent call, so leakage from earlier CASES would have to survive the full inter-case RESET"
+      ],
+      "smallest_discriminating_probe": "history probe B: same realized substrate, target call first-after-realization vs after controlled replay of the accepted prefix history; one factor changed",
+      "supporting": [
+        "none retained: both arms present the identical request history before every case (same 25-session order, same per-case 8-call shape)"
+      ]
+    }
+  },
+  "pinned_inputs": {
+    "hist_direct_run": {
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/direct-run.json",
+      "sha256": "dc2bdbb51ffaa3f53c6d62a59014d6870fd67df449c4555bdf26e0c39d4523f5"
+    },
+    "hist_equality": {
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/equality.json",
+      "sha256": "7bf292ef3917f9f26b5fc5e125e04361e8d6b0d5ada8f2f8ba7a9d653cf039f9"
+    },
+    "hist_serving_report": {
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/lifecycle-serving-report.json",
+      "sha256": "852a9768b353a6605f3fa31ce0fc94dd199fe8bb9d9e6adbb1f6bad6a2862ea8"
+    },
+    "producer_stage_chain": {
+      "path": "frozen producer git blob 924cd22e:benchmarks/inferswarm_r6/stage_chain.py (sha256 321bc91deb9a0e7f651a75f4158e973b3e72d889a32f76c8d8dc5c9081acde54, pinned by docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/physical-execution/coordinator-boundary-source-pins.json)",
+      "sha256": "321bc91deb9a0e7f651a75f4158e973b3e72d889a32f76c8d8dc5c9081acde54"
+    },
+    "retry_direct_run": {
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/physical-execution/direct/direct-run.json",
+      "sha256": "08807407784be47e40b5051e4de152a42c8248b81e6ee70ae253c7a3ca623ebf"
+    },
+    "retry_equality": {
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/physical-execution/equality-reduction.json",
+      "sha256": "6cf08489a7ee59deed53fd53ec72de7f533ded0ad15511d06bbab41e3a699f34"
+    },
+    "retry_serving_report": {
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/physical-execution/ordinary-http/serving-report.json",
+      "sha256": "48587da666d7771a87f4fba17e191927ad54ea07b43aa94bbe39c240cb44cb34"
+    }
+  },
+  "position0_prefill_divergence_cases": [
+    "c109-04-02-047",
+    "c109-04-05-043",
+    "c109-04-06-074"
+  ],
+  "producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "runtime_lifecycle_inventory": {
+    "case_order": {
+      "direct_vs_ordinary": "identical",
+      "source": "direct_case_order + ordinary session id sequence: identical order retained",
+      "status": "derived"
+    },
+    "cuda_device_runtime_configuration": {
+      "direct_vs_ordinary": "identical",
+      "source": "driver software snapshot + stage READY runtime reports retained in accepted #137 records: CUDA_VISIBLE_DEVICES per stage gpu_index; same devices, same torch/CUDA build on both arms",
+      "status": "derived"
+    },
+    "deterministic_nondeterministic_backend_flags": {
+      "direct_vs_ordinary": "identical (and never enabled \u2014 enabling would be an intervention per the issue)",
+      "source": "driver authority.software flags: deterministic_algorithms=False, cudnn knobs, TF32 state retained; no flag changed between arms",
+      "status": "derived"
+    },
+    "kv_state_allocation_reset": {
+      "consequence": "bounded instead by boundary digests (probe D/D2): stage-1 chunk-1 boundary byte-identical across realizations, so pre-divergence state at the observed boundary is equal",
+      "direct_vs_ordinary": "KV allocator identity not comparable between arms",
+      "source": "no accepted artifact captures KV allocator identity across the arms; RESET is observed behaviorally only",
+      "status": "not_retained"
+    },
+    "local_remote_stage_connection_lifecycle": {
+      "direct_vs_ordinary": "identical",
+      "source": "frozen wire client: one connection per realization, hello/session handshake resets last-stage session state; identical protocol on both arms",
+      "status": "derived"
+    },
+    "mutable_module_global_class_state": {
+      "consequence": "module-global enumeration is source-derived, not runtime-observed; a runtime-only mutation would not appear here",
+      "direct_vs_ordinary": "no mutable global implicated; capture arming is diagnostic-only and was not active for A/A2/B/C",
+      "source": "frozen producer closure grep: stage runtime keeps per-instance counters only; module-level mutables are config constants (HIDDEN_SIZE etc.); the localization capture sink is None unless ARM_CAPTURE is issued (probes D/D2 only)",
+      "status": "partially_retained"
+    },
+    "planner_realizer_side_effects": {
+      "direct_vs_ordinary": "planner not necessary for divergence",
+      "source": "the direct arm bypasses the planner entirely yet fails to reproduce its own historical outputs (cross-campaign matrix: all four observations distinct per divergent case)",
+      "status": "derived"
+    },
+    "pre_call_state_not_in_comparator": {
+      "direct_vs_ordinary": "no pre-call state difference is necessary to explain the divergence (fresh-first calls vary \u2014 probe A)",
+      "source": "accepted #133 comparator field set vs probe evidence: the comparator binds public generate() inputs; probe D2 shows the earliest differing observable is INSIDE stage-1 layer execution (after_layer_0), downstream of byte-identical inputs at every compared seam",
+      "status": "derived"
+    },
+    "process_creation_runtime_realization_path": {
+      "direct_vs_ordinary": "different realization entry path; identical stage process construction (same spawn context, same adapter_data, same model path)",
+      "source": "frozen stage_chain.py construction + accepted #133 invocation transcripts: direct arm realizes the chain once per campaign via GemmaStageChainRuntime; ordinary arm realizes via the serving coordinator per request",
+      "status": "derived"
+    },
+    "process_lifetime_request_history": {
+      "direct_vs_ordinary": "same request history shape; lifetime differs only in driver process identity",
+      "source": "history_identity above + accepted serving reports: both arms process the identical 24-case order with 8 calls per case; direct keeps one substrate for the whole campaign, ordinary substrate per campaign as well",
+      "status": "derived"
+    },
+    "realization_epoch_lifecycle": {
+      "consequence": "no comparison possible; not implicated by any retained observation",
+      "direct_vs_ordinary": "no epoch lifecycle to compare",
+      "source": "no epoch lifecycle exists in the frozen dense-chain runtime for these calls (single realization per arm; epoch notion belongs to the serving coordinator path)",
+      "status": "unavailable"
+    },
+    "runtime_object_reuse": {
+      "direct_vs_ordinary": "not discriminated by reuse alone",
+      "source": "probes A/A2 (accepted #137 records): per-execution results vary on one substrate (A2) and across fresh substrates (A) for the divergent population; object reuse is therefore not sufficient to explain the variance direction",
+      "status": "derived"
+    },
+    "session_reset_lifecycle": {
+      "direct_vs_ordinary": "RESET-does-not-fully-condition-state is NOT excluded by the cumulative arm (single observation, confounded by per-execution nondeterminism demonstrated by A2)",
+      "source": "frozen replay_call RESET discipline + probe B: RESET precedes every call on both arms; fresh vs after-stable-history produce equal tokens (3/3) while the cumulative after-divergent-history arm produced one differing value (1/3) \u2014 retained, informational",
+      "status": "derived"
+    },
+    "speculative_generation_cleanup": {
+      "direct_vs_ordinary": "cleanup contract honored on both arms",
+      "source": "speculative_consistency above: discarded step-1 token equals next call's prefill-committed token for the stable population (mechanically verified per case)",
+      "status": "derived"
+    },
+    "stage_startup_order": {
+      "direct_vs_ordinary": "identical",
+      "source": "frozen _Chain construction: stages spawn in plan order (first, middle) then remote last-stage connect; same order on both arms",
+      "status": "derived"
+    }
+  },
+  "schema": "inferswarm.issue137.phase1-causal-inventory/2",
+  "speculative_consistency": {
+    "divergent_population": {
+      "matches": 7,
+      "total": 42
+    },
+    "per_case": [
+      {
+        "case_id": "c109-01-01-045",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          true,
+          false,
+          false
+        ],
+        "match_count": 1
+      },
+      {
+        "case_id": "c109-01-02-076",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 0
+      },
+      {
+        "case_id": "c109-01-03-009",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 0
+      },
+      {
+        "case_id": "c109-01-04-036",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 0
+      },
+      {
+        "case_id": "c109-01-05-017",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          true,
+          false,
+          false
+        ],
+        "match_count": 1
+      },
+      {
+        "case_id": "c109-01-06-006",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          true,
+          false,
+          false
+        ],
+        "match_count": 1
+      },
+      {
+        "case_id": "c109-02-01-030",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 0
+      },
+      {
+        "case_id": "c109-02-02-020",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 0
+      },
+      {
+        "case_id": "c109-02-03-011",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 0
+      },
+      {
+        "case_id": "c109-02-04-033",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 0
+      },
+      {
+        "case_id": "c109-02-05-024",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 0
+      },
+      {
+        "case_id": "c109-02-06-049",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 0
+      },
+      {
+        "case_id": "c109-03-01-044",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 0
+      },
+      {
+        "case_id": "c109-03-02-054",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 0
+      },
+      {
+        "case_id": "c109-03-03-031",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 0
+      },
+      {
+        "case_id": "c109-03-04-003",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 0
+      },
+      {
+        "case_id": "c109-03-05-044",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 0
+      },
+      {
+        "case_id": "c109-03-06-016",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 0
+      },
+      {
+        "case_id": "c109-04-01-026",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          true,
+          false,
+          true,
+          true
+        ],
+        "match_count": 3
+      },
+      {
+        "case_id": "c109-04-02-047",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 0
+      },
+      {
+        "case_id": "c109-04-03-040",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 0
+      },
+      {
+        "case_id": "c109-04-04-024",
+        "decode_equals_next_prefill": [
+          false,
+          false,
+          false,
+          false,
+          true,
+          false,
+          false
+        ],
+        "match_count": 1
+      },
+      {
+        "case_id": "c109-04-05-043",
+        "decode_equals_next_prefill": [
+          false,
+          true,
+          false,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 1
+      },
+      {
+        "case_id": "c109-04-06-074",
+        "decode_equals_next_prefill": [
+          true,
+          false,
+          true,
+          false,
+          false,
+          false,
+          false
+        ],
+        "match_count": 2
+      }
+    ],
+    "stable_population": {
+      "matches": 3,
+      "total": 126
+    }
+  }
+}
