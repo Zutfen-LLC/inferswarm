@@ -14,13 +14,18 @@ execution authorization, or the integration branch:
    from a PASS, or authorization from a merge or green CI.
 2. Edit `docs/project-status.json` with the scoped claim and source references.
    Physical evidence and CPU fixtures must remain distinguishable. An observed
-   result awaiting acceptance belongs in the frontier prerequisite, not the
+   result awaiting acceptance belongs in the frontier prerequisite, not in the
    accepted capabilities list.
-3. Run `python3 scripts/sync_project_status.py --write` and review the diff.
+3. Run `python3 scripts/finalize_repository.py --write` (it runs the status
+   sync and every other maintained generator in dependency order, then proves
+   a second pass changes nothing) and review the diff. The narrower
+   `python3 scripts/sync_project_status.py --write` still covers the status
+   sections alone; see [finalization.md](finalization.md).
 4. Review explanatory prose outside generated sections in the README, roadmap,
    architecture overview, and active integration/implementation guides.
    Update affected prose in this PR or explain why it is unaffected.
-5. Run `python3 scripts/sync_project_status.py --check` and
+5. Run `python3 scripts/finalize_repository.py --check`,
+   `python3 scripts/sync_project_status.py --check`, and
    `python3 -m unittest tests.test_project_status -v`.
 
 The existing CI workflow runs the drift check and tests on every PR update and

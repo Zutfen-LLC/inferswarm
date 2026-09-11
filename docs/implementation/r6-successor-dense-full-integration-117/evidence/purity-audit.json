@@ -1,1 +1,1 @@
-{"forbidden_tokens":["gemma","rtx","3060","3090","bf16","triton","flashinfer","cuda","inferswarm00","inferswarm01","inferswarm03","inferswarm04","safetensors","tokenizer","checkpoint"],"path":"/home/zutfen/code/inferswarm/scripts/issue117_planner.py","planner_model_specific_branches":0,"violations":[]}
+{"forbidden_tokens":["gemma","rtx","3060","3090","bf16","triton","flashinfer","cuda","inferswarm00","inferswarm01","inferswarm03","inferswarm04","safetensors","tokenizer","checkpoint"],"path":"scripts/issue117_planner.py","planner_model_specific_branches":0,"violations":[]}

@@ -925,6 +925,16 @@ The earlier #118 `ISSUE117_IMPLEMENTATION_FREEZE_BLOCKED` record remains
 historical truth. The #119/#120 provenance recoveries and #121 accepted physical
 preflight are additive records; they do not rewrite that result.
 
+Issue #130 delivered the repository's deterministic finalization tooling
+(pending maintainer acceptance) on this lane: one fail-closed command
+(`scripts/finalize_repository.py --write` / `--check`) runs every declared
+generator once in a mechanically proven topological order, rejects dependency
+cycles and post-manifest writes, and proves a second pass is a byte no-op.
+The authority/integrity split (records a reducer consumes are read-only
+primary inputs; `producer-hashes.json` and retention manifests are terminal
+indexes written last) removes the circular pinning that previously made the
+Issue #117 chain require manual re-audit cascades after routine maintenance.
+
 ---
 
 ## Deferred validation targets

@@ -94,6 +94,9 @@ PRODUCERS = [
     "scripts/issue117_arm_c_frozen_pins.py",
     "scripts/issue129_arm_c_retry_core.py",
     "tests/test_issue129_arm_c_retry.py",
+    "scripts/finalize_repository.py",
+    "tests/test_finalize_repository.py",
+    "tests/test_evidence_manifest_lifecycle.py",
     "scripts/issue133_arm_c_retry_campaign.py",
     "scripts/issue133_arm_c_retry_direct.py",
     "scripts/issue133_canonical_environment.py",
@@ -460,6 +463,24 @@ def subject_identity_digest(subject: Mapping[str, Any]) -> str:
 
 def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def purity_audit_document(path: Path, forbidden_tokens) -> dict[str, Any]:
+    """Checkout-independent purity-audit evidence document.
+
+    Same audit as ``planner_purity_audit`` (shared implementation), but the
+    retained document records the repository-relative source path so the
+    evidence bytes are identical from any checkout (Issue #130
+    determinism): the previous absolute-path field made regeneration
+    checkout-dependent and broke the byte fixed-point contract.
+    """
+    document = planner_purity_audit(path, forbidden_tokens)
+    try:
+        relative = path.relative_to(ROOT).as_posix()
+    except ValueError:
+        relative = path.name  # outside the repository: name only
+    document["path"] = relative
+    return document
 
 
 def fixture_adjudication_identity(fixture_digest: str,
@@ -1675,7 +1696,7 @@ def run_campaign(out_dir: Path | None = None, *, fixture_path: Path | None = Non
             "fencing.json": fence,
             "negative-controls.json": {"controls": controls.results},
             "zero-invariants.json": zero,
-            "purity-audit.json": planner_purity_audit(
+            "purity-audit.json": purity_audit_document(
                 ROOT / "scripts" / "issue117_planner.py", PURITY_TOKENS),
             "applicability-audit.json": audit,
             "qualification-record.json": world["qualification_record"],

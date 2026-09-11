@@ -3,6 +3,8 @@
 Most executables in this directory are **evidence tooling**, not product code.
 `sync_project_status.py` is living documentation-maintenance tooling; its
 [maintenance contract](../docs/status-maintenance.md) permits reviewed updates.
+`finalize_repository.py` (Issue #130) is the deterministic finalization entry
+point described in [docs/finalization.md](../docs/finalization.md).
 InferSwarm has no released runtime; these scripts derive, freeze, verify, or
 diagnose the retained records under [`docs/`](../docs/). The runtime
 experiments themselves live in the
