@@ -836,13 +836,36 @@ _checkpoint_bytes = 9256814624  # participant stage report (fetched_bytes)
 require(_structural_bound < _checkpoint_bytes,
         "structural bound no longer excludes checkpoint transport")
 
-# 6d. HTTP ingress accounting (bodies bounded by the pinned coordinator)
+# 6d. HTTP ingress accounting (bodies bounded by the pinned coordinator;
+# every leaf classified with the same fail-closed classifier as the wire
+# payloads — a smuggled payload in a request body is payload, not
+# metadata)
 http_meta_bytes = 0
+http_payload_bytes = 0
+http_unknown_bytes = 0
+_HTTP_BODY_BUDGET = 4 * 1024 * 1024  # pinned coordinator.py do_POST bound
 for r in campaign["records"]:
-    http_meta_bytes += len(json.dumps(
-        r.get("request_body", {}), sort_keys=True).encode())
-http_meta_bytes += len(json.dumps(
-    fencing_arm.get("request_body", {}), sort_keys=True).encode())
+    body = json.dumps(r.get("request_body", {}), sort_keys=True,
+                      separators=(",", ":")).encode()
+    require(len(body) <= _HTTP_BODY_BUDGET,
+            "ordinary HTTP request body exceeds the pinned 4 MiB "
+            "coordinator ingress bound")
+    stats = {"control_metadata": 0, "model_payload": 0, "unknown": 0}
+    _classify_tree(r.get("request_body", {}), stats)
+    http_meta_bytes += len(body)
+    http_payload_bytes += stats["model_payload"]
+    http_unknown_bytes += stats["unknown"]
+fence_body = json.dumps(fencing_arm.get("request_body", {}),
+                        sort_keys=True,
+                        separators=(",", ":")).encode()
+require(len(fence_body) <= _HTTP_BODY_BUDGET,
+        "fencing HTTP request body exceeds the pinned 4 MiB ingress "
+        "bound")
+_fstats = {"control_metadata": 0, "model_payload": 0, "unknown": 0}
+_classify_tree(fencing_arm.get("request_body", {}), _fstats)
+http_meta_bytes += len(fence_body)
+http_payload_bytes += _fstats["model_payload"]
+http_unknown_bytes += _fstats["unknown"]
 
 # 6e. state census classification (name/type; NO size threshold)
 census_unknown = []
@@ -913,16 +936,39 @@ for phase, obs in (("pre", coord_pre), ("post", coord_post)):
         if p.get("maps_mentions_cuda_or_nvidia"):
             cuda_initialized += 1
 
-# 6g. the four zero invariants, derived
+# 6g-bis. census size bounds: an allowed NAME is not a license for an
+# arbitrary SIZE.  Every census entry is bounded:
+#   * retained cross-bound files: exact size (above) or superset bound;
+#   * the sha256 sidecar: exactly 86 bytes ("sha256:" + 64 hex + newline);
+#   * coordinator.log: bounded by the pinned coordinator's real output
+#     (two startup lines, KB-scale; anything bulk-sized under this name
+#     is a materialized artifact and fails the window).  The observed
+#     log sizes (150/286 bytes pre/post) bound the cap at 64 KiB.
+_LOG_CAP = 64 * 1024
+_SIDECAR_SIZE = 86
+for (phase, path), size in census_class.items():
+    if path.endswith("coordinator.log"):
+        require(size <= _LOG_CAP,
+                f"coordinator.log census size {size} exceeds the "
+                f"code-derived cap ({phase})")
+    elif path.endswith(".sha256"):
+        require(size == _SIDECAR_SIZE,
+                f"sha256 sidecar census size {size} != {_SIDECAR_SIZE} "
+                f"({phase})")
+
+# 6g. the four zero invariants, derived (received = wire-classified
+# payload + HTTP-ingress-classified payload; bulk = same totals)
 invariants["coordinator_cuda_initialized"] = cuda_initialized
-invariants["coordinator_model_weight_bytes_received"] = wire_payload_bytes
+invariants["coordinator_model_weight_bytes_received"] = (
+    wire_payload_bytes + http_payload_bytes)
 invariants["coordinator_model_weight_bytes_materialized"] = libtorch_maps
 invariants["coordinator_bulk_artifact_bytes_observed"] = (
-    wire_payload_bytes)
+    wire_payload_bytes + http_payload_bytes)
 invariants["coordinator_wire_frames_accounted"] = wire_frames
 invariants["coordinator_wire_metadata_bytes_accounted"] = wire_meta_bytes
 invariants["coordinator_http_ingress_metadata_bytes"] = http_meta_bytes
-invariants["coordinator_unclassified_wire_bytes"] = wire_unknown_bytes
+invariants["coordinator_unclassified_wire_bytes"] = (
+    wire_unknown_bytes + http_unknown_bytes)
 invariants["coordinator_unclassified_census_entries"] = len(census_unknown)
 for k in ("coordinator_cuda_initialized",
           "coordinator_model_weight_bytes_received",

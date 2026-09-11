@@ -4,7 +4,7 @@
   "coordinator_boundary": {
     "census_files_classified": 9,
     "executed_source_pins": "coordinator-boundary-source-pins.json (12 modules, each sha256-pinned, bound to frozen producer 924cd22e == git blob == deployed participant trees)",
-    "http_ingress_metadata_bytes": 6705,
+    "http_ingress_metadata_bytes": 6453,
     "receive_surface": "AST over pinned bytes: single coordinator recv_frame site (xc_coordinator L96) + HTTP do_POST (25 retained bodies); node_agent sends at exactly L63/L87",
     "structural_bound_bytes": 50531183,
     "structural_vs_checkpoint": "50531183 < 9256814624 (checkpoint cannot cross the boundary even at max-size frames)",
@@ -96,7 +96,7 @@
     "controlled_fencing_injections_rejected": 2,
     "coordinator_bulk_artifact_bytes_observed": 0,
     "coordinator_cuda_initialized": 0,
-    "coordinator_http_ingress_metadata_bytes": 6705,
+    "coordinator_http_ingress_metadata_bytes": 6453,
     "coordinator_model_weight_bytes_materialized": 0,
     "coordinator_model_weight_bytes_received": 0,
     "coordinator_unclassified_census_entries": 0,

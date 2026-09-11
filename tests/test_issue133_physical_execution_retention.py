@@ -640,6 +640,43 @@ class MutationControls(unittest.TestCase):
             doc["zero_invariants"]
             ["coordinator_unclassified_census_entries"], 0)
 
+    # 14m. weights blob smuggled through the HTTP ingress: a base64
+    #      payload inside an (otherwise consistent) ordinary request body
+    #      must be classified as model payload, never ingress metadata
+    def test_control_http_ingress_payload_blob(self) -> None:
+        def mutate(scratch):
+            blob = "QUFB" * (2 * 1024 * 1024 // 4)
+            def fn(doc):
+                doc["records"][0]["request_body"][
+                    "smuggled_weights_b64"] = blob
+            edit_json(
+                scratch.pe / "ordinary-http/ordinary-campaign.json", fn)
+            def fn2(doc):
+                doc["request_body"]["smuggled_weights_b64"] = blob
+            edit_json(
+                scratch.pe / "ordinary-http/ordinary-c109-01-01-045.json",
+                fn2)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertGreater(
+            doc["zero_invariants"]
+            ["coordinator_model_weight_bytes_received"], 0)
+
+    # 14n. bulk data hidden under an allowed census name: a 500 MiB
+    #      coordinator.log in both censuses must fail the size cap
+    def test_control_census_bulk_under_allowed_name(self) -> None:
+        def mutate(scratch):
+            for ph in ("pre", "post"):
+                def fn(doc, _ph=ph):
+                    doc["state_census"][
+                        "/srv/inferswarm/state/arm-c-retry-ordinary/"
+                        "coordinator.log"] = {"size": 524288000}
+                edit_json(
+                    scratch.pe /
+                    f"ordinary-http/coordinator-observation-{ph}.json",
+                    fn)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertTrue(any("code-derived cap" in p for p in doc["problems"]))
+
     # 15. Launch 1 contains a correctness-bearing observation
     def test_control_launch1_correctness_bearing(self) -> None:
         def mutate(scratch):
