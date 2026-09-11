@@ -1,7 +1,7 @@
 # Issue #133 Arm-C physical retry — physical-execution evidence
 
 Status: `ISSUE117_ARM_C_ORDINARY_SERVING_FAIL` (re-derived under the
-review-5172615768 fail-closed correction /2 from the unchanged retained
+review-5173318161 fail-closed correction /3 from the unchanged retained
 observations; pending maintainer re-review). Arm D remains blocked.
 
 Campaign `armc-retry-afcdc4428f95d50c`, attempt `armc-retry-physical-1`,
@@ -81,14 +81,33 @@ compared against the direct invocation transcript call by call —
 - One mismatch is a semantic FAIL under the frozen methodology. No
   rerun, no tuning, no relabeling.
 
-Terminal reduction (`terminal-reduction.json`, correction /2): every
-mandatory zero is mechanically derived from retained observations
-(fencing/attribution counters from
+Terminal reduction (`terminal-reduction.json`, correction /3 for review
+5173318161): every mandatory zero is mechanically derived from retained
+observations (fencing/attribution counters from
 `coordinator_scope.requests[*].token_events` + session ledgers +
-dual-retained injection rejection records; Coordinator counters from
-pre/post process observations, state censuses, and the strace audit);
-stale/wrong session/plan/epoch/position commits = 0, unattributed = 0;
-two controlled fencing injections REJECTED pre-commit
+dual-retained injection rejection records). The Coordinator
+receive/materialization/bulk zeros are derived from an exact transport
+accounting (review 5173318161 P1): `coordinator-boundary-source-pins.json`
+pins the twelve boundary/producer modules byte-bound to frozen producer
+924cd22e (git blob == deployed participant trees == vendored bytes; host
+preflights prove clean trees at that HEAD; the coordinator's own
+constructor re-verified it via `_require_clean_exact_source`); AST over
+the pinned bytes proves the receive surface is exactly one
+`recv_frame` site over one node-agent socket plus the bounded HTTP
+ingress (25 retained bodies), with every Coordinator-bound frame
+constructed by `node_agent.py` at exactly two `send_exact` sites; the
+200 GENERATE + 1 REPORT wire envelopes are re-encoded to exact canonical
+wire bytes from retained payloads and every leaf classified
+(control metadata / model payload / unknown — unknown must be 0);
+REALIZE/CLOSE are budget-bound (203 frames x 24 MiB < the 9.26 GB
+checkpoint — structural exclusion); census files are classified by
+name/type with no size threshold (the invented 1-GiB threshold is
+removed) and pre-census ⊆ post-census. Attempt attribution is fail-closed
+(review 5173318161 P2): all 48 per-case files bind by full content
+identity to their attempt-attributed aggregates; null/missing/wrong
+attempt ids fail closed and no unexpected attempt ids exist anywhere in
+the retained tree. Stale/wrong session/plan/epoch/position commits = 0,
+unattributed = 0; two controlled fencing injections REJECTED pre-commit
 (NON_NEXT_COMMIT_POSITION / RETIRED_OR_SUPERSEDED_EPOCH); coordinator
 CUDA/model-weight/bulk-byte counters all 0; launch 1's
 PRE_OBSERVATION_INFRASTRUCTURE classification is derived from the

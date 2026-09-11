@@ -174,10 +174,10 @@ class TerminalReductionDerivations(unittest.TestCase):
     def setUp(self) -> None:
         self.terminal = load("terminal-reduction.json")
 
-    def test_schema_is_corrected_v2(self) -> None:
+    def test_schema_is_corrected_v3(self) -> None:
         self.assertEqual(
             self.terminal["schema"],
-            "inferswarm.issue133.arm-c-retry.terminal-reduction/2")
+            "inferswarm.issue133.arm-c-retry.terminal-reduction/3")
 
     def test_terminal_is_semantic_fail(self) -> None:
         self.assertEqual(
@@ -394,9 +394,8 @@ class MutationControls(unittest.TestCase):
                 t["source_models_opens"] = 1
             edit_json(scratch.pe / "strace-audit.json", fn)
         doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
-        z = doc["zero_invariants"]
-        self.assertGreater(
-            z["coordinator_model_weight_bytes_received"], 0)
+        self.assertTrue(any("Source opens != 0" in p
+                            for p in doc["problems"]))
 
     # 9. participant substrate file digest drifts
     def test_control_substrate_digest_drift(self) -> None:
@@ -456,19 +455,190 @@ class MutationControls(unittest.TestCase):
         self.assertGreater(
             doc["zero_invariants"]["coordinator_cuda_initialized"], 0)
 
-    # 14. coordinator weight/bulk evidence nonzero (census bulk file)
+    # 14. coordinator weight/bulk evidence nonzero: a classified
+    #     artifact payload leaf injected into a retained wire result
+    #     (500 MiB base64 blob inside a GENERATE response)
     def test_control_coordinator_bulk_bytes(self) -> None:
         def mutate(scratch):
             def fn(doc):
-                doc["state_census"]["lifecycle/huge-artifact.bin"] = {
-                    "size": 2_500_000_000}
+                doc["epochs"][0]["runtime_sessions"][0][
+                    "artifact_payload"] = "QUFB" * (500 * 1024 * 1024 // 4)
+            edit_json(scratch.pe / "ordinary-http/serving-report.json", fn)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        z = doc["zero_invariants"]
+        self.assertGreaterEqual(
+            z["coordinator_bulk_artifact_bytes_observed"], 500 * 1024 * 1024)
+        self.assertGreater(
+            z["coordinator_model_weight_bytes_received"], 0)
+
+    # 14b. 64 MiB classified artifact payload (below any historical
+    #      GiB threshold; must still be counted, never absorbed)
+    def test_control_coordinator_bulk_bytes_64mib(self) -> None:
+        def mutate(scratch):
+            def fn(doc):
+                doc["epochs"][0]["runtime_sessions"][0][
+                    "artifact_payload"] = "QUFB" * (64 * 1024 * 1024 // 4)
+            edit_json(scratch.pe / "ordinary-http/serving-report.json", fn)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertGreaterEqual(
+            doc["zero_invariants"]
+            ["coordinator_bulk_artifact_bytes_observed"], 64 * 1024 * 1024)
+
+    # 14c. artifact payload received then deleted: census entry gone in
+    #      post but the wire payload was received (deleted state is a
+    #      defect independent of the payload accounting)
+    def test_control_artifact_received_then_deleted(self) -> None:
+        def mutate(scratch):
+            def fn_post(doc):
+                doc["state_census"].pop(
+                    "/srv/inferswarm/state/arm-c-retry-ordinary/"
+                    "serving-evidence.json", None)
+            edit_json(
+                scratch.pe /
+                "ordinary-http/coordinator-observation-post.json", fn_post)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertTrue(any("deleted during window" in p
+                            for p in doc["problems"]))
+
+    # 14d. unclassified coordinator-bound payload: a >512-char string
+    #      leaf in a wire result must count as unknown potentially-bulk
+    #      and fail the authoritative-terminal requirement
+    def test_control_unclassified_wire_payload(self) -> None:
+        def mutate(scratch):
+            def fn(doc):
+                doc["epochs"][0]["runtime_sessions"][0][
+                    "mystery_blob"] = ("mystery-" * 512) + "?"
+            edit_json(scratch.pe / "ordinary-http/serving-report.json", fn)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertGreater(
+            doc["zero_invariants"]
+            ["coordinator_unclassified_wire_bytes"], 0)
+
+    # 14e. model/artifact response envelope injected: an extra wire
+    #      result carrying a base64 tensor field (session-count and
+    #      logical-grouping checks fire independently; the payload
+    #      classification must ALSO see the blob)
+    def test_control_artifact_envelope_injected(self) -> None:
+        def mutate(scratch):
+            def fn(doc):
+                sess = doc["epochs"][0]["runtime_sessions"]
+                plan = sess[0]["plan_digest"]
+                sess.append({
+                    "session_id": sess[-1]["session_id"] + 1,
+                    "plan_digest": plan,
+                    "prompt_len": 0,
+                    "generated_token_ids": [0, 0],
+                    "hidden_state_b64":
+                        "AAAA" * (16 * 1024 * 1024 // 4),
+                })
+            edit_json(scratch.pe / "ordinary-http/serving-report.json", fn)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertGreater(
+            doc["zero_invariants"]
+            ["coordinator_model_weight_bytes_received"], 0)
+
+    # 14f. transient receive with no persistent state file: a numeric
+    #      tensor-scale array (>4096 floats) inside a wire result
+    def test_control_transient_receive_no_state_file(self) -> None:
+        def mutate(scratch):
+            def fn(doc):
+                doc["epochs"][0]["runtime_sessions"][0]["logits"] = [
+                    0.5] * 262144
+            edit_json(scratch.pe / "ordinary-http/serving-report.json", fn)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertGreater(
+            doc["zero_invariants"]
+            ["coordinator_unclassified_wire_bytes"], 0)
+
+    # 14g. static protocol/source identity drift: one byte flipped in a
+    #      pinned boundary source file
+    def test_control_boundary_source_drift(self) -> None:
+        def mutate(scratch):
+            p = (scratch.root / "arm-c-retry/frozen-source/924cd22e/"
+                 "benchmarks/inferswarm_r6/node_agent.py")
+            text = p.read_text().replace(
+                "send_exact(self._conn, encode_frame(response))",
+                "send_exact(self._conn, encode_frame(responsX))", 1)
+            p.write_text(text)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertTrue(any("boundary source drift" in p
+                            for p in doc["problems"]))
+
+    # 14h. pinned producer identity drift: the pins document names a
+    #      different producer
+    def test_control_boundary_producer_drift(self) -> None:
+        def mutate(scratch):
+            def fn(doc):
+                doc["frozen_producer"] = "0" * 40
+            edit_json(scratch.pe / "coordinator-boundary-source-pins.json",
+                      fn)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertTrue(any("frozen producer" in p for p in doc["problems"]))
+
+    # 14i. receive-site mutation: an extra send_exact site appended to
+    #      the pinned node agent (negative control for the structural
+    #      proof: the AST site-set assertion must trip)
+    def test_control_receive_surface_mutation(self) -> None:
+        def mutate(scratch):
+            p = (scratch.root / "arm-c-retry/frozen-source/924cd22e/"
+                 "benchmarks/inferswarm_r6/node_agent.py")
+            p.write_text(p.read_text() + "\n\ndef _leak(site=None):\n"
+                         "    send_exact(site, b'')\n")
+            # also update the pin so ONLY the AST assertion can catch it
+            import hashlib
+            def fn(doc):
+                doc["files"][
+                    "benchmarks/inferswarm_r6/node_agent.py"][
+                    "file_sha256"] = hashlib.sha256(
+                        p.read_bytes()).hexdigest()
+            edit_json(scratch.pe / "coordinator-boundary-source-pins.json",
+                      fn)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertTrue(any("send_exact site set" in p
+                            for p in doc["problems"]))
+
+    # 14j. coordinator materialization evidence nonzero: libtorch mapped
+    def test_control_coordinator_materialization(self) -> None:
+        def mutate(scratch):
+            def fn(doc):
+                doc["processes"][0]["maps_libtorch"] = 3
             edit_json(
                 scratch.pe /
                 "ordinary-http/coordinator-observation-post.json", fn)
         doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
         self.assertGreater(
             doc["zero_invariants"]
-            ["coordinator_bulk_artifact_bytes_observed"], 0)
+            ["coordinator_model_weight_bytes_materialized"], 0)
+
+    # 14k. required transport evidence absent: final runtime report
+    #      replaced by a failure marker
+    def test_control_transport_evidence_absent(self) -> None:
+        def mutate(scratch):
+            def fn(doc):
+                doc["epochs"][0]["final_runtime_report"] = {}
+                doc["epochs"][0]["runtime_report_failure"] = \
+                    "RuntimeError: participant vanished"
+            edit_json(scratch.pe / "ordinary-http/serving-report.json", fn)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertTrue(any("REPORT transport evidence" in p
+                            for p in doc["problems"]))
+
+    # 14l. unclassified census file: an artifact-named state file below
+    #      any GiB threshold (500 MiB weights.bin must be a defect, and
+    #      so must a 1 KB unknown file — classification is by name)
+    def test_control_unclassified_census_file(self) -> None:
+        def mutate(scratch):
+            def fn(doc):
+                doc["state_census"][
+                    "/srv/inferswarm/state/arm-c-retry-ordinary/"
+                    "weights.bin"] = {"size": 524288000}
+            edit_json(
+                scratch.pe /
+                "ordinary-http/coordinator-observation-post.json", fn)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertGreater(
+            doc["zero_invariants"]
+            ["coordinator_unclassified_census_entries"], 0)
 
     # 15. Launch 1 contains a correctness-bearing observation
     def test_control_launch1_correctness_bearing(self) -> None:
@@ -479,6 +649,77 @@ class MutationControls(unittest.TestCase):
         doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
         self.assertTrue(
             any("launch-1" in p for p in doc["problems"]))
+
+    # 15b. direct case attempt_id = null (review 5173318161 P2)
+    def test_control_direct_case_null_attempt(self) -> None:
+        def mutate(scratch):
+            def fn(doc):
+                doc["attempt_id"] = None
+            edit_json(scratch.pe / "direct/direct-c109-01-01-045.json", fn)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertTrue(
+            any("authorized attempt" in p for p in doc["problems"]))
+
+    # 15c. direct case missing attempt_id entirely: content binding must
+    #      still hold; removing the field alone (schema carries none) is
+    #      legal, so this control instead breaks content identity —
+    #      covered by 2d below.  Here: wrong (non-null) attempt id.
+    # 15d. wrong attempt id on a direct case
+    def test_control_direct_case_wrong_attempt(self) -> None:
+        def mutate(scratch):
+            def fn(doc):
+                doc["attempt_id"] = "armc-retry-physical-2"
+            edit_json(scratch.pe / "direct/direct-c109-01-01-045.json", fn)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertTrue(
+            any("authorized attempt" in p or "unexpected attempt" in p
+                for p in doc["problems"]))
+
+    # 15e. direct-run.json attempt attribution null
+    def test_control_direct_run_null_attempt(self) -> None:
+        def mutate(scratch):
+            def fn(doc):
+                doc["attempt_id"] = None
+            edit_json(scratch.pe / "direct/direct-run.json", fn)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertTrue(
+            any("direct run attempt attribution" in p
+                for p in doc["problems"]))
+
+    # 15f. ordinary campaign attribution wrong
+    def test_control_ordinary_campaign_wrong_attempt(self) -> None:
+        def mutate(scratch):
+            def fn(doc):
+                doc["attempt_id"] = "armc-retry-physical-1-direct"
+            edit_json(
+                scratch.pe / "ordinary-http/ordinary-campaign.json", fn)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertTrue(
+            any("ordinary campaign attempt attribution" in p
+                for p in doc["problems"]))
+
+    # 15g. direct case file content no longer binds to the attributed
+    #      aggregate (a case observation with no attribution path)
+    def test_control_direct_case_content_unbound(self) -> None:
+        def mutate(scratch):
+            def fn(doc):
+                doc["wall_ns"] = 42
+            edit_json(scratch.pe / "direct/direct-c109-01-01-045.json", fn)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertTrue(
+            any("does not bind" in p for p in doc["problems"]))
+
+    # 15h. ordinary case file content no longer binds
+    def test_control_ordinary_case_content_unbound(self) -> None:
+        def mutate(scratch):
+            def fn(doc):
+                doc["wall_ns"] = 7
+            edit_json(
+                scratch.pe / "ordinary-http/ordinary-c109-01-01-045.json",
+                fn)
+        doc = self._terminal_changes(mutate, expect_not=self.SEMANTIC)
+        self.assertTrue(
+            any("does not bind" in p for p in doc["problems"]))
 
     # 16. controlled fencing injection becomes accepted
     def test_control_fencing_injection_accepted(self) -> None:

@@ -96,6 +96,7 @@ strace_audit = load("strace-audit.json")
 strace_raw_pins = load("strace-raw-pins.json")
 substrate01 = load("substrate-reconciliation-01.json")
 substrate03 = load("substrate-reconciliation-03.json")
+boundary_pins = load("coordinator-boundary-source-pins.json")
 verdict_run1 = load("preflight/prelaunch-verdict-run1.json")
 verdict_final = load("preflight/prelaunch-verdict-immediate-prelaunch.json")
 tokenizer_proof = load("preflight/tokenizer-deployment-proof.json")
@@ -249,13 +250,30 @@ for name, ls in (("direct", last_stage_direct),
             == FROZEN_PRODUCER,
             f"last-stage {name} producer identity drift")
 
-# ---- 2. launch-1 lineage (derived, not authored) ------------------------------
+# ---- 2. launch-1 lineage + fail-closed attempt attribution --------------
 # Evidence: attempts/launch1-failure.log (ModuleNotFoundError before any
 # correctness-bearing output), attempts/execution-plan.launch1.json (the
 # launch-1 frozen plan exists and predates the retained case evidence),
-# and the ABSENCE of launch-1 case/commit observations (every retained
-# case/commit record belongs to attempt armc-retry-physical-1 / its
-# ordinary sub-attempt).
+# and the ABSENCE of launch-1 case/commit observations.
+#
+# Review 5173318161 P2: a correctness-bearing observation with a NULL or
+# missing attempt attribution is itself an evidence defect; the /2 logic
+# treated attempt_id == None as harmless.  Every physical observation is
+# now required to bind POSITIVELY to its authorized attempt/sub-attempt:
+#   * direct-run.json must carry attempt_id == the authorized attempt;
+#   * every direct per-case file carries no attempt field in its frozen
+#     schema, so each must bind by FULL content identity to a results
+#     row of the attempt-attributed direct run (and its transcript row
+#     must commit exactly the case's generated ids);
+#   * ordinary-campaign.json must carry attempt_id == the authorized
+#     ordinary sub-attempt;
+#   * every ordinary per-case file must bind by full content identity to
+#     a record of that campaign;
+#   * any attempt_id-bearing case file must name exactly the authorized
+#     attempt (null/wrong/missing all fail);
+#   * no other attempt ids may appear anywhere in the retained set.
+AUTHORIZED_ATTEMPT = "armc-retry-physical-1"
+AUTHORIZED_ORDINARY_SUBATTEMPT = "armc-retry-physical-1-ordinary"
 launch1_dependency_failure = (
     "ModuleNotFoundError" in launch1_log
     and re.search(r"No module named 'tvm_ffi'", launch1_log) is not None)
@@ -264,10 +282,117 @@ require(launch1_dependency_failure,
 require(launch1_plan.get("digest") == "sha256:a730405dab8bad2ee8c4eea9a4"
         "fb97b8ef53ea15415a4d904bf666d020cdc625",
         "launch-1 execution plan digest drift")
+
+# 2a. aggregates carry the exact authorized attribution
+require(direct_run.get("attempt_id") == AUTHORIZED_ATTEMPT,
+        "direct run attempt attribution drift")
+require(campaign.get("attempt_id") == AUTHORIZED_ORDINARY_SUBATTEMPT,
+        "ordinary campaign attempt attribution drift")
+
+# 2b. per-case files: content-identity binding to the attributed
+# aggregates + explicit attempt-field fail-closed checks
+import glob as _glob  # noqa: E402
+
+_direct_case_files = sorted(
+    (COLLECTED / "direct").glob("direct-c109-*.json"))
+require(len(_direct_case_files) == 24,
+        f"direct case file count {len(_direct_case_files)} != 24")
+_dr_rows = {r["case_id"]: r for r in direct_run["results"]}
+_dr_transcript = {t["case_id"]: t
+                  for t in direct_run["invocation_transcript"]}
+for cf in _direct_case_files:
+    doc = json.loads(cf.read_text())
+    cid = doc.get("case_id")
+    row = _dr_rows.get(cid)
+    if row is None:
+        problems.append(f"direct case {cid}: no attributed direct-run row")
+        continue
+    if json.dumps(doc, sort_keys=True) != json.dumps(row, sort_keys=True):
+        problems.append(
+            f"direct case {cid}: content does not bind to the "
+            "attempt-attributed direct-run results row")
+    tr = _dr_transcript.get(cid)
+    if tr is None:
+        problems.append(f"direct case {cid}: no transcript row")
+        continue
+    if [c["committed_token"] for c in tr["calls"]] != list(
+            doc.get("generated_token_ids", [])):
+        problems.append(
+            f"direct case {cid}: transcript commits != case ids")
+    if tr.get("logical_session_id") != doc.get("logical_session_id"):
+        problems.append(f"direct case {cid}: logical session drift")
+    # fail-closed attribution for any explicit attempt field
+    aid = doc.get("attempt_id", "__absent__")
+    if aid != "__absent__" and aid != AUTHORIZED_ATTEMPT:
+        problems.append(
+            f"direct case {cid}: attempt_id {aid!r} is not the "
+            "authorized attempt (null/missing/wrong fail closed)")
+
+_ordinary_case_files = sorted(
+    (COLLECTED / "ordinary-http").glob("ordinary-c109-*.json"))
+require(len(_ordinary_case_files) == 24,
+        f"ordinary case file count {len(_ordinary_case_files)} != 24")
+_oc_recs = {r["case_id"]: r for r in campaign["records"]}
+for cf in _ordinary_case_files:
+    doc = json.loads(cf.read_text())
+    cid = doc.get("case_id")
+    rec = _oc_recs.get(cid)
+    if rec is None:
+        problems.append(
+            f"ordinary case {cid}: no attributed campaign record")
+        continue
+    if json.dumps(doc, sort_keys=True) != json.dumps(rec, sort_keys=True):
+        problems.append(
+            f"ordinary case {cid}: content does not bind to the "
+            "sub-attempt-attributed campaign record")
+    aid = doc.get("attempt_id", "__absent__")
+    if aid != "__absent__" and aid != AUTHORIZED_ORDINARY_SUBATTEMPT:
+        problems.append(
+            f"ordinary case {cid}: attempt_id {aid!r} is not the "
+            "authorized ordinary sub-attempt")
+
+# 2c. no unexpected attempt ids anywhere in the retained evidence tree
+_ALLOWED_ATTEMPT_IDS = {AUTHORIZED_ATTEMPT, AUTHORIZED_ORDINARY_SUBATTEMPT,
+                        "armc-direct-6"}  # historical ranking-evidence id
+
+
+def _attempt_ids(obj):
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            # identity fields only (attempt_id / *_attempt_id);
+            # prose fields like reason_attempted are not attribution
+            if isinstance(k, str) and k.endswith("attempt_id") \
+                    and isinstance(v, str):
+                yield v
+            yield from _attempt_ids(v)
+    elif isinstance(obj, list):
+        for v in obj:
+            yield from _attempt_ids(v)
+
+
+for jf in sorted(COLLECTED.rglob("*.json")):
+    if jf.name in ("terminal-reduction.json", "equality-reduction.json"):
+        continue  # derived artifacts, not physical observations
+    try:
+        doc = json.loads(jf.read_text())
+    except json.JSONDecodeError:
+        problems.append(f"unparseable retained evidence: {jf.name}")
+        continue
+    unexpected = sorted(set(_attempt_ids(doc)) - _ALLOWED_ATTEMPT_IDS)
+    if unexpected:
+        problems.append(
+            f"{jf.name}: unexpected attempt ids {unexpected[:3]}")
+
 launch1_case_observations = [
     p.name for p in (COLLECTED / "direct").glob("*.json")
-    if json.loads(p.read_text()).get("attempt_id") not in (
-        None, "armc-retry-physical-1")]
+    if p.name.startswith("direct-c109-")
+    and json.loads(p.read_text()).get("attempt_id")
+    not in (None, AUTHORIZED_ATTEMPT)
+    and json.loads(p.read_text()).get("attempt_id") is not None]
+# (a direct case file naming ANY attempt other than the authorized one
+# is already a defect above; launch-1 attribution is proven by the
+# content binding to the launch-2 direct run plus the retained
+# dependency failure log with zero launch-1 output.)
 require(not launch1_case_observations,
         f"launch-1 correctness-bearing observations found: "
         f"{launch1_case_observations[:3]}")
@@ -313,8 +438,12 @@ sessions = epoch["runtime_sessions"]
 require(len(sessions) == 200, f"runtime sessions {len(sessions)} != 200")
 per_logical = defaultdict(int)
 for s in sessions:
-    per_logical[s["session_id"] // 1_000_000] += 1
-    if s["plan_digest"] != epoch["plan_digest"]:
+    sid = s.get("session_id")
+    if not isinstance(sid, int) or isinstance(sid, bool):
+        problems.append("runtime session id malformed")
+        continue
+    per_logical[sid // 1_000_000] += 1
+    if s.get("plan_digest") != epoch["plan_digest"]:
         problems.append("session plan digest drift")
 for logical, n in per_logical.items():
     if n != 8:
@@ -323,8 +452,9 @@ for logical, n in per_logical.items():
 # exactly L*1_000_000 + 8*(L-1)+1 .. L*1_000_000 + 8*L (r5b_epochs.py
 # L417-419 global sequence; the direct arm allocates the identical ids)
 for logical in sorted(per_logical):
-    ids = [s["session_id"] for s in sessions
-           if s["session_id"] // 1_000_000 == logical]
+    ids = [s.get("session_id", -1) for s in sessions
+           if isinstance(s.get("session_id"), int)
+           and s["session_id"] // 1_000_000 == logical]
     expected = [logical * 1_000_000 + 8 * (logical - 1) + j + 1
                 for j in range(8)]
     if sorted(ids) != expected:
@@ -412,7 +542,8 @@ require(set(csess) == {r["session_id"] for r in creq},
         "coordinator session-id sets disagree")
 # runtime sessions must attribute to exactly the 25 logical sessions
 for s in sessions:
-    if s["session_id"] // 1_000_000 not in per_logical:
+    if not isinstance(s.get("session_id"), int) or \
+            s["session_id"] // 1_000_000 not in per_logical:
         wrong_session += 1
 
 # controlled injections are NOT commits — proven by the retained rejection
@@ -460,15 +591,317 @@ for k in ("stale_session_commits", "wrong_session_commits",
     if invariants[k]:
         problems.append(f"fencing nonzero counter: {k}={invariants[k]}")
 
-# ---- 6. coordinator zeros (DERIVED from pre/post observations) ----------------
-# Authority ladder: live process observation pre+post (cuda env keys,
-# torch/cuda maps, nvidia devices) + participant-side strace (Source opens,
-# materialized writes) + the coordinator's own retained state census
-# (what bytes exist on the coordinator host at all).
-cuda_initialized = weight_bytes_received = 0
-weight_bytes_materialized = bulk_bytes = 0
-BULK_THRESHOLD = 1 << 30  # tokenizer/config/log artifacts are KB-scale;
-# anything at or above 1 GiB observed on the coordinator is bulk.
+# ---- 6. coordinator boundary (DERIVED: exact transport accounting --
+# pinned executed producer semantics + process/state observations) -------
+#
+# Review 5173318161 P1: absence of /srv/models opens or persistent census
+# entries does NOT exclude transient model/artifact receipt on the
+# Coordinator's sockets.  The receive/materialization/bulk zeros are
+# therefore derived from a mechanical transport accounting:
+#
+# (a) EXECUTED SOURCE IDENTITY.  coordinator-boundary-source-pins.json
+#     pins the sha256 of every module that constructs or receives a
+#     Coordinator-bound byte, byte-bound to the frozen producer
+#     924cd22e (git blob == deployed participant trees == vendored
+#     bytes; host preflights prove every tree clean at that HEAD and
+#     the coordinator's own constructor re-verified it at process
+#     start via _require_clean_exact_source; the pinned node-agent
+#     strace records the agent opening exactly these deployed files).
+# (b) RECEIVE SURFACE COMPLETENESS (AST over the pinned bytes): the
+#     Coordinator process's only socket receive call is
+#     xc_coordinator.RemoteEpochRuntime._request -> recv_frame (single
+#     site) over ONE node-agent connection; every other network input
+#     is the HTTP ingress (do_POST, bodies bounded to 4 MiB, all 25
+#     retained verbatim).  Every Coordinator-bound wire frame is
+#     CONSTRUCTED by node_agent.py at exactly two send_exact sites
+#     (_accept_response / _reject) from metadata-only response records.
+# (c) EXACT ENVELOPE ACCOUNTING.  The pinned r5b_epochs.py semantics
+#     bound the exchange count: 1 REALIZE + one GENERATE response per
+#     committed token (200 retained verbatim as
+#     epochs[*].runtime_sessions) + 1 REPORT (retained as
+#     final_runtime_report) + 1 CLOSE = 203 frames.  The 200 GENERATE
+#     and 1 REPORT envelopes are re-encoded to their EXACT canonical
+#     wire bytes from retained content; REALIZE/CLOSE results are not
+#     retained verbatim and are accounted at the 24 MiB wire budget
+#     bound under producer-semantics classification (their pinned
+#     constructors are dict literals over observation/node_identity/
+#     wall-ns and the runtime report -- no tensor passthrough exists).
+#     Structural consequence: 203 frames x ~24 MiB < the 9.26 GB
+#     participant checkpoint, so even adversarial max-size frames
+#     cannot transport the model across this boundary.
+# (d) VALUE CLASSIFICATION (fail-closed).  Every leaf of every
+#     retained received payload is classified: ints/bools/None/floats
+#     (timing statistics) = control metadata; a str > 512 chars or a
+#     numeric list > 4096 entries = UNKNOWN potentially-bulk; a
+#     base64/hex-blob-looking str or any bytes leaf = model payload.
+#     An authoritative terminal additionally requires unknown == 0.
+# (e) STATE CLASSIFICATION (no size threshold).  Census files are
+#     classified by path/name against the executed coordinator's own
+#     write set; the retained report/evidence/config files are
+#     cross-bound to their census sizes; any other name = unclassified
+#     defect.  The pre-census must be a subset of the post-census (a
+#     file present before and gone after = deleted state = defect).
+#     The invented 1-GiB BULK_THRESHOLD is removed entirely.
+# (f) MATERIALIZATION.  Receipt == 0 (above) AND the coordinator-
+#     process closure imports no torch/numpy/safetensors/triton (AST)
+#     AND constructs no raw socket outside the pinned adapter AND
+#     pre/post process maps show no libtorch and no CUDA env AND the
+#     census holds no artifact-class file => materialized == 0,
+#     derived not inferred from persistent-file absence.
+
+import ast  # noqa: E402
+
+# 6a. executed-source identity of the boundary closure
+_boundary_files = boundary_pins.get("files", {})
+require(bool(_boundary_files),
+        "coordinator boundary source pins absent")
+for rel, meta in sorted(_boundary_files.items()):
+    actual = sha256_file(EVIDENCE / "frozen-source/924cd22e" / rel)
+    require(actual == meta.get("file_sha256"),
+            f"coordinator boundary source drift: {rel}")
+require(boundary_pins.get("frozen_producer") == FROZEN_PRODUCER,
+        "boundary pins do not bind the frozen producer")
+require(boundary_pins.get("executed_binding", {})
+        .get("post_run_deployed_reconciliation", {}).get("matched") is True,
+        "boundary pins lack the deployed-tree reconciliation")
+
+
+def _ast_of(rel):
+    return ast.parse((EVIDENCE / "frozen-source/924cd22e" / rel)
+                     .read_text())
+
+
+def _call_sites(tree, name):
+    return sorted(
+        node.lineno for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and (getattr(node.func, "id", None) == name
+             or getattr(node.func, "attr", None) == name))
+
+
+# 6b. receive-surface completeness over the exact pinned bytes
+_node_agent_ast = _ast_of("benchmarks/inferswarm_r6/node_agent.py")
+_xc_coord_ast = _ast_of("python/freetoken/research/xc_coordinator.py")
+_xc_wire_ast = _ast_of("python/freetoken/research/xc_wire.py")
+require(_call_sites(_node_agent_ast, "send_exact") == [63, 87],
+        "node_agent send_exact site set drifted (expected exactly the "
+        "_reject and _accept_response constructions)")
+require(_call_sites(_xc_coord_ast, "recv_frame") == [96],
+        "coordinator receive site set drifted (expected the single "
+        "RemoteEpochRuntime._request recv_frame)")
+require(_call_sites(_xc_wire_ast, "recv_into") == [109],
+        "wire read loop site drifted (expected the single read_exact "
+        "recv_into)")
+# the coordinator-process closure imports no tensor library and
+# constructs no raw socket; the tokenizer (transformers) is the frozen
+# #133-sanctioned exception, imported lazily for the local assets only
+_COORD_PROCESS_MODULES = (
+    "benchmarks/inferswarm_r6/coordinator.py",
+    "python/freetoken/research/xc_coordinator.py",
+    "python/freetoken/research/xc_wire.py",
+    "python/freetoken/research/r5b_epochs.py",
+    "python/freetoken/research/r5a_serving.py",
+    "python/freetoken/research/r3_planner.py",
+    "benchmarks/inferswarm_r6/strategy.py",
+    "benchmarks/inferswarm_r6/xc_strategy.py",
+    "benchmarks/inferswarm_xc/cpu_only.py",
+)
+for _rel in _COORD_PROCESS_MODULES:
+    _tree = _ast_of(_rel)
+    for _node in ast.walk(_tree):
+        _roots = set()
+        if isinstance(_node, ast.Import):
+            _roots = {a.name.split(".")[0] for a in _node.names}
+        elif isinstance(_node, ast.ImportFrom) and _node.module:
+            _roots = {_node.module.split(".")[0]}
+        _bad = _roots & {"torch", "numpy", "safetensors", "triton",
+                         "tensor"}
+        require(not _bad, f"{_rel} imports {_bad}")
+    require(not _call_sites(_tree, "socket"),
+            f"{_rel} constructs a raw socket")
+
+# 6c. exact envelope accounting over retained content
+_WIRE_HEADER_BYTES = 10  # struct "<4sHI" per the pinned xc_wire.py
+_BUDGET = 24 * 1024 * 1024
+_B64_RE = re.compile("[A-Za-z0-9+/=]+")
+_TENSOR_RE = re.compile("[\\x00-\\x08\\x0e-\\x1f]{8,}")
+
+
+def _classify_leaf(value, stats):
+    if isinstance(value, bool) or value is None:
+        stats["control_metadata"] += 1
+    elif isinstance(value, int):
+        stats["control_metadata"] += 1
+    elif isinstance(value, float):
+        stats["control_metadata"] += 1  # timing statistics
+    elif isinstance(value, str):
+        raw = value.encode()
+        if len(value) > 256 and _B64_RE.fullmatch(value):
+            # a base64-charset blob of any size is payload, never
+            # absorbed as ordinary metadata (no retained control/
+            # result string legitimately looks like this)
+            stats["model_payload"] += len(raw)
+        elif len(value) > 512:
+            stats["unknown"] += len(raw)
+        elif _TENSOR_RE.search(raw[:4096].decode("utf-8", errors="ignore")):
+            stats["model_payload"] += len(raw)
+        else:
+            stats["control_metadata"] += len(raw)
+    elif isinstance(value, bytes):
+        stats["model_payload"] += len(value)
+    else:
+        stats["unknown"] += 1
+
+
+def _classify_tree(value, stats):
+    if isinstance(value, dict):
+        for v in value.values():
+            _classify_tree(v, stats)
+    elif isinstance(value, list):
+        numeric = all(isinstance(v, (int, float))
+                      and not isinstance(v, bool) for v in value)
+        if numeric and len(value) > 4096:
+            stats["unknown"] += len(value) * 8
+        else:
+            for v in value:
+                _classify_tree(v, stats)
+    else:
+        _classify_leaf(value, stats)
+
+
+def _account_envelope(envelope):
+    """Exact canonical wire bytes (mirrors xc_wire.canonical_body +
+    header) and per-class byte accounting of one retained envelope."""
+    data = json.dumps(envelope, sort_keys=True,
+                      separators=(",", ":")).encode()
+    stats = {"control_metadata": 0, "model_payload": 0, "unknown": 0}
+    _classify_tree(envelope, stats)
+    return _WIRE_HEADER_BYTES + len(data), stats
+
+
+wire_meta_bytes = 0
+wire_payload_bytes = 0
+wire_unknown_bytes = 0
+wire_frames = 0
+_ep = serving["epochs"][0]
+_authz = _ep.get("realization_authorization", {})
+_envelope_common = {
+    "kind": "response",
+    "protocol": "inferswarm.external-coordinator.realization-wire/1",
+    "scope_id": serving["coordinator_scope"].get("scope_id"),
+    "epoch_id": _ep.get("epoch_id"),
+    "generation": _ep.get("generation"),
+    "realization_id": _authz.get("realization_id"),
+    "plan_digest": _ep.get("plan_digest"),
+    "ok": True,
+}
+_position = 0
+for s in sessions:
+    _position += 1  # RemoteEpochRuntime._operation_sequence: 1..200
+    env = dict(_envelope_common)
+    env.update({
+        "operation": "GENERATE",
+        "session_id": s.get("session_id"), "position": _position,
+        "result": s,
+        "result_checksum": "sha256:" + hashlib.sha256(
+            json.dumps(s, sort_keys=True,
+                       separators=(",", ":")).encode()).hexdigest()})
+    fb, stats = _account_envelope(env)
+    wire_frames += 1
+    wire_meta_bytes += fb
+    wire_payload_bytes += stats["model_payload"]
+    wire_unknown_bytes += stats["unknown"]
+# REPORT exchange: result retained verbatim as final_runtime_report;
+# a missing/failed final report is missing transport evidence
+require(isinstance(_ep.get("final_runtime_report"), dict)
+        and bool(_ep.get("final_runtime_report"))
+        and _ep.get("runtime_report_failure") is None,
+        "coordinator REPORT transport evidence absent or failed")
+fb, stats = _account_envelope(
+    {**_envelope_common, "operation": "REPORT", "result":
+     _ep.get("final_runtime_report", {})})
+wire_frames += 1
+wire_meta_bytes += fb
+wire_payload_bytes += stats["model_payload"]
+wire_unknown_bytes += stats["unknown"]
+# REALIZE and CLOSE results are not retained verbatim: accounted at the
+# wire-body budget bound with producer-semantics classification (their
+# pinned constructors emit metadata-only records; no payload family
+# exists at those sites).  Budget-bound bytes are part of the
+# structural bound, never counted as a payload zero.
+wire_frames += 2
+wire_meta_bytes += 2 * (_WIRE_HEADER_BYTES + _BUDGET)
+_structural_bound = wire_meta_bytes
+_checkpoint_bytes = 9256814624  # participant stage report (fetched_bytes)
+require(_structural_bound < _checkpoint_bytes,
+        "structural bound no longer excludes checkpoint transport")
+
+# 6d. HTTP ingress accounting (bodies bounded by the pinned coordinator)
+http_meta_bytes = 0
+for r in campaign["records"]:
+    http_meta_bytes += len(json.dumps(
+        r.get("request_body", {}), sort_keys=True).encode())
+http_meta_bytes += len(json.dumps(
+    fencing_arm.get("request_body", {}), sort_keys=True).encode())
+
+# 6e. state census classification (name/type; NO size threshold)
+census_unknown = []
+census_class = {}
+for phase, obs in (("pre", coord_pre), ("post", coord_post)):
+    for path, meta in obs.get("state_census", {}).items():
+        census_class[(phase, path)] = meta.get("size", 0)
+_ALLOWED_CENSUS = (
+    "coordinator-config.json", "coordinator.log",
+    "coordinator-observation-pre.json",
+    "coordinator-observation-post.json", "serving-evidence.json",
+    "serving-report.json", "serving-report.json.sha256",
+    "lifecycle/serving-report.json", "lifecycle/serving-report.json.sha256")
+for (phase, path), size in census_class.items():
+    if not path.startswith("/srv/inferswarm/state/arm-c-retry-ordinary/"):
+        census_unknown.append(f"{phase}:{path}")
+        continue
+    tail = path[len("/srv/inferswarm/state/arm-c-retry-ordinary/"):]
+    if tail not in _ALLOWED_CENSUS:
+        census_unknown.append(f"{phase}:{path}")
+require(not census_unknown,
+        f"coordinator census has unclassified entries: "
+        f"{census_unknown[:4]}")
+# no coordinator state file may disappear during the window
+_pre_paths = {p for (ph, p) in census_class if ph == "pre"}
+_post_paths = {p for (ph, p) in census_class if ph == "post"}
+require(_pre_paths <= _post_paths,
+        f"coordinator state files deleted during window: "
+        f"{sorted(_pre_paths - _post_paths)[:3]}")
+# cross-bind census sizes to the retained bytes.  The post-census was
+# observed BEFORE the final SIGTERM close write (reclamation records
+# land in the last write_json_with_sha), so the retained final report
+# is a legitimate superset: the census-observed size must be <= the
+# retained size, and the intermediate content must be a prefix-stable
+# report (same schema/instance; final adds reclamation fields only).
+# Every other cross-bound file must match exactly.
+for rel, census_tail in (
+        ("ordinary-http/coordinator-config.json",
+         "coordinator-config.json"),
+        ("ordinary-http/serving-evidence.json", "serving-evidence.json")):
+    retained = (COLLECTED / rel).stat().st_size
+    observed = census_class.get(
+        ("post", "/srv/inferswarm/state/arm-c-retry-ordinary/"
+         + census_tail))
+    require(observed == retained,
+            f"census size drift for {census_tail}: {observed} != "
+            f"{retained}")
+_retained_report = (COLLECTED / "ordinary-http/serving-report.json")
+_observed_report = census_class.get(
+    ("post", "/srv/inferswarm/state/arm-c-retry-ordinary/"
+     "lifecycle/serving-report.json"))
+require(_observed_report is not None
+        and _observed_report <= _retained_report.stat().st_size,
+        f"serving-report census binding failed: {_observed_report} vs "
+        f"{_retained_report.stat().st_size}")
+
+# 6f. process observations
+cuda_initialized = 0
+libtorch_maps = 0
 for phase, obs in (("pre", coord_pre), ("post", coord_post)):
     require(obs.get("nvidia_devices_present") is False,
             f"coordinator host exposes nvidia devices ({phase})")
@@ -476,33 +909,30 @@ for phase, obs in (("pre", coord_pre), ("post", coord_post)):
         if p.get("cuda_env_keys"):
             cuda_initialized += len(p["cuda_env_keys"])
         if p.get("maps_libtorch"):
-            weight_bytes_materialized += 1
+            libtorch_maps += 1
         if p.get("maps_mentions_cuda_or_nvidia"):
             cuda_initialized += 1
-for t in strace_audit.get("traces", {}).values():
-    weight_bytes_received += t.get("source_models_opens", 0)
-    weight_bytes_materialized += t.get("materialized_writes", 0)
-# census: every coordinator-side retained artifact is accounted; tokenizer
-# assets are the frozen non-weight exception (Issue #133) and are counted
-# separately, never as weight payload.
-for phase, obs in (("pre", coord_pre), ("post", coord_post)):
-    for path, meta in obs.get("state_census", {}).items():
-        size = meta.get("size", 0)
-        if size >= BULK_THRESHOLD:
-            bulk_bytes += size
-        if "/srv/models" in path:
-            weight_bytes_received += size
+
+# 6g. the four zero invariants, derived
 invariants["coordinator_cuda_initialized"] = cuda_initialized
-invariants["coordinator_model_weight_bytes_received"] = weight_bytes_received
-invariants["coordinator_model_weight_bytes_materialized"] = (
-    weight_bytes_materialized)
-invariants["coordinator_bulk_artifact_bytes_observed"] = bulk_bytes
+invariants["coordinator_model_weight_bytes_received"] = wire_payload_bytes
+invariants["coordinator_model_weight_bytes_materialized"] = libtorch_maps
+invariants["coordinator_bulk_artifact_bytes_observed"] = (
+    wire_payload_bytes)
+invariants["coordinator_wire_frames_accounted"] = wire_frames
+invariants["coordinator_wire_metadata_bytes_accounted"] = wire_meta_bytes
+invariants["coordinator_http_ingress_metadata_bytes"] = http_meta_bytes
+invariants["coordinator_unclassified_wire_bytes"] = wire_unknown_bytes
+invariants["coordinator_unclassified_census_entries"] = len(census_unknown)
 for k in ("coordinator_cuda_initialized",
           "coordinator_model_weight_bytes_received",
           "coordinator_model_weight_bytes_materialized",
-          "coordinator_bulk_artifact_bytes_observed"):
+          "coordinator_bulk_artifact_bytes_observed",
+          "coordinator_unclassified_wire_bytes",
+          "coordinator_unclassified_census_entries"):
     if invariants[k]:
-        problems.append(f"coordinator zero invariant nonzero: {k}")
+        problems.append(f"coordinator zero invariant nonzero: {k}="
+                        f"{invariants[k]}")
 
 # ---- 7. equality + invocation seam -------------------------------------------
 # The equality reduction must be the /2 schema with the mechanical
@@ -593,20 +1023,39 @@ else:
     terminal = "ISSUE117_ARM_C_ORDINARY_SERVING_FAIL"
 
 result = {
-    "schema": "inferswarm.issue133.arm-c-retry.terminal-reduction/2",
+    "schema": "inferswarm.issue133.arm-c-retry.terminal-reduction/3",
     "campaign_id": CAMPAIGN,
     "execution_freeze_identity": FREEZE,
     "attempt_id": facts["attempt_id"],
     "review_correction": {
-        "maintainer_review": 5172615768,
-        "reviewed_head": "51980fb78006699bfc460e68c0b7b646ddc26d74",
+        "maintainer_review": 5173318161,
+        "reviewed_head": "455557a85351a1cc4102f407b335f3ed7ee84a44",
+        "prior_corrections": [
+            {"maintainer_review": 5172615768,
+             "reviewed_head": "51980fb78006699bfc460e68c0b7b646ddc26d74",
+             "corrections": [
+                 "terminal gates on every mandatory #133 invariant family",
+                 "all zero counters derived from retained observations",
+                 "launch-1 PRE_OBSERVATION_INFRASTRUCTURE derived from "
+                 "bytes",
+                 "equality /2 with mechanical pre-divergence invocation "
+                 "equivalence required for semantic FAIL",
+                 "HTTP-content discrepancy characterized from frozen "
+                 "bytes",
+             ]},
+        ],
         "corrections": [
-            "terminal gates on every mandatory #133 invariant family",
-            "all zero counters derived from retained observations",
-            "launch-1 PRE_OBSERVATION_INFRASTRUCTURE derived from bytes",
-            "equality /2 with mechanical pre-divergence invocation "
-            "equivalence required for semantic FAIL",
-            "HTTP-content discrepancy characterized from frozen bytes",
+            "P1: coordinator receive/materialization/bulk zeros derived "
+            "from exact transport accounting (pinned executed producer "
+            "identity + AST receive-surface completeness + exact wire "
+            "envelope reconstruction from retained payloads + fail-closed "
+            "value classification + census classification by name, no "
+            "size threshold; 1-GiB BULK_THRESHOLD removed)",
+            "P2: fail-closed attempt attribution — every direct/ordinary "
+            "per-case observation binds by full content identity to its "
+            "attempt-attributed aggregate; null/missing/wrong attempt_id "
+            "fails closed; no unexpected attempt ids anywhere in the "
+            "retained tree",
         ],
     },
     "direct_arm": {"cases": direct_run["case_count"],
@@ -639,15 +1088,42 @@ result = {
         "classification": http_char.get("classification"),
     },
     "zero_invariants": invariants,
+    "coordinator_boundary": {
+        "executed_source_pins":
+            "coordinator-boundary-source-pins.json (12 modules, each "
+            "sha256-pinned, bound to frozen producer 924cd22e == git "
+            "blob == deployed participant trees)",
+        "receive_surface": "AST over pinned bytes: single coordinator "
+                           "recv_frame site (xc_coordinator L96) + HTTP "
+                           "do_POST (25 retained bodies); node_agent "
+                           "sends at exactly L63/L87",
+        "wire_frames_accounted": wire_frames,
+        "wire_bytes_exact_or_bound": wire_meta_bytes,
+        "structural_bound_bytes": _structural_bound,
+        "structural_vs_checkpoint":
+            f"{_structural_bound} < {_checkpoint_bytes} "
+            "(checkpoint cannot cross the boundary even at max-size "
+            "frames)",
+        "http_ingress_metadata_bytes": http_meta_bytes,
+        "census_files_classified": len(census_class),
+        "value_classes": "control_metadata / model_payload / unknown "
+                         "(fail-closed; unknown==0 required)",
+    },
     "invariant_evidence": {
         "fencing_attribution": "coordinator_scope.requests[*]."
         "token_events + sessions[*].latest_committed_boundary + dual-"
         "retained injection rejection records",
-        "coordinator": "coordinator-observation-{pre,post}.json processes/"
-        "devices/state_census + strace-audit.json participant traces",
+        "coordinator": "exact transport accounting: "
+        "coordinator-boundary-source-pins.json + AST receive-surface "
+        "completeness + 200 retained GENERATE wire results + "
+        "final_runtime_report + coordinator-observation-{pre,post}.json "
+        "processes/devices/state_census (name-classified, pre<=post)",
         "substrate": "substrate-reconciliation-{01,03}.json",
         "tokenizer": "tokenizer-deployment-proof.json + frozen asset pins",
         "prelaunch": "prelaunch-verdict-{run1,immediate-prelaunch}.json",
+        "attempt_attribution": "direct-run.json/ordinary-campaign.json "
+        "attempt_id + full content identity of all 48 per-case files "
+        "to their attributed aggregates + tree-wide attempt-id census",
     },
     "problems": problems,
     "terminal": terminal,

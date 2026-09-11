@@ -394,6 +394,22 @@ COMMITTED_EVIDENCE_FILES = {
     "tokenizer-deployment-proof.json",
     "arm-c-retry/physical-execution/preflight/host-preflight-01.json",
     "arm-c-retry/physical-execution/preflight/host-preflight-03.json",
+    # review 5173318161: coordinator receive/materialization/bulk
+    # boundary proof inputs (vendored executed sources + pins doc)
+    "arm-c-retry/physical-execution/"
+    "coordinator-boundary-source-pins.json",
+    "arm-c-retry/frozen-source/924cd22e/benchmarks/inferswarm_r6/"
+    "node_agent.py",
+    "arm-c-retry/frozen-source/924cd22e/benchmarks/inferswarm_r6/"
+    "chain_runtime.py",
+    "arm-c-retry/frozen-source/924cd22e/benchmarks/inferswarm_r6/"
+    "stage_chain.py",
+    "arm-c-retry/frozen-source/924cd22e/benchmarks/inferswarm_xc/"
+    "cpu_only.py",
+    "arm-c-retry/frozen-source/924cd22e/python/freetoken/research/"
+    "xc_wire.py",
+    "arm-c-retry/frozen-source/924cd22e/python/freetoken/research/"
+    "xc_coordinator.py",
 }
 
 #: preservation pin: the accepted #118 canonical summary's exact bytes.

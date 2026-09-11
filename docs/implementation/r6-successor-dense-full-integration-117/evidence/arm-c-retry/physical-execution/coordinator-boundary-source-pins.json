@@ -1,0 +1,82 @@
+{
+  "campaign_id": "armc-retry-afcdc4428f95d50c",
+  "executed_binding": {
+    "coordinator_self_gate": "the executed coordinator.py constructor runs _require_clean_exact_source(repository_root, environment.implementation_commit == 924cd22e) and refuses a dirty or drifted tree at process start",
+    "host_preflights": "physical-execution/preflight/host-preflight-{01,03}.json verify every participant tree clean at HEAD == 924cd22e before launch (producer.checks.clean/head)",
+    "last_stage_producer_check": "last-stage-ordinary.json carries producer_check + producer_freetoken_sha == 924cd22e",
+    "node_agent_strace": "physical-execution/strace-raw-pins.json pins the raw node-agent strace; the trace records the agent opening exactly these deployed paths read-only with the byte sizes recorded here",
+    "post_run_deployed_reconciliation": {
+      "matched": true,
+      "method": "live sha256 of the deployed files on inferswarm01 and inferswarm03 (/srv/inferswarm/repos/FreeToken) compared to these pins and to the git blob content at 924cd22e",
+      "observed_at": "2026-09-10T23:20:00Z"
+    }
+  },
+  "files": {
+    "benchmarks/inferswarm_r6/chain_runtime.py": {
+      "file_sha256": "9652ebb376b3737d559e6f764b47dfe154e31d1804e9eac62825badb4b3d9980",
+      "role_in_proof": "ChainEpochRuntime.generate/report value constructors (GENERATE result shape)",
+      "size": 6154
+    },
+    "benchmarks/inferswarm_r6/coordinator.py": {
+      "file_sha256": "189548dc4f87f5f40c05f7796a2be7af0446ea05f95a0cf7bafcd3b79bec5d77",
+      "role_in_proof": "executed Coordinator entrypoint (HTTP ingress bound, sole egress via make_remote_realizer, self-gate)",
+      "size": 21343
+    },
+    "benchmarks/inferswarm_r6/node_agent.py": {
+      "file_sha256": "eebfa626b45362111282b7102fc0fcd4a5bf171fc82592f0d50eccd29b75a2e2",
+      "role_in_proof": "constructs every Coordinator-bound response frame (exactly two send_exact sites)",
+      "size": 15182
+    },
+    "benchmarks/inferswarm_r6/stage_chain.py": {
+      "file_sha256": "321bc91deb9a0e7f651a75f4158e973b3e72d889a32f76c8d8dc5c9081acde54",
+      "role_in_proof": "chain session-dict construction embedded in every GENERATE result",
+      "size": 14632
+    },
+    "benchmarks/inferswarm_r6/strategy.py": {
+      "file_sha256": "ca31f0999cb4fcf46d73c83f8b3ee7bbe2636792bcfc1824b15946aaac53906b",
+      "role_in_proof": "frozen strategy module imported by the coordinator closure",
+      "size": 14377
+    },
+    "benchmarks/inferswarm_r6/xc_strategy.py": {
+      "file_sha256": "8d33b4b297a20511448ab78909d2f528eef62c2b7943acae167668ec9ff0f26f",
+      "role_in_proof": "transition strategy (replay-input semantics) inside the coordinator closure",
+      "size": 11946
+    },
+    "benchmarks/inferswarm_xc/cpu_only.py": {
+      "file_sha256": "32dd1b33ffcff653da2d40624f84921b4873ae405335769dc25bb8b582b00eeb",
+      "role_in_proof": "json read/write helpers used by the coordinator report path",
+      "size": 2674
+    },
+    "python/freetoken/research/r3_planner.py": {
+      "file_sha256": "080e8b64fbb9fbc0f6df390d5714d0dbc691dd601e2bd13fe4ff71596e2d0856",
+      "role_in_proof": "planner freeze semantics inside the coordinator process",
+      "size": 25240
+    },
+    "python/freetoken/research/r5a_serving.py": {
+      "file_sha256": "f61adc3201f5c2c9d23afcc90da3135ca89b3ed7eb3213d68a41b08fc242b105",
+      "role_in_proof": "realizer contract consumed by the coordinator adapter",
+      "size": 15314
+    },
+    "python/freetoken/research/r5b_epochs.py": {
+      "file_sha256": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805",
+      "role_in_proof": "epoch controller driving the wire exchanges (positions, report/close)",
+      "size": 39695
+    },
+    "python/freetoken/research/xc_coordinator.py": {
+      "file_sha256": "d0a4cd3f784cb1272069f6f4f5453391df9655e32b46b6129d02be3b92a36aa2",
+      "role_in_proof": "the Coordinator's ONLY wire receive path (single recv_frame site in RemoteEpochRuntime._request)",
+      "size": 12086
+    },
+    "python/freetoken/research/xc_wire.py": {
+      "file_sha256": "71e9a37039d74c46505242504ca272127b033664af51d2aa16f965f97f8178de",
+      "role_in_proof": "frames/validates every Coordinator-bound wire byte (24 MiB body budget, fail-closed)",
+      "size": 12397
+    }
+  },
+  "frozen_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "provenance": {
+    "generated": "programmatically from the retained bytes; digests never hand-typed",
+    "vendored_from": "git blob content at FreeToken producer commit 924cd22ea081f6d4ed471016faf01d427fc5b0d2 (byte-equal to the deployed participant trees; see executed_binding)"
+  },
+  "schema": "inferswarm.issue133.arm-c-retry.coordinator-boundary-source-pins/1"
+}
