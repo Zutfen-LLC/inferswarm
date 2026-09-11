@@ -1,0 +1,9 @@
+hipGetDeviceCount=100(no ROCm-capable device is detected) n=0
+exit=0
+---
+HSA Agents               
+Agent 1                  
+  Name:                    Intel(R) Celeron(R) CPU G3900 @ 2.80GHz
+  Marketing Name:          Intel(R) Celeron(R) CPU G3900 @ 2.80GHz
+  Vendor Name:             CPU                                
+  Device Type:             CPU                                

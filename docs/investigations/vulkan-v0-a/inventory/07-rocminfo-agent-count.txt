@@ -1,0 +1,15 @@
+=== rocminfo full agent list (count GPU agents) ===
+1
+Agent 1                  
+  Name:                    Intel(R) Celeron(R) CPU G3900 @ 2.80GHz
+  Marketing Name:          Intel(R) Celeron(R) CPU G3900 @ 2.80GHz
+  Vendor Name:             CPU                                
+  Device Type:             CPU                                
+=== hipGetDeviceCount probe (compile+run tiny HIP program) ===
+                                                               ^
+
+Remark: The warnings can be suppressed with "-diag-suppress <warning-number>"
+
+28 errors detected in the compilation of "/tmp/hipcount.cpp".
+bash: line 13: /tmp/hipcount: No such file or directory
+exit=127

@@ -1,0 +1,30 @@
+=== HIP_PLATFORM=amd attempt ===
+ROCM_PATH    : /usr
+HIP_COMPILER : clang
+HIP_PLATFORM : amd
+CPP_CONFIG   :  -D__HIP_PLATFORM_HCC__= -D__HIP_PLATFORM_AMD__= -I/usr/include -I/usr/lib/llvm-17/lib/clang/17
+HIP_PLATFORM=amd
+--- compile:
+/tmp/hipcount.cpp:4:40: warning: ignoring return value of function declared with 'nodiscard' attribute [-Wunused-result]
+    4 | for(int i=0;i<n;i++){hipDeviceProp_t p;hipGetDeviceProperties(&p,i);printf("dev%d name=%s gcArch=%s multi=%d gmem=%zuMB\n",i,p.name,p.gcnArchName,p.multiProcessorCount,p.totalGlobalMem>>20);}
+      |                                        ^~~~~~~~~~~~~~~~~~~~~~ ~~~~
+1 warning generated when compiling for gfx803.
+/tmp/hipcount.cpp:4:40: warning: ignoring return value of function declared with 'nodiscard' attribute [-Wunused-result]
+    4 | for(int i=0;i<n;i++){hipDeviceProp_t p;hipGetDeviceProperties(&p,i);printf("dev%d name=%s gcArch=%s multi=%d gmem=%zuMB\n",i,p.name,p.gcnArchName,p.multiProcessorCount,p.totalGlobalMem>>20);}
+      |                                        ^~~~~~~~~~~~~~~~~~~~~~ ~~~~
+1 warning generated when compiling for host.
+/tmp/hipcount_amd
+=== is there a clang with amdgpu target at all? ===
+hwasan_symbolize
+bash: line 11: clang: command not found
+=== lld? ===
+=== does Debian ship comgr/hcrot? ===
+libamd-comgr-dev - ROCm code object manager - development package
+libamd-comgr2 - ROCm code object manager
+rocm-device-libs-17 - AMD specific device-side language runtime libraries
+ii  libamd-comgr-dev                    6.0+git20231212.4510c28+dfsg-3+b2    amd64        ROCm code object manager - development package
+ii  libamd-comgr2:amd64                 6.0+git20231212.4510c28+dfsg-3+b2    amd64        ROCm code object manager
+ii  libhsa-runtime-dev:amd64            6.1.2-3                              amd64        HSA Runtime API and runtime for ROCm - development files
+ii  libhsa-runtime64-1:amd64            6.1.2-3                              amd64        HSA Runtime API and runtime for ROCm
+ii  rocm-device-libs-17                 6.0+git20231212.5a852ed-2            amd64        AMD specific device-side language runtime libraries
+ii  rocminfo                            6.1.2-2                              amd64        ROCm Application for Reporting System Info

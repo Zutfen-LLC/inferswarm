@@ -1,0 +1,31 @@
+=== versions in archive ===
+hipcc:
+  Candidate: 5.7.1-6+deb13u1
+libamdhip64-dev:
+  Candidate: 5.7.1-6+deb13u1
+rocminfo:
+  Candidate: 6.1.2-2
+cmake:
+  Candidate: 3.31.6-2
+ninja-build:
+  Candidate: 1.12.1-1
+glslc:
+  Candidate: 2025.2-1
+=== MATERIAL CHANGE 2: install HIP probe stack ===
+Setting up hipcc (5.7.1-6+deb13u1) ...
+Processing triggers for systemd (257.13-1~deb13u1) ...
+Processing triggers for man-db (2.13.1-1) ...
+Processing triggers for libc-bin (2.41-12+deb13u3) ...
+=== MATERIAL CHANGE 3: install build deps (cmake ninja glslc git) ===
+Setting up cmake (3.31.6-2) ...
+Processing triggers for man-db (2.13.1-1) ...
+Processing triggers for libc-bin (2.41-12+deb13u3) ...
+=== rocminfo agent enumeration ===
+Runtime Version:         1.1
+Runtime Ext Version:     1.4
+HSA Agents               
+Agent 1                  
+  Name:                    Intel(R) Celeron(R) CPU G3900 @ 2.80GHz
+  Marketing Name:          Intel(R) Celeron(R) CPU G3900 @ 2.80GHz
+  Vendor Name:             CPU                                
+  Device Type:             CPU                                
