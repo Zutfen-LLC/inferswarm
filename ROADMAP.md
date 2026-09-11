@@ -921,6 +921,7 @@ Integrate V5-qualified dense Gemma with automatic planning, participant-exact ar
 - Coordinator on inferswarm00 stays CPU-only (zero CUDA init, zero weight bytes received/materialized, zero bulk artifact bytes; frozen tokenizer/config assets at a non-Source path are the only exception and are accounted separately).
 - Any correctness-bearing result emitted or committed without verified frozen deployment identity (pre-launch AND post-run byte verification) fires the campaign's permanent mandatory STOP; a blocked campaign can never produce PASS/FAIL authority and a retry needs a new maintainer authorization.
 - No h109-* holdout material may be used or created; Arm D and Arm E are not authorized by this issue.
+- Issue #137 Arm-C regime-4 diagnosis DIAGNOSTIC_ONLY, 2026-09-11: terminal ISSUE117_ARM_C_REGIME4_DIAGNOSIS_LOCALIZED — the six regime-4 divergences share one mechanism: per-execution numerical nondeterminism in the multi-chunk prompt_len above PREFILL_CHUNK=64 extend-prefill path, earliest divergence inside stage-1 decoder layers at/before global layer 1 on the small second chunk; probe C proved two-chunking a stable 53-token input flips its committed token while the single-chunk path is bit-deterministic across realizations; request history not causal; the accepted #133 FAIL terminal is unchanged; no remediation landed; Arm D remains blocked pending a separate remediation + requalification authority.
 <!-- project-status:frontier:end -->
 
 The retained implementation and preflight evidence is under

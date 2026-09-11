@@ -410,6 +410,31 @@ COMMITTED_EVIDENCE_FILES = {
     "xc_wire.py",
     "arm-c-retry/frozen-source/924cd22e/python/freetoken/research/"
     "xc_coordinator.py",
+    # issue #137 Arm-C regime-4 diagnosis (2026-09-11,
+    # DIAGNOSTIC_ONLY): CPU-only causal inventory, physical diagnostic
+    # probe records (fresh i137-diag-* run identity), per-layer capture
+    # manifests, and the fail-closed conclusions reduction deriving
+    # ISSUE117_ARM_C_REGIME4_DIAGNOSIS_LOCALIZED; the accepted #133
+    # terminal FAIL is unchanged historical evidence
+    "arm-c-regime4-diagnosis-137/METHODOLOGY.md",
+    "arm-c-regime4-diagnosis-137/README.md",
+    "arm-c-regime4-diagnosis-137/phase1-inventory.json",
+    "arm-c-regime4-diagnosis-137/i137-diag-A-1789127822.json",
+    "arm-c-regime4-diagnosis-137/i137-diag-A-1789129558.json",
+    "arm-c-regime4-diagnosis-137/i137-diag-A-1789129893.json",
+    "arm-c-regime4-diagnosis-137/i137-diag-A-1789130927.json",
+    "arm-c-regime4-diagnosis-137/i137-diag-A-1789131013.json",
+    "arm-c-regime4-diagnosis-137/i137-diag-A-1789131099.json",
+    "arm-c-regime4-diagnosis-137/i137-diag-A-1789131186.json",
+    "arm-c-regime4-diagnosis-137/i137-diag-A2-1789128152.json",
+    "arm-c-regime4-diagnosis-137/i137-diag-B-1789130217.json",
+    "arm-c-regime4-diagnosis-137/i137-diag-C-1789128426.json",
+    "arm-c-regime4-diagnosis-137/i137-diag-D-1789128772.json",
+    "arm-c-regime4-diagnosis-137/i137-diag-D2-1789129163.json",
+    "arm-c-regime4-diagnosis-137/i137-diag-D2-1789130625.json",
+    "arm-c-regime4-diagnosis-137/manifest-first-stage1-d2b.json",
+    "arm-c-regime4-diagnosis-137/manifest-middle-stage2-d2b.json",
+    "arm-c-regime4-diagnosis-137/diagnostic-conclusions.json",
 }
 
 #: preservation pin: the accepted #118 canonical summary's exact bytes.
