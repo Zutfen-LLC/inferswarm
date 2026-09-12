@@ -37,6 +37,42 @@ def write(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
 
 
+def sandbox_repo(test: unittest.TestCase) -> tuple[Path, Path]:
+    """A throwaway git repo mimicking the repository layout.
+
+    Returns (sandbox, venv_target) with requirements-test.txt and
+    .gitignore copied in; call patch_module_root so the bootstrap
+    module's ROOT/VENV point at the sandbox.
+    """
+    sandbox = Path(tempfile.mkdtemp())
+    test.addCleanup(shutil.rmtree, sandbox, ignore_errors=True)
+    for relative in ("requirements-test.txt", ".gitignore"):
+        destination = sandbox / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / relative, destination)
+    subprocess.run(["git", "init", "-q", str(sandbox)], check=True,
+                   capture_output=True)
+    subprocess.run(
+        ["git", "-C", str(sandbox), "config", "user.email",
+         "test@example.invalid"], check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-C", str(sandbox), "config", "user.name", "Test"],
+        check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-C", str(sandbox), "add", ".gitignore"],
+        check=True, capture_output=True)
+    return sandbox, sandbox / ".venv"
+
+
+def patch_module_root(test: unittest.TestCase, sandbox: Path) -> None:
+    """Point the bootstrap module's ROOT/VENV at a sandbox repo."""
+    original_root, original_venv = bootstrap.ROOT, bootstrap.VENV
+    bootstrap.ROOT = sandbox
+    bootstrap.VENV = sandbox / ".venv"
+    test.addCleanup(setattr, bootstrap, "ROOT", original_root)
+    test.addCleanup(setattr, bootstrap, "VENV", original_venv)
+
+
 class DependencyAuthorityTests(unittest.TestCase):
     """The single repository-owned dependency definition."""
 
@@ -257,6 +293,126 @@ class DocumentationContractTests(unittest.TestCase):
             write(ROOT / "tests" / "README.md", original)
 
 
+class VenvTargetSafetyTests(unittest.TestCase):
+    """The venv target is safe by construction, before any deletion.
+
+    Negative controls prove a tracked directory, the repository root,
+    an arbitrary --venv override, a symlink escape, and an existing
+    ordinary (non-venv) directory are ALL rejected without modifying
+    or deleting their sentinel contents.
+    """
+
+    def test_negative_control_tracked_directory_target_is_rejected(self):
+        """A tracked repository directory must never be a venv target.
+
+        Uses the real repository's tracked ``scripts/`` directory: the
+        refusal must fire before any deletion and its sentinel file
+        must survive byte-for-byte.
+        """
+        target = ROOT / "scripts"
+        tracked = subprocess.run(
+            ["git", "-C", str(ROOT), "ls-files", "--", "scripts"],
+            capture_output=True, text=True, check=True).stdout.split()
+        self.assertTrue(tracked)  # sanity: scripts/ is tracked
+        sentinel = target / "bootstrap_test_env.py"
+        before = sentinel.read_bytes()
+        with contextlib.redirect_stderr(io.StringIO()) as captured:
+            with self.assertRaises(SystemExit) as raised:
+                bootstrap.validate_venv_target(target)
+        self.assertEqual(raised.exception.code, 1)
+        self.assertIn("refusing venv target", captured.getvalue())
+        self.assertEqual(sentinel.read_bytes(), before)
+
+    def test_negative_control_repository_root_is_rejected(self):
+        sentinel = ROOT / "requirements-test.txt"
+        before = sentinel.read_bytes()
+        with contextlib.redirect_stderr(io.StringIO()) as captured:
+            with self.assertRaises(SystemExit) as raised:
+                bootstrap.validate_venv_target(ROOT)
+        self.assertEqual(raised.exception.code, 1)
+        self.assertIn("refusing venv target", captured.getvalue())
+        self.assertEqual(sentinel.read_bytes(), before)
+
+    def test_negative_control_arbitrary_venv_override_is_rejected(self):
+        """There is no --venv surface left: any other target is refused,
+        whether outside the repository or an untracked directory inside
+        it. Sentinels survive both."""
+        outside = Path(tempfile.mkdtemp()) / "escape-venv"
+        outside.mkdir()
+        sentinel_out = outside / "keep.txt"
+        sentinel_out.write_text("sentinel", encoding="utf-8")
+        inside = ROOT / "scratch-venv-under-test"
+        inside.mkdir()
+        sentinel_in = inside / "keep.txt"
+        sentinel_in.write_text("sentinel", encoding="utf-8")
+        try:
+            for target in (outside, inside):
+                with contextlib.redirect_stderr(io.StringIO()) as captured:
+                    with self.assertRaises(SystemExit) as raised:
+                        bootstrap.validate_venv_target(target)
+                self.assertEqual(raised.exception.code, 1)
+                self.assertIn("refusing venv target", captured.getvalue())
+            self.assertEqual(
+                sentinel_out.read_text(encoding="utf-8"), "sentinel")
+            self.assertEqual(
+                sentinel_in.read_text(encoding="utf-8"), "sentinel")
+            # The CLI no longer exposes --venv at all.
+            cli = subprocess.run(
+                [sys.executable,
+                 str(ROOT / "scripts" / "bootstrap_test_env.py"),
+                 "--venv", str(outside)],
+                capture_output=True, text=True, cwd=ROOT)
+            self.assertNotEqual(cli.returncode, 0)
+            self.assertIn("unrecognized arguments", cli.stderr)
+            self.assertEqual(
+                sentinel_out.read_text(encoding="utf-8"), "sentinel")
+        finally:
+            shutil.rmtree(outside)
+            shutil.rmtree(inside)
+
+    def test_negative_control_existing_ordinary_directory_is_rejected(self):
+        """An existing non-venv directory at the canonical target is
+        refused, never rmtree'd — sentinel contents survive intact."""
+        sandbox, target = sandbox_repo(self)
+        patch_module_root(self, sandbox)
+        target.mkdir()
+        sentinel = target / "precious.txt"
+        sentinel.write_text("do-not-delete", encoding="utf-8")
+        with contextlib.redirect_stderr(io.StringIO()) as captured:
+            with self.assertRaises(SystemExit):
+                bootstrap.validate_venv_target(target)
+        self.assertIn("refusing venv target", captured.getvalue())
+        self.assertIn("virtual environment home", captured.getvalue())
+        self.assertEqual(
+            sentinel.read_text(encoding="utf-8"), "do-not-delete")
+        self.assertTrue(target.is_dir())
+
+    def test_negative_control_symlink_escape_is_rejected(self):
+        """A symlinked venv directory could make deletion act outside
+        the target; the target dir itself being a symlink is refused
+        before anything else (internal bin/python symlinks are normal
+        venv structure and harmless: rmtree never follows them)."""
+        sandbox, target = sandbox_repo(self)
+        patch_module_root(self, sandbox)
+        real_home = sandbox / "real-home"
+        real_home.mkdir()
+        sentinel = real_home / "precious.txt"
+        sentinel.write_text("do-not-delete", encoding="utf-8")
+        target.symlink_to(real_home)
+        with contextlib.redirect_stderr(io.StringIO()) as captured:
+            with self.assertRaises(SystemExit):
+                bootstrap.validate_venv_target(target)
+        self.assertIn("refusing venv target", captured.getvalue())
+        self.assertIn("symlink", captured.getvalue())
+        self.assertEqual(
+            sentinel.read_text(encoding="utf-8"), "do-not-delete")
+        self.assertTrue(target.is_symlink())
+
+    def test_validate_target_accepts_the_canonical_gitignored_home(self):
+        # The real .venv (or its absence) must pass validation.
+        bootstrap.validate_venv_target(ROOT / ".venv")  # must not exit
+
+
 class BootstrapContractTests(unittest.TestCase):
     """Bootstrap contracts: idempotent design, CPU-only, tree-safe."""
 
@@ -269,7 +425,8 @@ class BootstrapContractTests(unittest.TestCase):
                 "# comment\n-r elsewhere.txt\njsonschema>=4.18,<5\n"),
             [])
 
-    def test_bootstrap_rejects_venvs_outside_the_repository(self):
+    def test_bootstrap_cli_no_longer_exposes_a_venv_override(self):
+        """The public --venv surface is removed: argparse rejects it."""
         with tempfile.TemporaryDirectory() as directory:
             result = subprocess.run(
                 [sys.executable,
@@ -277,7 +434,7 @@ class BootstrapContractTests(unittest.TestCase):
                  "--venv", str(Path(directory) / "escape-venv")],
                 capture_output=True, text=True, cwd=ROOT)
             self.assertNotEqual(result.returncode, 0, result.stdout)
-            self.assertIn("inside the repository", result.stderr)
+            self.assertIn("unrecognized arguments", result.stderr)
 
     def test_negative_control_bootstrap_mutation_of_tracked_files_is_detected(self):
         """The tree-digest guard fails closed on any tracked-file change.
@@ -328,6 +485,340 @@ class BootstrapContractTests(unittest.TestCase):
                         referenced.read_text(encoding="utf-8")),
                     [],
                     "frozen tokenizer requirements must stay CPU-only")
+
+
+class ExistingVenvInterpreterTests(unittest.TestCase):
+    """A pre-existing venv is reused only when its interpreter matches."""
+
+    def _sandbox_venv(self) -> tuple[Path, Path]:
+        """A sandbox git repo with a real venv inside it."""
+        sandbox, venv = sandbox_repo(self)
+        subprocess.run(
+            [sys.executable, "-m", "venv", "--without-pip",
+             str(venv)], check=True, capture_output=True)
+        return sandbox, venv
+
+    def test_control_existing_matching_venv_is_reused(self):
+        sandbox, venv = self._sandbox_venv()
+        python = venv / "bin" / "python"
+        # Same minor as the request: create_venv must reuse it (the
+        # recorded version line and the real interpreter both match).
+        request = f"{sys.version_info.major}.{sys.version_info.minor}"
+        marker = venv / "sentinel-from-original-creation"
+        marker.write_text("original", encoding="utf-8")
+        patch_module_root(self, sandbox)
+        result = bootstrap.create_venv(venv, request)
+        self.assertEqual(result, python)
+        self.assertEqual(
+            marker.read_text(encoding="utf-8"), "original",
+            "a matching existing venv must be reused, not recreated")
+
+    def test_negative_control_stale_wrong_minor_venv_is_recreated(self):
+        """A stale venv whose real interpreter has the wrong minor must
+        be recreated with the requested interpreter, not installed
+        into. Proven with a real mismatched venv when the host has both
+        interpreters, else with a forged pyvenv.cfg (which must also be
+        refused because its real interpreter is unverifiable/mismatched
+        and pyvenv.cfg disagrees with reality)."""
+        sandbox, venv = sandbox_repo(self)
+        # Build a real venv on a minor that differs from the 3.12
+        # request (the host launching interpreter's minor if it is not
+        # 3.12, else a forged-config stale venv).
+        launching_minor = f"{sys.version_info.major}.{sys.version_info.minor}"
+        forged = launching_minor == "3.12"
+        if not forged:
+            subprocess.run(
+                [sys.executable, "-m", "venv", "--without-pip",
+                 str(venv)], check=True, capture_output=True)
+        else:
+            # Launching interpreter IS 3.12; forge a stale 3.13 venv
+            # whose recorded version lies about the linked host
+            # interpreter — the dual-channel check must reject it.
+            venv.mkdir()
+            (venv / "pyvenv.cfg").write_text(
+                "home = /usr/bin\nversion = 3.13\n", encoding="utf-8")
+            (venv / "bin").mkdir()
+            (venv / "bin" / "python").symlink_to(sys.executable)
+        patch_module_root(self, sandbox)
+        python = bootstrap.create_venv(venv, "3.12")
+        probe = subprocess.run(
+            [str(python), "-c",
+             "import sys; print(sys.version_info[:2])"],
+            capture_output=True, text=True)
+        self.assertEqual(probe.stdout.strip(), "(3, 12)",
+                         "the recreated venv must run 3.12")
+        if forged:
+            self.assertNotEqual(
+                (venv / "pyvenv.cfg").read_text(encoding="utf-8"),
+                "home = /usr/bin\nversion = 3.13\n",
+                "the stale config must not survive recreation")
+
+    def test_negative_control_unverifiable_venv_is_recreated(self):
+        """pyvenv.cfg + a broken bin/python must not be trusted."""
+        sandbox, venv = sandbox_repo(self)
+        venv.mkdir()
+        (venv / "pyvenv.cfg").write_text(
+            "home = /usr/bin\nversion = 3.12\n", encoding="utf-8")
+        (venv / "bin").mkdir()
+        (venv / "bin" / "python").write_text("#!/bin/sh\nexit 9\n",
+                                             encoding="utf-8")
+        (venv / "bin" / "python").chmod(0o755)
+        patch_module_root(self, sandbox)
+        python = bootstrap.create_venv(venv, "3.12")
+        probe = subprocess.run(
+            [str(python), "-c",
+             "import sys; print(sys.version_info[:2])"],
+            capture_output=True, text=True)
+        self.assertEqual(probe.stdout.strip(), "(3, 12)")
+
+
+class MissingUvTests(unittest.TestCase):
+    """No uv + wrong launching interpreter fails deterministically."""
+
+    def test_negative_control_missing_uv_is_an_actionable_failure(self):
+        sandbox, venv = sandbox_repo(self)
+        original_which, original_launching = (
+            shutil.which, bootstrap._launching_version)
+        original_installed = bootstrap._installed_python_for
+        patch_module_root(self, sandbox)
+        shutil.which = lambda name: None
+        bootstrap._launching_version = lambda: (3, 13)
+        bootstrap._installed_python_for = lambda request: None
+        try:
+            with contextlib.redirect_stderr(io.StringIO()) as captured:
+                with self.assertRaises(SystemExit) as raised:
+                    bootstrap.create_venv(venv, "3.12")
+            self.assertEqual(raised.exception.code, 1)
+            message = captured.getvalue()
+            self.assertIn("uv", message)
+            self.assertIn("install", message.lower())
+            self.assertNotIn("Traceback", message)
+        finally:
+            shutil.which = original_which
+            bootstrap._launching_version = original_launching
+            bootstrap._installed_python_for = original_installed
+
+
+class ModelRuntimeRejectionTests(unittest.TestCase):
+    """The CPU/model-runtime rejection covers the declared invariant."""
+
+    def test_nvidia_cuda_runtime_families_are_rejected_mechanically(self):
+        """Common NVIDIA runtime wheels the round-1 exemplar list missed."""
+        for name in (
+                "nvidia-cublas-cu12", "nvidia-cuda-cuperso-cu12",
+                "nvidia-cuda-nvrtc-cu12", "nvidia-cuda-runtime-cu12",
+                "nvidia-cufft-cu12", "nvidia-curand-cu12",
+                "nvidia-cusolver-cu12", "nvidia-cusparse-cu12",
+                "nvidia-nccl-cu12", "nvidia-nvtx-cu12", "nvidia-nvjitlink-cu12",
+                "nvidia-cudnn-cu12", "nvidia-cudnn-cu11",
+                "nvidia_cuda_nvrtc_cu12", "NVIDIA-CUSOLVER-Cu12",
+                "pytorch-triton", "cuda-python", "ptxas"):
+            self.assertTrue(
+                bootstrap.is_forbidden_package(name),
+                f"{name} must be rejected as a model runtime")
+            self.assertTrue(
+                doctor.is_forbidden_package(name),
+                f"{name} must be rejected by the doctor rule")
+
+    def test_explicit_framework_names_stay_rejected(self):
+        for name in ("torch", "torchvision", "torchaudio", "triton",
+                     "vllm", "xformers", "flash-attn"):
+            self.assertTrue(bootstrap.is_forbidden_package(name))
+            self.assertTrue(doctor.is_forbidden_package(name))
+
+    def test_legitimate_packages_are_not_rejected(self):
+        for name in ("jsonschema", "numpy", "pyyaml", "transformers",
+                     "tokenizers", "jinja2", "markupsafe", "sympy",
+                     "typing-extensions", "attrs"):
+            self.assertFalse(bootstrap.is_forbidden_package(name))
+            self.assertFalse(doctor.is_forbidden_package(name))
+
+    def test_forbidden_rules_are_one_shared_implementation(self):
+        """Bootstrap and doctor must share one rule: the doctor imports
+        the bootstrap's implementation, so a drift is impossible."""
+        self.assertIs(doctor.is_forbidden_package,
+                      bootstrap.is_forbidden_package)
+
+    def test_negative_control_declared_nvidia_cuda_wheel_fails_bootstrap(self):
+        self.assertEqual(
+            bootstrap.forbidden_in_requirements(
+                "jsonschema>=4.18,<5\n"
+                "nvidia-cuda-nvrtc-cu12==12.6.77\n"),
+            ["nvidia-cuda-nvrtc-cu12"])
+        self.assertEqual(
+            bootstrap.forbidden_in_requirements(
+                "nvidia_nccl_cu12>=2.21\n"),
+            ["nvidia-nccl-cu12"])
+
+    def test_negative_control_installed_transitive_nvidia_wheel_fails(self):
+        """An NVIDIA CUDA wheel found by post-install inspection must
+        be reported — the transitive-contamination path. Install is
+        stubbed so no real package enters any environment."""
+        original = bootstrap.forbidden_installed
+        original_install = bootstrap.install
+
+        def contaminated(python: Path) -> list[str]:
+            return ["nvidia-cusolver-cu12"]
+
+        def stub_install(python: Path, *args: str) -> None:
+            return None
+
+        bootstrap.forbidden_installed = contaminated
+        bootstrap.install = stub_install
+        try:
+            with contextlib.redirect_stderr(io.StringIO()) as captured:
+                with self.assertRaises(SystemExit) as raised:
+                    bootstrap.bootstrap(ROOT / ".venv")
+            self.assertEqual(raised.exception.code, 1)
+            self.assertIn("nvidia-cusolver-cu12", captured.getvalue())
+            self.assertIn("entered the CPU environment", captured.getvalue())
+        finally:
+            bootstrap.forbidden_installed = original
+            bootstrap.install = original_install
+
+    def test_negative_control_installed_prohibited_runtime_fails_doctor(self):
+        original = doctor.installed_versions
+
+        def with_nvidia():
+            versions = original()
+            versions["nvidia-cuda-nvrtc-cu12"] = "12.6.77"
+            return versions
+
+        doctor.installed_versions = with_nvidia
+        try:
+            findings = doctor.doctor()
+        finally:
+            doctor.installed_versions = original
+        self.assertTrue(
+            any("model-runtime" in str(f) for f in findings),
+            [str(finding) for finding in findings])
+
+
+class OldDefectRegressionTests(unittest.TestCase):
+    """Prove the NEW controls catch the OLD round-1 defects.
+
+    Each control re-implements the round-1 behavior inline and shows
+    the old code accepted/missed what the corrected code rejects.
+    """
+
+    def test_old_round1_denylist_missed_common_nvidia_wheels(self):
+        """The round-1 exemplar frozenset did not contain the common
+        NVIDIA runtime wheels; the generalized rule rejects them."""
+        round1_denylist = frozenset({
+            "torch", "torchvision", "torchaudio", "triton", "cuda-python",
+            "nvidia-cublas-cu12", "nvidia-cuda-runtime-cu12",
+            "nvidia-cudnn-cu12", "xformers", "vllm", "flash-attn"})
+        for missed in ("nvidia-cuda-nvrtc-cu12", "nvidia-nccl-cu12",
+                       "nvidia-cufft-cu12", "nvidia-cusolver-cu12"):
+            self.assertNotIn(missed, round1_denylist)  # the old gap
+            self.assertTrue(bootstrap.is_forbidden_package(missed))
+            self.assertTrue(doctor.is_forbidden_package(missed))
+
+    def test_old_round1_reuse_check_could_not_detect_stale_venv(self):
+        """Round-1 create_venv reused any venv with pyvenv.cfg +
+        bin/python; show that check alone cannot distinguish a 3.12
+        from a 3.13 venv — which is why the corrected code inspects
+        the real interpreter."""
+        sandbox, venv = sandbox_repo(self)
+        venv.mkdir()
+        (venv / "pyvenv.cfg").write_text(
+            "home = /usr/bin\nversion = 3.13\n", encoding="utf-8")
+        (venv / "bin").mkdir()
+        (venv / "bin" / "python").symlink_to(sys.executable)
+
+        def round1_reuse_check() -> bool:
+            return ((venv / "pyvenv.cfg").is_file()
+                    and (venv / "bin" / "python").exists())
+
+        self.assertTrue(round1_reuse_check(),
+                        "the old check accepted a stale 3.13 venv")
+        # The old check could not see the real interpreter at all; the
+        # corrected code requires BOTH channels to agree with the
+        # request. Here the channels disagree with each other (cfg
+        # says 3.13, real interpreter is the host's), so a request can
+        # never be satisfied by both — exactly the stale shape.
+        real = bootstrap.venv_interpreter_version(venv / "bin" / "python")
+        recorded = bootstrap.venv_python_request(venv)
+        self.assertIsNotNone(real)
+        self.assertIsNotNone(recorded)
+        self.assertTrue(
+            real != (3, 12) or recorded != "3.12",
+            "the forged venv must fail the corrected dual-channel check")
+
+    def test_old_round1_venv_override_could_target_tracked_dirs(self):
+        """Round-1 main() accepted any repo descendant as --venv; show
+        that containment check alone accepted scripts/ — which is why
+        the override is removed entirely."""
+        venv_dir = (ROOT / "scripts" / ".venv").resolve()
+        round1_containment_ok = ROOT in venv_dir.parents
+        self.assertTrue(
+            round1_containment_ok,
+            "the old containment check accepted scripts/ as a venv target")
+        with contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                bootstrap.validate_venv_target(venv_dir)
+
+
+class FrozenPinValidationTests(unittest.TestCase):
+    """Referenced frozen pins are enforced, parsed dynamically."""
+
+    def test_frozen_pins_are_parsed_from_the_immutable_file(self):
+        frozen_path = ROOT / doctor.REFERENCED_REQUIREMENTS[0]
+        pins = doctor.parse_frozen_pins(
+            frozen_path.read_text(encoding="utf-8"))
+        self.assertEqual(pins, {
+            "transformers": "==5.17.0",
+            "tokenizers": "==0.23.2",
+            "jinja2": "==3.1.6",
+            "markupsafe": "==3.0.3"})
+        # The doctor module itself must not duplicate the pins.
+        doctor_source = (ROOT / "scripts" / "check_test_env.py").read_text(
+            encoding="utf-8")
+        for version in ("5.17.0", "0.23.2", "3.1.6", "3.0.3"):
+            self.assertNotIn(
+                version, doctor_source,
+                f"the doctor duplicates frozen pin {version}; the "
+                "immutable file is the only authority")
+
+    def test_negative_control_wrong_frozen_version_fails_the_doctor(self):
+        """At least one frozen package at a wrong installed version
+        must fail the doctor with the exact mismatch named."""
+        original = doctor.installed_versions
+
+        def wrong_transformers():
+            versions = original()
+            versions["transformers"] = "5.16.0"  # pin is 5.17.0
+            return versions
+
+        doctor.installed_versions = wrong_transformers
+        try:
+            findings = doctor.doctor()
+        finally:
+            doctor.installed_versions = original
+        self.assertTrue(
+            any("frozen dependency version mismatch" in str(f)
+                and "transformers" in str(f)
+                for f in findings),
+            [str(finding) for finding in findings])
+
+    def test_negative_control_wrong_jinja2_pin_fails_the_doctor(self):
+        original = doctor.installed_versions
+
+        def wrong_jinja2():
+            versions = original()
+            versions["jinja2"] = "3.1.5"  # pin is 3.1.6
+            return versions
+
+        doctor.installed_versions = wrong_jinja2
+        try:
+            findings = doctor.doctor()
+        finally:
+            doctor.installed_versions = original
+        self.assertTrue(
+            any("frozen dependency version mismatch" in str(f)
+                and "jinja2" in str(f)
+                for f in findings),
+            [str(finding) for finding in findings])
 
 
 class EnvironmentPurityTests(unittest.TestCase):

@@ -50,25 +50,24 @@ REQUIRED_EXACT_PYTHON = ("3", "12")
 EXPECTED_DIRECT_PACKAGES = frozenset({"jsonschema", "numpy", "pyyaml"})
 
 # Referenced immutable frozen requirement files (authoritative for their
-# own exact pins; the doctor verifies presence, not duplication).
+# own exact pins; the doctor parses them dynamically and enforces their
+# specifiers against the installed versions — never duplicating the pins
+# into a second hard-coded authority here).
 REFERENCED_REQUIREMENTS = (
     "docs/implementation/r6-successor-dense-full-integration-117/"
     "evidence/arm-c-retry/frozen-tokenizer/requirements.txt",
 )
 
-# Frozen tokenizer packages that specific CPU tests import directly.
-FROZEN_TOKENIZER_PACKAGES = frozenset({
-    "transformers", "tokenizers", "jinja2", "markupsafe"})
-
 # External (non-Python) executables the ordinary CPU suite shells out to.
 REQUIRED_EXECUTABLES = ("openssl",)
 
-# Model-runtime packages prohibited from the CPU test environment.
-FORBIDDEN_PACKAGES = frozenset({
-    "torch", "torchvision", "torchaudio", "triton", "cuda-python",
-    "nvidia-cublas-cu12", "nvidia-cuda-runtime-cu12", "nvidia-cudnn-cu12",
-    "xformers", "vllm", "flash-attn",
-})
+# Model-runtime rejection: the single mechanical rule lives in
+# scripts/bootstrap_test_env.py (is_forbidden_package — explicit
+# framework names plus the normalized NVIDIA/CUDA family rule); the
+# doctor imports it so the requirement screen and the environment
+# screen can never drift apart.
+sys.path.insert(0, str(ROOT / "scripts"))
+from bootstrap_test_env import is_forbidden_package  # noqa: E402
 
 # pip requirement line -> distribution-name normalization (PEP 503).
 def _normalize(name: str) -> str:
@@ -77,6 +76,16 @@ def _normalize(name: str) -> str:
 
 class DoctorError(ValueError):
     """One fail-closed doctor finding."""
+
+
+def check_forbidden(versions: dict[str, str]) -> None:
+    """Fail when any prohibited model-runtime package is installed."""
+    present = sorted(name for name in versions
+                     if is_forbidden_package(name))
+    if present:
+        raise DoctorError(
+            "model-runtime packages present in the CPU test environment: "
+            + ", ".join(present))
 
 
 def parse_requirements(text: str) -> tuple[set[str], set[str]]:
@@ -109,9 +118,9 @@ def check_python_version() -> None:
             f"CPU-suite interpreter {'.'.join(REQUIRED_EXACT_PYTHON)}: the "
             "accepted Issue #129 real-tokenizer proof pins its software "
             "identity to Python 3.12 and fails under any other minor "
-            "version. Bootstrap with a 3.12 interpreter "
-            "(scripts/bootstrap_test_env.py --python3.12 or set "
-            "UV_PYTHON=3.12)")
+            "version. Re-bootstrap with the canonical command "
+            "(python3 scripts/bootstrap_test_env.py, which requests "
+            "Python 3.12 via --python 3.12) or set UV_PYTHON=3.12")
 
 
 def installed_versions() -> dict[str, str]:
@@ -145,6 +154,76 @@ def _version_tuple(version: str) -> tuple[int, ...]:
     if match is None:
         raise DoctorError(f"unparseable version string: {version!r}")
     return tuple(int(part) for part in match.group(0).split("."))
+
+
+def parse_frozen_pins(text: str) -> dict[str, str]:
+    """Parse a frozen requirements text into {package: specifier}.
+
+    The referenced immutable files pin exact versions with ``==``; the
+    specifier is carried verbatim so the actual operator semantics
+    (not a re-derived approximation) drive verification. Lines without
+    a parseable ``name specifier`` shape raise, so a malformed frozen
+    file fails closed instead of being silently skipped.
+    """
+    pins: dict[str, str] = {}
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or line.startswith(("-r ", "-c ")):
+            continue
+        match = re.match(
+            r"([A-Za-z0-9][A-Za-z0-9._-]*)\s*([=<>!~][^\s;#]*)", line)
+        if match is None:
+            raise DoctorError(
+                f"unparseable frozen requirement line: {line!r}")
+        pins[_normalize(match.group(1))] = match.group(2)
+    if not pins:
+        raise DoctorError(
+            "referenced frozen requirements declare no version pins")
+    return pins
+
+
+def _specifier_holds(specifier: str, installed: str) -> bool:
+    """Evaluate a simple specifier (==, >=, <, ~=) against a version.
+
+    Standard library only; compound specifiers split on commas. Any
+    operator or version too complex for this evaluator fails CLOSED
+    (returns False with the mismatch surfaced by the caller) rather
+    than passing an unparsed constraint.
+    """
+    parts = _version_tuple(installed)
+    for clause in specifier.split(","):
+        clause = clause.strip()
+        match = re.fullmatch(r"(==|>=|<=|<|>|~=|!=)\s*"
+                             r"([0-9][0-9A-Za-z.*-]*)", clause)
+        if match is None:
+            return False
+        operator, declared = match.groups()
+        if operator == "==" and "*" in declared:
+            prefix = _version_tuple(declared.rstrip(".*"))
+            if parts[:len(prefix)] != prefix:
+                return False
+            continue
+        target = _version_tuple(declared)
+        if operator == "==" and parts != target:
+            return False
+        if operator == "!=" and parts == target:
+            return False
+        if operator == ">=" and not parts >= target:
+            return False
+        if operator == "<=" and not parts <= target:
+            return False
+        if operator == "<" and not parts < target:
+            return False
+        if operator == ">" and not parts > target:
+            return False
+        if operator == "~=":
+            floor = target
+            if len(floor) < 2:
+                return False
+            ceiling = (*floor[:-2], floor[-2] + 1)
+            if not floor <= parts < ceiling:
+                return False
+    return True
 
 
 def check_dependencies(requirements_text: str,
@@ -188,20 +267,24 @@ def check_dependencies(requirements_text: str,
             raise DoctorError(
                 f"{package} {versions[package]} violates the declared "
                 f"ceiling <{ceiling}")
-    for package in FROZEN_TOKENIZER_PACKAGES:
-        if package not in versions:
-            raise DoctorError(
-                "frozen tokenizer dependency is not installed: "
-                f"{package} (install the immutable Issue #117 requirements "
-                "referenced by requirements-test.txt)")
-
-
-def check_forbidden(versions: dict[str, str]) -> None:
-    present = sorted(FORBIDDEN_PACKAGES & set(versions))
-    if present:
-        raise DoctorError(
-            "model-runtime packages present in the CPU test environment: "
-            + ", ".join(present))
+    # Referenced frozen pins are enforced against the installed
+    # versions, parsed dynamically from the immutable file — no second
+    # hard-coded authority to drift.
+    for relative in REFERENCED_REQUIREMENTS:
+        frozen_text = (ROOT / relative).read_text(encoding="utf-8")
+        for package, specifier in sorted(parse_frozen_pins(frozen_text).items()):
+            if package not in versions:
+                raise DoctorError(
+                    "frozen tokenizer dependency is not installed: "
+                    f"{package} (install the immutable Issue #117 "
+                    "requirements referenced by requirements-test.txt)")
+            if not _specifier_holds(specifier, versions[package]):
+                raise DoctorError(
+                    f"frozen dependency version mismatch: {package} "
+                    f"{versions[package]} is installed but the immutable "
+                    f"Issue #117 pin requires {package}{specifier}; "
+                    "re-bootstrap (python3 scripts/bootstrap_test_env.py) "
+                    "to reinstall the frozen environment")
 
 
 def check_executables() -> None:
