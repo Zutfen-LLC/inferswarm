@@ -152,41 +152,101 @@
   "docs/architecture/": [
    "issue-83-95"
   ],
-  "docs/benchmarks/phase1/": [
+  "docs/benchmarks/results/phase0/": [
+   "issue-117-133"
+  ],
+  "docs/benchmarks/results/phase1/": [
    "phase1-analysis"
+  ],
+  "docs/benchmarks/workloads/": [
+   "repo-integrity"
   ],
   "docs/evidence-manifests.md": [
    "repo-integrity"
   ],
-  "docs/evidence/vulkan-v0-a/": [
-   "vulkan-v0-b"
-  ],
   "docs/finalization.md": [
    "repo-integrity"
   ],
+  "docs/implementation/artifact-locality-transition-planning-103/": [
+   "issue-99-103",
+   "issue-117-133"
+  ],
   "docs/implementation/plan-driven-artifact-acquisition-99/": [
-   "issue-99-103"
+   "issue-99-103",
+   "issue-117-133"
   ],
   "docs/implementation/plan-driven-artifact-orchestration-101/": [
-   "issue-99-103"
+   "issue-99-103",
+   "issue-117-133"
   ],
   "docs/implementation/r6-successor-dense-full-integration-117/": [
    "issue-117-133"
   ],
-  "docs/implementation/vulkan-arm-c-regime4-diagnosis-137/": [
-   "issue-137"
+  "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-regime4-diagnosis-137/": [
+   "issue-137",
+   "issue-117-133"
   ],
-  "docs/implementation/vulkan-v0-b/": [
+  "docs/investigations/data/": [
+   "phase1-analysis"
+  ],
+  "docs/investigations/vulkan-v0-a/": [
+   "vulkan-v0-b"
+  ],
+  "docs/investigations/vulkan-v0-b/": [
    "vulkan-v0-b"
   ],
   "docs/project-status.json": [
    "repo-integrity"
   ],
-  "docs/qualification/issue-109-v5/": [
+  "docs/qualification/gemma4-12b-it-post-v3-envelope-diagnosis/": [
+   "issue-83-95"
+  ],
+  "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/": [
+   "issue-83-95"
+  ],
+  "docs/qualification/gemma4-12b-it-semantic-83/": [
+   "issue-83-95"
+  ],
+  "docs/qualification/gemma4-12b-it-v1/": [
+   "issue-74-79"
+  ],
+  "docs/qualification/gemma4-12b-it-v2-campaign-81/": [
+   "issue-117-133"
+  ],
+  "docs/qualification/gemma4-12b-it-v2/": [
+   "issue-74-79"
+  ],
+  "docs/qualification/gemma4-12b-it-v3-campaign-88/": [
+   "issue-83-95"
+  ],
+  "docs/qualification/gemma4-12b-it-v3/": [
+   "issue-83-95"
+  ],
+  "docs/qualification/gemma4-12b-it-v4-campaign-97/": [
+   "issue-117-133"
+  ],
+  "docs/qualification/gemma4-12b-it-v4/": [
+   "issue-83-95"
+  ],
+  "docs/qualification/gemma4-12b-it-v5-campaign-110/": [
+   "issue-109-110",
+   "issue-117-133"
+  ],
+  "docs/qualification/gemma4-12b-it-v5-campaign-110/cleanup/": [
+   "issue-115-cleanup",
+   "issue-109-110",
+   "issue-117-133"
+  ],
+  "docs/qualification/gemma4-12b-it-v5/": [
+   "issue-109-110",
+   "issue-117-133"
+  ],
+  "docs/qualification/post-v3-numerical-core-doctrine/": [
+   "issue-83-95",
    "issue-109-110"
   ],
-  "docs/qualification/issue-74-holdout/": [
-   "issue-74-79"
+  "docs/qualification/post-v4-statistical-metric-doctrine/": [
+   "issue-109-110"
   ],
   "docs/status-maintenance.md": [
    "repo-integrity"
@@ -327,9 +387,6 @@
    "issue-109-110"
   ],
   "scripts/issue110_v5_custody.py": [
-   "issue-109-110"
-  ],
-  "scripts/issue110_v5_threshold_adapter.py": [
    "issue-109-110"
   ],
   "scripts/issue110_v5_thresholds.py": [

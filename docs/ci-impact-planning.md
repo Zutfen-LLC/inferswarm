@@ -74,6 +74,11 @@ The planner escalates to full regression when:
 
 - a changed path is unclassified (unknown new file, unregistered
   `scripts/` or `tests/` path, shared test infrastructure);
+- an unmapped **non-prose** `docs/**` file changes (generated evidence,
+  retained data, manifests, schemas, producer files, `.json`/`.jsonl`/
+  `.sha256`/...): only ordinary Markdown prose may classify as
+  repo-integrity-only; evidence-bearing documentation without an
+  explicit registry rule fails closed;
 - `.github/workflows/**` changes;
 - the planner itself, its registry, or its tests change;
 - the canonical dependency authority changes (`requirements-test.txt`,
@@ -81,9 +86,17 @@ The planner escalates to full regression when:
 - repository authority surfaces change (finalizer, status syncer,
   evidence manifest tooling and their docs, `docs/project-status.json`);
 - the changed-path input is malformed (duplicates, whitespace,
-  absolute paths, `..` traversal) or empty.
+  absolute paths, `..` traversal, **blank lines**) or empty.
 
 When in doubt the plan widens; it never narrows silently.
+
+Path rules use the repository's real retained trees. Each registered
+family prefix must exist in the tracked tree, and shared evidence trees
+fan out to the union of their mechanically demonstrated consumers
+(e.g. `docs/qualification/gemma4-12b-it-v5/` selects both
+`issue-109-110` and `issue-117-133`). `tests/test_plan_ci.py` enforces
+this with a `git ls-files` census: every configured prefix must exist,
+and every tracked non-Markdown docs file must be explicitly classified.
 
 ## CI Gate
 
@@ -102,3 +115,25 @@ paths to `PATH_GROUPS` in `scripts/plan_ci.py`, run
 the workflow. `tests/test_plan_ci.py` fails if any `tests/test_*.py`
 module is not owned by exactly one registered group, so an unregistered
 suite cannot slip through silently.
+
+## Adding an evidence-bearing docs subtree
+
+A new `docs/**` subtree holding generated/retained evidence (anything
+that is not ordinary Markdown prose) must be registered in
+`PATH_GROUPS` mapped to the groups whose tests actually consume it, or
+— if it is deliberately repo-integrity-only — added to the documented
+allowlist in `tests/test_plan_ci.py`
+(`TestRepositoryTreeCoverage.test_unmapped_evidence_census_fail_closed`)
+with the reason. The census test fails otherwise, so an unclassified
+evidence subtree cannot fall through to the prose rule.
+
+## Workflow wiring contract
+
+Each impact job's `if:` selects on real plan-job outputs only:
+`needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), '<group-id>')`.
+The `plan` job exposes exactly `mode`, `full_regression`, and `groups`;
+there is no duplicated per-group flag surface. `tests/test_plan_ci.py`
+(`TestWorkflowContract`) parses `.github/workflows/ci.yml` itself and
+fails if any job references a plan output that does not exist, if a
+registered group has no selectable job, or if workflow group ids drift
+from the registry.

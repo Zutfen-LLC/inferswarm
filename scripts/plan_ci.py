@@ -251,7 +251,8 @@ PATH_GROUPS = {
     "scripts/generate_issue76_stress_pool_v2.py": ["issue-74-79"],
     "scripts/issue79_v2_thresholds.py": ["issue-74-79"],
     "scripts/verify_issue79_v2_unseal.py": ["issue-74-79"],
-    "docs/qualification/issue-74-holdout/": ["issue-74-79"],
+    "docs/qualification/gemma4-12b-it-v1/": ["issue-74-79"],
+    "docs/qualification/gemma4-12b-it-v2/": ["issue-74-79"],
 
     "scripts/issue83_first_divergence.py": ["issue-83-95"],
     "scripts/issue86_v3_methodology.py": ["issue-83-95"],
@@ -278,13 +279,20 @@ PATH_GROUPS = {
     "scripts/issue108_post_v4_statistical_metric_doctrine.py": ["issue-83-95"],
     "docs/adr/": ["issue-83-95"],  # ADRs decide; doctrine changes are broad
     "docs/architecture/": ["issue-83-95"],
+    "docs/qualification/gemma4-12b-it-semantic-83/": ["issue-83-95"],
+    "docs/qualification/gemma4-12b-it-v3/": ["issue-83-95"],
+    "docs/qualification/gemma4-12b-it-v3-campaign-88/": ["issue-83-95"],
+    "docs/qualification/gemma4-12b-it-v4/": ["issue-83-95"],
+    "docs/qualification/gemma4-12b-it-post-v3-envelope-diagnosis/": ["issue-83-95"],
+    "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/": ["issue-83-95"],
+    "docs/qualification/post-v3-numerical-core-doctrine/": ["issue-83-95",
+        "issue-109-110"],  # test_issue109_v5_methodology also pins it
 
     "scripts/issue109_v5_contract.py": ["issue-109-110"],
     "scripts/issue109_v5_methodology.py": ["issue-109-110"],
     "scripts/issue109_v5_methodology_freeze.py": ["issue-109-110"],
     "scripts/issue109_v5_thresholds.py": ["issue-109-110"],
     "scripts/issue110_v5_custody.py": ["issue-109-110"],
-    "scripts/issue110_v5_threshold_adapter.py": ["issue-109-110"],
     "scripts/issue110_v5_thresholds.py": ["issue-109-110"],
     "scripts/verify_issue109_v5_unseal.py": ["issue-109-110"],
     "scripts/commit_issue109_holdout.py": ["issue-109-110"],
@@ -296,8 +304,26 @@ PATH_GROUPS = {
     "scripts/build_issue109_historical_exclusion.py": ["issue-109-110"],
     "scripts/build_issue109_schemas.py": ["issue-109-110"],
     "scripts/validate_issue109_prerequisites.py": ["issue-109-110"],
-    "docs/qualification/issue-109-v5/": ["issue-109-110"],
+    # Accepted V5 methodology/campaign evidence. The #109/#110 suites
+    # consume these trees directly, and Issue #117 reconstructs/binds
+    # the accepted V5/#110 subject evidence, so both lineages run.
+    "docs/qualification/gemma4-12b-it-v5/": ["issue-109-110", "issue-117-133"],
+    "docs/qualification/gemma4-12b-it-v5-campaign-110/": ["issue-109-110",
+        "issue-117-133"],
+    # Issue #115 cleanup producers/retained evidence (narrower than the
+    # campaign-110 tree: test_issue115_cleanup_retention reads exactly
+    # this subtree; classification unions with the parent rule).
+    "docs/qualification/gemma4-12b-it-v5-campaign-110/cleanup/": ["issue-115-cleanup",
+        "issue-109-110", "issue-117-133"],
+    "docs/qualification/post-v4-statistical-metric-doctrine/": ["issue-109-110"],
 
+    # Shared qualification lineage evidence consumed by #117 subject
+    # reconstruction (test_issue117_accepted_subject / applicability /
+    # preflight read these campaign trees directly).
+    "docs/qualification/gemma4-12b-it-v2-campaign-81/": ["issue-117-133"],
+    "docs/qualification/gemma4-12b-it-v4-campaign-97/": ["issue-117-133"],
+
+    # Issue #117 producer scripts and evidence tree.
     "scripts/issue117_accepted_subject.py": ["issue-117-133"],
     "scripts/issue117_applicability.py": ["issue-117-133"],
     "scripts/issue117_arm_a_evidence.py": ["issue-117-133"],
@@ -335,13 +361,21 @@ PATH_GROUPS = {
     "scripts/issue133_regenerate_corrected_freeze.py": ["issue-117-133"],
     "scripts/issue133_terminal_reduction.py": ["issue-117-133"],
     "docs/implementation/r6-successor-dense-full-integration-117/": ["issue-117-133"],
+    # Issue #137 retained evidence lives inside the #117 evidence tree;
+    # the narrower #137 subtree fans out to both its semantic group and
+    # the broader shared-tree lineage (the #117 prefix rule above also
+    # matches, and classification unions all matching rules).
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-regime4-diagnosis-137/":
+        ["issue-137", "issue-117-133"],
 
     "scripts/issue137_binding.py": ["issue-137"],
     "scripts/issue137_conclusions.py": ["issue-137"],
     "scripts/issue137_phase1_inventory.py": ["issue-137"],
     "scripts/issue137_probe_driver.py": ["issue-137",
         "issue-74-79"],   # Phase-1 probes feed 74-79 placement lineage
-    "docs/implementation/vulkan-arm-c-regime4-diagnosis-137/": ["issue-137"],
+    # (The synthetic docs/implementation/vulkan-arm-c-regime4-diagnosis-137/
+    # prefix never matched a tracked path; the real retained #137
+    # evidence rule lives with the #117 tree above.)
 
     "scripts/issue99_artifact_core.py": ["issue-99-103"],
     "scripts/issue99_mini_model.py": ["issue-99-103"],
@@ -352,8 +386,16 @@ PATH_GROUPS = {
     "scripts/issue103_fixture.py": ["issue-99-103"],
     "scripts/issue103_planner.py": ["issue-99-103"],
     "scripts/issue103_proof.py": ["issue-99-103"],
-    "docs/implementation/plan-driven-artifact-acquisition-99/": ["issue-99-103"],
-    "docs/implementation/plan-driven-artifact-orchestration-101/": ["issue-99-103"],
+    # #103 evidence; test_issue117_provenance and test_issue103_planner /
+    # test_evidence_manifest_lifecycle consume this shared tree.
+    "docs/implementation/artifact-locality-transition-planning-103/": ["issue-99-103",
+        "issue-117-133"],
+    # #99/#101 evidence; test_issue117_provenance pins these exact bytes
+    # as the #117 subject provenance, so the shared tree fans out.
+    "docs/implementation/plan-driven-artifact-acquisition-99/": ["issue-99-103",
+        "issue-117-133"],
+    "docs/implementation/plan-driven-artifact-orchestration-101/": ["issue-99-103",
+        "issue-117-133"],
 
     "scripts/v0a_correctness_derive.py": ["vulkan-v0-b"],
     "scripts/v0a_correctness_run.py": ["vulkan-v0-b"],
@@ -369,8 +411,11 @@ PATH_GROUPS = {
     "scripts/v0b_manifest.py": ["vulkan-v0-b"],
     "scripts/v0b_seam_comparison.py": ["vulkan-v0-b"],
     "scripts/v0b_terminal.py": ["vulkan-v0-b"],
-    "docs/implementation/vulkan-v0-b/": ["vulkan-v0-b"],
-    "docs/evidence/vulkan-v0-a/": ["vulkan-v0-b"],
+    # Retained V0-A/V0-B investigation evidence. test_v0b_reduction
+    # reads both trees directly (V0-B consumes accepted V0-A evidence),
+    # so both select vulkan-v0-b.
+    "docs/investigations/vulkan-v0-a/": ["vulkan-v0-b"],
+    "docs/investigations/vulkan-v0-b/": ["vulkan-v0-b"],
 
     "scripts/analyze_phase1_p6.py": ["phase1-analysis"],
     "scripts/derive_phase1_placement.py": ["phase1-analysis"],
@@ -378,7 +423,15 @@ PATH_GROUPS = {
     "scripts/derive_phase1r_d3_placement.py": ["phase1-analysis"],
     "scripts/derive_phase1r_d4_placement.py": ["phase1-analysis"],
     "scripts/derive_phase1r_d7_placement.py": ["phase1-analysis"],
-    "docs/benchmarks/phase1/": ["phase1-analysis"],
+    # Retained Phase-1 campaign evidence and placement data.
+    "docs/benchmarks/results/phase1/": ["phase1-analysis"],
+    "docs/investigations/data/": ["phase1-analysis"],
+    # Phase-0 retained results: p0c-hardware-profile.json is consumed
+    # by scripts/issue117_applicability.py (#117 applicability check).
+    "docs/benchmarks/results/phase0/": ["issue-117-133"],
+    # Frozen Phase-0 workloads: verified by scripts/check_phase0_workloads
+    # .py, an always-on repo-integrity step.
+    "docs/benchmarks/workloads/": ["repo-integrity"],
 
     # Top-level documentation: cheap always-on checks only. Deeper
     # documentation surfaces are family-owned above or fall through to
@@ -395,11 +448,18 @@ PATH_GROUPS = {
     ".github/ISSUE_TEMPLATE/": ["repo-integrity"],
 }
 
+# Generic documentation classification. Any docs/ path not matched by an
+# explicit rule above is ordinary prose ONLY when it is a Markdown file;
+# any other unmapped docs/ file (generated evidence, retained data,
+# manifests, schemas, producer files, ...) is evidence-bearing and fails
+# closed to full regression. Adding a new evidence-bearing docs subtree
+# requires registering it in PATH_GROUPS (or documenting why it is
+# prose-only); the repository-tree coverage tests enforce this.
+DOCS_PROSE_SUFFIX = ".md"
+
 # Documentation subtrees that are pure prose for a specific family.
-# Any other docs/ path is treated as general documentation (always-on
-# checks only) — adding a new evidence-bearing docs subtree without
-# registering it selects full regression via the unclassified rule
-# only if it holds scripts; pure prose docs never silently narrow.
+# (Superseded by explicit PATH_GROUPS entries; kept for registry
+# stability.)
 DOCS_FAMILY_PREFIXES = [
     # (prefix, group) — must match PATH_GROUPS entries
 ]
@@ -445,8 +505,10 @@ def classify_path(path):
             matched = True
     if matched:
         return _sort_unique(groups), True
-    # generic documentation: any docs/ path not otherwise classified
-    if path.startswith("docs/"):
+    # generic documentation: ordinary Markdown prose stays narrow
+    # (repo-integrity only); any other unmapped docs/ file is
+    # evidence-bearing and fails closed to full regression
+    if path.startswith("docs/") and path.endswith(DOCS_PROSE_SUFFIX):
         return ["repo-integrity"], True
     # generic test-infra roots
     if path in SHARED_TEST_PATHS:
@@ -661,7 +723,10 @@ def main(argv=None):
     if args.paths:
         changed = list(args.paths)
     else:
-        changed = [line.rstrip("\n") for line in sys.stdin if line.strip()]
+        # Preserve every stdin line (including blank ones) so that
+        # malformed input reaches _validate_paths and fails closed
+        # instead of being silently filtered into a narrow plan.
+        changed = [line.rstrip("\n") for line in sys.stdin]
 
     result = plan(changed, mode=args.mode)
     text = json.dumps(result, indent=1, sort_keys=True) + "\n"
