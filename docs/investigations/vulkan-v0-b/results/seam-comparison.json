@@ -1,0 +1,76 @@
+{
+ "classes_all_considered": true,
+ "issue": 142,
+ "note": "selection + authorization belong to the terminal recommendation, not to this comparison",
+ "schema": "inferswarm.vulkan-v0-b.seam-comparison/1",
+ "seams": [
+  {
+   "assessment": "RULED INAPPLICABLE for a first spike: the current stack exposes no practical Vulkan seam, and Phase1R evidence shows execution-path swaps inside it are disproportionately costly",
+   "class": "1. Existing runtime gains a Vulkan-native execution path",
+   "coexistence": "technically yes, but the implementation cost concentrates in the one runtime where backend neutrality is hardest to keep honest",
+   "description": "The current FreeToken research runtime's execution stack itself grows a Vulkan execution path alongside its CUDA path.",
+   "doctrine_map": "fabric-doctrine 10.1 (backend-native fast execution) / 10.2 (same-backend fusion); ADR 0006 backend-independent boundary",
+   "granularity": "whatever the runtime's execution boundary already is (stage/expert granularity on the tested Gemma path)",
+   "host_state_expectation": "runtime-defined; the RSS-shadow observation from V0-A suggests a ggml-style Vulkan path keeps significant host state, which must be accounted per residency rules",
+   "id": "S1-runtime-vulkan-path",
+   "planner_leak": "low if done behind the strategy/backend boundary; high temptation to leak 'vulkan' nouns into a runtime that already carries CUDA-shaped internals",
+   "qualification_requirements": "full three-layer ADR 0010 qualification for the new execution path on the #117 model line \u2014 same bar as the CUDA path",
+   "representation_materialization": "would require the runtime's state representations to be producible by a Vulkan compute path \u2014 new kernel/representation work at the runtime's internal seam",
+   "scope_risk": "LARGE \u2014 the current execution stack is CUDA/capture-shaped (Phase1R: leaving the captured path was catastrophically expensive on the tested stack); a Vulkan sibling inside it is a second full backend port inside the most performance-sensitive component",
+   "v0c_could_prove": "only a narrow 'Vulkan executes one strategy-defined unit beside CUDA in one Swarm' fact, at material implementation cost"
+  },
+  {
+   "assessment": "STRONGEST candidate: directly tests the architectural hypothesis (portable backend under vendor-neutral semantics) at the smallest honest scope",
+   "class": "2. Backend-specific execution adapter/participant",
+   "coexistence": "YES by construction \u2014 CUDA/HIP/Vulkan adapters are peers under one resource graph (doctrine 10.2 permits per-backend fast executors)",
+   "description": "A bounded Vulkan-capable executor/adapter realizes ONE strategy-defined execution unit (e.g. a single-model local serving unit) while the generic planner/resource model stays backend-neutral; the adapter is evidence-associated with a Compute Unit.",
+   "doctrine_map": "fabric-doctrine 2.4/2.8 (Compute Unit / runtime executor is plan construct), 6.6 (representation/backend legality owned by strategy), ADR 0006; matches the proven integration flow (freetoken.md: strategy-owned backend detail, generic planner backend-neutral)",
+   "granularity": "one whole-model (or strategy-chosen block-set) serving unit on one Compute Unit \u2014 matched to what the V0-A probe actually proved (single GPU, whole model, 37/37 layers)",
+   "host_state_expectation": "bounded and measurable: ready-state RSS deltas already characterized on NV-A (+213.7 MB vs CUDA); AMD-A RSS ~0.47 GB; a residency rule for the adapter is writable from retained evidence",
+   "id": "S2-backend-adapter-participant",
+   "planner_leak": "LOW \u2014 planner sees a backend-neutral execution capability + capability/evidence records; 'Vulkan' appears only as evidence and adapter implementation",
+   "qualification_requirements": "ADR 0010 three-layer qualification scoped to the adapter's declared semantic profile \u2014 the prospective-freeze list in this bundle's correctness-stability reduction",
+   "representation_materialization": "GGUF/model-file materialization on device-local memory, exactly the V0-A-proven shape; no new representation invented",
+   "scope_risk": "MODERATE \u2014 an executor from a maintained ggml/llama.cpp-class backend (Vulkan build) behind a narrow participant interface; no changes to the frozen CUDA line; failure isolates in the adapter",
+   "v0c_could_prove": "that a Vulkan-backed Compute Unit can join one Swarm, be selected by the generic planner under capability/evidence, execute the pinned model, and produce committed output beside a CUDA unit \u2014 without freezing any public API (API-unfrozen doctrine)"
+  },
+  {
+   "assessment": "INSUFFICIENT as the primary seam: it cannot test state/materialization semantics the architecture cares about; useful only as a reference implementation detail inside S2",
+   "class": "3. External ggml/llama.cpp-style execution substrate",
+   "coexistence": "yes, as an external service",
+   "description": "Treat an external whole-model executor (e.g. llama.cpp server) as a research participant/execution substrate without embedding it.",
+   "doctrine_map": "edge of doctrine: a participant must expose strategy/state/execution semantics, not just an HTTP text interface; ADR 0006 boundary bytes/identity",
+   "granularity": "whole model per process; the substrate owns scheduling \u2014 InferSwarm could not control block/state granularity",
+   "host_state_expectation": "opaque; slotting/KV management internal to the server",
+   "id": "S3-external-substrate",
+   "planner_leak": "low, but only because so little is exposed to plan over",
+   "qualification_requirements": "cannot satisfy exact-integrity layer for internal state movement (no boundary visibility); only end-to-end semantic checks possible",
+   "representation_materialization": "substrate-defined; opaque to the strategy \u2014 Logical State Unit semantics cannot be verified inside it",
+   "scope_risk": "SMALL to stand up, but architecturally weak: it proves an external server works, not that InferSwarm can plan/execute over a portable backend",
+   "v0c_could_prove": "only availability/economics of an opaque endpoint \u2014 the weakest architectural test"
+  },
+  {
+   "assessment": "RULED OUT for now: retained evidence shows maintained portable runtimes (ggml Vulkan) already execute the subject model correctly on both vendor stacks; no evidence shows a missing capability that only custom kernels supply",
+   "class": "4. Custom Vulkan kernel/backend work",
+   "coexistence": "yes in principle",
+   "description": "Write InferSwarm-owned Vulkan kernels/compute pipeline for model execution.",
+   "doctrine_map": "would be a new backend implementation from scratch under the strategy/backend boundary",
+   "granularity": "unbounded in principle, years of kernel coverage in practice",
+   "host_state_expectation": "self-defined",
+   "id": "S4-custom-vulkan-kernels",
+   "planner_leak": "n/a (no planner change needed)",
+   "qualification_requirements": "entire numerical-equivalence contract from zero",
+   "representation_materialization": "fully self-owned; maximum freedom, maximum cost",
+   "scope_risk": "VERY LARGE \u2014 a materially larger program by any measure; the issue itself flags this class as not casually selectable",
+   "v0c_could_prove": "nothing proportionate to cost at research scale"
+  },
+  {
+   "assessment": "NOT SUPPORTED by the evidence: the Vulkan path is physically real, device-proven, backend-locally stable, near-native on NVIDIA (0.949/0.884), and \u2014 pending the supplemental CPU arm \u2014 materially useful on AMD where NO native backend exists. 'Slow but correct' is exactly the compatibility-tier or strategy-economics case the doctrine accommodates. Rejection merely for losing to the native backend is explicitly barred by the issue.",
+   "class": "5. No integration",
+   "description": "Correctness/stability/economics do not justify further Vulkan work.",
+   "doctrine_map": "honest negative result recorded as evidence on Compute Units",
+   "id": "S5-no-integration",
+   "scope_risk": "none"
+  }
+ ]
+}

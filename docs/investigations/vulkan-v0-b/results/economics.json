@@ -1,0 +1,122 @@
+{
+ "amd_characterization": {
+  "arm": "AMD-A (02:00.0) Vulkan characterization",
+  "decode": {
+   "median": 43.65921,
+   "tg128_process_tps": [
+    43.696993,
+    43.648464,
+    43.65921
+   ]
+  },
+  "host_rss_at_ready_kB": 469720,
+  "native_comparator": "NONE \u2014 HIP/ROCm NATIVE_BACKEND_UNAVAILABLE (mechanically demonstrated); no Vulkan/native ratio exists",
+  "prefill": {
+   "median": 498.024489,
+   "pp512_process_tps": [
+    499.575935,
+    497.772115,
+    498.024489
+   ]
+  },
+  "startup_to_ready_s_median": 26.48,
+  "vram_at_ready_bytes": 3254091776
+ },
+ "host_execution_comparison": {
+  "classification": "MATCHED_WITH_DECLARED_DIFFERENCE (same host/probe/model/workload; execution substrate differs: device-local VRAM+GPU vs host RAM+CPU \u2014 that difference is the question)",
+  "cpu_arm": {
+   "arm_identity": "inferswarm02 host CPU (Celeron G3900, 2 threads), same probe build-vulkan binary, same model bytes, same pp512/tg128 workload, -ngl 0",
+   "n_runs": 3,
+   "pp512_median_tps": 53.81,
+   "runs": [
+    {
+     "pp512": 53.81,
+     "run_id": "v0b-cpu-01",
+     "tg128": 0.8
+    },
+    {
+     "pp512": 53.74,
+     "run_id": "v0b-cpu-02",
+     "tg128": 0.8
+    },
+    {
+     "pp512": 54.12,
+     "run_id": "v0b-cpu-03",
+     "tg128": 0.82
+    }
+   ],
+   "tg128_median_tps": 0.8
+  },
+  "decode": {
+   "amd_vulkan_median_tps": 43.65921,
+   "cpu_median_tps": 0.8,
+   "label": "CALCULATED",
+   "ratio_amd_vk_over_cpu": 54.574
+  },
+  "interpretation_guard": "this is a substrate-usefulness comparison, NOT a backend ratio; prefill and decode kept separate",
+  "method_authority": "docs/investigations/vulkan-v0-b/METHODOLOGY.md (frozen before collection)",
+  "pair": "AMD-A (02:00.0) Vulkan vs host CPU execution on the same host",
+  "prefill": {
+   "amd_vulkan_median_tps": 498.024489,
+   "cpu_median_tps": 53.81,
+   "label": "CALCULATED",
+   "ratio_amd_vk_over_cpu": 9.2552
+  }
+ },
+ "issue": 142,
+ "nvidia_same_device": {
+  "classification": "MATCHED_WITH_DECLARED_DIFFERENCE (same physical GPU, model, workload, link state; backend codegen differs by construction)",
+  "decode": {
+   "cuda_median": 108.027466,
+   "cuda_tg128_process_tps": [
+    107.921987,
+    108.061228,
+    108.027466
+   ],
+   "label": "CALCULATED from retained MEASURED process aggregates",
+   "ratio_vk_over_cuda": 0.8842,
+   "vulkan_median": 95.518049,
+   "vulkan_tg128_process_tps": [
+    95.246484,
+    95.518049,
+    95.584454
+   ]
+  },
+  "host_rss_at_ready": {
+   "cuda_kB": 789488,
+   "vulkan_kB": 1003172,
+   "vulkan_minus_cuda_kB": 213684
+  },
+  "pair": "NV-A (04:00.0) Vulkan vs CUDA",
+  "prefill": {
+   "cuda_median": 3773.101038,
+   "cuda_pp512_process_tps": [
+    3731.72964,
+    3775.340163,
+    3773.101038
+   ],
+   "label": "CALCULATED from retained MEASURED process aggregates",
+   "ratio_vk_over_cuda": 0.9486,
+   "vulkan_median": 3579.00686,
+   "vulkan_pp512_process_tps": [
+    3604.378304,
+    3579.00686,
+    3512.016979
+   ]
+  },
+  "startup_to_ready": {
+   "cuda_median_s": 11.364,
+   "label": "MEASURED (corrected zero-inference harness) + CALCULATED ratio",
+   "ratio_cuda_over_vk": 0.8726,
+   "vulkan_median_s": 13.023,
+   "vulkan_minus_cuda_s": 1.659
+  },
+  "vram_at_ready": {
+   "cuda_bytes": 3423600640,
+   "vulkan_bytes": 3279945728,
+   "vulkan_minus_cuda_bytes": -143654912
+  }
+ },
+ "prefill_decode_separation": "enforced \u2014 no combined average is computed anywhere in this reduction",
+ "schema": "inferswarm.vulkan-v0-b.economics/1"
+}

@@ -1,0 +1,167 @@
+# V0-B results: matched-evidence reduction and integration-seam selection
+
+All numbers are MEASURED in the accepted V0-A campaign (issue #141, PR
+#145 merge `273b9e8e32c779f063903cd75a0c6772d0d1e451`) or CALCULATED
+from those retained values by the mechanical reducers in this bundle
+(`scripts/v0b_*.py`, hashes in `MANIFEST.sha256`). The one new physical
+collection — the supplemental matched CPU baseline — was produced under
+`METHODOLOGY.md` as corrected by `METHODOLOGY-CORRECTION-1.md` and
+`METHODOLOGY-CORRECTION-2.md`, on `inferswarm02` (the V0-A host) on
+2026-09-12. Machine-readable authority: `TERMINAL.json`.
+
+## Phase 0 — comparability audit (mechanical)
+
+`results/comparability-matrix.json`, derived by
+`scripts/v0b_comparability_audit.py`:
+
+- parent identity pinned: #141 terminal
+  `V0A_MATCHED_CHARACTERIZATION_COMPLETE`; PR #145 merge
+  `273b9e8e`; V0-A head `2b2d546d`; superseded `2b14fba`
+  interpretations NOT consumed.
+- evidence integrity: all 88 parent-manifest rows re-hashed and
+  verified byte-exact; all 6 corrected correctness runs prove their
+  intended physical device (BDF) in their own retained stderr; all 18
+  retained bench rows pin the intended device selector with identical
+  model/workload parameters.
+- classification: NV-A Vulkan/CUDA pairs (prefill, decode, startup,
+  VRAM, host RSS, correctness) are MATCHED_WITH_DECLARED_DIFFERENCE
+  (same physical GPU/model/workload/link; backend codegen differs by
+  construction). AMD Vulkan/native is NOT_COMPARABLE (native
+  unavailable, mechanically demonstrated). AMD-vs-NVIDIA throughput is
+  DESCRIPTIVE_ONLY. Superseded evidence is quarantined in the matrix.
+
+## Phase 1 — correctness/stability (AMD + NVIDIA)
+
+`results/correctness-stability.json`, derived by
+`scripts/v0b_correctness_stability.py`:
+
+- Integrity: PASS for every corrected run — executable/model SHA-256
+  match the frozen identities, intended device proven per run (BDF
+  line), 37/37 layers offloaded, clean exits, no fallback or corruption
+  markers.
+- Backend-local repeatability: `stable` — AMD-A 3/3 identical visible
+  greedy generation; AMD-B, NV-A/VK, NV-A/CUDA each a single clean
+  observation (marked as such; the AMD-B smoke rule and the 1-run NV
+  arms bound the claim).
+- Cross-backend: a real generated-output difference — NV-A CUDA differs
+  from all Vulkan arms at one word choice. Classified honestly as a
+  generated-output difference; NOT relabeled as semantic equality.
+- ADR 0010 mapping: exact-integrity layer satisfied in evidence;
+  qualified-numerical and strategy-semantic layers NOT ESTABLISHED —
+  no logits are exposed, no numerical threshold is created here, and
+  the list of what a future qualification campaign must freeze
+  prospectively is recorded in the reduction.
+
+## Phase 2 — workload economics (matched pairs, distributions retained)
+
+`results/economics.json`, derived by `scripts/v0b_economics.py`. Prefill
+and decode are kept separate everywhere; no combined average exists.
+
+### NV-A (04:00.0, RTX 3060 Ti): Vulkan vs CUDA — same device
+
+| metric | Vulkan | CUDA | VK/CUDA (CALCULATED) |
+|---|---|---|---|
+| prefill pp512 t/s (median of 3 process aggregates) | 3579.0 | 3773.1 | **0.9486** |
+| decode tg128 t/s (median of 3) | 95.5 | 108.0 | **0.8842** |
+| startup-to-ready (s, corrected zero-inference) | 13.023 | 11.364 | CUDA 1.146x faster ready (+1.66 s) |
+| VRAM at ready | 3.280 GB | 3.424 GB | Vulkan −143.7 MB |
+| host RSS at ready | 1.003 GB | 0.789 GB | Vulkan +213.7 MB |
+
+### AMD-A (02:00.0, Polaris): Vulkan characterization — no native comparator
+
+pp512 median 498.0 t/s; tg128 median 43.7 t/s; ready 26.48 s; 3.25 GB
+VRAM at ready; 0.470 GB host RSS at ready. HIP/ROCm is
+`NATIVE_BACKEND_UNAVAILABLE` on the frozen stack; no Vulkan/native ratio
+is computed or claimed.
+
+### Supplemental matched CPU baseline (new physical collection, bounded)
+
+Method frozen in `METHODOLOGY.md` before collection; two bring-up
+corrections refined the CPU-execution proof rule (`METHODOLOGY-CORRECTION-1.md`,
+`METHODOLOGY-CORRECTION-2.md`); runs collected under superseded rules
+were discarded at collection time (recorded in the corrections; the
+runner's sequential run IDs were re-used by the accepted campaign —
+see correction 1's disposition for this declared provenance note).
+Accepted canonical arm: `v0b-cpu-01..03`, collected 2026-09-12 on
+`inferswarm02`, each proven by its own record.
+
+Accepted arm (3 independent process runs, same host/probe/model/
+workload as V0-A, `-ngl 0`, `-t 2`, backend-selection proven per run):
+pp512 median **53.81 t/s**; tg128 median **0.80 t/s**.
+
+Same-host substrate comparison (CALCULATED; MATCHED_WITH_DECLARED_
+DIFFERENCE — execution substrate differs, which is the question):
+
+| metric | AMD-A Vulkan | host CPU | ratio VK/CPU |
+|---|---|---|---|
+| prefill pp512 | 498.0 t/s | 53.81 t/s | **9.26x** |
+| decode tg128 | 43.7 t/s | 0.80 t/s | **54.6x** |
+
+Interpretation: the AMD Vulkan path is not merely "slower than a
+native backend that this host cannot run" — it is decisively more
+useful than host-memory execution on this host, at both prefill and
+decode, while also freeing the host CPU and holding state in
+device-local memory. The "slower than native" and "not useful vs
+host" conclusions are therefore different conclusions, and the
+evidence selects the former.
+
+Honest scope notes: this is one model, one 2-thread host CPU, one
+quantization; the CPU arm proves substrate usefulness for THIS
+subject, not a general CPU-performance characterization. The ggml
+Vulkan path reserves nonzero GPU scratch buffers even at `-ngl 0`
+(retained observation); the CPU-arm proof binds
+layers-executed-on-CPU, not "no GPU memory touched".
+
+## Phase 3 — portable-capability assessment
+
+`results/capability-assessment.json`, derived by
+`scripts/v0b_capability_assessment.py`. Findings are recorded as
+backend capabilities/evidence associated with physical Compute Units
+(never as vendor ontology). Highlights:
+
+- Deterministic device discovery/selection, explicit device-local
+  memory, model materialization on the accelerator, fixture-scale
+  execution without silent host fallback, evidence-bindable runtime
+  identity, and machine-readable capability discovery: evidence-
+  supported on BOTH vendor stacks.
+- Representation/quantization: strong on NVIDIA (fp16/int-dot/
+  NV_coopmat2 advertised), structurally limited on Polaris (no fp16
+  compute, no int-dot, no matrix cores — advertised-capability facts
+  only; causal attribution of the throughput level remains OPEN).
+- Persistent-host-copy question: NO direct evidence. Observation only:
+  at identical device residency the Vulkan arms hold more host RSS
+  than CUDA (NV-A +213.7 MB; AMD-A 0.47 GB total), consistent with a
+  host-side shadow; RSS cannot establish persistence semantics — a
+  runtime-level experiment is required before any residency claim.
+
+## Phase 4 — integration seams
+
+`results/seam-comparison.json` (`scripts/v0b_seam_comparison.py`).
+All five classes considered:
+
+1. Existing runtime gains a Vulkan path — ruled inapplicable for a
+   first spike: the current research runtime's execution stack is
+   CUDA/capture-shaped and Phase1R evidence shows execution-path swaps
+   there are disproportionately expensive.
+2. Backend-specific execution adapter/participant — strongest: a
+   bounded Vulkan-capable executor realizes ONE strategy-defined unit
+   on a Compute Unit while the planner stays backend-neutral; matches
+   doctrine (fabric-doctrine 2.4/2.8/6.6, ADR 0006) and directly tests
+   the portable-backend hypothesis.
+3. External whole-model substrate — insufficient as the primary seam:
+   cannot expose state/boundary semantics for exact-integrity
+   qualification.
+4. Custom Vulkan kernels — ruled out: no missing capability in the
+   retained evidence justifies that program scale.
+5. No integration — not supported: correct, stable, near-native on
+   NVIDIA, and decisively useful on AMD where no native backend exists.
+
+## Phase 5 — terminal
+
+`TERMINAL.json`: **`V0B_PROCEED_TO_INTEGRATION_SPIKE`**, recommended
+seam S2, with a bounded V0-C scope (one strategy-defined execution
+unit via a Vulkan-capable adapter, planner-selected from capability
+evidence, beside a CUDA unit, no public API freeze, no preferred-
+backend ADR, no new threshold). Whether V0-C EXECUTES remains a
+separate authorization decision; this bundle only establishes that the
+spike is evidence-supported and defines its honest scope.

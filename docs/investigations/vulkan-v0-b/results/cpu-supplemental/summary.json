@@ -1,0 +1,25 @@
+{
+ "accepted_runs": [
+  {
+   "pp512": 53.81,
+   "run_id": "v0b-cpu-01",
+   "tg128": 0.8
+  },
+  {
+   "pp512": 53.74,
+   "run_id": "v0b-cpu-02",
+   "tg128": 0.8
+  },
+  {
+   "pp512": 54.12,
+   "run_id": "v0b-cpu-03",
+   "tg128": 0.82
+  }
+ ],
+ "discarded_run_ids": [],
+ "expected_accepted_runs": 3,
+ "n_accepted": 3,
+ "pp512_median_tps": 53.81,
+ "schema": "inferswarm.vulkan-v0-b.cpu-supplemental-summary/1",
+ "tg128_median_tps": 0.8
+}
