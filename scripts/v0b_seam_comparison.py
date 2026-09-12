@@ -94,7 +94,7 @@ SEAMS = [
         "description": "Correctness/stability/economics do not justify further Vulkan work.",
         "doctrine_map": "honest negative result recorded as evidence on Compute Units",
         "scope_risk": "none",
-        "assessment": "NOT SUPPORTED by the evidence: the Vulkan path is physically real, device-proven, backend-locally stable, near-native on NVIDIA (0.949/0.884), and — pending the supplemental CPU arm — materially useful on AMD where NO native backend exists. 'Slow but correct' is exactly the compatibility-tier or strategy-economics case the doctrine accommodates. Rejection merely for losing to the native backend is explicitly barred by the issue.",
+        "assessment": "NOT SUPPORTED by the authoritative evidence: the Vulkan path is physically real, device-proven, and backend-locally stable on AMD-A; accepted V0-A capability evidence supports the portable-backend investigation. The retrospective CPU arm is descriptive context only and does not control this assessment. Rejection merely for losing to a native backend is explicitly barred by the issue.",
     },
 ]
 
