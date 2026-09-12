@@ -2,10 +2,10 @@
 
 Authority: `METHODOLOGY.md` + `METHODOLOGY-CORRECTION-1.md` +
 `METHODOLOGY-CORRECTION-2.md` (this bundle). This correction is issued in
-the maintainer-review correction round of PR #146, AFTER the accepted
-campaign was collected. It changes NO retained byte, collects NO new
-measurement, and rules no run in or out retroactively: all three
-accepted runs remain accepted, all superseded runs remain superseded.
+the maintainer-review correction round of PR #146, AFTER the canonical
+campaign was collected. It changes NO retained byte and collects NO new
+measurement. It is a retrospective factual validation rule, not a
+prospectively frozen campaign-acceptance rule.
 
 ## 1. Provenance statement made plain (supersedes the hedged wording)
 
@@ -85,12 +85,14 @@ lines are matched, retained, and reported with the disposition
 context, neither proof nor violation. Claim scope: layers-executed-on-
 CPU, NOT "no GPU memory touched".
 
-## 4. Disposition of the accepted runs
+## 4. Retrospective factual revalidation of the canonical runs
 
-The three accepted runs (`v0b-cpu-01..03`, collected 2026-09-12) satisfy
-the corrected rule on their retained raw bytes — including the
-previously undetected `using device Vulkan0` line, now explicitly
-dispositioned. They remain ACCEPTED; their collected-time verdicts were
-correct, their recorded `gpu_execution_binding_lines` fields were
-incomplete, and the summary (`cpu-supplemental/summary.json`) now
-carries the re-derived per-run proof.
+The three canonical runs (`v0b-cpu-01..03`, collected 2026-09-12) satisfy
+the corrected rule on their retained raw bytes — including the previously
+undetected `using device Vulkan0` line, now explicitly dispositioned. This
+supports the narrow factual finding that layers executed on the host CPU.
+It does not validate their collection-time correction-2 acceptance: that
+rule's banner prohibition was violated and its detector was defective.
+The summary (`cpu-supplemental/summary.json`) carries the re-derived
+retrospective per-run proof. The CPU arm is descriptive evidence, not
+prospectively frozen decision-grade supplemental evidence.

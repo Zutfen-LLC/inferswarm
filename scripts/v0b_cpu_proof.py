@@ -17,8 +17,8 @@ either way.
 
 A retained run's stderr satisfies the proof if and only if ALL of:
 
-  1. exactly one `offloaded N/M layers to GPU` line, with N == M == the
-     expected layer count (0/<n> — exact zero GPU-layer offload);
+  1. exactly one `offloaded N/M layers to GPU` line, with N == 0 and M ==
+     the expected layer count (0/<n> — exact zero GPU-layer offload);
   2. every `load_tensors: layer <i> assigned to device <D>` line present
      (one per model layer) assigns D == CPU — no layer assigned to a GPU;
   3. `CPU_Mapped model buffer` present (weights mapped on CPU);

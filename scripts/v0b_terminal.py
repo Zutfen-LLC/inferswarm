@@ -12,9 +12,8 @@ What is authoritative in the selection:
   - the seam reduction's explicit assessment of ALL FIVE Issue #142
     seam classes and the recorded properties of the selected seam;
   - the capability assessment's evidence-cited findings;
-  - the supplemental CPU arm's corrected
-    layers-executed-on-host-CPU proof status (cpu-supplemental/
-    summary.json schema /2, re-derived from raw stderr).
+  - retrospective CPU-layer factual context, re-derived by economics from
+    retained stderr under correction 3 after collection.
 
 What is DESCRIPTIVE, never gate-controlling (declared non-authoritative
 heuristics, NOT preregistered, NOT part of any frozen methodology):
@@ -79,37 +78,26 @@ def validate_economics(econ: dict) -> list[str]:
     amd = econ.get("amd_characterization") or {}
     if "NATIVE_BACKEND_UNAVAILABLE" not in amd.get("native_comparator", ""):
         problems.append("economics: AMD native comparator status is not NATIVE_BACKEND_UNAVAILABLE")
-    host = econ.get("host_execution_comparison")
-    if not isinstance(host, dict):
-        problems.append("economics: host_execution_comparison (supplemental CPU arm) missing")
-    else:
-        cpu = host.get("cpu_arm") or {}
-        runs = cpu.get("runs") or []
-        if len(runs) < 3 or cpu.get("n_runs") != len(runs):
-            problems.append("economics: CPU arm does not carry 3 proven runs")
-        for phase in ("prefill", "decode"):
-            r = (host.get(phase) or {}).get("ratio_amd_vk_over_cpu")
-            if not isinstance(r, (int, float)) or r <= 0:
-                problems.append(f"economics: host {phase} ratio missing or invalid")
     return problems
 
 
-def validate_cpu_summary(cs: dict) -> list[str]:
+def validate_correctness_qualification(cors: dict) -> list[str]:
     problems = []
-    if not str(cs.get("schema", "")).endswith("/2"):
-        problems.append("cpu summary: schema is not the corrected /2 proof schema")
-    if cs.get("n_accepted") != 3 or len(cs.get("accepted_runs") or []) != 3:
-        problems.append("cpu summary: accepted run count != 3")
-    if cs.get("failures"):
-        problems.append(f"cpu summary carries failures: {cs['failures']}")
-    proof = cs.get("per_run_proof") or {}
-    if len(proof) != 3:
-        problems.append("cpu summary: per_run_proof missing for accepted runs")
-    for rid, p in proof.items():
-        if not p.get("proved"):
-            problems.append(f"cpu summary: {rid} proof not re-derived as proved")
-        if not p.get("layers_all_cpu") or not p.get("offload_zero_proven"):
-            problems.append(f"cpu summary: {rid} lacks layers-all-CPU / zero-offload proof")
+    mapping = cors.get("adr_0010_mapping")
+    if not isinstance(mapping, dict):
+        return ["correctness: adr_0010_mapping missing"]
+    if mapping.get("new_threshold_created") is not False:
+        problems.append("correctness: adr_0010_mapping.new_threshold_created is not false")
+    if not str(mapping.get("layer_2_qualified_numerical_equivalence", "")).startswith("NOT ESTABLISHED"):
+        problems.append("correctness: layer 2 numerical equivalence is not explicitly NOT ESTABLISHED")
+    if not str(mapping.get("layer_3_strategy_declared_semantic_correctness", "")).startswith("NOT ESTABLISHED"):
+        problems.append("correctness: layer 3 semantic correctness is not explicitly NOT ESTABLISHED")
+    cross = cors.get("cross_backend") or {}
+    if cross.get("classification_per_issue_phase_1") != "generated-output difference":
+        problems.append("correctness: CUDA/Vulkan relationship is not exactly generated-output difference")
+    required = cors.get("a_future_qualification_campaign_would_need_to_freeze_prospectively")
+    if not isinstance(required, list) or not required or not all(isinstance(x, str) and x.strip() for x in required):
+        problems.append("correctness: prospective qualification requirements missing/empty")
     return problems
 
 
@@ -159,14 +147,18 @@ def select_seam_s2(seams: dict) -> tuple[list[str], dict | None]:
     if not str(s2.get("planner_leak", "")).startswith("LOW"):
         problems.append("seam S2: planner_leak is not LOW — backend-neutral "
                         "planning above the execution boundary not supported")
-    coex = s2.get("coexistence")
-    if not isinstance(coex, str) or not coex.strip():
-        problems.append("seam S2: coexistence with CUDA/HIP resources not recorded")
-    elif "CUDA" not in coex:
-        problems.append("seam S2: coexistence statement does not cover CUDA/HIP resources")
-    v0c = s2.get("v0c_could_prove", "")
-    if isinstance(v0c, str) and "without freezing any public API" not in v0c:
-        problems.append("seam S2: V0-C scope does not state the no-public-API-freeze bound")
+    bounds = s2.get("v0c_bounds")
+    if not isinstance(bounds, dict):
+        problems.append("seam S2: machine-readable V0-C bounds missing")
+    else:
+        for key in ("no_public_api_freeze", "no_planner_backend_nouns",
+                    "no_preferred_or_default_backend_adr",
+                    "backend_neutral_planning_above_execution_boundary"):
+            if bounds.get(key) is not True:
+                problems.append(f"seam S2: V0-C bound {key} is not true")
+        resources = bounds.get("coexisting_resources")
+        if not isinstance(resources, list) or not {"CUDA", "HIP"}.issubset(resources):
+            problems.append("seam S2: V0-C bounds do not establish CUDA and HIP coexistence")
     assessment = s2.get("assessment", "")
     if "STRONGEST" not in assessment:
         problems.append("seam S2: recorded assessment does not select it as the strongest candidate")
@@ -201,7 +193,7 @@ def main(argv: list[str] | None = None) -> int:
         "caps": B / "results/capability-assessment.json",
         "seams": B / "results/seam-comparison.json",
         "cors": B / "results/correctness-stability.json",
-        "cpu": B / "results/cpu-supplemental/summary.json",
+
     }
     out_path = B / "TERMINAL.json"
     if "--inputs-dir" in argv:
@@ -216,15 +208,15 @@ def main(argv: list[str] | None = None) -> int:
         caps = load(paths["caps"])
         seams = load(paths["seams"])
         cors = load(paths["cors"])
-        cpu = load(paths["cpu"])
+
     except (OSError, json.JSONDecodeError) as exc:
         print(json.dumps({"terminal": "V0B_EVIDENCE_INSUFFICIENT",
                           "fail_closed_reasons": [f"required reduction unreadable: {exc}"]}))
         return 1
 
     problems += validate_economics(econ)
-    problems += validate_cpu_summary(cpu)
     problems += validate_stability(cors)
+    problems += validate_correctness_qualification(cors)
     seam_problems, s2 = select_seam_s2(seams)
     problems += validate_capabilities(caps)
 
@@ -257,11 +249,8 @@ def main(argv: list[str] | None = None) -> int:
                       "backend-local repeatability demonstrated on AMD-A "
                       "(3/3 identical visible generation), with single-run "
                       "arms honestly classified insufficiently_observed; "
-                      "the supplemental CPU arm is proven "
-                      "layers-executed-on-host-CPU from raw retained stderr "
-                      "and shows AMD-A Vulkan decisively faster than "
-                      "host-memory execution on the same host, which has no "
-                      "native backend; the seam reduction validates S2 "
+                      "the authoritative basis excludes the retrospective CPU "
+                      "supplemental arm; the seam reduction validates S2 "
                       "mechanically (all five classes considered, LOW "
                       "planner leak, CUDA/HIP coexistence, no public API "
                       "freeze in the V0-C scope)")
@@ -320,12 +309,12 @@ def main(argv: list[str] | None = None) -> int:
                          "insufficiently_observed, never stable"),
             },
             "amd_native_backend": "NATIVE_BACKEND_UNAVAILABLE",
-            "cpu_arm_proof": {
-                "authoritative": True,
+            "cpu_arm_context": {
+                "authoritative": False,
                 "rule": "layers-executed-on-host-CPU (METHODOLOGY-CORRECTION-3.md)",
-                "accepted_runs": cpu.get("n_accepted"),
-                "scope": ("proves CPU layer execution; does NOT claim 'no GPU "
-                          "participated' or 'no GPU memory touched'"),
+                "governance": ((econ.get("host_execution_comparison") or {}).get("cpu_arm") or {}).get("governance"),
+                "scope": ("retrospective factual/descriptive context only; proves CPU "
+                          "layer execution, not prospectively frozen decision-grade authority"),
             },
             "descriptive_similarity_summaries": descriptive,
         },

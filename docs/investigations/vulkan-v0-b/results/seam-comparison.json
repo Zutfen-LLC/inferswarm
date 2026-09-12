@@ -32,6 +32,16 @@
    "qualification_requirements": "ADR 0010 three-layer qualification scoped to the adapter's declared semantic profile \u2014 the prospective-freeze list in this bundle's correctness-stability reduction",
    "representation_materialization": "GGUF/model-file materialization on device-local memory, exactly the V0-A-proven shape; no new representation invented",
    "scope_risk": "MODERATE \u2014 an executor from a maintained ggml/llama.cpp-class backend (Vulkan build) behind a narrow participant interface; no changes to the frozen CUDA line; failure isolates in the adapter",
+   "v0c_bounds": {
+    "backend_neutral_planning_above_execution_boundary": true,
+    "coexisting_resources": [
+     "CUDA",
+     "HIP"
+    ],
+    "no_planner_backend_nouns": true,
+    "no_preferred_or_default_backend_adr": true,
+    "no_public_api_freeze": true
+   },
    "v0c_could_prove": "that a Vulkan-backed Compute Unit can join one Swarm, be selected by the generic planner under capability/evidence, execute the pinned model, and produce committed output beside a CUDA unit \u2014 without freezing any public API (API-unfrozen doctrine)"
   },
   {

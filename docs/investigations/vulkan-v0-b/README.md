@@ -30,8 +30,8 @@ architectural handoff.
   - `capability-assessment.json` (Phase 3);
   - `seam-comparison.json` (Phase 4);
   - `cpu-supplemental/` — raw runs + mechanical summary (Phase 2
-    supplemental arm; accepted runs v0b-cpu-01..03; the summary
-    re-derives the CPU-execution proof from raw stderr).
+    supplemental arm; canonical runs v0b-cpu-01..03; the summary
+    re-derives the retrospective CPU-layer factual proof from raw stderr).
 - `MANIFEST.sha256` — bundle-local immutable manifest (lifecycle v2).
 
 ## Terminal
@@ -39,7 +39,7 @@ architectural handoff.
 `V0B_PROCEED_TO_INTEGRATION_SPIKE` — see `TERMINAL.json` for the exact
 fail-closed validations, decision inputs, and non-claims. No
 performance threshold quoted anywhere in this bundle was preregistered;
-the pp/tg similarity and host-usefulness ratios are descriptive only
+the pp/tg similarity and retrospective CPU ratios are descriptive only
 and gate nothing. This classification is an observation, not an
 execution authorization and not an acceptance: it does not authorize
 V0-C execution by itself and does not change any accepted Issue #117

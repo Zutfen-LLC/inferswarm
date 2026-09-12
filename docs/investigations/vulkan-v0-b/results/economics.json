@@ -26,21 +26,51 @@
   "classification": "MATCHED_WITH_DECLARED_DIFFERENCE (same host/probe/model/workload; execution substrate differs: device-local VRAM+GPU vs host RAM+CPU \u2014 that difference is the question)",
   "cpu_arm": {
    "arm_identity": "inferswarm02 host CPU (Celeron G3900, 2 threads), same probe build-vulkan binary, same model bytes, same pp512/tg128 workload, -ngl 0",
+   "governance": {
+    "evidence_use": "retrospective_descriptive_only",
+    "final_proof_timing": "retrospective_after_collection",
+    "physical_factual_finding": "layers-executed-on-host-CPU",
+    "prospectively_frozen_decision_grade": false
+   },
    "n_runs": 3,
    "pp512_median_tps": 53.81,
    "runs": [
     {
      "pp512": 53.81,
+     "raw_proof": {
+      "cpu_kv_buffer": true,
+      "cpu_mapped_model_buffer": true,
+      "cpu_output_buffer": true,
+      "layers_all_cpu": true,
+      "offload_zero_proven": true,
+      "proved": true
+     },
      "run_id": "v0b-cpu-01",
      "tg128": 0.8
     },
     {
      "pp512": 53.74,
+     "raw_proof": {
+      "cpu_kv_buffer": true,
+      "cpu_mapped_model_buffer": true,
+      "cpu_output_buffer": true,
+      "layers_all_cpu": true,
+      "offload_zero_proven": true,
+      "proved": true
+     },
      "run_id": "v0b-cpu-02",
      "tg128": 0.8
     },
     {
      "pp512": 54.12,
+     "raw_proof": {
+      "cpu_kv_buffer": true,
+      "cpu_mapped_model_buffer": true,
+      "cpu_output_buffer": true,
+      "layers_all_cpu": true,
+      "offload_zero_proven": true,
+      "proved": true
+     },
      "run_id": "v0b-cpu-03",
      "tg128": 0.82
     }
@@ -54,7 +84,7 @@
    "ratio_amd_vk_over_cpu": 54.574
   },
   "interpretation_guard": "this is a substrate-usefulness comparison, NOT a backend ratio; prefill and decode kept separate",
-  "method_authority": "docs/investigations/vulkan-v0-b/METHODOLOGY.md (frozen before collection)",
+  "method_authority": "retrospective correction-3 factual proof; not a prospectively frozen decision-grade CPU baseline",
   "pair": "AMD-A (02:00.0) Vulkan vs host CPU execution on the same host",
   "prefill": {
    "amd_vulkan_median_tps": 498.024489,

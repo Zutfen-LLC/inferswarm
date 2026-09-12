@@ -63,6 +63,6 @@ recorded here by this correction document rather than by retained bytes
 — a provenance defect of this bundle, declared rather than blurred:
 earlier V0-A corrections preserved superseded bytes in place; this
 bundle's runner overwrote them, and the overwritten bytes are NOT
-retained (see METHODOLOGY-CORRECTION-3.md §1). Accepted runs under this
-rule: `results/cpu-supplemental/v0b-cpu-01/` (re-collected),
-plus the subsequent sequential IDs.
+retained (see METHODOLOGY-CORRECTION-3.md §1). The IDs were later reused
+for canonical runs under later proof rules; no canonical run was accepted
+under correction 1.

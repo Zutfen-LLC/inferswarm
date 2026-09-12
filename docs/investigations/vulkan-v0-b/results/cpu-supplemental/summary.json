@@ -18,6 +18,13 @@
  ],
  "discarded_run_ids": [],
  "expected_accepted_runs": 3,
+ "governance": {
+  "evidence_use": "retrospective_descriptive_only",
+  "final_proof_timing": "retrospective_after_collection",
+  "physical_factual_finding": "layers-executed-on-host-CPU",
+  "prospectively_frozen_decision_grade": false,
+  "rationale": "correction 2 was the final declared rule before the canonical runs, but its CUDA0/Vulkan0 banner prohibition was violated and its detector missed the retained Vulkan0 line; correction 3 replaced that criterion after collection"
+ },
  "n_accepted": 3,
  "per_run_proof": {
   "v0b-cpu-01": {
@@ -72,6 +79,6 @@
  "pp512_median_tps": 53.81,
  "proof": "layers-executed-on-host-CPU re-derived per run from raw retained stderr (scripts/v0b_cpu_proof.py); run.json booleans are never trusted alone",
  "proof_rule_authority": "docs/investigations/vulkan-v0-b/METHODOLOGY-CORRECTION-3.md",
- "schema": "inferswarm.vulkan-v0-b.cpu-supplemental-summary/2",
+ "schema": "inferswarm.vulkan-v0-b.cpu-supplemental-summary/3",
  "tg128_median_tps": 0.8
 }

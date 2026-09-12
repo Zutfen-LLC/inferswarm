@@ -103,10 +103,20 @@ def main() -> int:
     discarded = [r for r in rejected if r not in accepted_ids]
 
     summary = {
-        "schema": "inferswarm.vulkan-v0-b.cpu-supplemental-summary/2",
+        "schema": "inferswarm.vulkan-v0-b.cpu-supplemental-summary/3",
         "proof_rule_authority": (
             "docs/investigations/vulkan-v0-b/METHODOLOGY-CORRECTION-3.md"),
         "proof": "layers-executed-on-host-CPU re-derived per run from raw retained stderr (scripts/v0b_cpu_proof.py); run.json booleans are never trusted alone",
+        "governance": {
+            "physical_factual_finding": "layers-executed-on-host-CPU",
+            "final_proof_timing": "retrospective_after_collection",
+            "prospectively_frozen_decision_grade": False,
+            "evidence_use": "retrospective_descriptive_only",
+            "rationale": ("correction 2 was the final declared rule before the "
+                          "canonical runs, but its CUDA0/Vulkan0 banner prohibition "
+                          "was violated and its detector missed the retained Vulkan0 "
+                          "line; correction 3 replaced that criterion after collection"),
+        },
         "expected_accepted_runs": EXPECTED_RUNS,
         "accepted_runs": accepted,
         "n_accepted": len(accepted),

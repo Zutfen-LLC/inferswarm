@@ -48,6 +48,13 @@ SEAMS = [
         "scope_risk": "MODERATE — an executor from a maintained ggml/llama.cpp-class backend (Vulkan build) behind a narrow participant interface; no changes to the frozen CUDA line; failure isolates in the adapter",
         "planner_leak": "LOW — planner sees a backend-neutral execution capability + capability/evidence records; 'Vulkan' appears only as evidence and adapter implementation",
         "coexistence": "YES by construction — CUDA/HIP/Vulkan adapters are peers under one resource graph (doctrine 10.2 permits per-backend fast executors)",
+        "v0c_bounds": {
+            "no_public_api_freeze": True,
+            "no_planner_backend_nouns": True,
+            "no_preferred_or_default_backend_adr": True,
+            "backend_neutral_planning_above_execution_boundary": True,
+            "coexisting_resources": ["CUDA", "HIP"],
+        },
         "v0c_could_prove": "that a Vulkan-backed Compute Unit can join one Swarm, be selected by the generic planner under capability/evidence, execute the pinned model, and produce committed output beside a CUDA unit — without freezing any public API (API-unfrozen doctrine)",
         "assessment": "STRONGEST candidate: directly tests the architectural hypothesis (portable backend under vendor-neutral semantics) at the smallest honest scope",
     },

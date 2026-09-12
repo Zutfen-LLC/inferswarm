@@ -26,6 +26,9 @@ import statistics
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from v0b_cpu_proof import recheck_run  # noqa: E402
+
 REPO = Path(__file__).resolve().parents[1]
 V0A = REPO / "docs/investigations/vulkan-v0-a"
 CPU_DIR = REPO / "docs/investigations/vulkan-v0-b/results/cpu-supplemental"
@@ -60,11 +63,13 @@ def reduce_cpu_arm() -> dict | None:
         if not rec_path.exists():
             continue
         rec = json.loads(rec_path.read_text())
-        if not rec.get("backend_selection_proven"):
-            failures.append(f"{rec.get('run_id')}: backend selection not proven")
-            continue
+        rid = rec.get("run_id", rd.name)
+        proof = recheck_run(rd, rec, expected_layers=37)
         if rec.get("exit_code") != 0:
-            failures.append(f"{rec.get('run_id')}: nonzero exit")
+            failures.append(f"{rid}: nonzero exit")
+            continue
+        if not proof.get("proved"):
+            failures.append(f"{rid}: raw stderr does not prove layers-executed-on-host-CPU")
             continue
         stdout = (rd / "stdout.txt").read_text()
         vals = {"pp512": [], "tg128": []}
@@ -90,7 +95,14 @@ def reduce_cpu_arm() -> dict | None:
                 f"{rec['run_id']}: expected 1 pp512 + 1 tg128 aggregate row, "
                 f"got {len(vals['pp512'])}/{len(vals['tg128'])}")
             continue
-        runs.append({"run_id": rec["run_id"], **{k: v[0] for k, v in vals.items()}})
+        runs.append({"run_id": rec["run_id"], "raw_proof": {
+            "proved": proof["proved"],
+            "offload_zero_proven": proof["offload_zero_proven"],
+            "layers_all_cpu": proof["layers_all_cpu"],
+            "cpu_mapped_model_buffer": proof["cpu_mapped_model_buffer"],
+            "cpu_kv_buffer": proof["cpu_kv_buffer"],
+            "cpu_output_buffer": proof["cpu_output_buffer"],
+        }, **{k: v[0] for k, v in vals.items()}})
     if not runs:
         return None
     return {
@@ -101,6 +113,12 @@ def reduce_cpu_arm() -> dict | None:
         "arm_identity": "inferswarm02 host CPU (Celeron G3900, 2 threads), "
                         "same probe build-vulkan binary, same model bytes, "
                         "same pp512/tg128 workload, -ngl 0",
+        "governance": {
+            "physical_factual_finding": "layers-executed-on-host-CPU",
+            "final_proof_timing": "retrospective_after_collection",
+            "prospectively_frozen_decision_grade": False,
+            "evidence_use": "retrospective_descriptive_only",
+        },
     }
 
 
@@ -187,7 +205,8 @@ def main() -> int:
         host_comparison = {
             "pair": "AMD-A (02:00.0) Vulkan vs host CPU execution on the same host",
             "classification": "MATCHED_WITH_DECLARED_DIFFERENCE (same host/probe/model/workload; execution substrate differs: device-local VRAM+GPU vs host RAM+CPU — that difference is the question)",
-            "method_authority": "docs/investigations/vulkan-v0-b/METHODOLOGY.md (frozen before collection)",
+            "method_authority": ("retrospective correction-3 factual proof; not a "
+                                 "prospectively frozen decision-grade CPU baseline"),
             "cpu_arm": cpu,
             "prefill": {
                 "amd_vulkan_median_tps": med(amd_vk["pp512"]),

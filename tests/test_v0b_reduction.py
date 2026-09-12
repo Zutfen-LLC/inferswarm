@@ -268,6 +268,7 @@ class TestTerminalFailClosed(unittest.TestCase):
                     s["v0c_could_prove"] = (
                         "that a Vulkan-backed Compute Unit can join one Swarm "
                         "while freezing the public adapter API surface")
+                    s["v0c_bounds"]["no_public_api_freeze"] = False
             self._seams(scratch).write_text(json.dumps(data))
         proc, term = self._mutated_terminal(mutate)
         self.assertNotEqual(term["terminal"], SPIKE)
@@ -293,7 +294,7 @@ class TestTerminalFailClosed(unittest.TestCase):
         self.assertNotEqual(term["terminal"], SPIKE)
         self.assertIsNone(term["recommended_v0c_seam"])
 
-    def test_missing_economics_cpu_arm_prevents_spike(self):
+    def test_missing_economics_cpu_arm_does_not_control_spike(self):
         def mutate(scratch):
             p = (scratch / "docs/investigations/vulkan-v0-b/results"
                  / "economics.json")
@@ -301,7 +302,49 @@ class TestTerminalFailClosed(unittest.TestCase):
             data["host_execution_comparison"] = None
             p.write_text(json.dumps(data))
         proc, term = self._mutated_terminal(mutate)
+        self.assertEqual(term["terminal"], SPIKE)
+        self.assertEqual(term["recommended_v0c_seam"],
+                         "S2-backend-adapter-participant")
+
+    def test_correctness_qualification_mutations_prevent_spike(self):
+        """The terminal must validate the upstream qualification posture,
+        not merely repeat non-claims in TERMINAL.json."""
+        mutations = {
+            "missing ADR-0010 mapping": lambda d: d.pop("adr_0010_mapping"),
+            "new threshold": lambda d: d["adr_0010_mapping"].__setitem__(
+                "new_threshold_created", True),
+            "layer 2 upgraded": lambda d: d["adr_0010_mapping"].__setitem__(
+                "layer_2_qualified_numerical_equivalence", "ESTABLISHED"),
+            "layer 3 upgraded": lambda d: d["adr_0010_mapping"].__setitem__(
+                "layer_3_strategy_declared_semantic_correctness", "ESTABLISHED"),
+            "generated-output difference relabeled": lambda d: d["cross_backend"].__setitem__(
+                "classification_per_issue_phase_1", "exact agreement"),
+            "prospective requirements removed": lambda d: d.__setitem__(
+                "a_future_qualification_campaign_would_need_to_freeze_prospectively", []),
+        }
+        for label, mutate_data in mutations.items():
+            with self.subTest(label=label):
+                def mutate(scratch):
+                    p = (scratch / "docs/investigations/vulkan-v0-b/results"
+                         / "correctness-stability.json")
+                    data = json.loads(p.read_text())
+                    mutate_data(data)
+                    p.write_text(json.dumps(data))
+                _, term = self._mutated_terminal(mutate)
+                self.assertNotEqual(term["terminal"], SPIKE)
+                self.assertIsNone(term["recommended_v0c_seam"])
+
+    def test_s2_cuda_without_hip_prevents_spike(self):
+        def mutate(scratch):
+            data = json.loads(self._seams(scratch).read_text())
+            for seam in data["seams"]:
+                if seam["id"] == "S2-backend-adapter-participant":
+                    seam["coexistence"] = "CUDA adapters are peers under one resource graph"
+                    seam["v0c_bounds"]["coexisting_resources"] = ["CUDA"]
+            self._seams(scratch).write_text(json.dumps(data))
+        _, term = self._mutated_terminal(mutate)
         self.assertNotEqual(term["terminal"], SPIKE)
+        self.assertIsNone(term["recommended_v0c_seam"])
 
     def test_stability_contradiction_prevents_spike(self):
         def mutate(scratch):
@@ -372,7 +415,7 @@ class TestTerminalSemantics(unittest.TestCase):
         non-authoritative descriptive blocks."""
         d = self.term["decision_inputs"]
         self.assertTrue(d["backend_local_stability"]["authoritative"])
-        self.assertTrue(d["cpu_arm_proof"]["authoritative"])
+        self.assertFalse(d["cpu_arm_context"]["authoritative"])
         self.assertFalse(
             d["descriptive_similarity_summaries"]["authoritative"])
         # no numeric acceptance gates anywhere in the terminal
@@ -613,6 +656,33 @@ class TestCpuProofContract(unittest.TestCase):
                                / "results/cpu-supplemental/summary.json").read_text())
             self.assertNotIn("v0b-cpu-02",
                              [r["run_id"] for r in summ["accepted_runs"]])
+
+    def test_economics_rechecks_raw_stderr_not_historical_boolean(self):
+        """Production economics must fail before making an invalid CPU ratio."""
+        with tempfile.TemporaryDirectory() as td:
+            scratch = make_scratch_tree(Path(td))
+            rd = (scratch / "docs/investigations/vulkan-v0-b/results"
+                  / "cpu-supplemental/v0b-cpu-02")
+            rec = json.loads((rd / "run.json").read_text())
+            self.assertTrue(rec["backend_selection_proven"])
+            stderr_path = rd / "stderr.txt"
+            stderr_path.write_text("\n".join(
+                ln for ln in stderr_path.read_text().splitlines()
+                if "offloaded 0/37 layers to GPU" not in ln) + "\n")
+            proc = subprocess.run(
+                [sys.executable, str(scratch / "scripts/v0b_economics.py")],
+                capture_output=True, text=True, timeout=600, cwd=scratch)
+            self.assertNotEqual(proc.returncode, 0,
+                                "economics must recheck raw stderr, not the boolean")
+            self.assertIn("v0b-cpu-02", proc.stdout + proc.stderr)
+
+    def test_cpu_arm_is_retrospective_descriptive_not_prospective_authority(self):
+        summ = json.loads((self.CPU / "summary.json").read_text())
+        governance = summ["governance"]
+        self.assertEqual(governance["physical_factual_finding"],
+                         "layers-executed-on-host-CPU")
+        self.assertEqual(governance["final_proof_timing"], "retrospective_after_collection")
+        self.assertFalse(governance["prospectively_frozen_decision_grade"])
 
     def test_mutated_stderr_contradicting_verdict_is_rejected(self):
         """Rewriting a layer assignment to a GPU breaks the proof even

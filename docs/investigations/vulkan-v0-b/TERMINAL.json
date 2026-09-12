@@ -12,11 +12,16 @@
     "NV-A/04:00.0/Vulkan": "insufficiently_observed"
    }
   },
-  "cpu_arm_proof": {
-   "accepted_runs": 3,
-   "authoritative": true,
+  "cpu_arm_context": {
+   "authoritative": false,
+   "governance": {
+    "evidence_use": "retrospective_descriptive_only",
+    "final_proof_timing": "retrospective_after_collection",
+    "physical_factual_finding": "layers-executed-on-host-CPU",
+    "prospectively_frozen_decision_grade": false
+   },
    "rule": "layers-executed-on-host-CPU (METHODOLOGY-CORRECTION-3.md)",
-   "scope": "proves CPU layer execution; does NOT claim 'no GPU participated' or 'no GPU memory touched'"
+   "scope": "retrospective factual/descriptive context only; proves CPU layer execution, not prospectively frozen decision-grade authority"
   },
   "descriptive_similarity_summaries": {
    "amd_vk_over_host_execution": {
@@ -69,7 +74,7 @@
   "terminal": "V0A_MATCHED_CHARACTERIZATION_COMPLETE",
   "v0a_head": "2b2d546dc77350f14016b31a105696b257c063f2"
  },
- "reason": "device-proven with clean integrity on every arm; backend-local repeatability demonstrated on AMD-A (3/3 identical visible generation), with single-run arms honestly classified insufficiently_observed; the supplemental CPU arm is proven layers-executed-on-host-CPU from raw retained stderr and shows AMD-A Vulkan decisively faster than host-memory execution on the same host, which has no native backend; the seam reduction validates S2 mechanically (all five classes considered, LOW planner leak, CUDA/HIP coexistence, no public API freeze in the V0-C scope)",
+ "reason": "device-proven with clean integrity on every arm; backend-local repeatability demonstrated on AMD-A (3/3 identical visible generation), with single-run arms honestly classified insufficiently_observed; the authoritative basis excludes the retrospective CPU supplemental arm; the seam reduction validates S2 mechanically (all five classes considered, LOW planner leak, CUDA/HIP coexistence, no public API freeze in the V0-C scope)",
  "recommended_v0c_seam": "S2-backend-adapter-participant",
  "schema": "inferswarm.vulkan-v0-b.terminal/2",
  "terminal": "V0B_PROCEED_TO_INTEGRATION_SPIKE",

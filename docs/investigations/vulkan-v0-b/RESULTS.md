@@ -4,11 +4,11 @@ All numbers are MEASURED in the accepted V0-A campaign (issue #141, PR
 #145 merge `273b9e8e32c779f063903cd75a0c6772d0d1e451`) or CALCULATED
 from those retained values by the mechanical reducers in this bundle
 (`scripts/v0b_*.py`, hashes in `MANIFEST.sha256`). The one new physical
-collection — the supplemental matched CPU baseline — was produced under
-`METHODOLOGY.md` as corrected by `METHODOLOGY-CORRECTION-1.md`,
-`METHODOLOGY-CORRECTION-2.md`, and (in the maintainer-review correction
-round) `METHODOLOGY-CORRECTION-3.md`, on `inferswarm02` (the V0-A host)
-on 2026-09-12. Machine-readable authority: `TERMINAL.json`.
+collection — the supplemental CPU arm — was collected while correction 2
+was the declared rule. Its final layer-execution proof was established
+retrospectively by `METHODOLOGY-CORRECTION-3.md`; it is descriptive,
+not prospectively frozen decision-grade evidence. Machine-readable
+authority: `TERMINAL.json`.
 
 ## Phase 0 — comparability audit (mechanical)
 
@@ -87,16 +87,16 @@ is computed or claimed.
 
 ### Supplemental matched CPU baseline (new physical collection, bounded)
 
-Method frozen in `METHODOLOGY.md` before collection; three corrections
-refine the proof and provenance record (`METHODOLOGY-CORRECTION-1.md`,
-`METHODOLOGY-CORRECTION-2.md`, `METHODOLOGY-CORRECTION-3.md`). Runs
-collected under superseded rules were discarded at collection time and
-their bytes were OVERWRITTEN by the accepted campaign's re-use of the
-runner's sequential run IDs; those bring-up bytes are NOT retained — a
-declared provenance defect of this bundle, recorded plainly in
-correction 3 §1. Accepted canonical arm: `v0b-cpu-01..03`, collected
-2026-09-12 on `inferswarm02`, each accepted only after the corrected
-proof is re-derived from its raw retained stderr.
+`METHODOLOGY.md` froze the original rule; corrections 1 and 2 replaced
+unsatisfiable rules before the canonical campaign. The canonical runs were
+collected while correction 2 was declared, but its banner prohibition was
+violated and its detector missed the retained Vulkan0 line. Correction 3
+was written after collection and retrospectively revalidates only the
+narrow raw factual layer-execution finding. Runs collected under superseded
+rules were discarded at collection time and their bytes were OVERWRITTEN by
+the canonical campaign's re-use of the runner's sequential run IDs; those
+bring-up bytes are NOT retained — a declared provenance defect. Canonical
+arm: `v0b-cpu-01..03`, collected 2026-09-12 on `inferswarm02`.
 
 Corrected execution proof (correction 3): the model's LAYERS executed on
 the host CPU — exactly one `offloaded 0/37 layers to GPU` line, all 37
@@ -108,9 +108,9 @@ initialization and GPU scratch allocation WERE present. The proof
 therefore claims CPU layer execution only — it does NOT claim "no GPU
 participated" or "no GPU device was used".
 
-Accepted arm (3 independent process runs, same host/probe/model/
-workload as V0-A, `-ngl 0`, `-t 2`): pp512 median **53.81 t/s**; tg128
-median **0.80 t/s**.
+Retrospective/descriptive arm (3 independent process runs, same
+host/probe/model/workload as V0-A, `-ngl 0`, `-t 2`): pp512 median
+**53.81 t/s**; tg128 median **0.80 t/s**.
 
 Same-host substrate comparison (CALCULATED; MATCHED_WITH_DECLARED_
 DIFFERENCE — execution substrate differs, which is the question):
@@ -120,15 +120,11 @@ DIFFERENCE — execution substrate differs, which is the question):
 | prefill pp512 | 498.0 t/s | 53.81 t/s | **9.26x** |
 | decode tg128 | 43.7 t/s | 0.80 t/s | **54.6x** |
 
-Interpretation: the AMD Vulkan path is not merely "slower than a
-native backend that this host cannot run" — it is decisively faster
-than host-memory execution on this host, at both prefill and decode,
-while also freeing the host CPU and holding state in device-local
-memory. The "slower than native" and "not useful vs host" conclusions
-are therefore different conclusions, and the evidence selects the
-former. The 2x figure sometimes used as a "usefulness bar" is a
-non-authoritative descriptive heuristic — it was never preregistered
-in this bundle's methodology and gates nothing.
+Descriptive context only: on this host, AMD Vulkan's observed throughput
+exceeds the retrospective CPU figures at both prefill and decode. These
+ratios do not establish a prospectively frozen decision gate and do not
+select the terminal; the 2x figure sometimes used as a "usefulness bar" is
+a non-authoritative descriptive heuristic that was never preregistered.
 
 Honest scope notes: this is one model, one 2-thread host CPU, one
 quantization; the CPU arm proves substrate usefulness for THIS
@@ -175,22 +171,21 @@ All five classes considered:
    qualification.
 4. Custom Vulkan kernels — ruled out: no missing capability in the
    retained evidence justifies that program scale.
-5. No integration — not supported: correct, clean, backend-locally
-   stable on AMD-A, near-native on NVIDIA (descriptively), and
-   decisively faster than host execution on AMD where no native backend
-   exists. Rejection merely for losing to the native backend is
-   explicitly barred by the issue.
+5. No integration — not supported by the authoritative V0-A integrity,
+   corrected AMD-A repeatability, capability, and seam evidence. The
+   retrospective CPU comparison remains descriptive context only.
 
 ## Phase 5 — terminal
 
 `TERMINAL.json`: **`V0B_PROCEED_TO_INTEGRATION_SPIKE`**, recommended
 seam S2 — selected only after the terminal generator mechanically
-validates its inputs (schema-corrected CPU-arm proof re-derived per run,
-per-pair repeatability consistency, all five seam classes considered,
-S2's recorded properties: LOW planner leak, CUDA/HIP coexistence, V0-C
-scope that freezes no public API, and the required capability facts with
-their evidence). Any missing, malformed, or contradictory input fails
-closed to a lower classification. The terminal claims no
+validates the authoritative inputs: per-pair integrity/repeatability,
+the ADR-0010 qualification posture, all five seam classes, S2's actual
+machine-readable V0-C bounds (including CUDA and HIP coexistence), and
+the required capability facts with their evidence. The retrospective CPU
+context does not gate this selection. Any missing, malformed, or
+contradictory authoritative input fails closed to a lower classification.
+The terminal claims no
 logits-level numerical equivalence and creates no threshold; its
 non-claims are machine-checked.
 

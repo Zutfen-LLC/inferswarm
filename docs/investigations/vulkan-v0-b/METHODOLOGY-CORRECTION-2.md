@@ -50,9 +50,12 @@ METHODOLOGY-CORRECTION-3.md §3.
 ## Addendum — run numbering
 
 The runner numbers its outputs sequentially per invocation
-(`v0b-cpu-01..03`), so the accepted canonical runs occupy
-`results/cpu-supplemental/v0b-cpu-01..03/` (collected 2026-09-12, all
-proven under this rule). The earlier discarded runs under the
-superseded rules used the same IDs; per correction 1's disposition,
-their bytes were overwritten by the accepted re-collections, and the
-corrections themselves are the retained record of the bring-up.
+(`v0b-cpu-01..03`), so the canonical retained runs occupy
+`results/cpu-supplemental/v0b-cpu-01..03/` (collected 2026-09-12) while
+correction 2 was the declared rule. They were mistakenly accepted by the
+defective detector despite the prohibited retained Vulkan0 banner. They
+are factually revalidated only under the retrospective correction-3
+layer-execution proof, not proven or accepted under this rule. The earlier
+discarded runs under the superseded rules used the same IDs; per correction
+1's disposition, their bytes were overwritten by the later collections,
+and the corrections themselves are the retained record of the bring-up.
