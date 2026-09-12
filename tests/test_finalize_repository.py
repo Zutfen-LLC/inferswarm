@@ -1279,7 +1279,6 @@ class SymlinkEscapeControls(unittest.TestCase):
         # outside the repository
         os.symlink(self.outside, self.root / "linked-dir")
         baseline = self._state()
-        outside_before = self._outside_bytes()
         with self.assertRaises(fin.FinalizationError) as caught:
             fin.finalize(
                 self.root, (self._gen_stage("linked-dir/gen.txt"),),
@@ -1295,12 +1294,14 @@ class SymlinkEscapeControls(unittest.TestCase):
         # same destination as gen.txt: registry validation rejects
         # non-canonical spellings before any write
         for alias in ("./gen.txt", "subdir/../gen.txt", "a//b.txt"):
+            def rogue(run, s, target=alias):
+                return {target: b"x"}
             with self.assertRaises(fin.FinalizationError):
                 fin.validate_registry((
                     fin.Stage("gen", "derived", "g",
                               reads=frozenset({"src.txt"}),
                               writes=frozenset({alias}),
-                              producer=lambda run, s: {alias: b"x"}),
+                              producer=rogue),
                 ))
 
     def test_write_lands_inside_repo_and_nowhere_else(self):

@@ -349,7 +349,6 @@ def _check_relative(stage_id: str, attr: str, relative: str) -> None:
 def topological_order(stages: tuple[Stage, ...]) -> list[str]:
     by_id = {stage.id: stage for stage in stages}
     dependencies = {stage.id: set(stage.after) for stage in stages}
-    dependents: dict[str, list[str]] = {stage.id: [] for stage in stages}
     ready = [stage.id for stage in stages if not dependencies[stage.id]]
     order: list[str] = []
     while ready:
