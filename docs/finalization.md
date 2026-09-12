@@ -57,13 +57,19 @@ Declared reads are also **enforced at run time**, not just declared:
 
 - `Run.read` rejects any path the active stage did not declare;
 - each stage executes against its own **restricted projection** — a
-  filesystem containing byte copies of *only* the paths that stage
-  declared — so a direct filesystem read of an undeclared sibling input
-  cannot observe the bytes at all (it is not merely discouraged, it is
-  impossible inside the projection);
+  filesystem containing byte copies of *only* the paths the stage is
+  authorized to read (declared `reads` plus manifest `covers`) — so a
+  direct filesystem read of an undeclared sibling input cannot observe
+  the bytes at all (it is not merely discouraged, it is impossible
+  inside the projection).  A path appearing only in `writes` is absent
+  from the projection: its pre-stage bytes are engine-private state.
+  A stage that legitimately consumes its own output's existing bytes
+  declares the path in both `reads` and `writes` (the self-input
+  contract), which puts it back in the projection;
 - the DAG therefore describes the real correctness dependency graph: a
   stage cannot silently consume another stage's input that happens to be
-  present in a shared sandbox.
+  present in a shared sandbox, nor alias its output to stale committed
+  bytes to make `--check` falsely pass after an input changes.
 
 The current chain:
 
@@ -124,7 +130,11 @@ there is no engine change and no separate per-issue finalizer.
 Stage producers and verifiers never execute against the real working tree:
 
 - each stage executes inside its own **restricted projection** (byte copies
-  of only its declared inputs and outputs); `run.root` *is* the projection —
+  of only the paths it is authorized to read: declared `reads` plus manifest
+  `covers`; writes-only outputs are deliberately absent, so their pre-stage
+  bytes cannot be inspected — the engine reads current output bytes for
+  change detection and the fixed-point proof through a private real-tree
+  channel no callable can reach); `run.root` *is* the projection —
   callables run with it as their working directory, so a relative-path
   write lands in the projection, and a `run.root`-based write hits copies,
   never authored bytes;

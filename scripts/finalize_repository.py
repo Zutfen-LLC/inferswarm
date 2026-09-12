@@ -48,11 +48,15 @@ interleave a write between the read and the write.
 Isolation contract (callables cannot silently mutate the repository).
 Stage producers and verifiers never execute against the real working
 tree.  Each pass materializes a sandbox containing byte copies of every
-declared input and declared write path; ``run.root`` IS the sandbox,
-callables run with the sandbox as their working directory, and
-``Run.read`` mediates reads (pending stage outputs shadow the sandbox
-bytes, so ``--check`` and a converged ``--write`` derive identical
-results).  Around every producer and verify callable the engine compares
+path the stage is authorized to READ (declared reads plus manifest
+covers); ``run.root`` IS the sandbox, callables run with the sandbox as
+their working directory, and ``Run.read`` mediates reads (pending stage
+outputs shadow the sandbox bytes, so ``--check`` and a converged
+``--write`` derive identical results).  A writes-only output is absent
+from the sandbox: its pre-stage bytes are engine-private state, visible
+only to the engine's own change detection through a private real-tree
+channel, never to any callable.  Around every producer and verify
+callable the engine compares
 full content digests of the sandbox tree and of the real worktree
 dirty/untracked census (tracked AND untracked paths).  Any direct write,
 modification, deletion, or rename — against the sandbox, or against the
@@ -116,8 +120,13 @@ with its own terminal manifest; it never edits the parent bundle.
 ``run.stage``) while its callable executes, and reads of paths the
 stage did not declare fail closed.  The sandbox ``run.root`` a callable
 sees is a per-stage *restricted projection*: it contains byte copies of
-only the paths that stage declared, so a direct filesystem read of an
-undeclared sibling input is impossible, not merely discouraged.
+only the paths the stage is authorized to read (its declared reads plus
+manifest covers), so a direct filesystem read of an undeclared sibling
+input — or of a writes-only output's pre-stage bytes — is impossible,
+not merely discouraged.  The engine's own view of current output bytes
+(change detection, pending-output comparison, the fixed-point proof)
+runs through the private ``Run.read_input`` real-tree channel and is
+never callable-visible.
 
 Not migrated, deliberately: the legacy #74/#99/#101/#103 manifests are
 immutable historical snapshots (their living-document rows are frozen and
@@ -199,6 +208,7 @@ class Run:
 
     def __init__(self, workroot: Path) -> None:
         self.root = workroot  # rebound per stage to its projection
+        self.real_root = workroot  # rebound per pass to the real tree
         self.workroot = workroot
         self.stage: frozenset[str] = frozenset({"*"})  # unbound sentinel
         self.pending: dict[str, bytes] = {}
@@ -206,10 +216,18 @@ class Run:
         self.changed: dict[str, list[str]] = {}
 
     def read_input(self, relative: str) -> bytes | None:
-        """Engine-internal input check (pre-stage); bypasses no guard."""
+        """Engine-private current-state read (never callable-visible).
+
+        Reads through the REAL tree, not the stage projection: a
+        writes-only output is absent from its stage's projection by
+        design (callable-visible state exposes only authorized reads),
+        while the engine still needs that path's current bytes for
+        change detection, pending-output comparison, and the
+        fixed-point proof.
+        """
         if relative in self.pending:
             return self.pending[relative]
-        path = self.root / relative
+        path = self.real_root / relative
         return path.read_bytes() if path.is_file() else None
 
     def read(self, relative: str) -> bytes | None:
@@ -599,49 +617,6 @@ def _head_blob(root: Path, relative: str) -> tuple[bytes, int]:
 # Sandbox isolation and callable guards
 # ---------------------------------------------------------------------------
 
-def _sandbox_inputs(stages: tuple[Stage, ...]) -> frozenset[str]:
-    inputs: set[str] = set()
-    for stage in stages:
-        inputs |= stage.reads | stage.writes | stage.covers
-    return frozenset(inputs)
-
-
-# ---------------------------------------------------------------------------
-# Per-stage restricted projections (F3): a callable cannot even SEE an
-# input it did not declare, so direct filesystem reads cannot silently
-# expand the dependency graph any more than Run.read can.
-# ---------------------------------------------------------------------------
-
-def _stage_projection(stage: Stage, root: Path, run: Run,
-                      workroot: Path) -> Path:
-    """Materialize the stage's restricted projection and bind run.root.
-
-    Contains byte copies of exactly the paths the stage declared
-    (reads + writes + covers), plus the pass's pending outputs for its
-    declared inputs (earlier-stage writes it declared as reads).  The
-    projection root is what the callable receives as ``run.root``.
-    """
-    projection = workroot / "projections" / stage.id
-    if projection.exists():
-        shutil.rmtree(projection, ignore_errors=True)
-    projection.mkdir(parents=True, exist_ok=True)
-    declared = stage.reads | stage.writes | stage.covers
-    for relative in sorted(declared):
-        if relative in run.pending:
-            data = run.pending[relative]
-            target = projection / relative
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(data)
-            continue
-        source = root / relative
-        if not source.is_file():
-            continue  # missing inputs fail later with a precise stage error
-        target = projection / relative
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(source, target)
-    return projection
-
-
 def _sandbox_digests(sandbox: Path) -> dict[str, str]:
     """Content digests of every file in a projection/sandbox tree.
 
@@ -659,6 +634,51 @@ def _sandbox_digests(sandbox: Path) -> dict[str, str]:
             digests[path.relative_to(sandbox).as_posix()] = \
                 _digest_file(path)
     return digests
+
+
+# ---------------------------------------------------------------------------
+# Per-stage restricted projections (F3): a callable cannot even SEE an
+# input it did not declare, so direct filesystem reads cannot silently
+# expand the dependency graph any more than Run.read can.  The projection
+# contains only paths the stage is AUTHORIZED TO READ (reads + covers):
+# a writes-only output is deliberately absent, so its pre-stage bytes
+# cannot be inspected directly any more than through Run.read.
+# ---------------------------------------------------------------------------
+
+def _stage_projection(stage: Stage, root: Path, run: Run,
+                      workroot: Path) -> Path:
+    """Materialize the stage's restricted projection and bind run.root.
+
+    Contains byte copies of exactly the paths the stage is authorized
+    to read: ``reads | covers`` (self-inputs are present because they
+    are declared in ``reads``).  A path appearing only in ``writes`` is
+    ABSENT — the stage never sees that output's pre-stage bytes.  The
+    engine's own view of current output bytes (change detection,
+    pending-output comparison, fixed point) runs through the private
+    ``Run.read_input`` real-tree channel instead.  Pending outputs for
+    declared inputs (earlier-stage writes it declared as reads) shadow
+    the projection bytes.  The projection root is what the callable
+    receives as ``run.root``.
+    """
+    projection = workroot / "projections" / stage.id
+    if projection.exists():
+        shutil.rmtree(projection, ignore_errors=True)
+    projection.mkdir(parents=True, exist_ok=True)
+    declared = stage.reads | stage.covers
+    for relative in sorted(declared):
+        if relative in run.pending:
+            data = run.pending[relative]
+            target = projection / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+            continue
+        source = root / relative
+        if not source.is_file():
+            continue  # missing inputs fail later with a precise stage error
+        target = projection / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+    return projection
 
 
 # ---------------------------------------------------------------------------
@@ -899,6 +919,7 @@ def _execute_pass(root: Path, stages: tuple[Stage, ...], workroot: Path,
     validate_order(stages, order_ids)
     backup = workroot / "starting-bytes"
     run = Run(workroot)
+    run.real_root = root  # engine-private channel; never callable-visible
     _mark_import_baseline()
     for stage_id in order_ids:
         stage = by_id[stage_id]

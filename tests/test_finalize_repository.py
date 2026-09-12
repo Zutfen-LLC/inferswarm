@@ -1127,6 +1127,137 @@ class DeclaredReadEnforcementControls(unittest.TestCase):
         self.assertFalse(observed["present"])
         self.assertEqual(observed["readable"], "OSError")
 
+    def test_writes_only_output_pre_stage_bytes_are_invisible(self):
+        # negative control (F3, round 4): a COMMITTED gen.txt with
+        # recognizable stale bytes; the stage declares reads={src.txt},
+        # writes={gen.txt} and attempts DIRECT filesystem access to its
+        # own writes-only output.  The pre-stage bytes must be
+        # unavailable through every channel: run.read rejects the
+        # undeclared read AND the path is absent from the projection.
+        self._write("gen.txt", "RECOGNIZABLE STALE OUTPUT BYTES\n")
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm",
+                        "stale output"], check=True)
+        observed = {}
+
+        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+            path = run.root / "gen.txt"
+            observed["present"] = path.is_file()
+            observed["direct"] = None
+            try:
+                observed["direct"] = path.read_bytes()
+            except OSError:
+                observed["direct"] = "OSError"
+            observed["mediated"] = None
+            try:
+                observed["mediated"] = run.read("gen.txt")
+            except fin.FinalizationError as error:
+                observed["mediated"] = f"rejected: {error}"
+            return {"gen.txt": b"regenerated\n"}
+
+        stages = (fin.Stage("gen", "derived", "g",
+                            reads=frozenset({"src.txt"}),
+                            writes=frozenset({"gen.txt"}),
+                            producer=rogue),)
+        fin.finalize(self.root, stages, write=True)
+        self.assertFalse(observed["present"])
+        self.assertEqual(observed["direct"], "OSError")
+        self.assertIn("undeclared read", observed["mediated"])
+        self.assertEqual((self.root / "gen.txt").read_bytes(),
+                         b"regenerated\n")
+
+    def test_explicit_self_input_old_output_bytes_remain_readable(self):
+        # positive control: the same stage registered with
+        # reads={"src.txt", "gen.txt"}, writes={"gen.txt"} — the
+        # explicit self-input contract.  The old output bytes MUST be
+        # available (status-sync semantics): both through run.read and
+        # directly through the projection.
+        self._write("gen.txt", "RECOGNIZABLE STALE OUTPUT BYTES\n")
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm",
+                        "stale output"], check=True)
+        observed = {}
+
+        def producer(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+            path = run.root / "gen.txt"
+            observed["present"] = path.is_file()
+            observed["direct"] = path.read_bytes()
+            observed["mediated"] = run.read("gen.txt")
+            return {"gen.txt": observed["mediated"].upper()}
+
+        stages = (fin.Stage("gen", "derived", "g",
+                            reads=frozenset({"src.txt", "gen.txt"}),
+                            writes=frozenset({"gen.txt"}),
+                            producer=producer),)
+        fin.finalize(self.root, stages, write=True)
+        self.assertTrue(observed["present"])
+        self.assertEqual(observed["direct"],
+                         b"RECOGNIZABLE STALE OUTPUT BYTES\n")
+        self.assertEqual(observed["mediated"],
+                         b"RECOGNIZABLE STALE OUTPUT BYTES\n")
+        self.assertEqual((self.root / "gen.txt").read_bytes(),
+                         b"RECOGNIZABLE STALE OUTPUT BYTES\n".upper())
+
+    def test_stale_previous_output_cannot_falsify_check(self):
+        # regression (F3, round 4): src.txt CHANGES after gen.txt was
+        # committed.  A producer that did NOT declare gen.txt as a read
+        # tries to make --check falsely pass by returning its previous
+        # (now stale) gen.txt bytes so the engine sees no change.  Both
+        # read channels must deny it the old bytes; forced to derive
+        # from the changed src.txt instead, its output differs from the
+        # committed bytes and --check correctly fails as stale.
+        def derive(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+            return {"gen.txt": (run.read("src.txt") or b"").upper()}
+
+        gen = fin.Stage("gen", "derived", "g",
+                        reads=frozenset({"src.txt"}),
+                        writes=frozenset({"gen.txt"}),
+                        producer=derive)
+        fin.finalize(self.root, (gen,), write=True)
+        self.assertEqual((self.root / "gen.txt").read_bytes(),
+                         b"AUTHORED\n")
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm",
+                        "derived output"], check=True)
+
+        # src.txt changes; the rogue wants --check to pass by aliasing
+        # its output to the committed (stale) gen.txt bytes
+        self._write("src.txt", "changed\n")
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm",
+                        "input change"], check=True)
+        observed = {}
+
+        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+            path = run.root / "gen.txt"
+            observed["present"] = path.is_file()
+            observed["direct"] = None
+            try:
+                observed["direct"] = path.read_bytes()
+            except OSError:
+                observed["direct"] = "OSError"
+            observed["mediated"] = None
+            try:
+                observed["mediated"] = run.read("gen.txt")
+            except fin.FinalizationError as error:
+                observed["mediated"] = f"rejected: {error}"
+            # denied the stale bytes, the producer can only derive from
+            # its declared (changed) input
+            return {"gen.txt": (run.read("src.txt") or b"").upper()}
+
+        rogue_stage = fin.Stage("gen", "derived", "g",
+                                reads=frozenset({"src.txt"}),
+                                writes=frozenset({"gen.txt"}),
+                                producer=rogue)
+        baseline = self._state()
+        with self.assertRaises(fin.FinalizationError) as caught:
+            fin.finalize(self.root, (rogue_stage,), write=False)
+        self.assertIn("stale", str(caught.exception))
+        self.assertFalse(observed["present"])
+        self.assertEqual(observed["direct"], "OSError")
+        self.assertIn("undeclared read", observed["mediated"])
+        self.assertEqual(self._state(), baseline)  # --check wrote nothing
+
     def test_hidden_undeclared_dependency_cycle_is_rejected(self):
         # stage A does not declare B's output as a read, but its
         # producer tries to consume it anyway: the mediated read is
