@@ -34,10 +34,13 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install check dependencies
+      - name: Bootstrap canonical CPU test environment (Issue #131)
         run: |
-          python3 -m pip install --user pyyaml jsonschema
-          python3 -m pip install --user -r docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/frozen-tokenizer/requirements.txt
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
 
       - name: Validate YAML files
         run: |
@@ -121,6 +124,9 @@ jobs:
       - name: Check issue 137 Arm-C regime-4 diagnosis (CPU-only)
         run: python3 -m unittest tests.test_issue137_regime4_diagnosis -v
 
+      - name: Check issue 131 canonical CPU test environment (CPU-only)
+        run: python3 -m unittest tests.test_issue131_cpu_test_env -v
+
       - name: Check issue 99 plan-driven artifact acquisition (CPU-only)
         run: python3 -m unittest tests.test_issue99_artifact_core tests.test_issue99_proof -v
 
@@ -172,7 +178,9 @@ jobs:
         run: |
           # No empty directories should be committed content (git does not
           # track them anyway) — this catches stray local-only clutter.
-          find . -path ./.git -prune -o -type d -empty -print | grep . && {
+          # The bootstrapped CPU test environment (.venv/, Issue #131) is
+          # legitimate gitignored local state, not clutter.
+          find . \( -path ./.git -o -path ./.venv \) -prune -o -type d -empty -print | grep . && {
             echo "Empty directories found"; exit 1; } || echo "No empty directories"
 
       - name: Check consistent project naming
