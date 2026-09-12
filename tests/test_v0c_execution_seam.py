@@ -23,6 +23,7 @@ AMD_CU = {
         "bound_compute_unit_id": "cu-amd-a",
         "bound_memory_resource_id": "mr-amd-a-vram",
         "bound_execution_unit_id": "unit-q4km-whole-model",
+        "execution_contract_id": "contract-s2-opaque-v1",
         "physical_device_bdf": "02:00.0",
         "runtime_identity": {"binary_sha256": "build-amd", "driver": "radv-x"},
         "observation_evidence_id": "evidence-amd-a",
@@ -45,6 +46,7 @@ CUDA_CU = {
         "bound_compute_unit_id": "cu-nv-a",
         "bound_memory_resource_id": "mr-nv-a-vram",
         "bound_execution_unit_id": "unit-q4km-whole-model",
+        "execution_contract_id": "contract-native-opaque-v1",
         "physical_device_bdf": "04:00.0",
         "runtime_identity": {"binary_sha256": "build-nv", "driver": "cuda-x"},
         "observation_evidence_id": "evidence-nv-a",
@@ -60,6 +62,7 @@ CUDA_CU = {
 }
 UNIT = {
     "execution_unit_id": "unit-q4km-whole-model",
+    "execution_contract_id": "contract-s2-opaque-v1",
     "required_representation": "gguf-q4-k-m",
     "required_features": ["compute"],
     "required_memory_bytes": 3254091776,
@@ -69,23 +72,37 @@ UNIT = {
 
 
 class V0CExecutionSeamTests(unittest.TestCase):
-    def test_selects_by_generic_facts_and_keeps_all_explanations(self):
+    def test_excludes_nonimplementing_generic_contract_and_keeps_ontology(self):
         decision = seam.plan_execution_unit(
             execution_unit=UNIT,
             compute_units=[AMD_CU, CUDA_CU],
             objective="MIN_STARTUP_SECONDS",
         )
-        self.assertEqual(
-            decision["selected_candidate"]["compute_unit_id"], "cu-nv-a"
-        )
+        self.assertEqual(decision["selected_candidate"]["compute_unit_id"], "cu-amd-a")
         self.assertEqual(
             {row["candidate_id"] for row in decision["explanations"]},
             {row["candidate_id"] for row in decision["candidates"]},
         )
-        self.assertEqual(
-            {row["reason"] for row in decision["explanations"]},
-            {"SELECTED_BY_OBJECTIVE", "LOWER_RANKED_BY_OBJECTIVE"},
-        )
+        self.assertEqual({row["reason"] for row in decision["explanations"]},
+                         {"SELECTED_BY_OBJECTIVE", "EXECUTION_CONTRACT_UNSUPPORTED"})
+
+    def test_second_generic_implementation_of_same_contract_can_win(self):
+        alternate = copy.deepcopy(CUDA_CU)
+        capability = alternate["capabilities"][0]
+        capability["execution_contract_id"] = UNIT["execution_contract_id"]
+        capability["economics"]["startup_seconds"] = 1.0
+        decision = seam.plan_execution_unit(
+            execution_unit=UNIT, compute_units=[AMD_CU, alternate], objective="MIN_STARTUP_SECONDS")
+        self.assertEqual(decision["selected_candidate"]["compute_unit_id"], "cu-nv-a")
+
+    def test_missing_or_wrong_execution_contract_is_excluded(self):
+        for value in (None, "contract-other"):
+            malformed = copy.deepcopy(AMD_CU)
+            malformed["capabilities"][0]["execution_contract_id"] = value
+            decision = seam.plan_execution_unit(execution_unit=UNIT, compute_units=[malformed],
+                                                objective="MIN_STARTUP_SECONDS")
+            self.assertEqual(decision["explanations"][0]["reason"],
+                             "EXECUTION_CONTRACT_UNSUPPORTED")
 
     def test_distinguishes_same_resource_implementations_deterministically(self):
         alternate = copy.deepcopy(AMD_CU)
@@ -123,6 +140,7 @@ class V0CExecutionSeamTests(unittest.TestCase):
         nan_capability = copy.deepcopy(AMD_CU)
         nan_capability["capabilities"][0]["economics"]["startup_seconds"] = float("nan")
         bool_capability = copy.deepcopy(CUDA_CU)
+        bool_capability["capabilities"][0]["execution_contract_id"] = UNIT["execution_contract_id"]
         bool_capability["capabilities"][0]["economics"]["startup_seconds"] = True
         first = seam.plan_execution_unit(
             execution_unit=UNIT, compute_units=[nan_capability, CUDA_CU], objective="MIN_STARTUP_SECONDS"
@@ -192,6 +210,7 @@ class V0CExecutionSeamTests(unittest.TestCase):
         unavailable = copy.deepcopy(AMD_CU)
         unavailable["capabilities"][0]["representations"] = ["other"]
         stale = copy.deepcopy(CUDA_CU)
+        stale["capabilities"][0]["execution_contract_id"] = UNIT["execution_contract_id"]
         stale["capabilities"][0]["evidence_fresh"] = False
         decision = seam.plan_execution_unit(
             execution_unit=UNIT, compute_units=[unavailable, stale], objective="MIN_STARTUP_SECONDS"

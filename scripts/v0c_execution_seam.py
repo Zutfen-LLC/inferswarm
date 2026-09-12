@@ -36,6 +36,7 @@ def _candidate_id(unit: Mapping[str, Any], compute_unit: Mapping[str, Any],
     memory = compute_unit.get("memory_resource", compute_unit)
     fields = {
         "execution_unit_id": unit.get("execution_unit_id"),
+        "execution_contract_id": unit.get("execution_contract_id"),
         "compute_unit_id": compute_unit.get("compute_unit_id"),
         "memory_resource_id": memory.get("memory_resource_id"),
         "implementation_id": capability.get("implementation_id"),
@@ -53,6 +54,11 @@ def _candidate_id(unit: Mapping[str, Any], compute_unit: Mapping[str, Any],
 
 def _eligibility(unit: Mapping[str, Any], compute_unit: Mapping[str, Any],
                  capability: Mapping[str, Any]) -> str | None:
+    required_contract = unit.get("execution_contract_id")
+    implemented_contract = capability.get("execution_contract_id")
+    if (not isinstance(required_contract, str) or not required_contract
+            or implemented_contract != required_contract):
+        return "EXECUTION_CONTRACT_UNSUPPORTED"
     identity_fields = ("implementation_id", "evidence_id", "physical_device_bdf",
                        "observation_evidence_id", "observation_digest")
     if not all(isinstance(capability.get(field), str) and capability[field]
@@ -110,6 +116,7 @@ def plan_execution_unit(*, execution_unit: Mapping[str, Any],
             candidate = {
                 "candidate_id": _candidate_id(execution_unit, compute_unit, capability),
                 "execution_unit_id": execution_unit["execution_unit_id"],
+                "execution_contract_id": execution_unit.get("execution_contract_id"),
                 "compute_unit_id": compute_unit["compute_unit_id"],
                 "memory_resource_id": compute_unit["memory_resource"]["memory_resource_id"],
                 "implementation_id": capability.get("implementation_id"),
@@ -177,7 +184,7 @@ def validate_frozen_plan(plan: Mapping[str, Any]) -> None:
         raise SeamError("frozen plan identity mismatch")
     unit = plan["execution_unit"]
     candidate = plan["candidate"]
-    scalar_fields = ("execution_unit_id", "compute_unit_id", "memory_resource_id",
+    scalar_fields = ("execution_unit_id", "execution_contract_id", "compute_unit_id", "memory_resource_id",
                      "implementation_id", "evidence_id", "physical_device_bdf",
                      "observation_evidence_id", "observation_digest")
     if (not all(isinstance(candidate.get(field), str) and candidate[field]
@@ -191,6 +198,8 @@ def validate_frozen_plan(plan: Mapping[str, Any]) -> None:
         raise SeamError("candidate runtime identity is not canonical") from error
     if candidate.get("execution_unit_id") != unit.get("execution_unit_id"):
         raise SeamError("candidate execution unit differs from frozen plan")
+    if candidate.get("execution_contract_id") != unit.get("execution_contract_id"):
+        raise SeamError("candidate execution contract differs from frozen plan")
     expected_id = _candidate_id(
         unit,
         {"compute_unit_id": candidate.get("compute_unit_id"),
