@@ -12,6 +12,7 @@ from __future__ import annotations
 from copy import deepcopy
 from hashlib import sha256
 import json
+import math
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -28,8 +29,18 @@ def _digest(value: Mapping[str, Any]) -> str:
     return sha256(_canonical_bytes(value)).hexdigest()
 
 
-def _candidate_id(unit: Mapping[str, Any], compute_unit: Mapping[str, Any]) -> str:
-    return f"{unit['execution_unit_id']}@{compute_unit['compute_unit_id']}"
+def _candidate_id(unit: Mapping[str, Any], compute_unit: Mapping[str, Any],
+                  capability: Mapping[str, Any]) -> str:
+    """Derive an unambiguous opaque identifier from structured identity facts."""
+    fields = {
+        "execution_unit_id": unit.get("execution_unit_id"),
+        "compute_unit_id": compute_unit.get("compute_unit_id"),
+        "implementation_id": capability.get("implementation_id"),
+        "evidence_id": capability.get("evidence_id"),
+    }
+    if not all(isinstance(value, str) and value for value in fields.values()):
+        raise SeamError("candidate identity fields must be nonempty strings")
+    return f"candidate-{_digest(fields)}"
 
 
 def _eligibility(unit: Mapping[str, Any], compute_unit: Mapping[str, Any],
@@ -67,7 +78,7 @@ def plan_execution_unit(*, execution_unit: Mapping[str, Any],
     for compute_unit in compute_units:
         for capability in compute_unit.get("capabilities", []):
             candidate = {
-                "candidate_id": _candidate_id(execution_unit, compute_unit),
+                "candidate_id": _candidate_id(execution_unit, compute_unit, capability),
                 "execution_unit_id": execution_unit["execution_unit_id"],
                 "compute_unit_id": compute_unit["compute_unit_id"],
                 "memory_resource_id": compute_unit["memory_resource"]["memory_resource_id"],
@@ -78,7 +89,10 @@ def plan_execution_unit(*, execution_unit: Mapping[str, Any],
             reason = _eligibility(execution_unit, compute_unit, capability)
             economics = capability.get("economics", {})
             value = economics.get("startup_seconds") if reason is None else None
-            if reason is None and not isinstance(value, (int, float)):
+            if (reason is None and (not isinstance(value, (int, float))
+                                   or isinstance(value, bool)
+                                   or not math.isfinite(value)
+                                   or value < 0)):
                 reason = "ECONOMICS_MISSING"
             rows.append({"candidate": candidate, "reason": reason, "ranking_value": value})
     rankable = sorted((row for row in rows if row["reason"] is None),
@@ -129,7 +143,13 @@ def validate_frozen_plan(plan: Mapping[str, Any]) -> None:
         raise SeamError("frozen plan identity mismatch")
     unit = plan["execution_unit"]
     candidate = plan["candidate"]
-    if candidate.get("candidate_id") != f"{unit.get('execution_unit_id')}@{candidate.get('compute_unit_id')}":
+    expected_id = _candidate_id(
+        unit,
+        {"compute_unit_id": candidate.get("compute_unit_id")},
+        {"implementation_id": candidate.get("implementation_id"),
+         "evidence_id": candidate.get("evidence_id")},
+    )
+    if candidate.get("candidate_id") != expected_id:
         raise SeamError("candidate does not belong to frozen execution unit")
 
 

@@ -58,12 +58,78 @@ class V0CExecutionSeamTests(unittest.TestCase):
             compute_units=[AMD_CU, CUDA_CU],
             objective="MIN_STARTUP_SECONDS",
         )
-        self.assertEqual(decision["selected_candidate_id"], "unit-q4km-whole-model@cu-nv-a")
+        self.assertEqual(
+            decision["selected_candidate"]["compute_unit_id"], "cu-nv-a"
+        )
         self.assertEqual(
             {row["candidate_id"] for row in decision["explanations"]},
-            {"unit-q4km-whole-model@cu-amd-a", "unit-q4km-whole-model@cu-nv-a"},
+            {row["candidate_id"] for row in decision["candidates"]},
         )
-        self.assertEqual(decision["explanations"][0]["reason"], "LOWER_RANKED_BY_OBJECTIVE")
+        self.assertEqual(
+            {row["reason"] for row in decision["explanations"]},
+            {"SELECTED_BY_OBJECTIVE", "LOWER_RANKED_BY_OBJECTIVE"},
+        )
+
+    def test_distinguishes_same_resource_implementations_deterministically(self):
+        alternate = copy.deepcopy(AMD_CU)
+        alternate["capabilities"][0]["implementation_id"] = "impl-portable-amd-a-alt"
+        alternate["capabilities"][0]["evidence_id"] = "evidence-amd-a-alt"
+        alternate["capabilities"][0]["economics"]["startup_seconds"] = 26.48
+        first = seam.plan_execution_unit(
+            execution_unit=UNIT, compute_units=[AMD_CU, alternate], objective="MIN_STARTUP_SECONDS"
+        )
+        second = seam.plan_execution_unit(
+            execution_unit=UNIT, compute_units=[alternate, AMD_CU], objective="MIN_STARTUP_SECONDS"
+        )
+        self.assertEqual(first["selected_candidate_id"], second["selected_candidate_id"])
+        self.assertEqual(len({row["candidate_id"] for row in first["explanations"]}), 2)
+        self.assertEqual(
+            sum(row["disposition"] == "SELECTED" for row in first["explanations"]), 1
+        )
+
+    def test_identity_encoding_cannot_alias_delimiter_containing_values(self):
+        left = copy.deepcopy(AMD_CU)
+        left["compute_unit_id"] = "cu#a"
+        left["capabilities"][0]["implementation_id"] = "b"
+        right = copy.deepcopy(AMD_CU)
+        right["compute_unit_id"] = "cu"
+        right["capabilities"][0]["implementation_id"] = "a#b"
+        decision = seam.plan_execution_unit(
+            execution_unit=UNIT, compute_units=[left, right], objective="MIN_STARTUP_SECONDS"
+        )
+        self.assertEqual(len({row["candidate_id"] for row in decision["explanations"]}), 2)
+        self.assertEqual(sum(row["disposition"] == "SELECTED" for row in decision["explanations"]), 1)
+
+    def test_rejects_nonfinite_or_boolean_economics_before_ranking(self):
+        nan_capability = copy.deepcopy(AMD_CU)
+        nan_capability["capabilities"][0]["economics"]["startup_seconds"] = float("nan")
+        bool_capability = copy.deepcopy(CUDA_CU)
+        bool_capability["capabilities"][0]["economics"]["startup_seconds"] = True
+        first = seam.plan_execution_unit(
+            execution_unit=UNIT, compute_units=[nan_capability, CUDA_CU], objective="MIN_STARTUP_SECONDS"
+        )
+        second = seam.plan_execution_unit(
+            execution_unit=UNIT, compute_units=[CUDA_CU, nan_capability], objective="MIN_STARTUP_SECONDS"
+        )
+        self.assertEqual(first["selected_candidate_id"], second["selected_candidate_id"])
+        self.assertIn("ECONOMICS_MISSING", {row["reason"] for row in first["explanations"]})
+        blocked = seam.plan_execution_unit(
+            execution_unit=UNIT, compute_units=[bool_capability], objective="MIN_STARTUP_SECONDS"
+        )
+        self.assertEqual(blocked["explanations"][0]["reason"], "ECONOMICS_MISSING")
+
+    def test_frozen_plan_requires_nonempty_implementation_identity(self):
+        decision = seam.plan_execution_unit(
+            execution_unit=UNIT, compute_units=[AMD_CU], objective="MIN_STARTUP_SECONDS"
+        )
+        plan = seam.freeze_plan(decision=decision, execution_unit=UNIT)
+        malformed = copy.deepcopy(plan)
+        malformed["candidate"]["implementation_id"] = None
+        malformed["plan_digest"] = seam._digest({
+            key: malformed[key] for key in malformed if key != "plan_digest"
+        })
+        with self.assertRaises(seam.SeamError):
+            seam.validate_frozen_plan(malformed)
 
     def test_rejects_capability_bound_to_wrong_physical_device(self):
         wrong = copy.deepcopy(AMD_CU)
