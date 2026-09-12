@@ -190,13 +190,18 @@ def venv_interpreter_version(python: Path) -> tuple[int, int] | None:
 
 
 def venv_python_request(venv_dir: Path) -> str | None:
-    """The ``version = X.Y`` recorded in the venv's pyvenv.cfg, if any."""
+    """Parse the major/minor recorded by a standard or uv pyvenv.cfg.
+
+    CPython's stdlib writes ``version = X.Y.Z``; uv writes
+    ``version_info = X.Y.Z``. Both are bootstrap-owned venv metadata,
+    but missing/malformed values are not acceptable reuse evidence.
+    """
     config = venv_dir / "pyvenv.cfg"
     if not config.is_file():
         return None
-    match = re.search(r"^version\s*=\s*(\d+\.\d+)(?:\.\d+)?\s*$",
-                      config.read_text(encoding="utf-8"),
-                      re.MULTILINE)
+    match = re.search(
+        r"^(?:version|version_info)\s*=\s*(\d+\.\d+)(?:\.\d+)?\s*$",
+        config.read_text(encoding="utf-8"), re.MULTILINE)
     return match.group(1) if match else None
 
 
@@ -245,27 +250,18 @@ def validate_venv_target(venv_dir: Path) -> None:
     if not ignored:
         _fail(f"refusing venv target {venv_dir}: it is not gitignored; "
               "add it to .gitignore before bootstrapping")
-    if venv_dir.exists():
-        # An existing ordinary directory is never rmtree'd. Only a
-        # venv home (pyvenv.cfg present, or an empty/partial creation
-        # from a failed bootstrap of this same script) may be replaced.
-        # Internal symlinks are normal venv structure (bin/python ->
-        # base interpreter) and harmless: shutil.rmtree never follows
-        # symlinks; only the target directory itself being a symlink
-        # (checked above) or a non-directory is refused.
-        has_cfg = (venv_dir / "pyvenv.cfg").is_file()
-        entries = sorted(entry.name for entry in venv_dir.iterdir())
-        partial = (not entries) or (
-            entries and all(
-                entry in {"pyvenv.cfg", "bin", "lib", "include",
-                          "share", ".tmp"}
-                for entry in entries))
-        if not has_cfg and not partial:
-            _fail(
-                f"refusing venv target {venv_dir}: it exists and is not "
-                "a virtual environment home (no pyvenv.cfg, non-venv "
-                "entries: " + ", ".join(entries[:8]) + "); the bootstrap "
-                "never deletes an existing ordinary directory")
+    if venv_dir.exists() and not (venv_dir / "pyvenv.cfg").is_file():
+        # Never infer bootstrap ownership from directory shape.  Names
+        # such as bin/lib/include/share are ordinary user-directory
+        # names too; `.venv/bin/keep.txt` must not become rmtree input.
+        # Automatic partial-creation recovery would require an explicit
+        # bootstrap-owned marker created BEFORE creation; none exists, so
+        # fail closed and require human inspection/cleanup instead.
+        _fail(
+            f"refusing venv target {venv_dir}: it already exists without "
+            "a bootstrap-owned pyvenv.cfg; refusing to recursively delete "
+            "a possibly ordinary directory. Inspect it and remove it "
+            "manually only if it is a disposable failed venv")
 
 
 def _request_tuple(python_request: str) -> tuple[int, int]:
@@ -310,7 +306,7 @@ def create_venv(venv_dir: Path, python_request: str = "3.12") -> Path:
         existing = venv_interpreter_version(python)
         recorded = venv_python_request(venv_dir)
         if existing is not None and existing == request and (
-                recorded in (None, python_request)):
+                recorded == python_request):
             return python  # verified healthy venv: reuse
         # Stale or unverifiable interpreter: recreate (target already
         # proven safe above). Report what was found.
@@ -335,15 +331,16 @@ def create_venv(venv_dir: Path, python_request: str = "3.12") -> Path:
         # stdlib venv may fail (Debian ships venv without ensurepip).
         shutil.rmtree(venv_dir, ignore_errors=True)
     if shutil.which("uv") is None:
+        requested = f"{request[0]}.{request[1]}"
+        executable = f"python{request[0]}.{request[1]}"
         _fail(
-            f"cannot create the Python {python_request[0]}."
-            f"{python_request[1]} virtual environment: the launching "
-            f"interpreter is {launching[0]}.{launching[1]}, no installed "
-            f"python{python_request[0]}.{python_request[1]} was found on "
-            "PATH, and 'uv' is not installed. Install python"
-            f"{python_request[0]}.{python_request[1]} (with the venv "
-            "module) or install uv <https://docs.astral.sh/uv/> and "
-            "re-run.")
+            f"cannot create the Python {requested} virtual environment: "
+            f"the launching interpreter is {launching[0]}.{launching[1]}, "
+            f"no installed {executable} was found on PATH, and 'uv' is "
+            f"not installed. Install {executable} with its venv module "
+            f"(for example: install a Python {requested} package that "
+            f"provides `{executable} -m venv`) or install uv "
+            "<https://docs.astral.sh/uv/>, then re-run.")
     uv = subprocess.run(["uv", "venv", "--python", python_request,
                          str(venv_dir)], capture_output=True)
     if uv.returncode != 0:

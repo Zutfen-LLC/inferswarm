@@ -61,9 +61,12 @@ The bootstrap is idempotent and writes only inside the gitignored `.venv/`;
 it creates a Python 3.12 environment (the accepted Issue #129 real-tokenizer
 proof pins that interpreter identity; the bootstrap uses the launching
 interpreter, an installed `python3.12`, or a `uv`-managed 3.12, in that
-order). An existing `.venv` is reused only after its interpreter's
-major/minor is verified to be 3.12; a stale venv is safely recreated. The
-doctor fails fast — before the expensive suite —
+order). An existing `.venv` is reused only after both its real interpreter
+major/minor and its parseable `pyvenv.cfg` version are verified as 3.12; a
+corrupted/stale venv is safely recreated only after the target is established
+as a venv home. An existing target with no `pyvenv.cfg` is refused rather than
+being inferred from directory shape. The doctor fails fast — before the
+expensive suite —
 on a missing declared dependency, a model-runtime package leaking into the
 CPU environment, a missing `openssl`, a non-3.12 interpreter, or
 CI/documentation drift from the canonical contract.

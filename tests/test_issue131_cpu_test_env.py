@@ -370,6 +370,40 @@ class VenvTargetSafetyTests(unittest.TestCase):
             shutil.rmtree(outside)
             shutil.rmtree(inside)
 
+    def test_negative_control_venv_shaped_ordinary_directory_is_refused(self):
+        """The real create path must not rmtree `.venv/bin/keep.txt`.
+
+        Generic names such as `bin` are not bootstrap ownership proof;
+        the sentinel must survive byte-identically and create_venv must
+        fail before any destructive operation.
+        """
+        sandbox, target = sandbox_repo(self)
+        patch_module_root(self, sandbox)
+        sentinel = target / "bin" / "keep.txt"
+        sentinel.parent.mkdir(parents=True)
+        sentinel.write_bytes(b"ordinary-user-content\n")
+        before = sentinel.read_bytes()
+        with contextlib.redirect_stderr(io.StringIO()) as captured:
+            with self.assertRaises(SystemExit) as raised:
+                bootstrap.create_venv(target, "3.12")
+        self.assertEqual(raised.exception.code, 1)
+        self.assertIn("without a bootstrap-owned pyvenv.cfg",
+                      captured.getvalue())
+        self.assertEqual(sentinel.read_bytes(), before)
+        self.assertTrue(target.is_dir())
+
+    def test_negative_control_empty_existing_target_is_refused(self):
+        """Even an empty no-config target is not inferred bootstrap-owned."""
+        sandbox, target = sandbox_repo(self)
+        patch_module_root(self, sandbox)
+        target.mkdir()
+        with contextlib.redirect_stderr(io.StringIO()) as captured:
+            with self.assertRaises(SystemExit):
+                bootstrap.validate_venv_target(target)
+        self.assertIn("without a bootstrap-owned pyvenv.cfg",
+                      captured.getvalue())
+        self.assertTrue(target.is_dir())
+
     def test_negative_control_existing_ordinary_directory_is_rejected(self):
         """An existing non-venv directory at the canonical target is
         refused, never rmtree'd — sentinel contents survive intact."""
@@ -382,7 +416,8 @@ class VenvTargetSafetyTests(unittest.TestCase):
             with self.assertRaises(SystemExit):
                 bootstrap.validate_venv_target(target)
         self.assertIn("refusing venv target", captured.getvalue())
-        self.assertIn("virtual environment home", captured.getvalue())
+        self.assertIn("without a bootstrap-owned pyvenv.cfg",
+                      captured.getvalue())
         self.assertEqual(
             sentinel.read_text(encoding="utf-8"), "do-not-delete")
         self.assertTrue(target.is_dir())
@@ -570,6 +605,25 @@ class ExistingVenvInterpreterTests(unittest.TestCase):
              "import sys; print(sys.version_info[:2])"],
             capture_output=True, text=True)
         self.assertEqual(probe.stdout.strip(), "(3, 12)")
+    def test_negative_control_malformed_pyvenv_cfg_is_recreated(self):
+        """A malformed recorded version is not accepted for reuse.
+
+        `pyvenv.cfg` exists, so ownership is established and safe
+        recreation is permitted; its malformed bytes must not survive.
+        """
+        sandbox, venv = self._sandbox_venv()
+        config = venv / "pyvenv.cfg"
+        config.write_text("home = /usr/bin\nversion = broken\n",
+                          encoding="utf-8")
+        patch_module_root(self, sandbox)
+        python = bootstrap.create_venv(venv, "3.12")
+        probe = subprocess.run(
+            [str(python), "-c", "import sys; print(sys.version_info[:2])"],
+            capture_output=True, text=True)
+        self.assertEqual(probe.stdout.strip(), "(3, 12)")
+        self.assertEqual(bootstrap.venv_python_request(venv), "3.12")
+        self.assertNotIn("version = broken",
+                         config.read_text(encoding="utf-8"))
 
 
 class MissingUvTests(unittest.TestCase):
@@ -590,8 +644,16 @@ class MissingUvTests(unittest.TestCase):
                     bootstrap.create_venv(venv, "3.12")
             self.assertEqual(raised.exception.code, 1)
             message = captured.getvalue()
-            self.assertIn("uv", message)
-            self.assertIn("install", message.lower())
+            expected = (
+                "bootstrap: cannot create the Python 3.12 virtual environment: "
+                "the launching interpreter is 3.13, no installed python3.12 "
+                "was found on PATH, and 'uv' is not installed. Install "
+                "python3.12 with its venv module (for example: install a "
+                "Python 3.12 package that provides `python3.12 -m venv`) or "
+                "install uv <https://docs.astral.sh/uv/>, then re-run.\n")
+            self.assertEqual(message, expected)
+            self.assertNotIn("3..", message)
+            self.assertNotIn("python3..", message)
             self.assertNotIn("Traceback", message)
         finally:
             shutil.which = original_which
