@@ -25,6 +25,7 @@ roadmap paragraph cannot change normative doctrine; that requires an ADR.
 | contribute | [CONTRIBUTING.md](../CONTRIBUTING.md) |
 | run the checks | [`tests/README.md`](../tests/README.md) |
 | understand a script | [`scripts/README.md`](../scripts/README.md) |
+| understand which CI checks run for a change | [CI impact planning](ci-impact-planning.md) |
 
 ## Directories
 
