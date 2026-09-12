@@ -14,9 +14,9 @@
  },
  "classification_summary": {
   "amd_a_vulkan": "physically proven (BDF), fully offloaded, clean exits, backend-local stable (3/3 identical visible generation)",
-  "amd_b_vulkan": "physically proven, clean, single-run smoke observation (insufficiently_observed for repeatability by design: smoke rule)",
-  "nvidia_cuda": "physically proven, clean, single-run observation; differs from Vulkan at one committed word",
-  "nvidia_vulkan": "physically proven, clean, single-run observation; identical visible generation to all AMD Vulkan runs"
+  "amd_b_vulkan": "physically proven, clean, single clean observation; repeatability insufficiently_observed by taxonomy (one run cannot demonstrate repeatability)",
+  "nvidia_cuda": "physically proven, clean, single observation (insufficiently_observed); differs from Vulkan at one committed word",
+  "nvidia_vulkan": "physically proven, clean, single observation (insufficiently_observed); visible generation identical to all AMD Vulkan runs"
  },
  "cross_backend": {
   "classification_per_issue_phase_1": "generated-output difference",
@@ -36,7 +36,7 @@
    "unique_visible_generations": 1
   },
   "AMD-B/03:00.0/Vulkan": {
-   "backend_local_repeatability": "stable",
+   "backend_local_repeatability": "insufficiently_observed",
    "generations": [
     "The sentence \"The quick brown fox jumps over the lazy dog\" is a well-known pangram, and after this sentence, the next sentence could be anything, as there is no specific rule or context provided for what comes next."
    ],
@@ -45,7 +45,7 @@
    "unique_visible_generations": 1
   },
   "NV-A/04:00.0/CUDA": {
-   "backend_local_repeatability": "stable",
+   "backend_local_repeatability": "insufficiently_observed",
    "generations": [
     "The sentence \"The quick brown fox jumps over the lazy dog\" is a well-known pangram, and after this sentence, the next sentence could be any word or phrase, as there is no specific rule or context provided for what comes next"
    ],
@@ -54,7 +54,7 @@
    "unique_visible_generations": 1
   },
   "NV-A/04:00.0/Vulkan": {
-   "backend_local_repeatability": "stable",
+   "backend_local_repeatability": "insufficiently_observed",
    "generations": [
     "The sentence \"The quick brown fox jumps over the lazy dog\" is a well-known pangram, and after this sentence, the next sentence could be anything, as there is no specific rule or context provided for what comes next."
    ],

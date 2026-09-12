@@ -11,14 +11,17 @@ architectural handoff.
   collection (supplemental matched CPU baseline) and the reduction rules.
 - `METHODOLOGY-CORRECTION-1.md`, `METHODOLOGY-CORRECTION-2.md` —
   additive corrections of the CPU-arm backend-selection proof rule,
-  each frozen before any run under it was accepted; runs collected
-  under superseded rules were discarded at collection time (their
-  bytes were overwritten by the accepted campaign's re-use of the
-  runner's sequential run IDs — declared in correction 1's
-  disposition).
+  each frozen before any run under it was accepted.
+- `METHODOLOGY-CORRECTION-3.md` — maintainer-review correction round:
+  the authoritative provenance statement (superseded bring-up bytes
+  were OVERWRITTEN and are NOT retained — a declared provenance defect
+  of this bundle) and the final layers-executed-on-host-CPU proof
+  semantics, including the explicit disposition of the retained
+  `llama_prepare_model_devices: using device Vulkan0 ...` line.
 - `RESULTS.md` — the human-readable reduction and interpretation.
 - `TERMINAL.json` — the machine-readable V0-B terminal classification
-  (exactly one), decision inputs, and the scoped V0-C question.
+  (exactly one), its fail-closed input validations, decision inputs,
+  and the scoped V0-C question.
 - `results/` — derived reductions (all mechanically produced by the
   `scripts/v0b_*.py` producers, hashes in `MANIFEST.sha256`):
   - `comparability-matrix.json` (Phase 0);
@@ -27,16 +30,20 @@ architectural handoff.
   - `capability-assessment.json` (Phase 3);
   - `seam-comparison.json` (Phase 4);
   - `cpu-supplemental/` — raw runs + mechanical summary (Phase 2
-    supplemental arm; accepted runs v0b-cpu-01..03).
+    supplemental arm; accepted runs v0b-cpu-01..03; the summary
+    re-derives the CPU-execution proof from raw stderr).
 - `MANIFEST.sha256` — bundle-local immutable manifest (lifecycle v2).
 
 ## Terminal
 
 `V0B_PROCEED_TO_INTEGRATION_SPIKE` — see `TERMINAL.json` for the exact
-decision inputs and non-claims. This classification is an observation,
-not an execution authorization and not an acceptance: it does not
-authorize V0-C execution by itself and does not change any accepted
-Issue #117 authority.
+fail-closed validations, decision inputs, and non-claims. No
+performance threshold quoted anywhere in this bundle was preregistered;
+the pp/tg similarity and host-usefulness ratios are descriptive only
+and gate nothing. This classification is an observation, not an
+execution authorization and not an acceptance: it does not authorize
+V0-C execution by itself and does not change any accepted Issue #117
+authority.
 
 ## Regenerating
 

@@ -71,12 +71,17 @@ def main() -> int:
 
         n_unique = p["unique_canonical_outputs"]
         runs = p["runs"]
-        if n_unique == 1:
+        # Repeatability is an observation-count-gated property (issue #142
+        # Phase 1): one observation cannot demonstrate repeatability, no
+        # matter what its output is. Integrity/clean-execution facts are
+        # recorded separately and never upgrade an under-observed pair to
+        # `stable`.
+        if runs >= 3 and n_unique == 1:
             repeatability = "stable"
-        elif runs < 3:
-            repeatability = "insufficiently_observed"
-        else:
+        elif runs >= 3:
             repeatability = "output_unstable"
+        else:
+            repeatability = "insufficiently_observed"
         per_pair[pair_name] = {
             "runs": runs,
             "unique_visible_generations": n_unique,
@@ -156,9 +161,9 @@ def main() -> int:
         "adr_0010_mapping": adr0010,
         "classification_summary": {
             "amd_a_vulkan": "physically proven (BDF), fully offloaded, clean exits, backend-local stable (3/3 identical visible generation)",
-            "amd_b_vulkan": "physically proven, clean, single-run smoke observation (insufficiently_observed for repeatability by design: smoke rule)",
-            "nvidia_vulkan": "physically proven, clean, single-run observation; identical visible generation to all AMD Vulkan runs",
-            "nvidia_cuda": "physically proven, clean, single-run observation; differs from Vulkan at one committed word",
+            "amd_b_vulkan": "physically proven, clean, single clean observation; repeatability insufficiently_observed by taxonomy (one run cannot demonstrate repeatability)",
+            "nvidia_vulkan": "physically proven, clean, single observation (insufficiently_observed); visible generation identical to all AMD Vulkan runs",
+            "nvidia_cuda": "physically proven, clean, single observation (insufficiently_observed); differs from Vulkan at one committed word",
         },
         **prospective,
     }

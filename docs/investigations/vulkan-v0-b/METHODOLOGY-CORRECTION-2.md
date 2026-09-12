@@ -37,11 +37,15 @@ only if ALL of:
 5. process exit code is 0.
 
 Note recorded honestly: with a Vulkan ICD present, ggml reserves nonzero
-GPU scratch buffers even at `-ngl 0` (observed values retained in the
-discarded runs' stderr). The rule above therefore proves
-layers-executed-on-CPU (0 offloaded + CPU buffers for weights/KV/output),
-NOT "no GPU memory touched". That distinction is declared here rather
-than blurred.
+GPU scratch buffers even at `-ngl 0`. The rule above also prohibited "no
+`CUDA0`/`Vulkan0` device-selection banner binding execution to a GPU
+device" — a clause the maintainer-review correction round found BOTH
+unsatisfiable (the accepted runs' stderr contains
+`llama_prepare_model_devices: using device Vulkan0 ...`) AND unenforced
+(the runner's `startswith("using device ")` detector could never match
+it). Correction 3 replaces that clause with an explicit disposition and
+defines the final proof; this document's rule is superseded by
+METHODOLOGY-CORRECTION-3.md §3.
 
 ## Addendum — run numbering
 

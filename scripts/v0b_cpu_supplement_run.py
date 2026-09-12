@@ -13,10 +13,22 @@ every run.json):
   - model byte-identical to the frozen V0-A subject;
   - METHODOLOGY.md present in the bundle (freeze authority).
 
-Per-run backend-selection proof: the llama-bench CSV row must record
-backends == "CPU", and retained stderr must contain NO Vulkan
-enumeration line. Any violation discards the run (exit nonzero) rather
-than reinterpreting it.
+Per-run backend-selection proof: the CURRENT rule is
+METHODOLOGY-CORRECTION-3.md — layers-executed-on-host-CPU, mechanically
+derived from the run's own retained stderr by the shared implementation
+in scripts/v0b_cpu_proof.py (exact zero GPU-layer offload; every
+per-layer assignment line bound to CPU; CPU-mapped model buffer; CPU KV
+buffer; CPU output buffer; clean exit). GPU device-preparation lines
+(e.g. `llama_prepare_model_devices: using device Vulkan0 ...`) are
+retained and dispositioned as ICD-enumeration context, not as proof and
+not as a violation. Any proof violation discards the run (exit nonzero)
+rather than reinterpreting it.
+
+History (declared provenance, METHODOLOGY-CORRECTION-3.md): the
+superseded original-rule and correction-1-rule bring-up runs were
+discarded at collection time and their bytes were later OVERWRITTEN when
+this runner re-used its sequential run IDs — they are NOT retained. This
+is a provenance defect of the bundle, not retained evidence.
 
 This is a NEW producer (successor under the frozen-producer rule); it
 does not modify any pinned V0-A script.
@@ -32,6 +44,9 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "scripts"))
+from v0b_cpu_proof import PROOF_SPEC, proof_from_stderr  # noqa: E402
+
 BUNDLE = REPO / "docs/investigations/vulkan-v0-b"
 OUT_DIR = BUNDLE / "results" / "cpu-supplemental"
 
@@ -47,6 +62,7 @@ MODEL_SHA = "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94"
 MODEL_BYTES = 1_929_903_264
 RUNS = 3
 THREADS = 2
+EXPECTED_LAYERS = 37
 
 
 def sha256(path: Path) -> str:
@@ -94,56 +110,34 @@ def one_run(idx: int) -> int:
     (run_dir / "stdout.txt").write_text(proc.stdout)
     (run_dir / "stderr.txt").write_text(proc.stderr)
 
-    # Backend-selection proof per METHODOLOGY-CORRECTION-2.md (frozen
-    # before any accepted run; corrections 1 and 2 retained their
-    # defective-rule runs as DISCARDED bring-up evidence). CPU-execution
-    # proof at this commit is:
-    #   - exactly one 'offloaded 0/37 layers to GPU' line;
-    #   - 'CPU_Mapped model buffer' (weights mapped on CPU);
-    #   - 'CPU KV buffer' and 'CPU  output buffer' present;
-    #   - no 'offloaded <n>/' with n>0 and no CUDA0/Vulkan0 device-
-    #     selection banner (enumeration banners are permitted);
-    #   - clean exit.
-    # NOTE (declared in correction 2): a present Vulkan ICD reserves
-    # nonzero GPU scratch buffers even at -ngl 0; this rule proves
-    # layers-executed-on-CPU, not 'no GPU memory touched'.
-    offload_lines = [ln for ln in proc.stderr.splitlines()
-                     if "offloaded " in ln and "layers to GPU" in ln]
-    offload_zero = (len(offload_lines) == 1
-                    and offload_lines[0].strip().startswith("load_tensors: offloaded 0/37"))
-    cpu_buffers = ("CPU_Mapped model buffer" in proc.stderr
-                   and "CPU KV buffer" in proc.stderr
-                   and "CPU  output buffer" in proc.stderr)
-    gpu_exec_bind = [
-        ln for ln in proc.stderr.splitlines()
-        if (ln.strip().startswith("using device ")
-            or "offloaded " in ln and "layers to GPU" in ln
-            and not ln.strip().startswith("load_tensors: offloaded 0/37"))
-    ]
-    proved = (offload_zero and cpu_buffers and not gpu_exec_bind
-              and proc.returncode == 0)
+    # Layers-executed-on-host-CPU proof per METHODOLOGY-CORRECTION-3.md,
+    # shared with the deriver so collection and reduction cannot drift.
+    proof = proof_from_stderr(proc.stderr, expected_layers=EXPECTED_LAYERS)
+    proved = bool(proof["proved"] and proc.returncode == 0)
 
     record = {
-        "schema": "inferswarm.vulkan-v0-b.cpu-supplemental-run/1",
+        "schema": "inferswarm.vulkan-v0-b.cpu-supplemental-run/2",
         "run_id": run_id,
         "host": os.uname().nodename,
         "timestamp_utc_start": started.isoformat(),
         "timestamp_utc_end": ended.isoformat(),
         "argv": argv,
         "methodology_freeze_authority": "docs/investigations/vulkan-v0-b/METHODOLOGY.md",
+        "proof_rule_authority": (
+            "docs/investigations/vulkan-v0-b/METHODOLOGY-CORRECTION-3.md"),
+        "proof_spec": PROOF_SPEC,
         "executable": {"path": str(PROBE_DIR / "llama-bench"),
                        "sha256": FROZEN["llama-bench"]},
         "model": {"path": str(MODEL_PATH), "sha256": MODEL_SHA,
                   "bytes": MODEL_BYTES},
         "intended": {"backend": "CPU", "device_selector": None,
                      "gpu_label": None, "physical_bdf": None,
-                     "note": "host-memory execution arm; no GPU may participate"},
+                     "note": ("host-memory execution arm; model layers "
+                              "must execute on host CPU")},
         "threads": THREADS,
         "exit_code": proc.returncode,
         "backend_selection_proven": proved,
-        "offload_zero_proven": offload_zero,
-        "cpu_buffer_proven": cpu_buffers,
-        "gpu_execution_binding_lines": gpu_exec_bind,
+        "proof_details": proof,
         "stdout_bytes": len(proc.stdout),
         "stderr_bytes": len(proc.stderr),
     }
@@ -155,8 +149,8 @@ def one_run(idx: int) -> int:
                           "exit_code": proc.returncode}))
         return 1
     print(json.dumps({"run": run_id, "status": "collected",
-                      "offload_zero_proven": offload_zero,
-                      "cpu_buffer_proven": cpu_buffers}))
+                      "offload_zero_proven": proof["offload_zero_proven"],
+                      "layers_all_cpu": proof["layers_all_cpu"]}))
     return 0
 
 

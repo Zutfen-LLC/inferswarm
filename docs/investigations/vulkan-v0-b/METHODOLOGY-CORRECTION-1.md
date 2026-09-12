@@ -3,9 +3,11 @@
 Authority: `METHODOLOGY.md` (this bundle). This correction is ADDITIVE and
 freezes a corrected per-run backend-selection proof BEFORE any canonical CPU
 run is accepted. It exists because the first physical run exposed a defect in
-the METHODOLOGY's proof rule — the run itself is retained as
-`results/cpu-supplemental/v0b-cpu-01/` with status DISCARDED under the
-original rule, and its bytes are never edited.
+the METHODOLOGY's proof rule. Disposition of that run: it was recorded
+DISCARDED under the original rule, and its bytes were later OVERWRITTEN when
+the accepted campaign re-used the runner's sequential run ID — the raw
+bring-up bytes are NOT retained (see METHODOLOGY-CORRECTION-3.md §1 for the
+authoritative provenance statement).
 
 ## Defect found by first-run bring-up (run v0b-cpu-01)
 
@@ -60,6 +62,7 @@ the accepted runs. The original defective-rule run is therefore
 recorded here by this correction document rather than by retained bytes
 — a provenance defect of this bundle, declared rather than blurred:
 earlier V0-A corrections preserved superseded bytes in place; this
-bundle's runner overwrote them. Accepted runs under this rule:
-`results/cpu-supplemental/v0b-cpu-01/` (re-collected),
+bundle's runner overwrote them, and the overwritten bytes are NOT
+retained (see METHODOLOGY-CORRECTION-3.md §1). Accepted runs under this
+rule: `results/cpu-supplemental/v0b-cpu-01/` (re-collected),
 plus the subsequent sequential IDs.

@@ -19,7 +19,59 @@
  "discarded_run_ids": [],
  "expected_accepted_runs": 3,
  "n_accepted": 3,
+ "per_run_proof": {
+  "v0b-cpu-01": {
+   "cpu_kv_buffer": true,
+   "cpu_mapped_model_buffer": true,
+   "cpu_output_buffer": true,
+   "gpu_device_binding_lines": [
+    {
+     "device": "Vulkan0",
+     "disposition": "icd_device_enumeration_context_not_prohibitive",
+     "line": "llama_prepare_model_devices: using device Vulkan0 (NVIDIA GeForce RTX 3060 Ti) (0000:04:00.0) - 8122 MiB free"
+    }
+   ],
+   "layers_all_cpu": true,
+   "matches_collected_verdict": true,
+   "offload_zero_proven": true,
+   "proved": true
+  },
+  "v0b-cpu-02": {
+   "cpu_kv_buffer": true,
+   "cpu_mapped_model_buffer": true,
+   "cpu_output_buffer": true,
+   "gpu_device_binding_lines": [
+    {
+     "device": "Vulkan0",
+     "disposition": "icd_device_enumeration_context_not_prohibitive",
+     "line": "llama_prepare_model_devices: using device Vulkan0 (NVIDIA GeForce RTX 3060 Ti) (0000:04:00.0) - 8122 MiB free"
+    }
+   ],
+   "layers_all_cpu": true,
+   "matches_collected_verdict": true,
+   "offload_zero_proven": true,
+   "proved": true
+  },
+  "v0b-cpu-03": {
+   "cpu_kv_buffer": true,
+   "cpu_mapped_model_buffer": true,
+   "cpu_output_buffer": true,
+   "gpu_device_binding_lines": [
+    {
+     "device": "Vulkan0",
+     "disposition": "icd_device_enumeration_context_not_prohibitive",
+     "line": "llama_prepare_model_devices: using device Vulkan0 (NVIDIA GeForce RTX 3060 Ti) (0000:04:00.0) - 8122 MiB free"
+    }
+   ],
+   "layers_all_cpu": true,
+   "matches_collected_verdict": true,
+   "offload_zero_proven": true,
+   "proved": true
+  }
+ },
  "pp512_median_tps": 53.81,
- "schema": "inferswarm.vulkan-v0-b.cpu-supplemental-summary/1",
+ "proof": "layers-executed-on-host-CPU re-derived per run from raw retained stderr (scripts/v0b_cpu_proof.py); run.json booleans are never trusted alone",
+ "proof_rule_authority": "docs/investigations/vulkan-v0-b/METHODOLOGY-CORRECTION-3.md",
+ "schema": "inferswarm.vulkan-v0-b.cpu-supplemental-summary/2",
  "tg128_median_tps": 0.8
 }

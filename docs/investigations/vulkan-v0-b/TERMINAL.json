@@ -1,23 +1,55 @@
 {
  "decision_inputs": {
   "amd_native_backend": "NATIVE_BACKEND_UNAVAILABLE",
-  "amd_useful_vs_host": {
-   "bar_declared": 2.0,
-   "decode_clears_bar": true,
-   "decode_ratio": 54.574,
-   "prefill_clears_bar": true,
-   "prefill_ratio": 9.2552
+  "backend_local_stability": {
+   "amd_a_stable": true,
+   "authoritative": true,
+   "note": "corrected taxonomy: one-run arms are insufficiently_observed, never stable",
+   "per_pair": {
+    "AMD-A/02:00.0/Vulkan": "stable",
+    "AMD-B/03:00.0/Vulkan": "insufficiently_observed",
+    "NV-A/04:00.0/CUDA": "insufficiently_observed",
+    "NV-A/04:00.0/Vulkan": "insufficiently_observed"
+   }
   },
-  "backend_local_stability": true,
-  "nv_near_native": {
-   "pp_ratio": 0.9486,
-   "tg_ratio": 0.8842,
-   "thresholds_declared": {
-    "pp": 0.85,
-    "tg": 0.8
+  "cpu_arm_proof": {
+   "accepted_runs": 3,
+   "authoritative": true,
+   "rule": "layers-executed-on-host-CPU (METHODOLOGY-CORRECTION-3.md)",
+   "scope": "proves CPU layer execution; does NOT claim 'no GPU participated' or 'no GPU memory touched'"
+  },
+  "descriptive_similarity_summaries": {
+   "amd_vk_over_host_execution": {
+    "decode_ratio": 54.574,
+    "prefill_ratio": 9.2552,
+    "reference_heuristic_declared_nonauthoritative": {
+     "ratio": 2.0
+    }
    },
-   "value": true
+   "authoritative": false,
+   "note": "descriptive-only summaries of retained evidence; NOT gates; never preregistered in the frozen methodology; the prior '2x pre-registered usefulness bar' claim was false and is withdrawn",
+   "nv_vk_vs_cuda_similarity_heuristic": {
+    "pp_ratio": 0.9486,
+    "reference_heuristic_declared_nonauthoritative": {
+     "pp": 0.85,
+     "tg": 0.8
+    },
+    "tg_ratio": 0.8842
+   }
   }
+ },
+ "fail_closed_validations": {
+  "problem_count": 0,
+  "problems": [],
+  "required_capability_facts": [
+   "deterministic_physical_device_discovery_selection",
+   "device_local_memory_capacity_explicit",
+   "model_state_materialization_on_accelerator",
+   "representative_ops_without_silent_host_fallback",
+   "evidence_bindable_backend_runtime_identity"
+  ],
+  "required_seam": "S2-backend-adapter-participant",
+  "seam_validation_problems": []
  },
  "issue": 142,
  "non_claims": [
@@ -25,7 +57,11 @@
   "no accepted Issue #117 correctness evidence or authority changed",
   "no causal decomposition of the AMD throughput level claimed (compute vs memory vs link remains open)",
   "no cross-backend semantic equivalence claimed (the one-word CUDA/Vulkan divergence stands)",
-  "no new numerical-equivalence threshold created or retroactively applied"
+  "no logits-level numerical equivalence claimed",
+  "no new numerical-equivalence threshold created or retroactively applied",
+  "no performance threshold used here was preregistered; the pp 0.85 / tg 0.80 and 2x-ratio heuristics are descriptive only and gate nothing",
+  "the CPU-arm proof does not claim 'no GPU participated' or 'no GPU device was used' (Vulkan enumeration and scratch reservation are retained facts)",
+  "superseded CPU bring-up bytes were overwritten and are NOT retained (declared provenance defect)"
  ],
  "parent": {
   "issue": 141,
@@ -33,9 +69,9 @@
   "terminal": "V0A_MATCHED_CHARACTERIZATION_COMPLETE",
   "v0a_head": "2b2d546dc77350f14016b31a105696b257c063f2"
  },
- "reason": "device-proven, backend-locally stable, near-native on NVIDIA, and decisively more useful than host execution on AMD-A which has no native backend; seam S2 is narrow and backend-neutral",
+ "reason": "device-proven with clean integrity on every arm; backend-local repeatability demonstrated on AMD-A (3/3 identical visible generation), with single-run arms honestly classified insufficiently_observed; the supplemental CPU arm is proven layers-executed-on-host-CPU from raw retained stderr and shows AMD-A Vulkan decisively faster than host-memory execution on the same host, which has no native backend; the seam reduction validates S2 mechanically (all five classes considered, LOW planner leak, CUDA/HIP coexistence, no public API freeze in the V0-C scope)",
  "recommended_v0c_seam": "S2-backend-adapter-participant",
- "schema": "inferswarm.vulkan-v0-b.terminal/1",
+ "schema": "inferswarm.vulkan-v0-b.terminal/2",
  "terminal": "V0B_PROCEED_TO_INTEGRATION_SPIKE",
  "v0c_scope_if_authorized": {
   "explicitly_not": [
