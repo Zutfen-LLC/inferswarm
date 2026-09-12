@@ -76,6 +76,24 @@ ancestry):
   path's behavior did NOT change, and no remediation of its
   instability is claimed.
 
+## Maintainer acceptance of the FreeToken cleanup (bookkeeping)
+
+FreeToken PR #33 was maintainer-accepted and merged into
+`inferswarm-research` as merge commit
+`55e8baaebabe67aeb967d4bd407ef26696933104` (parents `b05564a7` +
+`f6133b88`).  The merge contains candidate commit
+`f6133b88d40e4d43d3ac82fa732f21e540b7273d`, which remains the exact
+source-byte identity this record binds (the record's producer-delta
+evidence reproduces byte-identically against it; GitHub's merge commit
+does not change producer-delta meaning).  Acceptance of the CODE is not
+physical execution authority:
+
+- the terminal remains `ISSUE117_ARM_C_REMEDIATION_BLOCKED`;
+- the accepted 65–67 failing execution path is NOT remediated;
+- no fresh Arm-C qualification may use this producer without a new,
+  deeper remediation/authority sequence plus a new authorizing issue;
+- Arm D/E remain blocked behind Arm C.
+
 ## Required next remediation slice (deeper authority)
 
 Arm-C remains FAILED.  The instability is localized by #137 to the
