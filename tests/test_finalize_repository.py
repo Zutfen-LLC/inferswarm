@@ -1419,8 +1419,7 @@ class CapabilitySplitControls(unittest.TestCase):
                      write=True)
         self.assertFalse(observed["read_input"])
         self.assertEqual(observed["engine_attrs"], [])
-        self.assertEqual(observed["slots"],
-                         ["_pending", "_reads", "root", "scratch"])
+        self.assertEqual(observed["slots"], ["_reads", "root", "scratch"])
         self.assertIsNone(observed["dict"])  # no __dict__ to smuggle state
         self.assertIn("undeclared read", observed["mediated"])
         # the scratch the callable received is NOT the engine workroot
@@ -1500,28 +1499,29 @@ class CapabilitySplitControls(unittest.TestCase):
         self.assertIsNone(observed["mutations_engine"])
 
     def test_engine_state_not_mutable_from_callback(self) -> None:
-        # the capsule's pending view is an inert MappingProxyType
-        # snapshot: a callable cannot mutate engine bookkeeping through
-        # it, and engine run state stays invisible
+        # round 6: the capsule has NO pending view at all — the
+        # round-5 MappingProxyType snapshot still allowed READS of
+        # undeclared pending outputs (an undeclared dependency), so it
+        # is gone entirely: no mapping reachable from the capsule can
+        # be read OR mutated, and engine run state stays invisible
         observed = {}
 
         def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
-            pending = getattr(run, "_pending", None)
-            observed["pending_type"] = type(pending).__name__
-            observed["pending_is_engine_map"] = pending is getattr(
-                fin.EngineRun, "pending", None)
-            try:
-                pending["gen.txt"] = b"FORGED"  # type: ignore[index]
-                observed["pending_mutable"] = True
-            except TypeError:
-                observed["pending_mutable"] = False
+            observed["pending_attr"] = getattr(run, "_pending", None)
+            observed["pending_engine"] = getattr(run, "pending", None)
+            # any mapping/container reachable from the capsule
+            for attr in sorted(getattr(type(run), "__slots__", ())):
+                value = getattr(run, attr, None)
+                if isinstance(value, dict):
+                    observed[f"mapping:{attr}"] = sorted(value)
             return {"gen.txt": b"regenerated\n"}
 
         fin.finalize(self.root, (self._writes_only_stage(rogue),),
                      write=True)
-        self.assertEqual(observed["pending_type"], "mappingproxy")
-        self.assertFalse(observed["pending_is_engine_map"])
-        self.assertFalse(observed["pending_mutable"])
+        self.assertIsNone(observed["pending_attr"])
+        self.assertIsNone(observed["pending_engine"])
+        self.assertFalse(
+            any(key.startswith("mapping:") for key in observed))
 
     # -- control C: false-pass exploit regression ------------------------
 
@@ -1618,8 +1618,335 @@ class CapabilitySplitControls(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# F4: symlink and root-confinement escapes
+# F3 round 6: no pending snapshot, no retained sibling workspaces
 # ---------------------------------------------------------------------------
+
+class WorkspaceIsolationControls(unittest.TestCase):
+    """Round 6 closes the last two undeclared-read channels in the
+    callback workspace: the all-path pending snapshot on the capsule
+    (F3-A) and retained sibling projections/scratches under a shared
+    callable-reachable tree (F3-B)."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory(prefix="finalize-ws6-")
+        self.root = Path(self._tmp.name) / "repo"
+        self.workspace_area = Path(self._tmp.name) / "engine"
+        self.root.mkdir(parents=True)
+        self.workspace_area.mkdir()
+        self.addCleanup(self._tmp.cleanup)
+        for command in (["git", "init", "-q"],
+                        ["git", "config", "user.email", "t@example.com"],
+                        ["git", "config", "user.name", "t"]):
+            subprocess.run(command, cwd=self.root, check=True)
+        self._write("src.txt", "legitimate input\n")
+        self._write("secret-primary.txt", "RECOGNIZABLE PRIMARY SECRET")
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm", "base"],
+                       check=True)
+
+    def _write(self, relative: str, text: str) -> None:
+        path = self.root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+
+    def _state(self) -> dict[str, str]:
+        return {p.relative_to(self.root).as_posix():
+                hashlib.sha256(p.read_bytes()).hexdigest()
+                for p in sorted(self.root.rglob("*"))
+                if p.is_file() and ".git" not in p.parts}
+
+    def _two_stage_registry(self, stage_b):
+        """A writes secret-generated.txt; B (the probe) declares only
+        src.txt / out.txt and runs after stage A."""
+
+        def a_producer(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
+            return {"secret-generated.txt":
+                    b"RECOGNIZABLE GENERATED SECRET"}
+
+        return (
+            fin.Stage("stage-a", "derived", "a",
+                      reads=frozenset({"src.txt", "secret-primary.txt"}),
+                      writes=frozenset({"secret-generated.txt"}),
+                      producer=a_producer),
+            fin.Stage("stage-b", "derived", "b",
+                      reads=frozenset({"src.txt"}),
+                      writes=frozenset({"out.txt"}),
+                      after=frozenset({"stage-a"}),
+                      producer=stage_b),
+        )
+
+    # -- control A: pending-state leak -----------------------------------
+
+    def test_pending_snapshot_is_gone_and_secret_pending_unreachable(self):
+        # stage A writes recognizable secret bytes; stage B declares
+        # only src.txt/out.txt and inspects every StageRun slot,
+        # attempts direct pending-like attribute access, and inspects
+        # every mapping/container reachable from the capsule: neither
+        # the key nor the bytes of secret-generated.txt may appear
+        observed = {}
+        recovered = []
+
+        def probe(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
+            observed["slots"] = sorted(getattr(type(run), "__slots__", ()))
+            observed["dict"] = getattr(run, "__dict__", None)
+            observed["dir_state_attrs"] = sorted(
+                attr for attr in dir(run)
+                if any(m in attr.lower() for m in
+                       ("pending", "mutation", "engine", "workroot")))
+            # direct pending-like attribute access
+            for attr in ("_pending", "pending", "mutations", "changed",
+                         "engine", "run", "workroot", "state"):
+                value = getattr(run, attr, None)
+                if isinstance(value, dict):
+                    observed[f"dict-attr:{attr}"] = sorted(value)
+                elif value is not None:
+                    observed[f"attr:{attr}"] = repr(value)
+            # every mapping/container reachable from the capsule
+            for attr in sorted(getattr(type(run), "__slots__", ())):
+                value = getattr(run, attr, None)
+                if isinstance(value, dict):
+                    observed[f"mapping:{attr}"] = sorted(value)
+            # mediated read of the undeclared pending path
+            try:
+                recovered.append(("mediated",
+                                  run.read("secret-generated.txt")))
+            except fin.FinalizationError as error:
+                observed["mediated"] = f"rejected: {error}"
+            return {"out.txt": b"legitimate output\n"}
+
+        workroot = self.workspace_area / "workroot"
+        workroot.mkdir()
+        stages = self._two_stage_registry(probe)
+        fin.run_pipeline(self.root, stages, write=False, workroot=workroot)
+        # _pending no longer exists; the capsule surface is minimal
+        self.assertEqual(observed["slots"], ["_reads", "root", "scratch"])
+        self.assertNotIn("_pending", observed["slots"])
+        self.assertIsNone(observed["dict"])
+        self.assertEqual(observed["dir_state_attrs"], [])
+        self.assertIn("undeclared read", observed["mediated"])
+        # no mapping/container reachable, no non-None engine-ish attr
+        for key in observed:
+            self.assertFalse(key.startswith("mapping:"), key)
+            self.assertFalse(key.startswith("dict-attr:"), key)
+            self.assertFalse(key.startswith("attr:"), key)
+        # and no recovered value contains the secret key or bytes
+        for entry in recovered:
+            self.assertNotEqual(entry[1], b"RECOGNIZABLE GENERATED SECRET")
+
+    # -- control B: prior primary-input projection leak -------------------
+
+    def test_prior_primary_input_projection_unreachable_from_stage_b(self):
+        # secret-primary.txt is committed and read by stage A only.
+        # Inside stage B, recursively inspect every filesystem path
+        # reachable by walking UP from run.root and run.scratch and
+        # enumerating the descendants of those ancestors that remain
+        # inside the finalizer workspace: the primary secret must not
+        # be found.
+        observed = {}
+        found = []
+
+        def probe(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
+            boundaries = {run.scratch.resolve().parent,  # workspace dir
+                          run.scratch.resolve().parents[1],  # ws tree
+                          run.scratch.resolve().parents[2]}  # workroot
+            hits = []
+            for boundary in boundaries:
+                if not boundary.is_dir():
+                    continue
+                for path in boundary.rglob("*"):
+                    if path.name == "secret-primary.txt":
+                        try:
+                            hits.append((str(path),
+                                         path.read_bytes()))
+                        except OSError:
+                            hits.append((str(path), b"<unreadable>"))
+            found.extend(hits)
+            observed["root_parent_listing"] = sorted(
+                p.name for p in run.root.parent.iterdir())
+            observed["root_grandparent_listing"] = sorted(
+                p.name for p in run.root.parent.parent.iterdir())
+            observed["workspace_tree"] = sorted(
+                p.relative_to(run.root.parents[1]).as_posix()
+                for p in run.root.parents[1].rglob("*") if p.is_file())
+            return {"out.txt": b"legitimate output\n"}
+
+        workroot = self.workspace_area / "workroot"
+        workroot.mkdir()
+        stages = self._two_stage_registry(probe)
+        fin.run_pipeline(self.root, stages, write=False, workroot=workroot)
+        self.assertEqual(found, [])
+        # only stage B's own workspace remains under the workroot
+        self.assertEqual(observed["workspace_tree"],
+                         ["0002-stage-b/projection/src.txt"])
+        self.assertEqual(observed["root_parent_listing"],
+                         ["projection", "scratch"])
+        # the workroot's stage-workspaces dir holds exactly one child
+        self.assertEqual(observed["root_grandparent_listing"],
+                         ["0002-stage-b"])
+
+    # -- control C: prior generated-output projection leak ----------------
+
+    def test_prior_generated_output_unreachable_from_stage_b(self):
+        # stage A generated secret-generated.txt; stage B does not
+        # declare it and tries every recovery route: StageRun
+        # attributes, root traversal, scratch traversal, sibling
+        # directory enumeration.
+        observed = {}
+        recovered = []
+
+        def probe(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
+            # attributes
+            observed["slots"] = sorted(getattr(type(run), "__slots__", ()))
+            for attr in ("_pending", "pending"):
+                if getattr(run, attr, None) is not None:
+                    recovered.append((f"attr:{attr}", "present"))
+            # root traversal (own projection and upward)
+            for base in (run.root, run.scratch):
+                probe_path = base
+                for _ in range(6):
+                    candidate = probe_path / "secret-generated.txt"
+                    if candidate.is_file():
+                        recovered.append(
+                            ("walk", str(candidate), candidate.read_bytes()))
+                    if probe_path.parent == probe_path:
+                        break
+                    probe_path = probe_path.parent
+            # sibling directory enumeration from the workspace upward
+            probe_path = run.root.parent
+            for _ in range(4):
+                try:
+                    names = sorted(p.name for p in probe_path.iterdir())
+                except OSError:
+                    names = []
+                if "stage-a" in " ".join(names) or any(
+                        name.endswith("stage-a") for name in names):
+                    recovered.append(("sibling", str(probe_path), names))
+                if probe_path.parent == probe_path:
+                    break
+                probe_path = probe_path.parent
+            return {"out.txt": b"legitimate output\n"}
+
+        workroot = self.workspace_area / "workroot"
+        workroot.mkdir()
+        stages = self._two_stage_registry(probe)
+        fin.run_pipeline(self.root, stages, write=False, workroot=workroot)
+        self.assertEqual(observed["slots"], ["_reads", "root", "scratch"])
+        self.assertEqual(recovered, [])
+
+    # -- control D: hidden-edge false-pass regression ---------------------
+
+    def test_stale_input_cannot_be_papered_over_with_undeclared_bytes(self):
+        # two stages; B's producer WOULD return A's undeclared
+        # out-of-band value if either _pending or sibling projection
+        # access were available, making --check falsely pass.  The
+        # legitimate declared input (src.txt) is changed so B's proper
+        # output is stale: --check must FAIL stale and B must be
+        # unable to recover A's bytes.
+        def b_honest(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
+            return {"out.txt": (run.read("src.txt") or b"").upper()}
+
+        stages = self._two_stage_registry(b_honest)
+        fin.finalize(self.root, stages, write=True)
+        self.assertEqual((self.root / "secret-generated.txt").read_bytes(),
+                         b"RECOGNIZABLE GENERATED SECRET")
+        self.assertEqual((self.root / "out.txt").read_bytes(),
+                         b"LEGITIMATE INPUT\n")
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm",
+                        "converged"], check=True)
+        # change the legitimate declared input so B's proper output is
+        # stale; B first tries every undeclared route to A's value and
+        # would return it (falsifying --check) if any route worked
+        self._write("src.txt", "changed input\n")
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm",
+                        "input change"], check=True)
+        recovered = []
+
+        def b_adversarial(run: fin.StageRun,
+                          scratch: Path) -> dict[str, bytes]:
+            # route 1: pending snapshot attribute
+            pending = getattr(run, "_pending", None) or getattr(
+                run, "pending", None)
+            if isinstance(pending, dict) and \
+                    "secret-generated.txt" in pending:
+                recovered.append(("pending",
+                                  pending["secret-generated.txt"]))
+            # route 2: sibling projection of stage A
+            for parent in list(run.root.parents[:4]) \
+                    + list(run.scratch.parents[:4]):
+                candidate = parent / "secret-generated.txt"
+                if candidate.is_file():
+                    recovered.append(("sibling", candidate.read_bytes()))
+            # denied every undeclared route, derive honestly from the
+            # (changed) declared input
+            return {"out.txt": (run.read("src.txt") or b"").upper()}
+
+        adversarial = self._two_stage_registry(b_adversarial)
+        baseline = self._state()
+        with self.assertRaises(fin.FinalizationError) as caught:
+            fin.finalize(self.root, adversarial, write=False)
+        self.assertIn("stale", str(caught.exception))
+        # B recovered none of stage A's undeclared bytes
+        for entry in recovered:
+            self.assertNotIn(b"RECOGNIZABLE GENERATED SECRET", entry)
+        # and check mode left the tree byte-identical
+        self.assertEqual(self._state(), baseline)
+
+    # -- workspace lifecycle semantics ------------------------------------
+
+    def test_stage_workspace_destroyed_before_next_stage_runs(self):
+        # structural proof of the F3-B lifecycle: while stage B's
+        # callable executes, NO other stage workspace directory exists
+        # beneath the workroot; after the pass, the stage-workspaces
+        # tree is empty of children created for the pass.
+        observed = {}
+
+        def a_spy(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
+            observed["a_workspace_siblings"] = sorted(
+                p.name for p in run.root.parents[1].iterdir())
+            return {"secret-generated.txt":
+                    b"RECOGNIZABLE GENERATED SECRET"}
+
+        def b_spy(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
+            observed["b_workspace_siblings"] = sorted(
+                p.name for p in run.root.parents[1].iterdir())
+            observed["b_workspace_tree"] = sorted(
+                p.relative_to(run.root.parents[1]).as_posix()
+                for p in run.root.parents[1].rglob("*") if p.is_file())
+            return {"out.txt": b"legitimate output\n"}
+
+        workroot = self.workspace_area / "workroot"
+        workroot.mkdir()
+        stages = (
+            fin.Stage("stage-a", "derived", "a",
+                      reads=frozenset({"src.txt", "secret-primary.txt"}),
+                      writes=frozenset({"secret-generated.txt"}),
+                      producer=a_spy),
+            fin.Stage("stage-b", "derived", "b",
+                      reads=frozenset({"src.txt"}),
+                      writes=frozenset({"out.txt"}),
+                      after=frozenset({"stage-a"}),
+                      producer=b_spy),
+        )
+        fin.run_pipeline(self.root, stages, write=False, workroot=workroot)
+        # while A ran, only A's workspace existed; while B ran, only
+        # B's — A's was destroyed before B's callable was invoked
+        self.assertEqual(observed["a_workspace_siblings"],
+                         ["0001-stage-a"])
+        self.assertEqual(observed["b_workspace_siblings"],
+                         ["0002-stage-b"])
+        self.assertEqual(observed["b_workspace_tree"],
+                         ["0002-stage-b/projection/src.txt"])
+        # workroot reuse across passes never collides and never
+        # resurrects a prior workspace (each pass's workspaces are
+        # removed as their stages end, so the numbering may restart)
+        fin.run_pipeline(self.root, stages, write=False, workroot=workroot)
+        self.assertEqual(observed["b_workspace_siblings"],
+                         ["0002-stage-b"])
+
+
+
 
 class SymlinkEscapeControls(unittest.TestCase):
     """Engine writes can never be redirected outside the repository."""

@@ -32,11 +32,16 @@ duplicates.  Before writing anything the engine mechanically proves:
   stage's own restricted filesystem projection), and paths registered
   as primary/frozen authority inputs are globally write-forbidden —
   a writer scheduled before OR after the protected reader is rejected;
-  the capability boundary is MECHANICAL (round 5): callables receive a
-  narrow ``StageRun`` capsule (projection root, scratch, declared-read
-  ``read``) — never the engine's ``EngineRun``, which holds the real
-  repository root, the unrestricted current-output reader, and the
-  mutation/pending maps, none of which are reachable from the capsule;
+  the capability boundary is MECHANICAL (rounds 5-6): callables
+  receive a narrow ``StageRun`` capsule (projection root, scratch,
+  declared-read ``read``) — never the engine's ``EngineRun``, which
+  holds the real repository root, the unrestricted current-output
+  reader, and the mutation/pending maps, none of which are reachable
+  from the capsule; the capsule carries no pending snapshot at all
+  (authorized pending outputs are materialized into its projection),
+  and each stage executes inside a single disposable workspace
+  (projection + scratch) that is destroyed the moment the stage ends,
+  so no earlier stage's bytes remain callable-reachable;
 - every real-tree write is symlink-safe: the destination and every
   ancestor component are validated with no-follow semantics before
   any byte is written, so an output symlink or a symlinked parent
@@ -155,7 +160,6 @@ import stat
 import subprocess
 import sys
 import tempfile
-import types
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterator
@@ -200,23 +204,28 @@ class Stage:
 
 
 class StageRun:
-    """The ONLY object a stage callable ever receives (F3, round 5).
+    """The ONLY object a stage callable ever receives (F3, rounds 5-6).
 
     A narrow capability capsule: the stage's restricted projection
     root, a private scratch directory, and a declared-read-aware
     ``read()``.  It mechanically cannot express any engine-private
     capability — no real repository root, no unrestricted
-    current-output reader, no engine mutation/pending maps — because
-    those live on :class:`EngineRun`, a class whose instances are
-    never passed to (or reachable from attributes of) a callable.
+    current-output reader, no engine mutation/pending maps, and
+    (round 6) no pending snapshot AT ALL — because those live on
+    :class:`EngineRun`, a class whose instances are never passed to
+    (or reachable from attributes of) a callable.  Pending-stage
+    outputs for paths the active stage IS authorized to read are
+    materialized into its projection by ``_stage_projection``; the
+    engine's all-path pending map is never exposed in any form.
 
     ``root`` is the stage's restricted projection (byte copies of
     only the paths the stage is authorized to read: ``reads |
     covers``), never the real working tree.  ``read(path)`` rejects
-    any path outside the active stage's declared read set; bytes
-    already written by an earlier stage this pass (visible to this
-    stage only because it declared them as reads) shadow the
-    projection bytes, so ``--check`` and ``--write`` derive identical
+    any path outside the active stage's declared read set and reads
+    solely from the restricted projection; bytes already written by
+    an earlier stage this pass (visible to this stage only because
+    it declared them as reads) shadow the projection bytes, so
+    ``--check`` and a converged ``--write`` derive identical
     results.  Reading a path the stage also writes requires
     declaring it in BOTH ``reads`` and ``writes`` (the explicit
     self-input contract).  Desired bytes are returned from the
@@ -226,18 +235,19 @@ class StageRun:
 
     ``__slots__`` makes the capability surface explicit and frozen:
     there is no ``__dict__`` to smuggle engine state through, and
-    ``_pending`` is a per-call snapshot (``MappingProxyType``), not a
-    live reference into engine bookkeeping.
+    no slot holds a pending/mutation map or any all-path snapshot
+    (round 6: the round-5 ``_pending`` MappingProxyType still let a
+    callable READ undeclared pending outputs, which is an
+    undeclared dependency; it is gone).
     """
 
-    __slots__ = ("root", "scratch", "_reads", "_pending")
+    __slots__ = ("root", "scratch", "_reads")
 
     def __init__(self, root: Path, scratch: Path,
-                 reads: frozenset[str], pending: dict[str, bytes]) -> None:
+                 reads: frozenset[str]) -> None:
         self.root = root            # the stage's restricted projection
         self.scratch = scratch      # fresh per-stage scratch directory
         self._reads = reads         # this stage's authorized read set
-        self._pending = types.MappingProxyType(dict(pending))
 
     def read(self, relative: str) -> bytes | None:
         declared = "*" in self._reads or relative in self._reads
@@ -246,14 +256,12 @@ class StageRun:
                 f"undeclared read: the active stage did not declare "
                 f"{relative!r} in its reads; add it to the stage contract "
                 "or read through the declared dependency")
-        if relative in self._pending:
-            return self._pending[relative]
         path = self.root / relative
         return path.read_bytes() if path.is_file() else None
 
 
 class EngineRun:
-    """Engine-private pass state — NEVER callable-visible (F3, round 5).
+    """Engine-private pass state — NEVER callable-visible (F3, rounds 5-6).
 
     Holds exactly what the specification reserves to the engine: the
     real repository root, the unrestricted current-output reader
@@ -262,8 +270,7 @@ class EngineRun:
     per-stage change bookkeeping.  No instance, attribute, or
     subclass reference of this class is ever passed to a producer or
     verify callable; callables receive :class:`StageRun` capsules
-    built by :meth:`stage_run`, whose pending view is an inert
-    snapshot copy.
+    built by :meth:`stage_run`, which carry no pending view at all.
     """
 
     def __init__(self, real_root: Path, workroot: Path) -> None:
@@ -272,6 +279,7 @@ class EngineRun:
         self.pending: dict[str, bytes] = {}
         self.mutations: dict[str, bytes] = {}
         self.changed: dict[str, list[str]] = {}
+        self.workspace_sequence = 0
 
     def read_input(self, relative: str) -> bytes | None:
         """Engine-private current-state read (never callable-visible).
@@ -290,9 +298,17 @@ class EngineRun:
 
     def stage_run(self, stage: Stage, projection: Path,
                   scratch: Path) -> StageRun:
-        """Build the capability capsule one callable is invoked with."""
+        """Build the capability capsule one callable is invoked with.
+
+        Round 6: the capsule receives NO pending view in any form.
+        Pending outputs for paths the stage is authorized to read
+        are materialized into its projection by ``_stage_projection``
+        before the callable runs; the engine's all-path pending map
+        stays engine-private (an inert snapshot copy would still be
+        readable and leak undeclared pending outputs).
+        """
         reads = frozenset(stage.reads | stage.covers)
-        return StageRun(projection, scratch, reads, self.pending)
+        return StageRun(projection, scratch, reads)
 
     def apply(self, stage_id: str, desired: dict[str, bytes],
               projection: Path) -> None:
@@ -700,11 +716,33 @@ def _sandbox_digests(sandbox: Path) -> dict[str, str]:
 # cannot be inspected directly any more than through Run.read.
 # ---------------------------------------------------------------------------
 # Round-5 capability split: the working area the callable can physically
-# reach (its projection and scratch, beneath workroot/capsules/<stage>)
-# is disjoint from the engine vault (workroot-vault-<n>, a SIBLING of
-# the workroot) that holds the starting-state byte backup — a callable
-# with a scratch path could otherwise walk ``scratch / ".." / ".." /
+# reach (its projection and scratch, beneath workroot/capsules/<stage>) is
+# disjoint from the engine vault (workroot-vault-<n>, a SIBLING of the
+# workroot) that holds the starting-state byte backup — a callable with
+# a scratch path could otherwise walk ``scratch / ".." / ".." /
 # "starting-bytes"`` and read every current byte of the real tree.
+#
+# Round-6 disposable per-stage workspace: earlier rounds kept every
+# stage's projection under a shared ``workroot/projections/`` tree, so a
+# later callable could parent-walk from its own projection into the
+# SIBLING projections of earlier stages (or enumerate them) and consume
+# undeclared bytes — including primary inputs only earlier stages read.
+# Each stage now gets ONE disposable workspace created immediately
+# before its callable runs and destroyed entirely (finally) before the
+# engine proceeds:
+#
+#     workroot/stage-workspaces/<n>-<stage-id>/
+#         projection/     <- the callable's run.root
+#         scratch/        <- the callable's scratch
+#
+# The workspace is removed at stage completion, so no previous
+# projection or scratch directory remains beneath any ancestor reachable
+# from a later callback's root or scratch.  The workspace root is
+# two levels beneath the workroot; the workroot itself is removed when
+# the pass ends.  Engine state that must survive across stages lives in
+# EngineRun.pending, never in retained callable filesystems, and the
+# starting-state vault remains a sibling of the workroot, outside every
+# callable-reachable workspace (round 5, unchanged).
 
 def _backup_root(workroot: Path) -> Path:
     """Engine-private starting-state backup location (round 5).
@@ -717,9 +755,24 @@ def _backup_root(workroot: Path) -> Path:
     """
     return workroot.parent / (workroot.name + "-vault")
 
+def _stage_workspace(run: "EngineRun", stage_id: str) -> Path:
+    """Fresh, never-reused workspace directory for one stage (round 6).
+
+    A monotonically numbered name (sequence kept on the engine-private
+    run state) guarantees uniqueness even when a stage id repeats
+    across passes sharing one workroot; the engine never reuses (and
+    never needs to find) a prior stage's directory.
+    """
+    run.workspace_sequence += 1
+    workspace = (run.workroot / "stage-workspaces"
+                 / f"{run.workspace_sequence:04d}-{stage_id}")
+    workspace.mkdir(parents=True, exist_ok=False)
+    return workspace
+
+
 def _stage_projection(stage: Stage, root: Path, run: EngineRun,
-                      workroot: Path) -> Path:
-    """Materialize the stage's restricted projection and bind run.root.
+                      workspace: Path) -> Path:
+    """Materialize the stage's restricted projection inside its workspace.
 
     Contains byte copies of exactly the paths the stage is authorized
     to read: ``reads | covers`` (self-inputs are present because they
@@ -732,9 +785,7 @@ def _stage_projection(stage: Stage, root: Path, run: EngineRun,
     the projection bytes.  The projection root is what the callable
     receives as ``run.root``.
     """
-    projection = workroot / "projections" / stage.id
-    if projection.exists():
-        shutil.rmtree(projection, ignore_errors=True)
+    projection = workspace / "projection"
     projection.mkdir(parents=True, exist_ok=True)
     declared = stage.reads | stage.covers
     for relative in sorted(declared):
@@ -1002,21 +1053,24 @@ def _execute_pass(root: Path, stages: tuple[Stage, ...], workroot: Path,
         stage = by_id[stage_id]
         if stage.producer is None and stage.verify is None:
             continue  # purely declarative stage
-        projection = _stage_projection(stage, root, run, workroot)
-        # fresh per-stage capsule: a scratch directory the callable
-        # may use freely, sibling to (but outside) its projection
-        capsule = workroot / "capsules" / stage_id
-        if capsule.exists():
-            shutil.rmtree(capsule, ignore_errors=True)
-        capsule.mkdir(parents=True, exist_ok=True)
-        scratch = capsule / "scratch"
+        # round 6: ONE disposable per-stage workspace, created here and
+        # destroyed in the finally below — the projection and the
+        # scratch live together inside it, and NO earlier stage's
+        # workspace survives beneath any ancestor a later callable can
+        # reach (root or scratch).  Engine state that must cross stage
+        # boundaries lives in EngineRun.pending, never here.
+        workspace = _stage_workspace(run, stage_id)
+        projection = _stage_projection(stage, root, run, workspace)
+        # fresh per-stage scratch: a directory the callable may use
+        # freely, inside its own disposable workspace
+        scratch = workspace / "scratch"
         scratch.mkdir()
         # enforced read set: declared reads; covers count as reads for
         # terminal manifests (they hash every covered path); a path the
         # stage writes is readable ONLY if also declared in reads (the
-        # explicit self-input contract).  The pending view inside the
-        # capsule is an inert snapshot copy — mutating it cannot touch
-        # engine bookkeeping.
+        # explicit self-input contract).  The capsule carries NO
+        # pending view (round 6): authorized pending bytes are already
+        # materialized into the projection above.
         capability = run.stage_run(stage, projection, scratch)
         _purge_script_modules(projection)
         for relative in sorted(stage.reads | stage.covers):
@@ -1048,10 +1102,10 @@ def _execute_pass(root: Path, stages: tuple[Stage, ...], workroot: Path,
                                      starting, backup):
                     stage.verify(capability, scratch)
         finally:
-            # the capsule (projection copy + scratch) is per-stage and
-            # disposable: remove it so nothing later in the pass — and
-            # no callable — can reach this stage's workspace
-            shutil.rmtree(capsule, ignore_errors=True)
+            # the ENTIRE disposable stage workspace (projection copy +
+            # scratch) is removed before the engine proceeds: no prior
+            # projection or scratch remains callable-reachable (F3-B)
+            shutil.rmtree(workspace, ignore_errors=True)
     return {"order": order_ids, "changed": run.changed,
             "mutations": run.mutations}
 

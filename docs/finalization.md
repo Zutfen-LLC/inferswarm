@@ -73,8 +73,25 @@ the callback/engine boundary is **mechanical**:
   `__dict__`) for the real repository root, an unrestricted
   current-output reader, or the engine's pending/mutation maps: those
   live on the engine-private `EngineRun`, whose reference is never
-  passed to a callable.  The starting-state byte vault lives outside
-  the callable-reachable workroot, so no scratch path can walk to it;
+  passed to a callable.  The capsule carries **no pending snapshot at
+  all**: pending outputs for paths the stage IS authorized to read are
+  materialized into its projection before the callable runs, so an
+  inert read-only copy of the all-path pending map (which a callable
+  could still READ for undeclared paths) is never exposed.  The
+  starting-state byte vault lives outside the callable-reachable
+  workroot, so no scratch path can walk to it;
+- each stage executes inside a **single disposable per-stage
+  workspace** `stage-workspaces/<n>-<stage-id>/` containing exactly its
+  `projection/` and `scratch/`.  The workspace is created immediately
+  before the stage's callable runs and destroyed **entirely** (in a
+  `finally`, even on failure) before the engine proceeds to the next
+  stage — so no earlier stage's projection or scratch directory ever
+  remains beneath any ancestor reachable from a later callback's
+  `root` or `scratch`, and a later stage cannot parent-walk or
+  enumerate its way to another stage's bytes (including primary inputs
+  only an earlier stage read).  Engine state that must survive across
+  stages belongs to `EngineRun.pending`, never to retained callable
+  filesystems;
 - the DAG therefore describes the real correctness dependency graph: a
   stage cannot silently consume another stage's input that happens to be
   present in a shared sandbox, nor alias its output to stale committed
@@ -151,10 +168,16 @@ Stage producers and verifiers never execute against the real working tree:
   directory, and the declared-read-aware `read()`); the engine keeps the
   real root, the unrestricted current-output reader, and the
   pending/mutation maps on the engine-private `EngineRun`, never passed
-  to a callable.  The starting-state byte vault lives outside the
-  callable-reachable workroot (a sibling directory), so no scratch path
-  can walk up to it; the per-stage capsule (projection + scratch) is
-  removed when the stage ends;
+  to a callable — and the capsule itself carries no pending snapshot:
+  authorized pending bytes are materialized into the projection, the
+  all-path pending map is engine-private.  The projection and scratch
+  live together in one **disposable per-stage workspace**
+  (`stage-workspaces/<n>-<stage-id>/`), created immediately before the
+  stage's callable runs and destroyed entirely (in a `finally`, even on
+  failure) when the stage ends, so no earlier stage's workspace is ever
+  reachable from a later callback's paths.  The starting-state byte
+  vault lives outside the callable-reachable workroot (a sibling
+  directory), so no scratch path can walk up to it;
 - around every callable the engine compares **full content digests of the
   projection** and a **complete path-state census of the real worktree**
   (tracked and untracked, present *and deleted*: clean-tracked,
