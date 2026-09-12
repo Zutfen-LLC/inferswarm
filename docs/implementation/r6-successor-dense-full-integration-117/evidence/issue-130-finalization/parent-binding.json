@@ -1,0 +1,27 @@
+{
+  "authority_model": "commit:path + expected sha256 (docs/evidence-manifests.md lifecycle)",
+  "bindings": {
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256": {
+      "commit": "d1afad64ca8bdd05634d3d0e1e09b8077da525d5",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/MANIFEST.sha256",
+      "sha256": "473ad14a01d293c39d45293222ad42d61cd2e8046ff3c5433dbf5683d7824946"
+    },
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json": {
+      "commit": "d1afad64ca8bdd05634d3d0e1e09b8077da525d5",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/producer-hashes.json",
+      "sha256": "d63bbafa010461d9ff4a0dc23a948abf8ff9157faf00c486ab3c45bd45e40d9b"
+    },
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/purity-audit.json": {
+      "commit": "d1afad64ca8bdd05634d3d0e1e09b8077da525d5",
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/purity-audit.json",
+      "sha256": "54e6cb8fe831df57de30899e020f08376c855ff2c22d559cf3b3d9edd322fc7f"
+    },
+    "scripts/issue117_proof.py": {
+      "commit": "d1afad64ca8bdd05634d3d0e1e09b8077da525d5",
+      "path": "scripts/issue117_proof.py",
+      "sha256": "a000f674cd62f96e50c5e8e555c46b4ec7f7a0aaf0237d19651deb02f8c11395"
+    }
+  },
+  "parent_commit": "d1afad64ca8bdd05634d3d0e1e09b8077da525d5",
+  "parent_issue": 117
+}

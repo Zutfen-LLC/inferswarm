@@ -60,6 +60,11 @@ jobs:
           python3 scripts/sync_project_status.py --check
           python3 -m unittest tests.test_project_status -v
 
+      - name: Check deterministic repository finalization (Issue #130)
+        run: |
+          python3 scripts/finalize_repository.py --check
+          python3 -m unittest tests.test_finalize_repository -v
+
       - name: Check evidence manifest lifecycle
         run: |
           python3 scripts/issue137_manifest.py --check
