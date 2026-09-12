@@ -172,6 +172,7 @@ jobs:
       - name: Check evidence manifest lifecycle
         run: |
           python3 scripts/issue137_manifest.py --check
+          python3 scripts/issue153_manifest.py --check
           python3 -m unittest tests.test_evidence_manifest_lifecycle -v
 
       - name: Check frozen Phase-0 workloads
@@ -422,7 +423,7 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run shard S3
-        run: python3 -m unittest tests.test_issue117_arm_a_retention tests.test_issue117_arm_c_blocker tests.test_issue129_arm_c_retry tests.test_issue133_gate_tooling_drift -v
+        run: python3 -m unittest tests.test_issue117_arm_a_retention tests.test_issue117_arm_c_blocker tests.test_issue129_arm_c_retry tests.test_issue133_gate_tooling_drift tests.test_issue153_arm_c_remediation -v
 
   issue-117-133-s4:
     name: Group issue-117-133 shard 4

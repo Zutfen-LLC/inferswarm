@@ -1,0 +1,136 @@
+{
+  "accepted_137_population": {
+    "divergent_case_ids": [
+      "c109-04-01-026",
+      "c109-04-02-047",
+      "c109-04-03-040",
+      "c109-04-04-024",
+      "c109-04-05-043",
+      "c109-04-06-074"
+    ],
+    "divergent_prompt_lens": [
+      65,
+      65,
+      66,
+      67,
+      67,
+      67
+    ],
+    "failing_population_rows": [
+      65,
+      66,
+      67
+    ],
+    "pinned_record": {
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-regime4-diagnosis-137/phase1-inventory.json",
+      "sha256": "369b2c81faf8ed1b2a68b1e1d039d6e6e7924d02254443c4707ad1b006ac7b3f"
+    },
+    "prefill_chunk": 64,
+    "stable_max_prompt_len": 53,
+    "two_chunk_equals_divergent_population": true
+  },
+  "branch_classification": {
+    "branch": "BACKEND_REQUIRES_MULTI_CHUNK",
+    "branch_a_available": false,
+    "branch_a_withdrawn_rationale": "UNNECESSARY_PARTITION_POLICY was derived from the C2 53-row control's one-call legality; C2 proves only that partitioning is SUFFICIENT for instability on a stable input, not that the accepted 65-67-row failing units can legally be one call.  Under the frozen contract (wire max_token_count=64, boundary bytes and staging buffers sized 64*3840*2), a 65-67-row single call is inadmissible; making it legal would change a frozen semantic/wire contract, which exceeds #153 authority.  Branch A is therefore WITHDRAWN for the actual failing population.",
+    "branch_b_option_1_available_cpu_only": false,
+    "branch_b_option_1_rationale": "Source inspection of the required multi-chunk extend path (stage_runtime._make_batch -> triton prepare_metadata -> extend_paged_attention, and the 1-row second-chunk decode-kernel route) found no provable backend/state defect: metadata and causal semantics are correct, tiles are fixed (no autotune), no atomics, KV writes land at the passed position.  The #137 record shows the instability is execution-level (3/6 cases vary in-session; 3 are stable per-session but distinct across sessions) \u2014 not a CPU-provable state wiring defect.  Identifying a defect would require new physical evidence, which is not authorized.",
+    "branch_b_rationale": "The complete actual failing logical units (65-67 rows) MUST remain multi-chunk (64 + remainder) under the frozen contract.  The corrected candidate keeps that path byte-identical to the accepted producer.",
+    "terminal": "ISSUE117_ARM_C_REMEDIATION_BLOCKED"
+  },
+  "chunk_count_independent": [
+    "decode path (untouched)",
+    "session/request identity",
+    "plan/candidate identity and digests",
+    "fencing / epoch / position attribution",
+    "stage ownership (frozen plan)"
+  ],
+  "chunk_policy_owner": {
+    "accepted_line_class": "hand literal chunk = 64 inside generate()",
+    "function": "GemmaStageChainRuntime.generate",
+    "module": "benchmarks/inferswarm_r6/stage_chain.py",
+    "remediated_line_class": "plan_prefill_partitions(len(prompt), admitted_prefill_rows()) inside the same generate()"
+  },
+  "downstream_chunk_count_dependents": [
+    "per-stage KV pool advance (RESET between replays)",
+    "one boundary wire payload per chunk",
+    "decode position offset by consumed rows"
+  ],
+  "failing_population_single_call_legal": {
+    "frozen_boundary_contract_prefill_chunk_rows": 64,
+    "frozen_geometry_sizing": "prefill_bytes = 64*3840*2; activation staging buffers sized 64*2*3840*2; wire receive buffer MAX_TOKEN_COUNT*ROW_WIDTH*2",
+    "rows": [
+      65,
+      66,
+      67
+    ],
+    "runtime_capacity_note": "session KV capacity, NOT per-call boundary authority",
+    "runtime_capacity_tokens": 256,
+    "verdict": false,
+    "wire_bound": "0 < token_count <= max_token_count (=64)"
+  },
+  "inputs": {
+    "accepted_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+    "pinned_blobs": {
+      "chain_runtime.py": {
+        "accepted_sha256": "9652ebb376b3737d559e6f764b47dfe154e31d1804e9eac62825badb4b3d9980",
+        "path": "benchmarks/inferswarm_r6/chain_runtime.py",
+        "remediated_sha256": "9652ebb376b3737d559e6f764b47dfe154e31d1804e9eac62825badb4b3d9980"
+      },
+      "last_stage_service.py": {
+        "accepted_sha256": "08825dcd39f81dcf0d3f0a38a680a9eaac0fadfd9cebba8c32a54113cbf6bbc1",
+        "path": "benchmarks/inferswarm_r6/last_stage_service.py",
+        "remediated_sha256": "273c22187734ef674de25144fb9484fa965e5423e78de5d660dfb7481f3ff6b2"
+      },
+      "node_agent.py": {
+        "accepted_sha256": "eebfa626b45362111282b7102fc0fcd4a5bf171fc82592f0d50eccd29b75a2e2",
+        "path": "benchmarks/inferswarm_r6/node_agent.py",
+        "remediated_sha256": "eebfa626b45362111282b7102fc0fcd4a5bf171fc82592f0d50eccd29b75a2e2"
+      },
+      "prefill_partition.py": {
+        "accepted_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "path": "python/freetoken/research/prefill_partition.py",
+        "remediated_sha256": "841635bd42e2bf25954e3fbe6ec902fb79f3d33cca1a4f5b1e8a51383ab73c86"
+      },
+      "r4_wire.py": {
+        "accepted_sha256": "491f710efc07119441a98642f8569d18a47bc3b4e785fbe7111cea258ab05e2c",
+        "path": "python/freetoken/research/r4_wire.py",
+        "remediated_sha256": "491f710efc07119441a98642f8569d18a47bc3b4e785fbe7111cea258ab05e2c"
+      },
+      "stage_chain.py": {
+        "accepted_sha256": "321bc91deb9a0e7f651a75f4158e973b3e72d889a32f76c8d8dc5c9081acde54",
+        "path": "benchmarks/inferswarm_r6/stage_chain.py",
+        "remediated_sha256": "42950431177783699bb6f677155925784970b08d7ddf6c8ea6486952477e8983"
+      },
+      "strategy.py": {
+        "accepted_sha256": "ca31f0999cb4fcf46d73c83f8b3ee7bbe2636792bcfc1824b15946aaac53906b",
+        "path": "benchmarks/inferswarm_r6/strategy.py",
+        "remediated_sha256": "ca31f0999cb4fcf46d73c83f8b3ee7bbe2636792bcfc1824b15946aaac53906b"
+      },
+      "two_stage.py": {
+        "accepted_sha256": "3ab8c3f490719cbc026a35d8d106fe0b6ac21e142d403e75f85db7bc15cf2728",
+        "path": "benchmarks/inferswarm_r6/two_stage.py",
+        "remediated_sha256": "3718d274be274aff1fd763d33d689a074115e9c10e7e37ff6239da3535df5d2b"
+      }
+    },
+    "remediation_producer": "f6133b88d40e4d43d3ac82fa732f21e540b7273d",
+    "starting_research_base": "b05564a7f3f7ca1b141d54842357ff2624dc6a19"
+  },
+  "one_call_53_rows_legal_control_only": {
+    "frozen_boundary_contract_prefill_chunk_rows": 64,
+    "role": "causal CONTROL from #137 probe C2 (single 53-row call deterministic; 32+21 varied); proves partitioning is sufficient for instability on a stable input \u2014 NOT legality of a 65-67-row single call",
+    "runtime_capacity_tokens": 256,
+    "verdict": true,
+    "wire_bound": "0 < token_count <= max_token_count (=64)"
+  },
+  "remediation_scope_of_the_candidate": "The <=64 single-chunk policy cleanup (capacity-derived, no drifting literals, wire/chain agreement) is RETAINED as useful: it removes the unnecessary-partition DEFECT CLASS for legal units.  It does NOT remediate the accepted 65-67 failing population, whose canonical execution path is unchanged (64 + remainder, same requests).",
+  "row_limit_inputs": {
+    "accepted_last_stage_MAX_TOKEN_COUNT": 64,
+    "accepted_stage_chain_chunk_literal": 64,
+    "accepted_two_stage_chunk_literal": 32,
+    "strategy_PREFILL_CHUNK": 64,
+    "wire_validate_request_bound": "contract['max_token_count']"
+  },
+  "same_policy_direct_and_ordinary": "Both paths drive realize_dense_chain -> GemmaStageChainRuntime.generate (single seam)",
+  "schema": "inferswarm.issue117.arm-c-remediation.phase0-inventory/2"
+}
