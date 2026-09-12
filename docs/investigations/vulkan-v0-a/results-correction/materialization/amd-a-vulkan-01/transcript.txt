@@ -1,0 +1,253 @@
+
+
+Loading model... |[34m0.01.190.086[0m [32mI [0mcmn  common_param: common_params_print_info: build 1 (8ea2902) with GNU 14.2.0 for Linux x86_64
+[34m0.01.190.092[0m [32mI [0mcmn  common_param: common_params_print_info: verbosity = 4 (adjust with the `-lv N` CLI arg)
+[34m0.01.190.092[0m [32mI [0mcmn  common_param: device_info:
+[34m0.01.190.970[0m [32mI [0mcmn  common_param:   - Vulkan0 : Intel(R) HD Graphics 510 (SKL GT1) (7956 MiB, 7160 MiB free)
+[34m0.01.191.625[0m [32mI [0mcmn  common_param:   - Vulkan1 : AMD Radeon RX 580 Series (RADV POLARIS10) (8192 MiB, 8186 MiB free)
+[34m0.01.192.162[0m [32mI [0mcmn  common_param:   - Vulkan2 : AMD Radeon RX 580 Series (RADV POLARIS10) (8192 MiB, 8186 MiB free)
+[34m0.01.192.687[0m [32mI [0mcmn  common_param:   - Vulkan3 : NVIDIA GeForce RTX 3060 Ti (8438 MiB, 8122 MiB free)
+[34m0.01.192.722[0m [32mI [0mcmn  common_param:   - CPU     : Intel(R) Celeron(R) CPU G3900 @ 2.80GHz (15912 MiB, 15912 MiB free)
+[34m0.01.192.871[0m [32mI [0mcmn  common_param: system_info: n_threads = 2 (n_threads_batch = 2) / 2 | CPU : SSE3 = 1 | SSSE3 = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1 | 
+[34m0.01.193.078[0m [32mI [0msrv          init: using 5 threads for HTTP server
+[34m0.01.193.795[0m [35mW srv  llama_server: -----------------
+[0m[34m0.01.193.907[0m [35mW srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+[0m[34m0.01.194.038[0m [35mW srv  llama_server: this can be a security risk (cross-origin attacks)
+[0m[34m0.01.194.108[0m [35mW srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+[0m[34m0.01.194.110[0m [35mW srv  llama_server: -----------------
+[0m[34m0.01.194.138[0m [32mI [0msrv         start: binding port with default address family
+[34m0.01.195.472[0m [32mI [0msrv    load_model: loading model '/home/hermes/v0a/models/Qwen2.5-3B-Instruct-Q4_K_M.gguf'
+[34m0.01.195.588[0m [32mI [0msrv    load_model: local path '/home/hermes/v0a/models/Qwen2.5-3B-Instruct-Q4_K_M.gguf'
+[34m0.01.195.644[0m [32mI [0mcmn  common_init_: fitting params to device memory ...
+[34m0.01.195.718[0m [32mI [0mcmn  common_init_: (for bugs during this step try to reproduce them with -fit off, or provide --verbose logs if the bug only occurs with -fit on)
+[34m0.01.195.826[0m [32mI [0mcommon_params_fit_impl: getting device memory data for initial parameters:
+-\|/[34m0.01.617.750[0m [32mI [0mcommon_memory_breakdown_print: | memory breakdown [MiB]                       | total   free    self   model   context   compute    unaccounted |
+[34m0.01.617.755[0m [32mI [0mcommon_memory_breakdown_print: |   - Vulkan1 (RX 580 Series (RADV POLARIS10)) |  8192 = 8186 + (3091 =  1834 +    1152 +     104) +       -3086 |
+[34m0.01.617.755[0m [32mI [0mcommon_memory_breakdown_print: |   - Host                                     |                  283 =   243 +       0 +      40                |
+[34m0.01.669.341[0m [32mI [0mcommon_params_fit_impl: projected to use 3091 MiB of device memory vs. 8186 MiB of free device memory
+[34m0.01.669.349[0m [32mI [0mcommon_params_fit_impl: will leave 5095 >= 1024 MiB of free device memory, no changes needed
+[34m0.01.669.350[0m [32mI [0mcommon_fit_params: successfully fit params to free device memory
+[34m0.01.669.354[0m [32mI [0mcommon_fit_params: fitting params to free memory took 0.47 seconds
+-[34m0.01.725.202[0m [32mI [0mllama_model_loader: loaded meta data with 39 key-value pairs and 434 tensors from /home/hermes/v0a/models/Qwen2.5-3B-Instruct-Q4_K_M.gguf (version GGUF V3 (latest))
+[34m0.01.725.225[0m [32mI [0mllama_model_loader: Dumping metadata keys/values. Note: KV overrides do not apply in this output.
+[34m0.01.725.229[0m [32mI [0mllama_model_loader: - kv   0:                       general.architecture str              = qwen2
+[34m0.01.725.230[0m [32mI [0mllama_model_loader: - kv   1:                               general.type str              = model
+[34m0.01.725.231[0m [32mI [0mllama_model_loader: - kv   2:                               general.name str              = Qwen2.5 3B Instruct
+[34m0.01.725.232[0m [32mI [0mllama_model_loader: - kv   3:                           general.finetune str              = Instruct
+[34m0.01.725.232[0m [32mI [0mllama_model_loader: - kv   4:                           general.basename str              = Qwen2.5
+[34m0.01.725.233[0m [32mI [0mllama_model_loader: - kv   5:                         general.size_label str              = 3B
+[34m0.01.725.233[0m [32mI [0mllama_model_loader: - kv   6:                            general.license str              = other
+[34m0.01.725.234[0m [32mI [0mllama_model_loader: - kv   7:                       general.license.name str              = qwen-research
+[34m0.01.725.235[0m [32mI [0mllama_model_loader: - kv   8:                       general.license.link str              = https://huggingface.co/Qwen/Qwen2.5-3...
+[34m0.01.725.236[0m [32mI [0mllama_model_loader: - kv   9:                   general.base_model.count u32              = 1
+[34m0.01.725.237[0m [32mI [0mllama_model_loader: - kv  10:                  general.base_model.0.name str              = Qwen2.5 3B
+[34m0.01.725.237[0m [32mI [0mllama_model_loader: - kv  11:          general.base_model.0.organization str              = Qwen
+[34m0.01.725.238[0m [32mI [0mllama_model_loader: - kv  12:              general.base_model.0.repo_url str              = https://huggingface.co/Qwen/Qwen2.5-3B
+[34m0.01.725.247[0m [32mI [0mllama_model_loader: - kv  13:                               general.tags arr[str,2]       = ["chat", "text-generation"]
+[34m0.01.725.248[0m [32mI [0mllama_model_loader: - kv  14:                          general.languages arr[str,1]       = ["en"]
+[34m0.01.725.249[0m [32mI [0mllama_model_loader: - kv  15:                          qwen2.block_count u32              = 36
+[34m0.01.725.250[0m [32mI [0mllama_model_loader: - kv  16:                       qwen2.context_length u32              = 32768
+[34m0.01.725.250[0m [32mI [0mllama_model_loader: - kv  17:                     qwen2.embedding_length u32              = 2048
+[34m0.01.725.251[0m [32mI [0mllama_model_loader: - kv  18:                  qwen2.feed_forward_length u32              = 11008
+[34m0.01.725.251[0m [32mI [0mllama_model_loader: - kv  19:                 qwen2.attention.head_count u32              = 16
+[34m0.01.725.252[0m [32mI [0mllama_model_loader: - kv  20:              qwen2.attention.head_count_kv u32              = 2
+[34m0.01.725.256[0m [32mI [0mllama_model_loader: - kv  21:                       qwen2.rope.freq_base f32              = 1000000.000000
+[34m0.01.725.258[0m [32mI [0mllama_model_loader: - kv  22:     qwen2.attention.layer_norm_rms_epsilon f32              = 0.000001
+[34m0.01.725.258[0m [32mI [0mllama_model_loader: - kv  23:                          general.file_type u32              = 15
+[34m0.01.725.259[0m [32mI [0mllama_model_loader: - kv  24:                       tokenizer.ggml.model str              = gpt2
+[34m0.01.725.259[0m [32mI [0mllama_model_loader: - kv  25:                         tokenizer.ggml.pre str              = qwen2
+[34m0.01.744.977[0m [32mI [0mllama_model_loader: - kv  26:                      tokenizer.ggml.tokens arr[str,151936]  = ["!", "\"", "#", "$", "%", "&", "'", ...
+[34m0.01.750.683[0m [32mI [0mllama_model_loader: - kv  27:                  tokenizer.ggml.token_type arr[i32,151936]  = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, ...
+[34m0.01.770.581[0m [32mI [0mllama_model_loader: - kv  28:                      tokenizer.ggml.merges arr[str,151387]  = ["Ġ Ġ", "ĠĠ ĠĠ", "i n", "Ġ t",...
+[34m0.01.770.588[0m [32mI [0mllama_model_loader: - kv  29:                tokenizer.ggml.eos_token_id u32              = 151645
+[34m0.01.770.589[0m [32mI [0mllama_model_loader: - kv  30:            tokenizer.ggml.padding_token_id u32              = 151643
+[34m0.01.770.589[0m [32mI [0mllama_model_loader: - kv  31:                tokenizer.ggml.bos_token_id u32              = 151643
+[34m0.01.770.590[0m [32mI [0mllama_model_loader: - kv  32:               tokenizer.ggml.add_bos_token bool             = false
+[34m0.01.770.593[0m [32mI [0mllama_model_loader: - kv  33:                    tokenizer.chat_template str              = {%- if tools %}\n    {{- '<|im_start|>...
+[34m0.01.770.594[0m [32mI [0mllama_model_loader: - kv  34:               general.quantization_version u32              = 2
+[34m0.01.770.595[0m [32mI [0mllama_model_loader: - kv  35:                      quantize.imatrix.file str              = /models_out/Qwen2.5-3B-Instruct-GGUF/...
+[34m0.01.770.596[0m [32mI [0mllama_model_loader: - kv  36:                   quantize.imatrix.dataset str              = /training_dir/calibration_datav3.txt
+[34m0.01.770.597[0m [32mI [0mllama_model_loader: - kv  37:             quantize.imatrix.entries_count i32              = 252
+[34m0.01.770.598[0m [32mI [0mllama_model_loader: - kv  38:              quantize.imatrix.chunks_count i32              = 128
+[34m0.01.770.599[0m [32mI [0mllama_model_loader: - type  f32:  181 tensors
+[34m0.01.770.600[0m [32mI [0mllama_model_loader: - type q4_K:  216 tensors
+[34m0.01.770.600[0m [32mI [0mllama_model_loader: - type q6_K:   37 tensors
+[34m0.01.770.601[0m [32mI [0mprint_info: file format = GGUF V3 (latest)
+[34m0.01.770.602[0m [32mI [0mprint_info: file type   = Q4_K - Medium
+[34m0.01.770.604[0m [32mI [0mprint_info: file size   = 1.79 GiB (4.99 BPW) 
+[34m0.01.771.200[0m [32mI [0mllama_prepare_model_devices: using device Vulkan1 (AMD Radeon RX 580 Series (RADV POLARIS10)) (0000:02:00.0) - 8186 MiB free
+\|[34m0.01.915.621[0m [32mI [0mload: 0 unused tokens
+[34m0.01.917.557[0m [35mW load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+[0m[34m0.01.956.128[0m [32mI [0mload: printing all EOG tokens:
+[34m0.01.956.134[0m [32mI [0mload:   - 128247 ('</s>')
+[34m0.01.956.134[0m [32mI [0mload:   - 151643 ('<|endoftext|>')
+[34m0.01.956.135[0m [32mI [0mload:   - 151645 ('<|im_end|>')
+[34m0.01.956.135[0m [32mI [0mload:   - 151662 ('<|fim_pad|>')
+[34m0.01.956.136[0m [32mI [0mload:   - 151663 ('<|repo_name|>')
+[34m0.01.956.136[0m [32mI [0mload:   - 151664 ('<|file_sep|>')
+[34m0.01.956.609[0m [32mI [0mload: special tokens cache size = 23
+/[34m0.02.026.503[0m [32mI [0mload: token to piece cache size = 0.9310 MB
+[34m0.02.026.526[0m [32mI [0mprint_info: arch                  = qwen2
+[34m0.02.026.527[0m [32mI [0mprint_info: vocab_only            = 0
+[34m0.02.026.527[0m [32mI [0mprint_info: no_alloc              = 0
+[34m0.02.026.527[0m [32mI [0mprint_info: n_ctx_train           = 32768
+[34m0.02.026.528[0m [32mI [0mprint_info: n_embd_inp            = 2048
+[34m0.02.026.528[0m [32mI [0mprint_info: n_embd                = 2048
+[34m0.02.026.529[0m [32mI [0mprint_info: n_embd_out            = 2048
+[34m0.02.026.529[0m [32mI [0mprint_info: n_layer               = 36
+[34m0.02.026.529[0m [32mI [0mprint_info: n_layer_all           = 36
+[34m0.02.026.536[0m [32mI [0mprint_info: n_head                = 16
+[34m0.02.026.537[0m [32mI [0mprint_info: n_head_kv             = 2
+[34m0.02.026.537[0m [32mI [0mprint_info: n_rot                 = 128
+[34m0.02.026.538[0m [32mI [0mprint_info: n_swa                 = 0
+[34m0.02.026.538[0m [32mI [0mprint_info: is_swa_any            = 0
+[34m0.02.026.539[0m [32mI [0mprint_info: non_causal_type       = 0
+[34m0.02.026.539[0m [32mI [0mprint_info: n_embd_head_k         = 128
+[34m0.02.026.539[0m [32mI [0mprint_info: n_embd_head_v         = 128
+[34m0.02.026.540[0m [32mI [0mprint_info: n_gqa                 = 8
+[34m0.02.026.542[0m [32mI [0mprint_info: n_embd_k_gqa          = 256
+[34m0.02.026.544[0m [32mI [0mprint_info: n_embd_v_gqa          = 256
+[34m0.02.026.544[0m [32mI [0mprint_info: f_norm_eps            = 0.0e+00
+[34m0.02.026.545[0m [32mI [0mprint_info: f_norm_rms_eps        = 1.0e-06
+[34m0.02.026.546[0m [32mI [0mprint_info: f_clamp_kqv           = 0.0e+00
+[34m0.02.026.546[0m [32mI [0mprint_info: f_max_alibi_bias      = 0.0e+00
+[34m0.02.026.546[0m [32mI [0mprint_info: f_logit_scale         = 0.0e+00
+[34m0.02.026.546[0m [32mI [0mprint_info: f_attn_scale          = 0.0e+00
+[34m0.02.026.547[0m [32mI [0mprint_info: f_attn_value_scale    = 0.0000
+[34m0.02.026.548[0m [32mI [0mprint_info: n_ff                  = 11008
+[34m0.02.026.548[0m [32mI [0mprint_info: n_expert              = 0
+[34m0.02.026.549[0m [32mI [0mprint_info: n_expert_used         = 0
+[34m0.02.026.549[0m [32mI [0mprint_info: n_expert_groups       = 0
+[34m0.02.026.549[0m [32mI [0mprint_info: n_group_used          = 0
+[34m0.02.026.549[0m [32mI [0mprint_info: causal attn           = 1
+[34m0.02.026.550[0m [32mI [0mprint_info: pooling type          = -1
+[34m0.02.026.550[0m [32mI [0mprint_info: rope type             = 2
+[34m0.02.026.550[0m [32mI [0mprint_info: rope scaling          = linear
+[34m0.02.026.551[0m [32mI [0mprint_info: freq_base_train       = 1000000.0
+[34m0.02.026.552[0m [32mI [0mprint_info: freq_scale_train      = 1
+[34m0.02.026.552[0m [32mI [0mprint_info: n_ctx_orig_yarn       = 32768
+[34m0.02.026.553[0m [32mI [0mprint_info: rope_yarn_log_mul     = 0.0000
+[34m0.02.026.553[0m [32mI [0mprint_info: rope_finetuned        = unknown
+[34m0.02.026.554[0m [32mI [0mprint_info: model type            = 3B
+[34m0.02.026.555[0m [32mI [0mprint_info: model params          = 3.09 B
+[34m0.02.026.555[0m [32mI [0mprint_info: general.name          = Qwen2.5 3B Instruct
+[34m0.02.026.556[0m [32mI [0mprint_info: vocab type            = BPE
+[34m0.02.026.557[0m [32mI [0mprint_info: n_vocab               = 151936
+[34m0.02.026.557[0m [32mI [0mprint_info: n_merges              = 151387
+[34m0.02.026.557[0m [32mI [0mprint_info: BOS token             = 151643 '<|endoftext|>'
+[34m0.02.026.557[0m [32mI [0mprint_info: EOS token             = 151645 '<|im_end|>'
+[34m0.02.026.558[0m [32mI [0mprint_info: EOT token             = 151645 '<|im_end|>'
+[34m0.02.026.558[0m [32mI [0mprint_info: PAD token             = 151643 '<|endoftext|>'
+[34m0.02.026.558[0m [32mI [0mprint_info: LF token              = 198 'Ċ'
+[34m0.02.026.559[0m [32mI [0mprint_info: FIM PRE token         = 151659 '<|fim_prefix|>'
+[34m0.02.026.559[0m [32mI [0mprint_info: FIM SUF token         = 151661 '<|fim_suffix|>'
+[34m0.02.026.559[0m [32mI [0mprint_info: FIM MID token         = 151660 '<|fim_middle|>'
+[34m0.02.026.559[0m [32mI [0mprint_info: FIM PAD token         = 151662 '<|fim_pad|>'
+[34m0.02.026.560[0m [32mI [0mprint_info: FIM REP token         = 151663 '<|repo_name|>'
+[34m0.02.026.560[0m [32mI [0mprint_info: FIM SEP token         = 151664 '<|file_sep|>'
+[34m0.02.026.560[0m [32mI [0mprint_info: EOG token             = 128247 '</s>'
+[34m0.02.026.561[0m [32mI [0mprint_info: EOG token             = 151643 '<|endoftext|>'
+[34m0.02.026.561[0m [32mI [0mprint_info: EOG token             = 151645 '<|im_end|>'
+[34m0.02.026.561[0m [32mI [0mprint_info: EOG token             = 151662 '<|fim_pad|>'
+[34m0.02.026.562[0m [32mI [0mprint_info: EOG token             = 151663 '<|repo_name|>'
+[34m0.02.026.562[0m [32mI [0mprint_info: EOG token             = 151664 '<|file_sep|>'
+[34m0.02.026.562[0m [32mI [0mprint_info: max token length      = 256
+[34m0.02.027.659[0m [32mI [0mload_tensors: loading model tensors, this can take a while... (load_mode = mmap)
+-[34m0.02.158.781[0m [32mI [0mload_tensors: offloading output layer to GPU
+[34m0.02.158.786[0m [32mI [0mload_tensors: offloading 35 repeating layers to GPU
+[34m0.02.158.786[0m [32mI [0mload_tensors: offloaded 37/37 layers to GPU
+[34m0.02.158.791[0m [32mI [0mload_tensors:   CPU_Mapped model buffer size =   243.43 MiB
+[34m0.02.158.792[0m [32mI [0mload_tensors:      Vulkan1 model buffer size =  1834.82 MiB
+\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-[34m0.16.592.825[0m [32mI [0mcmn  common_init_: added </s> logit bias = -inf
+[34m0.16.593.569[0m [32mI [0mcmn  common_init_: added <|endoftext|> logit bias = -inf
+[34m0.16.594.393[0m [32mI [0mcmn  common_init_: added <|im_end|> logit bias = -inf
+[34m0.16.594.593[0m [32mI [0mcmn  common_init_: added <|fim_pad|> logit bias = -inf
+[34m0.16.594.594[0m [32mI [0mcmn  common_init_: added <|repo_name|> logit bias = -inf
+[34m0.16.594.594[0m [32mI [0mcmn  common_init_: added <|file_sep|> logit bias = -inf
+[34m0.16.594.698[0m [32mI [0mllama_context: constructing llama_context
+[34m0.16.594.700[0m [32mI [0mllama_context: n_seq_max             = 1
+[34m0.16.594.701[0m [32mI [0mllama_context: n_ctx                 = 32768
+[34m0.16.594.701[0m [32mI [0mllama_context: n_ctx_seq             = 32768
+[34m0.16.594.701[0m [32mI [0mllama_context: n_batch               = 2048
+[34m0.16.594.701[0m [32mI [0mllama_context: n_ubatch              = 512
+[34m0.16.594.702[0m [32mI [0mllama_context: causal_attn           = 1
+[34m0.16.594.702[0m [32mI [0mllama_context: flash_attn            = auto
+[34m0.16.594.703[0m [32mI [0mllama_context: kv_unified            = false
+[34m0.16.594.705[0m [32mI [0mllama_context: freq_base             = 1000000.0
+[34m0.16.594.706[0m [32mI [0mllama_context: freq_scale            = 1
+[34m0.16.594.706[0m [32mI [0mllama_context: n_rs_seq              = 0
+[34m0.16.594.706[0m [32mI [0mllama_context: n_outputs_max         = 1
+[34m0.16.594.706[0m [32mI [0mllama_context: n_outputs_max_per_seq = 1
+\|/-\|/-[34m0.17.367.037[0m [32mI [0mllama_context: Vulkan_Host  output buffer size =     0.58 MiB
+[34m0.17.368.469[0m [32mI [0mllama_kv_cache:    Vulkan1 KV buffer size =  1152.00 MiB
+\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|[34m0.26.429.531[0m [32mI [0mllama_kv_cache: size = 1152.00 MiB ( 32768 cells,  36 layers,  1/1 seqs), K (f16):  576.00 MiB, V (f16):  576.00 MiB
+[34m0.26.429.547[0m [32mI [0mllama_kv_cache: attn_rot_k = 0, n_embd_head_k_all = 128
+[34m0.26.429.548[0m [32mI [0mllama_kv_cache: attn_rot_v = 0, n_embd_head_k_all = 128
+[34m0.26.429.562[0m [32mI [0msched_reserve: reserving ...
+/[34m0.26.441.144[0m [32mI [0mresolve_fused_ops: Flash Attention enabled
+[34m0.26.441.154[0m [32mI [0mresolve_fused_ops: resolving fused DeepSeek V4 HC support:
+[34m0.26.451.845[0m [32mI [0mresolve_fused_ops: fused DeepSeek V4 HC pre enabled
+[34m0.26.461.295[0m [32mI [0mresolve_fused_ops: fused DeepSeek V4 HC comb enabled
+[34m0.26.467.454[0m [32mI [0mresolve_fused_ops: fused DeepSeek V4 HC post enabled
+[34m0.26.481.429[0m [32mI [0msched_reserve:    Vulkan1 compute buffer size =   104.51 MiB
+[34m0.26.481.435[0m [32mI [0msched_reserve: Vulkan_Host compute buffer size =    40.02 MiB
+[34m0.26.481.435[0m [32mI [0msched_reserve: graph nodes  = 1230
+[34m0.26.481.435[0m [32mI [0msched_reserve: graph splits = 2
+[34m0.26.481.437[0m [32mI [0msched_reserve: reserve took 51.87 ms, sched copies = 1
+[34m0.26.481.496[0m [32mI [0mcmn          init: llama threadpool init, n_threads = 2
+[34m0.26.481.524[0m [32mI [0mcmn  common_init_: warming up the model with an empty run - please wait ... (--no-warmup to disable)
+-[34m0.26.576.940[0m [32mI [0msrv    load_model: initializing, n_slots = 1, n_ctx_slot = 32768, kv_unified = 'false'
+[34m0.26.576.965[0m [32mI [0mspec common_specu: no implementations specified for speculative decoding
+[34m0.26.576.969[0m [32mI [0mslot   load_model: id  0 | task -1 | new slot, n_ctx = 32768
+[34m0.26.577.111[0m [32mI [0msrv    load_model: prompt cache is enabled, size limit: 8192 MiB
+[34m0.26.577.120[0m [32mI [0msrv    load_model: use `--cache-ram 0` to disable the prompt cache
+[34m0.26.577.121[0m [32mI [0msrv    load_model: for more info see https://github.com/ggml-org/llama.cpp/pull/16391
+[34m0.26.577.121[0m [32mI [0msrv    load_model: context checkpoints enabled, max = 32, min spacing = 8192
+[34m0.26.577.146[0m [32mI [0msrv          init: idle slots will be saved to prompt cache upon starting a new task
+[34m0.26.589.129[0m [32mI [0msrv          init: init: chat template, example_format: '<|im_start|>system
+You are a helpful assistant<|im_end|>
+<|im_start|>user
+Hello<|im_end|>
+<|im_start|>assistant
+Hi there<|im_end|>
+<|im_start|>user
+How are you?<|im_end|>
+<|im_start|>assistant
+'
+[34m0.26.596.752[0m [32mI [0msrv          init: init: chat template, thinking = 0
+[34m0.26.596.770[0m [32mI [0msrv          init: preserve_reasoning kwarg: not supported by template
+[34m0.26.596.825[0m [32mI [0msrv  llama_server: model loaded
+[34m0.26.596.825[0m [32mI [0msrv  llama_server: listening on http://127.0.0.1:49379
+[34m0.26.596.981[0m [32mI [0msrv  update_slots: all slots are idle
+\ 
+
+▄▄ ▄▄
+██ ██
+██ ██  ▀▀█▄ ███▄███▄  ▀▀█▄    ▄████ ████▄ ████▄
+██ ██ ▄█▀██ ██ ██ ██ ▄█▀██    ██    ██ ██ ██ ██
+██ ██ ▀█▄██ ██ ██ ██ ▀█▄██ ██ ▀████ ████▀ ████▀
+                                    ██    ██
+                                    ▀▀    ▀▀
+
+build      : b1-8ea2902
+model      : /home/hermes/v0a/models/Qwen2.5-3B-Instruct-Q4_K_M.gguf
+ftype      : Q4_K - Medium
+modalities : text
+
+available commands:
+  /exit or Ctrl+C     stop or exit
+  /regen              regenerate the last response
+  /clear              clear the chat history
+  /read <file>        add a text file
+  /glob <pattern>     add text files using globbing pattern
+
+
+[1m[32m
+> ///exit
+[0m
+
+Exiting...
+[34m0.31.733.250[0m [32mI [0msrv    operator(): operator(): cleaning up before exit...
+[34m0.31.735.708[0m [32mI [0mcommon_memory_breakdown_print: | memory breakdown [MiB]                       | total   free    self   model   context   compute    unaccounted |
+[34m0.31.735.721[0m [32mI [0mcommon_memory_breakdown_print: |   - Vulkan1 (RX 580 Series (RADV POLARIS10)) |  8192 = 5088 + (3091 =  1834 +    1152 +     104) +          12 |
+[34m0.31.735.722[0m [32mI [0mcommon_memory_breakdown_print: |   - Host                                     |                  283 =   243 +       0 +      40                |
