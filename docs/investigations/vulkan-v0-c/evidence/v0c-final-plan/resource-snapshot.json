@@ -1,0 +1,81 @@
+{
+  "compute_units": [
+    {
+      "capabilities": [
+        {
+          "bound_compute_unit_id": "cu-amd-a",
+          "bound_execution_unit_id": "unit-q4km-whole-model",
+          "bound_memory_resource_id": "mr-amd-a-vram",
+          "economics": {
+            "startup_seconds": 28.277
+          },
+          "evidence_fresh": true,
+          "evidence_id": "v0c-amd-a-final-qualification-01",
+          "execution_contract_id": "contract-s2-opaque-v1",
+          "implementation_id": "impl-portable-amd-a",
+          "integrity_status": "QUALIFIED",
+          "observation_digest": "66012e3b943e89b83ff2aa425ff74d5be3e1ce4a70db184cd4059797e9caaa73",
+          "observation_evidence_id": "v0c-amd-a-final-qualification-01",
+          "physical_device_bdf": "02:00.0",
+          "representations": [
+            "gguf-q4-k-m"
+          ],
+          "required_features": [
+            "compute"
+          ],
+          "runtime_identity": {
+            "binary_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+            "radv_target": "Mesa 25.0.7-2+deb13u1",
+            "selector": "Vulkan1",
+            "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c"
+          }
+        }
+      ],
+      "compute_unit_id": "cu-amd-a",
+      "memory_resource": {
+        "bytes": 8589934592,
+        "memory_resource_id": "mr-amd-a-vram"
+      },
+      "node_id": "node-inferswarm02",
+      "physical_device_bdf": "02:00.0"
+    },
+    {
+      "capabilities": [
+        {
+          "bound_compute_unit_id": "cu-nv-a",
+          "bound_execution_unit_id": "unit-q4km-whole-model",
+          "bound_memory_resource_id": "mr-nv-a-vram",
+          "economics": {
+            "startup_seconds": 1.0
+          },
+          "evidence_fresh": true,
+          "evidence_id": "v0c-nv-native-static-01",
+          "execution_contract_id": "contract-native-opaque-v1",
+          "implementation_id": "impl-native-nv-a",
+          "integrity_status": "QUALIFIED",
+          "observation_digest": "static-nv-not-eligible",
+          "observation_evidence_id": "v0c-nv-native-static-01",
+          "physical_device_bdf": "04:00.0",
+          "representations": [
+            "gguf-q4-k-m"
+          ],
+          "required_features": [
+            "compute"
+          ],
+          "runtime_identity": {
+            "binary_sha256": "native-nv-static"
+          }
+        }
+      ],
+      "compute_unit_id": "cu-nv-a",
+      "memory_resource": {
+        "bytes": 8589934592,
+        "memory_resource_id": "mr-nv-a-vram"
+      },
+      "node_id": "node-inferswarm02",
+      "physical_device_bdf": "04:00.0"
+    }
+  ],
+  "qualification_observation_identity": "66012e3b943e89b83ff2aa425ff74d5be3e1ce4a70db184cd4059797e9caaa73",
+  "schema": "inferswarm.v0c.resource-snapshot/1"
+}

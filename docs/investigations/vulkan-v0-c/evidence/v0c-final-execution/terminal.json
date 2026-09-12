@@ -1,0 +1,5 @@
+{
+  "reason": "one canonical physical attempt completed cleanly on the exact selected device with 37/37 offload and no fallback, but the frozen direct-accounting parser found no final Host/device breakdown rows after ready state. Therefore unexplained persistent host mirror, source fetches after ready, and unplanned state movement cannot be mechanically established.",
+  "schema": "inferswarm.v0c.terminal/1",
+  "terminal": "V0C_EVIDENCE_BLOCKED"
+}

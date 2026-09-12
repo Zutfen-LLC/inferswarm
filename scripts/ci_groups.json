@@ -112,7 +112,12 @@
   },
   "vulkan-v0-b": {
    "test_modules": [
-    "test_v0b_reduction"
+    "test_v0b_reduction",
+    "test_v0c_canonical_run",
+    "test_v0c_correctness",
+    "test_v0c_evidence_manifest",
+    "test_v0c_execution_seam",
+    "test_v0c_vulkan_adapter"
    ]
   }
  },
@@ -194,6 +199,9 @@
    "vulkan-v0-b"
   ],
   "docs/investigations/vulkan-v0-b/": [
+   "vulkan-v0-b"
+  ],
+  "docs/investigations/vulkan-v0-c/": [
    "vulkan-v0-b"
   ],
   "docs/project-status.json": [
@@ -629,6 +637,21 @@
   "scripts/v0b_terminal.py": [
    "vulkan-v0-b"
   ],
+  "scripts/v0c_canonical_run.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v0c_correctness.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v0c_execution_seam.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v0c_manifest.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v0c_vulkan_adapter.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/validate_issue109_prerequisites.py": [
    "issue-109-110"
   ],
@@ -658,6 +681,21 @@
   ],
   "tests/test_project_status.py": [
    "repo-integrity"
+  ],
+  "tests/test_v0c_canonical_run.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_v0c_correctness.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_v0c_evidence_manifest.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_v0c_execution_seam.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_v0c_vulkan_adapter.py": [
+   "vulkan-v0-b"
   ]
  },
  "planner": "scripts/plan_ci.py",
