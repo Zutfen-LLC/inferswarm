@@ -12,8 +12,12 @@ What is authoritative in the selection:
   - the seam reduction's explicit assessment of ALL FIVE Issue #142
     seam classes and the recorded properties of the selected seam;
   - the capability assessment's evidence-cited findings;
-  - retrospective CPU-layer factual context, re-derived by economics from
-    retained stderr under correction 3 after collection.
+  - the upstream correctness/stability reduction's explicit qualification
+    posture and per-pair integrity.
+
+Retrospective CPU-layer factual context is descriptive only: economics
+re-derives it from retained stderr under correction 3 after collection;
+it cannot promote or block the terminal selection.
 
 What is DESCRIPTIVE, never gate-controlling (declared non-authoritative
 heuristics, NOT preregistered, NOT part of any frozen methodology):
@@ -30,10 +34,9 @@ reduction, a seam whose recorded properties do not support
 backend-neutral planning above the execution boundary, a seam whose
 V0-C scope freezes a public API or cannot coexist with CUDA/HIP
 resources under the generic resource model, missing required capability
-facts, missing correctness qualifications/non-claims, or a broken CPU
-proof each PREVENTS the `V0B_PROCEED_TO_INTEGRATION_SPIKE` selection
-(failing closed to a lower classification rather than emitting the
-spike recommendation).
+facts, or missing correctness qualifications/non-claims each PREVENTS
+the `V0B_PROCEED_TO_INTEGRATION_SPIKE` selection (failing closed to a
+lower classification rather than emitting the spike recommendation).
 
 Writes docs/investigations/vulkan-v0-b/TERMINAL.json.
 """

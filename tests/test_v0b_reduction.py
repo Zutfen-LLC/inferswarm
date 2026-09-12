@@ -375,6 +375,12 @@ class TestTerminalSemantics(unittest.TestCase):
     def setUp(self):
         self.term = json.loads((V0B / "TERMINAL.json").read_text())
 
+    def test_terminal_docstring_excludes_cpu_from_authoritative_gate(self):
+        doc = (TERMINAL.read_text().split('"""', 2)[1]).lower()
+        self.assertNotIn("broken cpu\nproof each prevents", doc)
+        self.assertNotIn("what is authoritative in the selection:\n  - retrospective cpu", doc)
+        self.assertIn("retrospective cpu-layer factual context is descriptive", doc)
+
     def test_exactly_one_valid_terminal(self):
         self.assertIn(self.term["terminal"], VALID_TERMINALS)
 
