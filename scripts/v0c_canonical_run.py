@@ -64,12 +64,13 @@ def _breakdowns(stderr: str) -> tuple[list[dict[str, int | str]], list[str]]:
         r"(?P<context>\d+)\s*\+\s*(?P<compute>\d+)\)?"
     )
     rows, lines = [], []
-    for line in stderr.splitlines():
+    for line_index, line in enumerate(stderr.splitlines()):
         match = expression.search(line)
         if match:
             row = {key: (int(value) if value is not None else -1)
                    for key, value in match.groupdict().items() if key != "resource"}
             row["resource"] = match.group("resource")
+            row["line_index"] = line_index
             rows.append(row)
             lines.append(line)
     return rows, lines
@@ -85,21 +86,38 @@ def parse_accounting(stderr: str) -> dict[str, Any]:
     mapped, mapped_lines = _line_values(stderr, "CPU_Mapped model buffer size")
     output, output_lines = _line_values(stderr, "Vulkan_Host  output buffer size")
     host_compute, host_compute_lines = _line_values(stderr, "Vulkan_Host compute buffer size")
-    ready_lines = [line for line in stderr.splitlines()
+    all_lines = stderr.splitlines()
+    ready_indices = [index for index, line in enumerate(all_lines)
                    if "cached n_tokens = 0" in line and "memory_seq_rm" in line]
-    if len(ready_lines) != 1:
+    if len(ready_indices) != 1:
         raise AccountingError("missing or ambiguous ready-state accounting")
+    ready_index = ready_indices[0]
+    ready_lines = [all_lines[ready_index]]
     rows, breakdown_lines = _breakdowns(stderr)
-    device_rows = [row for row in rows if row["resource"] == "Vulkan1"]
+    indexed_rows = list(zip(rows, breakdown_lines, strict=True))
+    device_events = [(row, line, int(row["line_index"])) for row, line in indexed_rows
+                     if row["resource"] == "Vulkan1"]
     host_pattern = re.compile(r"\|\s+-\s+Host\s+\|\s*(\d+)\s*=\s*(\d+)\s*\+\s*(\d+)\s*\+\s*(\d+)")
-    host_matches = [(tuple(map(int, match.groups())), line) for line in stderr.splitlines()
-                    if (match := host_pattern.search(line))]
-    if len(device_rows) < 2:
-        raise AccountingError("missing before/after direct device memory breakdown")
-    if len(host_matches) != 1:
+    host_events = [(tuple(map(int, match.groups())), line, index)
+                   for index, line in enumerate(all_lines)
+                   if (match := host_pattern.search(line))]
+    pre_device = [(row, line, index) for row, line, index in device_events if index < ready_index]
+    post_device = [(row, line, index) for row, line, index in device_events if index > ready_index]
+    pre_host = [(row, line, index) for row, line, index in host_events if index < ready_index]
+    post_host = [(row, line, index) for row, line, index in host_events if index > ready_index]
+    if not pre_device:
+        raise AccountingError("missing pre-ready direct device memory breakdown")
+    if not post_device:
+        raise AccountingError("missing final direct device memory breakdown")
+    if not post_host:
         raise AccountingError("missing final direct host memory breakdown")
-    before, after = device_rows[0], device_rows[-1]
-    host_total, host_model, host_context, host_compute_mib = host_matches[0][0]
+    if len(post_device) != 1:
+        raise AccountingError("ambiguous final direct device memory breakdown")
+    if len(post_host) != 1:
+        raise AccountingError("ambiguous final direct host memory breakdown")
+    before, before_line, _ = pre_device[-1]
+    after, after_line, _ = post_device[0]
+    (host_total, host_model, host_context, host_compute_mib), host_line, _ = post_host[0]
     for row, name in ((before, "before device"), (after, "after device")):
         # The displayed total/free/self columns include the runtime's explicit
         # unaccounted field, so only the directly decomposed self total is exact.
@@ -115,8 +133,7 @@ def parse_accounting(stderr: str) -> dict[str, Any]:
         raise AccountingError("contradictory host buffers and breakdown")
     # A direct Host model component not labelled CPU_Mapped is not silently zeroed.
     unexplained = max(0, (host_model * MIB) - mapped)
-    ready_index = stderr.splitlines().index(ready_lines[0])
-    after_ready = stderr.splitlines()[ready_index + 1:]
+    after_ready = all_lines[ready_index + 1:]
     source_fetch_lines = [line for line in after_ready if re.search(r"\b(fetch|download|remote source)\b", line, re.I)]
     movement_lines = [line for line in after_ready if re.search(r"\b(rematerializ|state movement|migration|copying state)\b", line, re.I)]
     return {
@@ -136,9 +153,9 @@ def parse_accounting(stderr: str) -> dict[str, Any]:
             "device_model": model_lines, "device_context": context_lines,
             "device_compute": compute_lines, "host_mapping": mapped_lines,
             "host_output": output_lines, "host_compute": host_compute_lines,
-            "ready_state": ready_lines, "device_memory_before_after": [
-                breakdown_lines[rows.index(before)], breakdown_lines[rows.index(after)]],
-            "host_memory_final": [host_matches[0][1]],
+            "ready_state": ready_lines, "device_memory_before_after": [before_line, after_line],
+            "host_memory_pre_realization": [line for _, line, _ in pre_host],
+            "host_memory_final": [host_line],
             "source_fetches_after_ready": source_fetch_lines,
             "unplanned_state_movements": movement_lines,
         },
@@ -230,10 +247,10 @@ def main(argv: list[str] | None = None) -> int:
     environment = {key: os.environ[key] for key in sorted(os.environ) if key.startswith(("GGML_", "VK_", "LD_LIBRARY_PATH")) and os.environ[key]}
     started = datetime.now(timezone.utc).isoformat()
     t0 = time.monotonic()
-    process = subprocess.run(runtime_argv, capture_output=True, text=True, timeout=1200, env=dict(os.environ))
+    process = subprocess.run(runtime_argv, capture_output=True, text=False, timeout=1200, env=dict(os.environ))
     wall_seconds = round(time.monotonic() - t0, 3)
-    (out / "stdout.txt").write_text(process.stdout, encoding="utf-8")
-    (out / "stderr.txt").write_text(process.stderr, encoding="utf-8")
+    (out / "stdout.txt").write_bytes(process.stdout)
+    (out / "stderr.txt").write_bytes(process.stderr)
     (out / "exit-code.txt").write_text(f"{process.returncode}\n", encoding="utf-8")
     record: dict[str, Any] = {"schema": f"inferswarm.v0c.{args.mode}-attempt/1", "mode": args.mode,
         "started_utc": started, "wall_seconds": wall_seconds, "argv": runtime_argv, "environment": environment,
@@ -242,7 +259,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if process.returncode != 0:
             raise RuntimeError("runtime exit was not clean")
-        proof = _proof(process.stderr, frozen)
+        stderr = process.stderr.decode("utf-8")
+        proof = _proof(stderr, frozen)
         record["execution_proof"] = proof
         if args.mode == "qualification":
             observation = {"schema": "inferswarm.v0c.qualification-observation/1", "qualification_evidence_id": frozen["qualification_evidence_id"],
@@ -253,7 +271,7 @@ def main(argv: list[str] | None = None) -> int:
             observation["observation_digest"] = digest_bytes(canonical(observation))
             record["qualification_observation"] = observation
         else:
-            accounting = parse_accounting(process.stderr)
+            accounting = parse_accounting(stderr)
             record["materialization_accounting"] = accounting
             if any(accounting[key] != 0 for key in ("unexplained_persistent_host_mirror_bytes", "source_fetches_after_ready", "unplanned_state_movements")):
                 raise AccountingError("accounting disposition is not clean")

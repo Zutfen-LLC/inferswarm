@@ -44,12 +44,14 @@ EVIDENCE_FILES = frozenset({
 })
 SOURCES = frozenset({
     "scripts/v0c_canonical_run.py",
+    "scripts/v0c_correctness.py",
     "scripts/v0c_execution_seam.py",
     "scripts/v0c_manifest.py",
     "scripts/v0c_vulkan_adapter.py",
 })
 TESTS = frozenset({
     "tests/test_v0c_canonical_run.py",
+    "tests/test_v0c_correctness.py",
     "tests/test_v0c_evidence_manifest.py",
     "tests/test_v0c_execution_seam.py",
     "tests/test_v0c_vulkan_adapter.py",
