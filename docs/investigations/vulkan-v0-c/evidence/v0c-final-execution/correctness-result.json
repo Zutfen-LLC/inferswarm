@@ -1,1 +1,13 @@
-{"schema": "inferswarm.v0c.prospective-evidence-placeholder/1", "state": "PENDING_PHYSICAL_STAGE"}
+{
+  "byte_exact_visible_output": false,
+  "canonical_visible_output": "Loadinmode... |-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/-\\|/- \n\n\u2584\u2584 \u2584\u2584\n\u2588\u2588 \u2588\u2588\n\u2588\u2588 \u2588\u2588  \u2580\u2580\u2588\u2584 \u2588\u2588\u2588\u2584\u2588\u2588\u2588\u2584  \u2580\u2580\u2588\u2584    \u2584\u2588\u2588\u2588\u2588 \u2588\u2588\u2588\u2588\u2584 \u2588\u2588\u2588\u2588\u2584\n\u2588\u2588 \u2588\u2588 \u2584\u2588\u2580\u2588\u2588 \u2588\u2588 \u2588\u2588 \u2588\u2588 \u2584\u2588\u2580\u2588\u2588    \u2588\u2588    \u2588\u2588 \u2588\u2588 \u2588\u2588 \u2588\u2588\n\u2588\u2588 \u2588\u2588 \u2580\u2588\u2584\u2588\u2588 \u2588\u2588 \u2588\u2588 \u2588\u2588 \u2580\u2588\u2584\u2588\u2588 \u2588\u2588 \u2580\u2588\u2588\u2588\u2588 \u2588\u2588\u2588\u2588\u2580 \u2588\u2588\u2588\u2588\u2580\n                                    \u2588\u2588    \u2588\u2588\n                                    \u2580\u2580    \u2580\u2580\nbuil      :b10918ea29024mode      : homzutfe/cachv0modelQwen3InstrucQ4_K_gguftyp      :Q4_ -Mediumodalitie :tex\navailablcommand:\n  exioCtr    stooexi\n  rege             regeneratthlasrespons\n  clea             cleathchahistor\n  rea fil>       adtexfil\n  glo patter>    adtexfileusinglobbinpatter\n\n\n\n>Thquicbrowfojumpovethlazdo.Explaiwhahappennexionsentenc:Thsentenc Thquicbrowfojumpovethlazdo\"iwelknowpangra,anaftethisentenc,thnexsentenccoulbanythin,atherinspecifirulocontexprovidefowhacomenex.\n\n[Promp:24 |Generatio:4 ]\n\nExitin...",
+  "clean_exit": true,
+  "exact_device_proven": true,
+  "fallback_free": true,
+  "full_offload_proven": true,
+  "no_nan_inf": true,
+  "reason": "required direct materialization accounting was not emitted; no canonical execution proof or receipt may be minted",
+  "reference_visible_output": "The sentence \"The quick brown fox jumps over the lazy dog\" is a well-known pangram, and after this sentence, the next sentence could be anything, as there is no specific rule or context provided for what comes next.",
+  "schema": "inferswarm.v0c.correctness-result/1",
+  "status": "V0C_EVIDENCE_BLOCKED"
+}

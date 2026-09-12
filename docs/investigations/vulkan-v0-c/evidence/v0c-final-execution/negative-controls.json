@@ -1,1 +1,70 @@
-{"schema": "inferswarm.v0c.prospective-evidence-placeholder/1", "state": "PENDING_PHYSICAL_STAGE"}
+{
+  "controls": {
+    "accounting_unexplained_or_missing": {
+      "error": "missing final direct host memory breakdown",
+      "result": "REJECTED"
+    },
+    "alternate_device_fallback": {
+      "error": "adapter BDF contract",
+      "result": "REJECTED"
+    },
+    "cpu_fallback": {
+      "error": "adapter fallback contract",
+      "result": "REJECTED"
+    },
+    "generic_planner_source_audit": {
+      "matches": []
+    },
+    "partial_offload": {
+      "error": "adapter full-offload contract",
+      "result": "REJECTED"
+    },
+    "qualification_substituted_for_canonical": {
+      "error": "execution_receipt requires canonical execution schema",
+      "result": "REJECTED"
+    },
+    "wrong_candidate_id": {
+      "error": "frozen plan identity mismatch",
+      "result": "REJECTED"
+    },
+    "wrong_compute_unit_id": {
+      "error": "frozen plan identity mismatch",
+      "result": "REJECTED"
+    },
+    "wrong_execution_contract_id": {
+      "error": "frozen plan identity mismatch",
+      "result": "REJECTED"
+    },
+    "wrong_execution_unit_id": {
+      "error": "frozen plan identity mismatch",
+      "result": "REJECTED"
+    },
+    "wrong_implementation_id": {
+      "error": "frozen plan identity mismatch",
+      "result": "REJECTED"
+    },
+    "wrong_memory_resource_id": {
+      "error": "frozen plan identity mismatch",
+      "result": "REJECTED"
+    },
+    "wrong_model_identity": {
+      "error": "measured frozen identity mismatch (runner preflight contract)",
+      "result": "REJECTED"
+    },
+    "wrong_physical_device_bdf": {
+      "error": "frozen plan identity mismatch",
+      "result": "REJECTED"
+    },
+    "wrong_plan_digest": {
+      "error": "frozen plan identity mismatch",
+      "result": "REJECTED"
+    },
+    "wrong_runtime_binary": {
+      "error": "measured frozen identity mismatch (runner preflight contract)",
+      "result": "REJECTED"
+    }
+  },
+  "note": "Controls exercised through production validator/planner paths; physical accounting failure is retained, not retried.",
+  "schema": "inferswarm.v0c.negative-controls/1",
+  "status": "PASS"
+}

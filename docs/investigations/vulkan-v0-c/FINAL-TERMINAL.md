@@ -1,64 +1,37 @@
-# V0-C final terminal and physical-evidence disposition
+# V0-C final terminal and canonical-attempt disposition
 
 Issue: Zutfen-LLC/inferswarm#143
 
 Terminal: `V0C_EVIDENCE_BLOCKED`
 
-## Mechanical canonical-execution audit
+A final authority-pinned qualification and one plan-driven canonical attempt
+were performed locally on `inferswarm02`. The V0-C executable was
+`/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli`, SHA-256
+`5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec`.
+The older V0-A executable was not used.
 
-**Answer: yes.** The retained physical invocation in
-`raw/v0c-amd-a-01/` occurred before the final capability/device/Memory
-Resource/execution-unit hardening.
+Qualification `v0c-amd-a-final-qualification-01` passed with the exact source,
+runtime, and model identities, selected `Vulkan1` at `02:00.0`, 37/37 layer
+offload, no fallback, and clean exit. It minted
+`cap-v0c-amd-a-s2-final-01` and the generic planner selected
+`candidate-d3a1cdda2ead943f86e5c00ac534420964566ac8ddb237d53e0009b1702d25d4`.
+The frozen plan digest is
+`f0e9c51393ece62b3164b4c1050aa2e4651b91f67de5bb81747aeb11cb041464`.
 
-The raw observation was committed as
-`0de81ddde18f2c7981fe1086f96d04e473f1cba1` at
-`2026-09-12T13:22:53-04:00`, with parent
-`93d65669ae432e9e7b16f01631d8b07c7eee7d5a`. Its tree bound the then-current
-control-plane source bytes:
+Canonical attempt `v0c-amd-a-final-canonical-01` had clean exit, exact device
+and full-offload proofs, and no fallback. Its direct llama.cpp diagnostics
+included named model/KV/compute buffers and the ready-state marker, but after
+ready emitted memory-breakdown headers without final Host/device breakdown
+rows. The parser therefore cannot mechanically establish unexplained persistent
+host mirror bytes, source fetches after ready, or unplanned state movements.
+It does not manufacture zero from process RSS or missing lines.
 
-- `scripts/v0c_execution_seam.py` SHA-256
-  `9a19017365ee69748891c0a619d6eaeb764273a124d506f6540336f23825b259`;
-- `scripts/v0c_vulkan_adapter.py` SHA-256
-  `3ff79f70342c8b8ca3c5c441fe7bcd4597ab748ca82911fbb24d5b19f6cf5537`.
+Consequently no object under the canonical-execution-observation schema and no
+execution receipt was minted. The retained raw attempt, accounting failure,
+correctness reduction, and controls identify the concrete blocker. The old
+`v0c-amd-a-01` smoke remains noncanonical; it supplied neither a tolerance nor
+an output-derived contract change. The opaque execution-contract gate remains
+an architectural S2 clarification.
 
-The retained run binds the Phase-0 llama.cpp source commit
-`8ea290247c87ced2ab245b056ffe96dbcf90d36c`, `llama-cli` SHA-256
-`5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec`,
-model SHA-256
-`9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94`,
-selector `Vulkan1`, and BDF `02:00.0`. Its backend stderr proves the selected
-Vulkan device and 37/37 layer offload, but it was an adapter-substrate smoke
-rather than a frozen-plan realization.
-
-## Why the observation is not canonical for the final implementation
-
-The final hardening changes correctness-bearing execution semantics, not only
-metadata:
-
-- a capability now requires an adapter-validated observation bound to the
-  exact Compute Unit, Memory Resource, execution unit, evidence, BDF, and
-  runtime identity;
-- candidate identity now includes the Memory Resource, implementation, and
-  evidence identities, and a frozen plan rejects a candidate with a different
-  execution unit, Memory Resource, or derived candidate identity;
-- fallback text and ambiguous/mismatched device/offload observations fail
-  closed before a capability can be created.
-
-Therefore the earlier smoke cannot establish final capability eligibility,
-physical-device binding, Memory Resource binding, strategy execution-unit
-binding, candidate/plan identity, fallback rejection, or final execution
-attribution. It remains retained as the noncanonical initial observation;
-it is not rewritten, reclassified as a pass, or used to derive a tolerance.
-
-## Disposition and next authorized evidence
-
-No new canonical physical execution was performed for this finalization. The
-prospectively frozen methodology remains unchanged and permits a later
-canonical run only when it is driven by the final frozen plan and can retain
-all required materialization/residency, reconciliation, fallback, and result
-attribution records. Until that evidence exists, the terminal is
-`V0C_EVIDENCE_BLOCKED`.
-
-This is an integration-spike result only. It makes no production Vulkan,
-public API, preferred-backend, performance, or cross-backend-equivalence
-claim.
+This remains an integration spike: no public API, preferred/default-backend
+ADR, production-support claim, or cross-backend equivalence claim is made.
