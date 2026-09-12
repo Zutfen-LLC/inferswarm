@@ -353,10 +353,16 @@ jobs:
         run: python3 -m unittest tests.test_issue109_v5_methodology tests.test_issue109_v5_thresholds tests.test_issue109_v5_methodology_freeze tests.test_issue110_v5_custody_handoff tests.test_issue110_terminal_report_decimals -v
 
   # The ~850-test Issue #117/#129/#133 lineage dominates the old serial
-  # critical path (~197 s). It is split into four deterministic shards
-  # (S1-S4, composition fixed in scripts/ci_groups.json and mirrored in
-  # tests/test_plan_ci.py) so full regression no longer pays it serially.
-  # All shards consume the same canonical #131 CPU environment.
+  # critical path (~197 s hosted). It is split into four deterministic
+  # shards, balanced from measured per-module timings (recorded in the
+  # Issue #148 PR report). Shard composition is defined here and must
+  # keep the three test_issue133_{arm_c_retry_campaign,
+  # arm_c_retry_direct, corrected_freeze} modules in ONE shard:
+  # corrected_freeze pins the real scripts/ modules in sys.modules at
+  # import time, which is what makes the campaign fixture's scratch-repo
+  # gate exercise safe in-process (the pre-change monolithic command
+  # relied on the same property). All shards consume the same canonical
+  # #131 CPU environment.
 
   issue-117-133-s1:
     name: Group issue-117-133 shard 1
@@ -377,7 +383,7 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run shard S1
-        run: python3 -m unittest tests.test_issue117_integration_fixture tests.test_issue117_applicability tests.test_issue117_gemma_strategy tests.test_issue117_planner tests.test_issue117_preflight -v
+        run: python3 -m unittest tests.test_issue117_integration_fixture tests.test_issue117_applicability tests.test_issue117_gemma_strategy tests.test_issue117_planner tests.test_issue117_preflight tests.test_issue117_proof tests.test_issue117_provenance tests.test_issue117_checkpoint_authority tests.test_issue117_accepted_subject tests.test_issue117_physical_retention tests.test_issue117_arm_c_retention -v
 
   issue-117-133-s2:
     name: Group issue-117-133 shard 2
@@ -398,7 +404,7 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run shard S2
-        run: python3 -m unittest tests.test_issue117_proof tests.test_issue117_provenance tests.test_issue117_checkpoint_authority tests.test_issue117_accepted_subject tests.test_issue117_physical_retention -v
+        run: python3 -m unittest tests.test_issue117_arm_b_retention tests.test_issue133_arm_c_retry_campaign tests.test_issue133_arm_c_retry_direct tests.test_issue133_corrected_freeze -v
 
   issue-117-133-s3:
     name: Group issue-117-133 shard 3
@@ -419,7 +425,7 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run shard S3
-        run: python3 -m unittest tests.test_issue117_arm_a_retention tests.test_issue117_arm_b_retention tests.test_issue117_arm_c_retention tests.test_issue117_arm_c_blocker tests.test_issue129_arm_c_retry -v
+        run: python3 -m unittest tests.test_issue117_arm_a_retention tests.test_issue117_arm_c_blocker tests.test_issue129_arm_c_retry tests.test_issue133_gate_tooling_drift -v
 
   issue-117-133-s4:
     name: Group issue-117-133 shard 4
@@ -440,7 +446,7 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run shard S4
-        run: python3 -m unittest tests.test_issue133_arm_c_retry_campaign tests.test_issue133_arm_c_retry_direct tests.test_issue133_corrected_freeze tests.test_issue133_gate_tooling_drift tests.test_issue133_prelaunch_bootstrap tests.test_issue133_physical_execution_retention -v
+        run: python3 -m unittest tests.test_issue133_prelaunch_bootstrap tests.test_issue133_physical_execution_retention -v
 
   issue-137:
     name: Group issue-137
