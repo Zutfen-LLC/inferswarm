@@ -45,11 +45,28 @@ temporary internal structure.
 The repository is documentation plus CPU-only evidence tooling. Nothing here
 needs a GPU.
 
+The canonical CPU test environment (Issue #131) is declared once in
+[`requirements-test.txt`](requirements-test.txt) (which installs the immutable
+Issue #117 frozen tokenizer requirements by reference, never by duplication).
+Bootstrap it, let the doctor qualify the environment, then run the suite:
+
 ```bash
-python3 -m pip install --user jsonschema numpy
+python3 scripts/bootstrap_test_env.py
+.venv/bin/python scripts/check_test_env.py
+.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
 python3 scripts/check_phase0_workloads.py
-python3 -m unittest $(ls tests/test_*.py | sed 's#tests/#tests.#; s#\.py$##')
 ```
+
+The bootstrap is idempotent and writes only inside the gitignored `.venv/`;
+the doctor fails fast — before the expensive suite — on a missing declared
+dependency, a model-runtime package leaking into the CPU environment, a
+missing `openssl`, or CI/documentation drift from the canonical contract.
+
+A missing declared test dependency is an **environment setup failure**, not a
+pre-existing test failure: bootstrap and re-run rather than stashing or
+checking out other revisions to demonstrate the gap on the base branch. Only
+if the doctor passes and a test still fails is normal
+pre-existing-failure reproduction appropriate.
 
 On a clean working tree the suite passes with five skips, all of them
 host-local resources this repository deliberately does not carry. A dirty

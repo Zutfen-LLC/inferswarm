@@ -16,35 +16,51 @@ The first is not a test to relax. See the frozen-producer rule in
 
 ## Requirements
 
+The canonical CPU test environment is declared once in
+[`../requirements-test.txt`](../requirements-test.txt) (Issue #131). That file
+is the single dependency authority — CI, the bootstrap, and the doctor all
+consume it; it installs the immutable Issue #117 frozen tokenizer requirements
+by reference and never restates their pins.
+
+```bash
+python3 scripts/bootstrap_test_env.py     # idempotent; creates .venv/
+.venv/bin/python scripts/check_test_env.py  # fast doctor before the suite
+```
+
+What the environment provides and why:
+
 | Requirement | Needed for |
 |---|---|
 | Python 3.11 or newer | everything (CI pins `3.12`) |
 | `jsonschema` | `test_issue74_methodology`, `test_issue79_v2_threshold_tooling`, `test_issue86_v3_methodology`, `test_issue110_v5_custody_handoff`, and the v2/v3 unseal preflights |
 | `numpy` | `test_analyze_phase1_p6` only |
 | `pyyaml` | the CI YAML check, not the test suite |
-| the pinned Issue #129 tokenizer requirements | `test_issue129_arm_c_retry` real-tokenizer proof |
-| `openssl` on `PATH` | the sealing/preflight tools and the synthetic certificate/custody tests in `test_issue109_v5_methodology` and `test_issue110_v5_custody_handoff` |
+| the pinned Issue #129 tokenizer requirements | `test_issue129_arm_c_retry` real-tokenizer proof (installed by reference from the authority file) |
+| `openssl` on `PATH` | the sealing/preflight tools and the synthetic certificate/custody tests in `test_issue109_v5_methodology` and `test_issue110_v5_custody_handoff` (external executable checked by the doctor, not a Python package) |
 
 Everything else is standard library. No test imports `torch`, initializes
 CUDA, or contacts a GPU node — `test_issue115_cleanup_retention` mechanically
-asserts that the cleanup tooling cannot.
+asserts that the cleanup tooling cannot, and the Issue #131 doctor rejects a
+model-runtime package entering the CPU environment.
 
-```bash
-python3 -m pip install --user jsonschema numpy
-python3 -m pip install --user -r docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/frozen-tokenizer/requirements.txt
-```
+A missing declared dependency is an environment setup failure, not a
+pre-existing test failure: run the doctor, fix what it names, re-run. Do not
+stash, reset, or check out another revision merely to demonstrate a declared
+dependency is missing on the base branch.
 
 ## Running
 
-There is no `tests/__init__.py`, so `unittest discover` does not work. Name
-the modules, exactly as [`ci.yml`](../.github/workflows/ci.yml) does:
+`unittest` discovery over the test directory is the canonical full-suite
+invocation (verified on a clean bootstrapped environment; the modules import
+their script dependencies by inserting `scripts/` on `sys.path` themselves,
+so no `tests/__init__.py` is needed):
 
 ```bash
 # one module
 python3 -m unittest tests.test_issue117_preflight -v
 
-# everything
-python3 -m unittest $(ls tests/test_*.py | sed 's#tests/#tests.#; s#\.py$##')
+# everything (1640 tests; ~8 minutes)
+python3 -m unittest discover -s tests -p 'test_*.py'
 ```
 
 The repository-integrity check is separate and needs no dependencies:
@@ -55,9 +71,10 @@ python3 scripts/check_phase0_workloads.py
 
 ## Expected result
 
-On a clean working tree with `jsonschema` and `numpy` installed, the whole
-suite passes with **5 skips**. Every skip is a host-local resource this
-repository deliberately does not carry:
+On a clean working tree inside a bootstrapped environment, the whole suite
+passes with **5 skips** (discovery adds no skips; CI's named-module selection
+remains a subset). Every skip is a host-local resource this repository
+deliberately does not carry:
 
 | Skipped test | Reason |
 |---|---|
@@ -88,7 +105,7 @@ Five modules are deliberately out:
 
 | Module | Why it is out of CI |
 |---|---|
-| `test_analyze_phase1_p6` | requires `numpy`, which CI does not install |
+| `test_analyze_phase1_p6` | historical Phase-1 analysis; runs locally under the canonical environment (which does provide `numpy`) |
 | `test_derive_phase1_placement_v2` | historical Phase-1 derivation |
 | `test_derive_phase1r_d3_placement` | historical Phase1R derivation |
 | `test_derive_phase1r_d4_placement` | historical Phase1R derivation |
@@ -96,6 +113,10 @@ Five modules are deliberately out:
 
 These five guard records that are frozen and no longer change. Run them locally
 before touching anything under `docs/investigations/data/`.
+
+CI bootstraps the same canonical environment locally developers use
+(`bootstrap_test_env.py` + `check_test_env.py`, Issue #131); it installs no
+Python packages outside `requirements-test.txt`.
 
 ## Adding a test
 

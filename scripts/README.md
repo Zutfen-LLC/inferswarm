@@ -38,7 +38,11 @@ not decide methodology.
   needs `numpy`; `verify_issue79_v2_unseal.py` and
   `verify_issue86_v3_unseal.py` need `jsonschema`. Some tools shell out to
   `openssl` for public-key DER derivation only. The Issue #129 real-tokenizer
-  proof needs the exact packages in its retained `requirements.txt`.
+  proof needs the exact packages in its retained `requirements.txt`. All of
+  these are installed by the canonical CPU test environment
+  ([`../requirements-test.txt`](../requirements-test.txt), Issue #131);
+  `bootstrap_test_env.py` and `check_test_env.py` in this directory create
+  and qualify that environment.
 
 ## The frozen-producer rule — read before editing anything here
 
@@ -98,8 +102,15 @@ propagate the misattribution, and do not retroactively repair the frozen ones.
 ## Running them
 
 See [`../tests/README.md`](../tests/README.md) for the interpreter version,
-dependencies, and the full verification procedure. The single check that runs
-without any third-party package is:
+the canonical CPU test environment (Issue #131), and the full verification
+procedure. Bootstrap and doctor, then run:
+
+```bash
+python3 scripts/bootstrap_test_env.py
+.venv/bin/python scripts/check_test_env.py
+```
+
+The single check that runs without any third-party package is:
 
 ```bash
 python3 scripts/check_phase0_workloads.py
