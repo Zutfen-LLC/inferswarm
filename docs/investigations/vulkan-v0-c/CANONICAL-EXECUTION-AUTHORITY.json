@@ -13,6 +13,7 @@
     "tolerance": null
   },
   "frozen": {
+    "candidate_id": "candidate-d3a1cdda2ead943f86e5c00ac534420964566ac8ddb237d53e0009b1702d25d4",
     "canonical_execution_evidence_id": "v0c-amd-a-final-canonical-01",
     "compute_unit_id": "cu-amd-a",
     "control_plane_sources": {
@@ -33,6 +34,7 @@
     "model_sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
     "objective": "MIN_STARTUP_SECONDS",
     "physical_device_bdf": "02:00.0",
+    "plan_digest": "f0e9c51393ece62b3164b4c1050aa2e4651b91f67de5bb81747aeb11cb041464",
     "prompt": "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
     "qualification_evidence_id": "v0c-amd-a-final-qualification-01",
     "radv_vulkan_target": "Vulkan loader 1.4.309.0; RADV Mesa 25.0.7-2+deb13u1",
@@ -44,6 +46,13 @@
     "selector": "Vulkan1"
   },
   "issue": "#143",
+  "plan_binding": {
+    "capability_id": "cap-v0c-amd-a-s2-final-01",
+    "frozen_after_qualification_before_canonical_execution": true,
+    "plan_digest": "f0e9c51393ece62b3164b4c1050aa2e4651b91f67de5bb81747aeb11cb041464",
+    "qualification_observation_digest": "66012e3b943e89b83ff2aa425ff74d5be3e1ce4a70db184cd4059797e9caaa73",
+    "selected_candidate_id": "candidate-d3a1cdda2ead943f86e5c00ac534420964566ac8ddb237d53e0009b1702d25d4"
+  },
   "schema": "inferswarm.v0c.canonical-execution-authority/1",
   "schemas": {
     "candidate_set": "inferswarm.v0c.generic-plan/1",
