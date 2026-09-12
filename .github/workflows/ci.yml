@@ -124,6 +124,9 @@ jobs:
       - name: Check issue 137 Arm-C regime-4 diagnosis (CPU-only)
         run: python3 -m unittest tests.test_issue137_regime4_diagnosis -v
 
+      - name: Check issue 143 V0-C execution seam (CPU-only)
+        run: python3 -m unittest tests.test_v0c_execution_seam tests.test_v0c_vulkan_adapter -v
+
       - name: Check issue 131 canonical CPU test environment (CPU-only)
         run: python3 -m unittest tests.test_issue131_cpu_test_env -v
 
