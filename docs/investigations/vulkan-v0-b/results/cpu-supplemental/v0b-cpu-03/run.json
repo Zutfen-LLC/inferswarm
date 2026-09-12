@@ -1,0 +1,50 @@
+{
+ "schema": "inferswarm.vulkan-v0-b.cpu-supplemental-run/1",
+ "run_id": "v0b-cpu-03",
+ "host": "inferswarm02",
+ "timestamp_utc_start": "2026-09-12T03:37:12.083241+00:00",
+ "timestamp_utc_end": "2026-09-12T03:51:08.341785+00:00",
+ "argv": [
+  "/home/hermes/v0a/llama.cpp/build-vulkan/bin/llama-bench",
+  "-m",
+  "/home/hermes/v0a/models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+  "-ngl",
+  "0",
+  "-fa",
+  "0",
+  "-p",
+  "512",
+  "-n",
+  "128",
+  "-r",
+  "5",
+  "-t",
+  "2",
+  "-v"
+ ],
+ "methodology_freeze_authority": "docs/investigations/vulkan-v0-b/METHODOLOGY.md",
+ "executable": {
+  "path": "/home/hermes/v0a/llama.cpp/build-vulkan/bin/llama-bench",
+  "sha256": "f78e6786c7fbdeff3f89c97c02df078cfbc297b886fd3f8010a639720b66914c"
+ },
+ "model": {
+  "path": "/home/hermes/v0a/models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+  "sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
+  "bytes": 1929903264
+ },
+ "intended": {
+  "backend": "CPU",
+  "device_selector": null,
+  "gpu_label": null,
+  "physical_bdf": null,
+  "note": "host-memory execution arm; no GPU may participate"
+ },
+ "threads": 2,
+ "exit_code": 0,
+ "backend_selection_proven": true,
+ "offload_zero_proven": true,
+ "cpu_buffer_proven": true,
+ "gpu_execution_binding_lines": [],
+ "stdout_bytes": 528,
+ "stderr_bytes": 73014
+}

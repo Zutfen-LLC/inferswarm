@@ -1,0 +1,109 @@
+{
+ "capability_discovery_useful_to_planning": {
+  "evidence": "the V0-A backend-capability record schema (physical GPU identity + backend identity + advertised capabilities + measured economics, bound to evidence) matches the doctrine's 'capabilities/evidence associated with a resource' requirement (fabric-doctrine 2.4, 6.6, ADR 0006); it is research evidence shape, NOT a production schema",
+  "status": "evidence-supported as a shape"
+ },
+ "framing": "Findings are backend capabilities / evidence associated with physical Compute Units (fabric-doctrine 2.4/2.5, ADR 0006 backend-independent boundaries). Nothing here becomes a resource-ontology noun.",
+ "issue": 142,
+ "per_backend": {
+  "amd_a_polaris_vulkan": {
+   "compute_unit": "AMD-A (02:00.0, 1002:67df rev e7, 8 GiB VRAM, x16-capable slot via x1 riser)",
+   "findings": {
+    "backend_fast_path_coexistence_under_generic_semantics": {
+     "evidence": "fabric-doctrine 6.6/10.2 permits backend-native executors under backend-neutral planning; no InferSwarm-integrated Vulkan executor exists yet to demonstrate it",
+     "status": "conceptually supported, unproven"
+    },
+    "capability_property_discovery_for_planning": {
+     "evidence": "vulkaninfo JSON dumps + llama.cpp advertised-capability banner retained (fp16/int-dot/matrix-cores/subgroup) \u2014 machine-readable per-device capability facts",
+     "status": "evidence-supported"
+    },
+    "deterministic_physical_device_discovery_selection": {
+     "evidence": "loader enumerates multiple devices; every corrected run pinned --device Vulkan1 and proved BDF 0000:02:00.0 in its own stderr; llvmpipe/iGPU/other-card fallbacks excluded per-run",
+     "status": "evidence-supported"
+    },
+    "device_local_memory_capacity_explicit": {
+     "evidence": "vulkaninfo JSON dump: 8589934592 B device-local; corrected runs record ~3.25 GB VRAM at ready with the 1.92 GB model fully resident + KV",
+     "status": "evidence-supported"
+    },
+    "evidence_bindable_backend_runtime_identity": {
+     "evidence": "RADV 25.0.7-2+deb13u1, Vulkan API 1.4.305, loader 1.4.309.0 recorded in capability records with build/library SHA-256s",
+     "status": "evidence-supported"
+    },
+    "model_state_materialization_on_accelerator": {
+     "evidence": "37/37 layers offloaded, zero-inference harness proves VRAM residency at ready; Qwen2.5-3B Q4_K_M only \u2014 no claim for larger/multi-GPU models",
+     "status": "demonstrated for this model class"
+    },
+    "persistent_host_copy_requirement": {
+     "evidence": "AMD-A host RSS at ready 0.47 GB vs NV-A/Vulkan 1.00 GB vs NV-A/CUDA 0.79 GB for a 1.93 GB model: the Vulkan arms hold more host RSS than CUDA at identical residency, consistent with a host-side shadow of state; RSS cannot establish persistence semantics \u2014 needs a runtime-level experiment",
+     "status": "no-evidence (bounded observation)"
+    },
+    "representation_quantization_support": {
+     "evidence": "Q4_K_M executed correctly; Polaris/RADV advertises no fp16 compute storage->compute fast path, no int-dot, and no matrix cores (subgroup 64); retained ggml evidence records the tested f32 compute path \u2014 representation breadth is partial/untested. These advertised capabilities and the tested representation path do not demonstrate a cause of the observed AMD throughput; compute vs memory vs link remains open",
+     "status": "partial"
+    },
+    "representative_ops_without_silent_host_fallback": {
+     "evidence": "clean exits, stable greedy generation, no fallback markers in retained stderr across 4 Vulkan runs; logits-level op coverage NOT observable via CLI",
+     "status": "demonstrated at fixture scale"
+    },
+    "stable_sync_execution_semantics": {
+     "evidence": "backend-local repeatability stable (3/3 identical AMD-A generations); crash/hang/device-loss rate unobserved beyond campaign length",
+     "status": "evidence-supported (bounded)"
+    },
+    "useful_error_reporting": {
+     "evidence": "device/offload banners, exit codes, and RADV driver messages retained and sufficient to attribute runs",
+     "status": "adequate"
+    },
+    "workload_relevant_decode_performance": {
+     "evidence": "AMD Vulkan decode tg128 median 43.7 t/s is measured; a retained host comparison exists in results/economics.json. Vulkan/host ratios are descriptive context only: the CPU proof was established retrospectively after collection, is not prospectively frozen decision-grade authority, and does not gate or promote the V0-B terminal",
+     "status": "measured \u2014 descriptive host context only"
+    },
+    "workload_relevant_prefill_performance": {
+     "evidence": "pp512 median 498.0 t/s (vs NV-A Vulkan 3579.0) \u2014 DESCRIPTIVE cross-vendor only; absolute level ~26x below the same-class CUDA control is not available (no AMD native arm)",
+     "status": "measured \u2014 materially limited"
+    }
+   }
+  },
+  "nv_a_ga104_vulkan": {
+   "compute_unit": "NV-A (04:00.0, GA104 RTX 3060 Ti, 8 GiB, endpoint LnkCap 2.5GT/s x16 / LnkSta x1)",
+   "findings": {
+    "deterministic_physical_device_discovery_selection": {
+     "evidence": "pinned --device Vulkan3 proved as 0000:04:00.0 in run stderr; CUDA0 control likewise",
+     "status": "evidence-supported"
+    },
+    "device_local_memory_capacity_explicit": {
+     "evidence": "vulkaninfo + corrected materialization (~3.28 GB VRAM at ready)",
+     "status": "evidence-supported"
+    },
+    "evidence_bindable_backend_runtime_identity": {
+     "evidence": "NVIDIA Vulkan ICD 615.71.09 + build SHA-256s retained",
+     "status": "evidence-supported"
+    },
+    "model_state_materialization_on_accelerator": {
+     "evidence": "37/37 layers, zero-inference proof, flat VRAM through idle hold",
+     "status": "demonstrated for this model class"
+    },
+    "persistent_host_copy_requirement": {
+     "evidence": "same RSS-shadow observation as AMD-A; runtime-level experiment required",
+     "status": "no-evidence (bounded observation)"
+    },
+    "representation_quantization_support": {
+     "evidence": "fp16, int-dot, NV_coopmat2 (subgroup 32) advertised; Q4_K_M executed correctly at 0.949/0.884 of CUDA",
+     "status": "strong for this stack"
+    },
+    "representative_ops_without_silent_host_fallback": {
+     "evidence": "corrected run exited cleanly; intended NV-A physical device was proven; no silent host fallback markers were observed; zero-inference/materialization observations were clean where applicable. The one corrected generated-output observation is insufficiently observed; it is neither stable nor repeatable",
+     "status": "evidence-supported (one corrected run)"
+    },
+    "stable_sync_execution_semantics": {
+     "evidence": "single corrected run + 3 zero-inference process runs clean; campaign length bounds the claim",
+     "status": "evidence-supported (bounded)"
+    },
+    "workload_relevant_performance": {
+     "evidence": "pp512 ratio 0.949, tg128 ratio 0.884 vs CUDA (same device); startup-to-ready +1.66 s vs CUDA; VRAM at ready 143.7 MB LOWER than CUDA; host RSS 213.7 MB higher",
+     "status": "measured \u2014 near native"
+    }
+   }
+  }
+ },
+ "schema": "inferswarm.vulkan-v0-b.capability-assessment/1"
+}

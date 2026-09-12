@@ -1,0 +1,67 @@
+{
+ "a_future_qualification_campaign_would_need_to_freeze_prospectively": [
+  "the model execution strategy and its declared semantic profile (which generations are correctness-bearing)",
+  "the numerical-equivalence contract: observable (logits/token-probability vs committed tokens), tolerance or exactness class, and evaluation window",
+  "a fixture set with pre-registered per-fixture expectations per (device, backend) pair",
+  "run counts and acceptance statistics frozen before the first canonical run",
+  "an authority chain binding probe build, driver/ICD versions, and model bytes"
+ ],
+ "adr_0010_mapping": {
+  "layer_1_exact_integrity": "SATISFIED IN EVIDENCE \u2014 model/executable identities exact, intended device proven per run, full offload, no silent fallback or substitution recorded",
+  "layer_2_qualified_numerical_equivalence": "NOT ESTABLISHED \u2014 V0-A exposes no logits; a prospectively frozen strategy-declared numerical-equivalence contract for a Vulkan path does not exist and this bundle does NOT create or retroactively apply one",
+  "layer_3_strategy_declared_semantic_correctness": "NOT ESTABLISHED \u2014 one committed-token divergence exists between CUDA and Vulkan at the greedy fixture; no strategy has declared a semantic profile under which this difference is acceptable or not",
+  "new_threshold_created": false
+ },
+ "classification_summary": {
+  "amd_a_vulkan": "physically proven (BDF), fully offloaded, clean exits, backend-local stable (3/3 identical visible generation)",
+  "amd_b_vulkan": "physically proven, clean, single clean observation; repeatability insufficiently_observed by taxonomy (one run cannot demonstrate repeatability)",
+  "nvidia_cuda": "physically proven, clean, single observation (insufficiently_observed); differs from Vulkan at one committed word",
+  "nvidia_vulkan": "physically proven, clean, single observation (insufficiently_observed); visible generation identical to all AMD Vulkan runs"
+ },
+ "cross_backend": {
+  "classification_per_issue_phase_1": "generated-output difference",
+  "vulkan_vs_cuda_same_device_nv_a": "generated_output_difference \u2014 NV-A CUDA differs from all Vulkan runs at one word choice ('could be anything' vs 'could be any word or phrase'); NOT exact agreement and NOT relabeled as semantic equivalence",
+  "vulkan_vs_vulkan_across_devices": "byte-identical visible generation across AMD-A (x3), AMD-B, NV-A"
+ },
+ "derived_from": "docs/investigations/vulkan-v0-a/results-correction/correctness-summary.json (mechanical)",
+ "issue": 142,
+ "per_pair": {
+  "AMD-A/02:00.0/Vulkan": {
+   "backend_local_repeatability": "stable",
+   "generations": [
+    "The sentence \"The quick brown fox jumps over the lazy dog\" is a well-known pangram, and after this sentence, the next sentence could be anything, as there is no specific rule or context provided for what comes next."
+   ],
+   "integrity": "pass (per-run executable/model SHA-256 + BDF device proof + full offload; no fallback/corruption markers)",
+   "runs": 3,
+   "unique_visible_generations": 1
+  },
+  "AMD-B/03:00.0/Vulkan": {
+   "backend_local_repeatability": "insufficiently_observed",
+   "generations": [
+    "The sentence \"The quick brown fox jumps over the lazy dog\" is a well-known pangram, and after this sentence, the next sentence could be anything, as there is no specific rule or context provided for what comes next."
+   ],
+   "integrity": "pass (per-run executable/model SHA-256 + BDF device proof + full offload; no fallback/corruption markers)",
+   "runs": 1,
+   "unique_visible_generations": 1
+  },
+  "NV-A/04:00.0/CUDA": {
+   "backend_local_repeatability": "insufficiently_observed",
+   "generations": [
+    "The sentence \"The quick brown fox jumps over the lazy dog\" is a well-known pangram, and after this sentence, the next sentence could be any word or phrase, as there is no specific rule or context provided for what comes next"
+   ],
+   "integrity": "pass (per-run executable/model SHA-256 + BDF device proof + full offload; no fallback/corruption markers)",
+   "runs": 1,
+   "unique_visible_generations": 1
+  },
+  "NV-A/04:00.0/Vulkan": {
+   "backend_local_repeatability": "insufficiently_observed",
+   "generations": [
+    "The sentence \"The quick brown fox jumps over the lazy dog\" is a well-known pangram, and after this sentence, the next sentence could be anything, as there is no specific rule or context provided for what comes next."
+   ],
+   "integrity": "pass (per-run executable/model SHA-256 + BDF device proof + full offload; no fallback/corruption markers)",
+   "runs": 1,
+   "unique_visible_generations": 1
+  }
+ },
+ "schema": "inferswarm.vulkan-v0-b.correctness-stability/1"
+}
