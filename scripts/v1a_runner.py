@@ -157,6 +157,17 @@ def qualify(authority: Mapping[str, Any], measured: Mapping[str, Any], out: Path
         implementation_id=frozen["implementation_id"], evidence_id=frozen["qualification_evidence_id"],
         bdf=frozen["physical_device_bdf"], runtime_identity=frozen["runtime_identity"],
         observation=observation)
+    # Eligibility-completion facts (representation/features/integrity/freshness)
+    # come from the frozen authority; the economics objective value is the
+    # measured qualification wall time, never a caller assertion.
+    completion = authority["capability_completion"]
+    capability.update({
+        "representations": list(completion["representations"]),
+        "required_features": list(completion["required_features"]),
+        "integrity_status": completion["integrity_status"],
+        "evidence_fresh": True,
+        "economics": {"objective_value": run["wall_seconds"]},
+    })
     record = {"schema": "inferswarm.v1a.qualification/1",
               "qualification_evidence_id": frozen["qualification_evidence_id"],
               "preflight": measured, "attempt": {k: v for k, v in run.items() if k not in ("stdout", "stderr")},

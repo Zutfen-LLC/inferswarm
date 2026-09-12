@@ -88,31 +88,34 @@ class V1ARunnerTests(unittest.TestCase):
         self.assertEqual(capability["qualification_digest"], observation.proof_digest)
 
     def test_snapshot_and_plan_select_the_qualified_participant_generically(self):
-        authority = {**AUTHORITY, "ontology_pressure_resource": PRESSURE}
+        authority = {**AUTHORITY, "ontology_pressure_resource": PRESSURE,
+                     "capability_completion": {"representations": ["representation-opaque-a"],
+                                               "required_features": ["feature-a"],
+                                               "integrity_status": "QUALIFIED"}}
+        observation = adapter.parse_backend_observation(
+            stderr=STDERR, selector="Vulkan1", expected_bdf="02:00.0", node_id="node-inferswarm02",
+            compute_unit_id="cu-opaque-a", memory_resource_id="mr-opaque-a",
+            execution_unit_id="unit-opaque-a", execution_contract_id="contract-opaque-a",
+            implementation_id="impl-opaque-a", evidence_id="v1a-qualification-opaque-a",
+            runtime_identity={"runtime": "opaque"})
         capability = adapter.capability_record(
             node_id="node-inferswarm02", compute_unit_id="cu-opaque-a", memory_resource_id="mr-opaque-a",
             execution_unit_id="unit-opaque-a", execution_contract_id="contract-opaque-a",
             implementation_id="impl-opaque-a", evidence_id="v1a-qualification-opaque-a",
-            bdf="02:00.0", runtime_identity={"runtime": "opaque"},
-            observation=adapter.parse_backend_observation(
-                stderr=STDERR, selector="Vulkan1", expected_bdf="02:00.0", node_id="node-inferswarm02",
-                compute_unit_id="cu-opaque-a", memory_resource_id="mr-opaque-a",
-                execution_unit_id="unit-opaque-a", execution_contract_id="contract-opaque-a",
-                implementation_id="impl-opaque-a", evidence_id="v1a-qualification-opaque-a",
-                runtime_identity={"runtime": "opaque"}))
+            bdf="02:00.0", runtime_identity={"runtime": "opaque"}, observation=observation)
         # The pressure resource has a better objective value but an
         # incompatible contract: the generic planner must exclude it.
-        capability = {**capability, "representations": ["representation-opaque-a"],
-                      "required_features": ["feature-a"], "integrity_status": "QUALIFIED",
+        completion = authority["capability_completion"]
+        capability = {**capability, "representations": list(completion["representations"]),
+                      "required_features": list(completion["required_features"]),
+                      "integrity_status": completion["integrity_status"],
                       "evidence_fresh": True, "economics": {"objective_value": 2.0}}
         snapshot = runner.build_snapshot(authority, capability)
         decision, plan = runner.plan_and_freeze(authority, snapshot)
         self.assertEqual(decision["selected_candidate"]["compute_unit_id"], "cu-opaque-a")
-        reasons = {row["candidate_id"]: row for row in decision["explanations"]}
         excluded = [row for row in decision["explanations"] if row["disposition"] == "EXCLUDED"]
         self.assertEqual(len(excluded), 1)
         self.assertEqual(excluded[0]["reason"], "EXECUTION_CONTRACT_UNSUPPORTED")
-        self.assertTrue(reasons)
         participant.validate_frozen_plan(plan)
 
     def test_runner_source_contains_no_ssh_client_usage(self):
