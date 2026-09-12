@@ -71,3 +71,20 @@ historical methodology and accepted producer identities remain unchanged.
 Issue #117 is closed during the Issue #137 migration by moving the later
 diagnosis into its own bundle. Future slices must not restore the legacy
 review-manifest practice.
+
+Since Issue #130, living-bundle generation order is owned by the repository
+finalizer: [`scripts/finalize_repository.py`](../scripts/finalize_repository.py)
+runs every declared generator once in proven topological order, writes
+terminal manifests last, and proves a second pass is a byte no-op
+([docs/finalization.md](finalization.md)). `--write` there replaces the
+manual `--write` invocations above for every migrated bundle.
+
+The closed Issue #117 parent is bound, never regenerated: the additive
+Issue #130 successor bundle
+(`evidence/issue-130-finalization/`) pins the parent artifacts through
+immutable `commit:path` identity plus expected SHA-256
+(`parent-binding.json`), and its manifest records the parent rows with
+their accepted digests. The parent's historical `producer-hashes.json` and
+`MANIFEST.sha256` remain the accepted bytes; Issue #130 finalizer sources
+are hashed only by the successor bundle's own indexes, never added to the
+parent's producer inventory.
