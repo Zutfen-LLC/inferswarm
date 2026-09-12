@@ -1,4 +1,7 @@
 import json
+
+# Validation-only comment for the Issue #148 targeted-mode hosted
+# proof; non-semantic, no test behavior change.
 import sys
 import tempfile
 import unittest
