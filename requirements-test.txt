@@ -1,0 +1,27 @@
+# Canonical CPU test/developer dependency authority for InferSwarm (Issue #131).
+#
+# This file is the single repository-owned source for the ordinary CPU-only
+# test/check environment. It is consumed by:
+#   - scripts/bootstrap_test_env.py  (create/refresh the repo-local .venv)
+#   - scripts/check_test_env.py      (fast pre-suite doctor)
+#   - .github/workflows/ci.yml       (CI installs from this same file)
+#
+# Update policy: bounded ranges (>= floor from the oldest supported
+# interpreter, < next major) for living test dependencies; exact pins live
+# only in accepted frozen evidence. The immutable Issue #117 frozen
+# tokenizer requirements are installed BY REFERENCE below — never restate
+# or repin those four packages here; editing accepted evidence is
+# prohibited and a second authority would drift.
+#
+# CPU-only invariant: no model runtime (torch, CUDA, Triton, or NVIDIA
+# wheel) may appear here, directly or through the referenced file. The
+# doctor enforces this mechanically.
+
+jsonschema>=4.18,<5
+numpy>=1.26,<3
+pyyaml>=6.0,<7
+
+# Immutable accepted Issue #117 Arm-C-retry frozen tokenizer environment
+# (transformers/tokenizers/Jinja2/MarkupSafe exact pins). Required by the
+# real-tokenizer proof (test_issue129_arm_c_retry) and related modules.
+-r docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/frozen-tokenizer/requirements.txt
