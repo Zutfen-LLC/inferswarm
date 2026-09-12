@@ -5,7 +5,13 @@
     "host": "inferswarm02",
     "inference_main_at_start": "d1afad64ca8bdd05634d3d0e1e09b8077da525d5",
     "probe": "llama.cpp 8ea290247c87ced2ab245b056ffe96dbcf90d36c",
-    "model_sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94"
+    "model_sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
+    "correction_authority": "METHODOLOGY-CORRECTION.md (freeze 8115933f92e10b50588288d9908e75f12ebd92a5)",
+    "corrected_fields": [
+      "correctness (raw per-run records, device proof per run)",
+      "materialization (zero-inference harness; preliminary values superseded)"
+    ],
+    "throughput_source": "original accepted campaign (results/bench-*.csv), identity checks re-passed after correction"
   },
   "records": [
     {
@@ -37,16 +43,23 @@
       },
       "model_support": "PASS (qwen2 3B Q4_K_M fully offloaded, -ngl 99)",
       "correctness": {
+        "source": "corrected raw run records (results-correction/correctness-summary.json)",
         "greedy_fixture_runs": 3,
-        "unique_generations": 1,
-        "clean_exits": 3
+        "unique_visible_generations": 1,
+        "all_exit_clean": true,
+        "backend_local_repeatability": "stable",
+        "device_proof": "per-run stderr 'using device Vulkan1 (AMD Radeon RX 580 Series (RADV POLARIS10)) (0000:02:00.0)' + offloaded 37/37 layers"
       },
       "materialization": {
-        "wall_ms_median": 29101,
-        "vram_peak_bytes": 3254099968,
-        "vram_idle_after_exit_bytes": 5439488,
-        "host_peak_rss_kb": 2102584,
-        "host_rss_after_load_kb": 2102408
+        "status": "CORRECTED",
+        "authority": "METHODOLOGY-CORRECTION.md (zero-inference harness)",
+        "runs": 3,
+        "startup_to_ready_s_median": 26.48,
+        "vram_ready_bytes_median": 3254091776,
+        "vram_idle_hold_bytes_median": 3254091776,
+        "host_rss_ready_kB_median": 469720,
+        "host_rss_idle_hold_kB_median": 469720,
+        "preliminary_note": "results/mat2-amd-vk.* wall/peak values are RETAINED but PRELIMINARY/SUPERSEDED (their -n 0 runs evaluated input and produced output before exit)"
       },
       "prefill": {
         "pp512_median_tps": 498.0,
@@ -116,9 +129,11 @@
       },
       "model_support": "PASS (smoke)",
       "correctness": {
+        "source": "corrected raw run records (results-correction/correctness-summary.json)",
         "greedy_fixture_runs": 1,
-        "unique_generations": 1,
-        "matches_AMD_A": true
+        "unique_visible_generations": 1,
+        "matches_AMD_A": true,
+        "device_proof": "per-run stderr 'using device Vulkan2 ... (0000:03:00.0)' + offloaded 37/37 layers"
       },
       "limitations": [
         "smoke/repeatability check only per methodology multi-GPU rule (materially identical to AMD-A)"
@@ -137,7 +152,7 @@
           "kind": "device-local VRAM",
           "bytes": 8589934592
         },
-        "pcie_link": "LnkCap 2.5GT/s x16 / LnkSta x1 (root port forced Gen3 per BIOS; see inventory)",
+        "pcie_link": "LnkCap 2.5GT/s x16 / LnkSta 2.5GT/s x1 (endpoint capture; root-port state not retained, no 'forced Gen3' claim)",
         "identity_source": "PCI enumeration (backend-independent)"
       },
       "backend": {
@@ -156,15 +171,22 @@
       },
       "model_support": "PASS (fully offloaded)",
       "correctness": {
+        "source": "corrected raw run records (results-correction/correctness-summary.json)",
         "greedy_fixture_runs": 1,
-        "unique_generations": 1,
-        "semantically_equal_to_AMD_vulkan_runs": true
+        "unique_visible_generations": 1,
+        "visible_generation_matches_all_Vulkan_runs": true,
+        "cross_backend_note": "NV-A CUDA run DIFFERS from all Vulkan runs at one word choice at this fixture (retained cross-backend numerical difference; NOT a threshold)"
       },
       "materialization": {
-        "wall_ms_median": 13215,
-        "vram_peak_MiB": 3129,
-        "host_peak_rss_kb": 2630076,
-        "host_rss_after_load_kb": 2629840
+        "status": "CORRECTED",
+        "authority": "METHODOLOGY-CORRECTION.md (zero-inference harness)",
+        "runs": 3,
+        "startup_to_ready_s_median": 13.023,
+        "vram_ready_bytes_median": 3279945728,
+        "vram_idle_hold_bytes_median": 3279945728,
+        "host_rss_ready_kB_median": 1003172,
+        "host_rss_idle_hold_kB_median": 1003172,
+        "preliminary_note": "results/mat2-nvidia-vk.* wall/peak values are RETAINED but PRELIMINARY/SUPERSEDED"
       },
       "prefill": {
         "pp512_median_tps": 3579.0,
@@ -204,7 +226,7 @@
           "kind": "device-local VRAM",
           "bytes": 8589934592
         },
-        "pcie_link": "LnkCap 2.5GT/s x16 / LnkSta x1 (root port forced Gen3 per BIOS; see inventory)",
+        "pcie_link": "LnkCap 2.5GT/s x16 / LnkSta 2.5GT/s x1 (endpoint capture; root-port state not retained, no 'forced Gen3' claim)",
         "identity_source": "PCI enumeration (backend-independent)"
       },
       "backend": {
@@ -215,15 +237,21 @@
       },
       "model_support": "PASS (fully offloaded)",
       "correctness": {
+        "source": "corrected raw run records (results-correction/correctness-summary.json)",
         "greedy_fixture_runs": 1,
-        "unique_generations": 1,
-        "semantically_equal_to_vulkan_runs": true
+        "unique_visible_generations": 1,
+        "cross_backend_note": "differs from Vulkan at one word choice at this fixture (retained cross-backend numerical difference; NOT a threshold)"
       },
       "materialization": {
-        "wall_ms_median": 11359,
-        "vram_peak_MiB": 3239,
-        "host_peak_rss_kb": 2332228,
-        "host_rss_after_load_kb": 2332084
+        "status": "CORRECTED",
+        "authority": "METHODOLOGY-CORRECTION.md (zero-inference harness)",
+        "runs": 3,
+        "startup_to_ready_s_median": 11.364,
+        "vram_ready_bytes_median": 3423600640,
+        "vram_idle_hold_bytes_median": 3423600640,
+        "host_rss_ready_kB_median": 789488,
+        "host_rss_idle_hold_kB_median": 789488,
+        "preliminary_note": "results/mat2-nvidia-cuda.* wall/peak values are RETAINED but PRELIMINARY/SUPERSEDED"
       },
       "prefill": {
         "pp512_median_tps": 3773.1,
