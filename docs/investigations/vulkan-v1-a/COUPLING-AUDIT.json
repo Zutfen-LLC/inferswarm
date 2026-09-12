@@ -1,20 +1,32 @@
 {
-  "schema": "inferswarm.v1a.coupling-audit/1",
-  "scope": "accepted V0-C implementation and successor V1-A internal seam",
+  "schema": "inferswarm.v1a.coupling-audit/2",
+  "scope": "accepted V0-C implementation and generalized V1-A internal seam",
+  "mechanical_inputs": {
+    "generic_participant": "scripts/v1a_execution_participant.py",
+    "adapter": "scripts/v1a_vulkan_adapter.py",
+    "generic_forbidden_tokens": ["vulkan", "cuda", "amd", "nvidia", "radeon"],
+    "generic_forbidden_literals": ["37", "offloaded_layers"],
+    "authority_fact_classes": ["node identity", "Compute Unit", "Memory Resource", "BDF", "selector", "model/checkpoint", "execution unit", "execution contract", "implementation", "qualification evidence", "canonical evidence", "candidate digest", "plan digest", "resource snapshot schema", "ranking objective"]
+  },
   "classification": {
+    "node identity": "PHYSICAL_AUTHORITY_INPUT",
     "cu-amd-a": "PHYSICAL_AUTHORITY_INPUT",
     "mr-amd-a-vram": "PHYSICAL_AUTHORITY_INPUT",
-    "Vulkan1": "BACKEND_ADAPTER_DETAIL",
     "02:00.0": "PHYSICAL_AUTHORITY_INPUT",
+    "selector": "PHYSICAL_AUTHORITY_INPUT",
+    "model/checkpoint identity": "PHYSICAL_AUTHORITY_INPUT",
     "unit-q4km-whole-model": "GENERIC_CONTRACT_INPUT",
     "contract-s2-opaque-v1": "GENERIC_CONTRACT_INPUT",
     "impl-portable-amd-a": "GENERIC_CONTRACT_INPUT",
-    "v0c-amd-a-final-qualification": "PHYSICAL_AUTHORITY_INPUT",
-    "v0c-final-plan": "PHYSICAL_AUTHORITY_INPUT",
-    "inferswarm02": "PHYSICAL_AUTHORITY_INPUT",
+    "qualification/canonical evidence identity": "PHYSICAL_AUTHORITY_INPUT",
+    "candidate/plan digest": "GENERIC_CONTRACT_INPUT",
+    "model-specific layer count": "BACKEND_ADAPTER_RUNTIME_FACT",
+    "implicit proving-resource defaults": "FORBIDDEN_ON_GENERIC_PATH",
+    "Vulkan1": "BACKEND_ADAPTER_DETAIL",
     "AMD/Radeon/Vulkan naming": "BACKEND_ADAPTER_DETAIL"
   },
-  "v1a_invariant": "generic participant source accepts only opaque data and contains no vendor/runtime selection token",
+  "v1a_invariant": "generic participant receives only opaque validated identities; backend adapters validate runtime parsing, complete coverage, fallback absence, and physical identity",
   "one_off_coupling_on_generic_canonical_path": false,
-  "physical_execution_status": "PENDING_AUTHENTICATED_PROVING_HOST_ACCESS"
+  "mechanical_result": "generic source has no vendor token, model-specific layer literal, backend runtime field, or proving-resource default; Node identity is included in candidate identity, frozen-plan validation, capability binding, and canonical-proof matching",
+  "physical_execution_status": "LOCAL_PROVING_NODE_AVAILABLE__AUTHORITY_NOT_YET_FROZEN"
 }
