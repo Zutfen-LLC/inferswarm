@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Issue #154 backend-local adapter proof binding."""
+"""Issue #154 backend-local adapter proof binding.
+
+The adapter is the only component with backend/vendor awareness. It parses
+raw runtime output, rejects fallback or incomplete offload, validates the
+selected physical device, and seals opaque proof capsules. Every sealed
+capsule binds the execution contract: a qualification observation sealed
+for contract A can never be enriched into a contract-B capability, and a
+canonical proof sealed under contract A can never satisfy a contract-B
+plan.
+"""
 from __future__ import annotations
 
 from copy import deepcopy
@@ -54,6 +63,7 @@ class BackendObservation:
     compute_unit_id: str
     memory_resource_id: str
     execution_unit_id: str
+    execution_contract_id: str
     implementation_id: str
     evidence_id: str
     runtime_identity: dict[str, Any]
@@ -66,7 +76,9 @@ def _observation_facts(observation: BackendObservation) -> dict[str, Any]:
     return {"node_id": observation.node_id, "physical_device_bdf": observation.physical_device_bdf,
             "backend_selector": observation.backend_selector, "offloaded_layers": list(observation.offloaded_layers),
             "compute_unit_id": observation.compute_unit_id, "memory_resource_id": observation.memory_resource_id,
-            "execution_unit_id": observation.execution_unit_id, "implementation_id": observation.implementation_id,
+            "execution_unit_id": observation.execution_unit_id,
+            "execution_contract_id": observation.execution_contract_id,
+            "implementation_id": observation.implementation_id,
             "evidence_id": observation.evidence_id, "runtime_identity": observation.runtime_identity,
             "stderr_sha256": observation.stderr_sha256}
 
@@ -75,6 +87,8 @@ def _validate_observation(observation: Any) -> BackendObservation:
     if not isinstance(observation, BackendObservation) or observation.seal is not _SEAL:
         raise AdapterError("adapter-validated observation is required")
     facts = _observation_facts(observation)
+    if not _text(observation.execution_contract_id):
+        raise AdapterError("sealed observation does not bind an execution contract")
     if _digest(facts) != observation.proof_digest:
         raise AdapterError("adapter observation is altered")
     done, total = observation.offloaded_layers
@@ -85,9 +99,17 @@ def _validate_observation(observation: Any) -> BackendObservation:
 
 def parse_backend_observation(*, stderr: str, selector: str, expected_bdf: str, node_id: str,
                               compute_unit_id: str, memory_resource_id: str, execution_unit_id: str,
-                              implementation_id: str, evidence_id: str, runtime_identity: Mapping[str, Any]) -> BackendObservation:
-    """Parse one unambiguous selected-device and complete-offload observation."""
-    if not isinstance(stderr, str) or not stderr or not all(_text(x) for x in (selector, expected_bdf, node_id, compute_unit_id, memory_resource_id, execution_unit_id, implementation_id, evidence_id)):
+                              execution_contract_id: str, implementation_id: str, evidence_id: str,
+                              runtime_identity: Mapping[str, Any]) -> BackendObservation:
+    """Parse one unambiguous selected-device and complete-offload observation.
+
+    The execution contract is a required sealed identity: the observation
+    proves the runtime run performed under exactly this contract, so the
+    contract cannot be attached or replaced later by record enrichment.
+    """
+    if not isinstance(stderr, str) or not stderr or not all(_text(x) for x in (
+            selector, expected_bdf, node_id, compute_unit_id, memory_resource_id,
+            execution_unit_id, execution_contract_id, implementation_id, evidence_id)):
         raise AdapterError("required observation identity is missing")
     runtime = _runtime(runtime_identity)
     if _FALLBACK.search(stderr):
@@ -105,46 +127,67 @@ def parse_backend_observation(*, stderr: str, selector: str, expected_bdf: str, 
     facts = {"node_id": node_id, "physical_device_bdf": observed_bdf, "backend_selector": selector,
              "offloaded_layers": [done, total], "compute_unit_id": compute_unit_id,
              "memory_resource_id": memory_resource_id, "execution_unit_id": execution_unit_id,
-             "implementation_id": implementation_id, "evidence_id": evidence_id,
+             "execution_contract_id": execution_contract_id, "implementation_id": implementation_id,
+             "evidence_id": evidence_id,
              "runtime_identity": runtime, "stderr_sha256": sha256(stderr.encode()).hexdigest()}
-    facts["offloaded_layers"] = (done, total)
-    return BackendObservation(**facts, proof_digest=_digest({**facts, "offloaded_layers": [done, total]}), seal=_SEAL)
+    return BackendObservation(**{key: value for key, value in facts.items() if key != "offloaded_layers"},
+                              offloaded_layers=(done, total),
+                              proof_digest=_digest(facts), seal=_SEAL)
 
 
 def capability_record(*, node_id: str, compute_unit_id: str, memory_resource_id: str,
-                      execution_unit_id: str, implementation_id: str, evidence_id: str, bdf: str,
-                      runtime_identity: Mapping[str, Any], observation: BackendObservation) -> dict[str, Any]:
-    """Convert only exactly matching sealed observations into capability facts."""
+                      execution_unit_id: str, execution_contract_id: str, implementation_id: str,
+                      evidence_id: str, bdf: str, runtime_identity: Mapping[str, Any],
+                      observation: BackendObservation) -> dict[str, Any]:
+    """Convert only exactly matching sealed observations into capability facts.
+
+    The expected execution-contract ID must be supplied and must equal the
+    contract sealed inside the observation; a mismatch fails closed, so a
+    valid contract-A observation can never mint a contract-B capability.
+    """
     observation = _validate_observation(observation)
     runtime = _runtime(runtime_identity)
-    expected = (node_id, compute_unit_id, memory_resource_id, execution_unit_id, implementation_id, evidence_id, bdf, runtime)
+    expected = (node_id, compute_unit_id, memory_resource_id, execution_unit_id,
+                execution_contract_id, implementation_id, evidence_id, bdf, runtime)
     actual = (observation.node_id, observation.compute_unit_id, observation.memory_resource_id,
-              observation.execution_unit_id, observation.implementation_id, observation.evidence_id,
+              observation.execution_unit_id, observation.execution_contract_id,
+              observation.implementation_id, observation.evidence_id,
               observation.physical_device_bdf, observation.runtime_identity)
     if expected != actual:
         raise AdapterError("capability inputs contradict sealed observation")
     return {"bound_node_id": node_id, "bound_compute_unit_id": compute_unit_id,
             "bound_memory_resource_id": memory_resource_id, "bound_execution_unit_id": execution_unit_id,
+            "execution_contract_id": observation.execution_contract_id,
             "implementation_id": implementation_id, "evidence_id": evidence_id,
             "qualification_evidence_id": evidence_id, "qualification_digest": observation.proof_digest,
             "physical_device_bdf": bdf, "runtime_identity": deepcopy(runtime), "full_offload": True}
 
 
 def seal_canonical_execution_proof(*, observation: BackendObservation, plan_digest: str, candidate_id: str,
-                                   execution_evidence_id: str, stdout: bytes, stderr: str,
-                                   exit_code: int) -> participant.AdapterCanonicalExecutionProof:
-    """Seal canonical output only after adapter validation of the raw runtime observation."""
+                                   execution_contract_id: str, execution_evidence_id: str, stdout: bytes,
+                                   stderr: str, exit_code: int) -> participant.AdapterCanonicalExecutionProof:
+    """Seal canonical output only after adapter validation of the raw runtime observation.
+
+    The canonical proof inherits the execution contract sealed in the
+    adapter-validated observation; a caller-supplied contract that differs
+    from the sealed contract fails closed.
+    """
     observation = _validate_observation(observation)
-    if not all(_text(value) for value in (plan_digest, candidate_id, execution_evidence_id)):
-        raise AdapterError("canonical plan/candidate/evidence identity is missing")
+    if not all(_text(value) for value in (plan_digest, candidate_id, execution_contract_id,
+                                          execution_evidence_id)):
+        raise AdapterError("canonical plan/candidate/contract/evidence identity is missing")
+    if execution_contract_id != observation.execution_contract_id:
+        raise AdapterError("canonical contract differs from sealed observation contract")
     if not isinstance(stdout, bytes) or not isinstance(stderr, str) or exit_code != 0:
         raise AdapterError("canonical runtime did not exit cleanly")
     if sha256(stderr.encode()).hexdigest() != observation.stderr_sha256:
         raise AdapterError("canonical stderr differs from validated observation")
     facts = {"plan_digest": plan_digest, "candidate_id": candidate_id, "node_id": observation.node_id,
              "compute_unit_id": observation.compute_unit_id, "memory_resource_id": observation.memory_resource_id,
-             "execution_unit_id": observation.execution_unit_id, "implementation_id": observation.implementation_id,
-             "evidence_id": observation.evidence_id, "physical_device_bdf": observation.physical_device_bdf,
+             "execution_unit_id": observation.execution_unit_id,
+             "execution_contract_id": observation.execution_contract_id,
+             "implementation_id": observation.implementation_id, "evidence_id": observation.evidence_id,
+             "physical_device_bdf": observation.physical_device_bdf,
              "runtime_identity": deepcopy(observation.runtime_identity), "execution_evidence_id": execution_evidence_id,
              "stdout_sha256": sha256(stdout).hexdigest(), "stderr_sha256": observation.stderr_sha256,
              "backend_observation_digest": observation.proof_digest}

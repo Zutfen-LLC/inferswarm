@@ -10,8 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 BUNDLE = Path("docs/investigations/vulkan-v1-a")
 MANIFEST = BUNDLE / "MANIFEST.sha256"
 EVIDENCE = frozenset({"README.md", "COUPLING-AUDIT.json", "STATUS.json"})
-SOURCES = frozenset({"scripts/v1a_execution_participant.py", "scripts/v1a_vulkan_adapter.py", "scripts/v1a_manifest.py"})
-TESTS = frozenset({"tests/test_v1a_execution_participant.py", "tests/test_v1a_vulkan_adapter.py", "tests/test_v1a_evidence_manifest.py"})
+SOURCES = frozenset({"scripts/v1a_execution_participant.py", "scripts/v1a_vulkan_adapter.py", "scripts/v1a_manifest.py", "scripts/v1a_runner.py"})
+TESTS = frozenset({"tests/test_v1a_execution_participant.py", "tests/test_v1a_vulkan_adapter.py", "tests/test_v1a_evidence_manifest.py", "tests/test_v1a_runner.py"})
 
 
 class ManifestError(ValueError):

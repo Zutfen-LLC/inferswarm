@@ -41,6 +41,7 @@ def _candidate_id(unit: Mapping[str, Any], resource: Mapping[str, Any],
         "memory_resource_id": memory.get("memory_resource_id"),
         "physical_device_bdf": capability.get("physical_device_bdf"),
         "implementation_id": capability.get("implementation_id"),
+        "evidence_id": capability.get("evidence_id"),
         "qualification_evidence_id": capability.get("qualification_evidence_id"),
         "qualification_digest": capability.get("qualification_digest"),
         "runtime_identity": capability.get("runtime_identity"),
@@ -164,6 +165,7 @@ class AdapterCanonicalExecutionProof:
     compute_unit_id: str
     memory_resource_id: str
     execution_unit_id: str
+    execution_contract_id: str
     implementation_id: str
     evidence_id: str
     physical_device_bdf: str
@@ -179,7 +181,7 @@ class AdapterCanonicalExecutionProof:
 def _adapter_canonical_proof(*, facts: Mapping[str, Any]) -> AdapterCanonicalExecutionProof:
     """Internal factory used only after a backend adapter validates runtime facts."""
     body = deepcopy(dict(facts))
-    if not all(_nonempty(body.get(key)) for key in ("plan_digest", "candidate_id", "node_id", "compute_unit_id", "memory_resource_id", "execution_unit_id", "implementation_id", "evidence_id", "physical_device_bdf", "execution_evidence_id", "stdout_sha256", "stderr_sha256", "backend_observation_digest")):
+    if not all(_nonempty(body.get(key)) for key in ("plan_digest", "candidate_id", "node_id", "compute_unit_id", "memory_resource_id", "execution_unit_id", "execution_contract_id", "implementation_id", "evidence_id", "physical_device_bdf", "execution_evidence_id", "stdout_sha256", "stderr_sha256", "backend_observation_digest")):
         raise ParticipantError("adapter canonical proof identity incomplete")
     if not isinstance(body.get("runtime_identity"), Mapping):
         raise ParticipantError("adapter canonical proof runtime identity missing")
@@ -195,16 +197,57 @@ def _validate_adapter_canonical_proof(proof: Any) -> None:
         raise ParticipantError("adapter canonical proof is altered")
 
 
-def execution_receipt(*, plan: Mapping[str, Any], output: bytes, canonical_proof: Any) -> dict[str, Any]:
-    """Mint result attribution only from a matching adapter-sealed proof."""
+def canonical_observation(*, plan: Mapping[str, Any],
+                          canonical_proof: Any) -> dict[str, Any]:
+    """Generic observation of an adapter-sealed canonical execution.
+
+    The adapter-sealed proof must carry the exact execution contract the
+    frozen execution unit requires AND the contract frozen into the selected
+    candidate; a contract-A proof can never satisfy a contract-B plan.
+    """
     validate_frozen_plan(plan)
     _validate_adapter_canonical_proof(canonical_proof)
-    candidate = plan["candidate"]
-    fields = ("plan_digest", "candidate_id", "node_id", "compute_unit_id", "memory_resource_id", "execution_unit_id", "implementation_id", "evidence_id", "physical_device_bdf", "runtime_identity")
+    unit, candidate = plan["execution_unit"], plan["candidate"]
+    expected_contract = unit.get("execution_contract_id")
+    if canonical_proof.execution_contract_id != expected_contract:
+        raise ParticipantError("canonical proof execution contract differs from execution unit")
+    if candidate.get("execution_contract_id") != expected_contract:
+        raise ParticipantError("frozen candidate execution contract differs from execution unit")
+    return {"schema": "inferswarm.v1a.canonical-observation/1",
+            "plan_digest": plan["plan_digest"], "candidate_id": candidate["candidate_id"],
+            "node_id": candidate["node_id"], "compute_unit_id": candidate["compute_unit_id"],
+            "memory_resource_id": candidate["memory_resource_id"],
+            "execution_unit_id": candidate["execution_unit_id"],
+            "execution_contract_id": canonical_proof.execution_contract_id,
+            "implementation_id": candidate["implementation_id"],
+            "evidence_id": candidate["evidence_id"],
+            "qualification_digest": candidate["qualification_digest"],
+            "canonical_evidence_id": canonical_proof.execution_evidence_id,
+            "canonical_proof_digest": canonical_proof.proof_digest,
+            "output_sha256": canonical_proof.stdout_sha256}
+
+
+def execution_receipt(*, plan: Mapping[str, Any], output: bytes, canonical_proof: Any) -> dict[str, Any]:
+    """Mint result attribution only from a matching adapter-sealed proof.
+
+    Receipt attribution inherits the execution-contract binding proven by
+    the sealed canonical proof and re-checked against the frozen plan.
+    """
+    validate_frozen_plan(plan)
+    _validate_adapter_canonical_proof(canonical_proof)
+    unit, candidate = plan["execution_unit"], plan["candidate"]
+    if canonical_proof.execution_contract_id != unit.get("execution_contract_id"):
+        raise ParticipantError("canonical proof execution contract differs from execution unit")
+    if candidate.get("execution_contract_id") != unit.get("execution_contract_id"):
+        raise ParticipantError("frozen candidate execution contract differs from execution unit")
+    fields = ("plan_digest", "candidate_id", "node_id", "compute_unit_id", "memory_resource_id", "execution_unit_id", "execution_contract_id", "implementation_id", "evidence_id", "physical_device_bdf", "runtime_identity")
     expected = {"plan_digest": plan["plan_digest"], **{key: candidate[key] for key in fields if key != "plan_digest"}}
     if any(getattr(canonical_proof, key) != value for key, value in expected.items()):
         raise ParticipantError("canonical proof does not match frozen plan")
-    return {"plan_digest": plan["plan_digest"], "candidate_id": candidate["candidate_id"], "canonical_proof_digest": canonical_proof.proof_digest, "output_sha256": sha256(output).hexdigest()}
+    return {"plan_digest": plan["plan_digest"], "candidate_id": candidate["candidate_id"],
+            "execution_contract_id": canonical_proof.execution_contract_id,
+            "canonical_proof_digest": canonical_proof.proof_digest,
+            "output_sha256": sha256(output).hexdigest()}
 
 
 def source_token_audit(path: Path, forbidden_tokens: Sequence[str]) -> dict[str, list[str]]:

@@ -56,25 +56,31 @@ def resource(cu="cu-a", memory="mr-a", bdf="01:00.0", implementation="impl-a",
     }
 
 
-def adapter_proof(plan):
+def adapter_proof(plan, contract="contract-opaque-a", stderr=STDERR, candidate_id=None,
+                  execution_evidence_id="canonical-run-a", stdout=b"runtime output"):
     candidate = plan["candidate"]
-    stderr = STDERR.replace("02:00.0", candidate["physical_device_bdf"])
     observation = adapter.parse_backend_observation(
-        stderr=stderr, selector="VkSelector", expected_bdf=candidate["physical_device_bdf"],
+        stderr=stderr.replace("02:00.0", candidate["physical_device_bdf"]),
+        selector="VkSelector", expected_bdf=candidate["physical_device_bdf"],
         node_id=candidate["node_id"], compute_unit_id=candidate["compute_unit_id"],
         memory_resource_id=candidate["memory_resource_id"], execution_unit_id=candidate["execution_unit_id"],
-        implementation_id=candidate["implementation_id"], evidence_id=candidate["evidence_id"],
-        runtime_identity=candidate["runtime_identity"])
+        execution_contract_id=contract, implementation_id=candidate["implementation_id"],
+        evidence_id=candidate["evidence_id"], runtime_identity=candidate["runtime_identity"])
     return adapter.seal_canonical_execution_proof(
-        observation=observation, plan_digest=plan["plan_digest"], candidate_id=candidate["candidate_id"],
-        execution_evidence_id="canonical-run-a", stdout=b"runtime output", stderr=stderr, exit_code=0), observation
+        observation=observation, plan_digest=plan["plan_digest"],
+        candidate_id=candidate_id or candidate["candidate_id"],
+        execution_contract_id=contract, execution_evidence_id=execution_evidence_id,
+        stdout=stdout, stderr=stderr.replace("02:00.0", candidate["physical_device_bdf"]), exit_code=0), observation
 
 
 class V1AParticipantTests(unittest.TestCase):
     def plan(self, **kwargs):
+        contract = kwargs.pop("contract", UNIT["execution_contract_id"])
+        unit = {**UNIT, "execution_contract_id": contract}
         decision = participant.plan_execution_unit(
-            execution_unit=UNIT, compute_units=[resource(**kwargs)], objective="MIN_OBJECTIVE_VALUE")
-        return participant.freeze_plan(decision=decision, execution_unit=UNIT)
+            execution_unit=unit, compute_units=[resource(contract=contract, **kwargs)],
+            objective="MIN_OBJECTIVE_VALUE")
+        return participant.freeze_plan(decision=decision, execution_unit=unit)
 
     def test_second_opaque_participant_is_eligible_and_objective_selects_it(self):
         first = resource(score=3.0)
@@ -121,7 +127,8 @@ class V1AParticipantTests(unittest.TestCase):
 
     def test_recomputed_plan_cannot_substitute_node_or_candidate_identity(self):
         plan = self.plan()
-        for field, value in (("node_id", "node-other"), ("candidate_id", "candidate-other")):
+        for field, value in (("node_id", "node-other"), ("candidate_id", "candidate-other"),
+                             ("execution_contract_id", "contract-other")):
             altered = copy.deepcopy(plan)
             altered["candidate"][field] = value
             body = {key: altered[key] for key in altered if key != "plan_digest"}
@@ -132,8 +139,40 @@ class V1AParticipantTests(unittest.TestCase):
     def test_adapter_validated_canonical_proof_receipts_generic_twelve_layer_run(self):
         plan = self.plan(bdf="02:00.0")
         proof, _ = adapter_proof(plan)
+        observation = participant.canonical_observation(plan=plan, canonical_proof=proof)
+        self.assertEqual(observation["execution_contract_id"], "contract-opaque-a")
+        self.assertEqual(observation["canonical_evidence_id"], "canonical-run-a")
         receipt = participant.execution_receipt(plan=plan, output=b"result", canonical_proof=proof)
         self.assertEqual(receipt["candidate_id"], plan["candidate"]["candidate_id"])
+        self.assertEqual(receipt["execution_contract_id"], "contract-opaque-a")
+
+    def test_contract_a_canonical_proof_cannot_satisfy_a_contract_b_plan(self):
+        plan_b = self.plan(contract="contract-opaque-b")
+        # A contract-A proof seals legitimately from a contract-A observation,
+        # but it can never satisfy the contract-B plan at the generic boundary.
+        proof_a, _ = adapter_proof(self.plan(contract="contract-opaque-a"), execution_evidence_id="contract-a-proof")
+        for consumer in (lambda: participant.canonical_observation(plan=plan_b, canonical_proof=proof_a),
+                         lambda: participant.execution_receipt(plan=plan_b, output=b"result", canonical_proof=proof_a)):
+            with self.assertRaises(participant.ParticipantError):
+                consumer()
+
+    def test_wrong_contract_on_right_candidate_or_physical_resource_cannot_receipt(self):
+        plan = self.plan(bdf="02:00.0")
+        # Right candidate ID but a proof sealed under another contract (the
+        # adapter only seals such a proof from a cross-contract observation;
+        # build it directly to exercise the generic boundary).
+        contract_b = "contract-opaque-b"
+        cross_unit = {**UNIT, "execution_contract_id": contract_b}
+        decision_b = participant.plan_execution_unit(
+            execution_unit=cross_unit, compute_units=[resource(contract=contract_b)], objective="MIN_OBJECTIVE_VALUE")
+        plan_cross = participant.freeze_plan(decision=decision_b, execution_unit=cross_unit)
+        proof_b, _ = adapter_proof(plan_cross, contract=contract_b)
+        for consumer in (
+            lambda: participant.canonical_observation(plan=plan, canonical_proof=proof_b),
+            lambda: participant.execution_receipt(plan=plan, output=b"result", canonical_proof=proof_b),
+        ):
+            with self.assertRaises(participant.ParticipantError):
+                consumer()
 
     def test_mapping_qualification_proof_and_other_node_proof_cannot_receipt(self):
         plan = self.plan(bdf="02:00.0")
@@ -145,15 +184,28 @@ class V1AParticipantTests(unittest.TestCase):
                                 node_id="node-other", compute_unit_id=plan["candidate"]["compute_unit_id"],
                                 memory_resource_id=plan["candidate"]["memory_resource_id"],
                                 execution_unit_id=plan["candidate"]["execution_unit_id"],
+                                execution_contract_id=plan["candidate"]["execution_contract_id"],
                                 implementation_id=plan["candidate"]["implementation_id"],
                                 evidence_id=plan["candidate"]["evidence_id"],
                                 runtime_identity=plan["candidate"]["runtime_identity"]),
                             plan_digest=plan["plan_digest"], candidate_id=plan["candidate"]["candidate_id"],
+                            execution_contract_id=plan["candidate"]["execution_contract_id"],
                             execution_evidence_id="other-node", stdout=b"runtime output", stderr=STDERR,
                             exit_code=0)):
             with self.subTest(invalid=type(invalid).__name__), self.assertRaises(participant.ParticipantError):
                 participant.execution_receipt(plan=plan, output=b"result", canonical_proof=invalid)
         self.assertIsNotNone(proof)
+
+    def test_forged_proof_seal_cannot_substitute_for_adapter_validation(self):
+        plan = self.plan(bdf="02:00.0")
+        proof, _ = adapter_proof(plan)
+        forged = participant.AdapterCanonicalExecutionProof(
+            **{key: getattr(proof, key) for key in proof.__dataclass_fields__ if key != "seal"},
+            seal=object())
+        for consumer in (lambda: participant.canonical_observation(plan=plan, canonical_proof=forged),
+                         lambda: participant.execution_receipt(plan=plan, output=b"result", canonical_proof=forged)):
+            with self.assertRaises(participant.ParticipantError):
+                consumer()
 
     def test_generic_participant_source_has_no_model_layer_or_backend_coupling(self):
         source = (ROOT / "scripts" / "v1a_execution_participant.py").read_text(encoding="utf-8").lower()
