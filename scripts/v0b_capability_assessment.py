@@ -77,7 +77,7 @@ def main() -> int:
                         "evidence": "backend-local repeatability stable (3/3 identical AMD-A generations); crash/hang/device-loss rate unobserved beyond campaign length"},
                     "representation_quantization_support": {
                         "status": "partial",
-                        "evidence": "Q4_K_M executed correctly, BUT Polaris/RADV advertises no fp16 compute storage->compute fast path, no int-dot, no matrix cores (subgroup 64); ggml falls back to f32 compute — representation breadth untested, arithmetic throughput structurally limited by advertised capabilities"},
+                        "evidence": "Q4_K_M executed correctly; Polaris/RADV advertises no fp16 compute storage->compute fast path, no int-dot, and no matrix cores (subgroup 64); retained ggml evidence records the tested f32 compute path — representation breadth is partial/untested. These advertised capabilities and the tested representation path do not demonstrate a cause of the observed AMD throughput; compute vs memory vs link remains open"},
                     "useful_error_reporting": {
                         "status": "adequate",
                         "evidence": "device/offload banners, exit codes, and RADV driver messages retained and sufficient to attribute runs"},
@@ -85,8 +85,8 @@ def main() -> int:
                         "status": "measured — materially limited",
                         "evidence": "pp512 median 498.0 t/s (vs NV-A Vulkan 3579.0) — DESCRIPTIVE cross-vendor only; absolute level ~26x below the same-class CUDA control is not available (no AMD native arm)"},
                     "workload_relevant_decode_performance": {
-                        "status": "measured — pending host-baseline interpretation",
-                        "evidence": "tg128 median 43.7 t/s; usefulness vs host execution decided by this bundle's supplemental CPU arm (results/economics.json)"},
+                        "status": "measured — descriptive host context only",
+                        "evidence": "AMD Vulkan decode tg128 median 43.7 t/s is measured; a retained host comparison exists in results/economics.json. Vulkan/host ratios are descriptive context only: the CPU proof was established retrospectively after collection, is not prospectively frozen decision-grade authority, and does not gate or promote the V0-B terminal"},
                     "evidence_bindable_backend_runtime_identity": {
                         "status": "evidence-supported",
                         "evidence": "RADV 25.0.7-2+deb13u1, Vulkan API 1.4.305, loader 1.4.309.0 recorded in capability records with build/library SHA-256s"},
@@ -114,8 +114,8 @@ def main() -> int:
                         "status": "demonstrated for this model class",
                         "evidence": "37/37 layers, zero-inference proof, flat VRAM through idle hold"},
                     "representative_ops_without_silent_host_fallback": {
-                        "status": "demonstrated at fixture scale",
-                        "evidence": "clean run, stable generation, no fallback markers"},
+                        "status": "evidence-supported (one corrected run)",
+                        "evidence": "corrected run exited cleanly; intended NV-A physical device was proven; no silent host fallback markers were observed; zero-inference/materialization observations were clean where applicable. The one corrected generated-output observation is insufficiently observed; it is neither stable nor repeatable"},
                     "stable_sync_execution_semantics": {
                         "status": "evidence-supported (bounded)",
                         "evidence": "single corrected run + 3 zero-inference process runs clean; campaign length bounds the claim"},

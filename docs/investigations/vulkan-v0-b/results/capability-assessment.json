@@ -38,7 +38,7 @@
      "status": "no-evidence (bounded observation)"
     },
     "representation_quantization_support": {
-     "evidence": "Q4_K_M executed correctly, BUT Polaris/RADV advertises no fp16 compute storage->compute fast path, no int-dot, no matrix cores (subgroup 64); ggml falls back to f32 compute \u2014 representation breadth untested, arithmetic throughput structurally limited by advertised capabilities",
+     "evidence": "Q4_K_M executed correctly; Polaris/RADV advertises no fp16 compute storage->compute fast path, no int-dot, and no matrix cores (subgroup 64); retained ggml evidence records the tested f32 compute path \u2014 representation breadth is partial/untested. These advertised capabilities and the tested representation path do not demonstrate a cause of the observed AMD throughput; compute vs memory vs link remains open",
      "status": "partial"
     },
     "representative_ops_without_silent_host_fallback": {
@@ -54,8 +54,8 @@
      "status": "adequate"
     },
     "workload_relevant_decode_performance": {
-     "evidence": "tg128 median 43.7 t/s; usefulness vs host execution decided by this bundle's supplemental CPU arm (results/economics.json)",
-     "status": "measured \u2014 pending host-baseline interpretation"
+     "evidence": "AMD Vulkan decode tg128 median 43.7 t/s is measured; a retained host comparison exists in results/economics.json. Vulkan/host ratios are descriptive context only: the CPU proof was established retrospectively after collection, is not prospectively frozen decision-grade authority, and does not gate or promote the V0-B terminal",
+     "status": "measured \u2014 descriptive host context only"
     },
     "workload_relevant_prefill_performance": {
      "evidence": "pp512 median 498.0 t/s (vs NV-A Vulkan 3579.0) \u2014 DESCRIPTIVE cross-vendor only; absolute level ~26x below the same-class CUDA control is not available (no AMD native arm)",
@@ -91,8 +91,8 @@
      "status": "strong for this stack"
     },
     "representative_ops_without_silent_host_fallback": {
-     "evidence": "clean run, stable generation, no fallback markers",
-     "status": "demonstrated at fixture scale"
+     "evidence": "corrected run exited cleanly; intended NV-A physical device was proven; no silent host fallback markers were observed; zero-inference/materialization observations were clean where applicable. The one corrected generated-output observation is insufficiently observed; it is neither stable nor repeatable",
+     "status": "evidence-supported (one corrected run)"
     },
     "stable_sync_execution_semantics": {
      "evidence": "single corrected run + 3 zero-inference process runs clean; campaign length bounds the claim",

@@ -443,6 +443,72 @@ class TestTerminalSemantics(unittest.TestCase):
         self.assertIn("overwritten and are NOT retained", blob)
 
 
+class TestCrossArtifactCapabilityGovernance(unittest.TestCase):
+    """Capability prose must preserve terminal/taxonomy authority bounds."""
+
+    def setUp(self):
+        self.term = json.loads((V0B / "TERMINAL.json").read_text())
+        self.caps = json.loads((V0B / "results" / "capability-assessment.json")
+                              .read_text())
+        self.seams = json.loads((V0B / "results" / "seam-comparison.json")
+                               .read_text())
+        self.stability = json.loads((V0B / "results" / "correctness-stability.json")
+                                    .read_text())
+
+    def test_capability_cpu_governance_matches_nonauthoritative_terminal(self):
+        cpu = self.term["decision_inputs"]["cpu_arm_context"]
+        self.assertFalse(cpu["authoritative"])
+        self.assertIn("retrospective", cpu["scope"].lower())
+        self.assertIn("not prospectively frozen decision-grade", cpu["scope"].lower())
+        finding = self.caps["per_backend"]["amd_a_polaris_vulkan"]["findings"][
+            "workload_relevant_decode_performance"]
+        self.assertEqual(finding["status"], "measured — descriptive host context only")
+        self.assertIn("retained host comparison", finding["evidence"].lower())
+        self.assertIn("descriptive", finding["evidence"].lower())
+        self.assertIn("retrospectively", finding["evidence"].lower())
+        self.assertIn("does not gate or promote", finding["evidence"].lower())
+        self.assertNotIn("pending", finding["status"].lower())
+
+    def test_insufficiently_observed_pairs_are_not_described_as_repeatable(self):
+        capability_pairs = {
+            "AMD-A/02:00.0/Vulkan": self.caps["per_backend"]
+            ["amd_a_polaris_vulkan"]["findings"][
+                "representative_ops_without_silent_host_fallback"],
+            "NV-A/04:00.0/Vulkan": self.caps["per_backend"]
+            ["nv_a_ga104_vulkan"]["findings"][
+                "representative_ops_without_silent_host_fallback"],
+        }
+        for pair, finding in capability_pairs.items():
+            with self.subTest(pair=pair):
+                if (self.stability["per_pair"][pair]
+                        ["backend_local_repeatability"] == "insufficiently_observed"):
+                    evidence = finding["evidence"].lower()
+                    self.assertIn("insufficiently observed", evidence)
+                    self.assertIn("neither stable nor repeatable", evidence)
+                    self.assertNotIn("stable generation", evidence)
+
+    def test_amd_capability_causality_respects_terminal_nonclaim(self):
+        self.assertIn(
+            "no causal decomposition of the AMD throughput level claimed (compute vs memory vs link remains open)",
+            self.term["non_claims"])
+        evidence = self.caps["per_backend"]["amd_a_polaris_vulkan"]["findings"][
+            "representation_quantization_support"]["evidence"].lower()
+        self.assertIn("no fp16", evidence)
+        self.assertIn("no int-dot", evidence)
+        self.assertIn("no matrix cores", evidence)
+        self.assertIn("q4_k_m executed", evidence)
+        self.assertIn("representation breadth", evidence)
+        self.assertNotIn("throughput structurally limited", evidence)
+        self.assertIn("do not demonstrate a cause", evidence)
+
+    def test_s5_retains_corrected_taxonomy_and_cpu_governance(self):
+        s5 = next(s for s in self.seams["seams"] if s["id"] == "S5-no-integration")
+        assessment = s5["assessment"].lower()
+        self.assertIn("backend-locally stable on amd-a", assessment)
+        self.assertIn("retrospective cpu arm is descriptive context only", assessment)
+        self.assertNotIn("pending the supplemental cpu arm", assessment)
+
+
 class TestEconomicsGrounding(unittest.TestCase):
     """Ratios must be mechanically traceable to accepted V0-A rows."""
 
