@@ -104,3 +104,4 @@ These apply to every directory above.
 - **If a historical planning document could be mistaken for active
   guidance**, add a forward scope/supersession note rather than changing its
   measured facts.
+<!-- validation-only docs note for Issue #148 targeted-mode proof -->
