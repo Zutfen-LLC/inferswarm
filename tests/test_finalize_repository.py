@@ -65,13 +65,13 @@ class EngineHarness(unittest.TestCase):
     @staticmethod
     def derive_from(reads: list[str], out: str,
                     transform=lambda data: data.upper()) -> "callable":
-        def producer(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def producer(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             payload = b"".join(run.read(r) or b"" for r in reads)
             return {out: transform(payload)}
         return producer
 
     def manifest_producer(self, manifest: str, covered: list[str]):
-        def producer(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def producer(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             rows = {}
             for relative in sorted(covered):
                 data = run.read(relative)
@@ -251,7 +251,7 @@ class EngineHarness(unittest.TestCase):
     def test_second_pass_byte_changes_fail_the_fixed_point(self) -> None:
         counter = {"n": 0}
 
-        def flaky(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def flaky(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             counter["n"] += 1
             return {"gen.txt": f"attempt {counter['n']}\n".encode()}
 
@@ -332,7 +332,7 @@ class EngineHarness(unittest.TestCase):
         touch(self.root / "authored-dirty.md", "precious authored edit\n")
         baseline = self._baseline()
 
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             (run.root / "undeclared.txt").write_text("surprise\n")
             return {"gen.txt": b"ok\n"}
 
@@ -352,7 +352,7 @@ class EngineHarness(unittest.TestCase):
         touch(self.root / "authored-dirty.md", "precious authored edit\n")
         baseline = self._baseline()
 
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             os.makedirs("docs", exist_ok=True)
             with open("docs/injected.txt", "w") as handle:
                 handle.write("sandbox injection\n")
@@ -374,7 +374,7 @@ class EngineHarness(unittest.TestCase):
               "user's in-progress edit, byte one\n")
         baseline = self._baseline()
 
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             (run.root / "notes with spaces.md").write_text("clobbered\n")
             return {"gen.txt": b"ok\n"}
 
@@ -394,7 +394,7 @@ class EngineHarness(unittest.TestCase):
         # closed and the file is restored to its proven HEAD bytes
         baseline = self._baseline()
 
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             (run.root / "src.txt").write_text("hijacked\n")
             return {"gen.txt": b"ok\n"}
 
@@ -412,7 +412,7 @@ class EngineHarness(unittest.TestCase):
         touch(self.root / "authored-dirty.md", "precious authored edit\n")
         baseline = self._baseline()
 
-        def rogue_verify(run: fin.Run, scratch: Path) -> None:
+        def rogue_verify(run: fin.StageRun, scratch: Path) -> None:
             (run.root / "verifier-artifact.txt").write_text("forged\n")
 
         stages = (
@@ -429,7 +429,7 @@ class EngineHarness(unittest.TestCase):
         touch(self.root / "authored-dirty.md", "precious authored edit\n")
         baseline = self._baseline()
 
-        def rogue_verify(run: fin.Run, scratch: Path) -> None:
+        def rogue_verify(run: fin.StageRun, scratch: Path) -> None:
             with open(run.root / "authored-dirty.md", "a") as handle:
                 handle.write("appended by verifier\n")
 
@@ -450,7 +450,7 @@ class EngineHarness(unittest.TestCase):
         touch(self.root / "authored-dirty.md", "precious authored edit\n")
         baseline = self._baseline()
 
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             (run.root / "undeclared.txt").write_text("surprise\n")
             return {"gen.txt": b"ok\n"}
 
@@ -467,7 +467,7 @@ class EngineHarness(unittest.TestCase):
         touch(self.root / "authored-dirty.md", "precious authored edit\n")
         baseline = self._baseline()
 
-        def rogue_verify(run: fin.Run, scratch: Path) -> None:
+        def rogue_verify(run: fin.StageRun, scratch: Path) -> None:
             (run.root / "verifier-artifact.txt").write_text("forged\n")
 
         stages = (
@@ -884,7 +884,7 @@ class RealRootMutationControls(unittest.TestCase):
     def test_producer_creates_undeclared_file_in_actual_checkout(self):
         real_root = self.root  # TRUE real-root closure
 
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             (real_root / "undeclared.txt").write_text("injected\n")
             return {"gen.txt": b"ok\n"}
 
@@ -893,7 +893,7 @@ class RealRootMutationControls(unittest.TestCase):
     def test_producer_overwrites_clean_tracked_file_in_actual_checkout(self):
         real_root = self.root
 
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             (real_root / "clean-tracked.txt").write_text("hijacked\n")
             return {"gen.txt": b"ok\n"}
 
@@ -902,7 +902,7 @@ class RealRootMutationControls(unittest.TestCase):
     def test_producer_overwrites_authored_dirty_file_in_actual_checkout(self):
         real_root = self.root
 
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             (real_root / "dirty-tracked.txt").write_text("clobbered\n")
             return {"gen.txt": b"ok\n"}
 
@@ -911,7 +911,7 @@ class RealRootMutationControls(unittest.TestCase):
     def test_producer_deletes_clean_tracked_file_in_actual_checkout(self):
         real_root = self.root
 
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             (real_root / "clean-tracked.txt").unlink()
             return {"gen.txt": b"ok\n"}
 
@@ -920,7 +920,7 @@ class RealRootMutationControls(unittest.TestCase):
     def test_producer_deletes_authored_dirty_file(self):
         real_root = self.root
 
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             (real_root / "dirty-tracked.txt").unlink()
             return {"gen.txt": b"ok\n"}
 
@@ -929,7 +929,7 @@ class RealRootMutationControls(unittest.TestCase):
     def test_producer_deletes_untracked_file(self):
         real_root = self.root
 
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             (real_root / "untracked.txt").unlink()
             return {"gen.txt": b"ok\n"}
 
@@ -938,7 +938,7 @@ class RealRootMutationControls(unittest.TestCase):
     def test_producer_renames_file_in_actual_checkout(self):
         real_root = self.root
 
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             source = real_root / "clean-tracked.txt"
             source.rename(real_root / "renamed-away.txt")
             return {"gen.txt": b"ok\n"}
@@ -948,7 +948,7 @@ class RealRootMutationControls(unittest.TestCase):
     def test_verifier_creates_modifies_deletes_in_actual_checkout(self):
         real_root = self.root
 
-        def rogue_verify(run: fin.Run, scratch: Path) -> None:
+        def rogue_verify(run: fin.StageRun, scratch: Path) -> None:
             (real_root / "verifier-created.txt").write_text("forged\n")
             with open(real_root / "dirty-tracked.txt", "a") as handle:
                 handle.write("appended\n")
@@ -962,11 +962,11 @@ class RealRootMutationControls(unittest.TestCase):
     def test_equivalent_check_mode_cases_fail_and_preserve(self):
         real_root = self.root
 
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             (real_root / "undeclared.txt").write_text("injected\n")
             return {"gen.txt": b"ok\n"}
 
-        def rogue_verify(run: fin.Run, scratch: Path) -> None:
+        def rogue_verify(run: fin.StageRun, scratch: Path) -> None:
             (real_root / "verifier-created.txt").write_text("forged\n")
 
         self._expect_fail_closed((self._rogue_stage(rogue),), write=False)
@@ -977,7 +977,7 @@ class RealRootMutationControls(unittest.TestCase):
     def test_callable_raises_after_mutating_actual_checkout(self):
         real_root = self.root
 
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             (real_root / "clean-tracked.txt").write_text("hijacked\n")
             raise RuntimeError("callable blew up mid-mutation")
 
@@ -1009,7 +1009,7 @@ class RealRootMutationControls(unittest.TestCase):
         # and a rogue recreation of the deleted file is re-deleted
         real_root = self.root
 
-        def recreator(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def recreator(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             (real_root / "clean-tracked.txt").write_text("resurrected\n")
             return {"gen.txt": b"ok\n"}
 
@@ -1029,7 +1029,7 @@ class RealRootMutationControls(unittest.TestCase):
         # silently skipped (the error propagates, nothing is applied)
         real_root = self.root
 
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             (real_root / "clean-tracked.txt").write_text("hijacked\n")
             head = real_root / ".git" / "HEAD"
             head.rename(head.parent / "HEAD.broken")
@@ -1089,7 +1089,7 @@ class DeclaredReadEnforcementControls(unittest.TestCase):
     def test_undeclared_runtime_read_is_rejected(self):
         # the producer reads a path not in its declared reads through
         # run.read: rejected even though the file exists on disk
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             data = run.read("other-input.txt")  # NOT declared
             return {"gen.txt": (data or b"").upper()}
 
@@ -1109,7 +1109,7 @@ class DeclaredReadEnforcementControls(unittest.TestCase):
         # direct read cannot observe the undeclared input at all
         observed = {}
 
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             path = run.root / "other-input.txt"
             observed["present"] = path.is_file()
             observed["readable"] = None
@@ -1140,7 +1140,7 @@ class DeclaredReadEnforcementControls(unittest.TestCase):
                         "stale output"], check=True)
         observed = {}
 
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             path = run.root / "gen.txt"
             observed["present"] = path.is_file()
             observed["direct"] = None
@@ -1178,7 +1178,7 @@ class DeclaredReadEnforcementControls(unittest.TestCase):
                         "stale output"], check=True)
         observed = {}
 
-        def producer(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def producer(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             path = run.root / "gen.txt"
             observed["present"] = path.is_file()
             observed["direct"] = path.read_bytes()
@@ -1206,7 +1206,7 @@ class DeclaredReadEnforcementControls(unittest.TestCase):
         # read channels must deny it the old bytes; forced to derive
         # from the changed src.txt instead, its output differs from the
         # committed bytes and --check correctly fails as stale.
-        def derive(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def derive(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             return {"gen.txt": (run.read("src.txt") or b"").upper()}
 
         gen = fin.Stage("gen", "derived", "g",
@@ -1228,7 +1228,7 @@ class DeclaredReadEnforcementControls(unittest.TestCase):
                         "input change"], check=True)
         observed = {}
 
-        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             path = run.root / "gen.txt"
             observed["present"] = path.is_file()
             observed["direct"] = None
@@ -1263,7 +1263,7 @@ class DeclaredReadEnforcementControls(unittest.TestCase):
         # producer tries to consume it anyway: the mediated read is
         # rejected, proving the DAG cannot be silently widened at run
         # time to create a data cycle
-        def a_producer(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+        def a_producer(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
             try:
                 hidden = run.read("b.out")
             except fin.FinalizationError:
@@ -1343,6 +1343,278 @@ class DeclaredReadEnforcementControls(unittest.TestCase):
             with self.assertRaises(fin.FinalizationError) as caught:
                 fin.validate_registry((protected, rogue))
             self.assertIn("protected", str(caught.exception))
+
+
+# ---------------------------------------------------------------------------
+# F3 round 5: mechanical callback/engine capability split
+# ---------------------------------------------------------------------------
+
+class CapabilitySplitControls(unittest.TestCase):
+    """The callback-facing object mechanically cannot express
+    engine-private capabilities (real root, unrestricted current-output
+    reader, engine mutation/pending state)."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory(prefix="finalize-caps-")
+        self.root = Path(self._tmp.name)
+        self.addCleanup(self._tmp.cleanup)
+        for command in (["git", "init", "-q"],
+                        ["git", "config", "user.email", "t@example.com"],
+                        ["git", "config", "user.name", "t"]):
+            subprocess.run(command, cwd=self.root, check=True)
+        self._write("src.txt", "authored\n")
+        self._write("gen.txt", "RECOGNIZABLE STALE OUTPUT BYTES\n")
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm", "base"],
+                       check=True)
+
+    def _write(self, relative: str, text: str) -> None:
+        path = self.root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+
+    def _state(self) -> dict[str, str]:
+        return {p.relative_to(self.root).as_posix():
+                hashlib.sha256(p.read_bytes()).hexdigest()
+                for p in sorted(self.root.rglob("*"))
+                if p.is_file() and ".git" not in p.parts}
+
+    _STALE = b"RECOGNIZABLE STALE OUTPUT BYTES\n"
+
+    def _writes_only_stage(self, producer) -> fin.Stage:
+        return fin.Stage("gen", "derived", "g",
+                         reads=frozenset({"src.txt"}),
+                         writes=frozenset({"gen.txt"}),
+                         producer=producer)
+
+    # -- control A: no engine-private method leak -----------------------
+
+    def test_callback_object_exposes_no_read_input_equivalent(self) -> None:
+        # the writes-only stage attempts EVERY callable-visible route to
+        # an unrestricted current-output read: the attribute must not
+        # exist, no sibling capability may compute it, and the capsule
+        # has no __dict__ to hide anything in
+        observed = {}
+
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
+            observed["read_input"] = hasattr(run, "read_input")
+            observed["engine_attrs"] = sorted(
+                attr for attr in dir(run)
+                if "read_input" in attr or "real_root" in attr
+                or "pending" == attr or "mutations" in attr
+                or "changed" == attr or "engine" in attr.lower()
+                or "run" == attr)
+            observed["slots"] = sorted(getattr(type(run), "__slots__", ()))
+            observed["dict"] = getattr(run, "__dict__", None)
+            observed["mediated"] = None
+            try:
+                observed["mediated"] = run.read("gen.txt")
+            except fin.FinalizationError as error:
+                observed["mediated"] = f"rejected: {error}"
+            observed["scratch_parent_names"] = sorted(
+                p.name for p in scratch.parents[:3])
+            return {"gen.txt": b"regenerated\n"}
+
+        fin.finalize(self.root, (self._writes_only_stage(rogue),),
+                     write=True)
+        self.assertFalse(observed["read_input"])
+        self.assertEqual(observed["engine_attrs"], [])
+        self.assertEqual(observed["slots"],
+                         ["_pending", "_reads", "root", "scratch"])
+        self.assertIsNone(observed["dict"])  # no __dict__ to smuggle state
+        self.assertIn("undeclared read", observed["mediated"])
+        # the scratch the callable received is NOT the engine workroot
+        # and does not contain (or sit beside) the starting-state vault
+        self.assertNotIn("starting-bytes", observed["scratch_parent_names"])
+
+    def test_callback_object_class_is_not_the_engine_class(self) -> None:
+        # the object handed to the callable is a StageRun capsule; the
+        # engine's EngineRun (with real_root/read_input/pending) is a
+        # DIFFERENT class, and no attribute of the capsule yields an
+        # EngineRun instance or class
+        observed = {}
+
+        def probe(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
+            observed["type"] = type(run).__name__
+            observed["is_engine"] = isinstance(run, fin.EngineRun)
+            for attr in ("root", "scratch", "_reads", "_pending"):
+                value = getattr(run, attr, None)
+                if isinstance(value, fin.EngineRun) or value is fin.EngineRun:
+                    observed["yields_engine"] = attr
+            return {"gen.txt": b"regenerated\n"}
+
+        fin.finalize(self.root, (self._writes_only_stage(probe),),
+                     write=True)
+        self.assertEqual(observed["type"], "StageRun")
+        self.assertFalse(observed["is_engine"])
+        self.assertNotIn("yields_engine", observed)
+
+    # -- control B: no real-root leak ------------------------------------
+
+    def test_callback_object_yields_no_real_root(self) -> None:
+        # the writes-only stage walks every public/state attribute of
+        # the capsule and every path it can name, attempting to
+        # recover the real checkout and read the stale gen.txt from it
+        observed = {}
+
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
+            candidates = {}
+            for attr in ("root", "scratch"):
+                candidates[attr] = getattr(run, attr)
+            # any str path anywhere in the capsule's attributes
+            for attr, value in vars(type(run)).items():
+                pass
+            observed["root_is_real"] = run.root == self.root \
+                or run.root.resolve() == self.root.resolve()
+            observed["scratch_is_real"] = scratch == self.root \
+                or scratch.resolve() == self.root.resolve()
+            observed["root_reaches_real"] = self.root in run.root.parents
+            observed["scratch_reaches_real"] = self.root in scratch.parents
+            observed["root_sees_stale"] = (run.root / "gen.txt").is_file()
+            observed["scratch_sees_stale"] = (
+                scratch / "gen.txt").is_file() \
+                or (scratch / ".." / "gen.txt").is_file() \
+                or (scratch / ".." / ".." / "gen.txt").is_file() \
+                or (scratch / ".." / ".." / ".." / "gen.txt").is_file() \
+                or (scratch / ".." / ".." / ".." / ".." /
+                    "gen.txt").is_file()
+            observed["vault_absent"] = not (
+                scratch.parent / "starting-bytes").exists() \
+                and not (scratch / ".." / ".." / "starting-bytes").exists()
+            observed["real_root_attr"] = getattr(run, "real_root", None)
+            observed["pending_engine"] = getattr(run, "pending", None)
+            observed["mutations_engine"] = getattr(run, "mutations", None)
+            return {"gen.txt": b"regenerated\n"}
+
+        fin.finalize(self.root, (self._writes_only_stage(rogue),),
+                     write=True)
+        self.assertFalse(observed["root_is_real"])
+        self.assertFalse(observed["scratch_is_real"])
+        self.assertFalse(observed["root_reaches_real"])
+        self.assertFalse(observed["scratch_reaches_real"])
+        self.assertFalse(observed["root_sees_stale"])
+        self.assertFalse(observed["scratch_sees_stale"])
+        self.assertTrue(observed["vault_absent"])
+        self.assertIsNone(observed["real_root_attr"])
+        self.assertIsNone(observed["pending_engine"])
+        self.assertIsNone(observed["mutations_engine"])
+
+    def test_engine_state_not_mutable_from_callback(self) -> None:
+        # the capsule's pending view is an inert MappingProxyType
+        # snapshot: a callable cannot mutate engine bookkeeping through
+        # it, and engine run state stays invisible
+        observed = {}
+
+        def rogue(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
+            pending = getattr(run, "_pending", None)
+            observed["pending_type"] = type(pending).__name__
+            observed["pending_is_engine_map"] = pending is getattr(
+                fin.EngineRun, "pending", None)
+            try:
+                pending["gen.txt"] = b"FORGED"  # type: ignore[index]
+                observed["pending_mutable"] = True
+            except TypeError:
+                observed["pending_mutable"] = False
+            return {"gen.txt": b"regenerated\n"}
+
+        fin.finalize(self.root, (self._writes_only_stage(rogue),),
+                     write=True)
+        self.assertEqual(observed["pending_type"], "mappingproxy")
+        self.assertFalse(observed["pending_is_engine_map"])
+        self.assertFalse(observed["pending_mutable"])
+
+    # -- control C: false-pass exploit regression ------------------------
+
+    def test_adversarial_producer_cannot_recover_stale_output(self) -> None:
+        # commit src.txt + stale gen.txt, CHANGE src.txt, then an
+        # adversarial producer tries every callback-visible route to
+        # recover the current (stale) gen.txt bytes and return them
+        # unchanged, faking a --check pass.  Every route must fail;
+        # --check must fail as stale; the real tree must stay
+        # byte-identical through check mode.
+        self._write("src.txt", "changed\n")
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm",
+                        "input change"], check=True)
+        recovered = []
+
+        def adversarial(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
+            # route 1: mediated declared read
+            try:
+                recovered.append(("mediated", run.read("gen.txt")))
+            except fin.FinalizationError:
+                pass
+            # route 2: direct projection read
+            try:
+                recovered.append(("projection",
+                                  (run.root / "gen.txt").read_bytes()))
+            except OSError:
+                pass
+            # route 3: engine-private channels on the capsule
+            for attr in ("read_input", "real_root", "pending",
+                         "mutations", "changed", "workroot"):
+                channel = getattr(run, attr, None)
+                if channel is not None:
+                    recovered.append((attr, channel))
+            # route 4: walk the scratch upward looking for the stale
+            # bytes (vault / workroot / any sibling copy)
+            probe = scratch
+            for _ in range(6):
+                probe = probe.parent
+                for name in ("gen.txt", "starting-bytes/gen.txt"):
+                    candidate = probe / name
+                    if candidate.is_file():
+                        try:
+                            recovered.append(
+                                ("walk", str(candidate),
+                                 candidate.read_bytes()))
+                        except OSError:
+                            pass
+            # route 5: scratch or root attributes resolving to the
+            # real checkout
+            for path in (run.root, run.scratch if hasattr(run, "scratch")
+                         else scratch):
+                if path == self.root:
+                    recovered.append(("real-root-ref", str(path)))
+            # denied everywhere: derive only from the declared input
+            return {"gen.txt": (run.read("src.txt") or b"").upper()}
+
+        baseline = self._state()
+        with self.assertRaises(fin.FinalizationError) as caught:
+            fin.finalize(self.root,
+                         (self._writes_only_stage(adversarial),),
+                         write=False)
+        self.assertIn("stale", str(caught.exception))
+        # nothing recovered equals the stale bytes
+        for entry in recovered:
+            for item in (entry if isinstance(entry, tuple) else (entry,)):
+                self.assertNotEqual(item, self._STALE)
+        # and the real tree is byte-identical through check mode
+        self.assertEqual(self._state(), baseline)
+
+    # -- control D: explicit self-input positive control -----------------
+
+    def test_self_input_old_output_visible_through_capsule(self) -> None:
+        # reads={src.txt, gen.txt}, writes={gen.txt}: the old gen.txt
+        # bytes remain available through BOTH authorized channels
+        observed = {}
+
+        def producer(run: fin.StageRun, scratch: Path) -> dict[str, bytes]:
+            observed["present"] = (run.root / "gen.txt").is_file()
+            observed["direct"] = (run.root / "gen.txt").read_bytes()
+            observed["mediated"] = run.read("gen.txt")
+            return {"gen.txt": observed["mediated"].upper()}
+
+        stages = (fin.Stage("gen", "derived", "g",
+                            reads=frozenset({"src.txt", "gen.txt"}),
+                            writes=frozenset({"gen.txt"}),
+                            producer=producer),)
+        fin.finalize(self.root, stages, write=True)
+        self.assertTrue(observed["present"])
+        self.assertEqual(observed["direct"], self._STALE)
+        self.assertEqual(observed["mediated"], self._STALE)
+        self.assertEqual((self.root / "gen.txt").read_bytes(),
+                         self._STALE.upper())
 
 
 # ---------------------------------------------------------------------------

@@ -53,9 +53,10 @@ managed documents are self-inputs: their authored bytes outside the
 generated sections are real dependencies of the desired bytes, and the DAG
 represents them mechanically.
 
-Declared reads are also **enforced at run time**, not just declared:
+Declared reads are also **enforced at run time**, not just declared, and
+the callback/engine boundary is **mechanical**:
 
-- `Run.read` rejects any path the active stage did not declare;
+- `StageRun.read` rejects any path the active stage did not declare;
 - each stage executes against its own **restricted projection** — a
   filesystem containing byte copies of *only* the paths the stage is
   authorized to read (declared `reads` plus manifest `covers`) — so a
@@ -66,6 +67,14 @@ Declared reads are also **enforced at run time**, not just declared:
   A stage that legitimately consumes its own output's existing bytes
   declares the path in both `reads` and `writes` (the self-input
   contract), which puts it back in the projection;
+- the object a callable receives is a narrow **`StageRun` capability
+  capsule** — projection root, a fresh per-stage scratch directory, and
+  the declared-read-aware `read()`.  It has no attribute (and no
+  `__dict__`) for the real repository root, an unrestricted
+  current-output reader, or the engine's pending/mutation maps: those
+  live on the engine-private `EngineRun`, whose reference is never
+  passed to a callable.  The starting-state byte vault lives outside
+  the callable-reachable workroot, so no scratch path can walk to it;
 - the DAG therefore describes the real correctness dependency graph: a
   stage cannot silently consume another stage's input that happens to be
   present in a shared sandbox, nor alias its output to stale committed
@@ -137,7 +146,15 @@ Stage producers and verifiers never execute against the real working tree:
   channel no callable can reach); `run.root` *is* the projection —
   callables run with it as their working directory, so a relative-path
   write lands in the projection, and a `run.root`-based write hits copies,
-  never authored bytes;
+  never authored bytes.  The callable is invoked with a **`StageRun`
+  capability capsule** (the projection root, a fresh per-stage scratch
+  directory, and the declared-read-aware `read()`); the engine keeps the
+  real root, the unrestricted current-output reader, and the
+  pending/mutation maps on the engine-private `EngineRun`, never passed
+  to a callable.  The starting-state byte vault lives outside the
+  callable-reachable workroot (a sibling directory), so no scratch path
+  can walk up to it; the per-stage capsule (projection + scratch) is
+  removed when the stage ends;
 - around every callable the engine compares **full content digests of the
   projection** and a **complete path-state census of the real worktree**
   (tracked and untracked, present *and deleted*: clean-tracked,

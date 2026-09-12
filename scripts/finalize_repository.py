@@ -28,10 +28,15 @@ duplicates.  Before writing anything the engine mechanically proves:
   covered path is rejected;
 - a terminal manifest never covers its own bytes (no self-digest loop);
 - declared reads are *enforced*: a stage's callable may only read inputs
-  it declared (mediated through ``Run.read`` AND directly through the
+  it declared (mediated through ``StageRun.read`` AND directly through the
   stage's own restricted filesystem projection), and paths registered
   as primary/frozen authority inputs are globally write-forbidden —
   a writer scheduled before OR after the protected reader is rejected;
+  the capability boundary is MECHANICAL (round 5): callables receive a
+  narrow ``StageRun`` capsule (projection root, scratch, declared-read
+  ``read``) — never the engine's ``EngineRun``, which holds the real
+  repository root, the unrestricted current-output reader, and the
+  mutation/pending maps, none of which are reachable from the capsule;
 - every real-tree write is symlink-safe: the destination and every
   ancestor component are validated with no-follow semantics before
   any byte is written, so an output symlink or a symlinked parent
@@ -50,12 +55,14 @@ Stage producers and verifiers never execute against the real working
 tree.  Each pass materializes a sandbox containing byte copies of every
 path the stage is authorized to READ (declared reads plus manifest
 covers); ``run.root`` IS the sandbox, callables run with the sandbox as
-their working directory, and ``Run.read`` mediates reads (pending stage
-outputs shadow the sandbox bytes, so ``--check`` and a converged
+their working directory, and ``StageRun.read`` mediates reads (pending
+stage outputs shadow the sandbox bytes, so ``--check`` and a converged
 ``--write`` derive identical results).  A writes-only output is absent
 from the sandbox: its pre-stage bytes are engine-private state, visible
-only to the engine's own change detection through a private real-tree
-channel, never to any callable.  Around every producer and verify
+only to the engine's own change detection through the private
+``EngineRun.read_input`` real-tree channel, never to any callable; the
+starting-state byte vault lives OUTSIDE the callable-reachable workroot,
+so no scratch path can walk to it.  Around every producer and verify
 callable the engine compares
 full content digests of the sandbox tree and of the real worktree
 dirty/untracked census (tracked AND untracked paths).  Any direct write,
@@ -116,8 +123,8 @@ hashes + retention manifest for the Issue #130 sources) lives in its
 own additive successor bundle under ``evidence/issue-130-finalization``
 with its own terminal manifest; it never edits the parent bundle.
 
-``Run.read`` is the mediated read channel: each stage is bound (as
-``run.stage``) while its callable executes, and reads of paths the
+``StageRun.read`` is the mediated read channel; the capsule is built
+with exactly the stage's authorized read set, so reads of paths the
 stage did not declare fail closed.  The sandbox ``run.root`` a callable
 sees is a per-stage *restricted projection*: it contains byte copies of
 only the paths the stage is authorized to read (its declared reads plus
@@ -125,8 +132,10 @@ manifest covers), so a direct filesystem read of an undeclared sibling
 input — or of a writes-only output's pre-stage bytes — is impossible,
 not merely discouraged.  The engine's own view of current output bytes
 (change detection, pending-output comparison, the fixed-point proof)
-runs through the private ``Run.read_input`` real-tree channel and is
-never callable-visible.
+runs through the private ``EngineRun.read_input`` real-tree channel and
+is never callable-visible: no ``EngineRun`` reference is passed to, or
+reachable from the public/state attributes of, any callable's
+``StageRun``.
 
 Not migrated, deliberately: the legacy #74/#99/#101/#103 manifests are
 immutable historical snapshots (their living-document rows are frozen and
@@ -146,6 +155,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import types
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterator
@@ -185,32 +195,80 @@ class Stage:
     covers: frozenset[str] = frozenset()
     after: frozenset[str] = frozenset()
     protected: bool = False
-    producer: Callable[["Run", Path], dict[str, bytes]] | None = None
-    verify: Callable[["Run", Path], None] | None = None
+    producer: Callable[["StageRun", Path], dict[str, bytes]] | None = None
+    verify: Callable[["StageRun", Path], None] | None = None
 
 
-class Run:
-    """One finalization pass, executed against per-stage projections.
+class StageRun:
+    """The ONLY object a stage callable ever receives (F3, round 5).
 
-    ``root`` is the stage's restricted projection (byte copies of only
-    the paths that stage declared), never the real working tree.
-    Producers read tree state through ``run.read(path)``: bytes already
-    written by an earlier stage this pass shadow the projection bytes,
-    so ``--check`` and ``--write`` derive identical results.  While a
-    stage's callable executes, ``run.stage`` is bound to that stage's
-    declared read set and ``Run.read`` rejects any undeclared path;
-    reading a path the stage also writes requires declaring it in BOTH
-    ``reads`` and ``writes`` (the explicit self-input contract).
-    ``Run.apply`` records desired bytes; the engine — and only the
-    engine — writes them to the real tree during the apply step of a
-    ``--write`` run.
+    A narrow capability capsule: the stage's restricted projection
+    root, a private scratch directory, and a declared-read-aware
+    ``read()``.  It mechanically cannot express any engine-private
+    capability — no real repository root, no unrestricted
+    current-output reader, no engine mutation/pending maps — because
+    those live on :class:`EngineRun`, a class whose instances are
+    never passed to (or reachable from attributes of) a callable.
+
+    ``root`` is the stage's restricted projection (byte copies of
+    only the paths the stage is authorized to read: ``reads |
+    covers``), never the real working tree.  ``read(path)`` rejects
+    any path outside the active stage's declared read set; bytes
+    already written by an earlier stage this pass (visible to this
+    stage only because it declared them as reads) shadow the
+    projection bytes, so ``--check`` and ``--write`` derive identical
+    results.  Reading a path the stage also writes requires
+    declaring it in BOTH ``reads`` and ``writes`` (the explicit
+    self-input contract).  Desired bytes are returned from the
+    producer; the engine — and only the engine — compares them to
+    current state, records mutations, and writes them to the real
+    tree during the apply step of a ``--write`` run.
+
+    ``__slots__`` makes the capability surface explicit and frozen:
+    there is no ``__dict__`` to smuggle engine state through, and
+    ``_pending`` is a per-call snapshot (``MappingProxyType``), not a
+    live reference into engine bookkeeping.
     """
 
-    def __init__(self, workroot: Path) -> None:
-        self.root = workroot  # rebound per stage to its projection
-        self.real_root = workroot  # rebound per pass to the real tree
+    __slots__ = ("root", "scratch", "_reads", "_pending")
+
+    def __init__(self, root: Path, scratch: Path,
+                 reads: frozenset[str], pending: dict[str, bytes]) -> None:
+        self.root = root            # the stage's restricted projection
+        self.scratch = scratch      # fresh per-stage scratch directory
+        self._reads = reads         # this stage's authorized read set
+        self._pending = types.MappingProxyType(dict(pending))
+
+    def read(self, relative: str) -> bytes | None:
+        declared = "*" in self._reads or relative in self._reads
+        if not declared:
+            raise FinalizationError(
+                f"undeclared read: the active stage did not declare "
+                f"{relative!r} in its reads; add it to the stage contract "
+                "or read through the declared dependency")
+        if relative in self._pending:
+            return self._pending[relative]
+        path = self.root / relative
+        return path.read_bytes() if path.is_file() else None
+
+
+class EngineRun:
+    """Engine-private pass state — NEVER callable-visible (F3, round 5).
+
+    Holds exactly what the specification reserves to the engine: the
+    real repository root, the unrestricted current-output reader
+    (change detection, pending-output comparison, fixed-point
+    proofs), the pending-desired-output map, the mutation map, and
+    per-stage change bookkeeping.  No instance, attribute, or
+    subclass reference of this class is ever passed to a producer or
+    verify callable; callables receive :class:`StageRun` capsules
+    built by :meth:`stage_run`, whose pending view is an inert
+    snapshot copy.
+    """
+
+    def __init__(self, real_root: Path, workroot: Path) -> None:
+        self.real_root = real_root
         self.workroot = workroot
-        self.stage: frozenset[str] = frozenset({"*"})  # unbound sentinel
         self.pending: dict[str, bytes] = {}
         self.mutations: dict[str, bytes] = {}
         self.changed: dict[str, list[str]] = {}
@@ -218,35 +276,32 @@ class Run:
     def read_input(self, relative: str) -> bytes | None:
         """Engine-private current-state read (never callable-visible).
 
-        Reads through the REAL tree, not the stage projection: a
+        Reads through the REAL tree, not a stage projection: a
         writes-only output is absent from its stage's projection by
-        design (callable-visible state exposes only authorized reads),
-        while the engine still needs that path's current bytes for
-        change detection, pending-output comparison, and the
-        fixed-point proof.
+        design (callable-visible state exposes only authorized
+        reads), while the engine still needs that path's current
+        bytes for change detection, pending-output comparison, and
+        the fixed-point proof.
         """
         if relative in self.pending:
             return self.pending[relative]
         path = self.real_root / relative
         return path.read_bytes() if path.is_file() else None
 
-    def read(self, relative: str) -> bytes | None:
-        declared = "*" in self.stage or relative in self.stage
-        if not declared:
-            raise FinalizationError(
-                f"undeclared read: the active stage did not declare "
-                f"{relative!r} in its reads; add it to the stage contract "
-                "or read through the declared dependency")
-        if relative in self.pending:
-            return self.pending[relative]
-        path = self.root / relative
-        return path.read_bytes() if path.is_file() else None
+    def stage_run(self, stage: Stage, projection: Path,
+                  scratch: Path) -> StageRun:
+        """Build the capability capsule one callable is invoked with."""
+        reads = frozenset(stage.reads | stage.covers)
+        return StageRun(projection, scratch, reads, self.pending)
 
-    def apply(self, stage_id: str, desired: dict[str, bytes]) -> None:
+    def apply(self, stage_id: str, desired: dict[str, bytes],
+              projection: Path) -> None:
         """Record desired bytes and update the shadow state.
 
         Nothing here touches the real working tree; the engine's apply
-        step does that, once, for declared paths only.
+        step does that, once, for declared paths only.  Runs after the
+        producer has RETURNED — current-output comparison and pending
+        state updates are engine-private by construction.
         """
         changed = []
         for relative in sorted(desired):
@@ -256,7 +311,7 @@ class Run:
                 continue
             self.pending[relative] = data
             self.mutations[relative] = data
-            sandbox_path = self.root / relative
+            sandbox_path = projection / relative
             sandbox_path.parent.mkdir(parents=True, exist_ok=True)
             sandbox_path.write_bytes(data)
             changed.append(relative)
@@ -644,8 +699,25 @@ def _sandbox_digests(sandbox: Path) -> dict[str, str]:
 # a writes-only output is deliberately absent, so its pre-stage bytes
 # cannot be inspected directly any more than through Run.read.
 # ---------------------------------------------------------------------------
+# Round-5 capability split: the working area the callable can physically
+# reach (its projection and scratch, beneath workroot/capsules/<stage>)
+# is disjoint from the engine vault (workroot-vault-<n>, a SIBLING of
+# the workroot) that holds the starting-state byte backup — a callable
+# with a scratch path could otherwise walk ``scratch / ".." / ".." /
+# "starting-bytes"`` and read every current byte of the real tree.
 
-def _stage_projection(stage: Stage, root: Path, run: Run,
+def _backup_root(workroot: Path) -> Path:
+    """Engine-private starting-state backup location (round 5).
+
+    A sibling directory of the workroot, NOT inside it: the vault
+    holds byte copies of every real-tree path (including the stale
+    pre-stage bytes of writes-only outputs), so it must not be
+    reachable from any path a callable receives.  Scratch and
+    projections live beneath the workroot; the vault never does.
+    """
+    return workroot.parent / (workroot.name + "-vault")
+
+def _stage_projection(stage: Stage, root: Path, run: EngineRun,
                       workroot: Path) -> Path:
     """Materialize the stage's restricted projection and bind run.root.
 
@@ -690,7 +762,8 @@ def _snapshot_starting_state(root: Path, workroot: Path
     """Census every relevant path and back up authored bytes.
 
     Dirty-tracked and untracked bytes are copied into
-    ``workroot/starting-bytes`` (they exist nowhere else); clean-tracked
+    the engine vault (``workroot-vault``, a SIBLING of the workroot,
+never inside the callable-reachable workroot); clean-tracked
     bytes are restorable read-only from the git object store;
     deleted-tracked paths need no bytes — restoration must keep them
     deleted.  Clean-tracked paths are copied too, so restoration never
@@ -698,7 +771,7 @@ def _snapshot_starting_state(root: Path, workroot: Path
     census or restore fails, the engine still holds byte-level copies.
     """
     census = worktree_census(root)
-    backup = workroot / "starting-bytes"
+    backup = _backup_root(workroot)
     for relative, state in sorted(census.items()):
         if not state.present():
             continue
@@ -907,6 +980,7 @@ def run_pipeline(root: Path, stages: tuple[Stage, ...], *, write: bool,
     finally:
         if workroot is None:
             shutil.rmtree(managed, ignore_errors=True)
+            shutil.rmtree(_backup_root(managed), ignore_errors=True)
 
 
 def _execute_pass(root: Path, stages: tuple[Stage, ...], workroot: Path,
@@ -917,21 +991,34 @@ def _execute_pass(root: Path, stages: tuple[Stage, ...], workroot: Path,
     order_ids = topological_order(stages)
     by_id = {stage.id: stage for stage in stages}
     validate_order(stages, order_ids)
-    backup = workroot / "starting-bytes"
-    run = Run(workroot)
-    run.real_root = root  # engine-private channel; never callable-visible
+    backup = _backup_root(workroot)
+    # engine-private pass state: the real root, the unrestricted
+    # current-output reader, pending/mutation maps, and change
+    # bookkeeping all live on EngineRun, an object whose reference is
+    # never handed to any callable (F3 round 5 capability split)
+    run = EngineRun(root, workroot)
     _mark_import_baseline()
     for stage_id in order_ids:
         stage = by_id[stage_id]
         if stage.producer is None and stage.verify is None:
             continue  # purely declarative stage
-        run.root = _stage_projection(stage, root, run, workroot)
+        projection = _stage_projection(stage, root, run, workroot)
+        # fresh per-stage capsule: a scratch directory the callable
+        # may use freely, sibling to (but outside) its projection
+        capsule = workroot / "capsules" / stage_id
+        if capsule.exists():
+            shutil.rmtree(capsule, ignore_errors=True)
+        capsule.mkdir(parents=True, exist_ok=True)
+        scratch = capsule / "scratch"
+        scratch.mkdir()
         # enforced read set: declared reads; covers count as reads for
         # terminal manifests (they hash every covered path); a path the
         # stage writes is readable ONLY if also declared in reads (the
-        # explicit self-input contract)
-        run.stage = frozenset(stage.reads | stage.covers)
-        _purge_script_modules(run.root)
+        # explicit self-input contract).  The pending view inside the
+        # capsule is an inert snapshot copy — mutating it cannot touch
+        # engine bookkeeping.
+        capability = run.stage_run(stage, projection, scratch)
+        _purge_script_modules(projection)
         for relative in sorted(stage.reads | stage.covers):
             if run.read_input(relative) is None:
                 raise FinalizationError(
@@ -939,9 +1026,9 @@ def _execute_pass(root: Path, stages: tuple[Stage, ...], workroot: Path,
                     f"{relative}")
         try:
             if stage.producer is not None:
-                with _callable_guard(root, run.root, stage_id, "producer",
+                with _callable_guard(root, projection, stage_id, "producer",
                                      starting, backup):
-                    desired = stage.producer(run, workroot)
+                    desired = stage.producer(capability, scratch)
                 undeclared = sorted(set(desired) - set(stage.writes))
                 if undeclared:
                     raise FinalizationError(
@@ -952,13 +1039,19 @@ def _execute_pass(root: Path, stages: tuple[Stage, ...], workroot: Path,
                     raise FinalizationError(
                         f"stage {stage_id} did not produce declared paths "
                         f"{missing}")
-                run.apply(stage_id, desired)
+                # current-output comparison and pending-state updates
+                # are engine-private: they run here, after the producer
+                # has RETURNED its desired bytes, against EngineRun
+                run.apply(stage_id, desired, projection)
             if stage.verify is not None:
-                with _callable_guard(root, run.root, stage_id, "verify",
+                with _callable_guard(root, projection, stage_id, "verify",
                                      starting, backup):
-                    stage.verify(run, workroot)
+                    stage.verify(capability, scratch)
         finally:
-            run.stage = frozenset({"*"})
+            # the capsule (projection copy + scratch) is per-stage and
+            # disposable: remove it so nothing later in the pass — and
+            # no callable — can reach this stage's workspace
+            shutil.rmtree(capsule, ignore_errors=True)
     return {"order": order_ids, "changed": run.changed,
             "mutations": run.mutations}
 
@@ -1063,8 +1156,7 @@ def finalize(root: Path, stages: tuple[Stage, ...], *, write: bool) -> dict:
                 if relative not in allowed
                 and starting.get(relative) != after.get(relative)]
             if unexpected:
-                _restore_worktree(root, starting,
-                                  workroot / "starting-bytes",
+                _restore_worktree(root, starting, _backup_root(workroot),
                                   preserve=allowed)
                 raise FinalizationError(
                     "the worktree changed outside the declared writes "
@@ -1089,6 +1181,7 @@ def finalize(root: Path, stages: tuple[Stage, ...], *, write: bool) -> dict:
     finally:
         _purge_script_modules(None)
         shutil.rmtree(workroot, ignore_errors=True)
+        shutil.rmtree(_backup_root(workroot), ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------
@@ -1171,7 +1264,7 @@ def _parent_binding_document() -> dict[str, object]:
     }
 
 
-def _parent_bind_verify(run: Run, scratch: Path) -> None:
+def _parent_bind_verify(run: StageRun, scratch: Path) -> None:
     """Fail closed unless every closed-parent artifact is byte-current.
 
     Mechanical verification of the immutable parent binding: the live
@@ -1201,7 +1294,7 @@ def _parent_bind_verify(run: Run, scratch: Path) -> None:
 
 
 def _successor_producer_hashes_producer(
-        run: Run, scratch: Path) -> dict[str, bytes]:
+        run: StageRun, scratch: Path) -> dict[str, bytes]:
     """Producer-hash ledger for the Issue #130 successor bundle."""
     expected = {}
     for producer in sorted(FINALIZATION_PRODUCERS):
@@ -1215,7 +1308,7 @@ def _successor_producer_hashes_producer(
     return {f"{_BUNDLE_130}/producer-hashes.json": body}
 
 
-def _successor_manifest_rows(run: Run) -> dict[str, str]:
+def _successor_manifest_rows(run: StageRun) -> dict[str, str]:
     rows: dict[str, str] = {}
     for producer in sorted(FINALIZATION_PRODUCERS):
         data = run.read(producer)
@@ -1233,7 +1326,7 @@ def _successor_manifest_rows(run: Run) -> dict[str, str]:
     return rows
 
 
-def _successor_manifest_producer(run: Run, scratch: Path
+def _successor_manifest_producer(run: StageRun, scratch: Path
                                  ) -> dict[str, bytes]:
     """Terminal manifest of the additive Issue #130 successor bundle.
 
@@ -1248,14 +1341,14 @@ def _successor_manifest_producer(run: Run, scratch: Path
     return {f"{_BUNDLE_130}/MANIFEST.sha256": body.encode("utf-8")}
 
 
-def _status_source_verify(run: Run, scratch: Path) -> None:
+def _status_source_verify(run: StageRun, scratch: Path) -> None:
     _scripts(run.root)
     import sync_project_status as sync  # noqa: PLC0415
     document = json.loads(run.read("docs/project-status.json"))
     sync.validate(document)  # fail closed on a malformed status record
 
 
-def _status_sync_producer(run: Run, scratch: Path) -> dict[str, bytes]:
+def _status_sync_producer(run: StageRun, scratch: Path) -> dict[str, bytes]:
     """Living status sections, reusing the frozen sync renderer verbatim.
 
     Reads each managed document's existing bytes through the projection
@@ -1275,7 +1368,7 @@ def _status_sync_producer(run: Run, scratch: Path) -> dict[str, bytes]:
     return desired
 
 
-def _issue137_bundle_verify(run: Run, scratch: Path) -> None:
+def _issue137_bundle_verify(run: StageRun, scratch: Path) -> None:
     """The accepted Issue #137 bundle is closed: verify it byte-current."""
     _scripts(run.root)
     import issue137_manifest  # noqa: PLC0415
