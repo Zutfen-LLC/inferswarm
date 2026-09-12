@@ -1,16 +1,22 @@
-"""Issue #153 Arm-C remediation bundle regressions (CPU-only).
+"""Issue #153 remediation bundle regressions (CPU-only) — CORRECTED.
 
-Validates the retained remediation record against the FreeToken
-remediation producer bytes and the accepted #117 producer:
+Validates the corrected remediation record (classification
+BACKEND_REQUIRES_MULTI_CHUNK, terminal ISSUE117_ARM_C_REMEDIATION_BLOCKED)
+against the FreeToken remediation producer bytes and the accepted #117
+producer:
 
 - the phase-0 inventory, producer delta, and boundary matrix re-derive
   byte-identically from the pinned commits (via the FreeToken repo at
   its configured path, read-only);
-- the classification is recorded and is branch A;
-- the boundary matrix proves 1/31/32/33/53/63/64 single-chunk and
-  over-limit determinism;
-- the producer delta binds exact file hashes and the unchanged frozen
-  surface;
+- the classification is branch B and the terminal is BLOCKED;
+- the accepted #137 population facts are hash-pinned and derived (65-67
+  failing rows, <=53 stable, chunk 64, two-chunk == divergent);
+- the failing population answers record behavior_changed=False with the
+  unchanged accepted partition;
+- the producer delta binds exact file hashes, the unchanged frozen
+  surface, the timing-unit restoration, and mechanically rejects
+  out-of-scope runtime changes (unit drift, wire-service imports,
+  case/regime nouns);
 - the bundle manifest is complete and acyclic, and rejects mutated or
   undeclared evidence;
 - the parent #117 evidence manifest remains closed to this bundle;
@@ -39,7 +45,8 @@ REMEDICATION = (
 )
 FREETOKEN = ROOT.parent / "FreeToken"
 ACCEPTED_PRODUCER = "924cd22ea081f6d4ed471016faf01d427fc5b0d2"
-REMEDIATION_COMMIT = "5e6bca586f6d960ac863f63cf9e9232ed80e362b"
+# corrected candidate head (the reviewed head 5e6bca58 is superseded)
+REMEDIATION_COMMIT = "f6133b88d40e4d43d3ac82fa732f21e540b7273d"
 
 
 def load(name: str) -> dict:
@@ -57,11 +64,11 @@ def git(*args: str) -> str:
 
 
 class Phase0InventoryTests(unittest.TestCase):
-    def test_record_present_and_classified(self):
+    def test_record_present_and_correctly_classified(self):
         record = load("evidence/phase0-inventory.json")
         self.assertEqual(
             record["schema"],
-            "inferswarm.issue117.arm-c-remediation.phase0-inventory/1",
+            "inferswarm.issue117.arm-c-remediation.phase0-inventory/2",
         )
         self.assertEqual(
             record["chunk_policy_owner"]["function"],
@@ -71,13 +78,53 @@ class Phase0InventoryTests(unittest.TestCase):
             record["chunk_policy_owner"]["module"],
             "benchmarks/inferswarm_r6/stage_chain.py",
         )
-        self.assertTrue(record["one_call_53_rows_legal"]["verdict"])
+        # corrected classification: branch B, terminal BLOCKED
+        branch = record["branch_classification"]
+        self.assertEqual(branch["branch"], "BACKEND_REQUIRES_MULTI_CHUNK")
+        self.assertFalse(branch["branch_a_available"])
+        self.assertIn("WITHDRAWN", branch["branch_a_withdrawn_rationale"])
         self.assertEqual(
-            record["row_limit_inputs"]["accepted_two_stage_chunk_literal"], 32
+            branch["terminal"], "ISSUE117_ARM_C_REMEDIATION_BLOCKED"
         )
+        self.assertFalse(branch["branch_b_option_1_available_cpu_only"])
+
+    def test_accepted_137_population_facts_bound(self):
+        record = load("evidence/phase0-inventory.json")
+        population = record["accepted_137_population"]
         self.assertEqual(
-            record["row_limit_inputs"]["strategy_PREFILL_CHUNK"], 64
+            population["failing_population_rows"], [65, 66, 67]
         )
+        self.assertEqual(population["divergent_prompt_lens"],
+                         [65, 65, 66, 67, 67, 67])
+        self.assertEqual(population["stable_max_prompt_len"], 53)
+        self.assertEqual(population["prefill_chunk"], 64)
+        self.assertTrue(population["two_chunk_equals_divergent_population"])
+        # the population record is hash-pinned to the accepted #137 bytes
+        pinned = population["pinned_record"]
+        pinned_path = ROOT / pinned["path"]
+        actual = hashlib.sha256(pinned_path.read_bytes()).hexdigest()
+        self.assertEqual(actual, pinned["sha256"])
+
+    def test_failing_population_single_call_disproven(self):
+        record = load("evidence/phase0-inventory.json")
+        legality = record["failing_population_single_call_legal"]
+        self.assertEqual(legality["rows"], [65, 66, 67])
+        self.assertFalse(legality["verdict"])
+        self.assertIn("NOT per-call boundary authority",
+                      legality["runtime_capacity_note"])
+
+    def test_c2_control_is_control_only(self):
+        record = load("evidence/phase0-inventory.json")
+        control = record["one_call_53_rows_legal_control_only"]
+        self.assertTrue(control["verdict"])
+        self.assertIn("CONTROL", control["role"])
+        self.assertIn("NOT", control["role"])
+
+    def test_row_limit_inputs_record_accepted_literals(self):
+        record = load("evidence/phase0-inventory.json")
+        inputs = record["row_limit_inputs"]
+        self.assertEqual(inputs["accepted_two_stage_chunk_literal"], 32)
+        self.assertEqual(inputs["strategy_PREFILL_CHUNK"], 64)
 
     @unittest.skipUnless(freetoken_available(), "FreeToken checkout absent")
     def test_record_regenerates_byte_identically(self):
@@ -100,11 +147,12 @@ class Phase0InventoryTests(unittest.TestCase):
 
 
 class ProducerDeltaTests(unittest.TestCase):
-    def test_record_binds_classification_and_hashes(self):
+    def test_record_binds_corrected_classification_and_hashes(self):
         record = load("evidence/producer-delta.json")
-        self.assertEqual(
-            record["classification"], "UNNECESSARY_PARTITION_POLICY"
-        )
+        self.assertEqual(record["classification"],
+                         "BACKEND_REQUIRES_MULTI_CHUNK")
+        self.assertEqual(record["terminal"],
+                         "ISSUE117_ARM_C_REMEDIATION_BLOCKED")
         self.assertEqual(record["accepted_producer"], ACCEPTED_PRODUCER)
         self.assertEqual(record["remediation_producer"], REMEDIATION_COMMIT)
         self.assertEqual(
@@ -120,6 +168,37 @@ class ProducerDeltaTests(unittest.TestCase):
             self.assertRegex(entry["remediated_sha256"] or "", r"^[0-9a-f]{64}$")
         self.assertIn("no h109-* material was accessed",
                       " ".join(record["non_claims"]))
+        # every changed runtime file passed the mechanical audit
+        audit = record["changed_runtime_files_audit"]
+        for rel in record["changed_runtime_files"]:
+            if rel.startswith(("benchmarks/", "python/")):
+                self.assertEqual(audit[rel], "clean")
+
+    def test_failing_population_answers_record_no_behavior_change(self):
+        record = load("evidence/producer-delta.json")
+        answers = record["failing_population_remediation_answers"]
+        self.assertEqual(sorted(answers), ["65", "66", "67"])
+        for rows, answer in answers.items():
+            n = int(rows)
+            self.assertEqual(
+                answer["accepted_execution_partition"], [[0, 64], [64, n - 64]]
+            )
+            self.assertEqual(
+                answer["corrected_execution_partition"], [[0, 64], [64, n - 64]]
+            )
+            self.assertFalse(answer["behavior_changed"])
+
+    def test_timing_unit_correction_recorded(self):
+        record = load("evidence/producer-delta.json")
+        self.assertIn("perf_counter_ns", record["timing_unit_correction"])
+        self.assertIn("nanosecond", record["timing_unit_correction"])
+
+    def test_behavioral_delta_is_honest_about_failing_path(self):
+        record = load("evidence/producer-delta.json")
+        self.assertIn("UNCHANGED", record["behavioral_delta"])
+        self.assertIn("NOT remediated", record["behavioral_delta"])
+        self.assertIn("MUST NOT be authorized",
+                      record["applicability_caveat"])
 
     @unittest.skipUnless(freetoken_available(), "FreeToken checkout absent")
     def test_record_regenerates_byte_identically(self):
@@ -134,37 +213,100 @@ class ProducerDeltaTests(unittest.TestCase):
 
     @unittest.skipUnless(freetoken_available(), "FreeToken checkout absent")
     def test_delta_builder_rejects_out_of_scope_change(self):
-        # sanity: the allowed-changed set excludes every frozen surface file
         import issue153_producer_delta as pd
 
         for frozen in pd.MUST_BE_IDENTICAL:
             self.assertNotIn(frozen, pd.ALLOWED_CHANGED)
 
+    @unittest.skipUnless(freetoken_available(), "FreeToken checkout absent")
+    def test_delta_builder_rejects_unit_drift(self):
+        """Negative control: a two_stage carrying bare perf_counter() is
+        mechanically rejected by the changed-file audit (the reviewed
+        head's defect class), via the audit function directly on
+        mutated bytes of the real corrected file."""
+        import issue153_producer_delta as pd
+        import tempfile
+
+        data = pd.blob_bytes(
+            FREETOKEN, REMEDIATION_COMMIT,
+            "benchmarks/inferswarm_r6/two_stage.py",
+        )
+        drifted = data.replace(
+            b"t = time.perf_counter_ns()", b"t = time.perf_counter()"
+        )
+        self.assertNotEqual(drifted, data)  # mutation actually applied
+
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            subprocess.run(["git", "-C", str(repo), "init", "-q"], check=True)
+
+            original = pd.blob_bytes
+
+            def fake_blob(_repo, commit, path):
+                if path.endswith("two_stage.py"):
+                    return drifted
+                return original(FREETOKEN, commit, path)
+
+            pd.blob_bytes = fake_blob
+            try:
+                with self.assertRaises(SystemExit) as caught:
+                    pd.audit_changed_runtime_files(repo, REMEDIATION_COMMIT)
+                self.assertIn("perf_counter", str(caught.exception))
+            finally:
+                pd.blob_bytes = original
+
+    def test_runtime_capacity_256_recorded_separately(self):
+        record = load("evidence/phase0-inventory.json")
+        legality = record["failing_population_single_call_legal"]
+        self.assertEqual(legality["runtime_capacity_tokens"], 256)
+
 
 class BoundaryMatrixTests(unittest.TestCase):
-    def test_legal_sizes_single_chunk(self):
+    def test_failing_population_is_primary_and_unchanged(self):
         record = load("evidence/boundary-matrix.json")
         matrix = record["boundary_matrix"]
         self.assertEqual(matrix["admitted_capacity"], 64)
+        # the EXACT accepted population, explicitly classified
+        for n, expected in (
+            (65, [[0, 64], [64, 1]]),
+            (66, [[0, 64], [64, 2]]),
+            (67, [[0, 64], [64, 3]]),
+        ):
+            self.assertEqual(
+                matrix["accepted_failing_population"][str(n)], expected, n
+            )
+        # per-row answers: unchanged accepted partition, no behavior change
+        for n in (65, 66, 67):
+            answer = record["failing_population_answers"][str(n)]
+            self.assertFalse(answer["behavior_changed"], n)
+            self.assertFalse(answer["single_call_legal_under_frozen_contract"])
+            self.assertEqual(
+                answer["corrected_execution_partition"], [[0, 64], [64, n - 64]]
+            )
+
+    def test_legal_sizes_single_chunk_and_c2_control_retained(self):
+        record = load("evidence/boundary-matrix.json")
+        matrix = record["boundary_matrix"]
         for n in (1, 31, 32, 33, 53, 63, 64):
             self.assertEqual(
                 matrix["legal_single_chunk"][str(n)], [[0, n]], n
             )
-        self.assertEqual(matrix["over_limit"]["65"], [[0, 64], [64, 1]])
         self.assertEqual(matrix["over_limit"]["85"], [[0, 64], [64, 21]])
-        self.assertEqual(
-            matrix["historical_causal_control"]["single_chunk_53"], [[0, 53]]
-        )
-        self.assertTrue(
-            matrix["historical_causal_control"]["multi_chunk_32_21_rejected"]
-        )
+        control = matrix["historical_causal_control"]
+        self.assertEqual(control["single_chunk_53"], [[0, 53]])
+        self.assertTrue(control["multi_chunk_32_21_rejected"])
+        self.assertIn("NOT", control["role"])  # control-only disclaimed
+
+    def test_focused_suite_green_on_corrected_head(self):
+        record = load("evidence/boundary-matrix.json")
         self.assertEqual(record["focused_suite"]["exit_code"], 0)
-        self.assertIn("58 passed", record["focused_suite"]["summary"])
+        self.assertIn("79 passed", record["focused_suite"]["summary"])
         self.assertEqual(record["remediation_producer"], REMEDIATION_COMMIT)
 
-    def test_record_disclaims_gpu_claims(self):
+    def test_record_disclaims_gpu_and_remediation_claims(self):
         record = load("evidence/boundary-matrix.json")
         self.assertTrue(record["does_not_prove"].startswith("GPU numerical"))
+        self.assertIn("BLOCKED", record["does_not_prove"])
 
 
 class ManifestTests(unittest.TestCase):
@@ -229,10 +371,6 @@ class PreservationTests(unittest.TestCase):
         ))
 
     def test_accepted_bundles_byte_untouched_by_working_tree(self):
-        # the working tree must carry no modification under any accepted
-        # evidence bundle (this test runs against the checked-out tree;
-        # CI runs it against a fresh checkout, where it is trivially green
-        # and still guards against accidental in-place edits on push)
         status = subprocess.run(
             ["git", "-C", str(ROOT), "status", "--porcelain",
              "--", "docs/implementation"],
@@ -247,11 +385,25 @@ class PreservationTests(unittest.TestCase):
                 f"accepted evidence modified: {line}",
             )
 
+    def test_accepted_137_inventory_bytes_unchanged(self):
+        """The hash-pinned #137 population record is byte-identical to
+        its accepted manifest row (the correction binds to it read-only)."""
+        pinned = load("evidence/phase0-inventory.json")[
+            "accepted_137_population"
+        ]["pinned_record"]
+        actual = hashlib.sha256((ROOT / pinned["path"]).read_bytes()).hexdigest()
+        self.assertEqual(actual, pinned["sha256"])
+        self.assertEqual(
+            pinned["sha256"],
+            "369b2c81faf8ed1b2a68b1e1d039d6e6e7924d02254443c4707ad1b006ac7b3f",
+        )
+
     def test_readme_states_terminal_and_non_claims(self):
         readme = (REMEDICATION / "README.md").read_text()
-        self.assertIn("ISSUE117_ARM_C_REMEDIATION_READY", readme)
-        self.assertIn("UNNECESSARY_PARTITION_POLICY", readme)
-        self.assertIn("remains separately blocked", readme)
+        self.assertIn("ISSUE117_ARM_C_REMEDIATION_BLOCKED", readme)
+        self.assertIn("BACKEND_REQUIRES_MULTI_CHUNK", readme)
+        self.assertIn("WITHDRAWN", readme)
+        self.assertIn("MUST NOT be authorized", readme)
         self.assertIn("No GPU/model execution occurred", readme)
 
 

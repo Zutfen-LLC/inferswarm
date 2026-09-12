@@ -1,112 +1,149 @@
 # Issue #153 — Issue #117 Arm-C Remediation Record
 
-Status: `ISSUE117_ARM_C_REMEDIATION_READY` (CPU-only remediation; no
+Status: `ISSUE117_ARM_C_REMEDIATION_BLOCKED` (CPU-only correction; no
 physical execution).
 
-Authority: InferSwarm issue #153.  Parent integration gate: #117
-(historically closed).  This record is step 1 of the three-step
-remediation path the #117 docs require (remediation authority →
-maintainer acceptance → separately authorized fresh Arm-C
+Authority: InferSwarm issue #153, as corrected by the maintainer review
+of the first implementation (PRs #33/#155 at reviewed heads 5e6bca58 /
+b387e899) and the maintainer correction comment on issue #153.  Parent
+integration gate: #117 (historically closed).  This record is step 1 of
+the three-step remediation path the #117 docs require (remediation
+authority → maintainer acceptance → separately authorized fresh Arm-C
 requalification).  It is NOT acceptance, and it authorizes nothing
 physical.
 
-## Classification
+## Corrected classification
 
-`UNNECESSARY_PARTITION_POLICY` (branch A), decided from the Phase-0
-inventory before any behavioral edit, and re-derived mechanically by
-`scripts/issue153_phase0_inventory.py` from pinned producer bytes:
+`BACKEND_REQUIRES_MULTI_CHUNK` (branch B), re-derived mechanically by
+`scripts/issue153_phase0_inventory.py` from (a) the accepted #137
+population facts, hash-pinned from
+`../evidence/arm-c-regime4-diagnosis-137/phase1-inventory.json`
+(sha256 369b2c81…), and (b) the frozen contract bytes:
 
-- the chunk-policy owner is `GemmaStageChainRuntime.generate`
-  (`benchmarks/inferswarm_r6/stage_chain.py`);
-- the accepted producer's chunk boundaries came from a call-site hand
-  literal (`chunk = 64`), not from the frozen execution contract;
-- the legacy `two_stage.py` path still carried a hand default of
-  `chunk = 32` — a legal 53-row logical unit becomes `32 + 21` exactly
-  as the accepted #137 probe C2 intervention demonstrated;
-- one 53-row call is legal under the backend contract (wire bound
-  `0 < token_count <= 64`; frozen boundary geometry
-  `prefill_chunk_rows: 64`; runtime capacity 256 tokens);
-- therefore the subdivision was policy, not backend necessity.
+- the six divergent Arm-C cases are exactly the multi-chunk population
+  (`prompt_len > PREFILL_CHUNK=64`), all 65–67 rows; every stable case
+  is ≤ 53;
+- a 65–67-row single backend call is ILLEGAL under the frozen contract:
+  the R4 wire rejects `token_count > max_token_count` (= 64), and the
+  frozen boundary geometry sizes the boundary bytes and activation
+  staging buffers at exactly 64 rows (64×3840×2); runtime capacity 256
+  is session KV capacity, not per-call boundary authority;
+- probe C2's 53-row control proves only that partitioning is SUFFICIENT
+  for instability on a stable input — it does not legalize a 65–67-row
+  single call.  The first implementation's branch A
+  (`UNNECESSARY_PARTITION_POLICY`) was derived from that control's
+  legality and is WITHDRAWN.
 
-## Remediation (FreeToken candidate producer)
+Branch B disposition: option 1 (implement/prove partition-invariant
+multi-chunk semantics at the owning backend/state seam) is not
+available CPU-only — source inspection of the required extend path
+(`stage_runtime._make_batch` → triton `prepare_metadata` →
+`extend_paged_attention`; the 1–3-row second chunk routes through the
+decode kernel's `is_decode` branch with correct `prefix_len` causal
+semantics) found no provable state defect: fixed tiles, no autotune, no
+atomics, correct positions/KV writes.  The #137 record shows the
+instability is execution-level (3/6 cases vary within a session; 3 are
+per-session stable but distinct across sessions) — identifying a
+defect to fix would require new physical evidence, which no open issue
+authorizes.  The terminal is therefore BLOCKED.
 
-FreeToken PR (branch `inferswarm-153-arm-c-remediation` off the
-protected research head `b05564a7`, which contains the accepted
-producer `924cd22e` in ancestry):
+## What the corrected candidate producer changes (and what it does not)
 
-- new generic CPU-pure policy module
-  `python/freetoken/research/prefill_partition.py`:
-  `plan_prefill_partitions(total_rows, admitted_max_rows)` keeps a
-  legal unit as ONE backend call, partitions over-limit units
-  deterministically at the admitted capacity, and
-  `assert_partition_invariants` polices ordered / complete /
-  non-overlapping / exactly-once coverage; zero/negative/non-integer
-  inputs fail closed;
-- `stage_chain.generate` and `two_stage.generate` consume the policy,
-  with capacity `admitted_prefill_rows()` derived from the frozen
-  strategy `PREFILL_CHUNK` boundary-geometry constant (no new magic
-  constants);
-- `last_stage_service.MAX_TOKEN_COUNT` derives from the same source, so
-  the wire contract admits exactly what the chain sends;
-- decode path, session/plan identity, fencing, commit semantics,
-  planner semantics, and all frozen geometry are unchanged
-  (machine-checked; see the producer-delta record's
-  `explicitly_unchanged` list and the MUST_BE_IDENTICAL surface).
+FreeToken PR #33, corrected head (branch
+`inferswarm-153-arm-c-remediation` off the protected research head
+`b05564a7`, which contains the accepted producer `924cd22e` in
+ancestry):
+
+- retained (useful, but NOT a remediation of the failing population):
+  the capacity-derived ≤64 single-chunk policy
+  (`python/freetoken/research/prefill_partition.py`; a legal unit is
+  ONE call; over-limit units partition deterministically at the
+  capacity); `stage_chain.generate` and `two_stage.generate` consume
+  it with capacity from the frozen strategy `PREFILL_CHUNK`; this
+  removes the unnecessary-partition defect class for legal units (the
+  legacy `two_stage` hand default of 32 is gone);
+- corrected capacity ownership: strategy (frozen constant owner) →
+  `stage_chain`/`two_stage` (chunk policy) and strategy →
+  `last_stage_service` (wire bound).  The wire service no longer
+  imports the chain runtime; no runtime module imports the wire
+  service; sender and receiver derive from the same frozen constant;
+- timing-unit regression fixed: the `two_stage` prefill accumulator is
+  restored to `perf_counter_ns` on both sides (`prefill_ns` is
+  nanoseconds), with a structural AST regression contract;
+- for the accepted failing population 65/66/67: the execution
+  partition is the UNCHANGED accepted `64 + remainder` path, same
+  requests as the accepted hand-literal loop — the canonical failing
+  path's behavior did NOT change, and no remediation of its
+  instability is claimed.
+
+## Required next remediation slice (deeper authority)
+
+Arm-C remains FAILED.  The instability is localized by #137 to the
+second prefill chunk inside stage 1 at/before global layer 1 (first
+64-row chunk stable; embedding stable).  Making the required
+multi-chunk extend path stable requires one of:
+
+1. a physically authorized diagnostic/remediation issue that freezes a
+   producer with instrumented (or perturbed) execution of the chunk-2
+   extend path on the real substrate, to identify the execution-level
+   nondeterminism source (no such authority exists); or
+2. a maintainer-approved frozen-contract change admitting >64-row
+   single calls (boundary geometry + wire + buffers) — out of scope for
+   #153 and far beyond it.
+
+Arm D/E remain blocked behind Arm C.
 
 ## Evidence
 
 - [`evidence/phase0-inventory.json`](evidence/phase0-inventory.json) —
-  mechanically derived Phase-0 code-path inventory (owner, inputs,
-  53→32+21 explanation, one-call legality, path coverage, downstream
-  dependents), pinned to accepted and remediation producer bytes.
+  corrected Phase-0 inventory: owner, inputs, accepted #137 population
+  (hash-pinned), branch-B classification with the withdrawn-branch-A
+  rationale, one-call legality DISPROOF for 65–67, C2 control role.
 - [`evidence/producer-delta.json`](evidence/producer-delta.json) —
-  additive remediation record: classification, exact changed-file
-  hashes, behavioral delta (chunk-selection only), explicitly
-  unchanged surfaces, no-case-tuning proof, applicability caveat.
+  corrected producer delta: classification, terminal, exact changed
+  file hashes, mechanical changed-runtime-file audit (rejects unit
+  drift and out-of-scope changes), per-failing-population remediation
+  answers, applicability caveat.
 - [`evidence/boundary-matrix.json`](evidence/boundary-matrix.json) —
-  the executed boundary-test matrix (1/31/32/33/53/63/64 single-chunk;
-  65+ over-limit controls) and the focused FreeToken suite results,
-  derived from the FreeToken remediation worktree.
+  the executed boundary matrix with the 65/66/67 failing population as
+  the PRIMARY section (unchanged accepted partition, behavior_changed
+  false) and the legal matrix + 53-row C2 causal control retained.
 
 ## CPU/static proof summary
 
-58 focused tests in FreeToken
-`tests/research/test_issue117_arm_c_remediation.py`:
+Focused FreeToken suite
+`tests/research/test_issue117_arm_c_remediation.py` (79 tests):
 
-- boundary matrix: 1, 31, 32, 33, 53, 63, 64 → one chunk; 65 → 64+1,
-  85 → 64+21, 128, 129 → deterministic partitions, each legal per call;
-- #137 causal-control regression: policy selects `single_chunk_53`,
-  never `multi_chunk_32_21` (policy-selection proof only — no claim
-  about the GPU numerical result);
-- path equality: direct and ordinary paths share the single
-  `generate()` seam; the wire service admits exactly the policy
-  capacity;
-- coverage invariants and fail-closed negative controls (zero/negative
-  rows and capacities, non-integer inputs, reordered / overlapping /
-  gapped / incomplete / zero-row partitions, missing contract field);
-- semantic preservation via fake stages: PREFILL requests byte-identical
-  to the accepted loop for legal units, decode unchanged, every logical
-  row consumed exactly once, session identity surfaces untouched;
-- AST no-case-tuning audit: no case IDs, no regime nouns, no row-count
-  nouns (53/32/21/64) as constants in the generic policy.
+- exact accepted population 65/66/67 classified multi-chunk;
+  single-call legality mechanically disproven under the frozen
+  contract; branch A not derivable from 53-row legality alone;
+- corrected classification and terminal bound in the module source;
+- corrected partition == the accepted hand-literal loop (request
+  content equality via fake stages);
+- 53-row C2 retained as causal-control regression, explicitly not a
+  failing-population substitute;
+- coverage invariants and fail-closed negative controls;
+- decode/session/plan/fencing semantics unchanged;
+  `prefill_ns` nanoseconds (AST structural contract);
+- capacity ownership: wire derives from strategy; no runtime module
+  imports the wire service; sender/receiver mechanical agreement;
+- no case IDs/regime/model nouns in the remediation seam.
 
-FreeToken research suite on the remediation head: 511 passed, 1
+Full FreeToken research suite on the corrected head: 532 passed, 1
 deselected pre-existing base failure
 (`test_r6_localization.py::test_stage_chain_capture_ops_are_explicit`,
-asserting an op removed by d4d1608 — present at the starting research
-base `b05564a7`, unrelated to this remediation), 72 subtests passed.
+present at the starting research base `b05564a7`), 72 subtests.
 
 ## Non-claims
 
 - No GPU/model execution occurred; no InferSwarm node was contacted.
 - No `ISSUE117_ARM_C_ORDINARY_SERVING_PASS`/`FAIL` is derived.
 - No `h109-*` material was accessed.
-- This producer is a CANDIDATE, not accepted execution authority.
-- A fresh Arm-C requalification campaign remains separately blocked
-  pending maintainer acceptance of this remediation AND a new
-  authorizing issue that freezes the remediation producer, audits its
-  delta against the accepted subject, and authorizes physical
-  execution.
+- This producer is a CANDIDATE, not accepted execution authority, and
+  does NOT remediate the accepted 65–67 failure.
+- Fresh Arm-C requalification MUST NOT be authorized from this
+  producer; it remains blocked pending the deeper remediation slice
+  above AND a new authorizing issue.
 
 ## Accepted-evidence preservation
 

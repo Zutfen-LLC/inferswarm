@@ -7,8 +7,12 @@ policy module at the pinned SHA) and records the observed matrix plus
 the suite results.  CPU-only; the FreeToken worktree must be clean at
 the remediation commit.
 
-This proves policy selection only; it makes no claim about GPU
-numerical results.
+Corrected (maintainer review): the PRIMARY matrix is the accepted
+failing population 65/66/67 (classified multi-chunk under the frozen
+contract, execution partition equal to the accepted 64+remainder path);
+the 1/31/32/33/53/63/64 legal-single-chunk matrix and the 53-row C2
+control are RETAINED as secondary/causal-control evidence.  This proves
+policy selection only; it makes no claim about GPU numerical results.
 """
 from __future__ import annotations
 
@@ -19,10 +23,10 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA = "inferswarm.issue117.arm-c-remediation.boundary-matrix/1"
-LEGAL_SIZES = [1, 31, 32, 33, 53, 64]
-HISTORICAL = 53
-OVER_LIMIT = [65, 85, 128, 129]
+SCHEMA = "inferswarm.issue117.arm-c-remediation.boundary-matrix/2"
+ACCEPTED_FAILING_POPULATION = [65, 66, 67]
+LEGAL_SIZES = [1, 31, 32, 33, 53, 63, 64]
+OVER_LIMIT = [65, 66, 67, 85, 128, 129]
 
 
 def build_matrix(python_bin: str, env: dict) -> dict:
@@ -34,18 +38,27 @@ from benchmarks.inferswarm_r6.stage_chain import admitted_prefill_rows
 cap = admitted_prefill_rows()
 matrix = {
     "admitted_capacity": cap,
+    "accepted_failing_population": {
+        str(n): [list(p) for p in plan_prefill_partitions(n, cap)]
+        for n in [65, 66, 67]
+    },
     "legal_single_chunk": {
         str(n): [list(p) for p in plan_prefill_partitions(n, cap)]
         for n in [1, 31, 32, 33, 53, 63, 64]
     },
     "over_limit": {
         str(n): [list(p) for p in plan_prefill_partitions(n, cap)]
-        for n in [65, 85, 128, 129]
+        for n in [65, 66, 67, 85, 128, 129]
     },
     "historical_causal_control": {
         "unit_rows": 53,
         "single_chunk_53": [list(p) for p in plan_prefill_partitions(53, cap)],
         "multi_chunk_32_21_rejected": True,
+        "role": (
+            "causal CONTROL on a stable 53-row input (single call "
+            "deterministic, 32+21 varied in #137 probe C2); NOT a "
+            "substitute for the 65-67 failing population"
+        ),
     },
 }
 print(json.dumps(matrix))
@@ -100,11 +113,32 @@ def main(argv=None) -> int:
         "schema": SCHEMA,
         "remediation_producer": commit,
         "worktree_clean": True,
-        "proves": "chunk-policy selection on the canonical seam",
-        "does_not_prove": "GPU numerical results of any future campaign",
+        "proves": (
+            "chunk-policy classification of the exact accepted failing "
+            "population (65/66/67 -> multi-chunk, unchanged accepted "
+            "partition) plus policy selection on the canonical seam"
+        ),
+        "does_not_prove": (
+            "GPU numerical results of any future campaign; remediation "
+            "of the 65-67 extend-path instability (terminal is BLOCKED)"
+        ),
         "boundary_matrix": matrix,
+        "failing_population_answers": {
+            str(rows): {
+                "accepted_execution_partition": [[0, 64], [64, rows - 64]],
+                "corrected_execution_partition": matrix[
+                    "accepted_failing_population"
+                ][str(rows)],
+                "single_call_legal_under_frozen_contract": False,
+                "behavior_changed": (
+                    matrix["accepted_failing_population"][str(rows)]
+                    != [[0, 64], [64, rows - 64]]
+                ),
+            }
+            for rows in ACCEPTED_FAILING_POPULATION
+        },
         "legal_single_chunk_expected": {
-            str(n): [[0, n]] for n in [1, 31, 32, 33, 53, 63, 64]
+            str(n): [[0, n]] for n in LEGAL_SIZES
         },
         "focused_suite": {
             "command": "pytest tests/research/test_issue117_arm_c_remediation.py -q",
@@ -112,11 +146,15 @@ def main(argv=None) -> int:
             "summary": tail,
         },
     }
-    # verify every legal size stayed one call and 53 chose single-chunk
-    for n in [1, 31, 32, 33, 53, 63, 64]:
+    # verify every legal size stayed one call; the failing population is
+    # exactly the accepted 64+remainder partition with no behavior change
+    for n in LEGAL_SIZES:
         observed = matrix["legal_single_chunk"][str(n)]
         assert observed == [[0, n]], (n, observed)
-    assert matrix["over_limit"]["65"] == [[0, 64], [64, 1]]
+    for rows in ACCEPTED_FAILING_POPULATION:
+        observed = matrix["accepted_failing_population"][str(rows)]
+        assert observed == [[0, 64], [64, rows - 64]], (rows, observed)
+        assert record["failing_population_answers"][str(rows)]["behavior_changed"] is False
     assert matrix["historical_causal_control"]["single_chunk_53"] == [[0, 53]]
     assert suite.returncode == 0, tail
 

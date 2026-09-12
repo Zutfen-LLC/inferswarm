@@ -1,8 +1,41 @@
 {
   "boundary_matrix": {
+    "accepted_failing_population": {
+      "65": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          1
+        ]
+      ],
+      "66": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          2
+        ]
+      ],
+      "67": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          3
+        ]
+      ]
+    },
     "admitted_capacity": 64,
     "historical_causal_control": {
       "multi_chunk_32_21_rejected": true,
+      "role": "causal CONTROL on a stable 53-row input (single call deterministic, 32+21 varied in #137 probe C2); NOT a substitute for the 65-67 failing population",
       "single_chunk_53": [
         [
           0,
@@ -90,6 +123,26 @@
           1
         ]
       ],
+      "66": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          2
+        ]
+      ],
+      "67": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          3
+        ]
+      ],
       "85": [
         [
           0,
@@ -102,11 +155,85 @@
       ]
     }
   },
-  "does_not_prove": "GPU numerical results of any future campaign",
+  "does_not_prove": "GPU numerical results of any future campaign; remediation of the 65-67 extend-path instability (terminal is BLOCKED)",
+  "failing_population_answers": {
+    "65": {
+      "accepted_execution_partition": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          1
+        ]
+      ],
+      "behavior_changed": false,
+      "corrected_execution_partition": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          1
+        ]
+      ],
+      "single_call_legal_under_frozen_contract": false
+    },
+    "66": {
+      "accepted_execution_partition": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          2
+        ]
+      ],
+      "behavior_changed": false,
+      "corrected_execution_partition": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          2
+        ]
+      ],
+      "single_call_legal_under_frozen_contract": false
+    },
+    "67": {
+      "accepted_execution_partition": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          3
+        ]
+      ],
+      "behavior_changed": false,
+      "corrected_execution_partition": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          3
+        ]
+      ],
+      "single_call_legal_under_frozen_contract": false
+    }
+  },
   "focused_suite": {
     "command": "pytest tests/research/test_issue117_arm_c_remediation.py -q",
     "exit_code": 0,
-    "summary": "58 passed in 1.73s"
+    "summary": "79 passed in 1.84s"
   },
   "legal_single_chunk_expected": {
     "1": [
@@ -152,8 +279,8 @@
       ]
     ]
   },
-  "proves": "chunk-policy selection on the canonical seam",
-  "remediation_producer": "5e6bca586f6d960ac863f63cf9e9232ed80e362b",
-  "schema": "inferswarm.issue117.arm-c-remediation.boundary-matrix/1",
+  "proves": "chunk-policy classification of the exact accepted failing population (65/66/67 -> multi-chunk, unchanged accepted partition) plus policy selection on the canonical seam",
+  "remediation_producer": "f6133b88d40e4d43d3ac82fa732f21e540b7273d",
+  "schema": "inferswarm.issue117.arm-c-remediation.boundary-matrix/2",
   "worktree_clean": true
 }

@@ -119,13 +119,13 @@
         "The accepted historical Arm-C result remains ISSUE117_ARM_C_EVIDENCE_BLOCKER (PR #128, merge 718efbf5770b31c6e44eb3a8c4d0b81fd1dc9c22); it is preserved as the correct result of the original inadmissible campaign.",
         "The corrected fresh Arm-C campaign is accepted as ISSUE117_ARM_C_ORDINARY_SERVING_FAIL (PR #136, merge 1b83bcab0a5e682a438ca0554f71dd0ace15be55): 18/24 exact equality and six regime-4 committed-token divergences under complete pre-divergence invocation equivalence.",
         "Issue #137 diagnosis is accepted as ISSUE117_ARM_C_REGIME4_DIAGNOSIS_PARTIAL (PR #138, merge cdc23d0e8fa9d3b1b27bab5749939a5ad69b9610): multi-chunk extend-prefill is sufficient for instability on a stable control, and the earliest captured divergence is inside stage 1 at or before global layer 1, but one identical numerical mechanism for all six cases is not established.",
-        "Issue #153 remediation is implemented as ISSUE117_ARM_C_REMEDIATION_READY (UNNECESSARY_PARTITION_POLICY): a legal at-or-below-64-row extend-prefill unit provably remains one backend call on the canonical serving seam; the remediation producer is a candidate, not accepted execution authority.",
+        "Issue #153 corrected remediation is ISSUE117_ARM_C_REMEDIATION_BLOCKED (BACKEND_REQUIRES_MULTI_CHUNK): the accepted 65-67-row failing units must remain multi-chunk under the frozen 64-row boundary/wire contract, the required extend path's instability is not remediated, and the at-or-below-64 single-call policy cleanup is useful but not a remediation of the failing population; fresh Arm-C requalification MUST NOT be authorized from the candidate producer.",
         "No remediation or requalification execution is currently authorized. The next correctness-bearing work requires separate remediation authority followed by a separately accepted fresh Arm-C requalification authority.",
         "No h109-* holdout material may be opened, generated, copied, or used; Arm D and Arm E remain blocked."
       ],
       "reference": null,
       "state": "blocked",
-      "step": "Arm-C chunk-policy remediation is implemented and CPU-proven as ISSUE117_ARM_C_REMEDIATION_READY under issue #153 (classification UNNECESSARY_PARTITION_POLICY; FreeToken remediation producer open for maintainer review). No requalification execution is authorized: accept this remediation, then create a fresh Arm-C requalification authority that freezes the candidate producer before any physical run. Arm D remains blocked until an accepted ISSUE117_ARM_C_ORDINARY_SERVING_PASS"
+      "step": "Arm-C chunk-policy remediation corrected under issue #153 maintainer review: terminal ISSUE117_ARM_C_REMEDIATION_BLOCKED (classification BACKEND_REQUIRES_MULTI_CHUNK; the reviewed READY/UNNECESSARY_PARTITION_POLICY claim is withdrawn; FreeToken candidate producer corrected and open for maintainer review). Arm C remains failed; the required next slice is a deeper authority (physically authorized chunk-2 extend-path investigation or a frozen-contract change) before any requalification; Arm D/E remain blocked behind Arm C."
     },
     "objective": "Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.",
     "prerequisite": {
@@ -137,10 +137,10 @@
         "reference": "https://github.com/Zutfen-LLC/inferswarm/pull/136",
         "result": "ISSUE117_ARM_C_ORDINARY_SERVING_FAIL"
       },
-      "title": "Arm C \u2014 ordinary external-Coordinator serving"
+      "title": "Arm C — ordinary external-Coordinator serving"
     },
     "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/117",
-    "title": "Issue #117 \u2014 R6 successor dense full integration"
+    "title": "Issue #117 — R6 successor dense full integration"
   },
   "limits": [
     "Research / proof of concept; no released production runtime.",

@@ -1,30 +1,37 @@
 {
   "accepted_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
-  "applicability_caveat": "This producer is a CANDIDATE, not accepted execution authority. A fresh Arm-C requalification campaign requires a separately authorized issue that freezes this producer externally, audits the delta against the accepted subject, and authorizes correctness-bearing execution. The six historical divergent cases may serve as known regression identities only and may not be the sole basis for a pass.",
-  "behavioral_delta": "chunk-selection policy only: a logical extend-prefill unit that fits the admitted capacity (frozen boundary contract prefill_chunk_rows = 64) now provably remains ONE backend call on the canonical chain seam and both two-stage/chain generate() loops; over-limit units partition deterministically at the same admitted capacity",
+  "applicability_caveat": "This producer is a CANDIDATE, not accepted execution authority, and it does NOT remediate the accepted Arm-C failure: the terminal is BLOCKED.  Fresh Arm-C requalification MUST NOT be authorized from this producer. The required next remediation slice is a deeper authority (physical execution or contract change) targeting the multi-chunk extend path's execution-level instability localized by #137 to the second prefill chunk inside stage 1 at/before global layer 1.",
+  "behavioral_delta": "for legal (<= capacity) units only: chunk-selection policy (capacity-derived single call, no drifting literals; the legacy two_stage 32 default is gone).  For the accepted failing population (65-67 rows) the execution path is UNCHANGED (64 + remainder, same requests as the accepted hand-literal loop) \u2014 remediation-only in the sense that no other behavior changed; the failing path's instability is NOT remediated",
+  "capacity_ownership": "strategy (frozen constant owner) -> stage_chain + two_stage (chunk policy) and strategy -> last_stage_service (wire bound); the wire service no longer imports the chain runtime; no runtime module imports the wire service",
   "changed_runtime_files": {
     "benchmarks/inferswarm_r6/last_stage_service.py": {
       "accepted_sha256": "08825dcd39f81dcf0d3f0a38a680a9eaac0fadfd9cebba8c32a54113cbf6bbc1",
-      "remediated_sha256": "0c1c5803766898d88516e2ba0866d8117943bc6299a9999c96e24194c96d4694"
+      "remediated_sha256": "273c22187734ef674de25144fb9484fa965e5423e78de5d660dfb7481f3ff6b2"
     },
     "benchmarks/inferswarm_r6/stage_chain.py": {
       "accepted_sha256": "321bc91deb9a0e7f651a75f4158e973b3e72d889a32f76c8d8dc5c9081acde54",
-      "remediated_sha256": "08c95461b48a4231b9b93ab886e31fdf179bf6e38390c9ee248758d9c0d0d91c"
+      "remediated_sha256": "42950431177783699bb6f677155925784970b08d7ddf6c8ea6486952477e8983"
     },
     "benchmarks/inferswarm_r6/two_stage.py": {
       "accepted_sha256": "3ab8c3f490719cbc026a35d8d106fe0b6ac21e142d403e75f85db7bc15cf2728",
-      "remediated_sha256": "b578f1ce0cce2d0bdc9a45562d56e0651a34ebe16bb2895a9c9797f4021e215a"
+      "remediated_sha256": "3718d274be274aff1fd763d33d689a074115e9c10e7e37ff6239da3535df5d2b"
     },
     "python/freetoken/research/prefill_partition.py": {
       "accepted_sha256": null,
-      "remediated_sha256": "327892fa754d31486791b00294b1436d37954e532a4b3394ae7cc6e170e55a3b"
+      "remediated_sha256": "841635bd42e2bf25954e3fbe6ec902fb79f3d33cca1a4f5b1e8a51383ab73c86"
     },
     "tests/research/test_issue117_arm_c_remediation.py": {
       "accepted_sha256": null,
-      "remediated_sha256": "8463b8862d693401663088902892179f4a2dbc014d5288a4d699c187ec28dcec"
+      "remediated_sha256": "35acb1876f6c5f108bbe2b6d6db4cb1f27cb7be3665e36fdd9d7dcbecdebf47b"
     }
   },
-  "classification": "UNNECESSARY_PARTITION_POLICY",
+  "changed_runtime_files_audit": {
+    "benchmarks/inferswarm_r6/last_stage_service.py": "clean",
+    "benchmarks/inferswarm_r6/stage_chain.py": "clean",
+    "benchmarks/inferswarm_r6/two_stage.py": "clean",
+    "python/freetoken/research/prefill_partition.py": "clean"
+  },
+  "classification": "BACKEND_REQUIRES_MULTI_CHUNK",
   "explicitly_unchanged": [
     "model math / weights / checkpoint identity",
     "frozen geometry (boundary planes, row width, prefill_chunk_rows)",
@@ -35,14 +42,92 @@
     "session/request identity, plan digest surfaces",
     "fencing / epoch / position attribution"
   ],
-  "no_case_specific_tuning": "AST-level source audit in the remediation test suite and the phase-0 inventory builder: no case IDs, no regime nouns, no accepted divergent token ids in the remediation seam",
+  "failing_population_remediation_answers": {
+    "65": {
+      "accepted_execution_partition": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          1
+        ]
+      ],
+      "behavior_changed": false,
+      "corrected_execution_partition": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          1
+        ]
+      ],
+      "why": "single-call is illegal under the frozen 64-row boundary/wire contract; no CPU-provable backend/state defect exists in the required multi-chunk extend path, so branch-B option 1 is unavailable without new physical evidence"
+    },
+    "66": {
+      "accepted_execution_partition": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          2
+        ]
+      ],
+      "behavior_changed": false,
+      "corrected_execution_partition": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          2
+        ]
+      ],
+      "why": "single-call is illegal under the frozen 64-row boundary/wire contract; no CPU-provable backend/state defect exists in the required multi-chunk extend path, so branch-B option 1 is unavailable without new physical evidence"
+    },
+    "67": {
+      "accepted_execution_partition": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          3
+        ]
+      ],
+      "behavior_changed": false,
+      "corrected_execution_partition": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          3
+        ]
+      ],
+      "why": "single-call is illegal under the frozen 64-row boundary/wire contract; no CPU-provable backend/state defect exists in the required multi-chunk extend path, so branch-B option 1 is unavailable without new physical evidence"
+    }
+  },
+  "no_case_specific_tuning": "AST-level source audit in the remediation test suite, the phase-0 inventory builder, and this builder's changed-runtime-files audit: no case IDs, no regime nouns, no accepted divergent token ids in the remediation seam",
   "non_claims": [
     "no GPU/model execution occurred",
     "CPU/static policy proof does not establish the GPU numerical result of a future campaign",
     "no ISSUE117_ARM_C_ORDINARY_SERVING_PASS or FAIL is derived here",
-    "no h109-* material was accessed"
+    "no h109-* material was accessed",
+    "no remediation of the accepted 65-67 failing execution path is claimed (terminal is BLOCKED)"
   ],
-  "remediation_producer": "5e6bca586f6d960ac863f63cf9e9232ed80e362b",
-  "schema": "inferswarm.issue117.arm-c-remediation.producer-delta/1",
-  "starting_research_base": "b05564a7f3f7ca1b141d54842357ff2624dc6a19"
+  "remediation_producer": "f6133b88d40e4d43d3ac82fa732f21e540b7273d",
+  "schema": "inferswarm.issue117.arm-c-remediation.producer-delta/2",
+  "starting_research_base": "b05564a7f3f7ca1b141d54842357ff2624dc6a19",
+  "superseded_reviewed_head": "5e6bca586f6d960ac863f63cf9e9232ed80e362b",
+  "terminal": "ISSUE117_ARM_C_REMEDIATION_BLOCKED",
+  "timing_unit_correction": "two_stage prefill accumulator restored to perf_counter_ns on both sides (prefill_ns is nanoseconds); enforced mechanically by this builder and by a structural AST regression contract in the FreeToken suite"
 }

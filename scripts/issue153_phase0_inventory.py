@@ -4,8 +4,18 @@
 Derives the chunk-policy inventory record from pinned source bytes —
 never from names/comments alone. Every conclusion is bound to an
 executable check against the exact FreeToken producer bytes (accepted
-924cd22e and the remediation candidate), which are vendored under
-frozen-source/ and sha256-pinned by this bundle's manifest.
+924cd22e and the remediation candidate) and, after the maintainer
+correction, the ACCEPTED #137 population facts are derived from the
+retained, hash-pinned diagnosis record bytes.
+
+Corrected classification: Branch B (BACKEND_REQUIRES_MULTI_CHUNK).  The
+six divergent Arm-C cases are exactly the multi-chunk population
+(prompt_len 65-67, all > PREFILL_CHUNK=64; every stable case <= 53).
+A 65-67-row single backend call is ILLEGAL under the frozen contract
+(wire bound, frozen boundary geometry, wire buffer sizing), so branch A
+(UNNECESSARY_PARTITION_POLICY) is unavailable for the actual failing
+logical units; it was wrongly derived from the C2 53-row control's
+one-call legality and is withdrawn.
 
 CPU-only, stdlib-only. No model execution, no node access.
 """
@@ -17,7 +27,6 @@ import json
 import re
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -27,7 +36,21 @@ BUNDLE = Path(
 )
 ACCEPTED_PRODUCER = "924cd22ea081f6d4ed471016faf01d427fc5b0d2"
 STARTING_RESEARCH = "b05564a7f3f7ca1b141d54842357ff2624dc6a19"
-SCHEMA = "inferswarm.issue117.arm-c-remediation.phase0-inventory/1"
+SCHEMA = "inferswarm.issue117.arm-c-remediation.phase0-inventory/2"
+
+# The accepted #137 diagnosis record this builder binds the population
+# facts to (never re-typed: read + sha256-pinned from the repo bytes).
+I137_INVENTORY_REL = Path(
+    "docs/implementation/r6-successor-dense-full-integration-117/"
+    "evidence/arm-c-regime4-diagnosis-137/phase1-inventory.json"
+)
+I137_DIAG_CONCLUSIONS_REL = Path(
+    "docs/implementation/r6-successor-dense-full-integration-117/"
+    "evidence/arm-c-regime4-diagnosis-137/diagnostic-conclusions.json"
+)
+I137_INVENTORY_SHA256 = (
+    "369b2c81faf8ed1b2a68b1e1d039d6e6e7924d02254443c4707ad1b006ac7b3f"
+)
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -41,7 +64,64 @@ def fetch_blob(repo: Path, commit: str, path: str) -> bytes:
     return out
 
 
-def inventory_from_bytes(accepted: dict[str, bytes], remediated: dict[str, bytes]) -> dict:
+def load_pinned_i137(root: Path) -> dict:
+    """Load the accepted #137 inventory record and fail closed on drift."""
+    path = root / I137_INVENTORY_REL
+    data = path.read_bytes()
+    digest = sha256_bytes(data)
+    if digest != I137_INVENTORY_SHA256:
+        raise SystemExit(
+            f"accepted #137 inventory drifted: {digest} != pinned"
+        )
+    record = json.loads(data)
+    chunk_partition = record["chunk_partition"]
+    if not chunk_partition["two_chunk_equals_divergent_population"]:
+        raise SystemExit(
+            "accepted #137 record no longer binds two-chunk == divergent"
+        )
+    if chunk_partition["prefill_chunk"] != 64:
+        raise SystemExit("accepted #137 prefill_chunk is not 64")
+    return record
+
+
+def accepted_population_facts(root: Path) -> dict:
+    """Derive the failing/stable population facts from pinned #137 bytes.
+
+    Returns the EXACT accepted population: the six divergent cases, their
+    prompt lens (must all be 65-67), the stable population max (must be
+    <= 53), and the frozen chunk size (64).
+    """
+    record = load_pinned_i137(root)
+    cp = record["chunk_partition"]
+    cases = cp["cases"]
+    divergent_ids = cp["two_chunk_population"]
+    lens = sorted(int(cases[c]["prompt_len"]) for c in divergent_ids)
+    if lens != [65, 65, 66, 67, 67, 67]:
+        raise SystemExit(
+            f"accepted divergent prompt lens are not 65-67: {lens}"
+        )
+    stable_max = int(cp["max_single_chunk_len"])
+    if stable_max > 53:
+        raise SystemExit(f"stable max {stable_max} exceeds 53")
+    return {
+        "divergent_case_ids": divergent_ids,
+        "divergent_prompt_lens": lens,
+        "failing_population_rows": [65, 66, 67],
+        "stable_max_prompt_len": stable_max,
+        "prefill_chunk": int(cp["prefill_chunk"]),
+        "two_chunk_equals_divergent_population": True,
+        "pinned_record": {
+            "path": I137_INVENTORY_REL.as_posix(),
+            "sha256": I137_INVENTORY_SHA256,
+        },
+    }
+
+
+def inventory_from_bytes(
+    accepted: dict[str, bytes],
+    remediated: dict[str, bytes],
+    population: dict,
+) -> dict:
     """Build every Phase-0 conclusion from the pinned bytes."""
     chain_acc = accepted["stage_chain.py"].decode()
     chain_rem = remediated["stage_chain.py"].decode()
@@ -58,10 +138,8 @@ def inventory_from_bytes(accepted: dict[str, bytes], remediated: dict[str, bytes
         r"class GemmaStageChainRuntime.*?def generate\(", chain_acc, re.S
     )
     assert owner_match, "accepted stage_chain: generate() not found"
-    # the hand-literal chunk loop in the accepted producer
     hand_literal = re.search(r"^        chunk = 64", chain_acc, re.M)
     assert hand_literal, "accepted stage_chain: hand literal chunk = 64 absent"
-    # (2) row-limit/chunk-size inputs today
     inputs = {
         "accepted_stage_chain_chunk_literal": 64,
         "accepted_two_stage_chunk_literal": 32,
@@ -76,58 +154,67 @@ def inventory_from_bytes(accepted: dict[str, bytes], remediated: dict[str, bytes
     wire64 = re.search(r"^MAX_TOKEN_COUNT = 64", wire_acc, re.M)
     assert wire64, "accepted last_stage_service: MAX_TOKEN_COUNT = 64 absent"
 
-    # (3) why a 53-row unit could become 32+21 today: the accepted code
-    # derives chunk boundaries from a call-site literal, not from the
-    # frozen contract capacity; any literal < 53 subdivides a legal unit
-    # (two_stage's 32 default does exactly this; probe C2's chunk=32
-    # reproduced it on the chain seam).
-    single_chunk_derivation = "plan_prefill_partitions(" in chain_rem and (
+    # (2) corrected remediation shape: capacity-derived partition, the
+    # wire service derives the SAME frozen constant directly from
+    # strategy (corrected ownership: strategy -> chain + wire service),
+    # and the nanosecond timing contract is restored.
+    assert "plan_prefill_partitions(" in chain_rem and (
         "admitted_prefill_rows()" in chain_rem
-    )
-    assert single_chunk_derivation, (
-        "remediated stage_chain: capacity-derived partition absent"
-    )
+    ), "remediated stage_chain: capacity-derived partition absent"
     assert "chunk = 64" not in chain_rem
     assert "chunk = 32" not in chain_rem
     assert "chunk = 32" not in two_rem
-    assert "MAX_TOKEN_COUNT = admitted_prefill_rows()" in wire_rem
-
-    # (4) legality of one 53-row call under the current backend contract:
-    # the wire contract (validate_request) rejects only token_count <= 0
-    # or > max_token_count = 64 — a 53-row call is legal.
     assert (
+        "from benchmarks.inferswarm_r6.strategy import PREFILL_CHUNK "
+        "as MAX_TOKEN_COUNT" in wire_rem
+    ), "remediated last_stage_service: strategy-derived capacity absent"
+    assert (
+        "from benchmarks.inferswarm_r6.stage_chain import" not in wire_rem
+    ), "remediated last_stage_service still imports the chain runtime"
+    two_rem_ns = "prefill_ns += time.perf_counter_ns() - t" in two_rem and (
+        "time.perf_counter()" not in two_rem
+    )
+    assert two_rem_ns, "remediated two_stage: nanosecond timing not restored"
+
+    # (3) BRANCH DECISION, corrected: one 65-67-row call is ILLEGAL under
+    # the frozen contract — the wire validate_request rejects
+    # token_count > max_token_count (=64), and the frozen boundary
+    # geometry sizes the boundary bytes and activation staging buffers
+    # at exactly 64 rows.  The accepted failing population therefore
+    # REMAINS multi-chunk under any admissible unchanged contract.
+    wire_reject = (
         "token_count <= 0 or token_count > contract[\"max_token_count\"]"
         in accepted["r4_wire.py"].decode()
     )
+    assert wire_reject, "accepted r4_wire: max_token_count bound absent"
+    strategy_binds = (
+        '"prefill_bytes": PREFILL_CHUNK * HIDDEN_SIZE * 2' in strategy
+        and "activation-staging-buffers" in strategy
+    )
+    assert strategy_binds, "frozen geometry does not bind 64-row sizing"
+    assert "buffer_bytes = MAX_TOKEN_COUNT * ROW_WIDTH * 2" in wire_rem
 
-    # (5) same policy on direct and ordinary paths: both realize through
+    # (4) same policy on direct and ordinary paths: both realize through
     # realize_dense_chain -> GemmaStageChainRuntime.generate.
     for name in ("chain_runtime.py", "node_agent.py"):
         src = accepted[name].decode()
         assert "realize_dense_chain" in src, name
 
-    # (6) downstream state transitions affected by chunk count: the KV
+    # (5) downstream state transitions affected by chunk count: the KV
     # pools advance per PREFILL (reset via RESET between replays), the
     # boundary wire transfers one payload per chunk, decode positions are
-    # offset by the consumed row count. Bound from the remediated seam:
-    # the partition loop feeds _chain_prefill(position, count) and
-    # position advances by count — nothing else consumes chunk identity.
+    # offset by the consumed row count.
     assert "for _offset, count in partitions:" in chain_rem
     assert "position += count" in chain_rem
 
-    # (7) decode/KV authority/session identity/graph state/stage
+    # (6) decode/KV authority/session identity/graph state/stage
     # boundaries: decode path unchanged (no decode edit), session ids and
-    # plan digests flow through unchanged surfaces; the R6 stage runtime
-    # has no CUDA graph state on this path; stage ownership is bound by
-    # the frozen plan, not by chunk count.
+    # plan digests flow through unchanged surfaces.
     assert "def _chain_decode" in chain_rem
     rem_strategy = remediated["strategy.py"].decode()
     assert "PREFILL_CHUNK = 64" in rem_strategy  # frozen constant untouched
 
-    # no case-specific nouns anywhere in the remediation seam (module and
-    # function docstrings stripped; "Gemma" appears legitimately in the
-    # strategy adapter's frozen module name/strategy id, which is
-    # strategy-owned by design — check only the policy modules)
+    # no case-specific nouns anywhere in the remediation seam
     for src, label in ((partition, "prefill_partition"), (wire_rem, "wire")):
         stripped = re.sub(r'""".*?"""', "", src, flags=re.S)
         for token in ("c109", "regime4", "regime-4"):
@@ -135,6 +222,7 @@ def inventory_from_bytes(accepted: dict[str, bytes], remediated: dict[str, bytes
     for token in ("c109", "regime4", "regime-4"):
         assert token not in chain_rem and token not in two_rem, token
 
+    failing_rows = population["failing_population_rows"]
     return {
         "schema": SCHEMA,
         "chunk_policy_owner": {
@@ -147,25 +235,82 @@ def inventory_from_bytes(accepted: dict[str, bytes], remediated: dict[str, bytes
             ),
         },
         "row_limit_inputs": inputs,
-        "why_53_became_32_21": (
-            "The accepted code derives chunk boundaries from a call-site "
-            "hand literal rather than from the frozen execution contract's "
-            "admitted capacity; any literal below the logical unit's size "
-            "subdivides it. The legacy two_stage path defaulted to 32 (a "
-            "legal 53-row unit becomes 32+21), and the accepted #137 probe "
-            "C2 reproduced the same subdivision on the chain seam with "
-            "chunk=32. The chain's own literal was 64 by historical fix "
-            "(ff561e5), so the canonical chain happened to keep <=64-row "
-            "replays single-chunk, but the property was never derived or "
-            "enforced — nothing tied the chain literal, the wire capacity, "
-            "and the frozen boundary contract together."
-        ),
-        "one_call_53_rows_legal": {
+        "accepted_137_population": population,
+        "branch_classification": {
+            "branch": "BACKEND_REQUIRES_MULTI_CHUNK",
+            "branch_a_available": False,
+            "branch_a_withdrawn_rationale": (
+                "UNNECESSARY_PARTITION_POLICY was derived from the C2 "
+                "53-row control's one-call legality; C2 proves only that "
+                "partitioning is SUFFICIENT for instability on a stable "
+                "input, not that the accepted 65-67-row failing units "
+                "can legally be one call.  Under the frozen contract "
+                "(wire max_token_count=64, boundary bytes and staging "
+                "buffers sized 64*3840*2), a 65-67-row single call is "
+                "inadmissible; making it legal would change a frozen "
+                "semantic/wire contract, which exceeds #153 authority.  "
+                "Branch A is therefore WITHDRAWN for the actual failing "
+                "population."
+            ),
+            "branch_b_rationale": (
+                "The complete actual failing logical units (65-67 rows) "
+                "MUST remain multi-chunk (64 + remainder) under the "
+                "frozen contract.  The corrected candidate keeps that "
+                "path byte-identical to the accepted producer."
+            ),
+            "branch_b_option_1_available_cpu_only": False,
+            "branch_b_option_1_rationale": (
+                "Source inspection of the required multi-chunk extend "
+                "path (stage_runtime._make_batch -> triton "
+                "prepare_metadata -> extend_paged_attention, and the "
+                "1-row second-chunk decode-kernel route) found no "
+                "provable backend/state defect: metadata and causal "
+                "semantics are correct, tiles are fixed (no autotune), "
+                "no atomics, KV writes land at the passed position.  "
+                "The #137 record shows the instability is "
+                "execution-level (3/6 cases vary in-session; 3 are "
+                "stable per-session but distinct across sessions) — "
+                "not a CPU-provable state wiring defect.  Identifying "
+                "a defect would require new physical evidence, which "
+                "is not authorized."
+            ),
+            "terminal": "ISSUE117_ARM_C_REMEDIATION_BLOCKED",
+        },
+        "failing_population_single_call_legal": {
+            "rows": failing_rows,
+            "verdict": False,
+            "wire_bound": "0 < token_count <= max_token_count (=64)",
+            "frozen_boundary_contract_prefill_chunk_rows": 64,
+            "frozen_geometry_sizing": (
+                "prefill_bytes = 64*3840*2; activation staging buffers "
+                "sized 64*2*3840*2; wire receive buffer "
+                "MAX_TOKEN_COUNT*ROW_WIDTH*2"
+            ),
+            "runtime_capacity_tokens": 256,
+            "runtime_capacity_note": (
+                "session KV capacity, NOT per-call boundary authority"
+            ),
+        },
+        "one_call_53_rows_legal_control_only": {
             "wire_bound": "0 < token_count <= max_token_count (=64)",
             "frozen_boundary_contract_prefill_chunk_rows": 64,
             "runtime_capacity_tokens": 256,
             "verdict": True,
+            "role": (
+                "causal CONTROL from #137 probe C2 (single 53-row call "
+                "deterministic; 32+21 varied); proves partitioning is "
+                "sufficient for instability on a stable input — NOT "
+                "legality of a 65-67-row single call"
+            ),
         },
+        "remediation_scope_of_the_candidate": (
+            "The <=64 single-chunk policy cleanup (capacity-derived, "
+            "no drifting literals, wire/chain agreement) is RETAINED as "
+            "useful: it removes the unnecessary-partition DEFECT CLASS "
+            "for legal units.  It does NOT remediate the accepted "
+            "65-67 failing population, whose canonical execution path "
+            "is unchanged (64 + remainder, same requests)."
+        ),
         "same_policy_direct_and_ordinary": (
             "Both paths drive realize_dense_chain -> "
             "GemmaStageChainRuntime.generate (single seam)"
@@ -202,7 +347,8 @@ def build(repo: Path, remediated_commit: str) -> dict:
     remediated["prefill_partition.py"] = fetch_blob(
         repo, remediated_commit, "python/freetoken/research/prefill_partition.py"
     )
-    record = inventory_from_bytes(accepted, remediated)
+    population = accepted_population_facts(ROOT)
+    record = inventory_from_bytes(accepted, remediated, population)
     record["inputs"] = {
         "accepted_producer": ACCEPTED_PRODUCER,
         "starting_research_base": STARTING_RESEARCH,
