@@ -31,7 +31,7 @@ What the environment provides and why:
 
 | Requirement | Needed for |
 |---|---|
-| Python 3.11 or newer | everything (CI pins `3.12`) |
+| Python 3.12 (exact) | everything — the accepted Issue #129 real-tokenizer proof pins its frozen software identity to 3.12; the bootstrap creates a 3.12 `.venv` and the doctor rejects other minor versions |
 | `jsonschema` | `test_issue74_methodology`, `test_issue79_v2_threshold_tooling`, `test_issue86_v3_methodology`, `test_issue110_v5_custody_handoff`, and the v2/v3 unseal preflights |
 | `numpy` | `test_analyze_phase1_p6` only |
 | `pyyaml` | the CI YAML check, not the test suite |

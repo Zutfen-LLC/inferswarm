@@ -21,8 +21,14 @@ Contract:
 
 Usage::
 
-    python3 scripts/bootstrap_test_env.py            # bootstrap .venv
+    python3 scripts/bootstrap_test_env.py            # bootstrap .venv (Python 3.12)
     python3 scripts/bootstrap_test_env.py --venv DIR # explicit venv dir
+
+The canonical suite interpreter is Python 3.12: the accepted Issue
+#129 real-tokenizer proof pins its frozen software identity to 3.12,
+so the bootstrap requests a 3.12 interpreter (using an installed one,
+or letting ``uv`` fetch a managed one when the system python differs)
+and the doctor rejects any other minor version.
 
 Afterwards run the doctor and the suite::
 
@@ -118,22 +124,32 @@ def _fail(message: str) -> None:
     raise SystemExit(1)
 
 
-def create_venv(venv_dir: Path) -> Path:
-    """Create the venv with stdlib, falling back to ``uv``."""
+def create_venv(venv_dir: Path, python_request: str = "3.12") -> Path:
+    """Create the venv with stdlib, falling back to ``uv``.
+
+    ``python_request`` is the canonical suite interpreter (3.12; the
+    accepted Issue #129 real-tokenizer proof pins that identity). If the
+    launching interpreter already matches, it is used directly; otherwise
+    ``uv`` resolves or fetches the requested version.
+    """
     if (venv_dir / "pyvenv.cfg").is_file() and (venv_dir / "bin" / "python").exists():
         return venv_dir / "bin" / "python"
     if venv_dir.exists():
         # A partial venv from a failed creation attempt is not reusable.
         shutil.rmtree(venv_dir, ignore_errors=True)
-    if subprocess.run([sys.executable, "-m", "venv", str(venv_dir)],
-                      capture_output=True).returncode != 0:
+    launching = f"{sys.version_info.major}.{sys.version_info.minor}"
+    if launching == python_request:
+        if subprocess.run([sys.executable, "-m", "venv", str(venv_dir)],
+                          capture_output=True).returncode == 0:
+            return venv_dir / "bin" / "python"
         # stdlib venv may fail (Debian ships venv without ensurepip).
         shutil.rmtree(venv_dir, ignore_errors=True)
-        uv = subprocess.run(["uv", "venv", "--python", sys.executable,
-                             str(venv_dir)], capture_output=True)
-        if uv.returncode != 0:
-            _fail("cannot create the virtual environment: stdlib venv "
-                  "and uv both failed; install python3-venv or uv")
+    uv = subprocess.run(["uv", "venv", "--python", python_request,
+                         str(venv_dir)], capture_output=True)
+    if uv.returncode != 0:
+        _fail(f"cannot create the Python {python_request} virtual "
+              "environment: stdlib venv and uv both failed; install "
+              f"python{python_request}-venv or uv")
     return venv_dir / "bin" / "python"
 
 
@@ -155,7 +171,7 @@ def install(python: Path, *args: str) -> None:
               f"{completed.returncode})")
 
 
-def bootstrap(venv_dir: Path = VENV) -> Path:
+def bootstrap(venv_dir: Path = VENV, python_request: str = "3.12") -> Path:
     """Create/refresh the environment; returns the venv interpreter."""
     if not REQUIREMENTS.is_file():
         _fail(f"missing dependency authority: {REQUIREMENTS}")
@@ -181,7 +197,7 @@ def bootstrap(venv_dir: Path = VENV) -> Path:
                       "refusing to bootstrap")
 
     before = tracked_file_digests()
-    python = create_venv(venv_dir)
+    python = create_venv(venv_dir, python_request)
     install(python, "-r", str(REQUIREMENTS))
     present = forbidden_installed(python)
     if present:
@@ -205,11 +221,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--venv", type=Path, default=VENV,
         help="virtual environment directory (default: <repo>/.venv)")
+    parser.add_argument(
+        "--python", default="3.12", dest="python_request",
+        help="canonical suite interpreter request (default: 3.12; the "
+             "Issue #129 frozen tokenizer identity pins it)")
     args = parser.parse_args(argv)
     venv_dir = args.venv.resolve()
     if ROOT not in venv_dir.parents and venv_dir != (ROOT / ".venv").resolve():
         _fail("the bootstrap venv must live inside the repository")
-    python = bootstrap(venv_dir)
+    python = bootstrap(venv_dir, args.python_request)
     print("CPU test environment ready:", python)
     print("Next: run the doctor and the suite:")
     print(f"  {python} scripts/check_test_env.py")

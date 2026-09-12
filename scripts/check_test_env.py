@@ -38,6 +38,12 @@ DOCS_CONTRACT = {
 # Minimum supported interpreter (CI pins 3.12; the suite needs >= 3.11).
 MIN_PYTHON = (3, 11)
 
+# The accepted Issue #129 real-tokenizer proof pins the exact interpreter
+# identity (scripts/issue129_arm_c_retry_core.py TOKENIZER_PYTHON); running
+# its modules under any other minor version fails the frozen software
+# identity check mid-suite. The doctor fails fast instead.
+REQUIRED_EXACT_PYTHON = ("3", "12")
+
 # Living CPU test dependencies that the doctor must find importable.
 # This mirrors requirements-test.txt's direct (non-referenced) entries;
 # the authority check below proves the mirror cannot drift silently.
@@ -96,6 +102,16 @@ def check_python_version() -> None:
         raise DoctorError(
             f"unsupported interpreter {sys.version.split()[0]}; the CPU "
             f"test environment requires Python {MIN_PYTHON[0]}.{MIN_PYTHON[1]}+")
+    if (str(sys.version_info.major), str(sys.version_info.minor)) != (
+            REQUIRED_EXACT_PYTHON):
+        raise DoctorError(
+            f"interpreter {sys.version.split()[0]} is not the pinned "
+            f"CPU-suite interpreter {'.'.join(REQUIRED_EXACT_PYTHON)}: the "
+            "accepted Issue #129 real-tokenizer proof pins its software "
+            "identity to Python 3.12 and fails under any other minor "
+            "version. Bootstrap with a 3.12 interpreter "
+            "(scripts/bootstrap_test_env.py --python3.12 or set "
+            "UV_PYTHON=3.12)")
 
 
 def installed_versions() -> dict[str, str]:

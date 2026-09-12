@@ -58,9 +58,12 @@ python3 scripts/check_phase0_workloads.py
 ```
 
 The bootstrap is idempotent and writes only inside the gitignored `.venv/`;
-the doctor fails fast — before the expensive suite — on a missing declared
-dependency, a model-runtime package leaking into the CPU environment, a
-missing `openssl`, or CI/documentation drift from the canonical contract.
+it creates a Python 3.12 environment (the accepted Issue #129 real-tokenizer
+proof pins that interpreter identity; `uv` fetches a managed 3.12 if the
+system python differs). The doctor fails fast — before the expensive suite —
+on a missing declared dependency, a model-runtime package leaking into the
+CPU environment, a missing `openssl`, a non-3.12 interpreter, or
+CI/documentation drift from the canonical contract.
 
 A missing declared test dependency is an **environment setup failure**, not a
 pre-existing test failure: bootstrap and re-run rather than stashing or

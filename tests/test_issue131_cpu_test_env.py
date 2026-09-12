@@ -299,7 +299,8 @@ class BootstrapContractTests(unittest.TestCase):
         original_create, original_install, original_forbidden = (
             bootstrap.create_venv, bootstrap.install,
             bootstrap.forbidden_installed)
-        bootstrap.create_venv = lambda venv_dir: venv_dir / "bin" / "python"
+        bootstrap.create_venv = (
+            lambda venv_dir, python_request="3.12": venv_dir / "bin" / "python")
         bootstrap.install = lambda python, *args: None
         bootstrap.forbidden_installed = lambda python: []
         try:
