@@ -1,0 +1,649 @@
+{
+ "always_on": [
+  "repo-integrity"
+ ],
+ "full_regression_paths": [
+  "docs/evidence-manifests.md",
+  "docs/finalization.md",
+  "docs/project-status.json",
+  "docs/status-maintenance.md",
+  "requirements-test.txt",
+  "scripts/bootstrap_test_env.py",
+  "scripts/check_test_env.py",
+  "scripts/ci_groups.json",
+  "scripts/finalize_repository.py",
+  "scripts/issue137_manifest.py",
+  "scripts/plan_ci.py",
+  "scripts/sync_project_status.py",
+  "tests/test_plan_ci.py"
+ ],
+ "groups": {
+  "issue-109-110": {
+   "test_modules": [
+    "test_issue109_v5_methodology",
+    "test_issue109_v5_thresholds",
+    "test_issue109_v5_methodology_freeze",
+    "test_issue110_v5_custody_handoff",
+    "test_issue110_terminal_report_decimals"
+   ]
+  },
+  "issue-115-cleanup": {
+   "test_modules": [
+    "test_issue115_cleanup_retention"
+   ]
+  },
+  "issue-117-133": {
+   "test_modules": [
+    "test_issue117_integration_fixture",
+    "test_issue117_applicability",
+    "test_issue117_gemma_strategy",
+    "test_issue117_planner",
+    "test_issue117_preflight",
+    "test_issue117_proof",
+    "test_issue117_provenance",
+    "test_issue117_checkpoint_authority",
+    "test_issue117_accepted_subject",
+    "test_issue117_physical_retention",
+    "test_issue117_arm_a_retention",
+    "test_issue117_arm_b_retention",
+    "test_issue117_arm_c_retention",
+    "test_issue117_arm_c_blocker",
+    "test_issue129_arm_c_retry",
+    "test_issue133_arm_c_retry_campaign",
+    "test_issue133_arm_c_retry_direct",
+    "test_issue133_corrected_freeze",
+    "test_issue133_gate_tooling_drift",
+    "test_issue133_prelaunch_bootstrap",
+    "test_issue133_physical_execution_retention"
+   ]
+  },
+  "issue-137": {
+   "test_modules": [
+    "test_issue137_regime4_diagnosis",
+    "test_issue137_regime4_diagnosis_correction"
+   ]
+  },
+  "issue-74-79": {
+   "test_modules": [
+    "test_issue74_methodology",
+    "test_issue76_v2_stress_selection",
+    "test_issue79_v2_threshold_tooling"
+   ]
+  },
+  "issue-83-95": {
+   "test_modules": [
+    "test_issue83_semantic_contract",
+    "test_issue86_v3_methodology",
+    "test_issue90_post_v3_diagnosis",
+    "test_issue93_numerical_core_doctrine",
+    "test_issue95_v4_methodology",
+    "test_issue95_v4_thresholds",
+    "test_issue105_post_v4_core_diagnosis",
+    "test_issue108_post_v4_statistical_metric_doctrine"
+   ]
+  },
+  "issue-99-103": {
+   "test_modules": [
+    "test_issue99_artifact_core",
+    "test_issue99_proof",
+    "test_issue101_orchestration",
+    "test_issue101_proof",
+    "test_issue103_planner"
+   ]
+  },
+  "phase1-analysis": {
+   "test_modules": [
+    "test_analyze_phase1_p6",
+    "test_derive_phase1_placement_v2",
+    "test_derive_phase1r_d3_placement",
+    "test_derive_phase1r_d4_placement",
+    "test_derive_phase1r_d7_placement"
+   ]
+  },
+  "repo-integrity": {
+   "test_modules": [
+    "test_project_status",
+    "test_finalize_repository",
+    "test_evidence_manifest_lifecycle",
+    "test_issue131_cpu_test_env",
+    "test_plan_ci"
+   ]
+  },
+  "vulkan-v0-b": {
+   "test_modules": [
+    "test_v0b_reduction"
+   ]
+  }
+ },
+ "path_rules": {
+  ".github/ISSUE_TEMPLATE/": [
+   "repo-integrity"
+  ],
+  ".gitignore": [
+   "repo-integrity"
+  ],
+  "AGENTS.md": [
+   "repo-integrity"
+  ],
+  "ARCHITECTURE.md": [
+   "repo-integrity"
+  ],
+  "BENCHMARKING.md": [
+   "repo-integrity"
+  ],
+  "CONTRIBUTING.md": [
+   "repo-integrity"
+  ],
+  "LICENSE": [
+   "repo-integrity"
+  ],
+  "README.md": [
+   "repo-integrity"
+  ],
+  "ROADMAP.md": [
+   "repo-integrity"
+  ],
+  "SECURITY.md": [
+   "repo-integrity"
+  ],
+  "docs/adr/": [
+   "issue-83-95"
+  ],
+  "docs/architecture/": [
+   "issue-83-95"
+  ],
+  "docs/benchmarks/results/phase0/": [
+   "issue-117-133"
+  ],
+  "docs/benchmarks/results/phase1/": [
+   "phase1-analysis"
+  ],
+  "docs/benchmarks/workloads/": [
+   "repo-integrity"
+  ],
+  "docs/evidence-manifests.md": [
+   "repo-integrity"
+  ],
+  "docs/finalization.md": [
+   "repo-integrity"
+  ],
+  "docs/implementation/artifact-locality-transition-planning-103/": [
+   "issue-99-103",
+   "issue-117-133"
+  ],
+  "docs/implementation/plan-driven-artifact-acquisition-99/": [
+   "issue-99-103",
+   "issue-117-133"
+  ],
+  "docs/implementation/plan-driven-artifact-orchestration-101/": [
+   "issue-99-103",
+   "issue-117-133"
+  ],
+  "docs/implementation/r6-successor-dense-full-integration-117/": [
+   "issue-117-133"
+  ],
+  "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-regime4-diagnosis-137/": [
+   "issue-137",
+   "issue-117-133"
+  ],
+  "docs/investigations/data/": [
+   "phase1-analysis"
+  ],
+  "docs/investigations/vulkan-v0-a/": [
+   "vulkan-v0-b"
+  ],
+  "docs/investigations/vulkan-v0-b/": [
+   "vulkan-v0-b"
+  ],
+  "docs/project-status.json": [
+   "repo-integrity"
+  ],
+  "docs/qualification/gemma4-12b-it-post-v3-envelope-diagnosis/": [
+   "issue-83-95"
+  ],
+  "docs/qualification/gemma4-12b-it-post-v4-core-diagnosis/": [
+   "issue-83-95"
+  ],
+  "docs/qualification/gemma4-12b-it-semantic-83/": [
+   "issue-83-95"
+  ],
+  "docs/qualification/gemma4-12b-it-v1/": [
+   "issue-74-79"
+  ],
+  "docs/qualification/gemma4-12b-it-v2-campaign-81/": [
+   "issue-117-133"
+  ],
+  "docs/qualification/gemma4-12b-it-v2/": [
+   "issue-74-79"
+  ],
+  "docs/qualification/gemma4-12b-it-v3-campaign-88/": [
+   "issue-83-95"
+  ],
+  "docs/qualification/gemma4-12b-it-v3/": [
+   "issue-83-95"
+  ],
+  "docs/qualification/gemma4-12b-it-v4-campaign-97/": [
+   "issue-117-133"
+  ],
+  "docs/qualification/gemma4-12b-it-v4/": [
+   "issue-83-95"
+  ],
+  "docs/qualification/gemma4-12b-it-v5-campaign-110/": [
+   "issue-109-110",
+   "issue-117-133"
+  ],
+  "docs/qualification/gemma4-12b-it-v5-campaign-110/cleanup/": [
+   "issue-115-cleanup",
+   "issue-109-110",
+   "issue-117-133"
+  ],
+  "docs/qualification/gemma4-12b-it-v5/": [
+   "issue-109-110",
+   "issue-117-133"
+  ],
+  "docs/qualification/post-v3-numerical-core-doctrine/": [
+   "issue-83-95",
+   "issue-109-110"
+  ],
+  "docs/qualification/post-v4-statistical-metric-doctrine/": [
+   "issue-109-110"
+  ],
+  "docs/status-maintenance.md": [
+   "repo-integrity"
+  ],
+  "requirements-test.txt": [
+   "repo-integrity"
+  ],
+  "scripts/README.md": [
+   "repo-integrity"
+  ],
+  "scripts/analyze_phase1_p6.py": [
+   "phase1-analysis"
+  ],
+  "scripts/bootstrap_test_env.py": [
+   "repo-integrity"
+  ],
+  "scripts/build_issue109_build_audit.py": [
+   "issue-109-110"
+  ],
+  "scripts/build_issue109_disjointness.py": [
+   "issue-109-110"
+  ],
+  "scripts/build_issue109_historical_exclusion.py": [
+   "issue-109-110"
+  ],
+  "scripts/build_issue109_schemas.py": [
+   "issue-109-110"
+  ],
+  "scripts/build_issue86_disjointness.py": [
+   "issue-83-95"
+  ],
+  "scripts/build_issue86_schemas.py": [
+   "issue-83-95"
+  ],
+  "scripts/build_issue95_disjointness.py": [
+   "issue-83-95"
+  ],
+  "scripts/build_issue95_schemas.py": [
+   "issue-83-95"
+  ],
+  "scripts/check_phase0_workloads.py": [
+   "repo-integrity"
+  ],
+  "scripts/check_test_env.py": [
+   "repo-integrity"
+  ],
+  "scripts/commit_issue109_holdout.py": [
+   "issue-109-110"
+  ],
+  "scripts/commit_issue109_stress_selection.py": [
+   "issue-109-110"
+  ],
+  "scripts/commit_issue74_holdout.py": [
+   "issue-74-79"
+  ],
+  "scripts/commit_issue86_holdout.py": [
+   "issue-83-95"
+  ],
+  "scripts/commit_issue86_stress_selection.py": [
+   "issue-83-95"
+  ],
+  "scripts/commit_issue95_holdout.py": [
+   "issue-83-95"
+  ],
+  "scripts/commit_issue95_stress_selection.py": [
+   "issue-83-95"
+  ],
+  "scripts/derive_phase1_placement.py": [
+   "phase1-analysis"
+  ],
+  "scripts/derive_phase1_placement_v2.py": [
+   "phase1-analysis"
+  ],
+  "scripts/derive_phase1r_d3_placement.py": [
+   "phase1-analysis"
+  ],
+  "scripts/derive_phase1r_d4_placement.py": [
+   "phase1-analysis"
+  ],
+  "scripts/derive_phase1r_d7_placement.py": [
+   "phase1-analysis"
+  ],
+  "scripts/finalize_repository.py": [
+   "repo-integrity"
+  ],
+  "scripts/generate_issue109_corpora.py": [
+   "issue-109-110"
+  ],
+  "scripts/generate_issue74_corpora.py": [
+   "issue-74-79"
+  ],
+  "scripts/generate_issue76_stress_pool_v2.py": [
+   "issue-74-79"
+  ],
+  "scripts/generate_issue86_corpora.py": [
+   "issue-83-95"
+  ],
+  "scripts/generate_issue95_corpora.py": [
+   "issue-83-95"
+  ],
+  "scripts/hash_issue74_artifacts.py": [
+   "issue-74-79"
+  ],
+  "scripts/issue101_fixture.py": [
+   "issue-99-103"
+  ],
+  "scripts/issue101_orchestration.py": [
+   "issue-99-103"
+  ],
+  "scripts/issue101_proof.py": [
+   "issue-99-103"
+  ],
+  "scripts/issue103_fixture.py": [
+   "issue-99-103"
+  ],
+  "scripts/issue103_planner.py": [
+   "issue-99-103"
+  ],
+  "scripts/issue103_proof.py": [
+   "issue-99-103"
+  ],
+  "scripts/issue105_post_v4_core_diagnosis.py": [
+   "issue-83-95"
+  ],
+  "scripts/issue108_post_v4_statistical_metric_doctrine.py": [
+   "issue-83-95"
+  ],
+  "scripts/issue109_v5_contract.py": [
+   "issue-109-110"
+  ],
+  "scripts/issue109_v5_methodology.py": [
+   "issue-109-110"
+  ],
+  "scripts/issue109_v5_methodology_freeze.py": [
+   "issue-109-110"
+  ],
+  "scripts/issue109_v5_thresholds.py": [
+   "issue-109-110"
+  ],
+  "scripts/issue110_v5_custody.py": [
+   "issue-109-110"
+  ],
+  "scripts/issue110_v5_thresholds.py": [
+   "issue-109-110"
+  ],
+  "scripts/issue117_accepted_subject.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_applicability.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_arm_a_evidence.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_arm_b_correction_build.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_arm_b_evidence.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_arm_b_observe_hosts.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_arm_b_transport_audit_build.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_arm_c_authority_audit.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_arm_c_blocker_fakeroot.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_arm_c_blocker_reducer.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_arm_c_client.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_arm_c_decoded_bytes.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_arm_c_direct.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_arm_c_evidence.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_arm_c_fakeroot.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_arm_c_frozen_pins.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_arm_c_observe.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_arm_c_plan.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_arm_c_serving_evidence.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_checkpoint_authority.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_gemma_strategy.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_integration_fixture.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_parsers/": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_planner.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_preflight.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_proof.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue117_subject_identity.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue129_arm_c_retry_core.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue133_arm_c_retry_campaign.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue133_arm_c_retry_direct.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue133_canonical_environment.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue133_equality_reduction.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue133_physical_prelaunch_gate.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue133_real_builder_dry_run.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue133_regenerate_corrected_freeze.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue133_terminal_reduction.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue137_binding.py": [
+   "issue-137"
+  ],
+  "scripts/issue137_conclusions.py": [
+   "issue-137"
+  ],
+  "scripts/issue137_manifest.py": [
+   "repo-integrity"
+  ],
+  "scripts/issue137_phase1_inventory.py": [
+   "issue-137"
+  ],
+  "scripts/issue137_probe_driver.py": [
+   "issue-137",
+   "issue-74-79"
+  ],
+  "scripts/issue74_methodology.py": [
+   "issue-74-79"
+  ],
+  "scripts/issue79_v2_thresholds.py": [
+   "issue-74-79"
+  ],
+  "scripts/issue83_first_divergence.py": [
+   "issue-83-95"
+  ],
+  "scripts/issue86_v3_methodology.py": [
+   "issue-83-95"
+  ],
+  "scripts/issue86_v3_thresholds.py": [
+   "issue-83-95"
+  ],
+  "scripts/issue90_post_v3_diagnosis.py": [
+   "issue-83-95"
+  ],
+  "scripts/issue95_v4_contract.py": [
+   "issue-83-95"
+  ],
+  "scripts/issue95_v4_methodology.py": [
+   "issue-83-95"
+  ],
+  "scripts/issue95_v4_thresholds.py": [
+   "issue-83-95"
+  ],
+  "scripts/issue99_artifact_core.py": [
+   "issue-99-103"
+  ],
+  "scripts/issue99_mini_model.py": [
+   "issue-99-103"
+  ],
+  "scripts/issue99_proof.py": [
+   "issue-99-103"
+  ],
+  "scripts/seal_issue74_holdout.py": [
+   "issue-74-79"
+  ],
+  "scripts/select_issue109_margin_stress_v5.py": [
+   "issue-109-110"
+  ],
+  "scripts/select_issue74_margin_stress.py": [
+   "issue-74-79"
+  ],
+  "scripts/select_issue76_margin_stress_v2.py": [
+   "issue-74-79"
+  ],
+  "scripts/select_issue86_margin_stress_v3.py": [
+   "issue-83-95"
+  ],
+  "scripts/select_issue95_margin_stress_v4.py": [
+   "issue-83-95"
+  ],
+  "scripts/sync_project_status.py": [
+   "repo-integrity"
+  ],
+  "scripts/v0a_correctness_derive.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v0a_correctness_run.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v0a_materialization_derive.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v0a_materialization_run.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v0b_capability_assessment.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v0b_comparability_audit.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v0b_correctness_stability.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v0b_cpu_proof.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v0b_cpu_supplement_derive.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v0b_cpu_supplement_run.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v0b_economics.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v0b_manifest.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v0b_seam_comparison.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v0b_terminal.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/validate_issue109_prerequisites.py": [
+   "issue-109-110"
+  ],
+  "scripts/verify_issue109_v5_unseal.py": [
+   "issue-109-110"
+  ],
+  "scripts/verify_issue79_v2_unseal.py": [
+   "issue-74-79"
+  ],
+  "scripts/verify_issue86_v3_unseal.py": [
+   "issue-83-95"
+  ],
+  "scripts/verify_issue95_v4_unseal.py": [
+   "issue-83-95"
+  ],
+  "tests/test_evidence_manifest_lifecycle.py": [
+   "repo-integrity"
+  ],
+  "tests/test_finalize_repository.py": [
+   "repo-integrity"
+  ],
+  "tests/test_issue131_cpu_test_env.py": [
+   "repo-integrity"
+  ],
+  "tests/test_project_status.py": [
+   "repo-integrity"
+  ]
+ },
+ "planner": "scripts/plan_ci.py",
+ "planner_version": 1,
+ "schema": "ci-groups/1"
+}

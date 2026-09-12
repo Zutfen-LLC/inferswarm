@@ -1,28 +1,129 @@
 name: CI
 
-# Lightweight checks for a documentation/bootstrap repository:
-# - YAML syntax for issue templates and workflows
-# - frozen Phase-0 workload manifest integrity
-# - internal Markdown link integrity
-# - repository hygiene (no empty speculative directories)
+# Impact-selected CI (Issue #148).
 #
-# Deliberately NOT here: GPU benchmarks (no fake GPU CI), no self-hosted
-# runners attached to public-PR-triggered workflows. Hardware benchmarks run
-# on trusted hardware and are committed with provenance; see BENCHMARKING.md
-# and SECURITY.md.
+# PR path:   plan -> repo-integrity (always-on) + selected impact
+#            groups -> CI Gate
+# main path: full regression (all groups, sharded) -> CI Gate
+# unknown/shared/authority change: planner fails closed to full
+#
+# Selection authority is repository-owned (scripts/plan_ci.py +
+# scripts/ci_groups.json); no third-party action decides which
+# correctness suites run. See docs/ci-impact-planning.md.
+#
+# Deliberately NOT here: GPU benchmarks (no fake GPU CI), no
+# self-hosted runners attached to public-PR-triggered workflows.
+# Hardware benchmarks run on trusted hardware and are committed with
+# provenance; see BENCHMARKING.md and SECURITY.md.
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      full_regression:
+        description: "Force full regression (all groups)"
+        type: boolean
+        default: true
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # Deterministic pip behavior across runners.
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
 jobs:
-  checks:
-    name: Docs and repository checks
+  plan:
+    name: Plan CI (impact selection)
     runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.plan.outputs.mode }}
+      full_regression: ${{ steps.plan.outputs.full_regression }}
+      groups: ${{ steps.plan.outputs.groups }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+
+      - name: Compute changed paths (pull_request)
+        if: github.event_name == 'pull_request'
+        run: |
+          git diff --name-only --diff-filter=ACDMRT "origin/${GITHUB_BASE_REF}...HEAD" > /tmp/changed_paths.txt || true
+          # The three-dot form against the fetched base ref is the
+          # PR/base range; if it yields nothing the planner fails
+          # closed on the empty set — it never narrows silently.
+          echo "--- changed paths ---"
+          cat /tmp/changed_paths.txt
+
+      - name: Compute changed paths (push)
+        if: github.event_name == 'push'
+        run: |
+          # Push to main: full regression contract; paths recorded for
+          # the plan explanation only.
+          git diff --name-only --diff-filter=ACDMRT "${{ github.event.before }}..${{ github.sha }}" > /tmp/changed_paths.txt || true
+          cat /tmp/changed_paths.txt || true
+
+      - name: Plan (push to main / manual -> full)
+        if: github.event_name != 'pull_request'
+        run: |
+          python3 scripts/plan_ci.py --mode full --output /tmp/plan.json
+          cat /tmp/plan.json
+
+      - name: Plan (pull_request)
+        if: github.event_name == 'pull_request'
+        run: |
+          python3 scripts/plan_ci.py --mode pr --output /tmp/plan.json < /tmp/changed_paths.txt
+          cat /tmp/plan.json
+
+      - name: Validate plan shape (fail closed on malformed output)
+        run: |
+          python3 - <<'EOF'
+          import json, sys
+          p = json.load(open("/tmp/plan.json"))
+          assert p["schema"] == "ci-plan/1", p
+          assert p["mode"] in ("targeted", "full"), p
+          assert isinstance(p["full_regression"], bool), p
+          assert isinstance(p["groups"], list) and p["groups"], p
+          assert all(isinstance(g, str) for g in p["groups"]), p
+          print("plan schema OK:", p["mode"], p["groups"])
+          EOF
+
+      - name: Expose plan outputs
+        id: plan
+        run: |
+          mode=$(python3 -c "import json;print(json.load(open('/tmp/plan.json'))['mode'])")
+          full=$(python3 -c "import json;print(json.dumps(json.load(open('/tmp/plan.json'))['full_regression']))")
+          groups=$(python3 -c "import json;print(json.dumps(json.load(open('/tmp/plan.json'))['groups']))")
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "full_regression=$full" >> "$GITHUB_OUTPUT"
+          echo "groups=$groups" >> "$GITHUB_OUTPUT"
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ci-plan
+          path: /tmp/plan.json
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------
+  # Always-on repository integrity (every event, every mode).
+  # ---------------------------------------------------------------------------
+  repo-integrity:
+    name: Group repo-integrity (always-on)
+    runs-on: ubuntu-latest
+    needs: plan
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -76,65 +177,11 @@ jobs:
       - name: Check frozen Phase-0 workloads
         run: python3 scripts/check_phase0_workloads.py
 
-      - name: Check issue 74 frozen methodology
-        run: python3 -m unittest tests.test_issue74_methodology -v
-
-      - name: Check issue 76 v2 stress methodology
-        run: python3 -m unittest tests.test_issue76_v2_stress_selection -v
-
-      - name: Check issue 79 v2 threshold tooling (CPU-only)
-        run: python3 -m unittest tests.test_issue79_v2_threshold_tooling -v
-
-      - name: Check issue 83 semantic contract (CPU-only)
-        run: python3 -m unittest tests.test_issue83_semantic_contract -v
-
-      - name: Check issue 86 v3 methodology/tooling (CPU-only)
-        run: python3 -m unittest tests.test_issue86_v3_methodology -v
-
-      - name: Check issue 90 post-v3 envelope diagnosis (CPU-only)
-        run: python3 -m unittest tests.test_issue90_post_v3_diagnosis -v
-
-      - name: Check issue 93 numerical-core doctrine (CPU-only)
-        run: python3 -m unittest tests.test_issue93_numerical_core_doctrine -v
-
-      - name: Check issue 95 v4 prediction-aligned methodology (CPU-only)
-        run: python3 -m unittest tests.test_issue95_v4_methodology tests.test_issue95_v4_thresholds -v
-
-      - name: Check issue 105 post-v4 core diagnosis (CPU-only)
-        run: python3 -m unittest tests.test_issue105_post_v4_core_diagnosis -v
-
-      - name: Check issue 108 post-v4 statistical and metric doctrine (CPU-only)
-        run: python3 -m unittest tests.test_issue108_post_v4_statistical_metric_doctrine -v
-
-      - name: Check issue 109 v5 mixture-population methodology freeze (CPU-only)
-        run: python3 -m unittest tests.test_issue109_v5_methodology tests.test_issue109_v5_thresholds tests.test_issue109_v5_methodology_freeze -v
-
-      - name: Check issue 110 v5 custody handoff repair (CPU-only)
-        run: python3 -m unittest tests.test_issue110_v5_custody_handoff -v
-
-      - name: Check issue 110 terminal-report decimal derivation (CPU-only)
-        run: python3 -m unittest tests.test_issue110_terminal_report_decimals -v
-
-      - name: Check issue 115 cleanup retention manifest (CPU-only)
-        run: python3 -m unittest tests.test_issue115_cleanup_retention -v
-
-      - name: Check issue 117 R6 successor integration freeze (CPU-only)
-        run: python3 -m unittest tests.test_issue117_integration_fixture tests.test_issue117_applicability tests.test_issue117_gemma_strategy tests.test_issue117_planner tests.test_issue117_preflight tests.test_issue117_proof tests.test_issue117_provenance tests.test_issue117_checkpoint_authority tests.test_issue117_accepted_subject tests.test_issue117_physical_retention tests.test_issue117_arm_a_retention tests.test_issue117_arm_b_retention tests.test_issue117_arm_c_retention tests.test_issue117_arm_c_blocker tests.test_issue129_arm_c_retry tests.test_issue133_arm_c_retry_campaign tests.test_issue133_arm_c_retry_direct tests.test_issue133_corrected_freeze tests.test_issue133_gate_tooling_drift tests.test_issue133_prelaunch_bootstrap tests.test_issue133_physical_execution_retention -v
-
-      - name: Check issue 137 Arm-C regime-4 diagnosis (CPU-only)
-        run: python3 -m unittest tests.test_issue137_regime4_diagnosis -v
-
       - name: Check issue 131 canonical CPU test environment (CPU-only)
         run: python3 -m unittest tests.test_issue131_cpu_test_env -v
 
-      - name: Check issue 99 plan-driven artifact acquisition (CPU-only)
-        run: python3 -m unittest tests.test_issue99_artifact_core tests.test_issue99_proof -v
-
-      - name: Check issue 101 plan-driven artifact orchestration (CPU-only)
-        run: python3 -m unittest tests.test_issue101_orchestration tests.test_issue101_proof -v
-
-      - name: Check issue 103 artifact-locality transition planning (CPU-only)
-        run: python3 -m unittest tests.test_issue103_planner -v
+      - name: Check CI planner self-check (Issue #148)
+        run: python3 scripts/plan_ci.py --self-check
 
       - name: Check internal Markdown links
         run: |
@@ -219,4 +266,416 @@ jobs:
               print("Lowercase 'inferswarm' in prose — use 'InferSwarm'")
               sys.exit(1)
           print("Naming consistent")
+          EOF
+
+  # ---------------------------------------------------------------------------
+  # Impact-selected groups. Each job is conditional on the planner's
+  # selection; a skip is legitimate (the CI Gate verifies selection
+  # consistency, not mere job existence).
+  # ---------------------------------------------------------------------------
+
+  issue-74-79:
+    name: Group issue-74-79
+    runs-on: ubuntu-latest
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'issue-74-79')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run group issue-74-79
+        run: python3 -m unittest tests.test_issue74_methodology tests.test_issue76_v2_stress_selection tests.test_issue79_v2_threshold_tooling -v
+
+  issue-83-95:
+    name: Group issue-83-95
+    runs-on: ubuntu-latest
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'issue-83-95')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run group issue-83-95
+        run: python3 -m unittest tests.test_issue83_semantic_contract tests.test_issue86_v3_methodology tests.test_issue90_post_v3_diagnosis tests.test_issue93_numerical_core_doctrine tests.test_issue95_v4_methodology tests.test_issue95_v4_thresholds tests.test_issue105_post_v4_core_diagnosis tests.test_issue108_post_v4_statistical_metric_doctrine -v
+
+  issue-109-110:
+    name: Group issue-109-110
+    runs-on: ubuntu-latest
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'issue-109-110')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run group issue-109-110
+        run: python3 -m unittest tests.test_issue109_v5_methodology tests.test_issue109_v5_thresholds tests.test_issue109_v5_methodology_freeze tests.test_issue110_v5_custody_handoff tests.test_issue110_terminal_report_decimals -v
+
+  # The ~850-test Issue #117/#129/#133 lineage dominates the old serial
+  # critical path (~197 s hosted). It is split into four deterministic
+  # shards, balanced from measured per-module timings (recorded in the
+  # Issue #148 PR report). Shard composition is defined here and must
+  # keep the three test_issue133_{arm_c_retry_campaign,
+  # arm_c_retry_direct, corrected_freeze} modules in ONE shard:
+  # corrected_freeze pins the real scripts/ modules in sys.modules at
+  # import time, which is what makes the campaign fixture's scratch-repo
+  # gate exercise safe in-process (the pre-change monolithic command
+  # relied on the same property). All shards consume the same canonical
+  # #131 CPU environment.
+
+  issue-117-133-s1:
+    name: Group issue-117-133 shard 1
+    runs-on: ubuntu-latest
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'issue-117-133')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run shard S1
+        run: python3 -m unittest tests.test_issue117_integration_fixture tests.test_issue117_applicability tests.test_issue117_gemma_strategy tests.test_issue117_planner tests.test_issue117_preflight tests.test_issue117_proof tests.test_issue117_provenance tests.test_issue117_checkpoint_authority tests.test_issue117_accepted_subject tests.test_issue117_physical_retention tests.test_issue117_arm_c_retention -v
+
+  issue-117-133-s2:
+    name: Group issue-117-133 shard 2
+    runs-on: ubuntu-latest
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'issue-117-133')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run shard S2
+        run: python3 -m unittest tests.test_issue117_arm_b_retention tests.test_issue133_arm_c_retry_campaign tests.test_issue133_arm_c_retry_direct tests.test_issue133_corrected_freeze -v
+
+  issue-117-133-s3:
+    name: Group issue-117-133 shard 3
+    runs-on: ubuntu-latest
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'issue-117-133')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run shard S3
+        run: python3 -m unittest tests.test_issue117_arm_a_retention tests.test_issue117_arm_c_blocker tests.test_issue129_arm_c_retry tests.test_issue133_gate_tooling_drift -v
+
+  issue-117-133-s4:
+    name: Group issue-117-133 shard 4
+    runs-on: ubuntu-latest
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'issue-117-133')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run shard S4
+        run: python3 -m unittest tests.test_issue133_prelaunch_bootstrap tests.test_issue133_physical_execution_retention -v
+
+  issue-137:
+    name: Group issue-137
+    runs-on: ubuntu-latest
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'issue-137')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run group issue-137
+        run: python3 -m unittest tests.test_issue137_regime4_diagnosis tests.test_issue137_regime4_diagnosis_correction -v
+
+  issue-99-103:
+    name: Group issue-99-103
+    runs-on: ubuntu-latest
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'issue-99-103')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run group issue-99-103
+        run: python3 -m unittest tests.test_issue99_artifact_core tests.test_issue99_proof tests.test_issue101_orchestration tests.test_issue101_proof tests.test_issue103_planner -v
+
+  vulkan-v0-b:
+    name: Group vulkan-v0-b
+    runs-on: ubuntu-latest
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'vulkan-v0-b')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run group vulkan-v0-b
+        run: python3 -m unittest tests.test_v0b_reduction -v
+
+  phase1-analysis:
+    name: Group phase1-analysis
+    runs-on: ubuntu-latest
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'phase1-analysis')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run group phase1-analysis
+        run: python3 -m unittest tests.test_analyze_phase1_p6 tests.test_derive_phase1_placement_v2 tests.test_derive_phase1r_d3_placement tests.test_derive_phase1r_d4_placement tests.test_derive_phase1r_d7_placement -v
+
+  issue-115-cleanup:
+    name: Group issue-115-cleanup
+    runs-on: ubuntu-latest
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'issue-115-cleanup')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run group issue-115-cleanup
+        run: python3 -m unittest tests.test_issue115_cleanup_retention -v
+
+  # ---------------------------------------------------------------------------
+  # Stable aggregate gate. Branch protection should require exactly
+  # this check. It fails closed on: planner failure, malformed/absent
+  # plan, failed/cancelled/missing selected group, or repo-integrity
+  # failure. Legitimately unselected groups are skipped by design.
+  # ---------------------------------------------------------------------------
+  ci-gate:
+    name: CI Gate
+    runs-on: ubuntu-latest
+    needs: [plan, repo-integrity, issue-74-79, issue-83-95, issue-109-110,
+            issue-117-133-s1, issue-117-133-s2, issue-117-133-s3,
+            issue-117-133-s4, issue-137, issue-99-103, vulkan-v0-b,
+            phase1-analysis, issue-115-cleanup]
+    if: always()
+    steps:
+      - name: Aggregate selected results (fail closed)
+        run: |
+          python3 - <<'EOF'
+          import json, os, sys
+
+          results = {
+              "repo-integrity": "${{ needs.repo-integrity.result }}",
+              "issue-74-79": "${{ needs.issue-74-79.result }}",
+              "issue-83-95": "${{ needs.issue-83-95.result }}",
+              "issue-109-110": "${{ needs.issue-109-110.result }}",
+              "issue-117-133": "${{ needs.issue-117-133-s1.result }}",
+              "issue-117-133-shard2": "${{ needs.issue-117-133-s2.result }}",
+              "issue-117-133-shard3": "${{ needs.issue-117-133-s3.result }}",
+              "issue-117-133-shard4": "${{ needs.issue-117-133-s4.result }}",
+              "issue-137": "${{ needs.issue-137.result }}",
+              "issue-99-103": "${{ needs.issue-99-103.result }}",
+              "vulkan-v0-b": "${{ needs.vulkan-v0-b.result }}",
+              "phase1-analysis": "${{ needs.phase1-analysis.result }}",
+              "issue-115-cleanup": "${{ needs.issue-115-cleanup.result }}",
+          }
+          # The plan is re-derived from planner outputs embedded below;
+          # malformed or missing plan output fails closed.
+          plan_mode = "${{ needs.plan.outputs.mode }}"
+          plan_full = "${{ needs.plan.outputs.full_regression }}"
+          plan_groups = json.loads(r'''${{ needs.plan.outputs.groups }}''')
+          planner_result = "${{ needs.plan.result }}"
+
+          print("planner:", planner_result, "mode:", plan_mode,
+                "full_regression:", plan_full)
+          print("groups:", plan_groups)
+          print("results:", json.dumps(results, indent=1))
+
+          failures = []
+          if planner_result != "success":
+              failures.append(f"planner job result: {planner_result}")
+          if plan_mode not in ("targeted", "full"):
+              failures.append(f"plan mode malformed: {plan_mode!r}")
+          if plan_full not in ("true", "false"):
+              failures.append(f"plan full_regression malformed: {plan_full!r}")
+          if not isinstance(plan_groups, list) or not plan_groups:
+              failures.append("plan groups malformed or empty")
+
+          selected = set(plan_groups) if isinstance(plan_groups, list) else set()
+          full = plan_full == "true"
+
+          # Every selected group must map to a job result of success.
+          job_for_group = {
+              "repo-integrity": "repo-integrity",
+              "issue-74-79": "issue-74-79",
+              "issue-83-95": "issue-83-95",
+              "issue-109-110": "issue-109-110",
+              "issue-117-133": "issue-117-133",
+              "issue-137": "issue-137",
+              "issue-99-103": "issue-99-103",
+              "vulkan-v0-b": "vulkan-v0-b",
+              "phase1-analysis": "phase1-analysis",
+              "issue-115-cleanup": "issue-115-cleanup",
+          }
+          # the four 117-133 shards all report under the group id
+          shard_results = [results["issue-117-133"],
+                           results["issue-117-133-shard2"],
+                           results["issue-117-133-shard3"],
+                           results["issue-117-133-shard4"]]
+
+          for group in sorted(selected):
+              job = job_for_group.get(group)
+              if job is None:
+                  failures.append(f"selected group {group} has no job mapping")
+                  continue
+              if group == "issue-117-133":
+                  for i, r in enumerate(shard_results, 1):
+                      if r != "success":
+                          failures.append(
+                              f"selected group {group} shard {i} result: {r}")
+              else:
+                  r = results[job]
+                  if r != "success":
+                      failures.append(
+                          f"selected group {group} ({job}) result: {r}")
+
+          # Unselected groups must not have failed: a failure in a
+          # skipped-by-planner job is still a real failure signal.
+          for group, job in job_for_group.items():
+              if group == "issue-117-133":
+                  shard_failed = [r for r in shard_results
+                                  if r in ("failure", "cancelled")]
+                  if group not in selected and shard_failed:
+                      failures.append(
+                          f"unselected group {group} still failed: {shard_failed}")
+                  continue
+              if group not in selected and results[job] in ("failure", "cancelled"):
+                  failures.append(
+                      f"unselected group {group} ({job}) still failed: {results[job]}")
+
+          if failures:
+              print("CI GATE FAILED:")
+              for f in failures:
+                  print(" -", f)
+              sys.exit(1)
+          print("CI Gate: PASS — planner OK, repo-integrity OK, "
+                "all selected groups succeeded")
           EOF
