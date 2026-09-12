@@ -514,7 +514,7 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group vulkan-v0-b
-        run: python3 -m unittest tests.test_v0b_reduction -v
+        run: python3 -m unittest tests.test_v0b_reduction tests.test_v0c_canonical_run tests.test_v0c_correctness tests.test_v0c_evidence_manifest tests.test_v0c_execution_seam tests.test_v0c_vulkan_adapter tests.test_v1a_execution_participant tests.test_v1a_vulkan_adapter tests.test_v1a_evidence_manifest -v
 
   phase1-analysis:
     name: Group phase1-analysis

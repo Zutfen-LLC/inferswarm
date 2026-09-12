@@ -1,0 +1,20 @@
+{
+  "schema": "inferswarm.v1a.evidence-status/1",
+  "terminal": "V1A_EVIDENCE_BLOCKED",
+  "reason": "Authenticated proving-host identity is unavailable in this session: SSH rejected the unknown host key before any remote command executed.",
+  "completed_scope": [
+    "V0-C preservation verification",
+    "coupling audit",
+    "CPU-only generic participant contract",
+    "backend-local adapter controls",
+    "fixed-inventory manifest"
+  ],
+  "not_claimed": [
+    "fresh physical qualification",
+    "physical capability creation",
+    "physical candidate selection",
+    "canonical physical execution",
+    "correctness reproduction",
+    "V1A_REUSABLE_VULKAN_PARTICIPANT_PASS"
+  ]
+}

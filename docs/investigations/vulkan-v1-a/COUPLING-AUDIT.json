@@ -1,0 +1,20 @@
+{
+  "schema": "inferswarm.v1a.coupling-audit/1",
+  "scope": "accepted V0-C implementation and successor V1-A internal seam",
+  "classification": {
+    "cu-amd-a": "PHYSICAL_AUTHORITY_INPUT",
+    "mr-amd-a-vram": "PHYSICAL_AUTHORITY_INPUT",
+    "Vulkan1": "BACKEND_ADAPTER_DETAIL",
+    "02:00.0": "PHYSICAL_AUTHORITY_INPUT",
+    "unit-q4km-whole-model": "GENERIC_CONTRACT_INPUT",
+    "contract-s2-opaque-v1": "GENERIC_CONTRACT_INPUT",
+    "impl-portable-amd-a": "GENERIC_CONTRACT_INPUT",
+    "v0c-amd-a-final-qualification": "PHYSICAL_AUTHORITY_INPUT",
+    "v0c-final-plan": "PHYSICAL_AUTHORITY_INPUT",
+    "inferswarm02": "PHYSICAL_AUTHORITY_INPUT",
+    "AMD/Radeon/Vulkan naming": "BACKEND_ADAPTER_DETAIL"
+  },
+  "v1a_invariant": "generic participant source accepts only opaque data and contains no vendor/runtime selection token",
+  "one_off_coupling_on_generic_canonical_path": false,
+  "physical_execution_status": "PENDING_AUTHENTICATED_PROVING_HOST_ACCESS"
+}
