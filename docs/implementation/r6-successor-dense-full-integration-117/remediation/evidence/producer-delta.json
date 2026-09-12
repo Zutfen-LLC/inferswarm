@@ -1,0 +1,48 @@
+{
+  "accepted_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "applicability_caveat": "This producer is a CANDIDATE, not accepted execution authority. A fresh Arm-C requalification campaign requires a separately authorized issue that freezes this producer externally, audits the delta against the accepted subject, and authorizes correctness-bearing execution. The six historical divergent cases may serve as known regression identities only and may not be the sole basis for a pass.",
+  "behavioral_delta": "chunk-selection policy only: a logical extend-prefill unit that fits the admitted capacity (frozen boundary contract prefill_chunk_rows = 64) now provably remains ONE backend call on the canonical chain seam and both two-stage/chain generate() loops; over-limit units partition deterministically at the same admitted capacity",
+  "changed_runtime_files": {
+    "benchmarks/inferswarm_r6/last_stage_service.py": {
+      "accepted_sha256": "08825dcd39f81dcf0d3f0a38a680a9eaac0fadfd9cebba8c32a54113cbf6bbc1",
+      "remediated_sha256": "0c1c5803766898d88516e2ba0866d8117943bc6299a9999c96e24194c96d4694"
+    },
+    "benchmarks/inferswarm_r6/stage_chain.py": {
+      "accepted_sha256": "321bc91deb9a0e7f651a75f4158e973b3e72d889a32f76c8d8dc5c9081acde54",
+      "remediated_sha256": "08c95461b48a4231b9b93ab886e31fdf179bf6e38390c9ee248758d9c0d0d91c"
+    },
+    "benchmarks/inferswarm_r6/two_stage.py": {
+      "accepted_sha256": "3ab8c3f490719cbc026a35d8d106fe0b6ac21e142d403e75f85db7bc15cf2728",
+      "remediated_sha256": "b578f1ce0cce2d0bdc9a45562d56e0651a34ebe16bb2895a9c9797f4021e215a"
+    },
+    "python/freetoken/research/prefill_partition.py": {
+      "accepted_sha256": null,
+      "remediated_sha256": "327892fa754d31486791b00294b1436d37954e532a4b3394ae7cc6e170e55a3b"
+    },
+    "tests/research/test_issue117_arm_c_remediation.py": {
+      "accepted_sha256": null,
+      "remediated_sha256": "8463b8862d693401663088902892179f4a2dbc014d5288a4d699c187ec28dcec"
+    }
+  },
+  "classification": "UNNECESSARY_PARTITION_POLICY",
+  "explicitly_unchanged": [
+    "model math / weights / checkpoint identity",
+    "frozen geometry (boundary planes, row width, prefill_chunk_rows)",
+    "strategy constants (PREFILL_CHUNK untouched)",
+    "planner semantics / candidate identity",
+    "tokenizer, subject, qualification doctrine",
+    "decode path",
+    "session/request identity, plan digest surfaces",
+    "fencing / epoch / position attribution"
+  ],
+  "no_case_specific_tuning": "AST-level source audit in the remediation test suite and the phase-0 inventory builder: no case IDs, no regime nouns, no accepted divergent token ids in the remediation seam",
+  "non_claims": [
+    "no GPU/model execution occurred",
+    "CPU/static policy proof does not establish the GPU numerical result of a future campaign",
+    "no ISSUE117_ARM_C_ORDINARY_SERVING_PASS or FAIL is derived here",
+    "no h109-* material was accessed"
+  ],
+  "remediation_producer": "5e6bca586f6d960ac863f63cf9e9232ed80e362b",
+  "schema": "inferswarm.issue117.arm-c-remediation.producer-delta/1",
+  "starting_research_base": "b05564a7f3f7ca1b141d54842357ff2624dc6a19"
+}

@@ -1,0 +1,159 @@
+{
+  "boundary_matrix": {
+    "admitted_capacity": 64,
+    "historical_causal_control": {
+      "multi_chunk_32_21_rejected": true,
+      "single_chunk_53": [
+        [
+          0,
+          53
+        ]
+      ],
+      "unit_rows": 53
+    },
+    "legal_single_chunk": {
+      "1": [
+        [
+          0,
+          1
+        ]
+      ],
+      "31": [
+        [
+          0,
+          31
+        ]
+      ],
+      "32": [
+        [
+          0,
+          32
+        ]
+      ],
+      "33": [
+        [
+          0,
+          33
+        ]
+      ],
+      "53": [
+        [
+          0,
+          53
+        ]
+      ],
+      "63": [
+        [
+          0,
+          63
+        ]
+      ],
+      "64": [
+        [
+          0,
+          64
+        ]
+      ]
+    },
+    "over_limit": {
+      "128": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          64
+        ]
+      ],
+      "129": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          64
+        ],
+        [
+          128,
+          1
+        ]
+      ],
+      "65": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          1
+        ]
+      ],
+      "85": [
+        [
+          0,
+          64
+        ],
+        [
+          64,
+          21
+        ]
+      ]
+    }
+  },
+  "does_not_prove": "GPU numerical results of any future campaign",
+  "focused_suite": {
+    "command": "pytest tests/research/test_issue117_arm_c_remediation.py -q",
+    "exit_code": 0,
+    "summary": "58 passed in 1.73s"
+  },
+  "legal_single_chunk_expected": {
+    "1": [
+      [
+        0,
+        1
+      ]
+    ],
+    "31": [
+      [
+        0,
+        31
+      ]
+    ],
+    "32": [
+      [
+        0,
+        32
+      ]
+    ],
+    "33": [
+      [
+        0,
+        33
+      ]
+    ],
+    "53": [
+      [
+        0,
+        53
+      ]
+    ],
+    "63": [
+      [
+        0,
+        63
+      ]
+    ],
+    "64": [
+      [
+        0,
+        64
+      ]
+    ]
+  },
+  "proves": "chunk-policy selection on the canonical seam",
+  "remediation_producer": "5e6bca586f6d960ac863f63cf9e9232ed80e362b",
+  "schema": "inferswarm.issue117.arm-c-remediation.boundary-matrix/1",
+  "worktree_clean": true
+}

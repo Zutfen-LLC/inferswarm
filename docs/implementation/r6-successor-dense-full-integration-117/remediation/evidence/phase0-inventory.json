@@ -1,0 +1,83 @@
+{
+  "chunk_count_independent": [
+    "decode path (untouched)",
+    "session/request identity",
+    "plan/candidate identity and digests",
+    "fencing / epoch / position attribution",
+    "stage ownership (frozen plan)"
+  ],
+  "chunk_policy_owner": {
+    "accepted_line_class": "hand literal chunk = 64 inside generate()",
+    "function": "GemmaStageChainRuntime.generate",
+    "module": "benchmarks/inferswarm_r6/stage_chain.py",
+    "remediated_line_class": "plan_prefill_partitions(len(prompt), admitted_prefill_rows()) inside the same generate()"
+  },
+  "downstream_chunk_count_dependents": [
+    "per-stage KV pool advance (RESET between replays)",
+    "one boundary wire payload per chunk",
+    "decode position offset by consumed rows"
+  ],
+  "inputs": {
+    "accepted_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+    "pinned_blobs": {
+      "chain_runtime.py": {
+        "accepted_sha256": "9652ebb376b3737d559e6f764b47dfe154e31d1804e9eac62825badb4b3d9980",
+        "path": "benchmarks/inferswarm_r6/chain_runtime.py",
+        "remediated_sha256": "9652ebb376b3737d559e6f764b47dfe154e31d1804e9eac62825badb4b3d9980"
+      },
+      "last_stage_service.py": {
+        "accepted_sha256": "08825dcd39f81dcf0d3f0a38a680a9eaac0fadfd9cebba8c32a54113cbf6bbc1",
+        "path": "benchmarks/inferswarm_r6/last_stage_service.py",
+        "remediated_sha256": "0c1c5803766898d88516e2ba0866d8117943bc6299a9999c96e24194c96d4694"
+      },
+      "node_agent.py": {
+        "accepted_sha256": "eebfa626b45362111282b7102fc0fcd4a5bf171fc82592f0d50eccd29b75a2e2",
+        "path": "benchmarks/inferswarm_r6/node_agent.py",
+        "remediated_sha256": "eebfa626b45362111282b7102fc0fcd4a5bf171fc82592f0d50eccd29b75a2e2"
+      },
+      "prefill_partition.py": {
+        "accepted_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "path": "python/freetoken/research/prefill_partition.py",
+        "remediated_sha256": "327892fa754d31486791b00294b1436d37954e532a4b3394ae7cc6e170e55a3b"
+      },
+      "r4_wire.py": {
+        "accepted_sha256": "491f710efc07119441a98642f8569d18a47bc3b4e785fbe7111cea258ab05e2c",
+        "path": "python/freetoken/research/r4_wire.py",
+        "remediated_sha256": "491f710efc07119441a98642f8569d18a47bc3b4e785fbe7111cea258ab05e2c"
+      },
+      "stage_chain.py": {
+        "accepted_sha256": "321bc91deb9a0e7f651a75f4158e973b3e72d889a32f76c8d8dc5c9081acde54",
+        "path": "benchmarks/inferswarm_r6/stage_chain.py",
+        "remediated_sha256": "08c95461b48a4231b9b93ab886e31fdf179bf6e38390c9ee248758d9c0d0d91c"
+      },
+      "strategy.py": {
+        "accepted_sha256": "ca31f0999cb4fcf46d73c83f8b3ee7bbe2636792bcfc1824b15946aaac53906b",
+        "path": "benchmarks/inferswarm_r6/strategy.py",
+        "remediated_sha256": "ca31f0999cb4fcf46d73c83f8b3ee7bbe2636792bcfc1824b15946aaac53906b"
+      },
+      "two_stage.py": {
+        "accepted_sha256": "3ab8c3f490719cbc026a35d8d106fe0b6ac21e142d403e75f85db7bc15cf2728",
+        "path": "benchmarks/inferswarm_r6/two_stage.py",
+        "remediated_sha256": "b578f1ce0cce2d0bdc9a45562d56e0651a34ebe16bb2895a9c9797f4021e215a"
+      }
+    },
+    "remediation_producer": "5e6bca586f6d960ac863f63cf9e9232ed80e362b",
+    "starting_research_base": "b05564a7f3f7ca1b141d54842357ff2624dc6a19"
+  },
+  "one_call_53_rows_legal": {
+    "frozen_boundary_contract_prefill_chunk_rows": 64,
+    "runtime_capacity_tokens": 256,
+    "verdict": true,
+    "wire_bound": "0 < token_count <= max_token_count (=64)"
+  },
+  "row_limit_inputs": {
+    "accepted_last_stage_MAX_TOKEN_COUNT": 64,
+    "accepted_stage_chain_chunk_literal": 64,
+    "accepted_two_stage_chunk_literal": 32,
+    "strategy_PREFILL_CHUNK": 64,
+    "wire_validate_request_bound": "contract['max_token_count']"
+  },
+  "same_policy_direct_and_ordinary": "Both paths drive realize_dense_chain -> GemmaStageChainRuntime.generate (single seam)",
+  "schema": "inferswarm.issue117.arm-c-remediation.phase0-inventory/1",
+  "why_53_became_32_21": "The accepted code derives chunk boundaries from a call-site hand literal rather than from the frozen execution contract's admitted capacity; any literal below the logical unit's size subdivides it. The legacy two_stage path defaulted to 32 (a legal 53-row unit becomes 32+21), and the accepted #137 probe C2 reproduced the same subdivision on the chain seam with chunk=32. The chain's own literal was 64 by historical fix (ff561e5), so the canonical chain happened to keep <=64-row replays single-chunk, but the property was never derived or enforced \u2014 nothing tied the chain literal, the wire capacity, and the frozen boundary contract together."
+}

@@ -108,7 +108,10 @@ class ProjectStatusTests(unittest.TestCase):
         self.assertIn('ISSUE117_ARM_C_REGIME4_DIAGNOSIS_PARTIAL', output)
         self.assertIn('cdc23d0e8fa9d3b1b27bab5749939a5ad69b9610', output)
         self.assertIn('authorization:** blocked', output)
-        self.assertIn('no live execution slice is authorized', output)
+        # #153 remediation implemented, CPU-proven, still gate-blocking.
+        self.assertIn('ISSUE117_ARM_C_REMEDIATION_READY', output)
+        self.assertIn('UNNECESSARY_PARTITION_POLICY', output)
+        self.assertIn('No requalification execution is authorized', output)
         self.assertIn('Arm D remains blocked', output)
         self.assertNotIn('PR remains open', output)
         self.assertNotIn('not yet recorded', output)

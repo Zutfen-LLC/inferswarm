@@ -179,6 +179,7 @@ GROUP_TEST_MODULES = {
         "test_issue133_gate_tooling_drift",
         "test_issue133_prelaunch_bootstrap",
         "test_issue133_physical_execution_retention",
+        "test_issue153_arm_c_remediation",
     ],
     "issue-137": [
         "test_issue137_regime4_diagnosis",
@@ -369,6 +370,14 @@ PATH_GROUPS = {
         ["issue-137", "issue-117-133"],
 
     "scripts/issue137_binding.py": ["issue-137"],
+    # Issue #153 Arm-C remediation slice (CPU-only; bundle lives under the
+    # #117 implementation area, scripts + tests classified to the
+    # issue-117-133 lineage group).
+    "scripts/issue153_phase0_inventory.py": ["issue-117-133"],
+    "scripts/issue153_producer_delta.py": ["issue-117-133"],
+    "scripts/issue153_boundary_matrix.py": ["issue-117-133"],
+    "scripts/issue153_manifest.py": ["issue-117-133", "repo-integrity"],
+    "tests/test_issue153_arm_c_remediation.py": ["issue-117-133"],
     "scripts/issue137_conclusions.py": ["issue-137"],
     "scripts/issue137_phase1_inventory.py": ["issue-137"],
     "scripts/issue137_probe_driver.py": ["issue-137",
