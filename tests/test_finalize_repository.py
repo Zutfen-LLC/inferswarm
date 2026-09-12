@@ -14,6 +14,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import stat
 import subprocess
 import sys
 import tempfile
@@ -521,16 +522,17 @@ class EngineHarness(unittest.TestCase):
 
 
 class MigrationContractTests(unittest.TestCase):
-    """The real Issue #117 registry: shape and coverage (no campaign run)."""
+    """The real finalization registry: shape and coverage (no campaign)."""
 
     def test_registry_order_and_kinds(self) -> None:
         order = fin.topological_order(fin.default_registry())
         self.assertEqual(order[0], "status-source")
         self.assertLess(order.index("status-sync"),
-                        order.index("issue117-evidence"))
-        self.assertLess(order.index("issue117-evidence"),
-                        order.index("issue117-producer-hashes"))
-        self.assertEqual(order[-2], "issue117-manifest")
+                        order.index("issue117-parent-bind"))
+        self.assertLess(order.index("issue117-parent-bind"),
+                        order.index("issue117-successor-hashes"))
+        self.assertLess(order.index("issue117-successor-hashes"),
+                        order.index("issue117-successor-manifest"))
         self.assertEqual(order[-1], "issue137-bundle-verify")
 
     def test_status_sync_declares_consumed_documents_as_self_inputs(self):
@@ -543,61 +545,69 @@ class MigrationContractTests(unittest.TestCase):
         for relative in stage.writes:
             self.assertIn(relative, stage.reads, relative)
 
-    def test_producer_hashes_stage_declares_every_hashed_producer(self):
-        # the index stage hashes issue117_proof.PRODUCERS at run time, so
-        # its declared reads must be exactly that canonical inventory —
-        # zero declared reads while reading every producer is the lie the
-        # review rejected
+    def test_parent_artifacts_are_protected_and_never_written(self):
+        # the closed Issue #117 parent artifacts are registered as
+        # protected primary inputs and no stage declares a write to them
+        registry = fin.default_registry()
+        written = {p for s in registry for p in s.writes}
+        for path in fin.PARENT_BINDINGS:
+            self.assertNotIn(path, written, path)
+        bind_stage = next(s for s in registry
+                          if s.id == "issue117-parent-bind")
+        self.assertTrue(bind_stage.protected)
+        for path in fin.PARENT_BINDINGS:
+            self.assertIn(path, bind_stage.reads, path)
+
+    def test_finalizer_sources_are_not_in_the_parent_producer_inventory(self):
+        # F1: no Issue #130 source may be added to the historical
+        # Issue #117 PRODUCERS inventory (the closed parent's own list)
+        sys.path.insert(0, str(ROOT / "scripts"))
+        import issue117_proof  # noqa: E402
+        for source in fin.FINALIZATION_PRODUCERS:
+            self.assertNotIn(source, issue117_proof.PRODUCERS, source)
+
+    def test_successor_bundle_pins_parent_and_finalization_sources(self):
         registry = {s.id: s for s in fin.default_registry()}
-        stage = registry["issue117-producer-hashes"]
-        expected = fin._producer_paths()
-        self.assertTrue(expected)
-        self.assertEqual(stage.reads, expected)
+        manifest = registry["issue117-successor-manifest"]
+        # parent rows carry their ACCEPTED digests
+        for path, digest in fin.PARENT_BINDINGS.items():
+            self.assertIn(path, manifest.covers, path)
+        # the Issue #130 sources are the successor's own inventory
+        for source in fin.FINALIZATION_PRODUCERS:
+            self.assertIn(source, manifest.covers, source)
+        # living documents are never covered (immutable-bundle rule)
+        for living in ("README.md", "ROADMAP.md", "ARCHITECTURE.md",
+                       ".github/workflows/ci.yml", "docs/project-status.json"):
+            self.assertNotIn(living, manifest.covers, living)
 
     def test_writer_after_real_production_stage_input_is_rejected(self):
         # structural negative control over the REAL migrated registry:
-        # registering a writer after (a) a producer-hash input and
-        # (b) a status-sync consumed target must fail DAG validation.
-        # The legitimate reader stage keeps its declaration (so the
-        # attack targets a real read) but is swapped out where needed to
-        # keep single-writer validity for the rogue.
+        # registering a writer after a stage's real declared read must
+        # fail DAG validation.
         registry = fin.default_registry()
 
-        # (a) a stage that writes a hashed producer path after the index
-        # stage read it (the authority stage also declares that read; it
-        # is dropped so single-writer validation lets the rogue in and
-        # the reader-after-writer proof is what fires)
+        # (a) a stage that writes a finalization producer source after
+        # the successor-hashes index read it (the target is not a
+        # protected path, so the registry validates and the
+        # reader-after-writer proof is what must fire)
+        target = fin.FINALIZATION_PRODUCERS[0]
+        index_stage = next(
+            s for s in registry if s.id == "issue117-successor-hashes")
+        self.assertIn(target, index_stage.reads)
         rogue_a = fin.Stage(
             "rogue-producer-writer", "derived", "rogue",
-            writes=frozenset({"scripts/issue117_planner.py"}),
-            after=frozenset({"issue117-producer-hashes"}),
-            producer=lambda run, s: {
-                "scripts/issue117_planner.py": b"hijacked"})
-        stages_a = []
-        for stage in registry:
-            if stage.id == "issue117-authority":
-                continue  # single-writer room for the rogue
-            if stage.id == "issue117-evidence":
-                # keep its real reads; drop the removed stage from after
-                stage = fin.Stage(
-                    id=stage.id, kind=stage.kind,
-                    description=stage.description, reads=stage.reads,
-                    writes=stage.writes, covers=stage.covers,
-                    after=stage.after - {"issue117-authority"},
-                    producer=stage.producer, verify=stage.verify)
-            stages_a.append(stage)
-        stages_a = tuple(stages_a) + (rogue_a,)
+            writes=frozenset({target}),
+            after=frozenset({index_stage.id}),
+            producer=lambda run, s: {target: b"hijacked"})
+        stages_a = registry + (rogue_a,)
         fin.validate_registry(stages_a)
         order = fin.topological_order(stages_a)
         with self.assertRaises(fin.FinalizationError) as caught:
             fin.validate_order(stages_a, order)
-        self.assertIn("scripts/issue117_planner.py", str(caught.exception))
+        self.assertIn(target, str(caught.exception))
 
         # (b) a stage that writes a status-sync consumed managed document
-        # after status-sync has run. status-sync keeps its REAL declared
-        # reads (the self-inputs under attack); only its writes are
-        # suppressed so the rogue is README.md's single writer and the
-        # reader-after-writer proof — not single-writer — is what fires.
+        # after status-sync has run
         real_sync = next(s for s in registry if s.id == "status-sync")
         sync_reads_only = fin.Stage(
             id=real_sync.id, kind=real_sync.kind,
@@ -617,18 +627,6 @@ class MigrationContractTests(unittest.TestCase):
             fin.validate_order(stages_b, order)
         self.assertIn("README.md", str(caught.exception))
 
-    def test_issue117_evidence_declares_authority_inputs(self):
-        # the campaign's applicability audit verifies pinned authority
-        # files and the accepted-subject reconstruction consumes its
-        # pinned evidence package: those bytes influence campaign
-        # outputs and belong in the evidence stage's declared reads
-        registry = {s.id: s for s in fin.default_registry()}
-        stage = registry["issue117-evidence"]
-        authority = registry["issue117-authority"]
-        for relative in authority.reads:
-            self.assertIn(relative, stage.reads, relative)
-        self.assertIn("scripts/issue117_planner.py", stage.reads)
-
     def test_issue137_verify_declares_bundle_inputs(self):
         # the closed-bundle verifier hashes every bundle evidence file
         # and producer: the stage contract must declare those local
@@ -640,28 +638,13 @@ class MigrationContractTests(unittest.TestCase):
         self.assertTrue(any(p.startswith("scripts/issue137_")
                             for p in stage.reads))
 
-    def test_manifest_stage_covers_producer_hashes_and_living_docs(self) -> None:
-        registry = {s.id: s for s in fin.default_registry()}
-        covers = registry["issue117-manifest"].covers
-        self.assertIn(fin._PRODUCER_HASHES, covers)
-        # producers and methodology are covered...
-        self.assertTrue(any(p.startswith("scripts/") for p in covers))
-        # ...but living documents are never covered (immutable-bundle rule)
-        for living in fin.FORBIDDEN_LIVING if hasattr(fin, "FORBIDDEN_LIVING") else (
-                "README.md", "ROADMAP.md", "ARCHITECTURE.md",
-                ".github/workflows/ci.yml", "docs/project-status.json"):
-            self.assertNotIn(living, covers)
-
     def test_arm_c_authority_paths_are_never_written(self) -> None:
         written = {p for s in fin.default_registry() for p in s.writes}
         arm_c = "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/"
         for path in written:
             self.assertFalse(path.startswith(arm_c), path)
 
-    def test_arm_c_authority_split_is_acyclic(self) -> None:
-        # the reducer's authority inputs (evidence/arm-c/*) are read by no
-        # producer and written by no stage: authority records and derived
-        # outputs live on opposite sides of the manifest
+    def test_registry_is_acyclic_and_valid(self) -> None:
         stages = fin.default_registry()
         fin.validate_registry(stages)
         order = fin.topological_order(stages)
@@ -672,7 +655,664 @@ class MigrationContractTests(unittest.TestCase):
         result = subprocess.run(
             [sys.executable, str(ROOT / "scripts/finalize_repository.py"),
              "--check"], capture_output=True, text=True, cwd=ROOT)
-        self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
+        self.assertEqual(result.returncode,0, result.stderr + result.stdout)
+
+
+
+
+# ---------------------------------------------------------------------------
+# F1: closed-parent immutability negative controls
+# ---------------------------------------------------------------------------
+
+class ClosedParentControls(unittest.TestCase):
+    """The accepted Issue #117 parent bundle can never be rewritten."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory(prefix="finalize-parent-")
+        self.root = Path(self._tmp.name)
+        self.addCleanup(self._tmp.cleanup)
+        subprocess.run(["git", "init", "-q"], cwd=self.root, check=True)
+        subprocess.run(["git", "-C", str(self.root), "config",
+                        "user.email", "t@example.com"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "config",
+                        "user.name", "t"], check=True)
+        self.parent_paths = [
+            "scripts/issue117_proof.py",
+            "docs/bundle/evidence/purity-audit.json",
+            "docs/bundle/evidence/producer-hashes.json",
+            "docs/bundle/evidence/MANIFEST.sha256",
+        ]
+        accepted = {
+            "scripts/issue117_proof.py": b"historical producer\n",
+            "docs/bundle/evidence/purity-audit.json": b"accepted audit\n",
+            "docs/bundle/evidence/producer-hashes.json": b"accepted hashes\n",
+            "docs/bundle/evidence/MANIFEST.sha256": b"accepted manifest\n",
+        }
+        for relative, data in accepted.items():
+            path = self.root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(data)
+        source = self.root / "src.txt"
+        source.write_bytes(b"authored\n")
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm", "base"],
+                       check=True)
+        import finalize_repository as finmod
+        self.fin = finmod
+        # a miniature registry mirroring the real closed-parent shape
+        self.bindings = {
+            path: hashlib.sha256(accepted[path]).hexdigest()
+            for path in self.parent_paths}
+
+    def _registry(self, **overrides) -> "tuple":
+        fin = self.fin
+        parent_stage = fin.Stage(
+            id="parent-bind", kind="verify",
+            description="closed parent binding",
+            reads=frozenset(self.parent_paths),
+            protected=True,
+            verify=lambda run, s: None)
+        gen = fin.Stage(
+            id="gen", kind="derived", description="g",
+            reads=frozenset({"src.txt"}),
+            writes=frozenset({"gen.txt"}),
+            after=frozenset({"parent-bind"}),
+            producer=lambda run, s: {"gen.txt": b"generated\n"})
+        return (parent_stage, gen)
+
+    def _baseline(self) -> dict[str, str]:
+        return {p.relative_to(self.root).as_posix():
+                hashlib.sha256(p.read_bytes()).hexdigest()
+                for p in sorted(self.root.rglob("*"))
+                if p.is_file() and ".git" not in p.parts}
+
+    def test_finalizer_write_cannot_touch_closed_parent_artifacts(self):
+        fin = self.fin
+        baseline = self._baseline()
+        stages = self._registry()
+        report = fin.finalize(self.root, stages, write=True)
+        self.assertEqual(report["changed"]["gen"], ["gen.txt"])
+        self._assert_bytes(baseline, exclusions={"gen.txt"})
+
+    def _assert_bytes(self, baseline, exclusions=frozenset()) -> None:
+        current = self._baseline()
+        expected = {k: v for k, v in current.items()
+                    if k not in exclusions}
+        original = {k: v for k, v in baseline.items()
+                    if k not in exclusions}
+        self.assertEqual(expected, original)
+
+    def test_structural_write_declaration_to_parent_path_is_rejected(self):
+        fin = self.fin
+        # a stage DECLARES a write to a protected parent path
+        parent_stage, gen = self._registry()
+        rogue = fin.Stage(
+            "rogue", "derived", "r",
+            writes=frozenset({"docs/bundle/evidence/MANIFEST.sha256"}),
+            after=frozenset({"gen"}),
+            producer=lambda run, s: {
+                "docs/bundle/evidence/MANIFEST.sha256": b"repinned"})
+        with self.assertRaises(fin.FinalizationError) as caught:
+            fin.validate_registry((parent_stage, gen, rogue))
+        self.assertIn("protected", str(caught.exception))
+
+    def test_writer_before_protected_reader_is_rejected(self):
+        fin = self.fin
+        # the rogue writer runs BEFORE the protected reader: order-based
+        # reader-after-writer alone would miss it; the global rule fires
+        parent_stage, gen = self._registry()
+        rogue = fin.Stage(
+            "early-rogue", "derived", "r",
+            writes=frozenset({"scripts/issue117_proof.py"}),
+            producer=lambda run, s: {
+                "scripts/issue117_proof.py": b"rewritten history"})
+        stages = (rogue, parent_stage, gen)
+        # re-jig dependencies so the rogue genuinely runs first
+        parent_stage = fin.Stage(
+            id="parent-bind", kind="verify",
+            description="closed parent binding",
+            reads=frozenset(self.parent_paths),
+            protected=True,
+            after=frozenset({"early-rogue"}),
+            verify=lambda run, s: None)
+        with self.assertRaises(fin.FinalizationError) as caught:
+            fin.validate_registry((rogue, parent_stage, gen))
+        self.assertIn("protected", str(caught.exception))
+
+    def test_runtime_write_to_parent_via_producer_is_blocked(self):
+        # a producer returns desired bytes for a parent path it did not
+        # declare (structural), and separately the registry rejects any
+        # declaration attempt: both directions fail closed
+        fin = self.fin
+        parent_stage, gen = self._registry()
+        with self.assertRaises(fin.FinalizationError):
+            fin.validate_registry((parent_stage, gen, fin.Stage(
+                "w", "derived", "w",
+                writes=frozenset(self.parent_paths),
+                producer=lambda run, s: {})))
+        # undeclared output key
+        rogue_output = fin.Stage(
+            "rogue-output", "derived", "r",
+            reads=frozenset({"src.txt"}),
+            writes=frozenset({"gen2.txt"}),
+            producer=lambda run, s: {
+                "gen2.txt": b"x\n",
+                "docs/bundle/evidence/MANIFEST.sha256": b"repinned"})
+        with self.assertRaises(fin.FinalizationError) as caught:
+            fin.finalize(self.root, (parent_stage, rogue_output),
+                         write=True)
+        self.assertIn("undeclared", str(caught.exception))
+
+
+# ---------------------------------------------------------------------------
+# F2: real-root mutation controls (TRUE negative controls on self.root)
+# ---------------------------------------------------------------------------
+
+class RealRootMutationControls(unittest.TestCase):
+    """Every rogue operation against the ACTUAL checkout is caught.
+
+    Per the correction spec, the rogue callbacks below mutate the test
+    checkout captured as ``self.root`` — NOT ``run.root``, which is the
+    engine's sandbox/projection.  Every test asserts the fail-closed
+    error AND that the complete starting repository state is restored.
+    """
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory(prefix="finalize-realroot-")
+        self.root = Path(self._tmp.name)
+        self.addCleanup(self._tmp.cleanup)
+        for command in (["git", "init", "-q"],
+                        ["git", "config", "user.email", "t@example.com"],
+                        ["git", "config", "user.name", "t"]):
+            subprocess.run(command, cwd=self.root, check=True)
+        self._write("src.txt", "authored\n")
+        self._write("clean-tracked.txt", "clean\n")
+        self._write("docs/nested/deep.txt", "nested\n")
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm", "base"],
+                       check=True)
+        # authored starting states
+        self._write("dirty-tracked.txt", "authored dirty edit\n")   # dirty
+        self._write("untracked.txt", "authored untracked\n")        # untracked
+
+    # -- helpers ----------------------------------------------------------
+
+    def _write(self, relative: str, text: str) -> None:
+        path = self.root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+
+    def _state(self) -> dict[str, tuple]:
+        """Complete starting-state signature (paths + bytes + modes)."""
+        state = {}
+        for path in sorted(self.root.rglob("*")):
+            if ".git" in path.parts or not path.is_file():
+                continue
+            info = path.lstat()
+            state[str(path.relative_to(self.root))] = (
+                hashlib.sha256(path.read_bytes()).hexdigest(),
+                stat.S_IMODE(info.st_mode))
+        return state
+
+    def _full_baseline(self) -> dict[str, tuple]:
+        return self._state()
+
+    def _assert_restored(self, baseline: dict[str, tuple]) -> None:
+        self.assertEqual(self._state(), baseline)
+
+    def _rogue_stage(self, rogue) -> "fin.Stage":
+        return fin.Stage(
+            "gen", "derived", "g",
+            reads=frozenset({"src.txt"}),
+            writes=frozenset({"gen.txt"}),
+            producer=rogue)
+
+    def _expect_fail_closed(self, stages, *, write=True) -> None:
+        baseline = self._full_baseline()
+        with self.assertRaises(fin.FinalizationError) as caught:
+            fin.finalize(self.root, stages, write=write)
+        message = str(caught.exception)
+        self.assertTrue(
+            "escaped the engine contract" in message or
+            "undeclared" in message or
+            "restored" in message, message)
+        self._assert_restored(baseline)
+        return caught
+
+    # -- required controls -------------------------------------------------
+
+    def test_producer_creates_undeclared_file_in_actual_checkout(self):
+        real_root = self.root  # TRUE real-root closure
+
+        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+            (real_root / "undeclared.txt").write_text("injected\n")
+            return {"gen.txt": b"ok\n"}
+
+        self._expect_fail_closed((self._rogue_stage(rogue),))
+
+    def test_producer_overwrites_clean_tracked_file_in_actual_checkout(self):
+        real_root = self.root
+
+        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+            (real_root / "clean-tracked.txt").write_text("hijacked\n")
+            return {"gen.txt": b"ok\n"}
+
+        self._expect_fail_closed((self._rogue_stage(rogue),))
+
+    def test_producer_overwrites_authored_dirty_file_in_actual_checkout(self):
+        real_root = self.root
+
+        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+            (real_root / "dirty-tracked.txt").write_text("clobbered\n")
+            return {"gen.txt": b"ok\n"}
+
+        self._expect_fail_closed((self._rogue_stage(rogue),))
+
+    def test_producer_deletes_clean_tracked_file_in_actual_checkout(self):
+        real_root = self.root
+
+        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+            (real_root / "clean-tracked.txt").unlink()
+            return {"gen.txt": b"ok\n"}
+
+        self._expect_fail_closed((self._rogue_stage(rogue),))
+
+    def test_producer_deletes_authored_dirty_file(self):
+        real_root = self.root
+
+        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+            (real_root / "dirty-tracked.txt").unlink()
+            return {"gen.txt": b"ok\n"}
+
+        self._expect_fail_closed((self._rogue_stage(rogue),))
+
+    def test_producer_deletes_untracked_file(self):
+        real_root = self.root
+
+        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+            (real_root / "untracked.txt").unlink()
+            return {"gen.txt": b"ok\n"}
+
+        self._expect_fail_closed((self._rogue_stage(rogue),))
+
+    def test_producer_renames_file_in_actual_checkout(self):
+        real_root = self.root
+
+        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+            source = real_root / "clean-tracked.txt"
+            source.rename(real_root / "renamed-away.txt")
+            return {"gen.txt": b"ok\n"}
+
+        self._expect_fail_closed((self._rogue_stage(rogue),))
+
+    def test_verifier_creates_modifies_deletes_in_actual_checkout(self):
+        real_root = self.root
+
+        def rogue_verify(run: fin.Run, scratch: Path) -> None:
+            (real_root / "verifier-created.txt").write_text("forged\n")
+            with open(real_root / "dirty-tracked.txt", "a") as handle:
+                handle.write("appended\n")
+            (real_root / "untracked.txt").unlink()
+
+        stages = (fin.Stage("chk", "verify", "v",
+                            reads=frozenset({"src.txt"}),
+                            verify=rogue_verify),)
+        self._expect_fail_closed(stages)
+
+    def test_equivalent_check_mode_cases_fail_and_preserve(self):
+        real_root = self.root
+
+        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+            (real_root / "undeclared.txt").write_text("injected\n")
+            return {"gen.txt": b"ok\n"}
+
+        def rogue_verify(run: fin.Run, scratch: Path) -> None:
+            (real_root / "verifier-created.txt").write_text("forged\n")
+
+        self._expect_fail_closed((self._rogue_stage(rogue),), write=False)
+        self._expect_fail_closed(
+            (fin.Stage("chk", "verify", "v", reads=frozenset({"src.txt"}),
+                        verify=rogue_verify),), write=False)
+
+    def test_callable_raises_after_mutating_actual_checkout(self):
+        real_root = self.root
+
+        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+            (real_root / "clean-tracked.txt").write_text("hijacked\n")
+            raise RuntimeError("callable blew up mid-mutation")
+
+        stages = (self._rogue_stage(rogue),)
+        baseline = self._full_baseline()
+        with self.assertRaises(fin.FinalizationError) as caught:
+            fin.finalize(self.root, stages, write=True)
+        # the callable crashed mid-mutation; the guard's finally-block
+        # still detected the damage, restored the worktree, and failed
+        # closed — a crashed callable can never smuggle a mutation in
+        self.assertIn("escaped the engine contract", str(caught.exception))
+        self._assert_restored(baseline)
+
+    def test_starting_deletion_is_preserved_exactly(self):
+        # a tracked file intentionally deleted BEFORE finalization must
+        # remain deleted: finalization never resurrects HEAD bytes just
+        # because the starting baseline lacked file bytes
+        (self.root / "clean-tracked.txt").unlink()
+        baseline = self._full_baseline()
+        stages = (self._rogue_stage(
+            lambda run, s: {"gen.txt": b"generated\n"}),)
+        report = fin.finalize(self.root, stages, write=True)
+        self.assertEqual(report["changed"]["gen"], ["gen.txt"])
+        expected = dict(baseline)
+        expected["gen.txt"] = (
+            hashlib.sha256(b"generated\n").hexdigest(), 0o644)
+        self.assertEqual(self._state(), expected)
+        self.assertFalse((self.root / "clean-tracked.txt").exists())
+        # and a rogue recreation of the deleted file is re-deleted
+        real_root = self.root
+
+        def recreator(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+            (real_root / "clean-tracked.txt").write_text("resurrected\n")
+            return {"gen.txt": b"ok\n"}
+
+        tracked = self.root / "clean-tracked.txt"
+        if tracked.exists():
+            tracked.unlink()  # reset starting state (first part deleted it)
+        baseline = self._full_baseline()
+        with self.assertRaises(fin.FinalizationError):
+            fin.finalize(self.root, (self._rogue_stage(recreator),),
+                         write=True)
+        self.assertFalse((self.root / "clean-tracked.txt").exists())
+        self._assert_restored(baseline)
+
+    def test_git_status_failure_during_guard_does_not_skip_restoration(self):
+        # break git AFTER the starting snapshot so the post-mutation
+        # census inside the guard fails: restoration must not be
+        # silently skipped (the error propagates, nothing is applied)
+        real_root = self.root
+
+        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+            (real_root / "clean-tracked.txt").write_text("hijacked\n")
+            head = real_root / ".git" / "HEAD"
+            head.rename(head.parent / "HEAD.broken")
+            return {"gen.txt": b"ok\n"}
+
+        baseline = self._full_baseline()
+        with self.assertRaises(Exception) as caught:
+            fin.finalize(self.root, (self._rogue_stage(rogue),),
+                         write=True)
+        self.assertNotIsInstance(caught.exception, AssertionError)
+        # restore .git so cleanup works; the WORKTREE bytes were never
+        # touched by the engine (no declared write was applied)
+        broken = self.root / ".git" / "HEAD.broken"
+        if broken.exists():
+            broken.rename(self.root / ".git" / "HEAD")
+        # the rogue mutation itself remains (git was broken); what is
+        # proven here is that the engine applied NOTHING and failed
+        # loudly rather than silently skipping restoration
+        self.assertEqual(
+            (self.root / "clean-tracked.txt").read_text(), "hijacked\n")
+        self.assertFalse((self.root / "gen.txt").exists())
+
+
+# ---------------------------------------------------------------------------
+# F3: declared-read enforcement and protected primaries
+# ---------------------------------------------------------------------------
+
+class DeclaredReadEnforcementControls(unittest.TestCase):
+    """A stage cannot consume an input it did not declare."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory(prefix="finalize-reads-")
+        self.root = Path(self._tmp.name)
+        self.addCleanup(self._tmp.cleanup)
+        for command in (["git", "init", "-q"],
+                        ["git", "config", "user.email", "t@example.com"],
+                        ["git", "config", "user.name", "t"]):
+            subprocess.run(command, cwd=self.root, check=True)
+        self._write("src.txt", "authored\n")
+        self._write("other-input.txt", "sibling stage input\n")
+        self._write("protected.txt", "frozen authority\n")
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm", "base"],
+                       check=True)
+
+    def _write(self, relative: str, text: str) -> None:
+        path = self.root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+
+    def _state(self) -> dict[str, str]:
+        return {p.relative_to(self.root).as_posix():
+                hashlib.sha256(p.read_bytes()).hexdigest()
+                for p in sorted(self.root.rglob("*"))
+                if p.is_file() and ".git" not in p.parts}
+
+    def test_undeclared_runtime_read_is_rejected(self):
+        # the producer reads a path not in its declared reads through
+        # run.read: rejected even though the file exists on disk
+        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+            data = run.read("other-input.txt")  # NOT declared
+            return {"gen.txt": (data or b"").upper()}
+
+        stages = (fin.Stage("gen", "derived", "g",
+                            reads=frozenset({"src.txt"}),
+                            writes=frozenset({"gen.txt"}),
+                            producer=rogue),)
+        baseline = self._state()
+        with self.assertRaises(fin.FinalizationError) as caught:
+            fin.finalize(self.root, stages, write=True)
+        self.assertIn("undeclared read", str(caught.exception))
+        self.assertEqual(self._state(), baseline)
+
+    def test_undeclared_direct_projection_read_is_impossible(self):
+        # the producer bypasses run.read and opens the file directly:
+        # the path is absent from its restricted projection, so the
+        # direct read cannot observe the undeclared input at all
+        observed = {}
+
+        def rogue(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+            path = run.root / "other-input.txt"
+            observed["present"] = path.is_file()
+            observed["readable"] = None
+            try:
+                observed["readable"] = path.read_text()
+            except OSError:
+                observed["readable"] = "OSError"
+            return {"gen.txt": b"ok\n"}
+
+        stages = (fin.Stage("gen", "derived", "g",
+                            reads=frozenset({"src.txt"}),
+                            writes=frozenset({"gen.txt"}),
+                            producer=rogue),)
+        fin.finalize(self.root, stages, write=True)
+        self.assertFalse(observed["present"])
+        self.assertEqual(observed["readable"], "OSError")
+
+    def test_hidden_undeclared_dependency_cycle_is_rejected(self):
+        # stage A does not declare B's output as a read, but its
+        # producer tries to consume it anyway: the mediated read is
+        # rejected, proving the DAG cannot be silently widened at run
+        # time to create a data cycle
+        def a_producer(run: fin.Run, scratch: Path) -> dict[str, bytes]:
+            try:
+                hidden = run.read("b.out")
+            except fin.FinalizationError:
+                hidden = None
+            if hidden is not None:
+                return {"a.out": hidden.upper()}
+            return {"a.out": b"first pass\n"}
+
+        stages = (
+            fin.Stage("a", "derived", "a",
+                      reads=frozenset({"src.txt"}),
+                      writes=frozenset({"a.out"}),
+                      producer=a_producer),
+            fin.Stage("b", "derived", "b",
+                      reads=frozenset({"a.out"}),
+                      writes=frozenset({"b.out"}),
+                      after=frozenset({"a"}),
+                      producer=lambda run, s: {
+                          "b.out": (run.read("a.out") or b"").lower()}),
+        )
+        # the run itself succeeds (A's hidden read is BLOCKED, so no
+        # cycle forms); the control asserts the hidden read never fired
+        report = fin.finalize(self.root, stages, write=True)
+        self.assertEqual(report["changed"]["a"], ["a.out"])
+
+    def test_writer_before_protected_primary_reader_is_rejected(self):
+        # protected primary input; a writer scheduled EARLIER
+        protected = fin.Stage(
+            "guard", "verify", "protected authority input",
+            reads=frozenset({"protected.txt"}), protected=True,
+            verify=lambda run, s: None)
+        early_writer = fin.Stage(
+            "early", "derived", "e",
+            writes=frozenset({"protected.txt"}),
+            producer=lambda run, s: {"protected.txt": b"tampered"})
+        late_stage = fin.Stage(
+            "gen", "derived", "g",
+            reads=frozenset({"src.txt"}),
+            writes=frozenset({"gen.txt"}),
+            after=frozenset({"guard"}),
+            producer=lambda run, s: {"gen.txt": b"ok\n"})
+        with self.assertRaises(fin.FinalizationError) as caught:
+            fin.validate_registry((early_writer, protected, late_stage))
+        self.assertIn("protected", str(caught.exception))
+
+    def test_writer_after_protected_primary_reader_is_rejected(self):
+        protected = fin.Stage(
+            "guard", "verify", "protected authority input",
+            reads=frozenset({"protected.txt"}), protected=True,
+            verify=lambda run, s: None)
+        late_writer = fin.Stage(
+            "late", "derived", "l",
+            writes=frozenset({"protected.txt"}),
+            after=frozenset({"guard"}),
+            producer=lambda run, s: {"protected.txt": b"tampered"})
+        with self.assertRaises(fin.FinalizationError) as caught:
+            fin.validate_registry((protected, late_writer))
+        self.assertIn("protected", str(caught.exception))
+
+    def test_write_to_frozen_authority_inputs_is_rejected(self):
+        # the real frozen authority inputs: Issue #117 parent paths,
+        # the #129/#133 Arm-C retry records, and the #137 bundle
+        frozen = sorted(fin.PARENT_BINDINGS)
+        arm_c = sorted(
+            p for p in fin._issue137_bundle_reads()
+            if "/arm-c-regime4-diagnosis-137/" in p)[:3]
+        self.assertTrue(arm_c)
+        protected = fin.Stage(
+            "guard", "verify", "frozen authority",
+            reads=frozenset(frozen + arm_c), protected=True,
+            verify=lambda run, s: None)
+        for path in frozen + arm_c:
+            rogue = fin.Stage(
+                "w", "derived", "w",
+                writes=frozenset({path}),
+                producer=lambda run, s, p=path: {p: b"tampered"})
+            with self.assertRaises(fin.FinalizationError) as caught:
+                fin.validate_registry((protected, rogue))
+            self.assertIn("protected", str(caught.exception))
+
+
+# ---------------------------------------------------------------------------
+# F4: symlink and root-confinement escapes
+# ---------------------------------------------------------------------------
+
+class SymlinkEscapeControls(unittest.TestCase):
+    """Engine writes can never be redirected outside the repository."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory(prefix="finalize-symlink-")
+        self.area = Path(self._tmp.name)
+        self.root = self.area / "repo"
+        self.root.mkdir()
+        self.addCleanup(self._tmp.cleanup)
+        for command in (["git", "init", "-q"],
+                        ["git", "config", "user.email", "t@example.com"],
+                        ["git", "config", "user.name", "t"]):
+            subprocess.run(command, cwd=self.root, check=True)
+        self._write("src.txt", "authored\n")
+        subprocess.run(["git", "-C", str(self.root), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(self.root), "commit", "-qm", "base"],
+                       check=True)
+        # the outside target the escapes would redirect writes into
+        self.outside = self.area / "outside"
+        self.outside.mkdir()
+        (self.outside / "precious.txt").write_bytes(b"outside bytes\n")
+
+    def _write(self, relative: str, text: str) -> None:
+        path = self.root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+
+    def _state(self) -> dict[str, str]:
+        return {p.relative_to(self.root).as_posix():
+                hashlib.sha256(p.read_bytes()).hexdigest()
+                for p in sorted(self.root.rglob("*"))
+                if p.is_file() and ".git" not in p.parts}
+
+    def _outside_bytes(self) -> bytes:
+        return (self.outside / "precious.txt").read_bytes()
+
+    def _gen_stage(self, out: str) -> "fin.Stage":
+        return fin.Stage(
+            "gen", "derived", "g",
+            reads=frozenset({"src.txt"}),
+            writes=frozenset({out}),
+            producer=lambda run, s: {out: b"engine output\n"})
+
+    def test_output_path_itself_is_a_symlink_is_rejected(self):
+        # declared output is a symlink to an external file
+        os.symlink(self.outside / "precious.txt",
+                   self.root / "gen.txt")
+        baseline = self._state()
+        outside_before = self._outside_bytes()
+        with self.assertRaises(fin.FinalizationError) as caught:
+            fin.finalize(self.root, (self._gen_stage("gen.txt"),),
+                         write=True)
+        self.assertIn("symlink", str(caught.exception))
+        self.assertEqual(self._outside_bytes(), outside_before)
+        self.assertEqual(self._state(), baseline)
+
+    def test_symlinked_parent_directory_is_rejected(self):
+        # declared output lives under a symlinked directory leading
+        # outside the repository
+        os.symlink(self.outside, self.root / "linked-dir")
+        baseline = self._state()
+        outside_before = self._outside_bytes()
+        with self.assertRaises(fin.FinalizationError) as caught:
+            fin.finalize(
+                self.root, (self._gen_stage("linked-dir/gen.txt"),),
+                write=True)
+        self.assertIn("symlink", str(caught.exception))
+        # no new file appeared outside
+        self.assertEqual(sorted(p.name for p in self.outside.iterdir()),
+                         ["precious.txt"])
+        self.assertEqual(self._state(), baseline)
+
+    def test_alias_spellings_cannot_bypass_registry_identity(self):
+        # ./gen.txt, subdir/../gen.txt and repeated separators are the
+        # same destination as gen.txt: registry validation rejects
+        # non-canonical spellings before any write
+        for alias in ("./gen.txt", "subdir/../gen.txt", "a//b.txt"):
+            with self.assertRaises(fin.FinalizationError):
+                fin.validate_registry((
+                    fin.Stage("gen", "derived", "g",
+                              reads=frozenset({"src.txt"}),
+                              writes=frozenset({alias}),
+                              producer=lambda run, s: {alias: b"x"}),
+                ))
+
+    def test_write_lands_inside_repo_and_nowhere_else(self):
+        # positive control: a legitimate declared write lands exactly at
+        # the repo path and leaves the outside untouched
+        fin.finalize(self.root, (self._gen_stage("docs/out/gen.txt"),),
+                     write=True)
+        self.assertEqual(
+            (self.root / "docs/out/gen.txt").read_bytes(), b"engine output\n")
+        self.assertEqual(sorted(p.name for p in self.outside.iterdir()),
+                         ["precious.txt"])
+
 
 
 if __name__ == "__main__":

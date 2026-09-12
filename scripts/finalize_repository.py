@@ -26,7 +26,16 @@ duplicates.  Before writing anything the engine mechanically proves:
   invalidation), which also proves manifest-last ordering: a terminal
   manifest *reads* every path it covers, so any later writer of a
   covered path is rejected;
-- a terminal manifest never covers its own bytes (no self-digest loop).
+- a terminal manifest never covers its own bytes (no self-digest loop);
+- declared reads are *enforced*: a stage's callable may only read inputs
+  it declared (mediated through ``Run.read`` AND directly through the
+  stage's own restricted filesystem projection), and paths registered
+  as primary/frozen authority inputs are globally write-forbidden —
+  a writer scheduled before OR after the protected reader is rejected;
+- every real-tree write is symlink-safe: the destination and every
+  ancestor component are validated with no-follow semantics before
+  any byte is written, so an output symlink or a symlinked parent
+  can never redirect an engine-authorized write outside the checkout.
 
 A stage that consumes the existing bytes of a path it also writes — the
 status-sync managed documents carry authored content outside their
@@ -81,14 +90,34 @@ chain; the engine's cycle and reader-after-writer proofs hold for any
 registry built on this pattern, so future campaigns register stages here
 instead of growing another issue-specific finalizer.
 
-Migrated paths (the Issue #117 chain):
+Migrated paths:
 
 - ``scripts/sync_project_status.py`` living status sections;
-- the Issue #117 CPU campaign evidence (``issue117_proof.run_campaign``);
-- ``producer-hashes.json`` generation;
-- ``docs/implementation/r6-successor-dense-full-integration-117/evidence/
-  MANIFEST.sha256`` (terminal);
-- the closed Issue #137 bundle manifest (verification-only).
+- the additive Issue #130 successor bundle
+  (``.../evidence/issue-130-finalization``): parent-binding authority
+  record, producer-hashes ledger, terminal retention manifest;
+- the closed Issue #117 parent and Issue #137 bundle: verification-only.
+
+Closed-parent contract (Issue #130 correction round 3).  The Issue
+#117 bundle is a *closed accepted parent*: its ``MANIFEST.sha256``,
+``producer-hashes.json``, ``purity-audit.json``, and the historical
+producer ``scripts/issue117_proof.py`` are exact accepted bytes, no
+stage writes them, and no Issue #130 source is registered in the
+historical producer inventory.  The parent is bound immutably through
+the successor bundle's ``commit:path`` authority record (git blob
+identity + expected SHA-256, the accepted Issue #137 lifecycle model),
+and a dedicated verify stage fails closed if any parent path drifts
+from its accepted bytes.  Current-finalization integrity (producer
+hashes + retention manifest for the Issue #130 sources) lives in its
+own additive successor bundle under ``evidence/issue-130-finalization``
+with its own terminal manifest; it never edits the parent bundle.
+
+``Run.read`` is the mediated read channel: each stage is bound (as
+``run.stage``) while its callable executes, and reads of paths the
+stage did not declare fail closed.  The sandbox ``run.root`` a callable
+sees is a per-stage *restricted projection*: it contains byte copies of
+only the paths that stage declared, so a direct filesystem read of an
+undeclared sibling input is impossible, not merely discouraged.
 
 Not migrated, deliberately: the legacy #74/#99/#101/#103 manifests are
 immutable historical snapshots (their living-document rows are frozen and
@@ -104,6 +133,7 @@ import importlib
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -145,37 +175,57 @@ class Stage:
     writes: frozenset[str] = frozenset()
     covers: frozenset[str] = frozenset()
     after: frozenset[str] = frozenset()
+    protected: bool = False
     producer: Callable[["Run", Path], dict[str, bytes]] | None = None
     verify: Callable[["Run", Path], None] | None = None
 
 
 class Run:
-    """One finalization pass, executed against the sandbox.
+    """One finalization pass, executed against per-stage projections.
 
-    ``root`` is the per-pass sandbox (byte copies of every declared
-    input), never the real working tree.  Producers read tree state
-    through ``run.read(path)``: bytes already written by an earlier stage
-    this pass shadow the sandbox copies, so ``--check`` and ``--write``
-    derive identical results.  ``Run.apply`` records desired bytes; the
-    engine — and only the engine — writes them to the real tree during
-    the apply step of a ``--write`` run.
+    ``root`` is the stage's restricted projection (byte copies of only
+    the paths that stage declared), never the real working tree.
+    Producers read tree state through ``run.read(path)``: bytes already
+    written by an earlier stage this pass shadow the projection bytes,
+    so ``--check`` and ``--write`` derive identical results.  While a
+    stage's callable executes, ``run.stage`` is bound to that stage's
+    declared read set and ``Run.read`` rejects any undeclared path;
+    reading a path the stage also writes requires declaring it in BOTH
+    ``reads`` and ``writes`` (the explicit self-input contract).
+    ``Run.apply`` records desired bytes; the engine — and only the
+    engine — writes them to the real tree during the apply step of a
+    ``--write`` run.
     """
 
-    def __init__(self, sandbox: Path, workroot: Path) -> None:
-        self.root = sandbox
+    def __init__(self, workroot: Path) -> None:
+        self.root = workroot  # rebound per stage to its projection
         self.workroot = workroot
+        self.stage: frozenset[str] = frozenset({"*"})  # unbound sentinel
         self.pending: dict[str, bytes] = {}
         self.mutations: dict[str, bytes] = {}
         self.changed: dict[str, list[str]] = {}
 
+    def read_input(self, relative: str) -> bytes | None:
+        """Engine-internal input check (pre-stage); bypasses no guard."""
+        if relative in self.pending:
+            return self.pending[relative]
+        path = self.root / relative
+        return path.read_bytes() if path.is_file() else None
+
     def read(self, relative: str) -> bytes | None:
+        declared = "*" in self.stage or relative in self.stage
+        if not declared:
+            raise FinalizationError(
+                f"undeclared read: the active stage did not declare "
+                f"{relative!r} in its reads; add it to the stage contract "
+                "or read through the declared dependency")
         if relative in self.pending:
             return self.pending[relative]
         path = self.root / relative
         return path.read_bytes() if path.is_file() else None
 
     def apply(self, stage_id: str, desired: dict[str, bytes]) -> None:
-        """Record desired bytes and update the sandbox shadow state.
+        """Record desired bytes and update the shadow state.
 
         Nothing here touches the real working tree; the engine's apply
         step does that, once, for declared paths only.
@@ -183,7 +233,7 @@ class Run:
         changed = []
         for relative in sorted(desired):
             data = desired[relative]
-            current = self.read(relative)
+            current = self.read_input(relative)
             if current == data:
                 continue
             self.pending[relative] = data
@@ -258,13 +308,41 @@ def validate_registry(stages: tuple[Stage, ...]) -> None:
                     f"path {relative} is written by both {writers[relative]} "
                     f"and {stage.id}; generated paths have exactly one writer")
             writers[relative] = stage.id
+    # primary/frozen authority inputs are globally write-forbidden: any
+    # stage writing such a path is rejected REGARDLESS of topological
+    # ordering — a writer scheduled before the protected reader is just
+    # as invalid as one scheduled after it (Issue #130 correction F3).
+    protected_by: dict[str, str] = {}
+    for stage in stages:
+        if not stage.protected:
+            continue
+        for relative in stage.reads | stage.covers:
+            writer = writers.get(relative)
+            if writer is not None:
+                raise FinalizationError(
+                    f"stage {writer} writes {relative}, a primary/frozen "
+                    f"authority input protected by {stage.id}; protected "
+                    "inputs are never writable, in any order")
+            if relative in protected_by:
+                raise FinalizationError(
+                    f"protected input {relative} is claimed by both "
+                    f"{protected_by[relative]} and {stage.id}")
+            protected_by[relative] = stage.id
 
 
 def _check_relative(stage_id: str, attr: str, relative: str) -> None:
     path = Path(relative)
     if path.is_absolute() or ".." in path.parts or not relative.strip():
         raise FinalizationError(
-            f"stage {stage.id}: {attr} entry must be a repo-relative path: "
+            f"stage {stage_id}: {attr} entry must be a repo-relative path: "
+            f"{relative!r}")
+    if path.as_posix() != relative:
+        # alias spellings ("./x", "a//b.txt", trailing slashes) would
+        # create a second identity for the same destination and bypass
+        # single-writer/protected-path/manifest-coverage rules
+        raise FinalizationError(
+            f"stage {stage_id}: {attr} entry must be a canonical "
+            f"repo-relative spelling (no './', '//', or trailing '/'): "
             f"{relative!r}")
 
 
@@ -345,13 +423,6 @@ def validate_order(stages: tuple[Stage, ...], order: list[str]) -> None:
                             "bytes (writer {writer} runs later)")
 
 
-# ---------------------------------------------------------------------------
-# Fail-closed worktree census (NUL-delimited porcelain)
-# ---------------------------------------------------------------------------
-
-_STATUS_CHARS = frozenset(b"MADRCU?! ")
-
-
 def _git(root: Path, *args: str) -> bytes:
     """Run git read-only plumbing beneath ``root``; fail closed."""
     try:
@@ -371,50 +442,17 @@ def _git(root: Path, *args: str) -> bytes:
     return finished.stdout
 
 
-def _parse_porcelain_z(raw: bytes) -> list[str]:
-    """Parse ``status --porcelain=v1 -z`` records into repo-relative paths.
-
-    With ``-z`` every record is ``XY <path>`` NUL-delimited with no
-    quoting; rename/copy records carry the old path as a following bare
-    NUL token.  Anything unparseable fails closed.
-    """
-    paths: list[str] = []
-    expect_old_path = False
-    for token in raw.split(b"\0"):
-        if not token:
-            continue  # the trailing terminator
-        if expect_old_path:
-            paths.append(token.decode("utf-8", "surrogateescape"))
-            expect_old_path = False
-            continue
-        if (len(token) < 4 or token[2:3] != b" "
-                or any(byte not in _STATUS_CHARS for byte in token[:2])):
-            raise FinalizationError(
-                f"unparseable git status record: {token!r}; refusing to "
-                "guess the starting worktree state")
-        status = token[:2].decode("ascii")
-        paths.append(token[3:].decode("utf-8", "surrogateescape"))
-        if "R" in status or "C" in status:
-            expect_old_path = True
-    if expect_old_path:
-        raise FinalizationError(
-            "truncated git status record (rename/copy without its old "
-            "path); refusing to guess the starting worktree state")
-    return paths
-
-
 def dirty_paths(root: Path) -> list[str]:
     """Fail-closed census of dirty paths (tracked + untracked).
 
-    Returns a sorted, de-duplicated list of repo-relative paths that are
-    modified, staged, deleted, renamed, copied, or untracked.  Any
-    failure to obtain or parse trustworthy git status raises
-    ``FinalizationError`` — a fail-closed command never proceeds with an
-    invented empty census.
+    Kept for callers that only need the dirty PATH LIST; the engine
+    itself uses the full path-state ``worktree_census``.  Deletion of a
+    tracked path counts as dirty here (the worktree differs from HEAD).
     """
-    raw = _git(root, "status", "--porcelain=v1", "-z",
-               "--untracked-files=all")
-    return sorted(set(_parse_porcelain_z(raw)))
+    census = worktree_census(root)
+    return sorted(
+        relative for relative, state in census.items()
+        if state.state != "clean-tracked")
 
 
 def _tracked_paths(root: Path) -> set[str]:
@@ -431,11 +469,112 @@ def _digest_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _worktree_census(root: Path) -> dict[str, str]:
-    """Map every dirty/untracked path to its current content digest."""
-    return {relative: _digest_file(root / relative)
-            for relative in dirty_paths(root)
-            if (root / relative).is_file()}
+# ---------------------------------------------------------------------------
+# Path-state census (F2): every relevant path's STATE, not just bytes
+# ---------------------------------------------------------------------------
+
+_STATUS_CHARS = frozenset(b"MADRCU?! ")
+
+# path states:
+#   clean-tracked   tracked, present, bytes == HEAD (restorable from git)
+#   dirty-tracked   tracked, present, bytes != HEAD (authored; copy backed up)
+#   deleted-tracked tracked, ABSENT by author intent (must stay deleted)
+#   untracked       present, not tracked (authored; copy backed up)
+#   absent          neither tracked nor present at census time
+_MISSING = object()  # sentinel: path has no bytes (deleted/absent)
+
+
+def _status_records(root: Path) -> list[tuple[str, str]]:
+    """Parsed ``status --porcelain=v1 -z`` records: (XY, path) pairs.
+
+    Rename/copy records contribute their new path plus the old path
+    (marked as deleted-in-effect).  Unparseable output fails closed.
+    """
+    raw = _git(root, "status", "--porcelain=v1", "-z",
+               "--untracked-files=all")
+    records: list[tuple[str, str]] = []
+    expect_old_path = False
+    for token in raw.split(b"\0"):
+        if not token:
+            continue  # trailing terminator
+        if expect_old_path:
+            records.append(("D ", token.decode("utf-8", "surrogateescape")))
+            expect_old_path = False
+            continue
+        if (len(token) < 4 or token[2:3] != b" "
+                or any(byte not in _STATUS_CHARS for byte in token[:2])):
+            raise FinalizationError(
+                f"unparseable git status record: {token!r}; refusing to "
+                "guess the starting worktree state")
+        status = token[:2].decode("ascii")
+        records.append(
+            (status, token[3:].decode("utf-8", "surrogateescape")))
+        if "R" in status or "C" in status:
+            expect_old_path = True
+    if expect_old_path:
+        raise FinalizationError(
+            "truncated git status record (rename/copy without its old "
+            "path); refusing to guess the starting worktree state")
+    return records
+
+
+@dataclass(frozen=True)
+class PathState:
+    """The complete starting state of one repository path."""
+
+    state: str            # clean-tracked|dirty-tracked|deleted-tracked|
+                          # untracked|absent
+    digest: str | None    # sha256 of present bytes, None if absent
+    mode: int | None      # st_mode of the present file, None if absent
+
+    def present(self) -> bool:
+        return self.state in ("clean-tracked", "dirty-tracked", "untracked")
+
+
+def worktree_census(root: Path) -> dict[str, PathState]:
+    """Map every relevant path to its starting state (F2).
+
+    Relevant = tracked paths (present or deleted) + untracked files.
+    Distinguishes clean-tracked, dirty-tracked, deleted-tracked
+    (authored deletion — must remain deleted), and untracked, with
+    content digest and file mode so restoration is unambiguous.
+    """
+    tracked = _tracked_paths(root)
+    records = _status_records(root)
+    present: dict[str, PathState] = {}
+    deleted_tracked: set[str] = set()
+    for status, relative in records:
+        if relative in tracked and ("D" in status or "A" not in status
+                                    and status[1] == "D"):
+            pass  # handled below via set logic
+        if "D" in status:
+            # worktree deletion of a tracked path (XY=D. or .D);
+            # staged additions that are later deleted vanish instead
+            if relative in tracked:
+                deleted_tracked.add(relative)
+            continue
+        path = root / relative
+        if not path.is_file():
+            continue  # e.g. an untracked directory record; files follow
+        info = path.lstat()
+        present[relative] = PathState(
+            state=("untracked" if relative not in tracked
+                   else "dirty-tracked"),
+            digest=_digest_file(path), mode=stat.S_IMODE(info.st_mode))
+    census: dict[str, PathState] = dict(present)
+    for relative in sorted(tracked):
+        if relative in census or relative in deleted_tracked:
+            continue
+        # tracked, not in status output => clean and present
+        path = root / relative
+        info = path.lstat()
+        census[relative] = PathState(
+            state="clean-tracked",
+            digest=_digest_file(path), mode=stat.S_IMODE(info.st_mode))
+    for relative in deleted_tracked:
+        census[relative] = PathState(
+            state="deleted-tracked", digest=None, mode=None)
+    return census
 
 
 def _head_blob(root: Path, relative: str) -> tuple[bytes, int]:
@@ -468,26 +607,44 @@ def _sandbox_inputs(stages: tuple[Stage, ...]) -> frozenset[str]:
     return frozenset(inputs)
 
 
-def _prepare_sandbox(root: Path, inputs: frozenset[str],
-                     workroot: Path) -> Path:
-    """Byte-copy every declared input into a fresh sandbox directory.
+# ---------------------------------------------------------------------------
+# Per-stage restricted projections (F3): a callable cannot even SEE an
+# input it did not declare, so direct filesystem reads cannot silently
+# expand the dependency graph any more than Run.read can.
+# ---------------------------------------------------------------------------
 
-    The sandbox is what stage callables see as ``run.root``; the real
-    working tree is never exposed to callable execution.
+def _stage_projection(stage: Stage, root: Path, run: Run,
+                      workroot: Path) -> Path:
+    """Materialize the stage's restricted projection and bind run.root.
+
+    Contains byte copies of exactly the paths the stage declared
+    (reads + writes + covers), plus the pass's pending outputs for its
+    declared inputs (earlier-stage writes it declared as reads).  The
+    projection root is what the callable receives as ``run.root``.
     """
-    sandbox = workroot / "sandbox"
-    for relative in sorted(inputs):
+    projection = workroot / "projections" / stage.id
+    if projection.exists():
+        shutil.rmtree(projection, ignore_errors=True)
+    projection.mkdir(parents=True, exist_ok=True)
+    declared = stage.reads | stage.writes | stage.covers
+    for relative in sorted(declared):
+        if relative in run.pending:
+            data = run.pending[relative]
+            target = projection / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+            continue
         source = root / relative
         if not source.is_file():
             continue  # missing inputs fail later with a precise stage error
-        target = sandbox / relative
+        target = projection / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
-    return sandbox
+    return projection
 
 
 def _sandbox_digests(sandbox: Path) -> dict[str, str]:
-    """Content digests of every file in the sandbox tree.
+    """Content digests of every file in a projection/sandbox tree.
 
     Any file the engine did not put there, or any byte change to one it
     did, is a direct filesystem side effect by a callable.  Interpreter
@@ -505,107 +662,153 @@ def _sandbox_digests(sandbox: Path) -> dict[str, str]:
     return digests
 
 
-def _snapshot_starting_bytes(root: Path, workroot: Path
-                             ) -> tuple[dict[str, str], Path, set[str]]:
-    """Snapshot the authored starting state for fail-closed restoration.
+# ---------------------------------------------------------------------------
+# Starting-state snapshot and restoration (F2)
+# ---------------------------------------------------------------------------
 
-    Copies every dirty/untracked file (authored bytes that exist nowhere
-    else) into ``workroot/starting-bytes`` and records the tracked path
-    set.  Restoration after a detected mutation rewrites dirty/untracked
-    paths from these copies and clean tracked paths from their provably
-    identical HEAD bytes.  Authored content can therefore never be
-    destroyed by a failing callable — the very bytes that existed at the
-    start are the ones restored.
+def _snapshot_starting_state(root: Path, workroot: Path
+                             ) -> dict[str, PathState]:
+    """Census every relevant path and back up authored bytes.
+
+    Dirty-tracked and untracked bytes are copied into
+    ``workroot/starting-bytes`` (they exist nowhere else); clean-tracked
+    bytes are restorable read-only from the git object store;
+    deleted-tracked paths need no bytes — restoration must keep them
+    deleted.  Clean-tracked paths are copied too, so restoration never
+    depends on git succeeding AFTER a mutation: if a post-mutation
+    census or restore fails, the engine still holds byte-level copies.
     """
-    census = _worktree_census(root)
+    census = worktree_census(root)
     backup = workroot / "starting-bytes"
-    for relative in sorted(census):
+    for relative, state in sorted(census.items()):
+        if not state.present():
+            continue
         source = root / relative
         target = backup / relative
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
-    tracked = _tracked_paths(root)
-    return census, backup, tracked
+    return census
 
 
-def _restore_worktree(root: Path, baseline: dict[str, str], backup: Path,
-                      tracked: set[str], *, preserve: set[str]) -> list[str]:
-    """Restore the worktree to its starting bytes after a mutation.
+def _restore_worktree(root: Path, starting: dict[str, PathState],
+                      backup: Path, *, preserve: set[str]) -> list[str]:
+    """Restore the worktree to its exact starting state (F2).
 
-    ``preserve`` names declared engine writes that must survive (used
-    after the apply step).  Returns the restored/deleted paths.
+    Handles all six transitions:
+
+    - clean/dirty/untracked present at start -> restore bytes + mode
+      (authored bytes from the engine copy, which for clean-tracked
+      paths is byte-identical to HEAD);
+    - deleted-tracked at start -> a path a callable recreated is
+      DELETED again (an authored deletion stays deleted; HEAD bytes are
+      never resurrected merely because the baseline lacked file bytes);
+    - created during execution (not in the census) -> engine debris,
+      removed.
     """
     restored: list[str] = []
-    current = _worktree_census(root)
-    for relative in sorted(set(baseline) | set(current)):
+    current = worktree_census(root)
+    # git-status acquisition already failed closed inside the census if
+    # untrustworthy; a failure here aborts restoration loudly, never
+    # silently skips it (F2 requirement).
+    for relative in sorted(set(starting) | set(current)):
         if relative in preserve:
             continue
-        if baseline.get(relative) == current.get(relative):
+        was, now = starting.get(relative), current.get(relative)
+        if was == now:
             continue
         target = root / relative
-        if relative in baseline:
-            # authored content (dirty or untracked at start): restore the
-            # exact starting bytes from the engine-made copy
+        if was is None:
+            # created during the run, never authored, never tracked:
+            # engine debris — remove it (directories pruned below)
+            if now is not None and now.present():
+                target.unlink(missing_ok=True)
+            elif target.is_symlink() or target.exists():
+                target.unlink(missing_ok=True)
+            restored.append(relative)
+        elif was.present():
+            # authored or clean content: restore the exact starting
+            # bytes and mode from the engine-made copy
             source = backup / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
-        elif relative in tracked:
-            # clean and tracked at start: bytes provably identical to HEAD
-            blob, mode = _head_blob(root, relative)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(blob)
-            os.chmod(target, mode)
+            os.chmod(target, was.mode or 0o644)
+            restored.append(relative)
         else:
-            # created during the run, never authored, never tracked:
-            # engine debris — remove it
-            target.unlink(missing_ok=True)
-        restored.append(relative)
+            # deleted-tracked at start: keep it deleted
+            if now is not None and now.present():
+                target.unlink(missing_ok=True)
+            elif target.exists() or target.is_symlink():
+                target.unlink(missing_ok=True)
+            restored.append(relative)
+    # prune empty directories the removals may have left behind
+    for parent in sorted({(root / r).parent for r in restored},
+                         key=lambda p: len(p.parts), reverse=True):
+        try:
+            parent.rmdir()
+        except OSError:
+            pass
     return restored
 
 
+def _census_delta(before: dict[str, PathState],
+                  after: dict[str, PathState]) -> list[str]:
+    """Paths whose state changed between two censuses."""
+    changed = []
+    for relative in sorted(set(before) | set(after)):
+        if before.get(relative) != after.get(relative):
+            changed.append(relative)
+    return changed
+
+
 @contextlib.contextmanager
-def _callable_guard(root: Path, sandbox: Path, stage_id: str, role: str,
-                    baseline: dict[str, str], backup: Path,
-                    tracked: set[str]) -> Iterator[None]:
+def _callable_guard(root: Path, projection: Path, stage_id: str, role: str,
+                    starting: dict[str, PathState], backup: Path,
+                    ) -> Iterator[None]:
     """Detect any direct filesystem side effect of one stage callable.
 
-    Compares full content digests of the sandbox and a dirty/untracked
-    census of the REAL worktree before and after the callable.  On any
-    difference: restore the worktree to its starting bytes and fail
-    closed.  Nothing here relies on the callable reporting its writes
-    honestly.
+    Compares full content digests of the stage's restricted projection
+    and a complete path-state census of the REAL worktree before and
+    after the callable.  On any difference — create, overwrite, delete,
+    rename (a rename is a delete plus an undeclared create) — the
+    worktree is restored to its exact starting state and the engine
+    fails closed.  If the post-callable census itself fails, that
+    failure propagates: preservation is never silently skipped.  Nothing
+    here relies on the callable reporting its writes honestly.
     """
-    sandbox_before = _sandbox_digests(sandbox)
-    census_before = _worktree_census(root)
+    projection_before = _sandbox_digests(projection)
+    census_before = worktree_census(root)
     previous_cwd = Path(os.getcwd())
-    os.chdir(sandbox)
+    os.chdir(projection)
     try:
         yield
     finally:
         os.chdir(previous_cwd)
         damage: list[str] = []
-        sandbox_after = _sandbox_digests(sandbox)
-        if sandbox_after != sandbox_before:
+        try:
+            projection_after = _sandbox_digests(projection)
+        except OSError as error:
+            raise FinalizationError(
+                f"stage {stage_id} {role} left the projection "
+                f"unreadable ({error}); the finalizer fails closed "
+                "without applying any declared write") from error
+        if projection_after != projection_before:
             touched = sorted(
-                path for path in set(sandbox_after) | set(sandbox_before)
-                if sandbox_after.get(path) != sandbox_before.get(path))
+                path for path in set(projection_after) | set(projection_before)
+                if projection_after.get(path) != projection_before.get(path))
             damage.append(
                 "directly mutated the stage sandbox (undeclared "
                 f"filesystem writes): {touched}")
-        census_after = _worktree_census(root)
+        census_after = worktree_census(root)
         if census_after != census_before:
-            touched = sorted(
-                path for path in set(census_after) | set(census_before)
-                if census_after.get(path) != census_before.get(path))
+            touched = _census_delta(census_before, census_after)
             damage.append(
                 f"directly mutated the repository worktree: {touched}")
-            _restore_worktree(root, baseline, backup, tracked,
-                              preserve=set())
+            _restore_worktree(root, starting, backup, preserve=set())
         if damage:
             raise FinalizationError(
                 f"stage {stage_id} {role} escaped the engine contract: "
                 + "; ".join(damage)
-                + "; the repository was restored to its starting bytes "
+                + "; the repository was restored to its starting state "
                 "and no declared writes from this pass were applied")
 
 
@@ -676,10 +879,9 @@ def run_pipeline(root: Path, stages: tuple[Stage, ...], *, write: bool,
     nothing is applied (the mechanically read-only check mode).
     """
     managed = workroot or Path(tempfile.mkdtemp(prefix="finalize-repository-"))
-    baseline, backup, tracked = _snapshot_starting_bytes(root, managed)
+    starting = _snapshot_starting_state(root, managed)
     try:
-        report = _execute_pass(root, stages, managed,
-                               baseline, backup, tracked)
+        report = _execute_pass(root, stages, managed, starting)
         if write and report["mutations"]:
             _apply_mutations(root, report["mutations"])
         return report
@@ -689,68 +891,141 @@ def run_pipeline(root: Path, stages: tuple[Stage, ...], *, write: bool,
 
 
 def _execute_pass(root: Path, stages: tuple[Stage, ...], workroot: Path,
-                  baseline: dict[str, str], backup: Path,
-                  tracked: set[str]) -> dict:
-    """Execute one sandboxed pass; the real tree is never written here."""
+                  starting: dict[str, PathState]) -> dict:
+    """Execute one pass of per-stage projections; the real tree is
+    never written here."""
     validate_registry(stages)
     order_ids = topological_order(stages)
     by_id = {stage.id: stage for stage in stages}
     validate_order(stages, order_ids)
-    sandbox = _prepare_sandbox(root, _sandbox_inputs(stages), workroot)
+    backup = workroot / "starting-bytes"
+    run = Run(workroot)
     _mark_import_baseline()
-    _purge_script_modules(sandbox)
-    run = Run(sandbox, workroot)
     for stage_id in order_ids:
         stage = by_id[stage_id]
+        if stage.producer is None and stage.verify is None:
+            continue  # purely declarative stage
+        run.root = _stage_projection(stage, root, run, workroot)
+        # enforced read set: declared reads; covers count as reads for
+        # terminal manifests (they hash every covered path); a path the
+        # stage writes is readable ONLY if also declared in reads (the
+        # explicit self-input contract)
+        run.stage = frozenset(stage.reads | stage.covers)
+        _purge_script_modules(run.root)
         for relative in sorted(stage.reads | stage.covers):
-            if run.read(relative) is None:
+            if run.read_input(relative) is None:
                 raise FinalizationError(
                     f"stage {stage_id}: required input is missing: "
                     f"{relative}")
-        if stage.producer is not None:
-            with _callable_guard(root, sandbox, stage_id, "producer",
-                                 baseline, backup, tracked):
-                desired = stage.producer(run, workroot)
-            undeclared = sorted(set(desired) - set(stage.writes))
-            if undeclared:
-                raise FinalizationError(
-                    f"stage {stage_id} produced undeclared paths "
-                    f"{undeclared}; every written path must be declared")
-            missing = sorted(set(stage.writes) - set(desired))
-            if missing:
-                raise FinalizationError(
-                    f"stage {stage_id} did not produce declared paths "
-                    f"{missing}")
-            run.apply(stage_id, desired)
-        if stage.verify is not None:
-            with _callable_guard(root, sandbox, stage_id, "verify",
-                                 baseline, backup, tracked):
-                stage.verify(run, workroot)
+        try:
+            if stage.producer is not None:
+                with _callable_guard(root, run.root, stage_id, "producer",
+                                     starting, backup):
+                    desired = stage.producer(run, workroot)
+                undeclared = sorted(set(desired) - set(stage.writes))
+                if undeclared:
+                    raise FinalizationError(
+                        f"stage {stage_id} produced undeclared paths "
+                        f"{undeclared}; every written path must be declared")
+                missing = sorted(set(stage.writes) - set(desired))
+                if missing:
+                    raise FinalizationError(
+                        f"stage {stage_id} did not produce declared paths "
+                        f"{missing}")
+                run.apply(stage_id, desired)
+            if stage.verify is not None:
+                with _callable_guard(root, run.root, stage_id, "verify",
+                                     starting, backup):
+                    stage.verify(run, workroot)
+        finally:
+            run.stage = frozenset({"*"})
     return {"order": order_ids, "changed": run.changed,
             "mutations": run.mutations}
 
 
+def _validate_output_path(root: Path, relative: str) -> Path:
+    """Symlink-safe validation of one real-tree write target (F4).
+
+    The destination itself must not be a symlink, and no ancestor
+    component beneath the repository root may be a symlink; the
+    resulting canonical path must remain beneath ``root``.  Validation
+    uses no-follow ``lstat`` semantics on each component — a ``resolve``
+    check followed by an unsafe follow-write would reintroduce the
+    escape.  Aliases that would bypass registry identity (``..``,
+    absolute paths, repeated separators) are rejected upstream by
+    ``_check_relative``; this proves the *filesystem* agrees.
+    """
+    target = root / relative
+    # lstat the destination: an existing symlink destination is refused
+    try:
+        info = target.lstat()
+    except FileNotFoundError:
+        info = None
+    if info is not None and stat.S_ISLNK(info.st_mode):
+        raise FinalizationError(
+            f"output path {relative!r} is a symlink; engine writes must "
+            "land on a real file inside the repository, never follow a "
+            "symlinked destination")
+    # walk every ancestor component beneath the root with lstat
+    current = root
+    parts = Path(relative).parts
+    for component in parts[:-1]:
+        if component in ("", ".", ".."):
+            raise FinalizationError(
+                f"malformed output path {relative!r}")
+        current = current / component
+        try:
+            entry = current.lstat()
+        except FileNotFoundError:
+            break  # missing parents are created by the engine, no-follow
+        if stat.S_ISLNK(entry.st_mode):
+            raise FinalizationError(
+                f"output path {relative!r} has a symlinked ancestor "
+                f"({component!r}); engine writes must stay inside the "
+                "repository without following symlinks")
+        if not stat.S_ISDIR(entry.st_mode):
+            raise FinalizationError(
+                f"output path {relative!r} traverses non-directory "
+                f"component {component!r}")
+    # final containment check (root itself already resolved+compared)
+    if os.path.commonpath([str(root), str(target)]) != str(root):
+        raise FinalizationError(
+            f"output path {relative!r} escapes the repository root")
+    return target
+
+
 def _apply_mutations(root: Path, mutations: dict[str, bytes]) -> None:
-    """The ONLY code that writes the real working tree.
+    """The ONLY code that writes the real working tree (F4-hardened).
 
     Declared paths, engine bytes, one pass, after every stage has run.
+    Every destination is validated symlink-safely immediately before
+    its write; writes open the final component with ``O_NOFOLLOW`` so a
+    race between validation and write cannot redirect the byte landing.
     """
     for relative in sorted(mutations):
-        path = root / relative
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(mutations[relative])
+        target = _validate_output_path(root, relative)
+        data = mutations[relative]
+        parent = target.parent
+        parent.mkdir(parents=True, exist_ok=True)
+        descriptor = os.open(target, os.O_WRONLY | os.O_CREAT
+                             | os.O_TRUNC | os.O_NOFOLLOW, 0o644)
+        try:
+            os.write(descriptor, data)
+        finally:
+            os.close(descriptor)
 
 
 def finalize(root: Path, stages: tuple[Stage, ...], *, write: bool) -> dict:
     """Run the pipeline; in write mode prove the byte fixed point."""
-    starting_dirty = dirty_paths(root)  # fail closed on untrustworthy state
+    starting_census = worktree_census(root)  # fail closed if untrustworthy
+    starting_dirty = sorted(
+        relative for relative, state in starting_census.items()
+        if state.state in ("dirty-tracked", "deleted-tracked", "untracked"))
     workroot = Path(tempfile.mkdtemp(prefix="finalize-repository-"))
     try:
-        baseline, backup, tracked = \
-            _snapshot_starting_bytes(root, workroot)
+        starting = _snapshot_starting_state(root, workroot)
         reset_scratch_caches()
-        first = _execute_pass(root, stages, workroot,
-                              baseline, backup, tracked)
+        first = _execute_pass(root, stages, workroot, starting)
         report = {
             "mode": "write" if write else "check",
             "starting_dirty_paths": starting_dirty,
@@ -761,22 +1036,22 @@ def finalize(root: Path, stages: tuple[Stage, ...], *, write: bool) -> dict:
             _apply_mutations(root, first["mutations"])
             # post-apply audit: nothing outside the declared writes may
             # have changed; restore anything that did
-            after = _worktree_census(root)
+            after = worktree_census(root)
             allowed = set(first["mutations"])
-            unexpected = {
-                relative for relative in set(baseline) | set(after)
+            unexpected = [
+                relative for relative in set(starting) | set(after)
                 if relative not in allowed
-                and baseline.get(relative) != after.get(relative)}
+                and starting.get(relative) != after.get(relative)]
             if unexpected:
-                _restore_worktree(root, baseline, backup, tracked,
+                _restore_worktree(root, starting,
+                                  workroot / "starting-bytes",
                                   preserve=allowed)
                 raise FinalizationError(
                     "the worktree changed outside the declared writes "
                     f"during the apply step: {sorted(unexpected)}; the "
-                    "repository was restored to its starting bytes")
+                    "repository was restored to its starting state")
             reset_scratch_caches()
-            second = _execute_pass(root, stages, workroot,
-                                   baseline, backup, tracked)
+            second = _execute_pass(root, stages, workroot, starting)
             if second["mutations"]:
                 raise FinalizationError(
                     "fixed point not reached: the second (verification) "
@@ -802,9 +1077,37 @@ def finalize(root: Path, stages: tuple[Stage, ...], *, write: bool) -> dict:
 
 _AREA = ("docs/implementation/r6-successor-dense-full-integration-117")
 _EVIDENCE = f"{_AREA}/evidence"
-_PRODUCER_HASHES = f"{_EVIDENCE}/producer-hashes.json"
-_MANIFEST = f"{_EVIDENCE}/MANIFEST.sha256"
 _BUNDLE_137 = f"{_EVIDENCE}/arm-c-regime4-diagnosis-137"
+# The additive Issue #130 successor bundle: current-finalization
+# integrity for the Issue #130 sources, never a rewrite of the closed
+# Issue #117 parent bundle (accepted at commit d1afad6, unchanged).
+_BUNDLE_130 = f"{_EVIDENCE}/issue-130-finalization"
+_PARENT_COMMIT = "d1afad64ca8bdd05634d3d0e1e09b8077da525d5"
+
+# The closed Issue #117 parent artifacts (F1): path -> accepted SHA-256
+# at the accepted parent commit.  Identity derived from the accepted
+# git tree (d1afad6 = origin/main at review), the same authority the
+# accepted #137 lifecycle binds its parent with (commit:path identity
+# plus expected digest).  These paths are read-only: no stage writes
+# them, and the parent-bind verify stage fails closed on any drift.
+PARENT_BINDINGS: dict[str, str] = {
+    "scripts/issue117_proof.py":
+        "a000f674cd62f96e50c5e8e555c46b4ec7f7a0aaf0237d19651deb02f8c11395",
+    f"{_EVIDENCE}/purity-audit.json":
+        "54e6cb8fe831df57de30899e020f08376c855ff2c22d559cf3b3d9edd322fc7f",
+    f"{_EVIDENCE}/producer-hashes.json":
+        "d63bbafa010461d9ff4a0dc23a948abf8ff9157faf00c486ab3c45bd45e40d9b",
+    f"{_EVIDENCE}/MANIFEST.sha256":
+        "473ad14a01d293c39d45293222ad42d61cd2e8046ff3c5433dbf5683d7824946",
+}
+
+# Issue #130 finalizer sources and contracts (the successor bundle's
+# own producer inventory; additive, disjoint from the parent's).
+FINALIZATION_PRODUCERS: tuple[str, ...] = (
+    "scripts/finalize_repository.py",
+    "tests/test_finalize_repository.py",
+    "tests/test_evidence_manifest_lifecycle.py",
+)
 
 _campaign_cache: dict[str, dict[str, bytes]] = {}
 
@@ -824,34 +1127,105 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def _campaign_outputs(run: Run, scratch: Path) -> dict[str, bytes]:
-    """Run the frozen Issue #117 CPU campaign once per pass into scratch.
+def _parent_binding_document() -> dict[str, object]:
+    """Immutable commit:path authority record binding the closed parent.
 
-    The campaign is deterministic (fixed scratch working root, canonical
-    JSON, no timestamps, no network): identical trees produce identical
-    bytes from any checkout.  It executes against the pass sandbox
-    (``run.root``), so its repository reads — the integration fixture,
-    the pinned authority files, the producer sources — are byte copies
-    of the real tree's declared inputs, and any attempt by the campaign
-    to write repository paths lands in the sandbox and fails the guard.
+    Follows the accepted Issue #137 lifecycle model: an ancestor bundle
+    is addressed through immutable Git ``commit:path`` identity plus the
+    expected SHA-256 of each bound path, never through its live
+    working-tree copy.
     """
-    key = str(run.root.resolve())
-    cached = _campaign_cache.get(key)
-    if cached is not None:
-        return cached
-    _scripts(run.root)
-    import issue117_proof  # noqa: PLC0415 (lazy, sandbox-bound by design)
-    out_dir = scratch / "issue117-evidence"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    issue117_proof.run_campaign(out_dir)
-    outputs: dict[str, bytes] = {}
-    for name in sorted(issue117_proof.EVIDENCE_FILES):
-        path = out_dir / name
-        if path.is_file():
-            outputs[f"{_EVIDENCE}/{name}"] = path.read_bytes()
-    outputs[_MANIFEST] = (out_dir / "MANIFEST.sha256").read_bytes()
-    _campaign_cache[key] = outputs
-    return outputs
+    return {
+        "parent_issue": 117,
+        "parent_commit": _PARENT_COMMIT,
+        "authority_model": "commit:path + expected sha256 "
+                           "(docs/evidence-manifests.md lifecycle)",
+        "bindings": {
+            path: {
+                "commit": _PARENT_COMMIT,
+                "path": path,
+                "sha256": digest,
+            }
+            for path, digest in sorted(PARENT_BINDINGS.items())
+        },
+    }
+
+
+def _parent_bind_verify(run: Run, scratch: Path) -> None:
+    """Fail closed unless every closed-parent artifact is byte-current.
+
+    Mechanical verification of the immutable parent binding: the live
+    bytes must equal the accepted SHA-256 recorded in the successor
+    bundle's authority record AND the git blob identity at the accepted
+    parent commit must still match.  Verification-only: this stage
+    never writes anything, and the parent artifacts are registered as
+    protected (globally unwritable) inputs.
+    """
+    document = _parent_binding_document()
+    authority = run.root / _BUNDLE_130 / "parent-binding.json"
+    if authority.is_file():
+        committed = json.loads(authority.read_text(encoding="utf-8"))
+        if committed != document:
+            raise FinalizationError(
+                "Issue #130 successor bundle parent-binding record "
+                "disagrees with the engine's canonical binding document")
+    for path, digest in sorted(PARENT_BINDINGS.items()):
+        data = run.read(path)
+        if data is None:
+            raise FinalizationError(
+                f"closed parent artifact is missing: {path}")
+        if _sha256(data) != digest:
+            raise FinalizationError(
+                f"closed parent artifact drifted from its accepted "
+                f"bytes: {path} (expected sha256 {digest})")
+
+
+def _successor_producer_hashes_producer(
+        run: Run, scratch: Path) -> dict[str, bytes]:
+    """Producer-hash ledger for the Issue #130 successor bundle."""
+    expected = {}
+    for producer in sorted(FINALIZATION_PRODUCERS):
+        data = run.read(producer)
+        if data is None:
+            raise FinalizationError(
+                f"finalization producer is missing: {producer}")
+        expected[producer] = _sha256(data)
+    body = json.dumps(expected, sort_keys=True,
+                      separators=(",", ":")).encode("utf-8") + b"\n"
+    return {f"{_BUNDLE_130}/producer-hashes.json": body}
+
+
+def _successor_manifest_rows(run: Run) -> dict[str, str]:
+    rows: dict[str, str] = {}
+    for producer in sorted(FINALIZATION_PRODUCERS):
+        data = run.read(producer)
+        if data is None:
+            raise FinalizationError(
+                f"finalization producer is missing: {producer}")
+        rows[producer] = _sha256(data)
+    for path, digest in sorted(PARENT_BINDINGS.items()):
+        rows[path] = digest
+    binding = run.read(f"{_BUNDLE_130}/parent-binding.json")
+    if binding is None:
+        raise FinalizationError(
+            "successor bundle parent-binding record is missing")
+    rows[f"{_BUNDLE_130}/parent-binding.json"] = _sha256(binding)
+    return rows
+
+
+def _successor_manifest_producer(run: Run, scratch: Path
+                                 ) -> dict[str, bytes]:
+    """Terminal manifest of the additive Issue #130 successor bundle.
+
+    Covers the Issue #130 producer sources plus the closed parent
+    bindings (the parent paths are recorded with their ACCEPTED
+    digests — the successor manifest pins the parent, it never
+    regenerates it).
+    """
+    rows = _successor_manifest_rows(run)
+    body = "".join(f"{digest}  {path}\n"
+                   for path, digest in sorted(rows.items()))
+    return {f"{_BUNDLE_130}/MANIFEST.sha256": body.encode("utf-8")}
 
 
 def _status_source_verify(run: Run, scratch: Path) -> None:
@@ -864,10 +1238,10 @@ def _status_source_verify(run: Run, scratch: Path) -> None:
 def _status_sync_producer(run: Run, scratch: Path) -> dict[str, bytes]:
     """Living status sections, reusing the frozen sync renderer verbatim.
 
-    Reads each managed document's existing bytes through the sandbox and
-    replaces only the generated sections; the authored bytes outside the
-    markers are inputs to the desired bytes (declared as self-inputs in
-    the stage contract).
+    Reads each managed document's existing bytes through the projection
+    and replaces only the generated sections; the authored bytes outside
+    the markers are inputs to the desired bytes (declared as self-inputs
+    in the stage contract).
     """
     _scripts(run.root)
     import sync_project_status as sync  # noqa: PLC0415
@@ -881,65 +1255,6 @@ def _status_sync_producer(run: Run, scratch: Path) -> dict[str, bytes]:
     return desired
 
 
-def _issue117_evidence_producer(run: Run, scratch: Path) -> dict[str, bytes]:
-    outputs = _campaign_outputs(run, scratch)
-    return {path: data for path, data in outputs.items()
-            if path != _PRODUCER_HASHES and path != _MANIFEST}
-
-
-def _issue117_producer_hashes_producer(
-        run: Run, scratch: Path) -> dict[str, bytes]:
-    outputs = _campaign_outputs(run, scratch)
-    _scripts(run.root)
-    import issue117_proof  # noqa: PLC0415
-    expected = {}
-    for producer in sorted(issue117_proof.PRODUCERS):
-        data = run.read(producer)
-        if data is None:
-            raise FinalizationError(
-                f"issue117 producer is missing: {producer}")
-        expected[producer] = _sha256(data)
-    desired = outputs[_PRODUCER_HASHES]
-    if json.loads(desired) != expected:
-        raise FinalizationError(
-            "producer-hashes ledger does not match the finalized producer "
-            "bytes; the campaign scratch and the tree disagree")
-    return {_PRODUCER_HASHES: desired}
-
-
-def _verify_manifest_rows(rows: dict[str, str], run: Run) -> None:
-    """Re-derive every manifest row from the bytes visible to this pass.
-
-    Earlier-stage writes shadow the sandbox copies, so this proves
-    manifest-last coverage both live and counterfactually.
-    """
-    for relative, digest in sorted(rows.items()):
-        data = run.read(relative)
-        if data is None:
-            raise FinalizationError(
-                f"manifest covers a missing path: {relative}")
-        if _sha256(data) != digest:
-            raise FinalizationError(
-                f"manifest row does not match finalized bytes: {relative}")
-
-
-def _issue117_manifest_producer(run: Run, scratch: Path) -> dict[str, bytes]:
-    """Terminal retention manifest; every covered row is re-derived from
-    the finalized tree state visible to this pass (earlier writes shadow
-    the sandbox), which mechanically proves manifest-last coverage."""
-    outputs = _campaign_outputs(run, scratch)
-    desired = outputs[_MANIFEST]
-    rows: dict[str, str] = {}
-    for line in desired.decode("utf-8").splitlines():
-        digest, separator, relative = line.partition("  ")
-        if not separator or not relative:
-            raise FinalizationError(
-                f"malformed manifest row: {line!r}")
-        rows[relative] = digest
-    _verify_manifest_rows(rows, run)
-    return {_MANIFEST: desired}
-
-
 def _issue137_bundle_verify(run: Run, scratch: Path) -> None:
     """The accepted Issue #137 bundle is closed: verify it byte-current."""
     _scripts(run.root)
@@ -950,23 +1265,6 @@ def _issue137_bundle_verify(run: Run, scratch: Path) -> None:
         raise FinalizationError(
             f"Issue #137 bundle manifest verification failed: {error}") \
             from error
-
-
-def _issue117_covered_paths() -> frozenset[str]:
-    """Exactly the row set ``issue117_proof.write_manifest`` emits."""
-    _scripts(ROOT)
-    import issue117_proof  # noqa: PLC0415
-    covered = {f"{_EVIDENCE}/{name}" for name in issue117_proof.EVIDENCE_FILES}
-    covered.update(f"{_EVIDENCE}/{name}"
-                   for name in issue117_proof.COMMITTED_EVIDENCE_FILES
-                   if (ROOT / _EVIDENCE / name).is_file())
-    covered.update(issue117_proof.PRODUCERS)
-    for relative in (f"{_AREA}/METHODOLOGY.md",
-                     f"{_AREA}/METHODOLOGY-ARM-C-RETRY.md",
-                     f"{_AREA}/CHECKPOINT-AUTHORITY-BLOCKER.md"):
-        if (ROOT / relative).is_file():
-            covered.add(relative)
-    return frozenset(covered)
 
 
 def _status_sync_reads() -> frozenset[str]:
@@ -982,26 +1280,6 @@ def _status_sync_reads() -> frozenset[str]:
     return frozenset({"docs/project-status.json", *sync.TARGETS})
 
 
-def _issue117_authority_reads() -> frozenset[str]:
-    """Every repository authority byte the campaign's outputs depend on.
-
-    Derived from the canonical pinned-file dictionaries the campaign
-    actually verifies against — never a hand-maintained duplicate:
-    the V5 authority files, the accepted physical-identity evidence,
-    the accepted-subject evidence package, the frozen producer-delta
-    audit, and the immutable accepted #118 canonical summary.
-    """
-    _scripts(ROOT)
-    import issue117_applicability as applicability  # noqa: PLC0415
-    import issue117_accepted_subject as accepted_subject  # noqa: PLC0415
-    reads = set(applicability.V5_AUTHORITY_FILES)
-    reads |= set(applicability.ACCEPTED_PHYSICAL_IDENTITY_FILES)
-    reads |= set(accepted_subject.ACCEPTED_SUBJECT_EVIDENCE_FILES)
-    reads.add(applicability.PRODUCER_DELTA_RELATIVE_PATH)
-    reads.add(f"{_EVIDENCE}/canonical-summary.json")
-    return frozenset(reads)
-
-
 def _issue137_bundle_reads() -> frozenset[str]:
     """The closed #137 bundle's real read set, from its own constants."""
     _scripts(ROOT)
@@ -1012,14 +1290,19 @@ def _issue137_bundle_reads() -> frozenset[str]:
     return frozenset(reads)
 
 
+def _successor_bundle_files() -> list[str]:
+    return [f"{_BUNDLE_130}/parent-binding.json",
+            f"{_BUNDLE_130}/producer-hashes.json",
+            f"{_BUNDLE_130}/MANIFEST.sha256"]
+
+
 def default_registry() -> tuple[Stage, ...]:
-    """The migrated Issue #117 chain (see module docstring).
+    """The finalization DAG (see module docstring).
 
     Registration is declarative and derived from canonical constants:
     another campaign adds its own primary/derived/index/terminal-manifest/
     verify stages here without any engine change.
     """
-    covered = _issue117_covered_paths()
     return (
         Stage(
             id="status-source",
@@ -1050,73 +1333,48 @@ def default_registry() -> tuple[Stage, ...]:
             producer=_status_sync_producer,
         ),
         Stage(
-            id="issue117-authority",
-            kind="primary",
+            id="issue117-parent-bind",
+            kind="verify",
             description=(
-                "Authority inputs consumed by the Issue #117 campaign: "
-                "the pinned V5 authority files, the accepted physical-"
-                "identity evidence, the accepted-subject evidence "
-                "package, the frozen producer-delta audit, and the "
-                "immutable accepted #118 canonical summary. Derived from "
-                "the pinned-file dictionaries in issue117_applicability "
-                "and issue117_accepted_subject; never written by any "
-                "stage (the authority/integrity split, registered)"),
-            reads=_issue117_authority_reads(),
+                "The closed Issue #117 parent bundle is bound immutably "
+                "through commit:path identity plus expected SHA-256 "
+                "(accepted #137 lifecycle model). Verification-only: the "
+                "parent artifacts are exact accepted bytes, protected "
+                "against any writer, and no Issue #130 source is in the "
+                "historical producer inventory"),
+            reads=frozenset(PARENT_BINDINGS)
+                  | {f"{_BUNDLE_130}/parent-binding.json"},
+            protected=True,
             after=frozenset({"status-sync"}),
+            verify=_parent_bind_verify,
         ),
         Stage(
-            id="issue117-evidence",
-            kind="derived",
-            description=(
-                "Issue #117 CPU campaign evidence (frozen producer "
-                "issue117_proof.run_campaign; deterministic canonical "
-                "JSON). Reads the integration fixture, the purity-audited "
-                "planner source, and every declared authority input"),
-            reads=(frozenset({
-                       f"{_EVIDENCE}/integration-fixture.json",
-                       "scripts/issue117_planner.py",
-                   })
-                   | _issue117_authority_reads()),
-            writes=frozenset(
-                f"{_EVIDENCE}/{name}"
-                for name in (
-                    "strategy.json", "planner-decision.json",
-                    "requirements.json", "cold-acquisition.json",
-                    "materialization-witnesses.json", "warm-restart.json",
-                    "locality-mutation.json", "fencing.json",
-                    "negative-controls.json", "zero-invariants.json",
-                    "purity-audit.json", "applicability-audit.json",
-                    "qualification-record.json",
-                    "v5-qualification-subject-recovery.json",
-                )),
-            after=frozenset({"status-sync", "issue117-authority"}),
-            producer=_issue117_evidence_producer,
-        ),
-        Stage(
-            id="issue117-producer-hashes",
+            id="issue117-successor-hashes",
             kind="index",
             description=(
-                "Producer identity ledger for the Issue #117 bundle; pure "
-                "function of every producer path it hashes (declared "
-                "reads derived from issue117_proof.PRODUCERS)"),
-            reads=frozenset(_producer_paths()),
-            writes=frozenset({_PRODUCER_HASHES}),
-            after=frozenset({"issue117-evidence"}),
-            producer=_issue117_producer_hashes_producer,
+                "Producer identity ledger for the additive Issue #130 "
+                "successor bundle (scripts/finalize_repository.py + its "
+                "test suites); disjoint from the closed parent's "
+                "inventory"),
+            reads=frozenset(FINALIZATION_PRODUCERS),
+            writes=frozenset({f"{_BUNDLE_130}/producer-hashes.json"}),
+            after=frozenset({"issue117-parent-bind"}),
+            producer=_successor_producer_hashes_producer,
         ),
         Stage(
-            id="issue117-manifest",
+            id="issue117-successor-manifest",
             kind="terminal-manifest",
             description=(
-                "Terminal retention manifest for the Issue #117 bundle; "
-                "generated last, reads (hashes) every covered path, and is "
-                "read by nothing"),
-            writes=frozenset({_MANIFEST}),
-            covers=covered,
-            after=frozenset({
-                "status-sync", "issue117-evidence",
-                "issue117-producer-hashes"}),
-            producer=_issue117_manifest_producer,
+                "Terminal retention manifest of the additive Issue #130 "
+                "successor bundle; pins the Issue #130 producers and the "
+                "closed parent bindings (parent rows carry their ACCEPTED "
+                "digests; the parent is never regenerated)"),
+            writes=frozenset({f"{_BUNDLE_130}/MANIFEST.sha256"}),
+            covers=(frozenset(FINALIZATION_PRODUCERS)
+                    | frozenset(PARENT_BINDINGS)
+                    | {f"{_BUNDLE_130}/parent-binding.json"}),
+            after=frozenset({"issue117-successor-hashes"}),
+            producer=_successor_manifest_producer,
         ),
         Stage(
             id="issue137-bundle-verify",
@@ -1125,24 +1383,33 @@ def default_registry() -> tuple[Stage, ...]:
                 "The accepted Issue #137 additive bundle is closed and must "
                 "stay byte-current (scripts/issue137_manifest.py --check). "
                 "Reads derived from the bundle's own evidence/producer "
-                "constants"),
+                "constants; the #137 bundle inputs are protected"),
             reads=_issue137_bundle_reads(),
-            after=frozenset({"issue117-manifest"}),
+            protected=True,
+            after=frozenset({"issue117-successor-manifest"}),
             verify=_issue137_bundle_verify,
         ),
     )
 
 
-def _producer_paths() -> frozenset[str]:
-    """Every producer path the index stage hashes (canonical constant)."""
-    _scripts(ROOT)
-    import issue117_proof  # noqa: PLC0415
-    return frozenset(issue117_proof.PRODUCERS)
+def _parent_binding_bytes() -> bytes:
+    return (json.dumps(_parent_binding_document(), indent=2,
+                       sort_keys=True) + "\n").encode("utf-8")
 
 
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
+def materialize_successor_bundle() -> None:
+    """Write the static parent-binding authority record (authored-once).
+
+    The binding document is deterministic engine output pinned by the
+    successor manifest; it is written through the engine's own apply
+    path during ``--write`` runs of the finalizer bootstrap.  It exists
+    so the immutable parent binding is a committed, reviewable artifact
+    rather than engine-internal state.
+    """
+    authority = ROOT / _BUNDLE_130 / "parent-binding.json"
+    authority.parent.mkdir(parents=True, exist_ok=True)
+    authority.write_bytes(_parent_binding_bytes())
+
 
 def _describe(stages: tuple[Stage, ...]) -> str:
     order = topological_order(stages)
