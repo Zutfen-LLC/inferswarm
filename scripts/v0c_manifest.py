@@ -22,20 +22,34 @@ BUNDLE = Path("docs/investigations/vulkan-v0-c")
 MANIFEST = BUNDLE / "MANIFEST.sha256"
 
 EVIDENCE_FILES = frozenset({
+    "CANONICAL-EXECUTION-AUTHORITY.json",
     "FINAL-TERMINAL.md",
     "INITIAL-OBSERVATION.md",
     "METHODOLOGY.md",
     "PHASE0-RUNTIME-IDENTITY.md",
+    "evidence/v0c-amd-a-final-qualification/capability-record.json",
+    "evidence/v0c-amd-a-final-qualification/qualification-observation.json",
+    "evidence/v0c-final-plan/candidate-set.json",
+    "evidence/v0c-final-plan/frozen-plan.json",
+    "evidence/v0c-final-plan/resource-snapshot.json",
+    "evidence/v0c-final-execution/accounting.json",
+    "evidence/v0c-final-execution/canonical-execution-observation.json",
+    "evidence/v0c-final-execution/correctness-result.json",
+    "evidence/v0c-final-execution/execution-receipt.json",
+    "evidence/v0c-final-execution/negative-controls.json",
+    "evidence/v0c-final-execution/terminal.json",
     "raw/v0c-amd-a-01/exit-code.txt",
     "raw/v0c-amd-a-01/stderr.txt",
     "raw/v0c-amd-a-01/stdout.txt",
 })
 SOURCES = frozenset({
+    "scripts/v0c_canonical_run.py",
     "scripts/v0c_execution_seam.py",
     "scripts/v0c_manifest.py",
     "scripts/v0c_vulkan_adapter.py",
 })
 TESTS = frozenset({
+    "tests/test_v0c_canonical_run.py",
     "tests/test_v0c_evidence_manifest.py",
     "tests/test_v0c_execution_seam.py",
     "tests/test_v0c_vulkan_adapter.py",
