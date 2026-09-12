@@ -220,7 +220,7 @@ def execute_canonical(authority: Mapping[str, Any], plan: Mapping[str, Any], mea
                       out: Path) -> dict[str, Any]:
     frozen = authority["frozen"]
     participant.validate_frozen_plan(plan)
-    if plan["plan_digest"] != frozen["plan_digest"]:
+    if "plan_digest" in frozen and plan["plan_digest"] != frozen["plan_digest"]:
         raise RunnerError("frozen plan digest differs from authority")
     candidate = plan["candidate"]
     for field in ("node_id", "compute_unit_id", "memory_resource_id", "execution_unit_id",
@@ -290,7 +290,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.mode == "plan":
-        capability = json.loads(Path(args.capability).read_text(encoding="utf-8"))
+        loaded = json.loads(Path(args.capability).read_text(encoding="utf-8"))
+        capability = loaded.get("capability_record", loaded)
         snapshot = build_snapshot(authority, capability)
         decision, plan = plan_and_freeze(authority, snapshot)
         out.mkdir(parents=True, exist_ok=False)
