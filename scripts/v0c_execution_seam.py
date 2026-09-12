@@ -243,11 +243,62 @@ def reconcile_materialization(plan: Mapping[str, Any], observed: Mapping[str, An
     return {"clean": True, "expected": expected, "observed": deepcopy(dict(observed))}
 
 
-def execution_receipt(plan: Mapping[str, Any], *, output: bytes,
-                      observed_execution: Mapping[str, Any]) -> dict[str, Any]:
-    """Attribute a result only to the exact proof-bearing frozen candidate."""
+def seal_canonical_execution_proof(*, plan: Mapping[str, Any], execution_evidence_id: str,
+                                   stdout_sha256: str, stderr_sha256: str, exit_code: int,
+                                   model_identity: Mapping[str, Any], offloaded_layers: list[int],
+                                   fallback_free: bool) -> dict[str, Any]:
+    """Seal fresh post-plan facts; a qualification observation cannot fit this schema."""
     validate_frozen_plan(plan)
     candidate = plan["candidate"]
+    if (not isinstance(execution_evidence_id, str) or not execution_evidence_id
+            or not all(isinstance(value, str) and len(value) == 64
+                       for value in (stdout_sha256, stderr_sha256))
+            or exit_code != 0 or offloaded_layers != [37, 37] or not fallback_free):
+        raise SeamError("canonical execution facts are incomplete")
+    body = {"schema": "inferswarm.v0c.canonical-execution-observation/1",
+            "plan_digest": plan["plan_digest"], "candidate_id": candidate["candidate_id"],
+            "execution_evidence_id": execution_evidence_id,
+            "execution_unit_id": candidate["execution_unit_id"],
+            "execution_contract_id": candidate["execution_contract_id"],
+            "compute_unit_id": candidate["compute_unit_id"],
+            "memory_resource_id": candidate["memory_resource_id"],
+            "implementation_id": candidate["implementation_id"],
+            "physical_device_bdf": candidate["physical_device_bdf"],
+            "runtime_identity": deepcopy(candidate["runtime_identity"]),
+            "model_identity": deepcopy(dict(model_identity)),
+            "stdout_sha256": stdout_sha256, "stderr_sha256": stderr_sha256,
+            "exit_code": exit_code, "offloaded_layers": offloaded_layers,
+            "fallback_free": fallback_free}
+    try:
+        body["proof_digest"] = _digest(body)
+    except (TypeError, ValueError) as error:
+        raise SeamError("canonical execution identity is not canonical") from error
+    return body
+
+
+def execution_receipt(plan: Mapping[str, Any], *, output: bytes,
+                      observed_execution: Mapping[str, Any] | None = None,
+                      canonical_execution_proof: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Attribute a result only to a fresh, sealed canonical execution proof."""
+    validate_frozen_plan(plan)
+    candidate = plan["candidate"]
+    if canonical_execution_proof is not None:
+        proof = dict(canonical_execution_proof)
+        digest = proof.pop("proof_digest", None)
+        if (proof.get("schema") != "inferswarm.v0c.canonical-execution-observation/1"
+                or not isinstance(digest, str) or _digest(proof) != digest):
+            raise SeamError("canonical execution proof is missing or altered")
+        required = ("plan_digest", "candidate_id", "execution_unit_id", "execution_contract_id",
+                    "compute_unit_id", "memory_resource_id", "implementation_id",
+                    "physical_device_bdf", "runtime_identity")
+        expected = {"plan_digest": plan["plan_digest"], "candidate_id": candidate["candidate_id"],
+                    **{field: candidate[field] for field in required[2:]}}
+        if any(proof.get(field) != value for field, value in expected.items()):
+            raise SeamError("canonical execution proof differs from frozen plan")
+        return {"plan_digest": plan["plan_digest"], "candidate_id": candidate["candidate_id"],
+                "canonical_execution_digest": digest, "output_sha256": sha256(output).hexdigest()}
+    if observed_execution is None:
+        raise SeamError("canonical execution proof is required")
     required = ("compute_unit_id", "memory_resource_id", "execution_unit_id",
                 "physical_device_bdf", "runtime_identity", "implementation_id",
                 "evidence_id", "observation_evidence_id", "observation_digest")
@@ -256,8 +307,7 @@ def execution_receipt(plan: Mapping[str, Any], *, output: bytes,
         differences = sorted(field for field in set(expected) | set(observed_execution)
                              if expected.get(field) != observed_execution.get(field))
         raise SeamError(f"execution attribution differs from frozen plan: {differences}")
-    return {"plan_digest": plan["plan_digest"],
-            **deepcopy(expected),
+    return {"plan_digest": plan["plan_digest"], **deepcopy(expected),
             "output_sha256": sha256(output).hexdigest()}
 
 

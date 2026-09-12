@@ -284,6 +284,29 @@ class V0CExecutionSeamTests(unittest.TestCase):
         )
         self.assertEqual(audit["matches"], [])
 
+    def test_receipt_requires_fresh_canonical_execution_proof(self):
+        decision = seam.plan_execution_unit(execution_unit=UNIT, compute_units=[AMD_CU],
+                                            objective="MIN_STARTUP_SECONDS")
+        plan = seam.freeze_plan(decision=decision, execution_unit=UNIT)
+        proof = seam.seal_canonical_execution_proof(
+            plan=plan, execution_evidence_id="canonical-amd-a-01",
+            stdout_sha256="a" * 64, stderr_sha256="b" * 64, exit_code=0,
+            model_identity={"sha256": "c" * 64, "bytes": 1929903264},
+            offloaded_layers=[37, 37], fallback_free=True,
+        )
+        receipt = seam.execution_receipt(plan, output=b"known output",
+                                          canonical_execution_proof=proof)
+        self.assertEqual(receipt["canonical_execution_digest"], proof["proof_digest"])
+        qualification_substitute = copy.deepcopy(proof)
+        qualification_substitute["schema"] = "inferswarm.v0c.qualification-observation/1"
+        with self.assertRaises(seam.SeamError):
+            seam.execution_receipt(plan, output=b"known output",
+                                   canonical_execution_proof=qualification_substitute)
+        wrong = copy.deepcopy(proof)
+        wrong["physical_device_bdf"] = "04:00.0"
+        with self.assertRaises(seam.SeamError):
+            seam.execution_receipt(plan, output=b"known output", canonical_execution_proof=wrong)
+
 
 if __name__ == "__main__":
     unittest.main()
