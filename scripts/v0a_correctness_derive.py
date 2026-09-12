@@ -4,7 +4,8 @@
 Reads every docs/investigations/vulkan-v0-a/correctness/correction-*/
 run.json and mechanically derives:
   - runs per (physical GPU, backend);
-  - unique canonical outputs per backend/device;
+  - unique visible generations per backend/device (terminal-replay
+    canonicalization, Addendum B);
   - all-exit-clean status;
   - backend-local repeatability (single unique generation within a device);
   - exact / semantic cross-backend relationship;
@@ -17,6 +18,7 @@ are validated against the correction methodology's frozen plan.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -35,6 +37,31 @@ EXPECTED_RUNS = {
 }
 
 
+def visible_text(stdout: str) -> str:
+    """Replay backspace-repaint like a terminal; extract visible text.
+
+    The interactive TUI repaints lines with backspace sequences, so a
+    raw character digest reflects stream position, not logical output.
+    Replaying the backspaces yields the text a reader actually sees;
+    the generation sentence is then extracted (METHODOLOGY-CORRECTION
+    Addendum B, canonical-generation limitation).
+    """
+    text = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", stdout or "")
+    out: list[str] = []
+    for ch in text:
+        if ch == "\b":
+            if out:
+                out.pop()
+        else:
+            out.append(ch)
+    visible = "".join(out)
+    match = re.search(r"The sentence .*?(?=\n\s*\n|\[\s*Prompt)",
+                      visible, re.S)
+    if not match:
+        return ""
+    return re.sub(r"\s+", " ", match.group(0)).strip()
+
+
 def derive() -> dict:
     records = []
     for run_dir in sorted(CORRECTNESS.glob("correction-*/run.json")):
@@ -42,6 +69,8 @@ def derive() -> dict:
 
     per_pair = defaultdict(list)
     for record in records:
+        record["generation_visible"] = visible_text(
+            record["stdout_verbatim"])
         key = (record["intended"]["gpu_label"],
                record["intended"]["physical_bdf"],
                "Vulkan" if record["intended"]["device_selector"]
@@ -51,7 +80,7 @@ def derive() -> dict:
     pairs = {}
     for key, runs in sorted(per_pair.items()):
         label, bdf, backend = key
-        digests = {r["generation_canonicalized_sha256"] for r in runs}
+        digests = {r["generation_visible"] for r in runs}
         all_clean = all(r["exit_code"] == 0 and not r["failures"]
                         for r in runs)
         all_proven = all(r["intended_device_proven"] for r in runs)
@@ -61,7 +90,7 @@ def derive() -> dict:
             "expected_runs": EXPECTED_RUNS.get(key),
             "run_ids": sorted(r["run_id"] for r in runs),
             "unique_canonical_outputs": len(digests),
-            "canonical_output_digests": sorted(digests),
+            "canonical_generations": sorted(digests),
             "all_exit_clean": all_clean,
             "all_intended_device_proven": all_proven,
             "backend_local_repeatability":
@@ -73,13 +102,11 @@ def derive() -> dict:
         }
 
     vk_digests = {d for key, info in pairs.items() if key.endswith("Vulkan")
-                  for d in info["canonical_output_digests"]}
+                  for d in info["canonical_generations"]}
     cuda_digests = {d for key, info in pairs.items() if key.endswith("CUDA")
-                    for d in info["canonical_output_digests"]}
+                    for d in info["canonical_generations"]}
     if vk_digests and cuda_digests:
         cross = ("exact-equal" if vk_digests == cuda_digests
-                 else "semantically-equal-exactly"
-                 if semantic_equal(vk_digests, cuda_digests)
                  else "differs")
     else:
         cross = "insufficient-data"
@@ -90,6 +117,7 @@ def derive() -> dict:
         "derived_from": "correctness/correction-*/run.json",
         "derivation": "mechanical (scripts/v0a_correctness_derive.py)",
         "correction_authority": "METHODOLOGY-CORRECTION.md",
+        "canonicalization": "terminal-replay visible text (Addendum B)",
         "total_runs": len(records),
         "expected_total_runs": sum(EXPECTED_RUNS.values()),
         "run_plan_matches_methodology":
@@ -99,9 +127,9 @@ def derive() -> dict:
         "pairs": pairs,
         "cross_backend_relationship": cross,
         "cross_backend_note":
-            "exact byte-equality of canonicalized generations if "
-            "exact-equal; semantic equality is judged only from the "
-            "retained text and is NOT a logits claim",
+            "comparison is exact byte-equality of the visible greedy "
+            "generation after terminal-replay canonicalization; it is "
+            "NOT a logits-level claim",
         "all_exit_clean": all(info["all_exit_clean"]
                               for info in pairs.values()),
         "all_intended_device_proven": all(
@@ -111,18 +139,6 @@ def derive() -> dict:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     return summary
-
-
-def semantic_equal(vk_digests: set, cuda_digests: set) -> bool:
-    """Compare retained canonical texts for cross-backend equality."""
-    texts = {}
-    for run_dir in sorted(CORRECTNESS.glob("correction-*/run.json")):
-        record = json.loads(run_dir.read_text(encoding="utf-8"))
-        texts[record["generation_canonicalized_sha256"]] = (
-            record["generation_canonicalized"])
-    vk_texts = {texts[d] for d in vk_digests if d in texts}
-    cuda_texts = {texts[d] for d in cuda_digests if d in texts}
-    return vk_texts == cuda_texts
 
 
 def main() -> int:
