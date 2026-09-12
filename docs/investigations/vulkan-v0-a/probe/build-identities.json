@@ -1,0 +1,42 @@
+{
+  "llama_cpp_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+  "clone": "https://github.com/ggml-org/llama.cpp.git (anonymous HTTPS, depth 1)",
+  "compiler": {
+    "gcc": "14.2.0-19",
+    "glibc": "2.41-12deb13u3",
+    "cmake": "3.31.6",
+    "ninja": "1.12.1"
+  },
+  "builds": {
+    "build-vulkan": {
+      "cmake": "cmake -B build-vulkan -G Ninja -DCMAKE_BUILD_TYPE=Release -DGGML_VULKAN=ON",
+      "backends": [
+        "CPU",
+        "Vulkan"
+      ],
+      "hashes": {
+        "llama-bench": "f78e6786c7fbdeff3f89c97c02df078cfbc297b886fd3f8010a639720b66914c",
+        "llama-cli": "c4bcd6a94e0b7fdb1959e6542ce0f85bb905c6c9083fcd1a7b6b0daf15e2c9be",
+        "libggml-vulkan.so.0.23.0": "7e4c8980986ec061bffbde1b0b5b6f279526d685d4ed39ec8b982436da83ecc6",
+        "libggml-base.so.0.23.0": "369aaa53f5446eaa2436c6485c69aeadbcfcdb8b247e0baa369d37672af28acc",
+        "libllama.so.0.4.0": "af7bdcb9d68451d8e18b200a73c211fd446a858e38be63e350a19d48efedcf85"
+      }
+    },
+    "build-cuda": {
+      "cmake": "cmake -B build-cuda -G Ninja -DCMAKE_BUILD_TYPE=Release -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=86 -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc",
+      "nvcc": "CUDA 13.1 V13.1.115",
+      "backends": [
+        "CPU",
+        "CUDA"
+      ],
+      "hashes": {
+        "llama-bench": "378a89f869db6d9a6715e4ab55d03e3a74e3f930013deb6328776bf0da849e55",
+        "llama-cli": "066d371207569e431cabe95191b38dc41683b722fdb6c2b6b41008d0b4ebda1e",
+        "libggml-cuda.so": "ea71a0e0668e09b8722c26db1db3ad468ca0378703cb32343c089febac817183",
+        "libggml-base.so.0.23.0": "369aaa53f5446eaa2436c6485c69aeadbcfcdb8b247e0baa369d37672af28acc",
+        "libllama.so.0.4.0": "4c9d7381b90684fa9842f1366047a2fa306688e5813c7d026bfccc1e8eb0cedf",
+        "libggml-cuda.so.0.23.0": "ea71a0e0668e09b8722c26db1db3ad468ca0378703cb32343c089febac817183"
+      }
+    }
+  }
+}

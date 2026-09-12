@@ -1,0 +1,298 @@
+{
+  "schema": "inferswarm.vulkan-v0-a.materialization-correction-run/1",
+  "correction_authority": "METHODOLOGY-CORRECTION.md",
+  "run_id": "mat-nvacuda-03",
+  "host": "inferswarm02",
+  "arm": "nvidia-cuda",
+  "argv": [
+    "/home/hermes/v0a/llama.cpp/build-cuda/bin/llama-cli",
+    "-m",
+    "/home/hermes/v0a/models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+    "-ngl",
+    "99",
+    "--device",
+    "CUDA0",
+    "-lv",
+    "4"
+  ],
+  "timestamp_utc_start": "2026-09-12T00:13:47.999832+00:00",
+  "timestamp_utc_end": "2026-09-12T00:14:05.041936+00:00",
+  "ready_boundary_timestamp_utc": "2026-09-12T00:14:05.042046+00:00",
+  "startup_to_ready_s": 11.364,
+  "idle_hold_s": 5.0,
+  "executable": {
+    "path": "/home/hermes/v0a/llama.cpp/build-cuda/bin/llama-cli",
+    "sha256": "066d371207569e431cabe95191b38dc41683b722fdb6c2b6b41008d0b4ebda1e"
+  },
+  "model": {
+    "path": "/home/hermes/v0a/models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+    "sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94"
+  },
+  "intended": {
+    "physical_bdf": "04:00.0",
+    "device_selector": "CUDA0",
+    "backend": "build-cuda"
+  },
+  "memory": {
+    "pre_launch": {
+      "gpu_vram_used_bytes": 1048576,
+      "proc": {},
+      "timestamp_utc": "2026-09-12T00:13:47.999832+00:00"
+    },
+    "ready_boundary": {
+      "t_rel_s": 11.335,
+      "event": "ready_boundary",
+      "gpu_vram_used_bytes": 3423600640,
+      "proc": {
+        "VmSize": 43750732,
+        "VmHWM": 2328712,
+        "VmRSS": 789508
+      }
+    },
+    "idle_hold_samples": [
+      {
+        "t_rel_s": 11.836,
+        "event": "idle_hold",
+        "gpu_vram_used_bytes": 3423600640,
+        "proc": {
+          "VmSize": 43750732,
+          "VmHWM": 2328712,
+          "VmRSS": 789508
+        }
+      },
+      {
+        "t_rel_s": 12.336,
+        "event": "idle_hold",
+        "gpu_vram_used_bytes": 3423600640,
+        "proc": {
+          "VmSize": 43750732,
+          "VmHWM": 2328712,
+          "VmRSS": 789508
+        }
+      },
+      {
+        "t_rel_s": 12.837,
+        "event": "idle_hold",
+        "gpu_vram_used_bytes": 3423600640,
+        "proc": {
+          "VmSize": 43750732,
+          "VmHWM": 2328712,
+          "VmRSS": 789508
+        }
+      },
+      {
+        "t_rel_s": 13.338,
+        "event": "idle_hold",
+        "gpu_vram_used_bytes": 3423600640,
+        "proc": {
+          "VmSize": 43750732,
+          "VmHWM": 2328712,
+          "VmRSS": 789508
+        }
+      },
+      {
+        "t_rel_s": 13.839,
+        "event": "idle_hold",
+        "gpu_vram_used_bytes": 3423600640,
+        "proc": {
+          "VmSize": 43750732,
+          "VmHWM": 2328712,
+          "VmRSS": 789508
+        }
+      },
+      {
+        "t_rel_s": 14.34,
+        "event": "idle_hold",
+        "gpu_vram_used_bytes": 3423600640,
+        "proc": {
+          "VmSize": 43750732,
+          "VmHWM": 2328712,
+          "VmRSS": 789508
+        }
+      },
+      {
+        "t_rel_s": 14.84,
+        "event": "idle_hold",
+        "gpu_vram_used_bytes": 3423600640,
+        "proc": {
+          "VmSize": 43750732,
+          "VmHWM": 2328712,
+          "VmRSS": 789508
+        }
+      },
+      {
+        "t_rel_s": 15.341,
+        "event": "idle_hold",
+        "gpu_vram_used_bytes": 3423600640,
+        "proc": {
+          "VmSize": 43750732,
+          "VmHWM": 2328712,
+          "VmRSS": 789508
+        }
+      },
+      {
+        "t_rel_s": 15.842,
+        "event": "idle_hold",
+        "gpu_vram_used_bytes": 3423600640,
+        "proc": {
+          "VmSize": 43750732,
+          "VmHWM": 2328712,
+          "VmRSS": 789508
+        }
+      },
+      {
+        "t_rel_s": 16.343,
+        "event": "idle_hold",
+        "gpu_vram_used_bytes": 3423600640,
+        "proc": {
+          "VmSize": 43750732,
+          "VmHWM": 2328712,
+          "VmRSS": 789508
+        }
+      }
+    ],
+    "idle_hold_end": {
+      "t_rel_s": 16.844,
+      "event": "idle_hold_end",
+      "gpu_vram_used_bytes": 3423600640,
+      "proc": {
+        "VmSize": 43750732,
+        "VmHWM": 2328712,
+        "VmRSS": 789508
+      }
+    }
+  },
+  "memory_samples_all": [
+    {
+      "t_rel_s": 0.0,
+      "event": "pre_launch_baseline",
+      "gpu_vram_used_bytes": 1048576,
+      "proc": {}
+    },
+    {
+      "t_rel_s": 11.335,
+      "event": "ready_boundary",
+      "gpu_vram_used_bytes": 3423600640,
+      "proc": {
+        "VmSize": 43750732,
+        "VmHWM": 2328712,
+        "VmRSS": 789508
+      }
+    },
+    {
+      "t_rel_s": 11.836,
+      "event": "idle_hold",
+      "gpu_vram_used_bytes": 3423600640,
+      "proc": {
+        "VmSize": 43750732,
+        "VmHWM": 2328712,
+        "VmRSS": 789508
+      }
+    },
+    {
+      "t_rel_s": 12.336,
+      "event": "idle_hold",
+      "gpu_vram_used_bytes": 3423600640,
+      "proc": {
+        "VmSize": 43750732,
+        "VmHWM": 2328712,
+        "VmRSS": 789508
+      }
+    },
+    {
+      "t_rel_s": 12.837,
+      "event": "idle_hold",
+      "gpu_vram_used_bytes": 3423600640,
+      "proc": {
+        "VmSize": 43750732,
+        "VmHWM": 2328712,
+        "VmRSS": 789508
+      }
+    },
+    {
+      "t_rel_s": 13.338,
+      "event": "idle_hold",
+      "gpu_vram_used_bytes": 3423600640,
+      "proc": {
+        "VmSize": 43750732,
+        "VmHWM": 2328712,
+        "VmRSS": 789508
+      }
+    },
+    {
+      "t_rel_s": 13.839,
+      "event": "idle_hold",
+      "gpu_vram_used_bytes": 3423600640,
+      "proc": {
+        "VmSize": 43750732,
+        "VmHWM": 2328712,
+        "VmRSS": 789508
+      }
+    },
+    {
+      "t_rel_s": 14.34,
+      "event": "idle_hold",
+      "gpu_vram_used_bytes": 3423600640,
+      "proc": {
+        "VmSize": 43750732,
+        "VmHWM": 2328712,
+        "VmRSS": 789508
+      }
+    },
+    {
+      "t_rel_s": 14.84,
+      "event": "idle_hold",
+      "gpu_vram_used_bytes": 3423600640,
+      "proc": {
+        "VmSize": 43750732,
+        "VmHWM": 2328712,
+        "VmRSS": 789508
+      }
+    },
+    {
+      "t_rel_s": 15.341,
+      "event": "idle_hold",
+      "gpu_vram_used_bytes": 3423600640,
+      "proc": {
+        "VmSize": 43750732,
+        "VmHWM": 2328712,
+        "VmRSS": 789508
+      }
+    },
+    {
+      "t_rel_s": 15.842,
+      "event": "idle_hold",
+      "gpu_vram_used_bytes": 3423600640,
+      "proc": {
+        "VmSize": 43750732,
+        "VmHWM": 2328712,
+        "VmRSS": 789508
+      }
+    },
+    {
+      "t_rel_s": 16.343,
+      "event": "idle_hold",
+      "gpu_vram_used_bytes": 3423600640,
+      "proc": {
+        "VmSize": 43750732,
+        "VmHWM": 2328712,
+        "VmRSS": 789508
+      }
+    },
+    {
+      "t_rel_s": 16.844,
+      "event": "idle_hold_end",
+      "gpu_vram_used_bytes": 3423600640,
+      "proc": {
+        "VmSize": 43750732,
+        "VmHWM": 2328712,
+        "VmRSS": 789508
+      }
+    }
+  ],
+  "zero_inference_proven": true,
+  "evaluation_markers_found": [],
+  "ready_boundary_detected": true,
+  "timed_out": false,
+  "exit_code": 0
+}

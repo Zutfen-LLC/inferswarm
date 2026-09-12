@@ -1,0 +1,146 @@
+=== date ===
+2026-09-11T16:04:43-04:00
+=== hostname/os ===
+inferswarm02
+13.6
+6.12.107+deb13-amd64
+=== lspci GPUs (VGA/3D/display) ===
+00:02.0 VGA compatible controller [0300]: Intel Corporation HD Graphics 510 [8086:1902] (rev 06)
+02:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere [Radeon RX 470/480/570/570X/580/580X/590] [1002:67df] (rev e7)
+03:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere [Radeon RX 470/480/570/570X/580/580X/590] [1002:67df] (rev e7)
+04:00.0 VGA compatible controller [0300]: NVIDIA Corporation GA104 [GeForce RTX 3060 Ti Lite Hash Rate] [10de:2489] (rev a1)
+=== full lspci -vvv -k for GPU BDFs (drivers + LnkCap/LnkSta) ===
+--- 00:02.0
+	Subsystem: Intel Corporation Device 2015
+	Region 0: Memory at 2ffe000000 (64-bit, non-prefetchable) [size=16M]
+	Region 2: Memory at 2f90000000 (64-bit, prefetchable) [size=256M]
+	Region 4: I/O ports at f000 [size=64]
+	Kernel driver in use: i915
+--- 02:00.0
+	Subsystem: Sapphire Technology Limited Radeon RX 570 Pulse 4GB
+	Region 0: Memory at 2000000000 (64-bit, prefetchable) [size=8G]
+	Region 2: Memory at 2200000000 (64-bit, prefetchable) [size=2M]
+	Region 4: I/O ports at d000 [size=256]
+	Region 5: Memory at df200000 (32-bit, non-prefetchable) [size=256K]
+	Kernel driver in use: amdgpu
+--- 03:00.0
+	Subsystem: Sapphire Technology Limited Nitro+ Radeon RX 570/580/590
+	Region 0: Memory at 2400000000 (64-bit, prefetchable) [size=8G]
+	Region 2: Memory at 2300000000 (64-bit, prefetchable) [size=2M]
+	Region 4: I/O ports at c000 [size=256]
+	Region 5: Memory at df100000 (32-bit, non-prefetchable) [size=256K]
+	Kernel driver in use: amdgpu
+--- 04:00.0
+	Subsystem: eVga.com. Corp. Device 4667
+	Region 0: Memory at de000000 (32-bit, non-prefetchable) [size=16M]
+	Region 1: Memory at 2fa0000000 (64-bit, prefetchable) [size=256M]
+	Region 3: Memory at 2fb0000000 (64-bit, prefetchable) [size=32M]
+	Region 5: I/O ports at b000 [size=128]
+	Kernel driver in use: nvidia
+=== amdgpu cards via sysfs ===
+--- /sys/class/drm/card0 -> /sys/devices/pci0000:00/0000:00:02.0/drm/card0
+0x8086
+0x1902
+0x06
+--- /sys/class/drm/card0-DP-1 -> /sys/devices/pci0000:00/0000:00:02.0/drm/card0/card0-DP-1
+--- /sys/class/drm/card0-DP-2 -> /sys/devices/pci0000:00/0000:00:02.0/drm/card0/card0-DP-2
+--- /sys/class/drm/card0-HDMI-A-1 -> /sys/devices/pci0000:00/0000:00:02.0/drm/card0/card0-HDMI-A-1
+--- /sys/class/drm/card0-HDMI-A-2 -> /sys/devices/pci0000:00/0000:00:02.0/drm/card0/card0-HDMI-A-2
+--- /sys/class/drm/card0-HDMI-A-3 -> /sys/devices/pci0000:00/0000:00:02.0/drm/card0/card0-HDMI-A-3
+--- /sys/class/drm/card1 -> /sys/devices/pci0000:00/0000:00:1c.5/0000:02:00.0/drm/card1
+0x1002
+0x67df
+0xe7
+--- /sys/class/drm/card1-DP-3 -> /sys/devices/pci0000:00/0000:00:1c.5/0000:02:00.0/drm/card1/card1-DP-3
+--- /sys/class/drm/card1-DP-4 -> /sys/devices/pci0000:00/0000:00:1c.5/0000:02:00.0/drm/card1/card1-DP-4
+--- /sys/class/drm/card1-DVI-D-1 -> /sys/devices/pci0000:00/0000:00:1c.5/0000:02:00.0/drm/card1/card1-DVI-D-1
+--- /sys/class/drm/card1-HDMI-A-4 -> /sys/devices/pci0000:00/0000:00:1c.5/0000:02:00.0/drm/card1/card1-HDMI-A-4
+--- /sys/class/drm/card1-HDMI-A-5 -> /sys/devices/pci0000:00/0000:00:1c.5/0000:02:00.0/drm/card1/card1-HDMI-A-5
+--- /sys/class/drm/card2 -> /sys/devices/pci0000:00/0000:00:1d.0/0000:03:00.0/drm/card2
+0x1002
+0x67df
+0xe7
+--- /sys/class/drm/card2-DP-5 -> /sys/devices/pci0000:00/0000:00:1d.0/0000:03:00.0/drm/card2/card2-DP-5
+--- /sys/class/drm/card2-DP-6 -> /sys/devices/pci0000:00/0000:00:1d.0/0000:03:00.0/drm/card2/card2-DP-6
+--- /sys/class/drm/card2-DVI-D-2 -> /sys/devices/pci0000:00/0000:00:1d.0/0000:03:00.0/drm/card2/card2-DVI-D-2
+--- /sys/class/drm/card2-HDMI-A-6 -> /sys/devices/pci0000:00/0000:00:1d.0/0000:03:00.0/drm/card2/card2-HDMI-A-6
+--- /sys/class/drm/card2-HDMI-A-7 -> /sys/devices/pci0000:00/0000:00:1d.0/0000:03:00.0/drm/card2/card2-HDMI-A-7
+--- /sys/class/drm/card3 -> /sys/devices/pci0000:00/0000:00:1d.3/0000:04:00.0/drm/card3
+0x10de
+0x2489
+0xa1
+--- /sys/class/drm/card3-DP-7 -> /sys/devices/pci0000:00/0000:00:1d.3/0000:04:00.0/drm/card3/card3-DP-7
+--- /sys/class/drm/card3-DP-8 -> /sys/devices/pci0000:00/0000:00:1d.3/0000:04:00.0/drm/card3/card3-DP-8
+--- /sys/class/drm/card3-DP-9 -> /sys/devices/pci0000:00/0000:00:1d.3/0000:04:00.0/drm/card3/card3-DP-9
+--- /sys/class/drm/card3-HDMI-A-8 -> /sys/devices/pci0000:00/0000:00:1d.3/0000:04:00.0/drm/card3/card3-HDMI-A-8
+=== vram ===
+/sys/class/drm/card0/: 
+/sys/class/drm/card0-DP-1/: 
+/sys/class/drm/card0-DP-2/: 
+/sys/class/drm/card0-HDMI-A-1/: 
+/sys/class/drm/card0-HDMI-A-2/: 
+/sys/class/drm/card0-HDMI-A-3/: 
+/sys/class/drm/card1/: 8589934592
+/sys/class/drm/card1-DP-3/: 
+/sys/class/drm/card1-DP-4/: 
+/sys/class/drm/card1-DVI-D-1/: 
+/sys/class/drm/card1-HDMI-A-4/: 
+/sys/class/drm/card1-HDMI-A-5/: 
+/sys/class/drm/card2/: 8589934592
+/sys/class/drm/card2-DP-5/: 
+/sys/class/drm/card2-DP-6/: 
+/sys/class/drm/card2-DVI-D-2/: 
+/sys/class/drm/card2-HDMI-A-6/: 
+/sys/class/drm/card2-HDMI-A-7/: 
+/sys/class/drm/card3/: 
+/sys/class/drm/card3-DP-7/: 
+/sys/class/drm/card3-DP-8/: 
+/sys/class/drm/card3-DP-9/: 
+/sys/class/drm/card3-HDMI-A-8/: 
+=== glxinfo/EGL/Mesa/vulkan pkgs ===
+firmware-amd-graphics 20250410-2
+firmware-realtek 20250410-2
+libegl-mesa0:amd64 25.0.7-2+deb13u1
+libgl1-mesa-dri:amd64 25.0.7-2+deb13u1
+libglx-mesa0:amd64 25.0.7-2+deb13u1
+libglx-nvidia0:amd64 615.71.09-1
+libglx0:amd64 1.7.0-1+b2
+libnvidia-cfg1:amd64 615.71.09-1
+libnvidia-glcore:amd64 615.71.09-1
+libnvidia-glvkspirv:amd64 615.71.09-1
+libnvidia-rtcore:amd64 615.71.09-1
+libnvidia-vksc-core 615.71.09-1
+libvulkan1:amd64 1.4.309.0-1
+libxcb-glx0:amd64 1.17.0-2+b1
+mesa-libgallium:amd64 25.0.7-2+deb13u1
+mesa-vulkan-drivers:amd64 25.0.7-2+deb13u1
+nvidia-driver-libs:amd64 615.71.09-1
+nvidia-vulkan-icd:amd64 615.71.09-1
+whiptail 0.52.25-1
+=== ICDs on disk ===
+total 40
+drwxr-xr-x 2 root root 4096 Sep 11 08:56 .
+drwxr-xr-x 5 root root 4096 Sep 11 08:56 ..
+-rw-r--r-- 1 root root  141 Jun 19 15:20 gfxstream_vk_icd.json
+-rw-r--r-- 1 root root  143 Jun 19 15:20 intel_hasvk_icd.json
+-rw-r--r-- 1 root root  137 Jun 19 15:20 intel_icd.json
+-rw-r--r-- 1 root root  135 Jun 19 15:20 lvp_icd.json
+-rw-r--r-- 1 root root  139 Jun 19 15:20 nouveau_icd.json
+-rw-r--r-- 1 root root  140 Sep  4 18:06 nvidia_icd.json
+-rw-r--r-- 1 root root  138 Jun 19 15:20 radeon_icd.json
+-rw-r--r-- 1 root root  138 Jun 19 15:20 virtio_icd.json
+total 8
+drwxr-xr-x 2 root root 4096 Mar 18  2025 .
+drwxr-xr-x 5 root root 4096 Sep 11 08:55 ..
+=== vulkan loader ver ===
+ii  libvulkan1:amd64 1.4.309.0-1  amd64        Vulkan loader library
+=== vulkaninfo present? ===
+bash: line 17: vulkaninfo: command not found
+=== nvidia ===
+name, uuid, pci.bus_id, memory.total [MiB], driver_version
+NVIDIA GeForce RTX 3060 Ti, GPU-73156e26-f91f-a778-9bf1-2167645d75da, 00000000:04:00.0, 8192 MiB, 615.71.09
+=== ROCm/HIP tools ===
+=== free/disk ===
+               total        used        free      shared  buff/cache   available
+Mem:            15Gi       783Mi        13Gi       1.4Mi       1.3Gi        14Gi
+/dev/sda3       449G   23G  404G   6% /

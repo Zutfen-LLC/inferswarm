@@ -1,0 +1,279 @@
+{
+  "schema": "inferswarm.vulkan-v0-a.backend-capability-record/1",
+  "campaign": {
+    "issue": 141,
+    "host": "inferswarm02",
+    "inference_main_at_start": "d1afad64ca8bdd05634d3d0e1e09b8077da525d5",
+    "probe": "llama.cpp 8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+    "model_sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
+    "correction_authority": "METHODOLOGY-CORRECTION.md (freeze 8115933f92e10b50588288d9908e75f12ebd92a5)",
+    "corrected_fields": [
+      "correctness (raw per-run records, device proof per run)",
+      "materialization (zero-inference harness; preliminary values superseded)"
+    ],
+    "throughput_source": "original accepted campaign (results/bench-*.csv), identity checks re-passed after correction"
+  },
+  "records": [
+    {
+      "physical_gpu": {
+        "label": "AMD-A",
+        "pci_bdf": "02:00.0",
+        "vendor_device_id": "1002:67df rev e7",
+        "name": "AMD Ellesmere POLARIS10 (Radeon RX 570/580 class, Sapphire Pulse board)",
+        "memory_resource": {
+          "kind": "device-local VRAM",
+          "bytes": 8589934592
+        },
+        "pcie_link": "LnkCap 8GT/s x16 / LnkSta x1 downgraded (riser)",
+        "identity_source": "PCI enumeration (backend-independent)"
+      },
+      "backend": {
+        "kind": "Vulkan",
+        "api": "1.4.305",
+        "driver": "Mesa RADV 25.0.7-2+deb13u1 (radeon ICD)",
+        "loader": "1.4.309.0",
+        "advertised": {
+          "fp16": false,
+          "bf16": false,
+          "int_dot": false,
+          "matrix_cores": "none",
+          "subgroup_size": 64,
+          "shared_memory_bytes": 65536
+        }
+      },
+      "model_support": "PASS (qwen2 3B Q4_K_M fully offloaded, -ngl 99)",
+      "correctness": {
+        "source": "corrected raw run records (results-correction/correctness-summary.json)",
+        "greedy_fixture_runs": 3,
+        "unique_visible_generations": 1,
+        "all_exit_clean": true,
+        "backend_local_repeatability": "stable",
+        "device_proof": "per-run stderr 'using device Vulkan1 (AMD Radeon RX 580 Series (RADV POLARIS10)) (0000:02:00.0)' + offloaded 37/37 layers"
+      },
+      "materialization": {
+        "status": "CORRECTED",
+        "authority": "METHODOLOGY-CORRECTION.md (zero-inference harness)",
+        "runs": 3,
+        "startup_to_ready_s_median": 26.48,
+        "vram_ready_bytes_median": 3254091776,
+        "vram_idle_hold_bytes_median": 3254091776,
+        "host_rss_ready_kB_median": 469720,
+        "host_rss_idle_hold_kB_median": 469720,
+        "preliminary_note": "results/mat2-amd-vk.* wall/peak values are RETAINED but PRELIMINARY/SUPERSEDED (their -n 0 runs evaluated input and produced output before exit)"
+      },
+      "prefill": {
+        "pp512_median_tps": 498.0,
+        "process_runs_tps": [
+          499.6,
+          497.8,
+          498.0
+        ]
+      },
+      "decode": {
+        "tg128_median_tps": 43.7,
+        "process_runs_tps": [
+          43.7,
+          43.6,
+          43.7
+        ]
+      },
+      "limitations": [
+        "no fp16 arithmetic (Fp16 storage only) on Polaris; ggml falls back to f32 compute",
+        "PCIe x1 riser link caps host<->device transfer; same restriction on both backends"
+      ],
+      "evidence": [
+        "../results/bench-amd-vk.csv",
+        "../results/mat2-amd-vk.*"
+      ]
+    },
+    {
+      "physical_gpu": {
+        "label": "AMD-A",
+        "pci_bdf": "02:00.0",
+        "vendor_device_id": "1002:67df rev e7",
+        "name": "AMD Ellesmere POLARIS10 (Radeon RX 570/580 class, Sapphire Pulse board)",
+        "memory_resource": {
+          "kind": "device-local VRAM",
+          "bytes": 8589934592
+        },
+        "pcie_link": "LnkCap 8GT/s x16 / LnkSta x1 downgraded (riser)",
+        "identity_source": "PCI enumeration (backend-independent)"
+      },
+      "backend": {
+        "kind": "HIP/ROCm",
+        "status": "NATIVE_BACKEND_UNAVAILABLE",
+        "demonstration": "hipGetDeviceCount -> error 100 'no ROCm-capable device is detected' (HIP_PLATFORM=amd, hipcc 5.7.1, HSA runtime 6.1.2); rocminfo lists CPU agent only; gfx803 not supported by packaged ROCm runtime",
+        "evidence": [
+          "../inventory/amd-native-path/"
+        ]
+      }
+    },
+    {
+      "physical_gpu": {
+        "label": "AMD-B",
+        "pci_bdf": "03:00.0",
+        "vendor_device_id": "1002:67df rev e7",
+        "name": "AMD Ellesmere POLARIS10 (Radeon RX 570/580/590 class, Sapphire Nitro+ board)",
+        "memory_resource": {
+          "kind": "device-local VRAM",
+          "bytes": 8589934592
+        },
+        "pcie_link": "LnkCap 8GT/s x16 / LnkSta x1 downgraded (riser)",
+        "identity_source": "PCI enumeration (backend-independent)"
+      },
+      "backend": {
+        "kind": "Vulkan",
+        "api": "1.4.305",
+        "driver": "Mesa RADV 25.0.7-2+deb13u1",
+        "advertised": "identical to AMD-A (same device id/rev/driver)"
+      },
+      "model_support": "PASS (smoke)",
+      "correctness": {
+        "source": "corrected raw run records (results-correction/correctness-summary.json)",
+        "greedy_fixture_runs": 1,
+        "unique_visible_generations": 1,
+        "matches_AMD_A": true,
+        "device_proof": "per-run stderr 'using device Vulkan2 ... (0000:03:00.0)' + offloaded 37/37 layers"
+      },
+      "limitations": [
+        "smoke/repeatability check only per methodology multi-GPU rule (materially identical to AMD-A)"
+      ],
+      "evidence": [
+        "../results/correctness-greedy-fixture.txt"
+      ]
+    },
+    {
+      "physical_gpu": {
+        "label": "NV-A",
+        "pci_bdf": "04:00.0",
+        "vendor_device_id": "10de:2489 rev a1",
+        "name": "NVIDIA GA104 GeForce RTX 3060 Ti LHR",
+        "memory_resource": {
+          "kind": "device-local VRAM",
+          "bytes": 8589934592
+        },
+        "pcie_link": "LnkCap 2.5GT/s x16 / LnkSta 2.5GT/s x1 (endpoint capture; root-port state not retained, no 'forced Gen3' claim)",
+        "identity_source": "PCI enumeration (backend-independent)"
+      },
+      "backend": {
+        "kind": "Vulkan",
+        "api": "1.4.351",
+        "driver": "NVIDIA proprietary 615.71.09 (nvidia ICD)",
+        "loader": "1.4.309.0",
+        "advertised": {
+          "fp16": true,
+          "bf16": false,
+          "int_dot": true,
+          "matrix_cores": "NV_coopmat2",
+          "subgroup_size": 32,
+          "shared_memory_bytes": 49152
+        }
+      },
+      "model_support": "PASS (fully offloaded)",
+      "correctness": {
+        "source": "corrected raw run records (results-correction/correctness-summary.json)",
+        "greedy_fixture_runs": 1,
+        "unique_visible_generations": 1,
+        "visible_generation_matches_all_Vulkan_runs": true,
+        "cross_backend_note": "NV-A CUDA run DIFFERS from all Vulkan runs at one word choice at this fixture (retained cross-backend numerical difference; NOT a threshold)"
+      },
+      "materialization": {
+        "status": "CORRECTED",
+        "authority": "METHODOLOGY-CORRECTION.md (zero-inference harness)",
+        "runs": 3,
+        "startup_to_ready_s_median": 13.023,
+        "vram_ready_bytes_median": 3279945728,
+        "vram_idle_hold_bytes_median": 3279945728,
+        "host_rss_ready_kB_median": 1003172,
+        "host_rss_idle_hold_kB_median": 1003172,
+        "preliminary_note": "results/mat2-nvidia-vk.* wall/peak values are RETAINED but PRELIMINARY/SUPERSEDED"
+      },
+      "prefill": {
+        "pp512_median_tps": 3579.0,
+        "process_runs_tps": [
+          3604.4,
+          3579.0,
+          3512.0
+        ]
+      },
+      "decode": {
+        "tg128_median_tps": 95.5,
+        "process_runs_tps": [
+          95.2,
+          95.5,
+          95.6
+        ]
+      },
+      "same_device_ratios_vs_cuda": {
+        "pp512": 0.9486,
+        "tg128": 0.8842
+      },
+      "limitations": [
+        "llvmpipe CPU device also enumerated by loader; every run pins --device Vulkan3 (no silent CPU fallback)"
+      ],
+      "evidence": [
+        "../results/bench-nvidia-vk.csv",
+        "../results/mat2-nvidia-vk.*"
+      ]
+    },
+    {
+      "physical_gpu": {
+        "label": "NV-A",
+        "pci_bdf": "04:00.0",
+        "vendor_device_id": "10de:2489 rev a1",
+        "name": "NVIDIA GA104 GeForce RTX 3060 Ti LHR",
+        "memory_resource": {
+          "kind": "device-local VRAM",
+          "bytes": 8589934592
+        },
+        "pcie_link": "LnkCap 2.5GT/s x16 / LnkSta 2.5GT/s x1 (endpoint capture; root-port state not retained, no 'forced Gen3' claim)",
+        "identity_source": "PCI enumeration (backend-independent)"
+      },
+      "backend": {
+        "kind": "CUDA",
+        "runtime": "CUDA 13.1.2 (UMD 13.4)",
+        "driver": "615.71.09",
+        "nvcc_build": "13.1.115, sm_86"
+      },
+      "model_support": "PASS (fully offloaded)",
+      "correctness": {
+        "source": "corrected raw run records (results-correction/correctness-summary.json)",
+        "greedy_fixture_runs": 1,
+        "unique_visible_generations": 1,
+        "cross_backend_note": "differs from Vulkan at one word choice at this fixture (retained cross-backend numerical difference; NOT a threshold)"
+      },
+      "materialization": {
+        "status": "CORRECTED",
+        "authority": "METHODOLOGY-CORRECTION.md (zero-inference harness)",
+        "runs": 3,
+        "startup_to_ready_s_median": 11.364,
+        "vram_ready_bytes_median": 3423600640,
+        "vram_idle_hold_bytes_median": 3423600640,
+        "host_rss_ready_kB_median": 789488,
+        "host_rss_idle_hold_kB_median": 789488,
+        "preliminary_note": "results/mat2-nvidia-cuda.* wall/peak values are RETAINED but PRELIMINARY/SUPERSEDED"
+      },
+      "prefill": {
+        "pp512_median_tps": 3773.1,
+        "process_runs_tps": [
+          3731.7,
+          3775.3,
+          3773.1
+        ]
+      },
+      "decode": {
+        "tg128_median_tps": 108.0,
+        "process_runs_tps": [
+          107.9,
+          108.1,
+          108.0
+        ]
+      },
+      "evidence": [
+        "../results/bench-nvidia-cuda.csv",
+        "../results/mat2-nvidia-cuda.*"
+      ]
+    }
+  ],
+  "generated_utc": "2026-09-11T21:59:29.220271+00:00"
+}

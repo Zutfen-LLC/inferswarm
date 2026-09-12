@@ -1,0 +1,36 @@
+=== first compile errors ===
+/usr/include/hip/nvidia_detail/nvidia_hip_runtime_api.h(1535): error: no suitable constructor exists to convert from "int" to "cudaMemLocation"
+          hipMemoryAdviseTocudaMemoryAdvise(advice), device));
+                                                     ^
+
+/usr/include/hip/nvidia_detail/nvidia_hip_runtime_api.h(1540): error: no suitable constructor exists to convert from "int" to "cudaMemLocation"
+      return hipCUDAErrorTohipError(cudaMemPrefetchAsync(dev_ptr, count, device, stream));
+                                                                         ^
+
+/usr/include/hip/nvidia_detail/nvidia_hip_runtime_api.h(1540): error: argument of type "hipStream_t" (aka "CUstream_st *") is incompatible with parameter of type "unsigned int"
+      return hipCUDAErrorTohipError(cudaMemPrefetchAsync(dev_ptr, count, device, stream));
+                                                                                 ^
+
+/usr/include/hip/nvidia_detail/nvidia_hip_runtime_api.h(1659): error: class "cudaDeviceProp" has no member "clockRate"
+      cdprop.clockRate = prop->clockRate;
+             ^
+
+/usr/include/hip/nvidia_detail/nvidia_hip_runtime_api.h(1664): error: class "cudaDeviceProp" has no member "computeMode"
+      cdprop.computeMode = prop->computeMode;
+             ^
+
+=== headers present? ===
+amd_detail
+channel_descriptor.h
+device_functions.h
+driver_types.h
+hcc_detail
+hip_bf16.h
+hip_bfloat16.h
+hip_common.h
+hip_complex.h
+hip_cooperative_groups.h
+/usr/include/hip/amd_detail/amd_hip_runtime.h
+/usr/include/hip/hip_runtime.h
+/usr/include/hip/nvidia_detail/nvidia_hip_runtime.h
+/usr/lib/x86_64-linux-gnu/libamdhip64.so

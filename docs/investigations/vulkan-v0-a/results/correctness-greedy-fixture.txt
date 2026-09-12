@@ -1,0 +1,3 @@
+greedy fixture generations (Vulkan arm: 3x AMD-A, 1x AMD-B, 1x NV-A): 5 runs, 1 unique
+
+The sentence "The quick brown fox jumps over the lazy dog" is a well-known pangram, and after this sentence, the next sentence could be anything, as there is no specific rule or context provided for what comes next.

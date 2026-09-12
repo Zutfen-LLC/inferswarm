@@ -1,0 +1,7 @@
+-rw-rw-r-- 1 hermes hermes 213435 Sep 11 16:14 nvidia-vulkaninfo.json
+-rw-rw-r-- 1 hermes hermes 166311 Sep 11 16:14 radeon-vulkaninfo.json
+=== radeon heaps/subgroup/fp16 ===
+=== nvidia heaps/subgroup/fp16 ===
+"deviceName": "AMD Radeon RX 580 Series (RADV POLARIS10)"
+"deviceName": "NVIDIA GeForce RTX 3060 Ti"
+=== subgroup + fp16 + coopmatrix (radeon) ===

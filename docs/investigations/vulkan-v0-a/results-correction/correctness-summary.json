@@ -1,0 +1,82 @@
+{
+  "schema": "inferswarm.vulkan-v0-a.correctness-correction-summary/1",
+  "derived_from": "correctness/correction-*/run.json",
+  "derivation": "mechanical (scripts/v0a_correctness_derive.py)",
+  "correction_authority": "METHODOLOGY-CORRECTION.md",
+  "canonicalization": "terminal-replay visible text (Addendum B)",
+  "total_runs": 6,
+  "expected_total_runs": 6,
+  "run_plan_matches_methodology": true,
+  "pairs": {
+    "AMD-A/02:00.0/Vulkan": {
+      "runs": 3,
+      "expected_runs": 3,
+      "run_ids": [
+        "cor-amdavk-01",
+        "cor-amdavk-02",
+        "cor-amdavk-03"
+      ],
+      "unique_canonical_outputs": 1,
+      "canonical_generations": [
+        "The sentence \"The quick brown fox jumps over the lazy dog\" is a well-known pangram, and after this sentence, the next sentence could be anything, as there is no specific rule or context provided for what comes next."
+      ],
+      "all_exit_clean": true,
+      "all_intended_device_proven": true,
+      "backend_local_repeatability": "stable",
+      "warnings_or_fallbacks": [],
+      "device_proof_failures": []
+    },
+    "AMD-B/03:00.0/Vulkan": {
+      "runs": 1,
+      "expected_runs": 1,
+      "run_ids": [
+        "cor-amdbvk-01"
+      ],
+      "unique_canonical_outputs": 1,
+      "canonical_generations": [
+        "The sentence \"The quick brown fox jumps over the lazy dog\" is a well-known pangram, and after this sentence, the next sentence could be anything, as there is no specific rule or context provided for what comes next."
+      ],
+      "all_exit_clean": true,
+      "all_intended_device_proven": true,
+      "backend_local_repeatability": "stable",
+      "warnings_or_fallbacks": [],
+      "device_proof_failures": []
+    },
+    "NV-A/04:00.0/CUDA": {
+      "runs": 1,
+      "expected_runs": 1,
+      "run_ids": [
+        "cor-nvacuda-01"
+      ],
+      "unique_canonical_outputs": 1,
+      "canonical_generations": [
+        "The sentence \"The quick brown fox jumps over the lazy dog\" is a well-known pangram, and after this sentence, the next sentence could be any word or phrase, as there is no specific rule or context provided for what comes next"
+      ],
+      "all_exit_clean": true,
+      "all_intended_device_proven": true,
+      "backend_local_repeatability": "stable",
+      "warnings_or_fallbacks": [],
+      "device_proof_failures": []
+    },
+    "NV-A/04:00.0/Vulkan": {
+      "runs": 1,
+      "expected_runs": 1,
+      "run_ids": [
+        "cor-nvavk-01"
+      ],
+      "unique_canonical_outputs": 1,
+      "canonical_generations": [
+        "The sentence \"The quick brown fox jumps over the lazy dog\" is a well-known pangram, and after this sentence, the next sentence could be anything, as there is no specific rule or context provided for what comes next."
+      ],
+      "all_exit_clean": true,
+      "all_intended_device_proven": true,
+      "backend_local_repeatability": "stable",
+      "warnings_or_fallbacks": [],
+      "device_proof_failures": []
+    }
+  },
+  "cross_backend_relationship": "differs",
+  "cross_backend_note": "comparison is exact byte-equality of the visible greedy generation after terminal-replay canonicalization; it is NOT a logits-level claim",
+  "all_exit_clean": true,
+  "all_intended_device_proven": true
+}

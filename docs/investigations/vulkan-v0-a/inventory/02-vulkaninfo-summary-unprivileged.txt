@@ -1,0 +1,129 @@
+=== apt install vulkan-tools (recorded change) ===
+Unpacking vulkan-tools (1.4.304.0+dfsg1-1) ...
+Setting up vulkan-tools (1.4.304.0+dfsg1-1) ...
+Processing triggers for man-db (2.13.1-1) ...
+=== sudo lspci link caps for all four GPUs ===
+--- 00:02.0
+			ExtTag- RBE+ FLReset+ TEE-IO-
+			RlxdOrd- ExtTag- PhantFunc- AuxPwr- NoSnoop- FLReset-
+	Kernel driver in use: i915
+--- 02:00.0
+			ExtTag+ AttnBtn- AttnInd- PwrInd- RBE+ FLReset- TEE-IO-
+			RlxdOrd+ ExtTag+ PhantFunc- AuxPwr- NoSnoop+
+		LnkCap:	Port #0, Speed 8GT/s, Width x16, ASPM L1, Exit Latency L1 <1us
+		LnkSta:	Speed 2.5GT/s (downgraded), Width x1 (downgraded)
+	Capabilities: [200 v1] Physical Resizable BAR
+	Kernel driver in use: amdgpu
+--- 03:00.0
+			ExtTag+ AttnBtn- AttnInd- PwrInd- RBE+ FLReset- TEE-IO-
+			RlxdOrd+ ExtTag+ PhantFunc- AuxPwr- NoSnoop+
+		LnkCap:	Port #0, Speed 8GT/s, Width x16, ASPM L1, Exit Latency L1 <1us
+		LnkSta:	Speed 2.5GT/s (downgraded), Width x1 (downgraded)
+	Capabilities: [200 v1] Physical Resizable BAR
+	Kernel driver in use: amdgpu
+--- 04:00.0
+			ExtTag+ AttnBtn- AttnInd- PwrInd- RBE+ FLReset+ TEE-IO-
+			RlxdOrd+ ExtTag+ PhantFunc- AuxPwr- NoSnoop+ FLReset-
+		LnkCap:	Port #0, Speed 2.5GT/s, Width x16, ASPM L0s L1, Exit Latency L0s <512ns, L1 <4us
+		LnkSta:	Speed 2.5GT/s, Width x1 (downgraded)
+	Capabilities: [bb0 v1] Physical Resizable BAR
+	Kernel driver in use: nvidia
+=== NUMA ===
+NUMA node(s):                            1
+NUMA node0 CPU(s):                       0,1
+=== bridges above GPUs ===
+-[0000:00]-+-00.0
+           +-02.0
+           +-08.0
+           +-14.0
+           +-14.2
+           +-16.0
+           +-17.0
+           +-1c.0-[01]----00.0
+           +-1c.5-[02]--+-00.0
+           |            \-00.1
+           +-1d.0-[03]--+-00.0
+           |            \-00.1
+           +-1d.3-[04]--+-00.0
+           |            \-00.1
+           +-1f.0
+           +-1f.2
+           +-1f.3
+           \-1f.4
+=== vulkaninfo --summary ===
+'DISPLAY' environment variable not set... skipping surface info
+WARNING: [../src/intel/vulkan/anv_physical_device.c:2420] Code 0 : Unable to open device /dev/dri/renderD128: Permission denied (VK_ERROR_INCOMPATIBLE_DRIVER)
+WARNING: [../src/intel/vulkan_hasvk/anv_device.c:1602] Code 0 : Unable to open device /dev/dri/renderD128: Permission denied (VK_ERROR_INCOMPATIBLE_DRIVER)
+WARNING: [../src/amd/vulkan/radv_physical_device.c:1988] Code 0 : Could not open device /dev/dri/renderD130: Permission denied (VK_ERROR_INCOMPATIBLE_DRIVER)
+WARNING: [../src/amd/vulkan/radv_physical_device.c:1988] Code 0 : Could not open device /dev/dri/renderD129: Permission denied (VK_ERROR_INCOMPATIBLE_DRIVER)
+==========
+VULKANINFO
+==========
+
+Vulkan Instance Version: 1.4.309
+
+
+Instance Extensions: count = 25
+-------------------------------
+VK_EXT_acquire_drm_display             : extension revision 1
+VK_EXT_acquire_xlib_display            : extension revision 1
+VK_EXT_debug_report                    : extension revision 10
+VK_EXT_debug_utils                     : extension revision 2
+VK_EXT_direct_mode_display             : extension revision 1
+VK_EXT_display_surface_counter         : extension revision 1
+VK_EXT_headless_surface                : extension revision 1
+VK_EXT_surface_maintenance1            : extension revision 1
+VK_EXT_swapchain_colorspace            : extension revision 5
+VK_KHR_device_group_creation           : extension revision 1
+VK_KHR_display                         : extension revision 23
+VK_KHR_external_fence_capabilities     : extension revision 1
+VK_KHR_external_memory_capabilities    : extension revision 1
+VK_KHR_external_semaphore_capabilities : extension revision 1
+VK_KHR_get_display_properties2         : extension revision 1
+VK_KHR_get_physical_device_properties2 : extension revision 2
+VK_KHR_get_surface_capabilities2       : extension revision 1
+VK_KHR_portability_enumeration         : extension revision 1
+VK_KHR_surface                         : extension revision 25
+VK_KHR_surface_protected_capabilities  : extension revision 1
+VK_KHR_wayland_surface                 : extension revision 6
+VK_KHR_xcb_surface                     : extension revision 6
+VK_KHR_xlib_surface                    : extension revision 6
+VK_LUNARG_direct_driver_loading        : extension revision 1
+VK_NV_display_stereo                   : extension revision 1
+
+Instance Layers: count = 5
+--------------------------
+VK_LAYER_INTEL_nullhw       INTEL NULL HW                1.1.73   version 1
+VK_LAYER_MESA_device_select Linux device selection layer 1.4.303  version 1
+VK_LAYER_MESA_overlay       Mesa Overlay layer           1.4.303  version 1
+VK_LAYER_NV_optimus         NVIDIA Optimus layer         1.4.351  version 1
+VK_LAYER_NV_present         NVIDIA Presentation Layer    1.4.351  version 1
+
+Devices:
+========
+GPU0:
+	apiVersion         = 1.4.351
+	driverVersion      = 615.71.9.0
+	vendorID           = 0x10de
+	deviceID           = 0x2489
+	deviceType         = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+	deviceName         = NVIDIA GeForce RTX 3060 Ti
+	driverID           = DRIVER_ID_NVIDIA_PROPRIETARY
+	driverName         = NVIDIA
+	driverInfo         = 615.71.09
+	conformanceVersion = 1.4.3.3
+	deviceUUID         = 73156e26-f91f-a778-9bf1-2167645d75da
+	driverUUID         = e960882b-0170-5057-bf3e-c686505f8776
+GPU1:
+	apiVersion         = 1.4.305
+	driverVersion      = 0.0.1
+	vendorID           = 0x10005
+	deviceID           = 0x0000
+	deviceType         = PHYSICAL_DEVICE_TYPE_CPU
+	deviceName         = llvmpipe (LLVM 19.1.7, 128 bits)
+	driverID           = DRIVER_ID_MESA_LLVMPIPE
+	driverName         = llvmpipe
+	driverInfo         = Mesa 25.0.7-2+deb13u1 (LLVM 19.1.7)
+	conformanceVersion = 1.3.1.1
+	deviceUUID         = 6d657361-3235-2e30-2e37-2d322b646500
+	driverUUID         = 6c6c766d-7069-7065-5555-494400000000

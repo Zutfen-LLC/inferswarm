@@ -1,0 +1,14 @@
+=== link caps (root) ===
+--- 02:00.0
+		LnkCap:	Port #0, Speed 8GT/s, Width x16, ASPM L1, Exit Latency L1 <1us
+		LnkSta:	Speed 2.5GT/s (downgraded), Width x1 (downgraded)
+--- 03:00.0
+		LnkCap:	Port #0, Speed 8GT/s, Width x16, ASPM L1, Exit Latency L1 <1us
+		LnkSta:	Speed 2.5GT/s (downgraded), Width x1 (downgraded)
+--- 04:00.0
+		LnkCap:	Port #0, Speed 2.5GT/s, Width x16, ASPM L0s L1, Exit Latency L0s <512ns, L1 <4us
+		LnkSta:	Speed 2.5GT/s, Width x1 (downgraded)
+=== MATERIAL CHANGE 1: hermes -> render+video groups ===
+OK
+uid=1001(hermes) gid=1001(hermes) groups=1001(hermes),27(sudo),44(video),100(users),992(render)
+=== verify as hermes (new session picks up groups) ===

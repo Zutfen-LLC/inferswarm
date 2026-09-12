@@ -1,0 +1,35 @@
+=== hipcc version/config ===
+HIP version: 5.7.31921-0
+nvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2025 NVIDIA Corporation
+Built on Tue_Dec_16_07:23:41_PM_PST_2025
+Cuda compilation tools, release 13.1, V13.1.115
+Build cuda_13.1.r13.1/compiler.37061995_0
+--- hipconfig:
+HIP version  : 5.7.31921-0
+
+== hipconfig
+HIP_PATH     : /usr
+ROCM_PATH    : /usr
+HIP_COMPILER : nvcc
+HIP_PLATFORM : nvidia
+HIP_RUNTIME  : cuda
+CPP_CONFIG   :  -D__HIP_PLATFORM_NVCC__= -D__HIP_PLATFORM_NVIDIA__= -I/usr/include -I/usr/local/cuda/include
+
+== nvcc
+CUDA_PATH   : /usr/local/cuda
+nvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2025 NVIDIA Corporation
+Built on Tue_Dec_16_07:23:41_PM_PST_2025
+Cuda compilation tools, release 13.1, V13.1.115
+Build cuda_13.1.r13.1/compiler.37061995_0
+
+=== Environment Variables
+PATH=/usr/local/bin:/usr/bin:/bin:/usr/games
+=== force AMD platform gfx803 ===
+Warning: The --amdgpu-target option has been deprecated and will be removed in the future.  Use --offload-arch instead.
+nvcc fatal   : Unknown option '--amdgpu-target=gfx803'
+exit=2
+=== clang rocm targets (is gfx803 even a compiled-in target?) ===
+Warning: The --amdgpu-target option has been deprecated and will be removed in the future.  Use --offload-arch instead.
+nvcc fatal   : Unknown option '--amdgpu-target=gfx803'

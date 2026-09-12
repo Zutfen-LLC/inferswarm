@@ -1,0 +1,41 @@
+=== apt sources configured ===
+deb http://deb.debian.org/debian/ trixie main non-free-firmware
+deb-src http://deb.debian.org/debian/ trixie main non-free-firmware
+deb http://security.debian.org/debian-security trixie-security main non-free-firmware
+deb-src http://security.debian.org/debian-security trixie-security main non-free-firmware
+deb http://deb.debian.org/debian/ trixie-updates main non-free-firmware
+deb-src http://deb.debian.org/debian/ trixie-updates main non-free-firmware
+deb [signed-by=/usr/share/keyrings/cuda-archive-keyring.gpg] https://developer.download.nvidia.com/compute/cuda/repos/debian13/x86_64/ /
+deb [signed-by=/usr/share/keyrings/tailscale-archive-keyring.gpg] https://pkgs.tailscale.com/stable/debian trixie main
+=== any rocm/hip in Debian archive? ===
+bmf - e-mail filter for spam that learns
+ccze - robust, modular log coloriser
+clamassassin - email virus filter wrapper for ClamAV
+crm114 - versatile classifier for e-mail and other data
+feed2imap - feed aggregator (RSS/Atom) which puts items on a IMAP mail server
+filtermail - utility to filter incoming e-mail as accepted, spam, or ignored
+getmail6 - mail retriever with support for POP3, IMAP4 and SDPS
+libhipblas-dev - portable interface for GPU BLAS - headers
+libhipblas-doc - portable interface for GPU BLAS - documentation
+libhipblas0 - portable interface for GPU BLAS - library
+hipcc - C++ Runtime API and Kernel Language for AMD and NVIDIA GPUs
+libamdhip64-5 - Heterogeneous Interface for Portability - AMD GPUs implementation
+libamdhip64-dev - Header files for the AMD implementation of HIP
+libamdhip64-doc - HIP Runtime Documentation
+(empty = not packaged)
+=== rocm keyring/repo present? ===
+no /opt/rocm
+=== gfx803 identity of the AMD cards ===
+=== shader toolchain availability for llama.cpp vulkan build ===
+glslc:
+  Installed: (none)
+--
+glslang-tools:
+  Installed: (none)
+/usr/bin/make
+/usr/bin/g++
+/usr/bin/cc
+bash: line 12: cmake: command not found
+=== nvcc ===
+Cuda compilation tools, release 13.1, V13.1.115
+Build cuda_13.1.r13.1/compiler.37061995_0

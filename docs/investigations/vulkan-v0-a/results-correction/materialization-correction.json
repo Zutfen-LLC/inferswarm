@@ -1,0 +1,99 @@
+{
+  "schema": "inferswarm.vulkan-v0-a.materialization-correction-summary/1",
+  "derived_from": "results-correction/materialization/*/run.json",
+  "derivation": "mechanical (scripts/v0a_materialization_derive.py)",
+  "correction_authority": "METHODOLOGY-CORRECTION.md",
+  "preliminary_disposition": "results/mat2-* and results/materialization-walltime.txt are RETAINED but PRELIMINARY/SUPERSEDED: the llama-cli -n 0 runs entered the interactive prompt, evaluated input, and produced output before exit, so their wall times are not load-only, time-to-ready, or pure materialization times; their RSS/VRAM streams have no ready-boundary event marker",
+  "arms": {
+    "amd-a-vulkan": {
+      "runs": 3,
+      "run_ids": [
+        "mat-amdavk-01",
+        "mat-amdavk-02",
+        "mat-amdavk-03"
+      ],
+      "all_zero_inference_proven": true,
+      "all_exit_clean": true,
+      "startup_to_ready_s_median": 26.48,
+      "startup_to_ready_s_all": [
+        26.734,
+        26.386,
+        26.48
+      ],
+      "gpu_vram_peak_bytes_median": 3254091776,
+      "gpu_vram_ready_bytes_median": 3254091776,
+      "gpu_vram_idle_hold_bytes_median": 3254091776,
+      "host_rss_peak_kB_median": 469720,
+      "host_rss_ready_kB_median": 469720,
+      "host_rss_idle_hold_kB_median": 469720
+    },
+    "nvidia-vulkan": {
+      "runs": 3,
+      "run_ids": [
+        "mat-nvavk-01",
+        "mat-nvavk-02",
+        "mat-nvavk-03"
+      ],
+      "all_zero_inference_proven": true,
+      "all_exit_clean": true,
+      "startup_to_ready_s_median": 13.023,
+      "startup_to_ready_s_all": [
+        13.108,
+        13.023,
+        12.992
+      ],
+      "gpu_vram_peak_bytes_median": 3279945728,
+      "gpu_vram_ready_bytes_median": 3279945728,
+      "gpu_vram_idle_hold_bytes_median": 3279945728,
+      "host_rss_peak_kB_median": 1003172,
+      "host_rss_ready_kB_median": 1003172,
+      "host_rss_idle_hold_kB_median": 1003172
+    },
+    "nvidia-cuda": {
+      "runs": 3,
+      "run_ids": [
+        "mat-nvacuda-01",
+        "mat-nvacuda-02",
+        "mat-nvacuda-03"
+      ],
+      "all_zero_inference_proven": true,
+      "all_exit_clean": true,
+      "startup_to_ready_s_median": 11.364,
+      "startup_to_ready_s_all": [
+        11.365,
+        11.351,
+        11.364
+      ],
+      "gpu_vram_peak_bytes_median": 3423600640,
+      "gpu_vram_ready_bytes_median": 3423600640,
+      "gpu_vram_idle_hold_bytes_median": 3423600640,
+      "host_rss_peak_kB_median": 789488,
+      "host_rss_ready_kB_median": 789488,
+      "host_rss_idle_hold_kB_median": 789488
+    }
+  },
+  "nvidia_vulkan_minus_cuda_deltas": {
+    "startup_to_ready_s_median": {
+      "vulkan_minus_cuda": 1.659
+    },
+    "gpu_vram_peak_bytes_median": {
+      "vulkan_minus_cuda": -143654912
+    },
+    "gpu_vram_ready_bytes_median": {
+      "vulkan_minus_cuda": -143654912
+    },
+    "gpu_vram_idle_hold_bytes_median": {
+      "vulkan_minus_cuda": -143654912
+    },
+    "host_rss_peak_kB_median": {
+      "vulkan_minus_cuda": 213684
+    },
+    "host_rss_ready_kB_median": {
+      "vulkan_minus_cuda": 213684
+    },
+    "host_rss_idle_hold_kB_median": {
+      "vulkan_minus_cuda": 213684
+    }
+  },
+  "sufficient_runs_per_arm": true
+}

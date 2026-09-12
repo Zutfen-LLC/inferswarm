@@ -1,0 +1,7 @@
+amd-vk rc=0 wall_ms=29047
+nvidia-vk rc=0 wall_ms=13181
+nvidia-cuda rc=0 wall_ms=11357
+amd-vk rc=0 wall_ms=29156
+nvidia-vk rc=0 wall_ms=13250
+nvidia-cuda rc=0 wall_ms=11361
+TW_DONE 2026-09-11T17:58:20-04:00
