@@ -63,8 +63,8 @@ READY_TIMEOUT_S = 300
 IDLE_HOLD_S = 5.0
 SAMPLE_INTERVAL_S = 0.5
 
-READY_MARKER = "== Running in interactive mode =="
-READY_PROMPT = "> "
+READY_MARKER = "/glob <pattern>     add text files using globbing pattern"
+READY_PROMPT = ">"
 EVAL_MARKERS = (
     "prompt processing time", "eval time", "prompt evaluation",
     "timings per token",
@@ -174,7 +174,9 @@ def run_once(arm: str, run_id: str, out_dir: Path,
             transcript.extend(chunk)
         if ready_t is None:
             text = transcript.decode("utf-8", errors="replace")
-            if READY_MARKER in text and text.rstrip().endswith(">"):
+            stripped = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", text)
+            if (READY_MARKER in stripped
+                    and stripped.rstrip().endswith(READY_PROMPT)):
                 entry = sample("ready_boundary")
                 ready_t = time.monotonic()
                 ready_sample = entry
