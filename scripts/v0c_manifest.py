@@ -22,11 +22,14 @@ BUNDLE = Path("docs/investigations/vulkan-v0-c")
 MANIFEST = BUNDLE / "MANIFEST.sha256"
 
 EVIDENCE_FILES = frozenset({
+    "ATTEMPT-01-CORRECTION.json",
+    "ATTEMPT-01-PREQUALIFICATION-AUTHORITY.json",
     "CANONICAL-EXECUTION-AUTHORITY.json",
     "FINAL-TERMINAL.md",
     "INITIAL-OBSERVATION.md",
     "METHODOLOGY.md",
     "PHASE0-RUNTIME-IDENTITY.md",
+    "PLAN-BINDING-ATTEMPT-01.json",
     "evidence/v0c-amd-a-final-qualification/capability-record.json",
     "evidence/v0c-amd-a-final-qualification/qualification-observation.json",
     "evidence/v0c-final-plan/candidate-set.json",
@@ -41,6 +44,14 @@ EVIDENCE_FILES = frozenset({
     "raw/v0c-amd-a-01/exit-code.txt",
     "raw/v0c-amd-a-01/stderr.txt",
     "raw/v0c-amd-a-01/stdout.txt",
+    "raw/v0c-amd-a-final-canonical-01/attempt.json",
+    "raw/v0c-amd-a-final-canonical-01/exit-code.txt",
+    "raw/v0c-amd-a-final-canonical-01/stderr.txt",
+    "raw/v0c-amd-a-final-canonical-01/stdout.txt",
+    "raw/v0c-amd-a-final-qualification-01/attempt.json",
+    "raw/v0c-amd-a-final-qualification-01/exit-code.txt",
+    "raw/v0c-amd-a-final-qualification-01/stderr.txt",
+    "raw/v0c-amd-a-final-qualification-01/stdout.txt",
 })
 SOURCES = frozenset({
     "scripts/v0c_canonical_run.py",
