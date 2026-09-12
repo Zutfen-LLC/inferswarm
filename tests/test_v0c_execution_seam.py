@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import math
 import sys
 import unittest
 from pathlib import Path
@@ -16,8 +17,16 @@ import v0c_execution_seam as seam  # noqa: E402
 AMD_CU = {
     "compute_unit_id": "cu-amd-a",
     "node_id": "node-inferswarm02",
+    "physical_device_bdf": "02:00.0",
     "memory_resource": {"memory_resource_id": "mr-amd-a-vram", "bytes": 8589934592},
     "capabilities": [{
+        "bound_compute_unit_id": "cu-amd-a",
+        "bound_memory_resource_id": "mr-amd-a-vram",
+        "bound_execution_unit_id": "unit-q4km-whole-model",
+        "physical_device_bdf": "02:00.0",
+        "runtime_identity": {"binary_sha256": "build-amd", "driver": "radv-x"},
+        "observation_evidence_id": "evidence-amd-a",
+        "observation_digest": "proof-amd-a",
         "implementation_id": "impl-portable-amd-a",
         "required_features": ["compute"],
         "representations": ["gguf-q4-k-m"],
@@ -30,8 +39,16 @@ AMD_CU = {
 CUDA_CU = {
     "compute_unit_id": "cu-nv-a",
     "node_id": "node-inferswarm02",
+    "physical_device_bdf": "04:00.0",
     "memory_resource": {"memory_resource_id": "mr-nv-a-vram", "bytes": 8589934592},
     "capabilities": [{
+        "bound_compute_unit_id": "cu-nv-a",
+        "bound_memory_resource_id": "mr-nv-a-vram",
+        "bound_execution_unit_id": "unit-q4km-whole-model",
+        "physical_device_bdf": "04:00.0",
+        "runtime_identity": {"binary_sha256": "build-nv", "driver": "cuda-x"},
+        "observation_evidence_id": "evidence-nv-a",
+        "observation_digest": "proof-nv-a",
         "implementation_id": "impl-native-nv-a",
         "required_features": ["compute"],
         "representations": ["gguf-q4-k-m"],
@@ -90,9 +107,11 @@ class V0CExecutionSeamTests(unittest.TestCase):
     def test_identity_encoding_cannot_alias_delimiter_containing_values(self):
         left = copy.deepcopy(AMD_CU)
         left["compute_unit_id"] = "cu#a"
+        left["capabilities"][0]["bound_compute_unit_id"] = "cu#a"
         left["capabilities"][0]["implementation_id"] = "b"
         right = copy.deepcopy(AMD_CU)
         right["compute_unit_id"] = "cu"
+        right["capabilities"][0]["bound_compute_unit_id"] = "cu"
         right["capabilities"][0]["implementation_id"] = "a#b"
         decision = seam.plan_execution_unit(
             execution_unit=UNIT, compute_units=[left, right], objective="MIN_STARTUP_SECONDS"
@@ -131,6 +150,35 @@ class V0CExecutionSeamTests(unittest.TestCase):
         with self.assertRaises(seam.SeamError):
             seam.validate_frozen_plan(malformed)
 
+    def test_rejects_missing_or_contradictory_observation_bindings(self):
+        cases = (
+            ("bound_memory_resource_id", "mr-other", "CAPABILITY_MEMORY_BINDING_MISMATCH"),
+            ("bound_execution_unit_id", "unit-other", "CAPABILITY_EXECUTION_UNIT_BINDING_MISMATCH"),
+            ("observation_evidence_id", "evidence-other", "CAPABILITY_OBSERVATION_EVIDENCE_MISMATCH"),
+            ("physical_device_bdf", "04:00.0", "CAPABILITY_DEVICE_BINDING_MISMATCH"),
+            ("observation_digest", None, "CAPABILITY_OBSERVATION_MISSING"),
+            ("runtime_identity", {}, "CAPABILITY_OBSERVATION_MISSING"),
+            ("implementation_id", None, "CAPABILITY_OBSERVATION_MISSING"),
+            ("evidence_id", None, "CAPABILITY_OBSERVATION_MISSING"),
+        )
+        for field, wrong, reason in cases:
+            with self.subTest(field=field):
+                malformed = copy.deepcopy(AMD_CU)
+                malformed["capabilities"][0][field] = wrong
+                decision = seam.plan_execution_unit(
+                    execution_unit=UNIT, compute_units=[malformed], objective="MIN_STARTUP_SECONDS"
+                )
+                self.assertIsNone(decision["selected_candidate_id"])
+                self.assertEqual(decision["explanations"][0]["reason"], reason)
+
+    def test_rejects_noncanonical_runtime_identity(self):
+        malformed = copy.deepcopy(AMD_CU)
+        malformed["capabilities"][0]["runtime_identity"]["invalid"] = math.nan
+        with self.assertRaises(seam.SeamError):
+            seam.plan_execution_unit(
+                execution_unit=UNIT, compute_units=[malformed], objective="MIN_STARTUP_SECONDS"
+            )
+
     def test_rejects_capability_bound_to_wrong_physical_device(self):
         wrong = copy.deepcopy(AMD_CU)
         wrong["capabilities"][0]["bound_compute_unit_id"] = "cu-nv-a"
@@ -157,10 +205,16 @@ class V0CExecutionSeamTests(unittest.TestCase):
         )
         plan = seam.freeze_plan(decision=decision, execution_unit=UNIT)
         seam.validate_frozen_plan(plan)
-        tampered = copy.deepcopy(plan)
-        tampered["candidate"]["compute_unit_id"] = "cu-other"
-        with self.assertRaises(seam.SeamError):
-            seam.validate_frozen_plan(tampered)
+        for field, wrong in (("compute_unit_id", "cu-other"),
+                             ("memory_resource_id", "mr-other"),
+                             ("execution_unit_id", "unit-other")):
+            tampered = copy.deepcopy(plan)
+            tampered["candidate"][field] = wrong
+            tampered["plan_digest"] = seam._digest({
+                key: tampered[key] for key in tampered if key != "plan_digest"
+            })
+            with self.subTest(field=field), self.assertRaises(seam.SeamError):
+                seam.validate_frozen_plan(tampered)
 
     def test_reconciles_only_expected_materialization_and_result_identity(self):
         decision = seam.plan_execution_unit(
@@ -174,10 +228,35 @@ class V0CExecutionSeamTests(unittest.TestCase):
         observed["source_fetches_after_ready"] = 1
         with self.assertRaises(seam.SeamError):
             seam.reconcile_materialization(plan, observed)
-        receipt = seam.execution_receipt(plan, output=b"known output", device_identity="cu-amd-a")
+        observed_execution = {
+            "compute_unit_id": "cu-amd-a",
+            "memory_resource_id": "mr-amd-a-vram",
+            "execution_unit_id": "unit-q4km-whole-model",
+            "physical_device_bdf": "02:00.0",
+            "runtime_identity": {"binary_sha256": "build-amd", "driver": "radv-x"},
+            "implementation_id": "impl-portable-amd-a",
+            "evidence_id": "evidence-amd-a",
+            "observation_evidence_id": "evidence-amd-a",
+            "observation_digest": "proof-amd-a",
+        }
+        receipt = seam.execution_receipt(
+            plan, output=b"known output", observed_execution=observed_execution
+        )
         self.assertEqual(receipt["output_sha256"], hashlib.sha256(b"known output").hexdigest())
-        with self.assertRaises(seam.SeamError):
-            seam.execution_receipt(plan, output=b"known output", device_identity="cu-other")
+        for field, wrong in (("compute_unit_id", "cu-other"),
+                             ("memory_resource_id", "mr-other"),
+                             ("execution_unit_id", "unit-other"),
+                             ("physical_device_bdf", "04:00.0"),
+                             ("runtime_identity", {"binary_sha256": "other"}),
+                             ("implementation_id", "impl-other"),
+                             ("observation_digest", "proof-other")):
+            with self.subTest(field=field):
+                mismatched = copy.deepcopy(observed_execution)
+                mismatched[field] = wrong
+                with self.assertRaises(seam.SeamError):
+                    seam.execution_receipt(
+                        plan, output=b"known output", observed_execution=mismatched
+                    )
 
     def test_generic_planner_contains_no_backend_or_vendor_branches(self):
         audit = seam.planner_purity_audit(

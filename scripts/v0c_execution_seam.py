@@ -22,7 +22,8 @@ class SeamError(RuntimeError):
 
 
 def _canonical_bytes(value: Mapping[str, Any]) -> bytes:
-    return json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return json.dumps(value, sort_keys=True, separators=(",", ":"),
+                      allow_nan=False).encode("utf-8")
 
 
 def _digest(value: Mapping[str, Any]) -> str:
@@ -32,22 +33,51 @@ def _digest(value: Mapping[str, Any]) -> str:
 def _candidate_id(unit: Mapping[str, Any], compute_unit: Mapping[str, Any],
                   capability: Mapping[str, Any]) -> str:
     """Derive an unambiguous opaque identifier from structured identity facts."""
+    memory = compute_unit.get("memory_resource", compute_unit)
     fields = {
         "execution_unit_id": unit.get("execution_unit_id"),
         "compute_unit_id": compute_unit.get("compute_unit_id"),
+        "memory_resource_id": memory.get("memory_resource_id"),
         "implementation_id": capability.get("implementation_id"),
         "evidence_id": capability.get("evidence_id"),
+        "physical_device_bdf": capability.get("physical_device_bdf"),
+        "runtime_identity": capability.get("runtime_identity"),
+        "observation_evidence_id": capability.get("observation_evidence_id"),
+        "observation_digest": capability.get("observation_digest"),
     }
-    if not all(isinstance(value, str) and value for value in fields.values()):
-        raise SeamError("candidate identity fields must be nonempty strings")
-    return f"candidate-{_digest(fields)}"
+    try:
+        return f"candidate-{_digest(fields)}"
+    except (TypeError, ValueError) as error:
+        raise SeamError("candidate identity facts must be canonical") from error
 
 
 def _eligibility(unit: Mapping[str, Any], compute_unit: Mapping[str, Any],
                  capability: Mapping[str, Any]) -> str | None:
-    bound = capability.get("bound_compute_unit_id")
-    if bound is not None and bound != compute_unit["compute_unit_id"]:
+    identity_fields = ("implementation_id", "evidence_id", "physical_device_bdf",
+                       "observation_evidence_id", "observation_digest")
+    if not all(isinstance(capability.get(field), str) and capability[field]
+               for field in identity_fields):
+        return "CAPABILITY_OBSERVATION_MISSING"
+    if capability.get("bound_compute_unit_id") != compute_unit["compute_unit_id"]:
         return "CAPABILITY_DEVICE_BINDING_MISMATCH"
+    memory = compute_unit.get("memory_resource", {})
+    if capability.get("bound_memory_resource_id") != memory.get("memory_resource_id"):
+        return "CAPABILITY_MEMORY_BINDING_MISMATCH"
+    if capability.get("bound_execution_unit_id") != unit.get("execution_unit_id"):
+        return "CAPABILITY_EXECUTION_UNIT_BINDING_MISMATCH"
+    if capability.get("physical_device_bdf") != compute_unit.get("physical_device_bdf"):
+        return "CAPABILITY_DEVICE_BINDING_MISMATCH"
+    if capability.get("observation_evidence_id") != capability.get("evidence_id"):
+        return "CAPABILITY_OBSERVATION_EVIDENCE_MISMATCH"
+    observation_digest = capability.get("observation_digest")
+    runtime_identity = capability.get("runtime_identity")
+    if (not isinstance(observation_digest, str) or not observation_digest
+            or not isinstance(runtime_identity, Mapping) or not runtime_identity):
+        return "CAPABILITY_OBSERVATION_MISSING"
+    try:
+        _canonical_bytes(dict(runtime_identity))
+    except (TypeError, ValueError):
+        return "CAPABILITY_OBSERVATION_MISSING"
     if not capability.get("evidence_fresh", False):
         return "EVIDENCE_STALE"
     if capability.get("integrity_status") != unit["required_integrity_status"]:
@@ -84,6 +114,10 @@ def plan_execution_unit(*, execution_unit: Mapping[str, Any],
                 "memory_resource_id": compute_unit["memory_resource"]["memory_resource_id"],
                 "implementation_id": capability.get("implementation_id"),
                 "evidence_id": capability.get("evidence_id"),
+                "physical_device_bdf": capability.get("physical_device_bdf"),
+                "runtime_identity": deepcopy(capability.get("runtime_identity")),
+                "observation_evidence_id": capability.get("observation_evidence_id"),
+                "observation_digest": capability.get("observation_digest"),
                 "required_representation": execution_unit["required_representation"],
             }
             reason = _eligibility(execution_unit, compute_unit, capability)
@@ -143,11 +177,30 @@ def validate_frozen_plan(plan: Mapping[str, Any]) -> None:
         raise SeamError("frozen plan identity mismatch")
     unit = plan["execution_unit"]
     candidate = plan["candidate"]
+    scalar_fields = ("execution_unit_id", "compute_unit_id", "memory_resource_id",
+                     "implementation_id", "evidence_id", "physical_device_bdf",
+                     "observation_evidence_id", "observation_digest")
+    if (not all(isinstance(candidate.get(field), str) and candidate[field]
+                for field in scalar_fields)
+            or not isinstance(candidate.get("runtime_identity"), Mapping)
+            or not candidate["runtime_identity"]):
+        raise SeamError("candidate proof identity is incomplete")
+    try:
+        _canonical_bytes(dict(candidate["runtime_identity"]))
+    except (TypeError, ValueError) as error:
+        raise SeamError("candidate runtime identity is not canonical") from error
+    if candidate.get("execution_unit_id") != unit.get("execution_unit_id"):
+        raise SeamError("candidate execution unit differs from frozen plan")
     expected_id = _candidate_id(
         unit,
-        {"compute_unit_id": candidate.get("compute_unit_id")},
+        {"compute_unit_id": candidate.get("compute_unit_id"),
+         "memory_resource_id": candidate.get("memory_resource_id")},
         {"implementation_id": candidate.get("implementation_id"),
-         "evidence_id": candidate.get("evidence_id")},
+         "evidence_id": candidate.get("evidence_id"),
+         "physical_device_bdf": candidate.get("physical_device_bdf"),
+         "runtime_identity": candidate.get("runtime_identity"),
+         "observation_evidence_id": candidate.get("observation_evidence_id"),
+         "observation_digest": candidate.get("observation_digest")},
     )
     if candidate.get("candidate_id") != expected_id:
         raise SeamError("candidate does not belong to frozen execution unit")
@@ -182,15 +235,20 @@ def reconcile_materialization(plan: Mapping[str, Any], observed: Mapping[str, An
 
 
 def execution_receipt(plan: Mapping[str, Any], *, output: bytes,
-                      device_identity: str) -> dict[str, Any]:
-    """Attribute one execution result to its exact frozen plan and resource."""
+                      observed_execution: Mapping[str, Any]) -> dict[str, Any]:
+    """Attribute a result only to the exact proof-bearing frozen candidate."""
     validate_frozen_plan(plan)
     candidate = plan["candidate"]
-    if device_identity != candidate["compute_unit_id"]:
-        raise SeamError("execution device does not match frozen plan")
+    required = ("compute_unit_id", "memory_resource_id", "execution_unit_id",
+                "physical_device_bdf", "runtime_identity", "implementation_id",
+                "evidence_id", "observation_evidence_id", "observation_digest")
+    expected = {field: candidate[field] for field in required}
+    if dict(observed_execution) != expected:
+        differences = sorted(field for field in set(expected) | set(observed_execution)
+                             if expected.get(field) != observed_execution.get(field))
+        raise SeamError(f"execution attribution differs from frozen plan: {differences}")
     return {"plan_digest": plan["plan_digest"],
-            "execution_unit_id": plan["execution_unit"]["execution_unit_id"],
-            "compute_unit_id": device_identity,
+            **deepcopy(expected),
             "output_sha256": sha256(output).hexdigest()}
 
 
