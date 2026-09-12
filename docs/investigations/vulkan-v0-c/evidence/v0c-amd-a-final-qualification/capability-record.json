@@ -1,0 +1,33 @@
+{
+  "capability": {
+    "bound_compute_unit_id": "cu-amd-a",
+    "bound_execution_unit_id": "unit-q4km-whole-model",
+    "bound_memory_resource_id": "mr-amd-a-vram",
+    "economics": {
+      "startup_seconds": 28.277
+    },
+    "evidence_fresh": true,
+    "evidence_id": "v0c-amd-a-final-qualification-01",
+    "execution_contract_id": "contract-s2-opaque-v1",
+    "implementation_id": "impl-portable-amd-a",
+    "integrity_status": "QUALIFIED",
+    "observation_digest": "66012e3b943e89b83ff2aa425ff74d5be3e1ce4a70db184cd4059797e9caaa73",
+    "observation_evidence_id": "v0c-amd-a-final-qualification-01",
+    "physical_device_bdf": "02:00.0",
+    "representations": [
+      "gguf-q4-k-m"
+    ],
+    "required_features": [
+      "compute"
+    ],
+    "runtime_identity": {
+      "binary_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+      "radv_target": "Mesa 25.0.7-2+deb13u1",
+      "selector": "Vulkan1",
+      "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c"
+    }
+  },
+  "capability_id": "cap-v0c-amd-a-s2-final-01",
+  "qualification_observation_digest": "66012e3b943e89b83ff2aa425ff74d5be3e1ce4a70db184cd4059797e9caaa73",
+  "schema": "inferswarm.v0c.capability-record/1"
+}

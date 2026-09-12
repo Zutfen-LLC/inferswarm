@@ -1,0 +1,7 @@
+{
+  "candidate_id": "candidate-d3a1cdda2ead943f86e5c00ac534420964566ac8ddb237d53e0009b1702d25d4",
+  "plan_digest": "f0e9c51393ece62b3164b4c1050aa2e4651b91f67de5bb81747aeb11cb041464",
+  "reason": "canonical execution observation schema was not satisfied because accounting is blocked",
+  "schema": "inferswarm.v0c.execution-receipt/1",
+  "status": "NOT_MINTED"
+}

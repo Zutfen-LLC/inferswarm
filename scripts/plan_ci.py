@@ -193,6 +193,11 @@ GROUP_TEST_MODULES = {
     ],
     "vulkan-v0-b": [
         "test_v0b_reduction",
+        "test_v0c_canonical_run",
+        "test_v0c_correctness",
+        "test_v0c_evidence_manifest",
+        "test_v0c_execution_seam",
+        "test_v0c_vulkan_adapter",
     ],
     "phase1-analysis": [
         "test_analyze_phase1_p6",
@@ -416,6 +421,17 @@ PATH_GROUPS = {
     # so both select vulkan-v0-b.
     "docs/investigations/vulkan-v0-a/": ["vulkan-v0-b"],
     "docs/investigations/vulkan-v0-b/": ["vulkan-v0-b"],
+    "docs/investigations/vulkan-v0-c/": ["vulkan-v0-b"],
+    "scripts/v0c_canonical_run.py": ["vulkan-v0-b"],
+    "scripts/v0c_correctness.py": ["vulkan-v0-b"],
+    "scripts/v0c_execution_seam.py": ["vulkan-v0-b"],
+    "scripts/v0c_manifest.py": ["vulkan-v0-b"],
+    "scripts/v0c_vulkan_adapter.py": ["vulkan-v0-b"],
+    "tests/test_v0c_canonical_run.py": ["vulkan-v0-b"],
+    "tests/test_v0c_correctness.py": ["vulkan-v0-b"],
+    "tests/test_v0c_evidence_manifest.py": ["vulkan-v0-b"],
+    "tests/test_v0c_execution_seam.py": ["vulkan-v0-b"],
+    "tests/test_v0c_vulkan_adapter.py": ["vulkan-v0-b"],
 
     "scripts/analyze_phase1_p6.py": ["phase1-analysis"],
     "scripts/derive_phase1_placement.py": ["phase1-analysis"],

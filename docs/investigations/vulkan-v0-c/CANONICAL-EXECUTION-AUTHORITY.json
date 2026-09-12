@@ -1,0 +1,69 @@
+{
+  "architecture": {
+    "execution_contract_eligibility": "architectural S2 clarification, not output-derived tuning",
+    "no_preferred_backend_adr": true,
+    "no_public_api": true
+  },
+  "authority_state": "final pre-qualification authority",
+  "clean_tree_required": true,
+  "comparator": {
+    "byte_exact": true,
+    "fixture": "V0-A accepted AMD-A Vulkan visible greedy output",
+    "old_smoke": "v0c-amd-a-01 is noncanonical and cannot tune output or tolerance",
+    "tolerance": null
+  },
+  "frozen": {
+    "candidate_id": "candidate-d3a1cdda2ead943f86e5c00ac534420964566ac8ddb237d53e0009b1702d25d4",
+    "canonical_execution_evidence_id": "v0c-amd-a-final-canonical-01",
+    "compute_unit_id": "cu-amd-a",
+    "control_plane_sources": {
+      "scripts/v0c_canonical_run.py": "bb3ba46d8a39ea699868bc06f471f2afeafec136e21ff87a19d38473dee6233f",
+      "scripts/v0c_execution_seam.py": "34c0d6c7b37c9455c9673f5f01c7b3b4b76abce1e0e719344d51d1015e766b64",
+      "scripts/v0c_manifest.py": "aa95ea5e80deef1eec16675e9aa8457ed9417a68fcd7fa5b63b285fe7c6bd51f",
+      "scripts/v0c_vulkan_adapter.py": "372dddd1b9d9b207c17a445ab4b5708fcffb66382909d7ac1e6549495d78e159"
+    },
+    "executable": "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+    "executable_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+    "execution_contract_id": "contract-s2-opaque-v1",
+    "execution_unit_id": "unit-q4km-whole-model",
+    "hostname": "inferswarm02",
+    "implementation_id": "impl-portable-amd-a",
+    "memory_resource_id": "mr-amd-a-vram",
+    "model": "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+    "model_bytes": 1929903264,
+    "model_sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
+    "objective": "MIN_STARTUP_SECONDS",
+    "physical_device_bdf": "02:00.0",
+    "plan_digest": "f0e9c51393ece62b3164b4c1050aa2e4651b91f67de5bb81747aeb11cb041464",
+    "prompt": "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+    "qualification_evidence_id": "v0c-amd-a-final-qualification-01",
+    "radv_vulkan_target": "Vulkan loader 1.4.309.0; RADV Mesa 25.0.7-2+deb13u1",
+    "required_headroom_bytes": 536870912,
+    "required_memory_bytes": 3254091776,
+    "required_representation": "gguf-q4-k-m",
+    "runtime_source": "/home/zutfen/.cache/v0c-llama.cpp",
+    "runtime_source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+    "selector": "Vulkan1"
+  },
+  "issue": "#143",
+  "plan_binding": {
+    "capability_id": "cap-v0c-amd-a-s2-final-01",
+    "frozen_after_qualification_before_canonical_execution": true,
+    "plan_digest": "f0e9c51393ece62b3164b4c1050aa2e4651b91f67de5bb81747aeb11cb041464",
+    "qualification_observation_digest": "66012e3b943e89b83ff2aa425ff74d5be3e1ce4a70db184cd4059797e9caaa73",
+    "selected_candidate_id": "candidate-d3a1cdda2ead943f86e5c00ac534420964566ac8ddb237d53e0009b1702d25d4"
+  },
+  "schema": "inferswarm.v0c.canonical-execution-authority/1",
+  "schemas": {
+    "candidate_set": "inferswarm.v0c.generic-plan/1",
+    "canonical_execution_observation": "inferswarm.v0c.canonical-execution-observation/1",
+    "capability_record": "adapter-bound exact qualification only",
+    "correctness_result": "byte-exact canonical visible output",
+    "execution_receipt": "exact canonical proof only",
+    "frozen_plan": "inferswarm.v0c.frozen-plan/1",
+    "materialization_accounting": "inferswarm.v0c.materialization-accounting/1",
+    "negative_controls": "production-path fail-closed reductions",
+    "qualification_observation": "inferswarm.v0c.qualification-observation/1",
+    "resource_snapshot": "inferswarm.v0c.resource-snapshot/1"
+  }
+}
