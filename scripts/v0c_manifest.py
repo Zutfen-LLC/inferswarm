@@ -42,6 +42,7 @@ EVIDENCE_FILES = frozenset({
     "evidence/v0c-r2-plan/frozen-plan.json",
     "evidence/v0c-r2-plan/resource-snapshot.json",
     "evidence/v0c-r2-execution/accounting.json",
+    "evidence/v0c-r2-execution/canonical-execution-observation.json",
     "evidence/v0c-r2-execution/correctness-result.json",
     "evidence/v0c-r2-execution/execution-receipt.json",
     "evidence/v0c-r2-execution/terminal.json",
