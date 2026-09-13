@@ -116,6 +116,24 @@ correctness result.
 - No `h109-*` material was opened, generated, copied, inferred,
   reconstructed, decrypted, or used.
 
+## Current-main reconciliation
+
+Correctness-bearing physical execution ran from the exact accepted head
+`bce7fb3d8e54429972472933be66433b81ebcf8f`. While the campaign was
+completing — **after** all 40 direct results, 40 ordinary results, the
+controlled fencing arm, and both sentinel arms were retained — protected
+`origin/main` advanced to `8aadbd6ea3c635741cc67fcc9d9ba1d1dd8d500a`
+(PR #165 merge). This was detected post-execution and therefore has no effect
+on any result here.
+
+The additive branch was then reconciled onto current main without
+re-execution: the only conflict was the generated CI registry
+`scripts/ci_groups.json`, resolved by re-deriving it with
+`python3 scripts/plan_ci.py --emit-registry` so the `issue-35` and
+`issue-172-requal` registrations coexist. No accepted predecessor evidence was
+touched. Full record: `evidence/current-main-reconciliation.json`.
+
+
 ## Evidence layout
 
 - `authority.json` — Phase 0 freeze (heads, ancestry, execution-delta
