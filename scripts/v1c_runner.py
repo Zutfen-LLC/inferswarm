@@ -377,7 +377,7 @@ def main(argv: list[str] | None = None) -> int:
         record["record_digest"] = digest_bytes(canonical(record))
         (out / "canonical-execution.json").write_bytes(canonical(record) + b"\n")
         # Adapter-sealed evidence records, retained separately.
-        evidence = out.parent / "evidence" / frozen["canonical_execution_evidence_id"]
+        evidence = out.parent.parent / "evidence" / frozen["canonical_execution_evidence_id"]
         evidence.mkdir(parents=True, exist_ok=True)
         (evidence / "accounting.json").write_bytes(canonical(result["accounting"]) + b"\n")
         (evidence / "correctness-result.json").write_bytes(canonical(
