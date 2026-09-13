@@ -1,18 +1,21 @@
 {
-  "acceptance_state": "draft PR #165 records the campaign; acceptance remains with the maintainer",
-  "attempt": "initial campaign",
+  "acceptance_state": "draft PR #165 records the campaign and the correction round; acceptance remains with the maintainer",
+  "attempt": "correction round (maintainer NO-GO on the reviewed head 3b382b5): capacity authority corrected to measured residency/pressure facts; coarse role re-measured as a genuinely concurrent four-request workload with a matched control; R0 added to machine coverage; freeze provenance erratum added; branch reconciled with main df0365e",
   "facts": {
     "accepted_d3_d7": "bound byte-frozen (phase1r disposition/handoff/placements); inferswarm01 Gen2 x1 result preserved, not reinterpreted; this campaign is a new measurement identity",
-    "adverse_reproduction": "layer-split multiworker serving reproduced as the finest supported shape; row/tensor split fails closed at load (control R0, expected); adverse layer split is byte-exact and throughput-positive from the weak subject's perspective (1.26x) but 0.62x from the strong subject's perspective",
+    "adverse_reproduction": "layer-split multiworker serving reproduced as the finest supported shape; row/tensor split fails closed at load (control R0, expected; now present in machine classifications); adverse layer split is byte-exact and throughput-positive from the weak subject's perspective (1.26x) but 0.62x from the strong subject's perspective",
     "baseline_main_sha": "e38ebe91a0604fb666397ddae675248e9f819f60",
-    "capacity_case": "14B Q4_K_M infeasible-paging on one subject (0.2 t/s, 417.66 MiB CPU-mapped, 235 s wall) vs genuinely split residency on two x1 subjects (3917+4231 MiB device buffers, 21.3 t/s): ~106x feasibility gain, complete offload both arms",
+    "reconciled_main_sha": "df0365ea606a54222415e34f6cfb127e9f938f0c",
+    "capacity_case": "14B Q4_K_M on one subject: nominal 49/49 offload but memory-pressure limited (fit aborted 'n_gpu_layers already set by user to 99'; projected 32953 vs 8186 free MiB; final self-demand 9021 MiB on an 8192 MiB device; 0.2 t/s decode). Two-subject layer split: same nominal 49/49 but model buffers split 3917+4231 MiB across both devices, final self-demand within each device's capacity, 21.3 t/s. capacity_positive derived from these measured memory-fit facts (x1p-capacity-residency-facts.json), NOT from the complete_offload boolean",
+    "capacity_control_semantics": "the original control's declared auto-fit authority never executed: the sweep forced -ngl 99 and the runtime's fitter aborted with 'n_gpu_layers already set by user'. The retained raw bytes are SUFFICIENT to prove the Issue #35 capacity distinction mechanically (over-capacity single-device allocation vs split-resident two-device allocation), so no rerun was executed; the mismatch is disclosed, not superseded by a new run",
     "classifications": {
       "x1p-role-adverse (layer split, subject perspective)": "THROUGHPUT_POSITIVE",
-      "x1p-role-adverse-rowsplit-unsupported": "NOT_USEFUL_FOR_TESTED_ROLE (unsupported shape, fails closed)",
-      "x1p-role-capacity (14B two-subject)": "THROUGHPUT_POSITIVE with decisive capacity contribution",
-      "x1p-role-coarse (batched split)": "THROUGHPUT_POSITIVE (per-sequence; below single-sequence split)"
+      "x1p-role-adverse-rowsplit-unsupported (R0)": "NOT_USEFUL_FOR_TESTED_ROLE (unsupported shape, fails closed)",
+      "x1p-role-capacity (14B two-subject)": "THROUGHPUT_POSITIVE with measured capacity contribution (memory-fit facts)",
+      "x1p-role-coarse (retained -np 4 diagnostic)": "EVIDENCE_INSUFFICIENT for the coarse claim (one completion in retained stdout; invalid as four-sequence evidence; superseded by the corrected arm)",
+      "x1p-coarse4-split (corrected coarse: 4 concurrent requests)": "NOT_USEFUL_FOR_TESTED_ROLE vs the matched 4-concurrent control"
     },
-    "coarse_batch": "batch -np 4 amortization: 52.35 t/s per-sequence vs 55.95 single-sequence split (batching does not beat single-sequence split on this substrate for this workload)",
+    "coarse_corrected": "genuinely concurrent coarse workload: pinned llama-server, 4 parallel slots, 4 identical frozen requests per attempt, 2 attempts per arm, every request byte-correct vs the frozen reference. Split arm aggregate 34.517 t/s median (attempt values 5.239 cold-compile / 63.794 steady; wall 35.885 s / 2.947 s) vs matched single-subject control 62.469 t/s median (62.542/62.396; wall ~3.0 s): ratio 0.55, below the neutral band. The old 52.35 t/s 'batched' claim is retracted as a single-request diagnostic",
     "cross_device": "same frozen definitions on both subjects; device-local compute differs 2.03x (NV over AMD); marginal participation value flips sign with anchor device; capacity case is link/role dominated (both arms complete, ratio 106x)",
     "link_identity": "all three dGPU root ports electrically x1; both subjects negotiate Gen1 x1 under sustained load (sysfs sampled concurrently, ~450 samples/subject); link class pinned at floor under load",
     "local_host_confirmed": "inferswarm02 (local session, no SSH)",
@@ -24,8 +27,18 @@
   "nonclaims": [
     "per-role classifications for the tested substrate and supported runtime semantics only, not permanent device grades",
     "Gen1-class observed link is honest lower-bound evidence; no Gen3 label was forced",
-    "x4/x8/x16 remain later comparison points, not prerequisites"
+    "x4/x8/x16 remain later comparison points, not prerequisites",
+    "the coarse-concurrent classification derives from 2-attempt medians with the cold-compile attempt retained, per the frozen stop rules"
   ],
   "schema": "inferswarm.issue35.evidence-status/1",
-  "terminal": "X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED"
+  "terminal": "X1_PARTICIPANT_ONLY_CAPACITY_USEFUL",
+  "terminal_basis": {
+    "label": "CALCULATED",
+    "note": "Re-derived from the corrected evidence, not preserved from the reviewed head. On the tested substrate: the capacity role is decisively positive on measured memory-fit facts (106.5x); the matched genuinely-concurrent coarse shape is negative (0.55x aggregate, cold-start retained); the single-sequence layer split is throughput-positive only from the weaker anchor's perspective (1.26x) and negative from the stronger (0.62x); the finer row-split shape is unsupported. The envelope as a whole: an added x1 participant is reliably useful for capacity/residency, conditionally useful as a single-sequence compute partner when the anchor is the weaker device, and not useful for concurrent coarse serving on this substrate.",
+    "candidates_rejected": {
+      "X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED": "no longer supportable: the reviewed coarse evidence was a single-request diagnostic; the corrected matched coarse measurement is negative",
+      "X1_PARTICIPANT_NOT_USEFUL_ON_TESTED_SUBSTRATE": "rejected: the measured capacity contribution is decisive and the single-sequence split is throughput-positive from the weak anchor perspective",
+      "X1_EVIDENCE_INSUFFICIENT": "rejected: every role now carries workload-matched evidence with correctness proven"
+    }
+  }
 }

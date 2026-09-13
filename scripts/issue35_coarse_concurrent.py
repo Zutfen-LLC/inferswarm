@@ -328,8 +328,7 @@ def main(argv: list[str] | None = None) -> int:
     out_root = Path(args.out_root)
     results = []
     for arm in freeze["arms"]:
-        raw_dir = out_root / "raw" / arm["arm_id"] / "attempt-01"
-        results.append(run_arm(arm, env, raw_dir, reference))
+        results.append(run_arm(arm, env, out_root, reference))
     evidence = out_root / "evidence"
     evidence.mkdir(parents=True, exist_ok=True)
     for result in results:

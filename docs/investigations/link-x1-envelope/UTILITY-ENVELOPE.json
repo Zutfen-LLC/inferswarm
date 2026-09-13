@@ -1,4 +1,44 @@
 {
+  "capacity_authority": {
+    "control_pressure": {
+      "context_reductions": [
+        {
+          "from": 131072,
+          "to": 4096
+        }
+      ],
+      "fit_abort_reason": "n_gpu_layers already set by user to 99",
+      "fit_aborted": true,
+      "over_capacity": true,
+      "over_capacity_devices": [
+        {
+          "compute_mib": 105,
+          "context_mib": 768,
+          "device": "Vulkan1",
+          "device_total_mib": 8192,
+          "model_mib": 8148,
+          "self_mib": 9021
+        }
+      ],
+      "projected_vs_free": [
+        {
+          "free_mib": 8186,
+          "projected_mib": 32953
+        }
+      ]
+    },
+    "label": "CALCULATED",
+    "note": "capacity_positive is derived from measured residency/memory-pressure facts reduced from the retained raw stderr (issue35_residency_facts), not from the complete_offload layer-count boolean",
+    "role_residency": {
+      "device_model_buffers_mib": {
+        "Vulkan1": 3917.36,
+        "Vulkan3": 4231.02
+      },
+      "model_buffer_placement_count": 2,
+      "over_capacity": false,
+      "over_capacity_devices": []
+    }
+  },
   "classifications": [
     {
       "basis": "throughput ratio 1.260 above the neutral band",
@@ -11,26 +51,92 @@
       "throughput_ratio_vs_control": 1.2601
     },
     {
-      "basis": "throughput ratio 1.179 above the neutral band",
-      "capacity_positive": false,
-      "classification": "THROUGHPUT_POSITIVE",
-      "control_rate": 44.4,
-      "label": "CALCULATED",
+      "basis": "single llama-cli interaction with -np 4 slots provisioned: one completion in retained stdout; invalid for the intended coarse-comparison claim and superseded by the corrected concurrent arm; retained unchanged as a diagnostic/reference",
+      "classification": "EVIDENCE_INSUFFICIENT",
+      "label": "MEASURED",
       "role_id": "x1p-role-coarse",
-      "role_rate": 52.35,
-      "throughput_ratio_vs_control": 1.1791
+      "workload_shape": "1 request on a 4-slot-provisioned server"
     },
     {
-      "basis": "throughput ratio 106.500 above the neutral band",
-      "capacity_positive": false,
+      "basis": "throughput ratio 106.500 above the neutral band with capacity contributed on measured memory-fit facts (control pressured, role split-resident)",
+      "capacity_positive": true,
       "classification": "THROUGHPUT_POSITIVE",
       "control_rate": 0.2,
       "label": "CALCULATED",
       "role_id": "x1p-role-capacity",
       "role_rate": 21.3,
       "throughput_ratio_vs_control": 106.5
+    },
+    {
+      "basis": "role failed on the tested substrate in its declared expected mode; retained as evidence",
+      "classification": "NOT_USEFUL_FOR_TESTED_ROLE",
+      "label": "MEASURED",
+      "role_id": "x1p-role-adverse-rowsplit-unsupported"
+    },
+    {
+      "basis": "aggregate concurrent throughput ratio 0.553 (34.517 vs 62.469 tokens/s aggregate, CALCULATED from measured aggregate tokens / aggregate wall seconds, 4 concurrent matched requests per arm)",
+      "capacity_positive": false,
+      "classification": "NOT_USEFUL_FOR_TESTED_ROLE",
+      "control_rate": 62.469,
+      "label": "CALCULATED",
+      "role_id": "x1p-coarse4-split",
+      "role_rate": 34.517,
+      "throughput_ratio_vs_control": 0.5525,
+      "workload_shape": "4 concurrent requests vs 4 concurrent requests"
     }
   ],
+  "corrected_coarse": {
+    "aggregate_throughput_split_vs_single": {
+      "single": {
+        "definition": "sum(completion_tokens of all requests) / aggregate wall seconds (first request sent to last response complete)",
+        "label": "CALCULATED",
+        "max": 62.542,
+        "median": 62.469,
+        "min": 62.396,
+        "values": [
+          62.542,
+          62.396
+        ]
+      },
+      "split": {
+        "definition": "sum(completion_tokens of all requests) / aggregate wall seconds (first request sent to last response complete)",
+        "label": "CALCULATED",
+        "max": 63.794,
+        "median": 34.517,
+        "min": 5.239,
+        "values": [
+          5.239,
+          63.794
+        ]
+      }
+    },
+    "label": "CALCULATED",
+    "note": "The corrected coarse role is the four-concurrent-request experiment (x1p-coarse4-split vs the workload-matched concurrent control); the retained single-request result (x1p-role-coarse) is a diagnostic reference only.",
+    "per_sequence_split_vs_single": {
+      "single": {
+        "definition": "median over requests of (completion_tokens_i / per-request wall seconds_i); each request is one sequence, so this is the per-sequence service rate under four-way concurrency",
+        "label": "CALCULATED",
+        "max": 15.809,
+        "median": 15.71,
+        "min": 15.612,
+        "values": [
+          15.809,
+          15.612
+        ]
+      },
+      "split": {
+        "definition": "median over requests of (completion_tokens_i / per-request wall seconds_i); each request is one sequence, so this is the per-sequence service rate under four-way concurrency",
+        "label": "CALCULATED",
+        "max": 16.036,
+        "median": 8.673,
+        "min": 1.31,
+        "values": [
+          1.31,
+          16.036
+        ]
+      }
+    }
+  },
   "link_vs_device_separation": {
     "label": "CALCULATED",
     "note": "Both narrow-link subjects negotiate the same link class under load (see transport summaries). Observations consistent across both subjects are plausibly link/role dominated; device-local compute differences are carried explicitly from the single-subject controls and are not attributed to the link.",
@@ -42,8 +148,8 @@
   },
   "marginal_views": {
     "label": "CALCULATED",
-    "note": "The frozen classification uses the subject-perspective control; the peer-perspective ratio is recorded because the marginal value of adding a participant depends on which device already hosts the workload.",
     "views": {
+      "note": "The retained single-request coarse diagnostic (x1p-role-coarse) is excluded from marginal views: its workload shape (1 request, 4 idle-capable slots) is not matched to the single-sequence controls' semantics.",
       "x1p-role-adverse": {
         "adding_peer_to_subject": {
           "ratio": 1.2601,
@@ -51,16 +157,6 @@
         },
         "adding_subject_to_peer": {
           "ratio": 0.622,
-          "vs_control_median_tps": 89.95
-        }
-      },
-      "x1p-role-coarse": {
-        "adding_peer_to_subject": {
-          "ratio": 1.1791,
-          "vs_control_median_tps": 44.4
-        },
-        "adding_subject_to_peer_batched_per_sequence": {
-          "ratio": 0.582,
           "vs_control_median_tps": 89.95
         }
       }
@@ -73,7 +169,7 @@
     "wider links remain later comparison points, not prerequisites",
     "no vendor/width special case enters generic planner semantics"
   ],
-  "schema": "inferswarm.issue35.utility-envelope/1",
+  "schema": "inferswarm.issue35.utility-envelope/2",
   "taxonomy": [
     "CAPACITY_POSITIVE_THROUGHPUT_NEGATIVE",
     "CAPACITY_POSITIVE_THROUGHPUT_NEUTRAL",

@@ -1,0 +1,89 @@
+{
+  "schema": "inferswarm.issue35.correction-report/1",
+  "label": "MEASURED",
+  "corrected_pr_head_before": "3b382b5d301a2401738867bd288035d4fd483a53",
+  "reconciled_main_sha": "df0365ea606a54222415e34f6cfb127e9f938f0c",
+  "corrections": {
+    "freeze_provenance": {
+      "erratum_path": "FREEZE-PROVENANCE-ERRATUM.json",
+      "original_freeze_sha256": "69efbf89bc740e856358b8b4e6002211a606e46ea53897b463a156ede6a4cee3",
+      "original_freeze_bytes_preserved": true,
+      "defect": "ROLE-SWEEP-FREEZE.json frozen_utc=2026-09-13T16:30:00Z postdates the commits that mechanically contain the freeze; Git object chronology is the authoritative prospective-order proof; the field is documented additively, never edited in place",
+      "chain": "9eeee6196308db8927f604337400f0df1a281197 (initial freeze/tooling) -> 3b5f8f300aadc4ed3b26ac85c099ca4e7af2847e (transport evidence) -> 0b0f6f3e4f5d40328e74eaf4bc5b76576b4b99f7 (pre-role amendment; produces the current freeze bytes) -> 8779a86ced80fd36e42b1f8cc15e57ffe00402ef (comparator correction; transient manifest failure preserved) -> 02313b25fbbeed4cb093a6474f2078a3718eaf70 (manifest regeneration) -> 968faba0e735606194f6bff39c4b54c40acbe2df (physical role evidence; descendant of the whole corrected pre-execution chain; tree at amendment contains zero role evidence files, so no role-performance result existed when role definitions were finalized)"
+    },
+    "capacity_authority": {
+      "old_rule": "capacity_positive = role.complete_offload AND NOT control.complete_offload",
+      "old_rule_defect": "both retained capacity arms report nominal 49/49 complete offload (the sweep forced -ngl 99), so the boolean cannot distinguish them; the control also never exercised its declared auto-fit authority because the forced -ngl made the runtime fitter abort ('n_gpu_layers already set by user to 99')",
+      "corrected_rule": "capacity_positive derives from measured residency/memory-pressure facts reduced deterministically from the retained raw stderr: control pressure (over-capacity final allocation 9021 MiB self-demand on an 8192 MiB device; fit aborted; projected 32953 vs 8186 free MiB; context reduced 131072->4096) AND role split residency (model buffers 3917.36+4231.02 MiB across both devices, no over-capacity device). A non-zero CPU_Mapped buffer appears in BOTH arms and is never paging evidence by itself.",
+      "rerun_required": false,
+      "evidence": {
+        "facts_artifact": "evidence/x1p-capacity-residency-facts.json",
+        "source_role_stderr": "raw/x1p-role-capacity/attempt-01/stderr.txt",
+        "source_control_stderr": "raw/x1p-role-capacity-control/attempt-01/stderr.txt",
+        "original_control_evidence_untouched": true
+      },
+      "classification": "THROUGHPUT_POSITIVE with measured capacity contribution (ratio 106.5 vs the pressured control; 21.3 vs 0.2 t/s)"
+    },
+    "coarse_role": {
+      "old_result": "52.35 t/s median labeled as batch amortization from llama-cli -np 4",
+      "old_result_defect": "llama-cli at the pinned revision sends ONE chat-completion interaction to its embedded server; -np 4 provisions four parallel slots but issues no concurrent requests; the retained stdout contains exactly one completion",
+      "disposition_of_old_result": "retained byte-identical; classified EVIDENCE_INSUFFICIENT for the coarse claim and marked invalid as four-sequence evidence",
+      "prospective_freeze": {
+        "path": "COARSE-CORRECTION-FREEZE.json",
+        "committed_before_first_attempt": true,
+        "commit": "d4b35a567aa0d0bb155d2c211b63a9f25fb7d64b",
+        "exact_head_ci": {"run_id": 34772675623, "conclusion": "success"}
+      },
+      "execution_geometry": "pinned llama-server (same pinned llama.cpp source tree/build config as the frozen llama-cli; binary sha256 dded1ad18f02377c9ac63843b88e133a615a225eb53161d2479e9458d53e0599); 4 parallel slots; 4 concurrent identical frozen requests (frozen prompt, 48 max tokens, temp 0, seed 42) per attempt; 2 attempts per arm; every request required byte-correct vs the frozen reference",
+      "arms": {
+        "x1p-coarse4-split": {
+          "placement": "two-subject layer split (both subjects, -ngl 99, -sm layer)",
+          "aggregate_tokens_per_s": {"median": 34.517, "values": [5.239, 63.794], "label": "CALCULATED"},
+          "per_sequence_tokens_per_s": {"median": 8.673, "values": [1.31, 16.036], "label": "CALCULATED"},
+          "aggregate_wall_seconds": [35.885, 2.947],
+          "cold_start_note": "attempt-01 wall includes first-use pipeline compile on the split path (35.885 s; steady-state attempt-02 is 2.947 s); both attempts retained per the frozen stop rules; classification uses the attempt median",
+          "per_request_latency_seconds": {"median": 18.91, "min": 2.917, "max": 35.883},
+          "all_requests_correct": true,
+          "raw": ["raw/x1p-coarse4-split/attempt-01/", "raw/x1p-coarse4-split/attempt-02/"]
+        },
+        "x1p-coarse4-single": {
+          "placement": "single-subject anchor (matched control; same requests/slots/ctx)",
+          "aggregate_tokens_per_s": {"median": 62.469, "values": [62.542, 62.396], "label": "CALCULATED"},
+          "per_sequence_tokens_per_s": {"median": 15.71, "values": [15.809, 15.612], "label": "CALCULATED"},
+          "aggregate_wall_seconds": [3.006, 3.013],
+          "per_request_latency_seconds": {"median": 2.987, "min": 2.962, "max": 3.011},
+          "all_requests_correct": true,
+          "raw": ["raw/x1p-coarse4-single/attempt-01/", "raw/x1p-coarse4-single/attempt-02/"]
+        }
+      },
+      "matched_comparison": "aggregate ratio 34.517/62.469 = 0.5526 (CALCULATED), below the neutral band",
+      "classification": "NOT_USEFUL_FOR_TESTED_ROLE",
+      "classification_basis": "genuinely concurrent four-request workload matched in both arms; the two-subject layer split reduces aggregate concurrent throughput to 0.55x of the single-subject anchor"
+    },
+    "r0_machine_coverage": {
+      "defect": "x1p-role-adverse-rowsplit-unsupported was classified NOT_USEFUL_FOR_TESTED_ROLE in STATUS but omitted from UTILITY-ENVELOPE.json by build_envelope()",
+      "correction": "build_envelope() now loads and classifies R0; regression test proves R0 present with the fail-closed result"
+    },
+    "main_reconciliation": {
+      "method": "merge origin/main (df0365e) into issue-35-x1-envelope; both sides' CI registrations preserved in .github/workflows/ci.yml, scripts/ci_groups.json, scripts/plan_ci.py",
+      "overlapping_files": [".github/workflows/ci.yml", "scripts/ci_groups.json", "scripts/plan_ci.py"]
+    }
+  },
+  "rederived_terminal": {
+    "value": "X1_PARTICIPANT_ONLY_CAPACITY_USEFUL",
+    "previous_value": "X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED",
+    "why_changed": "the reviewed coarse-positive evidence was a single-request diagnostic; the corrected matched concurrent measurement is decisively negative, so the envelope-established terminal is no longer supportable, while the capacity contribution remains decisive and workload-matched",
+    "authority": "STATUS.json terminal + terminal_basis"
+  },
+  "consistency": {
+    "utility_envelope_schema": "inferswarm.issue35.utility-envelope/2",
+    "status_schema": "inferswarm.issue35.evidence-status/1",
+    "all_agree_on": {
+      "x1p-coarse4-split": "NOT_USEFUL_FOR_TESTED_ROLE",
+      "x1p-role-capacity": "THROUGHPUT_POSITIVE (capacity on measured memory-fit facts)",
+      "x1p-role-coarse_old": "diagnostic / EVIDENCE_INSUFFICIENT for the coarse claim",
+      "R0": "NOT_USEFUL_FOR_TESTED_ROLE",
+      "terminal": "X1_PARTICIPANT_ONLY_CAPACITY_USEFUL"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "completion_tokens": 47,
+  "model_reported": "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+  "prompt_tokens": 47,
+  "request_body_bytes": 201,
+  "request_payload_sha256": "8a030ad1f66614350e0e26f7a84ef7dac8e28176d2557d1efc9d17150a4273d8",
+  "response_bytes": 900,
+  "response_sha256": "d9d0f800006142ecc0f961261c58b82aba094863109844961e2c8df5c4820234",
+  "timing": {},
+  "visible_text": "The sentence \"The quick brown fox jumps over the lazy dog\" is a well-known pangram, and after this sentence, the next sentence could be anything, as there is no specific rule or context provided for what comes next.",
+  "wall_seconds": 35.883
+}

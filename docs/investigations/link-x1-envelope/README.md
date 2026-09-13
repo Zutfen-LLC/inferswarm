@@ -1,6 +1,6 @@
 # LINK-X1 — minimum viable PCIe interconnect envelope for local participants
 
-Status: campaign complete on `inferswarm02` (Issue #35); terminal `X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED`, recorded in draft PR #165 pending maintainer review. Additive investigation namespace; no prior
+Status: campaign complete on `inferswarm02` (Issue #35); terminal `X1_PARTICIPANT_ONLY_CAPACITY_USEFUL` (re-derived after the correction round), recorded in draft PR #165 pending maintainer review. Additive investigation namespace; no prior
 namespace is modified. Campaign host: `inferswarm02` (local session; SSH not
 used).
 
@@ -108,7 +108,9 @@ the accepted frozen reference where declared):
 | single AMD-A control | 44.4 | 37/37 | yes | (control) |
 | single NV-A control | 89.95 | 37/37 | yes | (control) |
 | adverse layer split | 55.95 | 37/37 | yes | THROUGHPUT_POSITIVE vs AMD anchor (1.26x); 0.62x vs NV anchor |
-| coarse split + batch np=4 | 52.35/seq | 37/37 | n/a (declared) | THROUGHPUT_POSITIVE vs AMD anchor (1.18x); below single-seq split |
+| coarse split + batch np=4 (RETRACTED as coarse evidence) | 52.35 (single request) | 37/37 | n/a | DIAGNOSTIC ONLY: one completion in retained stdout; -np 4 provisioned 4 idle-capable slots; invalid as four-sequence evidence (see CORRECTION-REPORT.json) |
+| corrected coarse: 4 concurrent requests, two-subject split | 34.52 aggregate (5.24 cold / 63.79 steady) | 37/37 | every request byte-exact | NOT_USEFUL_FOR_TESTED_ROLE vs matched control (0.55x) |
+| corrected coarse control: 4 concurrent requests, single subject | 62.47 aggregate | 37/37 | every request byte-exact | (matched control) |
 | capacity 14B two-subject | 21.3 | 49/49 | n/a | THROUGHPUT_POSITIVE, decisive capacity (vs 0.2 t/s paging control, ~106x) |
 | capacity 14B single control | 0.2 | 49/49 nominal, 417.66 MiB CPU-mapped | n/a | paging-dominated control |
 | R0 row-split control | failed at load | - | - | NOT_USEFUL_FOR_TESTED_ROLE (unsupported) |
@@ -120,11 +122,21 @@ load), a narrow-link participant is:
 
 - **net-useful as a capacity/residency contributor**: models that page on a
   single subject execute genuinely resident with the participant
-  (~106x measured feasibility gain, complete offload, split device buffers);
-- **conditionally throughput-useful**: adding a stronger participant to a
-  weaker anchor improves matched serving (1.26x measured); adding a weaker
-  participant to a stronger anchor degrades it (0.62x measured) — the
-  marginal sign depends on the anchor, not on the link alone;
+  (~106x measured feasibility gain; capacity derived from measured memory-fit
+  facts — the pressured single-device allocation vs the split-resident
+  two-device allocation — not the layer-count summary);
+- **conditionally throughput-useful for single-sequence serving**: adding a
+  stronger participant to a weaker anchor improves matched serving (1.26x
+  measured); adding a weaker participant to a stronger anchor degrades it
+  (0.62x measured) — the marginal sign depends on the anchor, not on the
+  link alone;
+- **not useful for genuinely concurrent coarse serving**: under a corrected
+  workload of four concurrent requests with a matched four-request control,
+  the two-subject split delivers 0.55x the single-subject aggregate
+  throughput (34.52 vs 62.47 t/s median). The previously reported 52.35 t/s
+  "batch" was a single llama-cli interaction with four idle-capable slots
+  (one completion in the retained stdout) and is retracted as coarse
+  evidence;
 - **dominated for fine-grained fan-out from a strong anchor** under current
   supported semantics; and the finer-grained tensor-split shape is not
   supported at all on these backends (fails closed, control R0).
@@ -136,5 +148,5 @@ service rate for the execution-unit class; and the anchor-relative
 throughput ratio. Recorded in `UTILITY-ENVELOPE.json`; wider links (x4/x8)
 remain later comparison points, not prerequisites.
 
-Terminal: `X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED` (see
-`STATUS.json`).
+Terminal: `X1_PARTICIPANT_ONLY_CAPACITY_USEFUL` (re-derived from the
+corrected evidence; see `STATUS.json` and `CORRECTION-REPORT.json`).

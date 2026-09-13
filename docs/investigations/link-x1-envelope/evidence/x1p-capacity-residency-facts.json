@@ -1,0 +1,206 @@
+{
+  "capacity_basis": {
+    "capacity_positive": true,
+    "control_pressure_facts": {
+      "context_reductions": [
+        {
+          "from": 131072,
+          "to": 4096
+        }
+      ],
+      "fit_abort_reason": "n_gpu_layers already set by user to 99",
+      "fit_aborted": true,
+      "over_capacity": true,
+      "over_capacity_devices": [
+        {
+          "compute_mib": 105,
+          "context_mib": 768,
+          "device": "Vulkan1",
+          "device_total_mib": 8192,
+          "model_mib": 8148,
+          "self_mib": 9021
+        }
+      ],
+      "projected_vs_free": [
+        {
+          "free_mib": 8186,
+          "projected_mib": 32953
+        }
+      ]
+    },
+    "cpu_mapped_note": "CPU_Mapped bytes appear in both arms (equal value); the pinned runtime maps a small buffer host-side in every placement and this does NOT evidence paging by itself \u2014 the paging/pressure evidence is the control's over-capacity self-demand, aborted fit, and 0.2 t/s decode rate vs the two-device arm's 21.3 t/s with identical nominal offload",
+    "label": "CALCULATED",
+    "role_residency_facts": {
+      "device_model_buffers_mib": {
+        "Vulkan1": 3917.36,
+        "Vulkan3": 4231.02
+      },
+      "model_buffer_placement_count": 2,
+      "over_capacity": false,
+      "over_capacity_devices": []
+    }
+  },
+  "control_residency_facts": {
+    "context_reductions": [
+      {
+        "from": 131072,
+        "to": 4096
+      }
+    ],
+    "cpu_mapped_mib": 417.66,
+    "device_model_buffers_mib": {
+      "Vulkan1": 8148.38
+    },
+    "device_model_buffers_total_mib": 8148.38,
+    "devices_listed": {
+      "CPU": {
+        "free_mib": 15912,
+        "name": "Intel(R) Celeron(R) CPU G3900 @ 2.80GHz",
+        "total_mib": 15912
+      },
+      "Vulkan0": {
+        "free_mib": 7160,
+        "name": "Intel(R) HD Graphics 510 (SKL GT1)",
+        "total_mib": 7956
+      },
+      "Vulkan1": {
+        "free_mib": 8186,
+        "name": "AMD Radeon RX 580 Series (RADV POLARIS10)",
+        "total_mib": 8192
+      },
+      "Vulkan2": {
+        "free_mib": 8186,
+        "name": "AMD Radeon RX 580 Series (RADV POLARIS10)",
+        "total_mib": 8192
+      },
+      "Vulkan3": {
+        "free_mib": 8122,
+        "name": "NVIDIA GeForce RTX 3060 Ti",
+        "total_mib": 8438
+      }
+    },
+    "devices_used_free_mib": {},
+    "entire_model_fit_statement": false,
+    "final_breakdown": [
+      {
+        "compute_mib": 105,
+        "context_mib": 768,
+        "device": "Vulkan1",
+        "device_total_mib": 8192,
+        "model_mib": 8148,
+        "self_mib": 9021
+      }
+    ],
+    "fit_abort_reason": "n_gpu_layers already set by user to 99",
+    "fit_aborted": true,
+    "label": "MEASURED",
+    "model_buffer_placement_count": 1,
+    "offload_summary": {
+      "complete_offload": true,
+      "layers_offloaded": 49,
+      "layers_total": 49
+    },
+    "over_capacity": true,
+    "over_capacity_devices": [
+      {
+        "compute_mib": 105,
+        "context_mib": 768,
+        "device": "Vulkan1",
+        "device_total_mib": 8192,
+        "model_mib": 8148,
+        "self_mib": 9021
+      }
+    ],
+    "projected_vs_free": [
+      {
+        "free_mib": 8186,
+        "projected_mib": 32953
+      }
+    ],
+    "schema": "inferswarm.issue35.residency-facts/1"
+  },
+  "role_residency_facts": {
+    "context_reductions": [
+      {
+        "from": 131072,
+        "to": 28160
+      }
+    ],
+    "cpu_mapped_mib": 417.66,
+    "device_model_buffers_mib": {
+      "Vulkan1": 3917.36,
+      "Vulkan3": 4231.02
+    },
+    "device_model_buffers_total_mib": 8148.38,
+    "devices_listed": {
+      "CPU": {
+        "free_mib": 15912,
+        "name": "Intel(R) Celeron(R) CPU G3900 @ 2.80GHz",
+        "total_mib": 15912
+      },
+      "Vulkan0": {
+        "free_mib": 7160,
+        "name": "Intel(R) HD Graphics 510 (SKL GT1)",
+        "total_mib": 7956
+      },
+      "Vulkan1": {
+        "free_mib": 8186,
+        "name": "AMD Radeon RX 580 Series (RADV POLARIS10)",
+        "total_mib": 8192
+      },
+      "Vulkan2": {
+        "free_mib": 8186,
+        "name": "AMD Radeon RX 580 Series (RADV POLARIS10)",
+        "total_mib": 8192
+      },
+      "Vulkan3": {
+        "free_mib": 8122,
+        "name": "NVIDIA GeForce RTX 3060 Ti",
+        "total_mib": 8438
+      }
+    },
+    "devices_used_free_mib": {},
+    "entire_model_fit_statement": true,
+    "final_breakdown": [
+      {
+        "compute_mib": 251,
+        "context_mib": 2750,
+        "device": "Vulkan1",
+        "device_total_mib": 8192,
+        "model_mib": 3917,
+        "self_mib": 6918
+      },
+      {
+        "compute_mib": 197,
+        "context_mib": 368,
+        "device": "Vulkan3",
+        "device_total_mib": 8438,
+        "model_mib": 4231,
+        "self_mib": 4796
+      }
+    ],
+    "fit_abort_reason": "n_gpu_layers already set by user to 99",
+    "fit_aborted": true,
+    "label": "MEASURED",
+    "model_buffer_placement_count": 2,
+    "offload_summary": {
+      "complete_offload": true,
+      "layers_offloaded": 49,
+      "layers_total": 49
+    },
+    "over_capacity": false,
+    "over_capacity_devices": [],
+    "projected_vs_free": [
+      {
+        "free_mib": 16285,
+        "projected_mib": 34070
+      }
+    ],
+    "schema": "inferswarm.issue35.residency-facts/1"
+  },
+  "schema": "inferswarm.issue35.capacity-residency/1",
+  "source_bytes": {
+    "control_stderr_sha256": "ba67391d2ad4d19309603a89621dd776727c0e9ab0e82ae8dd38ce50b7782a7a",
+    "role_stderr_sha256": "3c8dc50b1810ea7e30d3efb02c6b40012a077676ed9977ee4bea35d20a92169c"
+  }
+}
