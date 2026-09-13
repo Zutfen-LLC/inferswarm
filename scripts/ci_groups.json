@@ -552,6 +552,10 @@
   "scripts/issue157_instrumentation.py": [
    "issue-137"
   ],
+  "scripts/issue157_manifest.py": [
+   "issue-137",
+   "repo-integrity"
+  ],
   "scripts/issue157_probe_driver.py": [
    "issue-137"
   ],

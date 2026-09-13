@@ -1,0 +1,125 @@
+{
+  "checkpoint_digest_matrix": {
+    "anchor_a": {
+      "L0_attention_output": [
+        "785f3ea94a85",
+        "e676aa2b4ec6",
+        "01181f47bd37",
+        "c6a503c9d00c",
+        "6d86a124d3cd",
+        "6d86a124d3cd"
+      ],
+      "L0_backend_k_input": [
+        "stable",
+        "stable",
+        "stable",
+        "stable",
+        "stable",
+        "stable"
+      ],
+      "L0_backend_q_input": [
+        "stable",
+        "stable",
+        "stable",
+        "stable",
+        "stable",
+        "stable"
+      ],
+      "L0_backend_v_input": [
+        "stable",
+        "stable",
+        "stable",
+        "stable",
+        "stable",
+        "stable"
+      ],
+      "L0_k_normed": [
+        "stable",
+        "stable",
+        "stable",
+        "stable",
+        "stable",
+        "stable"
+      ],
+      "L0_kv_slice_post_write": [
+        "varies(5)",
+        "varies(5)",
+        "varies(5)",
+        "varies(5)",
+        "varies(5)",
+        "varies(5)"
+      ],
+      "L0_kv_slice_pre_write": [
+        "stable",
+        "stable",
+        "stable",
+        "stable",
+        "stable",
+        "stable"
+      ],
+      "L0_o_proj": [
+        "varies(5)",
+        "varies(5)",
+        "varies(5)",
+        "varies(5)",
+        "varies(5)",
+        "varies(5)"
+      ],
+      "L0_q_normed": [
+        "stable",
+        "stable",
+        "stable",
+        "stable",
+        "stable",
+        "stable"
+      ],
+      "L0_qkv_projected": [
+        "stable",
+        "stable",
+        "stable",
+        "stable",
+        "stable",
+        "stable"
+      ],
+      "L0_rotary_applied": [
+        "stable",
+        "stable",
+        "stable",
+        "stable",
+        "stable",
+        "stable"
+      ],
+      "after_layer_0": [
+        "varies(5)",
+        "varies(5)",
+        "varies(5)",
+        "varies(5)",
+        "varies(5)",
+        "varies(5)"
+      ]
+    }
+  },
+  "classification": "DIAGNOSTIC_ONLY",
+  "off_by_default_proof": [
+    "producer tree byte-identical to 55e8baa (issue157_binding per-module git-blob pins; zero FreeToken source changes)",
+    "instrumentation installs only under ISSUE157_STAGE_INSTRUMENT=1, set only by the #157 driver's spawned processes / the replay worker",
+    "CPU test test_shim_noop_without_env proves the shim registers nothing without the env var"
+  ],
+  "retained_run_records": {
+    "i157-BASE-1789261211": "c6158c423771f4d40eb0b61f5335731a0e53620ae33d8e1ceb3c600656d98b88",
+    "i157-IV-ROUTE-1789263283": "bda9a3ed621448fb12374a7c4cb5a40cbd01d276263933d24735ff141d5d5023",
+    "i157-IV-SWA-ALLOC-1789265498": "abbc03e504e7f5975fcfe62d7ed050f9b3d9f8799b117ff8691a6474b0e4ab92",
+    "i157-IV-SWA-ALLOC-1789266024": "f20bbca9fe06fe5680595ee6600dee676bb427b1dd97ad6b247ad7be80eee7b5",
+    "i157-IV-SYNC-1789262937": "4874319061afc369cdc09826049b668e967a3ff57443d87e2c208c39cc513217",
+    "i157-REPLAY-1789262629": "cb882d09d32113d200d6fd2a5a55d6a049c00cbf14dcd4fdd47be81bec37e709"
+  },
+  "retained_stage_jsonl": {
+    "i157-replay-worker-stage1-i157-IV-SWA-ALLOC-1789265467-0.jsonl": "b340807c30507e230f5da0e511a7f2d1539cf7149dad93d64c6bc2d62f82d2c4",
+    "i157-replay-worker-stage1-i157-IV-SWA-ALLOC-1789265498-0.jsonl": "606bfa8b7ee037d80c419dd39e8a6f96845407292cf5d3c10b8c3d18df2281c7",
+    "i157-replay-worker-stage1-i157-IV-SWA-ALLOC-1789266024-0.jsonl": "f490cf69e5cb9c8010c0f5a4b0bddf19469d9b112c64ab274a44c75f40dff8bc"
+  },
+  "retention_gaps": [
+    "raw per-call JSONL for runs 1789261629/1789261888/1789262267/1789262629/1789262937/1789263283 was removed by the inter-probe harness-clean step (rm -rf /tmp/issue157-harness) before the retention pull; the retained JSONL files cover the IV-SWA-ALLOC runs; reduced per-checkpoint values for the earlier runs are retained in exact-state-replay.json and interventions.json"
+  ],
+  "schema": "inferswarm.issue157.instrumentation-manifest/1"
+}

@@ -387,6 +387,7 @@ PATH_GROUPS = {
     "scripts/issue157_replay_harness.py": ["issue-137"],
     "scripts/issue157_replay_worker.py": ["issue-137"],
     "scripts/issue157_conclusions.py": ["issue-137"],
+    "scripts/issue157_manifest.py": ["issue-137", "repo-integrity"],
     "tests/test_issue157_chunk2_diagnosis.py": ["issue-137"],
     # Issue #153 Arm-C remediation slice (CPU-only; bundle lives under the
     # #117 implementation area, scripts + tests classified to the

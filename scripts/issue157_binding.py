@@ -264,7 +264,11 @@ def verify_baseline_inputs(mapping: dict[str, Path]) -> dict[str, str]:
 
 
 def verify_software(snapshot: dict, *, interpreter_path: str) -> None:
-    if Path(interpreter_path).resolve() != Path(
+    # The frozen venv python is a symlink (uv-managed); the accepted
+    # baseline records the LITERAL venv path, so identity is literal
+    # string equality (never resolve() — resolution depends on the
+    # host's uv install location).
+    if interpreter_path != (
         "/srv/inferswarm/repos/FreeToken/.venv/bin/python"
     ):
         raise BindError(
@@ -281,7 +285,17 @@ def verify_software(snapshot: dict, *, interpreter_path: str) -> None:
 
 
 def verify_geometry(observed: dict[str, list[str]]) -> None:
+    """Compare each PROVIDED host against the frozen geometry and fail
+    closed on drift.  The driver runs on inferswarm01 and provides its
+    UUIDs directly; inferswarm03's GPU identity is bound separately by
+    the last-stage launcher ledger (gpu_uuid recorded per launch) — so
+    only provided hosts are compared, but inferswarm01 MUST be present.
+    """
+    if "inferswarm01" not in observed:
+        raise BindError("geometry verification requires inferswarm01")
     for host, expected in GEOMETRY.items():
+        if host not in observed:
+            continue
         got = [u.strip() for u in observed.get(host, [])]
         if got != expected:
             raise BindError(f"geometry drift {host}: {got} != {expected}")

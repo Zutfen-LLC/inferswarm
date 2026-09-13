@@ -43,20 +43,51 @@ def sha256_tensor(t) -> str:
     return hashlib.sha256(raw.numpy().tobytes()).hexdigest()
 
 
-def kv_state_bytes(runtime) -> list:
-    """Frozen byte capture of the owned-layer KV pool tensors."""
-    from benchmarks.inferswarm_r6.stage_runtime import _iter_kv_pools
+def _real_state_tensors(runtime) -> list:
+    """The ACTUAL mutable KV-pool state the chunk-2 path reads/writes:
+    the full/swa group buffers, the full->swa index mapping, the swa
+    free-list, and the page table.  (The top-level _iter_pool_tensors
+    helper the accepted report uses does NOT reach these nested
+    _KVGroupStorage buffers — a fact recorded by this harness.)"""
+    pool = runtime.ctx.kv_cache
+    tensors = [
+        pool.full_kv_pool.buffer,
+        pool.swa_kv_pool.buffer,
+        pool.full_to_swa_index_mapping,
+    ]
+    free = getattr(pool, "_swa_free", None)
+    page_table = runtime.ctx.page_table
+    return tensors, free, page_table
 
-    pools = list(_iter_kv_pools(runtime.ctx.kv_cache))
-    return [p.detach().clone() for p in pools]
+
+def kv_state_snapshot(runtime) -> dict:
+    tensors, free, page_table = _real_state_tensors(runtime)
+    return {
+        "tensors": [t.detach().clone() for t in tensors],
+        "swa_free": None if free is None else free.detach().clone(),
+        "page_table": page_table.detach().clone(),
+    }
 
 
-def restore_kv_state(runtime, frozen: list) -> None:
-    from benchmarks.inferswarm_r6.stage_runtime import _iter_kv_pools
+def restore_kv_state(runtime, snap: dict) -> None:
+    tensors, free, page_table = _real_state_tensors(runtime)
+    for live, frozen in zip(tensors, snap["tensors"]):
+        live.copy_(frozen)
+    if free is not None and snap["swa_free"] is not None:
+        # free-list is rebuilt by slicing, not in-place: restore via the
+        # pool attribute (it is a plain tensor attribute)
+        pool = runtime.ctx.kv_cache
+        pool._swa_free = snap["swa_free"].clone()
+    page_table.copy_(snap["page_table"])
 
-    pools = list(_iter_kv_pools(runtime.ctx.kv_cache))
-    for pool, snap in zip(pools, frozen):
-        pool.copy_(snap)
+
+def kv_state_digests(runtime) -> list:
+    tensors, free, page_table = _real_state_tensors(runtime)
+    digests = [sha256_tensor(t) for t in tensors]
+    if free is not None:
+        digests.append(sha256_tensor(free))
+    digests.append(sha256_tensor(page_table))
+    return digests
 
 
 def main(argv=None) -> int:
@@ -67,7 +98,8 @@ def main(argv=None) -> int:
     parser.add_argument("--model", required=True)
     parser.add_argument("--chain-plan", required=True)
     parser.add_argument("--intervention", default="none",
-                        choices=["none", "sync", "scratch", "route"])
+                        choices=["none", "sync", "scratch", "route",
+                                 "swa-alloc"])
     args = parser.parse_args(argv)
 
     import torch
@@ -106,6 +138,15 @@ def main(argv=None) -> int:
     }
 
     # -- 1. materialize the frozen stage-1 runtime ------------------------
+    import torch  # noqa: F401
+
+    from freetoken.distributed import set_tp_info, try_get_tp_info
+    from freetoken.layers.rotary import set_rope_device
+
+    if try_get_tp_info() is None:
+        set_tp_info(rank=0, size=1)
+    set_rope_device(torch.device("cuda:0"))
+
     from benchmarks.inferswarm_r6.stage_runtime import GemmaDenseStage
 
     plan = json.loads(Path(args.chain_plan).read_text())
@@ -127,15 +168,19 @@ def main(argv=None) -> int:
         os.environ.get("ISSUE157_OUT_DIR", "/tmp/issue157-harness"),
         "replay-worker-stage1",
     )
+    # op-bisection: instance-level wraps on layers 0/1 (robust against
+    # class-level patch interception by decorators/descriptors)
+    _install_op_bisection(observer, runtime)
 
     # -- 2. execute chunk 1 fresh; freeze post-chunk-1 state --------------
     runtime.reset_session_state()
     hidden1, _ = runtime.prefill(replay[:prefix_len], None, 0)
-    frozen_kv = kv_state_bytes(runtime)
+    frozen = kv_state_snapshot(runtime)
+    frozen_digests = kv_state_digests(runtime)
     frozen_hidden1 = hidden1.detach().clone()
     result["chunk1"] = {
         "boundary_sha256": sha256_tensor(frozen_hidden1),
-        "kv_pool_sha256": [sha256_tensor(p) for p in frozen_kv],
+        "kv_state_digests": frozen_digests,
         "rows": int(frozen_hidden1.shape[0]),
     }
 
@@ -143,25 +188,33 @@ def main(argv=None) -> int:
     # chunk 1 twice more from scratch; must be byte-identical (accepted
     # fact: first chunk stable) — a mismatch classifies the harness.
     c1_digests = [result["chunk1"]["boundary_sha256"]]
+    c1_state_digests = [frozen_digests]
     for _ in range(2):
         runtime.reset_session_state()
         h1, _ = runtime.prefill(replay[:prefix_len], None, 0)
         c1_digests.append(sha256_tensor(h1))
+        c1_state_digests.append(kv_state_digests(runtime))
     result["chunk1_repeatability"] = {
         "digests": c1_digests,
         "byte_identical": len(set(c1_digests)) == 1,
+        "kv_state_digests": c1_state_digests,
+        "kv_state_byte_identical": all(
+            d == frozen_digests for d in c1_state_digests
+        ),
     }
 
     # -- 3. trials: fresh replay state per trial, exact chunk-2 op ---------
+    # intervention toggle (scratch arm): installed once, toggled per arm
+    scratch_on = [args.intervention == "scratch"]
+    if args.intervention == "scratch":
+        _prezero_decode_scratch(runtime, scratch_on)
     trial_rows = []
     for trial in range(args.trials):
         # fresh state reconstruction (never reuse mutated live state)
         runtime.reset_session_state()
-        restore_kv_state(runtime, frozen_kv)
+        restore_kv_state(runtime, frozen)
         # (no-mutated-reuse is proven post-hoc via the restore check)
 
-        if args.intervention == "scratch":
-            _prezero_decode_scratch(runtime)
         if args.intervention == "sync":
             torch.cuda.synchronize()
 
@@ -182,51 +235,138 @@ def main(argv=None) -> int:
     # -- 5. no-mutated-reuse proof ----------------------------------------
     # after the last trial the live pool differs from frozen (chunk-2 KV
     # written); restoring must return it to the frozen bytes.
-    live_before = [sha256_tensor(p) for p in kv_state_bytes(runtime)]
-    restore_kv_state(runtime, frozen_kv)
-    live_after = [sha256_tensor(p) for p in kv_state_bytes(runtime)]
+    live_before = kv_state_digests(runtime)
+    restore_kv_state(runtime, frozen)
+    live_after = kv_state_digests(runtime)
     result["no_reuse_proof"] = {
         "live_after_trials": live_before,
         "after_restore": live_after,
         "restore_returns_to_frozen": (
-            live_after == result["chunk1"]["kv_pool_sha256"]
+            live_after == result["chunk1"]["kv_state_digests"]
         ),
         "trials_mutated_state": (
-            live_before != result["chunk1"]["kv_pool_sha256"]
+            live_before != result["chunk1"]["kv_state_digests"]
         ),
     }
 
     # -- intervention-specific arms ----------------------------------------
     if args.intervention == "sync":
-        # paired control: identical state, NO explicit sync
+        # Treatment already ran above with a per-trial pre-prefill
+        # synchronize.  The NARROWER hypothesis — an unsynchronized
+        # producer/consumer race INSIDE the chunk-2 call, immediately
+        # before the earliest unstable op (layer-0 attention) — is
+        # tested by forcing a device-wide sync before EVERY backend
+        # attention call of the chunk-2 prefill.
+        from freetoken.attention.triton import TritonAttentionBackend
+
+        orig_bf = TritonAttentionBackend.forward
+        sync_on = [True]
+
+        def syncing(self, q, k, v, layer_id, batch, attn_spec=None):
+            if sync_on[0]:
+                torch.cuda.synchronize()
+            return orig_bf(self, q, k, v, layer_id, batch,
+                           attn_spec=attn_spec)
+
+        TritonAttentionBackend.forward = syncing
+        tight = []
+        try:
+            for trial in range(args.trials):
+                runtime.reset_session_state()
+                restore_kv_state(runtime, frozen)
+                hidden2, _ = runtime.prefill(chunk2_tokens, None,
+                                             prefix_len)
+                torch.cuda.synchronize()
+                tight.append(sha256_tensor(hidden2))
+        finally:
+            TritonAttentionBackend.forward = orig_bf
+        result["sync_tight_digests"] = tight
+        # paired control: identical state, NO explicit sync (normal path)
         paired = []
         for trial in range(args.trials):
             runtime.reset_session_state()
-            restore_kv_state(runtime, frozen_kv)
+            restore_kv_state(runtime, frozen)
             hidden2, _ = runtime.prefill(chunk2_tokens, None, prefix_len)
             torch.cuda.synchronize()
             paired.append(sha256_tensor(hidden2))
         result["sync_control_digests"] = paired
         result["sync_stabilizes"] = (
-            len(set(digests)) == 1 and len(set(paired)) > 1
+            len(set(tight)) == 1 and len(set(paired)) > 1
         )
+        result["sync_tight_deterministic"] = len(set(tight)) == 1
     elif args.intervention == "scratch":
+        # paired control: identical state, wrapper installed but OFF —
+        # the genuinely unchanged allocation path in the same process
+        scratch_on[0] = False
         paired = []
         for trial in range(args.trials):
             runtime.reset_session_state()
-            restore_kv_state(runtime, frozen_kv)
-            # control: DO NOT prezero; normal allocation path
+            restore_kv_state(runtime, frozen)
             hidden2, _ = runtime.prefill(chunk2_tokens, None, prefix_len)
             torch.cuda.synchronize()
             paired.append(sha256_tensor(hidden2))
+        scratch_on[0] = True
         result["scratch_control_digests"] = paired
         result["scratch_stabilizes"] = (
             len(set(digests)) == 1 and len(set(paired)) > 1
         )
+    elif args.intervention == "swa-alloc":
+        # Causal intervention for the SWA-mapping hypothesis: the R6
+        # standalone stage path never allocates swa slots (alloc_swa is
+        # scheduler-only), so full_to_swa_index_mapping stays at the
+        # all-zero sentinel: every SWA-layer prefix read resolves to
+        # swa slot 0, and the chunk-2 store's racing warps make slot-0
+        # content vary per trial.  ONE VARIABLE: perform the missing
+        # allocation (alloc_swa over the used full slots) before chunk
+        # execution; the store then writes distinct swa slots and the
+        # prefix reads real per-position K/V.  Chunk-1 AND chunk-2 run
+        # under the allocated mapping (the prefix must be re-derived).
+        import torch as _t
+
+        pool = runtime.ctx.kv_cache
+        treatment = []
+        for trial in range(args.trials):
+            runtime.reset_session_state()
+            # NB: reset_session_state ZEROES full_to_swa_index_mapping and
+            # _swa_free (both top-level pool tensors) — the allocation
+            # MUST come after it, else the intervention is neutralized.
+            _reset_swa_allocator(pool)
+            pool.alloc_swa(_t.arange(67, dtype=_t.int64,
+                                      device=pool.full_to_swa_index_mapping
+                                      .device))
+            h1, _ = runtime.prefill(replay[:prefix_len], None, 0)
+            h2, _ = runtime.prefill(chunk2_tokens, None, prefix_len)
+            _t.cuda.synchronize()
+            treatment.append({
+                "chunk1": sha256_tensor(h1),
+                "chunk2": sha256_tensor(h2),
+            })
+        # paired control: identical discipline, mapping NOT allocated
+        control = []
+        for trial in range(args.trials):
+            runtime.reset_session_state()
+            _reset_swa_allocator(pool)
+            h1, _ = runtime.prefill(replay[:prefix_len], None, 0)
+            h2, _ = runtime.prefill(chunk2_tokens, None, prefix_len)
+            _t.cuda.synchronize()
+            control.append({
+                "chunk1": sha256_tensor(h1),
+                "chunk2": sha256_tensor(h2),
+            })
+        result["swa_alloc_treatment"] = treatment
+        result["swa_alloc_control"] = control
+        result["swa_alloc_stabilizes"] = (
+            len({r["chunk2"] for r in treatment}) == 1
+            and len({r["chunk2"] for r in control}) > 1
+        )
+        result["swa_alloc_treatment_chunk2_deterministic"] = (
+            len({r["chunk2"] for r in treatment}) == 1
+        )
+
     elif args.intervention == "route":
         # mechanical route verification (observed at dispatch) + legal
         # alternate-route paired comparison
-        routes = _observe_routes(runtime, frozen_kv, chunk2_tokens,
+        routes = _observe_routes(runtime, frozen, chunk2_tokens,
                                  prefix_len)
         result["route_observation"] = routes
         # alternate route: same state, same rows/positions/KV authority;
@@ -234,7 +374,7 @@ def main(argv=None) -> int:
         # layers only when is_decode stays False.  For the split-k
         # decode route (is_decode=True) forcing is_decode False would
         # change kernel semantics => INTERVENTION_NOT_LEGAL there.
-        alt = _alternate_route_pair(runtime, frozen_kv, chunk2_tokens,
+        alt = _alternate_route_pair(runtime, frozen, chunk2_tokens,
                                     prefix_len)
         result["route_intervention"] = alt
 
@@ -248,20 +388,74 @@ def main(argv=None) -> int:
     return 0
 
 
-def _prezero_decode_scratch(runtime) -> None:
+def _reset_swa_allocator(pool) -> None:
+    """Rebuild the swa allocator to its pristine __init__ state (dense
+    zero mapping + full free-list) — the state the accepted runtime
+    implicitly carries at first use."""
+    import torch as _t
+
+    n = pool._full_num_tokens
+    ps = pool._page_size
+    dev = pool._device
+    pool.full_to_swa_index_mapping = _t.cat(
+        [
+            _t.zeros(n + ps, dtype=_t.int64, device=dev),
+            _t.tensor([-1], dtype=_t.int64, device=dev),
+        ]
+    )
+    pool._swa_free = _t.arange(
+        1, pool._swa_num_tokens, dtype=_t.int32, device=dev
+    )
+
+
+def _install_op_bisection(observer, runtime) -> None:
+    """Wrap layer-0/1 attention-component instance forwards so the
+    ORIGINAL execution path runs unchanged while intermediates are
+    captured (deep-capture gated)."""
+    gids = list(runtime.block.global_layer_ids)
+    for local_idx, layer in enumerate(runtime.block.layers):
+        g = gids[local_idx] if local_idx < len(gids) else local_idx
+        if g not in (0, 1):
+            continue
+        attn = layer.self_attn
+
+        def _wrap(obj, attr, checkpoint):
+            orig = getattr(obj, attr)
+
+            def wrapped(*args, **kwargs):
+                out = orig(*args, **kwargs)
+                if observer.deep:
+                    observer.tensor(checkpoint, out)
+                return out
+
+            setattr(obj, attr, wrapped)
+
+        _wrap(attn.qkv_proj, "forward", f"L{g}_qkv_projected")
+        _wrap(attn.q_norm, "forward", f"L{g}_q_normed")
+        _wrap(attn.k_norm, "forward", f"L{g}_k_normed")
+        _wrap(attn.rotary, "forward", f"L{g}_rotary_applied")
+        _wrap(attn.o_proj, "forward", f"L{g}_o_proj")
+
+
+def _prezero_decode_scratch(runtime, install_flag: list) -> None:
     """Deterministically zero the decode-route scratch buffers of the
     NEXT prepared metadata (B: concrete buffers proven to participate:
     attn_logits/attn_lse fp32 scratch allocated by
-    _ensure_decode_scratch via torch.empty)."""
-    # Implemented via metadata patching at prepare time: the scratch is
-    # allocated inside TritonMetadata per batch; prezero by wrapping
-    # _ensure_decode_scratch for the next call.
+    _ensure_decode_scratch via torch.empty).  install_flag[0] toggles
+    the wrapper ON/OFF so the paired control arm runs the genuinely
+    unchanged allocation path in the same process."""
     from freetoken.attention.triton import TritonAttentionBackend
 
-    orig = TritonAttentionBackend._ensure_decode_scratch
+    if not hasattr(TritonAttentionBackend, "_issue157_orig_scratch"):
+        TritonAttentionBackend._issue157_orig_scratch = (
+            TritonAttentionBackend._ensure_decode_scratch
+        )
+    orig = TritonAttentionBackend._issue157_orig_scratch
 
     def zeroing(self, metadata, bs, num_q_heads, head_dim):
         orig(self, metadata, bs, num_q_heads, head_dim)
+        if not install_flag[0]:
+            return
         if metadata.attn_logits is not None:
             metadata.attn_logits.zero_()
         if metadata.attn_lse is not None:
@@ -270,7 +464,7 @@ def _prezero_decode_scratch(runtime) -> None:
     TritonAttentionBackend._ensure_decode_scratch = zeroing
 
 
-def _observe_routes(runtime, frozen_kv, chunk2_tokens, prefix_len):
+def _observe_routes(runtime, frozen, chunk2_tokens, prefix_len):
     """Run chunk-2 once and record observed dispatch routes per layer."""
     routes = []
     from freetoken.attention.triton import TritonAttentionBackend
@@ -290,7 +484,7 @@ def _observe_routes(runtime, frozen_kv, chunk2_tokens, prefix_len):
     TritonAttentionBackend.forward = observing
     try:
         runtime.reset_session_state()
-        restore_kv_state(runtime, frozen_kv)
+        restore_kv_state(runtime, frozen)
         runtime.prefill(chunk2_tokens, None, prefix_len)
         import torch
 
@@ -300,7 +494,7 @@ def _observe_routes(runtime, frozen_kv, chunk2_tokens, prefix_len):
     return routes
 
 
-def _alternate_route_pair(runtime, frozen_kv, chunk2_tokens, prefix_len):
+def _alternate_route_pair(runtime, frozen, chunk2_tokens, prefix_len):
     """Paired comparison: current dispatch vs alternate legal route.
 
     Legality analysis (recorded, not forced): the backend picks a route
@@ -359,7 +553,7 @@ def _alternate_route_pair(runtime, frozen_kv, chunk2_tokens, prefix_len):
     try:
         for _ in range(3):
             runtime.reset_session_state()
-            restore_kv_state(runtime, frozen_kv)
+            restore_kv_state(runtime, frozen)
             h2, _ = runtime.prefill(chunk2_tokens, None, prefix_len)
             torch.cuda.synchronize()
             digests.append(sha256_tensor(h2))

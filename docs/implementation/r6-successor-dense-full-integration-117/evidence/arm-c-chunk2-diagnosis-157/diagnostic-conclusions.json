@@ -1,0 +1,204 @@
+{
+  "classification": "DIAGNOSTIC_ONLY",
+  "earliest_varying_checkpoint": {
+    "anchor_a": {
+      "all_varying": [
+        "L0_attention_output"
+      ],
+      "earliest_varying": "L0_attention_output"
+    }
+  },
+  "exact_state_replay": {
+    "chunk1_byte_identical_across_repeats": true,
+    "chunk2_deterministic": false,
+    "chunk2_digests": [
+      "22cabe19e70b86797682ac6b3156a0ce42e49fe9ebd28084a02b2a1516deae53",
+      "d25574fcf90de2a8c4c509a11317dc100c0343c1951ec0cb9b5fe93554ad7ee6",
+      "0cd519c11dab84993ace1b940f9fbf160448666114873a00185714a3ac307ded",
+      "be36f0bfa7e55bdcce6d85ac4f29eb725230008d651678a4212ea0d9341992a3",
+      "d8a3042976f9be089f38f77ede2ce498bc76844e12b68f2520a68aec6e5cfbbd",
+      "7c57c8a203ebaf02b0d8d44a615d930b47fa03dfe8fd4c113af74b3fb40a4fb2"
+    ],
+    "no_reuse_proof": {
+      "after_restore": [
+        "8e845e11ddfe151abbc4f63ede8b365b52b22c3146f3153e284a2bd1affee4f2",
+        "5505a85674bbd43249bfd11acd2f27357e9653f0c5aff876d20a04b76f862e12",
+        "1d830c8af4ff60b1ec36350ea25d99c4247d5d040d8d2c9acbe28011ebb9039e",
+        "1cfc9251644a358213d808b8088517b87a9f024bdf46198a3ed692b98b7373a7",
+        "8808405eec6fbe306fe3369f88daed79dd5613ddbb5e801f632b01d6218c5f08"
+      ],
+      "live_after_trials": [
+        "6cbb184a84f1dc44a648ac5754a7d31af98899a0ff4e85c0fb649dc8bfa85f1d",
+        "443e6bfa68b69d1d19d9c45d9d550f13ddcdbce76ecc63c97cf3ae5e3959e263",
+        "1d830c8af4ff60b1ec36350ea25d99c4247d5d040d8d2c9acbe28011ebb9039e",
+        "1cfc9251644a358213d808b8088517b87a9f024bdf46198a3ed692b98b7373a7",
+        "8808405eec6fbe306fe3369f88daed79dd5613ddbb5e801f632b01d6218c5f08"
+      ],
+      "restore_returns_to_frozen": true,
+      "trials_mutated_state": true
+    },
+    "trials": 6
+  },
+  "inputs": {
+    "baseline-reproduction.json": "c93f130786ca26a7ae9f9b7e20cb31607ba677b87e89bd15592f2ba29f33f1bc",
+    "exact-state-replay.json": "a2e2b50a6ba68d094fcefd822c9f312e9b50f748070634f9a70671dfacab3d46",
+    "instrumentation-manifest.json": "1e55086feec2e96306eaedabb34bfacb5f8240f4c5d0a0ca7509b84862591cfb",
+    "interventions.json": "2a241b1c96824acc11dba9ced1da6df4e9189b29d9702b2b83757c9305cf6d69"
+  },
+  "interventions": {
+    "route": {
+      "control_varies": true,
+      "detail": null,
+      "executed": true,
+      "stabilizes": false,
+      "treatment_deterministic": false
+    },
+    "scratch": {
+      "control_varies": null,
+      "detail": null,
+      "executed": true,
+      "stabilizes": false,
+      "treatment_deterministic": null
+    },
+    "swa_alloc": {
+      "control_varies": true,
+      "detail": {
+        "anchors_covered": [
+          "anchor_a",
+          "anchor_b"
+        ]
+      },
+      "executed": true,
+      "stabilizes": true,
+      "treatment_deterministic": true
+    },
+    "sync": {
+      "control_varies": true,
+      "detail": null,
+      "executed": true,
+      "stabilizes": false,
+      "treatment_deterministic": false
+    }
+  },
+  "per_anchor": {
+    "anchor_a": {
+      "committed_token_level": {
+        "note": "in-session variable family reproduced: 107 recurs with 818/100/236774/258882 \u2014 accepted #137 in-session values recur on current accepted code",
+        "reproduces": true,
+        "values": [
+          107,
+          258882,
+          107,
+          107,
+          236774,
+          107,
+          107,
+          818,
+          100
+        ]
+      },
+      "earliest_varying": "L0_attention_output",
+      "exact_state_level": {
+        "note": "exact-state chunk-2 replay from byte-identical restored state varies (6 distinct digests / 6 trials)",
+        "replay_deterministic": false
+      }
+    },
+    "anchor_b": {
+      "committed_token_level": {
+        "note": "session-stable at 107 across all 9 baseline observations \u2014 this diagnostic substrate reproduced the VALUE, not the cross-session drift; no accepted-value contradiction (107 is an accepted in-session value)",
+        "reproduces": false,
+        "values": [
+          107,
+          107,
+          107,
+          107,
+          107,
+          107,
+          107,
+          107,
+          107
+        ]
+      },
+      "earliest_varying": null,
+      "exact_state_level": {
+        "note": "the paired CONTROL arm of the swa_alloc intervention on anchor B varies (5 distinct chunk-2 digests / 6 trials) \u2014 the chunk-2 instability reproduces at the exact-state level",
+        "replay_varies_control": {
+          "anchors_covered": [
+            "anchor_a",
+            "anchor_b"
+          ]
+        }
+      }
+    }
+  },
+  "phenomenon_reproduction": {
+    "anchor_a": {
+      "distinct_committed_values": 5,
+      "observations": 9,
+      "realizations": 3,
+      "values": [
+        107,
+        258882,
+        107,
+        107,
+        236774,
+        107,
+        107,
+        818,
+        100
+      ],
+      "varies": true
+    },
+    "anchor_b": {
+      "distinct_committed_values": 1,
+      "observations": 9,
+      "realizations": 3,
+      "values": [
+        107,
+        107,
+        107,
+        107,
+        107,
+        107,
+        107,
+        107,
+        107
+      ],
+      "varies": false
+    },
+    "stable_control": {
+      "distinct_committed_values": 1,
+      "observations": 9,
+      "realizations": 3,
+      "values": [
+        1509,
+        1509,
+        1509,
+        1509,
+        1509,
+        1509,
+        1509,
+        1509,
+        1509
+      ],
+      "varies": false
+    }
+  },
+  "schema": "inferswarm.issue157.conclusions/1",
+  "shared_mechanism": {
+    "anchors_covered_by_intervention": [
+      "anchor_a",
+      "anchor_b"
+    ],
+    "anchors_share_demonstrated_mechanism": true,
+    "anchors_share_earliest_varying_checkpoint": false,
+    "support": "the single-factor swa_alloc intervention stabilizes BOTH anchors' chunk-2 (byte-deterministic treatment, varying paired control on each) \u2014 one demonstrated mechanism covers both behavioral families"
+  },
+  "terminal": "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED",
+  "terminal_requirements": {
+    "earliest_boundary_localized": true,
+    "mechanism_demonstrated": true,
+    "phenomenon_reproduced": true,
+    "stable_control_contradicted": false
+  }
+}

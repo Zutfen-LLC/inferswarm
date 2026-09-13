@@ -144,7 +144,9 @@ def build_chain(
                             "ISSUE157_ATTEMPT": str(attempt),
                             "ISSUE157_SCRIPTS_DIR": SCRIPTS_DIR,
                             "ISSUE157_STAGE_ROLE": (
-                                f"stage{index + 1}-{block['spec']['role']}"
+                                f"stage{index + 1}-"
+                                f"{block['spec'].get('start_layer', '?')}-"
+                                f"{block['spec'].get('end_layer', '?')}"
                             ),
                         }
                     self.stages.append(
@@ -378,7 +380,12 @@ def main(argv=None) -> int:
     parser.add_argument("--repo", default="/srv/inferswarm/repos/FreeToken")
     parser.add_argument("--probe", required=True,
                         choices=["BASE", "REPLAY", "IV-SYNC",
-                                 "IV-SCRATCH", "IV-ROUTE"])
+                                 "IV-SCRATCH", "IV-ROUTE",
+                                 "IV-SWA-ALLOC"])
+    parser.add_argument("--case", default=None,
+                        help="override the harness case (default: the "
+                             "frozen anchor A; expansion runs must record "
+                             "the reason in the evidence bundle)")
     parser.add_argument("--realizations", type=int, default=3)
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--replay-trials", type=int, default=6)
@@ -555,7 +562,7 @@ def main(argv=None) -> int:
         harness = import_module("issue157_replay_harness")
         result = harness.run(
             repo=repo,
-            case_id=ANCHOR_A,
+            case_id=args.case or ANCHOR_A,
             fixture_rows=rows,
             accepted_ids=accepted_ids,
             first_divergent=ACCEPTED_FIRST_DIVERGENT[ANCHOR_A],
@@ -568,7 +575,8 @@ def main(argv=None) -> int:
         observations.append(result)
         recon = []
 
-    elif args.probe in ("IV-SYNC", "IV-SCRATCH", "IV-ROUTE"):
+    elif args.probe in ("IV-SYNC", "IV-SCRATCH", "IV-ROUTE",
+                        "IV-SWA-ALLOC"):
         from importlib import import_module
 
         harness = import_module("issue157_replay_harness")
@@ -576,10 +584,11 @@ def main(argv=None) -> int:
             "IV-SYNC": "sync",
             "IV-SCRATCH": "scratch",
             "IV-ROUTE": "route",
+            "IV-SWA-ALLOC": "swa-alloc",
         }[args.probe]
         result = harness.run(
             repo=repo,
-            case_id=ANCHOR_A,
+            case_id=args.case or ANCHOR_A,
             fixture_rows=rows,
             accepted_ids=accepted_ids,
             first_divergent=ACCEPTED_FIRST_DIVERGENT[ANCHOR_A],

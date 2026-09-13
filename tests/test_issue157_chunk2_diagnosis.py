@@ -181,6 +181,16 @@ class TestBindingAnchors(unittest.TestCase):
 
         with self.assertRaises(b.BindError):
             b.verify_geometry({"inferswarm01": ["GPU-WRONG"]})
+        # missing inferswarm01 fails closed (driver must bind its host)
+        with self.assertRaises(b.BindError):
+            b.verify_geometry({"inferswarm03": b.GEOMETRY["inferswarm03"]})
+        # provided hosts compare exactly...
+        b.verify_geometry({"inferswarm01": b.GEOMETRY["inferswarm01"]})
+        # ...and 03 may additionally be bound via the ledger route
+        b.verify_geometry({
+            "inferswarm01": b.GEOMETRY["inferswarm01"],
+            "inferswarm03": b.GEOMETRY["inferswarm03"],
+        })
 
     def test_verifier_rejects_software_drift(self):
         import issue157_binding as b

@@ -287,6 +287,43 @@ def install(out_dir: str, stage_label: str) -> Chunk2Observer:
             and rows <= CHUNK2_MAX_ROWS
         )
         if md is not None and is_chunk2_call:
+            if g in (0, 1):
+                observer.tensor(f"L{g}_backend_q_input", q)
+                observer.tensor(f"L{g}_backend_k_input", k)
+                observer.tensor(f"L{g}_backend_v_input", v)
+                # Triton JIT specialization evidence: the JIT keys its
+                # cache on pointer 16-byte divisibility; drifting
+                # addresses of per-call temporaries flip the
+                # specialization (vectorization/accumulation order).
+                k_cache_t = self.kvcache.k_cache(layer_id)
+                v_cache_t = self.kvcache.v_cache(layer_id)
+                o_probe = torch.empty_like(q)
+                observer.raw(f"L{g}_ptr_alignment", {
+                    "q_ptr_mod16": int(q.data_ptr() % 16),
+                    "k_ptr_mod16": int(k.data_ptr() % 16),
+                    "v_ptr_mod16": int(v.data_ptr() % 16),
+                    "out_ptr_mod16": int(o_probe.data_ptr() % 16),
+                    "kcache_ptr_mod16": int(k_cache_t.data_ptr() % 16),
+                    "vcache_ptr_mod16": int(v_cache_t.data_ptr() % 16),
+                    "q_row_stride_mod16_elems": int(q.stride(0) % 8),
+                    "q_ptr_mod16_gcd": int(q.data_ptr() % 16),
+                })
+                del o_probe
+                # SWA allocator-state evidence: the full->swa mapping the
+                # store just consumed and the swa slot-0 bytes it wrote
+                pool = self.kvcache
+                mapping = getattr(pool, "full_to_swa_index_mapping", None)
+                if mapping is not None:
+                    observer.tensor(f"L{g}_swa_index_mapping", mapping)
+                    swa_buf = getattr(pool, "swa_kv_pool", None)
+                    if swa_buf is not None:
+                        observer.tensor(
+                            f"L{g}_swa_slot0_k",
+                            swa_buf.k_buffer[
+                                getattr(pool.layers_mapping[layer_id],
+                                         "index", 0)
+                            ][0],
+                        )
             route = {
                 "global_layer": g,
                 "rows": rows,
@@ -307,6 +344,11 @@ def install(out_dir: str, stage_label: str) -> Chunk2Observer:
                 if batch.positions is not None else None,
             }
             observer.raw(f"route_L{g}", route)
+            for attr in ("indices", "swa_indices", "indptr",
+                         "prefix_lens"):
+                t = getattr(md, attr, None)
+                if t is not None:
+                    observer.tensor(f"L{g}_md_{attr}", t)
             if g in (0, 1):
                 kv_len = (
                     int(md.indptr[-1].item())

@@ -1,0 +1,91 @@
+{
+  "schema": "inferswarm.issue157.launch-ledger/1",
+  "classification": "DIAGNOSTIC_ONLY",
+  "issue_authorization": 157,
+  "launches": [
+    {
+      "run_id": "i157-BASE-1789261211",
+      "probe": "BASE",
+      "host": "inferswarm01",
+      "design": "3 fresh chain realizations x 3 within-realization repeats x {anchor A, anchor B, stable control}; instrumentation armed in stage processes",
+      "note": "two binding fail-closed aborts preceded the executing launch (interpreter symlink resolution; geometry host-set semantics) — tooling fixes only, no GPU work consumed; one KeyError abort (stage-role label lookup) before any GPU work",
+      "outcome": "phenomenon reproduced: anchor A in-session variable (accepted values recur), anchor B session-stable at 107 (accepted value), stable control deterministic 1509 x9"
+    },
+    {
+      "run_id": "i157-REPLAY-1789261629",
+      "probe": "REPLAY",
+      "host": "inferswarm01/gpu-0",
+      "design": "first exact-state attempt",
+      "outcome": "HARNESS_FAILED (TP info not set) — no GPU model work"
+    },
+    {
+      "run_id": "i157-REPLAY-1789261888",
+      "probe": "REPLAY",
+      "host": "inferswarm01/gpu-0",
+      "design": "second attempt; state capture via top-level pool tensors",
+      "outcome": "executed but SUPERSEDED: restore was a no-op on real KV state (nested _KVGroupStorage buffers unreached); its own no_reuse_proof flagged trials_mutated_state=false, exposing the bug; chunk-2 varied 4/6 — directional but not exact-state evidence"
+    },
+    {
+      "run_id": "i157-REPLAY-1789262267",
+      "probe": "REPLAY",
+      "host": "inferswarm01/gpu-0",
+      "design": "corrected capture: full/swa buffers + mapping + free-list + page table",
+      "outcome": "exact-state replay varies (6 distinct chunk-2 digests / 6 trials) from byte-identical restored state; no-reuse proofs pass"
+    },
+    {
+      "run_id": "i157-REPLAY-1789262629",
+      "probe": "REPLAY",
+      "host": "inferswarm01/gpu-0",
+      "design": "as 1789262267 plus op-bisection instrumentation (qkv/norms/rotary/backend inputs) and metadata tensor digests",
+      "outcome": "earliest varying operation = L0_attention_output; all prior ops byte-stable; routes and metadata indices stable"
+    },
+    {
+      "run_id": "i157-IV-SYNC-1789262937",
+      "probe": "IV-SYNC",
+      "host": "inferswarm01/gpu-0",
+      "design": "device-wide synchronize before EVERY backend attention call of chunk-2 (tight) + per-trial pre-prefill sync (baseline arm) vs no-sync control",
+      "outcome": "REJECTED: tight-sync arm still varies (6 distinct); control varies"
+    },
+    {
+      "run_id": "i157-IV-ROUTE-1789263283",
+      "probe": "IV-ROUTE",
+      "host": "inferswarm01/gpu-0",
+      "design": "mechanical route verification at dispatch + paired alternate-route comparison (generic paged for extend chunks on head_dim<=256 layers)",
+      "outcome": "REJECTED: alternate route also varies; route observation retained (is_decode false, 3 rows, prefix 64 on all 16 owned layers)"
+    },
+    {
+      "run_id": "i157-IV-SWA-ALLOC-1789264227",
+      "probe": "IV-SWA-ALLOC",
+      "host": "inferswarm01/gpu-0",
+      "design": "first dispatch attempt",
+      "outcome": "NO EXECUTION: driver dispatch fall-through (probe missing from elif tuple; 14us, empty observations) — tooling incident retained"
+    },
+    {
+      "run_id": "i157-IV-SWA-ALLOC-1789264598",
+      "probe": "IV-SWA-ALLOC",
+      "host": "inferswarm01/gpu-0",
+      "design": "alloc_swa executed BEFORE reset_session_state",
+      "outcome": "SUPERSEDED: intervention neutralized (reset zeroes the mapping); treatment still varied — this run falsified nothing about the hypothesis and exposed the ordering requirement"
+    },
+    {
+      "run_id": "i157-IV-SWA-ALLOC-1789265498",
+      "probe": "IV-SWA-ALLOC",
+      "host": "inferswarm01/gpu-0",
+      "design": "corrected ordering (alloc AFTER reset), anchor A c109-04-02-047, 6 paired trials",
+      "outcome": "CAUSAL DEMONSTRATION: treatment deterministic 6/6; paired control varies 5 distinct; chunk-1 unchanged"
+    },
+    {
+      "run_id": "i157-IV-SWA-ALLOC-1789266024",
+      "probe": "IV-SWA-ALLOC",
+      "host": "inferswarm01/gpu-0",
+      "design": "mechanism coverage expansion on anchor B c109-04-06-074 (issue Phase-6 Q6; reason recorded before execution)",
+      "outcome": "SAME MECHANISM COVERS ANCHOR B: treatment deterministic 6/6; control varies 5 distinct"
+    }
+  ],
+  "infrastructure": {
+    "last_stage_launcher": "inferswarm03 /srv/inferswarm/state/issue157/launcher-loop.sh (producer-override mode recorded per launch in /srv/inferswarm/state/issue157/ready/ready-N.json)",
+    "producer_deployments": "inferswarm01 + inferswarm03 /srv/inferswarm/repos/FreeToken checked out at 55e8baaebabe67aeb967d4bd407ef26696933104, clean trees, verified by scripts/issue157_binding.py before every probe",
+    "accepted_evidence_isolation": "diagnostic outputs written only under /srv/inferswarm/state/issue157/** and /tmp/issue157-harness; accepted Arm-B/#133/#137/#153 evidence dirs and participant-state dirs never written",
+    "teardown": "launcher loop + last-stage services killed and verified stopped; node GPUs verified idle at campaign end"
+  }
+}
