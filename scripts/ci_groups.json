@@ -136,7 +136,12 @@
     "test_v2a_harness",
     "test_v2a_evidence_manifest",
     "test_v2a_discovery_authority_binding",
-    "test_v2a_discovery_authority_binding_r3"
+    "test_v2a_discovery_authority_binding_r3",
+    "test_issue35_link_probe",
+    "test_issue35_role_sweep",
+    "test_issue35_envelope",
+    "test_issue35_evidence_manifest",
+    "test_issue35_corrections"
    ]
   }
  },
@@ -226,6 +231,9 @@
   ],
   "docs/investigations/data/": [
    "phase1-analysis"
+  ],
+  "docs/investigations/link-x1-envelope/": [
+   "vulkan-v0-b"
   ],
   "docs/investigations/vulkan-v0-a/": [
    "vulkan-v0-b"
@@ -637,6 +645,21 @@
   "scripts/issue170_terminal_reduction.py": [
    "issue-117-133"
   ],
+  "scripts/issue35_coarse_concurrent.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue35_envelope.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue35_link_probe.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue35_residency_facts.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue35_role_sweep.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/issue74_methodology.py": [
    "issue-74-79"
   ],
@@ -831,6 +854,21 @@
   ],
   "tests/test_issue157_chunk2_diagnosis.py": [
    "issue-137"
+  ],
+  "tests/test_issue35_corrections.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_issue35_envelope.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_issue35_evidence_manifest.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_issue35_link_probe.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_issue35_role_sweep.py": [
+   "vulkan-v0-b"
   ],
   "tests/test_project_status.py": [
    "repo-integrity"

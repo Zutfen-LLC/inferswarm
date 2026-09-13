@@ -1,0 +1,44 @@
+{
+  "attempts": 1,
+  "clean_attempts": 1,
+  "generation_tokens_per_s": {
+    "max": 0.2,
+    "median": 0.2,
+    "min": 0.2,
+    "values": [
+      0.2
+    ]
+  },
+  "label": "MEASURED",
+  "offload": {
+    "complete_offload": true,
+    "fallback_mentioned": false,
+    "layers_offloaded": 49,
+    "layers_total": 49
+  },
+  "offload_consistent": true,
+  "prompt_tokens_per_s": {
+    "median": 5.9,
+    "values": [
+      5.9
+    ]
+  },
+  "residency": {
+    "cpu_mapped_mib": 417.66,
+    "device_model_buffers_mib": {
+      "Vulkan1": 8148.38
+    },
+    "fully_device_resident": false,
+    "graph_splits_observed": [
+      2
+    ]
+  },
+  "residency_consistent": true,
+  "role_id": "x1p-role-capacity-control",
+  "role_kind": "capacity_feasibility",
+  "schema": "inferswarm.issue35.role-sweep-result/1",
+  "walls": [
+    234.981
+  ],
+  "walls_provenance": "wall seconds as measured by the sweep runner at execution (subsequent residency re-reduction from retained raw bytes preserves them verbatim)"
+}

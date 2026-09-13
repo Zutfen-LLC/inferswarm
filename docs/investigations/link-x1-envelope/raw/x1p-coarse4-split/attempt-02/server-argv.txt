@@ -1,0 +1,1 @@
+/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-server -m /home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf --temp 0 --seed 42 -lv 4 -np 4 -c 4096 --host 127.0.0.1 --port 8371 --device Vulkan1,Vulkan3 -ngl 99 -sm layer

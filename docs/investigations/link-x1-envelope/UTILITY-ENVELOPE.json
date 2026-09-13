@@ -1,0 +1,238 @@
+{
+  "capacity_authority": {
+    "control_pressure": {
+      "context_reductions": [
+        {
+          "from": 131072,
+          "to": 4096
+        }
+      ],
+      "fit_abort_reason": "n_gpu_layers already set by user to 99",
+      "fit_aborted": true,
+      "over_capacity": true,
+      "over_capacity_devices": [
+        {
+          "compute_mib": 105,
+          "context_mib": 768,
+          "device": "Vulkan1",
+          "device_total_mib": 8192,
+          "model_mib": 8148,
+          "self_mib": 9021
+        }
+      ],
+      "projected_vs_free": [
+        {
+          "free_mib": 8186,
+          "projected_mib": 32953
+        }
+      ]
+    },
+    "label": "CALCULATED",
+    "note": "capacity_positive is derived from measured residency/memory-pressure facts reduced from the retained raw stderr (issue35_residency_facts), not from the complete_offload layer-count boolean",
+    "role_residency": {
+      "device_model_buffers_mib": {
+        "Vulkan1": 3917.36,
+        "Vulkan3": 4231.02
+      },
+      "model_buffer_placement_count": 2,
+      "over_capacity": false,
+      "over_capacity_devices": []
+    }
+  },
+  "classifications": [
+    {
+      "basis": "throughput ratio 1.260 above the neutral band",
+      "capacity_positive": false,
+      "classification": "THROUGHPUT_POSITIVE",
+      "control_rate": 44.4,
+      "label": "CALCULATED",
+      "role_id": "x1p-role-adverse",
+      "role_rate": 55.95,
+      "throughput_ratio_vs_control": 1.2601
+    },
+    {
+      "basis": "single llama-cli interaction with -np 4 slots provisioned: one completion in retained stdout; invalid for the intended coarse-comparison claim and superseded by the corrected concurrent arm; retained unchanged as a diagnostic/reference",
+      "classification": "EVIDENCE_INSUFFICIENT",
+      "label": "MEASURED",
+      "role_id": "x1p-role-coarse",
+      "superseded_by": "x1p-coarse4-split",
+      "workload_shape": "1 request on a 4-slot-provisioned server"
+    },
+    {
+      "basis": "throughput ratio 106.500 above the neutral band with capacity contributed on measured memory-fit facts (control pressured, role split-resident)",
+      "capacity_positive": true,
+      "classification": "THROUGHPUT_POSITIVE",
+      "control_rate": 0.2,
+      "label": "CALCULATED",
+      "role_id": "x1p-role-capacity",
+      "role_rate": 21.3,
+      "throughput_ratio_vs_control": 106.5
+    },
+    {
+      "basis": "role failed on the tested substrate in its declared expected mode; retained as evidence",
+      "classification": "NOT_USEFUL_FOR_TESTED_ROLE",
+      "label": "MEASURED",
+      "role_id": "x1p-role-adverse-rowsplit-unsupported"
+    },
+    {
+      "attempt_dispersion": {
+        "arm_highly_dispersed": true,
+        "arm_max_over_min": 12.1768,
+        "control_max_over_min": 1.0023,
+        "control_stable": true
+      },
+      "basis": "genuinely concurrent four-request workload matched in both arms; per-attempt aggregate states: attempt 1: 5.239 vs control 62.542 t/s (0.0838x, decisively below the control); attempt 2: 63.794 vs control 62.396 t/s (1.0224x, inside the declared \u00b15% neutral band). The retained split-arm distribution is highly dispersed (max/min 12.177) while the matched control is stable (max/min 1.002), so the attempt median ratio 0.5525 is recorded per the frozen stop rules but is NOT representative steady-state performance and does not carry the classification. Mechanical basis: no retained attempt demonstrates throughput improvement beyond the neutral band; attempt 1: 5.239 vs control 62.542 t/s (0.0838x, decisively below the control); attempt 2: 63.794 vs control 62.396 t/s (1.0224x, inside the declared \u00b15% neutral band); the role contributes no separate capacity benefit in this workload. A first-attempt initialization/cold-state effect is observed (large first-versus-second-attempt dispersion); causal attribution is not established by this issue (no retained evidence demonstrates a specific mechanism). Classification: NOT_USEFUL_FOR_TESTED_ROLE.",
+      "capacity_positive": false,
+      "classification": "NOT_USEFUL_FOR_TESTED_ROLE",
+      "control_rate": 62.469,
+      "label": "CALCULATED",
+      "median_is_steady_state": false,
+      "per_attempt_states": [
+        {
+          "arm_rate": 5.239,
+          "attempt": 1,
+          "control_rate": 62.542,
+          "ratio_vs_control_attempt": 0.0838
+        },
+        {
+          "arm_rate": 63.794,
+          "attempt": 2,
+          "control_rate": 62.396,
+          "ratio_vs_control_attempt": 1.0224
+        }
+      ],
+      "role_id": "x1p-coarse4-split",
+      "role_rate": 34.517,
+      "steady_state_note": "median of two highly separated attempts; NOT representative steady-state performance",
+      "throughput_ratio_vs_control": 0.5525,
+      "workload_shape": "4 concurrent requests vs 4 concurrent requests"
+    }
+  ],
+  "corrected_coarse": {
+    "aggregate_throughput_split_vs_single": {
+      "single": {
+        "definition": "sum(completion_tokens of all requests) / aggregate wall seconds (first request sent to last response complete)",
+        "label": "CALCULATED",
+        "max": 62.542,
+        "median": 62.469,
+        "min": 62.396,
+        "values": [
+          62.542,
+          62.396
+        ]
+      },
+      "split": {
+        "definition": "sum(completion_tokens of all requests) / aggregate wall seconds (first request sent to last response complete)",
+        "label": "CALCULATED",
+        "max": 63.794,
+        "median": 34.517,
+        "min": 5.239,
+        "values": [
+          5.239,
+          63.794
+        ]
+      }
+    },
+    "label": "CALCULATED",
+    "note": "The corrected coarse role is the four-concurrent-request experiment (x1p-coarse4-split vs the workload-matched concurrent control); the retained single-request result (x1p-role-coarse) is a diagnostic reference only.",
+    "per_sequence_split_vs_single": {
+      "single": {
+        "definition": "median over requests of (completion_tokens_i / per-request wall seconds_i); each request is one sequence, so this is the per-sequence service rate under four-way concurrency",
+        "label": "CALCULATED",
+        "max": 15.809,
+        "median": 15.71,
+        "min": 15.612,
+        "values": [
+          15.809,
+          15.612
+        ]
+      },
+      "split": {
+        "definition": "median over requests of (completion_tokens_i / per-request wall seconds_i); each request is one sequence, so this is the per-sequence service rate under four-way concurrency",
+        "label": "CALCULATED",
+        "max": 16.036,
+        "median": 8.673,
+        "min": 1.31,
+        "values": [
+          1.31,
+          16.036
+        ]
+      }
+    }
+  },
+  "link_vs_device_separation": {
+    "label": "CALCULATED",
+    "note": "Both narrow-link subjects negotiate the same link class under load (see transport summaries). Observations consistent across both subjects are plausibly link/role dominated; device-local compute differences are carried explicitly from the single-subject controls and are not attributed to the link.",
+    "single_subject_compute": {
+      "amd_a_median_tps": 44.4,
+      "device_local_ratio_nv_over_amd": 2.0259,
+      "nv_a_median_tps": 89.95
+    }
+  },
+  "marginal_views": {
+    "label": "CALCULATED",
+    "views": {
+      "note": "The retained single-request coarse diagnostic (x1p-role-coarse) is excluded from marginal views: its workload shape (1 request, 4 idle-capable slots) is not matched to the single-sequence controls' semantics.",
+      "x1p-role-adverse": {
+        "adding_peer_to_subject": {
+          "ratio": 1.2601,
+          "vs_control_median_tps": 44.4
+        },
+        "adding_subject_to_peer": {
+          "ratio": 0.622,
+          "vs_control_median_tps": 89.95
+        }
+      }
+    }
+  },
+  "neutral_band": 0.05,
+  "nonclaims": [
+    "per-role classifications for the tested substrate and supported semantics only, not permanent device grades",
+    "no universal hardware score is frozen",
+    "wider links remain later comparison points, not prerequisites",
+    "no vendor/width special case enters generic planner semantics"
+  ],
+  "schema": "inferswarm.issue35.utility-envelope/3",
+  "taxonomy": [
+    "CAPACITY_POSITIVE_THROUGHPUT_NEGATIVE",
+    "CAPACITY_POSITIVE_THROUGHPUT_NEUTRAL",
+    "THROUGHPUT_POSITIVE",
+    "NOT_USEFUL_FOR_TESTED_ROLE",
+    "EVIDENCE_INSUFFICIENT"
+  ],
+  "terminal": {
+    "basis": "utility characterized across the declared roles well enough to distinguish capacity-only versus throughput-useful placements; the measured envelope distinguishes: decisive capacity/residency utility on measured memory-fit facts (x1p-role-capacity ratio 106.5 vs the pressured control); conditional single-sequence throughput utility depending on anchor compute strength (x1p-role-adverse: 1.2601x adding the stronger participant to the weaker anchor vs 0.622x adding the weaker participant to the stronger anchor); unsupported finer split shape on this substrate (x1p-role-adverse-rowsplit-unsupported: fails closed under current supported semantics); no demonstrated benefit for the corrected four-concurrent-request coarse role (median of two highly separated attempts; NOT representative steady-state performance); device/backend compute rate as an explicit crossover input (device-local ratio 2.0259), not an x1/vendor special case. ENVELOPE_ESTABLISHED does not require every tested throughput role to be positive.",
+    "capacity_roles": [
+      "x1p-role-capacity"
+    ],
+    "label": "CALCULATED",
+    "serving_roles": [
+      "x1p-role-adverse",
+      "x1p-role-capacity"
+    ],
+    "supports_capacity_only": false,
+    "value": "X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED"
+  },
+  "transport_facts": {
+    "amd_a": {
+      "d2h_gbps_128mib": 0.166,
+      "h2d_gbps_128mib": 0.169,
+      "link_under_load": {
+        "generation": 1,
+        "sysfs_speed_label": "2.5 GT/s PCIe",
+        "width": 1
+      },
+      "service_ms_4kib": 0.154734
+    },
+    "nv_a": {
+      "d2h_gbps_128mib": 0.21,
+      "h2d_gbps_128mib": 0.2,
+      "link_under_load": {
+        "generation": 1,
+        "sysfs_speed_label": "2.5 GT/s PCIe",
+        "width": 1
+      },
+      "service_ms_4kib": 0.120172
+    }
+  }
+}

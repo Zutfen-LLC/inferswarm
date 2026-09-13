@@ -1,0 +1,8 @@
+{
+  "attempts": 1,
+  "expected_failure_mode": "runtime model-load failure: split buffers unsupported on these Vulkan backends",
+  "label": "MEASURED",
+  "outcome": "EXPECTED_FAILURE",
+  "role_id": "x1p-role-adverse-rowsplit-unsupported",
+  "role_kind": "communication_heavy_row_split"
+}

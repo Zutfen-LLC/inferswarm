@@ -1,0 +1,53 @@
+{
+  "schema": "inferswarm.issue35.freeze-provenance-erratum/1",
+  "label": "MEASURED",
+  "subject_artifact": "ROLE-SWEEP-FREEZE.json",
+  "subject_artifact_sha256": "69efbf89bc740e856358b8b4e6002211a606e46ea53897b463a156ede6a4cee3",
+  "defect": {
+    "field": "frozen_utc",
+    "embedded_value": "2026-09-13T16:30:00Z",
+    "error": "The embedded frozen_utc value postdates commits that mechanically contain the freeze and is therefore erroneous as a timestamp of freezing. Git object chronology is the authoritative prospective-order proof; the embedded field is NOT corrected in place.",
+    "correct_interpretation": "The freeze existed in Git no later than 2026-09-13T11:49:46-04:00 (initial freeze/tooling commit below) and was amended pre-execution at 2026-09-13T11:58:43-04:00."
+  },
+  "authority": "Git object chronology (commit timestamps + ancestry) is the authoritative proof of prospective order for this freeze. The embedded frozen_utc field is erroneous and is superseded by this erratum; the original freeze bytes are preserved byte-identical and must not be mutated.",
+  "chain": {
+    "initial_freeze_and_tooling": {
+      "sha": "9eeee6196308db8927f604337400f0df1a281197",
+      "committer_date": "2026-09-13T11:49:46-04:00",
+      "contains_freeze": true
+    },
+    "transport_evidence": {
+      "sha": "3b5f8f300aadc4ed3b26ac85c099ca4e7af2847e",
+      "committer_date": "2026-09-13T11:53:19-04:00",
+      "note": "transport substrate evidence only; no role-performance evidence existed yet"
+    },
+    "pre_role_amendment": {
+      "sha": "0b0f6f3e4f5d40328e74eaf4bc5b76576b4b99f7",
+      "committer_date": "2026-09-13T11:58:43-04:00",
+      "freeze_sha256_after": "69efbf89bc740e856358b8b4e6002211a606e46ea53897b463a156ede6a4cee3",
+      "note": "the amended freeze bytes (current bytes) date from this commit"
+    },
+    "comparator_correction": {
+      "sha": "8779a86ced80fd36e42b1f8cc15e57ffe00402ef",
+      "committer_date": "2026-09-13T12:05:29-04:00",
+      "note": "tooling/comparator correction; a transient manifest failure here was corrected by the manifest regeneration commit before any physical role evidence"
+    },
+    "manifest_regeneration": {
+      "sha": "02313b25fbbeed4cb093a6474f2078a3718eaf70",
+      "committer_date": "2026-09-13T12:15:33-04:00",
+      "note": "history preserved as-committed; not rewritten or concealed"
+    },
+    "physical_role_evidence": {
+      "sha": "968faba0e735606194f6bff39c4b54c40acbe2df",
+      "committer_date": "2026-09-13T12:28:52-04:00",
+      "descends_from_corrected_pre_execution_chain": true,
+      "ancestry_proof": "git merge-base --is-ancestor <amendment|comparator-correction|manifest-regeneration> 968faba -> true for all three"
+    }
+  },
+  "no_role_result_existed_at_freeze": "The pre-role amendment commit tree (0b0f6f3) contains NO file under evidence/ or raw/ for any role: git ls-tree of that commit lists only the transport evidence files. No role-performance result existed when the role definitions (including the amendment) were finalized.",
+  "nonclaims": [
+    "this erratum does not modify, regenerate, or reinterpret any accepted evidence",
+    "the original freeze bytes remain byte-identical; the erroneous field is documented, not repaired in place",
+    "the historical transient manifest failure at 8779a86 and its correction at 02313b2 are preserved as-committed"
+  ]
+}

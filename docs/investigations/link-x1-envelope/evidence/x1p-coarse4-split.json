@@ -1,0 +1,195 @@
+{
+  "aggregate_throughput_tokens_per_s": {
+    "definition": "sum(completion_tokens of all requests) / aggregate wall seconds (first request sent to last response complete)",
+    "label": "CALCULATED",
+    "max": 63.794,
+    "median": 34.517,
+    "min": 5.239,
+    "values": [
+      5.239,
+      63.794
+    ]
+  },
+  "all_attempts_all_correct": true,
+  "arm_id": "x1p-coarse4-split",
+  "attempts": 2,
+  "label": "MEASURED",
+  "offload": {
+    "complete_offload": true,
+    "layers_offloaded": 37,
+    "layers_total": 37
+  },
+  "parallel_slots": 4,
+  "per_attempt": [
+    {
+      "aggregate_completion_tokens": 188,
+      "aggregate_throughput_tokens_per_s": {
+        "definition": "sum(completion_tokens of all requests) / aggregate wall seconds (first request sent to last response complete)",
+        "label": "CALCULATED",
+        "value": 5.239
+      },
+      "aggregate_wall_seconds": 35.885,
+      "all_correct_vs_reference": true,
+      "all_requests_identical": true,
+      "arm_id": "x1p-coarse4-split",
+      "completion_tokens_per_request": [
+        47,
+        47,
+        47,
+        47
+      ],
+      "label": "MEASURED",
+      "offload": {
+        "complete_offload": true,
+        "layers_offloaded": 37,
+        "layers_total": 37
+      },
+      "parallel_slots": 4,
+      "per_request_correct_vs_reference": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "per_request_latency": {
+        "max": 35.883,
+        "median": 35.88,
+        "min": 34.874
+      },
+      "per_request_wall_seconds": [
+        35.88,
+        35.883,
+        34.874,
+        35.88
+      ],
+      "per_sequence_throughput_tokens_per_s": {
+        "definition": "median over requests of (completion_tokens_i / per-request wall seconds_i); each request is one sequence, so this is the per-sequence service rate under four-way concurrency",
+        "label": "CALCULATED",
+        "value": 1.31
+      },
+      "requests": 4,
+      "residency": {
+        "cpu_mapped_mib": 243.43,
+        "device_model_buffers_mib": {
+          "Vulkan1": 837.19,
+          "Vulkan3": 997.63
+        },
+        "fully_device_resident": false,
+        "graph_splits_observed": [
+          3
+        ]
+      },
+      "schema": "inferswarm.issue35.coarse-concurrent-result/1",
+      "server_binary_sha256": "dded1ad18f02377c9ac63843b88e133a615a225eb53161d2479e9458d53e0599",
+      "server_ready_seconds": 25.952,
+      "server_reported_generation_rate": null,
+      "server_stderr_sha256": "5ff781d80bbdbe5a471f4584df87773ffb04a337908d71ea65865b1ddf736dc7",
+      "server_stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "aggregate_completion_tokens": 188,
+      "aggregate_throughput_tokens_per_s": {
+        "definition": "sum(completion_tokens of all requests) / aggregate wall seconds (first request sent to last response complete)",
+        "label": "CALCULATED",
+        "value": 63.794
+      },
+      "aggregate_wall_seconds": 2.947,
+      "all_correct_vs_reference": true,
+      "all_requests_identical": true,
+      "arm_id": "x1p-coarse4-split",
+      "completion_tokens_per_request": [
+        47,
+        47,
+        47,
+        47
+      ],
+      "label": "MEASURED",
+      "offload": {
+        "complete_offload": true,
+        "layers_offloaded": 37,
+        "layers_total": 37
+      },
+      "parallel_slots": 4,
+      "per_request_correct_vs_reference": [
+        true,
+        true,
+        true,
+        true
+      ],
+      "per_request_latency": {
+        "max": 2.946,
+        "median": 2.931,
+        "min": 2.917
+      },
+      "per_request_wall_seconds": [
+        2.945,
+        2.946,
+        2.917,
+        2.917
+      ],
+      "per_sequence_throughput_tokens_per_s": {
+        "definition": "median over requests of (completion_tokens_i / per-request wall seconds_i); each request is one sequence, so this is the per-sequence service rate under four-way concurrency",
+        "label": "CALCULATED",
+        "value": 16.036
+      },
+      "requests": 4,
+      "residency": {
+        "cpu_mapped_mib": 243.43,
+        "device_model_buffers_mib": {
+          "Vulkan1": 837.19,
+          "Vulkan3": 997.63
+        },
+        "fully_device_resident": false,
+        "graph_splits_observed": [
+          3
+        ]
+      },
+      "schema": "inferswarm.issue35.coarse-concurrent-result/1",
+      "server_binary_sha256": "dded1ad18f02377c9ac63843b88e133a615a225eb53161d2479e9458d53e0599",
+      "server_ready_seconds": 16.991,
+      "server_reported_generation_rate": null,
+      "server_stderr_sha256": "0f395aba13726f256a5796df9d5cbaa877b6aa1772bac8602c57729e15ad7ff9",
+      "server_stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "per_request_latency_all_attempts": {
+    "max": 35.883,
+    "median": 18.91,
+    "min": 2.917,
+    "values": [
+      35.88,
+      35.883,
+      34.874,
+      35.88,
+      2.945,
+      2.946,
+      2.917,
+      2.917
+    ]
+  },
+  "per_sequence_throughput_tokens_per_s": {
+    "definition": "median over requests of (completion_tokens_i / per-request wall seconds_i); each request is one sequence, so this is the per-sequence service rate under four-way concurrency",
+    "label": "CALCULATED",
+    "max": 16.036,
+    "median": 8.673,
+    "min": 1.31,
+    "values": [
+      1.31,
+      16.036
+    ]
+  },
+  "requests": 4,
+  "residency": {
+    "cpu_mapped_mib": 243.43,
+    "device_model_buffers_mib": {
+      "Vulkan1": 837.19,
+      "Vulkan3": 997.63
+    },
+    "fully_device_resident": false,
+    "graph_splits_observed": [
+      3
+    ]
+  },
+  "schema": "inferswarm.issue35.coarse-concurrent-result/1",
+  "server_binary_sha256": "dded1ad18f02377c9ac63843b88e133a615a225eb53161d2479e9458d53e0599"
+}

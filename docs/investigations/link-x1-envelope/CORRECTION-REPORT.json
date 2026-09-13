@@ -1,0 +1,102 @@
+{
+  "schema": "inferswarm.issue35.correction-report/2",
+  "label": "MEASURED",
+  "corrected_pr_head_before": "ea6e488dc896ec12100df8956b65d52c9bf22ea4",
+  "reconciled_main_sha": "941d0fe52ecedff1c5294a5582af3fedecb1018e",
+  "corrections": {
+    "freeze_provenance": {
+      "erratum_path": "FREEZE-PROVENANCE-ERRATUM.json",
+      "original_freeze_sha256": "69efbf89bc740e856358b8b4e6002211a606e46ea53897b463a156ede6a4cee3",
+      "original_freeze_bytes_preserved": true,
+      "defect": "ROLE-SWEEP-FREEZE.json frozen_utc=2026-09-13T16:30:00Z postdates the commits that mechanically contain the freeze; Git object chronology is the authoritative prospective-order proof; the field is documented additively, never edited in place",
+      "chain": "9eeee6196308db8927f604337400f0df1a281197 (initial freeze/tooling) -> 3b5f8f300aadc4ed3b26ac85c099ca4e7af2847e (transport evidence) -> 0b0f6f3e4f5d40328e74eaf4bc5b76576b4b99f7 (pre-role amendment; produces the current freeze bytes) -> 8779a86ced80fd36e42b1f8cc15e57ffe00402ef (comparator correction; transient manifest failure preserved) -> 02313b25fbbeed4cb093a6474f2078a3718eaf70 (manifest regeneration) -> 968faba0e735606194f6bff39c4b54c40acbe2df (physical role evidence; descendant of the whole corrected pre-execution chain; tree at amendment contains zero role evidence files, so no role-performance result existed when role definitions were finalized)"
+    },
+    "capacity_authority": {
+      "old_rule": "capacity_positive = role.complete_offload AND NOT control.complete_offload",
+      "old_rule_defect": "both retained capacity arms report nominal 49/49 complete offload (the sweep forced -ngl 99), so the boolean cannot distinguish them; the control also never exercised its declared auto-fit authority because the forced -ngl made the runtime fitter abort ('n_gpu_layers already set by user to 99')",
+      "corrected_rule": "capacity_positive derives from measured residency/memory-pressure facts reduced deterministically from the retained raw stderr: control pressure (over-capacity final allocation 9021 MiB self-demand on an 8192 MiB device; fit aborted; projected 32953 vs 8186 free MiB; context reduced 131072->4096) AND role split residency (model buffers 3917.36+4231.02 MiB across both devices, no over-capacity device). A non-zero CPU_Mapped buffer appears in BOTH arms and is never paging evidence by itself.",
+      "rerun_required": false,
+      "evidence": {
+        "facts_artifact": "evidence/x1p-capacity-residency-facts.json",
+        "source_role_stderr": "raw/x1p-role-capacity/attempt-01/stderr.txt",
+        "source_control_stderr": "raw/x1p-role-capacity-control/attempt-01/stderr.txt",
+        "original_control_evidence_untouched": true
+      },
+      "classification": "THROUGHPUT_POSITIVE with measured capacity contribution (ratio 106.5 vs the pressured control; 21.3 vs 0.2 t/s)"
+    },
+    "coarse_role": {
+      "old_result": "52.35 t/s median labeled as batch amortization from llama-cli -np 4",
+      "old_result_defect": "llama-cli at the pinned revision sends ONE chat-completion interaction to its embedded server; -np 4 provisions four parallel slots but issues no concurrent requests; the retained stdout contains exactly one completion",
+      "disposition_of_old_result": "retained byte-identical; classified EVIDENCE_INSUFFICIENT for the coarse claim and marked invalid as four-sequence evidence",
+      "prospective_freeze": {
+        "path": "COARSE-CORRECTION-FREEZE.json",
+        "committed_before_first_attempt": true,
+        "commit": "d4b35a567aa0d0bb155d2c211b63a9f25fb7d64b",
+        "exact_head_ci": {"run_id": 34772675623, "conclusion": "success"}
+      },
+      "execution_geometry": "pinned llama-server (same pinned llama.cpp source tree/build config as the frozen llama-cli; binary sha256 dded1ad18f02377c9ac63843b88e133a615a225eb53161d2479e9458d53e0599); 4 parallel slots; 4 concurrent identical frozen requests (frozen prompt, 48 max tokens, temp 0, seed 42) per attempt; 2 attempts per arm; every request required byte-correct vs the frozen reference",
+      "arms": {
+        "x1p-coarse4-split": {
+          "placement": "two-subject layer split (both subjects, -ngl 99, -sm layer)",
+          "aggregate_tokens_per_s": {"median": 34.517, "values": [5.239, 63.794], "label": "CALCULATED"},
+          "per_sequence_tokens_per_s": {"median": 8.673, "values": [1.31, 16.036], "label": "CALCULATED"},
+          "aggregate_wall_seconds": [35.885, 2.947],
+          "cold_start_note": "attempt-01 wall (35.885 s) shows a first-attempt initialization/cold-state effect; the retained attempts show extreme first-versus-second-attempt dispersion (aggregate 5.239 vs 63.794 t/s) while the matched control is stable (62.542/62.396 t/s). Causal attribution of attempt 1 to any specific mechanism (e.g. pipeline compilation) is NOT established by this issue: no retained raw evidence demonstrates one. Both attempts retained per the frozen stop rules; the median is recorded per those rules but is NOT presented as representative steady-state performance; the per-attempt distribution carries the classification",
+          "per_request_latency_seconds": {"median": 18.91, "min": 2.917, "max": 35.883},
+          "all_requests_correct": true,
+          "raw": ["raw/x1p-coarse4-split/attempt-01/", "raw/x1p-coarse4-split/attempt-02/"]
+        },
+        "x1p-coarse4-single": {
+          "placement": "single-subject anchor (matched control; same requests/slots/ctx)",
+          "aggregate_tokens_per_s": {"median": 62.469, "values": [62.542, 62.396], "label": "CALCULATED"},
+          "per_sequence_tokens_per_s": {"median": 15.71, "values": [15.809, 15.612], "label": "CALCULATED"},
+          "aggregate_wall_seconds": [3.006, 3.013],
+          "per_request_latency_seconds": {"median": 2.987, "min": 2.962, "max": 3.011},
+          "all_requests_correct": true,
+          "raw": ["raw/x1p-coarse4-single/attempt-01/", "raw/x1p-coarse4-single/attempt-02/"]
+        }
+      },
+      "matched_comparison": "genuinely concurrent four-request workload matched in both arms; per-attempt aggregate states: attempt 1: 5.239 vs control 62.542 t/s (0.0838x, decisively below the control); attempt 2: 63.794 vs control 62.396 t/s (1.0224x, inside the declared +/-5% neutral band); the split-arm distribution is highly dispersed (max/min 12.18) while the control is stable (1.002); the median ratio 34.517/62.469 = 0.5526 is recorded per the frozen stop rules but is NOT representative steady-state performance and does not carry the classification",
+      "classification": "NOT_USEFUL_FOR_TESTED_ROLE",
+      "classification_basis": "the first split attempt is decisively below the control; the second split attempt is approximately 1.02x the stable control, inside the declared ±5% neutral band; no retained attempt demonstrates throughput improvement beyond the neutral band; the role contributes no separate capacity benefit in this workload. The median of the two highly separated attempts is not relied on as a stable ratio; the full distribution/uncertainty is recorded here and in UTILITY-ENVELOPE.json (per_attempt_states, attempt_dispersion, median_is_steady_state=false)"
+    },
+    "r0_machine_coverage": {
+      "defect": "x1p-role-adverse-rowsplit-unsupported was classified NOT_USEFUL_FOR_TESTED_ROLE in STATUS but omitted from UTILITY-ENVELOPE.json by build_envelope()",
+      "correction": "build_envelope() now loads and classifies R0; regression test proves R0 present with the fail-closed result"
+    },
+    "main_reconciliation": {
+      "method": "merge origin/main into issue-35-x1-envelope (no history rewrite); both sides' CI registrations preserved in .github/workflows/ci.yml, scripts/ci_groups.json, scripts/plan_ci.py; registry/workflow parity validation green after the merge (tests.test_plan_ci, 81 tests OK)",
+      "overlapping_files": [".github/workflows/ci.yml", "scripts/ci_groups.json", "scripts/plan_ci.py"]
+    },
+    "terminal_semantics": {
+      "defect": "the prior correction round re-derived the terminal as X1_PARTICIPANT_ONLY_CAPACITY_USEFUL, which the issue's own terminal definition forbids: that terminal is permitted only when the bounded tested roles establish real capacity utility but NO throughput-neutral/positive serving role under current supported semantics, while the retained supported serving-role evidence contains x1p-role-adverse = THROUGHPUT_POSITIVE (55.95 vs 44.4 t/s, ratio 1.2601; peer-perspective ratio 0.622 vs the stronger NV anchor). The prior terminal_basis additionally claimed ENVELOPE_ESTABLISHED was 'no longer supportable' because the corrected coarse measurement was negative — a misreading: ENVELOPE_ESTABLISHED does not require every tested throughput role to be positive",
+      "correction": "the terminal is now DERIVED by issue35_envelope.derive_terminal from the effective classifications and marginal facts (UTILITY-ENVELOPE.json schema /3 carries the machine derivation; STATUS.json carries the same value); issue35_envelope.validate_terminal enforces fail-closed consistency, including the specific forbidden combination (CAPACITY_ONLY declared while a supported serving role is throughput-positive)",
+      "corrected_value": "X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED",
+      "previous_value": "X1_PARTICIPANT_ONLY_CAPACITY_USEFUL",
+      "rerun_required": false,
+      "evidence_unchanged": "no physical measurement rerun; the derivation consumes the same retained evidence as the prior round"
+    },
+    "coarse_uncertainty_language": {
+      "defect": "the prior round attributed attempt 1 to 'first-use pipeline compile' / 'cold-compile' and leaned on the 0.5525 median ratio; no retained raw evidence demonstrates a compile mechanism (the split-arm server stderr contains no compile/shader/warmup lines beyond 'pipeline parallelism enabled', which appears identically in both attempts), and the median of two highly separated observations is not representative steady-state performance",
+      "correction": "derived artifacts now use factual language (first-attempt initialization/cold-state effect; large observed first-versus-second-attempt dispersion; causal attribution not established by this issue); the coarse classification records the full per-attempt distribution (per_attempt_states, attempt_dispersion, median_is_steady_state) and reasons from the per-attempt states (first decisively below control; second inside the ±5% neutral band; none beyond the band; no separate capacity benefit); the NOT_USEFUL_FOR_TESTED_ROLE conclusion is retained on that mechanical basis, not on the unstable median",
+      "raw_evidence_unchanged": true
+    }
+  },
+  "rederived_terminal": {
+    "value": "X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED",
+    "previous_value": "X1_PARTICIPANT_ONLY_CAPACITY_USEFUL",
+    "why_changed": "re-derived strictly from the issue's terminal definitions: X1_PARTICIPANT_ONLY_CAPACITY_USEFUL requires NO throughput-neutral/positive serving role under current supported semantics, but the retained x1p-role-adverse serving role is THROUGHPUT_POSITIVE (1.2601x vs the weaker anchor; 0.622x peer-perspective vs the stronger); the measured envelope distinguishes capacity-only versus throughput-useful placements (decisive capacity/residency utility; conditional single-sequence throughput utility depending on anchor compute strength; no benefit for the corrected four-concurrent-request coarse role; unsupported finer row/tensor split; device/backend compute rate as an explicit crossover input), which is what ENVELOPE_ESTABLISHED defines",
+    "authority": "issue35_envelope.derive_terminal over the effective classifications + marginal facts; carried in UTILITY-ENVELOPE.json (schema /3) and STATUS.json"
+  },
+  "consistency": {
+    "utility_envelope_schema": "inferswarm.issue35.utility-envelope/3",
+    "status_schema": "inferswarm.issue35.evidence-status/1",
+    "all_agree_on": {
+      "x1p-coarse4-split": "NOT_USEFUL_FOR_TESTED_ROLE",
+      "x1p-role-capacity": "THROUGHPUT_POSITIVE (capacity on measured memory-fit facts)",
+      "x1p-role-coarse_old": "diagnostic / EVIDENCE_INSUFFICIENT for the coarse claim (superseded by x1p-coarse4-split)",
+      "R0": "NOT_USEFUL_FOR_TESTED_ROLE",
+      "terminal": "X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED"
+    }
+  }
+}
