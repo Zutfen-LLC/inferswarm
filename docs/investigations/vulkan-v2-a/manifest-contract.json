@@ -1,0 +1,199 @@
+{
+ "bundle": "docs/investigations/vulkan-v2-a",
+ "ladder": [
+  {
+   "state": "namespace-only",
+   "evidence": [
+    "README.md"
+   ]
+  },
+  {
+   "state": "retained-replay-proof",
+   "evidence": [
+    "README.md",
+    "RETAINED-EVIDENCE-REPLAYS.json"
+   ]
+  },
+  {
+   "state": "dual-authority-freeze",
+   "evidence": [
+    "AUTHORITY-AMD-A.json",
+    "AUTHORITY-NV-A.json",
+    "README.md",
+    "RETAINED-EVIDENCE-REPLAYS.json"
+   ]
+  },
+  {
+   "state": "amd-qualification-retained",
+   "evidence": [
+    "AUTHORITY-AMD-A.json",
+    "AUTHORITY-NV-A.json",
+    "README.md",
+    "RETAINED-EVIDENCE-REPLAYS.json",
+    "raw/v2a-amd-a-qualification-01/exit-code.txt",
+    "raw/v2a-amd-a-qualification-01/qualification.json",
+    "raw/v2a-amd-a-qualification-01/stderr.txt",
+    "raw/v2a-amd-a-qualification-01/stdout.txt"
+   ]
+  },
+  {
+   "state": "amd-plan-frozen",
+   "evidence": [
+    "AUTHORITY-AMD-A.json",
+    "AUTHORITY-NV-A.json",
+    "README.md",
+    "RETAINED-EVIDENCE-REPLAYS.json",
+    "evidence/v2a-amd-a-plan-01/candidate-set.json",
+    "evidence/v2a-amd-a-plan-01/frozen-plan.json",
+    "evidence/v2a-amd-a-plan-01/resource-snapshot.json",
+    "raw/v2a-amd-a-qualification-01/exit-code.txt",
+    "raw/v2a-amd-a-qualification-01/qualification.json",
+    "raw/v2a-amd-a-qualification-01/stderr.txt",
+    "raw/v2a-amd-a-qualification-01/stdout.txt"
+   ]
+  },
+  {
+   "state": "amd-campaign-terminal",
+   "evidence": [
+    "AUTHORITY-AMD-A.json",
+    "AUTHORITY-NV-A.json",
+    "README.md",
+    "RETAINED-EVIDENCE-REPLAYS.json",
+    "evidence/v2a-amd-a-canonical-01/accounting.json",
+    "evidence/v2a-amd-a-canonical-01/canonical-observation.json",
+    "evidence/v2a-amd-a-canonical-01/correctness-result.json",
+    "evidence/v2a-amd-a-canonical-01/execution-receipt.json",
+    "evidence/v2a-amd-a-plan-01/candidate-set.json",
+    "evidence/v2a-amd-a-plan-01/frozen-plan.json",
+    "evidence/v2a-amd-a-plan-01/resource-snapshot.json",
+    "raw/v2a-amd-a-canonical-01/canonical-execution.json",
+    "raw/v2a-amd-a-canonical-01/exit-code.txt",
+    "raw/v2a-amd-a-canonical-01/stderr.txt",
+    "raw/v2a-amd-a-canonical-01/stdout.txt",
+    "raw/v2a-amd-a-qualification-01/exit-code.txt",
+    "raw/v2a-amd-a-qualification-01/qualification.json",
+    "raw/v2a-amd-a-qualification-01/stderr.txt",
+    "raw/v2a-amd-a-qualification-01/stdout.txt"
+   ]
+  },
+  {
+   "state": "nv-qualification-retained",
+   "evidence": [
+    "AUTHORITY-AMD-A.json",
+    "AUTHORITY-NV-A.json",
+    "README.md",
+    "RETAINED-EVIDENCE-REPLAYS.json",
+    "evidence/v2a-amd-a-canonical-01/accounting.json",
+    "evidence/v2a-amd-a-canonical-01/canonical-observation.json",
+    "evidence/v2a-amd-a-canonical-01/correctness-result.json",
+    "evidence/v2a-amd-a-canonical-01/execution-receipt.json",
+    "evidence/v2a-amd-a-plan-01/candidate-set.json",
+    "evidence/v2a-amd-a-plan-01/frozen-plan.json",
+    "evidence/v2a-amd-a-plan-01/resource-snapshot.json",
+    "raw/v2a-amd-a-canonical-01/canonical-execution.json",
+    "raw/v2a-amd-a-canonical-01/exit-code.txt",
+    "raw/v2a-amd-a-canonical-01/stderr.txt",
+    "raw/v2a-amd-a-canonical-01/stdout.txt",
+    "raw/v2a-amd-a-qualification-01/exit-code.txt",
+    "raw/v2a-amd-a-qualification-01/qualification.json",
+    "raw/v2a-amd-a-qualification-01/stderr.txt",
+    "raw/v2a-amd-a-qualification-01/stdout.txt",
+    "raw/v2a-nv-a-qualification-01/exit-code.txt",
+    "raw/v2a-nv-a-qualification-01/qualification.json",
+    "raw/v2a-nv-a-qualification-01/stderr.txt",
+    "raw/v2a-nv-a-qualification-01/stdout.txt"
+   ]
+  },
+  {
+   "state": "nv-plan-frozen",
+   "evidence": [
+    "AUTHORITY-AMD-A.json",
+    "AUTHORITY-NV-A.json",
+    "README.md",
+    "RETAINED-EVIDENCE-REPLAYS.json",
+    "evidence/v2a-amd-a-canonical-01/accounting.json",
+    "evidence/v2a-amd-a-canonical-01/canonical-observation.json",
+    "evidence/v2a-amd-a-canonical-01/correctness-result.json",
+    "evidence/v2a-amd-a-canonical-01/execution-receipt.json",
+    "evidence/v2a-amd-a-plan-01/candidate-set.json",
+    "evidence/v2a-amd-a-plan-01/frozen-plan.json",
+    "evidence/v2a-amd-a-plan-01/resource-snapshot.json",
+    "evidence/v2a-nv-a-plan-01/candidate-set.json",
+    "evidence/v2a-nv-a-plan-01/frozen-plan.json",
+    "evidence/v2a-nv-a-plan-01/resource-snapshot.json",
+    "raw/v2a-amd-a-canonical-01/canonical-execution.json",
+    "raw/v2a-amd-a-canonical-01/exit-code.txt",
+    "raw/v2a-amd-a-canonical-01/stderr.txt",
+    "raw/v2a-amd-a-canonical-01/stdout.txt",
+    "raw/v2a-amd-a-qualification-01/exit-code.txt",
+    "raw/v2a-amd-a-qualification-01/qualification.json",
+    "raw/v2a-amd-a-qualification-01/stderr.txt",
+    "raw/v2a-amd-a-qualification-01/stdout.txt",
+    "raw/v2a-nv-a-qualification-01/exit-code.txt",
+    "raw/v2a-nv-a-qualification-01/qualification.json",
+    "raw/v2a-nv-a-qualification-01/stderr.txt",
+    "raw/v2a-nv-a-qualification-01/stdout.txt"
+   ]
+  },
+  {
+   "state": "terminal",
+   "evidence": [
+    "AUTHORITY-AMD-A.json",
+    "AUTHORITY-NV-A.json",
+    "FINAL-TERMINAL.json",
+    "PORTABILITY-AUDIT.json",
+    "README.md",
+    "RETAINED-EVIDENCE-REPLAYS.json",
+    "STATUS.json",
+    "evidence/v2a-amd-a-canonical-01/accounting.json",
+    "evidence/v2a-amd-a-canonical-01/canonical-observation.json",
+    "evidence/v2a-amd-a-canonical-01/correctness-result.json",
+    "evidence/v2a-amd-a-canonical-01/execution-receipt.json",
+    "evidence/v2a-amd-a-plan-01/candidate-set.json",
+    "evidence/v2a-amd-a-plan-01/frozen-plan.json",
+    "evidence/v2a-amd-a-plan-01/resource-snapshot.json",
+    "evidence/v2a-nv-a-canonical-01/accounting.json",
+    "evidence/v2a-nv-a-canonical-01/canonical-observation.json",
+    "evidence/v2a-nv-a-canonical-01/correctness-result.json",
+    "evidence/v2a-nv-a-canonical-01/execution-receipt.json",
+    "evidence/v2a-nv-a-plan-01/candidate-set.json",
+    "evidence/v2a-nv-a-plan-01/frozen-plan.json",
+    "evidence/v2a-nv-a-plan-01/resource-snapshot.json",
+    "raw/v2a-amd-a-canonical-01/canonical-execution.json",
+    "raw/v2a-amd-a-canonical-01/exit-code.txt",
+    "raw/v2a-amd-a-canonical-01/stderr.txt",
+    "raw/v2a-amd-a-canonical-01/stdout.txt",
+    "raw/v2a-amd-a-qualification-01/exit-code.txt",
+    "raw/v2a-amd-a-qualification-01/qualification.json",
+    "raw/v2a-amd-a-qualification-01/stderr.txt",
+    "raw/v2a-amd-a-qualification-01/stdout.txt",
+    "raw/v2a-nv-a-canonical-01/canonical-execution.json",
+    "raw/v2a-nv-a-canonical-01/exit-code.txt",
+    "raw/v2a-nv-a-canonical-01/stderr.txt",
+    "raw/v2a-nv-a-canonical-01/stdout.txt",
+    "raw/v2a-nv-a-qualification-01/exit-code.txt",
+    "raw/v2a-nv-a-qualification-01/qualification.json",
+    "raw/v2a-nv-a-qualification-01/stderr.txt",
+    "raw/v2a-nv-a-qualification-01/stdout.txt"
+   ]
+  }
+ ],
+ "sources": [
+  "scripts/v2a_discovery.py",
+  "scripts/v2a_authority.py",
+  "scripts/v2a_harness.py",
+  "scripts/v2a_manifest.py",
+  "scripts/v1a_execution_participant.py",
+  "scripts/v1a_vulkan_adapter.py",
+  "scripts/v1a_runner.py",
+  "scripts/v0c_canonical_run.py",
+  "scripts/v0c_correctness.py",
+  "scripts/v1c_accounting.py"
+ ],
+ "tests": [
+  "tests/test_v2a_discovery.py",
+  "tests/test_v2a_authority.py",
+  "tests/test_v2a_harness.py",
+  "tests/test_v2a_evidence_manifest.py"
+ ]
+}
