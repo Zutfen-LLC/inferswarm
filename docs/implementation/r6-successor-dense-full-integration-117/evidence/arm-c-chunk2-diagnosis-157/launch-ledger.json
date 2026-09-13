@@ -1,0 +1,167 @@
+{
+  "classification": "DIAGNOSTIC_ONLY",
+  "infrastructure": {
+    "accepted_evidence_isolation": "diagnostic outputs written only under /srv/inferswarm/state/issue157/** and /tmp/issue157-harness; accepted Arm-B/#133/#137/#153 evidence dirs and participant-state dirs never written",
+    "last_stage_launcher": "inferswarm03 /srv/inferswarm/state/issue157/launcher-loop.sh (producer-override mode recorded per launch in /srv/inferswarm/state/issue157/ready/ready-N.json)",
+    "producer_deployments": "inferswarm01 + inferswarm03 /srv/inferswarm/repos/FreeToken checked out at 55e8baaebabe67aeb967d4bd407ef26696933104, clean trees, verified by scripts/issue157_binding.py before every probe",
+    "teardown": "launcher loop + last-stage services killed and verified stopped; node GPUs verified idle at campaign end"
+  },
+  "issue_authorization": 157,
+  "launches": [
+    {
+      "design": "3 fresh chain realizations x 3 within-realization repeats x {anchor A, anchor B, stable control}; instrumentation armed in stage processes",
+      "host": "inferswarm01",
+      "note": "two binding fail-closed aborts preceded the executing launch (interpreter symlink resolution; geometry host-set semantics) \u2014 tooling fixes only, no GPU work consumed; one KeyError abort (stage-role label lookup) before any GPU work",
+      "outcome": "phenomenon reproduced: anchor A in-session variable (accepted values recur), anchor B session-stable at 107 (accepted value), stable control deterministic 1509 x9",
+      "probe": "BASE",
+      "run_id": "i157-BASE-1789261211",
+      "superseded_for_phase2_authority_by": "i157-BASE-1789309328",
+      "tooling_note": "executed under uncommitted intermediate instrumentation bytes (sha256:98fa2a80\u2026d8d77, pre-freeze); NOT rerun under committed 2611ee1 bytes \u2014 correction pass 1 reran the REPLAY/IV arms only. Retained as the sole source of the Phase-2 token-level observations; chunk-1 boundary digests independently corroborated under committed bytes by i157-REPLAY-1789269282 and the i157-IV-SWA-ALLOC corr1 runs (see baseline-re provenance). The earlier note claiming supersession by a correction-pass-1 BASE rerun was inaccurate; corrected in the recertification record pass (2026-09-13)."
+    },
+    {
+      "design": "first exact-state attempt",
+      "host": "inferswarm01/gpu-0",
+      "outcome": "HARNESS_FAILED (TP info not set) \u2014 no GPU model work",
+      "probe": "REPLAY",
+      "run_id": "i157-REPLAY-1789261629"
+    },
+    {
+      "design": "second attempt; state capture via top-level pool tensors",
+      "host": "inferswarm01/gpu-0",
+      "outcome": "executed but SUPERSEDED: restore was a no-op on real KV state (nested _KVGroupStorage buffers unreached); its own no_reuse_proof flagged trials_mutated_state=false, exposing the bug; chunk-2 varied 4/6 \u2014 directional but not exact-state evidence",
+      "probe": "REPLAY",
+      "run_id": "i157-REPLAY-1789261888"
+    },
+    {
+      "design": "corrected capture: full/swa buffers + mapping + free-list + page table",
+      "host": "inferswarm01/gpu-0",
+      "outcome": "exact-state replay varies (6 distinct chunk-2 digests / 6 trials) from byte-identical restored state; no-reuse proofs pass",
+      "probe": "REPLAY",
+      "run_id": "i157-REPLAY-1789262267",
+      "tooling_note": "executed under uncommitted intermediate tool bytes (adversarial-review finding); superseded by the correction-pass-1 rerun under committed 2611ee1 bytes"
+    },
+    {
+      "design": "as 1789262267 plus op-bisection instrumentation (qkv/norms/rotary/backend inputs) and metadata tensor digests",
+      "host": "inferswarm01/gpu-0",
+      "outcome": "earliest varying operation = L0_attention_output; all prior ops byte-stable; routes and metadata indices stable",
+      "probe": "REPLAY",
+      "run_id": "i157-REPLAY-1789262629",
+      "tooling_note": "executed under uncommitted intermediate tool bytes (adversarial-review finding); superseded by the correction-pass-1 rerun under committed 2611ee1 bytes"
+    },
+    {
+      "design": "device-wide synchronize before EVERY backend attention call of chunk-2 (tight) + per-trial pre-prefill sync (baseline arm) vs no-sync control",
+      "host": "inferswarm01/gpu-0",
+      "outcome": "REJECTED: tight-sync arm still varies (6 distinct); control varies",
+      "probe": "IV-SYNC",
+      "run_id": "i157-IV-SYNC-1789262937",
+      "tooling_note": "executed under uncommitted intermediate tool bytes (adversarial-review finding); superseded by the correction-pass-1 rerun under committed 2611ee1 bytes"
+    },
+    {
+      "design": "mechanical route verification at dispatch + paired alternate-route comparison (generic paged for extend chunks on head_dim<=256 layers)",
+      "host": "inferswarm01/gpu-0",
+      "outcome": "REJECTED: alternate route also varies; route observation retained (is_decode false, 3 rows, prefix 64 on all 16 owned layers)",
+      "probe": "IV-ROUTE",
+      "run_id": "i157-IV-ROUTE-1789263283",
+      "tooling_note": "executed under uncommitted intermediate tool bytes (adversarial-review finding); superseded by the correction-pass-1 rerun under committed 2611ee1 bytes"
+    },
+    {
+      "design": "first dispatch attempt",
+      "host": "inferswarm01/gpu-0",
+      "outcome": "NO EXECUTION: driver dispatch fall-through (probe missing from elif tuple; 14us, empty observations) \u2014 tooling incident retained",
+      "probe": "IV-SWA-ALLOC",
+      "run_id": "i157-IV-SWA-ALLOC-1789264227"
+    },
+    {
+      "design": "alloc_swa executed BEFORE reset_session_state",
+      "host": "inferswarm01/gpu-0",
+      "outcome": "SUPERSEDED: intervention neutralized (reset zeroes the mapping); treatment still varied \u2014 this run falsified nothing about the hypothesis and exposed the ordering requirement",
+      "probe": "IV-SWA-ALLOC",
+      "run_id": "i157-IV-SWA-ALLOC-1789264598"
+    },
+    {
+      "design": "corrected ordering (alloc AFTER reset), anchor A c109-04-02-047, 6 paired trials",
+      "host": "inferswarm01/gpu-0",
+      "outcome": "CAUSAL DEMONSTRATION: treatment deterministic 6/6; paired control varies 5 distinct; chunk-1 unchanged",
+      "probe": "IV-SWA-ALLOC",
+      "run_id": "i157-IV-SWA-ALLOC-1789265498",
+      "tooling_note": "executed under uncommitted intermediate tool bytes (adversarial-review finding); superseded by the correction-pass-1 rerun under committed 2611ee1 bytes"
+    },
+    {
+      "design": "mechanism coverage expansion on anchor B c109-04-06-074 (issue Phase-6 Q6; reason recorded before execution)",
+      "host": "inferswarm01/gpu-0",
+      "outcome": "SAME MECHANISM COVERS ANCHOR B: treatment deterministic 6/6; control varies 6 distinct",
+      "probe": "IV-SWA-ALLOC",
+      "run_id": "i157-IV-SWA-ALLOC-1789266024",
+      "tooling_note": "executed under uncommitted intermediate tool bytes (adversarial-review finding); superseded by the correction-pass-1 rerun under committed 2611ee1 bytes"
+    },
+    {
+      "design": "confirmation rerun after instrumentation update (alignment capture)",
+      "host": "inferswarm01/gpu-0",
+      "outcome": "chunk-2 varies 6/6, no-reuse proofs pass (consistent with 1789262629)",
+      "probe": "REPLAY",
+      "run_id": "i157-REPLAY-1789263859",
+      "superseded_by_correction_pass_1": true
+    },
+    {
+      "design": "second confirmation rerun (swa-mapping capture instrumentation)",
+      "host": "inferswarm01/gpu-0",
+      "outcome": "chunk-2 varies, no-reuse proofs pass",
+      "probe": "REPLAY",
+      "run_id": "i157-REPLAY-1789265058",
+      "superseded_by_correction_pass_1": true
+    },
+    {
+      "design": "first corrected-ordering anchor-A execution; result 5/6-varied treatment indicated the reset-ordering was still wrong in that build; fixed and rerun 90s later",
+      "host": "inferswarm01/gpu-0",
+      "outcome": "SUPERSEDED by i157-IV-SWA-ALLOC-1789265498 (same session); its stage JSONL is retained in instrumentation-manifest.retained_stage_jsonl",
+      "probe": "IV-SWA-ALLOC",
+      "run_id": "i157-IV-SWA-ALLOC-1789265467",
+      "superseded_by_correction_pass_1": true
+    },
+    {
+      "design": "correction pass 1: rerun under committed tool bytes 2611ee1 (node bytes sha-verified)",
+      "host": "inferswarm01/gpu-0",
+      "outcome": "chunk-2 varies 6/6 from byte-identical restored state; no-reuse proofs pass; ALL JSONLs retained",
+      "probe": "REPLAY",
+      "run_id": "i157-REPLAY-1789269282"
+    },
+    {
+      "design": "correction pass 1 rerun",
+      "host": "inferswarm01/gpu-0",
+      "outcome": "REJECTED again: tight-sync varies 6/6; control varies",
+      "probe": "IV-SYNC",
+      "run_id": "i157-IV-SYNC-1789269402"
+    },
+    {
+      "design": "correction pass 1 rerun",
+      "host": "inferswarm01/gpu-0",
+      "outcome": "REJECTED again: alternate route varies; control varies",
+      "probe": "IV-ROUTE",
+      "run_id": "i157-IV-ROUTE-1789269522"
+    },
+    {
+      "design": "correction pass 1 rerun, anchor A",
+      "host": "inferswarm01/gpu-0",
+      "outcome": "CAUSAL CONFIRMED: treatment 1-distinct/6, control 3-distinct/6; chunk-1 stable both arms",
+      "probe": "IV-SWA-ALLOC",
+      "run_id": "i157-IV-SWA-ALLOC-1789269642"
+    },
+    {
+      "design": "correction pass 1 rerun, anchor B (expansion)",
+      "host": "inferswarm01/gpu-0",
+      "outcome": "CAUSAL CONFIRMED: treatment 1-distinct/6, control 6-distinct/6",
+      "probe": "IV-SWA-ALLOC",
+      "run_id": "i157-IV-SWA-ALLOC-1789269764"
+    },
+    {
+      "design": "authoritative Phase-2 BASE rerun under committed 2611ee1 execution-bearing tool bytes (2026-09-13 physical-authority correction): 3 fresh chain realizations x 3 within-realization repeats x {anchor A, anchor B, stable control}; instrumentation armed in stage processes",
+      "host": "inferswarm01",
+      "outcome": "phenomenon reproduced under frozen producer bytes: anchor A in-session variable (5 distinct / 9; accepted values 107+818 recur), anchor B session-stable at 107 x9 (accepted value), stable control deterministic 1509 x9; chunk-1 boundary byte-deterministic",
+      "probe": "BASE",
+      "run_id": "i157-BASE-1789309328",
+      "tooling_note": "executed under committed 2611ee1 bytes (instrumentation sha256:00a1c2c1...24fc, verified equal on the node before and after the run); supersedes i157-BASE-1789261211 for Phase-2 authority per the corrected reducer reproduction gate"
+    }
+  ],
+  "note": "Every launch with GPU model execution is ledgered, including confirmation reruns and tooling-incident aborts; the correction-pass-1 rerun entries are appended when pulled.",
+  "schema": "inferswarm.issue157.launch-ledger/1"
+}
