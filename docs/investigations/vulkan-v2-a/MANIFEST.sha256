@@ -36,6 +36,10 @@ a5b0a9e816f1e2923823d25eced2c6575c3b4e653a455369a3ceca0f8378f54d  docs/investiga
 96865aad2430535300133f3c8363726ab4518d068fe6fcf4eb410e96865268aa  docs/investigations/vulkan-v2-a/raw/v2a-amd-a-qualification-01/qualification.json
 a6cb988163e8fe39075219b8698b92bfa106731d2ffbfe55ed18895570fb2a14  docs/investigations/vulkan-v2-a/raw/v2a-amd-a-qualification-01/stderr.txt
 5f455f301e4e1d91d2c46577a5fccd2d9a6ab26d024240094b0b07be25337849  docs/investigations/vulkan-v2-a/raw/v2a-amd-a-qualification-01/stdout.txt
+9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa  docs/investigations/vulkan-v2-a/raw/v2a-amd-a-r2-qualification-01/exit-code.txt
+5df21814c7960cb9abe4e8a1de37bc3f558f60946435bdefb28316bcdbdb5eee  docs/investigations/vulkan-v2-a/raw/v2a-amd-a-r2-qualification-01/qualification.json
+a30d6defb7340daeeddf090e07ce052b2d6fbf8b87c47a3197ebb62a0e8e95e0  docs/investigations/vulkan-v2-a/raw/v2a-amd-a-r2-qualification-01/stderr.txt
+d766c9f78bd5993a7c8130a1f1aae759049a7392a3660e14281b290dabcacee5  docs/investigations/vulkan-v2-a/raw/v2a-amd-a-r2-qualification-01/stdout.txt
 622ddff24f96bc7293f273d956d6955c382e45dae7a673e7356108f012ada3c0  docs/investigations/vulkan-v2-a/raw/v2a-nv-a-canonical-01/canonical-execution.json
 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa  docs/investigations/vulkan-v2-a/raw/v2a-nv-a-canonical-01/exit-code.txt
 d316f2276c6935dd31cd67e9e936af0f423263893cd08bd1e0de003ffe739744  docs/investigations/vulkan-v2-a/raw/v2a-nv-a-canonical-01/stderr.txt
