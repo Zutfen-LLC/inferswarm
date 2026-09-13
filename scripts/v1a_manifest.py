@@ -9,7 +9,25 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 BUNDLE = Path("docs/investigations/vulkan-v1-a")
 MANIFEST = BUNDLE / "MANIFEST.sha256"
-EVIDENCE = frozenset({"README.md", "COUPLING-AUDIT.json", "STATUS.json", "PHYSICAL-AUTHORITY.json", "reference-visible-output.txt"})
+EVIDENCE = frozenset({
+    "README.md", "COUPLING-AUDIT.json", "STATUS.json", "PHYSICAL-AUTHORITY.json", "reference-visible-output.txt",
+    "GENERALIZATION-AUDIT.json", "FINAL-TERMINAL.json",
+    "evidence/v1a-amd-a-plan-01/resource-snapshot.json",
+    "evidence/v1a-amd-a-plan-01/candidate-set.json",
+    "evidence/v1a-amd-a-plan-01/frozen-plan.json",
+    "evidence/v1a-amd-a-canonical-01/accounting.json",
+    "evidence/v1a-amd-a-canonical-01/correctness-result.json",
+    "evidence/v1a-amd-a-canonical-01/canonical-observation.json",
+    "evidence/v1a-amd-a-canonical-01/execution-receipt.json",
+    "raw/v1a-amd-a-qualification-01/stdout.txt",
+    "raw/v1a-amd-a-qualification-01/stderr.txt",
+    "raw/v1a-amd-a-qualification-01/exit-code.txt",
+    "raw/v1a-amd-a-qualification-01/qualification.json",
+    "raw/v1a-amd-a-canonical-01/stdout.txt",
+    "raw/v1a-amd-a-canonical-01/stderr.txt",
+    "raw/v1a-amd-a-canonical-01/exit-code.txt",
+    "raw/v1a-amd-a-canonical-01/canonical-execution.json",
+})
 SOURCES = frozenset({"scripts/v1a_execution_participant.py", "scripts/v1a_vulkan_adapter.py", "scripts/v1a_manifest.py", "scripts/v1a_runner.py"})
 TESTS = frozenset({"tests/test_v1a_execution_participant.py", "tests/test_v1a_vulkan_adapter.py", "tests/test_v1a_evidence_manifest.py", "tests/test_v1a_runner.py"})
 
