@@ -1,0 +1,21 @@
+{
+ "bucket_counts": {
+  "1-8": 4,
+  "25-48": 4,
+  "49-64": 4,
+  "9-24": 4
+ },
+ "canonical_corpus_digest": "sha256:8a382df1ae5e7d7330966e65acba58bc02ff5af958f3ef63484cc52747a31c34",
+ "case_count": 16,
+ "classification_basis": "16 unique public cases; exact frozen target lengths and remainders re-derived from retained rendered-id lists; exactly four cases per original #168 bucket; all six accepted content classes at least twice; canonical digest and public disjointness re-derived; preflight 24/24; no physical execution",
+ "content_class_counts": {
+  "mathematics-numerals": 3,
+  "multilingual-text": 2,
+  "ordinary-prose": 3,
+  "punctuation-whitespace-rare-high-entropy": 3,
+  "repetitive-low-entropy": 2,
+  "source-code-structured-syntax": 3
+ },
+ "corpus_id": "issue170-arm-c-long-remainder-corpus-v1",
+ "verdict": "ISSUE117_ARM_C_LONG_REMAINDER_CORPUS_FROZEN"
+}
