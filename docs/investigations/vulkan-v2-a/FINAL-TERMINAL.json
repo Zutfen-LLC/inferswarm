@@ -1,0 +1,37 @@
+{
+ "basis": {
+  "adversarial_cpu_controls": "15/15 in tests/test_v2a_harness.py; discovery/authority/manifest negative controls in focused modules (54 focused tests)",
+  "amd_a_campaign": {
+   "canonical": "v2a-amd-a-canonical-01 PASS (exit 0, 37/37, accounting 0/0/0, byte-exact, sealed proof/observation/receipt)",
+   "canonical_record_digest": "2ec315b0db30c5ce90afce4ca2b188ad6ebfa692b9535a898ff42759e8e5b285",
+   "plan": "04099541dd9fd0c8c2e394fb...: SELECTED_BY_OBJECTIVE from opaque facts",
+   "qualification": "v2a-amd-a-qualification-01 PASS (37/37, no fallback, clean exit, adapter-sealed)"
+  },
+  "authority_loader_rejects_self_authorization": true,
+  "both_fresh_physical_campaigns_pass": true,
+  "discovery_non_authorizing": true,
+  "historical_evidence_unchanged": "all V0/V1 namespaces byte-frozen; all historical manifest verifiers PASS",
+  "no_public_api_or_default_backend_policy_frozen": true,
+  "nv_a_campaign": {
+   "canonical": "v2a-nv-a-canonical-01 PASS (exit 0, 37/37, accounting 0/0/0, byte-exact, sealed proof/observation/receipt)",
+   "canonical_record_digest": "77533b202b8fe6a29f3f450787ad9b1a91a81238f9a845bdd64918d28f178c62",
+   "plan": "8ed139dbc24215ec0f3f0c4e...: SELECTED_BY_OBJECTIVE from opaque facts",
+   "qualification": "v2a-nv-a-qualification-01 PASS (37/37, no fallback, clean exit, adapter-sealed)"
+  },
+  "portability_audit": "PASS: differences classified AUTHORITY_DATA_ONLY / BACKEND_RUNTIME_DATA_ONLY / REUSABLE_HARNESS_SEMANTICS_SHARED; no SUBJECT_SPECIFIC_CODE_REQUIRED; no foundational invariant falsified",
+  "retained_evidence_replays": "accepted AMD/V1-A and NV/V1-C transcripts both PASS under the same harness bytes (retrospective; accounting 0/0/0; byte-exact)",
+  "same_harness_source_freeze": "75e9da1 (authorities carry pins to the 3f48c49 source freeze; CI run 34739300393 CI Gate SUCCESS at exact head 3f48c49)"
+ },
+ "issue": "#163",
+ "nonclaims": [
+  "internal/research device qualification harness only",
+  "not a public plugin API",
+  "not production scheduler/backend support",
+  "not default/preferred-backend policy",
+  "no broad hardware/model qualification",
+  "no comparator recalibration",
+  "no Vulkan/CUDA numerical-equivalence claim"
+ ],
+ "schema": "inferswarm.v2a.terminal/1",
+ "terminal": "V2A_REUSABLE_DEVICE_QUALIFICATION_HARNESS_PASS"
+}

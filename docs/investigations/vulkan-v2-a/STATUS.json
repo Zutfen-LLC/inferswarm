@@ -1,0 +1,16 @@
+{
+ "acceptance_state": "draft PR #164 records the result; acceptance remains with the maintainer",
+ "facts": {
+  "adversarial_controls": "15/15 CPU controls PASS",
+  "amd_a": "qual PASS 37/37; canonical PASS accounting 0/0/0 byte-exact (Vulkan1 / 02:00.0)",
+  "local_host_confirmed": "inferswarm02",
+  "nv_a": "qual PASS 37/37; canonical PASS accounting 0/0/0 byte-exact (Vulkan3 / 04:00.0)",
+  "portability_audit": "PASS (data-only differences)",
+  "repeatability": "inherited from accepted predecessors (explicitly recorded in both authorities)",
+  "retained_replays": "AMD/V1-A + NV/V1-C both PASS under the same harness bytes",
+  "ssh_used": false
+ },
+ "issue": "#163",
+ "schema": "inferswarm.v2a.evidence-status/1",
+ "terminal": "V2A_REUSABLE_DEVICE_QUALIFICATION_HARNESS_PASS"
+}

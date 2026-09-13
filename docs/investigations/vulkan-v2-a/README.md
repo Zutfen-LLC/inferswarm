@@ -1,6 +1,7 @@
 # V2-A — reusable device qualification harness (issue #163)
 
-Status: IN PROGRESS (Phase 0 complete; namespace is additive).
+Status: CAMPAIGN COMPLETE — terminal `V2A_REUSABLE_DEVICE_QUALIFICATION_HARNESS_PASS`
+(see FINAL-TERMINAL.json, STATUS.json, PORTABILITY-AUDIT.json).
 
 V0 established Vulkan as a promising portable substrate; V1-A/V1-B/V1-C
 established a reusable internal S2 participant across two physical
