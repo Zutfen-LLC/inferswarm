@@ -1,0 +1,144 @@
+{
+  "case": "c109-04-02-047",
+  "chunk1": {
+    "boundary_sha256": "7522b637dcc9fe8a2b62a91bd663eeec1adc1959bcfeed9919f814c3942902c4",
+    "kv_state_digests": [
+      "8e845e11ddfe151abbc4f63ede8b365b52b22c3146f3153e284a2bd1affee4f2",
+      "ff083213afb949c8ffc89883d3a92aa48c58958cadc04d3e003c44c566c3a4a3",
+      "1d830c8af4ff60b1ec36350ea25d99c4247d5d040d8d2c9acbe28011ebb9039e",
+      "1cfc9251644a358213d808b8088517b87a9f024bdf46198a3ed692b98b7373a7",
+      "8808405eec6fbe306fe3369f88daed79dd5613ddbb5e801f632b01d6218c5f08"
+    ],
+    "rows": 64
+  },
+  "chunk1_repeatability": {
+    "byte_identical": true,
+    "digests": [
+      "7522b637dcc9fe8a2b62a91bd663eeec1adc1959bcfeed9919f814c3942902c4",
+      "7522b637dcc9fe8a2b62a91bd663eeec1adc1959bcfeed9919f814c3942902c4",
+      "7522b637dcc9fe8a2b62a91bd663eeec1adc1959bcfeed9919f814c3942902c4"
+    ],
+    "kv_state_byte_identical": false,
+    "kv_state_digests": [
+      [
+        "8e845e11ddfe151abbc4f63ede8b365b52b22c3146f3153e284a2bd1affee4f2",
+        "ff083213afb949c8ffc89883d3a92aa48c58958cadc04d3e003c44c566c3a4a3",
+        "1d830c8af4ff60b1ec36350ea25d99c4247d5d040d8d2c9acbe28011ebb9039e",
+        "1cfc9251644a358213d808b8088517b87a9f024bdf46198a3ed692b98b7373a7",
+        "8808405eec6fbe306fe3369f88daed79dd5613ddbb5e801f632b01d6218c5f08"
+      ],
+      [
+        "8e845e11ddfe151abbc4f63ede8b365b52b22c3146f3153e284a2bd1affee4f2",
+        "e8849e9f1aafa27d9943ebac3a42ae322abcd536f9b4689800400616eaf4383d",
+        "1d830c8af4ff60b1ec36350ea25d99c4247d5d040d8d2c9acbe28011ebb9039e",
+        "1cfc9251644a358213d808b8088517b87a9f024bdf46198a3ed692b98b7373a7",
+        "8808405eec6fbe306fe3369f88daed79dd5613ddbb5e801f632b01d6218c5f08"
+      ],
+      [
+        "8e845e11ddfe151abbc4f63ede8b365b52b22c3146f3153e284a2bd1affee4f2",
+        "e995defb2d26b71863b7213ac32ec094883363ea4999142106c4249484c93d98",
+        "1d830c8af4ff60b1ec36350ea25d99c4247d5d040d8d2c9acbe28011ebb9039e",
+        "1cfc9251644a358213d808b8088517b87a9f024bdf46198a3ed692b98b7373a7",
+        "8808405eec6fbe306fe3369f88daed79dd5613ddbb5e801f632b01d6218c5f08"
+      ]
+    ]
+  },
+  "chunk2_deterministic": false,
+  "chunk2_digests": [
+    "22cabe19e70b86797682ac6b3156a0ce42e49fe9ebd28084a02b2a1516deae53",
+    "86a995e8dd00342a3954f4794a5bbc5c33536f59a05fa2fc704c9cd8475fb32d",
+    "0cd519c11dab84993ace1b940f9fbf160448666114873a00185714a3ac307ded",
+    "84043e8d5d00aa5f5a46114e109021a1c73e43afdd8b39ea6dc400067529b121",
+    "6e2a1b916b688b9994b0ea480275715ba9a0b303b4de38500d4bf6bd87e9416f",
+    "c80495217288f9c01263711942f5987b5df6ecc305b0aaf56c4de645313d6030"
+  ],
+  "chunk2_rows": 3,
+  "classification": "DIAGNOSTIC_ONLY",
+  "derived_checkpoints_analysis": {
+    "note": "derived from the retained per-call JSONL of this run (all JSONLs preserved in the correction pass)",
+    "per_checkpoint": {
+      "L0_attention_output": {
+        "verdict": "varies (consumes slot 0)"
+      },
+      "L0_backend_k_input": {
+        "distinct": 1
+      },
+      "L0_backend_q_input": {
+        "distinct": 1
+      },
+      "L0_backend_v_input": {
+        "distinct": 1
+      },
+      "L0_k_normed": {
+        "distinct": 1
+      },
+      "L0_kv_slice_post_write": {
+        "verdict": "EARLIEST VARYING (racing store)"
+      },
+      "L0_kv_slice_pre_write": {
+        "distinct": 1
+      },
+      "L0_o_proj": {
+        "verdict": "varies (propagated)"
+      },
+      "L0_q_normed": {
+        "distinct": 1
+      },
+      "L0_qkv_projected": {
+        "distinct": 1
+      },
+      "L0_rotary_applied": {
+        "distinct": 1
+      },
+      "L1_kv_slice_pre_write": {
+        "distinct": 1
+      },
+      "after_layer_0": {
+        "verdict": "varies (propagated)"
+      },
+      "after_layer_1": {
+        "verdict": "varies (propagated)"
+      },
+      "kv_state_at_call_start": {
+        "distinct": 1
+      },
+      "md_indices": {
+        "distinct": 1
+      },
+      "md_indptr": {
+        "distinct": 1
+      },
+      "md_swa_indices": {
+        "distinct": 1
+      },
+      "routes_all_16_layers": {
+        "distinct": 1
+      }
+    }
+  },
+  "driver_record_sha256": "5421289c3661d3e6bc8d8bdc9bb2816415d2421531d6a9f93d7b15deef38915b",
+  "no_reuse_proof": {
+    "after_restore": [
+      "8e845e11ddfe151abbc4f63ede8b365b52b22c3146f3153e284a2bd1affee4f2",
+      "ff083213afb949c8ffc89883d3a92aa48c58958cadc04d3e003c44c566c3a4a3",
+      "1d830c8af4ff60b1ec36350ea25d99c4247d5d040d8d2c9acbe28011ebb9039e",
+      "1cfc9251644a358213d808b8088517b87a9f024bdf46198a3ed692b98b7373a7",
+      "8808405eec6fbe306fe3369f88daed79dd5613ddbb5e801f632b01d6218c5f08"
+    ],
+    "live_after_trials": [
+      "1b5ced6645399813fa07975f0d947bff18c1b3b511f91f9536e317a2df4633b6",
+      "45a7fc3f1f51d4614967d8d33c3831c88f2327741705db39dee18e5cb3cff07d",
+      "1d830c8af4ff60b1ec36350ea25d99c4247d5d040d8d2c9acbe28011ebb9039e",
+      "1cfc9251644a358213d808b8088517b87a9f024bdf46198a3ed692b98b7373a7",
+      "8808405eec6fbe306fe3369f88daed79dd5613ddbb5e801f632b01d6218c5f08"
+    ],
+    "restore_returns_to_frozen": true,
+    "trials_mutated_state": true
+  },
+  "provenance": "tooling committed at 2611ee1 (node bytes sha256-verified equal pre-launch)",
+  "schema": "inferswarm.issue157.exact-state-replay/2",
+  "source_run": "i157-REPLAY-1789269282",
+  "source_run_sha256": "a03a34bdcecd8e7719cadbc6508a47ec7cb8b7fc9082a10f6ffa0a27982d0973",
+  "supersedes": "i157-REPLAY-1789262629 (uncommitted tool bytes; same result)",
+  "trials": 6
+}

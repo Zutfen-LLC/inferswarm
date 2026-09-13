@@ -1,0 +1,243 @@
+{
+  "accepted_evidence_isolation": "diagnostic outputs write ONLY to /srv/inferswarm/state/issue157/** and this bundle; accepted Arm-B/#133/#137/#153 evidence dirs and participant-state directories are never mutated",
+  "authorization_scope": {
+    "authorizes": [
+      "fresh diagnostic GPU/model execution against the required multi-chunk extend-prefill path"
+    ],
+    "does_not_authorize": [
+      "Arm-C qualification attempt",
+      "PASS/FAIL reinterpretation of ISSUE117_ARM_C_ORDINARY_SERVING_FAIL",
+      "Arm D or Arm E",
+      "frozen-contract change",
+      "any h109-* access (opening, generation, copying, inference, reconstruction, use)"
+    ]
+  },
+  "chunk_partition_contract": {
+    "prefill_chunk_rows": 64,
+    "required_partitions": {
+      "65": [
+        64,
+        1
+      ],
+      "66": [
+        64,
+        2
+      ],
+      "67": [
+        64,
+        3
+      ]
+    },
+    "source": "frozen boundary/wire contract (accepted #153); never changed here"
+  },
+  "classification": "DIAGNOSTIC_ONLY",
+  "diagnostic_producer": {
+    "commit": "55e8baaebabe67aeb967d4bd407ef26696933104",
+    "deployment": "existing accepted /srv/inferswarm/repos/FreeToken checkout on inferswarm01 and inferswarm03 (verified clean at exactly this commit by scripts/issue157_binding.py before any GPU work)",
+    "repository": "Zutfen-LLC/FreeToken",
+    "source_changes": "NONE \u2014 zero FreeToken source changes; all instrumentation is InferSwarm-repo scripts installed at runtime only inside explicitly spawned #157 diagnostic processes"
+  },
+  "explicit_non_claims": "per METHODOLOGY.md Explicit non-claims",
+  "fresh_vs_same_substrate_policy": "per METHODOLOGY.md; baseline = fresh chain realizations with ledger-bound last-stage relaunches; replay/interventions = frozen-capture state reconstruction with restore-return proofs",
+  "frozen_corpus": {
+    "anchor_a": {
+      "case_id": "c109-04-02-047",
+      "chunk_partition": [
+        64,
+        3
+      ],
+      "family": "in-session-variable",
+      "first_divergent_position": 0,
+      "prompt_len": 67,
+      "selection_reason": "mandated by issue #157; only case with retained #137 D/D2 layer evidence (first chunk stable, embedding stable, earliest variance after layer 0 / at or before global layer 1)"
+    },
+    "anchor_b": {
+      "case_id": "c109-04-06-074",
+      "chunk_partition": [
+        64,
+        2
+      ],
+      "family": "session-stable-within-session / cross-session-different",
+      "first_divergent_position": 0,
+      "prompt_len": 66,
+      "selection_reason": "bound BEFORE physical execution from the accepted #137 per-case causal families record (in_session_values [107,107,107,107]; matches_an_accepted_value false; cross_campaign_all_four_distinct true); position-0 divergence \u2014 the chunk-2 prefill call itself, same call shape as Anchor A; distinct remainder (64+2 vs 64+3)"
+    },
+    "expansion_rule": "remaining accepted divergent cases run only when anchors localize to different mechanisms or a proposed mechanism needs coverage evidence; reason recorded before each expansion",
+    "stable_control": {
+      "case_id": "c109-03-04-003",
+      "chunk_partition": [
+        53
+      ],
+      "prompt_len": 53,
+      "selection_reason": "the exact stable control identity from accepted #137 probe C2, bound from the retained i137-diag-C2-1789141057.json case field (sha256 409c534c\u2026) and its deterministic single-chunk arm; never re-selected"
+    }
+  },
+  "frozen_subject": {
+    "checkpoint_path_nodes": "/srv/models/gemma-r6/model.safetensors",
+    "checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "model": "google/gemma-4-12B-it",
+    "qualification_subject": "sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f7f1d7994ffd",
+    "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7"
+  },
+  "instrumentation": {
+    "capture_plan": "per METHODOLOGY.md Phase 1: call/state identity, first-chunk-end state, layer-0/1 op checkpoints (qkv, norms, rotary, KV pre/post, attention out, o_proj, residual), route observation at dispatch, decode-scratch identity",
+    "execution_bearing_files": {
+      "scripts/issue157_binding.py": "sha256:66927fab5f98aed756780430492667bebda5efab2161edf1d77d0061a89348ca",
+      "scripts/issue157_instrumentation.py": "sha256:00a1c2c1452f87ca56289eeb3716e9cd08ba1c5a36e7d06ac6abdb79283024fc",
+      "scripts/issue157_probe_driver.py": "sha256:b49c0bec2d3e7ad2f7877632489a09cb6dda2702a735853ba3836d7589b88a3e",
+      "scripts/issue157_replay_harness.py": "sha256:0ce7e7a89e5c2548112435170cd2068cffb83337a7697d8156192d8728cb2024",
+      "scripts/issue157_replay_worker.py": "sha256:b7ed6de8a4fd0344f1aae810cab1fda1f852bf3cd594988297f2a72354f877c5",
+      "scripts/issue157_sitecustomize.py": "sha256:67effb1dfc8c9960e43f5c577195f71635930db4b768d831f84970748f4e8c4b"
+    },
+    "execution_bearing_files_note": "EXACTLY the tool bytes the committed physical reruns executed under (2611ee1): binding verification, probe driver, replay harness/worker, stage instrumentation, sitecustomize shim. These hashes are frozen physical history and are NEVER rewritten by a later change to the conclusions reducer.",
+    "hash_history": {
+      "correction_pass_1_commit_2611ee1": {
+        "note": "Adversarial review (provenance lane) found the original runs executed under uncommitted intermediate tool bytes. Per the issue's supersession rule the REPLAY and intervention (SYNC/ROUTE/SWA-ALLOC) arms were RERUN under the committed bytes at 2611ee1 (producer unchanged 55e8baa); the rerun artifacts live under out-corr1/ and supersede those original observations. The BASE arm (i157-BASE-1789261211) was NOT rerun: its Phase-2 token-level observations are retained with pre-freeze instrumentation provenance (sha256:98fa2a80\u2026, disclosed in baseline-reproduction.json tooling_provenance) and its chunk-1 boundary digests are independently corroborated under committed bytes by the rerun REPLAY and SWA-ALLOC arms. Original runs retained in launch-ledger.json. Corrected by the recertification record pass (2026-09-13) from an earlier inaccurate 'ALL evidence-bearing arms were RERUN' claim."
+      },
+      "freeze_commit_c11fa00": {
+        "note": "original pre-physical freeze hashes (see git c11fa00)",
+        "superseded_by": "correction_pass_1"
+      },
+      "physical_authority_correction_2026_09_13": {
+        "authoritative_base_run": "i157-BASE-1789309328",
+        "note": "Phase-2 BASE rerun under committed execution-bearing bytes: i157-BASE-1789309328 (instrumentation sha256:00a1c2c1...24fc == the execution_bearing_files pin; node bytes verified equal pre- and post-run). Supersedes i157-BASE-1789261211 for Phase-2 reproduction authority (retained as historical evidence).",
+        "superseded_run": "i157-BASE-1789261211",
+        "supersedes": "correction_pass_1_commit_2611ee1"
+      },
+      "pre_correction_pass_1_instrumentation_listing": {
+        "note": "the original instrumentation.files map (freeze c11fa00 / correction-pass-1 2611ee1) additionally listed scripts/issue157_conclusions.py among the instrumentation hashes; that listing is superseded by the execution_bearing_files / post_processing_files split recorded here, which preserves the exact same execution-bearing hashes while classifying the conclusions reducer explicitly as post-processing tooling (it never participated in physical execution or capture)",
+        "superseded_by": "post_evidence_reducer_amendments[0]"
+      }
+    },
+    "off_by_default_proof": [
+      "producer tree byte-identical to 55e8baa (binding verifier per-module pins; zero FreeToken source changes)",
+      "instrumentation imports only under ISSUE157_STAGE_INSTRUMENT=1, set only by the #157 driver's spawned stage processes",
+      "CPU/static test asserts ordinary-execution import graph never reaches issue157_* modules",
+      "node-deployed script bytes verified sha256-equal to committed HEAD before every rerun launch"
+    ],
+    "post_evidence_record_corrections": [
+      {
+        "amendment": "recertification provenance-record correction (PR #159 final exact-head review, both lanes P1)",
+        "changed_records": [
+          "baseline-reproduction.json (additive tooling_provenance)",
+          "launch-ledger.json (BASE tooling_note corrected)",
+          "physical-diagnostic-authority.json (correction_pass_1 note corrected)",
+          "README.md (over-claim + earliest-varying prose corrected)"
+        ],
+        "date": "2026-09-13",
+        "execution_bearing_bytes_unchanged": "all execution_bearing_files hashes identical to the 2611ee1 freeze; FreeToken diagnostic producer unchanged at 55e8baaebabe67aeb967d4bd407ef26696933104",
+        "physical_observation_bytes_unchanged": "anchor_a/anchor_b/stable_control observation lists and all digest lists in baseline-reproduction.json byte-identical; only additive provenance fields added",
+        "physical_rerun_required": false,
+        "reviewer_accepted_fix_shape": "corroboration record, no GPU rerun \u2014 accepted by both independent lanes"
+      },
+      {
+        "change": "fresh authoritative Phase-2 BASE run i157-BASE-1789309328 executed under committed 2611ee1 bytes and committed as the Phase-2 authority; old BASE superseded (retained historical); reducer reproduction gate corrected (Phase-2 authority derives only from a frozen-producer BASE record; Phase-3 replay cannot substitute)",
+        "date": "2026-09-13"
+      }
+    ],
+    "post_evidence_reducer_amendments": [
+      {
+        "amendment": "post-evidence reduction correction (PR #159 maintainer NO-GO item 1)",
+        "corrected_reducer_sha256": "3211dbcded10f26b74eb8245e9307aacf5665e4259da3778f720fbd350978620",
+        "execution_bearing_bytes_unchanged": "all execution_bearing_files hashes identical to the correction-pass-1 freeze; FreeToken diagnostic producer unchanged at 55e8baaebabe67aeb967d4bd407ef26696933104",
+        "physical_evidence_inputs_unchanged": "baseline-reproduction.json, exact-state-replay.json, interventions.json, instrumentation-manifest.json, launch-ledger.json all byte-identical to the correction-pass-1 retained bytes (sha256 verified)",
+        "physical_rerun_required": false,
+        "prior_reducer_sha256": "fcb75825cd8180cb4f67eaca7a8e1f8573be06fd5b1a16686ee429d4638a4747",
+        "reason": "derived-count/prose correction only: the reducer hard-coded observational counts in prose (5 distinct chunk-2 digests / 6 trials on anchor B, contradicting the retained 6-distinct control) and other numeric literals presented as derived; all counts now computed mechanically from retained evidence bytes (trial counts, distinct counts, control-varies, treatment-deterministic, chunk-1 pairing) and exposed as structured fields",
+        "terminal_after_regeneration": "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED (re-derived from unchanged evidence; unchanged from the pre-amendment reduction)"
+      },
+      {
+        "amendment": "post-evidence reduction correction #2 (PR #159 second maintainer NO-GO, recurrence block)",
+        "corrected_reducer_sha256": "7085714c0fd7ac74f5ee40dbfd55d7ae0b0fea4e9bbe26df70cf70f207b6d680",
+        "execution_bearing_bytes_unchanged": "all execution_bearing_files hashes identical to the correction-pass-1 freeze (2611ee1); FreeToken diagnostic producer unchanged at 55e8baaebabe67aeb967d4bd407ef26696933104",
+        "physical_evidence_inputs_unchanged": "baseline-reproduction.json, exact-state-replay.json, interventions.json, instrumentation-manifest.json, launch-ledger.json all byte-identical to the correction-pass-1 retained bytes (sha256 verified)",
+        "physical_rerun_required": false,
+        "prior_reducer_sha256": "3211dbcded10f26b74eb8245e9307aacf5665e4259da3778f720fbd350978620",
+        "reason": "Anchor-A recurrence accidentally sourced tokens from Anchor B: recurring_note() computed the recurrence set from baseline anchor_b observations before reading Anchor A, so the generated conclusion wrongly listed accepted value 818 as unobserved while 818 exists in the retained Anchor-A observations. The corrected reducer derives the recurrence from the retained Anchor-A observations only, exposes it as structured accepted_value_recurrence fields (accepted/recurring/not-observed/other-observed), generates prose from those fields, and fail-closed cross-checks the retained accepted_137_binding.recurred_in_this_baseline against the independently derived Anchor-A recurrence.",
+        "terminal_after_regeneration": "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED (re-derived normally from unchanged evidence under the corrected reducer; unchanged from the prior reduction)"
+      },
+      {
+        "amendment": "post-evidence reduction correction #3 (provenance-only: post-processing self-pin realignment)",
+        "corrected_reducer_sha256": "8883abd07442520acae12628b162ffa385a0c3efb484001ab8e0b2854cd71a67",
+        "execution_bearing_bytes_unchanged": "all execution_bearing_files hashes identical to the correction-pass-1 freeze (2611ee1); FreeToken diagnostic producer unchanged at 55e8baaebabe67aeb967d4bd407ef26696933104",
+        "physical_evidence_inputs_unchanged": "baseline-reproduction.json, exact-state-replay.json, interventions.json, instrumentation-manifest.json, launch-ledger.json all byte-identical to the retained correction-pass bytes (sha256 verified); diagnostic-conclusions.json byte-identical (reducer code unchanged this round)",
+        "physical_rerun_required": false,
+        "prior_reducer_sha256": "7085714c0fd7ac74f5ee40dbfd55d7ae0b0fea4e9bbe26df70cf70f207b6d680",
+        "reason": "adversarial-review round-2 Phase-2 provenance hardening (commit 0ecdb1c) changed the reducer after the round-1 amendment pinned it: superseded BASE-run identity rejection, explicit pre-freeze instrumentation-digest rejection, strict-boolean authority flag, and source_run_sha256 cross-check against instrumentation-manifest.json.retained_run_records; the authority record's post_processing_files pin was not refreshed at that commit, leaving the current-reducer self-pin stale",
+        "terminal_note": "terminal remains mechanically derived by scripts/issue157_conclusions.py from unchanged retained evidence; this correction touches only this authority record and adds a pin-recurrence test; no terminal field is asserted here"
+      }
+    ],
+    "post_processing_files": {
+      "scripts/issue157_conclusions.py": "sha256:8883abd07442520acae12628b162ffa385a0c3efb484001ab8e0b2854cd71a67"
+    },
+    "post_processing_files_note": "post-evidence reduction tooling ONLY: reduces already-retained observation JSON into diagnostic-conclusions.json. Never imported by, deployed to, or executed inside any physical diagnostic process; changing it cannot influence any physical execution or capture."
+  },
+  "intervention_matrix": {
+    "design": "one variable at a time; paired against unchanged control from identical diagnostic state; counterbalanced order; fresh substrate between paired trials",
+    "order": [
+      "IV-SYNC",
+      "IV-SCRATCH",
+      "IV-ROUTE",
+      "IV-BISECT(if needed)"
+    ],
+    "run_only": "interventions that remain necessary after baseline and exact-state replay"
+  },
+  "issue": 157,
+  "issue_state_at_authorization": {
+    "label": "ready-for-agent",
+    "status_line": "AGENT-READY \u2014 PHYSICALLY AUTHORIZED DIAGNOSTIC ONLY / NO ARM-C REQUALIFICATION",
+    "url": "https://github.com/Zutfen-LLC/inferswarm/issues/157"
+  },
+  "no_h109_access": true,
+  "physical_topology": {
+    "coordinator": "inferswarm00 (CPU-only)",
+    "driver": "610.57.04",
+    "note": "hardware/software identities rediscovered and frozen BEFORE diagnostic output (2026-09-12); historical mutable identities re-verified unchanged from the accepted #137 baseline snapshot",
+    "software_baseline": {
+      "cuda_runtime": "13.0",
+      "python": "3.12.13",
+      "torch": "2.11.0+cu130"
+    },
+    "stage_1": {
+      "bdf": "00000000:02:00.0",
+      "gpu": "gpu-0",
+      "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+      "host": "inferswarm01",
+      "layers": "[0,16)"
+    },
+    "stage_2": {
+      "bdf": "00000000:03:00.0",
+      "gpu": "gpu-1",
+      "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+      "host": "inferswarm01",
+      "layers": "[16,32)"
+    },
+    "stage_3_last": {
+      "bdf": "00000000:01:00.0",
+      "gpu": "gpu-0",
+      "gpu_uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176",
+      "host": "inferswarm03",
+      "layers": "[32,48)"
+    }
+  },
+  "repeat_counts": {
+    "baseline_realizations": 3,
+    "baseline_repeats_within_realization": 3,
+    "intervention_trials": 6,
+    "replay_trials": 6
+  },
+  "run_namespace": "i157-<probe>-<unix-seconds> (every launch: fresh run/attempt ID, classification DIAGNOSTIC_ONLY)",
+  "schema": "inferswarm.issue157.physical-diagnostic-authority/1",
+  "starting_identities": {
+    "accepted_153_candidate_source": "f6133b88d40e4d43d3ac82fa732f21e540b7273d",
+    "freetoken_inferswarm_research": "55e8baaebabe67aeb967d4bd407ef26696933104",
+    "inferswarm_main": "e63209c0a3fd7256f527e7d2a009a688cdd66ca6",
+    "predecessor_merges": {
+      "freetoken_pr33_merge": "55e8baaebabe67aeb967d4bd407ef26696933104",
+      "issue_133_pr136_merge": "1b83bcab0a5e682a438ca0554f71dd0ace15be55",
+      "issue_137_pr138_merge": "cdc23d0e8fa9d3b1b27bab5749939a5ad69b9610",
+      "issue_153_pr155_merge": "e63209c0a3fd7256f527e7d2a009a688cdd66ca6"
+    }
+  },
+  "stop_rules": "per METHODOLOGY.md Stop/escalation rules"
+}

@@ -1,0 +1,335 @@
+{
+  "classification": "DIAGNOSTIC_ONLY",
+  "earliest_varying_checkpoint": {
+    "anchor_a": {
+      "all_varying": [
+        "L0_kv_slice_post_write",
+        "L0_attention_output",
+        "L0_o_proj",
+        "after_layer_0",
+        "after_layer_1",
+        "L1_attention_output",
+        "L1_backend_k_input",
+        "L1_backend_q_input",
+        "L1_backend_v_input",
+        "L1_k_normed",
+        "L1_kv_slice_post_write",
+        "L1_o_proj",
+        "L1_q_normed",
+        "L1_qkv_projected",
+        "call_context"
+      ],
+      "earliest_varying": "L0_kv_slice_post_write",
+      "selection_rule": "first varying in EXECUTION_ORDER"
+    }
+  },
+  "exact_state_replay": {
+    "chunk1_byte_identical_across_repeats": true,
+    "chunk2_deterministic": false,
+    "chunk2_digests": [
+      "22cabe19e70b86797682ac6b3156a0ce42e49fe9ebd28084a02b2a1516deae53",
+      "86a995e8dd00342a3954f4794a5bbc5c33536f59a05fa2fc704c9cd8475fb32d",
+      "0cd519c11dab84993ace1b940f9fbf160448666114873a00185714a3ac307ded",
+      "84043e8d5d00aa5f5a46114e109021a1c73e43afdd8b39ea6dc400067529b121",
+      "6e2a1b916b688b9994b0ea480275715ba9a0b303b4de38500d4bf6bd87e9416f",
+      "c80495217288f9c01263711942f5987b5df6ecc305b0aaf56c4de645313d6030"
+    ],
+    "no_reuse_proof": {
+      "after_restore": [
+        "8e845e11ddfe151abbc4f63ede8b365b52b22c3146f3153e284a2bd1affee4f2",
+        "ff083213afb949c8ffc89883d3a92aa48c58958cadc04d3e003c44c566c3a4a3",
+        "1d830c8af4ff60b1ec36350ea25d99c4247d5d040d8d2c9acbe28011ebb9039e",
+        "1cfc9251644a358213d808b8088517b87a9f024bdf46198a3ed692b98b7373a7",
+        "8808405eec6fbe306fe3369f88daed79dd5613ddbb5e801f632b01d6218c5f08"
+      ],
+      "live_after_trials": [
+        "1b5ced6645399813fa07975f0d947bff18c1b3b511f91f9536e317a2df4633b6",
+        "45a7fc3f1f51d4614967d8d33c3831c88f2327741705db39dee18e5cb3cff07d",
+        "1d830c8af4ff60b1ec36350ea25d99c4247d5d040d8d2c9acbe28011ebb9039e",
+        "1cfc9251644a358213d808b8088517b87a9f024bdf46198a3ed692b98b7373a7",
+        "8808405eec6fbe306fe3369f88daed79dd5613ddbb5e801f632b01d6218c5f08"
+      ],
+      "restore_returns_to_frozen": true,
+      "trials_mutated_state": true
+    },
+    "trials": 6
+  },
+  "inputs": {
+    "baseline-reproduction.json": "471a14f351d2cfe1e7f886cc7098b5f0cb893d33ea95ed020b4f206788556983",
+    "exact-state-replay.json": "43c5163acb0bf55f167fbaef7b54a0ca87f3a73e4c69a2d450dc52ed0e2363d9",
+    "instrumentation-manifest.json": "897b1076eaee6d54e9d72d9fef8389fe1f0de931d17242ad1ef1b567e5487ead",
+    "interventions.json": "35576c3fa645a429d08a6ecc307b71980bc28946b8e810c5e1e13a2717501cbe"
+  },
+  "interventions": {
+    "route": {
+      "control_varies": true,
+      "detail": null,
+      "executed": true,
+      "stabilizes": false,
+      "treatment_deterministic": false
+    },
+    "scratch": {
+      "executed": false,
+      "verdict": "NOT EXECUTED (legal refusal, Phase 4-B): the decode-route fp32 scratch is not on the anchors' extend-route chunk-2 path (routes observed at dispatch); zeroing buffers proven NOT to participate would violate the legality precondition"
+    },
+    "swa_alloc": {
+      "control_varies": true,
+      "detail": {
+        "anchors_covered": [
+          "anchor_a",
+          "anchor_b"
+        ],
+        "per_anchor": {
+          "anchor_a": {
+            "chunk1": {
+              "control_distinct": 1,
+              "identical_across_arms": true,
+              "treatment_distinct": 1
+            },
+            "control_chunk2": {
+              "distinct": 3,
+              "trials": 6,
+              "varies": true
+            },
+            "control_varies": true,
+            "treatment_chunk2": {
+              "distinct": 1,
+              "trials": 6,
+              "varies": false
+            },
+            "treatment_deterministic": true
+          },
+          "anchor_b": {
+            "chunk1": {
+              "control_distinct": 1,
+              "identical_across_arms": true,
+              "treatment_distinct": 1
+            },
+            "control_chunk2": {
+              "distinct": 6,
+              "trials": 6,
+              "varies": true
+            },
+            "control_varies": true,
+            "treatment_chunk2": {
+              "distinct": 1,
+              "trials": 6,
+              "varies": false
+            },
+            "treatment_deterministic": true
+          }
+        }
+      },
+      "executed": true,
+      "stabilizes": true,
+      "treatment_deterministic": true
+    },
+    "sync": {
+      "control_varies": true,
+      "detail": null,
+      "executed": true,
+      "stabilizes": false,
+      "treatment_deterministic": false
+    }
+  },
+  "per_anchor": {
+    "anchor_a": {
+      "committed_token_level": {
+        "accepted_value_recurrence": {
+          "accepted_values": [
+            107,
+            818,
+            1437,
+            3771
+          ],
+          "accepted_values_not_observed": [
+            1437,
+            3771
+          ],
+          "other_observed_values": [
+            6455,
+            9366,
+            14937
+          ],
+          "recurring_values": [
+            107,
+            818
+          ]
+        },
+        "note": "in-session variable family reproduced: 107/818 recur with 6455/9366/14937; accepted values absent from the retained Anchor-A observations (1437, 3771) \u2014 accepted #137 in-session values recur on current accepted code",
+        "reproduces": true,
+        "values": [
+          107,
+          9366,
+          818,
+          107,
+          107,
+          6455,
+          14937,
+          107,
+          107
+        ]
+      },
+      "earliest_varying": "L0_kv_slice_post_write",
+      "exact_state_level": {
+        "distinct_digests": 6,
+        "note": "exact-state chunk-2 replay from byte-identical restored state varies (6 distinct digests / 6 trials)",
+        "replay_deterministic": false,
+        "trials": 6
+      }
+    },
+    "anchor_b": {
+      "committed_token_level": {
+        "note": "session-stable at 107 across all 9 baseline observations \u2014 this diagnostic substrate reproduced the VALUE, not the cross-session drift; no accepted-value contradiction (107 is an accepted in-session value)",
+        "reproduces": false,
+        "values": [
+          107,
+          107,
+          107,
+          107,
+          107,
+          107,
+          107,
+          107,
+          107
+        ]
+      },
+      "earliest_varying": null,
+      "exact_state_level": {
+        "baseline_varies": false,
+        "note": "the paired CONTROL arm of the swa_alloc intervention on anchor B varies (6 distinct chunk-2 digests / 6 trials) \u2014 the chunk-2 instability reproduces at the exact-state level",
+        "replay_varies_control": {
+          "anchors_covered": [
+            "anchor_a",
+            "anchor_b"
+          ],
+          "per_anchor": {
+            "anchor_a": {
+              "chunk1": {
+                "control_distinct": 1,
+                "identical_across_arms": true,
+                "treatment_distinct": 1
+              },
+              "control_chunk2": {
+                "distinct": 3,
+                "trials": 6,
+                "varies": true
+              },
+              "control_varies": true,
+              "treatment_chunk2": {
+                "distinct": 1,
+                "trials": 6,
+                "varies": false
+              },
+              "treatment_deterministic": true
+            },
+            "anchor_b": {
+              "chunk1": {
+                "control_distinct": 1,
+                "identical_across_arms": true,
+                "treatment_distinct": 1
+              },
+              "control_chunk2": {
+                "distinct": 6,
+                "trials": 6,
+                "varies": true
+              },
+              "control_varies": true,
+              "treatment_chunk2": {
+                "distinct": 1,
+                "trials": 6,
+                "varies": false
+              },
+              "treatment_deterministic": true
+            }
+          }
+        }
+      }
+    }
+  },
+  "phase2_reproduction_authority": {
+    "authority_instrumentation_sha256": "sha256:00a1c2c1452f87ca56289eeb3716e9cd08ba1c5a36e7d06ac6abdb79283024fc",
+    "executed_under_committed_2611ee1_bytes": true,
+    "gate": "Phase-2 reproduction authority requires a BASE record executed under the frozen execution-bearing tool bytes (2611ee1); Phase-3 exact-state replay is localization evidence only and never substitutes for it",
+    "source_run": "i157-BASE-1789309328",
+    "source_run_sha256": "2d113dd2ac26471889cd722125320d382c8653a6f78d9884d43ff3285a378992"
+  },
+  "phenomenon_reproduction": {
+    "anchor_a": {
+      "distinct_committed_values": 5,
+      "non_reproduction_lifecycle_reason": null,
+      "observations": 9,
+      "realizations": 3,
+      "values": [
+        107,
+        9366,
+        818,
+        107,
+        107,
+        6455,
+        14937,
+        107,
+        107
+      ],
+      "varies": true
+    },
+    "anchor_b": {
+      "distinct_committed_values": 1,
+      "non_reproduction_lifecycle_reason": null,
+      "observations": 9,
+      "realizations": 3,
+      "values": [
+        107,
+        107,
+        107,
+        107,
+        107,
+        107,
+        107,
+        107,
+        107
+      ],
+      "varies": false
+    },
+    "stable_control": {
+      "distinct_committed_values": 1,
+      "non_reproduction_lifecycle_reason": null,
+      "observations": 9,
+      "realizations": 3,
+      "values": [
+        1509,
+        1509,
+        1509,
+        1509,
+        1509,
+        1509,
+        1509,
+        1509,
+        1509
+      ],
+      "varies": false
+    }
+  },
+  "schema": "inferswarm.issue157.conclusions/1",
+  "shared_mechanism": {
+    "anchors_covered_by_intervention": [
+      "anchor_a",
+      "anchor_b"
+    ],
+    "anchors_share_demonstrated_mechanism": true,
+    "anchors_share_earliest_varying_checkpoint": false,
+    "support": "the single-factor swa_alloc intervention stabilizes BOTH anchors' chunk-2 (byte-deterministic treatment, varying paired control on each) \u2014 one demonstrated mechanism covers both behavioral families"
+  },
+  "terminal": "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED",
+  "terminal_requirements": {
+    "earliest_boundary_localized": true,
+    "exact_lifecycle_non_reproduction_reason": false,
+    "mechanism_demonstrated": true,
+    "phase2_baseline_execution_provenance_valid": true,
+    "phase3_exact_state_substitutes_for_phase2": false,
+    "phase3_exact_state_varies_retained_as_localization_evidence": true,
+    "phenomenon_reproduced": true,
+    "phenomenon_reproduction_source": "phase2_baseline_anchor_a",
+    "stable_control_contradicted": false
+  }
+}

@@ -184,6 +184,7 @@ GROUP_TEST_MODULES = {
     "issue-137": [
         "test_issue137_regime4_diagnosis",
         "test_issue137_regime4_diagnosis_correction",
+        "test_issue157_chunk2_diagnosis",
     ],
     "issue-99-103": [
         "test_issue99_artifact_core",
@@ -394,6 +395,20 @@ PATH_GROUPS = {
         ["issue-137", "issue-117-133"],
 
     "scripts/issue137_binding.py": ["issue-137"],
+    # Issue #157 chunk-2 diagnosis (CPU tooling; evidence bundle under
+    # the #117 tree fans out like #137's above).
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-chunk2-diagnosis-157/":
+        ["issue-137", "issue-117-133"],
+    "scripts/issue157_binding.py": ["issue-137"],
+    "scripts/issue157_instrumentation.py": ["issue-137"],
+    "scripts/issue157_sitecustomize.py": ["issue-137"],
+    "scripts/issue157_probe_driver.py": ["issue-137"],
+    "scripts/issue157_replay_harness.py": ["issue-137"],
+    "scripts/issue157_replay_worker.py": ["issue-137"],
+    "scripts/issue157_baseline_record.py": ["issue-137"],
+    "scripts/issue157_conclusions.py": ["issue-137"],
+    "scripts/issue157_manifest.py": ["issue-137", "repo-integrity"],
+    "tests/test_issue157_chunk2_diagnosis.py": ["issue-137"],
     # Issue #153 Arm-C remediation slice (CPU-only; bundle lives under the
     # #117 implementation area, scripts + tests classified to the
     # issue-117-133 lineage group).
