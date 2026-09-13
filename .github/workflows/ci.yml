@@ -477,6 +477,29 @@ jobs:
       - name: Run group issue-137
         run: python3 -m unittest tests.test_issue137_regime4_diagnosis tests.test_issue137_regime4_diagnosis_correction tests.test_issue157_chunk2_diagnosis -v
 
+  issue-172-requal:
+    name: Group issue-172-requal
+    runs-on: ubuntu-latest
+    needs: plan
+    if: needs.plan.outputs.full_regression == 'true' || contains(fromJSON(needs.plan.outputs.groups), 'issue-172-requal')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Bootstrap canonical CPU test environment (Issue #131)
+        run: |
+          python3 scripts/bootstrap_test_env.py
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+      - name: Doctor CPU test environment (Issue #131)
+        run: .venv/bin/python scripts/check_test_env.py
+      - name: Run group issue-172-requal
+        run: python3 -m unittest tests.test_issue172_requalification -v
+
   issue-99-103:
     name: Group issue-99-103
     runs-on: ubuntu-latest
@@ -587,8 +610,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [plan, repo-integrity, issue-74-79, issue-83-95, issue-109-110,
             issue-117-133-s1, issue-117-133-s2, issue-117-133-s3,
-            issue-117-133-s4, issue-137, issue-99-103, vulkan-v0-b,
-            phase1-analysis, issue-115-cleanup]
+            issue-117-133-s4, issue-137, issue-172-requal, issue-99-103,
+            vulkan-v0-b, phase1-analysis, issue-115-cleanup]
     if: always()
     steps:
       - name: Aggregate selected results (fail closed)
@@ -606,6 +629,7 @@ jobs:
               "issue-117-133-shard3": "${{ needs.issue-117-133-s3.result }}",
               "issue-117-133-shard4": "${{ needs.issue-117-133-s4.result }}",
               "issue-137": "${{ needs.issue-137.result }}",
+              "issue-172-requal": "${{ needs.issue-172-requal.result }}",
               "issue-99-103": "${{ needs.issue-99-103.result }}",
               "vulkan-v0-b": "${{ needs.vulkan-v0-b.result }}",
               "phase1-analysis": "${{ needs.phase1-analysis.result }}",

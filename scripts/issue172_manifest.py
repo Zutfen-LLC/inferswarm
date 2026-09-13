@@ -23,7 +23,7 @@ def main() -> int:
     entries = {}
     for path in sorted(root.rglob("*")):
         if path.is_file() and path.name != "MANIFEST.sha256":
-            entries[str(path.relative_to(root))] = sha256_file(path)
+            entries[path.relative_to(P.ROOT).as_posix()] = sha256_file(path)
     lines = [
         f"{digest}  {rel}" for rel, digest in entries.items()]
     (root / "MANIFEST.sha256").write_text("\n".join(lines) + "\n")
