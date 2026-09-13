@@ -55,9 +55,9 @@
     "trials": 6
   },
   "inputs": {
-    "baseline-reproduction.json": "7e034db93017e6d2c8497ddd9bc99936a8d7805bd69efe445f2562f17a0b7f6b",
+    "baseline-reproduction.json": "471a14f351d2cfe1e7f886cc7098b5f0cb893d33ea95ed020b4f206788556983",
     "exact-state-replay.json": "43c5163acb0bf55f167fbaef7b54a0ca87f3a73e4c69a2d450dc52ed0e2363d9",
-    "instrumentation-manifest.json": "2d3534c06483a8387ea7117f07d7b36dd5604f55215cf0b8f060f9c957d706f7",
+    "instrumentation-manifest.json": "897b1076eaee6d54e9d72d9fef8389fe1f0de931d17242ad1ef1b567e5487ead",
     "interventions.json": "35576c3fa645a429d08a6ecc307b71980bc28946b8e810c5e1e13a2717501cbe"
   },
   "interventions": {
@@ -147,27 +147,27 @@
             3771
           ],
           "other_observed_values": [
-            100,
-            236774,
-            258882
+            6455,
+            9366,
+            14937
           ],
           "recurring_values": [
             107,
             818
           ]
         },
-        "note": "in-session variable family reproduced: 107/818 recur with 100/236774/258882; accepted values absent from the retained Anchor-A observations (1437, 3771) \u2014 accepted #137 in-session values recur on current accepted code",
+        "note": "in-session variable family reproduced: 107/818 recur with 6455/9366/14937; accepted values absent from the retained Anchor-A observations (1437, 3771) \u2014 accepted #137 in-session values recur on current accepted code",
         "reproduces": true,
         "values": [
           107,
-          258882,
-          107,
-          107,
-          236774,
-          107,
-          107,
+          9366,
           818,
-          100
+          107,
+          107,
+          6455,
+          14937,
+          107,
+          107
         ]
       },
       "earliest_varying": "L0_kv_slice_post_write",
@@ -247,26 +247,35 @@
       }
     }
   },
+  "phase2_reproduction_authority": {
+    "authority_instrumentation_sha256": "sha256:00a1c2c1452f87ca56289eeb3716e9cd08ba1c5a36e7d06ac6abdb79283024fc",
+    "executed_under_committed_2611ee1_bytes": true,
+    "gate": "Phase-2 reproduction authority requires a BASE record executed under the frozen execution-bearing tool bytes (2611ee1); Phase-3 exact-state replay is localization evidence only and never substitutes for it",
+    "source_run": "i157-BASE-1789309328",
+    "source_run_sha256": "2d113dd2ac26471889cd722125320d382c8653a6f78d9884d43ff3285a378992"
+  },
   "phenomenon_reproduction": {
     "anchor_a": {
       "distinct_committed_values": 5,
+      "non_reproduction_lifecycle_reason": null,
       "observations": 9,
       "realizations": 3,
       "values": [
         107,
-        258882,
-        107,
-        107,
-        236774,
-        107,
-        107,
+        9366,
         818,
-        100
+        107,
+        107,
+        6455,
+        14937,
+        107,
+        107
       ],
       "varies": true
     },
     "anchor_b": {
       "distinct_committed_values": 1,
+      "non_reproduction_lifecycle_reason": null,
       "observations": 9,
       "realizations": 3,
       "values": [
@@ -284,6 +293,7 @@
     },
     "stable_control": {
       "distinct_committed_values": 1,
+      "non_reproduction_lifecycle_reason": null,
       "observations": 9,
       "realizations": 3,
       "values": [
@@ -313,8 +323,13 @@
   "terminal": "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED",
   "terminal_requirements": {
     "earliest_boundary_localized": true,
+    "exact_lifecycle_non_reproduction_reason": false,
     "mechanism_demonstrated": true,
+    "phase2_baseline_execution_provenance_valid": true,
+    "phase3_exact_state_substitutes_for_phase2": false,
+    "phase3_exact_state_varies_retained_as_localization_evidence": true,
     "phenomenon_reproduced": true,
+    "phenomenon_reproduction_source": "phase2_baseline_anchor_a",
     "stable_control_contradicted": false
   }
 }

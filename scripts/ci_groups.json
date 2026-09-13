@@ -561,6 +561,9 @@
   "scripts/issue153_producer_delta.py": [
    "issue-117-133"
   ],
+  "scripts/issue157_baseline_record.py": [
+   "issue-137"
+  ],
   "scripts/issue157_binding.py": [
    "issue-137"
   ],

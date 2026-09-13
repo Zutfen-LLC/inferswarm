@@ -232,6 +232,20 @@ class TestReducer(unittest.TestCase):
                                       for v in b_values]}],
             "stable_control": [{"repeats": [{"committed_step0": v}
                                             for v in c_values]}],
+            # authoritative BASE provenance by default (matches the
+            # committed bundle shape); the Phase-2 authority tests
+            # mutate it
+            "source_run": "i157-BASE-AUTHORITY",
+            "source_run_sha256": "f" * 64,
+            "tooling_provenance": {
+                "executed_under_committed_2611ee1_bytes": True,
+                "instrumentation_sha256_at_execution": (
+                    "sha256:00a1c2c1452f87ca56289eeb3716e9cd"
+                    "08ba1c5a36e7d06ac6abdb79283024fc"),
+                "execution_bearing_freeze_instrumentation_sha256": (
+                    "sha256:00a1c2c1452f87ca56289eeb3716e9cd"
+                    "08ba1c5a36e7d06ac6abdb79283024fc"),
+            },
         }
 
     def replay(self, *, digests, chunk1_ok=True):
@@ -358,7 +372,7 @@ class TestNoBareConstantTerminal(unittest.TestCase):
         self.assertIn("def reduce_terminal(", src)
         # and reduce_terminal must derive from measured conditions
         body = src.split("def reduce_terminal(")[1]
-        body = body.split("def baseline_reproduces(")[0]
+        body = body.split("def baseline_provenance_authority(")[0]
         # every terminal key flows through the TERMINALS dict inside
         # reduce_terminal, gated by measured conditions
         for key in ("LOCALIZED", "PARTIAL", "INSUFFICIENT"):
@@ -386,6 +400,320 @@ TERMINALS = (
     "ISSUE117_ARM_C_CHUNK2_DIAGNOSTIC_INSUFFICIENT_EVIDENCE",
     "ISSUE117_ARM_C_CHUNK2_EVIDENCE_BLOCKED",
 )
+
+
+class TestPhase2ReproductionAuthorityGate(unittest.TestCase):
+    """2026-09-13 physical-authority correction: Phase-2 reproduction
+    must derive from a valid frozen-producer BASE record; Phase-3
+    exact-state replay may never substitute for it.
+
+    Adversarial cases (issue directive §4):
+      1. pre-freeze/non-authoritative BASE + varying exact-state
+         replay + localized checkpoints + stabilizing intervention
+         => NOT LOCALIZED;
+      2. authoritative BASE that fails reproduction without an exact
+         lifecycle reason + varying replay + stabilizing intervention
+         => NOT LOCALIZED;
+      3. authoritative reproducing BASE + existing localization/
+         mechanism evidence => LOCALIZED;
+      4. explicit valid lifecycle non-reproduction path behaves
+         exactly as issue #157 specifies;
+      5. tampered BASE run identity/tool hashes fail closed;
+      6. the authoritative generated conclusion consumes the fresh
+         BASE run, not i157-BASE-1789261211.
+    """
+
+    AUTHORITY_SHA = (
+        "sha256:00a1c2c1452f87ca56289eeb3716e9cd"
+        "08ba1c5a36e7d06ac6abdb79283024fc")
+
+    def setUp(self):
+        self.mod = importlib.import_module("issue157_conclusions")
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self.tmp.name)
+        self.orig_dir = self.mod.EVIDENCE_DIR
+        self.mod.EVIDENCE_DIR = self.dir
+
+    def tearDown(self):
+        self.mod.EVIDENCE_DIR = self.orig_dir
+        self.tmp.cleanup()
+
+    def authoritative_baseline(self, *, a_values=(107, 818, 3771, 107),
+                               b_values=(107, 107, 107, 107),
+                               c_values=(1509,) * 4):
+        return {
+            "source_run": "i157-BASE-FRESH",
+            "source_run_sha256": "a" * 64,
+            "anchor_a": [{"repeats": [{"committed_step0": v}
+                                      for v in a_values]}],
+            "anchor_b": [{"repeats": [{"committed_step0": v}
+                                      for v in b_values]}],
+            "stable_control": [{"repeats": [{"committed_step0": v}
+                                            for v in c_values]}],
+            "tooling_provenance": {
+                "executed_under_committed_2611ee1_bytes": True,
+                "instrumentation_sha256_at_execution":
+                    self.AUTHORITY_SHA,
+                "execution_bearing_freeze_instrumentation_sha256":
+                    self.AUTHORITY_SHA,
+            },
+        }
+
+    def pre_freeze_baseline(self):
+        # the exact committed shape of the superseded
+        # i157-BASE-1789261211 record: anchor A VARIES (would satisfy
+        # reproduction on content) but the run executed under the
+        # PRE-FREEZE instrumentation bytes (98fa2a80...) — content
+        # identical to the retained historical record
+        b = self.authoritative_baseline(
+            a_values=(107, 818, 3771, 107, 107, 818, 3771, 1437, 107))
+        b["source_run"] = "i157-BASE-1789261211"
+        b["tooling_provenance"] = {
+            "executed_under_committed_2611ee1_bytes": False,
+            "instrumentation_sha256_at_execution": (
+                "sha256:98fa2a80d893dcae20f373d94064d55c9ab2314"
+                "cb868fbe9000e166d667d8d77"),
+            "execution_bearing_freeze_instrumentation_sha256":
+                self.AUTHORITY_SHA,
+        }
+        return b
+
+    def varying_replay(self):
+        return {
+            "chunk1_repeatability": {"byte_identical": True,
+                                     "digests": ["d1"] * 3},
+            "chunk2_digests": ["x", "y", "z", "x", "y", "w"],
+            "chunk2_deterministic": False,
+            "no_reuse_proof": {"restore_returns_to_frozen": True,
+                               "trials_mutated_state": True},
+            "trials": 6,
+        }
+
+    def stabilizing_interventions(self):
+        # the retained correction-pass SWA-ALLOC shape: control
+        # varies, treatment deterministic on both anchors
+        def digests(n_distinct, trials=6):
+            vals = [f"d{i}" for i in range(n_distinct)]
+            return [vals[i % len(vals)] for i in range(trials)]
+
+        return {"swa_alloc": {
+            "anchor_a": {
+                "control_chunk2_digests": digests(3),
+                "treatment_chunk2_digests": ["t"] * 6,
+                "control_chunk1_digests": ["c1"] * 6,
+                "treatment_chunk1_digests": ["c1"] * 6,
+            },
+            "anchor_b": {
+                "control_chunk2_digests": digests(6),
+                "treatment_chunk2_digests": ["t"] * 6,
+                "control_chunk1_digests": ["c1"] * 6,
+                "treatment_chunk1_digests": ["c1"] * 6,
+            },
+        }}
+
+    def localized_checkpoints(self):
+        return {"checkpoint_digest_matrix": {
+            "anchor_a": {"L0_kv_slice_post_write": ["p", "q", "r"],
+                         "L0_attention_output": ["p", "q", "r"]},
+            "anchor_b": {"L0_kv_slice_post_write": ["p", "q", "r"]},
+        }}
+
+    def write_and_reduce(self, baseline, *, replay=None,
+                         interventions=None, instr=None):
+        (self.dir / "baseline-reproduction.json").write_text(
+            json.dumps(baseline))
+        (self.dir / "exact-state-replay.json").write_text(
+            json.dumps(replay or self.varying_replay()))
+        (self.dir / "interventions.json").write_text(
+            json.dumps(interventions or self.stabilizing_interventions()))
+        (self.dir / "instrumentation-manifest.json").write_text(
+            json.dumps(instr or self.localized_checkpoints()))
+        out = self.dir / "diagnostic-conclusions.json"
+        rc = self.mod.main([])
+        self.assertEqual(rc, 0)
+        return json.loads(out.read_text())
+
+    def test_1_pre_freeze_base_plus_replay_evidence_not_localized(self):
+        """Case 1: non-authoritative BASE + varying replay + localized
+        checkpoints + stabilizing intervention => NOT LOCALIZED (the
+        replay cannot substitute for Phase-2 authority)."""
+        record = self.write_and_reduce(self.pre_freeze_baseline())
+        self.assertNotEqual(
+            record["terminal"],
+            "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED")
+        reasons = record["terminal_requirements"]
+        self.assertFalse(reasons["phenomenon_reproduced"])
+        self.assertFalse(
+            reasons["phase2_baseline_execution_provenance_valid"])
+        self.assertEqual(reasons["phenomenon_reproduction_source"],
+                         "none_non_authoritative_baseline")
+        # the replay variation is still retained as localization
+        # evidence — separation, not erasure
+        self.assertTrue(
+            reasons[
+                "phase3_exact_state_varies_retained_as_"
+                "localization_evidence"])
+        self.assertFalse(
+            reasons["phase3_exact_state_substitutes_for_phase2"])
+        # non-authoritative BASE with no other reproduction lands on
+        # INSUFFICIENT, not LOCALIZED/PARTIAL
+        self.assertEqual(
+            record["terminal"],
+            "ISSUE117_ARM_C_CHUNK2_DIAGNOSTIC_INSUFFICIENT_EVIDENCE")
+
+    def test_2_authoritative_base_fails_reproduction_not_localized(self):
+        """Case 2: authoritative BASE that does NOT reproduce (neither
+        anchor varies, no lifecycle reason) + varying replay +
+        stabilizing intervention => NOT LOCALIZED (INSUFFICIENT), even
+        though provenance is valid."""
+        baseline = self.authoritative_baseline(
+            a_values=(107,) * 4, b_values=(107,) * 4)
+        record = self.write_and_reduce(baseline)
+        self.assertEqual(
+            record["terminal"],
+            "ISSUE117_ARM_C_CHUNK2_DIAGNOSTIC_INSUFFICIENT_EVIDENCE")
+        reasons = record["terminal_requirements"]
+        self.assertTrue(
+            reasons["phase2_baseline_execution_provenance_valid"])
+        self.assertFalse(reasons["phenomenon_reproduced"])
+        self.assertEqual(reasons["phenomenon_reproduction_source"],
+                         "none_baseline_did_not_vary")
+
+    def test_3_authoritative_reproducing_base_localized(self):
+        """Case 3: authoritative reproducing BASE + existing
+        localization + mechanism evidence => LOCALIZED."""
+        record = self.write_and_reduce(
+            self.authoritative_baseline())
+        self.assertEqual(
+            record["terminal"],
+            "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED")
+        reasons = record["terminal_requirements"]
+        self.assertTrue(
+            reasons["phase2_baseline_execution_provenance_valid"])
+        self.assertTrue(reasons["phenomenon_reproduced"])
+        self.assertEqual(reasons["phenomenon_reproduction_source"],
+                         "phase2_baseline_anchor_a")
+
+    def test_4_lifecycle_non_reproduction_path(self):
+        """Case 4: an explicit lifecycle reason in an AUTHORITATIVE
+        BASE that does not reproduce => PARTIAL (issue #157 terminal
+        exception); the same reason in a NON-authoritative BASE, or
+        manufactured from exact-state variability, stays
+        INSUFFICIENT."""
+        # 4a: authoritative + explicit lifecycle reason => PARTIAL
+        baseline = self.authoritative_baseline(
+            a_values=(107,) * 4, b_values=(107,) * 4)
+        baseline["anchor_a"][0]["non_reproduction_lifecycle_reason"] = (
+            "exact demonstrated lifecycle cause: chunk-2 prefill "
+            "unreachable in this substrate because <demonstrated "
+            "mechanism>; observed directly, not inferred from absence")
+        record = self.write_and_reduce(baseline)
+        self.assertEqual(
+            record["terminal"],
+            "ISSUE117_ARM_C_CHUNK2_DIAGNOSIS_PARTIAL")
+        self.assertTrue(record["terminal_requirements"][
+            "exact_lifecycle_non_reproduction_reason"])
+        # 4b: identical lifecycle reason but NON-authoritative BASE
+        # => the exception does not apply => INSUFFICIENT
+        baseline_pf = self.pre_freeze_baseline()
+        baseline_pf["anchor_a"][0]["non_reproduction_lifecycle_reason"] = (
+            baseline["anchor_a"][0]["non_reproduction_lifecycle_reason"])
+        record_pf = self.write_and_reduce(baseline_pf)
+        self.assertEqual(
+            record_pf["terminal"],
+            "ISSUE117_ARM_C_CHUNK2_DIAGNOSTIC_INSUFFICIENT_EVIDENCE")
+        # 4c: no lifecycle reason anywhere, only exact-state
+        # variability => INSUFFICIENT (never manufactured)
+        baseline_nl = self.authoritative_baseline(
+            a_values=(107,) * 4, b_values=(107,) * 4)
+        record_nl = self.write_and_reduce(baseline_nl)
+        self.assertFalse(record_nl["terminal_requirements"][
+            "exact_lifecycle_non_reproduction_reason"])
+        self.assertEqual(
+            record_nl["terminal"],
+            "ISSUE117_ARM_C_CHUNK2_DIAGNOSTIC_INSUFFICIENT_EVIDENCE")
+
+    def test_5_tampered_base_identity_fails_closed(self):
+        """Case 5: tampered BASE run identity/tool hashes fail
+        closed — each single-field tamper strips Phase-2 authority
+        even when the observational content would reproduce."""
+        def tampered(**changes):
+            b = self.authoritative_baseline()
+            for path, value in changes.items():
+                if path == "source_run":
+                    b["source_run"] = value
+                elif path == "source_run_sha256":
+                    b["source_run_sha256"] = value
+                elif path == "at_execution":
+                    b["tooling_provenance"][
+                        "instrumentation_sha256_at_execution"] = value
+                elif path == "freeze_pin":
+                    b["tooling_provenance"][
+                        "execution_bearing_freeze_instrumentation_"
+                        "sha256"] = value
+                elif path == "flag":
+                    b["tooling_provenance"][
+                        "executed_under_committed_2611ee1_bytes"] = value
+                elif path == "drop_provenance":
+                    b.pop("tooling_provenance", None)
+            return b
+
+        tamper_matrix = [
+            {"source_run": ""},
+            {"source_run": None},
+            {"source_run_sha256": ""},
+            {"at_execution": "sha256:" + "0" * 64},
+            {"at_execution": None},
+            {"freeze_pin": "sha256:" + "0" * 64},
+            {"flag": False},          # flipped boolean alone
+            {"flag": None},
+            {"drop_provenance": True},
+        ]
+        for changes in tamper_matrix:
+            with self.subTest(**changes):
+                record = self.write_and_reduce(tampered(**changes))
+                reasons = record["terminal_requirements"]
+                self.assertFalse(
+                    reasons["phase2_baseline_execution_provenance_valid"],
+                    f"tamper {changes} must strip Phase-2 authority")
+                self.assertFalse(reasons["phenomenon_reproduced"])
+                self.assertNotEqual(
+                    record["terminal"],
+                    "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED")
+
+    def test_6_generated_conclusion_consumes_fresh_base(self):
+        """Case 6: the authoritative generated conclusion must consume
+        the FRESH committed-bytes BASE run — never
+        i157-BASE-1789261211 (the superseded pre-freeze run)."""
+        record = self.write_and_reduce(
+            self.authoritative_baseline())
+        authority = record["phase2_reproduction_authority"]
+        self.assertEqual(authority["source_run"], "i157-BASE-FRESH")
+        self.assertNotEqual(authority["source_run"],
+                            "i157-BASE-1789261211")
+        self.assertTrue(authority["executed_under_committed_2611ee1_bytes"])
+
+        # and against the COMMITTED bundle: the generated record must
+        # name the fresh committed-bytes BASE run, never the old
+        # pre-freeze run
+        bundle = (
+            REPO / "docs/implementation/"
+            "r6-successor-dense-full-integration-117/evidence/"
+            "arm-c-chunk2-diagnosis-157"
+        )
+        committed = json.loads(
+            (bundle / "diagnostic-conclusions.json").read_text())
+        committed_auth = committed.get("phase2_reproduction_authority")
+        self.assertIsNotNone(committed_auth)
+        self.assertNotEqual(
+            committed_auth.get("source_run"), "i157-BASE-1789261211")
+        self.assertTrue(
+            committed_auth.get("executed_under_committed_2611ee1_bytes"))
+        # the fresh BASE is ledgered
+        ledger = json.loads(
+            (bundle / "launch-ledger.json").read_text())
+        ids = {e.get("run_id") for e in ledger["launches"]}
+        self.assertIn(committed_auth.get("source_run"), ids)
 
 
 class TestDerivedCountsFollowEvidence(unittest.TestCase):
@@ -657,9 +985,10 @@ class TestCrossAnchorRecurrenceControls(unittest.TestCase):
 
     def test_recurrence_reflects_retained_bytes(self):
         """The committed evidence's derived recurrence is exactly the
-        expected reduction of the retained Anchor-A bytes: {107, 818}
-        recur, {1437, 3771} accepted-but-not-observed, {100, 236774,
-        258882} other observed."""
+        expected reduction of the retained Anchor-A bytes (fresh
+        authoritative BASE i157-BASE-1789309328): {107, 818} recur,
+        {1437, 3771} accepted-but-not-observed, {6455, 9366, 14937}
+        other observed."""
         record = self._reduce(json.loads(json.dumps(self.baseline_d)))
         rec = self._recurrence(record)
         self.assertEqual(rec["accepted_values"], [107, 818, 1437, 3771])
@@ -667,7 +996,7 @@ class TestCrossAnchorRecurrenceControls(unittest.TestCase):
         self.assertEqual(rec["accepted_values_not_observed"],
                          [1437, 3771])
         self.assertEqual(rec["other_observed_values"],
-                         [100, 236774, 258882])
+                         [6455, 9366, 14937])
 
     def test_control_a_anchor_a_recurrence_ignores_anchor_b(self):
         """Control A: accepted Anchor-A values include X and Y, Anchor
@@ -785,18 +1114,19 @@ class TestCrossAnchorRecurrenceControls(unittest.TestCase):
         self.assertEqual(rec["accepted_values_not_observed"],
                          [1437, 3771])
         self.assertEqual(rec["other_observed_values"],
-                         [100, 236774, 258882])
+                         [6455, 9366, 14937])
         note = record["per_anchor"]["anchor_a"][
             "committed_token_level"]["note"]
         self.assertNotIn("absent from every retained observation", note)
 
 
 class TestBaseArmProvenanceRecord(unittest.TestCase):
-    """Recertification record correction (2026-09-13, both review lanes'
-    shared P1): the BASE arm was never rerun under committed 2611ee1
-    bytes.  The record must disclose that honestly and bind its
-    corroboration claims to bytes that actually exist in the retained
-    committed-bytes runs."""
+    """BASE-arm provenance authority (2026-09-13 physical-authority
+    correction): the fresh Phase-2 BASE run i157-BASE-1789309328
+    executed under the committed 2611ee1 bytes and is the Phase-2
+    authority; the pre-freeze i157-BASE-1789261211 is superseded,
+    retained as historical evidence only, and every corroboration
+    claim binds to bytes that exist in the retained committed runs."""
 
     BUNDLE = REPO / (
         "docs/implementation/r6-successor-dense-full-integration-117/"
@@ -808,21 +1138,33 @@ class TestBaseArmProvenanceRecord(unittest.TestCase):
 
     def test_base_tooling_provenance_disclosed(self):
         b = self._load()
-        tp = b.get("tooling_provenance")
+        tp = b["tooling_provenance"]
         self.assertIsInstance(tp, dict)
-        self.assertFalse(tp["executed_under_committed_2611ee1_bytes"])
-        self.assertIn("98fa2a80", tp["instrumentation_sha256_at_execution"])
-        self.assertIn("00a1c2c1",
-                      tp["execution_bearing_freeze_instrumentation_sha256"])
+        self.assertTrue(tp["executed_under_committed_2611ee1_bytes"])
+        self.assertEqual(
+            tp["instrumentation_sha256_at_execution"],
+            "sha256:00a1c2c1452f87ca56289eeb3716e9cd"
+            "08ba1c5a36e7d06ac6abdb79283024fc")
+        self.assertEqual(
+            tp["execution_bearing_freeze_instrumentation_sha256"],
+            "sha256:00a1c2c1452f87ca56289eeb3716e9cd"
+            "08ba1c5a36e7d06ac6abdb79283024fc")
+        # the superseded pre-freeze run is disclosed, never concealed
+        sup = tp["superseded_run"]
+        self.assertEqual(sup["run_id"], "i157-BASE-1789261211")
+        self.assertIn("sha256:98fa2a80",
+                      sup["instrumentation_sha256_at_execution"])
+        self.assertEqual(b["source_run"], "i157-BASE-1789309328")
 
     def test_corroboration_digests_match_committed_runs(self):
         b = self._load()
-        corr = b["tooling_provenance"]["corroboration_under_committed_bytes"]
         iv = json.loads((self.BUNDLE / "interventions.json").read_text())
         rp = json.loads((self.BUNDLE / "exact-state-replay.json").read_text())
-        # anchor-A chunk-1 digest must appear in the committed REPLAY
-        # boundary and in the committed SWA-ALLOC chunk-1 digests
-        a = corr["anchor_a_chunk1_boundary_digest"]["value"]
+        # anchor-A chunk-1 digest of the FRESH BASE must appear in the
+        # committed REPLAY boundary and in the committed SWA-ALLOC
+        # chunk-1 digests (chunk-1 is deterministic across runs)
+        a = b["anchor_a_chunk1_boundary_digests"][0]
+        self.assertEqual(len(set(b["anchor_a_chunk1_boundary_digests"])), 1)
         self.assertIn(a, set(iv["swa_alloc"]["anchor_a"]
                                  ["control_chunk1_digests"]
                                  + iv["swa_alloc"]["anchor_a"]
@@ -830,7 +1172,8 @@ class TestBaseArmProvenanceRecord(unittest.TestCase):
         self.assertIn(a, json.dumps(rp))
         # anchor-B chunk-1 digest must appear in the committed
         # SWA-ALLOC anchor-B chunk-1 digests
-        bb = corr["anchor_b_chunk1_boundary_digest"]["value"]
+        bb = b["anchor_b_chunk1_boundary_digests"][0]
+        self.assertEqual(len(set(b["anchor_b_chunk1_boundary_digests"])), 1)
         self.assertIn(bb, set(iv["swa_alloc"]["anchor_b"]
                                   ["control_chunk1_digests"]
                                   + iv["swa_alloc"]["anchor_b"]
@@ -840,11 +1183,8 @@ class TestBaseArmProvenanceRecord(unittest.TestCase):
         ids = {e.get("run_id") for e in ledger["launches"]}
         self.assertIn("i157-REPLAY-1789269282", ids)
         self.assertIn("i157-IV-SWA-ALLOC-1789269642", ids)
-        containment_note = json.dumps(
-            corr["chunk2_instability_re_demonstrated"])
-        self.assertIn("3-distinct/6", containment_note)
-        self.assertIn("6-distinct/6", containment_note)
-        # the controls actually vary as claimed
+        self.assertIn("i157-BASE-1789309328", ids)
+        # the controls actually vary as claimed (retained bytes)
         ca = iv["swa_alloc"]["anchor_a"]["control_chunk2_digests"]
         cb = iv["swa_alloc"]["anchor_b"]["control_chunk2_digests"]
         self.assertEqual(len(set(ca)), 3)
@@ -852,11 +1192,20 @@ class TestBaseArmProvenanceRecord(unittest.TestCase):
 
     def test_ledger_and_authority_claims_are_truthful(self):
         ledger = json.loads((self.BUNDLE / "launch-ledger.json").read_text())
-        base = [e for e in ledger["launches"]
-                if e.get("run_id") == "i157-BASE-1789261211"]
-        self.assertEqual(len(base), 1)
+        by_id = {}
+        for e in ledger["launches"]:
+            by_id.setdefault(e.get("run_id"), []).append(e)
+        # BOTH BASE runs are ledgered: the old run preserved...
+        self.assertEqual(len(by_id["i157-BASE-1789261211"]), 1)
         self.assertNotIn("superseded by the correction-pass-1 rerun",
-                         base[0]["tooling_note"])
+                         by_id["i157-BASE-1789261211"][0]["tooling_note"])
+        # ...and explicitly superseded for Phase-2 authority only
+        self.assertEqual(
+            by_id["i157-BASE-1789261211"][0].get(
+                "superseded_for_phase2_authority_by"),
+            "i157-BASE-1789309328")
+        # ...by the fresh run, which exists exactly once
+        self.assertEqual(len(by_id["i157-BASE-1789309328"]), 1)
         auth = json.loads(
             (self.BUNDLE / "physical-diagnostic-authority.json").read_text())
         note = auth["instrumentation"]["hash_history"][
@@ -868,28 +1217,31 @@ class TestBaseArmProvenanceRecord(unittest.TestCase):
             "ALL evidence-bearing arms were RERUN under the "
             "committed bytes", note)
         self.assertIn("NOT rerun", note)
-        self.assertGreaterEqual(
-            len(auth["instrumentation"]["post_evidence_record_corrections"]),
-            1)
+        # the fresh BASE supersession is recorded in the authority
+        pac = auth["instrumentation"]["hash_history"].get(
+            "physical_authority_correction_2026_09_13")
+        self.assertIsNotNone(pac)
+        self.assertEqual(pac["authoritative_base_run"],
+                         "i157-BASE-1789309328")
+        self.assertEqual(pac["superseded_run"], "i157-BASE-1789261211")
 
-    def test_observation_bytes_unchanged_by_record_correction(self):
-        # every physical observation field must equal the pre-correction
-        # committed bytes at 9b30667 (additive-provenance-only proof)
-        import subprocess
-        cur = self._load()
-        old = json.loads(subprocess.check_output([
-            "git", "show",
-            "9b30667709858811404af4d6b2e6a977c6e70cc7:docs/"
-            "implementation/r6-successor-dense-full-integration-117/"
-            "evidence/arm-c-chunk2-diagnosis-157/"
-            "baseline-reproduction.json"]).decode())
-        for key in ("anchor_a", "anchor_b", "stable_control",
-                    "anchor_a_chunk1_boundary_digests",
-                    "anchor_b_chunk1_boundary_digests",
-                    "stable_control_single_call_boundary_digests",
-                    "accepted_137_binding",
-                    "source_run", "source_run_sha256"):
-            self.assertEqual(cur.get(key), old.get(key), key)
+    def test_observation_bytes_follow_fresh_run_record(self):
+        # the committed Phase-2 observations must be byte-derived from
+        # the retained fresh run record (hash-pinned in the
+        # instrumentation manifest), not from the old pre-freeze run
+        import hashlib
+        b = self._load()
+        im = json.loads(
+            (self.BUNDLE / "instrumentation-manifest.json").read_text())
+        pinned = im["retained_run_records"]["i157-BASE-1789309328"]
+        self.assertEqual(pinned, b["source_run_sha256"])
+        # anchor observations derive mechanically from the run rows:
+        # 9 observations per case, 3 realizations x 3 repeats
+        for case in ("anchor_a", "anchor_b", "stable_control"):
+            rows = b[case]
+            self.assertEqual(len(rows), 3)
+            for row in rows:
+                self.assertEqual(len(row["repeats"]), 3)
 
 
 class TestPartitionContract(unittest.TestCase):

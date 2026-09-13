@@ -34,13 +34,13 @@
             {
               "position": 64,
               "rows": 3,
-              "sha256": "d2d980696fe1c1cbdd5afe5c33d9294b739917db994ce3df71e3000de937cc22",
+              "sha256": "f2fecf45f6ec4b1d08092269eccff0029ae899f0bb935271de7b00390c4ab478",
               "stage_out": 0
             },
             {
               "position": 64,
               "rows": 3,
-              "sha256": "c955362fc80e4309d7f3d6d3f31708b438f25a93a1c0c2a07e514e8743b8ffd0",
+              "sha256": "b315b235e0174a8d6524eace91a979aac965a95d7625faa44956de81908b5541",
               "stage_out": 1
             }
           ],
@@ -71,13 +71,13 @@
             {
               "position": 64,
               "rows": 3,
-              "sha256": "0c74bd670cc22e831bb1c15a8877bc37237ec966fea29222bbe73eba3c7f1f22",
+              "sha256": "e5350b678a14b8a535946fceb01c4b1858ee1d732f17358ae3f21f42b078a882",
               "stage_out": 1
             }
           ],
-          "committed_step0": 258882,
+          "committed_step0": 9366,
           "repeat": 1,
-          "speculative_step1": 236761
+          "speculative_step1": 13293
         },
         {
           "boundary_digests": [
@@ -96,19 +96,19 @@
             {
               "position": 64,
               "rows": 3,
-              "sha256": "d2d980696fe1c1cbdd5afe5c33d9294b739917db994ce3df71e3000de937cc22",
+              "sha256": "6ccbac7939429af096d6d73b940a47e247ee418a3b492efa41baf59e1833bd3b",
               "stage_out": 0
             },
             {
               "position": 64,
               "rows": 3,
-              "sha256": "c955362fc80e4309d7f3d6d3f31708b438f25a93a1c0c2a07e514e8743b8ffd0",
+              "sha256": "9b5b41cb8ef5da2b5c20577444dc4a2499b5577a2238fae86c29783eac7b645c",
               "stage_out": 1
             }
           ],
-          "committed_step0": 107,
+          "committed_step0": 818,
           "repeat": 2,
-          "speculative_step1": 2063
+          "speculative_step1": 818
         }
       ]
     },
@@ -132,13 +132,13 @@
             {
               "position": 64,
               "rows": 3,
-              "sha256": "d2d980696fe1c1cbdd5afe5c33d9294b739917db994ce3df71e3000de937cc22",
+              "sha256": "3324f7e2d0b0e4450db44d20065163b124ccf1b320a229ccf67739e05fd01625",
               "stage_out": 0
             },
             {
               "position": 64,
               "rows": 3,
-              "sha256": "c955362fc80e4309d7f3d6d3f31708b438f25a93a1c0c2a07e514e8743b8ffd0",
+              "sha256": "e855291b7059dd3299e1452f3d2fff5e0418cf35507df2dca899a8a88f7cb629",
               "stage_out": 1
             }
           ],
@@ -169,13 +169,13 @@
             {
               "position": 64,
               "rows": 3,
-              "sha256": "3bd107fe8f0e398f6b17bcdd94af672b4c0b62fe10f7ed42dce3729ee4153da9",
+              "sha256": "47400dcfe3b3ceb1377dc3dfc30a76497118ae15e5e6e8b8c52fa11469316cfc",
               "stage_out": 1
             }
           ],
-          "committed_step0": 236774,
+          "committed_step0": 107,
           "repeat": 1,
-          "speculative_step1": 236761
+          "speculative_step1": 2063
         },
         {
           "boundary_digests": [
@@ -194,19 +194,19 @@
             {
               "position": 64,
               "rows": 3,
-              "sha256": "6825be73251fd895c50de8dfbad9d152fd50fe44ecbfb12d108a84c1d23cd0e9",
+              "sha256": "fe2d6f8c73affc1f9536f6f3e0ed75fa9ae0d186170f56821e1dab6bfc8ae669",
               "stage_out": 0
             },
             {
               "position": 64,
               "rows": 3,
-              "sha256": "3f2c960d0e0192699fe10a3a5872706ced7c6b78d6f73ee355f90b8dc87233d9",
+              "sha256": "a47a05faa5f8942fb662f410d5463bfd7d3f1ef20c5e826b5a4b69355d5fec3e",
               "stage_out": 1
             }
           ],
-          "committed_step0": 107,
+          "committed_step0": 6455,
           "repeat": 2,
-          "speculative_step1": 2063
+          "speculative_step1": 6455
         }
       ]
     },
@@ -230,18 +230,49 @@
             {
               "position": 64,
               "rows": 3,
-              "sha256": "3b0be91698356f3260fcb931427cf4cc1985806fac5012a52fce897197adb14b",
+              "sha256": "6efdca450428d51f4217f401c46bff217caf5cfa1ddb3527a33e10fa2cd51b94",
               "stage_out": 0
             },
             {
               "position": 64,
               "rows": 3,
-              "sha256": "334786a497fd7d61b8b53db94003709a60230e49a19befe85529f71bcfb4ea02",
+              "sha256": "19471f6411a1dc9fdafa4d48f7ec71fd1f6e75d02a44451ba658c6b039a9cb13",
+              "stage_out": 1
+            }
+          ],
+          "committed_step0": 14937,
+          "repeat": 0,
+          "speculative_step1": 3275
+        },
+        {
+          "boundary_digests": [
+            {
+              "position": 0,
+              "rows": 64,
+              "sha256": "7522b637dcc9fe8a2b62a91bd663eeec1adc1959bcfeed9919f814c3942902c4",
+              "stage_out": 0
+            },
+            {
+              "position": 0,
+              "rows": 64,
+              "sha256": "df7fa0b3a2477293246b66af2d9856af87905bd9293edd70af19b8cf92f8494e",
+              "stage_out": 1
+            },
+            {
+              "position": 64,
+              "rows": 3,
+              "sha256": "454ea7041a4cd1436ca45f5a5e23d9097042463609ee32f98c41b2cc96b6e394",
+              "stage_out": 0
+            },
+            {
+              "position": 64,
+              "rows": 3,
+              "sha256": "ebe906f2c99a7bec37d803542e1ce27de262ebdb69791af888679968607f8f45",
               "stage_out": 1
             }
           ],
           "committed_step0": 107,
-          "repeat": 0,
+          "repeat": 1,
           "speculative_step1": 2063
         },
         {
@@ -261,50 +292,19 @@
             {
               "position": 64,
               "rows": 3,
-              "sha256": "5f8f206d7088a5e27f928971657ee4f0180474bbe92fdbb09250bebc0322ccbf",
+              "sha256": "d2d980696fe1c1cbdd5afe5c33d9294b739917db994ce3df71e3000de937cc22",
               "stage_out": 0
             },
             {
               "position": 64,
               "rows": 3,
-              "sha256": "f724d429ba9b8d8e2ca6cdb6a9de551668f05962bf4e9f4bd12599d992fb71e3",
+              "sha256": "c955362fc80e4309d7f3d6d3f31708b438f25a93a1c0c2a07e514e8743b8ffd0",
               "stage_out": 1
             }
           ],
-          "committed_step0": 818,
-          "repeat": 1,
-          "speculative_step1": 236840
-        },
-        {
-          "boundary_digests": [
-            {
-              "position": 0,
-              "rows": 64,
-              "sha256": "7522b637dcc9fe8a2b62a91bd663eeec1adc1959bcfeed9919f814c3942902c4",
-              "stage_out": 0
-            },
-            {
-              "position": 0,
-              "rows": 64,
-              "sha256": "df7fa0b3a2477293246b66af2d9856af87905bd9293edd70af19b8cf92f8494e",
-              "stage_out": 1
-            },
-            {
-              "position": 64,
-              "rows": 3,
-              "sha256": "8f99b0e4f0b79f7a1cc2a00ce569d1d23c9b159da99a78ac7acc65488c63cd21",
-              "stage_out": 0
-            },
-            {
-              "position": 64,
-              "rows": 3,
-              "sha256": "252a4d2192da7b5aabbf55fa797877d9c0cde3ddb4937ebdbd6b6cada10a2c36",
-              "stage_out": 1
-            }
-          ],
-          "committed_step0": 100,
+          "committed_step0": 107,
           "repeat": 2,
-          "speculative_step1": 1694
+          "speculative_step1": 2063
         }
       ]
     }
@@ -347,7 +347,7 @@
             {
               "position": 64,
               "rows": 2,
-              "sha256": "3620edcb1597c895a6e84a57fffa17138f360b290b48253a5758f38b0a2c1e73",
+              "sha256": "a217bc84a163210df2d19d1a72995c18416ad9b72836325baa7bf6776e03d676",
               "stage_out": 1
             }
           ],
@@ -378,7 +378,7 @@
             {
               "position": 64,
               "rows": 2,
-              "sha256": "f48b959ad3aa284d6604d9eeadd050c9bb884ce1ffad15b7065720d338f22032",
+              "sha256": "0862e907c1e7b7e5f6a258ab37bfbd8cd00bbbf53b957b1d178040c7c7946ebc",
               "stage_out": 1
             }
           ],
@@ -409,7 +409,7 @@
             {
               "position": 64,
               "rows": 2,
-              "sha256": "2e8bd609e6435bcb8f971adc51d6353587d7f0d66a7bb5116e6ccdee53f1c1c8",
+              "sha256": "a217bc84a163210df2d19d1a72995c18416ad9b72836325baa7bf6776e03d676",
               "stage_out": 1
             }
           ],
@@ -439,13 +439,13 @@
             {
               "position": 64,
               "rows": 2,
-              "sha256": "c9db91cf373ea47a19c57479599ce031e2eaa7f4d972ff3d42b54c993cedfb88",
+              "sha256": "abef0ac113ac342d78ad57b88ed99c14204fdf4ec3b4ef5518db8105981c4b8d",
               "stage_out": 0
             },
             {
               "position": 64,
               "rows": 2,
-              "sha256": "5722b576b482d3899219af4c115b0bc4b477f72afaface6eb9b4de32b8289793",
+              "sha256": "d8e3cb69182505a2fadd281b44570c98ff004b87a64dab6876a331ed3ca4b43a",
               "stage_out": 1
             }
           ],
@@ -476,7 +476,7 @@
             {
               "position": 64,
               "rows": 2,
-              "sha256": "5a91e8a799540057f87472b9a757cf73f711c58b3a4662c30c7a45ebf6ab153e",
+              "sha256": "9e4c3d37a4ee127f50004d608ae4958581b2a2d5b7cdd537018e609721e80cf6",
               "stage_out": 1
             }
           ],
@@ -507,7 +507,7 @@
             {
               "position": 64,
               "rows": 2,
-              "sha256": "dec4bcb603c47dd24bacd7520dd8586e407590fad44c5cb1943bd8fcb51cf4ad",
+              "sha256": "2fad1f6674806ea3bb65b8bae1ddf25ecff1da146b5701d6bdf5a9a92d3fc6a1",
               "stage_out": 1
             }
           ],
@@ -543,7 +543,7 @@
             {
               "position": 64,
               "rows": 2,
-              "sha256": "3a24d96b4a41c17f2477158e8e2ad988bc871b47f1328ff06f0a4dc1f72eefce",
+              "sha256": "8e501a3e628f7b4dd8aedd81b8c9b5a5c702d2c48bd3a1c511a8b870ab06d12c",
               "stage_out": 1
             }
           ],
@@ -568,13 +568,13 @@
             {
               "position": 64,
               "rows": 2,
-              "sha256": "54fca2b52263de9bbc9cc4562f0ab68e214676ebd0e51c5f8f552c6f1a148ffb",
+              "sha256": "6304206381cac458bd0e2e113e4a867d8d200af950460ecb9da7c702fe8cd608",
               "stage_out": 0
             },
             {
               "position": 64,
               "rows": 2,
-              "sha256": "544b32e023bb0ac37429f88bd6a104b26908da5f1f9ae3c076c0d36868b2c2a3",
+              "sha256": "40d5ffe67892e9a29899f98f92b32bacacfcaaebaadbb53ec81c044d37b6eb5f",
               "stage_out": 1
             }
           ],
@@ -605,7 +605,7 @@
             {
               "position": 64,
               "rows": 2,
-              "sha256": "3a24d96b4a41c17f2477158e8e2ad988bc871b47f1328ff06f0a4dc1f72eefce",
+              "sha256": "33195f39adef3f60a3f1126cee66f1e30f558b2db97cc812a8c597c9b8ef7852",
               "stage_out": 1
             }
           ],
@@ -630,8 +630,8 @@
   "classification": "DIAGNOSTIC_ONLY",
   "producer": "55e8baaebabe67aeb967d4bd407ef26696933104",
   "schema": "inferswarm.issue157.baseline-reproduction/1",
-  "source_run": "i157-BASE-1789261211",
-  "source_run_sha256": "c6158c423771f4d40eb0b61f5335731a0e53620ae33d8e1ceb3c600656d98b88",
+  "source_run": "i157-BASE-1789309328",
+  "source_run_sha256": "2d113dd2ac26471889cd722125320d382c8653a6f78d9884d43ff3285a378992",
   "stable_control": [
     {
       "realization": 0,
@@ -832,40 +832,18 @@
     "0f8f2daa124609eaba5671eb1cefaf74f72c695b4754916e6feafac400c1dda8"
   ],
   "tooling_provenance": {
-    "corroboration_under_committed_bytes": {
-      "anchor_a_chunk1_boundary_digest": {
-        "byte_matches_committed_runs": [
-          {
-            "field": "boundary_sha256 (exact-state-replay.json)",
-            "run": "i157-REPLAY-1789269282"
-          },
-          {
-            "field": "control+treatment chunk-1 digests (interventions.json swa_alloc.anchor_a)",
-            "run": "i157-IV-SWA-ALLOC-1789269642"
-          }
-        ],
-        "value": "7522b637dcc9fe8a2b62a91bd663eeec1adc1959bcfeed9919f814c3942902c4"
-      },
-      "anchor_b_chunk1_boundary_digest": {
-        "byte_matches_committed_runs": [
-          {
-            "field": "control+treatment chunk-1 digests (interventions.json swa_alloc.anchor_b)",
-            "run": "i157-IV-SWA-ALLOC-1789269764"
-          }
-        ],
-        "value": "0bc45f8a2fba32d865242b967067d3723b0fc01bbeb5476f69ce3c7ea79ca664"
-      },
-      "chunk2_instability_re_demonstrated": {
-        "note": "paired CONTROL arms of the committed-bytes i157-IV-SWA-ALLOC reruns re-demonstrate chunk-2 instability under frozen instrumentation (anchor_a control 3-distinct/6, anchor_b control 6-distinct/6), while chunk-1 remains byte-identical to this BASE run's captures in the same arms"
-      },
-      "not_corroborated_under_committed_bytes": [
-        "Phase-2 committed-token value families (anchor_a in-session variable values, anchor_b session-stable 107, stable control 1509 x9)",
-        "accepted_137_binding.recurred_in_this_baseline cross-check (derived from this run's anchor_a tokens)"
-      ]
-    },
-    "executed_under_committed_2611ee1_bytes": false,
+    "binding_module_sha256_at_execution": "66927fab5f98aed756780430492667bebda5efab2161edf1d77d0061a89348ca",
+    "driver_sha256_at_execution": "sha256:b49c0bec2d3e7ad2f7877632489a09cb6dda2702a735853ba3836d7589b88a3e",
+    "executed_under_committed_2611ee1_bytes": true,
     "execution_bearing_freeze_instrumentation_sha256": "sha256:00a1c2c1452f87ca56289eeb3716e9cd08ba1c5a36e7d06ac6abdb79283024fc",
-    "instrumentation_sha256_at_execution": "sha256:98fa2a80d893dcae20f373d94064d55c9ab2314cb868fbe9000e166d667d8d77",
-    "note": "Phase-2 BASE run i157-BASE-1789261211 executed under uncommitted pre-freeze instrumentation bytes; it was NOT rerun under the committed 2611ee1 bytes (correction pass 1 reran REPLAY/IV arms only). This record corrects the earlier launch-ledger/authority claim that ALL evidence-bearing arms were rerun (recertification adversarial review, both lanes, 2026-09-13). Token-level observations (anchor lists, stable control) are retained verbatim from this run; physical observation bytes unchanged by this correction."
+    "instrumentation_sha256_at_execution": "sha256:00a1c2c1452f87ca56289eeb3716e9cd08ba1c5a36e7d06ac6abdb79283024fc",
+    "note": "Authoritative Phase-2 BASE (2026-09-13 physical-authority correction): executed under the committed execution-bearing tool bytes (2611ee1), node bytes sha256-verified equal to the authority pins before and after the run. Supersedes i157-BASE-1789261211 for Phase-2 authority.",
+    "sitecustomize_sha256_at_execution": "sha256:67effb1dfc8c9960e43f5c577195f71635930db4b768d831f84970748f4e8c4b",
+    "superseded_run": {
+      "disposition": "retained historical evidence only \u2014 preserved verbatim in the launch ledger and in git history (baseline-reproduction.json at 3518480); never deleted, rewritten, relabeled, or concealed",
+      "instrumentation_sha256_at_execution": "sha256:98fa2a80d893dcae20f373d94064d55c9ab2314cb868fbe9000e166d667d8d77",
+      "run_id": "i157-BASE-1789261211",
+      "superseded_because": "executed under uncommitted pre-freeze instrumentation bytes; cannot carry Phase-2 reproduction authority under the corrected reducer gate"
+    }
   }
 }

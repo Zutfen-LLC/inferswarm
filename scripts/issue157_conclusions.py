@@ -72,7 +72,14 @@ def reduce_phenomenon_reproduction(baseline: dict) -> dict:
         if not rows:
             raise ReductionError(f"baseline missing {key} observations")
         tokens = []
+        lifecycle_reasons = []
         for realization in rows:
+            # an explicit lifecycle non-reproduction reason is carried
+            # through verbatim (issue #157 terminal exception input);
+            # absence stays absence — never manufactured downstream
+            reason = realization.get("non_reproduction_lifecycle_reason")
+            if reason:
+                lifecycle_reasons.append(str(reason))
             for repeat in realization.get("repeats", []):
                 tokens.append(repeat["committed_step0"])
         distinct = sorted(set(tokens))
@@ -82,6 +89,10 @@ def reduce_phenomenon_reproduction(baseline: dict) -> dict:
             "values": tokens,
             "varies": len(distinct) > 1,
             "realizations": len(rows),
+            "non_reproduction_lifecycle_reason": (
+                "; ".join(lifecycle_reasons)
+                if lifecycle_reasons else None
+            ),
         }
     return out
 
@@ -237,7 +248,8 @@ def earliest_varying_checkpoint(instrumentation: dict) -> dict:
 
 def reduce_terminal(
     reproduction: dict, replay: dict, interventions: dict,
-    checkpoints: dict,
+    checkpoints: dict, *,
+    baseline_provenance: dict | None = None,
 ) -> tuple[str, dict]:
     """Terminal ladder (issue #157).  LOCALIZED requires ALL of:
     (a) chunk-2 phenomenon reproduced (or exact lifecycle reason),
@@ -245,21 +257,50 @@ def reduce_terminal(
     (c) >= 1 causal/necessary mechanism demonstrated by a prospective
         one-variable control,
     (d) strong enough to define a bounded remediation issue.
+
+    Phase-2 reproduction authority (2026-09-13 physical-authority
+    correction): the reproduction condition derives ONLY from a valid
+    frozen-producer BASE record.  The exact-state chunk-2 replay
+    (Phase 3) is evidence for operation-level localization and
+    intrinsic variability, but it can never substitute for the
+    prospectively required Phase-2 baseline reproduction: the two
+    phases observe different things under different lifecycles, so an
+    operation-level variation does not certify that the Phase-2
+    baseline phenomenon reproduced on the frozen diagnostic producer.
+
+    A BASE record whose execution-bearing provenance does not match
+    the accepted frozen authority cannot satisfy the gate at all
+    (fail closed), regardless of what the replay shows.
     """
-    # Reproduction gate (issue Phase 2): the accepted chunk-2 phenomenon
-    # is reproduced when a baseline anchor VARIES (in-session family), OR
-    # the exact-state chunk-2 replay varies from byte-identical restored
-    # state (the same instability observed at the operation level), OR a
-    # non-reproduction carries an exact lifecycle reason.  A merely
-    # non-empty baseline never satisfies the gate by itself.
-    a_repro = reproduction["anchor_a"]["varies"]
-    b_repro = reproduction["anchor_b"]["varies"]
+    # Phase-2 authority: the retained BASE record must have executed
+    # under the frozen execution-bearing tool bytes.  A pre-freeze/
+    # non-authoritative BASE record satisfies NOTHING here — its
+    # token-level observations are retained historical evidence, not
+    # Phase-2 reproduction authority.
+    provenance_ok = baseline_provenance_authority(
+        baseline_provenance or {})
+    if not provenance_ok:
+        repro = False
+        repro_source = "none_non_authoritative_baseline"
+    else:
+        a_repro = reproduction["anchor_a"]["varies"]
+        b_repro = reproduction["anchor_b"]["varies"]
+        repro = a_repro or b_repro
+        repro_source = (
+            "phase2_baseline_anchor_a" if a_repro
+            else "phase2_baseline_anchor_b" if b_repro
+            else "none_baseline_did_not_vary"
+        )
+    # Phase-3 evidence separation: exact-state variability is
+    # retained evidence for operation-level localization/intrinsic
+    # variability; it is deliberately NOT part of `repro`.
     exact_state_varies = not replay["chunk2_deterministic"]
-    repro = a_repro or b_repro or exact_state_varies
     # A stable control that varies contradicts the accepted #137
     # baseline (single-chunk 53-row units deterministic) and invalidates
     # a LOCALIZED claim: the substrate itself is unstable.
     control_contradicted = reproduction["stable_control"]["varies"]
+    lifecycle = lifecycle_reason_present(reproduction)
+    lifecycle_valid = provenance_ok and lifecycle
     localized_ckpts = any(
         v["earliest_varying"] for v in checkpoints.values()
     )
@@ -267,7 +308,13 @@ def reduce_terminal(
         arm.get("stabilizes") is True for arm in interventions.values()
     )
     reasons = {
+        "phase2_baseline_execution_provenance_valid": provenance_ok,
         "phenomenon_reproduced": repro,
+        "phenomenon_reproduction_source": repro_source,
+        "phase3_exact_state_varies_retained_as_localization_evidence":
+            exact_state_varies,
+        "phase3_exact_state_substitutes_for_phase2": False,
+        "exact_lifecycle_non_reproduction_reason": lifecycle,
         "earliest_boundary_localized": localized_ckpts,
         "mechanism_demonstrated": mechanism,
         "stable_control_contradicted": control_contradicted,
@@ -277,28 +324,64 @@ def reduce_terminal(
         return TERMINALS["LOCALIZED"], reasons
     if repro and (localized_ckpts or mechanism):
         return TERMINALS["PARTIAL"], reasons
-    if not repro and lifecycle_reason_present(reproduction):
+    # Terminal exception (issue #157): an EXPLICIT, demonstrated exact
+    # lifecycle reason for non-reproduction.  A lifecycle reason may
+    # never be manufactured from absence or from exact-state
+    # variability — it must be explicitly present in the authoritative
+    # BASE record (which requires a valid frozen-producer BASE).
+    if lifecycle_valid and not repro:
         return TERMINALS["PARTIAL"], reasons
     if not repro:
         return TERMINALS["INSUFFICIENT"], reasons
     return TERMINALS["PARTIAL"], reasons
 
 
-def baseline_reproduces(reproduction: dict) -> bool:
-    """Anchor A reproduces the accepted classes when it varies in
-    baseline (in-session-variable family) OR Anchor B produces a value
-    distinct from every accepted observation while session-stable
-    (cross-session family).  Determined from the retained distribution
-    itself, never a constant."""
-    a = reproduction["anchor_a"]
-    b = reproduction["anchor_b"]
-    if a["varies"]:
-        return True
-    # session-stable families reproduce when the single value differs
-    # from the accepted #137 in-session values (cross-session drift)
-    if not b["varies"] and b["observations"] >= 4:
-        return True
-    return False
+# The accepted frozen execution-bearing authority (commit 2611ee1):
+# instrumentation_sha256 of the BASE record's driver block must equal
+# the committed execution-bearing instrumentation bytes for the BASE
+# record to carry Phase-2 reproduction authority.  Source: the
+# execution_bearing_files pins in physical-diagnostic-authority.json
+# ("EXACTLY the tool bytes the committed physical reruns executed
+# under (2611ee1)") and baseline-reproduction.json
+# execution_bearing_freeze_instrumentation_sha256.
+AUTHORITY_INSTRUMENTATION_SHA256 = "sha256:" + "00a1c2c1452f87ca56289eeb3716e9cd08ba1c5a36e7d06ac6abdb79283024fc"
+
+
+def baseline_provenance_authority(baseline: dict) -> bool:
+    """Phase-2 authority gate over the retained BASE record bytes.
+
+    The baseline-reproduction.json record is authoritative for
+    Phase-2 reproduction ONLY when it proves the BASE run executed
+    under the frozen execution-bearing tool bytes (2611ee1).  The
+    `tooling_provenance.executed_under_committed_2611ee1_bytes` flag
+    and the at-execution instrumentation digest are validated against
+    the accepted authority pin; any mismatch, absence, or tampered
+    identity fails closed (returns False — no tuning, no retry, the
+    reducer never resurrects authority from a non-authoritative
+    record).
+
+    Tamper cases that fail closed: a flipped boolean alone, a digest
+    that does not equal the authority pin, a missing tooling
+    provenance block, or run identity fields inconsistent with the
+    flag.
+    """
+    tp = baseline.get("tooling_provenance") or {}
+    if not isinstance(tp, dict) or not tp:
+        return False
+    if tp.get("executed_under_committed_2611ee1_bytes") is not True:
+        return False
+    at_exec = tp.get("instrumentation_sha256_at_execution") or ""
+    freeze = tp.get("execution_bearing_freeze_instrumentation_sha256") or ""
+    if at_exec != AUTHORITY_INSTRUMENTATION_SHA256:
+        return False
+    if freeze != AUTHORITY_INSTRUMENTATION_SHA256:
+        return False
+    # the authoritative run must be bound to a retained run id and its
+    # source_run_sha256 must be present (identity tamper fail-closed)
+    if not baseline.get("source_run") or not baseline.get(
+            "source_run_sha256"):
+        return False
+    return True
 
 
 def lifecycle_reason_present(reproduction: dict) -> bool:
@@ -401,8 +484,10 @@ def main(argv=None) -> int:
     interventions_out = reduce_interventions(interventions)
     checkpoints = earliest_varying_checkpoint(instrumentation)
     recurrence = accepted_value_recurrence(baseline)
+    phase2_authority = baseline_provenance_authority(baseline)
     terminal, reasons = reduce_terminal(
-        reproduction, replay_out, interventions_out, checkpoints
+        reproduction, replay_out, interventions_out, checkpoints,
+        baseline_provenance=baseline,
     )
 
     # every observational number used in the prose below is computed
@@ -429,6 +514,21 @@ def main(argv=None) -> int:
         "classification": DIAGNOSTIC_ONLY,
         "terminal": terminal,
         "terminal_requirements": reasons,
+        "phase2_reproduction_authority": {
+            "source_run": baseline.get("source_run"),
+            "source_run_sha256": baseline.get("source_run_sha256"),
+            "executed_under_committed_2611ee1_bytes": bool(
+                phase2_authority
+            ),
+            "authority_instrumentation_sha256":
+                AUTHORITY_INSTRUMENTATION_SHA256,
+            "gate": (
+                "Phase-2 reproduction authority requires a BASE record "
+                "executed under the frozen execution-bearing tool bytes "
+                "(2611ee1); Phase-3 exact-state replay is localization "
+                "evidence only and never substitutes for it"
+            ),
+        },
         "phenomenon_reproduction": reproduction,
         "exact_state_replay": replay_out,
         "interventions": interventions_out,

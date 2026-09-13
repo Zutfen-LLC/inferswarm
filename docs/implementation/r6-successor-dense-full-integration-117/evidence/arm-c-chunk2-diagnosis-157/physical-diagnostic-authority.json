@@ -98,6 +98,12 @@
         "note": "original pre-physical freeze hashes (see git c11fa00)",
         "superseded_by": "correction_pass_1"
       },
+      "physical_authority_correction_2026_09_13": {
+        "authoritative_base_run": "i157-BASE-1789309328",
+        "note": "Phase-2 BASE rerun under committed execution-bearing bytes: i157-BASE-1789309328 (instrumentation sha256:00a1c2c1...24fc == the execution_bearing_files pin; node bytes verified equal pre- and post-run). Supersedes i157-BASE-1789261211 for Phase-2 reproduction authority (retained as historical evidence).",
+        "superseded_run": "i157-BASE-1789261211",
+        "supersedes": "correction_pass_1_commit_2611ee1"
+      },
       "pre_correction_pass_1_instrumentation_listing": {
         "note": "the original instrumentation.files map (freeze c11fa00 / correction-pass-1 2611ee1) additionally listed scripts/issue157_conclusions.py among the instrumentation hashes; that listing is superseded by the execution_bearing_files / post_processing_files split recorded here, which preserves the exact same execution-bearing hashes while classifying the conclusions reducer explicitly as post-processing tooling (it never participated in physical execution or capture)",
         "superseded_by": "post_evidence_reducer_amendments[0]"
@@ -123,6 +129,10 @@
         "physical_observation_bytes_unchanged": "anchor_a/anchor_b/stable_control observation lists and all digest lists in baseline-reproduction.json byte-identical; only additive provenance fields added",
         "physical_rerun_required": false,
         "reviewer_accepted_fix_shape": "corroboration record, no GPU rerun \u2014 accepted by both independent lanes"
+      },
+      {
+        "change": "fresh authoritative Phase-2 BASE run i157-BASE-1789309328 executed under committed 2611ee1 bytes and committed as the Phase-2 authority; old BASE superseded (retained historical); reducer reproduction gate corrected (Phase-2 authority derives only from a frozen-producer BASE record; Phase-3 replay cannot substitute)",
+        "date": "2026-09-13"
       }
     ],
     "post_evidence_reducer_amendments": [

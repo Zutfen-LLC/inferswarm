@@ -763,8 +763,9 @@
     "node-deployed script bytes verified sha256-equal to committed 2611ee1 before every correction-pass launch"
   ],
   "provenance": "tooling committed at 2611ee1 (node bytes sha256-verified equal pre-launch)",
-  "raw_jsonl_retention": "ALL per-call JSONLs of the correction-pass runs are retained (harness-jsonl/); the original runs' JSONLs were partially wiped (see superseded entries) \u2014 original runs superseded",
+  "raw_jsonl_retention": "ALL per-call JSONLs of the correction-pass runs are retained (harness-jsonl/), including ALL six stage JSONLs of the authoritative BASE rerun i157-BASE-1789309328 (node-local /srv/inferswarm/state/issue157/out-base2/instrumentation/); the original runs' JSONLs were partially wiped (see superseded entries) \u2014 original runs superseded",
   "retained_run_records": {
+    "i157-BASE-1789309328": "2d113dd2ac26471889cd722125320d382c8653a6f78d9884d43ff3285a378992",
     "i157-IV-ROUTE-1789269522": "6716950a7b0f3c40418b1ed783ba112ff5e75c7bc7b683f50e3786aba18dc481",
     "i157-IV-SWA-ALLOC-1789269642": "50c225800b8b0c2a13c376bea47899b3730824bca54b2012d18c975e2f074d8c",
     "i157-IV-SWA-ALLOC-1789269764": "a69225e7ef02d95c1fe7a77d5ef389893925a716955e87e7c407f6da830c79c7",
@@ -779,7 +780,13 @@
     "i157-replay-worker-stage1-i157-IV-SWA-ALLOC-1789269642-0.jsonl": "78c38225184080305de8ca1206bc604223621f815667e42105957511e47863f4",
     "i157-replay-worker-stage1-i157-IV-SWA-ALLOC-1789269764-0.jsonl": "3dcace78356f74d1875414ee739e56a878d6c1414b8fe46425d1051f71da11f5",
     "i157-replay-worker-stage1-i157-IV-SYNC-1789269402-0.jsonl": "c33b4bd6496cbac705156da9fd5f44094daa22b9edde9f0b35ee86ff43e45559",
-    "i157-replay-worker-stage1-i157-REPLAY-1789269282-0.jsonl": "5b153b3c4b8e0877f5a2dc6ac7969a914b52277c986048a90e04aba4920d99e7"
+    "i157-replay-worker-stage1-i157-REPLAY-1789269282-0.jsonl": "5b153b3c4b8e0877f5a2dc6ac7969a914b52277c986048a90e04aba4920d99e7",
+    "i157-stage1-0-16-i157-BASE-1789309328-0.jsonl": "f4d4403e46f3a9c1214888377ebbda69100471c74a330ba81ab2e7f435f408b3",
+    "i157-stage1-0-16-i157-BASE-1789309328-1.jsonl": "9428ea2e2eb642c6b218a4f6bde999722c46c56bbf60f24b5384ead3890628fb",
+    "i157-stage1-0-16-i157-BASE-1789309328-2.jsonl": "66759c379717d2be9c83707fa331d62c918033c45a507a5977e0e188131ae7a0",
+    "i157-stage2-16-32-i157-BASE-1789309328-0.jsonl": "028ea206f253751a55f517d8e97e513761166d8230730627d5750c6a0ff6cf33",
+    "i157-stage2-16-32-i157-BASE-1789309328-1.jsonl": "1dfc1041e89da49886cf1f9c1c5fadd9741d8d53c21b419dbebe398dd2856183",
+    "i157-stage2-16-32-i157-BASE-1789309328-2.jsonl": "bcfa54efef90b863b514dbc690f7339c029840cf657d486885bb594cfab66579"
   },
   "schema": "inferswarm.issue157.instrumentation-manifest/2"
 }

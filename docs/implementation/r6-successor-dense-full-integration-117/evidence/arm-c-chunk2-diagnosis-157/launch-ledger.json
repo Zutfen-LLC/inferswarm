@@ -15,6 +15,7 @@
       "outcome": "phenomenon reproduced: anchor A in-session variable (accepted values recur), anchor B session-stable at 107 (accepted value), stable control deterministic 1509 x9",
       "probe": "BASE",
       "run_id": "i157-BASE-1789261211",
+      "superseded_for_phase2_authority_by": "i157-BASE-1789309328",
       "tooling_note": "executed under uncommitted intermediate instrumentation bytes (sha256:98fa2a80\u2026d8d77, pre-freeze); NOT rerun under committed 2611ee1 bytes \u2014 correction pass 1 reran the REPLAY/IV arms only. Retained as the sole source of the Phase-2 token-level observations; chunk-1 boundary digests independently corroborated under committed bytes by i157-REPLAY-1789269282 and the i157-IV-SWA-ALLOC corr1 runs (see baseline-re provenance). The earlier note claiming supersession by a correction-pass-1 BASE rerun was inaccurate; corrected in the recertification record pass (2026-09-13)."
     },
     {
@@ -151,6 +152,14 @@
       "outcome": "CAUSAL CONFIRMED: treatment 1-distinct/6, control 6-distinct/6",
       "probe": "IV-SWA-ALLOC",
       "run_id": "i157-IV-SWA-ALLOC-1789269764"
+    },
+    {
+      "design": "authoritative Phase-2 BASE rerun under committed 2611ee1 execution-bearing tool bytes (2026-09-13 physical-authority correction): 3 fresh chain realizations x 3 within-realization repeats x {anchor A, anchor B, stable control}; instrumentation armed in stage processes",
+      "host": "inferswarm01",
+      "outcome": "phenomenon reproduced under frozen producer bytes: anchor A in-session variable (5 distinct / 9; accepted values 107+818 recur), anchor B session-stable at 107 x9 (accepted value), stable control deterministic 1509 x9; chunk-1 boundary byte-deterministic",
+      "probe": "BASE",
+      "run_id": "i157-BASE-1789309328",
+      "tooling_note": "executed under committed 2611ee1 bytes (instrumentation sha256:00a1c2c1...24fc, verified equal on the node before and after the run); supersedes i157-BASE-1789261211 for Phase-2 authority per the corrected reducer reproduction gate"
     }
   ],
   "note": "Every launch with GPU model execution is ledgered, including confirmation reruns and tooling-incident aborts; the correction-pass-1 rerun entries are appended when pulled.",

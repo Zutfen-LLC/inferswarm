@@ -61,7 +61,9 @@ the anchors' extend-route path — intervention not legal per Phase 4-B).
 - `METHODOLOGY.md` — frozen before physical output (commit c11fa00).
 - `physical-diagnostic-authority.json` — starting SHAs, subject,
   topology, anchors/control binding, intervention matrix, non-claims.
-- `baseline-reproduction.json` — Phase 2 (BASE run i157-BASE-1789261211).
+- `baseline-reproduction.json` — Phase 2 (authoritative BASE run
+  i157-BASE-1789309328, committed bytes; supersedes the retained
+  pre-freeze i157-BASE-1789261211 for Phase-2 authority).
 - `exact-state-replay.json` — Phase 3 (run i157-REPLAY-1789262629) +
   superseded first attempt (no-op-restore harness bug, retained).
 - `interventions.json` — Phase 4 arms incl. rejected hypotheses and
@@ -78,13 +80,12 @@ Two exact-head adversarial reviews returned GO-WITH-FIXES. All P1s
 resolved: (a) the REPLAY and intervention arms were RERUN under tool
 bytes committed at 2611ee1 (node bytes sha256-verified equal before
 launch) — all results confirmed (REPLAY varies 6/6; SYNC and ROUTE
-rejected; SWA-ALLOC stabilizes both anchors). The BASE arm was NOT
-rerun; its Phase-2 token-level observations retain pre-freeze
-instrumentation provenance, disclosed in
-`baseline-reproduction.json` `tooling_provenance`, with its chunk-1
-boundary digests independently corroborated under committed bytes by
-the rerun REPLAY and SWA-ALLOC arms and chunk-2 instability
-re-demonstrated by the rerun paired controls; (b) the reducer now selects the
+rejected; SWA-ALLOC stabilizes both anchors). At that pass the BASE
+arm was NOT rerun (its Phase-2 token-level observations retained
+pre-freeze instrumentation provenance, disclosed in
+`baseline-reproduction.json` `tooling_provenance`); the
+physical-authority correction below closed that gap with a fresh
+committed-bytes BASE rerun; (b) the reducer now selects the
 earliest varying checkpoint by execution order (the racing SWA store,
 not the downstream attention read), never reports a legally-skipped
 intervention as executed, and the reproduction gate is
@@ -143,3 +144,36 @@ stable at call-0 in accepted evidence and was not separately
 exercised); no Arm-C PASS/FAIL reinterpretation; no h109 access; no
 contract change; no remediation landed (a separate remediation issue
 must be opened after this PR is accepted).
+
+## Physical-authority correction (2026-09-13): fresh Phase-2 BASE under committed bytes
+
+The recertification reviews' authority gap is closed: the Phase-2
+BASE diagnostic was RERUN under the frozen execution-bearing tool
+bytes (2611ee1) as fresh run `i157-BASE-1789309328` (node bytes
+sha256-verified equal to the authority pins before and after the
+run; producer 55e8baa; identical anchors/control/geometry/subject;
+fresh DIAGNOSTIC_ONLY run ID). Results reproduce the accepted
+classes exactly, without tuning: anchor A in-session variable
+(5 distinct / 9 observations; accepted values 107 and 818 recur),
+anchor B session-stable at 107 across all 9 observations (an
+accepted value), stable control deterministic 1509 x9, chunk-1
+boundary byte-deterministic.
+
+`i157-BASE-1789261211` (pre-freeze instrumentation) is retained in
+the launch history as HISTORICAL evidence only and is EXPLICITLY
+SUPERSEDED for Phase-2 authority by `i157-BASE-1789309328`
+(`baseline-reproduction.json` `tooling_provenance.superseded_run` +
+`launch-ledger.json` `superseded_for_phase2_authority_by`). It was
+never deleted, rewritten, relabeled, or concealed.
+
+The conclusions reducer's reproduction gate was corrected in the
+same change: Phase-2 reproduction authority now derives ONLY from a
+BASE record executed under the frozen execution-bearing bytes
+(fail-closed on provenance tamper); the Phase-3 exact-state replay
+remains localization/intrinsic-variability evidence but can no
+longer substitute for the Phase-2 baseline condition; the #157
+terminal exception (explicit demonstrated exact lifecycle reason)
+is preserved and can never be manufactured from absence or from
+exact-state variability. The conflicting `baseline_reproduces`
+helper was removed. Terminal re-derived by the corrected reducer
+from the fresh BASE plus the retained correction-pass evidence.
