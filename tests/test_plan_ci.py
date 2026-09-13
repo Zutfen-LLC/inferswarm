@@ -512,6 +512,142 @@ class TestWorkflowContract(unittest.TestCase):
         self.assertEqual(p["groups"], sorted(plan_ci.GROUP_TEST_MODULES))
 
 
+class TestWorkflowRegistryParity(unittest.TestCase):
+    """Mechanical workflow-vs-registry parity guard (Issue #153).
+
+    Parses the REAL ``.github/workflows/ci.yml`` and derives the
+    executable unittest module inventory from actual ``run:`` commands
+    (no hand-maintained mirror table), then requires parity with
+    ``GROUP_TEST_MODULES`` in every direction. The negative controls
+    mutate a scratch copy of the parsed workflow/registry representation
+    and prove the guard FAILS for each drift class.
+    """
+
+    WORKFLOW = REPO_ROOT / ".github" / "workflows" / "ci.yml"
+
+    @classmethod
+    def setUpClass(cls):
+        import yaml
+        import ci_workflow_parity
+        cls.parity = ci_workflow_parity
+        with open(cls.WORKFLOW, encoding="utf-8") as fh:
+            cls.doc = yaml.safe_load(fh)
+        cls.registry = cls.parity.registry_modules()
+
+    def _copy_doc(self):
+        import copy
+        return copy.deepcopy(self.doc)
+
+    def _copy_registry(self):
+        return {g: set(m) for g, m in self.registry.items()}
+
+    # -- positive invariant ------------------------------------------------
+
+    def test_real_workflow_and_registry_are_at_parity(self):
+        problems = self.parity.parity_problems(self.doc, self.registry)
+        self.assertEqual(problems, [],
+                         "registry/workflow parity drift:\n  "
+                         + "\n  ".join(problems))
+
+    def test_v0b_job_executes_every_v0b_v0c_registered_module(self):
+        exec_map = self.parity.group_execution_map(self.doc)
+        self.assertEqual(exec_map["vulkan-v0-b"],
+                         self.registry["vulkan-v0-b"])
+
+    def test_repo_integrity_union_equals_registry(self):
+        exec_map = self.parity.group_execution_map(self.doc)
+        self.assertEqual(exec_map["repo-integrity"],
+                         self.registry["repo-integrity"])
+
+    def test_issue117_shard_union_equals_registry(self):
+        exec_map = self.parity.group_execution_map(self.doc)
+        self.assertEqual(exec_map["issue-117-133"],
+                         self.registry["issue-117-133"])
+
+    def test_issue117_shards_execute_each_module_exactly_once(self):
+        per_job = self.parity.parse_workflow(self.doc)
+        shard_jobs = {j: m for j, m in per_job.items()
+                      if self.parity.SHARD_JOB_RE.match(j)}
+        self.assertEqual(len(shard_jobs), 4, sorted(shard_jobs))
+        from collections import Counter
+        counts = Counter(
+            module for modules in shard_jobs.values()
+            for module in modules)
+        duplicated = {m: c for m, c in counts.items() if c != 1}
+        self.assertEqual(
+            duplicated, {},
+            "shard commands must execute every registered module "
+            "exactly once")
+        self.assertEqual(set(counts), self.registry["issue-117-133"])
+
+    # -- negative controls (scratch representations) ----------------------
+
+    def _assert_problems(self, doc, registry, needle):
+        problems = self.parity.parity_problems(doc, registry)
+        self.assertTrue(problems,
+                        "mutated representation must fail parity")
+        self.assertTrue(
+            any(needle in p for p in problems),
+            f"expected failure mentioning {needle!r}, got: {problems}")
+
+    def test_control_registered_v0c_module_removed_from_workflow(self):
+        # (1) a V0-C module stays registered but the workflow command
+        # no longer executes it.
+        doc = self._copy_doc()
+        step = [s for s in doc["jobs"]["vulkan-v0-b"]["steps"]
+                if "unittest" in (s.get("run") or "")][0]
+        step["run"] = step["run"].replace(
+            " tests.test_v0c_correctness", "")
+        self._assert_problems(doc, self.registry,
+                              "test_v0c_correctness")
+
+    def test_control_test_plan_ci_registered_but_not_executed(self):
+        # (2) test_plan_ci is registered to repo-integrity but no step
+        # executes it.
+        doc = self._copy_doc()
+        for step in doc["jobs"]["repo-integrity"]["steps"]:
+            run = step.get("run") or ""
+            if "unittest" in run and "test_plan_ci" in run:
+                step["run"] = run.replace("tests.test_plan_ci", "")
+        self.assertIn("test_plan_ci", self.registry["repo-integrity"])
+        self._assert_problems(doc, self.registry, "test_plan_ci")
+
+    def test_control_one_117_shard_drops_a_module(self):
+        # (3) one Issue #117 shard silently drops a module.
+        doc = self._copy_doc()
+        step = [s for s in doc["jobs"]["issue-117-133-s1"]["steps"]
+                if "unittest" in (s.get("run") or "")][0]
+        step["run"] = step["run"].replace(
+            " tests.test_issue117_proof", "")
+        self._assert_problems(doc, self.registry,
+                              "test_issue117_proof")
+
+    def test_control_workflow_runs_an_unregistered_module(self):
+        # (4) a workflow command executes a module the registry does
+        # not know.
+        doc = self._copy_doc()
+        registry = self._copy_registry()
+        registry["vulkan-v0-b"].discard("test_v0c_correctness")
+        step = [s for s in doc["jobs"]["vulkan-v0-b"]["steps"]
+                if "unittest" in (s.get("run") or "")][0]
+        step["run"] = step["run"].replace(
+            "tests.test_v0b_reduction",
+            "tests.test_v0b_reduction tests.test_ghost_module")
+        self._assert_problems(doc, registry, "test_ghost_module")
+
+    def test_control_module_in_two_unrelated_groups(self):
+        # (5) a module appears in two unrelated execution groups while
+        # no duplication is declared.
+        doc = self._copy_doc()
+        step = [s for s in doc["jobs"]["phase1-analysis"]["steps"]
+                if "unittest" in (s.get("run") or "")][0]
+        step["run"] = step["run"].replace(
+            "tests.test_analyze_phase1_p6",
+            "tests.test_analyze_phase1_p6 tests.test_v0b_reduction")
+        self._assert_problems(doc, self.registry,
+                              "multiple unrelated groups")
+
+
 class TestRepositoryTreeCoverage(unittest.TestCase):
     """Real tracked paths (git ls-files census) select real consumers.
 
