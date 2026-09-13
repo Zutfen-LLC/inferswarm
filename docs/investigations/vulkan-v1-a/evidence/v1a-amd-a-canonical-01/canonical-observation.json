@@ -1,0 +1,16 @@
+{
+ "candidate_id": "candidate-b16fc835b92bb2efa15426a440b4918bee238c8b9fa87526e2968d60536e5a6c",
+ "canonical_evidence_id": "v1a-amd-a-canonical-01",
+ "canonical_proof_digest": "b0097b59e7be16fc7a56129b962addaf1f3f202bd89cfd702c83c6b880eb6488",
+ "compute_unit_id": "cu-amd-a",
+ "evidence_id": "v1a-amd-a-qualification-01",
+ "execution_contract_id": "contract-s2-opaque-v1",
+ "execution_unit_id": "unit-q4km-whole-model",
+ "implementation_id": "impl-portable-amd-a",
+ "memory_resource_id": "mr-amd-a-vram",
+ "node_id": "node-inferswarm02",
+ "output_sha256": "f495a6da43b65bbf638bf3388d368006020a51efb837363e096e83405b2b5971",
+ "plan_digest": "6d2d02e638741c834eefd6e28f8488d5d41f8ff0854354f39ff0b9a7b173c956",
+ "qualification_digest": "3243bd9b2a2791a8739b6eb028d7cd329df00c6fca357f5fa3e58bbc05d53973",
+ "schema": "inferswarm.v1a.canonical-observation/1"
+}

@@ -1,0 +1,13 @@
+{
+ "acceptance_state": "draft PR #156 records the result; acceptance remains with the maintainer",
+ "facts": {
+  "canonical_reproduction": "v1a-amd-a-canonical-01 PASS (accounting 0/0/0; byte-exact 9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d)",
+  "generic_plan": "v1a-amd-a-plan-01 (AMD selected; NVIDIA/native excluded EXECUTION_CONTRACT_UNSUPPORTED)",
+  "local_host_confirmed": "inferswarm02",
+  "physical_qualification": "v1a-amd-a-qualification-01 PASS (37/37, no fallback, clean exit)",
+  "ssh_used": false,
+  "withdrawn_assumption": "earlier SSH-blocked terminal was a session assumption, not evidence"
+ },
+ "schema": "inferswarm.v1a.evidence-status/3",
+ "terminal": "V1A_REUSABLE_VULKAN_PARTICIPANT_PASS"
+}

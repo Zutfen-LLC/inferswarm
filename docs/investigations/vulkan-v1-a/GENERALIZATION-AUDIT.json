@@ -1,0 +1,39 @@
+{
+ "backend_specific_containment": "BACKEND_DETAIL_CONTAINED",
+ "binding_proof": {
+  "byte_exact_reference_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d",
+  "candidate_id": "candidate-b16fc835b92bb2efa15426a440b4918bee238c8b9fa87526e2968d60536e5a6c",
+  "canonical_proof_digest": "b0097b59e7be16fc7a56129b962addaf1f3f202bd89cfd702c83c6b880eb6488",
+  "execution_receipt_output_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d",
+  "plan_digest": "6d2d02e638741c834eefd6e28f8488d5d41f8ff0854354f39ff0b9a7b173c956",
+  "qualification_digest": "3243bd9b2a2791a8739b6eb028d7cd329df00c6fca357f5fa3e58bbc05d53973",
+  "qualification_offloaded_layers": [
+   37,
+   37
+  ]
+ },
+ "candidate_representation": "GENERIC_REFACTORED_FOR_REUSE",
+ "canonical_execution_observation": "GENERIC_REFACTORED_FOR_REUSE",
+ "execution_capability_representation": "GENERIC_REFACTORED_FOR_REUSE",
+ "foundational_invariant_falsified": "NONE",
+ "frozen_plan": "GENERIC_REFACTORED_FOR_REUSE",
+ "generic_eligibility_ranking": "GENERIC_REUSED_UNCHANGED",
+ "materialization_residency": "BACKEND_DETAIL_CONTAINED",
+ "mechanical_facts": {
+  "accepted_v0c_reducers_reused_byte_unchanged": true,
+  "execution_contract_bound_from_qualification_to_receipt": true,
+  "generic_source_backend_runtime_fields": [],
+  "generic_source_layer_literals": [],
+  "generic_source_proving_resource_defaults": [],
+  "generic_source_vendor_tokens": [],
+  "nvidia_native_excluded_generically": "EXECUTION_CONTRACT_UNSUPPORTED",
+  "planner_selection_backend_vendor_free": true
+ },
+ "memory_resource_binding": "GENERIC_REUSED_UNCHANGED",
+ "one_off_coupling_on_canonical_execution_path": "NONE",
+ "opaque_execution_contract_semantics": "GENERIC_REFACTORED_FOR_REUSE",
+ "physical_resource_ontology": "GENERIC_REFACTORED_FOR_REUSE",
+ "result_receipt_attribution": "GENERIC_REFACTORED_FOR_REUSE",
+ "schema": "inferswarm.v1a.generalization-audit/1",
+ "strategy_boundary": "GENERIC_REUSED_UNCHANGED"
+}

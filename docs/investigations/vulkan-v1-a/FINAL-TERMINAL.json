@@ -1,0 +1,28 @@
+{
+ "basis": {
+  "accepted_v0_evidence_untouched": true,
+  "accounting_clean": true,
+  "fresh_plan_driven_execution_byte_exact": true,
+  "fresh_qualification_through_generalized_inputs": "v1a-amd-a-qualification-01 PASS 37/37 no-fallback clean-exit",
+  "genericity_adversarial_controls_pass": true,
+  "no_foundational_invariant_falsified": true,
+  "no_public_api_or_default_backend_policy_frozen": true,
+  "one_off_v0c_coupling_removed_from_canonical_path": true,
+  "production_generic_planner_selects_legal_participant_without_backend_logic": "cu-amd-a selected; cu-nv-a excluded EXECUTION_CONTRACT_UNSUPPORTED",
+  "result_attribution_clean": true
+ },
+ "issue": "#154",
+ "schema": "inferswarm.v1a.terminal/1",
+ "superseded_probes": [
+  {
+   "authority": "238e8aa8935bff095d064ba9f802686cfed1ebe8",
+   "disposition": "superseded pre-freeze qualification probe"
+  },
+  {
+   "authority": "ecff4eaa871a8fb8f18a35b4649e173e71c66fe1",
+   "disposition": "superseded full-campaign probe under pre-receipt-semantics runner"
+  }
+ ],
+ "terminal": "V1A_REUSABLE_VULKAN_PARTICIPANT_PASS",
+ "withdrawn_session_assumption": "SSH unavailability terminal V1A_EVIDENCE_BLOCKED was withdrawn; the session runs locally on inferswarm02 and no SSH was used"
+}

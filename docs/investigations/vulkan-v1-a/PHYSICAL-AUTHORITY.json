@@ -1,0 +1,194 @@
+{
+ "accepted_comparator_reused_unchanged": {
+  "accounting_reducer": "scripts/v0c_canonical_run.py",
+  "accounting_reducer_sha256": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+  "correctness_reducer": "scripts/v0c_correctness.py",
+  "correctness_reducer_sha256": "cbefc2ee9f21c90c20defbc89e9838603c65c9f6c94fa8f7363e8ccab77e6f5c",
+  "fixture": "V0-A accepted AMD-A Vulkan visible greedy output (V0-C frozen fixture)",
+  "new_tolerance": "none",
+  "prompt": "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+  "recalibration": "none",
+  "reference_visible_output_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+ },
+ "authority_state": "prospective prephysical authority; refrozen on corrected runner source before any V1-A correctness-bearing physical output",
+ "capability_completion": {
+  "integrity_status": "QUALIFIED",
+  "representations": [
+   "gguf-q4-k-m"
+  ],
+  "required_features": [
+   "compute"
+  ]
+ },
+ "evidence_ids": {
+  "accounting": "v1a-amd-a-canonical-01",
+  "canonical_adapter_proof": "v1a-amd-a-canonical-01",
+  "canonical_execution": "v1a-amd-a-canonical-01",
+  "canonical_observation": "v1a-amd-a-canonical-01",
+  "capability_record": "v1a-amd-a-capability-01",
+  "correctness_result": "v1a-amd-a-canonical-01",
+  "execution_receipt": "v1a-amd-a-canonical-01",
+  "frozen_plan": "v1a-amd-a-plan-01",
+  "qualification": "v1a-amd-a-qualification-01",
+  "resource_snapshot_candidate_set": "v1a-amd-a-plan-01"
+ },
+ "frozen": {
+  "canonical_execution_evidence_id": "v1a-amd-a-canonical-01",
+  "compute_unit_id": "cu-amd-a",
+  "correctness_policy": "v0c-byte-exact-visible-output-v2",
+  "executable": "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+  "executable_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+  "execution_contract_id": "contract-s2-opaque-v1",
+  "execution_unit_id": "unit-q4km-whole-model",
+  "hostname": "inferswarm02",
+  "implementation_id": "impl-portable-amd-a",
+  "logical_state_id": "qwen2.5-3b-instruct-q4-k-m-whole-model",
+  "memory_bytes": 8589934592,
+  "memory_resource_id": "mr-amd-a-vram",
+  "model": "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+  "model_bytes": 1929903264,
+  "model_sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
+  "node_id": "node-inferswarm02",
+  "objective": "MIN_OBJECTIVE_VALUE",
+  "physical_device_bdf": "02:00.0",
+  "prompt": "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+  "qualification_evidence_id": "v1a-amd-a-qualification-01",
+  "reference_output": "docs/investigations/vulkan-v1-a/reference-visible-output.txt",
+  "required_features": [
+   "compute"
+  ],
+  "required_headroom_bytes": 536870912,
+  "required_integrity_status": "QUALIFIED",
+  "required_memory_bytes": 3254091776,
+  "required_representation": "gguf-q4-k-m",
+  "runtime_identity": {
+   "binary_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+   "radv_target": "Mesa 25.0.7-2+deb13u1",
+   "selector": "Vulkan1",
+   "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c"
+  },
+  "runtime_source": "/home/zutfen/.cache/v0c-llama.cpp",
+  "runtime_source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+  "selector": "Vulkan1",
+  "v1a_sources": {
+   "scripts/v0c_canonical_run.py": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+   "scripts/v0c_correctness.py": "cbefc2ee9f21c90c20defbc89e9838603c65c9f6c94fa8f7363e8ccab77e6f5c",
+   "scripts/v1a_execution_participant.py": "f6c65a8de446a8980da56a42c35b58e7b58a5642ce1ed410283cf5e7a19c4ee9",
+   "scripts/v1a_runner.py": "c7b5b26ebb9d4eae651dab386326c9d234de1b3af7f0e5a4e553ee90bc21b3ed",
+   "scripts/v1a_vulkan_adapter.py": "a6167de9b43539dbcad00e9563abff2cdb3b9b19a328defe63d327aa6f7b9387"
+  }
+ },
+ "generic_execution_identity": {
+  "correctness_policy": "v0c-byte-exact-visible-output-v2",
+  "execution_contract_id": "contract-s2-opaque-v1",
+  "execution_unit_id": "unit-q4km-whole-model",
+  "implementation_id": "impl-portable-amd-a",
+  "logical_state_id": "qwen2.5-3b-instruct-q4-k-m-whole-model",
+  "memory_resource_bytes": 8589934592,
+  "objective": "MIN_OBJECTIVE_VALUE",
+  "required_features": [
+   "compute"
+  ],
+  "required_headroom_bytes": 536870912,
+  "required_integrity_status": "QUALIFIED",
+  "required_memory_bytes": 3254091776,
+  "required_representation": "gguf-q4-k-m",
+  "runtime_identity": {
+   "binary_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+   "radv_target": "Mesa 25.0.7-2+deb13u1",
+   "selector": "Vulkan1",
+   "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c"
+  }
+ },
+ "issue": "#154",
+ "nonclaims": [
+  "reusable internal seam reproduction only",
+  "not production Vulkan support",
+  "not a public plugin API",
+  "not default/preferred-backend policy",
+  "not broad hardware/model qualification",
+  "no comparator recalibration, no new tolerance",
+  "SSH is not used; the proving node is local to the executing session"
+ ],
+ "physical_identity": {
+  "compute_unit_id": "cu-amd-a",
+  "driver_runtime_identity": "Vulkan loader 1.4.309.0; RADV Mesa 25.0.7-2+deb13u1",
+  "hostname": "inferswarm02",
+  "memory_resource_bytes": 8589934592,
+  "memory_resource_id": "mr-amd-a-vram",
+  "node_id": "node-inferswarm02",
+  "ontology_pressure_resource": {
+   "capabilities": [
+    {
+     "bound_compute_unit_id": "cu-nv-a",
+     "bound_execution_unit_id": "unit-q4km-whole-model",
+     "bound_memory_resource_id": "mr-nv-a-vram",
+     "bound_node_id": "node-inferswarm02",
+     "economics": {
+      "objective_value": 1.0
+     },
+     "evidence_fresh": true,
+     "evidence_id": "v1a-static-nv-pressure-01",
+     "execution_contract_id": "contract-native-opaque-v1",
+     "implementation_id": "impl-native-nv-a",
+     "integrity_status": "QUALIFIED",
+     "physical_device_bdf": "04:00.0",
+     "qualification_digest": "static-nv-not-eligible-contract-mismatch",
+     "qualification_evidence_id": "v1a-static-nv-pressure-01",
+     "representations": [
+      "gguf-q4-k-m"
+     ],
+     "required_features": [
+      "compute"
+     ],
+     "runtime_identity": {
+      "binary_sha256": "native-nv-static"
+     }
+    }
+   ],
+   "compute_unit_id": "cu-nv-a",
+   "memory_resource": {
+    "bytes": 8589934592,
+    "memory_resource_id": "mr-nv-a-vram"
+   },
+   "node_id": "node-inferswarm02",
+   "physical_device_bdf": "04:00.0"
+  },
+  "physical_device_bdf": "02:00.0",
+  "selector": "Vulkan1"
+ },
+ "predecessors": {
+  "accepted_main_at_start": "38907127f455827cd8696720bc7a0fe887cf96fa",
+  "reconciled_main_at_freeze": "e63209c0a3fd7256f527e7d2a009a688cdd66ca6",
+  "v0c_canonical_authority": "docs/investigations/vulkan-v0-c/CANONICAL-EXECUTION-AUTHORITY-R2-CANONICAL.json",
+  "v0c_terminal": "V0C_VULKAN_EXECUTION_SEAM_PASS"
+ },
+ "runtime_model": {
+  "llama_cli_path": "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+  "llama_cli_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+  "llama_cpp_source": "/home/zutfen/.cache/v0c-llama.cpp",
+  "llama_cpp_source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+  "model_bytes": 1929903264,
+  "model_path": "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+  "model_sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94"
+ },
+ "schema": "inferswarm.v1a.physical-authority/1",
+ "source_freeze": {
+  "generic_participant_sha256": "f6c65a8de446a8980da56a42c35b58e7b58a5642ce1ed410283cf5e7a19c4ee9",
+  "manifest_producer_sha256": "40b5c829c8638d443e8fe826414378f512136cf33d6504f309909e0bba546833",
+  "physical_runner_sha256": "c7b5b26ebb9d4eae651dab386326c9d234de1b3af7f0e5a4e553ee90bc21b3ed",
+  "v1a_source_freeze_sha": "2a468cf4438240b510239ff649e7c3e98483e0cd",
+  "vulkan_adapter_sha256": "a6167de9b43539dbcad00e9563abff2cdb3b9b19a328defe63d327aa6f7b9387"
+ },
+ "superseded_freeze": {
+  "commit": "ecff4eaa871a8fb8f18a35b4649e173e71c66fe1",
+  "reason": "receipt output semantics corrected to canonical visible response bytes (V0-C semantics) after a nonterminal probe; probe evidence under ecff4ea is superseded, not accepted"
+ },
+ "v1a_sources_pinned_by_runner_preflight": {
+  "scripts/v0c_canonical_run.py": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+  "scripts/v0c_correctness.py": "cbefc2ee9f21c90c20defbc89e9838603c65c9f6c94fa8f7363e8ccab77e6f5c",
+  "scripts/v1a_execution_participant.py": "f6c65a8de446a8980da56a42c35b58e7b58a5642ce1ed410283cf5e7a19c4ee9",
+  "scripts/v1a_runner.py": "c7b5b26ebb9d4eae651dab386326c9d234de1b3af7f0e5a4e553ee90bc21b3ed",
+  "scripts/v1a_vulkan_adapter.py": "a6167de9b43539dbcad00e9563abff2cdb3b9b19a328defe63d327aa6f7b9387"
+ }
+}
