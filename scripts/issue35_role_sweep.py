@@ -105,19 +105,28 @@ ROLE_COMMAND_BUILDERS = {
     # control every other role is compared against.
     "single_subject_control": lambda spec, role: [
         "--device", spec["selector"], "-ngl", "99"],
-    # role B: communication-heavy fine-grained multiworker serving --
-    # row-split tensor partition across the subject and a peer device;
-    # every token crosses the narrow links. This is the adverse/control
-    # case reproducing the known communication-sensitive failure mode.
-    "communication_heavy_row_split": lambda spec, role: [
-        "--device", f"{spec['selector']},{role['peer_selector']}",
-        "-ngl", "99", "-sm", "row",
-        "-ts", role["tensor_split"]],
-    # role C: coarse boundary -- layer split, contiguous model blocks
-    # per device, boundary traffic only at the split point per token.
+    # role B: communication-heavy fine-grained multiworker serving.
+    # The declared tensor_split value "unused-in-layer-mode" (or any
+    # value containing "unused") selects the layer split -- the finest
+    # multiworker shape the runtime supports on these backends -- where
+    # every generated token crosses the split boundary on both links.
+    # Any other tensor_split value selects the row-split tensor
+    # partition (retained for the unsupported-shape control).
+    "communication_heavy_row_split": lambda spec, role: (
+        ["--device", f"{spec['selector']},{role['peer_selector']}",
+         "-ngl", "99", "-sm", "layer"] if
+        str(role.get("tensor_split", "")).startswith("unused") else
+        ["--device", f"{spec['selector']},{role['peer_selector']}",
+         "-ngl", "99", "-sm", "row", "-ts", role["tensor_split"]]),
+    # role C: coarse boundary -- layer split (contiguous model blocks
+    # per device) with the batch-parallelism knob (-np) as the only
+    # supported coarser execution unit: N sequences per decode step
+    # amortize the same per-token boundary transfer over N useful
+    # tokens. batch_sequences defaults to 1 (single sequence).
     "coarse_layer_split": lambda spec, role: [
         "--device", f"{spec['selector']},{role['peer_selector']}",
-        "-ngl", role["layer_split"], "-sm", "layer"],
+        "-ngl", role["layer_split"], "-sm", "layer",
+        "-np", str(role.get("batch_sequences", 1))],
     # role D: capacity feasibility -- a model that cannot execute
     # resident on the control subject alone but can with the subject
     # participating; correctness/feasibility role, not a throughput race.

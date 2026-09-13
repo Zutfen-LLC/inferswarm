@@ -8,7 +8,7 @@
     {
       "role_id": "x1p-role-adverse",
       "role_kind": "communication_heavy_row_split",
-      "intent": "KNOWN ADVERSE CASE: reproduce the communication-sensitive failure mode. Under current supported semantics the finest-grained supported multiworker shape is a full layer split across two x1 links (row/tensor split is rejected by the runtime on these backends: 'does not support split buffers' — retained as expected-failure control R0). Every generated token crosses the split boundary on both x1 links.",
+      "intent": "KNOWN ADVERSE CASE: reproduce the communication-sensitive failure mode. Under current supported semantics the finest-grained supported multiworker shape is a full layer split across two x1 links (row/tensor split is rejected by the runtime on these backends: 'does not support split buffers' \u2014 retained as expected-failure control R0). Every generated token crosses the split boundary on both x1 links. AMENDED pre-execution: executes as -sm layer (row-split builder retained only for control R0).",
       "peer_selector": "Vulkan3",
       "tensor_split": "unused-in-layer-mode",
       "tokens": 48,
@@ -32,14 +32,14 @@
     {
       "role_id": "x1p-role-coarse",
       "role_kind": "coarse_layer_split",
-      "intent": "COARSER EXECUTION UNIT: contiguous layer blocks per device (pipeline shape); boundary traffic per token only at graph splits. Compare against the single-subject control to measure the marginal throughput effect of adding the second x1 participant. NOTE: with both devices fully offloaded the runtime assigns contiguous layer ranges; the split point is the runtime's, not ours.",
+      "intent": "COARSER EXECUTION UNIT: contiguous layer blocks per device (pipeline shape); boundary traffic per token only at graph splits. Compare against the single-subject control to measure the marginal throughput effect of adding the second x1 participant. NOTE: with both devices fully offloaded the runtime assigns contiguous layer ranges; the split point is the runtime's, not ours. AMENDED pre-execution: coarser unit = batch -np 4 (only supported coarser-execution-unit knob); correctness recorded as clean-exit/complete-offload/raw-retention, not byte-exact vs the single-sequence reference.",
       "peer_selector": "Vulkan3",
       "layer_split": "99",
       "tokens": 48,
       "attempts": 2,
       "timeout_s": 1800,
-      "correctness_reference": "frozen_reference",
-      "stop_rules": "run all attempts; classify from medians"
+      "stop_rules": "run all attempts; classify from medians",
+      "batch_sequences": 4
     },
     {
       "role_id": "x1p-role-single-amd-a",
@@ -101,5 +101,13 @@
       "reason": "NOT_PHYSICALLY_AVAILABLE: all root ports on this host are electrically x1; no hardware moves are in scope"
     }
   ],
-  "cross_device_note": "AMD-A and NV-A share the measured x1 link class (both Gen1-class under load on this substrate). The single-subject controls separate device-local compute; multiworker roles with the same peer shape across both subjects separate link-dominated from device-dominated effects."
+  "cross_device_note": "AMD-A and NV-A share the measured x1 link class (both Gen1-class under load on this substrate). The single-subject controls separate device-local compute; multiworker roles with the same peer shape across both subjects separate link-dominated from device-dominated effects.",
+  "pre_execution_amendment": {
+    "amended_utc": "2026-09-13T16:10:00Z",
+    "note": "Amended BEFORE any role-sweep execution attempt (transport substrate measurement only had run). Two mechanical reconciliations with verified runtime behavior, neither selected after observing role performance:",
+    "changes": [
+      "adverse role: the row-split builder is retained ONLY for the unsupported-shape control R0; the adverse role itself executes as the layer split (-sm layer), which its committed intent already declares is the finest supported multiworker shape ('full layer split across two x1 links; every generated token crosses the split boundary')",
+      "coarse role: distinguished from adverse by the only supported coarser-execution-unit knob: batch parallelism -np 4 (4 sequences per decode step amortize the same per-token boundary transfer over 4x useful work; same model, same greedy per-sequence semantics). Because the visible output of a 4-sequence batch is not byte-comparable to the single-sequence frozen reference, the coarse role records correctness as clean-exit + complete-offload + raw retention, not byte-exact comparison; the freeze's correctness_reference entry for this role is accordingly dropped"
+    ]
+  }
 }
