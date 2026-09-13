@@ -1,0 +1,63 @@
+{
+  "schema": "inferswarm.issue35.coarse-correction-freeze/1",
+  "frozen_utc": "2026-09-13T17:30:00Z",
+  "purpose": "PROSPECTIVE freeze for the corrected Issue #35 coarse-role measurement, committed BEFORE any attempt. Supersedes the -np 4 single-interaction interpretation of x1p-role-coarse (retained unchanged as an invalid-for-intended-coarse-comparison diagnostic).",
+  "defect_being_corrected": {
+    "old_role_id": "x1p-role-coarse",
+    "defect": "llama-cli at the pinned revision sends ONE chat-completion interaction to its embedded server; -np 4 provisions four parallel slots but issues no concurrent requests. The retained stdout contains exactly one completion. The 52.35 t/s result measured one request on a four-slot server, not four concurrent sequences, four-way batching, or amortized multi-sequence throughput.",
+    "disposition_of_old_result": "retained byte-identical as a diagnostic/reference (single-request throughput on a 4-slot-provisioned layer-split server); NOT accepted Phase-3B coarse evidence"
+  },
+  "environment": {
+    "server_executable": "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-server",
+    "server_provenance": "built from the SAME pinned llama.cpp source tree (commit 8ea290247c87ced2ab245b056ffe96dbcf90d36c) and the SAME accepted Vulkan build configuration as the frozen llama-cli (SUBJECT-FREEZE runtime pins); binary digest recorded at execution",
+    "server_binary_sha256": "dded1ad18f02377c9ac63843b88e133a615a225eb53161d2479e9458d53e0599",
+    "model": "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+    "model_sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
+    "prompt": "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+    "max_tokens": 48,
+    "sampling": "temperature 0, seed 42 (frozen greedy semantics, identical to the accepted workload)",
+    "reference_output_path": "docs/investigations/vulkan-v1-a/reference-visible-output.txt",
+    "reference_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d",
+    "correctness_rule": "EVERY request's visible response text must equal the frozen reference visible output (greedy temp-0 seed-42); any mismatch fails the arm closed",
+    "server_common_args": ["-lv", "4", "--host", "127.0.0.1"],
+    "endpoint": "/v1/chat/completions (non-streaming), the pinned server's own OpenAI-compatible seam"
+  },
+  "arms": [
+    {
+      "arm_id": "x1p-coarse4-split",
+      "intent": "CORRECTED COARSE ROLE: two-subject layer split, four available parallel slots, four concurrent identical frozen requests. Aggregate wall time and aggregate tokens are the measured coarse facts; per-request latency distribution recorded; per-sequence throughput derived and labeled CALCULATED.",
+      "port": 8371,
+      "parallel_slots": 4,
+      "requests": 4,
+      "ctx_size": 4096,
+      "server_extra_args": ["--device", "Vulkan1,Vulkan3", "-ngl", "99", "-sm", "layer"],
+      "ready_timeout_s": 300,
+      "request_timeout_s": 600,
+      "attempts": 2,
+      "stop_rules": "run all attempts; aggregate throughput compared across attempts for stability; classify from attempt medians; no early stop; any correctness mismatch or non-clean server exit fails the arm closed"
+    },
+    {
+      "arm_id": "x1p-coarse4-single",
+      "intent": "MATCHED CONTROL: single-subject anchor (AMD-A alone, all layers resident), SAME four-concurrent-request workload, same slots, same frozen requests, same correctness rule. Workload shape matched in both arms; only placement differs.",
+      "port": 8372,
+      "parallel_slots": 4,
+      "requests": 4,
+      "ctx_size": 4096,
+      "server_extra_args": ["--device", "Vulkan1", "-ngl", "99"],
+      "ready_timeout_s": 300,
+      "request_timeout_s": 600,
+      "attempts": 2,
+      "stop_rules": "run all attempts; same fail-closed rules as the split arm"
+    }
+  ],
+  "comparisons": {
+    "primary": "x1p-coarse4-split vs x1p-coarse4-single: aggregate throughput ratio and per-sequence service ratio under IDENTICAL four-concurrent-request workload shape",
+    "reference_retained_separately": "x1p-role-adverse (single-sequence two-device layer split) stays a separate single-sequence reference; it is NOT substituted for either concurrent arm"
+  },
+  "attempts_directory_rule": "each attempt is retained under raw/<arm_id>/attempt-NN/ with server argv, server stdout/stderr/exit, per-request response JSON, and per-request raw HTTP response digests",
+  "nonclaims": [
+    "no vendor/width/device/BDF special case enters any reusable logic",
+    "this freeze corrects the coarse-role measurement only; the capacity arm and its raw evidence are unchanged",
+    "the old coarse result is not deleted or relabeled as accepted; it remains a diagnostic"
+  ]
+}

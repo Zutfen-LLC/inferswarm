@@ -29,24 +29,51 @@ def control(rate=40.0, complete=True):
     }
 
 
+CAPACITY_BASIS = {
+    "label": "CALCULATED",
+    "capacity_positive": True,
+    "control_pressure_facts": {
+        "over_capacity": True,
+        "over_capacity_devices": [{"device": "D0", "self_mib": 9021,
+                                   "device_total_mib": 8192}],
+        "fit_aborted": True,
+        "fit_abort_reason": "n_gpu_layers already set by user",
+        "projected_vs_free": [{"projected_mib": 32953,
+                               "free_mib": 8186}],
+        "context_reductions": [{"from": 131072, "to": 4096}],
+    },
+    "role_residency_facts": {
+        "device_model_buffers_mib": {"D0": 3900.0, "D1": 4200.0},
+        "model_buffer_placement_count": 2,
+        "over_capacity": False,
+        "over_capacity_devices": [],
+    },
+}
+
+
 class ClassifyRoleTests(unittest.TestCase):
     def test_capacity_positive_throughput_negative(self):
+        # capacity comes from measured memory-fit facts (capacity_basis),
+        # never from the layer-count boolean alone
         result = envelope.classify_role(
-            role(rate=10.0, complete=True), control(rate=40.0, complete=False))
+            role(rate=10.0, complete=True), control(rate=40.0, complete=True),
+            capacity_basis=CAPACITY_BASIS)
         self.assertEqual(
             result["classification"],
             "CAPACITY_POSITIVE_THROUGHPUT_NEGATIVE")
 
     def test_capacity_positive_throughput_neutral(self):
         result = envelope.classify_role(
-            role(rate=39.0, complete=True), control(rate=40.0, complete=False))
+            role(rate=39.0, complete=True), control(rate=40.0, complete=True),
+            capacity_basis=CAPACITY_BASIS)
         self.assertEqual(
             result["classification"],
             "CAPACITY_POSITIVE_THROUGHPUT_NEUTRAL")
 
     def test_throughput_positive_with_capacity(self):
         result = envelope.classify_role(
-            role(rate=50.0, complete=True), control(rate=40.0, complete=False))
+            role(rate=50.0, complete=True), control(rate=40.0, complete=True),
+            capacity_basis=CAPACITY_BASIS)
         self.assertEqual(result["classification"], "THROUGHPUT_POSITIVE")
 
     def test_throughput_positive_no_capacity(self):

@@ -2,11 +2,13 @@
 """Issue #35 utility-envelope derivation.
 
 Derives the measured compute-to-communication / residency utility
-envelope from the retained campaign evidence (transport summaries and
-role-sweep results) WITHOUT freezing a universal hardware score and
-WITHOUT any vendor/width special case: every input is a measured fact
-from the frozen evidence files; every output is either a CALCULATED
-derivation (labeled) or a MEASURED fact carried through with its label.
+envelope from the retained campaign evidence (transport summaries,
+role-sweep results, the corrected residency-facts reduction, and the
+corrected concurrent coarse arms) WITHOUT freezing a universal hardware
+score and WITHOUT any vendor/width special case: every input is a
+measured fact from the frozen evidence files; every output is either a
+CALCULATED derivation (labeled) or a MEASURED fact carried through with
+its label.
 
 The classifier implements the issue's per-role taxonomy exactly:
 
@@ -16,28 +18,33 @@ The classifier implements the issue's per-role taxonomy exactly:
 * NOT_USEFUL_FOR_TESTED_ROLE
 * EVIDENCE_INSUFFICIENT
 
-Classification rules (declared here, before the physical sweep is
-reduced; deterministic and data-driven):
+Classification rules (declared before the corrected reduction;
+deterministic and data-driven):
 
-For a multiworker role R with matched single-subject control C (same
-model/workload, subject device):
+Throughput axis — a role is compared ONLY against a workload-matched
+control. A four-concurrent-request arm is compared against the
+four-concurrent-request control, never against a single-request
+baseline (and vice versa). throughput_ratio = matched medians.
 
-* capacity_delta = resident bytes contributed by the added participant
-  (feasible-with vs infeasible/partial control) — measured from the
-  role's offload facts and the subject's VRAM facts;
-* throughput_ratio = median generation t/s of R / median of C;
-* NEUTRAL_BAND = 0.05 (within-declared-uncertainty band; medians of
-  2-attempt distributions with min/max recorded — a ratio inside
-  [1-band, 1+band] is not evidence of a change either way);
-* if R executed a model the control could not hold resident
-  (complete_offload where the control is partial/infeasible):
-  capacity-positive regardless of throughput;
-* classification per role follows from capacity_delta and
-  throughput_ratio mechanically;
-* roles whose expected failure mode fired, or whose control is missing,
-  classify EVIDENCE_INSUFFICIENT (for feasibility) or
-  NOT_USEFUL_FOR_TESTED_ROLE (when the role's own execution failed for
-  reasons within the tested substrate).
+Capacity axis — CORRECTED per maintainer review: capacity contribution
+is derived from measured residency/memory-pressure facts (the
+residency-facts reduction over retained raw stderr), NOT from the
+``complete_offload`` layer-count boolean:
+
+* control pressure: over-capacity final allocation, aborted fit,
+  projected >> free, or context reduction under pressure;
+* role residency: model buffers materially split across BOTH
+  participants with no over-capacity device;
+* capacity_positive = control pressured AND role split-resident.
+
+A nominal complete offload with over-capacity self-demand is pressure,
+not residency success; a non-zero CPU_Mapped buffer appears in every
+placement and never proves paging by itself.
+
+Roles whose declared expected failure mode fired classify
+NOT_USEFUL_FOR_TESTED_ROLE (fail-closed controls are first-class
+classifications, not omissions). Roles without a matched control or
+without a throughput reduction classify EVIDENCE_INSUFFICIENT.
 
 Fail-closed: missing inputs raise ``EnvelopeError``; nothing defaults.
 """
@@ -47,7 +54,9 @@ import argparse
 import json
 from pathlib import Path
 
-SCHEMA = "inferswarm.issue35.utility-envelope/1"
+import issue35_residency_facts
+
+SCHEMA = "inferswarm.issue35.utility-envelope/2"
 NEUTRAL_BAND = 0.05
 
 TAXONOMY = (
@@ -69,9 +78,17 @@ def load(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def classify_role(role: dict, control: dict | None) -> dict:
-    """Classify one multiworker role against its matched control."""
-    role_id = role.get("role_id", "<unnamed>")
+def classify_role(role: dict, control: dict | None,
+                  capacity_basis: dict | None = None) -> dict:
+    """Classify one placement role against its matched control.
+
+    ``capacity_basis`` is the CALCULATED residency-facts derivation
+    (from ``issue35_residency_facts.derive_capacity_basis``); when the
+    role has no capacity question (same-model throughput roles) it is
+    None and capacity_positive is False by absence of evidence, never
+    by the layer-count boolean.
+    """
+    role_id = role.get("role_id", role.get("arm_id", "<unnamed>"))
     if role.get("outcome") == "EXPECTED_FAILURE":
         return {
             "role_id": role_id,
@@ -99,45 +116,45 @@ def classify_role(role: dict, control: dict | None) -> dict:
     control_rate = control["generation_tokens_per_s"]["median"]
     ratio = role_rate / control_rate
 
-    role_offload = role.get("offload", {})
-    control_offload = control.get("offload", {})
-    role_complete = role_offload.get("complete_offload")
-    control_complete = control_offload.get("complete_offload")
-
-    # Capacity contribution: the role achieved complete residency where
-    # the control could not. (For same-model roles this is false and the
-    # classification reduces to the throughput axis, as intended.)
-    capacity_positive = bool(role_complete) and not bool(control_complete)
+    capacity_positive = bool(
+        capacity_basis["capacity_positive"]) if capacity_basis else False
+    capacity_facts = (capacity_basis or {}).get("control_pressure_facts")
 
     if capacity_positive:
         if ratio < 1.0 - NEUTRAL_BAND:
             classification = "CAPACITY_POSITIVE_THROUGHPUT_NEGATIVE"
-            basis = ("complete resident execution where the control could "
-                     f"not hold the model; throughput ratio {ratio:.3f} "
-                     "below the neutral band")
+            basis = ("measured memory-fit facts: control placement "
+                     "pressure-limited "
+                     f"(over-capacity={capacity_facts['over_capacity']}, "
+                     f"fit aborted ({capacity_facts['fit_abort_reason']}), "
+                     f"projected {capacity_facts['projected_vs_free']}) "
+                     "while the role splits model buffers across both "
+                     f"participants with no over-capacity device; "
+                     f"throughput ratio {ratio:.3f} below the neutral band")
         elif ratio > 1.0 + NEUTRAL_BAND:
             classification = "THROUGHPUT_POSITIVE"
             basis = (f"throughput ratio {ratio:.3f} above the neutral band "
-                     "with capacity contributed")
+                     "with capacity contributed on measured memory-fit "
+                     "facts (control pressured, role split-resident)")
         else:
             classification = "CAPACITY_POSITIVE_THROUGHPUT_NEUTRAL"
             basis = (f"throughput ratio {ratio:.3f} inside the neutral "
-                     "band with capacity contributed")
+                     "band with capacity contributed on measured "
+                     "memory-fit facts")
     else:
         if ratio > 1.0 + NEUTRAL_BAND:
             classification = "THROUGHPUT_POSITIVE"
-            basis = (f"throughput ratio {ratio:.3f} above the neutral band")
+            basis = f"throughput ratio {ratio:.3f} above the neutral band"
         elif ratio < 1.0 - NEUTRAL_BAND:
             classification = "NOT_USEFUL_FOR_TESTED_ROLE"
-            basis = (f"no capacity contribution (control already complete) "
-                     f"and throughput ratio {ratio:.3f} below the neutral "
-                     "band")
+            basis = (f"no measured capacity contribution and throughput "
+                     f"ratio {ratio:.3f} below the neutral band")
         else:
             classification = "NOT_USEFUL_FOR_TESTED_ROLE"
-            basis = (f"no capacity contribution and throughput ratio "
-                     f"{ratio:.3f} inside the neutral band: no measured "
-                     "benefit justifies the added participation for this "
-                     "role shape")
+            basis = (f"no measured capacity contribution and throughput "
+                     f"ratio {ratio:.3f} inside the neutral band: no "
+                     "measured benefit justifies the added participation "
+                     "for this role shape")
     return {
         "role_id": role_id,
         "classification": classification,
@@ -184,6 +201,43 @@ def transfer_cost_per_token(transport: dict, bytes_per_token: float) -> dict:
     }
 
 
+def classify_concurrent_arm(arm: dict, control: dict) -> dict:
+    """Classify the corrected concurrent coarse arm against its
+    workload-matched concurrent control on aggregate throughput."""
+    arm_rate = arm["aggregate_throughput_tokens_per_s"]["median"]
+    control_rate = control["aggregate_throughput_tokens_per_s"]["median"]
+    ratio = arm_rate / control_rate
+    if not arm["all_attempts_all_correct"]:
+        return {
+            "role_id": arm["arm_id"],
+            "classification": "EVIDENCE_INSUFFICIENT",
+            "basis": "not every concurrent request matched the frozen "
+                     "reference semantics",
+            "label": "MEASURED",
+        }
+    if ratio > 1.0 + NEUTRAL_BAND:
+        classification = "THROUGHPUT_POSITIVE"
+    elif ratio < 1.0 - NEUTRAL_BAND:
+        classification = "NOT_USEFUL_FOR_TESTED_ROLE"
+    else:
+        classification = "NOT_USEFUL_FOR_TESTED_ROLE"
+    basis = (f"aggregate concurrent throughput ratio {ratio:.3f} "
+             f"({arm_rate} vs {control_rate} tokens/s aggregate, "
+             "CALCULATED from measured aggregate tokens / aggregate wall "
+             "seconds, 4 concurrent matched requests per arm)")
+    return {
+        "role_id": arm["arm_id"],
+        "classification": classification,
+        "throughput_ratio_vs_control": round(ratio, 4),
+        "role_rate": arm_rate,
+        "control_rate": control_rate,
+        "workload_shape": "4 concurrent requests vs 4 concurrent requests",
+        "capacity_positive": False,
+        "basis": basis,
+        "label": "CALCULATED",
+    }
+
+
 def build_envelope(root: Path) -> dict:
     evidence = root / "evidence"
     transport_amd = load(evidence / "x1p-transport-amd-a.json")
@@ -194,16 +248,43 @@ def build_envelope(root: Path) -> dict:
         "x1p-role-capacity": load(evidence / "x1p-role-capacity.json"),
         "x1p-role-capacity-control": load(
             evidence / "x1p-role-capacity-control.json"),
+        "x1p-role-adverse-rowsplit-unsupported": load(
+            evidence / "x1p-role-adverse-rowsplit-unsupported.json"),
         "x1p-role-single-amd-a": load(
             evidence / "x1p-role-single-amd-a.json"),
-        "x1p-role-single-nv-a": load(evidence / "x1p-role-single-nv-a.json"),
+        "x1p-role-single-nv-a": load(
+            evidence / "x1p-role-single-nv-a.json"),
     }
+    capacity_facts = load(evidence / "x1p-capacity-residency-facts.json")
+    coarse_split = load(evidence / "x1p-coarse4-split.json")
+    coarse_single = load(evidence / "x1p-coarse4-single.json")
+
+    capacity_basis = capacity_facts["capacity_basis"]
 
     classifications = [
-        classify_role(roles["x1p-role-adverse"], roles["x1p-role-single-amd-a"]),
-        classify_role(roles["x1p-role-coarse"], roles["x1p-role-single-amd-a"]),
+        classify_role(roles["x1p-role-adverse"],
+                      roles["x1p-role-single-amd-a"]),
+        # Retained single-request diagnostic: NOT classified as the
+        # coarse evidence; workload shape recorded for honesty.
+        {
+            "role_id": "x1p-role-coarse",
+            "classification": "EVIDENCE_INSUFFICIENT",
+            "basis": "single llama-cli interaction with -np 4 slots "
+                     "provisioned: one completion in retained stdout; "
+                     "invalid for the intended coarse-comparison claim "
+                     "and superseded by the corrected concurrent arm; "
+                     "retained unchanged as a diagnostic/reference",
+            "label": "MEASURED",
+            "workload_shape": "1 request on a 4-slot-provisioned server",
+        },
         classify_role(roles["x1p-role-capacity"],
-                      roles["x1p-role-capacity-control"]),
+                      roles["x1p-role-capacity-control"],
+                      capacity_basis=capacity_basis),
+        # Control R0: the unsupported row-split shape is a first-class
+        # classification (NOT_USEFUL_FOR_TESTED_ROLE, fail-closed), not
+        # an omission from the machine-readable envelope.
+        classify_role(roles["x1p-role-adverse-rowsplit-unsupported"], None),
+        classify_concurrent_arm(coarse_split, coarse_single),
     ]
 
     # Both-perspective marginal analysis for the two-device roles: the
@@ -226,12 +307,10 @@ def build_envelope(root: Path) -> dict:
             "adding_subject_to_peer": marginal(
                 "x1p-role-adverse", "x1p-role-single-nv-a"),
         },
-        "x1p-role-coarse": {
-            "adding_peer_to_subject": marginal(
-                "x1p-role-coarse", "x1p-role-single-amd-a"),
-            "adding_subject_to_peer_batched_per_sequence": marginal(
-                "x1p-role-coarse", "x1p-role-single-nv-a"),
-        },
+        "note": ("The retained single-request coarse diagnostic (x1p-role-coarse) "
+                 "is excluded from marginal views: its workload shape "
+                 "(1 request, 4 idle-capable slots) is not matched to the "
+                 "single-sequence controls' semantics."),
     }
 
     # Link-dominated vs device-dominated separation (both subjects share
@@ -245,12 +324,36 @@ def build_envelope(root: Path) -> dict:
         "neutral_band": NEUTRAL_BAND,
         "taxonomy": list(TAXONOMY),
         "classifications": classifications,
+        "corrected_coarse": {
+            "label": "CALCULATED",
+            "note": ("The corrected coarse role is the four-concurrent-"
+                     "request experiment (x1p-coarse4-split vs the "
+                     "workload-matched concurrent control); the "
+                     "retained single-request result (x1p-role-coarse) "
+                     "is a diagnostic reference only."),
+            "aggregate_throughput_split_vs_single": {
+                "split": coarse_split["aggregate_throughput_tokens_per_s"],
+                "single": coarse_single[
+                    "aggregate_throughput_tokens_per_s"],
+            },
+            "per_sequence_split_vs_single": {
+                "split": coarse_split[
+                    "per_sequence_throughput_tokens_per_s"],
+                "single": coarse_single[
+                    "per_sequence_throughput_tokens_per_s"],
+            },
+        },
+        "capacity_authority": {
+            "label": "CALCULATED",
+            "note": ("capacity_positive is derived from measured "
+                     "residency/memory-pressure facts reduced from the "
+                     "retained raw stderr (issue35_residency_facts), not "
+                     "from the complete_offload layer-count boolean"),
+            "control_pressure": capacity_basis["control_pressure_facts"],
+            "role_residency": capacity_basis["role_residency_facts"],
+        },
         "marginal_views": {
             "label": "CALCULATED",
-            "note": ("The frozen classification uses the subject-perspective "
-                     "control; the peer-perspective ratio is recorded because "
-                     "the marginal value of adding a participant depends on "
-                     "which device already hosts the workload."),
             "views": marginal_views,
         },
         "link_vs_device_separation": {
