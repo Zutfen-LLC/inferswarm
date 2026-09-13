@@ -1,0 +1,167 @@
+{
+  "accepted_evidence_isolation": "diagnostic outputs write ONLY to /srv/inferswarm/state/issue157/** and this bundle; accepted Arm-B/#133/#137/#153 evidence dirs and participant-state directories are never mutated",
+  "authorization_scope": {
+    "authorizes": [
+      "fresh diagnostic GPU/model execution against the required multi-chunk extend-prefill path"
+    ],
+    "does_not_authorize": [
+      "Arm-C qualification attempt",
+      "PASS/FAIL reinterpretation of ISSUE117_ARM_C_ORDINARY_SERVING_FAIL",
+      "Arm D or Arm E",
+      "frozen-contract change",
+      "any h109-* access (opening, generation, copying, inference, reconstruction, use)"
+    ]
+  },
+  "chunk_partition_contract": {
+    "prefill_chunk_rows": 64,
+    "required_partitions": {
+      "65": [
+        64,
+        1
+      ],
+      "66": [
+        64,
+        2
+      ],
+      "67": [
+        64,
+        3
+      ]
+    },
+    "source": "frozen boundary/wire contract (accepted #153); never changed here"
+  },
+  "classification": "DIAGNOSTIC_ONLY",
+  "diagnostic_producer": {
+    "commit": "55e8baaebabe67aeb967d4bd407ef26696933104",
+    "deployment": "existing accepted /srv/inferswarm/repos/FreeToken checkout on inferswarm01 and inferswarm03 (verified clean at exactly this commit by scripts/issue157_binding.py before any GPU work)",
+    "repository": "Zutfen-LLC/FreeToken",
+    "source_changes": "NONE \u2014 zero FreeToken source changes; all instrumentation is InferSwarm-repo scripts installed at runtime only inside explicitly spawned #157 diagnostic processes"
+  },
+  "explicit_non_claims": "per METHODOLOGY.md Explicit non-claims",
+  "fresh_vs_same_substrate_policy": "per METHODOLOGY.md; baseline = fresh chain realizations with ledger-bound last-stage relaunches; replay/interventions = frozen-capture state reconstruction with restore-return proofs",
+  "frozen_corpus": {
+    "anchor_a": {
+      "case_id": "c109-04-02-047",
+      "chunk_partition": [
+        64,
+        3
+      ],
+      "family": "in-session-variable",
+      "first_divergent_position": 0,
+      "prompt_len": 67,
+      "selection_reason": "mandated by issue #157; only case with retained #137 D/D2 layer evidence (first chunk stable, embedding stable, earliest variance after layer 0 / at or before global layer 1)"
+    },
+    "anchor_b": {
+      "case_id": "c109-04-06-074",
+      "chunk_partition": [
+        64,
+        2
+      ],
+      "family": "session-stable-within-session / cross-session-different",
+      "first_divergent_position": 0,
+      "prompt_len": 66,
+      "selection_reason": "bound BEFORE physical execution from the accepted #137 per-case causal families record (in_session_values [107,107,107,107]; matches_an_accepted_value false; cross_campaign_all_four_distinct true); position-0 divergence \u2014 the chunk-2 prefill call itself, same call shape as Anchor A; distinct remainder (64+2 vs 64+3)"
+    },
+    "expansion_rule": "remaining accepted divergent cases run only when anchors localize to different mechanisms or a proposed mechanism needs coverage evidence; reason recorded before each expansion",
+    "stable_control": {
+      "case_id": "c109-03-04-003",
+      "chunk_partition": [
+        53
+      ],
+      "prompt_len": 53,
+      "selection_reason": "the exact stable control identity from accepted #137 probe C2, bound from the retained i137-diag-C2-1789141057.json case field (sha256 409c534c\u2026) and its deterministic single-chunk arm; never re-selected"
+    }
+  },
+  "frozen_subject": {
+    "checkpoint_path_nodes": "/srv/models/gemma-r6/model.safetensors",
+    "checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "model": "google/gemma-4-12B-it",
+    "qualification_subject": "sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f7f1d7994ffd",
+    "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7"
+  },
+  "instrumentation": {
+    "capture_plan": "per METHODOLOGY.md Phase 1: call/state identity, first-chunk-end state, layer-0/1 op checkpoints (qkv, norms, rotary, KV pre/post, attention out, o_proj, residual), route observation at dispatch, decode-scratch identity",
+    "files": {
+      "scripts/issue157_binding.py": "sha256:194ef68a5d37fc3f3b2d8a1ae4fdf5f02b1efb61d07ce7f0c2255321d1cb28ef",
+      "scripts/issue157_conclusions.py": "sha256:41324bb145e4290b494d98e7bd24fec7150a7fdd78a80d2a0fa2b5b8c86dc6e9",
+      "scripts/issue157_instrumentation.py": "sha256:98fa2a80d893dcae20f373d94064d55c9ab2314cb868fbe9000e166d667d8d77",
+      "scripts/issue157_probe_driver.py": "sha256:203351e35094e0379dea4ec3885ba320794f52e337d191dc6c0ca9c545ca1047",
+      "scripts/issue157_replay_harness.py": "sha256:0ce7e7a89e5c2548112435170cd2068cffb83337a7697d8156192d8728cb2024",
+      "scripts/issue157_replay_worker.py": "sha256:74fd2ecedb0e94ab88c9ec69531054116d537d41078163d46c38316d51caf9b7",
+      "scripts/issue157_sitecustomize.py": "sha256:67effb1dfc8c9960e43f5c577195f71635930db4b768d831f84970748f4e8c4b"
+    },
+    "off_by_default_proof": [
+      "producer tree byte-identical to 55e8baa (binding verifier per-module pins; zero FreeToken source changes)",
+      "instrumentation imports only under ISSUE157_STAGE_INSTRUMENT=1, set only by the #157 driver's spawned stage processes",
+      "CPU/static test asserts ordinary-execution import graph never reaches issue157_* modules"
+    ]
+  },
+  "intervention_matrix": {
+    "design": "one variable at a time; paired against unchanged control from identical diagnostic state; counterbalanced order; fresh substrate between paired trials",
+    "order": [
+      "IV-SYNC",
+      "IV-SCRATCH",
+      "IV-ROUTE",
+      "IV-BISECT(if needed)"
+    ],
+    "run_only": "interventions that remain necessary after baseline and exact-state replay"
+  },
+  "issue": 157,
+  "issue_state_at_authorization": {
+    "label": "ready-for-agent",
+    "status_line": "AGENT-READY \u2014 PHYSICALLY AUTHORIZED DIAGNOSTIC ONLY / NO ARM-C REQUALIFICATION",
+    "url": "https://github.com/Zutfen-LLC/inferswarm/issues/157"
+  },
+  "no_h109_access": true,
+  "physical_topology": {
+    "coordinator": "inferswarm00 (CPU-only)",
+    "driver": "610.57.04",
+    "note": "hardware/software identities rediscovered and frozen BEFORE diagnostic output (2026-09-12); historical mutable identities re-verified unchanged from the accepted #137 baseline snapshot",
+    "software_baseline": {
+      "cuda_runtime": "13.0",
+      "python": "3.12.13",
+      "torch": "2.11.0+cu130"
+    },
+    "stage_1": {
+      "bdf": "00000000:02:00.0",
+      "gpu": "gpu-0",
+      "gpu_uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+      "host": "inferswarm01",
+      "layers": "[0,16)"
+    },
+    "stage_2": {
+      "bdf": "00000000:03:00.0",
+      "gpu": "gpu-1",
+      "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+      "host": "inferswarm01",
+      "layers": "[16,32)"
+    },
+    "stage_3_last": {
+      "bdf": "00000000:01:00.0",
+      "gpu": "gpu-0",
+      "gpu_uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176",
+      "host": "inferswarm03",
+      "layers": "[32,48)"
+    }
+  },
+  "repeat_counts": {
+    "baseline_realizations": 3,
+    "baseline_repeats_within_realization": 3,
+    "intervention_trials": 6,
+    "replay_trials": 6
+  },
+  "run_namespace": "i157-<probe>-<unix-seconds> (every launch: fresh run/attempt ID, classification DIAGNOSTIC_ONLY)",
+  "schema": "inferswarm.issue157.physical-diagnostic-authority/1",
+  "starting_identities": {
+    "accepted_153_candidate_source": "f6133b88d40e4d43d3ac82fa732f21e540b7273d",
+    "freetoken_inferswarm_research": "55e8baaebabe67aeb967d4bd407ef26696933104",
+    "inferswarm_main": "e63209c0a3fd7256f527e7d2a009a688cdd66ca6",
+    "predecessor_merges": {
+      "freetoken_pr33_merge": "55e8baaebabe67aeb967d4bd407ef26696933104",
+      "issue_133_pr136_merge": "1b83bcab0a5e682a438ca0554f71dd0ace15be55",
+      "issue_137_pr138_merge": "cdc23d0e8fa9d3b1b27bab5749939a5ad69b9610",
+      "issue_153_pr155_merge": "e63209c0a3fd7256f527e7d2a009a688cdd66ca6"
+    }
+  },
+  "stop_rules": "per METHODOLOGY.md Stop/escalation rules"
+}

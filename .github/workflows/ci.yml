@@ -475,7 +475,7 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group issue-137
-        run: python3 -m unittest tests.test_issue137_regime4_diagnosis tests.test_issue137_regime4_diagnosis_correction -v
+        run: python3 -m unittest tests.test_issue137_regime4_diagnosis tests.test_issue137_regime4_diagnosis_correction tests.test_issue157_chunk2_diagnosis -v
 
   issue-99-103:
     name: Group issue-99-103
