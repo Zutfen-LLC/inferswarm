@@ -1,0 +1,22 @@
+{
+ "basis": {
+  "accepted_generic_seam_sources_unchanged": true,
+  "accepted_v0_v1a_evidence_untouched": true,
+  "canonical_accounting_reduction": "FAIL_CLOSED: accepted V0-C accounting reducer cannot parse the second-subject transcript (hardcoded first-subject Vulkan1 selector label)",
+  "canonical_runtime_execution_pass": "exit 0, 37/37 offload, intended device Vulkan3/0000:04:00.0, no fallback, byte-exact visible output vs frozen reference",
+  "cross_subject_audit": "AUTHORITY_DATA_ONLY / BACKEND_ADAPTER_DATA_ONLY for participant, adapter, runner, comparator; GENERIC_SEAM_CHANGE_REQUIRED for the accepted accounting reducer; no foundational invariant falsified",
+  "fresh_second_subject_qualification_pass": "v1b-nv-a-qualification-01 (37/37, no fallback, clean exit, adapter-sealed)",
+  "generic_planning_selects_intended_participant_from_opaque_facts": "cu-nv-a SELECTED_BY_OBJECTIVE; cu-amd-a pressure EXCLUDED EVIDENCE_STALE with honest unfalsified economics",
+  "no_public_api_or_default_backend_policy_frozen": true,
+  "portability_invariant_honored": "no accepted source was modified to make the second subject legal; the required change is recorded, not implemented",
+  "subject_local_repeatability_pass": "v1b-nv-a-stability-01..03 (3/3 byte-exact, full offload, intended device, clean exits)"
+ },
+ "issue": "#158",
+ "required_authorized_repair": {
+  "nature": "provably generic bug repair (the selector is already authority data everywhere else in the accepted stack); requires a new authority/review boundary per the issue before any V1-B PASS may be claimed",
+  "what": "parameterize the device selector label in scripts/v0c_canonical_run.py parse_accounting (and its _breakdowns Vulkan1 row filter) from the frozen authority instead of the hardcoded 'Vulkan1' literal",
+  "why": "the reducer is a hash-pinned accepted V0-C source reused unchanged by accepted V1-A; issue #158 forbids correctness-bearing changes to accepted sources without separate prospective maintainer authorization"
+ },
+ "schema": "inferswarm.v1b.terminal/1",
+ "terminal": "V1B_SECOND_SUBJECT_REFACTOR_REQUIRED"
+}

@@ -1,0 +1,15 @@
+{
+ "acceptance_state": "draft PR records the result; acceptance remains with the maintainer",
+ "facts": {
+  "blocker": "accepted V0-C accounting reducer pins the first subject's Vulkan1 selector label; correcting it is a correctness-bearing change to a hash-pinned accepted source requiring separate prospective maintainer authorization",
+  "canonical_execution": "v1b-nv-a-canonical-01 runtime PASS (exit 0, 37/37, byte-exact) but accepted accounting reducer failed closed on the Vulkan3 transcript",
+  "generic_plan": "v1b-nv-a-plan-01 (NV-A selected from opaque facts; AMD pressure excluded EVIDENCE_STALE)",
+  "local_host_confirmed": "inferswarm02",
+  "physical_qualification": "v1b-nv-a-qualification-01 PASS (37/37, no fallback, clean exit, adapter-sealed)",
+  "ssh_used": false,
+  "stability_sample": "v1b-nv-a-stability-01..03 PASS (3/3 byte-exact, full offload, intended device)"
+ },
+ "issue": "#158",
+ "schema": "inferswarm.v1b.evidence-status/1",
+ "terminal": "V1B_SECOND_SUBJECT_REFACTOR_REQUIRED"
+}
