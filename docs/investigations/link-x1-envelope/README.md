@@ -1,6 +1,6 @@
 # LINK-X1 — minimum viable PCIe interconnect envelope for local participants
 
-Status: IN PROGRESS (Issue #35). Additive investigation namespace; no prior
+Status: campaign complete on `inferswarm02` (Issue #35); terminal `X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED`, recorded in draft PR #165 pending maintainer review. Additive investigation namespace; no prior
 namespace is modified. Campaign host: `inferswarm02` (local session; SSH not
 used).
 
@@ -89,3 +89,52 @@ for a device.
   subject values live only in frozen evidence JSON and fixtures bound to it.
 - Manifest: `v2a_manifest.py --contract manifest-contract.json` ladder (the
   accepted generalized generator, imported not forked).
+
+
+## Measured results (MEASURED/CALCULATED per BENCHMARKING.md)
+
+Transport (both subjects Gen1 x1 under load, sysfs-sampled concurrently):
+
+| Subject | BDF | H2D 128 MiB | D2H 128 MiB | 4 KiB service | Bidir |
+|---|---|---|---|---|---|
+| AMD-A | 02:00.0 | 0.169 GB/s | 0.166 GB/s | 0.155 ms | 0.167 GB/s |
+| NV-A | 04:00.0 | 0.200 GB/s | 0.210 GB/s | 0.120 ms | 0.413 GB/s |
+
+Role sweep (frozen workload, greedy temp 0 seed 42, 48 tokens; byte-exact vs
+the accepted frozen reference where declared):
+
+| Role | Median t/s | Offload | Byte-exact | Classification |
+|---|---|---|---|---|
+| single AMD-A control | 44.4 | 37/37 | yes | (control) |
+| single NV-A control | 89.95 | 37/37 | yes | (control) |
+| adverse layer split | 55.95 | 37/37 | yes | THROUGHPUT_POSITIVE vs AMD anchor (1.26x); 0.62x vs NV anchor |
+| coarse split + batch np=4 | 52.35/seq | 37/37 | n/a (declared) | THROUGHPUT_POSITIVE vs AMD anchor (1.18x); below single-seq split |
+| capacity 14B two-subject | 21.3 | 49/49 | n/a | THROUGHPUT_POSITIVE, decisive capacity (vs 0.2 t/s paging control, ~106x) |
+| capacity 14B single control | 0.2 | 49/49 nominal, 417.66 MiB CPU-mapped | n/a | paging-dominated control |
+| R0 row-split control | failed at load | - | - | NOT_USEFUL_FOR_TESTED_ROLE (unsupported) |
+
+## Envelope conclusion (planner-facing)
+
+On this measured substrate (Gen1-class x1 links pinned at their floor under
+load), a narrow-link participant is:
+
+- **net-useful as a capacity/residency contributor**: models that page on a
+  single subject execute genuinely resident with the participant
+  (~106x measured feasibility gain, complete offload, split device buffers);
+- **conditionally throughput-useful**: adding a stronger participant to a
+  weaker anchor improves matched serving (1.26x measured); adding a weaker
+  participant to a stronger anchor degrades it (0.62x measured) — the
+  marginal sign depends on the anchor, not on the link alone;
+- **dominated for fine-grained fan-out from a strong anchor** under current
+  supported semantics; and the finer-grained tensor-split shape is not
+  supported at all on these backends (fails closed, control R0).
+
+Measured facts a future planner needs (no vendor/width special cases):
+per-direction sustained bandwidth by size class; small-transfer service
+latency; residency/host-paging cost when oversubscribed; device-local
+service rate for the execution-unit class; and the anchor-relative
+throughput ratio. Recorded in `UTILITY-ENVELOPE.json`; wider links (x4/x8)
+remain later comparison points, not prerequisites.
+
+Terminal: `X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED` (see
+`STATUS.json`).

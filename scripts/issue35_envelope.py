@@ -206,6 +206,34 @@ def build_envelope(root: Path) -> dict:
                       roles["x1p-role-capacity-control"]),
     ]
 
+    # Both-perspective marginal analysis for the two-device roles: the
+    # same placement measured against EACH participant's standalone
+    # control. Adding the strong participant to the weak one can be
+    # throughput-positive while adding the weak one to the strong one is
+    # throughput-negative; both measured facts are recorded.
+    def marginal(rid, control_id):
+        role = roles[rid]
+        ctrl = roles[control_id]
+        return {
+            "vs_control_median_tps": ctrl["generation_tokens_per_s"]["median"],
+            "ratio": round(role["generation_tokens_per_s"]["median"] /
+                           ctrl["generation_tokens_per_s"]["median"], 4),
+        }
+    marginal_views = {
+        "x1p-role-adverse": {
+            "adding_peer_to_subject": marginal(
+                "x1p-role-adverse", "x1p-role-single-amd-a"),
+            "adding_subject_to_peer": marginal(
+                "x1p-role-adverse", "x1p-role-single-nv-a"),
+        },
+        "x1p-role-coarse": {
+            "adding_peer_to_subject": marginal(
+                "x1p-role-coarse", "x1p-role-single-amd-a"),
+            "adding_subject_to_peer_batched_per_sequence": marginal(
+                "x1p-role-coarse", "x1p-role-single-nv-a"),
+        },
+    }
+
     # Link-dominated vs device-dominated separation (both subjects share
     # the measured link class; the single-subject controls isolate
     # device-local compute).
@@ -217,6 +245,14 @@ def build_envelope(root: Path) -> dict:
         "neutral_band": NEUTRAL_BAND,
         "taxonomy": list(TAXONOMY),
         "classifications": classifications,
+        "marginal_views": {
+            "label": "CALCULATED",
+            "note": ("The frozen classification uses the subject-perspective "
+                     "control; the peer-perspective ratio is recorded because "
+                     "the marginal value of adding a participant depends on "
+                     "which device already hosts the workload."),
+            "views": marginal_views,
+        },
         "link_vs_device_separation": {
             "label": "CALCULATED",
             "note": (

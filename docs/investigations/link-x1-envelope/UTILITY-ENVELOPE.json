@@ -1,0 +1,106 @@
+{
+  "classifications": [
+    {
+      "basis": "throughput ratio 1.260 above the neutral band",
+      "capacity_positive": false,
+      "classification": "THROUGHPUT_POSITIVE",
+      "control_rate": 44.4,
+      "label": "CALCULATED",
+      "role_id": "x1p-role-adverse",
+      "role_rate": 55.95,
+      "throughput_ratio_vs_control": 1.2601
+    },
+    {
+      "basis": "throughput ratio 1.179 above the neutral band",
+      "capacity_positive": false,
+      "classification": "THROUGHPUT_POSITIVE",
+      "control_rate": 44.4,
+      "label": "CALCULATED",
+      "role_id": "x1p-role-coarse",
+      "role_rate": 52.35,
+      "throughput_ratio_vs_control": 1.1791
+    },
+    {
+      "basis": "throughput ratio 106.500 above the neutral band",
+      "capacity_positive": false,
+      "classification": "THROUGHPUT_POSITIVE",
+      "control_rate": 0.2,
+      "label": "CALCULATED",
+      "role_id": "x1p-role-capacity",
+      "role_rate": 21.3,
+      "throughput_ratio_vs_control": 106.5
+    }
+  ],
+  "link_vs_device_separation": {
+    "label": "CALCULATED",
+    "note": "Both narrow-link subjects negotiate the same link class under load (see transport summaries). Observations consistent across both subjects are plausibly link/role dominated; device-local compute differences are carried explicitly from the single-subject controls and are not attributed to the link.",
+    "single_subject_compute": {
+      "amd_a_median_tps": 44.4,
+      "device_local_ratio_nv_over_amd": 2.0259,
+      "nv_a_median_tps": 89.95
+    }
+  },
+  "marginal_views": {
+    "label": "CALCULATED",
+    "note": "The frozen classification uses the subject-perspective control; the peer-perspective ratio is recorded because the marginal value of adding a participant depends on which device already hosts the workload.",
+    "views": {
+      "x1p-role-adverse": {
+        "adding_peer_to_subject": {
+          "ratio": 1.2601,
+          "vs_control_median_tps": 44.4
+        },
+        "adding_subject_to_peer": {
+          "ratio": 0.622,
+          "vs_control_median_tps": 89.95
+        }
+      },
+      "x1p-role-coarse": {
+        "adding_peer_to_subject": {
+          "ratio": 1.1791,
+          "vs_control_median_tps": 44.4
+        },
+        "adding_subject_to_peer_batched_per_sequence": {
+          "ratio": 0.582,
+          "vs_control_median_tps": 89.95
+        }
+      }
+    }
+  },
+  "neutral_band": 0.05,
+  "nonclaims": [
+    "per-role classifications for the tested substrate and supported semantics only, not permanent device grades",
+    "no universal hardware score is frozen",
+    "wider links remain later comparison points, not prerequisites",
+    "no vendor/width special case enters generic planner semantics"
+  ],
+  "schema": "inferswarm.issue35.utility-envelope/1",
+  "taxonomy": [
+    "CAPACITY_POSITIVE_THROUGHPUT_NEGATIVE",
+    "CAPACITY_POSITIVE_THROUGHPUT_NEUTRAL",
+    "THROUGHPUT_POSITIVE",
+    "NOT_USEFUL_FOR_TESTED_ROLE",
+    "EVIDENCE_INSUFFICIENT"
+  ],
+  "transport_facts": {
+    "amd_a": {
+      "d2h_gbps_128mib": 0.166,
+      "h2d_gbps_128mib": 0.169,
+      "link_under_load": {
+        "generation": 1,
+        "sysfs_speed_label": "2.5 GT/s PCIe",
+        "width": 1
+      },
+      "service_ms_4kib": 0.154734
+    },
+    "nv_a": {
+      "d2h_gbps_128mib": 0.21,
+      "h2d_gbps_128mib": 0.2,
+      "link_under_load": {
+        "generation": 1,
+        "sysfs_speed_label": "2.5 GT/s PCIe",
+        "width": 1
+      },
+      "service_ms_4kib": 0.120172
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "acceptance_state": "draft PR #165 records the campaign; acceptance remains with the maintainer",
+  "attempt": "initial campaign",
+  "facts": {
+    "accepted_d3_d7": "bound byte-frozen (phase1r disposition/handoff/placements); inferswarm01 Gen2 x1 result preserved, not reinterpreted; this campaign is a new measurement identity",
+    "adverse_reproduction": "layer-split multiworker serving reproduced as the finest supported shape; row/tensor split fails closed at load (control R0, expected); adverse layer split is byte-exact and throughput-positive from the weak subject's perspective (1.26x) but 0.62x from the strong subject's perspective",
+    "baseline_main_sha": "e38ebe91a0604fb666397ddae675248e9f819f60",
+    "capacity_case": "14B Q4_K_M infeasible-paging on one subject (0.2 t/s, 417.66 MiB CPU-mapped, 235 s wall) vs genuinely split residency on two x1 subjects (3917+4231 MiB device buffers, 21.3 t/s): ~106x feasibility gain, complete offload both arms",
+    "classifications": {
+      "x1p-role-adverse (layer split, subject perspective)": "THROUGHPUT_POSITIVE",
+      "x1p-role-adverse-rowsplit-unsupported": "NOT_USEFUL_FOR_TESTED_ROLE (unsupported shape, fails closed)",
+      "x1p-role-capacity (14B two-subject)": "THROUGHPUT_POSITIVE with decisive capacity contribution",
+      "x1p-role-coarse (batched split)": "THROUGHPUT_POSITIVE (per-sequence; below single-sequence split)"
+    },
+    "coarse_batch": "batch -np 4 amortization: 52.35 t/s per-sequence vs 55.95 single-sequence split (batching does not beat single-sequence split on this substrate for this workload)",
+    "cross_device": "same frozen definitions on both subjects; device-local compute differs 2.03x (NV over AMD); marginal participation value flips sign with anchor device; capacity case is link/role dominated (both arms complete, ratio 106x)",
+    "link_identity": "all three dGPU root ports electrically x1; both subjects negotiate Gen1 x1 under sustained load (sysfs sampled concurrently, ~450 samples/subject); link class pinned at floor under load",
+    "local_host_confirmed": "inferswarm02 (local session, no SSH)",
+    "nongoals_held": "no vendor/width special case in generic semantics; no universal score frozen; no code optimization to make any role win",
+    "transport": "AMD-A 02:00.0: H2D/D2H ~0.17 GB/s, 4KiB service 0.155 ms; NV-A 04:00.0: ~0.20/0.21 GB/s, service 0.120 ms; bidir overlap ~0.17 vs ~0.41 GB/s",
+    "wider_link_control": "NOT_PHYSICALLY_AVAILABLE (no slot exceeds x1 electrical; no hardware moves in scope)"
+  },
+  "issue": "#35",
+  "nonclaims": [
+    "per-role classifications for the tested substrate and supported runtime semantics only, not permanent device grades",
+    "Gen1-class observed link is honest lower-bound evidence; no Gen3 label was forced",
+    "x4/x8/x16 remain later comparison points, not prerequisites"
+  ],
+  "schema": "inferswarm.issue35.evidence-status/1",
+  "terminal": "X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED"
+}
