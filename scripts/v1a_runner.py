@@ -224,9 +224,11 @@ def execute_canonical(authority: Mapping[str, Any], plan: Mapping[str, Any], mea
         raise RunnerError("frozen plan digest differs from authority")
     candidate = plan["candidate"]
     for field in ("node_id", "compute_unit_id", "memory_resource_id", "execution_unit_id",
-                  "execution_contract_id", "implementation_id", "candidate_id", "physical_device_bdf"):
+                  "execution_contract_id", "implementation_id", "physical_device_bdf"):
         if candidate.get(field) != frozen[field]:
             raise RunnerError(f"frozen candidate {field} mismatch")
+    if "candidate_id" in frozen and candidate.get("candidate_id") != frozen["candidate_id"]:
+        raise RunnerError("frozen candidate_id mismatch")
     run = _execute(frozen, out)
     if run["exit_code"] != 0:
         raise RunnerError(f"canonical exit was not clean: {run['exit_code']}")
