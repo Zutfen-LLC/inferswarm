@@ -1,0 +1,51 @@
+{
+  "built_at_unix": 1789331245,
+  "campaign_id": "issue172-arm-c-requalification-v1",
+  "case_count": 40,
+  "cpu_only": {
+    "gpu_execution_occurred": false,
+    "model_execution_occurred": false,
+    "recording_fake_runtime": true
+  },
+  "fixture40_digest": "sha256:aed0abda5814198fa570a49e6deab7a53c261208a4f9cbe3b994d2d889a5d246",
+  "frozen_control_plane_digests": {
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/frozen-source/924cd22e/benchmarks/inferswarm_r6/strategy.py": "ca31f0999cb4fcf46d73c83f8b3ee7bbe2636792bcfc1824b15946aaac53906b",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/frozen-source/924cd22e/python/freetoken/research/r3_planner.py": "080e8b64fbb9fbc0f6df390d5714d0dbc691dd601e2bd13fe4ff71596e2d0856",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-retry/frozen-source/924cd22e/python/freetoken/research/r5a_serving.py": "f61adc3201f5c2c9d23afcc90da3135ca89b3ed7eb3213d68a41b08fc242b105",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/coordinator.py": "189548dc4f87f5f40c05f7796a2be7af0446ea05f95a0cf7bafcd3b79bec5d77",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/benchmarks/inferswarm_r6/xc_strategy.py": "8d33b4b297a20511448ab78909d2f528eef62c2b7943acae167668ec9ff0f26f",
+    "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c/frozen-freetoken/924cd22e/python/freetoken/research/r5b_epochs.py": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805"
+  },
+  "g170_rendered_lengths": {
+    "g170-01": 65,
+    "g170-02": 67,
+    "g170-03": 69,
+    "g170-04": 72,
+    "g170-05": 73,
+    "g170-06": 78,
+    "g170-07": 83,
+    "g170-08": 88,
+    "g170-09": 89,
+    "g170-10": 96,
+    "g170-11": 104,
+    "g170-12": 112,
+    "g170-13": 113,
+    "g170-14": 118,
+    "g170-15": 123,
+    "g170-16": 128
+  },
+  "generalization_count": 16,
+  "global_problems": [],
+  "per_case_equal_count": 40,
+  "reduction_passed": false,
+  "regression_count": 24,
+  "runtime_session_allocation": {
+    "derivation": "verbatim AST extraction of EpochServingController._runtime_session_id from the sha256-pinned r5b_epochs.py bytes (structure verified: one sequence increment; return logical_session_id * 1000000 + sequence; sequence zeroed in __init__); the direct comparator allocates through this extracted method, never through a hand-copied formula",
+    "method_line": 417,
+    "method_sha256": "94276b21597f22795af28ee4d3566dc15a903abadfd9a5c00a3d527f2b892f6c",
+    "multiplier": 1000000,
+    "source_sha256": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805"
+  },
+  "schema": "inferswarm.issue172.arm-c-requal.cpu-transcript-preflight/1",
+  "terminal": "PREFLIGHT_PASS"
+}

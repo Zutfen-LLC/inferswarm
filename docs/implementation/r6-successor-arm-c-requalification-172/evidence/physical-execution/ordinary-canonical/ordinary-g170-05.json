@@ -1,0 +1,39 @@
+{
+  "arm": "generalization-170",
+  "case_id": "g170-05",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "ha same la ha loop na loop na same na echo la na tock na again na ha loop echo tock na tock loop na ha na loop la echo again tick na la same same ha zero same ha na ha na tock na na na echo tock zero loop ha ha again to",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 29,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\nha same la ha loop na loop na same na echo la na tock na again na ha loop echo tock na tock loop na ha na loop la echo again tick na la same same ha zero same ha na ha na tock na na na echo tock zero loop ha ha again to<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It sounds like you are creating a rhythmic",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-c476ec3aa837",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 73,
+      "total_tokens": 81
+    }
+  },
+  "schema": "inferswarm.issue172.arm-c-requal.ordinary-case/1",
+  "wall_ns": 3643048732
+}

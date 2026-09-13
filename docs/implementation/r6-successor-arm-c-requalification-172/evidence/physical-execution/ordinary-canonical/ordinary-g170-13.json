@@ -1,0 +1,39 @@
+{
+  "arm": "generalization-170",
+  "case_id": "g170-13",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "vector 34 < delta 3 ( 3 mean third squared matrix = 8 13 prime 2 - squared matrix < squared ratio half delta sum > half < ratio 8 x < squared = 5 - 8 55 55 squared = ( 1 prime vector 55 mean matrix squared 3 z y 0 0 ( mean = 21 half 55 21 squared vector 34 + - 13 > =",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 37,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\nvector 34 < delta 3 ( 3 mean third squared matrix = 8 13 prime 2 - squared matrix < squared ratio half delta sum > half < ratio 8 x < squared = 5 - 8 55 55 squared = ( 1 prime vector 55 mean matrix squared 3 z y 0 0 ( mean = 21 half 55 21 squared vector 34 + - 13 > =<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you are presenting a complex string",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-c476ec3aa837",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 113,
+      "total_tokens": 121
+    }
+  },
+  "schema": "inferswarm.issue172.arm-c-requal.ordinary-case/1",
+  "wall_ns": 3526803635
+}

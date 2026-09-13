@@ -1,0 +1,61 @@
+{
+  "observations": {
+    "after_chunk_1_64_rows": {
+      "allocated": 64,
+      "available": 192,
+      "live_mapped_slots": 64,
+      "live_positions_resolving_to_sentinel_slot0": 0,
+      "swa_paged": true
+    },
+    "after_chunk_2_1_row": {
+      "allocated": 65,
+      "available": 191,
+      "live_mapped_slots": 65,
+      "live_positions_resolving_to_sentinel_slot0": 0,
+      "swa_paged": true
+    },
+    "after_decode_position_65": {
+      "allocated": 66,
+      "available": 190,
+      "live_mapped_slots": 66,
+      "live_positions_resolving_to_sentinel_slot0": 0,
+      "swa_paged": true
+    },
+    "after_reset_following_session": {
+      "allocated": 0,
+      "available": 256,
+      "live_mapped_slots": 0,
+      "live_positions_resolving_to_sentinel_slot0": 0,
+      "swa_paged": true
+    },
+    "pristine_after_reset_1": {
+      "allocated": 0,
+      "available": 256,
+      "live_mapped_slots": 0,
+      "live_positions_resolving_to_sentinel_slot0": 0,
+      "swa_paged": true
+    },
+    "reuse_session_after_reset": {
+      "allocated": 52,
+      "available": 204,
+      "live_mapped_slots": 52,
+      "live_positions_resolving_to_sentinel_slot0": 0,
+      "swa_paged": true
+    }
+  },
+  "passed": true,
+  "producer": "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469",
+  "schema": "inferswarm.issue172.arm-c-requal.swa-ownership-observation/1",
+  "seam": "swa_session_ownership_report (accepted #166 pure-read)",
+  "session_geometry": "64+1 two-chunk then decode at 65; reuse 52",
+  "verdicts": {
+    "chunk1_frontier": true,
+    "chunk2_frontier": true,
+    "decode_extends_by_one": true,
+    "no_sentinel_resolution_while_live": true,
+    "ownership_conserved": true,
+    "pristine_is_zeroed": true,
+    "reset_releases_wholesale": true,
+    "reuse_starts_fresh": true
+  }
+}

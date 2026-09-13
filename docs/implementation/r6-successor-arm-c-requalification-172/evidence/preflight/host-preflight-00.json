@@ -1,0 +1,55 @@
+{
+  "campaign_id": "issue172-arm-c-requalification-v1",
+  "collected_at_unix": 1789331747,
+  "extra_gpu_hardware_note": "frozen geometry binds only the frozen devices at the frozen indices; additional physical GPUs are recorded inventory",
+  "gpus": [],
+  "host": "inferswarm00",
+  "instrumentation_off": {
+    "issue157_env_gates_present": [],
+    "pythonpath": "",
+    "r6_localization_env_gates_present": [],
+    "sitecustomize_on_path": true
+  },
+  "passed": true,
+  "problems": [],
+  "producer": {
+    "clean": true,
+    "head": "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469"
+  },
+  "producer_file_sha256": {
+    "benchmarks/inferswarm_r6/chain_runtime.py": "9652ebb376b3737d559e6f764b47dfe154e31d1804e9eac62825badb4b3d9980",
+    "benchmarks/inferswarm_r6/coordinator.py": "189548dc4f87f5f40c05f7796a2be7af0446ea05f95a0cf7bafcd3b79bec5d77",
+    "benchmarks/inferswarm_r6/freeze_environment.py": "ce71c5c6f5242e7776f71f66f195a11903a575d3e7c888fc1a18f1fc9f943235",
+    "benchmarks/inferswarm_r6/last_stage_service.py": "273c22187734ef674de25144fb9484fa965e5423e78de5d660dfb7481f3ff6b2",
+    "benchmarks/inferswarm_r6/node_agent.py": "eebfa626b45362111282b7102fc0fcd4a5bf171fc82592f0d50eccd29b75a2e2",
+    "benchmarks/inferswarm_r6/stage_chain.py": "42950431177783699bb6f677155925784970b08d7ddf6c8ea6486952477e8983",
+    "benchmarks/inferswarm_r6/stage_runtime.py": "afe9ceb09208174d0da2905d4097009460d05bbe5050b0d15eaa2baa4e40ac73",
+    "benchmarks/inferswarm_r6/strategy.py": "ca31f0999cb4fcf46d73c83f8b3ee7bbe2636792bcfc1824b15946aaac53906b",
+    "benchmarks/inferswarm_r6/wire_client.py": "84390972b0ad109e334516d4d772518afc3de1c8e1df3bf70136a99a2155f3ed",
+    "benchmarks/inferswarm_r6/xc_strategy.py": "8d33b4b297a20511448ab78909d2f528eef62c2b7943acae167668ec9ff0f26f",
+    "benchmarks/inferswarm_xc/cpu_only.py": "32dd1b33ffcff653da2d40624f84921b4873ae405335769dc25bb8b582b00eeb",
+    "benchmarks/inferswarm_xc/node_agent.py": "4ff6c4de1203af4de07c91a59c354fc5f8e9f30a9e618098c6d6e7cfc1a2a2fa",
+    "python/freetoken/research/prefill_partition.py": "841635bd42e2bf25954e3fbe6ec902fb79f3d33cca1a4f5b1e8a51383ab73c86",
+    "python/freetoken/research/r3_planner.py": "080e8b64fbb9fbc0f6df390d5714d0dbc691dd601e2bd13fe4ff71596e2d0856",
+    "python/freetoken/research/r5a_serving.py": "f61adc3201f5c2c9d23afcc90da3135ca89b3ed7eb3213d68a41b08fc242b105",
+    "python/freetoken/research/r5b_epochs.py": "388678971eb608741bd7dd4ad31a34e2e63c45fd2d0807e01065d077d9202805",
+    "python/freetoken/research/xc_coordinator.py": "d0a4cd3f784cb1272069f6f4f5453391df9655e32b46b6129d02be3b92a36aa2",
+    "python/freetoken/research/xc_wire.py": "71e9a37039d74c46505242504ca272127b033664af51d2aa16f965f97f8178de"
+  },
+  "schema": "inferswarm.issue172.arm-c-requal.physical-preflight/1",
+  "software": {
+    "nvcc": null,
+    "python": "3.13.5"
+  },
+  "substrate_reconciliation": {},
+  "tokenizer_deployment": {
+    "assets": {
+      "chat_template.jinja": "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4",
+      "config.json": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9",
+      "generation_config.json": "a8349d9bd64cc5841297fcb5002f0fdc4749c473c8f1b10ea337f9ce4ee7014e",
+      "tokenizer.json": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+      "tokenizer_config.json": "a62f4e85a47c0c136edaaa3a4f591fd6783717299a9def47e5ad03a49f6a5eb9"
+    },
+    "path": "/srv/inferswarm/tokenizers/gemma-r6-frozen"
+  }
+}
