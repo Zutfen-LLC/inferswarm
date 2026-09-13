@@ -344,6 +344,10 @@ def build_bindings(inventory: dict[str, Any], *, model: str,
         raise DiscoveryError("bindings require a v3 discovery inventory document")
     if inventory.get("authorization") != "NON_AUTHORIZING":
         raise DiscoveryError("inventory artifact must be explicitly NON_AUTHORIZING")
+    if probe_runner is None:
+        def _default_runner(argv):
+            return run_identity_probe(argv, raw_root=raw_root, raw_rel_dir=raw_rel_dir)
+        probe_runner = _default_runner
     measured = parse_utc_timestamp(inventory.get("measured_utc"), label="inventory measured_utc")
     reviewed = parse_utc_timestamp(
         reviewed_utc if reviewed_utc is not None else datetime.now(timezone.utc).isoformat(),
