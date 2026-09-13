@@ -108,7 +108,7 @@ class ReduceRoleTests(unittest.TestCase):
         self.assertEqual(result["generation_tokens_per_s"]["median"], 40.5)
 
     def test_reduce_with_reference(self):
-        reference = "\nexpected\n"
+        reference = "expected"
         attempts = [{
             "exit_code": 0, "wall_seconds": 1.0,
             "stdout": "> prompt\nexpected\n\n[ Prompt: 1 t/s | Generation: 1 t/s ]\n",

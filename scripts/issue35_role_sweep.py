@@ -38,6 +38,8 @@ import time
 from hashlib import sha256
 from pathlib import Path
 
+import v0c_correctness  # accepted comparator, imported not forked
+
 SCHEMA_SWEEP_RESULT = "inferswarm.issue35.role-sweep-result/1"
 
 _PROMPT_RATE = re.compile(r"Prompt:\s*([0-9.]+)\s*t/s")
@@ -83,20 +85,18 @@ def parse_offload(stderr_text: str) -> dict:
 
 
 def visible_output(stdout_text: str, prompt: str) -> str:
-    """Extract the visible greedy continuation after the prompt echo.
-
-    Mirrors the accepted V0-C visible-output semantics: the runtime
-    echoes the prompt, then the generated continuation, then a blank
-    line and the throughput summary. The continuation is everything
-    between the prompt echo and the summary block.
+    """Extract the visible greedy continuation via the ACCEPTED V0-C
+    byte-exact comparator's extraction grammar (imported, not
+    reimplemented): the reply delimited by ``"> <prompt>\n"`` and
+    ``"\n[ Prompt:"`` with the response/timing delimiter newline
+    removed. Fail-closed on missing/ambiguous markers or empty reply.
     """
-    if prompt not in stdout_text:
-        raise SweepError("prompt echo not found in stdout")
-    tail = stdout_text.split(prompt, 1)[1]
-    marker = "\n[ Prompt:"
-    if marker in tail:
-        tail = tail.split(marker, 1)[0]
-    return tail
+    try:
+        visible = v0c_correctness.extract_visible_response(
+            stdout_text.encode("utf-8"), prompt.encode("utf-8"))
+    except v0c_correctness.CorrectnessError as error:
+        raise SweepError(f"visible-output extraction failed: {error}") from error
+    return visible.decode("utf-8")
 
 
 ROLE_COMMAND_BUILDERS = {
