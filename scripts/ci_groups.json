@@ -116,7 +116,8 @@
     "test_finalize_repository",
     "test_evidence_manifest_lifecycle",
     "test_issue131_cpu_test_env",
-    "test_plan_ci"
+    "test_plan_ci",
+    "test_run_full_cpu_suite"
    ]
   },
   "vulkan-v0-b": {

@@ -46,11 +46,18 @@ python3 scripts/bootstrap_test_env.py
 .venv/bin/python -m unittest <modules-for-group> -v
 ```
 
-How to run full regression locally:
+How to run full regression locally (independent of impact selection):
 
 ```bash
-.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
+.venv/bin/python scripts/run_full_cpu_suite.py
+.venv/bin/python scripts/run_full_cpu_suite.py --jobs 1
+.venv/bin/python scripts/run_full_cpu_suite.py --list --json
 ```
+
+The runner discovers the raw serial population, uses bounded isolated worker
+processes, and fails closed unless the worker-executed identity set exactly
+matches that discovery. Use raw `unittest discover -s tests -p 'test_*.py'`
+for direct single-process debugging or the final serial equivalence check.
 
 How to force full CI in GitHub Actions: use `workflow_dispatch` on the
 CI workflow (full regression is the default), or push to `main` — every

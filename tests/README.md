@@ -50,16 +50,20 @@ dependency is missing on the base branch.
 
 ## Running
 
-`unittest` discovery over the test directory is the canonical full-suite
-invocation (verified on a clean bootstrapped environment; the modules import
-their script dependencies by inserting `scripts/` on `sys.path` themselves,
-so no `tests/__init__.py` is needed):
+The bounded parallel runner is the preferred full-suite invocation. It first
+uses raw `unittest` discovery as the population authority, then proves that
+worker-executed identities exactly equal that serial population. The modules
+import their script dependencies by inserting `scripts/` on `sys.path`
+themselves, so no `tests/__init__.py` is needed:
 
 ```bash
 # one module
 python3 -m unittest tests.test_issue117_preflight -v
 
-# everything (1640 tests; ~8 minutes)
+# everything (preferred bounded parallel full suite)
+python3 scripts/run_full_cpu_suite.py
+
+# raw serial discovery (direct debugging / equivalence check)
 python3 -m unittest discover -s tests -p 'test_*.py'
 ```
 
