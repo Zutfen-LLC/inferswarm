@@ -1,21 +1,20 @@
 # V2-A — reusable device qualification harness (issue #163)
 
-Status: R2 CAMPAIGN SUPERSEDED — correction round 3 (R3) in progress.
-The R2 terminal `V2A_REUSABLE_DEVICE_QUALIFICATION_HARNESS_PASS`
-(FINAL-TERMINAL-R2.json) is superseded (R2-SUPERSESSION.json): both R2
-physical campaigns remain factual, but the R2 authority loader aged only
-the review event and never required or aged the physical inventory
-measurement timestamp — a fresh review of a stale inventory could
-authorize a campaign, violating the #163 stale-inventory fail-closed
-requirement (maintainer NO-GO review on PR #164 head 1c724d3). R3
-corrects the contract (schemas discovery-inventory/bindings/3 and
-campaign-authority/3): the loader now validates
-DISCOVERY-BINDINGS.inventory_measured_utc against the digest-verified
-DISCOVERY-INVENTORY.measured_utc, enforces
-inventory measured <= reviewed <= freeze anchor, ages the PHYSICAL
-inventory against max_discovery_age_hours, and binds retained raw probe
-bytes to the structured proof through one shared validation path. All
-attempt-01 and R2 evidence is retained byte-unchanged.
+Status: R3 CAMPAIGN COMPLETE — terminal
+`V2A_REUSABLE_DEVICE_QUALIFICATION_HARNESS_PASS` restored under the
+corrected stale-inventory fail-closed contract (see FINAL-TERMINAL.json,
+PORTABILITY-AUDIT.json, STATUS.json). The R2 campaigns are SUPERSEDED
+(R2-SUPERSESSION.json, FINAL-TERMINAL-R2.json) but retained
+byte-unchanged: both R2 physical runs executed correctly, but their
+authority loader aged only the review event and never required or aged
+the physical inventory measurement timestamp (maintainer NO-GO review
+on PR #164 head 1c724d3). R3 re-proved both campaigns from FRESH
+discovery (measured 2026-09-13T13:57:21Z) under source freeze
+bb1ac724 with the corrected loader: inventory measured <= reviewed <=
+freeze anchor, the 72h age enforced against the measurement itself,
+and retained raw probe bytes mechanically bound to the structured
+proof. The attempt-01 campaigns remain superseded
+(ATTEMPT01-SUPERSESSION.json).
 
 V0 established Vulkan as a promising portable substrate; V1-A/V1-B/V1-C
 established a reusable internal S2 participant across two physical

@@ -1,0 +1,18 @@
+{
+ "acceptance_state": "draft PR #164 records the corrected R3 result; acceptance remains with the maintainer",
+ "attempt": "R3 \u2014 correction round 3",
+ "facts": {
+  "adversarial_controls": "15 + 23 R2 + 32 R3 controls PASS",
+  "amd_a_r3": "qual PASS 37/37; canonical PASS accounting 0/0/0 byte-exact (Vulkan1 / 02:00.0)",
+  "fresh_discovery": "R3 inventory/bindings measured 2026-09-13T13:57:21Z; stale-inventory contract enforced by loader v3",
+  "local_host_confirmed": "inferswarm02",
+  "nv_a_r3": "qual PASS 37/37; canonical PASS accounting 0/0/0 byte-exact (Vulkan3 / 04:00.0)",
+  "portability_audit": "PASS (data-only differences; discovery layer shared)",
+  "r2": "superseded (R2-SUPERSESSION.json); evidence retained byte-unchanged",
+  "repeatability": "inherited from accepted predecessors (explicitly recorded in both R3 authorities)",
+  "ssh_used": false
+ },
+ "issue": "#163",
+ "schema": "inferswarm.v2a.evidence-status/1",
+ "terminal": "V2A_REUSABLE_DEVICE_QUALIFICATION_HARNESS_PASS"
+}

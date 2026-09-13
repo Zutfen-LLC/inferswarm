@@ -1,0 +1,187 @@
+{
+ "attempt": "R3 (correction round 3): both campaigns under corrected source freeze bb1ac724bc77c16fe718ce943578a1c2138a3848 with stale-inventory fail-closed authorities (campaign-authority/3) bound to fresh R3 reviewed discovery (discovery-inventory/bindings/3, measured 2026-09-13T13:57:21Z); both authorities pushed at dac0a9e before any R3 physical output",
+ "campaign_subjects": [
+  {
+   "campaign": "first",
+   "evidence_ids": {
+    "canonical_execution_evidence_id": "v2a-amd-a-r3-canonical-01",
+    "qualification_evidence_id": "v2a-amd-a-r3-qualification-01"
+   },
+   "subject": {
+    "compute_unit_id": "cu-amd-a",
+    "implementation_id": "impl-portable-amd-a",
+    "memory_resource_id": "mr-amd-a-vram",
+    "node_id": "node-inferswarm02",
+    "physical_device_bdf": "02:00.0",
+    "selector": "Vulkan1"
+   }
+  },
+  {
+   "campaign": "second",
+   "evidence_ids": {
+    "canonical_execution_evidence_id": "v2a-nv-a-r3-canonical-01",
+    "qualification_evidence_id": "v2a-nv-a-r3-qualification-01"
+   },
+   "subject": {
+    "compute_unit_id": "cu-nv-a",
+    "implementation_id": "impl-portable-nv-a",
+    "memory_resource_id": "mr-nv-a-vram",
+    "node_id": "node-inferswarm02",
+    "physical_device_bdf": "04:00.0",
+    "selector": "Vulkan3"
+   }
+  }
+ ],
+ "classifications": [
+  {
+   "aspect": "reusable harness source bytes identical across campaigns",
+   "classification": "REUSABLE_HARNESS_SEMANTICS_SHARED",
+   "evidence": {
+    "same_harness_hashes": true
+   }
+  },
+  {
+   "aspect": "subject/resource identity, selector, and evidence IDs",
+   "classification": "AUTHORITY_DATA_ONLY",
+   "evidence": {
+    "subjects": [
+     {
+      "campaign": "first",
+      "evidence_ids": {
+       "canonical_execution_evidence_id": "v2a-amd-a-r3-canonical-01",
+       "qualification_evidence_id": "v2a-amd-a-r3-qualification-01"
+      },
+      "subject": {
+       "compute_unit_id": "cu-amd-a",
+       "implementation_id": "impl-portable-amd-a",
+       "memory_resource_id": "mr-amd-a-vram",
+       "node_id": "node-inferswarm02",
+       "physical_device_bdf": "02:00.0",
+       "selector": "Vulkan1"
+      }
+     },
+     {
+      "campaign": "second",
+      "evidence_ids": {
+       "canonical_execution_evidence_id": "v2a-nv-a-r3-canonical-01",
+       "qualification_evidence_id": "v2a-nv-a-r3-qualification-01"
+      },
+      "subject": {
+       "compute_unit_id": "cu-nv-a",
+       "implementation_id": "impl-portable-nv-a",
+       "memory_resource_id": "mr-nv-a-vram",
+       "node_id": "node-inferswarm02",
+       "physical_device_bdf": "04:00.0",
+       "selector": "Vulkan3"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "aspect": "runtime/state facts (executable, model, driver/runtime identity)",
+   "classification": "BACKEND_RUNTIME_DATA_ONLY",
+   "evidence": {
+    "differences": [
+     {
+      "runtime_identity": {
+       "first": {
+        "binary_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+        "radv_target": "Mesa 25.0.7-2+deb13u1",
+        "selector": "Vulkan1",
+        "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+        "vulkan_loader": "1.4.309",
+        "vulkan_loader_remeasured": "vulkaninfo instance version 1.4.309 (libvulkan1 1.4.309.0-1)"
+       },
+       "second": {
+        "binary_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+        "nvidia_driver_version": "615.71.09",
+        "nvidia_icd_api_version": "1.4.351",
+        "nvidia_icd_library": "libGLX_nvidia.so.0",
+        "nvidia_icd_path": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+        "selector": "Vulkan3",
+        "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+        "vulkan_loader": "1.4.309",
+        "vulkan_loader_remeasured": "vulkaninfo instance version 1.4.309 (libvulkan1 1.4.309.0-1)"
+       }
+      }
+     },
+     {
+      "memory_bytes": {
+       "first": 8589934592,
+       "second": 8847884288
+      }
+     }
+    ]
+   }
+  },
+  {
+   "aspect": "qualification and canonical results (offload, exit, accounting, correctness)",
+   "classification": "REUSABLE_HARNESS_SEMANTICS_SHARED",
+   "evidence": {
+    "accounting_clean": true,
+    "both_campaigns_passed": true,
+    "byte_exact": true
+   }
+  },
+  {
+   "aspect": "reviewed discovery implementation and artifacts (discovery->authority layer)",
+   "classification": "REUSABLE_HARNESS_SEMANTICS_SHARED",
+   "evidence": {
+    "bindings_prospectively_bound": true,
+    "discovery_artifacts_retained": true,
+    "same_discovery_implementation": true,
+    "same_reviewed_artifacts": true
+   }
+  }
+ ],
+ "foundational_invariant_falsified": false,
+ "harness_source_hashes": {
+  "scripts/v2a_authority.py": "f4d829bbeedaa95f3f7a653a540430c856d1d7232babb02c4557acd9de975f60",
+  "scripts/v2a_authority_v2.py": "5da2b59df89ca5b0d8289270a3e29a4c54b4fdfa3bc0488c6bb3b6817dc9eb02",
+  "scripts/v2a_authority_v3.py": "8b33bf54ad915e09c9f80938c9307c21b2c2a842e376c80c6f01d4dc96bac15c",
+  "scripts/v2a_discovery.py": "c6dc992954ec42eed23e6a78bf781b221571305a7d186cf88643bf205fdbe2c1",
+  "scripts/v2a_discovery_v2.py": "03244497def0844fa19a9ea98c7786163052fdc568de0efbed8cee14b20a6b18",
+  "scripts/v2a_discovery_v3.py": "42882ef600db1c282f915c7014c79d3d1ebe0c4ff66e4d5835f1588ec4f2422b",
+  "scripts/v2a_harness.py": "d878fb798829d096b4c37bf87c6f1441b287c06819c9b5edd199afa20c10a0ee",
+  "scripts/v2a_manifest.py": "645ed70db57d8865c5e6dd194ac21a6776ba005caee79f5f8c89b63ff0ac4d91"
+ },
+ "result": "PASS",
+ "runtime_data_differences": [
+  {
+   "runtime_identity": {
+    "first": {
+     "binary_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+     "radv_target": "Mesa 25.0.7-2+deb13u1",
+     "selector": "Vulkan1",
+     "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+     "vulkan_loader": "1.4.309",
+     "vulkan_loader_remeasured": "vulkaninfo instance version 1.4.309 (libvulkan1 1.4.309.0-1)"
+    },
+    "second": {
+     "binary_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+     "nvidia_driver_version": "615.71.09",
+     "nvidia_icd_api_version": "1.4.351",
+     "nvidia_icd_library": "libGLX_nvidia.so.0",
+     "nvidia_icd_path": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+     "selector": "Vulkan3",
+     "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+     "vulkan_loader": "1.4.309",
+     "vulkan_loader_remeasured": "vulkaninfo instance version 1.4.309 (libvulkan1 1.4.309.0-1)"
+    }
+   }
+  },
+  {
+   "memory_bytes": {
+    "first": 8589934592,
+    "second": 8847884288
+   }
+  }
+ ],
+ "schema": "inferswarm.v2a.portability-audit/1",
+ "source_freeze_commits": [
+  "bb1ac724bc77c16fe718ce943578a1c2138a3848",
+  "bb1ac724bc77c16fe718ce943578a1c2138a3848"
+ ],
+ "subject_specific_code_required": false
+}
