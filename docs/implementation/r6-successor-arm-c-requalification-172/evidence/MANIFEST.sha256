@@ -1,11 +1,12 @@
-e4b9c187d2bdd83b26f79b22176131b053070c27ae9a8d7ba7828073f932029f  docs/implementation/r6-successor-arm-c-requalification-172/evidence/authority.json
+43d91e6a1ebd890d12b398fa87eeaca11bc53358524a679c1437659bb3d11a33  docs/implementation/r6-successor-arm-c-requalification-172/evidence/authority.json
 e49b9c19232c10ec5c06408b890c21c48fbef0a48af68ad6ebf529b6d719e9c7  docs/implementation/r6-successor-arm-c-requalification-172/evidence/campaign-corpus.json
 37b1cd53c5339f8421e9e2f36b23ebb5e1dd153ee9f03fe1ea27471ddc33b549  docs/implementation/r6-successor-arm-c-requalification-172/evidence/chain-plan.json
 c661cd48d64af3deaaef45b03ab4d696bbcd5cd27831e6016a602d0b0fa4528c  docs/implementation/r6-successor-arm-c-requalification-172/evidence/coordinator-config.json
 026153de0d4b42878606af785ca745725006796cc785ca9a02e593af896547fd  docs/implementation/r6-successor-arm-c-requalification-172/evidence/corpus-binding.json
 da2bab0945ede74c85b4d6e943bcfcda557bf127619928785e86a45a9266646f  docs/implementation/r6-successor-arm-c-requalification-172/evidence/cpu-transcript-preflight-transcripts.json
 3be06e69ac5e31fd3100235da92fbf68d95abaf1ce42d87fb9f8c9847aab3a7a  docs/implementation/r6-successor-arm-c-requalification-172/evidence/cpu-transcript-preflight.json
-91ef165e63591ae00ba85047ccb8d5aa9fbebe4492a6ef78e024c0ac739e2c69  docs/implementation/r6-successor-arm-c-requalification-172/evidence/current-main-reconciliation.json
+2a07cccc58f09ea36ee34d448f99cac90c7826f726d3392ca661d447a46207ed  docs/implementation/r6-successor-arm-c-requalification-172/evidence/cross-repo-provenance.json
+d11103e5f3f9ad57198cd96806a76b25d312a24ae4671dad625779e1cae58bd8  docs/implementation/r6-successor-arm-c-requalification-172/evidence/current-main-reconciliation.json
 cd0909bb96fc637a921218c973aaa1640579af7093681714cd3216a0dfa5f279  docs/implementation/r6-successor-arm-c-requalification-172/evidence/environment.json
 27e1fb7731e253086d011f6c5c2ea682ccc247ce71cd4e015304f27421db8fa9  docs/implementation/r6-successor-arm-c-requalification-172/evidence/equality-reduction.json
 c3fd1661d07fe12e3d656a95513ca69d2420032a913cf104b52f683cc7e751fd  docs/implementation/r6-successor-arm-c-requalification-172/evidence/physical-execution/direct/direct-canonical-c109-01-01-045.json
@@ -151,5 +152,5 @@ f93ea1b8dfa14393965f6e3ef1150771a12366f7e640206e2e8843af2a46c1b5  docs/implement
 d81c70851e86355824b3d55e4efa0c3a63359738bb4e148231d8ec95ff692b83  docs/implementation/r6-successor-arm-c-requalification-172/evidence/serving-evidence.json
 357e887fcc600cb2779571468d46610f32639264e4bf046c14863c4621b8bf63  docs/implementation/r6-successor-arm-c-requalification-172/evidence/swa-ownership.json
 d3665ff1e8e4d74fd6498e9fbb1e3a19b3a7863fb253f40c83b8e76692da56fe  docs/implementation/r6-successor-arm-c-requalification-172/evidence/terminal-reduction.json
-ac201094b7867738e1257749c0cec38d26e5147e9eab0e38d1d44f1294e65734  docs/implementation/r6-successor-arm-c-requalification-172/evidence/validation.json
+99de9172a7c7d14ddcf70002979c70d94b7bb58762ab887070c9bfe082cfa11b  docs/implementation/r6-successor-arm-c-requalification-172/evidence/validation.json
 6ae6896c0c650a42ded203767845820e374049489aa52d31218dc22cd9c907cb  docs/implementation/r6-successor-arm-c-requalification-172/evidence/zero-invariants.json

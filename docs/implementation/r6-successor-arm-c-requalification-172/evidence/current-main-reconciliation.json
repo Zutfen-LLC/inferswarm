@@ -22,23 +22,20 @@
   "from": "bce7fb3d8e54429972472933be66433b81ebcf8f",
   "to": "8aadbd6ea3c635741cc67fcc9d9ba1d1dd8d500a",
   "cause": "PR #165 (branch issue-35-x1-envelope) merged into main while the physical campaign was completing",
-  "timing_relative_to_correctness_bearing_output": "after",
+  "timing_relative_to_correctness_bearing_output": "after (corroborated by retained timestamps; no independent witness retained)",
   "effect_on_physical_results": "none",
-  "reasoning": "The advance was observed after all 40 direct results, 40 ordinary results, the controlled fencing arm, and both sentinel arms had already been retained. No correctness-bearing output in this campaign was produced from the advanced head, so the #172 'stale bytes' prohibition is not implicated. The reconciliation below carries the frozen evidence forward onto current main without re-executing anything."
+  "reasoning": "The advance was observed after all 40 direct results, 40 ordinary results, the controlled fencing arm, and both sentinel arms had already been retained. No correctness-bearing output in this campaign was produced from the advanced head, so the #172 'stale bytes' prohibition is not implicated. The reconciliation below carries the frozen evidence forward onto current main without re-executing anything.",
+  "timing_evidence": {
+   "terminal_reduction_derived_at_unix": 1789334998,
+   "terminal_reduction_derived_at_local": "2026-09-13 17:29:58 -0400",
+   "advance_merge_committer_date": "2026-09-13 17:40:26 -0400",
+   "original_campaign_commit_committer_date": "2026-09-13 17:47:59 -0400",
+   "note": "derived_at_unix is campaign-authored; the corroboration comes from the fact that the campaign commit was written after the advance merge, so the results necessarily predate it"
+  }
  },
  "reconciliation": {
   "method": "rebase of the single additive branch onto current origin/main",
   "rebased_onto": "8aadbd6ea3c635741cc67fcc9d9ba1d1dd8d500a",
-  "conflicts": [
-   {
-    "path": "scripts/ci_groups.json",
-    "resolution": "generated registry, not hand-maintained: took current-main bytes and re-derived with 'python3 scripts/plan_ci.py --emit-registry' so the issue-35 and issue-172-requal registrations coexist"
-   },
-   {
-    "path": "scripts/plan_ci.py",
-    "resolution": "auto-merged; both registrations present; 'plan_ci.py --self-check' OK"
-   }
-  ],
   "files_modified_by_reconciliation": [
    "scripts/ci_groups.json",
    "scripts/plan_ci.py"
@@ -49,7 +46,21 @@
    "sync_project_status": "sections current",
    "evidence_manifest_current": true,
    "planner_self_check": "OK"
-  }
+  },
+  "rebase_resolutions": [
+   {
+    "path": "scripts/ci_groups.json",
+    "resolution": "generated registry, not hand-maintained: took current-main bytes and re-derived with 'python3 scripts/plan_ci.py --emit-registry' so the issue-35 and issue-172-requal registrations coexist",
+    "was_a_conflict": true,
+    "kind": "content conflict"
+   },
+   {
+    "path": "scripts/plan_ci.py",
+    "resolution": "auto-merged; both registrations present; 'plan_ci.py --self-check' OK",
+    "was_a_conflict": false,
+    "kind": "clean auto-merge (no conflict)"
+   }
+  ]
  },
  "non_claims": [
   "This record does not re-execute or re-derive any correctness-bearing result.",

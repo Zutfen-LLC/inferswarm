@@ -183,6 +183,73 @@ class Issue172RequalTests(unittest.TestCase):
             "sha256:ee845188d3328bdec29bf4b09d71f7ccda0701ff5758cb1d"
             "8a70460a40fecfb1")
 
+    def test_authority_binds_both_r5a_fences(self):
+        authority = load("authority.json")
+        plans = authority["plan_identities"]
+        self.assertEqual(
+            plans["r5a_static_plan_digest_accepted_predecessor"],
+            "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf"
+            "666d020cdc625")
+        self.assertEqual(
+            plans["r5a_static_plan_digest_requalified_campaign"],
+            "sha256:208be7956474a559756355c85142eb6716585f4c0320a27fe73d2"
+            "f4196972c3e")
+        # the fence the physical run actually recorded must be the
+        # campaign's own re-derived fence, not the predecessor's
+        fence = json.loads(
+            (EVIDENCE / "r5a-static-plan.json").read_text())["digest"]
+        self.assertEqual(
+            fence, plans["r5a_static_plan_digest_requalified_campaign"])
+
+    def test_issue168_delta_comparison_is_not_overclaimed(self):
+        delta = load("authority.json")["execution_delta_audit"]
+        self.assertFalse(delta["changed_set_is_identical_to_issue168_audit"])
+        comparison = delta["issue168_comparison"]
+        self.assertFalse(comparison["sets_identical"])
+        self.assertEqual(comparison["files_in_campaign_delta_omitted_by_"
+                                   "issue168"], [])
+        self.assertTrue(
+            comparison["every_extra_file_byte_identical_at_both_endpoints"])
+        self.assertTrue(all(
+            comparison["per_file_blob_identity"].values()))
+        self.assertNotIn("identical set to the accepted #168 audit",
+                         delta["delta_statement"])
+
+    def test_cross_repo_provenance_proof_is_retained(self):
+        proof = load("cross-repo-provenance.json")
+        self.assertTrue(
+            proof["freetoken_repo"]["ancestry_proof"]["observed_exit_code"]
+            == 0)
+        self.assertEqual(
+            proof["freetoken_repo"]["ancestry_proof"]["commits_between"][
+                "observed"], 1)
+        self.assertFalse(
+            proof["freetoken_repo"]["resolvable_in_inferswarm"])
+        heads = load("authority.json")["starting_heads"]
+        self.assertEqual(heads["cross_repo_proof_retained_at"],
+                         "evidence/cross-repo-provenance.json")
+
+    def test_reconciliation_states_timing_honestly(self):
+        recon = load("current-main-reconciliation.json")
+        advance = recon["protected_head_advance"]
+        self.assertEqual(
+            advance["timing_relative_to_correctness_bearing_output"],
+            "after (corroborated by retained timestamps; no independent "
+            "witness retained)")
+        self.assertIn("timing_evidence", advance)
+        resolutions = recon["reconciliation"]["rebase_resolutions"]
+        conflicted = [r for r in resolutions if r["was_a_conflict"]]
+        self.assertEqual(len(conflicted), 1)
+        self.assertTrue(conflicted[0]["path"].endswith("ci_groups.json"))
+
+    def test_validation_record_matches_the_final_run(self):
+        validation = load("validation.json")
+        self.assertEqual(validation["inferSwarm_cpu_suite"]["result"], "OK")
+        self.assertEqual(validation["inferSwarm_cpu_suite"]["tests_run"], 2315)
+        self.assertTrue(
+            validation["freetoken_regression"]["pre_existing_failure"][
+                "proven_pre_existing"])
+
     def test_manifest_covers_evidence_tree(self):
         manifest = (EVIDENCE / "MANIFEST.sha256").read_text().splitlines()
         listed = {line.split("  ", 1)[1]

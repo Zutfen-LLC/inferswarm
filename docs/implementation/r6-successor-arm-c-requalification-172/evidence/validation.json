@@ -6,9 +6,9 @@
   "command": ".venv/bin/python -m unittest discover -s tests -p 'test_*.py'",
   "environment": "canonical CPU test venv (.venv, Python 3.12) bootstrapped by scripts/bootstrap_test_env.py; scripts/check_test_env.py doctor passed",
   "result": "OK",
-  "tests_run": 2226,
+  "tests_run": 2315,
   "skipped": 6,
-  "note": "2226 tests / OK on the pre-reconciliation branch line, and re-run to OK (2226 tests, 6 skipped) after rebasing onto current main 8aadbd6; the strengthened gate-mapping assertion in tests/test_plan_ci.py is included in the final run."
+  "note": "2226 tests / OK on the pre-reconciliation branch line; 2315 tests / OK (6 skipped) after rebasing onto current main 8aadbd6, where the larger count includes the Issue #35 modules added by PR #165. The final run also includes the strengthened gate-mapping assertion in tests/test_plan_ci.py."
  },
  "focused_and_predecessor_suite": {
   "modules": [

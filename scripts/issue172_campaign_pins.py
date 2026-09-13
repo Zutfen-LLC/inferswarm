@@ -73,6 +73,15 @@ AUTHORIZED_PARTICIPANT_IDENTITY = (
     "sha256:ee845188d3328bdec29bf4b09d71f7ccda0701ff5758cb1d8a70460a40fecfb1")
 AUTHORIZED_R5A_STATIC_PLAN_DIGEST = (
     "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625")
+#: the fence THIS campaign's physical run actually used, re-derived by the
+#: real-builder CPU dry run under producer 6202eee (retained in
+#: evidence/r5a-static-plan.json and recorded as plan_digest in every run)
+REQUALIFIED_R5A_STATIC_PLAN_DIGEST = (
+    "sha256:208be7956474a559756355c85142eb6716585f4c0320a27fe73d2f4196972c3e")
+#: accepted Issue #168 authority record, consumed for the delta comparison
+ISSUE168_AUTHORITY_RECORD = (
+    "docs/implementation/r6-successor-arm-c-requal-blocked-168/evidence/"
+    "authority-record.json")
 AUTHORIZED_ENVIRONMENT_CANONICAL_SHA256 = (
     "98c04387215915acf54a9ff769492e3f7cb7b0266d36649631a531a9b5edbf67")
 

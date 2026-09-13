@@ -51,13 +51,43 @@
         "tests/research/test_issue166_swa_remediation.py"
       ]
     },
-    "delta_statement": "the only execution-bearing runtime change in this campaign's producer lineage beyond the accepted Arm-C producer is the accepted #153 single-chunk policy and the accepted #166 session-SWA-lifecycle ownership (hashes bound here; identical set to the accepted #168 audit \u2014 no new delta exists between the #168-audited head and this campaign's head because they are the same FreeToken commit)",
+    "changed_set_is_identical_to_issue168_audit": false,
+    "delta_statement": "the only execution-bearing runtime change in this campaign's producer lineage beyond the accepted Arm-C producer (924cd22) is the accepted #153 single-chunk policy and the accepted #166 session-SWA-lifecycle ownership (hashes bound here). The changed set is exactly 'git diff --name-only 924cd22..6202eee': five execution-bearing files plus two test-only files. This campaign's head IS the #168-audited FreeToken commit, so no new delta exists between the #168-audited head and this campaign's head. NOTE: this campaign's execution-bearing set is NOT identical to the set named in the accepted #168 audit, which lists 12 files; the seven extra files (benchmarks/inferswarm_110/*, benchmarks/inferswarm_110b/*) are byte-identical at both endpoints, so the #168 set is the more conservative, over-inclusive one. The difference is enumerated and resolved in evidence/cross-repo-provenance.json rather than glossed as agreement.",
     "execution_bearing_sha256_at_head": {
       "benchmarks/inferswarm_r6/last_stage_service.py": "273c22187734ef674de25144fb9484fa965e5423e78de5d660dfb7481f3ff6b2",
       "benchmarks/inferswarm_r6/stage_chain.py": "42950431177783699bb6f677155925784970b08d7ddf6c8ea6486952477e8983",
       "benchmarks/inferswarm_r6/stage_runtime.py": "afe9ceb09208174d0da2905d4097009460d05bbe5050b0d15eaa2baa4e40ac73",
       "benchmarks/inferswarm_r6/two_stage.py": "3718d274be274aff1fd763d33d689a074115e9c10e7e37ff6239da3535df5d2b",
       "python/freetoken/research/prefill_partition.py": "841635bd42e2bf25954e3fbe6ec902fb79f3d33cca1a4f5b1e8a51383ab73c86"
+    },
+    "issue168_comparison": {
+      "campaign_execution_bearing_count": 5,
+      "detail": "evidence/cross-repo-provenance.json#execution_delta_proof.comparison_with_accepted_issue168_audit",
+      "direction_of_discrepancy": "issue168 over-inclusive; nothing that changed is omitted from either set",
+      "every_extra_file_byte_identical_at_both_endpoints": true,
+      "extra_files_named_by_issue168_that_did_not_change": [
+        "benchmarks/inferswarm_110/__init__.py",
+        "benchmarks/inferswarm_110/chain_runner.py",
+        "benchmarks/inferswarm_110/last_stage_service.py",
+        "benchmarks/inferswarm_110/reference_runner.py",
+        "benchmarks/inferswarm_110b/__init__.py",
+        "benchmarks/inferswarm_110b/chain_runner_holdout.py",
+        "benchmarks/inferswarm_110b/reference_runner_holdout.py"
+      ],
+      "files_in_campaign_delta_omitted_by_issue168": [],
+      "issue168_audit": "docs/implementation/r6-successor-arm-c-requal-blocked-168/evidence/authority-record.json",
+      "issue168_execution_bearing_count": 12,
+      "per_file_blob_identity": {
+        "benchmarks/inferswarm_110/__init__.py": true,
+        "benchmarks/inferswarm_110/chain_runner.py": true,
+        "benchmarks/inferswarm_110/last_stage_service.py": true,
+        "benchmarks/inferswarm_110/reference_runner.py": true,
+        "benchmarks/inferswarm_110b/__init__.py": true,
+        "benchmarks/inferswarm_110b/chain_runner_holdout.py": true,
+        "benchmarks/inferswarm_110b/reference_runner_holdout.py": true
+      },
+      "reproduce_with": "python3 scripts/issue172_authority.py --freetoken <FreeToken checkout> (function issue168_comparison); the comparison is computed, not authored",
+      "sets_identical": false
     },
     "producer_head": "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469",
     "stage_runtime_matches_166_remediation": true
@@ -75,7 +105,9 @@
     "chain_plan_digest": "sha256:a71a3129b8764d7108f51ed30fb230b42fcd69646a20bcd6806b6ee53b9bc51f",
     "environment_canonical_sha256": "98c04387215915acf54a9ff769492e3f7cb7b0266d36649631a531a9b5edbf67",
     "participant_identity": "sha256:ee845188d3328bdec29bf4b09d71f7ccda0701ff5758cb1d8a70460a40fecfb1",
-    "r5a_static_plan_digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625"
+    "r5a_fence_note": "both fences are bound explicitly: the accepted predecessor fence (a730405d) and the fence the physical run actually used under producer 6202eee (208be795, retained in evidence/r5a-static-plan.json and recorded as plan_digest in every physical run)",
+    "r5a_static_plan_digest_accepted_predecessor": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+    "r5a_static_plan_digest_requalified_campaign": "sha256:208be7956474a559756355c85142eb6716585f4c0320a27fe73d2f4196972c3e"
   },
   "pre_observation_state": {
     "h109_material_accessed": false,
@@ -89,6 +121,8 @@
       "freetoken_head_equals_expected": true,
       "inferswarm_head_equals_expected": true
     },
+    "ancestor_proofs_note": "FreeToken commits are not resolvable in the InferSwarm object database, so these booleans are not re-verifiable from this bundle alone; the underlying commands and their verbatim observed output are retained in evidence/cross-repo-provenance.json",
+    "cross_repo_proof_retained_at": "evidence/cross-repo-provenance.json",
     "expected_freetoken_inferswarm_research": "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469",
     "expected_inferswarm_main": "bce7fb3d8e54429972472933be66433b81ebcf8f",
     "freetoken_inferswarm_research": "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469",

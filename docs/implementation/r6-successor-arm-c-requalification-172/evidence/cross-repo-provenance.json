@@ -1,0 +1,120 @@
+{
+ "schema": "inferswarm/issue172-arm-c-requalification/cross-repo-provenance/1",
+ "campaign_id": "issue172-arm-c-requalification-v1",
+ "purpose": "Retained, re-derivable proof for every provenance claim the campaign authority record depends on. The FreeToken-side commits do not exist in the InferSwarm repository, so the commands and their verbatim output are retained here rather than asserted as booleans.",
+ "inferSwarm_repo": {
+  "repository": "Zutfen-LLC/inferswarm",
+  "starting_head": {
+   "commit": "bce7fb3d8e54429972472933be66433b81ebcf8f",
+   "committer_date": "2026-09-13 16:02:35 -0400",
+   "subject": "Merge pull request #171 from Zutfen-LLC/issue170-arm-c-long-remainder-corpus",
+   "resolvable_in_repo": true,
+   "ancestor_of_final_head": true
+  },
+  "current_main_at_reconciliation": {
+   "commit": "8aadbd6ea3c635741cc67fcc9d9ba1d1dd8d500a",
+   "committer_date": "2026-09-13 17:40:26 -0400",
+   "subject": "Merge pull request #165 from Zutfen-LLC/issue-35-x1-envelope",
+   "parents": [
+    "bce7fb3d8e54429972472933be66433b81ebcf8f",
+    "e38a309d30dd0f844f9bf8996ad4264f75bae8f2"
+   ],
+   "note": "The first parent is the campaign's starting head, so current main is a direct descendant of the frozen accepted head; the advance cannot have moved the campaign's own base out from under it."
+  },
+  "command": "git log -1 --format='%H %ad %s' --date=iso <commit>; git rev-parse <merge>^1 <merge>^2"
+ },
+ "freetoken_repo": {
+  "repository": "Zutfen-LLC/FreeToken",
+  "working_copy": "/home/zutfen/src/FreeToken",
+  "resolvable_in_inferswarm": false,
+  "why_not_in_inferswarm": "separate repository; the InferSwarm evidence bundle cannot re-verify these objects from its own object database, so the proof is retained here as command output",
+  "head": {
+   "commit": "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469",
+   "committer_date": "2026-09-13 14:19:44 -0400",
+   "subject": "Merge PR #34: lifecycle-owned SWA mapping for InferSwarm #166"
+  },
+  "implementation_content_head": {
+   "commit": "64a37a1f1a2797a190610c5adcdcb4157bce63b9",
+   "committer_date": "2026-09-13 13:49:32 -0400",
+   "subject": "Issue #117 Arm-C SWA remediation (InferSwarm #166): lifecycle-owned full->swa mapping in the standalone R6 stage runtime"
+  },
+  "ancestry_proof": {
+   "command": "git merge-base --is-ancestor 64a37a1f1a2797a190610c5adcdcb4157bce63b9 6202eeebcdf63e7bc8bb3498dd3c364ae42ee469; echo $?",
+   "observed_exit_code": 0,
+   "result": "64a37a1f IS an ancestor of 6202eee",
+   "commits_between": {
+    "command": "git rev-list --count 64a37a1f1a2797a190610c5adcdcb4157bce63b9..6202eeebcdf63e7bc8bb3498dd3c364ae42ee469",
+    "observed": 1
+   }
+  },
+  "resolution_proof": {
+   "command": "git rev-parse 6202eeebcdf63e7bc8bb3498dd3c364ae42ee469 64a37a1f1a2797a190610c5adcdcb4157bce63b9",
+   "observed": [
+    "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469",
+    "64a37a1f1a2797a190610c5adcdcb4157bce63b9"
+   ]
+  }
+ },
+ "execution_delta_proof": {
+  "accepted_arm_c_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "producer_head": "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469",
+  "command": "git diff --name-only 924cd22ea081f6d4ed471016faf01d427fc5b0d2..6202eeebcdf63e7bc8bb3498dd3c364ae42ee469",
+  "observed_full_diff": [
+   "benchmarks/inferswarm_r6/last_stage_service.py",
+   "benchmarks/inferswarm_r6/stage_chain.py",
+   "benchmarks/inferswarm_r6/stage_runtime.py",
+   "benchmarks/inferswarm_r6/two_stage.py",
+   "python/freetoken/research/prefill_partition.py",
+   "tests/research/test_issue117_arm_c_remediation.py",
+   "tests/research/test_issue166_swa_remediation.py"
+  ],
+  "classification": {
+   "execution_bearing": [
+    "benchmarks/inferswarm_r6/last_stage_service.py",
+    "benchmarks/inferswarm_r6/stage_chain.py",
+    "benchmarks/inferswarm_r6/stage_runtime.py",
+    "benchmarks/inferswarm_r6/two_stage.py",
+    "python/freetoken/research/prefill_partition.py"
+   ],
+   "test_only": [
+    "tests/research/test_issue117_arm_c_remediation.py",
+    "tests/research/test_issue166_swa_remediation.py"
+   ]
+  },
+  "comparison_with_accepted_issue168_audit": {
+   "issue168_audit": "docs/implementation/r6-successor-arm-c-requal-blocked-168/evidence/authority-record.json",
+   "issue168_execution_bearing_count": 12,
+   "campaign_execution_bearing_count": 5,
+   "difference": [
+    "benchmarks/inferswarm_110/__init__.py",
+    "benchmarks/inferswarm_110/chain_runner.py",
+    "benchmarks/inferswarm_110/last_stage_service.py",
+    "benchmarks/inferswarm_110/reference_runner.py",
+    "benchmarks/inferswarm_110b/__init__.py",
+    "benchmarks/inferswarm_110b/chain_runner_holdout.py",
+    "benchmarks/inferswarm_110b/reference_runner_holdout.py"
+   ],
+   "difference_resolution": "Each of these seven files is BYTE-IDENTICAL at both endpoints (same git blob at 924cd22 and at 6202eee, verified with 'git rev-parse <commit>:<path>'). The accepted #168 audit set is therefore over-inclusive for this comparison; this campaign's set is exactly 'git diff --name-only 924cd22..6202eee'. The two sets are NOT identical, and this record states the difference explicitly rather than claiming agreement.",
+   "risk_assessment": "The discrepancy is conservative in direction: the #168 audit named MORE files than actually changed, so no file that changed was omitted from either audit. No execution-bearing change is unaccounted for."
+  },
+  "no_model_math_or_tokenizer_delta": "Neither the execution-bearing nor the test-only set touches model math, tokenizer, geometry, planner, or comparator code. The only execution-bearing changes are the accepted Issue #153 single-chunk/prefill-partition policy and the accepted Issue #166 session-SWA-lifecycle ownership."
+ },
+ "plan_fence_identities": {
+  "note": "Two distinct r5a static-plan fences exist and both are bound here so the authority record alone identifies the fence the physical run used.",
+  "accepted_predecessor_fence": {
+   "digest": "sha256:a730405dab8bad2ee8c4eea9a4fb97b8ef53ea15415a4d904bf666d020cdc625",
+   "role": "accepted Issue #129/#133 r5a static-plan digest, consumed as the authorization fence inherited from the predecessor campaign"
+  },
+  "requalified_campaign_fence": {
+   "digest": "sha256:208be7956474a559756355c85142eb6716585f4c0320a27fe73d2f4196972c3e",
+   "role": "the fence THIS campaign's physical run actually used: re-derived by the real-builder CPU dry run under producer 6202eee",
+   "retained_at": "docs/implementation/r6-successor-arm-c-requalification-172/evidence/r5a-static-plan.json",
+   "also_recorded_as": "plan_digest in every physical direct-run record"
+  }
+ },
+ "non_claims": [
+  "Retaining command output does not make the claims stronger than the commands shown; a reader may re-run them.",
+  "The #168 comparison documents a discrepancy in an accepted record and does not repair that record.",
+  "No h109-* material was opened, generated, copied, inferred, reconstructed, decrypted, or used."
+ ]
+}
