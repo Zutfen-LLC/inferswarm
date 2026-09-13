@@ -1,0 +1,143 @@
+{
+  "bidirectional": {
+    "bytes_per_transfer": 67108864,
+    "count": 8,
+    "gbps_max": 0.427,
+    "gbps_median": 0.413,
+    "gbps_min": 0.395,
+    "time_ms_max": 169.702838,
+    "time_ms_median": 162.469821,
+    "time_ms_min": 157.114086,
+    "time_ms_p90": 168.541617
+  },
+  "link": {
+    "idle_pre_generation": 1,
+    "idle_pre_width": 1,
+    "max_capability": {
+      "generation": 4,
+      "width": 16
+    },
+    "negotiated_under_load": {
+      "generation": 1,
+      "sysfs_speed_label": "2.5 GT/s PCIe",
+      "width": 1
+    },
+    "sample_count": 403
+  },
+  "provenance": {
+    "label": "MEASURED",
+    "measured_utc": "2026-09-13T15:52:35Z",
+    "probe_binary_sha256": "2719aa4b1877cf14daaa5dc5795ada13bb9e62ca0ea6a86030d7606f4596e021",
+    "probe_source_sha256": "297c951b9177bb22ed937e065825f67fc40622be5a9bff113b71b0fc83b955b5",
+    "raw_schema": "inferswarm.issue35.transport-probe/1"
+  },
+  "schema": "inferswarm.issue35.transport-summary/1",
+  "small_transfer_service": {
+    "bytes_per_transfer": 4096,
+    "count": 200,
+    "gbps_max": 0.046,
+    "gbps_median": 0.034,
+    "gbps_min": 0.007,
+    "time_ms_max": 0.58693,
+    "time_ms_median": 0.120172,
+    "time_ms_min": 0.089218,
+    "time_ms_p90": 0.14929
+  },
+  "subject_identity": {
+    "device_name": "NVIDIA GeForce RTX 3060 Ti",
+    "name_match_index": 0,
+    "pci_bdf": "04:00.0",
+    "twin_binding": "identity-probe selector->BDF binding (raw-byte derived) plus isolated-workload link observation; substrate link class is pinned at its floor under load (see link-log)",
+    "vk_api_version": "1.4.351"
+  },
+  "sustained_transfers": {
+    "d2h_134217728": {
+      "bytes_per_transfer": 134217728,
+      "count": 8,
+      "gbps_max": 0.21,
+      "gbps_median": 0.21,
+      "gbps_min": 0.21,
+      "time_ms_max": 639.362215,
+      "time_ms_median": 639.271201,
+      "time_ms_min": 638.657965,
+      "time_ms_p90": 639.359111
+    },
+    "d2h_16777216": {
+      "bytes_per_transfer": 16777216,
+      "count": 8,
+      "gbps_max": 0.213,
+      "gbps_median": 0.213,
+      "gbps_min": 0.213,
+      "time_ms_max": 78.839569,
+      "time_ms_median": 78.776832,
+      "time_ms_min": 78.720144,
+      "time_ms_p90": 78.792547
+    },
+    "d2h_4194304": {
+      "bytes_per_transfer": 4194304,
+      "count": 8,
+      "gbps_max": 0.212,
+      "gbps_median": 0.212,
+      "gbps_min": 0.211,
+      "time_ms_max": 19.870402,
+      "time_ms_median": 19.809276,
+      "time_ms_min": 19.77416,
+      "time_ms_p90": 19.854914
+    },
+    "d2h_67108864": {
+      "bytes_per_transfer": 67108864,
+      "count": 8,
+      "gbps_max": 0.213,
+      "gbps_median": 0.213,
+      "gbps_min": 0.211,
+      "time_ms_max": 318.003104,
+      "time_ms_median": 314.564951,
+      "time_ms_min": 314.503352,
+      "time_ms_p90": 315.715523
+    },
+    "h2d_134217728": {
+      "bytes_per_transfer": 134217728,
+      "count": 8,
+      "gbps_max": 0.2,
+      "gbps_median": 0.2,
+      "gbps_min": 0.197,
+      "time_ms_max": 681.562742,
+      "time_ms_median": 671.892645,
+      "time_ms_min": 671.488607,
+      "time_ms_p90": 675.837262
+    },
+    "h2d_16777216": {
+      "bytes_per_transfer": 16777216,
+      "count": 8,
+      "gbps_max": 0.2,
+      "gbps_median": 0.2,
+      "gbps_min": 0.199,
+      "time_ms_max": 84.12427,
+      "time_ms_median": 84.089681,
+      "time_ms_min": 84.064178,
+      "time_ms_p90": 84.09771
+    },
+    "h2d_4194304": {
+      "bytes_per_transfer": 4194304,
+      "count": 8,
+      "gbps_max": 0.199,
+      "gbps_median": 0.198,
+      "gbps_min": 0.196,
+      "time_ms_max": 21.388302,
+      "time_ms_median": 21.131455,
+      "time_ms_min": 21.102212,
+      "time_ms_p90": 21.240978
+    },
+    "h2d_67108864": {
+      "bytes_per_transfer": 67108864,
+      "count": 8,
+      "gbps_max": 0.2,
+      "gbps_median": 0.2,
+      "gbps_min": 0.199,
+      "time_ms_max": 336.836098,
+      "time_ms_median": 335.887492,
+      "time_ms_min": 335.827191,
+      "time_ms_p90": 336.51178
+    }
+  }
+}

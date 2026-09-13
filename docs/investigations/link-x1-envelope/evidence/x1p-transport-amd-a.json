@@ -1,0 +1,143 @@
+{
+  "bidirectional": {
+    "bytes_per_transfer": 67108864,
+    "count": 8,
+    "gbps_max": 0.168,
+    "gbps_median": 0.167,
+    "gbps_min": 0.167,
+    "time_ms_max": 400.893427,
+    "time_ms_median": 400.751403,
+    "time_ms_min": 400.054936,
+    "time_ms_p90": 400.884185
+  },
+  "link": {
+    "idle_pre_generation": 1,
+    "idle_pre_width": 1,
+    "max_capability": {
+      "generation": 3,
+      "width": 16
+    },
+    "negotiated_under_load": {
+      "generation": 1,
+      "sysfs_speed_label": "2.5 GT/s PCIe",
+      "width": 1
+    },
+    "sample_count": 491
+  },
+  "provenance": {
+    "label": "MEASURED",
+    "measured_utc": "2026-09-13T15:51:55Z",
+    "probe_binary_sha256": "2719aa4b1877cf14daaa5dc5795ada13bb9e62ca0ea6a86030d7606f4596e021",
+    "probe_source_sha256": "297c951b9177bb22ed937e065825f67fc40622be5a9bff113b71b0fc83b955b5",
+    "raw_schema": "inferswarm.issue35.transport-probe/1"
+  },
+  "schema": "inferswarm.issue35.transport-summary/1",
+  "small_transfer_service": {
+    "bytes_per_transfer": 4096,
+    "count": 200,
+    "gbps_max": 0.038,
+    "gbps_median": 0.026,
+    "gbps_min": 0.001,
+    "time_ms_max": 5.433596,
+    "time_ms_median": 0.154734,
+    "time_ms_min": 0.107012,
+    "time_ms_p90": 0.22775
+  },
+  "subject_identity": {
+    "device_name": "AMD Radeon RX 580 Series (RADV POLARIS10)",
+    "name_match_index": 0,
+    "pci_bdf": "02:00.0",
+    "twin_binding": "identity-probe selector->BDF binding (raw-byte derived) plus isolated-workload link observation; substrate link class is pinned at its floor under load (see link-log)",
+    "vk_api_version": "1.4.305"
+  },
+  "sustained_transfers": {
+    "d2h_134217728": {
+      "bytes_per_transfer": 134217728,
+      "count": 8,
+      "gbps_max": 0.166,
+      "gbps_median": 0.166,
+      "gbps_min": 0.166,
+      "time_ms_max": 809.84635,
+      "time_ms_median": 809.448353,
+      "time_ms_min": 809.133277,
+      "time_ms_p90": 809.629263
+    },
+    "d2h_16777216": {
+      "bytes_per_transfer": 16777216,
+      "count": 8,
+      "gbps_max": 0.166,
+      "gbps_median": 0.166,
+      "gbps_min": 0.165,
+      "time_ms_max": 101.41875,
+      "time_ms_median": 101.045558,
+      "time_ms_min": 100.949403,
+      "time_ms_p90": 101.166519
+    },
+    "d2h_4194304": {
+      "bytes_per_transfer": 4194304,
+      "count": 8,
+      "gbps_max": 0.167,
+      "gbps_median": 0.167,
+      "gbps_min": 0.166,
+      "time_ms_max": 25.263607,
+      "time_ms_median": 25.190118,
+      "time_ms_min": 25.140989,
+      "time_ms_p90": 25.256494
+    },
+    "d2h_67108864": {
+      "bytes_per_transfer": 67108864,
+      "count": 8,
+      "gbps_max": 0.166,
+      "gbps_median": 0.166,
+      "gbps_min": 0.166,
+      "time_ms_max": 404.65252,
+      "time_ms_median": 404.516784,
+      "time_ms_min": 404.366366,
+      "time_ms_p90": 404.517989
+    },
+    "h2d_134217728": {
+      "bytes_per_transfer": 134217728,
+      "count": 8,
+      "gbps_max": 0.169,
+      "gbps_median": 0.169,
+      "gbps_min": 0.169,
+      "time_ms_max": 795.852481,
+      "time_ms_median": 795.809857,
+      "time_ms_min": 795.77202,
+      "time_ms_p90": 795.830941
+    },
+    "h2d_16777216": {
+      "bytes_per_transfer": 16777216,
+      "count": 8,
+      "gbps_max": 0.168,
+      "gbps_median": 0.168,
+      "gbps_min": 0.168,
+      "time_ms_max": 99.689711,
+      "time_ms_median": 99.655319,
+      "time_ms_min": 99.622811,
+      "time_ms_p90": 99.687068
+    },
+    "h2d_4194304": {
+      "bytes_per_transfer": 4194304,
+      "count": 8,
+      "gbps_max": 0.168,
+      "gbps_median": 0.168,
+      "gbps_min": 0.167,
+      "time_ms_max": 25.048649,
+      "time_ms_median": 25.023205,
+      "time_ms_min": 24.989294,
+      "time_ms_p90": 25.030576
+    },
+    "h2d_67108864": {
+      "bytes_per_transfer": 67108864,
+      "count": 8,
+      "gbps_max": 0.169,
+      "gbps_median": 0.169,
+      "gbps_min": 0.169,
+      "time_ms_max": 398.154352,
+      "time_ms_median": 398.088229,
+      "time_ms_min": 398.008985,
+      "time_ms_p90": 398.119346
+    }
+  }
+}
