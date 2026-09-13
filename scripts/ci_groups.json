@@ -131,7 +131,8 @@
     "test_v2a_authority",
     "test_v2a_harness",
     "test_v2a_evidence_manifest",
-    "test_v2a_discovery_authority_binding"
+    "test_v2a_discovery_authority_binding",
+    "test_v2a_discovery_authority_binding_r3"
    ]
   }
  },
@@ -711,10 +712,16 @@
   "scripts/v2a_authority_v2.py": [
    "vulkan-v0-b"
   ],
+  "scripts/v2a_authority_v3.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/v2a_discovery.py": [
    "vulkan-v0-b"
   ],
   "scripts/v2a_discovery_v2.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v2a_discovery_v3.py": [
    "vulkan-v0-b"
   ],
   "scripts/v2a_harness.py": [
@@ -802,6 +809,9 @@
    "vulkan-v0-b"
   ],
   "tests/test_v2a_discovery_authority_binding.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_v2a_discovery_authority_binding_r3.py": [
    "vulkan-v0-b"
   ],
   "tests/test_v2a_evidence_manifest.py": [

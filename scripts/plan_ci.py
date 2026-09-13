@@ -213,6 +213,7 @@ GROUP_TEST_MODULES = {
         "test_v2a_harness",
         "test_v2a_evidence_manifest",
         "test_v2a_discovery_authority_binding",
+        "test_v2a_discovery_authority_binding_r3",
     ],
     "phase1-analysis": [
         "test_analyze_phase1_p6",
@@ -484,6 +485,9 @@ PATH_GROUPS = {
     "tests/test_v2a_discovery_authority_binding.py": ["vulkan-v0-b"],
     "scripts/v2a_discovery_v2.py": ["vulkan-v0-b"],
     "scripts/v2a_authority_v2.py": ["vulkan-v0-b"],
+    "scripts/v2a_discovery_v3.py": ["vulkan-v0-b"],
+    "scripts/v2a_authority_v3.py": ["vulkan-v0-b"],
+    "tests/test_v2a_discovery_authority_binding_r3.py": ["vulkan-v0-b"],
     "tests/test_v0c_correctness.py": ["vulkan-v0-b"],
     "tests/test_v0c_evidence_manifest.py": ["vulkan-v0-b"],
     "tests/test_v0c_execution_seam.py": ["vulkan-v0-b"],

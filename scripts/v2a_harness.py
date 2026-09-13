@@ -45,8 +45,8 @@ import v1a_vulkan_adapter as adapter  # noqa: E402
 import v0c_correctness as v0c_correctness  # noqa: E402
 import v1c_accounting as accepted_accounting  # noqa: E402
 import v2a_authority as authority_contract  # noqa: E402
-import v2a_authority_v2 as authority_contract_v2  # noqa: E402
-import v2a_discovery_v2 as discovery_v2  # noqa: E402
+import v2a_authority_v3 as authority_contract_v3  # noqa: E402
+import v2a_discovery_v3 as discovery_v3  # noqa: E402
 
 
 class HarnessError(RuntimeError):
@@ -179,7 +179,8 @@ def replay_retained(retained_stderr: str, *, selector: str, expected_bdf: str,
 
 HARNESS_SOURCES = (
     "scripts/v2a_harness.py", "scripts/v2a_discovery.py", "scripts/v2a_discovery_v2.py",
-    "scripts/v2a_authority.py", "scripts/v2a_authority_v2.py", "scripts/v2a_manifest.py",
+    "scripts/v2a_discovery_v3.py", "scripts/v2a_authority.py", "scripts/v2a_authority_v2.py",
+    "scripts/v2a_authority_v3.py", "scripts/v2a_manifest.py",
 )
 
 
@@ -303,11 +304,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--capability")
     parser.add_argument("--plan")
     args = parser.parse_args(argv)
-    # Correctness-bearing campaign stages require the v2 reviewed-discovery
+    # Correctness-bearing campaign stages require the v3 reviewed-discovery
     # contract: the authority's selector/BDF pair must be mechanically BOUND
-    # to a digest-verified reviewed discovery artifact before any stage runs.
-    v2a = authority_contract_v2.load_authority_file(Path(args.authority), reference_root=ROOT,
-                                                    discovery_root=ROOT)
+    # to a digest-verified reviewed discovery artifact whose PHYSICAL
+    # INVENTORY measurement (not merely its review event) is fresh, and
+    # whose retained raw identity-probe bytes re-verify against the
+    # structured proof, before any stage runs. R2 authorities
+    # (campaign-authority/2) no longer authorize correctness-bearing runs.
+    v2a = authority_contract_v3.load_authority_file(Path(args.authority), reference_root=ROOT,
+                                                    discovery_root=ROOT, raw_root=ROOT)
     v1a_view = _v1a_view(v2a)
     out = Path(args.out)
     frozen = v2a["frozen"]
