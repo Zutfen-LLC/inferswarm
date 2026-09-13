@@ -74,7 +74,14 @@
   },
   "runtime_source": "/home/zutfen/.cache/v0c-llama.cpp",
   "runtime_source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
-  "selector": "Vulkan3"
+  "selector": "Vulkan3",
+  "v1a_sources": {
+   "scripts/v0c_canonical_run.py": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+   "scripts/v0c_correctness.py": "cbefc2ee9f21c90c20defbc89e9838603c65c9f6c94fa8f7363e8ccab77e6f5c",
+   "scripts/v1a_execution_participant.py": "f6c65a8de446a8980da56a42c35b58e7b58a5642ce1ed410283cf5e7a19c4ee9",
+   "scripts/v1a_runner.py": "c7b5b26ebb9d4eae651dab386326c9d234de1b3af7f0e5a4e553ee90bc21b3ed",
+   "scripts/v1a_vulkan_adapter.py": "a6167de9b43539dbcad00e9563abff2cdb3b9b19a328defe63d327aa6f7b9387"
+  }
  },
  "issue": "#163",
  "nonclaims": [
