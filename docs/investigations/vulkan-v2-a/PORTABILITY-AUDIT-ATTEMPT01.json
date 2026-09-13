@@ -1,0 +1,217 @@
+{
+ "audit_conclusion": "both fresh physical campaigns ran through the exact same reusable harness/source-freeze bytes; every difference between them is authority, runtime, or evidence data; the generic planner, accounting reducer, comparator, adapter sealing, and evidence lifecycle are shared semantics with no subject-specific branch",
+ "campaign_subjects": [
+  {
+   "campaign": "first",
+   "evidence_ids": {
+    "canonical_execution_evidence_id": "v2a-amd-a-canonical-01",
+    "qualification_evidence_id": "v2a-amd-a-qualification-01"
+   },
+   "subject": {
+    "compute_unit_id": "cu-amd-a",
+    "implementation_id": "impl-portable-amd-a",
+    "memory_resource_id": "mr-amd-a-vram",
+    "node_id": "node-inferswarm02",
+    "physical_device_bdf": "02:00.0",
+    "selector": "Vulkan1"
+   }
+  },
+  {
+   "campaign": "second",
+   "evidence_ids": {
+    "canonical_execution_evidence_id": "v2a-nv-a-canonical-01",
+    "qualification_evidence_id": "v2a-nv-a-qualification-01"
+   },
+   "subject": {
+    "compute_unit_id": "cu-nv-a",
+    "implementation_id": "impl-portable-nv-a",
+    "memory_resource_id": "mr-nv-a-vram",
+    "node_id": "node-inferswarm02",
+    "physical_device_bdf": "04:00.0",
+    "selector": "Vulkan3"
+   }
+  }
+ ],
+ "campaigns_compared": [
+  {
+   "accounting": {
+    "selected_resource": "Vulkan1",
+    "source_fetches_after_ready": 0,
+    "unexplained_persistent_host_mirror_bytes": 0,
+    "unplanned_state_movements": 0
+   },
+   "authority": "docs/investigations/vulkan-v2-a/AUTHORITY-AMD-A.json",
+   "byte_exact_visible_output": true,
+   "candidate_id": "candidate-abbefdc3a32ee808cc4b5f7a152a9df1ba24363eaed170809e074c2c2e952ad9",
+   "canonical_execution_evidence_id": "v2a-amd-a-canonical-01",
+   "canonical_proof_digest": "33e2a495f126dfb435e11f90e92c065d58818d87dc94420cc68e0d67c38b796d",
+   "canonical_record_digest": "2ec315b0db30c5ce90afce4ca2b188ad6ebfa692b9535a898ff42759e8e5b285",
+   "execution_receipt": {
+    "candidate_id": "candidate-abbefdc3a32ee808cc4b5f7a152a9df1ba24363eaed170809e074c2c2e952ad9",
+    "canonical_proof_digest": "33e2a495f126dfb435e11f90e92c065d58818d87dc94420cc68e0d67c38b796d",
+    "execution_contract_id": "contract-s2-opaque-v1",
+    "output_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d",
+    "plan_digest": "04099541dd9fd0c8c2e394fb56637c109a67ff8034210bcfdf58fd2b7c274e07"
+   },
+   "plan_digest": "04099541dd9fd0c8c2e394fb56637c109a67ff8034210bcfdf58fd2b7c274e07",
+   "qualification_evidence_id": "v2a-amd-a-qualification-01"
+  },
+  {
+   "accounting": {
+    "selected_resource": "Vulkan3",
+    "source_fetches_after_ready": 0,
+    "unexplained_persistent_host_mirror_bytes": 0,
+    "unplanned_state_movements": 0
+   },
+   "authority": "docs/investigations/vulkan-v2-a/AUTHORITY-NV-A.json",
+   "byte_exact_visible_output": true,
+   "candidate_id": "candidate-9ddccd891bd8466bbc6aa80042de0e30429ede2a765153b6a61367d5fbb2c330",
+   "canonical_execution_evidence_id": "v2a-nv-a-canonical-01",
+   "canonical_proof_digest": "dde1939c28923379911157fc4f71b88edc552c9f98127e9176d15eff2a36ca47",
+   "canonical_record_digest": "77533b202b8fe6a29f3f450787ad9b1a91a81238f9a845bdd64918d28f178c62",
+   "execution_receipt": {
+    "candidate_id": "candidate-9ddccd891bd8466bbc6aa80042de0e30429ede2a765153b6a61367d5fbb2c330",
+    "canonical_proof_digest": "dde1939c28923379911157fc4f71b88edc552c9f98127e9176d15eff2a36ca47",
+    "execution_contract_id": "contract-s2-opaque-v1",
+    "output_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d",
+    "plan_digest": "8ed139dbc24215ec0f3f0c4e4618d085c0805894045f879f800ac7ad450aea86"
+   },
+   "plan_digest": "8ed139dbc24215ec0f3f0c4e4618d085c0805894045f879f800ac7ad450aea86",
+   "qualification_evidence_id": "v2a-nv-a-qualification-01"
+  }
+ ],
+ "classifications": [
+  {
+   "aspect": "reusable harness source bytes identical across campaigns",
+   "classification": "REUSABLE_HARNESS_SEMANTICS_SHARED",
+   "evidence": {
+    "same_harness_hashes": true
+   }
+  },
+  {
+   "aspect": "subject/resource identity, selector, and evidence IDs",
+   "classification": "AUTHORITY_DATA_ONLY",
+   "evidence": {
+    "subjects": [
+     {
+      "campaign": "first",
+      "evidence_ids": {
+       "canonical_execution_evidence_id": "v2a-amd-a-canonical-01",
+       "qualification_evidence_id": "v2a-amd-a-qualification-01"
+      },
+      "subject": {
+       "compute_unit_id": "cu-amd-a",
+       "implementation_id": "impl-portable-amd-a",
+       "memory_resource_id": "mr-amd-a-vram",
+       "node_id": "node-inferswarm02",
+       "physical_device_bdf": "02:00.0",
+       "selector": "Vulkan1"
+      }
+     },
+     {
+      "campaign": "second",
+      "evidence_ids": {
+       "canonical_execution_evidence_id": "v2a-nv-a-canonical-01",
+       "qualification_evidence_id": "v2a-nv-a-qualification-01"
+      },
+      "subject": {
+       "compute_unit_id": "cu-nv-a",
+       "implementation_id": "impl-portable-nv-a",
+       "memory_resource_id": "mr-nv-a-vram",
+       "node_id": "node-inferswarm02",
+       "physical_device_bdf": "04:00.0",
+       "selector": "Vulkan3"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "aspect": "runtime/state facts (executable, model, driver/runtime identity)",
+   "classification": "BACKEND_RUNTIME_DATA_ONLY",
+   "evidence": {
+    "differences": [
+     {
+      "runtime_identity": {
+       "first": {
+        "binary_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+        "radv_target": "Mesa 25.0.7-2+deb13u1",
+        "selector": "Vulkan1",
+        "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+        "vulkan_loader": "1.4.309",
+        "vulkan_loader_remeasured": "vulkaninfo instance version 1.4.309 (libvulkan1 1.4.309.0-1)"
+       },
+       "second": {
+        "binary_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+        "nvidia_driver_version": "615.71.09",
+        "nvidia_icd_api_version": "1.4.351",
+        "nvidia_icd_library": "libGLX_nvidia.so.0",
+        "nvidia_icd_path": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+        "selector": "Vulkan3",
+        "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+        "vulkan_loader": "1.4.309",
+        "vulkan_loader_remeasured": "vulkaninfo instance version 1.4.309 (libvulkan1 1.4.309.0-1)"
+       }
+      }
+     },
+     {
+      "memory_bytes": {
+       "first": 8589934592,
+       "second": 8847884288
+      }
+     }
+    ]
+   }
+  },
+  {
+   "aspect": "qualification and canonical results (offload, exit, accounting, correctness)",
+   "classification": "REUSABLE_HARNESS_SEMANTICS_SHARED",
+   "evidence": {
+    "accounting_clean": true,
+    "both_campaigns_passed": true,
+    "byte_exact": true
+   }
+  }
+ ],
+ "foundational_invariant_falsified": false,
+ "harness_source_hashes": {
+  "scripts/v2a_authority.py": "f4d829bbeedaa95f3f7a653a540430c856d1d7232babb02c4557acd9de975f60",
+  "scripts/v2a_discovery.py": "c6dc992954ec42eed23e6a78bf781b221571305a7d186cf88643bf205fdbe2c1",
+  "scripts/v2a_harness.py": "e20a5f952e2c550e6d94e0c4f689c8c40fe156d8c84358dbeb7d23f8fcbce283",
+  "scripts/v2a_manifest.py": "645ed70db57d8865c5e6dd194ac21a6776ba005caee79f5f8c89b63ff0ac4d91"
+ },
+ "result": "PASS",
+ "runtime_data_differences": [
+  {
+   "runtime_identity": {
+    "first": {
+     "binary_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+     "radv_target": "Mesa 25.0.7-2+deb13u1",
+     "selector": "Vulkan1",
+     "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+     "vulkan_loader": "1.4.309",
+     "vulkan_loader_remeasured": "vulkaninfo instance version 1.4.309 (libvulkan1 1.4.309.0-1)"
+    },
+    "second": {
+     "binary_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+     "nvidia_driver_version": "615.71.09",
+     "nvidia_icd_api_version": "1.4.351",
+     "nvidia_icd_library": "libGLX_nvidia.so.0",
+     "nvidia_icd_path": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+     "selector": "Vulkan3",
+     "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+     "vulkan_loader": "1.4.309",
+     "vulkan_loader_remeasured": "vulkaninfo instance version 1.4.309 (libvulkan1 1.4.309.0-1)"
+    }
+   }
+  },
+  {
+   "memory_bytes": {
+    "first": 8589934592,
+    "second": 8847884288
+   }
+  }
+ ],
+ "schema": "inferswarm.v2a.portability-audit/1",
+ "subject_specific_code_required": false
+}

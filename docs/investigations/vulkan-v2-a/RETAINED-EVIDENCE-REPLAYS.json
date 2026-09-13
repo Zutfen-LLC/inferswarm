@@ -1,0 +1,49 @@
+{
+ "harness_sources": {
+  "scripts/v2a_authority.py": "f4d829bbeedaa95f3f7a653a540430c856d1d7232babb02c4557acd9de975f60",
+  "scripts/v2a_discovery.py": "c6dc992954ec42eed23e6a78bf781b221571305a7d186cf88643bf205fdbe2c1",
+  "scripts/v2a_harness.py": "e20a5f952e2c550e6d94e0c4f689c8c40fe156d8c84358dbeb7d23f8fcbce283",
+  "scripts/v2a_manifest.py": "645ed70db57d8865c5e6dd194ac21a6776ba005caee79f5f8c89b63ff0ac4d91"
+ },
+ "purpose": "retrospective replay of ACCEPTED retained raw evidence for BOTH proven subjects under the SAME reusable V2-A harness reduction path (no subject-specific harness code); NOT a fresh physical qualification",
+ "result": "PASS",
+ "schema": "inferswarm.v2a.retained-evidence-replays/1",
+ "subjects": {
+  "first_proven_subject": {
+   "authority_source": "docs/investigations/vulkan-v1-a/PHYSICAL-AUTHORITY.json frozen facts (consumed as data)",
+   "replay": {
+    "accounting_three_tuple": [
+     0,
+     0,
+     0
+    ],
+    "byte_exact_visible_output": true,
+    "full_offload": [
+     37,
+     37
+    ],
+    "result": "PASS",
+    "role": "retrospective retained-evidence replay; NOT a fresh physical PASS"
+   },
+   "retained_evidence": "docs/investigations/vulkan-v1-a/raw/v1a-amd-a-canonical-01 (accepted V1-A)"
+  },
+  "second_proven_subject": {
+   "authority_source": "docs/investigations/vulkan-v1-c/PHYSICAL-AUTHORITY.json frozen facts (consumed as data)",
+   "replay": {
+    "accounting_three_tuple": [
+     0,
+     0,
+     0
+    ],
+    "byte_exact_visible_output": true,
+    "full_offload": [
+     37,
+     37
+    ],
+    "result": "PASS",
+    "role": "retrospective retained-evidence replay; NOT a fresh physical PASS"
+   },
+   "retained_evidence": "docs/investigations/vulkan-v1-c/raw/v1c-nv-a-canonical-01 (accepted V1-C)"
+  }
+ }
+}

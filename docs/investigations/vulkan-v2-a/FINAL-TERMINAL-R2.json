@@ -1,0 +1,44 @@
+{
+ "attempt": "R2 \u2014 correction round 2 (maintainer NO-GO review 5190619330 corrected)",
+ "basis": {
+  "adversarial_cpu_controls": "15/15 attempt-01 controls + 23 R2 discovery/authority binding controls (tests/test_v2a_discovery_authority_binding.py)",
+  "amd_a_r2_campaign": {
+   "canonical": "v2a-amd-a-r2-canonical-01 PASS (exit 0, 0, accounting 0/0/0, byte-exact, sealed proof/observation/receipt)",
+   "canonical_proof_digest": "686c9734cfbbd786a886574b3bbe9fae22b51b7110118991b27fb25dd3f1cf83",
+   "canonical_record_digest": "bf2c378f98e4966345d25f8a4d95f4864b120ea288c0c3617bf1bc429ce07e7b",
+   "plan": "def10923c0cae4a01d9369da...: SELECTED_BY_OBJECTIVE from opaque facts",
+   "qualification": "v2a-amd-a-r2-qualification-01 PASS (37/37, no fallback, clean exit, adapter-sealed)"
+  },
+  "attempt01_disposition": "superseded for final terminal purposes (ATTEMPT01-SUPERSESSION.json); evidence retained byte-unchanged as diagnostic proof the execution harness works",
+  "authority_loader_rejects_self_authorization": true,
+  "both_fresh_physical_campaigns_pass": true,
+  "corrected_contract": "discover -> review/freeze authority is mechanically real: both R2 authorities (inferswarm.v2a.campaign-authority/2) bind their selector/BDF pair to digest-verified NON_AUTHORIZING reviewed discovery artifacts (DISCOVERY-INVENTORY.json + DISCOVERY-BINDINGS.json) with prospectively BOUND identity-proof digests; the loader rejects missing/drifted/stale/ambiguous/mismatched bindings (16 negative controls)",
+  "discovery_non_authorizing": true,
+  "historical_evidence_unchanged": "all V0/V1 namespaces byte-frozen; all historical manifest verifiers PASS",
+  "identical_name_ambiguity": "AMD twins resolved only by the explicit zero-token identity probe, never ordering; Vulkan1->02:00.0 mechanically proven prospectively",
+  "no_correctness_bearing_source_changes_after_freeze": true,
+  "no_public_api_or_default_backend_policy_frozen": true,
+  "nv_a_r2_campaign": {
+   "canonical": "v2a-nv-a-r2-canonical-01 PASS (exit 0, 0, accounting 0/0/0, byte-exact, sealed proof/observation/receipt)",
+   "canonical_proof_digest": "a5ef20cd5571614133a7b6a5fcadf5b7f69271f171ea48092f77b91d11d503de",
+   "canonical_record_digest": "9a1603b7c11cb0db47697cf176f7f8a2f8e063addc8bb82ec72e6e5841680dce",
+   "plan": "9b62649ce82a6cacab60cd43...: SELECTED_BY_OBJECTIVE from opaque facts",
+   "qualification": "v2a-nv-a-r2-qualification-01 PASS (37/37, no fallback, clean exit, adapter-sealed)"
+  },
+  "portability_audit": "PASS incl. discovery->authority layer: AUTHORITY_DATA_ONLY / BACKEND_RUNTIME_DATA_ONLY / REUSABLE_HARNESS_SEMANTICS_SHARED; no SUBJECT_SPECIFIC_CODE_REQUIRED; no foundational invariant falsified",
+  "retained_evidence_replays": "accepted AMD/V1-A and NV/V1-C transcripts both PASS under the same harness bytes (retrospective; accounting 0/0/0; byte-exact)",
+  "same_corrected_source_freeze": "74ae32ebe0ff3cfc1b3cbb772a79cf1b0f5019fa (CI Gate SUCCESS run 34757720473, exact head)"
+ },
+ "issue": "#163",
+ "nonclaims": [
+  "internal/research device qualification harness only",
+  "not a public plugin API",
+  "not production scheduler/backend support",
+  "not default/preferred-backend policy",
+  "no broad hardware/model qualification",
+  "no comparator recalibration",
+  "no Vulkan/CUDA numerical-equivalence claim"
+ ],
+ "schema": "inferswarm.v2a.terminal/1",
+ "terminal": "V2A_REUSABLE_DEVICE_QUALIFICATION_HARNESS_PASS"
+}
