@@ -57,7 +57,8 @@
     "test_issue133_physical_execution_retention",
     "test_issue153_arm_c_remediation",
     "test_issue166_swa_remediation_record",
-    "test_issue168_requal_blocked_record"
+    "test_issue168_requal_blocked_record",
+    "test_issue170_long_remainder_corpus"
    ]
   },
   "issue-137": {
@@ -206,6 +207,9 @@
   ],
   "docs/implementation/plan-driven-artifact-orchestration-101/": [
    "issue-99-103",
+   "issue-117-133"
+  ],
+  "docs/implementation/r6-successor-arm-c-long-remainder-corpus-170/": [
    "issue-117-133"
   ],
   "docs/implementation/r6-successor-arm-c-requal-blocked-168/": [
@@ -624,6 +628,21 @@
    "issue-117-133"
   ],
   "scripts/issue168_terminal_reduction.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue170_authority_record.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue170_corpus_methodology.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue170_corpus_producer.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue170_manifest.py": [
+   "issue-117-133"
+  ],
+  "scripts/issue170_terminal_reduction.py": [
    "issue-117-133"
   ],
   "scripts/issue35_coarse_concurrent.py": [

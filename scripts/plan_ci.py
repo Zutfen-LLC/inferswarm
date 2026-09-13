@@ -182,6 +182,7 @@ GROUP_TEST_MODULES = {
         "test_issue153_arm_c_remediation",
         "test_issue166_swa_remediation_record",
         "test_issue168_requal_blocked_record",
+        "test_issue170_long_remainder_corpus",
     ],
     "issue-137": [
         "test_issue137_regime4_diagnosis",
@@ -401,6 +402,15 @@ PATH_GROUPS = {
     "scripts/issue168_authority_record.py": ["issue-117-133"],
     "scripts/issue168_terminal_reduction.py": ["issue-117-133"],
     "scripts/issue168_manifest.py": ["issue-117-133"],
+    # Issue #170 Arm-C long-remainder public corpus freeze (CPU-only
+    # prospective corpus; tokenizer-bound producer + stdlib reducer).
+    "docs/implementation/r6-successor-arm-c-long-remainder-corpus-170/": [
+        "issue-117-133"],
+    "scripts/issue170_corpus_methodology.py": ["issue-117-133"],
+    "scripts/issue170_corpus_producer.py": ["issue-117-133"],
+    "scripts/issue170_authority_record.py": ["issue-117-133"],
+    "scripts/issue170_terminal_reduction.py": ["issue-117-133"],
+    "scripts/issue170_manifest.py": ["issue-117-133"],
     # Issue #137 retained evidence lives inside the #117 evidence tree;
     # the narrower #137 subtree fans out to both its semantic group and
     # the broader shared-tree lineage (the #117 prefix rule above also
