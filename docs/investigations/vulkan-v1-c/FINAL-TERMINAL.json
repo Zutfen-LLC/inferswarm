@@ -1,0 +1,25 @@
+{
+ "basis": {
+  "accepted_historical_evidence_immutable": true,
+  "accounting_three_tuple": "0/0/0 (unexplained_persistent_host_mirror_bytes / source_fetches_after_ready / unplanned_state_movements)",
+  "byte_exact_correctness": "PASS vs inherited frozen reference (visible sha 9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d)",
+  "cross_subject_audit": "PASS: selector is authority data; accepted generic semantics reused; GENERIC_ACCOUNTING_REFACTOR_ACCEPTED; no subject-specific code on the canonical reusable path; no foundational invariant falsified",
+  "fresh_canonical_execution": "v1c-nv-a-canonical-01 PASS: exit 0, 37/37 offload, intended Vulkan3/0000:04:00.0, no fallback",
+  "fresh_generic_plan": "1a9822071ed8b3c8...: NV-A SELECTED_BY_OBJECTIVE from opaque facts; AMD pressure EXCLUDED EVIDENCE_STALE with honest unfalsified economics",
+  "fresh_v1c_qualification": "v1c-nv-a-qualification-01 PASS (37/37, no fallback, clean exit, adapter-sealed; wall 14.737s)",
+  "no_public_api_or_default_backend_policy_frozen": true,
+  "proof_receipt_attribution": "canonical proof 6b9f896ea32e4149...; receipt output sha 9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d == visible response bytes; plan digest 1a9822071ed8b3c8...",
+  "repeatability": "inherited from accepted V1-B 3/3 stability sample (runtime/model/comparator semantics unchanged, explicitly recorded in the authority)",
+  "successor_accounting_reduces_retained_v1b": "Vulkan3 transcript reduced 0/0/0 from direct runtime evidence (retrospective)",
+  "successor_accounting_reproduces_v1a_semantics": "field-by-field identical AND byte-identical canonical JSON over shared facts vs accepted accounting.json (RETAINED-TRANSCRIPT-REGRESSIONS.json)",
+  "v1b_terminal_unchanged": "V1B_SECOND_SUBJECT_REFACTOR_REQUIRED retained verbatim in docs/investigations/vulkan-v1-b/"
+ },
+ "issue": "#161",
+ "producer_source_hashes": {
+  "scripts/v1c_accounting.py": "8268862e58c14358f42b5b7f702e09a329860d1a9cf1376799f664fe5015275b",
+  "scripts/v1c_manifest.py": "ea7912f088e43936e6a31dd7200d6814c15a826a0b7c58c3dad81f637c8c6a55",
+  "scripts/v1c_runner.py": "cd3863375dd077f2277ffa52c93b2e653ba838b196ccaca9f1766a2194734cbe"
+ },
+ "schema": "inferswarm.v1c.terminal/1",
+ "terminal": "V1C_CROSS_SUBJECT_PORTABILITY_PASS"
+}

@@ -1,0 +1,202 @@
+{
+ "accepted_source_pins": {
+  "scripts/v0c_canonical_run.py": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+  "scripts/v0c_correctness.py": "cbefc2ee9f21c90c20defbc89e9838603c65c9f6c94fa8f7363e8ccab77e6f5c",
+  "scripts/v1a_execution_participant.py": "f6c65a8de446a8980da56a42c35b58e7b58a5642ce1ed410283cf5e7a19c4ee9",
+  "scripts/v1a_runner.py": "c7b5b26ebb9d4eae651dab386326c9d234de1b3af7f0e5a4e553ee90bc21b3ed",
+  "scripts/v1a_vulkan_adapter.py": "a6167de9b43539dbcad00e9563abff2cdb3b9b19a328defe63d327aa6f7b9387"
+ },
+ "authority_state": "prospective prephysical authority frozen before any V1-B correctness-bearing physical output on the second subject",
+ "capability_completion": {
+  "integrity_status": "QUALIFIED",
+  "representations": [
+   "gguf-q4-k-m"
+  ],
+  "required_features": [
+   "compute"
+  ]
+ },
+ "evidence_ids": {
+  "capability_record": "v1b-nv-a-capability-01",
+  "canonical_attempt_reduction": "v1b-nv-a-canonical-01",
+  "canonical_execution": "v1b-nv-a-canonical-01",
+  "frozen_plan": "v1b-nv-a-plan-01",
+  "qualification": "v1b-nv-a-qualification-01",
+  "resource_snapshot_candidate_set": "v1b-nv-a-plan-01",
+  "stability_sample": "v1b-nv-a-stability-01..03"
+ },
+ "frozen": {
+  "canonical_execution_evidence_id": "v1b-nv-a-canonical-01",
+  "compute_unit_id": "cu-nv-a",
+  "correctness_policy": "v0c-byte-exact-visible-output-v2",
+  "executable": "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+  "executable_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+  "execution_contract_id": "contract-s2-opaque-v1",
+  "execution_unit_id": "unit-q4km-whole-model",
+  "hostname": "inferswarm02",
+  "implementation_id": "impl-portable-nv-a",
+  "logical_state_id": "qwen2.5-3b-instruct-q4-k-m-whole-model",
+  "memory_bytes": 8847884288,
+  "memory_resource_id": "mr-nv-a-vram",
+  "model": "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+  "model_bytes": 1929903264,
+  "model_sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
+  "node_id": "node-inferswarm02",
+  "objective": "MIN_OBJECTIVE_VALUE",
+  "physical_device_bdf": "04:00.0",
+  "prompt": "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+  "qualification_evidence_id": "v1b-nv-a-qualification-01",
+  "reference_output": "docs/investigations/vulkan-v1-b/reference-visible-output.txt",
+  "required_features": [
+   "compute"
+  ],
+  "required_headroom_bytes": 536870912,
+  "required_integrity_status": "QUALIFIED",
+  "required_memory_bytes": 3254091776,
+  "required_representation": "gguf-q4-k-m",
+  "runtime_identity": {
+   "binary_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+   "nvidia_icd_api_version": "1.4.351",
+   "nvidia_icd_library": "libGLX_nvidia.so.0",
+   "nvidia_icd_path": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+   "selector": "Vulkan3",
+   "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+   "vulkan_loader": "1.4.309"
+  },
+  "runtime_source": "/home/zutfen/.cache/v0c-llama.cpp",
+  "runtime_source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+  "selector": "Vulkan3",
+  "v1a_sources": {
+   "scripts/v0c_canonical_run.py": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+   "scripts/v0c_correctness.py": "cbefc2ee9f21c90c20defbc89e9838603c65c9f6c94fa8f7363e8ccab77e6f5c",
+   "scripts/v1a_execution_participant.py": "f6c65a8de446a8980da56a42c35b58e7b58a5642ce1ed410283cf5e7a19c4ee9",
+   "scripts/v1a_runner.py": "c7b5b26ebb9d4eae651dab386326c9d234de1b3af7f0e5a4e553ee90bc21b3ed",
+   "scripts/v1a_vulkan_adapter.py": "a6167de9b43539dbcad00e9563abff2cdb3b9b19a328defe63d327aa6f7b9387"
+  }
+ },
+ "generic_execution_identity": {
+  "correctness_policy": "v0c-byte-exact-visible-output-v2",
+  "execution_contract_id": "contract-s2-opaque-v1",
+  "execution_unit_id": "unit-q4km-whole-model",
+  "implementation_id": "impl-portable-nv-a",
+  "integrity_policy": "required_integrity_status=QUALIFIED",
+  "logical_state_id": "qwen2.5-3b-instruct-q4-k-m-whole-model",
+  "memory_resource_bytes": 8847884288,
+  "objective": "MIN_OBJECTIVE_VALUE",
+  "required_features": [
+   "compute"
+  ],
+  "required_headroom_bytes": 536870912,
+  "required_integrity_status": "QUALIFIED",
+  "required_memory_bytes": 3254091776,
+  "required_representation": "gguf-q4-k-m",
+  "runtime_identity": {
+   "binary_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+   "nvidia_icd_api_version": "1.4.351",
+   "nvidia_icd_library": "libGLX_nvidia.so.0",
+   "nvidia_icd_path": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+   "selector": "Vulkan3",
+   "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+   "vulkan_loader": "1.4.309"
+  }
+ },
+ "issue": "#158",
+ "nonclaims": [
+  "reusable internal seam second-subject reproduction only",
+  "not production Vulkan support",
+  "not a public plugin API",
+  "not default/preferred-backend policy",
+  "no broad hardware/model qualification",
+  "no comparator recalibration, no new tolerance",
+  "no Vulkan/CUDA numerical-equivalence claim",
+  "accepted NV Vulkan vs CUDA generated-output difference is not reinterpreted",
+  "SSH is not used; the proving node is local to the executing session"
+ ],
+ "physical_identity": {
+  "compute_unit_id": "cu-nv-a",
+  "device_local_vram_capacity_bytes": 8847884288,
+  "device_local_vram_capacity_basis": "llama.cpp Vulkan device enumeration reports 8438 MiB total for the selected NV-A device",
+  "driver_runtime_identity": "Vulkan loader 1.4.309; NVIDIA ICD (libGLX_nvidia.so.0, api 1.4.351); NVIDIA driver 615.71.09 (nvidia-smi); Vulkan3 selector",
+  "gpu_name": "NVIDIA GA104 GeForce RTX 3060 Ti LHR",
+  "gpu_pci_id": "10de:2489",
+  "hostname": "inferswarm02",
+  "memory_resource_id": "mr-nv-a-vram",
+  "node_id": "node-inferswarm02",
+  "ontology_pressure_resource": {
+   "capabilities": [
+    {
+     "bound_compute_unit_id": "cu-amd-a",
+     "bound_execution_unit_id": "unit-q4km-whole-model",
+     "bound_memory_resource_id": "mr-amd-a-vram",
+     "bound_node_id": "node-inferswarm02",
+     "economics": {
+      "objective_value": 28.59
+     },
+     "evidence_fresh": false,
+     "evidence_id": "v1a-amd-a-qualification-01",
+     "execution_contract_id": "contract-s2-opaque-v1",
+     "implementation_id": "impl-portable-amd-a",
+     "integrity_status": "QUALIFIED",
+     "physical_device_bdf": "02:00.0",
+     "qualification_digest": "3243bd9b2a2791a8739b6eb028d7cd329df00c6fca357f5fa3e58bbc05d53973",
+     "qualification_evidence_id": "v1a-amd-a-qualification-01",
+     "representations": [
+      "gguf-q4-k-m"
+     ],
+     "required_features": [
+      "compute"
+     ],
+     "runtime_identity": {
+      "binary_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+      "radv_target": "Mesa 25.0.7-2+deb13u1",
+      "selector": "Vulkan1",
+      "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c"
+     }
+    }
+   ],
+   "compute_unit_id": "cu-amd-a",
+   "memory_resource": {
+    "bytes": 8589934592,
+    "memory_resource_id": "mr-amd-a-vram"
+   },
+   "node_id": "node-inferswarm02",
+   "physical_device_bdf": "02:00.0",
+   "pressure_note": "the accepted V1-A first-subject AMD/Vulkan capability retained verbatim as a separate ontology/planning-pressure record: same opaque execution contract, honest measured V1-A qualification economics (28.59 s wall), real accepted qualification digest. Its evidence belongs to the accepted V1-A campaign and was NOT re-qualified under this V1-B authority, so evidence_fresh is false; the generic planner must therefore exclude it EVIDENCE_STALE without any vendor/selector special case, and its economics are never falsified to force the NV-A selection"
+  }
+ },
+ "predecessors": {
+  "accepted_main_at_start": "95a0a036f40d56e3047308466f6909b1f86f2d1b",
+  "v0a_nv_vk_correctness_evidence": "docs/investigations/vulkan-v0-a/correctness/correction-cor-nvavk-01/run.json",
+  "v1a_authority": "docs/investigations/vulkan-v1-a/PHYSICAL-AUTHORITY.json",
+  "v1a_final_authority_commit": "f21bb33a398505d6beb0d4d5a1a1466cfe5d8a57",
+  "v1a_source_freeze_commit": "2a468cf4438240b510239ff649e7c3e98483e0cd",
+  "v1a_terminal": "V1A_REUSABLE_VULKAN_PARTICIPANT_PASS"
+ },
+ "runtime_model": {
+  "llama_cli_path": "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+  "llama_cli_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+  "llama_cpp_source": "/home/zutfen/.cache/v0c-llama.cpp",
+  "llama_cpp_source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+  "model_bytes": 1929903264,
+  "model_path": "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+  "model_sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
+  "rebuild_note": "the accepted V0-C/V1-A binary, source commit, model bytes, prompt, representation, and sampling configuration are reused exactly; no new binary is required for the second subject"
+ },
+ "schema": "inferswarm.v1b.physical-authority/1",
+ "source_freeze": {
+  "accepted_participant_sha256": "f6c65a8de446a8980da56a42c35b58e7b58a5642ce1ed410283cf5e7a19c4ee9",
+  "accepted_runner_sha256": "c7b5b26ebb9d4eae651dab386326c9d234de1b3af7f0e5a4e553ee90bc21b3ed",
+  "accepted_vulkan_adapter_sha256": "a6167de9b43539dbcad00e9563abff2cdb3b9b19a328defe63d327aa6f7b9387",
+  "accounting_reducer_sha256": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+  "correctness_reducer_sha256": "cbefc2ee9f21c90c20defbc89e9838603c65c9f6c94fa8f7363e8ccab77e6f5c",
+  "manifest_producer_placeholder": "filled at manifest generation from the committed producer bytes",
+  "no_accepted_source_modified_to_fit_nv_a": true
+ },
+ "stability_contract": {
+  "comparator": "accepted v0c byte-exact visible-output comparator, unchanged; frozen before first V1-B execution",
+  "evidence_id_prefix": "v1b-nv-a",
+  "judgment": "each execution must prove clean exit, intended device (Vulkan3/0000:04:00.0), complete offload, no fallback, and byte-exact visible output against the frozen reference",
+  "sample_size": 3,
+  "sample_scope": "three fresh deterministic executions under this frozen authority; the qualification execution is not counted toward the sample (independent fresh executions), so five total V1-B executions are prospectively authorized (1 qualification + 3 stability + 1 canonical)"
+ }
+}
