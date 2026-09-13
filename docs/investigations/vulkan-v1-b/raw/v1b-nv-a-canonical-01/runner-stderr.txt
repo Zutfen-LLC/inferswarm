@@ -1,0 +1,14 @@
+Traceback (most recent call last):
+  File "/home/zutfen/inferswarm/scripts/v1a_runner.py", line 332, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/home/zutfen/inferswarm/scripts/v1a_runner.py", line 312, in main
+    result = execute_canonical(authority, plan, measured, out)
+  File "/home/zutfen/inferswarm/scripts/v1a_runner.py", line 243, in execute_canonical
+    accounting = v0c_runner.parse_accounting(run["stderr"])
+  File "/home/zutfen/inferswarm/scripts/v0c_canonical_run.py", line 83, in parse_accounting
+    model, model_lines = _line_values(stderr, "Vulkan1 model buffer size")
+                         ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/zutfen/inferswarm/scripts/v0c_canonical_run.py", line 54, in _line_values
+    raise AccountingError(f"missing or ambiguous direct accounting line: {label}")
+v0c_canonical_run.AccountingError: missing or ambiguous direct accounting line: Vulkan1 model buffer size
