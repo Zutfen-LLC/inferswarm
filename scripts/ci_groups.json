@@ -55,7 +55,8 @@
     "test_issue133_gate_tooling_drift",
     "test_issue133_prelaunch_bootstrap",
     "test_issue133_physical_execution_retention",
-    "test_issue153_arm_c_remediation"
+    "test_issue153_arm_c_remediation",
+    "test_issue166_swa_remediation_record"
    ]
   },
   "issue-137": {
@@ -204,6 +205,9 @@
   ],
   "docs/implementation/plan-driven-artifact-orchestration-101/": [
    "issue-99-103",
+   "issue-117-133"
+  ],
+  "docs/implementation/r6-successor-arm-c-swa-remediation-166/": [
    "issue-117-133"
   ],
   "docs/implementation/r6-successor-dense-full-integration-117/": [
