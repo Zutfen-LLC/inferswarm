@@ -1,6 +1,6 @@
 # LINK-X1 — minimum viable PCIe interconnect envelope for local participants
 
-Status: campaign complete on `inferswarm02` (Issue #35); terminal `X1_PARTICIPANT_ONLY_CAPACITY_USEFUL` (re-derived after the correction round), recorded in draft PR #165 pending maintainer review. Additive investigation namespace; no prior
+Status: campaign complete on `inferswarm02` (Issue #35); terminal `X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED` (re-derived from the issue's terminal definitions by `issue35_envelope.derive_terminal`; see `UTILITY-ENVELOPE.json` schema /3, `STATUS.json`, and `CORRECTION-REPORT.json`), recorded in draft PR #165 pending maintainer review. Additive investigation namespace; no prior
 namespace is modified. Campaign host: `inferswarm02` (local session; SSH not
 used).
 
@@ -109,7 +109,7 @@ the accepted frozen reference where declared):
 | single NV-A control | 89.95 | 37/37 | yes | (control) |
 | adverse layer split | 55.95 | 37/37 | yes | THROUGHPUT_POSITIVE vs AMD anchor (1.26x); 0.62x vs NV anchor |
 | coarse split + batch np=4 (RETRACTED as coarse evidence) | 52.35 (single request) | 37/37 | n/a | DIAGNOSTIC ONLY: one completion in retained stdout; -np 4 provisioned 4 idle-capable slots; invalid as four-sequence evidence (see CORRECTION-REPORT.json) |
-| corrected coarse: 4 concurrent requests, two-subject split | 34.52 aggregate (5.24 cold / 63.79 steady) | 37/37 | every request byte-exact | NOT_USEFUL_FOR_TESTED_ROLE vs matched control (0.55x) |
+| corrected coarse: 4 concurrent requests, two-subject split | per-attempt 5.239 / 63.794 (highly dispersed; median 34.52 recorded but NOT representative steady-state) | 37/37 | every request byte-exact | NOT_USEFUL_FOR_TESTED_ROLE vs matched control: attempt 1 decisively below control (0.084x); attempt 2 ~1.02x, inside the ±5% neutral band; no attempt beyond the band; no separate capacity benefit |
 | corrected coarse control: 4 concurrent requests, single subject | 62.47 aggregate | 37/37 | every request byte-exact | (matched control) |
 | capacity 14B two-subject | 21.3 | 49/49 | n/a | THROUGHPUT_POSITIVE, decisive capacity (vs 0.2 t/s paging control, ~106x) |
 | capacity 14B single control | 0.2 | 49/49 nominal, 417.66 MiB CPU-mapped | n/a | paging-dominated control |
@@ -132,11 +132,20 @@ load), a narrow-link participant is:
   link alone;
 - **not useful for genuinely concurrent coarse serving**: under a corrected
   workload of four concurrent requests with a matched four-request control,
-  the two-subject split delivers 0.55x the single-subject aggregate
-  throughput (34.52 vs 62.47 t/s median). The previously reported 52.35 t/s
-  "batch" was a single llama-cli interaction with four idle-capable slots
-  (one completion in the retained stdout) and is retracted as coarse
-  evidence;
+  the two-subject split arm is highly dispersed across its two retained
+  attempts (5.239 then 63.794 t/s aggregate) while the control is stable
+  (62.542/62.396). The first attempt is decisively below the control
+  (0.084x) and shows a first-attempt initialization/cold-state effect
+  whose causal attribution is not established by this issue; the second is
+  approximately 1.02x the stable control, inside the declared ±5% neutral
+  band; no retained attempt demonstrates improvement beyond the band and
+  the role contributes no separate capacity benefit, so the role is
+  NOT_USEFUL_FOR_TESTED_ROLE on those per-attempt states. The 34.52 t/s
+  median of the two separated attempts is recorded per the frozen stop
+  rules but is not presented as representative steady-state performance.
+  The previously reported 52.35 t/s "batch" was a single llama-cli
+  interaction with four idle-capable slots (one completion in the
+  retained stdout) and is retracted as coarse evidence;
 - **dominated for fine-grained fan-out from a strong anchor** under current
   supported semantics; and the finer-grained tensor-split shape is not
   supported at all on these backends (fails closed, control R0).
@@ -148,5 +157,24 @@ service rate for the execution-unit class; and the anchor-relative
 throughput ratio. Recorded in `UTILITY-ENVELOPE.json`; wider links (x4/x8)
 remain later comparison points, not prerequisites.
 
-Terminal: `X1_PARTICIPANT_ONLY_CAPACITY_USEFUL` (re-derived from the
-corrected evidence; see `STATUS.json` and `CORRECTION-REPORT.json`).
+Terminal: `X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED` — derived
+by `issue35_envelope.derive_terminal` from the effective classifications
+and marginal facts (machine-carried in `UTILITY-ENVELOPE.json` schema /3;
+`issue35_envelope.validate_terminal` enforces the issue's terminal
+definitions fail-closed). The issue permits
+`X1_PARTICIPANT_ONLY_CAPACITY_USEFUL` only when the bounded tested roles
+establish real capacity utility but no throughput-neutral/positive
+serving role under current supported semantics; the retained
+`x1p-role-adverse` serving role is THROUGHPUT_POSITIVE (1.26x vs the
+weaker anchor), so that terminal is not available. The measured envelope
+distinguishes capacity-only versus throughput-useful placements — decisive
+capacity/residency utility; conditional single-sequence throughput utility
+depending on anchor compute strength; no demonstrated benefit for the
+corrected four-concurrent-request coarse role; unsupported finer
+row/tensor split on this substrate; and device/backend compute rate as an
+explicit crossover input rather than an x1/vendor special case.
+ENVELOPE_ESTABLISHED does not require every tested throughput role to be
+positive. The observed campaign measured the actual negotiated Gen1 x1
+substrate; the result is about that tested substrate (honest lower-bound
+link evidence), and Gen3/x4/x8 comparison points remain future work, not
+silent generalizations.

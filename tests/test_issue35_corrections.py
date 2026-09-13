@@ -329,12 +329,12 @@ class R0EnvelopeInclusionTests(unittest.TestCase):
         if not path.is_file():
             self.skipTest("corrected envelope not yet generated")
         doc = json.loads(path.read_text("utf-8"))
-        if doc.get("schema") != "inferswarm.issue35.utility-envelope/2":
-            # schema /1 bytes are the pre-correction envelope, pinned
+        if doc.get("schema") != "inferswarm.issue35.utility-envelope/3":
+            # older-schema bytes are pre-correction envelopes, pinned
             # byte-identical at the intermediate manifest rungs by
-            # design; the corrected /2 envelope is generated at the
+            # design; the corrected envelope is generated at the
             # terminal rung after the corrected evidence exists.
-            self.skipTest("envelope still at pre-correction schema /1")
+            self.skipTest("envelope still at a pre-correction schema")
         by_id = {c["role_id"]: c for c in doc["classifications"]}
         self.assertIn("x1p-role-adverse-rowsplit-unsupported", by_id)
         self.assertEqual(
@@ -442,6 +442,272 @@ class SourceAuditTests(unittest.TestCase):
             for rel in self.MODULES:
                 self.assertNotIn(token, (ROOT / rel).read_text("utf-8"),
                                  rel)
+
+
+class TerminalConsistencyTests(unittest.TestCase):
+    """Terminal semantics regression coverage (terminal-semantics round).
+
+    The issue's own terminal definitions, enforced mechanically:
+    X1_PARTICIPANT_ONLY_CAPACITY_USEFUL is permitted ONLY when the
+    bounded tested roles establish real capacity utility but NO
+    throughput-neutral/positive serving role under current supported
+    semantics. The retained Issue #35 evidence contains a supported
+    THROUGHPUT_POSITIVE serving role, so that terminal must fail
+    validation, and the retained evidence must derive the
+    envelope-established terminal.
+    """
+
+    # The effective classification set of the retained Issue #35
+    # evidence (from UTILITY-ENVELOPE.json, minus the superseded
+    # single-request coarse diagnostic).
+    EFFECTIVE = [
+        {"role_id": "x1p-role-adverse",
+         "classification": "THROUGHPUT_POSITIVE",
+         "capacity_positive": False,
+         "throughput_ratio_vs_control": 1.2601},
+        {"role_id": "x1p-role-capacity",
+         "classification": "THROUGHPUT_POSITIVE",
+         "capacity_positive": True,
+         "throughput_ratio_vs_control": 106.5},
+        {"role_id": "x1p-role-adverse-rowsplit-unsupported",
+         "classification": "NOT_USEFUL_FOR_TESTED_ROLE"},
+        {"role_id": "x1p-coarse4-split",
+         "classification": "NOT_USEFUL_FOR_TESTED_ROLE",
+         "workload_shape": "4 concurrent requests vs 4 concurrent "
+                           "requests"},
+    ]
+    MARGINAL = {
+        "x1p-role-adverse": {
+            "adding_peer_to_subject": {"ratio": 1.2601,
+                                       "vs_control_median_tps": 44.4},
+            "adding_subject_to_peer": {"ratio": 0.622,
+                                       "vs_control_median_tps": 89.95},
+        },
+    }
+
+    def test_capacity_only_terminal_fails_with_serving_role(self):
+        # Regression 1: declaring CAPACITY_ONLY while retained
+        # supported serving-role evidence contains a throughput-positive
+        # role is a mechanical contradiction and must fail validation.
+        with self.assertRaises(envelope.EnvelopeError) as ctx:
+            envelope.validate_terminal(
+                "X1_PARTICIPANT_ONLY_CAPACITY_USEFUL", self.EFFECTIVE)
+        self.assertIn("not permitted", str(ctx.exception))
+        self.assertIn("x1p-role-adverse", str(ctx.exception))
+
+    def test_retained_evidence_derives_required_terminal(self):
+        # Regression 2: the current Issue #35 evidence derives exactly
+        # the terminal required by the issue's terminal definitions.
+        derived = envelope.derive_terminal(
+            self.EFFECTIVE, marginal_views=self.MARGINAL)
+        self.assertEqual(
+            derived["value"],
+            "X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED")
+        # and the retained artifacts agree with the derivation
+        status = json.loads((BUNDLE / "STATUS.json").read_text("utf-8"))
+        self.assertEqual(status["terminal"], derived["value"])
+        doc = json.loads((BUNDLE / "UTILITY-ENVELOPE.json").read_text(
+            "utf-8"))
+        self.assertEqual(doc["terminal"]["value"], derived["value"])
+        envelope.validate_terminal(status["terminal"], self.EFFECTIVE)
+
+    def test_terminal_is_derived_not_manual(self):
+        # Regression 3: the terminal derivation must consume
+        # classifications/marginal facts; the generated envelope
+        # carries the machine derivation, and STATUS must agree with
+        # it (a manually independent STATUS string that contradicts
+        # the classifications fails validate_terminal).
+        doc = json.loads((BUNDLE / "UTILITY-ENVELOPE.json").read_text(
+            "utf-8"))
+        self.assertEqual(doc["terminal"]["label"], "CALCULATED")
+        # rebuilding from the same retained evidence reproduces it
+        rebuilt = envelope.build_envelope(BUNDLE)
+        self.assertEqual(rebuilt["terminal"], doc["terminal"])
+        # a STATUS drift the classifications do not support fails closed
+        with self.assertRaises(envelope.EnvelopeError):
+            envelope.validate_terminal(
+                "X1_PARTICIPANT_ONLY_CAPACITY_USEFUL",
+                rebuilt["classifications"])
+
+    def test_capacity_only_still_available_when_no_serving_role(self):
+        # The definition cuts both ways: capacity utility with NO
+        # throughput-neutral/positive serving role DOES derive
+        # CAPACITY_ONLY (guard against over-correction).
+        classes = [
+            {"role_id": "cap", "classification":
+             "CAPACITY_POSITIVE_THROUGHPUT_NEGATIVE",
+             "capacity_positive": True},
+            {"role_id": "other", "classification":
+             "NOT_USEFUL_FOR_TESTED_ROLE"},
+        ]
+        derived = envelope.derive_terminal(classes)
+        self.assertEqual(derived["value"],
+                         "X1_PARTICIPANT_ONLY_CAPACITY_USEFUL")
+        envelope.validate_terminal("X1_PARTICIPANT_ONLY_CAPACITY_USEFUL",
+                                   classes)
+
+    def test_unresolved_effective_role_is_insufficient(self):
+        classes = [{"role_id": "open",
+                    "classification": "EVIDENCE_INSUFFICIENT"}]
+        derived = envelope.derive_terminal(classes)
+        self.assertEqual(derived["value"], "X1_EVIDENCE_INSUFFICIENT")
+
+    def test_superseded_diagnostic_does_not_force_insufficient(self):
+        # The retained -np 4 single-request diagnostic is superseded by
+        # the corrected concurrent arm; it must not hold the terminal
+        # hostage to EVIDENCE_INSUFFICIENT.
+        with_superseded = self.EFFECTIVE + [
+            {"role_id": "x1p-role-coarse",
+             "classification": "EVIDENCE_INSUFFICIENT",
+             "superseded_by": "x1p-coarse4-split"},
+        ]
+        derived = envelope.derive_terminal(with_superseded)
+        self.assertEqual(
+            derived["value"],
+            "X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED")
+
+
+class CoarseDistributionHonestyTests(unittest.TestCase):
+    """Coarse-role uncertainty language, enforced mechanically."""
+
+    def _retained_arm(self):
+        return json.loads((BUNDLE / "evidence" / "x1p-coarse4-split.json")
+                          .read_text("utf-8"))
+
+    def _retained_control(self):
+        return json.loads((BUNDLE / "evidence" / "x1p-coarse4-single.json")
+                          .read_text("utf-8"))
+
+    def test_classification_retains_attempt_distribution(self):
+        # Regression 4: the corrected coarse interpretation retains and
+        # reports the measured attempt distribution.
+        out = envelope.classify_concurrent_arm(
+            self._retained_arm(), self._retained_control())
+        self.assertEqual([p["arm_rate"] for p in out["per_attempt_states"]],
+                         [5.239, 63.794])
+        self.assertEqual(out["attempt_dispersion"]["arm_max_over_min"],
+                         12.1768)
+        self.assertTrue(out["attempt_dispersion"]["arm_highly_dispersed"])
+        self.assertTrue(out["attempt_dispersion"]["control_stable"])
+        self.assertEqual(out["classification"], "NOT_USEFUL_FOR_TESTED_ROLE")
+        # generated artifact carries the same distribution
+        doc = json.loads((BUNDLE / "UTILITY-ENVELOPE.json").read_text(
+            "utf-8"))
+        coarse = [c for c in doc["classifications"]
+                  if c["role_id"] == "x1p-coarse4-split"][0]
+        self.assertEqual(coarse["per_attempt_states"],
+                         out["per_attempt_states"])
+
+    def test_dispersed_median_not_summarized_as_steady_state(self):
+        # Regression 5: a highly dispersed two-attempt distribution must
+        # not be summarized as though its median were a stable
+        # steady-state measurement.
+        out = envelope.classify_concurrent_arm(
+            self._retained_arm(), self._retained_control())
+        self.assertFalse(out["median_is_steady_state"])
+        self.assertIn("NOT", out["steady_state_note"])
+        self.assertIn("NOT", out["basis"].replace("not", "NOT")
+                      .replace("Not", "NOT"))
+        # the stable control arm, by contrast, may use its median
+        stable_arm = {
+            "arm_id": "stable-arm",
+            "all_attempts_all_correct": True,
+            "aggregate_throughput_tokens_per_s": {
+                "values": [100.0, 101.0], "median": 100.5,
+                "label": "CALCULATED"},
+        }
+        stable_ctrl = {
+            "arm_id": "stable-ctrl",
+            "aggregate_throughput_tokens_per_s": {
+                "values": [100.0, 100.0], "median": 100.0},
+        }
+        stable_out = envelope.classify_concurrent_arm(stable_arm,
+                                                      stable_ctrl)
+        self.assertTrue(stable_out["median_is_steady_state"])
+
+    def test_classification_does_not_rest_on_median_ratio(self):
+        # The median ratio (0.5525) is recorded but explicitly marked
+        # as not carrying the classification; the per-attempt states
+        # do (first decisively below, second inside the ±5% band, none
+        # beyond the band, no separate capacity benefit).
+        out = envelope.classify_concurrent_arm(
+            self._retained_arm(), self._retained_control())
+        self.assertEqual(out["throughput_ratio_vs_control"], 0.5525)
+        self.assertIn("does not carry the classification", out["basis"])
+        self.assertIn("no retained attempt demonstrates throughput "
+                      "improvement beyond the neutral band", out["basis"])
+        self.assertIn("no separate capacity benefit", out["basis"])
+
+    def test_stable_negative_arm_still_classifies_not_useful(self):
+        # A STABLE arm below the control keeps the classic
+        # NOT_USEFUL_FOR_TESTED_ROLE result via its median (the
+        # distribution-honesty correction must not flip conclusions).
+        arm = {
+            "arm_id": "a",
+            "all_attempts_all_correct": True,
+            "aggregate_throughput_tokens_per_s": {
+                "values": [50.0, 50.4], "median": 50.2,
+                "label": "CALCULATED"},
+        }
+        ctrl = {
+            "arm_id": "c",
+            "aggregate_throughput_tokens_per_s": {
+                "values": [100.0, 100.1], "median": 100.05},
+        }
+        out = envelope.classify_concurrent_arm(arm, ctrl)
+        self.assertEqual(out["classification"], "NOT_USEFUL_FOR_TESTED_ROLE")
+        self.assertTrue(out["median_is_steady_state"])
+
+    def test_no_unproven_causal_labels_in_derived_evidence(self):
+        # Regression 6: unproven causal labels (pipeline compile, etc.)
+        # must not enter authoritative derived evidence unless backed
+        # by explicit retained evidence. The retained raw stderr
+        # demonstrates no compile mechanism (verified below), so the
+        # derived artifacts must not attribute attempt 1 to one.
+        # Historical defect DESCRIPTIONS in the correction report may
+        # quote the removed language; interpretation fields may not.
+        forbidden = ("pipeline compile", "cold-compile", "cold compile",
+                     "shader compile", "compilation on the split path")
+        envelope_doc = json.loads(
+            (BUNDLE / "UTILITY-ENVELOPE.json").read_text("utf-8"))
+        coarse = [c for c in envelope_doc["classifications"]
+                  if c["role_id"] == "x1p-coarse4-split"][0]
+        self.assertIn("causal attribution is not established",
+                      coarse["basis"])
+        for token in forbidden:
+            self.assertNotIn(token, coarse["basis"])
+        report = json.loads(
+            (BUNDLE / "CORRECTION-REPORT.json").read_text("utf-8"))
+        arm = report["corrections"]["coarse_role"]["arms"][
+            "x1p-coarse4-split"]
+        self.assertIn("NOT established", arm["cold_start_note"])
+        self.assertIn("NOT presented as representative steady-state",
+                      arm["cold_start_note"])
+        for token in forbidden:
+            self.assertNotIn(token, arm["cold_start_note"])
+            self.assertNotIn(token,
+                             report["corrections"]["coarse_role"][
+                                 "classification_basis"])
+            self.assertNotIn(token,
+                             report["corrections"]["coarse_role"][
+                                 "matched_comparison"])
+        status = json.loads((BUNDLE / "STATUS.json").read_text("utf-8"))
+        for token in forbidden:
+            self.assertNotIn(token, status["facts"]["coarse_corrected"])
+        self.assertIn("causal attribution is NOT established",
+                      status["facts"]["coarse_corrected"])
+        # the retained raw evidence genuinely contains no compile
+        # mechanism for the cold attempt (both attempts carry the same
+        # 'pipeline parallelism enabled' line and nothing else)
+        for attempt in ("attempt-01", "attempt-02"):
+            stderr = (BUNDLE / "raw" / "x1p-coarse4-split" / attempt /
+                      "server-stderr.txt").read_text("utf-8", "replace")
+            compile_lines = [
+                ln for ln in stderr.splitlines()
+                if "compil" in ln.lower()
+                and "parallelism" not in ln.lower()
+            ]
+            self.assertEqual(compile_lines, [], attempt)
 
 
 if __name__ == "__main__":

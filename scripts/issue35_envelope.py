@@ -46,6 +46,33 @@ NOT_USEFUL_FOR_TESTED_ROLE (fail-closed controls are first-class
 classifications, not omissions). Roles without a matched control or
 without a throughput reduction classify EVIDENCE_INSUFFICIENT.
 
+Coarse-concurrent classification — CORRECTED (terminal-semantics
+round): the classification consumes the per-attempt DISTRIBUTION,
+never a median alone. With two highly separated attempts the median
+is not a steady-state measurement and must not be presented as one;
+the basis is the per-attempt states against the matched control, the
+median ratio is retained only because the frozen stop rules record
+it, and NO causal mechanism (e.g. pipeline compilation) is asserted
+for a cold first attempt unless it is demonstrated by retained
+evidence.
+
+Terminal derivation — CORRECTED (terminal-semantics round): the
+campaign terminal is DERIVED from the classifications and marginal
+facts by ``derive_terminal`` (and checkable by ``validate_terminal``),
+never a manually maintained status string. The issue's own terminal
+definitions are implemented mechanically:
+
+* X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED — utility is
+  characterized across the declared roles well enough to distinguish
+  capacity-only versus throughput-useful placements and define
+  measured requirements for future resource economics. This does NOT
+  require every tested throughput role to be positive.
+* X1_PARTICIPANT_ONLY_CAPACITY_USEFUL — only when the bounded tested
+  roles establish real capacity utility but NO throughput-neutral or
+  throughput-positive serving role under current supported semantics.
+  A retained THROUGHPUT_POSITIVE (or capacity-positive
+  throughput-neutral) supported serving role FORBIDS this terminal.
+
 Fail-closed: missing inputs raise ``EnvelopeError``; nothing defaults.
 """
 from __future__ import annotations
@@ -56,8 +83,14 @@ from pathlib import Path
 
 import issue35_residency_facts
 
-SCHEMA = "inferswarm.issue35.utility-envelope/2"
+SCHEMA = "inferswarm.issue35.utility-envelope/3"
 NEUTRAL_BAND = 0.05
+
+TERMINAL_ENVELOPE_ESTABLISHED = (
+    "X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED")
+TERMINAL_CAPACITY_ONLY = "X1_PARTICIPANT_ONLY_CAPACITY_USEFUL"
+TERMINAL_NOT_USEFUL = "X1_PARTICIPANT_NOT_USEFUL_ON_TESTED_SUBSTRATE"
+TERMINAL_INSUFFICIENT = "X1_EVIDENCE_INSUFFICIENT"
 
 TAXONOMY = (
     "CAPACITY_POSITIVE_THROUGHPUT_NEGATIVE",
@@ -201,13 +234,50 @@ def transfer_cost_per_token(transport: dict, bytes_per_token: float) -> dict:
     }
 
 
+def dispersion_ratio(values: list[float]) -> float:
+    """CALCULATED: max/min separation of an attempt-value list.
+
+    A two-attempt arm whose values differ by an order of magnitude is
+    highly dispersed; its median is not a steady-state measurement.
+    """
+    if not values:
+        raise EnvelopeError("no attempt values retained")
+    lo, hi = min(values), max(values)
+    if lo <= 0:
+        raise EnvelopeError(f"non-positive attempt value: {values}")
+    return hi / lo
+
+
 def classify_concurrent_arm(arm: dict, control: dict) -> dict:
     """Classify the corrected concurrent coarse arm against its
-    workload-matched concurrent control on aggregate throughput."""
-    arm_rate = arm["aggregate_throughput_tokens_per_s"]["median"]
-    control_rate = control["aggregate_throughput_tokens_per_s"]["median"]
-    ratio = arm_rate / control_rate
-    if not arm["all_attempts_all_correct"]:
+    workload-matched concurrent control.
+
+    CORRECTED (terminal-semantics round): the classification consumes
+    the per-attempt DISTRIBUTION, never the median alone. The retained
+    split arm has two highly separated attempts (large first-versus-
+    second-attempt dispersion) while the matched control is stable, so
+    the median of the split arm is not presented as representative
+    steady-state performance and the classification does not rest on
+    the unstable median ratio. The reasoning recorded in the basis is:
+
+    * every retained per-attempt state is compared against the stable
+      control state: an attempt inside the neutral band demonstrates
+      no improvement beyond the band, and an attempt decisively below
+      the control demonstrates degradation;
+    * no retained attempt demonstrates throughput improvement beyond
+      the declared neutral band;
+    * the role contributes no separate capacity benefit in this
+      workload (capacity_positive is False on measured facts);
+    therefore NOT_USEFUL_FOR_TESTED_ROLE. The per-attempt ratios and
+    the dispersion are recorded; the median ratio is retained only
+    because the frozen stop rules record medians, and is explicitly
+    NOT treated as a stable steady-state ratio. No causal mechanism
+    (e.g. pipeline compilation) is asserted for the cold first
+    attempt unless demonstrated by retained evidence (none is).
+    """
+    arm_dist = arm["aggregate_throughput_tokens_per_s"]
+    control_dist = control["aggregate_throughput_tokens_per_s"]
+    if not arm.get("all_attempts_all_correct"):
         return {
             "role_id": arm["arm_id"],
             "classification": "EVIDENCE_INSUFFICIENT",
@@ -215,27 +285,319 @@ def classify_concurrent_arm(arm: dict, control: dict) -> dict:
                      "reference semantics",
             "label": "MEASURED",
         }
-    if ratio > 1.0 + NEUTRAL_BAND:
+    control_values = control_dist["values"]
+    control_rate = control_dist["median"]
+    # The control's own per-attempt values anchor the comparison: use
+    # each retained control attempt as the matched state.
+    arm_values = arm_dist["values"]
+
+    # Per-attempt ratios: every arm attempt against every control
+    # attempt would overcount; pair them in retained order (the freeze
+    # fixes attempt counts per arm), else against the control median.
+    per_attempt = []
+    for i, value in enumerate(arm_values):
+        matched_control = (control_values[i]
+                           if i < len(control_values) else control_rate)
+        per_attempt.append({
+            "attempt": i + 1,
+            "arm_rate": value,
+            "control_rate": matched_control,
+            "ratio_vs_control_attempt": round(value / matched_control, 4),
+        })
+    ratios = [p["ratio_vs_control_attempt"] for p in per_attempt]
+    arm_dispersion = dispersion_ratio(arm_values)
+    control_dispersion = dispersion_ratio(control_values)
+    highly_dispersed = arm_dispersion > 1.0 + NEUTRAL_BAND
+    control_stable = control_dispersion <= 1.0 + NEUTRAL_BAND
+
+    # State-based reasoning. A stable arm (attempts agree within the
+    # band) is characterized by its median as before. A highly
+    # dispersed arm cannot be characterized by its median at all; the
+    # retained per-attempt states carry the classification:
+    #   * no retained attempt improves beyond the neutral band ->
+    #     NOT_USEFUL_FOR_TESTED_ROLE (no demonstrated benefit; any
+    #     decisively-below attempt is recorded as degradation);
+    #   * every retained attempt improves beyond the band ->
+    #     THROUGHPUT_POSITIVE (improvement in every retained state);
+    #   * mixed states -> EVIDENCE_INSUFFICIENT for a steady-state
+    #     characterization (the distribution does not establish one;
+    #     no third run is mandated by the frozen stop rules).
+    median_ratio = arm_dist["median"] / control_rate
+    if not highly_dispersed:
+        if median_ratio > 1.0 + NEUTRAL_BAND:
+            classification = "THROUGHPUT_POSITIVE"
+        else:
+            # Inside or below the band with no separate capacity
+            # contribution: no measured benefit justifies the added
+            # participation for this role shape.
+            classification = "NOT_USEFUL_FOR_TESTED_ROLE"
+    elif not any(r > 1.0 + NEUTRAL_BAND for r in ratios):
+        classification = "NOT_USEFUL_FOR_TESTED_ROLE"
+    elif all(r > 1.0 + NEUTRAL_BAND for r in ratios):
         classification = "THROUGHPUT_POSITIVE"
-    elif ratio < 1.0 - NEUTRAL_BAND:
-        classification = "NOT_USEFUL_FOR_TESTED_ROLE"
     else:
-        classification = "NOT_USEFUL_FOR_TESTED_ROLE"
-    basis = (f"aggregate concurrent throughput ratio {ratio:.3f} "
-             f"({arm_rate} vs {control_rate} tokens/s aggregate, "
-             "CALCULATED from measured aggregate tokens / aggregate wall "
-             "seconds, 4 concurrent matched requests per arm)")
+        classification = "EVIDENCE_INSUFFICIENT"
+    def state_words(p):
+        r = p["ratio_vs_control_attempt"]
+        if r < 1.0 - NEUTRAL_BAND:
+            return (f"attempt {p['attempt']}: {p['arm_rate']} vs control "
+                    f"{p['control_rate']} t/s ({r}x, decisively below "
+                    f"the control)")
+        if r > 1.0 + NEUTRAL_BAND:
+            return (f"attempt {p['attempt']}: {p['arm_rate']} vs control "
+                    f"{p['control_rate']} t/s ({r}x, above the neutral "
+                    f"band)")
+        return (f"attempt {p['attempt']}: {p['arm_rate']} vs control "
+                f"{p['control_rate']} t/s ({r}x, inside the declared "
+                f"±{int(NEUTRAL_BAND * 100)}% neutral band)")
+
+    states = "; ".join(state_words(p) for p in per_attempt)
+    if classification == "NOT_USEFUL_FOR_TESTED_ROLE":
+        state_basis = (
+            f"no retained attempt demonstrates throughput improvement "
+            f"beyond the neutral band"
+            + ("; " + states if states else "")
+            + f"; the role contributes no separate capacity benefit in "
+              f"this workload")
+    elif classification == "THROUGHPUT_POSITIVE":
+        state_basis = (
+            f"every retained attempt improves beyond the neutral band "
+            f"({states}); the first-attempt states are NOT attributed to "
+            f"any causal mechanism without retained evidence")
+    else:
+        state_basis = (
+            f"the retained states are mixed ({states}); the distribution "
+            f"does not establish a steady-state characterization")
+    basis = (
+        f"genuinely concurrent four-request workload matched in both "
+        f"arms; per-attempt aggregate states: {states}. "
+        + (f"The retained split-arm distribution is highly dispersed "
+           f"(max/min {arm_dispersion:.3f}) while the matched control "
+           f"is stable (max/min {control_dispersion:.3f}), so the "
+           f"attempt median ratio {median_ratio:.4f} is recorded per "
+           f"the frozen stop rules but is NOT representative "
+           f"steady-state performance and does not carry the "
+           f"classification. " if highly_dispersed else
+           f"The arm attempts agree within the neutral band "
+           f"(max/min {arm_dispersion:.3f}); median ratio "
+           f"{median_ratio:.4f}. ")
+        + f"Mechanical basis: {state_basis}. "
+        + (f"A first-attempt initialization/cold-state effect is "
+           f"observed (large first-versus-second-attempt dispersion); "
+           f"causal attribution is not established by this issue (no "
+           f"retained evidence demonstrates a specific mechanism). "
+           if highly_dispersed and per_attempt
+           and per_attempt[0]["arm_rate"] == min(arm_values) else "")
+        + f"Classification: {classification}.")
     return {
         "role_id": arm["arm_id"],
         "classification": classification,
-        "throughput_ratio_vs_control": round(ratio, 4),
-        "role_rate": arm_rate,
+        "throughput_ratio_vs_control": round(median_ratio, 4),
+        "role_rate": arm_dist["median"],
         "control_rate": control_rate,
+        "per_attempt_states": per_attempt,
+        "attempt_dispersion": {
+            "arm_max_over_min": round(arm_dispersion, 4),
+            "control_max_over_min": round(control_dispersion, 4),
+            "arm_highly_dispersed": highly_dispersed,
+            "control_stable": control_stable,
+        },
+        "median_is_steady_state": not highly_dispersed,
+        "steady_state_note": (
+            "median of two highly separated attempts; NOT "
+            "representative steady-state performance"
+            if highly_dispersed else
+            "attempts agree within the neutral band"),
         "workload_shape": "4 concurrent requests vs 4 concurrent requests",
         "capacity_positive": False,
         "basis": basis,
         "label": "CALCULATED",
     }
+
+
+def derive_terminal(classifications: list[dict],
+                    marginal_views: dict | None = None,
+                    link_vs_device: dict | None = None) -> dict:
+    """CALCULATED: derive the campaign terminal from the retained
+    classifications and marginal facts, per the issue's own terminal
+    definitions — never a manually maintained status string.
+
+    * X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED — utility is
+      characterized across the declared roles well enough to
+      distinguish capacity-only versus throughput-useful placements
+      and define measured requirements for future resource economics.
+      This does NOT require every tested throughput role to be
+      positive.
+    * X1_PARTICIPANT_ONLY_CAPACITY_USEFUL — only when the bounded
+      tested roles establish real capacity utility but NO
+      throughput-neutral/positive serving role under current
+      supported semantics.
+    * X1_PARTICIPANT_NOT_USEFUL_ON_TESTED_SUBSTRATE — no capacity
+      utility and no throughput-useful supported role.
+    * X1_EVIDENCE_INSUFFICIENT — an effective (non-superseded) role
+      still lacks sufficient evidence.
+
+    ``classifications`` must be the EFFECTIVE set: superseded
+    diagnostics retained for honesty (their insufficiency resolved by
+    a corrected arm, not left open) are excluded by the caller.
+    """
+    if not classifications:
+        raise EnvelopeError("no classifications retained")
+    # Superseded diagnostics (retained for honesty, their insufficiency
+    # resolved by a corrected arm) are excluded HERE, mechanically —
+    # the derivation must not depend on the caller pre-filtering.
+    effective = [c for c in classifications if not c.get("superseded_by")]
+    if not effective:
+        raise EnvelopeError("no effective classifications retained")
+    by_class: dict[str, list[dict]] = {}
+    for entry in effective:
+        by_class.setdefault(entry["classification"], []).append(entry)
+
+    unresolved = by_class.get("EVIDENCE_INSUFFICIENT", [])
+    if unresolved:
+        return {
+            "value": TERMINAL_INSUFFICIENT,
+            "label": "CALCULATED",
+            "basis": ("effective roles without sufficient evidence: "
+                      + ", ".join(sorted(c["role_id"] for c in unresolved))),
+        }
+
+    capacity_roles = [c for c in effective if c.get("capacity_positive")]
+    serving_roles = [c for c in effective
+                     if c["classification"] in ("THROUGHPUT_POSITIVE",
+                                                "CAPACITY_POSITIVE_"
+                                                "THROUGHPUT_NEUTRAL")]
+    not_useful = by_class.get("NOT_USEFUL_FOR_TESTED_ROLE", [])
+
+    capacity_real = bool(capacity_roles)
+    serving_real = bool(serving_roles)
+
+    if capacity_real and serving_real:
+        # The measured envelope distinguishes capacity-only versus
+        # throughput-useful placements (both axes characterized with
+        # matched evidence) and carries the measured requirements
+        # (transport facts; anchor-relative crossover input).
+        distinctions = []
+        distinctions.append(
+            "decisive capacity/residency utility on measured memory-fit "
+            "facts ("
+            + "; ".join(f"{c['role_id']} ratio "
+                        f"{c.get('throughput_ratio_vs_control')} vs the "
+                        f"pressured control"
+                        for c in capacity_roles) + ")")
+        if marginal_views:
+            for role_id, views in marginal_views.items():
+                if isinstance(views, dict) and "adding_peer_to_subject" in views \
+                        and "adding_subject_to_peer" in views:
+                    distinctions.append(
+                        f"conditional single-sequence throughput utility "
+                        f"depending on anchor compute strength "
+                        f"({role_id}: {views['adding_peer_to_subject']['ratio']}x "
+                        f"adding the stronger participant to the weaker "
+                        f"anchor vs "
+                        f"{views['adding_subject_to_peer']['ratio']}x adding "
+                        f"the weaker participant to the stronger anchor)")
+        for entry in not_useful:
+            if entry.get("workload_shape") == ("4 concurrent requests vs "
+                                               "4 concurrent requests"):
+                distinctions.append(
+                    "no demonstrated benefit for the corrected "
+                    "four-concurrent-request coarse role ("
+                    + entry.get("steady_state_note", "per-attempt states "
+                                "retained") + ")")
+            else:
+                distinctions.append(
+                    f"unsupported finer split shape on this substrate "
+                    f"({entry['role_id']}: fails closed under current "
+                    f"supported semantics)")
+        if link_vs_device and "single_subject_compute" in link_vs_device:
+            compute = link_vs_device["single_subject_compute"]
+            distinctions.append(
+                "device/backend compute rate as an explicit crossover "
+                "input (device-local ratio "
+                f"{compute.get('device_local_ratio_nv_over_amd')}), not an "
+                "x1/vendor special case")
+        return {
+            "value": TERMINAL_ENVELOPE_ESTABLISHED,
+            "label": "CALCULATED",
+            "basis": ("utility characterized across the declared roles "
+                      "well enough to distinguish capacity-only versus "
+                      "throughput-useful placements; the measured "
+                      "envelope distinguishes: "
+                      + "; ".join(distinctions)
+                      + ". ENVELOPE_ESTABLISHED does not require every "
+                        "tested throughput role to be positive."),
+            "supports_capacity_only": False,
+            "capacity_roles": sorted(c["role_id"] for c in capacity_roles),
+            "serving_roles": sorted(c["role_id"] for c in serving_roles),
+        }
+    if capacity_real and not serving_real:
+        return {
+            "value": TERMINAL_CAPACITY_ONLY,
+            "label": "CALCULATED",
+            "basis": ("real capacity utility established on measured "
+                      "memory-fit facts, but no throughput-neutral or "
+                      "throughput-positive serving role under current "
+                      "supported semantics"),
+            "supports_capacity_only": True,
+            "capacity_roles": sorted(c["role_id"] for c in capacity_roles),
+            "serving_roles": [],
+        }
+    if serving_real and not capacity_real:
+        return {
+            "value": TERMINAL_ENVELOPE_ESTABLISHED,
+            "label": "CALCULATED",
+            "basis": ("throughput-useful supported serving roles "
+                      "characterized ("
+                      + ", ".join(sorted(c["role_id"] for c in serving_roles))
+                      + "); no measured capacity contribution retained, so "
+                        "the capacity axis is characterized by its absence "
+                        "on the tested roles; the envelope distinguishes "
+                        "the two placement kinds for the tested substrate"),
+            "supports_capacity_only": False,
+            "capacity_roles": [],
+            "serving_roles": sorted(c["role_id"] for c in serving_roles),
+        }
+    return {
+        "value": TERMINAL_NOT_USEFUL,
+        "label": "CALCULATED",
+        "basis": ("no measured capacity contribution and no "
+                  "throughput-useful supported serving role on the tested "
+                  "substrate"),
+        "supports_capacity_only": False,
+        "capacity_roles": [],
+        "serving_roles": [],
+    }
+
+
+def validate_terminal(declared_terminal: str, classifications: list[dict],
+                      marginal_views: dict | None = None,
+                      link_vs_device: dict | None = None) -> dict:
+    """Fail-closed consistency check between a declared terminal (e.g.
+    the STATUS.json string) and the classifications it must derive from.
+
+    Raises ``EnvelopeError`` on any inconsistency, including the
+    specific mechanical contradiction of declaring
+    X1_PARTICIPANT_ONLY_CAPACITY_USEFUL while retained supported
+    serving-role evidence contains a throughput-positive (or
+    capacity-positive throughput-neutral) role.
+    """
+    derived = derive_terminal(classifications, marginal_views,
+                              link_vs_device)
+    if declared_terminal == TERMINAL_CAPACITY_ONLY and \
+            derived["value"] != TERMINAL_CAPACITY_ONLY:
+        serving = derived.get("serving_roles") or []
+        if serving:
+            raise EnvelopeError(
+                f"terminal {TERMINAL_CAPACITY_ONLY} is not permitted: "
+                f"retained supported serving-role evidence contains "
+                f"throughput-neutral/positive roles ({', '.join(serving)})")
+    if declared_terminal != derived["value"]:
+        raise EnvelopeError(
+            f"declared terminal {declared_terminal} does not match the "
+            f"terminal derived from the retained classifications "
+            f"({derived['value']})")
+    return derived
 
 
 def build_envelope(root: Path) -> dict:
@@ -265,7 +627,10 @@ def build_envelope(root: Path) -> dict:
         classify_role(roles["x1p-role-adverse"],
                       roles["x1p-role-single-amd-a"]),
         # Retained single-request diagnostic: NOT classified as the
-        # coarse evidence; workload shape recorded for honesty.
+        # coarse evidence; workload shape recorded for honesty. It is
+        # SUPERSEDED by the corrected concurrent arm — retained for
+        # honesty but excluded from terminal derivation (its
+        # insufficiency is resolved, not open).
         {
             "role_id": "x1p-role-coarse",
             "classification": "EVIDENCE_INSUFFICIENT",
@@ -276,6 +641,7 @@ def build_envelope(root: Path) -> dict:
                      "retained unchanged as a diagnostic/reference",
             "label": "MEASURED",
             "workload_shape": "1 request on a 4-slot-provisioned server",
+            "superseded_by": "x1p-coarse4-split",
         },
         classify_role(roles["x1p-role-capacity"],
                       roles["x1p-role-capacity-control"],
@@ -319,11 +685,40 @@ def build_envelope(root: Path) -> dict:
     amd_single = roles["x1p-role-single-amd-a"]["generation_tokens_per_s"]
     nv_single = roles["x1p-role-single-nv-a"]["generation_tokens_per_s"]
 
+    link_vs_device = {
+        "label": "CALCULATED",
+        "note": (
+            "Both narrow-link subjects negotiate the same link class "
+            "under load (see transport summaries). Observations consistent "
+            "across both subjects are plausibly link/role dominated; "
+            "device-local compute differences are carried explicitly "
+            "from the single-subject controls and are not attributed to "
+            "the link."),
+        "single_subject_compute": {
+            "amd_a_median_tps": amd_single["median"],
+            "nv_a_median_tps": nv_single["median"],
+            "device_local_ratio_nv_over_amd": round(
+                nv_single["median"] / amd_single["median"], 4),
+        },
+    }
+
+    # Terminal derivation (terminal-semantics round): the terminal is
+    # DERIVED from the effective classifications and marginal facts —
+    # never a manually maintained status string. Superseded
+    # diagnostics are excluded inside derive_terminal (retained for
+    # honesty, insufficiency resolved by a corrected arm, they do not
+    # force EVIDENCE_INSUFFICIENT).
+    terminal = derive_terminal(
+        classifications,
+        marginal_views=marginal_views,
+        link_vs_device=link_vs_device)
+
     return {
         "schema": SCHEMA,
         "neutral_band": NEUTRAL_BAND,
         "taxonomy": list(TAXONOMY),
         "classifications": classifications,
+        "terminal": terminal,
         "corrected_coarse": {
             "label": "CALCULATED",
             "note": ("The corrected coarse role is the four-concurrent-"
@@ -356,22 +751,7 @@ def build_envelope(root: Path) -> dict:
             "label": "CALCULATED",
             "views": marginal_views,
         },
-        "link_vs_device_separation": {
-            "label": "CALCULATED",
-            "note": (
-                "Both narrow-link subjects negotiate the same link class "
-                "under load (see transport summaries). Observations consistent "
-                "across both subjects are plausibly link/role dominated; "
-                "device-local compute differences are carried explicitly "
-                "from the single-subject controls and are not attributed "
-                "to the link."),
-            "single_subject_compute": {
-                "amd_a_median_tps": amd_single["median"],
-                "nv_a_median_tps": nv_single["median"],
-                "device_local_ratio_nv_over_amd": round(
-                    nv_single["median"] / amd_single["median"], 4),
-            },
-        },
+        "link_vs_device_separation": link_vs_device,
         "transport_facts": {
             subject: {
                 "link_under_load": transport["link"]["negotiated_under_load"],
@@ -410,6 +790,7 @@ def main(argv: list[str] | None = None) -> int:
         "out": str(out),
         "classifications": {c["role_id"]: c["classification"]
                             for c in envelope["classifications"]},
+        "terminal": envelope["terminal"]["value"],
     }, indent=2))
     return 0
 

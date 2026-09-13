@@ -55,6 +55,7 @@
       "classification": "EVIDENCE_INSUFFICIENT",
       "label": "MEASURED",
       "role_id": "x1p-role-coarse",
+      "superseded_by": "x1p-coarse4-split",
       "workload_shape": "1 request on a 4-slot-provisioned server"
     },
     {
@@ -74,13 +75,35 @@
       "role_id": "x1p-role-adverse-rowsplit-unsupported"
     },
     {
-      "basis": "aggregate concurrent throughput ratio 0.553 (34.517 vs 62.469 tokens/s aggregate, CALCULATED from measured aggregate tokens / aggregate wall seconds, 4 concurrent matched requests per arm)",
+      "attempt_dispersion": {
+        "arm_highly_dispersed": true,
+        "arm_max_over_min": 12.1768,
+        "control_max_over_min": 1.0023,
+        "control_stable": true
+      },
+      "basis": "genuinely concurrent four-request workload matched in both arms; per-attempt aggregate states: attempt 1: 5.239 vs control 62.542 t/s (0.0838x, decisively below the control); attempt 2: 63.794 vs control 62.396 t/s (1.0224x, inside the declared \u00b15% neutral band). The retained split-arm distribution is highly dispersed (max/min 12.177) while the matched control is stable (max/min 1.002), so the attempt median ratio 0.5525 is recorded per the frozen stop rules but is NOT representative steady-state performance and does not carry the classification. Mechanical basis: no retained attempt demonstrates throughput improvement beyond the neutral band; attempt 1: 5.239 vs control 62.542 t/s (0.0838x, decisively below the control); attempt 2: 63.794 vs control 62.396 t/s (1.0224x, inside the declared \u00b15% neutral band); the role contributes no separate capacity benefit in this workload. A first-attempt initialization/cold-state effect is observed (large first-versus-second-attempt dispersion); causal attribution is not established by this issue (no retained evidence demonstrates a specific mechanism). Classification: NOT_USEFUL_FOR_TESTED_ROLE.",
       "capacity_positive": false,
       "classification": "NOT_USEFUL_FOR_TESTED_ROLE",
       "control_rate": 62.469,
       "label": "CALCULATED",
+      "median_is_steady_state": false,
+      "per_attempt_states": [
+        {
+          "arm_rate": 5.239,
+          "attempt": 1,
+          "control_rate": 62.542,
+          "ratio_vs_control_attempt": 0.0838
+        },
+        {
+          "arm_rate": 63.794,
+          "attempt": 2,
+          "control_rate": 62.396,
+          "ratio_vs_control_attempt": 1.0224
+        }
+      ],
       "role_id": "x1p-coarse4-split",
       "role_rate": 34.517,
+      "steady_state_note": "median of two highly separated attempts; NOT representative steady-state performance",
       "throughput_ratio_vs_control": 0.5525,
       "workload_shape": "4 concurrent requests vs 4 concurrent requests"
     }
@@ -169,7 +192,7 @@
     "wider links remain later comparison points, not prerequisites",
     "no vendor/width special case enters generic planner semantics"
   ],
-  "schema": "inferswarm.issue35.utility-envelope/2",
+  "schema": "inferswarm.issue35.utility-envelope/3",
   "taxonomy": [
     "CAPACITY_POSITIVE_THROUGHPUT_NEGATIVE",
     "CAPACITY_POSITIVE_THROUGHPUT_NEUTRAL",
@@ -177,6 +200,19 @@
     "NOT_USEFUL_FOR_TESTED_ROLE",
     "EVIDENCE_INSUFFICIENT"
   ],
+  "terminal": {
+    "basis": "utility characterized across the declared roles well enough to distinguish capacity-only versus throughput-useful placements; the measured envelope distinguishes: decisive capacity/residency utility on measured memory-fit facts (x1p-role-capacity ratio 106.5 vs the pressured control); conditional single-sequence throughput utility depending on anchor compute strength (x1p-role-adverse: 1.2601x adding the stronger participant to the weaker anchor vs 0.622x adding the weaker participant to the stronger anchor); unsupported finer split shape on this substrate (x1p-role-adverse-rowsplit-unsupported: fails closed under current supported semantics); no demonstrated benefit for the corrected four-concurrent-request coarse role (median of two highly separated attempts; NOT representative steady-state performance); device/backend compute rate as an explicit crossover input (device-local ratio 2.0259), not an x1/vendor special case. ENVELOPE_ESTABLISHED does not require every tested throughput role to be positive.",
+    "capacity_roles": [
+      "x1p-role-capacity"
+    ],
+    "label": "CALCULATED",
+    "serving_roles": [
+      "x1p-role-adverse",
+      "x1p-role-capacity"
+    ],
+    "supports_capacity_only": false,
+    "value": "X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED"
+  },
   "transport_facts": {
     "amd_a": {
       "d2h_gbps_128mib": 0.166,
