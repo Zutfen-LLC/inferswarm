@@ -1,0 +1,73 @@
+{
+ "accepted_authority_chain": [
+  {
+   "issue": 133,
+   "terminal": "ISSUE117_ARM_C_ORDINARY_SERVING_FAIL"
+  },
+  {
+   "classification": "BACKEND_REQUIRES_MULTI_CHUNK",
+   "issue": 153,
+   "terminal": "ISSUE117_ARM_C_REMEDIATION_BLOCKED"
+  },
+  {
+   "issue": 157,
+   "terminal": "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED"
+  },
+  {
+   "issue": 166,
+   "terminal": "ISSUE117_ARM_C_SWA_REMEDIATION_READY"
+  },
+  {
+   "classification": "corpus_insufficiency_pre_observation",
+   "consumed_not_reinterpreted": true,
+   "issue": 168,
+   "record": "docs/implementation/r6-successor-arm-c-requal-blocked-168/evidence/terminal-reduction.json",
+   "terminal": "ISSUE117_ARM_C_REQUALIFICATION_EVIDENCE_BLOCKED"
+  }
+ ],
+ "corpus_binding": {
+  "canonical_corpus_digest": "sha256:8a382df1ae5e7d7330966e65acba58bc02ff5af958f3ef63484cc52747a31c34",
+  "case_count": 16,
+  "case_prefix": "g170-",
+  "file": "corpus.json",
+  "generator_sha256": "11031cf5cf255f5a1d8b2dff3461ff291d419e1b9d3601f5087df96089f3598f",
+  "methodology_sha256": "482c7ec6ff123e62db64a465d12c31a7c39b17666eda53dd2dc224a455c90ab2",
+  "schema": "inferswarm.issue170.arm-c-long-remainder-corpus/1",
+  "seed": "issue170-arm-c-long-remainder-corpus-v1"
+ },
+ "corpus_id": "issue170-arm-c-long-remainder-corpus-v1",
+ "forbidden_material": {
+  "namespace": "h109-",
+  "statement": "no h109-* path, metadata, seed, plaintext, or ciphertext-derived content was opened, generated, copied, inferred, or used in generation or exclusion logic"
+ },
+ "issue": "https://github.com/Zutfen-LLC/inferswarm/issues/170",
+ "non_claims": [
+  "this corpus does not answer whether #166 fixes Arm C; no Arm-C PASS/FAIL is derived",
+  "this is a coverage fixture, not a statistical population theorem; no statistical-qualification claim is made",
+  "Arm D and Arm E are not started",
+  "the physical Arm-C requalification successor remains separately blocked pending maintainer acceptance/merge of this corpus freeze"
+ ],
+ "physical_execution": {
+  "performed": false,
+  "statement": "no GPU, no CUDA initialization, no Gemma model execution, no FreeToken candidate runtime execution, no direct/ordinary serving, no candidate-output inspection, no correctness-bearing SSH execution occurred in this issue"
+ },
+ "regression_fixture_binding": {
+  "accepted_arm_c_fixture_digest": "sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba36f2",
+  "case_count": 24,
+  "renders_reproduced_under_frozen_tokenizer": 24
+ },
+ "schema": "inferswarm.issue170.arm-c-long-remainder-authority/1",
+ "starting_heads": {
+  "ancestor_proofs": {
+   "freetoken_166_implementation_in_research_merge": true,
+   "freetoken_166_merge_is_ancestor_of_research_head": true,
+   "freetoken_research_head_unchanged": true,
+   "starting_main_is_ancestor_of_working_head": true
+  },
+  "expected_freetoken_inferswarm_research": "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469",
+  "expected_inferswarm_main": "941d0fe52ecedff1c5294a5582af3fedecb1018e",
+  "freetoken_inferswarm_research": "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469",
+  "inferswarm_main": "941d0fe52ecedff1c5294a5582af3fedecb1018e",
+  "verified": true
+ }
+}

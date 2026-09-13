@@ -1,0 +1,11 @@
+{
+ "producers": {
+  "scripts/issue170_authority_record.py": "53e7cc11a9b30014a7c9fecba3a5702f353109c926a20f82dabda676bea76c32",
+  "scripts/issue170_corpus_methodology.py": "482c7ec6ff123e62db64a465d12c31a7c39b17666eda53dd2dc224a455c90ab2",
+  "scripts/issue170_corpus_producer.py": "11031cf5cf255f5a1d8b2dff3461ff291d419e1b9d3601f5087df96089f3598f",
+  "scripts/issue170_manifest.py": "ac6811ce66db8c846893225b3f663ecb3b11b1a99d333c8bb41483abfd1830b9",
+  "scripts/issue170_terminal_reduction.py": "67280aa3e60417ec2efd8839ce8e4e745b1ae2f6d7a5e139293f440eff30c494",
+  "tests/test_issue170_long_remainder_corpus.py": "1c58062d85622246aea974588ec7eeae7f86114b235d720a097610c77125a6c9"
+ },
+ "schema": "inferswarm.issue170.producer-hashes/1"
+}
