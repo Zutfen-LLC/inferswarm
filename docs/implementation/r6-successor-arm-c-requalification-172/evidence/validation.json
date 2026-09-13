@@ -1,0 +1,68 @@
+{
+ "schema": "inferswarm/issue172-arm-c-requalification/validation/1",
+ "campaign_id": "issue172-arm-c-requalification-v1",
+ "head": "17b0f1caa3425b05ca4fc78e4d12aeb71bcb19a2",
+ "inferSwarm_cpu_suite": {
+  "command": ".venv/bin/python -m unittest discover -s tests -p 'test_*.py'",
+  "environment": "canonical CPU test venv (.venv, Python 3.12) bootstrapped by scripts/bootstrap_test_env.py; scripts/check_test_env.py doctor passed",
+  "result": "OK",
+  "tests_run": 2226,
+  "skipped": 6,
+  "note": "2226 tests / OK on the pre-reconciliation branch line, and re-run to OK (2226 tests, 6 skipped) after rebasing onto current main 8aadbd6; the strengthened gate-mapping assertion in tests/test_plan_ci.py is included in the final run."
+ },
+ "focused_and_predecessor_suite": {
+  "modules": [
+   "tests.test_issue172_requalification",
+   "tests.test_issue117_arm_a_retention",
+   "tests.test_issue117_arm_c_blocker",
+   "tests.test_issue129_arm_c_retry",
+   "tests.test_issue133_gate_tooling_drift",
+   "tests.test_issue153_arm_c_remediation",
+   "tests.test_issue166_swa_remediation_record",
+   "tests.test_issue168_requal_blocked_record",
+   "tests.test_issue170_long_remainder_corpus",
+   "tests.test_project_status",
+   "tests.test_finalize_repository",
+   "tests.test_evidence_manifest_lifecycle",
+   "tests.test_plan_ci"
+  ],
+  "result": "OK",
+  "tests_run": 549
+ },
+ "finalizer": {
+  "command": "python3 scripts/finalize_repository.py --check",
+  "result": "passed: graph acyclic, manifests terminal, all generated artifacts current (6 stages)"
+ },
+ "project_status": {
+  "command": "python3 scripts/sync_project_status.py",
+  "result": "sections current"
+ },
+ "freetoken_regression": {
+  "host": "inferswarm01",
+  "producer": "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469",
+  "accepted_runtime_bytes_altered": false,
+  "targeted_command": ".venv/bin/python -m pytest tests/research/test_issue166_swa_remediation.py tests/research/test_issue117_arm_c_remediation.py -q",
+  "targeted_result": "114 passed",
+  "full_research_sweep": {
+   "command": ".venv/bin/python -m pytest tests/research -q",
+   "result": "567 passed, 72 subtests passed, 1 failed"
+  },
+  "pre_existing_failure": {
+   "test": "tests/research/test_r6_localization.py::test_stage_chain_capture_ops_are_explicit",
+   "assertion": "assert '\"SET_CAPTURE_STEPS\"' in stage_chain source",
+   "proven_pre_existing": true,
+   "proof": "the op was removed by commit d4d1608 ('cleanup: remove unused R6 localization capture-step op', 2026-09-03); 'git merge-base --is-ancestor d4d1608 55e8baaebabe67aeb967d4bd407ef26696933104' succeeds, so the removal is an ancestor of the accepted Issue #153 base. The stale test assertion therefore fails at the accepted lineage base and is not caused by Issue #172.",
+   "disposition": "not fixed in this PR: repairing it would alter the accepted producer tree inside a qualification campaign, which the issue forbids. Observed and reported only."
+  }
+ },
+ "non_claims": [
+  "A green suite is not acceptance and not execution authorization.",
+  "The pre-existing FreeToken failure is reported, not repaired."
+ ],
+ "gate_mapping_regression": {
+  "observed": "hosted CI run 34786994384: every group green including issue-172-requal, but CI Gate failed with 'selected group issue-172-requal has no job mapping'",
+  "root_cause": "the new group appeared in the gate's reported `results` dict but was missing from the gate's `job_for_group` mapping, so the fail-closed gate failed an otherwise green run",
+  "fix": "add the mapping entry AND strengthen tests/test_plan_ci.py to assert job_for_group membership for every registered group (the previous assertion was a substring check that the results dict alone satisfied)",
+  "falsifiability_verified": "the strengthened assertion fails when the mapping entry is removed and passes when present"
+ }
+}
