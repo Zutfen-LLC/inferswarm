@@ -10,7 +10,7 @@
   "recalibration": "none",
   "reference_visible_output_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
  },
- "authority_state": "prospective prephysical authority; frozen before any V1-A correctness-bearing physical output",
+ "authority_state": "prospective prephysical authority; refrozen on corrected runner source before any V1-A correctness-bearing physical output",
  "capability_completion": {
   "integrity_status": "QUALIFIED",
   "representations": [
@@ -74,7 +74,7 @@
    "scripts/v0c_canonical_run.py": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
    "scripts/v0c_correctness.py": "cbefc2ee9f21c90c20defbc89e9838603c65c9f6c94fa8f7363e8ccab77e6f5c",
    "scripts/v1a_execution_participant.py": "f6c65a8de446a8980da56a42c35b58e7b58a5642ce1ed410283cf5e7a19c4ee9",
-   "scripts/v1a_runner.py": "5bf7169389f3d29d59d4ee2077d64a42575a91f697c9bd0313e20327c6080201",
+   "scripts/v1a_runner.py": "50bcba6abc1fcba26e3fa3f075e71ed46e351dcdface29f97c0a6295ea5acbd7",
    "scripts/v1a_vulkan_adapter.py": "a6167de9b43539dbcad00e9563abff2cdb3b9b19a328defe63d327aa6f7b9387"
   }
  },
@@ -175,16 +175,20 @@
  "schema": "inferswarm.v1a.physical-authority/1",
  "source_freeze": {
   "generic_participant_sha256": "f6c65a8de446a8980da56a42c35b58e7b58a5642ce1ed410283cf5e7a19c4ee9",
-  "manifest_producer_sha256": "00216f06a2f0d4e844c66eb56d7dcb48a10e1fb82b5006161cdbd61b0e0b3a3f",
-  "physical_runner_sha256": "5bf7169389f3d29d59d4ee2077d64a42575a91f697c9bd0313e20327c6080201",
-  "v1a_source_freeze_sha": "a946c0b4a2505e92ba0b20f6c5b389f8f9da6417",
+  "manifest_producer_sha256": "40b5c829c8638d443e8fe826414378f512136cf33d6504f309909e0bba546833",
+  "physical_runner_sha256": "50bcba6abc1fcba26e3fa3f075e71ed46e351dcdface29f97c0a6295ea5acbd7",
+  "v1a_source_freeze_sha": "355789a5a70c4506413896558cb7abd29660f41d",
   "vulkan_adapter_sha256": "a6167de9b43539dbcad00e9563abff2cdb3b9b19a328defe63d327aa6f7b9387"
+ },
+ "superseded_freeze": {
+  "commit": "238e8aa8935bff095d064ba9f802686cfed1ebe8",
+  "reason": "runner ontology-pressure lookup path correction before any physical canonical execution; the qualification probe under 238e8aa is retained as a superseded pre-freeze probe, not accepted V1-A qualification evidence"
  },
  "v1a_sources_pinned_by_runner_preflight": {
   "scripts/v0c_canonical_run.py": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
   "scripts/v0c_correctness.py": "cbefc2ee9f21c90c20defbc89e9838603c65c9f6c94fa8f7363e8ccab77e6f5c",
   "scripts/v1a_execution_participant.py": "f6c65a8de446a8980da56a42c35b58e7b58a5642ce1ed410283cf5e7a19c4ee9",
-  "scripts/v1a_runner.py": "5bf7169389f3d29d59d4ee2077d64a42575a91f697c9bd0313e20327c6080201",
+  "scripts/v1a_runner.py": "50bcba6abc1fcba26e3fa3f075e71ed46e351dcdface29f97c0a6295ea5acbd7",
   "scripts/v1a_vulkan_adapter.py": "a6167de9b43539dbcad00e9563abff2cdb3b9b19a328defe63d327aa6f7b9387"
  }
 }
