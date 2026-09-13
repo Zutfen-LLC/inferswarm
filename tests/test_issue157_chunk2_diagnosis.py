@@ -667,7 +667,12 @@ class TestPhase2ReproductionAuthorityGate(unittest.TestCase):
             {"freeze_pin": "sha256:" + "0" * 64},
             {"flag": False},          # flipped boolean alone
             {"flag": None},
+            {"flag": "yes"},          # non-boolean truthy (Lane A P2)
+            {"flag": 1},
             {"drop_provenance": True},
+            # identity substitution (Lane B P1): otherwise-valid
+            # provenance naming the OLD superseded pre-freeze run
+            {"source_run": "i157-BASE-1789261211"},
         ]
         for changes in tamper_matrix:
             with self.subTest(**changes):
@@ -680,6 +685,40 @@ class TestPhase2ReproductionAuthorityGate(unittest.TestCase):
                 self.assertNotEqual(
                     record["terminal"],
                     "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED")
+
+    def test_5b_identity_substitution_vs_manifest_pin(self):
+        """Lane B P1 (manifest cross-check): an otherwise-valid record
+        whose source_run_sha256 does NOT equal the instrumentation
+        manifest's retained_run_records pin for the named run must
+        fail closed when the manifest pins are available."""
+        baseline = self.authoritative_baseline()
+        baseline["source_run"] = "i157-BASE-1789309328"
+        baseline["source_run_sha256"] = "b" * 64  # wrong pin
+        instr = self.localized_checkpoints()
+        instr["retained_run_records"] = {
+            "i157-BASE-1789309328": "a" * 64,  # the true pin
+        }
+        record = self.write_and_reduce(baseline, instr=instr)
+        reasons = record["terminal_requirements"]
+        self.assertFalse(
+            reasons["phase2_baseline_execution_provenance_valid"])
+        self.assertNotEqual(
+            record["terminal"],
+            "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED")
+        # and the MATCHING pin keeps authority
+        baseline_ok = self.authoritative_baseline()
+        baseline_ok["source_run"] = "i157-BASE-1789309328"
+        baseline_ok["source_run_sha256"] = "a" * 64
+        record_ok = self.write_and_reduce(baseline_ok, instr=instr)
+        self.assertTrue(record_ok["terminal_requirements"][
+            "phase2_baseline_execution_provenance_valid"])
+        # an unknown run id (not in the manifest pins) also fails
+        baseline_unknown = self.authoritative_baseline()
+        baseline_unknown["source_run"] = "i157-BASE-NOT-PINNED"
+        record_unknown = self.write_and_reduce(
+            baseline_unknown, instr=instr)
+        self.assertFalse(record_unknown["terminal_requirements"][
+            "phase2_baseline_execution_provenance_valid"])
 
     def test_6_generated_conclusion_consumes_fresh_base(self):
         """Case 6: the authoritative generated conclusion must consume

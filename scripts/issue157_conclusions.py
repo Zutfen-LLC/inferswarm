@@ -250,6 +250,7 @@ def reduce_terminal(
     reproduction: dict, replay: dict, interventions: dict,
     checkpoints: dict, *,
     baseline_provenance: dict | None = None,
+    retained_run_records: dict | None = None,
 ) -> tuple[str, dict]:
     """Terminal ladder (issue #157).  LOCALIZED requires ALL of:
     (a) chunk-2 phenomenon reproduced (or exact lifecycle reason),
@@ -278,7 +279,9 @@ def reduce_terminal(
     # token-level observations are retained historical evidence, not
     # Phase-2 reproduction authority.
     provenance_ok = baseline_provenance_authority(
-        baseline_provenance or {})
+        baseline_provenance or {},
+        retained_run_records=retained_run_records,
+    )
     if not provenance_ok:
         repro = False
         repro_source = "none_non_authoritative_baseline"
@@ -346,24 +349,45 @@ def reduce_terminal(
 # execution_bearing_freeze_instrumentation_sha256.
 AUTHORITY_INSTRUMENTATION_SHA256 = "sha256:" + "00a1c2c1452f87ca56289eeb3716e9cd08ba1c5a36e7d06ac6abdb79283024fc"
 
+# The pre-freeze BASE run superseded by the 2026-09-13
+# physical-authority correction: it executed under UNCOMMITTED
+# instrumentation bytes (sha256:98fa2a80...) and can NEVER carry
+# Phase-2 reproduction authority, regardless of any other field in
+# the record (adversarial-review Lane B P1: the identity check must
+# be substantive, not presence-only — a record claiming authority
+# while naming this run id must fail closed).
+SUPERSEDED_BASE_RUN_IDS = frozenset({
+    "i157-BASE-1789261211",
+})
+SUPERSEDED_INSTRUMENTATION_SHA256 = (
+    "sha256:98fa2a80d893dcae20f373d94064d55c9ab2314"
+    "cb868fbe9000e166d667d8d77"
+)
 
-def baseline_provenance_authority(baseline: dict) -> bool:
+
+def baseline_provenance_authority(
+    baseline: dict, retained_run_records: dict | None = None,
+) -> bool:
     """Phase-2 authority gate over the retained BASE record bytes.
 
     The baseline-reproduction.json record is authoritative for
     Phase-2 reproduction ONLY when it proves the BASE run executed
     under the frozen execution-bearing tool bytes (2611ee1).  The
     `tooling_provenance.executed_under_committed_2611ee1_bytes` flag
-    and the at-execution instrumentation digest are validated against
+    (strict boolean True — any non-boolean truthy value fails) and
+    the at-execution instrumentation digest are validated against
     the accepted authority pin; any mismatch, absence, or tampered
     identity fails closed (returns False — no tuning, no retry, the
     reducer never resurrects authority from a non-authoritative
     record).
 
-    Tamper cases that fail closed: a flipped boolean alone, a digest
-    that does not equal the authority pin, a missing tooling
-    provenance block, or run identity fields inconsistent with the
-    flag.
+    Tamper cases that fail closed: a flipped or non-boolean flag
+    alone, a digest that does not equal the authority pin (including
+    the superseded run's pre-freeze digest), a missing tooling
+    provenance block, a run identity naming a SUPERSEDED pre-freeze
+    run, or — when the instrumentation manifest's retained-run-record
+    pins are provided — a source_run_sha256 that does not equal the
+    manifest pin for the named run (identity substitution).
     """
     tp = baseline.get("tooling_provenance") or {}
     if not isinstance(tp, dict) or not tp:
@@ -376,11 +400,28 @@ def baseline_provenance_authority(baseline: dict) -> bool:
         return False
     if freeze != AUTHORITY_INSTRUMENTATION_SHA256:
         return False
-    # the authoritative run must be bound to a retained run id and its
-    # source_run_sha256 must be present (identity tamper fail-closed)
-    if not baseline.get("source_run") or not baseline.get(
-            "source_run_sha256"):
+    if at_exec == SUPERSEDED_INSTRUMENTATION_SHA256:
         return False
+    source_run = baseline.get("source_run")
+    source_sha = baseline.get("source_run_sha256")
+    if not source_run or not source_sha:
+        return False
+    # substantive identity check: a record claiming authority while
+    # naming a run known to have executed under pre-freeze bytes is a
+    # contradiction and fails closed (Lane B P1)
+    if source_run in SUPERSEDED_BASE_RUN_IDS:
+        return False
+    # cross-check against the instrumentation manifest's retained
+    # run-record pins when the manifest carries any: the named run's
+    # sha256 must equal the pinned bytes (identity substitution fails
+    # closed).  An entirely pin-less manifest cannot weaken the other
+    # checks — the manifest bytes are separately hash-pinned by the
+    # bundle MANIFEST, and every retained execution-bearing run IS
+    # pinned in the committed manifest.
+    if retained_run_records:
+        pinned = retained_run_records.get(source_run)
+        if pinned is None or pinned != source_sha:
+            return False
     return True
 
 
@@ -484,10 +525,14 @@ def main(argv=None) -> int:
     interventions_out = reduce_interventions(interventions)
     checkpoints = earliest_varying_checkpoint(instrumentation)
     recurrence = accepted_value_recurrence(baseline)
-    phase2_authority = baseline_provenance_authority(baseline)
+    retained_run_records = instrumentation.get(
+        "retained_run_records") or None
+    phase2_authority = baseline_provenance_authority(
+        baseline, retained_run_records=retained_run_records)
     terminal, reasons = reduce_terminal(
         reproduction, replay_out, interventions_out, checkpoints,
         baseline_provenance=baseline,
+        retained_run_records=retained_run_records,
     )
 
     # every observational number used in the prose below is computed

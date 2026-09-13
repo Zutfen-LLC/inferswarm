@@ -185,9 +185,13 @@ def main(argv=None) -> int:
                     "(baseline-reproduction.json at 3518480); never "
                     "deleted, rewritten, relabeled, or concealed"
                 ),
-                "instrumentation_sha256_at_execution": prev.get(
-                    "tooling_provenance", {}).get(
-                    "instrumentation_sha256_at_execution"),
+                # frozen constant (adversarial-review Lane B P2):
+                # never derived from --prev-record, so re-running this
+                # producer with the CURRENT record as prev cannot
+                # erode the pre-freeze disclosure
+                "instrumentation_sha256_at_execution":
+                    "sha256:98fa2a80d893dcae20f373d94064d55c9ab2314"
+                    "cb868fbe9000e166d667d8d77",
                 "superseded_because": (
                     "executed under uncommitted pre-freeze "
                     "instrumentation bytes; cannot carry Phase-2 "
