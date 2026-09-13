@@ -131,8 +131,13 @@ def reduce_interventions(interventions: dict) -> dict:
         }
     for name in ("sync", "scratch", "route"):
         arm = interventions.get(name)
-        if arm is None:
-            out[name] = {"executed": False}
+        if arm is None or not arm.get("executed", True):
+            # a present-but-not-executed arm (legal refusal) is never
+            # reported as an executed failed intervention
+            out[name] = {
+                "executed": False,
+                "verdict": (arm or {}).get("verdict"),
+            }
             continue
         out[name] = {
             "executed": True,
@@ -147,21 +152,42 @@ def reduce_interventions(interventions: dict) -> dict:
     return out
 
 
+# Execution order of the captured checkpoints within one chunk-2 call
+# (layer 0), derived from the instrumented path: metadata/routes and
+# model inputs precede the backend call, whose first action is the KV
+# STORE (observed via the post-write slice), followed by the attention
+# kernel read, o_proj, and the residual stream.
+EXECUTION_ORDER = [
+    "L0_backend_q_input", "L0_backend_k_input", "L0_backend_v_input",
+    "L0_qkv_projected", "L0_q_normed", "L0_k_normed", "L0_rotary_applied",
+    "L0_kv_slice_pre_write",
+    "L0_kv_slice_post_write",   # first observation AFTER the racing store
+    "L0_attention_output",
+    "L0_o_proj", "after_layer_0", "after_layer_1",
+]
+
+
 def earliest_varying_checkpoint(instrumentation: dict) -> dict:
-    """Derive the earliest varying checkpoint per anchor from retained
-    instrumentation records (per-call JSONL reduced by the manifest
-    builder into a per-checkpoint digest matrix)."""
+    """Derive the earliest varying checkpoint per anchor from the
+    per-checkpoint digest matrix, selected by EXECUTION ORDER (never
+    alphabetical, never a single hardcoded name)."""
     matrix = instrumentation.get("checkpoint_digest_matrix") or {}
     out = {}
     for anchor, checkpoints in sorted(matrix.items()):
-        varying = []
-        for name in sorted(checkpoints):
-            digests = checkpoints[name]
-            if len(set(digests)) > 1:
-                varying.append((name, len(set(digests))))
+        varying = [
+            name for name in EXECUTION_ORDER
+            if name in checkpoints
+            and len(set(checkpoints[name])) > 1
+        ]
+        extra = [
+            name for name in sorted(checkpoints)
+            if name not in EXECUTION_ORDER
+            and len(set(checkpoints[name])) > 1
+        ]
         out[anchor] = {
-            "earliest_varying": varying[0][0] if varying else None,
-            "all_varying": [v[0] for v in varying],
+            "earliest_varying": varying[0] if varying else None,
+            "all_varying": varying + extra,
+            "selection_rule": "first varying in EXECUTION_ORDER",
         }
     return out
 
@@ -177,15 +203,16 @@ def reduce_terminal(
         one-variable control,
     (d) strong enough to define a bounded remediation issue.
     """
-    a_repro = reproduction["anchor_a"]["varies"] or (
-        reproduction["anchor_a"]["distinct_committed_values"] >= 1
-        and baseline_reproduces(reproduction)
-    )
-    b_repro = reproduction["anchor_b"]["varies"] or (
-        reproduction["anchor_b"]["distinct_committed_values"] >= 1
-        and baseline_reproduces(reproduction)
-    )
-    repro = a_repro or b_repro
+    # Reproduction gate (issue Phase 2): the accepted chunk-2 phenomenon
+    # is reproduced when a baseline anchor VARIES (in-session family), OR
+    # the exact-state chunk-2 replay varies from byte-identical restored
+    # state (the same instability observed at the operation level), OR a
+    # non-reproduction carries an exact lifecycle reason.  A merely
+    # non-empty baseline never satisfies the gate by itself.
+    a_repro = reproduction["anchor_a"]["varies"]
+    b_repro = reproduction["anchor_b"]["varies"]
+    exact_state_varies = not replay["chunk2_deterministic"]
+    repro = a_repro or b_repro or exact_state_varies
     # A stable control that varies contradicts the accepted #137
     # baseline (single-chunk 53-row units deterministic) and invalidates
     # a LOCALIZED claim: the substrate itself is unstable.
@@ -303,6 +330,7 @@ def main(argv=None) -> int:
                         interventions_out.get("swa_alloc", {})
                         .get("detail", {})
                     ),
+                    "baseline_varies": reproduction["anchor_b"]["varies"],
                     "note": "the paired CONTROL arm of the swa_alloc "
                             "intervention on anchor B varies (5 distinct "
                             "chunk-2 digests / 6 trials) — the chunk-2 "

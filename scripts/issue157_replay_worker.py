@@ -331,7 +331,7 @@ def main(argv=None) -> int:
             # _swa_free (both top-level pool tensors) — the allocation
             # MUST come after it, else the intervention is neutralized.
             _reset_swa_allocator(pool)
-            pool.alloc_swa(_t.arange(67, dtype=_t.int64,
+            pool.alloc_swa(_t.arange(total, dtype=_t.int64,
                                       device=pool.full_to_swa_index_mapping
                                       .device))
             h1, _ = runtime.prefill(replay[:prefix_len], None, 0)
