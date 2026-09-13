@@ -155,10 +155,20 @@
         "prior_reducer_sha256": "3211dbcded10f26b74eb8245e9307aacf5665e4259da3778f720fbd350978620",
         "reason": "Anchor-A recurrence accidentally sourced tokens from Anchor B: recurring_note() computed the recurrence set from baseline anchor_b observations before reading Anchor A, so the generated conclusion wrongly listed accepted value 818 as unobserved while 818 exists in the retained Anchor-A observations. The corrected reducer derives the recurrence from the retained Anchor-A observations only, exposes it as structured accepted_value_recurrence fields (accepted/recurring/not-observed/other-observed), generates prose from those fields, and fail-closed cross-checks the retained accepted_137_binding.recurred_in_this_baseline against the independently derived Anchor-A recurrence.",
         "terminal_after_regeneration": "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED (re-derived normally from unchanged evidence under the corrected reducer; unchanged from the prior reduction)"
+      },
+      {
+        "amendment": "post-evidence reduction correction #3 (provenance-only: post-processing self-pin realignment)",
+        "corrected_reducer_sha256": "8883abd07442520acae12628b162ffa385a0c3efb484001ab8e0b2854cd71a67",
+        "execution_bearing_bytes_unchanged": "all execution_bearing_files hashes identical to the correction-pass-1 freeze (2611ee1); FreeToken diagnostic producer unchanged at 55e8baaebabe67aeb967d4bd407ef26696933104",
+        "physical_evidence_inputs_unchanged": "baseline-reproduction.json, exact-state-replay.json, interventions.json, instrumentation-manifest.json, launch-ledger.json all byte-identical to the retained correction-pass bytes (sha256 verified); diagnostic-conclusions.json byte-identical (reducer code unchanged this round)",
+        "physical_rerun_required": false,
+        "prior_reducer_sha256": "7085714c0fd7ac74f5ee40dbfd55d7ae0b0fea4e9bbe26df70cf70f207b6d680",
+        "reason": "adversarial-review round-2 Phase-2 provenance hardening (commit 0ecdb1c) changed the reducer after the round-1 amendment pinned it: superseded BASE-run identity rejection, explicit pre-freeze instrumentation-digest rejection, strict-boolean authority flag, and source_run_sha256 cross-check against instrumentation-manifest.json.retained_run_records; the authority record's post_processing_files pin was not refreshed at that commit, leaving the current-reducer self-pin stale",
+        "terminal_note": "terminal remains mechanically derived by scripts/issue157_conclusions.py from unchanged retained evidence; this correction touches only this authority record and adds a pin-recurrence test; no terminal field is asserted here"
       }
     ],
     "post_processing_files": {
-      "scripts/issue157_conclusions.py": "sha256:7085714c0fd7ac74f5ee40dbfd55d7ae0b0fea4e9bbe26df70cf70f207b6d680"
+      "scripts/issue157_conclusions.py": "sha256:8883abd07442520acae12628b162ffa385a0c3efb484001ab8e0b2854cd71a67"
     },
     "post_processing_files_note": "post-evidence reduction tooling ONLY: reduces already-retained observation JSON into diagnostic-conclusions.json. Never imported by, deployed to, or executed inside any physical diagnostic process; changing it cannot influence any physical execution or capture."
   },

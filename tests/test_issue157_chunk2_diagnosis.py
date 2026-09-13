@@ -1283,6 +1283,53 @@ class TestBaseArmProvenanceRecord(unittest.TestCase):
                 self.assertEqual(len(row["repeats"]), 3)
 
 
+class TestPostProcessingPinCurrency(unittest.TestCase):
+    """Recurrence prevention for the stale post-processing self-pin.
+
+    The authority record's instrumentation.post_processing_files pin for
+    scripts/issue157_conclusions.py drifted stale once already (the
+    adversarial-review round-2 reducer correction at 0ecdb1c changed the
+    reducer without refreshing the pin).  This test recomputes the pin
+    from the CURRENT reducer bytes every run, so any future reducer
+    correction that does not update the pin fails here.
+    """
+
+    REDUCER = SCRIPTS / "issue157_conclusions.py"
+    BUNDLE = REPO / (
+        "docs/implementation/r6-successor-dense-full-integration-117/"
+        "evidence/arm-c-chunk2-diagnosis-157")
+
+    def test_current_reducer_pin_matches_actual_bytes(self):
+        import hashlib
+        actual = "sha256:" + hashlib.sha256(
+            self.REDUCER.read_bytes()).hexdigest()
+        auth = json.loads(
+            (self.BUNDLE / "physical-diagnostic-authority.json").read_text())
+        pinned = auth["instrumentation"]["post_processing_files"][
+            "scripts/issue157_conclusions.py"]
+        self.assertEqual(
+            pinned, actual,
+            "physical-diagnostic-authority.json post_processing_files pin "
+            "for scripts/issue157_conclusions.py is stale: the reducer "
+            "changed without updating the current post-processing pin "
+            "(append a post_evidence_reducer_amendments entry and refresh "
+            "the pin in the same change)")
+
+    def test_latest_amendment_pins_current_reducer(self):
+        import hashlib
+        actual = hashlib.sha256(
+            self.REDUCER.read_bytes()).hexdigest()
+        auth = json.loads(
+            (self.BUNDLE / "physical-diagnostic-authority.json").read_text())
+        amendments = auth["instrumentation"][
+            "post_evidence_reducer_amendments"]
+        self.assertGreaterEqual(len(amendments), 1)
+        self.assertEqual(
+            amendments[-1]["corrected_reducer_sha256"], actual,
+            "the newest post_evidence_reducer_amendments entry must "
+            "document the reducer bytes currently at head")
+
+
 class TestPartitionContract(unittest.TestCase):
     def test_anchor_partitions_satisfy_coverage_invariants(self):
         sys.path.insert(0, str(SCRIPTS))
