@@ -1,9 +1,13 @@
 5a91e112134b160c8b85f329540d8cdffb04f23261c481cd31cbda16edf0f118  docs/investigations/vulkan-v2-a/ATTEMPT01-SUPERSESSION.json
 cf69dfbc6ebe596602dfc20c75c11980eb6aa35813b91ac6e991be31e8361c40  docs/investigations/vulkan-v2-a/AUTHORITY-AMD-A-R2.json
+fa53774c2d13da8c48414a32dac0fc29ee12394999ab0ecc5d57a2f979fa3350  docs/investigations/vulkan-v2-a/AUTHORITY-AMD-A-R3.json
 1e210848d21f1ebe5d0545d2de0b0f646ee709a486791ed501ce156f0e5e9e8e  docs/investigations/vulkan-v2-a/AUTHORITY-AMD-A.json
 519e0b3d0e349088d1a2a66cc5a1bffed5338fbea9230289d5914beb8658395c  docs/investigations/vulkan-v2-a/AUTHORITY-NV-A-R2.json
+82cf503a1d66922a841d856e8a59adb7db35176da94fa635e3963b77783e6aa8  docs/investigations/vulkan-v2-a/AUTHORITY-NV-A-R3.json
 4320ae39b9c784878bd391e6c09bacb3988b938434164083470931c9f5cc23cf  docs/investigations/vulkan-v2-a/AUTHORITY-NV-A.json
+e1ab50587843cb73107ea3bbf36c6162f81edbe5b83bed87f3906b66cb08ec72  docs/investigations/vulkan-v2-a/DISCOVERY-BINDINGS-R3.json
 74d5cac79031290e0fcf85f1ad6821444b41f10a3cafb5c435e9cd89e5b4849e  docs/investigations/vulkan-v2-a/DISCOVERY-BINDINGS.json
+b99db611236ac3cf6bfd9eb4475c39a11cc99cd6fd25ffa3ba2876efe475606e  docs/investigations/vulkan-v2-a/DISCOVERY-INVENTORY-R3.json
 e9fd925a7480174400a55b5b2144c8a7faf5021337ef45925d7d33eb3c20b193  docs/investigations/vulkan-v2-a/DISCOVERY-INVENTORY.json
 4687001b0fc070bd2b5f853eea18dcbeafdf26cc9f45181f0cc4d686deb69ea2  docs/investigations/vulkan-v2-a/FINAL-TERMINAL-ATTEMPT01.json
 59bff8a24a215ffd178067b7ca943851b5eb12cf16702164180e9a2f4314446c  docs/investigations/vulkan-v2-a/FINAL-TERMINAL-R2.json
@@ -46,6 +50,10 @@ c85bd87f0e0f63a7ca90f2d56533a765130c7b20c239300bf9945d1f08db3a2e  docs/investiga
 b0d39870767cc6c66641b7e92b56f2a8ca2566465bd4d9a3f152b493737fa014  docs/investigations/vulkan-v2-a/raw/discovery-r2/identity-probe-stderr-vulkan3.txt
 b550e3c9edb08086613031975d7e902653d22fc7cf1c68dddce13abf8da2e78c  docs/investigations/vulkan-v2-a/raw/discovery-r2/identity-probe-stdout-vulkan1.txt
 1d3e391a0f06874021545706d5f5b65328a509864ae0d4c085a2ed460a93a078  docs/investigations/vulkan-v2-a/raw/discovery-r2/identity-probe-stdout-vulkan3.txt
+05640cb5dbf22a64bf8bb69eef4e9b9bfe7071d527476c8977b490b375d99a94  docs/investigations/vulkan-v2-a/raw/discovery-r3/identity-probe-stderr-vulkan1.txt
+cb5b7771be4a98bc79b37c15b87320f9e4516154738d4176a7c6dac2df0eedff  docs/investigations/vulkan-v2-a/raw/discovery-r3/identity-probe-stderr-vulkan3.txt
+081c263f06557cd522a2b1fe36116ad8ce0b7f0a918ed4156a1207648600f0b4  docs/investigations/vulkan-v2-a/raw/discovery-r3/identity-probe-stdout-vulkan1.txt
+03a409848dd8ebd9d20b38ebe0d6994d3d6ca285411641c5308a2eea2ac571e1  docs/investigations/vulkan-v2-a/raw/discovery-r3/identity-probe-stdout-vulkan3.txt
 98421e3090b7e4622e53b45c400e44bf0e78472aedaf0df8125183a10b5ab79b  docs/investigations/vulkan-v2-a/raw/v2a-amd-a-canonical-01/canonical-execution.json
 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa  docs/investigations/vulkan-v2-a/raw/v2a-amd-a-canonical-01/exit-code.txt
 a5b0a9e816f1e2923823d25eced2c6575c3b4e653a455369a3ceca0f8378f54d  docs/investigations/vulkan-v2-a/raw/v2a-amd-a-canonical-01/stderr.txt
