@@ -181,6 +181,7 @@ GROUP_TEST_MODULES = {
         "test_issue133_physical_execution_retention",
         "test_issue153_arm_c_remediation",
         "test_issue166_swa_remediation_record",
+        "test_issue168_requal_blocked_record",
     ],
     "issue-137": [
         "test_issue137_regime4_diagnosis",
@@ -393,6 +394,13 @@ PATH_GROUPS = {
     # record; the FreeToken remediation producer is pinned by hash inside
     # remediation-record.json).
     "docs/implementation/r6-successor-arm-c-swa-remediation-166/": ["issue-117-133"],
+    # Issue #168 Arm-C post-SWA requalification blocked record (CPU-only
+    # pre-observation terminal; no physical execution).
+    "docs/implementation/r6-successor-arm-c-requal-blocked-168/": ["issue-117-133"],
+    "scripts/issue168_corpus_census.py": ["issue-117-133"],
+    "scripts/issue168_authority_record.py": ["issue-117-133"],
+    "scripts/issue168_terminal_reduction.py": ["issue-117-133"],
+    "scripts/issue168_manifest.py": ["issue-117-133"],
     # Issue #137 retained evidence lives inside the #117 evidence tree;
     # the narrower #137 subtree fans out to both its semantic group and
     # the broader shared-tree lineage (the #117 prefix rule above also

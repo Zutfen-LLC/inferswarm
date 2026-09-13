@@ -429,7 +429,7 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run shard S3
-        run: python3 -m unittest tests.test_issue117_arm_a_retention tests.test_issue117_arm_c_blocker tests.test_issue129_arm_c_retry tests.test_issue133_gate_tooling_drift tests.test_issue153_arm_c_remediation tests.test_issue166_swa_remediation_record -v
+        run: python3 -m unittest tests.test_issue117_arm_a_retention tests.test_issue117_arm_c_blocker tests.test_issue129_arm_c_retry tests.test_issue133_gate_tooling_drift tests.test_issue153_arm_c_remediation tests.test_issue166_swa_remediation_record tests.test_issue168_requal_blocked_record -v
 
   issue-117-133-s4:
     name: Group issue-117-133 shard 4

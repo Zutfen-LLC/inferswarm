@@ -1,158 +1,159 @@
 {
-  "capabilities": [
-    {
-      "acceptance": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/55#issuecomment-5495529413",
-        "state": "accepted"
-      },
-      "id": "planning",
-      "observation": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/55#issuecomment-5495529413",
-        "result": "R3_MINIMUM_AUTOMATIC_PLANNING_PASS"
-      },
-      "scope": "physical",
-      "summary": "Strategy-constrained selection among legal local plans using applicable evidence and operator policy.",
-      "title": "Automatic planning"
-    },
-    {
-      "acceptance": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/60#issuecomment-5504161037",
-        "state": "accepted"
-      },
-      "id": "serving",
-      "observation": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/60#issuecomment-5504161037",
-        "result": "R5A_STATIC_MULTI_NODE_SERVING_PASS"
-      },
-      "scope": "physical",
-      "summary": "A normal request drives planning, multi-Node realization, and backend-native execution on the tested Qwen path.",
-      "title": "Distributed serving"
-    },
-    {
-      "acceptance": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/62#issuecomment-5508822299",
-        "state": "accepted"
-      },
-      "id": "recovery",
-      "observation": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/62#issuecomment-5508822299",
-        "result": "R5B_PLAN_EPOCH_RECOVERY_PASS"
-      },
-      "scope": "physical",
-      "summary": "Resource changes and recovery preserve plan-epoch authority and reject retired work on the tested serving path.",
-      "title": "Plan epochs and recovery"
-    },
-    {
-      "acceptance": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/67#issuecomment-5516608982",
-        "state": "accepted"
-      },
-      "id": "coordinator",
-      "observation": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/67#issuecomment-5516608982",
-        "result": "EXTERNAL_COORDINATOR_SEPARATION_PASS"
-      },
-      "scope": "physical",
-      "summary": "A CPU-only Coordinator handles ingress, planning, epoch coordination, and committed output without hosting model execution.",
-      "title": "Separate Coordinator"
-    },
-    {
-      "acceptance": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/53fb8f4c7ba3108a21f983712e5cbdb747a26600",
-        "state": "accepted"
-      },
-      "id": "acquisition",
-      "observation": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/53fb8f4c7ba3108a21f983712e5cbdb747a26600/docs/implementation/plan-driven-artifact-acquisition-99/README.md",
-        "result": "PLAN_DRIVEN_ARTIFACT_ACQUISITION_PASS"
-      },
-      "scope": "cpu-fixture",
-      "summary": "Participants acquire only required model artifacts in the model-independent acquisition proof.",
-      "title": "Selective artifact acquisition"
-    },
-    {
-      "acceptance": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da",
-        "state": "accepted"
-      },
-      "id": "orchestration",
-      "observation": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da/docs/implementation/plan-driven-artifact-orchestration-101/README.md",
-        "result": "PLAN_DRIVEN_ARTIFACT_ORCHESTRATION_PASS"
-      },
-      "scope": "cpu-fixture",
-      "summary": "Verified inventory, source selection, peer publication, and replacement-plan acquisition work across participants.",
-      "title": "Peer reuse and replacement deltas"
-    },
-    {
-      "acceptance": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/47624abe14a84d27188018200a48a8652f93bfd6",
-        "state": "accepted"
-      },
-      "id": "locality",
-      "observation": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/47624abe14a84d27188018200a48a8652f93bfd6/docs/implementation/artifact-locality-transition-planning-103/README.md",
-        "result": "ARTIFACT_LOCALITY_TRANSITION_PLANNING_PASS"
-      },
-      "scope": "cpu-fixture",
-      "summary": "Verified artifact locality affects transition ranking without changing technical feasibility or execution ranking.",
-      "title": "Locality-aware transition planning"
-    },
-    {
-      "acceptance": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76",
-        "state": "accepted"
-      },
-      "id": "qualification",
-      "observation": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76/docs/qualification/gemma4-12b-it-v5-campaign-110/b/TERMINAL-REPORT.md",
-        "result": "V5_QUALIFICATION_PASS"
-      },
-      "scope": "physical",
-      "summary": "The frozen Gemma subject passed V5 numerical and semantic qualification; applicability remains specific to that subject.",
-      "title": "Dense Gemma numerical qualification"
-    }
-  ],
-  "frontier": {
-    "execution": {
-      "constraints": [
-        "The accepted historical Arm-C result remains ISSUE117_ARM_C_EVIDENCE_BLOCKER (PR #128, merge 718efbf5770b31c6e44eb3a8c4d0b81fd1dc9c22); it is preserved as the correct result of the original inadmissible campaign.",
-        "The corrected fresh Arm-C campaign is accepted as ISSUE117_ARM_C_ORDINARY_SERVING_FAIL (PR #136, merge 1b83bcab0a5e682a438ca0554f71dd0ace15be55): 18/24 exact equality and six regime-4 committed-token divergences under complete pre-divergence invocation equivalence.",
-        "Issue #137 diagnosis is accepted as ISSUE117_ARM_C_REGIME4_DIAGNOSIS_PARTIAL (PR #138, merge cdc23d0e8fa9d3b1b27bab5749939a5ad69b9610): multi-chunk extend-prefill is sufficient for instability on a stable control, and the earliest captured divergence is inside stage 1 at or before global layer 1, but one identical numerical mechanism for all six cases is not established.",
-        "Issue #153 corrected remediation is ISSUE117_ARM_C_REMEDIATION_BLOCKED (BACKEND_REQUIRES_MULTI_CHUNK): the accepted 65-67-row failing units must remain multi-chunk under the frozen 64-row boundary/wire contract, the required extend path's instability is not remediated, and the at-or-below-64 single-call policy cleanup is useful but not a remediation of the failing population; fresh Arm-C requalification MUST NOT be authorized from the candidate producer.",
-        "Issue #157 chunk-2 extend-path diagnosis delivered ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED under its physically authorized diagnostic-only scope: the R6 standalone stage path never performs SWA slot allocation, so full-to-swa index mapping stays at the all-zero sentinel and every SWA-layer chunk-2 store and prefix read resolves to swa slot 0; a single-factor alloc_swa intervention makes chunk-2 byte-deterministic on both anchors while the paired control varies. This is a diagnostic localization only: remediation and requalification still require separate authority.",
-        "No h109-* holdout material may be opened, generated, copied, or used; Arm D and Arm E remain blocked.",
-        "Issue #166 SWA allocation remediation delivered ISSUE117_ARM_C_SWA_REMEDIATION_READY under its implementation-remediation-only scope: the standalone R6 stage runtime now owns the session SWA allocation lifecycle (incremental alloc_swa frontier before each chunk's first prefix-consuming SWA KV operation, mapping persistence across chunks/decode, wholesale release on reset, fail-closed exhaustion/gaps), reaching the same underlying allocation semantic as the accepted #157 intervention and the scheduler path; proven CPU-only with lifecycle/negative-control tests, no model execution. The remediation producer is NOT promoted to qualification authority; fresh Arm-C requalification remains separately blocked pending maintainer acceptance/merge."
-      ],
-      "reference": null,
-      "state": "blocked",
-      "step": "Arm-C SWA allocation remediation implemented under issue #166 (terminal ISSUE117_ARM_C_SWA_REMEDIATION_READY, implementation-remediation-only, no physical execution): the standalone R6 stage runtime now owns the session SWA allocation lifecycle \u2014 incremental alloc_swa frontier established before each chunk's first prefix-consuming SWA KV operation, mapping persistence across chunks/decode, wholesale release on reset, fail-closed exhaustion/gaps \u2014 the same underlying allocation semantic as the accepted #157 intervention and the scheduler path, proven CPU-only with lifecycle and negative-control tests. The remediation producer is NOT promoted to qualification authority; fresh Arm-C requalification remains separately blocked pending maintainer acceptance/merge of the remediation. Arm C remains failed; no requalification executed; Arm D/E remain blocked"
-    },
-    "objective": "Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.",
-    "prerequisite": {
-      "acceptance": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/1b83bcab0a5e682a438ca0554f71dd0ace15be55",
-        "state": "accepted"
-      },
-      "observation": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/pull/136",
-        "result": "ISSUE117_ARM_C_ORDINARY_SERVING_FAIL"
-      },
-      "title": "Arm C \u2014 ordinary external-Coordinator serving"
-    },
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/117",
-    "title": "Issue #117 \u2014 R6 successor dense full integration"
+ "capabilities": [
+  {
+   "acceptance": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/55#issuecomment-5495529413",
+    "state": "accepted"
+   },
+   "id": "planning",
+   "observation": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/55#issuecomment-5495529413",
+    "result": "R3_MINIMUM_AUTOMATIC_PLANNING_PASS"
+   },
+   "scope": "physical",
+   "summary": "Strategy-constrained selection among legal local plans using applicable evidence and operator policy.",
+   "title": "Automatic planning"
   },
-  "limits": [
-    "Research / proof of concept; no released production runtime.",
-    "Physical results apply to their tested model, backend, hardware, and topology. CPU fixture proofs do not establish physical integration.",
-    "Public planner/strategy APIs, wire formats, and storage schemas remain unfrozen; broad vendor support remains an objective.",
-    "Historical Phase 1 NO-GO and R6 failure remain unchanged. GLM-5.3-Flash / #13 is a later falsifier."
-  ],
-  "runtime": {
-    "integration_branch": "inferswarm-research",
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/59",
-    "repository": "https://github.com/Zutfen-LLC/FreeToken"
+  {
+   "acceptance": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/60#issuecomment-5504161037",
+    "state": "accepted"
+   },
+   "id": "serving",
+   "observation": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/60#issuecomment-5504161037",
+    "result": "R5A_STATIC_MULTI_NODE_SERVING_PASS"
+   },
+   "scope": "physical",
+   "summary": "A normal request drives planning, multi-Node realization, and backend-native execution on the tested Qwen path.",
+   "title": "Distributed serving"
   },
-  "schema": "inferswarm.project-status/1"
+  {
+   "acceptance": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/62#issuecomment-5508822299",
+    "state": "accepted"
+   },
+   "id": "recovery",
+   "observation": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/62#issuecomment-5508822299",
+    "result": "R5B_PLAN_EPOCH_RECOVERY_PASS"
+   },
+   "scope": "physical",
+   "summary": "Resource changes and recovery preserve plan-epoch authority and reject retired work on the tested serving path.",
+   "title": "Plan epochs and recovery"
+  },
+  {
+   "acceptance": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/67#issuecomment-5516608982",
+    "state": "accepted"
+   },
+   "id": "coordinator",
+   "observation": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/67#issuecomment-5516608982",
+    "result": "EXTERNAL_COORDINATOR_SEPARATION_PASS"
+   },
+   "scope": "physical",
+   "summary": "A CPU-only Coordinator handles ingress, planning, epoch coordination, and committed output without hosting model execution.",
+   "title": "Separate Coordinator"
+  },
+  {
+   "acceptance": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/53fb8f4c7ba3108a21f983712e5cbdb747a26600",
+    "state": "accepted"
+   },
+   "id": "acquisition",
+   "observation": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/53fb8f4c7ba3108a21f983712e5cbdb747a26600/docs/implementation/plan-driven-artifact-acquisition-99/README.md",
+    "result": "PLAN_DRIVEN_ARTIFACT_ACQUISITION_PASS"
+   },
+   "scope": "cpu-fixture",
+   "summary": "Participants acquire only required model artifacts in the model-independent acquisition proof.",
+   "title": "Selective artifact acquisition"
+  },
+  {
+   "acceptance": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da",
+    "state": "accepted"
+   },
+   "id": "orchestration",
+   "observation": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da/docs/implementation/plan-driven-artifact-orchestration-101/README.md",
+    "result": "PLAN_DRIVEN_ARTIFACT_ORCHESTRATION_PASS"
+   },
+   "scope": "cpu-fixture",
+   "summary": "Verified inventory, source selection, peer publication, and replacement-plan acquisition work across participants.",
+   "title": "Peer reuse and replacement deltas"
+  },
+  {
+   "acceptance": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/47624abe14a84d27188018200a48a8652f93bfd6",
+    "state": "accepted"
+   },
+   "id": "locality",
+   "observation": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/47624abe14a84d27188018200a48a8652f93bfd6/docs/implementation/artifact-locality-transition-planning-103/README.md",
+    "result": "ARTIFACT_LOCALITY_TRANSITION_PLANNING_PASS"
+   },
+   "scope": "cpu-fixture",
+   "summary": "Verified artifact locality affects transition ranking without changing technical feasibility or execution ranking.",
+   "title": "Locality-aware transition planning"
+  },
+  {
+   "acceptance": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76",
+    "state": "accepted"
+   },
+   "id": "qualification",
+   "observation": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76/docs/qualification/gemma4-12b-it-v5-campaign-110/b/TERMINAL-REPORT.md",
+    "result": "V5_QUALIFICATION_PASS"
+   },
+   "scope": "physical",
+   "summary": "The frozen Gemma subject passed V5 numerical and semantic qualification; applicability remains specific to that subject.",
+   "title": "Dense Gemma numerical qualification"
+  }
+ ],
+ "frontier": {
+  "execution": {
+   "constraints": [
+    "The accepted historical Arm-C result remains ISSUE117_ARM_C_EVIDENCE_BLOCKER (PR #128, merge 718efbf5770b31c6e44eb3a8c4d0b81fd1dc9c22); it is preserved as the correct result of the original inadmissible campaign.",
+    "The corrected fresh Arm-C campaign is accepted as ISSUE117_ARM_C_ORDINARY_SERVING_FAIL (PR #136, merge 1b83bcab0a5e682a438ca0554f71dd0ace15be55): 18/24 exact equality and six regime-4 committed-token divergences under complete pre-divergence invocation equivalence.",
+    "Issue #137 diagnosis is accepted as ISSUE117_ARM_C_REGIME4_DIAGNOSIS_PARTIAL (PR #138, merge cdc23d0e8fa9d3b1b27bab5749939a5ad69b9610): multi-chunk extend-prefill is sufficient for instability on a stable control, and the earliest captured divergence is inside stage 1 at or before global layer 1, but one identical numerical mechanism for all six cases is not established.",
+    "Issue #153 corrected remediation is ISSUE117_ARM_C_REMEDIATION_BLOCKED (BACKEND_REQUIRES_MULTI_CHUNK): the accepted 65-67-row failing units must remain multi-chunk under the frozen 64-row boundary/wire contract, the required extend path's instability is not remediated, and the at-or-below-64 single-call policy cleanup is useful but not a remediation of the failing population; fresh Arm-C requalification MUST NOT be authorized from the candidate producer.",
+    "Issue #157 chunk-2 extend-path diagnosis delivered ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED under its physically authorized diagnostic-only scope: the R6 standalone stage path never performs SWA slot allocation, so full-to-swa index mapping stays at the all-zero sentinel and every SWA-layer chunk-2 store and prefix read resolves to swa slot 0; a single-factor alloc_swa intervention makes chunk-2 byte-deterministic on both anchors while the paired control varies. This is a diagnostic localization only: remediation and requalification still require separate authority.",
+    "No h109-* holdout material may be opened, generated, copied, or used; Arm D and Arm E remain blocked.",
+    "Issue #166 SWA allocation remediation delivered ISSUE117_ARM_C_SWA_REMEDIATION_READY under its implementation-remediation-only scope: the standalone R6 stage runtime now owns the session SWA allocation lifecycle (incremental alloc_swa frontier before each chunk's first prefix-consuming SWA KV operation, mapping persistence across chunks/decode, wholesale release on reset, fail-closed exhaustion/gaps), reaching the same underlying allocation semantic as the accepted #157 intervention and the scheduler path; proven CPU-only with lifecycle/negative-control tests, no model execution. The remediation producer is NOT promoted to qualification authority; fresh Arm-C requalification remains separately blocked pending maintainer acceptance/merge.",
+    "#168 Phase 1B fresh-arm corpus census (pinned frozen tokenizer, all 1416 public c109 cases rendered) proved buckets 25-48 and 49-64 EMPTY under every defensible two-chunk reading (corpus regimes cap raw prompts at 56 tokens; max rendered length 69), so the mandated 4x4 fresh multi-chunk arm is corpus-insufficient; issue forbids bucket adaptation and mandates the pre-observation terminal ISSUE117_ARM_C_REQUALIFICATION_EVIDENCE_BLOCKED (campaign issue168-arm-c-post-swa-requal-v1). No physical execution; the #166 remediation remains unexecuted; maintainer must authorize a longer-regime public corpus or re-scope the bucket design before requalification can run."
+   ],
+   "reference": null,
+   "state": "blocked",
+   "step": "Arm-C post-SWA requalification (issue #168) stopped pre-observation with ISSUE117_ARM_C_REQUALIFICATION_EVIDENCE_BLOCKED: the fresh 16-case multi-chunk generalization arm is corpus-insufficient (upper second-chunk-remainder buckets empty in the public c109 corpus; max rendered length 69 vs required up-to-128), mechanically proven with the pinned frozen tokenizer before any GPU/model execution. The #166 SWA remediation remains CPU-proven only; the requalification question is NOT answered; Arm C remains failed (#133); Arm D/E remain blocked; maintainer correction of the fresh-arm corpus/bucket design is required before a fresh campaign can be authorized"
+  },
+  "objective": "Integrate V5-qualified dense Gemma with automatic planning, participant-exact artifact acquisition, selective materialization, and ordinary fenced serving.",
+  "prerequisite": {
+   "acceptance": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/1b83bcab0a5e682a438ca0554f71dd0ace15be55",
+    "state": "accepted"
+   },
+   "observation": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/pull/136",
+    "result": "ISSUE117_ARM_C_ORDINARY_SERVING_FAIL"
+   },
+   "title": "Arm C \u2014 ordinary external-Coordinator serving"
+  },
+  "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/117",
+  "title": "Issue #117 \u2014 R6 successor dense full integration"
+ },
+ "limits": [
+  "Research / proof of concept; no released production runtime.",
+  "Physical results apply to their tested model, backend, hardware, and topology. CPU fixture proofs do not establish physical integration.",
+  "Public planner/strategy APIs, wire formats, and storage schemas remain unfrozen; broad vendor support remains an objective.",
+  "Historical Phase 1 NO-GO and R6 failure remain unchanged. GLM-5.3-Flash / #13 is a later falsifier."
+ ],
+ "runtime": {
+  "integration_branch": "inferswarm-research",
+  "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/59",
+  "repository": "https://github.com/Zutfen-LLC/FreeToken"
+ },
+ "schema": "inferswarm.project-status/1"
 }

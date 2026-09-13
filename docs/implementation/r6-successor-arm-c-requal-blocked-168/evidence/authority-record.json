@@ -1,0 +1,141 @@
+{
+ "accepted_authority_chain": [
+  {
+   "issue": 133,
+   "merge": "1b83bcab0a5e682a438ca0554f71dd0ace15be55",
+   "terminal": "ISSUE117_ARM_C_ORDINARY_SERVING_FAIL"
+  },
+  {
+   "classification": "BACKEND_REQUIRES_MULTI_CHUNK",
+   "issue": 153,
+   "terminal": "ISSUE117_ARM_C_REMEDIATION_BLOCKED"
+  },
+  {
+   "issue": 157,
+   "merge": "df0365ea606a54222415e34f6cfb127e9f938f0c",
+   "terminal": "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED"
+  },
+  {
+   "freetoken_implementation_head": "64a37a1f1a2797a190610c5adcdcb4157bce63b9",
+   "freetoken_merge": "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469",
+   "inferswarm_merge": "00140a14e3ecbbbd64fdaf1803fe3922e7f4a554",
+   "issue": 166,
+   "terminal": "ISSUE117_ARM_C_SWA_REMEDIATION_READY"
+  }
+ ],
+ "built_at_unix": 1789325005,
+ "campaign_id": "issue168-arm-c-post-swa-requal-v1",
+ "execution_delta_audit": {
+  "accepted_arm_c_producer": "924cd22ea081f6d4ed471016faf01d427fc5b0d2",
+  "changed_files_by_class": {
+   "docs_only": [],
+   "execution_bearing": [
+    "benchmarks/inferswarm_110/__init__.py",
+    "benchmarks/inferswarm_110/chain_runner.py",
+    "benchmarks/inferswarm_110/last_stage_service.py",
+    "benchmarks/inferswarm_110/reference_runner.py",
+    "benchmarks/inferswarm_110b/__init__.py",
+    "benchmarks/inferswarm_110b/chain_runner_holdout.py",
+    "benchmarks/inferswarm_110b/reference_runner_holdout.py",
+    "benchmarks/inferswarm_r6/last_stage_service.py",
+    "benchmarks/inferswarm_r6/stage_chain.py",
+    "benchmarks/inferswarm_r6/stage_runtime.py",
+    "benchmarks/inferswarm_r6/two_stage.py",
+    "python/freetoken/research/prefill_partition.py"
+   ],
+   "other": [],
+   "test_only": [
+    "tests/research/test_inferswarm_110_harness.py",
+    "tests/research/test_inferswarm_110b_holdout_authority.py",
+    "tests/research/test_issue117_arm_c_remediation.py",
+    "tests/research/test_issue166_swa_remediation.py"
+   ]
+  },
+  "delta_statement": "the only execution-bearing runtime change in the fresh campaign's producer lineage beyond the accepted Arm-C producer is the #153 single-chunk policy correction and the #166 session-SWA-lifecycle ownership in benchmarks/inferswarm_r6/stage_runtime.py (hashes bound above); model math, weights, tokenizer semantics, geometry, planner semantics, fencing contract, and comparator semantics are byte-identical otherwise (mechanically enumerated here, adjudicated by the maintainer at acceptance)",
+  "producer_lineage": [
+   "b05564a7f3f7ca1b141d54842357ff2624dc6a19",
+   "5e6bca586f6d960ac863f63cf9e9232ed80e362b",
+   "f6133b88d40e4d43d3ac82fa732f21e540b7273d",
+   "55e8baaebabe67aeb967d4bd407ef26696933104",
+   "64a37a1f1a2797a190610c5adcdcb4157bce63b9",
+   "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469"
+  ],
+  "stage_runtime_sha256_at_166": "afe9ceb09208174d0da2905d4097009460d05bbe5050b0d15eaa2baa4e40ac73",
+  "stage_runtime_sha256_at_base": "1cca03969a14d5b3d9b150a7972fa9bb2bee5a693073d603fb46e9af897f8737"
+ },
+ "fresh_corpus_census": {
+  "eligible_counts": {
+   "final_replay_crossing": {
+    "1-8": 78,
+    "25-48": 0,
+    "49-64": 0,
+    "9-24": 271
+   },
+   "prompt_two_chunk": {
+    "1-8": 344,
+    "25-48": 0,
+    "49-64": 0,
+    "9-24": 0
+   }
+  },
+  "file": "corpus-census.json",
+  "insufficient_buckets": {
+   "final_replay_crossing": [
+    "25-48",
+    "49-64"
+   ],
+   "prompt_two_chunk": [
+    "25-48",
+    "49-64",
+    "9-24"
+   ]
+  },
+  "max_rendered_len_corpus": 69,
+  "salt": "issue168-arm-c-post-swa-requal-v1",
+  "schema": "inferswarm.issue168.arm-c-requal-corpus-census/1"
+ },
+ "issue": "https://github.com/Zutfen-LLC/inferswarm/issues/168",
+ "non_claims": [
+  "no physical/GPU/model execution occurred",
+  "no direct/ordinary observation exists; the Arm-C requalification question is NOT answered by this record",
+  "the accepted #133 FAIL terminal and the #157/#166 records are untouched and remain the accepted state",
+  "no h109-* material was opened, generated, copied, inferred, reconstructed, or used",
+  "Arm D and Arm E were not started"
+ ],
+ "physical_authorization_id": "physical-authorization-issue168-inferswarm-00140a14-freetoken-6202eeeb",
+ "pre_observation_terminal": "ISSUE117_ARM_C_REQUALIFICATION_EVIDENCE_BLOCKED",
+ "preflight_state": {
+  "h109_material_accessed": false,
+  "outputs_inspected": false,
+  "phase_reached": "phase-1-corpus-freeze",
+  "physical_execution_performed": false
+ },
+ "regression_fixture_binding": {
+  "accepted_arm_c_fixture_digest": "sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba36f2",
+  "case_count": 24,
+  "renders_reproduced_under_frozen_tokenizer": 24
+ },
+ "schema": "inferswarm.issue168.arm-c-requal-authority/1",
+ "starting_heads": {
+  "ancestor_proofs": {
+   "freetoken_166_implementation_in_merge": true,
+   "freetoken_166_merge_is_ancestor_of_research": true,
+   "inferswarm_166_merge_is_ancestor_of_main": true
+  },
+  "expected_freetoken_inferswarm_research": "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469",
+  "expected_inferswarm_main": "00140a14e3ecbbbd64fdaf1803fe3922e7f4a554",
+  "freetoken_inferswarm_research": "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469",
+  "inferswarm_main": "00140a14e3ecbbbd64fdaf1803fe3922e7f4a554",
+  "verified": true
+ },
+ "subject": {
+  "candidate": "dense.6171f32b4413",
+  "checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+  "chunk_boundary_contract": "64 rows per prefill call",
+  "geometry": "inferswarm01/gpu-0 [0,16)\ninferswarm01/gpu-1 [16,32)\ninferswarm03/gpu-0 [32,48)",
+  "model": "google/gemma-4-12B-it",
+  "qualification_subject": "sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f7f1d7994ffd",
+  "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7"
+ },
+ "terminal_basis": "issue #168 Phase 1B: the fresh public multi-chunk generalization arm requires four eligible public cases in each of the second-chunk-remainder buckets 1-8, 9-24, 25-48, and 49-64, derived from the public c109 calibration corpus; the mechanically derived census (corpus-census.json) shows upper buckets empty under EVERY defensible reading of the two-chunk length requirement (the corpus's frozen length regimes cap raw prompts at 56 tokens, bounding rendered lengths at 69), so buckets 25-48 and 49-64 are corpus-insufficient. The issue forbids adapting buckets or inspecting outputs and mandates stopping pre-observation with ISSUE117_ARM_C_REQUALIFICATION_EVIDENCE_BLOCKED"
+}
