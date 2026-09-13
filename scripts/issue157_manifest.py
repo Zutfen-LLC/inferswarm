@@ -48,11 +48,15 @@ def main(argv=None) -> int:
         print(f"FAIL: bundle entry drift: missing={missing} "
               f"unexpected={unexpected}")
         return 1
+    prefix = (
+        "docs/implementation/r6-successor-dense-full-integration-117/"
+        "evidence/arm-c-chunk2-diagnosis-157/"
+    )
     rows = []
     for name in EXPECTED:
         if name == "MANIFEST.sha256":
             continue
-        rows.append(f"{sha256_file(BUNDLE / name)}  {name}")
+        rows.append(f"{sha256_file(BUNDLE / name)}  {prefix}{name}")
     manifest = "\n".join(rows) + "\n"
     manifest_path = BUNDLE / "MANIFEST.sha256"
     if check_only:
