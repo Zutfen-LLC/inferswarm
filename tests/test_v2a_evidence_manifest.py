@@ -46,11 +46,13 @@ class ManifestContractTests(unittest.TestCase):
                          "evidence/v2a-nv-a-canonical-01/execution-receipt.json"):
             self.assertIn(required, terminal)
 
-    def test_current_namespace_matches_first_rung(self):
+    def test_current_namespace_matches_a_ladder_rung(self):
         contract = manifest.load_contract(CONTRACT)
-        # The repository bundle currently holds README.md only.
-        self.assertEqual(manifest.current_inventory(ROOT / contract["bundle"]),
-                         frozenset(contract["ladder"][0]["evidence"]))
+        # The repository bundle must sit exactly on one ladder rung at
+        # all times (currently: README + retained replays).
+        actual = manifest.current_inventory(ROOT / contract["bundle"])
+        rungs = [frozenset(r["evidence"]) for r in contract["ladder"]]
+        self.assertIn(actual, rungs)
 
     def test_missing_evidence_fails_closed(self):
         with tempfile.TemporaryDirectory() as temp:
