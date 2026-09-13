@@ -1,0 +1,67 @@
+{
+  "campaign_id": "issue172-arm-c-requalification-v1",
+  "counters": {
+    "coordinator_bulk_artifact_bytes_observed": 0,
+    "coordinator_cuda_initialized": 0,
+    "coordinator_model_weight_bytes_materialized": 0,
+    "coordinator_model_weight_bytes_received": 0,
+    "direct_plan_substitution": 0,
+    "fencing_injections_accepted": 0,
+    "fencing_injections_rejected": 2,
+    "fencing_ledger_unmutated": true,
+    "hidden_source_fallback_reacquisition": 0,
+    "live_positions_resolving_to_swa_sentinel_slot0": 0,
+    "ordinary_plan_families": 1,
+    "silent_plan_substitution": 0,
+    "stale_epoch_commits": 0,
+    "stale_session_commits": 0,
+    "stale_swa_ownership_surviving_reset": 0,
+    "unattributed_correctness_bearing_commits": 0,
+    "unauthorized_model_state_movement": 0,
+    "unexpected_rematerialization": 0,
+    "unexplained_persistent_host_mirrors": 0,
+    "wrong_epoch_commits": 0,
+    "wrong_position_commits": 0,
+    "wrong_session_commits": 0
+  },
+  "fencing": {
+    "injections": [
+      {
+        "accepted": false,
+        "injection": "CONTROLLED_LATE_REAL_SERVING_RESULT",
+        "reason": "duplicate already-committed position"
+      },
+      {
+        "accepted": false,
+        "injection": "CONTROLLED_STALE_EPOCH_RESULT",
+        "reason": "retired/stale epoch identity"
+      }
+    ],
+    "ledger_unmutated": true
+  },
+  "mandatory_zeros": [
+    "stale_session_commits",
+    "wrong_session_commits",
+    "stale_epoch_commits",
+    "wrong_epoch_commits",
+    "wrong_position_commits",
+    "unattributed_correctness_bearing_commits",
+    "coordinator_cuda_initialized",
+    "coordinator_model_weight_bytes_received",
+    "coordinator_model_weight_bytes_materialized",
+    "coordinator_bulk_artifact_bytes_observed",
+    "hidden_source_fallback_reacquisition",
+    "unexpected_rematerialization",
+    "unexplained_persistent_host_mirrors",
+    "silent_plan_substitution",
+    "unauthorized_model_state_movement",
+    "live_positions_resolving_to_swa_sentinel_slot0",
+    "stale_swa_ownership_surviving_reset",
+    "fencing_injections_accepted",
+    "direct_plan_substitution"
+  ],
+  "passed": true,
+  "problems": [],
+  "schema": "inferswarm.issue172.arm-c-requal.zero-invariants/1",
+  "zero_failures": []
+}

@@ -1,0 +1,39 @@
+{
+  "arm": "generalization-170",
+  "case_id": "g170-09",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "island young amber open open field hill island open river gentle under calm hill bird joins open path island gentle drifts morning valley quiet open joins morning island amber quiet young bird quiet amber drifts valley amber path light young young island open wind stone joins kind east drifts young gentle valley joins under travels open near valley joins drifts path bird drifts amber calm open young open stone drifts calm light stone joins island joins",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 33,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\nisland young amber open open field hill island open river gentle under calm hill bird joins open path island gentle drifts morning valley quiet open joins morning island amber quiet young bird quiet amber drifts valley amber path light young young island open wind stone joins kind east drifts young gentle valley joins under travels open near valley joins drifts path bird drifts amber calm open young open stone drifts calm light stone joins island joins<turn|>\n<|turn>model\n<|channel>thought\n<channel|>This appears to be a word cloud or",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-c476ec3aa837",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 89,
+      "total_tokens": 97
+    }
+  },
+  "schema": "inferswarm.issue172.arm-c-requal.ordinary-case/1",
+  "wall_ns": 3662597642
+}

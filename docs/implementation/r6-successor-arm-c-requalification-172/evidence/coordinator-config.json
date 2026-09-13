@@ -1,0 +1,12 @@
+{
+  "chain_plan": "/srv/inferswarm/state/arm-c-requal-172/chain-plan.json",
+  "environment": "/srv/inferswarm/state/arm-c-requal-172/environment.json",
+  "node_agent_host": "10.0.0.141",
+  "node_agent_port": 18486,
+  "objective": "ttft_ms",
+  "report_out": "/srv/inferswarm/state/arm-c-requal-172/lifecycle/serving-report.json",
+  "repository_root": "/srv/inferswarm/repos/FreeToken",
+  "scope_id": "issue117-arm-c",
+  "serving_evidence": "/srv/inferswarm/state/arm-c-requal-172/serving-evidence.json",
+  "tokenizer_path": "/srv/inferswarm/tokenizers/gemma-r6-frozen"
+}

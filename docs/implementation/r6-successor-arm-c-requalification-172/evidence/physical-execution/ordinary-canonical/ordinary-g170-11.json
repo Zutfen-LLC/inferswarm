@@ -1,0 +1,39 @@
+{
+  "arm": "generalization-170",
+  "case_id": "g170-11",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "zero tick tick same again tock again again tick again again tock ha echo na same again again again na again zero la ha loop ha again again tick zero echo same tick loop la zero ha ha again echo zero la zero tock same echo la echo ha zero echo again loop tock tock same loop echo loop ha loop tick ha zero ha zero same ha ha na again la tock ha la na loop loop ha same loop na echo tock",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 35,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\nzero tick tick same again tock again again tick again again tock ha echo na same again again again na again zero la ha loop ha again again tick zero echo same tick loop la zero ha ha again echo zero la zero tock same echo la echo ha zero echo again loop tock tock same loop echo loop ha loop tick ha zero ha zero same ha ha na again la tock ha la na loop loop ha same loop na echo tock<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It seems like you are creating a rhythmic",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-c476ec3aa837",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 104,
+      "total_tokens": 112
+    }
+  },
+  "schema": "inferswarm.issue172.arm-c-requal.ordinary-case/1",
+  "wall_ns": 3576629417
+}

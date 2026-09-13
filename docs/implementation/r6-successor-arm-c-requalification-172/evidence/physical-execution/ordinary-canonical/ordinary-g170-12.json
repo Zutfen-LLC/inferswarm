@@ -1,0 +1,39 @@
+{
+  "arm": "generalization-170",
+  "case_id": "g170-12",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "grazie merci \u043f\u0440\u0438\u0432\u0435\u0442 \u0627\u0644\u0639\u0627\u0644\u0645 duniya bonjour namaste obrigado merci hola \u043f\u0440\u0438\u0432\u0435\u0442 grazie namaste tack v\u00e4rld mundo hallo namaste \u0645\u0631\u062d\u0628\u0627 hallo gracias danke obrigado \u0441\u043f\u0430\u0441\u0438\u0431\u043e mondo \u3053\u3093\u306b\u3061\u306f \u043f\u0440\u0438\u0432\u0435\u0442 \u043f\u0440\u0438\u0432\u0435\u0442 namaste \u0627\u0644\u0639\u0627\u0644\u0645 \uc138\uacc4 hola mundo mundo \uac10\uc0ac mundo gracias gracias hej \uc138\uacc4 \u3053\u3093\u306b\u3061\u306f hej ol\u00e1 duniya danke hej ol\u00e1 mondo danke bonjour grazie ciao \u0441\u043f\u0430\u0441\u0438\u0431\u043e \u4e16\u754c grazie mundo monde \u043c\u0438\u0440 welt \uc138\uacc4 v\u00e4rld \u0441\u043f\u0430\u0441\u0438\u0431\u043e tack \u3053\u3093\u306b\u3061\u306f duniya obrigado gracias duniya \u043c\u0438\u0440 \u043c\u0438\u0440 \uc138\uacc4 tack \u4e16\u754c mundo tack \u0627\u0644\u0639\u0627\u0644\u0645 mondo merci hallo bonjour hallo",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 36,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\ngrazie merci \u043f\u0440\u0438\u0432\u0435\u0442 \u0627\u0644\u0639\u0627\u0644\u0645 duniya bonjour namaste obrigado merci hola \u043f\u0440\u0438\u0432\u0435\u0442 grazie namaste tack v\u00e4rld mundo hallo namaste \u0645\u0631\u062d\u0628\u0627 hallo gracias danke obrigado \u0441\u043f\u0430\u0441\u0438\u0431\u043e mondo \u3053\u3093\u306b\u3061\u306f \u043f\u0440\u0438\u0432\u0435\u0442 \u043f\u0440\u0438\u0432\u0435\u0442 namaste \u0627\u0644\u0639\u0627\u0644\u0645 \uc138\uacc4 hola mundo mundo \uac10\uc0ac mundo gracias gracias hej \uc138\uacc4 \u3053\u3093\u306b\u3061\u306f hej ol\u00e1 duniya danke hej ol\u00e1 mondo danke bonjour grazie ciao \u0441\u043f\u0430\u0441\u0438\u0431\u043e \u4e16\u754c grazie mundo monde \u043c\u0438\u0440 welt \uc138\uacc4 v\u00e4rld \u0441\u043f\u0430\u0441\u0438\u0431\u043e tack \u3053\u3093\u306b\u3061\u306f duniya obrigado gracias duniya \u043c\u0438\u0440 \u043c\u0438\u0440 \uc138\uacc4 tack \u4e16\u754c mundo tack \u0627\u0644\u0639\u0627\u0644\u0645 mondo merci hallo bonjour hallo<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It looks like you have compiled a multilingual",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-c476ec3aa837",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 112,
+      "total_tokens": 120
+    }
+  },
+  "schema": "inferswarm.issue172.arm-c-requal.ordinary-case/1",
+  "wall_ns": 3536434225
+}

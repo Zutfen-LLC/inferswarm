@@ -68,6 +68,11 @@
     "test_issue157_chunk2_diagnosis"
    ]
   },
+  "issue-172-requal": {
+   "test_modules": [
+    "test_issue172_requalification"
+   ]
+  },
   "issue-74-79": {
    "test_modules": [
     "test_issue74_methodology",
@@ -214,6 +219,9 @@
   ],
   "docs/implementation/r6-successor-arm-c-requal-blocked-168/": [
    "issue-117-133"
+  ],
+  "docs/implementation/r6-successor-arm-c-requalification-172/": [
+   "issue-172-requal"
   ],
   "docs/implementation/r6-successor-arm-c-swa-remediation-166/": [
    "issue-117-133"
@@ -644,6 +652,60 @@
   ],
   "scripts/issue170_terminal_reduction.py": [
    "issue-117-133"
+  ],
+  "scripts/issue172_authority.py": [
+   "issue-172-requal"
+  ],
+  "scripts/issue172_campaign_pins.py": [
+   "issue-172-requal"
+  ],
+  "scripts/issue172_corpus_bind.py": [
+   "issue-172-requal"
+  ],
+  "scripts/issue172_cpu_preflight.py": [
+   "issue-172-requal"
+  ],
+  "scripts/issue172_direct_driver.py": [
+   "issue-172-requal"
+  ],
+  "scripts/issue172_direct_loop.py": [
+   "issue-172-requal"
+  ],
+  "scripts/issue172_equality_reduce.py": [
+   "issue-172-requal"
+  ],
+  "scripts/issue172_manifest.py": [
+   "issue-172-requal"
+  ],
+  "scripts/issue172_ordinary_client.py": [
+   "issue-172-requal"
+  ],
+  "scripts/issue172_ordinary_loop.py": [
+   "issue-172-requal"
+  ],
+  "scripts/issue172_physical_preflight.py": [
+   "issue-172-requal"
+  ],
+  "scripts/issue172_real_builder_dry_run.py": [
+   "issue-172-requal"
+  ],
+  "scripts/issue172_refreeze.py": [
+   "issue-172-requal"
+  ],
+  "scripts/issue172_sentinel_reduce.py": [
+   "issue-172-requal"
+  ],
+  "scripts/issue172_serving_evidence.py": [
+   "issue-172-requal"
+  ],
+  "scripts/issue172_swa_observation.py": [
+   "issue-172-requal"
+  ],
+  "scripts/issue172_terminal.py": [
+   "issue-172-requal"
+  ],
+  "scripts/issue172_zero_invariants.py": [
+   "issue-172-requal"
   ],
   "scripts/issue35_coarse_concurrent.py": [
    "vulkan-v0-b"

@@ -184,6 +184,9 @@ GROUP_TEST_MODULES = {
         "test_issue168_requal_blocked_record",
         "test_issue170_long_remainder_corpus",
     ],
+    "issue-172-requal": [
+        "test_issue172_requalification",
+    ],
     "issue-137": [
         "test_issue137_regime4_diagnosis",
         "test_issue137_regime4_diagnosis_correction",
@@ -411,6 +414,29 @@ PATH_GROUPS = {
     "scripts/issue170_authority_record.py": ["issue-117-133"],
     "scripts/issue170_terminal_reduction.py": ["issue-117-133"],
     "scripts/issue170_manifest.py": ["issue-117-133"],
+    # Issue #172 Arm-C physical requalification (post-#166/#170; the
+    # physical evidence bundle + CPU-side campaign tooling; the physical
+    # drivers are hash-retained inside the preflight records).
+    "docs/implementation/r6-successor-arm-c-requalification-172/": [
+        "issue-172-requal"],
+    "scripts/issue172_campaign_pins.py": ["issue-172-requal"],
+    "scripts/issue172_authority.py": ["issue-172-requal"],
+    "scripts/issue172_corpus_bind.py": ["issue-172-requal"],
+    "scripts/issue172_direct_loop.py": ["issue-172-requal"],
+    "scripts/issue172_ordinary_loop.py": ["issue-172-requal"],
+    "scripts/issue172_cpu_preflight.py": ["issue-172-requal"],
+    "scripts/issue172_physical_preflight.py": ["issue-172-requal"],
+    "scripts/issue172_refreeze.py": ["issue-172-requal"],
+    "scripts/issue172_real_builder_dry_run.py": ["issue-172-requal"],
+    "scripts/issue172_direct_driver.py": ["issue-172-requal"],
+    "scripts/issue172_ordinary_client.py": ["issue-172-requal"],
+    "scripts/issue172_serving_evidence.py": ["issue-172-requal"],
+    "scripts/issue172_equality_reduce.py": ["issue-172-requal"],
+    "scripts/issue172_sentinel_reduce.py": ["issue-172-requal"],
+    "scripts/issue172_swa_observation.py": ["issue-172-requal"],
+    "scripts/issue172_zero_invariants.py": ["issue-172-requal"],
+    "scripts/issue172_terminal.py": ["issue-172-requal"],
+    "scripts/issue172_manifest.py": ["issue-172-requal"],
     # Issue #137 retained evidence lives inside the #117 evidence tree;
     # the narrower #137 subtree fans out to both its semantic group and
     # the broader shared-tree lineage (the #117 prefix rule above also

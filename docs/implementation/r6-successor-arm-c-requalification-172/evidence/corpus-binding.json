@@ -1,0 +1,21 @@
+{
+  "campaign_id": "issue172-arm-c-requalification-v1",
+  "case_count": 40,
+  "checks": {
+    "g170_bucket_membership": true,
+    "g170_lengths_exact": true,
+    "no_forbidden_namespace": true,
+    "prefix_disambiguation_rendered": true,
+    "regression_session_indices_1_to_24": true
+  },
+  "combined_canonical_digest": "sha256:7976ca7b13ac18582a9ef3d6ff14a0935418b122e5e012aac9462cb4a8652630",
+  "corpus_170_canonical_digest": "sha256:8a382df1ae5e7d7330966e65acba58bc02ff5af958f3ef63484cc52747a31c34",
+  "generalization_count": 16,
+  "identity_counts": {
+    "total": 40
+  },
+  "integration_fixture_digest": "sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba36f2",
+  "regression_count": 24,
+  "regression_fixture_digest": "sha256:6046d4796a5d9cc888030c6b3f07304c20ce117d93905c3000d7aae7c0ae01c7",
+  "schema": "inferswarm.issue172.arm-c-requal-corpus-binding/1"
+}

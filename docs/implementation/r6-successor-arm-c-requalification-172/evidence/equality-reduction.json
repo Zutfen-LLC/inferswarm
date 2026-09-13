@@ -1,0 +1,251 @@
+{
+  "campaign_id": "issue172-arm-c-requalification-v1",
+  "case_count": 40,
+  "equal_count": 40,
+  "global_problems": [],
+  "note": "mechanically re-derived from retained bytes: committed ids step-by-step, counts, stopping, decoded sha, invocation seam call-by-call; no authored equality booleans consulted",
+  "rows": [
+    {
+      "case_id": "c109-01-01-045",
+      "equal": true,
+      "problems": [],
+      "session_index": 1
+    },
+    {
+      "case_id": "c109-01-02-076",
+      "equal": true,
+      "problems": [],
+      "session_index": 2
+    },
+    {
+      "case_id": "c109-01-03-009",
+      "equal": true,
+      "problems": [],
+      "session_index": 3
+    },
+    {
+      "case_id": "c109-01-04-036",
+      "equal": true,
+      "problems": [],
+      "session_index": 4
+    },
+    {
+      "case_id": "c109-01-05-017",
+      "equal": true,
+      "problems": [],
+      "session_index": 5
+    },
+    {
+      "case_id": "c109-01-06-006",
+      "equal": true,
+      "problems": [],
+      "session_index": 6
+    },
+    {
+      "case_id": "c109-02-01-030",
+      "equal": true,
+      "problems": [],
+      "session_index": 7
+    },
+    {
+      "case_id": "c109-02-02-020",
+      "equal": true,
+      "problems": [],
+      "session_index": 8
+    },
+    {
+      "case_id": "c109-02-03-011",
+      "equal": true,
+      "problems": [],
+      "session_index": 9
+    },
+    {
+      "case_id": "c109-02-04-033",
+      "equal": true,
+      "problems": [],
+      "session_index": 10
+    },
+    {
+      "case_id": "c109-02-05-024",
+      "equal": true,
+      "problems": [],
+      "session_index": 11
+    },
+    {
+      "case_id": "c109-02-06-049",
+      "equal": true,
+      "problems": [],
+      "session_index": 12
+    },
+    {
+      "case_id": "c109-03-01-044",
+      "equal": true,
+      "problems": [],
+      "session_index": 13
+    },
+    {
+      "case_id": "c109-03-02-054",
+      "equal": true,
+      "problems": [],
+      "session_index": 14
+    },
+    {
+      "case_id": "c109-03-03-031",
+      "equal": true,
+      "problems": [],
+      "session_index": 15
+    },
+    {
+      "case_id": "c109-03-04-003",
+      "equal": true,
+      "problems": [],
+      "session_index": 16
+    },
+    {
+      "case_id": "c109-03-05-044",
+      "equal": true,
+      "problems": [],
+      "session_index": 17
+    },
+    {
+      "case_id": "c109-03-06-016",
+      "equal": true,
+      "problems": [],
+      "session_index": 18
+    },
+    {
+      "case_id": "c109-04-01-026",
+      "equal": true,
+      "problems": [],
+      "session_index": 19
+    },
+    {
+      "case_id": "c109-04-02-047",
+      "equal": true,
+      "problems": [],
+      "session_index": 20
+    },
+    {
+      "case_id": "c109-04-03-040",
+      "equal": true,
+      "problems": [],
+      "session_index": 21
+    },
+    {
+      "case_id": "c109-04-04-024",
+      "equal": true,
+      "problems": [],
+      "session_index": 22
+    },
+    {
+      "case_id": "c109-04-05-043",
+      "equal": true,
+      "problems": [],
+      "session_index": 23
+    },
+    {
+      "case_id": "c109-04-06-074",
+      "equal": true,
+      "problems": [],
+      "session_index": 24
+    },
+    {
+      "case_id": "g170-01",
+      "equal": true,
+      "problems": [],
+      "session_index": 25
+    },
+    {
+      "case_id": "g170-02",
+      "equal": true,
+      "problems": [],
+      "session_index": 26
+    },
+    {
+      "case_id": "g170-03",
+      "equal": true,
+      "problems": [],
+      "session_index": 27
+    },
+    {
+      "case_id": "g170-04",
+      "equal": true,
+      "problems": [],
+      "session_index": 28
+    },
+    {
+      "case_id": "g170-05",
+      "equal": true,
+      "problems": [],
+      "session_index": 29
+    },
+    {
+      "case_id": "g170-06",
+      "equal": true,
+      "problems": [],
+      "session_index": 30
+    },
+    {
+      "case_id": "g170-07",
+      "equal": true,
+      "problems": [],
+      "session_index": 31
+    },
+    {
+      "case_id": "g170-08",
+      "equal": true,
+      "problems": [],
+      "session_index": 32
+    },
+    {
+      "case_id": "g170-09",
+      "equal": true,
+      "problems": [],
+      "session_index": 33
+    },
+    {
+      "case_id": "g170-10",
+      "equal": true,
+      "problems": [],
+      "session_index": 34
+    },
+    {
+      "case_id": "g170-11",
+      "equal": true,
+      "problems": [],
+      "session_index": 35
+    },
+    {
+      "case_id": "g170-12",
+      "equal": true,
+      "problems": [],
+      "session_index": 36
+    },
+    {
+      "case_id": "g170-13",
+      "equal": true,
+      "problems": [],
+      "session_index": 37
+    },
+    {
+      "case_id": "g170-14",
+      "equal": true,
+      "problems": [],
+      "session_index": 38
+    },
+    {
+      "case_id": "g170-15",
+      "equal": true,
+      "problems": [],
+      "session_index": 39
+    },
+    {
+      "case_id": "g170-16",
+      "equal": true,
+      "problems": [],
+      "session_index": 40
+    }
+  ],
+  "schema": "inferswarm.issue172.arm-c-requal.equality-reduction/1",
+  "terminal": "ISSUE117_ARM_C_ORDINARY_SERVING_PASS"
+}

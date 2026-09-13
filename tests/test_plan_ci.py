@@ -492,6 +492,17 @@ class TestWorkflowContract(unittest.TestCase):
         for group in plan_ci.GROUP_TEST_MODULES:
             self.assertIn(f'"{group}"', text,
                           f"group {group} absent from workflow gate mapping")
+        # The substring check above is not enough: a group can appear in the
+        # reported `results` dict yet be missing from `job_for_group`, which
+        # makes the fail-closed gate fail a green run
+        # ("selected group X has no job mapping"). Assert membership in the
+        # actual mapping the gate consults.
+        marker = "job_for_group = {"
+        self.assertIn(marker, text)
+        block = text.split(marker, 1)[1].split("}", 1)[0]
+        mapped = set(re.findall(r'"([a-z0-9-]+)":', block))
+        self.assertEqual(mapped, set(plan_ci.GROUP_TEST_MODULES),
+                         "gate job_for_group must map every registered group")
 
     def test_push_to_main_selects_full(self):
         # the Plan (push) step hardcodes --mode full

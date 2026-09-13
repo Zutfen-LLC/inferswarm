@@ -1,0 +1,55 @@
+{
+  "attempt_id": "armc-requal172-physical-1",
+  "attempt_ledger": [
+    {
+      "correctness_bearing_results": 40,
+      "launch": "canonical-direct",
+      "outcome": "completed-40-cases",
+      "phase": "phase-4-direct"
+    },
+    {
+      "correctness_bearing_results": 41,
+      "launch": "canonical-ordinary",
+      "outcome": "completed-40-cases-plus-fencing",
+      "phase": "phase-4-ordinary"
+    },
+    {
+      "correctness_bearing_results": 42,
+      "launch": "sentinels-direct",
+      "outcome": "completed-42-repeats",
+      "phase": "phase-5-direct"
+    },
+    {
+      "correctness_bearing_results": 42,
+      "launch": "sentinels-ordinary",
+      "outcome": "completed-42-repeats",
+      "phase": "phase-5-ordinary"
+    },
+    {
+      "classification": "correctable-pre-observation-infrastructure",
+      "correctness_bearing_results": 0,
+      "launch": "sentinels-direct-first-attempt",
+      "outcome": "PRE_OBSERVATION_INFRASTRUCTURE failure: last-stage service stale from the canonical phase (single-connection lifetime) refused the connection at realization; zero correctness-bearing results emitted, zero case outputs produced, frozen substrate preserved (all preflights re-passed before the successful relaunch)",
+      "phase": "phase-5-direct"
+    }
+  ],
+  "campaign_id": "issue172-arm-c-requalification-v1",
+  "conditions": {
+    "canonical_equality_40_of_40": true,
+    "corpus_bound_40": true,
+    "cpu_preflight_40_of_40": true,
+    "execution_delta_stage_runtime_ok": true,
+    "fencing_negatives_rejected": true,
+    "no_mandatory_stop_fired": true,
+    "physical_preflights_passed": true,
+    "sentinels_deterministic_and_exact": true,
+    "starting_heads_verified": true,
+    "swa_ownership_observed": true,
+    "zero_invariants_passed": true
+  },
+  "derived_at_unix": 1789334998,
+  "failed_conditions": [],
+  "physical_authorization_id": "physical-authorization-issue172-inferswarm-bce7fb3d-freetoken-6202eeeb",
+  "schema": "inferswarm.issue172.arm-c-requal.terminal/1",
+  "terminal": "ISSUE117_ARM_C_ORDINARY_SERVING_PASS"
+}

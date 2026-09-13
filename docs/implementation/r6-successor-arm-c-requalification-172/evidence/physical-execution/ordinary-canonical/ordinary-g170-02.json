@@ -1,0 +1,39 @@
+{
+  "arm": "generalization-170",
+  "case_id": "g170-02",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "while _tmp + true in { lambda ) in { = ] _tmp { else list true for item lambda def true ) = def yield else } return } yield = ) list [ while value yield def = return for break value ) - null map { , def true",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 26,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\nwhile _tmp + true in { lambda ) in { = ] _tmp { else list true for item lambda def true ) = def yield else } return } yield = ) list [ while value yield def = return for break value ) - null map { , def true<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you have provided a scrambled collection",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-c476ec3aa837",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 67,
+      "total_tokens": 75
+    }
+  },
+  "schema": "inferswarm.issue172.arm-c-requal.ordinary-case/1",
+  "wall_ns": 3435048164
+}
