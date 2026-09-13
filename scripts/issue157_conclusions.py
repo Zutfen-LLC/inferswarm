@@ -309,46 +309,79 @@ def lifecycle_reason_present(reproduction: dict) -> bool:
     )
 
 
-def recurring_note(baseline: dict) -> str:
-    """Anchor-A recurrence prose computed from the retained baseline
-    bytes and the retained accepted-#137 in-session values bound in
-    baseline-reproduction.json (never a hand-typed value list)."""
+def accepted_value_recurrence(baseline: dict) -> dict:
+    """Machine-readable Anchor-A recurrence record derived from the
+    retained baseline bytes and the retained accepted-#137 in-session
+    values bound in baseline-reproduction.json (never a hand-typed
+    value list).
+
+    The recurrence question is Anchor-A-specific: which accepted #137
+    ANCHOR-A values recur in the retained ANCHOR-A observations of
+    this baseline.  Anchor-B observations never enter this
+    computation (cross-anchor contamination is what the second
+    post-evidence correction eliminated).
+
+    Fail-closed binding cross-check: the retained
+    accepted_137_binding.recurred_in_this_baseline summary must agree
+    with the recurrence independently derived from the Anchor-A
+    observations — a disagreement raises ReductionError rather than
+    silently trusting either side.  Duplicate accepted values are
+    normalized to a set before comparison."""
     binding = baseline.get("accepted_137_binding") or {}
-    accepted = binding.get("anchor_a_accepted_in_session_values") or []
-    b_vals = baseline.get("anchor_b") or []
-    b_tokens = [
-        r["committed_step0"]
-        for realization in b_vals
-        for r in realization.get("repeats", [])
-    ]
-    recurred = sorted({v for v in b_tokens if v in accepted})
+    accepted_seq = binding.get("anchor_a_accepted_in_session_values") or []
+    accepted = sorted(set(accepted_seq))
     a_vals = baseline.get("anchor_a") or []
     a_tokens = [
         r["committed_step0"]
         for realization in a_vals
         for r in realization.get("repeats", [])
     ]
-    others = sorted(
-        v for v in dict.fromkeys(a_tokens) if v not in accepted
+    recurred = sorted({v for v in accepted if v in set(a_tokens)})
+    not_observed = sorted(set(accepted) - set(recurred))
+    other_observed = sorted(
+        {v for v in a_tokens if v not in set(accepted)}
     )
-    accepted_tail = sorted(
-        v for v in dict.fromkeys(accepted) if v not in recurred
-    )
+    retained_binding = binding.get("recurred_in_this_baseline")
+    if retained_binding is not None:
+        normalized_binding = sorted(set(retained_binding))
+        if normalized_binding != recurred:
+            raise ReductionError(
+                "accepted_137_binding cross-check failed: retained "
+                f"recurred_in_this_baseline {normalized_binding} "
+                "disagrees with the Anchor-A recurrence independently "
+                f"derived from the retained observations {recurred}"
+            )
+    return {
+        "accepted_values": accepted,
+        "recurring_values": recurred,
+        "accepted_values_not_observed": not_observed,
+        "other_observed_values": other_observed,
+    }
+
+
+def recurring_note(recurrence: dict) -> str:
+    """Anchor-A recurrence prose GENERATED from the structured
+    accepted_value_recurrence fields (the structured record is the
+    authority; prose is never the only representation)."""
+    recurred = recurrence["recurring_values"]
+    others = recurrence["other_observed_values"]
+    not_observed = recurrence["accepted_values_not_observed"]
     if recurred and others:
         return (
-            f"{recurred[0]} recurs with {'/'.join(map(str, others))}; "
-            f"values absent from every retained observation "
-            f"({', '.join(map(str, accepted_tail))}) — accepted #137 "
+            f"{'/'.join(map(str, recurred))} recur with "
+            f"{'/'.join(map(str, others))}; accepted values absent "
+            f"from the retained Anchor-A observations "
+            f"({', '.join(map(str, not_observed))}) — accepted #137 "
             "in-session values recur on current accepted code"
         )
     if recurred:
         return (
-            f"{recurred[0]} recurs — accepted #137 in-session values "
-            "recur on current accepted code"
+            f"{'/'.join(map(str, recurred))} recur — accepted #137 "
+            "in-session values recur on current accepted code"
         )
     return (
         "no accepted #137 in-session value recurs in the retained "
-        "observations"
+        "Anchor-A observations"
     )
 
 
@@ -367,6 +400,7 @@ def main(argv=None) -> int:
     replay_out = reduce_replay(replay)
     interventions_out = reduce_interventions(interventions)
     checkpoints = earliest_varying_checkpoint(instrumentation)
+    recurrence = accepted_value_recurrence(baseline)
     terminal, reasons = reduce_terminal(
         reproduction, replay_out, interventions_out, checkpoints
     )
@@ -404,9 +438,10 @@ def main(argv=None) -> int:
                 "committed_token_level": {
                     "reproduces": reproduction["anchor_a"]["varies"],
                     "values": reproduction["anchor_a"]["values"],
+                    "accepted_value_recurrence": recurrence,
                     "note": (
                         "in-session variable family reproduced: "
-                        f"{recurring_note(baseline)}"
+                        f"{recurring_note(recurrence)}"
                     ),
                 },
                 "exact_state_level": {

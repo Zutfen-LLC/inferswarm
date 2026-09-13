@@ -90,22 +90,6 @@
       "scripts/issue157_sitecustomize.py": "sha256:67effb1dfc8c9960e43f5c577195f71635930db4b768d831f84970748f4e8c4b"
     },
     "execution_bearing_files_note": "EXACTLY the tool bytes the committed physical reruns executed under (2611ee1): binding verification, probe driver, replay harness/worker, stage instrumentation, sitecustomize shim. These hashes are frozen physical history and are NEVER rewritten by a later change to the conclusions reducer.",
-    "post_processing_files": {
-      "scripts/issue157_conclusions.py": "sha256:3211dbcded10f26b74eb8245e9307aacf5665e4259da3778f720fbd350978620"
-    },
-    "post_processing_files_note": "post-evidence reduction tooling ONLY: reduces already-retained observation JSON into diagnostic-conclusions.json. Never imported by, deployed to, or executed inside any physical diagnostic process; changing it cannot influence any physical execution or capture.",
-    "post_evidence_reducer_amendments": [
-      {
-        "amendment": "post-evidence reduction correction (PR #159 maintainer NO-GO item 1)",
-        "prior_reducer_sha256": "fcb75825cd8180cb4f67eaca7a8e1f8573be06fd5b1a16686ee429d4638a4747",
-        "corrected_reducer_sha256": "3211dbcded10f26b74eb8245e9307aacf5665e4259da3778f720fbd350978620",
-        "reason": "derived-count/prose correction only: the reducer hard-coded observational counts in prose (5 distinct chunk-2 digests / 6 trials on anchor B, contradicting the retained 6-distinct control) and other numeric literals presented as derived; all counts now computed mechanically from retained evidence bytes (trial counts, distinct counts, control-varies, treatment-deterministic, chunk-1 pairing) and exposed as structured fields",
-        "physical_evidence_inputs_unchanged": "baseline-reproduction.json, exact-state-replay.json, interventions.json, instrumentation-manifest.json, launch-ledger.json all byte-identical to the correction-pass-1 retained bytes (sha256 verified)",
-        "execution_bearing_bytes_unchanged": "all execution_bearing_files hashes identical to the correction-pass-1 freeze; FreeToken diagnostic producer unchanged at 55e8baaebabe67aeb967d4bd407ef26696933104",
-        "physical_rerun_required": false,
-        "terminal_after_regeneration": "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED (re-derived from unchanged evidence; unchanged from the pre-amendment reduction)"
-      }
-    ],
     "hash_history": {
       "correction_pass_1_commit_2611ee1": {
         "note": "Adversarial review (provenance lane) found the original runs executed under uncommitted intermediate tool bytes. Per the issue's supersession rule, ALL evidence-bearing arms were RERUN under the committed bytes at 2611ee1 (producer unchanged 55e8baa); the rerun artifacts live under out-corr1/ and supersede the original observations. Original runs retained in launch-ledger.json as superseded."
@@ -124,7 +108,33 @@
       "instrumentation imports only under ISSUE157_STAGE_INSTRUMENT=1, set only by the #157 driver's spawned stage processes",
       "CPU/static test asserts ordinary-execution import graph never reaches issue157_* modules",
       "node-deployed script bytes verified sha256-equal to committed HEAD before every rerun launch"
-    ]
+    ],
+    "post_evidence_reducer_amendments": [
+      {
+        "amendment": "post-evidence reduction correction (PR #159 maintainer NO-GO item 1)",
+        "corrected_reducer_sha256": "3211dbcded10f26b74eb8245e9307aacf5665e4259da3778f720fbd350978620",
+        "execution_bearing_bytes_unchanged": "all execution_bearing_files hashes identical to the correction-pass-1 freeze; FreeToken diagnostic producer unchanged at 55e8baaebabe67aeb967d4bd407ef26696933104",
+        "physical_evidence_inputs_unchanged": "baseline-reproduction.json, exact-state-replay.json, interventions.json, instrumentation-manifest.json, launch-ledger.json all byte-identical to the correction-pass-1 retained bytes (sha256 verified)",
+        "physical_rerun_required": false,
+        "prior_reducer_sha256": "fcb75825cd8180cb4f67eaca7a8e1f8573be06fd5b1a16686ee429d4638a4747",
+        "reason": "derived-count/prose correction only: the reducer hard-coded observational counts in prose (5 distinct chunk-2 digests / 6 trials on anchor B, contradicting the retained 6-distinct control) and other numeric literals presented as derived; all counts now computed mechanically from retained evidence bytes (trial counts, distinct counts, control-varies, treatment-deterministic, chunk-1 pairing) and exposed as structured fields",
+        "terminal_after_regeneration": "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED (re-derived from unchanged evidence; unchanged from the pre-amendment reduction)"
+      },
+      {
+        "amendment": "post-evidence reduction correction #2 (PR #159 second maintainer NO-GO, recurrence block)",
+        "corrected_reducer_sha256": "7085714c0fd7ac74f5ee40dbfd55d7ae0b0fea4e9bbe26df70cf70f207b6d680",
+        "execution_bearing_bytes_unchanged": "all execution_bearing_files hashes identical to the correction-pass-1 freeze (2611ee1); FreeToken diagnostic producer unchanged at 55e8baaebabe67aeb967d4bd407ef26696933104",
+        "physical_evidence_inputs_unchanged": "baseline-reproduction.json, exact-state-replay.json, interventions.json, instrumentation-manifest.json, launch-ledger.json all byte-identical to the correction-pass-1 retained bytes (sha256 verified)",
+        "physical_rerun_required": false,
+        "prior_reducer_sha256": "3211dbcded10f26b74eb8245e9307aacf5665e4259da3778f720fbd350978620",
+        "reason": "Anchor-A recurrence accidentally sourced tokens from Anchor B: recurring_note() computed the recurrence set from baseline anchor_b observations before reading Anchor A, so the generated conclusion wrongly listed accepted value 818 as unobserved while 818 exists in the retained Anchor-A observations. The corrected reducer derives the recurrence from the retained Anchor-A observations only, exposes it as structured accepted_value_recurrence fields (accepted/recurring/not-observed/other-observed), generates prose from those fields, and fail-closed cross-checks the retained accepted_137_binding.recurred_in_this_baseline against the independently derived Anchor-A recurrence.",
+        "terminal_after_regeneration": "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED (re-derived normally from unchanged evidence under the corrected reducer; unchanged from the prior reduction)"
+      }
+    ],
+    "post_processing_files": {
+      "scripts/issue157_conclusions.py": "sha256:7085714c0fd7ac74f5ee40dbfd55d7ae0b0fea4e9bbe26df70cf70f207b6d680"
+    },
+    "post_processing_files_note": "post-evidence reduction tooling ONLY: reduces already-retained observation JSON into diagnostic-conclusions.json. Never imported by, deployed to, or executed inside any physical diagnostic process; changing it cannot influence any physical execution or capture."
   },
   "intervention_matrix": {
     "design": "one variable at a time; paired against unchanged control from identical diagnostic state; counterbalanced order; fresh substrate between paired trials",

@@ -541,6 +541,10 @@ class TestDerivedCountsFollowEvidence(unittest.TestCase):
         for banned in (
             "5 distinct", "6 distinct digests / 6 trials",
             "all 9 baseline",
+            # retired false-statement shape (second NO-GO): the
+            # reducer must never again assert absence from EVERY
+            # retained observation — recurrence is Anchor-A-scoped
+            "absent from every retained observation",
         ):
             self.assertNotIn(
                 banned, src,
@@ -588,6 +592,203 @@ class TestInstrumentationArming(unittest.TestCase):
         # disarmed observers record nothing further
         obs2.raw("y", 2)
         self.assertEqual(len(sink_rows), 1)
+
+
+class TestCrossAnchorRecurrenceControls(unittest.TestCase):
+    """Adversarial regression (second maintainer NO-GO, recurrence
+    block): the Anchor-A recurrence must derive from the retained
+    ANCHOR-A observations only.  Mutating Anchor B must never change
+    it; mutating Anchor A must; a binding that disagrees with the
+    independently derived recurrence must fail the reduction closed;
+    and the generated record may never again state that a value is
+    absent from every retained observation while it exists in the
+    retained Anchor-A observations.
+    """
+
+    def setUp(self):
+        self.mod = importlib.import_module("issue157_conclusions")
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self.tmp.name)
+        self.orig_dir = self.mod.EVIDENCE_DIR
+        self.mod.EVIDENCE_DIR = self.dir
+        src = (
+            REPO / "docs/implementation/"
+            "r6-successor-dense-full-integration-117/evidence/"
+            "arm-c-chunk2-diagnosis-157"
+        )
+        for name in self.mod.CONSUMED:
+            shutil.copy(src / name, self.dir / name)
+        self.baseline_d = json.loads(
+            (self.dir / "baseline-reproduction.json").read_text())
+
+    def tearDown(self):
+        self.mod.EVIDENCE_DIR = self.orig_dir
+        self.tmp.cleanup()
+
+    def _reduce(self, baseline):
+        (self.dir / "baseline-reproduction.json").write_text(
+            json.dumps(baseline))
+        rc = self.mod.main([])
+        self.assertEqual(rc, 0)
+        return json.loads(
+            (self.dir / "diagnostic-conclusions.json").read_text())
+
+    def _recurrence(self, record):
+        return record["per_anchor"]["anchor_a"][
+            "committed_token_level"]["accepted_value_recurrence"]
+
+    def _note(self, record):
+        return record["per_anchor"]["anchor_a"][
+            "committed_token_level"]["note"]
+
+    @staticmethod
+    def _set_anchor_values(baseline, anchor, values):
+        rows = baseline[anchor]
+        # distribute the values across the retained repeats in order,
+        # keeping the realizations/repeats structure intact
+        flat = list(values)
+        i = 0
+        for realization in rows:
+            for repeat in realization.get("repeats", []):
+                if i < len(flat):
+                    repeat["committed_step0"] = flat[i]
+                    i += 1
+        assert i == len(flat), "value count exceeds retained repeats"
+
+    def test_recurrence_reflects_retained_bytes(self):
+        """The committed evidence's derived recurrence is exactly the
+        expected reduction of the retained Anchor-A bytes: {107, 818}
+        recur, {1437, 3771} accepted-but-not-observed, {100, 236774,
+        258882} other observed."""
+        record = self._reduce(json.loads(json.dumps(self.baseline_d)))
+        rec = self._recurrence(record)
+        self.assertEqual(rec["accepted_values"], [107, 818, 1437, 3771])
+        self.assertEqual(rec["recurring_values"], [107, 818])
+        self.assertEqual(rec["accepted_values_not_observed"],
+                         [1437, 3771])
+        self.assertEqual(rec["other_observed_values"],
+                         [100, 236774, 258882])
+
+    def test_control_a_anchor_a_recurrence_ignores_anchor_b(self):
+        """Control A: accepted Anchor-A values include X and Y, Anchor
+        A observes both, Anchor B observes only X (and could never
+        supply Y) — the recurrence must contain both X and Y."""
+        baseline = json.loads(json.dumps(self.baseline_d))
+        # accepted X=107, Y=818 (retained binding unchanged); Anchor A
+        # observes both; Anchor B observes ONLY X=107 everywhere.
+        self._set_anchor_values(baseline, "anchor_a",
+                                [107, 107, 818, 107, 818, 107, 107,
+                                 818, 107])
+        self._set_anchor_values(baseline, "anchor_b",
+                                [107] * 9)
+        # binding must agree with the derived Anchor-A recurrence
+        record = self._reduce(baseline)
+        rec = self._recurrence(record)
+        self.assertIn(107, rec["recurring_values"])
+        self.assertIn(818, rec["recurring_values"])
+        self.assertNotIn(818, rec["accepted_values_not_observed"])
+        self.assertNotIn("818", [
+            str(v) for v in rec["accepted_values_not_observed"]])
+
+    def test_control_b_anchor_b_mutation_cannot_change_recurrence(self):
+        """Control B: Anchor A and the accepted binding fixed, Anchor
+        B values changed radically — the structured recurrence fields
+        and the generated prose must remain unchanged."""
+        first = self._reduce(json.loads(json.dumps(self.baseline_d)))
+        baseline = json.loads(json.dumps(self.baseline_d))
+        self._set_anchor_values(
+            baseline, "anchor_b",
+            [424242, 424242, 999999, 7, 7, 424242, 999999, 7, 12345])
+        second = self._reduce(baseline)
+        self.assertEqual(self._recurrence(first), self._recurrence(second))
+        self.assertEqual(self._note(first), self._note(second))
+
+    def test_control_c_anchor_a_mutation_changes_recurrence(self):
+        """Control C: remove one accepted recurring value (818) from
+        the Anchor-A observations — the derived recurrence must drop
+        it (to accepted-but-not-observed)."""
+        baseline = json.loads(json.dumps(self.baseline_d))
+        # original Anchor-A values: [107, 258882, 107, 107, 236774,
+        # 107, 107, 818, 100]; replace every 818 with a non-accepted
+        # value
+        self._set_anchor_values(baseline, "anchor_a",
+                                [107, 258882, 107, 107, 236774,
+                                 107, 107, 236774, 100])
+        # keep the retained binding consistent with the new derived
+        # recurrence ([107] only) so this control isolates the
+        # recurrence derivation, not the binding cross-check
+        baseline["accepted_137_binding"][
+            "recurred_in_this_baseline"] = [107]
+        record = self._reduce(baseline)
+        rec = self._recurrence(record)
+        self.assertEqual(rec["recurring_values"], [107])
+        self.assertIn(818, rec["accepted_values_not_observed"])
+
+    def test_control_d_binding_disagreement_fails_closed(self):
+        """Control D: mutate accepted_137_binding.
+        recurred_in_this_baseline so it disagrees with the
+        independently derived Anchor-A recurrence — the reducer must
+        fail, not silently choose either side."""
+        baseline = json.loads(json.dumps(self.baseline_d))
+        baseline["accepted_137_binding"][
+            "recurred_in_this_baseline"] = [107]
+        (self.dir / "baseline-reproduction.json").write_text(
+            json.dumps(baseline))
+        with self.assertRaises(self.mod.ReductionError) as ctx:
+            self.mod.main([])
+        self.assertIn("cross-check failed", str(ctx.exception))
+
+    def test_control_e_no_false_absence_statement(self):
+        """Control E (historical regression, structural): the
+        generated conclusion may never contain a statement equivalent
+        to '818 absent from every retained observation' while 818
+        exists in the retained Anchor-A observations — asserted
+        structurally, not by matching one exact prose sentence."""
+        baseline = json.loads(json.dumps(self.baseline_d))
+        # 818 IS in the retained Anchor-A observations
+        a_values = [
+            r["committed_step0"]
+            for realization in baseline["anchor_a"]
+            for r in realization.get("repeats", [])
+        ]
+        self.assertIn(818, a_values)
+        record = self._reduce(baseline)
+        note = self._note(record)
+        rec = self._recurrence(record)
+        # 818 recurs, so it can never be listed as absent
+        self.assertIn(818, rec["recurring_values"])
+        self.assertNotIn("818", [
+            str(v) for v in rec["accepted_values_not_observed"]])
+        # the historic false claim shape is gone: no value present in
+        # the Anchor-A observations may be described as absent from
+        # every retained observation
+        self.assertNotIn("absent from every retained observation", note)
+        # and every value named in the not-observed list must actually
+        # be absent from the retained Anchor-A observations
+        observed = set(a_values)
+        for v in rec["accepted_values_not_observed"]:
+            self.assertNotIn(v, observed)
+
+    def test_control_e_committed_record_carries_structured_recurrence(
+            self):
+        """The committed bundle must carry the structured recurrence
+        fields (prose is never the only authority)."""
+        committed = (
+            REPO / "docs/implementation/"
+            "r6-successor-dense-full-integration-117/evidence/"
+            "arm-c-chunk2-diagnosis-157/diagnostic-conclusions.json"
+        )
+        record = json.loads(committed.read_text())
+        rec = record["per_anchor"]["anchor_a"][
+            "committed_token_level"]["accepted_value_recurrence"]
+        self.assertEqual(rec["recurring_values"], [107, 818])
+        self.assertEqual(rec["accepted_values_not_observed"],
+                         [1437, 3771])
+        self.assertEqual(rec["other_observed_values"],
+                         [100, 236774, 258882])
+        note = record["per_anchor"]["anchor_a"][
+            "committed_token_level"]["note"]
+        self.assertNotIn("absent from every retained observation", note)
 
 
 class TestPartitionContract(unittest.TestCase):

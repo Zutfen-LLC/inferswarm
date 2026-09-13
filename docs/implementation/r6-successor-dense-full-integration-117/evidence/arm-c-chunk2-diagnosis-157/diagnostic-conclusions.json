@@ -135,7 +135,28 @@
   "per_anchor": {
     "anchor_a": {
       "committed_token_level": {
-        "note": "in-session variable family reproduced: 107 recurs with 100/236774/258882; values absent from every retained observation (818, 1437, 3771) \u2014 accepted #137 in-session values recur on current accepted code",
+        "accepted_value_recurrence": {
+          "accepted_values": [
+            107,
+            818,
+            1437,
+            3771
+          ],
+          "accepted_values_not_observed": [
+            1437,
+            3771
+          ],
+          "other_observed_values": [
+            100,
+            236774,
+            258882
+          ],
+          "recurring_values": [
+            107,
+            818
+          ]
+        },
+        "note": "in-session variable family reproduced: 107/818 recur with 100/236774/258882; accepted values absent from the retained Anchor-A observations (1437, 3771) \u2014 accepted #137 in-session values recur on current accepted code",
         "reproduces": true,
         "values": [
           107,
