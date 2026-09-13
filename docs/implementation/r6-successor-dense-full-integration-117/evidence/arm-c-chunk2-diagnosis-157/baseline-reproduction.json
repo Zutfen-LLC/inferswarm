@@ -830,5 +830,42 @@
     "0f8f2daa124609eaba5671eb1cefaf74f72c695b4754916e6feafac400c1dda8",
     "0f8f2daa124609eaba5671eb1cefaf74f72c695b4754916e6feafac400c1dda8",
     "0f8f2daa124609eaba5671eb1cefaf74f72c695b4754916e6feafac400c1dda8"
-  ]
+  ],
+  "tooling_provenance": {
+    "corroboration_under_committed_bytes": {
+      "anchor_a_chunk1_boundary_digest": {
+        "byte_matches_committed_runs": [
+          {
+            "field": "boundary_sha256 (exact-state-replay.json)",
+            "run": "i157-REPLAY-1789269282"
+          },
+          {
+            "field": "control+treatment chunk-1 digests (interventions.json swa_alloc.anchor_a)",
+            "run": "i157-IV-SWA-ALLOC-1789269642"
+          }
+        ],
+        "value": "7522b637dcc9fe8a2b62a91bd663eeec1adc1959bcfeed9919f814c3942902c4"
+      },
+      "anchor_b_chunk1_boundary_digest": {
+        "byte_matches_committed_runs": [
+          {
+            "field": "control+treatment chunk-1 digests (interventions.json swa_alloc.anchor_b)",
+            "run": "i157-IV-SWA-ALLOC-1789269764"
+          }
+        ],
+        "value": "0bc45f8a2fba32d865242b967067d3723b0fc01bbeb5476f69ce3c7ea79ca664"
+      },
+      "chunk2_instability_re_demonstrated": {
+        "note": "paired CONTROL arms of the committed-bytes i157-IV-SWA-ALLOC reruns re-demonstrate chunk-2 instability under frozen instrumentation (anchor_a control 3-distinct/6, anchor_b control 6-distinct/6), while chunk-1 remains byte-identical to this BASE run's captures in the same arms"
+      },
+      "not_corroborated_under_committed_bytes": [
+        "Phase-2 committed-token value families (anchor_a in-session variable values, anchor_b session-stable 107, stable control 1509 x9)",
+        "accepted_137_binding.recurred_in_this_baseline cross-check (derived from this run's anchor_a tokens)"
+      ]
+    },
+    "executed_under_committed_2611ee1_bytes": false,
+    "execution_bearing_freeze_instrumentation_sha256": "sha256:00a1c2c1452f87ca56289eeb3716e9cd08ba1c5a36e7d06ac6abdb79283024fc",
+    "instrumentation_sha256_at_execution": "sha256:98fa2a80d893dcae20f373d94064d55c9ab2314cb868fbe9000e166d667d8d77",
+    "note": "Phase-2 BASE run i157-BASE-1789261211 executed under uncommitted pre-freeze instrumentation bytes; it was NOT rerun under the committed 2611ee1 bytes (correction pass 1 reran REPLAY/IV arms only). This record corrects the earlier launch-ledger/authority claim that ALL evidence-bearing arms were rerun (recertification adversarial review, both lanes, 2026-09-13). Token-level observations (anchor lists, stable control) are retained verbatim from this run; physical observation bytes unchanged by this correction."
+  }
 }

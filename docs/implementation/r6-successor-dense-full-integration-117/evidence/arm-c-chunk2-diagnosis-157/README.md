@@ -20,9 +20,13 @@ its all-zero sentinel, and for every SWA attention layer:
    surviving bytes vary per execution;
 2. the extend kernel's prefix read (`swa_indices` = translate(page
    table) = all 0) resolves the 64-row prefix to **slot 0 repeated** —
-   it consumes the just-raced bytes, so the earliest varying operation
-   is the layer-0 attention kernel result (`L0_attention_output`;
-   qkv/norms/rotary/backend inputs all byte-stable before it);
+   it consumes the just-raced bytes, so the earliest varying
+   checkpoint is the layer-0 SWA KV store itself
+   (`L0_kv_slice_post_write`, the racing store; selected by explicit
+   execution order); the layer-0 attention kernel result
+   (`L0_attention_output`) is the earliest varying *read* — the first
+   propagated downstream consequence (qkv/norms/rotary/backend inputs
+   all byte-stable before it);
 3. chunk-1 is deterministic because with `prefix_len = 0` the split
    extend kernel reads `k_extend`/`v_extend` directly — the pool is
    never read.
@@ -71,10 +75,16 @@ the anchors' extend-route path — intervention not legal per Phase 4-B).
 ## Correction pass 1 (adversarial-review)
 
 Two exact-head adversarial reviews returned GO-WITH-FIXES. All P1s
-resolved: (a) the evidence-bearing arms were RERUN under tool bytes
-committed at 2611ee1 (node bytes sha256-verified equal before launch) —
-all results confirmed (REPLAY varies 6/6; SYNC and ROUTE rejected;
-SWA-ALLOC stabilizes both anchors); (b) the reducer now selects the
+resolved: (a) the REPLAY and intervention arms were RERUN under tool
+bytes committed at 2611ee1 (node bytes sha256-verified equal before
+launch) — all results confirmed (REPLAY varies 6/6; SYNC and ROUTE
+rejected; SWA-ALLOC stabilizes both anchors). The BASE arm was NOT
+rerun; its Phase-2 token-level observations retain pre-freeze
+instrumentation provenance, disclosed in
+`baseline-reproduction.json` `tooling_provenance`, with its chunk-1
+boundary digests independently corroborated under committed bytes by
+the rerun REPLAY and SWA-ALLOC arms and chunk-2 instability
+re-demonstrated by the rerun paired controls; (b) the reducer now selects the
 earliest varying checkpoint by execution order (the racing SWA store,
 not the downstream attention read), never reports a legally-skipped
 intervention as executed, and the reproduction gate is

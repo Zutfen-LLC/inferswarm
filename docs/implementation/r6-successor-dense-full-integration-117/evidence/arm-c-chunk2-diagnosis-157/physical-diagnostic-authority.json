@@ -92,7 +92,7 @@
     "execution_bearing_files_note": "EXACTLY the tool bytes the committed physical reruns executed under (2611ee1): binding verification, probe driver, replay harness/worker, stage instrumentation, sitecustomize shim. These hashes are frozen physical history and are NEVER rewritten by a later change to the conclusions reducer.",
     "hash_history": {
       "correction_pass_1_commit_2611ee1": {
-        "note": "Adversarial review (provenance lane) found the original runs executed under uncommitted intermediate tool bytes. Per the issue's supersession rule, ALL evidence-bearing arms were RERUN under the committed bytes at 2611ee1 (producer unchanged 55e8baa); the rerun artifacts live under out-corr1/ and supersede the original observations. Original runs retained in launch-ledger.json as superseded."
+        "note": "Adversarial review (provenance lane) found the original runs executed under uncommitted intermediate tool bytes. Per the issue's supersession rule the REPLAY and intervention (SYNC/ROUTE/SWA-ALLOC) arms were RERUN under the committed bytes at 2611ee1 (producer unchanged 55e8baa); the rerun artifacts live under out-corr1/ and supersede those original observations. The BASE arm (i157-BASE-1789261211) was NOT rerun: its Phase-2 token-level observations are retained with pre-freeze instrumentation provenance (sha256:98fa2a80\u2026, disclosed in baseline-reproduction.json tooling_provenance) and its chunk-1 boundary digests are independently corroborated under committed bytes by the rerun REPLAY and SWA-ALLOC arms. Original runs retained in launch-ledger.json. Corrected by the recertification record pass (2026-09-13) from an earlier inaccurate 'ALL evidence-bearing arms were RERUN' claim."
       },
       "freeze_commit_c11fa00": {
         "note": "original pre-physical freeze hashes (see git c11fa00)",
@@ -108,6 +108,22 @@
       "instrumentation imports only under ISSUE157_STAGE_INSTRUMENT=1, set only by the #157 driver's spawned stage processes",
       "CPU/static test asserts ordinary-execution import graph never reaches issue157_* modules",
       "node-deployed script bytes verified sha256-equal to committed HEAD before every rerun launch"
+    ],
+    "post_evidence_record_corrections": [
+      {
+        "amendment": "recertification provenance-record correction (PR #159 final exact-head review, both lanes P1)",
+        "changed_records": [
+          "baseline-reproduction.json (additive tooling_provenance)",
+          "launch-ledger.json (BASE tooling_note corrected)",
+          "physical-diagnostic-authority.json (correction_pass_1 note corrected)",
+          "README.md (over-claim + earliest-varying prose corrected)"
+        ],
+        "date": "2026-09-13",
+        "execution_bearing_bytes_unchanged": "all execution_bearing_files hashes identical to the 2611ee1 freeze; FreeToken diagnostic producer unchanged at 55e8baaebabe67aeb967d4bd407ef26696933104",
+        "physical_observation_bytes_unchanged": "anchor_a/anchor_b/stable_control observation lists and all digest lists in baseline-reproduction.json byte-identical; only additive provenance fields added",
+        "physical_rerun_required": false,
+        "reviewer_accepted_fix_shape": "corroboration record, no GPU rerun \u2014 accepted by both independent lanes"
+      }
     ],
     "post_evidence_reducer_amendments": [
       {

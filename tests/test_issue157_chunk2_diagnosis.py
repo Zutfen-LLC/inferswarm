@@ -791,6 +791,107 @@ class TestCrossAnchorRecurrenceControls(unittest.TestCase):
         self.assertNotIn("absent from every retained observation", note)
 
 
+class TestBaseArmProvenanceRecord(unittest.TestCase):
+    """Recertification record correction (2026-09-13, both review lanes'
+    shared P1): the BASE arm was never rerun under committed 2611ee1
+    bytes.  The record must disclose that honestly and bind its
+    corroboration claims to bytes that actually exist in the retained
+    committed-bytes runs."""
+
+    BUNDLE = REPO / (
+        "docs/implementation/r6-successor-dense-full-integration-117/"
+        "evidence/arm-c-chunk2-diagnosis-157")
+
+    def _load(self):
+        return json.loads(
+            (self.BUNDLE / "baseline-reproduction.json").read_text())
+
+    def test_base_tooling_provenance_disclosed(self):
+        b = self._load()
+        tp = b.get("tooling_provenance")
+        self.assertIsInstance(tp, dict)
+        self.assertFalse(tp["executed_under_committed_2611ee1_bytes"])
+        self.assertIn("98fa2a80", tp["instrumentation_sha256_at_execution"])
+        self.assertIn("00a1c2c1",
+                      tp["execution_bearing_freeze_instrumentation_sha256"])
+
+    def test_corroboration_digests_match_committed_runs(self):
+        b = self._load()
+        corr = b["tooling_provenance"]["corroboration_under_committed_bytes"]
+        iv = json.loads((self.BUNDLE / "interventions.json").read_text())
+        rp = json.loads((self.BUNDLE / "exact-state-replay.json").read_text())
+        # anchor-A chunk-1 digest must appear in the committed REPLAY
+        # boundary and in the committed SWA-ALLOC chunk-1 digests
+        a = corr["anchor_a_chunk1_boundary_digest"]["value"]
+        self.assertIn(a, set(iv["swa_alloc"]["anchor_a"]
+                                 ["control_chunk1_digests"]
+                                 + iv["swa_alloc"]["anchor_a"]
+                                 ["treatment_chunk1_digests"]))
+        self.assertIn(a, json.dumps(rp))
+        # anchor-B chunk-1 digest must appear in the committed
+        # SWA-ALLOC anchor-B chunk-1 digests
+        bb = corr["anchor_b_chunk1_boundary_digest"]["value"]
+        self.assertIn(bb, set(iv["swa_alloc"]["anchor_b"]
+                                  ["control_chunk1_digests"]
+                                  + iv["swa_alloc"]["anchor_b"]
+                                  ["treatment_chunk1_digests"]))
+        # every cited run id must exist in the retained ledger
+        ledger = json.loads((self.BUNDLE / "launch-ledger.json").read_text())
+        ids = {e.get("run_id") for e in ledger["launches"]}
+        self.assertIn("i157-REPLAY-1789269282", ids)
+        self.assertIn("i157-IV-SWA-ALLOC-1789269642", ids)
+        containment_note = json.dumps(
+            corr["chunk2_instability_re_demonstrated"])
+        self.assertIn("3-distinct/6", containment_note)
+        self.assertIn("6-distinct/6", containment_note)
+        # the controls actually vary as claimed
+        ca = iv["swa_alloc"]["anchor_a"]["control_chunk2_digests"]
+        cb = iv["swa_alloc"]["anchor_b"]["control_chunk2_digests"]
+        self.assertEqual(len(set(ca)), 3)
+        self.assertEqual(len(set(cb)), 6)
+
+    def test_ledger_and_authority_claims_are_truthful(self):
+        ledger = json.loads((self.BUNDLE / "launch-ledger.json").read_text())
+        base = [e for e in ledger["launches"]
+                if e.get("run_id") == "i157-BASE-1789261211"]
+        self.assertEqual(len(base), 1)
+        self.assertNotIn("superseded by the correction-pass-1 rerun",
+                         base[0]["tooling_note"])
+        auth = json.loads(
+            (self.BUNDLE / "physical-diagnostic-authority.json").read_text())
+        note = auth["instrumentation"]["hash_history"][
+            "correction_pass_1_commit_2611ee1"]["note"]
+        # the false blanket claim must not be asserted as fact; the
+        # only permitted occurrence is inside the correction sentence
+        # that quotes it as the corrected-away inaccuracy
+        self.assertNotIn(
+            "ALL evidence-bearing arms were RERUN under the "
+            "committed bytes", note)
+        self.assertIn("NOT rerun", note)
+        self.assertGreaterEqual(
+            len(auth["instrumentation"]["post_evidence_record_corrections"]),
+            1)
+
+    def test_observation_bytes_unchanged_by_record_correction(self):
+        # every physical observation field must equal the pre-correction
+        # committed bytes at 9b30667 (additive-provenance-only proof)
+        import subprocess
+        cur = self._load()
+        old = json.loads(subprocess.check_output([
+            "git", "show",
+            "9b30667709858811404af4d6b2e6a977c6e70cc7:docs/"
+            "implementation/r6-successor-dense-full-integration-117/"
+            "evidence/arm-c-chunk2-diagnosis-157/"
+            "baseline-reproduction.json"]).decode())
+        for key in ("anchor_a", "anchor_b", "stable_control",
+                    "anchor_a_chunk1_boundary_digests",
+                    "anchor_b_chunk1_boundary_digests",
+                    "stable_control_single_call_boundary_digests",
+                    "accepted_137_binding",
+                    "source_run", "source_run_sha256"):
+            self.assertEqual(cur.get(key), old.get(key), key)
+
+
 class TestPartitionContract(unittest.TestCase):
     def test_anchor_partitions_satisfy_coverage_invariants(self):
         sys.path.insert(0, str(SCRIPTS))

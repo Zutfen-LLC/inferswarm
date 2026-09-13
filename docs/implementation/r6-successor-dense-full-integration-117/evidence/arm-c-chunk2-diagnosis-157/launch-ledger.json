@@ -15,7 +15,7 @@
       "outcome": "phenomenon reproduced: anchor A in-session variable (accepted values recur), anchor B session-stable at 107 (accepted value), stable control deterministic 1509 x9",
       "probe": "BASE",
       "run_id": "i157-BASE-1789261211",
-      "tooling_note": "executed under uncommitted intermediate tool bytes (adversarial-review finding); superseded by the correction-pass-1 rerun under committed 2611ee1 bytes"
+      "tooling_note": "executed under uncommitted intermediate instrumentation bytes (sha256:98fa2a80\u2026d8d77, pre-freeze); NOT rerun under committed 2611ee1 bytes \u2014 correction pass 1 reran the REPLAY/IV arms only. Retained as the sole source of the Phase-2 token-level observations; chunk-1 boundary digests independently corroborated under committed bytes by i157-REPLAY-1789269282 and the i157-IV-SWA-ALLOC corr1 runs (see baseline-re provenance). The earlier note claiming supersession by a correction-pass-1 BASE rerun was inaccurate; corrected in the recertification record pass (2026-09-13)."
     },
     {
       "design": "first exact-state attempt",
