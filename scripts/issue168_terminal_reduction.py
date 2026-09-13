@@ -31,16 +31,23 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-EVIDENCE_DIR = ROOT / (
-    "docs/implementation/r6-successor-arm-c-requal-blocked-168/evidence")
+sys.path.insert(0, str(ROOT / "scripts"))
+
+#: accepted digest of the 24-case #133 Arm-C regression fixture
+#: (issue #168 Phase 1A) — consumed from the accepted #133 authority
+#: module (import-don't-restate; cross-pinned by the record tests)
+from issue129_arm_c_retry_core import FIXTURE_DIGEST_24  # noqa: E402
+
+ACCEPTED_FIXTURE_DIGEST = FIXTURE_DIGEST_24
 BUCKETS = (("1-8", 1, 8), ("9-24", 9, 24), ("25-48", 25, 48),
            ("49-64", 49, 64))
 REQUIRED_PER_BUCKET = 4
 CENSUS_SCHEMA = "inferswarm.issue168.arm-c-requal-corpus-census/1"
 AUTHORITY_SCHEMA = "inferswarm.issue168.arm-c-requal-authority/1"
-ACCEPTED_FIXTURE_DIGEST = (
-    "sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba36f2")
 BLOCKED_TERMINAL = "ISSUE117_ARM_C_REQUALIFICATION_EVIDENCE_BLOCKED"
+EVIDENCE_DIR = ROOT / (
+    "docs/implementation/r6-successor-arm-c-requal-blocked-168/evidence")
+CENSUS_SALT = "issue168-arm-c-post-swa-requal-v1"
 
 
 def bucket_of(remainder: int) -> str | None:
@@ -88,6 +95,13 @@ def reduce_terminal(evidence_dir: Path = EVIDENCE_DIR) -> dict:
             "corpus case-count drift")
     fixture_ids = set(census["regression_fixture"]["case_ids"])
     require(len(fixture_ids) == 24, "regression fixture case-count drift")
+    # per-case fixture flags must agree with the recorded fixture ids
+    # (an inconsistent flag would silently shift the eligible pool)
+    flagged = {row["case_id"] for row in per_case
+               if row["in_regression_fixture"]}
+    require(flagged == fixture_ids,
+            "per-case in_regression_fixture flags disagree with the "
+            "recorded regression fixture case ids")
 
     readings = census["eligibility_readings"]
     require(set(readings) == {
@@ -128,6 +142,24 @@ def reduce_terminal(evidence_dir: Path = EVIDENCE_DIR) -> dict:
                         f"{name}/{b}/{m['case_id']}: bucket membership")
                 require(65 <= m["effective_len"] <= 128,
                         f"{name}/{b}/{m['case_id']}: length window")
+                # recompute the canonical selection key from member
+                # bytes (salt + case id + rendered ids) so a forged or
+                # drifted key cannot ride along unverified
+                expected_key = hashlib.sha256(json.dumps({
+                    "salt": CENSUS_SALT,
+                    "case_id": m["case_id"],
+                    "rendered_prompt_token_ids":
+                        m["rendered_prompt_token_ids"],
+                }, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+                require(m["selection_key_sha256"] == expected_key,
+                        f"{name}/{b}/{m['case_id']}: selection key does "
+                        "not recompute from member bytes")
+                require(m["rendered_len"] == len(
+                    m["rendered_prompt_token_ids"]),
+                    f"{name}/{b}/{m['case_id']}: rendered_len vs ids")
+                require(m["effective_len"] == length_of(m),
+                        f"{name}/{b}/{m['case_id']}: effective_len vs "
+                        "reading definition")
         insufficient = sorted(
             b for b, _, _ in BUCKETS if recomputed[b] < REQUIRED_PER_BUCKET)
         require(insufficient == reading["insufficient_buckets"],

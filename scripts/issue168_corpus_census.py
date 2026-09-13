@@ -67,6 +67,15 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS = ROOT / "scripts"
+sys.path.insert(0, str(SCRIPTS))
+
+#: accepted digest of the 24-case #133 Arm-C regression fixture
+#: (issue #168 Phase 1A) — consumed from the accepted #133 authority
+#: module (import-don't-restate; cross-pinned by the record tests)
+from issue129_arm_c_retry_core import FIXTURE_DIGEST_24  # noqa: E402
+
+ACCEPTED_FIXTURE_DIGEST = FIXTURE_DIGEST_24
 SALT = "issue168-arm-c-post-swa-requal-v1"
 BUCKETS = (("1-8", 1, 8), ("9-24", 9, 24), ("25-48", 25, 48),
            ("49-64", 49, 64))
@@ -87,10 +96,12 @@ OUT_PATH = Path(
     "corpus-census.json")
 
 #: accepted digest of the 24-case #133 Arm-C regression fixture
-#: (issue #168 Phase 1A; identical to FIXTURE_DIGEST_24 in
-#: scripts/issue129_arm_c_retry_core.py)
-ACCEPTED_FIXTURE_DIGEST = (
-    "sha256:180185cd5c6a5dcd77b2c65979bd2c9aef4d1c7ea9fb4850a64f4508b2ba36f2")
+#: (issue #168 Phase 1A) — consumed from the accepted #133 authority
+#: module (import-don't-restate; cross-pinned by the record tests)
+sys.path.insert(0, str(ROOT / "scripts"))
+from issue129_arm_c_retry_core import FIXTURE_DIGEST_24  # noqa: E402
+
+ACCEPTED_FIXTURE_DIGEST = FIXTURE_DIGEST_24
 
 
 def sha_bytes(data: bytes) -> str:

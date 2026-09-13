@@ -249,6 +249,40 @@ class NegativeControls(unittest.TestCase):
         self.assertEqual(result["verdict"], "REDUCTION_FAILED")
         self.assertTrue(any("recomputation" in f for f in result["failures"]))
 
+    def test_forged_selection_key_rejected(self):
+        def mutate(doc):
+            members = doc["eligibility_readings"]["prompt_two_chunk"][
+                "members"]["1-8"]
+            members[0]["selection_key_sha256"] = "f" * 64
+        directory = _with_mutated_census(mutate, self.tmpdir)
+        result = REDUCER.reduce_terminal(directory)
+        self.assertEqual(result["verdict"], "REDUCTION_FAILED")
+        self.assertTrue(any("selection key does not recompute"
+                            in f for f in result["failures"]))
+
+    def test_member_rendered_len_vs_ids_rejected(self):
+        def mutate(doc):
+            members = doc["eligibility_readings"]["prompt_two_chunk"][
+                "members"]["1-8"]
+            members[0]["rendered_len"] = 40
+        directory = _with_mutated_census(mutate, self.tmpdir)
+        result = REDUCER.reduce_terminal(directory)
+        self.assertEqual(result["verdict"], "REDUCTION_FAILED")
+        self.assertTrue(any("rendered_len vs ids" in f
+                            for f in result["failures"]))
+
+    def test_fixture_flag_inconsistency_rejected(self):
+        def mutate(doc):
+            for row in doc["per_case_rendered_lengths"]:
+                if not row["in_regression_fixture"]:
+                    row["in_regression_fixture"] = True
+                    break
+        directory = _with_mutated_census(mutate, self.tmpdir)
+        result = REDUCER.reduce_terminal(directory)
+        self.assertEqual(result["verdict"], "REDUCTION_FAILED")
+        self.assertTrue(any("in_regression_fixture flags disagree"
+                            in f for f in result["failures"]))
+
     def test_fake_eligible_member_rejected(self):
         def mutate(doc):
             members = doc["eligibility_readings"]["prompt_two_chunk"][

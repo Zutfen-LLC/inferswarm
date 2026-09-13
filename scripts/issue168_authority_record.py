@@ -127,6 +127,12 @@ def audit_execution_delta(freetoken: Path) -> dict:
     return {
         "accepted_arm_c_producer": ARM_C_ACCEPTED_PRODUCER,
         "producer_lineage": commits,
+        "file_list_convention": (
+            "per-commit diff-tree with first-parent merge enumeration "
+            "(-m); changed_files_by_class entries are the cumulative "
+            "union over the lineage's commits, so reproducing a list "
+            "requires the same first-parent -m enumeration, not a "
+            "two-dot name-only diff"),
         "changed_files_by_class": {
             "execution_bearing": execution_bearing,
             "test_only": test_only,
