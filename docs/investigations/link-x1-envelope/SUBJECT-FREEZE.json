@@ -1,0 +1,93 @@
+{
+  "baseline_main_sha": "e38ebe91a0604fb666397ddae675248e9f819f60",
+  "frozen_environment": {
+    "correctness_reference": {
+      "path": "docs/investigations/vulkan-v1-a/reference-visible-output.txt",
+      "provenance": "accepted V0-A/V0-C/V1-A frozen byte-exact visible greedy reference, inherited unchanged",
+      "sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+    },
+    "model": "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+    "model_bytes": 1929903264,
+    "model_sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
+    "prompt": "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+    "repeatability": "inherited from accepted V1-A/V1-B/V2-A stability samples (same runtime, model, prompt, comparator semantics); explicitly recorded as inherited",
+    "runtime_executable": "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+    "runtime_executable_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+    "runtime_source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+    "vulkan_loader": "1.4.309",
+    "workload": "greedy decode, temp 0, seed 42, -st, -lv 4, 48 tokens, accepted V1-A argv shape"
+  },
+  "frozen_utc": "2026-09-13T15:39:06.906613+00:00",
+  "hostname": "inferswarm02",
+  "nonclaims": [
+    "transport and serving measurements only; no execution authorization, no acceptance, no planner policy",
+    "Gen1-x1-class substrate observed under load is honest lower-bound evidence; no attempt made to force a Gen3 label",
+    "no vendor/width special case enters generic planner semantics"
+  ],
+  "schema": "inferswarm.issue35.subject-freeze/1",
+  "subjects": {
+    "amd_a": {
+      "binding": "zero-token identity probe; raw bytes retained in raw/x1p-transport-amd-a/identity/",
+      "device_name": "AMD Radeon RX 580 Series (RADV POLARIS10)",
+      "driver": "amdgpu/RADV Mesa 25.0.7-2+deb13u1",
+      "link": {
+        "current_link_speed": "2.5 GT/s PCIe",
+        "current_link_width": "1",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "lspci_line": "02:00.0 VGA compatible controller: Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere [Radeon RX 470/480/570/570X/580/580X/590] (rev e7)",
+      "pci_bdf": "02:00.0",
+      "selector": "Vulkan1",
+      "vram_bytes": 8589934592
+    },
+    "amd_b": {
+      "binding": "zero-token identity probe (NOT re-probed this campaign; BDF recorded from lspci inventory; NOT used as a sweep subject)",
+      "device_name": "AMD Radeon RX 580 Series (RADV POLARIS10)",
+      "driver": "amdgpu/RADV Mesa 25.0.7-2+deb13u1",
+      "link": {
+        "current_link_speed": "2.5 GT/s PCIe",
+        "current_link_width": "1",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "lspci_line": "03:00.0 VGA compatible controller: Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere [Radeon RX 470/480/570/570X/580/580X/590] (rev e7)",
+      "pci_bdf": "03:00.0",
+      "selector": "Vulkan2",
+      "vram_bytes": 8589934592
+    },
+    "nv_a": {
+      "binding": "unique deviceName; loader index cross-checked",
+      "device_name": "NVIDIA GeForce RTX 3060 Ti",
+      "driver": "nvidia 615.71.09 (CUDA UMD 13.4)",
+      "link": {
+        "current_link_speed": "2.5 GT/s PCIe",
+        "current_link_width": "1",
+        "max_link_speed": "16.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "lspci_line": "04:00.0 VGA compatible controller: NVIDIA Corporation GA104 [GeForce RTX 3060 Ti Lite Hash Rate] (rev a1)",
+      "pci_bdf": "04:00.0",
+      "selector": "Vulkan3",
+      "vram_bytes": 8847884288
+    }
+  },
+  "topology": {
+    "accepted_d3_d7_binding": {
+      "disposition": "docs/implementation/phase1r-final-disposition.md (byte-frozen)",
+      "handoff": "docs/implementation/phase1r-architecture-search-handoff.md (byte-frozen)",
+      "placements": [
+        "docs/investigations/data/phase1r-d3-three-device-placement.json",
+        "docs/investigations/data/phase1r-d4-capability-weighted-placement.json",
+        "docs/investigations/data/phase1r-d7-fanin-sparse-placement.json"
+      ],
+      "preserved_result": "capacity-positive, throughput-negative on tested path (inferswarm01, Gen2 x1); preserved not reinterpreted; this campaign is a NEW measurement identity on inferswarm02"
+    },
+    "root_ports": {
+      "00:1c.5": "x1 electrical (max 8GT/s x1)",
+      "00:1d.0": "x1 electrical (max 8GT/s x1)",
+      "00:1d.3": "x1 electrical (max 8GT/s x1)"
+    },
+    "wider_link_control": "NOT_PHYSICALLY_AVAILABLE: no slot on this host exceeds x1 electrical; an honest wider-link matched control is impossible without hardware change (out of scope per issue non-goals: no hardware moves)"
+  }
+}
