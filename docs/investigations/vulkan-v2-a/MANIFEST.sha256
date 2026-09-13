@@ -53,6 +53,9 @@ b678dd75abe82cc714e70df36f8f2db4315bfd4de18a185c099d6e9d0c304b4b  docs/investiga
 c85bd87f0e0f63a7ca90f2d56533a765130c7b20c239300bf9945d1f08db3a2e  docs/investigations/vulkan-v2-a/evidence/v2a-nv-a-r2-plan-01/candidate-set.json
 2b22601065bb93104ff7ac7df380550b630871f846e5f97d795d2f2d1a235b4a  docs/investigations/vulkan-v2-a/evidence/v2a-nv-a-r2-plan-01/frozen-plan.json
 369b456fac5cfcd6a71847bc58a4d45a33bd4257d907245668065b4ee05b2200  docs/investigations/vulkan-v2-a/evidence/v2a-nv-a-r2-plan-01/resource-snapshot.json
+48477b7d764d8d94bcd64c5b3f93a6b3ce5588bee77cfd48242d3c3b9e6b0fa2  docs/investigations/vulkan-v2-a/evidence/v2a-nv-a-r3-plan-01/candidate-set.json
+e24a792a980fcaf6d5bcd9fee55e0581ebf39516e032f1e347c094af141de828  docs/investigations/vulkan-v2-a/evidence/v2a-nv-a-r3-plan-01/frozen-plan.json
+baa8f5961dac9557f1ffd4d8deb4585f41ed0e17858f950ddfbe6d64a948aeb6  docs/investigations/vulkan-v2-a/evidence/v2a-nv-a-r3-plan-01/resource-snapshot.json
 4d37d3bd823f5c6c792c97e9fe7b52861e595ec3b6c44a1628f7ad413224e0e3  docs/investigations/vulkan-v2-a/raw/discovery-r2/identity-probe-stderr-vulkan1.txt
 b0d39870767cc6c66641b7e92b56f2a8ca2566465bd4d9a3f152b493737fa014  docs/investigations/vulkan-v2-a/raw/discovery-r2/identity-probe-stderr-vulkan3.txt
 b550e3c9edb08086613031975d7e902653d22fc7cf1c68dddce13abf8da2e78c  docs/investigations/vulkan-v2-a/raw/discovery-r2/identity-probe-stdout-vulkan1.txt
