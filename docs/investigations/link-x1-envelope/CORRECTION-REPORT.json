@@ -2,7 +2,7 @@
   "schema": "inferswarm.issue35.correction-report/2",
   "label": "MEASURED",
   "corrected_pr_head_before": "ea6e488dc896ec12100df8956b65d52c9bf22ea4",
-  "reconciled_main_sha": "00140a14e3ecbbbd64fdaf1803fe3922e7f4a554",
+  "reconciled_main_sha": "941d0fe52ecedff1c5294a5582af3fedecb1018e",
   "corrections": {
     "freeze_provenance": {
       "erratum_path": "FREEZE-PROVENANCE-ERRATUM.json",
