@@ -20,6 +20,14 @@ offloaded 12/12 layers to GPU
 
 AUTHORITY = {
     "schema": "inferswarm.v1a.physical-authority/1",
+    "physical_identity": {
+        "hostname": "inferswarm02",
+        "node_id": "node-inferswarm02",
+        "compute_unit_id": "cu-opaque-a",
+        "memory_resource_id": "mr-opaque-a",
+        "memory_resource_bytes": 8589934592,
+        "physical_device_bdf": "02:00.0",
+    },
     "frozen": {
         "hostname": "inferswarm02",
         "node_id": "node-inferswarm02",
@@ -88,7 +96,7 @@ class V1ARunnerTests(unittest.TestCase):
         self.assertEqual(capability["qualification_digest"], observation.proof_digest)
 
     def test_snapshot_and_plan_select_the_qualified_participant_generically(self):
-        authority = {**AUTHORITY, "ontology_pressure_resource": PRESSURE,
+        authority = {**AUTHORITY, "physical_identity": {**AUTHORITY["physical_identity"], "ontology_pressure_resource": PRESSURE},
                      "capability_completion": {"representations": ["representation-opaque-a"],
                                                "required_features": ["feature-a"],
                                                "integrity_status": "QUALIFIED"}}

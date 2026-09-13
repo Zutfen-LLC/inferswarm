@@ -187,7 +187,7 @@ def build_snapshot(authority: Mapping[str, Any], capability: Mapping[str, Any]) 
            "physical_device_bdf": frozen["physical_device_bdf"],
            "memory_resource": {"memory_resource_id": frozen["memory_resource_id"], "bytes": frozen["memory_bytes"]},
            "capabilities": [capability]}
-    pressure = authority["ontology_pressure_resource"]
+    pressure = authority["physical_identity"]["ontology_pressure_resource"]
     return {"schema": "inferswarm.v1a.resource-snapshot/1", "node_id": frozen["node_id"],
             "compute_units": [amd, pressure]}
 
