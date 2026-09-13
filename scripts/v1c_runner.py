@@ -412,7 +412,8 @@ def main(argv: list[str] | None = None) -> int:
     qualification = json.loads(Path(args.qualification).read_text(encoding="utf-8"))
     candidate_set = json.loads(Path(args.candidate_set).read_text(encoding="utf-8"))
     canonical_record = json.loads(Path(args.canonical_record).read_text(encoding="utf-8"))
-    audit = build_cross_subject_audit(v1a_authority, v1b_authority, authority, regression,
+    audit = build_cross_subject_audit(v1a_authority, v1b_authority, authority,
+                                      regression["v1a_regression"] if "v1a_regression" in regression else regression,
                                       retained_v1b, qualification, candidate_set, canonical_record)
     out.write_bytes(canonical(audit) + b"\n")
     print(audit["result"])

@@ -1,0 +1,16 @@
+{
+ "acceptance_state": "draft PR #162 records the result; acceptance remains with the maintainer",
+ "facts": {
+  "canonical_execution": "v1c-nv-a-canonical-01 PASS (exit 0, 37/37, accounting 0/0/0, byte-exact)",
+  "cross_subject_audit": "PASS (selector authority data; generic refactor accepted)",
+  "generic_plan": "v1c-nv-a-plan-01 (NV-A SELECTED_BY_OBJECTIVE; AMD pressure EVIDENCE_STALE)",
+  "local_host_confirmed": "inferswarm02",
+  "physical_qualification": "v1c-nv-a-qualification-01 PASS (37/37, adapter-sealed)",
+  "repeatability": "inherited from accepted V1-B 3/3 (explicitly recorded)",
+  "retained_transcript_regressions": "V1-A field-by-field + byte-identical; V1-B Vulkan3 0/0/0; 11 negative controls fail-closed",
+  "ssh_used": false
+ },
+ "issue": "#161",
+ "schema": "inferswarm.v1c.evidence-status/1",
+ "terminal": "V1C_CROSS_SUBJECT_PORTABILITY_PASS"
+}
