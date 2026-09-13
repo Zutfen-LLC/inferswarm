@@ -103,31 +103,74 @@ def reduce_replay(replay: dict) -> dict:
     return out
 
 
+def arm_digest_stats(arm: dict, kind: str) -> dict:
+    """Per-arm digest statistics computed from the retained digest
+    lists themselves (trial count, distinct count, varies).  Every
+    summary number in the output record flows through here — the
+    reducer never carries an observation count as a literal."""
+    digests = arm.get(f"{kind}_chunk2_digests") or []
+    return {
+        "trials": len(digests),
+        "distinct": len(set(digests)),
+        "varies": len(set(digests)) > 1,
+    }
+
+
+def chunk1_pairing(arm: dict) -> dict:
+    """Chunk-1 pairing between the treatment and control arms,
+    computed from the retained chunk-1 digest lists."""
+    control = arm.get("control_chunk1_digests") or []
+    treatment = arm.get("treatment_chunk1_digests") or []
+    return {
+        "control_distinct": len(set(control)),
+        "treatment_distinct": len(set(treatment)),
+        "identical_across_arms": bool(
+            control and set(control) == set(treatment)
+        ),
+    }
+
+
 def reduce_interventions(interventions: dict) -> dict:
     out = {}
     # the swa_alloc arm is the causal intervention; its anchors each
     # carry paired treatment/control evidence
     alloc = interventions.get("swa_alloc") or {}
-    if alloc and any(
-        alloc.get(a, {}).get("stabilizes") for a in ("anchor_a", "anchor_b")
-    ):
+    anchor_stats = {}
+    for anchor in ("anchor_a", "anchor_b"):
+        arm = alloc.get(anchor) or {}
+        if not arm:
+            continue
+        anchor_stats[anchor] = {
+            "control_chunk2": arm_digest_stats(arm, "control"),
+            "treatment_chunk2": arm_digest_stats(arm, "treatment"),
+            "control_varies": arm_digest_stats(arm, "control")["varies"],
+            "treatment_deterministic": (
+                arm_digest_stats(arm, "treatment")["trials"] > 0
+                and arm_digest_stats(arm, "treatment")["distinct"] == 1
+            ),
+            "chunk1": chunk1_pairing(arm),
+        }
+    if alloc and any(s["control_varies"] and s["treatment_deterministic"]
+                     for s in anchor_stats.values()):
         out["swa_alloc"] = {
             "executed": True,
             "treatment_deterministic": all(
-                alloc[a]["treatment_deterministic"]
-                for a in ("anchor_a", "anchor_b")
+                s["treatment_deterministic"] for s in anchor_stats.values()
             ),
             "control_varies": any(
-                alloc[a]["control_varies"]
-                for a in ("anchor_a", "anchor_b")
+                s["control_varies"] for s in anchor_stats.values()
             ),
             "stabilizes": all(
-                alloc[a]["stabilizes"] for a in ("anchor_a", "anchor_b")
+                s["control_varies"] and s["treatment_deterministic"]
+                for s in anchor_stats.values()
             ),
-            "detail": {"anchors_covered": sorted(
-                a for a in ("anchor_a", "anchor_b")
-                if alloc.get(a, {}).get("stabilizes")
-            )},
+            "detail": {
+                "anchors_covered": sorted(
+                    a for a, s in anchor_stats.items()
+                    if s["control_varies"] and s["treatment_deterministic"]
+                ),
+                "per_anchor": anchor_stats,
+            },
         }
     for name in ("sync", "scratch", "route"):
         arm = interventions.get(name)
@@ -266,6 +309,49 @@ def lifecycle_reason_present(reproduction: dict) -> bool:
     )
 
 
+def recurring_note(baseline: dict) -> str:
+    """Anchor-A recurrence prose computed from the retained baseline
+    bytes and the retained accepted-#137 in-session values bound in
+    baseline-reproduction.json (never a hand-typed value list)."""
+    binding = baseline.get("accepted_137_binding") or {}
+    accepted = binding.get("anchor_a_accepted_in_session_values") or []
+    b_vals = baseline.get("anchor_b") or []
+    b_tokens = [
+        r["committed_step0"]
+        for realization in b_vals
+        for r in realization.get("repeats", [])
+    ]
+    recurred = sorted({v for v in b_tokens if v in accepted})
+    a_vals = baseline.get("anchor_a") or []
+    a_tokens = [
+        r["committed_step0"]
+        for realization in a_vals
+        for r in realization.get("repeats", [])
+    ]
+    others = sorted(
+        v for v in dict.fromkeys(a_tokens) if v not in accepted
+    )
+    accepted_tail = sorted(
+        v for v in dict.fromkeys(accepted) if v not in recurred
+    )
+    if recurred and others:
+        return (
+            f"{recurred[0]} recurs with {'/'.join(map(str, others))}; "
+            f"values absent from every retained observation "
+            f"({', '.join(map(str, accepted_tail))}) — accepted #137 "
+            "in-session values recur on current accepted code"
+        )
+    if recurred:
+        return (
+            f"{recurred[0]} recurs — accepted #137 in-session values "
+            "recur on current accepted code"
+        )
+    return (
+        "no accepted #137 in-session value recurs in the retained "
+        "observations"
+    )
+
+
 def main(argv=None) -> int:
     inputs = {}
     baseline, inputs["baseline-reproduction.json"] = load_required(
@@ -285,6 +371,25 @@ def main(argv=None) -> int:
         reproduction, replay_out, interventions_out, checkpoints
     )
 
+    # every observational number used in the prose below is computed
+    # here from the retained inputs — never a literal
+    replay_trials = replay.get("trials") or len(
+        replay.get("chunk2_digests") or []
+    )
+    replay_distinct = len(set(replay.get("chunk2_digests") or []))
+    b_row = reproduction["anchor_b"]
+    b_stable = not b_row["varies"] and b_row["observations"] > 0
+    stable_value = (
+        sorted(set(b_row["values"]))[0] if b_stable else None
+    )
+    b_observations = b_row["observations"]
+    b_ctrl = (
+        (interventions_out.get("swa_alloc", {})
+         .get("detail", {}).get("per_anchor", {})
+         .get("anchor_b", {}).get("control_chunk2"))
+        or {"distinct": None, "trials": None}
+    )
+
     conclusions = {
         "schema": SCHEMA,
         "classification": DIAGNOSTIC_ONLY,
@@ -299,17 +404,22 @@ def main(argv=None) -> int:
                 "committed_token_level": {
                     "reproduces": reproduction["anchor_a"]["varies"],
                     "values": reproduction["anchor_a"]["values"],
-                    "note": "in-session variable family reproduced: "
-                            "107 recurs with 818/100/236774/258882 — "
-                            "accepted #137 in-session values recur on "
-                            "current accepted code",
+                    "note": (
+                        "in-session variable family reproduced: "
+                        f"{recurring_note(baseline)}"
+                    ),
                 },
                 "exact_state_level": {
                     "replay_deterministic":
                         replay_out["chunk2_deterministic"],
-                    "note": "exact-state chunk-2 replay from "
-                            "byte-identical restored state varies "
-                            "(6 distinct digests / 6 trials)",
+                    "trials": replay_trials,
+                    "distinct_digests": replay_distinct,
+                    "note": (
+                        "exact-state chunk-2 replay from "
+                        "byte-identical restored state varies "
+                        f"({replay_distinct} distinct digests / "
+                        f"{replay_trials} trials)"
+                    ),
                 },
                 "earliest_varying": checkpoints.get("anchor_a", {}).get(
                     "earliest_varying"
@@ -319,11 +429,19 @@ def main(argv=None) -> int:
                 "committed_token_level": {
                     "reproduces": reproduction["anchor_b"]["varies"],
                     "values": reproduction["anchor_b"]["values"],
-                    "note": "session-stable at 107 across all 9 baseline "
-                            "observations — this diagnostic substrate "
-                            "reproduced the VALUE, not the cross-session "
-                            "drift; no accepted-value contradiction "
-                            "(107 is an accepted in-session value)",
+                    "note": (
+                        "session-stable at "
+                        f"{stable_value} across all "
+                        f"{b_observations} baseline observations — "
+                        "this diagnostic substrate reproduced the "
+                        "VALUE, not the cross-session drift; no "
+                        "accepted-value contradiction "
+                        f"({stable_value} is an accepted in-session "
+                        "value)"
+                    ) if b_stable else (
+                        "anchor B varies across "
+                        f"{b_observations} baseline observations"
+                    ),
                 },
                 "exact_state_level": {
                     "replay_varies_control": (
@@ -331,11 +449,13 @@ def main(argv=None) -> int:
                         .get("detail", {})
                     ),
                     "baseline_varies": reproduction["anchor_b"]["varies"],
-                    "note": "the paired CONTROL arm of the swa_alloc "
-                            "intervention on anchor B varies (5 distinct "
-                            "chunk-2 digests / 6 trials) — the chunk-2 "
-                            "instability reproduces at the exact-state "
-                            "level",
+                    "note": (
+                        "the paired CONTROL arm of the swa_alloc "
+                        "intervention on anchor B varies "
+                        f"({b_ctrl['distinct']} distinct chunk-2 digests "
+                        f"/ {b_ctrl['trials']} trials) — the chunk-2 "
+                        "instability reproduces at the exact-state level"
+                    ),
                 },
                 "earliest_varying": checkpoints.get("anchor_b", {}).get(
                     "earliest_varying"

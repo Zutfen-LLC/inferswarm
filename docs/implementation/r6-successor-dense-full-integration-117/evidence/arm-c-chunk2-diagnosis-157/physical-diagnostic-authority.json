@@ -81,15 +81,31 @@
   },
   "instrumentation": {
     "capture_plan": "per METHODOLOGY.md Phase 1: call/state identity, first-chunk-end state, layer-0/1 op checkpoints (qkv, norms, rotary, KV pre/post, attention out, o_proj, residual), route observation at dispatch, decode-scratch identity",
-    "files": {
+    "execution_bearing_files": {
       "scripts/issue157_binding.py": "sha256:66927fab5f98aed756780430492667bebda5efab2161edf1d77d0061a89348ca",
-      "scripts/issue157_conclusions.py": "sha256:fcb75825cd8180cb4f67eaca7a8e1f8573be06fd5b1a16686ee429d4638a4747",
       "scripts/issue157_instrumentation.py": "sha256:00a1c2c1452f87ca56289eeb3716e9cd08ba1c5a36e7d06ac6abdb79283024fc",
       "scripts/issue157_probe_driver.py": "sha256:b49c0bec2d3e7ad2f7877632489a09cb6dda2702a735853ba3836d7589b88a3e",
       "scripts/issue157_replay_harness.py": "sha256:0ce7e7a89e5c2548112435170cd2068cffb83337a7697d8156192d8728cb2024",
       "scripts/issue157_replay_worker.py": "sha256:b7ed6de8a4fd0344f1aae810cab1fda1f852bf3cd594988297f2a72354f877c5",
       "scripts/issue157_sitecustomize.py": "sha256:67effb1dfc8c9960e43f5c577195f71635930db4b768d831f84970748f4e8c4b"
     },
+    "execution_bearing_files_note": "EXACTLY the tool bytes the committed physical reruns executed under (2611ee1): binding verification, probe driver, replay harness/worker, stage instrumentation, sitecustomize shim. These hashes are frozen physical history and are NEVER rewritten by a later change to the conclusions reducer.",
+    "post_processing_files": {
+      "scripts/issue157_conclusions.py": "sha256:3211dbcded10f26b74eb8245e9307aacf5665e4259da3778f720fbd350978620"
+    },
+    "post_processing_files_note": "post-evidence reduction tooling ONLY: reduces already-retained observation JSON into diagnostic-conclusions.json. Never imported by, deployed to, or executed inside any physical diagnostic process; changing it cannot influence any physical execution or capture.",
+    "post_evidence_reducer_amendments": [
+      {
+        "amendment": "post-evidence reduction correction (PR #159 maintainer NO-GO item 1)",
+        "prior_reducer_sha256": "fcb75825cd8180cb4f67eaca7a8e1f8573be06fd5b1a16686ee429d4638a4747",
+        "corrected_reducer_sha256": "3211dbcded10f26b74eb8245e9307aacf5665e4259da3778f720fbd350978620",
+        "reason": "derived-count/prose correction only: the reducer hard-coded observational counts in prose (5 distinct chunk-2 digests / 6 trials on anchor B, contradicting the retained 6-distinct control) and other numeric literals presented as derived; all counts now computed mechanically from retained evidence bytes (trial counts, distinct counts, control-varies, treatment-deterministic, chunk-1 pairing) and exposed as structured fields",
+        "physical_evidence_inputs_unchanged": "baseline-reproduction.json, exact-state-replay.json, interventions.json, instrumentation-manifest.json, launch-ledger.json all byte-identical to the correction-pass-1 retained bytes (sha256 verified)",
+        "execution_bearing_bytes_unchanged": "all execution_bearing_files hashes identical to the correction-pass-1 freeze; FreeToken diagnostic producer unchanged at 55e8baaebabe67aeb967d4bd407ef26696933104",
+        "physical_rerun_required": false,
+        "terminal_after_regeneration": "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED (re-derived from unchanged evidence; unchanged from the pre-amendment reduction)"
+      }
+    ],
     "hash_history": {
       "correction_pass_1_commit_2611ee1": {
         "note": "Adversarial review (provenance lane) found the original runs executed under uncommitted intermediate tool bytes. Per the issue's supersession rule, ALL evidence-bearing arms were RERUN under the committed bytes at 2611ee1 (producer unchanged 55e8baa); the rerun artifacts live under out-corr1/ and supersede the original observations. Original runs retained in launch-ledger.json as superseded."
@@ -97,6 +113,10 @@
       "freeze_commit_c11fa00": {
         "note": "original pre-physical freeze hashes (see git c11fa00)",
         "superseded_by": "correction_pass_1"
+      },
+      "pre_correction_pass_1_instrumentation_listing": {
+        "note": "the original instrumentation.files map (freeze c11fa00 / correction-pass-1 2611ee1) additionally listed scripts/issue157_conclusions.py among the instrumentation hashes; that listing is superseded by the execution_bearing_files / post_processing_files split recorded here, which preserves the exact same execution-bearing hashes while classifying the conclusions reducer explicitly as post-processing tooling (it never participated in physical execution or capture)",
+        "superseded_by": "post_evidence_reducer_amendments[0]"
       }
     },
     "off_by_default_proof": [

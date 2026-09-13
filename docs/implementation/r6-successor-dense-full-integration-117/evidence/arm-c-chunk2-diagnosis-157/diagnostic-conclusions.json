@@ -78,7 +78,47 @@
         "anchors_covered": [
           "anchor_a",
           "anchor_b"
-        ]
+        ],
+        "per_anchor": {
+          "anchor_a": {
+            "chunk1": {
+              "control_distinct": 1,
+              "identical_across_arms": true,
+              "treatment_distinct": 1
+            },
+            "control_chunk2": {
+              "distinct": 3,
+              "trials": 6,
+              "varies": true
+            },
+            "control_varies": true,
+            "treatment_chunk2": {
+              "distinct": 1,
+              "trials": 6,
+              "varies": false
+            },
+            "treatment_deterministic": true
+          },
+          "anchor_b": {
+            "chunk1": {
+              "control_distinct": 1,
+              "identical_across_arms": true,
+              "treatment_distinct": 1
+            },
+            "control_chunk2": {
+              "distinct": 6,
+              "trials": 6,
+              "varies": true
+            },
+            "control_varies": true,
+            "treatment_chunk2": {
+              "distinct": 1,
+              "trials": 6,
+              "varies": false
+            },
+            "treatment_deterministic": true
+          }
+        }
       },
       "executed": true,
       "stabilizes": true,
@@ -95,7 +135,7 @@
   "per_anchor": {
     "anchor_a": {
       "committed_token_level": {
-        "note": "in-session variable family reproduced: 107 recurs with 818/100/236774/258882 \u2014 accepted #137 in-session values recur on current accepted code",
+        "note": "in-session variable family reproduced: 107 recurs with 100/236774/258882; values absent from every retained observation (818, 1437, 3771) \u2014 accepted #137 in-session values recur on current accepted code",
         "reproduces": true,
         "values": [
           107,
@@ -111,8 +151,10 @@
       },
       "earliest_varying": "L0_kv_slice_post_write",
       "exact_state_level": {
+        "distinct_digests": 6,
         "note": "exact-state chunk-2 replay from byte-identical restored state varies (6 distinct digests / 6 trials)",
-        "replay_deterministic": false
+        "replay_deterministic": false,
+        "trials": 6
       }
     },
     "anchor_b": {
@@ -134,12 +176,52 @@
       "earliest_varying": null,
       "exact_state_level": {
         "baseline_varies": false,
-        "note": "the paired CONTROL arm of the swa_alloc intervention on anchor B varies (5 distinct chunk-2 digests / 6 trials) \u2014 the chunk-2 instability reproduces at the exact-state level",
+        "note": "the paired CONTROL arm of the swa_alloc intervention on anchor B varies (6 distinct chunk-2 digests / 6 trials) \u2014 the chunk-2 instability reproduces at the exact-state level",
         "replay_varies_control": {
           "anchors_covered": [
             "anchor_a",
             "anchor_b"
-          ]
+          ],
+          "per_anchor": {
+            "anchor_a": {
+              "chunk1": {
+                "control_distinct": 1,
+                "identical_across_arms": true,
+                "treatment_distinct": 1
+              },
+              "control_chunk2": {
+                "distinct": 3,
+                "trials": 6,
+                "varies": true
+              },
+              "control_varies": true,
+              "treatment_chunk2": {
+                "distinct": 1,
+                "trials": 6,
+                "varies": false
+              },
+              "treatment_deterministic": true
+            },
+            "anchor_b": {
+              "chunk1": {
+                "control_distinct": 1,
+                "identical_across_arms": true,
+                "treatment_distinct": 1
+              },
+              "control_chunk2": {
+                "distinct": 6,
+                "trials": 6,
+                "varies": true
+              },
+              "control_varies": true,
+              "treatment_chunk2": {
+                "distinct": 1,
+                "trials": 6,
+                "varies": false
+              },
+              "treatment_deterministic": true
+            }
+          }
         }
       }
     }

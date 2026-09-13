@@ -27,6 +27,7 @@ from __future__ import annotations
 import importlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -385,6 +386,166 @@ TERMINALS = (
     "ISSUE117_ARM_C_CHUNK2_DIAGNOSTIC_INSUFFICIENT_EVIDENCE",
     "ISSUE117_ARM_C_CHUNK2_EVIDENCE_BLOCKED",
 )
+
+
+class TestDerivedCountsFollowEvidence(unittest.TestCase):
+    """Adversarial regression (maintainer NO-GO item 1): every
+    observational count in the generated conclusion summary must
+    follow the retained evidence bytes mechanically — a mutated
+    digest list or trial count must change the summary, and a
+    hard-coded expected count string must fail the negative control.
+    """
+
+    def setUp(self):
+        self.mod = importlib.import_module("issue157_conclusions")
+        self.tmp = tempfile.TemporaryDirectory()
+        self.dir = Path(self.tmp.name)
+        self.orig_dir = self.mod.EVIDENCE_DIR
+        self.mod.EVIDENCE_DIR = self.dir
+        # real-shaped retained evidence, copied from the bundle and
+        # mutated per test
+        src = (
+            REPO / "docs/implementation/"
+            "r6-successor-dense-full-integration-117/evidence/"
+            "arm-c-chunk2-diagnosis-157"
+        )
+        for name in self.mod.CONSUMED:
+            shutil.copy(src / name, self.dir / name)
+        self.baseline_d = json.loads(
+            (self.dir / "baseline-reproduction.json").read_text())
+        self.replay_d = json.loads(
+            (self.dir / "exact-state-replay.json").read_text())
+        self.iv_d = json.loads(
+            (self.dir / "interventions.json").read_text())
+        self.instr_d = json.loads(
+            (self.dir / "instrumentation-manifest.json").read_text())
+
+    def tearDown(self):
+        self.mod.EVIDENCE_DIR = self.orig_dir
+        self.tmp.cleanup()
+
+    def _write_mutated(self, *, baseline=None, replay=None,
+                       interventions=None):
+        # rewrite ONLY mutated inputs: untouched files keep their
+        # original bytes so the reducer's input-hash map is stable
+        # for the byte-identity regression
+        if baseline is not None:
+            (self.dir / "baseline-reproduction.json").write_text(
+                json.dumps(baseline))
+        if replay is not None:
+            (self.dir / "exact-state-replay.json").write_text(
+                json.dumps(replay))
+        if interventions is not None:
+            (self.dir / "interventions.json").write_text(
+                json.dumps(interventions))
+        out = self.dir / "diagnostic-conclusions.json"
+        rc = self.mod.main([])
+        self.assertEqual(rc, 0)
+        return json.loads(out.read_text())
+
+    def test_committed_bundle_regenerates_byte_identically(self):
+        """The committed diagnostic-conclusions.json must be exactly
+        what the reducer produces from the committed evidence bytes."""
+        committed = (
+            REPO / "docs/implementation/"
+            "r6-successor-dense-full-integration-117/evidence/"
+            "arm-c-chunk2-diagnosis-157/diagnostic-conclusions.json"
+        )
+        self._write_mutated()
+        regenerated = (self.dir / "diagnostic-conclusions.json").read_text()
+        self.assertEqual(
+            committed.read_text(), regenerated,
+            "committed conclusions are not the byte-identical "
+            "reduction of the committed evidence",
+        )
+
+    def test_anchor_b_control_distinct_follows_digests(self):
+        """Mutating only the anchor-B control digests (3 distinct while
+        trials stay six) must change the derived prose AND the
+        structured counts."""
+        record = self._mutations_b_control_3_distinct()
+        ctrl = record["interventions"]["swa_alloc"]["detail"][
+            "per_anchor"]["anchor_b"]["control_chunk2"]
+        self.assertEqual(ctrl["trials"], 6)
+        self.assertEqual(ctrl["distinct"], 3)
+        note = record["per_anchor"]["anchor_b"]["exact_state_level"]["note"]
+        self.assertIn("(3 distinct chunk-2 digests / 6 trials)", note)
+        # the negative control: the previously hard-coded string must
+        # NOT survive a mutation that changes the underlying bytes
+        self.assertNotIn("5 distinct", note)
+        self.assertNotIn("(6 distinct chunk-2 digests / 6 trials)", note)
+
+    def _mutations_b_control_3_distinct(self):
+        iv = json.loads(json.dumps(self.iv_d))
+        d = iv["swa_alloc"]["anchor_b"]["control_chunk2_digests"]
+        iv["swa_alloc"]["anchor_b"]["control_chunk2_digests"] = [
+            d[0], d[1], d[2], d[0], d[1], d[2],
+        ]
+        return self._write_mutated(interventions=iv)
+
+    def test_anchor_a_control_distinct_follows_digests(self):
+        iv = json.loads(json.dumps(self.iv_d))
+        d = iv["swa_alloc"]["anchor_a"]["control_chunk2_digests"]
+        iv["swa_alloc"]["anchor_a"]["control_chunk2_digests"] = [d[0]] * len(d)
+        record = self._write_mutated(interventions=iv)
+        ctrl = record["interventions"]["swa_alloc"]["detail"][
+            "per_anchor"]["anchor_a"]["control_chunk2"]
+        self.assertEqual(ctrl["distinct"], 1)
+        self.assertFalse(ctrl["varies"])
+        # a non-varying control removes the causal demonstration:
+        # the terminal must drop off LOCALIZED, not stay on a literal
+        self.assertNotEqual(
+            record["terminal"],
+            "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED",
+        )
+
+    def test_treatment_trial_count_follows_digests(self):
+        iv = json.loads(json.dumps(self.iv_d))
+        t = iv["swa_alloc"]["anchor_b"]["treatment_chunk2_digests"]
+        iv["swa_alloc"]["anchor_b"]["treatment_chunk2_digests"] = t[:4]
+        record = self._write_mutated(interventions=iv)
+        trt = record["interventions"]["swa_alloc"]["detail"][
+            "per_anchor"]["anchor_b"]["treatment_chunk2"]
+        self.assertEqual(trt["trials"], 4)
+        self.assertEqual(trt["distinct"], 1)
+
+    def test_replay_distinct_count_follows_digests(self):
+        replay = json.loads(json.dumps(self.replay_d))
+        d = replay["chunk2_digests"]
+        replay["chunk2_digests"] = [
+            d[0], d[1], d[0], d[1], d[0], d[1],
+        ]
+        record = self._write_mutated(replay=replay)
+        level = record["per_anchor"]["anchor_a"]["exact_state_level"]
+        self.assertEqual(level["distinct_digests"], 2)
+        self.assertEqual(level["trials"], 6)
+        self.assertIn("(2 distinct digests / 6 trials)", level["note"])
+        self.assertNotIn("(6 distinct digests / 6 trials)", level["note"])
+
+    def test_baseline_observation_count_follows_bytes(self):
+        baseline = json.loads(json.dumps(self.baseline_d))
+        baseline["anchor_b"] = baseline["anchor_b"][:2]  # 2 realizations
+        record = self._write_mutated(baseline=baseline)
+        obs = record["phenomenon_reproduction"]["anchor_b"]["observations"]
+        self.assertEqual(obs, 6)  # 2 realizations x 3 repeats
+        note = record["per_anchor"]["anchor_b"]["committed_token_level"][
+            "note"]
+        self.assertIn("across all 6 baseline observations", note)
+        self.assertNotIn("across all 9 baseline observations", note)
+
+    def test_reducer_source_carries_no_observational_count_literals(
+            self):
+        """Structural negative control: the reducer source may not
+        contain the historic hard-coded count strings at all."""
+        src = _src("issue157_conclusions.py")
+        for banned in (
+            "5 distinct", "6 distinct digests / 6 trials",
+            "all 9 baseline",
+        ):
+            self.assertNotIn(
+                banned, src,
+                f"reducer source carries observational literal: {banned}",
+            )
 
 
 class TestInstrumentationArming(unittest.TestCase):

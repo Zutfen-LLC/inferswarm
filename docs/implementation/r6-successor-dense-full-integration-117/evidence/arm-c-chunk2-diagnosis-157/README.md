@@ -40,7 +40,7 @@ to stage-1 SWA layers 0–1.
 factor vs the paired control:
 
 - Anchor A `c109-04-02-047` (64+3, in-session-variable family):
-  treatment chunk-2 byte-deterministic 6/6; paired control 5 distinct
+  treatment chunk-2 byte-deterministic 6/6; paired control 3 distinct
   digests / 6 trials; chunk-1 unchanged.
 - Anchor B `c109-04-06-074` (64+2, session-stable family): treatment
   deterministic 6/6; control 6 distinct / 6.
@@ -94,6 +94,35 @@ Original (superseded, retained): node-local `/srv/inferswarm/state/issue157/out/
 JSONL; partially wiped by inter-probe harness cleaning — see retention
 gaps in `instrumentation-manifest.json`). Orchestrator pull copy:
 retained at `~/i157/pull` during review.
+
+## Correction pass 2 (post-evidence reduction correction)
+
+Maintainer NO-GO review found the conclusions reducer still carried
+numeric literals in prose (Anchor-B control described as "5 distinct
+chunk-2 digests / 6 trials" while the retained control is mechanically
+6 distinct / 6, plus similar literals elsewhere). Fixed generically:
+every trial/distinct count, control-varies flag, treatment-determinism
+flag, and chunk-1 pairing fact is now COMPUTED from the retained
+evidence bytes and retained as structured machine-readable fields
+(`interventions.swa_alloc.detail.per_anchor.*`), with all prose
+formatting those computed fields — no numeric literals remain in the
+reducer's observational prose. Adversarial mutation tests added in
+`tests/test_issue157_chunk2_diagnosis.py` (TestDerivedCountsFollowEvidence)
+prove the summary follows mutated inputs mechanically, and that the
+committed `diagnostic-conclusions.json` regenerates byte-identically.
+
+Provenance (authority record `instrumentation` section): the
+execution-bearing tool hashes used for the committed physical reruns
+(2611ee1) are preserved verbatim under `execution_bearing_files`;
+`scripts/issue157_conclusions.py` is classified explicitly as
+`post_processing_files` (post-evidence reduction only — never executed
+inside, and never influencing, any physical diagnostic process); an
+additive `post_evidence_reducer_amendments` entry records the prior and
+corrected reducer hashes with proof that no physical observation,
+execution-bearing instrumentation byte, or FreeToken producer byte
+changed. No GPU/model rerun was performed or required for this
+correction. Terminal re-derived from unchanged evidence:
+`ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED`.
 
 ## Non-claims
 
