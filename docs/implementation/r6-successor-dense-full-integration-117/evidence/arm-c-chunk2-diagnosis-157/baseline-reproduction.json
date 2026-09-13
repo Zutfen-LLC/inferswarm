@@ -1,4 +1,18 @@
 {
+  "accepted_137_binding": {
+    "anchor_a_accepted_in_session_values": [
+      107,
+      818,
+      3771,
+      1437,
+      107
+    ],
+    "recurred_in_this_baseline": [
+      107,
+      818
+    ],
+    "source": "arm-c-regime4-diagnosis-137/diagnostic-conclusions.json (accepted; MANIFEST row 6bcb15616f0b32819204160e91b52e1c77f6095baff1c191c5b949dc28dfbf12)"
+  },
   "anchor_a": [
     {
       "realization": 0,

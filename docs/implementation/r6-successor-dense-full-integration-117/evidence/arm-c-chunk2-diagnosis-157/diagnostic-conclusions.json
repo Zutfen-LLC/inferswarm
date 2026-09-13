@@ -3,9 +3,24 @@
   "earliest_varying_checkpoint": {
     "anchor_a": {
       "all_varying": [
-        "L0_attention_output"
+        "L0_kv_slice_post_write",
+        "L0_attention_output",
+        "L0_o_proj",
+        "after_layer_0",
+        "after_layer_1",
+        "L1_attention_output",
+        "L1_backend_k_input",
+        "L1_backend_q_input",
+        "L1_backend_v_input",
+        "L1_k_normed",
+        "L1_kv_slice_post_write",
+        "L1_o_proj",
+        "L1_q_normed",
+        "L1_qkv_projected",
+        "call_context"
       ],
-      "earliest_varying": "L0_attention_output"
+      "earliest_varying": "L0_kv_slice_post_write",
+      "selection_rule": "first varying in EXECUTION_ORDER"
     }
   },
   "exact_state_replay": {
@@ -13,23 +28,23 @@
     "chunk2_deterministic": false,
     "chunk2_digests": [
       "22cabe19e70b86797682ac6b3156a0ce42e49fe9ebd28084a02b2a1516deae53",
-      "d25574fcf90de2a8c4c509a11317dc100c0343c1951ec0cb9b5fe93554ad7ee6",
+      "86a995e8dd00342a3954f4794a5bbc5c33536f59a05fa2fc704c9cd8475fb32d",
       "0cd519c11dab84993ace1b940f9fbf160448666114873a00185714a3ac307ded",
-      "be36f0bfa7e55bdcce6d85ac4f29eb725230008d651678a4212ea0d9341992a3",
-      "d8a3042976f9be089f38f77ede2ce498bc76844e12b68f2520a68aec6e5cfbbd",
-      "7c57c8a203ebaf02b0d8d44a615d930b47fa03dfe8fd4c113af74b3fb40a4fb2"
+      "84043e8d5d00aa5f5a46114e109021a1c73e43afdd8b39ea6dc400067529b121",
+      "6e2a1b916b688b9994b0ea480275715ba9a0b303b4de38500d4bf6bd87e9416f",
+      "c80495217288f9c01263711942f5987b5df6ecc305b0aaf56c4de645313d6030"
     ],
     "no_reuse_proof": {
       "after_restore": [
         "8e845e11ddfe151abbc4f63ede8b365b52b22c3146f3153e284a2bd1affee4f2",
-        "5505a85674bbd43249bfd11acd2f27357e9653f0c5aff876d20a04b76f862e12",
+        "ff083213afb949c8ffc89883d3a92aa48c58958cadc04d3e003c44c566c3a4a3",
         "1d830c8af4ff60b1ec36350ea25d99c4247d5d040d8d2c9acbe28011ebb9039e",
         "1cfc9251644a358213d808b8088517b87a9f024bdf46198a3ed692b98b7373a7",
         "8808405eec6fbe306fe3369f88daed79dd5613ddbb5e801f632b01d6218c5f08"
       ],
       "live_after_trials": [
-        "6cbb184a84f1dc44a648ac5754a7d31af98899a0ff4e85c0fb649dc8bfa85f1d",
-        "443e6bfa68b69d1d19d9c45d9d550f13ddcdbce76ecc63c97cf3ae5e3959e263",
+        "1b5ced6645399813fa07975f0d947bff18c1b3b511f91f9536e317a2df4633b6",
+        "45a7fc3f1f51d4614967d8d33c3831c88f2327741705db39dee18e5cb3cff07d",
         "1d830c8af4ff60b1ec36350ea25d99c4247d5d040d8d2c9acbe28011ebb9039e",
         "1cfc9251644a358213d808b8088517b87a9f024bdf46198a3ed692b98b7373a7",
         "8808405eec6fbe306fe3369f88daed79dd5613ddbb5e801f632b01d6218c5f08"
@@ -40,10 +55,10 @@
     "trials": 6
   },
   "inputs": {
-    "baseline-reproduction.json": "c93f130786ca26a7ae9f9b7e20cb31607ba677b87e89bd15592f2ba29f33f1bc",
-    "exact-state-replay.json": "a2e2b50a6ba68d094fcefd822c9f312e9b50f748070634f9a70671dfacab3d46",
-    "instrumentation-manifest.json": "1e55086feec2e96306eaedabb34bfacb5f8240f4c5d0a0ca7509b84862591cfb",
-    "interventions.json": "2a241b1c96824acc11dba9ced1da6df4e9189b29d9702b2b83757c9305cf6d69"
+    "baseline-reproduction.json": "d1ff3bce1add29f0e3f59bae943d12b7cf7c44729de1ae23627a9ce36c3914c9",
+    "exact-state-replay.json": "43c5163acb0bf55f167fbaef7b54a0ca87f3a73e4c69a2d450dc52ed0e2363d9",
+    "instrumentation-manifest.json": "2d3534c06483a8387ea7117f07d7b36dd5604f55215cf0b8f060f9c957d706f7",
+    "interventions.json": "35576c3fa645a429d08a6ecc307b71980bc28946b8e810c5e1e13a2717501cbe"
   },
   "interventions": {
     "route": {
@@ -54,11 +69,8 @@
       "treatment_deterministic": false
     },
     "scratch": {
-      "control_varies": null,
-      "detail": null,
-      "executed": true,
-      "stabilizes": false,
-      "treatment_deterministic": null
+      "executed": false,
+      "verdict": "NOT EXECUTED (legal refusal, Phase 4-B): the decode-route fp32 scratch is not on the anchors' extend-route chunk-2 path (routes observed at dispatch); zeroing buffers proven NOT to participate would violate the legality precondition"
     },
     "swa_alloc": {
       "control_varies": true,
@@ -97,7 +109,7 @@
           100
         ]
       },
-      "earliest_varying": "L0_attention_output",
+      "earliest_varying": "L0_kv_slice_post_write",
       "exact_state_level": {
         "note": "exact-state chunk-2 replay from byte-identical restored state varies (6 distinct digests / 6 trials)",
         "replay_deterministic": false
@@ -121,6 +133,7 @@
       },
       "earliest_varying": null,
       "exact_state_level": {
+        "baseline_varies": false,
         "note": "the paired CONTROL arm of the swa_alloc intervention on anchor B varies (5 distinct chunk-2 digests / 6 trials) \u2014 the chunk-2 instability reproduces at the exact-state level",
         "replay_varies_control": {
           "anchors_covered": [

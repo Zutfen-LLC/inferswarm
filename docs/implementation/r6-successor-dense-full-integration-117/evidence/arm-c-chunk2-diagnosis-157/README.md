@@ -27,7 +27,7 @@ its all-zero sentinel, and for every SWA attention layer:
    extend kernel reads `k_extend`/`v_extend` directly — the pool is
    never read.
 
-This explains every accepted #133/#137/#153 fact: the 18 stable
+This is consistent with every accepted #133/#137/#153 fact (explanatory consistency, not a coverage proof for all six cases): the 18 stable
 single-chunk cases never read a prefix; the six multi-chunk cases do;
 #137's C2 probe destabilized a stable 53-row case exactly by
 introducing a second chunk (a prefix read); the divergence localizes
@@ -43,7 +43,7 @@ factor vs the paired control:
   treatment chunk-2 byte-deterministic 6/6; paired control 5 distinct
   digests / 6 trials; chunk-1 unchanged.
 - Anchor B `c109-04-06-074` (64+2, session-stable family): treatment
-  deterministic 6/6; control 5 distinct / 6.
+  deterministic 6/6; control 6 distinct / 6.
 
 Rejected hypotheses (same paired design): execution-order/
 synchronization (device-wide sync before every attention call — still
@@ -68,9 +68,28 @@ the anchors' extend-route path — intervention not legal per Phase 4-B).
 - `diagnostic-conclusions.json` — reduced conclusions + terminal.
 - `MANIFEST.sha256` — fail-closed bundle manifest.
 
+## Correction pass 1 (adversarial-review)
+
+Two exact-head adversarial reviews returned GO-WITH-FIXES. All P1s
+resolved: (a) the evidence-bearing arms were RERUN under tool bytes
+committed at 2611ee1 (node bytes sha256-verified equal before launch) —
+all results confirmed (REPLAY varies 6/6; SYNC and ROUTE rejected;
+SWA-ALLOC stabilizes both anchors); (b) the reducer now selects the
+earliest varying checkpoint by execution order (the racing SWA store,
+not the downstream attention read), never reports a legally-skipped
+intervention as executed, and the reproduction gate is
+non-tautological; (c) the checkpoint matrix is derived from the
+retained raw JSONLs of the correction-pass runs (94 checkpoints,
+including the direct full_to_swa_index_mapping observation); (d) the
+authority record re-freezes the final tool hashes with the drift
+history recorded; (e) the launch ledger is complete (19 entries,
+including previously-unledgered confirmation runs).
+
 ## Raw run artifacts
 
-Node-local (inferswarm01): `/srv/inferswarm/state/issue157/out/`
+Correction-pass (authoritative): `~/i157/pull-corr1/` (all JSONLs
+retained) + node-local `/srv/inferswarm/state/issue157/out-corr1/`.
+Original (superseded, retained): node-local `/srv/inferswarm/state/issue157/out/`
 (driver records + replay results), `/tmp/issue157-harness/` (per-call
 JSONL; partially wiped by inter-probe harness cleaning — see retention
 gaps in `instrumentation-manifest.json`). Orchestrator pull copy:

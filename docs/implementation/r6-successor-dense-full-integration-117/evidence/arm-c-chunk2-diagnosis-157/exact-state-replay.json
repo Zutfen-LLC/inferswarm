@@ -4,7 +4,7 @@
     "boundary_sha256": "7522b637dcc9fe8a2b62a91bd663eeec1adc1959bcfeed9919f814c3942902c4",
     "kv_state_digests": [
       "8e845e11ddfe151abbc4f63ede8b365b52b22c3146f3153e284a2bd1affee4f2",
-      "5505a85674bbd43249bfd11acd2f27357e9653f0c5aff876d20a04b76f862e12",
+      "ff083213afb949c8ffc89883d3a92aa48c58958cadc04d3e003c44c566c3a4a3",
       "1d830c8af4ff60b1ec36350ea25d99c4247d5d040d8d2c9acbe28011ebb9039e",
       "1cfc9251644a358213d808b8088517b87a9f024bdf46198a3ed692b98b7373a7",
       "8808405eec6fbe306fe3369f88daed79dd5613ddbb5e801f632b01d6218c5f08"
@@ -22,21 +22,21 @@
     "kv_state_digests": [
       [
         "8e845e11ddfe151abbc4f63ede8b365b52b22c3146f3153e284a2bd1affee4f2",
-        "5505a85674bbd43249bfd11acd2f27357e9653f0c5aff876d20a04b76f862e12",
+        "ff083213afb949c8ffc89883d3a92aa48c58958cadc04d3e003c44c566c3a4a3",
         "1d830c8af4ff60b1ec36350ea25d99c4247d5d040d8d2c9acbe28011ebb9039e",
         "1cfc9251644a358213d808b8088517b87a9f024bdf46198a3ed692b98b7373a7",
         "8808405eec6fbe306fe3369f88daed79dd5613ddbb5e801f632b01d6218c5f08"
       ],
       [
         "8e845e11ddfe151abbc4f63ede8b365b52b22c3146f3153e284a2bd1affee4f2",
-        "23008e933fb75325fa21f5fb18ac0bab21cf357d12f9661acd9a08531ea7dbbe",
+        "e8849e9f1aafa27d9943ebac3a42ae322abcd536f9b4689800400616eaf4383d",
         "1d830c8af4ff60b1ec36350ea25d99c4247d5d040d8d2c9acbe28011ebb9039e",
         "1cfc9251644a358213d808b8088517b87a9f024bdf46198a3ed692b98b7373a7",
         "8808405eec6fbe306fe3369f88daed79dd5613ddbb5e801f632b01d6218c5f08"
       ],
       [
         "8e845e11ddfe151abbc4f63ede8b365b52b22c3146f3153e284a2bd1affee4f2",
-        "2d985299f1e72e4c0a34ce19b6824cf270b2612a7949731afca811ddebab2f26",
+        "e995defb2d26b71863b7213ac32ec094883363ea4999142106c4249484c93d98",
         "1d830c8af4ff60b1ec36350ea25d99c4247d5d040d8d2c9acbe28011ebb9039e",
         "1cfc9251644a358213d808b8088517b87a9f024bdf46198a3ed692b98b7373a7",
         "8808405eec6fbe306fe3369f88daed79dd5613ddbb5e801f632b01d6218c5f08"
@@ -46,21 +46,19 @@
   "chunk2_deterministic": false,
   "chunk2_digests": [
     "22cabe19e70b86797682ac6b3156a0ce42e49fe9ebd28084a02b2a1516deae53",
-    "d25574fcf90de2a8c4c509a11317dc100c0343c1951ec0cb9b5fe93554ad7ee6",
+    "86a995e8dd00342a3954f4794a5bbc5c33536f59a05fa2fc704c9cd8475fb32d",
     "0cd519c11dab84993ace1b940f9fbf160448666114873a00185714a3ac307ded",
-    "be36f0bfa7e55bdcce6d85ac4f29eb725230008d651678a4212ea0d9341992a3",
-    "d8a3042976f9be089f38f77ede2ce498bc76844e12b68f2520a68aec6e5cfbbd",
-    "7c57c8a203ebaf02b0d8d44a615d930b47fa03dfe8fd4c113af74b3fb40a4fb2"
+    "84043e8d5d00aa5f5a46114e109021a1c73e43afdd8b39ea6dc400067529b121",
+    "6e2a1b916b688b9994b0ea480275715ba9a0b303b4de38500d4bf6bd87e9416f",
+    "c80495217288f9c01263711942f5987b5df6ecc305b0aaf56c4de645313d6030"
   ],
   "chunk2_rows": 3,
   "classification": "DIAGNOSTIC_ONLY",
   "derived_checkpoints_analysis": {
-    "note": "derived at analysis time from the run's per-call JSONL records (raw JSONL for this run was wiped by the inter-probe harness-clean step; reduced values retained here, retention gap recorded in README)",
+    "note": "derived from the retained per-call JSONL of this run (all JSONLs preserved in the correction pass)",
     "per_checkpoint": {
       "L0_attention_output": {
-        "distinct": 5,
-        "n": 6,
-        "verdict": "EARLIEST VARYING"
+        "verdict": "varies (consumes slot 0)"
       },
       "L0_backend_k_input": {
         "distinct": 1
@@ -75,15 +73,13 @@
         "distinct": 1
       },
       "L0_kv_slice_post_write": {
-        "distinct": 5,
-        "n": 6
+        "verdict": "EARLIEST VARYING (racing store)"
       },
       "L0_kv_slice_pre_write": {
         "distinct": 1
       },
       "L0_o_proj": {
-        "distinct": 5,
-        "n": 6
+        "verdict": "varies (propagated)"
       },
       "L0_q_normed": {
         "distinct": 1
@@ -98,12 +94,10 @@
         "distinct": 1
       },
       "after_layer_0": {
-        "distinct": 5,
-        "n": 6
+        "verdict": "varies (propagated)"
       },
       "after_layer_1": {
-        "distinct": 6,
-        "n": 6
+        "verdict": "varies (propagated)"
       },
       "kv_state_at_call_start": {
         "distinct": 1
@@ -117,28 +111,23 @@
       "md_swa_indices": {
         "distinct": 1
       },
-      "ptr_alignment_mod16": {
-        "distinct": 1,
-        "note": "all captured pointers 0 mod 16 across trials"
-      },
       "routes_all_16_layers": {
-        "distinct": 1,
-        "note": "is_decode false; prefix_lens [64]; positions [64,65,66]"
+        "distinct": 1
       }
     }
   },
-  "driver_record_sha256": "7cef18593da6a17c205237963eb42dc3ef85e2f2808c110cf919c0ef8de47e08",
+  "driver_record_sha256": "5421289c3661d3e6bc8d8bdc9bb2816415d2421531d6a9f93d7b15deef38915b",
   "no_reuse_proof": {
     "after_restore": [
       "8e845e11ddfe151abbc4f63ede8b365b52b22c3146f3153e284a2bd1affee4f2",
-      "5505a85674bbd43249bfd11acd2f27357e9653f0c5aff876d20a04b76f862e12",
+      "ff083213afb949c8ffc89883d3a92aa48c58958cadc04d3e003c44c566c3a4a3",
       "1d830c8af4ff60b1ec36350ea25d99c4247d5d040d8d2c9acbe28011ebb9039e",
       "1cfc9251644a358213d808b8088517b87a9f024bdf46198a3ed692b98b7373a7",
       "8808405eec6fbe306fe3369f88daed79dd5613ddbb5e801f632b01d6218c5f08"
     ],
     "live_after_trials": [
-      "6cbb184a84f1dc44a648ac5754a7d31af98899a0ff4e85c0fb649dc8bfa85f1d",
-      "443e6bfa68b69d1d19d9c45d9d550f13ddcdbce76ecc63c97cf3ae5e3959e263",
+      "1b5ced6645399813fa07975f0d947bff18c1b3b511f91f9536e317a2df4633b6",
+      "45a7fc3f1f51d4614967d8d33c3831c88f2327741705db39dee18e5cb3cff07d",
       "1d830c8af4ff60b1ec36350ea25d99c4247d5d040d8d2c9acbe28011ebb9039e",
       "1cfc9251644a358213d808b8088517b87a9f024bdf46198a3ed692b98b7373a7",
       "8808405eec6fbe306fe3369f88daed79dd5613ddbb5e801f632b01d6218c5f08"
@@ -146,13 +135,10 @@
     "restore_returns_to_frozen": true,
     "trials_mutated_state": true
   },
-  "schema": "inferswarm.issue157.exact-state-replay/1",
-  "source_run": "i157-REPLAY-1789262629",
-  "source_run_sha256": "cb882d09d32113d200d6fd2a5a55d6a049c00cbf14dcd4fdd47be81bec37e709",
-  "superseded_first_attempt": {
-    "reason": "state capture used the top-level _iter_pool_tensors helper, which does not reach the nested _KVGroupStorage buffers \u2014 restore was a no-op on real KV state; retained as the harness-invalid first attempt (its no_reuse_proof flagged trials_mutated_state=false)",
-    "run": "i157-REPLAY-1789261888",
-    "sha256": "e463ef19299efc9cc8f793597b46718281ada71a4ca11050bec36cf8c398a921"
-  },
+  "provenance": "tooling committed at 2611ee1 (node bytes sha256-verified equal pre-launch)",
+  "schema": "inferswarm.issue157.exact-state-replay/2",
+  "source_run": "i157-REPLAY-1789269282",
+  "source_run_sha256": "a03a34bdcecd8e7719cadbc6508a47ec7cb8b7fc9082a10f6ffa0a27982d0973",
+  "supersedes": "i157-REPLAY-1789262629 (uncommitted tool bytes; same result)",
   "trials": 6
 }

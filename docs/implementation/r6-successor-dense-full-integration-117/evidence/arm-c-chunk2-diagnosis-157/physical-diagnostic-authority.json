@@ -82,18 +82,28 @@
   "instrumentation": {
     "capture_plan": "per METHODOLOGY.md Phase 1: call/state identity, first-chunk-end state, layer-0/1 op checkpoints (qkv, norms, rotary, KV pre/post, attention out, o_proj, residual), route observation at dispatch, decode-scratch identity",
     "files": {
-      "scripts/issue157_binding.py": "sha256:194ef68a5d37fc3f3b2d8a1ae4fdf5f02b1efb61d07ce7f0c2255321d1cb28ef",
-      "scripts/issue157_conclusions.py": "sha256:41324bb145e4290b494d98e7bd24fec7150a7fdd78a80d2a0fa2b5b8c86dc6e9",
-      "scripts/issue157_instrumentation.py": "sha256:98fa2a80d893dcae20f373d94064d55c9ab2314cb868fbe9000e166d667d8d77",
-      "scripts/issue157_probe_driver.py": "sha256:203351e35094e0379dea4ec3885ba320794f52e337d191dc6c0ca9c545ca1047",
+      "scripts/issue157_binding.py": "sha256:66927fab5f98aed756780430492667bebda5efab2161edf1d77d0061a89348ca",
+      "scripts/issue157_conclusions.py": "sha256:fcb75825cd8180cb4f67eaca7a8e1f8573be06fd5b1a16686ee429d4638a4747",
+      "scripts/issue157_instrumentation.py": "sha256:00a1c2c1452f87ca56289eeb3716e9cd08ba1c5a36e7d06ac6abdb79283024fc",
+      "scripts/issue157_probe_driver.py": "sha256:b49c0bec2d3e7ad2f7877632489a09cb6dda2702a735853ba3836d7589b88a3e",
       "scripts/issue157_replay_harness.py": "sha256:0ce7e7a89e5c2548112435170cd2068cffb83337a7697d8156192d8728cb2024",
-      "scripts/issue157_replay_worker.py": "sha256:74fd2ecedb0e94ab88c9ec69531054116d537d41078163d46c38316d51caf9b7",
+      "scripts/issue157_replay_worker.py": "sha256:b7ed6de8a4fd0344f1aae810cab1fda1f852bf3cd594988297f2a72354f877c5",
       "scripts/issue157_sitecustomize.py": "sha256:67effb1dfc8c9960e43f5c577195f71635930db4b768d831f84970748f4e8c4b"
+    },
+    "hash_history": {
+      "correction_pass_1_commit_2611ee1": {
+        "note": "Adversarial review (provenance lane) found the original runs executed under uncommitted intermediate tool bytes. Per the issue's supersession rule, ALL evidence-bearing arms were RERUN under the committed bytes at 2611ee1 (producer unchanged 55e8baa); the rerun artifacts live under out-corr1/ and supersede the original observations. Original runs retained in launch-ledger.json as superseded."
+      },
+      "freeze_commit_c11fa00": {
+        "note": "original pre-physical freeze hashes (see git c11fa00)",
+        "superseded_by": "correction_pass_1"
+      }
     },
     "off_by_default_proof": [
       "producer tree byte-identical to 55e8baa (binding verifier per-module pins; zero FreeToken source changes)",
       "instrumentation imports only under ISSUE157_STAGE_INSTRUMENT=1, set only by the #157 driver's spawned stage processes",
-      "CPU/static test asserts ordinary-execution import graph never reaches issue157_* modules"
+      "CPU/static test asserts ordinary-execution import graph never reaches issue157_* modules",
+      "node-deployed script bytes verified sha256-equal to committed HEAD before every rerun launch"
     ]
   },
   "intervention_matrix": {

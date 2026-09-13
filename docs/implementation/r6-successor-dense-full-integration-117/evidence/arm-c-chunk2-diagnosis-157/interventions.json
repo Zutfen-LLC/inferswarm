@@ -1,10 +1,11 @@
 {
   "bisection": {
     "executed": true,
-    "verdict": "op-level bisection inside layer 0: qkv_proj, q/k norms, rotary, backend q/k/v inputs ALL byte-stable; attention output (the triton extend kernel result over the prefix-resident pool) is the EARLIEST varying operation; combined with the swa_alloc intervention the varying quantity inside that op is the slot-0-resident prefix state"
+    "verdict": "earliest varying operation = the SWA-layer KV store (L0_kv_slice_post_write; racing warps on slot 0); the attention kernel read varies by consuming slot-0 bytes; all model-input ops before it byte-stable"
   },
   "classification": "DIAGNOSTIC_ONLY",
   "one_variable_design": "each intervention changes exactly one factor against a paired control from identical diagnostic state, fresh state reconstruction per trial, same process, same producer",
+  "provenance": "tooling committed at 2611ee1 (node bytes sha256-verified equal pre-launch)",
   "route": {
     "alternate_digests": [
       "c8c6aa2c959010b3d428fff6b5bbfd2d9ad956b175847d1e5b8bc3d5b80133a0",
@@ -12,15 +13,16 @@
       "62f73b7d4f698afd0880005cbd8fdc3fffd1b33869f15c61e80177ab15787125"
     ],
     "control_digests": [
-      "22cabe19e70b86797682ac6b3156a0ce42e49fe9ebd28084a02b2a1516deae53",
-      "d25574fcf90de2a8c4c509a11317dc100c0343c1951ec0cb9b5fe93554ad7ee6",
+      "7d2b7adc1b2d677b35a6b75ecd37fc5ae05e62142736cd3f689455e06e98650f",
+      "79aa7bb0efc0105069bad3c2993b45a81394515de3d3de955a9d8601c390601a",
       "0cd519c11dab84993ace1b940f9fbf160448666114873a00185714a3ac307ded",
-      "8b8415f33df0cc2a7baa8f5431e1f5198a0ccf8c1ff0f56f36c88110b333bfc6",
-      "031205ba5ef5bb92d20b0bbd25072b504439d4fe53c16431fc3789a2e074ca58",
-      "9f8391e4e262ac99b63502ba59045442926199d66d8b3e183f3a986ec549f8ca"
+      "9aa9aa87ce0dfcb030517eaca2d78e39e01aa07053717122c986b0fd712b7353",
+      "b37f343a9f219ad8844e1cb5e6bb2c96412597aed8ae7a8832e1245535d1fd64",
+      "b39fee7d87e854ccf69424b7191cf788c119491f5bfdf6970c8f4a0775bbfe3b"
     ],
     "control_varies": true,
-    "intervention": "paired comparison: current extend route vs generic paged_attention for the 2-3-row extend chunks on head_dim<=256 layers (same state, same rows/positions/KV authority; decode-route and head_dim>256 layers unchanged)",
+    "executed": true,
+    "intervention": "paired alternate-route comparison (generic paged_attention for extend chunks on head_dim<=256 layers)",
     "route_observation": [
       {
         "head_dim": 256,
@@ -119,33 +121,42 @@
         "rows": 3
       }
     ],
-    "source_run": "i157-IV-ROUTE-1789263283",
-    "source_run_sha256": "bda9a3ed621448fb12374a7c4cb5a40cbd01d276263933d24735ff141d5d5023",
+    "source_run": "i157-IV-ROUTE-1789269522",
+    "source_run_sha256": "6716950a7b0f3c40418b1ed783ba112ff5e75c7bc7b683f50e3786aba18dc481",
     "stabilizes": false,
+    "supersedes": "i157-IV-ROUTE-1789263283 (same result)",
     "treatment_deterministic": false,
-    "verdict": "REJECTED: not kernel-route-specific \u2014 the alternate legal route ALSO varies; the mechanism is upstream of route selection (the KV state both routes read)"
+    "verdict": "REJECTED: not kernel-route-specific \u2014 the alternate legal route ALSO varies; the mechanism is upstream (the KV state both routes read)"
   },
-  "schema": "inferswarm.issue157.interventions/1",
+  "schema": "inferswarm.issue157.interventions/2",
   "scratch": {
     "executed": false,
-    "verdict": "NOT EXECUTED: the decode-route fp32 scratch (attn_logits/attn_lse via torch.empty in _ensure_decode_scratch) is not on the anchors' chunk-2 execution path \u2014 both anchors' chunk-2 calls are extend-route (2/3 rows, is_decode false, observed at dispatch); zeroing buffers proven NOT to participate would violate the issue's Phase-4-B legality precondition. The extend route's only allocation is the torch.empty_like(q) output, fully overwritten by the kernel store."
+    "verdict": "NOT EXECUTED (legal refusal, Phase 4-B): the decode-route fp32 scratch is not on the anchors' extend-route chunk-2 path (routes observed at dispatch); zeroing buffers proven NOT to participate would violate the legality precondition"
   },
   "swa_alloc": {
     "anchor_a": {
       "case": "c109-04-02-047",
       "chunk2_rows": 3,
+      "control_chunk1_digests": [
+        "7522b637dcc9fe8a2b62a91bd663eeec1adc1959bcfeed9919f814c3942902c4",
+        "7522b637dcc9fe8a2b62a91bd663eeec1adc1959bcfeed9919f814c3942902c4",
+        "7522b637dcc9fe8a2b62a91bd663eeec1adc1959bcfeed9919f814c3942902c4",
+        "7522b637dcc9fe8a2b62a91bd663eeec1adc1959bcfeed9919f814c3942902c4",
+        "7522b637dcc9fe8a2b62a91bd663eeec1adc1959bcfeed9919f814c3942902c4",
+        "7522b637dcc9fe8a2b62a91bd663eeec1adc1959bcfeed9919f814c3942902c4"
+      ],
       "control_chunk2_digests": [
         "06a2260e71bbfcce8e730333e5fc740be9d1b64c41815edc42d4136b79e910d3",
-        "fd1eec5289d7ee416923c84b81dbc1250a333145cf084bfb4d75c6bbc35da774",
-        "5869cb18cad418ffc6e9cab94bcde1bb64ce8880e268a1a637160e28bdaf59c8",
-        "cc3997e3fa01537ef5bac0567c81bad41182042fa2019f4075fd748f2752ccdf",
+        "8b802dc6f65d6dea054733fcab5fc551b847781d11b7a5f103dde0c0f27e6008",
+        "0fcfba60f385e5bf6994ae4f79654fcd401c608178bd5d3d6a0cabb2ee28d0a2",
+        "8b802dc6f65d6dea054733fcab5fc551b847781d11b7a5f103dde0c0f27e6008",
         "06a2260e71bbfcce8e730333e5fc740be9d1b64c41815edc42d4136b79e910d3",
         "8b802dc6f65d6dea054733fcab5fc551b847781d11b7a5f103dde0c0f27e6008"
       ],
       "control_varies": true,
-      "intervention": "perform the missing SWA slot allocation (alloc_swa over the 67 used full slots) after reset_session_state and before chunk execution \u2014 the single changed factor vs the paired control",
-      "source_run": "i157-IV-SWA-ALLOC-1789265498",
-      "source_run_sha256": "abbc03e504e7f5975fcfe62d7ed050f9b3d9f8799b117ff8691a6474b0e4ab92",
+      "intervention": "alloc_swa over the used full slots after reset_session_state, before chunk execution (the single changed factor)",
+      "source_run": "i157-IV-SWA-ALLOC-1789269642",
+      "source_run_sha256": "50c225800b8b0c2a13c376bea47899b3730824bca54b2012d18c975e2f074d8c",
       "stabilizes": true,
       "treatment_chunk1_digests": [
         "7522b637dcc9fe8a2b62a91bd663eeec1adc1959bcfeed9919f814c3942902c4",
@@ -168,20 +179,36 @@
     "anchor_b": {
       "case": "c109-04-06-074",
       "chunk2_rows": 2,
+      "control_chunk1_digests": [
+        "0bc45f8a2fba32d865242b967067d3723b0fc01bbeb5476f69ce3c7ea79ca664",
+        "0bc45f8a2fba32d865242b967067d3723b0fc01bbeb5476f69ce3c7ea79ca664",
+        "0bc45f8a2fba32d865242b967067d3723b0fc01bbeb5476f69ce3c7ea79ca664",
+        "0bc45f8a2fba32d865242b967067d3723b0fc01bbeb5476f69ce3c7ea79ca664",
+        "0bc45f8a2fba32d865242b967067d3723b0fc01bbeb5476f69ce3c7ea79ca664",
+        "0bc45f8a2fba32d865242b967067d3723b0fc01bbeb5476f69ce3c7ea79ca664"
+      ],
       "control_chunk2_digests": [
-        "e862ee9c12a3ac6e799b571676b13911e100dd3d67c217bcecb5e59ad271275c",
-        "257fabeeffa35b56152bdf92c17e2c96773bcf9912a7fc31ee21012ba11e4251",
-        "1682c9e8f988390d6f4f1e3845bdd865e941dee13c38ed49edbaf6a378328014",
-        "6cd4ab27182a355b0956279debd15b84a026fb0b0b9bec4a986b94a2a6d9e62e",
-        "e6d7164bee8d073810b6d9283af13a36d4856ae8661be29a4cf8eec498b15e58",
-        "3738b8a5bafc110d2b33e4bcc529ee2249b81e7382e920c7fa0bf0150eb9199f"
+        "1da40a0830a0eb1fa9998d55cfcc458fff82f8320d070b56748348194f5bea31",
+        "c558ea440d5606aab55ad02dbf04a096da8c7f7aa7af431111d93ce4634ddde9",
+        "3d7002698222b596a92982273344ebaa387ba75662ffc48c0a1269ebfa666161",
+        "7af408fee1f27b8bb9adca78e54468d3bff5aa53ca6ea2b1dc07ede8fe6e720d",
+        "ffee0be690fa33782843de3aba089832ccaeafefbc63fb910b8692ce46786498",
+        "dcc0d922a4170caea5c4ac25582d8e8d690fe59272b0ae8250182b61ae86e021"
       ],
       "control_varies": true,
-      "expansion_reason": "issue #157 Phase-6 Q6 (does the same mechanism cover Anchor A and Anchor B?) \u2014 the demonstrated mechanism was tested for coverage on the second anchor family before claiming it",
+      "expansion_reason": "issue Phase-6 Q6 \u2014 mechanism coverage tested on the second anchor family before claiming it",
       "intervention": "identical single-factor alloc_swa design",
-      "source_run": "i157-IV-SWA-ALLOC-1789266024",
-      "source_run_sha256": "f20bbca9fe06fe5680595ee6600dee676bb427b1dd97ad6b247ad7be80eee7b5",
+      "source_run": "i157-IV-SWA-ALLOC-1789269764",
+      "source_run_sha256": "a69225e7ef02d95c1fe7a77d5ef389893925a716955e87e7c407f6da830c79c7",
       "stabilizes": true,
+      "treatment_chunk1_digests": [
+        "0bc45f8a2fba32d865242b967067d3723b0fc01bbeb5476f69ce3c7ea79ca664",
+        "0bc45f8a2fba32d865242b967067d3723b0fc01bbeb5476f69ce3c7ea79ca664",
+        "0bc45f8a2fba32d865242b967067d3723b0fc01bbeb5476f69ce3c7ea79ca664",
+        "0bc45f8a2fba32d865242b967067d3723b0fc01bbeb5476f69ce3c7ea79ca664",
+        "0bc45f8a2fba32d865242b967067d3723b0fc01bbeb5476f69ce3c7ea79ca664",
+        "0bc45f8a2fba32d865242b967067d3723b0fc01bbeb5476f69ce3c7ea79ca664"
+      ],
       "treatment_chunk2_digests": [
         "20948b95ace57c600cda00c0057c76b09e5fcb758013b4e081f54a948f6c34e6",
         "20948b95ace57c600cda00c0057c76b09e5fcb758013b4e081f54a948f6c34e6",
@@ -192,43 +219,34 @@
       ],
       "treatment_deterministic": true
     },
-    "superseded_attempts": [
-      {
-        "reason": "intervention ordering bug: alloc_swa executed BEFORE reset_session_state which zeroes the mapping \u2014 treatment neutralized (still varied)",
-        "run": "i157-IV-SWA-ALLOC-1789264598",
-        "sha256": "fe432493383386dd125bb9b2dac95300ff4c6aa48968322000f4f0d92cc26b05"
-      },
-      {
-        "reason": "driver dispatch fall-through: probe not in the elif tuple \u2014 no execution (14us, empty observations); retained as tooling incident",
-        "run": "i157-IV-SWA-ALLOC-1789264227",
-        "sha256": "c44703f4fa2f74e2c7e205752cf495fbfdf01dee3b8433c105dcf95e235c3ad7"
-      }
-    ],
-    "verdict": "DEMONSTRATED CAUSAL/NECESSARY: with SWA slots allocated (mapping populated), chunk-2 is byte-deterministic on BOTH anchors while the paired unchanged control varies; chunk-1 unaffected. Mechanism: the R6 standalone stage never calls alloc_swa (scheduler-only in the accepted source), so full_to_swa_index_mapping stays at the all-zero sentinel \u2014 every SWA-layer store translates to swa slot 0 (chunk-2's rows are racing warps overwriting one slot) and the extend kernel's 64-position prefix read resolves to slot 0, consuming the just-raced bytes. Chunk-1 is deterministic because prefix_len=0 means the prefix loop never reads the pool."
+    "supersedes": "i157-IV-SWA-ALLOC-1789265498/1789266024 (same results)",
+    "verdict": "DEMONSTRATED CAUSAL/NECESSARY: with SWA slots allocated, chunk-2 is byte-deterministic on BOTH anchors while the paired unchanged control varies; chunk-1 unchanged in both arms (retained digests). Mechanism: the R6 standalone stage never calls alloc_swa (scheduler-only in the accepted source), so full_to_swa_index_mapping stays at the all-zero sentinel \u2014 every SWA-layer store translates to swa slot 0 (racing warps) and the extend kernel's prefix read resolves to slot 0. Chunk-1 is deterministic because prefix_len=0 never reads the pool."
   },
   "sync": {
     "control_digests": [
+      "54fea8dfefd1f45e3d503cc9893da4c2d8ed34f40a8589bd6f4272713b8640e5",
+      "23a3daad5ef72bc8610c6fad33b13c5f7a912de777bc2c47f06f44ed0d739057",
+      "14222292560c3401bef8b6ae952fc27f80216616b5d61215d451519307271126",
+      "029a7637130fa7ee235cef834f01b56d24cb3d8cefd994a3fa2cdfec734097c5",
       "6c838a340425a304acd91c6facda50b996ce6b87295bafff8d8fd35e52d54080",
-      "680935cc7333d029539720bd3e008d64a0fee2f5ea532e395f70519a9c5d52c2",
-      "6e3b023025525f0524b425736e9365927bb9583baec34e203319592eadcba714",
-      "3c5c20b113ebd7bd6f897a9a1d75bab2e400acd1e385a41b5afe2449c0eb7bfb",
-      "314d0a9c2e985ec8582fa98dff6bffefc168486fe01751ea9e631abf1910711a",
-      "f1a4cd5233a8c6e15d23669d3d5b25f7a743f091b3872507f49b5062cc6c0660"
+      "980f8995349c82daf2252487c23cc18d191f4a58eb8e9abec9e9e765b67563d3"
     ],
     "control_varies": true,
-    "intervention": "explicit torch.cuda.synchronize() before EVERY backend attention call of the chunk-2 prefill (and per-trial pre-prefill sync)",
-    "source_run": "i157-IV-SYNC-1789262937",
-    "source_run_sha256": "4874319061afc369cdc09826049b668e967a3ff57443d87e2c208c39cc513217",
+    "executed": true,
+    "intervention": "explicit torch.cuda.synchronize() before EVERY backend attention call of the chunk-2 prefill",
+    "source_run": "i157-IV-SYNC-1789269402",
+    "source_run_sha256": "04f73cf49695d0935611e8e50e46bab8f1581a49548f997403e89306fa137d7b",
     "stabilizes": false,
+    "supersedes": "i157-IV-SYNC-1789262937 (same result)",
     "treatment_deterministic": false,
     "treatment_digests": [
-      "7040849fdd97f23af1e693dce29e8423885c9c86a1acee1c05e3dbd9df663e6f",
-      "43810f80a9680f2490ee1564ceeff7a8391ca2371fe216fb50623732ef5d9277",
-      "f1f51905ec2dc0d60c51ab36dd03a1534a841d493c10a469fa3ea9f96bb830a6",
-      "3689c4f769bf88ef287ece61e12b6b6dbe73676a6f12fbea323e86d47a0e0a04",
-      "8a8cd988d7d5050b46401e28cf7af41caa5bbbf9baff9a08f3dacb9bdacf2120",
-      "3689c4f769bf88ef287ece61e12b6b6dbe73676a6f12fbea323e86d47a0e0a04"
+      "62e2969faa0e7df6861af6b5a06f5f27ab3e3e548a4d760cf1b446142e9eb577",
+      "6199b129f8d7e6e7332e6724bb96e7fda63c92db10ed62dc24cb66870dfe8f56",
+      "6c838a340425a304acd91c6facda50b996ce6b87295bafff8d8fd35e52d54080",
+      "02f8de097c0f82066bc7f6b101d71ec9ae68dea8d9cf0958a1028efa441bae6a",
+      "029a7637130fa7ee235cef834f01b56d24cb3d8cefd994a3fa2cdfec734097c5",
+      "847d723347a67ff9e24d1ba7dcbf9d1d6e916cc1f35f23f873654c36cf092394"
     ],
-    "verdict": "REJECTED: execution-order/synchronization hypothesis for this path (device-wide sync before every attention call does not stabilize; chunk-2 output still varies)"
+    "verdict": "REJECTED: execution-order/synchronization hypothesis (device-wide sync before every attention call does not stabilize)"
   }
 }
