@@ -2,6 +2,10 @@
 4320ae39b9c784878bd391e6c09bacb3988b938434164083470931c9f5cc23cf  docs/investigations/vulkan-v2-a/AUTHORITY-NV-A.json
 198ac5a172ed421150db85a07f550aad9c9346d355720f39590c28760cd08030  docs/investigations/vulkan-v2-a/README.md
 40767eb7b71e6f7ec58cb84822c3a72c1d26d3bc8d5de6e5a71235b7528f4297  docs/investigations/vulkan-v2-a/RETAINED-EVIDENCE-REPLAYS.json
+9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa  docs/investigations/vulkan-v2-a/raw/v2a-amd-a-qualification-01/exit-code.txt
+96865aad2430535300133f3c8363726ab4518d068fe6fcf4eb410e96865268aa  docs/investigations/vulkan-v2-a/raw/v2a-amd-a-qualification-01/qualification.json
+a6cb988163e8fe39075219b8698b92bfa106731d2ffbfe55ed18895570fb2a14  docs/investigations/vulkan-v2-a/raw/v2a-amd-a-qualification-01/stderr.txt
+5f455f301e4e1d91d2c46577a5fccd2d9a6ab26d024240094b0b07be25337849  docs/investigations/vulkan-v2-a/raw/v2a-amd-a-qualification-01/stdout.txt
 db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb  scripts/v0c_canonical_run.py
 cbefc2ee9f21c90c20defbc89e9838603c65c9f6c94fa8f7363e8ccab77e6f5c  scripts/v0c_correctness.py
 f6c65a8de446a8980da56a42c35b58e7b58a5642ce1ed410283cf5e7a19c4ee9  scripts/v1a_execution_participant.py
