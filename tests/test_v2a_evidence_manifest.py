@@ -42,14 +42,34 @@ class ManifestContractTests(unittest.TestCase):
         self.assertIn("README.md", rungs[0])
         terminal = rungs[-1]
         for required in ("PORTABILITY-AUDIT.json", "FINAL-TERMINAL.json", "STATUS.json",
+                         "ATTEMPT01-SUPERSESSION.json",
+                         "DISCOVERY-INVENTORY.json", "DISCOVERY-BINDINGS.json",
+                         "raw/discovery-r2/identity-probe-stderr-vulkan1.txt",
+                         "raw/discovery-r2/identity-probe-stderr-vulkan3.txt",
                          "evidence/v2a-amd-a-canonical-01/execution-receipt.json",
-                         "evidence/v2a-nv-a-canonical-01/execution-receipt.json"):
+                         "evidence/v2a-nv-a-canonical-01/execution-receipt.json",
+                         "evidence/v2a-amd-a-r2-canonical-01/execution-receipt.json",
+                         "evidence/v2a-nv-a-r2-canonical-01/execution-receipt.json"):
             self.assertIn(required, terminal)
+
+    def test_every_post_discovery_rung_retains_the_discovery_snapshot(self):
+        contract = manifest.load_contract(CONTRACT)
+        discovery_paths = ("DISCOVERY-INVENTORY.json", "DISCOVERY-BINDINGS.json",
+                           "raw/discovery-r2/identity-probe-stderr-vulkan1.txt",
+                           "raw/discovery-r2/identity-probe-stderr-vulkan3.txt")
+        for rung in contract["ladder"]:
+            if rung["state"] in ("r2-reviewed-discovery-retained", "r2-dual-authority-freeze",
+                                 "r2-amd-qualification-retained", "r2-amd-plan-frozen",
+                                 "r2-amd-campaign-terminal", "r2-nv-qualification-retained",
+                                 "r2-nv-plan-frozen", "terminal"):
+                for path in discovery_paths:
+                    self.assertIn(path, rung["evidence"],
+                                  f"rung {rung['state']} lost the discovery snapshot")
 
     def test_current_namespace_matches_a_ladder_rung(self):
         contract = manifest.load_contract(CONTRACT)
         # The repository bundle must sit exactly on one ladder rung at
-        # all times (currently: README + retained replays).
+        # all times (currently: attempt-01 supersession state).
         actual = manifest.current_inventory(ROOT / contract["bundle"])
         rungs = [frozenset(r["evidence"]) for r in contract["ladder"]]
         self.assertIn(actual, rungs)

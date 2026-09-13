@@ -45,6 +45,8 @@ import v1a_vulkan_adapter as adapter  # noqa: E402
 import v0c_correctness as v0c_correctness  # noqa: E402
 import v1c_accounting as accepted_accounting  # noqa: E402
 import v2a_authority as authority_contract  # noqa: E402
+import v2a_authority_v2 as authority_contract_v2  # noqa: E402
+import v2a_discovery_v2 as discovery_v2  # noqa: E402
 
 
 class HarnessError(RuntimeError):
@@ -176,8 +178,8 @@ def replay_retained(retained_stderr: str, *, selector: str, expected_bdf: str,
 # ---------------------------------------------------------------------------
 
 HARNESS_SOURCES = (
-    "scripts/v2a_harness.py", "scripts/v2a_discovery.py", "scripts/v2a_authority.py",
-    "scripts/v2a_manifest.py",
+    "scripts/v2a_harness.py", "scripts/v2a_discovery.py", "scripts/v2a_discovery_v2.py",
+    "scripts/v2a_authority.py", "scripts/v2a_authority_v2.py", "scripts/v2a_manifest.py",
 )
 
 
@@ -217,6 +219,22 @@ def build_portability_audit(campaigns: list[Mapping[str, Any]]) -> dict[str, Any
                     "runtime_identity", "memory_bytes")
         if first["authority"]["frozen"].get(key) != second["authority"]["frozen"].get(key)
     ]
+    # R2 discovery->authority layer: both campaigns must run the exact
+    # same discovery implementation, reference manifest-retained reviewed
+    # discovery, and carry prospectively BOUND selector/BDF bindings.
+    discovery_impl_same = all(
+        c.get("discovery_implementation_sha256") == campaigns[0].get(
+            "discovery_implementation_sha256") for c in campaigns)
+    bindings_all_bound = all(
+        c.get("authority", {}).get("verified_binding", {}).get("binding_status") == "BOUND"
+        for c in campaigns)
+    discovery_retained = all(
+        c.get("discovery_binding", {}).get("bindings_sha256")
+        and c.get("discovery_binding", {}).get("inventory_sha256") for c in campaigns)
+    same_artifacts = (first.get("discovery_binding", {}).get("inventory_sha256")
+                      == second.get("discovery_binding", {}).get("inventory_sha256")
+                      and first.get("discovery_binding", {}).get("bindings_sha256")
+                      == second.get("discovery_binding", {}).get("bindings_sha256"))
     both_passed = all(c.get("canonical", {}).get("result") == "PASS" and
                       c.get("qualification", {}).get("result") == "PASS" for c in campaigns)
     accounting_clean = all(
@@ -244,8 +262,17 @@ def build_portability_audit(campaigns: list[Mapping[str, Any]]) -> dict[str, Any
          "classification": "REUSABLE_HARNESS_SEMANTICS_SHARED"
          if (both_passed and accounting_clean and byte_exact)
          else "FOUNDATIONAL_INVARIANT_FALSIFIED"},
+        {"aspect": "reviewed discovery implementation and artifacts (discovery->authority layer)",
+         "evidence": {"same_discovery_implementation": discovery_impl_same,
+                      "bindings_prospectively_bound": bindings_all_bound,
+                      "discovery_artifacts_retained": discovery_retained,
+                      "same_reviewed_artifacts": same_artifacts},
+         "classification": "REUSABLE_HARNESS_SEMANTICS_SHARED"
+         if (discovery_impl_same and bindings_all_bound and discovery_retained)
+         else "SUBJECT_SPECIFIC_CODE_REQUIRED"},
     ]
     passed = (same_harness and both_passed and accounting_clean and byte_exact
+              and discovery_impl_same and bindings_all_bound and discovery_retained
               and not any(row["classification"] == "SUBJECT_SPECIFIC_CODE_REQUIRED"
                           or row["classification"] == "FOUNDATIONAL_INVARIANT_FALSIFIED"
                           for row in classifications))
@@ -276,7 +303,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--capability")
     parser.add_argument("--plan")
     args = parser.parse_args(argv)
-    v2a = authority_contract.load_authority_file(Path(args.authority), reference_root=ROOT)
+    # Correctness-bearing campaign stages require the v2 reviewed-discovery
+    # contract: the authority's selector/BDF pair must be mechanically BOUND
+    # to a digest-verified reviewed discovery artifact before any stage runs.
+    v2a = authority_contract_v2.load_authority_file(Path(args.authority), reference_root=ROOT,
+                                                    discovery_root=ROOT)
     v1a_view = _v1a_view(v2a)
     out = Path(args.out)
     frozen = v2a["frozen"]

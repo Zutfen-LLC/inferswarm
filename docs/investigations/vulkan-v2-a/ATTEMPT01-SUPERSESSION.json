@@ -1,0 +1,44 @@
+{
+ "schema": "inferswarm.v2a.attempt01-supersession/1",
+ "issue": "#163",
+ "review_reference": "maintainer NO-GO review 5190619330 on PR #164 head 9d51b47697953da0782f0c4dec07df6782624cbd",
+ "attempt01_head": "9d51b47697953da0782f0c4dec07df6782624cbd",
+ "superseded_terminal": "V2A_REUSABLE_DEVICE_QUALIFICATION_HARNESS_PASS (recorded in FINAL-TERMINAL-ATTEMPT01.json, renamed from FINAL-TERMINAL.json; bytes unchanged)",
+ "disposition": {
+  "physical_executions_correct": "both attempt-01 physical campaigns executed correctly through the reusable harness: qualification full offload with no fallback and clean exit, canonical execution exit 0, selector-aware accounting 0/0/0, byte-exact correctness against the accepted pre-existing references, adapter-sealed canonical proof, canonical observation, and attributed execution receipt",
+  "evidence_remains_factual": "the attempt-01 qualification/canonical/accounting/correctness/proof/receipt evidence (raw/ and evidence/ v2a-*-a-*01 trees) remains factual and is retained byte-unchanged as superseded diagnostic evidence; no raw byte was edited or deleted",
+  "defect": "the attempt-01 authorities did not mechanically bind the frozen selector/BDF pair to a reviewed discovery artifact: v2a_discovery.py correctly classified the two identically-named devices as AMBIGUOUS, yet AUTHORITY-AMD-A.json froze the pair (Vulkan1 -> 02:00.0) without any required reviewed-discovery binding, and the loader (v2a_authority.py) accepted any syntactically valid pair; the binding was only proven later, during the correctness-bearing qualification run",
+  "consequence": "the attempt-01 runs therefore cannot establish the final reusable discover -> review/freeze -> qualify contract for terminal purposes; their PASS terminal is superseded",
+  "superseded_for": "final terminal purposes only; retained as diagnostic evidence that the execution harness works end to end"
+ },
+ "correction": {
+  "reviewed_discovery_contract": "schemas inferswarm.v2a.discovery-inventory/2 and inferswarm.v2a.discovery-bindings/2 (scripts/v2a_discovery_v2.py) plus inferswarm.v2a.campaign-authority/2 (scripts/v2a_authority_v2.py): authorities must reference digest-verified NON_AUTHORIZING reviewed discovery artifacts whose selected selector is mechanically BOUND to the exact frozen BDF before any campaign stage runs",
+  "identity_probe": "bounded NON-CORRECTNESS-BEARING selector identity probe: the accepted runtime executes with -n 0 (zero generated tokens) and -lv 4 so its own selected-device line states the stable BDF; probe evidence is retained raw and digest-bound; ambiguity/mismatch fails closed",
+  "r2_campaigns": "fresh AMD-A-R2 and NV-A-R2 campaigns under the corrected source freeze re-prove the full pipeline with prospectively bound authorities"
+ },
+ "retained_artifacts": {
+  "attempt01_evidence": [
+   "AUTHORITY-AMD-A.json",
+   "AUTHORITY-NV-A.json",
+   "FINAL-TERMINAL-ATTEMPT01.json",
+   "PORTABILITY-AUDIT-ATTEMPT01.json",
+   "STATUS-ATTEMPT01.json",
+   "raw/v2a-amd-a-qualification-01",
+   "raw/v2a-amd-a-canonical-01",
+   "raw/v2a-nv-a-qualification-01",
+   "raw/v2a-nv-a-canonical-01",
+   "evidence/v2a-amd-a-plan-01",
+   "evidence/v2a-amd-a-canonical-01",
+   "evidence/v2a-nv-a-plan-01",
+   "evidence/v2a-nv-a-canonical-01"
+  ],
+  "byte_preservation": "every retained attempt-01 file is byte-identical to PR head 9d51b47 (renames only, verified by git)"
+ },
+ "nonclaims": [
+  "internal/research device qualification harness proof only",
+  "not a public plugin API",
+  "not production scheduler/backend support",
+  "not default/preferred-backend policy",
+  "no correctness claim is inherited from the superseded campaigns; R2 re-proves correctness freshly"
+ ]
+}

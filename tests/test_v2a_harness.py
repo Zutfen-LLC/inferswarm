@@ -410,6 +410,8 @@ class GenericityControlsTests(unittest.TestCase):
 class PortabilityAuditTests(unittest.TestCase):
     def _campaign(self, selector: str, bdf: str, passed: bool = True) -> dict:
         authority = _synthetic_authority(selector, bdf)
+        authority["verified_binding"] = {"selector": selector, "pci_bdf": bdf,
+                                         "binding_status": "BOUND"}
         return {
             "authority": authority,
             "qualification": {"result": "PASS" if passed else "FAIL"},
@@ -420,6 +422,9 @@ class PortabilityAuditTests(unittest.TestCase):
                                          "unplanned_state_movements": 0}},
             "harness_source_hashes": {path: harness._sha256_file(ROOT / path)
                                       for path in harness.HARNESS_SOURCES},
+            "discovery_implementation_sha256": harness._sha256_file(
+                ROOT / "scripts/v2a_discovery_v2.py"),
+            "discovery_binding": {"inventory_sha256": "3" * 64, "bindings_sha256": "4" * 64},
         }
 
     def test_audit_passes_on_data_only_differences(self):
