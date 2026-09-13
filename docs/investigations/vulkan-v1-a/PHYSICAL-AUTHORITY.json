@@ -74,7 +74,7 @@
    "scripts/v0c_canonical_run.py": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
    "scripts/v0c_correctness.py": "cbefc2ee9f21c90c20defbc89e9838603c65c9f6c94fa8f7363e8ccab77e6f5c",
    "scripts/v1a_execution_participant.py": "f6c65a8de446a8980da56a42c35b58e7b58a5642ce1ed410283cf5e7a19c4ee9",
-   "scripts/v1a_runner.py": "50bcba6abc1fcba26e3fa3f075e71ed46e351dcdface29f97c0a6295ea5acbd7",
+   "scripts/v1a_runner.py": "c7b5b26ebb9d4eae651dab386326c9d234de1b3af7f0e5a4e553ee90bc21b3ed",
    "scripts/v1a_vulkan_adapter.py": "a6167de9b43539dbcad00e9563abff2cdb3b9b19a328defe63d327aa6f7b9387"
   }
  },
@@ -176,19 +176,19 @@
  "source_freeze": {
   "generic_participant_sha256": "f6c65a8de446a8980da56a42c35b58e7b58a5642ce1ed410283cf5e7a19c4ee9",
   "manifest_producer_sha256": "40b5c829c8638d443e8fe826414378f512136cf33d6504f309909e0bba546833",
-  "physical_runner_sha256": "50bcba6abc1fcba26e3fa3f075e71ed46e351dcdface29f97c0a6295ea5acbd7",
-  "v1a_source_freeze_sha": "355789a5a70c4506413896558cb7abd29660f41d",
+  "physical_runner_sha256": "c7b5b26ebb9d4eae651dab386326c9d234de1b3af7f0e5a4e553ee90bc21b3ed",
+  "v1a_source_freeze_sha": "2a468cf4438240b510239ff649e7c3e98483e0cd",
   "vulkan_adapter_sha256": "a6167de9b43539dbcad00e9563abff2cdb3b9b19a328defe63d327aa6f7b9387"
  },
  "superseded_freeze": {
-  "commit": "238e8aa8935bff095d064ba9f802686cfed1ebe8",
-  "reason": "runner ontology-pressure lookup path correction before any physical canonical execution; the qualification probe under 238e8aa is retained as a superseded pre-freeze probe, not accepted V1-A qualification evidence"
+  "commit": "ecff4eaa871a8fb8f18a35b4649e173e71c66fe1",
+  "reason": "receipt output semantics corrected to canonical visible response bytes (V0-C semantics) after a nonterminal probe; probe evidence under ecff4ea is superseded, not accepted"
  },
  "v1a_sources_pinned_by_runner_preflight": {
   "scripts/v0c_canonical_run.py": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
   "scripts/v0c_correctness.py": "cbefc2ee9f21c90c20defbc89e9838603c65c9f6c94fa8f7363e8ccab77e6f5c",
   "scripts/v1a_execution_participant.py": "f6c65a8de446a8980da56a42c35b58e7b58a5642ce1ed410283cf5e7a19c4ee9",
-  "scripts/v1a_runner.py": "50bcba6abc1fcba26e3fa3f075e71ed46e351dcdface29f97c0a6295ea5acbd7",
+  "scripts/v1a_runner.py": "c7b5b26ebb9d4eae651dab386326c9d234de1b3af7f0e5a4e553ee90bc21b3ed",
   "scripts/v1a_vulkan_adapter.py": "a6167de9b43539dbcad00e9563abff2cdb3b9b19a328defe63d327aa6f7b9387"
  }
 }
