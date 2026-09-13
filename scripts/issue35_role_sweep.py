@@ -84,6 +84,39 @@ def parse_offload(stderr_text: str) -> dict:
             "complete_offload": done == total, "fallback_mentioned": fallback}
 
 
+_CPU_MAPPED = re.compile(r"CPU_Mapped model buffer size\s*=\s*([0-9.]+) MiB")
+_DEV_BUFFER = re.compile(r"(Vulkan\d+) model buffer size\s*=\s*([0-9.]+) MiB")
+_GRAPH_SPLITS = re.compile(r"graph splits = (\d+)")
+
+
+def parse_residency(stderr_text: str) -> dict:
+    """Parse residency facts from retained stderr (fail-closed on absence
+    of the load summary; every fact re-derived from raw bytes).
+
+    A nominal ``offloaded N/N`` line with a non-zero CPU_Mapped buffer is
+    partial residency in fact: the runtime maps part of the model in host
+    memory and pages it over the link while still printing complete
+    offload. The honest residency fact combines both.
+    """
+    m = _OFFLOAD_LINE.search(stderr_text)
+    if m is None:
+        raise SweepError("no offload summary in stderr")
+    cpu_mapped_mib = None
+    cm = _CPU_MAPPED.search(stderr_text)
+    if cm is not None:
+        cpu_mapped_mib = float(cm.group(1))
+    device_buffers = {sel: float(size) for sel, size in
+                      _DEV_BUFFER.findall(stderr_text)}
+    splits = [int(s) for s in _GRAPH_SPLITS.findall(stderr_text)]
+    fully_resident = (cpu_mapped_mib in (None, 0.0)) and bool(device_buffers)
+    return {
+        "cpu_mapped_mib": cpu_mapped_mib,
+        "device_model_buffers_mib": device_buffers,
+        "graph_splits_observed": splits,
+        "fully_device_resident": fully_resident,
+    }
+
+
 def visible_output(stdout_text: str, prompt: str) -> str:
     """Extract the visible greedy continuation via the ACCEPTED V0-C
     byte-exact comparator's extraction grammar (imported, not
@@ -193,6 +226,7 @@ def reduce_role(spec: dict, role: dict, attempts: list[dict],
         raise SweepError(f"role {role['role_id']}: no clean attempts")
     rates = [parse_rates(a["stdout"]) for a in clean]
     offloads = [parse_offload(a["stderr"]) for a in clean]
+    residencies = [parse_residency(a["stderr"]) for a in clean]
     result = {
         "schema": SCHEMA_SWEEP_RESULT,
         "role_id": role["role_id"],
@@ -215,6 +249,8 @@ def reduce_role(spec: dict, role: dict, attempts: list[dict],
         },
         "offload": offloads[0],
         "offload_consistent": all(o == offloads[0] for o in offloads),
+        "residency": residencies[0],
+        "residency_consistent": all(r == residencies[0] for r in residencies),
     }
     if reference is not None:
         outs = [visible_output(a["stdout"], spec["prompt"]) for a in clean]

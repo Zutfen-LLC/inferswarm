@@ -1,0 +1,55 @@
+{
+  "attempts": 2,
+  "byte_exact_vs_reference": {
+    "all_match": true,
+    "matches": [
+      true,
+      true
+    ]
+  },
+  "clean_attempts": 2,
+  "generation_tokens_per_s": {
+    "max": 56.1,
+    "median": 55.95,
+    "min": 55.8,
+    "values": [
+      55.8,
+      56.1
+    ]
+  },
+  "label": "MEASURED",
+  "offload": {
+    "complete_offload": true,
+    "fallback_mentioned": false,
+    "layers_offloaded": 37,
+    "layers_total": 37
+  },
+  "offload_consistent": true,
+  "prompt_tokens_per_s": {
+    "median": 326.8,
+    "values": [
+      325.3,
+      328.3
+    ]
+  },
+  "residency": {
+    "cpu_mapped_mib": 243.43,
+    "device_model_buffers_mib": {
+      "Vulkan1": 837.19,
+      "Vulkan3": 997.63
+    },
+    "fully_device_resident": false,
+    "graph_splits_observed": [
+      3
+    ]
+  },
+  "residency_consistent": true,
+  "role_id": "x1p-role-adverse",
+  "role_kind": "communication_heavy_row_split",
+  "schema": "inferswarm.issue35.role-sweep-result/1",
+  "walls": [
+    19.771,
+    18.8
+  ],
+  "walls_provenance": "wall seconds as measured by the sweep runner at execution (subsequent residency re-reduction from retained raw bytes preserves them verbatim)"
+}
