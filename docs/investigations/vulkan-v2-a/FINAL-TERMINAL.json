@@ -1,0 +1,45 @@
+{
+ "attempt": "R3 \u2014 correction round 3 (stale-inventory fail-closed + raw-probe byte binding; R2 supersession)",
+ "basis": {
+  "adversarial_cpu_controls": "15 attempt-01 controls + 23 R2 binding controls + 32 R3 stale-inventory/timestamp/raw-probe controls, all PASS",
+  "amd_a_r3_campaign": {
+   "canonical": "v2a-amd-a-r3-canonical-01 PASS (exit 0, accounting 0/0/0, byte-exact vs the accepted V1-A reference, sealed proof/observation/receipt)",
+   "canonical_proof_digest": "0159c6029dc868d08194ac71f56df794b22d18506d3ccfec6301fed5f6ab8a07",
+   "canonical_record_digest": "911c9ed022927c55a029c359ef8fba16d0e272b1dca6b4e295920fd327b29538",
+   "plan_digest": "1b513573cc03fb0f01ee3ce1b6feeae6dd1ca3414d109349b40657966ca56877",
+   "qualification": "v2a-amd-a-r3-qualification-01 PASS (37/37 offload, no fallback, clean exit, adapter-sealed, Vulkan1/02:00.0)",
+   "qualification_digest": "986a70058ea9acb98290648ade131c9a5606d671adf2b6d88c1e4b1837865433"
+  },
+  "both_authorities_pushed_before_physical": "dac0a9e19054f304406ad32d039ed48b96bb1b51 (AMD fa53774c..., NV 82cf503a...)",
+  "both_fresh_physical_campaigns_pass": true,
+  "corrected_contract": "discover -> review/freeze -> qualify with the PHYSICAL inventory measurement required, cross-checked (bindings.inventory_measured_utc == digest-verified DISCOVERY-INVENTORY.measured_utc), and AGED: inventory measured <= reviewed <= freeze anchor, max_discovery_age_hours enforced against the measurement; malformed/naive/future/inverted timestamps reject; a fresh review of a stale inventory rejects; retained raw probe bytes re-verify against the structured proof through one shared validation path (raw digest -> structured digest -> identity/BDF -> zero-generation)",
+  "fresh_r3_discovery": "DISCOVERY-INVENTORY-R3.json (sha b99db611...) + DISCOVERY-BINDINGS-R3.json (sha e1ab5058...) measured 2026-09-13T13:57:21Z; both subjects probed with zero-token identity probes, raw bytes retained under raw/discovery-r3/",
+  "historical_evidence_unchanged": "all V0/V1 namespaces byte-frozen; all historical manifest verifiers PASS",
+  "no_correctness_bearing_source_changes_after_freeze": true,
+  "no_public_api_or_default_backend_policy_frozen": true,
+  "nv_a_r3_campaign": {
+   "canonical": "v2a-nv-a-r3-canonical-01 PASS (exit 0, accounting 0/0/0, byte-exact vs the accepted V1-B reference, sealed proof/observation/receipt)",
+   "canonical_proof_digest": "df1409dc37ba2421ea7a4a72ddcc07c0aab55c8c6f22d95a33f568250c19ec01",
+   "canonical_record_digest": "98ce3fec942aa693c4faf89d1cc9f3db6c80f09b41098212f6886b61f2fe9f5c",
+   "plan_digest": "c5ddccdc458b9f2ee7538a51e2902db54c9e09513b14c787856c1d9666e0916d",
+   "qualification": "v2a-nv-a-r3-qualification-01 PASS (37/37 offload, no fallback, clean exit, adapter-sealed, Vulkan3/04:00.0)",
+   "qualification_digest": "cf611922c05a916a0b5ffa0a4a9fcbeb48d983846dc1f209a0ef714a55a46718"
+  },
+  "portability_audit": "PASS: AUTHORITY_DATA_ONLY / BACKEND_RUNTIME_DATA_ONLY / REUSABLE_HARNESS_SEMANTICS_SHARED; no SUBJECT_SPECIFIC_CODE_REQUIRED; no foundational invariant falsified",
+  "r2_disposition": "superseded for terminal purposes (R2-SUPERSESSION.json): R2 physical executions factual and retained byte-unchanged; R2 loader aged only the review event",
+  "retained_evidence_replays": "accepted AMD/V1-A and NV/V1-C transcripts PASS under the same harness bytes (retrospective; accounting 0/0/0; byte-exact)",
+  "same_corrected_source_freeze": "bb1ac724bc77c16fe718ce943578a1c2138a3848 (CI Gate SUCCESS run 34761159111, exact head)"
+ },
+ "issue": "#163",
+ "nonclaims": [
+  "internal/research device qualification harness only",
+  "not a public plugin API",
+  "not production scheduler/backend support",
+  "not default/preferred-backend policy",
+  "no broad hardware/model qualification",
+  "no comparator recalibration",
+  "no Vulkan/CUDA numerical-equivalence claim"
+ ],
+ "schema": "inferswarm.v2a.terminal/1",
+ "terminal": "V2A_REUSABLE_DEVICE_QUALIFICATION_HARNESS_PASS"
+}

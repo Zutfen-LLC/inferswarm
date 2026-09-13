@@ -1,0 +1,48 @@
+{
+ "schema": "inferswarm.v2a.r2-supersession/1",
+ "issue": "#163",
+ "review_reference": "maintainer NO-GO review on PR #164 head 1c724d3bec11e4938821398baf510e412275a759",
+ "r2_head": "1c724d3bec11e4938821398baf510e412275a759",
+ "superseded_terminal": "V2A_REUSABLE_DEVICE_QUALIFICATION_HARNESS_PASS (recorded in FINAL-TERMINAL-R2.json, renamed from FINAL-TERMINAL.json; bytes unchanged; STATUS.json renamed to STATUS-R2.json, bytes unchanged)",
+ "disposition": {
+  "physical_executions_correct": "both R2 physical campaigns (AMD-A-R2 Vulkan1/02:00.0 and NV-A-R2 Vulkan3/04:00.0) executed correctly through the reusable harness: qualification full offload with no fallback and clean exit, canonical execution exit 0, selector-aware accounting 0/0/0, byte-exact correctness against the accepted pre-existing references, adapter-sealed canonical proof, canonical observation, and attributed execution receipt; their physical evidence is factual",
+  "evidence_remains_factual": "all R2 discovery, authority, raw, plan, canonical, accounting, correctness, proof, observation, and receipt artifacts are retained byte-unchanged as superseded evidence; no raw byte was edited or deleted; renames (FINAL-TERMINAL.json -> FINAL-TERMINAL-R2.json, STATUS.json -> STATUS-R2.json) are byte-exact and verified by git",
+  "defect": "the R2 authority loader (scripts/v2a_authority_v2.py) checked freshness using bindings.reviewed_utc ONLY. Issue #163 requires stale INVENTORY to fail closed: the loader never required, never cross-checked, and never aged the physical inventory measurement timestamp (DISCOVERY-INVENTORY.measured_utc). A fresh review of a >72h-stale physical inventory measurement could therefore authorize a correctness-bearing campaign against a host that no longer matched the measurement. Additionally, the retained raw identity-probe bytes were bound to the structured proof only by self-reported structured digests, and the R2 zero-generation CPU control could pass through an unrelated duplicate-BDF rejection rather than the generation invariant itself",
+  "consequence": "the R2 runs cannot establish the final discover -> review/freeze -> qualify contract for terminal purposes: the reviewed-discovery freshness gate did not age the underlying inventory measurement, so their PASS terminal is superseded pending R3 re-proof under the corrected contract",
+  "superseded_for": "final terminal purposes only; retained as factual evidence that the execution harness works end to end under reviewed-discovery-bound authorities"
+ },
+ "correction": {
+  "inventory_freshness_contract": "schemas inferswarm.v2a.discovery-inventory/3 and inferswarm.v2a.discovery-bindings/3 (scripts/v2a_discovery_v3.py) plus inferswarm.v2a.campaign-authority/3 (scripts/v2a_authority_v3.py): the loader requires and mechanically validates the inventory measurement timestamp itself (DISCOVERY-BINDINGS.inventory_measured_utc must exactly equal DISCOVERY-INVENTORY.measured_utc inside the digest-verified artifacts), parses all timestamps fail-closed (malformed, naive/non-timezone-aware, future, or inverted chronology rejected), enforces inventory measured <= binding reviewed <= authority/preflight freshness anchor, and enforces max_discovery_age_hours against the PHYSICAL inventory measurement, not merely the review event; a fresh review of a stale inventory rejects, and no caller-supplied enrichment can bypass it because the timestamps live inside the digest-verified artifacts",
+  "raw_probe_provenance": "one shared validation path (v2a_discovery_v3.validate_probe) derives the identity line, BDF, and zero-generation proof FROM retained raw stdout/stderr bytes and checks every structured field against that derivation; probe records carry explicit raw_stdout_path/raw_stderr_path; verification re-reads the retained bytes and re-derives: raw byte digest -> structured digest field -> selected-device identity/BDF -> zero-generation proof; tampering with raw stdout or stderr while keeping the structured binding unchanged fails closed; raw probe data stays NON_AUTHORIZING and NON_CORRECTNESS_BEARING and no correctness reference is derived from it",
+  "zero_generation_control_repair": "the R2 control test_probe_with_nonzero_generation_fails_closed could pass because its injected runner bound multiple twins to the same 02:00.0 BDF (duplicate-BDF rejection independent of the generation proof). The R3 controls (tests/test_v2a_discovery_authority_binding_r3.py) bind the twins to DISTINCT BDFs clean on every other axis and vary ONLY the generation evidence, injected and real probes exercise the same shared validation path, and the R2 probe evidence bytes are preserved unchanged",
+  "r3_campaigns": "fresh AMD-A-R3 and NV-A-R3 campaigns under a new corrected source freeze re-prove the full pipeline with fresh R3 discovery (re-measured inventory) and prospectively frozen authorities bound to that fresh discovery"
+ },
+ "retained_artifacts": {
+  "r2_evidence": [
+   "AUTHORITY-AMD-A-R2.json",
+   "AUTHORITY-NV-A-R2.json",
+   "DISCOVERY-INVENTORY.json",
+   "DISCOVERY-BINDINGS.json",
+   "FINAL-TERMINAL-R2.json",
+   "PORTABILITY-AUDIT.json",
+   "STATUS-R2.json",
+   "raw/discovery-r2",
+   "raw/v2a-amd-a-r2-qualification-01",
+   "raw/v2a-amd-a-r2-canonical-01",
+   "evidence/v2a-amd-a-r2-plan-01",
+   "evidence/v2a-amd-a-r2-canonical-01",
+   "raw/v2a-nv-a-r2-qualification-01",
+   "raw/v2a-nv-a-r2-canonical-01",
+   "evidence/v2a-nv-a-r2-plan-01",
+   "evidence/v2a-nv-a-r2-canonical-01"
+  ],
+  "byte_preservation": "every retained R2 file is byte-identical to PR head 1c724d3 (renames only, verified by git); v2a_discovery_v2.py and v2a_authority_v2.py are retained byte-unchanged and imported by the R3 successors"
+ },
+ "nonclaims": [
+  "internal/research device qualification harness proof only",
+  "not a public plugin API",
+  "not production scheduler/backend support",
+  "not default/preferred-backend policy",
+  "no correctness claim is inherited from the superseded R2 campaigns; R3 re-proves correctness freshly under the corrected freshness contract"
+ ]
+}

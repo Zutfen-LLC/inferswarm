@@ -1,0 +1,18 @@
+{
+ "acceptance_state": "draft PR #164 records the corrected R2 result; acceptance remains with the maintainer",
+ "attempt": "R2 \u2014 correction round 2",
+ "facts": {
+  "adversarial_controls": "15/15 + 23 R2 binding controls PASS",
+  "amd_a_r2": "qual PASS 37/37; canonical PASS accounting 0/0/0 byte-exact (Vulkan1 / 02:00.0)",
+  "attempt01": "superseded; evidence retained byte-unchanged",
+  "local_host_confirmed": "inferswarm02",
+  "nv_a_r2": "qual PASS 37/37; canonical PASS accounting 0/0/0 byte-exact (Vulkan3 / 04:00.0)",
+  "portability_audit": "PASS (data-only differences; discovery layer shared)",
+  "repeatability": "inherited from accepted predecessors (explicitly recorded in both R2 authorities)",
+  "reviewed_discovery": "DISCOVERY-INVENTORY.json + DISCOVERY-BINDINGS.json retained; Vulkan1->02:00.0 and Vulkan3->04:00.0 prospectively BOUND by zero-token identity probes (raw bytes retained)",
+  "ssh_used": false
+ },
+ "issue": "#163",
+ "schema": "inferswarm.v2a.evidence-status/1",
+ "terminal": "V2A_REUSABLE_DEVICE_QUALIFICATION_HARNESS_PASS"
+}
