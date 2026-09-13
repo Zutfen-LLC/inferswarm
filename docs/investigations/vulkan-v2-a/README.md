@@ -1,12 +1,15 @@
 # V2-A — reusable device qualification harness (issue #163)
 
-Status: CORRECTION ROUND 2 (R2) in progress. The attempt-01 dual
-campaigns and their `V2A_REUSABLE_DEVICE_QUALIFICATION_HARNESS_PASS`
-terminal are SUPERSEDED (see ATTEMPT01-SUPERSESSION.json,
-FINAL-TERMINAL-ATTEMPT01.json). They remain retained, byte-unchanged,
-as diagnostic evidence that the execution harness works; their
-authorities lacked the mechanically required reviewed-discovery
-binding (maintainer NO-GO review 5190619330).
+Status: R2 CAMPAIGN COMPLETE — terminal
+`V2A_REUSABLE_DEVICE_QUALIFICATION_HARNESS_PASS` restored under the
+corrected discover -> review/freeze -> qualify contract (see
+FINAL-TERMINAL.json, PORTABILITY-AUDIT.json, STATUS.json). The
+attempt-01 dual campaigns and their earlier PASS terminal are
+SUPERSEDED (ATTEMPT01-SUPERSESSION.json, FINAL-TERMINAL-ATTEMPT01.json)
+but retained byte-unchanged as diagnostic evidence: both physical runs
+executed correctly, but their authorities lacked the mechanically
+required reviewed-discovery binding (maintainer NO-GO review
+5190619330).
 
 V0 established Vulkan as a promising portable substrate; V1-A/V1-B/V1-C
 established a reusable internal S2 participant across two physical
@@ -82,8 +85,10 @@ recalibration, no Vulkan/CUDA numerical-equivalence claim, no SSH.
   harness bytes (retrospective regression only).
 - Attempt-01 dual physical campaigns retained as superseded diagnostic
   evidence (byte-unchanged).
-- R2: fresh reviewed discovery (inventory + probed bindings) under the
-  corrected source freeze, then two fresh physical campaigns (AMD-A-R2
-  and NV-A-R2) from separate v2 authorities over the SAME corrected
-  source freeze, then the R2 portability audit including the
-  discovery->authority layer.
+- R2 (COMPLETE): fresh reviewed discovery (inventory + probed
+  bindings) under the corrected source freeze 74ae32e, two fresh
+  physical campaigns (AMD-A-R2 and NV-A-R2) from separate v2
+  authorities over the SAME corrected source freeze — both PASS
+  (37/37 offload, accounting 0/0/0, byte-exact) — and the R2
+  portability audit including the discovery->authority layer: PASS
+  with no subject-specific code.

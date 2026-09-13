@@ -6,10 +6,13 @@ cf69dfbc6ebe596602dfc20c75c11980eb6aa35813b91ac6e991be31e8361c40  docs/investiga
 74d5cac79031290e0fcf85f1ad6821444b41f10a3cafb5c435e9cd89e5b4849e  docs/investigations/vulkan-v2-a/DISCOVERY-BINDINGS.json
 e9fd925a7480174400a55b5b2144c8a7faf5021337ef45925d7d33eb3c20b193  docs/investigations/vulkan-v2-a/DISCOVERY-INVENTORY.json
 4687001b0fc070bd2b5f853eea18dcbeafdf26cc9f45181f0cc4d686deb69ea2  docs/investigations/vulkan-v2-a/FINAL-TERMINAL-ATTEMPT01.json
+59bff8a24a215ffd178067b7ca943851b5eb12cf16702164180e9a2f4314446c  docs/investigations/vulkan-v2-a/FINAL-TERMINAL.json
 6e9fb8bf12e14878f2bc078bcc2922b845d7387fac7eb395a71342223cf726ce  docs/investigations/vulkan-v2-a/PORTABILITY-AUDIT-ATTEMPT01.json
-1c52a295562eea680ca5805bdd23e3ee3fd5b261b24550eff3e5162d646660fb  docs/investigations/vulkan-v2-a/README.md
+548e04759a08a5bdc99741a9dfb58895678923f2bd5d5b0e5172dbcd62a53870  docs/investigations/vulkan-v2-a/PORTABILITY-AUDIT.json
+186d533256a48a7b2c5dcc9c225d6b4d6ccddc45debd360d061aa65a7b137a0a  docs/investigations/vulkan-v2-a/README.md
 40767eb7b71e6f7ec58cb84822c3a72c1d26d3bc8d5de6e5a71235b7528f4297  docs/investigations/vulkan-v2-a/RETAINED-EVIDENCE-REPLAYS.json
 05738ec6d09fd6459a0e5d82474209f537f105540ff15e090d7714896238e1ad  docs/investigations/vulkan-v2-a/STATUS-ATTEMPT01.json
+8658196d7b418dcc991c5915706d7bb3619ef7329fe4c3ec7af55a9fbf0e94e1  docs/investigations/vulkan-v2-a/STATUS.json
 42d2de18d62ecd276af75cf7ac99aee85e97588fa93bd36d5c7946c753045a07  docs/investigations/vulkan-v2-a/evidence/v2a-amd-a-canonical-01/accounting.json
 e9f239281273933b011b30769fd4dcbfb5b1945d7a0feed7534d6acaa247bf93  docs/investigations/vulkan-v2-a/evidence/v2a-amd-a-canonical-01/canonical-observation.json
 57612d6938278e4a41ec4573bdb3632e07798ea7e2b7252101ee64530312c977  docs/investigations/vulkan-v2-a/evidence/v2a-amd-a-canonical-01/correctness-result.json
@@ -31,6 +34,10 @@ faefbf660960a9692c704a0fa0985f296fdaf23633214e25093b579d4080b8d8  docs/investiga
 80d8c80559e81a56a9e0d3f65fa563a4e9a33af9c1c061d15702d281ab59c9b1  docs/investigations/vulkan-v2-a/evidence/v2a-nv-a-plan-01/candidate-set.json
 f4a17379ff5009a7e8ddd23be54012631c5e98d9547cc67a5aa05e143bef72e5  docs/investigations/vulkan-v2-a/evidence/v2a-nv-a-plan-01/frozen-plan.json
 0bb5a1abffa43881a14812f491c424437e41838ea5167c28afafb9c95cd47ff8  docs/investigations/vulkan-v2-a/evidence/v2a-nv-a-plan-01/resource-snapshot.json
+78ccc722e26f3c4ef701b72be4dd99938c6b1ffc8706c46230e5cc40c873e559  docs/investigations/vulkan-v2-a/evidence/v2a-nv-a-r2-canonical-01/accounting.json
+6598ad47be77426a8de785861f7b342521924477f13938abfbe9a7ca1dd49351  docs/investigations/vulkan-v2-a/evidence/v2a-nv-a-r2-canonical-01/canonical-observation.json
+57612d6938278e4a41ec4573bdb3632e07798ea7e2b7252101ee64530312c977  docs/investigations/vulkan-v2-a/evidence/v2a-nv-a-r2-canonical-01/correctness-result.json
+b678dd75abe82cc714e70df36f8f2db4315bfd4de18a185c099d6e9d0c304b4b  docs/investigations/vulkan-v2-a/evidence/v2a-nv-a-r2-canonical-01/execution-receipt.json
 c85bd87f0e0f63a7ca90f2d56533a765130c7b20c239300bf9945d1f08db3a2e  docs/investigations/vulkan-v2-a/evidence/v2a-nv-a-r2-plan-01/candidate-set.json
 2b22601065bb93104ff7ac7df380550b630871f846e5f97d795d2f2d1a235b4a  docs/investigations/vulkan-v2-a/evidence/v2a-nv-a-r2-plan-01/frozen-plan.json
 369b456fac5cfcd6a71847bc58a4d45a33bd4257d907245668065b4ee05b2200  docs/investigations/vulkan-v2-a/evidence/v2a-nv-a-r2-plan-01/resource-snapshot.json
@@ -62,6 +69,10 @@ d316f2276c6935dd31cd67e9e936af0f423263893cd08bd1e0de003ffe739744  docs/investiga
 12f445299031c71726c6749703071aecd3bf5a4786eec003994a94b35a52d8a4  docs/investigations/vulkan-v2-a/raw/v2a-nv-a-qualification-01/qualification.json
 dcf92bf8328f9cdbfe0bb9f4c19278f67f6ccc1b6b2b5fa28313328b89b8ef6d  docs/investigations/vulkan-v2-a/raw/v2a-nv-a-qualification-01/stderr.txt
 1444dc1665fbdb68f6f48bf42ffaacfbc36ae7ab3c07864175fd4dbf69cbcc27  docs/investigations/vulkan-v2-a/raw/v2a-nv-a-qualification-01/stdout.txt
+aa13d4ee490c32e480a5bedd9dca82ff689c9abaf043e2a811955dd609561668  docs/investigations/vulkan-v2-a/raw/v2a-nv-a-r2-canonical-01/canonical-execution.json
+9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa  docs/investigations/vulkan-v2-a/raw/v2a-nv-a-r2-canonical-01/exit-code.txt
+cb64a1ddc0fd12f171edcc85fe311ca63817af0499a4eef4e93ec7a85477bf45  docs/investigations/vulkan-v2-a/raw/v2a-nv-a-r2-canonical-01/stderr.txt
+cee07c3735b3eebace4054cf2331817575dc2e3501b1c3b3dfe7e2b39542572d  docs/investigations/vulkan-v2-a/raw/v2a-nv-a-r2-canonical-01/stdout.txt
 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa  docs/investigations/vulkan-v2-a/raw/v2a-nv-a-r2-qualification-01/exit-code.txt
 c5e8cebfba5158b36decc27de76e9fea3d60325ca1d84afac383362085718ed7  docs/investigations/vulkan-v2-a/raw/v2a-nv-a-r2-qualification-01/qualification.json
 aef586c570d5df86a0d31e2486667f244194a61aedac96280ce91488ac00bc4f  docs/investigations/vulkan-v2-a/raw/v2a-nv-a-r2-qualification-01/stderr.txt
