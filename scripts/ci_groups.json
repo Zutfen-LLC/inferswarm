@@ -126,7 +126,11 @@
     "test_v1b_evidence_manifest",
     "test_v1c_accounting",
     "test_v1c_runner",
-    "test_v1c_evidence_manifest"
+    "test_v1c_evidence_manifest",
+    "test_v2a_discovery",
+    "test_v2a_authority",
+    "test_v2a_harness",
+    "test_v2a_evidence_manifest"
    ]
   }
  },
@@ -220,6 +224,9 @@
    "vulkan-v0-b"
   ],
   "docs/investigations/vulkan-v1-c/": [
+   "vulkan-v0-b"
+  ],
+  "docs/investigations/vulkan-v2-a/": [
    "vulkan-v0-b"
   ],
   "docs/project-status.json": [
@@ -697,6 +704,18 @@
   "scripts/v1c_runner.py": [
    "vulkan-v0-b"
   ],
+  "scripts/v2a_authority.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v2a_discovery.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v2a_harness.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/v2a_manifest.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/validate_issue109_prerequisites.py": [
    "issue-109-110"
   ],
@@ -767,6 +786,18 @@
    "vulkan-v0-b"
   ],
   "tests/test_v1c_runner.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_v2a_authority.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_v2a_discovery.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_v2a_evidence_manifest.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_v2a_harness.py": [
    "vulkan-v0-b"
   ]
  },
