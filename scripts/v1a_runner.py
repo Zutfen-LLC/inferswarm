@@ -254,7 +254,10 @@ def execute_canonical(authority: Mapping[str, Any], plan: Mapping[str, Any], mea
         execution_evidence_id=frozen["canonical_execution_evidence_id"], stdout=run["stdout"],
         stderr=run["stderr"], exit_code=run["exit_code"])
     observation_record = participant.canonical_observation(plan=plan, canonical_proof=proof)
-    receipt = participant.execution_receipt(plan=plan, output=run["stdout"], canonical_proof=proof)
+    # V0-C receipt semantics: attribution covers the canonical visible
+    # response bytes, not the raw spinner-laden transcript.
+    receipt = participant.execution_receipt(plan=plan, output=correctness["visible_response_bytes"],
+                                            canonical_proof=proof)
     return {"run": run, "accounting": accounting, "correctness": correctness, "proof": proof,
             "canonical_observation": observation_record, "receipt": receipt}
 
