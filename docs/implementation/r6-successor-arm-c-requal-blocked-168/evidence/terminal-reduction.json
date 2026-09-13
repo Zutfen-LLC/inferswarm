@@ -1,0 +1,34 @@
+{
+ "classification_basis": "corpus_insufficiency_pre_observation",
+ "detail": {
+  "final_replay_crossing": {
+   "insufficient_buckets": [
+    "25-48",
+    "49-64"
+   ],
+   "recomputed_counts": {
+    "1-8": 78,
+    "25-48": 0,
+    "49-64": 0,
+    "9-24": 271
+   }
+  },
+  "prompt_two_chunk": {
+   "insufficient_buckets": [
+    "25-48",
+    "49-64",
+    "9-24"
+   ],
+   "recomputed_counts": {
+    "1-8": 344,
+    "25-48": 0,
+    "49-64": 0,
+    "9-24": 0
+   }
+  }
+ },
+ "mandate": "issue #168 Phase 1B: do not adapt the bucket or inspect outputs; report the corpus insufficiency for maintainer correction",
+ "required_per_bucket": 4,
+ "schema": "inferswarm.issue168.arm-c-requal-terminal/1",
+ "verdict": "ISSUE117_ARM_C_REQUALIFICATION_EVIDENCE_BLOCKED"
+}
