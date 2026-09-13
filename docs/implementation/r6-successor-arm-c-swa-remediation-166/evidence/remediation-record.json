@@ -1,0 +1,100 @@
+{
+  "schema": "inferswarm.issue117.arm-c-swa-remediation/1",
+  "issue": 166,
+  "terminal": "ISSUE117_ARM_C_SWA_REMEDIATION_READY",
+  "scope": "IMPLEMENTATION REMEDIATION ONLY / NO ARM-C REQUALIFICATION. No fresh correctness-bearing model campaign, no Arm-C PASS/FAIL derivation, no Arm D/E, no h109-* material. Fresh Arm-C requalification remains separately blocked pending maintainer acceptance/merge of this remediation.",
+
+  "starting_heads": {
+    "inferswarm_main": "df0365ea606a54222415e34f6cfb127e9f938f0c",
+    "freetoken_inferswarm_research": "55e8baaebabe67aeb967d4bd407ef26696933104",
+    "verification": "both heads verified byte-exact against origin at session start; no drift found; no forward reconciliation required"
+  },
+
+  "authority_consumed": {
+    "issue_133": "ISSUE117_ARM_C_ORDINARY_SERVING_FAIL",
+    "issue_153": "ISSUE117_ARM_C_REMEDIATION_BLOCKED / BACKEND_REQUIRES_MULTI_CHUNK",
+    "issue_157_pr_159": "ISSUE117_ARM_C_CHUNK2_CAUSE_LOCALIZED",
+    "merge": "InferSwarm df0365ea (Merge PR #159)",
+    "remediation_requirement": "#157 established required multi-chunk execution is real; chunk 1 stable; earliest varying checkpoint L0_kv_slice_post_write; the standalone R6 stage path lacks the SWA allocation/mapping lifecycle reached by the scheduler/cache-manager path; a prospective one-variable alloc_swa intervention stabilized both diagnostic anchors while paired controls varied."
+  },
+
+  "phase0_ownership_inventory": {
+    "alloc_swa_implementation": "HybridSWAKVCache.alloc_swa (python/freetoken/kvcache/hybrid_swa_pool.py) — one swa slot per full slot, recorded in the dense full_to_swa_index_mapping; free-list sliced; exhaustion raises. Also DSV4PagedPool.alloc_swa (separate pool family, page-quantized, unrelated model class).",
+    "alloc_swa_callers_before_166": [
+      "python/freetoken/scheduler/cache.py CacheManager.allocate_paged (the ONLY caller): allocates each chunk's full pages then alloc_swa's their swa slots atomically, before _write_page_table; radix path first ensure_swa_slots (tree eviction), naive path relies on pool sizing"
+    ],
+    "scheduler_lifecycle": "mapping established per-chunk in allocate_paged BEFORE any store/gather; out-of-window release in maybe_free_swa_out_of_window (decode) / free_swa_out_of_window_extend (prefill) via free_swa (idempotent over the sentinel); wholesale release on finish/abort through cache_req/_free_swa; rebuild() resets mapping+free-list atomically with buffer realloc.",
+    "why_standalone_never_reached_it": "GemmaDenseStage._setup_context builds the same HybridSWAKVCache pool directly via create_kvcache_pool with a fixed identity page table (page_table[i] == i) and NO CacheManager: no code path between _setup_context and the attention backend ever calls alloc_swa, so full_to_swa_index_mapping remained the all-zero init sentinel for the process lifetime. Every SWA-layer store wrote swa slot 0 (racing warps -> varying bytes) and every prefix gather read slot 0 (#157: chunk-2 nondeterminism, earliest varying boundary L0_kv_slice_post_write).",
+    "session_state_owner_in_standalone_path": "GemmaDenseStage itself: single request at a time, ctx.page_table a fixed identity row, reset_session_state() between sessions (drivers: stage_chain RESET op per generate(), single_gpu_control per step, last_stage_service per session, two_stage, #157 replay harness, #97/#110 services).",
+    "mapping_validity_timeline": {
+      "creation": "pool __init__/_init_swa_paged_state builds sentinel mapping + full free-list",
+      "first_prefill": "must be valid for [0, chunk_rows) BEFORE prepare_metadata translates the page-table range (the first prefix-consuming SWA operation)",
+      "extend_prefill": "must be valid for [0, start+rows) before the chunk's gathers/stores",
+      "decode": "must be valid for [0, position+1] before the step",
+      "reset_reuse": "all ownership released (mapping all-sentinel, free-list whole) — never inherited",
+      "teardown_abort": "process teardown drops the pool (CUDA context destruction); abort within a session leaves the frontier observable; next session's reset releases everything",
+      "exhaustion": "RuntimeError (fail-closed) — never continues on sentinel slot 0"
+    },
+    "allocation_failure_behavior": "alloc_swa raises RuntimeError('SWA pool exhausted') when the free-list is shorter than the request; the #166 lifecycle checks swa_available_size() first and raises a named fail-closed error before consuming anything (no partial allocation: the frontier is advanced only after a successful alloc_swa).",
+    "chosen_owner": "GemmaDenseStage (the standalone stage runtime), via a session-ownership lifecycle at the same lifecycle points the scheduler uses.",
+    "rejected_alternatives": [
+      "Pasting the #157 diagnostic intervention (alloc_swa over arange(used) after each reset) at driver call sites: rejected — drivers are many (chain/single/control/diagnostic/#97/#110 services), the seam would be duplicated per driver, and the allocation would sit AFTER reset but have no persistence/failure contract of its own.",
+      "Allocating inside prepare_metadata / the attention backend: rejected — the backend is a generic pool consumer; giving it allocator authority inverts the scheduler's ownership model and would change every non-standalone path.",
+      "Building a CacheManager instance inside the stage runtime: rejected — the standalone path has no page-allocator role (page table is a fixed identity), so the manager would be dead weight plus a second ownership authority.",
+      "Modifying HybridSWAKVCache to self-allocate on store_kv: rejected — silently allocates behind the scheduler's back on the shared-pool path (double allocation), violating exactly-once ownership."
+    ]
+  },
+
+  "remediation_design": {
+    "owner_seam": "GemmaDenseStage._ensure_swa_session_mapping / _reset_swa_session_ownership / _swa_pool / swa_session_ownership_report, wired into all four execution branches (prefill first/single + receiver, decode first/single + receiver) BEFORE self._prepare.",
+    "mechanism": "incremental ownership frontier [0, allocated): each call allocates exactly the not-yet-owned positions of the upcoming chunk's full referenced range (chunk rows + prefix gathers), via pool.alloc_swa over arange(frontier, need_end) — the SAME underlying allocation semantic as CacheManager.allocate_paged per chunk and as the accepted #157 one-variable intervention.",
+    "reset_ordering": "reset_session_state zeroes pool tensors THEN rebuilds the allocator via _init_swa_paged_state — the zero loop also zeroes _swa_free (a top-level pool tensor), and a zeroed free-list would hand out reserved sentinel slot 0 on the next alloc_swa (the #157-recorded trap); rebuilding after the zeroes guarantees the pristine __init__ ownership state.",
+    "pool_sizing": "num_swa_tokens = max_seq_len + 1 (sentinel convention, matching rebuild_from_config's num_pages+1) so a full-capacity session is not one slot short.",
+    "non_swa": "getattr(pool, 'swa_paged', False) gate — non-SWA pools never enter the lifecycle (no unnecessary SWA state)."
+  },
+
+  "changed_files": [
+    {
+      "repo": "Zutfen-LLC/FreeToken",
+      "path": "benchmarks/inferswarm_r6/stage_runtime.py",
+      "base_sha256": "1cca03969a14d5b3d9b150a7972fa9bb2bee5a693073d603fb46e9af897f8737",
+      "remediated_sha256": "afe9ceb09208174d0da2905d4097009460d05bbe5050b0d15eaa2baa4e40ac73",
+      "change": "session SWA ownership lifecycle (+135 lines; no existing line changed except pool construction num_swa_tokens and the four _prepare call sites each preceded by the ensure call)"
+    },
+    {
+      "repo": "Zutfen-LLC/FreeToken",
+      "path": "tests/research/test_issue166_swa_remediation.py",
+      "change": "NEW: 35 CPU lifecycle tests incl. negative controls",
+      "sha256_prefix": "e2d16ff67c5256c4"
+    }
+  ],
+
+  "remediation_producer": {
+    "repo": "Zutfen-LLC/FreeToken",
+    "branch": "issue-166-swa-remediation",
+    "base": "55e8baaebabe67aeb967d4bd407ef26696933104",
+    "head": "64a37a1f1a2797a190610c5adcdcb4157bce63b9",
+    "diff_sha256_stage_runtime": "4ee373bb5799835bbabde68443e9740a04c26c6fb976743c918450f623bed467",
+    "promotion": "NOT promoted to qualification authority by this issue — CPU/static validation only"
+  },
+
+  "causal_applicability": {
+    "accepted_intervention": "#157 interventions.json: alloc_swa(arange(used_full_slots)) executed after reset_session_state and allocator rebuild, BEFORE chunk-1 execution — chunk-2 byte-deterministic 6/6 on both anchors while paired controls varied 5-6 distinct.",
+    "earliest_varying_boundary": "L0_kv_slice_post_write (the SWA-layer KV store racing on slot 0); the attention read varies by consuming slot-0 bytes.",
+    "proof_the_corrected_lifecycle_reaches_the_same_semantic": "The production lifecycle calls the SAME pool.alloc_swa over the SAME ascending arange of used full slots, established BEFORE any SWA KV operation of every chunk (mechanically: test_prefill_*_mapping_valid_before_prepare observes mapping validity AT prepare_metadata time; test_standalone_reaches_the_scheduler_allocation_semantic proves byte-equal mapping vs the accepted intervention shape given identical pool state; test_alloc_swa_call_sites_are_exactly_the_two_lifecycle_owners proves no other allocation seam exists). The corrected ordinary stage lifecycle therefore establishes the identical allocation state that the diagnostic intervention established before L0_kv_slice_post_write, before that boundary executes, on every chunk.",
+    "physical_requalification": "deliberately NOT executed here — the causal stabilization of the 65-67-row failing population under the corrected ordinary path is exactly what the separately-authorized fresh Arm-C requalification must measure."
+  },
+
+  "diagnostic_instrumentation_status": "The #157 diagnostic instrumentation (ISSUE157_STAGE_INSTRUMENT env gate + sitecustomize install in InferSwarm scripts/issue157_*) remains OFF by default and is NOT the production fix; the production fix is the FreeToken stage-runtime lifecycle above. No #157 script changed.",
+
+  "evidence_preservation_157": {
+    "bundle": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-chunk2-diagnosis-157/",
+    "proof": "byte-preservation verified by recomputing the accepted MANIFEST.sha256 over the bundle at the remediation head — every row matches the accepted manifest (tests/test_issue166_swa_remediation_record.py::test_157_evidence_bundle_bytes_unchanged); no file inside the accepted bundle was touched",
+    "manifest_sha256_rows_verified": 9
+  },
+
+  "validation": {
+    "freetoken_focused": "35/35 tests/research/test_issue166_swa_remediation.py green; 189/189 focused research regression sweep green (test_issue117_arm_c_remediation, test_r6_gate_contracts, test_r6_final_row_fp32_promotion, test_r6_inplace_softcap, test_r6_single_gpu_control, test_r6_single_gpu_control_gate); scheduler/kvcache SWA suites show ONLY failures proven byte-identical pre-existing at base 55e8baa on the CPU-only validation host (torch CPU build environment; verified by stash-and-rerun at base).",
+    "qualification_prohibited": "no GPU execution, no model execution, no campaign"
+  }
+}
