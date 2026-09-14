@@ -398,13 +398,19 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
                     worker_script = worker_root / "scripts" / Path(__file__).name
                     if not worker_script.is_file():
                         worker_script = Path(__file__).resolve()
-                    command = [sys.executable, str(worker_script), "--worker",
-                               "--root", str(worker_root), "--tests-dir", str(worker_root / "tests"),
-                               "--modules-file", str(modules_path),
-                               "--expected-ids-file", str(expected_path), "--receipt", str(receipt)]
-                    process = subprocess.Popen(command, cwd=worker_root, text=True,
-                                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                               env=_task_environment(task, temporary))
+                    # Worker output goes to per-task files, never OS pipes: the
+                    # poll-based reaper does not drain pipes while waiting, and
+                    # a full 64KB pipe buffer would freeze the worker forever.
+                    stdout_path = artifacts / f"task-{task.index}-stdout.txt"
+                    stderr_path = artifacts / f"task-{task.index}-stderr.txt"
+                    with stdout_path.open("wb") as out, stderr_path.open("wb") as err:
+                        command = [sys.executable, str(worker_script), "--worker",
+                                   "--root", str(worker_root), "--tests-dir", str(worker_root / "tests"),
+                                   "--modules-file", str(modules_path),
+                                   "--expected-ids-file", str(expected_path), "--receipt", str(receipt)]
+                        process = subprocess.Popen(command, cwd=worker_root, text=True,
+                                                   stdout=out, stderr=err,
+                                                   env=_task_environment(task, temporary))
                     running.append((task, process, receipt, worker_root, time.monotonic()))
                 # Reap whichever live worker finishes first: a crashing task is
                 # detected promptly regardless of phase order, and its slot
@@ -430,11 +436,15 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
                 if finished is None:
                     continue
                 task, process, receipt, worker_root, started_at = running.pop(finished)
-                stdout, stderr = process.communicate()
+                process.wait()
                 ended_at = time.monotonic()
                 remove_worker_root(root, worker_root)
                 outstanding_roots.remove(worker_root)
                 if process.returncode:
+                    stdout = (artifacts / f"task-{task.index}-stdout.txt").read_text(
+                        encoding="utf-8", errors="replace")
+                    stderr = (artifacts / f"task-{task.index}-stderr.txt").read_text(
+                        encoding="utf-8", errors="replace")
                     diagnostics.append(
                         f"task {task.index} ({task.phase}) exit={process.returncode}\n{stdout}\n{stderr}")
                 if not receipt.is_file():
