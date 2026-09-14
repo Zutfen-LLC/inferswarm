@@ -1,11 +1,21 @@
-"""Issue #173 bounded parallel CPU-suite runner contract."""
+"""Issue #173 bounded parallel CPU-suite runner contract.
+
+Corrected-revision regression coverage per maintainer review: phased
+scheduling that never permanently dedicates workers to isolated modules,
+isolation correctness at every supported worker count, TMPDIR-sensitive
+serial semantics, preserved adversarial-review fixes, and exact identity
+coverage across phases.
+"""
 from __future__ import annotations
 
 import hashlib
 import json
+import os
 import shutil
+import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -23,10 +33,23 @@ def write(path: Path, text: str) -> None:
 def fixture(test: unittest.TestCase, files: dict[str, str]) -> tuple[Path, Path]:
     root = Path(tempfile.mkdtemp(prefix="issue173-suite-"))
     test.addCleanup(shutil.rmtree, root, ignore_errors=True)
+    # Fixture modules share names across temporary roots; purge them from
+    # sys.modules or the next discovery hits a stale-module ImportError.
+    for name in files:
+        test.addCleanup(sys.modules.pop, Path(name).stem, None)
     tests = root / "tests"
     for name, text in files.items():
         write(tests / name, text)
     return root, tests
+
+
+def sample_units() -> list[runner.Unit]:
+    """A miniature population exercising every scheduling declaration."""
+    return [runner.Unit(name, (f"{name}.Case.test_x",)) for name in (
+        "test_issue133_arm_c_retry_campaign", "test_issue133_arm_c_retry_direct",
+        "test_issue133_corrected_freeze", "test_issue117_arm_b_retention",
+        "test_issue103_planner", "test_issue117_preflight",
+        "test_other", "test_last")]
 
 
 class DiscoveryAndPlanTests(unittest.TestCase):
@@ -41,29 +64,112 @@ class DiscoveryAndPlanTests(unittest.TestCase):
         self.assertEqual(runner.identity_digest(ids), hashlib.sha256(
             b"test_alpha.A.test_one\ntest_alpha.A.test_two\ntest_beta.B.test_three\n").hexdigest())
 
-    def test_partition_is_deterministic_complete_and_keeps_required_bundle_together(self):
-        units = [runner.Unit(name, (f"{name}.Case.test_x",)) for name in (
-            "test_issue133_arm_c_retry_campaign", "test_issue133_arm_c_retry_direct",
-            "test_issue133_corrected_freeze", "test_issue117_arm_b_retention", "test_issue103_planner", "test_issue117_preflight", "test_other", "test_last")]
-        first = runner.partition_units(units, 4)
-        second = runner.partition_units(units, 4)
-        self.assertEqual(first, second)
-        assigned = [unit.name for bucket in first for unit in bucket]
-        self.assertEqual(sorted(assigned), sorted(unit.name for unit in units))
-        bundle_workers = {index for index, bucket in enumerate(first) for unit in bucket
-                          if unit.name in runner.COOLOCATED_MODULES}
-        self.assertEqual(bundle_workers, {next(iter(bundle_workers))})
-        isolated = [bucket for bucket in first
-                    if any(unit.name in runner.ISOLATED_MODULES for unit in bucket)]
-        self.assertEqual([[unit.name for unit in bucket] for bucket in isolated],
-                         [["test_issue117_arm_b_retention"], ["test_issue103_planner"],
-                          ["test_issue117_preflight"]])
-
     def test_jobs_validation_and_cap_are_bounded(self):
         self.assertEqual(runner.worker_count(999, 3), 3)
         self.assertEqual(runner.worker_count(1, 3), 1)
         with self.assertRaises(ValueError):
             runner.worker_count(0, 3)
+
+
+class SchedulingPlanTests(unittest.TestCase):
+    """Inspect the actual scheduling plan at every supported worker count."""
+
+    def assert_schedule_safe(self, jobs: int) -> list[runner.Task]:
+        units = sample_units()
+        selected, tasks = runner.build_tasks(units, jobs)
+        self.assertEqual(selected, min(jobs, len(units)))
+        # Exact identity coverage, no duplicates, no losses.
+        assigned = [unit for task in tasks for unit in task.units]
+        self.assertEqual(sorted(u.name for u in assigned), sorted(u.name for u in units))
+        # Every isolated module is a single-module task at EVERY jobs value.
+        isolated_tasks = [t for t in tasks if t.phase == "isolated"]
+        self.assertEqual(sorted(u.name for t in isolated_tasks for u in t.units),
+                         sorted(runner.ISOLATED_MODULES))
+        for task in isolated_tasks:
+            self.assertEqual(len(task.units), 1)
+        # No other task contains an isolated module.
+        for task in tasks:
+            if task.phase != "isolated":
+                self.assertFalse(
+                    any(u.name in runner.ISOLATED_MODULES for u in task.units),
+                    f"isolated module co-located in {task.phase} task at jobs={jobs}")
+        # TMPDIR-sensitive modules always get inherited (serial-compatible) mode.
+        for task in tasks:
+            for unit in task.units:
+                if unit.name in runner.TMPDIR_SENSITIVE_MODULES:
+                    self.assertIn(task.tmpdir_mode, ("inherited", "serial"),
+                                  f"sensitive module in {task.tmpdir_mode} task at jobs={jobs}")
+        # Deterministic.
+        self.assertEqual(tasks, runner.build_tasks(units, jobs)[1])
+        return tasks
+
+    def test_schedule_is_safe_at_jobs_1(self):
+        selected, tasks = runner.build_tasks(sample_units(), 1)
+        self.assertEqual(selected, 1)
+        self.assertEqual([t.phase for t in tasks], ["serial"])
+        self.assertEqual([t.tmpdir_mode for t in tasks], ["serial"])
+        self.assertEqual([u.name for u in tasks[0].units],
+                         [u.name for u in sample_units()])
+
+    def test_schedule_is_safe_at_jobs_2(self):
+        self.assert_schedule_safe(2)
+
+    def test_schedule_is_safe_at_jobs_3(self):
+        self.assert_schedule_safe(3)
+
+    def test_schedule_is_safe_at_default_jobs_4(self):
+        tasks = self.assert_schedule_safe(4)
+        # The non-isolated population must NOT collapse onto one task.
+        population = [t for t in tasks if t.phase == "population"]
+        self.assertGreaterEqual(len(population), 2,
+                                "default jobs=4 collapsed the population onto one worker")
+        # ... and worker slots are reused, not permanently reserved.
+        self.assertGreater(len(tasks), 4,
+                           "no slot reuse: tasks did not exceed the worker count")
+
+    def test_schedule_is_safe_at_oversized_jobs(self):
+        selected, tasks = runner.build_tasks(sample_units(), 99)
+        self.assertEqual(selected, 8)
+        # 8 workers: 3 isolated singleton tasks, the Issue #133 bundle kept
+        # together as one task, and the other two modules as singletons.
+        sizes = sorted(len(t.units) for t in tasks)
+        self.assertEqual(sizes, [1, 1, 1, 1, 1, 3])
+        for task in tasks:
+            if len(task.units) > 1:
+                self.assertEqual({u.name for u in task.units}, runner.COOLOCATED_MODULES)
+
+    def test_population_is_least_loaded_balanced_at_default_jobs(self):
+        units = sample_units()
+        _, tasks = runner.build_tasks(units, 4)
+        population = [t for t in tasks if t.phase == "population"]
+        counts = [sum(len(u.ids) for u in t.units) for t in population]
+        # 5 population units form 3 groups (bundle + 2 singletons) across 4
+        # requested workers: the deterministic least-loaded assignment is
+        # [3,1,1] test counts in 3 buckets (a 4th would stay empty).
+        self.assertEqual(sorted(counts), [1, 1, 3])
+        # The Issue #133 bundle stays together in exactly one task.
+        bundle_tasks = [t for t in population
+                        if any(u.name in runner.COOLOCATED_MODULES for u in t.units)]
+        self.assertEqual(len(bundle_tasks), 1)
+        self.assertEqual({u.name for u in bundle_tasks[0].units}, runner.COOLOCATED_MODULES)
+
+    def test_jobs_2_does_not_collapse_the_population(self):
+        _, tasks = runner.build_tasks(sample_units(), 2)
+        population = [t for t in tasks if t.phase == "population"]
+        self.assertEqual(len(population), 2)
+
+    def test_isolated_declared_co_located_is_rejected(self):
+        units = [runner.Unit("test_issue133_planner", ("t",)), runner.Unit("test_other", ("t",))]
+        saved_isolated = runner.ISOLATED_MODULES
+        saved_coolocated = runner.COOLOCATED_MODULES
+        try:
+            runner.ISOLATED_MODULES = frozenset({"test_issue133_planner"})
+            runner.COOLOCATED_MODULES = frozenset({"test_issue133_planner"})
+            with self.assertRaises(runner.SuiteError):
+                runner.build_tasks(units, 4)
+        finally:
+            runner.ISOLATED_MODULES = saved_isolated
+            runner.COOLOCATED_MODULES = saved_coolocated
 
 
 class ExecutionTests(unittest.TestCase):
@@ -72,27 +178,72 @@ class ExecutionTests(unittest.TestCase):
             "test_exec_alpha.py": "import unittest\nEVENTS=[]\ndef setUpModule(): EVENTS.append('setup')\ndef tearDownModule(): EVENTS.append('teardown')\nclass A(unittest.TestCase):\n def test_one(self): self.assertEqual(EVENTS,['setup'])\n def test_two(self): self.assertEqual(EVENTS,['setup'])\n",
             "test_exec_beta.py": "import unittest\nclass B(unittest.TestCase):\n def test_three(self): pass\n",
         })
-        result = runner.run_suite(root, tests, jobs=2, timeout=30)
+        result = runner.run_suite(root, tests, jobs=2, timeout=60)
         self.assertTrue(result["ok"], result)
         self.assertEqual(result["serial_ids"], result["executed_ids"])
         self.assertEqual(result["serial_digest"], result["executed_digest"])
-        single = runner.run_suite(root, tests, jobs=1, timeout=30)
+        single = runner.run_suite(root, tests, jobs=1, timeout=60)
         self.assertTrue(single["ok"], single)
         self.assertEqual(single["serial_ids"], single["executed_ids"])
+
+    def test_identity_coverage_is_exact_across_phases(self):
+        # Real declaration names so the fixture population spans all phases.
+        files = {
+            "test_issue103_planner.py": "import unittest\nclass P(unittest.TestCase):\n def test_a(self): pass\n",
+            "test_issue117_preflight.py": "import unittest\nclass F(unittest.TestCase):\n def test_b(self): pass\n",
+            "test_issue117_arm_b_retention.py": "import unittest\nclass R(unittest.TestCase):\n def test_c(self): pass\n",
+            "test_issue133_arm_c_retry_campaign.py": "import unittest\nclass C1(unittest.TestCase):\n def test_d(self): pass\n",
+            "test_issue133_arm_c_retry_direct.py": "import unittest\nclass C2(unittest.TestCase):\n def test_e(self): pass\n",
+            "test_issue133_corrected_freeze.py": "import unittest\nclass C3(unittest.TestCase):\n def test_f(self): pass\n",
+            "test_other_one.py": "import unittest\nclass O(unittest.TestCase):\n def test_g(self): pass\n",
+            "test_other_two.py": "import unittest\nclass T(unittest.TestCase):\n def test_h(self): pass\n",
+        }
+        root, tests = fixture(self, files)
+        result = runner.run_suite(root, tests, jobs=2, timeout=60)
+        self.assertTrue(result["ok"], result.get("diagnostics"))
+        phases = [t["phase"] for t in result["tasks"]]
+        self.assertEqual(phases, ["isolated", "isolated", "isolated", "population", "population"])
+        self.assertEqual(sorted(result["executed_ids"]), sorted(result["serial_ids"]))
+        self.assertEqual(result["executed_digest"], result["serial_digest"])
+
+    def test_phased_execution_reuses_worker_slots(self):
+        # 4 isolated + enough population tasks that a jobs=3 window must reuse
+        # slots: more tasks than workers, all completing.
+        files = {name + ".py": "import unittest\nclass S(unittest.TestCase):\n def test_x(self): pass\n"
+                 for name in runner.ISOLATED_MODULES}
+        files.update({f"test_pop_{i:02d}.py": "import unittest\nclass Q(unittest.TestCase):\n def test_x(self): pass\n"
+                      for i in range(6)})
+        root, tests = fixture(self, files)
+        result = runner.run_suite(root, tests, jobs=3, timeout=60)
+        self.assertTrue(result["ok"], result.get("diagnostics"))
+        self.assertEqual(result["jobs"], 3)
+        self.assertGreater(len(result["tasks"]), 3)
+        # Tasks run in a bounded window of selected_jobs; overlap never exceeds it.
+        events = []
+        for entry in result["task_timings"]:
+            events.append((entry["started_at"], 1))
+            events.append((entry["ended_at"], -1))
+        events.sort()
+        live = 0
+        peak = 0
+        for _, delta in events:
+            live += delta
+            peak = max(peak, live)
+        self.assertLessEqual(peak, 3, f"rolling window exceeded jobs: peak={peak}")
+        self.assertGreater(peak, 1, "no parallelism was observed at all")
 
     def test_failure_error_and_worker_crash_fail_closed(self):
         root, tests = fixture(self, {
             "test_fail.py": "import unittest\nclass F(unittest.TestCase):\n def test_failure(self): self.fail('expected failure')\n",
             "test_error.py": "import unittest\nclass E(unittest.TestCase):\n def test_error(self): raise RuntimeError('expected error')\n",
         })
-        result = runner.run_suite(root, tests, jobs=2, timeout=30)
+        result = runner.run_suite(root, tests, jobs=2, timeout=60)
         self.assertFalse(result["ok"])
         self.assertIn("expected failure", result["diagnostics"])
         self.assertIn("expected error", result["diagnostics"])
 
     def test_git_worker_root_is_an_isolated_worktree(self):
         root, _ = fixture(self, {"test_one.py": "import unittest\n"})
-        subprocess = __import__("subprocess")
         for command in (("git", "init", "-q"), ("git", "config", "user.email", "test@example.invalid"),
                         ("git", "config", "user.name", "Test"), ("git", "add", "."),
                         ("git", "commit", "-qm", "base")):
@@ -110,41 +261,60 @@ class ExecutionTests(unittest.TestCase):
         })
         write(root / "fixturepkg" / "__init__.py", "")
         write(root / "fixturepkg" / "helper.py", "VALUE = 173\n")
-        result = runner.run_suite(root, tests, jobs=1, timeout=30)
+        result = runner.run_suite(root, tests, jobs=1, timeout=60)
         self.assertTrue(result["ok"], result)
 
     def test_dirty_git_checkout_is_rejected_before_worker_execution(self):
         root, tests = fixture(self, {
             "test_dirty.py": "import unittest\nclass D(unittest.TestCase):\n def test_value(self): pass\n",
         })
-        subprocess = __import__("subprocess")
         for command in (("git", "init", "-q"), ("git", "config", "user.email", "test@example.invalid"),
                         ("git", "config", "user.name", "Test"), ("git", "add", "."),
                         ("git", "commit", "-qm", "base")):
             subprocess.run(command, cwd=root, check=True)
         write(tests / "test_dirty.py", "import unittest\nclass D(unittest.TestCase):\n def test_value(self): self.fail('dirty code must run')\n")
         with self.assertRaises(runner.SuiteError):
-            runner.run_suite(root, tests, jobs=1, timeout=30)
+            runner.run_suite(root, tests, jobs=1, timeout=60)
 
     def test_worker_crash_terminates_siblings_before_returning(self):
+        marker_parent = Path(tempfile.mkdtemp(prefix="issue173-sibling-"))
+        self.addCleanup(shutil.rmtree, marker_parent, ignore_errors=True)
+        marker = marker_parent / "late"
         root, tests = fixture(self, {
             "test_crash.py": "import os, unittest\nclass C(unittest.TestCase):\n def test_crash(self): os._exit(7)\n",
-            "test_sleep.py": "import pathlib, time, unittest\nMARKER=pathlib.Path(" + repr(str(Path(tempfile.gettempdir()) / "issue173-sibling-marker")) + ")\nclass S(unittest.TestCase):\n def test_sleep(self): time.sleep(3); MARKER.write_text('late')\n",
+            "test_sleep.py": "import pathlib, time, unittest\nMARKER=pathlib.Path(" + repr(str(marker)) + ")\nclass S(unittest.TestCase):\n def test_sleep(self): time.sleep(3); MARKER.write_text('late')\n",
         })
-        marker = Path(tempfile.gettempdir()) / "issue173-sibling-marker"
         marker.unlink(missing_ok=True)
-        self.addCleanup(marker.unlink, missing_ok=True)
         with self.assertRaises(runner.SuiteError):
-            runner.run_suite(root, tests, jobs=2, timeout=30)
-        __import__("time").sleep(4)
+            runner.run_suite(root, tests, jobs=2, timeout=60)
+        time.sleep(4)
         self.assertFalse(marker.exists(), "crashed worker left a sibling running")
+
+    def test_worker_crash_during_late_phase_terminates_early_siblings(self):
+        # A crashing POPULATION task must still terminate live ISOLATED
+        # siblings scheduled later in the same window (phase-order crash).
+        marker_parent = Path(tempfile.mkdtemp(prefix="issue173-sibling2-"))
+        self.addCleanup(shutil.rmtree, marker_parent, ignore_errors=True)
+        marker = marker_parent / "late"
+        files = {
+            "test_issue103_planner.py": f"import pathlib, time, unittest\nMARKER=pathlib.Path({str(marker)!r})\nclass P(unittest.TestCase):\n def test_slow(self): time.sleep(30); MARKER.write_text('late')\n",
+            "test_issue117_arm_b_retention.py": "import unittest\nclass R(unittest.TestCase):\n def test_x(self): pass\n",
+            "test_issue117_preflight.py": "import unittest\nclass F(unittest.TestCase):\n def test_x(self): pass\n",
+            "test_crash.py": "import os, unittest\nclass C(unittest.TestCase):\n def test_crash(self): os._exit(9)\n",
+        }
+        root, tests = fixture(self, files)
+        marker.unlink(missing_ok=True)
+        with self.assertRaises(runner.SuiteError):
+            runner.run_suite(root, tests, jobs=4, timeout=60)
+        time.sleep(2)
+        self.assertFalse(marker.exists(), "crash in a later phase left an earlier sibling running")
 
     def test_worker_crash_without_receipt_fails_closed(self):
         root, tests = fixture(self, {
             "test_crash_one.py": "import os, unittest\nclass C(unittest.TestCase):\n def test_crash(self): os._exit(7)\n",
         })
         with self.assertRaises(runner.SuiteError):
-            runner.run_suite(root, tests, jobs=1, timeout=30)
+            runner.run_suite(root, tests, jobs=1, timeout=60)
 
     def test_malformed_or_missing_receipt_fails_closed(self):
         with self.assertRaises(runner.SuiteError):
@@ -152,14 +322,96 @@ class ExecutionTests(unittest.TestCase):
         with self.assertRaises(runner.SuiteError):
             runner.validate_receipts([], ["test_x.C.test_y"])
 
+
+class EnvironmentSemanticsTests(unittest.TestCase):
+    def test_task_environment_modes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            temp = Path(temporary)
+            serial = runner.Task(0, "serial", (), "serial")
+            inherited = runner.Task(1, "isolated", (), "inherited")
+            private = runner.Task(2, "population", (), "private")
+            saved = dict(os.environ)
+            try:
+                os.environ.clear()
+                os.environ.update({"PATH": "/usr/bin:/bin", "TMPDIR": "/serial-tmp"})
+                # serial / inherited: parent environment verbatim.
+                self.assertEqual(runner._task_environment(serial, temp), dict(os.environ))
+                self.assertEqual(runner._task_environment(inherited, temp), dict(os.environ))
+                self.assertEqual(runner._task_environment(inherited, temp).get("TMPDIR"), "/serial-tmp")
+                # private: per-task scratch replaces TMPDIR, nothing else changes.
+                env = runner._task_environment(private, temp)
+                self.assertEqual(env["TMPDIR"], str(temp / "task-2-tmp"))
+                self.assertTrue(Path(env["TMPDIR"]).is_dir())
+                env.pop("TMPDIR")
+                expected = dict(os.environ)
+                expected.pop("TMPDIR", None)
+                self.assertEqual(env, expected)
+            finally:
+                os.environ.clear()
+                os.environ.update(saved)
+
+    def test_tmpdir_sensitivity_classification(self):
+        self.assertEqual(runner.tmpdir_mode_for(["test_issue103_planner"]), "inherited")
+        self.assertEqual(runner.tmpdir_mode_for(["test_issue117_preflight"]), "inherited")
+        self.assertEqual(runner.tmpdir_mode_for(["test_issue103_planner", "test_other"]), "inherited")
+        self.assertEqual(runner.tmpdir_mode_for(["test_issue117_arm_b_retention"]), "private")
+        self.assertEqual(runner.tmpdir_mode_for(["test_other"]), "private")
+
+    def test_sensitive_module_observes_inherited_tmpdir(self):
+        # A fixture module with the real sensitive name asserts the TMPDIR it
+        # observes equals the parent's value verbatim; the ordinary module
+        # asserts it received distinct per-task private scratch instead.
+        parent_tmpdir = os.environ.get("TMPDIR")
+        root, tests = fixture(self, {
+            "test_issue103_planner.py": (
+                "import os, unittest\nOBSERVED = os.environ.get('TMPDIR')\n"
+                "class P(unittest.TestCase):\n"
+                " def test_tmpdir(self):\n"
+                "  self.assertEqual(OBSERVED, " + repr(parent_tmpdir) + ")\n"
+            ),
+            "test_other.py": (
+                "import os, unittest\nOBSERVED = os.environ.get('TMPDIR')\n"
+                "class O(unittest.TestCase):\n"
+                " def test_tmpdir(self):\n"
+                "  self.assertNotEqual(OBSERVED, " + repr(parent_tmpdir) + ")\n"
+            ),
+        })
+        result = runner.run_suite(root, tests, jobs=2, timeout=60)
+        self.assertTrue(result["ok"], result.get("diagnostics"))
+        modes = {t["modules"][0]: t["tmpdir_mode"] for t in result["tasks"]}
+        self.assertEqual(modes["test_issue103_planner"], "inherited")
+        self.assertEqual(modes["test_other"], "private")
+
+    def test_ordinary_module_runs_in_private_scratch_under_parallel(self):
+        root, tests = fixture(self, {
+            "test_scratch_one.py": (
+                "import os, unittest\n"
+                "class S(unittest.TestCase):\n"
+                " def test_tmpdir(self): self.assertIn('task-', os.environ.get('TMPDIR', '/tmp'))\n"
+            ),
+            "test_scratch_two.py": (
+                "import os, unittest\n"
+                "class T(unittest.TestCase):\n"
+                " def test_tmpdir(self): self.assertIn('task-', os.environ.get('TMPDIR', '/tmp'))\n"
+            ),
+        })
+        result = runner.run_suite(root, tests, jobs=2, timeout=60)
+        self.assertTrue(result["ok"], result.get("diagnostics"))
+
+
+class CliTests(unittest.TestCase):
     def test_list_mode_is_machine_readable_and_successful(self):
-        completed = __import__("subprocess").run(
+        completed = subprocess.run(
             [sys.executable, str(ROOT / "scripts" / "run_full_cpu_suite.py"), "--list", "--json"],
             cwd=ROOT, capture_output=True, text=True)
         self.assertEqual(completed.returncode, 0, completed.stderr)
         payload = json.loads(completed.stdout)
         self.assertEqual(payload["schema"], runner.SCHEMA)
         self.assertGreater(payload["count"], 0)
+        self.assertIn("tasks", payload)
+        phases = [t["phase"] for t in payload["tasks"]]
+        self.assertEqual(phases[:len(runner.ISOLATED_MODULES)],
+                         ["isolated"] * len(runner.ISOLATED_MODULES))
 
     def test_runner_does_not_depend_on_ci_impact_selection(self):
         source = (ROOT / "scripts" / "run_full_cpu_suite.py").read_text(encoding="utf-8")

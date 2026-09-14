@@ -3,9 +3,30 @@
 
 Issue #173.  Discovery is the authority: this runner performs the same
 ``unittest discover -s tests -p 'test_*.py'`` population discovery once, then
-partitions complete module suites across a bounded number of subprocesses.
+schedules complete module suites across a bounded number of subprocesses.
 Each worker returns the test IDs it actually started; the parent fails closed
 unless their union is exactly the discovered serial identity set.
+
+Scheduling contract (corrected per maintainer review of the first revision):
+
+* ``ISOLATED_MODULES`` tasks are always single-module process tasks.  They are
+  scheduled first and never share a worker process with another module, at any
+  supported ``--jobs`` value.  They do not permanently consume a worker slot:
+  execution uses a bounded rolling window of at most ``--jobs`` live worker
+  processes, and a slot is released as soon as its task terminates.
+* The remaining population (with the Issue #133 co-location bundle kept in one
+  task) is deterministically least-loaded partitioned across the requested
+  worker count, so the default ``--jobs 4`` spreads the population instead of
+  collapsing it onto one worker.
+* ``jobs=1`` retains ordinary serial semantics: one process, discovery order,
+  and the inherited environment.
+
+TMPDIR contract: a task whose modules intersect
+``TMPDIR_SENSITIVE_MODULES`` must observe the serial-compatible temporary
+directory environment, so it inherits the parent environment verbatim (no
+``TMPDIR`` override), exactly like raw ``unittest discover``.  ``jobs=1``
+inherits for every module.  Every other parallel task receives a private
+scratch ``TMPDIR`` so ordinary modules cannot collide on volatile paths.
 
 Use ``.venv/bin/python scripts/run_full_cpu_suite.py`` for the preferred local
 full CPU-suite command.  ``unittest discover`` remains useful for direct
@@ -38,14 +59,19 @@ COOLOCATED_MODULES = frozenset({
     "test_issue133_arm_c_retry_direct",
     "test_issue133_corrected_freeze",
 })
-# These modules need an exclusive worker under parallel execution. Arm-B copies
-# multi-GB retained evidence; Issue #103 asserts its serial /tmp-shaped volatile
-# paths. Keeping each isolated preserves both contracts.
+# These modules need an exclusive worker process under parallel execution.
+# Arm-B copies multi-GB retained evidence; Issue #103 and the Issue #117
+# preflight assert serial /tmp-shaped volatile paths.  Keeping each in its own
+# single-module process preserves both contracts without starving the
+# remaining population of worker slots.
 ISOLATED_MODULES = frozenset({
     "test_issue117_arm_b_retention",
     "test_issue103_planner",
     "test_issue117_preflight",
 })
+# Modules whose deterministic records encode /tmp-shaped volatile paths.  A
+# task containing any of them must run with the serial-compatible inherited
+# environment (no TMPDIR override), never with private scratch.
 TMPDIR_SENSITIVE_MODULES = frozenset({
     "test_issue103_planner",
     "test_issue117_preflight",
@@ -60,6 +86,16 @@ class SuiteError(RuntimeError):
 class Unit:
     name: str
     ids: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class Task:
+    """One worker-process assignment in the phased schedule."""
+
+    index: int
+    phase: str  # "serial" | "isolated" | "population"
+    units: tuple[Unit, ...]
+    tmpdir_mode: str  # "serial" | "inherited" | "private"
 
 
 def flatten(suite: unittest.TestSuite | unittest.TestCase) -> list[unittest.TestCase]:
@@ -128,29 +164,66 @@ def default_jobs(unit_count: int) -> int:
     return worker_count(min(DEFAULT_MAX_JOBS, os.cpu_count() or 1), unit_count)
 
 
-def partition_units(units: list[Unit], jobs: int) -> list[list[Unit]]:
-    """Deterministic least-test-count partition, preserving required bundle."""
-    jobs = worker_count(jobs, len(units))
-    unit_by_name = {unit.name: unit for unit in units}
-    required = [unit_by_name[name] for name in unit_by_name if name in COOLOCATED_MODULES]
-    if required and {unit.name for unit in required} != COOLOCATED_MODULES:
+def tmpdir_mode_for(module_names: Iterable[str]) -> str:
+    """Inherited (serial-compatible) environment for path-sensitive modules."""
+    return ("inherited" if TMPDIR_SENSITIVE_MODULES.intersection(module_names)
+            else "private")
+
+
+def co_location_groups(units: list[Unit]) -> list[list[Unit]]:
+    """Group population units, keeping the Issue #133 bundle in one group."""
+    bundle = [unit for unit in units if unit.name in COOLOCATED_MODULES]
+    if bundle and {unit.name for unit in bundle} != COOLOCATED_MODULES:
         raise SuiteError("required Issue #133 co-location bundle is incomplete")
-    isolated = [unit_by_name[name] for name in unit_by_name if name in ISOLATED_MODULES]
-    if jobs > len(isolated) and isolated:
-        remaining = [unit for unit in units if unit.name not in ISOLATED_MODULES]
-        buckets = partition_units(remaining, jobs - len(isolated))
-        return [[unit] for unit in isolated] + buckets
-    grouped: list[list[Unit]] = []
-    if required:
-        grouped.append(required)
-    grouped.extend([[unit] for unit in units if unit.name not in COOLOCATED_MODULES])
+    groups: list[list[Unit]] = []
+    for unit in units:
+        if unit.name in COOLOCATED_MODULES:
+            if unit is bundle[0]:
+                groups.append(bundle)
+            continue
+        groups.append([unit])
+    return groups
+
+
+def least_loaded_buckets(groups: list[list[Unit]], jobs: int) -> list[list[Unit]]:
+    """Deterministic least-test-count partition of groups onto jobs buckets."""
     buckets: list[list[Unit]] = [[] for _ in range(jobs)]
     loads = [0] * jobs
-    for group in grouped:
+    for group in groups:
         index = min(range(jobs), key=lambda item: (loads[item], item))
         buckets[index].extend(group)
         loads[index] += sum(len(unit.ids) for unit in group)
     return [bucket for bucket in buckets if bucket]
+
+
+def build_tasks(units: list[Unit], jobs: int) -> tuple[int, list[Task]]:
+    """Build the deterministic phased schedule for a requested worker count.
+
+    jobs=1 is the explicit serial contract: one task, discovery order,
+    inherited environment.  For jobs >= 2 every ISOLATED_MODULES unit becomes
+    a single-module task scheduled first (never sharing a process with another
+    module), and the remaining population is balanced across all requested
+    workers.  Task order is deterministic; the runtime rolling window reuses
+    worker slots as tasks terminate, so isolated tasks do not permanently
+    consume a slot.
+    """
+    if ISOLATED_MODULES & COOLOCATED_MODULES:
+        raise SuiteError("module declared both isolated and co-located")
+    jobs = worker_count(jobs, len(units))
+    if jobs == 1:
+        return 1, [Task(0, "serial", tuple(units), "serial")]
+    tasks: list[Task] = []
+    for unit in units:
+        if unit.name in ISOLATED_MODULES:
+            tasks.append(Task(len(tasks), "isolated", (unit,),
+                              tmpdir_mode_for((unit.name,))))
+    population = [unit for unit in units if unit.name not in ISOLATED_MODULES]
+    groups = co_location_groups(population)
+    if groups:
+        for bucket in least_loaded_buckets(groups, min(jobs, len(groups))):
+            tasks.append(Task(len(tasks), "population", tuple(bucket),
+                              tmpdir_mode_for(unit.name for unit in bucket)))
+    return jobs, tasks
 
 
 class RecordingResult(unittest.TextTestResult):
@@ -228,14 +301,12 @@ def ensure_clean_git_worktree(root: Path) -> None:
         raise SuiteError("refusing dirty Git worktree: commit or stash before the isolated full suite")
 
 
-def stop_workers(workers: list[tuple]) -> None:
-    """Terminate, reap, then force-kill every started worker before cleanup."""
-    for worker in workers:
-        process = worker[0]
+def stop_workers(processes: list[subprocess.Popen]) -> None:
+    """Terminate, reap, then force-kill every live worker before cleanup."""
+    for process in processes:
         if process.poll() is None:
             process.terminate()
-    for worker in workers:
-        process = worker[0]
+    for process in processes:
         try:
             process.communicate(timeout=10)
         except subprocess.TimeoutExpired:
@@ -262,99 +333,162 @@ def remove_worker_root(root: Path, worker_root: Path) -> None:
     if worker_root == root:
         return
     removed = subprocess.run(["git", "-C", str(root), "worktree", "remove", "--force",
-                               str(worker_root)], capture_output=True, text=True)
+                              str(worker_root)], capture_output=True, text=True)
     if removed.returncode != 0:
         raise SuiteError(f"cannot remove isolated worker worktree: {removed.stderr.strip()}")
 
 
+def _task_environment(task: Task, temporary: Path) -> dict[str, str]:
+    """Build the worker environment honoring the TMPDIR contract.
+
+    "serial" (jobs=1) and "inherited" (TMPDIR-sensitive) tasks receive the
+    parent environment verbatim, which is exactly what raw serial
+    ``unittest discover`` observes.  Only "private" parallel tasks get a
+    per-task scratch TMPDIR.
+    """
+    environment = dict(os.environ)
+    if task.tmpdir_mode == "private":
+        worker_tmp = temporary / f"task-{task.index}-tmp"
+        worker_tmp.mkdir(parents=True, exist_ok=True)
+        environment["TMPDIR"] = str(worker_tmp)
+    return environment
+
+
 def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | None = None,
-              timeout: float = 1800.0) -> dict:
+              timeout: float = 1800.0, retain_dir: Path | None = None) -> dict:
+    """Execute the phased schedule through a rolling window of bounded workers."""
     root, tests_dir = Path(root).resolve(), Path(tests_dir or Path(root) / "tests").resolve()
     ensure_clean_git_worktree(root)
     units = discover_units(root, tests_dir)
     serial_ids = ids_for_units(units)
-    selected_jobs = default_jobs(len(units)) if jobs is None else worker_count(jobs, len(units))
-    buckets = partition_units(units, selected_jobs)
+    requested = default_jobs(len(units)) if jobs is None else jobs
+    selected_jobs, tasks = build_tasks(units, requested)
     diagnostics: list[str] = []
     receipts: list[dict] = []
+    timings: list[dict] = []
     workspace_parent = Path(os.environ.get(
         "INFER_SWARM_SUITE_TMPDIR", str(Path.home() / ".cache"))).resolve()
     workspace_parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix="parallel-full-cpu-suite-", dir=workspace_parent) as temporary:
-        temp = Path(temporary)
-        workers: list[tuple[subprocess.Popen, Path, Path]] = []
+    if retain_dir is not None:
+        retain_dir = Path(retain_dir).resolve()
+        if retain_dir.exists() and any(retain_dir.iterdir()):
+            raise SuiteError(f"retain directory is not empty: {retain_dir}")
+        retain_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="parallel-full-cpu-suite-", dir=workspace_parent) as temporary_name:
+        temporary = Path(temporary_name)
+        artifacts = retain_dir if retain_dir is not None else temporary
+        pending = list(tasks)
+        running: list[tuple[Task, subprocess.Popen, Path, Path, float]] = []
+        outstanding_roots: list[Path] = []
         try:
-            for index, bucket in enumerate(buckets):
-                worker_root = prepare_worker_root(root, temp, index)
-                receipt = temp / f"worker-{index}.json"
-                assigned = ids_for_units(bucket)
-                worker_script = worker_root / "scripts" / Path(__file__).name
-                if not worker_script.is_file():
-                    worker_script = Path(__file__).resolve()
-                modules_path = temp / f"worker-{index}-modules.json"
-                expected_path = temp / f"worker-{index}-expected.json"
-                modules_path.write_text(json.dumps([unit.name for unit in bucket]), encoding="utf-8")
-                expected_path.write_text(json.dumps(assigned), encoding="utf-8")
-                command = [sys.executable, str(worker_script), "--worker",
-                           "--root", str(worker_root), "--tests-dir", str(worker_root / "tests"),
-                           "--modules-file", str(modules_path),
-                           "--expected-ids-file", str(expected_path), "--receipt", str(receipt)]
-                worker_tmp = temp / f"worker-{index}-tmp"
-                worker_tmp.mkdir()
-                environment = os.environ.copy()
-                # All ordinary parallel workers get a private home-filesystem
-                # scratch directory. The one path-sensitive module retains the
-                # serial command's /tmp behavior; jobs=1 remains fully serial.
-                if len(buckets) > 1 and {unit.name for unit in bucket} != TMPDIR_SENSITIVE_MODULES:
-                    environment["TMPDIR"] = str(worker_tmp)
-                workers.append((subprocess.Popen(command, cwd=worker_root, text=True,
-                                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                                  env=environment),
-                                receipt, worker_root))
-            for index, (process, receipt, _) in enumerate(workers):
-                try:
-                    stdout, stderr = process.communicate(timeout=timeout)
-                except subprocess.TimeoutExpired:
-                    process.terminate()
-                    stdout, stderr = process.communicate(timeout=10)
-                    raise SuiteError(f"worker {index} timed out after {timeout} seconds")
+            while pending or running:
+                # Fill the rolling window: at most selected_jobs live workers,
+                # isolated tasks first, then population buckets in order.
+                while pending and len(running) < selected_jobs:
+                    task = pending.pop(0)
+                    worker_root = prepare_worker_root(root, temporary, task.index)
+                    outstanding_roots.append(worker_root)
+                    modules_path = artifacts / f"task-{task.index}-modules.json"
+                    expected_path = artifacts / f"task-{task.index}-expected.json"
+                    receipt = artifacts / f"task-{task.index}.json"
+                    modules_path.write_text(
+                        json.dumps([unit.name for unit in task.units]), encoding="utf-8")
+                    expected_path.write_text(
+                        json.dumps(ids_for_units(task.units)), encoding="utf-8")
+                    worker_script = worker_root / "scripts" / Path(__file__).name
+                    if not worker_script.is_file():
+                        worker_script = Path(__file__).resolve()
+                    command = [sys.executable, str(worker_script), "--worker",
+                               "--root", str(worker_root), "--tests-dir", str(worker_root / "tests"),
+                               "--modules-file", str(modules_path),
+                               "--expected-ids-file", str(expected_path), "--receipt", str(receipt)]
+                    process = subprocess.Popen(command, cwd=worker_root, text=True,
+                                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                               env=_task_environment(task, temporary))
+                    running.append((task, process, receipt, worker_root, time.monotonic()))
+                # Reap whichever live worker finishes first: a crashing task is
+                # detected promptly regardless of phase order, and its slot
+                # returns to the window for the next pending task.
+                finished = None
+                while finished is None and running:
+                    now = time.monotonic()
+                    for slot, entry in enumerate(running):
+                        if entry[1].poll() is not None:
+                            finished = slot
+                            break
+                        if now - entry[4] > timeout:
+                            entry[1].terminate()
+                            try:
+                                entry[1].communicate(timeout=10)
+                            except subprocess.TimeoutExpired:
+                                entry[1].kill()
+                                entry[1].communicate()
+                            raise SuiteError(
+                                f"task {entry[0].index} ({entry[0].phase}) timed out "
+                                f"after {timeout} seconds")
+                    time.sleep(0.05)
+                if finished is None:
+                    continue
+                task, process, receipt, worker_root, started_at = running.pop(finished)
+                stdout, stderr = process.communicate()
+                ended_at = time.monotonic()
+                remove_worker_root(root, worker_root)
+                outstanding_roots.remove(worker_root)
                 if process.returncode:
-                    diagnostics.append(f"worker {index} exit={process.returncode}\n{stdout}\n{stderr}")
+                    diagnostics.append(
+                        f"task {task.index} ({task.phase}) exit={process.returncode}\n{stdout}\n{stderr}")
                 if not receipt.is_file():
-                    raise SuiteError(f"worker {index} exited without a receipt")
+                    raise SuiteError(f"task {task.index} ({task.phase}) exited without a receipt")
                 try:
                     receipts.append(json.loads(receipt.read_text(encoding="utf-8")))
                 except (OSError, json.JSONDecodeError) as error:
-                    raise SuiteError(f"worker {index} receipt is malformed: {error}") from error
+                    raise SuiteError(f"task {task.index} receipt is malformed: {error}") from error
+                timings.append({
+                    "task": task.index, "phase": task.phase,
+                    "modules": [unit.name for unit in task.units],
+                    "tmpdir_mode": task.tmpdir_mode,
+                    "started_at": started_at, "ended_at": ended_at,
+                    "elapsed_seconds": receipts[-1].get("elapsed_seconds"),
+                    "tests_run": receipts[-1].get("tests_run"),
+                })
         except BaseException as error:
-            stop_workers(workers)
+            stop_workers([entry[1] for entry in running])
+            for worker_root in list(outstanding_roots):
+                remove_worker_root(root, worker_root)
             if isinstance(error, KeyboardInterrupt):
                 raise SuiteError("interrupted: all worker processes terminated") from error
             raise
-        finally:
-            for _, _, worker_root in workers:
-                remove_worker_root(root, worker_root)
     try:
         executed_ids, executed_digest = validate_receipts(receipts, serial_ids)
     except SuiteError as error:
         diagnostics.append(str(error))
-        return {"ok": False, "serial_ids": serial_ids, "executed_ids": [],
-                "serial_digest": identity_digest(sorted(serial_ids)), "executed_digest": None,
-                "count": len(serial_ids), "diagnostics": "\n".join(diagnostics)}
-    return {"ok": not diagnostics, "serial_ids": serial_ids, "executed_ids": executed_ids,
-            "serial_digest": identity_digest(sorted(serial_ids)), "executed_digest": executed_digest,
-            "count": len(serial_ids), "jobs": len(buckets), "diagnostics": "\n".join(diagnostics)}
+        return _result(False, serial_ids, [], selected_jobs, tasks, timings, diagnostics)
+    return _result(not diagnostics, serial_ids, executed_ids, selected_jobs, tasks,
+                   timings, diagnostics, executed_digest)
+
+
+def _result(ok: bool, serial_ids: list[str], executed_ids: list[str], jobs: int,
+            tasks: list[Task], timings: list[dict], diagnostics: list[str],
+            executed_digest: str | None = None) -> dict:
+    return {"ok": ok, "serial_ids": serial_ids, "executed_ids": executed_ids,
+            "serial_digest": identity_digest(sorted(serial_ids)),
+            "executed_digest": executed_digest, "count": len(serial_ids), "jobs": jobs,
+            "tasks": [{"index": task.index, "phase": task.phase, "tmpdir_mode": task.tmpdir_mode,
+                       "modules": [unit.name for unit in task.units]} for task in tasks],
+            "task_timings": timings, "diagnostics": "\n".join(diagnostics)}
 
 
 def plan(root: Path, tests_dir: Path, jobs: int | None) -> dict:
     units = discover_units(root, tests_dir)
-    selected_jobs = default_jobs(len(units)) if jobs is None else worker_count(jobs, len(units))
-    buckets = partition_units(units, selected_jobs)
+    selected_jobs, tasks = build_tasks(units, default_jobs(len(units)) if jobs is None else jobs)
     ids = ids_for_units(units)
     return {"schema": SCHEMA, "count": len(ids), "identity_digest": identity_digest(sorted(ids)),
-            "module_count": len(units), "jobs": len(buckets),
+            "module_count": len(units), "jobs": selected_jobs,
             "co_located_modules": sorted(COOLOCATED_MODULES),
-            "workers": [[unit.name for unit in bucket] for bucket in buckets]}
+            "isolated_modules": sorted(ISOLATED_MODULES),
+            "tmpdir_sensitive_modules": sorted(TMPDIR_SENSITIVE_MODULES),
+            "tasks": [{"index": task.index, "phase": task.phase, "tmpdir_mode": task.tmpdir_mode,
+                       "modules": [unit.name for unit in task.units]} for task in tasks]}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -363,6 +497,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--timeout", type=float, default=1800.0)
     parser.add_argument("--list", "--plan", action="store_true", dest="list_only")
     parser.add_argument("--json", action="store_true")
+    parser.add_argument("--retain-dir", type=Path,
+                        help="keep per-task assignment/receipt files and summary.json here")
     parser.add_argument("--worker", action="store_true")
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--tests-dir", type=Path)
@@ -384,7 +520,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.list_only:
             payload = plan(args.root, tests_dir, args.jobs)
         else:
-            payload = run_suite(args.root, tests_dir, jobs=args.jobs, timeout=args.timeout)
+            payload = run_suite(args.root, tests_dir, jobs=args.jobs, timeout=args.timeout,
+                                retain_dir=args.retain_dir)
     except (SuiteError, ValueError) as error:
         print(f"parallel-full-cpu-suite: FAIL {error}", file=sys.stderr)
         return 1
@@ -392,14 +529,19 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(payload, sort_keys=True))
     elif args.list_only:
         print(f"discovered {payload['count']} tests in {payload['module_count']} modules; "
-              f"identity digest {payload['identity_digest']}; {payload['jobs']} workers")
+              f"identity digest {payload['identity_digest']}; {payload['jobs']} workers; "
+              f"{len(payload['tasks'])} tasks")
     elif payload["ok"]:
         print(f"parallel-full-cpu-suite: PASS {payload['count']} tests; "
-              f"identity digest {payload['serial_digest']}; {payload['jobs']} workers")
+              f"identity digest {payload['serial_digest']}; {payload['jobs']} workers; "
+              f"{len(payload['tasks'])} tasks")
     else:
         print("parallel-full-cpu-suite: FAIL\n" + payload["diagnostics"], file=sys.stderr)
     if args.list_only:
         return 0
+    if args.retain_dir is not None:
+        summary = Path(args.retain_dir).resolve() / "summary.json"
+        _atomic_json(summary, payload)
     return 0 if payload["ok"] else 1
 
 
