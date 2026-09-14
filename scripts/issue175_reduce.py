@@ -141,6 +141,27 @@ def gpu_fence(gpus: list[dict], frozen: dict, host: str | None = None) -> dict:
             "passed": not problems}
 
 
+def fresh_identity(post: dict, killed_pids: list[int]) -> dict:
+    """Prove the post-restart record carries FRESH execution
+    processes: at least one matching process, every pid outside the
+    pre-restart kill list, and every starttime present (so identity is
+    bound, not just pid)."""
+    problems: list[str] = []
+    procs = post.get("processes", [])
+    if not procs:
+        problems.append("no post-restart execution processes recorded")
+    for proc in procs:
+        if proc.get("pid") in killed_pids:
+            problems.append(
+                f"post-restart pid {proc['pid']} is a killed pid")
+        if not proc.get("starttime"):
+            problems.append(
+                f"post-restart pid {proc.get('pid')} lacks starttime")
+    return {"problems": problems,
+            "fresh_process_count": len(procs),
+            "passed": not problems}
+
+
 # ------------------------------------------------------------------
 # 2. strace transfer classification
 # ------------------------------------------------------------------

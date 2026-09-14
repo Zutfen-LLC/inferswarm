@@ -1,0 +1,25 @@
+{
+  "counters": {
+    "cache_weight_opens": {},
+    "connects": [
+      "306460 connect(3, {sa_family=AF_INET, sin_port=htons(18486), sin_addr=inet_addr(\"10.0.0.141\")}, 16) = -1 EINPROGRESS (Operation now in progress)",
+      "306460 connect(5, {sa_family=AF_UNIX, sun_path=\"/var/run/nscd/socket\"}, 110) = -1 ENOENT (No such file or directory)",
+      "306460 connect(5, {sa_family=AF_UNIX, sun_path=\"/var/run/nscd/socket\"}, 110) = -1 ENOENT (No such file or directory)"
+    ],
+    "source_weight_reads": [],
+    "unexpected_weight_reads": []
+  },
+  "derived": {
+    "source_model_weight_bytes_received": 0,
+    "unexpected_model_source_reads": 0,
+    "unexpected_rematerialization_sources": 0,
+    "verified_cache_hit_bytes": 0
+  },
+  "passed": true,
+  "problems": [],
+  "restart": 1,
+  "schema": "inferswarm.issue175.arm-d.strace-reduction/1",
+  "side": "coordinator",
+  "source_trace": "strace-raw/strace-1-coordinator.strace",
+  "source_trace_sha256": "c2312a7916e23639f12ed98ad6a540a60b932a6c37c164afb4e94096e5e8616a"
+}

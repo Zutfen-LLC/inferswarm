@@ -44,6 +44,11 @@ ALIAS_BYTES = {
     ".stage-3/armb-participant.safetensors": 9292241800,
 }
 
+#: the CPU-only Coordinator must open ZERO model-weight bytes; the map
+#: deliberately contains no cache aliases so ANY .safetensors open on
+#: the coordinator side classifies as an unexpected weight source
+COORDINATOR_WEIGHT_MAP: dict[str, int] = {}
+
 #: frozen kill lists (from the retained launch/death logs; PIDs of the
 #: processes each restart terminated, per host)
 KILL_LISTS = {
@@ -84,12 +89,15 @@ def main() -> int:
 
     for restart in (1, 2):
         # --- strace parts ---
-        for side, trace in (("node", f"strace-{restart}-node-agent"
-                                        ".strace"),
-                            ("last", f"strace-{restart}-last-stage"
-                                     ".strace")):
+        for side, trace, byte_map in (
+                ("node", f"strace-{restart}-node-agent.strace",
+                 ALIAS_BYTES),
+                ("last", f"strace-{restart}-last-stage.strace",
+                 ALIAS_BYTES),
+                ("coordinator", f"strace-{restart}-coordinator.strace",
+                 COORDINATOR_WEIGHT_MAP)):
             lines = (raw / trace).read_text(errors="replace").splitlines()
-            reduction = R.reduce_strace(lines, ALIAS_BYTES)
+            reduction = R.reduce_strace(lines, byte_map)
             rec = {"schema": "inferswarm.issue175.arm-d."
                              "strace-reduction/1",
                    "restart": restart, "side": side,
@@ -97,6 +105,22 @@ def main() -> int:
                    "source_trace_sha256": sha256_file(raw / trace),
                    **reduction}
             write_canonical(parts / f"strace-{restart}-{side}.json", rec)
+
+        # --- fresh-identity fence part: the post-restart inventory
+        # must show NEW execution processes (pids outside the kill
+        # list, distinct starttimes) holding the service ports ---
+        for host in ("00", "01", "03"):
+            post = json.loads(
+                (inv / f"inventory-{host}-post{restart}.json").read_text())
+            fresh = R.fresh_identity(post, KILL_LISTS[restart][host])
+            rec = {"schema": "inferswarm.issue175.arm-d.fresh-identity/1",
+                   "campaign_id": P.CAMPAIGN_ID,
+                   "restart": restart, "host": f"inferswarm{host}",
+                   "post_record": f"inventories/inventory-{host}-"
+                                  f"post{restart}.json",
+                   **fresh}
+            write_canonical(
+                parts / f"fresh-{restart}-{host}.json", rec)
 
         # --- fence parts ---
         for host in ("00", "01", "03"):

@@ -126,6 +126,39 @@ def main() -> int:
             equality=parts.get(f"equality-{restart}"),
             label=f"restart-{restart}")
 
+        # fresh post-restart process identity: every host's post
+        # inventory must carry new processes outside the kill list
+        for host in ("00", "01", "03"):
+            fresh = parts.get(f"fresh-{restart}-{host}", {})
+            if not fresh:
+                restarts[restart]["problems"].append(
+                    f"[restart-{restart}] no fresh-identity part for "
+                    f"inferswarm{host}")
+            elif not fresh.get("passed"):
+                restarts[restart]["problems"].append(
+                    f"[restart-{restart}] inferswarm{host} fresh "
+                    f"identity: {fresh.get('problems')}")
+        restarts[restart]["passed"] = (
+            not restarts[restart]["problems"])
+
+        # coordinator zero-derivation: the coordinator's own trace
+        # reduction must exist and carry ZERO weight bytes (the map
+        # has no aliases, so any safetensors open fails the part)
+        coord = parts.get(f"strace-{restart}-coordinator", {})
+        if not coord:
+            restarts[restart]["problems"].append(
+                f"[restart-{restart}] no coordinator strace reduction")
+        else:
+            derived = coord.get("derived", {})
+            for counter in ("source_model_weight_bytes_received",
+                            "unexpected_rematerialization_sources"):
+                if int(derived.get(counter, -1) or 0) != 0:
+                    restarts[restart]["problems"].append(
+                        f"[restart-{restart}] coordinator {counter} "
+                        f"= {derived.get(counter)}")
+        restarts[restart]["passed"] = (
+            not restarts[restart]["problems"])
+
     zero = R.aggregate_zero_invariants({
         k: v for k, v in parts.items()
         if k.startswith(("strace-", "equality-", "cache-"))})

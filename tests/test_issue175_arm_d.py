@@ -296,6 +296,29 @@ class FenceTests(unittest.TestCase):
         fence = R.gpu_fence(gpus, P.FROZEN_GEOMETRY_UUIDS)
         self.assertFalse(fence["passed"])
 
+    def test_fresh_identity_rejects_killed_pid(self):
+        post = make_fence_record("post", [fake_proc(100, "1111")])
+        fresh = R.fresh_identity(post, killed_pids=[100])
+        self.assertFalse(fresh["passed"])
+
+    def test_fresh_identity_rejects_missing_starttime(self):
+        proc = fake_proc(200, "9999")
+        proc["starttime"] = None
+        fresh = R.fresh_identity(make_fence_record("post", [proc]),
+                                 killed_pids=[100])
+        self.assertFalse(fresh["passed"])
+
+    def test_fresh_identity_rejects_empty(self):
+        fresh = R.fresh_identity(make_fence_record("post", []),
+                                 killed_pids=[100])
+        self.assertFalse(fresh["passed"])
+
+    def test_coordinator_weight_map_has_no_aliases(self):
+        # the coordinator classification map must stay empty so any
+        # safetensors open on the coordinator is an unexpected source
+        import issue175_assemble as A
+        self.assertEqual(A.COORDINATOR_WEIGHT_MAP, {})
+
     def test_gpu_fence_accepts_idle(self):
         gpus = []
         for host, wanted in P.FROZEN_GEOMETRY_UUIDS.items():
