@@ -236,33 +236,59 @@ def reduce_strace(lines: list[str], file_sizes: dict[str, int]) -> dict:
 # ------------------------------------------------------------------
 # 3. cache-hit / materialization accounting
 # ------------------------------------------------------------------
-def reduce_cache_hits(stage_ready: dict) -> dict:
-    """Derive per-participant cache-hit accounting from a chain
-    realization observation / last-stage ready report.
+def reduce_cache_hits(strace_reductions: list[dict],
+                      ready_reports: list[dict]) -> dict:
+    """Derive per-participant cache-hit accounting from RETAINED bytes
+    only: the per-side strace reductions (verified cache bytes, zero
+    reacquisition derived from classified opens) cross-checked against
+    the materialization witnesses' fetched_bytes. Every number is
+    derived; no constant appears in a check position.
 
-    Requires fetched_bytes == checkpoint_bytes_selected (everything
-    planned came from the single local participant shard), the
-    participant digest to be the verified one, and the byte counts to
-    equal the accepted #172 values (identical shard, identical plan).
+    ``strace_reductions``: outputs of reduce_strace for one restart
+    window (node side + last side). ``ready_reports``: the retained
+    last-stage ready reports (fetched_bytes) for the same window.
     """
     problems: list[str] = []
+    if not strace_reductions:
+        problems.append("no strace reductions retained")
+        return {"problems": problems, "per_participant": {},
+                "passed": False}
     per_participant = {}
-    for rel, want in P.CACHE_ARTIFACTS.get("all", {}).items():
-        pass  # filled per host below
-    stages = stage_ready.get("stages") or []
-    if not stages:
-        problems.append("no stage realization records")
-    for stage in stages:
-        role = stage.get("role")
-        fetched = stage.get("fetched_bytes")
-        if fetched is None:
-            problems.append(f"stage {role} missing fetched_bytes")
+    for reduction in strace_reductions:
+        derived = reduction.get("derived") or {}
+        if not derived:
+            problems.append("strace reduction lacks derived counters")
             continue
-        per_participant[role] = {
-            "fetched_bytes": fetched,
-            "cache_hit_bytes": fetched,
-            "reacquired_model_weight_bytes": 0,
+        # reacquisition derived by the transfer classifier, never a
+        # constant here
+        per_participant[reduction.get("side", "?")] = {
+            "cache_hit_bytes": int(
+                derived.get("verified_cache_hit_bytes", 0) or 0),
+            "reacquired_model_weight_bytes": int(
+                derived.get("source_model_weight_bytes_received", 0)
+                or 0),
+            "unexpected_rematerialization_sources": int(
+                derived.get("unexpected_rematerialization_sources", 0)
+                or 0),
         }
+    # cross-check against the materialization witnesses: the last
+    # side's strace-bound cache bytes are WHOLE-FILE bounds (an
+    # open+mmap makes the full shard available); the witness counts
+    # planned TENSOR bytes only. The witness must not exceed the
+    # strace bound, and the difference must stay within a plausible
+    # safetensors header + metadata envelope (bound: 1 MiB).
+    HEADER_ENVELOPE = 1 << 20
+    for report in ready_reports:
+        runtime = report.get("runtime") or {}
+        fetched = runtime.get("fetched_bytes")
+        last = per_participant.get("last")
+        if fetched is not None and last:
+            bound = last["cache_hit_bytes"]
+            if not (bound - HEADER_ENVELOPE <= int(fetched) <= bound):
+                lo = bound - HEADER_ENVELOPE
+                problems.append(
+                    f"witness fetched_bytes {fetched} outside the "
+                    f"strace-derived cache bound [{lo}, {bound}]")
     return {"problems": problems, "per_participant": per_participant,
             "passed": not problems}
 

@@ -131,9 +131,47 @@ class CacheIdentityTests(unittest.TestCase):
         self.assertNotEqual(row["sha256"], row["expected_sha256"])
 
     def test_missing_cache_object_cannot_be_labeled_hit(self):
-        # reduce_cache_hits with a missing stage record fails closed
-        reduction = R.reduce_cache_hits({"stages": []})
+        # reduce_cache_hits with no retained strace reductions fails
+        # closed (a missing cache object cannot be mislabeled a hit)
+        reduction = R.reduce_cache_hits([], [])
         self.assertFalse(reduction["passed"])
+
+    def test_cache_hits_derived_from_strace_not_constants(self):
+        # cache accounting derives from the transfer classifier's
+        # derived counters; a nonzero reacquisition propagates
+        good = {"side": "node", "derived": {
+            "verified_cache_hit_bytes": 100,
+            "source_model_weight_bytes_received": 0,
+            "unexpected_rematerialization_sources": 0}}
+        bad = {"side": "node", "derived": {
+            "verified_cache_hit_bytes": 100,
+            "source_model_weight_bytes_received": 5,
+            "unexpected_rematerialization_sources": 1}}
+        ok_red = R.reduce_cache_hits([good], [])
+        bad_red = R.reduce_cache_hits([bad], [])
+        self.assertEqual(ok_red["per_participant"]["node"][
+            "reacquired_model_weight_bytes"], 0)
+        self.assertEqual(bad_red["per_participant"]["node"][
+            "reacquired_model_weight_bytes"], 5)
+        # witness cross-check: fetched_bytes must match the derived
+        # cache bytes
+        witness = {"runtime": {"fetched_bytes": 999}}
+        mismatch = R.reduce_cache_hits(
+            [{"side": "last", "derived": {
+                "verified_cache_hit_bytes": 100,
+                "source_model_weight_bytes_received": 0,
+                "unexpected_rematerialization_sources": 0}}],
+            [witness])
+        self.assertFalse(mismatch["passed"])
+        # a witness inside the whole-file bound (tensor bytes plus a
+        # small header envelope) passes the cross-check
+        in_range = R.reduce_cache_hits(
+            [{"side": "last", "derived": {
+                "verified_cache_hit_bytes": 9292241800,
+                "source_model_weight_bytes_received": 0,
+                "unexpected_rematerialization_sources": 0}}],
+            [{"runtime": {"fetched_bytes": 9292212768}}])
+        self.assertTrue(in_range["passed"])
 
     def test_corrupted_cache_bytes_rejected_by_inventory_semantics(self):
         # the inventory builder records verified=digest==expected;
