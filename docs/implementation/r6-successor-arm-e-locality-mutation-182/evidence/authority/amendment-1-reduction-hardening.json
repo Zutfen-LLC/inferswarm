@@ -1,0 +1,79 @@
+{
+  "amendment_id": "amendment-1-reduction-hardening",
+  "amendments": [
+    {
+      "amendment_id": "amendment-2-terminal-rederivation",
+      "authority_json_regenerated": false,
+      "correction": "The terminal now re-derives the ENTIRE comparison document from retained bytes (deterministic rebuild via issue182_compare.build_comparison_document over pinned Arm-B inputs + frozen authority + retained observation records) and byte-compares it (OBS-COMPARISON-REDERIVATION-MISMATCH); GPU memory_used is re-derived from the retained receipt stdout (OBS-GPU-TELEMETRY-DRIFT); byte preservation is re-derived from the before/after tree digests; comparison identity fields are bound; collector identity is bound to the frozen producer hash; a manifest verification test makes MANIFEST.sha256 tamper-evident in CI.",
+      "execution_bearing_collector_unchanged": true,
+      "producer_hash_transitions": {
+        "scripts/issue182_campaign_pins.py": {
+          "corrected": "d641b0ec67cc37dcbd4372017d078ccde238c3ae3be4b7b82866f37f619679f5",
+          "delta": "round-2 STOP-rule name additions"
+        },
+        "scripts/issue182_compare.py": {
+          "corrected": "a9cfba69a85fe4d1d61d4ff96d2aa8187be8de67766cb60187df6b419a11a577",
+          "delta": "main() refactored into reusable build_comparison_document() consumed by the terminal re-derivation"
+        },
+        "scripts/issue182_terminal.py": {
+          "corrected": "88e01cd5d1f94a85e4ba0fc85f0e83d717271d17172be0c3df1dbf549009323f",
+          "delta": "full comparison re-derivation byte-compare; GPU-used vs stdout; preservation re-derivation; comparison/collector identity binding"
+        }
+      },
+      "reason": "Exact-head adversarial review round 2 (both lanes NO-GO with demonstrated holes at 9bc30b1): the terminal re-derived identity but still trusted authored derived content \u2014 comparison rows (fabricated economics passed as P0-1/P1-1; jointly forged gate ledgers passed as P0-2), GPU memory_used rows vs the retained nvidia-smi stdout (P1-2), byte_preservation boolean vs retained tree digests (P2), and MANIFEST.sha256 had no verifier (P2-3).",
+      "rerun_required": false
+    },
+    {
+      "amendment_id": "amendment-3-fence-manifest-hardening",
+      "authority_json_regenerated": false,
+      "correction": "The terminal re-derives the execution-bearing process list from the retained ps receipt stdout using the collector's exact pattern semantics and fails closed on divergence or on a re-derived live process; fence.ports is re-derived symmetrically (cosmetic, not acceptance-bearing); the terminal is itself a MANIFEST.sha256 consumer (OBS-MANIFEST-MISMATCH); a BLOCKED terminal nulls comparison-derived magnitudes instead of embedding possibly forged numbers.",
+      "execution_bearing_collector_unchanged": true,
+      "new_stop_rules": [
+        "OBS-FENCE-DERIVATION-MISMATCH",
+        "OBS-MANIFEST-MISMATCH"
+      ],
+      "producer_hash_transitions": {
+        "scripts/issue182_campaign_pins.py": {
+          "corrected": "6acf7fdf73a9cc6735a65549966c6539b08a90605b71c4f13120959a4c16be22"
+        },
+        "scripts/issue182_terminal.py": {
+          "corrected": "d00e3416cdd04707f3aa2f16959584ab43fdba955df6aa105526e03a859d4b6d"
+        }
+      },
+      "reason": "Exact-head adversarial review round 3: lane A PASS with P3 hardening notes; lane B NO-GO with one P1 \u2014 fence.processes was consumed verbatim although the full ps stdout is retained in the same record (the exact mirror of the round-2 GPU memory_used fix, which had been applied only to nvidia-smi).",
+      "rerun_required": false
+    }
+  ],
+  "campaign_id": "issue182-arm-e-locality-mutation-v1",
+  "classification": "post-processing reduction only",
+  "classification_proof": {
+    "authority_json_unchanged": "evidence/authority.json is NOT regenerated; the observation epoch remains bound to authority_digest sha256:951562c2c975e65d7e09a32e66c1a6940229d76b252d3ec285537e2b82d3b93c",
+    "execution_bearing_collector_unchanged": "scripts/issue182_inventory.py is byte-identical to the producer the physical observation executed (sha256 5d46361804c1ba591aa6ab025845d7a26f6a45a9f4e03a2b8c02c307d7362fc8 at both a759061 and the corrected head)",
+    "no_physical_input_changed": "the retained observation records are byte-identical to those written by the collector (record_digest still verifies); no rerun, no re-observation, no cache access occurred",
+    "pins_delta_semantics": "issue182_campaign_pins.py changed only additively (two new STOP-rule names OBS-RECORD-DIGEST-MISMATCH / OBS-WARM-ARM-BINDING-MISMATCH plus comments); no constant consumed by the collector changed value (ATTEMPT_ID, OBSERVATION_SEQUENCE, FROZEN_HOST_GPU_UUIDS, PINNED_GPU_TOTAL_BYTES, GPU_MEMORY_USED_MAX_MIB, MATERIALIZED_PINS, roots all identical)"
+  },
+  "new_stop_rules": [
+    "OBS-RECORD-DIGEST-MISMATCH",
+    "OBS-WARM-ARM-BINDING-MISMATCH"
+  ],
+  "producer_hash_transitions": {
+    "scripts/issue182_campaign_pins.py": {
+      "corrected": "d641b0ec67cc37dcbd4372017d078ccde238c3ae3be4b7b82866f37f619679f5",
+      "delta": "additive STOP-rule names only",
+      "prior": "82c2e5e8b714abdb98cdce951a6eaa29d4d7bbe84077bffa3569b6517ef2d17a"
+    },
+    "scripts/issue182_compare.py": {
+      "corrected": "3f0c89e813b138eff5fcc99e3481c042f73dbd0dbefa3db32bd79808e84a0204",
+      "delta": "emits warm_arm_binding (per-host canonical snapshot identity) consumed by the terminal cross-binding",
+      "prior": "04bf69348d4ccf6c92365b486c6d2378906ebc096628e65cda90286a9d70c273"
+    },
+    "scripts/issue182_terminal.py": {
+      "corrected": "2e0eabf5af86b30c7e1f9b362b1fae778bf38ba6c6b06a6cc9051f13f9516d1a",
+      "delta": "verifies observation record_digest; re-derives accepted object sets from retained Arm-B bytes (independent of any sidecar); re-checks GPU totals vs pins; cross-binds comparison warm_arm_binding to the observation records",
+      "prior": "5abaa155347485ab1944f696db11a7378fe607f0a20aa11e6bf7650d9b78b445"
+    }
+  },
+  "reason": "Exact-head adversarial review lanes A/B (first round, both timed out at 600s but each demonstrated concrete terminal-layer holes before cutoff, independently reproduced and confirmed by the operator): (A4) a contradictory observation record paired with the retained comparison still terminated PASS because the terminal never cross-bound the comparison's warm arm to the observation records; (B1) a self-consistently re-bound forged sidecar/authority/record triple passed the terminal because the terminal trusted the authority-bound sidecar instead of independently re-deriving the accepted object set from retained accepted bytes; (B2) post-hoc record tampering (GPU memory.total vs pin; stale record_digest) passed the terminal because no consumer verified the record self-digest or re-checked GPU totals.",
+  "rerun_required": false,
+  "schema": "inferswarm.issue182.arm-e.authority-amendment/1"
+}

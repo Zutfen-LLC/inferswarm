@@ -1,0 +1,405 @@
+{
+  "accepted_cache_objects": {
+    "path": "docs/implementation/r6-successor-arm-e-locality-mutation-182/evidence/authority/accepted-cache-objects.json",
+    "per_node_object_count": {
+      "inferswarm01": 411,
+      "inferswarm03": 218
+    },
+    "sha256": "e49a85a0667ce6da15d427ad2732a8571fd9e537de87eaa61b1d4464c152f3cd"
+  },
+  "arm_d_binding": {
+    "campaign_id": "issue175-arm-d-warm-restart-v1",
+    "file_sha256": {
+      "authority": "1d18ce594206e5b7ef9599225919fc96e10024da88e6e2400376a4e28f98569e",
+      "terminal_reduction": "ca5b51faf859f1d09866d635a3fd9bfd566d79cec9f8b88713c4ff7833fd5ffb",
+      "warm_inventory_01": "79105b66f0662da869f6d48e3a2fc603e24c15e64abf9ff648b962f560e450ca",
+      "warm_inventory_03": "18f7847b0a57a722e66c94dee1dfd3941946558bc5c33c20b799c3655a9c7c14"
+    },
+    "materialized_reference": {
+      "inferswarm01": {
+        "dense.6171f32b4413.stage-1/armb-participant.safetensors": {
+          "bytes": 9256843520,
+          "sha256": "2e8cf1af3ff64f7d5f800dac72fea2d418ffa81b15c3a90da5fd42542eaa9ed5"
+        },
+        "dense.6171f32b4413.stage-2/armb-participant.safetensors": {
+          "bytes": 7278967984,
+          "sha256": "85b218060e0242af6fb27a2e988a24a66892511e8067c38ca90280efa3af038d"
+        }
+      },
+      "inferswarm03": {
+        "dense.6171f32b4413.stage-3/armb-participant.safetensors": {
+          "bytes": 9292241800,
+          "sha256": "120e9c29173e91419fe1cfd355651bede6bf195f331e9dac2fd682c4420e6036"
+        }
+      }
+    },
+    "terminal": "ISSUE117_ARM_D_WARM_RESTART_CACHE_REUSE_PASS"
+  },
+  "attempt_state_machine": {
+    "attempt_id": "arme-182-physical-2",
+    "no_retry": true,
+    "stop_rules": [
+      "OBS-HOST-UNREACHABLE",
+      "OBS-ROOT-MISSING",
+      "OBS-CACHE-DIGEST-MISMATCH",
+      "OBS-GPU-TOTAL-DRIFT",
+      "OBS-GPU-SET-MISMATCH",
+      "OBS-GPU-TELEMETRY-UNPARSEABLE",
+      "OBS-GPU-NOT-IDLE",
+      "OBS-PROBE-FAILED",
+      "OBS-CONTENT-ADDRESS-MISMATCH",
+      "OBS-UNACCEPTED-CACHE-OBJECT",
+      "OBS-OBSERVATION-EPOCH-INVALID",
+      "OBS-FORBIDDEN-NAMESPACE-MATERIAL",
+      "OBS-MUTATION-DETECTED",
+      "OBS-PROCESSES-LIVE"
+    ],
+    "transitions": [
+      "FROZEN -> OBSERVING -> REDUCING -> TERMINAL",
+      "OBSERVING -> BLOCKED (STOP rule) -> STOPPED"
+    ]
+  },
+  "authority_digest": "sha256:951562c2c975e65d7e09a32e66c1a6940229d76b252d3ec285537e2b82d3b93c",
+  "campaign_id": "issue182-arm-e-locality-mutation-v1",
+  "capacity_method": {
+    "note": "the capacity model is a planning input held identical across both arms; it is not a hardware claim",
+    "pinned_gpu_total_bytes": {
+      "inferswarm01/gpu-0": 12884901888,
+      "inferswarm01/gpu-1": 12884901888,
+      "inferswarm03/gpu-0": 12884901888,
+      "inferswarm03/gpu-1": 12884901888,
+      "inferswarm04/gpu-0": 25769803776
+    },
+    "reserve_bytes": 3221225472,
+    "usable_weight_bytes": "observed nvidia-smi memory.total bytes minus the frozen CAPACITY_RESERVE_BYTES (3072 MiB) per serving GPU"
+  },
+  "cold_arm_binding": {
+    "inferswarm01": {
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-b/raw/coordinator/inventory-inferswarm01.json",
+      "sequence": 1,
+      "sha256": "48db5b83afaa3c434170d5a88a1c5cf2c81b6826313e02024c76f9df472570aa",
+      "verified_object_count": 0
+    },
+    "inferswarm03": {
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-b/raw/coordinator/inventory-inferswarm03.json",
+      "sequence": 1,
+      "sha256": "3fb8ff2e8dd11d7eb8d099ff57eefebe32d0785f8d0d3ea4fbbc44b799033b19",
+      "verified_object_count": 0
+    }
+  },
+  "drift_classification": {
+    "changed_files_by_class": {
+      "docs_only": [
+        "CONTRIBUTING.md",
+        "docs/README.md",
+        "docs/ci-impact-planning.md",
+        "docs/hardware/README.md",
+        "docs/hardware/pcie-slot-ledger.md",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/MANIFEST.sha256",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/authority.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/baseline-screen/ordinary-c109-03-04-003.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/baseline-screen/ordinary-c109-04-02-047.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/baseline-screen/ordinary-campaign.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/baseline-screen/ordinary-g170-01.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-00-post1.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-00-post2.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-00-postkill1.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-00-postkill2.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-00-pre1.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-00-pre2.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-00-prelaunch.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-01-post1.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-01-post2.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-01-postkill1.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-01-postkill2.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-01-pre1.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-01-pre2.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-01-prelaunch.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-03-post1.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-03-post2.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-03-postkill1.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-03-postkill2.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-03-pre1.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-03-pre2.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/inventories/inventory-03-prelaunch.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/cache-1.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/cache-2.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/equality-1.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/equality-2.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/fence-1-00.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/fence-1-01.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/fence-1-03.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/fence-2-00.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/fence-2-01.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/fence-2-03.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/fresh-1-00.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/fresh-1-01.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/fresh-1-03.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/fresh-2-00.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/fresh-2-01.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/fresh-2-03.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/gpu-1-01.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/gpu-1-03.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/gpu-2-01.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/gpu-2-03.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/killed-pids-1.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/killed-pids-2.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/strace-1-coordinator.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/strace-1-last.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/strace-1-node.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/strace-2-coordinator.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/strace-2-last.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/reduction-parts/strace-2-node.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/fencing-arm.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-01-01-045.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-01-02-076.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-01-03-009.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-01-04-036.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-01-05-017.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-01-06-006.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-02-01-030.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-02-02-020.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-02-03-011.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-02-04-033.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-02-05-024.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-02-06-049.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-03-01-044.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-03-02-054.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-03-03-031.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-03-04-003.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-03-05-044.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-03-06-016.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-04-01-026.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-04-02-047.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-04-03-040.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-04-04-024.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-04-05-043.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-c109-04-06-074.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-campaign.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-g170-01.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-g170-02.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-g170-03.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-g170-04.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-g170-05.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-g170-06.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-g170-07.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-g170-08.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-g170-09.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-g170-10.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-g170-11.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-g170-12.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-g170-13.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-g170-14.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-g170-15.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart1-canonical/ordinary-g170-16.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/restart2-sentinels/ordinary-campaign.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/serving-report-restart1.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/serving-report-restart2.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/strace-raw/strace-1-coordinator.strace",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/strace-raw/strace-1-last-stage.strace",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/strace-raw/strace-1-node-agent.strace",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/strace-raw/strace-2-coordinator.strace",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/strace-raw/strace-2-last-stage.strace",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/strace-raw/strace-2-node-agent.strace",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/strace-raw/strace-baseline-coordinator.strace",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/witnesses/last-stage-ready-baseline.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/witnesses/last-stage-ready-restart1.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/witnesses/last-stage-ready-restart2.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/witnesses/node-agent-ready-baseline.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/witnesses/node-agent-ready-restart1.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/physical-execution/witnesses/node-agent-ready-restart2.json",
+        "docs/implementation/r6-successor-arm-d-warm-restart-175/evidence/terminal-reduction.json"
+      ],
+      "execution_bearing": [],
+      "other": [],
+      "test_or_ci_only": [
+        ".github/workflows/ci.yml",
+        "scripts/ci_groups.json",
+        "scripts/issue175_assemble.py",
+        "scripts/issue175_authority.py",
+        "scripts/issue175_campaign_pins.py",
+        "scripts/issue175_inventory.py",
+        "scripts/issue175_manifest.py",
+        "scripts/issue175_ordinary_client.py",
+        "scripts/issue175_reduce.py",
+        "scripts/issue175_terminal.py",
+        "scripts/plan_ci.py",
+        "scripts/run_full_cpu_suite.py",
+        "tests/README.md",
+        "tests/test_issue175_arm_d.py",
+        "tests/test_run_full_cpu_suite.py"
+      ]
+    },
+    "classification": "post-#172 drift through the accepted Arm-D merge is test/CI-orchestration-only and documentation-only; no execution-bearing change to the Issue #117 planner/artifact/locality semantics exists in the delta, so no applicability audit beyond this classification is required",
+    "commit_count": 20,
+    "range": "52c3b560..d4d50b20205e455a195a908ee9d5ea72bc5d8d04"
+  },
+  "geometry_uuid_binding": {
+    "geometry_verified_against": "accepted Arm-D authority frozen_geometry_uuids",
+    "host_sets_verified_against": "retained Arm-D terminal-window observation inventories",
+    "per_host": {
+      "inferswarm01": {
+        "0": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+        "1": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+      },
+      "inferswarm03": {
+        "0": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176",
+        "1": "GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0"
+      }
+    }
+  },
+  "heads": {
+    "ancestor_proofs": {
+      "merge_181_is_ancestor_of_main": true
+    },
+    "freetoken_inferswarm_research_retained": "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469",
+    "inferswarm_main": "d4d50b20205e455a195a908ee9d5ea72bc5d8d04",
+    "note": "the accepted FreeToken producer is retained predecessor identity only; it is NOT executed in this planning-only arm",
+    "verified": true
+  },
+  "issue": "https://github.com/Zutfen-LLC/inferswarm/issues/182",
+  "locality_analog": {
+    "all_gates_unchanged": true,
+    "objective": "MIN_TRANSITION_COST",
+    "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/locality-mutation.json",
+    "selected_candidate_id": "dense.6171f32b4413",
+    "sha256": "0c594067dbd5a975b382bb4664b75409eb20a1acbae3a817ab365e1668ca0388",
+    "v5_missing_bytes_cold": 263300,
+    "v5_missing_bytes_warm": 0
+  },
+  "non_claims": [
+    "no new model correctness or numerical qualification",
+    "no new throughput/performance numbers",
+    "no physical transfer-time prediction accuracy",
+    "no GPU scheduling quality",
+    "no dynamic congestion/queueing behavior",
+    "no production failover",
+    "no node reboot/cache-loss recovery",
+    "no mutable session-cache movement",
+    "no public stable planner or locality schema"
+  ],
+  "normalization": {
+    "projection": "node_id, sequence, sorted (content_digest, length, byte_digest_verified) triples",
+    "sequence_monotonic": true
+  },
+  "observation_epoch": {
+    "bound_to": [
+      "authority_digest",
+      "campaign_id",
+      "attempt_id",
+      "host"
+    ],
+    "note": "the fresh observation's inventory sequence is a frozen authority constant derived from the retained accepted inventory lineage; the collector embeds it only after verifying the staged authority bytes, and comparison and terminal re-derive it independently",
+    "retained_accepted_sequence": 2,
+    "retained_cold_sequence": 1,
+    "rule": "fresh observation epoch sequence = retained accepted Arm-B post-acquisition sequence (2) + 1, strictly later than both the cold (1) and retained accepted inventory identities; bound to authority_digest + attempt_id + campaign_id + host inside the physical record and re-derived at comparison and termination",
+    "sequence": 3
+  },
+  "observation_plan": {
+    "byte_preservation": "sha256 of every object file under the cache objects root + stat (size, mtime_ns, inode) per file, captured before and after the semantic observation; any difference stops OBS-MUTATION-DETECTED",
+    "hosts": [
+      "inferswarm01",
+      "inferswarm03"
+    ],
+    "no_cuda_init": true,
+    "no_peer_transfer": true,
+    "no_runtime_start": true,
+    "no_source_contact": true,
+    "process_fence": "pgrep over the accepted #175 service patterns; any live execution-bearing process stops OBS-PROCESSES-LIVE",
+    "read_only": true,
+    "roots": {
+      "cache_objects": "/srv/inferswarm/cache/issue117/objects",
+      "model_view_01": "/srv/inferswarm/state/arm-c/model-view",
+      "substrate": "/srv/inferswarm/materialized/issue117",
+      "tokenizer_deployment": "/srv/inferswarm/tokenizers/gemma-r6-frozen"
+    }
+  },
+  "path_bandwidth": {
+    "method": "aggregate ACQUIRED bytes / aggregate wall_time_seconds over the retained Arm-B acquisition ledger events of the acquiring node",
+    "per_node": {
+      "inferswarm01": {
+        "acquired_bytes": 16535741313,
+        "bandwidth_bytes_per_second": 434574.9060678728,
+        "event_count": 411,
+        "ledger_sha256": "cb67c7bf8cdd16475b9c790971b1e1dccdb6ccfc381d9fca002f852a4545cbb0",
+        "wall_time_seconds": 38050.382298
+      },
+      "inferswarm03": {
+        "acquired_bytes": 9292214629,
+        "bandwidth_bytes_per_second": 506866.01125049,
+        "event_count": 218,
+        "ledger_sha256": "aabfe6c7abaf8bbc23aa1b3c2dda356004003ae01f2fe4579d0e31a1777b9053",
+        "wall_time_seconds": 18332.684423
+      }
+    }
+  },
+  "physical_authorization_id": "physical-authorization-issue182-read-only-inventory",
+  "planning_evidence_contract": {
+    "path": {
+      "applicability_context": {
+        "arm": "locality-mutation-planning-only",
+        "campaign": "issue182-arm-e-locality-mutation-v1"
+      },
+      "evidence_identity": "arm-e-path-band-v1",
+      "evidence_version": "issue182-evidence-v1"
+    }
+  },
+  "probe_contract": {
+    "fail_closed": true,
+    "gpu_requirements": "every frozen GPU of an observation host must be observed with parseable telemetry, memory.total equal to the pinned authority total, and memory.used within the frozen idle bound (16 MiB, derived from the retained Arm-D terminal-window observation)",
+    "note": "an empty process list / port set / GPU row set is admissible evidence ONLY against a retained successful (returncode 0) probe receipt; a failed probe is never converted into an empty observation",
+    "probes": [
+      "ps",
+      "ss",
+      "nvidia-smi"
+    ],
+    "receipt_fields": "name, argv, returncode, stdout/stderr byte counts, sha256 digests, bounded raw text",
+    "stop_rule": "OBS-PROBE-FAILED"
+  },
+  "producer_hashes": {
+    "issue101_orchestration.py": "37027a7d5ebed8505d50a4a060f36bfe0330d3473175d63147db3e1986089860",
+    "issue103_planner.py": "b8c805100a16afed1bae3ce4135b368a88edc6950bfed602d120bc59d3b48bce",
+    "issue117_accepted_subject.py": "54c91179688bf4480fa023abc8a5b4889c3a0cc7988be65a54ec2b352182457f",
+    "issue117_gemma_strategy.py": "4ff7e71633b416278e2756adebd8bb36bed24dfadb252fb20af89ccb823b23b7",
+    "issue117_planner.py": "4cbecda2edf540f3165b6bd243aca0c3b944b42d72b337673113d0efc987151f",
+    "issue182_authority.py": "176425ca119088f0ba917379d0ef2defd156425b54bf458349cf8c9eeae03a2d",
+    "issue182_campaign_pins.py": "82c2e5e8b714abdb98cdce951a6eaa29d4d7bbe84077bffa3569b6517ef2d17a",
+    "issue182_compare.py": "04bf69348d4ccf6c92365b486c6d2378906ebc096628e65cda90286a9d70c273",
+    "issue182_inventory.py": "5d46361804c1ba591aa6ab025845d7a26f6a45a9f4e03a2b8c02c307d7362fc8",
+    "issue182_manifest.py": "422635a1910ee6fc7f79eb0298db040088d3bec18e379b9cd8def4d47edf6ee8",
+    "issue182_terminal.py": "5abaa155347485ab1944f696db11a7378fe607f0a20aa11e6bf7650d9b78b445",
+    "issue74_methodology.py": "e075c099c9f97c78fa9c138951772248291a62fa02a041dbb5d70b50d109e2ec",
+    "issue99_artifact_core.py": "8b88af5b2f738c2a7428c9538cf76a14f889cb573a1722122951c45fc5965321"
+  },
+  "schema": "inferswarm.issue182.arm-e-authority/1",
+  "subject_and_plan": {
+    "file_sha256": {
+      "execution_plan": "e8416564d63b2f3b114fa70fca8593c88b42a3f662ff7959a91dac20512d3bff",
+      "requirements": "8fe8854a0ba118c9ba598655834d9177b4d1bc9f1ef99a5259834b389e02dde3"
+    },
+    "model_identity": {
+      "checkpoint_authority_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+      "model_id": "google/gemma-4-12B-it",
+      "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7"
+    },
+    "participants": {
+      "dense.6171f32b4413.stage-1": {
+        "digest": "sha256:0de4e795d035fd73345d9540db9d0de11d170f7c5ee80e7c0df48b9be19599b5",
+        "execution_unit_id": "inferswarm01/gpu-0",
+        "node_id": "inferswarm01"
+      },
+      "dense.6171f32b4413.stage-2": {
+        "digest": "sha256:c2874c7bfcd0f7c9719a8e8bee0eb870dcd720a83800fa4ab537eca70dcbdd54",
+        "execution_unit_id": "inferswarm01/gpu-1",
+        "node_id": "inferswarm01"
+      },
+      "dense.6171f32b4413.stage-3": {
+        "digest": "sha256:d3644f7344d78f41c138b4bd959de84ac318fd027d6b5fe9968ac50d78cd5d23",
+        "execution_unit_id": "inferswarm03/gpu-0",
+        "node_id": "inferswarm03"
+      }
+    },
+    "plan_digest": "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad",
+    "requirements_digest": "sha256:68ef850a0a15b9aaabd64de0907e9936297ad4471669e5cb2607b7ddf020c817"
+  }
+}

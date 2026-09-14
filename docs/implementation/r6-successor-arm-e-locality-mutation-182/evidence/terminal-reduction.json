@@ -1,0 +1,28 @@
+{
+  "attempt_id": "arme-182-physical-2",
+  "campaign_id": "issue182-arm-e-locality-mutation-v1",
+  "gate_ledger_unchanged": true,
+  "note": "mechanically re-derived from retained bytes; no authored terminal/pass/equality boolean consulted",
+  "physical_authorization_id": "physical-authorization-issue182-read-only-inventory",
+  "planning_only": {
+    "derivation": "no_model_execution: every retained fence receipt succeeded and no execution-bearing process was live; no_gpu_initialization: every observed GPU memory.used is within the frozen idle bound; no_artifact_acquisition: before/after byte preservation proven on every observation host; no_h109_access: no retained campaign record mentions the forbidden namespace",
+    "no_artifact_acquisition": true,
+    "no_gpu_initialization": true,
+    "no_h109_access": true,
+    "no_model_execution": true
+  },
+  "problems": [],
+  "schema": "inferswarm.issue182.arm-e.terminal-reduction/1",
+  "selection": {
+    "cold": "dense.6171f32b4413",
+    "warm": "dense.6171f32b4413"
+  },
+  "terminal": "ISSUE117_ARM_E_LOCALITY_MUTATION_PASS",
+  "v5": {
+    "missing_bytes_cold": 27841245749,
+    "missing_bytes_warm": 0,
+    "required_bytes": 27841245749,
+    "transition_seconds_cold": 60355.10925236964,
+    "transition_seconds_warm": 0.0
+  }
+}
