@@ -30,6 +30,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -477,6 +478,315 @@ class MaterializationWitnessTests(unittest.TestCase):
             "physical-execution/serving-report-sentinels.json")
         self.assertEqual(sentinels["active_plan_digest"],
                          P.COORDINATOR_PLAN_DIGEST_172)
+
+
+class SentinelEqualityTests(unittest.TestCase):
+    """Restart-2 sentinel exactness: the strengthened reducer derives
+    7 identities x 6 repeats = 42 exact observations from retained
+    raw bytes, and fails closed on every mandated mutation class."""
+
+    @classmethod
+    def setUpClass(cls):
+        B = (P.EVIDENCE_DIR / "physical-execution")
+        cls.r2_campaign = json.loads(
+            (B / "restart2-sentinels/ordinary-campaign.json").read_text())
+        cls.r2_report = json.loads(
+            (B / "serving-report-restart2.json").read_text())
+        cls.r1_campaign = json.loads(
+            (B / "restart1-canonical/ordinary-campaign.json").read_text())
+        cls.r1_report = json.loads(
+            (B / "serving-report-restart1.json").read_text())
+        cls.acc_campaign = json.loads(
+            (P.EVIDENCE_172 / "physical-execution/ordinary-sentinels"
+             "/ordinary-campaign.json").read_text())
+        cls.acc_report = json.loads(
+            (P.EVIDENCE_172 / "physical-execution"
+             "/serving-report-sentinels.json").read_text())
+        cls.corpus = json.loads(
+            P.CORPUS_172_PATH.read_text())
+
+    def reduce(self, r2c=None, r2r=None, r1c=None, r1r=None,
+               acc=None, accr=None):
+        return R.reduce_sentinel_equality(
+            copy.deepcopy(r2c or self.r2_campaign),
+            copy.deepcopy(r2r or self.r2_report),
+            copy.deepcopy(r1c or self.r1_campaign),
+            copy.deepcopy(r1r or self.r1_report),
+            copy.deepcopy(acc or self.acc_campaign),
+            copy.deepcopy(accr or self.acc_report),
+            self.corpus["cases"])
+
+    # ---------- positive baseline ----------
+
+    def test_retained_bytes_derive_42_exact(self):
+        reduction = self.reduce()
+        self.assertTrue(reduction["passed"], reduction["problems"])
+        self.assertEqual(reduction["equal_count"], 42)
+        self.assertEqual(reduction["row_count"], 42)
+        self.assertEqual(reduction["unique_observation_count"], 42)
+        self.assertEqual(reduction["identity_count"], 7)
+        self.assertEqual(reduction["repeats_per_identity"], 6)
+        self.assertTrue(reduction["token_event_determinism"])
+        self.assertTrue(reduction["fresh_session_order"])
+
+    def test_committed_part_matches_fresh_derivation(self):
+        # the stored equality-2.json must equal a fresh derivation
+        # from the retained raw bytes (stored-vs-derived drift guard)
+        stored = json.loads(
+            (P.EVIDENCE_DIR / "physical-execution" / "reduction-parts"
+             / "equality-2.json").read_text())
+        fresh = self.reduce()
+        for key in ("passed", "equal_count", "row_count",
+                    "unique_observation_count",
+                    "token_event_determinism"):
+            self.assertEqual(stored[key], fresh[key], key)
+
+    # ---------- mandated negative controls ----------
+
+    def test_committed_token_id_mutation_fails(self):
+        r2r = copy.deepcopy(self.r2_report)
+        r2r["coordinator_scope"]["requests"][7]["token_events"][2][
+            "token_id"] += 1
+        reduction = self.reduce(r2r=r2r)
+        self.assertFalse(reduction["passed"])
+        self.assertIn("committed ids differ from accepted #172",
+                      "; ".join(reduction["rows"][7]["problems"]))
+
+    def test_missing_token_event_fails(self):
+        r2r = copy.deepcopy(self.r2_report)
+        del r2r["coordinator_scope"]["requests"][9]["token_events"][3]
+        reduction = self.reduce(r2r=r2r)
+        self.assertFalse(reduction["passed"])
+
+    def test_duplicated_position_fails(self):
+        r2r = copy.deepcopy(self.r2_report)
+        events = r2r["coordinator_scope"]["requests"][4]["token_events"]
+        events[3]["position"] = events[2]["position"]
+        reduction = self.reduce(r2r=r2r)
+        self.assertFalse(reduction["passed"])
+        self.assertTrue(any("position sequence" in p
+                            for p in reduction["rows"][4]["problems"]))
+
+    def test_wrong_plan_digest_fails(self):
+        r2r = copy.deepcopy(self.r2_report)
+        for event in (r2r["coordinator_scope"]["requests"][11]
+                      ["token_events"]):
+            event["plan_digest"] = "sha256:" + "0" * 64
+        reduction = self.reduce(r2r=r2r)
+        self.assertFalse(reduction["passed"])
+
+    def test_mixed_epoch_fails(self):
+        r2r = copy.deepcopy(self.r2_report)
+        r2r["coordinator_scope"]["requests"][13]["token_events"][5][
+            "epoch_id"] = "research-generation-0:deadbeef1234"
+        reduction = self.reduce(r2r=r2r)
+        self.assertFalse(reduction["passed"])
+        self.assertTrue(any("mixed/stale epoch" in p
+                            for p in reduction["problems"]))
+
+    def test_missing_attribution_fails(self):
+        r2r = copy.deepcopy(self.r2_report)
+        r2r["coordinator_scope"]["requests"][2]["token_events"][1][
+            "committed_at_ns"] = None
+        reduction = self.reduce(r2r=r2r)
+        self.assertFalse(reduction["passed"])
+        self.assertTrue(any("unattributed" in p
+                            for p in reduction["rows"][2]["problems"]))
+
+    def test_wrong_stopping_semantics_fails(self):
+        r2c = copy.deepcopy(self.r2_campaign)
+        r2c["records"][5]["response"]["choices"][0][
+            "finish_reason"] = "stop"
+        reduction = self.reduce(r2c=r2c)
+        self.assertFalse(reduction["passed"])
+        self.assertTrue(any("finish reason" in p
+                            for p in reduction["rows"][5]["problems"]))
+
+    def test_decoded_text_mismatch_fails(self):
+        r2c = copy.deepcopy(self.r2_campaign)
+        r2c["records"][17]["response"]["choices"][0]["message"][
+            "content"] += "x"
+        reduction = self.reduce(r2c=r2c)
+        self.assertFalse(reduction["passed"])
+        self.assertTrue(any("decoded text mismatch" in p for p in
+                            reduction["rows"][17]["problems"]))
+
+    def test_missing_repeat_fails(self):
+        r2c = copy.deepcopy(self.r2_campaign)
+        r2r = copy.deepcopy(self.r2_report)
+        del r2c["records"][7]
+        del r2r["coordinator_scope"]["requests"][7]
+        del r2r["sessions"][7]
+        reduction = self.reduce(r2c=r2c, r2r=r2r)
+        self.assertFalse(reduction["passed"])
+
+    def test_duplicate_identity_fails(self):
+        r2c = copy.deepcopy(self.r2_campaign)
+        r2c["records"][7]["repeat"] = 1  # duplicates records[0]
+        reduction = self.reduce(r2c=r2c)
+        self.assertFalse(reduction["passed"])
+        self.assertTrue(any("duplicate (case_id, repeat)" in p
+                            for p in reduction["problems"]))
+
+    def test_accepted_reference_mismatch_fails(self):
+        accr = copy.deepcopy(self.acc_report)
+        accr["coordinator_scope"]["requests"][20]["token_events"][4][
+            "token_id"] += 1
+        reduction = self.reduce(accr=accr)
+        self.assertFalse(reduction["passed"])
+
+    def test_restart1_reference_mismatch_fails(self):
+        r1r = copy.deepcopy(self.r1_report)
+        # session 16 = c109-03-04-003 (corpus session-index mapping)
+        for request in r1r["coordinator_scope"]["requests"]:
+            if request["session_id"] == 16:
+                request["token_events"][6]["token_id"] += 1
+        reduction = self.reduce(r1r=r1r)
+        self.assertFalse(reduction["passed"])
+        mismatched = [r for r in reduction["rows"] if not r["equal"]]
+        self.assertTrue(mismatched)
+        self.assertTrue(all(
+            r["case_id"] == "c109-03-04-003" for r in mismatched))
+        self.assertTrue(any("differ from restart 1" in p
+                            for r in mismatched
+                            for p in r["problems"]))
+
+    def test_authored_pass_cannot_substitute(self):
+        r2r = copy.deepcopy(self.r2_report)
+        r2r["coordinator_scope"]["requests"][7]["token_events"][2][
+            "token_id"] += 1
+        r2c = copy.deepcopy(self.r2_campaign)
+        r2c["ok_count"] = 42
+        r2c["arm_d_pass"] = True
+        r2c["records"][7]["equal"] = True
+        reduction = self.reduce(r2c=r2c, r2r=r2r)
+        self.assertFalse(reduction["passed"])
+
+    # ---------- additional trust-boundary controls ----------
+
+    def test_session_order_gap_fails(self):
+        r2r = copy.deepcopy(self.r2_report)
+        r2r["coordinator_scope"]["requests"][9]["session_id"] = 99
+        reduction = self.reduce(r2r=r2r)
+        self.assertFalse(reduction["passed"])
+        self.assertTrue(any("fresh 1..N" in p
+                            for p in reduction["problems"]))
+
+    def test_stale_realization_identity_fails(self):
+        r2r = copy.deepcopy(self.r2_report)
+        r2r["active_realization_id"] = self.r1_report[
+            "active_realization_id"]
+        reduction = self.reduce(r2r=r2r)
+        self.assertFalse(reduction["passed"])
+        self.assertTrue(any("realization identity not fresh" in p
+                            for p in reduction["problems"]))
+
+    def test_epoch_not_fresh_fails(self):
+        r2r = copy.deepcopy(self.r2_report)
+        # backdate the active epoch to before the last restart-1
+        # commit (retained max r1 commit is ~273.27e12 ns)
+        r2r["epochs"][0]["activated_at_ns"] = 1
+        reduction = self.reduce(r2r=r2r)
+        self.assertFalse(reduction["passed"])
+        self.assertTrue(any("epoch not fresh" in p
+                            for p in reduction["problems"]))
+
+    def test_enumeration_drift_fails(self):
+        r2c = copy.deepcopy(self.r2_campaign)
+        r2c["records"][0], r2c["records"][1] = (
+            r2c["records"][1], r2c["records"][0])
+        reduction = self.reduce(r2c=r2c)
+        self.assertFalse(reduction["passed"])
+        self.assertTrue(any("protocol order" in p
+                            for p in reduction["problems"]))
+
+
+class SentinelAssemblerSubprocessTests(unittest.TestCase):
+    """End-to-end fail-closed controls: mutate exactly one retained
+    raw file in an isolated bundle copy, run the COMMITTED assembler
+    as a subprocess against explicit paths, and assert the written
+    equality-2.json fails closed."""
+
+    BUNDLE = (P.EVIDENCE_DIR / "physical-execution")
+
+    def _scratch(self):
+        import shutil
+        import tempfile
+        tmp = tempfile.mkdtemp(prefix="issue175-sent-",
+                               dir=os.environ.get(
+                                   "ISSUE175_TMPDIR", None))
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+        bundle = Path(tmp) / "physical-execution"
+        shutil.copytree(self.BUNDLE, bundle)
+        # reduction parts are regenerated; drop them so only raw
+        # inputs drive the result
+        shutil.rmtree(bundle / "reduction-parts")
+        return bundle
+
+    def _run_assembler(self, bundle: Path) -> dict:
+        import subprocess
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPTS / "issue175_assemble.py"),
+             "--bundle", str(bundle)],
+            capture_output=True, text=True, timeout=300)
+        self.assertEqual(proc.returncode, 0, proc.stderr[-2000:])
+        return json.loads(
+            (bundle / "reduction-parts" / "equality-2.json")
+            .read_text())
+
+    def test_pristine_scratch_reproduces_pass(self):
+        result = self._run_assembler(self._scratch())
+        self.assertTrue(result["passed"], result["problems"])
+        self.assertEqual(result["equal_count"], 42)
+
+    def test_raw_token_mutation_blocks_pass(self):
+        bundle = self._scratch()
+        report = bundle / "serving-report-restart2.json"
+        data = json.loads(report.read_text())
+        data["coordinator_scope"]["requests"][14]["token_events"][3][
+            "token_id"] += 1
+        report.write_text(json.dumps(data))
+        result = self._run_assembler(bundle)
+        self.assertFalse(result["passed"])
+        self.assertFalse(result["rows"][14]["equal"])
+
+    def test_raw_missing_repeat_blocks_pass(self):
+        bundle = self._scratch()
+        campaign = bundle / "restart2-sentinels/ordinary-campaign.json"
+        data = json.loads(campaign.read_text())
+        del data["records"][20]
+        data["case_count"] = 41
+        campaign.write_text(json.dumps(data))
+        result = self._run_assembler(bundle)
+        self.assertFalse(result["passed"])
+
+    def test_raw_decoded_text_mutation_blocks_pass(self):
+        bundle = self._scratch()
+        campaign = bundle / "restart2-sentinels/ordinary-campaign.json"
+        data = json.loads(campaign.read_text())
+        data["records"][30]["response"]["choices"][0]["message"][
+            "content"] += "tampered"
+        campaign.write_text(json.dumps(data))
+        result = self._run_assembler(bundle)
+        self.assertFalse(result["passed"])
+        self.assertFalse(result["rows"][30]["equal"])
+
+    def test_forged_authored_pass_flags_are_inert(self):
+        bundle = self._scratch()
+        report = bundle / "serving-report-restart2.json"
+        data = json.loads(report.read_text())
+        data["coordinator_scope"]["requests"][14]["token_events"][3][
+            "token_id"] += 1
+        data["arm_d_pass"] = True
+        data["equality_2_passed"] = True
+        report.write_text(json.dumps(data))
+        campaign = bundle / "restart2-sentinels/ordinary-campaign.json"
+        cdata = json.loads(campaign.read_text())
+        cdata["ok_count"] = 42
+        cdata["arm_d_pass"] = True
+        campaign.write_text(json.dumps(cdata))
+        result = self._run_assembler(bundle)
+        self.assertFalse(result["passed"])
 
 
 if __name__ == "__main__":

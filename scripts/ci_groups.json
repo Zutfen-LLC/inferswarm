@@ -716,6 +716,9 @@
   "scripts/issue172_zero_invariants.py": [
    "issue-172-requal"
   ],
+  "scripts/issue175_assemble.py": [
+   "issue-175-arm-d"
+  ],
   "scripts/issue175_authority.py": [
    "issue-175-arm-d"
   ],

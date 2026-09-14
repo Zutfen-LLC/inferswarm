@@ -445,6 +445,7 @@ PATH_GROUPS = {
         "issue-175-arm-d"],
     "scripts/issue175_campaign_pins.py": ["issue-175-arm-d"],
     "scripts/issue175_authority.py": ["issue-175-arm-d"],
+    "scripts/issue175_assemble.py": ["issue-175-arm-d"],
     "scripts/issue175_inventory.py": ["issue-175-arm-d"],
     "scripts/issue175_reduce.py": ["issue-175-arm-d"],
     "scripts/issue175_terminal.py": ["issue-175-arm-d"],

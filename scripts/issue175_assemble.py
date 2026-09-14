@@ -175,50 +175,43 @@ def main() -> int:
     acc_report = json.loads(
         (E172 / "serving-report-canonical.json").read_text())
     corpus = json.loads(P.CORPUS_172_PATH.read_text())
-    equality = R.reduce_equality(post_campaign, post_report,
-                                 acc_campaign, acc_report,
-                                 corpus["cases"])
+    equality_1 = R.reduce_equality(post_campaign, post_report,
+                                   acc_campaign, acc_report,
+                                   corpus["cases"])
     rec = {"schema": P.EQUALITY_SCHEMA, "campaign_id": P.CAMPAIGN_ID,
            "restart": 1,
            "comparison": "post-restart ordinary vs accepted #172 "
-                         "canonical", **equality}
+                         "canonical", **equality_1}
     write_canonical(parts / "equality-1.json", rec)
 
-    # --- sentinel part (restart 2) ---
+    # --- sentinel part (restart 2, strengthened reduction) ---
     r2 = json.loads(
         (bundle / "restart2-sentinels/ordinary-campaign.json").read_text())
+    r1 = json.loads(
+        (bundle / "restart1-canonical/ordinary-campaign.json").read_text())
     acc_s = json.loads(
         (E172 / "ordinary-sentinels/ordinary-campaign.json").read_text())
-    rows = []
-    for record in r2["records"]:
-        accepted = [x for x in acc_s["records"]
-                    if x["case_id"] == record["case_id"]
-                    and x["repeat"] == record["repeat"]][0]
-        rows.append({
-            "case": record["case_id"], "repeat": record["repeat"],
-            "equal": record["response"]["choices"][0]["message"][
-                "content"] == accepted["response"]["choices"][0][
-                "message"]["content"]})
-    determinism = all(
-        len(set(r["response"]["choices"][0]["message"]["content"]
-                for r in r2["records"] if r["case_id"] == cid)) == 1
-        for cid in {r["case_id"] for r in r2["records"]})
-    sent_pass = (all(x["equal"] for x in rows) and determinism
-                 and len(rows) == len(P.SENTINEL_IDS) * P.SENTINEL_REPEATS)
+    acc_s_report = json.loads(
+        (E172 / "serving-report-sentinels.json").read_text())
+    equality = R.reduce_sentinel_equality(
+        r2, json.loads(
+            (bundle / "serving-report-restart2.json").read_text()),
+        r1, post_report,
+        acc_s, acc_s_report,
+        corpus["cases"])
     rec = {"schema": P.EQUALITY_SCHEMA, "campaign_id": P.CAMPAIGN_ID,
            "restart": 2,
            "comparison": "post-restart sentinels vs accepted #172 "
-                         "sentinels + within-restart determinism",
-           "rows": rows, "row_count": len(rows),
-           "equal_count": sum(1 for x in rows if x["equal"]),
-           "within_restart_determinism": determinism,
-           "passed": sent_pass}
+                         "sentinels + restart-1 canonical + "
+                         "within-restart token-event determinism",
+           **equality}
     write_canonical(parts / "equality-2.json", rec)
 
     print(json.dumps({
         "parts": sorted(p.name for p in parts.glob("*.json")),
-        "equality_1": equality["equal_count"],
-        "equality_2_rows": len(rows),
+        "equality_1": equality_1["equal_count"],
+        "equality_2_rows": equality["row_count"],
+        "equality_2_equal": equality["equal_count"],
     }, indent=1))
     return 0
 

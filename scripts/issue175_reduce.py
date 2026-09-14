@@ -428,6 +428,428 @@ def reduce_equality(post_campaign: dict, post_report: dict,
 
 
 # ------------------------------------------------------------------
+# 4b. restart-2 sentinel exactness (strengthened correction pass)
+# ------------------------------------------------------------------
+#: retained campaign/report schema literals (as committed by the
+#: campaign client and the R5B serving report; matched exactly so a
+#: reshaped/foreign record cannot ride the reduction)
+SENTINEL_CAMPAIGN_SCHEMA = (
+    "inferswarm.issue175.arm-d.ordinary-campaign/1")
+SERVING_REPORT_SCHEMA = "inferswarm.r5b.epoch-serving-report/1"
+COORDINATOR_KIND = "cpu-only-external-coordinator-r6-dense"
+
+
+def _request_commit_ids(request: dict) -> list[int]:
+    return [int(e["token_id"]) for e in request.get("token_events", [])]
+
+
+def _event_attribution_ok(event: dict) -> bool:
+    return all(event.get(key) is not None for key in (
+        "token_id", "position", "epoch_id", "plan_digest",
+        "committed_at_ns"))
+
+
+def reduce_sentinel_equality(r2_campaign: dict, r2_report: dict,
+                             r1_campaign: dict, r1_report: dict,
+                             acc_campaign: dict, acc_report: dict,
+                             corpus_cases: list[dict]) -> dict:
+    """Restart-2 sentinel exactness, derived from retained raw bytes.
+
+    This is the strengthened restart-#2 reducer (maintainer correction
+    pass over PR #181): the previous assembler compared only decoded
+    HTTP text; this reducer mechanically consumes the retained
+    correctness-bearing observations themselves.
+
+    For every one of the exact seven accepted sentinel identities x
+    six repeats it:
+
+    1.  binds the restart-2 HTTP campaign record to the restart-2
+        Coordinator serving-report request deterministically (fresh
+        session order 1..42 in report order + cross-arm prompt-token
+        identity + identical enumeration to the accepted #172
+        protocol order);
+    2.  binds the accepted #172 ordinary-sentinel campaign +
+        serving-report observation for the same (identity, repeat);
+    3.  binds the restart-1 canonical observation for the same case
+        identity (corpus session-index mapping);
+    4.  requires exact committed token-id equality (vs accepted AND
+        vs restart 1 — compared directly, never transitively);
+    5.  requires exactly the frozen committed-token count;
+    6.  requires positions exactly 0..7 in event order;
+    7.  requires one valid fresh epoch family (single epoch id ==
+        active epoch, activated strictly after every restart-1
+        commit, every restart-2 commit strictly after activation —
+        no stale or mixed epoch commits);
+    8.  requires every committed plan digest == the frozen accepted
+        Coordinator plan;
+    9.  requires complete attribution on every correctness-bearing
+        token event (token_id/position/epoch_id/plan_digest/
+        committed_at_ns all present) and a consistent session-ledger
+        boundary;
+    10. requires HTTP success (200);
+    11. requires frozen stopping semantics (finish_reason "length",
+        completion_tokens == frozen count);
+    12. requires decoded-text equality (vs accepted and vs restart 1);
+    13. requires within-restart-2 determinism at the token-event
+        level (full (token_id, position, epoch_id, plan_digest)
+        tuples), not merely decoded-text determinism;
+    14. enforces prospectively valid restart-2 fresh-session /
+        session-order semantics (fresh coordinator sessions numbered
+        1..N in arrival order, no gaps, no reuse); historical #172
+        session ids are NOT treated as an identity requirement.
+
+    Authored booleans (ok_count, stored equal/passed flags) are never
+    consulted; every count is derived from the raw records.
+    """
+    problems: list[str] = []
+    rows: list[dict] = []
+
+    # ---------- restart-2 campaign shape ----------
+    if r2_campaign.get("schema") != SENTINEL_CAMPAIGN_SCHEMA:
+        problems.append("restart-2 campaign schema drift")
+    if r2_campaign.get("mode") != "sentinels":
+        problems.append("restart-2 campaign mode is not sentinels")
+    if r2_campaign.get("origin") != P.COORDINATOR_ORIGIN:
+        problems.append("restart-2 campaign origin drift")
+    records = r2_campaign.get("records", [])
+    want_total = len(P.SENTINEL_IDS) * P.SENTINEL_REPEATS
+    if len(records) != want_total:
+        problems.append(
+            f"restart-2 record count {len(records)} != {want_total}")
+    pairs = [(r.get("case_id"), int(r.get("repeat", 0)))
+             for r in records]
+    if len(set(pairs)) != len(pairs):
+        duplicates = sorted({p for p in pairs
+                             if pairs.count(p) > 1})
+        problems.append(
+            f"duplicate (case_id, repeat) identities: {duplicates[:3]}")
+    identities = {p[0] for p in pairs}
+    if identities != set(P.SENTINEL_IDS):
+        problems.append(
+            "sentinel identity set drift: "
+            f"{sorted(identities)} vs frozen {sorted(P.SENTINEL_IDS)}")
+    for identity in sorted(identities):
+        repeats = sorted(p[1] for p in pairs if p[0] == identity)
+        if repeats != list(range(1, P.SENTINEL_REPEATS + 1)):
+            problems.append(
+                f"{identity} repeats present: {repeats}")
+
+    # ---------- restart-2 serving report shape ----------
+    if r2_report.get("schema") != SERVING_REPORT_SCHEMA:
+        problems.append("restart-2 serving report schema drift")
+    scope = r2_report.get("coordinator_scope", {})
+    if scope.get("kind") != COORDINATOR_KIND:
+        problems.append("restart-2 coordinator kind drift")
+    reqs = scope.get("requests", [])
+    if any(q.get("fencing_arm_injections") for q in reqs):
+        problems.append("unexpected fencing request in restart-2")
+    if len(reqs) != len(records):
+        problems.append(
+            f"restart-2 requests {len(reqs)} != records "
+            f"{len(records)}")
+    # prospectively valid fresh-session semantics: a fresh coordinator
+    # numbers its sessions 1..N in arrival order. This is a restart-2
+    # order/ownership requirement, NOT numeric identity with the
+    # historical #172 session ids (fresh sessions are expected).
+    session_ids = [q.get("session_id") for q in reqs]
+    if session_ids != list(range(1, len(reqs) + 1)):
+        problems.append(
+            "restart-2 session order is not a fresh 1..N sequence")
+
+    # ---------- accepted #172 reference table ----------
+    if acc_campaign.get("mode") != "sentinels":
+        problems.append("accepted reference campaign mode drift")
+    acc_records = acc_campaign.get("records", [])
+    acc_reqs = [q for q in acc_report.get("coordinator_scope", {})
+                .get("requests", [])
+                if not q.get("fencing_arm_injections")]
+    if len(acc_records) != want_total or len(acc_reqs) != want_total:
+        problems.append("accepted sentinel reference count drift")
+    acc_pairs = [(r.get("case_id"), int(r.get("repeat", 0)))
+                 for r in acc_records]
+    # the restart-2 enumeration must be the accepted protocol order
+    # verbatim (deterministic binding anchor #1)
+    if pairs != acc_pairs:
+        problems.append(
+            "restart-2 (identity, repeat) enumeration differs from "
+            "the accepted #172 protocol order")
+    acc_by_pair = dict(zip(acc_pairs, acc_reqs))
+    acc_http_by_pair = dict(zip(acc_pairs, acc_records))
+    # cross-arm prompt-token identity (deterministic binding anchor
+    # #2): the restart-2 request presented the same prompt tokens as
+    # the accepted request at the same protocol position
+    for index in range(min(len(reqs), len(acc_reqs))):
+        if (reqs[index].get("prompt_token_ids")
+                != acc_reqs[index].get("prompt_token_ids")):
+            problems.append(
+                f"request {index + 1} prompt tokens differ from the "
+                "accepted #172 observation at the same protocol "
+                "position")
+            break
+    # within-restart-2 prompt grouping (binding anchor #3): the six
+    # requests of one identity share one prompt; distinct identities
+    # carry distinct prompts
+    prompt_by_identity: dict = {}
+    for index, pair in enumerate(pairs[:len(reqs)]):
+        prompt_by_identity.setdefault(
+            pair[0], []).append(reqs[index].get("prompt_token_ids"))
+    for identity, prompts in prompt_by_identity.items():
+        if len({tuple(p or []) for p in prompts}) != 1:
+            problems.append(
+                f"{identity} repeats did not present one prompt")
+    if len({tuple(p[0] or []) for p in prompt_by_identity.values()
+            if p}) != len(prompt_by_identity):
+        problems.append(
+            "distinct sentinel identities share one prompt "
+            "(binding ambiguity)")
+
+    # ---------- restart-1 canonical reference table ----------
+    case_by_index = {c["session_index"]: c["case_id"]
+                     for c in corpus_cases}
+    r1_reqs = [q for q in r1_report.get("coordinator_scope", {})
+               .get("requests", [])
+               if not q.get("fencing_arm_injections")]
+    r1_by_case: dict = {}
+    for request in r1_reqs:
+        case_id = case_by_index.get(request.get("session_id"))
+        if case_id is None:
+            problems.append(
+                "restart-1 request session outside the corpus")
+            continue
+        if case_id in r1_by_case:
+            problems.append(
+                f"restart-1 duplicate observation for {case_id}")
+        r1_by_case[case_id] = request
+    r1_http_by_case = {r.get("case_id"): r
+                       for r in r1_campaign.get("records", [])}
+    # the accepted negative control must stay present and rejected in
+    # the restart-1 canonical record
+    r1_fencing = [q for q in r1_report.get("coordinator_scope", {})
+                  .get("requests", [])
+                  if q.get("fencing_arm_injections")]
+    if not r1_fencing:
+        problems.append("no fencing negative control in restart 1")
+    for request in r1_fencing:
+        for injection in request.get("fencing_arm_injections", []):
+            if injection.get("accepted") is not False:
+                problems.append("fencing injection accepted (r1)")
+
+    # ---------- epoch family / plan / realization identity ----------
+    all_events = [e for q in reqs for e in q.get("token_events", [])]
+    epoch_ids = {e.get("epoch_id") for e in all_events}
+    active_epoch = r2_report.get("active_epoch_id")
+    if len(epoch_ids) != 1 or active_epoch not in epoch_ids:
+        problems.append(
+            f"mixed/stale epoch commits: {sorted(epoch_ids)[:3]}")
+    epoch_rows = [e for e in r2_report.get("epochs", [])
+                  if e.get("epoch_id") == active_epoch]
+    r1_all_events = [e for q in r1_reqs
+                     for e in q.get("token_events", [])]
+    max_r1_commit = max((int(e["committed_at_ns"])
+                         for e in r1_all_events
+                         if e.get("committed_at_ns") is not None),
+                        default=None)
+    if len(epoch_rows) != 1:
+        problems.append("active epoch not uniquely retained")
+    else:
+        activated = int(epoch_rows[0]["activated_at_ns"])
+        if max_r1_commit is not None and activated <= max_r1_commit:
+            problems.append(
+                "restart-2 epoch not fresh: activated at or before a "
+                "restart-1 commit")
+    min_r2_commit = min((int(e["committed_at_ns"])
+                         for e in all_events
+                         if e.get("committed_at_ns") is not None),
+                        default=None)
+    if epoch_rows and min_r2_commit is not None:
+        activated = int(epoch_rows[0]["activated_at_ns"])
+        if min_r2_commit <= activated:
+            problems.append(
+                "restart-2 commit at or before epoch activation")
+    plan_digests = {e.get("plan_digest") for e in all_events}
+    if plan_digests != {P.COORDINATOR_PLAN_DIGEST_172}:
+        problems.append(
+            f"committed plan digests {sorted(plan_digests)[:2]} "
+            "!= frozen accepted Coordinator plan")
+    if r2_report.get("active_plan_digest") != P.COORDINATOR_PLAN_DIGEST_172:
+        problems.append("active plan digest != frozen accepted plan")
+    if (r2_report.get("active_realization_id") in (None, "")
+            or r2_report.get("active_realization_id")
+            == r1_report.get("active_realization_id")):
+        problems.append(
+            "restart-2 active realization identity not fresh")
+    if int(r2_report.get("realization_attempts") or 0) < 1:
+        problems.append("restart-2 realization attempts < 1")
+
+    # ---------- session ledger cross-check ----------
+    ledger = {s.get("session_id"): s
+              for s in r2_report.get("sessions", [])}
+
+    # ---------- per-observation rows ----------
+    equal_count = 0
+    for index, record in enumerate(records):
+        if index >= len(reqs):
+            break
+        request = reqs[index]
+        case_id, repeat = pairs[index]
+        row_problems: list[str] = []
+        events = request.get("token_events") or []
+        ids = [int(e["token_id"]) for e in events]
+        # (4) exact committed token-id equality, both references
+        accepted = acc_by_pair.get((case_id, repeat))
+        if accepted is None:
+            row_problems.append("missing accepted #172 reference")
+        else:
+            if ids != _request_commit_ids(accepted):
+                row_problems.append(
+                    "committed ids differ from accepted #172: "
+                    f"{ids} vs {_request_commit_ids(accepted)}")
+        r1_request = r1_by_case.get(case_id)
+        if r1_request is None:
+            row_problems.append("missing restart-1 canonical "
+                                "reference for this identity")
+        else:
+            if ids != _request_commit_ids(r1_request):
+                row_problems.append(
+                    "committed ids differ from restart 1: "
+                    f"{ids} vs {_request_commit_ids(r1_request)}")
+        # (5) frozen committed-token count
+        if len(ids) != P.COMMIT_TOKENS:
+            row_problems.append(
+                f"committed count {len(ids)} != {P.COMMIT_TOKENS}")
+        # (6) positions exactly 0..7 in event order
+        positions = [e.get("position") for e in events]
+        if positions != list(range(P.COMMIT_TOKENS)):
+            row_problems.append(f"position sequence {positions}")
+        # (7)(8) per-event epoch/plan/freshness attribution
+        for event in events:
+            if event.get("epoch_id") != active_epoch:
+                row_problems.append("stale/mixed epoch commit")
+                break
+            if event.get("plan_digest") != P.COORDINATOR_PLAN_DIGEST_172:
+                row_problems.append("wrong committed plan digest")
+                break
+        # (9) complete attribution on every correctness-bearing event
+        if not all(_event_attribution_ok(e) for e in events):
+            row_problems.append("unattributed correctness-bearing "
+                                "commit")
+        # committed arrays must agree with the events they summarize
+        if (request.get("committed_epoch_ids")
+                != [e.get("epoch_id") for e in events]
+                or request.get("committed_plan_digests")
+                != [e.get("plan_digest") for e in events]):
+            row_problems.append("committed arrays diverge from "
+                                "token events")
+        # session ledger attribution
+        entry = ledger.get(request.get("session_id"))
+        if entry is None:
+            row_problems.append("no session-ledger entry")
+        else:
+            boundary = entry.get("latest_committed_boundary") or {}
+            if (entry.get("generated_token_ids") != ids
+                    or boundary.get("committed_generated_token_ids")
+                    != ids
+                    or boundary.get("committed_position")
+                    != P.COMMIT_TOKENS):
+                row_problems.append("session ledger diverges from "
+                                    "token events")
+        # (10) HTTP success
+        if record.get("http_status") != 200:
+            row_problems.append(
+                f"http status {record.get('http_status')}")
+        # (11) frozen stopping semantics
+        choice = ((record.get("response") or {})
+                  .get("choices", [{}])[0])
+        if choice.get("finish_reason") != "length":
+            row_problems.append(
+                f"finish reason {choice.get('finish_reason')}")
+        usage = (record.get("response") or {}).get("usage") or {}
+        if usage.get("completion_tokens") != P.COMMIT_TOKENS:
+            row_problems.append(
+                f"completion tokens {usage.get('completion_tokens')}")
+        # (12) decoded-text equality vs both references
+        text = ((choice.get("message") or {}).get("content"))
+        if accepted is not None:
+            acc_text = (((accepted_response := acc_http_by_pair.get(
+                (case_id, repeat)) or {})
+                .get("response") or {}).get("choices", [{}])[0]
+                .get("message", {}).get("content"))
+            if text != acc_text:
+                row_problems.append("decoded text mismatch vs "
+                                    "accepted #172")
+        r1_http = r1_http_by_case.get(case_id)
+        if r1_http is not None:
+            r1_text = (((r1_http.get("response") or {})
+                        .get("choices", [{}])[0])
+                       .get("message", {}).get("content"))
+            if text != r1_text:
+                row_problems.append("decoded text mismatch vs "
+                                    "restart 1")
+        row = {"case_id": case_id, "repeat": repeat,
+               "session_id": request.get("session_id"),
+               "equal": not row_problems, "problems": row_problems}
+        rows.append(row)
+        equal_count += 1 if row["equal"] else 0
+
+    # ---------- (13) within-restart-2 token-event determinism ----------
+    event_tuples: dict = {}
+    for index, pair in enumerate(pairs[:len(reqs)]):
+        events = reqs[index].get("token_events") or []
+        signature = tuple(
+            (e.get("token_id"), e.get("position"),
+             e.get("epoch_id"), e.get("plan_digest"))
+            for e in events)
+        event_tuples.setdefault(pair[0], set()).add(signature)
+    token_event_determinism = all(
+        len(signatures) == 1
+        for signatures in event_tuples.values()) and len(
+            event_tuples) == len(P.SENTINEL_IDS)
+    if not token_event_determinism:
+        varied = sorted(cid for cid, sigs in event_tuples.items()
+                        if len(sigs) != 1)
+        problems.append(
+            f"within-restart-2 token-event variation: {varied[:3]}")
+    text_determinism = all(
+        len({((records[i].get("response") or {})
+              .get("choices", [{}])[0])
+             .get("message", {}).get("content")
+             for i, p in enumerate(pairs) if p[0] == cid}) == 1
+        for cid in identities)
+
+    unique_count = len(set(pairs))
+    cardinality_ok = (
+        unique_count == want_total
+        and len(identities) == len(P.SENTINEL_IDS)
+        and all(
+            sum(1 for p in pairs if p[0] == cid) == P.SENTINEL_REPEATS
+            for cid in identities))
+    if not cardinality_ok:
+        problems.append(
+            f"unique sentinel observations {unique_count} != "
+            f"{len(P.SENTINEL_IDS)}x{P.SENTINEL_REPEATS}")
+
+    passed = (not problems and equal_count == len(rows)
+              and rows and cardinality_ok
+              and token_event_determinism)
+    return {
+        "problems": problems,
+        "rows": rows,
+        "row_count": len(rows),
+        "equal_count": equal_count,
+        "unique_observation_count": unique_count,
+        "identity_count": len(identities),
+        "repeats_per_identity": P.SENTINEL_REPEATS,
+        "within_restart_determinism": bool(
+            token_event_determinism and text_determinism),
+        "token_event_determinism": bool(token_event_determinism),
+        "decoded_text_determinism": bool(text_determinism),
+        "fresh_session_order": session_ids == list(
+            range(1, len(reqs) + 1)),
+        "passed": passed,
+    }
+
+
+# ------------------------------------------------------------------
 # 5. zero-invariant aggregation
 # ------------------------------------------------------------------
 ZERO_COUNTERS = (

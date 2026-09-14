@@ -1,222 +1,313 @@
 {
   "campaign_id": "issue175-arm-d-warm-restart-v1",
-  "comparison": "post-restart sentinels vs accepted #172 sentinels + within-restart determinism",
+  "comparison": "post-restart sentinels vs accepted #172 sentinels + restart-1 canonical + within-restart token-event determinism",
+  "decoded_text_determinism": true,
   "equal_count": 42,
+  "fresh_session_order": true,
+  "identity_count": 7,
   "passed": true,
+  "problems": [],
+  "repeats_per_identity": 6,
   "restart": 2,
   "row_count": 42,
   "rows": [
     {
-      "case": "c109-03-04-003",
+      "case_id": "c109-03-04-003",
       "equal": true,
-      "repeat": 1
+      "problems": [],
+      "repeat": 1,
+      "session_id": 1
     },
     {
-      "case": "c109-04-02-047",
+      "case_id": "c109-04-02-047",
       "equal": true,
-      "repeat": 1
+      "problems": [],
+      "repeat": 1,
+      "session_id": 2
     },
     {
-      "case": "c109-04-06-074",
+      "case_id": "c109-04-06-074",
       "equal": true,
-      "repeat": 1
+      "problems": [],
+      "repeat": 1,
+      "session_id": 3
     },
     {
-      "case": "g170-01",
+      "case_id": "g170-01",
       "equal": true,
-      "repeat": 1
+      "problems": [],
+      "repeat": 1,
+      "session_id": 4
     },
     {
-      "case": "g170-05",
+      "case_id": "g170-05",
       "equal": true,
-      "repeat": 1
+      "problems": [],
+      "repeat": 1,
+      "session_id": 5
     },
     {
-      "case": "g170-09",
+      "case_id": "g170-09",
       "equal": true,
-      "repeat": 1
+      "problems": [],
+      "repeat": 1,
+      "session_id": 6
     },
     {
-      "case": "g170-13",
+      "case_id": "g170-13",
       "equal": true,
-      "repeat": 1
+      "problems": [],
+      "repeat": 1,
+      "session_id": 7
     },
     {
-      "case": "c109-03-04-003",
+      "case_id": "c109-03-04-003",
       "equal": true,
-      "repeat": 2
+      "problems": [],
+      "repeat": 2,
+      "session_id": 8
     },
     {
-      "case": "c109-04-02-047",
+      "case_id": "c109-04-02-047",
       "equal": true,
-      "repeat": 2
+      "problems": [],
+      "repeat": 2,
+      "session_id": 9
     },
     {
-      "case": "c109-04-06-074",
+      "case_id": "c109-04-06-074",
       "equal": true,
-      "repeat": 2
+      "problems": [],
+      "repeat": 2,
+      "session_id": 10
     },
     {
-      "case": "g170-01",
+      "case_id": "g170-01",
       "equal": true,
-      "repeat": 2
+      "problems": [],
+      "repeat": 2,
+      "session_id": 11
     },
     {
-      "case": "g170-05",
+      "case_id": "g170-05",
       "equal": true,
-      "repeat": 2
+      "problems": [],
+      "repeat": 2,
+      "session_id": 12
     },
     {
-      "case": "g170-09",
+      "case_id": "g170-09",
       "equal": true,
-      "repeat": 2
+      "problems": [],
+      "repeat": 2,
+      "session_id": 13
     },
     {
-      "case": "g170-13",
+      "case_id": "g170-13",
       "equal": true,
-      "repeat": 2
+      "problems": [],
+      "repeat": 2,
+      "session_id": 14
     },
     {
-      "case": "c109-03-04-003",
+      "case_id": "c109-03-04-003",
       "equal": true,
-      "repeat": 3
+      "problems": [],
+      "repeat": 3,
+      "session_id": 15
     },
     {
-      "case": "c109-04-02-047",
+      "case_id": "c109-04-02-047",
       "equal": true,
-      "repeat": 3
+      "problems": [],
+      "repeat": 3,
+      "session_id": 16
     },
     {
-      "case": "c109-04-06-074",
+      "case_id": "c109-04-06-074",
       "equal": true,
-      "repeat": 3
+      "problems": [],
+      "repeat": 3,
+      "session_id": 17
     },
     {
-      "case": "g170-01",
+      "case_id": "g170-01",
       "equal": true,
-      "repeat": 3
+      "problems": [],
+      "repeat": 3,
+      "session_id": 18
     },
     {
-      "case": "g170-05",
+      "case_id": "g170-05",
       "equal": true,
-      "repeat": 3
+      "problems": [],
+      "repeat": 3,
+      "session_id": 19
     },
     {
-      "case": "g170-09",
+      "case_id": "g170-09",
       "equal": true,
-      "repeat": 3
+      "problems": [],
+      "repeat": 3,
+      "session_id": 20
     },
     {
-      "case": "g170-13",
+      "case_id": "g170-13",
       "equal": true,
-      "repeat": 3
+      "problems": [],
+      "repeat": 3,
+      "session_id": 21
     },
     {
-      "case": "c109-03-04-003",
+      "case_id": "c109-03-04-003",
       "equal": true,
-      "repeat": 4
+      "problems": [],
+      "repeat": 4,
+      "session_id": 22
     },
     {
-      "case": "c109-04-02-047",
+      "case_id": "c109-04-02-047",
       "equal": true,
-      "repeat": 4
+      "problems": [],
+      "repeat": 4,
+      "session_id": 23
     },
     {
-      "case": "c109-04-06-074",
+      "case_id": "c109-04-06-074",
       "equal": true,
-      "repeat": 4
+      "problems": [],
+      "repeat": 4,
+      "session_id": 24
     },
     {
-      "case": "g170-01",
+      "case_id": "g170-01",
       "equal": true,
-      "repeat": 4
+      "problems": [],
+      "repeat": 4,
+      "session_id": 25
     },
     {
-      "case": "g170-05",
+      "case_id": "g170-05",
       "equal": true,
-      "repeat": 4
+      "problems": [],
+      "repeat": 4,
+      "session_id": 26
     },
     {
-      "case": "g170-09",
+      "case_id": "g170-09",
       "equal": true,
-      "repeat": 4
+      "problems": [],
+      "repeat": 4,
+      "session_id": 27
     },
     {
-      "case": "g170-13",
+      "case_id": "g170-13",
       "equal": true,
-      "repeat": 4
+      "problems": [],
+      "repeat": 4,
+      "session_id": 28
     },
     {
-      "case": "c109-03-04-003",
+      "case_id": "c109-03-04-003",
       "equal": true,
-      "repeat": 5
+      "problems": [],
+      "repeat": 5,
+      "session_id": 29
     },
     {
-      "case": "c109-04-02-047",
+      "case_id": "c109-04-02-047",
       "equal": true,
-      "repeat": 5
+      "problems": [],
+      "repeat": 5,
+      "session_id": 30
     },
     {
-      "case": "c109-04-06-074",
+      "case_id": "c109-04-06-074",
       "equal": true,
-      "repeat": 5
+      "problems": [],
+      "repeat": 5,
+      "session_id": 31
     },
     {
-      "case": "g170-01",
+      "case_id": "g170-01",
       "equal": true,
-      "repeat": 5
+      "problems": [],
+      "repeat": 5,
+      "session_id": 32
     },
     {
-      "case": "g170-05",
+      "case_id": "g170-05",
       "equal": true,
-      "repeat": 5
+      "problems": [],
+      "repeat": 5,
+      "session_id": 33
     },
     {
-      "case": "g170-09",
+      "case_id": "g170-09",
       "equal": true,
-      "repeat": 5
+      "problems": [],
+      "repeat": 5,
+      "session_id": 34
     },
     {
-      "case": "g170-13",
+      "case_id": "g170-13",
       "equal": true,
-      "repeat": 5
+      "problems": [],
+      "repeat": 5,
+      "session_id": 35
     },
     {
-      "case": "c109-03-04-003",
+      "case_id": "c109-03-04-003",
       "equal": true,
-      "repeat": 6
+      "problems": [],
+      "repeat": 6,
+      "session_id": 36
     },
     {
-      "case": "c109-04-02-047",
+      "case_id": "c109-04-02-047",
       "equal": true,
-      "repeat": 6
+      "problems": [],
+      "repeat": 6,
+      "session_id": 37
     },
     {
-      "case": "c109-04-06-074",
+      "case_id": "c109-04-06-074",
       "equal": true,
-      "repeat": 6
+      "problems": [],
+      "repeat": 6,
+      "session_id": 38
     },
     {
-      "case": "g170-01",
+      "case_id": "g170-01",
       "equal": true,
-      "repeat": 6
+      "problems": [],
+      "repeat": 6,
+      "session_id": 39
     },
     {
-      "case": "g170-05",
+      "case_id": "g170-05",
       "equal": true,
-      "repeat": 6
+      "problems": [],
+      "repeat": 6,
+      "session_id": 40
     },
     {
-      "case": "g170-09",
+      "case_id": "g170-09",
       "equal": true,
-      "repeat": 6
+      "problems": [],
+      "repeat": 6,
+      "session_id": 41
     },
     {
-      "case": "g170-13",
+      "case_id": "g170-13",
       "equal": true,
-      "repeat": 6
+      "problems": [],
+      "repeat": 6,
+      "session_id": 42
     }
   ],
   "schema": "inferswarm.issue175.arm-d.equality-reduction/1",
+  "token_event_determinism": true,
+  "unique_observation_count": 42,
   "within_restart_determinism": true
 }
