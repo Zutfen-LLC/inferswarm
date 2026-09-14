@@ -1,0 +1,46 @@
+{
+  "fleet_fit": {
+    "aggregate_weight_headroom_bytes": 4762949984,
+    "capacity_feasible": "NOT_ESTABLISHED",
+    "correctness_qualified": "NOT_ESTABLISHED",
+    "economically_useful": "NOT_ESTABLISHED",
+    "reason": "Aggregate VRAM is not a per-resource fit proof; the required compute, KV, recurrent, and staging allocations and a lawful cross-host execution path are unmeasured.",
+    "runtime_supported": "NOT_ESTABLISHED",
+    "verified_nvidia_weight_bytes": 77309411328
+  },
+  "issue": 189,
+  "non_claims": [
+    "No Qwen3.8 inference, model download, GPU execution, serving run, or R8-B execution occurred.",
+    "This reduction is not acceptance or execution authorization for R8-B.",
+    "It does not infer per-tensor quantization, N-gram tensor bytes, or host/SSD suitability from aggregate GGUF bytes."
+  ],
+  "record_digest": "sha256:3d1d916c1083eee416ca034af60df7a45eceb1caad48b487c630067d79a30bb8",
+  "representation": {
+    "complete_split_bytes": 72546461344,
+    "complete_split_files": 3,
+    "complete_split_gib": 67.56,
+    "id": "unsloth-UD-IQ1_S"
+  },
+  "runtime_blockers": [
+    {
+      "classification": "CORRECTNESS_BLOCKER",
+      "id": "rpc-cross-host-correctness",
+      "reason": "The required multi-resource shape needs cross-host RPC, while the recorded Qwen3.8 GGUF defect was deterministic long-prompt degeneration. The issue closure alone does not name a prospectively qualified commit or prove this fleet/mode safe.",
+      "source": "https://github.com/ggml-org/llama.cpp/issues/27993"
+    },
+    {
+      "classification": "RUNTIME_BACKEND_PREREQUISITE",
+      "id": "ngram-materialization-control",
+      "reason": "The retained conversion inventory does not establish an independently addressable N-gram GGUF materialization or an honest host-memory placement contract; small-read behavior is a separate performance risk.",
+      "source": "https://github.com/ggml-org/llama.cpp/issues/28256"
+    }
+  ],
+  "schema": "inferswarm.issue189.r8a-terminal/1",
+  "source_authority": {
+    "official_revision": "de4b8e4d43b917e7706784d8bb445c9af86a3540",
+    "source_findings_sha256": "ab7d063cdc65ecda951b97ff0b15fbfd0f62446688e54e50ddf3dfcda99ecdab",
+    "third_party_gguf_revision": "38bb39ee97821de2c9009abb7e93950eec396e66"
+  },
+  "terminal": "R8A_QWEN38_RUNTIME_PREREQUISITE",
+  "terminal_reason": "The target remains architecturally informative, but no pinned llama.cpp commit plus bounded, single-slot, text-only, multi-resource correctness/residency protocol has been established for the only current-fleet-sized representation."
+}

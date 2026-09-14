@@ -97,39 +97,15 @@ class ProjectStatusTests(unittest.TestCase):
                 self.assertEqual(self.run_main(root, '--write'), 1)
                 self.assertEqual(self.snapshot(root), before)
 
-    def test_current_record_accepts_arm_c_lineage_and_closes_the_sequence(self):
+    def test_current_record_tracks_only_the_authorized_r8a_static_frontier(self):
         output = sync.render(self.record)['frontier']
-        # The corrected #133 campaign FAIL and the #137 diagnosis remain
-        # accepted historical constraints of the closed sequence.
-        self.assertIn('ISSUE117_ARM_C_ORDINARY_SERVING_FAIL', output)
-        self.assertIn('1b83bcab0a5e682a438ca0554f71dd0ace15be55', output)
-        self.assertIn('ISSUE117_ARM_C_REGIME4_DIAGNOSIS_PARTIAL', output)
-        self.assertIn('cdc23d0e8fa9d3b1b27bab5749939a5ad69b9610', output)
-        self.assertIn('ISSUE117_ARM_C_REMEDIATION_BLOCKED', output)
-        self.assertIn('BACKEND_REQUIRES_MULTI_CHUNK', output)
-        self.assertIn('65-67-row failing units must remain multi-chunk', output)
-        # The accepted Arm-E observation is now the frontier prerequisite.
-        self.assertIn('ISSUE117_ARM_E_LOCALITY_MUTATION_PASS', output)
-        self.assertIn('accepted](https://github.com/Zutfen-LLC/inferswarm/'
-                      'commit/1149a8ad9576ac25dfa2e474b9142c9c903ced77)', output)
-        self.assertIn('ISSUE117_ARM_D_WARM_RESTART_CACHE_REUSE_PASS', output)
-        self.assertIn('d4d50b20205e455a195a908ee9d5ea72bc5d8d04', output)
-        # Issue #184 final closure: the planned A-E sequence is complete.
-        self.assertIn('authorization:** blocked', output)
-        self.assertIn('COMPLETE/ACCEPTED', output)
-        self.assertIn('FINAL-STATUS.md', output)
-        # No stale live blocked/pending claims remain.
-        self.assertNotIn('Arm D/E remain blocked', output)
-        self.assertNotIn('Arm D and Arm E remain blocked', output)
-        self.assertNotIn('PR open for maintainer review', output)
-        self.assertNotIn('PENDING maintainer acceptance', output)
-        self.assertNotIn('PR remains open', output)
-        self.assertNotIn('not yet recorded', output)
-        self.assertNotIn('physical Arm-C retry NOT authorized', output)
-        capabilities = sync.render(self.record)['capabilities']
-        self.assertNotIn('ISSUE117_ARM_B_COLD_REALIZATION_PASS', capabilities)
-        self.assertNotIn('Arm B', capabilities)
-        self.assertNotIn('ISSUE117_ARM_C_EVIDENCE_BLOCKER', capabilities)
+        self.assertIn('Issue #189', output)
+        self.assertIn('R8A_STATIC_RESEARCH_AUTHORIZED', output)
+        self.assertIn('authorization:** authorized', output)
+        self.assertIn('CPU/static/read-only R8-A research only', output)
+        self.assertIn('does not authorize a model download', output)
+        self.assertIn('later R8-B work requires separate maintainer authority', output)
+        self.assertNotIn('ISSUE117_ARM_E_LOCALITY_MUTATION_PASS', output)
 
     def test_accepted_prerequisite_does_not_authorize_execution(self):
         self.record['frontier']['execution']['state'] = 'blocked'

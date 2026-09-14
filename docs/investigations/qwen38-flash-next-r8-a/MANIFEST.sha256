@@ -1,0 +1,6 @@
+fcdc549d8e45aa5ab073cb035155d2c79b40bef18e356a0961070c0770877554  docs/investigations/qwen38-flash-next-r8-a/README.md
+2ca13d01a2d4a262b997fc5de56bdedd39af3a9f4fd2cac9a7e1e1d5974adfef  docs/investigations/qwen38-flash-next-r8-a/producer-hashes.json
+ab7d063cdc65ecda951b97ff0b15fbfd0f62446688e54e50ddf3dfcda99ecdab  docs/investigations/qwen38-flash-next-r8-a/source-findings.md
+6e6a8a7522199f762a4751c0108d274562c71189a9e0d787a40586e2de599fc9  docs/investigations/qwen38-flash-next-r8-a/terminal-reduction.json
+82a7dbcd8c138015338289dba334cf0f9af6fd1f46a422092fb1ca114b2f4a8a  scripts/issue189_r8a_reducer.py
+0347d29097913953631805b8128e6f56db5a723bfb111e7fd22f81fc13369bbf  tests/test_issue189_r8a.py
