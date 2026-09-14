@@ -31,6 +31,18 @@ RUNTIME_AUDIT_REVISION = "1bc7a5af0d14b1fb72f266abbd1237b394187115"
 RPC_REPRODUCER_REVISION = "17252c769a63c1cb650ce98ae309cf4de0da7778"
 RPC_REPORTER_REBUILD_REVISION = "cc231cb0da565440cf6a3e5b55dfeba477972cb6"
 RPC_FIX_REVISION = "a273d22e142b9ad253a09d7b76d4d24ba64eb9bc"
+RPC_ISSUE_BODY_SHA256 = "d0f1f6a5033e177be6fc44365b7700402c5690e9aad810fb9f6d83dfe1b352c2"
+RPC_CLASSIFICATION = "CORRECTNESS_BLOCKER"
+RPC_REPORTED_MODE = (
+    "Metal layer-split cross-host RPC, UD-IQ4_XS, long prefill/decode "
+    "beyond about 2K prompt tokens"
+)
+RPC_MODE_SOURCE_FACTS = (
+    "Metal layer-split",
+    "cross-host RPC topology",
+    "Unsloth UD-IQ4_XS",
+    "after roughly 2K prompt",
+)
 UD_IQ1_S_MEMBERS = (
     ("UD-IQ1_S/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf", 10_946_624),
     ("UD-IQ1_S/Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf", 49_990_818_368),
@@ -80,7 +92,9 @@ def reduction_document(root: Path = ROOT) -> dict:
         raise ValueError("ISSUE189_FAIL: source-authority record is missing")
     text = source.read_text(encoding="utf-8")
     for expected in (OFFICIAL_REVISION, GGUF_REVISION, RUNTIME_AUDIT_REVISION,
-                     RPC_REPRODUCER_REVISION, RPC_FIX_REVISION, "R8-A"):
+                     RPC_REPRODUCER_REVISION, RPC_REPORTER_REBUILD_REVISION,
+                     RPC_FIX_REVISION, RPC_ISSUE_BODY_SHA256, RPC_CLASSIFICATION,
+                     *RPC_MODE_SOURCE_FACTS, "R8-A"):
         if expected not in text:
             raise ValueError(f"ISSUE189_FAIL: source-authority fact missing: {expected}")
 
@@ -122,10 +136,10 @@ def reduction_document(root: Path = ROOT) -> dict:
         "runtime_blockers": [
             {
                 "id": "rpc-cross-host-correctness",
-                "classification": "CORRECTNESS_BLOCKER",
+                "classification": RPC_CLASSIFICATION,
                 "source": "https://github.com/ggml-org/llama.cpp/issues/27993",
                 "affected_runtime_revision": RPC_REPRODUCER_REVISION,
-                "reported_mode": "Metal layer-split cross-host RPC, UD-IQ4_XS, long prefill/decode beyond about 2K prompt tokens",
+                "reported_mode": RPC_REPORTED_MODE,
                 "reported_rebuild_revision": RPC_REPORTER_REBUILD_REVISION,
                 "reported_fix_revision": RPC_FIX_REVISION,
                 "reason": "The reported fix does not qualify NVIDIA, UD-IQ1_S, this fleet, or the required exact layer/RPC shape.",

@@ -53,6 +53,18 @@ class Issue189R8ATests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "incomplete GGUF object inventory"):
                 reducer.reduction_document(root)
 
+    def test_reducer_fails_closed_when_runtime_classification_or_mode_drifts(self):
+        original = (reducer.ROOT / reducer.SOURCE).read_text()
+        for expected in (reducer.RPC_CLASSIFICATION, *reducer.RPC_MODE_SOURCE_FACTS):
+            with self.subTest(expected=expected), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / reducer.AREA).mkdir(parents=True)
+                (root / reducer.SOURCE).write_text(original.replace(expected, "drift", 1))
+                (root / reducer.CENSUS).write_bytes(
+                    (reducer.ROOT / reducer.CENSUS).read_bytes())
+                with self.assertRaisesRegex(ValueError, "source-authority fact missing"):
+                    reducer.reduction_document(root)
+
     def test_no_execution_authorization_is_smuggled_into_terminal(self):
         document = reducer.reduction_document()
         self.assertEqual(document["terminal"], "R8A_QWEN38_RUNTIME_PREREQUISITE")
