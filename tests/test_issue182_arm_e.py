@@ -685,7 +685,11 @@ class ProbeReceiptTests(unittest.TestCase):
             warm, synthetic_warm_record("inferswarm03"))
         self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
 
-    def test_planning_fail_is_not_blocked(self):
+    def test_tampered_comparison_now_blocks_not_fail(self):
+        """Round-2 semantics change: a comparison whose rows were
+        edited post-hoc (previously FAIL via rederive_problems) is now
+        EVIDENCE_BLOCKED at the re-derivation gate — the retained
+        document must BE the deterministic rebuild."""
         comparison = copy.deepcopy(base_comparison())
         comparison["warm_arm"]["rows"][P.SUBJECT["candidate"]][
             "gates"]["technical_feasibility"]["passed"] = False
@@ -699,7 +703,10 @@ class ProbeReceiptTests(unittest.TestCase):
                  ).write_text(json.dumps(synthetic_warm_record(node)))
             (tmp / "comparison.json").write_text(json.dumps(comparison))
             document = T.reduce_terminal(tmp)
-        self.assertEqual(document["terminal"], P.FAIL_TERMINAL)
+        self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+        self.assertTrue(any(
+            "OBS-COMPARISON-REDERIVATION-MISMATCH" in p
+            for p in document["problems"]))
 
 
 class RankingEvidenceTests(unittest.TestCase):
@@ -894,6 +901,123 @@ class AdversarialReviewRoundControls(unittest.TestCase):
             document = T.reduce_terminal(tmp)
         self.assertEqual(document["terminal"], P.PASS_TERMINAL)
         self.assertEqual(document["problems"], [])
+
+
+class AdversarialReviewRound2Controls(unittest.TestCase):
+    """26 (review lanes A/B round 2): authored-content trust controls.
+
+    Round 2 demonstrated the terminal trusted authored DERIVED fields
+    (comparison rows, GPU-used rows, preservation booleans). Every
+    control here reproduces a demonstrated hole against head 9bc30b1
+    and asserts the corrected terminal blocks it."""
+
+    def _terminal_for(self, warm01, warm03, comparison=None):
+        with tempfile.TemporaryDirectory(prefix="arm-e-rev2-") as tmp:
+            tmp = Path(tmp)
+            (tmp / "authority.json").write_text(
+                (EVIDENCE_DIR / "authority.json").read_text())
+            obs = tmp / "observation"
+            obs.mkdir()
+            (obs / "warm-inventory-inferswarm01.json").write_text(
+                json.dumps(warm01))
+            (obs / "warm-inventory-inferswarm03.json").write_text(
+                json.dumps(warm03))
+            (tmp / "comparison.json").write_text(json.dumps(
+                comparison if comparison is not None
+                else base_comparison()))
+            return T.reduce_terminal(tmp)
+
+    def test_fabricated_economics_block(self):
+        """Lane A P0-1: forged self-consistent comparison with
+        fabricated cold/warm magnitudes must BLOCK on re-derivation."""
+        comparison = copy.deepcopy(base_comparison())
+        v5 = P.SUBJECT["candidate"]
+        for arm in ("cold_arm", "warm_arm"):
+            comparison[arm]["rows"][v5]["missing_bytes"] = 7
+            comparison[arm]["rows"][v5]["ranking_value"] = 0.25
+            comparison[arm]["rows"][v5]["required_bytes"] = 7
+        # keep cross-arm coupling internally consistent
+        comparison["v5"]["cold"]["missing_bytes"] = 7
+        comparison["v5"]["warm"]["missing_bytes"] = 3
+        document = self._terminal_for(
+            synthetic_warm_record("inferswarm01"),
+            synthetic_warm_record("inferswarm03"),
+            comparison=comparison)
+        self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+        self.assertTrue(any(
+            "OBS-COMPARISON-REDERIVATION-MISMATCH" in p
+            for p in document["problems"]))
+
+    def test_jointly_forged_gate_ledger_blocks(self):
+        """Lane A P0-2: a gate flipped identically in BOTH arms (e.g.
+        an infeasible candidate forged admissible everywhere) must
+        BLOCK on re-derivation."""
+        comparison = copy.deepcopy(base_comparison())
+        infeasible = "dense.3b8644d360a3"
+        for arm in ("cold_arm", "warm_arm"):
+            row = comparison[arm]["rows"][infeasible]
+            row["gates"]["technical_feasibility"]["passed"] = True
+            row["admissible"] = True
+            row["ranking_status"] = "RANKED"
+        document = self._terminal_for(
+            synthetic_warm_record("inferswarm01"),
+            synthetic_warm_record("inferswarm03"),
+            comparison=comparison)
+        self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+        self.assertTrue(any(
+            "OBS-COMPARISON-REDERIVATION-MISMATCH" in p
+            for p in document["problems"]))
+
+    def test_gpu_used_vs_receipt_stdout_drift_blocks(self):
+        """Lane B P1-2: fence rows claiming idle while the retained
+        nvidia-smi stdout says 9000 MiB used must BLOCK."""
+        warm = synthetic_warm_record("inferswarm01")
+        stdout_lines = []
+        for gpu in warm["fence"]["gpus"]:
+            stdout_lines.append(
+                f"{gpu['index']}, {gpu['uuid']}, 12288 MiB, 9000 MiB, "
+                f"{gpu['driver']}")
+        stdout = "\n".join(stdout_lines) + "\n"
+        warm["fence"]["probe_receipts"]["nvidia-smi"]["stdout"] = stdout
+        warm["fence"]["probe_receipts"]["nvidia-smi"]["stdout_sha256"] = (
+            hashlib.sha256(stdout.encode()).hexdigest())
+        warm["fence"]["probe_receipts"]["nvidia-smi"]["stdout_bytes"] = (
+            len(stdout.encode()))
+        warm["record_digest"] = T.observation_record_digest(warm)
+        document = self._terminal_for(
+            warm, synthetic_warm_record("inferswarm03"))
+        self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+        self.assertTrue(any("OBS-GPU-TELEMETRY-DRIFT" in p
+                            for p in document["problems"]))
+
+    def test_preservation_digest_mismatch_blocks(self):
+        """Lane B P2: byte_preservation_proven kept true while the
+        retained before/after tree digests differ must BLOCK."""
+        warm = synthetic_warm_record("inferswarm01")
+        warm["preservation_before"] = {"file_count": 411,
+                                       "tree_digest": "aaa"}
+        warm["preservation_after"] = {"file_count": 411,
+                                      "tree_digest": "bbb"}
+        warm["record_digest"] = T.observation_record_digest(warm)
+        document = self._terminal_for(
+            warm, synthetic_warm_record("inferswarm03"))
+        self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+        self.assertTrue(any("OBS-MUTATION-DETECTED" in p
+                            for p in document["problems"]))
+
+    def test_manifest_of_evidence_dir_verifies(self):
+        """Lanes A/B P2-3: MANIFEST.sha256 has an automated verifier —
+        every row matches the retained evidence bytes (a doctored
+        evidence file regenerating nothing leaves a detectable
+        mismatch)."""
+        manifest = (EVIDENCE_DIR / "MANIFEST.sha256").read_text().splitlines()
+        self.assertTrue(manifest)
+        for line in manifest:
+            digest, _, name = line.partition("  ")
+            path = P.ROOT / name
+            self.assertTrue(path.is_file(), name)
+            self.assertEqual(
+                hashlib.sha256(path.read_bytes()).hexdigest(), digest, name)
 
 
 class PurityTests(unittest.TestCase):

@@ -72,6 +72,53 @@ def normalized_object_set(record: dict) -> set:
             if obj.get("byte_digest_verified")}
 
 
+#: content-authenticated cache for the comparison re-derivation (the
+#: planner runs are deterministic; identical retained inputs must not
+#: pay re-derivation twice within one process)
+_REDERIVATION_CACHE: dict[tuple, str | None] = {}
+
+
+def rederive_comparison_digest(authority_path: Path,
+                               record_01: dict, record_03: dict) -> str | None:
+    """Re-derive the ENTIRE comparison document from retained bytes and
+    return its canonical digest (None if the derivation fails closed).
+
+    Review round 2 (lanes A/B P0-1/P0-2, lane B P1-1): the terminal
+    must never trust authored row content — economics, gate ledgers,
+    admissibility — because cross-arm coupling checks cannot detect a
+    jointly forged self-consistent comparison. The only authority is
+    the deterministic rebuild over the pinned Arm-B inputs, the frozen
+    authority, and the retained observation records.
+    """
+    import issue182_compare as C  # noqa: PLC0415  (lazy, stdlib-only)
+    key = (hashlib.sha256(authority_path.read_bytes()).hexdigest(),
+           observation_record_digest(record_01),
+           observation_record_digest(record_03))
+    if key not in _REDERIVATION_CACHE:
+        try:
+            document = C.build_comparison_document(
+                authority_path, record_01, record_03)
+            _REDERIVATION_CACHE[key] = hashlib.sha256(
+                canonical_json_bytes(document)).hexdigest()
+        except SystemExit:
+            _REDERIVATION_CACHE[key] = None
+    return _REDERIVATION_CACHE[key]
+
+
+def gpu_used_from_receipt_stdout(receipt) -> dict:
+    """Re-derive {uuid: memory_used} from the retained nvidia-smi
+    receipt stdout (review round 2 lane B P1-2: the collector's
+    stdout-to-row derivation must not be trusted post-hoc)."""
+    rows = {}
+    if receipt is None or receipt.get("returncode") != 0:
+        return rows
+    for line in (receipt.get("stdout") or "").splitlines():
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) >= 5:
+            rows[parts[1]] = parts[3]
+    return rows
+
+
 def load(path: Path) -> dict:
     return json.loads(path.read_text())
 
@@ -251,6 +298,27 @@ def reduce_terminal(evidence_dir: Path) -> dict:
         planning_evidence["hosts"].append(host)
         if record.get("byte_preservation_proven"):
             planning_evidence["byte_preservation_hosts"].append(host)
+        # review round 2 lane B P2: byte preservation is RE-DERIVED
+        # from the retained before/after tree digests, not trusted
+        # from the boolean
+        if (record.get("preservation_before", {}).get("tree_digest")
+                != record.get("preservation_after", {}).get("tree_digest")):
+            stop_problems.append({
+                "host": host, "stop_rule": "OBS-MUTATION-DETECTED",
+                "detail": "before/after tree digests differ"})
+        # review round 2 lane B P1-2: GPU memory_used is RE-DERIVED
+        # from the retained nvidia-smi receipt stdout, not trusted
+        # from the fence rows
+        used_from_stdout = gpu_used_from_receipt_stdout(
+            (fence.get("probe_receipts") or {}).get("nvidia-smi"))
+        for gpu in fence.get("gpus") or []:
+            row_used = gpu.get("memory_used")
+            stdout_used = used_from_stdout.get(gpu.get("uuid"))
+            if stdout_used is not None and row_used != stdout_used:
+                stop_problems.append({
+                    "host": host, "stop_rule": "OBS-GPU-TELEMETRY-DRIFT",
+                    "uuid": gpu.get("uuid"),
+                    "row": row_used, "receipt_stdout": stdout_used})
         for gpu in fence.get("gpus") or []:
             planning_evidence["gpu_state"].append({
                 "host": host, "uuid": gpu.get("uuid"),
@@ -260,10 +328,24 @@ def reduce_terminal(evidence_dir: Path) -> dict:
             if receipt.get("returncode") != 0:
                 planning_evidence["probe_failures"].append(
                     {"host": host, "probe": probe_name})
+        # review round 2 lane B P3: the record names its collector;
+        # bind it to the frozen authority producer hash
+        collector_hash = authority.get("producer_hashes", {}).get(
+            "issue182_inventory.py")
+        if (record.get("collector_sha256") and collector_hash
+                and record["collector_sha256"] != collector_hash):
+            stop_problems.append({
+                "host": host,
+                "stop_rule": "OBS-COLLECTOR-IDENTITY-MISMATCH"})
 
     comparison = load(evidence_dir / "comparison.json")
     if comparison.get("schema") != P.COMPARISON_SCHEMA:
         raise SystemExit("ISSUE182_TERMINAL_FAIL: comparison schema")
+    # review round 2 lane A P2-4: comparison identity is bound, not
+    # just its schema
+    if (comparison.get("campaign_id") != P.CAMPAIGN_ID
+            or comparison.get("attempt_id") != P.ATTEMPT_ID):
+        raise SystemExit("ISSUE182_TERMINAL_FAIL: comparison identity")
 
     # review lane A: the retained comparison's warm arm must be
     # CROSS-BOUND to the observation records — the warm snapshot each
@@ -299,6 +381,31 @@ def reduce_terminal(evidence_dir: Path) -> dict:
                 stop_problems.append({
                     "host": host,
                     "stop_rule": "OBS-WARM-ARM-BINDING-MISMATCH"})
+
+    # review round 2 (lanes A/B, P0-1/P0-2 + lane B P1-1): the ENTIRE
+    # comparison document is re-derived from retained bytes (pinned
+    # Arm-B planning inputs + frozen authority + the retained
+    # observation records) and byte-compared against the retained
+    # comparison. A self-consistent forged comparison — fabricated
+    # economics, jointly flipped gate ledgers — cannot survive this:
+    # the rebuild produces the authoritative rows.
+    if not stop_problems:
+        records = {
+            host: load(
+                evidence_dir / f"observation/warm-inventory-{host}.json")
+            for host in P.OBSERVATION_HOSTS}
+        rederived_digest = rederive_comparison_digest(
+            evidence_dir / "authority.json",
+            records["inferswarm01"], records["inferswarm03"])
+        retained_digest = hashlib.sha256(
+            canonical_json_bytes(comparison)).hexdigest()
+        if rederived_digest != retained_digest:
+            stop_problems.append({
+                "host": "comparison",
+                "stop_rule": "OBS-COMPARISON-REDERIVATION-MISMATCH",
+                "detail": {
+                    "retained": retained_digest,
+                    "rederived": rederived_digest}})
 
     if stop_problems:
         terminal = P.BLOCKED_TERMINAL

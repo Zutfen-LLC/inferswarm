@@ -591,16 +591,15 @@ def compare(cold: dict, warm: dict, inputs_identity: dict) -> dict:
     }
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--warm-01", type=Path, required=True)
-    parser.add_argument("--warm-03", type=Path, required=True)
-    parser.add_argument("--out", type=Path,
-                        default=P.EVIDENCE_DIR / "comparison.json")
-    parser.add_argument("--skip-retained-cross-check", action="store_true",
-                        help="test fixture mode: synthetic warm snapshots")
-    args = parser.parse_args()
+def build_comparison_document(authority_path: Path, warm_record_01: dict,
+                              warm_record_03: dict) -> dict:
+    """Deterministically build the full comparison document.
 
+    Extracted from main() so the terminal reducer can RE-DERIVE the
+    entire comparison from retained bytes (review round 2, lanes A/B:
+    the terminal must never trust authored row content — economics,
+    gate ledgers — only re-derived identity).
+    """
     requirements = json.loads(P.ARM_B_REQUIREMENTS.read_text())
     plan = json.loads(P.ARM_B_PLAN.read_text())
     candidates = load_candidates()
@@ -618,7 +617,7 @@ def main() -> int:
             "ISSUE182_COMPARE_FAIL: plan builder does not reproduce the "
             "retained Arm-B execution plan")
 
-    authority = json.loads((P.EVIDENCE_DIR / "authority.json").read_text())
+    authority = json.loads(authority_path.read_text())
     bandwidth = {node: entry["bandwidth_bytes_per_second"]
                  for node, entry in
                  authority["path_bandwidth"]["per_node"].items()}
@@ -663,13 +662,10 @@ def main() -> int:
 
     cold_snapshots = [cold_snapshot("inferswarm01"),
                       cold_snapshot("inferswarm03")]
-    warm_record_01 = json.loads(args.warm_01.read_text())
-    warm_record_03 = json.loads(args.warm_03.read_text())
     warm_snapshots = [warm_snapshot(warm_record_01, authority),
                       warm_snapshot(warm_record_03, authority)]
-    if not args.skip_retained_cross_check:
-        check_warm_against_retained(warm_snapshots[0], "inferswarm01")
-        check_warm_against_retained(warm_snapshots[1], "inferswarm03")
+    check_warm_against_retained(warm_snapshots[0], "inferswarm01")
+    check_warm_against_retained(warm_snapshots[1], "inferswarm03")
 
     cold_decision = summarize(run_arm(planner_inputs, cold_snapshots))
     warm_decision = summarize(run_arm(planner_inputs, warm_snapshots))
@@ -687,6 +683,37 @@ def main() -> int:
                 canonical_json_bytes(snapshot)).hexdigest(),
         }
         for snapshot in warm_snapshots}
+    return document
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--warm-01", type=Path, required=True)
+    parser.add_argument("--warm-03", type=Path, required=True)
+    parser.add_argument("--out", type=Path,
+                        default=P.EVIDENCE_DIR / "comparison.json")
+    parser.add_argument("--skip-retained-cross-check", action="store_true",
+                        help="test fixture mode: synthetic warm snapshots")
+    args = parser.parse_args()
+
+    warm_record_01 = json.loads(args.warm_01.read_text())
+    warm_record_03 = json.loads(args.warm_03.read_text())
+    if args.skip_retained_cross_check:
+        # fixture mode: bypass ONLY the retained Arm-B subset cross-check
+        # by monkeypatching it to a no-op; every other derivation runs
+        global check_warm_against_retained
+        _real = check_warm_against_retained
+        check_warm_against_retained = lambda *a, **k: None
+        try:
+            document = build_comparison_document(
+                P.EVIDENCE_DIR / "authority.json",
+                warm_record_01, warm_record_03)
+        finally:
+            check_warm_against_retained = _real
+    else:
+        document = build_comparison_document(
+            P.EVIDENCE_DIR / "authority.json",
+            warm_record_01, warm_record_03)
     write_json(args.out, document)
     print(json.dumps({
         "comparison": str(args.out),
