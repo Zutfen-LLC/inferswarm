@@ -22,6 +22,26 @@
       },
       "reason": "Exact-head adversarial review round 2 (both lanes NO-GO with demonstrated holes at 9bc30b1): the terminal re-derived identity but still trusted authored derived content \u2014 comparison rows (fabricated economics passed as P0-1/P1-1; jointly forged gate ledgers passed as P0-2), GPU memory_used rows vs the retained nvidia-smi stdout (P1-2), byte_preservation boolean vs retained tree digests (P2), and MANIFEST.sha256 had no verifier (P2-3).",
       "rerun_required": false
+    },
+    {
+      "amendment_id": "amendment-3-fence-manifest-hardening",
+      "authority_json_regenerated": false,
+      "correction": "The terminal re-derives the execution-bearing process list from the retained ps receipt stdout using the collector's exact pattern semantics and fails closed on divergence or on a re-derived live process; fence.ports is re-derived symmetrically (cosmetic, not acceptance-bearing); the terminal is itself a MANIFEST.sha256 consumer (OBS-MANIFEST-MISMATCH); a BLOCKED terminal nulls comparison-derived magnitudes instead of embedding possibly forged numbers.",
+      "execution_bearing_collector_unchanged": true,
+      "new_stop_rules": [
+        "OBS-FENCE-DERIVATION-MISMATCH",
+        "OBS-MANIFEST-MISMATCH"
+      ],
+      "producer_hash_transitions": {
+        "scripts/issue182_campaign_pins.py": {
+          "corrected": "6acf7fdf73a9cc6735a65549966c6539b08a90605b71c4f13120959a4c16be22"
+        },
+        "scripts/issue182_terminal.py": {
+          "corrected": "d00e3416cdd04707f3aa2f16959584ab43fdba955df6aa105526e03a859d4b6d"
+        }
+      },
+      "reason": "Exact-head adversarial review round 3: lane A PASS with P3 hardening notes; lane B NO-GO with one P1 \u2014 fence.processes was consumed verbatim although the full ps stdout is retained in the same record (the exact mirror of the round-2 GPU memory_used fix, which had been applied only to nvidia-smi).",
+      "rerun_required": false
     }
   ],
   "campaign_id": "issue182-arm-e-locality-mutation-v1",

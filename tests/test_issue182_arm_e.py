@@ -207,8 +207,10 @@ class AuthorityTests(unittest.TestCase):
         # the frozen authority predates the review-round amendment;
         # its STOP-rule list PLUS the amendment's new rules must equal
         # the living pin set (the authority itself is never rewritten)
-        effective = sorted(set(machine["stop_rules"]) | set(
-            self.amendment_new_stop_rules()))
+        effective = sorted(
+            set(machine["stop_rules"])
+            | set(self.amendment_new_stop_rules())
+            | set(self.round3_stop_rules()))
         self.assertEqual(effective, sorted(P.STOP_RULES))
 
     @staticmethod
@@ -218,7 +220,23 @@ class AuthorityTests(unittest.TestCase):
         if not amendment_path.is_file():
             return []
         amendment = json.loads(amendment_path.read_text())
-        return list(amendment.get("new_stop_rules") or [])
+        rules = list(amendment.get("new_stop_rules") or [])
+        for entry in amendment.get("amendments") or []:
+            rules.extend(entry.get("new_stop_rules") or [])
+        return rules
+
+    @staticmethod
+    def round3_stop_rules() -> list[str]:
+        amendment_path = (P.EVIDENCE_DIR / "authority" /
+                          "amendment-1-reduction-hardening.json")
+        if not amendment_path.is_file():
+            return []
+        amendment = json.loads(amendment_path.read_text())
+        rules = []
+        for entry in amendment.get("amendments") or []:
+            if entry.get("amendment_id") == "amendment-3-fence-manifest-hardening":
+                rules.extend(entry.get("new_stop_rules") or [])
+        return rules
 
     def test_plan_and_requirements_bound_to_retained_bytes(self):
         binding = self.authority["subject_and_plan"]
@@ -1004,6 +1022,39 @@ class AdversarialReviewRound2Controls(unittest.TestCase):
         self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
         self.assertTrue(any("OBS-MUTATION-DETECTED" in p
                             for p in document["problems"]))
+
+    def test_emptied_process_fence_vs_retained_stdout_blocks(self):
+        """Lane B round-3 P1-1: fence.processes blanked while the
+        retained ps stdout shows a live service process must BLOCK —
+        the process fence is re-derived from the retained stdout."""
+        warm = synthetic_warm_record("inferswarm01")
+        stdout = ("  1234 python -m inferswarm_r6.node_agent --serve\\n"
+                  "  9999 /usr/bin/sshd -D\\n")
+        warm["fence"]["probe_receipts"]["ps"]["stdout"] = stdout
+        warm["fence"]["probe_receipts"]["ps"]["stdout_sha256"] = (
+            hashlib.sha256(stdout.encode()).hexdigest())
+        warm["fence"]["probe_receipts"]["ps"]["stdout_bytes"] = (
+            len(stdout.encode()))
+        warm["fence"]["processes"] = []  # the forgery under test
+        warm["record_digest"] = T.observation_record_digest(warm)
+        document = self._terminal_for(
+            warm, synthetic_warm_record("inferswarm03"))
+        self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+        self.assertTrue(any("OBS-PROCESSES-LIVE" in p
+                            for p in document["problems"]))
+
+    def test_blocked_terminal_nulls_comparison_derived_fields(self):
+        """Lane A round-3 P3-2: a BLOCKED document carries no possibly
+        forged magnitudes (v5/selection/gate_ledger_unchanged null)."""
+        warm = synthetic_warm_record("inferswarm01")
+        warm["problems"] = [{"stop_rule": "OBS-ROOT-MISSING"}]
+        warm["record_digest"] = T.observation_record_digest(warm)
+        document = self._terminal_for(
+            warm, synthetic_warm_record("inferswarm03"))
+        self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+        self.assertIsNone(document["v5"])
+        self.assertIsNone(document["selection"])
+        self.assertIsNone(document["gate_ledger_unchanged"])
 
     def test_manifest_of_evidence_dir_verifies(self):
         """Lanes A/B P2-3: MANIFEST.sha256 has an automated verifier —

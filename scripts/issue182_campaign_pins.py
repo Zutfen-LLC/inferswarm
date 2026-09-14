@@ -341,6 +341,11 @@ ACCEPTED_CACHE_OBJECTS_PATH = ROOT / (
 #:   OBS-WARM-ARM-BINDING-MISMATCH  the comparison's warm arm is not
 #:                             the snapshot bound to the retained
 #:                             observation records (review lane A)
+#:   OBS-FENCE-DERIVATION-MISMATCH  a derived fence field disagrees
+#:                             with its retained receipt stdout
+#:                             (review round 3 lane B P1-1)
+#:   OBS-MANIFEST-MISMATCH     evidence manifest row does not verify
+#:                             against the live evidence bytes
 #:   OBS-MUTATION-DETECTED     before/after root digest differs
 #:   OBS-PROCESSES-LIVE        execution-bearing process live at fence
 ATTEMPT_ID = "arme-182-physical-2"
@@ -359,6 +364,8 @@ STOP_RULES = (
     "OBS-FORBIDDEN-NAMESPACE-MATERIAL",
     "OBS-RECORD-DIGEST-MISMATCH",
     "OBS-WARM-ARM-BINDING-MISMATCH",
+    "OBS-FENCE-DERIVATION-MISMATCH",
+    "OBS-MANIFEST-MISMATCH",
     "OBS-MUTATION-DETECTED",
     "OBS-PROCESSES-LIVE",
 )

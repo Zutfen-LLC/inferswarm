@@ -119,6 +119,45 @@ def gpu_used_from_receipt_stdout(receipt) -> dict:
     return rows
 
 
+def processes_from_receipt_stdout(receipt) -> list[dict]:
+    """Re-derive the execution-bearing process list from the retained
+    ps receipt stdout using the collector's exact pattern semantics
+    (review round 3 lane B P1-1: fence.processes must not be trusted
+    verbatim when the raw ps output is retained in the same record)."""
+    import issue182_inventory as I  # noqa: PLC0415  (lazy, stdlib-only)
+    processes = []
+    if receipt is None or receipt.get("returncode") != 0:
+        return processes
+    for line in (receipt.get("stdout") or "").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        pid_text, _, args = line.partition(" ")
+        if not any(pattern in args for pattern in I.SERVICE_PATTERNS):
+            continue
+        if "ps -eo" in args or "issue182" in args or "grep" in args:
+            continue
+        processes.append({"pid": pid_text, "args": args[:300]})
+    return processes
+
+
+def ports_from_receipt_stdout(receipts: dict) -> dict:
+    """Re-derive listening-port rows from the retained ss receipts
+    (review round 3 lane B P2-1: symmetric with the GPU/ps fixes;
+    cosmetic — ports are not an acceptance input, but the derived
+    dict must not silently disagree with the retained stdout)."""
+    ports = {}
+    for port in (18080, 18485, 18486):
+        receipt = (receipts or {}).get(f"ss:{port}")
+        if receipt is None or receipt.get("returncode") != 0:
+            ports[str(port)] = None
+            continue
+        ports[str(port)] = [
+            line for line in (receipt.get("stdout") or "").splitlines()
+            if line.strip() and not line.lstrip().startswith("State")]
+    return ports
+
+
 def load(path: Path) -> dict:
     return json.loads(path.read_text())
 
@@ -176,6 +215,26 @@ def rederive_problems(comparison: dict) -> list[str]:
     return problems
 
 
+def verify_evidence_manifest(evidence_dir: Path) -> list[str]:
+    """Verify every MANIFEST.sha256 row against the live evidence bytes
+    (review round 3 lane A P3-1 / lane B: the terminal itself must be
+    a manifest consumer, not only a test). Returns problem strings."""
+    manifest_path = evidence_dir / "MANIFEST.sha256"
+    if not manifest_path.is_file():
+        return []
+    problems = []
+    for line in manifest_path.read_text().splitlines():
+        digest, _, name = line.partition("  ")
+        if not digest or not name:
+            continue
+        path = P.ROOT / name
+        if not path.is_file():
+            problems.append(f"manifest-file-missing:{name}")
+        elif hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+            problems.append(f"manifest-digest-mismatch:{name}")
+    return problems
+
+
 def reduce_terminal(evidence_dir: Path) -> dict:
     authority = load(evidence_dir / "authority.json")
     if authority.get("schema") != P.AUTHORITY_SCHEMA:
@@ -212,13 +271,35 @@ def reduce_terminal(evidence_dir: Path) -> dict:
         # P1-1: an empty observation is admissible ONLY against
         # retained successful probe receipts
         receipts = fence.get("probe_receipts") or {}
-        for probe_name in ("ps", "ss:18080", "ss:18485", "ss:18486",
-                           "nvidia-smi"):
+        for probe_name in REQUIRED_RECEIPTS:
             receipt = receipts.get(probe_name)
             if receipt is None or receipt.get("returncode") != 0:
                 stop_problems.append({
                     "host": host, "stop_rule": "OBS-PROBE-FAILED",
                     "probe": probe_name})
+        # review round 3 lane B P1-1: the process fence is RE-DERIVED
+        # from the retained ps stdout using the collector's exact
+        # pattern semantics — an emptied fence.processes list cannot
+        # hide a live service the retained stdout shows
+        rederived_processes = processes_from_receipt_stdout(
+            receipts.get("ps"))
+        if rederived_processes:
+            stop_problems.append({
+                "host": host, "stop_rule": "OBS-PROCESSES-LIVE",
+                "detail": rederived_processes[:5],
+                "source": "re-derived from retained ps receipt stdout"})
+        elif list(fence.get("processes") or []) != rederived_processes:
+            stop_problems.append({
+                "host": host,
+                "stop_rule": "OBS-FENCE-DERIVATION-MISMATCH",
+                "field": "processes"})
+        # review round 3 lane B P2-1: ports re-derived symmetrically
+        if fence.get("ports") is not None and \
+                fence.get("ports") != ports_from_receipt_stdout(receipts):
+            stop_problems.append({
+                "host": host,
+                "stop_rule": "OBS-FENCE-DERIVATION-MISMATCH",
+                "field": "ports"})
         # P1-2: freshness identity re-derived against the live authority
         epoch = record.get("observation_epoch") or {}
         if (epoch.get("authority_digest") != authority.get("authority_digest")
@@ -407,6 +488,14 @@ def reduce_terminal(evidence_dir: Path) -> dict:
                     "retained": retained_digest,
                     "rederived": rederived_digest}})
 
+    # review round 3 lane A P3-1 / lane B: the terminal is itself a
+    # MANIFEST consumer — a doctored evidence file that regenerated
+    # nothing leaves a detectable digest mismatch here too
+    for manifest_problem in verify_evidence_manifest(evidence_dir):
+        stop_problems.append({
+            "host": "manifest", "stop_rule": "OBS-MANIFEST-MISMATCH",
+            "detail": manifest_problem})
+
     if stop_problems:
         terminal = P.BLOCKED_TERMINAL
         problems = [f"stop:{p['stop_rule']}@{p['host']}" for p in stop_problems]
@@ -417,9 +506,14 @@ def reduce_terminal(evidence_dir: Path) -> dict:
             problems.append("stored problems disagree with re-derived set")
         terminal = P.PASS_TERMINAL if not problems else P.FAIL_TERMINAL
 
+    # review round 3 lane A P3-2: a BLOCKED terminal must not embed
+    # possibly-forged comparison-derived magnitudes in its document
     v5 = P.SUBJECT["candidate"]
-    cold_v5 = comparison["cold_arm"]["rows"][v5]
-    warm_v5 = comparison["warm_arm"]["rows"][v5]
+    if terminal == P.BLOCKED_TERMINAL:
+        cold_v5 = warm_v5 = None
+    else:
+        cold_v5 = comparison["cold_arm"]["rows"][v5]
+        warm_v5 = comparison["warm_arm"]["rows"][v5]
 
     # planning-only fields are DERIVED from the retained observation
     # records, never authored as literal booleans (maintainer comment
@@ -471,18 +565,19 @@ def reduce_terminal(evidence_dir: Path) -> dict:
         "note": ("mechanically re-derived from retained bytes; no authored "
                  "terminal/pass/equality boolean consulted"),
         "problems": problems,
-        "v5": {
+        "v5": None if cold_v5 is None else {
             "missing_bytes_cold": cold_v5["missing_bytes"],
             "missing_bytes_warm": warm_v5["missing_bytes"],
             "required_bytes": cold_v5["required_bytes"],
             "transition_seconds_cold": cold_v5["ranking_value"],
             "transition_seconds_warm": warm_v5["ranking_value"],
         },
-        "selection": {
+        "selection": None if cold_v5 is None else {
             "cold": comparison["cold_arm"]["selected_candidate_id"],
             "warm": comparison["warm_arm"]["selected_candidate_id"],
         },
-        "gate_ledger_unchanged": comparison.get("all_gates_unchanged"),
+        "gate_ledger_unchanged": None if cold_v5 is None else
+            comparison.get("all_gates_unchanged"),
         "planning_only": planning_only,
         "terminal": terminal,
     }
