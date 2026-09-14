@@ -97,24 +97,32 @@ class ProjectStatusTests(unittest.TestCase):
                 self.assertEqual(self.run_main(root, '--write'), 1)
                 self.assertEqual(self.snapshot(root), before)
 
-    def test_current_record_accepts_arm_c_fail_and_blocks_execution(self):
+    def test_current_record_accepts_arm_c_lineage_and_closes_the_sequence(self):
         output = sync.render(self.record)['frontier']
-        # The corrected #133 campaign is the current accepted Arm-C result.
+        # The corrected #133 campaign FAIL and the #137 diagnosis remain
+        # accepted historical constraints of the closed sequence.
         self.assertIn('ISSUE117_ARM_C_ORDINARY_SERVING_FAIL', output)
-        self.assertIn('accepted](https://github.com/Zutfen-LLC/inferswarm/'
-                      'commit/1b83bcab0a5e682a438ca0554f71dd0ace15be55)', output)
-        # The accepted #137 diagnosis narrows the failure without authorizing
-        # remediation, requalification, or Arm D.
+        self.assertIn('1b83bcab0a5e682a438ca0554f71dd0ace15be55', output)
         self.assertIn('ISSUE117_ARM_C_REGIME4_DIAGNOSIS_PARTIAL', output)
         self.assertIn('cdc23d0e8fa9d3b1b27bab5749939a5ad69b9610', output)
-        self.assertIn('authorization:** blocked', output)
-        # #153 corrected remediation: BLOCKED, branch B, failing
-        # population not remediated; no requalification authority.
         self.assertIn('ISSUE117_ARM_C_REMEDIATION_BLOCKED', output)
         self.assertIn('BACKEND_REQUIRES_MULTI_CHUNK', output)
         self.assertIn('65-67-row failing units must remain multi-chunk', output)
-        self.assertIn('MUST NOT be authorized', output)
-        self.assertIn('Arm D/E remain blocked', output)
+        # The accepted Arm-E observation is now the frontier prerequisite.
+        self.assertIn('ISSUE117_ARM_E_LOCALITY_MUTATION_PASS', output)
+        self.assertIn('accepted](https://github.com/Zutfen-LLC/inferswarm/'
+                      'commit/1149a8ad9576ac25dfa2e474b9142c9c903ced77)', output)
+        self.assertIn('ISSUE117_ARM_D_WARM_RESTART_CACHE_REUSE_PASS', output)
+        self.assertIn('d4d50b20205e455a195a908ee9d5ea72bc5d8d04', output)
+        # Issue #184 final closure: the planned A-E sequence is complete.
+        self.assertIn('authorization:** blocked', output)
+        self.assertIn('COMPLETE/ACCEPTED', output)
+        self.assertIn('FINAL-STATUS.md', output)
+        # No stale live blocked/pending claims remain.
+        self.assertNotIn('Arm D/E remain blocked', output)
+        self.assertNotIn('Arm D and Arm E remain blocked', output)
+        self.assertNotIn('PR open for maintainer review', output)
+        self.assertNotIn('PENDING maintainer acceptance', output)
         self.assertNotIn('PR remains open', output)
         self.assertNotIn('not yet recorded', output)
         self.assertNotIn('physical Arm-C retry NOT authorized', output)

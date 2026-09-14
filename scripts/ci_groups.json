@@ -58,7 +58,8 @@
     "test_issue153_arm_c_remediation",
     "test_issue166_swa_remediation_record",
     "test_issue168_requal_blocked_record",
-    "test_issue170_long_remainder_corpus"
+    "test_issue170_long_remainder_corpus",
+    "test_issue184_final_closure"
    ]
   },
   "issue-137": {

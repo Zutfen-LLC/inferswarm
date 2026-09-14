@@ -2,7 +2,22 @@
 
 ## Current state
 
-**Observed terminals (latest first):**
+**FINAL CLOSURE (Issue #184, CPU/docs only): the planned Arm A–E sequence
+is COMPLETE/ACCEPTED.** Arm A `ISSUE117_ARM_A_EXECUTION_EQUIVALENCE_PASS`
+(PR #122, merge `6774474941d7ce2a0252c8c1e148f8bce61a8d6d`); Arm B
+`ISSUE117_ARM_B_COLD_REALIZATION_PASS` (PR #127, merge
+`fed87d1b71a0794374dd58c921e31606a56a242f`); Arm C lineage: historical
+`ISSUE117_ARM_C_EVIDENCE_BLOCKER` (PR #128) and pre-remediation
+`ISSUE117_ARM_C_ORDINARY_SERVING_FAIL` (PR #136) preserved, post-remediation
+`ISSUE117_ARM_C_ORDINARY_SERVING_PASS` accepted (PR #174, merge
+`52c3b560d560f69d0f009ed5772c1a70efc01ba2`); Arm D
+`ISSUE117_ARM_D_WARM_RESTART_CACHE_REUSE_PASS` (PR #181, merge
+`d4d50b20205e455a195a908ee9d5ea72bc5d8d04`); Arm E
+`ISSUE117_ARM_E_LOCALITY_MUTATION_PASS` (PR #183, merge
+`1149a8ad9576ac25dfa2e474b9142c9c903ced77`). No remaining Issue #117
+execution slice. See [FINAL-STATUS.md](FINAL-STATUS.md).
+
+**Observed terminals (latest first, historical):**
 
 - Issue #129 (2026-09-09, review-corrected, pending maintainer review):
   `ISSUE117_ARM_C_RETRY_METHODOLOGY_READY` — CPU-only Arm-C retry
@@ -48,8 +63,9 @@
   integration producer `924cd22ea081f6d4ed471016faf01d427fc5b0d2`. No
   holdout material was used.
 
-Arm D has NOT been executed and remains blocked pending maintainer review
-of the Arm-C observation.
+Arm D and Arm E have since been executed and accepted (Issue #175 / PR
+#181 and Issue #182 / PR #183); see FINAL-STATUS.md. The statement below
+is retained as the historical record of this area's own point in time.
 
 Accepted predecessor gates remain historical authority:
 
@@ -418,7 +434,9 @@ semantics are derived from the sha256-pinned FreeToken bytes by
 `scripts/issue117_arm_c_evidence.py` (retained-equality derivation;
 34-control suite in `tests/test_issue117_arm_c_retention.py`).
 
-Arm D has NOT been executed and remains blocked.
+Arm D and Arm E were subsequently executed and accepted (PR #181, PR
+#183); the block above is the historical record of the Arm-C campaign
+point in time.
 
 ## Non-claims (Arm C)
 
@@ -427,11 +445,14 @@ Arm D has NOT been executed and remains blocked.
   comparator and is diagnostic only.
 - The six regime-4 divergences are diagnostic evidence for a follow-up
   hypothesis (multi-chunk/KV nondeterminism), not an accepted result.
-- No Arm-D warm-restart or Arm-E locality claim; Arm D remains blocked.
+- This area's own record makes no Arm-D warm-restart or Arm-E locality
+  claim; those claims live in the accepted #175/#182 areas.
 - No new Arm-C physical campaign is authorized by this record.
 - Arm B does not claim ordinary external-Coordinator serving; that is Arm C.
 - No PREFILL/decode/generate or fixture serving was executed as part of Arm B.
-- Arms C/D/E have not been executed.
+- At this area's original point in time, Arms C/D/E had not been
+  executed; the complete accepted sequence is recorded in
+  FINAL-STATUS.md.
 - No consumed `h109-*` holdout material is used as Arm-B evidence.
 - No public planner, artifact, path, or wire schema is frozen by this record.
 - Historical accepted failures/blockers remain historical truth; later
@@ -439,11 +460,9 @@ Arm D has NOT been executed and remains blocked.
 
 ## Next gate
 
-Arm C — ordinary external-Coordinator serving — remains blocked until
-maintainer acceptance/merge of the Arm-B observation.
-
-Do not rerun accepted Arm A, the accepted physical preflight, or Arm B merely
-to begin Arm C.
+None — the planned Issue #117 sequence is closed (FINAL-STATUS.md). Any
+successor work requires a new issue and fresh authority. Do not rerun
+accepted arms.
 
 ## Evidence index
 
