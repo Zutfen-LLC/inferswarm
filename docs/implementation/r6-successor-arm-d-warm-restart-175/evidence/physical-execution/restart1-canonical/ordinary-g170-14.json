@@ -1,0 +1,39 @@
+{
+  "arm": "generalization-170",
+  "case_id": "g170-14",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "[ while def while { ) map true break _tmp ) false { if ( if { + in def for yield + in def } class lambda + : } for - { class def yield ) + ) return , item , return class else else { ) [ for in class - _tmp in lambda lambda class ( } _tmp yield return while def if = item true if item { if while list map map else return list while yield for ) + return else [ : , : return def if break if { while class =",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 38,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\n[ while def while { ) map true break _tmp ) false { if ( if { + in def for yield + in def } class lambda + : } for - { class def yield ) + ) return , item , return class else else { ) [ for in class - _tmp in lambda lambda class ( } _tmp yield return while def if = item true if item { if while list map map else return list while yield for ) + return else [ : , : return def if break if { while class =<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you have provided a **frequency",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-397798088e60",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 118,
+      "total_tokens": 126
+    }
+  },
+  "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+  "wall_ns": 3853523056
+}

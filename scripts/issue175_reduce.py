@@ -52,9 +52,9 @@ ACCOUNTED_NON_WEIGHT = (
 )
 
 OPEN_RE = re.compile(
-    r'^(?:\[\d+\] )?openat\([^,]+, "([^"]+)"')
+    r'^(?:(?:\[\d+\]|\d+) )?openat\([^,]+, "([^"]+)"')
 CONNECT_RE = re.compile(
-    r"^(?:\[\d+\] )?connect\(\d+,")
+    r"^(?:(?:\[\d+\]|\d+) )?connect\(\d+,")
 
 
 def _provenance_ok(record: dict, schema: str) -> bool:
@@ -97,7 +97,9 @@ def compare_fences(pre: dict, post: dict, killed_pids: list[int]) -> dict:
                 f"pid {pid} identical starttime across the boundary")
     # ports must be free of the OLD listeners and rebound by NEW pids
     for port, listeners in post.get("ports", {}).items():
-        if listeners and not post_procs:
+        has_listener = bool(listeners) if isinstance(listeners, list) \
+            else bool(str(listeners).strip())
+        if has_listener and not post_procs:
             problems.append(f"port {port} has a listener but no processes")
     counters = {
         "pre_execution_processes": len(pre_procs),
@@ -110,14 +112,17 @@ def compare_fences(pre: dict, post: dict, killed_pids: list[int]) -> dict:
             "passed": not problems}
 
 
-def gpu_fence(gpus: list[dict], frozen: dict) -> dict:
+def gpu_fence(gpus: list[dict], frozen: dict, host: str | None = None) -> dict:
     """Old accelerator realization must be inactive: ~0 used memory on
-    every frozen device."""
+    every frozen device. When ``host`` is given, only that host's frozen
+    devices are checked against the record collected on that host."""
     problems = []
     seen = {}
     for gpu in gpus:
         seen[gpu["uuid"]] = gpu
-    for host, wanted in frozen.items():
+    scope = {host: frozen[host]} if host in frozen else (
+        {} if host is not None else frozen)
+    for host, wanted in scope.items():
         for index, uuid in wanted.items():
             gpu = seen.get(uuid)
             if gpu is None:
@@ -139,11 +144,23 @@ def gpu_fence(gpus: list[dict], frozen: dict) -> dict:
 # ------------------------------------------------------------------
 # 2. strace transfer classification
 # ------------------------------------------------------------------
+#: the authorized 01-side model view is a directory of symlinks whose
+#: targets resolve into CACHE_ROOT; the retained inventory record
+#: proves the resolution, so symlink-path opens are cache reads. A
+#: model-view path that did NOT resolve into the cache would fail the
+#: inventory's dangling/entry checks before any reduction runs.
+MODEL_VIEW_ALIASES = (
+    "/srv/inferswarm/state/arm-c/model-view/",
+)
+
+
 def classify_opened_path(path: str) -> str:
     """Classify one opened file path."""
     if path.endswith(WEIGHT_SUFFIX) or path.endswith(
             ".safetensors.index.json"):
-        if path.startswith(CACHE_ROOT):
+        if path.startswith(CACHE_ROOT) or (
+                path.startswith(MODEL_VIEW_ALIASES)
+                and path.endswith(WEIGHT_SUFFIX)):
             return "cache_weight_read"
         for root in SOURCE_ROOTS:
             if path.startswith(root):

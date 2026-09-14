@@ -1,0 +1,75 @@
+{
+  "cache_artifacts": {
+    "dense.6171f32b4413.stage-1/armb-participant.safetensors": {
+      "bytes": 9256843520,
+      "expected_sha256": "2e8cf1af3ff64f7d5f800dac72fea2d418ffa81b15c3a90da5fd42542eaa9ed5",
+      "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-1/armb-participant.safetensors",
+      "sha256": "2e8cf1af3ff64f7d5f800dac72fea2d418ffa81b15c3a90da5fd42542eaa9ed5",
+      "verified": true
+    },
+    "dense.6171f32b4413.stage-2/armb-participant.safetensors": {
+      "bytes": 7278967984,
+      "expected_sha256": "85b218060e0242af6fb27a2e988a24a66892511e8067c38ca90280efa3af038d",
+      "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-2/armb-participant.safetensors",
+      "sha256": "85b218060e0242af6fb27a2e988a24a66892511e8067c38ca90280efa3af038d",
+      "verified": true
+    }
+  },
+  "campaign_id": "issue175-arm-d-warm-restart-v1",
+  "collected_at_unix": 1789365783,
+  "gpus": [
+    {
+      "driver": "610.57.04",
+      "index": "0",
+      "memory_used": "1 MiB",
+      "uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"
+    },
+    {
+      "driver": "610.57.04",
+      "index": "1",
+      "memory_used": "1 MiB",
+      "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+    }
+  ],
+  "host": "inferswarm01",
+  "model_view": {
+    "entries": {
+      "config.json": {
+        "bytes": 4423
+      },
+      "stage-1.safetensors": {
+        "resolved": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-1/armb-participant.safetensors",
+        "symlink": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-1/armb-participant.safetensors"
+      },
+      "stage-2.safetensors": {
+        "resolved": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-2/armb-participant.safetensors",
+        "symlink": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-2/armb-participant.safetensors"
+      }
+    },
+    "path": "/srv/inferswarm/state/arm-c/model-view"
+  },
+  "passed": true,
+  "phase": "post-kill-1",
+  "ports": {
+    "18080": [],
+    "18485": [],
+    "18486": []
+  },
+  "problems": [],
+  "processes": [],
+  "producer": {
+    "clean": true,
+    "head": "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469"
+  },
+  "schema": "inferswarm.issue175.arm-d.cache-inventory/1",
+  "tokenizer": {
+    "assets": {
+      "chat_template.jinja": "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4",
+      "config.json": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9",
+      "generation_config.json": "a8349d9bd64cc5841297fcb5002f0fdc4749c473c8f1b10ea337f9ce4ee7014e",
+      "tokenizer.json": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+      "tokenizer_config.json": "a62f4e85a47c0c136edaaa3a4f591fd6783717299a9def47e5ad03a49f6a5eb9"
+    },
+    "path": "/srv/inferswarm/tokenizers/gemma-r6-frozen"
+  }
+}

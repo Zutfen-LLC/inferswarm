@@ -1,0 +1,222 @@
+{
+  "campaign_id": "issue175-arm-d-warm-restart-v1",
+  "comparison": "post-restart sentinels vs accepted #172 sentinels + within-restart determinism",
+  "equal_count": 42,
+  "passed": true,
+  "restart": 2,
+  "row_count": 42,
+  "rows": [
+    {
+      "case": "c109-03-04-003",
+      "equal": true,
+      "repeat": 1
+    },
+    {
+      "case": "c109-04-02-047",
+      "equal": true,
+      "repeat": 1
+    },
+    {
+      "case": "c109-04-06-074",
+      "equal": true,
+      "repeat": 1
+    },
+    {
+      "case": "g170-01",
+      "equal": true,
+      "repeat": 1
+    },
+    {
+      "case": "g170-05",
+      "equal": true,
+      "repeat": 1
+    },
+    {
+      "case": "g170-09",
+      "equal": true,
+      "repeat": 1
+    },
+    {
+      "case": "g170-13",
+      "equal": true,
+      "repeat": 1
+    },
+    {
+      "case": "c109-03-04-003",
+      "equal": true,
+      "repeat": 2
+    },
+    {
+      "case": "c109-04-02-047",
+      "equal": true,
+      "repeat": 2
+    },
+    {
+      "case": "c109-04-06-074",
+      "equal": true,
+      "repeat": 2
+    },
+    {
+      "case": "g170-01",
+      "equal": true,
+      "repeat": 2
+    },
+    {
+      "case": "g170-05",
+      "equal": true,
+      "repeat": 2
+    },
+    {
+      "case": "g170-09",
+      "equal": true,
+      "repeat": 2
+    },
+    {
+      "case": "g170-13",
+      "equal": true,
+      "repeat": 2
+    },
+    {
+      "case": "c109-03-04-003",
+      "equal": true,
+      "repeat": 3
+    },
+    {
+      "case": "c109-04-02-047",
+      "equal": true,
+      "repeat": 3
+    },
+    {
+      "case": "c109-04-06-074",
+      "equal": true,
+      "repeat": 3
+    },
+    {
+      "case": "g170-01",
+      "equal": true,
+      "repeat": 3
+    },
+    {
+      "case": "g170-05",
+      "equal": true,
+      "repeat": 3
+    },
+    {
+      "case": "g170-09",
+      "equal": true,
+      "repeat": 3
+    },
+    {
+      "case": "g170-13",
+      "equal": true,
+      "repeat": 3
+    },
+    {
+      "case": "c109-03-04-003",
+      "equal": true,
+      "repeat": 4
+    },
+    {
+      "case": "c109-04-02-047",
+      "equal": true,
+      "repeat": 4
+    },
+    {
+      "case": "c109-04-06-074",
+      "equal": true,
+      "repeat": 4
+    },
+    {
+      "case": "g170-01",
+      "equal": true,
+      "repeat": 4
+    },
+    {
+      "case": "g170-05",
+      "equal": true,
+      "repeat": 4
+    },
+    {
+      "case": "g170-09",
+      "equal": true,
+      "repeat": 4
+    },
+    {
+      "case": "g170-13",
+      "equal": true,
+      "repeat": 4
+    },
+    {
+      "case": "c109-03-04-003",
+      "equal": true,
+      "repeat": 5
+    },
+    {
+      "case": "c109-04-02-047",
+      "equal": true,
+      "repeat": 5
+    },
+    {
+      "case": "c109-04-06-074",
+      "equal": true,
+      "repeat": 5
+    },
+    {
+      "case": "g170-01",
+      "equal": true,
+      "repeat": 5
+    },
+    {
+      "case": "g170-05",
+      "equal": true,
+      "repeat": 5
+    },
+    {
+      "case": "g170-09",
+      "equal": true,
+      "repeat": 5
+    },
+    {
+      "case": "g170-13",
+      "equal": true,
+      "repeat": 5
+    },
+    {
+      "case": "c109-03-04-003",
+      "equal": true,
+      "repeat": 6
+    },
+    {
+      "case": "c109-04-02-047",
+      "equal": true,
+      "repeat": 6
+    },
+    {
+      "case": "c109-04-06-074",
+      "equal": true,
+      "repeat": 6
+    },
+    {
+      "case": "g170-01",
+      "equal": true,
+      "repeat": 6
+    },
+    {
+      "case": "g170-05",
+      "equal": true,
+      "repeat": 6
+    },
+    {
+      "case": "g170-09",
+      "equal": true,
+      "repeat": 6
+    },
+    {
+      "case": "g170-13",
+      "equal": true,
+      "repeat": 6
+    }
+  ],
+  "schema": "inferswarm.issue175.arm-d.equality-reduction/1",
+  "within_restart_determinism": true
+}

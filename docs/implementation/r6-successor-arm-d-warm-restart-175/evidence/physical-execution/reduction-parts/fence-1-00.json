@@ -1,0 +1,29 @@
+{
+  "campaign_id": "issue175-arm-d-warm-restart-v1",
+  "fence": {
+    "counters": {
+      "killed_pids": [
+        305140,
+        305137
+      ],
+      "post_execution_processes": 0,
+      "pre_execution_processes": 2,
+      "pre_restart_pids_still_alive": 0
+    },
+    "passed": true,
+    "problems": []
+  },
+  "gpu_fence": {
+    "passed": true,
+    "problems": []
+  },
+  "host": "inferswarm00",
+  "killed_pids": [
+    305140,
+    305137
+  ],
+  "post_record": "inventories/inventory-00-postkill1.json",
+  "pre_record": "inventories/inventory-00-pre1.json",
+  "restart": 1,
+  "schema": "inferswarm.issue175.arm-d.process-fence/1"
+}

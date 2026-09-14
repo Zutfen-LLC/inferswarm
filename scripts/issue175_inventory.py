@@ -30,8 +30,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import issue175_campaign_pins as P  # noqa: E402
 
 SERVICE_PATTERNS = (
-    "inferswarm_xc.coordinator", "inferswarm_r6.node_agent",
-    "inferswarm_r6.last_stage_service", "spawn_main",
+    "inferswarm_xc.coordinator", "inferswarm_r6.coordinator",
+    "inferswarm_r6.node_agent", "inferswarm_r6.last_stage_service",
+    "spawn_main",
 )
 
 
@@ -92,8 +93,12 @@ def collect_processes() -> list[dict]:
 def collect_ports() -> dict:
     listening = {}
     for port in (18080, 18485, 18486):
-        out = check(["ss", "-tlnp", f"sport = :{port}"])
-        listening[str(port)] = out
+        out = check(["ss", "-tln", f"sport = :{port}"])
+        # ss prints a header even with no match; a real listener adds
+        # a data row
+        rows = [line for line in out.splitlines()
+                if line.strip() and not line.lstrip().startswith("State")]
+        listening[str(port)] = rows
     return listening
 
 

@@ -1,0 +1,61 @@
+{
+  "campaign_id": "issue175-arm-d-warm-restart-v1",
+  "note": "mechanically re-derived from retained bytes; no authored terminal/cache-hit/pass boolean consulted",
+  "problems": [],
+  "restarts": {
+    "1": {
+      "fence": {
+        "killed_pids": [
+          2324042,
+          2324038
+        ],
+        "post_execution_processes": 0,
+        "pre_execution_processes": 2,
+        "pre_restart_pids_still_alive": 0
+      },
+      "label": "restart-1",
+      "passed": true,
+      "problems": [],
+      "transfer_problems": []
+    },
+    "2": {
+      "fence": {
+        "killed_pids": [
+          2329793,
+          2329790
+        ],
+        "post_execution_processes": 0,
+        "pre_execution_processes": 2,
+        "pre_restart_pids_still_alive": 0
+      },
+      "label": "restart-2",
+      "passed": true,
+      "problems": [],
+      "transfer_problems": []
+    }
+  },
+  "schema": "inferswarm.issue175.arm-d.terminal-reduction/1",
+  "stop_fired": false,
+  "terminal": "ISSUE117_ARM_D_WARM_RESTART_CACHE_REUSE_PASS",
+  "zero_invariants": {
+    "coordinator_bulk_artifact_bytes_observed": 0,
+    "coordinator_model_weight_bytes_materialized": 0,
+    "coordinator_model_weight_bytes_received": 0,
+    "cross_node_model_weight_bytes_received": 0,
+    "silent_plan_substitutions": 0,
+    "source_model_weight_bytes_received": 0,
+    "stale_epoch_commits": 0,
+    "stale_plan_commits": 0,
+    "stale_session_commits": 0,
+    "unattributed_correctness_bearing_commits": 0,
+    "unexpected_model_source_reads": 0,
+    "unexpected_rematerialization_sources": 0,
+    "unverified_cache_objects_used": 0,
+    "wrong_artifact_cache_hits": 0,
+    "wrong_epoch_commits": 0,
+    "wrong_plan_cache_hits": 0,
+    "wrong_plan_commits": 0,
+    "wrong_position_commits": 0,
+    "wrong_session_commits": 0
+  }
+}

@@ -36,18 +36,36 @@ def load(path: str) -> dict:
     return json.loads(Path(path).read_text())
 
 
-def reduce_restart(fence_pre: dict, fence_post: dict,
-                   killed: list[int], strace_reductions: list[dict],
+def reduce_restart(fence_parts: list[dict], killed: list[int],
+                   strace_reductions: list[dict],
                    cache_reduction: dict, gpu_records: list[dict],
                    equality: dict | None, label: str) -> dict:
     problems: list[str] = []
 
-    fence = R.compare_fences(fence_pre, fence_post, killed)
-    problems += [f"[{label}] {p}" for p in fence["problems"]]
+    # fence parts embed the already-derived per-host fence + gpu fence
+    # reductions; each must itself be passed and consistent with the
+    # global kill list for its restart
+    if not fence_parts:
+        problems.append(f"[{label}] no fence parts retained")
+    for part in fence_parts:
+        fence = part.get("fence", {})
+        gpu = part.get("gpu_fence", {})
+        if not fence.get("passed"):
+            problems += [f"[{label}] {part.get('host')}: {p}"
+                         for p in fence.get("problems", [])]
+        if not gpu.get("passed"):
+            problems += [f"[{label}] {part.get('host')}: {p}"
+                         for p in gpu.get("problems", [])]
+        for pid in part.get("killed_pids", []):
+            if pid not in killed:
+                problems.append(
+                    f"[{label}] {part.get('host')} killed pid {pid} "
+                    "outside the global kill list")
 
     for host_gpus in gpu_records:
+        host = host_gpus.get("host")
         gpu = R.gpu_fence(host_gpus.get("gpus", []),
-                          P.FROZEN_GEOMETRY_UUIDS)
+                          P.FROZEN_GEOMETRY_UUIDS, host=host)
         problems += [f"[{label}] {p}" for p in gpu["problems"]]
 
     transfer_problems = []
@@ -95,8 +113,8 @@ def main() -> int:
     restarts = {}
     for restart in (1, 2):
         restarts[restart] = reduce_restart(
-            fence_pre=parts.get(f"fence-pre-{restart}", {}),
-            fence_post=parts.get(f"fence-post-{restart}", {}),
+            fence_parts=[v for k, v in parts.items()
+                         if k.startswith(f"fence-{restart}-")],
             killed=(parts.get(f"killed-pids-{restart}", {})
                     .get("pids", [])),
             strace_reductions=[

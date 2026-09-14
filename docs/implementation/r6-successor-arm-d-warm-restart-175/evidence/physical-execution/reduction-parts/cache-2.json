@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "per_participant": {
+    "stage-1+2 (inferswarm01)": {
+      "cache_hit_bytes": 16535811504,
+      "reacquired_model_weight_bytes": 0
+    },
+    "stage-3 (inferswarm03)": {
+      "cache_hit_bytes": 9292241800,
+      "reacquired_model_weight_bytes": 0
+    }
+  },
+  "problems": [],
+  "restart": 2,
+  "schema": "inferswarm.issue175.arm-d.cache-reduction/1"
+}

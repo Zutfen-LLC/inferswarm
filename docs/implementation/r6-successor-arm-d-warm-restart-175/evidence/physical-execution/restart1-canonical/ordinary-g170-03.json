@@ -1,0 +1,39 @@
+{
+  "arm": "generalization-170",
+  "case_id": "g170-03",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "near bird quiet valley stone river near stone under bird under morning drifts kind young bird kind under gentle river quiet quiet morning river quiet young light joins calm under drifts near field near hill bird east under island near near wind kind east joins calm under morning island quiet kind gentle young drifts drifts open",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 27,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\nnear bird quiet valley stone river near stone under bird under morning drifts kind young bird kind under gentle river quiet quiet morning river quiet young light joins calm under drifts near field near hill bird east under island near near wind kind east joins calm under morning island quiet kind gentle young drifts drifts open<turn|>\n<|turn>model\n<|channel>thought\n<channel|>This appears to be a word cloud or",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-397798088e60",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 69,
+      "total_tokens": 77
+    }
+  },
+  "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+  "wall_ns": 3865465066
+}
