@@ -1,5 +1,9 @@
-4a940d039d596ca782cb448ac2b0e4abf223d671e0a0c8086e82998e9ddd06c2  docs/implementation/r6-successor-arm-e-locality-mutation-182/evidence/authority.json
-8c2df3ed36c219278a3f38a38de563ff65b6a88cd4b430289bbc874ca8663604  docs/implementation/r6-successor-arm-e-locality-mutation-182/evidence/comparison.json
-24f992f9e5cdbb713af26db383feedb57497aaba15c721f36d29995f863e41c3  docs/implementation/r6-successor-arm-e-locality-mutation-182/evidence/observation/warm-inventory-inferswarm01.json
-94b4d591401ce7a03d63a4d98236d323890e56679c1d514379331597bb15c142  docs/implementation/r6-successor-arm-e-locality-mutation-182/evidence/observation/warm-inventory-inferswarm03.json
-c54cd39877d9f80937c4895f65a691586a405478f11f40a5080598bb5abb9a86  docs/implementation/r6-successor-arm-e-locality-mutation-182/evidence/terminal-reduction.json
+25dcbc40956e61e2ae3911c7da241286b10b4dbb7231a0e4313d05f4d3b0aee1  docs/implementation/r6-successor-arm-e-locality-mutation-182/evidence/authority.json
+e49a85a0667ce6da15d427ad2732a8571fd9e537de87eaa61b1d4464c152f3cd  docs/implementation/r6-successor-arm-e-locality-mutation-182/evidence/authority/accepted-cache-objects.json
+ecf228dc18e635fc1cac660a82f2910d302384fe299c3eb225ebda62b86093e8  docs/implementation/r6-successor-arm-e-locality-mutation-182/evidence/comparison.json
+694801ab06ed30ab1aa33d1cd883f575f4a2f6446451b05b3a0ec7704fd65417  docs/implementation/r6-successor-arm-e-locality-mutation-182/evidence/observation-superseded/README.md
+24f992f9e5cdbb713af26db383feedb57497aaba15c721f36d29995f863e41c3  docs/implementation/r6-successor-arm-e-locality-mutation-182/evidence/observation-superseded/warm-inventory-inferswarm01.json
+94b4d591401ce7a03d63a4d98236d323890e56679c1d514379331597bb15c142  docs/implementation/r6-successor-arm-e-locality-mutation-182/evidence/observation-superseded/warm-inventory-inferswarm03.json
+7a8f39947c2fc77e9b5b074a30e422243cdb0efc30401f86e5e0dae9a2be31a3  docs/implementation/r6-successor-arm-e-locality-mutation-182/evidence/observation/warm-inventory-inferswarm01.json
+42d962303791999ae3242cf92f6d9c57e58b194b3b5c6ce481c649700b633ee5  docs/implementation/r6-successor-arm-e-locality-mutation-182/evidence/observation/warm-inventory-inferswarm03.json
+0c1546440facb876f271da636269ef0d5fcc3c9a7d51e0128323937b1913eb0e  docs/implementation/r6-successor-arm-e-locality-mutation-182/evidence/terminal-reduction.json

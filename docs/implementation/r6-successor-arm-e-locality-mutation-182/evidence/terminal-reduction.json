@@ -1,11 +1,11 @@
 {
-  "attempt_id": "arme-182-physical-1",
+  "attempt_id": "arme-182-physical-2",
   "campaign_id": "issue182-arm-e-locality-mutation-v1",
   "gate_ledger_unchanged": true,
   "note": "mechanically re-derived from retained bytes; no authored terminal/pass/equality boolean consulted",
   "physical_authorization_id": "physical-authorization-issue182-read-only-inventory",
   "planning_only": {
-    "derivation": "observation fence records prove no execution-bearing process was live; the only reads were cache-object hashing and stat",
+    "derivation": "no_model_execution: every retained fence receipt succeeded and no execution-bearing process was live; no_gpu_initialization: every observed GPU memory.used is within the frozen idle bound; no_artifact_acquisition: before/after byte preservation proven on every observation host; no_h109_access: no retained campaign record mentions the forbidden namespace",
     "no_artifact_acquisition": true,
     "no_gpu_initialization": true,
     "no_h109_access": true,

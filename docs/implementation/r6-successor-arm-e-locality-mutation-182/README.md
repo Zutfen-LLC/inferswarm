@@ -2,7 +2,7 @@
 
 Campaign: `issue182-arm-e-locality-mutation-v1`
 Authorization: `physical-authorization-issue182-read-only-inventory`
-Attempt: `arme-182-physical-1`
+Attempt: `arme-182-physical-2`
 Terminal (derived): **`ISSUE117_ARM_E_LOCALITY_MUTATION_PASS`**
 
 Issue: https://github.com/Zutfen-LLC/inferswarm/issues/182
@@ -23,13 +23,26 @@ of the Arm-D-terminal durable verified artifact caches.
   pre-realization node inventory snapshots (both empty of verified
   objects), consumed byte-for-byte from
   `../r6-successor-dense-full-integration-117/evidence/arm-b/raw/coordinator/`.
-- **Arm E-B (warm)**: a fresh read-only observation (2026-09-14) of
+- **Arm E-B (warm)**: a fresh read-only observation (2026-09-14,
+  attempt 2, hardened collector) of
   `/srv/inferswarm/cache/issue117/objects` on inferswarm01 (411
   verified objects) and inferswarm03 (218), with sha256 re-verification
   of every object, before/after tree-digest byte-preservation proof,
   materialized-shard pins re-verified against the accepted Arm-D
   authority, GPU totals checked against the frozen pins, and a process
-  fence proving no execution-bearing process was live.
+  fence proving no execution-bearing process was live. Every
+  acceptance-bearing probe (`ps`, per-port `ss`, `nvidia-smi`) retains
+  a structured command receipt (argv, return code, stdout/stderr
+  digests) — a failed probe is OBS-PROBE-FAILED, never an empty
+  observation; every frozen host GPU (including inferswarm03 gpu-1)
+  is observed, parseable, pinned, and idle within the 16 MiB bound;
+  every object's content-address identity (name hex == recomputed
+  bytes digest) is proven and the verified object set must EQUAL the
+  accepted verified-cache provenance sidecar derived from the
+  retained Arm-B post-acquisition inventories (no missing, no extra);
+  and the observation epoch (sequence 3 = accepted 2 + 1) is bound to
+  the frozen authority digest + attempt id inside the physical
+  record, re-derived at comparison and termination.
 - Both arms run the ACCEPTED admission planner
   (`scripts/issue117_planner.py` over `issue103_planner` /
   `issue101_orchestration` / `issue99_artifact_core`) with every
