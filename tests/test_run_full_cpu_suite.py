@@ -187,34 +187,50 @@ class ExecutionTests(unittest.TestCase):
         self.assertEqual(single["serial_ids"], single["executed_ids"])
 
     def test_identity_coverage_is_exact_across_phases(self):
-        # Real declaration names so the fixture population spans all phases.
-        files = {
-            "test_issue103_planner.py": "import unittest\nclass P(unittest.TestCase):\n def test_a(self): pass\n",
-            "test_issue117_preflight.py": "import unittest\nclass F(unittest.TestCase):\n def test_b(self): pass\n",
-            "test_issue117_arm_b_retention.py": "import unittest\nclass R(unittest.TestCase):\n def test_c(self): pass\n",
-            "test_issue133_arm_c_retry_campaign.py": "import unittest\nclass C1(unittest.TestCase):\n def test_d(self): pass\n",
-            "test_issue133_arm_c_retry_direct.py": "import unittest\nclass C2(unittest.TestCase):\n def test_e(self): pass\n",
-            "test_issue133_corrected_freeze.py": "import unittest\nclass C3(unittest.TestCase):\n def test_f(self): pass\n",
-            "test_other_one.py": "import unittest\nclass O(unittest.TestCase):\n def test_g(self): pass\n",
-            "test_other_two.py": "import unittest\nclass T(unittest.TestCase):\n def test_h(self): pass\n",
-        }
+        # Synthetic declaration names (injected into the runner's frozensets)
+        # so the fixture population spans all phases WITHOUT colliding with
+        # the real repository modules already loaded in this interpreter.
+        isolated_names = [f"test_iso_{i}" for i in range(3)]
+        bundle_names = [f"test_bundle_{i}" for i in range(3)]
+        ordinary_names = [f"test_ord_{i}" for i in range(4)]
+        body = "import unittest\nclass X(unittest.TestCase):\n def test_x(self): pass\n"
+        files = {name + ".py": body for name in (*isolated_names, *bundle_names, *ordinary_names)}
         root, tests = fixture(self, files)
-        result = runner.run_suite(root, tests, jobs=2, timeout=60)
+        saved_isolated, saved_coolocated, saved_sensitive = (
+            runner.ISOLATED_MODULES, runner.COOLOCATED_MODULES, runner.TMPDIR_SENSITIVE_MODULES)
+        try:
+            runner.ISOLATED_MODULES = frozenset(isolated_names)
+            runner.COOLOCATED_MODULES = frozenset(bundle_names)
+            runner.TMPDIR_SENSITIVE_MODULES = frozenset(isolated_names[:2])
+            result = runner.run_suite(root, tests, jobs=2, timeout=60)
+        finally:
+            runner.ISOLATED_MODULES = saved_isolated
+            runner.COOLOCATED_MODULES = saved_coolocated
+            runner.TMPDIR_SENSITIVE_MODULES = saved_sensitive
         self.assertTrue(result["ok"], result.get("diagnostics"))
         phases = [t["phase"] for t in result["tasks"]]
-        self.assertEqual(phases, ["isolated", "isolated", "isolated", "population", "population"])
+        self.assertEqual(phases[:3], ["isolated", "isolated", "isolated"])
+        self.assertEqual([t["phase"] for t in result["tasks"][3:]], ["population"] * (len(phases) - 3))
         self.assertEqual(sorted(result["executed_ids"]), sorted(result["serial_ids"]))
         self.assertEqual(result["executed_digest"], result["serial_digest"])
+        modes = [t["tmpdir_mode"] for t in result["tasks"][:3]]
+        self.assertEqual(sorted(modes), ["inherited", "inherited", "private"])
 
     def test_phased_execution_reuses_worker_slots(self):
-        # 4 isolated + enough population tasks that a jobs=3 window must reuse
-        # slots: more tasks than workers, all completing.
-        files = {name + ".py": "import unittest\nclass S(unittest.TestCase):\n def test_x(self): pass\n"
-                 for name in runner.ISOLATED_MODULES}
+        # Synthetic isolated names + enough population tasks that a jobs=3
+        # window must reuse slots: more tasks than workers, all completing.
+        isolated = {f"test_iso_{i}.py": "import unittest\nclass S(unittest.TestCase):\n def test_x(self): pass\n"
+                   for i in range(4)}
+        files = dict(isolated)
         files.update({f"test_pop_{i:02d}.py": "import unittest\nclass Q(unittest.TestCase):\n def test_x(self): pass\n"
                       for i in range(6)})
         root, tests = fixture(self, files)
-        result = runner.run_suite(root, tests, jobs=3, timeout=60)
+        saved = runner.ISOLATED_MODULES
+        try:
+            runner.ISOLATED_MODULES = frozenset(name[:-3] for name in isolated)
+            result = runner.run_suite(root, tests, jobs=3, timeout=60)
+        finally:
+            runner.ISOLATED_MODULES = saved
         self.assertTrue(result["ok"], result.get("diagnostics"))
         self.assertEqual(result["jobs"], 3)
         self.assertGreater(len(result["tasks"]), 3)
@@ -297,15 +313,20 @@ class ExecutionTests(unittest.TestCase):
         self.addCleanup(shutil.rmtree, marker_parent, ignore_errors=True)
         marker = marker_parent / "late"
         files = {
-            "test_issue103_planner.py": f"import pathlib, time, unittest\nMARKER=pathlib.Path({str(marker)!r})\nclass P(unittest.TestCase):\n def test_slow(self): time.sleep(30); MARKER.write_text('late')\n",
-            "test_issue117_arm_b_retention.py": "import unittest\nclass R(unittest.TestCase):\n def test_x(self): pass\n",
-            "test_issue117_preflight.py": "import unittest\nclass F(unittest.TestCase):\n def test_x(self): pass\n",
+            "test_iso_slow.py": f"import pathlib, time, unittest\nMARKER=pathlib.Path({str(marker)!r})\nclass P(unittest.TestCase):\n def test_slow(self): time.sleep(30); MARKER.write_text('late')\n",
+            "test_iso_two.py": "import unittest\nclass R(unittest.TestCase):\n def test_x(self): pass\n",
+            "test_iso_three.py": "import unittest\nclass F(unittest.TestCase):\n def test_x(self): pass\n",
             "test_crash.py": "import os, unittest\nclass C(unittest.TestCase):\n def test_crash(self): os._exit(9)\n",
         }
         root, tests = fixture(self, files)
         marker.unlink(missing_ok=True)
-        with self.assertRaises(runner.SuiteError):
-            runner.run_suite(root, tests, jobs=4, timeout=60)
+        saved = runner.ISOLATED_MODULES
+        try:
+            runner.ISOLATED_MODULES = frozenset({"test_iso_slow", "test_iso_two", "test_iso_three"})
+            with self.assertRaises(runner.SuiteError):
+                runner.run_suite(root, tests, jobs=4, timeout=60)
+        finally:
+            runner.ISOLATED_MODULES = saved
         time.sleep(2)
         self.assertFalse(marker.exists(), "crash in a later phase left an earlier sibling running")
 
@@ -358,12 +379,12 @@ class EnvironmentSemanticsTests(unittest.TestCase):
         self.assertEqual(runner.tmpdir_mode_for(["test_other"]), "private")
 
     def test_sensitive_module_observes_inherited_tmpdir(self):
-        # A fixture module with the real sensitive name asserts the TMPDIR it
-        # observes equals the parent's value verbatim; the ordinary module
+        # A fixture module with a synthetic sensitive name asserts the TMPDIR
+        # it observes equals the parent's value verbatim; the ordinary module
         # asserts it received distinct per-task private scratch instead.
         parent_tmpdir = os.environ.get("TMPDIR")
         root, tests = fixture(self, {
-            "test_issue103_planner.py": (
+            "test_sensitive.py": (
                 "import os, unittest\nOBSERVED = os.environ.get('TMPDIR')\n"
                 "class P(unittest.TestCase):\n"
                 " def test_tmpdir(self):\n"
@@ -376,10 +397,16 @@ class EnvironmentSemanticsTests(unittest.TestCase):
                 "  self.assertNotEqual(OBSERVED, " + repr(parent_tmpdir) + ")\n"
             ),
         })
-        result = runner.run_suite(root, tests, jobs=2, timeout=60)
+        saved = runner.ISOLATED_MODULES, runner.TMPDIR_SENSITIVE_MODULES
+        try:
+            runner.ISOLATED_MODULES = frozenset({"test_sensitive"})
+            runner.TMPDIR_SENSITIVE_MODULES = frozenset({"test_sensitive"})
+            result = runner.run_suite(root, tests, jobs=2, timeout=60)
+        finally:
+            runner.ISOLATED_MODULES, runner.TMPDIR_SENSITIVE_MODULES = saved
         self.assertTrue(result["ok"], result.get("diagnostics"))
         modes = {t["modules"][0]: t["tmpdir_mode"] for t in result["tasks"]}
-        self.assertEqual(modes["test_issue103_planner"], "inherited")
+        self.assertEqual(modes["test_sensitive"], "inherited")
         self.assertEqual(modes["test_other"], "private")
 
     def test_ordinary_module_runs_in_private_scratch_under_parallel(self):
