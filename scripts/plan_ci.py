@@ -134,6 +134,7 @@ GROUP_TEST_MODULES = {
         "test_evidence_manifest_lifecycle",
         "test_issue131_cpu_test_env",
         "test_plan_ci",
+        "test_run_full_cpu_suite",
     ],
     "issue-74-79": [
         "test_issue74_methodology",

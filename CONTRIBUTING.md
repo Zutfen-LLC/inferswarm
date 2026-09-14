@@ -53,7 +53,7 @@ Bootstrap it, let the doctor qualify the environment, then run the suite:
 ```bash
 python3 scripts/bootstrap_test_env.py
 .venv/bin/python scripts/check_test_env.py
-.venv/bin/python -m unittest discover -s tests -p 'test_*.py'
+.venv/bin/python scripts/run_full_cpu_suite.py
 python3 scripts/check_phase0_workloads.py
 ```
 

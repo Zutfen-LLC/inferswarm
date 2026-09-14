@@ -184,11 +184,9 @@ jobs:
       - name: Check CI planner self-check (Issue #148)
         run: python3 scripts/plan_ci.py --self-check
 
-      - name: Check CI planner test suite (Issue #153 correction)
-        # Registry parity: test_plan_ci is registered to repo-integrity
-        # and must actually execute here (previously only the planner
-        # --self-check ran; the module itself never executed in CI).
-        run: python3 -m unittest tests.test_plan_ci -v
+      - name: Check CI planner and full-suite runner tests
+        # Registry parity requires every repo-integrity module to run here.
+        run: python3 -m unittest tests.test_plan_ci tests.test_run_full_cpu_suite -v
 
       - name: Check internal Markdown links
         run: |
