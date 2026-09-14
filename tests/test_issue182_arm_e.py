@@ -83,7 +83,7 @@ def run_compare(warm01: dict, warm03: dict, **kwargs) -> dict:
         (tmp / "warm-01.json").write_text(json.dumps(warm01))
         (tmp / "warm-03.json").write_text(json.dumps(warm03))
         out = tmp / "comparison.json"
-        cmd = [".venv/bin/python", "scripts/issue182_compare.py",
+        cmd = [sys.executable, "scripts/issue182_compare.py",
                "--warm-01", str(tmp / "warm-01.json"),
                "--warm-03", str(tmp / "warm-03.json"),
                "--out", str(out)]
