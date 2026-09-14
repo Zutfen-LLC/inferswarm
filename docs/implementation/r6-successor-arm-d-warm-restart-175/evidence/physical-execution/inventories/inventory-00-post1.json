@@ -1,0 +1,50 @@
+{
+  "cache_artifacts": {},
+  "campaign_id": "issue175-arm-d-warm-restart-v1",
+  "collected_at_unix": 1789365865,
+  "gpus": [],
+  "host": "inferswarm00",
+  "model_view": {
+    "note": "the CPU-only Coordinator holds no model view by design",
+    "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3"
+  },
+  "passed": true,
+  "phase": "post-restart-1",
+  "ports": {
+    "18080": [
+      "LISTEN 0      5            0.0.0.0:18080      0.0.0.0:*"
+    ],
+    "18485": [],
+    "18486": []
+  },
+  "problems": [],
+  "processes": [
+    {
+      "args": "strace -f -qq -e trace=openat,connect -o /srv/inferswarm/state/arm-d-175/restart1/coordinator.strace /srv/inferswarm/venv/bin/python -m benchmarks.inferswarm_r6.coordinator --config /srv/inferswarm/state/arm-d-175/restart1/coordinator-config.json --port 18080",
+      "boot_id": "31857e46-c0bb-430f-9d34-73ed90ef4865",
+      "pid": 306457,
+      "starttime": "27296843"
+    },
+    {
+      "args": "/srv/inferswarm/venv/bin/python -m benchmarks.inferswarm_r6.coordinator --config /srv/inferswarm/state/arm-d-175/restart1/coordinator-config.json --port 18080",
+      "boot_id": "31857e46-c0bb-430f-9d34-73ed90ef4865",
+      "pid": 306460,
+      "starttime": "27296844"
+    }
+  ],
+  "producer": {
+    "clean": true,
+    "head": "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469"
+  },
+  "schema": "inferswarm.issue175.arm-d.cache-inventory/1",
+  "tokenizer": {
+    "assets": {
+      "chat_template.jinja": "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4",
+      "config.json": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9",
+      "generation_config.json": "a8349d9bd64cc5841297fcb5002f0fdc4749c473c8f1b10ea337f9ce4ee7014e",
+      "tokenizer.json": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+      "tokenizer_config.json": "a62f4e85a47c0c136edaaa3a4f591fd6783717299a9def47e5ad03a49f6a5eb9"
+    },
+    "path": "/srv/inferswarm/tokenizers/gemma-r6-frozen"
+  }
+}

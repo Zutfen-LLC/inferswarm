@@ -1,0 +1,39 @@
+{
+  "arm": "generalization-170",
+  "case_id": "g170-08",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "while } for yield = item , + = for if list def = map value + null item if return : if _tmp + true + for value , _tmp value false [ - yield _tmp else null ] : false item false : lambda lambda for false yield - list in ] null while def else if def ) yield if , while ) break : if ] value list",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 32,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\nwhile } for yield = item , + = for if list def = map value + null item if return : if _tmp + true + for value , _tmp value false [ - yield _tmp else null ] : false item false : lambda lambda for false yield - list in ] null while def else if def ) yield if , while ) break : if ] value list<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you have provided a **j",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-397798088e60",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 88,
+      "total_tokens": 96
+    }
+  },
+  "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+  "wall_ns": 3851862391
+}

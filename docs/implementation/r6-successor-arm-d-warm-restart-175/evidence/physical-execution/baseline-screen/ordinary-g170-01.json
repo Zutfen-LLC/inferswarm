@@ -1,0 +1,39 @@
+{
+  "arm": "generalization-170",
+  "case_id": "g170-01",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "z - < z + = squared 0 mean ratio ( y 8 34 third squared mean 34 vector squared vector ratio 13 34 + y 0 sum 3 34 matrix vector 21 matrix 2",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 3,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\nz - < z + = squared 0 mean ratio ( y 8 34 third squared mean 34 vector squared vector ratio 13 34 + y 0 sum 3 34 matrix vector 21 matrix 2<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you are providing a string of",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-675d9c9c1b39",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 65,
+      "total_tokens": 73
+    }
+  },
+  "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+  "wall_ns": 3774488671
+}

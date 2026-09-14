@@ -1,0 +1,69 @@
+{
+  "cache_artifacts": {
+    "dense.6171f32b4413.stage-3/armb-participant.safetensors": {
+      "bytes": 9292241800,
+      "expected_sha256": "120e9c29173e91419fe1cfd355651bede6bf195f331e9dac2fd682c4420e6036",
+      "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3/armb-participant.safetensors",
+      "sha256": "120e9c29173e91419fe1cfd355651bede6bf195f331e9dac2fd682c4420e6036",
+      "verified": true
+    }
+  },
+  "campaign_id": "issue175-arm-d-warm-restart-v1",
+  "collected_at_unix": 1789365802,
+  "gpus": [
+    {
+      "driver": "610.57.04",
+      "index": "0",
+      "memory_used": "1 MiB",
+      "uuid": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176"
+    },
+    {
+      "driver": "610.57.04",
+      "index": "1",
+      "memory_used": "1 MiB",
+      "uuid": "GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0"
+    }
+  ],
+  "host": "inferswarm03",
+  "model_view": {
+    "entries": {
+      "armb-participant.safetensors": {
+        "bytes": 9292241800
+      },
+      "assemble-report.json": {
+        "bytes": 17782
+      },
+      "config.json": {
+        "bytes": 4423
+      },
+      "realize-report-wrapped.json": {
+        "bytes": 14618
+      },
+      "realize-report.json": {
+        "bytes": 15515
+      },
+      "realize-strace.log": {
+        "bytes": 9996518
+      }
+    },
+    "path": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3"
+  },
+  "passed": true,
+  "phase": "post-kill-1",
+  "ports": {
+    "18080": [],
+    "18485": [],
+    "18486": []
+  },
+  "problems": [],
+  "processes": [],
+  "producer": {
+    "clean": true,
+    "head": "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469"
+  },
+  "schema": "inferswarm.issue175.arm-d.cache-inventory/1",
+  "tokenizer": {
+    "assets": {},
+    "path": "/srv/inferswarm/tokenizers/gemma-r6-frozen"
+  }
+}

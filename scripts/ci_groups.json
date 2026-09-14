@@ -73,6 +73,11 @@
     "test_issue172_requalification"
    ]
   },
+  "issue-175-arm-d": {
+   "test_modules": [
+    "test_issue175_arm_d"
+   ]
+  },
   "issue-74-79": {
    "test_modules": [
     "test_issue74_methodology",
@@ -226,6 +231,9 @@
   ],
   "docs/implementation/r6-successor-arm-c-swa-remediation-166/": [
    "issue-117-133"
+  ],
+  "docs/implementation/r6-successor-arm-d-warm-restart-175/": [
+   "issue-175-arm-d"
   ],
   "docs/implementation/r6-successor-dense-full-integration-117/": [
    "issue-117-133"
@@ -707,6 +715,24 @@
   ],
   "scripts/issue172_zero_invariants.py": [
    "issue-172-requal"
+  ],
+  "scripts/issue175_assemble.py": [
+   "issue-175-arm-d"
+  ],
+  "scripts/issue175_authority.py": [
+   "issue-175-arm-d"
+  ],
+  "scripts/issue175_campaign_pins.py": [
+   "issue-175-arm-d"
+  ],
+  "scripts/issue175_inventory.py": [
+   "issue-175-arm-d"
+  ],
+  "scripts/issue175_reduce.py": [
+   "issue-175-arm-d"
+  ],
+  "scripts/issue175_terminal.py": [
+   "issue-175-arm-d"
   ],
   "scripts/issue35_coarse_concurrent.py": [
    "vulkan-v0-b"

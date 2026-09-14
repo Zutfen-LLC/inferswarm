@@ -1,0 +1,10 @@
+{
+  "campaign_id": "issue175-arm-d-warm-restart-v1",
+  "fresh_process_count": 4,
+  "host": "inferswarm01",
+  "passed": true,
+  "post_record": "inventories/inventory-01-post1.json",
+  "problems": [],
+  "restart": 1,
+  "schema": "inferswarm.issue175.arm-d.fresh-identity/1"
+}

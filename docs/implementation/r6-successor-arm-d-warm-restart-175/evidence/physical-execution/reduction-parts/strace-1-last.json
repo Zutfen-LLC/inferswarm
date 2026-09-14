@@ -1,0 +1,25 @@
+{
+  "counters": {
+    "cache_weight_opens": {
+      "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3/armb-participant.safetensors": 671
+    },
+    "connects": [
+      "2329793 connect(8, {sa_family=AF_UNIX, sun_path=\"/tmp/nvidia-mps/control\"}, 26) = -1 ENOENT (No such file or directory)"
+    ],
+    "source_weight_reads": [],
+    "unexpected_weight_reads": []
+  },
+  "derived": {
+    "source_model_weight_bytes_received": 0,
+    "unexpected_model_source_reads": 0,
+    "unexpected_rematerialization_sources": 0,
+    "verified_cache_hit_bytes": 9292241800
+  },
+  "passed": true,
+  "problems": [],
+  "restart": 1,
+  "schema": "inferswarm.issue175.arm-d.strace-reduction/1",
+  "side": "last",
+  "source_trace": "strace-raw/strace-1-last-stage.strace",
+  "source_trace_sha256": "03ac1c5c24c845bd44a74d2674c85a90303129abf617e7f159718309ce1e0129"
+}

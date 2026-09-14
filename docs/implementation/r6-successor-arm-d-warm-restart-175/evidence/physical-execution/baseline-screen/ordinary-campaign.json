@@ -1,0 +1,129 @@
+{
+  "attempt_id": "armd-175-physical-1-screen",
+  "case_count": 3,
+  "completed_at_ns": 1789365372155641617,
+  "fencing_arm": null,
+  "mode": "screen",
+  "ok_count": 3,
+  "origin": "http://10.0.0.206:18080",
+  "records": [
+    {
+      "arm": "regression-133",
+      "case_id": "c109-03-04-003",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "\u3053\u3093\u306b\u3061\u306f bonjour hola \u043f\u0440\u0438\u0432\u0435\u0442 bonjour monde v\u00e4rld \uc138\uacc4 \uac10\uc0ac mondo tack \u0441\u043f\u0430\u0441\u0438\u0431\u043e ciao tack ciao hola welt \u0627\u0644\u0639\u0627\u0644\u0645 \u043f\u0440\u0438\u0432\u0435\u0442 bonjour grazie mondo obrigado welt mundo \uc138\uacc4 \u0645\u0631\u062d\u0628\u0627 \u0441\u043f\u0430\u0441\u0438\u0431\u043e \u0627\u0644\u0639\u0627\u0644\u0645 mundo mondo \uc138\uacc4 \u0645\u0631\u062d\u0628\u0627 \u043f\u0440\u0438\u0432\u0435\u0442 \u3042\u308a\u304c\u3068\u3046 \u043f\u0440\u0438\u0432\u0435\u0442 \u0645\u0631\u062d\u0628\u0627 he",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 1,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\n\u3053\u3093\u306b\u3061\u306f bonjour hola \u043f\u0440\u0438\u0432\u0435\u0442 bonjour monde v\u00e4rld \uc138\uacc4 \uac10\uc0ac mondo tack \u0441\u043f\u0430\u0441\u0438\u0431\u043e ciao tack ciao hola welt \u0627\u0644\u0639\u0627\u0644\u0645 \u043f\u0440\u0438\u0432\u0435\u0442 bonjour grazie mondo obrigado welt mundo \uc138\uacc4 \u0645\u0631\u062d\u0628\u0627 \u0441\u043f\u0430\u0441\u0438\u0431\u043e \u0627\u0644\u0639\u0627\u0644\u0645 mundo mondo \uc138\uacc4 \u0645\u0631\u062d\u0628\u0627 \u043f\u0440\u0438\u0432\u0435\u0442 \u3042\u308a\u304c\u3068\u3046 \u043f\u0440\u0438\u0432\u0435\u0442 \u0645\u0631\u062d\u0628\u0627 he<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It looks like you have shared a beautiful",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-675d9c9c1b39",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 53,
+          "total_tokens": 61
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 27119082713
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-04-02-047",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "{ else while true if else : def value else else ( for - class item map in if _tmp in - ] class if break item in def null = [ lambda break item true null list class + return if [ _tmp break - [ map break if _tmp",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 2,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\n{ else while true if else : def value else else ( for - class item map in if _tmp in - ] class if break item in def null = [ lambda break item true null list class + return if [ _tmp break - [ map break if _tmp<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you have provided a collection of",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-675d9c9c1b39",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 67,
+          "total_tokens": 75
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3953084131
+    },
+    {
+      "arm": "generalization-170",
+      "case_id": "g170-01",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "z - < z + = squared 0 mean ratio ( y 8 34 third squared mean 34 vector squared vector ratio 13 34 + y 0 sum 3 34 matrix vector 21 matrix 2",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 3,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nz - < z + = squared 0 mean ratio ( y 8 34 third squared mean 34 vector squared vector ratio 13 34 + y 0 sum 3 34 matrix vector 21 matrix 2<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you are providing a string of",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-675d9c9c1b39",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 65,
+          "total_tokens": 73
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3774488671
+    }
+  ],
+  "schema": "inferswarm.issue175.arm-d.ordinary-campaign/1"
+}

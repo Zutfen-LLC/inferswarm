@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "per_participant": {
+    "last": {
+      "cache_hit_bytes": 9292241800,
+      "reacquired_model_weight_bytes": 0,
+      "unexpected_rematerialization_sources": 0
+    },
+    "node": {
+      "cache_hit_bytes": 16535811504,
+      "reacquired_model_weight_bytes": 0,
+      "unexpected_rematerialization_sources": 0
+    }
+  },
+  "problems": [],
+  "restart": 2,
+  "schema": "inferswarm.issue175.arm-d.cache-reduction/1"
+}

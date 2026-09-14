@@ -188,6 +188,9 @@ GROUP_TEST_MODULES = {
     "issue-172-requal": [
         "test_issue172_requalification",
     ],
+    "issue-175-arm-d": [
+        "test_issue175_arm_d",
+    ],
     "issue-137": [
         "test_issue137_regime4_diagnosis",
         "test_issue137_regime4_diagnosis_correction",
@@ -438,6 +441,14 @@ PATH_GROUPS = {
     "scripts/issue172_zero_invariants.py": ["issue-172-requal"],
     "scripts/issue172_terminal.py": ["issue-172-requal"],
     "scripts/issue172_manifest.py": ["issue-172-requal"],
+    "docs/implementation/r6-successor-arm-d-warm-restart-175/": [
+        "issue-175-arm-d"],
+    "scripts/issue175_campaign_pins.py": ["issue-175-arm-d"],
+    "scripts/issue175_authority.py": ["issue-175-arm-d"],
+    "scripts/issue175_assemble.py": ["issue-175-arm-d"],
+    "scripts/issue175_inventory.py": ["issue-175-arm-d"],
+    "scripts/issue175_reduce.py": ["issue-175-arm-d"],
+    "scripts/issue175_terminal.py": ["issue-175-arm-d"],
     # Issue #137 retained evidence lives inside the #117 evidence tree;
     # the narrower #137 subtree fans out to both its semantic group and
     # the broader shared-tree lineage (the #117 prefix rule above also

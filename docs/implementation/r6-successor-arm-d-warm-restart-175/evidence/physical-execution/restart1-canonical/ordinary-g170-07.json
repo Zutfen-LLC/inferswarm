@@ -1,0 +1,39 @@
+{
+  "arm": "generalization-170",
+  "case_id": "g170-07",
+  "http_status": 200,
+  "request_body": {
+    "max_tokens": 8,
+    "messages": [
+      {
+        "content": "5 mean 13 z 13 sum ratio 5 ) sum 8 3 delta x < + 0 + ( ratio half y mean - third 5 3 0 delta y ratio = prime matrix vector 21 squared 0 8 squared > sum z 13 3 delta 34 prime squared +",
+        "role": "user"
+      }
+    ],
+    "model": "gemma-4-12B-it",
+    "temperature": 0.0
+  },
+  "request_session_index": 31,
+  "response": {
+    "choices": [
+      {
+        "finish_reason": "length",
+        "index": 0,
+        "message": {
+          "content": "<bos><|turn>user\n5 mean 13 z 13 sum ratio 5 ) sum 8 3 delta x < + 0 + ( ratio half y mean - third 5 3 0 delta y ratio = prime matrix vector 21 squared 0 8 squared > sum z 13 3 delta 34 prime squared +<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you are presenting a complex string",
+          "role": "assistant"
+        }
+      }
+    ],
+    "id": "chatcmpl-397798088e60",
+    "model": "gemma-4-12B-it",
+    "object": "chat.completion",
+    "usage": {
+      "completion_tokens": 8,
+      "prompt_tokens": 83,
+      "total_tokens": 91
+    }
+  },
+  "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+  "wall_ns": 3814182373
+}

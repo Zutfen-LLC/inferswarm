@@ -1,0 +1,1609 @@
+{
+  "attempt_id": "armd-175-physical-1-r1-canonical",
+  "case_count": 40,
+  "completed_at_ns": 1789366116693275397,
+  "fencing_arm": {
+    "case_id": "c109-01-01-045",
+    "http_status": 200,
+    "request_body": {
+      "inferswarm_fencing_arm_after_step": 3,
+      "max_tokens": 8,
+      "messages": [
+        {
+          "content": "valley island morning wind drifts island valley",
+          "role": "user"
+        }
+      ],
+      "model": "gemma-4-12B-it",
+      "temperature": 0.0
+    },
+    "response": {
+      "choices": [
+        {
+          "finish_reason": "length",
+          "index": 0,
+          "message": {
+            "content": "<bos><|turn>user\nvalley island morning wind drifts island valley<turn|>\n<|turn>model\n<|channel>thought\n<channel|>The phrase you provided has a beautiful,",
+            "role": "assistant"
+          }
+        }
+      ],
+      "id": "chatcmpl-397798088e60",
+      "model": "gemma-4-12B-it",
+      "object": "chat.completion",
+      "usage": {
+        "completion_tokens": 8,
+        "prompt_tokens": 20,
+        "total_tokens": 28
+      }
+    },
+    "schema": "inferswarm.issue175.arm-d.fencing-arm/1",
+    "wall_ns": 2596198597
+  },
+  "mode": "canonical",
+  "ok_count": 40,
+  "origin": "http://10.0.0.206:18080",
+  "records": [
+    {
+      "arm": "regression-133",
+      "case_id": "c109-01-01-045",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "valley island morning wind drifts island valley",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 1,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nvalley island morning wind drifts island valley<turn|>\n<|turn>model\n<|channel>thought\n<channel|>The phrase you provided has a beautiful,",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 20,
+          "total_tokens": 28
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 26070350201
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-01-02-076",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "def else = while",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 2,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\ndef else = while<turn|>\n<|turn>model\n<|channel>thought\n<channel|>In most programming languages, the statement `",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 17,
+          "total_tokens": 25
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 2598572106
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-01-03-009",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "( - prime + squared",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 3,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\n( - prime + squared<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears your input was cut off or",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 18,
+          "total_tokens": 26
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 2604516061
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-01-04-036",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "duniya \u3042\u308a\u304c\u3068\u3046 hej bonjour",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 4,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nduniya \u3042\u308a\u304c\u3068\u3046 hej bonjour<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It looks like you are listing greetings and",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 19,
+          "total_tokens": 27
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 2554246187
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-01-05-017",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "ha tick la again same",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 5,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nha tick la again same<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It sounds like you're frustrated because",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 18,
+          "total_tokens": 26
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 2588179383
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-01-06-006",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "\u00b6 // ^ @ }",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 6,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\n\u00b6 // ^ @ }<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It looks like you\u2019ve provided a",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 18,
+          "total_tokens": 26
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 2548786151
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-02-01-030",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "valley field east stone light near young young bird calm stone joins young drifts hill valley bird open travels young under stone amber under valley quiet drifts quiet",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 7,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nvalley field east stone light near young young bird calm stone joins young drifts hill valley bird open travels young under stone amber under valley quiet drifts quiet<turn|>\n<|turn>model\n<|channel>thought\n<channel|>This appears to be a **word cloud",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 41,
+          "total_tokens": 49
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 2578905778
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-02-02-020",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "def null ( class _tmp lambda else yield true class while return true false map list for : true lambda lambda [ ] ) map ) for",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 8,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\ndef null ( class _tmp lambda else yield true class while return true false map list for : true lambda lambda [ ] ) map ) for<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you have provided a collection of",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 41,
+          "total_tokens": 49
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 2628438073
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-02-03-011",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "mean 21 55 1 = 0 x vector 2 8 x half z third 21 +",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 9,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nmean 21 55 1 = 0 x vector 2 8 x half z third 21 +<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you are providing a string of",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 39,
+          "total_tokens": 47
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 2633216376
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-02-04-033",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "v\u00e4rld tack \u043c\u0438\u0440 \u0645\u0631\u062d\u0628\u0627 namaste hej hola monde hola namaste obrigado obrigado \u0634\u0643\u0631\u0627 \u043c\u0438\u0440 \uc138\uacc4 ol\u00e1 merci gracias \uac10\uc0ac",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 10,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nv\u00e4rld tack \u043c\u0438\u0440 \u0645\u0631\u062d\u0628\u0627 namaste hej hola monde hola namaste obrigado obrigado \u0634\u0643\u0631\u0627 \u043c\u0438\u0440 \uc138\uacc4 ol\u00e1 merci gracias \uac10\uc0ac<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It looks like you have compiled a list",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 38,
+          "total_tokens": 46
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 2580259580
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-02-05-024",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "zero na ha echo loop ha zero ha ha la echo again again zero tick tock zero na ha loop same again na la loop",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 11,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nzero na ha echo loop ha zero ha ha la echo again again zero tick tock zero na ha loop same again na la loop<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It sounds like you are describing a **",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 39,
+          "total_tokens": 47
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 2616539207
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-02-06-049",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "// \u00b6 // ^ $ & // ; + \u203b # + \u25c7 % $ :: 7f < # # \u03bb \\t",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 12,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\n// \u00b6 // ^ $ & // ; + \u203b # + \u25c7 % $ :: 7f < # # \u03bb \\t<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you have provided a string of",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 38,
+          "total_tokens": 46
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 2615877177
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-03-01-044",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "river light path east island hill morning stone east travels morning light wind gentle joins wind open travels amber wind calm hill joins young calm amber valley morning hill amber gentle bird near light joins morning light stone young",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 13,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nriver light path east island hill morning stone east travels morning light wind gentle joins wind open travels amber wind calm hill joins young calm amber valley morning hill amber gentle bird near light joins morning light stone young<turn|>\n<|turn>model\n<|channel>thought\n<channel|>To make sense of this word cloud,",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 52,
+          "total_tokens": 60
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 2600706555
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-03-02-054",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "} lambda true class value break lambda , } else class false map { lambda = } { else for [ + ] in return false : = list while { in ( + while for (",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 14,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\n} lambda true class value break lambda , } else class false map { lambda = } { else for [ + ] in return false : = list while { in ( + while for (<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you have provided a collection of",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 50,
+          "total_tokens": 58
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 2632595495
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-03-03-031",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": ") squared z mean ratio prime 2 squared 55 34 = 55 + 13 third 2 21 8 5 13",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 15,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\n) squared z mean ratio prime 2 squared 55 34 = 55 + 13 third 2 21 8 5 13<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you are providing a sequence of",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 49,
+          "total_tokens": 57
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 2598416728
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-03-04-003",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "\u3053\u3093\u306b\u3061\u306f bonjour hola \u043f\u0440\u0438\u0432\u0435\u0442 bonjour monde v\u00e4rld \uc138\uacc4 \uac10\uc0ac mondo tack \u0441\u043f\u0430\u0441\u0438\u0431\u043e ciao tack ciao hola welt \u0627\u0644\u0639\u0627\u0644\u0645 \u043f\u0440\u0438\u0432\u0435\u0442 bonjour grazie mondo obrigado welt mundo \uc138\uacc4 \u0645\u0631\u062d\u0628\u0627 \u0441\u043f\u0430\u0441\u0438\u0431\u043e \u0627\u0644\u0639\u0627\u0644\u0645 mundo mondo \uc138\uacc4 \u0645\u0631\u062d\u0628\u0627 \u043f\u0440\u0438\u0432\u0435\u0442 \u3042\u308a\u304c\u3068\u3046 \u043f\u0440\u0438\u0432\u0435\u0442 \u0645\u0631\u062d\u0628\u0627 he",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 16,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\n\u3053\u3093\u306b\u3061\u306f bonjour hola \u043f\u0440\u0438\u0432\u0435\u0442 bonjour monde v\u00e4rld \uc138\uacc4 \uac10\uc0ac mondo tack \u0441\u043f\u0430\u0441\u0438\u0431\u043e ciao tack ciao hola welt \u0627\u0644\u0639\u0627\u0644\u0645 \u043f\u0440\u0438\u0432\u0435\u0442 bonjour grazie mondo obrigado welt mundo \uc138\uacc4 \u0645\u0631\u062d\u0628\u0627 \u0441\u043f\u0430\u0441\u0438\u0431\u043e \u0627\u0644\u0639\u0627\u0644\u0645 mundo mondo \uc138\uacc4 \u0645\u0631\u062d\u0628\u0627 \u043f\u0440\u0438\u0432\u0435\u0442 \u3042\u308a\u304c\u3068\u3046 \u043f\u0440\u0438\u0432\u0435\u0442 \u0645\u0631\u062d\u0628\u0627 he<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It looks like you have shared a beautiful",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 53,
+          "total_tokens": 61
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 2616252943
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-03-05-044",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "zero echo ha zero tick na tick again la ha ha again same zero na loop tick ha again la tick same ha same again na tick zero loop ha tock again loop echo zero ha",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 17,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nzero echo ha zero tick na tick again la ha ha again same zero na loop tick ha again la tick same ha same again na tick zero loop ha tock again loop echo zero ha<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It sounds like you are describing a **",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 50,
+          "total_tokens": 58
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 2648916100
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-03-06-016",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "\u03a9 | \\t > & } ! \u03a9 ^ { \u203b _ \u203b % \u03a9 ? $ > \u00b6 // ? ~ \u0416 # \u00b6 \u00a7 \u203b $ + ; @ _ \u732b | $ }",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 18,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\n\u03a9 | \\t > & } ! \u03a9 ^ { \u203b _ \u203b % \u03a9 ? $ > \u00b6 // ? ~ \u0416 # \u00b6 \u00a7 \u203b $ + ; @ _ \u732b | $ }<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you have provided a string of",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 50,
+          "total_tokens": 58
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 2644522305
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-04-01-026",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "under joins under amber morning light kind kind light drifts under under hill path young hill amber joins wind under open near under near gentle morning bird travels morning travels quiet wind calm light bird east island river wind east valley travels light wind path open east open valley calm east hill",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 19,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nunder joins under amber morning light kind kind light drifts under under hill path young hill amber joins wind under open near under near gentle morning bird travels morning travels quiet wind calm light bird east island river wind east valley travels light wind path open east open valley calm east hill<turn|>\n<|turn>model\n<|channel>thought\n<channel|>The amber light drifts under the hill path",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 65,
+          "total_tokens": 73
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3864580083
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-04-02-047",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "{ else while true if else : def value else else ( for - class item map in if _tmp in - ] class if break item in def null = [ lambda break item true null list class + return if [ _tmp break - [ map break if _tmp",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 20,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\n{ else while true if else : def value else else ( for - class item map in if _tmp in - ] class if break item in def null = [ lambda break item true null list class + return if [ _tmp break - [ map break if _tmp<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you have provided a collection of",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 67,
+          "total_tokens": 75
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3824769107
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-04-03-040",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "2 1 5 5 34 third = 3 8 mean z ) ) z mean + 1 + 21 ( 55 - - + delta 3 8 prime sum third prime 13 8 ratio 21 ",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 21,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\n2 1 5 5 34 third = 3 8 mean z ) ) z mean + 1 + 21 ( 55 - - + delta 3 8 prime sum third prime 13 8 ratio 21<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you are presenting a complex mathematical",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 67,
+          "total_tokens": 75
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3827016701
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-04-04-024",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "monde welt \u043c\u0438\u0440 \u0634\u0643\u0631\u0627 \u043c\u0438\u0440 \u4e16\u754c mundo ciao namaste mondo ciao danke \u4e16\u754c \uc138\uacc4 \u0627\u0644\u0639\u0627\u0644\u0645 hallo gracias \uc138\uacc4 \u3042\u308a\u304c\u3068\u3046 \uac10\uc0ac \u3053\u3093\u306b\u3061\u306f namaste obrigado \u0645\u0631\u062d\u0628\u0627 \u3042\u308a\u304c\u3068\u3046 danke \u0634\u0643\u0631\u0627 danke \u3042\u308a\u304c\u3068\u3046 mundo \u4e16\u754c welt v\u00e4rld \u3042\u308a\u304c\u3068\u3046 merci \uac10\uc0ac \u043f\u0440\u0438\u0432\u0435\u0442 mondo hola hola d",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 22,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nmonde welt \u043c\u0438\u0440 \u0634\u0643\u0631\u0627 \u043c\u0438\u0440 \u4e16\u754c mundo ciao namaste mondo ciao danke \u4e16\u754c \uc138\uacc4 \u0627\u0644\u0639\u0627\u0644\u0645 hallo gracias \uc138\uacc4 \u3042\u308a\u304c\u3068\u3046 \uac10\uc0ac \u3053\u3093\u306b\u3061\u306f namaste obrigado \u0645\u0631\u062d\u0628\u0627 \u3042\u308a\u304c\u3068\u3046 danke \u0634\u0643\u0631\u0627 danke \u3042\u308a\u304c\u3068\u3046 mundo \u4e16\u754c welt v\u00e4rld \u3042\u308a\u304c\u3068\u3046 merci \uac10\uc0ac \u043f\u0440\u0438\u0432\u0435\u0442 mondo hola hola d<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It looks like you have compiled a multilingual",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 65,
+          "total_tokens": 73
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3854898638
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-04-05-043",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "tick echo zero ha echo ha again ha na tock na ha echo again again again echo ha la same echo ha same zero na la na loop again tick loop tick tock same zero ha again na again again same ha ha again na zero same echo la tock loop",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 23,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\ntick echo zero ha echo ha again ha na tock na ha echo again again again echo ha la same echo ha same zero na la na loop again tick loop tick tock same zero ha again na again again same ha ha again na zero same echo la tock loop<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It seems like you are creating a rhythmic",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 67,
+          "total_tokens": 75
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3857325609
+    },
+    {
+      "arm": "regression-133",
+      "case_id": "c109-04-06-074",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "+ \u203b 0x * \\t + 0x ~ ! ! ; \u0416 \\t \u03bb ^ \u203b \u00b6 & < ^ { % \u00b6 { \u03a9 % // // 7f \u0416 + & # < 0x = / ^ { ? \u00b6 ] _",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 24,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\n+ \u203b 0x * \\t + 0x ~ ! ! ; \u0416 \\t \u03bb ^ \u203b \u00b6 & < ^ { % \u00b6 { \u03a9 % // // 7f \u0416 + & # < 0x = / ^ { ? \u00b6 ] _<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you have provided a string of",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 66,
+          "total_tokens": 74
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3843428095
+    },
+    {
+      "arm": "generalization-170",
+      "case_id": "g170-01",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "z - < z + = squared 0 mean ratio ( y 8 34 third squared mean 34 vector squared vector ratio 13 34 + y 0 sum 3 34 matrix vector 21 matrix 2",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 25,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nz - < z + = squared 0 mean ratio ( y 8 34 third squared mean 34 vector squared vector ratio 13 34 + y 0 sum 3 34 matrix vector 21 matrix 2<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you are providing a string of",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 65,
+          "total_tokens": 73
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3805316106
+    },
+    {
+      "arm": "generalization-170",
+      "case_id": "g170-02",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "while _tmp + true in { lambda ) in { = ] _tmp { else list true for item lambda def true ) = def yield else } return } yield = ) list [ while value yield def = return for break value ) - null map { , def true",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 26,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nwhile _tmp + true in { lambda ) in { = ] _tmp { else list true for item lambda def true ) = def yield else } return } yield = ) list [ while value yield def = return for break value ) - null map { , def true<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you have provided a scrambled collection",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 67,
+          "total_tokens": 75
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3866723138
+    },
+    {
+      "arm": "generalization-170",
+      "case_id": "g170-03",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "near bird quiet valley stone river near stone under bird under morning drifts kind young bird kind under gentle river quiet quiet morning river quiet young light joins calm under drifts near field near hill bird east under island near near wind kind east joins calm under morning island quiet kind gentle young drifts drifts open",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 27,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nnear bird quiet valley stone river near stone under bird under morning drifts kind young bird kind under gentle river quiet quiet morning river quiet young light joins calm under drifts near field near hill bird east under island near near wind kind east joins calm under morning island quiet kind gentle young drifts drifts open<turn|>\n<|turn>model\n<|channel>thought\n<channel|>This appears to be a word cloud or",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 69,
+          "total_tokens": 77
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3865465066
+    },
+    {
+      "arm": "generalization-170",
+      "case_id": "g170-04",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "7f a9 $ % \u25c7 - @ - \u203b @ | ! - | $ : * ^ _ 7f { = ? \u732b _ 0x + // } ! { :: @ \u732b = ; // / ? } ! { 0x $ \\t } 7f \u203b",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 28,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\n7f a9 $ % \u25c7 - @ - \u203b @ | ! - | $ : * ^ _ 7f { = ? \u732b _ 0x + // } ! { :: @ \u732b = ; // / ? } ! { 0x $ \\t } 7f \u203b<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you have provided a string of",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 72,
+          "total_tokens": 80
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3818673060
+    },
+    {
+      "arm": "generalization-170",
+      "case_id": "g170-05",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "ha same la ha loop na loop na same na echo la na tock na again na ha loop echo tock na tock loop na ha na loop la echo again tick na la same same ha zero same ha na ha na tock na na na echo tock zero loop ha ha again to",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 29,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nha same la ha loop na loop na same na echo la na tock na again na ha loop echo tock na tock loop na ha na loop la echo again tick na la same same ha zero same ha na ha na tock na na na echo tock zero loop ha ha again to<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It sounds like you are creating a rhythmic",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 73,
+          "total_tokens": 81
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3833062229
+    },
+    {
+      "arm": "generalization-170",
+      "case_id": "g170-06",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "\u0634\u0643\u0631\u0627 hej mundo \uc138\uacc4 \uc138\uacc4 gracias \u3053\u3093\u306b\u3061\u306f bonjour obrigado \uac10\uc0ac mundo obrigado ciao ol\u00e1 merci \u4e16\u754c danke welt hej danke hallo mondo tack v\u00e4rld \u0627\u0644\u0639\u0627\u0644\u0645 \u0441\u043f\u0430\u0441\u0438\u0431\u043e mundo obrigado monde hola mundo hallo \u0634\u0643\u0631\u0627 gracias ol\u00e1 \u3042\u308a\u304c\u3068\u3046 \u3053\u3093\u306b\u3061\u306f ciao mondo \u3053\u3093\u306b\u3061\u306f bonjour hola obrigado hej danke \uac10\uc0ac bonjour \u043f\u0440\u0438\u0432\u0435\u0442 namaste monde",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 30,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\n\u0634\u0643\u0631\u0627 hej mundo \uc138\uacc4 \uc138\uacc4 gracias \u3053\u3093\u306b\u3061\u306f bonjour obrigado \uac10\uc0ac mundo obrigado ciao ol\u00e1 merci \u4e16\u754c danke welt hej danke hallo mondo tack v\u00e4rld \u0627\u0644\u0639\u0627\u0644\u0645 \u0441\u043f\u0430\u0441\u0438\u0431\u043e mundo obrigado monde hola mundo hallo \u0634\u0643\u0631\u0627 gracias ol\u00e1 \u3042\u308a\u304c\u3068\u3046 \u3053\u3093\u306b\u3061\u306f ciao mondo \u3053\u3093\u306b\u3061\u306f bonjour hola obrigado hej danke \uac10\uc0ac bonjour \u043f\u0440\u0438\u0432\u0435\u0442 namaste monde<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It looks like you have compiled a multilingual",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 78,
+          "total_tokens": 86
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3837544223
+    },
+    {
+      "arm": "generalization-170",
+      "case_id": "g170-07",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "5 mean 13 z 13 sum ratio 5 ) sum 8 3 delta x < + 0 + ( ratio half y mean - third 5 3 0 delta y ratio = prime matrix vector 21 squared 0 8 squared > sum z 13 3 delta 34 prime squared +",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 31,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\n5 mean 13 z 13 sum ratio 5 ) sum 8 3 delta x < + 0 + ( ratio half y mean - third 5 3 0 delta y ratio = prime matrix vector 21 squared 0 8 squared > sum z 13 3 delta 34 prime squared +<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you are presenting a complex string",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 83,
+          "total_tokens": 91
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3814182373
+    },
+    {
+      "arm": "generalization-170",
+      "case_id": "g170-08",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "while } for yield = item , + = for if list def = map value + null item if return : if _tmp + true + for value , _tmp value false [ - yield _tmp else null ] : false item false : lambda lambda for false yield - list in ] null while def else if def ) yield if , while ) break : if ] value list",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 32,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nwhile } for yield = item , + = for if list def = map value + null item if return : if _tmp + true + for value , _tmp value false [ - yield _tmp else null ] : false item false : lambda lambda for false yield - list in ] null while def else if def ) yield if , while ) break : if ] value list<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you have provided a **j",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 88,
+          "total_tokens": 96
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3851862391
+    },
+    {
+      "arm": "generalization-170",
+      "case_id": "g170-09",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "island young amber open open field hill island open river gentle under calm hill bird joins open path island gentle drifts morning valley quiet open joins morning island amber quiet young bird quiet amber drifts valley amber path light young young island open wind stone joins kind east drifts young gentle valley joins under travels open near valley joins drifts path bird drifts amber calm open young open stone drifts calm light stone joins island joins",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 33,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nisland young amber open open field hill island open river gentle under calm hill bird joins open path island gentle drifts morning valley quiet open joins morning island amber quiet young bird quiet amber drifts valley amber path light young young island open wind stone joins kind east drifts young gentle valley joins under travels open near valley joins drifts path bird drifts amber calm open young open stone drifts calm light stone joins island joins<turn|>\n<|turn>model\n<|channel>thought\n<channel|>This appears to be a word cloud or",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 89,
+          "total_tokens": 97
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3906785503
+    },
+    {
+      "arm": "generalization-170",
+      "case_id": "g170-10",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "= $ $ | \u03a9 ^ 7f > \u03a9 _ * - / = : # \\t $ } \u732b & } \u732b + ] # 0x < ? | & | \u203b < $ / ? > | < @ _ ? ~ ~ \u03a9 \\t :: ~ 0x { # ] \u00a7 > | * < $ - } % $ \u03bb ? } \u03a9 \u25c7 | ^ ! @ :: ; a",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 34,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\n= $ $ | \u03a9 ^ 7f > \u03a9 _ * - / = : # \\t $ } \u732b & } \u732b + ] # 0x < ? | & | \u203b < $ / ? > | < @ _ ? ~ ~ \u03a9 \\t :: ~ 0x { # ] \u00a7 > | * < $ - } % $ \u03bb ? } \u03a9 \u25c7 | ^ ! @ :: ; a<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you have provided a string of",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 96,
+          "total_tokens": 104
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3890226932
+    },
+    {
+      "arm": "generalization-170",
+      "case_id": "g170-11",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "zero tick tick same again tock again again tick again again tock ha echo na same again again again na again zero la ha loop ha again again tick zero echo same tick loop la zero ha ha again echo zero la zero tock same echo la echo ha zero echo again loop tock tock same loop echo loop ha loop tick ha zero ha zero same ha ha na again la tock ha la na loop loop ha same loop na echo tock",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 35,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nzero tick tick same again tock again again tick again again tock ha echo na same again again again na again zero la ha loop ha again again tick zero echo same tick loop la zero ha ha again echo zero la zero tock same echo la echo ha zero echo again loop tock tock same loop echo loop ha loop tick ha zero ha zero same ha ha na again la tock ha la na loop loop ha same loop na echo tock<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It seems like you are creating a rhythmic",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 104,
+          "total_tokens": 112
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3895271584
+    },
+    {
+      "arm": "generalization-170",
+      "case_id": "g170-12",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "grazie merci \u043f\u0440\u0438\u0432\u0435\u0442 \u0627\u0644\u0639\u0627\u0644\u0645 duniya bonjour namaste obrigado merci hola \u043f\u0440\u0438\u0432\u0435\u0442 grazie namaste tack v\u00e4rld mundo hallo namaste \u0645\u0631\u062d\u0628\u0627 hallo gracias danke obrigado \u0441\u043f\u0430\u0441\u0438\u0431\u043e mondo \u3053\u3093\u306b\u3061\u306f \u043f\u0440\u0438\u0432\u0435\u0442 \u043f\u0440\u0438\u0432\u0435\u0442 namaste \u0627\u0644\u0639\u0627\u0644\u0645 \uc138\uacc4 hola mundo mundo \uac10\uc0ac mundo gracias gracias hej \uc138\uacc4 \u3053\u3093\u306b\u3061\u306f hej ol\u00e1 duniya danke hej ol\u00e1 mondo danke bonjour grazie ciao \u0441\u043f\u0430\u0441\u0438\u0431\u043e \u4e16\u754c grazie mundo monde \u043c\u0438\u0440 welt \uc138\uacc4 v\u00e4rld \u0441\u043f\u0430\u0441\u0438\u0431\u043e tack \u3053\u3093\u306b\u3061\u306f duniya obrigado gracias duniya \u043c\u0438\u0440 \u043c\u0438\u0440 \uc138\uacc4 tack \u4e16\u754c mundo tack \u0627\u0644\u0639\u0627\u0644\u0645 mondo merci hallo bonjour hallo",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 36,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\ngrazie merci \u043f\u0440\u0438\u0432\u0435\u0442 \u0627\u0644\u0639\u0627\u0644\u0645 duniya bonjour namaste obrigado merci hola \u043f\u0440\u0438\u0432\u0435\u0442 grazie namaste tack v\u00e4rld mundo hallo namaste \u0645\u0631\u062d\u0628\u0627 hallo gracias danke obrigado \u0441\u043f\u0430\u0441\u0438\u0431\u043e mondo \u3053\u3093\u306b\u3061\u306f \u043f\u0440\u0438\u0432\u0435\u0442 \u043f\u0440\u0438\u0432\u0435\u0442 namaste \u0627\u0644\u0639\u0627\u0644\u0645 \uc138\uacc4 hola mundo mundo \uac10\uc0ac mundo gracias gracias hej \uc138\uacc4 \u3053\u3093\u306b\u3061\u306f hej ol\u00e1 duniya danke hej ol\u00e1 mondo danke bonjour grazie ciao \u0441\u043f\u0430\u0441\u0438\u0431\u043e \u4e16\u754c grazie mundo monde \u043c\u0438\u0440 welt \uc138\uacc4 v\u00e4rld \u0441\u043f\u0430\u0441\u0438\u0431\u043e tack \u3053\u3093\u306b\u3061\u306f duniya obrigado gracias duniya \u043c\u0438\u0440 \u043c\u0438\u0440 \uc138\uacc4 tack \u4e16\u754c mundo tack \u0627\u0644\u0639\u0627\u0644\u0645 mondo merci hallo bonjour hallo<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It looks like you have compiled a multilingual",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 112,
+          "total_tokens": 120
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3843907893
+    },
+    {
+      "arm": "generalization-170",
+      "case_id": "g170-13",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "vector 34 < delta 3 ( 3 mean third squared matrix = 8 13 prime 2 - squared matrix < squared ratio half delta sum > half < ratio 8 x < squared = 5 - 8 55 55 squared = ( 1 prime vector 55 mean matrix squared 3 z y 0 0 ( mean = 21 half 55 21 squared vector 34 + - 13 > =",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 37,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nvector 34 < delta 3 ( 3 mean third squared matrix = 8 13 prime 2 - squared matrix < squared ratio half delta sum > half < ratio 8 x < squared = 5 - 8 55 55 squared = ( 1 prime vector 55 mean matrix squared 3 z y 0 0 ( mean = 21 half 55 21 squared vector 34 + - 13 > =<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you are presenting a complex string",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 113,
+          "total_tokens": 121
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3902956774
+    },
+    {
+      "arm": "generalization-170",
+      "case_id": "g170-14",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "[ while def while { ) map true break _tmp ) false { if ( if { + in def for yield + in def } class lambda + : } for - { class def yield ) + ) return , item , return class else else { ) [ for in class - _tmp in lambda lambda class ( } _tmp yield return while def if = item true if item { if while list map map else return list while yield for ) + return else [ : , : return def if break if { while class =",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 38,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\n[ while def while { ) map true break _tmp ) false { if ( if { + in def for yield + in def } class lambda + : } for - { class def yield ) + ) return , item , return class else else { ) [ for in class - _tmp in lambda lambda class ( } _tmp yield return while def if = item true if item { if while list map map else return list while yield for ) + return else [ : , : return def if break if { while class =<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you have provided a **frequency",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 118,
+          "total_tokens": 126
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 3853523056
+    },
+    {
+      "arm": "generalization-170",
+      "case_id": "g170-15",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "quiet morning under river joins calm stone under stone bird east young open island near open amber near under hill young kind field calm hill light gentle hill drifts river open drifts drifts quiet near near joins joins open bird valley bird hill east drifts young gentle light near morning field near light valley calm kind under calm light light east near amber gentle field wind open gentle travels path travels kind island calm under river island river near joins morning amber island stone bird near gentle quiet path river path travels open young near island amber wind river young wind under valley east drifts light travels quiet under travels",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 39,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\nquiet morning under river joins calm stone under stone bird east young open island near open amber near under hill young kind field calm hill light gentle hill drifts river open drifts drifts quiet near near joins joins open bird valley bird hill east drifts young gentle light near morning field near light valley calm kind under calm light light east near amber gentle field wind open gentle travels path travels kind island calm under river island river near joins morning amber island stone bird near gentle quiet path river path travels open young near island amber wind river young wind under valley east drifts light travels quiet under travels<turn|>\n<|turn>model\n<|channel>thought\n<channel|>This appears to be a **word cloud",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 123,
+          "total_tokens": 131
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 4135217074
+    },
+    {
+      "arm": "generalization-170",
+      "case_id": "g170-16",
+      "http_status": 200,
+      "request_body": {
+        "max_tokens": 8,
+        "messages": [
+          {
+            "content": "+ \u03bb \\t ; [ $ | ^ :: ? ; & \u03a9 : \u03bb \u732b 7f \u00a7 / \u00b6 \u00a7 \u03bb - % > _ [ & & / = a9 ! 7f > // | [ ] a9 :: 7f \u203b } > \u732b \\t _ ~ ! ~ | ; @ $ & :: \\t _ ? { } > $ | \u03a9 ] # \u03bb \u00b6 < a9 ; * ? \u25c7 _ 7f \u03bb & 7f :: :: + \u00b6 0x % | \u732b * = :: \u00a7 ! # \u25c7 !",
+            "role": "user"
+          }
+        ],
+        "model": "gemma-4-12B-it",
+        "temperature": 0.0
+      },
+      "request_session_index": 40,
+      "response": {
+        "choices": [
+          {
+            "finish_reason": "length",
+            "index": 0,
+            "message": {
+              "content": "<bos><|turn>user\n+ \u03bb \\t ; [ $ | ^ :: ? ; & \u03a9 : \u03bb \u732b 7f \u00a7 / \u00b6 \u00a7 \u03bb - % > _ [ & & / = a9 ! 7f > // | [ ] a9 :: 7f \u203b } > \u732b \\t _ ~ ! ~ | ; @ $ & :: \\t _ ? { } > $ | \u03a9 ] # \u03bb \u00b6 < a9 ; * ? \u25c7 _ 7f \u03bb & 7f :: :: + \u00b6 0x % | \u732b * = :: \u00a7 ! # \u25c7 !<turn|>\n<|turn>model\n<|channel>thought\n<channel|>It appears you have provided a string of",
+              "role": "assistant"
+            }
+          }
+        ],
+        "id": "chatcmpl-397798088e60",
+        "model": "gemma-4-12B-it",
+        "object": "chat.completion",
+        "usage": {
+          "completion_tokens": 8,
+          "prompt_tokens": 128,
+          "total_tokens": 136
+        }
+      },
+      "schema": "inferswarm.issue175.arm-d.ordinary-case/1",
+      "wall_ns": 4881250434
+    }
+  ],
+  "schema": "inferswarm.issue175.arm-d.ordinary-campaign/1"
+}

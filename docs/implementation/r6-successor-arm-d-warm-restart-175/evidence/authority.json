@@ -1,0 +1,208 @@
+{
+  "accepted_172_material": {
+    "comparison_authority": "post-restart ordinary results compare against the accepted #172 canonical visible/committed results for the same case identities (serving report token_events + ordinary HTTP records); no new comparator is derived",
+    "corpus_case_count": 40,
+    "files": {
+      "corpus": {
+        "path": "docs/implementation/r6-successor-arm-c-requalification-172/evidence/campaign-corpus.json",
+        "sha256": "e49b9c19232c10ec5c06408b890c21c48fbef0a48af68ad6ebf529b6d719e9c7"
+      },
+      "direct_run": {
+        "path": "docs/implementation/r6-successor-arm-c-requalification-172/evidence/physical-execution/direct-run.json",
+        "sha256": "6c5e270b7a87ed9fa9bef010a17a4b38a88b395d13d6a6cce7234f478bfe5490"
+      },
+      "ordinary_canonical": {
+        "path": "docs/implementation/r6-successor-arm-c-requalification-172/evidence/physical-execution/ordinary-canonical/ordinary-campaign.json",
+        "sha256": "3e13e6c86244fc3707b58e904246fe1f93622dfa9a157ff79a9db7afd6f805f3"
+      },
+      "ordinary_sentinels": {
+        "path": "docs/implementation/r6-successor-arm-c-requalification-172/evidence/physical-execution/ordinary-sentinels/ordinary-campaign.json",
+        "sha256": "ff3b3e9ee71c085fe077cd88d34ef7823a7c395b50b483385009cb5e5d62f7ac"
+      },
+      "serving_report_canonical": {
+        "path": "docs/implementation/r6-successor-arm-c-requalification-172/evidence/physical-execution/serving-report-canonical.json",
+        "sha256": "9e9ba0e726ae4e0a3e0694852b153e7f28aa15bd696c6f999803b69a3077960c"
+      },
+      "serving_report_sentinels": {
+        "path": "docs/implementation/r6-successor-arm-c-requalification-172/evidence/physical-execution/serving-report-sentinels.json",
+        "sha256": "2c4caf8a4e233cd3403badcee757d5d8146a40d617ee08b5c998bf6fc36442c1"
+      }
+    },
+    "warm_restart_fixture": {
+      "coordinator_bytes_observed": 0,
+      "path": "docs/implementation/r6-successor-dense-full-integration-117/evidence/warm-restart.json",
+      "per_participant_reacquired_bytes": {
+        "dense.6171f32b4413.stage-1": 0,
+        "dense.6171f32b4413.stage-2": 0,
+        "dense.6171f32b4413.stage-3": 0
+      },
+      "semantics": "loaded and bound, never reinterpreted: cache-hit bytes per participant, zero reacquired bytes, zero transfer bytes, materialization witnesses semantically equivalent, coordinator bulk bytes zero",
+      "sha256": "0fb372ccd5d9db7838cbae8a9d24a60481cf0ec2df3b382d3d7e5ae2ff16b996",
+      "warm_restart_model_weight_transfer_bytes": 0
+    }
+  },
+  "artifact_cache_binding": {
+    "model_view_01": "/srv/inferswarm/state/arm-c/model-view",
+    "model_view_03": "/srv/inferswarm/materialized/issue117/dense.6171f32b4413.stage-3",
+    "per_node_artifacts": {
+      "inferswarm01": {
+        "dense.6171f32b4413.stage-1/armb-participant.safetensors": "2e8cf1af3ff64f7d5f800dac72fea2d418ffa81b15c3a90da5fd42542eaa9ed5",
+        "dense.6171f32b4413.stage-2/armb-participant.safetensors": "85b218060e0242af6fb27a2e988a24a66892511e8067c38ca90280efa3af038d"
+      },
+      "inferswarm03": {
+        "dense.6171f32b4413.stage-3/armb-participant.safetensors": "120e9c29173e91419fe1cfd355651bede6bf195f331e9dac2fd682c4420e6036"
+      }
+    },
+    "substrate_root": "/srv/inferswarm/materialized/issue117",
+    "tokenizer_asset_pins": {
+      "chat_template.jinja": "ae53464bf3be25802b3a5b37def7fd89667067d7577049b3b2d74c4d8de4c6d4",
+      "config.json": "478c46e8d2c52d5c2d85bf67e3b3e8c90e7c9d91086cee27e3c267907e936bd9",
+      "generation_config.json": "a8349d9bd64cc5841297fcb5002f0fdc4749c473c8f1b10ea337f9ce4ee7014e",
+      "tokenizer.json": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+      "tokenizer_config.json": "a62f4e85a47c0c136edaaa3a4f591fd6783717299a9def47e5ad03a49f6a5eb9"
+    },
+    "tokenizer_deployment": "/srv/inferswarm/tokenizers/gemma-r6-frozen"
+  },
+  "attempt_state_machine": {
+    "attempt_id": "armd-175-physical-1",
+    "rules": [
+      "retain every launch and attempt",
+      "a pre-observation infrastructure failure is correctable only when mechanically proven to have emitted/committed zero correctness-bearing results and preserved the frozen canonical cache",
+      "an invalid attempt that emitted any correctness-bearing result is terminal STOP",
+      "after a valid failure, no fresh passing campaign is created inside this issue"
+    ]
+  },
+  "built_at_unix": 1789364932,
+  "campaign_id": "issue175-arm-d-warm-restart-v1",
+  "corpus_plan": {
+    "pre_restart_screen_cases": [
+      "c109-03-04-003",
+      "c109-04-02-047",
+      "g170-01"
+    ],
+    "restart_1": "exact accepted 40-case canonical corpus + trailing fencing-arm negative control",
+    "restart_2": "exact accepted seven sentinel identities x 6 repeats (the accepted #172 protocol verbatim)"
+  },
+  "deployment_authority": {
+    "chain_plan_input": "/srv/inferswarm/state/arm-c-requal-172/chain-plan.json",
+    "coordinator_origin": "http://10.0.0.206:18080",
+    "coordinator_python": "/srv/inferswarm/venv/bin/python",
+    "coordinator_repo": "/srv/inferswarm/repos/FreeToken",
+    "environment_input": "/srv/inferswarm/state/arm-c-requal-172/environment.json",
+    "last_stage_endpoint": "10.0.0.219:18485",
+    "node_agent_endpoint": "10.0.0.141:18486",
+    "node_python": "/home/zutfen/FreeToken/.venv/bin/python",
+    "node_repo": "/home/zutfen/FreeToken",
+    "scope_id": "issue117-arm-c",
+    "serving_evidence_input": "/srv/inferswarm/state/arm-c-requal-172/serving-evidence.json"
+  },
+  "frozen_geometry_uuids": {
+    "inferswarm01": {
+      "0": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+      "1": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55"
+    },
+    "inferswarm03": {
+      "0": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176"
+    }
+  },
+  "issue": "https://github.com/Zutfen-LLC/inferswarm/issues/175",
+  "physical_authorization_id": "physical-authorization-issue175-inferswarm-246dcca8-freetoken-6202eeeb",
+  "plan_identities": {
+    "chain_plan_digest_172": "sha256:b24c3ca06b3ea79b62fdea8058afe9f71e0c69187b5cd77740cc5855f9796529",
+    "coordinator_plan_digest_172": "sha256:14344025ed0d86d8db91664dc19aa03f321e8d8586919f9d6776ad6c76f58bb7",
+    "environment_canonical_sha256_172": "sha256:cd0909bb96fc637a921218c973aaa1640579af7093681714cd3216a0dfa5f279",
+    "participant_identity": "sha256:ee845188d3328bdec29bf4b09d71f7ccda0701ff5758cb1d8a70460a40fecfb1",
+    "r5a_static_plan_digest_172": "sha256:208be7956474a559756355c85142eb6716585f4c0320a27fe73d2f4196972c3e"
+  },
+  "post_172_drift": {
+    "changed_files_by_class": {
+      "docs_only": [
+        "CONTRIBUTING.md",
+        "docs/README.md",
+        "docs/ci-impact-planning.md",
+        "docs/hardware/README.md",
+        "docs/hardware/pcie-slot-ledger.md"
+      ],
+      "execution_bearing": [],
+      "other": [],
+      "test_or_ci_only": [
+        ".github/workflows/ci.yml",
+        "scripts/ci_groups.json",
+        "scripts/plan_ci.py",
+        "scripts/run_full_cpu_suite.py",
+        "tests/README.md",
+        "tests/test_run_full_cpu_suite.py"
+      ]
+    },
+    "classification": "post-#172 drift is test/CI-orchestration-only and documentation-only (the accepted #173 parallel CPU-suite runner and two hardware-ledger docs); no execution-bearing change to the Issue #117 / participant / artifact / planner / serving path exists in the delta, so no applicability audit beyond this classification is required",
+    "commit_count": 11,
+    "range": "52c3b560d560f69d0f009ed5772c1a70efc01ba2..246dcca809d8af22b3f3e4ae11ec9fd412fbd8dc"
+  },
+  "pre_observation_state": {
+    "h109_material_accessed": false,
+    "outputs_inspected": false,
+    "physical_execution_performed": false
+  },
+  "restart_authority": {
+    "boundary_steps": [
+      "terminate the execution-bearing participant runtime processes for the accepted stage topology by exact PID (coordinator process on 00, node-agent + spawn-isolated stage-1/stage-2 children on 01, last-stage service on 03)",
+      "prove process death: /proc/<pid> absent, pgrep -af pattern empty, ss -tln free of 18080/18485/18486, GPU memory reclaimed (nvidia-smi 0-1 MiB), and record PID + process start time (/proc/<pid>/stat field 22) + boot_id so no post-restart PID is confused with the pre-restart process",
+      "prove old accelerator realization inactive: GPU memory usage back to ~0 on all three frozen devices",
+      "preserve Node-local verified immutable artifact cache bytes on disk (no clean/regenerate/repopulate; re-verify digests after restart)",
+      "start fresh participant runtime processes under exact frozen producer bytes (same worktrees, verified clean at 6202eeeb before launch)",
+      "Coordinator re-ingests participant inventory/capability state, replans from the same frozen environment/chain-plan/serving-evidence bytes, and must reproduce the accepted plan digest 14344025ed0d (proven for two independent coordinator instances in #172)",
+      "every required immutable artifact satisfied from verified local cache hit (per-stage fetched_bytes == accepted values, local cache read + H2D materialization accounted separately)",
+      "fresh serving sessions after restart; no stale pre-restart session/epoch/position commit may land"
+    ],
+    "launch_order": [
+      "1. last-stage service on 03 (single-connection; relaunch per chain realization)",
+      "2. node-agent on 01 (drives stages 1-2, connects to 03)",
+      "3. external CPU-only coordinator waist on 00",
+      "4. ordinary client from the orchestration host"
+    ],
+    "non_claims": [
+      "no OS/Node reboot survival is claimed",
+      "no disk replacement or Node replacement is claimed",
+      "no cache reconstruction after cache loss is claimed",
+      "no live in-flight request continuation across process death is claimed",
+      "no mutable KV/SWA/radix/session cache reuse across restart is claimed (immutable artifact cache only)",
+      "no Arm-E inventory/locality mutation is claimed",
+      "no failover/replica promotion is claimed",
+      "no production restart orchestration/API stability is claimed",
+      "no h109-* material was opened, generated, copied, inferred, reconstructed, decrypted, or used",
+      "Arm E is not started in this issue"
+    ],
+    "observation_window": "from first pre-restart baseline request to the completion of each restart's post-restart correctness corpus",
+    "process_death_proof_method": "exact-PID kill; then mechanical re-observation: /proc/<pid> gone, pgrep pattern empty, ss -tln ports free, nvidia-smi per-device memory ~0, plus pid+starttime+boot_id record for every pre- and post-restart process identity",
+    "restart_count": 2,
+    "stop_rules": [
+      "invalid attempt emitted a correctness-bearing result",
+      "accepted cache mutated/repaired/reacquired during the canonical campaign",
+      "correctness-bearing harness/runtime bytes changed after freeze",
+      "valid Source/peer model-weight reacquisition",
+      "valid post-restart correctness mismatch",
+      "old runtime/process identity remained active (restart not genuine)",
+      "artifact-integrity failure bypassed or auto-repaired"
+    ],
+    "transfer_observation": "strace -f -e trace=openat,connect attached to every execution-bearing process for each full restart window; raw traces retained; reducer classifies every openat of model-weight bytes and every connect() destination"
+  },
+  "schema": "inferswarm.issue175.arm-d-authority/1",
+  "starting_heads": {
+    "ancestor_proofs": {
+      "merge_174_is_ancestor_of_main": true
+    },
+    "freetoken_inferswarm_research": "6202eeebcdf63e7bc8bb3498dd3c364ae42ee469",
+    "inferswarm_main": "246dcca809d8af22b3f3e4ae11ec9fd412fbd8dc",
+    "note": "head equality against origin is asserted by the operator procedure (fetch + rev-parse recorded in the run log); the mechanical proofs retained here are the ancestry checks",
+    "verified": true
+  },
+  "subject": {
+    "candidate": "dense.6171f32b4413",
+    "checkpoint_sha256": "5a84cb313260ac447237b890387116dfa8682e49a6b44bc585ae8353abbff18d",
+    "geometry": "inferswarm01/gpu-0 [0,16)\ninferswarm01/gpu-1 [16,32)\ninferswarm03/gpu-0 [32,48)",
+    "model": "google/gemma-4-12B-it",
+    "prefill_boundary_rows": 64,
+    "qualification_subject": "sha256:c6b9fe721103fb041be3a5b980e73ee148f2304c8572bc50e971f1d7994ffd",
+    "revision": "707f0a3b8a3c7ad586ed01e27eafbad8a27dd0f7"
+  }
+}
