@@ -184,6 +184,7 @@ GROUP_TEST_MODULES = {
         "test_issue166_swa_remediation_record",
         "test_issue168_requal_blocked_record",
         "test_issue170_long_remainder_corpus",
+        "test_issue184_final_closure",
     ],
     "issue-172-requal": [
         "test_issue172_requalification",
