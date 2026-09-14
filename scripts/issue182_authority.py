@@ -289,6 +289,45 @@ def bind_accepted_cache_objects() -> dict:
     }
 
 
+def bind_geometry_uuids() -> dict:
+    """Verify the pinned GPU UUID literals byte-for-byte against the
+    accepted Arm-D authority (geometry) and the retained Arm-D
+    terminal-window observation (full host GPU sets). Hand-copied
+    digest/UUID constants always drift; this closes that seam at
+    authority build (correction round 2026-09-14: the inferswarm03
+    gpu-0 pin had silently dropped a hex character)."""
+    authority = json.loads(P.ARM_D_AUTHORITY.read_text())
+    accepted_geometry = authority.get("frozen_geometry_uuids", {})
+    for host, gpus in P.FROZEN_GEOMETRY_UUIDS.items():
+        accepted = accepted_geometry.get(host, {})
+        if gpus != accepted:
+            raise SystemExit(
+                f"ISSUE182_AUTHORITY_FAIL: geometry uuid pin drift vs "
+                f"accepted Arm-D authority on {host}: "
+                f"{gpus} != {accepted}")
+    retained = {}
+    for node, path in (("inferswarm01", P.ARM_D_WARM_INVENTORY_01),
+                       ("inferswarm03", P.ARM_D_WARM_INVENTORY_03)):
+        document = json.loads(path.read_text())
+        retained[node] = {gpu["index"]: gpu["uuid"]
+                          for gpu in document.get("gpus", [])}
+    for host, gpus in P.FROZEN_HOST_GPU_UUIDS.items():
+        accepted = retained.get(host, {})
+        if gpus != accepted:
+            raise SystemExit(
+                f"ISSUE182_AUTHORITY_FAIL: host gpu uuid pin drift vs "
+                f"retained Arm-D observation on {host}: "
+                f"{gpus} != {accepted}")
+    return {
+        "geometry_verified_against": "accepted Arm-D authority "
+                                     "frozen_geometry_uuids",
+        "host_sets_verified_against": "retained Arm-D terminal-window "
+                                      "observation inventories",
+        "per_host": {host: dict(gpus)
+                     for host, gpus in P.FROZEN_HOST_GPU_UUIDS.items()},
+    }
+
+
 def bind_arm_d() -> dict:
     """Bind the accepted Arm-D authority/terminal/warm reference pins."""
     authority = json.loads(P.ARM_D_AUTHORITY.read_text())
@@ -425,6 +464,7 @@ def build_authority(inferswarm: Path) -> dict:
         "subject_and_plan": bind_subject_and_plan(),
         "cold_arm_binding": bind_cold_arm(),
         "arm_d_binding": bind_arm_d(),
+        "geometry_uuid_binding": bind_geometry_uuids(),
         "accepted_cache_objects": bind_accepted_cache_objects(),
         "locality_analog": bind_locality_analog(),
         "path_bandwidth": derive_bandwidth(),

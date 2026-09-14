@@ -149,14 +149,20 @@ MATERIALIZED_PINS = {
     },
 }
 
-#: frozen geometry UUIDs (accepted #175 authority)
+#: frozen geometry UUIDs (accepted #175 authority). Correction round:
+#: the previous hand-copied inferswarm03/gpu-0 UUID had dropped a hex
+#: character (39 chars) — masked until now by the fail-open GPU check
+#: (P1-1); the hardened OBS-GPU-SET-MISMATCH fence caught it live on
+#: 2026-09-14. The builder now verifies these literals byte-for-byte
+#: against the accepted Arm-D authority (bind_geometry_uuids), so
+#: hand-copy drift fails closed at authority build.
 FROZEN_GEOMETRY_UUIDS = {
     "inferswarm01": {
         "0": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
         "1": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
     },
     "inferswarm03": {
-        "0": "GPU-e1f2f90c-49ab-2689-0cf1-5d9da520176",
+        "0": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176",
     },
 }
 
@@ -164,13 +170,14 @@ FROZEN_GEOMETRY_UUIDS = {
 #: IS a frozen GPU of an observation host (accepted Arm-D retained
 #: terminal-window observation, inventory-03-postkill2.json); the
 #: fail-closed fence must observe it too (P1-1: every frozen GPU).
+#: Also verified against the retained Arm-D records by the builder.
 FROZEN_HOST_GPU_UUIDS = {
     "inferswarm01": {
         "0": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
         "1": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
     },
     "inferswarm03": {
-        "0": "GPU-e1f2f90c-49ab-2689-0cf1-5d9da520176",
+        "0": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176",
         "1": "GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0",
     },
 }
