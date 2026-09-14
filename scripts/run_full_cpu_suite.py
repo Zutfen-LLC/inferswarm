@@ -463,10 +463,17 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
                 })
         except BaseException as error:
             stop_workers([entry[1] for entry in running])
+            cleanup_error = None
             for worker_root in list(outstanding_roots):
-                remove_worker_root(root, worker_root)
+                try:
+                    remove_worker_root(root, worker_root)
+                except SuiteError as cleanup_failure:
+                    # Never mask the original failure with a cleanup failure.
+                    cleanup_error = cleanup_failure
             if isinstance(error, KeyboardInterrupt):
                 raise SuiteError("interrupted: all worker processes terminated") from error
+            if cleanup_error is not None:
+                error.add_note(f"worktree cleanup also failed: {cleanup_error}")
             raise
     try:
         executed_ids, executed_digest = validate_receipts(receipts, serial_ids)

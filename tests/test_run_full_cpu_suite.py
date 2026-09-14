@@ -327,6 +327,20 @@ class ExecutionTests(unittest.TestCase):
                 runner.run_suite(root, tests, jobs=4, timeout=60)
         finally:
             runner.ISOLATED_MODULES = saved
+        # Mechanically prove every worker process was terminated and reaped:
+        # poll the process table for any survivor instead of relying on the
+        # 30s marker write timing alone.
+        deadline = time.monotonic() + 10
+        survivor = None
+        while time.monotonic() < deadline:
+            survivors = subprocess.run(
+                ["pgrep", "-f", "issue173-sibling2"], capture_output=True, text=True).stdout.strip()
+            if not survivors:
+                survivor = None
+                break
+            survivor = survivors
+            time.sleep(0.2)
+        self.assertIsNone(survivor, f"live worker processes survived the crash path: {survivor}")
         time.sleep(2)
         self.assertFalse(marker.exists(), "crash in a later phase left an earlier sibling running")
 
@@ -336,6 +350,26 @@ class ExecutionTests(unittest.TestCase):
         })
         with self.assertRaises(runner.SuiteError):
             runner.run_suite(root, tests, jobs=1, timeout=60)
+
+    def test_task_timeout_terminates_worker_and_siblings(self):
+        # A task exceeding --timeout must be terminated, its siblings reaped,
+        # and the parent must fail closed with the timeout diagnosis.
+        marker_parent = Path(tempfile.mkdtemp(prefix="issue173-timeout-"))
+        self.addCleanup(shutil.rmtree, marker_parent, ignore_errors=True)
+        marker = marker_parent / "late"
+        root, tests = fixture(self, {
+            "test_slow.py": f"import pathlib, time, unittest\nMARKER=pathlib.Path({str(marker)!r})\nclass S(unittest.TestCase):\n def test_slow(self): time.sleep(60); MARKER.write_text('late')\n",
+            "test_quick.py": "import unittest\nclass Q(unittest.TestCase):\n def test_quick(self): pass\n",
+        })
+        marker.unlink(missing_ok=True)
+        with self.assertRaises(runner.SuiteError) as caught:
+            runner.run_suite(root, tests, jobs=2, timeout=3)
+        self.assertIn("timed out", str(caught.exception))
+        time.sleep(2)
+        self.assertFalse(marker.exists(), "timed-out worker kept running")
+        survivors = subprocess.run(["pgrep", "-f", "issue173-timeout"],
+                                   capture_output=True, text=True).stdout.strip()
+        self.assertEqual(survivors, "", f"live workers survived timeout: {survivors}")
 
     def test_malformed_or_missing_receipt_fails_closed(self):
         with self.assertRaises(runner.SuiteError):
