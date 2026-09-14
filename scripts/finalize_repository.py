@@ -1256,6 +1256,7 @@ _R8A_PRODUCERS = frozenset({
 _R8A_AUTHORED = frozenset({
     f"{_R8A}/source-findings.md",
     f"{_R8A}/README.md",
+    f"{_R8A}/gguf-census.json",
 })
 # The additive Issue #130 successor bundle: current-finalization
 # integrity for the Issue #130 sources, never a rewrite of the closed
@@ -1610,6 +1611,7 @@ def default_registry() -> tuple[Stage, ...]:
                 "CPU/static Issue #189 R8-A terminal reduction from the "
                 "separately pinned Qwen and Unsloth authority record"),
             reads=frozenset({f"{_R8A}/source-findings.md",
+                             f"{_R8A}/gguf-census.json",
                              "scripts/issue189_r8a_reducer.py"}),
             writes=frozenset({_R8A_TERMINAL}),
             after=frozenset({"issue137-bundle-verify"}),

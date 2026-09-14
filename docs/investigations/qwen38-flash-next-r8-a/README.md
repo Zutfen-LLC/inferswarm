@@ -22,7 +22,10 @@ The classes below come from the pinned official config/card. **MEASURED** means 
 | Gated residual | **MEASURED:** four branches and rank 320. | Immutable parameters plus transient activations; no separate distributed authority is inferred. |
 | MTP | **MEASURED:** one MTP layer; the conversion has separate MTP sidecars. | Optional speculative state is not part of a first correctness subject until its exact sidecar and protocol are pinned. |
 | Vision encoder/projector | **MEASURED:** the official model is conditional-generation with a 27-depth vision configuration; conversion includes mmproj sidecars. | Excluded from any first text-only subject; multimodal correctness needs its own authority. |
-| KV, recurrent, sampling, and workspace state | **MEASURED:** `use_cache=true`; **INFERRED:** runtime/session state is mutable and non-reconstructible absent an explicit checkpoint protocol. | Must be capacity-accounted separately from weights; it cannot be treated as a free host mirror or a model artifact. |
+| KV cache | **MEASURED:** `use_cache=true`. | Mutable session state; normally reconstructible by exact replay/prefill, but live transfer/checkpoint semantics require runtime-specific proof. Account separately from weights. |
+| GDN recurrent / PLE-conv / QSA-indexer state | **INFERRED from the hybrid architecture and rollback report:** live recurrent/indexer state has distinct transfer/snapshot semantics. | Keep with the owning execution context unless an exact runtime proves snapshot, restore, or transfer equivalence; do not call it generically non-reconstructible. |
+| Sampling / RNG state | **INFERRED:** mutable runtime session state, potentially replayable or checkpointable under a frozen runtime. | Not model weight state and no basis for a universal residency restriction. |
+| Activation and workspace state | **INFERRED:** ephemeral allocation state. | Capacity-account separately; it is neither a persistent materialization nor a required host mirror. |
 
 ## Decomposition and pressure
 
@@ -41,7 +44,7 @@ The smallest complete current conversion is Unsloth `UD-IQ1_S`: three split GGUF
 
 The other deployed devices do not repair this conclusion: the RX 580 path is Vulkan/unqualified and has x1 risers, the RTX 3060 Ti capacity is not used as a fit assumption here, and a mixed-backend plan requires independent backend qualification. The PCIe ledger is a topology inventory, not a bandwidth result.
 
-The required multi-resource/cross-host shape has no qualified llama.cpp identity. In particular, the recorded Qwen3.8 RPC long-prompt degeneration [#27993](https://github.com/ggml-org/llama.cpp/issues/27993) is correctness-relevant even though it was later closed: closure does not bind a repair commit or prove the required fleet/mode. The N-gram pathological-read report [#28256](https://github.com/ggml-org/llama.cpp/issues/28256) is a performance-only risk once correctness is established. The open multi-sequence recurrent rollback issue [#28019](https://github.com/ggml-org/llama.cpp/issues/28019) is mode-specific and excluded from a proposed single-slot first subject, but confirms that hybrid mutable state cannot be assumed transferable.
+The required multi-resource/cross-host shape has no qualified llama.cpp identity. The retained audit source is `ggml-org/llama.cpp@1bc7a5af0d14b1fb72f266abbd1237b394187115`, not a selected R8-B build. The prior [#27993](https://github.com/ggml-org/llama.cpp/issues/27993) **CORRECTNESS_BLOCKER** was reported on `17252c769a63c1cb650ce98ae309cf4de0da7778`, Metal layer-split cross-host RPC, long prefill/decode, and UD-IQ4_XS; reporter rebuild `cc231cb0da565440cf6a3e5b55dfeba477972cb6` and repair `a273d22e142b9ad253a09d7b76d4d24ba64eb9bc` do not qualify NVIDIA/UD-IQ1_S or this fleet. The N-gram small-read [#28256](https://github.com/ggml-org/llama.cpp/issues/28256) is a **PERFORMANCE_ONLY_RISK** for NFS/FS-cache backing. The open multi-sequence rollback [#28019](https://github.com/ggml-org/llama.cpp/issues/28019) is a **MODE_SPECIFIC_RISK**, excluded from a first single-slot subject.
 
 | status | R8-A conclusion |
 | --- | --- |
@@ -52,7 +55,7 @@ The required multi-resource/cross-host shape has no qualified llama.cpp identity
 
 ## Required prerequisite before R8-B
 
-Pin a post-fix llama.cpp commit and build recipe, then authorize a separately bounded, text-only, single-slot qualification. Before any output is judged, freeze one complete GGUF split set, its header/tensor census, a reference strategy, per-resource allocation limits, an explicit N-gram placement/control, prompt/context ladder, and stop conditions. It must first demonstrate correct short and long prefill/decode on the exact required layer/RPC shape; only then can n-gram locality or economic measurements be investigated.
+Select a post-observation llama.cpp commit and exact build recipe, then separately authorize a text-only, single-slot qualification over the required NVIDIA/cross-host layer-RPC shape. Before any output is judged, freeze one complete GGUF split set (the object census exists; header/tensor identity remains required), a reference strategy, per-resource allocation limits, explicit N-gram placement/control, prompt/context ladder, and stop conditions. Demonstrate correct short and long prefill/decode on that exact shape before n-gram locality or economics work.
 
 ## Non-claims
 

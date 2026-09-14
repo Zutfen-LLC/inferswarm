@@ -14,33 +14,44 @@
     "This reduction is not acceptance or execution authorization for R8-B.",
     "It does not infer per-tensor quantization, N-gram tensor bytes, or host/SSD suitability from aggregate GGUF bytes."
   ],
-  "record_digest": "sha256:3d1d916c1083eee416ca034af60df7a45eceb1caad48b487c630067d79a30bb8",
+  "record_digest": "sha256:951a9380c187527202155251e8a96554e1c43a21be82bce07e8a90f0c98f25fc",
   "representation": {
     "complete_split_bytes": 72546461344,
     "complete_split_files": 3,
     "complete_split_gib": 67.56,
-    "id": "unsloth-UD-IQ1_S"
+    "id": "unsloth-UD-IQ1_S",
+    "object_identities": [
+      "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+      "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
+      "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a"
+    ]
   },
+  "runtime_audit_revision": "1bc7a5af0d14b1fb72f266abbd1237b394187115",
   "runtime_blockers": [
     {
+      "affected_runtime_revision": "17252c769a63c1cb650ce98ae309cf4de0da7778",
       "classification": "CORRECTNESS_BLOCKER",
       "id": "rpc-cross-host-correctness",
-      "reason": "The required multi-resource shape needs cross-host RPC, while the recorded Qwen3.8 GGUF defect was deterministic long-prompt degeneration. The issue closure alone does not name a prospectively qualified commit or prove this fleet/mode safe.",
+      "reason": "The reported fix does not qualify NVIDIA, UD-IQ1_S, this fleet, or the required exact layer/RPC shape.",
+      "reported_fix_revision": "a273d22e142b9ad253a09d7b76d4d24ba64eb9bc",
+      "reported_mode": "Metal layer-split cross-host RPC, UD-IQ4_XS, long prefill/decode beyond about 2K prompt tokens",
+      "reported_rebuild_revision": "cc231cb0da565440cf6a3e5b55dfeba477972cb6",
       "source": "https://github.com/ggml-org/llama.cpp/issues/27993"
     },
     {
-      "classification": "RUNTIME_BACKEND_PREREQUISITE",
+      "classification": "PERFORMANCE_ONLY_RISK",
       "id": "ngram-materialization-control",
-      "reason": "The retained conversion inventory does not establish an independently addressable N-gram GGUF materialization or an honest host-memory placement contract; small-read behavior is a separate performance risk.",
+      "reason": "The NFS/FS-cache small-read report is performance-only; separately, no retained conversion control proves independently addressable N-gram materialization.",
       "source": "https://github.com/ggml-org/llama.cpp/issues/28256"
     }
   ],
   "schema": "inferswarm.issue189.r8a-terminal/1",
   "source_authority": {
+    "gguf_census_sha256": "5664961903f0b6afd1066ac88d287471231c962604fe7e7176f2b3f41ee43fe1",
     "official_revision": "de4b8e4d43b917e7706784d8bb445c9af86a3540",
-    "source_findings_sha256": "ab7d063cdc65ecda951b97ff0b15fbfd0f62446688e54e50ddf3dfcda99ecdab",
+    "source_findings_sha256": "fdc15c64511f2b8cff33eb20b9e4788c997601b607d61d10a3e05fdd3512844e",
     "third_party_gguf_revision": "38bb39ee97821de2c9009abb7e93950eec396e66"
   },
   "terminal": "R8A_QWEN38_RUNTIME_PREREQUISITE",
-  "terminal_reason": "The target remains architecturally informative, but no pinned llama.cpp commit plus bounded, single-slot, text-only, multi-resource correctness/residency protocol has been established for the only current-fleet-sized representation."
+  "terminal_reason": "The target remains architecturally informative, but no selected and qualified llama.cpp build plus bounded, text-only, single-slot, NVIDIA/cross-host layer-RPC correctness and residency protocol exists for the only current-fleet-sized representation."
 }

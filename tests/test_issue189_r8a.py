@@ -24,6 +24,8 @@ class Issue189R8ATests(unittest.TestCase):
         authority = document["source_authority"]
         self.assertNotEqual(authority["official_revision"],
                             authority["third_party_gguf_revision"])
+        self.assertEqual(document["runtime_audit_revision"],
+                         reducer.RUNTIME_AUDIT_REVISION)
         self.assertEqual(document["representation"]["complete_split_files"], 3)
 
     def test_terminal_fails_closed_without_complete_source_authority(self):
@@ -33,7 +35,22 @@ class Issue189R8ATests(unittest.TestCase):
             source.parent.mkdir(parents=True)
             original = (reducer.ROOT / reducer.SOURCE).read_text()
             source.write_text(original.replace(reducer.GGUF_REVISION, "drift"))
+            (root / reducer.CENSUS).write_bytes(
+                (reducer.ROOT / reducer.CENSUS).read_bytes())
             with self.assertRaisesRegex(ValueError, "source-authority fact missing"):
+                reducer.reduction_document(root)
+
+    def test_reducer_requires_every_selected_split_object(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / reducer.AREA).mkdir(parents=True)
+            for relative in (reducer.SOURCE, reducer.CENSUS):
+                (root / relative).write_bytes((reducer.ROOT / relative).read_bytes())
+            census_path = root / reducer.CENSUS
+            census = json.loads(census_path.read_text())
+            census["files"] = census["files"][1:]
+            census_path.write_text(json.dumps(census))
+            with self.assertRaisesRegex(ValueError, "incomplete GGUF object inventory"):
                 reducer.reduction_document(root)
 
     def test_no_execution_authorization_is_smuggled_into_terminal(self):

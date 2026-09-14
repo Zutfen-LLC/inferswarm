@@ -79,11 +79,44 @@ card describes the subject as a causal language model with vision encoder and
 states the same 125B / 6B-active / 51B-N-gram / 4B-MTP model overview:
 [pinned card](https://huggingface.co/unsloth/Qwen3.8-Flash-Next-GGUF/blob/38bb39ee97821de2c9009abb7e93950eec396e66/README.md#L57-L86).
 
+The full object-level census — every GGUF path, split membership, byte length,
+and Hugging Face LFS SHA-256 identity — is retained in
+[`gguf-census.json`](gguf-census.json). Its source is the pinned tree API
+response (SHA-256 `ed5072f498b344ed2b256170bea21c74c3026b72281f035b010d2242ed4e0869`),
+not a guessed aggregate. The census identifies the six MTP sidecars and both
+mmproj sidecars separately. It still is not a header/tensor census.
+
 Static inventory alone does **not** establish GGUF architecture metadata,
 per-tensor quantization, an independently addressable N-gram table, or a safe
 offload mode.  Those require a subsequent bounded pinned-GGUF header/range
 census.  Nor do the aggregate bytes establish per-resource fit, runtime
 support, correctness qualification, or useful performance.
+
+## Pinned runtime-defect audit
+
+The runtime source inspected at final handoff is
+[`ggml-org/llama.cpp@1bc7a5af0d14b1fb72f266abbd1237b394187115`](https://github.com/ggml-org/llama.cpp/tree/1bc7a5af0d14b1fb72f266abbd1237b394187115).
+It is an audit source only, not a qualified R8-B runtime selection.
+
+The prior cross-host RPC defect is narrowly retained from
+[#27993](https://github.com/ggml-org/llama.cpp/issues/27993): its body
+SHA-256 is `d0f1f6a5033e177be6fc44365b7700402c5690e9aad810fb9f6d83dfe1b352c2`.
+The report reproduced deterministic all-zero output after roughly 2K prompt
+tokens on `17252c769a63c1cb650ce98ae309cf4de0da7778`, using a Metal layer-split
+cross-host RPC topology and Unsloth UD-IQ4_XS. The reporter later says a rebuild
+at `cc231cb0da565440cf6a3e5b55dfeba477972cb6` fixed that reproduction; the
+referenced repair is merged PR [#27960](https://github.com/ggml-org/llama.cpp/pull/27960),
+commit `a273d22e142b9ad253a09d7b76d4d24ba64eb9bc`. This is a
+**CORRECTNESS_BLOCKER for the reported mode**, not evidence that the repair is
+correct for NVIDIA, UD-IQ1_S, this fleet, or a new R8-B subject.
+
+The N-gram small-read report [#28256](https://github.com/ggml-org/llama.cpp/issues/28256)
+(body SHA-256 `f9194246333987761e1930b4a9c6cd852fbf9ffde0bd8cb4df38adaa996155f8`)
+is a **PERFORMANCE_ONLY_RISK** for its NFS/FS-cache backing mode. The open
+multi-sequence rollback report [#28019](https://github.com/ggml-org/llama.cpp/issues/28019)
+(body SHA-256 `9f367873e4c7fbb937dd5b3e27c320ea31629f059ee2b1a53a7386386c31d6e0`)
+is a **MODE_SPECIFIC_RISK**, outside a first single-slot subject. Neither
+issue establishes an independently placeable N-gram materialization.
 
 ## Retained retrieval identities
 
