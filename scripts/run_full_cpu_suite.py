@@ -295,9 +295,18 @@ def validate_receipts(receipts: list[dict], serial_ids: list[str]) -> tuple[list
 
 def ensure_clean_git_worktree(root: Path) -> None:
     """Reject dirty Git roots so discovery and isolated workers share one SHA."""
+    probe = subprocess.run(["git", "-C", str(root), "rev-parse", "--is-inside-work-tree"],
+                           capture_output=True, text=True)
+    inside = probe.returncode == 0 and probe.stdout.strip() == "true"
     status = subprocess.run(["git", "-C", str(root), "status", "--porcelain"],
                             capture_output=True, text=True)
-    if status.returncode == 0 and status.stdout:
+    if status.returncode != 0:
+        if inside:
+            # Fail closed: a git failure inside a real work tree must never be
+            # treated as a clean tree (review P2: guard was silently skipped).
+            raise SuiteError(f"git status failed inside a work tree: {status.stderr.strip()}")
+        return  # not a Git checkout (plain fixture root); no guard applies
+    if status.stdout:
         raise SuiteError("refusing dirty Git worktree: commit or stash before the isolated full suite")
 
 

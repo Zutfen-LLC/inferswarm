@@ -292,6 +292,29 @@ class ExecutionTests(unittest.TestCase):
         with self.assertRaises(runner.SuiteError):
             runner.run_suite(root, tests, jobs=1, timeout=60)
 
+    def test_git_status_failure_inside_a_work_tree_fails_closed(self):
+        # Review P2: a git status failure must never be treated as a clean
+        # tree inside a real work tree. Simulate with a bogus GIT_DIR that
+        # rev-parse accepts as inside-work-tree but status cannot use.
+        root, tests = fixture(self, {
+            "test_clean.py": "import unittest\nclass C(unittest.TestCase):\n def test_value(self): pass\n",
+        })
+        for command in (("git", "init", "-q"), ("git", "config", "user.email", "test@example.invalid"),
+                        ("git", "config", "user.name", "Test"), ("git", "add", "."),
+                        ("git", "commit", "-qm", "base")):
+            subprocess.run(command, cwd=root, check=True)
+        saved = dict(os.environ)
+        try:
+            # A directory as GIT_INDEX_FILE: rev-parse still reports a work
+            # tree, but `git status` fails (unable to map index file).
+            os.environ["GIT_INDEX_FILE"] = str(root / ".git")
+            with self.assertRaises(runner.SuiteError) as caught:
+                runner.run_suite(root, tests, jobs=1, timeout=60)
+            self.assertIn("git status failed", str(caught.exception))
+        finally:
+            os.environ.clear()
+            os.environ.update(saved)
+
     def test_worker_crash_terminates_siblings_before_returning(self):
         marker_parent = Path(tempfile.mkdtemp(prefix="issue173-sibling-"))
         self.addCleanup(shutil.rmtree, marker_parent, ignore_errors=True)
