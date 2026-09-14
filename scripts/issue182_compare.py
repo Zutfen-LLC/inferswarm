@@ -316,8 +316,24 @@ def cold_snapshot(node_id: str) -> dict:
     }
 
 
-def warm_snapshot(record: dict) -> dict:
-    """Normalize one fresh observation record into a snapshot document."""
+def warm_snapshot(record: dict, authority: dict) -> dict:
+    """Normalize one fresh observation record into a snapshot document.
+
+    Fail-closed hardening (maintainer comment 5666244858):
+
+    - every acceptance-bearing probe receipt must be present and
+      successful (returncode 0): an empty observation is admissible
+      only against a proven-successful probe;
+    - the record's observation epoch must be exactly the frozen
+      authority identity (authority_digest, campaign, attempt, host,
+      sequence) — the sequence is consumed from the record's bound
+      epoch, never manufactured here;
+    - the record's verified object set must EQUAL the accepted
+      verified-cache provenance set (sidecar sha256 re-verified
+      against the authority binding): missing = cache drift, extra =
+      unaccepted provenance; every object must additionally carry
+      content_address_verified.
+    """
     problems = record.get("problems") or []
     if problems:
         raise SystemExit(
@@ -329,9 +345,34 @@ def warm_snapshot(record: dict) -> dict:
     if fence.get("processes"):
         raise SystemExit(
             "ISSUE182_COMPARE_FAIL: execution-bearing processes live")
-    return {
+    receipts = fence.get("probe_receipts") or {}
+    for probe_name in ("ps", "ss:18080", "ss:18485", "ss:18486",
+                       "nvidia-smi"):
+        receipt = receipts.get(probe_name)
+        if receipt is None or receipt.get("returncode") != 0:
+            raise SystemExit(
+                f"ISSUE182_COMPARE_FAIL: probe {probe_name} missing or "
+                f"failed on {record.get('host')}; an empty observation "
+                f"is not admissible without a successful receipt")
+
+    epoch = record.get("observation_epoch") or {}
+    frozen_epoch = authority.get("observation_epoch") or {}
+    if (epoch.get("authority_digest") != authority.get("authority_digest")
+            or epoch.get("campaign_id") != P.CAMPAIGN_ID
+            or epoch.get("attempt_id") != (authority.get(
+                "attempt_state_machine") or {}).get("attempt_id")
+            or epoch.get("host") != record.get("host")
+            or epoch.get("sequence") != frozen_epoch.get("sequence")):
+        raise SystemExit(
+            f"ISSUE182_COMPARE_FAIL: observation epoch identity wrong "
+            f"or stale on {record.get('host')}: {epoch}")
+    if epoch.get("sequence") != P.OBSERVATION_SEQUENCE:
+        raise SystemExit(
+            "ISSUE182_COMPARE_FAIL: observation sequence != frozen pin")
+
+    snapshot = {
         "node_id": record["host"],
-        "sequence": 2,
+        "sequence": epoch["sequence"],
         "source": {"source_id": record["host"],
                    "endpoint": f"file://{P.CACHE_ROOT}"},
         "verified_objects": [
@@ -341,6 +382,55 @@ def warm_snapshot(record: dict) -> dict:
             for obj in record["verified_objects"]],
         "entries": [],
     }
+    check_warm_against_accepted(snapshot, record["host"], authority)
+    return snapshot
+
+
+def load_accepted_cache_objects(authority: dict) -> dict:
+    """Load the sidecar, re-verifying its sha256 vs the authority."""
+    binding = authority.get("accepted_cache_objects") or {}
+    path = P.ROOT / binding["path"]
+    digest = sha256_file(path)
+    if digest != binding["sha256"]:
+        raise SystemExit(
+            "ISSUE182_COMPARE_FAIL: accepted-cache-objects sidecar "
+            "digest drift vs authority binding")
+    sidecar = json.loads(path.read_text())
+    if sidecar.get("schema") != P.ACCEPTED_CACHE_OBJECTS_SCHEMA:
+        raise SystemExit(
+            "ISSUE182_COMPARE_FAIL: accepted-cache-objects schema")
+    return sidecar
+
+
+def check_warm_against_accepted(warm: dict, node_id: str,
+                                authority: dict) -> None:
+    """P1-3: the fresh verified object set must EQUAL the accepted
+    verified-cache provenance set (no missing, no extra), every object
+    carrying content-address identity proof."""
+    sidecar = load_accepted_cache_objects(authority)
+    accepted = sidecar["per_node"][node_id]["objects"]
+    record_objects = [
+        obj for obj in warm["verified_objects"]
+        if obj["byte_digest_verified"]]
+    if len(record_objects) != len(warm["verified_objects"]):
+        raise SystemExit(
+            "ISSUE182_COMPARE_FAIL: unverified object in warm snapshot "
+            f"on {node_id}")
+    fresh_set = {(obj["content_digest"], obj["length"])
+                 for obj in record_objects}
+    accepted_set = {(obj["content_digest"], obj["length"])
+                    for obj in accepted}
+    missing = accepted_set - fresh_set
+    extra = fresh_set - accepted_set
+    if missing:
+        raise SystemExit(
+            f"ISSUE182_COMPARE_FAIL: cache drift vs accepted verified "
+            f"cache provenance on {node_id}: {sorted(missing)[:3]}")
+    if extra:
+        raise SystemExit(
+            f"ISSUE182_COMPARE_FAIL: unaccepted extra cache objects on "
+            f"{node_id} (forged/unprovenanced locality evidence "
+            f"rejected): {sorted(extra)[:3]}")
 
 
 def check_warm_against_retained(warm: dict, node_id: str) -> None:
@@ -575,8 +665,8 @@ def main() -> int:
                       cold_snapshot("inferswarm03")]
     warm_record_01 = json.loads(args.warm_01.read_text())
     warm_record_03 = json.loads(args.warm_03.read_text())
-    warm_snapshots = [warm_snapshot(warm_record_01),
-                      warm_snapshot(warm_record_03)]
+    warm_snapshots = [warm_snapshot(warm_record_01, authority),
+                      warm_snapshot(warm_record_03, authority)]
     if not args.skip_retained_cross_check:
         check_warm_against_retained(warm_snapshots[0], "inferswarm01")
         check_warm_against_retained(warm_snapshots[1], "inferswarm03")

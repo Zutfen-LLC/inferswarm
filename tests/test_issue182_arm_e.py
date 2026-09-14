@@ -25,6 +25,19 @@ copies as negative controls:
 17. forged gate_ledger_unchanged=true with an actual gate change fails
 18. economics_changed with identical locality fails
 19. planner purity: the campaign tooling never imports torch/transformers
+
+Review-correction round (maintainer comment 5666244858):
+
+20. P1-1: a failed/missing probe receipt is OBS-PROBE-FAILED (BLOCKED),
+    never an empty observation; an empty process list is admissible
+    ONLY against a proven-successful ps receipt
+21. P1-1: missing/unparseable/non-idle GPU telemetry stops the campaign
+22. P1-2: stale sequence / replayed record / wrong attempt / wrong
+    authority binding are rejected (observation epoch controls)
+23. P1-3: sha256-* objects must carry matching content-address
+    identity; forged extra objects with unaccepted provenance are
+    rejected even though the pre-correction subset check accepted them
+24. planning-only terminal fields are derived, not authored literals
 """
 from __future__ import annotations
 
@@ -41,6 +54,8 @@ SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 import issue182_campaign_pins as P  # noqa: E402
+import issue182_compare as C  # noqa: E402
+import issue182_inventory as I  # noqa: E402
 import issue182_terminal as T  # noqa: E402
 
 from issue74_methodology import canonical_json_bytes  # noqa: E402
@@ -48,18 +63,55 @@ from issue74_methodology import canonical_json_bytes  # noqa: E402
 EVIDENCE_DIR = P.EVIDENCE_DIR
 ARM_B = P.ARM_B
 
-#: synthetic warm fixture built from the retained Arm-B post-acquisition
-#: inventories (identical semantics to a fresh scan of the live cache)
-FIXTURE_WARM = {}
+BASE_COMPARISON = None
+LIVE_AUTHORITY = None
 
 
 def load_arm_b(name: str) -> dict:
     return json.loads((ARM_B / name).read_text())
 
 
-def synthetic_warm_record(node: str) -> dict:
-    post = load_arm_b(f"inventory-post-{node}.json")
+def live_authority() -> dict:
+    global LIVE_AUTHORITY
+    if LIVE_AUTHORITY is None:
+        LIVE_AUTHORITY = json.loads(
+            (EVIDENCE_DIR / "authority.json").read_text())
+    return LIVE_AUTHORITY
+
+
+def synthetic_epoch(host: str, **overrides) -> dict:
+    """Observation epoch bound to the live frozen authority bytes."""
+    authority = live_authority()
+    epoch = {
+        "sequence": P.OBSERVATION_SEQUENCE,
+        "authority_digest": authority["authority_digest"],
+        "campaign_id": P.CAMPAIGN_ID,
+        "attempt_id": P.ATTEMPT_ID,
+        "host": host,
+    }
+    epoch.update(overrides)
+    return epoch
+
+
+def ok_receipt(name: str, stdout: str = "") -> dict:
     return {
+        "name": name, "argv": [name], "returncode": 0,
+        "stdout_bytes": len(stdout), "stdout_sha256":
+            hashlib.sha256(stdout.encode()).hexdigest(),
+        "stdout": stdout, "stderr_bytes": 0,
+        "stderr_sha256": hashlib.sha256(b"").hexdigest(), "stderr": "",
+    }
+
+
+def synthetic_warm_record(node: str, **overrides) -> dict:
+    """A fresh-observation-shaped record over the accepted object set.
+
+    The verified object set is derived from the retained accepted
+    Arm-B post-acquisition inventories — identical semantics to a
+    fresh scan of the live cache under the accepted cache contract.
+    """
+    post = load_arm_b(f"inventory-post-{node}.json")
+    record = {
         "schema": P.INVENTORY_SCHEMA,
         "campaign_id": P.CAMPAIGN_ID,
         "attempt_id": P.ATTEMPT_ID,
@@ -67,13 +119,38 @@ def synthetic_warm_record(node: str) -> dict:
         "problems": [],
         "byte_preservation_proven": True,
         "cache_root": P.CACHE_OBJECTS_ROOT,
+        "observation_epoch": synthetic_epoch(node),
         "verified_objects": [
             {"content_digest": obj["content_digest"],
              "length": obj["length"],
-             "byte_digest_verified": True}
+             "byte_digest_verified": True,
+             "content_address_verified": True}
             for obj in post["verified_objects"]],
-        "fence": {"processes": []},
+        "fence": {
+            "processes": [],
+            "ports": {"18080": [], "18485": [], "18486": []},
+            "gpus": [
+                {"index": index, "uuid": uuid,
+                 "memory_total": "12288 MiB", "memory_used": "1 MiB",
+                 "driver": "610.57.04"}
+                for index, uuid in
+                sorted(P.FROZEN_HOST_GPU_UUIDS[node].items())],
+            "probe_receipts": {
+                "ps": ok_receipt("ps"),
+                "ss:18080": ok_receipt("ss:18080"),
+                "ss:18485": ok_receipt("ss:18485"),
+                "ss:18486": ok_receipt("ss:18486"),
+                "nvidia-smi": ok_receipt("nvidia-smi"),
+            },
+            "collected_at_unix": 1789396037,
+        },
     }
+    for key, value in overrides.items():
+        if key == "epoch_overrides":
+            record["observation_epoch"].update(value)
+        else:
+            record[key] = value
+    return record
 
 
 def run_compare(warm01: dict, warm03: dict, **kwargs) -> dict:
@@ -96,9 +173,6 @@ def run_compare(warm01: dict, warm03: dict, **kwargs) -> dict:
         return json.loads(out.read_text())
 
 
-BASE_COMPARISON = None
-
-
 def base_comparison() -> dict:
     global BASE_COMPARISON
     if BASE_COMPARISON is None:
@@ -113,8 +187,7 @@ class AuthorityTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.authority = json.loads(
-            (EVIDENCE_DIR / "authority.json").read_text())
+        cls.authority = live_authority()
 
     def test_schema_and_campaign(self):
         self.assertEqual(self.authority["schema"], P.AUTHORITY_SCHEMA)
@@ -126,6 +199,12 @@ class AuthorityTests(unittest.TestCase):
     def test_accepted_heads_bound(self):
         self.assertTrue(self.authority["heads"]["ancestor_proofs"][
             "merge_181_is_ancestor_of_main"])
+
+    def test_attempt_state_machine_bound(self):
+        machine = self.authority["attempt_state_machine"]
+        self.assertEqual(machine["attempt_id"], P.ATTEMPT_ID)
+        self.assertEqual(sorted(machine["stop_rules"]),
+                         sorted(P.STOP_RULES))
 
     def test_plan_and_requirements_bound_to_retained_bytes(self):
         binding = self.authority["subject_and_plan"]
@@ -150,6 +229,39 @@ class AuthorityTests(unittest.TestCase):
                      "issue182_terminal.py", "issue182_manifest.py"):
             self.assertIn(name, self.authority["producer_hashes"])
 
+    def test_observation_epoch_frozen(self):
+        epoch = self.authority["observation_epoch"]
+        self.assertEqual(epoch["sequence"], P.OBSERVATION_SEQUENCE)
+        self.assertEqual(epoch["retained_cold_sequence"], 1)
+        self.assertEqual(epoch["retained_accepted_sequence"], 2)
+        self.assertEqual(epoch["sequence"],
+                         epoch["retained_accepted_sequence"] + 1)
+
+    def test_probe_contract_fail_closed(self):
+        contract = self.authority["probe_contract"]
+        self.assertTrue(contract["fail_closed"])
+        self.assertEqual(contract["stop_rule"], "OBS-PROBE-FAILED")
+        self.assertEqual(sorted(contract["probes"]),
+                         sorted(P.FENCE_PROBE_NAMES))
+
+    def test_accepted_cache_objects_binding_rederivable(self):
+        """The sidecar on disk equals the sha256 in the authority AND is
+        re-derivable from the retained Arm-B post inventories."""
+        binding = self.authority["accepted_cache_objects"]
+        sidecar_path = P.ROOT / binding["path"]
+        self.assertEqual(
+            hashlib.sha256(sidecar_path.read_bytes()).hexdigest(),
+            binding["sha256"])
+        sidecar = json.loads(sidecar_path.read_text())
+        self.assertEqual(sidecar["schema"], P.ACCEPTED_CACHE_OBJECTS_SCHEMA)
+        for node in P.OBSERVATION_HOSTS:
+            retained = load_arm_b(f"inventory-post-{node}.json")
+            retained_set = {(obj["content_digest"], obj["length"])
+                            for obj in retained["verified_objects"]}
+            sidecar_set = {(obj["content_digest"], obj["length"])
+                           for obj in sidecar["per_node"][node]["objects"]}
+            self.assertEqual(retained_set, sidecar_set, node)
+
 
 class TwoArmSemanticsTests(unittest.TestCase):
     """2-4. cold/warm derivation and gate invariance (positive fixture)."""
@@ -167,6 +279,13 @@ class TwoArmSemanticsTests(unittest.TestCase):
         v5 = self.comparison["warm_arm"]["rows"][P.SUBJECT["candidate"]]
         self.assertEqual(v5["missing_bytes"], 0)
         self.assertEqual(v5["ranking_value"], 0.0)
+
+    def test_warm_sequence_is_bound_epoch_not_literal(self):
+        """The warm snapshot sequence is 3 only via the bound epoch
+        (P1-2); no planner-side manufacture of sequence values."""
+        source = (SCRIPTS / "issue182_compare.py").read_text()
+        self.assertNotIn('"sequence": 2', source)
+        self.assertNotIn('"sequence": 3', source)
 
     def test_gate_ledger_unchanged_every_candidate(self):
         self.assertTrue(self.comparison["all_gates_unchanged"])
@@ -199,12 +318,6 @@ class LocalityCannotMutateGatesTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.comparison = base_comparison()
-
-    def _mutated_arm(self, mutation):
-        """Apply a gate-input mutation to a copy of the comparison rows."""
-        doc = copy.deepcopy(self.comparison)
-        mutation(doc)
-        return doc
 
     def test_locality_only_delta_between_arms(self):
         cold_rows = self.comparison["cold_arm"]["rows"]
@@ -261,65 +374,201 @@ class LocalityCannotMutateGatesTests(unittest.TestCase):
 class WarmInventoryTrustTests(unittest.TestCase):
     """10-12. possession trust boundary on the warm snapshot."""
 
-    def test_digest_mismatched_object_not_counted(self):
+    def test_digest_mismatched_object_rejected(self):
         warm = synthetic_warm_record("inferswarm01")
         warm["verified_objects"][0]["content_digest"] = \
             "sha256:" + "0" * 64
-        comparison = run_compare(warm, synthetic_warm_record("inferswarm03"))
-        # a mismatched digest simply is not local: economics stay cold for
-        # that artifact; gates must still be unchanged and no problem set
-        self.assertTrue(comparison["all_gates_unchanged"])
-        v5 = P.SUBJECT["candidate"]
-        self.assertGreater(
-            comparison["warm_arm"]["rows"][v5]["missing_bytes"], 0)
+        with self.assertRaises(RuntimeError) as ctx:
+            run_compare(warm, synthetic_warm_record("inferswarm03"))
+        self.assertIn("cache drift", str(ctx.exception))
 
-    def test_wrong_node_inventory_not_counted(self):
-        # stage-3 requirements live on inferswarm03; putting its objects
-        # on the 01 snapshot cannot satisfy them
+    def test_wrong_node_inventory_rejected(self):
         warm01 = synthetic_warm_record("inferswarm01")
         warm03 = synthetic_warm_record("inferswarm03")
         swap = warm03["verified_objects"]
         warm03["verified_objects"] = warm01["verified_objects"]
         warm01["verified_objects"] = swap
-        comparison = run_compare(warm01, warm03)
-        v5 = P.SUBJECT["candidate"]
-        self.assertGreater(
-            comparison["warm_arm"]["rows"][v5]["missing_bytes"], 0)
+        with self.assertRaises(RuntimeError) as ctx:
+            run_compare(warm01, warm03)
+        self.assertIn("cache drift", str(ctx.exception))
 
     def test_source_advertisement_not_possession(self):
-        # entries advertise peer availability; an empty verified_objects
-        # set with rich entries cannot yield locality (entries is what
-        # the coordinator ingests, but verified possession is derived
-        # from verified_objects only — prove it by emptying them)
         warm = synthetic_warm_record("inferswarm01")
         warm["verified_objects"] = []
-        comparison = run_compare(warm, synthetic_warm_record("inferswarm03"))
-        v5 = P.SUBJECT["candidate"]
-        cold = comparison["cold_arm"]["rows"][v5]["missing_bytes"]
-        warm_missing = comparison["warm_arm"]["rows"][v5]["missing_bytes"]
-        # stage-1/2 bytes still missing (only stage-3 counts now)
-        self.assertGreater(warm_missing, 0)
-        self.assertLess(warm_missing, cold)
+        with self.assertRaises(RuntimeError) as ctx:
+            run_compare(warm, synthetic_warm_record("inferswarm03"))
+        self.assertIn("cache drift", str(ctx.exception))
 
 
-class RankingEvidenceTests(unittest.TestCase):
-    """13. missing path evidence leaves a candidate unranked, not guessed."""
+class FreshnessControlsTests(unittest.TestCase):
+    """22 (P1-2). stale/replayed/wrong-attempt/wrong-authority rejected."""
 
-    def test_missing_path_evidence_yields_unranked(self):
-        comparison = base_comparison()
-        # sanity: with evidence present, V5 ranks
-        v5 = comparison["warm_arm"]["rows"][P.SUBJECT["candidate"]]
-        self.assertEqual(v5["ranking_status"], "RANKED")
-        # missing evidence is exercised through the accepted #103 planner
-        # contract (AMBIGUOUS/MISSING -> FEASIBLE_UNRANKED), already
-        # covered by the accepted #103 suite; here the Arm-E contract
-        # requires the cold arm's ranked status to derive from evidence:
-        cold = comparison["cold_arm"]["rows"][P.SUBJECT["candidate"]]
-        self.assertIsNotNone(cold["ranking_value"])
+    def test_stale_sequence_rejected(self):
+        warm = synthetic_warm_record(
+            "inferswarm01",
+            epoch_overrides={"sequence": 2})
+        with self.assertRaises(RuntimeError) as ctx:
+            run_compare(warm, synthetic_warm_record("inferswarm03"))
+        self.assertIn("epoch identity wrong or stale", str(ctx.exception))
+
+    def test_replayed_record_wrong_host_rejected(self):
+        # a record collected for 03 replayed as the 01 observation
+        warm = synthetic_warm_record("inferswarm01")
+        warm["observation_epoch"]["host"] = "inferswarm03"
+        with self.assertRaises(RuntimeError) as ctx:
+            run_compare(warm, synthetic_warm_record("inferswarm03"))
+        self.assertIn("epoch identity wrong or stale", str(ctx.exception))
+
+    def test_wrong_attempt_rejected_by_compare(self):
+        warm = synthetic_warm_record(
+            "inferswarm01",
+            epoch_overrides={"attempt_id": "arme-182-physical-1"})
+        with self.assertRaises(RuntimeError) as ctx:
+            run_compare(warm, synthetic_warm_record("inferswarm03"))
+        self.assertIn("epoch identity wrong or stale", str(ctx.exception))
+
+    def test_wrong_authority_binding_rejected(self):
+        warm = synthetic_warm_record(
+            "inferswarm01",
+            epoch_overrides={"authority_digest": "0" * 64})
+        with self.assertRaises(RuntimeError) as ctx:
+            run_compare(warm, synthetic_warm_record("inferswarm03"))
+        self.assertIn("epoch identity wrong or stale", str(ctx.exception))
+
+    def test_wrong_attempt_rejected_by_terminal(self):
+        warm = synthetic_warm_record("inferswarm01")
+        warm["attempt_id"] = "arme-182-physical-1"
+        warm["observation_epoch"]["attempt_id"] = "arme-182-physical-1"
+        document = self._terminal_for(
+            warm, synthetic_warm_record("inferswarm03"))
+        self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+        self.assertTrue(any(
+            "OBS-OBSERVATION-EPOCH-INVALID" in p
+            for p in document["problems"]))
+
+    def _terminal_for(self, warm01, warm03):
+        with tempfile.TemporaryDirectory(prefix="arm-e-term-") as tmp:
+            tmp = Path(tmp)
+            (tmp / "authority.json").write_text(
+                (EVIDENCE_DIR / "authority.json").read_text())
+            obs = tmp / "observation"
+            obs.mkdir()
+            (obs / "warm-inventory-inferswarm01.json").write_text(
+                json.dumps(warm01))
+            (obs / "warm-inventory-inferswarm03.json").write_text(
+                json.dumps(warm03))
+            (tmp / "comparison.json").write_text(
+                json.dumps(base_comparison()))
+            return T.reduce_terminal(tmp)
 
 
-class ObservationFenceTests(unittest.TestCase):
-    """16. observation STOP rules force BLOCKED terminal."""
+class ForgedExtraObjectTests(unittest.TestCase):
+    """23 (P1-3). content-address identity + accepted provenance."""
+
+    def test_content_address_mismatch_detected_by_classifier(self):
+        # a file whose name hex does NOT equal its bytes digest
+        files = {
+            "sha256-" + "a" * 64: {"size": 10, "mtime_ns": 1,
+                                   "inode": 1, "sha256": "b" * 64},
+        }
+        objects, problems = I.classify_tree_objects(files)
+        self.assertEqual(objects, [])
+        self.assertEqual(problems[0]["stop_rule"],
+                         "OBS-CONTENT-ADDRESS-MISMATCH")
+
+    def test_non_content_addressed_file_rejected(self):
+        files = {
+            "README.txt": {"size": 3, "mtime_ns": 1,
+                           "inode": 1, "sha256": "c" * 64},
+        }
+        objects, problems = I.classify_tree_objects(files)
+        self.assertEqual(objects, [])
+        self.assertEqual(problems[0]["stop_rule"],
+                         "OBS-UNACCEPTED-CACHE-OBJECT")
+
+    def test_valid_content_address_accepted(self):
+        digest = hashlib.sha256(b"payload").hexdigest()
+        files = {
+            f"sha256-{digest}": {"size": 7, "mtime_ns": 1,
+                                 "inode": 1, "sha256": digest},
+        }
+        objects, problems = I.classify_tree_objects(files)
+        self.assertEqual(problems, [])
+        self.assertEqual(objects[0]["content_address_verified"], True)
+        self.assertEqual(objects[0]["content_digest"],
+                         "sha256:" + digest)
+
+    def _forged_object(self) -> dict:
+        """An independent, well-formed forged object: content-address
+        consistent, verified-looking, requirement-shaped — exactly what
+        the pre-correction subset-only cross-check accepted."""
+        digest = hashlib.sha256(b"forged-extra-object-control").hexdigest()
+        # length of a real 15 MiB shard chunk so it looks like an
+        # artifact chunk, not metadata noise
+        return {"content_digest": "sha256:" + digest,
+                "length": 15728640,
+                "byte_digest_verified": True,
+                "content_address_verified": True}
+
+    def test_forged_extra_object_rejected_by_compare(self):
+        warm = synthetic_warm_record("inferswarm01")
+        warm["verified_objects"] = (
+            [self._forged_object()] + warm["verified_objects"])
+        with self.assertRaises(RuntimeError) as ctx:
+            run_compare(warm, synthetic_warm_record("inferswarm03"))
+        self.assertIn("unaccepted extra cache objects", str(ctx.exception))
+
+    def test_forged_extra_object_accepted_by_pre_correction_logic(self):
+        """4b control: the OLD subset-only cross-check accepted this
+        exact forged record — the new equality check is what rejects
+        it, so the regression catches the old defect, not vice versa."""
+        warm = synthetic_warm_record("inferswarm01")
+        warm["verified_objects"] = (
+            [self._forged_object()] + warm["verified_objects"])
+        authority = live_authority()
+
+        def old_subset_check(warm_snapshot, node_id, auth):
+            # replica of the pre-correction retained-subset cross-check
+            path = C.ARM_B_POST_01 if node_id == "inferswarm01" \
+                else C.ARM_B_POST_03
+            retained = json.loads(path.read_text())
+            retained_set = {(obj["content_digest"], obj["length"])
+                            for obj in retained["verified_objects"]}
+            fresh_set = {(obj["content_digest"], obj["length"])
+                         for obj in warm_snapshot["verified_objects"]}
+            if retained_set - fresh_set:
+                raise SystemExit("old check: missing objects")
+
+        original = C.check_warm_against_accepted
+        try:
+            C.check_warm_against_accepted = old_subset_check
+            snapshot = C.warm_snapshot(warm, authority)  # must NOT raise
+            self.assertEqual(
+                len(snapshot["verified_objects"]),
+                len(warm["verified_objects"]))
+        finally:
+            C.check_warm_against_accepted = original
+        # and the restored hardening rejects it
+        with self.assertRaises(SystemExit):
+            C.warm_snapshot(warm, authority)
+
+    def test_missing_accepted_object_rejected(self):
+        warm = synthetic_warm_record("inferswarm01")
+        warm["verified_objects"] = warm["verified_objects"][1:]
+        with self.assertRaises(RuntimeError) as ctx:
+            run_compare(warm, synthetic_warm_record("inferswarm03"))
+        self.assertIn("cache drift", str(ctx.exception))
+
+    def test_unverified_object_rejected(self):
+        warm = synthetic_warm_record("inferswarm01")
+        warm["verified_objects"][0]["byte_digest_verified"] = False
+        with self.assertRaises(RuntimeError) as ctx:
+            run_compare(warm, synthetic_warm_record("inferswarm03"))
+        self.assertIn("unverified object", str(ctx.exception))
+
+
+class ProbeReceiptTests(unittest.TestCase):
+    """20-21 (P1-1). fail-closed probes with retained receipts."""
 
     def _terminal_for(self, warm01, warm03):
         with tempfile.TemporaryDirectory(prefix="arm-e-term-") as tmp:
@@ -342,6 +591,64 @@ class ObservationFenceTests(unittest.TestCase):
             synthetic_warm_record("inferswarm03"))
         self.assertEqual(document["terminal"], P.PASS_TERMINAL)
         self.assertEqual(document["problems"], [])
+
+    def test_empty_process_list_admissible_with_successful_receipt(self):
+        self.assertEqual(
+            synthetic_warm_record("inferswarm01")["fence"]["processes"], [])
+
+    def test_missing_ps_receipt_blocks(self):
+        warm = synthetic_warm_record("inferswarm01")
+        del warm["fence"]["probe_receipts"]["ps"]
+        document = self._terminal_for(
+            warm, synthetic_warm_record("inferswarm03"))
+        self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+        self.assertTrue(any("OBS-PROBE-FAILED" in p
+                            for p in document["problems"]))
+
+    def test_failed_nvidia_smi_blocks_not_empty_observation(self):
+        """A failed nvidia-smi (rc=1, no output -> no GPU rows) must
+        BLOCK on the failed receipt, never read as 'no GPUs observed'."""
+        warm = synthetic_warm_record("inferswarm01")
+        warm["fence"]["probe_receipts"]["nvidia-smi"] = {
+            "name": "nvidia-smi", "argv": I.GPU_QUERY, "returncode": 1,
+            "stdout_bytes": 0,
+            "stdout_sha256": hashlib.sha256(b"").hexdigest(),
+            "stdout": "", "stderr_bytes": 57,
+            "stderr_sha256": hashlib.sha256(b"err").hexdigest(),
+            "stderr": "err"}
+        warm["fence"]["gpus"] = []
+        document = self._terminal_for(
+            warm, synthetic_warm_record("inferswarm03"))
+        self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+        self.assertTrue(any("OBS-PROBE-FAILED" in p
+                            for p in document["problems"]))
+
+    def test_missing_gpu_row_blocks(self):
+        warm = synthetic_warm_record("inferswarm01")
+        warm["fence"]["gpus"] = warm["fence"]["gpus"][:1]
+        document = self._terminal_for(
+            warm, synthetic_warm_record("inferswarm03"))
+        self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+        self.assertTrue(any("OBS-GPU-SET-MISMATCH" in p
+                            for p in document["problems"]))
+
+    def test_unparseable_gpu_telemetry_blocks(self):
+        warm = synthetic_warm_record("inferswarm01")
+        warm["fence"]["gpus"][0]["memory_used"] = "[N/A]"
+        document = self._terminal_for(
+            warm, synthetic_warm_record("inferswarm03"))
+        self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+        self.assertTrue(any("OBS-GPU-TELEMETRY-UNPARSEABLE" in p
+                            for p in document["problems"]))
+
+    def test_busy_gpu_blocks(self):
+        warm = synthetic_warm_record("inferswarm01")
+        warm["fence"]["gpus"][0]["memory_used"] = "8192 MiB"
+        document = self._terminal_for(
+            warm, synthetic_warm_record("inferswarm03"))
+        self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+        self.assertTrue(any("OBS-GPU-NOT-IDLE" in p
+                            for p in document["problems"]))
 
     def test_mutation_detected_blocks(self):
         warm = synthetic_warm_record("inferswarm01")
@@ -381,8 +688,24 @@ class ObservationFenceTests(unittest.TestCase):
         self.assertEqual(document["terminal"], P.FAIL_TERMINAL)
 
 
+class RankingEvidenceTests(unittest.TestCase):
+    """13. missing path evidence leaves a candidate unranked, not guessed."""
+
+    def test_missing_path_evidence_yields_unranked(self):
+        comparison = base_comparison()
+        # sanity: with evidence present, V5 ranks
+        v5 = comparison["warm_arm"]["rows"][P.SUBJECT["candidate"]]
+        self.assertEqual(v5["ranking_status"], "RANKED")
+        # missing evidence is exercised through the accepted #103 planner
+        # contract (AMBIGUOUS/MISSING -> FEASIBLE_UNRANKED), already
+        # covered by the accepted #103 suite; here the Arm-E contract
+        # requires the cold arm's ranked status to derive from evidence:
+        cold = comparison["cold_arm"]["rows"][P.SUBJECT["candidate"]]
+        self.assertIsNotNone(cold["ranking_value"])
+
+
 class StoredBooleanSubstitutionTests(unittest.TestCase):
-    """15, 17-18. authored booleans are not authority."""
+    """15, 17-18, 24. authored booleans are not authority."""
 
     def test_stored_unchanged_with_real_change_fails(self):
         doc = copy.deepcopy(base_comparison())
@@ -405,6 +728,39 @@ class StoredBooleanSubstitutionTests(unittest.TestCase):
         self.assertNotIn("terminal = True", source.replace(
             "terminal = P.PASS_TERMINAL if not problems else "
             "P.FAIL_TERMINAL", ""))
+
+    def test_planning_only_fields_not_authored_literals(self):
+        """24: the planning-only booleans must be derived, so their
+        literal True forms are banned from the terminal producer."""
+        source = (SCRIPTS / "issue182_terminal.py").read_text()
+        for field in ("no_model_execution", "no_gpu_initialization",
+                      "no_artifact_acquisition", "no_h109_access"):
+            self.assertNotIn(f'"{field}": True', source)
+            self.assertNotIn(f"'{field}': True", source)
+
+    def test_planning_only_fields_derive_false_under_attack(self):
+        """If the underlying retained facts go missing, the derived
+        planning-only fields must go False (they are computed)."""
+        with tempfile.TemporaryDirectory(prefix="arm-e-deriv-") as tmp:
+            tmp = Path(tmp)
+            (tmp / "authority.json").write_text(
+                (EVIDENCE_DIR / "authority.json").read_text())
+            (tmp / "comparison.json").write_text(
+                json.dumps(base_comparison()))
+            obs = tmp / "observation"
+            obs.mkdir()
+            warm01 = synthetic_warm_record("inferswarm01")
+            warm03 = synthetic_warm_record("inferswarm03")
+            # a busy GPU must derive no_gpu_initialization False
+            warm01["fence"]["gpus"][0]["memory_used"] = "8192 MiB"
+            for node, record in (("inferswarm01", warm01),
+                                 ("inferswarm03", warm03)):
+                (obs / f"warm-inventory-{node}.json").write_text(
+                    json.dumps(record))
+            document = T.reduce_terminal(tmp)
+            self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+            self.assertFalse(document["planning_only"][
+                "no_gpu_initialization"])
 
 
 class PurityTests(unittest.TestCase):

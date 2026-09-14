@@ -1,4 +1,12 @@
 {
+  "accepted_cache_objects": {
+    "path": "docs/implementation/r6-successor-arm-e-locality-mutation-182/evidence/authority/accepted-cache-objects.json",
+    "per_node_object_count": {
+      "inferswarm01": 411,
+      "inferswarm03": 218
+    },
+    "sha256": "e49a85a0667ce6da15d427ad2732a8571fd9e537de87eaa61b1d4464c152f3cd"
+  },
   "arm_d_binding": {
     "campaign_id": "issue175-arm-d-warm-restart-v1",
     "file_sha256": {
@@ -28,13 +36,21 @@
     "terminal": "ISSUE117_ARM_D_WARM_RESTART_CACHE_REUSE_PASS"
   },
   "attempt_state_machine": {
-    "attempt_id": "arme-182-physical-1",
+    "attempt_id": "arme-182-physical-2",
     "no_retry": true,
     "stop_rules": [
       "OBS-HOST-UNREACHABLE",
       "OBS-ROOT-MISSING",
       "OBS-CACHE-DIGEST-MISMATCH",
       "OBS-GPU-TOTAL-DRIFT",
+      "OBS-GPU-SET-MISMATCH",
+      "OBS-GPU-TELEMETRY-UNPARSEABLE",
+      "OBS-GPU-NOT-IDLE",
+      "OBS-PROBE-FAILED",
+      "OBS-CONTENT-ADDRESS-MISMATCH",
+      "OBS-UNACCEPTED-CACHE-OBJECT",
+      "OBS-OBSERVATION-EPOCH-INVALID",
+      "OBS-FORBIDDEN-NAMESPACE-MATERIAL",
       "OBS-MUTATION-DETECTED",
       "OBS-PROCESSES-LIVE"
     ],
@@ -43,7 +59,7 @@
       "OBSERVING -> BLOCKED (STOP rule) -> STOPPED"
     ]
   },
-  "authority_digest": "sha256:5045824d894c32a2823dd621c6e7a3fe0cfc59f6e77cd6cec151a93c41be9137",
+  "authority_digest": "sha256:39d1fb4997787a9e7b4ed11e416378b4c4888e9c55d37a11fe998a87eb3dea8b",
   "campaign_id": "issue182-arm-e-locality-mutation-v1",
   "capacity_method": {
     "note": "the capacity model is a planning input held identical across both arms; it is not a hardware claim",
@@ -252,6 +268,19 @@
     "projection": "node_id, sequence, sorted (content_digest, length, byte_digest_verified) triples",
     "sequence_monotonic": true
   },
+  "observation_epoch": {
+    "bound_to": [
+      "authority_digest",
+      "campaign_id",
+      "attempt_id",
+      "host"
+    ],
+    "note": "the fresh observation's inventory sequence is a frozen authority constant derived from the retained accepted inventory lineage; the collector embeds it only after verifying the staged authority bytes, and comparison and terminal re-derive it independently",
+    "retained_accepted_sequence": 2,
+    "retained_cold_sequence": 1,
+    "rule": "fresh observation epoch sequence = retained accepted Arm-B post-acquisition sequence (2) + 1, strictly later than both the cold (1) and retained accepted inventory identities; bound to authority_digest + attempt_id + campaign_id + host inside the physical record and re-derived at comparison and termination",
+    "sequence": 3
+  },
   "observation_plan": {
     "byte_preservation": "sha256 of every object file under the cache objects root + stat (size, mtime_ns, inode) per file, captured before and after the semantic observation; any difference stops OBS-MUTATION-DETECTED",
     "hosts": [
@@ -301,18 +330,30 @@
       "evidence_version": "issue182-evidence-v1"
     }
   },
+  "probe_contract": {
+    "fail_closed": true,
+    "gpu_requirements": "every frozen GPU of an observation host must be observed with parseable telemetry, memory.total equal to the pinned authority total, and memory.used within the frozen idle bound (16 MiB, derived from the retained Arm-D terminal-window observation)",
+    "note": "an empty process list / port set / GPU row set is admissible evidence ONLY against a retained successful (returncode 0) probe receipt; a failed probe is never converted into an empty observation",
+    "probes": [
+      "ps",
+      "ss",
+      "nvidia-smi"
+    ],
+    "receipt_fields": "name, argv, returncode, stdout/stderr byte counts, sha256 digests, bounded raw text",
+    "stop_rule": "OBS-PROBE-FAILED"
+  },
   "producer_hashes": {
     "issue101_orchestration.py": "37027a7d5ebed8505d50a4a060f36bfe0330d3473175d63147db3e1986089860",
     "issue103_planner.py": "b8c805100a16afed1bae3ce4135b368a88edc6950bfed602d120bc59d3b48bce",
     "issue117_accepted_subject.py": "54c91179688bf4480fa023abc8a5b4889c3a0cc7988be65a54ec2b352182457f",
     "issue117_gemma_strategy.py": "4ff7e71633b416278e2756adebd8bb36bed24dfadb252fb20af89ccb823b23b7",
     "issue117_planner.py": "4cbecda2edf540f3165b6bd243aca0c3b944b42d72b337673113d0efc987151f",
-    "issue182_authority.py": "ffee646e28b5f347341ac08cd31e8212dd52a3601880dcdf2f547ee7c14b3678",
-    "issue182_campaign_pins.py": "16956adf28e4cabfd9cdf71247b4c24ce84a842f42d014fc3d962b01031f4ccb",
-    "issue182_compare.py": "c6199bae4ae2b4efefdb92f355d85f1f59638290bd14dd48750281cacd9f9e21",
-    "issue182_inventory.py": "c21a64f0fc00b1839e14a6ab4689f0ffc0db07d6b80c152a6d6e34fdfcfbe979",
+    "issue182_authority.py": "a6e8a8b9281dafa033dc2d5e92d3dd6da51195cfcacb79da8cc26677a78411e7",
+    "issue182_campaign_pins.py": "fdb71c9e336872096eefaad3d64795330e34f6ac53c6a23acd965d86e6ae06df",
+    "issue182_compare.py": "04bf69348d4ccf6c92365b486c6d2378906ebc096628e65cda90286a9d70c273",
+    "issue182_inventory.py": "5d46361804c1ba591aa6ab025845d7a26f6a45a9f4e03a2b8c02c307d7362fc8",
     "issue182_manifest.py": "422635a1910ee6fc7f79eb0298db040088d3bec18e379b9cd8def4d47edf6ee8",
-    "issue182_terminal.py": "3b840e19d4cc52f9047acf09af555e1650dcfd0332fd85c955b72286eb2ae443",
+    "issue182_terminal.py": "5abaa155347485ab1944f696db11a7378fe607f0a20aa11e6bf7650d9b78b445",
     "issue74_methodology.py": "e075c099c9f97c78fa9c138951772248291a62fa02a041dbb5d70b50d109e2ec",
     "issue99_artifact_core.py": "8b88af5b2f738c2a7428c9538cf76a14f889cb573a1722122951c45fc5965321"
   },

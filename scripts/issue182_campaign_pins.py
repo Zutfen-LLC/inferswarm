@@ -156,7 +156,22 @@ FROZEN_GEOMETRY_UUIDS = {
         "1": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
     },
     "inferswarm03": {
-        "0": "GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176",
+        "0": "GPU-e1f2f90c-49ab-2689-0cf1-5d9da520176",
+    },
+}
+
+#: inferswarm03 gpu-1 is not part of the accepted candidate geometry but
+#: IS a frozen GPU of an observation host (accepted Arm-D retained
+#: terminal-window observation, inventory-03-postkill2.json); the
+#: fail-closed fence must observe it too (P1-1: every frozen GPU).
+FROZEN_HOST_GPU_UUIDS = {
+    "inferswarm01": {
+        "0": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+        "1": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+    },
+    "inferswarm03": {
+        "0": "GPU-e1f2f90c-49ab-2689-0cf1-5d9da520176",
+        "1": "GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0",
     },
 }
 
@@ -230,22 +245,105 @@ NORMALIZATION_PROJECTION = (
 INVENTORY_SEQUENCE_MONOTONIC = True
 
 #: ------------------------------------------------------------------
+#: Observation epoch / freshness identity (review correction P1-2,
+#: maintainer comment 5666244858)
+#: ------------------------------------------------------------------
+#: The fresh observation's inventory sequence is NOT manufactured by
+#: the planner adapter. It is a frozen authority constant derived from
+#: the retained accepted inventory lineage (Arm-B cold = sequence 1,
+#: Arm-B post-acquisition = sequence 2), bound in authority.json
+#: BEFORE the observation, embedded in the physical record by the
+#: node-side collector only after verifying the staged authority
+#: bytes (authority_digest), the frozen attempt id, and the campaign
+#: id, and re-verified independently by the comparison and the
+#: terminal reducer against the live authority + retained records.
+OBSERVATION_SEQUENCE = 3
+OBSERVATION_EPOCH_RULE = (
+    "fresh observation epoch sequence = retained accepted Arm-B "
+    "post-acquisition sequence (2) + 1, strictly later than both the "
+    "cold (1) and retained accepted inventory identities; bound to "
+    "authority_digest + attempt_id + campaign_id + host inside the "
+    "physical record and re-derived at comparison and termination")
+
+#: ------------------------------------------------------------------
+#: Fail-closed host-probe contract (review correction P1-1)
+#: ------------------------------------------------------------------
+#: Every acceptance-bearing probe retains a structured receipt in the
+#: observation record: exact command identity, return code,
+#: stdout/stderr byte counts + sha256 digests + bounded raw text. A
+#: failed probe is OBS-PROBE-FAILED — never an empty observation.
+FENCE_PROBE_NAMES = ("ps", "ss", "nvidia-smi")
+PROBE_STDOUT_CAP_BYTES = 65536
+
+#: every frozen GPU of an observation host must be observed, its
+#: telemetry parseable, and its memory.used within this bound, or the
+#: campaign stops (OBS-GPU-SET-MISMATCH / OBS-GPU-TELEMETRY-\
+#: UNPARSEABLE / OBS-GPU-NOT-IDLE). The bound derives from the
+#: retained Arm-D terminal-window observation (0-1 MiB per idle GPU)
+#: with headroom for driver bookkeeping; any CUDA initialization or
+#: correctness-bearing GPU work by this campaign is prohibited and
+#: would show as memory.used far above it.
+GPU_MEMORY_USED_MAX_MIB = 16
+
+#: ------------------------------------------------------------------
+#: Accepted verified-cache provenance manifest (review correction P1-3)
+#: ------------------------------------------------------------------
+#: Sidecar written by the authority builder from the retained accepted
+#: Arm-B post-acquisition inventories; the fresh observation's verified
+#: object set must EQUAL it (no missing, no extra) and every object
+#: must carry matching content-address identity (object name hex ==
+#: recomputed bytes digest). Consumed by comparison + terminal with
+#: the sidecar sha256 re-verified against the authority binding.
+ACCEPTED_CACHE_OBJECTS_SCHEMA = (
+    "inferswarm.issue182.arm-e.accepted-cache-objects/1")
+ACCEPTED_CACHE_OBJECTS_PATH = ROOT / (
+    "docs/implementation/r6-successor-arm-e-locality-mutation-182/"
+    "evidence/authority/accepted-cache-objects.json")
+
+#: ------------------------------------------------------------------
 #: Attempt state machine / STOP rules (frozen before observation)
 #: ------------------------------------------------------------------
-#: ATTEMPT arme-182-1: single-pass read-only observation + reduction.
+#: ATTEMPT arme-182-2: single-pass read-only observation + reduction.
+#:   Review correction round (maintainer comment 5666244858): the
+#:   arme-182-physical-1 observation lacked mechanically retained
+#:   successful-probe receipts and a real observation freshness
+#:   identity, and is retained as SUPERSEDED evidence only.
 #: STOP rules (any fires -> terminal BLOCKED, no retry, no repair):
 #:   OBS-HOST-UNREACHABLE      observation host unreachable
 #:   OBS-ROOT-MISSING          a bound cache/materialized root is absent
 #:   OBS-CACHE-DIGEST-MISMATCH live byte digest != accepted Arm-D pin
 #:   OBS-GPU-TOTAL-DRIFT       live GPU total != pinned authority total
+#:   OBS-GPU-SET-MISMATCH      a frozen host GPU not observed (or extra)
+#:   OBS-GPU-TELEMETRY-UNPARSEABLE  GPU row not parseable as pinned
+#:   OBS-GPU-NOT-IDLE          GPU memory.used above the idle bound
+#:   OBS-PROBE-FAILED          an acceptance-bearing host probe (ps /
+#:                             ss / nvidia-smi) exited nonzero or is
+#:                             missing its receipt (P1-1: a failed
+#:                             probe is never an empty observation)
+#:   OBS-CONTENT-ADDRESS-MISMATCH  sha256-<hex> object name != recomputed
+#:                             content digest (P1-3)
+#:   OBS-UNACCEPTED-CACHE-OBJECT   fresh object outside the accepted
+#:                             verified-cache provenance manifest
+#:   OBS-OBSERVATION-EPOCH-INVALID  freshness identity wrong/stale
+#:                             (P1-2: bound epoch, sequence, attempt)
+#:   OBS-FORBIDDEN-NAMESPACE-MATERIAL  forbidden-namespace material
+#:                             referenced by a retained campaign record
 #:   OBS-MUTATION-DETECTED     before/after root digest differs
 #:   OBS-PROCESSES-LIVE        execution-bearing process live at fence
-ATTEMPT_ID = "arme-182-physical-1"
+ATTEMPT_ID = "arme-182-physical-2"
 STOP_RULES = (
     "OBS-HOST-UNREACHABLE",
     "OBS-ROOT-MISSING",
     "OBS-CACHE-DIGEST-MISMATCH",
     "OBS-GPU-TOTAL-DRIFT",
+    "OBS-GPU-SET-MISMATCH",
+    "OBS-GPU-TELEMETRY-UNPARSEABLE",
+    "OBS-GPU-NOT-IDLE",
+    "OBS-PROBE-FAILED",
+    "OBS-CONTENT-ADDRESS-MISMATCH",
+    "OBS-UNACCEPTED-CACHE-OBJECT",
+    "OBS-OBSERVATION-EPOCH-INVALID",
+    "OBS-FORBIDDEN-NAMESPACE-MATERIAL",
     "OBS-MUTATION-DETECTED",
     "OBS-PROCESSES-LIVE",
 )

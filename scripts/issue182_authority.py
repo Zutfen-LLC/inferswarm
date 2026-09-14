@@ -211,6 +211,84 @@ def bind_cold_arm() -> dict:
     return binding
 
 
+def accepted_cache_objects_document() -> tuple[dict, bytes]:
+    """Build the accepted verified-cache provenance sidecar (P1-3).
+
+    Derives, from the RETAINED accepted Arm-B post-acquisition node
+    inventory snapshots, the exact per-node set of (content_digest,
+    length) pairs that carry accepted verified-cache provenance. The
+    fresh observation must EQUAL this set — missing objects are cache
+    drift and EXTRA objects are unaccepted provenance; both stop the
+    campaign. Every object consumed as verified locality evidence is
+    thereby cross-bound to the accepted Arm-B verified inventory.
+    """
+    per_node = {}
+    for node in P.OBSERVATION_HOSTS:
+        path = P.ARM_B / f"inventory-post-{node}.json"
+        document = json.loads(path.read_text())
+        if document.get("schema") != (
+                "inferswarm.issue101.node-inventory-snapshot/1"):
+            raise SystemExit(
+                f"ISSUE182_AUTHORITY_FAIL: post inventory schema {node}")
+        if document.get("node_id") != node:
+            raise SystemExit(
+                f"ISSUE182_AUTHORITY_FAIL: post inventory node {node}")
+        if document.get("sequence") != 2:
+            raise SystemExit(
+                "ISSUE182_AUTHORITY_FAIL: accepted post-acquisition "
+                f"inventory not sequence 2 ({node})")
+        objects = document["verified_objects"]
+        for obj in objects:
+            if not obj.get("byte_digest_verified"):
+                raise SystemExit(
+                    "ISSUE182_AUTHORITY_FAIL: accepted post-acquisition "
+                    f"inventory carries an unverified object ({node})")
+        per_node[node] = {
+            "sequence": document["sequence"],
+            "source_record": {
+                "path": str(path.relative_to(P.ROOT)),
+                "sha256": sha256_file(path),
+            },
+            "objects": [
+                {"content_digest": obj["content_digest"],
+                 "length": obj["length"]}
+                for obj in objects],
+        }
+    sidecar = {
+        "schema": P.ACCEPTED_CACHE_OBJECTS_SCHEMA,
+        "campaign_id": P.CAMPAIGN_ID,
+        "derivation": (
+            "retained accepted Arm-B post-acquisition verified node "
+            "inventories (sequence 2); the fresh Arm-E observation's "
+            "verified object set must EQUAL the per-node set — no "
+            "missing object (cache drift) and no extra object "
+            "(unaccepted provenance)"),
+        "per_node": per_node,
+    }
+    payload = json.dumps(sidecar, indent=2, sort_keys=True).encode() + b"\n"
+    return sidecar, payload
+
+
+def bind_accepted_cache_objects() -> dict:
+    """Bind the sidecar bytes on disk (must have been written first)."""
+    path = P.ACCEPTED_CACHE_OBJECTS_PATH
+    if not path.is_file():
+        raise SystemExit(
+            "ISSUE182_AUTHORITY_FAIL: accepted-cache-objects sidecar "
+            "missing (write it before freezing authority)")
+    sidecar = json.loads(path.read_text())
+    if sidecar.get("schema") != P.ACCEPTED_CACHE_OBJECTS_SCHEMA:
+        raise SystemExit(
+            "ISSUE182_AUTHORITY_FAIL: accepted-cache-objects schema")
+    return {
+        "path": str(path.relative_to(P.ROOT)),
+        "sha256": sha256_file(path),
+        "per_node_object_count": {
+            node: len(binding["objects"])
+            for node, binding in sidecar["per_node"].items()},
+    }
+
+
 def bind_arm_d() -> dict:
     """Bind the accepted Arm-D authority/terminal/warm reference pins."""
     authority = json.loads(P.ARM_D_AUTHORITY.read_text())
@@ -347,8 +425,43 @@ def build_authority(inferswarm: Path) -> dict:
         "subject_and_plan": bind_subject_and_plan(),
         "cold_arm_binding": bind_cold_arm(),
         "arm_d_binding": bind_arm_d(),
+        "accepted_cache_objects": bind_accepted_cache_objects(),
         "locality_analog": bind_locality_analog(),
         "path_bandwidth": derive_bandwidth(),
+        "observation_epoch": {
+            "rule": P.OBSERVATION_EPOCH_RULE,
+            "sequence": P.OBSERVATION_SEQUENCE,
+            "retained_cold_sequence": 1,
+            "retained_accepted_sequence": 2,
+            "bound_to": ("authority_digest", "campaign_id", "attempt_id",
+                         "host"),
+            "note": (
+                "the fresh observation's inventory sequence is a frozen "
+                "authority constant derived from the retained accepted "
+                "inventory lineage; the collector embeds it only after "
+                "verifying the staged authority bytes, and comparison "
+                "and terminal re-derive it independently"),
+        },
+        "probe_contract": {
+            "fail_closed": True,
+            "probes": list(P.FENCE_PROBE_NAMES),
+            "receipt_fields": (
+                "name, argv, returncode, stdout/stderr byte counts, "
+                "sha256 digests, bounded raw text"),
+            "stop_rule": "OBS-PROBE-FAILED",
+            "gpu_requirements": (
+                "every frozen GPU of an observation host must be "
+                "observed with parseable telemetry, memory.total equal "
+                "to the pinned authority total, and memory.used within "
+                f"the frozen idle bound ({P.GPU_MEMORY_USED_MAX_MIB} "
+                "MiB, derived from the retained Arm-D terminal-window "
+                "observation)"),
+            "note": (
+                "an empty process list / port set / GPU row set is "
+                "admissible evidence ONLY against a retained "
+                "successful (returncode 0) probe receipt; a failed "
+                "probe is never converted into an empty observation"),
+        },
         "capacity_method": {
             "usable_weight_bytes": (
                 "observed nvidia-smi memory.total bytes minus the frozen "
@@ -408,6 +521,12 @@ def main() -> int:
     parser.add_argument("--inferswarm-root", type=Path, default=P.ROOT)
     parser.add_argument("--out", type=Path, default=P.EVIDENCE_DIR / "authority.json")
     args = parser.parse_args()
+    # write the accepted-cache provenance sidecar FIRST (deterministic
+    # derivation from retained bytes) so the authority binds the exact
+    # sidecar bytes on disk
+    _, payload = accepted_cache_objects_document()
+    P.ACCEPTED_CACHE_OBJECTS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    P.ACCEPTED_CACHE_OBJECTS_PATH.write_bytes(payload)
     document = build_authority(args.inferswarm_root)
     write_json(args.out, document)
     print(json.dumps({

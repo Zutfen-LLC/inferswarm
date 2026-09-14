@@ -33,6 +33,13 @@ import issue182_campaign_pins as P  # noqa: E402
 MIN_TRANSITION_COST = "MIN_TRANSITION_COST"
 
 
+def _parse_gpu_mib(text) -> int | None:
+    try:
+        return int(str(text).split()[0])
+    except (ValueError, IndexError):
+        return None
+
+
 def load(path: Path) -> dict:
     return json.loads(path.read_text())
 
@@ -99,20 +106,93 @@ def reduce_terminal(evidence_dir: Path) -> dict:
 
     # observation records: any STOP rule fired -> BLOCKED
     stop_problems = []
+    planning_evidence = {
+        "hosts": [], "gpu_state": [], "probe_failures": [],
+        "byte_preservation_hosts": [],
+    }
     for host in P.OBSERVATION_HOSTS:
         record = load(evidence_dir / f"observation/warm-inventory-{host}.json")
         if record.get("schema") != P.INVENTORY_SCHEMA:
             raise SystemExit(
                 f"ISSUE182_TERMINAL_FAIL: inventory schema {host}")
+        if record.get("attempt_id") != P.ATTEMPT_ID:
+            stop_problems.append({
+                "host": host,
+                "stop_rule": "OBS-OBSERVATION-EPOCH-INVALID",
+                "detail": "attempt id does not match the frozen attempt"})
         for problem in record.get("problems") or []:
             stop_problems.append({"host": host, **problem})
         if not record.get("byte_preservation_proven"):
             stop_problems.append({
                 "host": host, "stop_rule": "OBS-MUTATION-DETECTED",
                 "detail": "byte_preservation_proven false"})
-        if (record.get("fence") or {}).get("processes"):
+        fence = record.get("fence") or {}
+        if fence.get("processes"):
             stop_problems.append({
                 "host": host, "stop_rule": "OBS-PROCESSES-LIVE"})
+        # P1-1: an empty observation is admissible ONLY against
+        # retained successful probe receipts
+        receipts = fence.get("probe_receipts") or {}
+        for probe_name in ("ps", "ss:18080", "ss:18485", "ss:18486",
+                           "nvidia-smi"):
+            receipt = receipts.get(probe_name)
+            if receipt is None or receipt.get("returncode") != 0:
+                stop_problems.append({
+                    "host": host, "stop_rule": "OBS-PROBE-FAILED",
+                    "probe": probe_name})
+        # P1-2: freshness identity re-derived against the live authority
+        epoch = record.get("observation_epoch") or {}
+        if (epoch.get("authority_digest") != authority.get("authority_digest")
+                or epoch.get("campaign_id") != P.CAMPAIGN_ID
+                or epoch.get("attempt_id") != P.ATTEMPT_ID
+                or epoch.get("host") != host
+                or epoch.get("sequence") != P.OBSERVATION_SEQUENCE):
+            stop_problems.append({
+                "host": host, "stop_rule": "OBS-OBSERVATION-EPOCH-INVALID"})
+        # P1-3: content-address identity proven for every object
+        for obj in record.get("verified_objects") or []:
+            if not obj.get("content_address_verified"):
+                stop_problems.append({
+                    "host": host,
+                    "stop_rule": "OBS-CONTENT-ADDRESS-MISMATCH",
+                    "object": obj.get("host_path")})
+                break
+        # P1-1: every frozen GPU of the host observed, parseable,
+        # pinned total, idle within the frozen bound (re-derived here
+        # from the record's GPU rows, not trusted from the collector)
+        observed_uuids = {gpu.get("uuid") for gpu in fence.get("gpus") or []}
+        pinned_uuids = set(P.FROZEN_HOST_GPU_UUIDS.get(host, {}).values())
+        if observed_uuids != pinned_uuids:
+            stop_problems.append({
+                "host": host, "stop_rule": "OBS-GPU-SET-MISMATCH"})
+        for gpu in fence.get("gpus") or []:
+            used = _parse_gpu_mib(gpu.get("memory_used"))
+            total = _parse_gpu_mib(gpu.get("memory_total"))
+            if used is None or total is None:
+                stop_problems.append({
+                    "host": host,
+                    "stop_rule": "OBS-GPU-TELEMETRY-UNPARSEABLE",
+                    "uuid": gpu.get("uuid")})
+            elif used > P.GPU_MEMORY_USED_MAX_MIB:
+                stop_problems.append({
+                    "host": host, "stop_rule": "OBS-GPU-NOT-IDLE",
+                    "uuid": gpu.get("uuid"),
+                    "memory_used_mib": used})
+        # planning-only derivation evidence (comment 5666244858: the
+        # terminal fields below are DERIVED from these retained facts,
+        # not authored as literal booleans)
+        planning_evidence["hosts"].append(host)
+        if record.get("byte_preservation_proven"):
+            planning_evidence["byte_preservation_hosts"].append(host)
+        for gpu in fence.get("gpus") or []:
+            planning_evidence["gpu_state"].append({
+                "host": host, "uuid": gpu.get("uuid"),
+                "memory_used": gpu.get("memory_used")})
+        for probe_name, receipt in sorted(
+                (fence.get("probe_receipts") or {}).items()):
+            if receipt.get("returncode") != 0:
+                planning_evidence["probe_failures"].append(
+                    {"host": host, "probe": probe_name})
 
     comparison = load(evidence_dir / "comparison.json")
     if comparison.get("schema") != P.COMPARISON_SCHEMA:
@@ -131,6 +211,49 @@ def reduce_terminal(evidence_dir: Path) -> dict:
     v5 = P.SUBJECT["candidate"]
     cold_v5 = comparison["cold_arm"]["rows"][v5]
     warm_v5 = comparison["warm_arm"]["rows"][v5]
+
+    # planning-only fields are DERIVED from the retained observation
+    # records, never authored as literal booleans (maintainer comment
+    # 5666244858). The fence receipts prove no execution-bearing
+    # process was live and no probe failed; GPU telemetry proves every
+    # observed GPU idle; byte preservation proves no cache bytes were
+    # touched; no retained campaign record references the forbidden
+    # namespace.
+    def _gpu_idle(gpu: dict) -> bool:
+        try:
+            return int(str(gpu["memory_used"]).split()[0]) <= \
+                P.GPU_MEMORY_USED_MAX_MIB
+        except (ValueError, IndexError, KeyError):
+            return False
+
+    planning_only = {
+        "no_model_execution": bool(
+            planning_evidence["hosts"])
+            and not planning_evidence["probe_failures"]
+            and all(not _procs for _procs in [
+                (load(evidence_dir / f"observation/warm-inventory-{h}.json")
+                 .get("fence") or {}).get("processes")
+                for h in planning_evidence["hosts"]]),
+        "no_gpu_initialization": bool(planning_evidence["gpu_state"])
+            and all(_gpu_idle(g) for g in planning_evidence["gpu_state"]),
+        "no_artifact_acquisition": (
+            sorted(planning_evidence["byte_preservation_hosts"])
+            == sorted(P.OBSERVATION_HOSTS)),
+        "no_h109_access": all(
+            P.FORBIDDEN_NAMESPACE not in json.dumps(record)
+            for record in [load(
+                evidence_dir / f"observation/warm-inventory-{h}.json")
+                for h in P.OBSERVATION_HOSTS]),
+        "derivation": (
+            "no_model_execution: every retained fence receipt succeeded "
+            "and no execution-bearing process was live; "
+            "no_gpu_initialization: every observed GPU memory.used is "
+            "within the frozen idle bound; no_artifact_acquisition: "
+            "before/after byte preservation proven on every observation "
+            "host; no_h109_access: no retained campaign record mentions "
+            "the forbidden namespace"),
+    }
+
     document = {
         "schema": P.TERMINAL_SCHEMA,
         "campaign_id": P.CAMPAIGN_ID,
@@ -151,15 +274,7 @@ def reduce_terminal(evidence_dir: Path) -> dict:
             "warm": comparison["warm_arm"]["selected_candidate_id"],
         },
         "gate_ledger_unchanged": comparison.get("all_gates_unchanged"),
-        "planning_only": {
-            "no_model_execution": True,
-            "no_gpu_initialization": True,
-            "no_artifact_acquisition": True,
-            "no_h109_access": True,
-            "derivation": ("observation fence records prove no "
-                           "execution-bearing process was live; the only "
-                           "reads were cache-object hashing and stat"),
-        },
+        "planning_only": planning_only,
         "terminal": terminal,
     }
     return document
