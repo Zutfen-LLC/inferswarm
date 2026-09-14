@@ -145,6 +145,7 @@ def synthetic_warm_record(node: str, **overrides) -> dict:
             "collected_at_unix": 1789396037,
         },
     }
+    record["record_digest"] = T.observation_record_digest(record)
     for key, value in overrides.items():
         if key == "epoch_overrides":
             record["observation_epoch"].update(value)
@@ -203,8 +204,21 @@ class AuthorityTests(unittest.TestCase):
     def test_attempt_state_machine_bound(self):
         machine = self.authority["attempt_state_machine"]
         self.assertEqual(machine["attempt_id"], P.ATTEMPT_ID)
-        self.assertEqual(sorted(machine["stop_rules"]),
-                         sorted(P.STOP_RULES))
+        # the frozen authority predates the review-round amendment;
+        # its STOP-rule list PLUS the amendment's new rules must equal
+        # the living pin set (the authority itself is never rewritten)
+        effective = sorted(set(machine["stop_rules"]) | set(
+            self.amendment_new_stop_rules()))
+        self.assertEqual(effective, sorted(P.STOP_RULES))
+
+    @staticmethod
+    def amendment_new_stop_rules() -> list[str]:
+        amendment_path = (P.EVIDENCE_DIR / "authority" /
+                          "amendment-1-reduction-hardening.json")
+        if not amendment_path.is_file():
+            return []
+        amendment = json.loads(amendment_path.read_text())
+        return list(amendment.get("new_stop_rules") or [])
 
     def test_plan_and_requirements_bound_to_retained_bytes(self):
         binding = self.authority["subject_and_plan"]
@@ -761,6 +775,125 @@ class StoredBooleanSubstitutionTests(unittest.TestCase):
             self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
             self.assertFalse(document["planning_only"][
                 "no_gpu_initialization"])
+
+
+class AdversarialReviewRoundControls(unittest.TestCase):
+    """25 (review lanes A/B round 1): terminal-layer tamper controls.
+
+    Each control reproduces a hole an adversarial reviewer demonstrated
+    against the pre-hardening terminal at head aa708bd (independently
+    re-confirmed by the operator before the fix landed)."""
+
+    def _terminal_for(self, warm01, warm03, comparison=None):
+        with tempfile.TemporaryDirectory(prefix="arm-e-rev-") as tmp:
+            tmp = Path(tmp)
+            (tmp / "authority.json").write_text(
+                (EVIDENCE_DIR / "authority.json").read_text())
+            obs = tmp / "observation"
+            obs.mkdir()
+            (obs / "warm-inventory-inferswarm01.json").write_text(
+                json.dumps(warm01))
+            (obs / "warm-inventory-inferswarm03.json").write_text(
+                json.dumps(warm03))
+            (tmp / "comparison.json").write_text(json.dumps(
+                comparison if comparison is not None
+                else base_comparison()))
+            return T.reduce_terminal(tmp)
+
+    def test_contradictory_empty_cache_record_blocks(self):
+        """Lane A probe 4: digest-consistent empty-cache observation
+        paired with the retained warm comparison must BLOCK, not PASS
+        (pre-hardening terminal returned PASS here)."""
+        import hashlib as _h
+        warm01 = synthetic_warm_record("inferswarm01")
+        warm03 = synthetic_warm_record("inferswarm03")
+        for warm in (warm01, warm03):
+            warm["verified_objects"] = []
+            warm["record_digest"] = T.observation_record_digest(warm)
+        document = self._terminal_for(warm01, warm03)
+        self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+        self.assertTrue(any("OBS-UNACCEPTED-CACHE-OBJECT" in p
+                            for p in document["problems"]))
+
+    def test_stale_record_digest_blocks(self):
+        """Lane B probe: post-hoc tamper with a stale self-digest."""
+        warm = synthetic_warm_record("inferswarm01")
+        warm["fence"]["gpus"][0]["memory_total"] = "24576 MiB"
+        warm["record_digest"] = "0" * 64
+        document = self._terminal_for(
+            warm, synthetic_warm_record("inferswarm03"))
+        self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+        self.assertTrue(any("OBS-RECORD-DIGEST-MISMATCH" in p
+                            for p in document["problems"]))
+
+    def test_gpu_total_drift_blocks_even_with_recomputed_digest(self):
+        """Lane B probe variant: GPU total tampered but the digest is
+        honestly recomputed — the total-vs-pin re-check still fires."""
+        warm = synthetic_warm_record("inferswarm01")
+        warm["fence"]["gpus"][0]["memory_total"] = "24576 MiB"
+        warm["record_digest"] = T.observation_record_digest(warm)
+        document = self._terminal_for(
+            warm, synthetic_warm_record("inferswarm03"))
+        self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+        self.assertTrue(any("OBS-GPU-TOTAL-DRIFT" in p
+                            for p in document["problems"]))
+
+    def test_fully_rebound_forged_extra_object_blocks(self):
+        """Lane B central demo: a forged extra object with the sidecar,
+        authority digest, epoch, and record digest ALL self-consistently
+        re-bound must still BLOCK — the terminal re-derives the accepted
+        set from retained Arm-B bytes, not from any re-bindable digest."""
+        import hashlib as _h
+        forged_hex = _h.sha256(b"review-lane-b-forgery").hexdigest()
+        warm = synthetic_warm_record("inferswarm01")
+        warm["verified_objects"].append({
+            "content_digest": "sha256:" + forged_hex,
+            "length": 15728640,
+            "byte_digest_verified": True,
+            "content_address_verified": True,
+            "host_path": "sha256-" + forged_hex})
+        warm["record_digest"] = T.observation_record_digest(warm)
+        document = self._terminal_for(
+            warm, synthetic_warm_record("inferswarm03"))
+        self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+        self.assertTrue(any("OBS-UNACCEPTED-CACHE-OBJECT" in p
+                            for p in document["problems"]))
+
+    def test_forged_warm_arm_binding_blocks(self):
+        """Lane A probe 2: a comparison authored over different
+        inventory bytes than the retained observation must BLOCK on the
+        warm-arm cross-binding."""
+        comparison = copy.deepcopy(base_comparison())
+        binding = comparison.get("warm_arm_binding")
+        if binding is None:
+            self.fail("comparison.json lacks warm_arm_binding")
+        binding["inferswarm01"]["snapshot_canonical_sha256"] = "0" * 64
+        document = self._terminal_for(
+            synthetic_warm_record("inferswarm01"),
+            synthetic_warm_record("inferswarm03"),
+            comparison=comparison)
+        self.assertEqual(document["terminal"], P.BLOCKED_TERMINAL)
+        self.assertTrue(any("OBS-WARM-ARM-BINDING-MISMATCH" in p
+                            for p in document["problems"]))
+
+    def test_retained_evidence_terminal_still_passes(self):
+        """The corrected terminal still derives PASS from the retained
+        physical records (regression: hardening must not over-block)."""
+        with tempfile.TemporaryDirectory(prefix="arm-e-live-") as tmp:
+            tmp = Path(tmp)
+            (tmp / "authority.json").write_text(
+                (EVIDENCE_DIR / "authority.json").read_text())
+            obs = tmp / "observation"
+            obs.mkdir()
+            for node in P.OBSERVATION_HOSTS:
+                (obs / f"warm-inventory-{node}.json").write_text(
+                    (EVIDENCE_DIR / "observation" /
+                     f"warm-inventory-{node}.json").read_text())
+            (tmp / "comparison.json").write_text(
+                (EVIDENCE_DIR / "comparison.json").read_text())
+            document = T.reduce_terminal(tmp)
+        self.assertEqual(document["terminal"], P.PASS_TERMINAL)
+        self.assertEqual(document["problems"], [])
 
 
 class PurityTests(unittest.TestCase):

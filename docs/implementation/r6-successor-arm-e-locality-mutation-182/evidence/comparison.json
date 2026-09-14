@@ -1390,5 +1390,17 @@
       }
     },
     "selected_candidate_id": "dense.6171f32b4413"
+  },
+  "warm_arm_binding": {
+    "inferswarm01": {
+      "object_count": 411,
+      "sequence": 3,
+      "snapshot_canonical_sha256": "513e9ae4c8537653ed9f10d699632a30712eeb5d6e54cf81cb1163b44b3cacf1"
+    },
+    "inferswarm03": {
+      "object_count": 218,
+      "sequence": 3,
+      "snapshot_canonical_sha256": "2fe94b078c05d635b8019ac52ae7becd38bc08355ca4e9bbec679201d5686cea"
+    }
   }
 }

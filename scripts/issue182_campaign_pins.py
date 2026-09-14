@@ -335,6 +335,12 @@ ACCEPTED_CACHE_OBJECTS_PATH = ROOT / (
 #:                             (P1-2: bound epoch, sequence, attempt)
 #:   OBS-FORBIDDEN-NAMESPACE-MATERIAL  forbidden-namespace material
 #:                             referenced by a retained campaign record
+#:   OBS-RECORD-DIGEST-MISMATCH  observation record self-digest does
+#:                             not verify (post-hoc tamper; review
+#:                             lane B)
+#:   OBS-WARM-ARM-BINDING-MISMATCH  the comparison's warm arm is not
+#:                             the snapshot bound to the retained
+#:                             observation records (review lane A)
 #:   OBS-MUTATION-DETECTED     before/after root digest differs
 #:   OBS-PROCESSES-LIVE        execution-bearing process live at fence
 ATTEMPT_ID = "arme-182-physical-2"
@@ -351,6 +357,8 @@ STOP_RULES = (
     "OBS-UNACCEPTED-CACHE-OBJECT",
     "OBS-OBSERVATION-EPOCH-INVALID",
     "OBS-FORBIDDEN-NAMESPACE-MATERIAL",
+    "OBS-RECORD-DIGEST-MISMATCH",
+    "OBS-WARM-ARM-BINDING-MISMATCH",
     "OBS-MUTATION-DETECTED",
     "OBS-PROCESSES-LIVE",
 )

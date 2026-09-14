@@ -676,6 +676,17 @@ def main() -> int:
     document = compare(cold_decision, warm_decision, inputs_identity)
     document["cold_arm"] = cold_decision
     document["warm_arm"] = warm_decision
+    # review lane A: bind the comparison's warm arm to the EXACT warm
+    # snapshots consumed, by canonical identity — the terminal re-derives
+    # this from the observation records and fails closed on any drift
+    document["warm_arm_binding"] = {
+        snapshot["node_id"]: {
+            "sequence": snapshot["sequence"],
+            "object_count": len(snapshot["verified_objects"]),
+            "snapshot_canonical_sha256": hashlib.sha256(
+                canonical_json_bytes(snapshot)).hexdigest(),
+        }
+        for snapshot in warm_snapshots}
     write_json(args.out, document)
     print(json.dumps({
         "comparison": str(args.out),

@@ -1,0 +1,35 @@
+{
+  "schema": "inferswarm.issue182.arm-e.authority-amendment/1",
+  "campaign_id": "issue182-arm-e-locality-mutation-v1",
+  "amendment_id": "amendment-1-reduction-hardening",
+  "reason": "Exact-head adversarial review lanes A/B (first round, both timed out at 600s but each demonstrated concrete terminal-layer holes before cutoff, independently reproduced and confirmed by the operator): (A4) a contradictory observation record paired with the retained comparison still terminated PASS because the terminal never cross-bound the comparison's warm arm to the observation records; (B1) a self-consistently re-bound forged sidecar/authority/record triple passed the terminal because the terminal trusted the authority-bound sidecar instead of independently re-deriving the accepted object set from retained accepted bytes; (B2) post-hoc record tampering (GPU memory.total vs pin; stale record_digest) passed the terminal because no consumer verified the record self-digest or re-checked GPU totals.",
+  "classification": "post-processing reduction only",
+  "classification_proof": {
+    "execution_bearing_collector_unchanged": "scripts/issue182_inventory.py is byte-identical to the producer the physical observation executed (sha256 5d46361804c1ba591aa6ab025845d7a26f6a45a9f4e03a2b8c02c307d7362fc8 at both a759061 and the corrected head)",
+    "pins_delta_semantics": "issue182_campaign_pins.py changed only additively (two new STOP-rule names OBS-RECORD-DIGEST-MISMATCH / OBS-WARM-ARM-BINDING-MISMATCH plus comments); no constant consumed by the collector changed value (ATTEMPT_ID, OBSERVATION_SEQUENCE, FROZEN_HOST_GPU_UUIDS, PINNED_GPU_TOTAL_BYTES, GPU_MEMORY_USED_MAX_MIB, MATERIALIZED_PINS, roots all identical)",
+    "no_physical_input_changed": "the retained observation records are byte-identical to those written by the collector (record_digest still verifies); no rerun, no re-observation, no cache access occurred",
+    "authority_json_unchanged": "evidence/authority.json is NOT regenerated; the observation epoch remains bound to authority_digest sha256:951562c2c975e65d7e09a32e66c1a6940229d76b252d3ec285537e2b82d3b93c"
+  },
+  "producer_hash_transitions": {
+    "scripts/issue182_compare.py": {
+      "prior": "04bf69348d4ccf6c92365b486c6d2378906ebc096628e65cda90286a9d70c273",
+      "corrected": "3f0c89e813b138eff5fcc99e3481c042f73dbd0dbefa3db32bd79808e84a0204",
+      "delta": "emits warm_arm_binding (per-host canonical snapshot identity) consumed by the terminal cross-binding"
+    },
+    "scripts/issue182_terminal.py": {
+      "prior": "5abaa155347485ab1944f696db11a7378fe607f0a20aa11e6bf7650d9b78b445",
+      "corrected": "2e0eabf5af86b30c7e1f9b362b1fae778bf38ba6c6b06a6cc9051f13f9516d1a",
+      "delta": "verifies observation record_digest; re-derives accepted object sets from retained Arm-B bytes (independent of any sidecar); re-checks GPU totals vs pins; cross-binds comparison warm_arm_binding to the observation records"
+    },
+    "scripts/issue182_campaign_pins.py": {
+      "prior": "82c2e5e8b714abdb98cdce951a6eaa29d4d7bbe84077bffa3569b6517ef2d17a",
+      "corrected": "d641b0ec67cc37dcbd4372017d078ccde238c3ae3be4b7b82866f37f619679f5",
+      "delta": "additive STOP-rule names only"
+    }
+  },
+  "new_stop_rules": [
+    "OBS-RECORD-DIGEST-MISMATCH",
+    "OBS-WARM-ARM-BINDING-MISMATCH"
+  ],
+  "rerun_required": false
+}

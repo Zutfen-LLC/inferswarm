@@ -30,7 +30,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import issue182_campaign_pins as P  # noqa: E402
 
+from issue74_methodology import canonical_json_bytes  # noqa: E402
+
 MIN_TRANSITION_COST = "MIN_TRANSITION_COST"
+
+#: probes whose successful receipts the terminal re-verifies
+REQUIRED_RECEIPTS = ("ps", "ss:18080", "ss:18485", "ss:18486", "nvidia-smi")
 
 
 def _parse_gpu_mib(text) -> int | None:
@@ -38,6 +43,33 @@ def _parse_gpu_mib(text) -> int | None:
         return int(str(text).split()[0])
     except (ValueError, IndexError):
         return None
+
+
+def observation_record_digest(record: dict) -> str:
+    """Recompute the collector's record self-digest."""
+    return hashlib.sha256(json.dumps(
+        {k: v for k, v in record.items() if k != "record_digest"},
+        sort_keys=True).encode()).hexdigest()
+
+
+def accepted_object_sets() -> dict:
+    """Independently re-derive the accepted verified object sets from
+    the RETAINED accepted Arm-B post-acquisition inventories (review
+    lanes A/B: a rebuilt authority with a doctored sidecar must not
+    survive the terminal even when every digest is re-bound)."""
+    per_node = {}
+    for node in P.OBSERVATION_HOSTS:
+        path = P.ARM_B / f"inventory-post-{node}.json"
+        document = json.loads(path.read_text())
+        per_node[node] = {(obj["content_digest"], obj["length"])
+                          for obj in document["verified_objects"]}
+    return per_node
+
+
+def normalized_object_set(record: dict) -> set:
+    return {(obj["content_digest"], obj["length"])
+            for obj in record.get("verified_objects") or []
+            if obj.get("byte_digest_verified")}
 
 
 def load(path: Path) -> dict:
@@ -157,6 +189,41 @@ def reduce_terminal(evidence_dir: Path) -> dict:
                     "stop_rule": "OBS-CONTENT-ADDRESS-MISMATCH",
                     "object": obj.get("host_path")})
                 break
+        # review lane B: the record's self-digest must verify (a
+        # post-hoc tampered record with a stale digest fails closed)
+        if record.get("record_digest") != observation_record_digest(record):
+            stop_problems.append({
+                "host": host,
+                "stop_rule": "OBS-RECORD-DIGEST-MISMATCH"})
+        # review lane B: the verified object set must EQUAL the set
+        # independently re-derived from the RETAINED accepted Arm-B
+        # post-acquisition inventories — a rebuilt authority with a
+        # doctored sidecar cannot survive this even fully re-bound
+        accepted = accepted_object_sets().get(host, set())
+        observed = normalized_object_set(record)
+        if observed != accepted:
+            stop_problems.append({
+                "host": host,
+                "stop_rule": "OBS-UNACCEPTED-CACHE-OBJECT",
+                "detail": {
+                    "missing": sorted(accepted - observed)[:3],
+                    "extra": sorted(observed - accepted)[:3]}})
+        # review lane B: GPU totals re-checked against the frozen pins
+        for gpu in fence.get("gpus") or []:
+            total = _parse_gpu_mib(gpu.get("memory_total"))
+            uuid = gpu.get("uuid")
+            cu_id = next((f"{host}/gpu-{index}"
+                          for index, pinned_uuid in
+                          P.FROZEN_HOST_GPU_UUIDS.get(host, {}).items()
+                          if pinned_uuid == uuid), None)
+            pinned_total = P.PINNED_GPU_TOTAL_BYTES.get(cu_id) \
+                if cu_id else None
+            if pinned_total is not None and total is not None \
+                    and total * 1024 * 1024 != pinned_total:
+                stop_problems.append({
+                    "host": host, "stop_rule": "OBS-GPU-TOTAL-DRIFT",
+                    "cu": cu_id, "pinned": pinned_total,
+                    "actual": total * 1024 * 1024})
         # P1-1: every frozen GPU of the host observed, parseable,
         # pinned total, idle within the frozen bound (re-derived here
         # from the record's GPU rows, not trusted from the collector)
@@ -197,6 +264,41 @@ def reduce_terminal(evidence_dir: Path) -> dict:
     comparison = load(evidence_dir / "comparison.json")
     if comparison.get("schema") != P.COMPARISON_SCHEMA:
         raise SystemExit("ISSUE182_TERMINAL_FAIL: comparison schema")
+
+    # review lane A: the retained comparison's warm arm must be
+    # CROSS-BOUND to the observation records — the warm snapshot each
+    # arm consumed is re-derived from the record's verified object set
+    # and its canonical identity pinned in the comparison document, so
+    # a comparison authored over DIFFERENT inventory bytes than the
+    # retained observation cannot terminate PASS
+    if not stop_problems:
+        warm_bindings = comparison.get("warm_arm_binding") or {}
+        for host in P.OBSERVATION_HOSTS:
+            record = load(
+                evidence_dir / f"observation/warm-inventory-{host}.json")
+            snapshot = {
+                "node_id": record["host"],
+                "sequence": P.OBSERVATION_SEQUENCE,
+                "source": {"source_id": record["host"],
+                           "endpoint": f"file://{P.CACHE_ROOT}"},
+                "verified_objects": [
+                    {"content_digest": obj["content_digest"],
+                     "length": obj["length"],
+                     "byte_digest_verified": bool(
+                         obj["byte_digest_verified"])}
+                    for obj in record["verified_objects"]],
+                "entries": [],
+            }
+            digest = hashlib.sha256(
+                canonical_json_bytes(snapshot)).hexdigest()
+            binding = warm_bindings.get(host) or {}
+            if (binding.get("snapshot_canonical_sha256") != digest
+                    or binding.get("object_count")
+                    != len(record["verified_objects"])
+                    or binding.get("sequence") != P.OBSERVATION_SEQUENCE):
+                stop_problems.append({
+                    "host": host,
+                    "stop_rule": "OBS-WARM-ARM-BINDING-MISMATCH"})
 
     if stop_problems:
         terminal = P.BLOCKED_TERMINAL
