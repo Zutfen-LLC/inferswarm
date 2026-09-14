@@ -91,6 +91,20 @@ class WarmRestartFixtureTests(unittest.TestCase):
 class CacheIdentityTests(unittest.TestCase):
     """3-7. artifact identity verification fail-closed semantics."""
 
+    def test_pins_equal_accepted_172_preflight_records(self):
+        """The frozen cache pins must equal the accepted #172 host
+        preflight records byte-for-byte (guards against hand
+        transcription typos — one was caught in review)."""
+        for host, record in (("inferswarm01", "host-preflight-01.json"),
+                             ("inferswarm03", "host-preflight-03.json")):
+            accepted = json.loads(
+                (EVIDENCE_172 / "preflight" / record).read_text())
+            for rel, digest in accepted[
+                    "substrate_reconciliation"].items():
+                self.assertEqual(
+                    P.CACHE_ARTIFACTS[host][rel], digest,
+                    f"{host} {rel} pin != accepted #172 record")
+
     def test_every_participant_artifact_maps_to_exact_digest(self):
         all_artifacts = {}
         for host, arts in P.CACHE_ARTIFACTS.items():

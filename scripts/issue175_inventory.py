@@ -156,7 +156,10 @@ def main() -> int:
     model_view = {"path": P.MODEL_VIEW_01 if host == "inferswarm01"
                   else P.MODEL_VIEW_03}
     view = Path(model_view["path"])
-    if view.is_dir():
+    if host == "inferswarm00":
+        model_view["note"] = (
+            "the CPU-only Coordinator holds no model view by design")
+    elif view.is_dir():
         entries = {}
         for entry in sorted(view.iterdir()):
             if entry.is_symlink():

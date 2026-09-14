@@ -123,7 +123,7 @@ CACHE_ARTIFACTS = {
         "dense.6171f32b4413.stage-1/armb-participant.safetensors":
             "2e8cf1af3ff64f7d5f800dac72fea2d418ffa81b15c3a90da5fd42542eaa9ed5",
         "dense.6171f32b4413.stage-2/armb-participant.safetensors":
-            "85b218060e0242af6fb27a2e988a24a66862511e8067c38ca90280efa3af038d",
+            "85b218060e0242af6fb27a2e988a24a66892511e8067c38ca90280efa3af038d",
     },
     "inferswarm03": {
         "dense.6171f32b4413.stage-3/armb-participant.safetensors":
