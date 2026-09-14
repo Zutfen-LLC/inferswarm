@@ -1,0 +1,1394 @@
+{
+  "all_gates_unchanged": true,
+  "attempt_id": "arme-182-physical-1",
+  "campaign_id": "issue182-arm-e-locality-mutation-v1",
+  "cold_arm": {
+    "objective": "MIN_TRANSITION_COST",
+    "ranking_order": [
+      "dense.6171f32b4413",
+      "dense.3b8644d360a3",
+      "dense.720a017663e4",
+      "dense.97c6513e854b",
+      "dense.9dd68b5adfa3",
+      "dense.b1fb60400bc3",
+      "dense.b3c4d8a8929e",
+      "dense.e3a5ae183953",
+      "dense.ede4c4376efe"
+    ],
+    "rows": {
+      "dense.3b8644d360a3": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "dense.6171f32b4413": {
+        "admissible": true,
+        "admission_failures": [],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [
+              "inferswarm.issue117.accepted-v5-qualification/1"
+            ],
+            "reason": "MATCHED_ACCEPTED_QUALIFICATION_RECORD",
+            "required": true,
+            "status": "QUALIFICATION_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": true,
+            "reason": null
+          }
+        },
+        "missing_bytes": 27841245749,
+        "ranking_reason": "MIN_TRANSITION_COST",
+        "ranking_status": "RANKED",
+        "ranking_value": 60355.10925236964,
+        "required_bytes": 27841245749
+      },
+      "dense.720a017663e4": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "HARD_POLICY_EXCLUSION",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": false,
+            "reason": "HARD_POLICY_EXCLUSION"
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "dense.97c6513e854b": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "HARD_POLICY_EXCLUSION",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": false,
+            "reason": "HARD_POLICY_EXCLUSION"
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "dense.9dd68b5adfa3": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "dense.b1fb60400bc3": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "dense.b3c4d8a8929e": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "dense.e3a5ae183953": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "dense.ede4c4376efe": {
+        "admissible": false,
+        "admission_failures": [
+          "HARD_POLICY_EXCLUSION",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": false,
+            "reason": "HARD_POLICY_EXCLUSION"
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": true,
+            "reason": null
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "HARD_POLICY_EXCLUSION",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      }
+    },
+    "selected_candidate_id": "dense.6171f32b4413"
+  },
+  "gate_ledger_unchanged": {
+    "dense.3b8644d360a3": true,
+    "dense.6171f32b4413": true,
+    "dense.720a017663e4": true,
+    "dense.97c6513e854b": true,
+    "dense.9dd68b5adfa3": true,
+    "dense.b1fb60400bc3": true,
+    "dense.b3c4d8a8929e": true,
+    "dense.e3a5ae183953": true,
+    "dense.ede4c4376efe": true
+  },
+  "inputs_identity": {
+    "candidates_digest": "sha256:4079c040cb74bbf517156300d3b5183f45d8c841d4521f26ffbabc72a2943b8d",
+    "contract_digest": "sha256:45f30f36732f6c6bae29191ddc6afe680d3edad02c56601032b12698bab9eafd",
+    "feasibility_digest": "sha256:38137578bb5395872beeafb0cd4ea331d978ef229bebca92c6a4239870863da5",
+    "identical_across_arms": true,
+    "note": "every non-inventory planning input is constructed once and deep-copied into both arms; the digests above pin the exact bytes both arms consumed",
+    "path_evidence_digest": "sha256:cf3d2959cb2192148d9c93359f0c0edccbe4c753fa106597eb5ec14840becb97",
+    "plan_digest": "sha256:8646e00ce53e3aac4c163ca35231fa82471815386d71266a0d0962eea565bdad",
+    "policy_digest": "sha256:d250bd6b5506ef16e57c92ca64bb171221aa4f5db6f617fde61fe526cfe71666",
+    "qualification_record_digest": "sha256:a94c0a5711d1cbb1785c920b5304c0cc699a99d0d97f2eae34afcf1e24c37a61",
+    "requirements_digest": "sha256:68ef850a0a15b9aaabd64de0907e9936297ad4471669e5cb2607b7ddf020c817"
+  },
+  "objective": "MIN_TRANSITION_COST",
+  "per_candidate": {
+    "dense.3b8644d360a3": {
+      "cold": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "warm": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      }
+    },
+    "dense.6171f32b4413": {
+      "cold": {
+        "admissible": true,
+        "admission_failures": [],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [
+              "inferswarm.issue117.accepted-v5-qualification/1"
+            ],
+            "reason": "MATCHED_ACCEPTED_QUALIFICATION_RECORD",
+            "required": true,
+            "status": "QUALIFICATION_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": true,
+            "reason": null
+          }
+        },
+        "missing_bytes": 27841245749,
+        "ranking_reason": "MIN_TRANSITION_COST",
+        "ranking_status": "RANKED",
+        "ranking_value": 60355.10925236964,
+        "required_bytes": 27841245749
+      },
+      "warm": {
+        "admissible": true,
+        "admission_failures": [],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [
+              "inferswarm.issue117.accepted-v5-qualification/1"
+            ],
+            "reason": "MATCHED_ACCEPTED_QUALIFICATION_RECORD",
+            "required": true,
+            "status": "QUALIFICATION_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": true,
+            "reason": null
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "MIN_TRANSITION_COST",
+        "ranking_status": "RANKED",
+        "ranking_value": 0.0,
+        "required_bytes": 27841245749
+      }
+    },
+    "dense.720a017663e4": {
+      "cold": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "HARD_POLICY_EXCLUSION",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": false,
+            "reason": "HARD_POLICY_EXCLUSION"
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "warm": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "HARD_POLICY_EXCLUSION",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": false,
+            "reason": "HARD_POLICY_EXCLUSION"
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      }
+    },
+    "dense.97c6513e854b": {
+      "cold": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "HARD_POLICY_EXCLUSION",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": false,
+            "reason": "HARD_POLICY_EXCLUSION"
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "warm": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "HARD_POLICY_EXCLUSION",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": false,
+            "reason": "HARD_POLICY_EXCLUSION"
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      }
+    },
+    "dense.9dd68b5adfa3": {
+      "cold": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "warm": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      }
+    },
+    "dense.b1fb60400bc3": {
+      "cold": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "warm": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      }
+    },
+    "dense.b3c4d8a8929e": {
+      "cold": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "warm": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      }
+    },
+    "dense.e3a5ae183953": {
+      "cold": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "warm": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      }
+    },
+    "dense.ede4c4376efe": {
+      "cold": {
+        "admissible": false,
+        "admission_failures": [
+          "HARD_POLICY_EXCLUSION",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": false,
+            "reason": "HARD_POLICY_EXCLUSION"
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": true,
+            "reason": null
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "HARD_POLICY_EXCLUSION",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "warm": {
+        "admissible": false,
+        "admission_failures": [
+          "HARD_POLICY_EXCLUSION",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": false,
+            "reason": "HARD_POLICY_EXCLUSION"
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": true,
+            "reason": null
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "HARD_POLICY_EXCLUSION",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      }
+    }
+  },
+  "problems": [],
+  "ranking_order": {
+    "cold": [
+      "dense.6171f32b4413",
+      "dense.3b8644d360a3",
+      "dense.720a017663e4",
+      "dense.97c6513e854b",
+      "dense.9dd68b5adfa3",
+      "dense.b1fb60400bc3",
+      "dense.b3c4d8a8929e",
+      "dense.e3a5ae183953",
+      "dense.ede4c4376efe"
+    ],
+    "warm": [
+      "dense.6171f32b4413",
+      "dense.3b8644d360a3",
+      "dense.720a017663e4",
+      "dense.97c6513e854b",
+      "dense.9dd68b5adfa3",
+      "dense.b1fb60400bc3",
+      "dense.b3c4d8a8929e",
+      "dense.e3a5ae183953",
+      "dense.ede4c4376efe"
+    ]
+  },
+  "schema": "inferswarm.issue182.arm-e.two-arm-comparison/1",
+  "selection": {
+    "cold": "dense.6171f32b4413",
+    "unchanged": true,
+    "warm": "dense.6171f32b4413"
+  },
+  "v5": {
+    "cold": {
+      "estimated_transition_seconds": 60355.10925236964,
+      "missing_bytes": 27841245749,
+      "ranking_status": "RANKED",
+      "required_bytes": 27841245749
+    },
+    "economics_changed": true,
+    "locality_changed": true,
+    "warm": {
+      "estimated_transition_seconds": 0.0,
+      "missing_bytes": 0,
+      "ranking_status": "RANKED",
+      "required_bytes": 27841245749
+    }
+  },
+  "warm_arm": {
+    "objective": "MIN_TRANSITION_COST",
+    "ranking_order": [
+      "dense.6171f32b4413",
+      "dense.3b8644d360a3",
+      "dense.720a017663e4",
+      "dense.97c6513e854b",
+      "dense.9dd68b5adfa3",
+      "dense.b1fb60400bc3",
+      "dense.b3c4d8a8929e",
+      "dense.e3a5ae183953",
+      "dense.ede4c4376efe"
+    ],
+    "rows": {
+      "dense.3b8644d360a3": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "dense.6171f32b4413": {
+        "admissible": true,
+        "admission_failures": [],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [
+              "inferswarm.issue117.accepted-v5-qualification/1"
+            ],
+            "reason": "MATCHED_ACCEPTED_QUALIFICATION_RECORD",
+            "required": true,
+            "status": "QUALIFICATION_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": true,
+            "reason": null
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "MIN_TRANSITION_COST",
+        "ranking_status": "RANKED",
+        "ranking_value": 0.0,
+        "required_bytes": 27841245749
+      },
+      "dense.720a017663e4": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "HARD_POLICY_EXCLUSION",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": false,
+            "reason": "HARD_POLICY_EXCLUSION"
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "dense.97c6513e854b": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "HARD_POLICY_EXCLUSION",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": false,
+            "reason": "HARD_POLICY_EXCLUSION"
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "dense.9dd68b5adfa3": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "dense.b1fb60400bc3": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "dense.b3c4d8a8929e": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "dense.e3a5ae183953": {
+        "admissible": false,
+        "admission_failures": [
+          "CAPACITY_INFEASIBLE",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": false,
+            "reason": "CAPACITY_INFEASIBLE"
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "CAPACITY_INFEASIBLE",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      },
+      "dense.ede4c4376efe": {
+        "admissible": false,
+        "admission_failures": [
+          "HARD_POLICY_EXCLUSION",
+          "QUALIFICATION_SUBJECT_MISMATCH"
+        ],
+        "gates": {
+          "hard_policy_eligible": {
+            "passed": false,
+            "reason": "HARD_POLICY_EXCLUSION"
+          },
+          "integrity_eligible": {
+            "passed": true,
+            "reason": null
+          },
+          "qualification_applicability": {
+            "malformed_record_ids": [],
+            "matched_record_ids": [],
+            "reason": "QUALIFICATION_SUBJECT_MISMATCH",
+            "required": true,
+            "status": "QUALIFICATION_NOT_APPLICABLE",
+            "unbound_record_ids": []
+          },
+          "technical_feasibility": {
+            "known": true,
+            "passed": true,
+            "reason": null
+          }
+        },
+        "missing_bytes": 0,
+        "ranking_reason": "HARD_POLICY_EXCLUSION",
+        "ranking_status": "EXCLUDED",
+        "ranking_value": null,
+        "required_bytes": 0
+      }
+    },
+    "selected_candidate_id": "dense.6171f32b4413"
+  }
+}

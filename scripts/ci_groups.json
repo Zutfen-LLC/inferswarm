@@ -78,6 +78,11 @@
     "test_issue175_arm_d"
    ]
   },
+  "issue-182-arm-e": {
+   "test_modules": [
+    "test_issue182_arm_e"
+   ]
+  },
   "issue-74-79": {
    "test_modules": [
     "test_issue74_methodology",
@@ -234,6 +239,9 @@
   ],
   "docs/implementation/r6-successor-arm-d-warm-restart-175/": [
    "issue-175-arm-d"
+  ],
+  "docs/implementation/r6-successor-arm-e-locality-mutation-182/": [
+   "issue-182-arm-e"
   ],
   "docs/implementation/r6-successor-dense-full-integration-117/": [
    "issue-117-133"
@@ -733,6 +741,24 @@
   ],
   "scripts/issue175_terminal.py": [
    "issue-175-arm-d"
+  ],
+  "scripts/issue182_authority.py": [
+   "issue-182-arm-e"
+  ],
+  "scripts/issue182_campaign_pins.py": [
+   "issue-182-arm-e"
+  ],
+  "scripts/issue182_compare.py": [
+   "issue-182-arm-e"
+  ],
+  "scripts/issue182_inventory.py": [
+   "issue-182-arm-e"
+  ],
+  "scripts/issue182_manifest.py": [
+   "issue-182-arm-e"
+  ],
+  "scripts/issue182_terminal.py": [
+   "issue-182-arm-e"
   ],
   "scripts/issue35_coarse_concurrent.py": [
    "vulkan-v0-b"
