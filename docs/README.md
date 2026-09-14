@@ -22,6 +22,7 @@ roadmap paragraph cannot change normative doctrine; that requires an ADR.
 | know why something was decided | [ADRs](adr/README.md) |
 | know what happens next | [ROADMAP.md](../ROADMAP.md) |
 | publish a number | [BENCHMARKING.md](../BENCHMARKING.md) |
+| inspect current test hardware topology | [Hardware references](hardware/README.md) |
 | contribute | [CONTRIBUTING.md](../CONTRIBUTING.md) |
 | run the checks | [`tests/README.md`](../tests/README.md) |
 | understand a script | [`scripts/README.md`](../scripts/README.md) |
@@ -45,6 +46,12 @@ that *specifies* semantics.
 Phase-0 and Phase-1 campaign records, the frozen Phase-0 workload fixtures,
 and raw per-workload data. Results are immutable once committed; corrections
 are new records that preserve the earlier provenance.
+
+### [`hardware/`](hardware/README.md) — living test hardware topology
+
+Current physical test-fleet references, including the PCIe slot/device ledger.
+Update these when hardware placement or bus topology changes; historical
+benchmark and qualification evidence remains immutable.
 
 ### [`implementation/`](implementation/README.md) — experiment plans and retained proofs
 
