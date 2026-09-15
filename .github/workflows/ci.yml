@@ -208,6 +208,11 @@ jobs:
           errors = []
           checked = 0
           for path in md_files:
+              # Retained upstream source, byte-preserved as R7-A authority
+              # rather than local prose. Its sibling links name files outside
+              # the bounded retained source slice, not repository links.
+              if path == "./docs/investigations/deepseek-v41-flash-r7-a/external/README.md":
+                  continue
               base = os.path.dirname(path)
               text = open(path, encoding="utf-8").read()
               for target in link_re.findall(text):
