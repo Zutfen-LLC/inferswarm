@@ -1,0 +1,8 @@
+host=inferswarm01
+utc=2026-09-15T00:50:56Z
+kernel=6.12.105+deb13-amd64
+GPU|bdf=0000:02:00.0|ven=0x10de|dev=0x2504|sub=0x1458/0x4074|rev=0xa1|drv=nvidia|lnkcap=16.0 GT/s PCIe/16|lnksta=2.5 GT/s PCIe/16|vram_bytes=na|name=na
+GPU|bdf=0000:03:00.0|ven=0x10de|dev=0x2504|sub=0x1458/0x4074|rev=0xa1|drv=nvidia|lnkcap=16.0 GT/s PCIe/16|lnksta=2.5 GT/s PCIe/16|vram_bytes=na|name=na
+nvidia-smi:
+0, NVIDIA GeForce RTX 3060, 12288 MiB, 00000000:02:00.0, 610.57.04
+1, NVIDIA GeForce RTX 3060, 12288 MiB, 00000000:03:00.0, 610.57.04

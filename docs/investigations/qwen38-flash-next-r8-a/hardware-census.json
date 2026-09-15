@@ -1,0 +1,220 @@
+{
+  "schema": "inferswarm.issue189.hardware-census/2",
+  "kind": "mechanically derived heterogeneous accelerator resource census",
+  "collected_at": "2026-09-14T20:51-04:00",
+  "collection_method": "read-only SSH inventory: per-device sysfs PCI attributes (vendor/device/subsystem/revision/driver/max_link_speed/max_link_width/current_link_speed/current_link_width/mem_info_vram_total), lspci -PP -nn enumeration, and nvidia-smi memory queries. No GPU compute was initialized, no model was loaded, and no correctness-bearing GPU work was executed.",
+  "raw_evidence": {
+    "inv-inferswarm01.txt": "f07c0aece34f8043cce0c14731d35ca614d5c172f646f3201efdc4fdd6ee11f1",
+    "inv-inferswarm02.txt": "8e178112719ddb32fdfb933bcd94cca233c2803f5c46dcbc0b02fa8dc20e5c3c",
+    "inv-inferswarm03.txt": "d484c4c61877f3904afb4e63b4bc864a95db889c47cfcc72b79d9f5d463ab8dc",
+    "inv-inferswarm04.txt": "bb93ed6059a8733590b17c4d01b145872c9e787071a5c2e42410cfb9be515a11",
+    "inv-valinor.txt": "e43d647eedc7f12aa1606ca6e719f85a8e219be8bf6c40b7766fdc807a56cdb8",
+    "host-scan-receipts.md": "3e63ae43baf1d776"
+  },
+  "maintainer_reported_unverified": {
+    "note": "Orientation numbers relayed by the maintainer for verification. Devices that no reachable deployed host exposes are retained as reported-not-observed and excluded from every deployed total; they are never encoded as fleet constants.",
+    "nvidia_expected_if_confirmed": {"bytes": 85899345920, "note": "80 GB nominal; CONFIRMED by this census"},
+    "amd_reported": {"bytes": 42949672960, "note": "40 GB nominal from 3x RX 580 8GB + 1x RX 6800 XT 16GB; NOT confirmed: only 2 Ellesmere 8GiB devices observable"},
+    "combined_reported": {"bytes": 128849018880, "note": "120 GB; NOT confirmed"}
+  },
+  "resources": [
+    {
+      "host": "inferswarm01", "bdf": "0000:02:00.0",
+      "vendor_device": "10de:2504", "subsystem": "1458:4074", "revision": "0xa1",
+      "identity": "NVIDIA GA106 GeForce RTX 3060 Lite Hash Rate 12GB",
+      "driver": "nvidia", "driver_version": "610.57.04",
+      "memory_bytes": 12884901888,
+      "memory_source": "nvidia-smi --query-gpu=memory.total (12288 MiB)",
+      "link": {"lnkcap": "16.0 GT/s PCIe x16", "lnksta": "2.5 GT/s PCIe x16 (idle downtrain)"},
+      "status": "DEPLOYED_AVAILABLE",
+      "backends_observable": ["cuda"],
+      "qualification_state": {
+        "cuda": "QUALIFIED_FOR_RELEVANT_BACKEND (accepted #117 dense campaign: torch 2.11.0+cu130, driver 610.57.04, native BF16 correctness-bearer on inferswarm01/03 resources)"
+      },
+      "qwen38_ud_iq1_s_qualified": "NOT_ESTABLISHED",
+      "provenance": "raw-hardware/inv-inferswarm01.txt"
+    },
+    {
+      "host": "inferswarm01", "bdf": "0000:03:00.0",
+      "vendor_device": "10de:2504", "subsystem": "1458:4074", "revision": "0xa1",
+      "identity": "NVIDIA GA106 GeForce RTX 3060 Lite Hash Rate 12GB",
+      "driver": "nvidia", "driver_version": "610.57.04",
+      "memory_bytes": 12884901888,
+      "memory_source": "nvidia-smi memory.total (12288 MiB)",
+      "link": {"lnkcap": "16.0 GT/s PCIe x16", "lnksta": "2.5 GT/s PCIe x16 (idle downtrain)"},
+      "status": "DEPLOYED_AVAILABLE",
+      "backends_observable": ["cuda"],
+      "qualification_state": {"cuda": "NOT_ESTABLISHED for this exact device"},
+      "qwen38_ud_iq1_s_qualified": "NOT_ESTABLISHED",
+      "provenance": "raw-hardware/inv-inferswarm01.txt"
+    },
+    {
+      "host": "inferswarm02", "bdf": "0000:02:00.0",
+      "vendor_device": "1002:67df", "subsystem": "1da2:e353 (Sapphire Radeon RX 570 Pulse 4GB label)", "revision": "0xe7",
+      "identity": "AMD/ATI Ellesmere Polaris10 (lspci: RX 470/480/570/580 family; accepted Vulkan runtime enumerates it as AMD Radeon RX 580 Series)",
+      "driver": "amdgpu",
+      "memory_bytes": 8589934592,
+      "memory_source": "amdgpu sysfs mem_info_vram_total (8589934592 bytes); corroborated by accepted V1-A/V1-B Vulkan runtime enumeration (8192 MiB) and 8 GiB prefetchable PCI BAR",
+      "identity_note": "subsystem marketing label says RX 570 4GB; driver-measured VRAM, BAR size, and the accepted llama.cpp RADV POLARIS10 enumeration all report 8 GiB. The mechanically measured 8589934592 bytes is authoritative for capacity.",
+      "link": {"lnkcap": "8.0 GT/s PCIe x16", "lnksta": "2.5 GT/s PCIe x1 (mining riser)"},
+      "status": "DEPLOYED_AVAILABLE",
+      "backends_observable": ["vulkan"],
+      "qualification_state": {
+        "vulkan": "ACCEPTED-QUALIFIED for llama.cpp Vulkan Q4_K_M whole-model inference as cu-amd-a / v1a-amd-a-qualification-01 (accepted V1-A campaign); evidence_fresh=false under V1-B authority (EVIDENCE_STALE exclusion, not a falsification)"
+      },
+      "qwen38_ud_iq1_s_qualified": "NOT_ESTABLISHED",
+      "provenance": "raw-hardware/inv-inferswarm02.txt; docs/investigations/vulkan-v1-b/evidence/v1b-nv-a-plan-01/resource-snapshot.json"
+    },
+    {
+      "host": "inferswarm02", "bdf": "0000:03:00.0",
+      "vendor_device": "1002:67df", "subsystem": "1da2:e366 (Sapphire Nitro+ RX 570/580/590)", "revision": "0xe7",
+      "identity": "AMD/ATI Ellesmere Polaris10 (same family; accepted Vulkan runtime enumerates it as AMD Radeon RX 580 Series)",
+      "driver": "amdgpu",
+      "memory_bytes": 8589934592,
+      "memory_source": "amdgpu sysfs mem_info_vram_total (8589934592 bytes); corroborated by accepted V1-B Vulkan enumeration (8192 MiB)",
+      "link": {"lnkcap": "8.0 GT/s PCIe x16", "lnksta": "2.5 GT/s PCIe x1 (mining riser)"},
+      "status": "DEPLOYED_AVAILABLE",
+      "backends_observable": ["vulkan"],
+      "qualification_state": {
+        "vulkan": "backend-capable and enumerated by the accepted V1-B runtime, but never the selected/qualified subject of any accepted campaign (V1-A qualified 02:00.0 only)"
+      },
+      "qwen38_ud_iq1_s_qualified": "NOT_ESTABLISHED",
+      "provenance": "raw-hardware/inv-inferswarm02.txt; docs/investigations/vulkan-v1-b/raw/v1b-nv-a-canonical-01/stderr.txt"
+    },
+    {
+      "host": "inferswarm02", "bdf": "0000:04:00.0",
+      "vendor_device": "10de:2489", "subsystem": "3842:4667 (eVga)", "revision": "0xa1",
+      "identity": "NVIDIA GA104 GeForce RTX 3060 Ti Lite Hash Rate 8GB",
+      "driver": "nvidia", "driver_version": "615.71.09",
+      "memory_bytes": 8589934592,
+      "memory_source": "nvidia-smi memory.total (8192 MiB); corroborated by accepted V1-B Vulkan enumeration (8438 MiB reported device memory)",
+      "link": {"lnkcap": "16.0 GT/s PCIe x16", "lnksta": "2.5 GT/s PCIe x1 (mining riser; LnkCap masked by riser bridge)"},
+      "status": "DEPLOYED_QUALIFIED_FOR_RELEVANT_BACKEND",
+      "backends_observable": ["vulkan", "cuda (driver present; CUDA capability not enumerated this pass)"],
+      "qualification_state": {
+        "vulkan": "QUALIFIED_FOR_RELEVANT_BACKEND as cu-nv-a / v1b-nv-a-qualification-01 (accepted V1-B campaign, llama.cpp Vulkan, Q4_K_M, byte-exact visible-output policy)"
+      },
+      "qwen38_ud_iq1_s_qualified": "NOT_ESTABLISHED",
+      "provenance": "raw-hardware/inv-inferswarm02.txt; docs/investigations/vulkan-v1-b/PHYSICAL-AUTHORITY.json"
+    },
+    {
+      "host": "inferswarm03", "bdf": "0000:01:00.0",
+      "vendor_device": "10de:2504", "subsystem": "1458:4074", "revision": "0xa1",
+      "identity": "NVIDIA GA106 GeForce RTX 3060 Lite Hash Rate 12GB",
+      "driver": "nvidia", "driver_version": "610.57.04",
+      "memory_bytes": 12884901888,
+      "memory_source": "nvidia-smi memory.total (12288 MiB)",
+      "link": {"lnkcap": "16.0 GT/s PCIe x16", "lnksta": "2.5 GT/s PCIe x16 (idle downtrain)"},
+      "status": "DEPLOYED_AVAILABLE",
+      "backends_observable": ["cuda"],
+      "qualification_state": {"cuda": "QUALIFIED_FOR_RELEVANT_BACKEND (accepted #117 dense campaign stage cu inferswarm03/gpu-0)"},
+      "qwen38_ud_iq1_s_qualified": "NOT_ESTABLISHED",
+      "provenance": "raw-hardware/inv-inferswarm03.txt"
+    },
+    {
+      "host": "inferswarm03", "bdf": "0000:03:00.0",
+      "vendor_device": "10de:2504", "subsystem": "1462:3903 (MSI)", "revision": "0xa1",
+      "identity": "NVIDIA GA106 GeForce RTX 3060 Lite Hash Rate 12GB",
+      "driver": "nvidia", "driver_version": "610.57.04",
+      "memory_bytes": 12884901888,
+      "memory_source": "nvidia-smi memory.total (12288 MiB)",
+      "link": {"lnkcap": "16.0 GT/s PCIe x16", "lnksta": "2.5 GT/s PCIe x4 (width-limited slot wiring)"},
+      "status": "DEPLOYED_AVAILABLE",
+      "backends_observable": ["cuda"],
+      "qualification_state": {"cuda": "QUALIFIED_FOR_RELEVANT_BACKEND (accepted #117 dense campaign stage cu inferswarm03/gpu-1)"},
+      "qwen38_ud_iq1_s_qualified": "NOT_ESTABLISHED",
+      "provenance": "raw-hardware/inv-inferswarm03.txt"
+    },
+    {
+      "host": "inferswarm04", "bdf": "0000:01:00.0",
+      "vendor_device": "10de:2204", "subsystem": "1043:87af (ASUS)", "revision": "0xa1",
+      "identity": "NVIDIA GA102 GeForce RTX 3090 24GB",
+      "driver": "nvidia", "driver_version": "610.57.04",
+      "memory_bytes": 25769803776,
+      "memory_source": "nvidia-smi memory.total (24576 MiB)",
+      "link": {"lnkcap": "16.0 GT/s PCIe x16 (platform root port Gen2-limited)", "lnksta": "2.5 GT/s PCIe x16 (idle downtrain)"},
+      "status": "DEPLOYED_AVAILABLE",
+      "backends_observable": ["cuda"],
+      "qualification_state": {"cuda": "NOT_ESTABLISHED for this exact device under a current authority"},
+      "qwen38_ud_iq1_s_qualified": "NOT_ESTABLISHED",
+      "provenance": "raw-hardware/inv-inferswarm04.txt"
+    },
+    {
+      "host": "valinor", "bdf": "0000:07:00.0",
+      "vendor_device": "10de:1c02", "subsystem": "3842:6162 (eVga)", "revision": "0xa1",
+      "identity": "NVIDIA GP106 GeForce GTX 1060 3GB",
+      "driver": "nvidia", "driver_version": "580.178.04",
+      "memory_bytes": 3221225472,
+      "memory_source": "nvidia-smi memory.total (3072 MiB)",
+      "link": {"lnkcap": "8.0 GT/s PCIe x16", "lnksta": "2.5 GT/s PCIe x8 (x8/x8 CPU lane split while PCIEX16_2 populated)"},
+      "status": "EXCLUDED_WITH_REASON",
+      "exclusion_reason": "DEPLOYED host device but outside the InferSwarm execution fleet boundary: it is the PCIe-topology test host's display/general GPU. It is classified here per the correction directive (no silent omission), counted in the physical-fleet aggregate, and excluded from every InferSwarm runtime-fit subset. Its 3 GiB would not fit any plausible R8 weight shard regardless.",
+      "backends_observable": ["cuda (driver present)"],
+      "qualification_state": {},
+      "qwen38_ud_iq1_s_qualified": "NOT_ESTABLISHED",
+      "provenance": "raw-hardware/inv-valinor.txt"
+    },
+    {
+      "resource_id": "reported-not-observed-amd-rx580-third",
+      "identity": "reported third Radeon RX 580 8GB",
+      "status": "EXCLUDED_WITH_REASON",
+      "exclusion_reason": "Maintainer relayed a 3x RX 580 inventory; only two Ellesmere devices are observable on any reachable deployed host (inferswarm02 02:00.0 and 03:00.0). A sweep of every reachable host (inferswarm00-04, valinor, buildbox, monomyth-build, pm01, pm04, readynas, plex, rproxy; receipts retained) found no third Polaris and no Navi device. Offline hosts cannot be excluded, but no reachable deployed host exposes it; it is not current execution authority and contributes zero bytes to deployed totals.",
+      "memory_bytes": 0,
+      "provenance": "raw-hardware/host-scan-receipts.md"
+    },
+    {
+      "resource_id": "reported-not-observed-amd-rx6800xt",
+      "identity": "reported Radeon RX 6800 XT 16GB (Navi 21)",
+      "status": "EXCLUDED_WITH_REASON",
+      "exclusion_reason": "Not observable on any reachable host (no 1002:73xx device anywhere in the sweep). Same reachability caveat as the third RX 580. Retained as reported-not-observed; contributes zero bytes to deployed totals. If later located/commissioned it must be re-inventoried and separately qualified before any R8 use.",
+      "memory_bytes": 0,
+      "provenance": "raw-hardware/host-scan-receipts.md"
+    },
+    {
+      "resource_id": "pending-amd-radeon-pro-v340l",
+      "identity": "AMD Radeon Pro V340L, board 102-D05318-02",
+      "status": "PENDING_NOT_AVAILABLE",
+      "expected_physical_form": "dual GPU module, 2 x 8GB = 16GB aggregate across two independent device address spaces",
+      "modeling_note": "Recorded ONLY as pending/reserve inventory. Modeled conceptually as two separate 8 GiB device address spaces pending commissioning-time verification of that physical/runtime exposure; never flattened into one 16 GiB allocation. Its bytes are excluded from all current fleet arithmetic; the ~136 GB future aggregate is a projection, not a present-tense fact.",
+      "memory_bytes": 0,
+      "provenance": "maintainer report 5672736372 (pending-hardware disclosure); no mechanical observation exists or is claimed"
+    }
+  ],
+  "totals": {
+    "deployed_nvidia_bytes": 85899345920,
+    "deployed_nvidia_breakdown": "5 x 12288 MiB (3060) + 8192 MiB (3060 Ti) + 24576 MiB (3090) = 80 GiB on inferswarm01-04",
+    "deployed_amd_bytes": 17179869184,
+    "deployed_amd_breakdown": "2 x 8589934592 (Ellesmere/Polaris10, amdgpu-measured) = 16 GiB on inferswarm02",
+    "deployed_accelerator_bytes_total": 103079215104,
+    "deployed_physical_total_including_valinor_gtx1060": 106300440576,
+    "pending_excluded_bytes": 0,
+    "expected_future_aggregate_if_v340l_commissioned": "approximately 118 GiB deployed (103079215104 + 2 x 8589934592), NOT 136 GiB: the 136 GB projection assumed the unobserved 40 GB AMD inventory"
+  },
+  "backend_visibility": {
+    "cuda": {
+      "resources": ["inferswarm01/02:00.0","inferswarm01/03:00.0","inferswarm02/04:00.0 (driver present; CUDA not enumerated this pass)","inferswarm03/01:00.0","inferswarm03/03:00.0","inferswarm04/01:00.0","valinor/07:00.0"],
+      "capacity_bytes_driver_present": 98784247808,
+      "note": "nvidia driver 610.57.04/615.71.09 bound on every NVIDIA resource; CUDA enumerability on 3060 Ti was not probed this pass (would initialize a GPU context); the accepted #117 authority proves CUDA execution on inferswarm01/03 3060 resources and the 3090 reference host lineage"
+    },
+    "vulkan": {
+      "resources": ["inferswarm02/02:00.0","inferswarm02/03:00.0","inferswarm02/04:00.0"],
+      "capacity_bytes": 25769803776,
+      "note": "accepted V1-B runtime enumerates all three inferswarm02 discrete GPUs (Vulkan0 Intel iGPU also present); qualification exists only for 04:00.0 (nv-a) and, under V1-A, 02:00.0 (amd-a)"
+    }
+  },
+  "r8_runtime_mode_subset": {
+    "proposed_mode": "llama.cpp, heterogeneous CUDA(+Vulkan optional) layer-split cross-host RPC, Unsloth UD-IQ1_S, n-gram/PLE table host-resident",
+    "weight_resident_subset_rationale": "For the proposed R8 mode the whole 96-GiB NVIDIA execution pool (80 GiB on 01-04 + 16 GiB AMD if a Vulkan arm is included) is CANDIDATE capacity; exact per-resource fit is NOT_ESTABLISHED. The retained R8-A conclusions make no per-resource allocation claim beyond the representation-level facts in gguf-header-census.json (backbone minus PLE table ~40.74 GiB; PLE table 26.82 GiB; neither implies residency feasibility).",
+    "correctness_qualified_subset": [],
+    "correctness_qualified_bytes": 0
+  },
+  "non_claims": [
+    "No GPU was initialized, no CUDA/Vulkan context was created, and no model or benchmark was executed.",
+    "nvidia-smi --query-gpu is a driver query, not correctness-bearing GPU work.",
+    "Aggregate VRAM is not a feasibility proof; per-resource fit constraints for R8 are NOT_ESTABLISHED.",
+    "Backend capability is not Qwen3.8 qualification: accepted Vulkan work proves llama.cpp Vulkan on specific devices for Qwen2.5-3B Q4_K_M only.",
+    "x1 riser topology limits communication-sensitive utility, not capacity utility; no throughput claim is made in either direction.",
+    "Offline-host devices cannot be mechanically excluded; the reported-not-observed rows document exactly what was and was not seen, on which hosts, when.",
+    "The V340L is pending hardware: zero bytes, zero authority, not current capacity."
+  ]
+}

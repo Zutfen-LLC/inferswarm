@@ -910,11 +910,12 @@ Determine whether Qwen3.8-Flash-Next is an architecturally valuable, practical h
 
 - **R8 program — static research authority observation:** [`R8A_STATIC_RESEARCH_AUTHORIZED`](https://github.com/Zutfen-LLC/inferswarm/issues/188).
 - **Maintainer acceptance:** [accepted](https://github.com/Zutfen-LLC/inferswarm/issues/188).
-- **Recorded execution authorization:** authorized — Issue #189 authorizes CPU/static/read-only R8-A research only: retain source/runtime/fleet analysis and one bounded prerequisite or future-subject recommendation, with no physical R8-B execution.. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/189).
+- **Recorded execution authorization:** authorized — Issue #189 authorizes CPU/static/read-only R8-A research only: retain source/runtime/fleet analysis and one bounded prerequisite or future-subject recommendation, with no physical R8-B execution. Correction round complete: terminal R8A_QWEN38_RUNTIME_PREREQUISITE re-derived from the bounded GGUF header census (PLE n-gram table identity/bytes established) and the measured 96-GiB deployed accelerator census (80 GiB NVIDIA + 16 GiB AMD).. [Authority](https://github.com/Zutfen-LLC/inferswarm/issues/189).
 
 - Issue #188 is roadmap authority for R8-A only. It does not authorize a model download, GPU execution, serving campaign, planner change, backend policy, or R8-B physical run.
 - R8-A must keep official Qwen and third-party GGUF authorities distinct, pin every source/runtime identity, and treat an observed static conclusion as neither acceptance nor R8-B authorization.
 - The accepted Issue #117 Arm A-E sequence remains historical evidence for its frozen Gemma subject/topology; it does not qualify Qwen3.8, GGUF, llama.cpp, another backend, or a successor topology.
+- The 2026-09-14 correction round (maintainer review 5672736372) additionally requires: fleet-fit conclusions derive from the mechanical hardware census (no authored aggregate constants), the GGUF header/tensor census is retained evidence, and reported-but-unobserved or pending hardware contributes zero bytes to deployed totals.
 - Any later R8-B work requires separate maintainer authority after an accepted R8-A record; green CPU checks, a generated terminal, and issue closure do not substitute for that authority.
 <!-- project-status:frontier:end -->
 

@@ -1,0 +1,7 @@
+host=inferswarm04
+utc=2026-09-15T00:50:55Z
+kernel=6.12.107+deb13-amd64
+GPU|bdf=0000:00:02.0|ven=0x8086|dev=0x0412|sub=0x8086/0x0412|rev=0x06|drv=i915|lnkcap=/|lnksta=/|vram_bytes=na|name=na
+GPU|bdf=0000:01:00.0|ven=0x10de|dev=0x2204|sub=0x1043/0x87af|rev=0xa1|drv=nvidia|lnkcap=16.0 GT/s PCIe/16|lnksta=2.5 GT/s PCIe/16|vram_bytes=na|name=na
+nvidia-smi:
+0, NVIDIA GeForce RTX 3090, 24576 MiB, 00000000:01:00.0, 610.57.04

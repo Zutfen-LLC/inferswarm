@@ -4,7 +4,8 @@
 
 Initial baseline collected: 2026-09-13 via SSH (`dmidecode -t slot` + `lspci -PP -nn -vv`) for inferswarm01-04.  
 Valinor audit added: 2026-09-13.  
-Last topology refresh: 2026-09-13.
+Issue #189 R8-A accelerator census refresh (read-only sysfs/lspci/nvidia-smi, per-device VRAM measured): 2026-09-14 — see `docs/investigations/qwen38-flash-next-r8-a/hardware-census.json` for the authoritative per-resource record.  
+Last topology refresh: 2026-09-14.
 
 The original inferswarm01-04 collection notes referenced raw JSON per host (`inferswarm0{1..4}.json`). Those captures were not included in this repository import and are not reconstructed here.
 
@@ -119,6 +120,8 @@ Before using either reserve Z440 for evidence-bearing work, collect its own `dmi
 | 04 | RTX 3090 24GB | Gen2 x16 on this platform |
 | Valinor | GTX 1060 3GB | CPU PEG slot; currently x8 due to x8/x8 split, Gen1 speed observed at idle |
 
+Per-device VRAM (2026-09-14 measured refresh): the two inferswarm02 Ellesmere cards each expose 8589934592 bytes via amdgpu `mem_info_vram_total` and are enumerated by the accepted Vulkan runtime as "AMD Radeon RX 580 Series (RADV POLARIS10) (8192 MiB)". The 02:00.0 card's subsystem label reads "Radeon RX 570 Pulse 4GB" (Sapphire 1da2:e353); the driver-measured 8 GiB, the 8 GiB prefetchable BAR, and the runtime enumeration agree on 8 GiB, which is authoritative for capacity. NVIDIA totals confirmed 80 GiB across inferswarm01-04. No third Polaris device and no RX 6800 XT is observable on any reachable host; the Radeon Pro V340L (102-D05318-02, dual-die 2x8GB) is pending hardware and excluded from all deployed totals. Full per-resource records: `docs/investigations/qwen38-flash-next-r8-a/hardware-census.json`.
+
 ## Actionable observations
 1. inferswarm03 GPU2 (03:00.0) negotiated WIDTH x4 (downgraded) in an x16 slot - worth
    checking BIOS bifurcation settings if full x16 expected.
@@ -139,3 +142,4 @@ Record test-relevant physical changes here in addition to updating the current t
 | 2026-09-13 | Initial repository baseline | Imported the collected inferswarm01-04 PCIe/device inventory. |
 | 2026-09-13 | Added Valinor audit | Physical inventory added; ASUS board documentation resolves CPU PEG allocation as x16 single / x8+x8 dual. |
 | 2026-09-13 | Added two reserve HP Z440 chassis | Reported identical to deployed inferswarm01; kept outside deployed census pending per-host audit and commissioning. |
+| 2026-09-14 | Issue #189 R8-A accelerator census refresh | Read-only per-device VRAM measurement (amdgpu sysfs, nvidia-smi) and fleet-wide device sweep; retained in docs/investigations/qwen38-flash-next-r8-a/hardware-census.json. Confirmed 80 GiB NVIDIA on 01-04 and 2x8 GiB Ellesmere on 02; recorded reported-but-unobserved AMD devices and pending V340L as non-deployed. |

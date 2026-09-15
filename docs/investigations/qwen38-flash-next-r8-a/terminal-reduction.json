@@ -1,30 +1,93 @@
 {
   "fleet_fit": {
-    "aggregate_weight_headroom_bytes": 4762949984,
+    "aggregate_weight_headroom_bytes": 30532753760,
+    "authority": "hardware-census.json (mechanically derived rows)",
     "capacity_feasible": "NOT_ESTABLISHED",
+    "capacity_visible_to_backends": {
+      "cuda_driver_present_bytes": 95521253376,
+      "source": "hardware-census.json backend_visibility",
+      "vulkan_enumerated_bytes": 25769803776
+    },
     "correctness_qualified": "NOT_ESTABLISHED",
+    "deployed_accelerator_bytes_total": 103079215104,
+    "deployed_accelerator_gib_total": 96.0,
+    "deployed_amd_bytes": 17179869184,
+    "deployed_amd_gib": 16.0,
+    "deployed_nvidia_bytes": 85899345920,
+    "deployed_nvidia_gib": 80.0,
     "economically_useful": "NOT_ESTABLISHED",
-    "reason": "Aggregate VRAM is not a per-resource fit proof; the required compute, KV, recurrent, and staging allocations and a lawful cross-host execution path are unmeasured.",
+    "pending_v340l_bytes": 0,
+    "per_resource_fit_constraints": {
+      "largest_single_resource_bytes": 25769803776,
+      "largest_single_resource_gib": 24.0,
+      "note": "No deployed resource individually holds even the 40.74 GiB backbone (largest is 24 GiB), and the 26.82 GiB PLE table alone exceeds every resource; any accelerator-resident plan requires distribution, and the PLE table specifically requires host or split residency regardless of fleet aggregate.",
+      "single_resource_fits_backbone": false,
+      "single_resource_fits_ple_table": false
+    },
+    "r8_runtime_mode_qualified_capacity_bytes": 0,
+    "reason": "96 GiB of deployed accelerator memory exists (80 GiB NVIDIA + 16 GiB AMD, mechanically derived), and the representation is now header-established, but exact R8 execution qualification is not established: aggregate VRAM is not a per-resource fit proof and no qualified llama.cpp build exists for the proposed mode.",
     "runtime_supported": "NOT_ESTABLISHED",
-    "verified_nvidia_weight_bytes": 77309411328
+    "valinor_gtx1060_bytes_excluded_from_execution_fleet": 3221225472
   },
   "issue": 189,
   "non_claims": [
-    "No Qwen3.8 inference, model download, GPU execution, serving run, or R8-B execution occurred.",
+    "No Qwen3.8 inference, model body download, GPU execution, serving run, or R8-B execution occurred.",
     "This reduction is not acceptance or execution authorization for R8-B.",
-    "It does not infer per-tensor quantization, N-gram tensor bytes, or host/SSD suitability from aggregate GGUF bytes."
+    "It does not infer per-tensor residency feasibility, throughput, or host/SSD suitability from aggregate bytes.",
+    "No mixed-vendor correctness and no economic claim for PLE host placement is made.",
+    "The reported 40 GB AMD inventory and the pending V340L contribute zero bytes to every total above."
   ],
-  "record_digest": "sha256:951a9380c187527202155251e8a96554e1c43a21be82bce07e8a90f0c98f25fc",
+  "record_digest": "sha256:c525ca703d16fc85a81635df7ccb3128da95080e916d1a414b2593e1d442f238",
   "representation": {
+    "architecture": "qwen4exp",
+    "backbone_minus_ple_table_bytes": 43746323104,
+    "backbone_minus_ple_table_gib": 40.74,
     "complete_split_bytes": 72546461344,
     "complete_split_files": 3,
     "complete_split_gib": 67.56,
+    "gguf_version": 3,
     "id": "unsloth-UD-IQ1_S",
+    "ngram_ple_state": {
+      "byte_extent_derived": "offset-delta within split member 00002",
+      "economic_usefulness_of_host_placement": "NOT_ESTABLISHED (unmeasured)",
+      "identity_addressability": "ESTABLISHED",
+      "metadata_keys": [
+        "qwen4exp.ple.layers",
+        "qwen4exp.ple.ngram_size",
+        "qwen4exp.ple.heads_per_ngram",
+        "qwen4exp.ple.conv_kernel",
+        "qwen4exp.ple.eos_token_id",
+        "qwen4exp.ple.layer_multipliers",
+        "qwen4exp.ple.head_offsets",
+        "qwen4exp.ple.head_vocab_sizes"
+      ],
+      "placement_behavior_of_any_build": "NOT_ESTABLISHED (runtime question)",
+      "ple_layer_tensors": [
+        "blk.1.ple_conv1d.weight",
+        "blk.1.ple_key.weight",
+        "blk.1.ple_norm_conv.weight",
+        "blk.1.ple_norm_key.weight",
+        "blk.1.ple_norm_query.weight",
+        "blk.1.ple_value.weight"
+      ],
+      "representation_separable_from_backbone": "YES",
+      "runtime_control_surface": "llama.cpp -ot/--override-tensor buffer-type override exists at the pinned audit revision (common/arg.cpp; LLAMA_ARG_OVERRIDE_TENSOR); per_layer_token_embd is created TENSOR_READ_LAZY with PLE-range validation in src/models/qwen4exp.cpp",
+      "split_member": "UD-IQ1_S/Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+      "table_bytes": 28800138240,
+      "table_dims": [
+        160,
+        320001536
+      ],
+      "table_ggml_type": "GGML_TYPE_IQ4_NL",
+      "table_gib": 26.82,
+      "table_tensor": "per_layer_token_embd.weight"
+    },
     "object_identities": [
       "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
       "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
       "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a"
-    ]
+    ],
+    "tensor_total": 1224
   },
   "runtime_audit_revision": "1bc7a5af0d14b1fb72f266abbd1237b394187115",
   "runtime_blockers": [
@@ -32,7 +95,7 @@
       "affected_runtime_revision": "17252c769a63c1cb650ce98ae309cf4de0da7778",
       "classification": "CORRECTNESS_BLOCKER",
       "id": "rpc-cross-host-correctness",
-      "reason": "The reported fix does not qualify NVIDIA, UD-IQ1_S, this fleet, or the required exact layer/RPC shape.",
+      "reason": "The reported fix does not qualify NVIDIA, AMD, UD-IQ1_S, this fleet, or the required exact layer/RPC shape.",
       "reported_fix_revision": "a273d22e142b9ad253a09d7b76d4d24ba64eb9bc",
       "reported_mode": "Metal layer-split cross-host RPC, UD-IQ4_XS, long prefill/decode beyond about 2K prompt tokens",
       "reported_rebuild_revision": "cc231cb0da565440cf6a3e5b55dfeba477972cb6",
@@ -41,17 +104,30 @@
     {
       "classification": "PERFORMANCE_ONLY_RISK",
       "id": "ngram-materialization-control",
-      "reason": "The NFS/FS-cache small-read report is performance-only; separately, no retained conversion control proves independently addressable N-gram materialization.",
+      "reason": "The NFS/FS-cache small-read report is performance-only; representation-level addressability of the PLE table is now ESTABLISHED, but actual placement behavior of any build and its economics remain unmeasured runtime questions.",
       "source": "https://github.com/ggml-org/llama.cpp/issues/28256"
     }
   ],
-  "schema": "inferswarm.issue189.r8a-terminal/1",
+  "schema": "inferswarm.issue189.r8a-terminal/2",
   "source_authority": {
     "gguf_census_sha256": "5664961903f0b6afd1066ac88d287471231c962604fe7e7176f2b3f41ee43fe1",
+    "gguf_header_census_sha256": "d816d7ee22e7e1b4fea1fdc07707d20f75d1abef086f711fc610cb25f75176b7",
+    "hardware_census_sha256": "e3fd332966a10e405a237fdd4f52b2c493a966b2fd0e06b3438b278d73d3315f",
     "official_revision": "de4b8e4d43b917e7706784d8bb445c9af86a3540",
-    "source_findings_sha256": "fdc15c64511f2b8cff33eb20b9e4788c997601b607d61d10a3e05fdd3512844e",
+    "source_findings_sha256": "347475548be0ce3cef7528e13c70058de6ff3e7fc255562dd6674ec5bd5e6061",
     "third_party_gguf_revision": "38bb39ee97821de2c9009abb7e93950eec396e66"
   },
+  "successor_recommendation": "Frame the next issue as a bounded qualification problem (not 'fix llama.cpp'): prospective qualification of one pinned llama.cpp commit/build across the exact chosen R8 subject \u2014 text only, single request slot, exact pinned UD-IQ1_S split, frozen prompt/context ladder, per-resource weight/KV/GDN/QSA/PLE-staging accounting, exact no-fallback/device proof, short and long prefill/decode correctness. A sensible arm order is NVIDIA first, RX 6800 XT Vulkan when it exists on a reachable host, one RX 580 Vulkan arm, and only then any mixed-backend experiment.",
   "terminal": "R8A_QWEN38_RUNTIME_PREREQUISITE",
+  "terminal_derivation": {
+    "fleet_truthfully_inventoried": "YES \u2014 per-resource mechanical census with statuses, provenance, and reported-but-unobserved devices disclosed, not authored into capacity",
+    "rejected_alternatives": {
+      "R8A_EVIDENCE_BLOCKED": "not emitted: pinned public metadata fully supported the census",
+      "R8A_QWEN38_GGUF_PHYSICAL_GATE_READY": "not emitted: no qualified runtime/build exists",
+      "R8A_QWEN38_REPRESENTATION_PREREQUISITE": "not emitted: the header/tensor census closed the representation gap"
+    },
+    "remaining_blocker": "runtime/backend qualification of one pinned llama.cpp build for the exact proposed mode on this fleet",
+    "representation_sufficient": "YES \u2014 bounded header census established GGUF v3/qwen4exp identity, complete 1224-tensor split placement, exact PLE n-gram tensor identity/bytes, and an upstream buffer-override control surface; no separate representation prerequisite remains"
+  },
   "terminal_reason": "The target remains architecturally informative, but no selected and qualified llama.cpp build plus bounded, text-only, single-slot, NVIDIA/cross-host layer-RPC correctness and residency protocol exists for the only current-fleet-sized representation."
 }

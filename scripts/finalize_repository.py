@@ -1253,10 +1253,24 @@ _R8A_PRODUCERS = frozenset({
     "scripts/issue189_r8a_reducer.py",
     "tests/test_issue189_r8a.py",
 })
+_R8A_RAW_EVIDENCE = tuple(sorted(frozenset({
+    f"{_R8A}/raw-headers/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf.header.bin",
+    f"{_R8A}/raw-headers/Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf.header.bin",
+    f"{_R8A}/raw-headers/Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf.header.bin",
+    f"{_R8A}/raw-hardware/inv-inferswarm01.txt",
+    f"{_R8A}/raw-hardware/inv-inferswarm02.txt",
+    f"{_R8A}/raw-hardware/inv-inferswarm03.txt",
+    f"{_R8A}/raw-hardware/inv-inferswarm04.txt",
+    f"{_R8A}/raw-hardware/inv-valinor.txt",
+    f"{_R8A}/raw-hardware/host-scan-receipts.md",
+})))
 _R8A_AUTHORED = frozenset({
     f"{_R8A}/source-findings.md",
     f"{_R8A}/README.md",
     f"{_R8A}/gguf-census.json",
+    f"{_R8A}/gguf-header-census.json",
+    f"{_R8A}/hardware-census.json",
+    *_R8A_RAW_EVIDENCE,
 })
 # The additive Issue #130 successor bundle: current-finalization
 # integrity for the Issue #130 sources, never a rewrite of the closed
@@ -1612,6 +1626,9 @@ def default_registry() -> tuple[Stage, ...]:
                 "separately pinned Qwen and Unsloth authority record"),
             reads=frozenset({f"{_R8A}/source-findings.md",
                              f"{_R8A}/gguf-census.json",
+                             f"{_R8A}/gguf-header-census.json",
+                             f"{_R8A}/hardware-census.json",
+                             *_R8A_RAW_EVIDENCE,
                              "scripts/issue189_r8a_reducer.py"}),
             writes=frozenset({_R8A_TERMINAL}),
             after=frozenset({"issue137-bundle-verify"}),

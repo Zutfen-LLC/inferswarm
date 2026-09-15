@@ -132,6 +132,69 @@ research; they are audit aids, not upstream artifact identities.
 | official revision API response | `9212971add20d6aea4d577c020efd1c5b2a68bd28c319c10317f71277d60a787` |
 | Unsloth revision API response | `df9b512a3061533226a0376e1fbd5b9eb082f3aa050ce3ddcd979c6d5f631310` |
 
+## 2026-09-14 correction: bounded GGUF header/tensor census (Issue #189 maintainer review)
+
+The object-level census above is now superseded in depth (not in facts) by
+[`gguf-header-census.json`](gguf-header-census.json): a bounded metadata-only
+inspection of the exact pinned UD-IQ1_S split set using HTTP range reads
+(206 responses, receipts retained per fetch) and local CPU parsing. Total
+fetched: 11,077,696 bytes (10.56 MiB, budget-capped at 96 MiB); **zero model
+body bytes downloaded**; the contiguous header extents are retained verbatim
+under `raw-headers/` (10,946,618 B + 37,683 B + 40,218 B).
+
+Mechanically established facts (all from parsed headers, not filenames):
+
+- GGUF v3, architecture `qwen4exp`, `general.file_type=24`, quantized by
+  Unsloth with `quantize.imatrix.file=Qwen3.8-Flash-Next-GGUF/imatrix_unsloth.gguf`.
+- Split structure: `split.no=0/1/2`, `split.count=3`, `split.tensors.count=1224`.
+  Split 00001 is metadata-only (0 tensors, 67 KV pairs incl. the full 248,320
+  token tokenizer and the chat template); splits 00002/00003 carry
+  595 + 629 = 1224 tensors (sum equals the declared split count exactly).
+- The PLE / n-gram state is explicitly encoded:
+  `qwen4exp.ple.layers=[1]`, `ple.ngram_size=3`, `ple.heads_per_ngram=8`
+  (16 heads), `ple.conv_kernel=4`, `ple.eos_token_id=248044`,
+  `ple.layer_multipliers=[23703573157769, 20109073645365, 8052911324071]`,
+  `ple.head_offsets`/`ple.head_vocab_sizes` (16 uint64 each, ~20M rows per
+  head; offsets sum 320,001,536 rows), `embedding_length_per_layer_input=160`.
+- Exact n-gram tensor identities: `per_layer_token_embd.weight`
+  `[160, 320001536]` GGML_TYPE_IQ4_NL in split 00002, plus six
+  `blk.1.ple_*` tensors (ple_key Q8_0 [2560,10240], ple_value Q8_0
+  [2560,2560], ple_conv1d F32, three F32 norms) in split 00002.
+- Derived byte spans (offset-delta arithmetic, consistent with declared
+  GGML block sizes): PLE table = 28,800,138,240 B = 26.82 GiB (4.5 bpw
+  over 51,200,245,760 elements); representation total 67.56 GiB minus the
+  PLE table = ~40.74 GiB backbone+tokenizer+output.
+- llama.cpp control surface (pinned audit revision
+  `1bc7a5af0d14b1fb72f266abbd1237b394187115`, sources fetched and digested):
+  `src/models/qwen4exp.cpp` creates `per_layer_token_embd` with
+  TENSOR_READ_LAZY and validates it against the PLE head ranges;
+  `common/arg.cpp` exposes `-ot/--override-tensor <pattern>=<buffer type>`
+  (env LLAMA_ARG_OVERRIDE_TENSOR). The PLE table is therefore exactly named,
+  size-known, and independently addressable at the representation level.
+
+Representation-level separability of the n-gram/PLE table is thereby
+ESTABLISHED (exact tensor identity + exact byte extent + an upstream
+buffer-override control surface). Whether host placement of it is
+*economically useful* on this fleet remains unmeasured and unclaimed; and
+actual placement behavior of any specific build remains a runtime
+qualification question, not a representation fact.
+
+Reported-but-unverifiable remainders: nothing in the bounded header scope
+remains unknown for the metadata questions Issue #189 asked. What this
+census cannot speak to (and does not claim): correctness of any runtime's
+PLE gather implementation, KV/GDN session-state accounting at runtime, and
+split-file RPC loading behavior — those are runtime/backend qualifications.
+
+Hardware note (same correction round): the living PCIe ledger was refreshed
+by read-only per-device measurement; see [`hardware-census.json`](hardware-census.json).
+Deployed accelerator memory is mechanically 96 GiB (80 GiB NVIDIA on
+inferswarm01-04 + 16 GiB AMD Ellesmere on inferswarm02), plus Valinor's
+GTX 1060 3GB outside the execution-fleet boundary. The maintainer-relayed
+40 GB AMD figure (3x RX 580 + RX 6800 XT) was NOT confirmed: only two
+Ellesmere 8 GiB devices are observable on any reachable host. The Radeon
+Pro V340L (102-D05318-02) is pending hardware: zero current capacity,
+modeled as two independent 8 GiB address spaces if commissioned.
+
 ## Non-claims
 
 This note makes no Qwen3.8 correctness, performance, runtime-defect,

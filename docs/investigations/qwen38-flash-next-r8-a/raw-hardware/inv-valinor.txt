@@ -1,0 +1,6 @@
+host=Valinor
+utc=2026-09-15T00:50:55Z
+kernel=7.2.3-1-cachyos
+GPU|bdf=0000:07:00.0|ven=0x10de|dev=0x1c02|sub=0x3842/0x6162|rev=0xa1|drv=nvidia|lnkcap=8.0 GT/s PCIe/16|lnksta=2.5 GT/s PCIe/8|vram_bytes=na|name=na
+nvidia-smi:
+0, NVIDIA GeForce GTX 1060 3GB, 3072 MiB, 00000000:07:00.0, 580.178.04
