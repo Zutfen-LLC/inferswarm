@@ -98,8 +98,10 @@ Anonymous only ~244 MB. Per-device GPU residency: 01 CUDA0 6911 MiB /
 CUDA1 6633 MiB; 03 GPU0 7875 MiB / GPU1 6911 MiB; 04 13760 MiB.
 RPC-server host RSS 0.3-0.8 GB each (compute/staging buffers only).
 Raw observations retained under evidence/accounting/. Network figures
-(descriptive only): initialization model-weight transfer ~72 GB over
-1 GbE (~5.3 min candidate load); steady-state per-case wall times
+(descriptive only): candidate load window ~5.3 min (log-timestamp
+derived; the RPC-resident backbone ~41.4 GiB is what crosses the
+network — no byte-count or link-speed observation was retained, so no
+transfer-volume figure is claimed); steady-state per-case wall times
 retained in run JSONs (e.g. case-4096 ~28 s prefill-dominated).
 
 Negative controls
