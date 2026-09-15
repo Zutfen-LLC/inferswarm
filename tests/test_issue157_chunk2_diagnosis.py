@@ -32,11 +32,17 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 SCRIPTS = REPO / "scripts"
-FREETOKEN = Path("/srv/inferswarm/repos/FreeToken")
+# This is an optional, host-local producer checkout.  Keep the historical
+# default for operators who retain it there, but let another checkout be named
+# explicitly and treat an unreadable optional checkout exactly like an absent
+# one.  A present, readable checkout is still checked strictly below.
+FREETOKEN = Path(os.environ.get(
+    "INFERSWARM_FREETOKEN_ROOT", "/srv/inferswarm/repos/FreeToken"))
 
 sys.path.insert(0, str(SCRIPTS))
 
@@ -45,12 +51,23 @@ def _src(name: str) -> str:
     return (SCRIPTS / name).read_text()
 
 
+def freetoken_tree_available(path: Path) -> bool:
+    """Whether an optional producer tree can be inspected on this host."""
+    try:
+        return path.is_dir()
+    except OSError:
+        # A host-local resource outside this repository can be inaccessible
+        # (for example, when an enclosing directory is mode 0700).  It is not
+        # an evidence failure unless the caller explicitly supplies it.
+        return False
+
+
 class TestOffByDefault(unittest.TestCase):
     """Instrumentation must be unreachable from ordinary execution."""
 
     def test_producer_tree_has_no_issue157_references(self):
         """The frozen producer never mentions the #157 instrumentation."""
-        if not FREETOKEN.is_dir():
+        if not freetoken_tree_available(FREETOKEN):
             self.skipTest("producer checkout not present on this host")
         hits = subprocess.run(
             ["grep", "-r", "issue157", str(FREETOKEN / "benchmarks"),
@@ -104,6 +121,10 @@ class TestOffByDefault(unittest.TestCase):
         self.assertIn("ISSUE157_STAGE_INSTRUMENT", src)
         self.assertIn('_MARKER = "benchmarks.inferswarm_r6.stage_runtime"',
                       src)
+
+    def test_inaccessible_optional_producer_checkout_skips_cleanly(self):
+        with mock.patch.object(Path, "is_dir", side_effect=PermissionError):
+            self.assertFalse(freetoken_tree_available(Path("/unreadable")))
 
 
 class TestBindingAnchors(unittest.TestCase):
