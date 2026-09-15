@@ -151,22 +151,39 @@ def check_capture(rec, case, arm, inputs, tf=False):
             if anc.returncode != 0:
                 p.append("capture head is not an ancestor of HEAD")
             else:
+                # Fail-closed INVERSION (accepted R8-D v2
+                # CORRECTNESS_PREFIXES pattern): a descendant HEAD may
+                # advance freely (CI merge commits, registration,
+                # unrelated mainline work) BUT any change INSIDE a
+                # correctness-bearing prefix (the campaign's frozen
+                # producers, its accepted predecessors' authority/evidence,
+                # or the pinned run-driver bytes) invalidates captures
+                # bound to the earlier head.
                 diff = _sp.run(
                     ["git", "diff", "--name-only", cap_head, "HEAD"],
                     cwd=repo, capture_output=True,
                     text=True).stdout.split()
-                allowed_pre = (os.path.join(R8E_DIR, ""),
-                               "docs/investigations/"
-                               "qwen38-flash-next-r8-e/",
-                               "scripts/issue199", "tests/test_issue199",
-                               "scripts/plan_ci.py", "scripts/ci_groups.json",
-                               ".github/workflows/ci.yml",
-                               "tests/test_issue184_final_closure.py")
-                bad = [x for x in diff if not x.startswith(allowed_pre)]
+                correctness_pre = (
+                    "scripts/issue199_r8e_authority.py",
+                    "scripts/issue199_r8e_launch.py",
+                    "scripts/issue199_r8e_capture.py",
+                    os.path.join(R8E_DIR, "evidence/run/run-driver.sh"),
+                    os.path.join(R8E_DIR, "evidence/run/wait_backends.sh"),
+                    os.path.join(R8E_DIR, "evidence/run/"
+                                 "stop_rpc_backends.sh"),
+                    "docs/investigations/qwen38-flash-next-r8-a/",
+                    "docs/investigations/qwen38-flash-next-r8-b/",
+                    "docs/investigations/qwen38-flash-next-r8-c/",
+                    "docs/investigations/qwen38-flash-next-r8-d/",
+                    "docs/investigations/qwen38-flash-next-r8-d-v2/")
+                bad = [x for x in diff
+                       if x.startswith(correctness_pre)]
                 if bad:
-                    p.append("post-capture-head changes outside the "
-                             "campaign namespace: " + ", ".join(bad[:3]))
-                # fall through: dirt provably confined to own evidence
+                    p.append("correctness-bearing changes after the "
+                             "capture head: " + ", ".join(bad[:3]))
+                # fall through: dirt provably confined to non-
+                # correctness-bearing additions (e.g. this campaign's
+                # own not-yet-committed evidence output)
     # non-perturbation: sampled token must equal the accepted R8-D
     # token (incremental state class only; tf rows record their own
     # tokens as retained evidence of the state-class difference)
@@ -186,6 +203,15 @@ def check_capture(rec, case, arm, inputs, tf=False):
             p.append("n_nonfinite mismatch hook vs derived bytes "
                      "(authored characterization contradicting raw "
                      "score evidence)")
+        # hook top-16 vs top16 re-derived from the retained f32 bytes
+        # (hook prints 9 significant digits; compare at that precision)
+        b16 = rec.get("top16_from_f32_bytes") or []
+        if b16:
+            h16 = row.get("top") or []
+            bad16 = any(ht != bt or abs(hv - bv) > abs(hv) * 1e-6
+                        for (ht, hv), (bt, bv) in zip(h16, b16))
+            if bad16 or len(h16) != len(b16):
+                p.append("top16 mismatch hook vs derived bytes")
     else:
         rec["_tf_note"] = ("tf state class: token equality to R8-D not "
                            "required; difference retained as evidence")

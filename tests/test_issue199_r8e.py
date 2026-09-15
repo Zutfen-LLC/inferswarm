@@ -138,10 +138,11 @@ class CaptureRecordTests(unittest.TestCase):
 
     def test_binding_blocks(self):
         inputs = A.load_decision_inputs(str(REPO))
-        import issue199_r8e_capture as C
+        import issue199_r8e_terminal_reduction as R
         for case, arm, i, rec in self._caps():
-            probs = C.verify_capture(rec, inputs)
+            probs, row = R.check_capture(rec, case, arm, inputs)
             self.assertEqual(probs, [], f"{case}/{arm}: {probs}")
+            self.assertIsNotNone(row)
 
     def test_state_class_separation(self):
         for case, arm, i, rec in self._caps():
