@@ -225,13 +225,9 @@ def verify_capture(rec, inputs):
         probs.append("n_nonfinite mismatch hook vs derived bytes")
     # 4. top16 agreement hook vs bytes
     if tgt and rec["top16_from_f32_bytes"]:
-        # hook prints 9 significant digits; f32 bytes carry the exact
-        # float — compare ids exactly and values to hook precision
-        h = tgt[0]["top"]
-        b = rec["top16_from_f32_bytes"]
-        bad = any(ht != bt or abs(hv - bv) > abs(hv) * 1e-6
-                  for (ht, hv), (bt, bv) in zip(h, b))
-        if bad:
+        h = [[t, round(v, 6)] for t, v in tgt[0]["top"]]
+        b = [[t, round(v, 6)] for t, v in rec["top16_from_f32_bytes"]]
+        if h != b:
             probs.append("top16 mismatch hook vs derived bytes")
     # 5. no forbidden request keys
     req = json.loads(base64.b64decode(rec["request_body_b64"]))
