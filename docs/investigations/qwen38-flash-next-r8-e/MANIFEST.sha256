@@ -1,4 +1,4 @@
-27e2c76c03a9f48c645f91c0fa386b0913b8fe284e690f9119c87f561168fbe9  docs/investigations/qwen38-flash-next-r8-e/README.md
+98a9790cb9fa10accce19c3c9e204405455350956a25e1dec9ba017a434bfe2e  docs/investigations/qwen38-flash-next-r8-e/README.md
 058674419daa1189b25b80e99278001e437827a97c9a2d68ed7e24f03df0d659  docs/investigations/qwen38-flash-next-r8-e/evidence/instrumentation/applied-source.patch
 52c311b319a08c0a4ff4b66b446d9f164d064a0049b57cc25d81b89aaf5e414f  docs/investigations/qwen38-flash-next-r8-e/evidence/instrumentation/apply_hook.py
 0a77026cae1380fe702a304f0dfdb3fb5c5c70c0a9c756f19feb8dc10704df98  docs/investigations/qwen38-flash-next-r8-e/evidence/instrumentation/instrumentation.json

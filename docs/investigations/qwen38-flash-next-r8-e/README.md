@@ -135,3 +135,14 @@ requalification of R8-D (its FAIL stands unchanged); no serving
 integration; no production readiness; characterization scoped to the
 pinned build/model/topology and the two decision points; no successor
 issue created or executed in this campaign.
+
+Local full-suite runner isolation anomaly (documented, pre-existing)
+-------------------------------------------------------------------
+scripts/run_full_cpu_suite.py on BOTH the campaign head and origin/main
+f142a0d (verified in a scratch worktree, same .venv) reports the same
+three test_issue193_r8c.TestNegativeControls errors in the parallel
+population task (task 5). The identical module set runs green in a
+single process (626 tests OK) and the modules pass under the hosted
+vulkan-v0-b CI group on the exact final head. This is the known local
+parallel-runner isolation anomaly class, pre-existing on main, not a
+regression of this campaign; no test was weakened.
