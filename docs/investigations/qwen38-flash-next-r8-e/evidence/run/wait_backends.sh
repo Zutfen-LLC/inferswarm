@@ -6,12 +6,18 @@
 set -euo pipefail
 for EP in 10.0.0.219:50052 10.0.0.219:50053 10.0.0.204:50052; do
   H=${EP%:*}; P=${EP#*:}
+  ok=""
   for I in $(seq 1 100); do
     if timeout 3 bash -c "echo > /dev/tcp/$H/$P" 2>/dev/null; then
-      echo "$EP reachable"; break
+      ok=1
+      break
     fi
     sleep 3
-    [ "$I" = 100 ] && { echo "$EP NOT reachable"; exit 1; }
+  done
+  if [ -z "$ok" ]; then
+    echo "$EP NOT reachable"
+    exit 1
   fi
+  echo "$EP reachable"
 done
 echo BACKENDS_REACHABLE

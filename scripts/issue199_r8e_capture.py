@@ -53,6 +53,18 @@ DECISION_POINTS = {
     "case-4096": {"prefix": [],            "pos": 0},
 }
 
+# state class selection: "incremental" (decision-faithful: original
+# accepted prompt, hook observes the target generated position during
+# the byte-identical-to-R8-D incremental decode) or "tf" (Issue #199
+# Phase-2 teacher-forced construction: prompt + accepted common prefix
+# prefilled, first sampled position observed). PHYSICAL FINDING
+# (pre-freeze smoke, 2026-09-15): the case-256 fixture prompt is a
+# repeating pattern; under tf prefill the reference emits 34227 at the
+# observed position, NOT the accepted 271 — the accepted 271 arises
+# from incremental decode numerics. tf rows are therefore retained as a
+# separate state class and never substitute for incremental rows.
+DECISION_MODE = "incremental"
+
 PORTS = {"reference": 8331, "candidate": 8333}
 
 
@@ -79,7 +91,13 @@ def producer_sha():
 def send_capture(arm, case, inputs, out_dir, label, binary_env=None):
     """One request against a running server; capture + retain evidence."""
     dp = DECISION_POINTS[case]
-    prompt = list(inputs[case][arm]["prompt_token_ids"]) + list(dp["prefix"])
+    if DECISION_MODE == "tf":
+        prompt = list(inputs[case][arm]["prompt_token_ids"]) + \
+            list(dp["prefix"])
+        observe_pos = 0
+    else:
+        prompt = list(inputs[case][arm]["prompt_token_ids"])
+        observe_pos = dp["pos"]
     body = serialize_request(prompt)
     url = f"http://127.0.0.1:{PORTS[arm]}/completion"
     req = urllib.request.Request(
@@ -102,7 +120,7 @@ def send_capture(arm, case, inputs, out_dir, label, binary_env=None):
             if line:
                 rows.append(json.loads(line))
     # float32 row at target position
-    f32_path = obs_path + f".pos{dp['pos']}.f32"
+    f32_path = obs_path + f".pos{observe_pos}.f32"
     row_b = open(f32_path, "rb").read() if os.path.exists(f32_path) else b""
     # derived stats from retained bytes (never from C++)
     import struct
@@ -127,7 +145,7 @@ def send_capture(arm, case, inputs, out_dir, label, binary_env=None):
         "arm": arm,
         "case": case,
         "label": label,
-        "generated_position_observed": dp["pos"],
+        "generated_position_observed": observe_pos,
         "teacher_forced_prefix": list(dp["prefix"]),
         "prompt_token_count": len(prompt),
         "prompt_sha256": sha_b(json.dumps(prompt).encode()),
@@ -148,7 +166,7 @@ def send_capture(arm, case, inputs, out_dir, label, binary_env=None):
         } if row_sha else None,
         "top16_from_f32_bytes": top16_from_bytes,
         "binding": {
-            "case": case, "arm": arm, "generated_position": dp["pos"],
+            "case": case, "arm": arm, "generated_position": observe_pos,
             "prompt_token_count": len(prompt),
             "prompt_sha256": sha_b(json.dumps(prompt).encode()),
             "request_sha256": sha_b(body),
@@ -163,7 +181,7 @@ def send_capture(arm, case, inputs, out_dir, label, binary_env=None):
     }
     # retain the float32 bytes themselves under evidence/
     if row_b:
-        with open(os.path.join(out_dir, f"row-{label}.pos{dp['pos']}.f32"),
+        with open(os.path.join(out_dir, f"row-{label}.pos{observe_pos}.f32"),
                   "wb") as fh:
             fh.write(row_b)
     return rec
@@ -175,26 +193,30 @@ def verify_capture(rec, inputs):
     probs = []
     case, arm = rec["case"], rec["arm"]
     dp = DECISION_POINTS[case]
-    # 1. teacher-forced identity against accepted bytes
-    exp_prompt = list(inputs[case][arm]["prompt_token_ids"]) + list(dp["prefix"])
+    if rec.get("state_class") == "tf":
+        pos = 0
+        exp_prompt = list(inputs[case][arm]["prompt_token_ids"]) + \
+            list(dp["prefix"])
+    else:
+        pos = dp["pos"]
+        exp_prompt = list(inputs[case][arm]["prompt_token_ids"])
     got_prompt = json.loads(base64.b64decode(rec["request_body_b64"]))["prompt"]
     if got_prompt != exp_prompt:
-        probs.append("request prompt != teacher-forced accepted state")
+        probs.append("request prompt != accepted state "
+                     f"({'tf' if pos == 0 and rec.get('state_class') == 'tf' else 'incremental'})")
     # 2. token-position binding
-    tgt = [r for r in rec["hook_rows"] if r["pos"] == dp["pos"]]
+    tgt = [r for r in rec["hook_rows"] if r["pos"] == pos]
     if not tgt:
-        probs.append(f"no hook row at generated position {dp['pos']}")
+        probs.append(f"no hook row at generated position {pos}")
     else:
         r0 = tgt[0]
         if r0["n_vocab"] != rec["f32_row_floats"]:
             probs.append("hook n_vocab != f32 row floats")
-        if r0["tok"] != (rec["response_generated_tokens"] or [None])[dp["pos"]
-                                                                    if dp["pos"] < len(rec["response_generated_tokens"] or []) else 0]:
-            # sampled token at the observed position must equal the
-            # response token at the same position
-            gt = rec["response_generated_tokens"]
-            if dp["pos"] >= len(gt) or r0["tok"] != gt[dp["pos"]]:
-                probs.append("hook tok != response token at observed position")
+        gt = rec["response_generated_tokens"] or []
+        # sampled token at the observed position must equal the
+        # response token at the same position
+        if pos >= len(gt) or r0["tok"] != gt[pos]:
+            probs.append("hook tok != response token at observed position")
     # 3. row stats consistency
     if rec["f32_row_stats"] is None:
         probs.append("no f32 row retained at target position")
@@ -220,7 +242,18 @@ def main():
     ap.add_argument("--arm", required=True,
                     choices=["reference", "candidate"])
     ap.add_argument("--case", required=True, choices=CASES)
-    ap.add_argument("--mode", default="obs", choices=["obs", "accepted"])
+    ap.add_argument("--mode", default="obs",
+                    choices=["obs", "accepted"])
+    ap.add_argument("--state", default="incremental",
+                    choices=["incremental", "tf"],
+                    help="incremental: original accepted prompt, "
+                         "n_predict=8, hook observes every generated "
+                         "position (byte-identical execution to R8-D; "
+                         "decision-faithful). tf: teacher-forced prompt "
+                         "= prompt + accepted common prefix (Issue #199 "
+                         "Phase-2 construction; observed as a separate "
+                         "state class, never substituted for the "
+                         "decision-faithful row).")
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--label", required=True)
     a = ap.parse_args()
@@ -240,11 +273,14 @@ def main():
         # NOTE: env vars must be set in the SERVER process; the caller
         # launches the server with these. Here we only record the
         # intended observation path for the record.
+    global DECISION_MODE
+    DECISION_MODE = a.state
     rec = send_capture(a.arm, a.case, inputs, a.out_dir, a.label, env)
     head, clean = git_state()
     rec["git_head"] = head
     rec["git_clean"] = clean
     rec["mode"] = a.mode
+    rec["state_class"] = a.state
     probs = verify_capture(rec, inputs)
     rec["capture_problems"] = probs
     out = os.path.join(a.out_dir, f"capture-{a.label}.json")

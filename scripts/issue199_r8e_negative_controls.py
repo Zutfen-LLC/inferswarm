@@ -116,7 +116,7 @@ def main():
         C256 = "reference"
         cap = lambda arm, i: os.path.join(  # noqa: E731
             R8E_DIR, "evidence/observations",
-            f"capture-case-256-{arm}-obs{i}.json")
+            f"capture-case-256-{arm}-obs{i}.json")  # incremental state
 
         # NC1 wrong predecessor identity: corrupt an R8-D v2 evidence
         # byte covered by its manifest

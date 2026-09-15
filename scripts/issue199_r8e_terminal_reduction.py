@@ -83,8 +83,13 @@ def logit_of(row, tok):
     return None
 
 
-def check_capture(rec, case, arm, inputs):
-    """Fail-closed identity/binding checks on one capture record."""
+def check_capture(rec, case, arm, inputs, tf=False):
+    """Fail-closed identity/binding checks on one capture record.
+    tf=True: teacher-forced state class (pos 0 observed, tf prefix in
+    the request); the accepted-next-token equality is NOT required for
+    tf rows (physically they legitimately differ — recorded, and that
+    difference is itself retained evidence), but all binding checks
+    still apply."""
     p = []
     if rec.get("schema") != "inferswarm.issue199.observation/1":
         p.append("wrong schema")
@@ -92,7 +97,14 @@ def check_capture(rec, case, arm, inputs):
         p.append("wrong campaign")
     if rec.get("case") != case or rec.get("arm") != arm:
         p.append("case/arm mismatch")
-    pos = DECISION_POS[case]
+    if tf:
+        if rec.get("state_class") != "tf":
+            p.append("tf capture not labeled state_class=tf")
+        pos = 0
+    else:
+        if rec.get("state_class") not in (None, "incremental"):
+            p.append("capture state_class is not incremental")
+        pos = DECISION_POS[case]
     row = hook_row(rec, pos)
     if row is None:
         p.append(f"no hook row at generated position {pos} "
@@ -104,24 +116,34 @@ def check_capture(rec, case, arm, inputs):
     if b.get("generated_position") != pos or b.get("case") != case or \
             b.get("arm") != arm:
         p.append("binding block missing/misaligned")
-    # teacher-forced prompt identity (accepted bytes)
-    dp_prefix = rec.get("teacher_forced_prefix")
-    exp_prompt = list(inputs[case][arm]["prompt_token_ids"]) + \
-        list(dp_prefix or [])
+    # prompt identity (accepted bytes)
+    dp_prefix = rec.get("teacher_forced_prefix") or []
+    if tf:
+        exp_prompt = list(inputs[case][arm]["prompt_token_ids"]) + \
+            list(dp_prefix)
+    else:
+        exp_prompt = list(inputs[case][arm]["prompt_token_ids"])
     req = json.loads(__import__("base64").b64decode(
         rec["request_body_b64"]))
     if req.get("prompt") != exp_prompt:
-        p.append("request prompt != teacher-forced accepted state")
+        p.append("request prompt != accepted state (wrong case prompt "
+                 "or teacher-forced prefix)")
     if not rec.get("git_clean"):
         p.append("captured with dirty worktree")
-    # non-perturbation: sampled token must equal the accepted R8-D token
+    # non-perturbation: sampled token must equal the accepted R8-D
+    # token (incremental state class only; tf rows record their own
+    # tokens as retained evidence of the state-class difference)
     exp_tok = ACCEPTED_NEXT[(case, arm)]
     gt = rec.get("response_generated_tokens") or []
-    if pos >= len(gt) or gt[pos] != exp_tok:
-        p.append(f"response token at pos {pos} != accepted R8-D token "
-                 f"{exp_tok} (perturbing observation path)")
-    if row["tok"] != exp_tok:
-        p.append("hook tok != accepted R8-D token")
+    if not tf:
+        if pos >= len(gt) or gt[pos] != exp_tok:
+            p.append(f"response token at pos {pos} != accepted R8-D "
+                     f"token {exp_tok} (perturbing observation path)")
+        if row["tok"] != exp_tok:
+            p.append("hook tok != accepted R8-D token")
+    else:
+        rec["_tf_note"] = ("tf state class: token equality to R8-D not "
+                           "required; difference retained as evidence")
     return p, row
 
 
@@ -211,9 +233,17 @@ def derive(area_override=None):
         checks["instrumentation_record_present"] = False
         problems.append("instrumentation record missing")
 
-    # 2. captures: 2 cases x 2 arms x >=2 repeats, obs mode
+    # 2. captures: 2 cases x 2 arms x >=2 repeats, obs mode.
+    # Decision-faithful evidence = incremental state class (original
+    # accepted prompt; hook observes the target position during the
+    # byte-identical-to-R8-D decode). tf (teacher-forced) captures are
+    # retained as a SEPARATE state class: the physical pre-freeze smoke
+    # proved the case-256 tf construction does NOT reproduce the R8-D
+    # decision computation (reference emits 34227, not 271, under tf
+    # prefill), so tf rows can never substitute for incremental rows.
     views = {}
     stability = {}
+    tf_views = {}
     for case in CASES:
         for arm in ("reference", "candidate"):
             recs = []
@@ -225,6 +255,11 @@ def derive(area_override=None):
                     rec = load(rel)
                 except FileNotFoundError:
                     problems.append("missing capture " + rel)
+                    continue
+                if rec.get("state_class") != "incremental":
+                    problems.append(
+                        f"{case}/{arm}/obs{i}: decision-faithful capture "
+                        "is not incremental state class")
                     continue
                 p, row = check_capture(rec, case, arm, inputs)
                 if p:
@@ -248,6 +283,30 @@ def derive(area_override=None):
                 problems.append(
                     f"{case}/{arm}: repeat logits-row instability")
             views[(case, arm)] = arm_view(row1, FOCUS_TOKENS[case])
+
+    # 2b. teacher-forced captures (separate state class; informational,
+    # must be internally valid + stable but never gates the terminal)
+    for case in CASES:
+        for arm in ("reference", "candidate"):
+            recs = []
+            for i in (1, 2):
+                rel = os.path.join(
+                    R8E_DIR, "evidence", "observations-tf",
+                    f"capture-{case}-{arm}-tf{i}.json")
+                try:
+                    rec = load(rel)
+                except FileNotFoundError:
+                    continue
+                p, row = check_capture(rec, case, arm, inputs,
+                                       tf=True)
+                if p:
+                    problems.append(f"tf {case}/{arm}/tf{i}: " +
+                                    "; ".join(p))
+                    continue
+                recs.append((rec, row))
+            if len(recs) == 2:
+                tf_views[(case, arm)] = arm_view(recs[0][1],
+                                                 FOCUS_TOKENS[case])
 
     # 3. non-perturbation controls (accepted binary, both arms, both cases)
     for case in CASES:
@@ -301,6 +360,7 @@ def derive(area_override=None):
         "problems": problems,
         "stability": stability,
         "per_case": per_case,
+        "tf_views": {f"{c}/{a}": v for (c, a), v in tf_views.items()},
         "accepted_predecessor_terminal": R8D_V2_TERMINAL,
     }
 
