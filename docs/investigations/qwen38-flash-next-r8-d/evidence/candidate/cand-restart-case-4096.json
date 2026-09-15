@@ -1,0 +1,43 @@
+{
+  "base_url": "http://127.0.0.1:8323",
+  "campaign": "issue195-r8d-true-greedy-requal-v1",
+  "fixture_sha_note": "accepted R8-B fixture ladder consumed verbatim: docs/investigations/qwen38-flash-next-r8-b/evidence/reference/fixture-ladder.json",
+  "label": "cand-restart-case-4096",
+  "request_contract": {
+    "cache_prompt": false,
+    "n_predict": 8,
+    "return_tokens": true,
+    "samplers": [
+      "top_k"
+    ],
+    "seed": 0,
+    "stream": false,
+    "temperature": 0.0,
+    "top_k": 1
+  },
+  "results": [
+    {
+      "case_id": "case-4096",
+      "generated_text": "",
+      "generated_tokens": [
+        248046
+      ],
+      "prompt_len": 4097,
+      "stop_type": "eos",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 0.001,
+        "predicted_n": 1,
+        "predicted_per_second": 0.0,
+        "predicted_per_token_ms": 0.0,
+        "prompt_ms": 26518.521,
+        "prompt_n": 4097,
+        "prompt_per_second": 154.49579559885711,
+        "prompt_per_token_ms": 6.4726680497925315
+      },
+      "wall_s": 27.485
+    }
+  ],
+  "schema": "inferswarm.issue195.ladder-run/1"
+}

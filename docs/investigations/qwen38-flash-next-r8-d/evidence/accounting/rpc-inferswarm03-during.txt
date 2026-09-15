@@ -1,0 +1,21 @@
+=== inferswarm03 rpc pid=3200 2026-09-15T15:35:38Z ===
+VmRSS:	  379224 kB
+Rss: 298404 kB
+Pss_Dirty: 148944 kB
+Pss: 245543 kB
+GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176, 7875 MiB
+GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0, 6911 MiB
+=== inferswarm03 rpc pid=3201 2026-09-15T15:35:39Z ===
+VmRSS:	  384196 kB
+Rss: 303376 kB
+Pss_Dirty: 153860 kB
+Pss: 250525 kB
+GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176, 7875 MiB
+GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0, 6911 MiB
+=== inferswarm03 rpc pid=3304 2026-09-15T15:35:39Z ===
+VmRSS:	    3424 kB
+Rss: 3424 kB
+Pss_Dirty: 272 kB
+Pss: 941 kB
+GPU-e1f2f90c-49ab-2689-0cf1-e5d9da520176, 7875 MiB
+GPU-a57bd3fb-c072-67ed-166c-ce52cf504ac0, 6911 MiB

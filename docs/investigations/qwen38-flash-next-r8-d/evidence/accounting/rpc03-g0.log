@@ -1,0 +1,68 @@
+ggml_cuda_init: found 1 CUDA devices (Total VRAM: 11962 MiB):
+  Device 0: NVIDIA GeForce RTX 3060, compute capability 8.6, VMM: yes, VRAM: 11962 MiB
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+WARNING: Host ('0.0.0.0') is != '127.0.0.1'
+         Never expose the RPC server to an open network!
+         This is an experimental feature and is not secure!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Starting RPC server v6.0.0
+  endpoint       : 0.0.0.0:50052
+  local cache    : n/a
+Devices:
+  CUDA0: NVIDIA GeForce RTX 3060 (11962 MiB, 11849 MiB free)
+  transport      : TCP
+Accepted client connection
+Client connection closed
+Accepted client connection
+Client connection closed
+Accepted client connection
+Client connection closed
+Accepted client connection
+Client connection closed
+Accepted client connection
+Client connection closed
+Accepted client connection
+Client connection closed
+Accepted client connection
+Client connection closed
+Accepted client connection
+Client connection closed
+Accepted client connection
+Client connection closed
+Accepted client connection
+Client connection closed
+Accepted client connection
+Client connection closed
+Accepted client connection
+Client connection closed
+Accepted client connection
+Client connection closed
+Accepted client connection
+ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+ggml_backend_cuda_graph_compute: CUDA graph warmup complete
+ggml_backend_cuda_graph_compute: CUDA graph warmup reset
+Client connection closed

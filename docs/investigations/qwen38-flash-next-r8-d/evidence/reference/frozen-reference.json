@@ -1,0 +1,84 @@
+{
+  "cases": {
+    "case-1024": {
+      "generated_tokens": [
+        561,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        18030,
+        16382
+      ],
+      "prompt_len": 1022,
+      "stop_type": "limit",
+      "stopping_word": ""
+    },
+    "case-256": {
+      "generated_tokens": [
+        561,
+        324,
+        55965,
+        51624,
+        29014,
+        271,
+        248068,
+        271
+      ],
+      "prompt_len": 256,
+      "stop_type": "limit",
+      "stopping_word": ""
+    },
+    "case-3072": {
+      "generated_tokens": [
+        328,
+        760,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        18030
+      ],
+      "prompt_len": 3077,
+      "stop_type": "limit",
+      "stopping_word": ""
+    },
+    "case-4096": {
+      "generated_tokens": [
+        328,
+        760,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        18030
+      ],
+      "prompt_len": 4097,
+      "stop_type": "limit",
+      "stopping_word": ""
+    }
+  },
+  "deterministic_3x": true,
+  "frozen_before_candidate_output": true,
+  "request_contract": {
+    "cache_prompt": false,
+    "n_predict": 8,
+    "return_tokens": true,
+    "samplers": [
+      "top_k"
+    ],
+    "seed": 0,
+    "stream": false,
+    "temperature": 0.0,
+    "top_k": 1
+  },
+  "run_files": [
+    "reference/ref-run-1.json",
+    "reference/ref-run-2.json",
+    "reference/ref-run-3.json"
+  ],
+  "schema": "inferswarm.issue195.frozen-reference/1"
+}

@@ -1,0 +1,131 @@
+{
+  "backbone_mib": 41368.28,
+  "campaign": "issue195-r8d-true-greedy-requal-v1",
+  "checks": {
+    "all_cases_token_exact": false,
+    "backbone_on_intended_devices": true,
+    "binaries_pinned_all_hosts": true,
+    "candidate_deterministic_3x": true,
+    "fixture_identity_exact": true,
+    "legacy_greedy_negative_control_noncanonical": true,
+    "no_fallback_wrong_device": true,
+    "no_pathological_output": true,
+    "ple_host_resident_both_arms": true,
+    "predecessor_bundles_byte_preserved": true,
+    "reference_deterministic_3x": true,
+    "reference_frozen_before_candidate": true,
+    "request_contract_unchanged_all_runs": true,
+    "restart_identity_sentinels": true,
+    "sampler_contract_proven_candidate": true,
+    "sampler_contract_proven_reference": true,
+    "sampler_contract_reproven_after_restart": true,
+    "split_all_members_exact": true,
+    "stop_semantics_equal_all_cases": false,
+    "topk_gt1_negative_control_not_true_greedy": true,
+    "topology_uuid_bdf_match": true
+  },
+  "per_case": {
+    "case-1024": {
+      "candidate_tokens": [
+        561,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        18030,
+        16382
+      ],
+      "first_divergence_position": null,
+      "reference_tokens": [
+        561,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        18030,
+        16382
+      ],
+      "stop_equal": true,
+      "token_exact": true
+    },
+    "case-256": {
+      "candidate_tokens": [
+        561,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        36165,
+        271
+      ],
+      "first_divergence_position": 5,
+      "reference_tokens": [
+        561,
+        324,
+        55965,
+        51624,
+        29014,
+        271,
+        248068,
+        271
+      ],
+      "stop_equal": true,
+      "token_exact": false
+    },
+    "case-3072": {
+      "candidate_tokens": [
+        328,
+        760,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        18030
+      ],
+      "first_divergence_position": null,
+      "reference_tokens": [
+        328,
+        760,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        18030
+      ],
+      "stop_equal": true,
+      "token_exact": true
+    },
+    "case-4096": {
+      "candidate_tokens": [
+        248046
+      ],
+      "first_divergence_position": 0,
+      "reference_tokens": [
+        328,
+        760,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        18030
+      ],
+      "stop_equal": false,
+      "token_exact": false
+    }
+  },
+  "placement_detail": {
+    "backbone_on_intended_devices": true,
+    "no_fallback_wrong_device": true,
+    "ple_host_resident_both_arms": true
+  },
+  "schema": "inferswarm.issue195.terminal-reduction/1",
+  "start_main": "f65b70970a9a10bf57bd58a902fe6e08b588c619",
+  "terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+  "terminal_basis": "valid candidate correctness output reached with per-case token/stop mismatch against the frozen true-greedy reference"
+}
