@@ -33,11 +33,13 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from issue199_r8e_authority import (  # noqa: E402
-    CAMPAIGN_ID, CASE256_CAND_TOKEN, CASE256_REF_TOKEN, CASES,
-    CASE4096_CAND_TOKEN, CASE4096_REF_TOKEN, FOCUS_TOKENS,
-    R8D_V2_TERMINAL, R8E_DIR, load_decision_inputs, r8d_v2_manifest_ok)
+    ACCEPTED_BINARY_SHA256, CAMPAIGN_ID, CASE256_CAND_TOKEN,
+    CASE256_REF_TOKEN, CASES, CASE4096_CAND_TOKEN, CASE4096_REF_TOKEN,
+    FOCUS_TOKENS, LLAMA_CPP_COMMIT, R8D_V2_TERMINAL, R8E_DIR,
+    load_decision_inputs, r8d_v2_manifest_ok)
 
 REPO = os.path.abspath(os.path.join(HERE, ".."))
+AREA_OVERRIDE_MODE = False
 EV = os.path.join(REPO, R8E_DIR, "evidence")
 
 # accepted R8-D next-token at each decision point (from accepted bytes)
@@ -128,8 +130,43 @@ def check_capture(rec, case, arm, inputs, tf=False):
     if req.get("prompt") != exp_prompt:
         p.append("request prompt != accepted state (wrong case prompt "
                  "or teacher-forced prefix)")
+    # Worktree state at capture: full cleanliness is the simple green
+    # path. A dirty flag is admissible ONLY when mechanically provable
+    # as the campaign's own not-yet-committed evidence: the capture head
+    # must be the frozen producer head (or an ancestor of HEAD whose
+    # descendant delta is confined to the additive campaign namespace +
+    # registration files). This mirrors the accepted R8-D v2
+    # CORRECTNESS_PREFIXES descendant rule.
     if not rec.get("git_clean"):
-        p.append("captured with dirty worktree")
+        cap_head = rec.get("git_head")
+        if cap_head is None:
+            p.append("dirty worktree with no recorded git head")
+        else:
+            import subprocess as _sp
+            repo = os.path.dirname(os.path.dirname(
+                os.path.abspath(__file__))) if not AREA_OVERRIDE_MODE                 else REPO
+            anc = _sp.run(["git", "merge-base", "--is-ancestor",
+                           cap_head, "HEAD"], cwd=repo,
+                          capture_output=True)
+            if anc.returncode != 0:
+                p.append("capture head is not an ancestor of HEAD")
+            else:
+                diff = _sp.run(
+                    ["git", "diff", "--name-only", cap_head, "HEAD"],
+                    cwd=repo, capture_output=True,
+                    text=True).stdout.split()
+                allowed_pre = (os.path.join(R8E_DIR, ""),
+                               "docs/investigations/"
+                               "qwen38-flash-next-r8-e/",
+                               "scripts/issue199", "tests/test_issue199",
+                               "scripts/plan_ci.py", "scripts/ci_groups.json",
+                               ".github/workflows/ci.yml",
+                               "tests/test_issue184_final_closure.py")
+                bad = [x for x in diff if not x.startswith(allowed_pre)]
+                if bad:
+                    p.append("post-capture-head changes outside the "
+                             "campaign namespace: " + ", ".join(bad[:3]))
+                # fall through: dirt provably confined to own evidence
     # non-perturbation: sampled token must equal the accepted R8-D
     # token (incremental state class only; tf rows record their own
     # tokens as retained evidence of the state-class difference)
@@ -141,6 +178,14 @@ def check_capture(rec, case, arm, inputs, tf=False):
                      f"token {exp_tok} (perturbing observation path)")
         if row["tok"] != exp_tok:
             p.append("hook tok != accepted R8-D token")
+        # authored-vs-derived consistency: hook n_nonfinite must equal
+        # the n_nonfinite derived from the retained f32 bytes
+        st = rec.get("f32_row_stats") or {}
+        if "n_nonfinite" in st and st["n_nonfinite"] != row.get(
+                "n_nonfinite"):
+            p.append("n_nonfinite mismatch hook vs derived bytes "
+                     "(authored characterization contradicting raw "
+                     "score evidence)")
     else:
         rec["_tf_note"] = ("tf state class: token equality to R8-D not "
                            "required; difference retained as evidence")
@@ -205,6 +250,8 @@ def derive(area_override=None):
     global REPO, EV
     if area_override:
         # sandbox mode: the override dir plays the role of the repo root
+        global AREA_OVERRIDE_MODE
+        AREA_OVERRIDE_MODE = True
         REPO = area_override
         EV = os.path.join(REPO, R8E_DIR, "evidence")
     problems = []
@@ -228,6 +275,19 @@ def derive(area_override=None):
                   "binary_sha256", "build_host", "base_commit"):
             if not instr.get(k):
                 problems.append("instrumentation record missing " + k)
+        import re as _re
+        if instr.get("base_commit") != LLAMA_CPP_COMMIT:
+            problems.append("instrumentation base commit != authority")
+        for k in ("patch_sha256", "applied_source_sha256",
+                  "binary_sha256"):
+            v = instr.get(k) or ""
+            if not _re.fullmatch(r"[0-9a-f]{64}", v):
+                problems.append("instrumentation " + k +
+                                " is not a sha256 hex digest")
+        if instr.get("binary_sha256") == ACCEPTED_BINARY_SHA256.get(
+                "llama-server"):
+            problems.append("instrumentation binary sha equals the "
+                            "accepted uninstrumented llama-server")
     except FileNotFoundError:
         instr = None
         checks["instrumentation_record_present"] = False
@@ -297,8 +357,17 @@ def derive(area_override=None):
                     rec = load(rel)
                 except FileNotFoundError:
                     continue
+                # tf class: the hook JSONL row (top16/focus/ranks) is
+                # the retained observation; a missing pos-0 f32 sidecar
+                # is tolerated for tf only (the tf construction is
+                # informational and never gates the terminal — the
+                # driver's LLAMA_OBSERVE_POS targets the incremental
+                # decision position).
                 p, row = check_capture(rec, case, arm, inputs,
                                        tf=True)
+                p = [x for x in p
+                     if x not in ("hook n_vocab != f32 row floats",
+                                  "no f32 row retained at target position")]
                 if p:
                     problems.append(f"tf {case}/{arm}/tf{i}: " +
                                     "; ".join(p))

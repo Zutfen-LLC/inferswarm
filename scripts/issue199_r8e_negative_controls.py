@@ -41,7 +41,10 @@ REPO = os.path.abspath(os.path.join(HERE, ".."))
 
 def sandbox(tmp):
     """Copy the evidence namespaces the reducer reads into a sandbox
-    repo-root layout."""
+    repo-root layout, then build a git repo whose history preserves the
+    capture-head -> HEAD ancestry the dirty-worktree rule proves (the
+    sandbox commits mimic the real campaign: capture head first, later
+    namespace-confined commits on top)."""
     root = os.path.join(tmp, "repo")
     for rel in (R8E_DIR, R8D_V2_DIR,
                 "docs/investigations/qwen38-flash-next-r8-a",
@@ -52,6 +55,30 @@ def sandbox(tmp):
         dst = os.path.join(root, rel)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copytree(src, dst)
+    import subprocess as sp
+    def git(*a):
+        sp.run(["git", "-C", root] + list(a), check=True,
+               capture_output=True)
+    git("init", "-q")
+    git("config", "user.email", "sandbox@invalid")
+    git("config", "user.name", "sandbox")
+    # capture head commit = the evidence as captured (pre-terminal);
+    # the terminal artifact is excluded so commit 2 is non-empty
+    term = os.path.join(root, R8E_DIR, "terminal-reduction.json")
+    term_saved = None
+    if os.path.exists(term):
+        term_saved = open(term, "rb").read()
+        os.remove(term)
+    git("add", "-A")
+    git("commit", "-q", "-m", "capture head")
+    cap_head = sp.run(["git", "-C", root, "rev-parse", "HEAD"],
+                      capture_output=True, text=True).stdout.strip()
+    # later namespace-confined commit (terminal + controls)
+    if term_saved is not None:
+        open(term, "wb").write(term_saved)
+    git("add", "-A")
+    git("commit", "-q", "-m", "terminal + controls")
+    open(os.path.join(tmp, "cap_head"), "w").write(cap_head)
     return root
 
 
@@ -72,17 +99,24 @@ def base_state(root):
 
 
 def control(root, cap_rel, mutate, expect_substr, note):
-    """One mutation on one capture record; the reducer must BLOCK."""
-    d = read_cap(root, cap_rel)
+    """One mutation on one PRISTINE capture record; the reducer must
+    BLOCK with the intended check. Exactly one mutation per control:
+    the record is snapshotted before mutation and restored after, so
+    controls never chain."""
+    fp = os.path.join(root, cap_rel)
+    pristine = open(fp, "rb").read()
+    d = json.loads(pristine)
     mutate(d)
     write_cap(root, cap_rel, d)
     r = base_state(root)
     moved = (r["terminal"] == "R8E_EVIDENCE_BLOCKED" and
              any(expect_substr in p for p in r["problems"]))
-    return {"control": note, "moved": moved,
-            "terminal": r["terminal"],
-            "matched_problem": next(
-                (p for p in r["problems"] if expect_substr in p), None)}
+    out = {"control": note, "moved": moved,
+           "terminal": r["terminal"],
+           "matched_problem": next(
+               (p for p in r["problems"] if expect_substr in p), None)}
+    open(fp, "wb").write(pristine)
+    return out
 
 
 def main():
@@ -93,6 +127,23 @@ def main():
 
     with tempfile.TemporaryDirectory() as tmp:
         root = sandbox(tmp)
+        cap_head = open(os.path.join(tmp, "cap_head")).read().strip()
+        # bind every sandboxed capture record's git head to the sandbox
+        # capture-head commit (and dirty) BEFORE the baseline reduction,
+        # so the ancestry proof is exercisable from the first derive
+        for sub in ("observations", "observations-tf", "nonperturbation"):
+            dpath = os.path.join(root, R8E_DIR, "evidence", sub)
+            if not os.path.isdir(dpath):
+                continue
+            for fn in os.listdir(dpath):
+                if not (fn.startswith("capture-") and
+                        fn.endswith(".json")):
+                    continue
+                fp = os.path.join(dpath, fn)
+                d = json.load(open(fp))
+                d["git_head"] = cap_head
+                d["git_clean"] = False  # exercise the confined-dirty rule
+                json.dump(d, open(fp, "w"), indent=2, sort_keys=True)
         base = base_state(root)
         base_terminal = base["terminal"]
         base_problems = list(base["problems"])
@@ -135,7 +186,7 @@ def main():
         ip = os.path.join(root, R8E_DIR,
                           "evidence/instrumentation/instrumentation.json")
         d = json.load(open(ip))
-        d["binary_sha256"] = "0" * 64
+        d["binary_sha256"] = "deadbeef"  # not a sha256 hex digest
         json.dump(d, open(ip, "w"), indent=2, sort_keys=True)
         r = base_state(root)
         results.append({

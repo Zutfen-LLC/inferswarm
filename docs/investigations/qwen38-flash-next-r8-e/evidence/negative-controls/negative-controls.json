@@ -1,0 +1,65 @@
+{
+  "all_moved": true,
+  "baseline_green": true,
+  "campaign": "issue199-r8e-residual-divergence",
+  "controls": [
+    {
+      "baseline_green": true,
+      "control": "baseline",
+      "problems": [],
+      "terminal": "R8E_RESIDUAL_DIVERGENCE_CHARACTERIZED"
+    },
+    {
+      "control": "NC1 wrong R8-D predecessor identity",
+      "moved": true,
+      "terminal": "R8E_EVIDENCE_BLOCKED"
+    },
+    {
+      "control": "NC2 wrong binary identity",
+      "moved": true,
+      "terminal": "R8E_EVIDENCE_BLOCKED"
+    },
+    {
+      "control": "NC3 wrong prefix",
+      "matched_problem": "case-256/reference/obs1: request prompt != accepted state (wrong case prompt or teacher-forced prefix)",
+      "moved": true,
+      "terminal": "R8E_EVIDENCE_BLOCKED"
+    },
+    {
+      "control": "NC4 placement swap",
+      "matched_problem": "case-256/reference/obs1: case/arm mismatch; binding block missing/misaligned",
+      "moved": true,
+      "terminal": "R8E_EVIDENCE_BLOCKED"
+    },
+    {
+      "control": "NC5 no position binding",
+      "matched_problem": "case-256/reference/obs1: no hook row at generated position 5 (score capture lacking token-position binding)",
+      "moved": true,
+      "terminal": "R8E_EVIDENCE_BLOCKED"
+    },
+    {
+      "control": "NC6 changed accepted token",
+      "matched_problem": "case-256/reference/obs1: response token at pos 5 != accepted R8-D token 271 (perturbing observation path); hook tok != accepted R8-D token",
+      "moved": true,
+      "terminal": "R8E_EVIDENCE_BLOCKED"
+    },
+    {
+      "control": "NC7 stale capture",
+      "matched_problem": "case-256/reference/obs1: wrong campaign; capture head is not an ancestor of HEAD",
+      "moved": true,
+      "terminal": "R8E_EVIDENCE_BLOCKED"
+    },
+    {
+      "control": "NC8 n_probs substitution",
+      "matched_problem": "case-256/reference/obs1: no hook row at generated position 5 (score capture lacking token-position binding)",
+      "moved": true,
+      "terminal": "R8E_EVIDENCE_BLOCKED"
+    },
+    {
+      "control": "NC9 authored contradiction",
+      "matched_problem": "case-256/reference/obs1: n_nonfinite mismatch hook vs derived bytes (authored characterization contradicting raw score evidence)",
+      "moved": true,
+      "terminal": "R8E_EVIDENCE_BLOCKED"
+    }
+  ]
+}

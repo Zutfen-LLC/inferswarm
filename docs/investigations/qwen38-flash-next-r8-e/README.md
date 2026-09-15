@@ -3,8 +3,51 @@ R8-E — Qwen3.8-Flash-Next residual true-greedy divergence characterization
 
 Terminal (machine-derived by scripts/issue199_r8e_terminal_reduction.py):
 
-R8E_RESIDUAL_DIVERGENCE_CHARACTERIZED | R8E_DEEPER_RUNTIME_LOCALIZATION_JUSTIFIED | R8E_EVIDENCE_BLOCKED
-(filled after reduction)
+R8E_RESIDUAL_DIVERGENCE_CHARACTERIZED
+
+Result (raw values, no post-hoc threshold)
+------------------------------------------
+case-256, generated position 5 (incremental state class, decision-faithful):
+  reference : winner 271 (logit 16.706398), runner-up 34227 (16.0985374),
+              top1-top2 margin +0.6079
+  candidate : winner 34227 (16.3057117), runner-up 271 (16.000248),
+              margin +0.3055
+  top-16 overlap 14/16; the two competing tokens are the TOP-2 in BOTH
+  arms; rank 3+ tokens agree closely (31347 13.81/13.92, 25292
+  13.65/13.64). Consistent with a narrow numerical-margin inversion
+  between otherwise coherent distributions.
+  Cross-arm logit deltas: 271: -0.706 (ref 16.706 -> cand 16.000);
+  34227: +0.207 (16.099 -> 16.306).
+  tf-state cross-check: under teacher-forced prefill the arms MIRROR
+  (reference emits 34227, candidate emits 271) — both arms sit close to
+  the 271/34227 decision boundary from opposite sides.
+
+case-4096, generated position 0 (4097-token prompt, first token):
+  reference : winner 328 (15.0245876), 561 (14.5521736), 359
+  (14.0666008), 271 (13.8466511), EOS 248046 rank 5 (13.2554426);
+              margin +0.4724
+  candidate : winner EOS 248046 (16.6363716), 328 rank 2 (15.4173584),
+              271 (14.860343), 561 (14.6030521), 359 (13.6044436);
+              margin +1.2190
+  top-16 overlap 13/16. EOS IS candidate argmax before sampling (rank 1
+  vs reference rank 5); reference winner 328 is candidate rank 2. The
+  EOS win is accompanied by a moderate top-K reorder (overlap 13/16,
+  EOS +3.38 logits cross-arm) — but the reference winner remains the
+  candidate runner-up and the familiar-token structure (328/561/359/
+  271) persists in both top-5s: consistent with a margin inversion
+  riding on a moderately shifted, still-coherent distribution rather
+  than a qualitatively different score structure.
+
+Per the frozen reducer rule (materially different score structure iff
+top-16 overlap < 12/16, or non-finite logits, or loser missing from
+the other arm's top-16 with a large gap), BOTH cases classify as
+margin-sensitive winner inversions. Deeper runtime localization is NOT
+justified by this evidence: no separately-authorized layer/state
+boundary localization issue is motivated by these two decision points.
+
+Repeat stability: every arm/case pair reproduced byte-identical float32
+logits rows (f32_row_sha256 equal across repeats) and identical token
+sequences. Non-finite counts: 0 everywhere.
 
 Accepted predecessor (immutable, consumed, never rewritten)
 -----------------------------------------------------------
