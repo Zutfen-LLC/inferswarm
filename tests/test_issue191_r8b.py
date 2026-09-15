@@ -96,6 +96,28 @@ class Issue191RetentionTests(unittest.TestCase):
         self.assertTrue(d["checks"]["negative_controls_fail_closed"])
         self.assertTrue(d["fail_basis"])
 
+    def test_manifest_pins_every_r8b_evidence_file(self):
+        import hashlib as _hl
+        rows = {}
+        for line in (R8B / "MANIFEST.sha256").read_text().splitlines():
+            if not line.strip():
+                continue
+            digest, _, rel = line.partition("  ")
+            self.assertEqual(len(digest), 64)
+            self.assertNotIn(rel.strip(), rows)  # no duplicates
+            rows[rel.strip()] = digest
+        for rel, digest in rows.items():
+            target = ROOT / rel
+            self.assertTrue(target.is_file(), rel)
+            self.assertEqual(_hl.sha256(target.read_bytes()).hexdigest(),
+                             digest, rel)
+        # manifest does not list itself and covers every file in the tree
+        self.assertNotIn(
+            "docs/investigations/qwen38-flash-next-r8-b/MANIFEST.sha256", rows)
+        on_disk = {p.relative_to(ROOT).as_posix() for p in R8B.rglob("*")
+                   if p.is_file() and p.name != "MANIFEST.sha256"}
+        self.assertEqual(on_disk, set(rows))
+
     def test_mutation_candidate_tokens_breaks_comparison(self):
         ref = load("evidence/reference/reference-run-1.json")
         cand = load("evidence/candidate/candidate-run-1.json")

@@ -1,6 +1,7 @@
 {
   "schema": "inferswarm.issue191.residency-accounting/1",
-  "collected": "2026-09-15, per-process /proc + nvidia-smi during the frozen arms; raw command outputs retained in this directory",
+  "collected": "2026-09-15, per-process /proc + nvidia-smi during the frozen arms",
+  "provenance_note": "Load-log-derived numbers (PLE lazy-read size, per-device model buffer sizes, CPU_Mapped sizes, layers offloaded) trace line-by-line to the retained reference-server.log / candidate-server.log. The per-process nvidia-smi GPU-used figures and /proc VmRSS/RssAnon/RssFile/PSS values were transcribed live over SSH during the runs and are NOT retained as raw command outputs anywhere in this directory (review finding F1, corrected claim; the original draft wrongly said raw outputs were retained here). All processes were terminated and GPUs returned to idle after the campaign, so these one-time observations cannot be recollected; they are retained as transcribed observations only. Every correctness-bearing claim (terminal, placement, token equality) rests on the retained logs and run JSONs, not on these figures.",
   "reference_arm_inferswarm01": {
     "process": "llama-server (r8b-ref, pid 3455239)",
     "placement_from_load_log": {

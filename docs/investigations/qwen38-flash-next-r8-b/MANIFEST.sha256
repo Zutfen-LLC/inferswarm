@@ -1,6 +1,6 @@
-332a7929a961cceb3f1fe23680704e47b3113ffba01b2895254d8cbad648a54c  docs/investigations/qwen38-flash-next-r8-b/README.md
+dd190600ff1c7ddaad4d1b398ab78fa6aef37ff762ec71ffcc9d834c82449ab8  docs/investigations/qwen38-flash-next-r8-b/README.md
 98b9bece42a744a82e008b8e96eb1d715023f5bf6910ce58bfc2c5f74d3e4d35  docs/investigations/qwen38-flash-next-r8-b/TOPOLOGY-FREEZE.md
-6aa5086a0fc2c55fea61065f398a788ba16f6e3d7e8ee4411808e0517cf67d53  docs/investigations/qwen38-flash-next-r8-b/evidence/accounting/residency-accounting.json
+3f0b960071a4dc1db666967d0fdbfc3176c1489a1bbb285208420d44d29ed4f5  docs/investigations/qwen38-flash-next-r8-b/evidence/accounting/residency-accounting.json
 d5e5620d01fec52d9d3132a66f427786937fe8b2db8a5cb6240306d07283ccd3  docs/investigations/qwen38-flash-next-r8-b/evidence/candidate/candidate-restart.json
 3f2fb9452bd7a36cd7b0e3338614622111314413d9e95ca90570a482dedb9394  docs/investigations/qwen38-flash-next-r8-b/evidence/candidate/candidate-run-1.json
 9f329a233d7dce3892f12207afdde131294e8530334d70b31442fd7bda56cb6e  docs/investigations/qwen38-flash-next-r8-b/evidence/candidate/candidate-run-2.json
@@ -19,5 +19,5 @@ ab4cb96c7d4c0e0fb79dcabd09c5bd0491c03ab860675e5d5240ca557c73e4a9  docs/investiga
 d21ebcae8dc1dd7b3fe907e296a994b872de04c689be1ef0e4e7bb818880b34a  docs/investigations/qwen38-flash-next-r8-b/evidence/runtime-authority/runtime-authority.json
 03d829efd259311d5319ae243910183c7efa557d1a76f3386e3c16c45a9bcbd8  docs/investigations/qwen38-flash-next-r8-b/evidence/split-identity/split-verification.json
 c38b3e3df48d8fed7a9542b1a89f5bfa0eb33d02f347c00766893b170f8440bb  docs/investigations/qwen38-flash-next-r8-b/evidence/topology-ladder/smoke-singlehost-2x3060.log
-fed39e8cb67e87f6bcc122089f734bfc5ccd56a72d692a696a7ca29508f88c49  docs/investigations/qwen38-flash-next-r8-b/producer-hashes.json
+4cc1f5c86bce25259da0affc0daf540953969624b43cb7800394db4a5ba2e0aa  docs/investigations/qwen38-flash-next-r8-b/producer-hashes.json
 40071d556332a151bf64e5bd6bfc7c8cfb9d629d865b1183d50da1806f53171f  docs/investigations/qwen38-flash-next-r8-b/terminal-reduction.json
