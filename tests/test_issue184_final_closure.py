@@ -224,6 +224,15 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue195_terminal_reduction.py",
             "scripts/issue195_negative_controls.py",
             "scripts/issue195_manifest.py",
+            # Issue #195 R8-D v2 corrected campaign (PR #197): fresh
+            # additive producer namespace, same registration pattern
+            "scripts/issue195_v2_authority.py",
+            "scripts/issue195_v2_run_ladder.py",
+            "scripts/issue195_v2_freeze_reference.py",
+            "scripts/issue195_v2_terminal_reduction.py",
+            "scripts/issue195_v2_negative_controls.py",
+            "scripts/issue195_v2_manifest.py",
+            "scripts/issue195_v2_launch.py",
             ".github/workflows/ci.yml")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)
