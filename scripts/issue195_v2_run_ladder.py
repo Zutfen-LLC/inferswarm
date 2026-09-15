@@ -131,13 +131,18 @@ def fail_closed_gate(repo):
                 problems.append(f"HEAD {head[:12]} is not a descendant of "
                                 f"reference-freeze commit {exp[:12]}")
             else:
-                # descendant: no correctness-bearing changes allowed after
-                # the refreeze commit
+                # descendant: no correctness-bearing changes allowed
+                # after the refreeze commit EXCEPT the REFREEZE.json pin
+                # file itself (which by contract is authored in the
+                # commit immediately after the pushed reference freeze
+                # and pins that commit's identity + digest)
                 diff = subprocess.run(
                     ["git", "diff", "--name-only", exp, head], cwd=repo,
                     capture_output=True, text=True).stdout.split()
                 from issue195_v2_authority import CORRECTNESS_PREFIXES
-                bad = [p for p in diff if any(
+                PIN_FILE = ("docs/investigations/qwen38-flash-next-r8-d-v2"
+                            "/evidence/reference/REFREEZE.json")
+                bad = [p for p in diff if p != PIN_FILE and any(
                     p.startswith(pre) for pre in CORRECTNESS_PREFIXES)]
                 if bad:
                     problems.append(

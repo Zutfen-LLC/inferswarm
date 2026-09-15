@@ -422,8 +422,11 @@ def check_reference_frozen_prospectively(cand_runs, rf, problems):
                 ok = False
                 continue
             diff = git("diff", "--name-only", exp_commit, head)
-            changed = [p for p in diff.stdout.split() if any(
-                p.startswith(pre) for pre in CORRECTNESS_PREFIXES)]
+            pin_file = (R8D_V2_DIR + "/evidence/reference/REFREEZE.json")
+            changed = [p for p in diff.stdout.split()
+                       if p != pin_file and any(
+                           p.startswith(pre) for pre in
+                           CORRECTNESS_PREFIXES)]
             if changed:
                 problems.append("correctness-bearing change after refreeze: "
                                 + changed[0])

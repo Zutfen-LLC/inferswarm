@@ -130,3 +130,17 @@ prerequisite prevents valid distributed correctness execution; once a
 valid candidate correctness run exists, any failed invariant
 (token/stop/placement/topology/restart/sampler/accounting/freeze) is a
 qualification FAIL; a generated mismatch may never be relabeled BLOCKED.
+
+Pin-file exemption (freeze amendment, pre-candidate)
+----------------------------------------------------
+The REFREEZE.json pin file is by contract authored in the commit
+immediately AFTER the pushed reference-freeze commit (it records that
+commit's SHA, which cannot be known before pushing). Both the candidate
+fail-closed gate and the reducer's ancestry check therefore exempt
+exactly one path — v2/evidence/reference/REFREEZE.json — from the
+"no correctness-bearing changes after the reference freeze" rule. Every
+other correctness-bearing path remains fail-closed. The reference arm
+was re-run under the amended producers before the amended freeze (the
+producer bytes changed after the first v2 authority freeze, so the
+first v2 reference attempt was superseded intra-v2; no candidate output
+existed at any point during that supersession).
