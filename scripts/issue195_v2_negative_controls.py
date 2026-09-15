@@ -76,11 +76,12 @@ def sandbox():
                 "qwen38-flash-next-r8-c"):
         shutil.copytree(os.path.join(REPO, "docs/investigations", sub),
                         os.path.join(tmp, "docs/investigations", sub))
-    # predecessor manifests pin repo files outside the investigation
-    # areas (scripts/, tests/); copy every referenced path so the
-    # predecessor checks exercise real bytes in the sandbox
+    # predecessor manifests (and the superseded v1 manifest) may pin repo
+    # files outside the investigation areas (scripts/, tests/); copy every
+    # referenced path so predecessor and v1 manifest verification exercise
+    # real bytes in the sandbox
     for area in ("qwen38-flash-next-r8-a", "qwen38-flash-next-r8-b",
-                 "qwen38-flash-next-r8-c"):
+                 "qwen38-flash-next-r8-c", "qwen38-flash-next-r8-d"):
         m = os.path.join(tmp, "docs/investigations", area, "MANIFEST.sha256")
         for line in open(m):
             line = line.strip()
@@ -160,14 +161,42 @@ def synth_green_campaign():
 
 
 def control(name, description, check_names, direction, mutate,
-            expect_terminal=None, baseline=sandbox):
+            expect_terminal=None, baseline=sandbox,
+            baseline_must_be_green=False):
+    """Run one differential control.
+
+    baseline_must_be_green marks controls whose baseline is a
+    purpose-built synthetic green campaign: before any mutation is
+    applied, the unmodified baseline reduction MUST derive
+    TERMINAL_PASS with every check green. If that precondition is
+    false the control is INVALID (and the suite fails) — a synthetic
+    "green" baseline that is not actually reducer-PASS must never be
+    used before any mutation is applied. The precondition is enforced
+    automatically for every control whose baseline is
+    synth_green_campaign.
+    """
     base = baseline()
+    if baseline is synth_green_campaign:
+        baseline_must_be_green = True
     bt, bc, err = run_reducer(base)
     if bt is None:
         RESULTS.append({"control": name, "valid": False,
                         "reason": "baseline reducer error: " + str(err)})
         shutil.rmtree(base, ignore_errors=True)
         return
+    if baseline_must_be_green:
+        not_green = ([] if bt == TERMINAL_PASS else ["terminal"]) + \
+            sorted(k for k, v in (bc or {}).items() if v is not True)
+        if not_green:
+            RESULTS.append({
+                "control": name, "valid": False,
+                "reason": "synthetic green baseline precondition false "
+                "(not reducer-PASS): " + ", ".join(not_green),
+                "baseline_terminal": bt,
+                "baseline_checks": {c: (bc or {}).get(c)
+                                    for c in check_names}})
+            shutil.rmtree(base, ignore_errors=True)
+            return
     pre_ok = True
     if direction == "flip_false":
         for c in check_names:

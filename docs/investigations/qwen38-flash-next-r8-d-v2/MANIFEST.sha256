@@ -1,5 +1,5 @@
 daafb50dd215353a1618e7b673fbc2b0d812b42fcb66a29614aa787b321d0829  docs/investigations/qwen38-flash-next-r8-d-v2/AUTHORITY-FREEZE-V2.md
-e70f82f317b70f5cdf84b765d8e9f51190da2e29c329a038cd20857bd287e607  docs/investigations/qwen38-flash-next-r8-d-v2/README.md
+63f1f54f805fc3c77a4b2aa2ea6dfbd4ddc65f37a7a866380df43bb2a26f332f  docs/investigations/qwen38-flash-next-r8-d-v2/README.md
 74f143dfcfe582415020af3e18fa61f5f37ab7edd0c6565db3be6619d870b02b  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/accounting/client-01-during.txt
 6b780f89cd58836469102db5b12f54450a3918fdd5e114706561d92f0ca545bf  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/accounting/rpc-inferswarm03-during.txt
 03ef59ab6c17545dc128507b25766f3b20c7989f045e9257bf1baa13684b3f40  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/accounting/rpc-inferswarm04-during.txt
@@ -23,7 +23,7 @@ ec657331fe92c9544ae243659a1da621ee70dc2c28e3a6d68cdb862a5ea82ac2  docs/investiga
 c1eb344c864004c32d635a805664263d5c09be47da9487c9c2a81d1c39e9c17d  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/host-inventory/inferswarm03-nvidia-smi-q.xml
 b4e3ffdb088fea01c9df345ada8003ad787dfed7e4c4b2e7e71f632531fa6a8a  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/host-inventory/inferswarm04-inventory-raw.txt
 173e27c4bdfc954cf8b5030243de474900c958b87d88f7c634c8aa8137bfe18d  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/host-inventory/inferswarm04-nvidia-smi-q.xml
-0426c9b8b1d07ef75125aa8ba77ed0af85642b85de4e2d4dc436e16ae13b01ca  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/negative-controls/negative-controls.json
+251acd2f61de54f7b6a513b982d8f99e09289fcc2fdd88908de878265c3d64d5  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/negative-controls/negative-controls.json
 3832ee2b9517e58109f04362130f938a131710f697893acd14d38a1f1b7207bc  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/reference/REFREEZE.json
 494715b986cd372a75434f0d54b33eb8c285a75e75beff22295e78aea1f31a30  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/reference/frozen-reference.json
 e75eec8e769cacbee503b4f5c4bc1600970b112a338a017793feaf79d6af188e  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/reference/ref-run-1.json

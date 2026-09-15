@@ -133,7 +133,7 @@
       "baseline_checks": {
         "candidate_topology_matches_frozen_authority": true
       },
-      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_PASS",
       "control": "NC-10",
       "description": "candidate topology differs from frozen authority",
       "differential": true,
@@ -161,7 +161,7 @@
       "baseline_checks": {
         "frozen_reference_integrity": true
       },
-      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_PASS",
       "control": "NC-12",
       "description": "post-hoc frozen-reference token mutation detected",
       "differential": true,
@@ -175,14 +175,14 @@
       "baseline_checks": {
         "all_cases_token_exact": true
       },
-      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_PASS",
       "control": "NC-13",
       "description": "authored PASS contradicting retained raw output",
       "differential": true,
       "mutated_checks": {
         "all_cases_token_exact": true
       },
-      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_PASS",
       "valid": true
     },
     {
@@ -231,7 +231,7 @@
       "baseline_checks": {
         "all_cases_token_exact": true
       },
-      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_PASS",
       "control": "NC-17",
       "description": "token mismatch on valid campaign => FAIL (not BLOCKED)",
       "differential": true,
@@ -246,7 +246,7 @@
       "baseline_checks": {
         "restart_pids_proven_gone": true
       },
-      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_PASS",
       "control": "NC-18",
       "description": "post-output restart failure => FAIL",
       "differential": true,
@@ -261,7 +261,7 @@
       "baseline_checks": {
         "sampler_contract_reproven_after_restart": true
       },
-      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_PASS",
       "control": "NC-19",
       "description": "post-output sampler reproof failure => FAIL",
       "differential": true,
@@ -276,7 +276,7 @@
       "baseline_checks": {
         "ple_host_resident_both_arms": true
       },
-      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_PASS",
       "control": "NC-20",
       "description": "post-output placement failure => FAIL",
       "differential": true,

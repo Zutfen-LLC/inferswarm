@@ -106,9 +106,15 @@ Negative controls (22, all valid)
 Differential method: unmodified baseline first; assert expected
 pre-mutation state; exactly one mutation; intended check/terminal must
 move; baseline-red invariants rejected unless a purpose-built
-synthetic green baseline is used (NC-10's v1 defect class is fixed:
-controls that were previously vacuously green on the real FAIL
-campaign now run on synthetic PASS-shaped baselines).
+synthetic green baseline is used. Correction (PR #197 final pass,
+2026-09-15): the control harness now ENFORCES the synthetic-green
+precondition — before any mutation is applied to a synthetic-green
+campaign the baseline reduction must derive TERMINAL_PASS with every
+check green, else the control is invalid and the suite fails
+(scripts/issue195_v2_negative_controls.py, control(baseline_must_be_green)).
+The sandbox also materializes every repo path referenced by the r8-a/b/c
+predecessor manifests AND the superseded v1 manifest, so predecessor
+and v1-manifest verification exercise real bytes inside the sandbox.
 NC-1 predecessor identity / NC-2 GGUF hash / NC-3 binary hash /
 NC-4 GPU UUID / NC-5 legacy-greedy mislabel / NC-6 top_k>1 mislabel /
 NC-7 missing chain => BLOCKED / NC-8 request mutation after freeze /
@@ -119,6 +125,12 @@ evidence mutation / NC-17 token mismatch => FAIL (not BLOCKED) /
 NC-18 restart failure => FAIL / NC-19 reproof failure => FAIL /
 NC-20 placement failure => FAIL / NC-S1 bare-True trap / NC-S2
 authored-verdict-never-read.
+Baseline terminals of record (regenerated negative-controls.json):
+NC-10/NC-12/NC-13/NC-17/NC-18/NC-19/NC-20 run on synthetic PASS
+baselines (baseline_terminal == ...QUALIFICATION_PASS, machine-verified
+by the precondition assert); NC-17..NC-20 each demonstrate a true
+PASS -> FAIL terminal transition; all other controls run on the real
+retained FAIL campaign bytes.
 
 Identity (re-verified fresh at v2 freeze, 2026-09-15)
 -----------------------------------------------------
@@ -148,6 +160,43 @@ Unchanged from v1: no AMD/Vulkan, no llama.cpp repair/revision change,
 no serving integration, no production readiness, FAIL scoped to the
 pinned build/model/topology/fixtures/contract. Successor work requires
 fresh issues.
+
+Mainline reconciliation during the campaign (2026-09-15)
+-------------------------------------------------------
+origin/main advanced AFTER the R8-D v2 campaign's accepted ancestor:
+- accepted R8-C ancestor (campaign base): f65b709
+  (merge of PR #194, 2026-09-15)
+- main advanced to 264aa7e0d428fbdbc37c38fbaa242da804f9155d
+  (merge of PR #198 "hardware(#196): refresh living GPU/PCIe inventory
+  for Valinor and inferswarm02", committed 2026-09-15T12:48:10-04:00;
+  content commit 9cb1970016cacea8a48dcbc68fc8621678892305,
+  2026-09-15T12:01:40-04:00).
+Changed paths in f65b709..264aa7e (complete set):
+  docs/hardware/README.md
+  docs/hardware/current-inventory/2026-09-15/README.md
+  docs/hardware/current-inventory/2026-09-15/raw/inferswarm02-console.txt
+  docs/hardware/current-inventory/2026-09-15/raw/inv-inferswarm01.txt
+  docs/hardware/current-inventory/2026-09-15/raw/inv-inferswarm03.txt
+  docs/hardware/current-inventory/2026-09-15/raw/inv-inferswarm04.txt
+  docs/hardware/current-inventory/2026-09-15/raw/valinor-console.txt
+  docs/hardware/pcie-slot-ledger.md
+  scripts/ci_groups.json
+  scripts/plan_ci.py
+  tests/test_plan_ci.py
+Applicability disposition: NON-EXECUTION-BEARING. The delta is living
+hardware inventory documentation/receipts (read-only scan captures,
+deliberately superseded by later refreshes) plus CI planner/test
+registration for those receipts. It touches no R8-D execution path,
+llama.cpp/model authority, physical topology authority, request
+producer, sampler contract, comparator, or retained v2 evidence. The
+v2 reducer's topology/identity checks bind to the campaign's own
+frozen host inventories under evidence/host-inventory/ (which remain
+byte-frozen), not to docs/hardware/current-inventory/. Therefore no
+physical rerun is required and none was performed. Reconciled by a
+normal merge commit (no rebase; refreeze/candidate git ancestry
+preserved); the merge retains both the #195 CI registration and the
+mainline #196 registration.
+No main commit later than 264aa7e existed at reconciliation time.
 
 Evidence layout
 ---------------

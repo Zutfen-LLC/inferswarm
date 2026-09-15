@@ -425,6 +425,33 @@ class TestNegativeControlsV2(unittest.TestCase):
         for c in diff:
             self.assertNotIn(c, [None])
 
+    def test_synthetic_green_controls_baseline_is_pass(self):
+        """PR #197 correction: every control whose method description
+        claims a synthetic green (PASS-shaped) baseline must actually
+        record TERMINAL_PASS as its baseline_terminal. A synthetic
+        baseline that is not reducer-PASS must never be used to
+        demonstrate a PASS -> FAIL transition (the NC-17..NC-20 vacuity
+        defect class)."""
+        p = V2_EV / "negative-controls" / "negative-controls.json"
+        if not p.exists():
+            self.skipTest("negative controls not yet run")
+        d = load(p)
+        by_id = {c["control"]: c for c in d["controls"]}
+        # controls documented as using the synthetic PASS baseline
+        synthetic = ["NC-10", "NC-12", "NC-13", "NC-17", "NC-18",
+                     "NC-19", "NC-20"]
+        for cid in synthetic:
+            self.assertIn(cid, by_id)
+            c = by_id[cid]
+            self.assertEqual(c["baseline_terminal"], A.TERMINAL_PASS,
+                             f"{cid} synthetic baseline is not reducer-PASS")
+        # the terminal-semantic controls must demonstrate PASS -> FAIL
+        for cid in ("NC-17", "NC-18", "NC-19", "NC-20"):
+            c = by_id[cid]
+            self.assertEqual(c["mutated_terminal"], A.TERMINAL_FAIL,
+                             f"{cid} must flip synthetic PASS to FAIL")
+            self.assertTrue(c["valid"])
+
 
 class TestManifestV2(unittest.TestCase):
     def test_manifest_covers_all_v2_evidence(self):
