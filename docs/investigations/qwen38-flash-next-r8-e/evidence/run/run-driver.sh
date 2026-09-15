@@ -19,12 +19,12 @@ TMP=/tmp/i199
 PY=python3
 mkdir -p $TMP $EV/observations $EV/observations-tf $EV/nonperturbation $EV/run
 
-launch_obs () {  # $1 obsfile $2 pos $3 focus $4 port $5 log $6 extra-args...
+launch_obs () {  # $1 obsfile $2 pos $3 focus $4 port $5 log $6+ extra-args...
   rm -f "$1" "$1".pos*.f32 "$5"
   LLAMA_OBSERVE_LOGITS="$1" LLAMA_OBSERVE_POS="$2" LLAMA_OBSERVE_FOCUS="$3" \
     nohup /home/hermes/llama.cpp/r8e-obs/build-obs/bin/llama-server \
     -m /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf \
-    -c 8192 --host 127.0.0.1 --port "$4" -lv 4 "${@:7}" > "$5" 2>&1 &
+    -c 8192 --host 127.0.0.1 --port "$4" -lv 4 "${@:6}" > "$5" 2>&1 &
   OBS_PID=$!
 }
 launch_accepted () {  # $1 port $2 log $3 extra-args...
