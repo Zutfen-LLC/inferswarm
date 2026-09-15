@@ -1272,6 +1272,31 @@ _R8A_AUTHORED = frozenset({
     f"{_R8A}/hardware-census.json",
     *_R8A_RAW_EVIDENCE,
 })
+_R7A = "docs/investigations/deepseek-v41-flash-r7-a"
+_R7A_TERMINAL = f"{_R7A}/terminal-reduction.json"
+_R7A_HASHES = f"{_R7A}/producer-hashes.json"
+_R7A_MANIFEST = f"{_R7A}/MANIFEST.sha256"
+_R7A_PRODUCERS = frozenset({
+    "scripts/issue187_r7a_census.py",
+    "scripts/issue187_r7a_reducer.py",
+    "scripts/issue187_r7a_manifest.py",
+    "tests/test_issue187_r7a.py",
+})
+_R7A_AUTHORED = frozenset({
+    f"{_R7A}/README.md",
+    f"{_R7A}/acceptance-validation.json",
+    f"{_R7A}/mainline-reconciliation.json",
+    f"{_R7A}/repository-inventory.json",
+    f"{_R7A}/state-inputs.json",
+    f"{_R7A}/tensor-census.json",
+    f"{_R7A}/external/LICENSE",
+    f"{_R7A}/external/README.md",
+    f"{_R7A}/external/config.json",
+    f"{_R7A}/external/tokenizer_config.json",
+    f"{_R7A}/external/model.safetensors.index.json",
+    f"{_R7A}/external/inference/config.json",
+    f"{_R7A}/external/inference/model.py",
+})
 # The additive Issue #130 successor bundle: current-finalization
 # integrity for the Issue #130 sources, never a rewrite of the closed
 # Issue #117 parent bundle (accepted at commit d1afad6, unchanged).
@@ -1519,6 +1544,33 @@ def _issue189_manifest_producer(run: StageRun, scratch: Path
     return {_R8A_MANIFEST: body.encode("utf-8")}
 
 
+def _issue187_terminal_producer(run: StageRun, scratch: Path
+                                ) -> dict[str, bytes]:
+    """Derive the offline Issue #187 R7-A terminal from retained metadata."""
+    _scripts(run.root)
+    import issue187_r7a_reducer as r7a  # noqa: PLC0415
+    document = r7a.reduction_document(run.root)
+    return {_R7A_TERMINAL: (json.dumps(document, sort_keys=True,
+                                       separators=(",", ":"))
+                            + "\n").encode("utf-8")}
+
+
+def _issue187_producer_hashes(run: StageRun, scratch: Path
+                              ) -> dict[str, bytes]:
+    """Record Issue #187 producer identities before its terminal manifest."""
+    _scripts(run.root)
+    import issue187_r7a_manifest as r7a_manifest  # noqa: PLC0415
+    return {_R7A_HASHES: r7a_manifest.producer_hash_bytes(run.root)}
+
+
+def _issue187_manifest_producer(run: StageRun, scratch: Path
+                                ) -> dict[str, bytes]:
+    """Terminal integrity manifest for the additive Issue #187 bundle."""
+    _scripts(run.root)
+    import issue187_r7a_manifest as r7a_manifest  # noqa: PLC0415
+    return {_R7A_MANIFEST: r7a_manifest.manifest_bytes(run.root)}
+
+
 def _successor_bundle_files() -> list[str]:
     return [f"{_BUNDLE_130}/parent-binding.json",
             f"{_BUNDLE_130}/producer-hashes.json",
@@ -1654,6 +1706,35 @@ def default_registry() -> tuple[Stage, ...]:
                     | {_R8A_TERMINAL, _R8A_HASHES}),
             after=frozenset({"issue189-producer-hashes"}),
             producer=_issue189_manifest_producer,
+        ),
+        Stage(
+            id="issue187-terminal",
+            kind="derived",
+            description=(
+                "Offline Issue #187 R7-A terminal reduction from the pinned "
+                "DeepSeek metadata/header census"),
+            reads=_R7A_AUTHORED | {"scripts/issue187_r7a_reducer.py"},
+            writes=frozenset({_R7A_TERMINAL}),
+            after=frozenset({"issue189-manifest"}),
+            producer=_issue187_terminal_producer,
+        ),
+        Stage(
+            id="issue187-producer-hashes",
+            kind="index",
+            description="Issue #187 census/reducer/manifest/test identity ledger",
+            reads=_R7A_PRODUCERS,
+            writes=frozenset({_R7A_HASHES}),
+            after=frozenset({"issue187-terminal"}),
+            producer=_issue187_producer_hashes,
+        ),
+        Stage(
+            id="issue187-manifest",
+            kind="terminal-manifest",
+            description="Terminal integrity manifest for the additive static Issue #187 bundle",
+            writes=frozenset({_R7A_MANIFEST}),
+            covers=_R7A_AUTHORED | _R7A_PRODUCERS | {_R7A_TERMINAL, _R7A_HASHES},
+            after=frozenset({"issue187-producer-hashes"}),
+            producer=_issue187_manifest_producer,
         ),
     )
 

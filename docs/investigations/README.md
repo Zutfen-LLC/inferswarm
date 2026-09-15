@@ -1,5 +1,7 @@
 # Investigations
 
+- [DeepSeek V4.1 Flash R7-A static census](deepseek-v41-flash-r7-a/README.md)
+
 Research inputs: feasibility studies, hardware analyses, literature notes, and
 other artifacts that *inform* InferSwarm's direction without being architecture
 contracts.
