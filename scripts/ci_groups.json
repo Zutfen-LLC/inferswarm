@@ -137,6 +137,7 @@
     "test_issue191_r8b",
     "test_issue193_r8c",
     "test_issue195_r8d",
+    "test_issue195_r8d_v2",
     "test_v0b_reduction",
     "test_v0c_canonical_run",
     "test_v0c_correctness",
@@ -272,6 +273,9 @@
    "vulkan-v0-b"
   ],
   "docs/investigations/qwen38-flash-next-r8-c/": [
+   "vulkan-v0-b"
+  ],
+  "docs/investigations/qwen38-flash-next-r8-d-v2/": [
    "vulkan-v0-b"
   ],
   "docs/investigations/qwen38-flash-next-r8-d/": [
@@ -825,6 +829,27 @@
   "scripts/issue195_terminal_reduction.py": [
    "vulkan-v0-b"
   ],
+  "scripts/issue195_v2_authority.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue195_v2_freeze_reference.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue195_v2_launch.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue195_v2_manifest.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue195_v2_negative_controls.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue195_v2_run_ladder.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue195_v2_terminal_reduction.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "vulkan-v0-b"
   ],
@@ -1042,6 +1067,9 @@
    "vulkan-v0-b"
   ],
   "tests/test_issue195_r8d.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_issue195_r8d_v2.py": [
    "vulkan-v0-b"
   ],
   "tests/test_issue35_corrections.py": [
