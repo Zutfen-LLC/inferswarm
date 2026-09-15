@@ -33,6 +33,7 @@ def load(p):
 
 def run_reducer(area=None):
     env = dict(os.environ)
+    env["I195_GIT_OVERRIDE"] = str(REPO)  # ancestry checks use real history
     if area:
         env["I195_AREA_OVERRIDE"] = str(area)
     r = subprocess.run(
@@ -288,6 +289,25 @@ class TestTerminalSemantics(unittest.TestCase):
         fr = load(area / "evidence/reference/frozen-reference.json")
         for i in (1, 2, 3):
             p = area / f"evidence/candidate/cand-run-{i}.json"
+            d = load(p)
+            for r in d["results"]:
+                fc = fr["cases"][r["case_id"]]
+                resp = json.loads(base64.b64decode(r["response_bytes_b64"]))
+                resp["tokens"] = fc["generated_tokens"]
+                resp["stop_type"] = fc["stop_type"]
+                resp["stopping_word"] = fc["stopping_word"]
+                rb = json.dumps(resp, sort_keys=True,
+                                separators=(",", ":")).encode()
+                r["response_bytes_b64"] = base64.b64encode(rb).decode()
+                r["response_sha256"] = hashlib.sha256(rb).hexdigest()
+                r["parsed_from_retained_bytes"]["generated_tokens"] = \
+                    fc["generated_tokens"]
+                r["parsed_from_retained_bytes"]["stop_type"] = fc["stop_type"]
+                r["parsed_from_retained_bytes"]["stopping_word"] = \
+                    fc["stopping_word"]
+            p.write_text(json.dumps(d, indent=2, sort_keys=True) + "\n")
+        for c in ("case-256", "case-4096"):
+            p = area / f"evidence/candidate/cand-restart-{c}.json"
             d = load(p)
             for r in d["results"]:
                 fc = fr["cases"][r["case_id"]]
