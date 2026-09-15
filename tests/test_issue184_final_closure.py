@@ -215,6 +215,9 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue191_negative_controls.py",
             "scripts/issue191_terminal_reduction.py",
             "scripts/issue191_verify_split_set.py",
+            "scripts/issue193_r8c_authority.py",
+            "scripts/issue193_phase1_reduction.py",
+            "scripts/issue193_terminal_reduction.py",
             ".github/workflows/ci.yml")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)
