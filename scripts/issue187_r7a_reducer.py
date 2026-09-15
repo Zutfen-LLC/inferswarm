@@ -12,6 +12,7 @@ AREA = "docs/investigations/deepseek-v41-flash-r7-a"
 INVENTORY = f"{AREA}/repository-inventory.json"
 CENSUS = f"{AREA}/tensor-census.json"
 STATE = f"{AREA}/state-inputs.json"
+INDEX = f"{AREA}/external/model.safetensors.index.json"
 OUTPUT = f"{AREA}/terminal-reduction.json"
 REVISION = "dba1be0a40aa45a94ad051997016db3960a90277"
 ISSUE117_CLOSURE = "f349cbdfbb20ac933447c483f855b1f501aa7a1c"
@@ -65,7 +66,8 @@ def load(root: Path, relative: str) -> dict:
 
 
 def reduction_document(root: Path = ROOT) -> dict:
-    inventory, census, state = (load(root, path) for path in (INVENTORY, CENSUS, STATE))
+    inventory, census, state, index = (load(root, path)
+                                       for path in (INVENTORY, CENSUS, STATE, INDEX))
     if any(doc.get("revision") != REVISION for doc in (inventory, census, state)):
         raise ValueError("ISSUE187_FAIL: stale external revision")
     if inventory.get("issue117_closure_ancestor") != ISSUE117_CLOSURE:
@@ -85,9 +87,22 @@ def reduction_document(root: Path = ROOT) -> dict:
         raise ValueError("ISSUE187_FAIL: tensor duplication")
     if any(row.get("shard") not in {s["path"] for s in shards} for row in tensors):
         raise ValueError("ISSUE187_FAIL: tensor references absent shard")
+    weight_map = index.get("weight_map")
+    if not isinstance(weight_map, dict) or not all(
+            isinstance(name, str) and isinstance(shard, str)
+            for name, shard in weight_map.items()):
+        raise ValueError("ISSUE187_FAIL: malformed official tensor index")
+    if set(weight_map) != set(names):
+        raise ValueError("ISSUE187_FAIL: index/header tensor population disagreement")
+    if any(weight_map[row["name"]] != row["shard"] for row in tensors):
+        raise ValueError("ISSUE187_FAIL: index/header shard mapping disagreement")
+    if census.get("index_sha256") != sha256(root / INDEX):
+        raise ValueError("ISSUE187_FAIL: stale or ambiguous official tensor index")
     tensor_bytes = sum(row.get("encoded_bytes", -1) for row in tensors)
     if tensor_bytes != census.get("tensor_encoded_bytes"):
         raise ValueError("ISSUE187_FAIL: tensor byte sum disagreement")
+    if index.get("metadata", {}).get("total_size") != tensor_bytes:
+        raise ValueError("ISSUE187_FAIL: index tensor byte sum disagreement")
     totals = census.get("state_class_totals", {})
     if sum(row.get("encoded_bytes", -1) for row in totals.values()) != tensor_bytes:
         raise ValueError("ISSUE187_FAIL: state-class byte sum disagreement")

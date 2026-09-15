@@ -18,7 +18,8 @@ class Issue187R7ATests(unittest.TestCase):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         root = Path(tmp.name)
-        for relative in (reducer.INVENTORY, reducer.CENSUS, reducer.STATE):
+        for relative in (reducer.INVENTORY, reducer.CENSUS, reducer.STATE,
+                         reducer.INDEX):
             target = root / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(reducer.ROOT / relative, target)
@@ -49,6 +50,43 @@ class Issue187R7ATests(unittest.TestCase):
         document["tensors"][1]["name"] = document["tensors"][0]["name"]
         path.write_text(json.dumps(document))
         with self.assertRaisesRegex(ValueError, "tensor duplication"):
+            reducer.reduction_document(root)
+
+    def test_omitted_tensor_fails_closed(self):
+        root = self.staged()
+        path = root / reducer.CENSUS
+        document = json.loads(path.read_text())
+        document["tensors"].pop()
+        path.write_text(json.dumps(document))
+        with self.assertRaisesRegex(ValueError, "tensor census count disagreement"):
+            reducer.reduction_document(root)
+
+    def test_inconsistent_tensor_sum_fails_closed(self):
+        root = self.staged()
+        path = root / reducer.CENSUS
+        document = json.loads(path.read_text())
+        document["tensor_encoded_bytes"] += 1
+        path.write_text(json.dumps(document))
+        with self.assertRaisesRegex(ValueError, "tensor byte sum disagreement"):
+            reducer.reduction_document(root)
+
+    def test_malformed_or_ambiguous_official_index_fails_closed(self):
+        root = self.staged()
+        path = root / reducer.INDEX
+        path.write_text("{")
+        with self.assertRaisesRegex(ValueError, "missing or malformed"):
+            reducer.reduction_document(root)
+
+        root = self.staged()
+        path = root / reducer.INDEX
+        document = json.loads(path.read_text())
+        name = next(iter(document["weight_map"]))
+        original = document["weight_map"][name]
+        document["weight_map"][name] = next(
+            shard for shard in set(document["weight_map"].values())
+            if shard != original)
+        path.write_text(json.dumps(document))
+        with self.assertRaisesRegex(ValueError, "index/header shard mapping disagreement"):
             reducer.reduction_document(root)
 
     def test_aggregate_vram_is_not_a_feasibility_claim(self):

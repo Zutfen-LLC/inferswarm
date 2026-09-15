@@ -132,7 +132,6 @@ GROUP_TEST_MODULES = {
         "test_project_status",
         "test_finalize_repository",
         "test_evidence_manifest_lifecycle",
-        "test_issue187_r7a",
         "test_issue131_cpu_test_env",
         "test_plan_ci",
         "test_run_full_cpu_suite",
@@ -195,6 +194,9 @@ GROUP_TEST_MODULES = {
     ],
     "issue-182-arm-e": [
         "test_issue182_arm_e",
+    ],
+    "issue-187-r7a": [
+        "test_issue187_r7a",
     ],
     "issue-137": [
         "test_issue137_regime4_diagnosis",
@@ -287,7 +289,7 @@ PATH_GROUPS = {
     "tests/test_finalize_repository.py": ["repo-integrity"],
     "tests/test_evidence_manifest_lifecycle.py": ["repo-integrity"],
     "tests/test_issue131_cpu_test_env.py": ["repo-integrity"],
-    "tests/test_issue187_r7a.py": ["repo-integrity"],
+    "tests/test_issue187_r7a.py": ["issue-187-r7a"],
     "scripts/bootstrap_test_env.py": ["repo-integrity"],   # + env authority -> full
     "scripts/check_test_env.py": ["repo-integrity"],       # + env authority -> full
     "requirements-test.txt": ["repo-integrity"],           # + env authority -> full
@@ -471,9 +473,9 @@ PATH_GROUPS = {
     "scripts/issue182_inventory.py": ["issue-182-arm-e"],
     "scripts/issue182_compare.py": ["issue-182-arm-e"],
     "scripts/issue182_terminal.py": ["issue-182-arm-e"],
-    "scripts/issue187_r7a_census.py": ["repo-integrity"],
-    "scripts/issue187_r7a_manifest.py": ["repo-integrity"],
-    "scripts/issue187_r7a_reducer.py": ["repo-integrity"],
+    "scripts/issue187_r7a_census.py": ["issue-187-r7a"],
+    "scripts/issue187_r7a_manifest.py": ["issue-187-r7a"],
+    "scripts/issue187_r7a_reducer.py": ["issue-187-r7a"],
     "scripts/issue182_manifest.py": ["issue-182-arm-e"],
     # Issue #137 retained evidence lives inside the #117 evidence tree;
     # the narrower #137 subtree fans out to both its semantic group and
@@ -659,7 +661,7 @@ PATH_GROUPS = {
     # Retained Phase-1 campaign evidence and placement data.
     "docs/benchmarks/results/phase1/": ["phase1-analysis"],
     "docs/investigations/data/": ["phase1-analysis"],
-    "docs/investigations/deepseek-v41-flash-r7-a/": ["repo-integrity"],
+    "docs/investigations/deepseek-v41-flash-r7-a/": ["issue-187-r7a"],
     # Phase-0 retained results: p0c-hardware-profile.json is consumed
     # by scripts/issue117_applicability.py (#117 applicability check).
     "docs/benchmarks/results/phase0/": ["issue-117-133"],
