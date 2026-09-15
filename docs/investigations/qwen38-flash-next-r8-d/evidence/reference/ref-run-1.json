@@ -1,0 +1,137 @@
+{
+  "base_url": "http://127.0.0.1:8321",
+  "campaign": "issue195-r8d-true-greedy-requal-v1",
+  "fixture_sha_note": "accepted R8-B fixture ladder consumed verbatim: docs/investigations/qwen38-flash-next-r8-b/evidence/reference/fixture-ladder.json",
+  "label": "ref-true-greedy-run1",
+  "request_contract": {
+    "cache_prompt": false,
+    "n_predict": 8,
+    "return_tokens": true,
+    "samplers": [
+      "top_k"
+    ],
+    "seed": 0,
+    "stream": false,
+    "temperature": 0.0,
+    "top_k": 1
+  },
+  "results": [
+    {
+      "case_id": "case-256",
+      "generated_text": " The lighthouse keeper counted\n\n<think>\n\n",
+      "generated_tokens": [
+        561,
+        324,
+        55965,
+        51624,
+        29014,
+        271,
+        248068,
+        271
+      ],
+      "prompt_len": 256,
+      "stop_type": "limit",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 436.891,
+        "predicted_n": 8,
+        "predicted_per_second": 16.022303045839806,
+        "predicted_per_token_ms": 62.413000000000004,
+        "prompt_ms": 3041.404,
+        "prompt_n": 256,
+        "prompt_per_second": 84.17165230268652,
+        "prompt_per_token_ms": 11.880484375
+      },
+      "wall_s": 3.621
+    },
+    {
+      "case_id": "case-1024",
+      "generated_text": " The lighthouse keeper counted forty-one waves",
+      "generated_tokens": [
+        561,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        18030,
+        16382
+      ],
+      "prompt_len": 1022,
+      "stop_type": "limit",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 500.903,
+        "predicted_n": 8,
+        "predicted_per_second": 13.974761580585461,
+        "predicted_per_token_ms": 71.55757142857144,
+        "prompt_ms": 6456.757,
+        "prompt_n": 1022,
+        "prompt_per_second": 158.28379479048075,
+        "prompt_per_token_ms": 6.317766144814089
+      },
+      "wall_s": 7.07
+    },
+    {
+      "case_id": "case-3072",
+      "generated_text": " \"The lighthouse keeper counted forty-one",
+      "generated_tokens": [
+        328,
+        760,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        18030
+      ],
+      "prompt_len": 3077,
+      "stop_type": "limit",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 435.268,
+        "predicted_n": 8,
+        "predicted_per_second": 16.082046003841313,
+        "predicted_per_token_ms": 62.18114285714285,
+        "prompt_ms": 18054.949,
+        "prompt_n": 3077,
+        "prompt_per_second": 170.42418674237183,
+        "prompt_per_token_ms": 5.867711732206695
+      },
+      "wall_s": 18.662
+    },
+    {
+      "case_id": "case-4096",
+      "generated_text": " \"The lighthouse keeper counted forty-one",
+      "generated_tokens": [
+        328,
+        760,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        18030
+      ],
+      "prompt_len": 4097,
+      "stop_type": "limit",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 441.288,
+        "predicted_n": 8,
+        "predicted_per_second": 15.862656587081453,
+        "predicted_per_token_ms": 63.04114285714286,
+        "prompt_ms": 23502.172,
+        "prompt_n": 4097,
+        "prompt_per_second": 174.32431351451262,
+        "prompt_per_token_ms": 5.736434464242128
+      },
+      "wall_s": 24.146
+    }
+  ],
+  "schema": "inferswarm.issue195.ladder-run/1"
+}

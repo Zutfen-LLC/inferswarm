@@ -1,0 +1,50 @@
+{
+  "base_url": "http://127.0.0.1:8323",
+  "campaign": "issue195-r8d-true-greedy-requal-v1",
+  "fixture_sha_note": "accepted R8-B fixture ladder consumed verbatim: docs/investigations/qwen38-flash-next-r8-b/evidence/reference/fixture-ladder.json",
+  "label": "cand-restart-case-256",
+  "request_contract": {
+    "cache_prompt": false,
+    "n_predict": 8,
+    "return_tokens": true,
+    "samplers": [
+      "top_k"
+    ],
+    "seed": 0,
+    "stream": false,
+    "temperature": 0.0,
+    "top_k": 1
+  },
+  "results": [
+    {
+      "case_id": "case-256",
+      "generated_text": " The lighthouse keeper counted forty-two\n\n",
+      "generated_tokens": [
+        561,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        36165,
+        271
+      ],
+      "prompt_len": 256,
+      "stop_type": "limit",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 398.775,
+        "predicted_n": 8,
+        "predicted_per_second": 17.55375838505423,
+        "predicted_per_token_ms": 56.96785714285714,
+        "prompt_ms": 3211.021,
+        "prompt_n": 256,
+        "prompt_per_second": 79.7254206683793,
+        "prompt_per_token_ms": 12.54305078125
+      },
+      "wall_s": 4.47
+    }
+  ],
+  "schema": "inferswarm.issue195.ladder-run/1"
+}

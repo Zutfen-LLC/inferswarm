@@ -1,0 +1,12 @@
+=== inferswarm04 rpc pid=1175844 2026-09-15T15:35:39Z ===
+VmRSS:	  778304 kB
+Rss: 778304 kB
+Pss_Dirty: 614868 kB
+Pss: 775053 kB
+GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03, 13760 MiB
+=== inferswarm04 rpc pid=1175939 2026-09-15T15:35:39Z ===
+VmRSS:	    3544 kB
+Rss: 3544 kB
+Pss_Dirty: 276 kB
+Pss: 987 kB
+GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03, 13760 MiB

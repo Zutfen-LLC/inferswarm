@@ -1,0 +1,134 @@
+{
+  "campaign": "issue195-r8d-true-greedy-requal-v2",
+  "cases": {
+    "case-1024": {
+      "generated_text": " The lighthouse keeper counted forty-one waves",
+      "generated_tokens": [
+        561,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        18030,
+        16382
+      ],
+      "prompt_token_count": 1022,
+      "prompt_token_ids_sha256": "487ce1e22b24034f316890d75385de6a41ce39011eb0a63c9fee41b2f029e9be",
+      "request_sha256_per_repeat": [
+        "dd248ee3b831d7383a47496713cb9a1968eb644439a3fd11b0d7ecafce076c9d",
+        "dd248ee3b831d7383a47496713cb9a1968eb644439a3fd11b0d7ecafce076c9d",
+        "dd248ee3b831d7383a47496713cb9a1968eb644439a3fd11b0d7ecafce076c9d"
+      ],
+      "response_sha256_per_repeat": [
+        "22f267c4b2f6187fdd36c0d0bdaddeba862b60279f92526b08c570334fb9f7c8",
+        "e63e0810bde109378e366b1711a92cf24026c4218ba07b00b117f63a011faf1a",
+        "d11fc85e3a1471802bc9f20d0bb6f9ec0a260cce819388d4a90a201801210962"
+      ],
+      "stop_type": "limit",
+      "stopping_word": ""
+    },
+    "case-256": {
+      "generated_text": " The lighthouse keeper counted\n\n<think>\n\n",
+      "generated_tokens": [
+        561,
+        324,
+        55965,
+        51624,
+        29014,
+        271,
+        248068,
+        271
+      ],
+      "prompt_token_count": 256,
+      "prompt_token_ids_sha256": "1b084ab91910b763777cef6db14dc3b8ce849fca0376ac27e855f386c2600a90",
+      "request_sha256_per_repeat": [
+        "16c315a6abe789ef86fde92a5d56fd780b56a5ff059d9568c9e26d21cfd6c6d3",
+        "16c315a6abe789ef86fde92a5d56fd780b56a5ff059d9568c9e26d21cfd6c6d3",
+        "16c315a6abe789ef86fde92a5d56fd780b56a5ff059d9568c9e26d21cfd6c6d3"
+      ],
+      "response_sha256_per_repeat": [
+        "649e0b98ac1e307df2895de8c97134ce43d3f7c1d79432ee7bf70cf418cbf94a",
+        "aa2a185e4e18b05f014ce2e5f73e4b46e162f63e71132ed8ad36b5d1f205e107",
+        "4adcf76d2f77d65eb7c7dc2e476dff7ed27228dad052b5243cc6a8af227fe9cd"
+      ],
+      "stop_type": "limit",
+      "stopping_word": ""
+    },
+    "case-3072": {
+      "generated_text": " \"The lighthouse keeper counted forty-one",
+      "generated_tokens": [
+        328,
+        760,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        18030
+      ],
+      "prompt_token_count": 3077,
+      "prompt_token_ids_sha256": "0542edaaa3f8187ce089c5b87b99ca119b59439f8381ebecf3c4838d51722c5c",
+      "request_sha256_per_repeat": [
+        "832a2065e11522d6edd12609c86e218e3b5ebd9cc5430a5fa1532878eab0ac2b",
+        "832a2065e11522d6edd12609c86e218e3b5ebd9cc5430a5fa1532878eab0ac2b",
+        "832a2065e11522d6edd12609c86e218e3b5ebd9cc5430a5fa1532878eab0ac2b"
+      ],
+      "response_sha256_per_repeat": [
+        "48d938a33d0eabf53859e31d3b16336a8a61a5bd587d2ddc4db0af9decb731c0",
+        "0af07cb9844c5b7f11bbc12af2b95fad436dbf796ffd66d27ec3f7fb7e94aef4",
+        "cbe99d31bc270450230cc460aa9d82e98b3086c7faf3e632ed05eb93c39dc520"
+      ],
+      "stop_type": "limit",
+      "stopping_word": ""
+    },
+    "case-4096": {
+      "generated_text": " \"The lighthouse keeper counted forty-one",
+      "generated_tokens": [
+        328,
+        760,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        18030
+      ],
+      "prompt_token_count": 4097,
+      "prompt_token_ids_sha256": "28d70b9cfe6b873a4c789bb8e0f947ec523c607cfb7c5015f03583e888315611",
+      "request_sha256_per_repeat": [
+        "6509bd87ac3abc7e5d3630c13ca767c1ffc257001a009f88ea38c7d418cb3039",
+        "6509bd87ac3abc7e5d3630c13ca767c1ffc257001a009f88ea38c7d418cb3039",
+        "6509bd87ac3abc7e5d3630c13ca767c1ffc257001a009f88ea38c7d418cb3039"
+      ],
+      "response_sha256_per_repeat": [
+        "71a9cbda668e43ac5504452e45115290a227f2c1516052b44781c924e0f9f191",
+        "676c114e0e9862b44419d4224225929f45e52046ae0edb5d0807e7063a6d74b7",
+        "d6af1666adc609d6f3e33d7e213f94df247196facf28edfd99d8315601d8bcf6"
+      ],
+      "stop_type": "limit",
+      "stopping_word": ""
+    }
+  },
+  "created_utc": "2026-09-15T17:10:23.019Z",
+  "determinism": "verified across 3 clean repeats per case",
+  "fixture_ladder_sha256": "419bde668c7b3cedf823c98ca0a883560a9a501007f9a28bf8d826148ee822db",
+  "reference_run_file_sha256": {
+    "ref-run-1.json": "e75eec8e769cacbee503b4f5c4bc1600970b112a338a017793feaf79d6af188e",
+    "ref-run-2.json": "e14448e9e7f69d0a6d0a3d48d8c65097fb6de0e124b748d66ff93ba4a40c89eb",
+    "ref-run-3.json": "e39538012885777df58c1de98583e0192ee8d2aa65e315a3eb3ed92269a66472"
+  },
+  "request_contract": {
+    "cache_prompt": false,
+    "n_predict": 8,
+    "return_tokens": true,
+    "samplers": [
+      "top_k"
+    ],
+    "seed": 0,
+    "stream": false,
+    "temperature": 0.0,
+    "top_k": 1
+  },
+  "schema": "inferswarm.issue195.frozen-reference/2"
+}

@@ -1,0 +1,2 @@
+1185145 760980 /home/hermes/llama.cpp/build-v041/bin/ggml-rpc-server -H 0.0.0.0 -p 50052 -d CUDA0
+0, 14464 MiB

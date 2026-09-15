@@ -1,0 +1,9 @@
+{
+  "scripts/issue195_manifest.py": "b8b141ff2ab67e6bb901becb194c32b78ae425d0eaaa2aa6fd60011acd0b9607",
+  "scripts/issue195_negative_controls.py": "1a98c99ba35a63742c0cf1d8712119f214ec0756419c9cc7c9a7373d79023864",
+  "scripts/issue195_r8d_authority.py": "c7a7821c0f93e7034ac2e3b774cc3c2229d6e8743350b61a4c19220771a07961",
+  "scripts/issue195_run_ladder.py": "f9bb5f30014a71d050933ba18973e7b18371222734967623405056b68456b175",
+  "scripts/issue195_sampler_probe.py": "f72c859a4f8df5326c390f8d0c657e6f337e9a98724cbb991fe3db1e379e8638",
+  "scripts/issue195_terminal_reduction.py": "ed54854fda34b855a837ce830b70d6699c9ebbc1851b5372925722e208d977bd",
+  "tests/test_issue195_r8d.py": "00c89be5a75e4aeab30a6505fa7ab159050b5c3c507ecf7990f7a68cd85414c7"
+}

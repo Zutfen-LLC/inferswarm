@@ -1,0 +1,28 @@
+{
+  "all_members_match_r8a_pins": true,
+  "campaign": "issue195-r8d-true-greedy-requal-v2",
+  "expected_total_bytes": 72546461344,
+  "members": [
+    {
+      "bytes": 10946624,
+      "file": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+      "matches_r8a_pin": true,
+      "sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd"
+    },
+    {
+      "bytes": 49990818368,
+      "file": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+      "matches_r8a_pin": true,
+      "sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6"
+    },
+    {
+      "bytes": 22544696352,
+      "file": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+      "matches_r8a_pin": true,
+      "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a"
+    }
+  ],
+  "method": "full sha256 on inferswarm01 at v2 freeze (2026-09-15), raw output at raw-sha256sum.txt",
+  "schema": "inferswarm.issue195.split-rehash/2",
+  "total_bytes": 72546461344
+}

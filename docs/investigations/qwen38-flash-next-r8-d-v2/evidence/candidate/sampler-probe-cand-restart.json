@@ -1,0 +1,108 @@
+{
+  "all_pass": true,
+  "base_url": "http://127.0.0.1:8323",
+  "probe_prompt_token_ids": [
+    1,
+    1501,
+    2028
+  ],
+  "schema": "inferswarm.issue195.sampler-probe/1",
+  "variants": {
+    "canonical": {
+      "classification": "TRUE_GREEDY_PROVEN",
+      "generated_tokens": [
+        507,
+        1
+      ],
+      "log_evidence": {
+        "chains": [
+          "logits -> top-k -> dist"
+        ],
+        "greedy_unresolved_warnings": 0,
+        "unresolved_warnings": 0
+      },
+      "request": {
+        "cache_prompt": false,
+        "n_predict": 2,
+        "prompt": [
+          1,
+          1501,
+          2028
+        ],
+        "return_tokens": true,
+        "samplers": [
+          "top_k"
+        ],
+        "seed": 0,
+        "stream": false,
+        "temperature": 0.0,
+        "top_k": 1
+      },
+      "wall_s": 0.227
+    },
+    "legacy": {
+      "classification": "NONCANONICAL_LEGACY_GREEDY",
+      "generated_tokens": [
+        507,
+        36316
+      ],
+      "log_evidence": {
+        "chains": [
+          "logits -> dist"
+        ],
+        "greedy_unresolved_warnings": 1,
+        "unresolved_warnings": 1
+      },
+      "request": {
+        "cache_prompt": false,
+        "n_predict": 2,
+        "prompt": [
+          1,
+          1501,
+          2028
+        ],
+        "return_tokens": true,
+        "samplers": [
+          "greedy"
+        ],
+        "seed": 0,
+        "stream": false,
+        "temperature": 0.0,
+        "top_k": 0
+      },
+      "wall_s": 0.242
+    },
+    "wide": {
+      "classification": "NOT_TRUE_GREEDY",
+      "generated_tokens": [
+        507,
+        198
+      ],
+      "log_evidence": {
+        "chains": [
+          "logits -> top-k -> dist"
+        ],
+        "greedy_unresolved_warnings": 0,
+        "unresolved_warnings": 0
+      },
+      "request": {
+        "cache_prompt": false,
+        "n_predict": 2,
+        "prompt": [
+          1,
+          1501,
+          2028
+        ],
+        "return_tokens": true,
+        "samplers": [
+          "top_k"
+        ],
+        "seed": 0,
+        "stream": false,
+        "temperature": 0.0,
+        "top_k": 4
+      },
+      "wall_s": 0.223
+    }
+  }
+}

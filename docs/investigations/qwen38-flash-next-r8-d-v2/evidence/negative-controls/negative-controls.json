@@ -1,0 +1,305 @@
+{
+  "all_valid": true,
+  "campaign": "issue195-r8d-true-greedy-requal-v2",
+  "controls": [
+    {
+      "baseline_checks": {
+        "predecessor_bundles_byte_preserved": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "control": "NC-1",
+      "description": "wrong accepted predecessor identity (R8-C manifest)",
+      "differential": true,
+      "mutated_checks": {
+        "predecessor_bundles_byte_preserved": false
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "split_all_members_exact": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "control": "NC-2",
+      "description": "changed GGUF member hash",
+      "differential": true,
+      "mutated_checks": {
+        "split_all_members_exact": false
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "binaries_pinned_all_hosts": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "control": "NC-3",
+      "description": "changed llama-server binary hash (inferswarm01)",
+      "differential": true,
+      "mutated_checks": {
+        "binaries_pinned_all_hosts": false
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "topology_uuid_bdf_match": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "control": "NC-4",
+      "description": "stale/wrong GPU UUID in inventory",
+      "differential": true,
+      "mutated_checks": {
+        "topology_uuid_bdf_match": false
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "legacy_greedy_negative_control_noncanonical": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "control": "NC-5",
+      "description": "legacy greedy variant falsely accepted as canonical",
+      "differential": true,
+      "mutated_checks": {
+        "legacy_greedy_negative_control_noncanonical": false
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "topk_gt1_negative_control_not_true_greedy": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "control": "NC-6",
+      "description": "top_k>1 falsely classified true-greedy",
+      "differential": true,
+      "mutated_checks": {
+        "topk_gt1_negative_control_not_true_greedy": false
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "sampler_contract_proven_reference": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "control": "NC-7",
+      "description": "missing sampler-chain evidence on reference probe",
+      "differential": true,
+      "expected_terminal": "R8D_EVIDENCE_BLOCKED",
+      "mutated_checks": {
+        "sampler_contract_proven_reference": false
+      },
+      "mutated_terminal": "R8D_EVIDENCE_BLOCKED",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "candidate_identity_exact": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "control": "NC-8",
+      "description": "request mutation after reference freeze (top_k->4)",
+      "differential": true,
+      "mutated_checks": {
+        "candidate_identity_exact": false
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "candidate_identity_exact": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "control": "NC-9",
+      "description": "wrong prompt token IDs actually sent",
+      "differential": true,
+      "mutated_checks": {
+        "candidate_identity_exact": false
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "candidate_topology_matches_frozen_authority": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_PASS",
+      "control": "NC-10",
+      "description": "candidate topology differs from frozen authority",
+      "differential": true,
+      "mutated_checks": {
+        "candidate_topology_matches_frozen_authority": false
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "restart_pids_proven_gone": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "control": "NC-11",
+      "description": "stale process contamination after restart (PID alive)",
+      "differential": true,
+      "mutated_checks": {
+        "restart_pids_proven_gone": false
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "frozen_reference_integrity": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_PASS",
+      "control": "NC-12",
+      "description": "post-hoc frozen-reference token mutation detected",
+      "differential": true,
+      "mutated_checks": {
+        "frozen_reference_integrity": false
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "all_cases_token_exact": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_PASS",
+      "control": "NC-13",
+      "description": "authored PASS contradicting retained raw output",
+      "differential": true,
+      "mutated_checks": {
+        "all_cases_token_exact": true
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_PASS",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "candidate_identity_exact": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "control": "NC-14",
+      "description": "n_probs present in correctness-bearing request",
+      "differential": true,
+      "mutated_checks": {
+        "candidate_identity_exact": false
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "predecessor_bundles_byte_preserved": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "control": "NC-15",
+      "description": "accepted R8-B evidence manifest mutation",
+      "differential": true,
+      "mutated_checks": {
+        "predecessor_bundles_byte_preserved": false
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "v1_evidence_byte_preserved": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "control": "NC-16",
+      "description": "actual v1 evidence byte mutation detected",
+      "differential": true,
+      "mutated_checks": {
+        "v1_evidence_byte_preserved": false
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "all_cases_token_exact": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_PASS",
+      "control": "NC-17",
+      "description": "token mismatch on valid campaign => FAIL (not BLOCKED)",
+      "differential": true,
+      "expected_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "mutated_checks": {
+        "all_cases_token_exact": false
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "restart_pids_proven_gone": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_PASS",
+      "control": "NC-18",
+      "description": "post-output restart failure => FAIL",
+      "differential": true,
+      "expected_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "mutated_checks": {
+        "restart_pids_proven_gone": false
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "sampler_contract_reproven_after_restart": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_PASS",
+      "control": "NC-19",
+      "description": "post-output sampler reproof failure => FAIL",
+      "differential": true,
+      "expected_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "mutated_checks": {
+        "sampler_contract_reproven_after_restart": false
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "valid": true
+    },
+    {
+      "baseline_checks": {
+        "ple_host_resident_both_arms": true
+      },
+      "baseline_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_PASS",
+      "control": "NC-20",
+      "description": "post-output placement failure => FAIL",
+      "differential": true,
+      "expected_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "mutated_checks": {
+        "ple_host_resident_both_arms": false
+      },
+      "mutated_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+      "valid": true
+    },
+    {
+      "control": "NC-S1",
+      "description": "no bare-True composer trap in reducer (structural AST/regex scan)",
+      "structural": true,
+      "valid": true
+    },
+    {
+      "control": "NC-S2",
+      "description": "derive() never reads any authored verdict file (structural)",
+      "structural": true,
+      "valid": true
+    }
+  ],
+  "method": "differential: unmodified baseline first; assert expected pre-mutation state; exactly one mutation; intended check/terminal must move in the intended direction; baseline-red invariants rejected unless a purpose-built synthetic green baseline is used",
+  "schema": "inferswarm.issue195.negative-controls/2"
+}

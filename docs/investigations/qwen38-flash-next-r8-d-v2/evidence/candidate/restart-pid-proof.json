@@ -1,0 +1,37 @@
+{
+  "schema": "inferswarm.issue195.pidproof/1",
+  "terminated_pids": [
+    {
+      "checked_at_utc": "2026-09-15T18:11:06Z",
+      "confirmed_gone_before_relaunch": true,
+      "host": "localhost",
+      "kill_confirmed": true,
+      "pid": 4050636,
+      "role": "candidate-client-llama-server"
+    },
+    {
+      "checked_at_utc": "2026-09-15T18:11:20Z",
+      "confirmed_gone_before_relaunch": true,
+      "host": "inferswarm03",
+      "kill_confirmed": true,
+      "pid": 32236,
+      "role": "rpc03-g0-ggml-rpc-server"
+    },
+    {
+      "checked_at_utc": "2026-09-15T18:11:20Z",
+      "confirmed_gone_before_relaunch": true,
+      "host": "inferswarm03",
+      "kill_confirmed": true,
+      "pid": 32240,
+      "role": "rpc03-g1-ggml-rpc-server"
+    },
+    {
+      "checked_at_utc": "2026-09-15T18:11:22Z",
+      "confirmed_gone_before_relaunch": true,
+      "host": "inferswarm04",
+      "kill_confirmed": true,
+      "pid": 1183031,
+      "role": "rpc04-ggml-rpc-server"
+    }
+  ]
+}

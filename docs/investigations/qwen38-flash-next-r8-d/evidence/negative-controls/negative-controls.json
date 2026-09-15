@@ -1,0 +1,82 @@
+{
+  "all_fail_closed": true,
+  "controls": [
+    {
+      "control": "NC-01",
+      "description": "candidate token mutation detected",
+      "fails_closed": true,
+      "reducer_exit": 0
+    },
+    {
+      "control": "NC-02",
+      "description": "changed GGUF member hash rejected",
+      "fails_closed": true,
+      "reducer_exit": 0
+    },
+    {
+      "control": "NC-03",
+      "description": "changed runtime binary hash rejected",
+      "fails_closed": true,
+      "reducer_exit": 0
+    },
+    {
+      "control": "NC-04",
+      "description": "stale/wrong GPU UUID rejected",
+      "fails_closed": true,
+      "reducer_exit": 0
+    },
+    {
+      "control": "NC-05",
+      "description": "missing sampler-chain evidence BLOCKED",
+      "fails_closed": true,
+      "reducer_exit": 0
+    },
+    {
+      "control": "NC-06",
+      "description": "top_k>1 cannot pass as true greedy",
+      "fails_closed": true,
+      "reducer_exit": 0
+    },
+    {
+      "control": "NC-07",
+      "description": "legacy 'greedy' cannot be mislabeled canonical",
+      "fails_closed": true,
+      "reducer_exit": 0
+    },
+    {
+      "control": "NC-08",
+      "description": "request mutation after freeze detected",
+      "fails_closed": true,
+      "reducer_exit": 0
+    },
+    {
+      "control": "NC-09",
+      "description": "restart output drift detected",
+      "fails_closed": true,
+      "reducer_exit": 0
+    },
+    {
+      "control": "NC-10",
+      "description": "post-hoc reference rewrite does not flip the comparison (comparison consumes run JSONs, not the frozen doc)",
+      "fails_closed": true,
+      "reducer_exit": 0
+    },
+    {
+      "control": "NC-11",
+      "description": "authored PASS contradicting raw output rejected (structural: reducer never reads terminal-reduction.json)",
+      "fails_closed": true,
+      "reducer_exit": 0
+    },
+    {
+      "control": "NC-12",
+      "description": "R8-B/R8-C evidence mutation detected via MANIFEST re-verification (structural: every row re-hashed)",
+      "fails_closed": true
+    },
+    {
+      "control": "NC-13",
+      "description": "no bare 'True' check constants in reducer (composer-constant trap)",
+      "fails_closed": true
+    }
+  ],
+  "schema": "inferswarm.issue195.negative-controls/1"
+}

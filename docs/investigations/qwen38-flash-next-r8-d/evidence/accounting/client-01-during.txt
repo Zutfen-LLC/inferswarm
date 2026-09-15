@@ -1,0 +1,21 @@
+=== R8-D residency capture 2026-09-15T15:35:32Z pid=3982046 ===
+VmRSS:	25386568 kB
+Rss: 25417096 kB
+Anonymous: 249600 kB
+Pss_Dirty: 273040 kB
+Pss: 25412794 kB
+Private_Dirty: 433044 kB
+Private_Clean: 25137432 kB
+Shared_Dirty: 0 kB
+Shared_Clean: 6624 kB
+7f2ce2000000-7f3024000000 ---p 00000000 00:00 0 
+7f3024600000-7f356424d000 r--s 00000000 08:11 52166663                   /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf
+7f3564400000-7f3579fbb000 r--s 00000000 08:11 52166661                   /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf
+7f3579fbb000-7f3c2e9af000 r--s 15bbb000 08:11 52166661                   /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf
+7f3c2e9af000-7f4107ef6000 r--s 6ca5af000 08:11 52166661                  /srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf
+7f4108000000-7f4108021000 rw-p 00000000 00:00 0 
+--
+7f4154021000-7f4158000000 ---p 00000000 00:00 0 
+  eno1: 107930265074 93520381    0    0    0     0          0     89902 336750886444 234822045    0    0    0     0       0          0
+GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099, 6911 MiB
+GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55, 6633 MiB
