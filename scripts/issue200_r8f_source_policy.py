@@ -189,12 +189,19 @@ def acquire_under_policy(node: Any, coordinator: Coordinator, ticket: Mapping[st
     would not: ``coordinator.validate_attempt`` is still the sole gate.
     """
     authority, record = coordinator.validate_attempt(ticket, node.node_id, source.descriptor())
-    if ticket["mode"] == "LOCAL_CACHE" or not node.cache.has_verified(record):
-        return node.acquire(coordinator, ticket, source)
-
     identity = {"attempt_digest": ticket["attempt_digest"], "artifact_id": record["artifact_id"],
                 "participant_id": ticket["participant_id"], "node_id": node.node_id,
                 "epoch": ticket["epoch"], "plan_digest": ticket["plan_digest"]}
+    if ticket["mode"] == "LOCAL_CACHE":
+        return node.acquire(coordinator, ticket, source)
+    try:
+        already_local = node.cache.has_verified(record)
+    except AcquisitionError as error:
+        node.failures.append({**identity, "reason": str(error).split(":")[0]})
+        raise
+    if not already_local:
+        return node.acquire(coordinator, ticket, source)
+
     try:
         node.cache.begin_partial(record)
         offset = 0
