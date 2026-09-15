@@ -209,6 +209,7 @@ GROUP_TEST_MODULES = {
     ],
     "vulkan-v0-b": [
         "test_issue189_r8a",
+        "test_issue191_r8b",
         "test_v0b_reduction",
         "test_v0c_canonical_run",
         "test_v0c_correctness",
@@ -544,6 +545,17 @@ PATH_GROUPS = {
     # it shares the bounded static-investigation contract with this group.
     "docs/investigations/qwen38-flash-next-r8-a/": ["vulkan-v0-b"],
     "scripts/issue189_r8a_reducer.py": ["vulkan-v0-b"],
+    # Issue #191 (R8-B) physical llama.cpp RPC qualification; evidence,
+    # producers, and its retention test form one family selecting the
+    # static/llama.cpp investigation group.
+    "docs/investigations/qwen38-flash-next-r8-b/": ["vulkan-v0-b"],
+    "scripts/issue191_r8b_authority.py": ["vulkan-v0-b"],
+    "scripts/issue191_derive_fixtures.py": ["vulkan-v0-b"],
+    "scripts/issue191_run_ladder.py": ["vulkan-v0-b"],
+    "scripts/issue191_negative_controls.py": ["vulkan-v0-b"],
+    "scripts/issue191_terminal_reduction.py": ["vulkan-v0-b"],
+    "scripts/issue191_verify_split_set.py": ["vulkan-v0-b"],
+    "tests/test_issue191_r8b.py": ["vulkan-v0-b"],
     "scripts/v0c_canonical_run.py": ["vulkan-v0-b"],
     "scripts/v0c_correctness.py": ["vulkan-v0-b"],
     "scripts/v0c_execution_seam.py": ["vulkan-v0-b"],
