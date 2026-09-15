@@ -109,7 +109,9 @@
     "test_issue99_proof",
     "test_issue101_orchestration",
     "test_issue101_proof",
-    "test_issue103_planner"
+    "test_issue103_planner",
+    "test_issue200_r8f_source_policy",
+    "test_issue200_r8f_proof"
    ]
   },
   "phase1-analysis": {
@@ -262,6 +264,9 @@
   "docs/implementation/r6-successor-dense-full-integration-117/evidence/arm-c-regime4-diagnosis-137/": [
    "issue-137",
    "issue-117-133"
+  ],
+  "docs/implementation/r8-f-local-backing-source-policy-200/": [
+   "issue-99-103"
   ],
   "docs/investigations/data/": [
    "phase1-analysis"
@@ -853,6 +858,18 @@
   "scripts/issue195_v2_terminal_reduction.py": [
    "vulkan-v0-b"
   ],
+  "scripts/issue200_r8f_fixture.py": [
+   "issue-99-103"
+  ],
+  "scripts/issue200_r8f_proof.py": [
+   "issue-99-103"
+  ],
+  "scripts/issue200_r8f_source_policy.py": [
+   "issue-99-103"
+  ],
+  "scripts/issue200_r8f_terminal_reduction.py": [
+   "issue-99-103"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "vulkan-v0-b"
   ],
@@ -1074,6 +1091,12 @@
   ],
   "tests/test_issue195_r8d_v2.py": [
    "vulkan-v0-b"
+  ],
+  "tests/test_issue200_r8f_proof.py": [
+   "issue-99-103"
+  ],
+  "tests/test_issue200_r8f_source_policy.py": [
+   "issue-99-103"
   ],
   "tests/test_issue35_corrections.py": [
    "vulkan-v0-b"
