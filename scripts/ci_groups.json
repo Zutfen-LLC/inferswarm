@@ -133,6 +133,7 @@
   },
   "vulkan-v0-b": {
    "test_modules": [
+    "test_issue189_r8a",
     "test_v0b_reduction",
     "test_v0c_canonical_run",
     "test_v0c_correctness",
@@ -259,6 +260,9 @@
    "phase1-analysis"
   ],
   "docs/investigations/link-x1-envelope/": [
+   "vulkan-v0-b"
+  ],
+  "docs/investigations/qwen38-flash-next-r8-a/": [
    "vulkan-v0-b"
   ],
   "docs/investigations/vulkan-v0-a/": [
@@ -760,6 +764,9 @@
   ],
   "scripts/issue182_terminal.py": [
    "issue-182-arm-e"
+  ],
+  "scripts/issue189_r8a_reducer.py": [
+   "vulkan-v0-b"
   ],
   "scripts/issue35_coarse_concurrent.py": [
    "vulkan-v0-b"
