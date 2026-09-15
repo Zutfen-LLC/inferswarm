@@ -100,7 +100,8 @@ hygiene, project-naming consistency, and a named list of test modules.
 
 The generated-status gate also runs `test_project_status` for documentation
 drift and authority-field separation. The separate evidence-manifest gate runs
-`test_evidence_manifest_lifecycle` and the Issue #137 bundle verifier.
+`test_evidence_manifest_lifecycle` and the Issue #137, #153, and #187 bundle
+verifiers.
 
 Every module guarding live evidence is in that list, including
 `test_issue117_physical_retention`, which runs in the issue #117 CPU-only step.

@@ -126,6 +126,7 @@
     "test_project_status",
     "test_finalize_repository",
     "test_evidence_manifest_lifecycle",
+    "test_issue187_r7a",
     "test_issue131_cpu_test_env",
     "test_plan_ci",
     "test_run_full_cpu_suite"
@@ -265,6 +266,9 @@
   ],
   "docs/investigations/data/": [
    "phase1-analysis"
+  ],
+  "docs/investigations/deepseek-v41-flash-r7-a/": [
+   "repo-integrity"
   ],
   "docs/investigations/link-x1-envelope/": [
    "vulkan-v0-b"
@@ -784,6 +788,15 @@
   "scripts/issue182_terminal.py": [
    "issue-182-arm-e"
   ],
+  "scripts/issue187_r7a_census.py": [
+   "repo-integrity"
+  ],
+  "scripts/issue187_r7a_manifest.py": [
+   "repo-integrity"
+  ],
+  "scripts/issue187_r7a_reducer.py": [
+   "repo-integrity"
+  ],
   "scripts/issue189_r8a_reducer.py": [
    "vulkan-v0-b"
   ],
@@ -1062,6 +1075,9 @@
   ],
   "tests/test_issue157_chunk2_diagnosis.py": [
    "issue-137"
+  ],
+  "tests/test_issue187_r7a.py": [
+   "repo-integrity"
   ],
   "tests/test_issue191_r8b.py": [
    "vulkan-v0-b"

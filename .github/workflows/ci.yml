@@ -173,7 +173,8 @@ jobs:
         run: |
           python3 scripts/issue137_manifest.py --check
           python3 scripts/issue153_manifest.py --check
-          python3 -m unittest tests.test_evidence_manifest_lifecycle -v
+          python3 scripts/issue187_r7a_manifest.py --check
+          python3 -m unittest tests.test_evidence_manifest_lifecycle tests.test_issue187_r7a -v
 
       - name: Check frozen Phase-0 workloads
         run: python3 scripts/check_phase0_workloads.py
