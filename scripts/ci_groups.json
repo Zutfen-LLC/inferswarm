@@ -84,6 +84,11 @@
     "test_issue182_arm_e"
    ]
   },
+  "issue-187-r7a": {
+   "test_modules": [
+    "test_issue187_r7a"
+   ]
+  },
   "issue-74-79": {
    "test_modules": [
     "test_issue74_methodology",
@@ -270,6 +275,9 @@
   ],
   "docs/investigations/data/": [
    "phase1-analysis"
+  ],
+  "docs/investigations/deepseek-v41-flash-r7-a/": [
+   "issue-187-r7a"
   ],
   "docs/investigations/link-x1-envelope/": [
    "vulkan-v0-b"
@@ -789,6 +797,15 @@
   "scripts/issue182_terminal.py": [
    "issue-182-arm-e"
   ],
+  "scripts/issue187_r7a_census.py": [
+   "issue-187-r7a"
+  ],
+  "scripts/issue187_r7a_manifest.py": [
+   "issue-187-r7a"
+  ],
+  "scripts/issue187_r7a_reducer.py": [
+   "issue-187-r7a"
+  ],
   "scripts/issue189_r8a_reducer.py": [
    "vulkan-v0-b"
   ],
@@ -1082,6 +1099,9 @@
   ],
   "tests/test_issue157_chunk2_diagnosis.py": [
    "issue-137"
+  ],
+  "tests/test_issue187_r7a.py": [
+   "issue-187-r7a"
   ],
   "tests/test_issue191_r8b.py": [
    "vulkan-v0-b"

@@ -111,6 +111,8 @@ docs/project-status.json (authored)
       closed parent bindings with their accepted digests)
   → Issue #137 bundle verification (closed, read-only, protected; declares
       its bundle inputs)
+  → Issue #189 R8-A static terminal, producer hashes, and manifest
+  → Issue #187 R7-A static terminal, producer hashes, and manifest
 ```
 
 ## Closed parent and additive successor (the #137 lifecycle model)
