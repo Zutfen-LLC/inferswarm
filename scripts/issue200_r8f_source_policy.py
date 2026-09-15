@@ -39,7 +39,9 @@ from copy import deepcopy
 from typing import Any, Mapping, Sequence
 
 from issue74_methodology import canonical_json_bytes
-from issue99_artifact_core import CoordinatorAuthority, fail, self_digest, validate_self_identity
+from issue99_artifact_core import (
+    AcquisitionError, CoordinatorAuthority, fail, self_digest, validate_self_identity,
+)
 from issue101_orchestration import Coordinator
 
 # ---------------------------------------------------------------------------
@@ -202,7 +204,7 @@ def acquire_under_policy(node: Any, coordinator: Coordinator, ticket: Mapping[st
             data = source.read(record["origin"], object_base + offset, want)
             offset = node.cache.append_partial(record, data)
         node.cache.finish_partial(record)
-    except Exception as error:  # noqa: BLE001 - re-raised after bookkeeping, taxonomy unchanged
+    except AcquisitionError as error:
         node.failures.append({**identity, "reason": str(error).split(":")[0]})
         raise
     event = {"event": "ACQUIRED", "participant_id": ticket["participant_id"],
