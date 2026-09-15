@@ -806,6 +806,12 @@ class TestRepositoryTreeCoverage(unittest.TestCase):
                 # check_phase0_workloads.py repo-integrity step
                 if f.startswith("docs/benchmarks/workloads/"):
                     allowed_prose = True
+                # living hardware inventory receipts (Issue #196): raw
+                # read-only scan captures backing the living PCIe slot
+                # ledger; deliberately superseded by later refreshes,
+                # never retained experiment evidence
+                elif f.startswith("docs/hardware/current-inventory/"):
+                    allowed_prose = True
                 else:
                     allowed_prose = f in allowed
                 if not allowed_prose:

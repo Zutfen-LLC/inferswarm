@@ -1,0 +1,6 @@
+=== host: inferswarm04 utc: 2026-09-15T15:47:52Z
+inferswarm04
+name, pci.bus_id, pci.device_id, memory.total [MiB], driver_version, pcie.link.gen.current, pcie.link.gen.max, pcie.link.width.current, pcie.link.width.max
+NVIDIA GeForce RTX 3090, 00000000:01:00.0, 0x220410DE, 24576 MiB, 610.57.04, 1, 2, 16, 16
+00:02.0 VGA compatible controller [0300]: Intel Corporation Xeon E3-1200 v3/4th Gen Core Processor Integrated Graphics Controller [8086:0412] (rev 06)
+01:00.0 VGA compatible controller [0300]: NVIDIA Corporation GA102 [GeForce RTX 3090] [10de:2204] (rev a1)
