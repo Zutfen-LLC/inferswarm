@@ -1,0 +1,122 @@
+{
+  "base_url": "http://127.0.0.1:8302",
+  "fixture_sha_note": "fixture ladder as frozen in evidence/reference/fixture-ladder.json",
+  "label": "candidate-arm-run2",
+  "results": [
+    {
+      "case_id": "case-256",
+      "generated_text": " The tide pools reflected\n\n<think>\n\n</think>",
+      "generated_tokens": [
+        561,
+        40554,
+        32039,
+        25082,
+        271,
+        248068,
+        271,
+        248069
+      ],
+      "prompt_len": 256,
+      "stop_type": "limit",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 442.521,
+        "predicted_n": 8,
+        "predicted_per_second": 15.81845833305086,
+        "predicted_per_token_ms": 63.217285714285715,
+        "prompt_ms": 2427.613,
+        "prompt_n": 256,
+        "prompt_per_second": 105.45338157276305,
+        "prompt_per_token_ms": 9.48286328125
+      },
+      "wall_s": 5.287
+    },
+    {
+      "case_id": "case-1024",
+      "generated_text": " The keeper logged ...\n\nThe keeper logged",
+      "generated_tokens": [
+        561,
+        51624,
+        13332,
+        2423,
+        271,
+        760,
+        51624,
+        13332
+      ],
+      "prompt_len": 1022,
+      "stop_type": "limit",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 587.536,
+        "predicted_n": 8,
+        "predicted_per_second": 11.91416355763732,
+        "predicted_per_token_ms": 83.93371428571427,
+        "prompt_ms": 7741.431,
+        "prompt_n": 1022,
+        "prompt_per_second": 132.01693588691808,
+        "prompt_per_token_ms": 7.574785714285714
+      },
+      "wall_s": 10.101
+    },
+    {
+      "case_id": "case-3072",
+      "generated_text": " The foghorn sounded twice and the l",
+      "generated_tokens": [
+        561,
+        29262,
+        49172,
+        33172,
+        10598,
+        321,
+        279,
+        324
+      ],
+      "prompt_len": 3077,
+      "stop_type": "limit",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 454.36,
+        "predicted_n": 8,
+        "predicted_per_second": 15.406285764591951,
+        "predicted_per_token_ms": 64.90857142857143,
+        "prompt_ms": 20278.247,
+        "prompt_n": 3077,
+        "prompt_per_second": 151.73895455558858,
+        "prompt_per_token_ms": 6.590265518362041
+      },
+      "wall_s": 23.017
+    },
+    {
+      "case_id": "case-4096",
+      "generated_text": "",
+      "generated_tokens": [
+        248046
+      ],
+      "prompt_len": 4097,
+      "stop_type": "eos",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 0.001,
+        "predicted_n": 1,
+        "predicted_per_second": 0.0,
+        "predicted_per_token_ms": 0.0,
+        "prompt_ms": 26399.311,
+        "prompt_n": 4097,
+        "prompt_per_second": 155.19344425314733,
+        "prompt_per_token_ms": 6.4435711496216745
+      },
+      "wall_s": 29.218
+    }
+  ],
+  "sampling": {
+    "greedy": true,
+    "seed": 0,
+    "temperature": 0.0
+  },
+  "schema": "inferswarm.issue191.ladder-run/1"
+}

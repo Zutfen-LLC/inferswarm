@@ -1,0 +1,28 @@
+{
+  "checks": {
+    "all_cases_token_exact": false,
+    "backbone_on_intended_devices": true,
+    "candidate_deterministic_3x": true,
+    "long_cases_nonempty": true,
+    "negative_controls_fail_closed": true,
+    "ple_host_resident_both_arms": true,
+    "prefix_divergence_pattern": {
+      "case-1024": 3,
+      "case-256": 3,
+      "case-3072": 4,
+      "case-4096": 0
+    },
+    "reference_deterministic_3x": true,
+    "restart_equality": true,
+    "split_all_members_exact": true
+  },
+  "fail_basis": "Distributed candidate (cross-host RPC, 5 CUDA devices over 3 hosts) produces generated token IDs that differ from the frozen same-build single-host non-RPC reference on all four fixture cases, with a consistent shared-prefix divergence pattern. The candidate is internally deterministic (3/3 identical) and restart-stable, so the divergence is reproducible, not noise. Per the issue contract this is retained as FAIL: no comparator weakening, no topology/runtime change after the observation.",
+  "per_case_token_exact": {
+    "case-1024": false,
+    "case-256": false,
+    "case-3072": false,
+    "case-4096": false
+  },
+  "schema": "inferswarm.issue191.terminal-reduction/1",
+  "terminal": "R8B_QWEN38_NVIDIA_RPC_RUNTIME_QUALIFICATION_FAIL"
+}

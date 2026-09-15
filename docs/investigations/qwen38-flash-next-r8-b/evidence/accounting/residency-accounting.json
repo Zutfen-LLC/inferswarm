@@ -1,0 +1,70 @@
+{
+  "schema": "inferswarm.issue191.residency-accounting/1",
+  "collected": "2026-09-15, per-process /proc + nvidia-smi during the frozen arms; raw command outputs retained in this directory",
+  "reference_arm_inferswarm01": {
+    "process": "llama-server (r8b-ref, pid 3455239)",
+    "placement_from_load_log": {
+      "PLE_per_layer_token_embd_weight": "CPU lazy read, mmap-backed, 27465 MiB (log line retained)",
+      "model_buffers": "CPU_Mapped 19821.96 + 21460.90 MiB; CUDA0 9620.55 MiB; CUDA1 9808.56 MiB",
+      "layers_offloaded": "49/49 (47 repeating + output)"
+    },
+    "process_memory": {
+      "VmRSS_kB": 44192172,
+      "RssAnon_kB": 2154700,
+      "RssFile_kB": 41985312,
+      "Pss_sum_kB": 46425400,
+      "interpretation": "RssFile dominated by file-backed GGUF mappings (PLE + CPU_Mapped spill); RssAnon ~2.1 GB is runtime/workspace state, NOT a persistent anonymous host mirror of weights"
+    },
+    "gguf_mappings": {
+      "00001-of-00003.gguf": "0.0 MiB (1 mapping; metadata only)",
+      "00002-of-00003.gguf": "47287.9 MiB in 3 mappings (PLE 27466 + backbone spill ~19822)",
+      "00003-of-00003.gguf": "21460.9 MiB in 2 mappings"
+    },
+    "gpu": {
+      "CUDA0_02:00.0_used_MiB": 10661,
+      "CUDA1_03:00.0_used_MiB": 10765,
+      "compute_apps": "pid 3455239 on both devices"
+    }
+  },
+  "candidate_arm_client_inferswarm01": {
+    "process": "llama-server (r8b-cand, pid 3459567)",
+    "placement_from_load_log": {
+      "PLE_per_layer_token_embd_weight": "CPU lazy read, mmap-backed, 27465 MiB on the CLIENT (log line retained)",
+      "model_buffers": "CUDA0 6796.90 MiB; CUDA1 6518.70 MiB; RPC(03:g0) 7761.99 MiB; RPC(03:g1) 6796.90 MiB; RPC(04:3090) 13493.79 MiB; CPU_Mapped 341.02 MiB (tokenizer/metadata) plus PLE 27465.95 MiB",
+      "layers_offloaded": "49/49 across the 5-device pool"
+    },
+    "process_memory": {
+      "VmRSS_kB": 2450628,
+      "RssAnon_kB": 2084932,
+      "RssFile_kB": 341336,
+      "interpretation": "client RSS is small: backbone weights live on devices; the PLE mapping is file-backed and faulted on demand"
+    },
+    "gguf_mappings": {
+      "00001-of-00003.gguf": "0.0 MiB (1 mapping)",
+      "00002-of-00003.gguf": "27807.0 MiB in 3 mappings (PLE + metadata; resident subset)",
+      "00003-of-00003.gguf": "0.0 MiB (1 mapping; tensors pulled over RPC-wire into device buffers, not mapped locally)"
+    },
+    "gpu": {
+      "CUDA0_used_MiB": 7514,
+      "CUDA1_used_MiB": 7224
+    }
+  },
+  "candidate_arm_rpc_inferswarm03": {
+    "rpc_server_port_50052_gpu0_01:00.0_UUID-e1f2f90c": {"gpu_used_MiB": 8321, "VmRSS_kB": 745344, "RssAnon_kB": 542928, "RssFile_kB": 192176},
+    "rpc_server_port_50053_gpu1_03:00.0_UUID-a57bd3fb": {"gpu_used_MiB": 7473, "VmRSS_kB": 800452, "RssAnon_kB": 597824, "RssFile_kB": 192388}
+  },
+  "candidate_arm_rpc_inferswarm04": {
+    "rpc_server_port_50052_gpu0_01:00.0_UUID-ecda1aaa": {"gpu_used_MiB": 14464, "VmRSS_kB": 813852, "RssAnon_kB": 610780, "RssFile_kB": 192832}
+  },
+  "totals_check": {
+    "backbone_bytes_on_devices_MiB": 41368,
+    "backbone_arithmetic": "6796.90 + 6518.70 + 7761.99 + 6796.90 + 13493.79 = 41368.28 MiB = 40.4 GiB, consistent with the accepted R8-A backbone-minus-PLE figure (~40.74 GiB representation incl. tokenizer/output head; the ~0.3 GiB delta is the CPU_Mapped 341 MiB metadata/tokenizer buffer on the client)",
+    "PLE_bytes_MiB": 27466,
+    "no_unexpected_anonymous_host_mirror": "client RssAnon ~2.0 GiB is runtime/workspace; every weight byte is either file-backed mmap (PLE + metadata) or device-buffer resident"
+  },
+  "descriptive_network": {
+    "link": "1 GbE switched LAN 10.0.0.0/24",
+    "model_transfer_over_rpc": "~41 GiB pushed at load over ~6 minutes (observed wall time between load start and server-ready in candidate-server.log)",
+    "per_case_steady_state": "prompt+decode traffic per case ~ prompt_len*2560*2 B + logits; see per-case wall_s in run records"
+  }
+}
