@@ -67,8 +67,9 @@ for CASE in case-256 case-4096; do
     stop_pid "$CASE" $P
   done
 done
-# candidate accepted x2 (needs RPC backends up)
-bash $EV/run/launch_rpc_backends.sh
+# candidate accepted x2 (needs RPC backends up — launched/stopped by the
+# orchestrator host; here we only prove reachability)
+bash $EV/run/wait_backends.sh
 for CASE in case-256 case-4096; do
   for I in 1 2; do
     rm -f $TMP/cand-acc-server.log
@@ -101,7 +102,7 @@ for CASE in case-256 case-4096; do
     stop_pid x $REF_PID
   done
 done
-bash $EV/run/launch_rpc_backends.sh
+bash $EV/run/wait_backends.sh
 for CASE in case-256 case-4096; do
   POS=$(posof $CASE); FOCUS=$(focus $CASE)
   for I in 1 2; do
