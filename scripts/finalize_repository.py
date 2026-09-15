@@ -1245,6 +1245,33 @@ def finalize(root: Path, stages: tuple[Stage, ...], *, write: bool) -> dict:
 _AREA = ("docs/implementation/r6-successor-dense-full-integration-117")
 _EVIDENCE = f"{_AREA}/evidence"
 _BUNDLE_137 = f"{_EVIDENCE}/arm-c-regime4-diagnosis-137"
+_R8A = "docs/investigations/qwen38-flash-next-r8-a"
+_R8A_TERMINAL = f"{_R8A}/terminal-reduction.json"
+_R8A_HASHES = f"{_R8A}/producer-hashes.json"
+_R8A_MANIFEST = f"{_R8A}/MANIFEST.sha256"
+_R8A_PRODUCERS = frozenset({
+    "scripts/issue189_r8a_reducer.py",
+    "tests/test_issue189_r8a.py",
+})
+_R8A_RAW_EVIDENCE = tuple(sorted(frozenset({
+    f"{_R8A}/raw-headers/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf.header.bin",
+    f"{_R8A}/raw-headers/Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf.header.bin",
+    f"{_R8A}/raw-headers/Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf.header.bin",
+    f"{_R8A}/raw-hardware/inv-inferswarm01.txt",
+    f"{_R8A}/raw-hardware/inv-inferswarm02.txt",
+    f"{_R8A}/raw-hardware/inv-inferswarm03.txt",
+    f"{_R8A}/raw-hardware/inv-inferswarm04.txt",
+    f"{_R8A}/raw-hardware/inv-valinor.txt",
+    f"{_R8A}/raw-hardware/host-scan-receipts.md",
+})))
+_R8A_AUTHORED = frozenset({
+    f"{_R8A}/source-findings.md",
+    f"{_R8A}/README.md",
+    f"{_R8A}/gguf-census.json",
+    f"{_R8A}/gguf-header-census.json",
+    f"{_R8A}/hardware-census.json",
+    *_R8A_RAW_EVIDENCE,
+})
 # The additive Issue #130 successor bundle: current-finalization
 # integrity for the Issue #130 sources, never a rewrite of the closed
 # Issue #117 parent bundle (accepted at commit d1afad6, unchanged).
@@ -1457,6 +1484,41 @@ def _issue137_bundle_reads() -> frozenset[str]:
     return frozenset(reads)
 
 
+def _issue189_terminal_producer(run: StageRun, scratch: Path
+                                ) -> dict[str, bytes]:
+    """Derive the CPU/static R8-A terminal from its pinned authorities."""
+    _scripts(run.root)
+    import issue189_r8a_reducer as r8a  # noqa: PLC0415
+    return {_R8A_TERMINAL: r8a.render(run.root)}
+
+
+def _issue189_producer_hashes(run: StageRun, scratch: Path
+                              ) -> dict[str, bytes]:
+    """Record the R8-A reducer/test identities before its terminal manifest."""
+    rows = {}
+    for path in sorted(_R8A_PRODUCERS):
+        content = run.read(path)
+        if content is None:
+            raise FinalizationError(f"Issue #189 producer is missing: {path}")
+        rows[path] = _sha256(content)
+    return {_R8A_HASHES: (json.dumps(rows, indent=2, sort_keys=True)
+                          + "\n").encode("utf-8")}
+
+
+def _issue189_manifest_producer(run: StageRun, scratch: Path
+                                ) -> dict[str, bytes]:
+    """Terminal manifest for the additive, static Issue #189 bundle."""
+    rows = {}
+    for path in sorted(_R8A_AUTHORED | _R8A_PRODUCERS
+                       | {_R8A_TERMINAL, _R8A_HASHES}):
+        content = run.read(path)
+        if content is None:
+            raise FinalizationError(f"Issue #189 manifest input is missing: {path}")
+        rows[path] = _sha256(content)
+    body = "".join(f"{digest}  {path}\n" for path, digest in sorted(rows.items()))
+    return {_R8A_MANIFEST: body.encode("utf-8")}
+
+
 def _successor_bundle_files() -> list[str]:
     return [f"{_BUNDLE_130}/parent-binding.json",
             f"{_BUNDLE_130}/producer-hashes.json",
@@ -1555,6 +1617,43 @@ def default_registry() -> tuple[Stage, ...]:
             protected=True,
             after=frozenset({"issue117-successor-manifest"}),
             verify=_issue137_bundle_verify,
+        ),
+        Stage(
+            id="issue189-terminal",
+            kind="derived",
+            description=(
+                "CPU/static Issue #189 R8-A terminal reduction from the "
+                "separately pinned Qwen and Unsloth authority record"),
+            reads=frozenset({f"{_R8A}/source-findings.md",
+                             f"{_R8A}/gguf-census.json",
+                             f"{_R8A}/gguf-header-census.json",
+                             f"{_R8A}/hardware-census.json",
+                             *_R8A_RAW_EVIDENCE,
+                             "scripts/issue189_r8a_reducer.py"}),
+            writes=frozenset({_R8A_TERMINAL}),
+            after=frozenset({"issue137-bundle-verify"}),
+            producer=_issue189_terminal_producer,
+        ),
+        Stage(
+            id="issue189-producer-hashes",
+            kind="index",
+            description="Issue #189 reducer/test identity ledger",
+            reads=_R8A_PRODUCERS,
+            writes=frozenset({_R8A_HASHES}),
+            after=frozenset({"issue189-terminal"}),
+            producer=_issue189_producer_hashes,
+        ),
+        Stage(
+            id="issue189-manifest",
+            kind="terminal-manifest",
+            description=(
+                "Terminal integrity manifest for the additive static "
+                "Issue #189 R8-A evidence bundle"),
+            writes=frozenset({_R8A_MANIFEST}),
+            covers=(_R8A_AUTHORED | _R8A_PRODUCERS
+                    | {_R8A_TERMINAL, _R8A_HASHES}),
+            after=frozenset({"issue189-producer-hashes"}),
+            producer=_issue189_manifest_producer,
         ),
     )
 

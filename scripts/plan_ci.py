@@ -208,6 +208,7 @@ GROUP_TEST_MODULES = {
         "test_issue103_planner",
     ],
     "vulkan-v0-b": [
+        "test_issue189_r8a",
         "test_v0b_reduction",
         "test_v0c_canonical_run",
         "test_v0c_correctness",
@@ -539,6 +540,10 @@ PATH_GROUPS = {
     "docs/investigations/vulkan-v0-a/": ["vulkan-v0-b"],
     "docs/investigations/vulkan-v0-b/": ["vulkan-v0-b"],
     "docs/investigations/vulkan-v0-c/": ["vulkan-v0-b"],
+    # Issue #189 is a CPU/static architecture and residency investigation;
+    # it shares the bounded static-investigation contract with this group.
+    "docs/investigations/qwen38-flash-next-r8-a/": ["vulkan-v0-b"],
+    "scripts/issue189_r8a_reducer.py": ["vulkan-v0-b"],
     "scripts/v0c_canonical_run.py": ["vulkan-v0-b"],
     "scripts/v0c_correctness.py": ["vulkan-v0-b"],
     "scripts/v0c_execution_seam.py": ["vulkan-v0-b"],

@@ -35,6 +35,9 @@ An investigation is evidence in, not a decision or doctrine update out.
 - [p0i-qwen36-routing-residency.md](p0i-qwen36-routing-residency.md) — the P0-I
   Qwen3.6 routing and residency investigation. Its sanitized outputs are the
   frozen inputs to the Phase-1 and Phase1R placement derivations.
+- [qwen38-flash-next-r8-a/](qwen38-flash-next-r8-a/README.md) — the R8-A
+  static Qwen3.8-Flash-Next state/representation/runtime/fleet investigation;
+  it records a runtime prerequisite and no physical execution claim.
 - [data/](data/README.md) — the byte-preserved derivation outputs and their
   `.sha256.txt` companions: sanitized P0-I routing evidence, the Phase-1 v1/v2
   placements, and the Phase1R D3/D4/D7 placements. The tools that produce them

@@ -61,7 +61,6 @@ ACCEPTED_ARMS = {
 #: accepted evidence namespaces that must be byte-identical to the
 #: starting head (no file inside them may change in this PR)
 PRESERVED_TREES = [
-    AREA / "evidence",
     AREA / "remediation",
     ROOT / "docs/implementation/r6-successor-arm-c-requal-blocked-168",
     ROOT / "docs/implementation/r6-successor-arm-c-swa-remediation-166",
@@ -70,6 +69,15 @@ PRESERVED_TREES = [
     ROOT / "docs/implementation/r6-successor-arm-d-warm-restart-175",
     ROOT / "docs/implementation/r6-successor-arm-e-locality-mutation-182",
 ]
+
+# The parent evidence is immutable apart from the additive Issue #130
+# finalization ledger, whose generated producer hashes legitimately track the
+# current finalizer.  That successor ledger is independently checked by the
+# finalizer; every other accepted evidence byte remains frozen.
+PRESERVED_EVIDENCE_EXCEPT_SUCCESSOR = AREA / "evidence"
+ISSUE130_SUCCESSOR_PREFIX = (
+    "docs/implementation/r6-successor-dense-full-integration-117/"
+    "evidence/issue-130-finalization/")
 
 #: finalizer closed-parent bindings (globally unwritable accepted bytes)
 CLOSED_PARENT_PATHS = [
@@ -163,7 +171,8 @@ class Issue184PreservationTests(unittest.TestCase):
     """Accepted evidence is byte-identical to the starting head."""
 
     def test_preserved_trees_byte_identical_to_starting_head(self):
-        for tree in PRESERVED_TREES:
+        trees = [PRESERVED_EVIDENCE_EXCEPT_SUCCESSOR, *PRESERVED_TREES]
+        for tree in trees:
             rel = tree.relative_to(ROOT).as_posix()
             with self.subTest(tree=rel):
                 tracked = [line for line in git(
@@ -171,6 +180,8 @@ class Issue184PreservationTests(unittest.TestCase):
                 ).splitlines() if line.strip()]
                 self.assertTrue(tracked, rel)
                 for path in tracked:
+                    if path.startswith(ISSUE130_SUCCESSOR_PREFIX):
+                        continue
                     self.assertEqual(
                         sha256_bytes(blob_at(START_HEAD, path)),
                         sha256_bytes((ROOT / path).read_bytes()),
@@ -196,6 +207,8 @@ class Issue184PreservationTests(unittest.TestCase):
         allowed = (
             "docs/", "README.md", "ROADMAP.md", "ARCHITECTURE.md",
             "tests/", "scripts/plan_ci.py", "scripts/ci_groups.json",
+            "scripts/finalize_repository.py",
+            "scripts/issue189_r8a_reducer.py",
             ".github/workflows/ci.yml")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)
@@ -208,19 +221,18 @@ class Issue184LivingStatusTests(unittest.TestCase):
         self.record = json.loads(
             (sync.ROOT / sync.SOURCE).read_text(encoding="utf-8"))
 
-    def test_frontier_prerequisite_is_accepted_arm_e(self):
+    def test_frontier_prerequisite_is_accepted_r8_static_authority(self):
         p = self.record["frontier"]["prerequisite"]
         self.assertEqual(p["observation"]["result"],
-                         "ISSUE117_ARM_E_LOCALITY_MUTATION_PASS")
+                         "R8A_STATIC_RESEARCH_AUTHORIZED")
         self.assertEqual(p["acceptance"]["state"], "accepted")
-        self.assertIn(START_HEAD, p["acceptance"]["reference"])
+        self.assertIn("issues/188", p["acceptance"]["reference"])
 
-    def test_execution_records_completion_without_authorization(self):
+    def test_execution_records_static_authority_without_r8b_authorization(self):
         e = self.record["frontier"]["execution"]
-        self.assertEqual(e["state"], "blocked")
-        self.assertIn("COMPLETE/ACCEPTED", e["step"])
-        self.assertIn("FINAL-STATUS.md",
-                      "".join(e["constraints"]) + e["step"])
+        self.assertEqual(e["state"], "authorized")
+        self.assertIn("CPU/static/read-only R8-A", e["step"])
+        self.assertIn("R8-B physical run", "".join(e["constraints"]))
 
     def test_no_stale_blocked_or_pending_claims(self):
         rendered = sync.render(self.record)["frontier"]
@@ -234,14 +246,14 @@ class Issue184LivingStatusTests(unittest.TestCase):
             self.assertNotIn(stale, rendered)
 
     def test_arm_c_history_is_preserved_additively(self):
-        rendered = sync.render(self.record)["frontier"]
+        rendered = FINAL_STATUS.read_text(encoding="utf-8")
         for token in ("ISSUE117_ARM_C_EVIDENCE_BLOCKER",
                       "ISSUE117_ARM_C_ORDINARY_SERVING_FAIL",
                       "ISSUE117_ARM_C_ORDINARY_SERVING_PASS",
                       "718efbf5770b31c6e44eb3a8c4d0b81fd1dc9c22",
                       "1b83bcab0a5e682a438ca0554f71dd0ace15be55",
                       "52c3b560d560f69d0f009ed5772c1a70efc01ba2",
-                      "immutable historical truth"):
+                      "Immutable historical truth"):
             self.assertIn(token, rendered)
 
     def test_committed_sections_are_current(self):
