@@ -4,8 +4,9 @@
     "authority": "hardware-census.json (mechanically derived rows)",
     "capacity_feasible": "NOT_ESTABLISHED",
     "capacity_visible_to_backends": {
-      "cuda_driver_present_bytes": 95521253376,
-      "source": "hardware-census.json backend_visibility",
+      "cuda_driver_present_bytes_execution_fleet": 85899345920,
+      "cuda_driver_present_bytes_including_valinor": 89120571392,
+      "derivation": "row-sum of measured memory over census resources listing each backend",
       "vulkan_enumerated_bytes": 25769803776
     },
     "correctness_qualified": "NOT_ESTABLISHED",
@@ -37,7 +38,7 @@
     "No mixed-vendor correctness and no economic claim for PLE host placement is made.",
     "The reported 40 GB AMD inventory and the pending V340L contribute zero bytes to every total above."
   ],
-  "record_digest": "sha256:c525ca703d16fc85a81635df7ccb3128da95080e916d1a414b2593e1d442f238",
+  "record_digest": "sha256:02954126d840b679a4f4c1038e4e663eae9fe9d73a8b8193d96e3e643f60fd12",
   "representation": {
     "architecture": "qwen4exp",
     "backbone_minus_ple_table_bytes": 43746323104,
@@ -71,7 +72,7 @@
         "blk.1.ple_value.weight"
       ],
       "representation_separable_from_backbone": "YES",
-      "runtime_control_surface": "llama.cpp -ot/--override-tensor buffer-type override exists at the pinned audit revision (common/arg.cpp; LLAMA_ARG_OVERRIDE_TENSOR); per_layer_token_embd is created TENSOR_READ_LAZY with PLE-range validation in src/models/qwen4exp.cpp",
+      "runtime_control_surface": "llama.cpp -ot/--override-tensor buffer-type override exists at the pinned audit revision (common/arg.cpp; LLAMA_ARG_OVERRIDE_TENSOR), and per_layer_token_embd is created TENSOR_READ_LAZY with PLE-range validation in src/models/qwen4exp.cpp. CAVEAT (review finding, loader source at the pinned revision): the TENSOR_READ_LAZY path returns lazy_read::buft() (CPU) before the -ot override block in llama-model-loader/hash buft_for_tensor, so -ot applicability to THIS tensor is itself NOT_ESTABLISHED at this revision; representation-level addressability (exact identity, byte extent, separate split placement) is what is established.",
       "split_member": "UD-IQ1_S/Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
       "table_bytes": 28800138240,
       "table_dims": [
@@ -112,7 +113,7 @@
   "source_authority": {
     "gguf_census_sha256": "5664961903f0b6afd1066ac88d287471231c962604fe7e7176f2b3f41ee43fe1",
     "gguf_header_census_sha256": "d816d7ee22e7e1b4fea1fdc07707d20f75d1abef086f711fc610cb25f75176b7",
-    "hardware_census_sha256": "e3fd332966a10e405a237fdd4f52b2c493a966b2fd0e06b3438b278d73d3315f",
+    "hardware_census_sha256": "9665c8ff873e7a6c5c5c1dda2dc2eab09a39c04bfef507f8e23ac547fa1bf050",
     "official_revision": "de4b8e4d43b917e7706784d8bb445c9af86a3540",
     "source_findings_sha256": "347475548be0ce3cef7528e13c70058de6ff3e7fc255562dd6674ec5bd5e6061",
     "third_party_gguf_revision": "38bb39ee97821de2c9009abb7e93950eec396e66"

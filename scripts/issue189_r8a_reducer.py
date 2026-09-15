@@ -247,6 +247,17 @@ def load_hardware_census(root: Path) -> dict:
             or totals.get("deployed_amd_bytes") != amd \
             or totals.get("deployed_accelerator_bytes_total") != nvidia + amd:
         raise ValueError("ISSUE189_FAIL: census totals disagree with resource rows")
+    def backend_capacity(backend: str) -> int:
+        """Row-sum of measured memory over resources listing the backend."""
+        total = 0
+        for row in resources:
+            if row.get("status") in (PENDING_STATUS, "EXCLUDED_WITH_REASON") \
+                    and "resource_id" in row:
+                continue
+            if any(backend in str(b) for b in row.get("backends_observable", [])):
+                total += observed_memory(row)
+        return total
+
     pending = [r for r in resources if r.get("status") == PENDING_STATUS]
     if not pending or any(r.get("memory_bytes", 0) != 0 for r in pending):
         raise ValueError("ISSUE189_FAIL: pending hardware must be zero-capacity")
@@ -257,6 +268,8 @@ def load_hardware_census(root: Path) -> dict:
         raise ValueError(
             "ISSUE189_FAIL: V340L not modeled as two independent address spaces")
     document["_derived"] = {
+        "cuda_driver_present_bytes": backend_capacity("cuda"),
+        "vulkan_enumerated_bytes": backend_capacity("vulkan"),
         "nvidia_bytes": nvidia,
         "nvidia_rows": len(nvidia_rows),
         "amd_bytes": amd,
@@ -343,9 +356,15 @@ def reduction_document(root: Path = ROOT) -> dict:
                 "runtime_control_surface": (
                     "llama.cpp -ot/--override-tensor buffer-type override exists at "
                     "the pinned audit revision (common/arg.cpp; "
-                    "LLAMA_ARG_OVERRIDE_TENSOR); per_layer_token_embd is created "
+                    "LLAMA_ARG_OVERRIDE_TENSOR), and per_layer_token_embd is created "
                     "TENSOR_READ_LAZY with PLE-range validation in "
-                    "src/models/qwen4exp.cpp"),
+                    "src/models/qwen4exp.cpp. CAVEAT (review finding, loader source "
+                    "at the pinned revision): the TENSOR_READ_LAZY path returns "
+                    "lazy_read::buft() (CPU) before the -ot override block in "
+                    "llama-model-loader/hash buft_for_tensor, so -ot applicability "
+                    "to THIS tensor is itself NOT_ESTABLISHED at this revision; "
+                    "representation-level addressability (exact identity, byte "
+                    "extent, separate split placement) is what is established."),
                 "placement_behavior_of_any_build": "NOT_ESTABLISHED (runtime question)",
                 "economic_usefulness_of_host_placement": "NOT_ESTABLISHED (unmeasured)",
             },
@@ -379,9 +398,12 @@ def reduction_document(root: Path = ROOT) -> dict:
                     "aggregate."),
             },
             "capacity_visible_to_backends": {
-                "cuda_driver_present_bytes": 98_742_478_848 - derived_h["valinor_bytes"],
-                "vulkan_enumerated_bytes": 25_769_803_776,
-                "source": "hardware-census.json backend_visibility",
+                "cuda_driver_present_bytes_execution_fleet":
+                    derived_h["cuda_driver_present_bytes"] - derived_h["valinor_bytes"],
+                "cuda_driver_present_bytes_including_valinor":
+                    derived_h["cuda_driver_present_bytes"],
+                "vulkan_enumerated_bytes": derived_h["vulkan_enumerated_bytes"],
+                "derivation": "row-sum of measured memory over census resources listing each backend",
             },
             "r8_runtime_mode_qualified_capacity_bytes":
                 derived_h["qualified_for_r8_bytes"],

@@ -1,8 +1,8 @@
-806f6db0f1080d8ba8d7fd54100a8df7187f8a0226600f75ac7892abf9bdc674  docs/investigations/qwen38-flash-next-r8-a/README.md
+8b0a15f943be84dd3a37e57e585fa32de3a736bd88e90226f24f84d5b9eb501d  docs/investigations/qwen38-flash-next-r8-a/README.md
 5664961903f0b6afd1066ac88d287471231c962604fe7e7176f2b3f41ee43fe1  docs/investigations/qwen38-flash-next-r8-a/gguf-census.json
 d816d7ee22e7e1b4fea1fdc07707d20f75d1abef086f711fc610cb25f75176b7  docs/investigations/qwen38-flash-next-r8-a/gguf-header-census.json
-e3fd332966a10e405a237fdd4f52b2c493a966b2fd0e06b3438b278d73d3315f  docs/investigations/qwen38-flash-next-r8-a/hardware-census.json
-54e49aac5187d0db8ba4391623f7e7c71ada7bed958f6e8363e743908068eafb  docs/investigations/qwen38-flash-next-r8-a/producer-hashes.json
+9665c8ff873e7a6c5c5c1dda2dc2eab09a39c04bfef507f8e23ac547fa1bf050  docs/investigations/qwen38-flash-next-r8-a/hardware-census.json
+033c3ed5f51c0b1c0ed2804d5643f9f5946c70e0e4db37cf3335e73d7040443f  docs/investigations/qwen38-flash-next-r8-a/producer-hashes.json
 3e63ae43baf1d7761394f3bea09a4a4cd18ee9777a656cb03fb9cbc7e0fb60cb  docs/investigations/qwen38-flash-next-r8-a/raw-hardware/host-scan-receipts.md
 f07c0aece34f8043cce0c14731d35ca614d5c172f646f3201efdc4fdd6ee11f1  docs/investigations/qwen38-flash-next-r8-a/raw-hardware/inv-inferswarm01.txt
 8e178112719ddb32fdfb933bcd94cca233c2803f5c46dcbc0b02fa8dc20e5c3c  docs/investigations/qwen38-flash-next-r8-a/raw-hardware/inv-inferswarm02.txt
@@ -13,6 +13,6 @@ a0fc66d5d914c7d01ae005a0eb8a6b0b2a6ad76c57eb5bd788d351dad87fede6  docs/investiga
 42ab8133a66ef69073203f2172d7a55f767f469e0088ad056a0c892cdda20e96  docs/investigations/qwen38-flash-next-r8-a/raw-headers/Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf.header.bin
 f5e9431739d1860ece5c53cb4b22c301be563560dc76b975c620166ef2029579  docs/investigations/qwen38-flash-next-r8-a/raw-headers/Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf.header.bin
 347475548be0ce3cef7528e13c70058de6ff3e7fc255562dd6674ec5bd5e6061  docs/investigations/qwen38-flash-next-r8-a/source-findings.md
-4479dffec351d29de59af1dbed161b136f365cdbb19ce96075765cb338fa9edb  docs/investigations/qwen38-flash-next-r8-a/terminal-reduction.json
-51e43d3c8e0d62f191d5b121b2f1d9f1461afe28ae9c6ee896b3db73604d1da4  scripts/issue189_r8a_reducer.py
-19ce6a654f2e97757feedca4f24a32a57c5632ae83b7308123174cf6b6040ac3  tests/test_issue189_r8a.py
+febd579c1e1323e5a3662e0ce1739b85a3452fe2ae0a28bee30f0214e6e6ba7c  docs/investigations/qwen38-flash-next-r8-a/terminal-reduction.json
+14beb8265d621004476ecb66653d4bd7f5c918bb34328e2c7cf880d13f7c7a28  scripts/issue189_r8a_reducer.py
+1e1d162229ff6984f699a852b48b722f037cc4f7b4a12f2b7bb07f2fdc3b1565  tests/test_issue189_r8a.py

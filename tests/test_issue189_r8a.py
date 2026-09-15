@@ -214,6 +214,44 @@ class Issue189R8ATests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "census totals disagree"):
             reducer.reduction_document(root)
 
+    def test_backend_capacity_is_row_dererved_not_authored(self):
+        document = reducer.reduction_document()
+        visible = document["fleet_fit"]["capacity_visible_to_backends"]
+        # CUDA rows: 4x12GiB 3060 + 8GiB 3060 Ti + 24GiB 3090 + 3GiB Valinor
+        self.assertEqual(
+            visible["cuda_driver_present_bytes_including_valinor"],
+            4*12884901888 + 8589934592 + 25769803776 + 3221225472)
+        self.assertEqual(visible["cuda_driver_present_bytes_execution_fleet"],
+                         85899345920)
+        # Vulkan rows: 2x Ellesmere + 3060 Ti
+        self.assertEqual(visible["vulkan_enumerated_bytes"], 3*8589934592)
+
+    def test_no_authored_backend_capacity_constants(self):
+        source = (SCRIPTS / "issue189_r8a_reducer.py").read_text()
+        for banned in ("98_742_478_848", "25_769_803_776", "98784247808",
+                       "25769803776"):
+            self.assertNotIn(banned, source)
+
+    def test_census_breakdown_matches_rows(self):
+        document = json.loads((ROOT / reducer.HARDWARE).read_text())
+        nvidia_rows = [r for r in document["resources"]
+                       if str(r.get("vendor_device", "")).startswith("10de")
+                       and r.get("host") != "valinor"
+                       and r.get("status") in reducer.DEPLOYED_STATUSES]
+        gtx3060 = sum(1 for r in nvidia_rows if r["vendor_device"] == "10de:2504")
+        self.assertEqual(gtx3060, 4)
+        self.assertIn("4 x 12288 MiB",
+                      document["totals"]["deployed_nvidia_breakdown"])
+        self.assertNotIn("5 x 12288 MiB",
+                         document["totals"]["deployed_nvidia_breakdown"])
+
+    def test_ot_caveat_is_retained(self):
+        document = reducer.reduction_document()
+        surface = document["representation"]["ngram_ple_state"][
+            "runtime_control_surface"]
+        self.assertIn("NOT_ESTABLISHED at this revision", surface)
+        self.assertIn("lazy_read::buft()", surface)
+
     def test_unclassified_status_fails_closed(self):
         def mutate(document):
             document["resources"][0]["status"] = "PROBABLY_FINE"
