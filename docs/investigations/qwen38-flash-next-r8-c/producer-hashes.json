@@ -1,0 +1,10 @@
+{
+  "files": {
+    "scripts/issue193_phase1_reduction.py": "59f4d64eefd14ab455a249510ba21c8c169a93c1fa9ddd69721c5d131f726515",
+    "scripts/issue193_r8c_authority.py": "95424b1260d70f9a805650c722a8f8e835de07186a78bc00a6aafa5af9d6d62e",
+    "scripts/issue193_terminal_reduction.py": "2c4f0d3c3151bedad790732a9db5f769acd2618fee9101a6a7666db93ef52c5b",
+    "tests/test_issue193_r8c.py": "5d41ec159aa0fff0bf6085335ddce6025b166c0c1d2e93a19f2d6cee3314c528"
+  },
+  "note": "sha256 of execution-bearing producers and the retention test at final head",
+  "schema": "inferswarm.issue193.producer-hashes/1"
+}

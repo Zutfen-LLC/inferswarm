@@ -1,0 +1,126 @@
+{
+  "base_url": "http://127.0.0.1:8312",
+  "fixture_sha_note": "accepted R8-B fixture ladder",
+  "label": "intervention-C",
+  "results": [
+    {
+      "case_id": "case-256",
+      "generated_text": " The lighthouse keeper counted forty-two\n\n",
+      "generated_tokens": [
+        561,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        36165,
+        271
+      ],
+      "prompt_len": 256,
+      "stop_type": "limit",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 417.528,
+        "predicted_n": 8,
+        "predicted_per_second": 16.76534268360445,
+        "predicted_per_token_ms": 59.646857142857144,
+        "prompt_ms": 2785.283,
+        "prompt_n": 256,
+        "prompt_per_second": 91.91166570865511,
+        "prompt_per_token_ms": 10.88001171875
+      },
+      "wall_s": 3.225
+    },
+    {
+      "case_id": "case-1024",
+      "generated_text": " The lighthouse keeper counted forty-one waves",
+      "generated_tokens": [
+        561,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        18030,
+        16382
+      ],
+      "prompt_len": 1022,
+      "stop_type": "limit",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 557.071,
+        "predicted_n": 8,
+        "predicted_per_second": 12.565723220199938,
+        "predicted_per_token_ms": 79.58157142857144,
+        "prompt_ms": 7807.05,
+        "prompt_n": 1022,
+        "prompt_per_second": 130.9073209470927,
+        "prompt_per_token_ms": 7.63899217221135
+      },
+      "wall_s": 9.29
+    },
+    {
+      "case_id": "case-3072",
+      "generated_text": " \"The lighthouse keeper counted forty-one",
+      "generated_tokens": [
+        328,
+        760,
+        324,
+        55965,
+        51624,
+        29014,
+        34227,
+        18030
+      ],
+      "prompt_len": 3077,
+      "stop_type": "limit",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 399.224,
+        "predicted_n": 8,
+        "predicted_per_second": 17.53401599102258,
+        "predicted_per_token_ms": 57.032,
+        "prompt_ms": 20253.341,
+        "prompt_n": 3077,
+        "prompt_per_second": 151.92555144358653,
+        "prompt_per_token_ms": 6.5821712707182325
+      },
+      "wall_s": 21.757
+    },
+    {
+      "case_id": "case-4096",
+      "generated_text": "",
+      "generated_tokens": [
+        248046
+      ],
+      "prompt_len": 4097,
+      "stop_type": "eos",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 0.001,
+        "predicted_n": 1,
+        "predicted_per_second": 0.0,
+        "predicted_per_token_ms": 0.0,
+        "prompt_ms": 26410.769,
+        "prompt_n": 4097,
+        "prompt_per_second": 155.12611541148235,
+        "prompt_per_token_ms": 6.4463678301196
+      },
+      "wall_s": 27.883
+    }
+  ],
+  "samplers": [
+    "top_k"
+  ],
+  "sampling": {
+    "greedy": true,
+    "seed": 0,
+    "temperature": 0.0
+  },
+  "schema": "inferswarm.issue193.intervention-run/1",
+  "top_k": 1
+}

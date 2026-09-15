@@ -1,0 +1,43 @@
+{
+  "base_url": "http://127.0.0.1:8311",
+  "fixture_sha_note": "accepted R8-B fixture ladder (docs/investigations/qwen38-flash-next-r8-b/evidence/reference/fixture-ladder.json)",
+  "label": "arm-R8C-R-run3",
+  "n_probs": 0,
+  "results": [
+    {
+      "case_id": "case-256",
+      "generated_text": " The tide pools gleamed\n\n<think>\n",
+      "generated_tokens": [
+        561,
+        40554,
+        32039,
+        28056,
+        3486,
+        271,
+        248068,
+        198
+      ],
+      "prompt_len": 256,
+      "stop_type": "limit",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 438.445,
+        "predicted_n": 8,
+        "predicted_per_second": 15.9655144887044,
+        "predicted_per_token_ms": 62.635,
+        "prompt_ms": 2561.725,
+        "prompt_n": 256,
+        "prompt_per_second": 99.93266256136002,
+        "prompt_per_token_ms": 10.00673828125
+      },
+      "wall_s": 3.021
+    }
+  ],
+  "sampling": {
+    "greedy": true,
+    "seed": 0,
+    "temperature": 0.0
+  },
+  "schema": "inferswarm.issue193.arm-run/1"
+}

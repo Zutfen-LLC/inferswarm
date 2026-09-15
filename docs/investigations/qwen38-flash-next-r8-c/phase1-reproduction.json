@@ -1,0 +1,53 @@
+{
+  "checks": [
+    {
+      "check": "R-run1 == accepted R8-B reference tokens",
+      "detail": "[561, 40554, 32039, 28056, 3486, 271, 248068, 198]",
+      "ok": true
+    },
+    {
+      "check": "r8c-R-run2.json == accepted reference tokens",
+      "detail": "",
+      "ok": true
+    },
+    {
+      "check": "r8c-R-run3.json == accepted reference tokens",
+      "detail": "",
+      "ok": true
+    },
+    {
+      "check": "R placement == accepted R8-B reference placement",
+      "detail": "[9620.55, 9808.56, 19821.96, 21460.9, 27465.95]",
+      "ok": true
+    },
+    {
+      "check": "C-run2 == accepted R8-B candidate tokens",
+      "detail": "[561, 40554, 32039, 25082, 271, 248068, 271, 248069]",
+      "ok": true
+    },
+    {
+      "check": "C-run3 == accepted R8-B candidate tokens",
+      "detail": "",
+      "ok": true
+    },
+    {
+      "check": "C-restart == accepted R8-B candidate tokens",
+      "detail": "",
+      "ok": true
+    },
+    {
+      "check": "C placement == accepted R8-B candidate placement",
+      "detail": "[341.02, 6518.7, 6796.9, 6796.9, 7761.99, 13493.79, 27465.95]",
+      "ok": true
+    },
+    {
+      "check": "invalid-topology C attempt retained and excluded",
+      "detail": "",
+      "ok": true
+    }
+  ],
+  "note": "All reproduction arms executed under the exact pinned authority (binaries/model/split re-hashed at freeze). The first C launch ran while the reference server still held inferswarm01's GPUs, producing a different placement; retained as r8c-C-run1-invalid-topology.json and excluded from reproduction.",
+  "reproduced": true,
+  "schema": "inferswarm.issue193.phase1-reproduction/1",
+  "sentinel": "case-256"
+}

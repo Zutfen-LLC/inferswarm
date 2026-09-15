@@ -1,0 +1,19 @@
+{
+ "schema": "inferswarm.issue193.split-rehash/1",
+ "verified_at": "2026-09-15T08:00-04:00",
+ "model_host": "inferswarm01",
+ "model_dir": "/srv/models/qwen38-ud-iq1-s",
+ "method": "fresh sha256sum on host, compared to accepted R8-A LFS pins (also pinned by accepted R8-B split-verification.json)",
+ "members": [
+  {"member": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+   "sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+   "matches_accepted_pin": true},
+  {"member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+   "sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
+   "matches_accepted_pin": true},
+  {"member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+   "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a",
+   "matches_accepted_pin": true}
+ ],
+ "all_ok": true
+}

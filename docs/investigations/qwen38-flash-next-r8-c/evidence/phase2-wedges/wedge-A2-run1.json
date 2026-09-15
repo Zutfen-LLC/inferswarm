@@ -1,0 +1,43 @@
+{
+  "base_url": "http://127.0.0.1:8322",
+  "fixture_sha_note": "accepted R8-B fixture ladder (docs/investigations/qwen38-flash-next-r8-b/evidence/reference/fixture-ladder.json)",
+  "label": "wedge-A2-run1",
+  "n_probs": 0,
+  "results": [
+    {
+      "case_id": "case-256",
+      "generated_text": " The tide pools dried up and\n\nThe",
+      "generated_tokens": [
+        561,
+        40554,
+        32039,
+        30581,
+        685,
+        321,
+        271,
+        760
+      ],
+      "prompt_len": 256,
+      "stop_type": "limit",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 2087.417,
+        "predicted_n": 8,
+        "predicted_per_second": 3.3534267470275467,
+        "predicted_per_token_ms": 298.2024285714286,
+        "prompt_ms": 5379.791,
+        "prompt_n": 256,
+        "prompt_per_second": 47.58549170404575,
+        "prompt_per_token_ms": 21.01480859375
+      },
+      "wall_s": 7.489
+    }
+  ],
+  "sampling": {
+    "greedy": true,
+    "seed": 0,
+    "temperature": 0.0
+  },
+  "schema": "inferswarm.issue193.arm-run/1"
+}

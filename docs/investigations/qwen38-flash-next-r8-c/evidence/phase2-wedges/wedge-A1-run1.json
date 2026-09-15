@@ -1,0 +1,43 @@
+{
+  "base_url": "http://127.0.0.1:8321",
+  "fixture_sha_note": "accepted R8-B fixture ladder (docs/investigations/qwen38-flash-next-r8-b/evidence/reference/fixture-ladder.json)",
+  "label": "wedge-A1-run1",
+  "n_probs": 0,
+  "results": [
+    {
+      "case_id": "case-256",
+      "generated_text": " The tide pools drank the their their\n\n",
+      "generated_tokens": [
+        561,
+        40554,
+        32039,
+        51358,
+        279,
+        836,
+        836,
+        271
+      ],
+      "prompt_len": 256,
+      "stop_type": "limit",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 1712.157,
+        "predicted_n": 8,
+        "predicted_per_second": 4.088410116595616,
+        "predicted_per_token_ms": 244.59385714285713,
+        "prompt_ms": 4742.976,
+        "prompt_n": 256,
+        "prompt_per_second": 53.97455099920388,
+        "prompt_per_token_ms": 18.52725
+      },
+      "wall_s": 6.477
+    }
+  ],
+  "sampling": {
+    "greedy": true,
+    "seed": 0,
+    "temperature": 0.0
+  },
+  "schema": "inferswarm.issue193.arm-run/1"
+}
