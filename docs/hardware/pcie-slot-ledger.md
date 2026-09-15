@@ -5,7 +5,8 @@
 Initial baseline collected: 2026-09-13 via SSH (`dmidecode -t slot` + `lspci -PP -nn -vv`) for inferswarm01-04.  
 Valinor audit added: 2026-09-13.  
 Issue #189 R8-A accelerator census refresh (read-only sysfs/lspci/nvidia-smi, per-device VRAM measured): 2026-09-14 — see `docs/investigations/qwen38-flash-next-r8-a/hardware-census.json` for the authoritative per-resource record.  
-Last topology refresh: 2026-09-14.
+Issue #196 living inventory refresh (Valinor RX 6800 XT installed; inferswarm02 RX 5600 XT observed alongside both Ellesmere): 2026-09-15 — raw receipts at `docs/hardware/current-inventory/2026-09-15/`.  
+Last topology refresh: 2026-09-15.
 
 The original inferswarm01-04 collection notes referenced raw JSON per host (`inferswarm0{1..4}.json`). Those captures were not included in this repository import and are not reconstructed here.
 
@@ -22,17 +23,29 @@ CAVEAT on "now" speeds: GPU links may downtrain link SPEED to Gen1 (2.5GT/s) at 
 | 1 | SLOT 1 | PCIe 2.0 x4 | x1 | EMPTY (available) | - | - |
 | 6 | SLOT 6 | legacy PCI 32-bit | - | EMPTY (available) | - | - |
 
-## inferswarm02  (Intel 200-series PCH consumer board, Debian 13)
+## inferswarm02  (MINERDUDE 12XTREME, Intel 200-series/B250 PCH, Debian 13)
 DMI slot usage flags unreliable on this board (all "Available"); occupancy derived from lspci.
-| Slot | Designation | Capability | Occupant | Device LnkCap | Negotiated now |
+| Slot / root port | Designation | Capability | Occupant | Device LnkCap | Negotiated now |
 |------|-------------|------------|----------|---------------|----------------|
-| 1 | PCI-Express | x16 (Gen3) | AMD Radeon RX 470/480/570/580 (Ellesmere) @02:00.0 | Gen3 x16 | Gen1 x1 (riser) |
-| 1 | PCI-Express | (2nd device shares/bifurcated or open-ended) | AMD Radeon RX 470/480/570/580 (Ellesmere) @03:00.0 | Gen3 x16 | Gen1 x1 (riser) |
-| ? | riser | x1 | RTX 3060 Ti LHR (GA104) @04:00.0 | Gen1 x16 (see note) | Gen1 x1 (riser) |
-| PCIE-6/7 | x1 slots | Gen3 x1 | Realtek RTL8111 GbE @01:00.0 | Gen1 x1 | Gen1 x1 |
-| PCIE-8 | x4 slot | Gen3 x4 | EMPTY (available) | - | - |
-Note: 3060 Ti reports LnkCap Gen1 x16 (native GA104 is Gen4 x16) - cheap x1 riser/bridge
-masks endpoint capability. Known fleet state: 2 GPUs on x1 mining risers.
+| 00:1c.5 (DMI "PCI-Express" x16 slot) | x16 (Gen3) wired | AMD Radeon RX 470/480/570/580 (Ellesmere) @02:00.0 via x1 riser, Sapphire "RX 570 Pulse 4GB" label [1da2:e353], 8 GiB measured | Gen3 x16 | Gen1 x1 (riser) |
+| 00:1d.0 | PCH Root Port #10 | Gen3 x1 | AMD Radeon RX 5600 XT (Navi 10) @05:00.0 behind on-card switch (03:00.0/04:00.0), Sapphire [1da2:e411], 5.98 GiB measured | Gen4 x16 (endpoint); switch trains Gen4 x16 internally, Gen1 x1 to root | Gen1 x1 at root (riser) |
+| 00:1d.2 | PCH Root Port #11 | Gen3 x1 | AMD Radeon RX 470/480/570/580 (Ellesmere) @06:00.0, Sapphire Nitro+ [1da2:e366], 8 GiB measured | Gen3 x16 | Gen1 x1 (riser) |
+| 00:1d.3 | PCH Root Port #12 | Gen3 x1 | RTX 3060 Ti LHR (GA104) @07:00.0, eVga [3842:4667], 8 GiB | Gen1 x16 (riser-masked; native Gen4) | Gen1 x1 (riser) |
+| 00:1c.0 | (DMI x1 mappings unreliable) | Gen2 x1 observed | Realtek RTL8111 GbE @01:00.0 | Gen1 x1 | Gen1 x1 |
+| PCIE-8 (00:1d.1) | x4 slot | Gen3 x4 | EMPTY (available) | - | - |
+Notes (2026-09-15 refresh): four discrete GPUs are installed, ALL on x1
+risers from chipset root ports; no GPU occupies a direct (non-riser) slot
+wiring. The 3060 Ti reports LnkCap Gen1 x16 (native GA104 is Gen4 x16) —
+cheap x1 riser/bridge masks endpoint capability. The RX 5600 XT is behind
+its own onboard PCIe switch; its internal link trains Gen4 x16 while the
+external root-port link is Gen1 x1. Known fleet state: 4 GPUs on x1 mining
+risers.
+
+Historical note: the 2026-09-13/14 ledger recorded the two Ellesmere cards
+at 02:00.0 and 03:00.0 and the 3060 Ti at 04:00.0. The 2026-09-15 refresh
+finds the 5600 XT at 05:00.0, the second Ellesmere now at 06:00.0, and the
+3060 Ti at 07:00.0 — BDFs shifted with the riser re-plumb; the cards
+themselves are unchanged (subsystem IDs match the R8-A census exactly).
 
 ## inferswarm03  (Tiger Lake-H platform, Debian 13)
 | Slot | Designation | Capability | Occupant | Device LnkCap | Negotiated now |
@@ -61,12 +74,12 @@ ASUS documents the two CPU-connected graphics slots as PCIe 4.0 x16 when PCIEX16
 
 | Slot / path | Board capability | Current occupant | Endpoint/device max | Negotiated / observed now |
 |-------------|------------------|------------------|---------------------|---------------------------|
-| PCIEX16_1 | CPU PCIe 4.0 x16 alone; x8 in dual-slot split | GTX 1060 3GB | Gen3 x16 | Gen1 x8 at idle; x8 width expected while PCIEX16_2 is populated |
-| PCIEX16_2 | CPU PCIe 4.0 x8 when paired with PCIEX16_1 | Toshiba Cx5 NVMe adapter | Gen3 x4 | Gen3 x4 (device max) |
+| PCIEX16_1 (root port 00:03.1) | CPU PCIe 4.0 x16 alone; x8 in dual-slot split | XFX Speedster MERC 319 AMD Radeon RX 6800 XT (Navi 21) @09:00.0 behind on-card switch (07:00.0/08:00.0) | Endpoint Gen4 x16 | Root port AND card upstream port LnkSta Gen4 x8 (measured 2026-09-15) |
+| PCIEX16_2 | CPU PCIe 4.0 x8 when paired with PCIEX16_1 | EMPTY (available) | - | - |
 | PCIEX16_3 | B550 chipset PCIe 3.0 x4 | EMPTY (available) | - | - |
 | PCIEX1_1 | B550 chipset PCIe 3.0 x1 | EMPTY (available) | - | - |
 | PCIEX1_2 | B550 chipset PCIe 3.0 x1 | EMPTY (available) | - | - |
-| M.2_1 (CPU) | CPU PCIe 4.0 x4 | Intel 660p NVMe | Gen3 x4 | Gen3 x4 (device max) |
+| M.2_1 (CPU) | CPU PCIe 4.0 x4 | Intel 660p NVMe @01:00.0 | Gen3 x4 | Gen3 x4 (device max) |
 | onboard | B550 chipset path | Intel AX200 Wi-Fi | Gen2 x1 observed | Gen2 x1 |
 | onboard | B550 chipset path | Intel I225-V 2.5GbE | Gen2 x1 observed | Gen2 x1 |
 
@@ -74,7 +87,20 @@ Board capability authority:
 - [ASUS ROG STRIX B550-E GAMING specifications](https://rog.asus.com/us/motherboards/rog-strix/rog-strix-b550-e-gaming-model/spec/)
 - [ASUS ROG STRIX B550-E GAMING user manual](https://dlcdnets.asus.com/pub/ASUS/mb/SocketAM4/ROG_STRIX_B550-E_GAMING/E16546_ROG_STRIX_B550-E_GAMING_UM_WEB.pdf)
 
-Current interpretation: the GTX 1060's x8 width is not a permanent limitation of PCIEX16_1. PCIEX16_2 is populated by the NVMe adapter, so the board allocates the CPU graphics lanes x8/x8. Removing or relocating that device should return PCIEX16_1 to x16; verify mechanically with `LnkSta` after any move.
+Current interpretation (2026-09-15): the RX 6800 XT replaced the GTX 1060 3GB
+in PCIEX16_1, and the Toshiba Cx5 NVMe adapter that occupied PCIEX16_2 was
+removed (DMI reports PCIEX16_2 "Available"; no second CPU-PEG endpoint
+exists; the only NVMe is the Intel 660p on the CPU M.2_1 path). With
+PCIEX16_2 empty, ASUS documents x16 for single-slot population, but the
+MEASURED link is Gen4 x8 on both the root port (00:03.1) and the card's
+upstream port (07:00.0). The cause (firmware lane-allocation setting,
+CPU/socket lane population, or board strap) is NOT determined by this
+read-only scan; verify with `LnkSta` after any BIOS change before assuming
+x16 is available. The card's internal switch link (08:00.0 → 09:00.0)
+trains Gen4 x16; VRAM measured 17163091968 bytes (15.98 GiB) via amdgpu
+sysfs; driver amdgpu; subsystem XFX [1eae:6701]; Vulkan/CUDA visibility not
+probed this pass (capability observation pending a future qualification;
+not a correctness qualification).
 
 ## Reserve hardware — HP Z440 x2 (undeployed)
 
@@ -110,26 +136,53 @@ Before using either reserve Z440 for evidence-bearing work, collect its own `dmi
 | legacy PCI 32-bit | 1 | 01 SLOT 6 |
 | TOTAL PCIe expansion slots | 22 | + 1 legacy PCI; M.2 and onboard endpoints excluded |
 
-## Deployed fleet aggregate — GPU population (8 GPUs)
+## Deployed fleet aggregate — GPU population (10 GPUs, 2026-09-15 measured)
 | Host | GPU | Slot link (capability / current wiring) |
 |------|-----|----------------------------------------|
 | 01 | RTX 3060 LHR 12GB x2 | Gen3 x16 each |
-| 02 | RX 580-class (Ellesmere) x2 | Gen3 x16 capable, on x1 risers |
-| 02 | RTX 3060 Ti LHR | Gen4 native, on x1 riser |
+| 02 | RX 580-class (Ellesmere) x2 (8 GiB each) | Gen3 x16 capable, on x1 risers |
+| 02 | RX 5600 XT (Navi 10, 5.98 GiB) | Gen4 x16 endpoint, on x1 riser |
+| 02 | RTX 3060 Ti LHR (8 GiB) | Gen4 native, on x1 riser |
 | 03 | RTX 3060 LHR 12GB x2 | Gen3 x16 / second card width-limited to x4 |
 | 04 | RTX 3090 24GB | Gen2 x16 on this platform |
-| Valinor | GTX 1060 3GB | CPU PEG slot; currently x8 due to x8/x8 split, Gen1 speed observed at idle |
+| Valinor | RX 6800 XT 16GB (Navi 21, XFX Merc 319) | CPU PEG slot; measured Gen4 x8 (see Valinor section) |
 
-Per-device VRAM (2026-09-14 measured refresh): the two inferswarm02 Ellesmere cards each expose 8589934592 bytes via amdgpu `mem_info_vram_total` and are enumerated by the accepted Vulkan runtime as "AMD Radeon RX 580 Series (RADV POLARIS10) (8192 MiB)". The 02:00.0 card's subsystem label reads "Radeon RX 570 Pulse 4GB" (Sapphire 1da2:e353); the driver-measured 8 GiB, the 8 GiB prefetchable BAR, and the runtime enumeration agree on 8 GiB, which is authoritative for capacity. NVIDIA totals confirmed 80 GiB across inferswarm01-04. No third Polaris device and no RX 6800 XT is observable on any reachable host; the Radeon Pro V340L (102-D05318-02, dual-die 2x8GB) is pending hardware and excluded from all deployed totals. Full per-resource records: `docs/investigations/qwen38-flash-next-r8-a/hardware-census.json`.
+Per-device VRAM (2026-09-15 measured refresh, Issue #196): all figures below
+are driver/runtime-measured per device this pass (amdgpu sysfs
+`mem_info_vram_total`, `nvidia-smi memory.total`) and cross-checked against
+the raw receipts in `docs/hardware/current-inventory/2026-09-15/`:
+
+- Valinor RX 6800 XT: 17163091968 bytes (15.98 GiB), amdgpu.
+- inferswarm02: Ellesmere 02:00.0 = 8589934592; Ellesmere 06:00.0 =
+  8589934592; RX 5600 XT 05:00.0 = 6425673728; RTX 3060 Ti 07:00.0 =
+  8589934592 (nvidia-smi).
+- NVIDIA fleet on 01-04 unchanged from the R8-A census: 80 GiB total
+  (re-verified by sweep 2026-09-15).
+- Execution-fleet aggregate (01-04): 109504888832 bytes = 101.98 GiB
+  (80 GiB NVIDIA + 21.98 GiB AMD). Including Valinor: 126667980800 bytes
+  = 117.97 GiB across 10 GPUs.
+
+Historical (2026-09-14, R8-A census window): the then-current deployed
+accelerator census was 96 GiB execution-fleet (80 GiB NVIDIA + 16 GiB AMD =
+2x Ellesmere) and no RX 6800 XT was observable on any reachable host. That
+record remains correct for its capture window and is retained byte-preserved
+in `docs/investigations/qwen38-flash-next-r8-a/hardware-census.json`; the
+R8-A reported-not-observed RX 6800 XT row described a real 2026-09-14
+observation and is superseded for CURRENT state by this 2026-09-15 refresh
+(the card is now installed on Valinor). The Radeon Pro V340L remains
+pending hardware and excluded from all deployed totals.
 
 ## Actionable observations
 1. inferswarm03 GPU2 (03:00.0) negotiated WIDTH x4 (downgraded) in an x16 slot - worth
    checking BIOS bifurcation settings if full x16 expected.
 2. GPU link speeds may read Gen1 at idle (normal power management); verify under load
    with `sudo lspci -s <bdf> -vv | grep LnkSta` while a GPU job runs.
-3. inferswarm02's three GPUs all sit on x1 mining risers - ~985MB/s ceiling each.
+3. inferswarm02's four GPUs all sit on x1 mining risers - ~985MB/s ceiling each.
 4. inferswarm04's x16 slot is Gen2 (5GT/s = 4GB/s ceiling for the RTX 3090).
-5. Valinor supplies verified PCIe 4.0 CPU-lane capability, but no currently installed endpoint exercises Gen4 signaling: its GTX 1060 and listed NVMe devices are Gen3-generation endpoints.
+5. Valinor's RX 6800 XT now exercises Gen4 signaling (endpoint and internal switch
+   link at Gen4 x16; external root-port link Gen4 x8). NOTE: x8 width with PCIEX16_2
+   empty contradicts the ASUS single-slot x16 documentation - investigate BIOS
+   PCIe lane allocation before relying on x16.
 6. Valinor supports controlled same-host topology experiments: CPU PEG x16 versus x8 allocation, CPU-direct versus B550-chipset paths, and chipset x4/x1 constraints after deliberate card moves.
 7. The two reserve Z440s can provide replication of inferswarm01-class topology after commissioning, reducing host-specific confounding in future bus-sensitivity experiments.
 
@@ -143,3 +196,4 @@ Record test-relevant physical changes here in addition to updating the current t
 | 2026-09-13 | Added Valinor audit | Physical inventory added; ASUS board documentation resolves CPU PEG allocation as x16 single / x8+x8 dual. |
 | 2026-09-13 | Added two reserve HP Z440 chassis | Reported identical to deployed inferswarm01; kept outside deployed census pending per-host audit and commissioning. |
 | 2026-09-14 | Issue #189 R8-A accelerator census refresh | Read-only per-device VRAM measurement (amdgpu sysfs, nvidia-smi) and fleet-wide device sweep; retained in docs/investigations/qwen38-flash-next-r8-a/hardware-census.json. Confirmed 80 GiB NVIDIA on 01-04 and 2x8 GiB Ellesmere on 02; recorded reported-but-unobserved AMD devices and pending V340L as non-deployed. |
+| 2026-09-15 | Issue #196 living inventory refresh | Valinor: GTX 1060 3GB replaced by XFX RX 6800 XT in PCIEX16_1; PCIEX16_2 NVMe adapter removed (slot now empty); measured external link Gen4 x8 despite empty PCIEX16_2. inferswarm02: RX 5600 XT (Navi 10, 5.98 GiB) newly observed at 05:00.0; both Ellesmere cards remain (02:00.0, 06:00.0 after BDF shift); 3060 Ti moved to 07:00.0. Measurement basis: read-only dmidecode/lspci -vvv/sysfs/vulkaninfo/nvidia-smi scans; raw receipts at docs/hardware/current-inventory/2026-09-15/. Fleet: 10 GPUs, 101.98 GiB execution-fleet (01-04), 117.97 GiB including Valinor. |
