@@ -164,32 +164,32 @@ def load_physical_phase5_evidence(path: Path | None = None) -> dict[str, Any]:
     except ValueError:
         display_path = target
     if not target.is_file():
-        return {"physical_phase5_ran": False, "valid": False,
+        return {"evidence_file_present": False, "valid": False,
                 "reason": f"no physical Phase 5 evidence file at {display_path}"}
     try:
         doc = json.loads(target.read_text())
     except (json.JSONDecodeError, OSError) as error:
-        return {"physical_phase5_ran": True, "valid": False,
+        return {"evidence_file_present": True, "valid": False,
                 "reason": f"physical Phase 5 evidence file is not valid JSON: {error}"}
     if not isinstance(doc, dict):
-        return {"physical_phase5_ran": True, "valid": False,
+        return {"evidence_file_present": True, "valid": False,
                 "reason": "physical Phase 5 evidence is not a JSON object"}
     missing = PHYSICAL_PHASE5_REQUIRED_FIELDS - doc.keys()
     if missing:
-        return {"physical_phase5_ran": True, "valid": False,
+        return {"evidence_file_present": True, "valid": False,
                 "reason": f"missing required fields: {sorted(missing)}", "document": doc}
     if doc.get("schema") != PHYSICAL_PHASE5_SCHEMA:
-        return {"physical_phase5_ran": True, "valid": False,
+        return {"evidence_file_present": True, "valid": False,
                 "reason": f"schema mismatch: expected {PHYSICAL_PHASE5_SCHEMA!r}, got {doc.get('schema')!r}",
                 "document": doc}
     required_true = ("accepted_release_hashes_matched", "provenance_verified",
                       "identical_required_state_and_placement", "zero_reacquisition_bytes_measured")
     unsatisfied = [key for key in required_true if doc.get(key) is not True]
     if unsatisfied:
-        return {"physical_phase5_ran": True, "valid": False,
+        return {"evidence_file_present": True, "valid": False,
                 "reason": f"required physical proof predicates not satisfied: {unsatisfied}",
                 "document": doc}
-    return {"physical_phase5_ran": True, "valid": True, "document": doc}
+    return {"evidence_file_present": True, "valid": True, "document": doc}
 
 
 def reduce_terminal(physical_phase5_evidence_path: Path | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -211,7 +211,7 @@ def reduce_terminal(physical_phase5_evidence_path: Path | None = None) -> tuple[
     # own evidence is missing.
     if not compact_seam_pass:
         terminal = TERMINAL_GENERIC_SOURCE_POLICY_BLOCKED
-    elif physical["physical_phase5_ran"] and physical["valid"]:
+    elif physical["evidence_file_present"] and physical["valid"]:
         terminal = TERMINAL_LOCAL_VERIFIED_BACKING_PASS
     elif cache_finding["legal_non_runtime_modifying_seam_exists"]:
         terminal = TERMINAL_PHYSICAL_VERIFICATION_REQUIRED_INCOMPLETE
@@ -248,7 +248,7 @@ def reduce_terminal(physical_phase5_evidence_path: Path | None = None) -> tuple[
         "phase4_launch_configuration_finding": phase4,
         "cache_mechanism_finding": cache_finding,
         "execution_environment_note": environment,
-        "physical_phase5_ran": physical["physical_phase5_ran"] and physical["valid"],
+        "physical_phase5_ran": physical["evidence_file_present"] and physical["valid"],
         "physical_phase5_evidence_status": physical,
         "physical_phase5_handoff": physical_phase5_handoff,
         "terminal": terminal,

@@ -138,6 +138,17 @@ class FreshCampaignTests(unittest.TestCase):
 
 
 class StaticDisciplineTests(unittest.TestCase):
+    def test_upstream_source_identity_hashes_are_well_formed_sha256(self):
+        """A truncated or malformed hash is never a valid sha256 digest; this
+        network-free check catches transcription corruption in
+        UPSTREAM_SOURCE_IDENTITY even though re-fetching the real upstream
+        files to confirm the value itself is correct is out of scope for the
+        standard CPU suite."""
+        for path, entry in cache_mechanism.UPSTREAM_SOURCE_IDENTITY.items():
+            digest = entry["sha256"]
+            self.assertEqual(len(digest), 64, f"{path}: sha256 must be 64 hex chars, got {len(digest)}")
+            self.assertRegex(digest, r"^[0-9a-f]{64}$", f"{path}: sha256 must be lowercase hex")
+
     def test_proof_stack_imports_only_stdlib_and_accepted_modules(self):
         allowed = set(sys.stdlib_module_names) | {
             "issue74_methodology", "issue99_artifact_core", "issue101_orchestration",

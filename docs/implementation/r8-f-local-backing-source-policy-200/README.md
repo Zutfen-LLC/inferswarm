@@ -230,11 +230,11 @@ never modified — see `evidence/rpc-cache-mechanism.json` for full sha256s):
 
 | File | sha256 |
 |---|---|
-| `tools/rpc/rpc-server.cpp` | `14f69793a377a79f2476a190da1f80bac079cfeb4a83df13ffd378d3435d974` |
-| `tools/rpc/README.md` | `f3ca2fcfadf926ec60115da8102cedf08f0701f60f62c16ff42f56f87dd819d` |
-| `ggml/src/ggml-rpc/ggml-rpc.cpp` | `07ca713158d222959b4415e74e0bee83119212aad85750ff6240773365c0b2d` |
-| `ggml/include/ggml-rpc.h` | `505c01e4575c06a3b01cdbbb5688368baaabf6223a36eeafd918057251da6e4` |
-| `ggml/src/ggml-rpc/transport.h` | `fec7abf4e6cebec0d20e3350c01f2f47d495f90a79c6d829870e09d8a7ef221` |
+| `tools/rpc/rpc-server.cpp` | `14f69793a377a79f2476a190da1f80bac079cfeb4a83df13ffd378d3435d974a` |
+| `tools/rpc/README.md` | `f3ca2fcfadf926ec60115da8102cedf08f0701f60f62c16ff42f56f87dd819da` |
+| `ggml/src/ggml-rpc/ggml-rpc.cpp` | `07ca713158d222959b4415e74e0bee83119212aad85750ff6240773365c0b2d9` |
+| `ggml/include/ggml-rpc.h` | `505c01e4575c06a3b01cdbbb5688368baaabf6223a36eeafd918057251da6e43` |
+| `ggml/src/ggml-rpc/transport.h` | `fec7abf4e6cebec0d20e3350c01f2f47d495f90a79c6d829870e09d8a7ef2219` |
 
 Mechanics read directly from those files:
 

@@ -63,23 +63,23 @@ SMALL_RESPONSE_THRESHOLD_BYTES = 4096
 # for traceability only and carry no independent authority.
 UPSTREAM_SOURCE_IDENTITY = {
     "tools/rpc/rpc-server.cpp": {
-        "sha256": "14f69793a377a79f2476a190da1f80bac079cfeb4a83df13ffd378d3435d974",
+        "sha256": "14f69793a377a79f2476a190da1f80bac079cfeb4a83df13ffd378d3435d974a",
         "fetched_from": f"{PINNED_UPSTREAM_REPO}/raw/{PINNED_LLAMA_CPP_COMMIT}/tools/rpc/rpc-server.cpp",
     },
     "tools/rpc/README.md": {
-        "sha256": "f3ca2fcfadf926ec60115da8102cedf08f0701f60f62c16ff42f56f87dd819d",
+        "sha256": "f3ca2fcfadf926ec60115da8102cedf08f0701f60f62c16ff42f56f87dd819da",
         "fetched_from": f"{PINNED_UPSTREAM_REPO}/raw/{PINNED_LLAMA_CPP_COMMIT}/tools/rpc/README.md",
     },
     "ggml/src/ggml-rpc/ggml-rpc.cpp": {
-        "sha256": "07ca713158d222959b4415e74e0bee83119212aad85750ff6240773365c0b2d",
+        "sha256": "07ca713158d222959b4415e74e0bee83119212aad85750ff6240773365c0b2d9",
         "fetched_from": f"{PINNED_UPSTREAM_REPO}/raw/{PINNED_LLAMA_CPP_COMMIT}/ggml/src/ggml-rpc/ggml-rpc.cpp",
     },
     "ggml/include/ggml-rpc.h": {
-        "sha256": "505c01e4575c06a3b01cdbbb5688368baaabf6223a36eeafd918057251da6e4",
+        "sha256": "505c01e4575c06a3b01cdbbb5688368baaabf6223a36eeafd918057251da6e43",
         "fetched_from": f"{PINNED_UPSTREAM_REPO}/raw/{PINNED_LLAMA_CPP_COMMIT}/ggml/include/ggml-rpc.h",
     },
     "ggml/src/ggml-rpc/transport.h": {
-        "sha256": "fec7abf4e6cebec0d20e3350c01f2f47d495f90a79c6d829870e09d8a7ef221",
+        "sha256": "fec7abf4e6cebec0d20e3350c01f2f47d495f90a79c6d829870e09d8a7ef2219",
         "fetched_from": f"{PINNED_UPSTREAM_REPO}/raw/{PINNED_LLAMA_CPP_COMMIT}/ggml/src/ggml-rpc/transport.h",
     },
 }
@@ -155,6 +155,12 @@ def mechanical_cache_finding(experiment: dict[str, Any] | None = None) -> dict[s
     if exit_code("A_cold") != 0 or exit_code("B_warm_restart") != 0 or exit_code("C_prestaged") != 0:
         raise AssertionError("cache-mechanism finding: a benign phase (A/B/C) did not verify correct "
                               "byte-identical content; refusing to derive a seam conclusion from it")
+    if not phases["A_cold"]["predicted_vs_actual_cache_filename_match"]:
+        raise AssertionError(
+            "cache-mechanism finding: the Python FNV-1a re-implementation used to predict/pre-stage "
+            "cache filenames (fnv1a_reference.py) did not match the actual filename the pinned server "
+            "wrote in phase A; refusing to derive a seam conclusion, since phase C's pre-staging result "
+            "would be meaningless if the prediction itself is wrong rather than the seam being absent")
 
     cold_exceeded_threshold = cold_bytes > HASH_THRESHOLD_BYTES
     durable_cache_reuse_suppresses_retransmission = (
@@ -171,7 +177,11 @@ def mechanical_cache_finding(experiment: dict[str, Any] | None = None) -> dict[s
     else:
         case_classification = "D"
 
-    legal_non_runtime_modifying_seam_exists = case_classification in ("A", "B", "C")
+    # The classifier above only ever yields "B", "C", or "D" -- "A" ("the
+    # cache is on out of the box, no adapter needed at all") would require a
+    # phase this experiment doesn't run (no adapter, no prior transfer, cache
+    # simply already warm), so it is not a reachable outcome here.
+    legal_non_runtime_modifying_seam_exists = case_classification in ("B", "C")
 
     return {
         "schema": "inferswarm.issue200.rpc-cache-mechanical-finding/1",
