@@ -1,6 +1,7 @@
 # R8-F — Verified Node-Local Model Backing and Explicit Artifact Source Policy — Issue #200
 
-Status: **Complete: `R8F_RUNTIME_LOCAL_BACKING_PREREQUISITE`**
+Status: **Incomplete (corrected): `R8F_PHYSICAL_VERIFICATION_REQUIRED_INCOMPLETE`** —
+see "Correction notice" below.
 
 Parent: [#188](https://github.com/Zutfen-LLC/inferswarm/issues/188) — R8
 Qwen3.8-Flash-Next heterogeneous residency/execution program.
@@ -182,7 +183,22 @@ a documented disposition citing the Phase 4 finding below:
     by `ledger_network_accounting` (`nc11`);
 12. not runnable on a compact CPU fixture; see Phase 4/5 below (`nc12`).
 
-## Phase 4 — the real Qwen/runtime seam
+## Correction notice (this revision)
+
+An earlier revision of this record inferred, from the single fact that the
+accepted R8-D v2 launch (`scripts/issue195_v2_launch.py`) never passes a
+model path to any `ggml-rpc-server` backend invocation, that **no
+participant-local-backing seam exists at all** in the pinned runtime, and
+emitted `R8F_RUNTIME_LOCAL_BACKING_PREREQUISITE` on that basis. That
+inference was incomplete: it never inspected the pinned
+`ggml-rpc-server`'s own local-cache implementation. It is **retracted** and
+replaced by the corrected Phase 4 treatment below, which mechanically tested
+that cache seam against the actual pinned binary. The generic Phase 1–3
+source-policy/local-backing seam (below) is unaffected and unchanged.
+
+## Phase 4 — the real Qwen/runtime seam, corrected
+
+### 4a. The narrow, still-true launch-configuration fact
 
 Traced mechanically from the exact committed R8-D v2 physical launch
 orchestration (`scripts/issue195_v2_launch.py`, the producer that actually
@@ -198,53 +214,118 @@ RPC03_G1 (backend, inferswarm03): ggml-rpc-server -H 0.0.0.0 -p 50053 -d CUDA1
 RPC04    (backend, inferswarm04): ggml-rpc-server -H 0.0.0.0 -p 50052 -d CUDA0
 ```
 
-Only the client process is ever given a model path. Every `ggml-rpc-server`
-backend process is launched with only `-H`/`-p`/`-d` — no model artifact of
-any kind. The `ggml-rpc` wire protocol this pinned build implements
-(`alloc_buffer`/`set_tensor`/`get_tensor`/`copy_tensor`/`graph_compute`) is a
-generic remote compute/memory protocol driven entirely by client-originated
-pushes.
+Only the client process was given a model path in *this specific launch*,
+and no RPC backend received `-c`/`--cache` either. This fact is scoped to
+this one launch configuration and, by itself, proves only that R8-D v2 never
+exercised any backend-local materialization path — it does **not** prove the
+pinned runtime lacks one.
 
-Mechanical answers:
+### 4b. The pinned RPC local-cache seam, mechanically tested
 
-1. **Can a remote participant's assigned model state be materialized from
-   that participant's own verified local backing without the client
-   retransmitting the same bytes? No.** The RPC backend process has no
-   model-loading capability of its own and no seam to open a
-   participant-local verified artifact by content identity.
-2. **Exact seam permitting it:** none exists in the pinned build.
-3. **Where client-originated bytes are forced:** every RPC backend launch
-   invocation omits a model path entirely, so every tensor byte an RPC
-   backend process ever holds must originate from the client's `set_tensor`
-   calls.
+The pinned build separately implements a local file cache for large
+tensors, entirely independent of the model-path question above. Immutable
+identity of the exact pinned files inspected (fetched read-only from
+`https://github.com/ggml-org/llama.cpp` at the pinned commit; never vendored,
+never modified — see `evidence/rpc-cache-mechanism.json` for full sha256s):
 
-Client-local `mmap` of the checkpoint (client-local materialization staging)
-is not confused with RPC-host-local backing consumption anywhere in this
-finding or its evidence.
+| File | sha256 |
+|---|---|
+| `tools/rpc/rpc-server.cpp` | `14f69793a377a79f2476a190da1f80bac079cfeb4a83df13ffd378d3435d974` |
+| `tools/rpc/README.md` | `f3ca2fcfadf926ec60115da8102cedf08f0701f60f62c16ff42f56f87dd819d` |
+| `ggml/src/ggml-rpc/ggml-rpc.cpp` | `07ca713158d222959b4415e74e0bee83119212aad85750ff6240773365c0b2d` |
+| `ggml/include/ggml-rpc.h` | `505c01e4575c06a3b01cdbbb5688368baaabf6223a36eeafd918057251da6e4` |
+| `ggml/src/ggml-rpc/transport.h` | `fec7abf4e6cebec0d20e3350c01f2f47d495f90a79c6d829870e09d8a7ef221` |
 
-Per the issue's own hard constraint ("Do not change llama.cpp merely to
-force this experiment to work... retain that as a substrate prerequisite"),
-this stops the physical phase here rather than staging 72.5 GB for
-appearance. The smallest narrow successor scope is recorded in
-`evidence/terminal-reduction.json` and is explicitly out of scope for this
-issue/session.
+Mechanics read directly from those files:
 
-## Phase 5 — not run
+- `-c`/`--cache` (`rpc-server.cpp`) enables a local file cache under
+  `$LLAMA_CACHE/rpc/` (default `$HOME/.cache/llama.cpp/rpc/`).
+- For any `set_tensor` payload larger than `HASH_THRESHOLD` (10 MiB,
+  `ggml-rpc.cpp`), the client first sends `RPC_CMD_SET_TENSOR_HASH` — an
+  FNV-1a hash (`fnv_hash`) of the exact bytes it is about to send — instead
+  of the payload. If the server finds a file at
+  `<cache_dir>/<16-hex-fnv1a-hash>`, it loads that file into the tensor's
+  backend memory and reports a hit; the client then **skips the full
+  `SET_TENSOR` transfer entirely**. On a miss, the client falls back to the
+  full transfer, and the server writes what it received to that same path.
+- `rpc_server::get_cached_file` trusts whatever bytes are stored at that
+  filename and **never re-hashes the file's own content** before serving
+  it — the FNV-1a name is upstream's internal dedup key, not a
+  content-integrity check.
 
-Two independent reasons, both recorded in `evidence/terminal-reduction.json`
+### 4c. Bounded non-Qwen experiment (this correction)
+
+Because the code alone doesn't settle *retransmission is actually
+suppressed* or *pre-staged content is actually consumed*, this correction
+built the pinned `ggml-rpc-server` binary from the pinned commit (CPU-only,
+`-DGGML_RPC=ON`, no llama.cpp source modified) and drove it with an external
+driver (`evidence/rpc-cache-experiment-raw/driver.cpp`) that calls only the
+pinned public backend API (`ggml_backend_rpc_buffer_type`,
+`ggml_backend_alloc_ctx_tensors_from_buft`, `ggml_backend_tensor_set/get`).
+A deterministic 12 MiB fixture (`gen_fixture.py`, just over `HASH_THRESHOLD`)
+stands in for a tiny slice of the real release. Network bytes were measured
+independently via `strace` on the client's own `send`/`recv` syscalls, not
+by trusting either side's self-reporting. Full results:
+`evidence/rpc-cache-experiment.json`; raw per-phase strace/server logs:
+`evidence/rpc-cache-experiment-raw/raw-logs/`.
+
+| Phase | Setup | `SET` phase bytes sent | Result |
+|---|---|---:|---|
+| A — cold | fresh empty cache, first-ever contact | 12,583,546 | full payload sent (cache miss, as expected) |
+| B — warm, restarted | **new server process**, same on-disk cache from A | 321 | hash-probe only — payload retransmission suppressed after a restart (durable, not in-memory) |
+| C — pre-staged | brand-new server, bytes written to the predicted cache path **before any client ever connected** | 321 | hash-probe hit on first-ever contact — pre-staged verified backing consumed with **zero** prior network pass |
+| D — wrong content | predicted cache path holds different bytes | 321 (hit) | server served the wrong bytes; client-side `get` detected the mismatch (upstream itself did not) |
+| E — truncated | predicted cache path holds a half-length prefix | 321 (hit) | server served truncated data with a silently unwritten tail; client-side `get` detected the mismatch |
+
+Mechanical conclusions (`evidence/rpc-cache-mechanism.json`,
+`mechanical_cache_finding`):
+
+1. **Can participant-local durable state avoid retransmission of identical
+   assigned tensor bytes? Yes** — phase B, across a full server-process
+   restart, using only the on-disk cache.
+2. **Can that mechanism consume an InferSwarm-verified operator-prestaged
+   immutable release directly, with no prior network pass? Yes** — phase C.
+3. **Case classification: C** — *"existing cache can consume pre-staged
+   backing with a bounded external adapter, no llama.cpp modification."* The
+   adapter's job is narrow: verify InferSwarm provenance for a participant's
+   assigned tensor, then write those exact bytes to
+   `<cache_dir>/<fnv1a-hex>` before the client connects. This is a
+   staging/materialization step; it changes no Logical State Unit
+   requirement, no placement decision, and no planner semantics.
+4. **Is a correctness-bearing llama.cpp/runtime modification required? No**,
+   for whole-tensor (single-chunk, offset-0) assignments — proven above. An
+   explicit, honest boundary: this experiment does not prove (and does not
+   assume) the same result for a tensor fragmented into multiple
+   `(offset, size)` sub-ranges by llama.cpp's own runtime tensor-split
+   logic; reproducing those exact chunk boundaries ahead of time is left
+   open, not claimed.
+5. **Is the upstream FNV-1a filename InferSwarm trust authority? No** —
+   phases D and E mechanically prove the pinned server is fail-open: it
+   trusts whatever bytes sit at the predicted filename with no
+   re-verification. Any adapter populating this cache **must** perform
+   InferSwarm's own SHA-256/provenance verification before writing to the
+   cache path; the FNV-1a name is never sufficient by itself, and this
+   record never claims the upstream cache meets Issue #200's verification
+   bar on its own.
+
+Client-local `mmap` of a checkpoint (client-local materialization staging)
+is still not confused with RPC-host-local backing consumption anywhere in
+this record.
+
+## Phase 5 — not run in this session (legal seam established; physical proof outstanding)
+
+Two independent facts, both recorded in `evidence/terminal-reduction.json`
 so neither is mistaken for the other:
 
-1. **Substrate blocker (Phase 4, above)** — the pinned `ggml-rpc-server`
-   cannot consume participant-local backing for its assigned tensors; this
-   alone is sufficient under the issue's own hard constraint to stop the
-   physical phase.
+1. **No substrate blocker** — Phase 4 above mechanically establishes a
+   legal, non-runtime-modifying seam (Case C). This alone does **not**
+   satisfy Issue #200: it shows the architecture question has a positive
+   answer, not that the bounded physical Qwen proof happened.
 2. **Execution-environment constraint of this session** — this remote
    execution session has no SSH credentials, no `known_hosts` entries, and
    no DNS resolution for the R8-D physical fleet hostnames
-   (`inferswarm01`/`03`/`04`); verified directly (`ssh -o BatchMode=yes`
-   resolution failure, empty `~/.ssh`). This is reported separately because
-   it is a property of *this session*, not of the architecture or runtime —
-   a session with fleet access would still hit the Phase 4 blocker above.
+   (`inferswarm01`/`03`/`04`). This is a property of *this session*, not of
+   the architecture or runtime.
 
 No physical arm ran. No model was downloaded, staged, or claimed staged. No
 network/local byte accounting for a physical arm exists because none was
@@ -252,20 +333,37 @@ produced; `evidence/terminal-reduction.json.physical_phase5_ran` is `false`
 and carries no `staged_bytes`/`network_bytes` fields (NC-12,
 `test_terminal_reduction_never_claims_physical_arm_ran`).
 
+`evidence/terminal-reduction.json.physical_phase5_handoff` records the exact
+scope for whoever runs Phase 5 next: the accepted Qwen3.8-Flash-Next
+UD-IQ1_S release and hashes, the bounded provenance-verifying adapter
+described above, a remote/cold arm, a local-verified arm (identical required
+state and placement, pre-staged, zero prior network pass), the local-verified
+arm repeated once, and the exact network/timing/identity evidence to retain.
+`scripts/issue200_r8f_terminal_reduction.py` structurally cannot emit
+`R8F_LOCAL_VERIFIED_BACKING_PASS` without a validated
+`evidence/physical-phase5.json` document satisfying every Issue #200 physical
+predicate (see `load_physical_phase5_evidence`); no such document exists in
+this correction, so `PASS` is not reachable here.
+
 ## Terminal
 
 ```
-R8F_RUNTIME_LOCAL_BACKING_PREREQUISITE
+R8F_PHYSICAL_VERIFICATION_REQUIRED_INCOMPLETE
 ```
 
 The generic source-policy/local-cache capability is sound (compact seam
-`PASS`, all negative controls fail closed), but the current pinned execution
-substrate cannot consume participant-local immutable backing for
-remote-assigned state without a runtime/backend change. This is a
-successful architectural finding, not permission to patch the runtime in
-this issue/session. No Qwen-specific generic planner branch was introduced.
-No R8-D correctness adjudication was rerun or requalified — R8-D v2 evidence
-was read, never re-executed.
+`PASS`, all negative controls fail closed). The pinned execution substrate
+**does** have a legal, non-runtime-modifying seam for participant-local
+verified backing (Case C, Phase 4c above) — no llama.cpp/runtime
+modification is required. What remains outstanding is the bounded physical
+Qwen proof Issue #200 itself requires before a `PASS`/`PREREQUISITE`
+terminal can honestly be claimed; this session cannot execute it (no fleet
+reachability). This is neither a pass nor a permission to patch the runtime:
+it is an honest incomplete/handoff terminal. No Qwen-specific generic
+planner branch was introduced. No R8-D correctness adjudication was rerun or
+requalified — R8-D v2 evidence was read, never re-executed. No llama.cpp
+source was modified anywhere in this correction, including to produce the
+bounded RPC cache experiment evidence.
 
 ## Validation
 
@@ -279,12 +377,15 @@ was read, never re-executed.
 ## Evidence layout
 
 ```
-evidence/arms.json                    five canonical arms + cross-arm invariant
-evidence/negative-controls.json       all 12 required negative controls
-evidence/local-backing-accounting.json Phase 2 required-vs-optional accounting
-evidence/producer-hashes.json         sha256 of every producer this record depends on
-evidence/canonical-summary.json       pass/fail roll-up
-evidence/isolation.json               mechanical network/process/path isolation record
-evidence/terminal-reduction.json      Phase 4 finding + environment note + terminal
-evidence/MANIFEST.sha256              integrity anchor over every retained/producer path
+evidence/arms.json                          five canonical arms + cross-arm invariant
+evidence/negative-controls.json             all 12 required negative controls
+evidence/local-backing-accounting.json      Phase 2 required-vs-optional accounting
+evidence/producer-hashes.json               sha256 of every producer this record depends on
+evidence/canonical-summary.json             pass/fail roll-up
+evidence/isolation.json                     mechanical network/process/path isolation record
+evidence/rpc-cache-mechanism.json           pinned upstream source identity + mechanical cache-seam finding
+evidence/rpc-cache-experiment.json          bounded non-Qwen cold/warm/prestaged/adversarial experiment results
+evidence/rpc-cache-experiment-raw/          driver source, fixture generator, orchestration script, raw strace/server logs
+evidence/terminal-reduction.json            Phase 4 finding + cache-mechanism finding + environment note + terminal
+evidence/MANIFEST.sha256                    integrity anchor over every retained/producer path
 ```

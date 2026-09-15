@@ -1,0 +1,12 @@
+Starting RPC server v6.0.0
+  endpoint       : 127.0.0.1:58303
+  local cache    : /tmp/claude-0/-home-user-inferswarm/814f5c21-e0bf-55e5-aefa-383a311de85c/scratchpad/r8f_rpc_cache_probe/work/cache-c/rpc/
+Devices:
+  CPU: Intel(R) Xeon(R) Processor @ 2.80GHz (16095 MiB, 16095 MiB free)
+  transport      : TCP
+Accepted client connection
+Client connection closed
+Accepted client connection
+Client connection closed
+Accepted client connection
+Client connection closed

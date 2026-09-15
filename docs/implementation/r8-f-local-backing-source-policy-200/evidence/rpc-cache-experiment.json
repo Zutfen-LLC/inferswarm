@@ -1,0 +1,233 @@
+{
+  "fixture": {
+    "note": "SHA-256 is the InferSwarm-style provenance identity used in this experiment; the FNV-1a value is upstream's own internal cache-dedup key and is recorded only to predict the cache filename, never treated as provenance authority.",
+    "predicted_fnv1a_cache_key": "a0cad02b716eb51f",
+    "sha256": "a947de2035450bc7399893f2cbb8ddac67389177468793b68a6cc9fb429cc4bc",
+    "size_bytes": 12582912
+  },
+  "method_note": "Network bytes are measured by strace on the client driver's own send()/recv() syscalls (trace=network), independent of any llama.cpp instrumentation. bytes_set_phase_alloc_to_set_done is the metric that matters for the cache question: it isolates the SET_TENSOR_HASH/SET_TENSOR exchange from the unconditional verification-only GET_TENSOR the driver performs afterwards (GET_TENSOR has no cache shortcut in this pinned build and always transfers the full tensor back, in every phase).",
+  "phases": {
+    "A_cold": {
+      "cache_dir_listing_after": [
+        {
+          "name": "a0cad02b716eb51f",
+          "size_bytes": 12582912
+        }
+      ],
+      "description": "First-ever SET_TENSOR for this content on a fresh empty cache dir.",
+      "predicted_vs_actual_cache_filename_match": true,
+      "result": {
+        "bytes_get_phase_verification_only": {
+          "recv": 12582920,
+          "sent": 321
+        },
+        "bytes_pre_alloc_handshake_and_buffer_type_query": {
+          "recv": 156,
+          "sent": 139
+        },
+        "bytes_set_phase_alloc_to_set_done": {
+          "recv": 9,
+          "sent": 12583546
+        },
+        "bytes_total_on_wire": {
+          "recv": 12583085,
+          "sent": 12584023
+        },
+        "driver_stderr": "[driver] endpoint=127.0.0.1:58301 fixture=fixture.bin size=12582912 mode=setget\n[driver] marker=ALLOC_START epoch=1789510043.847701\n[driver] marker=ALLOC_DONE epoch=1789510043.851303\n[driver] marker=SET_DONE epoch=1789510043.905618\n[driver] marker=GET_DONE epoch=1789510043.953558\n[driver] setget complete; byte-identical to fixture: yes; mismatch_count=0; first_mismatch_offset=-1\n[driver] marker=BEFORE_FREE epoch=1789510043.956533",
+        "exit_code": 0,
+        "markers": {
+          "ALLOC_DONE": 1789510043.851303,
+          "ALLOC_START": 1789510043.847701,
+          "BEFORE_FREE": 1789510043.956533,
+          "GET_DONE": 1789510043.953558,
+          "SET_DONE": 1789510043.905618
+        },
+        "mode": "setget",
+        "strace_log": "work/strace-A_cold.log",
+        "tag": "A_cold"
+      },
+      "server_log": "work/server-A_cold.log"
+    },
+    "B_warm_restart": {
+      "cache_dir_listing_after": [
+        {
+          "name": "a0cad02b716eb51f",
+          "size_bytes": 12582912
+        }
+      ],
+      "description": "Fresh server process (new PID, fresh connections) restarted against the SAME on-disk cache dir populated in phase A -- proves durability across process restart, not merely an in-memory/same-connection effect.",
+      "result": {
+        "bytes_get_phase_verification_only": {
+          "recv": 12582920,
+          "sent": 321
+        },
+        "bytes_pre_alloc_handshake_and_buffer_type_query": {
+          "recv": 156,
+          "sent": 139
+        },
+        "bytes_set_phase_alloc_to_set_done": {
+          "recv": 9,
+          "sent": 321
+        },
+        "bytes_total_on_wire": {
+          "recv": 12583085,
+          "sent": 798
+        },
+        "driver_stderr": "[driver] endpoint=127.0.0.1:58302 fixture=fixture.bin size=12582912 mode=setget\n[driver] marker=ALLOC_START epoch=1789510044.299825\n[driver] marker=ALLOC_DONE epoch=1789510044.303260\n[driver] marker=SET_DONE epoch=1789510044.342291\n[driver] marker=GET_DONE epoch=1789510044.371796\n[driver] setget complete; byte-identical to fixture: yes; mismatch_count=0; first_mismatch_offset=-1\n[driver] marker=BEFORE_FREE epoch=1789510044.374811",
+        "exit_code": 0,
+        "markers": {
+          "ALLOC_DONE": 1789510044.30326,
+          "ALLOC_START": 1789510044.299825,
+          "BEFORE_FREE": 1789510044.374811,
+          "GET_DONE": 1789510044.371796,
+          "SET_DONE": 1789510044.342291
+        },
+        "mode": "setget",
+        "strace_log": "work/strace-B_warm_restart.log",
+        "tag": "B_warm_restart"
+      },
+      "server_log": "work/server-B_warm_restart.log"
+    },
+    "C_prestaged": {
+      "cache_dir_listing_after": [
+        {
+          "name": "a0cad02b716eb51f",
+          "size_bytes": 12582912
+        }
+      ],
+      "description": "Brand-new empty cache dir + brand-new server that has NEVER seen this content; the exact fixture bytes are written to the predicted cache path BEFORE the driver ever runs (simulating a bounded external adapter materializing InferSwarm-verified local backing into the RPC cache). First-ever contact with this server is the measured event.",
+      "prestaged_file": {
+        "path": "work/cache-c/rpc/a0cad02b716eb51f",
+        "sha256": "a947de2035450bc7399893f2cbb8ddac67389177468793b68a6cc9fb429cc4bc",
+        "size_bytes": 12582912
+      },
+      "result": {
+        "bytes_get_phase_verification_only": {
+          "recv": 12582920,
+          "sent": 321
+        },
+        "bytes_pre_alloc_handshake_and_buffer_type_query": {
+          "recv": 156,
+          "sent": 139
+        },
+        "bytes_set_phase_alloc_to_set_done": {
+          "recv": 9,
+          "sent": 321
+        },
+        "bytes_total_on_wire": {
+          "recv": 12583085,
+          "sent": 798
+        },
+        "driver_stderr": "[driver] endpoint=127.0.0.1:58303 fixture=fixture.bin size=12582912 mode=setget\n[driver] marker=ALLOC_START epoch=1789510044.698990\n[driver] marker=ALLOC_DONE epoch=1789510044.702718\n[driver] marker=SET_DONE epoch=1789510044.740587\n[driver] marker=GET_DONE epoch=1789510044.777162\n[driver] setget complete; byte-identical to fixture: yes; mismatch_count=0; first_mismatch_offset=-1\n[driver] marker=BEFORE_FREE epoch=1789510044.780976",
+        "exit_code": 0,
+        "markers": {
+          "ALLOC_DONE": 1789510044.702718,
+          "ALLOC_START": 1789510044.69899,
+          "BEFORE_FREE": 1789510044.780976,
+          "GET_DONE": 1789510044.777162,
+          "SET_DONE": 1789510044.740587
+        },
+        "mode": "setget",
+        "strace_log": "work/strace-C_prestaged.log",
+        "tag": "C_prestaged"
+      },
+      "server_log": "work/server-C_prestaged.log"
+    },
+    "D_wrong_content": {
+      "cache_blindly_trusted_wrong_content": true,
+      "cache_dir_listing_after": [
+        {
+          "name": "a0cad02b716eb51f",
+          "size_bytes": 12582912
+        }
+      ],
+      "description": "Adversarial: file at the predicted cache path holds DIFFERENT bytes than the fixture (collision/corruption simulation). Demonstrates whether the pinned server detects this or blindly trusts the filename.",
+      "prestaged_file": {
+        "path": "work/cache-d/rpc/a0cad02b716eb51f",
+        "sha256": "d6211f1c64b5a9cc35c7165f4a415e4ae7b4536a657b7cb44d7299ba9ef8a791",
+        "size_bytes": 12582912
+      },
+      "result": {
+        "bytes_get_phase_verification_only": {
+          "recv": 12582920,
+          "sent": 321
+        },
+        "bytes_pre_alloc_handshake_and_buffer_type_query": {
+          "recv": 156,
+          "sent": 139
+        },
+        "bytes_set_phase_alloc_to_set_done": {
+          "recv": 9,
+          "sent": 321
+        },
+        "bytes_total_on_wire": {
+          "recv": 12583085,
+          "sent": 798
+        },
+        "driver_stderr": "[driver] endpoint=127.0.0.1:58304 fixture=fixture.bin size=12582912 mode=setget\n[driver] marker=ALLOC_START epoch=1789510045.198030\n[driver] marker=ALLOC_DONE epoch=1789510045.201605\n[driver] marker=SET_DONE epoch=1789510045.241765\n[driver] marker=GET_DONE epoch=1789510045.269750\n[driver] setget complete; byte-identical to fixture: no; mismatch_count=12534082; first_mismatch_offset=0\n[driver] marker=BEFORE_FREE epoch=1789510045.283347",
+        "exit_code": 2,
+        "markers": {
+          "ALLOC_DONE": 1789510045.201605,
+          "ALLOC_START": 1789510045.19803,
+          "BEFORE_FREE": 1789510045.283347,
+          "GET_DONE": 1789510045.26975,
+          "SET_DONE": 1789510045.241765
+        },
+        "mode": "setget",
+        "strace_log": "work/strace-D_wrong_content.log",
+        "tag": "D_wrong_content"
+      },
+      "server_log": "work/server-D_wrong_content.log",
+      "wrong_content_sha256": "d6211f1c64b5a9cc35c7165f4a415e4ae7b4536a657b7cb44d7299ba9ef8a791"
+    },
+    "E_truncated": {
+      "cache_dir_listing_after": [
+        {
+          "name": "a0cad02b716eb51f",
+          "size_bytes": 6291456
+        }
+      ],
+      "cache_silently_accepted_short_entry": true,
+      "description": "Adversarial: file at the predicted cache path is a truncated (half-length) prefix of the fixture. Demonstrates whether the pinned server rejects a short cache entry or silently accepts it, leaving the tensor tail unwritten.",
+      "prestaged_file": {
+        "path": "work/cache-e/rpc/a0cad02b716eb51f",
+        "sha256": "5ad94b3d8870bfb5d3ec48768e1f9d3e0f8c2111b19d796576e9c2886e5c728a",
+        "size_bytes": 6291456
+      },
+      "result": {
+        "bytes_get_phase_verification_only": {
+          "recv": 12582920,
+          "sent": 321
+        },
+        "bytes_pre_alloc_handshake_and_buffer_type_query": {
+          "recv": 156,
+          "sent": 139
+        },
+        "bytes_set_phase_alloc_to_set_done": {
+          "recv": 9,
+          "sent": 321
+        },
+        "bytes_total_on_wire": {
+          "recv": 12583085,
+          "sent": 798
+        },
+        "driver_stderr": "[driver] endpoint=127.0.0.1:58305 fixture=fixture.bin size=12582912 mode=setget\n[driver] marker=ALLOC_START epoch=1789510045.633148\n[driver] marker=ALLOC_DONE epoch=1789510045.636498\n[driver] marker=SET_DONE epoch=1789510045.665848\n[driver] marker=GET_DONE epoch=1789510045.698442\n[driver] setget complete; byte-identical to fixture: no; mismatch_count=6267029; first_mismatch_offset=6291456\n[driver] marker=BEFORE_FREE epoch=1789510045.715734",
+        "exit_code": 2,
+        "markers": {
+          "ALLOC_DONE": 1789510045.636498,
+          "ALLOC_START": 1789510045.633148,
+          "BEFORE_FREE": 1789510045.715734,
+          "GET_DONE": 1789510045.698442,
+          "SET_DONE": 1789510045.665848
+        },
+        "mode": "setget",
+        "strace_log": "work/strace-E_truncated.log",
+        "tag": "E_truncated"
+      },
+      "server_log": "work/server-E_truncated.log",
+      "truncated_size_bytes": 6291456
+    }
+  },
+  "pinned_llama_cpp_commit": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "schema": "inferswarm.issue200.rpc-cache-experiment/1"
+}

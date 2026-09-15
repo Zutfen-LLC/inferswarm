@@ -57,6 +57,7 @@ ROOT = Path(__file__).resolve().parents[1]
 AREA = Path("docs/implementation/r8-f-local-backing-source-policy-200")
 PRODUCERS = ["scripts/issue200_r8f_source_policy.py", "scripts/issue200_r8f_fixture.py",
              "scripts/issue200_r8f_proof.py", "scripts/issue200_r8f_terminal_reduction.py",
+             "scripts/issue200_r8f_rpc_cache_mechanism.py",
              "scripts/issue99_artifact_core.py", "scripts/issue101_orchestration.py",
              "scripts/issue74_methodology.py",
              "tests/test_issue200_r8f_source_policy.py", "tests/test_issue200_r8f_proof.py"]
@@ -496,11 +497,17 @@ def write_evidence(documents: dict[str, Any]) -> None:
     for name, document in documents.items():
         write_canonical_json(evidence / name, document)
     manifest_lines = []
-    for path in sorted({*PRODUCERS, *(str(AREA / "evidence" / name) for name in documents),
-                        str(AREA / "README.md"), str(AREA / "methodology.md")}):
+    for path in sorted({*PRODUCERS, str(AREA / "README.md"), str(AREA / "methodology.md")}):
         full = ROOT / path
         if full.is_file():
             manifest_lines.append(f"{sha(full)}  {path}")
+    # Cover every file actually present under evidence/ (including retained,
+    # non-JSON supporting files such as raw logs and the external RPC-cache
+    # experiment driver source under evidence/rpc-cache-experiment-raw/),
+    # not only the JSON documents this call happened to (re)write.
+    for full in sorted(evidence.rglob("*")):
+        if full.is_file() and full.name != "MANIFEST.sha256":
+            manifest_lines.append(f"{sha(full)}  {full.relative_to(ROOT)}")
     (evidence / "MANIFEST.sha256").write_text("\n".join(sorted(manifest_lines)) + "\n")
 
 
