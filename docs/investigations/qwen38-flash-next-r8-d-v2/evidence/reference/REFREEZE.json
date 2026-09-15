@@ -1,0 +1,7 @@
+{
+  "campaign": "issue195-r8d-true-greedy-requal-v2",
+  "created_utc": "2026-09-15T17:04:28.693Z",
+  "frozen_reference_sha256": "94982952d4f0f6acae15814748c1596626f15ddcc52e35651d44e5bb47cd2c95",
+  "refreeze_commit": "7cfc261a16ea07a9dde49c8b2de966aadfd43896",
+  "schema": "inferswarm.issue195.refreeze-pin/1"
+}
