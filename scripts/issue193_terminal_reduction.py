@@ -126,16 +126,28 @@ def main():
     n_vocab = meta["n_vocab"]
     data = open(os.path.join(ev, "phase4-tool", "dl-R.bin"), "rb").read()
     import struct
+    # NOTE (review P2 correction): rows are conditioned on the TOOL's own
+    # greedy trajectory, which is on-stream with the accepted reference only
+    # while the tool's pick equals the accepted token (row 0, and row 1's
+    # context). Rank claims are therefore restricted to ON-trajectory rows;
+    # off-trajectory ranks are reported as context-only and prove nothing
+    # about the accepted stream.
+    tool_toks = meta.get("tokens") or []
     ranks = []
+    on_traj_ranks = {}
     for r in range(min(8, meta["n_rows"])):
         v = struct.unpack_from("<%df" % n_vocab, data, r * n_vocab * 4)
         order = sorted(range(n_vocab), key=lambda i: -v[i])
         rank = order.index(acc[r]) if acc[r] < n_vocab else None
         ranks.append(rank)
-    check("accepted stream contains non-argmax tokens (rank>0) at >=3 positions",
-          sum(1 for x in ranks if x and x > 0) >= 3, f"ranks={ranks}")
-    check("accepted pos0/pos5/pos6 are argmax-consistent",
-          ranks[0] == 0 and ranks[5] == 0 and ranks[6] == 0, f"ranks={ranks}")
+        on_traj = (r == 0) or (tool_toks[:r] == acc[:r])
+        if on_traj:
+            on_traj_ranks[r] = rank
+    check("accepted stream pos1 token is NOT the argmax of its own decision "
+          "context (rank>0 on the on-trajectory row)",
+          on_traj_ranks.get(1, -1) > 0, f"on_traj_ranks={on_traj_ranks}")
+    check("accepted pos0 is argmax-consistent (on-trajectory)",
+          on_traj_ranks.get(0) == 0, f"on_traj_ranks={on_traj_ranks}")
 
     # 6. Phase 5 intervention
     ivR = jload(os.path.join(ev, "phase5-intervention", "iv-R.json"))

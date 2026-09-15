@@ -27,9 +27,21 @@ It is causally localized to the request-level sampler chain:
    the candidate's ran across five CUDA devices — large numerical-path
    difference, deterministic per arm.
 3. Rank proof from retained full-vocab logits (Phase 4 tool, R arm): the
-   accepted reference stream contains tokens at full-vocab rank 1 (pos 1),
-   ~154k (pos 2), ~1.6k (pos 3), ~42k (pos 4) of the emitted distribution —
-   impossible under true greedy; expected under dist sampling.
+   tool's rows are conditioned on ITS OWN greedy trajectory, which shares the
+   accepted reference stream's decision contexts only through position 1 (the
+   tool's argmax diverges from the accepted token at position 1). On the
+   on-trajectory decision row, the accepted position-1 token (40554) sits at
+   full-vocab rank 1 of its own decision context — impossible under true
+   greedy, expected under dist sampling. Off-trajectory rows (positions >= 2,
+   ranks ~154k/1.6k/42k) are retained as context-only diagnostics and are NOT
+   used as claims about the accepted stream.
+
+Caveat (review finding): the accepted candidate-server.log (213 lines) ends at
+the load stage and retains no sampler-chain line; "both arms ran dist" for the
+ACCEPTED runs rests on protocol symmetry (identical request bodies) plus the
+R8-C phase-1 reproduction, whose candidate rerun log does retain the same
+warning + "logits -> dist" chain and byte-identical outputs.
+
 4. Single-factor intervention (Phase 5, request field ONLY: samplers=["top_k"],
    top_k=1 = true greedy; binaries/model/topology/protocol otherwise exact):
    the same five-device RPC candidate vs the reference becomes token-identical

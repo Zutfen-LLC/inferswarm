@@ -1,8 +1,8 @@
 a2bf86954420b289f6d0c51e940154b846e50771a52cb5317ce55627c8c14ca2  docs/investigations/qwen38-flash-next-r8-c/AUTHORITY-FREEZE.md
-963d316bb7b2d89c9427b27808119e38a7d834c8db071a4f31db69736fcf0b00  docs/investigations/qwen38-flash-next-r8-c/README.md
+48c551c5b312cf4f48644a6defa453b4d68745c496e456f64afee756123c6ccf  docs/investigations/qwen38-flash-next-r8-c/README.md
 7c3f53d6ba5cebe88b5e84802e2d5af663e849d6e131deb108bc6c9dbb8fe8fe  docs/investigations/qwen38-flash-next-r8-c/phase1-reproduction.json
 3f8a3bd66090c3d577f57caa40b9b87de3a9b23055dbc3c3543a0a4501c30ed8  docs/investigations/qwen38-flash-next-r8-c/producer-hashes.json
-104fdc085cb5ea08c3fae366467d21f4905d9971b691c03050619a524fd1ecff  docs/investigations/qwen38-flash-next-r8-c/terminal-reduction.json
+71fa1a2a92153b30d821f6d67dbb197003667e9a71219bc9255ddd13709ec05e  docs/investigations/qwen38-flash-next-r8-c/terminal-reduction.json
 ebf36c08f5e1f19816d82b9088ca4e1386d97223114809d5af6a8a89672e12f5  docs/investigations/qwen38-flash-next-r8-c/evidence/r8b-bundle-reverification.json
 54ac3a2fff93acdb1dfb797f4e52a50574cfb1cd91a625d89af6d4d4f41a6e1f  docs/investigations/qwen38-flash-next-r8-c/evidence/host-inventory/inferswarm01-inventory-raw.txt
 098ef5c2422e6c4d033587a9e43b6bcb9bf6fdd4004bc82d4b0157c1218aed69  docs/investigations/qwen38-flash-next-r8-c/evidence/host-inventory/inferswarm01-nvidia-smi-q.xml

@@ -52,13 +52,13 @@
       "ok": true
     },
     {
-      "check": "accepted stream contains non-argmax tokens (rank>0) at >=3 positions",
-      "detail": "ranks=[0, 1, 154065, 1637, 41947, 0, 0, 1]",
+      "check": "accepted stream pos1 token is NOT the argmax of its own decision context (rank>0 on the on-trajectory row)",
+      "detail": "on_traj_ranks={0: 0, 1: 1}",
       "ok": true
     },
     {
-      "check": "accepted pos0/pos5/pos6 are argmax-consistent",
-      "detail": "ranks=[0, 1, 154065, 1637, 41947, 0, 0, 1]",
+      "check": "accepted pos0 is argmax-consistent (on-trajectory)",
+      "detail": "on_traj_ranks={0: 0, 1: 1}",
       "ok": true
     },
     {

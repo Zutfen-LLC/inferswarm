@@ -139,23 +139,43 @@ class TestNegativeControls(unittest.TestCase):
         self.tmp = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.tmp)
 
-    def _mutated_phase1(self, mutate):
-        src = jload(os.path.join(R8C, "phase1-reproduction.json"))
-        mutate(src)
-        p = os.path.join(self.tmp, "phase1.json")
-        with open(p, "w") as fh:
-            json.dump(src, fh)
-        return src
+    def _run_phase1_reducer_on(self, mutate_fn):
+        """Run the REAL phase-1 reducer against a mutated copy of the evidence
+        tree; return (rc, stdout). Mutations copy the tree to tmp first."""
+        import shutil
+        import subprocess
+        tree = os.path.join(self.tmp, "ev")
+        shutil.copytree(os.path.join(R8C, "evidence", "phase1-reproduction"), tree)
+        mutate_fn(tree)
+        # the reducer resolves EV relative to its own file; patch via env-free
+        # approach: run a small driver importing the reducer with monkeypatched EV
+        driver = os.path.join(self.tmp, "drv.py")
+        with open(driver, "w") as fh:
+            fh.write(
+                "import importlib.util, os, sys\n"
+                f"spec = importlib.util.spec_from_file_location('p1r', {os.path.join(ROOT, 'scripts', 'issue193_phase1_reduction.py')!r})\n"
+                "m = importlib.util.module_from_spec(spec)\n"
+                "spec.loader.exec_module(m)\n"
+                f"m.EV = {tree!r}\n"
+                "sys.exit(0 if m.main() else 1)\n")  # main() exits itself; defensive
+        r = subprocess.run([os.path.join(ROOT, ".venv", "bin", "python"), driver],
+                           capture_output=True, text=True)
+        return r.returncode, r.stdout + r.stderr
 
-    def test_reproduction_gate_rejects_false(self):
-        d = self._mutated_phase1(lambda x: x.__setitem__("reproduced", False))
-        self.assertFalse(d["reproduced"])
+    def test_phase1_reducer_fails_on_mutated_tokens(self):
+        def mutate(tree):
+            p = os.path.join(tree, "r8c-R-run1.json")
+            d = jload(p)
+            d["results"][0]["generated_tokens"][3] += 1
+            json.dump(d, open(p, "w"))
+        rc, out = self._run_phase1_reducer_on(mutate)
+        self.assertNotEqual(rc, 0, out)
 
-    def test_reproduction_gate_rejects_failed_check(self):
-        def break_check(x):
-            x["checks"][0]["ok"] = False
-        d = self._mutated_phase1(break_check)
-        self.assertFalse(all(c["ok"] for c in d["checks"]))
+    def test_phase1_reducer_fails_on_removed_run(self):
+        def mutate(tree):
+            os.remove(os.path.join(tree, "r8c-R-run2.json"))
+        rc, out = self._run_phase1_reducer_on(mutate)
+        self.assertNotEqual(rc, 0, out)
 
     def test_terminal_reducer_runs_green_on_retained_bytes(self):
         import subprocess
