@@ -54,7 +54,7 @@ set -euo pipefail
 LOG=/tmp/i195-v2/rpc03-g0.log
 mkdir -p /tmp/i195-v2
 rm -f "$LOG"
-nohup {RPC_BIN} --host 0.0.0.0 --port 50052 -d 0 -v > "$LOG" 2>&1 &
+nohup {RPC_BIN} -H 0.0.0.0 -p 50052 -d CUDA0 > "$LOG" 2>&1 &
 echo "rpc03-g0 pid=$!"
 """
 
@@ -63,7 +63,7 @@ set -euo pipefail
 LOG=/tmp/i195-v2/rpc03-g1.log
 mkdir -p /tmp/i195-v2
 rm -f "$LOG"
-nohup {RPC_BIN} --host 0.0.0.0 --port 50053 -d 1 -v > "$LOG" 2>&1 &
+nohup {RPC_BIN} -H 0.0.0.0 -p 50053 -d CUDA1 > "$LOG" 2>&1 &
 echo "rpc03-g1 pid=$!"
 """
 
@@ -72,7 +72,7 @@ set -euo pipefail
 LOG=/tmp/i195-v2/rpc04.log
 mkdir -p /tmp/i195-v2
 rm -f "$LOG"
-nohup {RPC_BIN} --host 0.0.0.0 --port 50052 -d 0 -v > "$LOG" 2>&1 &
+nohup {RPC_BIN} -H 0.0.0.0 -p 50052 -d CUDA0 > "$LOG" 2>&1 &
 echo "rpc04 pid=$!"
 """
 

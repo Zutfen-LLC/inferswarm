@@ -143,6 +143,13 @@ ALL_CHECK_NAMES = (
 # run-record verification (shared by reducer and freeze producer)
 # ---------------------------------------------------------------------------
 
+def producer_pin_for(rel_path):
+    pf = os.path.join(REPO, R8D_V2_DIR, "producer-hashes.json")
+    if not os.path.exists(pf):
+        return None
+    return load(pf).get(rel_path)
+
+
 def verify_run_record(d, where, problems):
     """Internal + authority identity verification of one run record.
     Returns (internally_integral, identity_exact).
@@ -168,6 +175,13 @@ def verify_run_record(d, where, problems):
     if d.get("producer_sha256") is None:
         problems.append(f"{where}: missing producer identity")
         internal_ok = False
+    else:
+        pin = producer_pin_for(d.get("producer_path") or
+                               "scripts/issue195_v2_run_ladder.py")
+        if pin is not None and pin != d["producer_sha256"]:
+            problems.append(f"{where}: producer sha != repo pin "
+                            "(executing producer differs from pinned bytes)")
+            internal_ok = False
     if d.get("fixture_ladder_sha256") != FIXTURE_LADDER_SHA256:
         problems.append(f"{where}: fixture ladder digest mismatch")
         identity_ok = False

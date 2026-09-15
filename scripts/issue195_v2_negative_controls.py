@@ -76,8 +76,23 @@ def sandbox():
                 "qwen38-flash-next-r8-c"):
         shutil.copytree(os.path.join(REPO, "docs/investigations", sub),
                         os.path.join(tmp, "docs/investigations", sub))
-    # the reducer resolves the frozen ladder from REPO (overridden);
-    # R8-B tree copied above provides it byte-exact
+    # predecessor manifests pin repo files outside the investigation
+    # areas (scripts/, tests/); copy every referenced path so the
+    # predecessor checks exercise real bytes in the sandbox
+    for area in ("qwen38-flash-next-r8-a", "qwen38-flash-next-r8-b",
+                 "qwen38-flash-next-r8-c"):
+        m = os.path.join(tmp, "docs/investigations", area, "MANIFEST.sha256")
+        for line in open(m):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            _h, rel = line.split(None, 1)
+            rel = rel.lstrip("*")
+            src = os.path.join(REPO, rel)
+            dst = os.path.join(tmp, rel)
+            if os.path.isfile(src) and not os.path.exists(dst):
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copy2(src, dst)
     return tmp
 
 
@@ -123,6 +138,16 @@ def synth_green_campaign():
     fr = json.load(open(ev(base, "reference", "frozen-reference.json")))
     for i in (1, 2, 3):
         p = ev(base, "candidate", f"cand-run-{i}.json")
+        d = json.load(open(p))
+        for r in d["results"]:
+            fc = fr["cases"][r["case_id"]]
+            rewrite_response_tokens(r, fc["generated_tokens"],
+                                    fc["stop_type"], fc["stopping_word"])
+        with open(p, "w") as fh:
+            json.dump(d, fh, indent=2, sort_keys=True)
+            fh.write("\n")
+    for c in ("case-256", "case-4096"):
+        p = ev(base, "candidate", f"cand-restart-{c}.json")
         d = json.load(open(p))
         for r in d["results"]:
             fc = fr["cases"][r["case_id"]]
@@ -313,7 +338,8 @@ def main():
         with open(p, "w") as fh:
             json.dump({"terminal": TERMINAL_PASS, "authored": True}, fh)
     control("NC-13", "authored PASS contradicting retained raw output",
-            ["all_cases_token_exact"], "stay_true", nc13)
+            ["all_cases_token_exact"], "stay_true", nc13,
+            baseline=synth_green_campaign)
 
     # NC-14 n_probs in a correctness-bearing request must be rejected
     def nc14(a):
@@ -402,7 +428,7 @@ def main():
             r"return True  # (?:always|stub)", src),
         "structural": True})
     # derive() must never read an authored verdict file
-    der_src = src.split("def main")[0]
+    der_src = src.split("def derive")[1].split("def main")[0] if "def derive" in src else src
     RESULTS.append({
         "control": "NC-S2", "description": "derive() never reads any "
         "authored verdict file (structural)", "valid": (
