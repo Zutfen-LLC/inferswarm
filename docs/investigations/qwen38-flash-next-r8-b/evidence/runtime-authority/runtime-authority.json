@@ -1,0 +1,47 @@
+{
+  "schema": "inferswarm.issue191.runtime-authority/1",
+  "llama_cpp_repo": "ggml-org/llama.cpp",
+  "llama_cpp_commit": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "llama_cpp_tag": "v0.4.1",
+  "release_date": "2026-09-14T18:27:29Z",
+  "repair_ancestry": {
+    "issue_27993_repair_pr": 27960,
+    "repair_merge_commit": "73f56d105bb6b5aeb37d0c7dcc6a7d58c2f7974a",
+    "repair_head_commit": "a273d22e142b9ad253a09d7b76d4d24ba64eb9bc",
+    "verified_ancestor_of_selection": true,
+    "verification": "GitHub compare API 2026-09-15: 73f56d1...b29c606e status=ahead (selection contains the repair)"
+  },
+  "qwen4exp_support_commits_ancestral": [
+    "6c84c7d5d8833c6e0df69628f75a0f599797934e",
+    "36b10154383b60eb15baac2c7a40d2a5f784faa7",
+    "09412af38a9fe328da2ed452a40f310eea350290",
+    "0eadefebd3f8f92a86d634a0e5b8fffc9dc792c0",
+    "6fe74980162af0ed5e559870d5deccafaa034e7c"
+  ],
+  "build": {
+    "cmake_configure": "-DCMAKE_BUILD_TYPE=Release -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=86 -DLLAMA_CURL=OFF -DGGML_RPC=ON",
+    "nvcc": "release 13.1, V13.1.137 (CUDA 13.1, /usr/local/cuda-13.1)",
+    "gcc": "14.2.0 (Debian 14.2.0-19)",
+    "cmake": "3.31.6",
+    "targets": ["llama-cli", "llama-server", "ggml-rpc-server"]
+  },
+  "binaries_sha256": {
+    "llama-cli": "3f6b0ed46f42e5c614e4fb4d36b91c56061dfff96096bbb1e4bc0044bd95e77f",
+    "llama-server": "de3a8a545e2f5995f80ff23f60776fedc30edca67f0e09f3bc47c845156e3411",
+    "ggml-rpc-server": "a897f908add3305658e6b4f996880033d07ede0800fff71dbc46e90230acdfe9"
+  },
+  "cross_host_identical": {
+    "hosts": ["inferswarm01", "inferswarm03", "inferswarm04"],
+    "note": "per-host sha256sum outputs compared 2026-09-15; all three hosts report the identical digests above for every binary"
+  },
+  "tensor_read_lazy_treatment": {
+    "source_files": ["src/models/qwen4exp.cpp", "src/llama-model-loader.cpp"],
+    "finding": "qwen4exp.cpp creates per_layer_token_embd.weight with TENSOR_READ_LAZY; llama_model_loader lazy_read::add() auto-lazy-reads tensors above 4 GiB when mmap is supported; lazy_read::buft() returns the CPU device buffer type; buft_for_tensor() returns the lazy buft BEFORE the -ot override block, so -ot cannot move the PLE table. Host-side mmap-backed PLE residency on the model-loading client is the runtime default at this revision.",
+    "observed_runtime_line_reference": "llama_model_loader: add: tensor per_layer_token_embd.weight (size = 27465 MiB) lazy read enabled (in both reference and candidate logs)"
+  },
+  "runtime_option_contract": {
+    "client_server": "-m <split-00001> -c 8192 --host 127.0.0.1 --port <p> --rpc <endpoint-list> -lv 4 (candidate adds --rpc)",
+    "rpc_server": "ggml-rpc-server --host 0.0.0.0 --port 5005x (CUDA_VISIBLE_DEVICES pins per-GPU on inferswarm03)",
+    "generation_protocol": "HTTP /tokenize + /completion with prompt=<exact token ids>, n_predict=8, temperature=0.0, seed=0, samplers=[greedy], cache_prompt=false, return_tokens=true, stream=false — IDENTICAL for both arms"
+  }
+}

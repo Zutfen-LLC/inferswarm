@@ -1,0 +1,126 @@
+{
+  "base_url": "http://127.0.0.1:8301",
+  "fixture_sha_note": "fixture ladder as frozen in evidence/reference/fixture-ladder.json",
+  "label": "reference-arm-run1",
+  "results": [
+    {
+      "case_id": "case-256",
+      "generated_text": " The tide pools gleamed\n\n<think>\n",
+      "generated_tokens": [
+        561,
+        40554,
+        32039,
+        28056,
+        3486,
+        271,
+        248068,
+        198
+      ],
+      "prompt_len": 256,
+      "stop_type": "limit",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 460.132,
+        "predicted_n": 8,
+        "predicted_per_second": 15.213025827371276,
+        "predicted_per_token_ms": 65.73314285714285,
+        "prompt_ms": 2598.258,
+        "prompt_n": 256,
+        "prompt_per_second": 98.52755192132575,
+        "prompt_per_token_ms": 10.1494453125
+      },
+      "wall_s": 3.351
+    },
+    {
+      "case_id": "case-1024",
+      "generated_text": " The keeper logged \n\n<think>\nThe user",
+      "generated_tokens": [
+        561,
+        51624,
+        13332,
+        4558,
+        248068,
+        198,
+        760,
+        1156
+      ],
+      "prompt_len": 1022,
+      "stop_type": "limit",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 563.483,
+        "predicted_n": 8,
+        "predicted_per_second": 12.422735024836598,
+        "predicted_per_token_ms": 80.49757142857142,
+        "prompt_ms": 6226.273,
+        "prompt_n": 1022,
+        "prompt_per_second": 164.14313988480748,
+        "prompt_per_token_ms": 6.092243639921723
+      },
+      "wall_s": 6.924
+    },
+    {
+      "case_id": "case-3072",
+      "generated_text": " The foghorn sounded",
+      "generated_tokens": [
+        561,
+        29262,
+        49172,
+        33172,
+        248046
+      ],
+      "prompt_len": 3077,
+      "stop_type": "eos",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 295.386,
+        "predicted_n": 5,
+        "predicted_per_second": 13.54160319040171,
+        "predicted_per_token_ms": 73.8465,
+        "prompt_ms": 18002.736,
+        "prompt_n": 3077,
+        "prompt_per_second": 170.9184648377891,
+        "prompt_per_token_ms": 5.850742931426715
+      },
+      "wall_s": 18.513
+    },
+    {
+      "case_id": "case-4096",
+      "generated_text": " The foghorn sounded once.\n\nThe",
+      "generated_tokens": [
+        561,
+        29262,
+        49172,
+        33172,
+        2957,
+        13,
+        271,
+        760
+      ],
+      "prompt_len": 4097,
+      "stop_type": "limit",
+      "stopping_word": "",
+      "timings": {
+        "cache_n": 0,
+        "predicted_ms": 469.861,
+        "predicted_n": 8,
+        "predicted_per_second": 14.898023032343609,
+        "predicted_per_token_ms": 67.123,
+        "prompt_ms": 23256.259,
+        "prompt_n": 4097,
+        "prompt_per_second": 176.16762868008996,
+        "prompt_per_token_ms": 5.676411764705882
+      },
+      "wall_s": 23.969
+    }
+  ],
+  "sampling": {
+    "greedy": true,
+    "seed": 0,
+    "temperature": 0.0
+  },
+  "schema": "inferswarm.issue191.ladder-run/1"
+}

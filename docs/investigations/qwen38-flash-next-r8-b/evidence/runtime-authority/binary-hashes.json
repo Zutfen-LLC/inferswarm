@@ -1,0 +1,8 @@
+{
+  "binaries_sha256": {
+    "ggml-rpc-server": "a897f908add3305658e6b4f996880033d07ede0800fff71dbc46e90230acdfe9",
+    "llama-cli": "3f6b0ed46f42e5c614e4fb4d36b91c56061dfff96096bbb1e4bc0044bd95e77f",
+    "llama-server": "de3a8a545e2f5995f80ff23f60776fedc30edca67f0e09f3bc47c845156e3411"
+  },
+  "schema": "inferswarm.issue191.binary-hashes/1"
+}

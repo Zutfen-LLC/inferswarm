@@ -1,0 +1,16 @@
+0.00.246.863 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.247.632 W srv  llama_server: -----------------
+0.00.247.635 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+0.00.247.636 W srv  llama_server: this can be a security risk (cross-origin attacks)
+0.00.247.636 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+0.00.247.637 W srv  llama_server: -----------------
+0.00.249.093 I srv    load_model: loading model '/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf'
+0.01.632.825 W common_fit_params: failed to fit params to free device memory: n_gpu_layers already set by user to 99, abort
+0.03.682.922 E ggml_backend_cuda_buffer_type_alloc_buffer: allocating 21155.78 MiB on device 0: cudaMalloc failed: out of memory
+0.03.682.932 E alloc_tensor_range: failed to allocate CUDA0 buffer of size 22183447808
+0.04.425.344 E llama_model_load: error loading model: unable to allocate CUDA0 buffer
+0.04.425.463 E llama_model_load_from_file_impl: failed to load model
+0.04.425.474 E cmn  common_init_: failed to load model '/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf'
+0.04.425.481 E srv    load_model: failed to load model, '/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf'
+0.04.425.486 I srv    operator(): operator(): cleaning up before exit...
+0.04.456.468 E srv  llama_server: exiting due to model loading error

@@ -1,0 +1,56 @@
+{
+  "schema": "inferswarm.issue191.split-verification/1",
+  "verified_at": "2026-09-15T00:15-04:00",
+  "model_host": "inferswarm01",
+  "model_dir": "/srv/models/qwen38-ud-iq1-s",
+  "authority": {
+    "unsloth_repo": "unsloth/Qwen3.8-Flash-Next-GGUF",
+    "unsloth_revision": "38bb39ee97821de2c9009abb7e93950eec396e66",
+    "representation": "UD-IQ1_S",
+    "total_encoded_bytes": 72546461344,
+    "r8a_merge": "938af774878f562314e920007846f9f2bb611ec2"
+  },
+  "members": [
+    {
+      "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+      "expected_bytes": 10946624,
+      "expected_lfs_sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+      "actual_bytes": 10946624,
+      "actual_sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+      "bytes_ok": true,
+      "sha256_ok": true,
+      "header_prefix_sha256": "a0fc66d5d914c7d01ae005a0eb8a6b0b2a6ad76c57eb5bd788d351dad87fede6",
+      "r8a_header_sha256": "a0fc66d5d914c7d01ae005a0eb8a6b0b2a6ad76c57eb5bd788d351dad87fede6",
+      "header_bytes_ok": true,
+      "header_extent_bytes": 10946618
+    },
+    {
+      "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+      "expected_bytes": 49990818368,
+      "expected_lfs_sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
+      "actual_bytes": 49990818368,
+      "actual_sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
+      "bytes_ok": true,
+      "sha256_ok": true,
+      "header_prefix_sha256": "42ab8133a66ef69073203f2172d7a55f767f469e0088ad056a0c892cdda20e96",
+      "r8a_header_sha256": "42ab8133a66ef69073203f2172d7a55f767f469e0088ad056a0c892cdda20e96",
+      "header_bytes_ok": true,
+      "header_extent_bytes": 37683
+    },
+    {
+      "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+      "expected_bytes": 22544696352,
+      "expected_lfs_sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a",
+      "actual_bytes": 22544696352,
+      "actual_sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a",
+      "bytes_ok": true,
+      "sha256_ok": true,
+      "header_prefix_sha256": "f5e9431739d1860ece5c53cb4b22c301be563560dc76b975c620166ef2029579",
+      "r8a_header_sha256": "f5e9431739d1860ece5c53cb4b22c301be563560dc76b975c620166ef2029579",
+      "header_bytes_ok": true,
+      "header_extent_bytes": 40218
+    }
+  ],
+  "method": "sha256sum on inferswarm01 (full 67.55 GiB read) 2026-09-15; header-prefix check = head -c N | sha256sum vs the retained R8-A raw-headers extents; all values above transcribed from those command outputs",
+  "all_ok": true
+}

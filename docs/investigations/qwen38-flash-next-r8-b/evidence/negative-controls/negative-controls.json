@@ -1,0 +1,56 @@
+{
+  "all_fail_closed": true,
+  "controls": [
+    {
+      "control": "NC-01",
+      "description": "wrong GGUF member LFS identity rejected by digest check",
+      "fails_closed": true
+    },
+    {
+      "control": "NC-02",
+      "description": "missing split member detected (member count != 3)",
+      "fails_closed": true
+    },
+    {
+      "control": "NC-03",
+      "description": "binary hash pins are exact 64-hex and cross-host identical",
+      "fails_closed": true
+    },
+    {
+      "control": "NC-04",
+      "description": "rpc-server binary hash is distinct from client/server",
+      "fails_closed": true
+    },
+    {
+      "control": "NC-05",
+      "description": "topology freeze pins exact GPU UUID/BDF set",
+      "fails_closed": true
+    },
+    {
+      "control": "NC-06",
+      "description": "missing RPC endpoint would fail device count != 3",
+      "fails_closed": true
+    },
+    {
+      "control": "NC-09",
+      "description": "insufficient GPU memory fails closed (retained OOM receipt)",
+      "fails_closed": true
+    },
+    {
+      "control": "NC-12",
+      "description": "candidate/reference token mismatch detected (the FAIL basis)",
+      "fails_closed": true
+    },
+    {
+      "control": "NC-13",
+      "description": ">2K cases produce non-empty output (pathology check)",
+      "fails_closed": true
+    },
+    {
+      "control": "NC-15",
+      "description": "PASS/FAIL re-derived from raw rows, not authored",
+      "fails_closed": true
+    }
+  ],
+  "schema": "inferswarm.issue191.negative-controls/1"
+}
