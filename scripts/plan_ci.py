@@ -275,6 +275,10 @@ PATH_GROUPS = {
     "scripts/check_phase0_workloads.py": ["repo-integrity"],
     "docs/project-status.json": ["repo-integrity"],
     "docs/status-maintenance.md": ["repo-integrity"],
+    # Living hardware inventory receipts (Issue #196): raw read-only
+    # scan captures backing the living PCIe slot ledger; superseded by
+    # later refreshes, never retained experiment evidence.
+    "docs/hardware/current-inventory/": ["repo-integrity"],
     "docs/finalization.md": ["repo-integrity"],
     "docs/evidence-manifests.md": ["repo-integrity"],
     "scripts/README.md": ["repo-integrity"],

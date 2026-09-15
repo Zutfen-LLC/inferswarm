@@ -5,6 +5,7 @@ This directory holds living references for current InferSwarm test hardware. Upd
 ## References
 
 - [PCIe slot ledger](pcie-slot-ledger.md) — per-host slot capabilities, GPU occupants, negotiated widths/speeds, available slots, fleet aggregates, and topology notes.
+- [Current-inventory captures](current-inventory/) — dated raw read-only scan receipts backing each living-ledger refresh. These are living-state receipts, not retained experiment evidence; a later refresh supersedes them without correction procedures.
 
 ## Maintenance
 

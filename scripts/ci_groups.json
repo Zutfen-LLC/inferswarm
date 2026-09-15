@@ -219,6 +219,9 @@
   "docs/finalization.md": [
    "repo-integrity"
   ],
+  "docs/hardware/current-inventory/": [
+   "repo-integrity"
+  ],
   "docs/implementation/artifact-locality-transition-planning-103/": [
    "issue-99-103",
    "issue-117-133"

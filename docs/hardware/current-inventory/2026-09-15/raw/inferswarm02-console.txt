@@ -1,0 +1,1852 @@
+=== host: inferswarm02 utc: 2026-09-15T15:30:53Z ===
+=== kernel: 6.12.107+deb13-amd64 ===
+
+### dmidecode baseboard
+# dmidecode 3.6
+Getting SMBIOS data from sysfs.
+SMBIOS 3.2.0 present.
+
+Handle 0x0002, DMI type 2, 15 bytes
+Base Board Information
+	Manufacturer: MINERDUDE
+	Product Name: 12XTREME
+	Version: Default string
+	Serial Number: Default string
+	Asset Tag: Default string
+	Features:
+		Board is a hosting board
+		Board is replaceable
+	Location In Chassis: Default string
+	Chassis Handle: 0x0003
+	Type: Motherboard
+	Contained Object Handles: 0
+
+Handle 0x001C, DMI type 10, 6 bytes
+On Board Device Information
+	Type: Video
+	Status: Enabled
+	Description:    To Be Filled By O.E.M.
+
+Handle 0x004F, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: Onboard - Other
+	Type: Other
+	Status: Enabled
+	Type Instance: 1
+	Bus Address: 0000:00:00.0
+
+Handle 0x0050, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: Onboard - Video
+	Type: Video
+	Status: Enabled
+	Type Instance: 1
+	Bus Address: 0000:00:02.0
+
+Handle 0x0051, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: Onboard - Other
+	Type: Other
+	Status: Enabled
+	Type Instance: 2
+	Bus Address: 0000:00:08.0
+
+Handle 0x0052, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: Onboard - Other
+	Type: Other
+	Status: Enabled
+	Type Instance: 3
+	Bus Address: 0000:00:14.0
+
+Handle 0x0053, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: Onboard - Other
+	Type: Other
+	Status: Enabled
+	Type Instance: 4
+	Bus Address: 0000:00:14.2
+
+Handle 0x0054, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: Onboard - Other
+	Type: Other
+	Status: Enabled
+	Type Instance: 5
+	Bus Address: 0000:00:16.0
+
+Handle 0x0055, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: Onboard - SATA
+	Type: SATA Controller
+	Status: Enabled
+	Type Instance: 1
+	Bus Address: 0000:00:17.0
+
+Handle 0x0056, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: Onboard - Other
+	Type: Other
+	Status: Enabled
+	Type Instance: 6
+	Bus Address: 0000:00:1f.0
+
+Handle 0x0057, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: Onboard - Other
+	Type: Other
+	Status: Enabled
+	Type Instance: 7
+	Bus Address: 0000:00:1f.2
+
+Handle 0x0058, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: Onboard - Sound
+	Type: Sound
+	Status: Enabled
+	Type Instance: 1
+	Bus Address: 0000:00:1f.3
+
+Handle 0x0059, DMI type 41, 11 bytes
+Onboard Device
+	Reference Designation: Onboard - Other
+	Type: Other
+	Status: Enabled
+	Type Instance: 8
+	Bus Address: 0000:00:1f.4
+
+
+### dmidecode slots
+# dmidecode 3.6
+Getting SMBIOS data from sysfs.
+SMBIOS 3.2.0 present.
+
+Handle 0x0048, DMI type 9, 17 bytes
+System Slot Information
+	Designation: PCI-Express
+	Type: PCI Express x16
+	Data Bus Width: 16x or x16
+	Current Usage: Available
+	Length: Long
+	ID: 1
+	Characteristics:
+		3.3 V is provided
+		PME signal is supported
+	Bus Address: 0000:00:01.0
+
+Handle 0x0049, DMI type 9, 17 bytes
+System Slot Information
+	Designation: PCI-Express 6
+	Type: PCI Express
+	Data Bus Width: 1x or x1
+	Current Usage: Available
+	Length: Long
+	ID: 2
+	Characteristics:
+		3.3 V is provided
+		PME signal is supported
+	Bus Address: 0000:00:1c.6
+
+Handle 0x004A, DMI type 9, 17 bytes
+System Slot Information
+	Designation: PCI-Express 7
+	Type: PCI Express
+	Data Bus Width: 1x or x1
+	Current Usage: Available
+	Length: Long
+	ID: 3
+	Characteristics:
+		3.3 V is provided
+		PME signal is supported
+	Bus Address: 0000:00:1c.7
+
+Handle 0x004B, DMI type 9, 17 bytes
+System Slot Information
+	Designation: PCI-Express 8
+	Type: PCI Express
+	Data Bus Width: 4x or x4
+	Current Usage: Available
+	Length: Long
+	ID: 4
+	Characteristics:
+		3.3 V is provided
+		PME signal is supported
+	Bus Address: 0000:00:1d.1
+
+
+### lspci -nn (full)
+00:00.0 Host bridge [0600]: Intel Corporation Xeon E3-1200 v5/E3-1500 v5/6th Gen Core Processor Host Bridge/DRAM Registers [8086:190f] (rev 07)
+00:02.0 VGA compatible controller [0300]: Intel Corporation HD Graphics 510 [8086:1902] (rev 06)
+00:08.0 System peripheral [0880]: Intel Corporation Xeon E3-1200 v5/v6 / E3-1500 v5 / 6th/7th/8th Gen Core Processor Gaussian Mixture Model [8086:1911]
+00:14.0 USB controller [0c03]: Intel Corporation 200 Series/Z370 Chipset Family USB 3.0 xHCI Controller [8086:a2af]
+00:14.2 Signal processing controller [1180]: Intel Corporation 200 Series PCH Thermal Subsystem [8086:a2b1]
+00:16.0 Communication controller [0780]: Intel Corporation 200 Series PCH CSME HECI #1 [8086:a2ba]
+00:17.0 SATA controller [0106]: Intel Corporation 200 Series PCH SATA controller [AHCI mode] [8086:a282]
+00:1c.0 PCI bridge [0604]: Intel Corporation 200 Series PCH PCI Express Root Port #5 [8086:a294] (rev f0)
+00:1c.5 PCI bridge [0604]: Intel Corporation 200 Series PCH PCI Express Root Port #6 [8086:a295] (rev f0)
+00:1d.0 PCI bridge [0604]: Intel Corporation 200 Series PCH PCI Express Root Port #10 [8086:a299] (rev f0)
+00:1d.2 PCI bridge [0604]: Intel Corporation 200 Series PCH PCI Express Root Port #11 [8086:a29a] (rev f0)
+00:1d.3 PCI bridge [0604]: Intel Corporation 200 Series PCH PCI Express Root Port #12 [8086:a29b] (rev f0)
+00:1f.0 ISA bridge [0601]: Intel Corporation 200 Series PCH LPC Controller (B250) [8086:a2c8]
+00:1f.2 Memory controller [0580]: Intel Corporation 200 Series/Z370 Chipset Family Power Management Controller [8086:a2a1]
+00:1f.3 Audio device [0403]: Intel Corporation 200 Series PCH HD Audio [8086:a2f0]
+00:1f.4 SMBus [0c05]: Intel Corporation 200 Series/Z370 Chipset Family SMBus Controller [8086:a2a3]
+01:00.0 Ethernet controller [0200]: Realtek Semiconductor Co., Ltd. RTL8111/8168/8211/8411 PCI Express Gigabit Ethernet Controller [10ec:8168] (rev 07)
+02:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere [Radeon RX 470/480/570/570X/580/580X/590] [1002:67df] (rev e7)
+02:00.1 Audio device [0403]: Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere HDMI Audio [Radeon RX 470/480 / 570/580/590] [1002:aaf0]
+03:00.0 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD/ATI] Navi 10 XL Upstream Port of PCI Express Switch [1002:1478] (rev ca)
+04:00.0 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD/ATI] Navi 10 XL Downstream Port of PCI Express Switch [1002:1479]
+05:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Navi 10 [Radeon RX 5600 OEM/5600 XT / 5700/5700 XT] [1002:731f] (rev ca)
+05:00.1 Audio device [0403]: Advanced Micro Devices, Inc. [AMD/ATI] Navi 10 HDMI Audio [1002:ab38]
+06:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere [Radeon RX 470/480/570/570X/580/580X/590] [1002:67df] (rev e7)
+06:00.1 Audio device [0403]: Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere HDMI Audio [Radeon RX 470/480 / 570/580/590] [1002:aaf0]
+07:00.0 VGA compatible controller [0300]: NVIDIA Corporation GA104 [GeForce RTX 3060 Ti Lite Hash Rate] [10de:2489] (rev a1)
+07:00.1 Audio device [0403]: NVIDIA Corporation GA104 High Definition Audio Controller [10de:228b] (rev a1)
+
+### lspci tree
+-[0000:00]-+-00.0  Intel Corporation Xeon E3-1200 v5/E3-1500 v5/6th Gen Core Processor Host Bridge/DRAM Registers
+           +-02.0  Intel Corporation HD Graphics 510
+           +-08.0  Intel Corporation Xeon E3-1200 v5/v6 / E3-1500 v5 / 6th/7th/8th Gen Core Processor Gaussian Mixture Model
+           +-14.0  Intel Corporation 200 Series/Z370 Chipset Family USB 3.0 xHCI Controller
+           +-14.2  Intel Corporation 200 Series PCH Thermal Subsystem
+           +-16.0  Intel Corporation 200 Series PCH CSME HECI #1
+           +-17.0  Intel Corporation 200 Series PCH SATA controller [AHCI mode]
+           +-1c.0-[01]----00.0  Realtek Semiconductor Co., Ltd. RTL8111/8168/8211/8411 PCI Express Gigabit Ethernet Controller
+           +-1c.5-[02]--+-00.0  Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere [Radeon RX 470/480/570/570X/580/580X/590]
+           |            \-00.1  Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere HDMI Audio [Radeon RX 470/480 / 570/580/590]
+           +-1d.0-[03-05]----00.0-[04-05]----00.0-[05]--+-00.0  Advanced Micro Devices, Inc. [AMD/ATI] Navi 10 [Radeon RX 5600 OEM/5600 XT / 5700/5700 XT]
+           |                                            \-00.1  Advanced Micro Devices, Inc. [AMD/ATI] Navi 10 HDMI Audio
+           +-1d.2-[06]--+-00.0  Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere [Radeon RX 470/480/570/570X/580/580X/590]
+           |            \-00.1  Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere HDMI Audio [Radeon RX 470/480 / 570/580/590]
+           +-1d.3-[07]--+-00.0  NVIDIA Corporation GA104 [GeForce RTX 3060 Ti Lite Hash Rate]
+           |            \-00.1  NVIDIA Corporation GA104 High Definition Audio Controller
+           +-1f.0  Intel Corporation 200 Series PCH LPC Controller (B250)
+           +-1f.2  Intel Corporation 200 Series/Z370 Chipset Family Power Management Controller
+           +-1f.3  Intel Corporation 200 Series PCH HD Audio
+           \-1f.4  Intel Corporation 200 Series/Z370 Chipset Family SMBus Controller
+
+### GPU-class BDFs: 0000:00:02.0
+0000:02:00.0
+0000:05:00.0
+0000:06:00.0
+0000:07:00.0
+
+### lspci -PP -nn -vvv -s 0000:00:02.0
+00:02.0 VGA compatible controller [0300]: Intel Corporation HD Graphics 510 [8086:1902] (rev 06) (prog-if 00 [VGA controller])
+	DeviceName: Onboard - Video
+	Subsystem: Intel Corporation Device [8086:2015]
+	Control: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx+
+	Status: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-
+	Latency: 0, Cache Line Size: 64 bytes
+	Interrupt: pin A routed to IRQ 137
+	IOMMU group: 0
+	Region 0: Memory at 2ffe000000 (64-bit, non-prefetchable) [size=16M]
+	Region 2: Memory at 2f70000000 (64-bit, prefetchable) [size=256M]
+	Region 4: I/O ports at f000 [size=64]
+	Expansion ROM at 000c0000 [virtual] [disabled] [size=128K]
+	Capabilities: [40] Vendor Specific Information: Len=0c <?>
+	Capabilities: [70] Express (v2) Root Complex Integrated Endpoint, IntMsgNum 0
+		DevCap:	MaxPayload 128 bytes, PhantFunc 0
+			ExtTag- RBE+ FLReset+ TEE-IO-
+		DevCtl:	CorrErr- NonFatalErr- FatalErr- UnsupReq-
+			RlxdOrd- ExtTag- PhantFunc- AuxPwr- NoSnoop- FLReset-
+			MaxPayload 128 bytes, MaxReadReq 128 bytes
+		DevSta:	CorrErr- NonFatalErr- FatalErr- UnsupReq- AuxPwr- TransPend-
+		DevCap2: Completion Timeout: Not Supported, TimeoutDis- NROPrPrP- LTR-
+			 10BitTagComp- 10BitTagReq- OBFF Not Supported, ExtFmt- EETLPPrefix-
+			 EmergencyPowerReduction Not Supported, EmergencyPowerReductionInit-
+			 FRS-
+			 AtomicOpsCap: 32bit- 64bit- 128bitCAS-
+		DevCtl2: Completion Timeout: 50us to 50ms, TimeoutDis-
+			 AtomicOpsCtl: ReqEn-
+			 IDOReq- IDOCompl- LTR- EmergencyPowerReductionReq-
+			 10BitTagReq- OBFF Disabled, EETLPPrefixBlk-
+	Capabilities: [ac] MSI: Enable+ Count=1/1 Maskable- 64bit-
+		Address: fee00018  Data: 0000
+	Capabilities: [d0] Power Management version 2
+		Flags: PMEClk- DSI+ D1- D2- AuxCurrent=0mA PME(D0-,D1-,D2-,D3hot-,D3cold-)
+		Status: D0 NoSoftRst- PME-Enable- DSel=0 DScale=0 PME-
+	Capabilities: [100 v1] Process Address Space ID (PASID)
+		PASIDCap: Exec+ Priv-, Max PASID Width: 14
+		PASIDCtl: Enable- Exec- Priv-
+	Capabilities: [200 v1] Address Translation Service (ATS)
+		ATSCap:	Invalidate Queue Depth: 00
+		ATSCtl:	Enable-, Smallest Translation Unit: 00
+	Capabilities: [300 v1] Page Request Interface (PRI)
+		PRICtl: Enable- Reset-
+		PRISta: RF- UPRGI- Stopped- PASID+
+		Page Request Capacity: 00008000, Page Request Allocation: 00000000
+	Kernel driver in use: i915
+	Kernel modules: i915
+
+
+### lspci -PP -nn -vvv -s 0000:02:00.0
+00:1c.5/02:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere [Radeon RX 470/480/570/570X/580/580X/590] [1002:67df] (rev e7) (prog-if 00 [VGA controller])
+	Subsystem: Sapphire Technology Limited Radeon RX 570 Pulse 4GB [1da2:e353]
+	Control: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx+
+	Status: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-
+	Latency: 0, Cache Line Size: 64 bytes
+	Interrupt: pin A routed to IRQ 139
+	IOMMU group: 13
+	Region 0: Memory at 2000000000 (64-bit, prefetchable) [size=8G]
+	Region 2: Memory at 2200000000 (64-bit, prefetchable) [size=2M]
+	Region 4: I/O ports at d000 [size=256]
+	Region 5: Memory at df400000 (32-bit, non-prefetchable) [size=256K]
+	Expansion ROM at df440000 [disabled] [size=128K]
+	Capabilities: [48] Vendor Specific Information: Len=08 <?>
+	Capabilities: [50] Power Management version 3
+		Flags: PMEClk- DSI- D1+ D2+ AuxCurrent=0mA PME(D0-,D1+,D2+,D3hot+,D3cold+)
+		Status: D0 NoSoftRst+ PME-Enable- DSel=0 DScale=0 PME-
+	Capabilities: [58] Express (v2) Legacy Endpoint, IntMsgNum 0
+		DevCap:	MaxPayload 256 bytes, PhantFunc 0, Latency L0s <4us, L1 unlimited
+			ExtTag+ AttnBtn- AttnInd- PwrInd- RBE+ FLReset- TEE-IO-
+		DevCtl:	CorrErr+ NonFatalErr+ FatalErr+ UnsupReq+
+			RlxdOrd+ ExtTag+ PhantFunc- AuxPwr- NoSnoop+
+			MaxPayload 256 bytes, MaxReadReq 512 bytes
+		DevSta:	CorrErr+ NonFatalErr- FatalErr- UnsupReq+ AuxPwr- TransPend-
+		LnkCap:	Port #0, Speed 8GT/s, Width x16, ASPM L1, Exit Latency L1 <1us
+			ClockPM+ Surprise- LLActRep- BwNot- ASPMOptComp+
+		LnkCtl:	ASPM Disabled; RCB 64 bytes, LnkDisable- CommClk+
+			ExtSynch- ClockPM+ AutWidDis- BWInt- AutBWInt-
+		LnkSta:	Speed 2.5GT/s (downgraded), Width x1 (downgraded)
+			TrErr- Train- SlotClk+ DLActive- BWMgmt- ABWMgmt-
+		DevCap2: Completion Timeout: Not Supported, TimeoutDis- NROPrPrP- LTR+
+			 10BitTagComp- 10BitTagReq- OBFF Not Supported, ExtFmt+ EETLPPrefix+, MaxEETLPPrefixes 1
+			 EmergencyPowerReduction Not Supported, EmergencyPowerReductionInit-
+			 FRS-
+			 AtomicOpsCap: 32bit+ 64bit+ 128bitCAS-
+		DevCtl2: Completion Timeout: 50us to 50ms, TimeoutDis-
+			 AtomicOpsCtl: ReqEn-
+			 IDOReq- IDOCompl- LTR+ EmergencyPowerReductionReq-
+			 10BitTagReq- OBFF Disabled, EETLPPrefixBlk-
+		LnkCap2: Supported Link Speeds: 2.5-8GT/s, Crosslink- Retimer- 2Retimers- DRS-
+		LnkCtl2: Target Link Speed: 8GT/s, EnterCompliance- SpeedDis-
+			 Transmit Margin: Normal Operating Range, EnterModifiedCompliance- ComplianceSOS-
+			 Compliance Preset/De-emphasis: -6dB de-emphasis, 0dB preshoot
+		LnkSta2: Current De-emphasis Level: -3.5dB, EqualizationComplete- EqualizationPhase1-
+			 EqualizationPhase2- EqualizationPhase3- LinkEqualizationRequest-
+			 Retimer- 2Retimers- CrosslinkRes: unsupported
+	Capabilities: [a0] MSI: Enable+ Count=1/1 Maskable- 64bit+
+		Address: 00000000fee00498  Data: 0000
+	Capabilities: [100 v1] Vendor Specific Information: ID=0001 Rev=1 Len=010 <?>
+	Capabilities: [150 v2] Advanced Error Reporting
+		UESta:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UEMsk:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UESvrt:	DLP+ SDES+ TLP- FCP+ CmpltTO- CmpltAbrt- UnxCmplt- RxOF+ MalfTLP+
+			ECRC- UnsupReq- ACSViol- UncorrIntErr+ BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		CESta:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr- CorrIntErr- HeaderOF-
+		CEMsk:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr+ CorrIntErr- HeaderOF-
+		AERCap:	First Error Pointer: 00, ECRCGenCap+ ECRCGenEn- ECRCChkCap+ ECRCChkEn-
+			MultHdrRecCap- MultHdrRecEn- TLPPfxPres- HdrLogCap-
+		HeaderLog: 00000000 00000000 00000000 00000000
+	Capabilities: [200 v1] Physical Resizable BAR
+		BAR 0: current size: 8GB, supported: 256MB 512MB 1GB 2GB 4GB 8GB
+	Capabilities: [270 v1] Secondary PCI Express
+		LnkCtl3: LnkEquIntrruptEn- PerformEqu-
+		LaneErrStat: 0
+	Capabilities: [2b0 v1] Address Translation Service (ATS)
+		ATSCap:	Invalidate Queue Depth: 00
+		ATSCtl:	Enable-, Smallest Translation Unit: 00
+	Capabilities: [2c0 v1] Page Request Interface (PRI)
+		PRICtl: Enable- Reset-
+		PRISta: RF- UPRGI- Stopped+ PASID-
+		Page Request Capacity: 00000020, Page Request Allocation: 00000000
+	Capabilities: [2d0 v1] Process Address Space ID (PASID)
+		PASIDCap: Exec+ Priv+, Max PASID Width: 10
+		PASIDCtl: Enable- Exec- Priv-
+	Capabilities: [320 v1] Latency Tolerance Reporting
+		Max snoop latency: 3145728ns
+		Max no snoop latency: 3145728ns
+	Capabilities: [328 v1] Alternative Routing-ID Interpretation (ARI)
+		ARICap:	MFVC- ACS-, Next Function: 1
+		ARICtl:	MFVC- ACS-, Function Group: 0
+	Capabilities: [370 v1] L1 PM Substates
+		L1SubCap: PCI-PM_L1.2+ PCI-PM_L1.1+ ASPM_L1.2+ ASPM_L1.1+ L1_PM_Substates+
+			  PortCommonModeRestoreTime=0us PortTPowerOnTime=170us
+		L1SubCtl1: PCI-PM_L1.2- PCI-PM_L1.1- ASPM_L1.2- ASPM_L1.1-
+			   T_CommonMode=0us LTR1.2_Threshold=0ns
+		L1SubCtl2: T_PwrOn=170us
+	Kernel driver in use: amdgpu
+	Kernel modules: amdgpu
+
+
+### lspci -PP -nn -vvv -s 0000:05:00.0
+00:1d.0/03:00.0/04:00.0/05:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Navi 10 [Radeon RX 5600 OEM/5600 XT / 5700/5700 XT] [1002:731f] (rev ca) (prog-if 00 [VGA controller])
+	Subsystem: Sapphire Technology Limited Navi 10 [Radeon RX 5600 OEM/5600 XT / 5700/5700 XT]Navi 10 [Radeon RX 5600 OEM/5600 XT / 5700/5700 XT] [1da2:e411]
+	Control: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx+
+	Status: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-
+	Latency: 0, Cache Line Size: 64 bytes
+	Interrupt: pin A routed to IRQ 141
+	IOMMU group: 16
+	Region 0: Memory at 2400000000 (64-bit, prefetchable) [size=8G]
+	Region 2: Memory at 2300000000 (64-bit, prefetchable) [size=2M]
+	Region 4: I/O ports at c000 [size=256]
+	Region 5: Memory at df100000 (32-bit, non-prefetchable) [size=512K]
+	Expansion ROM at df180000 [disabled] [size=128K]
+	Capabilities: [48] Vendor Specific Information: Len=08 <?>
+	Capabilities: [50] Power Management version 3
+		Flags: PMEClk- DSI- D1- D2- AuxCurrent=0mA PME(D0-,D1+,D2+,D3hot+,D3cold+)
+		Status: D0 NoSoftRst+ PME-Enable- DSel=0 DScale=0 PME-
+	Capabilities: [64] Express (v2) Legacy Endpoint, IntMsgNum 0
+		DevCap:	MaxPayload 256 bytes, PhantFunc 0, Latency L0s <4us, L1 unlimited
+			ExtTag+ AttnBtn- AttnInd- PwrInd- RBE+ FLReset- TEE-IO-
+		DevCtl:	CorrErr+ NonFatalErr+ FatalErr+ UnsupReq+
+			RlxdOrd+ ExtTag+ PhantFunc- AuxPwr- NoSnoop+
+			MaxPayload 256 bytes, MaxReadReq 512 bytes
+		DevSta:	CorrErr+ NonFatalErr- FatalErr- UnsupReq+ AuxPwr- TransPend-
+		LnkCap:	Port #0, Speed 16GT/s, Width x16, ASPM L0s L1, Exit Latency L0s <64ns, L1 <1us
+			ClockPM- Surprise- LLActRep- BwNot- ASPMOptComp+
+		LnkCtl:	ASPM Disabled; RCB 64 bytes, LnkDisable- CommClk+
+			ExtSynch- ClockPM- AutWidDis- BWInt- AutBWInt-
+		LnkSta:	Speed 16GT/s, Width x16
+			TrErr- Train- SlotClk+ DLActive- BWMgmt- ABWMgmt-
+		DevCap2: Completion Timeout: Range ABCD, TimeoutDis+ NROPrPrP- LTR+
+			 10BitTagComp+ 10BitTagReq+ OBFF Not Supported, ExtFmt+ EETLPPrefix+, MaxEETLPPrefixes 1
+			 EmergencyPowerReduction Not Supported, EmergencyPowerReductionInit-
+			 FRS-
+			 AtomicOpsCap: 32bit+ 64bit+ 128bitCAS-
+		DevCtl2: Completion Timeout: 50us to 50ms, TimeoutDis-
+			 AtomicOpsCtl: ReqEn-
+			 IDOReq- IDOCompl- LTR+ EmergencyPowerReductionReq-
+			 10BitTagReq- OBFF Disabled, EETLPPrefixBlk-
+		LnkCap2: Supported Link Speeds: 2.5-16GT/s, Crosslink- Retimer+ 2Retimers+ DRS-
+		LnkCtl2: Target Link Speed: 16GT/s, EnterCompliance- SpeedDis-
+			 Transmit Margin: Normal Operating Range, EnterModifiedCompliance- ComplianceSOS-
+			 Compliance Preset/De-emphasis: -6dB de-emphasis, 0dB preshoot
+		LnkSta2: Current De-emphasis Level: -3.5dB, EqualizationComplete+ EqualizationPhase1+
+			 EqualizationPhase2+ EqualizationPhase3+ LinkEqualizationRequest-
+			 Retimer- 2Retimers- CrosslinkRes: unsupported
+	Capabilities: [a0] MSI: Enable+ Count=1/1 Maskable- 64bit+
+		Address: 00000000fee004d8  Data: 0000
+	Capabilities: [100 v1] Vendor Specific Information: ID=0001 Rev=1 Len=010 <?>
+	Capabilities: [150 v2] Advanced Error Reporting
+		UESta:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UEMsk:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UESvrt:	DLP+ SDES+ TLP- FCP+ CmpltTO- CmpltAbrt- UnxCmplt- RxOF+ MalfTLP+
+			ECRC- UnsupReq- ACSViol- UncorrIntErr+ BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		CESta:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr- CorrIntErr- HeaderOF-
+		CEMsk:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr+ CorrIntErr- HeaderOF-
+		AERCap:	First Error Pointer: 00, ECRCGenCap+ ECRCGenEn- ECRCChkCap+ ECRCChkEn-
+			MultHdrRecCap- MultHdrRecEn- TLPPfxPres- HdrLogCap-
+		HeaderLog: 00000000 00000000 00000000 00000000
+	Capabilities: [200 v1] Physical Resizable BAR
+		BAR 0: current size: 8GB, supported: 256MB 512MB 1GB
+		BAR 2: current size: 2MB, supported: 2MB 4MB 8MB 16MB 32MB 64MB 128MB 256MB
+	Capabilities: [240 v1] Power Budgeting <?>
+	Capabilities: [270 v1] Secondary PCI Express
+		LnkCtl3: LnkEquIntrruptEn- PerformEqu-
+		LaneErrStat: 0
+	Capabilities: [2a0 v1] Access Control Services
+		ACSCap:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+	Capabilities: [2b0 v1] Address Translation Service (ATS)
+		ATSCap:	Invalidate Queue Depth: 00
+		ATSCtl:	Enable-, Smallest Translation Unit: 00
+	Capabilities: [2c0 v1] Page Request Interface (PRI)
+		PRICtl: Enable- Reset-
+		PRISta: RF- UPRGI- Stopped+ PASID-
+		Page Request Capacity: 00000100, Page Request Allocation: 00000000
+	Capabilities: [2d0 v1] Process Address Space ID (PASID)
+		PASIDCap: Exec+ Priv+, Max PASID Width: 10
+		PASIDCtl: Enable- Exec- Priv-
+	Capabilities: [320 v1] Latency Tolerance Reporting
+		Max snoop latency: 3145728ns
+		Max no snoop latency: 3145728ns
+	Capabilities: [400 v1] Data Link Feature <?>
+	Capabilities: [410 v1] Physical Layer 16.0 GT/s <?>
+	Capabilities: [440 v1] Lane Margining at the Receiver
+		PortCap: Uses Driver-
+		PortSta: MargReady- MargSoftReady-
+	Kernel driver in use: amdgpu
+	Kernel modules: amdgpu
+
+
+### lspci -PP -nn -vvv -s 0000:06:00.0
+00:1d.2/06:00.0 VGA compatible controller [0300]: Advanced Micro Devices, Inc. [AMD/ATI] Ellesmere [Radeon RX 470/480/570/570X/580/580X/590] [1002:67df] (rev e7) (prog-if 00 [VGA controller])
+	Subsystem: Sapphire Technology Limited Nitro+ Radeon RX 570/580/590 [1da2:e366]
+	Control: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx+
+	Status: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-
+	Latency: 0, Cache Line Size: 64 bytes
+	Interrupt: pin A routed to IRQ 142
+	IOMMU group: 18
+	Region 0: Memory at 2600000000 (64-bit, prefetchable) [size=8G]
+	Region 2: Memory at 2800000000 (64-bit, prefetchable) [size=2M]
+	Region 4: I/O ports at b000 [size=256]
+	Region 5: Memory at df300000 (32-bit, non-prefetchable) [size=256K]
+	Expansion ROM at df340000 [disabled] [size=128K]
+	Capabilities: [48] Vendor Specific Information: Len=08 <?>
+	Capabilities: [50] Power Management version 3
+		Flags: PMEClk- DSI- D1+ D2+ AuxCurrent=0mA PME(D0-,D1+,D2+,D3hot+,D3cold+)
+		Status: D0 NoSoftRst+ PME-Enable- DSel=0 DScale=0 PME-
+	Capabilities: [58] Express (v2) Legacy Endpoint, IntMsgNum 0
+		DevCap:	MaxPayload 256 bytes, PhantFunc 0, Latency L0s <4us, L1 unlimited
+			ExtTag+ AttnBtn- AttnInd- PwrInd- RBE+ FLReset- TEE-IO-
+		DevCtl:	CorrErr+ NonFatalErr+ FatalErr+ UnsupReq+
+			RlxdOrd+ ExtTag+ PhantFunc- AuxPwr- NoSnoop+
+			MaxPayload 256 bytes, MaxReadReq 512 bytes
+		DevSta:	CorrErr+ NonFatalErr- FatalErr- UnsupReq+ AuxPwr- TransPend-
+		LnkCap:	Port #0, Speed 8GT/s, Width x16, ASPM L1, Exit Latency L1 <1us
+			ClockPM+ Surprise- LLActRep- BwNot- ASPMOptComp+
+		LnkCtl:	ASPM Disabled; RCB 64 bytes, LnkDisable- CommClk+
+			ExtSynch- ClockPM+ AutWidDis- BWInt- AutBWInt-
+		LnkSta:	Speed 2.5GT/s (downgraded), Width x1 (downgraded)
+			TrErr- Train- SlotClk+ DLActive- BWMgmt- ABWMgmt-
+		DevCap2: Completion Timeout: Not Supported, TimeoutDis- NROPrPrP- LTR+
+			 10BitTagComp- 10BitTagReq- OBFF Not Supported, ExtFmt+ EETLPPrefix+, MaxEETLPPrefixes 1
+			 EmergencyPowerReduction Not Supported, EmergencyPowerReductionInit-
+			 FRS-
+			 AtomicOpsCap: 32bit+ 64bit+ 128bitCAS-
+		DevCtl2: Completion Timeout: 50us to 50ms, TimeoutDis-
+			 AtomicOpsCtl: ReqEn-
+			 IDOReq- IDOCompl- LTR+ EmergencyPowerReductionReq-
+			 10BitTagReq- OBFF Disabled, EETLPPrefixBlk-
+		LnkCap2: Supported Link Speeds: 2.5-8GT/s, Crosslink- Retimer- 2Retimers- DRS-
+		LnkCtl2: Target Link Speed: 8GT/s, EnterCompliance- SpeedDis-
+			 Transmit Margin: Normal Operating Range, EnterModifiedCompliance- ComplianceSOS-
+			 Compliance Preset/De-emphasis: -6dB de-emphasis, 0dB preshoot
+		LnkSta2: Current De-emphasis Level: -3.5dB, EqualizationComplete- EqualizationPhase1-
+			 EqualizationPhase2- EqualizationPhase3- LinkEqualizationRequest-
+			 Retimer- 2Retimers- CrosslinkRes: unsupported
+	Capabilities: [a0] MSI: Enable+ Count=1/1 Maskable- 64bit+
+		Address: 00000000fee004f8  Data: 0000
+	Capabilities: [100 v1] Vendor Specific Information: ID=0001 Rev=1 Len=010 <?>
+	Capabilities: [150 v2] Advanced Error Reporting
+		UESta:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UEMsk:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UESvrt:	DLP+ SDES+ TLP- FCP+ CmpltTO- CmpltAbrt- UnxCmplt- RxOF+ MalfTLP+
+			ECRC- UnsupReq- ACSViol- UncorrIntErr+ BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		CESta:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr- CorrIntErr- HeaderOF-
+		CEMsk:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr+ CorrIntErr- HeaderOF-
+		AERCap:	First Error Pointer: 00, ECRCGenCap+ ECRCGenEn- ECRCChkCap+ ECRCChkEn-
+			MultHdrRecCap- MultHdrRecEn- TLPPfxPres- HdrLogCap-
+		HeaderLog: 00000000 00000000 00000000 00000000
+	Capabilities: [200 v1] Physical Resizable BAR
+		BAR 0: current size: 8GB, supported: 256MB 512MB 1GB 2GB 4GB 8GB
+	Capabilities: [270 v1] Secondary PCI Express
+		LnkCtl3: LnkEquIntrruptEn- PerformEqu-
+		LaneErrStat: 0
+	Capabilities: [2b0 v1] Address Translation Service (ATS)
+		ATSCap:	Invalidate Queue Depth: 00
+		ATSCtl:	Enable-, Smallest Translation Unit: 00
+	Capabilities: [2c0 v1] Page Request Interface (PRI)
+		PRICtl: Enable- Reset-
+		PRISta: RF- UPRGI- Stopped+ PASID-
+		Page Request Capacity: 00000020, Page Request Allocation: 00000000
+	Capabilities: [2d0 v1] Process Address Space ID (PASID)
+		PASIDCap: Exec+ Priv+, Max PASID Width: 10
+		PASIDCtl: Enable- Exec- Priv-
+	Capabilities: [320 v1] Latency Tolerance Reporting
+		Max snoop latency: 3145728ns
+		Max no snoop latency: 3145728ns
+	Capabilities: [328 v1] Alternative Routing-ID Interpretation (ARI)
+		ARICap:	MFVC- ACS-, Next Function: 1
+		ARICtl:	MFVC- ACS-, Function Group: 0
+	Capabilities: [370 v1] L1 PM Substates
+		L1SubCap: PCI-PM_L1.2+ PCI-PM_L1.1+ ASPM_L1.2+ ASPM_L1.1+ L1_PM_Substates+
+			  PortCommonModeRestoreTime=0us PortTPowerOnTime=170us
+		L1SubCtl1: PCI-PM_L1.2- PCI-PM_L1.1- ASPM_L1.2- ASPM_L1.1-
+			   T_CommonMode=0us LTR1.2_Threshold=0ns
+		L1SubCtl2: T_PwrOn=170us
+	Kernel driver in use: amdgpu
+	Kernel modules: amdgpu
+
+
+### lspci -PP -nn -vvv -s 0000:07:00.0
+00:1d.3/07:00.0 VGA compatible controller [0300]: NVIDIA Corporation GA104 [GeForce RTX 3060 Ti Lite Hash Rate] [10de:2489] (rev a1) (prog-if 00 [VGA controller])
+	Subsystem: eVga.com. Corp. Device [3842:4667]
+	Control: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx+
+	Status: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-
+	Latency: 0
+	Interrupt: pin A routed to IRQ 138
+	IOMMU group: 19
+	Region 0: Memory at de000000 (32-bit, non-prefetchable) [size=16M]
+	Region 1: Memory at 2f80000000 (64-bit, prefetchable) [size=256M]
+	Region 3: Memory at 2f90000000 (64-bit, prefetchable) [size=32M]
+	Region 5: I/O ports at a000 [size=128]
+	Expansion ROM at df000000 [virtual] [disabled] [size=512K]
+	Capabilities: [60] Power Management version 3
+		Flags: PMEClk- DSI- D1- D2- AuxCurrent=0mA PME(D0+,D1-,D2-,D3hot+,D3cold-)
+		Status: D0 NoSoftRst+ PME-Enable- DSel=0 DScale=0 PME-
+	Capabilities: [68] MSI: Enable+ Count=1/1 Maskable- 64bit+
+		Address: 00000000fee00478  Data: 0000
+	Capabilities: [78] Express (v1) Legacy Endpoint, IntMsgNum 0
+		DevCap:	MaxPayload 256 bytes, PhantFunc 0, Latency L0s unlimited, L1 <64us
+			ExtTag+ AttnBtn- AttnInd- PwrInd- RBE+ FLReset+ TEE-IO-
+		DevCtl:	CorrErr+ NonFatalErr+ FatalErr+ UnsupReq+
+			RlxdOrd+ ExtTag+ PhantFunc- AuxPwr- NoSnoop+ FLReset-
+			MaxPayload 256 bytes, MaxReadReq 512 bytes
+		DevSta:	CorrErr- NonFatalErr- FatalErr- UnsupReq- AuxPwr- TransPend-
+		LnkCap:	Port #0, Speed 2.5GT/s, Width x16, ASPM L0s L1, Exit Latency L0s <512ns, L1 <4us
+			ClockPM+ Surprise- LLActRep- BwNot- ASPMOptComp+
+		LnkCtl:	ASPM Disabled; RCB 64 bytes, LnkDisable- CommClk+
+			ExtSynch- ClockPM+ AutWidDis- BWInt- AutBWInt-
+		LnkSta:	Speed 2.5GT/s, Width x1 (downgraded)
+			TrErr- Train- SlotClk+ DLActive- BWMgmt- ABWMgmt-
+	Capabilities: [b4] Vendor Specific Information: Len=14 <?>
+	Capabilities: [100 v1] Virtual Channel
+		Caps:	LPEVC=0 RefClk=100ns PATEntryBits=1
+		Arb:	Fixed- WRR32- WRR64- WRR128-
+		Ctrl:	ArbSelect=Fixed
+		Status:	InProgress-
+		VC0:	Caps:	PATOffset=00 MaxTimeSlots=1 RejSnoopTrans-
+			Arb:	Fixed- WRR32- WRR64- WRR128- TWRR128- WRR256-
+			Ctrl:	Enable+ ID=0 ArbSelect=Fixed TC/VC=ff
+			Status:	NegoPending- InProgress-
+	Capabilities: [250 v1] Latency Tolerance Reporting
+		Max snoop latency: 34326183936ns
+		Max no snoop latency: 34326183936ns
+	Capabilities: [258 v1] L1 PM Substates
+		L1SubCap: PCI-PM_L1.2+ PCI-PM_L1.1+ ASPM_L1.2+ ASPM_L1.1+ L1_PM_Substates+
+			  PortCommonModeRestoreTime=255us PortTPowerOnTime=10us
+		L1SubCtl1: PCI-PM_L1.2- PCI-PM_L1.1- ASPM_L1.2- ASPM_L1.1-
+			   T_CommonMode=0us LTR1.2_Threshold=0ns
+		L1SubCtl2: T_PwrOn=44us
+	Capabilities: [128 v1] Power Budgeting <?>
+	Capabilities: [420 v2] Advanced Error Reporting
+		UESta:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UEMsk:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UESvrt:	DLP+ SDES+ TLP- FCP+ CmpltTO- CmpltAbrt- UnxCmplt- RxOF+ MalfTLP+
+			ECRC- UnsupReq- ACSViol- UncorrIntErr+ BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		CESta:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr- CorrIntErr- HeaderOF-
+		CEMsk:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr+ CorrIntErr- HeaderOF+
+		AERCap:	First Error Pointer: 00, ECRCGenCap- ECRCGenEn- ECRCChkCap- ECRCChkEn-
+			MultHdrRecCap- MultHdrRecEn- TLPPfxPres- HdrLogCap-
+		HeaderLog: 00000000 00000000 00000000 00000000
+	Capabilities: [600 v1] Vendor Specific Information: ID=0001 Rev=1 Len=024 <?>
+	Capabilities: [900 v1] Null
+	Capabilities: [bb0 v1] Physical Resizable BAR
+		BAR 0: current size: 16MB, supported: 16MB
+		BAR 1: current size: 256MB, supported: 64MB 128MB 256MB 512MB 1GB 2GB 4GB 8GB
+		BAR 3: current size: 32MB, supported: 32MB
+	Capabilities: [c1c v1] Physical Layer 16.0 GT/s <?>
+	Capabilities: [d00 v1] Lane Margining at the Receiver
+		PortCap: Uses Driver+
+		PortSta: MargReady- MargSoftReady-
+	Capabilities: [e00 v1] Data Link Feature <?>
+	Kernel driver in use: nvidia
+	Kernel modules: nouveau, nvidia_drm, nvidia
+
+
+### sysfs walk for 0000:00:02.0
+parent: pci0000:00
+
+### lspci -nn -vv -s pci0000:00 (parent)
+
+### sysfs walk for 0000:02:00.0
+parent: 0000:00:1c.5
+
+### lspci -nn -vv -s 0000:00:1c.5 (parent)
+00:1c.5 PCI bridge [0604]: Intel Corporation 200 Series PCH PCI Express Root Port #6 [8086:a295] (rev f0) (prog-if 00 [Normal decode])
+	Subsystem: Intel Corporation Device [8086:7270]
+	Control: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx+
+	Status: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-
+	Latency: 0, Cache Line Size: 64 bytes
+	Interrupt: pin B routed to IRQ 123
+	IOMMU group: 7
+	Bus: primary=00, secondary=02, subordinate=02, sec-latency=0
+	I/O behind bridge: d000-dfff [size=4K] [16-bit]
+	Memory behind bridge: df400000-df4fffff [size=1M] [32-bit]
+	Prefetchable memory behind bridge: 2000000000-22ffffffff [size=12G] [32-bit]
+	Secondary status: 66MHz- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- <SERR- <PERR-
+	BridgeCtl: Parity- SERR+ NoISA- VGA- VGA16+ MAbort- >Reset- FastB2B-
+		PriDiscTmr- SecDiscTmr- DiscTmrStat- DiscTmrSERREn-
+	Capabilities: [40] Express (v2) Root Port (Slot+), IntMsgNum 0
+		DevCap:	MaxPayload 256 bytes, PhantFunc 0
+			ExtTag- RBE+ TEE-IO-
+		DevCtl:	CorrErr+ NonFatalErr+ FatalErr+ UnsupReq+
+			RlxdOrd- ExtTag- PhantFunc- AuxPwr- NoSnoop-
+			MaxPayload 256 bytes, MaxReadReq 128 bytes
+		DevSta:	CorrErr- NonFatalErr- FatalErr- UnsupReq- AuxPwr+ TransPend-
+		LnkCap:	Port #6, Speed 8GT/s, Width x1, ASPM not supported
+			ClockPM- Surprise- LLActRep+ BwNot+ ASPMOptComp+
+		LnkCtl:	ASPM Disabled; RCB 64 bytes, LnkDisable- CommClk+
+			ExtSynch- ClockPM- AutWidDis- BWInt- AutBWInt-
+		LnkSta:	Speed 2.5GT/s, Width x1
+			TrErr- Train- SlotClk+ DLActive+ BWMgmt+ ABWMgmt-
+		SltCap:	AttnBtn- PwrCtrl- MRL- AttnInd- PwrInd- HotPlug- Surprise-
+			Slot #9, PowerLimit 10W; Interlock- NoCompl+
+		SltCtl:	Enable: AttnBtn- PwrFlt- MRL- PresDet- CmdCplt- HPIrq- LinkChg-
+			Control: AttnInd Unknown, PwrInd Unknown, Power- Interlock-
+		SltSta:	Status: AttnBtn- PowerFlt- MRL- CmdCplt- PresDet+ Interlock-
+			Changed: MRL- PresDet- LinkState+
+		RootCap: CRSVisible-
+		RootCtl: ErrCorrectable- ErrNon-Fatal- ErrFatal- PMEIntEna+ CRSVisible-
+		RootSta: PME ReqID 0000, PMEStatus- PMEPending-
+		DevCap2: Completion Timeout: Range ABC, TimeoutDis+ NROPrPrP- LTR+
+			 10BitTagComp- 10BitTagReq- OBFF Not Supported, ExtFmt- EETLPPrefix-
+			 EmergencyPowerReduction Not Supported, EmergencyPowerReductionInit-
+			 FRS- LN System CLS Not Supported, TPHComp- ExtTPHComp- ARIFwd+
+			 AtomicOpsCap: Routing- 32bit- 64bit- 128bitCAS-
+		DevCtl2: Completion Timeout: 50us to 50ms, TimeoutDis- ARIFwd+
+			 AtomicOpsCtl: ReqEn- EgressBlck-
+			 IDOReq- IDOCompl- LTR+ EmergencyPowerReductionReq-
+			 10BitTagReq- OBFF Disabled, EETLPPrefixBlk-
+		LnkCap2: Supported Link Speeds: 2.5-8GT/s, Crosslink- Retimer- 2Retimers- DRS-
+		LnkCtl2: Target Link Speed: 8GT/s, EnterCompliance- SpeedDis-
+			 Transmit Margin: Normal Operating Range, EnterModifiedCompliance- ComplianceSOS-
+			 Compliance Preset/De-emphasis: -6dB de-emphasis, 0dB preshoot
+		LnkSta2: Current De-emphasis Level: -3.5dB, EqualizationComplete- EqualizationPhase1-
+			 EqualizationPhase2- EqualizationPhase3- LinkEqualizationRequest-
+			 Retimer- 2Retimers- CrosslinkRes: unsupported
+	Capabilities: [80] MSI: Enable+ Count=1/1 Maskable- 64bit-
+		Address: fee00258  Data: 0000
+	Capabilities: [90] Subsystem: Intel Corporation Device [8086:7270]
+	Capabilities: [a0] Power Management version 3
+		Flags: PMEClk- DSI- D1- D2- AuxCurrent=0mA PME(D0+,D1-,D2-,D3hot+,D3cold+)
+		Status: D0 NoSoftRst- PME-Enable- DSel=0 DScale=0 PME-
+	Capabilities: [100 v1] Advanced Error Reporting
+		UESta:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UEMsk:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt+ RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UESvrt:	DLP+ SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF+ MalfTLP+
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		CESta:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr- CorrIntErr- HeaderOF-
+		CEMsk:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr+ CorrIntErr- HeaderOF-
+		AERCap:	First Error Pointer: 00, ECRCGenCap- ECRCGenEn- ECRCChkCap- ECRCChkEn-
+			MultHdrRecCap- MultHdrRecEn- TLPPfxPres- HdrLogCap-
+		HeaderLog: 00000000 00000000 00000000 00000000
+		RootCmd: CERptEn+ NFERptEn+ FERptEn+
+		RootSta: CERcvd- MultCERcvd- UERcvd- MultUERcvd-
+			 FirstFatal- NonFatalMsg- FatalMsg- IntMsgNum 0
+		ErrorSrc: ERR_COR: 0000 ERR_FATAL/NONFATAL: 0000
+	Capabilities: [140 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd- EgressCtrl- DirectTrans-
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+	Kernel driver in use: pcieport
+
+
+### lspci -nn -vv -s pci0000:00 (upstream pci0000:00)
+
+### sysfs walk for 0000:05:00.0
+parent: 0000:04:00.0
+
+### lspci -nn -vv -s 0000:04:00.0 (parent)
+04:00.0 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD/ATI] Navi 10 XL Downstream Port of PCI Express Switch [1002:1479] (prog-if 00 [Normal decode])
+	Subsystem: Advanced Micro Devices, Inc. [AMD/ATI] Navi 10 XL Downstream Port of PCI Express Switch [1002:1479]
+	Control: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx+
+	Status: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-
+	Latency: 0, Cache Line Size: 64 bytes
+	Interrupt: pin A routed to IRQ 127
+	IOMMU group: 15
+	Bus: primary=04, secondary=05, subordinate=05, sec-latency=0
+	I/O behind bridge: c000-cfff [size=4K] [16-bit]
+	Memory behind bridge: df100000-df1fffff [size=1M] [32-bit]
+	Prefetchable memory behind bridge: 2300000000-25ffffffff [size=12G] [32-bit]
+	Secondary status: 66MHz- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- <SERR- <PERR-
+	BridgeCtl: Parity- SERR+ NoISA- VGA- VGA16+ MAbort- >Reset- FastB2B-
+		PriDiscTmr- SecDiscTmr- DiscTmrStat- DiscTmrSERREn-
+	Capabilities: [50] Power Management version 3
+		Flags: PMEClk- DSI- D1- D2- AuxCurrent=0mA PME(D0+,D1-,D2-,D3hot+,D3cold+)
+		Status: D0 NoSoftRst+ PME-Enable- DSel=0 DScale=0 PME-
+	Capabilities: [58] Express (v2) Downstream Port (Slot-), IntMsgNum 0
+		DevCap:	MaxPayload 512 bytes, PhantFunc 0
+			ExtTag+ RBE+ TEE-IO-
+		DevCtl:	CorrErr+ NonFatalErr+ FatalErr+ UnsupReq+
+			RlxdOrd+ ExtTag+ PhantFunc- AuxPwr- NoSnoop+
+			MaxPayload 256 bytes, MaxReadReq 512 bytes
+		DevSta:	CorrErr+ NonFatalErr- FatalErr- UnsupReq+ AuxPwr- TransPend-
+		LnkCap:	Port #0, Speed 16GT/s, Width x16, ASPM L0s L1, Exit Latency L0s <64ns, L1 <1us
+			ClockPM- Surprise- LLActRep+ BwNot+ ASPMOptComp+
+		LnkCtl:	ASPM Disabled; LnkDisable- CommClk+
+			ExtSynch- ClockPM- AutWidDis- BWInt- AutBWInt-
+		LnkSta:	Speed 16GT/s, Width x16
+			TrErr- Train- SlotClk+ DLActive+ BWMgmt+ ABWMgmt-
+		DevCap2: Completion Timeout: Not Supported, TimeoutDis- NROPrPrP- LTR+
+			 10BitTagComp+ 10BitTagReq+ OBFF Not Supported, ExtFmt+ EETLPPrefix+, MaxEETLPPrefixes 4
+			 EmergencyPowerReduction Not Supported, EmergencyPowerReductionInit-
+			 FRS- ARIFwd-
+			 AtomicOpsCap: Routing+
+		DevCtl2: Completion Timeout: 50us to 50ms, TimeoutDis- ARIFwd-
+			 AtomicOpsCtl: EgressBlck-
+			 IDOReq- IDOCompl- LTR+ EmergencyPowerReductionReq-
+			 10BitTagReq- OBFF Disabled, EETLPPrefixBlk-
+		LnkCap2: Supported Link Speeds: 2.5-16GT/s, Crosslink- Retimer+ 2Retimers+ DRS-
+		LnkCtl2: Target Link Speed: 16GT/s, EnterCompliance- SpeedDis-, Selectable De-emphasis: -3.5dB
+			 Transmit Margin: Normal Operating Range, EnterModifiedCompliance- ComplianceSOS-
+			 Compliance Preset/De-emphasis: -6dB de-emphasis, 0dB preshoot
+		LnkSta2: Current De-emphasis Level: -3.5dB, EqualizationComplete+ EqualizationPhase1+
+			 EqualizationPhase2+ EqualizationPhase3+ LinkEqualizationRequest-
+			 Retimer- 2Retimers- CrosslinkRes: unsupported
+	Capabilities: [a0] MSI: Enable+ Count=1/1 Maskable- 64bit+
+		Address: 00000000fee00318  Data: 0000
+	Capabilities: [c0] Subsystem: Advanced Micro Devices, Inc. [AMD/ATI] Navi 10 XL Downstream Port of PCI Express Switch [1002:1479]
+	Capabilities: [100 v1] Vendor Specific Information: ID=0001 Rev=1 Len=010 <?>
+	Capabilities: [150 v2] Advanced Error Reporting
+		UESta:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UEMsk:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UESvrt:	DLP+ SDES+ TLP- FCP+ CmpltTO- CmpltAbrt- UnxCmplt- RxOF+ MalfTLP+
+			ECRC- UnsupReq- ACSViol- UncorrIntErr+ BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		CESta:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr- CorrIntErr- HeaderOF-
+		CEMsk:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr+ CorrIntErr- HeaderOF-
+		AERCap:	First Error Pointer: 00, ECRCGenCap+ ECRCGenEn- ECRCChkCap+ ECRCChkEn-
+			MultHdrRecCap- MultHdrRecEn- TLPPfxPres- HdrLogCap-
+		HeaderLog: 00000000 00000000 00000000 00000000
+	Capabilities: [270 v1] Secondary PCI Express
+		LnkCtl3: LnkEquIntrruptEn- PerformEqu-
+		LaneErrStat: 0
+	Capabilities: [2a0 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl- DirectTrans+
+		ACSCtl:	SrcValid+ TransBlk- ReqRedir+ CmpltRedir+ UpstreamFwd+ EgressCtrl- DirectTrans-
+	Capabilities: [400 v1] Data Link Feature <?>
+	Capabilities: [410 v1] Physical Layer 16.0 GT/s <?>
+	Capabilities: [440 v1] Lane Margining at the Receiver
+		PortCap: Uses Driver-
+		PortSta: MargReady- MargSoftReady-
+	Kernel driver in use: pcieport
+
+
+### lspci -nn -vv -s 0000:03:00.0 (upstream 0000:03:00.0)
+03:00.0 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD/ATI] Navi 10 XL Upstream Port of PCI Express Switch [1002:1478] (rev ca) (prog-if 00 [Normal decode])
+	Control: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx-
+	Status: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-
+	Latency: 0, Cache Line Size: 64 bytes
+	Interrupt: pin A routed to IRQ 17
+	IOMMU group: 14
+	Region 0: Memory at df200000 (32-bit, non-prefetchable) [size=16K]
+	Bus: primary=03, secondary=04, subordinate=05, sec-latency=0
+	I/O behind bridge: c000-cfff [size=4K] [16-bit]
+	Memory behind bridge: df100000-df1fffff [size=1M] [32-bit]
+	Prefetchable memory behind bridge: 2300000000-25ffffffff [size=12G] [32-bit]
+	Secondary status: 66MHz- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- <SERR- <PERR-
+	BridgeCtl: Parity- SERR+ NoISA- VGA- VGA16+ MAbort- >Reset- FastB2B-
+		PriDiscTmr- SecDiscTmr- DiscTmrStat- DiscTmrSERREn-
+	Capabilities: [48] Vendor Specific Information: Len=08 <?>
+	Capabilities: [50] Power Management version 3
+		Flags: PMEClk- DSI- D1- D2- AuxCurrent=0mA PME(D0+,D1-,D2-,D3hot+,D3cold+)
+		Status: D0 NoSoftRst+ PME-Enable- DSel=0 DScale=0 PME-
+	Capabilities: [58] Express (v2) Upstream Port, IntMsgNum 0
+		DevCap:	MaxPayload 512 bytes, PhantFunc 0
+			ExtTag+ AttnBtn- AttnInd- PwrInd- RBE+ SlotPowerLimit 10W TEE-IO-
+		DevCtl:	CorrErr+ NonFatalErr+ FatalErr+ UnsupReq+
+			RlxdOrd+ ExtTag+ PhantFunc- AuxPwr- NoSnoop+
+			MaxPayload 256 bytes, MaxReadReq 512 bytes
+		DevSta:	CorrErr+ NonFatalErr- FatalErr- UnsupReq+ AuxPwr- TransPend-
+		LnkCap:	Port #0, Speed 16GT/s, Width x16, ASPM L1, Exit Latency L1 <64us
+			ClockPM- Surprise- LLActRep- BwNot- ASPMOptComp+
+		LnkCtl:	ASPM Disabled; LnkDisable- CommClk+
+			ExtSynch- ClockPM- AutWidDis- BWInt- AutBWInt-
+		LnkSta:	Speed 2.5GT/s (downgraded), Width x1 (downgraded)
+			TrErr- Train- SlotClk+ DLActive- BWMgmt- ABWMgmt-
+		DevCap2: Completion Timeout: Not Supported, TimeoutDis- NROPrPrP- LTR+
+			 10BitTagComp+ 10BitTagReq+ OBFF Not Supported, ExtFmt+ EETLPPrefix+, MaxEETLPPrefixes 4
+			 EmergencyPowerReduction Not Supported, EmergencyPowerReductionInit-
+			 FRS-
+			 AtomicOpsCap: Routing+ 32bit- 64bit- 128bitCAS-
+		DevCtl2: Completion Timeout: 50us to 50ms, TimeoutDis-
+			 AtomicOpsCtl: EgressBlck-
+			 IDOReq- IDOCompl- LTR+ EmergencyPowerReductionReq-
+			 10BitTagReq- OBFF Disabled, EETLPPrefixBlk-
+		LnkCap2: Supported Link Speeds: 2.5-16GT/s, Crosslink- Retimer+ 2Retimers+ DRS-
+		LnkCtl2: Target Link Speed: 16GT/s, EnterCompliance- SpeedDis-
+			 Transmit Margin: Normal Operating Range, EnterModifiedCompliance- ComplianceSOS-
+			 Compliance Preset/De-emphasis: -6dB de-emphasis, 0dB preshoot
+		LnkSta2: Current De-emphasis Level: -3.5dB, EqualizationComplete- EqualizationPhase1-
+			 EqualizationPhase2- EqualizationPhase3- LinkEqualizationRequest-
+			 Retimer- 2Retimers- CrosslinkRes: unsupported
+	Capabilities: [a0] MSI: Enable- Count=1/1 Maskable- 64bit+
+		Address: 0000000000000000  Data: 0000
+	Capabilities: [100 v1] Vendor Specific Information: ID=0001 Rev=1 Len=010 <?>
+	Capabilities: [150 v2] Advanced Error Reporting
+		UESta:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UEMsk:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UESvrt:	DLP+ SDES+ TLP- FCP+ CmpltTO- CmpltAbrt- UnxCmplt- RxOF+ MalfTLP+
+			ECRC- UnsupReq- ACSViol- UncorrIntErr+ BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		CESta:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr- CorrIntErr- HeaderOF-
+		CEMsk:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr+ CorrIntErr- HeaderOF-
+		AERCap:	First Error Pointer: 00, ECRCGenCap+ ECRCGenEn- ECRCChkCap+ ECRCChkEn-
+			MultHdrRecCap- MultHdrRecEn- TLPPfxPres- HdrLogCap-
+		HeaderLog: 00000000 00000000 00000000 00000000
+	Capabilities: [270 v1] Secondary PCI Express
+		LnkCtl3: LnkEquIntrruptEn- PerformEqu-
+		LaneErrStat: 0
+	Capabilities: [320 v1] Latency Tolerance Reporting
+		Max snoop latency: 3145728ns
+		Max no snoop latency: 3145728ns
+	Capabilities: [400 v1] Data Link Feature <?>
+	Capabilities: [410 v1] Physical Layer 16.0 GT/s <?>
+	Capabilities: [440 v1] Lane Margining at the Receiver
+		PortCap: Uses Driver-
+		PortSta: MargReady- MargSoftReady-
+	Kernel driver in use: pcieport
+
+
+### lspci -nn -vv -s 0000:00:1d.0 (upstream 0000:00:1d.0)
+00:1d.0 PCI bridge [0604]: Intel Corporation 200 Series PCH PCI Express Root Port #10 [8086:a299] (rev f0) (prog-if 00 [Normal decode])
+	Subsystem: Intel Corporation Device [8086:7270]
+	Control: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx+
+	Status: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-
+	Latency: 0, Cache Line Size: 64 bytes
+	Interrupt: pin B routed to IRQ 124
+	IOMMU group: 8
+	Bus: primary=00, secondary=03, subordinate=05, sec-latency=0
+	I/O behind bridge: c000-cfff [size=4K] [16-bit]
+	Memory behind bridge: df100000-df2fffff [size=2M] [32-bit]
+	Prefetchable memory behind bridge: 2300000000-25ffffffff [size=12G] [32-bit]
+	Secondary status: 66MHz- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- <SERR- <PERR-
+	BridgeCtl: Parity- SERR+ NoISA- VGA- VGA16+ MAbort- >Reset- FastB2B-
+		PriDiscTmr- SecDiscTmr- DiscTmrStat- DiscTmrSERREn-
+	Capabilities: [40] Express (v2) Root Port (Slot+), IntMsgNum 0
+		DevCap:	MaxPayload 256 bytes, PhantFunc 0
+			ExtTag- RBE+ TEE-IO-
+		DevCtl:	CorrErr+ NonFatalErr+ FatalErr+ UnsupReq+
+			RlxdOrd- ExtTag- PhantFunc- AuxPwr- NoSnoop-
+			MaxPayload 256 bytes, MaxReadReq 128 bytes
+		DevSta:	CorrErr- NonFatalErr- FatalErr- UnsupReq- AuxPwr+ TransPend-
+		LnkCap:	Port #10, Speed 8GT/s, Width x1, ASPM not supported
+			ClockPM- Surprise- LLActRep+ BwNot+ ASPMOptComp+
+		LnkCtl:	ASPM Disabled; RCB 64 bytes, LnkDisable- CommClk+
+			ExtSynch- ClockPM- AutWidDis- BWInt- AutBWInt-
+		LnkSta:	Speed 2.5GT/s, Width x1
+			TrErr- Train- SlotClk+ DLActive+ BWMgmt+ ABWMgmt-
+		SltCap:	AttnBtn- PwrCtrl- MRL- AttnInd- PwrInd- HotPlug- Surprise-
+			Slot #13, PowerLimit 10W; Interlock- NoCompl+
+		SltCtl:	Enable: AttnBtn- PwrFlt- MRL- PresDet- CmdCplt- HPIrq- LinkChg-
+			Control: AttnInd Unknown, PwrInd Unknown, Power- Interlock-
+		SltSta:	Status: AttnBtn- PowerFlt- MRL- CmdCplt- PresDet+ Interlock-
+			Changed: MRL- PresDet- LinkState+
+		RootCap: CRSVisible-
+		RootCtl: ErrCorrectable- ErrNon-Fatal- ErrFatal- PMEIntEna+ CRSVisible-
+		RootSta: PME ReqID 0501, PMEStatus- PMEPending-
+		DevCap2: Completion Timeout: Range ABC, TimeoutDis+ NROPrPrP- LTR+
+			 10BitTagComp- 10BitTagReq- OBFF Not Supported, ExtFmt- EETLPPrefix-
+			 EmergencyPowerReduction Not Supported, EmergencyPowerReductionInit-
+			 FRS- LN System CLS Not Supported, TPHComp- ExtTPHComp- ARIFwd+
+			 AtomicOpsCap: Routing- 32bit- 64bit- 128bitCAS-
+		DevCtl2: Completion Timeout: 50us to 50ms, TimeoutDis- ARIFwd-
+			 AtomicOpsCtl: ReqEn- EgressBlck-
+			 IDOReq- IDOCompl- LTR+ EmergencyPowerReductionReq-
+			 10BitTagReq- OBFF Disabled, EETLPPrefixBlk-
+		LnkCap2: Supported Link Speeds: 2.5-8GT/s, Crosslink- Retimer- 2Retimers- DRS-
+		LnkCtl2: Target Link Speed: 8GT/s, EnterCompliance- SpeedDis-
+			 Transmit Margin: Normal Operating Range, EnterModifiedCompliance- ComplianceSOS-
+			 Compliance Preset/De-emphasis: -6dB de-emphasis, 0dB preshoot
+		LnkSta2: Current De-emphasis Level: -3.5dB, EqualizationComplete- EqualizationPhase1-
+			 EqualizationPhase2- EqualizationPhase3- LinkEqualizationRequest-
+			 Retimer- 2Retimers- CrosslinkRes: unsupported
+	Capabilities: [80] MSI: Enable+ Count=1/1 Maskable- 64bit-
+		Address: fee00278  Data: 0000
+	Capabilities: [90] Subsystem: Intel Corporation Device [8086:7270]
+	Capabilities: [a0] Power Management version 3
+		Flags: PMEClk- DSI- D1- D2- AuxCurrent=0mA PME(D0+,D1-,D2-,D3hot+,D3cold+)
+		Status: D0 NoSoftRst- PME-Enable- DSel=0 DScale=0 PME-
+	Capabilities: [100 v1] Advanced Error Reporting
+		UESta:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UEMsk:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt+ RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UESvrt:	DLP+ SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF+ MalfTLP+
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		CESta:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr- CorrIntErr- HeaderOF-
+		CEMsk:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr+ CorrIntErr- HeaderOF-
+		AERCap:	First Error Pointer: 00, ECRCGenCap- ECRCGenEn- ECRCChkCap- ECRCChkEn-
+			MultHdrRecCap- MultHdrRecEn- TLPPfxPres- HdrLogCap-
+		HeaderLog: 00000000 00000000 00000000 00000000
+		RootCmd: CERptEn+ NFERptEn+ FERptEn+
+		RootSta: CERcvd- MultCERcvd- UERcvd- MultUERcvd-
+			 FirstFatal- NonFatalMsg- FatalMsg- IntMsgNum 0
+		ErrorSrc: ERR_COR: 0000 ERR_FATAL/NONFATAL: 0000
+	Capabilities: [140 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd- EgressCtrl- DirectTrans-
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+	Kernel driver in use: pcieport
+
+
+### lspci -nn -vv -s pci0000:00 (upstream pci0000:00)
+
+### sysfs walk for 0000:06:00.0
+parent: 0000:00:1d.2
+
+### lspci -nn -vv -s 0000:00:1d.2 (parent)
+00:1d.2 PCI bridge [0604]: Intel Corporation 200 Series PCH PCI Express Root Port #11 [8086:a29a] (rev f0) (prog-if 00 [Normal decode])
+	Subsystem: Intel Corporation Device [8086:7270]
+	Control: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx+
+	Status: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-
+	Latency: 0, Cache Line Size: 64 bytes
+	Interrupt: pin C routed to IRQ 125
+	IOMMU group: 9
+	Bus: primary=00, secondary=06, subordinate=06, sec-latency=0
+	I/O behind bridge: b000-bfff [size=4K] [16-bit]
+	Memory behind bridge: df300000-df3fffff [size=1M] [32-bit]
+	Prefetchable memory behind bridge: 2600000000-28ffffffff [size=12G] [32-bit]
+	Secondary status: 66MHz- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- <SERR- <PERR-
+	BridgeCtl: Parity- SERR+ NoISA- VGA- VGA16+ MAbort- >Reset- FastB2B-
+		PriDiscTmr- SecDiscTmr- DiscTmrStat- DiscTmrSERREn-
+	Capabilities: [40] Express (v2) Root Port (Slot+), IntMsgNum 0
+		DevCap:	MaxPayload 256 bytes, PhantFunc 0
+			ExtTag- RBE+ TEE-IO-
+		DevCtl:	CorrErr+ NonFatalErr+ FatalErr+ UnsupReq+
+			RlxdOrd- ExtTag- PhantFunc- AuxPwr- NoSnoop-
+			MaxPayload 256 bytes, MaxReadReq 128 bytes
+		DevSta:	CorrErr- NonFatalErr- FatalErr- UnsupReq- AuxPwr+ TransPend-
+		LnkCap:	Port #11, Speed 8GT/s, Width x1, ASPM not supported
+			ClockPM- Surprise- LLActRep+ BwNot+ ASPMOptComp+
+		LnkCtl:	ASPM Disabled; RCB 64 bytes, LnkDisable- CommClk+
+			ExtSynch- ClockPM- AutWidDis- BWInt- AutBWInt-
+		LnkSta:	Speed 2.5GT/s, Width x1
+			TrErr- Train- SlotClk+ DLActive+ BWMgmt+ ABWMgmt-
+		SltCap:	AttnBtn- PwrCtrl- MRL- AttnInd- PwrInd- HotPlug- Surprise-
+			Slot #14, PowerLimit 10W; Interlock- NoCompl+
+		SltCtl:	Enable: AttnBtn- PwrFlt- MRL- PresDet- CmdCplt- HPIrq- LinkChg-
+			Control: AttnInd Unknown, PwrInd Unknown, Power- Interlock-
+		SltSta:	Status: AttnBtn- PowerFlt- MRL- CmdCplt- PresDet+ Interlock-
+			Changed: MRL- PresDet- LinkState+
+		RootCap: CRSVisible-
+		RootCtl: ErrCorrectable- ErrNon-Fatal- ErrFatal- PMEIntEna+ CRSVisible-
+		RootSta: PME ReqID 0000, PMEStatus- PMEPending-
+		DevCap2: Completion Timeout: Range ABC, TimeoutDis+ NROPrPrP- LTR+
+			 10BitTagComp- 10BitTagReq- OBFF Not Supported, ExtFmt- EETLPPrefix-
+			 EmergencyPowerReduction Not Supported, EmergencyPowerReductionInit-
+			 FRS- LN System CLS Not Supported, TPHComp- ExtTPHComp- ARIFwd+
+			 AtomicOpsCap: Routing- 32bit- 64bit- 128bitCAS-
+		DevCtl2: Completion Timeout: 50us to 50ms, TimeoutDis- ARIFwd+
+			 AtomicOpsCtl: ReqEn- EgressBlck-
+			 IDOReq- IDOCompl- LTR+ EmergencyPowerReductionReq-
+			 10BitTagReq- OBFF Disabled, EETLPPrefixBlk-
+		LnkCap2: Supported Link Speeds: 2.5-8GT/s, Crosslink- Retimer- 2Retimers- DRS-
+		LnkCtl2: Target Link Speed: 8GT/s, EnterCompliance- SpeedDis-
+			 Transmit Margin: Normal Operating Range, EnterModifiedCompliance- ComplianceSOS-
+			 Compliance Preset/De-emphasis: -6dB de-emphasis, 0dB preshoot
+		LnkSta2: Current De-emphasis Level: -3.5dB, EqualizationComplete- EqualizationPhase1-
+			 EqualizationPhase2- EqualizationPhase3- LinkEqualizationRequest-
+			 Retimer- 2Retimers- CrosslinkRes: unsupported
+	Capabilities: [80] MSI: Enable+ Count=1/1 Maskable- 64bit-
+		Address: fee002b8  Data: 0000
+	Capabilities: [90] Subsystem: Intel Corporation Device [8086:7270]
+	Capabilities: [a0] Power Management version 3
+		Flags: PMEClk- DSI- D1- D2- AuxCurrent=0mA PME(D0+,D1-,D2-,D3hot+,D3cold+)
+		Status: D0 NoSoftRst- PME-Enable- DSel=0 DScale=0 PME-
+	Capabilities: [100 v1] Advanced Error Reporting
+		UESta:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UEMsk:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt+ RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UESvrt:	DLP+ SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF+ MalfTLP+
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		CESta:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr- CorrIntErr- HeaderOF-
+		CEMsk:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr+ CorrIntErr- HeaderOF-
+		AERCap:	First Error Pointer: 00, ECRCGenCap- ECRCGenEn- ECRCChkCap- ECRCChkEn-
+			MultHdrRecCap- MultHdrRecEn- TLPPfxPres- HdrLogCap-
+		HeaderLog: 00000000 00000000 00000000 00000000
+		RootCmd: CERptEn+ NFERptEn+ FERptEn+
+		RootSta: CERcvd- MultCERcvd- UERcvd- MultUERcvd-
+			 FirstFatal- NonFatalMsg- FatalMsg- IntMsgNum 0
+		ErrorSrc: ERR_COR: 0000 ERR_FATAL/NONFATAL: 0000
+	Capabilities: [140 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd- EgressCtrl- DirectTrans-
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+	Kernel driver in use: pcieport
+
+
+### lspci -nn -vv -s pci0000:00 (upstream pci0000:00)
+
+### sysfs walk for 0000:07:00.0
+parent: 0000:00:1d.3
+
+### lspci -nn -vv -s 0000:00:1d.3 (parent)
+00:1d.3 PCI bridge [0604]: Intel Corporation 200 Series PCH PCI Express Root Port #12 [8086:a29b] (rev f0) (prog-if 00 [Normal decode])
+	Subsystem: Intel Corporation Device [8086:7270]
+	Control: I/O+ Mem+ BusMaster+ SpecCycle- MemWINV- VGASnoop- ParErr- Stepping- SERR- FastB2B- DisINTx+
+	Status: Cap+ 66MHz- UDF- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- >SERR- <PERR- INTx-
+	Latency: 0, Cache Line Size: 64 bytes
+	Interrupt: pin D routed to IRQ 126
+	IOMMU group: 10
+	Bus: primary=00, secondary=07, subordinate=07, sec-latency=0
+	I/O behind bridge: a000-afff [size=4K] [16-bit]
+	Memory behind bridge: de000000-df0fffff [size=17M] [32-bit]
+	Prefetchable memory behind bridge: 2f80000000-2f91ffffff [size=288M] [32-bit]
+	Secondary status: 66MHz- FastB2B- ParErr- DEVSEL=fast >TAbort- <TAbort- <MAbort- <SERR- <PERR-
+	BridgeCtl: Parity- SERR+ NoISA- VGA- VGA16+ MAbort- >Reset- FastB2B-
+		PriDiscTmr- SecDiscTmr- DiscTmrStat- DiscTmrSERREn-
+	Capabilities: [40] Express (v2) Root Port (Slot+), IntMsgNum 0
+		DevCap:	MaxPayload 256 bytes, PhantFunc 0
+			ExtTag- RBE+ TEE-IO-
+		DevCtl:	CorrErr+ NonFatalErr+ FatalErr+ UnsupReq+
+			RlxdOrd- ExtTag- PhantFunc- AuxPwr- NoSnoop-
+			MaxPayload 256 bytes, MaxReadReq 128 bytes
+		DevSta:	CorrErr- NonFatalErr- FatalErr- UnsupReq- AuxPwr+ TransPend-
+		LnkCap:	Port #12, Speed 8GT/s, Width x1, ASPM not supported
+			ClockPM- Surprise- LLActRep+ BwNot+ ASPMOptComp+
+		LnkCtl:	ASPM Disabled; RCB 64 bytes, LnkDisable- CommClk+
+			ExtSynch- ClockPM- AutWidDis- BWInt- AutBWInt-
+		LnkSta:	Speed 2.5GT/s, Width x1
+			TrErr- Train- SlotClk+ DLActive+ BWMgmt+ ABWMgmt-
+		SltCap:	AttnBtn- PwrCtrl- MRL- AttnInd- PwrInd- HotPlug- Surprise-
+			Slot #15, PowerLimit 10W; Interlock- NoCompl+
+		SltCtl:	Enable: AttnBtn- PwrFlt- MRL- PresDet- CmdCplt- HPIrq- LinkChg-
+			Control: AttnInd Unknown, PwrInd Unknown, Power- Interlock-
+		SltSta:	Status: AttnBtn- PowerFlt- MRL- CmdCplt- PresDet+ Interlock-
+			Changed: MRL- PresDet- LinkState+
+		RootCap: CRSVisible-
+		RootCtl: ErrCorrectable- ErrNon-Fatal- ErrFatal- PMEIntEna+ CRSVisible-
+		RootSta: PME ReqID 0000, PMEStatus- PMEPending-
+		DevCap2: Completion Timeout: Range ABC, TimeoutDis+ NROPrPrP- LTR+
+			 10BitTagComp- 10BitTagReq- OBFF Not Supported, ExtFmt- EETLPPrefix-
+			 EmergencyPowerReduction Not Supported, EmergencyPowerReductionInit-
+			 FRS- LN System CLS Not Supported, TPHComp- ExtTPHComp- ARIFwd+
+			 AtomicOpsCap: Routing- 32bit- 64bit- 128bitCAS-
+		DevCtl2: Completion Timeout: 50us to 50ms, TimeoutDis- ARIFwd-
+			 AtomicOpsCtl: ReqEn- EgressBlck-
+			 IDOReq- IDOCompl- LTR+ EmergencyPowerReductionReq-
+			 10BitTagReq- OBFF Disabled, EETLPPrefixBlk-
+		LnkCap2: Supported Link Speeds: 2.5-8GT/s, Crosslink- Retimer- 2Retimers- DRS-
+		LnkCtl2: Target Link Speed: 8GT/s, EnterCompliance- SpeedDis-
+			 Transmit Margin: Normal Operating Range, EnterModifiedCompliance- ComplianceSOS-
+			 Compliance Preset/De-emphasis: -6dB de-emphasis, 0dB preshoot
+		LnkSta2: Current De-emphasis Level: -3.5dB, EqualizationComplete- EqualizationPhase1-
+			 EqualizationPhase2- EqualizationPhase3- LinkEqualizationRequest-
+			 Retimer- 2Retimers- CrosslinkRes: unsupported
+	Capabilities: [80] MSI: Enable+ Count=1/1 Maskable- 64bit-
+		Address: fee002f8  Data: 0000
+	Capabilities: [90] Subsystem: Intel Corporation Device [8086:7270]
+	Capabilities: [a0] Power Management version 3
+		Flags: PMEClk- DSI- D1- D2- AuxCurrent=0mA PME(D0+,D1-,D2-,D3hot+,D3cold+)
+		Status: D0 NoSoftRst- PME-Enable- DSel=0 DScale=0 PME-
+	Capabilities: [100 v1] Advanced Error Reporting
+		UESta:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UEMsk:	DLP- SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt+ RxOF- MalfTLP-
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		UESvrt:	DLP+ SDES- TLP- FCP- CmpltTO- CmpltAbrt- UnxCmplt- RxOF+ MalfTLP+
+			ECRC- UnsupReq- ACSViol- UncorrIntErr- BlockedTLP- AtomicOpBlocked- TLPBlockedErr-
+			PoisonTLPBlocked- DMWrReqBlocked- IDECheck- MisIDETLP- PCRC_CHECK- TLPXlatBlocked-
+		CESta:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr- CorrIntErr- HeaderOF-
+		CEMsk:	RxErr- BadTLP- BadDLLP- Rollover- Timeout- AdvNonFatalErr+ CorrIntErr- HeaderOF-
+		AERCap:	First Error Pointer: 00, ECRCGenCap- ECRCGenEn- ECRCChkCap- ECRCChkEn-
+			MultHdrRecCap- MultHdrRecEn- TLPPfxPres- HdrLogCap-
+		HeaderLog: 00000000 00000000 00000000 00000000
+		RootCmd: CERptEn+ NFERptEn+ FERptEn+
+		RootSta: CERcvd- MultCERcvd- UERcvd- MultUERcvd-
+			 FirstFatal- NonFatalMsg- FatalMsg- IntMsgNum 0
+		ErrorSrc: ERR_COR: 0000 ERR_FATAL/NONFATAL: 0000
+	Capabilities: [140 v1] Access Control Services
+		ACSCap:	SrcValid+ TransBlk+ ReqRedir+ CmpltRedir+ UpstreamFwd- EgressCtrl- DirectTrans-
+		ACSCtl:	SrcValid- TransBlk- ReqRedir- CmpltRedir- UpstreamFwd- EgressCtrl- DirectTrans-
+	Kernel driver in use: pcieport
+
+
+### lspci -nn -vv -s pci0000:00 (upstream pci0000:00)
+
+### drm class
+total 0
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card0 -> ../../devices/pci0000:00/0000:00:02.0/drm/card0
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card0-DP-1 -> ../../devices/pci0000:00/0000:00:02.0/drm/card0/card0-DP-1
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card0-DP-2 -> ../../devices/pci0000:00/0000:00:02.0/drm/card0/card0-DP-2
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card0-HDMI-A-1 -> ../../devices/pci0000:00/0000:00:02.0/drm/card0/card0-HDMI-A-1
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card0-HDMI-A-2 -> ../../devices/pci0000:00/0000:00:02.0/drm/card0/card0-HDMI-A-2
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card0-HDMI-A-3 -> ../../devices/pci0000:00/0000:00:02.0/drm/card0/card0-HDMI-A-3
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card1 -> ../../devices/pci0000:00/0000:00:1c.5/0000:02:00.0/drm/card1
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card1-DP-3 -> ../../devices/pci0000:00/0000:00:1c.5/0000:02:00.0/drm/card1/card1-DP-3
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card1-DP-4 -> ../../devices/pci0000:00/0000:00:1c.5/0000:02:00.0/drm/card1/card1-DP-4
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card1-DVI-D-1 -> ../../devices/pci0000:00/0000:00:1c.5/0000:02:00.0/drm/card1/card1-DVI-D-1
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card1-HDMI-A-4 -> ../../devices/pci0000:00/0000:00:1c.5/0000:02:00.0/drm/card1/card1-HDMI-A-4
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card1-HDMI-A-5 -> ../../devices/pci0000:00/0000:00:1c.5/0000:02:00.0/drm/card1/card1-HDMI-A-5
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card2 -> ../../devices/pci0000:00/0000:00:1d.0/0000:03:00.0/0000:04:00.0/0000:05:00.0/drm/card2
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card2-DP-5 -> ../../devices/pci0000:00/0000:00:1d.0/0000:03:00.0/0000:04:00.0/0000:05:00.0/drm/card2/card2-DP-5
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card2-DP-6 -> ../../devices/pci0000:00/0000:00:1d.0/0000:03:00.0/0000:04:00.0/0000:05:00.0/drm/card2/card2-DP-6
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card2-DP-7 -> ../../devices/pci0000:00/0000:00:1d.0/0000:03:00.0/0000:04:00.0/0000:05:00.0/drm/card2/card2-DP-7
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card2-HDMI-A-6 -> ../../devices/pci0000:00/0000:00:1d.0/0000:03:00.0/0000:04:00.0/0000:05:00.0/drm/card2/card2-HDMI-A-6
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card3 -> ../../devices/pci0000:00/0000:00:1d.3/0000:07:00.0/drm/card3
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card3-DP-10 -> ../../devices/pci0000:00/0000:00:1d.3/0000:07:00.0/drm/card3/card3-DP-10
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card3-DP-8 -> ../../devices/pci0000:00/0000:00:1d.3/0000:07:00.0/drm/card3/card3-DP-8
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card3-DP-9 -> ../../devices/pci0000:00/0000:00:1d.3/0000:07:00.0/drm/card3/card3-DP-9
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card3-HDMI-A-7 -> ../../devices/pci0000:00/0000:00:1d.3/0000:07:00.0/drm/card3/card3-HDMI-A-7
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card4 -> ../../devices/pci0000:00/0000:00:1d.2/0000:06:00.0/drm/card4
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card4-DP-11 -> ../../devices/pci0000:00/0000:00:1d.2/0000:06:00.0/drm/card4/card4-DP-11
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card4-DP-12 -> ../../devices/pci0000:00/0000:00:1d.2/0000:06:00.0/drm/card4/card4-DP-12
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card4-DVI-D-2 -> ../../devices/pci0000:00/0000:00:1d.2/0000:06:00.0/drm/card4/card4-DVI-D-2
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card4-HDMI-A-8 -> ../../devices/pci0000:00/0000:00:1d.2/0000:06:00.0/drm/card4/card4-HDMI-A-8
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 card4-HDMI-A-9 -> ../../devices/pci0000:00/0000:00:1d.2/0000:06:00.0/drm/card4/card4-HDMI-A-9
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 renderD128 -> ../../devices/pci0000:00/0000:00:02.0/drm/renderD128
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 renderD129 -> ../../devices/pci0000:00/0000:00:1c.5/0000:02:00.0/drm/renderD129
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 renderD130 -> ../../devices/pci0000:00/0000:00:1d.0/0000:03:00.0/0000:04:00.0/0000:05:00.0/drm/renderD130
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 renderD131 -> ../../devices/pci0000:00/0000:00:1d.3/0000:07:00.0/drm/renderD131
+lrwxrwxrwx 1 root root    0 Sep 15 10:54 renderD132 -> ../../devices/pci0000:00/0000:00:1d.2/0000:06:00.0/drm/renderD132
+-r--r--r-- 1 root root 4096 Sep 15 11:30 version
+
+### sysfs /sys/class/drm/card0
+driver: i915
+vendor: 0x8086
+
+device: 0x1902
+
+subsystem_vendor: 0x8086
+
+subsystem_device: 0x2015
+
+revision: 0x06
+
+class: 0x030000
+
+current_link_speed: Unknown
+
+current_link_width: 0
+
+max_link_speed: Unknown
+
+max_link_width: 255
+
+resource: 0x0000002ffe000000 0x0000002ffeffffff 0x0000000000140204
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000002f70000000 0x0000002f7fffffff 0x000000000014220c
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x000000000000f000 0x000000000000f03f 0x0000000000040101
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x00000000000c0000 0x00000000000dffff 0x0000000000000212
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+
+boot_vga: 1
+gpu_id-adjacent sysfs:
+DRIVER=i915
+PCI_CLASS=30000
+PCI_ID=8086:1902
+PCI_SUBSYS_ID=8086:2015
+PCI_SLOT_NAME=0000:00:02.0
+MODALIAS=pci:v00008086d00001902sv00008086sd00002015bc03sc00i00
+
+### sysfs /sys/class/drm/card0-DP-1
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=0
+DEVNAME=dri/card0
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card0-DP-2
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=0
+DEVNAME=dri/card0
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card0-HDMI-A-1
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=0
+DEVNAME=dri/card0
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card0-HDMI-A-2
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=0
+DEVNAME=dri/card0
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card0-HDMI-A-3
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=0
+DEVNAME=dri/card0
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card1
+driver: amdgpu
+vendor: 0x1002
+
+device: 0x67df
+
+subsystem_vendor: 0x1da2
+
+subsystem_device: 0xe353
+
+revision: 0xe7
+
+class: 0x030000
+
+current_link_speed: 2.5 GT/s PCIe
+
+current_link_width: 1
+
+max_link_speed: 8.0 GT/s PCIe
+
+max_link_width: 16
+
+mem_info_vram_total: 8589934592
+
+mem_info_vis_vram_total: 8589934592
+
+mem_info_gtt_total: 8342519808
+
+resource: 0x0000002000000000 0x00000021ffffffff 0x000000000014220c
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000002200000000 0x00000022001fffff 0x000000000014220c
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x000000000000d000 0x000000000000d0ff 0x0000000000040101
+0x00000000df400000 0x00000000df43ffff 0x0000000000040200
+0x00000000df440000 0x00000000df45ffff 0x0000000000046200
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+
+boot_vga: 0
+gpu_id-adjacent sysfs:
+DRIVER=amdgpu
+PCI_CLASS=30000
+PCI_ID=1002:67DF
+PCI_SUBSYS_ID=1DA2:E353
+PCI_SLOT_NAME=0000:02:00.0
+MODALIAS=pci:v00001002d000067DFsv00001DA2sd0000E353bc03sc00i00
+
+### sysfs /sys/class/drm/card1-DP-3
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=1
+DEVNAME=dri/card1
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card1-DP-4
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=1
+DEVNAME=dri/card1
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card1-DVI-D-1
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=1
+DEVNAME=dri/card1
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card1-HDMI-A-4
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=1
+DEVNAME=dri/card1
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card1-HDMI-A-5
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=1
+DEVNAME=dri/card1
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card2
+driver: amdgpu
+vendor: 0x1002
+
+device: 0x731f
+
+subsystem_vendor: 0x1da2
+
+subsystem_device: 0xe411
+
+revision: 0xca
+
+class: 0x030000
+
+current_link_speed: 16.0 GT/s PCIe
+
+current_link_width: 16
+
+max_link_speed: 16.0 GT/s PCIe
+
+max_link_width: 16
+
+mem_info_vram_total: 6425673728
+
+mem_info_vis_vram_total: 6425673728
+
+mem_info_gtt_total: 8342519808
+
+resource: 0x0000002400000000 0x00000025ffffffff 0x000000000014220c
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000002300000000 0x00000023001fffff 0x000000000014220c
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x000000000000c000 0x000000000000c0ff 0x0000000000040101
+0x00000000df100000 0x00000000df17ffff 0x0000000000040200
+0x00000000df180000 0x00000000df19ffff 0x0000000000046200
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+
+boot_vga: 0
+gpu_id-adjacent sysfs:
+DRIVER=amdgpu
+PCI_CLASS=30000
+PCI_ID=1002:731F
+PCI_SUBSYS_ID=1DA2:E411
+PCI_SLOT_NAME=0000:05:00.0
+MODALIAS=pci:v00001002d0000731Fsv00001DA2sd0000E411bc03sc00i00
+
+### sysfs /sys/class/drm/card2-DP-5
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=2
+DEVNAME=dri/card2
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card2-DP-6
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=2
+DEVNAME=dri/card2
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card2-DP-7
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=2
+DEVNAME=dri/card2
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card2-HDMI-A-6
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=2
+DEVNAME=dri/card2
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card3
+driver: nvidia
+vendor: 0x10de
+
+device: 0x2489
+
+subsystem_vendor: 0x3842
+
+subsystem_device: 0x4667
+
+revision: 0xa1
+
+class: 0x030000
+
+current_link_speed: 2.5 GT/s PCIe
+
+current_link_width: 1
+
+max_link_speed: 16.0 GT/s PCIe
+
+max_link_width: 16
+
+resource: 0x00000000de000000 0x00000000deffffff 0x0000000000040200
+0x0000002f80000000 0x0000002f8fffffff 0x000000000014220c
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000002f90000000 0x0000002f91ffffff 0x000000000014220c
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x000000000000a000 0x000000000000a07f 0x0000000000040101
+0x00000000df000000 0x00000000df07ffff 0x0000000000046200
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+
+boot_vga: 0
+gpu_id-adjacent sysfs:
+DRIVER=nvidia
+PCI_CLASS=30000
+PCI_ID=10DE:2489
+PCI_SUBSYS_ID=3842:4667
+PCI_SLOT_NAME=0000:07:00.0
+MODALIAS=pci:v000010DEd00002489sv00003842sd00004667bc03sc00i00
+
+### sysfs /sys/class/drm/card3-DP-10
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=3
+DEVNAME=dri/card3
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card3-DP-8
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=3
+DEVNAME=dri/card3
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card3-DP-9
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=3
+DEVNAME=dri/card3
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card3-HDMI-A-7
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=3
+DEVNAME=dri/card3
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card4
+driver: amdgpu
+vendor: 0x1002
+
+device: 0x67df
+
+subsystem_vendor: 0x1da2
+
+subsystem_device: 0xe366
+
+revision: 0xe7
+
+class: 0x030000
+
+current_link_speed: 2.5 GT/s PCIe
+
+current_link_width: 1
+
+max_link_speed: 8.0 GT/s PCIe
+
+max_link_width: 16
+
+mem_info_vram_total: 8589934592
+
+mem_info_vis_vram_total: 8589934592
+
+mem_info_gtt_total: 8342519808
+
+resource: 0x0000002600000000 0x00000027ffffffff 0x000000000014220c
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000002800000000 0x00000028001fffff 0x000000000014220c
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x000000000000b000 0x000000000000b0ff 0x0000000000040101
+0x00000000df300000 0x00000000df33ffff 0x0000000000040200
+0x00000000df340000 0x00000000df35ffff 0x0000000000046200
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+0x0000000000000000 0x0000000000000000 0x0000000000000000
+
+boot_vga: 0
+gpu_id-adjacent sysfs:
+DRIVER=amdgpu
+PCI_CLASS=30000
+PCI_ID=1002:67DF
+PCI_SUBSYS_ID=1DA2:E366
+PCI_SLOT_NAME=0000:06:00.0
+MODALIAS=pci:v00001002d000067DFsv00001DA2sd0000E366bc03sc00i00
+
+### sysfs /sys/class/drm/card4-DP-11
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=4
+DEVNAME=dri/card4
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card4-DP-12
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=4
+DEVNAME=dri/card4
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card4-DVI-D-2
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=4
+DEVNAME=dri/card4
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card4-HDMI-A-8
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=4
+DEVNAME=dri/card4
+DEVTYPE=drm_minor
+
+### sysfs /sys/class/drm/card4-HDMI-A-9
+driver: driver
+device: 
+boot_vga: n/a
+gpu_id-adjacent sysfs:
+MAJOR=226
+MINOR=4
+DEVNAME=dri/card4
+DEVTYPE=drm_minor
+
+### nvidia-smi
+Tue Sep 15 11:30:54 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 615.71.09              KMD Version: 615.71.09     CUDA UMD Version: 13.4     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA GeForce RTX 3060 Ti     On  |   00000000:07:00.0 Off |                  N/A |
+|  0%   35C    P8             12W /  240W |       1MiB /   8192MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+
+### nvidia-smi -q -d MEMORY,PCI
+Failed to parse --display/-d flags
+
+### nvidia-smi --query-gpu
+Field "pci.sub_system_id" is not a valid field to query.
+
+
+### vulkaninfo --summary
+'DISPLAY' environment variable not set... skipping surface info
+==========
+VULKANINFO
+==========
+
+Vulkan Instance Version: 1.4.309
+
+
+Instance Extensions: count = 25
+-------------------------------
+VK_EXT_acquire_drm_display             : extension revision 1
+VK_EXT_acquire_xlib_display            : extension revision 1
+VK_EXT_debug_report                    : extension revision 10
+VK_EXT_debug_utils                     : extension revision 2
+VK_EXT_direct_mode_display             : extension revision 1
+VK_EXT_display_surface_counter         : extension revision 1
+VK_EXT_headless_surface                : extension revision 1
+VK_EXT_surface_maintenance1            : extension revision 1
+VK_EXT_swapchain_colorspace            : extension revision 5
+VK_KHR_device_group_creation           : extension revision 1
+VK_KHR_display                         : extension revision 23
+VK_KHR_external_fence_capabilities     : extension revision 1
+VK_KHR_external_memory_capabilities    : extension revision 1
+VK_KHR_external_semaphore_capabilities : extension revision 1
+VK_KHR_get_display_properties2         : extension revision 1
+VK_KHR_get_physical_device_properties2 : extension revision 2
+VK_KHR_get_surface_capabilities2       : extension revision 1
+VK_KHR_portability_enumeration         : extension revision 1
+VK_KHR_surface                         : extension revision 25
+VK_KHR_surface_protected_capabilities  : extension revision 1
+VK_KHR_wayland_surface                 : extension revision 6
+VK_KHR_xcb_surface                     : extension revision 6
+VK_KHR_xlib_surface                    : extension revision 6
+VK_LUNARG_direct_driver_loading        : extension revision 1
+VK_NV_display_stereo                   : extension revision 1
+
+Instance Layers: count = 5
+--------------------------
+VK_LAYER_INTEL_nullhw       INTEL NULL HW                1.1.73   version 1
+VK_LAYER_MESA_device_select Linux device selection layer 1.4.303  version 1
+VK_LAYER_MESA_overlay       Mesa Overlay layer           1.4.303  version 1
+VK_LAYER_NV_optimus         NVIDIA Optimus layer         1.4.351  version 1
+VK_LAYER_NV_present         NVIDIA Presentation Layer    1.4.351  version 1
+
+Devices:
+========
+GPU0:
+	apiVersion         = 1.4.305
+	driverVersion      = 25.0.7
+	vendorID           = 0x8086
+	deviceID           = 0x1902
+	deviceType         = PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU
+	deviceName         = Intel(R) HD Graphics 510 (SKL GT1)
+	driverID           = DRIVER_ID_INTEL_OPEN_SOURCE_MESA
+	driverName         = Intel open-source Mesa driver
+	driverInfo         = Mesa 25.0.7-2+deb13u1
+	conformanceVersion = 1.4.0.0
+	deviceUUID         = 86800219-0600-0000-0002-000000000000
+	driverUUID         = 2f784820-7750-3c96-f005-19cf15571d8b
+GPU1:
+	apiVersion         = 1.4.305
+	driverVersion      = 25.0.7
+	vendorID           = 0x1002
+	deviceID           = 0x67df
+	deviceType         = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+	deviceName         = AMD Radeon RX 580 Series (RADV POLARIS10)
+	driverID           = DRIVER_ID_MESA_RADV
+	driverName         = radv
+	driverInfo         = Mesa 25.0.7-2+deb13u1
+	conformanceVersion = 1.4.0.0
+	deviceUUID         = 00000000-0200-0000-0000-000000000000
+	driverUUID         = 414d442d-4d45-5341-2d44-525600000000
+GPU2:
+	apiVersion         = 1.4.305
+	driverVersion      = 25.0.7
+	vendorID           = 0x1002
+	deviceID           = 0x731f
+	deviceType         = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+	deviceName         = AMD Radeon RX 5600 XT (RADV NAVI10)
+	driverID           = DRIVER_ID_MESA_RADV
+	driverName         = radv
+	driverInfo         = Mesa 25.0.7-2+deb13u1
+	conformanceVersion = 1.4.0.0
+	deviceUUID         = 00000000-0500-0000-0000-000000000000
+	driverUUID         = 414d442d-4d45-5341-2d44-525600000000
+GPU3:
+	apiVersion         = 1.4.305
+	driverVersion      = 25.0.7
+	vendorID           = 0x1002
+	deviceID           = 0x67df
+	deviceType         = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+	deviceName         = AMD Radeon RX 580 Series (RADV POLARIS10)
+	driverID           = DRIVER_ID_MESA_RADV
+	driverName         = radv
+	driverInfo         = Mesa 25.0.7-2+deb13u1
+	conformanceVersion = 1.4.0.0
+	deviceUUID         = 00000000-0600-0000-0000-000000000000
+	driverUUID         = 414d442d-4d45-5341-2d44-525600000000
+GPU4:
+	apiVersion         = 1.4.351
+	driverVersion      = 615.71.9.0
+	vendorID           = 0x10de
+	deviceID           = 0x2489
+	deviceType         = PHYSICAL_DEVICE_TYPE_DISCRETE_GPU
+	deviceName         = NVIDIA GeForce RTX 3060 Ti
+	driverID           = DRIVER_ID_NVIDIA_PROPRIETARY
+	driverName         = NVIDIA
+	driverInfo         = 615.71.09
+	conformanceVersion = 1.4.3.3
+	deviceUUID         = 73156e26-f91f-a778-9bf1-2167645d75da
+	driverUUID         = e960882b-0170-5057-bf3e-c686505f8776
+GPU5:
+	apiVersion         = 1.4.305
+	driverVersion      = 0.0.1
+	vendorID           = 0x10005
+	deviceID           = 0x0000
+	deviceType         = PHYSICAL_DEVICE_TYPE_CPU
+	deviceName         = llvmpipe (LLVM 19.1.7, 128 bits)
+	driverID           = DRIVER_ID_MESA_LLVMPIPE
+	driverName         = llvmpipe
+
+### modules
+nvidia_uvm           1957888  0
+nvidia_drm            159744  0
+nvidia_modeset       1998848  2 nvidia_drm
+amdgpu              14487552  3
+nvidia              18489344  14 nvidia_uvm,nvidia_modeset
+amdxcp                 12288  1 amdgpu
+drm_exec               12288  1 amdgpu
+gpu_sched              65536  1 amdgpu
+drm_suballoc_helper    12288  1 amdgpu
+drm_buddy              12288  2 amdgpu,i915
+drm_display_helper    274432  3 amdgpu,nvidia_drm,i915
+drm_ttm_helper         16384  2 amdgpu,nvidia_drm
+ttm                   106496  3 amdgpu,drm_ttm_helper,i915
+drm_kms_helper        253952  5 drm_display_helper,amdgpu,drm_ttm_helper,nvidia_drm,i915
+i2c_algo_bit           16384  2 amdgpu,i915
+drm                   774144  18 gpu_sched,drm_kms_helper,drm_exec,drm_suballoc_helper,drm_display_helper,nvidia,drm_buddy,amdgpu,drm_ttm_helper,nvidia_drm,i915,ttm,amdxcp
+crc16                  12288  2 amdgpu,ext4
+video                  81920  3 amdgpu,i915,nvidia_modeset
+
+=== scan complete 2026-09-15T15:30:55Z ===
