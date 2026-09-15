@@ -1,0 +1,9 @@
+1f6382f850b5480f26eba1378ff33f936d25872357dbe13e5dabbb11f141a029  docs/investigations/qwen38-flash-next-r8-d-v2/AUTHORITY-FREEZE-V2.md
+06022c8c378da38416af58bf13c93ae7663924fbf620382af490452ef163fb98  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/host-inventory/inferswarm01-inventory-raw.txt
+c292ac3930c88b770d98bdc1436d7d77c10350f2d3e16c16351bf7f4ab93464a  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/host-inventory/inferswarm01-nvidia-smi-q.xml
+ec657331fe92c9544ae243659a1da621ee70dc2c28e3a6d68cdb862a5ea82ac2  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/host-inventory/inferswarm03-inventory-raw.txt
+c1eb344c864004c32d635a805664263d5c09be47da9487c9c2a81d1c39e9c17d  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/host-inventory/inferswarm03-nvidia-smi-q.xml
+b4e3ffdb088fea01c9df345ada8003ad787dfed7e4c4b2e7e71f632531fa6a8a  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/host-inventory/inferswarm04-inventory-raw.txt
+173e27c4bdfc954cf8b5030243de474900c958b87d88f7c634c8aa8137bfe18d  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/host-inventory/inferswarm04-nvidia-smi-q.xml
+95528b12e4042af159bd0dcda2a332fbd8c3157482933c8f74241c94b138ef29  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/split-identity/raw-sha256sum.txt
+007fee97f3d26fde8e2edce1066482278fd65297f85b5aa2f94b31dab65e6e09  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/split-identity/split-rehash.json

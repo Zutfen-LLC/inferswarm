@@ -1,0 +1,11 @@
+{
+  "scripts/issue195_sampler_probe.py": "f72c859a4f8df5326c390f8d0c657e6f337e9a98724cbb991fe3db1e379e8638",
+  "scripts/issue195_v2_authority.py": "4dbe0cc2e983190c2efac43212fd5f2976d4244cc55b190b05f1e9bb45497539",
+  "scripts/issue195_v2_freeze_reference.py": "9a56a1fc7e3e8ec1bc4c17918c72f6dc636d9aa17bd04cac1844d5b0efa12ff0",
+  "scripts/issue195_v2_launch.py": "ee38a89bb2366fac47832f99590044bd569f49f3b93d4fe1f69529495a4f76ab",
+  "scripts/issue195_v2_manifest.py": "05729f92002ecd91e790d89a191b2d1f2d5f403c64dc0c9e08233243f02f3d24",
+  "scripts/issue195_v2_negative_controls.py": "a201996d923936309cd61f9177d462b6881126a2ddd2c60d48e296ccec8023c9",
+  "scripts/issue195_v2_run_ladder.py": "f749a5f77bd8a07e16c5cf58f69dc61fcd8fb17ee594a6b3d6f9832980d6c6c8",
+  "scripts/issue195_v2_terminal_reduction.py": "4b12682e33348a77cf0cce13d46c7c6591457da13cc768cf5d64c0c09eb0b23d",
+  "tests/test_issue195_r8d_v2.py": "ff77c262671af8bcb6443480ed509d065e40daa09c2d8301f65687e7146ea65d"
+}
