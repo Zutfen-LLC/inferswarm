@@ -5,5 +5,11 @@ ec657331fe92c9544ae243659a1da621ee70dc2c28e3a6d68cdb862a5ea82ac2  docs/investiga
 c1eb344c864004c32d635a805664263d5c09be47da9487c9c2a81d1c39e9c17d  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/host-inventory/inferswarm03-nvidia-smi-q.xml
 b4e3ffdb088fea01c9df345ada8003ad787dfed7e4c4b2e7e71f632531fa6a8a  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/host-inventory/inferswarm04-inventory-raw.txt
 173e27c4bdfc954cf8b5030243de474900c958b87d88f7c634c8aa8137bfe18d  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/host-inventory/inferswarm04-nvidia-smi-q.xml
+494715b986cd372a75434f0d54b33eb8c285a75e75beff22295e78aea1f31a30  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/reference/frozen-reference.json
+e75eec8e769cacbee503b4f5c4bc1600970b112a338a017793feaf79d6af188e  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/reference/ref-run-1.json
+e14448e9e7f69d0a6d0a3d48d8c65097fb6de0e124b748d66ff93ba4a40c89eb  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/reference/ref-run-2.json
+e39538012885777df58c1de98583e0192ee8d2aa65e315a3eb3ed92269a66472  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/reference/ref-run-3.json
+9265f23bd2167eb9557c6901e1813e9f99cd03c209ce1776a81d3175863079db  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/reference/ref-server.log
+679ed76bf6b02dec59e4515e326e8bbd4339b05ddd2562bf88ff250fe4497500  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/reference/sampler-probe-ref.json
 95528b12e4042af159bd0dcda2a332fbd8c3157482933c8f74241c94b138ef29  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/split-identity/raw-sha256sum.txt
 007fee97f3d26fde8e2edce1066482278fd65297f85b5aa2f94b31dab65e6e09  docs/investigations/qwen38-flash-next-r8-d-v2/evidence/split-identity/split-rehash.json
