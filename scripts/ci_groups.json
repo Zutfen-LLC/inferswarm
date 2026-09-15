@@ -135,6 +135,7 @@
    "test_modules": [
     "test_issue189_r8a",
     "test_issue191_r8b",
+    "test_issue193_r8c",
     "test_v0b_reduction",
     "test_v0c_canonical_run",
     "test_v0c_correctness",
@@ -267,6 +268,9 @@
    "vulkan-v0-b"
   ],
   "docs/investigations/qwen38-flash-next-r8-b/": [
+   "vulkan-v0-b"
+  ],
+  "docs/investigations/qwen38-flash-next-r8-c/": [
    "vulkan-v0-b"
   ],
   "docs/investigations/vulkan-v0-a/": [
@@ -790,6 +794,15 @@
   "scripts/issue191_verify_split_set.py": [
    "vulkan-v0-b"
   ],
+  "scripts/issue193_phase1_reduction.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue193_r8c_authority.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue193_terminal_reduction.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "vulkan-v0-b"
   ],
@@ -1001,6 +1014,9 @@
    "issue-137"
   ],
   "tests/test_issue191_r8b.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_issue193_r8c.py": [
    "vulkan-v0-b"
   ],
   "tests/test_issue35_corrections.py": [

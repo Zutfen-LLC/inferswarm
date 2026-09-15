@@ -1,0 +1,10 @@
+{
+  "result": {
+    "checked": 23,
+    "ok": true,
+    "problems": []
+  },
+  "schema": "inferswarm.issue193.r8b-bundle-reverification/1",
+  "starting_main": "3448cc7d63853079fff2520952c2b65d586ae3e4",
+  "verified_at": "2026-09-15"
+}

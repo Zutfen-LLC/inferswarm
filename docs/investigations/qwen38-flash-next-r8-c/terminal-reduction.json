@@ -1,0 +1,90 @@
+{
+  "cause_statement": "The accepted R8-B exact-token FAIL is causally localized to the request-level sampler chain, not RPC transport or state: samplers=[\"greedy\"] did not resolve at llama.cpp b29c606e (retained warning in the accepted reference log), so both arms ran seeded distribution sampling (\"logits -> dist\", seed 0). Distribution sampling amplifies lawful cross-backend numerical-path logit differences (reference = CPU-spill-heavy placement; candidate = five-CUDA-device placement) into token divergence by moving the cumulative-sum crossing point. Under a single-factor intervention to true greedy (request field only: top_k=1), the same five-device RPC topology becomes token-identical to the reference on 2 of 4 cases and agrees through >=5 positions on case-256. Cross-host transport is exonerated by wedge B (loopback and remote RPC byte-identical); a same-GPU direct-vs-RPC difference exists (wedge A) but produces deterministic, coherent outputs in both arms with no state-corruption invariant violated. The residual true-greedy differences (case-256 pos>=5, case-4096 EOS) are attributed to lawful numerical-path variation; separating them further requires a trustworthy logit-row surface the pinned build's server does not expose (its n_probs rows are misaligned relative to the sampled decision row).",
+  "checks": [
+    {
+      "check": "phase1 reproduction machine-derived",
+      "detail": "",
+      "ok": true
+    },
+    {
+      "check": "A1 internally deterministic",
+      "detail": "[561, 40554, 32039, 51358, 279, 836, 836, 271]",
+      "ok": true
+    },
+    {
+      "check": "A2 internally deterministic",
+      "detail": "[561, 40554, 32039, 30581, 685, 321, 271, 760]",
+      "ok": true
+    },
+    {
+      "check": "A1 vs A2 diverge (same GPU, direct vs loopback RPC)",
+      "detail": "A1=[561, 40554, 32039, 51358, 279, 836, 836, 271] A2=[561, 40554, 32039, 30581, 685, 321, 271, 760]",
+      "ok": true
+    },
+    {
+      "check": "wedge A placement matched (subset size identical on both arms)",
+      "detail": "[6936.1, 21500.26, 27465.95, 47674.92] vs [6936.1, 21500.26, 27465.95, 47674.92]",
+      "ok": true
+    },
+    {
+      "check": "B2 internally deterministic",
+      "detail": "[561, 40554, 32039, 30581, 685, 321, 271, 760]",
+      "ok": true
+    },
+    {
+      "check": "A2 == B2 (loopback and remote RPC byte-identical streams)",
+      "detail": "A2=[561, 40554, 32039, 30581, 685, 321, 271, 760] B2=[561, 40554, 32039, 30581, 685, 321, 271, 760]",
+      "ok": true
+    },
+    {
+      "check": "wedge B placement matched",
+      "detail": "[6936.1, 21500.26, 27465.95, 47674.92]",
+      "ok": true
+    },
+    {
+      "check": "accepted reference log retains greedy-name mismatch warnings",
+      "detail": "16",
+      "ok": true
+    },
+    {
+      "check": "accepted reference log retains actual chain 'logits -> dist'",
+      "detail": "16",
+      "ok": true
+    },
+    {
+      "check": "accepted stream contains non-argmax tokens (rank>0) at >=3 positions",
+      "detail": "ranks=[0, 1, 154065, 1637, 41947, 0, 0, 1]",
+      "ok": true
+    },
+    {
+      "check": "accepted pos0/pos5/pos6 are argmax-consistent",
+      "detail": "ranks=[0, 1, 154065, 1637, 41947, 0, 0, 1]",
+      "ok": true
+    },
+    {
+      "check": "true-greedy intervention: >=2 of 4 cases token-identical R vs C",
+      "detail": "[{\"case\": \"case-256\", \"identical\": false, \"shared_prefix\": 5}, {\"case\": \"case-1024\", \"identical\": true, \"shared_prefix\": 8}, {\"case\": \"case-3072\", \"identical\": true, \"shared_prefix\": 8}, {\"case\": \"case-4096\", \"identical\": false, \"shared_prefix\": 0}]",
+      "ok": true
+    },
+    {
+      "check": "case-256 true-greedy shared prefix longer than accepted dist-mode (3)",
+      "detail": "5",
+      "ok": true
+    },
+    {
+      "check": "phase3 teacher-forced surface retained with row-misalignment observation",
+      "detail": "",
+      "ok": true
+    }
+  ],
+  "classification": "Primarily numerical-path divergence amplified by an invalid greedy-protocol assumption in the R8-B methodology; no RPC/state corruption demonstrated; historical R8-B FAIL remains valid under its own frozen comparator (exact tokens under the actually-built sampler chain) and is NOT reinterpreted as PASS.",
+  "non_claims": [
+    "no repair to llama.cpp attempted or validated",
+    "no requalification; R8-B FAIL stands unmodified",
+    "no claim that llama.cpp RPC is defect-free in general",
+    "no AMD/Vulkan/mixed-vendor evidence",
+    "residual true-greedy case-256/case-4096 differences not localized to a layer"
+  ],
+  "schema": "inferswarm.issue193.terminal-reduction/1",
+  "terminal": "R8C_QWEN38_RPC_DIVERGENCE_CAUSE_LOCALIZED"
+}
