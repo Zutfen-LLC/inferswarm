@@ -1,0 +1,987 @@
+{
+  "accepted_predecessor_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
+  "campaign": "issue199-r8e-residual-divergence",
+  "checks": {
+    "evidence_manifest_verified": true,
+    "instrumentation_record_present": true,
+    "r8d_v2_evidence_byte_preserved": true
+  },
+  "per_case": {
+    "case-256": {
+      "cand_focus_271": {
+        "logit": 16.000247955322266,
+        "rank": 2
+      },
+      "cand_focus_34227": {
+        "logit": 16.30571174621582,
+        "rank": 1
+      },
+      "cand_top16": [
+        [
+          34227,
+          16.30571174621582
+        ],
+        [
+          271,
+          16.000247955322266
+        ],
+        [
+          31347,
+          13.924830436706543
+        ],
+        [
+          25292,
+          13.636290550231934
+        ],
+        [
+          279,
+          12.819021224975586
+        ],
+        [
+          16570,
+          12.50802230834961
+        ],
+        [
+          4558,
+          12.225730895996094
+        ],
+        [
+          264,
+          12.102861404418945
+        ],
+        [
+          28279,
+          11.905715942382812
+        ],
+        [
+          799,
+          11.814693450927734
+        ],
+        [
+          2943,
+          11.73245906829834
+        ],
+        [
+          11292,
+          11.664850234985352
+        ],
+        [
+          42744,
+          11.633328437805176
+        ],
+        [
+          220,
+          11.632619857788086
+        ],
+        [
+          1132,
+          11.585762977600098
+        ],
+        [
+          198,
+          11.55881118774414
+        ]
+      ],
+      "cand_top1_top2_margin": 0.3054637908935547,
+      "characterization": "narrow-winner-inversion",
+      "cross_arm_logit_deltas": {
+        "271": -0.7061500549316406,
+        "34227": 0.20717430114746094
+      },
+      "focal_rank_facts": {
+        "any_focal_rank_missing": false,
+        "both_focal_rank_1_or_2_in_both_arms": true,
+        "focal_ordering_inverted": true
+      },
+      "focal_ranks": {
+        "candidate|271": 2,
+        "candidate|34227": 1,
+        "reference|271": 1,
+        "reference|34227": 2
+      },
+      "focus": {
+        "candidate": {
+          "271": {
+            "logit": 16.000247955322266,
+            "rank": 2
+          },
+          "34227": {
+            "logit": 16.30571174621582,
+            "rank": 1
+          }
+        },
+        "reference": {
+          "271": {
+            "logit": 16.706398010253906,
+            "rank": 1
+          },
+          "34227": {
+            "logit": 16.09853744506836,
+            "rank": 2
+          }
+        }
+      },
+      "ref_focus_271": {
+        "logit": 16.706398010253906,
+        "rank": 1
+      },
+      "ref_focus_34227": {
+        "logit": 16.09853744506836,
+        "rank": 2
+      },
+      "ref_top16": [
+        [
+          271,
+          16.706398010253906
+        ],
+        [
+          34227,
+          16.09853744506836
+        ],
+        [
+          31347,
+          13.809734344482422
+        ],
+        [
+          25292,
+          13.649127960205078
+        ],
+        [
+          16570,
+          12.918323516845703
+        ],
+        [
+          279,
+          12.60280990600586
+        ],
+        [
+          198,
+          12.291034698486328
+        ],
+        [
+          4558,
+          12.012208938598633
+        ],
+        [
+          264,
+          11.830911636352539
+        ],
+        [
+          28279,
+          11.48566722869873
+        ],
+        [
+          60163,
+          11.44229507446289
+        ],
+        [
+          220,
+          11.403194427490234
+        ],
+        [
+          799,
+          11.351033210754395
+        ],
+        [
+          50614,
+          11.227668762207031
+        ],
+        [
+          1132,
+          11.131026268005371
+        ],
+        [
+          11292,
+          11.13051986694336
+        ]
+      ],
+      "ref_top1_top2_margin": 0.6078605651855469,
+      "shifted_reasons": [
+        "focal winner tokens occupy ranks 1 and 2 in both arms with inverted ordering (top-16 overlap 14/16)"
+      ],
+      "top16_order_equal": false,
+      "top16_overlap_count": 14,
+      "top16_set_equal": false
+    },
+    "case-4096": {
+      "cand_focus_248046": {
+        "logit": 16.636371612548828,
+        "rank": 1
+      },
+      "cand_focus_328": {
+        "logit": 15.4173583984375,
+        "rank": 2
+      },
+      "cand_top16": [
+        [
+          248046,
+          16.636371612548828
+        ],
+        [
+          328,
+          15.4173583984375
+        ],
+        [
+          271,
+          14.860342979431152
+        ],
+        [
+          561,
+          14.603052139282227
+        ],
+        [
+          359,
+          13.604443550109863
+        ],
+        [
+          198,
+          12.85779857635498
+        ],
+        [
+          1001,
+          12.20865535736084
+        ],
+        [
+          695,
+          12.136311531066895
+        ],
+        [
+          4558,
+          12.113499641418457
+        ],
+        [
+          1358,
+          12.077142715454102
+        ],
+        [
+          498,
+          11.981736183166504
+        ],
+        [
+          220,
+          11.804994583129883
+        ],
+        [
+          279,
+          11.283914566040039
+        ],
+        [
+          1510,
+          10.984918594360352
+        ],
+        [
+          4356,
+          10.972922325134277
+        ],
+        [
+          10232,
+          10.956005096435547
+        ]
+      ],
+      "cand_top1_top2_margin": 1.2190132141113281,
+      "characterization": "broader-focal-shift",
+      "cross_arm_logit_deltas": {
+        "248046": 3.3809289932250977,
+        "328": 0.39277076721191406
+      },
+      "focal_rank_facts": {
+        "any_focal_rank_missing": false,
+        "both_focal_rank_1_or_2_in_both_arms": false,
+        "focal_ordering_inverted": true
+      },
+      "focal_ranks": {
+        "candidate|248046": 1,
+        "candidate|328": 2,
+        "reference|248046": 5,
+        "reference|328": 1
+      },
+      "focus": {
+        "candidate": {
+          "328": {
+            "logit": 15.4173583984375,
+            "rank": 2
+          },
+          "248046": {
+            "logit": 16.636371612548828,
+            "rank": 1
+          }
+        },
+        "reference": {
+          "328": {
+            "logit": 15.024587631225586,
+            "rank": 1
+          },
+          "248046": {
+            "logit": 13.25544261932373,
+            "rank": 5
+          }
+        }
+      },
+      "ref_focus_248046": {
+        "logit": 13.25544261932373,
+        "rank": 5
+      },
+      "ref_focus_328": {
+        "logit": 15.024587631225586,
+        "rank": 1
+      },
+      "ref_top16": [
+        [
+          328,
+          15.024587631225586
+        ],
+        [
+          561,
+          14.552173614501953
+        ],
+        [
+          359,
+          14.066600799560547
+        ],
+        [
+          271,
+          13.846651077270508
+        ],
+        [
+          248046,
+          13.25544261932373
+        ],
+        [
+          198,
+          12.077540397644043
+        ],
+        [
+          1001,
+          11.840921401977539
+        ],
+        [
+          498,
+          11.541878700256348
+        ],
+        [
+          695,
+          11.531448364257812
+        ],
+        [
+          4558,
+          11.43608283996582
+        ],
+        [
+          220,
+          11.391757011413574
+        ],
+        [
+          7018,
+          11.26095199584961
+        ],
+        [
+          279,
+          11.049806594848633
+        ],
+        [
+          1848,
+          10.762418746948242
+        ],
+        [
+          4486,
+          10.587655067443848
+        ],
+        [
+          1510,
+          10.517049789428711
+        ]
+      ],
+      "ref_top1_top2_margin": 0.4724140167236328,
+      "shifted_reasons": [
+        "248046 is rank 5 in the reference arm (not the immediate runner-up) (top-16 overlap 13/16 retained as context)"
+      ],
+      "top16_order_equal": false,
+      "top16_overlap_count": 13,
+      "top16_set_equal": false
+    }
+  },
+  "problems": [],
+  "repeat_byte_details": {
+    "case-256/candidate/obs1": {
+      "actual_raw_hook_sha256": "e3b4001c63e27c355381b2d0b654bbbeb46ea6211a5ab6ff36c8036e7be68e21",
+      "actual_row_copy_sha256": "e3b4001c63e27c355381b2d0b654bbbeb46ea6211a5ab6ff36c8036e7be68e21",
+      "identity": {
+        "arm": "candidate",
+        "capture_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-256-candidate-obs1.json",
+        "case": "case-256",
+        "generated_position": 5,
+        "label": "case-256-candidate-obs1",
+        "observation_path": "obs-case-256-candidate-obs1.jsonl",
+        "observation_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-256-candidate-obs1.jsonl",
+        "raw_f32_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-256-candidate-obs1.jsonl.pos5.f32",
+        "repeat": 1,
+        "row_copy_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/row-case-256-candidate-obs1.pos5.f32"
+      },
+      "problems": [],
+      "raw_hook_equals_row_copy": true
+    },
+    "case-256/candidate/obs2": {
+      "actual_raw_hook_sha256": "e3b4001c63e27c355381b2d0b654bbbeb46ea6211a5ab6ff36c8036e7be68e21",
+      "actual_row_copy_sha256": "e3b4001c63e27c355381b2d0b654bbbeb46ea6211a5ab6ff36c8036e7be68e21",
+      "identity": {
+        "arm": "candidate",
+        "capture_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-256-candidate-obs2.json",
+        "case": "case-256",
+        "generated_position": 5,
+        "label": "case-256-candidate-obs2",
+        "observation_path": "obs-case-256-candidate-obs2.jsonl",
+        "observation_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-256-candidate-obs2.jsonl",
+        "raw_f32_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-256-candidate-obs2.jsonl.pos5.f32",
+        "repeat": 2,
+        "row_copy_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/row-case-256-candidate-obs2.pos5.f32"
+      },
+      "problems": [],
+      "raw_hook_equals_row_copy": true
+    },
+    "case-256/reference/obs1": {
+      "actual_raw_hook_sha256": "1fd17a48f88678df7d375f3b7668268d1a4c13b183fd46ea7cf056dd5819190e",
+      "actual_row_copy_sha256": "1fd17a48f88678df7d375f3b7668268d1a4c13b183fd46ea7cf056dd5819190e",
+      "identity": {
+        "arm": "reference",
+        "capture_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-256-reference-obs1.json",
+        "case": "case-256",
+        "generated_position": 5,
+        "label": "case-256-reference-obs1",
+        "observation_path": "obs-case-256-reference-obs1.jsonl",
+        "observation_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-256-reference-obs1.jsonl",
+        "raw_f32_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-256-reference-obs1.jsonl.pos5.f32",
+        "repeat": 1,
+        "row_copy_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/row-case-256-reference-obs1.pos5.f32"
+      },
+      "problems": [],
+      "raw_hook_equals_row_copy": true
+    },
+    "case-256/reference/obs2": {
+      "actual_raw_hook_sha256": "1fd17a48f88678df7d375f3b7668268d1a4c13b183fd46ea7cf056dd5819190e",
+      "actual_row_copy_sha256": "1fd17a48f88678df7d375f3b7668268d1a4c13b183fd46ea7cf056dd5819190e",
+      "identity": {
+        "arm": "reference",
+        "capture_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-256-reference-obs2.json",
+        "case": "case-256",
+        "generated_position": 5,
+        "label": "case-256-reference-obs2",
+        "observation_path": "obs-case-256-reference-obs2.jsonl",
+        "observation_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-256-reference-obs2.jsonl",
+        "raw_f32_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-256-reference-obs2.jsonl.pos5.f32",
+        "repeat": 2,
+        "row_copy_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/row-case-256-reference-obs2.pos5.f32"
+      },
+      "problems": [],
+      "raw_hook_equals_row_copy": true
+    },
+    "case-4096/candidate/obs1": {
+      "actual_raw_hook_sha256": "d4a0a88fff3a4214c732deb0b7e6c0f29d207db008fda734072570450f0e7661",
+      "actual_row_copy_sha256": "d4a0a88fff3a4214c732deb0b7e6c0f29d207db008fda734072570450f0e7661",
+      "identity": {
+        "arm": "candidate",
+        "capture_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-4096-candidate-obs1.json",
+        "case": "case-4096",
+        "generated_position": 0,
+        "label": "case-4096-candidate-obs1",
+        "observation_path": "obs-case-4096-candidate-obs1.jsonl",
+        "observation_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-4096-candidate-obs1.jsonl",
+        "raw_f32_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-4096-candidate-obs1.jsonl.pos0.f32",
+        "repeat": 1,
+        "row_copy_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/row-case-4096-candidate-obs1.pos0.f32"
+      },
+      "problems": [],
+      "raw_hook_equals_row_copy": true
+    },
+    "case-4096/candidate/obs2": {
+      "actual_raw_hook_sha256": "d4a0a88fff3a4214c732deb0b7e6c0f29d207db008fda734072570450f0e7661",
+      "actual_row_copy_sha256": "d4a0a88fff3a4214c732deb0b7e6c0f29d207db008fda734072570450f0e7661",
+      "identity": {
+        "arm": "candidate",
+        "capture_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-4096-candidate-obs2.json",
+        "case": "case-4096",
+        "generated_position": 0,
+        "label": "case-4096-candidate-obs2",
+        "observation_path": "obs-case-4096-candidate-obs2.jsonl",
+        "observation_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-4096-candidate-obs2.jsonl",
+        "raw_f32_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-4096-candidate-obs2.jsonl.pos0.f32",
+        "repeat": 2,
+        "row_copy_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/row-case-4096-candidate-obs2.pos0.f32"
+      },
+      "problems": [],
+      "raw_hook_equals_row_copy": true
+    },
+    "case-4096/reference/obs1": {
+      "actual_raw_hook_sha256": "e79a8490e33d25bc9ac0b9c49a26ffd443b5dd37d966275c35c920a6541eeb7a",
+      "actual_row_copy_sha256": "e79a8490e33d25bc9ac0b9c49a26ffd443b5dd37d966275c35c920a6541eeb7a",
+      "identity": {
+        "arm": "reference",
+        "capture_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-4096-reference-obs1.json",
+        "case": "case-4096",
+        "generated_position": 0,
+        "label": "case-4096-reference-obs1",
+        "observation_path": "obs-case-4096-reference-obs1.jsonl",
+        "observation_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-4096-reference-obs1.jsonl",
+        "raw_f32_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-4096-reference-obs1.jsonl.pos0.f32",
+        "repeat": 1,
+        "row_copy_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/row-case-4096-reference-obs1.pos0.f32"
+      },
+      "problems": [],
+      "raw_hook_equals_row_copy": true
+    },
+    "case-4096/reference/obs2": {
+      "actual_raw_hook_sha256": "e79a8490e33d25bc9ac0b9c49a26ffd443b5dd37d966275c35c920a6541eeb7a",
+      "actual_row_copy_sha256": "e79a8490e33d25bc9ac0b9c49a26ffd443b5dd37d966275c35c920a6541eeb7a",
+      "identity": {
+        "arm": "reference",
+        "capture_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-4096-reference-obs2.json",
+        "case": "case-4096",
+        "generated_position": 0,
+        "label": "case-4096-reference-obs2",
+        "observation_path": "obs-case-4096-reference-obs2.jsonl",
+        "observation_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-4096-reference-obs2.jsonl",
+        "raw_f32_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-4096-reference-obs2.jsonl.pos0.f32",
+        "repeat": 2,
+        "row_copy_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/row-case-4096-reference-obs2.pos0.f32"
+      },
+      "problems": [],
+      "raw_hook_equals_row_copy": true
+    }
+  },
+  "stability": {
+    "case-256/candidate": {
+      "actual_obs1_raw_hook_sha256": "e3b4001c63e27c355381b2d0b654bbbeb46ea6211a5ab6ff36c8036e7be68e21",
+      "actual_obs2_raw_hook_sha256": "e3b4001c63e27c355381b2d0b654bbbeb46ea6211a5ab6ff36c8036e7be68e21",
+      "repeat_f32_row_sha256_equality": true,
+      "repeat_token_equality": true
+    },
+    "case-256/reference": {
+      "actual_obs1_raw_hook_sha256": "1fd17a48f88678df7d375f3b7668268d1a4c13b183fd46ea7cf056dd5819190e",
+      "actual_obs2_raw_hook_sha256": "1fd17a48f88678df7d375f3b7668268d1a4c13b183fd46ea7cf056dd5819190e",
+      "repeat_f32_row_sha256_equality": true,
+      "repeat_token_equality": true
+    },
+    "case-4096/candidate": {
+      "actual_obs1_raw_hook_sha256": "d4a0a88fff3a4214c732deb0b7e6c0f29d207db008fda734072570450f0e7661",
+      "actual_obs2_raw_hook_sha256": "d4a0a88fff3a4214c732deb0b7e6c0f29d207db008fda734072570450f0e7661",
+      "repeat_f32_row_sha256_equality": true,
+      "repeat_token_equality": true
+    },
+    "case-4096/reference": {
+      "actual_obs1_raw_hook_sha256": "e79a8490e33d25bc9ac0b9c49a26ffd443b5dd37d966275c35c920a6541eeb7a",
+      "actual_obs2_raw_hook_sha256": "e79a8490e33d25bc9ac0b9c49a26ffd443b5dd37d966275c35c920a6541eeb7a",
+      "repeat_f32_row_sha256_equality": true,
+      "repeat_token_equality": true
+    }
+  },
+  "terminal": "R8E_DEEPER_RUNTIME_LOCALIZATION_JUSTIFIED",
+  "tf_views": {
+    "case-256/candidate": {
+      "focus_tokens": {
+        "271": {
+          "logit": 17.9783325,
+          "rank": 1
+        },
+        "34227": {
+          "logit": 16.7383041,
+          "rank": 2
+        }
+      },
+      "n_nonfinite": 0,
+      "runner_up": 34227,
+      "runner_up_logit": 16.7383041,
+      "top16": [
+        [
+          271,
+          17.9783325
+        ],
+        [
+          34227,
+          16.7383041
+        ],
+        [
+          31347,
+          14.9035034
+        ],
+        [
+          25292,
+          14.8253222
+        ],
+        [
+          16570,
+          13.8000269
+        ],
+        [
+          4558,
+          13.4487686
+        ],
+        [
+          279,
+          13.0443993
+        ],
+        [
+          50614,
+          12.474843
+        ],
+        [
+          198,
+          12.4609871
+        ],
+        [
+          264,
+          12.1364765
+        ],
+        [
+          60163,
+          12.0143576
+        ],
+        [
+          28279,
+          11.9896946
+        ],
+        [
+          248044,
+          11.9016809
+        ],
+        [
+          799,
+          11.8837681
+        ],
+        [
+          78592,
+          11.8360558
+        ],
+        [
+          11292,
+          11.8211594
+        ]
+      ],
+      "top16_ids": [
+        271,
+        34227,
+        31347,
+        25292,
+        16570,
+        4558,
+        279,
+        50614,
+        198,
+        264,
+        60163,
+        28279,
+        248044,
+        799,
+        78592,
+        11292
+      ],
+      "top1_top2_margin": 1.2400284,
+      "winner": 271,
+      "winner_logit": 17.9783325
+    },
+    "case-256/reference": {
+      "focus_tokens": {
+        "271": {
+          "logit": 17.397316,
+          "rank": 2
+        },
+        "34227": {
+          "logit": 17.7268753,
+          "rank": 1
+        }
+      },
+      "n_nonfinite": 0,
+      "runner_up": 271,
+      "runner_up_logit": 17.397316,
+      "top16": [
+        [
+          34227,
+          17.7268753
+        ],
+        [
+          271,
+          17.397316
+        ],
+        [
+          25292,
+          15.4331856
+        ],
+        [
+          31347,
+          14.6180754
+        ],
+        [
+          16570,
+          14.1081791
+        ],
+        [
+          4558,
+          13.4292603
+        ],
+        [
+          198,
+          13.1105309
+        ],
+        [
+          248046,
+          13.0533628
+        ],
+        [
+          28279,
+          12.8887377
+        ],
+        [
+          279,
+          12.7718315
+        ],
+        [
+          60163,
+          12.4572964
+        ],
+        [
+          264,
+          12.4346609
+        ],
+        [
+          5600,
+          12.3313217
+        ],
+        [
+          220,
+          12.2696829
+        ],
+        [
+          799,
+          12.1700401
+        ],
+        [
+          2943,
+          12.149579
+        ]
+      ],
+      "top16_ids": [
+        34227,
+        271,
+        25292,
+        31347,
+        16570,
+        4558,
+        198,
+        248046,
+        28279,
+        279,
+        60163,
+        264,
+        5600,
+        220,
+        799,
+        2943
+      ],
+      "top1_top2_margin": 0.32955929999999967,
+      "winner": 34227,
+      "winner_logit": 17.7268753
+    },
+    "case-4096/candidate": {
+      "focus_tokens": {
+        "328": {
+          "logit": 15.4173584,
+          "rank": 2
+        },
+        "248046": {
+          "logit": 16.6363716,
+          "rank": 1
+        }
+      },
+      "n_nonfinite": 0,
+      "runner_up": 328,
+      "runner_up_logit": 15.4173584,
+      "top16": [
+        [
+          248046,
+          16.6363716
+        ],
+        [
+          328,
+          15.4173584
+        ],
+        [
+          271,
+          14.860343
+        ],
+        [
+          561,
+          14.6030521
+        ],
+        [
+          359,
+          13.6044436
+        ],
+        [
+          198,
+          12.8577986
+        ],
+        [
+          1001,
+          12.2086554
+        ],
+        [
+          695,
+          12.1363115
+        ],
+        [
+          4558,
+          12.1134996
+        ],
+        [
+          1358,
+          12.0771427
+        ],
+        [
+          498,
+          11.9817362
+        ],
+        [
+          220,
+          11.8049946
+        ],
+        [
+          279,
+          11.2839146
+        ],
+        [
+          1510,
+          10.9849186
+        ],
+        [
+          4356,
+          10.9729223
+        ],
+        [
+          10232,
+          10.9560051
+        ]
+      ],
+      "top16_ids": [
+        248046,
+        328,
+        271,
+        561,
+        359,
+        198,
+        1001,
+        695,
+        4558,
+        1358,
+        498,
+        220,
+        279,
+        1510,
+        4356,
+        10232
+      ],
+      "top1_top2_margin": 1.219013200000001,
+      "winner": 248046,
+      "winner_logit": 16.6363716
+    },
+    "case-4096/reference": {
+      "focus_tokens": {
+        "328": {
+          "logit": 15.0245876,
+          "rank": 1
+        },
+        "248046": {
+          "logit": 13.2554426,
+          "rank": 5
+        }
+      },
+      "n_nonfinite": 0,
+      "runner_up": 561,
+      "runner_up_logit": 14.5521736,
+      "top16": [
+        [
+          328,
+          15.0245876
+        ],
+        [
+          561,
+          14.5521736
+        ],
+        [
+          359,
+          14.0666008
+        ],
+        [
+          271,
+          13.8466511
+        ],
+        [
+          248046,
+          13.2554426
+        ],
+        [
+          198,
+          12.0775404
+        ],
+        [
+          1001,
+          11.8409214
+        ],
+        [
+          498,
+          11.5418787
+        ],
+        [
+          695,
+          11.5314484
+        ],
+        [
+          4558,
+          11.4360828
+        ],
+        [
+          220,
+          11.391757
+        ],
+        [
+          7018,
+          11.260952
+        ],
+        [
+          279,
+          11.0498066
+        ],
+        [
+          1848,
+          10.7624187
+        ],
+        [
+          4486,
+          10.5876551
+        ],
+        [
+          1510,
+          10.5170498
+        ]
+      ],
+      "top16_ids": [
+        328,
+        561,
+        359,
+        271,
+        248046,
+        198,
+        1001,
+        498,
+        695,
+        4558,
+        220,
+        7018,
+        279,
+        1848,
+        4486,
+        1510
+      ],
+      "top1_top2_margin": 0.47241400000000056,
+      "winner": 328,
+      "winner_logit": 15.0245876
+    }
+  }
+}

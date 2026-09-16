@@ -1,0 +1,49 @@
+{"label": "case-256-reference-accepted1", "problems": ["no hook row at generated position 5", "no f32 row retained at target position"], "tokens": [561, 324, 55965, 51624, 29014, 271, 248068, 271], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/nonperturbation/capture-case-256-reference-accepted1.json"}
+{"label": "case-256-reference-accepted2", "problems": ["no hook row at generated position 5", "no f32 row retained at target position"], "tokens": [561, 324, 55965, 51624, 29014, 271, 248068, 271], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/nonperturbation/capture-case-256-reference-accepted2.json"}
+10.0.0.219:50052 reachable
+10.0.0.219:50053 reachable
+10.0.0.204:50052 reachable
+BACKENDS_REACHABLE
+{"label": "case-256-candidate-accepted1", "problems": ["no hook row at generated position 5", "no f32 row retained at target position"], "tokens": [561, 324, 55965, 51624, 29014, 34227, 36165, 271], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/nonperturbation/capture-case-256-candidate-accepted1.json"}
+{"label": "case-256-candidate-accepted2", "problems": ["no hook row at generated position 5", "no f32 row retained at target position"], "tokens": [561, 324, 55965, 51624, 29014, 34227, 36165, 271], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/nonperturbation/capture-case-256-candidate-accepted2.json"}
+{"label": "case-4096-reference-accepted1", "problems": ["no hook row at generated position 0", "no f32 row retained at target position"], "tokens": [328, 760, 324, 55965, 51624, 29014, 34227, 18030], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/nonperturbation/capture-case-4096-reference-accepted1.json"}
+{"label": "case-4096-reference-accepted2", "problems": ["no hook row at generated position 0", "no f32 row retained at target position"], "tokens": [328, 760, 324, 55965, 51624, 29014, 34227, 18030], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/nonperturbation/capture-case-4096-reference-accepted2.json"}
+10.0.0.219:50052 reachable
+10.0.0.219:50053 reachable
+10.0.0.204:50052 reachable
+BACKENDS_REACHABLE
+{"label": "case-4096-candidate-accepted1", "problems": ["no hook row at generated position 0", "no f32 row retained at target position"], "tokens": [248046], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/nonperturbation/capture-case-4096-candidate-accepted1.json"}
+{"label": "case-4096-candidate-accepted2", "problems": ["no hook row at generated position 0", "no f32 row retained at target position"], "tokens": [248046], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/nonperturbation/capture-case-4096-candidate-accepted2.json"}
+{"label": "case-256-reference-obs1", "problems": ["top16 mismatch hook vs derived bytes"], "tokens": [561, 324, 55965, 51624, 29014, 271, 248068, 271], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-256-reference-obs1.json"}
+{"label": "case-256-reference-obs2", "problems": ["top16 mismatch hook vs derived bytes"], "tokens": [561, 324, 55965, 51624, 29014, 271, 248068, 271], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-256-reference-obs2.json"}
+10.0.0.219:50052 reachable
+10.0.0.219:50053 reachable
+10.0.0.204:50052 reachable
+BACKENDS_REACHABLE
+{"label": "case-256-candidate-obs1", "problems": ["top16 mismatch hook vs derived bytes"], "tokens": [561, 324, 55965, 51624, 29014, 34227, 36165, 271], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-256-candidate-obs1.json"}
+{"label": "case-256-candidate-obs2", "problems": ["top16 mismatch hook vs derived bytes"], "tokens": [561, 324, 55965, 51624, 29014, 34227, 36165, 271], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-256-candidate-obs2.json"}
+{"label": "case-4096-reference-obs1", "problems": [], "tokens": [328, 760, 324, 55965, 51624, 29014, 34227, 18030], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-4096-reference-obs1.json"}
+{"label": "case-4096-reference-obs2", "problems": [], "tokens": [328, 760, 324, 55965, 51624, 29014, 34227, 18030], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-4096-reference-obs2.json"}
+10.0.0.219:50052 reachable
+10.0.0.219:50053 reachable
+10.0.0.204:50052 reachable
+BACKENDS_REACHABLE
+{"label": "case-4096-candidate-obs1", "problems": ["top16 mismatch hook vs derived bytes"], "tokens": [248046], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-4096-candidate-obs1.json"}
+{"label": "case-4096-candidate-obs2", "problems": ["top16 mismatch hook vs derived bytes"], "tokens": [248046], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-4096-candidate-obs2.json"}
+{"label": "case-256-reference-tf1", "problems": ["hook n_vocab != f32 row floats", "no f32 row retained at target position"], "tokens": [34227, 18030, 16382, 1518, 279, 29262, 49172, 18018], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/observations-tf/capture-case-256-reference-tf1.json"}
+{"label": "case-256-reference-tf2", "problems": ["hook n_vocab != f32 row floats", "no f32 row retained at target position"], "tokens": [34227, 18030, 16382, 1518, 279, 29262, 49172, 18018], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/observations-tf/capture-case-256-reference-tf2.json"}
+10.0.0.219:50052 reachable
+10.0.0.219:50053 reachable
+10.0.0.204:50052 reachable
+BACKENDS_REACHABLE
+{"label": "case-256-candidate-tf1", "problems": ["hook n_vocab != f32 row floats", "no f32 row retained at target position"], "tokens": [271, 248068, 271, 248069, 271, 760, 324, 55965], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/observations-tf/capture-case-256-candidate-tf1.json"}
+{"label": "case-256-candidate-tf2", "problems": ["hook n_vocab != f32 row floats", "no f32 row retained at target position"], "tokens": [271, 248068, 271, 248069, 271, 760, 324, 55965], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/observations-tf/capture-case-256-candidate-tf2.json"}
+{"label": "case-4096-reference-tf1", "problems": [], "tokens": [328, 760, 324, 55965, 51624, 29014, 34227, 18030], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/observations-tf/capture-case-4096-reference-tf1.json"}
+{"label": "case-4096-reference-tf2", "problems": [], "tokens": [328, 760, 324, 55965, 51624, 29014, 34227, 18030], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/observations-tf/capture-case-4096-reference-tf2.json"}
+10.0.0.219:50052 reachable
+10.0.0.219:50053 reachable
+10.0.0.204:50052 reachable
+BACKENDS_REACHABLE
+{"label": "case-4096-candidate-tf1", "problems": ["top16 mismatch hook vs derived bytes"], "tokens": [248046], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/observations-tf/capture-case-4096-candidate-tf1.json"}
+{"label": "case-4096-candidate-tf2", "problems": ["top16 mismatch hook vs derived bytes"], "tokens": [248046], "out": "/srv/inferswarm/repos/inferswarm-git/docs/investigations/qwen38-flash-next-r8-e/evidence/observations-tf/capture-case-4096-candidate-tf2.json"}
+RUN_COMPLETE

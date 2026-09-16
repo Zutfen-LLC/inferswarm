@@ -1,0 +1,249 @@
+R8-E — Qwen3.8-Flash-Next residual true-greedy divergence characterization
+(Issue #199; bounded two-case diagnostic, NO requalification)
+
+Terminal (machine-derived by scripts/issue199_r8e_terminal_reduction.py):
+
+R8E_DEEPER_RUNTIME_LOCALIZATION_JUSTIFIED
+
+(Correction round for the NO-GO review: the original reduction
+classified BOTH cases as margin-sensitive winner inversions using an
+overlap-only shortcut. The corrected reducer characterizes each case
+from the structural rank facts of the competing winner tokens; no
+physical observation was rerun and every retained evidence byte is
+unchanged. See "Corrected characterization rule" below.)
+
+Result (raw values, no post-hoc threshold)
+------------------------------------------
+case-256, generated position 5 (incremental state class, decision-faithful):
+  reference : winner 271 (logit 16.706398), runner-up 34227 (16.0985374),
+              top1-top2 margin +0.6079
+  candidate : winner 34227 (16.3057117), runner-up 271 (16.000248),
+              margin +0.3055
+  top-16 overlap 14/16; the two competing tokens are the TOP-2 in BOTH
+  arms (271 rank 1 ref / rank 2 cand; 34227 rank 2 ref / rank 1 cand);
+  rank 3+ tokens agree closely (31347 13.81/13.92, 25292 13.65/13.64).
+  Structurally a clean focal-token 1<->2 winner inversion.
+  Cross-arm logit deltas: 271: -0.706 (ref 16.706 -> cand 16.000);
+  34227: +0.207 (16.099 -> 16.306). Descriptive only — not
+  thresholded.
+  tf-state cross-check: under teacher-forced prefill the arms MIRROR
+  (reference emits 34227, candidate emits 271) — both arms sit close to
+  the 271/34227 decision boundary from opposite sides.
+
+case-4096, generated position 0 (4097-token prompt, first token):
+  reference : winner 328 (15.0245876), 561 (14.5521736), 359
+  (14.0666008), 271 (13.8466511), EOS 248046 rank 5 (13.2554426);
+  margin +0.4724
+  candidate : winner EOS 248046 (16.6363716), 328 rank 2 (15.4173584),
+  271 (14.860343), 561 (14.6030521), 359 (13.6044436);
+  margin +1.2190
+  top-16 overlap 13/16. EOS IS candidate argmax before sampling (rank 1
+  vs reference rank 5); reference winner 328 is candidate rank 2.
+  Cross-arm logit deltas: EOS +3.381 (13.255 -> 16.636); 328 +0.393
+  (15.025 -> 15.417). Descriptive only — not thresholded.
+  This is NOT the same structure as case-256: EOS is not the reference
+  winner's runner-up — in the reference arm EOS sits at rank 5 behind
+  561, 359 and 271, and it moves rank 5->1 across arms. The two cases
+  must not be described with one shared "margin-sensitive winner
+  inversion" label.
+
+Per the corrected reducer rule (see below), case-256 classifies as a
+narrow-winner-inversion and case-4096 as a broader-focal-shift. Under
+Issue #199's terminal definitions, case-4096's decision-point evidence
+is a materially different score structure that cannot reasonably be
+explained by only a winner inversion, so a separately authorized
+layer/state-boundary localization issue IS justified by this evidence.
+That successor issue has NOT been created or executed in this campaign.
+
+Corrected characterization rule (structural, no post-hoc threshold)
+-------------------------------------------------------------------
+Derived from Issue #199's own required decision structure, applied to
+the two focal winner tokens (each arm's accepted R8-D winner):
+
+- narrow-winner-inversion: both focal tokens occupy ranks 1 and 2 in
+  BOTH arms with inverted ordering (the immediate decision competitors
+  trade places); top-16 overlap coherent (>= 12/16); all logits finite.
+- broader-focal-shift: a focal token is NOT the other winner's
+  immediate runner-up somewhere (rank >= 3 in an arm, absent from an
+  arm's retained top-16, or the focal ordering is not inverted) even
+  though broader top-K overlap alone would look coherent.
+- materially-different-score-structure: top-16 overlap < 12/16, a
+  focal winner absent from an arm's retained top-16, or non-finite
+  logits.
+
+Terminal predicate: R8E_DEEPER_RUNTIME_LOCALIZATION_JUSTIFIED iff any
+case is not a narrow-winner-inversion. The top-16 overlap count alone
+(>= 12) can never classify a case as a narrow inversion. Raw ranks,
+logits, margins, overlap counts and cross-arm deltas are retained in
+terminal-reduction.json without thresholding.
+
+Repeat stability: every arm/case pair reproduced byte-identical float32
+logits rows (f32_row_sha256 equal across repeats) and identical token
+sequences. Non-finite counts: 0 everywhere.
+
+Accepted predecessor (immutable, consumed, never rewritten)
+-----------------------------------------------------------
+Issue #195 / PR #197 merged as f142a0d9b693f999685960c641b2a8fe362c4e1e
+(reviewed head ca7e159929190a04cabd059042def1b6bd4c2467), terminal
+R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL. R8-D v2 evidence
+byte-preserved (verified by the R8-E reducer's
+r8d_v2_evidence_byte_preserved check on every derivation).
+
+Objective (diagnostic, not adjudicative)
+----------------------------------------
+Characterize what the two residual true-greedy branches look like
+immediately before token choice:
+  1. case-256, generated position 5 (reference 271 vs candidate 34227)
+  2. case-4096, generated position 0 (reference 328 vs candidate EOS
+     248046)
+and answer per case: margin-sensitive winner inversion, or materially
+different next-token score structure.
+
+Observation method (Phase 1)
+----------------------------
+No native llama.cpp output exposes the exact pre-sampler logits for the
+current position (the pinned server's n_probs surface is
+known-misaligned and forbidden as an oracle). An OBSERVATION-ONLY
+diagnostic build was therefore created from the exact accepted source
+b29c606e28a01b1bc8c1351026a0fa6e616bf6c4:
+
+- patch: 85 added lines in tools/server/server-context.cpp; the hook is
+  INERT unless LLAMA_OBSERVE_LOGITS is set; it reads (via
+  llama_get_logits_ith) the same logits row the sampler just consumed
+  at the sampling seam (immediately after common_sampler_sample in
+  update_slots, bound to slot.stats.n_gen for token-position binding),
+  performs NO llama/ggml state writes, changes no tensor placement,
+  execution, sampling, precision, or state lifetime;
+- byte-identity proof: apply_hook.py applied to a pristine b29c606e
+  checkout reproduces the built source byte-for-byte;
+- binary: build-obs/bin/llama-server sha256 c2d06193... (separately
+  named path; the accepted llama-server/ggml-rpc-server binaries are
+  unchanged and re-hashed);
+- all digests/statistics over the retained exact float32 logits-row
+  bytes are computed by the Python producer from the bytes; the C++
+  emits only ids/ranks/values.
+
+Non-perturbation proof: for both arms and both cases the UNINSTRUMENTED
+accepted binary reproduced the accepted R8-D next token (fresh server
+process per request), and the INSTRUMENTED binary's sampled token at
+the observed position equals the accepted R8-D token for the
+incremental state class (2 repeats each; see nonperturbation/ and
+observations/).
+
+State classes (physical finding)
+--------------------------------
+- incremental (decision-faithful): the original accepted prompt with
+  n_predict=8; the hook observes every generated position; execution is
+  byte-identical to the accepted R8-D request. This is the class the
+  terminal derives from.
+- tf (Issue #199 Phase-2 teacher-forced construction): prompt + accepted
+  common prefix prefilled; first sampled position observed. PRE-FREEZE
+  PHYSICAL FINDING: under tf prefill the case-256 REFERENCE emits
+  34227 at the observed position, NOT the accepted 271 — the fixture
+  prompt is a repeating pattern and the accepted 271 arises from
+  incremental-decode numerics (prefill vs decode kernels). tf rows are
+  retained as a separate state class and never substitute for
+  incremental rows. (For case-4096 position 0, tf and incremental
+  coincide by construction: first token after full prefill.)
+
+Evidence layout
+---------------
+producer-hashes.json, MANIFEST.sha256, terminal-reduction.json
+evidence/instrumentation/  apply_hook.py, applied-source.patch,
+                          r8e-build.sh, instrumentation.json
+evidence/run/             run-driver.sh, wait_backends.sh,
+                          stop_rpc_backends.sh
+evidence/nonperturbation/ 8 records (2 cases x 2 arms x 2 repeats,
+                          accepted binary)
+evidence/observations/    8 records + float32 rows (2 cases x 2 arms x
+                          2 repeats, diagnostic binary, incremental)
+evidence/observations-tf/ 8 records + float32 rows (tf state class)
+evidence/negative-controls/ negative-controls.json (17 controls;
+                          original controls, semantic NC10, and
+                          repeat-byte authority NC11--NC17)
+
+Repeat byte-authority contract (CPU correction)
+------------------------------------------------
+For each loop-derived `(case, arm, obs1|obs2)` tuple the reducer requires
+the exact capture filename and label, generated position, binding case/arm,
+and binding `observation_path`. It then opens the exact raw hook output
+`obs-<case>-<arm>-obs<N>.jsonl` and canonical hook sidecar
+`obs-<case>-<arm>-obs<N>.jsonl.pos<P>.f32`; neither is selected through a
+capture record label. The raw JSONL must equal the capture's retained hook
+rows. The separately retained `row-<case>-<arm>-obs<N>.pos<P>.f32` is a
+copy made by the capture producer after it opened the hook sidecar. Both are
+contract-bearing, must be ordinary non-aliased files, and must be byte-for-
+byte identical for that same repeat.
+
+Each repeat is decoded independently: float count, actual SHA-256,
+non-finite count, argmax, top-16 order/logits, focal ranks/logits, and
+top1/top2 relationship are derived from its canonical raw sidecar and
+cross-checked against authored hook/record fields. Only after both repeat
+bindings pass may `repeat_f32_row_sha256_equality` be true, and it compares
+the two independently derived actual SHA-256 values. Thus a regenerated
+manifest, matching record digest strings, or internally self-consistent
+obs2 metadata cannot establish stability without identical retained bytes.
+
+Non-claims
+----------
+No repair of llama.cpp; no revision/quantization/topology change; no
+requalification of R8-D (its FAIL stands unchanged); no serving
+integration; no production readiness; characterization scoped to the
+pinned build/model/topology and the two decision points; no successor
+issue created or executed in this campaign.
+
+Local full-suite runner isolation anomaly (documented, pre-existing)
+-------------------------------------------------------------------
+scripts/run_full_cpu_suite.py on BOTH the campaign head and origin/main
+f142a0d (verified in a scratch worktree, same .venv) reports the same
+three test_issue193_r8c.TestNegativeControls errors in the parallel
+population task (task 5). The identical module set runs green in a
+single process (626 tests OK) and the modules pass under the hosted
+vulkan-v0-b CI group on the exact final head. This is the known local
+parallel-runner isolation anomaly class, pre-existing on main, not a
+regression of this campaign; no test was weakened.
+
+Review disposition (both lanes, exact head be9fe24 + delta d69de86)
+-------------------------------------------------------------------
+Lane 1 (observation correctness / token-position binding): PASS.
+P2 closed (head 3ae3902-era fix, reduction-tooling only): derive() is
+now itself a manifest consumer — it re-hashes every MANIFEST.sha256
+row against the on-disk bytes and checks the file-set equality, so a
+tampered .f32/logits sidecar fails closed at reduction time (verified:
+single flipped byte in a retained row -> BLOCKED with the tampered
+path named), not only in the CI test layer. Remaining P3s accepted as
+documented (hook print precision note in retained records; tf sidecar
+naming; llama.cpp pristine-source identity established via
+upstream-master blob-sha match).
+Lane 2 (provenance / non-claims): PASS, no findings above P3.
+Delta-confirmation at final head: PASS (post-review commits
+non-correctness-bearing).
+
+Correction round (NO-GO on the original PR #205 reduction)
+----------------------------------------------------------
+The maintainer review rejected the original semantic reduction: the
+reducer labeled a case "consistent-with-margin-inversion" whenever
+top-16 overlap >= 12/16 and logits were finite, which let case-4096's
+rank-5->rank-1 EOS shift inherit case-256's clean-inversion label.
+Corrected in place (reducer characterization semantics, characterization
+mutation tests, NC10 semantic negative control, README); zero physical
+observations rerun, all retained evidence bytes verified unchanged.
+Exact-head reviews for the corrected head are recorded in the PR body.
+
+Second correction delta (exact-head review P2): the characterization
+inputs are now re-derived DIRECTLY from the retained float32 row bytes
+(bytes_derived_view: argmax, top-16 order, focal ranks and logits from
+the sidecar the manifest pins), with the authored hook rows demoted to
+cross-checks — a hook row claiming a focal rank the bytes contradict
+now fails closed ("authored-vs-bytes contradiction"). NC10 was
+strengthened to forge the rank structure consistently across hook
+rows, f32 sidecars, and digests (binding facts untouched), proving the
+derived characterization/terminal still follow the raw bytes; the NC2
+restore path was fixed to be byte-exact (pre-existing sandbox-only
+newline drift).
+
+Third correction delta (repeat-stability authority): obs2 now receives the
+same fixed-path, actual-byte binding as obs1. NC11--NC17 demonstrate stale
+obs2 digest, label and JSONL aliases, raw-sidecar alias, one-sided raw/copy
+mutation, and a fully self-consistent-but-byte-different obs2 all BLOCK.
+No physical Qwen observation was rerun or rewritten for this correction.
