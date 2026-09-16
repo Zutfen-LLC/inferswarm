@@ -57,12 +57,13 @@ ROOT = Path(__file__).resolve().parents[1]
 AREA = Path("docs/implementation/r8-f-local-backing-source-policy-200")
 PRODUCERS = ["scripts/issue200_r8f_source_policy.py", "scripts/issue200_r8f_fixture.py",
              "scripts/issue200_r8f_proof.py", "scripts/issue200_r8f_terminal_reduction.py",
-             "scripts/issue200_r8f_rpc_cache_mechanism.py",
+             "scripts/issue200_r8f_rpc_cache_mechanism.py", "scripts/issue200_r8f_physical.py",
              "scripts/issue99_artifact_core.py", "scripts/issue101_orchestration.py",
              "scripts/issue74_methodology.py",
              "tests/test_issue200_r8f_source_policy.py", "tests/test_issue200_r8f_proof.py"]
 EVIDENCE_FILES = {"arms.json", "negative-controls.json", "local-backing-accounting.json",
-                  "producer-hashes.json", "canonical-summary.json", "isolation.json"}
+                  "materialization-invariance.json", "producer-hashes.json",
+                  "canonical-summary.json", "isolation.json"}
 
 
 def require(condition: bool, message: str) -> None:
@@ -72,6 +73,42 @@ def require(condition: bool, message: str) -> None:
 
 def sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def materialize_and_reconcile(plan, coordinator, node, participant_id):
+    """Exercise the accepted #101 reconciliation seam after acquisition.
+
+    This deliberately contains no Source descriptor or policy.  It is the
+    identity of the materialization that the frozen requirement authority
+    permits, not an identity of how bytes happened to arrive at the Node.
+    """
+    participant = coordinator._participant(participant_id)
+    identity = {"epoch": plan["epoch"], "participant_id": participant_id,
+                "node_id": node.node_id}
+    materializations = []
+    for record in participant["required_artifacts"]:
+        data = node.cache.open_verified(record)
+        for state_id in record["satisfies_logical_state_ids"]:
+            materializations.append({**identity, "logical_state_id": state_id,
+                                     "verification": "VERIFIED_CACHE_SOURCE",
+                                     "observed_bytes": len(data),
+                                     "expected_bytes": record["length"]})
+    reconciliation = coordinator.reconcile(
+        participant_id, [record["artifact_id"] for record in participant["required_artifacts"]],
+        materializations)
+    frozen = next(p for p in plan["participants"] if p["participant_id"] == participant_id)
+    identity_document = {
+        "schema": "inferswarm.issue200.materialization-identity/1",
+        "plan_digest": plan["plan_digest"],
+        "participant_requirements_digest": participant["participant_requirements_digest"],
+        "required_artifact_ids": sorted(record["artifact_id"] for record in participant["required_artifacts"]),
+        "logical_state_unit_coverage": sorted(
+            state for states in frozen["required_state"].values() for state in states),
+        "materializations": reconciliation["materializations"],
+    }
+    identity_document["materialization_identity"] = (
+        "sha256:" + hashlib.sha256(canonical_json_bytes(identity_document)).hexdigest())
+    return identity_document
 
 
 # ---------------------------------------------------------------------------
@@ -232,16 +269,6 @@ def run_arms(temp_root: Path) -> dict[str, Any]:
     require(node_rreq.ledger.events == [], "RREQ: local fallback must never be silently substituted")
     results["RREQ"] = {"failed_closed": True, "local_ledger_events_after": len(node_rreq.ledger.events)}
 
-    # --- policy never changes required state (cross-arm invariant) ---------
-    digests = set()
-    for coordinator_instance, participant_id in (
-            (coordinator, "P-L1"), (coordinator2, "P-L2"), (coordinator3, "P-R1"),
-            (coordinator4, "P-LREQ"), (coordinator5, "P-RREQ")):
-        participant = coordinator_instance._participant(participant_id)
-        digests.add(participant["participant_requirements_digest"])
-    results["policy_never_changes_required_state"] = {
-        "distinct_requirement_digests_per_participant": len(digests) == 5}
-
     # --- Phase 2: local-backing accounting (full release vs. narrow plan) ---
     node_backing = Node("BACKING", NodeArtifactCache(temp_root / "node-BACKING"))
     coordinator6 = PolicyCoordinator(node_sources=[node_backing.descriptor()], origin_sources=[origin.descriptor()])
@@ -256,7 +283,55 @@ def run_arms(temp_root: Path) -> dict[str, Any]:
         r["length"] for n, r in fixture.records.items() if n != 1),
            "backing accounting: optional surplus mismatch")
 
-    return {"arms": results, "local_backing_accounting": accounting}
+    # --- Phase 3: same plan + same requirements, different Sources --------
+    # This is intentionally not a comparison of the five pedagogical arms
+    # above: those have different participants and required state.  Here one
+    # frozen plan is independently reconciled/materialized twice, once from
+    # verified local backing and once from the authorized origin source.
+    invariant_plan = fixture.plan(2, {"P-INVARIANT": ("INVARIANT", [1, 2])})
+    local_node = Node("INVARIANT", NodeArtifactCache(temp_root / "node-invariant-local"))
+    remote_node = Node("INVARIANT", NodeArtifactCache(temp_root / "node-invariant-remote"))
+    fixture.stage_full_release(local_node)
+    local_coordinator = PolicyCoordinator(
+        node_sources=[local_node.descriptor()], origin_sources=[origin.descriptor()])
+    remote_coordinator = PolicyCoordinator(
+        node_sources=[remote_node.descriptor()], origin_sources=[origin.descriptor()])
+    local_requirements = local_coordinator.freeze(invariant_plan, fixture.resolve)
+    remote_requirements = remote_coordinator.freeze(invariant_plan, fixture.resolve)
+    require(local_requirements == remote_requirements,
+            "Phase 3: Source policy must not change frozen requirements")
+    local_coordinator.ingest(local_node.inventory())
+    remote_coordinator.ingest(remote_node.inventory())
+    local_delta = local_coordinator.delta("P-INVARIANT")
+    remote_delta = remote_coordinator.delta("P-INVARIANT")
+    for record in local_coordinator._participant("P-INVARIANT")["required_artifacts"]:
+        local_ticket = local_coordinator.authorize_under_policy(
+            local_delta, record["artifact_id"], SOURCE_POLICY_PREFER_LOCAL_VERIFIED)
+        require(local_ticket["mode"] == "LOCAL_CACHE", "Phase 3 local arm must use backing")
+        acquire_under_policy(local_node, local_coordinator, local_ticket, local_node.source(record))
+        remote_ticket = remote_coordinator.authorize_under_policy(
+            remote_delta, record["artifact_id"], SOURCE_POLICY_PREFER_REMOTE_AUTHORIZED)
+        require(remote_ticket["mode"] == "ORIGIN", "Phase 3 remote arm must use authorized origin")
+        acquire_under_policy(remote_node, remote_coordinator, remote_ticket, origin)
+    local_materialization = materialize_and_reconcile(
+        invariant_plan, local_coordinator, local_node, "P-INVARIANT")
+    remote_materialization = materialize_and_reconcile(
+        invariant_plan, remote_coordinator, remote_node, "P-INVARIANT")
+    for field in ("plan_digest", "participant_requirements_digest", "required_artifact_ids",
+                  "logical_state_unit_coverage", "materializations", "materialization_identity"):
+        require(local_materialization[field] == remote_materialization[field],
+                f"Phase 3: Source changed {field}")
+    invariance = {
+        "schema": "inferswarm.issue200.materialization-invariance/1",
+        "frozen_plan_digest": invariant_plan["plan_digest"],
+        "same_requirement_authority": local_requirements == remote_requirements,
+        "local_verified": {"source_policy": SOURCE_POLICY_PREFER_LOCAL_VERIFIED,
+                           "acquisition": "LOCAL_CACHE", **local_materialization},
+        "remote_authorized": {"source_policy": SOURCE_POLICY_PREFER_REMOTE_AUTHORIZED,
+                              "acquisition": "ORIGIN", **remote_materialization},
+    }
+    return {"arms": results, "local_backing_accounting": accounting,
+            "materialization_invariance": invariance}
 
 
 # ---------------------------------------------------------------------------
@@ -486,6 +561,7 @@ def run_campaign() -> dict[str, Any]:
         "arms.json": arm_output["arms"],
         "negative-controls.json": negative_controls,
         "local-backing-accounting.json": arm_output["local_backing_accounting"],
+        "materialization-invariance.json": arm_output["materialization_invariance"],
         "producer-hashes.json": producer_hashes(),
         "canonical-summary.json": summary,
         "isolation.json": isolation,

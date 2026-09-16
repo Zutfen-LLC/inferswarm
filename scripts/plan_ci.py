@@ -544,6 +544,7 @@ PATH_GROUPS = {
     "scripts/issue200_r8f_proof.py": ["issue-99-103"],
     "scripts/issue200_r8f_terminal_reduction.py": ["issue-99-103"],
     "scripts/issue200_r8f_rpc_cache_mechanism.py": ["issue-99-103"],
+    "scripts/issue200_r8f_physical.py": ["issue-99-103"],
     "tests/test_issue200_r8f_source_policy.py": ["issue-99-103"],
     "tests/test_issue200_r8f_proof.py": ["issue-99-103"],
     "docs/implementation/r8-f-local-backing-source-policy-200/": ["issue-99-103"],

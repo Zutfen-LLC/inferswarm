@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import issue200_r8f_proof as proof
 import issue200_r8f_rpc_cache_mechanism as cache_mechanism
 import issue200_r8f_terminal_reduction as reduction
+import issue200_r8f_physical as physical
 
 
 def sha(path):
@@ -42,17 +43,88 @@ def valid_cache_finding(**overrides):
     return finding
 
 
-def valid_physical_phase5_document(**overrides):
+def _receipt(root, name, document):
+    path = root / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(document, sort_keys=True).encode()
+    path.write_bytes(payload)
+    return {"path": name, "sha256": hashlib.sha256(payload).hexdigest()}
+
+
+def valid_physical_phase5_document(root, **overrides):
+    authority = physical.accepted_model_authority()
+    node_id = "inferswarm03"
+    binary = physical.accepted_rpc_binary_authority()[node_id]
+    payload_bytes = b"r8-f-observed-payload"
+    payload_sha = hashlib.sha256(payload_bytes).hexdigest()
+    payload_path = "raw/payload.bin"
+    (root / "raw").mkdir(parents=True, exist_ok=True)
+    (root / payload_path).write_bytes(payload_bytes)
+    payload = {"offset": 0, "length": len(payload_bytes), "sha256": payload_sha,
+               "fnv1a_cache_key": physical.fnv1a64(payload_bytes)}
+
+    def arm(name, policy, source, immutable_bytes):
+        network = _receipt(root, f"raw/{name}.network.json", {
+            "schema": "inferswarm.issue200.network-receipt/1", "arm": name,
+            "source_attribution": source,
+            "events": [{"classification": "immutable_model_payload", "bytes": immutable_bytes},
+                       {"classification": "rpc_control_or_hash_probe", "bytes": 17}],
+        })
+        runtime = _receipt(root, f"raw/{name}.runtime.json", {"arm": name, "schema": "raw-runtime/1",
+                   "participants": [node_id], "required_state_identity": "sha256:state",
+                   "participant_requirements_identity": "sha256:requirements",
+                   "placement_identity": "sha256:placement", "materialization_identity": "sha256:materialization",
+                   "initialization_wall_time_ms": 1.0, "set_tensor_payloads": [payload]})
+        reads = _receipt(root, f"raw/{name}.reads.json", {"arm": name, "schema": "raw-reads/1",
+                   "source_attribution": source})
+        result = {"source_policy": policy, "source_attribution": source,
+                  "participants": [node_id], "required_state_identity": "sha256:state",
+                  "participant_requirements_identity": "sha256:requirements",
+                  "placement_identity": "sha256:placement",
+                  "materialization_identity": "sha256:materialization",
+                  "initialization_wall_time_ms": 1.0, "network_receipt": network,
+                  "runtime_receipt": runtime, "local_read_receipt": reads,
+                  "set_tensor_payloads": [payload]}
+        if name != "cold_remote":
+            cache_dir = f"/private/{name}"
+            initialized = _receipt(root, f"raw/{name}.cache-init.json", {
+                "schema": "inferswarm.issue200.cache-initialization-receipt/1", "arm": name,
+                "cache_dir": cache_dir, "entries_before": [],
+            })
+            result["private_cache_dir"] = cache_dir
+            result["cache_initialization_receipt"] = initialized
+            staging = _receipt(root, f"raw/{name}.staging.json", {
+                "schema": "inferswarm.issue200.cache-staging-receipt/1", "arm": name,
+                "atomic_publish": True, "cache_sha256": payload_sha, "payload_path": payload_path,
+            })
+            result["cache_staging"] = [{
+                "accepted_artifact_range": {"member": authority["members"][0]["file"], "offset": 0,
+                                            "length": len(payload_bytes), "sha256": payload_sha},
+                "set_tensor_payload": payload,
+                "staged_cache": {"path": f"{cache_dir}/{payload['fnv1a_cache_key']}",
+                                 "sha256_before": payload_sha, "sha256_after": payload_sha,
+                                 "length_before": len(payload_bytes), "length_after": len(payload_bytes),
+                                 "receipt": staging},
+            }]
+        return result
+
     doc = {
         "schema": reduction.PHYSICAL_PHASE5_SCHEMA,
-        "participants": ["p1", "p2"],
-        "accepted_release_hashes_matched": True,
-        "provenance_verified": True,
-        "identical_required_state_and_placement": True,
-        "zero_reacquisition_bytes_measured": True,
-        "network_bytes_remote_cold_arm": 12345,
-        "network_bytes_local_verified_arm": 0,
-        "network_bytes_local_verified_arm_repeat": 0,
+        "accepted_model_members": authority["members"], "accepted_total_bytes": authority["total_bytes"],
+        "runtime": {"llama_cpp_commit": physical.PINNED_LLAMA_CPP_COMMIT,
+                    "source_files": cache_mechanism.UPSTREAM_SOURCE_IDENTITY,
+                    "binaries": [{"node_id": node_id, "binary": "ggml-rpc-server", "sha256": binary}]},
+        "participants": [{"node_id": node_id, "rpc_endpoint": "100.77.187.38:50052",
+                          "rpc_command": "ggml-rpc-server -H 0.0.0.0 -p 50052 -c /private/cache"}],
+        "frozen": {"required_state_identity": "sha256:state",
+                   "participant_requirements_identity": "sha256:requirements",
+                   "placement_identity": "sha256:placement",
+                   "materialization_identity": "sha256:materialization"},
+        "arms": {
+            "cold_remote": arm("cold_remote", "PREFER_REMOTE_AUTHORIZED", "REMOTE_AUTHORIZED", len(payload_bytes)),
+            "local_verified": arm("local_verified", "REQUIRE_LOCAL_VERIFIED", "LOCAL_VERIFIED", 0),
+            "repeat_local_verified": arm("repeat_local_verified", "REQUIRE_LOCAL_VERIFIED", "LOCAL_VERIFIED", 0),
+        },
     }
     doc.update(overrides)
     return doc
@@ -96,9 +168,11 @@ class CommittedEvidenceTests(unittest.TestCase):
 
         self.assertEqual(normalize(document), normalize(self.retained["terminal-reduction.json"]))
 
-    def test_committed_terminal_is_physical_verification_required_incomplete(self):
+    def test_committed_campaign_is_explicitly_nonterminal_pending_phase5(self):
         document = self.retained["terminal-reduction.json"]
-        self.assertEqual(document["terminal"], "R8F_PHYSICAL_VERIFICATION_REQUIRED_INCOMPLETE")
+        self.assertIsNone(document["terminal"])
+        self.assertEqual(document["status"], "PHASE5_REQUIRED")
+        self.assertTrue(document["incomplete"])
         self.assertTrue(document["compact_source_policy_seam_pass"])
         self.assertFalse(document["physical_phase5_ran"])
         self.assertTrue(document["cache_mechanism_finding"]["legal_non_runtime_modifying_seam_exists"])
@@ -107,8 +181,11 @@ class CommittedEvidenceTests(unittest.TestCase):
 
     def test_all_arms_and_negative_controls_recorded(self):
         arms = self.retained["arms.json"]
-        for arm in ("L1", "L2", "R1", "LREQ", "RREQ", "policy_never_changes_required_state"):
+        for arm in ("L1", "L2", "R1", "LREQ", "RREQ"):
             self.assertIn(arm, arms)
+        invariance = self.retained["materialization-invariance.json"]
+        self.assertEqual(invariance["local_verified"]["materialization_identity"],
+                         invariance["remote_authorized"]["materialization_identity"])
         controls = self.retained["negative-controls.json"]
         self.assertEqual(len(controls), 12, sorted(controls))
 
@@ -153,7 +230,8 @@ class StaticDisciplineTests(unittest.TestCase):
         allowed = set(sys.stdlib_module_names) | {
             "issue74_methodology", "issue99_artifact_core", "issue101_orchestration",
             "issue200_r8f_source_policy", "issue200_r8f_fixture", "issue200_r8f_proof",
-            "issue200_r8f_terminal_reduction", "issue200_r8f_rpc_cache_mechanism"}
+            "issue200_r8f_terminal_reduction", "issue200_r8f_rpc_cache_mechanism",
+            "issue200_r8f_physical"}
         for name in ("issue200_r8f_proof.py", "issue200_r8f_terminal_reduction.py"):
             tree = ast.parse((ROOT / "scripts" / name).read_text())
             modules = set()
@@ -215,18 +293,15 @@ class StaticDisciplineTests(unittest.TestCase):
 
 
 class TerminalReductionFailClosedTests(unittest.TestCase):
-    """Mutation/negative tests proving the terminal reducer fails closed:
-    PASS requires validated physical evidence, PREREQUISITE requires the
-    cache seam to be mechanically shown insufficient (never a default), and
-    a missing cache-mechanism evaluation must surface loudly rather than
-    silently resolving to a guess."""
+    """PASS is derived from raw receipts; it is never an authored boolean."""
 
     def test_legal_seam_plus_no_physical_evidence_cannot_pass(self):
         with mock.patch.object(cache_mechanism, "mechanical_cache_finding",
                                return_value=valid_cache_finding()):
             document, _ = reduction.reduce_terminal()
         self.assertNotEqual(document["terminal"], reduction.TERMINAL_LOCAL_VERIFIED_BACKING_PASS)
-        self.assertEqual(document["terminal"], reduction.TERMINAL_PHYSICAL_VERIFICATION_REQUIRED_INCOMPLETE)
+        self.assertIsNone(document["terminal"])
+        self.assertEqual(document["status"], "PHASE5_REQUIRED")
 
     def test_missing_physical_evidence_cannot_pass(self):
         with tempfile.TemporaryDirectory() as td:
@@ -240,9 +315,7 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
     def test_invalid_or_mismatched_physical_evidence_cannot_pass(self):
         cases = [
             {},  # missing every required field
-            valid_physical_phase5_document(schema="wrong-schema"),
-            valid_physical_phase5_document(provenance_verified=False),
-            valid_physical_phase5_document(zero_reacquisition_bytes_measured=False),
+            {"schema": "wrong-schema"},
         ]
         for bad_doc in cases:
             with tempfile.TemporaryDirectory() as td:
@@ -258,22 +331,57 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
     def test_valid_physical_evidence_enables_pass(self):
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / "physical-phase5.json"
-            path.write_text(json.dumps(valid_physical_phase5_document()))
+            path.write_text(json.dumps(valid_physical_phase5_document(Path(td))))
             with mock.patch.object(cache_mechanism, "mechanical_cache_finding",
                                    return_value=valid_cache_finding()):
                 document, _ = reduction.reduce_terminal(physical_phase5_evidence_path=path)
         self.assertEqual(document["terminal"], reduction.TERMINAL_LOCAL_VERIFIED_BACKING_PASS)
         self.assertTrue(document["physical_phase5_ran"])
 
-    def test_no_physical_evidence_and_no_legal_seam_is_runtime_prerequisite(self):
-        with mock.patch.object(cache_mechanism, "mechanical_cache_finding",
-                               return_value=valid_cache_finding(
-                                   case_classification="D",
-                                   legal_non_runtime_modifying_seam_exists=False,
-                                   durable_cache_reuse_suppresses_retransmission=False,
-                                   prestaged_verified_backing_consumed_without_prior_network_pass=False)):
-            document, _ = reduction.reduce_terminal()
-        self.assertEqual(document["terminal"], reduction.TERMINAL_RUNTIME_LOCAL_BACKING_PREREQUISITE)
+    def _rejects_pass_after_mutation(self, mutate):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            doc = valid_physical_phase5_document(root)
+            mutate(doc, root)
+            path = root / "physical-phase5.json"
+            path.write_text(json.dumps(doc))
+            with mock.patch.object(cache_mechanism, "mechanical_cache_finding",
+                                   return_value=valid_cache_finding()):
+                result, _ = reduction.reduce_terminal(physical_phase5_evidence_path=path)
+            self.assertNotEqual(result["terminal"], reduction.TERMINAL_LOCAL_VERIFIED_BACKING_PASS)
+            self.assertFalse(result["physical_phase5_ran"])
+
+    def test_required_physical_mutations_reject_pass(self):
+        mutations = [
+            lambda d, r: d["arms"]["local_verified"]["network_receipt"].update(
+                _receipt(r, "raw/local_verified.network.json", {"schema": "inferswarm.issue200.network-receipt/1",
+                 "arm": "local_verified", "source_attribution": "LOCAL_VERIFIED",
+                 "events": [{"classification": "immutable_model_payload", "bytes": 1}]})),
+            lambda d, r: d["arms"]["repeat_local_verified"]["network_receipt"].update(
+                _receipt(r, "raw/repeat_local_verified.network.json", {"schema": "inferswarm.issue200.network-receipt/1",
+                 "arm": "repeat_local_verified", "source_attribution": "LOCAL_VERIFIED",
+                 "events": [{"classification": "immutable_model_payload", "bytes": 1}]})),
+            lambda d, r: d["arms"]["local_verified"].__setitem__("placement_identity", "sha256:drift"),
+            lambda d, r: d["arms"]["local_verified"].__setitem__("required_state_identity", "sha256:drift"),
+            lambda d, r: d["arms"]["local_verified"].__setitem__("materialization_identity", "sha256:drift"),
+            lambda d, r: d["accepted_model_members"].pop(),
+            lambda d, r: d["accepted_model_members"][0].__setitem__("sha256", "0" * 64),
+            lambda d, r: d["accepted_model_members"][0].__setitem__("bytes", 1),
+            lambda d, r: d["participants"].clear(),
+            lambda d, r: d["arms"]["local_verified"]["runtime_receipt"].update(
+                _receipt(r, "raw/local_verified.runtime.json", {"arm": "local_verified",
+                 "schema": "raw-runtime/1", "participants": []})),
+            lambda d, r: d["arms"]["local_verified"].pop("source_attribution"),
+            lambda d, r: d["arms"]["repeat_local_verified"].__setitem__(
+                "private_cache_dir", d["arms"]["local_verified"]["private_cache_dir"]),
+            lambda d, r: d["arms"]["local_verified"]["cache_staging"][0]["staged_cache"].__setitem__("sha256_after", "0" * 64),
+            lambda d, r: d["arms"]["local_verified"]["cache_staging"][0]["staged_cache"]["receipt"].__setitem__("path", "raw/missing.json"),
+            lambda d, r: d["arms"]["local_verified"]["network_receipt"].__setitem__("path", "raw/missing.json"),
+            lambda d, r: d.__setitem__("zero_reacquisition_bytes_measured", True),
+        ]
+        for mutation in mutations:
+            with self.subTest(mutation=mutation):
+                self._rejects_pass_after_mutation(mutation)
 
     def test_runtime_prerequisite_never_emitted_when_cache_seam_not_evaluated(self):
         """If the cache-mechanism evidence cannot be evaluated at all (e.g. its

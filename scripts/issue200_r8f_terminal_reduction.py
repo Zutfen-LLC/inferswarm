@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Issue #200 (R8-F) machine-derived terminal classification.
 
-Combines three independently mechanical findings into exactly one of the
-four terminals this issue defines:
+Combines the compact policy proof, corrected Phase-4 cache finding, and (if
+present) mechanically validated Phase-5 receipts into one of the three Issue
+#200 terminals.  An unresolved Phase 5 is deliberately *not* a terminal.
 
 1. the compact CPU source-policy/local-backing campaign
    (``issue200_r8f_proof.run_campaign``) - Phases 1-3;
@@ -34,23 +35,17 @@ from typing import Any
 
 from issue200_r8f_proof import ROOT, AREA, run_campaign, write_evidence
 import issue200_r8f_rpc_cache_mechanism as cache_mechanism
+import issue200_r8f_physical as physical
 
 TERMINAL_LOCAL_VERIFIED_BACKING_PASS = "R8F_LOCAL_VERIFIED_BACKING_PASS"
 TERMINAL_RUNTIME_LOCAL_BACKING_PREREQUISITE = "R8F_RUNTIME_LOCAL_BACKING_PREREQUISITE"
 TERMINAL_GENERIC_SOURCE_POLICY_BLOCKED = "R8F_GENERIC_SOURCE_POLICY_BLOCKED"
-TERMINAL_PHYSICAL_VERIFICATION_REQUIRED_INCOMPLETE = "R8F_PHYSICAL_VERIFICATION_REQUIRED_INCOMPLETE"
 
 LLAMA_CPP_PINNED_COMMIT = "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4"
 RPC_LAUNCH_SOURCE = "scripts/issue195_v2_launch.py"
 
 PHYSICAL_PHASE5_EVIDENCE_DEFAULT_PATH = ROOT / AREA / "evidence" / "physical-phase5.json"
-PHYSICAL_PHASE5_SCHEMA = "inferswarm.issue200.physical-phase5/1"
-PHYSICAL_PHASE5_REQUIRED_FIELDS = {
-    "schema", "participants", "accepted_release_hashes_matched",
-    "provenance_verified", "identical_required_state_and_placement",
-    "zero_reacquisition_bytes_measured", "network_bytes_remote_cold_arm",
-    "network_bytes_local_verified_arm", "network_bytes_local_verified_arm_repeat",
-}
+PHYSICAL_PHASE5_SCHEMA = physical.SCHEMA
 
 
 def phase4_mechanical_finding() -> dict[str, Any]:
@@ -136,20 +131,18 @@ def cache_mechanism_finding() -> dict[str, Any]:
 def environment_execution_note() -> dict[str, Any]:
     """Records (does not claim to resolve) the separate, non-substrate reason
     Phase 5 did not run in this execution environment: this session has no
-    network reachability to the physical fleet hosts the R8-D v2 campaign
-    used (no DNS resolution, no SSH credentials, no known_hosts entries).
+    usable authorized access to the physical fleet hosts the R8-D v2 campaign
+    used. Hostname resolution alone is not authorization to operate the fleet.
     This is independent of the cache-mechanism finding above; both are
     reported so neither is mistaken for the other."""
     return {
         "schema": "inferswarm.issue200.execution-environment-note/1",
-        "physical_fleet_reachable_from_this_session": False,
-        "note": ("This remote execution session has no SSH credentials, no "
-                 "known_hosts entries, and no DNS resolution for the R8-D "
-                 "physical fleet hostnames (inferswarm01/03/04). This is an "
-                 "execution-environment constraint of this particular session, "
-                 "reported separately from the cache-mechanism finding above so "
-                 "the two are never conflated: a legal staging seam existing in "
-                 "principle does not mean this session could execute it."),
+        "fleet_phase5_authorized_from_this_session": False,
+        "note": ("The fleet hostnames resolve from this session, but an SSH "
+                 "BatchMode probe to inferswarm01 was rejected for lack of a "
+                 "usable credential. This is an execution-environment constraint "
+                 "only; it is not evidence about the legal cache seam or a final "
+                 "Issue #200 terminal."),
     }
 
 
@@ -174,22 +167,10 @@ def load_physical_phase5_evidence(path: Path | None = None) -> dict[str, Any]:
     if not isinstance(doc, dict):
         return {"evidence_file_present": True, "valid": False,
                 "reason": "physical Phase 5 evidence is not a JSON object"}
-    missing = PHYSICAL_PHASE5_REQUIRED_FIELDS - doc.keys()
-    if missing:
-        return {"evidence_file_present": True, "valid": False,
-                "reason": f"missing required fields: {sorted(missing)}", "document": doc}
-    if doc.get("schema") != PHYSICAL_PHASE5_SCHEMA:
-        return {"evidence_file_present": True, "valid": False,
-                "reason": f"schema mismatch: expected {PHYSICAL_PHASE5_SCHEMA!r}, got {doc.get('schema')!r}",
-                "document": doc}
-    required_true = ("accepted_release_hashes_matched", "provenance_verified",
-                      "identical_required_state_and_placement", "zero_reacquisition_bytes_measured")
-    unsatisfied = [key for key in required_true if doc.get(key) is not True]
-    if unsatisfied:
-        return {"evidence_file_present": True, "valid": False,
-                "reason": f"required physical proof predicates not satisfied: {unsatisfied}",
-                "document": doc}
-    return {"evidence_file_present": True, "valid": True, "document": doc}
+    validation = physical.validate_physical_evidence(doc, evidence_root=target.parent)
+    return {"evidence_file_present": True, "valid": validation["valid"],
+            "reason": validation.get("reason"), "document": doc,
+            "derived": validation.get("derived")}
 
 
 def reduce_terminal(physical_phase5_evidence_path: Path | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -201,25 +182,19 @@ def reduce_terminal(physical_phase5_evidence_path: Path | None = None) -> tuple[
     environment = environment_execution_note()
     physical = load_physical_phase5_evidence(physical_phase5_evidence_path)
 
-    # Fail-closed terminal derivation. PASS requires validated physical
-    # evidence (structurally unreachable in this correction: no such
-    # evidence file is committed). PREREQUISITE requires the cache-mechanism
-    # finding to have mechanically shown no legal non-runtime-modifying seam
-    # exists -- it must never be emitted merely because a launch happened to
-    # omit -m/-c, and it is never reached by defaulting past an exception:
-    # cache_mechanism_finding() raises rather than returning a guess if its
-    # own evidence is missing.
+    # Fail closed.  Phase 4 case C establishes a legal generic cache seam,
+    # but does not settle the actual frozen Qwen payload boundaries.  Until
+    # Phase 5 settles them, this campaign is explicitly incomplete outside
+    # the terminal field.  It may never invent a fourth terminal.
     if not compact_seam_pass:
         terminal = TERMINAL_GENERIC_SOURCE_POLICY_BLOCKED
     elif physical["evidence_file_present"] and physical["valid"]:
         terminal = TERMINAL_LOCAL_VERIFIED_BACKING_PASS
-    elif cache_finding["legal_non_runtime_modifying_seam_exists"]:
-        terminal = TERMINAL_PHYSICAL_VERIFICATION_REQUIRED_INCOMPLETE
     else:
-        terminal = TERMINAL_RUNTIME_LOCAL_BACKING_PREREQUISITE
+        terminal = None
 
     physical_phase5_handoff = None
-    if terminal == TERMINAL_PHYSICAL_VERIFICATION_REQUIRED_INCOMPLETE:
+    if terminal is None:
         physical_phase5_handoff = {
             "required_release": "accepted Qwen3.8-Flash-Next UD-IQ1_S release (accepted hashes)",
             "seam_to_exercise": ("bounded external adapter that verifies InferSwarm provenance for "
@@ -243,7 +218,7 @@ def reduce_terminal(physical_phase5_evidence_path: Path | None = None) -> tuple[
         }
 
     document = {
-        "schema": "inferswarm.issue200.terminal-reduction/2",
+        "schema": "inferswarm.issue200.terminal-reduction/3",
         "compact_source_policy_seam_pass": compact_seam_pass,
         "phase4_launch_configuration_finding": phase4,
         "cache_mechanism_finding": cache_finding,
@@ -251,6 +226,8 @@ def reduce_terminal(physical_phase5_evidence_path: Path | None = None) -> tuple[
         "physical_phase5_ran": physical["evidence_file_present"] and physical["valid"],
         "physical_phase5_evidence_status": physical,
         "physical_phase5_handoff": physical_phase5_handoff,
+        "status": "PHASE5_REQUIRED" if terminal is None else "TERMINAL_RESOLVED",
+        "incomplete": terminal is None,
         "terminal": terminal,
     }
     return document, campaign

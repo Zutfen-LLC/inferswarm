@@ -1,7 +1,7 @@
 # R8-F — Verified Node-Local Model Backing and Explicit Artifact Source Policy — Issue #200
 
-Status: **Incomplete (corrected): `R8F_PHYSICAL_VERIFICATION_REQUIRED_INCOMPLETE`** —
-see "Correction notice" below.
+Status: **Incomplete: `PHASE5_REQUIRED`**. This is deliberately a
+machine-readable nonterminal status, not an Issue #200 terminal.
 
 Parent: [#188](https://github.com/Zutfen-LLC/inferswarm/issues/188) — R8
 Qwen3.8-Flash-Next heterogeneous residency/execution program.
@@ -23,11 +23,10 @@ are required or treating whole-model local possession as a participant
 feasibility prerequisite.
 
 Then, using only already-committed, previously-accepted R8-D v2 evidence
-(never re-executed, never requalified), mechanically determines whether the
-pinned physical runtime (llama.cpp / `ggml-rpc-server`) can actually honor
-that seam for a remote participant's assigned state without the client
-retransmitting the same bytes — and reports honestly that it cannot, so the
-bounded physical Qwen proof (Phase 5) correctly does not run.
+(never re-executed, never requalified), it retains the corrected Phase-4
+finding: the pinned runtime exposes a `-c` / `RPC_CMD_SET_TENSOR_HASH` cache
+seam, but the bounded non-Qwen experiment does not establish the actual Qwen
+payload/chunk boundary. Phase 5 therefore remains required.
 
 ## Authority consumed
 
@@ -322,10 +321,9 @@ so neither is mistaken for the other:
    satisfy Issue #200: it shows the architecture question has a positive
    answer, not that the bounded physical Qwen proof happened.
 2. **Execution-environment constraint of this session** — this remote
-   execution session has no SSH credentials, no `known_hosts` entries, and
-   no DNS resolution for the R8-D physical fleet hostnames
-   (`inferswarm01`/`03`/`04`). This is a property of *this session*, not of
-   the architecture or runtime.
+   execution session can resolve the fleet hostnames but has no usable SSH
+   credential (a BatchMode probe was rejected). This is a property of *this
+   session*, not of the architecture or runtime.
 
 No physical arm ran. No model was downloaded, staged, or claimed staged. No
 network/local byte accounting for a physical arm exists because none was
@@ -339,17 +337,19 @@ UD-IQ1_S release and hashes, the bounded provenance-verifying adapter
 described above, a remote/cold arm, a local-verified arm (identical required
 state and placement, pre-staged, zero prior network pass), the local-verified
 arm repeated once, and the exact network/timing/identity evidence to retain.
-`scripts/issue200_r8f_terminal_reduction.py` structurally cannot emit
-`R8F_LOCAL_VERIFIED_BACKING_PASS` without a validated
-`evidence/physical-phase5.json` document satisfying every Issue #200 physical
-predicate (see `load_physical_phase5_evidence`); no such document exists in
-this correction, so `PASS` is not reachable here.
+`scripts/issue200_r8f_physical.py` derives every acceptance predicate from
+checksum-bound raw receipts, the accepted R8-D member authority, observed
+SET_TENSOR boundaries, cache staging receipts, and network event records. It
+rejects authored summary booleans. No such Phase-5 evidence exists here, so
+`PASS` is not reachable here.
 
-## Terminal
+## Current nonterminal status
 
-```
-R8F_PHYSICAL_VERIFICATION_REQUIRED_INCOMPLETE
-```
+`terminal-reduction.json` has `terminal: null`, `status: "PHASE5_REQUIRED"`,
+and `incomplete: true`. Issue #200 defines exactly these terminals:
+`R8F_LOCAL_VERIFIED_BACKING_PASS`,
+`R8F_RUNTIME_LOCAL_BACKING_PREREQUISITE`, and
+`R8F_GENERIC_SOURCE_POLICY_BLOCKED`.
 
 The generic source-policy/local-cache capability is sound (compact seam
 `PASS`, all negative controls fail closed). The pinned execution substrate
@@ -357,9 +357,9 @@ The generic source-policy/local-cache capability is sound (compact seam
 verified backing (Case C, Phase 4c above) — no llama.cpp/runtime
 modification is required. What remains outstanding is the bounded physical
 Qwen proof Issue #200 itself requires before a `PASS`/`PREREQUISITE`
-terminal can honestly be claimed; this session cannot execute it (no fleet
-reachability). This is neither a pass nor a permission to patch the runtime:
-it is an honest incomplete/handoff terminal. No Qwen-specific generic
+terminal can honestly be claimed; this session cannot execute it (no usable
+fleet credential). This is neither a pass nor a permission to patch the
+runtime: it is an honest incomplete/handoff status. No Qwen-specific generic
 planner branch was introduced. No R8-D correctness adjudication was rerun or
 requalified — R8-D v2 evidence was read, never re-executed. No llama.cpp
 source was modified anywhere in this correction, including to produce the
@@ -377,15 +377,16 @@ bounded RPC cache experiment evidence.
 ## Evidence layout
 
 ```
-evidence/arms.json                          five canonical arms + cross-arm invariant
+evidence/arms.json                          five canonical Source-policy arms
 evidence/negative-controls.json             all 12 required negative controls
 evidence/local-backing-accounting.json      Phase 2 required-vs-optional accounting
+evidence/materialization-invariance.json    same frozen plan/requirements, local vs remote materialization proof
 evidence/producer-hashes.json               sha256 of every producer this record depends on
 evidence/canonical-summary.json             pass/fail roll-up
 evidence/isolation.json                     mechanical network/process/path isolation record
 evidence/rpc-cache-mechanism.json           pinned upstream source identity + mechanical cache-seam finding
 evidence/rpc-cache-experiment.json          bounded non-Qwen cold/warm/prestaged/adversarial experiment results
 evidence/rpc-cache-experiment-raw/          driver source, fixture generator, orchestration script, raw strace/server logs
-evidence/terminal-reduction.json            Phase 4 finding + cache-mechanism finding + environment note + terminal
+evidence/terminal-reduction.json            Phase 4 finding + cache-mechanism finding + nonterminal Phase-5 status
 evidence/MANIFEST.sha256                    integrity anchor over every retained/producer path
 ```
