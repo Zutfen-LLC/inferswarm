@@ -146,3 +146,19 @@ single process (626 tests OK) and the modules pass under the hosted
 vulkan-v0-b CI group on the exact final head. This is the known local
 parallel-runner isolation anomaly class, pre-existing on main, not a
 regression of this campaign; no test was weakened.
+
+Review disposition (both lanes, exact head be9fe24 + delta d69de86)
+-------------------------------------------------------------------
+Lane 1 (observation correctness / token-position binding): PASS.
+P2 closed (head 3ae3902-era fix, reduction-tooling only): derive() is
+now itself a manifest consumer — it re-hashes every MANIFEST.sha256
+row against the on-disk bytes and checks the file-set equality, so a
+tampered .f32/logits sidecar fails closed at reduction time (verified:
+single flipped byte in a retained row -> BLOCKED with the tampered
+path named), not only in the CI test layer. Remaining P3s accepted as
+documented (hook print precision note in retained records; tf sidecar
+naming; llama.cpp pristine-source identity established via
+upstream-master blob-sha match).
+Lane 2 (provenance / non-claims): PASS, no findings above P3.
+Delta-confirmation at final head: PASS (post-review commits
+non-correctness-bearing).

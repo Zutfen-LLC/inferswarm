@@ -3,6 +3,6 @@
   "scripts/issue199_r8e_capture.py": "27d8c01f404323044ebe0fb38e6e72ae4967dd511c59396298b277c210cb1312",
   "scripts/issue199_r8e_launch.py": "186540923979407ab2a4d90929dedfd02bc952d7bc715aa85c19fc48ac5de8dc",
   "scripts/issue199_r8e_manifest.py": "30ed6ed2b99fe3d83f9c0768713d25cb2ebe031a31d875702f7b385b0dd0db81",
-  "scripts/issue199_r8e_negative_controls.py": "a9aa55415731147940a3e154c2e32a30d97eaf97a10890afcfb4121bb9aad854",
-  "scripts/issue199_r8e_terminal_reduction.py": "588217910fc1fb3237bf25775addcd125da11c231a2a8decba76c43d1796f0a7"
+  "scripts/issue199_r8e_negative_controls.py": "88ce50b97b285e84aec5cdb8cecfcc7be5a9ddedc44a6db0fce628beac7ea616",
+  "scripts/issue199_r8e_terminal_reduction.py": "9fbc696ae042c414907fa4f92d05371019634790332220e74789cd04c7d40d93"
 }

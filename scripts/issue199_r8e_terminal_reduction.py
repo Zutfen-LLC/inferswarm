@@ -271,6 +271,42 @@ def characterize(case, ref_view, cand_view, focus_tokens):
     return raw
 
 
+def _manifest_ok(repo):
+    """Verify every MANIFEST.sha256 row against the on-disk bytes AND
+    the on-disk file set against the listed set (the reducer is itself
+    a manifest consumer: doctored evidence bytes must fail closed at
+    reduction time, not only in the CI test layer). Review lane-1 P2,
+    PR #205."""
+    import hashlib
+    p = os.path.join(repo, R8E_DIR, "MANIFEST.sha256")
+    if not os.path.exists(p):
+        return False, "manifest missing"
+    listed = set()
+    for line in open(p):
+        line = line.strip()
+        if not line:
+            continue
+        digest, name = line.split("  ", 1)
+        fp = os.path.join(repo, name)
+        if not os.path.exists(fp):
+            return False, name + " missing"
+        got = hashlib.sha256(open(fp, "rb").read()).hexdigest()
+        if got != digest:
+            return False, name + " digest mismatch (tampered evidence)"
+        listed.add(name)
+    ondisk = set()
+    for dirpath, _dirs, files in os.walk(os.path.join(repo, R8E_DIR)):
+        for f in files:
+            if f in ("MANIFEST.sha256", "producer-hashes.json"):
+                continue
+            rel = os.path.relpath(os.path.join(dirpath, f),
+                                  repo).replace(os.sep, "/")
+            ondisk.add(rel)
+    if listed != ondisk:
+        return False, "manifest/on-disk file-set drift: %s" %             sorted(listed ^ ondisk)[:3]
+    return True, "ok (%d rows)" % len(listed)
+
+
 def derive(area_override=None):
     """Full reduction. Returns dict with terminal + checks."""
     global REPO, EV
@@ -282,6 +318,13 @@ def derive(area_override=None):
         EV = os.path.join(REPO, R8E_DIR, "evidence")
     problems = []
     checks = {}
+
+    # 0a. evidence manifest: the reducer re-hashes the retained bytes
+    # itself (never trusts record-embedded digests alone)
+    mok, mmsg = _manifest_ok(REPO)
+    checks["evidence_manifest_verified"] = mok
+    if not mok:
+        problems.append("evidence manifest verification failed: " + mmsg)
 
     # 0. accepted predecessor identity + byte preservation
     ok, msg = r8d_v2_manifest_ok(REPO)

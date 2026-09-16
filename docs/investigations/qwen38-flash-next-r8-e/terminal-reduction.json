@@ -2,6 +2,7 @@
   "accepted_predecessor_terminal": "R8D_QWEN38_TRUE_GREEDY_NVIDIA_RPC_QUALIFICATION_FAIL",
   "campaign": "issue199-r8e-residual-divergence",
   "checks": {
+    "evidence_manifest_verified": true,
     "instrumentation_record_present": true,
     "r8d_v2_evidence_byte_preserved": true
   },

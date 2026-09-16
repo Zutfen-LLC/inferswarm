@@ -144,6 +144,27 @@ def main():
                 d["git_head"] = cap_head
                 d["git_clean"] = False  # exercise the confined-dirty rule
                 json.dump(d, open(fp, "w"), indent=2, sort_keys=True)
+        # the repoint rewrote evidence bytes: regenerate the SANDBOX
+        # manifest so the baseline reflects the repointed records (the
+        # real campaign's manifest covers its own committed records).
+        # The manifest builder also pins producers, so stage the
+        # producer scripts into the sandbox first.
+        import pathlib
+        import shutil as _sh
+        sdir = pathlib.Path(root) / "scripts"
+        sdir.mkdir(exist_ok=True)
+        for rel in ("issue199_r8e_authority.py",
+                    "issue199_r8e_launch.py",
+                    "issue199_r8e_capture.py",
+                    "issue199_r8e_terminal_reduction.py",
+                    "issue199_r8e_negative_controls.py",
+                    "issue199_r8e_manifest.py"):
+            _sh.copy(os.path.join(REPO, "scripts", rel),
+                     sdir / rel)
+        import issue199_r8e_manifest as MB
+        MB.AREA = pathlib.Path(root) / R8E_DIR
+        MB.ROOT = pathlib.Path(root)
+        MB.main()
         base = base_state(root)
         base_terminal = base["terminal"]
         base_problems = list(base["problems"])
