@@ -15,6 +15,8 @@ import issue200_r8f_proof as proof
 import issue200_r8f_rpc_cache_mechanism as cache_mechanism
 import issue200_r8f_terminal_reduction as reduction
 import issue200_r8f_physical as physical
+import issue200_r8f_range_receipt as range_receipt
+import issue200_r8f_network_reduce as network_reduce
 
 
 def sha(path):
@@ -51,8 +53,17 @@ def _receipt(root, name, document):
     return {"path": name, "sha256": hashlib.sha256(payload).hexdigest()}
 
 
+def synthetic_authority(root, payload_bytes=b"r8-f-observed-payload"):
+    member_path = (root / "node-local" / "tiny-accepted-member.gguf").resolve()
+    member_path.parent.mkdir(parents=True, exist_ok=True)
+    member_path.write_bytes(b"tiny-prefix/" + payload_bytes + b"/tiny-suffix")
+    return ({"authority_path": "synthetic/tiny-authority.json", "members": [{
+        "file": member_path.name, "bytes": member_path.stat().st_size,
+        "sha256": sha(member_path)}], "total_bytes": member_path.stat().st_size}, member_path)
+
+
 def valid_physical_phase5_document(root, **overrides):
-    authority = physical.accepted_model_authority()
+    authority, member_path = synthetic_authority(root)
     node_id = "inferswarm03"
     binary = physical.accepted_rpc_binary_authority()[node_id]
     payload_bytes = b"r8-f-observed-payload"
@@ -64,20 +75,40 @@ def valid_physical_phase5_document(root, **overrides):
                "fnv1a_cache_key": physical.fnv1a64(payload_bytes)}
 
     def arm(name, policy, source, immutable_bytes):
-        immutable_event = {"classification": "immutable_model_payload", "bytes": immutable_bytes}
+        measured = range_receipt.measure_range(
+            node_id=node_id, source_path=member_path, member=member_path.name,
+            accepted_member_bytes=authority["members"][0]["bytes"],
+            accepted_member_sha256=authority["members"][0]["sha256"],
+            offset=len(b"tiny-prefix/"), length=len(payload_bytes),
+            retained_range_path=root / f"raw/{name}.range.bin")
+        stdout = _receipt(root, f"raw/{name}.range.stdout.json", measured)
+        stderr_path = root / f"raw/{name}.range.stderr"
+        stderr_path.write_bytes(b"")
+        stderr = {"path": f"raw/{name}.range.stderr", "sha256": hashlib.sha256(b"").hexdigest()}
+        range_bytes = {"path": f"raw/{name}.range.bin", "sha256": payload_sha}
+        accepted_range = {"member": member_path.name, "offset": measured["offset"],
+                          "length": len(payload_bytes), "sha256": payload_sha,
+                          "provenance_receipt": {"command": ["python3", "scripts/issue200_r8f_range_receipt.py"],
+                              "exit_code": 0, "stdout": stdout, "stderr": stderr, "retained_range": range_bytes}}
+        raw_trace = (f'999 1.000 sendto(3, {json.dumps(b"control".decode("latin1"))}, 7, 0, {{sin_port=htons(50052), sin_addr=inet_addr("100.77.187.38")}}, 16) = 7\n').encode()
         if immutable_bytes:
-            immutable_event.update(payload)
-        network = _receipt(root, f"raw/{name}.network.json", {
-            "schema": "inferswarm.issue200.network-receipt/1", "arm": name,
-            "source_attribution": source,
-            "events": [immutable_event,
-                       {"classification": "rpc_control_or_hash_probe", "bytes": 17}],
-        })
+            raw_trace += (f'999 1.001 sendto(3, {json.dumps(payload_bytes.decode("latin1"))}, {len(payload_bytes)}, 0, {{sin_port=htons(50052), sin_addr=inet_addr("100.77.187.38")}}, 16) = {len(payload_bytes)}\n').encode()
+        raw_capture = {"path": f"raw/{name}.strace", "sha256": hashlib.sha256(raw_trace).hexdigest()}
+        (root / raw_capture["path"]).write_bytes(raw_trace)
+        derived = network_reduce.reduce_capture(raw_trace, client_pid=999, server_endpoint="100.77.187.38:50052",
+                                                payloads=[{**payload, "participant": node_id, "observation_id": "set-1", "order": 1,
+                                                           "bytes": payload_bytes}])
+        reduction_stdout = {"path": f"raw/{name}.network.reduced.json", "sha256": hashlib.sha256(physical.canonical_json_bytes(derived)).hexdigest()}
+        (root / reduction_stdout["path"]).write_bytes(physical.canonical_json_bytes(derived))
+        network = {"arm": name, "capture_tool": "strace -xx", "capture_command": ["strace", "-f", "-xx"],
+                   "client_pid": 999, "server_endpoint": "100.77.187.38:50052", "capture_started": "1", "capture_ended": "2",
+                   "raw_capture": raw_capture, "reducer_sha256": network_reduce.reducer_sha256(), "reduction_stdout": reduction_stdout}
+        observed_payload = {**payload, "participant": node_id, "observation_id": "set-1", "order": 1}
         runtime = _receipt(root, f"raw/{name}.runtime.json", {"arm": name, "schema": "raw-runtime/1",
                    "participants": [node_id], "required_state_identity": "sha256:state",
                    "participant_requirements_identity": "sha256:requirements",
                    "placement_identity": "sha256:placement", "materialization_identity": "sha256:materialization",
-                   "initialization_wall_time_ms": 1.0, "set_tensor_payloads": [payload]})
+                   "initialization_wall_time_ms": 1.0, "set_tensor_payloads": [observed_payload]})
         reads = _receipt(root, f"raw/{name}.reads.json", {"arm": name, "schema": "raw-reads/1",
                    "source_attribution": source})
         result = {"source_policy": policy, "source_attribution": source,
@@ -87,7 +118,9 @@ def valid_physical_phase5_document(root, **overrides):
                   "materialization_identity": "sha256:materialization",
                   "initialization_wall_time_ms": 1.0, "network_receipt": network,
                   "runtime_receipt": runtime, "local_read_receipt": reads,
-                  "set_tensor_payloads": [payload]}
+                  "set_tensor_payloads": [observed_payload],
+                  "accepted_artifact_ranges": [{"accepted_artifact_range": accepted_range,
+                                                   "set_tensor_payload": observed_payload}]}
         if name != "cold_remote":
             cache_dir = f"/private/{name}"
             initialized = _receipt(root, f"raw/{name}.cache-init.json", {
@@ -101,13 +134,12 @@ def valid_physical_phase5_document(root, **overrides):
                 "atomic_publish": True, "cache_sha256": payload_sha, "payload_path": payload_path,
             })
             result["cache_staging"] = [{
-                "accepted_artifact_range": {"member": authority["members"][0]["file"], "offset": 0,
-                                            "length": len(payload_bytes), "sha256": payload_sha},
-                "set_tensor_payload": payload,
+                "accepted_artifact_range": accepted_range,
+                "set_tensor_payload": observed_payload,
                 "staged_cache": {"path": f"{cache_dir}/{payload['fnv1a_cache_key']}",
                                  "sha256_before": payload_sha, "sha256_after": payload_sha,
                                  "length_before": len(payload_bytes), "length_after": len(payload_bytes),
-                                 "receipt": staging},
+                                 "receipt": staging, "range_bytes": range_bytes},
             }]
         return result
 
@@ -333,10 +365,11 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
 
     def test_valid_physical_evidence_enables_pass(self):
         with tempfile.TemporaryDirectory() as td:
-            path = Path(td) / "physical-phase5.json"
+            root = Path(td)
+            path = root / "physical-phase5.json"
             path.write_text(json.dumps(valid_physical_phase5_document(Path(td))))
-            with mock.patch.object(cache_mechanism, "mechanical_cache_finding",
-                                   return_value=valid_cache_finding()):
+            with mock.patch.object(cache_mechanism, "mechanical_cache_finding", return_value=valid_cache_finding()), \
+                 mock.patch.object(physical, "accepted_model_authority", return_value=synthetic_authority(root)[0]):
                 document, _ = reduction.reduce_terminal(physical_phase5_evidence_path=path)
         self.assertEqual(document["terminal"], reduction.TERMINAL_LOCAL_VERIFIED_BACKING_PASS)
         self.assertTrue(document["physical_phase5_ran"])
@@ -348,8 +381,8 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
             mutate(doc, root)
             path = root / "physical-phase5.json"
             path.write_text(json.dumps(doc))
-            with mock.patch.object(cache_mechanism, "mechanical_cache_finding",
-                                   return_value=valid_cache_finding()):
+            with mock.patch.object(cache_mechanism, "mechanical_cache_finding", return_value=valid_cache_finding()), \
+                 mock.patch.object(physical, "accepted_model_authority", return_value=synthetic_authority(root)[0]):
                 result, _ = reduction.reduce_terminal(physical_phase5_evidence_path=path)
             self.assertNotEqual(result["terminal"], reduction.TERMINAL_LOCAL_VERIFIED_BACKING_PASS)
             self.assertFalse(result["physical_phase5_ran"])
@@ -384,6 +417,62 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
         ]
         for mutation in mutations:
             with self.subTest(mutation=mutation):
+                self._rejects_pass_after_mutation(mutation)
+
+    def test_provenance_and_raw_network_adversaries_reject(self):
+        """A JSON assertion can neither forge an accepted range nor relabel wire bytes."""
+        def arbitrary_range(doc, root):
+            # The historical synthetic bug: literal bytes merely labelled as
+            # offset zero of an accepted member.
+            doc["arms"]["local_verified"]["accepted_artifact_ranges"][0]["accepted_artifact_range"]["offset"] = 0
+
+        def retained_bytes_mismatch(doc, root):
+            path = root / "raw/local_verified.range.bin"
+            path.write_bytes(b"x" * len(path.read_bytes()))
+            receipt = doc["arms"]["local_verified"]["accepted_artifact_ranges"][0]["accepted_artifact_range"]["provenance_receipt"]["retained_range"]
+            receipt["sha256"] = sha(path)
+
+        def altered_offset_after_receipt(doc, root):
+            doc["arms"]["local_verified"]["accepted_artifact_ranges"][0]["accepted_artifact_range"]["offset"] += 1
+
+        def raw_capture_missing(doc, root):
+            doc["arms"]["cold_remote"]["network_receipt"]["raw_capture"]["path"] = "raw/missing.strace"
+
+        def raw_capture_sha_mismatch(doc, root):
+            doc["arms"]["cold_remote"]["network_receipt"]["raw_capture"]["sha256"] = "0" * 64
+
+        def relabel_or_count_json(doc, root):
+            # Any summarized event/count is forbidden, including a claimed
+            # zero payload or a payload labelled control.
+            doc["arms"]["cold_remote"]["network_receipt"]["events"] = [{"classification": "rpc_control_or_hash_probe", "bytes": 0}]
+
+        def local_capture_contains_payload(doc, root):
+            receipt = doc["arms"]["local_verified"]["network_receipt"]
+            path = root / receipt["raw_capture"]["path"]
+            payload = b"r8-f-observed-payload"
+            path.write_bytes(path.read_bytes() + (f'999 1.002 sendto(3, {json.dumps(payload.decode())}, {len(payload)}, 0, {{sin_port=htons(50052), sin_addr=inet_addr("100.77.187.38")}}, 16) = {len(payload)}\n').encode())
+            receipt["raw_capture"]["sha256"] = sha(path)
+
+        def partial_payload(doc, root):
+            receipt = doc["arms"]["cold_remote"]["network_receipt"]
+            path = root / receipt["raw_capture"]["path"]
+            payload = b"r8-f-observed-payload"[:5]
+            path.write_bytes((f'999 1.003 sendto(3, {json.dumps(payload.decode())}, {len(payload)}, 0, {{sin_port=htons(50052), sin_addr=inet_addr("100.77.187.38")}}, 16) = {len(payload)}\n').encode())
+            receipt["raw_capture"]["sha256"] = sha(path)
+
+        def wrong_binding(doc, root):
+            doc["arms"]["cold_remote"]["network_receipt"]["client_pid"] = 1000
+
+        def boundary_drift(doc, root):
+            doc["arms"]["repeat_local_verified"]["set_tensor_payloads"][0]["length"] += 1
+
+        cases = {"arbitrary-literal-range": arbitrary_range, "retained-range-mismatch": retained_bytes_mismatch,
+                 "offset-after-receipt": altered_offset_after_receipt, "capture-missing": raw_capture_missing,
+                 "capture-sha": raw_capture_sha_mismatch, "authored-network-relabel": relabel_or_count_json,
+                 "payload-in-local-capture": local_capture_contains_payload, "partial-payload": partial_payload,
+                 "wrong-pid": wrong_binding, "cross-arm-boundary": boundary_drift}
+        for name, mutation in cases.items():
+            with self.subTest(name=name):
                 self._rejects_pass_after_mutation(mutation)
 
     def test_runtime_prerequisite_never_emitted_when_cache_seam_not_evaluated(self):

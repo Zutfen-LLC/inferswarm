@@ -338,10 +338,16 @@ described above, a remote/cold arm, a local-verified arm (identical required
 state and placement, pre-staged, zero prior network pass), the local-verified
 arm repeated once, and the exact network/timing/identity evidence to retain.
 `scripts/issue200_r8f_physical.py` derives every acceptance predicate from
-checksum-bound raw receipts, the accepted R8-D member authority, observed
-SET_TENSOR boundaries, cache staging receipts, and network event records. It
-rejects authored summary booleans. No such Phase-5 evidence exists here, so
-`PASS` is not reachable here.
+checksum-bound raw receipts, the accepted R8-D member authority, and observed
+SET_TENSOR boundaries. For each staged range, the CPU-only
+`scripts/issue200_r8f_range_receipt.py` opens the node-local accepted member,
+checks its complete size/SHA-256, reads the exact range, retains its bytes,
+and emits the bound measurement receipt. Network totals are not a JSON event
+claim: `scripts/issue200_r8f_network_reduce.py` re-parses a retained,
+PID/endpoint-bound `strace -xx` capture and maps exact raw sends to those
+observed payload bytes. It rejects authored summary booleans and
+classifications. No such Phase-5 evidence exists here, so `PASS` is not
+reachable here.
 
 ## Current nonterminal status
 

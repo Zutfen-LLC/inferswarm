@@ -18,13 +18,15 @@ from typing import Any, Mapping
 
 from issue74_methodology import canonical_json_bytes
 from issue200_r8f_rpc_cache_mechanism import UPSTREAM_SOURCE_IDENTITY
+import issue200_r8f_range_receipt as range_receipt
+import issue200_r8f_network_reduce as network_reduce
 
 ROOT = Path(__file__).resolve().parents[1]
 AREA = Path("docs/implementation/r8-f-local-backing-source-policy-200")
 AUTHORITY_PATH = Path("docs/investigations/qwen38-flash-next-r8-d-v2/evidence/split-identity/split-rehash.json")
 HOST_INVENTORY_DIR = Path("docs/investigations/qwen38-flash-next-r8-d-v2/evidence/host-inventory")
 PINNED_LLAMA_CPP_COMMIT = "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4"
-SCHEMA = "inferswarm.issue200.physical-phase5/2"
+SCHEMA = "inferswarm.issue200.physical-phase5/3"
 ARMS = ("cold_remote", "local_verified", "repeat_local_verified")
 FORBIDDEN_SUMMARY_FIELDS = {
     "accepted_release_hashes_matched", "provenance_verified",
@@ -89,33 +91,83 @@ def _read_receipt(base: Path, receipt: Mapping[str, Any], expected_arm: str, kin
     return document
 
 
-def _network_bytes(base: Path, arm: str, receipt: Mapping[str, Any], payloads: list[dict[str, Any]]) -> dict[str, Any]:
-    raw = _read_receipt(base, receipt, arm, "network")
-    if raw.get("schema") != "inferswarm.issue200.network-receipt/1" or not isinstance(raw.get("events"), list):
-        raise ValueError(f"{arm}: network receipt schema/events malformed")
-    totals = {"immutable_payload": 0, "rpc_control": 0, "total": 0}
-    expected = {(item["offset"], item["length"], item["sha256"]) for item in payloads}
-    observed = set()
-    for event in raw["events"]:
-        if (not isinstance(event, dict) or not isinstance(event.get("bytes"), int)
-                or event["bytes"] < 0 or event.get("classification") not in
-                {"immutable_model_payload", "rpc_control_or_hash_probe"}):
-            raise ValueError(f"{arm}: invalid network event")
-        totals["total"] += event["bytes"]
-        if event["classification"] == "immutable_model_payload":
-            if event["bytes"] == 0:
-                continue
-            identity = (event.get("offset"), event.get("length"), event.get("sha256"))
-            if identity not in expected or event["bytes"] != event.get("length"):
-                raise ValueError(f"{arm}: immutable network event is not an observed SET_TENSOR payload")
-            observed.add(identity)
-            totals["immutable_payload"] += event["bytes"]
-        else:
-            totals["rpc_control"] += event["bytes"]
-    if observed and observed != expected:
-        raise ValueError(f"{arm}: immutable network receipt does not cover every observed payload")
-    return {**totals, "source_attribution": raw.get("source_attribution"),
-            "payload_identities": sorted(observed)}
+def _read_raw_bytes(base: Path, receipt: Mapping[str, Any], label: str) -> bytes:
+    path, digest = receipt.get("path"), receipt.get("sha256")
+    if not isinstance(path, str) or not isinstance(digest, str):
+        raise ValueError(f"{label}: raw path/sha256 missing")
+    target = (base / path).resolve()
+    if base.resolve() not in target.parents or not target.is_file():
+        raise ValueError(f"{label}: raw path missing or escapes evidence root")
+    raw = target.read_bytes()
+    if _sha256(raw) != digest:
+        raise ValueError(f"{label}: raw SHA-256 mismatch")
+    return raw
+
+
+def _range_provenance(base: Path, arm: str, source: Mapping[str, Any], member: Mapping[str, Any],
+                      participant_ids: list[str]) -> bytes:
+    provenance = source.get("provenance_receipt")
+    if not isinstance(provenance, dict) or provenance.get("exit_code") != 0:
+        raise ValueError(f"{arm}: accepted range has no successful raw provenance invocation")
+    command = provenance.get("command")
+    if not isinstance(command, list) or "scripts/issue200_r8f_range_receipt.py" not in command:
+        raise ValueError(f"{arm}: accepted range provenance command is not the controlled helper")
+    stderr = _read_raw_bytes(base, provenance.get("stderr", {}), f"{arm}: range stderr")
+    if stderr:
+        raise ValueError(f"{arm}: range helper stderr is nonempty")
+    measured = json.loads(_read_raw_bytes(base, provenance.get("stdout", {}), f"{arm}: range stdout"))
+    required = {"schema": "inferswarm.issue200.accepted-range-measurement/1", "member": member["file"],
+                "accepted_member_bytes": member["bytes"], "accepted_member_sha256": member["sha256"],
+                "offset": source.get("offset"), "length": source.get("length"),
+                "range_sha256": source.get("sha256")}
+    if any(measured.get(key) != value for key, value in required.items()):
+        raise ValueError(f"{arm}: raw member/range measurement does not match accepted authority/mapping")
+    if measured.get("node_id") not in participant_ids or not isinstance(measured.get("source_path"), str) or not Path(measured["source_path"]).is_absolute():
+        raise ValueError(f"{arm}: range measurement lacks participant Node/absolute source path")
+    if measured.get("tool") != {"path": "scripts/issue200_r8f_range_receipt.py", "sha256": range_receipt.helper_sha256()}:
+        raise ValueError(f"{arm}: range helper source identity mismatch")
+    retained = _read_raw_bytes(base, provenance.get("retained_range", {}), f"{arm}: retained range")
+    if len(retained) != source["length"] or _sha256(retained) != source["sha256"]:
+        raise ValueError(f"{arm}: retained range bytes do not match measured member range")
+    return retained
+
+
+def _network_bytes(base: Path, arm: str, receipt: Mapping[str, Any], payloads: list[dict[str, Any]],
+                   payload_bytes: list[bytes]) -> dict[str, Any]:
+    if not isinstance(receipt, dict):
+        raise ValueError(f"{arm}: raw network capture receipt missing")
+    allowed = {"arm", "capture_tool", "capture_command", "client_pid", "server_endpoint",
+               "capture_started", "capture_ended", "raw_capture", "reducer_sha256", "reduction_stdout"}
+    if set(receipt) != allowed:
+        raise ValueError(f"{arm}: authored network classification/count fields are forbidden")
+    raw = _read_raw_bytes(base, receipt.get("raw_capture", {}), f"{arm}: raw network capture")
+    if receipt.get("capture_tool") != "strace -xx" or not isinstance(receipt.get("capture_command"), list):
+        raise ValueError(f"{arm}: capture command/tool identity missing")
+    if not isinstance(receipt.get("client_pid"), int) or not isinstance(receipt.get("server_endpoint"), str):
+        raise ValueError(f"{arm}: capture PID/endpoint binding missing")
+    if receipt.get("arm") != arm or not receipt.get("capture_started") or not receipt.get("capture_ended"):
+        raise ValueError(f"{arm}: capture arm/boundaries missing")
+    observed_payloads = []
+    for item, data in zip(payloads, payload_bytes):
+        observed_payloads.append({**item, "bytes": data})
+    derived = network_reduce.reduce_capture(raw, client_pid=receipt["client_pid"],
+                                            server_endpoint=receipt["server_endpoint"], payloads=observed_payloads)
+    if receipt.get("reducer_sha256") != network_reduce.reducer_sha256():
+        raise ValueError(f"{arm}: network reducer source identity mismatch")
+    # A stored output is permitted only as an audit artifact; independently
+    # regenerate it and require byte-for-byte equality.
+    stored = _read_raw_bytes(base, receipt.get("reduction_stdout", {}), f"{arm}: network reduction stdout")
+    if stored != canonical_json_bytes(derived):
+        raise ValueError(f"{arm}: stored network reduction differs from raw-capture derivation")
+    expected = sorted(({key: payload[key] for key in ("participant", "observation_id", "order", "offset", "length", "sha256")}
+                       for payload in observed_payloads), key=lambda item: item["order"])
+    if arm == "cold_remote" and derived["payload_identities"] != expected:
+        raise ValueError(f"{arm}: raw capture does not account for every frozen SET_TENSOR payload")
+    if arm != "cold_remote" and derived["payload_identities"]:
+        raise ValueError(f"{arm}: raw capture moved immutable SET_TENSOR payload")
+    return {"immutable_payload": derived["immutable_payload_bytes"],
+            "rpc_control": derived["protocol_control_hash_probe_bytes"],
+            "total": derived["client_to_server_bytes"], "payload_identities": derived["payload_identities"]}
 
 
 def _same_keys(values: list[Mapping[str, Any]], keys: tuple[str, ...], label: str):
@@ -125,8 +177,37 @@ def _same_keys(values: list[Mapping[str, Any]], keys: tuple[str, ...], label: st
     return baseline
 
 
+def _validate_payload_ranges(base: Path, arm: str, mappings: Any, authority: dict[str, Any],
+                             payloads: list[dict[str, Any]], participant_ids: list[str]) -> list[bytes]:
+    """Bind every observed SET_TENSOR payload to actual accepted-member bytes."""
+    if not isinstance(mappings, list) or len(mappings) != len(payloads):
+        raise ValueError(f"{arm}: every SET_TENSOR payload needs one accepted-range provenance receipt")
+    members = {member["file"]: member for member in authority["members"]}
+    result: list[bytes] = []
+    seen = set()
+    for mapping in mappings:
+        if not isinstance(mapping, dict) or not isinstance(mapping.get("accepted_artifact_range"), dict):
+            raise ValueError(f"{arm}: malformed accepted range mapping")
+        source, payload = mapping["accepted_artifact_range"], mapping.get("set_tensor_payload")
+        member = members.get(source.get("member"))
+        if not member or not isinstance(source.get("offset"), int) or not isinstance(source.get("length"), int):
+            raise ValueError(f"{arm}: accepted range member/offset/length malformed")
+        if source["offset"] < 0 or source["length"] <= 0 or source["offset"] + source["length"] > member["bytes"]:
+            raise ValueError(f"{arm}: accepted range exceeds accepted member")
+        key = (payload.get("offset"), payload.get("length"), payload.get("sha256")) if isinstance(payload, dict) else None
+        if key not in {(p["offset"], p["length"], p["sha256"]) for p in payloads} or source["length"] != payload["length"] or source.get("sha256") != payload["sha256"]:
+            raise ValueError(f"{arm}: accepted range is not this observed SET_TENSOR payload")
+        if key in seen:
+            raise ValueError(f"{arm}: duplicate accepted range mapping")
+        seen.add(key)
+        result.append(_range_provenance(base, arm, source, member, participant_ids))
+    if seen != {(p["offset"], p["length"], p["sha256"]) for p in payloads}:
+        raise ValueError(f"{arm}: accepted ranges do not cover all observed payloads")
+    return result
+
+
 def _validate_stage_mapping(base: Path, arm: str, mappings: Any, authority: dict[str, Any],
-                            payloads: list[dict[str, Any]], cache_dir: str):
+                            payloads: list[dict[str, Any]], cache_dir: str, participant_ids: list[str]):
     if not isinstance(mappings, list) or not mappings:
         raise ValueError(f"{arm}: cache staging mapping missing")
     members = {member["file"]: member for member in authority["members"]}
@@ -147,6 +228,9 @@ def _validate_stage_mapping(base: Path, arm: str, mappings: Any, authority: dict
             raise ValueError(f"{arm}: staging mapping does not cover an observed SET_TENSOR payload")
         if source.get("sha256") != payload.get("sha256"):
             raise ValueError(f"{arm}: staged payload digest differs from verified backing range")
+        measured_bytes = _range_provenance(base, arm, source, member, participant_ids)
+        if measured_bytes != _read_raw_bytes(base, staged.get("range_bytes", {}), f"{arm}: staged range bytes"):
+            raise ValueError(f"{arm}: staged range bytes differ from measured accepted member range")
         if staged.get("sha256_before") != payload["sha256"] or staged.get("sha256_after") != payload["sha256"]:
             raise ValueError(f"{arm}: cache content was not SHA-256 verified before and after use")
         if staged.get("length_before") != payload["length"] or staged.get("length_after") != payload["length"]:
@@ -256,6 +340,10 @@ def validate_physical_evidence(document: Mapping[str, Any], *, evidence_root: Pa
                         or not isinstance(payload.get("length"), int) or payload["offset"] < 0
                         or payload["length"] <= 0 or not re.fullmatch(r"[0-9a-f]{64}", str(payload.get("sha256", "")))):
                     raise ValueError(f"{name}: malformed SET_TENSOR boundary")
+                if not isinstance(payload.get("observation_id"), str) or not payload["observation_id"] or not isinstance(payload.get("order"), int):
+                    raise ValueError(f"{name}: SET_TENSOR observation/order identity missing")
+                if payload.get("participant") not in participant_ids:
+                    raise ValueError(f"{name}: SET_TENSOR participant identity missing")
             if (runtime_receipt.get("set_tensor_payloads") != payloads
                     or runtime_receipt.get("initialization_wall_time_ms") != arm["initialization_wall_time_ms"]
                     or any(runtime_receipt.get(key) != frozen[key] for key in frozen_keys)):
@@ -264,10 +352,10 @@ def validate_physical_evidence(document: Mapping[str, Any], *, evidence_root: Pa
                 evidence_root, arm.get("local_read_receipt", {}), name, "local durable/cache read")
             if local_reads.get("source_attribution") != expected_source[name]:
                 raise ValueError(f"{name}: local durable/cache receipt lacks Source attribution")
-            network[name] = _network_bytes(evidence_root, name, arm.get("network_receipt", {}), payloads)
-            if network[name]["source_attribution"] != expected_source[name]:
-                raise ValueError(f"{name}: network receipt lacks Source attribution")
-            payload_identities.append([(p["offset"], p["length"], p["sha256"]) for p in payloads])
+            payload_bytes = _validate_payload_ranges(evidence_root, name, arm.get("accepted_artifact_ranges"),
+                                                     authority, payloads, participant_ids)
+            network[name] = _network_bytes(evidence_root, name, arm.get("network_receipt", {}), payloads, payload_bytes)
+            payload_identities.append(payloads)
             if name != "cold_remote":
                 cache_dir = arm.get("private_cache_dir")
                 if not isinstance(cache_dir, str) or not cache_dir or cache_dir in private_cache_dirs:
@@ -278,7 +366,7 @@ def validate_physical_evidence(document: Mapping[str, Any], *, evidence_root: Pa
                 if (cache_start.get("schema") != "inferswarm.issue200.cache-initialization-receipt/1"
                         or cache_start.get("cache_dir") != cache_dir or cache_start.get("entries_before") != []):
                     raise ValueError(f"{name}: cache was not proven fresh/private before staging")
-                _validate_stage_mapping(evidence_root, name, arm.get("cache_staging"), authority, payloads, cache_dir)
+                _validate_stage_mapping(evidence_root, name, arm.get("cache_staging"), authority, payloads, cache_dir, participant_ids)
         if len({canonical_json_bytes(item) for item in payload_identities}) != 1:
             raise ValueError("actual SET_TENSOR payload boundaries differ across arms")
         if network["cold_remote"]["immutable_payload"] <= 0:
