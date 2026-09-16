@@ -233,6 +233,15 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue195_v2_negative_controls.py",
             "scripts/issue195_v2_manifest.py",
             "scripts/issue195_v2_launch.py",
+            # Issue #199 R8-E bounded residual-divergence
+            # characterization: fresh additive producer namespace,
+            # same registration pattern
+            "scripts/issue199_r8e_authority.py",
+            "scripts/issue199_r8e_launch.py",
+            "scripts/issue199_r8e_capture.py",
+            "scripts/issue199_r8e_terminal_reduction.py",
+            "scripts/issue199_r8e_negative_controls.py",
+            "scripts/issue199_r8e_manifest.py",
             # Issue #200 R8-F: additive internal Source-policy seam over the
             # accepted #99/#101 architecture; fresh producer namespace, same
             # registration pattern as the #195 v2 campaign above.

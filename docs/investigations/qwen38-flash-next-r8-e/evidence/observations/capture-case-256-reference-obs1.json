@@ -1,0 +1,812 @@
+{
+  "arm": "reference",
+  "binding": {
+    "arm": "reference",
+    "case": "case-256",
+    "generated_position": 5,
+    "observation_path": "obs-case-256-reference-obs1.jsonl",
+    "prompt_sha256": "647c266d9e9b7769679d875a1d06fb7c47cf6f4b3acd9fb5d0364f2baa7a94b5",
+    "prompt_token_count": 256,
+    "request_sha256": "16c315a6abe789ef86fde92a5d56fd780b56a5ff059d9568c9e26d21cfd6c6d3"
+  },
+  "campaign": "issue199-r8e-residual-divergence",
+  "capture_problems": [
+    "top16 mismatch hook vs derived bytes"
+  ],
+  "case": "case-256",
+  "elapsed_s": 3.853,
+  "ended_utc": "2026-09-15T22:38:57Z",
+  "f32_row_floats": 248320,
+  "f32_row_sha256": "1fd17a48f88678df7d375f3b7668268d1a4c13b183fd46ea7cf056dd5819190e",
+  "f32_row_stats": {
+    "fsum": -401127.4987733811,
+    "fsum_math": -401127.4987733811,
+    "n_nonfinite": 0,
+    "sumsq": 1408694.343500945
+  },
+  "generated_position_observed": 5,
+  "git_clean": false,
+  "git_head": "fa87c675f2bdf915fa71e274aa2378373657313d",
+  "hook_rows": [
+    {
+      "focus": [
+        [
+          271,
+          3,
+          14.3915939
+        ],
+        [
+          34227,
+          273,
+          7.37525463
+        ]
+      ],
+      "n_nonfinite": 0,
+      "n_vocab": 248320,
+      "pos": 0,
+      "tok": 561,
+      "top": [
+        [
+          561,
+          15.7115765
+        ],
+        [
+          359,
+          14.5212688
+        ],
+        [
+          271,
+          14.3915939
+        ],
+        [
+          328,
+          14.1834602
+        ],
+        [
+          198,
+          12.9113531
+        ],
+        [
+          220,
+          12.7234087
+        ],
+        [
+          1165,
+          12.3540497
+        ],
+        [
+          4486,
+          11.8996677
+        ],
+        [
+          2838,
+          11.6562824
+        ],
+        [
+          5044,
+          11.6390724
+        ],
+        [
+          1541,
+          11.6261129
+        ],
+        [
+          695,
+          11.5669546
+        ],
+        [
+          357,
+          11.3361597
+        ],
+        [
+          18037,
+          11.2234182
+        ],
+        [
+          2500,
+          11.0800571
+        ],
+        [
+          3437,
+          11.0602188
+        ]
+      ]
+    },
+    {
+      "focus": [
+        [
+          271,
+          32,
+          11.255414
+        ],
+        [
+          34227,
+          130,
+          9.19409752
+        ]
+      ],
+      "n_nonfinite": 0,
+      "n_vocab": 248320,
+      "pos": 1,
+      "tok": 324,
+      "top": [
+        [
+          324,
+          16.4937935
+        ],
+        [
+          40554,
+          15.5925531
+        ],
+        [
+          51624,
+          14.3453884
+        ],
+        [
+          29262,
+          14.3264475
+        ],
+        [
+          54517,
+          14.1980162
+        ],
+        [
+          23167,
+          14.1229258
+        ],
+        [
+          8026,
+          13.1217537
+        ],
+        [
+          2235,
+          12.5873117
+        ],
+        [
+          13071,
+          12.5399113
+        ],
+        [
+          78812,
+          12.2070961
+        ],
+        [
+          16382,
+          12.1983633
+        ],
+        [
+          9117,
+          12.0059214
+        ],
+        [
+          13234,
+          11.9460831
+        ],
+        [
+          3474,
+          11.8108635
+        ],
+        [
+          1483,
+          11.781826
+        ],
+        [
+          3000,
+          11.7201519
+        ]
+      ]
+    },
+    {
+      "focus": [
+        [
+          271,
+          3,
+          13.3732185
+        ],
+        [
+          34227,
+          3850,
+          2.44718719
+        ]
+      ],
+      "n_nonfinite": 0,
+      "n_vocab": 248320,
+      "pos": 2,
+      "tok": 55965,
+      "top": [
+        [
+          55965,
+          19.913044
+        ],
+        [
+          21204,
+          14.992363
+        ],
+        [
+          271,
+          13.3732185
+        ],
+        [
+          1487,
+          9.90323544
+        ],
+        [
+          65138,
+          9.86152458
+        ],
+        [
+          1055,
+          9.83242416
+        ],
+        [
+          27404,
+          9.51202011
+        ],
+        [
+          2173,
+          8.75832176
+        ],
+        [
+          8208,
+          8.60211945
+        ],
+        [
+          248044,
+          8.50265312
+        ],
+        [
+          1077,
+          8.40476608
+        ],
+        [
+          812,
+          8.3523941
+        ],
+        [
+          198,
+          8.2929554
+        ],
+        [
+          1672,
+          8.14997482
+        ],
+        [
+          3034,
+          7.94929218
+        ],
+        [
+          602,
+          7.8916769
+        ]
+      ]
+    },
+    {
+      "focus": [
+        [
+          271,
+          2,
+          15.4331942
+        ],
+        [
+          34227,
+          3334,
+          3.16873455
+        ]
+      ],
+      "n_nonfinite": 0,
+      "n_vocab": 248320,
+      "pos": 3,
+      "tok": 51624,
+      "top": [
+        [
+          51624,
+          19.183836
+        ],
+        [
+          271,
+          15.4331942
+        ],
+        [
+          2426,
+          11.9754705
+        ],
+        [
+          561,
+          11.8053427
+        ],
+        [
+          78812,
+          11.4608421
+        ],
+        [
+          579,
+          11.090992
+        ],
+        [
+          8341,
+          11.0065269
+        ],
+        [
+          13262,
+          10.9582863
+        ],
+        [
+          557,
+          10.7936306
+        ],
+        [
+          198,
+          10.6705647
+        ],
+        [
+          18291,
+          10.4867134
+        ],
+        [
+          760,
+          10.3078117
+        ],
+        [
+          29014,
+          10.2805996
+        ],
+        [
+          12,
+          9.832407
+        ],
+        [
+          321,
+          9.76932812
+        ],
+        [
+          369,
+          9.59611225
+        ]
+      ]
+    },
+    {
+      "focus": [
+        [
+          271,
+          2,
+          15.8104668
+        ],
+        [
+          34227,
+          895,
+          5.73894405
+        ]
+      ],
+      "n_nonfinite": 0,
+      "n_vocab": 248320,
+      "pos": 4,
+      "tok": 29014,
+      "top": [
+        [
+          29014,
+          17.4604874
+        ],
+        [
+          271,
+          15.8104668
+        ],
+        [
+          579,
+          14.4395533
+        ],
+        [
+          37444,
+          13.1603203
+        ],
+        [
+          1179,
+          12.6119919
+        ],
+        [
+          1018,
+          12.6042633
+        ],
+        [
+          557,
+          12.2671137
+        ],
+        [
+          29547,
+          12.1065807
+        ],
+        [
+          33351,
+          12.001708
+        ],
+        [
+          995,
+          11.9520292
+        ],
+        [
+          6749,
+          11.867445
+        ],
+        [
+          10184,
+          11.8637838
+        ],
+        [
+          1467,
+          11.7947588
+        ],
+        [
+          14428,
+          11.6430149
+        ],
+        [
+          12076,
+          11.6181917
+        ],
+        [
+          5820,
+          11.5273647
+        ]
+      ]
+    },
+    {
+      "focus": [
+        [
+          271,
+          1,
+          16.706398
+        ],
+        [
+          34227,
+          2,
+          16.0985374
+        ]
+      ],
+      "n_nonfinite": 0,
+      "n_vocab": 248320,
+      "pos": 5,
+      "tok": 271,
+      "top": [
+        [
+          271,
+          16.706398
+        ],
+        [
+          34227,
+          16.0985374
+        ],
+        [
+          31347,
+          13.8097343
+        ],
+        [
+          25292,
+          13.649128
+        ],
+        [
+          16570,
+          12.9183235
+        ],
+        [
+          279,
+          12.6028099
+        ],
+        [
+          198,
+          12.2910347
+        ],
+        [
+          4558,
+          12.0122089
+        ],
+        [
+          264,
+          11.8309116
+        ],
+        [
+          28279,
+          11.4856672
+        ],
+        [
+          60163,
+          11.4422951
+        ],
+        [
+          220,
+          11.4031944
+        ],
+        [
+          799,
+          11.3510332
+        ],
+        [
+          50614,
+          11.2276688
+        ],
+        [
+          1132,
+          11.1310263
+        ],
+        [
+          11292,
+          11.1305199
+        ]
+      ]
+    },
+    {
+      "focus": [
+        [
+          271,
+          22,
+          11.20508
+        ],
+        [
+          34227,
+          12,
+          11.6159363
+        ]
+      ],
+      "n_nonfinite": 0,
+      "n_vocab": 248320,
+      "pos": 6,
+      "tok": 248068,
+      "top": [
+        [
+          248068,
+          16.660347
+        ],
+        [
+          760,
+          15.086647
+        ],
+        [
+          3836,
+          13.872345
+        ],
+        [
+          19,
+          13.2710285
+        ],
+        [
+          1076,
+          13.1658249
+        ],
+        [
+          8160,
+          12.8255033
+        ],
+        [
+          27775,
+          12.6581268
+        ],
+        [
+          7691,
+          12.3033695
+        ],
+        [
+          40,
+          12.1411667
+        ],
+        [
+          2064,
+          12.0128403
+        ],
+        [
+          5836,
+          11.7155275
+        ],
+        [
+          34227,
+          11.6159363
+        ],
+        [
+          1206,
+          11.5727034
+        ],
+        [
+          248044,
+          11.475008
+        ],
+        [
+          32177,
+          11.3748026
+        ],
+        [
+          623,
+          11.3691273
+        ]
+      ]
+    },
+    {
+      "focus": [
+        [
+          271,
+          1,
+          27.1607285
+        ],
+        [
+          34227,
+          48708,
+          -0.731820226
+        ]
+      ],
+      "n_nonfinite": 0,
+      "n_vocab": 248320,
+      "pos": 7,
+      "tok": 271,
+      "top": [
+        [
+          271,
+          27.1607285
+        ],
+        [
+          198,
+          25.8348083
+        ],
+        [
+          4558,
+          15.3405437
+        ],
+        [
+          1358,
+          15.2372608
+        ],
+        [
+          248046,
+          15.0767593
+        ],
+        [
+          695,
+          13.8315105
+        ],
+        [
+          13488,
+          13.3572588
+        ],
+        [
+          248044,
+          13.0364695
+        ],
+        [
+          987,
+          12.7628117
+        ],
+        [
+          56963,
+          12.6858101
+        ],
+        [
+          6987,
+          12.2319069
+        ],
+        [
+          318,
+          12.1306534
+        ],
+        [
+          2228,
+          11.85882
+        ],
+        [
+          25952,
+          11.6272173
+        ],
+        [
+          18050,
+          11.2131233
+        ],
+        [
+          248069,
+          10.8181419
+        ]
+      ]
+    }
+  ],
+  "label": "case-256-reference-obs1",
+  "mode": "obs",
+  "producer": "issue199_r8e_capture.py",
+  "producer_sha256": "27d8c01f404323044ebe0fb38e6e72ae4967dd511c59396298b277c210cb1312",
+  "prompt_sha256": "647c266d9e9b7769679d875a1d06fb7c47cf6f4b3acd9fb5d0364f2baa7a94b5",
+  "prompt_token_count": 256,
+  "request_body_b64": "eyJjYWNoZV9wcm9tcHQiOmZhbHNlLCJuX3ByZWRpY3QiOjgsInByb21wdCI6WzI1MjMsNTEzLDE0MjEyLDI2NCw0MDU1NCwxNDMzLDEzLDU2MSwzMjQsNTU5NjUsNTE2MjQsMjkwMTQsMzQyMjcsMTgwMzAsMTYzODIsMTUxOCwyNzksMjkyNjIsNDkxNzIsMTgwMTgsMTA1OTgsMTMsNTYxLDMyNCw1NTk2NSw1MTYyNCwyOTAxNCwzNDIyNywxODAzMCwxNjM4MiwxNTE4LDI3OSwyOTI2Miw0OTE3MiwxODAxOCwxMDU5OCwxMyw1NjEsMzI0LDU1OTY1LDUxNjI0LDI5MDE0LDM0MjI3LDE4MDMwLDE2MzgyLDE1MTgsMjc5LDI5MjYyLDQ5MTcyLDE4MDE4LDEwNTk4LDEzLDU2MSwzMjQsNTU5NjUsNTE2MjQsMjkwMTQsMzQyMjcsMTgwMzAsMTYzODIsMTUxOCwyNzksMjkyNjIsNDkxNzIsMTgwMTgsMTA1OTgsMTMsNTYxLDMyNCw1NTk2NSw1MTYyNCwyOTAxNCwzNDIyNywxODAzMCwxNjM4MiwxNTE4LDI3OSwyOTI2Miw0OTE3MiwxODAxOCwxMDU5OCwxMyw1NjEsMzI0LDU1OTY1LDUxNjI0LDI5MDE0LDM0MjI3LDE4MDMwLDE2MzgyLDE1MTgsMjc5LDI5MjYyLDQ5MTcyLDE4MDE4LDEwNTk4LDEzLDU2MSwzMjQsNTU5NjUsNTE2MjQsMjkwMTQsMzQyMjcsMTgwMzAsMTYzODIsMTUxOCwyNzksMjkyNjIsNDkxNzIsMTgwMTgsMTA1OTgsMTMsNTYxLDMyNCw1NTk2NSw1MTYyNCwyOTAxNCwzNDIyNywxODAzMCwxNjM4MiwxNTE4LDI3OSwyOTI2Miw0OTE3MiwxODAxOCwxMDU5OCwxMyw1NjEsMzI0LDU1OTY1LDUxNjI0LDI5MDE0LDM0MjI3LDE4MDMwLDE2MzgyLDE1MTgsMjc5LDI5MjYyLDQ5MTcyLDE4MDE4LDEwNTk4LDEzLDU2MSwzMjQsNTU5NjUsNTE2MjQsMjkwMTQsMzQyMjcsMTgwMzAsMTYzODIsMTUxOCwyNzksMjkyNjIsNDkxNzIsMTgwMTgsMTA1OTgsMTMsNTYxLDMyNCw1NTk2NSw1MTYyNCwyOTAxNCwzNDIyNywxODAzMCwxNjM4MiwxNTE4LDI3OSwyOTI2Miw0OTE3MiwxODAxOCwxMDU5OCwxMyw1NjEsMzI0LDU1OTY1LDUxNjI0LDI5MDE0LDM0MjI3LDE4MDMwLDE2MzgyLDE1MTgsMjc5LDI5MjYyLDQ5MTcyLDE4MDE4LDEwNTk4LDEzLDU2MSwzMjQsNTU5NjUsNTE2MjQsMjkwMTQsMzQyMjcsMTgwMzAsMTYzODIsMTUxOCwyNzksMjkyNjIsNDkxNzIsMTgwMTgsMTA1OTgsMTMsNTYxLDMyNCw1NTk2NSw1MTYyNCwyOTAxNCwzNDIyNywxODAzMCwxNjM4MiwxNTE4LDI3OSwyOTI2Miw0OTE3MiwxODAxOCwxMDU5OCwxMyw1NjEsMzI0LDU1OTY1LDUxNjI0LDI5MDE0LDM0MjI3LDE4MDMwLDE2MzgyLDE1MTgsMjc5LDI5MjYyLDQ5MTcyLDE4MDE4LDEwNTk4LDEzLDU2MSwzMjQsNTU5NjUsNTE2MjQsMjkwMTQsMzQyMjcsMTgwMzAsMTYzODIsMTUxOCwyNzksMjkyNjIsNDkxNzIsMTgwMTgsMTA1OTgsMTMsMjIwLDU2MSwxNzI3LDE0MzMsNDIwMiwxMTY5MCw0MzAsMTA2OTUsMjVdLCJyZXR1cm5fdG9rZW5zIjp0cnVlLCJzYW1wbGVycyI6WyJ0b3BfayJdLCJzZWVkIjowLCJzdHJlYW0iOmZhbHNlLCJ0ZW1wZXJhdHVyZSI6MC4wLCJ0b3BfayI6MX0=",
+  "request_body_sha256": "16c315a6abe789ef86fde92a5d56fd780b56a5ff059d9568c9e26d21cfd6c6d3",
+  "response_body_b64": "eyJpbmRleCI6MCwiY29udGVudCI6IiBUaGUgbGlnaHRob3VzZSBrZWVwZXIgY291bnRlZFxuXG48dGhpbms+XG5cbiIsInRva2VucyI6WzU2MSwzMjQsNTU5NjUsNTE2MjQsMjkwMTQsMjcxLDI0ODA2OCwyNzFdLCJpZF9zbG90IjozLCJzdG9wIjp0cnVlLCJtb2RlbCI6Ii9zcnYvbW9kZWxzL3F3ZW4zOC11ZC1pcTEtcy9Rd2VuMy44LUZsYXNoLU5leHQtVUQtSVExX1MtMDAwMDEtb2YtMDAwMDMuZ2d1ZiIsInRva2Vuc19wcmVkaWN0ZWQiOjgsInRva2Vuc19ldmFsdWF0ZWQiOjI1NiwiZ2VuZXJhdGlvbl9zZXR0aW5ncyI6eyJzZWVkIjowLCJ0ZW1wZXJhdHVyZSI6MC4wLCJkeW5hdGVtcF9yYW5nZSI6MC4wLCJkeW5hdGVtcF9leHBvbmVudCI6MS4wLCJ0b3BfayI6MSwidG9wX3AiOjAuOTQ5OTk5OTg4MDc5MDcxLCJtaW5fcCI6MC4wNTAwMDAwMDA3NDUwNTgwNiwidG9wX25fc2lnbWEiOi0xLjAsInh0Y19wcm9iYWJpbGl0eSI6MC4wLCJ4dGNfdGhyZXNob2xkIjowLjEwMDAwMDAwMTQ5MDExNjEyLCJ0eXBpY2FsX3AiOjEuMCwicmVwZWF0X2xhc3RfbiI6NjQsInJlcGVhdF9wZW5hbHR5IjoxLjAsInByZXNlbmNlX3BlbmFsdHkiOjAuMCwiZnJlcXVlbmN5X3BlbmFsdHkiOjAuMCwiZHJ5X211bHRpcGxpZXIiOjAuMCwiZHJ5X2Jhc2UiOjEuNzUsImRyeV9hbGxvd2VkX2xlbmd0aCI6MiwiZHJ5X3BlbmFsdHlfbGFzdF9uIjo2NCwiZHJ5X3NlcXVlbmNlX2JyZWFrZXJzIjpbIlxuIiwiOiIsIlwiIiwiKiJdLCJtaXJvc3RhdCI6MCwibWlyb3N0YXRfdGF1Ijo1LjAsIm1pcm9zdGF0X2V0YSI6MC4xMDAwMDAwMDE0OTAxMTYxMiwiYWRhcHRpdmVfdGFyZ2V0IjotMS4wLCJhZGFwdGl2ZV9kZWNheSI6MC44OTk5OTk5NzYxNTgxNDIxLCJzdG9wIjpbXSwibWF4X3Rva2VucyI6OCwibl9wcmVkaWN0Ijo4LCJuX2tlZXAiOjAsIm5fZGlzY2FyZCI6MCwiaWdub3JlX2VvcyI6ZmFsc2UsInN0cmVhbSI6ZmFsc2UsImxvZ2l0X2JpYXMiOltdLCJuX3Byb2JzIjowLCJtaW5fa2VlcCI6MCwiZ3JhbW1hciI6IiIsImdyYW1tYXJfbGF6eSI6ZmFsc2UsImdyYW1tYXJfdHJpZ2dlcnMiOltdLCJwcmVzZXJ2ZWRfdG9rZW5zIjpbXSwiY2hhdF9mb3JtYXQiOiJDb250ZW50LW9ubHkiLCJyZWFzb25pbmdfZm9ybWF0IjoiZGVlcHNlZWsiLCJyZWFzb25pbmdfaW5fY29udGVudCI6ZmFsc2UsImdlbmVyYXRpb25fcHJvbXB0IjoiIiwic2FtcGxlcnMiOlsidG9wX2siXSwic3BlY3VsYXRpdmUudHlwZXMiOiJub25lIiwidGltaW5nc19wZXJfdG9rZW4iOmZhbHNlLCJwb3N0X3NhbXBsaW5nX3Byb2JzIjpmYWxzZSwiYmFja2VuZF9zYW1wbGluZyI6ZmFsc2UsImxvcmEiOltdfSwicHJvbXB0IjoiWW91IGFyZSByZWNvcmRpbmcgYSB0aWRlIGxvZy4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gIFRoZSBuZXh0IGxvZyBlbnRyeSBiZWdpbnMgYXMgZm9sbG93czoiLCJoYXNfbmV3X2xpbmUiOnRydWUsInRydW5jYXRlZCI6ZmFsc2UsInN0b3BfdHlwZSI6ImxpbWl0Iiwic3RvcHBpbmdfd29yZCI6IiIsInRva2Vuc19jYWNoZWQiOjI2MywidGltaW5ncyI6eyJjYWNoZV9uIjowLCJwcm9tcHRfbiI6MjU2LCJwcm9tcHRfbXMiOjMwMjQuMjYyLCJwcm9tcHRfcGVyX3Rva2VuX21zIjoxMS44MTM1MjM0Mzc1LCJwcm9tcHRfcGVyX3NlY29uZCI6ODQuNjQ4NzUwNjcwNDExNDksInByZWRpY3RlZF9uIjo4LCJwcmVkaWN0ZWRfbXMiOjgwNy4yNjIsInByZWRpY3RlZF9wZXJfdG9rZW5fbXMiOjExNS4zMjMxNDI4NTcxNDI4NiwicHJlZGljdGVkX3Blcl9zZWNvbmQiOjguNjcxMjg2Mzk3NzI0NjUzfX0=",
+  "response_body_sha256": "809ef29b07042b4990c69a7ddb320b8320ed40c8bde4b538b37568303f46c47f",
+  "response_generated_tokens": [
+    561,
+    324,
+    55965,
+    51624,
+    29014,
+    271,
+    248068,
+    271
+  ],
+  "response_stop_type": "limit",
+  "response_timings": {
+    "cache_n": 0,
+    "predicted_ms": 807.262,
+    "predicted_n": 8,
+    "predicted_per_second": 8.671286397724653,
+    "predicted_per_token_ms": 115.32314285714286,
+    "prompt_ms": 3024.262,
+    "prompt_n": 256,
+    "prompt_per_second": 84.64875067041149,
+    "prompt_per_token_ms": 11.8135234375
+  },
+  "schema": "inferswarm.issue199.observation/1",
+  "started_utc": "2026-09-15T22:38:52Z",
+  "state_class": "incremental",
+  "teacher_forced_prefix": [
+    561,
+    324,
+    55965,
+    51624,
+    29014
+  ],
+  "top16_from_f32_bytes": [
+    [
+      271,
+      16.706398010253906
+    ],
+    [
+      34227,
+      16.09853744506836
+    ],
+    [
+      31347,
+      13.809734344482422
+    ],
+    [
+      25292,
+      13.649127960205078
+    ],
+    [
+      16570,
+      12.918323516845703
+    ],
+    [
+      279,
+      12.60280990600586
+    ],
+    [
+      198,
+      12.291034698486328
+    ],
+    [
+      4558,
+      12.012208938598633
+    ],
+    [
+      264,
+      11.830911636352539
+    ],
+    [
+      28279,
+      11.48566722869873
+    ],
+    [
+      60163,
+      11.44229507446289
+    ],
+    [
+      220,
+      11.403194427490234
+    ],
+    [
+      799,
+      11.351033210754395
+    ],
+    [
+      50614,
+      11.227668762207031
+    ],
+    [
+      1132,
+      11.131026268005371
+    ],
+    [
+      11292,
+      11.13051986694336
+    ]
+  ]
+}
