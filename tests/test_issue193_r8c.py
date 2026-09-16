@@ -2,7 +2,9 @@
 reduction fail-closed behavior, and negative controls."""
 import json
 import os
+import sys
 import unittest
+from pathlib import Path
 
 from scripts import issue193_r8c_authority as auth
 
@@ -158,7 +160,7 @@ class TestNegativeControls(unittest.TestCase):
                 "spec.loader.exec_module(m)\n"
                 f"m.EV = {tree!r}\n"
                 "sys.exit(0 if m.main() else 1)\n")  # main() exits itself; defensive
-        r = subprocess.run([os.path.join(ROOT, ".venv", "bin", "python"), driver],
+        r = subprocess.run([sys.executable, driver],
                            capture_output=True, text=True)
         return r.returncode, r.stdout + r.stderr
 
@@ -180,11 +182,20 @@ class TestNegativeControls(unittest.TestCase):
     def test_terminal_reducer_runs_green_on_retained_bytes(self):
         import subprocess
         r = subprocess.run(
-            [os.path.join(ROOT, ".venv", "bin", "python"),
+            [sys.executable,
              os.path.join(ROOT, "scripts", "issue193_terminal_reduction.py")],
             capture_output=True, text=True, cwd=self.tmp)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("R8C_QWEN38_RPC_DIVERGENCE_CAUSE_LOCALIZED", r.stdout)
+
+    def test_reducers_use_the_bootstrap_selected_interpreter(self):
+        """Detached suite workers intentionally do not contain ``.venv``."""
+        source = Path(__file__).read_text(encoding="utf-8")
+        forbidden = 'os.path.join(ROOT, ".venv", "bin", ' + '"python")'
+        self.assertNotIn(forbidden, source)
+        self.assertIn("subprocess.run([sys.executable, " + "driver]", source)
+        self.assertIn("[sys.executable,\n             " +
+                      'os.path.join(ROOT, "scripts",', source)
 
     def test_sampler_chain_finding_requires_accepted_log(self):
         # the finding is bound to RETAINED accepted bytes, not rerun claims:

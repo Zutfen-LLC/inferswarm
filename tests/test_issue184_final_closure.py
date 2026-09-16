@@ -242,6 +242,12 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue199_r8e_terminal_reduction.py",
             "scripts/issue199_r8e_negative_controls.py",
             "scripts/issue199_r8e_manifest.py",
+            # Issue #187 R7-A: bounded metadata/header census only; the
+            # accepted closure remains intact while this new producer family
+            # is independently pinned by its additive evidence manifest.
+            "scripts/issue187_r7a_census.py",
+            "scripts/issue187_r7a_reducer.py",
+            "scripts/issue187_r7a_manifest.py",
             ".github/workflows/ci.yml")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)
