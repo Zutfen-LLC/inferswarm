@@ -253,6 +253,11 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue200_r8f_physical.py",
             "scripts/issue200_r8f_range_receipt.py",
             "scripts/issue200_r8f_network_reduce.py",
+            "scripts/issue200_r8f_phase5_assemble.py",
+            "scripts/issue200_r8f_phase5_orchestrator.py",
+            "scripts/issue200_r8f_stage_cache.py",
+            "scripts/issue200_r8f_backing_verify.py",
+            "scripts/issue200_r8f_cache_enum.py",
             # Issue #187 R7-A: bounded metadata/header census only; the
             # accepted closure remains intact while this new producer family
             # is independently pinned by its additive evidence manifest.

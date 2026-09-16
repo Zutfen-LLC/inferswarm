@@ -1,14 +1,38 @@
 # R8-F — Verified Node-Local Model Backing and Explicit Artifact Source Policy — Issue #200
 
-Status: **Incomplete: `PHASE5_REQUIRED`**. This is deliberately a
-machine-readable nonterminal status, not an Issue #200 terminal.
+Status: **Complete: `R8F_LOCAL_VERIFIED_BACKING_PASS`** (Phase 5 executed
+2026-09-16; mechanically derived, see Phase 5 below).
 
 Parent: [#188](https://github.com/Zutfen-LLC/inferswarm/issues/188) — R8
 Qwen3.8-Flash-Next heterogeneous residency/execution program.
 
 Starting `origin/main`: `f142a0d9b693f999685960c641b2a8fe362c4e1e` (PR #197
-merge, exactly the SHA the issue names). No later `main` commit existed at
-the time this record was produced, so no reconciliation was required.
+merge, exactly the SHA the issue names). Correction round 2 (this revision,
+PR #206): the first Phase-5 commit was incorrectly based directly on
+`2d2e457` even though `main` had already advanced to
+`8a3681b28c6c7e1797f7dd7f5b6efcde31d83b6c` (R8-E PR #205 merge); the
+branch was reconciled by merging `origin/main@8a3681b` (merge commit
+`54a5145`), preserving both the R8-E closure/CI registration and this
+campaign's producers semantically unchanged.
+
+Correction round 3 (this revision, maintainer review of head `0e761a8`):
+Phase 5 was re-executed once as a bounded three-arm campaign under fresh
+private cache/run IDs (`/tmp/i200p5c3`).  Reason: the correction hardens
+every helper receipt with exact committed tool identity (backing
+verification, cache enumeration, staging), and the retained round-2
+enumeration receipts could not be provenance-bound — they were emitted by
+the pre-hardening enumerator whose receipt named a fictitious
+`cache-enum.sh` command and carried no tool identity, and their content
+(cache-empty-before / precheck-before-start) is a temporal observation that
+no other retained bytes can re-derive.  All other hardenings are
+reduction-level: the client and RPC-server execve argv are now proven
+byte-for-byte from the raw captures' own first records, assembler
+launch summaries are demoted to derivative convenience, and the terminal is
+proved independent of the orchestrator run-summary (retained retention-only
+under `evidence/physical-phase5-raw/run-summary.json` alongside the
+committed orchestrator producer source).  No R8-D evidence was rerun; no
+llama.cpp byte was modified; the retained round-2 raw evidence remains in
+git history at commit `0e761a8`.
 
 ## What this is
 
@@ -346,14 +370,16 @@ and emits the bound measurement receipt. Network totals are not a JSON event
 claim: `scripts/issue200_r8f_network_reduce.py` re-parses a retained,
 process-wide PID/TID/endpoint-bound `strace -xx` capture and maps exact raw
 sends to those observed payload bytes. It rejects authored summary booleans
-and classifications. The Phase-5 capture contract is one exact argv, bound to
-the recorded root client PID:
+and classifications. (HISTORICAL — this handoff section describes the
+superseded first-attempt contract; the corrected executed contract is in the
+Phase 5 section below: from-exec capture with a mechanically derived
+`-s <payload+4096>` string limit. The original argv was:)
 
 ```text
 strace -f --always-show-pid -ttt -xx -s 0 -e trace=network,write,writev -p <client-pid>
 ```
 
-`-f`, `--always-show-pid`, `-s 0`, and `-xx` are mandatory. `-f -p` follows
+`-f`, `--always-show-pid`, `-s 0`, and `-xx` were mandatory. `-f -p` follows
 the root client's threads and later descendants; every PID-prefixed syscall
 in the retained stream is accounted as a captured tracee, never filtered back
 to only the root PID. The reducer rejects a relevant `sendto` whose argument
@@ -371,7 +397,125 @@ participant-local cache-staging receipt is additionally bound to the same
 node's assignment. No such Phase-5 evidence exists here, so `PASS` is not
 reachable here.
 
-## Current nonterminal status
+## Phase 5 — bounded physical Qwen proof (corrected execution, 2026-09-16)
+
+An adversarial exact-head review of the first Phase-5 execution (PR head
+45c797e) rejected its network proof: the mandated `-s 0` capture was
+LENGTH-only (every payload rendered `""...`), the cold arm's "identity" was
+a payload-length window, the capture attached ~3s AFTER the client launched,
+`retained-range.bin` for the cold arm was copied from a local arm, cache
+freshness/staging/runtime facts were authored by the assembler, LOCAL_VERIFIED
+attribution was derived from the arm name, and the "repeat" arm re-staged a
+fresh cache rather than reusing arm B's. This section documents the corrected
+execution. Everything below is mechanically derived from retained raw
+receipts; the committed validator (`scripts/issue200_r8f_physical.py`,
+schema `inferswarm.issue200.physical-phase5/4`) independently re-derives
+every acceptance predicate and the terminal reducer consumes only its
+verdict.
+
+### Participant full-release backing prerequisite (corrected)
+
+Before any arm ran, the complete accepted three-member release was verified
+co-resident under the participant's durable backing directory
+(`/srv/models/qwen38-ud-iq1-s/`) by the controlled helper
+(`scripts/issue200_r8f_backing_verify.py`, receipt
+`evidence/physical-phase5-raw/backing-verify.stdout.json`), with every
+member identity DERIVED from the accepted R8-D split-rehash authority
+(`docs/investigations/qwen38-flash-next-r8-d-v2/evidence/split-identity/split-rehash.json`),
+never duplicated as constants:
+
+| Member | bytes | SHA-256 (live-verified on inferswarm04) |
+|---|---:|---|
+| `Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf` | 10,946,624 | `88a14208…496693bafd` |
+| `Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf` | 49,990,818,368 | `3a62e35b…992b2b6` |
+| `Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf` | 22,544,696,352 | `0e25ceae…643a861a` |
+| **accepted total** | **72,546,461,344** | exact match |
+
+Members 1 and 2 were staged (only the missing members) from the accepted
+inferswarm01 copies with full SHA-256 verification before the run; member 3
+was already resident from R8-D. No model file is ever committed.
+
+### Byte-complete capture contract (corrected)
+
+The frozen capture argv is now derived mechanically — the string limit is
+`max(payload_lengths) + 4096` = **10,817,536** — and the client is launched
+UNDER strace from exec, so capture provably begins before the client process
+exists (the first retained record is the client's own `execve`; a `-p` attach
+can never satisfy this contract):
+
+```text
+strace -f --always-show-pid -ttt -xx -s 10817536 -e trace=network,write,writev,execve <frozen llama-server argv>
+```
+
+The participant `ggml-rpc-server` runs under its own from-exec
+`strace -f -ttt -xx -s 4096 -e trace=%file,read`, proving LOCAL_VERIFIED
+source attribution by a successful `openat` of the exact
+`<private-cache>/rpc/<FNV>` file by that server PID followed by `read`
+syscalls accounting exactly the cached payload length.
+
+### Arms and mechanically derived network accounting
+
+| Arm | Policy / Source | immutable payload bytes | control/hash-probe bytes | total client→server | init wall |
+|---|---|---:|---:|---:|---:|
+| A cold_remote | `PREFER_REMOTE_AUTHORIZED` / `REMOTE_AUTHORIZED` | 10,813,440 | 97,255 | 10,910,695 | 7.40 s |
+| B local_verified | `REQUIRE_LOCAL_VERIFIED` / `LOCAL_VERIFIED` | **0** | 96,942 | 96,942 | 4.99 s |
+| C repeat_local_verified (TRUE reuse) | `REQUIRE_LOCAL_VERIFIED` / `LOCAL_VERIFIED` | **0** | 96,942 | 96,942 | 5.04 s |
+
+Cold-arm byte identity is EXACT, not a length window: the complete framed
+10,813,744-byte record is retained verbatim in the capture, and the extracted
+10,813,440-byte payload equals — byte-for-byte and by SHA-256 — both the
+participant-side exact accepted member range (`retained-range.bin`, fetched
+from inferswarm04 for EVERY arm; the assembler cross-arm fallback is deleted
+and a missing per-arm range is a hard failure) and the frozen payload
+identity `1c0284d8b85f4966e2dd1990271f3bc470667c11041d5d084be1ca511080f5f4`.
+Exactly one such payload transfer exists; abbreviated/`""...` records,
+same-length wrong payloads, duplicates, and unexplained payload-class traffic
+all fail closed (see the 26 mutation controls in
+`tests/test_issue200_r8f_proof.py`).
+
+Arm B staged the participant-local verified backing BEFORE any client
+contact through the controlled committed helper
+(`scripts/issue200_r8f_stage_cache.py`): temp file inside the target cache
+directory, fsync, exact SHA-256/size verification, atomic rename into the
+FNV-keyed final path, re-read verification of the final path — the receipt is
+raw helper stdout, and the validator independently re-derives every digest
+and recomputes the FNV-1a filename from the actual bytes. Cache freshness is
+derived from retained participant-side enumerations
+(`issue200_r8f_cache_enum.py`) taken before staging (empty), after staging
+(exact file present), and — for arm C — before the new processes started
+(exact file already present with exact size/SHA-256, `measured_at` strictly
+earlier than both new process start timestamps).
+
+Arm C is a TRUE reuse arm: a fresh client AND a fresh `ggml-rpc-server`
+process against arm B's already-populated cache, NO staging command, no
+cache initialization receipt permitted, and the validator rejects any
+`cache_staging` block on it. The participant file-strace proves the new
+server read the cache file locally (openat + read accounting exactly
+10,813,440 bytes) and the byte-complete client capture proves zero immutable
+network payload.
+
+Runtime/materialization success for every arm is derived from the retained
+client launch receipt (exact frozen argv, live `sha256sum` binary receipt
+matching the accepted R8-D client identity, recorded process identity) plus
+the retained client log containing the defined `listening on http://`
+readiness line; the RPC server receipt binds argv, `LLAMA_CACHE`
+environment, live binary SHA-256, PID, and log. The assembler synthesizes
+none of these — every acceptance-significant field is a checksummed copy of
+raw execution output or a validator derivation.
+
+### Terminal
+
+`evidence/terminal-reduction.json` carries
+`terminal: R8F_LOCAL_VERIFIED_BACKING_PASS`, `status: TERMINAL_RESOLVED`,
+`physical_phase5_ran: true`. Non-claims: this proves the generic
+source-policy seam plus participant-local verified backing consumption for
+the frozen bounded subject on the pinned substrate; it does not rerun or
+reinterpret any R8-D qualification/correctness adjudication, does not rank
+sources by bandwidth or economics, and does not modify llama.cpp anywhere.
+No Qwen-specific generic planner branch and no automatic bandwidth policy
+were introduced.
+
+## Historical nonterminal status (pre-Phase-5)
 
 `terminal-reduction.json` has `terminal: null`, `status: "PHASE5_REQUIRED"`,
 and `incomplete: true`. Issue #200 defines exactly these terminals:
@@ -415,6 +559,8 @@ evidence/isolation.json                     mechanical network/process/path isol
 evidence/rpc-cache-mechanism.json           pinned upstream source identity + mechanical cache-seam finding
 evidence/rpc-cache-experiment.json          bounded non-Qwen cold/warm/prestaged/adversarial experiment results
 evidence/rpc-cache-experiment-raw/          driver source, fixture generator, orchestration script, raw strace/server logs
-evidence/terminal-reduction.json            Phase 4 finding + cache-mechanism finding + nonterminal Phase-5 status
+evidence/terminal-reduction.json            Phase 4 finding + cache-mechanism finding + terminal Phase-5 status
+evidence/physical-phase5.json               Phase-5 physical evidence document (validator-conformant)
+evidence/physical-phase5-raw/               per-arm raw captures, range/staging receipts, retained range bytes
 evidence/MANIFEST.sha256                    integrity anchor over every retained/producer path
 ```
