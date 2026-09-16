@@ -346,8 +346,24 @@ and emits the bound measurement receipt. Network totals are not a JSON event
 claim: `scripts/issue200_r8f_network_reduce.py` re-parses a retained,
 PID/endpoint-bound `strace -xx` capture and maps exact raw sends to those
 observed payload bytes. It rejects authored summary booleans and
-classifications. No such Phase-5 evidence exists here, so `PASS` is not
-reachable here.
+classifications. The Phase-5 capture contract is one exact argv, bound to
+the recorded client PID:
+
+```text
+strace -ttt -xx -s 0 -e trace=network,write,writev -p <client-pid>
+```
+
+`-s 0` and `-xx` are mandatory; the reducer rejects a relevant `sendto`
+whose argument is abbreviated (`...`), malformed, short, or whose result
+does not bind the exact retained bytes. It also records the TCP peer from
+`connect`, accepts the pinned client's `sendto` form only, and rejects a
+bound-peer `send`/`sendmsg`/`sendmmsg`/socket `write`/`writev` rather than
+silently excluding it. This makes an absent or incomplete raw capture
+incapable of proving zero reacquisition. Every accepted range measurement
+and participant-local cache-staging receipt is additionally bound to the
+same `SET_TENSOR` payload participant, so one node's backing cannot prove
+another node's assignment. No such Phase-5 evidence exists here, so `PASS`
+is not reachable here.
 
 ## Current nonterminal status
 

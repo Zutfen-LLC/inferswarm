@@ -53,7 +53,7 @@ def _receipt(root, name, document):
     return {"path": name, "sha256": hashlib.sha256(payload).hexdigest()}
 
 
-def synthetic_authority(root, payload_bytes=b"r8-f-observed-payload"):
+def synthetic_authority(root, payload_bytes=b"r8-f-observed-payload-" * 4):
     member_path = (root / "node-local" / "tiny-accepted-member.gguf").resolve()
     member_path.parent.mkdir(parents=True, exist_ok=True)
     member_path.write_bytes(b"tiny-prefix/" + payload_bytes + b"/tiny-suffix")
@@ -66,7 +66,9 @@ def valid_physical_phase5_document(root, **overrides):
     authority, member_path = synthetic_authority(root)
     node_id = "inferswarm03"
     binary = physical.accepted_rpc_binary_authority()[node_id]
-    payload_bytes = b"r8-f-observed-payload"
+    # Materially exceeds strace's ordinary 32-byte default.  The positive
+    # fixture proves the retained -s 0/-xx capture recovers exact bytes.
+    payload_bytes = b"r8-f-observed-payload-" * 4
     payload_sha = hashlib.sha256(payload_bytes).hexdigest()
     payload_path = "raw/payload.bin"
     (root / "raw").mkdir(parents=True, exist_ok=True)
@@ -100,7 +102,8 @@ def valid_physical_phase5_document(root, **overrides):
                                                            "bytes": payload_bytes}])
         reduction_stdout = {"path": f"raw/{name}.network.reduced.json", "sha256": hashlib.sha256(physical.canonical_json_bytes(derived)).hexdigest()}
         (root / reduction_stdout["path"]).write_bytes(physical.canonical_json_bytes(derived))
-        network = {"arm": name, "capture_tool": "strace -xx", "capture_command": ["strace", "-f", "-xx"],
+        network = {"arm": name, "capture_tool": network_reduce.CAPTURE_TOOL,
+                   "capture_command": network_reduce.required_capture_command(999),
                    "client_pid": 999, "server_endpoint": "100.77.187.38:50052", "capture_started": "1", "capture_ended": "2",
                    "raw_capture": raw_capture, "reducer_sha256": network_reduce.reducer_sha256(), "reduction_stdout": reduction_stdout}
         observed_payload = {**payload, "participant": node_id, "observation_id": "set-1", "order": 1}
@@ -129,14 +132,16 @@ def valid_physical_phase5_document(root, **overrides):
             })
             result["private_cache_dir"] = cache_dir
             result["cache_initialization_receipt"] = initialized
+            staged_path = f"{cache_dir}/{payload['fnv1a_cache_key']}"
             staging = _receipt(root, f"raw/{name}.staging.json", {
                 "schema": "inferswarm.issue200.cache-staging-receipt/1", "arm": name,
                 "atomic_publish": True, "cache_sha256": payload_sha, "payload_path": payload_path,
+                "node_id": node_id, "cache_dir": cache_dir, "staged_path": staged_path,
             })
             result["cache_staging"] = [{
                 "accepted_artifact_range": accepted_range,
                 "set_tensor_payload": observed_payload,
-                "staged_cache": {"path": f"{cache_dir}/{payload['fnv1a_cache_key']}",
+                "staged_cache": {"path": staged_path,
                                  "sha256_before": payload_sha, "sha256_after": payload_sha,
                                  "length_before": len(payload_bytes), "length_after": len(payload_bytes),
                                  "receipt": staging, "range_bytes": range_bytes},
@@ -474,6 +479,119 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
         for name, mutation in cases.items():
             with self.subTest(name=name):
                 self._rejects_pass_after_mutation(mutation)
+
+    def test_full_payload_capture_and_abbreviation_controls(self):
+        """A >32-byte payload is exact under -s 0; abbreviated records fail."""
+        payload = b"phase5-payload-larger-than-default-strace-limit-0123456789"
+        identity = {"participant": "inferswarm03", "observation_id": "set-large", "order": 1,
+                    "offset": 0, "length": len(payload),
+                    "sha256": hashlib.sha256(payload).hexdigest(), "bytes": payload}
+        complete = (f'999 1.000 sendto(3, {json.dumps(payload.decode())}, {len(payload)}, 0, '
+                    '{sin_port=htons(50052), sin_addr=inet_addr("100.77.187.38")}, 16) = '
+                    f'{len(payload)}\n').encode()
+        reduced = network_reduce.reduce_capture(complete, client_pid=999,
+                                                server_endpoint="100.77.187.38:50052",
+                                                payloads=[identity])
+        self.assertGreater(len(payload), 32)
+        self.assertEqual(reduced["immutable_payload_bytes"], len(payload))
+        self.assertEqual(reduced["payload_identities"][0]["sha256"], identity["sha256"])
+        # The retained pinned driver uses connect() followed by sendto(...,
+        # NULL, 0), so prove the peer-FD form is not silently discarded.
+        connected = (b'999 1.000 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3\n'
+                     b'999 1.001 connect(3, {sa_family=AF_INET, sin_port=htons(50052), '
+                     b'sin_addr=inet_addr("100.77.187.38")}, 16) = 0\n' +
+                     complete.replace(b'999 1.000 ', b'999 1.002 ').replace(
+                         b'{sin_port=htons(50052), sin_addr=inet_addr("100.77.187.38")}, 16', b'NULL, 0'))
+        self.assertEqual(network_reduce.reduce_capture(
+            connected, client_pid=999, server_endpoint="100.77.187.38:50052",
+            payloads=[identity])["immutable_payload_bytes"], len(payload))
+        # This is the normal default-strace spelling: a complete quoted prefix
+        # followed by an ellipsis, not payload bytes named "...".
+        abbreviated = complete.replace(json.dumps(payload.decode()).encode(),
+                                       json.dumps(payload[:32].decode()).encode() + b"...", 1)
+        with self.assertRaisesRegex(ValueError, "abbreviated"):
+            network_reduce.reduce_capture(abbreviated, client_pid=999,
+                                          server_endpoint="100.77.187.38:50052", payloads=[identity])
+
+    def test_capture_command_and_raw_network_controls_reject(self):
+        """Metadata and an argv list cannot replace the exact raw contract."""
+        def no_string_limit(doc, root):
+            doc["arms"]["local_verified"]["network_receipt"]["capture_command"] = [
+                "strace", "-ttt", "-xx", "-e", "trace=network,write,writev", "-p", "999"]
+
+        def no_pid_or_coverage(doc, root):
+            doc["arms"]["local_verified"]["network_receipt"]["capture_command"] = [
+                "strace", "-ttt", "-xx", "-s", "0", "-p", "999"]
+
+        def no_process_binding(doc, root):
+            doc["arms"]["local_verified"]["network_receipt"]["capture_command"] = [
+                "strace", "-ttt", "-xx", "-s", "0", "-e", "trace=network,write,writev"]
+
+        def forged_boundaries(doc, root):
+            receipt = doc["arms"]["local_verified"]["network_receipt"]
+            receipt["capture_started"] = "forged-start"
+            receipt["capture_ended"] = "forged-end"
+            receipt["capture_command"] = ["strace", "-xx"]
+
+        def truncated_local_payload(doc, root):
+            receipt = doc["arms"]["local_verified"]["network_receipt"]
+            path = root / receipt["raw_capture"]["path"]
+            payload = b"r8-f-observed-payload-" * 4
+            line = (f'999 1.001 sendto(3, {json.dumps(payload[:32].decode())}..., {len(payload)}, 0, '
+                    '{sin_port=htons(50052), sin_addr=inet_addr("100.77.187.38")}, 16) = '
+                    f'{len(payload)}\n').encode()
+            path.write_bytes(path.read_bytes() + line)
+            receipt["raw_capture"]["sha256"] = sha(path)
+
+        def unsupported_bound_sendmsg(doc, root):
+            receipt = doc["arms"]["local_verified"]["network_receipt"]
+            path = root / receipt["raw_capture"]["path"]
+            path.write_bytes(path.read_bytes() + b'999 1.001 sendmsg(3, {msg_iov=[{iov_base="x", iov_len=1}]}, 0) = 1\n')
+            receipt["raw_capture"]["sha256"] = sha(path)
+
+        for name, mutation in {
+            "missing-string-limit": no_string_limit,
+            "missing-pid-or-syscall-binding": no_pid_or_coverage,
+            "missing-process-binding": no_process_binding,
+            "forged-capture-boundaries": forged_boundaries,
+            "truncated-local-frozen-prefix": truncated_local_payload,
+            "unsupported-bound-sendmsg": unsupported_bound_sendmsg,
+        }.items():
+            with self.subTest(name=name):
+                self._rejects_pass_after_mutation(mutation)
+
+    def _make_multi_participant_assignment(self, doc, root, *, staging_attack):
+        """Turn the synthetic bundle into A-backing/B-payload adversary."""
+        node_a, node_b = "inferswarm03", "inferswarm04"
+        binary = physical.accepted_rpc_binary_authority()[node_b]
+        doc["participants"].append({"node_id": node_b, "rpc_endpoint": "100.77.187.39:50052",
+                                    "rpc_command": "ggml-rpc-server -H 0.0.0.0 -p 50052 -c /private/cache"})
+        doc["runtime"]["binaries"].append({"node_id": node_b, "binary": "ggml-rpc-server", "sha256": binary})
+        for arm_name, arm in doc["arms"].items():
+            arm["participants"] = [node_a, node_b]
+            arm["set_tensor_payloads"][0]["participant"] = node_b
+            arm["accepted_artifact_ranges"][0]["set_tensor_payload"]["participant"] = node_b
+            runtime = json.loads((root / arm["runtime_receipt"]["path"]).read_text())
+            runtime["participants"] = [node_a, node_b]
+            runtime["set_tensor_payloads"][0]["participant"] = node_b
+            arm["runtime_receipt"] = _receipt(root, arm["runtime_receipt"]["path"], runtime)
+            if arm_name != "cold_remote":
+                arm["cache_staging"][0]["set_tensor_payload"]["participant"] = node_b
+            if staging_attack:
+                provenance = arm["accepted_artifact_ranges"][0]["accepted_artifact_range"]["provenance_receipt"]
+                measured = json.loads((root / provenance["stdout"]["path"]).read_text())
+                measured["node_id"] = node_b
+                provenance["stdout"] = _receipt(root, provenance["stdout"]["path"], measured)
+
+    def test_cross_participant_range_provenance_rejects(self):
+        def attack(doc, root):
+            self._make_multi_participant_assignment(doc, root, staging_attack=False)
+        self._rejects_pass_after_mutation(attack)
+
+    def test_cross_participant_cache_staging_rejects(self):
+        def attack(doc, root):
+            self._make_multi_participant_assignment(doc, root, staging_attack=True)
+        self._rejects_pass_after_mutation(attack)
 
     def test_runtime_prerequisite_never_emitted_when_cache_seam_not_evaluated(self):
         """If the cache-mechanism evidence cannot be evaluated at all (e.g. its

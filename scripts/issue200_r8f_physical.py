@@ -105,7 +105,7 @@ def _read_raw_bytes(base: Path, receipt: Mapping[str, Any], label: str) -> bytes
 
 
 def _range_provenance(base: Path, arm: str, source: Mapping[str, Any], member: Mapping[str, Any],
-                      participant_ids: list[str]) -> bytes:
+                      expected_participant: str) -> bytes:
     provenance = source.get("provenance_receipt")
     if not isinstance(provenance, dict) or provenance.get("exit_code") != 0:
         raise ValueError(f"{arm}: accepted range has no successful raw provenance invocation")
@@ -122,8 +122,8 @@ def _range_provenance(base: Path, arm: str, source: Mapping[str, Any], member: M
                 "range_sha256": source.get("sha256")}
     if any(measured.get(key) != value for key, value in required.items()):
         raise ValueError(f"{arm}: raw member/range measurement does not match accepted authority/mapping")
-    if measured.get("node_id") not in participant_ids or not isinstance(measured.get("source_path"), str) or not Path(measured["source_path"]).is_absolute():
-        raise ValueError(f"{arm}: range measurement lacks participant Node/absolute source path")
+    if measured.get("node_id") != expected_participant or not isinstance(measured.get("source_path"), str) or not Path(measured["source_path"]).is_absolute():
+        raise ValueError(f"{arm}: range measurement is not on the SET_TENSOR participant/absolute source path")
     if measured.get("tool") != {"path": "scripts/issue200_r8f_range_receipt.py", "sha256": range_receipt.helper_sha256()}:
         raise ValueError(f"{arm}: range helper source identity mismatch")
     retained = _read_raw_bytes(base, provenance.get("retained_range", {}), f"{arm}: retained range")
@@ -141,12 +141,13 @@ def _network_bytes(base: Path, arm: str, receipt: Mapping[str, Any], payloads: l
     if set(receipt) != allowed:
         raise ValueError(f"{arm}: authored network classification/count fields are forbidden")
     raw = _read_raw_bytes(base, receipt.get("raw_capture", {}), f"{arm}: raw network capture")
-    if receipt.get("capture_tool") != "strace -xx" or not isinstance(receipt.get("capture_command"), list):
+    if receipt.get("capture_tool") != network_reduce.CAPTURE_TOOL:
         raise ValueError(f"{arm}: capture command/tool identity missing")
     if not isinstance(receipt.get("client_pid"), int) or not isinstance(receipt.get("server_endpoint"), str):
         raise ValueError(f"{arm}: capture PID/endpoint binding missing")
     if receipt.get("arm") != arm or not receipt.get("capture_started") or not receipt.get("capture_ended"):
         raise ValueError(f"{arm}: capture arm/boundaries missing")
+    network_reduce.validate_capture_contract(receipt.get("capture_command"), receipt["client_pid"])
     observed_payloads = []
     for item, data in zip(payloads, payload_bytes):
         observed_payloads.append({**item, "bytes": data})
@@ -183,6 +184,7 @@ def _validate_payload_ranges(base: Path, arm: str, mappings: Any, authority: dic
     if not isinstance(mappings, list) or len(mappings) != len(payloads):
         raise ValueError(f"{arm}: every SET_TENSOR payload needs one accepted-range provenance receipt")
     members = {member["file"]: member for member in authority["members"]}
+    payload_index = {(p["offset"], p["length"], p["sha256"]): p for p in payloads}
     result: list[bytes] = []
     seen = set()
     for mapping in mappings:
@@ -195,13 +197,14 @@ def _validate_payload_ranges(base: Path, arm: str, mappings: Any, authority: dic
         if source["offset"] < 0 or source["length"] <= 0 or source["offset"] + source["length"] > member["bytes"]:
             raise ValueError(f"{arm}: accepted range exceeds accepted member")
         key = (payload.get("offset"), payload.get("length"), payload.get("sha256")) if isinstance(payload, dict) else None
-        if key not in {(p["offset"], p["length"], p["sha256"]) for p in payloads} or source["length"] != payload["length"] or source.get("sha256") != payload["sha256"]:
+        if (key not in payload_index or payload != payload_index[key]
+                or source["length"] != payload["length"] or source.get("sha256") != payload["sha256"]):
             raise ValueError(f"{arm}: accepted range is not this observed SET_TENSOR payload")
         if key in seen:
             raise ValueError(f"{arm}: duplicate accepted range mapping")
         seen.add(key)
-        result.append(_range_provenance(base, arm, source, member, participant_ids))
-    if seen != {(p["offset"], p["length"], p["sha256"]) for p in payloads}:
+        result.append(_range_provenance(base, arm, source, member, payload_index[key]["participant"]))
+    if seen != set(payload_index):
         raise ValueError(f"{arm}: accepted ranges do not cover all observed payloads")
     return result
 
@@ -224,11 +227,12 @@ def _validate_stage_mapping(base: Path, arm: str, mappings: Any, authority: dict
         if source["offset"] < 0 or source["length"] <= 0 or source["offset"] + source["length"] > member["bytes"]:
             raise ValueError(f"{arm}: source range outside accepted member")
         key = (payload.get("offset"), payload.get("length"), payload.get("sha256"))
-        if key not in payload_index or source["length"] != payload["length"]:
+        if key not in payload_index or payload != payload_index[key] or source["length"] != payload["length"]:
             raise ValueError(f"{arm}: staging mapping does not cover an observed SET_TENSOR payload")
         if source.get("sha256") != payload.get("sha256"):
             raise ValueError(f"{arm}: staged payload digest differs from verified backing range")
-        measured_bytes = _range_provenance(base, arm, source, member, participant_ids)
+        expected_participant = payload_index[key]["participant"]
+        measured_bytes = _range_provenance(base, arm, source, member, expected_participant)
         if measured_bytes != _read_raw_bytes(base, staged.get("range_bytes", {}), f"{arm}: staged range bytes"):
             raise ValueError(f"{arm}: staged range bytes differ from measured accepted member range")
         if staged.get("sha256_before") != payload["sha256"] or staged.get("sha256_after") != payload["sha256"]:
@@ -248,6 +252,9 @@ def _validate_stage_mapping(base: Path, arm: str, mappings: Any, authority: dict
             raise ValueError(f"{arm}: cache staging receipt schema")
         if receipt.get("atomic_publish") is not True or receipt.get("cache_sha256") != payload["sha256"]:
             raise ValueError(f"{arm}: cache staging receipt lacks atomic SHA-256 verification")
+        if (receipt.get("node_id") != expected_participant or receipt.get("cache_dir") != cache_dir
+                or receipt.get("staged_path") != staged.get("path")):
+            raise ValueError(f"{arm}: cache staging receipt is not bound to the payload participant/cache path")
         payload_path = receipt.get("payload_path")
         if not isinstance(payload_path, str):
             raise ValueError(f"{arm}: raw SET_TENSOR payload bytes must be retained")
