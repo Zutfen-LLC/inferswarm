@@ -209,6 +209,8 @@ GROUP_TEST_MODULES = {
         "test_issue101_orchestration",
         "test_issue101_proof",
         "test_issue103_planner",
+        "test_issue200_r8f_source_policy",
+        "test_issue200_r8f_proof",
     ],
     "vulkan-v0-b": [
         "test_issue189_r8a",
@@ -535,6 +537,18 @@ PATH_GROUPS = {
         "issue-117-133"],
     "docs/implementation/plan-driven-artifact-orchestration-101/": ["issue-99-103",
         "issue-117-133"],
+    # Issue #200 (R8-F) internal Source-policy seam: additive extension of
+    # the #99/#101 architecture that never modifies their pinned producers;
+    # shares the same CPU-only lineage group.
+    "scripts/issue200_r8f_source_policy.py": ["issue-99-103"],
+    "scripts/issue200_r8f_fixture.py": ["issue-99-103"],
+    "scripts/issue200_r8f_proof.py": ["issue-99-103"],
+    "scripts/issue200_r8f_terminal_reduction.py": ["issue-99-103"],
+    "scripts/issue200_r8f_rpc_cache_mechanism.py": ["issue-99-103"],
+    "scripts/issue200_r8f_physical.py": ["issue-99-103"],
+    "tests/test_issue200_r8f_source_policy.py": ["issue-99-103"],
+    "tests/test_issue200_r8f_proof.py": ["issue-99-103"],
+    "docs/implementation/r8-f-local-backing-source-policy-200/": ["issue-99-103"],
 
     "scripts/v0a_correctness_derive.py": ["vulkan-v0-b"],
     "scripts/v0a_correctness_run.py": ["vulkan-v0-b"],

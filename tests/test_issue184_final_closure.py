@@ -242,6 +242,17 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue199_r8e_terminal_reduction.py",
             "scripts/issue199_r8e_negative_controls.py",
             "scripts/issue199_r8e_manifest.py",
+            # Issue #200 R8-F: additive internal Source-policy seam over the
+            # accepted #99/#101 architecture; fresh producer namespace, same
+            # registration pattern as the #195 v2 campaign above.
+            "scripts/issue200_r8f_source_policy.py",
+            "scripts/issue200_r8f_fixture.py",
+            "scripts/issue200_r8f_proof.py",
+            "scripts/issue200_r8f_terminal_reduction.py",
+            "scripts/issue200_r8f_rpc_cache_mechanism.py",
+            "scripts/issue200_r8f_physical.py",
+            "scripts/issue200_r8f_range_receipt.py",
+            "scripts/issue200_r8f_network_reduce.py",
             # Issue #187 R7-A: bounded metadata/header census only; the
             # accepted closure remains intact while this new producer family
             # is independently pinned by its additive evidence manifest.
