@@ -64,10 +64,13 @@ def valid_physical_phase5_document(root, **overrides):
                "fnv1a_cache_key": physical.fnv1a64(payload_bytes)}
 
     def arm(name, policy, source, immutable_bytes):
+        immutable_event = {"classification": "immutable_model_payload", "bytes": immutable_bytes}
+        if immutable_bytes:
+            immutable_event.update(payload)
         network = _receipt(root, f"raw/{name}.network.json", {
             "schema": "inferswarm.issue200.network-receipt/1", "arm": name,
             "source_attribution": source,
-            "events": [{"classification": "immutable_model_payload", "bytes": immutable_bytes},
+            "events": [immutable_event,
                        {"classification": "rpc_control_or_hash_probe", "bytes": 17}],
         })
         runtime = _receipt(root, f"raw/{name}.runtime.json", {"arm": name, "schema": "raw-runtime/1",

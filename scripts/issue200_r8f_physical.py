@@ -89,11 +89,13 @@ def _read_receipt(base: Path, receipt: Mapping[str, Any], expected_arm: str, kin
     return document
 
 
-def _network_bytes(base: Path, arm: str, receipt: Mapping[str, Any]) -> dict[str, Any]:
+def _network_bytes(base: Path, arm: str, receipt: Mapping[str, Any], payloads: list[dict[str, Any]]) -> dict[str, Any]:
     raw = _read_receipt(base, receipt, arm, "network")
     if raw.get("schema") != "inferswarm.issue200.network-receipt/1" or not isinstance(raw.get("events"), list):
         raise ValueError(f"{arm}: network receipt schema/events malformed")
     totals = {"immutable_payload": 0, "rpc_control": 0, "total": 0}
+    expected = {(item["offset"], item["length"], item["sha256"]) for item in payloads}
+    observed = set()
     for event in raw["events"]:
         if (not isinstance(event, dict) or not isinstance(event.get("bytes"), int)
                 or event["bytes"] < 0 or event.get("classification") not in
@@ -101,10 +103,19 @@ def _network_bytes(base: Path, arm: str, receipt: Mapping[str, Any]) -> dict[str
             raise ValueError(f"{arm}: invalid network event")
         totals["total"] += event["bytes"]
         if event["classification"] == "immutable_model_payload":
+            if event["bytes"] == 0:
+                continue
+            identity = (event.get("offset"), event.get("length"), event.get("sha256"))
+            if identity not in expected or event["bytes"] != event.get("length"):
+                raise ValueError(f"{arm}: immutable network event is not an observed SET_TENSOR payload")
+            observed.add(identity)
             totals["immutable_payload"] += event["bytes"]
         else:
             totals["rpc_control"] += event["bytes"]
-    return {**totals, "source_attribution": raw.get("source_attribution")}
+    if observed and observed != expected:
+        raise ValueError(f"{arm}: immutable network receipt does not cover every observed payload")
+    return {**totals, "source_attribution": raw.get("source_attribution"),
+            "payload_identities": sorted(observed)}
 
 
 def _same_keys(values: list[Mapping[str, Any]], keys: tuple[str, ...], label: str):
@@ -237,13 +248,6 @@ def validate_physical_evidence(document: Mapping[str, Any], *, evidence_root: Pa
                 evidence_root, arm.get("runtime_receipt", {}), name, "runtime/materialization")
             if runtime_receipt.get("participants") != participant_ids:
                 raise ValueError(f"{name}: participants do not match runtime receipt")
-            local_reads = _read_receipt(
-                evidence_root, arm.get("local_read_receipt", {}), name, "local durable/cache read")
-            if local_reads.get("source_attribution") != expected_source[name]:
-                raise ValueError(f"{name}: local durable/cache receipt lacks Source attribution")
-            network[name] = _network_bytes(evidence_root, name, arm.get("network_receipt", {}))
-            if network[name]["source_attribution"] != expected_source[name]:
-                raise ValueError(f"{name}: network receipt lacks Source attribution")
             payloads = arm.get("set_tensor_payloads")
             if not isinstance(payloads, list) or not payloads:
                 raise ValueError(f"{name}: actual SET_TENSOR payload boundaries missing")
@@ -256,6 +260,13 @@ def validate_physical_evidence(document: Mapping[str, Any], *, evidence_root: Pa
                     or runtime_receipt.get("initialization_wall_time_ms") != arm["initialization_wall_time_ms"]
                     or any(runtime_receipt.get(key) != frozen[key] for key in frozen_keys)):
                 raise ValueError(f"{name}: runtime receipt does not bind payload/timing/identity")
+            local_reads = _read_receipt(
+                evidence_root, arm.get("local_read_receipt", {}), name, "local durable/cache read")
+            if local_reads.get("source_attribution") != expected_source[name]:
+                raise ValueError(f"{name}: local durable/cache receipt lacks Source attribution")
+            network[name] = _network_bytes(evidence_root, name, arm.get("network_receipt", {}), payloads)
+            if network[name]["source_attribution"] != expected_source[name]:
+                raise ValueError(f"{name}: network receipt lacks Source attribution")
             payload_identities.append([(p["offset"], p["length"], p["sha256"]) for p in payloads])
             if name != "cold_remote":
                 cache_dir = arm.get("private_cache_dir")
@@ -272,6 +283,8 @@ def validate_physical_evidence(document: Mapping[str, Any], *, evidence_root: Pa
             raise ValueError("actual SET_TENSOR payload boundaries differ across arms")
         if network["cold_remote"]["immutable_payload"] <= 0:
             raise ValueError("cold/remote arm did not move immutable model payload")
+        if not network["cold_remote"]["payload_identities"]:
+            raise ValueError("cold/remote arm did not bind transfer to selected payload boundaries")
         if network["local_verified"]["immutable_payload"] != 0:
             raise ValueError("local verified arm reacquired immutable payload")
         if network["repeat_local_verified"]["immutable_payload"] != 0:
