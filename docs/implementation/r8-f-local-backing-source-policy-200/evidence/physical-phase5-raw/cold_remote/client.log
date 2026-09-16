@@ -1,13 +1,13 @@
-0.00.136.137 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
-0.00.137.076 W srv  llama_server: -----------------
-0.00.137.115 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
-0.00.137.116 W srv  llama_server: this can be a security risk (cross-origin attacks)
-0.00.137.116 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
-0.00.137.117 W srv  llama_server: -----------------
-0.00.139.048 I srv    load_model: loading model '/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf'
-0.04.480.972 I cmn          init: llama threadpool init, n_threads = 14
-0.05.289.249 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 8192, kv_unified = 'true'
-0.05.302.626 W srv          init: chat template supports preserving reasoning, it is enabled by default (may use more tokens, disable via --no-reasoning-preserve)
-0.05.302.790 I srv  llama_server: model loaded
-0.05.302.968 I srv  llama_server: listening on http://127.0.0.1:8341
-0.07.705.145 I srv    operator(): operator(): cleaning up before exit...
+0.00.128.822 I cmn  common_param: common_params_print_info: verbosity = 3 (adjust with the `-lv N` CLI arg)
+0.00.129.775 W srv  llama_server: -----------------
+0.00.129.815 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set
+0.00.129.816 W srv  llama_server: this can be a security risk (cross-origin attacks)
+0.00.129.817 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655
+0.00.129.817 W srv  llama_server: -----------------
+0.00.131.769 I srv    load_model: loading model '/srv/models/qwen38-ud-iq1-s/Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf'
+0.04.576.702 I cmn          init: llama threadpool init, n_threads = 14
+0.05.374.255 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 8192, kv_unified = 'true'
+0.05.386.674 W srv          init: chat template supports preserving reasoning, it is enabled by default (may use more tokens, disable via --no-reasoning-preserve)
+0.05.386.788 I srv  llama_server: model loaded
+0.05.386.928 I srv  llama_server: listening on http://127.0.0.1:8341
+0.07.712.224 I srv    operator(): operator(): cleaning up before exit...

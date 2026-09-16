@@ -60,6 +60,7 @@ PRODUCERS = ["scripts/issue200_r8f_source_policy.py", "scripts/issue200_r8f_fixt
              "scripts/issue200_r8f_rpc_cache_mechanism.py", "scripts/issue200_r8f_physical.py",
              "scripts/issue200_r8f_range_receipt.py", "scripts/issue200_r8f_network_reduce.py",
              "scripts/issue200_r8f_phase5_assemble.py",
+             "scripts/issue200_r8f_phase5_orchestrator.py",
              "scripts/issue200_r8f_stage_cache.py",
              "scripts/issue200_r8f_backing_verify.py",
              "scripts/issue200_r8f_cache_enum.py",

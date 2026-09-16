@@ -51,13 +51,16 @@ from issue74_methodology import canonical_json_bytes
 
 CAPTURE_TOOL = "strace phase5-process-wide-byte-complete/4"
 SYSCALL_CLASSES = "network,write,writev,execve"
+EXECVE = re.compile(
+    r'^execve\("(?P<path>(?:[^"\\]|\\.)*)", \[(?P<argv>.*)\](?P<rest>[^)]*)'
+    r"\)\s+=\s+(?P<result>-?\d+)$")
 # Generous bound on the pinned client's SET_TENSOR framing overhead
 # (| cmd(1) | size(8) | rpc_tensor | offset(8) |; observed 304 bytes on the
 # physical Qwen run).  The -s limit is derived as max payload + allowance.
 FRAME_ALLOWANCE = 4096
 SUPPORTED_OUTBOUND = "sendto"
 OTHER_OUTBOUND = {"send", "sendmsg", "sendmmsg", "write", "writev"}
-PID_LINE = re.compile(r"^(?P<pid>\d+)\s+\S+\s+(?P<record>.*)$")
+PID_LINE = re.compile(r"^(?P<pid>\d+)\s+(?P<ts>\S+)\s+(?P<record>.*)$")
 CALL = re.compile(r"^(?P<name>[a-z][a-z0-9_]*)\(")
 FD = re.compile(r"^[a-z][a-z0-9_]*\((?P<fd>\d+)(?:,|\))")
 RESULT = re.compile(r"\)\s+=\s+(?P<result>-?\d+)\s*$")
@@ -75,6 +78,24 @@ UNFINISHED = re.compile(r"(?P<body>.*)<unfinished \.\.\.>\s*$")
 # regex can only match lines containing the literal marker).
 _UNFINISHED_MARKER = "<unfinished ...>"
 RESUMED = re.compile(r"^(?P<pid>\d+)\s+\S+\s+<\.\.\.\s+(?P<name>[a-z][a-z0-9_]*) resumed>(?P<rest>.*)$")
+
+
+def parse_execve(record: str) -> tuple[str, list[str]] | None:
+    """Parse a complete ``execve(...)`` strace record into (path, argv).
+
+    Returns None when the record is abbreviated (``...`` ellipsis marker):
+    an abbreviated execve can never carry execution identity.  Every argv
+    element is decoded from strace's string-escaping byte-exactly.
+    """
+    if "..." in record:
+        return None
+    match = EXECVE.match(record)
+    if match is None:
+        return None
+    path = _unescape(match["path"])
+    body = match["argv"] or ""
+    argv = [_unescape(item) for item in re.findall(r'"((?:[^"\\]|\\.)*)"', body)]
+    return path, argv
 
 
 def required_string_limit(payload_lengths: list[int]) -> int:
@@ -193,6 +214,7 @@ def reduce_capture(raw: bytes, *, client_pid: int, server_endpoint: str,
     fd_peers: dict[int, tuple[str, int]] = {}
     tracee_pids: set[int] = set()
     first_record_seen = False
+    client_exec_ts: float | None = None
     for line in lines:
         prefixed = PID_LINE.match(line)
         if prefixed is None:
@@ -212,9 +234,25 @@ def reduce_capture(raw: bytes, *, client_pid: int, server_endpoint: str,
             if int(prefixed["pid"]) != client_pid:
                 raise ValueError("first tracee record is not the bound client PID")
             if client_argv is not None:
-                observed = _unescape(record.split('"', 2)[1]).encode("latin1") if '"' in record else b""
-                if observed.decode("latin1", "replace") != client_argv[0]:
+                # FULL ARGV BINDING (review item 5): decode the complete
+                # execve record and compare EVERY argument byte-for-byte —
+                # exact binary path plus model member, --rpc, -ot, host,
+                # port, -ngl, -c, --no-warmup, and ordering.  Extra, missing,
+                # substituted, reordered, abbreviated, or unparseable argv
+                # is a rejection; capture_command/client-launch metadata are
+                # never proof of argv, only cross-checks.
+                parsed = parse_execve(record)
+                if parsed is None:
+                    raise ValueError("client execve record is abbreviated or unparseable")
+                observed_path, observed_argv = parsed
+                if observed_path != client_argv[0]:
                     raise ValueError("client execve binary does not match the frozen client argv")
+                if observed_argv != client_argv:
+                    raise ValueError("client execve argv list does not match the frozen client argv byte-for-byte")
+            try:
+                client_exec_ts = float(prefixed["ts"])
+            except (TypeError, ValueError):
+                raise ValueError("client execve record lacks a parseable -ttt timestamp")
             first_record_seen = True
             continue
         name_match = CALL.match(record)
@@ -305,6 +343,7 @@ def reduce_capture(raw: bytes, *, client_pid: int, server_endpoint: str,
             "reducer_sha256": reducer_sha256(), "client_to_server_bytes": total,
             "immutable_payload_bytes": immutable, "protocol_control_hash_probe_bytes": total - immutable,
             "traced_pids": sorted(tracee_pids),
+            "client_execve_ts": client_exec_ts,
             "payload_identities": sorted(matched, key=lambda item: item["order"])}
 
 

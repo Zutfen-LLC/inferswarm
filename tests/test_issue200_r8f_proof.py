@@ -21,6 +21,8 @@ import issue200_r8f_terminal_reduction as reduction
 import issue200_r8f_physical as physical
 import issue200_r8f_range_receipt as range_receipt
 import issue200_r8f_network_reduce as network_reduce
+import issue200_r8f_cache_enum as cache_enum
+import issue200_r8f_stage_cache as stage_cache
 
 
 
@@ -77,10 +79,12 @@ def synthetic_authority(root, payload_bytes=b"r8-f-observed-payload-" * 4):
 def synthetic_backing_receipt(root, authority, node_id):
     return {
         "schema": "inferswarm.issue200.participant-full-release-receipt/1",
-        "tool": {"path": "scripts/issue200_r8f_backing_verify.py", "sha256": "0" * 64},
+        "tool": {"path": "scripts/issue200_r8f_backing_verify.py",
+                 "sha256": physical.backing_verify.helper_sha256()},
         "node_id": node_id, "backing_dir": "/srv/models/synthetic",
-        "authority_path": "synthetic/tiny-authority.json",
-        "members": [{**m, "present": True, "actual_bytes": m["bytes"],
+        "authority_path": f"/deployed{physical.AUTHORITY_PATH}",
+        "members": [{**m, "expected_bytes": m["bytes"], "expected_sha256": m["sha256"],
+                     "present": True, "actual_bytes": m["bytes"],
                      "actual_sha256": m["sha256"], "verified": True} for m in authority["members"]],
         "total_bytes": authority["total_bytes"], "all_members_verified": True}
 
@@ -89,6 +93,18 @@ def strace_escape(data: bytes) -> str:
     """Render bytes the way strace -xx renders them in a string literal."""
     return "".join((chr(b) if 32 <= b < 127 and chr(b) not in '"\\'
                     else f"\\x{b:02x}") for b in data)
+
+
+def quote_arg(text: str) -> str:
+    """Render one argv element as a complete strace -xx string literal."""
+    return f'"{strace_escape(text.encode())}"'
+
+
+def _empty_receipt(root, name):
+    path = root / name
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"")
+    return {"path": name, "sha256": hashlib.sha256(b"").hexdigest()}
 
 
 def valid_physical_phase5_document(root, **overrides):
@@ -124,7 +140,9 @@ def valid_physical_phase5_document(root, **overrides):
         # From-exec byte-complete capture: execve first, then connect, then
         # complete (non-abbreviated) target-bound records.
         framed = b"\x00" * 8 + payload_bytes  # small frame prefix + payload suffix
-        records = [f'999 1.000 execve("{strace_escape(CLIENT_ARGV[0].encode())}", ...) = 0',
+        exec_line = (f'999 1.000 execve("{strace_escape(CLIENT_ARGV[0].encode())}", '
+                     f'[{", ".join(quote_arg(a) for a in CLIENT_ARGV)}], 0x1 /* 1 var */) = 0')
+        records = [exec_line,
                    '999 1.000 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3',
                    '999 1.000 connect(3, {sa_family=AF_INET, sin_port=htons(50052), '
                    'sin_addr=inet_addr("100.77.187.38")}, 16) = 0',
@@ -143,7 +161,6 @@ def valid_physical_phase5_document(root, **overrides):
         network = {"arm": name, "capture_tool": network_reduce.CAPTURE_TOOL,
                    "capture_command": network_reduce.required_capture_command(CLIENT_ARGV, [len(payload_bytes)]),
                    "client_argv": CLIENT_ARGV, "client_pid": 999, "server_endpoint": "100.77.187.38:50052",
-                   "capture_started": "1", "capture_ended": "2",
                    "raw_capture": raw_capture, "reducer_sha256": network_reduce.reducer_sha256(),
                    "reduction_stdout": reduction_stdout}
         observed_payload = {**payload, "participant": node_id, "observation_id": "set-1", "order": 1}
@@ -171,17 +188,21 @@ def valid_physical_phase5_document(root, **overrides):
             "binary_live_receipt": {"path": rpc_bin_live["path"], "sha256": rpc_bin_live["sha256"]},
             "server_log": {"path": f"raw/{name}.server.log", "sha256": sha(server_log)}})
         read_cache_dir = cache_dir
+        rpc_exec_path = physical.FROZEN_RPC_EXEC[0]
+        rpc_exec_argv = [rpc_exec_path, *physical.FROZEN_RPC_EXEC[1]]
+        rpc_exec_line = (f'777 1.000 execve("{strace_escape(rpc_exec_path.encode())}", '
+                         f'[{", ".join(quote_arg(a) for a in rpc_exec_argv)}], 0x1 /* 1 var */) = 0')
         if name == "cold_remote":
             # cold arm: the server OPENS the cache file for WRITING (miss path)
             # and never reads it — the zero-read denial holds.
             read_strace_lines = [
-                "777 1.000 execve(\"/opt/ggml-rpc-server\", ...) = 0",
+                rpc_exec_line,
                 f'777 2.000 openat(AT_FDCWD, "{read_cache_dir}/rpc/{payload["fnv1a_cache_key"]}", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 5',
                 f'777 2.001 write(5, "", {len(payload_bytes)}) = {len(payload_bytes)}',
             ]
         else:
             read_strace_lines = [
-                "777 1.000 execve(\"/opt/ggml-rpc-server\", ...) = 0",
+                rpc_exec_line,
                 f'777 2.000 openat(AT_FDCWD, "{read_cache_dir}/rpc/{payload["fnv1a_cache_key"]}", O_RDONLY) = 5',
                 f'777 2.001 read(5, "", {len(payload_bytes)}) = {len(payload_bytes)}',
             ]
@@ -206,26 +227,28 @@ def valid_physical_phase5_document(root, **overrides):
                   "accepted_artifact_ranges": [{"accepted_artifact_range": accepted_range,
                                                    "set_tensor_payload": observed_payload}]}
         fnv = payload["fnv1a_cache_key"]
+        ENUM_TOOL = {"path": "scripts/issue200_r8f_cache_enum.py", "sha256": cache_enum.helper_sha256()}
+        def enum_receipt(name_, entries_, measured_at_):
+            return _receipt(root, f"raw/{name_}.cache-enum.json", {
+                "schema": "inferswarm.issue200.cache-enumeration-receipt/2", "arm": name_,
+                "tool": ENUM_TOOL,
+                "node_id": node_id, "cache_dir": cache_dir, "measured_at": measured_at_,
+                "command": [sys.executable, "/deployed/issue200_r8f_cache_enum.py", name_, cache_dir],
+                "entries": entries_})
         if name == "cold_remote":
-            init = _receipt(root, f"raw/{name}.cache-init.json", {
-                "schema": "inferswarm.issue200.cache-enumeration-receipt/1", "arm": name,
-                "node_id": node_id, "cache_dir": cache_dir, "measured_at": now - 2,
-                "command": ["cache-enum.sh", name, cache_dir], "entries": []})
-            result["cache_initialization_receipt"] = init
+            result["cache_initialization_receipt"] = enum_receipt(name, [], now - 2)
         elif name == "local_verified":
-            init = _receipt(root, f"raw/{name}.cache-init.json", {
-                "schema": "inferswarm.issue200.cache-enumeration-receipt/1", "arm": name,
-                "node_id": node_id, "cache_dir": cache_dir, "measured_at": now - 2,
-                "command": ["cache-enum.sh", name, cache_dir], "entries": []})
+            result["cache_initialization_receipt"] = enum_receipt(name, [], now - 2)
             after = _receipt(root, f"raw/{name}.cache-after.json", {
-                "schema": "inferswarm.issue200.cache-enumeration-receipt/1", "arm": name,
+                "schema": "inferswarm.issue200.cache-enumeration-receipt/2", "arm": name,
+                "tool": ENUM_TOOL,
                 "node_id": node_id, "cache_dir": cache_dir, "measured_at": now - 1.5,
-                "command": ["cache-enum.sh", name, cache_dir],
+                "command": [sys.executable, "/deployed/issue200_r8f_cache_enum.py", name, cache_dir],
                 "entries": [{"name": f"rpc/{fnv}", "size": len(payload_bytes), "sha256": payload_sha}]})
             staged_path = f"{cache_dir}/{fnv}"
-            staging = _receipt(root, f"raw/{name}.staging.json", {
+            staging_measurement = {
                 "arm": name, "schema": "inferswarm.issue200.cache-staging-measurement/1",
-                "tool": {"path": "scripts/issue200_r8f_stage_cache.py", "sha256": "0" * 64},
+                "tool": {"path": "scripts/issue200_r8f_stage_cache.py", "sha256": stage_cache.helper_sha256()},
                 "node_id": node_id, "source_path": str(member_path), "member": member_path.name,
                 "accepted_member_bytes": authority["members"][0]["bytes"],
                 "accepted_member_sha256": authority["members"][0]["sha256"],
@@ -235,24 +258,26 @@ def valid_physical_phase5_document(root, **overrides):
                 "tmp_path": f"{cache_dir}/.{fnv}.stage-tmp",
                 "tmp_size": len(payload_bytes), "tmp_sha256": payload_sha,
                 "final_size": len(payload_bytes), "final_sha256": payload_sha,
-                "atomic_publish": "os.rename after fsync inside target directory",
-                "stdout": {"path": f"raw/{name}.staging.stdout", "sha256": hashlib.sha256(b"").hexdigest()},
-                "stderr": {"path": f"raw/{name}.staging.stderr", "sha256": hashlib.sha256(b"").hexdigest()},
-                "exit_code": 0})
-            result["cache_initialization_receipt"] = init
+                "atomic_publish": "os.rename after fsync inside target directory"}
+            staging_raw = _receipt(root, f"raw/{name}.staging.stdout", staging_measurement)
+            staging_stderr = {"path": f"raw/{name}.staging.stderr", "sha256": hashlib.sha256(b"").hexdigest()}
+            (root / staging_stderr["path"]).write_bytes(b"")
+            result["cache_initialization_receipt"] = enum_receipt(name, [], now - 2)
             result["cache_after_staging_receipt"] = after
             result["cache_staging"] = [{
                 "accepted_artifact_range": accepted_range,
                 "set_tensor_payload": observed_payload,
                 "staged_cache": {"path": staged_path,
-                                 "receipt": staging,
+                                 "raw_stdout": staging_raw,
+                                 "raw_stderr": staging_stderr,
                                  "range_bytes": range_bytes}}]
         else:  # repeat: TRUE reuse of local_verified's cache
             reused_dir = "/private/local_verified"
             pre = _receipt(root, f"raw/{name}.cache-precheck.json", {
-                "schema": "inferswarm.issue200.cache-enumeration-receipt/1", "arm": name,
-                "node_id": node_id, "cache_dir": reused_dir, "measured_at": now - 1.5,
-                "command": ["cache-enum.sh", name, reused_dir],
+                "schema": "inferswarm.issue200.cache-enumeration-receipt/2", "arm": name,
+                "tool": {"path": "scripts/issue200_r8f_cache_enum.py", "sha256": cache_enum.helper_sha256()},
+                "node_id": node_id, "cache_dir": reused_dir, "measured_at": 0.5,
+                "command": [sys.executable, "/deployed/issue200_r8f_cache_enum.py", name, reused_dir],
                 "entries": [{"name": f"rpc/{fnv}", "size": len(payload_bytes), "sha256": payload_sha}]})
             result["private_cache_dir"] = reused_dir
             result["cache_precheck_receipt"] = pre
@@ -285,7 +310,7 @@ def valid_physical_phase5_document(root, **overrides):
         "participant_backing_verification": {
             "node_id": node_id,
             "command": ["python3", "scripts/issue200_r8f_backing_verify.py", "--node-id", node_id],
-            "exit_code": 0, "receipt": backing, "stderr": {"path": "raw/backing.stderr", "sha256": hashlib.sha256(b"").hexdigest()}},
+            "exit_code": 0, "receipt": backing, "stderr": _empty_receipt(root, "raw/backing.stderr")},
         "arms": {
             "cold_remote": arm("cold_remote", "PREFER_REMOTE_AUTHORIZED", "REMOTE_AUTHORIZED", len(payload_bytes)),
             "local_verified": arm("local_verified", "REQUIRE_LOCAL_VERIFIED", "LOCAL_VERIFIED", 0),
@@ -653,7 +678,7 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
         def absent_cache_read(doc, root):
             reads = json.loads((root / doc["arms"]["local_verified"]["participant_read_receipt"]["path"]).read_text())
             cap = root / reads["strace_capture"]["path"]
-            cap.write_bytes(b'777 1.000 execve("/opt/ggml-rpc-server", ...) = 0\n')
+            cap.write_bytes(b'777 1.000 execve("' + strace_escape(physical.FROZEN_RPC_EXEC[0].encode()).encode() + b'", []) = 0\n')
             reads["strace_capture"]["sha256"] = sha(cap)
             reads["derived_read_bytes"] = 0
             reads["read_syscalls"] = 0
@@ -662,15 +687,17 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
 
         def staging_digest_mismatch(doc, root):
             staged = doc["arms"]["local_verified"]["cache_staging"][0]["staged_cache"]
-            receipt = json.loads((root / staged["receipt"]["path"]).read_text())
+            receipt = json.loads((root / staged["raw_stdout"]["path"]).read_text())
             receipt["final_sha256"] = "0" * 64
-            staged["receipt"] = _receipt(root, "raw/local_verified.staging.json", receipt)
+            staged["raw_stdout"] = _receipt(root, "raw/local_verified.staging.stdout", receipt)
 
         def staging_exit_mismatch(doc, root):
+            # raw-stdout authority: exit status is non-authoritative, but a
+            # TAMPERED raw stdout (wrong member) must still reject.
             staged = doc["arms"]["local_verified"]["cache_staging"][0]["staged_cache"]
-            receipt = json.loads((root / staged["receipt"]["path"]).read_text())
-            receipt["exit_code"] = 1
-            staged["receipt"] = _receipt(root, "raw/local_verified.staging.json", receipt)
+            receipt = json.loads((root / staged["raw_stdout"]["path"]).read_text())
+            receipt["member"] = "wrong-member.gguf"
+            staged["raw_stdout"] = _receipt(root, "raw/local_verified.staging.stdout", receipt)
 
         def repeat_arm_secretly_restages(doc, root):
             arm = doc["arms"]["repeat_local_verified"]
@@ -708,6 +735,216 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
             path.write_bytes(path.read_bytes() + line.encode())
             receipt["raw_capture"]["sha256"] = sha(path)
 
+        # ---- review item 6: execve argv mutation controls (same accepted
+        # binary, one acceptance-significant argument changed, ALL JSON
+        # metadata still claiming the frozen argv).  The full-argv byte
+        # comparison must reject each one.
+        def _rewritten_client_capture(doc, root, argv):
+            receipt = doc["arms"]["cold_remote"]["network_receipt"]
+            path = root / receipt["raw_capture"]["path"]
+            payload = b"r8-f-observed-payload-" * 4
+            framed = b"\x00" * 8 + payload
+            records = [
+                f'999 1.000 execve("{strace_escape(argv[0].encode())}", '
+                f'[{", ".join(quote_arg(a) for a in argv)}], 0x1 /* 1 var */) = 0',
+                '999 1.000 connect(3, {sa_family=AF_INET, sin_port=htons(50052), '
+                'sin_addr=inet_addr("100.77.187.38")}, 16) = 0',
+                f'1001 1.002 sendto(3, "{strace_escape(framed)}", {len(framed)}, 0, NULL, 0) = {len(framed)}',
+            ]
+            path.write_bytes(("\n".join(records) + "\n").encode())
+            receipt["raw_capture"]["sha256"] = sha(path)
+            receipt["capture_command"] = network_reduce.required_capture_command(argv, [len(payload)])
+
+        def argv_mutated_model_path(doc, root):
+            argv = list(CLIENT_ARGV)
+            argv[argv.index("-m") + 1] = "/models/a-different-member.gguf"
+            _rewritten_client_capture(doc, root, argv)
+
+        def argv_mutated_rpc_endpoint(doc, root):
+            argv = list(CLIENT_ARGV)
+            argv[argv.index("--rpc") + 1] = "10.0.0.204:50053"
+            _rewritten_client_capture(doc, root, argv)
+
+        def argv_mutated_ot_mapping(doc, root):
+            argv = list(CLIENT_ARGV)
+            argv[argv.index("-ot") + 1] = "blk.99.attn_gate.weight=RPC0[10.0.0.204:50052]"
+            _rewritten_client_capture(doc, root, argv)
+
+        def argv_mutated_ngl(doc, root):
+            argv = list(CLIENT_ARGV)
+            argv[argv.index("-ngl") + 1] = "99"
+            _rewritten_client_capture(doc, root, argv)
+
+        def argv_mutated_context(doc, root):
+            argv = list(CLIENT_ARGV)
+            argv[argv.index("-c") + 1] = "4096"
+            _rewritten_client_capture(doc, root, argv)
+
+        def argv_mutated_no_warmup_removed(doc, root):
+            argv = [a for a in CLIENT_ARGV if a != "--no-warmup"]
+            _rewritten_client_capture(doc, root, argv)
+
+        def argv_reordered(doc, root):
+            argv = list(CLIENT_ARGV)
+            i, j = argv.index("--no-warmup"), argv.index("-ngl")
+            argv[i], argv[j] = argv[j], argv[i]
+            _rewritten_client_capture(doc, root, argv)
+
+        def argv_extra_argument(doc, root):
+            argv = list(CLIENT_ARGV) + ["--threads", "8"]
+            _rewritten_client_capture(doc, root, argv)
+
+        def abbreviated_execve_record(doc, root):
+            receipt = doc["arms"]["cold_remote"]["network_receipt"]
+            path = root / receipt["raw_capture"]["path"]
+            lines = path.read_text().splitlines()
+            lines[0] = f'999 1.000 execve("{strace_escape(CLIENT_ARGV[0].encode())}", ...) = 0'
+            path.write_bytes(("\n".join(lines) + "\n").encode())
+            receipt["raw_capture"]["sha256"] = sha(path)
+
+        # ---- review item 7: RPC-server execution binding controls.
+        def _rewritten_rpc_capture(doc, root, arm_name, argv):
+            reads = json.loads((root / doc["arms"][arm_name]["participant_read_receipt"]["path"]).read_text())
+            cap = root / reads["strace_capture"]["path"]
+            lines = cap.read_text().splitlines()
+            lines[0] = (f'777 1.000 execve("{strace_escape(argv[0].encode())}", '
+                        f'[{", ".join(quote_arg(a) for a in argv)}], 0x1 /* 1 var */) = 0')
+            cap.write_bytes(("\n".join(lines) + "\n").encode())
+            reads["strace_capture"]["sha256"] = sha(cap)
+            doc["arms"][arm_name]["participant_read_receipt"] = _receipt(
+                root, f"raw/{arm_name}.reads.json", reads)
+
+        def rpc_execve_wrong_binary(doc, root):
+            argv = ["/some/other/ggml-rpc-server", "-H", "0.0.0.0", "-p", "50052", "-d", "CUDA0", "-c"]
+            _rewritten_rpc_capture(doc, root, "local_verified", argv)
+
+        def rpc_execve_cache_flag_removed(doc, root):
+            argv = [physical.FROZEN_RPC_EXEC[0], "-H", "0.0.0.0", "-p", "50052", "-d", "CUDA0"]
+            _rewritten_rpc_capture(doc, root, "local_verified", argv)
+
+        def rpc_execve_wrong_port(doc, root):
+            argv = [physical.FROZEN_RPC_EXEC[0], "-H", "0.0.0.0", "-p", "60000", "-d", "CUDA0", "-c"]
+            _rewritten_rpc_capture(doc, root, "local_verified", argv)
+
+        def rpc_strace_not_from_exec(doc, root):
+            reads = json.loads((root / doc["arms"]["local_verified"]["participant_read_receipt"]["path"]).read_text())
+            cap = root / reads["strace_capture"]["path"]
+            lines = cap.read_text().splitlines()
+            lines[0] = '777 2.000 openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY) = 3'
+            cap.write_bytes(("\n".join(lines) + "\n").encode())
+            reads["strace_capture"]["sha256"] = sha(cap)
+            doc["arms"]["local_verified"]["participant_read_receipt"] = _receipt(
+                root, "raw/local_verified.reads.json", reads)
+
+        # ---- review item 10: backing verification controls.
+        def _rewrite_backing(doc, root, mutate):
+            backing = json.loads((root / doc["participant_backing_verification"]["receipt"]["path"]).read_text())
+            mutate(backing)
+            doc["participant_backing_verification"]["receipt"] = _receipt(
+                root, "raw/backing.json", backing)
+
+        def backing_forged_verified_wrong_sha(doc, root):
+            def mutate(b):
+                b["members"][0]["actual_sha256"] = "0" * 64  # forged verified:true, wrong measured SHA
+            _rewrite_backing(doc, root, mutate)
+
+        def backing_forged_verified_wrong_size(doc, root):
+            def mutate(b):
+                b["members"][0]["actual_bytes"] = 1  # forged verified:true, wrong measured size
+            _rewrite_backing(doc, root, mutate)
+
+        def backing_zero_helper_sha(doc, root):
+            def mutate(b):
+                b["tool"]["sha256"] = "0" * 64
+            _rewrite_backing(doc, root, mutate)
+
+        def backing_wrong_helper_path(doc, root):
+            def mutate(b):
+                b["tool"]["path"] = "scripts/some_other_helper.py"
+            _rewrite_backing(doc, root, mutate)
+
+        def backing_extra_member(doc, root):
+            def mutate(b):
+                b["members"].append({"file": "extra.gguf", "bytes": 1, "sha256": "0" * 64,
+                                     "present": True, "verified": True, "actual_bytes": 1,
+                                     "actual_sha256": "0" * 64})
+            _rewrite_backing(doc, root, mutate)
+
+        def backing_wrong_authority_path(doc, root):
+            def mutate(b):
+                b["authority_path"] = "/some/other/authority.json"
+            _rewrite_backing(doc, root, mutate)
+
+        def backing_nonempty_stderr(doc, root):
+            path = root / doc["participant_backing_verification"]["stderr"]["path"]
+            path.write_bytes(b"helper warning noise\n")
+            doc["participant_backing_verification"]["stderr"]["sha256"] = sha(path)
+
+        # ---- review item 12: cache-enum helper identity controls.
+        def _rewrite_enum(doc, root, arm_name, key, mutate):
+            ref = doc["arms"][arm_name].get("cache_initialization_receipt") \
+                or doc["arms"][arm_name]["cache_precheck_receipt"]
+            enum = json.loads((root / ref["path"]).read_text())
+            mutate(enum)
+            doc["arms"][arm_name][ "cache_initialization_receipt" if "cache_initialization_receipt"
+                                   in doc["arms"][arm_name] else "cache_precheck_receipt"] = _receipt(
+                root, f"raw/{arm_name}.cache-enum-forged.json", enum)
+
+        def enum_wrong_helper_identity(doc, root):
+            _rewrite_enum(doc, root, "cold_remote", "tool",
+                          lambda e: e.__setitem__("tool", {"path": "scripts/issue200_r8f_cache_enum.py",
+                                                           "sha256": "0" * 64}))
+
+        def enum_missing_helper_identity(doc, root):
+            def mutate(e):
+                e.pop("tool", None)
+                e["command"] = ["cache-enum.sh", e["arm"], e["cache_dir"]]  # fictitious pre-correction form
+            _rewrite_enum(doc, root, "cold_remote", "tool", mutate)
+
+        def precheck_wrong_helper_identity(doc, root):
+            _rewrite_enum(doc, root, "repeat_local_verified", "tool",
+                          lambda e: e.__setitem__("tool", {"path": "scripts/issue200_r8f_cache_enum.py",
+                                                           "sha256": "1" * 64}))
+
+        def precheck_fictitious_command(doc, root):
+            _rewrite_enum(doc, root, "repeat_local_verified", "command",
+                          lambda e: e.__setitem__("command", ["cache-enum.sh", e["arm"], e["cache_dir"]]))
+
+        # ---- review item 14: staging provenance controls.
+        def _rewrite_staging(doc, root, mutate):
+            staged = doc["arms"]["local_verified"]["cache_staging"][0]["staged_cache"]
+            measurement = json.loads((root / staged["raw_stdout"]["path"]).read_text())
+            mutate(measurement)
+            staged["raw_stdout"] = _receipt(root, "raw/local_verified.staging.stdout", measurement)
+
+        def staging_wrong_helper_hash(doc, root):
+            _rewrite_staging(doc, root, lambda m: m["tool"].__setitem__("sha256", "0" * 64))
+
+        def staging_wrong_helper_path(doc, root):
+            _rewrite_staging(doc, root, lambda m: m["tool"].__setitem__("path", "scripts/wrong_stage.py"))
+
+        def staging_forged_wrapper_only(doc, root):
+            # A perfect wrapper document with NO raw stdout cannot validate.
+            doc["arms"]["local_verified"]["cache_staging"][0]["staged_cache"].pop("raw_stdout")
+
+        def staging_mismatched_raw_vs_wrapper(doc, root):
+            staged = doc["arms"]["local_verified"]["cache_staging"][0]["staged_cache"]
+            measurement = json.loads((root / staged["raw_stdout"]["path"]).read_text())
+            measurement["staged_path"] = f"{measurement['cache_dir']}/ffffffffffffffff"
+            staged["path"] = measurement["staged_path"]  # wrapper agrees, FNV wrong
+            staged["raw_stdout"] = _receipt(root, "raw/local_verified.staging.stdout", measurement)
+
+        def staging_nonempty_stderr(doc, root):
+            staged = doc["arms"]["local_verified"]["cache_staging"][0]["staged_cache"]
+            path = root / staged["raw_stderr"]["path"]
+            path.write_bytes(b"staging stderr noise\n")
+            staged["raw_stderr"]["sha256"] = sha(path)
+
+        def staging_missing_raw_stdout(doc, root):
+            staged = doc["arms"]["local_verified"]["cache_staging"][0]["staged_cache"]
+            (root / staged["raw_stdout"]["path"]).unlink()
+            # digest reference still points at the missing file
+
         cases = {
             "abbreviated-cold-payload": abbreviated_cold_payload,
             "same-length-wrong-payload": same_length_wrong_payload,
@@ -733,6 +970,41 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
             "wrong-client-binary": wrong_client_binary,
             "wrong-rpc-env": wrong_rpc_env,
             "payload-in-local-capture": local_capture_contains_payload,
+            # item 6 — client execve argv mutations
+            "argv-mutated-model-path": argv_mutated_model_path,
+            "argv-mutated-rpc-endpoint": argv_mutated_rpc_endpoint,
+            "argv-mutated-ot-mapping": argv_mutated_ot_mapping,
+            "argv-mutated-ngl": argv_mutated_ngl,
+            "argv-mutated-context": argv_mutated_context,
+            "argv-no-warmup-removed": argv_mutated_no_warmup_removed,
+            "argv-reordered": argv_reordered,
+            "argv-extra-argument": argv_extra_argument,
+            "abbreviated-execve-record": abbreviated_execve_record,
+            # item 7 — RPC execve binding
+            "rpc-execve-wrong-binary": rpc_execve_wrong_binary,
+            "rpc-execve-cache-flag-removed": rpc_execve_cache_flag_removed,
+            "rpc-execve-wrong-port": rpc_execve_wrong_port,
+            "rpc-strace-not-from-exec": rpc_strace_not_from_exec,
+            # item 10 — backing controls
+            "backing-forged-verified-wrong-sha": backing_forged_verified_wrong_sha,
+            "backing-forged-verified-wrong-size": backing_forged_verified_wrong_size,
+            "backing-zero-helper-sha": backing_zero_helper_sha,
+            "backing-wrong-helper-path": backing_wrong_helper_path,
+            "backing-extra-member": backing_extra_member,
+            "backing-wrong-authority-path": backing_wrong_authority_path,
+            "backing-nonempty-stderr": backing_nonempty_stderr,
+            # item 12 — enum helper identity
+            "enum-wrong-helper-identity": enum_wrong_helper_identity,
+            "enum-missing-helper-identity": enum_missing_helper_identity,
+            "precheck-wrong-helper-identity": precheck_wrong_helper_identity,
+            "precheck-fictitious-command": precheck_fictitious_command,
+            # item 14 — staging provenance
+            "staging-wrong-helper-hash": staging_wrong_helper_hash,
+            "staging-wrong-helper-path": staging_wrong_helper_path,
+            "staging-forged-wrapper-only": staging_forged_wrapper_only,
+            "staging-mismatched-raw-vs-wrapper": staging_mismatched_raw_vs_wrapper,
+            "staging-nonempty-stderr": staging_nonempty_stderr,
+            "staging-missing-raw-stdout": staging_missing_raw_stdout,
         }
         for name, mutation in cases.items():
             with self.subTest(name=name):
@@ -754,7 +1026,8 @@ class ByteCompleteReducerTests(unittest.TestCase):
                 'sin_addr=inet_addr("100.77.187.38")}, 16) = 0\n').encode()
 
     def _exec(self):
-        return (f'999 1.000 execve("{strace_escape(CLIENT_ARGV[0].encode())}", ...) = 0\n').encode()
+        return (f'999 1.000 execve("{strace_escape(CLIENT_ARGV[0].encode())}", '
+                f'[{", ".join(quote_arg(a) for a in CLIENT_ARGV)}], 0x1 /* 1 var */) = 0\n').encode()
 
     def test_string_limit_is_mechanically_derived(self):
         self.assertEqual(network_reduce.required_string_limit([100]), 100 + 4096)
@@ -840,6 +1113,77 @@ class ByteCompleteReducerTests(unittest.TestCase):
                                             payloads=[identity], client_argv=CLIENT_ARGV)
         self.assertEqual(out["immutable_payload_bytes"], 0)
         self.assertEqual(out["client_to_server_bytes"], 7)
+
+
+class AssemblerClosureTests(unittest.TestCase):
+    """Review items 17/18: every acceptance-significant external input the
+    assembler consumes must be retained under the evidence tree + MANIFEST,
+    and the retained raw evidence alone (run-summary withheld) must
+    re-derive the terminal."""
+
+    EVIDENCE = ROOT / proof.AREA / "evidence"
+
+    def test_assembler_consumes_no_unretained_external_input(self):
+        """Closure gate: grep the assembler source for path/string inputs;
+        every non-repo input must be under the retained raw tree."""
+        import ast
+        source = (ROOT / "scripts/issue200_r8f_phase5_assemble.py").read_text()
+        tree = ast.parse(source)
+        external_roots = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) \
+                    and node.func.id == "Path" and node.args:
+                arg = node.args[0]
+                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+                    external_roots.add(arg.value)
+        # Only the fleet-run root may be external, and every acceptance-
+        # significant file under it must be copied into the committed tree.
+        self.assertEqual(external_roots, {"/tmp/issue200-p5c3-evidence"},
+                         f"assembler consumes unexpected external input roots: {external_roots}")
+        # Every raw receipt the assembler copies must exist under the
+        # retained evidence tree and be covered by MANIFEST.sha256.
+        raw_dir = self.EVIDENCE / "physical-phase5-raw"
+        manifest = {}
+        for line in (self.EVIDENCE / "MANIFEST.sha256").read_text().splitlines():
+            digest, _, path = line.partition("  ")
+            manifest[path.strip()] = digest
+        for retained in sorted(raw_dir.rglob("*")):
+            if not retained.is_file():
+                continue
+            rel = str(retained.relative_to(ROOT))
+            self.assertIn(rel, manifest, f"retained raw evidence not in MANIFEST: {rel}")
+            self.assertEqual(manifest[rel], sha(retained), f"MANIFEST digest mismatch: {rel}")
+        # The fleet-run root itself must NOT be a terminal input: the run
+        # summary is retained retention-only, and the producer source is
+        # committed and retained.
+        self.assertTrue((raw_dir / "run-summary.json").is_file(),
+                        "orchestrator run summary must be retained byte-for-byte")
+        self.assertTrue((raw_dir / "issue200_r8f_phase5_orchestrator.py").is_file(),
+                        "orchestrator producer source must be retained byte-for-byte")
+        committed = (ROOT / "scripts/issue200_r8f_phase5_orchestrator.py").read_bytes()
+        self.assertEqual(committed, (raw_dir / "issue200_r8f_phase5_orchestrator.py").read_bytes(),
+                         "retained orchestrator differs from the committed producer")
+
+    def test_terminal_survives_run_summary_withheld(self):
+        """Review item 18: deleting the retained run-summary.json (and every
+        reference to it) must NOT change the terminal — the retained raw
+        evidence alone re-derives it."""
+        doc = json.loads((self.EVIDENCE / "physical-phase5.json").read_text())
+        doc.pop("run_summary_retained", None)
+        with tempfile.TemporaryDirectory() as td:
+            scratch = Path(td) / "evidence"
+            import shutil
+            shutil.copytree(self.EVIDENCE, scratch)
+            (scratch / "physical-phase5-raw" / "run-summary.json").unlink()
+            target = scratch / "physical-phase5.json"
+            target.write_bytes(json.dumps(doc).encode())
+            validation = physical.validate_physical_evidence(doc, evidence_root=scratch)
+            self.assertTrue(validation["valid"],
+                            f"raw evidence alone must re-derive the terminal; got: {validation.get('reason')}")
+            with mock.patch.object(cache_mechanism, "mechanical_cache_finding",
+                                   return_value=valid_cache_finding()):
+                document, _ = reduction.reduce_terminal(physical_phase5_evidence_path=target)
+        self.assertEqual(document["terminal"], reduction.TERMINAL_LOCAL_VERIFIED_BACKING_PASS)
 
 
 if __name__ == "__main__":

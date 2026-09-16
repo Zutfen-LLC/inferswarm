@@ -53,7 +53,10 @@ from typing import Any, Mapping
 
 from issue74_methodology import canonical_json_bytes
 from issue200_r8f_rpc_cache_mechanism import UPSTREAM_SOURCE_IDENTITY
+import issue200_r8f_backing_verify as backing_verify
 import issue200_r8f_range_receipt as range_receipt
+import issue200_r8f_cache_enum as cache_enum
+import issue200_r8f_stage_cache as stage_cache
 import issue200_r8f_network_reduce as network_reduce
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -64,7 +67,7 @@ PINNED_LLAMA_CPP_COMMIT = "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4"
 SCHEMA = "inferswarm.issue200.physical-phase5/4"
 ARMS = ("cold_remote", "local_verified", "repeat_local_verified")
 PARTICIPANT_BACKING_SCHEMA = "inferswarm.issue200.participant-full-release-receipt/1"
-CACHE_ENUM_SCHEMA = "inferswarm.issue200.cache-enumeration-receipt/1"
+CACHE_ENUM_SCHEMA = "inferswarm.issue200.cache-enumeration-receipt/2"
 STAGE_MEASUREMENT_SCHEMA = "inferswarm.issue200.cache-staging-measurement/1"
 CLIENT_LAUNCH_SCHEMA = "inferswarm.issue200.client-launch-receipt/1"
 RPC_LAUNCH_SCHEMA = "inferswarm.issue200.rpc-server-launch-receipt/1"
@@ -77,6 +80,11 @@ FORBIDDEN_SUMMARY_FIELDS = {
 
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def canonical_key(value: Any) -> str:
+    import json as _json
+    return _json.dumps(value, sort_keys=True)
 
 
 def fnv1a64(data: bytes) -> str:
@@ -184,47 +192,89 @@ def _range_provenance(base: Path, arm: str, source: Mapping[str, Any], member: M
 
 def _verify_participant_backing(base: Path, document: Mapping[str, Any],
                                 authority: dict[str, Any], participant: str) -> None:
-    """Requirement: complete accepted three-member participant backing."""
+    """Requirement: complete accepted three-member participant backing.
+
+    Correction round 3 (review item 9): the retained raw helper receipt is
+    the ONLY authority.  Every measured field is checked directly —
+    ``verified:true`` / ``present:true`` never substitute for the actual
+    bytes/SHA equality the helper measured.
+    """
     block = document.get("participant_backing_verification")
     if not isinstance(block, dict) or block.get("node_id") != participant:
         raise ValueError("participant full-release backing verification is not bound to the participant")
-    if block.get("exit_code") != 0:
-        raise ValueError("participant full-release backing verification did not succeed")
-    command = block.get("command")
-    if not isinstance(command, list) or "scripts/issue200_r8f_backing_verify.py" not in command:
-        raise ValueError("participant backing command is not the controlled helper")
     receipt = json.loads(_read_raw_bytes(base, block.get("receipt", {}), "participant backing receipt"))
     if receipt.get("schema") != PARTICIPANT_BACKING_SCHEMA:
         raise ValueError("participant backing receipt schema mismatch")
+    # Helper identity: the exact committed helper source, never a claimed name.
+    if receipt.get("tool") != {"path": "scripts/issue200_r8f_backing_verify.py",
+                               "sha256": backing_verify.helper_sha256()}:
+        raise ValueError("participant backing helper source identity mismatch")
+    if not isinstance(receipt.get("authority_path"), str) or not receipt["authority_path"].endswith(str(AUTHORITY_PATH)):
+        raise ValueError("participant backing authority path is not the exact committed R8-D authority")
     if receipt.get("node_id") != participant:
         raise ValueError("participant backing receipt is not from the SET_TENSOR participant")
     observed = receipt.get("members")
+    if not isinstance(observed, list):
+        raise ValueError("participant backing receipt members are malformed")
+    # Exactly all accepted members: no extras, no omissions, exact order-independent identity.
     def _norm(item):
         return {"file": item.get("file"),
                 "bytes": item.get("expected_bytes", item.get("bytes")),
                 "sha256": item.get("expected_sha256", item.get("sha256"))}
-    normalized = [_norm(item) for item in observed] if isinstance(observed, list) else None
-    if normalized != [{k: m.get(k) for k in ("file", "bytes", "sha256")} for m in authority["members"]]:
-        raise ValueError("participant backing member filenames/bytes/SHA-256 do not EQUAL the accepted authority")
+    normalized = [_norm(item) for item in observed]
+    expected = [_norm(m) for m in authority["members"]]
+    if len(normalized) != len(expected) or sorted(map(canonical_key, normalized)) != sorted(map(canonical_key, expected)):
+        raise ValueError("participant backing member set does not EQUAL the accepted authority members exactly")
+    for item, member in zip(sorted(observed, key=lambda i: i["file"]), sorted(authority["members"], key=lambda m: m["file"])):
+        # Measured-field equality: actual == expected == accepted, present and
+        # verified true, for EVERY member.  No trusted summary booleans.
+        if item.get("file") != member["file"]:
+            raise ValueError(f"participant backing member mismatch: {item.get('file')}")
+        if item.get("expected_bytes") != member["bytes"] or item.get("expected_sha256") != member["sha256"]:
+            raise ValueError(f"participant backing expected identity differs from authority: {item.get('file')}")
+        if item.get("actual_bytes") != member["bytes"]:
+            raise ValueError(f"participant backing measured size differs from accepted: {item.get('file')}")
+        if item.get("actual_sha256") != member["sha256"]:
+            raise ValueError(f"participant backing measured SHA-256 differs from accepted: {item.get('file')}")
+        if item.get("present") is not True or item.get("verified") is not True:
+            raise ValueError(f"participant backing member not live-verified: {item.get('file')}")
     if receipt.get("total_bytes") != authority["total_bytes"]:
         raise ValueError("participant backing total bytes do not equal the accepted total")
-    for item in observed:
-        if not item.get("verified") or not item.get("present"):
-            raise ValueError(f"participant backing member not live-verified: {item.get('file')}")
+    if receipt.get("all_members_verified") is not True:
+        raise ValueError("participant backing all_members_verified is not true")
     backing_dir = receipt.get("backing_dir")
     if not isinstance(backing_dir, str) or not backing_dir.startswith("/"):
         raise ValueError("participant backing directory is not an absolute durable path")
+    stderr = _read_raw_bytes(base, block.get("stderr", {}), "participant backing helper stderr")
+    if stderr:
+        raise ValueError("participant backing helper stderr is nonempty")
+
 
 
 def _verify_cache_enumeration(base: Path, arm: str, receipt_ref: Mapping[str, Any],
                               cache_dir: str, expected_entries: list[dict[str, Any]],
                               participant: str = "inferswarm04") -> float:
-    """A cache enumeration receipt is a retained raw participant-side listing."""
+    """A cache enumeration receipt is a retained raw participant-side listing.
+
+    Correction round 3 (review item 11): the receipt must carry the EXACT
+    committed enumerator helper identity (path + sha256) and the actual
+    executable/argv that ran.  A receipt emitted by any other tool —
+    including the pre-correction helper whose argv named a fictitious
+    ``cache-enum.sh`` — cannot validate.
+    """
     receipt = _read_receipt(base, receipt_ref, arm, "cache enumeration")
     if receipt.get("schema") != CACHE_ENUM_SCHEMA or receipt.get("cache_dir") != cache_dir:
         raise ValueError(f"{arm}: cache enumeration receipt is not bound to the private cache directory")
     if receipt.get("node_id") != participant:
         raise ValueError(f"{arm}: cache enumeration was not performed on the participant")
+    if receipt.get("tool") != {"path": "scripts/issue200_r8f_cache_enum.py",
+                               "sha256": cache_enum.helper_sha256()}:
+        raise ValueError(f"{arm}: cache enumeration helper source identity mismatch")
+    command = receipt.get("command")
+    if (not isinstance(command, list) or len(command) != 4
+            or not command[1].endswith("issue200_r8f_cache_enum.py")
+            or command[2] != arm or command[3] != cache_dir):
+        raise ValueError(f"{arm}: cache enumeration command is not the exact requested arm/cache-dir invocation")
     measured_at = receipt.get("measured_at")
     if not isinstance(measured_at, (int, float)):
         raise ValueError(f"{arm}: cache enumeration lacks a measurement timestamp")
@@ -243,7 +293,7 @@ def _network_bytes(base: Path, arm: str, receipt: Mapping[str, Any], payloads: l
     if not isinstance(receipt, dict):
         raise ValueError(f"{arm}: raw network capture receipt missing")
     allowed = {"arm", "capture_tool", "capture_command", "client_argv", "client_pid", "server_endpoint",
-               "capture_started", "capture_ended", "raw_capture", "reducer_sha256", "reduction_stdout"}
+               "raw_capture", "reducer_sha256", "reduction_stdout"}
     if set(receipt) != allowed:
         raise ValueError(f"{arm}: authored network classification/count fields are forbidden")
     raw = _read_raw_bytes(base, receipt.get("raw_capture", {}), f"{arm}: raw network capture")
@@ -253,8 +303,8 @@ def _network_bytes(base: Path, arm: str, receipt: Mapping[str, Any], payloads: l
         raise ValueError(f"{arm}: capture is not bound to the frozen client argv")
     if not isinstance(receipt.get("client_pid"), int) or not isinstance(receipt.get("server_endpoint"), str):
         raise ValueError(f"{arm}: capture PID/endpoint binding missing")
-    if receipt.get("arm") != arm or not receipt.get("capture_started") or not receipt.get("capture_ended"):
-        raise ValueError(f"{arm}: capture arm/boundaries missing")
+    if receipt.get("arm") != arm:
+        raise ValueError(f"{arm}: capture arm binding missing")
     lengths = [int(p["length"]) for p in payloads]
     network_reduce.validate_capture_contract(receipt.get("capture_command"), client_argv, lengths)
     observed_payloads = [{**item, "bytes": data} for item, data in zip(payloads, payload_bytes)]
@@ -274,17 +324,25 @@ def _network_bytes(base: Path, arm: str, receipt: Mapping[str, Any], payloads: l
         raise ValueError(f"{arm}: raw capture moved immutable SET_TENSOR payload")
     return {"immutable_payload": derived["immutable_payload_bytes"],
             "rpc_control": derived["protocol_control_hash_probe_bytes"],
-            "total": derived["client_to_server_bytes"], "payload_identities": derived["payload_identities"]}
+            "total": derived["client_to_server_bytes"], "payload_identities": derived["payload_identities"],
+            "client_execve_ts": derived["client_execve_ts"]}
 
 
 def _verify_client_runtime(base: Path, arm: str, arm_doc: Mapping[str, Any], client_argv: list[str],
                            pinned_client_sha: str) -> dict[str, Any]:
-    """Runtime/materialization success derived from the raw launch receipt."""
+    """Client launch receipt (DEMOTED — review items 5/15).
+
+    Correction round 3: this assembler-generated ``client-launch.json`` is a
+    DERIVATIVE CONVENIENCE SUMMARY ONLY.  Client argv is proven from the raw
+    capture's first-execve record inside the network reducer (byte-for-byte
+    full-argv comparison); the launch summary may only cross-check.  Binary
+    identity, log retention, and PID presence still bind here.
+    """
     receipt = _read_receipt(base, arm_doc.get("client_launch_receipt", {}), arm, "client launch")
     if receipt.get("schema") != CLIENT_LAUNCH_SCHEMA:
         raise ValueError(f"{arm}: client launch receipt schema mismatch")
     if receipt.get("argv") != client_argv:
-        raise ValueError(f"{arm}: client launch argv is not the frozen client command")
+        raise ValueError(f"{arm}: client launch summary argv contradicts the frozen client command")
     if receipt.get("binary_sha256") != pinned_client_sha or not isinstance(receipt.get("binary_live_receipt"), dict):
         raise ValueError(f"{arm}: client binary identity is not live-receipt bound")
     live = _read_receipt(base, receipt["binary_live_receipt"], None, "client binary live receipt")
@@ -306,13 +364,21 @@ def _verify_client_runtime(base: Path, arm: str, arm_doc: Mapping[str, Any], cli
 
 def _verify_rpc_runtime(base: Path, arm: str, arm_doc: Mapping[str, Any], cache_dir: str,
                         pinned_rpc_sha: str) -> dict[str, Any]:
+    """RPC-server launch receipt (DEMINUTURED — review item 15).
+
+    Correction round 3: this assembler-generated ``rpc-launch.json`` is a
+    DERIVATIVE CONVENIENCE SUMMARY ONLY.  It must not establish executable,
+    argv, or environment authority: those are proven from the retained raw
+    participant strace's own first-execve record inside
+    ``_verify_participant_read`` (binary path + exact argv) and from the
+    exact FNV cache path that server actually opens (effective cache use —
+    an authored ``LLAMA_CACHE`` env field is NOT authority).  Here we only
+    check the summary is internally consistent (binary identity receipts,
+    log retention, PID presence) so a contradicted summary fails closed.
+    """
     receipt = _read_receipt(base, arm_doc.get("rpc_server_receipt", {}), arm, "rpc server launch")
     if receipt.get("schema") != RPC_LAUNCH_SCHEMA:
         raise ValueError(f"{arm}: rpc-server launch receipt schema mismatch")
-    argv = receipt.get("argv")
-    if (not isinstance(argv, list) or argv[:1] != ["ggml-rpc-server"]
-            or "-c" not in argv or receipt.get("env", {}).get("LLAMA_CACHE") != cache_dir):
-        raise ValueError(f"{arm}: rpc-server argv/environment is not the frozen cache-enabled command")
     if receipt.get("binary_sha256") != pinned_rpc_sha or not isinstance(receipt.get("binary_live_receipt"), dict):
         raise ValueError(f"{arm}: rpc-server binary identity is not live-receipt bound")
     live = _read_receipt(base, receipt["binary_live_receipt"], None, "rpc binary live receipt")
@@ -326,16 +392,59 @@ def _verify_rpc_runtime(base: Path, arm: str, arm_doc: Mapping[str, Any], cache_
         raise ValueError(f"{arm}: rpc-server launch receipt lacks process identity")
     if not isinstance(receipt.get("started_at"), (int, float)):
         raise ValueError(f"{arm}: rpc-server launch receipt lacks a start timestamp")
+    # Cross-check only (non-authoritative): if the summary still carries an
+    # env claim, it must not contradict the cache_dir the raw strace binds.
+    env = receipt.get("env", {})
+    if isinstance(env, dict) and "LLAMA_CACHE" in env and env["LLAMA_CACHE"] != cache_dir:
+        raise ValueError(f"{arm}: rpc-server summary env contradicts the bound cache directory")
     return {"pid": receipt["pid"], "started_at": receipt["started_at"]}
 
 
-_READ_LINE = re.compile(r"^(?P<pid>\d+)\s+\S+\s+(?P<record>.*)$")
+_READ_LINE = re.compile(r"^(?P<pid>\d+)\s+(?P<ts>\S+)\s+(?P<record>.*)$")
 _OPENAT = re.compile(r'^openat\((?P<dir>(?:-?\d+|AT_FDCWD)), "(?P<path>(?:[^"\\]|\\.)*)",.*\)\s+=\s+(?P<fd>\d+)$')
 _READ = re.compile(r"^read\((?P<fd>\d+),.*\)\s+=\s+(?P<result>\d+)$")
+
+# The exact frozen RPC-server execution the participant-side from-exec strace
+# must prove (review item 7): binary path plus host/port/device/cache-enable
+# arguments, in order.  Derived from the pinned launch contract, never from
+# assembler-authored rpc-launch.json fields.
+FROZEN_RPC_EXEC = ("/home/hermes/llama.cpp/build-v041/bin/ggml-rpc-server",
+                   ["-H", "0.0.0.0", "-p", "50052", "-d", "CUDA0", "-c"])
 
 
 def _unescape(text: str) -> str:
     return re.sub(r"\\x([0-9a-fA-F]{2})", lambda m: chr(int(m.group(1), 16)), text)
+
+
+def _parse_first_execve(capture: bytes, arm: str) -> tuple[int, str, list[str]]:
+    """Bind the strace root PID and the exact first-execve argv.
+
+    The participant-side capture is from-exec: its FIRST record must be the
+    ggml-rpc-server's own ``execve`` (an attach can never produce this).
+    Returns (root_pid, binary_path, argv).  Abbreviated/unparseable execve,
+    or a first record that is not the server's execve, is a rejection.
+    """
+    first_line = capture.split(b"\n", 1)[0].decode("utf-8", "strict")
+    match = _READ_LINE.match(first_line)
+    if match is None:
+        raise ValueError(f"{arm}: participant strace lacks a PID-prefixed first record")
+    record = match["record"]
+    parsed = network_reduce.parse_execve(record)
+    if parsed is None:
+        raise ValueError(f"{arm}: participant strace first record is not a parseable complete execve")
+    return int(match["pid"]), parsed[0], parsed[1]
+
+
+def _participant_exec_ts(base: Path, arm: str, arm_doc: Mapping[str, Any]) -> float:
+    """The participant server's exec timestamp from the raw strace itself."""
+    receipt = _read_receipt(base, arm_doc.get("participant_read_receipt", {}), arm, "participant cache read")
+    capture = _read_raw_bytes(base, receipt.get("strace_capture", {}), f"{arm}: participant read strace")
+    first_line = capture.split(b"\n", 1)[0].decode("utf-8", "strict")
+    _parse_first_execve(capture, arm)  # proves the record is the server's own execve
+    match = _READ_LINE.match(first_line)
+    if match is None:
+        raise ValueError(f"{arm}: participant strace first record is malformed")
+    return float(match["ts"])
 
 
 def _verify_participant_read(base: Path, arm: str, arm_doc: Mapping[str, Any],
@@ -343,6 +452,15 @@ def _verify_participant_read(base: Path, arm: str, arm_doc: Mapping[str, Any],
                              server_pid: int, require_zero: bool = False) -> dict[str, Any]:
     """LOCAL_VERIFIED source attribution derived from the participant-side
     from-exec file strace of this arm's own ggml-rpc-server.
+
+    Correction round 3 (review items 7/8): the SAME retained strace now
+    establishes BOTH (a) the server's execution provenance — its first
+    record must be the accepted ggml-rpc-server binary's own execve with the
+    exact frozen argv including ``-c`` (cache enable) — and (b) effective
+    cache use: the bound server PID opens/reads the exact FNV cache path.
+    The assembler-authored ``rpc-launch.json`` argv/env is NOT authority; an
+    authored ``LLAMA_CACHE`` env field is at most a cross-check, never proof
+    (the effective cache use is the FNV path actually opened).
 
     With ``require_zero`` (cold arm), the derivation instead proves the
     server performed ZERO successful reads of the cache file (the file may
@@ -357,6 +475,15 @@ def _verify_participant_read(base: Path, arm: str, arm_doc: Mapping[str, Any],
     capture = _read_raw_bytes(base, receipt.get("strace_capture", {}), f"{arm}: participant read strace")
     if receipt.get("server_pid") != server_pid:
         raise ValueError(f"{arm}: cache-read strace is not bound to the arm's server process")
+    # (a) Execution provenance from the capture itself.
+    root_pid, exec_path, exec_argv = _parse_first_execve(capture, arm)
+    if root_pid != server_pid:
+        raise ValueError(f"{arm}: participant strace root PID is not the server PID whose reads carry attribution")
+    if exec_path != FROZEN_RPC_EXEC[0]:
+        raise ValueError(f"{arm}: participant server did not start from the accepted ggml-rpc-server binary")
+    if exec_argv != [FROZEN_RPC_EXEC[0], *FROZEN_RPC_EXEC[1]]:
+        raise ValueError(f"{arm}: participant server execve argv does not match the frozen RPC launch byte-for-byte")
+    # (b) Effective cache use: the exact FNV cache path this server opens/reads.
     expected_path = f"{cache_dir}/rpc/{fnv}"
     try:
         lines = capture.decode("utf-8", "strict").splitlines()
@@ -476,22 +603,39 @@ def _validate_stage_mapping(base: Path, arm: str, mappings: Any, authority: dict
         fnv = payload.get("fnv1a_cache_key")
         if not isinstance(fnv, str) or fnv1a64(measured_bytes) != fnv:
             raise ValueError(f"{arm}: FNV cache filename does not match actual payload bytes")
-        receipt = _read_receipt(base, staged.get("receipt", {}), arm, "cache staging")
-        if receipt.get("schema") != STAGE_MEASUREMENT_SCHEMA:
-            raise ValueError(f"{arm}: cache staging receipt is not the controlled helper's measurement")
-        if receipt.get("exit_code") != 0:
-            raise ValueError(f"{arm}: cache staging helper did not exit successfully")
-        if (receipt.get("node_id") != expected_participant or receipt.get("cache_dir") != cache_dir
-                or receipt.get("staged_path") != staged.get("path")):
+        # STAGING PROVENANCE (review item 13): the controlled helper's RAW
+        # CANONICAL STDOUT is the authority, consumed directly.  It must
+        # carry the exact committed helper identity; the assembler wrapper
+        # ("staging.json" + authored exit_code) is derivative only.
+        raw_stdout_ref = staged.get("raw_stdout")
+        if not isinstance(raw_stdout_ref, dict):
+            raise ValueError(f"{arm}: staging raw helper stdout is missing")
+        raw_stdout = _read_raw_bytes(base, raw_stdout_ref, f"{arm}: staging raw stdout")
+        measurement = json.loads(raw_stdout)
+        if measurement.get("schema") != STAGE_MEASUREMENT_SCHEMA:
+            raise ValueError(f"{arm}: staging raw stdout is not the controlled helper's measurement")
+        if measurement.get("tool") != {"path": "scripts/issue200_r8f_stage_cache.py",
+                                       "sha256": stage_cache.helper_sha256()}:
+            raise ValueError(f"{arm}: staging helper source identity mismatch")
+        raw_stderr_ref = staged.get("raw_stderr")
+        if not isinstance(raw_stderr_ref, dict):
+            raise ValueError(f"{arm}: staging raw helper stderr is missing")
+        if _read_raw_bytes(base, raw_stderr_ref, f"{arm}: staging raw stderr"):
+            raise ValueError(f"{arm}: staging helper stderr is nonempty")
+        if (measurement.get("node_id") != expected_participant or measurement.get("cache_dir") != cache_dir
+                or measurement.get("staged_path") != staged.get("path")):
             raise ValueError(f"{arm}: cache staging receipt is not bound to the payload participant/cache path")
-        if (receipt.get("range_sha256") != payload["sha256"]
-                or receipt.get("tmp_sha256") != payload["sha256"] or receipt.get("final_sha256") != payload["sha256"]
-                or receipt.get("tmp_size") != payload["length"] or receipt.get("final_size") != payload["length"]
-                or receipt.get("offset") != source["offset"] or receipt.get("length") != payload["length"]
-                or receipt.get("fnv1a_cache_key") != fnv):
+        if (measurement.get("range_sha256") != payload["sha256"]
+                or measurement.get("tmp_sha256") != payload["sha256"] or measurement.get("final_sha256") != payload["sha256"]
+                or measurement.get("tmp_size") != payload["length"] or measurement.get("final_size") != payload["length"]
+                or measurement.get("offset") != source["offset"] or measurement.get("length") != payload["length"]
+                or measurement.get("fnv1a_cache_key") != fnv
+                or measurement.get("member") != source["member"]):
             raise ValueError(f"{arm}: staging measurement does not verify exact digest/size before and after publish")
-        if not isinstance(receipt.get("tmp_path"), str) or not receipt["tmp_path"].startswith(cache_dir.rstrip("/") + "/"):
+        if not isinstance(measurement.get("tmp_path"), str) or not measurement["tmp_path"].startswith(cache_dir.rstrip("/") + "/"):
             raise ValueError(f"{arm}: staging temporary file was not written inside the target cache directory")
+        if measurement.get("atomic_publish") != "os.rename after fsync inside target directory":
+            raise ValueError(f"{arm}: staging measurement does not document atomic-publish semantics")
         if not staged["path"].startswith(cache_dir.rstrip("/") + "/") or Path(staged["path"]).name != fnv:
             raise ValueError(f"{arm}: staged cache path is not the FNV-keyed final path inside its private cache directory")
         seen.add(key)
@@ -570,8 +714,6 @@ def validate_physical_evidence(document: Mapping[str, Any], *, evidence_root: Pa
             for key in frozen_keys:
                 if arm.get(key) != frozen[key]:
                     raise ValueError(f"{name}: {key} differs from frozen identity")
-            if not isinstance(arm.get("initialization_wall_time_ms"), (int, float)) or arm["initialization_wall_time_ms"] < 0:
-                raise ValueError(f"{name}: initialization wall time missing")
             client_info = _verify_client_runtime(evidence_root, name, arm, client_argv, pinned_client_sha)
             if arm.get("network_receipt", {}).get("client_pid") != client_info["pid"]:
                 raise ValueError(f"{name}: network capture PID is not the launched client process")
@@ -598,6 +740,10 @@ def validate_physical_evidence(document: Mapping[str, Any], *, evidence_root: Pa
             fnv = payloads[0].get("fnv1a_cache_key")
             rpc_info = _verify_rpc_runtime(evidence_root, name, arm, cache_dir,
                                            accepted_binaries[participant_id])
+            # Effective server start time: derived from the participant strace's
+            # OWN first-record -ttt timestamp (raw evidence), never from an
+            # assembler-authored started_at field.
+            read_receipt_ts = _participant_exec_ts(evidence_root, name, arm)
             if name == "cold_remote":
                 _verify_cache_enumeration(evidence_root, name, arm.get("cache_initialization_receipt", {}),
                                           cache_dir, [], participant_id)
@@ -635,6 +781,11 @@ def validate_physical_evidence(document: Mapping[str, Any], *, evidence_root: Pa
                     raise ValueError(f"{name}: reuse arm does not reuse the local-verified arm's cache directory")
                 if "cache_staging" in arm or "cache_initialization_receipt" in arm:
                     raise ValueError(f"{name}: reuse arm must not stage or freshly initialize a cache")
+                # The precheck is a full hardened enumeration receipt (item 12):
+                # exact helper identity + exact requested arm/cache-dir/node.
+                _verify_cache_enumeration(evidence_root, name, arm.get("cache_precheck_receipt", {}),
+                                          cache_dir, [{"name": f"rpc/{fnv}", "size": payloads[0]["length"],
+                                                        "sha256": payloads[0]["sha256"]}], participant_id)
                 precheck = _read_receipt(evidence_root, arm.get("cache_precheck_receipt", {}), name, "cache precheck")
                 if precheck.get("schema") != CACHE_ENUM_SCHEMA or precheck.get("cache_dir") != cache_dir:
                     raise ValueError(f"{name}: cache precheck receipt is not bound to the reused cache directory")
@@ -643,8 +794,15 @@ def validate_physical_evidence(document: Mapping[str, Any], *, evidence_root: Pa
                 if entries != [{"name": f"rpc/{fnv}", "size": payloads[0]["length"], "sha256": payloads[0]["sha256"]}]:
                     raise ValueError(f"{name}: reused cache file did not already exist with exact size/SHA before the new server/client")
                 measured = precheck.get("measured_at")
-                if not isinstance(measured, (int, float)) or not (measured < client_info["started_at"]
-                        and measured < rpc_info["started_at"]):
+                if not isinstance(measured, (int, float)):
+                    raise ValueError(f"{name}: cache precheck lacks a measurement timestamp")
+                # Ordering authority (review item 8/L1-P2-02 disposition):
+                # the before/after proof compares the enumerator's measured_at
+                # against process start times DERIVED FROM THE RAW CAPTURES'
+                # own -ttt first-record timestamps, never against
+                # assembler-authored started_at fields.
+                client_exec_ts = network[name]["client_execve_ts"]
+                if not (measured < client_exec_ts and measured < read_receipt_ts):
                     raise ValueError(f"{name}: cache precheck was not measured before the new server/client started")
                 read = _verify_participant_read(evidence_root, name, arm, cache_dir, fnv,
                                                 payloads[0]["length"], rpc_info["pid"])

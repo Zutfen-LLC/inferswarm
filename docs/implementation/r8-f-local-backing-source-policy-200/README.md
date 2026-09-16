@@ -15,6 +15,25 @@ branch was reconciled by merging `origin/main@8a3681b` (merge commit
 `54a5145`), preserving both the R8-E closure/CI registration and this
 campaign's producers semantically unchanged.
 
+Correction round 3 (this revision, maintainer review of head `0e761a8`):
+Phase 5 was re-executed once as a bounded three-arm campaign under fresh
+private cache/run IDs (`/tmp/i200p5c3`).  Reason: the correction hardens
+every helper receipt with exact committed tool identity (backing
+verification, cache enumeration, staging), and the retained round-2
+enumeration receipts could not be provenance-bound — they were emitted by
+the pre-hardening enumerator whose receipt named a fictitious
+`cache-enum.sh` command and carried no tool identity, and their content
+(cache-empty-before / precheck-before-start) is a temporal observation that
+no other retained bytes can re-derive.  All other hardenings are
+reduction-level: the client and RPC-server execve argv are now proven
+byte-for-byte from the raw captures' own first records, assembler
+launch summaries are demoted to derivative convenience, and the terminal is
+proved independent of the orchestrator run-summary (retained retention-only
+under `evidence/physical-phase5-raw/run-summary.json` alongside the
+committed orchestrator producer source).  No R8-D evidence was rerun; no
+llama.cpp byte was modified; the retained round-2 raw evidence remains in
+git history at commit `0e761a8`.
+
 ## What this is
 
 Implements and proves a **model-independent internal Source-policy seam**
