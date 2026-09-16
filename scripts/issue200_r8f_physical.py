@@ -366,10 +366,15 @@ def _verify_participant_read(base: Path, arm: str, arm_doc: Mapping[str, Any],
             continue
         pid, record = int(match["pid"]), match["record"]
         openat = _OPENAT.match(record)
-        if openat is not None and _unescape(openat["path"]) == expected_path:
-            if pid != server_pid:
-                raise ValueError(f"{arm}: cache file was opened by a process other than the bound server")
-            fd = int(openat["fd"])
+        if openat is not None:
+            if fd is not None and int(openat["fd"]) == fd:
+                # FD reuse: stop attributing reads to the cache file once the
+                # same FD number is opened for a different path (review P2).
+                fd = None
+            if _unescape(openat["path"]) == expected_path:
+                if pid != server_pid:
+                    raise ValueError(f"{arm}: cache file was opened by a process other than the bound server")
+                fd = int(openat["fd"])
             continue
         read = _READ.match(record)
         if read is not None and fd is not None and int(read["fd"]) == fd:
