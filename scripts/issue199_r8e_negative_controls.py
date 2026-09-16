@@ -22,6 +22,8 @@ Issue #199 required controls -> control ids:
   9. authored characterization contradicting raw ..... NC9
  10. semantic characterization (rank structure vs
      authored prose) ................................ NC10 (correction)
+ 11. stale obs2 digest / every alias and one-sided-copy seam .... NC11-16
+ 17. internally consistent but byte-different obs2 ............ NC17
 """
 import argparse
 import copy
@@ -191,6 +193,153 @@ def main():
         cap = lambda arm, i: os.path.join(  # noqa: E731
             R8E_DIR, "evidence/observations",
             f"capture-case-256-{arm}-obs{i}.json")  # incremental state
+
+        # These controls deliberately regenerate the sandbox manifest.  A
+        # green generic manifest must never conceal a broken per-repeat
+        # identity or actual-byte binding.
+        import pathlib as _pathlib
+        import issue199_r8e_manifest as _MB0
+
+        def refresh_manifest():
+            _MB0.AREA = _pathlib.Path(root) / R8E_DIR
+            _MB0.ROOT = _pathlib.Path(root)
+            _MB0.main()
+
+        def byte_control(note, mutate, expect_substr):
+            snaps = {}
+
+            def snap(rel):
+                fp = os.path.join(root, rel)
+                snaps[rel] = (os.path.islink(fp),
+                              os.readlink(fp) if os.path.islink(fp) else
+                              open(fp, "rb").read())
+
+            mutate(snap)
+            refresh_manifest()
+            r = base_state(root)
+            for rel, (was_link, content) in snaps.items():
+                fp = os.path.join(root, rel)
+                if os.path.lexists(fp):
+                    os.unlink(fp)
+                if was_link:
+                    os.symlink(content, fp)
+                else:
+                    open(fp, "wb").write(content)
+            refresh_manifest()
+            return {"control": note,
+                    "moved": r["terminal"] == "R8E_EVIDENCE_BLOCKED" and
+                    any(expect_substr in x for x in r["problems"]),
+                    "terminal": r["terminal"],
+                    "matched_problem": next((x for x in r["problems"]
+                                             if expect_substr in x), None)}
+
+        def ident(case, arm, i):
+            return R.expected_repeat_identity(case, arm, i)
+
+        # NC11: mutate only obs2's canonical raw sidecar; leave its
+        # capture-authored digest stale while making the generic manifest
+        # green.  The exact obs2 byte/digest binding must stop reduction.
+        def nc11(snap):
+            x = ident("case-256", "reference", 2)
+            snap(x["raw_f32_rel"])
+            fp = os.path.join(root, x["raw_f32_rel"])
+            b = bytearray(open(fp, "rb").read())
+            b[0] ^= 1
+            open(fp, "wb").write(b)
+        results.append(byte_control(
+            "NC11 stale obs2 authored digest after raw-byte mutation",
+            nc11, "f32_row_sha256 disagrees with actual raw hook row bytes"))
+
+        def mutate_cap(case, arm, i, fn, snap):
+            x = ident(case, arm, i)
+            snap(x["capture_rel"])
+            fp = os.path.join(root, x["capture_rel"])
+            d = json.load(open(fp))
+            fn(d)
+            write_cap(root, x["capture_rel"], d)
+
+        results.append(byte_control(
+            "NC12 obs2 label aliases obs1 label",
+            lambda snap: mutate_cap("case-256", "reference", 2,
+                lambda d: d.__setitem__("label", "case-256-reference-obs1"), snap),
+            "capture label != loop-derived label"))
+        results.append(byte_control(
+            "NC13 obs2 observation-path aliases obs1 JSONL",
+            lambda snap: mutate_cap("case-256", "reference", 2,
+                lambda d: d["binding"].__setitem__(
+                    "observation_path", "obs-case-256-reference-obs1.jsonl"), snap),
+            "binding.observation_path != loop-derived raw JSONL path"))
+
+        # A symlink is a concrete raw-sidecar redirection.  Exact fixed
+        # names alone are insufficient if their inode may alias obs1.
+        def nc14(snap):
+            one = ident("case-256", "reference", 1)
+            two = ident("case-256", "reference", 2)
+            snap(two["raw_f32_rel"])
+            fp = os.path.join(root, two["raw_f32_rel"])
+            os.unlink(fp)
+            os.symlink(os.path.basename(os.path.join(root, one["raw_f32_rel"])), fp)
+        results.append(byte_control("NC14 obs2 raw-sidecar aliases obs1",
+                                    nc14, "must not alias another repeat"))
+
+        def flip_only(rel):
+            def mutate(snap):
+                snap(rel)
+                fp = os.path.join(root, rel)
+                b = bytearray(open(fp, "rb").read())
+                b[0] ^= 1
+                open(fp, "wb").write(b)
+            return mutate
+        x2 = ident("case-256", "reference", 2)
+        results.append(byte_control("NC15 obs2 raw-hook sidecar mutation only",
+                                    flip_only(x2["raw_f32_rel"]),
+                                    "raw hook f32 sidecar != retained row-copy"))
+        results.append(byte_control("NC16 obs2 retained row-copy mutation only",
+                                    flip_only(x2["row_copy_rel"]),
+                                    "raw hook f32 sidecar != retained row-copy"))
+
+        # NC17 is the hard negative: every obs2 authored field and both
+        # duplicate sidecars are made self-consistent with a different,
+        # valid float32 row.  Only independently derived repeat bytes may
+        # reject it.
+        def nc17(snap):
+            import struct
+            x = ident("case-256", "reference", 2)
+            for rel in (x["capture_rel"], x["observation_rel"],
+                        x["raw_f32_rel"], x["row_copy_rel"]):
+                snap(rel)
+            rawp = os.path.join(root, x["raw_f32_rel"])
+            vals = list(struct.unpack("<%df" % (os.path.getsize(rawp) // 4),
+                                      open(rawp, "rb").read()))
+            # Preserve argmax/token identity but alter a non-focal score.
+            vals[100] = vals[100] - 0.125
+            b = struct.pack("<%df" % len(vals), *vals)
+            for rel in (x["raw_f32_rel"], x["row_copy_rel"]):
+                open(os.path.join(root, rel), "wb").write(b)
+            fp = os.path.join(root, x["capture_rel"])
+            d = json.load(open(fp))
+            view = R._view_from_row_bytes(b, "case-256")
+            d["f32_row_sha256"] = hashlib.sha256(b).hexdigest()
+            d["f32_row_floats"] = len(vals)
+            d["f32_row_stats"]["n_nonfinite"] = view["n_nonfinite"]
+            d["f32_row_stats"]["fsum"] = view["fsum_math"]
+            d["f32_row_stats"]["fsum_math"] = view["fsum_math"]
+            d["f32_row_stats"]["sumsq"] = view["sumsq"]
+            d["top16_from_f32_bytes"] = view["top16"]
+            for row in d["hook_rows"]:
+                if row["pos"] == x["generated_position"]:
+                    row["top"] = view["top16"]
+                    row["tok"] = view["winner"]
+                    row["n_nonfinite"] = view["n_nonfinite"]
+                    row["focus"] = [[tok, view["focus_tokens"][tok]["rank"],
+                                     view["focus_tokens"][tok]["logit"]]
+                                    for tok in (271, 34227)]
+            write_cap(root, x["capture_rel"], d)
+            with open(os.path.join(root, x["observation_rel"]), "w") as fh:
+                for row in d["hook_rows"]:
+                    fh.write(json.dumps(row, sort_keys=True) + "\n")
+        results.append(byte_control("NC17 internally consistent but byte-different obs2",
+                                    nc17, "repeat logits-row instability"))
 
         # NC1 wrong predecessor identity: corrupt an R8-D v2 evidence
         # byte covered by its manifest
@@ -400,7 +549,11 @@ def main():
                     orel0 = os.path.join(
                         R8E_DIR, "evidence/observations",
                         f"obs-{label}.jsonl.pos{pos}.f32")
+                    jrel = os.path.join(
+                        R8E_DIR, "evidence/observations",
+                        f"obs-{label}.jsonl")
                     snap(crel)
+                    snap(jrel)
                     snap(rrel)
                     if os.path.exists(os.path.join(root, orel0)):
                         snap(orel0)
@@ -434,6 +587,12 @@ def main():
                     d_["authored_characterization"] = \
                         "narrow-winner-inversion"
                     write_cap(root, crel, d_)
+                    # The capture producer copied the raw hook JSONL into
+                    # hook_rows.  A complete self-consistent negative must
+                    # update that contract-bearing source as well.
+                    with open(os.path.join(root, jrel), "w") as jfh:
+                        for hook in d_["hook_rows"]:
+                            jfh.write(json.dumps(hook, sort_keys=True) + "\n")
                     # also mirror the forgery into the raw obs jsonl
                     # sidecar the manifest covers
                     orel = os.path.join(

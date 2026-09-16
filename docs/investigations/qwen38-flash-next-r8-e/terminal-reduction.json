@@ -401,20 +401,174 @@
     }
   },
   "problems": [],
+  "repeat_byte_details": {
+    "case-256/candidate/obs1": {
+      "actual_raw_hook_sha256": "e3b4001c63e27c355381b2d0b654bbbeb46ea6211a5ab6ff36c8036e7be68e21",
+      "actual_row_copy_sha256": "e3b4001c63e27c355381b2d0b654bbbeb46ea6211a5ab6ff36c8036e7be68e21",
+      "identity": {
+        "arm": "candidate",
+        "capture_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-256-candidate-obs1.json",
+        "case": "case-256",
+        "generated_position": 5,
+        "label": "case-256-candidate-obs1",
+        "observation_path": "obs-case-256-candidate-obs1.jsonl",
+        "observation_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-256-candidate-obs1.jsonl",
+        "raw_f32_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-256-candidate-obs1.jsonl.pos5.f32",
+        "repeat": 1,
+        "row_copy_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/row-case-256-candidate-obs1.pos5.f32"
+      },
+      "problems": [],
+      "raw_hook_equals_row_copy": true
+    },
+    "case-256/candidate/obs2": {
+      "actual_raw_hook_sha256": "e3b4001c63e27c355381b2d0b654bbbeb46ea6211a5ab6ff36c8036e7be68e21",
+      "actual_row_copy_sha256": "e3b4001c63e27c355381b2d0b654bbbeb46ea6211a5ab6ff36c8036e7be68e21",
+      "identity": {
+        "arm": "candidate",
+        "capture_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-256-candidate-obs2.json",
+        "case": "case-256",
+        "generated_position": 5,
+        "label": "case-256-candidate-obs2",
+        "observation_path": "obs-case-256-candidate-obs2.jsonl",
+        "observation_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-256-candidate-obs2.jsonl",
+        "raw_f32_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-256-candidate-obs2.jsonl.pos5.f32",
+        "repeat": 2,
+        "row_copy_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/row-case-256-candidate-obs2.pos5.f32"
+      },
+      "problems": [],
+      "raw_hook_equals_row_copy": true
+    },
+    "case-256/reference/obs1": {
+      "actual_raw_hook_sha256": "1fd17a48f88678df7d375f3b7668268d1a4c13b183fd46ea7cf056dd5819190e",
+      "actual_row_copy_sha256": "1fd17a48f88678df7d375f3b7668268d1a4c13b183fd46ea7cf056dd5819190e",
+      "identity": {
+        "arm": "reference",
+        "capture_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-256-reference-obs1.json",
+        "case": "case-256",
+        "generated_position": 5,
+        "label": "case-256-reference-obs1",
+        "observation_path": "obs-case-256-reference-obs1.jsonl",
+        "observation_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-256-reference-obs1.jsonl",
+        "raw_f32_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-256-reference-obs1.jsonl.pos5.f32",
+        "repeat": 1,
+        "row_copy_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/row-case-256-reference-obs1.pos5.f32"
+      },
+      "problems": [],
+      "raw_hook_equals_row_copy": true
+    },
+    "case-256/reference/obs2": {
+      "actual_raw_hook_sha256": "1fd17a48f88678df7d375f3b7668268d1a4c13b183fd46ea7cf056dd5819190e",
+      "actual_row_copy_sha256": "1fd17a48f88678df7d375f3b7668268d1a4c13b183fd46ea7cf056dd5819190e",
+      "identity": {
+        "arm": "reference",
+        "capture_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-256-reference-obs2.json",
+        "case": "case-256",
+        "generated_position": 5,
+        "label": "case-256-reference-obs2",
+        "observation_path": "obs-case-256-reference-obs2.jsonl",
+        "observation_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-256-reference-obs2.jsonl",
+        "raw_f32_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-256-reference-obs2.jsonl.pos5.f32",
+        "repeat": 2,
+        "row_copy_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/row-case-256-reference-obs2.pos5.f32"
+      },
+      "problems": [],
+      "raw_hook_equals_row_copy": true
+    },
+    "case-4096/candidate/obs1": {
+      "actual_raw_hook_sha256": "d4a0a88fff3a4214c732deb0b7e6c0f29d207db008fda734072570450f0e7661",
+      "actual_row_copy_sha256": "d4a0a88fff3a4214c732deb0b7e6c0f29d207db008fda734072570450f0e7661",
+      "identity": {
+        "arm": "candidate",
+        "capture_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-4096-candidate-obs1.json",
+        "case": "case-4096",
+        "generated_position": 0,
+        "label": "case-4096-candidate-obs1",
+        "observation_path": "obs-case-4096-candidate-obs1.jsonl",
+        "observation_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-4096-candidate-obs1.jsonl",
+        "raw_f32_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-4096-candidate-obs1.jsonl.pos0.f32",
+        "repeat": 1,
+        "row_copy_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/row-case-4096-candidate-obs1.pos0.f32"
+      },
+      "problems": [],
+      "raw_hook_equals_row_copy": true
+    },
+    "case-4096/candidate/obs2": {
+      "actual_raw_hook_sha256": "d4a0a88fff3a4214c732deb0b7e6c0f29d207db008fda734072570450f0e7661",
+      "actual_row_copy_sha256": "d4a0a88fff3a4214c732deb0b7e6c0f29d207db008fda734072570450f0e7661",
+      "identity": {
+        "arm": "candidate",
+        "capture_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-4096-candidate-obs2.json",
+        "case": "case-4096",
+        "generated_position": 0,
+        "label": "case-4096-candidate-obs2",
+        "observation_path": "obs-case-4096-candidate-obs2.jsonl",
+        "observation_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-4096-candidate-obs2.jsonl",
+        "raw_f32_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-4096-candidate-obs2.jsonl.pos0.f32",
+        "repeat": 2,
+        "row_copy_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/row-case-4096-candidate-obs2.pos0.f32"
+      },
+      "problems": [],
+      "raw_hook_equals_row_copy": true
+    },
+    "case-4096/reference/obs1": {
+      "actual_raw_hook_sha256": "e79a8490e33d25bc9ac0b9c49a26ffd443b5dd37d966275c35c920a6541eeb7a",
+      "actual_row_copy_sha256": "e79a8490e33d25bc9ac0b9c49a26ffd443b5dd37d966275c35c920a6541eeb7a",
+      "identity": {
+        "arm": "reference",
+        "capture_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-4096-reference-obs1.json",
+        "case": "case-4096",
+        "generated_position": 0,
+        "label": "case-4096-reference-obs1",
+        "observation_path": "obs-case-4096-reference-obs1.jsonl",
+        "observation_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-4096-reference-obs1.jsonl",
+        "raw_f32_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-4096-reference-obs1.jsonl.pos0.f32",
+        "repeat": 1,
+        "row_copy_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/row-case-4096-reference-obs1.pos0.f32"
+      },
+      "problems": [],
+      "raw_hook_equals_row_copy": true
+    },
+    "case-4096/reference/obs2": {
+      "actual_raw_hook_sha256": "e79a8490e33d25bc9ac0b9c49a26ffd443b5dd37d966275c35c920a6541eeb7a",
+      "actual_row_copy_sha256": "e79a8490e33d25bc9ac0b9c49a26ffd443b5dd37d966275c35c920a6541eeb7a",
+      "identity": {
+        "arm": "reference",
+        "capture_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-4096-reference-obs2.json",
+        "case": "case-4096",
+        "generated_position": 0,
+        "label": "case-4096-reference-obs2",
+        "observation_path": "obs-case-4096-reference-obs2.jsonl",
+        "observation_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-4096-reference-obs2.jsonl",
+        "raw_f32_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/obs-case-4096-reference-obs2.jsonl.pos0.f32",
+        "repeat": 2,
+        "row_copy_rel": "docs/investigations/qwen38-flash-next-r8-e/evidence/observations/row-case-4096-reference-obs2.pos0.f32"
+      },
+      "problems": [],
+      "raw_hook_equals_row_copy": true
+    }
+  },
   "stability": {
     "case-256/candidate": {
+      "actual_obs1_raw_hook_sha256": "e3b4001c63e27c355381b2d0b654bbbeb46ea6211a5ab6ff36c8036e7be68e21",
+      "actual_obs2_raw_hook_sha256": "e3b4001c63e27c355381b2d0b654bbbeb46ea6211a5ab6ff36c8036e7be68e21",
       "repeat_f32_row_sha256_equality": true,
       "repeat_token_equality": true
     },
     "case-256/reference": {
+      "actual_obs1_raw_hook_sha256": "1fd17a48f88678df7d375f3b7668268d1a4c13b183fd46ea7cf056dd5819190e",
+      "actual_obs2_raw_hook_sha256": "1fd17a48f88678df7d375f3b7668268d1a4c13b183fd46ea7cf056dd5819190e",
       "repeat_f32_row_sha256_equality": true,
       "repeat_token_equality": true
     },
     "case-4096/candidate": {
+      "actual_obs1_raw_hook_sha256": "d4a0a88fff3a4214c732deb0b7e6c0f29d207db008fda734072570450f0e7661",
+      "actual_obs2_raw_hook_sha256": "d4a0a88fff3a4214c732deb0b7e6c0f29d207db008fda734072570450f0e7661",
       "repeat_f32_row_sha256_equality": true,
       "repeat_token_equality": true
     },
     "case-4096/reference": {
+      "actual_obs1_raw_hook_sha256": "e79a8490e33d25bc9ac0b9c49a26ffd443b5dd37d966275c35c920a6541eeb7a",
+      "actual_obs2_raw_hook_sha256": "e79a8490e33d25bc9ac0b9c49a26ffd443b5dd37d966275c35c920a6541eeb7a",
       "repeat_f32_row_sha256_equality": true,
       "repeat_token_equality": true
     }

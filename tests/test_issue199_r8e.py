@@ -184,6 +184,26 @@ class CaptureRecordTests(unittest.TestCase):
                 self.assertEqual(r1["f32_row_sha256"],
                                  r2["f32_row_sha256"])
 
+    def test_repeat_stability_is_actual_byte_pinned(self):
+        """The real evidence pin opens both fixed raw sidecars and both
+        row copies; record digests are only cross-checks."""
+        for case in self.CASES:
+            for arm in self.ARMS:
+                actual = []
+                for i in (1, 2):
+                    rec = load(R8E_EV / "observations" /
+                               f"capture-{case}-{arm}-obs{i}.json")
+                    view, ident, probs = R_mod.bind_repeat_to_bytes(
+                        rec, str(REPO), case, arm, i)
+                    self.assertEqual(probs, [], f"{case}/{arm}/obs{i}: {probs}")
+                    self.assertEqual(ident["label"], f"{case}-{arm}-obs{i}")
+                    self.assertTrue((R8E_EV / "observations" /
+                                     Path(ident["raw_f32_rel"]).name).is_file())
+                    self.assertEqual(view["actual_sha256"],
+                                     sha(REPO / ident["row_copy_rel"]))
+                    actual.append(view["actual_sha256"])
+                self.assertEqual(actual[0], actual[1], f"{case}/{arm}")
+
 
 class NonPerturbationTests(unittest.TestCase):
     def test_accepted_binary_controls_reproduce_r8d(self):
@@ -367,7 +387,8 @@ class CharacterizationTests(unittest.TestCase):
         # cross-check path:
         bview, bprob = R.bytes_derived_view(rec, str(REPO),
                                             "case-4096", "reference")
-        self.assertEqual(bprob, [])
+        self.assertTrue(any("hook focal 248046 disagrees" in x
+                            for x in bprob), bprob)
         self.assertIsNotNone(bview)
         self.assertEqual(bview["focus_tokens"][248046]["rank"], 5)
         hview = R.arm_view(row, [328, 248046])
@@ -478,6 +499,21 @@ class ManifestTests(unittest.TestCase):
         for rel in A.R8E_PRODUCERS:
             self.assertIn(rel, pins)
             self.assertEqual(sha(REPO / rel), pins[rel])
+
+    def test_repeat_byte_adversaries_are_retained_and_green(self):
+        d = load(R8E_EV / "negative-controls/negative-controls.json")
+        self.assertTrue(d["all_moved"])
+        names = {x["control"]: x for x in d["controls"]}
+        for name in (
+                "NC11 stale obs2 authored digest after raw-byte mutation",
+                "NC12 obs2 label aliases obs1 label",
+                "NC13 obs2 observation-path aliases obs1 JSONL",
+                "NC14 obs2 raw-sidecar aliases obs1",
+                "NC15 obs2 raw-hook sidecar mutation only",
+                "NC16 obs2 retained row-copy mutation only",
+                "NC17 internally consistent but byte-different obs2"):
+            self.assertIn(name, names)
+            self.assertTrue(names[name]["moved"], name)
 
 
 if __name__ == "__main__":

@@ -10,6 +10,48 @@
       "terminal": "R8E_DEEPER_RUNTIME_LOCALIZATION_JUSTIFIED"
     },
     {
+      "control": "NC11 stale obs2 authored digest after raw-byte mutation",
+      "matched_problem": "case-256/reference/obs2: raw hook f32 sidecar != retained row-copy f32 sidecar; f32_row_sha256 disagrees with actual raw hook row bytes",
+      "moved": true,
+      "terminal": "R8E_EVIDENCE_BLOCKED"
+    },
+    {
+      "control": "NC12 obs2 label aliases obs1 label",
+      "matched_problem": "case-256/reference/obs2: capture label != loop-derived label",
+      "moved": true,
+      "terminal": "R8E_EVIDENCE_BLOCKED"
+    },
+    {
+      "control": "NC13 obs2 observation-path aliases obs1 JSONL",
+      "matched_problem": "case-256/reference/obs2: binding.observation_path != loop-derived raw JSONL path",
+      "moved": true,
+      "terminal": "R8E_EVIDENCE_BLOCKED"
+    },
+    {
+      "control": "NC14 obs2 raw-sidecar aliases obs1",
+      "matched_problem": "case-256/reference/obs2: loop-derived raw hook f32 sidecar must not alias another repeat",
+      "moved": true,
+      "terminal": "R8E_EVIDENCE_BLOCKED"
+    },
+    {
+      "control": "NC15 obs2 raw-hook sidecar mutation only",
+      "matched_problem": "case-256/reference/obs2: raw hook f32 sidecar != retained row-copy f32 sidecar; f32_row_sha256 disagrees with actual raw hook row bytes",
+      "moved": true,
+      "terminal": "R8E_EVIDENCE_BLOCKED"
+    },
+    {
+      "control": "NC16 obs2 retained row-copy mutation only",
+      "matched_problem": "case-256/reference/obs2: raw hook f32 sidecar != retained row-copy f32 sidecar",
+      "moved": true,
+      "terminal": "R8E_EVIDENCE_BLOCKED"
+    },
+    {
+      "control": "NC17 internally consistent but byte-different obs2",
+      "matched_problem": "case-256/reference: repeat logits-row instability",
+      "moved": true,
+      "terminal": "R8E_EVIDENCE_BLOCKED"
+    },
+    {
       "control": "NC1 wrong R8-D predecessor identity",
       "moved": true,
       "terminal": "R8E_EVIDENCE_BLOCKED"

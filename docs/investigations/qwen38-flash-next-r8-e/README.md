@@ -158,10 +158,31 @@ evidence/nonperturbation/ 8 records (2 cases x 2 arms x 2 repeats,
 evidence/observations/    8 records + float32 rows (2 cases x 2 arms x
                           2 repeats, diagnostic binary, incremental)
 evidence/observations-tf/ 8 records + float32 rows (tf state class)
-evidence/negative-controls/ negative-controls.json (10 controls;
-                          9 original + NC10 semantic
-                          characterization control added in the
-                          correction round)
+evidence/negative-controls/ negative-controls.json (17 controls;
+                          original controls, semantic NC10, and
+                          repeat-byte authority NC11--NC17)
+
+Repeat byte-authority contract (CPU correction)
+------------------------------------------------
+For each loop-derived `(case, arm, obs1|obs2)` tuple the reducer requires
+the exact capture filename and label, generated position, binding case/arm,
+and binding `observation_path`. It then opens the exact raw hook output
+`obs-<case>-<arm>-obs<N>.jsonl` and canonical hook sidecar
+`obs-<case>-<arm>-obs<N>.jsonl.pos<P>.f32`; neither is selected through a
+capture record label. The raw JSONL must equal the capture's retained hook
+rows. The separately retained `row-<case>-<arm>-obs<N>.pos<P>.f32` is a
+copy made by the capture producer after it opened the hook sidecar. Both are
+contract-bearing, must be ordinary non-aliased files, and must be byte-for-
+byte identical for that same repeat.
+
+Each repeat is decoded independently: float count, actual SHA-256,
+non-finite count, argmax, top-16 order/logits, focal ranks/logits, and
+top1/top2 relationship are derived from its canonical raw sidecar and
+cross-checked against authored hook/record fields. Only after both repeat
+bindings pass may `repeat_f32_row_sha256_equality` be true, and it compares
+the two independently derived actual SHA-256 values. Thus a regenerated
+manifest, matching record digest strings, or internally self-consistent
+obs2 metadata cannot establish stability without identical retained bytes.
 
 Non-claims
 ----------
@@ -220,3 +241,9 @@ rows, f32 sidecars, and digests (binding facts untouched), proving the
 derived characterization/terminal still follow the raw bytes; the NC2
 restore path was fixed to be byte-exact (pre-existing sandbox-only
 newline drift).
+
+Third correction delta (repeat-stability authority): obs2 now receives the
+same fixed-path, actual-byte binding as obs1. NC11--NC17 demonstrate stale
+obs2 digest, label and JSONL aliases, raw-sidecar alias, one-sided raw/copy
+mutation, and a fully self-consistent-but-byte-different obs2 all BLOCK.
+No physical Qwen observation was rerun or rewritten for this correction.

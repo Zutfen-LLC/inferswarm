@@ -69,6 +69,11 @@ def sha_b(b):
     return hashlib.sha256(b).hexdigest()
 
 
+def read_bytes(path):
+    with open(path, "rb") as fh:
+        return fh.read()
+
+
 def load(rel):
     with open(os.path.join(REPO, rel)) as fh:
         return json.load(fh)
@@ -88,7 +93,155 @@ def rank_of(row, tok):
     return None
 
 
-def bytes_derived_view(rec, repo, case, arm):
+def expected_repeat_identity(case, arm, repeat):
+    """The loop authority, rather than capture-controlled metadata,
+    selects every artifact for one incremental observation repeat."""
+    pos = DECISION_POS[case]
+    label = f"{case}-{arm}-obs{repeat}"
+    obsdir = os.path.join(R8E_DIR, "evidence", "observations")
+    observation = f"obs-{label}.jsonl"
+    return {
+        "case": case, "arm": arm, "repeat": repeat, "label": label,
+        "generated_position": pos,
+        "capture_rel": os.path.join(obsdir, f"capture-{label}.json"),
+        "observation_path": observation,
+        "observation_rel": os.path.join(obsdir, observation),
+        # This is the hook producer's output path: the capture producer
+        # opens it before copying the identical retained row-* sidecar.
+        "raw_f32_rel": os.path.join(obsdir, f"{observation}.pos{pos}.f32"),
+        "row_copy_rel": os.path.join(obsdir, f"row-{label}.pos{pos}.f32"),
+    }
+
+
+def _float_equal(a, b):
+    import math
+    return (a == b or (isinstance(a, (int, float)) and
+            isinstance(b, (int, float)) and math.isclose(
+                a, b, rel_tol=1e-6, abs_tol=1e-7)))
+
+
+def _view_from_row_bytes(row_b, case):
+    """Decode a retained float32 row and derive every score fact used by
+    characterization or capture-field cross-checks."""
+    import struct
+    import math
+    vals = list(struct.unpack("<%df" % (len(row_b) // 4), row_b))
+    finite = [i for i, v in enumerate(vals) if v == v and v not in
+              (float("inf"), float("-inf"))]
+    order = sorted(finite, key=lambda i: (-vals[i], i))
+    top = [[i, vals[i]] for i in order[:16]]
+    focus = {}
+    for tok in FOCUS_TOKENS[case]:
+        focus[tok] = {"rank": (order.index(tok) + 1 if tok in order else None),
+                      "logit": vals[tok] if tok < len(vals) else None}
+    winner, winner_logit = (top[0] if top else (None, None))
+    runner, runner_logit = (top[1] if len(top) > 1 else (None, None))
+    return {"top16_ids": [t for t, _v in top], "top16": top,
+            "winner": winner, "winner_logit": winner_logit,
+            "runner_up": runner, "runner_up_logit": runner_logit,
+            "top1_top2_margin": (winner_logit - runner_logit
+                                   if runner_logit is not None else None),
+            "focus_tokens": focus,
+            "n_nonfinite": len(vals) - len(finite),
+            "float_count": len(vals), "actual_sha256": sha_b(row_b),
+            "fsum_math": math.fsum(vals),
+            "sumsq": math.fsum(v * v for v in vals)}
+
+
+def bind_repeat_to_bytes(rec, repo, case, arm, repeat):
+    """Bind *one* repeat to its exact raw hook output and copied row.
+
+    The generated loop tuple is the only artifact selector.  In
+    particular, a capture's mutable label never chooses a path.  The raw
+    hook sidecar is canonical; row-* is a retained copy and is therefore
+    separately required and byte-identical.
+    """
+    ident = expected_repeat_identity(case, arm, repeat)
+    p = []
+    if rec.get("label") != ident["label"]:
+        p.append("capture label != loop-derived label")
+    b = rec.get("binding") or {}
+    for key in ("case", "arm", "generated_position"):
+        if b.get(key) != ident[key]:
+            p.append("binding.%s != loop-derived identity" % key)
+    if b.get("observation_path") != ident["observation_path"]:
+        p.append("binding.observation_path != loop-derived raw JSONL path")
+    if rec.get("generated_position_observed") != ident["generated_position"]:
+        p.append("capture generated position != loop-derived position")
+    # The raw JSONL itself is contract-bearing, not just a filename in a
+    # record.  It must be the fixed repeat's output and equal the retained
+    # hook rows copied into its capture record.
+    for rel, role in ((ident["observation_rel"], "raw observation JSONL"),
+                      (ident["raw_f32_rel"], "raw hook f32 sidecar"),
+                      (ident["row_copy_rel"], "retained row-copy f32 sidecar")):
+        if os.path.islink(os.path.join(repo, rel)):
+            p.append("loop-derived %s must not alias another repeat" % role)
+    try:
+        with open(os.path.join(repo, ident["observation_rel"])) as fh:
+            raw_rows = [json.loads(line) for line in fh if line.strip()]
+        if raw_rows != rec.get("hook_rows"):
+            p.append("raw observation JSONL rows != capture hook_rows")
+    except (FileNotFoundError, json.JSONDecodeError) as exc:
+        p.append("loop-derived raw observation JSONL unusable: %s" % exc)
+    try:
+        raw_b = read_bytes(os.path.join(repo, ident["raw_f32_rel"]))
+    except FileNotFoundError:
+        raw_b = None
+        p.append("loop-derived raw hook f32 sidecar missing")
+    try:
+        copy_b = read_bytes(os.path.join(repo, ident["row_copy_rel"]))
+    except FileNotFoundError:
+        copy_b = None
+        p.append("loop-derived retained row-copy f32 sidecar missing")
+    if raw_b is None or copy_b is None:
+        return None, ident, p
+    if raw_b != copy_b:
+        p.append("raw hook f32 sidecar != retained row-copy f32 sidecar")
+    if len(raw_b) % 4:
+        p.append("raw hook f32 row byte length not a multiple of 4")
+        return None, ident, p
+    view = _view_from_row_bytes(raw_b, case)
+    if rec.get("f32_row_floats") != view["float_count"]:
+        p.append("f32_row_floats disagrees with actual raw hook row bytes")
+    if rec.get("f32_row_sha256") != view["actual_sha256"]:
+        p.append("f32_row_sha256 disagrees with actual raw hook row bytes")
+    row = hook_row(rec, ident["generated_position"])
+    if row is None:
+        p.append("no hook row at loop-derived generated position")
+    else:
+        if row.get("n_vocab") != view["float_count"]:
+            p.append("hook n_vocab disagrees with actual raw hook row bytes")
+        if row.get("n_nonfinite") != view["n_nonfinite"]:
+            p.append("hook n_nonfinite disagrees with actual raw hook row bytes")
+        top = row.get("top") or []
+        if len(top) != len(view["top16"]) or any(
+                ht != bt or not _float_equal(hv, bv)
+                for (ht, hv), (bt, bv) in zip(top, view["top16"])):
+            p.append("hook top-16 disagrees with actual raw hook row bytes")
+        if row.get("tok") != view["winner"]:
+            p.append("hook top1 token disagrees with actual raw hook row bytes")
+        for tok in FOCUS_TOKENS[case]:
+            authored = next((x for x in row.get("focus", []) if x[0] == tok), None)
+            derived = view["focus_tokens"][tok]
+            if (authored is None or authored[1] != derived["rank"] or
+                    not _float_equal(authored[2], derived["logit"])):
+                p.append("hook focal %s disagrees with actual raw hook row bytes" % tok)
+    authored_top = rec.get("top16_from_f32_bytes") or []
+    if authored_top and (len(authored_top) != len(view["top16"]) or any(
+            at != bt or not _float_equal(av, bv)
+            for (at, av), (bt, bv) in zip(authored_top, view["top16"]))):
+        p.append("record top16_from_f32_bytes disagrees with actual raw hook row bytes")
+    stats = rec.get("f32_row_stats") or {}
+    if stats.get("n_nonfinite") != view["n_nonfinite"]:
+        p.append("record f32_row_stats.n_nonfinite disagrees with actual raw hook row bytes")
+    for key in ("fsum", "fsum_math", "sumsq"):
+        if not _float_equal(stats.get(key), view["fsum_math"] if key in
+                            ("fsum", "fsum_math") else view["sumsq"]):
+            p.append("record f32_row_stats.%s disagrees with actual raw hook row bytes" % key)
+    return view, ident, p
+
+
+def bytes_derived_view(rec, repo, case, arm, repeat=1):
     """Re-derive argmax/top-16/focal ranks directly from the retained
     float32 row bytes (correction-round P2: authored hook 'focus'
     ranks must never be the sole authority for the characterization).
@@ -97,54 +250,7 @@ def bytes_derived_view(rec, repo, case, arm):
     ONLY from the bytes, or None when the row bytes are unavailable
     (the caller then fails closed for the incremental state class).
     """
-    import struct
-    p = []
-    pos = DECISION_POS[case]
-    label = rec.get("label") or ""
-    rel = os.path.join(R8E_DIR, "evidence", "observations",
-                       f"row-{label}.pos{pos}.f32")
-    fp = os.path.join(repo, rel)
-    try:
-        row_b = open(fp, "rb").read()
-    except FileNotFoundError:
-        p.append("retained f32 row bytes missing: " + rel)
-        return None, p
-    if len(row_b) % 4:
-        p.append("f32 row byte length not a multiple of 4")
-        return None, p
-    vals = list(struct.unpack("<%df" % (len(row_b) // 4), row_b))
-    if rec.get("f32_row_floats") != len(vals):
-        p.append("f32_row_floats disagrees with retained row bytes")
-    if sha_b(row_b) != rec.get("f32_row_sha256"):
-        p.append("f32_row_sha256 disagrees with retained row bytes "
-                 "(row sidecar tampered)")
-        return None, p
-    finite = [i for i, v in enumerate(vals) if v == v and v not in
-              (float("inf"), float("-inf"))]
-    n_nonfinite = len(vals) - len(finite)
-    order = sorted(finite, key=lambda i: -vals[i])
-    top = [[i, vals[i]] for i in order[:16]]
-    focus = {}
-    for tok in FOCUS_TOKENS[case]:
-        r = None
-        for idx, i in enumerate(order):
-            if i == tok:
-                r = idx + 1
-                break
-        focus[tok] = {"rank": r, "logit": vals[tok] if
-                      (tok < len(vals)) else None}
-    winner, winner_logit = (top[0] if top else (None, None))
-    runner, runner_logit = (top[1] if len(top) > 1 else (None, None))
-    margin = None
-    if winner_logit is not None and runner_logit is not None:
-        margin = winner_logit - runner_logit
-    view = {
-        "top16_ids": [t for t, _v in top], "top16": top,
-        "winner": winner, "winner_logit": winner_logit,
-        "runner_up": runner, "runner_up_logit": runner_logit,
-        "top1_top2_margin": margin,
-        "focus_tokens": focus, "n_nonfinite": n_nonfinite,
-    }
+    view, _ident, p = bind_repeat_to_bytes(rec, repo, case, arm, repeat)
     return view, p
 
 
@@ -503,6 +609,7 @@ def derive(area_override=None):
     # prefill), so tf rows can never substitute for incremental rows.
     views = {}
     stability = {}
+    repeat_byte_details = {}
     tf_views = {}
     for case in CASES:
         for arm in ("reference", "candidate"):
@@ -525,32 +632,53 @@ def derive(area_override=None):
                 if p:
                     problems.append(f"{case}/{arm}/obs{i}: " + "; ".join(p))
                     continue
-                recs.append((rec, row))
+                # Every repeat independently opens its fixed raw hook
+                # sidecar and fixed retained row copy.  Do this before
+                # repeat comparison; a matching pair of authored digests
+                # can never establish stability.
+                bview, ident, bprob = bind_repeat_to_bytes(
+                    rec, REPO, case, arm, i)
+                detail_key = f"{case}/{arm}/obs{i}"
+                repeat_byte_details[detail_key] = {
+                    "identity": ident,
+                    "actual_raw_hook_sha256": (bview or {}).get(
+                        "actual_sha256"),
+                    "actual_row_copy_sha256": (sha_b(read_bytes(
+                        os.path.join(REPO, ident["row_copy_rel"])))
+                        if os.path.exists(os.path.join(
+                            REPO, ident["row_copy_rel"])) else None),
+                    "raw_hook_equals_row_copy": not any(
+                        "raw hook f32 sidecar != retained row-copy" in x
+                        for x in bprob),
+                    "problems": bprob,
+                }
+                if bprob or bview is None:
+                    problems.append(f"{case}/{arm}/obs{i}: " + "; ".join(
+                        bprob or ["actual retained bytes unusable"]))
+                    continue
+                recs.append((rec, row, bview))
             if len(recs) < 2:
                 problems.append(f"{case}/{arm}: fewer than 2 valid repeats")
                 continue
-            (r1, row1), (r2, row2) = recs
+            (r1, row1, view1), (r2, row2, view2) = recs
             stable_tok = r1["response_generated_tokens"] == \
                 r2["response_generated_tokens"]
-            stable_row = r1["f32_row_sha256"] == r2["f32_row_sha256"]
+            stable_row = view1["actual_sha256"] == view2["actual_sha256"]
             stability[f"{case}/{arm}"] = {
                 "repeat_token_equality": stable_tok,
                 "repeat_f32_row_sha256_equality": stable_row,
+                "actual_obs1_raw_hook_sha256": view1["actual_sha256"],
+                "actual_obs2_raw_hook_sha256": view2["actual_sha256"],
             }
             if not stable_tok:
                 problems.append(f"{case}/{arm}: repeat token instability")
             if not stable_row:
                 problems.append(
                     f"{case}/{arm}: repeat logits-row instability")
-            # bytes-authoritative view (correction-round P2 fix): the
-            # characterization inputs are re-derived from the retained
-            # float32 row bytes, never from authored hook 'focus'
-            # ranks; authored fields are demoted to cross-checks.
-            bview, bprob = bytes_derived_view(r1, REPO, case, arm)
-            if bview is None or bprob:
-                problems.append(f"{case}/{arm}/obs1: " + "; ".join(
-                    bprob or ["f32 row bytes unusable"]))
-                continue
+            # Characterization uses the independently decoded obs1 raw
+            # hook bytes.  obs2 was decoded with identical authority above
+            # and gates repeat stability, rather than being a mere digest.
+            bview = view1
             hview = arm_view(row1, FOCUS_TOKENS[case])
             xb = []
             if bview["winner"] != hview["winner"]:
@@ -657,6 +785,7 @@ def derive(area_override=None):
         "checks": checks,
         "problems": problems,
         "stability": stability,
+        "repeat_byte_details": repeat_byte_details,
         "per_case": per_case,
         "tf_views": {f"{c}/{a}": v for (c, a), v in tf_views.items()},
         "accepted_predecessor_terminal": R8D_V2_TERMINAL,
