@@ -6,13 +6,14 @@
 0ff9276968986a018994e64926312064d662043654c7a004a5864b0629245d5b  docs/implementation/r8-f-local-backing-source-policy-200/evidence/rpc-cache-experiment-raw/gen_fixture.py
 1431976fb68d0c84ab413b79b369468f942277fa9f57f1656925438ad48f8c32  scripts/issue200_r8f_backing_verify.py
 19b53a573037ae6e3c9405e4d25d44e2dc1088554337a55ef3ac94e0582718f7  docs/implementation/r8-f-local-backing-source-policy-200/evidence/terminal-reduction.json
+1a92375d64745d7f5c440e60b58e91b80fc00f0211a98ec03a142ededa5b0c23  docs/implementation/r8-f-local-backing-source-policy-200/evidence/canonical-summary.json
 1c0284d8b85f4966e2dd1990271f3bc470667c11041d5d084be1ca511080f5f4  docs/implementation/r8-f-local-backing-source-policy-200/evidence/physical-phase5-raw/cold_remote/retained-range.bin
 1c0284d8b85f4966e2dd1990271f3bc470667c11041d5d084be1ca511080f5f4  docs/implementation/r8-f-local-backing-source-policy-200/evidence/physical-phase5-raw/local_verified/retained-range.bin
 1c0284d8b85f4966e2dd1990271f3bc470667c11041d5d084be1ca511080f5f4  docs/implementation/r8-f-local-backing-source-policy-200/evidence/physical-phase5-raw/repeat_local_verified/retained-range.bin
+1dfa42b6c898e6dd28117ec1e2be34da2dc776ab62fbac680f35bfd4af144ceb  tests/test_issue200_r8f_proof.py
 1e6e0e4ead178442f1ad9495dd2317a616b62a0efc444c4061dcc5886c354c6c  scripts/issue200_r8f_terminal_reduction.py
 1f2344ea98c4a9c32a490430bb6efdd02e38037bb0d8ff7be12d36ac5437b79a  docs/implementation/r8-f-local-backing-source-policy-200/evidence/physical-phase5-raw/local_verified/participant-reads.strace
 223aed043a28fbe532e3a8388df06c2e50fbf457355fc0d5ea273c3dba82a366  docs/implementation/r8-f-local-backing-source-policy-200/evidence/rpc-cache-experiment-raw/raw-logs/server-B_warm_restart.log
-22a40cf2b92958ac4aff8f385db78eaf61dfaec0046cc88702c2d5a3a4c231bf  docs/implementation/r8-f-local-backing-source-policy-200/evidence/canonical-summary.json
 22fa6af67a04d3d668f55ae8ccbffcdb2593e9186813deee4192566ef742a25c  docs/implementation/r8-f-local-backing-source-policy-200/evidence/physical-phase5-raw/run-summary.json
 27b13afcb7c36fd5e89f39c2a01fbcf7c4b8175cc921c96609efced21a690e14  docs/implementation/r8-f-local-backing-source-policy-200/evidence/physical-phase5-raw/cold_remote/participant-reads.strace
 28ce075a66a0cbc8a57853c323c839948ff72ab38f2b25889b75b5e6d00a5838  docs/implementation/r8-f-local-backing-source-policy-200/evidence/physical-phase5-raw/local_verified/staging.stdout
@@ -45,7 +46,6 @@
 7f2a604c31e2ebf2e95b895028475d5fa711394e2a8cd91e61f017f6b085c395  tests/test_issue200_r8f_source_policy.py
 8046878f57ddaa43534c61c10adb9ba5d9658f453cadd5fad41d36ad14cd736c  docs/implementation/r8-f-local-backing-source-policy-200/evidence/rpc-cache-experiment-raw/raw-logs/strace-E_truncated.log
 83b0ffecc37adbb2074f453b5b26d3fcacca2ab5c80878b7ee70e5f9ac0afd66  docs/implementation/r8-f-local-backing-source-policy-200/evidence/negative-controls.json
-86481f2c42abc112ce2548a6b9d8b524fd79adc58ba4cc321a006ac6e301633a  docs/implementation/r8-f-local-backing-source-policy-200/evidence/producer-hashes.json
 8b88af5b2f738c2a7428c9538cf76a14f889cb573a1722122951c45fc5965321  scripts/issue99_artifact_core.py
 8c36290fa40395a3b72067e986e661cab190dcf70b92a1be7b62dadabef0a144  docs/implementation/r8-f-local-backing-source-policy-200/evidence/rpc-cache-experiment-raw/raw-logs/server-C_prestaged.log
 9b2dccbc3798c6157ff7e45c786b05ff39643f0f57cb5cb4b9b6aa97c66f0b6b  docs/implementation/r8-f-local-backing-source-policy-200/evidence/physical-phase5.json
@@ -60,9 +60,11 @@ ab44dd53a7c57fc1b076fe481838b231bc20e113b9bd65edba16298f16d0ed86  docs/implement
 b00f154264b74ddb1db4451dbfdfb958f5728f8a03808935e58123b67b97b493  docs/implementation/r8-f-local-backing-source-policy-200/README.md
 b1e664e2dcb56ed136d7440621423d3a6dfef7a954082bb817c3769468f87097  scripts/issue200_r8f_source_policy.py
 b6dd5b742fec4cd40f7ed4fd31cee34724f3a38994d55d695af447f566753907  docs/implementation/r8-f-local-backing-source-policy-200/evidence/physical-phase5-raw/cold_remote/cache-init.json
+b79132e5ec3c2201be86eb44e47580c6e9cd575892e9c800d22e6ba6568f695e  scripts/issue200_r8f_physical.py
 b7ce2c8f4b26627a630f8bab1a918cf172a92b243b8e53f8b4346b513bbaa752  docs/implementation/r8-f-local-backing-source-policy-200/evidence/rpc-cache-experiment-raw/raw-logs/server-D_wrong_content.log
 b81e18c1147f694ade35ec0c9926dd1a323d5c2bda95994ddf6654ac2675f8c7  scripts/issue200_r8f_rpc_cache_mechanism.py
 bc872cdefe4a11f12d38ad04f356b74ff024053bf1033c302d08a916f627ea62  docs/implementation/r8-f-local-backing-source-policy-200/evidence/physical-phase5-raw/local_verified/network.reduced.json
+bd6f143b91ea9acf56257db08b2c25d2a8466c67fec7a2efdf0a2e62024d8250  docs/implementation/r8-f-local-backing-source-policy-200/evidence/producer-hashes.json
 bfb539f821f9a3cc7ef7868339b8a573b7846efa37912eaf0e285f873fac5d8d  docs/implementation/r8-f-local-backing-source-policy-200/evidence/physical-phase5-raw/repeat_local_verified/capture.strace
 c200e0ab0093e1e523ae9cdebee8e8e79b0bff45557c4578e2693b5958c5facb  docs/implementation/r8-f-local-backing-source-policy-200/evidence/physical-phase5-raw/local_verified/rpc-server.log
 c200e0ab0093e1e523ae9cdebee8e8e79b0bff45557c4578e2693b5958c5facb  docs/implementation/r8-f-local-backing-source-policy-200/evidence/physical-phase5-raw/repeat_local_verified/rpc-server.log
@@ -72,7 +74,6 @@ c6803316a4de3867da964dbf7083f0c71d33ed4340315e4c922cddd2dfeecf20  docs/implement
 c9e6e4fc243c0748ed411e3360ff2bed0cefc6a8c2fd52803c92c7c024747102  docs/implementation/r8-f-local-backing-source-policy-200/evidence/rpc-cache-experiment-raw/orchestrate.py
 cb1f6717fa2dea71c32420efc6583af12829593f592dcb5c536d778838fb2b05  docs/implementation/r8-f-local-backing-source-policy-200/evidence/physical-phase5-raw/repeat_local_verified/range.stdout.json
 d3b21b4facc53900ac6d546d5261815d6160ff6f0f59b4f4ede2e9af25ce443d  docs/implementation/r8-f-local-backing-source-policy-200/evidence/physical-phase5-raw/local_verified/rpc-launch.json
-d52f47fc78921c302eb5708e1a90cf3a99b9c27f3ca6a2dd0c902126098216d3  tests/test_issue200_r8f_proof.py
 d7bb0b06b368eaf16483a6eb6d1752bf9b939c2460911936ccdfb2c4e8f2b428  docs/implementation/r8-f-local-backing-source-policy-200/evidence/rpc-cache-experiment-raw/fnv1a_reference.py
 de537e8b338730d64ef85e8983c1c2cd802c53115bab092bb114a02d38bf83c2  scripts/issue200_r8f_network_reduce.py
 de8bd04978e61f1e4785ea5bfba55598b656426df04f56cefb5b4b01b75a54d3  docs/implementation/r8-f-local-backing-source-policy-200/evidence/physical-phase5-raw/local_verified/cache-after-staging.json
@@ -89,5 +90,4 @@ e74e6f9c63ef9680c8f90f36f20cb4bdf9c87b5cd26e97eefe8aa27ff4ee9450  docs/implement
 e87a102c2759843a6525b2a575206240ecd239e91a6312635e5c14373b7fcc13  scripts/issue200_r8f_range_receipt.py
 e92dea9f737f8d7a712233d1e7e8d8aa0708b679c552bbf46557d036da63dcf1  docs/implementation/r8-f-local-backing-source-policy-200/evidence/physical-phase5-raw/repeat_local_verified/network.reduced.json
 e9e2b20867e4c3e3a23602d4b00ae4cc49ce92a5493969c9d816fb5fa5b2fff8  docs/implementation/r8-f-local-backing-source-policy-200/evidence/physical-phase5-raw/backing-verify.stdout.json
-ed63168ab2a631e5cd624ad973a3f4e989f6fa0cf09c6ec379af9ede7a9018d0  scripts/issue200_r8f_physical.py
 f528bafe68fc4a0767253e1795761a3e930e1cc6a1f7bdd23d9b5e406372848b  scripts/issue200_r8f_stage_cache.py

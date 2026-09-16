@@ -492,6 +492,7 @@ def _verify_participant_read(base: Path, arm: str, arm_doc: Mapping[str, Any],
     fd = None
     read_total = 0
     read_count = 0
+    cache_ever_opened_read = False
     for line in lines:
         match = _READ_LINE.match(line)
         if match is None:
@@ -499,14 +500,21 @@ def _verify_participant_read(base: Path, arm: str, arm_doc: Mapping[str, Any],
         pid, record = int(match["pid"]), match["record"]
         openat = _OPENAT.match(record)
         if openat is not None:
+            path = _unescape(openat["path"])
+            if path == expected_path:
+                if pid != server_pid:
+                    raise ValueError(f"{arm}: cache file was opened by a process other than the bound server")
+                # Read-mode open of the cache file is itself a fact: the
+                # server ATTEMPTED a cache read (a decoy same-fd rebind must
+                # never launder that attempt — review LANE-B-1).
+                if "O_RDONLY" in record:
+                    cache_ever_opened_read = True
+                fd = int(openat["fd"])
+                continue
             if fd is not None and int(openat["fd"]) == fd:
                 # FD reuse: stop attributing reads to the cache file once the
                 # same FD number is opened for a different path (review P2).
                 fd = None
-            if _unescape(openat["path"]) == expected_path:
-                if pid != server_pid:
-                    raise ValueError(f"{arm}: cache file was opened by a process other than the bound server")
-                fd = int(openat["fd"])
             continue
         read = _READ.match(record)
         if read is not None and fd is not None and int(read["fd"]) == fd:
@@ -521,7 +529,11 @@ def _verify_participant_read(base: Path, arm: str, arm_doc: Mapping[str, Any],
         # COLD-ARM DENIAL: the server may open the cache file (write path on
         # the miss) but must never successfully READ it.  A successful read
         # means the payload came from pre-populated local state, contradicting
-        # REMOTE_AUTHORIZED attribution.
+        # REMOTE_AUTHORIZED attribution.  A read-mode OPEN of the cache file
+        # is already a denial (LANE-B-1): a decoy same-fd rebind of another
+        # path must never launder an attempted cache read.
+        if cache_ever_opened_read:
+            raise ValueError(f"{arm}: cold/remote server opened the cache file for READING")
         if read_total != 0:
             raise ValueError(f"{arm}: participant server READ {read_total} bytes of the cache file")
         if receipt.get("derived_read_bytes") != 0 or receipt.get("read_syscalls") != 0:

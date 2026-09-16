@@ -945,6 +945,23 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
             (root / staged["raw_stdout"]["path"]).unlink()
             # digest reference still points at the missing file
 
+        def cold_decoy_fd_rebind_laundering_read(doc, root):
+            """Review LANE-B-1's demonstrated forgery (round 3): inject an
+            O_RDONLY openat of the cold cache file, then a decoy same-fd
+            openat of /etc/hostname, then a successful read — the fd-reuse
+            clearing must NOT launder the read-mode cache open."""
+            reads = json.loads((root / doc["arms"]["cold_remote"]["participant_read_receipt"]["path"]).read_text())
+            cap = root / reads["strace_capture"]["path"]
+            cold_cache = doc["arms"]["cold_remote"]["private_cache_dir"]
+            fnv = doc["arms"]["cold_remote"]["set_tensor_payloads"][0]["fnv1a_cache_key"]
+            injection = (f'777 3.000 openat(AT_FDCWD, "{cold_cache}/rpc/{fnv}", O_RDONLY) = 38\n'
+                         '777 3.001 openat(AT_FDCWD, "/etc/hostname", O_RDONLY) = 38\n'
+                         '777 3.002 read(38, "zz", 10) = 10\n')
+            cap.write_bytes(cap.read_bytes() + injection.encode())
+            reads["strace_capture"]["sha256"] = sha(cap)
+            doc["arms"]["cold_remote"]["participant_read_receipt"] = _receipt(
+                root, "raw/cold_remote.reads.json", reads)
+
         cases = {
             "abbreviated-cold-payload": abbreviated_cold_payload,
             "same-length-wrong-payload": same_length_wrong_payload,
@@ -953,6 +970,7 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
             "tampered-retained-bytes": tampered_retained_bytes,
             "cold-range-substituted": cold_range_substituted_from_local,
             "cold-read-receipt-masks-local-read": cold_read_receipt_masking_local_read,
+            "cold-decoy-fd-rebind-laundering-read": cold_decoy_fd_rebind_laundering_read,
             "missing-backing-member": missing_backing_member,
             "unverified-backing-member": unverified_backing_member,
             "forged-entries-before": forged_entries_before,
