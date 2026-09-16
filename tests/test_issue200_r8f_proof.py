@@ -171,11 +171,20 @@ def valid_physical_phase5_document(root, **overrides):
             "binary_live_receipt": {"path": rpc_bin_live["path"], "sha256": rpc_bin_live["sha256"]},
             "server_log": {"path": f"raw/{name}.server.log", "sha256": sha(server_log)}})
         read_cache_dir = cache_dir
-        read_strace_lines = [
-            "777 1.000 execve(\"/opt/ggml-rpc-server\", ...) = 0",
-            f'777 2.000 openat(AT_FDCWD, "{read_cache_dir}/rpc/{payload["fnv1a_cache_key"]}", O_RDONLY) = 5',
-            f'777 2.001 read(5, "", {len(payload_bytes)}) = {len(payload_bytes)}',
-        ]
+        if name == "cold_remote":
+            # cold arm: the server OPENS the cache file for WRITING (miss path)
+            # and never reads it — the zero-read denial holds.
+            read_strace_lines = [
+                "777 1.000 execve(\"/opt/ggml-rpc-server\", ...) = 0",
+                f'777 2.000 openat(AT_FDCWD, "{read_cache_dir}/rpc/{payload["fnv1a_cache_key"]}", O_WRONLY|O_CREAT|O_TRUNC, 0666) = 5',
+                f'777 2.001 write(5, "", {len(payload_bytes)}) = {len(payload_bytes)}',
+            ]
+        else:
+            read_strace_lines = [
+                "777 1.000 execve(\"/opt/ggml-rpc-server\", ...) = 0",
+                f'777 2.000 openat(AT_FDCWD, "{read_cache_dir}/rpc/{payload["fnv1a_cache_key"]}", O_RDONLY) = 5',
+                f'777 2.001 read(5, "", {len(payload_bytes)}) = {len(payload_bytes)}',
+            ]
         read_strace = ("\n".join(read_strace_lines) + "\n").encode()
         read_strace_ref = {"path": f"raw/{name}.reads.strace", "sha256": hashlib.sha256(read_strace).hexdigest()}
         (root / read_strace_ref["path"]).write_bytes(read_strace)
@@ -621,6 +630,26 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
             doc["arms"]["local_verified"]["participant_read_receipt"] = _receipt(
                 root, "raw/local_verified.reads.json", reads)
 
+        def cold_read_receipt_masking_local_read(doc, root):
+            """Review L2-1's demonstrated attack: swap the COLD arm's
+            participant-read receipt for the local arm's (relabel + digest
+            fix).  The hardened cold-arm zero-read denial must reject."""
+            import shutil
+            src = root / "raw/local_verified.reads.strace"
+            dst = root / "raw/cold_remote.reads.strace"
+            cold_cache = doc["arms"]["cold_remote"]["private_cache_dir"]
+            local_cache = doc["arms"]["local_verified"]["private_cache_dir"]
+            data = src.read_bytes().replace(local_cache.encode(), cold_cache.encode())
+            dst.write_bytes(data)
+            reads = json.loads((root / doc["arms"]["cold_remote"]["participant_read_receipt"]["path"]).read_text())
+            reads["cache_dir"] = cold_cache
+            reads["strace_capture"] = {"path": "raw/cold_remote.reads.strace",
+                                       "sha256": hashlib.sha256(data).hexdigest()}
+            reads["derived_read_bytes"] = len(payload_bytes) if (payload_bytes := b"r8-f-observed-payload-" * 4) else 0
+            reads["read_syscalls"] = 1
+            doc["arms"]["cold_remote"]["participant_read_receipt"] = _receipt(
+                root, "raw/cold_remote.reads.json", reads)
+
         def absent_cache_read(doc, root):
             reads = json.loads((root / doc["arms"]["local_verified"]["participant_read_receipt"]["path"]).read_text())
             cap = root / reads["strace_capture"]["path"]
@@ -686,6 +715,7 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
             "capture-without-execve-start": capture_without_execve_start,
             "tampered-retained-bytes": tampered_retained_bytes,
             "cold-range-substituted": cold_range_substituted_from_local,
+            "cold-read-receipt-masks-local-read": cold_read_receipt_masking_local_read,
             "missing-backing-member": missing_backing_member,
             "unverified-backing-member": unverified_backing_member,
             "forged-entries-before": forged_entries_before,

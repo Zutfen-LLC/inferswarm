@@ -340,9 +340,14 @@ def _unescape(text: str) -> str:
 
 def _verify_participant_read(base: Path, arm: str, arm_doc: Mapping[str, Any],
                              cache_dir: str, fnv: str, payload_length: int,
-                             server_pid: int) -> dict[str, Any]:
+                             server_pid: int, require_zero: bool = False) -> dict[str, Any]:
     """LOCAL_VERIFIED source attribution derived from the participant-side
-    from-exec file strace of this arm's own ggml-rpc-server."""
+    from-exec file strace of this arm's own ggml-rpc-server.
+
+    With ``require_zero`` (cold arm), the derivation instead proves the
+    server performed ZERO successful reads of the cache file (the file may
+    legitimately be opened for writing — that is the cold cache miss path).
+    """
     receipt_ref = arm_doc.get("participant_read_receipt")
     if not isinstance(receipt_ref, dict):
         raise ValueError(f"{arm}: participant cache-read receipt missing")
@@ -385,6 +390,16 @@ def _verify_participant_read(base: Path, arm: str, arm_doc: Mapping[str, Any],
                 raise ValueError(f"{arm}: cache-file read returned a nonpositive result")
             read_total += result
             read_count += 1
+    if require_zero:
+        # COLD-ARM DENIAL: the server may open the cache file (write path on
+        # the miss) but must never successfully READ it.  A successful read
+        # means the payload came from pre-populated local state, contradicting
+        # REMOTE_AUTHORIZED attribution.
+        if read_total != 0:
+            raise ValueError(f"{arm}: participant server READ {read_total} bytes of the cache file")
+        if receipt.get("derived_read_bytes") != 0 or receipt.get("read_syscalls") != 0:
+            raise ValueError(f"{arm}: retained cache-read receipt disagrees with the zero-read re-derivation")
+        return {"opened_path": expected_path, "read_bytes": 0, "read_syscalls": 0}
     if fd is None:
         raise ValueError(f"{arm}: participant server never opened the exact FNV cache file")
     if read_total != payload_length:
@@ -588,6 +603,18 @@ def validate_physical_evidence(document: Mapping[str, Any], *, evidence_root: Pa
                                           cache_dir, [], participant_id)
                 if "cache_staging" in arm:
                     raise ValueError(f"{name}: cold arm must not stage cache content")
+                # COLD-ARM CACHE-READ DENIAL (review L2-1): REMOTE_AUTHORIZED
+                # attribution requires proving the cold server never READ the
+                # payload from a pre-populated cache.  Re-derive from the raw
+                # participant strace: zero successful read() syscalls on the
+                # FNV cache file by the bound server PID.  A forged
+                # participant-read receipt that masks a local read must be
+                # rejected here, not merely digest-bound.
+                cold_read = _verify_participant_read(evidence_root, name, arm, cache_dir, fnv,
+                                                     payloads[0]["length"], rpc_info["pid"],
+                                                     require_zero=True)
+                if cold_read["read_bytes"] != 0:
+                    raise ValueError(f"{name}: cold/remote arm's server READ the cache file locally")
             elif name == "local_verified":
                 if local_cache_dir is not None and cache_dir == local_cache_dir:
                     raise ValueError(f"{name}: cache directory collision")
