@@ -20,6 +20,8 @@ Issue #199 required controls -> control ids:
   7. stale/session-contaminated capture .............. NC7
   8. HTTP n_probs cannot substitute .................. NC8
   9. authored characterization contradicting raw ..... NC9
+ 10. semantic characterization (rank structure vs
+     authored prose) ................................ NC10 (correction)
 """
 import argparse
 import copy
@@ -294,6 +296,125 @@ def main():
         results.append(control(root, cap(C256, 1), nc9,
                                "n_nonfinite mismatch",
                                "NC9 authored contradiction"))
+
+        # NC10 semantic-characterization negative control (correction
+        # round for the NO-GO review): prove the characterization (and
+        # through it the terminal) is derived from the retained RAW
+        # rank/logit structure and never from authored prose/summaries.
+        # Two independent single forgeries, each restored afterwards:
+        #
+        #   (a) NON-NARROW FORGERY: in the case-256 candidate row,
+        #       demote focal token 271 from rank 2 to rank 5 (argmax and
+        #       all binding/token facts untouched) while planting an
+        #       authored characterization field that still claims a
+        #       narrow winner inversion. The reducer must flip the
+        #       derived characterization to broader-focal-shift.
+        #
+        #   (b) NARROW FORGERY: in the case-4096 reference row, promote
+        #       EOS 248046 from rank 5 to rank 2 (328 stays argmax, all
+        #       binding facts untouched). Case-4096 then structurally
+        #       mirrors case-256's clean 1<->2 inversion, and with both
+        #       cases narrow the TERMINAL itself must flip off
+        #       LOCALIZATION_JUSTIFIED to RESIDUAL_DIVERGENCE_
+        #       CHARACTERIZED — the terminal follows bytes, not prose.
+        #
+        # The sandbox manifest is regenerated after each forgery so the
+        # integrity layer cannot mask the semantic path under BLOCKED.
+        def reforge_row(d, forge):
+            pos = d["generated_position_observed"]
+            for hr in d["hook_rows"]:
+                if hr["pos"] != pos:
+                    continue
+                forge(hr)
+                # keep the stored hook-vs-bytes cross-check consistent
+                # with the forged hook row (the attacker updates every
+                # authored derived field; only RAW structure differs)
+                if d.get("top16_from_f32_bytes"):
+                    d["top16_from_f32_bytes"] = [list(x) for x in
+                                                hr["top"]]
+                # authored prose claims narrow inversion regardless
+                d["authored_characterization"] = \
+                    "narrow-winner-inversion"
+
+        def demote_271_to_rank5(hr):
+            top = [list(x) for x in hr["top"]]
+            ids = [t for t, _v in top]
+            i271 = ids.index(271)
+            val271 = top[i271][1]
+            target = top[4]  # rank-5 entry (index 4)
+            top[i271][1] = target[1] - 0.01
+            top[4][1] = val271
+            top.sort(key=lambda tv: -tv[1])
+            hr["top"] = top
+            hr["focus"] = [[t, next(i + 1 for i, (tt, _v) in
+                                    enumerate(top) if tt == t),
+                            next(v for tt, v in top if tt == t)]
+                           for t in (271, 34227)]
+
+        def promote_eos_to_rank2(hr):
+            top = [list(x) for x in hr["top"]]
+            ids = [t for t, _v in top]
+            ieos = ids.index(248046)
+            top[ieos][1] = (top[0][1] + top[1][1]) / 2.0  # 328..561
+            top.sort(key=lambda tv: -tv[1])
+            hr["top"] = top
+            hr["focus"] = [[t, next(i + 1 for i, (tt, _v) in
+                                    enumerate(top) if tt == t),
+                            next(v for tt, v in top if tt == t)]
+                           for t in (328, 248046)]
+
+        import issue199_r8e_manifest as _MB
+        import pathlib as _pl
+
+        def regen_manifest(root_):
+            _MB.AREA = _pl.Path(root_) / R8E_DIR
+            _MB.ROOT = _pl.Path(root_)
+            _MB.main()
+
+        def semantic_control(cap_rel, forge, case, expect_pre,
+                             expect_post):
+            fp_ = os.path.join(root, cap_rel)
+            pristine_ = open(fp_, "rb").read()
+            d_ = json.loads(pristine_)
+            reforge_row(d_, forge)
+            write_cap(root, cap_rel, d_)
+            regen_manifest(root)
+            rr = base_state(root)
+            open(fp_, "wb").write(pristine_)
+            regen_manifest(root)
+            return {
+                "derived_characterization":
+                    rr["per_case"][case].get("characterization"),
+                "derived_terminal": rr["terminal"],
+                "derived_problems": rr["problems"][:3],
+                "moved": (rr["per_case"][case].get(
+                    "characterization") == expect_post
+                    and expect_post != expect_pre)}
+
+        base_r = base_state(root)
+        assert base_r["per_case"]["case-256"][
+            "characterization"] == "narrow-winner-inversion"
+        assert base_r["per_case"]["case-4096"][
+            "characterization"] == "broader-focal-shift"
+        nc10a = semantic_control(
+            os.path.join(R8E_DIR, "evidence/observations",
+                         "capture-case-256-candidate-obs1.json"),
+            demote_271_to_rank5, "case-256",
+            "narrow-winner-inversion", "broader-focal-shift")
+        nc10b = semantic_control(
+            os.path.join(R8E_DIR, "evidence/observations",
+                         "capture-case-4096-reference-obs1.json"),
+            promote_eos_to_rank2, "case-4096",
+            "broader-focal-shift", "narrow-winner-inversion")
+        results.append({
+            "control": "NC10 semantic characterization (raw rank "
+                       "structure mutated; authored characterization "
+                       "still says narrow winner inversion)",
+            "moved": nc10a["moved"] and nc10b["moved"] and
+            nc10b["derived_terminal"] ==
+            "R8E_RESIDUAL_DIVERGENCE_CHARACTERIZED",
+            "nc10a_nonnarrow_forge": nc10a,
+            "nc10b_narrow_forge": nc10b})
 
     ok = all(c["moved"] for c in results[1:])
     doc = {"campaign": CAMPAIGN_ID, "controls": results,

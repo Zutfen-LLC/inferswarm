@@ -7,7 +7,7 @@
       "baseline_green": true,
       "control": "baseline",
       "problems": [],
-      "terminal": "R8E_RESIDUAL_DIVERGENCE_CHARACTERIZED"
+      "terminal": "R8E_DEEPER_RUNTIME_LOCALIZATION_JUSTIFIED"
     },
     {
       "control": "NC1 wrong R8-D predecessor identity",
@@ -60,6 +60,22 @@
       "matched_problem": "case-256/reference/obs1: n_nonfinite mismatch hook vs derived bytes (authored characterization contradicting raw score evidence)",
       "moved": true,
       "terminal": "R8E_EVIDENCE_BLOCKED"
+    },
+    {
+      "control": "NC10 semantic characterization (raw rank structure mutated; authored characterization still says narrow winner inversion)",
+      "moved": true,
+      "nc10a_nonnarrow_forge": {
+        "derived_characterization": "broader-focal-shift",
+        "derived_problems": [],
+        "derived_terminal": "R8E_DEEPER_RUNTIME_LOCALIZATION_JUSTIFIED",
+        "moved": true
+      },
+      "nc10b_narrow_forge": {
+        "derived_characterization": "narrow-winner-inversion",
+        "derived_problems": [],
+        "derived_terminal": "R8E_RESIDUAL_DIVERGENCE_CHARACTERIZED",
+        "moved": true
+      }
     }
   ]
 }

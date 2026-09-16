@@ -3,7 +3,14 @@ R8-E — Qwen3.8-Flash-Next residual true-greedy divergence characterization
 
 Terminal (machine-derived by scripts/issue199_r8e_terminal_reduction.py):
 
-R8E_RESIDUAL_DIVERGENCE_CHARACTERIZED
+R8E_DEEPER_RUNTIME_LOCALIZATION_JUSTIFIED
+
+(Correction round for the NO-GO review: the original reduction
+classified BOTH cases as margin-sensitive winner inversions using an
+overlap-only shortcut. The corrected reducer characterizes each case
+from the structural rank facts of the competing winner tokens; no
+physical observation was rerun and every retained evidence byte is
+unchanged. See "Corrected characterization rule" below.)
 
 Result (raw values, no post-hoc threshold)
 ------------------------------------------
@@ -13,11 +20,12 @@ case-256, generated position 5 (incremental state class, decision-faithful):
   candidate : winner 34227 (16.3057117), runner-up 271 (16.000248),
               margin +0.3055
   top-16 overlap 14/16; the two competing tokens are the TOP-2 in BOTH
-  arms; rank 3+ tokens agree closely (31347 13.81/13.92, 25292
-  13.65/13.64). Consistent with a narrow numerical-margin inversion
-  between otherwise coherent distributions.
+  arms (271 rank 1 ref / rank 2 cand; 34227 rank 2 ref / rank 1 cand);
+  rank 3+ tokens agree closely (31347 13.81/13.92, 25292 13.65/13.64).
+  Structurally a clean focal-token 1<->2 winner inversion.
   Cross-arm logit deltas: 271: -0.706 (ref 16.706 -> cand 16.000);
-  34227: +0.207 (16.099 -> 16.306).
+  34227: +0.207 (16.099 -> 16.306). Descriptive only — not
+  thresholded.
   tf-state cross-check: under teacher-forced prefill the arms MIRROR
   (reference emits 34227, candidate emits 271) — both arms sit close to
   the 271/34227 decision boundary from opposite sides.
@@ -25,25 +33,49 @@ case-256, generated position 5 (incremental state class, decision-faithful):
 case-4096, generated position 0 (4097-token prompt, first token):
   reference : winner 328 (15.0245876), 561 (14.5521736), 359
   (14.0666008), 271 (13.8466511), EOS 248046 rank 5 (13.2554426);
-              margin +0.4724
+  margin +0.4724
   candidate : winner EOS 248046 (16.6363716), 328 rank 2 (15.4173584),
-              271 (14.860343), 561 (14.6030521), 359 (13.6044436);
-              margin +1.2190
+  271 (14.860343), 561 (14.6030521), 359 (13.6044436);
+  margin +1.2190
   top-16 overlap 13/16. EOS IS candidate argmax before sampling (rank 1
-  vs reference rank 5); reference winner 328 is candidate rank 2. The
-  EOS win is accompanied by a moderate top-K reorder (overlap 13/16,
-  EOS +3.38 logits cross-arm) — but the reference winner remains the
-  candidate runner-up and the familiar-token structure (328/561/359/
-  271) persists in both top-5s: consistent with a margin inversion
-  riding on a moderately shifted, still-coherent distribution rather
-  than a qualitatively different score structure.
+  vs reference rank 5); reference winner 328 is candidate rank 2.
+  Cross-arm logit deltas: EOS +3.381 (13.255 -> 16.636); 328 +0.393
+  (15.025 -> 15.417). Descriptive only — not thresholded.
+  This is NOT the same structure as case-256: EOS is not the reference
+  winner's runner-up — in the reference arm EOS sits at rank 5 behind
+  561, 359 and 271, and it moves rank 5->1 across arms. The two cases
+  must not be described with one shared "margin-sensitive winner
+  inversion" label.
 
-Per the frozen reducer rule (materially different score structure iff
-top-16 overlap < 12/16, or non-finite logits, or loser missing from
-the other arm's top-16 with a large gap), BOTH cases classify as
-margin-sensitive winner inversions. Deeper runtime localization is NOT
-justified by this evidence: no separately-authorized layer/state
-boundary localization issue is motivated by these two decision points.
+Per the corrected reducer rule (see below), case-256 classifies as a
+narrow-winner-inversion and case-4096 as a broader-focal-shift. Under
+Issue #199's terminal definitions, case-4096's decision-point evidence
+is a materially different score structure that cannot reasonably be
+explained by only a winner inversion, so a separately authorized
+layer/state-boundary localization issue IS justified by this evidence.
+That successor issue has NOT been created or executed in this campaign.
+
+Corrected characterization rule (structural, no post-hoc threshold)
+-------------------------------------------------------------------
+Derived from Issue #199's own required decision structure, applied to
+the two focal winner tokens (each arm's accepted R8-D winner):
+
+- narrow-winner-inversion: both focal tokens occupy ranks 1 and 2 in
+  BOTH arms with inverted ordering (the immediate decision competitors
+  trade places); top-16 overlap coherent (>= 12/16); all logits finite.
+- broader-focal-shift: a focal token is NOT the other winner's
+  immediate runner-up somewhere (rank >= 3 in an arm, absent from an
+  arm's retained top-16, or the focal ordering is not inverted) even
+  though broader top-K overlap alone would look coherent.
+- materially-different-score-structure: top-16 overlap < 12/16, a
+  focal winner absent from an arm's retained top-16, or non-finite
+  logits.
+
+Terminal predicate: R8E_DEEPER_RUNTIME_LOCALIZATION_JUSTIFIED iff any
+case is not a narrow-winner-inversion. The top-16 overlap count alone
+(>= 12) can never classify a case as a narrow inversion. Raw ranks,
+logits, margins, overlap counts and cross-arm deltas are retained in
+terminal-reduction.json without thresholding.
 
 Repeat stability: every arm/case pair reproduced byte-identical float32
 logits rows (f32_row_sha256 equal across repeats) and identical token
@@ -126,7 +158,10 @@ evidence/nonperturbation/ 8 records (2 cases x 2 arms x 2 repeats,
 evidence/observations/    8 records + float32 rows (2 cases x 2 arms x
                           2 repeats, diagnostic binary, incremental)
 evidence/observations-tf/ 8 records + float32 rows (tf state class)
-evidence/negative-controls/ negative-controls.json (9 controls)
+evidence/negative-controls/ negative-controls.json (10 controls;
+                          9 original + NC10 semantic
+                          characterization control added in the
+                          correction round)
 
 Non-claims
 ----------
@@ -162,3 +197,14 @@ upstream-master blob-sha match).
 Lane 2 (provenance / non-claims): PASS, no findings above P3.
 Delta-confirmation at final head: PASS (post-review commits
 non-correctness-bearing).
+
+Correction round (NO-GO on the original PR #205 reduction)
+----------------------------------------------------------
+The maintainer review rejected the original semantic reduction: the
+reducer labeled a case "consistent-with-margin-inversion" whenever
+top-16 overlap >= 12/16 and logits were finite, which let case-4096's
+rank-5->rank-1 EOS shift inherit case-256's clean-inversion label.
+Corrected in place (reducer characterization semantics, characterization
+mutation tests, NC10 semantic negative control, README); zero physical
+observations rerun, all retained evidence bytes verified unchanged.
+Exact-head reviews for the corrected head are recorded in the PR body.

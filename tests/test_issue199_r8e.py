@@ -20,6 +20,10 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "scripts"))
 import issue199_r8e_authority as A  # noqa: E402
+import issue199_r8e_terminal_reduction as R_mod  # noqa: E402
+
+R_char = lambda ref, cand, focus: R_mod.characterize(  # noqa: E731
+    "synthetic-case", ref, cand, focus)
 
 R8E = REPO / "docs/investigations/qwen38-flash-next-r8-e"
 R8E_EV = R8E / "evidence"
@@ -197,6 +201,182 @@ class NonPerturbationTests(unittest.TestCase):
             self.assertEqual(rec["mode"], "accepted")
             n += 1
         self.assertEqual(n, 8)
+
+
+class CharacterizationTests(unittest.TestCase):
+    """Mutation tests around characterize() semantics (correction round
+    for the NO-GO review of PR #205).
+
+    Fixtures are SYNTHETIC (arbitrary token ids / logits, NOT the
+    observed R8-E values) so no class boundary can have been tuned to
+    the retained campaign data.
+    """
+
+    FOCUS = [101, 202]
+
+    @staticmethod
+    def _view(top, focus_ranks, n_nonfinite=0, focus_logits=None):
+        """Build an arm_view-shaped dict from explicit rank facts."""
+        focus = {}
+        for tok, rank in focus_ranks.items():
+            logit = None
+            if focus_logits and tok in focus_logits:
+                logit = focus_logits[tok]
+            else:
+                for t, v in top:
+                    if t == tok:
+                        logit = v
+            focus[tok] = {"rank": rank, "logit": logit}
+        w, wl = top[0]
+        r, rl = top[1] if len(top) > 1 else (None, None)
+        return {
+            "top16_ids": [t for t, _v in top],
+            "top16": top, "winner": w, "winner_logit": wl,
+            "runner_up": r, "runner_up_logit": rl,
+            "top1_top2_margin": (wl - rl) if r is not None else None,
+            "focus_tokens": focus, "n_nonfinite": n_nonfinite,
+        }
+
+    @staticmethod
+    def _coherent_top16():
+        """16-entry top list, arbitrary synthetic ids/logits."""
+        return [[7000 + i, 10.0 - 0.31 * i] for i in range(16)]
+
+    def _pair(self, ref_ranks, cand_ranks, ref_top=None, cand_top=None,
+              ref_nonfinite=0, cand_nonfinite=0):
+        ref_top = ref_top if ref_top is not None else self._coherent_top16()
+        cand_top = (cand_top if cand_top is not None
+                    else [list(x) for x in ref_top])
+        ref = self._view(ref_top, ref_ranks, ref_nonfinite)
+        cand = self._view(cand_top, cand_ranks, cand_nonfinite)
+        return ref, cand
+
+    def test_clean_focal_swap_is_narrow_inversion(self):
+        # focal tokens 101/202 trade ranks 1<->2; rest of top-16 shared
+        ref_top = [[101, 9.5], [202, 9.1]] + self._coherent_top16()[2:]
+        cand_top = [[202, 9.4], [101, 9.2]] + self._coherent_top16()[2:]
+        ref, cand = self._pair(
+            {101: 1, 202: 2}, {101: 2, 202: 1},
+            ref_top=ref_top, cand_top=cand_top)
+        c = R_char(ref, cand, self.FOCUS)
+        self.assertEqual(c["characterization"], "narrow-winner-inversion")
+        self.assertTrue(c["focal_rank_facts"][
+                            "both_focal_rank_1_or_2_in_both_arms"])
+        self.assertTrue(c["focal_rank_facts"]["focal_ordering_inverted"])
+
+    def test_high_overlap_alone_does_not_imply_narrow(self):
+        # 15/16 of the top-16 set is shared, but a focal winner sits at
+        # rank 5 in one arm: overlap-only reasoning would wrongly call
+        # this a narrow inversion.
+        ref_top = [[101, 9.5], [7001, 9.0], [7002, 8.8], [7003, 8.6],
+                   [202, 8.4]] + self._coherent_top16()[5:]
+        cand_top = [[202, 9.6], [101, 9.3]] + self._coherent_top16()[2:]
+        ref, cand = self._pair(
+            {101: 1, 202: 5}, {101: 2, 202: 1},
+            ref_top=ref_top, cand_top=cand_top)
+        c = R_char(ref, cand, self.FOCUS)
+        self.assertEqual(c["top16_overlap_count"], 16 - 1)
+        self.assertEqual(c["characterization"], "broader-focal-shift")
+
+    def test_focal_rank5_to_rank1_not_clean_swap(self):
+        # the exact shape under review: one focal token moves rank 5->1
+        # while the opposing winner moves 1->2. This must NOT classify
+        # as the same clean 1<->2 inversion as a mutual swap.
+        ref_top = [[101, 9.5], [7001, 9.0], [7002, 8.8], [7003, 8.6],
+                   [202, 8.4]] + self._coherent_top16()[5:]
+        cand_top = [[202, 12.9], [101, 9.9], [7001, 8.9], [7002, 8.7],
+                    [7003, 8.5]] + self._coherent_top16()[5:]
+        ref, cand = self._pair(
+            {101: 1, 202: 5}, {101: 2, 202: 1},
+            ref_top=ref_top, cand_top=cand_top)
+        c = R_char(ref, cand, self.FOCUS)
+        self.assertEqual(c["characterization"], "broader-focal-shift")
+        self.assertFalse(c["focal_rank_facts"][
+                             "both_focal_rank_1_or_2_in_both_arms"])
+        # descriptive raw delta retained WITHOUT thresholding it
+        self.assertAlmostEqual(
+            c["cross_arm_logit_deltas"]["202"], 12.9 - 8.4)
+
+    def test_nonfinite_forces_materially_different(self):
+        ref, cand = self._pair({101: 1, 202: 2}, {101: 2, 202: 1},
+                               cand_nonfinite=2)
+        c = R_char(ref, cand, self.FOCUS)
+        self.assertEqual(
+            c["characterization"], "materially-different-score-structure")
+
+    def test_low_overlap_continues_shifted(self):
+        base = self._coherent_top16()
+        other = [[8000 + i, 9.9 - 0.3 * i] for i in range(16)]
+        ref, cand = self._pair(
+            {101: 1, 202: 2}, {101: 2, 202: 1},
+            ref_top=[[101, 9.5], [202, 9.1]] + base[2:],
+            cand_top=[[202, 9.4], [101, 9.2]] + other[2:])
+        c = R_char(ref, cand, self.FOCUS)
+        self.assertLess(c["top16_overlap_count"], 12)
+        self.assertEqual(
+            c["characterization"], "materially-different-score-structure")
+
+    def test_focal_missing_from_top16_is_materially_different(self):
+        base = self._coherent_top16()
+        ref_top = [[101, 9.5], [202, 9.1]] + base[2:]
+        cand_top = [[202, 9.4], [101, 9.2]] + base[2:14] + \
+            [[9001, 1.0], [9002, 0.9]]
+        ref, cand = self._pair(
+            {101: 1, 202: 2}, {101: None, 202: 1},
+            ref_top=ref_top, cand_top=cand_top)
+        c = R_char(ref, cand, self.FOCUS)
+        self.assertEqual(
+            c["characterization"], "materially-different-score-structure")
+        self.assertTrue(c["focal_rank_facts"]["any_focal_rank_missing"])
+
+    def test_uninverted_focal_ordering_not_narrow(self):
+        # focal tokens hold ranks 1 and 2 in both arms but the ORDER is
+        # the same (no winner change at all between arms for the focal
+        # pair): structurally not an inversion.
+        ref_top = [[101, 9.5], [202, 9.1]] + self._coherent_top16()[2:]
+        cand_top = [[101, 9.4], [202, 9.2]] + self._coherent_top16()[2:]
+        ref, cand = self._pair(
+            {101: 1, 202: 2}, {101: 1, 202: 2},
+            ref_top=ref_top, cand_top=cand_top)
+        c = R_char(ref, cand, self.FOCUS)
+        self.assertEqual(c["characterization"], "broader-focal-shift")
+
+
+class RealEvidenceCharacterizationTests(unittest.TestCase):
+    """Pin the corrected reduction on the retained campaign evidence."""
+
+    def _derive(self):
+        import issue199_r8e_terminal_reduction as R
+        return R.derive()
+
+    def test_case256_is_narrow_inversion(self):
+        d = self._derive()
+        c = d["per_case"]["case-256"]
+        self.assertEqual(c["characterization"], "narrow-winner-inversion")
+        self.assertEqual(c["focal_ranks"],
+                         {"reference|271": 1, "reference|34227": 2,
+                          "candidate|271": 2, "candidate|34227": 1})
+
+    def test_case4096_is_broader_focal_shift(self):
+        d = self._derive()
+        c = d["per_case"]["case-4096"]
+        self.assertEqual(c["characterization"], "broader-focal-shift")
+        self.assertEqual(c["focal_ranks"],
+                         {"reference|328": 1, "reference|248046": 5,
+                          "candidate|328": 2, "candidate|248046": 1})
+        self.assertFalse(c["focal_rank_facts"][
+                             "both_focal_rank_1_or_2_in_both_arms"])
+        # raw descriptive deltas retained, unthresholded
+        self.assertAlmostEqual(
+            c["cross_arm_logit_deltas"]["248046"], 3.380929, places=6)
+        self.assertAlmostEqual(
+            c["cross_arm_logit_deltas"]["328"], 0.3927708, places=6)
+
+    def test_terminal_is_deeper_localization(self):
+        d = self._derive()
+        self.assertEqual(d["terminal"],
+                         "R8E_DEEPER_RUNTIME_LOCALIZATION_JUSTIFIED")
+        self.assertEqual(d["problems"], [])
 
 
 class TerminalReductionTests(unittest.TestCase):

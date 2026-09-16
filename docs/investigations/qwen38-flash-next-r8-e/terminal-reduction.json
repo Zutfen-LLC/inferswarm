@@ -83,7 +83,22 @@
         ]
       ],
       "cand_top1_top2_margin": 0.30546370000000067,
-      "characterization": "consistent-with-margin-inversion",
+      "characterization": "narrow-winner-inversion",
+      "cross_arm_logit_deltas": {
+        "271": -0.7061500000000009,
+        "34227": 0.20717429999999837
+      },
+      "focal_rank_facts": {
+        "any_focal_rank_missing": false,
+        "both_focal_rank_1_or_2_in_both_arms": true,
+        "focal_ordering_inverted": true
+      },
+      "focal_ranks": {
+        "candidate|271": 2,
+        "candidate|34227": 1,
+        "reference|271": 1,
+        "reference|34227": 2
+      },
       "focus": {
         "candidate": {
           "271": {
@@ -181,7 +196,9 @@
         ]
       ],
       "ref_top1_top2_margin": 0.6078605999999986,
-      "shifted_reasons": [],
+      "shifted_reasons": [
+        "focal winner tokens occupy ranks 1 and 2 in both arms with inverted ordering (top-16 overlap 14/16)"
+      ],
       "top16_order_equal": false,
       "top16_overlap_count": 14,
       "top16_set_equal": false
@@ -262,7 +279,22 @@
         ]
       ],
       "cand_top1_top2_margin": 1.219013200000001,
-      "characterization": "consistent-with-margin-inversion",
+      "characterization": "broader-focal-shift",
+      "cross_arm_logit_deltas": {
+        "248046": 3.380929,
+        "328": 0.3927707999999992
+      },
+      "focal_rank_facts": {
+        "any_focal_rank_missing": false,
+        "both_focal_rank_1_or_2_in_both_arms": false,
+        "focal_ordering_inverted": true
+      },
+      "focal_ranks": {
+        "candidate|248046": 1,
+        "candidate|328": 2,
+        "reference|248046": 5,
+        "reference|328": 1
+      },
       "focus": {
         "candidate": {
           "328": {
@@ -360,7 +392,9 @@
         ]
       ],
       "ref_top1_top2_margin": 0.47241400000000056,
-      "shifted_reasons": [],
+      "shifted_reasons": [
+        "248046 is rank 5 in the reference arm (not the immediate runner-up) (top-16 overlap 13/16 retained as context)"
+      ],
       "top16_order_equal": false,
       "top16_overlap_count": 13,
       "top16_set_equal": false
@@ -385,7 +419,7 @@
       "repeat_token_equality": true
     }
   },
-  "terminal": "R8E_RESIDUAL_DIVERGENCE_CHARACTERIZED",
+  "terminal": "R8E_DEEPER_RUNTIME_LOCALIZATION_JUSTIFIED",
   "tf_views": {
     "case-256/candidate": {
       "focus_tokens": {

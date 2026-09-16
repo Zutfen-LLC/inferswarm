@@ -1,9 +1,9 @@
-fb89977d84d471abd1f5beff997145d9ca3fba35fcd466807bb1761ed07f847b  docs/investigations/qwen38-flash-next-r8-e/README.md
+03ece840c5d356c419b97fab6d0ff9c442115a55b02235118e91993d2182de6e  docs/investigations/qwen38-flash-next-r8-e/README.md
 058674419daa1189b25b80e99278001e437827a97c9a2d68ed7e24f03df0d659  docs/investigations/qwen38-flash-next-r8-e/evidence/instrumentation/applied-source.patch
 52c311b319a08c0a4ff4b66b446d9f164d064a0049b57cc25d81b89aaf5e414f  docs/investigations/qwen38-flash-next-r8-e/evidence/instrumentation/apply_hook.py
 0a77026cae1380fe702a304f0dfdb3fb5c5c70c0a9c756f19feb8dc10704df98  docs/investigations/qwen38-flash-next-r8-e/evidence/instrumentation/instrumentation.json
 2986590857824582b6c4a9d6008fe997f89b6529454c7234fca75fc83527fd76  docs/investigations/qwen38-flash-next-r8-e/evidence/instrumentation/r8e-build.sh
-9aa4cc43544886ce70785bdc212081e3e1e99df83a2ae18cad2f2d1f58c9e88b  docs/investigations/qwen38-flash-next-r8-e/evidence/negative-controls/negative-controls.json
+f5539478762fb938abfb02df3d02922f97d5ba50a3328101f16ffdbd9dce71ae  docs/investigations/qwen38-flash-next-r8-e/evidence/negative-controls/negative-controls.json
 b207b73d7559d98f747919d144c02b3f945336d667c25d67eb8f0f919c4889a2  docs/investigations/qwen38-flash-next-r8-e/evidence/nonperturbation/capture-case-256-candidate-accepted1.json
 d31bc1354c242cb665df143e1746a2ce0fece66fefe33d55792ba9ffbbb2561b  docs/investigations/qwen38-flash-next-r8-e/evidence/nonperturbation/capture-case-256-candidate-accepted2.json
 897efe23c7a17c976c4f7ef692a55c394df3825f53c56e6cbad2a104ec3cb8a4  docs/investigations/qwen38-flash-next-r8-e/evidence/nonperturbation/capture-case-256-reference-accepted1.json
@@ -76,4 +76,4 @@ e79a8490e33d25bc9ac0b9c49a26ffd443b5dd37d966275c35c920a6541eeb7a  docs/investiga
 f91b18d732fc3df804552c21727c1b08b995bc1f43ab3f6a0a2d3168020a5a81  docs/investigations/qwen38-flash-next-r8-e/evidence/run/run-driver.sh
 ed0cf50626f88ec42424e446b0ccdb0d087d547f08da5af75f4834b3618fe527  docs/investigations/qwen38-flash-next-r8-e/evidence/run/stop_rpc_backends.sh
 87d2bf86dc6c0540f97939337d0999407c9a1b11735a0809550596c0d51f0c38  docs/investigations/qwen38-flash-next-r8-e/evidence/run/wait_backends.sh
-636b14e41cd085ce71eb7242bb6dfc0df37cd2806901492655712a48b4903a62  docs/investigations/qwen38-flash-next-r8-e/terminal-reduction.json
+63a956a488104aa547db6b98b9ec38fd03ed4743b49839e9e9f77b85dadd7a22  docs/investigations/qwen38-flash-next-r8-e/terminal-reduction.json

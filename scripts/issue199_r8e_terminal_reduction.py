@@ -11,15 +11,28 @@ Terminals (exactly one):
   R8E_EVIDENCE_BLOCKED
 
 Per-case characterization (from RAW rank/logit/margin evidence, no
-post-hoc threshold): a branch is distribution-shifted (justifying deeper
-localization) iff the top-K structure materially differs — mechanically:
-the two arms' top-16 sets are equal AND the winner-vs-runner-up margins
-have the same sign structure in a narrow band around zero (margin
-inversion) vs any of: (a) top-16 set/rank overlap materially broken,
-(b) the loser of one arm missing from the other arm's top-16 entirely
-with a large gap, or (c) non-finite logits. The reducer reports raw
-values and BOTH per-case characterizations; the terminal is
-LOCALIZATION_JUSTIFIED iff EITHER case is distribution-shifted.
+post-hoc numeric threshold; the classes and the boundary between them
+come from Issue #199's required structure, not from magnitudes observed
+in this campaign):
+
+- "narrow-winner-inversion": the two focal winner tokens (each arm's
+  accepted winner at this decision point) are the immediate decision
+  competitors in BOTH arms — each occupies rank 1 or 2 in both arms,
+  their ordering is inverted, both are finite, and the top-16 overlap
+  is coherent (>= 12/16).
+- "broader-focal-shift": a focal winner token is NOT the other arm's
+  runner-up (some focal token sits at rank >= 3 in some arm, or the
+  focal ordering is not inverted) while the broader top-K set remains
+  mostly shared — a score/rank re-arrangement beyond a pure winner
+  swap, even though overlap alone would look coherent.
+- "materially-different-score-structure": the broader top-K structure
+  itself is broken (overlap < 12/16), a focal winner falls outside the
+  other arm's retained top-16 entirely, or non-finite logits appear.
+
+Terminal: LOCALIZATION_JUSTIFIED iff ANY case is NOT a
+narrow-winner-inversion (broader focal shift or materially different
+structure both qualify — Issue #199's terminal text asks whether the
+evidence "cannot reasonably be explained by only a winner inversion").
 
 BLOCKED iff no non-perturbing token-aligned observation path was
 established (non-perturbation proofs failed / observation records
@@ -234,7 +247,22 @@ def arm_view(row, focus_tokens):
 
 
 def characterize(case, ref_view, cand_view, focus_tokens):
-    """Margin-inversion vs distribution-shift, from raw structure only."""
+    """Structural characterization from raw rank facts only.
+
+    Three mutually-exclusive classes, derived from Issue #199's own
+    decision structure (no numeric tolerance on logit magnitudes):
+
+    - narrow-winner-inversion: both focal winner tokens hold ranks 1
+      and 2 in BOTH arms with inverted ordering (the immediate
+      decision competitors simply trade places) and the top-16 set
+      remains coherent;
+    - broader-focal-shift: a focal token is not the other winner's
+      immediate runner-up somewhere (rank >= 3, absent from a top-16,
+      or ordering not inverted) while top-K overlap alone would still
+      look coherent;
+    - materially-different-score-structure: broader top-K structure
+      broken (overlap < 12/16) or non-finite logits.
+    """
     raw = {
         "top16_set_equal":
             set(ref_view["top16_ids"]) == set(cand_view["top16_ids"]),
@@ -248,26 +276,69 @@ def characterize(case, ref_view, cand_view, focus_tokens):
                   else cand_view["focus_tokens"] for arm in
                   ("reference", "candidate")},
     }
-    shifted_reasons = []
-    if raw["top16_set_equal"] is False:
-        # measure the overlap
-        inter = set(ref_view["top16_ids"]) & set(cand_view["top16_ids"])
-        raw["top16_overlap_count"] = len(inter)
-        if len(inter) < 12:
-            shifted_reasons.append(
-                f"top-16 overlap only {len(inter)}/16 across arms")
-    if ref_view["n_nonfinite"] or cand_view["n_nonfinite"]:
-        shifted_reasons.append("non-finite logits present")
-    # cross-arm winner handling
-    for tok, arm in ((t, "reference") for t in focus_tokens):
-        v = (ref_view if arm == "reference" else cand_view)["focus_tokens"][tok]
-        raw[f"ref_focus_{tok}"] = v
+    inter = set(ref_view["top16_ids"]) & set(cand_view["top16_ids"])
+    raw["top16_overlap_count"] = len(inter)
+    raw["cross_arm_logit_deltas"] = {
+        str(tok): (None if (ref_view["focus_tokens"][tok]["logit"] is None
+                            or cand_view["focus_tokens"][tok]["logit"]
+                            is None)
+                   else cand_view["focus_tokens"][tok]["logit"]
+                   - ref_view["focus_tokens"][tok]["logit"])
+        for tok in focus_tokens}
     for tok in focus_tokens:
+        raw[f"ref_focus_{tok}"] = ref_view["focus_tokens"][tok]
         raw[f"cand_focus_{tok}"] = cand_view["focus_tokens"][tok]
-    raw["shifted_reasons"] = shifted_reasons
-    raw["characterization"] = ("materially-different-score-structure"
-                               if shifted_reasons else
-                               "consistent-with-margin-inversion")
+
+    nonfinite = bool(ref_view["n_nonfinite"] or cand_view["n_nonfinite"])
+    overlap = len(inter)
+    # rank facts per focal token (rank None = outside that arm's
+    # retained top-16 / unranked in the focus rows)
+    fr = {tok: ref_view["focus_tokens"][tok]["rank"]
+          for tok in focus_tokens}
+    cr = {tok: cand_view["focus_tokens"][tok]["rank"]
+          for tok in focus_tokens}
+    ranks = {("reference", tok): fr[tok] for tok in focus_tokens}
+    ranks.update({("candidate", tok): cr[tok] for tok in focus_tokens})
+    raw["focal_ranks"] = {f"{arm}|{tok}": r for (arm, tok), r
+                          in ranks.items()}
+    raw["focal_rank_facts"] = {
+        "both_focal_rank_1_or_2_in_both_arms": all(
+            r in (1, 2) for r in ranks.values()),
+        "focal_ordering_inverted": (
+            fr[focus_tokens[0]] == 1 and cr[focus_tokens[1]] == 1),
+        "any_focal_rank_missing": any(r is None for r in ranks.values()),
+    }
+    if nonfinite:
+        clazz = "materially-different-score-structure"
+        reason = ("non-finite logits present (%d ref / %d cand)"
+                  % (ref_view["n_nonfinite"], cand_view["n_nonfinite"]))
+    elif overlap < 12 or raw["focal_rank_facts"]["any_focal_rank_missing"]:
+        clazz = "materially-different-score-structure"
+        reason = ("top-16 overlap only %d/16 across arms"
+                  % overlap) if overlap < 12 else (
+            "focal winner token absent from an arm's retained top-16")
+    elif (raw["focal_rank_facts"]["both_focal_rank_1_or_2_in_both_arms"]
+            and raw["focal_rank_facts"]["focal_ordering_inverted"]):
+        clazz = "narrow-winner-inversion"
+        reason = ("focal winner tokens occupy ranks 1 and 2 in both arms "
+                  "with inverted ordering (top-16 overlap %d/16)"
+                  % overlap)
+    else:
+        clazz = "broader-focal-shift"
+        detail = []
+        for (arm, tok), r in sorted(ranks.items()):
+            if r is None:
+                continue
+            if r >= 3:
+                detail.append(f"{tok} is rank {r} in the {arm} arm "
+                              "(not the immediate runner-up)")
+        if not raw["focal_rank_facts"]["focal_ordering_inverted"]:
+            detail.append("focal ordering not inverted across arms")
+        reason = ("; ".join(detail) if detail else
+                  "focal rank structure is not a clean 1<->2 inversion") + \
+            f" (top-16 overlap {overlap}/16 retained as context)"
+    raw["shifted_reasons"] = [reason]
+    raw["characterization"] = clazz
     return raw
 
 
@@ -475,7 +546,12 @@ def derive(area_override=None):
                              views[(case, "candidate")],
                              FOCUS_TOKENS[case])
             per_case[case] = c
-            if c["characterization"] == "materially-different-score-structure":
+            if c["characterization"] != "narrow-winner-inversion":
+                # Issue #199: deeper localization is justified when the
+                # decision-point evidence "cannot reasonably be
+                # explained by only a winner inversion" — a broader
+                # focal score/rank shift qualifies exactly as much as a
+                # materially reordered distribution.
                 any_shifted = True
         else:
             per_case[case] = {"error": "missing valid arm view"}
