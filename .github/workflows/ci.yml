@@ -594,7 +594,7 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group issue-99-103
-        run: python3 -m unittest tests.test_issue99_artifact_core tests.test_issue99_proof tests.test_issue101_orchestration tests.test_issue101_proof tests.test_issue103_planner -v
+        run: python3 -m unittest tests.test_issue99_artifact_core tests.test_issue99_proof tests.test_issue101_orchestration tests.test_issue101_proof tests.test_issue103_planner tests.test_issue200_r8f_source_policy tests.test_issue200_r8f_proof -v
 
   vulkan-v0-b:
     name: Group vulkan-v0-b

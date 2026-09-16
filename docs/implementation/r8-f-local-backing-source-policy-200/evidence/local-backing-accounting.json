@@ -1,0 +1,1 @@
+{"node_id":"BACKING","participant_id":"P-BACKING","participant_requirements_digest":"sha256:805f020714f9a256ea0e227884d2f9c28b82d9dab5ee67995076bd7e6819d889","required_artifact_bytes":4,"required_bytes_satisfied_from_local_backing":4,"retained_optional_backing_bytes":28,"schema":"inferswarm.issue200.local-backing-accounting/1","total_verified_local_backing_bytes":32}
