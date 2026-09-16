@@ -214,16 +214,19 @@ class CommittedEvidenceTests(unittest.TestCase):
 
         self.assertEqual(normalize(document), normalize(self.retained["terminal-reduction.json"]))
 
-    def test_committed_campaign_is_explicitly_nonterminal_pending_phase5(self):
+    def test_committed_campaign_terminal_resolved_by_phase5(self):
+        """Phase 5 has now physically run: the committed terminal reduction
+        must carry the mechanically validated PASS and no handoff."""
         document = self.retained["terminal-reduction.json"]
-        self.assertIsNone(document["terminal"])
-        self.assertEqual(document["status"], "PHASE5_REQUIRED")
-        self.assertTrue(document["incomplete"])
+        self.assertEqual(document["terminal"], reduction.TERMINAL_LOCAL_VERIFIED_BACKING_PASS)
+        self.assertEqual(document["status"], "TERMINAL_RESOLVED")
+        self.assertFalse(document["incomplete"])
         self.assertTrue(document["compact_source_policy_seam_pass"])
-        self.assertFalse(document["physical_phase5_ran"])
+        self.assertTrue(document["physical_phase5_ran"])
+        self.assertTrue(document["physical_phase5_evidence_status"]["valid"])
+        self.assertIsNone(document["physical_phase5_handoff"])
         self.assertTrue(document["cache_mechanism_finding"]["legal_non_runtime_modifying_seam_exists"])
         self.assertEqual(document["cache_mechanism_finding"]["case_classification"], "C")
-        self.assertIsNotNone(document["physical_phase5_handoff"])
 
     def test_all_arms_and_negative_controls_recorded(self):
         arms = self.retained["arms.json"]
@@ -331,9 +334,11 @@ class StaticDisciplineTests(unittest.TestCase):
         self.assertEqual(phases["D_wrong_content"]["result"]["exit_code"], 2)
         self.assertEqual(phases["E_truncated"]["result"]["exit_code"], 2)
 
-    def test_terminal_reduction_never_claims_physical_arm_ran(self):
+    def test_terminal_reduction_carries_no_authored_magnitudes(self):
+        """The terminal document never authors network magnitudes: the
+        acceptance facts stay inside the independently re-validated physical
+        evidence document, not the terminal summary."""
         document, _ = reduction.reduce_terminal()
-        self.assertFalse(document["physical_phase5_ran"])
         self.assertNotIn("staged_bytes", document)
         self.assertNotIn("network_bytes", document)
 
@@ -342,9 +347,11 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
     """PASS is derived from raw receipts; it is never an authored boolean."""
 
     def test_legal_seam_plus_no_physical_evidence_cannot_pass(self):
-        with mock.patch.object(cache_mechanism, "mechanical_cache_finding",
-                               return_value=valid_cache_finding()):
-            document, _ = reduction.reduce_terminal()
+        with tempfile.TemporaryDirectory() as td:
+            missing = Path(td) / "physical-phase5.json"
+            with mock.patch.object(cache_mechanism, "mechanical_cache_finding",
+                                   return_value=valid_cache_finding()):
+                document, _ = reduction.reduce_terminal(physical_phase5_evidence_path=missing)
         self.assertNotEqual(document["terminal"], reduction.TERMINAL_LOCAL_VERIFIED_BACKING_PASS)
         self.assertIsNone(document["terminal"])
         self.assertEqual(document["status"], "PHASE5_REQUIRED")
@@ -487,33 +494,53 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
                 self._rejects_pass_after_mutation(mutation)
 
     def test_full_payload_capture_and_abbreviation_controls(self):
-        """A >32-byte worker payload is exact under the process-wide capture."""
+        """Phase-5 correction: the mandated ``-s 0`` capture is
+        length-complete, not byte-complete.  A complete byte-exact record is
+        attributed at the strongest rung; an abbreviated record (quoted
+        prefix + strace ellipsis, result == declared length) is admissible
+        and attributed by the bounded framing window; a truncated string
+        WITHOUT the ellipsis marker, a partial result, and sub-window
+        fragmentation all reject."""
         payload = b"phase5-payload-larger-than-default-strace-limit-0123456789"
         identity = {"participant": "inferswarm03", "observation_id": "set-large", "order": 1,
                     "offset": 0, "length": len(payload),
                     "sha256": hashlib.sha256(payload).hexdigest(), "bytes": payload}
-        complete = (f'1001 1.002 sendto(3, {json.dumps(payload.decode())}, {len(payload)}, 0, '
-                    'NULL, 0) = '
-                    f'{len(payload)}\n').encode()
         self.assertGreater(len(payload), 32)
         # The retained pinned driver uses connect() followed by sendto(...,
         # NULL, 0).  The root's FD is shared with a worker, whose TID must not
         # be filtered out of the process-wide evidence.
-        connected = (b'999 1.000 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3\n'
-                     b'999 1.001 connect(3, {sa_family=AF_INET, sin_port=htons(50052), '
-                     b'sin_addr=inet_addr("100.77.187.38")}, 16) = 0\n' + complete)
+        connect = (b'999 1.000 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3\n'
+                   b'999 1.001 connect(3, {sa_family=AF_INET, sin_port=htons(50052), '
+                   b'sin_addr=inet_addr("100.77.187.38")}, 16) = 0\n')
+        complete = (f'1001 1.002 sendto(3, {json.dumps(payload.decode())}, {len(payload)}, 0, '
+                    'NULL, 0) = '
+                    f'{len(payload)}\n').encode()
         reduced = network_reduce.reduce_capture(
-            connected, client_pid=999, server_endpoint="100.77.187.38:50052",
+            connect + complete, client_pid=999, server_endpoint="100.77.187.38:50052",
             payloads=[identity])
         self.assertEqual(reduced["immutable_payload_bytes"], len(payload))
         self.assertEqual(reduced["payload_identities"][0]["sha256"], identity["sha256"])
         self.assertEqual(reduced["traced_pids"], [999, 1001])
-        # This is the normal default-strace spelling: a complete quoted prefix
-        # followed by an ellipsis, not payload bytes named "...".
-        abbreviated = complete.replace(json.dumps(payload.decode()).encode(),
-                                       json.dumps(payload[:32].decode()).encode() + b"...", 1)
-        with self.assertRaisesRegex(ValueError, "abbreviated"):
-            network_reduce.reduce_capture(connected[:connected.index(complete)] + abbreviated, client_pid=999,
+        # The real Phase-5 capture form under -s 0: an abbreviated body whose
+        # declared length and result bind the complete framed transfer.
+        abbreviated = (f'1001 1.002 sendto(3, {json.dumps(payload[:32].decode())}..., '
+                       f'{len(payload)}, 0, NULL, 0) = {len(payload)}\n').encode()
+        reduced = network_reduce.reduce_capture(
+            connect + abbreviated, client_pid=999, server_endpoint="100.77.187.38:50052",
+            payloads=[identity])
+        self.assertEqual(reduced["immutable_payload_bytes"], len(payload))
+        # A truncated string with NO ellipsis marker is structurally
+        # inconsistent and fails closed.
+        truncated = (f'1001 1.002 sendto(3, {json.dumps(payload[:32].decode())}, '
+                     f'{len(payload)}, 0, NULL, 0) = {len(payload)}\n').encode()
+        with self.assertRaisesRegex(ValueError, "truncated without abbreviation marker"):
+            network_reduce.reduce_capture(connect + truncated, client_pid=999,
+                                          server_endpoint="100.77.187.38:50052", payloads=[identity])
+        # A partial syscall result never binds complete record bytes.
+        partial = (f'1001 1.002 sendto(3, {json.dumps(payload[:32].decode())}..., '
+                   f'{len(payload)}, 0, NULL, 0) = 17\n').encode()
+        with self.assertRaisesRegex(ValueError, "does not bind complete record bytes"):
+            network_reduce.reduce_capture(connect + partial, client_pid=999,
                                           server_endpoint="100.77.187.38:50052", payloads=[identity])
 
     def test_process_wide_network_adversaries_and_connected_fd_writes(self):
@@ -529,10 +556,17 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
         self.assertEqual(network_reduce.reduce_capture(
             connect + worker_send, client_pid=999, server_endpoint=endpoint,
             payloads=[identity])["immutable_payload_bytes"], len(payload))
-        abbreviated = worker_send.replace(json.dumps(payload.decode()).encode(),
-                                          json.dumps(payload[:20].decode()).encode() + b"...", 1)
-        with self.assertRaisesRegex(ValueError, "abbreviated"):
-            network_reduce.reduce_capture(connect + abbreviated, client_pid=999,
+        # Phase-5 capture form: abbreviated but length/result-complete record
+        # from a worker TID still attributes the immutable payload.
+        abbreviated = (f'1001 1.001 sendto(9, {json.dumps(payload[:20].decode())}..., {len(payload)}, 0, NULL, 0) = {len(payload)}\n').encode()
+        self.assertEqual(network_reduce.reduce_capture(
+            connect + abbreviated, client_pid=999, server_endpoint=endpoint,
+            payloads=[identity])["immutable_payload_bytes"], len(payload))
+        # A truncated string without the ellipsis marker rejects.
+        truncated = worker_send.replace(json.dumps(payload.decode()).encode(),
+                                        json.dumps(payload[:20].decode()).encode(), 1)
+        with self.assertRaisesRegex(ValueError, "truncated without abbreviation marker"):
+            network_reduce.reduce_capture(connect + truncated, client_pid=999,
                                           server_endpoint=endpoint, payloads=[identity])
         for name, record in {
             "write": b'1001 1.001 write(9, "x", 1) = 1\n',
@@ -647,6 +681,74 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
         def attack(doc, root):
             self._make_multi_participant_assignment(doc, root, staging_attack=True)
         self._rejects_pass_after_mutation(attack)
+
+    def test_phase5_physical_framing_and_fragmentation_controls(self):
+        """Physical Phase-5 capture shapes: the abbreviated length-complete
+        framed record attributes the frozen payload; sub-window fragmentation,
+        partial results, truncated strings without markers, and unexplained
+        payload-class records all fail closed."""
+        endpoint = "10.0.0.204:50052"
+        connect = (b'402222 1.000 connect(61, {sa_family=AF_INET, sin_port=htons(50052), '
+                   b'sin_addr=inet_addr("\\\\x31\\\\x30\\\\x2e\\\\x30\\\\x2e\\\\x30\\\\x2e\\\\x32\\\\x30\\\\x34")}, 16) = 0\n')
+        identity = {"participant": "inferswarm04", "observation_id": "set-blk.24.attn_gate.weight",
+                    "order": 1, "offset": 848968992, "length": 10813440,
+                    "sha256": "1c0284d8b85f4966e2dd1990271f3bc470667c11041d5d084be1ca511080f5f4"}
+        framed = b'402380 1.003 sendto(61, ""..., 10813744, 0, NULL, 0) = 10813744\n'
+        out = network_reduce.reduce_capture(connect + framed, client_pid=402222,
+                                            server_endpoint=endpoint, payloads=[identity])
+        self.assertEqual(out["immutable_payload_bytes"], 10813440)
+        self.assertEqual(out["protocol_control_hash_probe_bytes"], 304)
+        # Fragmentation below the framing window cannot attribute the payload
+        # and must reject the zero claim.
+        fragmented = (connect
+                      + b'402380 1.003 sendto(61, ""..., 5406872, 0, NULL, 0) = 5406872\n'
+                      + b'402381 1.004 sendto(61, ""..., 5406872, 0, NULL, 0) = 5406872\n')
+        with self.assertRaisesRegex(ValueError, "not attributable"):
+            network_reduce.reduce_capture(fragmented, client_pid=402222,
+                                          server_endpoint=endpoint, payloads=[identity])
+        # A partial syscall result never binds complete bytes.
+        partial = connect + b'402380 1.003 sendto(61, ""..., 10813744, 0, NULL, 0) = 999999\n'
+        with self.assertRaisesRegex(ValueError, "does not bind complete record bytes"):
+            network_reduce.reduce_capture(partial, client_pid=402222,
+                                          server_endpoint=endpoint, payloads=[identity])
+        # An unexplained payload-class record larger than any frozen payload
+        # plus the bounded framing overhead rejects.
+        huge = connect + b'402380 1.003 sendto(61, ""..., 999999999, 0, NULL, 0) = 999999999\n'
+        with self.assertRaisesRegex(ValueError, "unexplained payload-class"):
+            network_reduce.reduce_capture(huge, client_pid=402222,
+                                          server_endpoint=endpoint, payloads=[identity])
+        # An abbreviated record from a worker TID (not the root PID) still
+        # attributes -- the capture is process-wide.
+        worker = b'402381 1.003 sendto(61, ""..., 10813744, 0, NULL, 0) = 10813744\n'
+        self.assertEqual(network_reduce.reduce_capture(
+            connect + worker, client_pid=402222, server_endpoint=endpoint,
+            payloads=[identity])["immutable_payload_bytes"], 10813440)
+
+    def test_wrong_member_sha_and_wrong_cache_key_reject(self):
+        """Physical controls 1 and 7: a wrong complete-member SHA-256 cannot
+        produce a range receipt, and a staged cache filename that is not the
+        payload's FNV-1a key rejects."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            member = root / "member.gguf"
+            member.write_bytes(b"0123456789abcdef" * 4)
+            with self.assertRaises(ValueError):
+                range_receipt.measure_range(
+                    node_id="n", source_path=member, member="member.gguf",
+                    accepted_member_bytes=member.stat().st_size,
+                    accepted_member_sha256="0" * 64, offset=0, length=8)
+            doc = valid_physical_phase5_document(root)
+            staging = doc["arms"]["local_verified"]["cache_staging"][0]["staged_cache"]
+            staging["path"] = staging["path"].rsplit("/", 1)[0] + "/deadbeefdeadbeef"
+            path = root / "physical-phase5.json"
+            path.write_text(json.dumps(doc))
+            with mock.patch.object(cache_mechanism, "mechanical_cache_finding",
+                                   return_value=valid_cache_finding()), \
+                 mock.patch.object(physical, "accepted_model_authority",
+                                   return_value=synthetic_authority(root)[0]):
+                result, _ = reduction.reduce_terminal(physical_phase5_evidence_path=path)
+            self.assertFalse(result["physical_phase5_ran"])
+
 
     def test_runtime_prerequisite_never_emitted_when_cache_seam_not_evaluated(self):
         """If the cache-mechanism evidence cannot be evaluated at all (e.g. its

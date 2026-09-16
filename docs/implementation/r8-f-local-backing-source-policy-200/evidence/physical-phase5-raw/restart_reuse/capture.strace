@@ -1,0 +1,158 @@
+strace: Process 416925 attached with 37 threads
+416933 1789568830.301843 accept4(19, NULL, NULL, SOCK_CLOEXEC <unfinished ...>
+416925 1789568830.969541 socket(AF_INET, SOCK_STREAM, IPPROTO_IP) = 61
+416925 1789568830.969657 setsockopt(61, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+416925 1789568830.969831 connect(61, {sa_family=AF_INET, sin_port=htons(50052), sin_addr=inet_addr("\x31\x30\x2e\x30\x2e\x30\x2e\x32\x30\x34")}, 16) = 0
+416925 1789568830.970420 sendto(61, ""..., 1, 0, NULL, 0) = 1
+416925 1789568830.970607 sendto(61, ""..., 8, 0, NULL, 0) = 8
+416925 1789568830.970704 sendto(61, ""..., 24, 0, NULL, 0) = 24
+416925 1789568830.970784 recvfrom(61, ""..., 8, 0, NULL, NULL) = 8
+416925 1789568830.971059 recvfrom(61, ""..., 28, 0, NULL, NULL) = 28
+strace: Process 417053 attached
+417053 1789568830.971480 sendto(61, ""..., 1, 0, NULL, 0) = 1
+417053 1789568830.971619 sendto(61, ""..., 8, 0, NULL, 0) = 8
+417053 1789568830.971706 sendto(61, ""..., 4, 0, NULL, 0) = 4
+417053 1789568830.971799 recvfrom(61, ""..., 8, 0, NULL, NULL) = 8
+417053 1789568830.972282 recvfrom(61, ""..., 16, 0, NULL, NULL) = 16
+417053 1789568830.972681 +++ exited with 0 +++
+416925 1789568830.972709 socket(AF_INET, SOCK_STREAM, IPPROTO_IP) = 61
+416925 1789568830.972775 setsockopt(61, SOL_TCP, TCP_NODELAY, [1], 4) = 0
+416925 1789568830.972887 connect(61, {sa_family=AF_INET, sin_port=htons(50052), sin_addr=inet_addr("\x31\x30\x2e\x30\x2e\x30\x2e\x32\x30\x34")}, 16) = 0
+416925 1789568830.973390 sendto(61, ""..., 1, 0, NULL, 0) = 1
+416925 1789568830.973476 sendto(61, ""..., 8, 0, NULL, 0) = 8
+416925 1789568830.973557 sendto(61, ""..., 24, 0, NULL, 0) = 24
+416925 1789568830.973631 recvfrom(61, ""..., 8, 0, NULL, NULL) = 8
+416925 1789568830.974076 recvfrom(61, ""..., 28, 0, NULL, NULL) = 28
+strace: Process 417054 attached
+417054 1789568830.974457 sendto(61, ""..., 1, 0, NULL, 0) = 1
+417054 1789568830.974597 sendto(61, ""..., 8, 0, NULL, 0) = 8
+417054 1789568830.974685 sendto(61, ""..., 12, 0, NULL, 0) = 12
+417054 1789568830.974768 recvfrom(61, ""..., 8, 0, NULL, NULL) = 8
+417054 1789568830.975665 recvfrom(61, ""..., 16, 0, NULL, NULL) = 16
+417054 1789568830.975968 sendto(61, ""..., 1, 0, NULL, 0) = 1
+417054 1789568830.976060 sendto(61, ""..., 8, 0, NULL, 0) = 8
+417054 1789568830.976139 sendto(61, ""..., 8, 0, NULL, 0) = 8
+417054 1789568830.976219 recvfrom(61, ""..., 8, 0, NULL, NULL) = 8
+417054 1789568830.976549 recvfrom(61, ""..., 8, 0, NULL, NULL) = 8
+417054 1789568831.003419 sendto(61, ""..., 1, 0, NULL, 0) = 1
+417054 1789568831.003563 sendto(61, ""..., 8, 0, NULL, 0) = 8
+417054 1789568831.003654 sendto(61, ""..., 312, 0, NULL, 0) = 312
+417054 1789568831.003739 recvfrom(61, ""..., 8, 0, NULL, NULL) = 8
+417054 1789568831.069577 recvfrom(61, ""..., 1, 0, NULL, NULL) = 1
+417054 1789568831.350253 sendto(61, ""..., 1, 0, NULL, 0) = 1
+417054 1789568831.350419 sendto(61, ""..., 8, 0, NULL, 0) = 8
+417054 1789568831.350514 sendto(61, ""..., 12, 0, NULL, 0) = 12
+417054 1789568831.350600 recvfrom(61, ""..., 8, 0, NULL, NULL) = 8
+417054 1789568831.351253 recvfrom(61, ""..., 16, 0, NULL, NULL) = 16
+417054 1789568831.359778 sendto(61, ""..., 1, 0, NULL, 0) = 1
+417054 1789568831.359922 sendto(61, ""..., 8, 0, NULL, 0) = 8
+417054 1789568831.360020 sendto(61, ""..., 3260, 0, NULL, 0) = 3260
+417054 1789568831.360113 recvfrom(61, ""..., 8, 0, NULL, NULL) = 8
+417054 1789568831.360526 recvfrom(61, ""..., 8, 0, NULL, NULL) = 8
+416928 1789568831.375006 write(2, ""..., 13) = 13
+416928 1789568831.375115 write(2, ""..., 2) = 2
+416928 1789568831.375191 write(2, ""..., 57) = 57
+417054 1789568831.443352 sendto(61, ""..., 1, 0, NULL, 0) = 1
+417054 1789568831.443495 sendto(61, ""..., 8, 0, NULL, 0) = 8
+417054 1789568831.443592 sendto(61, ""..., 3260, 0, NULL, 0) = 3260
+417054 1789568831.443691 recvfrom(61, ""..., 8, 0, NULL, NULL) = 8
+417054 1789568831.444096 recvfrom(61, ""..., 8, 0, NULL, NULL) = 8
+417054 1789568831.447883 sendto(61, ""..., 1, 0, NULL, 0) = 1
+417054 1789568831.448011 sendto(61, ""..., 8, 0, NULL, 0) = 8
+417054 1789568831.448105 sendto(61, ""..., 8, 0, NULL, 0) = 8
+417054 1789568831.448193 recvfrom(61, ""..., 8, 0, NULL, NULL) = 8
+417054 1789568831.448494 recvfrom(61, ""..., 8, 0, NULL, NULL) = 8
+strace: Process 417062 attached
+strace: Process 417063 attached
+strace: Process 417064 attached
+strace: Process 417065 attached
+strace: Process 417066 attached
+strace: Process 417067 attached
+strace: Process 417068 attached
+strace: Process 417069 attached
+strace: Process 417070 attached
+strace: Process 417071 attached
+strace: Process 417072 attached
+strace: Process 417073 attached
+strace: Process 417074 attached
+417054 1789568831.789800 sendto(61, ""..., 1, 0, NULL, 0) = 1
+417054 1789568831.789985 sendto(61, ""..., 8, 0, NULL, 0) = 8
+417054 1789568831.790062 sendto(61, ""..., 20784, 0, NULL, 0) = 20784
+417054 1789568831.790757 sendto(61, ""..., 1, 0, NULL, 0) = 1
+417054 1789568831.790841 sendto(61, ""..., 8, 0, NULL, 0) = 8
+417054 1789568831.790913 sendto(61, ""..., 49456, 0, NULL, 0) = 49456
+417054 1789568831.791228 sendto(61, ""..., 1, 0, NULL, 0) = 1
+417054 1789568831.791292 sendto(61, ""..., 8, 0, NULL, 0) = 8
+417054 1789568831.791408 sendto(61, ""..., 2420, 0, NULL, 0) = 2420
+417054 1789568831.791651 sendto(61, ""..., 1, 0, NULL, 0) = 1
+417054 1789568831.791714 sendto(61, ""..., 8, 0, NULL, 0) = 8
+417054 1789568831.791794 sendto(61, ""..., 312, 0, NULL, 0) = 312
+417054 1789568831.791875 recvfrom(61, ""..., 8, 0, NULL, NULL) = 8
+417054 1789568831.852546 recvfrom(61, ""..., 49152, 0, NULL, NULL) = 13032
+417054 1789568831.852626 recvfrom(61, ""..., 36120, 0, NULL, NULL) = 24616
+417054 1789568831.853091 recvfrom(61, ""..., 11504, 0, NULL, NULL) = 11504
+416928 1789568832.215070 write(2, ""..., 13) = 13
+416928 1789568832.215185 write(2, ""..., 2) = 2
+416928 1789568832.215252 write(2, ""..., 85) = 85
+416928 1789568832.227612 write(2, ""..., 13) = 13
+416928 1789568832.227707 write(2, ""..., 2) = 2
+416928 1789568832.227776 write(2, ""..., 148) = 148
+416928 1789568832.227836 write(2, ""..., 13) = 13
+416928 1789568832.227948 write(2, ""..., 2) = 2
+416928 1789568832.228018 write(2, ""..., 32) = 32
+416928 1789568832.228087 write(2, ""..., 13) = 13
+416928 1789568832.228147 write(2, ""..., 2) = 2
+strace: Process 417086 attached
+416928 1789568832.228215 write(2, ""..., 54) = 54
+strace: Process 417073 detached
+strace: Process 417086 detached
+strace: Process 417074 detached
+strace: Process 417072 detached
+strace: Process 417071 detached
+strace: Process 417070 detached
+strace: Process 417069 detached
+strace: Process 417068 detached
+strace: Process 417067 detached
+strace: Process 417066 detached
+strace: Process 417065 detached
+strace: Process 417064 detached
+strace: Process 417063 detached
+strace: Process 417062 detached
+strace: Process 417054 detached
+strace: Process 416972 detached
+strace: Process 416971 detached
+strace: Process 416970 detached
+strace: Process 416964 detached
+strace: Process 416963 detached
+strace: Process 416960 detached
+strace: Process 416959 detached
+strace: Process 416958 detached
+strace: Process 416957 detached
+strace: Process 416956 detached
+strace: Process 416955 detached
+strace: Process 416954 detached
+strace: Process 416953 detached
+strace: Process 416952 detached
+strace: Process 416951 detached
+strace: Process 416950 detached
+strace: Process 416949 detached
+strace: Process 416948 detached
+strace: Process 416947 detached
+strace: Process 416946 detached
+strace: Process 416945 detached
+strace: Process 416944 detached
+strace: Process 416943 detached
+strace: Process 416942 detached
+strace: Process 416941 detached
+strace: Process 416940 detached
+strace: Process 416939 detached
+strace: Process 416938 detached
+strace: Process 416937 detached
+strace: Process 416936 detached
+strace: Process 416935 detached
+strace: Process 416934 detached
+strace: Process 416933 detached
+strace: Process 416930 detached
+strace: Process 416929 detached
+strace: Process 416928 detached
+strace: Process 416925 detached

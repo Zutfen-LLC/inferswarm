@@ -129,20 +129,22 @@ def cache_mechanism_finding() -> dict[str, Any]:
 
 
 def environment_execution_note() -> dict[str, Any]:
-    """Records (does not claim to resolve) the separate, non-substrate reason
-    Phase 5 did not run in this execution environment: this session has no
-    usable authorized access to the physical fleet hosts the R8-D v2 campaign
-    used. Hostname resolution alone is not authorization to operate the fleet.
-    This is independent of the cache-mechanism finding above; both are
-    reported so neither is mistaken for the other."""
+    """Records the execution-environment history accurately across sessions:
+    the Phase-1..4 session had no usable fleet credential (Phase 5 could not
+    run there); the Phase-5 session (2026-09-16) did, and executed the
+    bounded physical comparison. This note is independent of the
+    cache-mechanism finding; both are reported so neither is mistaken for
+    the other."""
     return {
-        "schema": "inferswarm.issue200.execution-environment-note/1",
-        "fleet_phase5_authorized_from_this_session": False,
-        "note": ("The fleet hostnames resolve from this session, but an SSH "
-                 "BatchMode probe to inferswarm01 was rejected for lack of a "
-                 "usable credential. This is an execution-environment constraint "
-                 "only; it is not evidence about the legal cache seam or a final "
-                 "Issue #200 terminal."),
+        "schema": "inferswarm.issue200.execution-environment-note/2",
+        "phase4_session_fleet_authorized": False,
+        "phase5_session_fleet_authorized": True,
+        "note": ("The Phase-1..4 session's SSH BatchMode probe to inferswarm01 was "
+                 "rejected for lack of a usable credential, which is why Phase 5 was "
+                 "handed off rather than run then. The Phase-5 session (2026-09-16) "
+                 "held a usable credential and executed the bounded physical "
+                 "comparison; the retained physical evidence, not this note, is the "
+                 "authority for what it proved."),
     }
 
 

@@ -1,7 +1,7 @@
 # R8-F — Verified Node-Local Model Backing and Explicit Artifact Source Policy — Issue #200
 
-Status: **Incomplete: `PHASE5_REQUIRED`**. This is deliberately a
-machine-readable nonterminal status, not an Issue #200 terminal.
+Status: **Complete: `R8F_LOCAL_VERIFIED_BACKING_PASS`** (Phase 5 executed
+2026-09-16; mechanically derived, see Phase 5 below).
 
 Parent: [#188](https://github.com/Zutfen-LLC/inferswarm/issues/188) — R8
 Qwen3.8-Flash-Next heterogeneous residency/execution program.
@@ -371,7 +371,134 @@ participant-local cache-staging receipt is additionally bound to the same
 node's assignment. No such Phase-5 evidence exists here, so `PASS` is not
 reachable here.
 
-## Current nonterminal status
+## Phase 5 — bounded physical Qwen proof (executed 2026-09-16)
+
+The bounded physical comparison the issue requires was executed on the fleet
+against the real accepted release, the pinned R8-D binaries, and the exact
+process-wide capture contract. Everything below is mechanically derived from
+retained raw receipts; the committed validator
+(`scripts/issue200_r8f_physical.py`, schema `inferswarm.issue200.physical-phase5/3`)
+independently re-derives every acceptance predicate and the terminal reducer
+consumes only its verdict.
+
+### Frozen subject (identical across all three arms)
+
+- Client: `inferswarm01`, pinned `llama-server`
+  (`de3a8a545e2f5995f80ff23f60776fedc30edca67f0e09f3bc47c845156e3411`).
+- One remote RPC participant: `inferswarm04` `RPC0[10.0.0.204:50052]`
+  (RTX 3090, `GPU-ecda1aaa-0c66-857b-8218-3d511dc75c03`, BDF `01:00.0`),
+  pinned `ggml-rpc-server`
+  (`a897f908add3305658e6b4f996880033d07ede0800fff71dbc46e90230acdfe9`, matching
+  the accepted R8-D host inventory). `inferswarm04` was selected because it is
+  the simplest and highest-capacity accepted R8-D RPC participant (single GPU,
+  24 GiB, holds no other role), and its assignment carries a cache-eligible
+  tensor payload (10,813,440 bytes) larger than the pinned RPC
+  `HASH_THRESHOLD` (10 MiB).
+- Required state: one Logical State Unit — tensor `blk.24.attn_gate.weight`
+  (Q5_K, `[2560, 6144]`, 10,813,440 bytes, the smallest cache-eligible tensor
+  of the accepted release) of member
+  `Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf`, file range
+  `[848968992, 848968992+10813440)`, placed on the participant via
+  `-ot 'blk\.24\.attn_gate\.weight=RPC0[10.0.0.204:50052]'`; every other
+  tensor stays exactly where the accepted R8-D placement put it
+  (client-local; `-ngl 0 -c 8192`, `--no-warmup`, load subject = model
+  initialization to `listening on http://`).
+- Backing authority: the participant's own copy of member 3, full
+  SHA-256-verified (`0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a`)
+  against the accepted R8-D split-rehash authority before any staging.
+
+### Actual observed Qwen SET_TENSOR payload boundary
+
+The pinned client transfers the whole tensor as ONE framed RPC message
+emitted by a single `send()` syscall of a worker TID:
+`cmd(1) + size(8) + rpc_tensor + offset(8) + payload` — observed wire length
+10,813,744 bytes for the 10,813,440-byte payload (304-byte framing
+overhead), preceded by a `RPC_CMD_SET_TENSOR_HASH` probe because the payload
+exceeds `HASH_THRESHOLD`. There is no sub-tensor fragmentation at this
+boundary, and the earlier synthetic experiment's assumption of bare-payload
+syscalls was wrong in exactly one respect: the payload is the suffix of a
+framed record. The Phase-5 network reducer
+(`scripts/issue200_r8f_network_reduce.py`, schema
+`inferswarm.issue200.network-reduction/3`) was corrected accordingly (see
+"Phase-5 reducer correction" below) before the canonical arms ran.
+
+### Arms and mechanically derived network accounting
+
+| Arm | Policy / Source | immutable payload bytes | control/hash-probe bytes | total client-to-server | init wall |
+|---|---|---:|---:|---:|---:|
+| A cold_remote | `PREFER_REMOTE_AUTHORIZED` / `REMOTE_AUTHORIZED` | 10,813,440 | 80,335 | 10,893,775 | 2.643 s |
+| B local_verified | `REQUIRE_LOCAL_VERIFIED` / `LOCAL_VERIFIED` | **0** | 80,022 | 80,022 | 2.626 s |
+| C repeat_local_verified | `REQUIRE_LOCAL_VERIFIED` / `LOCAL_VERIFIED` | **0** | 80,022 | 80,022 | 2.621 s |
+
+All three arms carry identical required-state, participant-requirements,
+placement, and materialization identities (validator-enforced), identical
+SET_TENSOR payload boundaries, and the exact capture contract
+`strace -f --always-show-pid -ttt -xx -s 0 -e trace=network,write,writev -p <client-pid>`
+with the full traced PID/TID sets retained in each reduction output
+(4 tracees per arm: the client root plus its RPC worker threads).
+
+Arm B staged the participant-local verified backing BEFORE any client
+contact: the controlled range helper verified the complete member and read
+the exact range (`scripts/issue200_r8f_range_receipt.py`, retained stdout/
+stderr/range bytes per arm), the staging adapter verified SHA-256
+before-and-after and published atomically to
+`<private cache>/rpc/bbc9ae6a1038b6a6` (the FNV-1a cache key of the exact
+payload bytes — a filename computation, never trust authority). Arm C
+repeated the same fresh-prestaged procedure against a second fresh private
+cache. A supplementary observation
+(`evidence/physical-phase5-raw/restart_reuse/`) additionally proves restart
+durability: a fresh `ggml-rpc-server` process against arm B's
+already-populated on-disk cache (no re-staging, no network rebuild) again
+moved 0 immutable bytes.
+
+### Phase-5 reducer correction (producer identity changed legitimately)
+
+Executing the mandated capture contract for the first time against the real
+pinned client discovered two facts the never-executed Phase-4-era reducer
+assumptions contradicted:
+
+1. On the fleet's strace 6.13, `-s 0` is the zero-length string limit: every
+   nonempty send payload renders as `""...`. A retained capture under the
+   exact mandated argv is therefore length-complete (declared length +
+   syscall result per record) but not byte-complete. The corrected reducer
+   accepts an abbreviated record only when it is structurally
+   self-consistent (decoded prefix shorter than declared length, ellipsis
+   marker present, result == declared length); truncated-without-marker,
+   partial-result, and over-long records still fail closed.
+2. The immutable payload is the suffix of a framed record (304 bytes
+   observed overhead; the acceptance window is bounded at 4096 bytes
+   independently of that observation), never a bare-payload record.
+
+Attribution is rung-ordered and fragmentation-proof: exact retained bytes
+when available; otherwise exactly one target-bound record within
+`[payload_length, payload_length + 4096]`; a zero claim for a local arm is
+accepted only when the arm's TOTAL target-bound bytes are strictly below
+every frozen payload length (so a payload fragmented into sub-window records
+can never produce a zero), and any target-bound record larger than every
+frozen payload plus the window rejects as unexplained payload-class traffic.
+
+### Phase-5 physical negative controls
+
+All 22 issue-listed physical controls are mechanically exercised: 19 via the
+committed mutation/unit controls over the validator and reducer (including
+the new fragmentation, partial-result, truncated-without-marker,
+unexplained-payload-class, wrong-member-SHA, and wrong-FNV-key controls),
+and the process-wide/PID/argv/connect-provenance/unsupported-syscall family
+via `tests/test_issue200_r8f_proof.py` (26 tests, green).
+
+### Terminal
+
+`evidence/terminal-reduction.json` now carries
+`terminal: R8F_LOCAL_VERIFIED_BACKING_PASS`, `status: TERMINAL_RESOLVED`,
+`physical_phase5_ran: true`, with the evidence-status block retaining the
+validator's full derived accounting. Non-claims: this proves the generic
+source-policy seam plus participant-local verified backing consumption for
+the frozen bounded subject on the pinned substrate; it does not rerun or
+reinterpret any R8-D qualification/correctness adjudication, does not rank
+sources by bandwidth or economics, and does not modify llama.cpp anywhere.
+
+
+## Historical nonterminal status (pre-Phase-5)
 
 `terminal-reduction.json` has `terminal: null`, `status: "PHASE5_REQUIRED"`,
 and `incomplete: true`. Issue #200 defines exactly these terminals:
@@ -415,6 +542,8 @@ evidence/isolation.json                     mechanical network/process/path isol
 evidence/rpc-cache-mechanism.json           pinned upstream source identity + mechanical cache-seam finding
 evidence/rpc-cache-experiment.json          bounded non-Qwen cold/warm/prestaged/adversarial experiment results
 evidence/rpc-cache-experiment-raw/          driver source, fixture generator, orchestration script, raw strace/server logs
-evidence/terminal-reduction.json            Phase 4 finding + cache-mechanism finding + nonterminal Phase-5 status
+evidence/terminal-reduction.json            Phase 4 finding + cache-mechanism finding + terminal Phase-5 status
+evidence/physical-phase5.json               Phase-5 physical evidence document (validator-conformant)
+evidence/physical-phase5-raw/               per-arm raw captures, range/staging receipts, retained range bytes
 evidence/MANIFEST.sha256                    integrity anchor over every retained/producer path
 ```
