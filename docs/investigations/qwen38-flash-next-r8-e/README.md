@@ -208,3 +208,15 @@ Corrected in place (reducer characterization semantics, characterization
 mutation tests, NC10 semantic negative control, README); zero physical
 observations rerun, all retained evidence bytes verified unchanged.
 Exact-head reviews for the corrected head are recorded in the PR body.
+
+Second correction delta (exact-head review P2): the characterization
+inputs are now re-derived DIRECTLY from the retained float32 row bytes
+(bytes_derived_view: argmax, top-16 order, focal ranks and logits from
+the sidecar the manifest pins), with the authored hook rows demoted to
+cross-checks — a hook row claiming a focal rank the bytes contradict
+now fails closed ("authored-vs-bytes contradiction"). NC10 was
+strengthened to forge the rank structure consistently across hook
+rows, f32 sidecars, and digests (binding facts untouched), proving the
+derived characterization/terminal still follow the raw bytes; the NC2
+restore path was fixed to be byte-exact (pre-existing sandbox-only
+newline drift).

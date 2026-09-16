@@ -88,6 +88,66 @@ def rank_of(row, tok):
     return None
 
 
+def bytes_derived_view(rec, repo, case, arm):
+    """Re-derive argmax/top-16/focal ranks directly from the retained
+    float32 row bytes (correction-round P2: authored hook 'focus'
+    ranks must never be the sole authority for the characterization).
+
+    Returns (view, problems): view is an arm_view-shaped dict built
+    ONLY from the bytes, or None when the row bytes are unavailable
+    (the caller then fails closed for the incremental state class).
+    """
+    import struct
+    p = []
+    pos = DECISION_POS[case]
+    label = rec.get("label") or ""
+    rel = os.path.join(R8E_DIR, "evidence", "observations",
+                       f"row-{label}.pos{pos}.f32")
+    fp = os.path.join(repo, rel)
+    try:
+        row_b = open(fp, "rb").read()
+    except FileNotFoundError:
+        p.append("retained f32 row bytes missing: " + rel)
+        return None, p
+    if len(row_b) % 4:
+        p.append("f32 row byte length not a multiple of 4")
+        return None, p
+    vals = list(struct.unpack("<%df" % (len(row_b) // 4), row_b))
+    if rec.get("f32_row_floats") != len(vals):
+        p.append("f32_row_floats disagrees with retained row bytes")
+    if sha_b(row_b) != rec.get("f32_row_sha256"):
+        p.append("f32_row_sha256 disagrees with retained row bytes "
+                 "(row sidecar tampered)")
+        return None, p
+    finite = [i for i, v in enumerate(vals) if v == v and v not in
+              (float("inf"), float("-inf"))]
+    n_nonfinite = len(vals) - len(finite)
+    order = sorted(finite, key=lambda i: -vals[i])
+    top = [[i, vals[i]] for i in order[:16]]
+    focus = {}
+    for tok in FOCUS_TOKENS[case]:
+        r = None
+        for idx, i in enumerate(order):
+            if i == tok:
+                r = idx + 1
+                break
+        focus[tok] = {"rank": r, "logit": vals[tok] if
+                      (tok < len(vals)) else None}
+    winner, winner_logit = (top[0] if top else (None, None))
+    runner, runner_logit = (top[1] if len(top) > 1 else (None, None))
+    margin = None
+    if winner_logit is not None and runner_logit is not None:
+        margin = winner_logit - runner_logit
+    view = {
+        "top16_ids": [t for t, _v in top], "top16": top,
+        "winner": winner, "winner_logit": winner_logit,
+        "runner_up": runner, "runner_up_logit": runner_logit,
+        "top1_top2_margin": margin,
+        "focus_tokens": focus, "n_nonfinite": n_nonfinite,
+    }
+    return view, p
+
+
 def logit_of(row, tok):
     for t, _rank, v in row.get("focus", []):
         if t == tok:
@@ -482,7 +542,31 @@ def derive(area_override=None):
             if not stable_row:
                 problems.append(
                     f"{case}/{arm}: repeat logits-row instability")
-            views[(case, arm)] = arm_view(row1, FOCUS_TOKENS[case])
+            # bytes-authoritative view (correction-round P2 fix): the
+            # characterization inputs are re-derived from the retained
+            # float32 row bytes, never from authored hook 'focus'
+            # ranks; authored fields are demoted to cross-checks.
+            bview, bprob = bytes_derived_view(r1, REPO, case, arm)
+            if bview is None or bprob:
+                problems.append(f"{case}/{arm}/obs1: " + "; ".join(
+                    bprob or ["f32 row bytes unusable"]))
+                continue
+            hview = arm_view(row1, FOCUS_TOKENS[case])
+            xb = []
+            if bview["winner"] != hview["winner"]:
+                xb.append("argmax differs hook vs bytes")
+            if bview["top16_ids"] != hview["top16_ids"]:
+                xb.append("top-16 order differs hook vs bytes")
+            for tok in FOCUS_TOKENS[case]:
+                br = bview["focus_tokens"][tok]["rank"]
+                hr = hview["focus_tokens"][tok]["rank"]
+                if br != hr:
+                    xb.append(f"focal {tok} rank hook {hr} vs bytes {br}")
+            if xb:
+                problems.append(f"{case}/{arm}/obs1 authored-vs-bytes "
+                                "contradiction: " + "; ".join(xb))
+                continue
+            views[(case, arm)] = bview
 
     # 2b. teacher-forced captures (separate state class; informational,
     # must be internally valid + stable but never gates the terminal)

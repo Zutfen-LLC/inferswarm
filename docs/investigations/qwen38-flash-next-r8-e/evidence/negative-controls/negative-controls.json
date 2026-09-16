@@ -27,7 +27,7 @@
     },
     {
       "control": "NC4 placement swap",
-      "matched_problem": "evidence manifest verification failed: docs/investigations/qwen38-flash-next-r8-e/evidence/instrumentation/instrumentation.json digest mismatch (tampered evidence)",
+      "matched_problem": "evidence manifest verification failed: docs/investigations/qwen38-flash-next-r8-e/evidence/observations/capture-case-256-reference-obs1.json digest mismatch (tampered evidence)",
       "moved": true,
       "terminal": "R8E_EVIDENCE_BLOCKED"
     },

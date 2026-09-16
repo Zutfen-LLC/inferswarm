@@ -208,6 +208,7 @@ def main():
         # NC2 wrong model/binary identity: instrumentation record binary
         ip = os.path.join(root, R8E_DIR,
                           "evidence/instrumentation/instrumentation.json")
+        ip_pristine = open(ip, "rb").read()
         d = json.load(open(ip))
         d["binary_sha256"] = "deadbeef"  # not a sha256 hex digest
         json.dump(d, open(ip, "w"), indent=2, sort_keys=True)
@@ -217,12 +218,9 @@ def main():
             "moved": r["terminal"] == "R8E_EVIDENCE_BLOCKED" and
             any("binary" in p for p in r["problems"]),
             "terminal": r["terminal"]})
-        # restore
-        d["binary_sha256"] = json.load(open(
-            os.path.join(REPO, R8E_DIR,
-                         "evidence/instrumentation/"
-                         "instrumentation.json")))["binary_sha256"]
-        json.dump(d, open(ip, "w"), indent=2, sort_keys=True)
+        # byte-exact restore (round-tripping through json.dump would
+        # drop the trailing newline and drift the sandbox manifest)
+        open(ip, "wb").write(ip_pristine)
 
         # NC3 wrong teacher-forced prefix: mutate request prompt bytes
         def nc3(d):
@@ -336,32 +334,31 @@ def main():
                 d["authored_characterization"] = \
                     "narrow-winner-inversion"
 
-        def demote_271_to_rank5(hr):
-            top = [list(x) for x in hr["top"]]
-            ids = [t for t, _v in top]
-            i271 = ids.index(271)
-            val271 = top[i271][1]
-            target = top[4]  # rank-5 entry (index 4)
-            top[i271][1] = target[1] - 0.01
-            top[4][1] = val271
-            top.sort(key=lambda tv: -tv[1])
-            hr["top"] = top
-            hr["focus"] = [[t, next(i + 1 for i, (tt, _v) in
-                                    enumerate(top) if tt == t),
-                            next(v for tt, v in top if tt == t)]
-                           for t in (271, 34227)]
+        def demote_271_to_rank5(hr, vals):
+            # swap focal 271 (rank 2) with the rank-5 entry IN THE
+            # BYTES, then mirror the new ordering into the hook row
+            order = sorted(range(len(vals)), key=lambda i: -vals[i])
+            i271, i5 = order[1], order[4]
+            vals[i271], vals[i5] = vals[i5], vals[i271]
+            order2 = sorted(range(len(vals)), key=lambda i: -vals[i])
+            top16 = [[i, vals[i]] for i in order2[:16]]
+            hr["top"] = top16
+            hr["focus"] = [[t, next(idx + 1 for idx, (tt, _v) in
+                                    enumerate(top16) if tt == t),
+                            vals[t]] for t in (271, 34227)]
 
-        def promote_eos_to_rank2(hr):
-            top = [list(x) for x in hr["top"]]
-            ids = [t for t, _v in top]
-            ieos = ids.index(248046)
-            top[ieos][1] = (top[0][1] + top[1][1]) / 2.0  # 328..561
-            top.sort(key=lambda tv: -tv[1])
-            hr["top"] = top
-            hr["focus"] = [[t, next(i + 1 for i, (tt, _v) in
-                                    enumerate(top) if tt == t),
-                            next(v for tt, v in top if tt == t)]
-                           for t in (328, 248046)]
+        def promote_eos_to_rank2(hr, vals):
+            # move EOS 248046 (rank 5) to rank 2 IN THE BYTES (logit
+            # strictly between the new top-2), mirror into hook row
+            order = sorted(range(len(vals)), key=lambda i: -vals[i])
+            ieos = order[4]
+            vals[ieos] = (vals[order[0]] + vals[order[1]]) / 2.0
+            order2 = sorted(range(len(vals)), key=lambda i: -vals[i])
+            top16 = [[i, vals[i]] for i in order2[:16]]
+            hr["top"] = top16
+            hr["focus"] = [[t, next(idx + 1 for idx, (tt, _v) in
+                                    enumerate(top16) if tt == t),
+                            vals[t]] for t in (328, 248046)]
 
         import issue199_r8e_manifest as _MB
         import pathlib as _pl
@@ -372,16 +369,102 @@ def main():
             _MB.main()
 
         def semantic_control(cap_rel, forge, case, expect_pre,
-                             expect_post):
-            fp_ = os.path.join(root, cap_rel)
-            pristine_ = open(fp_, "rb").read()
-            d_ = json.loads(pristine_)
-            reforge_row(d_, forge)
-            write_cap(root, cap_rel, d_)
+                             expect_post, forge_only_arm):
+            """Forge the rank structure CONSISTENTLY across the full
+            retained evidence stack for one arm of one case: both
+            repeats' hook rows, the float32 row sidecars (values
+            rewritten so the forged ordering IS the bytes' ordering),
+            the records' digests/stats of those bytes, and the manifest
+            — leaving binding/token identity facts and any authored
+            characterization prose untouched. What remains impossible
+            to forge by construction: the accepted R8-D token pins
+            (still equal to each arm's forged argmax) and the
+            repeat-stability equality (both repeats forged
+            identically). The derived characterization must follow the
+            (forged) raw bytes, not the authored prose."""
+            import struct
+
+            def forge_arm(arm):
+                for i in (1, 2):
+                    crel = os.path.join(
+                        R8E_DIR, "evidence/observations",
+                        f"capture-{case}-{arm}-obs{i}.json")
+                    fp_ = os.path.join(root, crel)
+                    pristine_ = open(fp_, "rb").read()
+                    d_ = json.loads(pristine_)
+                    pos = d_["generated_position_observed"]
+                    label = d_["label"]
+                    rrel = os.path.join(
+                        R8E_DIR, "evidence/observations",
+                        f"row-{label}.pos{pos}.f32")
+                    orel0 = os.path.join(
+                        R8E_DIR, "evidence/observations",
+                        f"obs-{label}.jsonl.pos{pos}.f32")
+                    snap(crel)
+                    snap(rrel)
+                    if os.path.exists(os.path.join(root, orel0)):
+                        snap(orel0)
+                    rfp = os.path.join(root, rrel)
+                    row_bytes = open(rfp, "rb").read()
+                    vals = list(struct.unpack(
+                        "<%df" % (len(row_bytes) // 4), row_bytes))
+                    for hr in d_["hook_rows"]:
+                        if hr["pos"] != pos:
+                            continue
+                        forge(hr, vals)
+                        if d_.get("top16_from_f32_bytes"):
+                            d_["top16_from_f32_bytes"] = [
+                                list(x) for x in hr["top"]]
+                    # write the forged float values back into the
+                    # sidecar bytes, then re-pin every digest/stat the
+                    # records carry about those bytes
+                    import hashlib as _hl
+                    nb = struct.pack("<%df" % len(vals), *vals)
+                    open(rfp, "wb").write(nb)
+                    d_["f32_row_sha256"] = _hl.sha256(nb).hexdigest()
+                    d_["f32_row_stats"] = {
+                        "fsum": math.fsum(vals),
+                        "fsum_math": math.fsum(vals),
+                        "n_nonfinite": sum(
+                            1 for v in vals if v != v or v in
+                            (float("inf"), float("-inf"))),
+                        "sumsq": math.fsum(v * v for v in vals),
+                    }
+                    # authored prose claims narrow inversion
+                    d_["authored_characterization"] = \
+                        "narrow-winner-inversion"
+                    write_cap(root, crel, d_)
+                    # also mirror the forgery into the raw obs jsonl
+                    # sidecar the manifest covers
+                    orel = os.path.join(
+                        R8E_DIR, "evidence/observations",
+                        f"obs-{label}.jsonl.pos{pos}.f32")
+                    ofp = os.path.join(root, orel)
+                    if os.path.exists(ofp):
+                        open(ofp, "wb").write(nb)
+            import math
+            import subprocess as _sp2
+            # snapshot every file we will touch (both arms, both
+            # repeats: capture json + row sidecar + obs sidecar)
+            snaps = {}
+
+            def snap(rel):
+                fp__ = os.path.join(root, rel)
+                snaps[rel] = open(fp__, "rb").read()
+
+            def restore(rel):
+                open(os.path.join(root, rel), "wb").write(snaps[rel])
+            forge_arm(forge_only_arm)
             regen_manifest(root)
             rr = base_state(root)
-            open(fp_, "wb").write(pristine_)
+            for rel in snaps:
+                restore(rel)
             regen_manifest(root)
+            # sanity: pristine bytes fully restored (a later derive
+            # must see the un-forged evidence)
+            rr2 = base_state(root)
+            assert rr2["terminal"] == base_r["terminal"], \
+                "NC10 restore incomplete: %r" % rr2["problems"][:3]
             return {
                 "derived_characterization":
                     rr["per_case"][case].get("characterization"),
@@ -400,12 +483,14 @@ def main():
             os.path.join(R8E_DIR, "evidence/observations",
                          "capture-case-256-candidate-obs1.json"),
             demote_271_to_rank5, "case-256",
-            "narrow-winner-inversion", "broader-focal-shift")
+            "narrow-winner-inversion", "broader-focal-shift",
+            forge_only_arm="candidate")
         nc10b = semantic_control(
             os.path.join(R8E_DIR, "evidence/observations",
                          "capture-case-4096-reference-obs1.json"),
             promote_eos_to_rank2, "case-4096",
-            "broader-focal-shift", "narrow-winner-inversion")
+            "broader-focal-shift", "narrow-winner-inversion",
+            forge_only_arm="reference")
         results.append({
             "control": "NC10 semantic characterization (raw rank "
                        "structure mutated; authored characterization "

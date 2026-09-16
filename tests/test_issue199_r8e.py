@@ -342,6 +342,46 @@ class CharacterizationTests(unittest.TestCase):
         self.assertEqual(c["characterization"], "broader-focal-shift")
 
 
+    def test_forged_hook_focus_rank_contradicts_bytes(self):
+        """Correction-round P2 regression: authored hook 'focus' ranks
+        are cross-checked against the bytes-derived view; a capture
+        whose bytes show the focal winner at rank 5 while the authored
+        focus row claims rank 2 must fail closed."""
+        import issue199_r8e_terminal_reduction as R
+        inputs = A.load_decision_inputs(str(REPO))
+        rel = ("evidence/observations/"
+               "capture-case-4096-reference-obs1.json")
+        rec = load(R8E_EV / "observations" /
+                   "capture-case-4096-reference-obs1.json")
+        self.assertEqual(rec["label"], "case-4096-reference-obs1")
+        # forge the authored focus rank for EOS: bytes say rank 5
+        for hr in rec["hook_rows"]:
+            if hr["pos"] == 0:
+                hr["focus"] = [[328, 1, 15.0245876],
+                               [248046, 2, 13.2554426]]
+        probs, row = R.check_capture(rec, "case-4096", "reference",
+                                     inputs)
+        # check_capture itself still passes (binding-only); the
+        # bytes-vs-authored contradiction is caught in derive() —
+        # prove it there through the real bytes_derived_view +
+        # cross-check path:
+        bview, bprob = R.bytes_derived_view(rec, str(REPO),
+                                            "case-4096", "reference")
+        self.assertEqual(bprob, [])
+        self.assertIsNotNone(bview)
+        self.assertEqual(bview["focus_tokens"][248046]["rank"], 5)
+        hview = R.arm_view(row, [328, 248046])
+        self.assertEqual(hview["focus_tokens"][248046]["rank"], 2)
+        # and the derive-level cross-check flags exactly this pair
+        xb = []
+        for tok in (328, 248046):
+            br = bview["focus_tokens"][tok]["rank"]
+            hr_ = hview["focus_tokens"][tok]["rank"]
+            if br != hr_:
+                xb.append(tok)
+        self.assertEqual(xb, [248046])
+
+
 class RealEvidenceCharacterizationTests(unittest.TestCase):
     """Pin the corrected reduction on the retained campaign evidence."""
 
