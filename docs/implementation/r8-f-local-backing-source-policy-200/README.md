@@ -344,26 +344,32 @@ SET_TENSOR boundaries. For each staged range, the CPU-only
 checks its complete size/SHA-256, reads the exact range, retains its bytes,
 and emits the bound measurement receipt. Network totals are not a JSON event
 claim: `scripts/issue200_r8f_network_reduce.py` re-parses a retained,
-PID/endpoint-bound `strace -xx` capture and maps exact raw sends to those
-observed payload bytes. It rejects authored summary booleans and
-classifications. The Phase-5 capture contract is one exact argv, bound to
-the recorded client PID:
+process-wide PID/TID/endpoint-bound `strace -xx` capture and maps exact raw
+sends to those observed payload bytes. It rejects authored summary booleans
+and classifications. The Phase-5 capture contract is one exact argv, bound to
+the recorded root client PID:
 
 ```text
-strace -ttt -xx -s 0 -e trace=network,write,writev -p <client-pid>
+strace -f --always-show-pid -ttt -xx -s 0 -e trace=network,write,writev -p <client-pid>
 ```
 
-`-s 0` and `-xx` are mandatory; the reducer rejects a relevant `sendto`
-whose argument is abbreviated (`...`), malformed, short, or whose result
-does not bind the exact retained bytes. It also records the TCP peer from
-`connect`, accepts the pinned client's `sendto` form only, and rejects a
-bound-peer `send`/`sendmsg`/`sendmmsg`/socket `write`/`writev` rather than
-silently excluding it. This makes an absent or incomplete raw capture
-incapable of proving zero reacquisition. Every accepted range measurement
-and participant-local cache-staging receipt is additionally bound to the
-same `SET_TENSOR` payload participant, so one node's backing cannot prove
-another node's assignment. No such Phase-5 evidence exists here, so `PASS`
-is not reachable here.
+`-f`, `--always-show-pid`, `-s 0`, and `-xx` are mandatory. `-f -p` follows
+the root client's threads and later descendants; every PID-prefixed syscall
+in the retained stream is accounted as a captured tracee, never filtered back
+to only the root PID. The reducer rejects a relevant `sendto` whose argument
+is abbreviated (`...`), malformed, short, or whose result does not bind the
+exact retained bytes. It accepts target traffic only after the retained trace
+contains a successful target `connect()` for its FD; authored capture boundary
+strings cannot substitute for that connection provenance. It also rejects a
+bound-peer `send`/`sendmsg`/`sendmmsg`/`write`/`writev` (including a write on
+a connected FD whose earlier `socket()` predates attachment) rather than
+silently excluding it. Unrelated stdout/stderr writes remain distinguishable.
+This makes an absent, incomplete, or root-PID-only raw capture incapable of
+proving zero reacquisition. Every accepted range measurement and
+participant-local cache-staging receipt is additionally bound to the same
+`SET_TENSOR` payload participant, so one node's backing cannot prove another
+node's assignment. No such Phase-5 evidence exists here, so `PASS` is not
+reachable here.
 
 ## Current nonterminal status
 

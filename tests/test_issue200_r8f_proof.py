@@ -92,9 +92,15 @@ def valid_physical_phase5_document(root, **overrides):
                           "length": len(payload_bytes), "sha256": payload_sha,
                           "provenance_receipt": {"command": ["python3", "scripts/issue200_r8f_range_receipt.py"],
                               "exit_code": 0, "stdout": stdout, "stderr": stderr, "retained_range": range_bytes}}
-        raw_trace = (f'999 1.000 sendto(3, {json.dumps(b"control".decode("latin1"))}, 7, 0, {{sin_port=htons(50052), sin_addr=inet_addr("100.77.187.38")}}, 16) = 7\n').encode()
+        # The root creates/connects the shared FD and emits harmless control;
+        # a worker emits the frozen payload.  This is the process-wide shape:
+        # -f keeps the worker TID visible and --always-show-pid binds both.
+        raw_trace = (b'999 0.999 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3\n'
+                     b'999 1.000 connect(3, {sa_family=AF_INET, sin_port=htons(50052), '
+                     b'sin_addr=inet_addr("100.77.187.38")}, 16) = 0\n'
+                     + (f'999 1.001 sendto(3, {json.dumps(b"control".decode("latin1"))}, 7, 0, NULL, 0) = 7\n').encode())
         if immutable_bytes:
-            raw_trace += (f'999 1.001 sendto(3, {json.dumps(payload_bytes.decode("latin1"))}, {len(payload_bytes)}, 0, {{sin_port=htons(50052), sin_addr=inet_addr("100.77.187.38")}}, 16) = {len(payload_bytes)}\n').encode()
+            raw_trace += (f'1001 1.002 sendto(3, {json.dumps(payload_bytes.decode("latin1"))}, {len(payload_bytes)}, 0, NULL, 0) = {len(payload_bytes)}\n').encode()
         raw_capture = {"path": f"raw/{name}.strace", "sha256": hashlib.sha256(raw_trace).hexdigest()}
         (root / raw_capture["path"]).write_bytes(raw_trace)
         derived = network_reduce.reduce_capture(raw_trace, client_pid=999, server_endpoint="100.77.187.38:50052",
@@ -455,7 +461,7 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
             receipt = doc["arms"]["local_verified"]["network_receipt"]
             path = root / receipt["raw_capture"]["path"]
             payload = b"r8-f-observed-payload"
-            path.write_bytes(path.read_bytes() + (f'999 1.002 sendto(3, {json.dumps(payload.decode())}, {len(payload)}, 0, {{sin_port=htons(50052), sin_addr=inet_addr("100.77.187.38")}}, 16) = {len(payload)}\n').encode())
+            path.write_bytes(path.read_bytes() + (f'1001 1.002 sendto(3, {json.dumps(payload.decode())}, {len(payload)}, 0, NULL, 0) = {len(payload)}\n').encode())
             receipt["raw_capture"]["sha256"] = sha(path)
 
         def partial_payload(doc, root):
@@ -481,51 +487,98 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
                 self._rejects_pass_after_mutation(mutation)
 
     def test_full_payload_capture_and_abbreviation_controls(self):
-        """A >32-byte payload is exact under -s 0; abbreviated records fail."""
+        """A >32-byte worker payload is exact under the process-wide capture."""
         payload = b"phase5-payload-larger-than-default-strace-limit-0123456789"
         identity = {"participant": "inferswarm03", "observation_id": "set-large", "order": 1,
                     "offset": 0, "length": len(payload),
                     "sha256": hashlib.sha256(payload).hexdigest(), "bytes": payload}
-        complete = (f'999 1.000 sendto(3, {json.dumps(payload.decode())}, {len(payload)}, 0, '
-                    '{sin_port=htons(50052), sin_addr=inet_addr("100.77.187.38")}, 16) = '
+        complete = (f'1001 1.002 sendto(3, {json.dumps(payload.decode())}, {len(payload)}, 0, '
+                    'NULL, 0) = '
                     f'{len(payload)}\n').encode()
-        reduced = network_reduce.reduce_capture(complete, client_pid=999,
-                                                server_endpoint="100.77.187.38:50052",
-                                                payloads=[identity])
         self.assertGreater(len(payload), 32)
-        self.assertEqual(reduced["immutable_payload_bytes"], len(payload))
-        self.assertEqual(reduced["payload_identities"][0]["sha256"], identity["sha256"])
         # The retained pinned driver uses connect() followed by sendto(...,
-        # NULL, 0), so prove the peer-FD form is not silently discarded.
+        # NULL, 0).  The root's FD is shared with a worker, whose TID must not
+        # be filtered out of the process-wide evidence.
         connected = (b'999 1.000 socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) = 3\n'
                      b'999 1.001 connect(3, {sa_family=AF_INET, sin_port=htons(50052), '
-                     b'sin_addr=inet_addr("100.77.187.38")}, 16) = 0\n' +
-                     complete.replace(b'999 1.000 ', b'999 1.002 ').replace(
-                         b'{sin_port=htons(50052), sin_addr=inet_addr("100.77.187.38")}, 16', b'NULL, 0'))
-        self.assertEqual(network_reduce.reduce_capture(
+                     b'sin_addr=inet_addr("100.77.187.38")}, 16) = 0\n' + complete)
+        reduced = network_reduce.reduce_capture(
             connected, client_pid=999, server_endpoint="100.77.187.38:50052",
-            payloads=[identity])["immutable_payload_bytes"], len(payload))
+            payloads=[identity])
+        self.assertEqual(reduced["immutable_payload_bytes"], len(payload))
+        self.assertEqual(reduced["payload_identities"][0]["sha256"], identity["sha256"])
+        self.assertEqual(reduced["traced_pids"], [999, 1001])
         # This is the normal default-strace spelling: a complete quoted prefix
         # followed by an ellipsis, not payload bytes named "...".
         abbreviated = complete.replace(json.dumps(payload.decode()).encode(),
                                        json.dumps(payload[:32].decode()).encode() + b"...", 1)
         with self.assertRaisesRegex(ValueError, "abbreviated"):
-            network_reduce.reduce_capture(abbreviated, client_pid=999,
+            network_reduce.reduce_capture(connected[:connected.index(complete)] + abbreviated, client_pid=999,
                                           server_endpoint="100.77.187.38:50052", payloads=[identity])
+
+    def test_process_wide_network_adversaries_and_connected_fd_writes(self):
+        """Every followed TID participates; target-bound unsupported forms fail."""
+        endpoint = "100.77.187.38:50052"
+        payload = b"worker-frozen-payload-larger-than-32-bytes-0123456789"
+        identity = {"participant": "inferswarm03", "observation_id": "worker", "order": 1,
+                    "offset": 0, "length": len(payload),
+                    "sha256": hashlib.sha256(payload).hexdigest(), "bytes": payload}
+        connect = (b'999 1.000 connect(9, {sa_family=AF_INET, sin_port=htons(50052), '
+                   b'sin_addr=inet_addr("100.77.187.38")}, 16) = 0\n')
+        worker_send = (f'1001 1.001 sendto(9, {json.dumps(payload.decode())}, {len(payload)}, 0, NULL, 0) = {len(payload)}\n').encode()
+        self.assertEqual(network_reduce.reduce_capture(
+            connect + worker_send, client_pid=999, server_endpoint=endpoint,
+            payloads=[identity])["immutable_payload_bytes"], len(payload))
+        abbreviated = worker_send.replace(json.dumps(payload.decode()).encode(),
+                                          json.dumps(payload[:20].decode()).encode() + b"...", 1)
+        with self.assertRaisesRegex(ValueError, "abbreviated"):
+            network_reduce.reduce_capture(connect + abbreviated, client_pid=999,
+                                          server_endpoint=endpoint, payloads=[identity])
+        for name, record in {
+            "write": b'1001 1.001 write(9, "x", 1) = 1\n',
+            "writev": b'1001 1.001 writev(9, [{iov_base="x", iov_len=1}], 1) = 1\n',
+        }.items():
+            with self.subTest(name=name):
+                with self.assertRaisesRegex(ValueError, "unsupported outbound"):
+                    network_reduce.reduce_capture(connect + record, client_pid=999,
+                                                  server_endpoint=endpoint, payloads=[])
+        # FD 9 has no socket() receipt: successful target connect provenance
+        # alone is both necessary and sufficient to classify the write.
+        unprovenanced_target_send = worker_send.replace(
+            b"NULL, 0", b'{sin_port=htons(50052), sin_addr=inet_addr("100.77.187.38")}, 16')
+        with self.assertRaisesRegex(ValueError, "connect provenance"):
+            network_reduce.reduce_capture(unprovenanced_target_send, client_pid=999,
+                                          server_endpoint=endpoint, payloads=[identity])
+        with self.assertRaisesRegex(ValueError, "PID/TID prefix"):
+            network_reduce.reduce_capture(worker_send.removeprefix(b"1001 "), client_pid=999,
+                                          server_endpoint=endpoint, payloads=[identity])
+        harmless = (connect + b'1001 1.001 sendto(9, "control", 7, 0, NULL, 0) = 7\n'
+                    b'999 1.002 write(1, "stdout", 6) = 6\n'
+                    b'1001 1.003 writev(2, [{iov_base="stderr", iov_len=6}], 1) = 6\n')
+        self.assertEqual(network_reduce.reduce_capture(
+            harmless, client_pid=999, server_endpoint=endpoint, payloads=[])["client_to_server_bytes"], 7)
 
     def test_capture_command_and_raw_network_controls_reject(self):
         """Metadata and an argv list cannot replace the exact raw contract."""
         def no_string_limit(doc, root):
             doc["arms"]["local_verified"]["network_receipt"]["capture_command"] = [
-                "strace", "-ttt", "-xx", "-e", "trace=network,write,writev", "-p", "999"]
+                "strace", "-f", "--always-show-pid", "-ttt", "-xx", "-e", "trace=network,write,writev", "-p", "999"]
 
         def no_pid_or_coverage(doc, root):
             doc["arms"]["local_verified"]["network_receipt"]["capture_command"] = [
-                "strace", "-ttt", "-xx", "-s", "0", "-p", "999"]
+                "strace", "-f", "--always-show-pid", "-ttt", "-xx", "-s", "0", "-p", "999"]
 
         def no_process_binding(doc, root):
             doc["arms"]["local_verified"]["network_receipt"]["capture_command"] = [
-                "strace", "-ttt", "-xx", "-s", "0", "-e", "trace=network,write,writev"]
+                "strace", "-f", "--always-show-pid", "-ttt", "-xx", "-s", "0", "-e", "trace=network,write,writev"]
+
+        def no_follow_forks(doc, root):
+            doc["arms"]["local_verified"]["network_receipt"]["capture_command"] = [
+                "strace", "--always-show-pid", "-ttt", "-xx", "-s", "0", "-e", "trace=network,write,writev", "-p", "999"]
+
+        def no_stable_tid_prefix(doc, root):
+            doc["arms"]["local_verified"]["network_receipt"]["capture_command"] = [
+                "strace", "-f", "-ttt", "-xx", "-s", "0", "-e", "trace=network,write,writev", "-p", "999"]
 
         def forged_boundaries(doc, root):
             receipt = doc["arms"]["local_verified"]["network_receipt"]
@@ -553,6 +606,8 @@ class TerminalReductionFailClosedTests(unittest.TestCase):
             "missing-string-limit": no_string_limit,
             "missing-pid-or-syscall-binding": no_pid_or_coverage,
             "missing-process-binding": no_process_binding,
+            "missing-follow-forks": no_follow_forks,
+            "missing-stable-tid-prefix": no_stable_tid_prefix,
             "forged-capture-boundaries": forged_boundaries,
             "truncated-local-frozen-prefix": truncated_local_payload,
             "unsupported-bound-sendmsg": unsupported_bound_sendmsg,

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Fail-closed reduction of the retained Phase-5 strace capture.
+"""Fail-closed reduction of the retained process-wide Phase-5 strace capture.
 
-The pinned client establishes its RPC TCP peer with ``connect`` and emits RPC
-bytes with ``sendto``.  The capture records network plus write/writev; a
-different bound-peer outbound form is a rejection, never a zero-byte claim.
+The exact ``-f -p`` capture follows every client thread and descendant.  The
+persistent PID prefix makes each retained syscall a mechanically attributable
+tracee record.  The pinned client establishes its RPC TCP peer with ``connect``
+and emits RPC bytes with ``sendto``; another bound-peer outbound form is a
+rejection, never a zero-byte claim.
 """
 from __future__ import annotations
 
@@ -19,8 +21,8 @@ from issue74_methodology import canonical_json_bytes
 # One exact argv contract, not an authored list that merely contains ``-xx``.
 # ``-s 0`` is strace's unlimited string limit.  ``network`` catches send*;
 # write/writev catch socket writes outside strace's network class.
-CAPTURE_TOOL = "strace phase5-full-payload/1"
-CAPTURE_PREFIX = ("strace", "-ttt", "-xx", "-s", "0", "-e",
+CAPTURE_TOOL = "strace phase5-process-wide-full-payload/2"
+CAPTURE_PREFIX = ("strace", "-f", "--always-show-pid", "-ttt", "-xx", "-s", "0", "-e",
                   "trace=network,write,writev", "-p")
 SUPPORTED_OUTBOUND = "sendto"
 OTHER_OUTBOUND = {"send", "sendmsg", "sendmmsg", "write", "writev"}
@@ -82,10 +84,15 @@ def _complete_data(text: str) -> bytes:
 
 def reduce_capture(raw: bytes, *, client_pid: int, server_endpoint: str,
                    payloads: list[dict[str, Any]]) -> dict[str, Any]:
-    """Derive counts only from complete raw records for the bound peer.
+    """Derive counts from every PID-prefixed tracee record for the bound peer.
 
-    Only another PID or an explicit different endpoint is ignored.  A bound
-    peer's malformed/abbreviated/unsupported outbound record fails closed.
+    The caller has already mechanically checked the sole eligible argv:
+    ``strace -f --always-show-pid ... -p <client-pid>``.  Consequently every
+    PID-prefixed syscall in this retained stream is a root-client thread or a
+    followed descendant; deliberately do *not* filter it back to the root PID.
+    A target send is accepted only after a successful target ``connect`` on its
+    FD has been retained.  This proves capture/peer provenance began before
+    accepted RPC traffic rather than trusting capture boundary strings.
     """
     try:
         host, port_text = server_endpoint.rsplit(":", 1)
@@ -101,40 +108,54 @@ def reduce_capture(raw: bytes, *, client_pid: int, server_endpoint: str,
 
     sends: list[bytes] = []
     fd_peers: dict[int, tuple[str, int]] = {}
-    socket_fds: set[int] = set()
+    tracee_pids: set[int] = set()
     for line in lines:
         prefixed = PID_LINE.match(line)
-        if prefixed is None or int(prefixed["pid"]) != client_pid:
+        if prefixed is None:
+            # Non-syscall strace notices (for example an exit marker) are not
+            # evidence.  An unprefixed candidate outbound record, however,
+            # would defeat --always-show-pid's tracee binding.
+            if any(token in line for token in (*OTHER_OUTBOUND, SUPPORTED_OUTBOUND, "connect")):
+                raise ValueError("captured network record lacks required PID/TID prefix")
             continue
+        tracee_pids.add(int(prefixed["pid"]))
         record = prefixed["record"]
         name_match = CALL.match(record)
         if name_match is None:
             if any(token in record for token in (*OTHER_OUTBOUND, "sendto")):
-                raise ValueError("bound outbound strace record is incomplete or unparseable")
+                raise ValueError("tracee outbound strace record is incomplete or unparseable")
             continue
         name, fd = name_match["name"], _fd(record)
-        if name == "socket":
-            result = RESULT.search(record)
-            if result and int(result["result"]) >= 0:
-                socket_fds.add(int(result["result"]))
-            continue
         if name == "connect":
             result, endpoint = RESULT.search(record), _endpoint(record)
             if fd is not None and result and int(result["result"]) == 0 and endpoint is not None:
                 fd_peers[fd] = endpoint
             continue
         if name in OTHER_OUTBOUND:
-            # send* always writes a socket.  write* becomes relevant after a
-            # socket() receipt; this exact pinned path has neither form.
-            if name.startswith("send") or (fd is not None and fd in socket_fds):
+            # A successful target connect is sufficient FD provenance.  Do
+            # not require a socket() record: attachment can occur after
+            # socket() but before connect(), and writes on that connected FD
+            # are still target-bound traffic that a zero claim must reject.
+            if fd is not None and fd_peers.get(fd) == target:
                 raise ValueError(f"unsupported outbound {name} record in Phase-5 capture")
             continue
         if name != SUPPORTED_OUTBOUND:
             continue
 
         endpoint = _endpoint(record)
-        relevant = endpoint == target or (endpoint is None and fd is not None and fd_peers.get(fd) == target)
-        if not relevant:
+        connected_target = fd is not None and fd_peers.get(fd) == target
+        if endpoint == target and not connected_target:
+            raise ValueError("target sendto lacks preceding successful target connect provenance")
+        if endpoint is None and not connected_target:
+            # NULL peer form is safe only when the retained successful
+            # connect establishes this FD's target peer.  Otherwise we cannot
+            # distinguish it from an unrelated connected socket.
+            raise ValueError("sendto peer cannot be mechanically bound to the retained endpoint")
+        if endpoint is not None and endpoint != target:
+            # Explicitly a different target, so it cannot be Phase-5 RPC
+            # traffic even if an FD number was reused in a followed process.
+            continue
+        if not connected_target:
             if endpoint is not None:  # mechanically shown to be a different peer
                 continue
             raise ValueError("sendto peer cannot be mechanically bound to the retained endpoint")
@@ -148,7 +169,7 @@ def reduce_capture(raw: bytes, *, client_pid: int, server_endpoint: str,
             raise ValueError("strace send length/result does not bind complete raw bytes")
         sends.append(data)
     if not sends:
-        raise ValueError("raw capture has no client-to-server sends for bound PID/endpoint")
+        raise ValueError("raw capture has no tracee-to-server sends for bound PID/endpoint")
     immutable, matched = 0, []
     for payload in payloads:
         data = payload["bytes"]
@@ -164,9 +185,10 @@ def reduce_capture(raw: bytes, *, client_pid: int, server_endpoint: str,
             immutable += len(data)
             matched.append({key: payload[key] for key in ("participant", "observation_id", "order", "offset", "length", "sha256")})
     total = sum(map(len, sends))
-    return {"schema": "inferswarm.issue200.network-reduction/1",
+    return {"schema": "inferswarm.issue200.network-reduction/2",
             "reducer_sha256": reducer_sha256(), "client_to_server_bytes": total,
             "immutable_payload_bytes": immutable, "protocol_control_hash_probe_bytes": total - immutable,
+            "traced_pids": sorted(tracee_pids),
             "payload_identities": sorted(matched, key=lambda item: item["order"])}
 
 
