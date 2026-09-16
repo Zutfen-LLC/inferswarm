@@ -96,6 +96,30 @@ def _raw_ref(copied: dict, document: dict) -> dict:
     return {"path": copied["path"], "sha256": copied["sha256"], "document": document}
 
 
+_HEX = __import__("re").compile(r"\\x([0-9a-fA-F]{2})")
+
+
+def _derive_cache_read(raw: bytes, cache_dir: str, fnv: str, server_pid: int, length: int):
+    """Derive cache-file open/read accounting from the raw participant strace."""
+    import re as _re
+    def unesc(s):
+        return _HEX.sub(lambda m: chr(int(m.group(1), 16)), s)
+    expected_path = f"{cache_dir}/rpc/{fnv}"
+    fd = None
+    total = 0
+    count = 0
+    for line in raw.decode("utf-8", "strict").splitlines():
+        m = _re.match(r"^(\d+) \S+ openat\((?:-?\d+|AT_FDCWD), \"((?:[^\"\\]|\\.)*)\",.*\)\s+=\s+(\d+)$", line)
+        if m and unesc(m.group(2)) == expected_path:
+            fd = int(m.group(3))
+            continue
+        r = _re.match(r"^(\d+) \S+ read\((\d+),.*\)\s+=\s+(\d+)$", line)
+        if r and fd is not None and int(r.group(2)) == fd:
+            total += int(r.group(3))
+            count += 1
+    return total, count
+
+
 def main() -> int:
     summary = json.loads((RUN / "run-summary.json").read_text())
     evidence = AREA / "evidence"
@@ -113,6 +137,7 @@ def main() -> int:
     backing_receipt = copy_in(RUN / "backing-verify.stdout", "backing-verify.stdout.json")
     backing_stderr = copy_in(RUN / "backing-verify.stderr", "backing-verify.stderr")
     backing_block = {
+        "node_id": PARTICIPANT,
         "command": ["python3", "scripts/issue200_r8f_backing_verify.py",
                     "--node-id", PARTICIPANT],
         "exit_code": 0,
@@ -178,12 +203,16 @@ def main() -> int:
             "server_log": {"path": rpc_log["path"], "sha256": rpc_log["sha256"]}})
         # participant cache-read strace (raw)
         read_strace = copy_in(arm_raw / "participant-reads.strace", f"{arm}/participant-reads.strace")
+        read_bytes, read_syscalls = _derive_cache_read(
+            (arm_raw / "participant-reads.strace").read_bytes(), run["cache_dir"], FNV,
+            run["rpc"]["pid"], LENGTH)
         read_receipt = write_receipt(f"{arm}/participant-read.json", {
             "arm": arm, "schema": "inferswarm.issue200.participant-cache-read-receipt/1",
             "server_pid": run["rpc"]["pid"], "cache_dir": run["cache_dir"],
             "strace_capture": read_strace,
-            "capture_command": ["strace", "-f", "-ttt", "-xx", "-e", "trace=file",
-                                "-o", "<rpc-arm.file.strace>", "ggml-rpc-server", "-c"]})
+            "capture_command": ["strace", "-f", "-ttt", "-xx", "-s", "4096", "-e", "trace=%file,read",
+                                "-o", "<rpc-arm.file.strace>", "ggml-rpc-server", "-c"],
+            "derived_read_bytes": read_bytes, "read_syscalls": read_syscalls})
         arm_doc = {
             "source_policy": "PREFER_REMOTE_AUTHORIZED" if arm == "cold_remote" else "REQUIRE_LOCAL_VERIFIED",
             "source_attribution": "REMOTE_AUTHORIZED" if arm == "cold_remote" else "LOCAL_VERIFIED",

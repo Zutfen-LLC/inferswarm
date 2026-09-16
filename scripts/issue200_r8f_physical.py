@@ -199,14 +199,17 @@ def _verify_participant_backing(base: Path, document: Mapping[str, Any],
     if receipt.get("node_id") != participant:
         raise ValueError("participant backing receipt is not from the SET_TENSOR participant")
     observed = receipt.get("members")
-    normalized = [{k: item.get(k) for k in ("file", "bytes", "sha256")}
-                  for item in observed] if isinstance(observed, list) else None
+    def _norm(item):
+        return {"file": item.get("file"),
+                "bytes": item.get("expected_bytes", item.get("bytes")),
+                "sha256": item.get("expected_sha256", item.get("sha256"))}
+    normalized = [_norm(item) for item in observed] if isinstance(observed, list) else None
     if normalized != [{k: m.get(k) for k in ("file", "bytes", "sha256")} for m in authority["members"]]:
         raise ValueError("participant backing member filenames/bytes/SHA-256 do not EQUAL the accepted authority")
     if receipt.get("total_bytes") != authority["total_bytes"]:
         raise ValueError("participant backing total bytes do not equal the accepted total")
     for item in observed:
-        if not item.get("verified"):
+        if not item.get("verified") or not item.get("present"):
             raise ValueError(f"participant backing member not live-verified: {item.get('file')}")
     backing_dir = receipt.get("backing_dir")
     if not isinstance(backing_dir, str) or not backing_dir.startswith("/"):

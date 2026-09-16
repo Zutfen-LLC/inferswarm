@@ -1,1 +1,1 @@
-{"arm":"local_verified","cache_dir":"/tmp/i200p5/armB-cache","entries_before":[],"schema":"inferswarm.issue200.cache-initialization-receipt/1"}
+{"arm":"local_verified","cache_dir":"/tmp/i200p5c2/20260916T152538-armB-cache","command":["cache-enum.sh","local_verified","/tmp/i200p5c2/20260916T152538-armB-cache"],"entries":[],"measured_at":1789587093,"node_id":"inferswarm04","schema":"inferswarm.issue200.cache-enumeration-receipt/1"}

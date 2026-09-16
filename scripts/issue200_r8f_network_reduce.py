@@ -69,6 +69,11 @@ SENDTO = re.compile(r"^sendto\((?P<fd>\d+), (?P<data>" + STRING
                     + r")(?P<ellipsis>\.\.\.)?, (?P<length>\d+), [^,]+, (?P<rest>.*)\)"
                     r"\s+=\s+(?P<result>-?\d+)$")
 UNFINISHED = re.compile(r"(?P<body>.*)<unfinished \.\.\.>\s*$")
+# Fast path: the marker is a plain substring; running the full regex on a
+# 40+ MB byte-complete payload line is quadratic backtracking, so the merge
+# pre-filters with a substring test that preserves exact semantics (the
+# regex can only match lines containing the literal marker).
+_UNFINISHED_MARKER = "<unfinished ...>"
 RESUMED = re.compile(r"^(?P<pid>\d+)\s+\S+\s+<\.\.\.\s+(?P<name>[a-z][a-z0-9_]*) resumed>(?P<rest>.*)$")
 
 
@@ -136,7 +141,7 @@ def _merge_unfinished(lines: list[str]) -> list[str]:
     pending: dict[str, str] = {}
     merged: list[str] = []
     for line in lines:
-        unfinished = UNFINISHED.search(line)
+        unfinished = UNFINISHED.search(line) if _UNFINISHED_MARKER in line else None
         if unfinished:
             prefixed = PID_LINE.match(line)
             if prefixed is None:
@@ -149,7 +154,9 @@ def _merge_unfinished(lines: list[str]) -> list[str]:
         if resumed:
             body = pending.pop(resumed["pid"], None)
             if body is not None:
-                merged.append(f"{resumed['pid']} x {body}{resumed['rest'].lstrip()}")
+                # Rebuild the complete record from the unfinished half's
+                # ORIGINAL prefix (pid + timestamp), never a synthetic one.
+                merged.append(f"{body}{resumed['rest'].lstrip()}")
             else:
                 merged.append(line)
             continue
