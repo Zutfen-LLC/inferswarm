@@ -1,0 +1,12 @@
+libvulkan-dev 1.4.309.0-1
+libvulkan1 1.4.309.0-1
+mesa-libgallium 25.0.7-2+deb13u1
+mesa-utils 
+mesa-va-drivers 25.0.7-2+deb13u1
+mesa-vulkan-drivers 25.0.7-2+deb13u1
+vulkan-headers 
+vulkan-icd 
+vulkan-loader 
+vulkan-sdk-headers 
+vulkan-sdk-runtime 
+vulkan-tools 1.4.304.0+dfsg1-1

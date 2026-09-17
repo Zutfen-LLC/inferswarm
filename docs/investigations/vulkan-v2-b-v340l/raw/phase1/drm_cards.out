@@ -1,0 +1,8 @@
+lrwxrwxrwx  1 root root    0 Sep 17 09:56 card0 -> ../../devices/pci0000:00/0000:00:02.0/drm/card0
+lrwxrwxrwx  1 root root    0 Sep 17 09:56 card0-DP-1 -> ../../devices/pci0000:00/0000:00:02.0/drm/card0/card0-DP-1
+lrwxrwxrwx  1 root root    0 Sep 17 09:56 card0-DP-2 -> ../../devices/pci0000:00/0000:00:02.0/drm/card0/card0-DP-2
+lrwxrwxrwx  1 root root    0 Sep 17 09:56 card0-HDMI-A-1 -> ../../devices/pci0000:00/0000:00:02.0/drm/card0/card0-HDMI-A-1
+lrwxrwxrwx  1 root root    0 Sep 17 09:56 card0-HDMI-A-2 -> ../../devices/pci0000:00/0000:00:02.0/drm/card0/card0-HDMI-A-2
+lrwxrwxrwx  1 root root    0 Sep 17 09:56 card0-HDMI-A-3 -> ../../devices/pci0000:00/0000:00:02.0/drm/card0/card0-HDMI-A-3
+lrwxrwxrwx  1 root root    0 Sep 17 09:56 card1 -> ../../devices/pci0000:00/0000:00:1d.0/0000:02:00.0/0000:03:00.0/0000:04:00.0/0000:05:00.0/0000:06:00.0/drm/card1
+lrwxrwxrwx  1 root root    0 Sep 17 09:56 card2 -> ../../devices/pci0000:00/0000:00:1d.0/0000:02:00.0/0000:03:01.0/0000:07:00.0/0000:08:00.0/0000:09:00.0/drm/card2
