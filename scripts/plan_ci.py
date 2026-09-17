@@ -487,6 +487,7 @@ PATH_GROUPS = {
     "scripts/issue187_r7a_reducer.py": ["issue-187-r7a"],
     "scripts/issue209_r7b_manifest.py": ["issue-209-r7b"],
     "scripts/issue209_r7b_reducer.py": ["issue-209-r7b"],
+    "scripts/issue209_r7b_fixture.py": ["issue-209-r7b"],
     "docs/investigations/deepseek-v41-flash-r7-b/": ["issue-209-r7b"],
     "scripts/issue182_manifest.py": ["issue-182-arm-e"],
     # Issue #137 retained evidence lives inside the #117 evidence tree;

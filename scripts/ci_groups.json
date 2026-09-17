@@ -931,6 +931,9 @@
   "scripts/issue200_r8f_terminal_reduction.py": [
    "issue-99-103"
   ],
+  "scripts/issue209_r7b_fixture.py": [
+   "issue-209-r7b"
+  ],
   "scripts/issue209_r7b_manifest.py": [
    "issue-209-r7b"
   ],

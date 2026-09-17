@@ -1,24 +1,239 @@
 {
-  "schema": "inferswarm.issue209.external-source-evidence/2",
-  "official_reference": {
-    "revision": "dba1be0a40aa45a94ad051997016db3960a90277",
-    "generate_py": {"sha256": "8668d67f7d108e32b90d50cb0d8606889ceb2219bfe95741d84e22f70768e9f0", "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/dba1be0a40aa45a94ad051997016db3960a90277/inference/generate.py", "excerpt": "load_model(model, f\"model{rank}-mp{world_size}.safetensors\")"},
-    "convert_py": {"sha256": "035028340479145594a81d6084a8424e57363adf83c0d5983914783d95614d76", "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/dba1be0a40aa45a94ad051997016db3960a90277/inference/convert.py", "excerpt": "model.safetensors.index.json; load_file(shard); save_file(state_dicts[i], f\"model{i}-mp{mp}.safetensors\")"},
-    "parent_retained_files": {"docs/investigations/deepseek-v41-flash-r7-a/external/LICENSE": "f2c6c602815669d292889e5be8c802f2ed950653b77999b1584e8e6aed25d040", "docs/investigations/deepseek-v41-flash-r7-a/external/inference/config.json": "2e84f45cf1dac8c7fcbb200e96667d4b913275690668ed496f24c7747207a809", "docs/investigations/deepseek-v41-flash-r7-a/external/inference/model.py": "4e9ae23620edc8028ccc5d5fef552ab7fdc7dcd6f79608754fe9f67644056f65"}
+ "official_reference": {
+  "convert_py": {
+   "excerpt": "model.safetensors.index.json; load_file(shard); save_file(state_dicts[i], f\"model{i}-mp{mp}.safetensors\")",
+   "sha256": "035028340479145594a81d6084a8424e57363adf83c0d5983914783d95614d76",
+   "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/dba1be0a40aa45a94ad051997016db3960a90277/inference/convert.py"
   },
-  "third_party_candidates": {
-    "vllm": {
-      "repository": "https://github.com/vllm-project/vllm",
-      "revision": "0eae9acd4d01574e12d4ecf6a0229813f7fdb799",
-      "license": {"path": "LICENSE", "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4", "excerpt": "Apache License Version 2.0, January 2004"},
-      "build": {"path": "pyproject.toml", "sha256": "953aefa02a4a18194946711b76f6a4854fd096f09b3d07ac4403e339cb4dd518", "excerpt": "name = \"vllm\"; requires-python = \">=3.10,<3.15\"; torch == 2.13.0"},
-      "files": {
-        "model": {"path": "vllm/models/deepseek_v41/nvidia/model.py", "sha256": "51e40463b6ce3a76ad64a09b6bbdf4688cae468d316f426d9d394fcff08b146e", "excerpts": ["self.start_layer, self.end_layer, self.layers = make_layers(\n    config.num_hidden_layers,\n    lambda prefix: DeepseekV4DecoderLayer(", "if is_pp_missing_parameter(name, self):\n    continue", "return IntermediateTensors(\n    {\"hidden_states\": hidden_states, \"pre_mix\": pre_mix}\n)"]},
-        "utils": {"path": "vllm/model_executor/models/utils.py", "sha256": "98b8358dd37f1148b6d29d1969ba4064343a316153ebad6e3bb82cdf3d528bf9", "excerpts": ["start_layer, end_layer = get_pp_indices(\n    num_hidden_layers, get_pp_group().rank_in_group, get_pp_group().world_size\n)", "modules = torch.nn.ModuleList(\n    [PPMissingLayer() for _ in range(start_layer)]\n    + get_offloader().wrap_modules(\n        layer_fn(prefix=f\"{prefix}.{idx}\") for idx in range(start_layer, end_layer)\n    )\n    + [PPMissingLayer() for _ in range(end_layer, num_hidden_layers)]\n)", "return any(\n    name.startswith(missing_layer_name)\n    for missing_layer_name in get_pp_missing_layer_names(model)\n)"]},
-        "default_loader": {"path": "vllm/model_executor/model_loader/default_loader.py", "sha256": "9c9d54b1b650bf5affc924ebb8b8c73711e187ae7486cadd9f737bb1279cc7b8", "excerpts": ["allow_patterns = [\"*.safetensors\", \"*.bin\"]", "# Here, we download the `model.safetensors.index.json` and filter\n# any files not found in the index.", "hf_weights_files = filter_duplicate_safetensors_files(\n    hf_weights_files, hf_folder, index_file\n)", "weights_iterator = safetensors_weights_iterator(\n    hf_weights_files,\n    self.load_config.use_tqdm_on_load,\n    self.load_config.safetensors_load_strategy,\n    local_expert_ids=self.local_expert_ids,"]},
-        "attention": {"path": "vllm/models/deepseek_v41/attention.py", "sha256": "88c47493149406249a195bf9e316ab3c63154ce82001f90dcde5b0e8be137069", "excerpts": ["# Only kv-source layers own a compressed-KV cache; consumers read the\n# source's cache through the forward context, and cr==0 layers are\n# pure SWA.\nif not self.is_kv_source:\n    return None", "raise NotImplementedError(\n    f\"Indexer K cache source {k_cache_prefix} not found on \"\n    \"this rank; PP splits inside a v4.1 kv-sharing group \"\n    \"are not supported.\"\n)", "num_tokens = (\n    indexer_metadata.num_decode_tokens\n    + indexer_metadata.num_prefill_tokens\n)"]}
-      }
+  "generate_py": {
+   "excerpt": "load_model(model, f\"model{rank}-mp{world_size}.safetensors\")",
+   "sha256": "8668d67f7d108e32b90d50cb0d8606889ceb2219bfe95741d84e22f70768e9f0",
+   "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash/resolve/dba1be0a40aa45a94ad051997016db3960a90277/inference/generate.py"
+  },
+  "parent_retained_files": {
+   "docs/investigations/deepseek-v41-flash-r7-a/external/LICENSE": "f2c6c602815669d292889e5be8c802f2ed950653b77999b1584e8e6aed25d040",
+   "docs/investigations/deepseek-v41-flash-r7-a/external/inference/config.json": "2e84f45cf1dac8c7fcbb200e96667d4b913275690668ed496f24c7747207a809",
+   "docs/investigations/deepseek-v41-flash-r7-a/external/inference/model.py": "4e9ae23620edc8028ccc5d5fef552ab7fdc7dcd6f79608754fe9f67644056f65"
+  },
+  "revision": "dba1be0a40aa45a94ad051997016db3960a90277"
+ },
+ "retention_note": "Full bytes of all cited vLLM files retained under external/vllm/ at the pinned revision; excerpts are verbatim inclusive line spans of those bytes.",
+ "schema": "inferswarm.issue209.external-source-evidence/3",
+ "third_party_candidates": {
+  "sglang": {
+   "excerpt": "DeepSeek-V4.1 Flash support has not shipped in an SGLang release yet.",
+   "path": "docs/cookbook/autoregressive/DeepSeek/DeepSeek-V4_1.mdx",
+   "revision": "7ccbf5fd04f7ee23095fc38e49e749d58dc18282",
+   "sha256": "b47a8f8b1c3e27a009d1c06648c0c8d1173b09fbb85530febcd06a5337ac6b43",
+   "url": "https://raw.githubusercontent.com/sgl-project/sglang/7ccbf5fd04f7ee23095fc38e49e749d58dc18282/docs/cookbook/autoregressive/DeepSeek/DeepSeek-V4_1.mdx"
+  },
+  "vllm": {
+   "build": {
+    "excerpt": "name = \"vllm\"; requires-python = \">=3.10,<3.15\"; torch == 2.13.0",
+    "path": "pyproject.toml",
+    "sha256": "953aefa02a4a18194946711b76f6a4854fd096f09b3d07ac4403e339cb4dd518"
+   },
+   "files": {
+    "attention": {
+     "excerpt_spans": [
+      [
+       300,
+       336
+      ],
+      [
+       419,
+       444
+      ],
+      [
+       530,
+       558
+      ],
+      [
+       1032,
+       1057
+      ]
+     ],
+     "excerpts": [
+      "            self.compress_ratio = int(compress_ratios[layer_id])\n        else:\n            # MTP layers past the configured list are pure sliding-window.\n            self.compress_ratio = 0\n        if self.compress_ratio not in (0, 1, 2):\n            raise ValueError(\n                f\"DeepSeek V4.1 layer {layer_id} has compress_ratio=\"\n                f\"{self.compress_ratio}; only 0 (sliding window), 1 and 2 are \"\n                \"supported.\"\n            )\n        self.kv_source_layers = tuple(\n            getattr(config, \"kv_source_layer_ids\", None) or ()\n        )\n        self.index_source_layers = tuple(\n            getattr(config, \"index_source_layer_ids\", None) or ()\n        )\n        self.candidate_source_layer = getattr(config, \"candidate_source_layer_id\", -1)\n        self.candidate_topk_blocks = getattr(config, \"candidate_topk_blocks\", 0)\n        self.candidate_block_size = getattr(config, \"candidate_block_size\", 0)\n\n        is_backbone = layer_id < config.num_hidden_layers\n        self.is_kv_source = is_backbone and layer_id in self.kv_source_layers\n        self.is_index_source = is_backbone and layer_id in self.index_source_layers\n        if self.compress_ratio > 0:\n            if not self.kv_source_layers or not self.index_source_layers:\n                raise ValueError(\n                    \"DeepSeek V4.1 requires kv_source_layer_ids / \"\n                    \"index_source_layer_ids in the config for compressed \"\n                    f\"layers (layer {layer_id} has \"\n                    f\"compress_ratio={self.compress_ratio}).\"\n                )\n            self.kv_source_layer_id = max(\n                s for s in self.kv_source_layers if s <= layer_id\n            )\n            self.index_source_layer_id = max(\n                s for s in self.index_source_layers if s <= layer_id\n            )",
+      "            # Index K cache: owned only by kv-source layers (their indexer has\n            # wk/k_norm); non-owning index sources share the K cache of the\n            # latest kv source below them (its indexer produces the keys).\n            if self.is_kv_source:\n                index_k_cache = DeepseekV4IndexerCache(\n                    head_dim=_indexer_k_cache_head_dim(\n                        config.index_head_dim, dsa_indexer_uses_fp4(vllm_config)\n                    ),\n                    dtype=torch.uint8,\n                    prefix=f\"{prefix}.indexer.k_cache\",\n                    cache_config=cache_config,\n                    compress_ratio=self.compress_ratio,\n                )\n            else:\n                assert self.kv_source_layer_id is not None\n                k_cache_prefix = (\n                    f\"{_replace_layer_index(prefix, self.kv_source_layer_id)}\"\n                    \".indexer.k_cache\"\n                )\n                index_k_cache = self._static_forward_context.get(k_cache_prefix)\n                if index_k_cache is None:\n                    raise NotImplementedError(\n                        f\"Indexer K cache source {k_cache_prefix} not found on \"\n                        \"this rank; PP splits inside a v4.1 kv-sharing group \"\n                        \"are not supported.\"\n                    )",
+      "        # Compressors live only on kv-source layers; consumers read the\n        # source's compressed cache through the forward context.\n        self.compressor = None\n        if self.is_kv_source:\n            self.compressor = DeepseekCompressor(\n                vllm_config=vllm_config,\n                compress_ratio=self.compress_ratio,\n                hidden_size=self.hidden_size,\n                head_dim=self.head_dim,\n                rotate=True,\n                prefix=f\"{prefix}.compressor\",\n                k_cache_prefix=self.prefix,\n            )\n        # Prefix of the attention layer owning this layer's compressed KV\n        # cache (self for kv sources).\n        if self.compress_ratio > 0:\n            assert self.kv_source_layer_id is not None\n            self.compressed_cache_prefix: str | None = _replace_layer_index(\n                prefix, self.kv_source_layer_id\n            )\n            if (\n                not self.is_kv_source\n                and self.compressed_cache_prefix not in self._static_forward_context\n            ):\n                raise NotImplementedError(\n                    f\"Compressed-KV source {self.compressed_cache_prefix} not \"\n                    \"found on this rank; PP splits inside a v4.1 kv-sharing \"\n                    \"group are not supported.\"\n                )",
+      "    def get_kv_cache_spec(self, vllm_config: VllmConfig) -> KVCacheSpec | None:\n        # Only kv-source layers own a compressed-KV cache; consumers read the\n        # source's cache through the forward context, and cr==0 layers are\n        # pure SWA. The SWA cache is allocated separately as\n        # DeepseekV4SWACache.\n        if not self.is_kv_source:\n            return None\n        # fp8_ds_mla is a UE8M0 block-scaled uint8 layout whose page rounds up\n        # to the decode kernel's TMA stride; plain bf16 / per-tensor fp8 rows\n        # use natural element-size pages.\n        uses_fp8_ds_mla_layout = self.kv_cache_dtype in (\"fp8_ds_mla\", \"nvfp4_ds_mla\")\n        return MLAAttentionSpec(\n            block_size=vllm_config.cache_config.block_size,\n            num_kv_heads=1,\n            head_size=self.head_dim,\n            dtype=torch.uint8 if uses_fp8_ds_mla_layout else self.kv_cache_torch_dtype,\n            tokens_per_state=self.compress_ratio,\n            cache_dtype_str=self.kv_cache_dtype,\n            alignment=self.kv_page_alignment if uses_fp8_ds_mla_layout else 512,\n            model_version=\"deepseek_v4\",\n            kv_quant_mode=get_kv_quant_mode(self.kv_cache_dtype),\n            # Packed record width; head_size stays semantic (512).\n            state_content_bytes=(\n                self.compressed_bytes_per_token if uses_fp8_ds_mla_layout else None\n            ),\n        )"
+     ],
+     "path": "vllm/models/deepseek_v41/attention.py",
+     "sha256": "88c47493149406249a195bf9e316ab3c63154ce82001f90dcde5b0e8be137069"
     },
-    "sglang": {"revision": "7ccbf5fd04f7ee23095fc38e49e749d58dc18282", "path": "docs/cookbook/autoregressive/DeepSeek/DeepSeek-V4_1.mdx", "sha256": "b47a8f8b1c3e27a009d1c06648c0c8d1173b09fbb85530febcd06a5337ac6b43", "url": "https://raw.githubusercontent.com/sgl-project/sglang/7ccbf5fd04f7ee23095fc38e49e749d58dc18282/docs/cookbook/autoregressive/DeepSeek/DeepSeek-V4_1.mdx", "excerpt": "DeepSeek-V4.1 Flash support has not shipped in an SGLang release yet."}
+    "default_loader": {
+     "excerpt_spans": [
+      [
+       167,
+       180
+      ]
+     ],
+     "excerpts": [
+      "            allow_patterns = [\"*.safetensors\", \"*.bin\"]\n        elif (\n            load_format == \"safetensors\"\n            or load_format == \"fastsafetensors\"\n            or load_format == \"instanttensor\"\n        ):\n            use_safetensors = True\n            allow_patterns = [\"*.safetensors\"]\n        elif load_format == \"mistral\":\n            use_safetensors = True\n            allow_patterns = [\"consolidated*.safetensors\"]\n            index_file = \"consolidated.safetensors.index.json\"\n        elif load_format == \"pt\":\n            allow_patterns = [\"*.pt\"]"
+     ],
+     "path": "vllm/model_executor/model_loader/default_loader.py",
+     "sha256": "9c9d54b1b650bf5affc924ebb8b8c73711e187ae7486cadd9f737bb1279cc7b8"
+    },
+    "kv_cache_coordinator": {
+     "excerpt_spans": [
+      [
+       594,
+       610
+      ],
+      [
+       729,
+       760
+      ]
+     ],
+     "excerpts": [
+      "class SpecGroup(NamedTuple):\n    \"\"\"KV cache groups that share one spec, batched together for a single\n    cache-hit lookup.\n\n    ``use_eagle`` is True iff any member group is an EAGLE/MTP group. Members\n    sharing a spec are cached and looked up jointly, so the EAGLE last-block drop\n    is necessarily decided for the whole spec group.\n    \"\"\"\n\n    spec: KVCacheSpec\n    group_ids: list[int]\n    manager_cls: type[SingleTypeKVCacheManager]\n    use_eagle: bool\n\n\nclass HybridKVCacheCoordinator(KVCacheCoordinator):\n    \"\"\"KV cache coordinator for hybrid models with multiple KV cache types, and",
+      "        \"\"\"Groups KV cache groups by their spec type for efficient batch processing\n        during cache hit lookup.\n        \"\"\"\n        self.attention_groups: list[SpecGroup] = []\n        for i, g in enumerate(self.kv_cache_config.kv_cache_groups):\n            # Skip groups that opt out of prefix caching (e.g. GLM-5.3-Flash\n            # kpool tail): their blocks are per-request scratch, never\n            # shareable, so they must not participate in hit lookup (their\n            # manager-level hooks already no-op). Their slot in the per-group\n            # hit tuple stays empty.\n            if not g.kv_cache_spec.prefix_cacheable:\n                continue\n            manager_cls = self.single_type_managers[i].__class__\n            spec = g.kv_cache_spec\n            use_eagle = i in self.eagle_group_ids\n\n            # Try to find an existing group with the same spec\n            for idx, group in enumerate(self.attention_groups):\n                if (\n                    group.spec == spec\n                    and group.manager_cls is manager_cls\n                    and self.single_type_managers[group.group_ids[0]].block_pool\n                    is self.single_type_managers[i].block_pool\n                ):\n                    group.group_ids.append(i)\n                    if use_eagle and not group.use_eagle:\n                        self.attention_groups[idx] = group._replace(use_eagle=True)\n                    break\n            else:\n                self.attention_groups.append(\n                    SpecGroup(spec, [i], manager_cls, use_eagle)\n                )"
+     ],
+     "path": "vllm/v1/core/kv_cache_coordinator.py",
+     "sha256": "7fa4065d19021e77b3424d24e1b088c530ed70b90c5ed9bc52cf4b7581d5fc48"
+    },
+    "kv_cache_interface": {
+     "excerpt_spans": [
+      [
+       155,
+       166
+      ],
+      [
+       633,
+       656
+      ]
+     ],
+     "excerpts": [
+      "@dataclass(frozen=True)\nclass KVCacheSpec:\n    \"\"\"A base class for specifying the KV cache format of one layer.\"\"\"\n\n    # number of tokens in a block\n    block_size: int\n\n    @property\n    def prefix_cacheable(self) -> bool:\n        \"\"\"Whether this spec's group participates in prefix caching.\"\"\"\n        return True\n",
+      "\n\n@dataclass(frozen=True, kw_only=True)\nclass MLAAttentionSpec(FullAttentionSpec):\n    # TODO(Lucas/Chen): less hacky way to do this\n    cache_dtype_str: str | None = None\n    # DeepseekV4 only fields. Non-DeepseekV4 MLA models leave these at defaults.\n    alignment: int | None = None  # Default to None for no padding.\n    model_version: str | None = None\n    cache_role: SparseCacheRole = SparseCacheRole.SPARSE\n    is_index_group_leader: bool = False\n    storage_block_size: int | None = None\n    \"\"\"Token width used to view storage when it differs from the kernel block.\"\"\"\n    block_stride_alignment: int | None = None\n    \"\"\"Required alignment, in bytes, of the distance between consecutive\n    blocks of this cache. In block-major layouts that distance is the whole\n    block (all layers' pages), so the allocator rounds the block up to it.\n    DeepGEMM's paged sparse MQA-logits kernels address pages as\n    ``base + page * stride`` and need it 512B-aligned.\"\"\"\n    # Group capability enabled when any member flattens a non-causal query block\n    # into decode rows. Runtime metadata still selects causal vs. non-causal mode.\n    non_causal_multi_token_decode: bool = False\n    # MLA stores a single latent vector per state; there is no separate V.\n    head_size_v: int = 0"
+     ],
+     "path": "vllm/v1/kv_cache_interface.py",
+     "sha256": "a187dd20b9404bcdcd9f9e64bd1ccef821084bfb88330f16f6798e0672b74316"
+    },
+    "kv_cache_manager": {
+     "excerpt_spans": [
+      [
+       605,
+       614
+      ],
+      [
+       636,
+       648
+      ],
+      [
+       659,
+       669
+      ],
+      [
+       738,
+       744
+      ]
+     ],
+     "excerpts": [
+      "    def free(self, request: Request) -> None:\n        \"\"\"Free the blocks allocated for the request.\n        We free the blocks in reverse order so that the tail blocks are evicted\n        first when caching is enabled.\n\n        Args:\n            request: The request to free the blocks.\n\n        \"\"\"\n        self.coordinator.free(request.request_id)",
+      "    def pop_blocks_for_free(self, request: Request) -> list[KVCacheBlock]:\n        \"\"\"Pop the request's bookkeeping and return its blocks without\n        returning them to the block pool. The caller must eventually free\n        them in reverse order (so that tail blocks are evicted first).\n\n        Args:\n            request: The request to pop the blocks for.\n\n        Returns:\n            The request's blocks in allocation order.\n\n        \"\"\"\n        return self.coordinator.pop_blocks_for_free(request.request_id)",
+      "    def reset_prefix_cache(self) -> bool:\n        \"\"\"Reset prefix cache. This function may be used in RLHF\n        flows to invalidate prefix caching after the weights are updated,\n        or used for resetting prefix caching status for benchmarking.\n\n        Returns:\n            bool: True if the prefix cache is successfully reset,\n            False otherwise.\n\n        \"\"\"\n        if not self.coordinator.reset_prefix_cache():",
+      "    def get_blocks(self, request_id: str) -> KVCacheBlocks:\n        \"\"\"Get the blocks of a request.\"\"\"\n        return self.create_kv_cache_blocks(self.coordinator.get_blocks(request_id))\n\n    def get_block_ids(self, request_id: str) -> tuple[list[int], ...]:\n        \"\"\"Get the block ids of a request.\"\"\"\n        return self.get_blocks(request_id).get_block_ids()"
+     ],
+     "path": "vllm/v1/core/kv_cache_manager.py",
+     "sha256": "b5a0bb144934cc3c0e6b6dc63b69e1919e7a36c4221fba949b07e89c08e1f11c"
+    },
+    "model": {
+     "excerpt_spans": [
+      [
+       504,
+       514
+      ]
+     ],
+     "excerpts": [
+      "\n        # Two-level candidate filtering: the indexer at\n        # candidate_source_layer_id publishes the top candidate blocks of\n        # compressed positions here; later ratio-1 indexers (24/28/32/36)\n        # mask their scores with it.\n        candidate_source_layer = getattr(config, \"candidate_source_layer_id\", -1)\n        candidate_topk_blocks = getattr(config, \"candidate_topk_blocks\", 0)\n        if candidate_source_layer >= 0 and candidate_topk_blocks > 0:\n            self.candidate_block_buffer = torch.empty(\n                vllm_config.scheduler_config.max_num_batched_tokens,\n                candidate_topk_blocks,"
+     ],
+     "path": "vllm/models/deepseek_v41/nvidia/model.py",
+     "sha256": "51e40463b6ce3a76ad64a09b6bbdf4688cae468d316f426d9d394fcff08b146e"
+    },
+    "scheduler": {
+     "excerpt_spans": [
+      [
+       376,
+       378
+      ],
+      [
+       1480,
+       1521
+      ],
+      [
+       1537,
+       1543
+      ],
+      [
+       2591,
+       2623
+      ],
+      [
+       2640,
+       2649
+      ],
+      [
+       2662,
+       2675
+      ],
+      [
+       3183,
+       3186
+      ]
+     ],
+     "excerpts": [
+      "        # FIFO of (fence_seq, blocks): blocks become safe to free once\n        # processed_step_seq >= fence_seq.\n        self.deferred_frees: deque[tuple[int, list[KVCacheBlock]]] = deque()",
+      "    def _preempt_request(\n        self, request: Request, timestamp: float, drop_stale_output: bool = False\n    ) -> None:\n        \"\"\"Preempt a request and put it back to the waiting queue.\n\n        NOTE: The request should be popped from the running queue outside of this\n        method.\n\n        drop_stale_output: drop (rather than deliver) any in-flight output; used\n        by reset_prefix_cache, whose same-step resume would otherwise deliver\n        tokens out of order, and for connectors with a pending KV hand-off,\n        which the preemption's block free would leave without valid KV.\n        \"\"\"\n        assert request.status == RequestStatus.RUNNING, (\n            \"Only running requests can be preempted\"\n        )\n        self._free_request_blocks(request)\n        self.encoder_cache_manager.free(request)\n        self._inflight_prefills.discard(request)\n        request.status = RequestStatus.PREEMPTED\n        request.num_computed_tokens = 0\n        if request.spec_token_ids:\n            request.spec_token_ids = []\n        # Async scheduling: mark all in-flight output as stale. Its tokens are\n        # still delivered on return (dropping them would perturb spec-decode\n        # acceptance) but must not mutate the reset counters; each step drains\n        # its share in update_from_output. num_in_flight_tokens already\n        # includes any undrained stale share, so assign rather than accumulate.\n        # An undrained drop-mode share stays dropped: its positions have\n        # already been resampled.\n        request.drop_stale_output = drop_stale_output or (\n            request.drop_stale_output and request.num_stale_output_tokens > 0\n        )\n        request.num_stale_output_tokens = request.num_in_flight_tokens\n        request.num_output_placeholders = 0\n        request.num_preemptions += 1\n        if self.log_stats:\n            request.record_event(EngineCoreEventType.PREEMPTED, timestamp)\n\n        # Put the request back to the waiting queue.\n        self.waiting.prepend_request(request)\n        self.reset_preempted_req_ids.add(request.request_id)",
+      "            request.num_in_flight_tokens += num_scheduled_token\n            if self.defer_block_free:\n                # Record the in-flight step, to fence deferred block freeing.\n                request.last_sched_seq = self.sched_step_seq\n            request.is_prefill_chunk = request.num_computed_tokens < (\n                request.num_tokens + request.num_output_placeholders\n            )",
+      "    def _free_request(\n        self, request: Request, delay_free_blocks: bool = False\n    ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:\n        assert request.is_finished()\n\n        self._inflight_prefills.discard(request)\n        connector_delay_free_blocks, kv_xfer_params = self._connector_finished(request)\n\n        # EC Connector: mirror the KV hook. The contract requires firing\n        # before the encoder cache is freed so the connector can inspect\n        # per-request state (e.g. which mm_hashes it recorded during\n        # save_caches()) and emit ec_transfer_params for the response body.\n        ec_xfer_params: dict[str, Any] | None = None\n        if self.ec_connector is not None:\n            ec_delay_free, ec_xfer_params = self.ec_connector.request_finished(request)\n            connector_delay_free_blocks |= ec_delay_free\n\n        self.encoder_cache_manager.free(request)\n        request_id = request.request_id\n        self.finished_req_ids.add(request_id)\n        if self.finished_req_ids_dict is not None:\n            self.finished_req_ids_dict[request.client_index].add(request_id)\n\n        delay_free_blocks |= connector_delay_free_blocks\n        if not delay_free_blocks:\n            self._free_blocks(request)\n\n        return kv_xfer_params, ec_xfer_params\n\n    def _free_blocks(self, request: Request):\n        assert request.is_finished()\n        self._free_request_blocks(request)\n        del self.requests[request.request_id]",
+      "    def _free_request_blocks(self, request: Request):\n        \"\"\"Free the request's KV blocks, deferring the return to the block\n        pool when an in-flight GPU step may still write them.\n        \"\"\"\n        if self._request_blocks_can_be_freed(request):\n            self.kv_cache_manager.free(request)\n            return\n        blocks = self.kv_cache_manager.pop_blocks_for_free(request)\n        if blocks:\n            self.deferred_frees.append((self.sched_step_seq, blocks))",
+      "    def _drain_deferred_frees(self):\n        \"\"\"Return deferred blocks whose fence step has completed.\n\n        Fences are appended in near-monotonic order (a CoW retention fence\n        can lead request-free fences by one step), so stop at the first\n        pending one; any satisfied entry behind it is merely freed later.\n        \"\"\"\n        while self.deferred_frees:\n            fence, _ = self.deferred_frees[0]\n            if fence > self.processed_step_seq:\n                break\n            _, blocks = self.deferred_frees.popleft()\n            # Free in reverse order so that the tail blocks are evicted first.\n            self.kv_cache_manager.block_pool.free_blocks(reversed(blocks))",
+      "                if self.recompute_kv_load_failures:\n                    request.num_computed_tokens = 0\n                    self.failed_recving_kv_req_ids.add(req_id)\n        return set() if self.recompute_kv_load_failures else affected_req_ids"
+     ],
+     "path": "vllm/v1/core/sched/scheduler.py",
+     "sha256": "ea45be71111aa81a423b4e77dc82b769cda530f0117a3af3214202d8feda06a4"
+    },
+    "single_type_kv_cache_manager": {
+     "excerpt_spans": [
+      [
+       557,
+       574
+      ],
+      [
+       576,
+       584
+      ]
+     ],
+     "excerpts": [
+      "    def pop_blocks_for_free(self, request_id: str) -> list[KVCacheBlock]:\n        \"\"\"Pop the request's bookkeeping and return its blocks without yet\n        returning them to the block pool. The caller is responsible for\n        eventually passing the returned blocks to `block_pool.free_blocks`,\n        freeing them in reverse order (so that tail blocks are evicted first).\n\n        Args:\n            request_id: The request ID.\n\n        Returns:\n            The request's blocks in allocation order.\n\n        \"\"\"\n        # Default to [] in case a request is freed (aborted) before alloc.\n        req_blocks = self.req_to_blocks.pop(request_id, [])\n        self.num_cached_block.pop(request_id, None)\n        self._partial_hit_reqs.pop(request_id, None)\n        return req_blocks",
+      "    def free(self, request_id: str) -> None:\n        \"\"\"Free the blocks for the request.\n\n        Args:\n            request_id: The request ID.\n\n        \"\"\"\n        # Free blocks in reverse order so that the tail blocks are freed first.\n        self.block_pool.free_blocks(reversed(self.pop_blocks_for_free(request_id)))"
+     ],
+     "path": "vllm/v1/core/single_type_kv_cache_manager.py",
+     "sha256": "15360abf039513fab8f0fe99d7bc36283e63251d83e1c13f99368ae89bf13135"
+    },
+    "utils": {
+     "excerpt_spans": [
+      [
+       868,
+       912
+      ]
+     ],
+     "excerpts": [
+      "    start_layer, end_layer = get_pp_indices(\n        num_hidden_layers, get_pp_group().rank_in_group, get_pp_group().world_size\n    )\n\n    modules = torch.nn.ModuleList(\n        [PPMissingLayer() for _ in range(start_layer)]\n        + get_offloader().wrap_modules(\n            layer_fn(prefix=f\"{prefix}.{idx}\") for idx in range(start_layer, end_layer)\n        )\n        + [PPMissingLayer() for _ in range(end_layer, num_hidden_layers)]\n    )\n\n    return start_layer, end_layer, modules\n\n\n# NOTE: don't use lru_cache here because it can prevent garbage collection\n_model_to_pp_missing_layer_names: dict[int, list[str]] = {}\n\n\ndef get_pp_missing_layer_names(model: torch.nn.Module) -> list[str]:\n    \"\"\"Get the names of the missing layers in a pipeline parallel model.\"\"\"\n    model_id = id(model)\n    if model_id in _model_to_pp_missing_layer_names:\n        return _model_to_pp_missing_layer_names[model_id]\n\n    missing_layer_names = []\n    for name, module in model.named_modules():\n        if isinstance(module, (StageMissingLayer, PPMissingLayer)):\n            # NOTE: the trailing dot is used to match the prefix of the layer.\n            # without the dot, we could match a layer that is not missing,\n            # e.g., 'encoder.layer.1' would match 'encoder.layer.11'\n            missing_layer_names.append(name + \".\")\n    _model_to_pp_missing_layer_names[model_id] = missing_layer_names\n\n    return missing_layer_names\n\n\ndef is_pp_missing_parameter(name: str, model: torch.nn.Module) -> bool:\n    \"\"\"Check if a parameter is missing in a pipeline parallel model.\"\"\"\n    if isinstance(model, (StageMissingLayer, PPMissingLayer)):\n        return True\n\n    return any(\n        name.startswith(missing_layer_name)\n        for missing_layer_name in get_pp_missing_layer_names(model)"
+     ],
+     "path": "vllm/model_executor/models/utils.py",
+     "sha256": "98b8358dd37f1148b6d29d1969ba4064343a316153ebad6e3bb82cdf3d528bf9"
+    }
+   },
+   "license": {
+    "excerpt": "Apache License Version 2.0, January 2004",
+    "path": "LICENSE",
+    "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+   },
+   "repository": "https://github.com/vllm-project/vllm",
+   "revision": "0eae9acd4d01574e12d4ecf6a0229813f7fdb799"
   }
+ }
 }

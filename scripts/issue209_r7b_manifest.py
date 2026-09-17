@@ -17,6 +17,7 @@ OUTPUT = AREA / "MANIFEST.sha256"
 PRODUCERS = (
     "scripts/issue209_r7b_manifest.py",
     "scripts/issue209_r7b_reducer.py",
+    "scripts/issue209_r7b_fixture.py",
     "tests/test_issue209_r7b.py",
 )
 

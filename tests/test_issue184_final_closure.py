@@ -268,6 +268,7 @@ class Issue184PreservationTests(unittest.TestCase):
             # it consumes R7-A without changing the accepted parent bundle.
             "scripts/issue209_r7b_reducer.py",
             "scripts/issue209_r7b_manifest.py",
+            "scripts/issue209_r7b_fixture.py",
             # Issue #207 R8-G: additive runtime-boundary localization
             # producers, independently pinned by its R8-G manifest.
             "scripts/issue207_r8g_authority.py",

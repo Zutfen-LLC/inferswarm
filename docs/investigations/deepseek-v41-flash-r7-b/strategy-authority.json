@@ -1,0 +1,40 @@
+{
+ "boundary_hidden_state_contract": "Hidden states cross the cut as IntermediateTensors between pipeline stages (model.py IntermediateTensors plumbing); the stage-[20,40) consumer receives the stage-[0,20) producer output tensors plus their layouts.",
+ "cache_lifetime_invalidation_reconstruction": {
+  "invalidation": "Freed on completion (_free_request -> _free_blocks); deferred through deferred_frees when an in-flight GPU step may still write them, drained by _drain_deferred_frees after the fence step; prefix cache reset via reset_prefix_cache; preemption frees blocks and resets num_computed_tokens=0.",
+  "lifetime": "Request-scoped: blocks are owned via req_to_blocks[request_id] (kv_cache_manager) from allocation to free.",
+  "reconstruction": "Preempted requests requeue to the waiting queue and recompute from token 0; failed KV loads under recompute policy reset num_computed_tokens=0 for recomputation (scheduler).",
+  "source_binding": "All semantics are properties of the pinned vLLM v1 scheduler/cache manager bytes at 0eae9acd; the adapter consumes them as the substrate contract, it does not reimplement them."
+ },
+ "cut_layer": 20,
+ "cut_legality": "Layer 20 is a kv-source layer and the candidate_source_layer; groups below end at 20 (nearest-source-at-or-below resolution, attention.py:331-336); no PP cut falls inside a kv-sharing group (attention.py:439-444,550-558).",
+ "dependencies": {
+  "cross_stage_cache": "None required at the cut: layer 20 owns its own compressed-KV cache; no consumer at layer >=21 resolves a kv source below 20 except within its own group (nearest source at or below: layer 20).",
+  "downstream": "final norm + LM head (embedding_or_head tensors) after layer 39; MTP layers 40-42 explicitly out of scope",
+  "upstream": "stage-[0,20) producer unit (hidden states, embed; engram tables 1,14 rows retained immutable)"
+ },
+ "digest": "64df7d08b990bf9ae31aee1099f5dac05f0502d2e43002f95e68c549b116a95b",
+ "generic_extension": "None required: contiguous_stage is expressible through the existing generic opaque execution-unit/dependency/Memory Resource seams; no DeepSeek/expert/router/cache/backend noun enters generic planner code.",
+ "immutable_state": {
+  "authority": "R7-A tensor-census.json index_sha256=74b0686a3d2891980d5e303251b075a3bccae2c2ff650747db2620a649b98fa8",
+  "policy": "All layers.[0..20). tensors of the producer stage unit, derived from the accepted R7-A census (state classes attention/router/shared_expert/backbone_or_other as attributed per layer by name pattern); no handwritten geometry."
+ },
+ "layer_interval": [
+  20,
+  40
+ ],
+ "materialization_lifetime": "Selective per-unit: only tensors attributed to the stage interval are required; unrelated official tensors sharing a shard are not participants (shard-granularity acquisition distinguished from logical required bytes per Phase 4 contract).",
+ "model_repository": "deepseek-ai/DeepSeek-V4.1-Flash",
+ "model_revision": "dba1be0a40aa45a94ad051997016db3960a90277",
+ "prefill_decode_applicability": "Both phases execute through the same stage units; cache authority transitions follow the pinned scheduler semantics (is_prefill_chunk derived from num_computed_tokens; preemption frees blocks, resets num_computed_tokens=0, and requeues for recomputation).",
+ "runtime_revision": "0eae9acd4d01574e12d4ecf6a0229813f7fdb799",
+ "schema": "inferswarm.issue209.strategy-authority/1",
+ "selection_rule": "Only honestly supported shape: the pinned runtime exposes a truthful contiguous backbone cut with explicit boundary hidden-state and cache ownership (IntermediateTensors boundary transfer; kv-source-owned MLAAttentionSpec caches); it exposes no independent routed-expert-bank execution seam (experts execute inside whole-layer MoE forward), so expert_local is not supportable without hidden whole-model execution.",
+ "session_mutable_state": {
+  "kv_cache": "Compressed-KV and indexer-K caches owned exclusively by kv-source layers 2,8,14 (below-cut sources consumed through the forward context within the producer stage) and 20 (the boundary source, owned by the consumer stage); MLAAttentionSpec cache groups (kv_cache_interface.py MLAAttentionSpec.merge asserts uniform quantization/tokens_per_state/model_version/cache_role per group).",
+  "ownership_rule": "Only kv-source layers own a compressed-KV cache (attention.py get_kv_cache_spec returns None for non-sources); consumers read the source's cache through the forward context.",
+  "swa_cache": "Sliding-window attention state (window_size=128) per layer with compress_ratio=0 (layers 0,1 and 40..42 MTP out of scope); allocated separately as DeepseekV4SWACache."
+ },
+ "shape": "contiguous_stage",
+ "strategy_identity": "deepseek-v41-flash-contiguous-stage/1"
+}

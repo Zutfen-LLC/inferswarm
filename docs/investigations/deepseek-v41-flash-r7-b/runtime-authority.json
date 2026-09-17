@@ -1,22 +1,124 @@
 {
-  "schema": "inferswarm.issue209.runtime-authority/2",
-  "selection_scope": "CPU/static source audit only; no checkpoint body was downloaded and no model code was executed.",
-  "candidate_disposition_rule": "A candidate is selected only when every mandatory predicate is PASS from retained immutable evidence. A disposition cannot upgrade a FAIL or UNPROVEN predicate; UNPROVEN is an evidence gap, not a runtime/backend deficiency.",
-  "mandatory_predicates": ["p1_exact_immutable_runtime_revision", "p2_license_provenance", "p3_source_faithful_model_path", "p4_native_official_sharded_safetensors", "p5_no_mandatory_representation_conversion", "p6_text_prefill_decode_path", "p7_selective_materialization_control", "p8_observable_cache_authority", "p9_one_legal_multi_resource_shape", "p10_deterministic_build_identity"],
-  "candidates": [
-    {"id": "official-reference-runtime", "revision": "dba1be0a40aa45a94ad051997016db3960a90277", "disposition": "REJECTED", "failed_predicates": ["p4_native_official_sharded_safetensors", "p5_no_mandatory_representation_conversion"], "why": "The source consumes converted model{rank}-mp{world_size}.safetensors rather than the official index/shards."},
-    {"id": "vllm-current-source", "revision": "0eae9acd4d01574e12d4ecf6a0229813f7fdb799", "disposition": "EVIDENCE_BLOCKED", "failed_predicates": ["p8_observable_cache_authority"], "source_evidence_ref": "external-source-evidence.json#third_party_candidates.vllm", "predicate_adjudications": [
-      {"id": "p1_exact_immutable_runtime_revision", "status": "PASS", "evidence": ["repository commit 0eae9acd4d01574e12d4ecf6a0229813f7fdb799"]},
-      {"id": "p2_license_provenance", "status": "PASS", "evidence": ["LICENSE c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"]},
-      {"id": "p3_source_faithful_model_path", "status": "PASS", "evidence": ["vllm/models/deepseek_v41/nvidia/model.py 51e40463b6ce3a76ad64a09b6bbdf4688cae468d316f426d9d394fcff08b146e"]},
-      {"id": "p4_native_official_sharded_safetensors", "status": "PASS", "evidence": ["default_loader.py 9c9d54b1b650bf5affc924ebb8b8c73711e187ae7486cadd9f737bb1279cc7b8: standard model.safetensors.index.json plus shard filtering/iterator"]},
-      {"id": "p5_no_mandatory_representation_conversion", "status": "PASS", "evidence": ["default_loader.py standard safetensors path; no R7 conversion producer"]},
-      {"id": "p6_text_prefill_decode_path", "status": "PASS", "evidence": ["model.py forward/IntermediateTensors and attention.py paged cache insert path"]},
-      {"id": "p7_selective_materialization_control", "status": "PASS", "evidence": ["utils.py PPMissingLayer/make_layers/is_pp_missing_parameter and model.py local-stage load_weights skip"]},
-      {"id": "p8_observable_cache_authority", "status": "UNPROVEN", "evidence": ["attention.py proves layer cache ownership and dependencies, but the retained source set does not bind request/session lifetime, invalidation, or a legal reconstruction boundary to this model's selected PP boundary"]},
-      {"id": "p9_one_legal_multi_resource_shape", "status": "PASS", "evidence": ["model.py explicit PP intermediate transfer; utils.py local interval; attention.py source-declared invalid cross-sharing cuts"]},
-      {"id": "p10_deterministic_build_identity", "status": "PASS", "evidence": ["exact source commit; pyproject.toml 953aefa02a4a18194946711b76f6a4854fd096f09b3d07ac4403e339cb4dd518; R7-A config 2e84f45cf1dac8c7fcbb200e96667d4b913275690668ed496f24c7747207a809"]}
-    ]},
-    {"id": "sglang-current-source", "revision": "7ccbf5fd04f7ee23095fc38e49e749d58dc18282", "disposition": "REJECTED", "failed_predicates": ["p3_source_faithful_model_path", "p8_observable_cache_authority", "p9_one_legal_multi_resource_shape"], "why": "The pinned source says support has not shipped in an SGLang release."}
-  ]
+ "candidate_disposition_rule": "A candidate is selected only when every mandatory predicate is PASS from retained immutable evidence. A disposition cannot upgrade a FAIL or UNPROVEN predicate; UNPROVEN is an evidence gap, not a runtime/backend deficiency.",
+ "candidates": [
+  {
+   "disposition": "REJECTED",
+   "failed_predicates": [
+    "p4_native_official_sharded_safetensors",
+    "p5_no_mandatory_representation_conversion"
+   ],
+   "id": "official-reference-runtime",
+   "revision": "dba1be0a40aa45a94ad051997016db3960a90277",
+   "why": "The source consumes converted model{rank}-mp{world_size}.safetensors rather than the official index/shards."
+  },
+  {
+   "disposition": "SELECTED",
+   "failed_predicates": [],
+   "id": "vllm-current-source",
+   "predicate_adjudications": [
+    {
+     "evidence": [
+      "repository commit 0eae9acd4d01574e12d4ecf6a0229813f7fdb799"
+     ],
+     "id": "p1_exact_immutable_runtime_revision",
+     "status": "PASS"
+    },
+    {
+     "evidence": [
+      "LICENSE c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+     ],
+     "id": "p2_license_provenance",
+     "status": "PASS"
+    },
+    {
+     "evidence": [
+      "vllm/models/deepseek_v41/nvidia/model.py 51e40463b6ce3a76ad64a09b6bbdf4688cae468d316f426d9d394fcff08b146e"
+     ],
+     "id": "p3_source_faithful_model_path",
+     "status": "PASS"
+    },
+    {
+     "evidence": [
+      "default_loader.py 9c9d54b1b650bf5affc924ebb8b8c73711e187ae7486cadd9f737bb1279cc7b8: standard model.safetensors.index.json plus shard filtering/iterator"
+     ],
+     "id": "p4_native_official_sharded_safetensors",
+     "status": "PASS"
+    },
+    {
+     "evidence": [
+      "default_loader.py standard safetensors path; no R7 conversion producer"
+     ],
+     "id": "p5_no_mandatory_representation_conversion",
+     "status": "PASS"
+    },
+    {
+     "evidence": [
+      "model.py forward/IntermediateTensors and attention.py paged cache insert path"
+     ],
+     "id": "p6_text_prefill_decode_path",
+     "status": "PASS"
+    },
+    {
+     "evidence": [
+      "utils.py PPMissingLayer/make_layers/is_pp_missing_parameter and model.py local-stage load_weights skip"
+     ],
+     "id": "p7_selective_materialization_control",
+     "status": "PASS"
+    },
+    {
+     "evidence": [
+      "vllm/v1/core/kv_cache_manager.py b5a0bb144934cc3c31a8bc2f3823d0290d6c78b1ac84a2f75c7cf9a5b2eb9468 (request->block ownership req_to_blocks; free(); reset_prefix_cache)",
+      "vllm/v1/core/single_type_kv_cache_manager.py 15360abf039513fad525fbf7490e21ae57165140589994c2b6ab5a28a2ad531a (pop_blocks_for_free; free reverse-order)",
+      "vllm/v1/core/kv_cache_coordinator.py 7fa4065d19021e77917d878c80e9c53a3fb660c174e337a8979e30a2b4e37d23 (SpecGroup uniform-spec grouping)",
+      "vllm/v1/core/sched/scheduler.py ea45be71111aa81af74356835e673b0e8f790c5272ff858d3166194a51019a28b (_free_request on completion; deferred_frees for in-flight; _drain_deferred_frees; _preempt_request frees blocks, resets num_computed_tokens=0, requeues to waiting; is_prefill_chunk prefill/decode transition)",
+      "vllm/v1/kv_cache_interface.py a187dd20b9404bcd169272a2f741a66accd8dd7a8b6ad35a35d8f9e5f8302b4c (KVCacheSpec/MLAAttentionSpec DeepseekV4 cache specs; group merge uniformity)",
+      "vllm/models/deepseek_v41/attention.py 88c47493149406249a195bf9e316ab3c63154ce82001f90dcde5b0e8be137069 (is_kv_source cache ownership; compressed_cache_prefix mapping; PP cuts inside kv-sharing groups not supported)"
+     ],
+     "id": "p8_observable_cache_authority",
+     "status": "PASS"
+    },
+    {
+     "evidence": [
+      "model.py explicit PP intermediate transfer; utils.py local interval; attention.py source-declared invalid cross-sharing cuts"
+     ],
+     "id": "p9_one_legal_multi_resource_shape",
+     "status": "PASS"
+    },
+    {
+     "evidence": [
+      "exact source commit; pyproject.toml 953aefa02a4a18194946711b76f6a4854fd096f09b3d07ac4403e339cb4dd518; R7-A config 2e84f45cf1dac8c7fcbb200e96667d4b913275690668ed496f24c7747207a809"
+     ],
+     "id": "p10_deterministic_build_identity",
+     "status": "PASS"
+    }
+   ],
+   "revision": "0eae9acd4d01574e12d4ecf6a0229813f7fdb799",
+   "source_evidence_ref": "external-source-evidence.json#third_party_candidates.vllm"
+  },
+  {
+   "disposition": "REJECTED",
+   "failed_predicates": [
+    "p3_source_faithful_model_path",
+    "p8_observable_cache_authority",
+    "p9_one_legal_multi_resource_shape"
+   ],
+   "id": "sglang-current-source",
+   "revision": "7ccbf5fd04f7ee23095fc38e49e749d58dc18282",
+   "why": "The pinned source says support has not shipped in an SGLang release."
+  }
+ ],
+ "mandatory_predicates": [
+  "p1_exact_immutable_runtime_revision",
+  "p2_license_provenance",
+  "p3_source_faithful_model_path",
+  "p4_native_official_sharded_safetensors",
+  "p5_no_mandatory_representation_conversion",
+  "p6_text_prefill_decode_path",
+  "p7_selective_materialization_control",
+  "p8_observable_cache_authority",
+  "p9_one_legal_multi_resource_shape",
+  "p10_deterministic_build_identity"
+ ],
+ "schema": "inferswarm.issue209.runtime-authority/2",
+ "selection_scope": "CPU/static source audit only; no checkpoint body was downloaded and no model code was executed."
 }

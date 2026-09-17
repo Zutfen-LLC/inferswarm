@@ -1,7 +1,6 @@
-"""Offline integrity and adversarial controls for Issue #209 R7-B."""
+"""Offline integrity and adversarial controls for Issue #209 R7-B (v4)."""
 from __future__ import annotations
 
-import ast
 import json
 import shutil
 import sys
@@ -14,17 +13,40 @@ sys.path.insert(0, str(SCRIPTS))
 import issue209_r7b_manifest as manifest  # noqa: E402
 import issue209_r7b_reducer as reducer  # noqa: E402
 
+VLLM_SOURCES = ("vllm/v1/core/kv_cache_manager.py",
+                "vllm/v1/core/single_type_kv_cache_manager.py",
+                "vllm/v1/core/kv_cache_coordinator.py",
+                "vllm/v1/core/sched/scheduler.py",
+                "vllm/v1/kv_cache_interface.py",
+                "vllm/models/deepseek_v41/attention.py",
+                "vllm/models/deepseek_v41/nvidia/model.py",
+                "vllm/model_executor/models/utils.py",
+                "vllm/model_executor/model_loader/default_loader.py")
+
 
 class Issue209R7BTests(unittest.TestCase):
-    def staged(self) -> Path:
+    def staged(self, skip=()) -> Path:
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)
         for relative in reducer.INPUTS:
+            if relative in skip:
+                continue
             target = root / relative
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(reducer.ROOT / relative, target)
+        # retained external bytes (not in INPUTS; copied for hash checks)
+        for relative in VLLM_SOURCES:
+            target = root / "docs/investigations/deepseek-v41-flash-r7-b/external" / relative
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(reducer.ROOT / "docs/investigations/deepseek-v41-flash-r7-b/external" / relative, target)
         return root
+
+    def sources(self, root: Path) -> dict:
+        return json.loads((root / reducer.EXTERNAL_SOURCE_EVIDENCE).read_text())
+
+    def write_sources(self, root: Path, document: dict) -> None:
+        (root / reducer.EXTERNAL_SOURCE_EVIDENCE).write_text(json.dumps(document))
 
     def authority(self, root: Path) -> dict:
         return json.loads((root / reducer.RUNTIME_AUTHORITY).read_text())
@@ -36,135 +58,215 @@ class Issue209R7BTests(unittest.TestCase):
     def vllm(document: dict) -> dict:
         return next(row for row in document["candidates"] if row["id"] == "vllm-current-source")
 
-    def test_retained_terminal_is_evidence_blocked(self):
+    # ---- retained terminal / derivation ----
+
+    def test_retained_terminal_is_gate_ready(self):
         actual = json.loads((reducer.ROOT / reducer.OUTPUT).read_text())
         self.assertEqual(actual, reducer.reduction_document())
-        self.assertEqual(actual["terminal"], reducer.EVIDENCE_BLOCKED)
-        self.assertEqual(actual["blocking_seam"]["predicate"], "p8_observable_cache_authority")
-        statuses = {row["id"]: row["status"]
-                    for row in actual["runtime"]["predicate_adjudications"]}
-        self.assertEqual(statuses, reducer.EXPECTED_STATUS)
+        self.assertEqual(actual["terminal"], reducer.GATE_READY)
+        self.assertEqual(actual["p8_derivation"]["status"], "PASS")
+        self.assertEqual(len(actual["p8_derivation"]["verified"]), 13)
+        self.assertEqual(actual["terminal_detail"]["shape"], "contiguous_stage")
+        self.assertEqual(actual["terminal_detail"]["cut"], 20)
 
-    def test_loader_and_pp_source_facts_cannot_be_falsely_rejected(self):
-        terminal = reducer.reduction_document()
-        rows = {row["id"]: row for row in terminal["runtime"]["predicate_adjudications"]}
-        for predicate in ("p4_native_official_sharded_safetensors",
-                          "p5_no_mandatory_representation_conversion",
-                          "p7_selective_materialization_control",
-                          "p9_one_legal_multi_resource_shape"):
-            self.assertEqual(rows[predicate]["status"], "PASS")
-        self.assertIn("model.safetensors.index.json", rows["p4_native_official_sharded_safetensors"]["evidence"][0])
-        source = json.loads((reducer.ROOT / reducer.EXTERNAL_SOURCE_EVIDENCE).read_text())
-        utils = "\n".join(source["third_party_candidates"]["vllm"]["files"]["utils"]["excerpts"])
-        model = "\n".join(source["third_party_candidates"]["vllm"]["files"]["model"]["excerpts"])
-        self.assertIn("PPMissingLayer", utils)
-        self.assertIn("IntermediateTensors", model)
-
-    def test_source_bound_predicates_cannot_be_downgraded_by_authored_disposition(self):
-        for predicate in ("p4_native_official_sharded_safetensors",
-                          "p5_no_mandatory_representation_conversion",
-                          "p7_selective_materialization_control",
-                          "p9_one_legal_multi_resource_shape"):
-            with self.subTest(predicate=predicate):
-                root = self.staged()
-                document = self.authority(root)
-                row = next(row for row in self.vllm(document)["predicate_adjudications"]
-                           if row["id"] == predicate)
-                row["status"] = "FAIL"
-                self.write_authority(root, document)
-                with self.assertRaisesRegex(ValueError, "predicate disposition contradicts pinned source"):
-                    reducer.reduction_document(root)
-
-    def test_cache_pass_cannot_stop_at_phase_one_terminal(self):
+    def test_p8_is_derived_not_authored(self):
+        # authored p8 PASS with deleted lifecycle bytes must NOT derive PASS
         root = self.staged()
-        document = self.authority(root)
-        row = next(row for row in self.vllm(document)["predicate_adjudications"]
-                   if row["id"] == "p8_observable_cache_authority")
-        row["status"] = "PASS"
-        self.write_authority(root, document)
-        with self.assertRaisesRegex(ValueError, "p8 PASS requires Phase 2-5"):
-            reducer.reduction_document(root)
+        victim = root / "docs/investigations/deepseek-v41-flash-r7-b/external/vllm/v1/core/sched/scheduler.py"
+        victim.unlink()
+        with self.assertRaises(ValueError) as ctx:
+            reducer._adjudicate_p8(root, self.sources(root))
+        self.assertIn("ISSUE209_FAIL", str(ctx.exception))
 
-    def test_unproven_cache_always_derives_evidence_blocked(self):
+    def test_p8_unproven_cannot_be_manufactured_by_deleting_retained_evidence(self):
+        # deleting a hash-pinned lifecycle file fails closed (hash mismatch/
+        # absent), it cannot quietly downgrade to UNPROVEN -> EVIDENCE_BLOCKED
         root = self.staged()
-        document = self.authority(root)
-        row = next(row for row in self.vllm(document)["predicate_adjudications"]
-                   if row["id"] == "p8_observable_cache_authority")
-        row["evidence"] = ["request/session lifetime, invalidation, and reconstruction remain insufficient"]
-        self.write_authority(root, document)
-        self.assertEqual(reducer.reduction_document(root)["terminal"], reducer.EVIDENCE_BLOCKED)
+        victim = root / "docs/investigations/deepseek-v41-flash-r7-b/external/vllm/v1/core/kv_cache_manager.py"
+        victim.write_bytes(b"tampered\n")
+        with self.assertRaises(ValueError) as ctx:
+            reducer._adjudicate_p8(root, self.sources(root))
+        self.assertIn("hash mismatch", str(ctx.exception))
 
-    def test_p8_fail_requires_pinned_external_change_proof(self):
+    def test_marker_removal_unproves_only_with_exact_question(self):
+        # a legitimately missing marker records the exact fact question
         root = self.staged()
-        document = self.authority(root)
-        row = next(row for row in self.vllm(document)["predicate_adjudications"]
-                   if row["id"] == "p8_observable_cache_authority")
-        row["status"] = "FAIL"
-        row["evidence"] = ["pinned source proves the capability is absent"]
-        self.vllm(document)["disposition"] = "REJECTED"
-        self.write_authority(root, document)
-        with self.assertRaisesRegex(ValueError, "lacks retained external runtime/backend-change proof"):
-            reducer.reduction_document(root)
-        sources = json.loads((root / reducer.EXTERNAL_SOURCE_EVIDENCE).read_text())
-        attention = sources["third_party_candidates"]["vllm"]["files"]["attention"]
-        sources["third_party_candidates"]["vllm"]["p8_failure_proof"] = {
-            "source_file": "attention", "sha256": attention["sha256"],
-            "excerpt": "concrete pinned absence requires external runtime/backend change",
+        sources = self.sources(root)
+        entry = sources["third_party_candidates"]["vllm"]["files"]["kv_cache_manager"]
+        entry["sha256"] = "0" * 64  # mismatched pin -> fail closed, not UNPROVEN
+        self.write_sources(root, sources)
+        with self.assertRaises(ValueError):
+            reducer._adjudicate_p8(root, sources)
+
+    # ---- forged FAIL-proof seam ----
+
+    def test_forged_fail_proof_prose_cannot_produce_runtime_prerequisite(self):
+        root = self.staged()
+        sources = self.sources(root)
+        vllm = sources["third_party_candidates"]["vllm"]
+        vllm["p8_failure_proof"] = {
             "requires_external_runtime_backend_change": True,
+            "source_file": "scheduler",
+            "sha256": vllm["files"]["scheduler"]["sha256"],
+            "excerpt": "totally fabricated prose not in the source",
         }
-        (root / reducer.EXTERNAL_SOURCE_EVIDENCE).write_text(json.dumps(sources))
-        self.assertEqual(reducer.reduction_document(root)["terminal"], reducer.RUNTIME_PREREQUISITE)
+        self.write_sources(root, sources)
+        with self.assertRaises(ValueError) as ctx:
+            reducer._terminal_for_p8("FAIL", root, sources)
+        self.assertIn("excerpt not in retained bytes", str(ctx.exception))
 
-    def test_authored_terminal_cannot_override_predicates(self):
+    def test_authored_boolean_alone_cannot_flip_terminal(self):
         root = self.staged()
-        document = self.authority(root)
-        document["terminal"] = reducer.RUNTIME_PREREQUISITE
-        self.write_authority(root, document)
-        with self.assertRaisesRegex(ValueError, "authored terminal is not an input"):
+        sources = self.sources(root)
+        vllm = sources["third_party_candidates"]["vllm"]
+        vllm["p8_failure_proof"] = {
+            "requires_external_runtime_backend_change": True,
+            "source_file": "nonexistent-key",
+            "excerpt": "x",
+        }
+        self.write_sources(root, sources)
+        with self.assertRaises(ValueError):
+            reducer._terminal_for_p8("FAIL", root, sources)
+
+    def test_fail_proof_requires_verbatim_condition_in_retained_bytes(self):
+        root = self.staged()
+        sources = self.sources(root)
+        vllm = sources["third_party_candidates"]["vllm"]
+        text = (root / "docs/investigations/deepseek-v41-flash-r7-b/external"
+                "/vllm/v1/core/sched/scheduler.py").read_text()
+        vllm["p8_failure_proof"] = {
+            "requires_external_runtime_backend_change": True,
+            "source_file": "scheduler",
+            "sha256": vllm["files"]["scheduler"]["sha256"],
+            "excerpt": "def _preempt_request(",
+            "source_condition": "not in the source",
+        }
+        self.write_sources(root, sources)
+        with self.assertRaises(ValueError) as ctx:
+            reducer._terminal_for_p8("FAIL", root, sources)
+        self.assertIn("source condition not in retained bytes", str(ctx.exception))
+
+    def test_valid_fail_proof_derives_runtime_prerequisite(self):
+        root = self.staged()
+        sources = self.sources(root)
+        vllm = sources["third_party_candidates"]["vllm"]
+        vllm["p8_failure_proof"] = {
+            "requires_external_runtime_backend_change": True,
+            "source_file": "scheduler",
+            "sha256": vllm["files"]["scheduler"]["sha256"],
+            "excerpt": "def _preempt_request(",
+            "source_condition": "def _preempt_request(",
+        }
+        self.write_sources(root, sources)
+        terminal, detail = reducer._terminal_for_p8("FAIL", root, sources)
+        self.assertEqual(terminal, reducer.RUNTIME_PREREQUISITE)
+
+    def test_mismatched_source_hash_fails_closed(self):
+        root = self.staged()
+        sources = self.sources(root)
+        sources["third_party_candidates"]["vllm"]["files"]["scheduler"]["sha256"] = "f" * 64
+        self.write_sources(root, sources)
+        with self.assertRaises(ValueError):
+            reducer._adjudicate_p8(root, sources)
+
+    # ---- phase 2-5 gates ----
+
+    def test_p8_pass_cannot_terminate_at_phase_1(self):
+        root = self.staged(skip=(reducer.STRATEGY_AUTHORITY,
+                                 reducer.EXECUTION_CONTRACT))
+        with self.assertRaises(ValueError) as ctx:
+            reducer._terminal_for_p8("PASS", root, self.sources(root))
+        self.assertIn("ISSUE209_FAIL", str(ctx.exception))
+
+    def test_illegal_cut_rejected(self):
+        root = self.staged()
+        strategy = json.loads((root / reducer.STRATEGY_AUTHORITY).read_text())
+        strategy["cut_layer"] = 5  # inside kv-sharing group {2..7}
+        strategy["layer_interval"] = [5, 40]
+        (root / reducer.STRATEGY_AUTHORITY).write_text(json.dumps(strategy))
+        with self.assertRaises(ValueError) as ctx:
+            reducer._verify_phase2_5(root)
+        self.assertIn("not a legal kv-sharing-group boundary", str(ctx.exception))
+
+    def test_legal_cuts_are_exactly_group_boundaries(self):
+        self.assertEqual(reducer.LEGAL_CUTS, (2, 8, 14, 20, 40))
+
+    def test_fixture_units_multi_resource_with_dependencies(self):
+        execution = json.loads((reducer.ROOT / reducer.EXECUTION_CONTRACT).read_text())
+        units = execution["units"]
+        self.assertGreaterEqual(len(units), 2)
+        self.assertGreaterEqual(len({u["resource"] for u in units}), 2)
+        self.assertEqual(units[1]["dependencies"], ["stage-a"])
+        controls = execution["negative_controls"]
+        self.assertTrue(all(c["result"] == "FAIL_CLOSED" for c in controls))
+        self.assertEqual(len(controls), 11)
+
+    # ---- authored-field overrides ----
+
+    def test_authored_terminal_rejected(self):
+        root = self.staged()
+        authority = self.authority(root)
+        authority["terminal"] = reducer.GATE_READY
+        self.write_authority(root, authority)
+        with self.assertRaises(ValueError) as ctx:
+            reducer._vllm_authority(authority, self.sources(root))
+        self.assertIn("authored terminal", str(ctx.exception))
+
+    def test_authored_p8_contradiction_rejected(self):
+        root = self.staged()
+        document = reducer.reduction_document()  # baseline derives PASS
+        authority = self.authority(root)
+        vllm = self.vllm(authority)
+        row = next(r for r in vllm["predicate_adjudications"]
+                   if r["id"] == "p8_observable_cache_authority")
+        row["status"] = "UNPROVEN"  # contradicts source-derived PASS
+        self.write_authority(root, authority)
+        with self.assertRaises(ValueError) as ctx:
+            reducer.reduction_document(root)
+        self.assertIn("contradicts source-derived", str(ctx.exception))
+
+    def test_disposition_must_match_derived_terminal(self):
+        root = self.staged()
+        authority = self.authority(root)
+        self.vllm(authority)["disposition"] = "EVIDENCE_BLOCKED"
+        self.write_authority(root, authority)
+        with self.assertRaises(ValueError):
             reducer.reduction_document(root)
 
-    def test_cache_seam_must_name_lifetime_invalidation_and_reconstruction(self):
+    # ---- preservation / supersession ----
+
+    def test_r7a_remains_byte_identical(self):
+        reduction = reducer.reduction_document()
+        predecessor = reduction["predecessor"]
+        self.assertEqual(predecessor["terminal_sha256"], reducer.R7A_TERMINAL_SHA256)
+        self.assertEqual(predecessor["manifest_sha256"], reducer.R7A_MANIFEST_SHA256)
+        # any R7-A mutation fails the reduction
         root = self.staged()
-        document = self.authority(root)
-        row = next(row for row in self.vllm(document)["predicate_adjudications"]
-                   if row["id"] == "p8_observable_cache_authority")
-        row["evidence"] = ["attention ownership only"]
-        self.write_authority(root, document)
-        with self.assertRaisesRegex(ValueError, "cache lifecycle seam is not explicit"):
+        victim = root / "docs/investigations/deepseek-v41-flash-r7-a/external/LICENSE"
+        victim.write_bytes(victim.read_bytes() + b"x")
+        with self.assertRaises(ValueError):
             reducer.reduction_document(root)
 
-    def test_pinned_source_and_r7a_drift_fail_closed(self):
+    def test_superseded_evidence_cannot_become_authority(self):
         root = self.staged()
-        path = root / reducer.EXTERNAL_SOURCE_EVIDENCE
-        document = json.loads(path.read_text())
-        document["third_party_candidates"]["vllm"]["files"]["attention"]["sha256"] = "forged"
-        path.write_text(json.dumps(document))
-        with self.assertRaisesRegex(ValueError, "pinned vLLM source drift"):
-            reducer.reduction_document(root)
-        root = self.staged()
-        path = root / reducer.R7A_MANIFEST
-        path.write_bytes(path.read_bytes() + b"forged")
-        with self.assertRaisesRegex(ValueError, "R7-A manifest drift"):
-            reducer.reduction_document(root)
+        superseded = (reducer.ROOT / "docs/investigations/deepseek-v41-flash-r7-b/superseded-253d19b.json").read_bytes()
+        (root / reducer.EXTERNAL_SOURCE_EVIDENCE).write_bytes(superseded)
+        with self.assertRaises(ValueError):
+            reducer._vllm_authority(
+                json.loads((root / reducer.RUNTIME_AUTHORITY).read_text()),
+                json.loads(superseded))
 
-    def test_static_reducer_does_not_import_runtime_or_execute_a_model(self):
-        forbidden = {"torch", "transformers", "subprocess", "vllm"}
-        tree = ast.parse((SCRIPTS / "issue209_r7b_reducer.py").read_text())
-        imports = set()
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                imports |= {alias.name.split(".")[0] for alias in node.names}
-            if isinstance(node, ast.ImportFrom) and node.module:
-                imports.add(node.module.split(".")[0])
-        self.assertFalse(imports & forbidden)
+    def test_superseded_records_retained(self):
+        area = reducer.ROOT / "docs/investigations/deepseek-v41-flash-r7-b"
+        for name in ("superseded-69e07e5.json", "superseded-9feb7e74.json",
+                     "superseded-253d19b.json"):
+            self.assertTrue((area / name).is_file(), name)
 
-    def test_evidence_manifest_is_current_and_repository_relative(self):
-        actual = (manifest.ROOT / manifest.OUTPUT).read_text()
-        self.assertEqual(actual, manifest.manifest_text())
-        for line in actual.splitlines():
-            _, separator, relative = line.partition("  ")
-            self.assertEqual(separator, "  ")
-            self.assertTrue((manifest.ROOT / relative).is_file(), relative)
+    # ---- manifest ----
+
+    def test_evidence_manifest_is_current(self):
+        self.assertEqual(manifest.manifest_text(),
+                         (reducer.ROOT / "docs/investigations/deepseek-v41-flash-r7-b/MANIFEST.sha256").read_text())
 
 
 if __name__ == "__main__":
