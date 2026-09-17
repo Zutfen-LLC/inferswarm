@@ -25,7 +25,8 @@ R7A_TERMINAL_NAME = "R7A_DEEPSEEK_V41_SUBSTRATE_PREREQUISITE"
 R7A_MANIFEST_SHA256 = "6730826a7c00b92cc88bda814583ccc6955370cde37d685261f764b5146e640c"
 R7A_TERMINAL_SHA256 = "aee287f59199622b97bdf9862624f990416ee838eebea397e6a64d99526806dc"
 VLLM_REVISION = "0eae9acd4d01574e12d4ecf6a0229813f7fdb799"
-TERMINAL = "R7B_RUNTIME_SUBSTRATE_PREREQUISITE"
+EVIDENCE_BLOCKED = "R7B_EVIDENCE_BLOCKED"
+RUNTIME_PREREQUISITE = "R7B_RUNTIME_SUBSTRATE_PREREQUISITE"
 PREDICATES = (
     "p1_exact_immutable_runtime_revision", "p2_license_provenance",
     "p3_source_faithful_model_path", "p4_native_official_sharded_safetensors",
@@ -70,7 +71,34 @@ def _preserve_r7a(root: Path) -> None:
             raise ValueError("ISSUE209_FAIL: R7-A retained source drift")
 
 
-def _vllm_prerequisite(authority: dict[str, Any], sources: dict[str, Any]) -> dict[str, Any]:
+def _terminal_for_p8(p8: dict[str, Any], sources: dict[str, Any]) -> str:
+    """Derive the terminal solely from the cache predicate and retained proof.
+
+    An unresolved source question is evidence-blocked, not a claim about the
+    runtime.  A runtime prerequisite needs a distinct retained proof that the
+    missing capability requires an external runtime/backend change.  A PASS
+    cannot terminate this Phase-1-only reduction: the selected shape, frozen
+    cuts, adapter, and compact fixture must then be completed by later phases.
+    """
+    status = p8.get("status")
+    if status == "UNPROVEN":
+        return EVIDENCE_BLOCKED
+    if status == "FAIL":
+        proof = sources.get("third_party_candidates", {}).get("vllm", {}).get(
+            "p8_failure_proof")
+        if not isinstance(proof, dict) or proof.get("requires_external_runtime_backend_change") is not True:
+            raise ValueError("ISSUE209_FAIL: p8 FAIL lacks retained external runtime/backend-change proof")
+        source_file = proof.get("source_file")
+        source = sources["third_party_candidates"]["vllm"].get("files", {}).get(source_file, {})
+        if not source_file or proof.get("sha256") != source.get("sha256") or not proof.get("excerpt"):
+            raise ValueError("ISSUE209_FAIL: p8 FAIL proof is not bound to retained pinned source")
+        return RUNTIME_PREREQUISITE
+    if status == "PASS":
+        raise ValueError("ISSUE209_FAIL: p8 PASS requires Phase 2-5 shape, cut, adapter, and fixture evidence")
+    raise ValueError("ISSUE209_FAIL: invalid p8 cache-authority disposition")
+
+
+def _vllm_authority(authority: dict[str, Any], sources: dict[str, Any]) -> tuple[dict[str, Any], str]:
     if authority.get("mandatory_predicates") != list(PREDICATES):
         raise ValueError("ISSUE209_FAIL: incomplete selection rubric")
     candidates = authority.get("candidates")
@@ -80,7 +108,7 @@ def _vllm_prerequisite(authority: dict[str, Any], sources: dict[str, Any]) -> di
     if len(vllm_rows) != 1:
         raise ValueError("ISSUE209_FAIL: vLLM candidate identity drift")
     vllm = vllm_rows[0]
-    if (vllm.get("revision") != VLLM_REVISION or vllm.get("disposition") != "REJECTED"
+    if (vllm.get("revision") != VLLM_REVISION
             or vllm.get("failed_predicates") != ["p8_observable_cache_authority"]):
         raise ValueError("ISSUE209_FAIL: unsupported runtime disposition")
     adjudications = {row.get("id"): row for row in vllm.get("predicate_adjudications", [])}
@@ -88,9 +116,9 @@ def _vllm_prerequisite(authority: dict[str, Any], sources: dict[str, Any]) -> di
         raise ValueError("ISSUE209_FAIL: incomplete predicate adjudication")
     for predicate, expected in EXPECTED_STATUS.items():
         row = adjudications[predicate]
-        if row.get("status") != expected or not row.get("evidence"):
-            if predicate == "p8_observable_cache_authority" and row.get("status") == "PASS":
-                raise ValueError("ISSUE209_FAIL: unsupported cache authority upgrade")
+        if not row.get("evidence"):
+            raise ValueError("ISSUE209_FAIL: predicate disposition lacks retained evidence")
+        if predicate != "p8_observable_cache_authority" and row.get("status") != expected:
             raise ValueError("ISSUE209_FAIL: predicate disposition contradicts pinned source")
 
     source = sources.get("third_party_candidates", {}).get("vllm", {})
@@ -106,20 +134,30 @@ def _vllm_prerequisite(authority: dict[str, Any], sources: dict[str, Any]) -> di
             or source.get("license", {}).get("sha256")
             != "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"):
         raise ValueError("ISSUE209_FAIL: vLLM provenance/build drift")
-    p8_evidence = " ".join(adjudications["p8_observable_cache_authority"]["evidence"])
+    p8 = adjudications["p8_observable_cache_authority"]
+    p8_evidence = " ".join(p8["evidence"])
     required_gap = ("request/session lifetime", "invalidation", "reconstruction")
-    if not all(term in p8_evidence for term in required_gap):
+    if p8.get("status") == "UNPROVEN" and not all(term in p8_evidence for term in required_gap):
         raise ValueError("ISSUE209_FAIL: cache lifecycle seam is not explicit")
-    return vllm
+    if "terminal" in authority or "terminal" in vllm:
+        raise ValueError("ISSUE209_FAIL: authored terminal is not an input to reduction")
+    terminal = _terminal_for_p8(p8, sources)
+    expected_disposition = {
+        EVIDENCE_BLOCKED: "EVIDENCE_BLOCKED",
+        RUNTIME_PREREQUISITE: "REJECTED",
+    }[terminal]
+    if vllm.get("disposition") != expected_disposition:
+        raise ValueError("ISSUE209_FAIL: runtime disposition contradicts predicate-derived terminal")
+    return vllm, terminal
 
 
 def reduction_document(root: Path = ROOT) -> dict[str, Any]:
     _preserve_r7a(root)
-    vllm = _vllm_prerequisite(_load(root, RUNTIME_AUTHORITY),
-                              _load(root, EXTERNAL_SOURCE_EVIDENCE))
+    vllm, terminal = _vllm_authority(_load(root, RUNTIME_AUTHORITY),
+                                     _load(root, EXTERNAL_SOURCE_EVIDENCE))
     return {
-        "schema": "inferswarm.issue209.terminal-reduction/2",
-        "terminal": TERMINAL,
+        "schema": "inferswarm.issue209.terminal-reduction/3",
+        "terminal": terminal,
         "predecessor": {
             "merge": "7417c2f58a63d4da854ff399ba6fea5bd722da83",
             "terminal": R7A_TERMINAL_NAME,
@@ -134,12 +172,13 @@ def reduction_document(root: Path = ROOT) -> dict[str, Any]:
                     "predicate_adjudications": vllm["predicate_adjudications"]},
         "blocking_seam": {
             "predicate": "p8_observable_cache_authority",
-            "observed": "Pinned attention source establishes KV-source ownership, shared-cache dependencies, prefill/decode token accounting, and rejection of PP cuts inside a sharing group; it does not establish request/session cache lifetime, invalidation, or a legal reconstruction boundary.",
+            "classification": "evidence_gap",
+            "observed": "Pinned attention source establishes KV-source ownership, shared-cache dependencies, prefill/decode token accounting, and rejection of PP cuts inside a sharing group; the retained source set does not bind request/session lifetime, invalidation, or legal reconstruction to this model's selected boundary.",
             "smallest_successor_evidence": "Retain exact pinned vLLM request/session KV-cache lifecycle and invalidation/reconstruction source, bind it to this model's cache-source mapping, then re-adjudicate p8 without downloading a checkpoint or executing a model.",
         },
         "non_claims": [
             "No strategy adapter, compact execution fixture, full checkpoint download, model execution, GPU/CUDA/Vulkan qualification, serving, or representation conversion occurred.",
-            "This prerequisite records no execution authorization.",
+            "This evidence blocker records no execution authorization or runtime/backend deficiency.",
         ],
     }
 

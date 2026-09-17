@@ -36,10 +36,10 @@ class Issue209R7BTests(unittest.TestCase):
     def vllm(document: dict) -> dict:
         return next(row for row in document["candidates"] if row["id"] == "vllm-current-source")
 
-    def test_retained_terminal_is_current_runtime_prerequisite(self):
+    def test_retained_terminal_is_evidence_blocked(self):
         actual = json.loads((reducer.ROOT / reducer.OUTPUT).read_text())
         self.assertEqual(actual, reducer.reduction_document())
-        self.assertEqual(actual["terminal"], reducer.TERMINAL)
+        self.assertEqual(actual["terminal"], reducer.EVIDENCE_BLOCKED)
         self.assertEqual(actual["blocking_seam"]["predicate"], "p8_observable_cache_authority")
         statuses = {row["id"]: row["status"]
                     for row in actual["runtime"]["predicate_adjudications"]}
@@ -75,14 +75,52 @@ class Issue209R7BTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "predicate disposition contradicts pinned source"):
                     reducer.reduction_document(root)
 
-    def test_cache_predicate_cannot_be_upgraded_without_lifecycle_evidence(self):
+    def test_cache_pass_cannot_stop_at_phase_one_terminal(self):
         root = self.staged()
         document = self.authority(root)
         row = next(row for row in self.vllm(document)["predicate_adjudications"]
                    if row["id"] == "p8_observable_cache_authority")
         row["status"] = "PASS"
         self.write_authority(root, document)
-        with self.assertRaisesRegex(ValueError, "unsupported cache authority upgrade"):
+        with self.assertRaisesRegex(ValueError, "p8 PASS requires Phase 2-5"):
+            reducer.reduction_document(root)
+
+    def test_unproven_cache_always_derives_evidence_blocked(self):
+        root = self.staged()
+        document = self.authority(root)
+        row = next(row for row in self.vllm(document)["predicate_adjudications"]
+                   if row["id"] == "p8_observable_cache_authority")
+        row["evidence"] = ["request/session lifetime, invalidation, and reconstruction remain insufficient"]
+        self.write_authority(root, document)
+        self.assertEqual(reducer.reduction_document(root)["terminal"], reducer.EVIDENCE_BLOCKED)
+
+    def test_p8_fail_requires_pinned_external_change_proof(self):
+        root = self.staged()
+        document = self.authority(root)
+        row = next(row for row in self.vllm(document)["predicate_adjudications"]
+                   if row["id"] == "p8_observable_cache_authority")
+        row["status"] = "FAIL"
+        row["evidence"] = ["pinned source proves the capability is absent"]
+        self.vllm(document)["disposition"] = "REJECTED"
+        self.write_authority(root, document)
+        with self.assertRaisesRegex(ValueError, "lacks retained external runtime/backend-change proof"):
+            reducer.reduction_document(root)
+        sources = json.loads((root / reducer.EXTERNAL_SOURCE_EVIDENCE).read_text())
+        attention = sources["third_party_candidates"]["vllm"]["files"]["attention"]
+        sources["third_party_candidates"]["vllm"]["p8_failure_proof"] = {
+            "source_file": "attention", "sha256": attention["sha256"],
+            "excerpt": "concrete pinned absence requires external runtime/backend change",
+            "requires_external_runtime_backend_change": True,
+        }
+        (root / reducer.EXTERNAL_SOURCE_EVIDENCE).write_text(json.dumps(sources))
+        self.assertEqual(reducer.reduction_document(root)["terminal"], reducer.RUNTIME_PREREQUISITE)
+
+    def test_authored_terminal_cannot_override_predicates(self):
+        root = self.staged()
+        document = self.authority(root)
+        document["terminal"] = reducer.RUNTIME_PREREQUISITE
+        self.write_authority(root, document)
+        with self.assertRaisesRegex(ValueError, "authored terminal is not an input"):
             reducer.reduction_document(root)
 
     def test_cache_seam_must_name_lifetime_invalidation_and_reconstruction(self):

@@ -1,0 +1,7 @@
+{
+  "schema": "inferswarm.issue209.superseded-terminal-correction/1",
+  "superseded_commit": "9feb7e74f2c9ce1915a85e9c4d74e068bf0f750e",
+  "prior_terminal": "R7B_RUNTIME_SUBSTRATE_PREREQUISITE",
+  "correction_reason": "The corrected source audit left p8 observable_cache_authority UNPROVEN while its reducer derived a runtime prerequisite. Issue #209 reserves that terminal for a mechanically proven external runtime/backend deficiency; this successor classifies the unresolved lifecycle/reconstruction source gap as R7B_EVIDENCE_BLOCKED.",
+  "preserved_history": "69e07e5 remains the original insufficient-audit correction history; 9feb7e74 remains the expanded-source re-adjudication history. Neither is rewritten."
+}

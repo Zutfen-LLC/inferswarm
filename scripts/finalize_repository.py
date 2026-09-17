@@ -1312,6 +1312,7 @@ _R7B_AUTHORED = frozenset({
     f"{_R7B}/mainline-reconciliation.json",
     f"{_R7B}/runtime-authority.json",
     f"{_R7B}/superseded-69e07e5.json",
+    f"{_R7B}/superseded-9feb7e74.json",
 })
 # The additive Issue #130 successor bundle: current-finalization
 # integrity for the Issue #130 sources, never a rewrite of the closed
