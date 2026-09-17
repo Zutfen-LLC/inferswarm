@@ -2,7 +2,18 @@
 
 Status: COMPLETE — terminal `V2B_V340L_DUAL_DIE_QUALIFICATION_PASS`
 (derived by `scripts/issue210_terminal.py` from the retained artifacts;
-see TERMINAL.json).
+see TERMINAL.json). The terminal mechanically requires, derived from
+retained bytes on every run: per-die qualification/canonical PASS with
+full offload, byte-exact output and accounting 0/0/0 across all
+repeats, raw stdout/stderr digests re-hashed from the retained raw
+files, correct and distinct selector/BDF bindings, distinct Compute
+Units, portability audit PASS, the accepted V2-A predecessor identity
+(merge `e38ebe9` declared by both authorities AND carried by the
+retained accepted V2-A terminal artifact), and the retained Phase-1
+topology proving root port `00:1d.0` and PM8533 upstream `02:00.0`
+both negotiated Gen3 x1 (`8.0 GT/s`, width `1`) in
+`raw/phase1/pci-topology.json`. A mutation of any one predicate
+prevents the PASS terminal.
 
 Both physical Vega 10 dies on the newly installed V340L were
 independently qualified through the accepted V2-A reusable harness,
@@ -60,12 +71,18 @@ BDFs were freshly discovered; nothing was copied from the issue text.
 
 ## Negative controls
 
-16 fail-closed controls in `tests/test_issue210_v2b_v340l.py` (19
-tests), mutating the REAL retained evidence: wrong selector/BDF,
-selector/BDF swap between the identical dies, stale inventory aging,
-mutated accepted evidence, partial offload, wrong-die attribution,
-accounting substitution, nonzero mirror/fetch, authored-PASS
-contradiction, non-Gen3-x1 topology, and one-die-PASS promotion.
+Fail-closed controls in `tests/test_issue210_v2b_v340l.py` (38 tests)
+mutating the REAL retained evidence in isolated sandbox copies and
+re-running the actual terminal reducer end to end: wrong/superseded
+V2-A predecessor identity (merge and terminal), missing or non-Gen3-x1
+Phase-1 topology evidence (root port Gen1/Gen2/wrong-width, PM8533
+upstream Gen1/Gen2/wrong-width, erased speed/width), nonzero accounting
+(recorded and raw-bytes-derived: unexplained host mirror, post-ready
+source fetches, unplanned state movements), raw stdout/stderr digest
+mutation, selector/BDF swap, one-die-PASS-only promotion, plus the
+retained loader-level authority controls (wrong selector/BDF, stale
+inventory, mutated accepted evidence, partial offload, wrong-die
+attribution, accounting substitution).
 
 ## Nonclaims
 

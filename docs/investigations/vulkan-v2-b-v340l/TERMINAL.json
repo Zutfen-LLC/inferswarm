@@ -1,4 +1,14 @@
 {
+  "accepted_predecessor": {
+    "accepted_v2a_merge": "e38ebe91a0604fb666397ddae675248e9f819f60",
+    "accepted_v2a_terminal": "V2A_REUSABLE_DEVICE_QUALIFICATION_HARNESS_PASS",
+    "both_authorities_declare_accepted_merge": true,
+    "both_authorities_declare_accepted_terminal": true,
+    "retained_v2a_terminal_artifact": "docs/investigations/vulkan-v2-a/FINAL-TERMINAL.json",
+    "retained_v2a_terminal_is_accepted": true,
+    "retained_v2a_terminal_sha256": "42d32ce95b710ba973c33db69885dbdb6f0845ee03ca3d0aa1f5e4ecb8e57aad",
+    "retained_v2a_terminal_value": "V2A_REUSABLE_DEVICE_QUALIFICATION_HARNESS_PASS"
+  },
   "campaign_main_at_start": "267b983de1249cad9c516e5c5c3cf86ed4a5a252",
   "cross_die_audit": {
     "frozen_field_differences": [
@@ -160,7 +170,23 @@
     "no SR-IOV VF support or ROCm/HIP qualification claim",
     "no public backend API stability claim"
   ],
-  "schema": "inferswarm.v2b.terminal/1",
+  "phase1_topology": {
+    "phase1_topology_evidence_complete": true,
+    "pm8533_upstream_bdf": "0000:02:00.0",
+    "pm8533_upstream_current_link_speed": "8.0 GT/s PCIe",
+    "pm8533_upstream_current_link_width": "1",
+    "pm8533_upstream_gen3_x1": true,
+    "pm8533_upstream_is_11f8_8533": true,
+    "pm8533_upstream_present": true,
+    "raw_file": "raw/phase1/pci-topology.json",
+    "raw_file_sha256": "759afb6921ce05ab9d51e02d624bbfe42c56716acc38c1117dddbba27efbbf6b",
+    "root_port_bdf": "0000:00:1d.0",
+    "root_port_current_link_speed": "8.0 GT/s PCIe",
+    "root_port_current_link_width": "1",
+    "root_port_gen3_x1": true,
+    "root_port_present": true
+  },
+  "schema": "inferswarm.v2b.terminal/2",
   "successor_readiness": {
     "both_dies_eligible_for_later_simultaneous_testing": true,
     "consumable_unchanged_per_die": [
@@ -189,10 +215,14 @@
   },
   "terminal": "V2B_V340L_DUAL_DIE_QUALIFICATION_PASS",
   "terminal_derivation": {
+    "accepted_v2a_predecessor_verified": true,
     "die_a_pass": true,
     "die_b_pass": true,
     "distinct_compute_units": true,
+    "phase1_topology_evidence_complete": true,
+    "pm8533_upstream_gen3_x1": true,
     "portability_audit_result": "PASS",
+    "root_port_gen3_x1": true,
     "selectors_bound_to_distinct_bdfs": true
   }
 }
