@@ -6,8 +6,9 @@ see TERMINAL.json).
 
 Both physical Vega 10 dies on the newly installed V340L were
 independently qualified through the accepted V2-A reusable harness,
-byte-unchanged (all 18 harness source sha256s equal the accepted R3
-authority pins):
+byte-unchanged: all 18 harness source files are byte-identical to merge
+`e38ebe9` (mechanical git diff), of which 14 carry individual sha256
+pins in accepted V2-A R3 artifacts (all re-verified):
 
 - die A: selector `Vulkan1` -> BDF `06:00.0`, `cu-v340l-die-a` /
   `mr-v340l-die-a-vram`

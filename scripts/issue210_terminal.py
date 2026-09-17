@@ -78,6 +78,12 @@ def die_facts(die: str) -> dict:
         # comparator against the SAME frozen reference for every repeat: each
         # repeat's correctness byte_exact flag is retained below.
         "repeat_byte_exact": [r["correctness"]["byte_exact_visible_output"] for r in repeats],
+        "raw_digests_match_records": all(
+            digest((AREA / "raw" / f"v2b-v340l-{die}-canonical-01{suffix}" /
+                    "stdout.txt").read_bytes()) == r["attempt"]["stdout_sha256"]
+            and digest((AREA / "raw" / f"v2b-v340l-{die}-canonical-01{suffix}" /
+                       "stderr.txt").read_bytes()) == r["attempt"]["stderr_sha256"]
+            for r, suffix in zip(repeats, ("", "-r2", "-r3"))),
         "selected_device_line": next(
             line for line in (AREA / "raw" / f"v2b-v340l-{die}-canonical-01" /
                               "stderr.txt").read_text().splitlines()
@@ -99,7 +105,8 @@ def main() -> int:
                 and all(v == 0 for v in d["accounting_three_tuple"])
                 and d["repeat_count"] >= 3 and all(d["repeat_byte_exact"])
                 and d["repeat_all_accounting_clean"]
-                and d["offloaded_layers_full"] is True)
+                and d["offloaded_layers_full"] is True
+                and d["raw_digests_match_records"] is True)
 
     a_pass, b_pass = die_passes(a), die_passes(b)
     bound = {x["selector"]: x["pci_bdf"] for x in bindings["bindings"]

@@ -66,6 +66,7 @@
     "plan_digest": "183a96e540edc0582f2ee3ecfa06555ccd380aa49575968b167b9d64361e1ba0",
     "qualification_digest": "83ffa4c46c685a077f485f37a423cc0f5fd2625dc89bc003b95cb73fb5213811",
     "qualification_result": "PASS",
+    "raw_digests_match_records": true,
     "repeat_all_accounting_clean": true,
     "repeat_byte_exact": [
       true,
@@ -114,6 +115,7 @@
     "plan_digest": "acd9878dc75443137bad3dfd9f629ebf17648a2524a956ddd82e898144b68488",
     "qualification_digest": "726b13a7c16a3e026202d2c38afceed6337dd1a6dd800329b63f4ac2c69f6423",
     "qualification_result": "PASS",
+    "raw_digests_match_records": true,
     "repeat_all_accounting_clean": true,
     "repeat_byte_exact": [
       true,
