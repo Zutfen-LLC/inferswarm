@@ -1,0 +1,196 @@
+{
+  "campaign_main_at_start": "267b983de1249cad9c516e5c5c3cf86ed4a5a252",
+  "cross_die_audit": {
+    "frozen_field_differences": [
+      {
+        "classification": "IDENTITY_DATA_ONLY",
+        "field": "canonical_execution_evidence_id"
+      },
+      {
+        "classification": "IDENTITY_DATA_ONLY",
+        "field": "compute_unit_id"
+      },
+      {
+        "classification": "IDENTITY_DATA_ONLY",
+        "field": "implementation_id"
+      },
+      {
+        "classification": "IDENTITY_DATA_ONLY",
+        "field": "memory_resource_id"
+      },
+      {
+        "classification": "IDENTITY_DATA_ONLY",
+        "field": "physical_device_bdf"
+      },
+      {
+        "classification": "IDENTITY_DATA_ONLY",
+        "field": "qualification_evidence_id"
+      },
+      {
+        "classification": "IDENTITY_DATA_ONLY",
+        "field": "runtime_identity"
+      },
+      {
+        "classification": "IDENTITY_DATA_ONLY",
+        "field": "selector"
+      }
+    ],
+    "harness_source_hashes_identical": true,
+    "result": "PASS"
+  },
+  "die_a": {
+    "accounting_three_tuple": [
+      0,
+      0,
+      0
+    ],
+    "authority_sha256": "59e2429914564b9bfc8a4d5a33a303d10f3fbd8e6dbecfdb8fcee5723ca61f54",
+    "byte_exact_visible_output": true,
+    "candidate_id": "candidate-89b71cecaf3f70b3b74df6975daf5047941d59adf3c17c97b5d307ac4b783bde",
+    "canonical_digest": "6deb9d73035b9180af1e0b33ba5e70c592636f96c2e61ada683a72ca1ac3847a",
+    "canonical_observation_evidence_id": "v2b-v340l-a-qualification-01",
+    "canonical_proof_digest": "30676bd341d87b69960a1a3cfbb797e0a391f37e8aa671d0959cbc704f31f807",
+    "canonical_result": "PASS",
+    "compute_unit_id": "cu-v340l-die-a",
+    "die": "a",
+    "execution_receipt_output_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d",
+    "memory_resource_id": "mr-v340l-die-a-vram",
+    "node_id": "node-inferswarm02",
+    "offloaded_layer_count": 2,
+    "offloaded_layers": [
+      37,
+      37
+    ],
+    "offloaded_layers_full": true,
+    "pci_bdf": "06:00.0",
+    "plan_digest": "183a96e540edc0582f2ee3ecfa06555ccd380aa49575968b167b9d64361e1ba0",
+    "qualification_digest": "83ffa4c46c685a077f485f37a423cc0f5fd2625dc89bc003b95cb73fb5213811",
+    "qualification_result": "PASS",
+    "repeat_all_accounting_clean": true,
+    "repeat_byte_exact": [
+      true,
+      true,
+      true
+    ],
+    "repeat_canonical_digests": [
+      "6deb9d73035b9180af1e0b33ba5e70c592636f96c2e61ada683a72ca1ac3847a",
+      "12555e17ae00480331441f629b3f01f9114c079bb6a9eb3ef746eaf6b6d0b3f8",
+      "6f00f693129e06a757aa4cb955b052b23ee7d01dd5bfbd5a83cbed6c469edb90"
+    ],
+    "repeat_count": 3,
+    "repeat_stdout_sha256": [
+      "0168042f9f99f7efdbed05b661f6edcf518e86207af7d5ba6563b790db473c3f",
+      "93d772af1f60e41db840b80bc8d290fdb9815e8fc7f4a220e99de0bf7ce11257",
+      "9ab1c5b07920b3efcb5943b9e7058b22e5a33618c8183a654df1afd674624c96"
+    ],
+    "selected_device_line": "0.00.819.858 I llama_prepare_model_devices: using device Vulkan1 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:06:00.0) - 8168 MiB free",
+    "selector": "Vulkan1"
+  },
+  "die_b": {
+    "accounting_three_tuple": [
+      0,
+      0,
+      0
+    ],
+    "authority_sha256": "109f5752a30ab1befca68118b3fa8e7c770cf083b302054025908a60da200eab",
+    "byte_exact_visible_output": true,
+    "candidate_id": "candidate-c55230d4112a629ab9ce404516d9b1e8698f90f8621045ad52acac47a6e6f24e",
+    "canonical_digest": "8a30dcaeb131ac8eca4ca5109d083f5382caeb13ec55b137fe55a56494f775ee",
+    "canonical_observation_evidence_id": "v2b-v340l-b-qualification-01",
+    "canonical_proof_digest": "3e8ee5838145d120b197e4972c0717d684ad5a58afba6a2cfbe54a963665b916",
+    "canonical_result": "PASS",
+    "compute_unit_id": "cu-v340l-die-b",
+    "die": "b",
+    "execution_receipt_output_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d",
+    "memory_resource_id": "mr-v340l-die-b-vram",
+    "node_id": "node-inferswarm02",
+    "offloaded_layer_count": 2,
+    "offloaded_layers": [
+      37,
+      37
+    ],
+    "offloaded_layers_full": true,
+    "pci_bdf": "09:00.0",
+    "plan_digest": "acd9878dc75443137bad3dfd9f629ebf17648a2524a956ddd82e898144b68488",
+    "qualification_digest": "726b13a7c16a3e026202d2c38afceed6337dd1a6dd800329b63f4ac2c69f6423",
+    "qualification_result": "PASS",
+    "repeat_all_accounting_clean": true,
+    "repeat_byte_exact": [
+      true,
+      true,
+      true
+    ],
+    "repeat_canonical_digests": [
+      "8a30dcaeb131ac8eca4ca5109d083f5382caeb13ec55b137fe55a56494f775ee",
+      "4f68268cb91ee60b30b3290490c1cc3ed66255b3725600213937b6f1ae851b5c",
+      "7440b2badb82da807053cb0b24a4dc25d46b13cda263d84189c6181e365cded1"
+    ],
+    "repeat_count": 3,
+    "repeat_stdout_sha256": [
+      "3689a3aeec1b8036ff4e01cda0082af83735313b2f501d5cdd6a14dae886bf0a",
+      "cfa0f5efab51e507e93aa2e83bb99990a77d3242b7cbdcb4eca34355bf4bc2b1",
+      "72a3b1f06f57c487841bd9f7208156f05f1498468bbdc40fad5ac62c2ad063f2"
+    ],
+    "selected_device_line": "0.00.809.155 I llama_prepare_model_devices: using device Vulkan2 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:09:00.0) - 8168 MiB free",
+    "selector": "Vulkan2"
+  },
+  "discovery": {
+    "binding_statuses": {
+      "Vulkan0": "BOUND",
+      "Vulkan1": "BOUND",
+      "Vulkan2": "BOUND"
+    },
+    "inventory_measured_utc": "2026-09-17T14:07:57.706338+00:00",
+    "reviewed_utc": "2026-09-17T14:07:57.706648+00:00"
+  },
+  "freeze_commits": {
+    "authorities": "2c761e97e6c3a6f7281c98f92c2aff386f7ef684",
+    "phase1_topology": "c26746c719e4f60fc6c5f85482e40483de5aa9ec"
+  },
+  "issue": "#210",
+  "nonclaims": [
+    "no concurrent two-die performance scaling or shared Gen3 x1 contention claim",
+    "no aggregate 16 GiB single-address-space semantics",
+    "no production scheduler policy or preferred/default backend decision",
+    "no x1 economic suitability claim (issue #35 owns that work)",
+    "no Qwen3.8 or DeepSeek V4.1 qualification",
+    "no mixed AMD/NVIDIA execution claim",
+    "no SR-IOV VF support or ROCm/HIP qualification claim",
+    "no public backend API stability claim"
+  ],
+  "schema": "inferswarm.v2b.terminal/1",
+  "successor_readiness": {
+    "both_dies_eligible_for_later_simultaneous_testing": true,
+    "consumable_unchanged_per_die": [
+      "authority bytes (sha-pinned)",
+      "capability record",
+      "frozen plan",
+      "qualification/canonical/accounting semantics (V2-A harness imports)"
+    ],
+    "explicitly_unproven": [
+      "concurrent dual-die scaling",
+      "shared-x1 contention envelope",
+      "thermals/power under dual load",
+      "reset isolation",
+      "model-specific Qwen/DeepSeek correctness",
+      "mixed-vendor execution"
+    ],
+    "facts_a_later_dual_die_or_35_campaign_must_preserve": {
+      "gpu_to_switch_links": "Gen3 x16 both dies",
+      "pm8533_upstream": "0000:02:00.0 negotiated Gen3 x1 (cap x16)",
+      "root_port": "0000:00:1d.0 negotiated PCIe Gen3 x1 (8.0 GT/s x1)",
+      "selectors": {
+        "Vulkan1": "06:00.0",
+        "Vulkan2": "09:00.0"
+      }
+    }
+  },
+  "terminal": "V2B_V340L_DUAL_DIE_QUALIFICATION_PASS",
+  "terminal_derivation": {
+    "die_a_pass": true,
+    "die_b_pass": true,
+    "distinct_compute_units": true,
+    "portability_audit_result": "PASS",
+    "selectors_bound_to_distinct_bdfs": true
+  }
+}

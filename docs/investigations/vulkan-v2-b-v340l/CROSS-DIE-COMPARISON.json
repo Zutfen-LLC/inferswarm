@@ -1,0 +1,286 @@
+{
+  "classifications": [
+    {
+      "aspect": "reusable harness source bytes identical across campaigns",
+      "classification": "REUSABLE_HARNESS_SEMANTICS_SHARED",
+      "evidence": {
+        "same_harness_hashes": true
+      }
+    },
+    {
+      "aspect": "subject/resource identity, selector, and evidence IDs",
+      "classification": "AUTHORITY_DATA_ONLY",
+      "evidence": {
+        "subjects": [
+          {
+            "campaign": "first",
+            "evidence_ids": {
+              "canonical_execution_evidence_id": "v2b-v340l-a-canonical-01",
+              "qualification_evidence_id": "v2b-v340l-a-qualification-01"
+            },
+            "subject": {
+              "compute_unit_id": "cu-v340l-die-a",
+              "implementation_id": "impl-portable-v340l-die-a",
+              "memory_resource_id": "mr-v340l-die-a-vram",
+              "node_id": "node-inferswarm02",
+              "physical_device_bdf": "06:00.0",
+              "selector": "Vulkan1"
+            }
+          },
+          {
+            "campaign": "second",
+            "evidence_ids": {
+              "canonical_execution_evidence_id": "v2b-v340l-b-canonical-01",
+              "qualification_evidence_id": "v2b-v340l-b-qualification-01"
+            },
+            "subject": {
+              "compute_unit_id": "cu-v340l-die-b",
+              "implementation_id": "impl-portable-v340l-die-b",
+              "memory_resource_id": "mr-v340l-die-b-vram",
+              "node_id": "node-inferswarm02",
+              "physical_device_bdf": "09:00.0",
+              "selector": "Vulkan2"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "aspect": "runtime/state facts (executable, model, driver/runtime identity)",
+      "classification": "BACKEND_RUNTIME_DATA_ONLY",
+      "evidence": {
+        "differences": [
+          {
+            "runtime_identity": {
+              "first": {
+                "binary_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+                "radv_target": "Mesa 25.0.7-2+deb13u1 (RADV VEGA10)",
+                "selector": "Vulkan1",
+                "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+                "vulkan_loader": "1.4.309",
+                "vulkan_loader_remeasured": "1.4.309"
+              },
+              "second": {
+                "binary_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+                "radv_target": "Mesa 25.0.7-2+deb13u1 (RADV VEGA10)",
+                "selector": "Vulkan2",
+                "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+                "vulkan_loader": "1.4.309",
+                "vulkan_loader_remeasured": "1.4.309"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "aspect": "qualification and canonical results (offload, exit, accounting, correctness)",
+      "classification": "REUSABLE_HARNESS_SEMANTICS_SHARED",
+      "evidence": {
+        "accounting_clean": true,
+        "both_campaigns_passed": true,
+        "byte_exact": true
+      }
+    },
+    {
+      "aspect": "reviewed discovery implementation and artifacts (discovery->authority layer)",
+      "classification": "REUSABLE_HARNESS_SEMANTICS_SHARED",
+      "evidence": {
+        "bindings_prospectively_bound": true,
+        "discovery_artifacts_retained": true,
+        "same_discovery_implementation": true,
+        "same_reviewed_artifacts": true
+      }
+    }
+  ],
+  "frozen_field_differences": [
+    {
+      "classification": "IDENTITY_DATA_ONLY",
+      "field": "canonical_execution_evidence_id"
+    },
+    {
+      "classification": "IDENTITY_DATA_ONLY",
+      "field": "compute_unit_id"
+    },
+    {
+      "classification": "IDENTITY_DATA_ONLY",
+      "field": "implementation_id"
+    },
+    {
+      "classification": "IDENTITY_DATA_ONLY",
+      "field": "memory_resource_id"
+    },
+    {
+      "classification": "IDENTITY_DATA_ONLY",
+      "field": "physical_device_bdf"
+    },
+    {
+      "classification": "IDENTITY_DATA_ONLY",
+      "field": "qualification_evidence_id"
+    },
+    {
+      "classification": "IDENTITY_DATA_ONLY",
+      "field": "runtime_identity"
+    },
+    {
+      "classification": "IDENTITY_DATA_ONLY",
+      "field": "selector"
+    }
+  ],
+  "harness_source_hashes_identical": true,
+  "identical_visible_output_both_dies": null,
+  "per_die": {
+    "A": {
+      "bdf": "06:00.0",
+      "canonical": {
+        "accounting": {
+          "basis": "direct llama.cpp named buffers plus before/after memory-breakdown rows; never process RSS",
+          "device_compute_bytes": 109586678,
+          "device_context_bytes": 1207959552,
+          "device_resident_model_bytes": 1923948216,
+          "host_context_kv_output_compute_bytes": 42572186,
+          "intentional_host_mapping_or_cache_bytes": 255254856,
+          "predecessor": {
+            "limitation": "pinned the first subject's observed selector label; failed closed on any other subject",
+            "reducer": "scripts/v0c_canonical_run.py::parse_accounting",
+            "reducer_sha256": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+            "schema": "inferswarm.v0c.materialization-accounting/1"
+          },
+          "raw_lines": {
+            "device_compute": [
+              "0.03.959.932 I sched_reserve:    Vulkan1 compute buffer size =   104.51 MiB"
+            ],
+            "device_context": [
+              "0.03.919.355 I llama_kv_cache:    Vulkan1 KV buffer size =  1152.00 MiB"
+            ],
+            "device_memory_before_after": [
+              "0.00.678.578 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+              "0.05.101.896 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
+            ],
+            "device_model": [
+              "0.01.079.520 I load_tensors:      Vulkan1 model buffer size =  1834.82 MiB"
+            ],
+            "host_compute": [
+              "0.03.959.940 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+            ],
+            "host_mapping": [
+              "0.01.079.519 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+            ],
+            "host_memory_final": [
+              "0.05.101.896 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+            ],
+            "host_memory_pre_realization": [
+              "0.00.678.579 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+            ],
+            "host_output": [
+              "0.03.918.770 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+            ],
+            "ready_state": [
+              "0.04.201.095 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+            ],
+            "source_fetches_after_ready": [],
+            "unplanned_state_movements": []
+          },
+          "released_staging_bytes": 0,
+          "representation_conversion_bytes": 0,
+          "required_persistent_host_bytes": 0,
+          "schema": "inferswarm.v0c.materialization-accounting/2",
+          "selected_resource": "Vulkan1",
+          "source_fetches_after_ready": 0,
+          "unexplained_persistent_host_mirror_bytes": 0,
+          "unplanned_state_movements": 0
+        },
+        "correctness": {
+          "byte_exact_visible_output": true
+        },
+        "record_digest": "6deb9d73035b9180af1e0b33ba5e70c592636f96c2e61ada683a72ca1ac3847a",
+        "result": "PASS",
+        "stdout_sha256": "0168042f9f99f7efdbed05b661f6edcf518e86207af7d5ba6563b790db473c3f"
+      },
+      "qualification": {
+        "offloaded_layers": 2,
+        "record_digest": "83ffa4c46c685a077f485f37a423cc0f5fd2625dc89bc003b95cb73fb5213811",
+        "result": "PASS",
+        "wall_seconds": 5.221
+      },
+      "selector": "Vulkan1"
+    },
+    "B": {
+      "bdf": "09:00.0",
+      "canonical": {
+        "accounting": {
+          "basis": "direct llama.cpp named buffers plus before/after memory-breakdown rows; never process RSS",
+          "device_compute_bytes": 109586678,
+          "device_context_bytes": 1207959552,
+          "device_resident_model_bytes": 1923948216,
+          "host_context_kv_output_compute_bytes": 42572186,
+          "intentional_host_mapping_or_cache_bytes": 255254856,
+          "predecessor": {
+            "limitation": "pinned the first subject's observed selector label; failed closed on any other subject",
+            "reducer": "scripts/v0c_canonical_run.py::parse_accounting",
+            "reducer_sha256": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+            "schema": "inferswarm.v0c.materialization-accounting/1"
+          },
+          "raw_lines": {
+            "device_compute": [
+              "0.03.954.745 I sched_reserve:    Vulkan2 compute buffer size =   104.51 MiB"
+            ],
+            "device_context": [
+              "0.03.913.996 I llama_kv_cache:    Vulkan2 KV buffer size =  1152.00 MiB"
+            ],
+            "device_memory_before_after": [
+              "0.00.668.504 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+              "0.05.027.776 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
+            ],
+            "device_model": [
+              "0.01.065.258 I load_tensors:      Vulkan2 model buffer size =  1834.82 MiB"
+            ],
+            "host_compute": [
+              "0.03.954.752 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+            ],
+            "host_mapping": [
+              "0.01.065.257 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+            ],
+            "host_memory_final": [
+              "0.05.027.776 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+            ],
+            "host_memory_pre_realization": [
+              "0.00.668.505 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+            ],
+            "host_output": [
+              "0.03.913.381 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+            ],
+            "ready_state": [
+              "0.04.107.388 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+            ],
+            "source_fetches_after_ready": [],
+            "unplanned_state_movements": []
+          },
+          "released_staging_bytes": 0,
+          "representation_conversion_bytes": 0,
+          "required_persistent_host_bytes": 0,
+          "schema": "inferswarm.v0c.materialization-accounting/2",
+          "selected_resource": "Vulkan2",
+          "source_fetches_after_ready": 0,
+          "unexplained_persistent_host_mirror_bytes": 0,
+          "unplanned_state_movements": 0
+        },
+        "correctness": {
+          "byte_exact_visible_output": true
+        },
+        "record_digest": "8a30dcaeb131ac8eca4ca5109d083f5382caeb13ec55b137fe55a56494f775ee",
+        "result": "PASS",
+        "stdout_sha256": "3689a3aeec1b8036ff4e01cda0082af83735313b2f501d5cdd6a14dae886bf0a"
+      },
+      "qualification": {
+        "offloaded_layers": 2,
+        "record_digest": "726b13a7c16a3e026202d2c38afceed6337dd1a6dd800329b63f4ac2c69f6423",
+        "result": "PASS",
+        "wall_seconds": 5.137
+      },
+      "selector": "Vulkan2"
+    }
+  },
+  "result": "PASS",
+  "schema": "inferswarm.v2b.cross-die-comparison/1"
+}
