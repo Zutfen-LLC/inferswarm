@@ -250,6 +250,7 @@ GROUP_TEST_MODULES = {
         "test_v2a_discovery_authority_binding_r3",
         "test_issue210_v2b_v340l",
         "test_issue215_v2c_platform_stability",
+        "test_issue216_v2d_concurrent",
         "test_issue35_link_probe",
         "test_issue35_role_sweep",
         "test_issue35_envelope",
@@ -693,6 +694,14 @@ PATH_GROUPS = {
     "scripts/issue215_sentinel.py": ["vulkan-v0-b"],
     "scripts/issue215_terminal.py": ["vulkan-v0-b"],
     "tests/test_issue215_v2c_platform_stability.py": ["vulkan-v0-b"],
+    # Issue #216 V2-D concurrent dual-die campaign: independent additive
+    # producers and evidence, selected with the V2 Vulkan lineage.
+    "docs/investigations/vulkan-v2-d-v340l-concurrent/": ["vulkan-v0-b"],
+    "scripts/issue216_campaign_plan.py": ["vulkan-v0-b"],
+    "scripts/issue216_concurrent.py": ["vulkan-v0-b"],
+    "scripts/issue216_terminal.py": ["vulkan-v0-b"],
+    "scripts/issue216_manifest.py": ["vulkan-v0-b"],
+    "tests/test_issue216_v2d_concurrent.py": ["vulkan-v0-b"],
     "tests/test_v2a_discovery_authority_binding_r3.py": ["vulkan-v0-b"],
     # Issue #35 x1 interconnect envelope campaign (same accepted
     # evidence-lifecycle family; the manifest generator is shared).

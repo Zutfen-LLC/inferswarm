@@ -180,6 +180,7 @@
     "test_v2a_discovery_authority_binding_r3",
     "test_issue210_v2b_v340l",
     "test_issue215_v2c_platform_stability",
+    "test_issue216_v2d_concurrent",
     "test_issue35_link_probe",
     "test_issue35_role_sweep",
     "test_issue35_envelope",
@@ -348,6 +349,9 @@
    "vulkan-v0-b"
   ],
   "docs/investigations/vulkan-v2-c-v340l-platform-stability/": [
+   "vulkan-v0-b"
+  ],
+  "docs/investigations/vulkan-v2-d-v340l-concurrent/": [
    "vulkan-v0-b"
   ],
   "docs/project-status.json": [
@@ -979,6 +983,18 @@
   "scripts/issue215_terminal.py": [
    "vulkan-v0-b"
   ],
+  "scripts/issue216_campaign_plan.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue216_concurrent.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue216_manifest.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue216_terminal.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "vulkan-v0-b"
   ],
@@ -1223,6 +1239,9 @@
    "vulkan-v0-b"
   ],
   "tests/test_issue215_v2c_platform_stability.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_issue216_v2d_concurrent.py": [
    "vulkan-v0-b"
   ],
   "tests/test_issue35_corrections.py": [

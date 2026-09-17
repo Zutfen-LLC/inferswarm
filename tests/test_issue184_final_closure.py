@@ -296,6 +296,12 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue215_build_final_authorities_v2.py",
             "scripts/issue215_v2_authority.py",
             "scripts/issue215_manifest.py",
+            # Issue #216 V2-D: additive concurrent V340L campaign producers,
+            # independently pinned by the V2-D evidence manifest.
+            "scripts/issue216_campaign_plan.py",
+            "scripts/issue216_concurrent.py",
+            "scripts/issue216_terminal.py",
+            "scripts/issue216_manifest.py",
             # Issue #213 campaign gate ordering: orchestration tooling and
             # CI registration, independently covered by its own group.
             "scripts/issue213_gate_orchestration.py",

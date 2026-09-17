@@ -1,0 +1,178 @@
+{
+ "campaign_plan": {
+  "accepted_predecessors": {
+   "v2a_merge": "e38ebe91a0604fb666397ddae675248e9f819f60",
+   "v2a_terminal": "V2A_REUSABLE_DEVICE_QUALIFICATION_HARNESS_PASS",
+   "v2b_merge": "f91119d05e7079c780c7b88be6138fed0920b759",
+   "v2b_terminal": "V2B_V340L_DUAL_DIE_QUALIFICATION_PASS",
+   "v2c_merge": "605d0b465dc2bd015a7c832c67f4adcd7aefeb61",
+   "v2c_terminal": "V2C_V340L_PLATFORM_STABILITY_PASS",
+   "x1_merge": "8aadbd6ea3c635741cc67fcc9d9ba1d1dd8d500a",
+   "x1_terminal": "X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED"
+  },
+  "baselines": {
+   "repetitions_per_die": 3,
+   "telemetry": [
+    "service_time",
+    "utilization",
+    "hbm",
+    "clocks",
+    "temperature",
+    "power",
+    "fan",
+    "ecc_ras",
+    "aer_amdgpu",
+    "link_state"
+   ],
+   "workload": "v2-compatible-8-token-sentinel"
+  },
+  "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v1",
+  "concurrent": {
+   "overlap_requirement": "strict positive monotonic interval intersection for every retained repeat",
+   "participants": {
+    "a": "Vulkan1",
+    "b": "Vulkan2"
+   },
+   "required": [
+    "byte_exact",
+    "full_offload",
+    "zero_accounting",
+    "clean_exit",
+    "no_nan_inf",
+    "per_die_attribution",
+    "no_cross_substitution"
+   ],
+   "retained_repetitions": 3,
+   "synchronization": "same-host start-gate file; both child receipts record monotonic start/end",
+   "warmups": 1,
+   "workload": "v2-compatible-8-token-sentinel"
+  },
+  "device_reset": {
+   "prohibited": [
+    "pci_remove_rescan",
+    "bus_reset",
+    "undocumented_sysfs_reset",
+    "power_state_hack"
+   ],
+   "require_documented_supported_mechanism": true,
+   "unsupported_terminal": "DEVICE_RESET_ISOLATION_NOT_AVAILABLE"
+  },
+  "fault_isolation": {
+   "arms": [
+    "a-loss-b-survives",
+    "b-loss-a-survives"
+   ],
+   "required": [
+    "survivor_keeps_original_selector_bdf",
+    "survivor_no_fallback",
+    "relaunch_lost_participant",
+    "per_die_resentinel",
+    "final_concurrent_sentinel"
+   ],
+   "termination": "SIGTERM; verify exit; SIGKILL only after frozen 30-second grace"
+  },
+  "host": "inferswarm02",
+  "issue": 216,
+  "nonclaims": [
+   "no aggregate/coherent 16 GiB single-address-space V340L memory",
+   "no Qwen3.8 or DeepSeek V4.1 model-program qualification",
+   "no mixed AMD/NVIDIA execution",
+   "no SR-IOV VF support",
+   "no ROCm/HIP support",
+   "no generic planner scoring or automatic placement policy",
+   "no production service or HA claim"
+  ],
+  "physical_resources": {
+   "a": {
+    "compute_unit_id": "cu-v340l-die-a",
+    "expected_bdf": "06:00.0",
+    "memory_resource_id": "mr-v340l-die-a-vram",
+    "selector": "Vulkan1",
+    "vram_bytes": 8573157376
+   },
+   "b": {
+    "compute_unit_id": "cu-v340l-die-b",
+    "expected_bdf": "09:00.0",
+    "memory_resource_id": "mr-v340l-die-b-vram",
+    "selector": "Vulkan2",
+    "vram_bytes": 8573157376
+   },
+   "shared_upstream": {
+    "required_negotiated": "Gen3 x1",
+    "root_port": "00:1d.0",
+    "switch": "PM8533",
+    "switch_upstream": "02:00.0"
+   }
+  },
+  "preflight": {
+   "required": [
+    "host_kernel_amdgpu_icd_runtime",
+    "full_pci_topology_and_bars",
+    "under_load_link_state",
+    "fresh_two_die_binding",
+    "hbm_cu_ecc_sriov",
+    "v2c_platform_peripheral_health",
+    "clean_preload_aer_amdgpu_journal"
+   ],
+   "sentinel_repetitions_per_die": 1
+  },
+  "runtime": {
+   "accounting_reducer": "scripts/v1c_accounting.py",
+   "comparator": "scripts/v0c_correctness.py",
+   "executable": "/home/hermes/v0a/llama.cpp/build-vulkan/bin/llama-cli",
+   "executable_sha256": "c4bcd6a94e0b7fdb1959e6542ce0f85bb905c6c9083fcd1a7b6b0daf15e2c9be",
+   "model": "/home/hermes/v0a/models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+   "model_sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
+   "reference": "docs/investigations/vulkan-v1-a/reference-visible-output.txt",
+   "reference_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d",
+   "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c"
+  },
+  "schema": "inferswarm.v2d.campaign-plan/1",
+  "soak": {
+   "continuous_liveness_required": true,
+   "minimum_duration_seconds": 3600,
+   "sentinel_checkpoint_seconds": 600,
+   "stop_conditions": [
+    "worker_crash_or_hang",
+    "amdgpu_reset_or_hang",
+    "fatal_aer",
+    "uncorrected_ecc_ras_growth",
+    "thermal_alarm_or_shutdown",
+    "host_or_required_peripheral_failure",
+    "sentinel_failure"
+   ],
+   "telemetry_cadence_seconds": 60,
+   "workload": "paired bounded V2-compatible sentinel loop"
+  },
+  "starting_main": "605d0b465dc2bd015a7c832c67f4adcd7aefeb61",
+  "terminals": {
+   "blocked": "V2D_EVIDENCE_BLOCKED",
+   "correctness_fail": "V2D_V340L_CONCURRENT_CORRECTNESS_FAIL",
+   "pass": "V2D_V340L_CONCURRENT_DUAL_DIE_STABILITY_PASS",
+   "stress_fail": "V2D_V340L_PLATFORM_STRESS_FAIL"
+  },
+  "transport": {
+   "directions": [
+    "h2d",
+    "d2h"
+   ],
+   "latency_size_bytes": 4096,
+   "link_capture": "before-and-after full root/switch/endpoint lspci -PP -nn -vv",
+   "modes": [
+    "single-a",
+    "single-b",
+    "dual"
+   ],
+   "repetitions": 5,
+   "sizes_bytes": [
+    4194304,
+    67108864,
+    536870912
+   ],
+   "tool": "issue216_transport.py Vulkan transfer benchmark",
+   "uncertainty": "sample_count,min,max,median,mean"
+  },
+  "validation_order": "Issue #213: focused/preservation/reducer/finalizer before review; one full suite and one hosted CI only on final reviewed head"
+ },
+ "campaign_plan_digest": "e98d154d87d87bfa8d2d7b72ee3dd3e95305f35d84074a95a7b624f85b4057ee"
+}
