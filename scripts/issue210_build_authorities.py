@@ -163,6 +163,42 @@ def build(die: str, selector: str, cu: str, mr: str, impl: str, bdf: str,
         },
     }
 
+def pressure(die: str, cu: str, mr: str, bdf: str, ev: str) -> dict:
+    """The other V340L die as a static pressure resource in the snapshot.
+
+    Mirrors the accepted V2-A pattern (authority data only; the planner
+    sees a second, contract-mismatched CU and must still select the
+    campaign's own subject). Integrity/identity facts are the fresh
+    V2-B discovery facts for the sibling die.
+    """
+    return {
+        "capabilities": [{
+            "bound_compute_unit_id": cu,
+            "bound_execution_unit_id": R3F["execution_unit_id"],
+            "bound_memory_resource_id": mr,
+            "bound_node_id": "node-inferswarm02",
+            "economics": {"objective_value": 1.0},
+            "evidence_fresh": True,
+            "evidence_id": ev,
+            "execution_contract_id": "contract-native-opaque-v1",
+            "implementation_id": f"impl-static-{die}",
+            "integrity_status": "QUALIFIED",
+            "physical_device_bdf": bdf,
+            "qualification_digest": f"static-{die}-not-eligible-contract-mismatch",
+            "qualification_evidence_id": ev,
+            "representations": [R3F["required_representation"]],
+            "required_features": ["compute"],
+            "runtime_identity": {"binary_sha256": f"static-{die}"},
+        }],
+        "compute_unit_id": cu,
+        "memory_resource": {
+            "bytes": None,  # filled by the caller from fresh discovery facts
+            "memory_resource_id": mr,
+        },
+        "node_id": "node-inferswarm02",
+        "physical_device_bdf": bdf,
+    }
+
 DIE_A = build("A", "Vulkan1", "cu-v340l-die-a", "mr-v340l-die-a-vram",
               "impl-portable-v340l-die-a", "06:00.0",
               "v2b-v340l-a-plan-01", "v2b-v340l-a-qualification-01",
@@ -171,6 +207,22 @@ DIE_B = build("B", "Vulkan2", "cu-v340l-die-b", "mr-v340l-die-b-vram",
               "impl-portable-v340l-die-b", "09:00.0",
               "v2b-v340l-b-plan-01", "v2b-v340l-b-qualification-01",
               "v2b-v340l-b-canonical-01", "v2b-v340l-b-capability-01")
+
+# Each die's authority carries its sibling as the static pressure resource.
+DIE_A["physical_identity"]["ontology_pressure_resource"] = pressure(
+    "v340l-die-b", "cu-v340l-die-b", "mr-v340l-die-b-vram", "09:00.0",
+    "v2b-static-die-b-pressure-01")
+DIE_B["physical_identity"]["ontology_pressure_resource"] = pressure(
+    "v340l-die-a", "cu-v340l-die-a", "mr-v340l-die-a-vram", "06:00.0",
+    "v2b-static-die-a-pressure-01")
+# pressure memory bytes: fresh discovery fact for the sibling die
+INV_BY_BDF = {d.get("candidate_bdfs") and b or d.get("pci_bdf"): d
+              for d in INV["devices"] for b in (d.get("candidate_bdfs") or [d.get("pci_bdf")])}
+for doc, sib_bdf in ((DIE_A, "09:00.0"), (DIE_B, "06:00.0")):
+    doc["physical_identity"]["ontology_pressure_resource"]["memory_resource"]["bytes"] = \
+        next(d["device_local_vram_bytes"] for d in INV["devices"]
+             if sib_bdf in (d.get("candidate_bdfs") or [d.get("pci_bdf")]))
+
 
 for name, doc in (("AUTHORITY-V340L-A.json", DIE_A), ("AUTHORITY-V340L-B.json", DIE_B)):
     out = AREA / name

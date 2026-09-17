@@ -116,6 +116,43 @@
     "memory_resource_bytes": 8573157376,
     "memory_resource_id": "mr-v340l-die-b-vram",
     "node_id": "node-inferswarm02",
+    "ontology_pressure_resource": {
+      "capabilities": [
+        {
+          "bound_compute_unit_id": "cu-v340l-die-a",
+          "bound_execution_unit_id": "unit-q4km-whole-model",
+          "bound_memory_resource_id": "mr-v340l-die-a-vram",
+          "bound_node_id": "node-inferswarm02",
+          "economics": {
+            "objective_value": 1.0
+          },
+          "evidence_fresh": true,
+          "evidence_id": "v2b-static-die-a-pressure-01",
+          "execution_contract_id": "contract-native-opaque-v1",
+          "implementation_id": "impl-static-v340l-die-a",
+          "integrity_status": "QUALIFIED",
+          "physical_device_bdf": "06:00.0",
+          "qualification_digest": "static-v340l-die-a-not-eligible-contract-mismatch",
+          "qualification_evidence_id": "v2b-static-die-a-pressure-01",
+          "representations": [
+            "gguf-q4-k-m"
+          ],
+          "required_features": [
+            "compute"
+          ],
+          "runtime_identity": {
+            "binary_sha256": "static-v340l-die-a"
+          }
+        }
+      ],
+      "compute_unit_id": "cu-v340l-die-a",
+      "memory_resource": {
+        "bytes": 8573157376,
+        "memory_resource_id": "mr-v340l-die-a-vram"
+      },
+      "node_id": "node-inferswarm02",
+      "physical_device_bdf": "06:00.0"
+    },
     "upstream_topology": {
       "gpu_to_switch_link": "PCIe Gen3 x16 (LnkSta 8.0 GT/s x16 at the endpoint)",
       "pm8533_switch": "Microchip PM8533 (11f8:8533) fanout switch",
