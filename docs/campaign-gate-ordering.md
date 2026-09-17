@@ -135,12 +135,34 @@ internal worker plumbing not part of the public request.
 tests tree and derives its launch identity from the SAME effective tests
 directory; a custom directory is never silently normalized back to
 `root/tests`. For a Git-backed guarded request the tests tree must be
-**provably bound to the exact committed head**: it must live inside the
-repository root (never under `.git`) and be a real directory. Combined with
-the clean-worktree prerequisite, every file under it is tracked and
-byte-identical to `HEAD`. An external or unprovable tests tree is **refused**
-— never cached as though HEAD authorized its contents. Plain non-Git fixture
-roots keep the runner's existing unguarded behavior.
+**provably bound to the exact committed head**. A clean
+`git status --porcelain` census alone does NOT prove that: ignored in-repo
+trees (`scratch/`, `tmp/`, `.cache/`, ...) are invisible to that census, so
+files below them can be present and executable without being HEAD content.
+The mechanical HEAD-binding proof (all fail closed, before identity
+derivation, completion lookup, attach, or launch) is:
+
+1. the effective tests directory lives inside the repository root (never
+   under `.git`) and is a real directory;
+2. the directory itself is not an ignored tree with no committed content
+   (`git check-ignore` + the HEAD census below) — an ignored in-repo tree
+   can never claim exact-head authority;
+3. every test source module the runner's own discovery imports from that
+   tree (bytecode writing suppressed so the proof does not dirty the tree)
+   appears in the `git ls-tree -r --name-only HEAD -- <tests-dir>` census —
+   the census enumerates the committed tree, not the index or worktree, so
+   untracked or ignored execution-relevant content can never appear in it;
+4. the ordinary clean-worktree prerequisite remains: every TRACKED file is
+   byte-identical to `HEAD` (staged, unstaged, and untracked dirtiness all
+   refuse).
+
+Together: everything the suite can execute from that tree is tracked at the
+exact HEAD and unmodified, so the exact committed head authorizes the
+executed contents. An external or unprovable tests tree is **refused** —
+never cached as though HEAD authorized its contents. Plain non-Git fixture
+roots keep the runner's existing unguarded behavior. The default canonical
+`tests/` tree is itself tracked content, so ordinary execution (including
+`__pycache__` noise, ignored by rule) is unaffected.
 
 ### Retention and reuse policy (smallest safe policy, no artifact cache)
 

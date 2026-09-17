@@ -767,16 +767,68 @@ def _runner_plan_and_config(root: Path, tests_dir: Path, jobs: int | None,
     return payload, config
 
 
+def _head_tracked_files(root: Path, rel_dir: str) -> frozenset[str]:
+    """Every file under ``rel_dir`` tracked at the EXACT HEAD (fail closed).
+
+    ``git ls-tree -r --name-only HEAD`` enumerates the committed tree —
+    not the index and not the worktree — so an untracked or ignored file
+    can never appear in this census.  A git failure fails closed.
+    """
+    proc = subprocess.run(
+        ["git", "-C", str(root), "ls-tree", "-r", "--name-only", "-z",
+         "HEAD", "--", rel_dir],
+        capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise GateOrderingError(
+            f"git ls-tree HEAD census failed (fail closed): "
+            f"{proc.stderr.strip()}")
+    return frozenset(entry for entry in proc.stdout.split("\0") if entry)
+
+
+def _git_path_ignored(root: Path, rel_path: str) -> bool:
+    """Whether ``rel_path`` matches a Git ignore rule (fail closed on error).
+
+    ``git check-ignore`` reports ignore RULES, independent of tracked
+    status; exit 0 means ignored, exit 1 means not ignored, anything else
+    is a git failure that must never be read as "not ignored".
+    """
+    proc = subprocess.run(
+        ["git", "-C", str(root), "check-ignore", "-q", "--", rel_path],
+        capture_output=True, text=True)
+    if proc.returncode not in (0, 1):
+        raise GateOrderingError(
+            f"git check-ignore failed (fail closed): {proc.stderr.strip()}")
+    return proc.returncode == 0
+
+
 def _require_head_bound_tests_dir(root: Path, tests_dir: Path) -> None:
     """Fail-closed binding of a custom tests tree to the exact head.
 
-    For a Git-backed guarded request the effective tests directory MUST
-    live inside the repository root (never under ``.git``) and be a real
-    directory; combined with the clean-worktree prerequisite, every file
-    under it is tracked and byte-identical to ``HEAD`` — the exact
-    committed head authorizes the executed contents.  An external or
-    unprovable tests tree is REFUSED, never cached as though HEAD
-    authorized it.
+    A clean ``git status --porcelain`` census does NOT prove that an
+    arbitrary in-repo directory contains only HEAD-authorized content:
+    ignored in-repo trees (``scratch/``, ``tmp/``, ``.cache/``, ...) are
+    invisible to that census.  The mechanical HEAD-binding proof is:
+
+    1. the effective tests directory lives inside the repository root
+       (never under ``.git``) and is a real directory;
+    2. the directory itself is not an ignored tree with no committed
+       content (``git check-ignore`` + the HEAD census below) — an
+       ignored in-repo tree can never claim exact-head authority;
+    3. every test source module the runner's own discovery imports from
+       that tree (``discover_units``, bytecode writing suppressed so the
+       proof does not dirty the tree) must appear in the
+       ``git ls-tree -r --name-only HEAD -- <tests-dir>`` census —
+       untracked or ignored execution-relevant content cannot be
+       authorized by the exact committed head;
+    4. the ordinary clean-worktree prerequisite remains: every TRACKED
+       file is byte-identical to ``HEAD`` (staged, unstaged, and
+       untracked dirtiness all refuse).
+
+    Together: everything the suite can execute from that tree is tracked
+    at the exact HEAD and unmodified, so the exact committed head
+    authorizes the executed contents.  An external or unprovable tests
+    tree is REFUSED — never cached as though HEAD authorized it — before
+    identity derivation, completion lookup, attach, or launch.
     """
     root, tests_dir = Path(root).resolve(), Path(tests_dir).resolve()
     try:
@@ -791,6 +843,34 @@ def _require_head_bound_tests_dir(root: Path, tests_dir: Path) -> None:
     if not tests_dir.is_dir():
         raise GateOrderingError(
             f"guarded tests directory is missing (fail closed): {tests_dir}")
+    rel_dir = relative.as_posix()
+    tracked = _head_tracked_files(root, rel_dir)
+    if _git_path_ignored(root, rel_dir) and not tracked:
+        raise GateOrderingError(
+            f"guarded tests directory is ignored by Git and untracked at "
+            f"HEAD (fail closed): {rel_dir} — an ignored in-repo tree is "
+            "invisible to the clean-worktree census and can never prove "
+            "exact-head authority")
+    runner = _load_runner_module()
+    previous = sys.dont_write_bytecode
+    sys.dont_write_bytecode = True
+    try:
+        try:
+            units = runner.discover_units(root, tests_dir)
+        except Exception as error:  # runner SuiteError -> fail closed
+            raise GateOrderingError(
+                f"guarded tests-tree discovery failed (fail closed): "
+                f"{error}") from error
+    finally:
+        sys.dont_write_bytecode = previous
+    for unit in units:
+        module_rel = (relative / f"{unit.name}.py").as_posix()
+        if module_rel not in tracked:
+            raise GateOrderingError(
+                f"discovered guarded tests module is not tracked at HEAD — "
+                "untracked or ignored execution-relevant content can never "
+                f"be authorized by the exact committed head (fail closed): "
+                f"{module_rel}")
 
 
 def canonical_suite_config(root: Path, tests_dir: Path | None = None, *,
@@ -970,8 +1050,10 @@ def launch_request_identity(root: Path, tests_dir: Path | None = None, *,
     never merely another cache-key component: the runner contract
     requires a committed exact head.  For a Git-backed guarded request a
     custom tests directory must additionally be provably bound to that
-    exact head (inside the repository root, not under ``.git``, real
-    directory) — an external or unprovable tests tree fails closed.
+    exact head (``_require_head_bound_tests_dir``: inside the repository
+    root, not under ``.git``, not an ignored untracked tree, and every
+    discovered test module tracked at HEAD) — an external or unprovable
+    tests tree fails closed.
     """
     root = Path(root).resolve()
     _require_clean_committed_worktree(root)
@@ -1400,9 +1482,11 @@ def run_single_head_suite(root: Path, *, tests_dir: Path | None = None,
     SAME effective tests directory.  A custom tests directory is never
     silently normalized back to ``root/tests``.  For a Git-backed guarded
     request the tests tree must be provably bound to the exact committed
-    head (inside the repository root, not under ``.git``): an unsafe or
-    unprovable external tree fails closed rather than being cached as
-    though HEAD authorized its contents.
+    head (``_require_head_bound_tests_dir``: inside the repository root,
+    not under ``.git``, not an ignored untracked tree, and every
+    discovered test module tracked at HEAD): an unsafe or unprovable
+    external tree fails closed rather than being cached as though HEAD
+    authorized its contents.
 
     Retention policy (smallest safe policy, no generalized artifact
     cache): a non-retained completion can never silently satisfy a

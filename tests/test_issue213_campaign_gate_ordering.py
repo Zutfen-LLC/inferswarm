@@ -1686,5 +1686,241 @@ class SuiteConfigurationIdentityTests(unittest.TestCase):
                                   request_a.to_dict()))
 
 
+class CustomTestsTreeHeadBindingTests(unittest.TestCase):
+    """Controls 48-51 (Issue #213 custom tests-tree HEAD-binding
+    correction) — REAL invocation-path proof that a custom ``--tests-dir``
+    is mechanically bound to the exact committed head.  Controls 48 and 49
+    FAIL on the pre-correction head 749c921, where "inside the repository
+    root + clean ``git status --porcelain``" was incorrectly accepted as
+    proof that every file below an arbitrary in-repo directory is tracked
+    — false for ignored in-repo trees such as ``scratch/``."""
+
+    def _repo(self, add_cleanup, *, tracked_tree=None,
+              gitignore=("__pycache__/", "scratch/"),
+              ignored_custom_tree=False):
+        """Clean committed fixture repo with an InferSwarm-equivalent
+        ignore rule set, an optional COMMITTED custom tests tree, and an
+        optional UNCOMMITTED custom tests tree inside the ignored
+        ``scratch/`` tree."""
+        global _guard_repo_seq
+        _guard_repo_seq += 1
+        prefix = f"issue213h{_guard_repo_seq}"
+        root = Path(tempfile.mkdtemp(prefix=f"{prefix}-root-"))
+        add_cleanup(lambda: subprocess.run(["rm", "-rf", str(root)], check=False))
+        repo = root / "repo"
+        repo.mkdir()
+        for cmd in (("git", "init", "-q"),
+                    ("git", "config", "user.email", "t@example.invalid"),
+                    ("git", "config", "user.name", "t")):
+            subprocess.run(cmd, cwd=repo, check=True)
+        (repo / ".gitignore").write_text(
+            "\n".join(gitignore) + "\n", encoding="utf-8")
+        (repo / "tests").mkdir()
+        module_default = f"test_{prefix}d"
+        add_cleanup(sys.modules.pop, module_default, None)
+        (repo / "tests" / f"{module_default}.py").write_text(
+            "import unittest\nclass A(unittest.TestCase):\n"
+            " def test_default(self): pass\n", encoding="utf-8")
+        if tracked_tree is not None:
+            tree = repo / tracked_tree
+            tree.mkdir()
+            module_t = f"test_{prefix}t"
+            add_cleanup(sys.modules.pop, module_t, None)
+            (tree / f"{module_t}.py").write_text(
+                "import unittest\nclass T(unittest.TestCase):\n"
+                " def test_tracked(self): self.assertTrue(True)\n",
+                encoding="utf-8")
+        if ignored_custom_tree:
+            scratch_tree = repo / "scratch" / "custom-tests"
+            scratch_tree.mkdir(parents=True)
+            module_i = f"test_{prefix}i"
+            add_cleanup(sys.modules.pop, module_i, None)
+            (scratch_tree / f"{module_i}.py").write_text(
+                "import unittest\nclass I(unittest.TestCase):\n"
+                " def test_ignored(self): self.assertTrue(True)\n",
+                encoding="utf-8")
+        for rel in gate.ENV_AUTHORITY_FILES:
+            path = repo / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("authority\n", encoding="utf-8")
+        subprocess.run(("git", "add", "-A"), cwd=repo, check=True)
+        subprocess.run(("git", "commit", "-qm", "init"), cwd=repo, check=True)
+        return repo
+
+    def _patched_runner(self):
+        calls = []
+        original = runner.run_suite
+
+        def recording(root, tests_dir=None, **kwargs):
+            calls.append({"root": str(root),
+                          "tests_dir": str(tests_dir or Path(root) / "tests")})
+            return original(Path(root), tests_dir, **kwargs)
+
+        runner.run_suite = recording
+        self.addCleanup(setattr, runner, "run_suite", original)
+        return calls
+
+    def _porcelain(self, repo: Path) -> str:
+        proc = subprocess.run(["git", "-C", str(repo), "status", "--porcelain"],
+                              capture_output=True, text=True)
+        return proc.stdout
+
+    # A. ignored in-repo custom tree: the uncommitted ignored module is
+    # invisible to the ordinary clean-worktree census, yet the guarded
+    # request must fail closed before any underlying launch.
+    def test_control48_ignored_custom_tree_fails_closed(self):
+        repo = self._repo(self.addCleanup, ignored_custom_tree=True)
+        calls = self._patched_runner()
+        # Mechanical premise: the ignored in-repo tree leaves the ordinary
+        # census CLEAN — this is exactly what fooled the pre-fix proof.
+        self.assertEqual(self._porcelain(repo), "",
+                         "fixture premise: an ignored in-repo tree is "
+                         "invisible to git status --porcelain")
+        self.assertTrue((repo / "scratch" / "custom-tests").is_dir())
+        with self.assertRaises(gate.GateOrderingError) as caught:
+            gate.run_single_head_suite(
+                repo, tests_dir=repo / "scratch" / "custom-tests",
+                lock_dir=repo.parent / "locks")
+        self.assertIn("ignored by Git", str(caught.exception))
+        self.assertEqual(len(calls), 0,
+                         "fail-closed must precede the underlying launch")
+
+    # B. ignored-body mutation cannot reuse: mechanically reproduces the
+    # pre-fix vulnerability (pass-3 _require_head_bound_tests_dir body),
+    # then proves the corrected guard refuses the ignored tree so no
+    # cached PASS can ever be returned for mutated ignored content.
+    #
+    # The pre-fix defect is that the launch identity itself was derived
+    # from unproven (ignored, HEAD-invisible) content: the guard claimed
+    # "every file under the tree is tracked and byte-identical to HEAD"
+    # without any tracked-tree proof.  Once ANY execution produces a
+    # completion for that identity (modeled here through the module's own
+    # suite_command seam — e.g. an execution path not covered by the
+    # runner's detached-worktree doctrine), a body mutation that keeps
+    # the test ID and count invisible to git status leaves the identity
+    # UNCHANGED, and the mutated request silently consumes the cached
+    # PASS.  The corrected code refuses the ignored tree BEFORE identity
+    # derivation and completion lookup, so no cached PASS can be returned.
+    def test_control49_ignored_body_mutation_cannot_reuse(self):
+        repo = self._repo(self.addCleanup, ignored_custom_tree=True)
+        scratch_tree = repo / "scratch" / "custom-tests"
+        ignored_module = next(scratch_tree.glob("test_*.py"))
+        lock_dir = repo.parent / "locks"
+        launches = []
+
+        # Pre-fix behavior, reproduced mechanically: the 749c921 proof
+        # (inside-root + not-.git + is-dir + clean ordinary status).
+        real_guard = gate._require_head_bound_tests_dir
+
+        def pre_fix_proof(root, tests_dir):
+            root, tests_dir = Path(root).resolve(), Path(tests_dir).resolve()
+            relative = tests_dir.relative_to(root)
+            assert relative.parts[0] != ".git" and tests_dir.is_dir()
+
+        def fake_execution():
+            launches.append(time.time())
+            return dict(pre_fix_pass_result)  # canonical PASS payload
+
+        gate._require_head_bound_tests_dir = pre_fix_proof
+        try:
+            # "First execution exists": the pre-fix guard accepted the
+            # ignored tree and derived its identity from the LIVE tree's
+            # discovery (ignored content hashed into the identity).
+            identity = gate.launch_request_identity(repo,
+                                                    tests_dir=scratch_tree)
+            pre_fix_pass_result = {
+                "schema": gate.RUNNER_SCHEMA, "ok": True,
+                "serial_digest": identity["suite"]["serial_digest"],
+                "executed_digest": identity["suite"]["executed_digest"],
+                "count": identity["suite"]["count"],
+                "suite_config": identity["suite"]["suite_config"],
+            }
+            first = gate.run_single_head_suite(repo, tests_dir=scratch_tree,
+                                               lock_dir=lock_dir,
+                                               suite_command=fake_execution)
+            self.assertTrue(first["ok"])
+            self.assertEqual(len(launches), 1)
+            # Stable test ID, same count: mutate ONLY the ignored body.
+            ignored_module.write_text(
+                ignored_module.read_text(encoding="utf-8").replace(
+                    "assertTrue(True)", "assertTrue(False)"),
+                encoding="utf-8")
+            self.assertEqual(self._porcelain(repo), "",
+                             "ignored-body mutation stays invisible to the "
+                             "ordinary census — the pre-fix identity would "
+                             "remain reusable")
+            second = gate.run_single_head_suite(repo, tests_dir=scratch_tree,
+                                                lock_dir=lock_dir,
+                                                suite_command=fake_execution)
+            # THE VULNERABILITY: the mutated (now failing) body's request
+            # consumed the first body's cached PASS without a new launch.
+            self.assertTrue(second["ok"])
+            self.assertEqual(len(launches), 1,
+                             "pre-fix proof reused the completion across an "
+                             "invisible ignored-body mutation")
+        finally:
+            gate._require_head_bound_tests_dir = real_guard
+        # Corrected code: the ignored tree is rejected BEFORE identity
+        # derivation, completion lookup, reuse, or launch — no cached
+        # PASS can be returned.
+        self.assertEqual(self._porcelain(repo), "")
+        with self.assertRaises(gate.GateOrderingError) as caught:
+            gate.run_single_head_suite(repo, tests_dir=scratch_tree,
+                                       lock_dir=lock_dir,
+                                       suite_command=fake_execution)
+        self.assertIn("ignored by Git", str(caught.exception))
+        self.assertEqual(len(launches), 1,
+                         "corrected guard must refuse before any new launch")
+
+    # C. tracked custom tree remains valid: guarded execution succeeds and
+    # sequential exact-config reuse still works; ignored __pycache__ noise
+    # inside the tracked custom tree does not over-reject.
+    def test_control50_tracked_custom_tree_valid_and_reuses(self):
+        repo = self._repo(self.addCleanup, tracked_tree="tree_c")
+        calls = self._patched_runner()
+        lock_dir = repo.parent / "locks"
+        first = gate.run_single_head_suite(repo, tests_dir=repo / "tree_c",
+                                           lock_dir=lock_dir)
+        self.assertTrue(first["ok"])
+        self.assertTrue(any("test_tracked" in t for t in first["serial_ids"]))
+        self.assertEqual(Path(calls[0]["tests_dir"]).name, "tree_c")
+        # Ordinary ignored bytecode noise inside the custom tree must not
+        # turn the scoped HEAD-binding proof into a rejection.
+        pycache = repo / "tree_c" / "__pycache__"
+        pycache.mkdir()
+        (pycache / "noise.cpython-312.pyc").write_bytes(b"\x00noise")
+        self.assertEqual(self._porcelain(repo), "")
+        second = gate.run_single_head_suite(repo, tests_dir=repo / "tree_c",
+                                            lock_dir=lock_dir)
+        self.assertTrue(second["ok"])
+        self.assertEqual(len(calls), 1,
+                         "identical exact-config request on a tracked custom "
+                         "tree must reuse the sequential PASS")
+
+    # D. tracked custom tree modification: an uncommitted body change in
+    # the tracked custom tree is refused by the existing dirty-worktree
+    # doctrine BEFORE reuse or launch, even with a live completion present.
+    def test_control51_tracked_custom_tree_modification_refused(self):
+        repo = self._repo(self.addCleanup, tracked_tree="tree_c")
+        calls = self._patched_runner()
+        lock_dir = repo.parent / "locks"
+        first = gate.run_single_head_suite(repo, tests_dir=repo / "tree_c",
+                                           lock_dir=lock_dir)
+        self.assertTrue(first["ok"])
+        self.assertEqual(len(calls), 1)
+        tracked_module = next((repo / "tree_c").glob("test_*.py"))
+        tracked_module.write_text(
+            tracked_module.read_text(encoding="utf-8").replace(
+                "assertTrue(True)", "assertTrue(False)"),
+            encoding="utf-8")
+        with self.assertRaises(gate.GateOrderingError) as caught:
+            gate.run_single_head_suite(repo, tests_dir=repo / "tree_c",
+                                       lock_dir=lock_dir)
+        self.assertIn("dirty Git worktree", str(caught.exception))
+        self.assertEqual(len(calls), 1,
+                         "dirty tracked-body refusal must precede both "
+                         "reuse and launch")
+
+
 if __name__ == "__main__":
     unittest.main()
