@@ -1,0 +1,8 @@
+{
+  "schema": "inferswarm.issue209.superseded-correction/1",
+  "superseded_commit": "69e07e55c7ede8306f35af0a1b07e2c2aad8bad8",
+  "prior_terminal": "R7B_RUNTIME_SUBSTRATE_PREREQUISITE",
+  "prior_conclusion": "vLLM was rejected on p7, p8, and p9 after only vllm/models/deepseek_v41/nvidia/model.py was retained and audited.",
+  "correction_reason": "The prior audit was insufficient: it did not bind the PP utility, default safetensors loader, or V4.1 attention/cache sources. This successor retains that result as correction history and re-adjudicates from the expanded pinned source set.",
+  "preserved_predecessor": "Accepted R7-A evidence remains separately byte-bound by its original commit:path and hashes."
+}

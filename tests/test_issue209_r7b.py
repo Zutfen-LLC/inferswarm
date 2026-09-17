@@ -1,6 +1,7 @@
-"""Offline integrity and negative controls for Issue #209's substrate audit."""
+"""Offline integrity and adversarial controls for Issue #209 R7-B."""
 from __future__ import annotations
 
+import ast
 import json
 import shutil
 import sys
@@ -10,8 +11,8 @@ from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 sys.path.insert(0, str(SCRIPTS))
-import issue209_r7b_reducer as reducer  # noqa: E402
 import issue209_r7b_manifest as manifest  # noqa: E402
+import issue209_r7b_reducer as reducer  # noqa: E402
 
 
 class Issue209R7BTests(unittest.TestCase):
@@ -25,90 +26,99 @@ class Issue209R7BTests(unittest.TestCase):
             shutil.copy2(reducer.ROOT / relative, target)
         return root
 
-    def test_retained_terminal_is_current(self):
+    def authority(self, root: Path) -> dict:
+        return json.loads((root / reducer.RUNTIME_AUTHORITY).read_text())
+
+    def write_authority(self, root: Path, document: dict) -> None:
+        (root / reducer.RUNTIME_AUTHORITY).write_text(json.dumps(document))
+
+    @staticmethod
+    def vllm(document: dict) -> dict:
+        return next(row for row in document["candidates"] if row["id"] == "vllm-current-source")
+
+    def test_retained_terminal_is_current_runtime_prerequisite(self):
         actual = json.loads((reducer.ROOT / reducer.OUTPUT).read_text())
         self.assertEqual(actual, reducer.reduction_document())
+        self.assertEqual(actual["terminal"], reducer.TERMINAL)
+        self.assertEqual(actual["blocking_seam"]["predicate"], "p8_observable_cache_authority")
+        statuses = {row["id"]: row["status"]
+                    for row in actual["runtime"]["predicate_adjudications"]}
+        self.assertEqual(statuses, reducer.EXPECTED_STATUS)
 
-    def test_official_runtime_conversion_disqualifies_native_subject_claim(self):
-        document = reducer.reduction_document()
-        candidate = document["candidate_dispositions"][0]
-        self.assertEqual(candidate["id"], "official-reference-runtime")
-        self.assertEqual(candidate["disposition"], "REJECTED")
-        self.assertIn("p4_native_official_sharded_safetensors",
-                      candidate["failed_predicates"])
-        self.assertEqual(document["terminal"], reducer.TERMINAL)
+    def test_loader_and_pp_source_facts_cannot_be_falsely_rejected(self):
+        terminal = reducer.reduction_document()
+        rows = {row["id"]: row for row in terminal["runtime"]["predicate_adjudications"]}
+        for predicate in ("p4_native_official_sharded_safetensors",
+                          "p5_no_mandatory_representation_conversion",
+                          "p7_selective_materialization_control",
+                          "p9_one_legal_multi_resource_shape"):
+            self.assertEqual(rows[predicate]["status"], "PASS")
+        self.assertIn("model.safetensors.index.json", rows["p4_native_official_sharded_safetensors"]["evidence"][0])
+        source = json.loads((reducer.ROOT / reducer.EXTERNAL_SOURCE_EVIDENCE).read_text())
+        utils = "\n".join(source["third_party_candidates"]["vllm"]["files"]["utils"]["excerpts"])
+        model = "\n".join(source["third_party_candidates"]["vllm"]["files"]["model"]["excerpts"])
+        self.assertIn("PPMissingLayer", utils)
+        self.assertIn("IntermediateTensors", model)
 
-    def test_source_revision_drift_fails_closed(self):
-        root = self.staged()
-        path = root / reducer.RUNTIME_AUTHORITY
-        document = json.loads(path.read_text())
-        document["candidates"][0]["revision"] = "drifted"
-        path.write_text(json.dumps(document))
-        with self.assertRaisesRegex(ValueError, "runtime revision drift"):
-            reducer.reduction_document(root)
-
-    def test_loader_that_accepts_official_shards_cannot_be_falsely_rejected(self):
-        root = self.staged()
-        path = root / reducer.RUNTIME_AUTHORITY
-        document = json.loads(path.read_text())
-        candidate = document["candidates"][0]
-        candidate["loader_contract"] = "official-sharded-safetensors-index"
-        path.write_text(json.dumps(document))
-        with self.assertRaisesRegex(ValueError, "candidate disposition contradicts loader contract"):
-            reducer.reduction_document(root)
-
-    def test_wrong_predecessor_terminal_fails_closed(self):
-        root = self.staged()
-        path = root / reducer.R7A_TERMINAL
-        document = json.loads(path.read_text())
-        document["terminal"] = "forged"
-        path.write_text(json.dumps(document))
-        with self.assertRaisesRegex(ValueError, "R7-A terminal drift"):
-            reducer.reduction_document(root)
-
-    def test_nonsemantic_predecessor_terminal_edit_fails_closed(self):
-        root = self.staged()
-        path = root / reducer.R7A_TERMINAL
-        document = json.loads(path.read_text())
-        document["non_claims"].append("forged extra claim")
-        path.write_text(json.dumps(document, sort_keys=True))
-        with self.assertRaisesRegex(ValueError, "R7-A terminal content drift"):
-            reducer.reduction_document(root)
-
-    def test_predecessor_manifest_and_source_drift_fail_closed(self):
-        for relative, expected in (
-            (reducer.R7A_MANIFEST, "R7-A manifest drift"),
-            (next(iter(reducer.R7A_RETAINED_FILES)), "R7-A retained source drift"),
-        ):
-            with self.subTest(relative=relative):
+    def test_source_bound_predicates_cannot_be_downgraded_by_authored_disposition(self):
+        for predicate in ("p4_native_official_sharded_safetensors",
+                          "p5_no_mandatory_representation_conversion",
+                          "p7_selective_materialization_control",
+                          "p9_one_legal_multi_resource_shape"):
+            with self.subTest(predicate=predicate):
                 root = self.staged()
-                path = root / relative
-                path.write_bytes(path.read_bytes() + b"forged")
-                with self.assertRaisesRegex(ValueError, expected):
+                document = self.authority(root)
+                row = next(row for row in self.vllm(document)["predicate_adjudications"]
+                           if row["id"] == predicate)
+                row["status"] = "FAIL"
+                self.write_authority(root, document)
+                with self.assertRaisesRegex(ValueError, "predicate disposition contradicts pinned source"):
                     reducer.reduction_document(root)
 
-    def test_external_source_evidence_drift_fails_closed(self):
+    def test_cache_predicate_cannot_be_upgraded_without_lifecycle_evidence(self):
+        root = self.staged()
+        document = self.authority(root)
+        row = next(row for row in self.vllm(document)["predicate_adjudications"]
+                   if row["id"] == "p8_observable_cache_authority")
+        row["status"] = "PASS"
+        self.write_authority(root, document)
+        with self.assertRaisesRegex(ValueError, "unsupported cache authority upgrade"):
+            reducer.reduction_document(root)
+
+    def test_cache_seam_must_name_lifetime_invalidation_and_reconstruction(self):
+        root = self.staged()
+        document = self.authority(root)
+        row = next(row for row in self.vllm(document)["predicate_adjudications"]
+                   if row["id"] == "p8_observable_cache_authority")
+        row["evidence"] = ["attention ownership only"]
+        self.write_authority(root, document)
+        with self.assertRaisesRegex(ValueError, "cache lifecycle seam is not explicit"):
+            reducer.reduction_document(root)
+
+    def test_pinned_source_and_r7a_drift_fail_closed(self):
         root = self.staged()
         path = root / reducer.EXTERNAL_SOURCE_EVIDENCE
         document = json.loads(path.read_text())
-        document["third_party_candidates"]["vllm"]["revision"] = "forged"
+        document["third_party_candidates"]["vllm"]["files"]["attention"]["sha256"] = "forged"
         path.write_text(json.dumps(document))
-        with self.assertRaisesRegex(ValueError, "candidate source revision drift"):
+        with self.assertRaisesRegex(ValueError, "pinned vLLM source drift"):
             reducer.reduction_document(root)
-
-    def test_pinned_candidate_authority_drift_fails_closed(self):
         root = self.staged()
-        path = root / reducer.RUNTIME_AUTHORITY
-        document = json.loads(path.read_text())
-        document["candidates"][1]["revision"] = "forged"
-        path.write_text(json.dumps(document))
-        with self.assertRaisesRegex(ValueError, "candidate authority inventory drift"):
+        path = root / reducer.R7A_MANIFEST
+        path.write_bytes(path.read_bytes() + b"forged")
+        with self.assertRaisesRegex(ValueError, "R7-A manifest drift"):
             reducer.reduction_document(root)
 
-    def test_no_model_runtime_or_execution_is_imported(self):
-        source = (SCRIPTS / "issue209_r7b_reducer.py").read_text().lower()
-        for forbidden in ("import torch", "import transformers", "import subprocess", "cuda"):
-            self.assertNotIn(forbidden, source)
+    def test_static_reducer_does_not_import_runtime_or_execute_a_model(self):
+        forbidden = {"torch", "transformers", "subprocess", "vllm"}
+        tree = ast.parse((SCRIPTS / "issue209_r7b_reducer.py").read_text())
+        imports = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                imports |= {alias.name.split(".")[0] for alias in node.names}
+            if isinstance(node, ast.ImportFrom) and node.module:
+                imports.add(node.module.split(".")[0])
+        self.assertFalse(imports & forbidden)
 
     def test_evidence_manifest_is_current_and_repository_relative(self):
         actual = (manifest.ROOT / manifest.OUTPUT).read_text()
