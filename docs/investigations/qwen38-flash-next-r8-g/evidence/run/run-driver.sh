@@ -57,6 +57,18 @@ wait_port () { # $1 logfile
   echo "server failed to listen"; tail -5 "$1"; return 1
 }
 
+# llama-server performs a 1-token load-time decode (common_context_can_
+# seq_rm cache probe) EVEN with --no-warmup; after the server is
+# listening, truncate the observation JSONLs and clear the bounds dir so
+# occurrence 0 of every name is the FIRST graph execution of the CAPTURED
+# request. (The pre-request rows of the probe run are separately
+# retained in the server log; the capture producer re-proves empty
+# JSONLs at request time.)
+reset_obs () { # $1 bout $2 bjsonl $3 ljsonl
+  : > "$2"; : > "$3" 2>/dev/null || true
+  rm -rf "$1"; mkdir -p "$1"
+}
+
 stop_pid () {
   kill "$1" 2>/dev/null || true
   for i in $(seq 1 90); do kill -0 "$1" 2>/dev/null || return 0; sleep 1; done
@@ -75,8 +87,7 @@ nonpert)
       launch_obs $ARM $TMP/bout-$ARM-$I $TMP/b-$ARM-$I.jsonl \
         $TMP/l-$ARM-$I.jsonl $TMP/obs-server-$ARM-$I.log
       wait_port $TMP/obs-server-$ARM-$I.log
-      # capture producer reads sidecars from $OUT; run server with out
-      # pointing at a per-capture dir then copy rows+sidecars in
+      reset_obs $TMP/bout-$ARM-$I $TMP/b-$ARM-$I.jsonl $TMP/l-$ARM-$I.jsonl
       $PY scripts/issue207_r8g_capture.py --arm $ARM --case case-4096 \
         --phase nonpert --spec "$SPEC" --out-dir $OUT \
         --bounds-dir $TMP/bout-$ARM-$I --bounds-jsonl $TMP/b-$ARM-$I.jsonl \
@@ -94,6 +105,7 @@ coarse)
       launch_obs $ARM $TMP/bout-c-$ARM-$I $TMP/b-c-$ARM-$I.jsonl \
         $TMP/l-c-$ARM-$I.jsonl $TMP/obs-server-c-$ARM-$I.log
       wait_port $TMP/obs-server-c-$ARM-$I.log
+      reset_obs $TMP/bout-c-$ARM-$I $TMP/b-c-$ARM-$I.jsonl $TMP/l-c-$ARM-$I.jsonl
       $PY scripts/issue207_r8g_capture.py --arm $ARM --case case-4096 \
         --phase coarse --spec "$SPEC" --out-dir $OUT \
         --bounds-dir $TMP/bout-c-$ARM-$I --bounds-jsonl $TMP/b-c-$ARM-$I.jsonl \
@@ -111,6 +123,7 @@ refine)
       launch_obs $ARM $TMP/bout-r-$ARM-$I $TMP/b-r-$ARM-$I.jsonl \
         $TMP/l-r-$ARM-$I.jsonl $TMP/obs-server-r-$ARM-$I.log
       wait_port $TMP/obs-server-r-$ARM-$I.log
+      reset_obs $TMP/bout-r-$ARM-$I $TMP/b-r-$ARM-$I.jsonl $TMP/l-r-$ARM-$I.jsonl
       $PY scripts/issue207_r8g_capture.py --arm $ARM --case case-4096 \
         --phase refine --spec "$SPEC" --out-dir $OUT \
         --bounds-dir $TMP/bout-r-$ARM-$I --bounds-jsonl $TMP/b-r-$ARM-$I.jsonl \
@@ -128,6 +141,7 @@ contrast)
       launch_obs $ARM $TMP/bout-x-$ARM-$I $TMP/b-x-$ARM-$I.jsonl \
         $TMP/l-x-$ARM-$I.jsonl $TMP/obs-server-x-$ARM-$I.log
       wait_port $TMP/obs-server-x-$ARM-$I.log
+      reset_obs $TMP/bout-x-$ARM-$I $TMP/b-x-$ARM-$I.jsonl $TMP/l-x-$ARM-$I.jsonl
       $PY scripts/issue207_r8g_capture.py --arm $ARM --case case-256 \
         --phase contrast --spec "$SPEC" --out-dir $OUT \
         --bounds-dir $TMP/bout-x-$ARM-$I --bounds-jsonl $TMP/b-x-$ARM-$I.jsonl \
