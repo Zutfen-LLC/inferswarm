@@ -1,0 +1,5 @@
+# final repository closure; never an input to the terminal reduction it covers
+b6a2f307bbc83a330483d7d23ffc9b65772c52eb7b6dac81320118e5f7831feb  README.md
+6f142a3eafa33b382ed9842b271ffa3a218f6a3750e73bd174531ccef654f721  evidence/input-manifest.json
+4a979e21940e0e32f4a16022c0981ed522f44b969678a7ee7f47458a706d5d03  producer-hashes.json
+e2cd1b8757fe50bd57458f730c8872090a38439399ab9094311d6976506a6098  terminal-reduction.json

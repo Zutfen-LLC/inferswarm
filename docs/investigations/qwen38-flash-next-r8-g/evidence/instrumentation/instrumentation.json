@@ -1,0 +1,20 @@
+{
+  "accepted_ggml_rpc_server_sha256_unchanged": "a897f908add3305658e6b4f996880033d07ede0800fff71dbc46e90230acdfe9",
+  "accepted_llama_server_sha256_unchanged": "de3a8a545e2f5995f80ff23f60776fedc30edca67f0e09f3bc47c845156e3411",
+  "applied_source_sha256": "3227c89a16e5cd68ded21ac7d0c710244d8ba41ebe50b8ab76d2430b8a39242f",
+  "base_commit": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "base_source_file_sha256_pristine": "2f5d65ce6ef0504b5c8cf55a74c68d3959c49784ba380ef836566b7a7d5fa12b",
+  "binary_path": "/home/hermes/llama.cpp/r8g-obs/build-r8g/bin/llama-server",
+  "binary_sha256": "e0125f6631eb98e4d8dcc2a5ca4b5fedfc0abff4155f2e07cc5f154c3773176c",
+  "build_dir": "build-r8g",
+  "build_host": "inferswarm01",
+  "build_script_sha256": "ee5cb3e9455120cb52264a4beb67588e796364613ef8c6b42e7b5b88dc4cca35",
+  "configure_flags": "CUDACXX=/usr/local/cuda/bin/nvcc -DCMAKE_BUILD_TYPE=Release -DGGML_CUDA=ON -DCMAKE_CUDA_ARCHITECTURES=86 -DLLAMA_CURL=OFF -DGGML_RPC=ON -DGGML_CUDA_FA_ALL_QUANTS=OFF -DGGML_CUDA_FA_QUANTS=q4_0-q4_0;q8_0-q8_0;f16-f16;bf16-bf16 -DGGML_CUDA_COMPRESSION_MODE=size",
+  "hooks": {
+    "r8g_boundary_observer": "NATIVE scheduler eval callback (params_base.cb_eval -> llama_context -> ggml_backend_sched_set_eval_callback); observation only: ask=membership in frozen name set, tell=post-synchronize ggml_backend_tensor_get + frozen last-token-column extraction + sha256 + JSONL row + raw f32 sidecar; inert unless LLAMA_OBSERVE_BOUNDARIES/_OUT/_JSONL all set",
+    "r8g_observe_logits": "accepted R8-E hook semantics, byte-equivalent logic (sampling seam; inert unless LLAMA_OBSERVE_LOGITS)"
+  },
+  "note": "byte-identity proof: apply_hook.py applied to a pristine b29c606e checkout reproduces the built source byte-for-byte (REPRO_IDENTICAL, 2026-09-16). No execution, tensor placement, precision, synchronization-policy, sampling, cache-lifetime, source-policy, or state-ownership change: the callback path uses only the scheduler's own supported eval-callback mode and a documented tensor read.",
+  "patch_sha256": "f58a62742d74aecb79082b6bb0fd87b65cc8448b86fed09c8644d2bbb09e2863",
+  "worktree": "/home/hermes/llama.cpp/r8g-obs"
+}

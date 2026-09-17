@@ -1,0 +1,8 @@
+{
+  "scripts/issue207_r8g_authority.py": "d8f70ae967b367e93956d409e6548116a34f6913afa57f632d9dcc1f8399edbd",
+  "scripts/issue207_r8g_capture.py": "050c10547f93496ac804d1056b017d941256acf646e052148e659e9e2c07b5cd",
+  "scripts/issue207_r8g_launch.py": "5169f720b9505a2b0cc60d9231708b32884752c3c92a604447f1a7ef1db90f00",
+  "scripts/issue207_r8g_manifest.py": "d89393135242c778aae302ef1839f2b4451280bb49c2d585fe76dd34240a696a",
+  "scripts/issue207_r8g_negative_controls.py": "cb4a7a11ab6d4a16e8d2c02ebb8aca8545681729697566e103b0d858fea491d8",
+  "scripts/issue207_r8g_reduce.py": "73f5ea9c1b88d157437d4f04bdd38735f80de000986eacc632a656badbed5917"
+}

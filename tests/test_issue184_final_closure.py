@@ -264,6 +264,14 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue187_r7a_census.py",
             "scripts/issue187_r7a_reducer.py",
             "scripts/issue187_r7a_manifest.py",
+            # Issue #207 R8-G: additive runtime-boundary localization
+            # producers, independently pinned by its R8-G manifest.
+            "scripts/issue207_r8g_authority.py",
+            "scripts/issue207_r8g_launch.py",
+            "scripts/issue207_r8g_capture.py",
+            "scripts/issue207_r8g_reduce.py",
+            "scripts/issue207_r8g_negative_controls.py",
+            "scripts/issue207_r8g_manifest.py",
             ".github/workflows/ci.yml")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)
