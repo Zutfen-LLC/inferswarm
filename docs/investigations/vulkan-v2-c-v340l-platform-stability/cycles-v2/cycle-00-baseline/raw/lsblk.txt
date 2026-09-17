@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "lsblk",
+  "-o",
+  "NAME,SIZE,TYPE,MOUNTPOINT,MODEL"
+ ],
+ "rc": 0,
+ "stdout": "NAME     SIZE TYPE MOUNTPOINT  MODEL\nsda    232.9G disk             Samsung SSD 840 EVO 250GB\n\u251c\u2500sda1     1G part /boot/efi   \n\u251c\u2500sda2     8G part [SWAP]      \n\u2514\u2500sda3 223.9G part /           \nsdb      1.9T disk             TEAM T2532TB\n\u2514\u2500sdb1   1.9T part /srv/models \n",
+ "stderr": ""
+}

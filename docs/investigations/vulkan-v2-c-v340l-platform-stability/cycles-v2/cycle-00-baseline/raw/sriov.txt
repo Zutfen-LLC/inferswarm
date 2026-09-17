@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "bash",
+  "-c",
+  "for d in /sys/bus/pci/devices/*; do t=$(cat $d/vendor):$(cat $d/device); if [ \"$t\" = \"0x1002/0x6864\" ] || [ \"$t\" = \"0x1022/0x1470\" ] || [ \"$t\" = \"0x1022/0x1471\" ]; then echo == $d; cat $d/sriov_totalvfs 2>/dev/null; cat $d/sriov_numvfs 2>/dev/null; fi; done"
+ ],
+ "rc": 0,
+ "stdout": "",
+ "stderr": ""
+}

@@ -1,0 +1,12 @@
+{
+ "argv": [
+  "findmnt",
+  "-n",
+  "-o",
+  "SOURCE",
+  "/"
+ ],
+ "rc": 0,
+ "stdout": "/dev/sda3\n",
+ "stderr": ""
+}

@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "bash",
+  "-c",
+  "set -e; f=$(mktemp /var/tmp/issue215-fs-sentinel.XXXXXX); printf issue215 > $f; sync; cat $f; rm -f $f; echo STORAGE_SENTINEL_OK"
+ ],
+ "rc": 0,
+ "stdout": "issue215STORAGE_SENTINEL_OK\n",
+ "stderr": ""
+}

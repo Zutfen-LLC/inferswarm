@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "bash",
+  "-c",
+  "for d in /sys/bus/usb/devices/*; do [ -f $d/idVendor ] || continue; echo \"$d $(cat $d/idVendor):$(cat $d/idProduct) $(cat $d/product 2>/dev/null)\"; done"
+ ],
+ "rc": 0,
+ "stdout": "/sys/bus/usb/devices/1-7 16c0:05dc Fan-Controller\n/sys/bus/usb/devices/2-1 152d:a578 SABRENT\n/sys/bus/usb/devices/2-2 152d:a578 SABRENT\n/sys/bus/usb/devices/usb1 1d6b:0002 xHCI Host Controller\n/sys/bus/usb/devices/usb2 1d6b:0003 xHCI Host Controller\n",
+ "stderr": ""
+}

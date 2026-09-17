@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "bash",
+  "-c",
+  "lspci -nnk -s 01:00.0 | tail -3"
+ ],
+ "rc": 0,
+ "stdout": "\tSubsystem: Realtek Semiconductor Co., Ltd. Device [10ec:0123]\n\tKernel driver in use: r8169\n\tKernel modules: r8169\n",
+ "stderr": ""
+}

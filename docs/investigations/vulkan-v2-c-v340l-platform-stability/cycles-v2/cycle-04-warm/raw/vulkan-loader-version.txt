@@ -1,0 +1,11 @@
+{
+ "argv": [
+  "dpkg-query",
+  "-W",
+  "-f=${Version}\\n",
+  "libvulkan1"
+ ],
+ "rc": 0,
+ "stdout": "1.4.309.0-1\n",
+ "stderr": ""
+}
