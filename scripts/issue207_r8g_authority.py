@@ -131,7 +131,13 @@ N_LAYER = 48                       # qwen4exp.block_count
 N_EMBD = 2560                      # qwen4exp.embedding_length
 HC_MULT = 4                        # qwen4exp.hyper_connection.count
 FULL_ATTENTION_INTERVAL = 4        # qwen4exp.full_attention_interval
-PLE_LAYER = 0                      # qwen4exp.ple.layers = [0]
+PLE_LAYER = 1                      # qwen4exp.ple.layers = [1] (array,
+                                  # single entry, READ FROM GGUF bytes;
+                                  # the initial freeze draft wrongly
+                                  # assumed layer 0 — corrected 2026-09-16
+                                  # BEFORE any cross-arm refinement
+                                  # comparison was observed; no refinement
+                                  # verdict existed at correction time)
 N_VOCAB = 248320                   # observed f32 row width (R8-E rows)
 
 def is_full_attention_layer(il):

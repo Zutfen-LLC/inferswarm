@@ -40,7 +40,7 @@ class TestAuthority(unittest.TestCase):
         self.assertEqual(A.N_LAYER, 48)
         self.assertEqual(A.FULL_ATTENTION_LAYERS,
                          [3, 7, 11, 15, 19, 23, 27, 31, 35, 39, 43, 47])
-        self.assertEqual(A.PLE_LAYER, 0)
+        self.assertEqual(A.PLE_LAYER, 1)
         self.assertEqual(A.N_VOCAB, 248320)
 
     def test_coarse_boundary_set_frozen_order(self):
@@ -56,8 +56,10 @@ class TestAuthority(unittest.TestCase):
     def test_layer_sublists(self):
         gdn = A.layer_sublist(2)
         self.assertTrue(any(n.startswith("ple_conv_out") for n, _ in
-                            A.layer_sublist(0)))
+                            A.layer_sublist(1)))
         self.assertFalse(any(n.startswith("ple_conv_out") for n, _ in gdn))
+        self.assertFalse(any(n.startswith("ple_conv_out") for n, _ in
+                             A.layer_sublist(0)))
         attn = A.layer_sublist(3)
         self.assertTrue(any(n.startswith("Qcur") for n, _ in attn))
         self.assertFalse(any(n.startswith("Qcur") for n, _ in gdn))
