@@ -81,7 +81,7 @@ def producer_sha():
 
 
 def send_capture(arm, case, inputs, out_dir, label, phase, spec,
-                 server_env_hint):
+                 server_env_hint, bounds_dir, bounds_jsonl, logits_jsonl):
     pos = DECISION_POS[case]
     prompt = list(inputs[case][arm]["prompt_token_ids"])
     body = serialize_request(prompt)
@@ -89,13 +89,15 @@ def send_capture(arm, case, inputs, out_dir, label, phase, spec,
     req = urllib.request.Request(
         url, data=body, headers={"Content-Type": "application/json"})
 
-    b_jsonl = os.path.join(out_dir, f"bounds-{label}.jsonl")
-    l_jsonl = os.path.join(out_dir, f"logits-{label}.jsonl")
     # producer-side proof that no boundary rows predate the request
     pre_rows = 0
-    if os.path.exists(b_jsonl):
-        with open(b_jsonl) as fh:
+    if os.path.exists(bounds_jsonl):
+        with open(bounds_jsonl) as fh:
             pre_rows = sum(1 for _ in fh)
+    pre_logits_rows = 0
+    if os.path.exists(logits_jsonl):
+        with open(logits_jsonl) as fh:
+            pre_logits_rows = sum(1 for _ in fh)
 
     started = utcnow()
     t0 = time.time()
@@ -105,20 +107,20 @@ def send_capture(arm, case, inputs, out_dir, label, phase, spec,
     res = json.loads(raw)
 
     lrows = []
-    if os.path.exists(l_jsonl):
-        for line in open(l_jsonl):
+    if os.path.exists(logits_jsonl):
+        for line in open(logits_jsonl):
             line = line.strip()
             if line:
                 lrows.append(json.loads(line))
     brows = []
-    if os.path.exists(b_jsonl):
-        for line in open(b_jsonl):
+    if os.path.exists(bounds_jsonl):
+        for line in open(bounds_jsonl):
             line = line.strip()
             if line:
                 brows.append(json.loads(line))
 
     # f32 logits row at the target position (seam anchor)
-    f32_path = l_jsonl + f".pos{pos}.f32"
+    f32_path = logits_jsonl + f".pos{pos}.f32"
     row_b = open(f32_path, "rb").read() if os.path.exists(f32_path) else b""
     import struct
     n = len(row_b) // 4
@@ -127,14 +129,36 @@ def send_capture(arm, case, inputs, out_dir, label, phase, spec,
     n_nonfinite = sum(1 for v in vals if v != v or v in
                       (float("inf"), float("-inf"))) if vals else None
 
-    # boundary sidecar set named by the retained rows (presence check)
+    rec_problems = []
+    # retain the boundary sidecars INTO the evidence dir (copy from the
+    # server's bounds dir; the copy is verified byte-identical below)
     sidecars = {}
     for r_ in brows:
         safe = "".join(c if (c.isalnum() or c in ".-_") else "_"
                        for c in r_["name"])
-        p = os.path.join(out_dir, f"{safe}__{r_['seq']}.f32")
-        sidecars[p] = os.path.getsize(p) if os.path.exists(p) else -1
-
+        src = os.path.join(bounds_dir, f"{safe}__{r_['seq']}.f32")
+        dst = os.path.join(out_dir, f"{safe}__{r_['seq']}.f32")
+        if os.path.exists(src):
+            b_ = open(src, "rb").read()
+            with open(dst, "wb") as fh:
+                fh.write(b_)
+            if sha_b(b_) != r_["sha256"]:
+                rec_problems.append(
+                    "copied sidecar digest mismatch " + safe)
+            sidecars[dst] = len(b_)
+        else:
+            sidecars[dst] = -1
+    # retain the logits hook jsonl + f32 row copy in the evidence dir
+    if os.path.exists(logits_jsonl):
+        with open(logits_jsonl, "rb") as fh:
+            lb_ = fh.read()
+        with open(os.path.join(out_dir, f"logits-{label}.jsonl"),
+                  "wb") as fh:
+            fh.write(lb_)
+    if row_b:
+        with open(os.path.join(out_dir, f"row-{label}.pos{pos}.f32"),
+                  "wb") as fh:
+            fh.write(row_b)
     rec = {
         "schema": OBS_SCHEMA,
         "campaign": CAMPAIGN_ID,
@@ -156,8 +180,10 @@ def send_capture(arm, case, inputs, out_dir, label, phase, spec,
         "response_stop_type": res.get("stop_type"),
         "response_timings": res.get("timings"),
         "preexisting_boundary_rows": pre_rows,
+        "preexisting_logits_rows": pre_logits_rows,
         "boundary_rows": brows,
         "boundary_row_count": len(brows),
+        "boundary_rows_problems": rec_problems,
         "boundary_sidecar_sizes": {
             os.path.basename(k): v for k, v in sidecars.items()},
         "logits_hook_rows": lrows,
@@ -198,6 +224,8 @@ def verify_capture(rec, inputs):
         gt = rec["response_generated_tokens"] or []
         if pos >= len(gt) or tgt[0]["tok"] != gt[pos]:
             probs.append("hook tok != response token at target position")
+    if rec.get("preexisting_logits_rows", 0) != 0:
+        probs.append("logits rows existed before the request")
     # every boundary row's sidecar must exist with the recorded size
     for r_ in rec["boundary_rows"]:
         safe = "".join(c if (c.isalnum() or c in ".-_") else "_"
@@ -222,6 +250,12 @@ def main():
                     choices=["nonpert", "coarse", "refine", "contrast"])
     ap.add_argument("--spec", required=True,
                     help="exact LLAMA_OBSERVE_BOUNDARIES string")
+    ap.add_argument("--bounds-dir", required=True,
+                    help="server LLAMA_OBSERVE_BOUNDARY_OUT dir")
+    ap.add_argument("--bounds-jsonl", required=True,
+                    help="server LLAMA_OBSERVE_BOUNDARY_JSONL path")
+    ap.add_argument("--logits-jsonl", required=True,
+                    help="server LLAMA_OBSERVE_LOGITS path")
     ap.add_argument("--out-dir", required=True)
     ap.add_argument("--label", required=True)
     a = ap.parse_args()
@@ -231,11 +265,14 @@ def main():
     inputs = load_decision_inputs(REPO)
     rec = send_capture(a.arm, a.case, inputs, a.out_dir, a.label,
                        a.phase, a.spec,
-                       "LLAMA_OBSERVE_BOUNDARIES=%s" % a.spec)
+                       "LLAMA_OBSERVE_BOUNDARIES=%s" % a.spec,
+                       a.bounds_dir, a.bounds_jsonl, a.logits_jsonl)
     head, clean = git_state()
     rec["git_head"] = head
     rec["git_clean"] = clean
-    probs = verify_capture(rec, inputs)
+    rec["phase_dir"] = a.phase if a.phase != "nonpert" else "nonpert"
+    probs = verify_capture(rec, inputs) + list(
+        rec["boundary_rows_problems"])
     rec["capture_problems"] = probs
     out = os.path.join(a.out_dir, f"capture-{a.label}.json")
     with open(out, "w") as fh:
