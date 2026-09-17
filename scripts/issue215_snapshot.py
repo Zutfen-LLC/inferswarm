@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -58,6 +59,19 @@ def write_artifact(out: Path, name: str, data: bytes) -> dict:
     path = out / name
     path.write_bytes(data)
     (out / (name + ".sha256")).write_text(sha256_bytes(data) + "\n", encoding="utf-8")
+    # Durability (v2 lesson, cycle-04 v1 loss): every artifact is fsynced,
+    # and its parent directory entry too, so retained bytes survive an
+    # abrupt power cut at any moment.
+    fd = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    dfd = os.open(out, os.O_RDONLY)
+    try:
+        os.fsync(dfd)
+    finally:
+        os.close(dfd)
     return {"name": name, "bytes": len(data), "sha256": sha256_bytes(data)}
 
 

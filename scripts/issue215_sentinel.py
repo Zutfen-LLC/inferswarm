@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -48,6 +49,21 @@ def _now() -> str:
 
 def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+def _durable_write(path: Path, data: bytes) -> None:
+    """Durability (v2 lesson, cycle-04 v1 loss): fsync file + parent dir."""
+    path.write_bytes(data)
+    fd = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    dfd = os.open(path.parent, os.O_RDONLY)
+    try:
+        os.fsync(dfd)
+    finally:
+        os.close(dfd)
+
 
 
 def list_devices() -> tuple[list[dict], bytes]:
@@ -121,7 +137,7 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
 
     devices, enum_stdout = list_devices()
-    (out / "list-devices.stdout").write_bytes(enum_stdout)
+    _durable_write(out / "list-devices.stdout", enum_stdout)
     bdfs = vega_bdfs()
     record: dict = {
         "schema": SCHEMA,
@@ -143,7 +159,7 @@ def main() -> int:
     if len(vega_selectors) != 2:
         record["result"] = "DISCOVERY_FAILED"
         record["reason"] = f"expected exactly 2 Vega selectors, saw {len(vega_selectors)}"
-        (out / "sentinel-record.json").write_bytes(json.dumps(record, indent=1).encode() + b"\n")
+        _durable_write(out / "sentinel-record.json", json.dumps(record, indent=1).encode() + b"\n")
         print(json.dumps({"result": "DISCOVERY_FAILED", "reason": record["reason"]}))
         return 1
 
@@ -156,13 +172,13 @@ def main() -> int:
         d_out = out / f"die-{die}"
         d_out.mkdir()
         probe = probe_identity(dev["selector"])
-        (d_out / "probe-stderr.txt").write_bytes(probe["stderr"].encode())
-        (d_out / "probe.json").write_bytes(json.dumps(
+        _durable_write(d_out / "probe-stderr.txt", probe["stderr"].encode())
+        _durable_write(d_out / "probe.json", json.dumps(
             {k: v for k, v in probe.items() if k != "stderr"}, indent=1).encode() + b"\n")
         run = run_sentinel(dev["selector"])
-        (d_out / "stdout.txt").write_bytes(run["stdout"])
-        (d_out / "stderr.txt").write_bytes(run["stderr"])
-        (d_out / "exit-code.txt").write_text(f"{run['rc']}\n")
+        _durable_write(d_out / "stdout.txt", run["stdout"])
+        _durable_write(d_out / "stderr.txt", run["stderr"])
+        _durable_write(d_out / "exit-code.txt", f"{run['rc']}\n".encode())
         stderr_text = run["stderr"].decode("utf-8", "replace")
         # Accepted comparator grammar extracts the visible response; the
         # sentinel policy is byte-exact PREFIX equality against the frozen
@@ -181,7 +197,7 @@ def main() -> int:
                 "reference_sha256": ref_sha,
                 "byte_exact_prefix_of_reference": byte_exact,
             }
-        (d_out / "visible-output.txt").write_bytes(visible)
+        _durable_write(d_out / "visible-output.txt", visible)
         # Accepted selector-aware accounting reducer.
         try:
             accounting = v1c_accounting.parse_accounting(stderr_text, selector=dev["selector"])
@@ -214,7 +230,7 @@ def main() -> int:
             "result": "PASS" if ok else "FAIL",
         }
 
-    (out / "sentinel-record.json").write_bytes(json.dumps(record, indent=1).encode() + b"\n")
+    _durable_write(out / "sentinel-record.json", json.dumps(record, indent=1).encode() + b"\n")
     summary = {d: record["dies"][d]["result"] for d in record["dies"]}
     print(json.dumps({"cycle": args.cycle, "boot_id": args.boot_id, "dies": summary}))
     return 0 if all(v == "PASS" for v in summary.values()) else 1

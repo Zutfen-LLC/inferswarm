@@ -347,22 +347,38 @@ def derive(cycles_root: Path, plan: dict) -> dict:
             entry["checks"]["boot_id_unique_across_cycles"] = True
         sent_dir = cdir.parent / f"cycle-{entry['cycle_index']:02d}-sentinels"
         if sent_dir.is_dir():
-            sent = derive_sentinel_cycle(sent_dir)
-            # Sentinel attribution must bind to THIS boot and THIS boot's
-            # freshly enumerated Vega BDFs (stale authority fails closed).
-            if sent["boot_id"] != entry["boot_id"]:
-                sent["sentinel_result"] = "FAIL"
-                sent["attribution_error"] = "sentinel boot_id does not match snapshot boot_id"
-            vega_set = set(entry["detail"].get("vega_bdfs") or [])
-            if not set(sent.get("probe_bdfs") or []) <= vega_set:
-                sent["sentinel_result"] = "FAIL"
-                sent["attribution_error"] = (sent.get("attribution_error") or "") + \
-                    "; sentinel probe BDFs not among this boot's live Vega BDFs"
-            entry["sentinels"] = sent
-            entry["checks"]["sentinels_pass"] = sent["sentinel_result"] == "PASS"
-            sentinels[entry["cycle_index"]] = sent
+            record_path = sent_dir / "sentinel-record.json"
+            capture_ok = record_path.is_file() and record_path.stat().st_size > 0
+            if not capture_ok:
+                # The sentinel tool ran but its retained bytes are absent or
+                # empty (v1 cycle-04 power-cut page-cache loss). This is a
+                # CAPTURE fault, not an executed-and-failed sentinel: the
+                # campaign may not claim PASS or FAIL on an unobserved
+                # predicate — it classifies BLOCKED.
+                entry["sentinels"] = {"sentinel_result": "CAPTURE_UNAVAILABLE",
+                                      "reason": "sentinel-record.json missing or empty"}
+                entry["checks"]["sentinels_pass"] = False
+                entry["sentinel_capture_unavailable"] = True
+            else:
+                sent = derive_sentinel_cycle(sent_dir)
+                # Sentinel attribution must bind to THIS boot and THIS boot's
+                # freshly enumerated Vega BDFs (stale authority fails closed).
+                if sent["boot_id"] != entry["boot_id"]:
+                    sent["sentinel_result"] = "FAIL"
+                    sent["attribution_error"] = "sentinel boot_id does not match snapshot boot_id"
+                vega_set = set(entry["detail"].get("vega_bdfs") or [])
+                if not set(sent.get("probe_bdfs") or []) <= vega_set:
+                    sent["sentinel_result"] = "FAIL"
+                    sent["attribution_error"] = (sent.get("attribution_error") or "") + \
+                        "; sentinel probe BDFs not among this boot's live Vega BDFs"
+                entry["sentinels"] = sent
+                entry["checks"]["sentinels_pass"] = sent["sentinel_result"] == "PASS"
+                sentinels[entry["cycle_index"]] = sent
         else:
             entry["checks"]["sentinels_pass"] = False
+            entry["sentinel_capture_unavailable"] = True
+            entry["sentinels"] = {"sentinel_result": "CAPTURE_UNAVAILABLE",
+                                  "reason": "sentinel directory absent"}
         if entry["cycle_type"] == "warm":
             warm_count += 1
         elif entry["cycle_type"] == "cold":
@@ -373,10 +389,16 @@ def derive(cycles_root: Path, plan: dict) -> dict:
 
     all_pass = all(e["cycle_result"] == "PASS" for e in table)
     sentinels_all_pass = bool(sentinels) and all(s["sentinel_result"] == "PASS" for s in sentinels.values())
+    capture_unavailable = any(e.get("sentinel_capture_unavailable") for e in table)
     min_warm_ok = warm_count >= 4  # 3 ordinary + >=1 additional warm
     cold_ok = cold_count >= 1
 
     if not table:
+        terminal = "V2C_EVIDENCE_BLOCKED"
+    elif capture_unavailable:
+        # A required predicate could not be observed from retained bytes:
+        # trustworthy evidence for BOTH pass and fail is missing. BLOCKED,
+        # never relabeled as a platform failure (issue terminal contract).
         terminal = "V2C_EVIDENCE_BLOCKED"
     elif not all_pass or not sentinels_all_pass:
         terminal = "V2C_V340L_PLATFORM_STABILITY_FAIL"
@@ -397,6 +419,7 @@ def derive(cycles_root: Path, plan: dict) -> dict:
         "cold_cycles": cold_count,
         "all_cycles_pass": all_pass,
         "sentinels_all_pass": sentinels_all_pass,
+        "capture_unavailable_cycles": [e["cycle_index"] for e in table if e.get("sentinel_capture_unavailable")],
         "manual_interventions": [],
         "terminal": terminal,
     }
