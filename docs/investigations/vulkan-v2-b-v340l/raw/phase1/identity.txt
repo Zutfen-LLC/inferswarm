@@ -1,0 +1,2 @@
+collected_utc=2026-09-17T14:02:06+00:00
+hostname=inferswarm02

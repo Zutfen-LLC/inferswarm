@@ -276,6 +276,13 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue207_r8g_reduce.py",
             "scripts/issue207_r8g_negative_controls.py",
             "scripts/issue207_r8g_manifest.py",
+            # Issue #210 V2-B: additive V340L dual-die qualification
+            # producers over the accepted V2-A harness, independently
+            # pinned by the V2-B evidence manifest.
+            "scripts/issue210_build_authorities.py",
+            "scripts/issue210_assemble.py",
+            "scripts/issue210_terminal.py",
+            "scripts/issue210_manifest.py",
             ".github/workflows/ci.yml")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)
