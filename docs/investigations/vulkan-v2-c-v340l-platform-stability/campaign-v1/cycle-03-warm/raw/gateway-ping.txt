@@ -1,0 +1,13 @@
+{
+ "argv": [
+  "ping",
+  "-c",
+  "3",
+  "-W",
+  "2",
+  "10.0.0.1"
+ ],
+ "rc": 0,
+ "stdout": "PING 10.0.0.1 (10.0.0.1) 56(84) bytes of data.\n64 bytes from 10.0.0.1: icmp_seq=1 ttl=64 time=0.451 ms\n64 bytes from 10.0.0.1: icmp_seq=2 ttl=64 time=0.539 ms\n64 bytes from 10.0.0.1: icmp_seq=3 ttl=64 time=0.551 ms\n\n--- 10.0.0.1 ping statistics ---\n3 packets transmitted, 3 received, 0% packet loss, time 2025ms\nrtt min/avg/max/mdev = 0.451/0.513/0.551/0.044 ms\n",
+ "stderr": ""
+}

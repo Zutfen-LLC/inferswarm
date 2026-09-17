@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "bash",
+  "-c",
+  "for d in /sys/class/drm/card*/device; do echo == $d; cat $d/mem_info_vram_total 2>/dev/null; done"
+ ],
+ "rc": 0,
+ "stdout": "== /sys/class/drm/card0/device\n== /sys/class/drm/card0-DP-1/device\n== /sys/class/drm/card0-DP-2/device\n== /sys/class/drm/card0-HDMI-A-1/device\n== /sys/class/drm/card0-HDMI-A-2/device\n== /sys/class/drm/card0-HDMI-A-3/device\n== /sys/class/drm/card1/device\n8573157376\n== /sys/class/drm/card2/device\n8573157376\n",
+ "stderr": ""
+}

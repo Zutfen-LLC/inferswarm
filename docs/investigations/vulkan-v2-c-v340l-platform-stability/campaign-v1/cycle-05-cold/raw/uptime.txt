@@ -1,0 +1,9 @@
+{
+ "argv": [
+  "cat",
+  "/proc/uptime"
+ ],
+ "rc": 0,
+ "stdout": "94.73 166.57\n",
+ "stderr": ""
+}

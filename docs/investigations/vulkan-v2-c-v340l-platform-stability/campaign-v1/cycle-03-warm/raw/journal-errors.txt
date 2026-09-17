@@ -1,0 +1,12 @@
+{
+ "argv": [
+  "journalctl",
+  "-b",
+  "-p",
+  "err",
+  "--no-pager"
+ ],
+ "rc": 0,
+ "stdout": "Sep 17 17:01:45 inferswarm02 kernel: x86/cpu: SGX disabled or unsupported by BIOS.\nSep 17 17:01:45 inferswarm02 kernel: ACPI BIOS Error (bug): Failure creating named object [\\_SB.PCI0.SAT0.PSTA], AE_ALREADY_EXISTS (20251212/dswload2-326)\nSep 17 17:01:45 inferswarm02 kernel: ACPI Error: AE_ALREADY_EXISTS, During name lookup/catalog (20251212/psobject-220)\nSep 17 17:01:45 inferswarm02 kernel: ACPI BIOS Error (bug): Failure creating named object [\\_SB.PCI0.SAT0.PON], AE_ALREADY_EXISTS (20251212/dswload2-326)\nSep 17 17:01:45 inferswarm02 kernel: ACPI Error: AE_ALREADY_EXISTS, During name lookup/catalog (20251212/psobject-220)\nSep 17 17:01:45 inferswarm02 kernel: ACPI BIOS Error (bug): Failure creating named object [\\_SB.PCI0.SAT0.POFF], AE_ALREADY_EXISTS (20251212/dswload2-326)\nSep 17 17:01:45 inferswarm02 kernel: ACPI Error: AE_ALREADY_EXISTS, During name lookup/catalog (20251212/psobject-220)\nSep 17 17:01:47 inferswarm02 nvidia-persistenced[518]: Failed to query NVIDIA devices. Please ensure that the NVIDIA device files (/dev/nvidia*) exist, and that user 101 has read and write permissions for those files.\nSep 17 17:01:47 inferswarm02 systemd[1]: Failed to start nvidia-persistenced.service - NVIDIA Persistence Daemon.\n",
+ "stderr": ""
+}

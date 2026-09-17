@@ -1,0 +1,129 @@
+{
+ "schema": "inferswarm.v2c.execution-sentinel/1",
+ "campaign_id": "issue215-v2c-v340l-platform-stability-v1",
+ "cycle_index": 3,
+ "boot_id": "3edc3d73-eefa-4da1-a0fb-4b49bbc5fdfc",
+ "repo_head": "9c64ea154ea0c2a708638ab70a06acb3d1b73275",
+ "repo_dirty": true,
+ "comparator_identity": {
+  "v0c_correctness_sha256": "cbefc2ee9f21c90c20defbc89e9838603c65c9f6c94fa8f7363e8ccab77e6f5c",
+  "v1c_accounting_sha256": "8268862e58c14358f42b5b7f702e09a329860d1a9cf1376799f664fe5015275b"
+ },
+ "enumeration": {
+  "devices": [
+   {
+    "selector": "Vulkan0",
+    "name": "Intel(R) HD Graphics 510 (SKL GT1) (7954 MiB, 7158 MiB free)"
+   },
+   {
+    "selector": "Vulkan1",
+    "name": "AMD Radeon Pro V340 (RADV VEGA10) (8176 MiB, 8168 MiB free)"
+   },
+   {
+    "selector": "Vulkan2",
+    "name": "AMD Radeon Pro V340 (RADV VEGA10) (8176 MiB, 8168 MiB free)"
+   }
+  ],
+  "vega_bdfs_live": [
+   "06:00.0",
+   "09:00.0"
+  ]
+ },
+ "dies": {
+  "a": {
+   "selector": "Vulkan1",
+   "device_name": "AMD Radeon Pro V340 (RADV VEGA10) (8176 MiB, 8168 MiB free)",
+   "probe_bdf": "06:00.0",
+   "identity_proof_line": "using device Vulkan1 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:06:00.0) - 8168 MiB free",
+   "probe_rc": 0,
+   "stdout_sha256": "fe415e4411da5b040d62a4c93d9e3abd1659f30b0e703c1af893e1e012a9d933",
+   "stderr_sha256": "884a455ace2928b7464d8084a96a17a771571ca424fe22a8389adda0cebd325f",
+   "visible_output_sha256": "d0c1410074799fba4bf380f68b6654d2e8690d6805877186a5501f20629380fa",
+   "byte_exact_visible_output": true,
+   "exit_code": 0,
+   "argv": [
+    "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+    "-m",
+    "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+    "--temp",
+    "0",
+    "--seed",
+    "42",
+    "-n",
+    "8",
+    "-ngl",
+    "99",
+    "--device",
+    "Vulkan1",
+    "-lv",
+    "4",
+    "-p",
+    "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+    "-st"
+   ],
+   "offloaded_layers": [
+    37,
+    37
+   ],
+   "offload_full": true,
+   "accounting_three_tuple": {
+    "unexplained_persistent_host_mirror_bytes": 0,
+    "source_fetches_after_ready": 0,
+    "unplanned_state_movements": 0
+   },
+   "accounting_clean": true,
+   "reference_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d",
+   "reference_len": 215,
+   "visible_len": 39,
+   "result": "PASS"
+  },
+  "b": {
+   "selector": "Vulkan2",
+   "device_name": "AMD Radeon Pro V340 (RADV VEGA10) (8176 MiB, 8168 MiB free)",
+   "probe_bdf": "09:00.0",
+   "identity_proof_line": "using device Vulkan2 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:09:00.0) - 8168 MiB free",
+   "probe_rc": 0,
+   "stdout_sha256": "09e17ecd94eb15d5afdb01e23553a653d97c9ffa90a22a8dbabe596f43adb190",
+   "stderr_sha256": "fc844a5b0535af9add8e220145fefe5789c93b06443f46a40aa883e4647166c7",
+   "visible_output_sha256": "d0c1410074799fba4bf380f68b6654d2e8690d6805877186a5501f20629380fa",
+   "byte_exact_visible_output": true,
+   "exit_code": 0,
+   "argv": [
+    "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+    "-m",
+    "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+    "--temp",
+    "0",
+    "--seed",
+    "42",
+    "-n",
+    "8",
+    "-ngl",
+    "99",
+    "--device",
+    "Vulkan2",
+    "-lv",
+    "4",
+    "-p",
+    "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+    "-st"
+   ],
+   "offloaded_layers": [
+    37,
+    37
+   ],
+   "offload_full": true,
+   "accounting_three_tuple": {
+    "unexplained_persistent_host_mirror_bytes": 0,
+    "source_fetches_after_ready": 0,
+    "unplanned_state_movements": 0
+   },
+   "accounting_clean": true,
+   "reference_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d",
+   "reference_len": 215,
+   "visible_len": 39,
+   "result": "PASS"
+  }
+ },
+ "captured_utc": "2026-09-17T21:02:59.458549+00:00"
+}

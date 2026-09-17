@@ -1,0 +1,9 @@
+{
+ "argv": [
+  "lsusb",
+  "-t"
+ ],
+ "rc": 0,
+ "stdout": "/:  Bus 001.Port 001: Dev 001, Class=root_hub, Driver=xhci_hcd/12p, 480M\n    |__ Port 007: Dev 002, If 0, Class=[unknown], Driver=[none], 1.5M\n/:  Bus 002.Port 001: Dev 001, Class=root_hub, Driver=xhci_hcd/6p, 5000M\n    |__ Port 001: Dev 002, If 0, Class=Mass Storage, Driver=uas, 5000M\n    |__ Port 002: Dev 003, If 0, Class=Mass Storage, Driver=uas, 5000M\n",
+ "stderr": ""
+}

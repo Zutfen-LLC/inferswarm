@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "dmidecode",
+  "-s",
+  "bios-version"
+ ],
+ "rc": 0,
+ "stdout": "5.12\n",
+ "stderr": ""
+}

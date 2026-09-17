@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "dmidecode",
+  "-s",
+  "baseboard-product-name"
+ ],
+ "rc": 0,
+ "stdout": "12XTREME\n",
+ "stderr": ""
+}
