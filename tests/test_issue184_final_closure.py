@@ -207,6 +207,7 @@ class Issue184PreservationTests(unittest.TestCase):
         allowed = (
             "docs/", "README.md", "ROADMAP.md", "ARCHITECTURE.md",
             "tests/", "scripts/plan_ci.py", "scripts/ci_groups.json",
+            "AGENTS.md", "CONTRIBUTING.md",
             "scripts/finalize_repository.py",
             "scripts/issue189_r8a_reducer.py",
             "scripts/issue191_r8b_authority.py",
@@ -284,6 +285,13 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue210_assemble.py",
             "scripts/issue210_terminal.py",
             "scripts/issue210_manifest.py",
+            # Issue #213 campaign gate ordering: orchestration tooling and
+            # CI registration, independently covered by its own group.
+            "scripts/issue213_gate_orchestration.py",
+            # Issue #213 correction pass: single-launch guard integrated
+            # into the canonical runner path (scripts/run_full_cpu_suite.py),
+            # independently covered by test_run_full_cpu_suite.
+            "scripts/run_full_cpu_suite.py",
             ".github/workflows/ci.yml")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)

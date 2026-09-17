@@ -31,6 +31,14 @@ scratch ``TMPDIR`` so ordinary modules cannot collide on volatile paths.
 Use ``.venv/bin/python scripts/run_full_cpu_suite.py`` for the preferred local
 full CPU-suite command.  ``unittest discover`` remains useful for direct
 single-process debugging and equivalence checks.
+
+Single-launch deduplication (Issue #213): the canonical invocation path
+(delegating to :func:`run_single_head_suite`) guarantees at most ONE real
+suite process per ``(exact head, suite configuration, environment
+authority)`` request on a host.  Concurrent identical requests attach
+behind the live launch and consume its mechanically validated completion
+receipt; distinct identities never share results.  The launch identity is
+derived mechanically from the repository, never from a caller-supplied key.
 """
 from __future__ import annotations
 
@@ -50,7 +58,13 @@ from pathlib import Path
 from typing import Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS = ROOT / "scripts"
 SCHEMA = "parallel-full-cpu-suite/1"
+# Structured normalized suite configuration (Issue #213 configuration
+# identity).  The execution-relevant public runner inputs live in ONE
+# authoritative object; the completion/receipt identity binds it instead
+# of a command string alone.
+SUITE_CONFIG_SCHEMA = "suite-config/1"
 DEFAULT_MAX_JOBS = 4
 # Kept in one interpreter because the historical Issue #133 fixture deliberately
 # couples these real script modules through sys.modules.
@@ -372,6 +386,8 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
     serial_ids = ids_for_units(units)
     requested = default_jobs(len(units)) if jobs is None else jobs
     selected_jobs, tasks = build_tasks(units, requested)
+    config = suite_config_for(root, tests_dir, jobs, selected_jobs,
+                              _task_dicts(tasks), timeout, retain_dir)
     diagnostics: list[str] = []
     receipts: list[dict] = []
     timings: list[dict] = []
@@ -407,6 +423,14 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
                     worker_script = worker_root / "scripts" / Path(__file__).name
                     if not worker_script.is_file():
                         worker_script = Path(__file__).resolve()
+                    # The worker executes the SAME effective tests tree:
+                    # map it into the detached worktree when the root is a
+                    # Git checkout (custom tests directories included);
+                    # non-Git fixture roots execute the tree in place.
+                    try:
+                        worker_tests = worker_root / tests_dir.relative_to(root)
+                    except ValueError:
+                        worker_tests = tests_dir
                     # Worker output goes to per-task files, never OS pipes: the
                     # poll-based reaper does not drain pipes while waiting, and
                     # a full 64KB pipe buffer would freeze the worker forever.
@@ -414,7 +438,7 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
                     stderr_path = artifacts / f"task-{task.index}-stderr.txt"
                     with stdout_path.open("wb") as out, stderr_path.open("wb") as err:
                         command = [sys.executable, str(worker_script), "--worker",
-                                   "--root", str(worker_root), "--tests-dir", str(worker_root / "tests"),
+                                   "--root", str(worker_root), "--tests-dir", str(worker_tests),
                                    "--modules-file", str(modules_path),
                                    "--expected-ids-file", str(expected_path), "--receipt", str(receipt)]
                         process = subprocess.Popen(command, cwd=worker_root, text=True,
@@ -488,33 +512,147 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
         executed_ids, executed_digest = validate_receipts(receipts, serial_ids)
     except SuiteError as error:
         diagnostics.append(str(error))
-        return _result(False, serial_ids, [], selected_jobs, tasks, timings, diagnostics)
+        return _result(False, serial_ids, [], selected_jobs, tasks, timings,
+                       diagnostics, config=config)
     return _result(not diagnostics, serial_ids, executed_ids, selected_jobs, tasks,
-                   timings, diagnostics, executed_digest)
+                   timings, diagnostics, executed_digest, config=config)
+
+
+def run_single_head_suite(root: Path = ROOT, *, tests_dir: Path | None = None,
+                          jobs: int | None = None,
+                          timeout: float = 1800.0,
+                          retain_dir: Path | None = None) -> dict:
+    """Canonical single-launch entry (Issue #213 duplicate-launch guard).
+
+    Thin delegation to ``issue213_gate_orchestration.run_single_head_suite``
+    so the guard lives at the canonical invocation seam with exactly one
+    dependency edge.  ``tests_dir`` is honored exactly like the runner's
+    own ``run_suite`` contract (default ``root/tests``); the launch
+    identity binds the SAME effective tests directory.  Non-git roots run
+    unguarded, mirroring the runner's own git doctrine; a dirty Git
+    worktree is refused BEFORE identity derivation/completion reuse (the
+    guard enforces the runner's own ``ensure_clean_git_worktree``
+    doctrine), surfacing here as the runner's own ``SuiteError`` so the
+    CLI keeps its FAIL/exit-1 contract.  Import is local: tests import
+    THIS module first, and the orchestration module loads THIS module only
+    lazily for ``plan()``.
+    """
+    sys.path.insert(0, str(SCRIPTS))
+    try:
+        import issue213_gate_orchestration as gate
+    finally:
+        try:
+            sys.path.remove(str(SCRIPTS))
+        except ValueError:  # pragma: no cover (defensive)
+            pass
+    try:
+        return gate.run_single_head_suite(
+            Path(root), tests_dir=tests_dir, jobs=jobs, timeout=timeout,
+            retain_dir=retain_dir)
+    except gate.GateOrderingError as error:
+        raise SuiteError(str(error)) from error
 
 
 def _result(ok: bool, serial_ids: list[str], executed_ids: list[str], jobs: int,
             tasks: list[Task], timings: list[dict], diagnostics: list[str],
-            executed_digest: str | None = None) -> dict:
-    return {"ok": ok, "serial_ids": serial_ids, "executed_ids": executed_ids,
-            "serial_digest": identity_digest(sorted(serial_ids)),
-            "executed_digest": executed_digest, "count": len(serial_ids), "jobs": jobs,
-            "tasks": [{"index": task.index, "phase": task.phase, "tmpdir_mode": task.tmpdir_mode,
-                       "modules": [unit.name for unit in task.units]} for task in tasks],
-            "task_timings": timings, "diagnostics": "\n".join(diagnostics)}
+            executed_digest: str | None = None,
+            config: dict | None = None) -> dict:
+    payload = {"schema": SCHEMA, "ok": ok, "serial_ids": serial_ids, "executed_ids": executed_ids,
+               "serial_digest": identity_digest(sorted(serial_ids)),
+               "executed_digest": executed_digest, "count": len(serial_ids), "jobs": jobs,
+               "tasks": _task_dicts(tasks),
+               "task_timings": timings, "diagnostics": "\n".join(diagnostics)}
+    if config is not None:
+        payload["suite_config"] = config
+    return payload
+
+
+def _task_dicts(tasks: list[Task]) -> list[dict]:
+    return [{"index": task.index, "phase": task.phase,
+             "tmpdir_mode": task.tmpdir_mode,
+             "modules": [unit.name for unit in task.units]} for task in tasks]
+
+
+def task_plan_digest(task_dicts: list[dict]) -> str:
+    """Deterministic digest of the effective schedule (Identity #213).
+
+    Binds the phased task plan — task order, phase, TMPDIR mode, and module
+    assignment — so two requests with different effective schedules can
+    never share one completion identity.
+    """
+    return hashlib.sha256(json.dumps(
+        task_dicts, sort_keys=True, separators=(",", ":")).encode(
+            "utf-8")).hexdigest()
+
+
+def suite_config_for(root: Path, tests_dir: Path, requested_jobs: int | None,
+                     selected_jobs: int, task_dicts: list[dict],
+                     timeout: float, retain_dir: Path | None) -> dict:
+    """The ONE normalized execution configuration (Issue #213).
+
+    Captures every execution-relevant public runner input — effective tests
+    directory, EFFECTIVE/selected jobs, the deterministic task-plan
+    digest, timeout, and retention request — as a structured object.
+    Identity binds the EFFECTIVE schedule (the runner's deterministic
+    plan), not the requested label: default jobs and explicit ``--jobs 1``
+    are distinguishable exactly when their effective schedules differ.
+    Never a bare test-count/digest proxy: two runs that discover the same
+    population under different jobs/timeout/retention/tests-dir
+    configurations carry different ``suite_config`` objects.
+    """
+    if (not isinstance(timeout, (int, float)) or isinstance(timeout, bool)
+            or timeout <= 0):
+        raise SuiteError(f"timeout must be a positive number: {timeout!r}")
+    if requested_jobs is not None and (not isinstance(requested_jobs, int)
+                                       or isinstance(requested_jobs, bool)
+                                       or requested_jobs < 1):
+        raise SuiteError(f"jobs must be a positive integer: {requested_jobs!r}")
+    root, tests_dir = Path(root).resolve(), Path(tests_dir).resolve()
+    try:
+        tests_identity = tests_dir.relative_to(root).as_posix()
+    except ValueError:
+        # Outside the root: only representable (and only legal) for plain
+        # non-Git fixture roots; guarded Git-backed requests fail closed on
+        # this shape before identity derivation (orchestration doctrine).
+        tests_identity = str(tests_dir)
+    return {
+        "schema": SUITE_CONFIG_SCHEMA,
+        "tests_dir": tests_identity,
+        "jobs": selected_jobs,
+        "plan_digest": task_plan_digest(task_dicts),
+        "timeout": float(timeout),
+        "retain_dir": (str(Path(retain_dir).resolve())
+                       if retain_dir is not None else None),
+    }
+
+
+def suite_config(root: Path = ROOT, tests_dir: Path | None = None, *,
+                 jobs: int | None = None, timeout: float = 1800.0,
+                 retain_dir: Path | None = None) -> dict:
+    """Derive the normalized configuration from the runner's own plan.
+
+    Same authority as execution: the deterministic ``plan()`` of the exact
+    ``(root, tests_dir, jobs)`` triple determines the effective selected
+    jobs and the task-plan digest recorded in the configuration.
+    """
+    root = Path(root).resolve()
+    tests_dir = Path(tests_dir or root / "tests").resolve()
+    payload = plan(root, tests_dir, jobs)
+    return suite_config_for(root, tests_dir, jobs, payload["jobs"],
+                            payload["tasks"], timeout, retain_dir)
 
 
 def plan(root: Path, tests_dir: Path, jobs: int | None) -> dict:
     units = discover_units(root, tests_dir)
     selected_jobs, tasks = build_tasks(units, default_jobs(len(units)) if jobs is None else jobs)
     ids = ids_for_units(units)
+    task_dicts = _task_dicts(tasks)
     return {"schema": SCHEMA, "count": len(ids), "identity_digest": identity_digest(sorted(ids)),
             "module_count": len(units), "jobs": selected_jobs,
             "co_located_modules": sorted(COOLOCATED_MODULES),
             "isolated_modules": sorted(ISOLATED_MODULES),
             "tmpdir_sensitive_modules": sorted(TMPDIR_SENSITIVE_MODULES),
-            "tasks": [{"index": task.index, "phase": task.phase, "tmpdir_mode": task.tmpdir_mode,
-                       "modules": [unit.name for unit in task.units]} for task in tasks]}
+            "tasks": task_dicts}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -546,8 +684,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.list_only:
             payload = plan(args.root, tests_dir, args.jobs)
         else:
-            payload = run_suite(args.root, tests_dir, jobs=args.jobs, timeout=args.timeout,
-                                retain_dir=args.retain_dir)
+            payload = run_single_head_suite(args.root, tests_dir=tests_dir,
+                                            jobs=args.jobs,
+                                            timeout=args.timeout,
+                                            retain_dir=args.retain_dir)
     except (SuiteError, ValueError) as error:
         print(f"parallel-full-cpu-suite: FAIL {error}", file=sys.stderr)
         return 1
@@ -565,9 +705,13 @@ def main(argv: list[str] | None = None) -> int:
         print("parallel-full-cpu-suite: FAIL\n" + payload["diagnostics"], file=sys.stderr)
     if args.list_only:
         return 0
-    if args.retain_dir is not None:
-        summary = Path(args.retain_dir).resolve() / "summary.json"
-        _atomic_json(summary, payload)
+    # NOTE (Issue #213 retained-artifact correction): summary.json is
+    # finalized INSIDE the guarded logical request by the orchestration
+    # seam (issue213_gate_orchestration.run_single_head_suite), BEFORE the
+    # completion receipt is published and the launch lock released.  The
+    # CLI must never write it separately: a second writer here would
+    # re-open the post-suite/pre-summary window in which a completion is
+    # observable while the retained contract is still incomplete.
     return 0 if payload["ok"] else 1
 
 
