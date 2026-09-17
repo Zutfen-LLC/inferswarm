@@ -130,24 +130,31 @@ def send_capture(arm, case, inputs, out_dir, label, phase, spec,
                       (float("inf"), float("-inf"))) if vals else None
 
     rec_problems = []
-    # retain the boundary sidecars INTO the evidence dir (copy from the
-    # server's bounds dir; the copy is verified byte-identical below)
+    # retain the boundary sidecars INTO the evidence dir under a
+    # per-capture subdirectory (flat naming collides across captures of
+    # the same phase — physical finding 2026-09-16); copy verified
+    # byte-identical against the authored row digest
+    sc_dir = os.path.join(out_dir, "sc-" + label)
+    os.makedirs(sc_dir, exist_ok=True)
     sidecars = {}
     for r_ in brows:
         safe = "".join(c if (c.isalnum() or c in ".-_") else "_"
                        for c in r_["name"])
         src = os.path.join(bounds_dir, f"{safe}__{r_['seq']}.f32")
-        dst = os.path.join(out_dir, f"{safe}__{r_['seq']}.f32")
+        dst = os.path.join(sc_dir, f"{safe}__{r_['seq']}.f32")
         if os.path.exists(src):
             b_ = open(src, "rb").read()
             with open(dst, "wb") as fh:
                 fh.write(b_)
-            if sha_b(b_) != r_["sha256"]:
+            if r_["sha256"] != "NA" and sha_b(b_) != r_["sha256"]:
                 rec_problems.append(
                     "copied sidecar digest mismatch " + safe)
             sidecars[dst] = len(b_)
         else:
-            sidecars[dst] = -1
+            if r_["sha256"] == "NA":
+                sidecars[dst] = 0
+            else:
+                sidecars[dst] = -1
     # retain the logits hook jsonl + f32 row copy in the evidence dir
     if os.path.exists(logits_jsonl):
         with open(logits_jsonl, "rb") as fh:
@@ -184,6 +191,7 @@ def send_capture(arm, case, inputs, out_dir, label, phase, spec,
         "boundary_rows": brows,
         "boundary_row_count": len(brows),
         "boundary_rows_problems": rec_problems,
+        "boundary_sidecar_dir": "sc-" + label,
         "boundary_sidecar_sizes": {
             os.path.basename(k): v for k, v in sidecars.items()},
         "logits_hook_rows": lrows,

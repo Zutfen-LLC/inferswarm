@@ -109,9 +109,12 @@ def load_captures(phase_dir):
 
 
 def capture_sidecar(cap, phase_dir, name, seq):
-    p = os.path.join(EV, phase_dir,
-                     f"{safe_name(name)}__{seq}.f32")
-    return p
+    sc = cap.get("boundary_sidecar_dir")
+    if sc:
+        return os.path.join(EV, phase_dir, sc,
+                            f"{safe_name(name)}__{seq}.f32")
+    return os.path.join(EV, phase_dir,
+                        f"{safe_name(name)}__{seq}.f32")
 
 
 def target_execution_binding(cap):
