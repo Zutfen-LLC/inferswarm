@@ -1,0 +1,157 @@
+{
+ "accepted_source_pins": {
+  "scripts/v0c_canonical_run.py": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+  "scripts/v0c_correctness.py": "cbefc2ee9f21c90c20defbc89e9838603c65c9f6c94fa8f7363e8ccab77e6f5c",
+  "scripts/v1a_execution_participant.py": "f6c65a8de446a8980da56a42c35b58e7b58a5642ce1ed410283cf5e7a19c4ee9",
+  "scripts/v1a_runner.py": "c7b5b26ebb9d4eae651dab386326c9d234de1b3af7f0e5a4e553ee90bc21b3ed",
+  "scripts/v1a_vulkan_adapter.py": "a6167de9b43539dbcad00e9563abff2cdb3b9b19a328defe63d327aa6f7b9387",
+  "scripts/v1c_accounting.py": "8268862e58c14358f42b5b7f702e09a329860d1a9cf1376799f664fe5015275b"
+ },
+ "authority_state": "prospective prephysical V2-C final-check authority frozen and pushed before any V2-C final-check correctness-bearing physical output; binds selector/BDF to the FRESH final-boot V2-C reviewed discovery artifacts mechanically (loader v3 stale-inventory fail-closed contract); runtime/model/prompt/reference reused byte-identically from the accepted V2-B authority",
+ "capability_completion": {
+  "integrity_status": "QUALIFIED",
+  "representations": [
+   "gguf-q4-k-m"
+  ],
+  "required_features": [
+   "compute"
+  ]
+ },
+ "correctness": {
+  "comparator_identity": "scripts/v0c_correctness.py",
+  "comparator_policy": "v0c-byte-exact-visible-output-v2",
+  "comparator_sha256": "cbefc2ee9f21c90c20defbc89e9838603c65c9f6c94fa8f7363e8ccab77e6f5c",
+  "no_recalibration": "reference bytes are prospectively frozen; comparator policy may not be loosened or replaced after observation",
+  "reference_path": "docs/investigations/vulkan-v1-a/reference-visible-output.txt",
+  "reference_provenance": "accepted V0-A/V0-C/V1-A frozen reference: docs/investigations/vulkan-v1-a/reference-visible-output.txt (sha256 9013db8f...), the accepted byte-exact visible greedy output retained by the merged V1-A campaign",
+  "reference_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+ },
+ "discovery_binding": {
+  "binding_proof_sha256": "d942eb9f4fd0a46aa7364e144e6a1dc8632495d987e8b8d472b552fce673890a",
+  "binding_status": "BOUND",
+  "bindings_path": "docs/investigations/vulkan-v2-c-v340l-platform-stability/final-boot-staging/discovery/DISCOVERY-BINDINGS-R3.json",
+  "bindings_sha256": "ff8840842cf489cfd5481458b63defba24a8eacd83d96962656e588e4cbd4c16",
+  "discovery_hostname": "inferswarm02",
+  "discovery_runtime_executable_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+  "inventory_measured_utc": "2026-09-17T21:11:01.588582+00:00",
+  "inventory_path": "docs/investigations/vulkan-v2-c-v340l-platform-stability/final-boot-staging/discovery/DISCOVERY-INVENTORY-R3.json",
+  "inventory_sha256": "f99bc7c49a0b23c3f1e98558ccb6a4c2c3d8c27ce168e6aca5c3c7beada132ac",
+  "pci_bdf": "09:00.0",
+  "reviewed_utc": "2026-09-17T21:11:01.588831+00:00",
+  "selector": "Vulkan2"
+ },
+ "evidence": {
+  "capability_evidence_id": "v2c-final-b-capability-01",
+  "evidence_namespace": "vulkan-v2-c-v340l-platform-stability",
+  "plan_evidence_id": "v2c-final-b-plan-01"
+ },
+ "frozen": {
+  "canonical_execution_evidence_id": "v2c-final-b-canonical-01",
+  "compute_unit_id": "cu-v340l-die-b",
+  "correctness_policy": "v0c-byte-exact-visible-output-v2",
+  "executable": "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+  "executable_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+  "execution_contract_id": "contract-s2-opaque-v1",
+  "execution_unit_id": "unit-q4km-whole-model",
+  "hostname": "inferswarm02",
+  "implementation_id": "impl-v2c-final-die-b",
+  "logical_state_id": "qwen2.5-3b-instruct-q4-k-m-whole-model",
+  "memory_bytes": 8573157376,
+  "memory_resource_id": "mr-v340l-die-b-vram",
+  "model": "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+  "model_bytes": 1929903264,
+  "model_sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
+  "node_id": "node-inferswarm02",
+  "objective": "MIN_OBJECTIVE_VALUE",
+  "physical_device_bdf": "09:00.0",
+  "prompt": "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+  "qualification_evidence_id": "v2c-final-b-qualification-01",
+  "required_features": [
+   "compute"
+  ],
+  "required_headroom_bytes": 536870912,
+  "required_integrity_status": "QUALIFIED",
+  "required_memory_bytes": 3254091776,
+  "required_representation": "gguf-q4-k-m",
+  "runtime_identity": {
+   "binary_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+   "radv_target": "Mesa 25.0.7-2+deb13u1 (RADV VEGA10)",
+   "selector": "Vulkan2",
+   "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+   "vulkan_loader": "1.4.309",
+   "vulkan_loader_remeasured": "1.4.309"
+  },
+  "runtime_source": "/home/zutfen/.cache/v0c-llama.cpp",
+  "runtime_source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+  "selector": "Vulkan2",
+  "v1a_sources": {
+   "scripts/v0c_canonical_run.py": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+   "scripts/v0c_correctness.py": "cbefc2ee9f21c90c20defbc89e9838603c65c9f6c94fa8f7363e8ccab77e6f5c",
+   "scripts/v1a_execution_participant.py": "f6c65a8de446a8980da56a42c35b58e7b58a5642ce1ed410283cf5e7a19c4ee9",
+   "scripts/v1a_runner.py": "c7b5b26ebb9d4eae651dab386326c9d234de1b3af7f0e5a4e553ee90bc21b3ed",
+   "scripts/v1a_vulkan_adapter.py": "a6167de9b43539dbcad00e9563abff2cdb3b9b19a328defe63d327aa6f7b9387"
+  }
+ },
+ "issue": "#215",
+ "nonclaims": [
+  "internal/research device qualification harness proof only",
+  "not a public plugin API",
+  "not production scheduler/backend support",
+  "not default/preferred-backend policy",
+  "no broad hardware/model qualification",
+  "no comparator recalibration, no new tolerance",
+  "no Vulkan/CUDA numerical-equivalence claim",
+  "SSH is not used; the proving node is local to the executing session",
+  "no concurrent dual-die execution, throughput scaling, or shared-x1 contention claim",
+  "no SR-IOV VF, ROCm/HIP, or mixed-vendor claim",
+  "no Qwen3.8/DeepSeek V4.1 model qualification"
+ ],
+ "physical_identity": {
+  "compute_unit_id": "cu-v340l-die-b",
+  "device_local_vram_capacity_bytes": 8573157376,
+  "driver_runtime_identity": "Vulkan loader 1.4.309 (re-measured); RADV Mesa 25.0.7-2+deb13u1",
+  "gpu_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+  "gpu_pci_id": "1002:6864",
+  "hostname": "inferswarm02",
+  "memory_resource_bytes": 8573157376,
+  "memory_resource_id": "mr-v340l-die-b-vram",
+  "node_id": "node-inferswarm02",
+  "ontology_pressure_resource": {
+   "capabilities": [],
+   "compute_unit_id": "cu-v340l-die-a",
+   "memory_resource": {
+    "bytes": 8573157376,
+    "memory_resource_id": "mr-v340l-die-a-vram"
+   },
+   "node_id": "node-inferswarm02",
+   "physical_device_bdf": "06:00.0"
+  },
+  "upstream_topology": {
+   "gpu_to_switch_link": "PCIe Gen3 x16 (LnkSta 8.0 GT/s x16 at the endpoint)",
+   "pm8533_switch": "Microchip PM8533 (11f8:8533) fanout switch",
+   "root_port": "0000:00:1d.0 Intel 200-series PCH Root Port #9",
+   "root_port_negotiated": "PCIe Gen3 x1 (8.0 GT/s, width 1)"
+  }
+ },
+ "predecessors": {
+  "campaign_main_at_start": "36d0d7a7301230512dbbc2bca65388b6800dec6f",
+  "v2b_authority": "docs/investigations/vulkan-v2-b-v340l/AUTHORITY-V340L-A.json",
+  "v2b_merge": "f91119d05e7079c780c7b88be6138fed0920b759",
+  "v2b_terminal": "V2B_V340L_DUAL_DIE_QUALIFICATION_PASS"
+ },
+ "repeatability_inheritance": {
+  "inherited": true,
+  "predecessor_evidence": "accepted V0-C stability fixtures and the accepted V1-A canonical run (byte-exact vs frozen reference)",
+  "rule": "repeatability is inherited from the accepted predecessor campaigns, not newly measured: runtime binary/model/prompt/configuration and comparator semantics are reused unchanged (verified hash-identical at this freeze); the V2-A harness reuses the accepted execution/comparator/accounting semantics by import, so generated-output repeatability is unaffected"
+ },
+ "runtime_model_reuse": {
+  "basis": "exact reuse of the accepted V2-A R3 runtime/model/prompt/configuration",
+  "drift_check": "executable sha256, model sha256/bytes, llama.cpp source commit, Vulkan loader identity re-measured on this host at freeze; the previous AMD-A subject (RX 580 pair) was physically replaced by the V340L, so the selector/BDF/driver facts are FRESH V2-B measurements, not inherited"
+ },
+ "schema": "inferswarm.v2a.campaign-authority/3",
+ "source_freeze": {
+  "campaign_branch": "issue-210-v2b-v340l",
+  "discovery_head": "c26746c719e4f60fc6c5f85482e40483de5aa9ec",
+  "harness_sources_reused_unchanged": true
+ }
+}
