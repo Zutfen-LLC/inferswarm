@@ -296,42 +296,65 @@ def derive_cycle(cycle_dir: Path, baseline_usb: set[str] | None,
     hbm = [int(x) for x in re.findall(r"^([0-9]{9,})$", mem_text, re.M)]
     checks["hbm_capacity_expected"] = len(hbm) >= 2 and sorted(hbm)[-2:] == [EXPECTED_HBM_BYTES] * 2
 
-    # Link state, anchored at the ROOT BUS and cross-bound to the nn topology:
-    # a root-port candidate must be a bridge ENUMERATED IN lspci-nn (not a
-    # vv-only fabrication), its primary bus must be 00, and the bound switch
-    # upstream must be an nn-enumerated switch row whose vv block declares
-    # primary == that root port's secondary. Duplicate final-BDF vv blocks
-    # are rejected at parse time, so a forged prepend cannot ride a real row.
-    nn_bridge_bdfs = {r["bdf"] for r in lspci if r["id"].lower() in
-                      ("8086:a294", "8086:a29a", "8086:a295", "8086:a296", "8086:a297",
-                       "8086:a298", "8086:a299", "8086:a29a", "8086:a398") } |                      {r["bdf"] for r in lspci if r["desc"].lower().startswith("pci bridge")
+    nn_bridge_bdfs = {r["bdf"] for r in lspci
+                      if r["desc"].lower().startswith("pci bridge")
                       and r["id"].split(":")[0] == "8086"}
     nn_switch_bdfs = {s["bdf"] for s in switches}
+    # Link state. The chain is determined UNIQUELY from the retained
+    # lspci TREE topology (independent capture): the root port is the unique
+    # tree bridge whose secondary bus == the switch upstream's primary bus.
+    # The vv blocks then corroborate nn membership + Bus lines + LnkSta.
+    # Ambiguity (multiple candidate root ports or switch rows) fails CLOSED:
+    # an in-place rewrite of another real root port cannot smuggle a second
+    # chain, because BOTH chains would need to satisfy every predicate AND
+    # the tree must corroborate each; a degraded true root port then fails.
     gen3 = {"root_port": False, "switch_upstream": False}
     detail["link_chain"] = None
-    for rp_bdf, rp_block in blocks.items():
-        if rp_bdf not in nn_bridge_bdfs:
-            continue  # vv block without a matching nn row = fabricated topology
-        rp_buses = _bus_primary_secondary(rp_block)
-        if not rp_buses or rp_buses[0] != 0:
-            continue  # not a root-bus bridge (root port)
-        for s in switches:
-            if s["bdf"] not in nn_switch_bdfs or s["bdf"] not in blocks:
+    detail["link_candidates"] = []
+    tree_text = required_stdout("lspci-tree.txt")
+    candidates = []
+    for s in switches:
+        sb = blocks.get(s["bdf"])
+        if sb is None or s["bdf"] not in nn_switch_bdfs:
+            continue
+        s_buses = _bus_primary_secondary(sb)
+        if not s_buses:
+            continue
+        tree_roots = tree_root_port_for_switch(tree_text, s_buses[0])
+        for rp_bdf, rp_block in blocks.items():
+            if rp_bdf not in nn_bridge_bdfs:
                 continue
-            sb = blocks[s["bdf"]]
-            s_buses = _bus_primary_secondary(sb)
-            if not s_buses or s_buses[0] != rp_buses[1]:
-                continue  # this switch row's parent is not THIS root port
+            rp_buses = _bus_primary_secondary(rp_block)
+            if not rp_buses or rp_buses[0] != 0 or rp_buses[1] != s_buses[0]:
+                continue
+            # tree corroboration: the tree must ALSO show this root port
+            # opening the switch's primary bus (tree devices are abbreviated
+            # as '1d.0'; vv keys are '00:1d.0' — compare on the short form)
+            rp_short = rp_bdf.split(":")[1]  # '1d.0'
+            if not any(d == rp_short or d.endswith(rp_short) or rp_short.endswith(d)
+                       for d in tree_roots):
+                continue
             rst = _lnksta(rp_block)
             sst = _lnksta(sb)
             rp_ok = bool(rst and rst["speed"] == 8.0 and rst["width"] == 1)
             sw_ok = bool(sst and sst["speed"] == 8.0 and sst["width"] == 1)
-            if rp_ok:
-                gen3["root_port"] = True
-            if sw_ok:
-                gen3["switch_upstream"] = True
-            detail["link_chain"] = {"root_port_bdf": rp_bdf, "switch_upstream_bdf": s["bdf"],
-                                    "root_port_sta": rst, "switch_upstream_sta": sst}
+            candidates.append({"root_port_bdf": rp_bdf, "switch_upstream_bdf": s["bdf"],
+                               "root_port_sta": rst, "switch_upstream_sta": sst,
+                               "rp_ok": rp_ok, "sw_ok": sw_ok})
+    detail["link_candidates"] = candidates
+    if len(candidates) == 1:
+        c = candidates[0]
+        gen3["root_port"] = c["rp_ok"]
+        gen3["switch_upstream"] = c["sw_ok"]
+        detail["link_chain"] = c
+    elif len(candidates) > 1:
+        # ambiguity among corroborated chains: ALL must be Gen3 x1 (a forged
+        # second chain cannot rescue a degraded true chain)
+        gen3["root_port"] = all(c["rp_ok"] for c in candidates)
+        gen3["switch_upstream"] = all(c["sw_ok"] for c in candidates)
+        detail["link_chain"] = candidates[0]
+        detail["link_ambiguous"] = True
+    # zero candidates -> both predicates False (fail closed)
     checks["upstream_gen3_x1"] = gen3["root_port"] and gen3["switch_upstream"]
     detail["link"] = {"ok": checks["upstream_gen3_x1"], "parts": gen3}
 
@@ -387,6 +410,37 @@ def derive_cycle(cycle_dir: Path, baseline_usb: set[str] | None,
         "failed_checks": [k for k, v in checks.items() if not v],
     }
 
+
+
+def parse_lspci_tree(text: str) -> dict[str, tuple[int, int]]:
+    """Parse an lspci -t tree into {final_bdf: (secondary, subordinate)} for
+    bridge entries, from the retained tree bytes (independent of -vv)."""
+    spans: dict[str, tuple[int, int]] = {}
+    for m in re.finditer(r"([0-9a-f]{2})\.([0-9a-f]{2})\.([0-9a-f])\[(\w+)-?(\w+)?\]", text):
+        seg = m.group(0)
+        # lspci -t abbreviates BDFs as bus-relative (e.g. '1d.0-[02-09]'); the
+        # full form appears as 'XX-YY' bus ranges after the device. We record
+        # device -> (sec, sub) when a bracket range follows the device token.
+        dev = m.group(0).split("-[")[0]
+        rng = re.search(r"\[([0-9a-f]{2})-([0-9a-f]{2})\]", seg)
+        if rng:
+            spans[dev] = (int(rng.group(1), 16), int(rng.group(2), 16))
+    return spans
+
+
+def tree_root_port_for_switch(tree_text: str, switch_secondary: int) -> set[str]:
+    """Bridge devices in the TREE whose secondary == the switch's primary bus.
+    lspci -t abbreviates devices as '<bus><zero-padded?>.0' (e.g. '1d.0-[02-09]');
+    a single-bus span prints as '[NN]'. The tree is a separate retained capture;
+    forging a -vv chain without also forging the tree leaves it uncorroborated."""
+    found: set[str] = set()
+    for m in re.finditer(r"([0-9a-f]{1,2}\.[0-9a-f])\s*-\[([0-9a-f]{2})(?:-([0-9a-f]{2}))?\]",
+                         tree_text):
+        dev = m.group(1)
+        sec = int(m.group(2), 16)
+        if sec == switch_secondary:
+            found.add(dev)
+    return found
 
 def _stdout_of(path: Path) -> str:
     """Raw artifacts store probe results as JSON {argv, rc, stdout, stderr}."""

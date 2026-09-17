@@ -87,12 +87,30 @@
       "switch_upstream": true
      }
     },
+    "link_candidates": [
+     {
+      "root_port_bdf": "00:1d.0",
+      "root_port_sta": {
+       "speed": 8.0,
+       "width": 1
+      },
+      "rp_ok": true,
+      "sw_ok": true,
+      "switch_upstream_bdf": "02:00.0",
+      "switch_upstream_sta": {
+       "speed": 8.0,
+       "width": 1
+      }
+     }
+    ],
     "link_chain": {
      "root_port_bdf": "00:1d.0",
      "root_port_sta": {
       "speed": 8.0,
       "width": 1
      },
+     "rp_ok": true,
+     "sw_ok": true,
      "switch_upstream_bdf": "02:00.0",
      "switch_upstream_sta": {
       "speed": 8.0,
@@ -227,12 +245,30 @@
       "switch_upstream": true
      }
     },
+    "link_candidates": [
+     {
+      "root_port_bdf": "00:1d.0",
+      "root_port_sta": {
+       "speed": 8.0,
+       "width": 1
+      },
+      "rp_ok": true,
+      "sw_ok": true,
+      "switch_upstream_bdf": "02:00.0",
+      "switch_upstream_sta": {
+       "speed": 8.0,
+       "width": 1
+      }
+     }
+    ],
     "link_chain": {
      "root_port_bdf": "00:1d.0",
      "root_port_sta": {
       "speed": 8.0,
       "width": 1
      },
+     "rp_ok": true,
+     "sw_ok": true,
      "switch_upstream_bdf": "02:00.0",
      "switch_upstream_sta": {
       "speed": 8.0,
@@ -367,12 +403,30 @@
       "switch_upstream": true
      }
     },
+    "link_candidates": [
+     {
+      "root_port_bdf": "00:1d.0",
+      "root_port_sta": {
+       "speed": 8.0,
+       "width": 1
+      },
+      "rp_ok": true,
+      "sw_ok": true,
+      "switch_upstream_bdf": "02:00.0",
+      "switch_upstream_sta": {
+       "speed": 8.0,
+       "width": 1
+      }
+     }
+    ],
     "link_chain": {
      "root_port_bdf": "00:1d.0",
      "root_port_sta": {
       "speed": 8.0,
       "width": 1
      },
+     "rp_ok": true,
+     "sw_ok": true,
      "switch_upstream_bdf": "02:00.0",
      "switch_upstream_sta": {
       "speed": 8.0,
@@ -507,12 +561,30 @@
       "switch_upstream": true
      }
     },
+    "link_candidates": [
+     {
+      "root_port_bdf": "00:1d.0",
+      "root_port_sta": {
+       "speed": 8.0,
+       "width": 1
+      },
+      "rp_ok": true,
+      "sw_ok": true,
+      "switch_upstream_bdf": "02:00.0",
+      "switch_upstream_sta": {
+       "speed": 8.0,
+       "width": 1
+      }
+     }
+    ],
     "link_chain": {
      "root_port_bdf": "00:1d.0",
      "root_port_sta": {
       "speed": 8.0,
       "width": 1
      },
+     "rp_ok": true,
+     "sw_ok": true,
      "switch_upstream_bdf": "02:00.0",
      "switch_upstream_sta": {
       "speed": 8.0,
@@ -647,12 +719,30 @@
       "switch_upstream": true
      }
     },
+    "link_candidates": [
+     {
+      "root_port_bdf": "00:1d.0",
+      "root_port_sta": {
+       "speed": 8.0,
+       "width": 1
+      },
+      "rp_ok": true,
+      "sw_ok": true,
+      "switch_upstream_bdf": "02:00.0",
+      "switch_upstream_sta": {
+       "speed": 8.0,
+       "width": 1
+      }
+     }
+    ],
     "link_chain": {
      "root_port_bdf": "00:1d.0",
      "root_port_sta": {
       "speed": 8.0,
       "width": 1
      },
+     "rp_ok": true,
+     "sw_ok": true,
      "switch_upstream_bdf": "02:00.0",
      "switch_upstream_sta": {
       "speed": 8.0,

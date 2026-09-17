@@ -52,7 +52,8 @@ def synth_raw(stdout_map: dict[str, str]) -> Path:
     return tmp
 
 
-LSPCI_NN = """00:1d.0 PCI bridge [0604]: Intel Corporation 200 Series PCH PCIe Root Port #9 [8086:a294]
+LSPCI_NN = """00:1c.0 PCI bridge [0604]: Intel Corporation 200 Series PCH PCIe Root Port #5 [8086:a294]
+00:1d.0 PCI bridge [0604]: Intel Corporation 200 Series PCH PCIe Root Port #11 [8086:a294]
 00:14.0 USB controller [0c03]: Intel Corporation 200 Series/Z370 Chipset Family USB 3.0 xHCI Controller [8086:a2af]
 01:00.0 Ethernet controller [0200]: Realtek RTL8111/8168 [10ec:8168] (rev 07)
 02:00.0 PCI bridge [0604]: Microchip PM8533 [11f8:8533]
@@ -79,6 +80,9 @@ VEGA_VV_B = VEGA_VV_A.replace("06:00.0", "09:00.0").replace("d0000000", "b000000
 
 FULL_VV = """00:00.0 Host bridge [0600]: Intel Corp Host Bridge [8086:190f]
 \tKernel driver in use: skl_uncore
+00:1c.0 PCI bridge [0604]: Intel 200 Series PCH PCIe Root Port #5 [8086:a294]
+\tBus: primary=00, secondary=01, subordinate=01
+\tLnkSta:\tSpeed 2.5GT/s, Width x1
 00:1d.0 PCI bridge [0604]: Intel 200 Series PCH PCIe Root Port #11 [8086:a29a]
 \tBus: primary=00, secondary=02, subordinate=09
 \tLnkCap:\tPort #11, Speed 8GT/s, Width x1
@@ -140,7 +144,10 @@ JOURNAL = """Sep 17 00:00:00 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bu
 """
 BASE_RAW = {
     "lspci-nn.txt": LSPCI_NN,
-    "lspci-tree.txt": "t",
+    "lspci-tree.txt": "-[0000:00]-+-00.0\n"
+           "+-1c.0-[01]----00.0\n"
+           "+-1d.0-[02-09]----00.0-[03-09]--+-00.0-[04-06]----00.0-[05-06]----00.0-[06]----00.0\n"
+           "|                               \\-01.0-[07-09]----00.0-[08-09]----00.0-[09]----00.0\n",
     f"lspci-vv-06-00.0.txt": VEGA_VV_A,
     f"lspci-vv-09-00.0.txt": VEGA_VV_B,
     "lspci-vv-full.txt": FULL_VV,
@@ -735,6 +742,33 @@ class TerminalMutationControls(unittest.TestCase):
         raw.write_text(json.dumps(d))
         with self.assertRaises(Exception):
             run_reducer(tmp / "cycles")
+
+
+    # Round-4 review attack (M7): degrade the true root port AND rewrite the
+    # OTHER real root port (00:1c.0) in place to claim the switch bus. The
+    # retained lspci TREE still shows 00:1c.0 opening bus 01, so the forged
+    # chain is uncorroborated and only the degraded true chain remains.
+    def test_control_31_second_root_port_rewrite_rejected(self):
+        tmp = self.sandbox()
+        # degrade true root port
+        self._mutate_block(tmp, "00:1d.0 PCI bridge",
+                           "LnkSta:" + chr(9) + "Speed 8GT/s, Width x1",
+                           "LnkSta:" + chr(9) + "Speed 2.5GT/s, Width x1")
+        # rewrite 00:1c.0 in place: secondary 01 -> 02, LnkSta -> 8GT/s x1
+        raw = (tmp / "cycles/cycle-02-warm/raw/lspci-vv-full.txt")
+        d = json.loads(raw.read_text())
+        s = d["stdout"]
+        i = s.find("00:1c.0 PCI bridge")
+        end = i
+        for line in s[i:].splitlines(keepends=True)[1:]:
+            if line and not line.startswith((chr(9), " ")):
+                break
+            end += len(line)
+        blk = s[i:end].replace("secondary=01", "secondary=02")
+        blk = blk.replace("Speed 2.5GT/s, Width x1", "Speed 8GT/s, Width x1")
+        d["stdout"] = s[:i] + blk + s[end:]
+        raw.write_text(json.dumps(d))
+        self.assertNotEqual(self.derive_terminal(tmp), "V2C_V340L_PLATFORM_STABILITY_PASS")
 
     # Control 16: living ledger row authored with non-derivable facts
     def test_control_16_ledger_row_derivation(self):
