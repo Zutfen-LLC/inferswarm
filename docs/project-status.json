@@ -1,156 +1,157 @@
 {
-  "capabilities": [
-    {
-      "acceptance": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/55#issuecomment-5495529413",
-        "state": "accepted"
-      },
-      "id": "planning",
-      "observation": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/55#issuecomment-5495529413",
-        "result": "R3_MINIMUM_AUTOMATIC_PLANNING_PASS"
-      },
-      "scope": "physical",
-      "summary": "Strategy-constrained selection among legal local plans using applicable evidence and operator policy.",
-      "title": "Automatic planning"
-    },
-    {
-      "acceptance": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/60#issuecomment-5504161037",
-        "state": "accepted"
-      },
-      "id": "serving",
-      "observation": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/60#issuecomment-5504161037",
-        "result": "R5A_STATIC_MULTI_NODE_SERVING_PASS"
-      },
-      "scope": "physical",
-      "summary": "A normal request drives planning, multi-Node realization, and backend-native execution on the tested Qwen path.",
-      "title": "Distributed serving"
-    },
-    {
-      "acceptance": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/62#issuecomment-5508822299",
-        "state": "accepted"
-      },
-      "id": "recovery",
-      "observation": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/62#issuecomment-5508822299",
-        "result": "R5B_PLAN_EPOCH_RECOVERY_PASS"
-      },
-      "scope": "physical",
-      "summary": "Resource changes and recovery preserve plan-epoch authority and reject retired work on the tested serving path.",
-      "title": "Plan epochs and recovery"
-    },
-    {
-      "acceptance": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/67#issuecomment-5516608982",
-        "state": "accepted"
-      },
-      "id": "coordinator",
-      "observation": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/67#issuecomment-5516608982",
-        "result": "EXTERNAL_COORDINATOR_SEPARATION_PASS"
-      },
-      "scope": "physical",
-      "summary": "A CPU-only Coordinator handles ingress, planning, epoch coordination, and committed output without hosting model execution.",
-      "title": "Separate Coordinator"
-    },
-    {
-      "acceptance": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/53fb8f4c7ba3108a21f983712e5cbdb747a26600",
-        "state": "accepted"
-      },
-      "id": "acquisition",
-      "observation": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/53fb8f4c7ba3108a21f983712e5cbdb747a26600/docs/implementation/plan-driven-artifact-acquisition-99/README.md",
-        "result": "PLAN_DRIVEN_ARTIFACT_ACQUISITION_PASS"
-      },
-      "scope": "cpu-fixture",
-      "summary": "Participants acquire only required model artifacts in the model-independent acquisition proof.",
-      "title": "Selective artifact acquisition"
-    },
-    {
-      "acceptance": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da",
-        "state": "accepted"
-      },
-      "id": "orchestration",
-      "observation": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da/docs/implementation/plan-driven-artifact-orchestration-101/README.md",
-        "result": "PLAN_DRIVEN_ARTIFACT_ORCHESTRATION_PASS"
-      },
-      "scope": "cpu-fixture",
-      "summary": "Verified inventory, source selection, peer publication, and replacement-plan acquisition work across participants.",
-      "title": "Peer reuse and replacement deltas"
-    },
-    {
-      "acceptance": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/47624abe14a84d27188018200a48a8652f93bfd6",
-        "state": "accepted"
-      },
-      "id": "locality",
-      "observation": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/47624abe14a84d27188018200a48a8652f93bfd6/docs/implementation/artifact-locality-transition-planning-103/README.md",
-        "result": "ARTIFACT_LOCALITY_TRANSITION_PLANNING_PASS"
-      },
-      "scope": "cpu-fixture",
-      "summary": "Verified artifact locality affects transition ranking without changing technical feasibility or execution ranking.",
-      "title": "Locality-aware transition planning"
-    },
-    {
-      "acceptance": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76",
-        "state": "accepted"
-      },
-      "id": "qualification",
-      "observation": {
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76/docs/qualification/gemma4-12b-it-v5-campaign-110/b/TERMINAL-REPORT.md",
-        "result": "V5_QUALIFICATION_PASS"
-      },
-      "scope": "physical",
-      "summary": "The frozen Gemma subject passed V5 numerical and semantic qualification; applicability remains specific to that subject.",
-      "title": "Dense Gemma numerical qualification"
-    }
-  ],
-  "frontier": {
-    "execution": {
-      "constraints": [
-        "Issue #188 is roadmap authority for R8-A only. It does not authorize a model download, GPU execution, serving campaign, planner change, backend policy, or R8-B physical run.",
-        "R8-A must keep official Qwen and third-party GGUF authorities distinct, pin every source/runtime identity, and treat an observed static conclusion as neither acceptance nor R8-B authorization.",
-        "The accepted Issue #117 Arm A-E sequence remains historical evidence for its frozen Gemma subject/topology; it does not qualify Qwen3.8, GGUF, llama.cpp, another backend, or a successor topology.",
-        "The 2026-09-14 correction round (maintainer review 5672736372) additionally requires: fleet-fit conclusions derive from the mechanical hardware census (no authored aggregate constants), the GGUF header/tensor census is retained evidence, and reported-but-unobserved or pending hardware contributes zero bytes to deployed totals.",
-        "Any later R8-B work requires separate maintainer authority after an accepted R8-A record; green CPU checks, a generated terminal, and issue closure do not substitute for that authority."
-      ],
-      "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/189",
-      "state": "authorized",
-      "step": "Issue #189 authorizes CPU/static/read-only R8-A research only: retain source/runtime/fleet analysis and one bounded prerequisite or future-subject recommendation, with no physical R8-B execution. Correction round complete: terminal R8A_QWEN38_RUNTIME_PREREQUISITE re-derived from the bounded GGUF header census (PLE n-gram table identity/bytes established) and the measured 96-GiB deployed accelerator census (80 GiB NVIDIA + 16 GiB AMD)."
-    },
-    "objective": "Determine whether Qwen3.8-Flash-Next is an architecturally valuable, practical heterogeneous-residency target and freeze the authority/prerequisites for a later separately authorized physical campaign.",
-    "prerequisite": {
-      "title": "R8 program — static research authority",
-      "observation": {
-        "result": "R8A_STATIC_RESEARCH_AUTHORIZED",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/188"
-      },
-      "acceptance": {
-        "state": "accepted",
-        "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/188"
-      }
-    },
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/189",
-    "title": "Issue #189 — R8-A Qwen3.8-Flash-Next static census and runtime-fit"
+ "capabilities": [
+  {
+   "acceptance": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/55#issuecomment-5495529413",
+    "state": "accepted"
+   },
+   "id": "planning",
+   "observation": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/55#issuecomment-5495529413",
+    "result": "R3_MINIMUM_AUTOMATIC_PLANNING_PASS"
+   },
+   "scope": "physical",
+   "summary": "Strategy-constrained selection among legal local plans using applicable evidence and operator policy.",
+   "title": "Automatic planning"
   },
-  "limits": [
-    "Research / proof of concept; no released production runtime.",
-    "Physical results apply to their tested model, backend, hardware, and topology. CPU fixture proofs do not establish physical integration.",
-    "Public planner/strategy APIs, wire formats, and storage schemas remain unfrozen; broad vendor support remains an objective.",
-    "Historical Phase 1 NO-GO and R6 failure remain unchanged. GLM-5.3-Flash / #13 is a later falsifier."
-  ],
-  "runtime": {
-    "integration_branch": "inferswarm-research",
-    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/59",
-    "repository": "https://github.com/Zutfen-LLC/FreeToken"
+  {
+   "acceptance": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/60#issuecomment-5504161037",
+    "state": "accepted"
+   },
+   "id": "serving",
+   "observation": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/60#issuecomment-5504161037",
+    "result": "R5A_STATIC_MULTI_NODE_SERVING_PASS"
+   },
+   "scope": "physical",
+   "summary": "A normal request drives planning, multi-Node realization, and backend-native execution on the tested Qwen path.",
+   "title": "Distributed serving"
   },
-  "schema": "inferswarm.project-status/1"
+  {
+   "acceptance": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/62#issuecomment-5508822299",
+    "state": "accepted"
+   },
+   "id": "recovery",
+   "observation": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/62#issuecomment-5508822299",
+    "result": "R5B_PLAN_EPOCH_RECOVERY_PASS"
+   },
+   "scope": "physical",
+   "summary": "Resource changes and recovery preserve plan-epoch authority and reject retired work on the tested serving path.",
+   "title": "Plan epochs and recovery"
+  },
+  {
+   "acceptance": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/67#issuecomment-5516608982",
+    "state": "accepted"
+   },
+   "id": "coordinator",
+   "observation": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/67#issuecomment-5516608982",
+    "result": "EXTERNAL_COORDINATOR_SEPARATION_PASS"
+   },
+   "scope": "physical",
+   "summary": "A CPU-only Coordinator handles ingress, planning, epoch coordination, and committed output without hosting model execution.",
+   "title": "Separate Coordinator"
+  },
+  {
+   "acceptance": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/53fb8f4c7ba3108a21f983712e5cbdb747a26600",
+    "state": "accepted"
+   },
+   "id": "acquisition",
+   "observation": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/53fb8f4c7ba3108a21f983712e5cbdb747a26600/docs/implementation/plan-driven-artifact-acquisition-99/README.md",
+    "result": "PLAN_DRIVEN_ARTIFACT_ACQUISITION_PASS"
+   },
+   "scope": "cpu-fixture",
+   "summary": "Participants acquire only required model artifacts in the model-independent acquisition proof.",
+   "title": "Selective artifact acquisition"
+  },
+  {
+   "acceptance": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da",
+    "state": "accepted"
+   },
+   "id": "orchestration",
+   "observation": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/ffbc51a85dfa492b11ff8f3b0ea31b7762d6a5da/docs/implementation/plan-driven-artifact-orchestration-101/README.md",
+    "result": "PLAN_DRIVEN_ARTIFACT_ORCHESTRATION_PASS"
+   },
+   "scope": "cpu-fixture",
+   "summary": "Verified inventory, source selection, peer publication, and replacement-plan acquisition work across participants.",
+   "title": "Peer reuse and replacement deltas"
+  },
+  {
+   "acceptance": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/47624abe14a84d27188018200a48a8652f93bfd6",
+    "state": "accepted"
+   },
+   "id": "locality",
+   "observation": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/47624abe14a84d27188018200a48a8652f93bfd6/docs/implementation/artifact-locality-transition-planning-103/README.md",
+    "result": "ARTIFACT_LOCALITY_TRANSITION_PLANNING_PASS"
+   },
+   "scope": "cpu-fixture",
+   "summary": "Verified artifact locality affects transition ranking without changing technical feasibility or execution ranking.",
+   "title": "Locality-aware transition planning"
+  },
+  {
+   "acceptance": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/commit/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76",
+    "state": "accepted"
+   },
+   "id": "qualification",
+   "observation": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/blob/546ff9d44c727b6eba5abf3c8b40669b0b9b0b76/docs/qualification/gemma4-12b-it-v5-campaign-110/b/TERMINAL-REPORT.md",
+    "result": "V5_QUALIFICATION_PASS"
+   },
+   "scope": "physical",
+   "summary": "The frozen Gemma subject passed V5 numerical and semantic qualification; applicability remains specific to that subject.",
+   "title": "Dense Gemma numerical qualification"
+  }
+ ],
+ "frontier": {
+  "execution": {
+   "constraints": [
+    "Issue #188 is roadmap authority for R8-A only. It does not authorize a model download, GPU execution, serving campaign, planner change, backend policy, or R8-B physical run.",
+    "R8-A must keep official Qwen and third-party GGUF authorities distinct, pin every source/runtime identity, and treat an observed static conclusion as neither acceptance nor R8-B authorization.",
+    "The accepted Issue #117 Arm A-E sequence remains historical evidence for its frozen Gemma subject/topology; it does not qualify Qwen3.8, GGUF, llama.cpp, another backend, or a successor topology.",
+    "The 2026-09-14 correction round (maintainer review 5672736372) additionally requires: fleet-fit conclusions derive from the mechanical hardware census (no authored aggregate constants), the GGUF header/tensor census is retained evidence, and reported-but-unobserved or pending hardware contributes zero bytes to deployed totals.",
+    "Any later R8-B work requires separate maintainer authority after an accepted R8-A record; green CPU checks, a generated terminal, and issue closure do not substitute for that authority."
+   ],
+   "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/189",
+   "state": "authorized",
+   "step": "Issue #189 authorizes CPU/static/read-only R8-A research only: retain source/runtime/fleet analysis and one bounded prerequisite or future-subject recommendation, with no physical R8-B execution. Correction round complete: terminal R8A_QWEN38_RUNTIME_PREREQUISITE re-derived from the bounded GGUF header census (PLE n-gram table identity/bytes established) and the measured 96-GiB deployed accelerator census (80 GiB NVIDIA + 16 GiB AMD)."
+  },
+  "objective": "Determine whether Qwen3.8-Flash-Next is an architecturally valuable, practical heterogeneous-residency target and freeze the authority/prerequisites for a later separately authorized physical campaign.",
+  "prerequisite": {
+   "acceptance": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/188",
+    "state": "accepted"
+   },
+   "observation": {
+    "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/188",
+    "result": "R8A_STATIC_RESEARCH_AUTHORIZED"
+   },
+   "title": "R8 program \u2014 static research authority"
+  },
+  "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/189",
+  "title": "Issue #189 \u2014 R8-A Qwen3.8-Flash-Next static census and runtime-fit"
+ },
+ "limits": [
+  "Research / proof of concept; no released production runtime.",
+  "Issue #209 R7-B derived R7B_DEEPSEEK_V41_PHYSICAL_GATE_READY at https://github.com/Zutfen-LLC/inferswarm/pull/211 from retained pinned vLLM lifecycle source; compact fixture substrate-contract only, maintainer acceptance pending, and it grants no execution authorization.",
+  "Physical results apply to their tested model, backend, hardware, and topology. CPU fixture proofs do not establish physical integration.",
+  "Public planner/strategy APIs, wire formats, and storage schemas remain unfrozen; broad vendor support remains an objective.",
+  "Historical Phase 1 NO-GO and R6 failure remain unchanged. GLM-5.3-Flash / #13 is a later falsifier."
+ ],
+ "runtime": {
+  "integration_branch": "inferswarm-research",
+  "reference": "https://github.com/Zutfen-LLC/inferswarm/issues/59",
+  "repository": "https://github.com/Zutfen-LLC/FreeToken"
+ },
+ "schema": "inferswarm.project-status/1"
 }
