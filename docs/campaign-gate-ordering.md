@@ -105,10 +105,68 @@ module) is integrated into the **canonical invocation path**: the
 `run_full_cpu_suite.py` CLI itself delegates through `run_single_head_suite`,
 so direct legitimate invocation cannot bypass single-launch behavior.
 
+### The normalized suite configuration (identity-bearing)
+
+`suite configuration` means exactly one structured object — the runner's
+`suite_config` (`suite-config/1`) — never a bare test-count/digest proxy:
+
+| Field | Meaning |
+|---|---|
+| `tests_dir` | effective tests directory (repo-relative posix path); the identity derives from the SAME directory execution uses |
+| `jobs` | effective/selected worker count from the runner's deterministic plan of the exact `(root, tests_dir, requested jobs)` |
+| `plan_digest` | sha256 of the deterministic phased task plan (task order, phase, TMPDIR mode, module assignment) |
+| `timeout` | per-task timeout in seconds |
+| `retain_dir` | the retention request: `null` or the resolved requested directory |
+
+Identity binds the **effective** schedule, not the requested label: default
+jobs and explicit `--jobs 1` are distinguishable exactly when their effective
+schedules differ (identical effective configurations deduplicate normally).
+The task-plan digest makes schedule drift mechanically unforgeable.
+
+**Identity-bearing runner options**: `--tests-dir`, `--jobs` (through the
+plan-derived schedule), `--timeout`, `--retain-dir`. All other runner options
+are either non-execution-bearing (display: `--json`, `--list/--plan`) or
+internal worker plumbing not part of the public request.
+
+### Custom tests-directory rules (fail closed)
+
+`--tests-dir` restores the pre-#213 execution contract
+(`run_suite(root, tests_dir, ...)`): the guarded path executes the requested
+tests tree and derives its launch identity from the SAME effective tests
+directory; a custom directory is never silently normalized back to
+`root/tests`. For a Git-backed guarded request the tests tree must be
+**provably bound to the exact committed head**: it must live inside the
+repository root (never under `.git`) and be a real directory. Combined with
+the clean-worktree prerequisite, every file under it is tracked and
+byte-identical to `HEAD`. An external or unprovable tests tree is **refused**
+— never cached as though HEAD authorized its contents. Plain non-Git fixture
+roots keep the runner's existing unguarded behavior.
+
+### Retention and reuse policy (smallest safe policy, no artifact cache)
+
+A cached run without retained per-task artifacts cannot silently satisfy a
+later `--retain-dir` invocation:
+
+- concurrent identical requests with the same retention request may
+  deduplicate (exactly one launch; the retained artifacts land once, in the
+  one requested directory);
+- sequential cached-PASS reuse is **disabled** when satisfying the request
+  would omit the requested retained artifacts — the request performs a fresh
+  underlying suite run unless the exact documented artifact set is
+  mechanically proven present and compatible in the requested directory
+  (per-task `task-N-modules.json`, `task-N-expected.json`, `task-N.json`,
+  `task-N-stdout.txt`, `task-N-stderr.txt` for every task, plus the CLI's
+  `summary.json`);
+- this is a presence check against the exact retained set — **no
+  generalized artifact cache** is built.
+
+### Launch identity and guard mechanics
+
 - the launch identity key is **derived mechanically** — exact repository
   SHA + canonical suite population identity (the runner's own plan digest
-  and count) + environment authority hashes. An arbitrary caller-supplied
-  lock key is never accepted as authority;
+  and count) + the normalized suite configuration + environment authority
+  hashes. An arbitrary caller-supplied lock key is never accepted as
+  authority;
 - a **clean committed worktree is a prerequisite to the launch identity
   itself**: every guarded canonical full-suite request in a Git checkout
   establishes a clean committed worktree (the runner's own
@@ -142,8 +200,11 @@ so direct legitimate invocation cannot bypass single-launch behavior.
   `ok`, positive integer count, valid 64-hex serial/executed digests),
   its outcome must agree with the record's top-level `ok` flag, and a
   PASS additionally requires serial digest == executed digest, a count
-  exactly equal to the launch identity's suite count, and digests exactly
-  equal to the launch identity's suite population digest. Malformed,
+  exactly equal to the launch identity's suite count, digests exactly
+  equal to the launch identity's suite population digest, AND a suite
+  configuration exactly equal to the launch identity's configuration
+  (a completion produced under different jobs/tests/timeout/retention
+  inputs can never suppress this request's launch). Malformed,
   missing, or forged result fields fail closed — an incomplete result
   such as `{"ok": true}` can never suppress a fresh suite;
 - a completed FAIL is delivered only to requests that already attached to
@@ -171,7 +232,7 @@ the smallest record binding a PASS to its exact identity:
 | Field | Source |
 |---|---|
 | `git_commit_sha` | `git rev-parse HEAD`, clean tree enforced, exact 40-hex shape |
-| `suite` | runner schema (must be the known runner schema), canonical command, serial + executed identity digests (hex, equal), positive count |
+| `suite` | runner schema (must be the known runner schema), canonical command, the normalized suite configuration (`suite-config/1`), serial + executed identity digests (hex, equal), positive count |
 | `environment` | sha256 of each environment authority file — the complete required set, exactly (missing or unknown keys rejected) |
 | `result` | `PASS` only |
 | `count` | positive integer, consistent with the suite count |
@@ -196,9 +257,16 @@ lifecycle, not through receipts.
 `handoff_gate_status` takes an **independently derived**
 `FinalHeadRequest` — the current/final head identity derived from the
 repository itself (`current_final_head_request`: clean tree, `git
-rev-parse HEAD`, the runner's canonical plan of that tree, environment
-authority hashes) — and never identity extracted from the receipt under
-validation. Both final gates must bind to that one exact SHA:
+rev-parse HEAD`, the runner's canonical plan of that tree under the
+**canonical final-head suite configuration**, environment authority
+hashes) — and never identity extracted from the receipt under
+validation. The canonical final validation configuration is: default
+tests directory (`root/tests`), default jobs schedule, default per-task
+timeout (1800 s), no retained-artifact request. Because the normalized
+suite configuration is part of the request identity, a suite run under a
+different jobs/tests/timeout/retention configuration can never satisfy
+the canonical final-head request even when it discovers the same test
+IDs. Both final gates must bind to that one exact SHA:
 
 - the suite receipt must validate (structurally, per above) against the
   final-head request identity;

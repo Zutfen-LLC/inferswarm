@@ -69,11 +69,26 @@ import issue213_gate_orchestration as gate  # noqa: E402
 import run_full_cpu_suite as runner  # noqa: E402
 
 
+def sample_suite_config(tests_dir="tests", jobs=1,
+                        plan_digest=None, timeout=1800.0, retain_dir=None):
+    """A structurally valid normalized suite configuration (sample)."""
+    return {
+        "schema": gate.SUITE_CONFIG_SCHEMA,
+        "tests_dir": tests_dir,
+        "jobs": jobs,
+        "plan_digest": plan_digest or "a" * 64,
+        "timeout": timeout,
+        "retain_dir": retain_dir,
+    }
+
+
 def make_receipt(sha="a" * 40, serial="f" * 64, env_hash="e" * 64,
-                 result="PASS", started=None, ended=None, count=2759):
+                 result="PASS", started=None, ended=None, count=2759,
+                 config=None):
     suite = {
         "runner_schema": gate.RUNNER_SCHEMA,
         "suite_command": list(gate.FULL_SUITE_COMMAND),
+        "suite_config": config or sample_suite_config(),
         "serial_digest": serial,
         "executed_digest": serial,
         "count": count,
@@ -92,10 +107,11 @@ def make_receipt(sha="a" * 40, serial="f" * 64, env_hash="e" * 64,
 
 
 def make_final_head(sha="b" * 40, serial="f" * 64, env_hash="e" * 64,
-                    count=2759):
+                    count=2759, config=None):
     suite = {
         "runner_schema": gate.RUNNER_SCHEMA,
         "suite_command": list(gate.FULL_SUITE_COMMAND),
+        "suite_config": config or sample_suite_config(),
         "serial_digest": serial,
         "executed_digest": serial,
         "count": count,
@@ -106,9 +122,10 @@ def make_final_head(sha="b" * 40, serial="f" * 64, env_hash="e" * 64,
 
 
 def runner_result(ok=True, serial="f" * 64, count=2759,
-                  schema=gate.RUNNER_SCHEMA):
+                  schema=gate.RUNNER_SCHEMA, config=None):
     return {"ok": ok, "schema": schema, "serial_digest": serial,
-            "executed_digest": serial, "count": count}
+            "executed_digest": serial, "count": count,
+            "suite_config": config or sample_suite_config()}
 
 
 def canonical_result_for(identity: dict, ok: bool = True) -> dict:
@@ -117,7 +134,8 @@ def canonical_result_for(identity: dict, ok: bool = True) -> dict:
     executed = suite["serial_digest"] if ok else None
     return {"schema": gate.RUNNER_SCHEMA, "ok": ok,
             "serial_digest": suite["serial_digest"],
-            "executed_digest": executed, "count": suite["count"]}
+            "executed_digest": executed, "count": suite["count"],
+            "suite_config": suite["suite_config"]}
 
 
 _guard_repo_seq = 0
@@ -574,6 +592,7 @@ class FinalHeadRequestTests(unittest.TestCase):
         suite = {
             "runner_schema": gate.RUNNER_SCHEMA,
             "suite_command": list(gate.FULL_SUITE_COMMAND),
+            "suite_config": sample_suite_config(),
             "serial_digest": "f" * 64, "executed_digest": "f" * 64,
             "count": 2759,
         }
@@ -590,6 +609,19 @@ class FinalHeadRequestTests(unittest.TestCase):
         with self.assertRaises(gate.GateOrderingError):
             gate.FinalHeadRequest(git_commit_sha="a" * 40, suite=suite,
                                   environment=bad_env)
+        # a suite identity without the normalized configuration is
+        # structurally invalid
+        with self.assertRaises(gate.GateOrderingError):
+            gate.FinalHeadRequest(git_commit_sha="a" * 40,
+                                  suite={k: v for k, v in suite.items()
+                                         if k != "suite_config"},
+                                  environment=environment)
+        # ...and one with a malformed configuration
+        with self.assertRaises(gate.GateOrderingError):
+            gate.FinalHeadRequest(
+                git_commit_sha="a" * 40,
+                suite=dict(suite, suite_config=sample_suite_config(jobs=0)),
+                environment=environment)
 
 
 class LaunchGuardTests(unittest.TestCase):
@@ -697,13 +729,15 @@ class LaunchGuardTests(unittest.TestCase):
             "schema": gate.LAUNCH_IDENTITY_SCHEMA}
         guard = gate.LaunchGuard(identity, lock_dir=guard_dir)
         # canonical runner result shaped from the launch identity's own
-        # suite population (a bare {"ok": True, "count": 3} is FORGED and
-        # must fail closed — see the forged-completion controls)
+        # suite population AND configuration (a bare {"ok": True,
+        # "count": 3} is FORGED and must fail closed — see the
+        # forged-completion controls)
         suite = identity["suite"]
         canonical = {"schema": gate.RUNNER_SCHEMA, "ok": True,
                      "serial_digest": suite["serial_digest"],
                      "executed_digest": suite["executed_digest"],
-                     "count": suite["count"]}
+                     "count": suite["count"],
+                     "suite_config": suite["suite_config"]}
         guard.write_completion(canonical, started_unix=1.0)
         record = guard.find_valid_completion()
         self.assertIsNotNone(record)
@@ -1044,7 +1078,7 @@ class PreservationTests(unittest.TestCase):
         source = (ROOT / "scripts" / "run_full_cpu_suite.py").read_text(
             encoding="utf-8")
         self.assertIn(
-            "payload = run_single_head_suite(args.root, jobs=args.jobs,",
+            "payload = run_single_head_suite(args.root, tests_dir=tests_dir,",
             source)
 
 
@@ -1295,6 +1329,361 @@ class CompletionHardeningTests(unittest.TestCase):
         self.assertTrue(record["ok"])
         self.assertEqual(record["result"]["count"],
                          identity["suite"]["count"])
+
+
+class SuiteConfigurationIdentityTests(unittest.TestCase):
+    """Controls 38-46 (Issue #213 configuration-identity correction) —
+    REAL invocation-path configuration drift, all of which FAIL on the
+    pre-correction head 376e978 where the launch identity ignored the
+    requested configuration and `--tests-dir` never reached the guarded
+    execution path."""
+
+    def _repo(self, add_cleanup, *, tree_b=False, default_tree=True,
+              module_count=1):
+        """Clean committed fixture with default tree A and optional tree B."""
+        global _guard_repo_seq
+        _guard_repo_seq += 1
+        prefix = f"issue213k{_guard_repo_seq}"
+        root = Path(tempfile.mkdtemp(prefix=f"{prefix}-root-"))
+        add_cleanup(lambda: subprocess.run(["rm", "-rf", str(root)], check=False))
+        repo = root / "repo"
+        repo.mkdir()
+        for cmd in (("git", "init", "-q"),
+                    ("git", "config", "user.email", "t@example.invalid"),
+                    ("git", "config", "user.name", "t")):
+            subprocess.run(cmd, cwd=repo, check=True)
+        if default_tree:
+            (repo / "tests").mkdir()
+            for extra in range(max(0, module_count - 1)):
+                module_extra = f"test_{prefix}a{extra}"
+                add_cleanup(sys.modules.pop, module_extra, None)
+                (repo / "tests" / f"{module_extra}.py").write_text(
+                    "import unittest\nclass A(unittest.TestCase):\n"
+                    f" def test_tree_a{extra}(self): pass\n", encoding="utf-8")
+            module_a = f"test_{prefix}a"
+            add_cleanup(sys.modules.pop, module_a, None)
+            (repo / "tests" / f"{module_a}.py").write_text(
+                "import unittest\nclass A(unittest.TestCase):\n"
+                " def test_tree_a(self): pass\n", encoding="utf-8")
+        if tree_b:
+            (repo / "tree_b").mkdir()
+            module_b = f"test_{prefix}b"
+            add_cleanup(sys.modules.pop, module_b, None)
+            (repo / "tree_b" / f"{module_b}.py").write_text(
+                "import unittest\nclass B(unittest.TestCase):\n"
+                " def test_tree_b(self): pass\n", encoding="utf-8")
+        for rel in gate.ENV_AUTHORITY_FILES:
+            path = repo / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("authority\n", encoding="utf-8")
+        subprocess.run(("git", "add", "-A"), cwd=repo, check=True)
+        subprocess.run(("git", "commit", "-qm", "init"), cwd=repo, check=True)
+        return repo
+
+    def _patched_runner(self, repo):
+        """Patch runner.run_suite to record (root, tests_dir, jobs, timeout,
+        retain_dir) per launch and delegate to the real implementation."""
+        calls = []
+        original = runner.run_suite
+
+        def recording(root, tests_dir=None, **kwargs):
+            calls.append({"root": str(root),
+                          "tests_dir": str(tests_dir or Path(root) / "tests"),
+                          "jobs": kwargs.get("jobs"),
+                          "timeout": kwargs.get("timeout"),
+                          "retain_dir": kwargs.get("retain_dir")})
+            return original(Path(root), tests_dir, **kwargs)
+
+        runner.run_suite = recording
+        self.addCleanup(setattr, runner, "run_suite", original)
+        return calls
+
+    def _scrub_pycache(self, repo: Path) -> None:
+        """Remove untracked __pycache__ left by direct run_suite imports.
+
+        Guarded identity derivation imports discovery under
+        ``dont_write_bytecode``, but a bare ``runner.run_suite`` call
+        imports first and writes bytecode into the fixture tree.
+        """
+        subprocess.run(["find", str(repo), "-name", "__pycache__",
+                        "-type", "d", "-exec", "rm", "-rf", "{}", "+"],
+                       check=False)
+
+    # A. jobs drift: guarded run with jobs=1 then jobs=2 on the same
+    # head/environment requires a SECOND underlying launch, and each
+    # returned result's jobs matches its request.
+    def test_control38_jobs_drift_requires_second_launch(self):
+        repo = self._repo(self.addCleanup, module_count=4)
+        lock_dir = repo.parent / "locks"
+        calls = self._patched_runner(repo)
+        first = gate.run_single_head_suite(repo, jobs=1, lock_dir=lock_dir)
+        self.assertTrue(first["ok"])
+        self.assertEqual(first["jobs"], 1)
+        second = gate.run_single_head_suite(repo, jobs=2, lock_dir=lock_dir)
+        self.assertTrue(second["ok"])
+        self.assertEqual(second["jobs"], 2,
+                         "returned jobs must correspond to each request")
+        self.assertEqual(len(calls), 2,
+                         "jobs drift must require a second underlying launch")
+        self.assertEqual([c["jobs"] for c in calls], [1, 2])
+
+    # A2. explicit jobs=1 vs jobs=3 (different task plans) also distinct.
+    def test_control38_explicit_jobs_distinguishable(self):
+        repo = self._repo(self.addCleanup, module_count=4)
+        lock_dir = repo.parent / "locks"
+        calls = self._patched_runner(repo)
+        gate.run_single_head_suite(repo, jobs=1, lock_dir=lock_dir)
+        gate.run_single_head_suite(repo, jobs=3, lock_dir=lock_dir)
+        self.assertEqual(len(calls), 2)
+
+    # B. reverse jobs drift: default/cached run first; an explicit jobs=1
+    # request must NOT consume the default run's completion.
+    def test_control39_reverse_jobs_drift_no_reuse(self):
+        repo = self._repo(self.addCleanup, module_count=4)
+        lock_dir = repo.parent / "locks"
+        calls = self._patched_runner(repo)
+        default = gate.run_single_head_suite(repo, lock_dir=lock_dir)
+        self.assertTrue(default["ok"])
+        self.assertGreater(default["jobs"], 1,
+                           "fixture must give the default schedule more "
+                           "than one worker")
+        second = gate.run_single_head_suite(repo, jobs=1, lock_dir=lock_dir)
+        self.assertTrue(second["ok"])
+        self.assertEqual(len(calls), 2,
+                         "default-run completion must not satisfy a "
+                         "jobs=1 request")
+        self.assertEqual(second["jobs"], 1)
+
+    # C. timeout drift: materially different timeout => distinct execution
+    # identity / fresh launch.
+    def test_control40_timeout_drift_requires_fresh_launch(self):
+        repo = self._repo(self.addCleanup)
+        lock_dir = repo.parent / "locks"
+        calls = self._patched_runner(repo)
+        first = gate.run_single_head_suite(repo, timeout=600.0,
+                                           lock_dir=lock_dir)
+        self.assertTrue(first["ok"])
+        second = gate.run_single_head_suite(repo, timeout=3600.0,
+                                            lock_dir=lock_dir)
+        self.assertTrue(second["ok"])
+        self.assertEqual(len(calls), 2,
+                         "timeout drift must force a fresh launch — a "
+                         "long-timeout PASS may not masquerade under a "
+                         "shorter timeout")
+        self.assertEqual([c["timeout"] for c in calls], [600.0, 3600.0])
+        # distinct launch identities record distinct suite configurations
+        id_a = gate.launch_request_identity(repo, timeout=600.0)
+        id_b = gate.launch_request_identity(repo, timeout=3600.0)
+        self.assertNotEqual(id_a["suite"]["suite_config"],
+                            id_b["suite"]["suite_config"])
+
+    # D. custom tests directory honored: guarded invocation with
+    # tests_dir=B executes B, not A.
+    def test_control41_custom_tests_dir_executes_tree_b(self):
+        repo = self._repo(self.addCleanup, tree_b=True)
+        lock_dir = repo.parent / "locks"
+        calls = self._patched_runner(repo)
+        result = gate.run_single_head_suite(repo, tests_dir=repo / "tree_b",
+                                            lock_dir=lock_dir)
+        self.assertTrue(result["ok"])
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(Path(calls[0]["tests_dir"]).name, "tree_b",
+                         "the guarded path must execute the requested "
+                         "tests tree, not the default")
+        executed = result["serial_ids"]
+        self.assertTrue(any("tree_b" in test_id for test_id in executed),
+                        f"expected tree B population, got {executed}")
+        self.assertFalse(any("tree_a" in test_id for test_id in executed))
+
+    # E. default-cache cannot satisfy a custom tests directory: fresh
+    # execution and custom population result.
+    def test_control42_default_run_cannot_satisfy_custom_tree(self):
+        repo = self._repo(self.addCleanup, tree_b=True)
+        lock_dir = repo.parent / "locks"
+        calls = self._patched_runner(repo)
+        default = gate.run_single_head_suite(repo, lock_dir=lock_dir)
+        self.assertTrue(default["ok"])
+        self.assertFalse(any("tree_b" in t for t in default["serial_ids"]))
+        custom = gate.run_single_head_suite(repo, tests_dir=repo / "tree_b",
+                                            lock_dir=lock_dir)
+        self.assertTrue(custom["ok"])
+        self.assertEqual(len(calls), 2,
+                         "a default-tree completion must never satisfy a "
+                         "custom tests-directory request")
+        self.assertTrue(any("tree_b" in t for t in custom["serial_ids"]))
+        self.assertNotEqual(default["serial_digest"],
+                            custom["serial_digest"])
+
+    # E2. fail-closed: a tests directory outside the repository root is
+    # refused for a Git-backed guarded request, never cached.
+    def test_control42_external_tests_dir_fails_closed(self):
+        repo = self._repo(self.addCleanup)
+        calls = self._patched_runner(repo)
+        external = repo.parent / "external-tests"
+        external.mkdir(exist_ok=True)
+        (external / "test_external_probe.py").write_text(
+            "import unittest\nclass X(unittest.TestCase):\n"
+            " def test_x(self): pass\n", encoding="utf-8")
+        self.addCleanup(sys.modules.pop, "test_external_probe", None)
+        with self.assertRaises(gate.GateOrderingError) as caught:
+            gate.run_single_head_suite(repo, tests_dir=external,
+                                       lock_dir=repo.parent / "locks")
+        self.assertIn("inside the repository root", str(caught.exception))
+        self.assertEqual(len(calls), 0,
+                         "no underlying launch may occur for an unprovable "
+                         "external tests tree")
+
+    # F. retain-dir after a non-retained PASS: the documented retained
+    # per-task artifacts must be produced, not the old cached payload.
+    def test_control43_retain_dir_after_non_retained_pass(self):
+        repo = self._repo(self.addCleanup)
+        lock_dir = repo.parent / "locks"
+        calls = self._patched_runner(repo)
+        first = gate.run_single_head_suite(repo, lock_dir=lock_dir)
+        self.assertTrue(first["ok"])
+        self.assertEqual(len(calls), 1)
+        retain_dir = repo.parent / "retained"
+        second = gate.run_single_head_suite(repo, retain_dir=retain_dir,
+                                            lock_dir=lock_dir)
+        self.assertTrue(second["ok"])
+        self.assertEqual(len(calls), 2,
+                         "a non-retained PASS must be rerun to produce the "
+                         "requested retained artifacts")
+        task_count = len(second["tasks"])
+        self.assertGreaterEqual(task_count, 1)
+        for index in range(task_count):
+            for suffix in ("-modules.json", "-expected.json", ".json",
+                           "-stdout.txt", "-stderr.txt"):
+                self.assertTrue(
+                    (retain_dir / f"task-{index}{suffix}").is_file(),
+                    f"missing documented retained artifact task-{index}"
+                    f"{suffix}")
+        # The CLI produces the full documented retained set INCLUDING
+        # summary.json (the seam produces the per-task artifacts; the CLI
+        # adds the summary) — proven through a real CLI invocation on a
+        # fresh retain directory.
+        cli_retain = repo.parent / "retained-cli"
+        completed = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "run_full_cpu_suite.py"),
+             "--root", str(repo), "--retain-dir", str(cli_retain),
+             "--json"],
+            capture_output=True, text=True)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertTrue((cli_retain / "summary.json").is_file(),
+                        "the CLI must produce summary.json alongside the "
+                        "per-task retained artifacts")
+
+    # F2. concurrent identical requests WITH the same retention request
+    # still deduplicate (exactly-one launch + attach).
+    def test_control44_concurrent_retained_requests_deduplicate(self):
+        repo = self._repo(self.addCleanup)
+        lock_dir = repo.parent / "locks"
+        calls = self._patched_runner(repo)
+        retain_dir = repo.parent / "retained-conc"
+        launches = []
+        release = threading.Event()
+        original = runner.run_suite
+
+        def slow_suite(root, tests_dir=None, **kwargs):
+            launches.append(time.time())
+            release.wait(10)
+            return original(Path(root), tests_dir, **kwargs)
+
+        runner.run_suite = slow_suite
+        self.addCleanup(setattr, runner, "run_suite", original)
+        results = {}
+
+        def starter(name):
+            try:
+                results[name] = gate.run_single_head_suite(
+                    repo, retain_dir=retain_dir, lock_dir=lock_dir)
+            except BaseException as error:  # noqa: BLE001
+                results[name] = error
+
+        first = threading.Thread(target=starter, args=("first",))
+        first.start()
+        deadline = time.monotonic() + 10
+        while not launches and time.monotonic() < deadline:
+            time.sleep(0.01)
+        self.assertEqual(len(launches), 1)
+        second = threading.Thread(target=starter, args=("second",))
+        second.start()
+        time.sleep(0.3)
+        self.assertEqual(len(launches), 1,
+                         "concurrent identical retained requests must "
+                         "deduplicate, not relaunch")
+        release.set()
+        first.join(30)
+        second.join(30)
+        self.assertEqual(len(launches), 1)
+        self.assertTrue(results["first"]["ok"])
+        self.assertTrue(results["second"]["ok"])
+
+    # G. identical full configuration: sequential PASS reuse preserved.
+    def test_control45_identical_config_reuses(self):
+        repo = self._repo(self.addCleanup)
+        lock_dir = repo.parent / "locks"
+        calls = self._patched_runner(repo)
+        first = gate.run_single_head_suite(repo, jobs=1, timeout=900.0,
+                                           lock_dir=lock_dir)
+        self.assertTrue(first["ok"])
+        second = gate.run_single_head_suite(repo, jobs=1, timeout=900.0,
+                                            lock_dir=lock_dir)
+        self.assertTrue(second["ok"])
+        self.assertEqual(len(calls), 1,
+                         "identical full configuration must reuse the "
+                         "sequential PASS")
+
+    # H. default-vs-explicit jobs equivalence when schedules coincide:
+    # default jobs on a one-module population IS jobs=1 — requests whose
+    # EFFECTIVE schedules and configurations coincide may attach/reuse.
+    def test_control46_equivalent_default_and_explicit_jobs(self):
+        repo = self._repo(self.addCleanup)
+        lock_dir = repo.parent / "locks"
+        calls = self._patched_runner(repo)
+        default = gate.run_single_head_suite(repo, lock_dir=lock_dir)
+        self.assertTrue(default["ok"])
+        explicit = gate.run_single_head_suite(repo, jobs=1,
+                                              lock_dir=lock_dir)
+        self.assertTrue(explicit["ok"])
+        self.assertEqual(len(calls), 1,
+                         "requests with the SAME effective jobs/config "
+                         "must deduplicate normally")
+
+    # I. receipt configuration drift: a receipt under configuration A
+    # cannot satisfy an independently derived request under configuration
+    # B even with identical serial IDs/count.
+    def test_control47_receipt_config_drift_rejected(self):
+        repo = self._repo(self.addCleanup, module_count=4)
+        # Build a receipt under configuration A (jobs=2 schedule).  A bare
+        # run_suite import writes fixture bytecode; scrub it so the tree
+        # is clean for receipt derivation exactly as the guarded path
+        # guarantees (dont_write_bytecode) for its own imports.
+        result_a = runner.run_suite(repo, jobs=2)
+        self.assertTrue(result_a["ok"])
+        self._scrub_pycache(repo)
+        receipt_a = gate.build_receipt(
+            repo, result_a, started_unix=1.0, ended_unix=2.0)
+        # Independently derive request B: default configuration.
+        request_b = gate.current_final_head_request(repo)
+        self.assertFalse(
+            gate.validate_receipt(receipt_a.to_dict(), request_b.to_dict()),
+            "a receipt produced under jobs=2 must not satisfy the default "
+            "configuration request even with identical test IDs/count")
+        self.assertEqual(receipt_a.suite["count"], request_b.suite["count"])
+        self.assertEqual(receipt_a.suite["serial_digest"],
+                         request_b.suite["serial_digest"])
+        # and the reverse: a default-configuration receipt vs a jobs=2
+        # request
+        result_default = runner.run_suite(repo)
+        self.assertTrue(result_default["ok"])
+        self._scrub_pycache(repo)
+        receipt_default = gate.build_receipt(
+            repo, result_default, started_unix=3.0, ended_unix=4.0)
+        request_a = gate.current_final_head_request(repo, jobs=2)
+        self.assertFalse(
+            gate.validate_receipt(receipt_default.to_dict(),
+                                  request_a.to_dict()))
 
 
 if __name__ == "__main__":

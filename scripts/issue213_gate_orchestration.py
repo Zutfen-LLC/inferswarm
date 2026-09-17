@@ -74,6 +74,21 @@ LAUNCH_IDENTITY_SCHEMA = "suite-launch-identity/1"
 LAUNCH_LOCK_SCHEMA = "suite-launch-lock/2"
 COMPLETION_SCHEMA = "suite-launch-completion/1"
 
+# Structured normalized suite-configuration identity (Issue #213
+# configuration correction).  MUST equal the runner's own
+# SUITE_CONFIG_SCHEMA; a mismatch fails closed at derivation.
+SUITE_CONFIG_SCHEMA = "suite-config/1"
+
+# The canonical final-validation configuration values (current runner
+# doctrine): default tests directory, default jobs schedule, default
+# per-task timeout, no retained-artifact request.
+CANONICAL_TIMEOUT_SECONDS = 1800.0
+
+# The documented retained per-task artifact set (assignment + receipt +
+# captured output streams) a `--retain-dir` request is entitled to.
+RETAINED_TASK_SUFFIXES = ("-modules.json", "-expected.json", ".json",
+                          "-stdout.txt", "-stderr.txt")
+
 # Runner schema per current runner doctrine (scripts/run_full_cpu_suite.py
 # SCHEMA constant).  Suite identities carrying any other runner schema are
 # malformed and fail closed.
@@ -170,13 +185,58 @@ def _validate_git_sha(sha: object, what: str) -> str:
     return sha
 
 
+def _validate_suite_config(config: object) -> None:
+    """Structurally validate a normalized suite configuration (fail closed).
+
+    The configuration is the authority for execution identity: known
+    schema, a nonempty tests-directory identity, a valid requested-jobs
+    value (None or a positive integer), a positive integer effective-jobs
+    value, a 64-hex deterministic task-plan digest, a positive timeout,
+    and a retain_dir that is None or a nonempty string.
+    """
+    if not isinstance(config, dict):
+        raise GateOrderingError(
+            "suite configuration is not an object (fail closed)")
+    if config.get("schema") != SUITE_CONFIG_SCHEMA:
+        raise GateOrderingError(
+            "suite configuration schema is unknown (fail closed): "
+            f"{config.get('schema')!r}")
+    tests_dir = config.get("tests_dir")
+    if not isinstance(tests_dir, str) or not tests_dir.strip():
+        raise GateOrderingError(
+            "suite configuration tests_dir is malformed (fail closed): "
+            f"{tests_dir!r}")
+    jobs = config.get("jobs")
+    if not isinstance(jobs, int) or isinstance(jobs, bool) or jobs < 1:
+        raise GateOrderingError(
+            "suite configuration effective jobs is malformed (fail closed): "
+            f"{jobs!r}")
+    plan_digest = config.get("plan_digest")
+    if not isinstance(plan_digest, str) or not _SHA256_RE.fullmatch(plan_digest):
+        raise GateOrderingError(
+            "suite configuration plan digest is malformed (fail closed): "
+            f"{plan_digest!r}")
+    timeout = config.get("timeout")
+    if (not isinstance(timeout, (int, float)) or isinstance(timeout, bool)
+            or timeout <= 0):
+        raise GateOrderingError(
+            "suite configuration timeout is malformed (fail closed): "
+            f"{timeout!r}")
+    retain = config.get("retain_dir")
+    if retain is not None and (not isinstance(retain, str) or not retain.strip()):
+        raise GateOrderingError(
+            "suite configuration retain_dir is malformed (fail closed): "
+            f"{retain!r}")
+
+
 def validate_suite_identity_values(suite: object) -> None:
     """Validate the required suite identity structure and values.
 
     Required: known runner schema, the canonical suite command/config
-    identity, hex serial and executed digests that are EQUAL, and a positive
-    integer test count.  Anything else (missing, unknown, malformed,
-    forged) fails closed.
+    identity, a structurally valid normalized suite configuration, hex
+    serial and executed digests that are EQUAL, and a positive integer
+    test count.  Anything else (missing, unknown, malformed, forged)
+    fails closed.
     """
     if not isinstance(suite, dict):
         raise GateOrderingError("suite identity is not an object (fail closed)")
@@ -190,6 +250,11 @@ def validate_suite_identity_values(suite: object) -> None:
         raise GateOrderingError(
             "suite identity command is not the canonical suite "
             f"configuration (fail closed): {command!r}")
+    if "suite_config" not in suite:
+        raise GateOrderingError(
+            "suite identity lacks the normalized suite configuration "
+            "(fail closed)")
+    _validate_suite_config(suite["suite_config"])
     serial = suite.get("serial_digest")
     executed = suite.get("executed_digest")
     for name, value in (("serial_digest", serial),
@@ -234,10 +299,13 @@ def validate_environment_authority(environment: object) -> None:
 def suite_identity(runner_result: dict) -> dict:
     """Canonical suite identity from a successful runner result payload.
 
-    Binds the runner schema, the canonical command, the serial identity
-    digest of the discovered population, the executed identity digest, and
-    the test count.  The runner must have proven serial/executed equality
-    (``ok``); otherwise the identity is malformed (fail closed).
+    Binds the runner schema, the canonical command, the NORMALIZED SUITE
+    CONFIGURATION the runner actually executed under (tests directory,
+    jobs schedule, task-plan digest, timeout, retention), the serial
+    identity digest of the discovered population, the executed identity
+    digest, and the test count.  The runner must have proven
+    serial/executed equality (``ok``); otherwise the identity is
+    malformed (fail closed).
     """
     if not isinstance(runner_result, dict):
         raise GateOrderingError("suite result payload is not an object")
@@ -256,6 +324,7 @@ def suite_identity(runner_result: dict) -> dict:
     identity = {
         "runner_schema": RUNNER_SCHEMA,
         "suite_command": list(FULL_SUITE_COMMAND),
+        "suite_config": runner_result.get("suite_config"),
         "serial_digest": serial,
         "executed_digest": executed,
         "count": count,
@@ -671,52 +740,118 @@ def _load_runner_module():
     return runner
 
 
-def _canonical_plan_identity(root: Path) -> tuple[str, int]:
-    """Serial population digest + count from the runner's own plan.
+def _runner_plan_and_config(root: Path, tests_dir: Path, jobs: int | None,
+                            timeout: float,
+                            retain_dir: Path | None) -> tuple[dict, dict]:
+    """The runner's own deterministic plan + normalized suite config.
 
     Discovery imports must not dirty the tree being identified (no
     ``__pycache__``), so bytecode writing is suppressed for the duration.
+    The runner's suite-config schema must agree with this module's
+    doctrine constant or derivation fails closed.
     """
     runner = _load_runner_module()
+    if getattr(runner, "SUITE_CONFIG_SCHEMA", None) != SUITE_CONFIG_SCHEMA:
+        raise GateOrderingError(
+            "runner suite-config schema disagrees with orchestration "
+            f"doctrine (fail closed): {runner.SUITE_CONFIG_SCHEMA!r}")
     previous = sys.dont_write_bytecode
     sys.dont_write_bytecode = True
     try:
-        payload = runner.plan(Path(root), Path(root) / "tests", None)
+        payload = runner.plan(Path(root), Path(tests_dir), jobs)
+        config = runner.suite_config_for(Path(root), Path(tests_dir), jobs,
+                                         payload["jobs"], payload["tasks"],
+                                         timeout, retain_dir)
     finally:
         sys.dont_write_bytecode = previous
-    digest = payload.get("identity_digest")
-    count = payload.get("count")
-    if not isinstance(digest, str) or not _SHA256_RE.fullmatch(digest):
-        raise GateOrderingError(
-            f"canonical suite plan digest malformed (fail closed): {digest!r}")
-    if not isinstance(count, int) or isinstance(count, bool) or count < 1:
-        raise GateOrderingError(
-            f"canonical suite plan count malformed (fail closed): {count!r}")
-    return digest, count
+    return payload, config
 
 
-def current_final_head_request(root: Path) -> FinalHeadRequest:
+def _require_head_bound_tests_dir(root: Path, tests_dir: Path) -> None:
+    """Fail-closed binding of a custom tests tree to the exact head.
+
+    For a Git-backed guarded request the effective tests directory MUST
+    live inside the repository root (never under ``.git``) and be a real
+    directory; combined with the clean-worktree prerequisite, every file
+    under it is tracked and byte-identical to ``HEAD`` — the exact
+    committed head authorizes the executed contents.  An external or
+    unprovable tests tree is REFUSED, never cached as though HEAD
+    authorized it.
+    """
+    root, tests_dir = Path(root).resolve(), Path(tests_dir).resolve()
+    try:
+        relative = tests_dir.relative_to(root)
+    except ValueError:
+        raise GateOrderingError(
+            "guarded tests directory must live inside the repository root "
+            f"(fail closed): {tests_dir}") from None
+    if relative.parts and relative.parts[0] == ".git":
+        raise GateOrderingError(
+            "guarded tests directory may not live under .git (fail closed)")
+    if not tests_dir.is_dir():
+        raise GateOrderingError(
+            f"guarded tests directory is missing (fail closed): {tests_dir}")
+
+
+def canonical_suite_config(root: Path, tests_dir: Path | None = None, *,
+                           jobs: int | None = None,
+                           timeout: float = CANONICAL_TIMEOUT_SECONDS,
+                           retain_dir: Path | None = None) -> dict:
+    """The normalized execution configuration for one request (fail closed).
+
+    Requires a clean committed worktree, binds a custom tests directory
+    to the exact head, and derives the configuration (effective tests
+    directory, requested/effective jobs, deterministic task-plan digest,
+    timeout, retention) from the runner's own plan of that exact tree.
+    """
+    root = Path(root).resolve()
+    _require_clean_committed_worktree(root)
+    effective = Path(tests_dir or root / "tests").resolve()
+    if _inside_git_work_tree(root):
+        _require_head_bound_tests_dir(root, effective)
+    _, config = _runner_plan_and_config(root, effective, jobs, timeout,
+                                        retain_dir)
+    _validate_suite_config(config)
+    return config
+
+
+def current_final_head_request(root: Path, *, tests_dir: Path | None = None,
+                               jobs: int | None = None,
+                               timeout: float = CANONICAL_TIMEOUT_SECONDS,
+                               retain_dir: Path | None = None) -> FinalHeadRequest:
     """Independently derive the CURRENT final-head request identity.
 
     Requires a clean git worktree (the head must be a real committed head),
     takes the exact SHA from git, the suite identity from the runner's own
-    canonical plan of that worktree, and the environment authority hashes.
+    canonical plan of that worktree under the CANONICAL final-validation
+    configuration (default tests directory ``root/tests``, default jobs
+    schedule, default per-task timeout, no retained-artifact request —
+    callers deriving the canonical final head pass no overrides), and the
+    environment authority hashes.  The normalized suite configuration is
+    part of the identity: a suite run under a different jobs/tests/
+    timeout/retention configuration can never satisfy this request even
+    when it discovers the same test IDs.
     """
     root = Path(root).resolve()
     if not git_tree_clean(root):
         raise GateOrderingError(
             "refusing final-head request identity on dirty worktree "
             "(fail closed)")
-    digest, count = _canonical_plan_identity(root)
+    effective = Path(tests_dir or root / "tests").resolve()
+    if _inside_git_work_tree(root):
+        _require_head_bound_tests_dir(root, effective)
+    payload, config = _runner_plan_and_config(root, effective, jobs, timeout,
+                                              retain_dir)
     suite = {
         "runner_schema": RUNNER_SCHEMA,
         "suite_command": list(FULL_SUITE_COMMAND),
-        "serial_digest": digest,
+        "suite_config": config,
+        "serial_digest": payload["identity_digest"],
         # Plan-time identity: serial discovery is the population authority.
         # A COMPLETED receipt must additionally carry the runner-proven
         # executed digest, which the runner proves equal to serial.
-        "executed_digest": digest,
-        "count": count,
+        "executed_digest": payload["identity_digest"],
+        "count": payload["count"],
     }
     return FinalHeadRequest(
         git_commit_sha=git_commit_sha(root),
@@ -812,13 +947,19 @@ def _require_clean_committed_worktree(root: Path) -> None:
             "identity, consulting a completion, attaching, or launching")
 
 
-def launch_request_identity(root: Path) -> dict:
+def launch_request_identity(root: Path, tests_dir: Path | None = None, *,
+                            jobs: int | None = None,
+                            timeout: float = CANONICAL_TIMEOUT_SECONDS,
+                            retain_dir: Path | None = None) -> dict:
     """Mechanically derived (head, suite-config, environment) launch identity.
 
     The key authority is the exact repository SHA, the canonical suite
-    population identity (runner plan digest + count + canonical command),
-    and the required environment authority hashes.  An arbitrary
-    caller-supplied lock key is never accepted anywhere in this module.
+    population identity (runner plan digest + count + canonical command +
+    the NORMALIZED SUITE CONFIGURATION: effective tests directory,
+    requested/effective jobs, deterministic task-plan digest, timeout,
+    retention request), and the required environment authority hashes.
+    An arbitrary caller-supplied lock key is never accepted anywhere in
+    this module.
 
     A Git worktree MUST be clean and committed BEFORE the identity is
     derived: the guard's clean-worktree doctrine is the runner's own
@@ -827,20 +968,28 @@ def launch_request_identity(root: Path) -> dict:
     tree), applied here so that a dirty tree is REFUSED before any
     completion lookup, attach, or launch can occur.  A dirty worktree is
     never merely another cache-key component: the runner contract
-    requires a committed exact head.
+    requires a committed exact head.  For a Git-backed guarded request a
+    custom tests directory must additionally be provably bound to that
+    exact head (inside the repository root, not under ``.git``, real
+    directory) — an external or unprovable tests tree fails closed.
     """
     root = Path(root).resolve()
     _require_clean_committed_worktree(root)
-    digest, count = _canonical_plan_identity(root)
+    effective = Path(tests_dir or root / "tests").resolve()
+    if _inside_git_work_tree(root):
+        _require_head_bound_tests_dir(root, effective)
+    payload, config = _runner_plan_and_config(root, effective, jobs, timeout,
+                                              retain_dir)
     identity = {
         "schema": LAUNCH_IDENTITY_SCHEMA,
         "git_commit_sha": git_commit_sha(root),
         "suite": {
             "runner_schema": RUNNER_SCHEMA,
             "suite_command": list(FULL_SUITE_COMMAND),
-            "serial_digest": digest,
-            "executed_digest": digest,
-            "count": count,
+            "suite_config": config,
+            "serial_digest": payload["identity_digest"],
+            "executed_digest": payload["identity_digest"],
+            "count": payload["count"],
         },
         "environment": environment_identity(root),
     }
@@ -970,8 +1119,10 @@ class LaunchGuard:
         any boolean never authorize reuse on their own.  The embedded
         runner result must be a canonical full-suite runner payload whose
         outcome agrees with the record's ``ok`` flag; a PASS additionally
-        binds its count and serial/executed digests to THIS launch
-        identity's suite population.
+        binds its count, serial/executed digests, AND ITS NORMALIZED SUITE
+        CONFIGURATION to THIS launch identity's suite (a result produced
+        under a different jobs/tests/timeout/retention configuration can
+        never satisfy this request).
         """
         if not isinstance(record, dict) or record.get("schema") != COMPLETION_SCHEMA:
             raise GateOrderingError(
@@ -990,14 +1141,15 @@ class LaunchGuard:
                 "completion receipt outcome malformed (fail closed)")
         result = record.get("result")
         # A canonical runner result is required — any dict is not enough.
-        self._validated_runner_result(result, require_pass=ok)
+        result = self._validated_runner_result(result, require_pass=ok)
         if result["ok"] is not ok:
             raise GateOrderingError(
                 "completion receipt ok flag disagrees with the embedded "
                 "runner result (fail closed)")
         if ok:
-            # A reusable PASS binds the runner-proven population to THIS
-            # launch identity's suite: exact count and exact digest.
+            # A reusable PASS binds the runner-proven population AND the
+            # executed suite configuration to THIS launch identity's
+            # suite: exact count, exact digest, exact configuration.
             if result["count"] != self.identity["suite"]["count"]:
                 raise GateOrderingError(
                     "completion receipt runner count differs from the "
@@ -1008,6 +1160,11 @@ class LaunchGuard:
                 raise GateOrderingError(
                     "completion receipt runner digests differ from the "
                     "launch identity suite population digest (fail closed)")
+            if result.get("suite_config") != \
+                    self.identity["suite"]["suite_config"]:
+                raise GateOrderingError(
+                    "completion receipt suite configuration differs from "
+                    "the launch identity configuration (fail closed)")
         started: object = record.get("started_unix")
         ended: object = record.get("ended_unix")
         for name, value in (("started_unix", started), ("ended_unix", ended)):
@@ -1075,7 +1232,7 @@ class LaunchGuard:
                 f"malformed (fail closed): {executed!r}")
         return result
 
-    def acquire_or_attach(self) -> dict:
+    def acquire_or_attach(self, *, accept_completion: bool = True) -> dict:
         """Return ``{"attached": bool, ...}`` for one logical launch request.
 
         ``attached=False`` — the caller OWNS the single live launch for
@@ -1083,11 +1240,15 @@ class LaunchGuard:
         process is already running this exact identity; the caller must
         wait on its completion, never start a second suite.  Malformed or
         unprovably-stale state fails closed with ``GateOrderingError``.
+        ``accept_completion=False`` skips the sequential completion-reuse
+        path (used by the retention policy: a completion whose requested
+        retained artifacts are not mechanically present must be rerun).
         """
         self.root.mkdir(parents=True, exist_ok=True)
         deadline = time.monotonic() + LAUNCH_GUARD_TIMEOUT_SECONDS
         while True:
-            completed = self.find_valid_completion()
+            completed = (self.find_valid_completion()
+                         if accept_completion else None)
             if completed is not None:
                 return {"attached": True, "completed": True,
                         "pid": None, "result": completed["result"],
@@ -1184,7 +1345,30 @@ class LaunchGuard:
         temporary.replace(self.completion_path())
 
 
-def run_single_head_suite(root: Path, *, timeout: float = 1800.0,
+def _retained_artifacts_present(retain_dir: Path,
+                                task_count: int) -> bool:
+    """Mechanically prove the documented retained artifact set is present.
+
+    A cached run can satisfy a ``--retain-dir`` request ONLY when the
+    requested directory already contains every documented per-task
+    artifact (assignment, expected-IDs, receipt, captured stdout/stderr)
+    for every task of the completed run plus ``summary.json``.  This is a
+    presence check against the exact retained set — never a generalized
+    artifact cache.
+    """
+    retain_dir = Path(retain_dir)
+    if not (retain_dir / "summary.json").is_file():
+        return False
+    for index in range(task_count):
+        for suffix in ("-modules.json", "-expected.json", ".json",
+                       "-stdout.txt", "-stderr.txt"):
+            if not (retain_dir / f"task-{index}{suffix}").is_file():
+                return False
+    return True
+
+
+def run_single_head_suite(root: Path, *, tests_dir: Path | None = None,
+                          timeout: float = CANONICAL_TIMEOUT_SECONDS,
                           jobs: int | None = None,
                           retain_dir: Path | None = None,
                           suite_command=None,
@@ -1199,11 +1383,35 @@ def run_single_head_suite(root: Path, *, timeout: float = 1800.0,
       bounded completion receipt, and consumes the mechanically validated
       result instead of launching;
     * an identical request arriving right after completion consumes the
-      bounded completion receipt (capped liveness, not a persistent cache);
+      bounded completion receipt (capped liveness, not a persistent
+      cache);
     * distinct head/config/environment identities never share results
-      (distinct deterministic keys);
+      (distinct deterministic keys) — the normalized suite configuration
+      (effective tests directory, requested/effective jobs, task-plan
+      digest, timeout, retention request) is part of the key, so a
+      request under a different configuration can never consume another
+      configuration's completion;
     * non-git roots have no exact-head identity and run unguarded, exactly
       like the runner's own git doctrine.
+
+    ``tests_dir`` restores the pre-#213 execution contract
+    (``run_suite(root, tests_dir, ...)``): the guarded path executes the
+    requested tests tree, and the launch identity is derived from the
+    SAME effective tests directory.  A custom tests directory is never
+    silently normalized back to ``root/tests``.  For a Git-backed guarded
+    request the tests tree must be provably bound to the exact committed
+    head (inside the repository root, not under ``.git``): an unsafe or
+    unprovable external tree fails closed rather than being cached as
+    though HEAD authorized its contents.
+
+    Retention policy (smallest safe policy, no generalized artifact
+    cache): a non-retained completion can never silently satisfy a
+    ``--retain-dir`` request.  Sequential cached-PASS reuse is disabled
+    when satisfying the request would omit the requested retained
+    per-task artifacts; the request performs a fresh underlying suite run
+    unless the exact documented artifact set is mechanically proven
+    present and compatible.  Concurrent identical requests that share the
+    same retention request may deduplicate normally.
 
     If the underlying suite raises, no completion is written: waiters fail
     closed and the next identical request launches fresh.
@@ -1219,23 +1427,39 @@ def run_single_head_suite(root: Path, *, timeout: float = 1800.0,
     the suite (a FAIL never suppresses a fresh launch).
     """
     root = Path(root).resolve()
+    effective_tests = Path(tests_dir or root / "tests").resolve()
 
     def _invoke() -> dict:
         if suite_command is not None:
             return suite_command()
         runner = _load_runner_module()
-        return runner.run_suite(root, jobs=jobs, timeout=timeout,
-                                retain_dir=retain_dir)
+        return runner.run_suite(root, effective_tests, jobs=jobs,
+                                timeout=timeout, retain_dir=retain_dir)
 
     if not _inside_git_work_tree(root):
         return _invoke()
     # Clean committed worktree BEFORE identity derivation, completion
-    # lookup, attach, or launch (fail closed exactly like the runner).
+    # lookup, attach, or launch (fail closed exactly like the runner);
+    # a Git-backed custom tests tree must be head-bound (fail closed).
     _require_clean_committed_worktree(root)
-    identity = launch_request_identity(root)
+    _require_head_bound_tests_dir(root, effective_tests)
+    identity = launch_request_identity(root, effective_tests, jobs=jobs,
+                                       timeout=timeout,
+                                       retain_dir=retain_dir)
     guard = LaunchGuard(identity, lock_dir=lock_dir,
                         poll_seconds=0.02 if suite_command is not None else 0.05)
-    outcome = guard.acquire_or_attach()
+    accept_completion = True
+    if retain_dir is not None:
+        # Retention request: sequential reuse of a possibly non-retained
+        # PASS is allowed ONLY when the requested directory mechanically
+        # proves the full documented per-task artifact set (plus the
+        # summary); otherwise a fresh underlying run produces them.
+        completed = guard.find_valid_completion()
+        if completed is not None:
+            task_count = len(completed["result"].get("tasks") or [])
+            accept_completion = _retained_artifacts_present(
+                Path(retain_dir), task_count)
+    outcome = guard.acquire_or_attach(accept_completion=accept_completion)
     if outcome["attached"]:
         if outcome["completed"]:
             return outcome["result"]
