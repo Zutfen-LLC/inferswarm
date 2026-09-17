@@ -1,0 +1,17 @@
+amdgpu 21139456 2 - Live 0xffffffffc1a00000
+amdxcp 16384 1 amdgpu, Live 0xffffffffc0c28000
+drm_panel_backlight_quirks 12288 1 amdgpu, Live 0xffffffffc0c38000
+gpu_sched 69632 1 amdgpu, Live 0xffffffffc0c8b000
+drm_ttm_helper 20480 1 amdgpu, Live 0xffffffffc0c01000
+drm_buddy 12288 2 amdgpu,i915, Live 0xffffffffc0c0e000
+ttm 159744 3 amdgpu,i915,drm_ttm_helper, Live 0xffffffffc0c7e000
+drm_exec 12288 1 amdgpu, Live 0xffffffffc07e1000
+drm_suballoc_helper 20480 1 amdgpu, Live 0xffffffffc07fc000
+drm_display_helper 315392 2 amdgpu,i915, Live 0xffffffffc0c54000
+cec 77824 3 amdgpu,i915,drm_display_helper, Live 0xffffffffc0c3a000
+drm_client_lib 16384 2 amdgpu,i915, Live 0xffffffffc07fd000
+drm_kms_helper 266240 5 amdgpu,i915,drm_ttm_helper,drm_display_helper,drm_client_lib, Live 0xffffffffc07e4000
+i2c_algo_bit 16384 2 amdgpu,i915, Live 0xffffffffc07dd000
+drm 925696 17 amdgpu,i915,amdxcp,drm_panel_backlight_quirks,gpu_sched,drm_ttm_helper,drm_buddy,ttm,drm_exec,drm_suballoc_helper,drm_display_helper,drm_client_lib,drm_kms_helper, Live 0xffffffffc077f000
+crc16 12288 2 amdgpu,ext4, Live 0xffffffffc06c1000
+video 81920 2 amdgpu,i915, Live 0xffffffffc0613000

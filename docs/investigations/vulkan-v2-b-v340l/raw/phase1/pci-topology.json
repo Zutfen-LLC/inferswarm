@@ -1,0 +1,623 @@
+{
+ "0000:00:00.0": {
+  "class": "0x060000",
+  "current_link_speed": null,
+  "current_link_width": null,
+  "device": "0x190f",
+  "driver": "skl_uncore",
+  "max_link_speed": null,
+  "max_link_width": null,
+  "numa_node": "-1",
+  "resource": [],
+  "revision": "0x07",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0x2015",
+  "subsystem_vendor": "0x8086",
+  "vendor": "0x8086"
+ },
+ "0000:00:02.0": {
+  "class": "0x030000",
+  "current_link_speed": "Unknown",
+  "current_link_width": "0",
+  "device": "0x1902",
+  "driver": "i915",
+  "max_link_speed": "Unknown",
+  "max_link_width": "255",
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x0000002ffeffffff",
+    "flags": "0x0000000000140204",
+    "start": "0x0000002ffe000000"
+   },
+   {
+    "end": "0x0000002e1fffffff",
+    "flags": "0x000000000014220c",
+    "start": "0x0000002e10000000"
+   },
+   {
+    "end": "0x000000000000f03f",
+    "flags": "0x0000000000040101",
+    "start": "0x000000000000f000"
+   },
+   {
+    "end": "0x00000000000dffff",
+    "flags": "0x0000000000000212",
+    "start": "0x00000000000c0000"
+   }
+  ],
+  "revision": "0x06",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0x2015",
+  "subsystem_vendor": "0x8086",
+  "vendor": "0x8086"
+ },
+ "0000:00:08.0": {
+  "class": "0x088000",
+  "current_link_speed": null,
+  "current_link_width": null,
+  "device": "0x1911",
+  "driver": null,
+  "max_link_speed": null,
+  "max_link_width": null,
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x0000002fff013fff",
+    "flags": "0x0000000000140204",
+    "start": "0x0000002fff013000"
+   }
+  ],
+  "revision": "0x00",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0x2015",
+  "subsystem_vendor": "0x8086",
+  "vendor": "0x8086"
+ },
+ "0000:00:14.0": {
+  "class": "0x0c0330",
+  "current_link_speed": null,
+  "current_link_width": null,
+  "device": "0xa2af",
+  "driver": "xhci_hcd",
+  "max_link_speed": null,
+  "max_link_width": null,
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x0000002fff00ffff",
+    "flags": "0x0000000000140204",
+    "start": "0x0000002fff000000"
+   }
+  ],
+  "revision": "0x00",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0x7270",
+  "subsystem_vendor": "0x8086",
+  "vendor": "0x8086"
+ },
+ "0000:00:14.2": {
+  "class": "0x118000",
+  "current_link_speed": null,
+  "current_link_width": null,
+  "device": "0xa2b1",
+  "driver": null,
+  "max_link_speed": null,
+  "max_link_width": null,
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x0000002fff012fff",
+    "flags": "0x0000000000140204",
+    "start": "0x0000002fff012000"
+   }
+  ],
+  "revision": "0x00",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0x7270",
+  "subsystem_vendor": "0x8086",
+  "vendor": "0x8086"
+ },
+ "0000:00:16.0": {
+  "class": "0x078000",
+  "current_link_speed": null,
+  "current_link_width": null,
+  "device": "0xa2ba",
+  "driver": "mei_me",
+  "max_link_speed": null,
+  "max_link_width": null,
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x0000002fff011fff",
+    "flags": "0x0000000000140204",
+    "start": "0x0000002fff011000"
+   }
+  ],
+  "revision": "0x00",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0x1999",
+  "subsystem_vendor": "0x8086",
+  "vendor": "0x8086"
+ },
+ "0000:00:1c.0": {
+  "class": "0x060400",
+  "current_link_speed": "2.5 GT/s PCIe",
+  "current_link_width": "1",
+  "device": "0xa294",
+  "driver": "pcieport",
+  "max_link_speed": "8.0 GT/s PCIe",
+  "max_link_width": "1",
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x000000000000efff",
+    "flags": "0x0000000000000100",
+    "start": "0x000000000000e000"
+   },
+   {
+    "end": "0x00000000dfefffff",
+    "flags": "0x0000000000000200",
+    "start": "0x00000000dfe00000"
+   },
+   {
+    "end": "0x0000002e200fffff",
+    "flags": "0x0000000000102201",
+    "start": "0x0000002e20000000"
+   }
+  ],
+  "revision": "0xf0",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0x7270",
+  "subsystem_vendor": "0x8086",
+  "vendor": "0x8086"
+ },
+ "0000:00:1d.0": {
+  "class": "0x060400",
+  "current_link_speed": "8.0 GT/s PCIe",
+  "current_link_width": "1",
+  "device": "0xa298",
+  "driver": "pcieport",
+  "max_link_speed": "8.0 GT/s PCIe",
+  "max_link_width": "1",
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x00000000907fffff",
+    "flags": "0x0000000000000200",
+    "start": "0x0000000090000000"
+   },
+   {
+    "end": "0x0000002e001fffff",
+    "flags": "0x0000000000102201",
+    "start": "0x0000002800000000"
+   }
+  ],
+  "revision": "0xf0",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0x7270",
+  "subsystem_vendor": "0x8086",
+  "vendor": "0x8086"
+ },
+ "0000:00:1f.0": {
+  "class": "0x060100",
+  "current_link_speed": null,
+  "current_link_width": null,
+  "device": "0xa2c8",
+  "driver": null,
+  "max_link_speed": null,
+  "max_link_width": null,
+  "numa_node": "-1",
+  "resource": [],
+  "revision": "0x00",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0x7270",
+  "subsystem_vendor": "0x8086",
+  "vendor": "0x8086"
+ },
+ "0000:00:1f.2": {
+  "class": "0x058000",
+  "current_link_speed": null,
+  "current_link_width": null,
+  "device": "0xa2a1",
+  "driver": null,
+  "max_link_speed": null,
+  "max_link_width": null,
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x00000000dff03fff",
+    "flags": "0x0000000000040200",
+    "start": "0x00000000dff00000"
+   }
+  ],
+  "revision": "0x00",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0x7270",
+  "subsystem_vendor": "0x8086",
+  "vendor": "0x8086"
+ },
+ "0000:00:1f.4": {
+  "class": "0x0c0500",
+  "current_link_speed": null,
+  "current_link_width": null,
+  "device": "0xa2a3",
+  "driver": "i801_smbus",
+  "max_link_speed": null,
+  "max_link_width": null,
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x0000002fff0100ff",
+    "flags": "0x0000000000140204",
+    "start": "0x0000002fff010000"
+   },
+   {
+    "end": "0x000000000000f05f",
+    "flags": "0x0000000000040101",
+    "start": "0x000000000000f040"
+   }
+  ],
+  "revision": "0x00",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0x7270",
+  "subsystem_vendor": "0x8086",
+  "vendor": "0x8086"
+ },
+ "0000:01:00.0": {
+  "class": "0x020000",
+  "current_link_speed": "2.5 GT/s PCIe",
+  "current_link_width": "1",
+  "device": "0x8168",
+  "driver": "r8169",
+  "max_link_speed": "2.5 GT/s PCIe",
+  "max_link_width": "1",
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x000000000000e0ff",
+    "flags": "0x0000000000040101",
+    "start": "0x000000000000e000"
+   },
+   {
+    "end": "0x00000000dfe00fff",
+    "flags": "0x0000000000140204",
+    "start": "0x00000000dfe00000"
+   },
+   {
+    "end": "0x0000002e20003fff",
+    "flags": "0x000000000014220c",
+    "start": "0x0000002e20000000"
+   }
+  ],
+  "revision": "0x07",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0x0123",
+  "subsystem_vendor": "0x10ec",
+  "vendor": "0x10ec"
+ },
+ "0000:02:00.0": {
+  "class": "0x060400",
+  "current_link_speed": "8.0 GT/s PCIe",
+  "current_link_width": "1",
+  "device": "0x8533",
+  "driver": "pcieport",
+  "max_link_speed": "8.0 GT/s PCIe",
+  "max_link_width": "16",
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x00000000907fffff",
+    "flags": "0x0000000000000200",
+    "start": "0x0000000090000000"
+   },
+   {
+    "end": "0x0000002e001fffff",
+    "flags": "0x0000000000102201",
+    "start": "0x0000002800000000"
+   }
+  ],
+  "revision": "0x00",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0xbeef",
+  "subsystem_vendor": "0x11f8",
+  "vendor": "0x11f8"
+ },
+ "0000:03:00.0": {
+  "class": "0x060400",
+  "current_link_speed": "8.0 GT/s PCIe",
+  "current_link_width": "16",
+  "device": "0x8533",
+  "driver": "pcieport",
+  "max_link_speed": "8.0 GT/s PCIe",
+  "max_link_width": "16",
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x00000000903fffff",
+    "flags": "0x0000000000000200",
+    "start": "0x0000000090000000"
+   },
+   {
+    "end": "0x0000002a409fffff",
+    "flags": "0x0000000000102201",
+    "start": "0x0000002800000000"
+   }
+  ],
+  "revision": "0x00",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0xbeef",
+  "subsystem_vendor": "0x11f8",
+  "vendor": "0x11f8"
+ },
+ "0000:03:01.0": {
+  "class": "0x060400",
+  "current_link_speed": "8.0 GT/s PCIe",
+  "current_link_width": "1",
+  "device": "0x8533",
+  "driver": "pcieport",
+  "max_link_speed": "8.0 GT/s PCIe",
+  "max_link_width": "16",
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x00000000907fffff",
+    "flags": "0x0000000000000200",
+    "start": "0x0000000090400000"
+   },
+   {
+    "end": "0x0000002dffffffff",
+    "flags": "0x0000000000102201",
+    "start": "0x0000002bbf600000"
+   }
+  ],
+  "revision": "0x00",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0xbeef",
+  "subsystem_vendor": "0x11f8",
+  "vendor": "0x11f8"
+ },
+ "0000:04:00.0": {
+  "class": "0x060400",
+  "current_link_speed": "8.0 GT/s PCIe",
+  "current_link_width": "16",
+  "device": "0x1470",
+  "driver": "pcieport",
+  "max_link_speed": "8.0 GT/s PCIe",
+  "max_link_width": "16",
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x0000000090303fff",
+    "flags": "0x0000000000040200",
+    "start": "0x0000000090300000"
+   },
+   {
+    "end": "0x00000000902fffff",
+    "flags": "0x0000000000000200",
+    "start": "0x0000000090000000"
+   },
+   {
+    "end": "0x0000002a409fffff",
+    "flags": "0x0000000000102201",
+    "start": "0x0000002800000000"
+   }
+  ],
+  "revision": "0x05",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0x0000",
+  "subsystem_vendor": "0x0000",
+  "vendor": "0x1022"
+ },
+ "0000:05:00.0": {
+  "class": "0x060400",
+  "current_link_speed": "8.0 GT/s PCIe",
+  "current_link_width": "16",
+  "device": "0x1471",
+  "driver": "pcieport",
+  "max_link_speed": "8.0 GT/s PCIe",
+  "max_link_width": "16",
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x00000000902fffff",
+    "flags": "0x0000000000000200",
+    "start": "0x0000000090000000"
+   },
+   {
+    "end": "0x0000002a409fffff",
+    "flags": "0x0000000000102201",
+    "start": "0x0000002800000000"
+   }
+  ],
+  "revision": "0x00",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0x1471",
+  "subsystem_vendor": "0x1022",
+  "vendor": "0x1022"
+ },
+ "0000:06:00.0": {
+  "class": "0x038000",
+  "current_link_speed": "8.0 GT/s PCIe",
+  "current_link_width": "16",
+  "device": "0x6864",
+  "driver": "amdgpu",
+  "max_link_speed": "8.0 GT/s PCIe",
+  "max_link_width": "16",
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x00000029ffffffff",
+    "flags": "0x000000000014220c",
+    "start": "0x0000002800000000"
+   },
+   {
+    "end": "0x0000002a401fffff",
+    "flags": "0x000000000014220c",
+    "start": "0x0000002a40000000"
+   },
+   {
+    "end": "0x000000009007ffff",
+    "flags": "0x0000000000040200",
+    "start": "0x0000000090000000"
+   },
+   {
+    "end": "0x000000009029ffff",
+    "flags": "0x0000000000046200",
+    "start": "0x0000000090280000"
+   },
+   {
+    "end": "0x0000002a3fffffff",
+    "flags": "0x000000000014220c",
+    "start": "0x0000002a00000000"
+   },
+   {
+    "end": "0x0000002a409fffff",
+    "flags": "0x000000000014220c",
+    "start": "0x0000002a40200000"
+   },
+   {
+    "end": "0x000000009027ffff",
+    "flags": "0x0000000000040200",
+    "start": "0x0000000090080000"
+   }
+  ],
+  "revision": "0x05",
+  "sriov_numvfs": "0",
+  "sriov_totalvfs": "4",
+  "subsystem_device": "0x0c00",
+  "subsystem_vendor": "0x1002",
+  "vendor": "0x1002"
+ },
+ "0000:07:00.0": {
+  "class": "0x060400",
+  "current_link_speed": "8.0 GT/s PCIe",
+  "current_link_width": "1",
+  "device": "0x1470",
+  "driver": "pcieport",
+  "max_link_speed": "8.0 GT/s PCIe",
+  "max_link_width": "16",
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x0000000090703fff",
+    "flags": "0x0000000000040200",
+    "start": "0x0000000090700000"
+   },
+   {
+    "end": "0x00000000906fffff",
+    "flags": "0x0000000000000200",
+    "start": "0x0000000090400000"
+   },
+   {
+    "end": "0x0000002dffffffff",
+    "flags": "0x0000000000102201",
+    "start": "0x0000002bbf600000"
+   }
+  ],
+  "revision": "0x05",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0x0000",
+  "subsystem_vendor": "0x0000",
+  "vendor": "0x1022"
+ },
+ "0000:08:00.0": {
+  "class": "0x060400",
+  "current_link_speed": "8.0 GT/s PCIe",
+  "current_link_width": "16",
+  "device": "0x1471",
+  "driver": "pcieport",
+  "max_link_speed": "8.0 GT/s PCIe",
+  "max_link_width": "16",
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x00000000906fffff",
+    "flags": "0x0000000000000200",
+    "start": "0x0000000090400000"
+   },
+   {
+    "end": "0x0000002dffffffff",
+    "flags": "0x0000000000102201",
+    "start": "0x0000002bbf600000"
+   }
+  ],
+  "revision": "0x00",
+  "sriov_numvfs": null,
+  "sriov_totalvfs": null,
+  "subsystem_device": "0x1471",
+  "subsystem_vendor": "0x1022",
+  "vendor": "0x1022"
+ },
+ "0000:09:00.0": {
+  "class": "0x038000",
+  "current_link_speed": "8.0 GT/s PCIe",
+  "current_link_width": "16",
+  "device": "0x6864",
+  "driver": "amdgpu",
+  "max_link_speed": "8.0 GT/s PCIe",
+  "max_link_width": "16",
+  "numa_node": "-1",
+  "resource": [
+   {
+    "end": "0x0000002dffffffff",
+    "flags": "0x000000000014220c",
+    "start": "0x0000002c00000000"
+   },
+   {
+    "end": "0x0000002bbf7fffff",
+    "flags": "0x000000000014220c",
+    "start": "0x0000002bbf600000"
+   },
+   {
+    "end": "0x000000009047ffff",
+    "flags": "0x0000000000040200",
+    "start": "0x0000000090400000"
+   },
+   {
+    "end": "0x000000009069ffff",
+    "flags": "0x0000000000046200",
+    "start": "0x0000000090680000"
+   },
+   {
+    "end": "0x0000002bffffffff",
+    "flags": "0x000000000014220c",
+    "start": "0x0000002bc0000000"
+   },
+   {
+    "end": "0x0000002bbfffffff",
+    "flags": "0x000000000014220c",
+    "start": "0x0000002bbf800000"
+   },
+   {
+    "end": "0x000000009067ffff",
+    "flags": "0x0000000000040200",
+    "start": "0x0000000090480000"
+   }
+  ],
+  "revision": "0x05",
+  "sriov_numvfs": "0",
+  "sriov_totalvfs": "4",
+  "subsystem_device": "0x0c00",
+  "subsystem_vendor": "0x1002",
+  "vendor": "0x1002"
+ }
+}

@@ -173,6 +173,7 @@
     "test_v2a_evidence_manifest",
     "test_v2a_discovery_authority_binding",
     "test_v2a_discovery_authority_binding_r3",
+    "test_issue210_v2b_v340l",
     "test_issue35_link_probe",
     "test_issue35_role_sweep",
     "test_issue35_envelope",
@@ -332,6 +333,9 @@
    "vulkan-v0-b"
   ],
   "docs/investigations/vulkan-v2-a/": [
+   "vulkan-v0-b"
+  ],
+  "docs/investigations/vulkan-v2-b-v340l/": [
    "vulkan-v0-b"
   ],
   "docs/project-status.json": [
@@ -927,6 +931,18 @@
   "scripts/issue200_r8f_terminal_reduction.py": [
    "issue-99-103"
   ],
+  "scripts/issue210_assemble.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue210_build_authorities.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue210_manifest.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue210_terminal.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/issue213_gate_orchestration.py": [
    "issue-213-gate-ordering"
   ],
@@ -1166,6 +1182,9 @@
   ],
   "tests/test_issue200_r8f_source_policy.py": [
    "issue-99-103"
+  ],
+  "tests/test_issue210_v2b_v340l.py": [
+   "vulkan-v0-b"
   ],
   "tests/test_issue35_corrections.py": [
    "vulkan-v0-b"
