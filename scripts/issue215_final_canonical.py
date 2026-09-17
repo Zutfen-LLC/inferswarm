@@ -20,7 +20,7 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
-CAMPAIGN_ID = "issue215-v2c-v340l-platform-stability-v1"
+CAMPAIGN_ID = "issue215-v2c-v340l-platform-stability-v2"
 
 
 def sha256_file(path: Path) -> str:

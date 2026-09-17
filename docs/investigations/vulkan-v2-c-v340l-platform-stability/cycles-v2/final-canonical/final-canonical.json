@@ -1,6 +1,6 @@
 {
  "schema": "inferswarm.v2c.final-canonical/1",
- "campaign_id": "issue215-v2c-v340l-platform-stability-v1",
+ "campaign_id": "issue215-v2c-v340l-platform-stability-v2",
  "boot_id": "9345db65-58de-477a-958e-d2c1487f2b93",
  "repo_head": "4b6075114862f9c3ac794e7636c87aac1488dc70",
  "discovery": {

@@ -637,7 +637,7 @@ f99bc7c49a0b23c3f1e98558ccb6a4c2c3d8c27ce168e6aca5c3c7beada132ac  docs/investiga
 c4c585cf5e4b02042b31a1cd21406ab7e120b30a0c6fa7d7cd627ba64a4be503  docs/investigations/vulkan-v2-c-v340l-platform-stability/campaign-v1/final-canonical/harness-evidence-copies/v2c-final-a-canonical-01/canonical-observation.json
 57612d6938278e4a41ec4573bdb3632e07798ea7e2b7252101ee64530312c977  docs/investigations/vulkan-v2-c-v340l-platform-stability/campaign-v1/final-canonical/harness-evidence-copies/v2c-final-a-canonical-01/correctness-result.json
 1053b526753f703926c229c24d87eb8521b8997c94511d50ba5118cbee9c8ed3  docs/investigations/vulkan-v2-c-v340l-platform-stability/campaign-v1/final-canonical/harness-evidence-copies/v2c-final-a-canonical-01/execution-receipt.json
-1008b2a2a455cdc2da65f9a22db69a7195be8dec2dad76899c2263a1fbb968b3  docs/investigations/vulkan-v2-c-v340l-platform-stability/cycles-v2/TERMINAL-V2.json
+e794b6903838f395d1bf8202a613bc2bf98829909064d9d38f4e4d6d5dfb437f  docs/investigations/vulkan-v2-c-v340l-platform-stability/cycles-v2/TERMINAL-V2.json
 8ea620365b2d79044ef135f52d07b8e10e8e792d77f523d7687669e60cb92e63  docs/investigations/vulkan-v2-c-v340l-platform-stability/cycles-v2/cycle-00-baseline/raw/amdgpu-version.txt
 091e374ee4a102b3b6972737dcdc34919eb52cb9e08eb2f3d35bfb00bcc8a71e  docs/investigations/vulkan-v2-c-v340l-platform-stability/cycles-v2/cycle-00-baseline/raw/amdgpu-version.txt.sha256
 ef8e1a67f133d576595ba3d4c5dab51df43bd8f4a5cb58699b0a6e97fec9d790  docs/investigations/vulkan-v2-c-v340l-platform-stability/cycles-v2/cycle-00-baseline/raw/boot_id.txt
@@ -1264,7 +1264,7 @@ ef23d3dc5e436c450031fc4b57b43e1bc0cb0465ccf7587fd949f7a7553948b6  docs/investiga
 c551bd660f3dcab914842312a9840bf28ff66ca84a265ab92ea623dc3618795d  docs/investigations/vulkan-v2-c-v340l-platform-stability/cycles-v2/final-canonical/die-b/qualification/stdout.txt
 1bdf02e4e957f4c70732ad473d9c651c9fa419ebbd77ce9f67dd19ef6257b9e2  docs/investigations/vulkan-v2-c-v340l-platform-stability/cycles-v2/final-canonical/discovery/DISCOVERY-BINDINGS-R3.json
 b7c1987fe5f09e62e5de236d0af4c999999edd5a516a9d0cce86b8fdd5fa0db5  docs/investigations/vulkan-v2-c-v340l-platform-stability/cycles-v2/final-canonical/discovery/DISCOVERY-INVENTORY-R3.json
-92f2ed86b3ea73ea49e325f622d45d008b371e5dadf8a46d08b9d2aebccb4631  docs/investigations/vulkan-v2-c-v340l-platform-stability/cycles-v2/final-canonical/final-canonical.json
+b08e55c9da5081a95e72143b6496673097309d23e72ba3c2f635bf995afe51ff  docs/investigations/vulkan-v2-c-v340l-platform-stability/cycles-v2/final-canonical/final-canonical.json
 ff8840842cf489cfd5481458b63defba24a8eacd83d96962656e588e4cbd4c16  docs/investigations/vulkan-v2-c-v340l-platform-stability/final-boot-staging/discovery/DISCOVERY-BINDINGS-R3.json
 f99bc7c49a0b23c3f1e98558ccb6a4c2c3d8c27ce168e6aca5c3c7beada132ac  docs/investigations/vulkan-v2-c-v340l-platform-stability/final-boot-staging/discovery/DISCOVERY-INVENTORY-R3.json
 2c94192994eb040f867f862ef54d1a0cb014638f2ef975f08c40b52464c2f111  docs/investigations/vulkan-v2-c-v340l-platform-stability/final-boot-staging/discovery/raw/identity-probe-stderr-vulkan1.txt

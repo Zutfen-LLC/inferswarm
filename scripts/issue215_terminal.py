@@ -38,6 +38,9 @@ USB_ID = "8086:a2af"
 GEN3_SPEED = "8.0 GT/s"
 WIDTH_1 = "x1"
 EXPECTED_HBM_BYTES = 8573157376
+PROMPT_SENTINEL = ("The quick brown fox jumps over the lazy dog. "
+                   "Explain what happens next in one sentence:").encode()
+REFERENCE_PATH_SENTINEL = "docs/investigations/vulkan-v1-a/reference-visible-output.txt"
 
 
 class ReductionError(RuntimeError):
@@ -116,23 +119,77 @@ def parse_lspci_vv(text: str) -> dict:
     return out
 
 
+
+_SIZE_RE = re.compile(r"^([0-9]+)([KMGT]?)$", re.M)
+
+
+def _size_bytes(token: str) -> int:
+    m = _SIZE_RE.match(token.strip())
+    if not m:
+        raise ReductionError(f"unparseable BAR size token: {token!r}")
+    mult = {"": 1, "K": 1024, "M": 1024 ** 2, "G": 1024 ** 3, "T": 1024 ** 4}[m.group(2)]
+    return int(m.group(1)) * mult
+
+
+def split_lspci_blocks(text: str) -> dict[str, str]:
+    """Split an lspci -PP/-nn -vv dump into per-device blocks keyed by the
+    FINAL BDF of each device path header line. Block boundaries are device
+    header lines (a path of BDF segments at line start); everything until
+    the next header belongs to that device."""
+    header = re.compile(r"^((?:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}\.[0-9A-F])/)*([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}\.[0-9A-F])\s", re.M)
+    matches = list(header.finditer(text))
+    blocks: dict[str, str] = {}
+    for i, m in enumerate(matches):
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+        bdf = m.group(2)
+        blocks.setdefault(bdf, "")
+        blocks[bdf] += text[m.start():end]
+    return blocks
+
+
+def _lnksta(block: str) -> dict | None:
+    m = re.search(r"LnkSta:\s*Speed (\d+\.?\d*)GT/s, Width x?(\d+)", block)
+    if not m:
+        return None
+    return {"speed": float(m.group(1)), "width": int(m.group(2))}
+
+
+def _bus_primary_secondary(block: str) -> tuple[int, int] | None:
+    m = re.search(r"Bus: primary=([0-9A-Fa-f]+), secondary=([0-9A-Fa-f]+)", block)
+    if not m:
+        return None
+    return int(m.group(1), 16), int(m.group(2), 16)
+
+
+def _endpoint_bars(block: str) -> list[tuple[int, int]]:
+    """Parse assigned memory BARs [(start, size_bytes)] from one endpoint
+    block. Disabled/unassigned BARs raise (caller fails closed)."""
+    bars = []
+    for m in re.finditer(
+            r"Region \d+: Memory at ([0-9a-f]+) \([^)]*\)\s*\[size=([0-9]+[KMGT]?)\]", block):
+        bars.append((int(m.group(1), 16), _size_bytes(m.group(2))))
+    if re.search(r"Region \d+: Memory at [0-9a-f]+ \([^)]*\)\s*\[disabled\]", block):
+        raise ReductionError("endpoint BAR is disabled")
+    if re.search(r"Region \d+: Memory at 00000000", block):
+        raise ReductionError("endpoint BAR is unassigned")
+    return bars
+
+
 def parse_journal_errors(journal_text: str) -> dict:
     """Classify boot-journal errors into transient (retained observation) vs
-    correctness-bearing (fails the cycle)."""
-    fatal_aer = re.findall(r"severity=(Fatal|Uncorrectable)", journal_text)
-    fatal_amdgpu = re.findall(r"amdgpu.*(fail|timeout|reset|hang|GPU hang)", journal_text, re.I)
-    dmar_fault = re.findall(r"DMAR:[^\n]*(fault|error)", journal_text, re.I)
-    unresolved_bar = re.findall(r"BAR (\d+): no space|can't claim BAR|not claimed", journal_text)
-    nic_usb_storage_fail = re.findall(r"(r8169|usb \d+-\d|ata\d+|sd[a-z]): .*(fail|error|reset)", journal_text, re.I)
+    correctness-bearing (fails the cycle). Fatal/uncorrected AER phrasings
+    cover the kernel-standard spellings (case-insensitive)."""
+    def count(pattern: str) -> int:
+        return len(re.findall(pattern, journal_text, re.I))
     return {
-        "fatal_aer_count": len(fatal_aer),
-        "amdgpu_failure_count": len(fatal_amdgpu),
-        "dmar_fault_count": len(dmar_fault),
-        "unresolved_bar_count": len(unresolved_bar),
-        "controller_failure_count": len(nic_usb_storage_fail),
-        "correctable_aer_count": len(re.findall(r"severity=Correctable", journal_text)),
+        "fatal_aer_count": count(r"severity\s*=\s*(fatal|uncorrectable|uncorrected)")
+                            + count(r"AER:\s*(?:Multiple\s+)?Uncorrected"),
+        "amdgpu_failure_count": count(r"amdgpu.*(fail|timeout|reset|hang)"),
+        "dmar_fault_count": count(r"DMAR:[^\n]*(fault|error)"),
+        "unresolved_bar_count": count(r"BAR \d+: no space|can't claim BAR|not claimed"),
+        "controller_failure_count": count(r"(r8169|usb \d+-\d|ata\d+|sd[a-z]): .*(fail|error|reset)"),
+        "correctable_aer_count": count(r"severity=Correctable"),
     }
-
 
 def parse_link_from_tree_or_vv(vv_text: str) -> dict | None:
     return parse_lspci_vv(vv_text)
@@ -152,15 +209,47 @@ def derive_cycle(cycle_dir: Path, baseline_usb: set[str] | None,
     checks: dict[str, bool] = {}
     detail: dict[str, Any] = {}
 
-    # boot transition proof
+    def required_stdout(name: str) -> str:
+        path = raw / name
+        if not path.is_file():
+            raise ReductionError(f"missing required raw artifact: {path}")
+        text = _stdout_of(path)
+        # a retained-but-empty capture for a required probe is a capture
+        # fault, not evidence of a clean platform
+        if not text.strip():
+            raise ReductionError(f"empty required raw artifact: {path}")
+        return text
+
+    # boot transition proof: receipt boot_id must equal the retained
+    # raw boot_id.txt bytes (measured by the collector, retained raw).
+    boot_id_raw = required_stdout("boot_id.txt").strip()
+    checks["boot_id_bound_to_raw"] = rec["boot_id"] == boot_id_raw
+    detail["boot_id"] = rec["boot_id"]
     if kind != "baseline":
         checks["boot_id_changed"] = rec.get("boot_id_changed") is True
-        detail["boot_id"] = rec["boot_id"]
+        checks["prev_boot_id_bound"] = rec.get("prev_boot_id") is not None
         detail["prev_boot_id"] = rec.get("prev_boot_id")
 
+    # warm/cold transition-type corroboration from the PREVIOUS boot's
+    # retained journal bytes: an ordinary OS reboot records
+    # reboot.target; a cold power cut does not (the journal simply ends).
+    if kind in ("warm", "cold"):
+        prev_shutdown = required_stdout("prev-boot-shutdown.txt")
+        prev_last = required_stdout("prev-boot-last-lines.txt")
+        saw_reboot_target = ("reboot.target" in prev_shutdown
+                             or "reboot.target" in prev_last)
+        if kind == "warm":
+            checks["warm_reboot_evidence"] = saw_reboot_target
+        else:
+            # cold cycle: the previous boot must show a NON-reboot
+            # termination (power cut) — reboot.target evidence would mean
+            # this was actually a warm reboot mislabeled cold.
+            checks["cold_powercut_evidence"] = not saw_reboot_target
+        detail["prev_boot_saw_reboot_target"] = saw_reboot_target
+
     # PCI topology
-    lspci = parse_lspci_nn(_stdout_of(raw / "lspci-nn.txt"))
-    lspci_text = _stdout_of(raw / "lspci-nn.txt")
+    lspci_text = required_stdout("lspci-nn.txt")
+    lspci = parse_lspci_nn(lspci_text)
     vegas = vega_functions(lspci)
     switches = pm8533_upstream(lspci)
     bridges = vega_bridges(lspci)
@@ -169,49 +258,70 @@ def derive_cycle(cycle_dir: Path, baseline_usb: set[str] | None,
     detail["vega_bdfs"] = [v["bdf"] for v in vegas]
     detail["switch_bdfs"] = [s["bdf"] for s in switches]
 
-    # per-Vega -vv dumps
-    vega_vv = {}
+    # per-Vega -vv dumps (block-scoped)
+    full_vv = required_stdout("lspci-vv-full.txt")
+    blocks = split_lspci_blocks(full_vv)
+    vega_states = {}
+    bar_fail: list[str] = []
     for v in vegas:
-        name = f"lspci-vv-{v['bdf'].replace(':', '-')}.txt"
-        p = raw / name
-        vega_vv[v["bdf"]] = parse_lspci_vv(_stdout_of(p)) if p.is_file() else None
-    bound = all(vega_vv[v["bdf"]] and vega_vv[v["bdf"]]["driver"] == "amdgpu" for v in vegas)
-    checks["both_vega_amdgpu_bound"] = bound
-    bars_assigned = all(
-        vega_vv[v["bdf"]] and vega_vv[v["bdf"]]["bars"] and not vega_vv[v["bdf"]]["regions_fail"]
-        for v in vegas)
-    checks["bars_assigned_not_disabled"] = bars_assigned
-    # BAR non-overlap across the two endpoints
-    if len(vegas) == 2 and all(vega_vv[v["bdf"]] for v in vegas):
-        ranges = []
-        for v in vegas:
-            for bar in vega_vv[v["bdf"]]["bars"]:
-                if bar.get("addr") and not bar.get("disabled") and bar.get("addr") != "00000000":
-                    ranges.append((int(bar["addr"], 16), bar.get("size")))
-        checks["bars_nonoverlapping"] = len({a for a, _ in ranges}) == len(ranges)
-    else:
-        checks["bars_nonoverlapping"] = False
+        b = blocks.get(v["bdf"])
+        if b is None:
+            bar_fail.append(f"{v['bdf']}:no-block")
+            continue
+        vega_states[v["bdf"]] = b
+    checks["both_vega_amdgpu_bound"] = bool(vega_states) and all(
+        "Kernel driver in use: amdgpu" in b for b in vega_states.values())
+    ranges: list[tuple[int, int]] = []
+    try:
+        for bdf, b in vega_states.items():
+            for start, size in _endpoint_bars(b):
+                ranges.append((start, size))
+        checks["bars_assigned_not_disabled"] = len(ranges) > 0 and not bar_fail
+    except ReductionError as exc:
+        bar_fail.append(str(exc))
+        checks["bars_assigned_not_disabled"] = False
+    # size-aware non-overlap across ALL Vega BARs
+    ranges_sorted = sorted(ranges)
+    overlaps = [(a, b) for (a, a_sz), (b, b_sz) in zip(ranges_sorted, ranges_sorted[1:])
+                if a + a_sz > b]
+    checks["bars_nonoverlapping"] = not overlaps and not bar_fail and len(ranges) >= 2
+    detail["bar_overlaps"] = overlaps
+    detail["bar_fail"] = bar_fail
 
     # memory capacity via sysfs
-    mem_text = _stdout_of(raw / "gpu-sysfs-mem.txt")
+    mem_text = required_stdout("gpu-sysfs-mem.txt")
     hbm = [int(x) for x in re.findall(r"^([0-9]{9,})$", mem_text, re.M)]
-    checks["hbm_capacity_expected"] = sorted(hbm)[-2:] == [EXPECTED_HBM_BYTES] * 2 if len(hbm) >= 2 else False
+    checks["hbm_capacity_expected"] = len(hbm) >= 2 and sorted(hbm)[-2:] == [EXPECTED_HBM_BYTES] * 2
 
-    # link state on root port + switch upstream + endpoints (from full -vv)
-    full_vv = _stdout_of(raw / "lspci-vv-full.txt")
-    gen3_x1 = verify_gen3_x1(full_vv, [s["bdf"] for s in switches], [v["bdf"] for v in vegas])
-    checks["upstream_gen3_x1"] = gen3_x1["ok"]
-    detail["link"] = gen3_x1
+    # link state: root port (parent of switch bus) + switch upstream, block-scoped
+    gen3 = {"root_port": False, "switch_upstream": False}
+    for s in switches:
+        sb = blocks.get(s["bdf"])
+        if not sb:
+            continue
+        sta = _lnksta(sb)
+        if sta and sta["speed"] == 8.0 and sta["width"] == 1:
+            gen3["switch_upstream"] = True
+        buses = _bus_primary_secondary(sb)
+        if buses:
+            for cand_bdf, cand_block in blocks.items():
+                cb = _bus_primary_secondary(cand_block)
+                if cb and cb[1] == buses[0]:
+                    rst = _lnksta(cand_block)
+                    if rst and rst["speed"] == 8.0 and rst["width"] == 1:
+                        gen3["root_port"] = True
+    checks["upstream_gen3_x1"] = gen3["root_port"] and gen3["switch_upstream"]
+    detail["link"] = {"ok": checks["upstream_gen3_x1"], "parts": gen3}
 
     # Vulkan fresh enumeration
-    vulkan_enum = _stdout_of(raw / "vulkan-list-devices.txt")
+    vulkan_enum = required_stdout("vulkan-list-devices.txt")
     v_sel = re.findall(r"^\s*(Vulkan[0-9]+):\s+(.*)$", vulkan_enum, re.M)
     checks["two_vega_vulkan_devices"] = sum(1 for _, n in v_sel if "V340" in n or "Vega" in n) == 2
 
     # NIC
-    nic_link = _stdout_of(raw / "nic-link.txt")
-    nic_addr = _stdout_of(raw / "nic-addr.txt")
-    ping = _stdout_of(raw / "gateway-ping.txt")
+    nic_link = required_stdout("nic-link.txt")
+    nic_addr = required_stdout("nic-addr.txt")
+    ping = required_stdout("gateway-ping.txt")
     checks["nic_present_bound"] = NIC_ID.lower() in lspci_text.lower() and "r8169" in _stdout_of(raw / "nic-driver.txt")
     link_state = re.search(r"state (UP|DOWN)", nic_link)
     checks["nic_link_up"] = link_state is not None and link_state.group(1) == "UP"
@@ -219,7 +329,7 @@ def derive_cycle(cycle_dir: Path, baseline_usb: set[str] | None,
     checks["gateway_reachable"] = ping.count("time=") >= 3
 
     # USB
-    lsusb = _stdout_of(raw / "lsusb.txt")
+    lsusb = required_stdout("lsusb.txt")
     usb_now = set(re.findall(r"ID [0-9a-f]{4}:[0-9a-f]{4}", lsusb))
     if kind == "baseline":
         checks["usb_controllers_enumerated"] = "Linux Foundation root hub" in lsusb or len(usb_now) > 0
@@ -230,13 +340,13 @@ def derive_cycle(cycle_dir: Path, baseline_usb: set[str] | None,
         detail["usb_missing_from_baseline"] = sorted(missing)
 
     # Storage
-    findmnt = _stdout_of(raw / "findmnt-root.txt")
-    sentinel = _stdout_of(raw / "storage-sentinel.txt")
+    findmnt = required_stdout("findmnt-root.txt")
+    sentinel = required_stdout("storage-sentinel.txt")
     checks["root_fs_mounted_expected"] = "/dev/sda3" in findmnt or "UUID=f3a7ad1c" in findmnt
     checks["storage_sentinel_ok"] = "STORAGE_SENTINEL_OK" in sentinel
 
     # Kernel/platform errors
-    journal = _stdout_of(raw / "journal-errors.txt") + "\n" + _stdout_of(raw / "journal-aer.txt")
+    journal = required_stdout("journal-errors.txt") + "\n" + required_stdout("journal-aer.txt")
     err = parse_journal_errors(journal)
     detail["error_classes"] = err
     checks["no_fatal_aer"] = err["fatal_aer_count"] == 0
@@ -256,23 +366,6 @@ def derive_cycle(cycle_dir: Path, baseline_usb: set[str] | None,
     }
 
 
-def verify_gen3_x1(full_vv: str, switch_bdfs: list[str], vega_bdfs: list[str]) -> dict:
-    """Root port + PM8533 upstream must show Speed 8GT/s (or 8.0GT/s) Width x1
-    in LnkSta (lspci prints 'Speed 8GT/s' for Gen3)."""
-    ok = {"root_port": False, "switch_upstream": False}
-    for bdf in switch_bdfs:
-        m = re.search(re.escape(bdf) + r".*?(?=^[0-9a-f]{2}:[0-9a-f]{2}\.[0-9] |\Z)", full_vv, re.S | re.M)
-        if not m:
-            continue
-        block = m.group(0)
-        sta = re.search(r"LnkSta:\s*Speed 8(\.0)?GT/s, Width x?1\b", block)
-        ok["switch_upstream"] = ok["switch_upstream"] or bool(sta)
-    # root port: the root port feeding the switch (00:1d.0 class block)
-    rp = re.search(r"Root Port[^\n]*\n(?:.*\n)*?.*?LnkSta:\s*Speed 8(\.0)?GT/s, Width x?1\b", full_vv)
-    ok["root_port"] = bool(rp)
-    return {"ok": ok["root_port"] and ok["switch_upstream"], "parts": ok}
-
-
 def _stdout_of(path: Path) -> str:
     """Raw artifacts store probe results as JSON {argv, rc, stdout, stderr}."""
     if not path.is_file():
@@ -285,23 +378,99 @@ def _stdout_of(path: Path) -> str:
 
 
 def derive_sentinel_cycle(sent_dir: Path) -> dict:
+    """Re-derive every sentinel predicate from the RETAINED RAW BYTES of the
+    die executions (probe, stdout/stderr/exit-code, visible-output), plus the
+    accepted comparator/accounting modules when importable. The structured
+    sentinel-record.json is used ONLY for attribution fields that the raw
+    bytes cannot carry (selector resolution provenance); every correctness
+    predicate is recomputed, never trusted."""
     rec = load_json(sent_dir / "sentinel-record.json")
+    import importlib.util
+    from pathlib import Path as _P
+
     dies = {}
-    for die, d in rec.get("dies", {}).items():
+    for die in ("a", "b"):
+        d_dir = sent_dir / f"die-{die}"
+        if not d_dir.is_dir():
+            dies[die] = {"result": "FAIL", "reason": "die raw dir absent"}
+            continue
+        try:
+            exit_code = int((d_dir / "exit-code.txt").read_text().strip())
+            stdout = (d_dir / "stdout.txt").read_bytes()
+            stderr = (d_dir / "stderr.txt").read_bytes()
+            visible = (d_dir / "visible-output.txt").read_bytes()
+            probe = json.loads((d_dir / "probe.json").read_text())
+        except (OSError, ValueError) as exc:
+            dies[die] = {"result": "FAIL", "reason": f"raw artifact unreadable: {exc}"}
+            continue
+        stderr_text = stderr.decode("utf-8", "replace")
+        # probe binding re-derived from raw probe stderr
+        proof = probe.get("identity_proof_line")
+        bdf = probe.get("bdf")
+        # offload from raw stderr
+        m = re.search(r"offloaded (\d+)/(\d+) layers", stderr_text)
+        offloaded = [int(m.group(1)), int(m.group(2))] if m else None
+        offload_full = offloaded is not None and offloaded[0] == offloaded[1]
+        # byte-exactness: retained visible output must equal the recorded
+        # stdout-derived response AND the structured digest must match
+        vis_sha = sha256_bytes(visible)
+        stdout_sha = sha256_bytes(stdout)
+        stderr_sha = sha256_bytes(stderr)
+        struct = (rec.get("dies") or {}).get(die) or {}
+        digests_match = (struct.get("visible_output_sha256") == vis_sha
+                         and struct.get("stdout_sha256") == stdout_sha
+                         and struct.get("stderr_sha256") == stderr_sha)
+        byte_exact_recorded = struct.get("byte_exact_visible_output") is True
+        # comparator re-derivation: accepted extract_visible_response when the
+        # module is importable next to this script; else grammar fallback
+        try:
+            spec = importlib.util.spec_from_file_location(
+                "v0c_correctness_recheck", _P(__file__).resolve().parent / "v0c_correctness.py")
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            derived_visible = mod.extract_visible_response(stdout, PROMPT_SENTINEL)
+            comparator_ok = derived_visible == visible
+            reference = (_P(__file__).resolve().parents[1]
+                         / REFERENCE_PATH_SENTINEL).read_bytes()
+            byte_exact = reference.startswith(derived_visible) and len(derived_visible) > 0
+        except Exception:
+            comparator_ok = False
+            byte_exact = False
+        # accounting re-derivation via accepted v1c reducer
+        try:
+            spec2 = importlib.util.spec_from_file_location(
+                "v1c_accounting_recheck", _P(__file__).resolve().parent / "v1c_accounting.py")
+            mod2 = importlib.util.module_from_spec(spec2)
+            spec2.loader.exec_module(mod2)
+            acct = mod2.parse_accounting(stderr_text, selector=struct.get("selector", "Vulkan1"))
+            accounting = {k: acct[k] for k in (
+                "unexplained_persistent_host_mirror_bytes", "source_fetches_after_ready",
+                "unplanned_state_movements")}
+        except Exception as exc:
+            accounting = {"error": f"{type(exc).__name__}: {exc}"}
+        accounting_clean = all(v == 0 for v in accounting.values())
+        ok = (exit_code == 0 and proof and bdf and offload_full
+              and digests_match and byte_exact_recorded and byte_exact
+              and comparator_ok and accounting_clean)
         dies[die] = {
-            "selector": d["selector"], "probe_bdf": d["probe_bdf"],
-            "result": d["result"],
-            "byte_exact": d["byte_exact_visible_output"],
-            "accounting_three_tuple": d["accounting_three_tuple"],
-            "offload_full": d["offload_full"],
-            "identity_proof_line": d["identity_proof_line"],
-            "visible_output_sha256": d["visible_output_sha256"],
-            "stdout_sha256": d["stdout_sha256"], "stderr_sha256": d["stderr_sha256"],
+            "selector": struct.get("selector"), "probe_bdf": bdf,
+            "identity_proof_line": proof,
+            "exit_code": exit_code,
+            "offloaded_layers": offloaded, "offload_full": offload_full,
+            "visible_output_sha256": vis_sha, "stdout_sha256": stdout_sha,
+            "stderr_sha256": stderr_sha,
+            "digests_match_record": digests_match,
+            "byte_exact_visible_output": byte_exact,
+            "byte_exact_rederived_from_reference": byte_exact,
+            "comparator_grammar_ok": comparator_ok,
+            "accounting_three_tuple": accounting,
+            "accounting_clean": accounting_clean,
+            "result": "PASS" if ok else "FAIL",
         }
-    distinct_bdfs = {d["probe_bdf"] for d in rec.get("dies", {}).values()}
-    distinct_selectors = {d["selector"] for d in rec.get("dies", {}).values()}
-    ok = (rec.get("dies")
-          and all(d["result"] == "PASS" for d in rec["dies"].values())
+    distinct_bdfs = {d.get("probe_bdf") for d in dies.values() if d.get("probe_bdf")}
+    distinct_selectors = {d.get("selector") for d in dies.values() if d.get("selector")}
+    ok = (len(dies) == 2
+          and all(d["result"] == "PASS" for d in dies.values())
           and len(distinct_bdfs) == 2
           and len(distinct_selectors) == 2)
     return {"boot_id": rec.get("boot_id"), "dies": dies,
@@ -425,11 +594,57 @@ def derive(cycles_root: Path, plan: dict) -> dict:
     }
 
 
+def derive_final_canonical(area: Path, plan: dict) -> dict | None:
+    """Derive the final-boot full-canonical predicates from retained bytes
+    (qualification/canonical records + raw digests + discovery bindings)."""
+    fc = area / "cycles-v2" / "final-canonical"
+    rec_path = fc / "final-canonical.json"
+    if not rec_path.is_file():
+        return None
+    rec = json.loads(rec_path.read_text(encoding="utf-8"))
+    dies = {}
+    for die in ("a", "b"):
+        try:
+            c = json.loads((fc / f"die-{die}/canonical/canonical-execution.json").read_text())
+            q = json.loads((fc / f"die-{die}/qualification/qualification.json").read_text())
+            stdout_sha = sha256_bytes((fc / f"die-{die}/canonical/stdout.txt").read_bytes())
+            stderr_sha = sha256_bytes((fc / f"die-{die}/canonical/stderr.txt").read_bytes())
+            raw_match = (stdout_sha == c["attempt"]["stdout_sha256"]
+                         and stderr_sha == c["attempt"]["stderr_sha256"])
+            acct = {k: c["accounting"][k] for k in (
+                "unexplained_persistent_host_mirror_bytes", "source_fetches_after_ready",
+                "unplanned_state_movements")}
+            dies[die] = {
+                "qualification_result": q["result"],
+                "offloaded_layers": q["offloaded_layers"],
+                "canonical_result": c["result"],
+                "byte_exact_visible_output": c["correctness"]["byte_exact_visible_output"],
+                "accounting_three_tuple": acct,
+                "raw_bytes_match_record": raw_match,
+            }
+        except (OSError, KeyError, json.JSONDecodeError) as exc:
+            dies[die] = {"result": "FAIL", "error": f"{type(exc).__name__}: {exc}"}
+    ok = all(
+        d.get("qualification_result") == "PASS" and d.get("canonical_result") == "PASS"
+        and d.get("byte_exact_visible_output") is True
+        and all(v == 0 for v in d.get("accounting_three_tuple", {"x": 1}).values())
+        and d.get("raw_bytes_match_record") for d in dies.values()) and len(dies) == 2
+    return {"boot_id": rec.get("boot_id"),
+            "discovery": rec.get("discovery"),
+            "dies": dies,
+            "result": "PASS" if ok else "FAIL"}
+
+
 def main() -> int:
     root = repo_root()
     area = area_root(root)
     plan = load_json(area / "CAMPAIGN-PLAN-V2.json")
-    reduction = derive(area / "cycles", plan)
+    reduction = derive(area / "cycles-v2", plan)
+    fc = derive_final_canonical(area, plan)
+    if fc is not None:
+        reduction["final_canonical"] = fc
+        if fc["result"] != "PASS":
+            reduction["terminal"] = "V2C_V340L_PLATFORM_STABILITY_FAIL"
     out = area / "TERMINAL.json"
     payload = json.dumps(reduction, indent=1, sort_keys=True, allow_nan=False)
     out.write_bytes(payload.encode() + b"\n")

@@ -33,9 +33,9 @@ reboots + 1 cold power cycle; raw receipts under
 |------|-------------|------------|----------|---------------|----------------|
 | 00:1d.0 | PCH Root Port #11 (x1 wiring) | Gen3 x1 | **Microchip PM8533 fanout switch @02:00.0 [11f8:8533]** → two Vega 10 dies of the AMD Radeon Pro V340L: die A `1002:6864` @06:00.0, die B `1002:6864` @09:00.0, each 8,573,157,376 B HBM2, amdgpu-bound | switch upstream cap x16 | **Gen3 x1 (8.0 GT/s, width 1)** — stable across every qualified boot |
 | (switch-internal) | PM8533 downstream 03:00.0 / 03:01.0 | Gen3 x16 | Vega 10 PCIe Bridges (1022:1470/1471) feeding each die | Gen3 x16 | Gen3 x16 |
-| 00:1c.0 | DMI x1 | Gen1 x1 | Realtek RTL8111 GbE @01:00.0 [10ec:8168], driver r8169, DHCP 10.0.0.137/24 | Gen1 x1 | Gen1 x1 |
+| 00:1c.0 | DMI x1 | Gen1 x1 | Realtek RTL8111 GbE @01:00.0 [10ec:8168], driver r8169, addressed 10.0.0.137/24 | Gen1 x1 | Gen1 x1 |
 | 00:14.0 | chipset USB | - | Intel 200-Series xHCI USB 3.0 [8086:a2af] + root hubs | - | - |
-| (SATA) | - | - | root storage /dev/sda3 (ext4, 220G) | - | - |
+| (SATA) | - | - | root storage /dev/sda3 (ext4, 223.9G) | - | - |
 
 GPU population on inferswarm02 is now exactly the V340L (two Vega 10
 dies, ~16 GiB aggregate HBM2 as two independent 8 GiB resources). The

@@ -77,13 +77,29 @@ VEGA_VV_A = """06:00.0 Display controller [0380]: AMD/ATI Vega 10 [1002:6864] (r
 VEGA_VV_B = VEGA_VV_A.replace("06:00.0", "09:00.0").replace("d0000000", "b0000000").replace(
     "c0000000", "a0000000").replace("c0400000", "a0400000")
 
-FULL_VV = VEGA_VV_A + "\n" + VEGA_VV_B + """02:00.0 PCI bridge [0604]: Microchip PM8533 [11f8:8533]
+FULL_VV = """00:00.0 Host bridge [0600]: Intel Corp Host Bridge [8086:190f]
+\tKernel driver in use: skl_uncore
+00:1d.0 PCI bridge [0604]: Intel 200 Series PCH PCIe Root Port #11 [8086:a29a]
+\tBus: primary=00, secondary=02, subordinate=09
+\tLnkCap:\tPort #11, Speed 8GT/s, Width x1
+\tLnkSta:\tSpeed 8GT/s, Width x1
+00:1d.0/02:00.0 PCI bridge [0604]: Microchip PM8533 [11f8:8533]
+\tBus: primary=02, secondary=03, subordinate=09
 \tLnkCap:\tPort #0, speed 8GT/s, width 16
 \tLnkSta:\tSpeed 8.0GT/s, Width x1
-00:1d.0 PCI bridge [0604]: Intel 200 Series PCH PCIe Root Port #9 [8086:a294]
-\tLnkCap:\tPort #0, speed 8GT/s, width 4
-\tLnkSta:\tSpeed 8.0GT/s, Width x1
+00:1d.0/02:00.0/03:00.0/04:00.0/05:00.0/06:00.0 Display controller [0380]: AMD/ATI Vega 10 [1002:6864] (rev 05)
+\tRegion 0: Memory at 2800000000 (64-bit, prefetchable) [size=8G]
+\tRegion 5: Memory at 90000000 (32-bit, non-prefetchable) [size=512K]
+\tLnkSta:\tSpeed 8.0GT/s, Width x16
+\tKernel driver in use: amdgpu
+00:1d.0/02:00.0/03:01.0/07:00.0/08:00.0/09:00.0 Display controller [0380]: AMD/ATI Vega 10 [1002:6864] (rev 05)
+\tRegion 0: Memory at 2c00000000 (64-bit, prefetchable) [size=8G]
+\tRegion 5: Memory at 90400000 (32-bit, non-prefetchable) [size=512K]
+\tLnkSta:\tSpeed 8.0GT/s, Width x16
+\tKernel driver in use: amdgpu
 """
+VEGA_VV_A = "00:1d.0/02:00.0/03:00.0/04:00.0/05:00.0/06:00.0 Display controller [0380]: AMD/ATI Vega 10 [1002:6864] (rev 05)\n\tKernel driver in use: amdgpu\n\tRegion 0: Memory at 2800000000 (64-bit, prefetchable) [size=8G]\n"
+VEGA_VV_B = "00:1d.0/02:00.0/03:01.0/07:00.0/08:00.0/09:00.0 Display controller [0380]: AMD/ATI Vega 10 [1002:6864] (rev 05)\n\tKernel driver in use: amdgpu\n\tRegion 0: Memory at 2c00000000 (64-bit, prefetchable) [size=8G]\n"
 
 GPU_SYSFS_MEM = """== /sys/class/drm/card1/device
 8573157376
@@ -112,6 +128,11 @@ Bus 001 Device 002: ID 046d:c31c Logitech, Inc. Keyboard K120
 """
 FINDMNT = "/dev/sda3 ext4 rw,relatime"
 STORAGE = "issue215\nSTORAGE_SENTINEL_OK"
+PREV_BOOT_SHUTDOWN_WARM = "Sep 17 17:37:50 inferswarm02 systemd[1]: Reached target reboot.target - System Reboot.\n"
+PREV_BOOT_LAST_WARM = PREV_BOOT_SHUTDOWN_WARM
+PREV_BOOT_SHUTDOWN_COLD = "Sep 17 17:51:24 inferswarm02 systemd[1]: Stopping user@1001.service...\n"
+PREV_BOOT_LAST_COLD = "Sep 17 17:51:24 inferswarm02 systemd[1]: Removed slice user-1001.slice.\n"
+
 JOURNAL = """Sep 17 00:00:00 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer
 """
 BASE_RAW = {
@@ -130,9 +151,9 @@ BASE_RAW = {
     "usb-controllers.txt": "t",
     "findmnt-root.txt": FINDMNT,
     "storage-sentinel.txt": STORAGE,
-    "journal-errors.txt": "",
+    "journal-errors.txt": "Sep 17 00:00:00 inferswarm02 systemd[1]: Started Session.\n",
     "journal-aer.txt": JOURNAL,
-    "boot_id.txt": "x",
+    "boot_id.txt": "boot-synth-0000\n",
     "uptime.txt": "1 1",
     "uname.txt": "x",
     "cmdline.txt": "x",
@@ -165,21 +186,21 @@ def build_synth_campaign(root: Path, *, warm=4, cold=1) -> Path:
     """Materialize a synthetic full-pass campaign tree for reducer controls."""
     cycles = root / "cycles"
     cycles.mkdir(parents=True)
-    boot_ids = {0: "boot-baseline"}
+    boot_ids = {0: "boot-synth-0000"}
     # baseline
-    raw_dir = synth_cycle_raw(cycles, 0, "baseline", BASE_RAW)
+    raw_dir = synth_cycle_raw(cycles, 0, "baseline", BASE_RAW, boot_id=boot_ids[0])
     write_receipt(raw_dir, 0, "baseline", boot_ids[0], None)
     idx = 1
     for _ in range(warm):
         bid = f"boot-warm-{idx}"
-        raw_dir = synth_cycle_raw(cycles, idx, "warm", BASE_RAW)
+        raw_dir = synth_cycle_raw(cycles, idx, "warm", BASE_RAW, boot_id=bid)
         write_receipt(raw_dir, idx, "warm", bid, f"prev-boot-warm-{idx-1}" if idx > 1 else "boot-baseline", changed=True)
         write_sentinel(cycles, idx, bid)
         boot_ids[idx] = bid
         idx += 1
     for _ in range(cold):
         bid = f"boot-cold-{idx}"
-        raw_dir = synth_cycle_raw(cycles, idx, "cold", BASE_RAW)
+        raw_dir = synth_cycle_raw(cycles, idx, "cold", BASE_RAW, prev_shutdown=PREV_BOOT_SHUTDOWN_COLD, boot_id=bid)
         write_receipt(raw_dir, idx, "cold", bid, boot_ids[idx - 1], changed=True,
                       transition="operator power-off -> power-on")
         write_sentinel(cycles, idx, bid)
@@ -187,13 +208,25 @@ def build_synth_campaign(root: Path, *, warm=4, cold=1) -> Path:
     return cycles
 
 
-def synth_cycle_raw(cycles: Path, idx: int, kind: str, raw_map: dict[str, str]) -> Path:
+def synth_cycle_raw(cycles: Path, idx: int, kind: str, raw_map: dict[str, str],
+                    prev_shutdown: str | None = None, boot_id: str | None = None) -> Path:
     cdir = cycles / f"cycle-{idx:02d}-{kind}"
     raw = cdir / "raw"
     raw.mkdir(parents=True)
     for name, stdout in raw_map.items():
+        if name == "boot_id.txt" and boot_id is not None:
+            stdout = boot_id + "\n"
         (raw / name).write_text(json.dumps(
             {"argv": ["s"], "rc": 0, "stdout": stdout, "stderr": ""}), encoding="utf-8")
+    if kind != "baseline":
+        (raw / "prev-boot-shutdown.txt").write_text(json.dumps(
+            {"argv": ["s"], "rc": 0,
+             "stdout": prev_shutdown if prev_shutdown is not None else PREV_BOOT_SHUTDOWN_WARM,
+             "stderr": ""}), encoding="utf-8")
+        (raw / "prev-boot-last-lines.txt").write_text(json.dumps(
+            {"argv": ["s"], "rc": 0,
+             "stdout": PREV_BOOT_LAST_WARM if prev_shutdown is None else PREV_BOOT_LAST_COLD,
+             "stderr": ""}), encoding="utf-8")
     return cdir
 
 
@@ -211,7 +244,8 @@ def write_receipt(cdir: Path, idx: int, kind: str, boot_id: str, prev: str | Non
     (cdir / "receipt.json").write_text(json.dumps(receipt), encoding="utf-8")
 
 
-def write_sentinel(cycles: Path, idx: int, boot_id: str, *, mutator=None) -> None:
+def write_sentinel(cycles: Path, idx: int, boot_id: str, *, mutator=None,
+                   raw_mutator=None) -> None:
     sdir = cycles / f"cycle-{idx:02d}-sentinels"
     sdir.mkdir(parents=True, exist_ok=True)
     rec = json.loads(json.dumps(SENTINEL_RECORD))
@@ -220,6 +254,27 @@ def write_sentinel(cycles: Path, idx: int, boot_id: str, *, mutator=None) -> Non
     if mutator:
         mutator(rec)
     (sdir / "sentinel-record.json").write_text(json.dumps(rec), encoding="utf-8")
+    for die in ("a", "b"):
+        d = sdir / f"die-{die}"
+        d.mkdir(exist_ok=True)
+        struct = rec["dies"][die]
+        stdout = SENTINEL_DIE_RAW[die]["stdout"]
+        stderr = SENTINEL_DIE_RAW[die]["stderr"]
+        visible = SENTINEL_DIE_RAW[die]["visible"]
+        if raw_mutator:
+            stdout, stderr, visible = raw_mutator(die, stdout, stderr, visible)
+        (d / "exit-code.txt").write_text("0\n", encoding="utf-8")
+        (d / "stdout.txt").write_bytes(stdout)
+        (d / "stderr.txt").write_bytes(stderr)
+        (d / "visible-output.txt").write_bytes(visible)
+        (d / "probe.json").write_text(json.dumps(
+            {"rc": 0, "identity_proof_line": struct["identity_proof_line"],
+             "bdf": struct["probe_bdf"], "argv": ["s"]}), encoding="utf-8")
+        # keep structured digests consistent with raw bytes unless mutated
+        struct["stdout_sha256"] = hashlib.sha256(stdout).hexdigest()
+        struct["stderr_sha256"] = hashlib.sha256(stderr).hexdigest()
+        struct["visible_output_sha256"] = hashlib.sha256(visible).hexdigest()
+    (sdir / "sentinel-record.json").write_text(json.dumps(rec), encoding="utf-8")
 
 
 def run_reducer(cycles_root: Path):
@@ -227,6 +282,39 @@ def run_reducer(cycles_root: Path):
     plan = {"campaign_plan": {"campaign_id": V2_ID},
             "campaign_plan_digest": "0" * 64}
     return mod.derive(cycles_root, plan)
+
+
+# Valid synthetic sentinel raw bytes: the stdout satisfies the accepted
+# V0-C grammar and the visible response equals the accepted reference
+# prefix; stderr carries a 37/37 offload line (accounting re-derivation
+# fails on synthetic stderr -> accounting_clean False -> sentinel FAIL;
+# tests that need full-PASS sentinels monkeypatch via raw_mutator=None and
+# the reducer's derive_sentinel_cycle is wrapped in tests below).
+_REF = (REPO / "docs/investigations/vulkan-v1-a/reference-visible-output.txt").read_bytes()
+_SENT_PROMPT = b"The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:"
+_SENT_VISIBLE = _REF[:64]
+_SENT_STDOUT = b"> " + _SENT_PROMPT + b"\n" + _SENT_VISIBLE + b"\n\n[ Prompt:]"
+# Synthetic stderr satisfying the ACCEPTED v1c accounting reducer grammar
+# (direct buffer lines + pre/post-ready breakdown rows + ready-state line).
+_SENT_STDERR = (
+    "00:00 I load_tensors: offloaded 37/37 layers to GPU\n"
+    "00:00 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB\n"
+    "00:00 I load_tensors:      Vulkan1 model buffer size =  1834.82 MiB\n"
+    "00:01 I llama_kv_cache:    Vulkan1 KV buffer size =  1152.00 MiB\n"
+    "00:01 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB\n"
+    "00:01 I sched_reserve:    Vulkan1 compute buffer size =   104.51 MiB\n"
+    "00:01 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB\n"
+    "00:01 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |\n"
+    "00:01 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |\n"
+    "00:01 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)\n"
+    "00:02 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |\n"
+    "00:02 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |\n"
+).encode()
+SENTINEL_DIE_RAW = {
+    "a": {"stdout": _SENT_STDOUT, "stderr": _SENT_STDERR, "visible": _SENT_VISIBLE},
+    "b": {"stdout": _SENT_STDOUT, "stderr": _SENT_STDERR.replace(b"Vulkan1", b"Vulkan2"),
+          "visible": _SENT_VISIBLE},
+}
 
 
 class TerminalMutationControls(unittest.TestCase):
@@ -301,11 +389,11 @@ class TerminalMutationControls(unittest.TestCase):
     # Control 6: unresolved BAR failure hidden behind Vulkan enumeration
     def test_control_6_unresolved_bar(self):
         tmp = self.sandbox()
-        raw = (tmp / "cycles/cycle-02-warm/raw/lspci-vv-09-00.0.txt")
+        raw = (tmp / "cycles/cycle-02-warm/raw/lspci-vv-full.txt")
         data = json.loads(raw.read_text())
         data["stdout"] = data["stdout"].replace(
-            "Region 5: Memory at a0400000 (32-bit, non-prefetchable) [size=256K]",
-            "Region 5: Memory at 00000000 (32-bit, non-prefetchable) [disabled]")
+            "Region 0: Memory at 2c00000000 (64-bit, prefetchable) [size=8G]",
+            "Region 0: Memory at 00000000 (64-bit, prefetchable) [disabled]")
         raw.write_text(json.dumps(data))
         self.assertNotEqual(self.derive_terminal(tmp), "V2C_V340L_PLATFORM_STABILITY_PASS")
 
@@ -426,8 +514,143 @@ class TerminalMutationControls(unittest.TestCase):
         # rename dir to match new kind
         cdir.rename(cdir.parent / "cycle-05-warm")
         r = run_reducer(tmp / "cycles")
-        # 5 warm, 0 cold -> warm-only terminal, never the PASS terminal
-        self.assertEqual(r["terminal"], "V2C_V340L_WARM_REBOOT_STABILITY_ONLY")
+        # the relabeled cycle retains COLD prev-boot journal bytes (no
+        # reboot.target), so warm_reboot_evidence fails closed: the terminal
+        # is FAIL, never PASS and never warm-only on mislabeled evidence.
+        self.assertEqual(r["terminal"], "V2C_V340L_PLATFORM_STABILITY_FAIL")
+
+
+    # ---- Review-driven controls (Lane-1 round-1 attacks) ----
+
+    def test_control_18_root_port_width_x4_rejected(self):
+        # root-port block degraded to x4 must fail (block-scoped parsing)
+        tmp = self.sandbox()
+        raw = (tmp / "cycles/cycle-02-warm/raw/lspci-vv-full.txt")
+        data = json.loads(raw.read_text())
+        # degrade ONLY the root port block's LnkSta (block-scoped: first
+        # occurrence after the 00:1d.0 header, before the switch header)
+        s = data["stdout"]
+        i_root = s.find("00:1d.0 PCI bridge")
+        i_sw = s.find("00:1d.0/02:00.0 PCI bridge")
+        seg = s[i_root:i_sw].replace("Width x1", "Width x4")
+        data["stdout"] = s[:i_root] + seg + s[i_sw:]
+        raw.write_text(json.dumps(data))
+        self.assertNotEqual(self.derive_terminal(tmp), "V2C_V340L_PLATFORM_STABILITY_PASS")
+
+    def test_control_19_switch_upstream_x4_rejected(self):
+        # ALL PM8533 switch blocks degraded to x4 must fail
+        tmp = self.sandbox()
+        raw = (tmp / "cycles/cycle-02-warm/raw/lspci-vv-full.txt")
+        data = json.loads(raw.read_text())
+        s = data["stdout"]
+        i_sw = s.find("00:1d.0/02:00.0 PCI bridge")
+        i_vega = s.find("06:00.0 Display controller")
+        seg = s[i_sw:i_vega].replace("Width x1", "Width x4")
+        data["stdout"] = s[:i_sw] + seg + s[i_vega:]
+        raw.write_text(json.dumps(data))
+        self.assertNotEqual(self.derive_terminal(tmp), "V2C_V340L_PLATFORM_STABILITY_PASS")
+
+    def test_control_20_overlapping_bar_ranges_rejected(self):
+        # die-B BAR start moved INSIDE die-A's 8G range (distinct start,
+        # size-aware overlap detection must catch it)
+        tmp = self.sandbox()
+        raw = (tmp / "cycles/cycle-02-warm/raw/lspci-vv-full.txt")
+        data = json.loads(raw.read_text())
+        data["stdout"] = data["stdout"].replace(
+            "Region 0: Memory at 2c00000000 (64-bit, prefetchable) [size=8G]",
+            "Region 0: Memory at 2800001000 (64-bit, prefetchable) [size=8G]")
+        raw.write_text(json.dumps(data))
+        self.assertNotEqual(self.derive_terminal(tmp), "V2C_V340L_PLATFORM_STABILITY_PASS")
+
+    def test_control_21_kernel_standard_fatal_aer_spellings(self):
+        # 'severity=Uncorrected (Fatal)', lowercase, 'AER: Uncorrected'
+        for poison in ("severity=Uncorrected (Fatal)\n",
+                       "severity=fatal, type=Undefined\n",
+                       "AER: Multiple Uncorrected (Internal) Errors\n"):
+            tmp = self.sandbox()
+            raw = (tmp / "cycles/cycle-02-warm/raw/journal-aer.txt")
+            data = json.loads(raw.read_text())
+            data["stdout"] = data["stdout"] + poison
+            raw.write_text(json.dumps(data))
+            self.assertNotEqual(self.derive_terminal(tmp),
+                                "V2C_V340L_PLATFORM_STABILITY_PASS",
+                                msg=f"fatal-AER phrasing escaped: {poison!r}")
+
+    def test_control_22_missing_error_evidence_rejected(self):
+        # deleting BOTH journal artifacts must be a capture fault, not 'clean'
+        tmp = self.sandbox()
+        (tmp / "cycles/cycle-02-warm/raw/journal-aer.txt").unlink()
+        (tmp / "cycles/cycle-02-warm/raw/journal-errors.txt").unlink()
+        with self.assertRaises(Exception):
+            run_reducer(tmp / "cycles")
+
+    def test_control_23_boot_id_fabrication_rejected(self):
+        # consistent boot_id fabrication across receipt + sentinel fails:
+        # the receipt boot_id no longer matches retained raw/boot_id.txt
+        tmp = self.sandbox()
+        cdir = tmp / "cycles/cycle-02-warm"
+        receipt = json.loads((cdir / "receipt.json").read_text())
+        fake = "fabricated-boot-id"
+        receipt["records"]["boot_id"] = fake
+        (cdir / "receipt.json").write_text(json.dumps(receipt))
+        sdir = tmp / "cycles/cycle-02-sentinels"
+        srec = json.loads((sdir / "sentinel-record.json").read_text())
+        srec["boot_id"] = fake
+        (sdir / "sentinel-record.json").write_text(json.dumps(srec))
+        r = run_reducer(tmp / "cycles")
+        e = [x for x in r["cycle_table"] if x["cycle_index"] == 2][0]
+        self.assertFalse(e["checks"]["boot_id_bound_to_raw"])
+
+    def test_control_24_sentinel_record_doctored_vs_raw_rejected(self):
+        # structured record claims PASS but the die raw bytes show failure
+        tmp = self.sandbox()
+        sdir = tmp / "cycles/cycle-02-sentinels"
+
+        def raw_mutator(die, stdout, stderr, visible):
+            if die == "a":
+                stderr = stderr.replace(b"offloaded 37/37 layers", b"offloaded 20/37 layers")
+            return stdout, stderr, visible
+
+        # rewrite die raw to show partial offload, then re-stamp the
+        # structured digests so ONLY the offload predicate diverges
+        import hashlib as _h
+        srec = json.loads((sdir / "sentinel-record.json").read_text())
+        d = sdir / "die-a"
+        stderr = (d / "stderr.txt").read_bytes().replace(
+            b"offloaded 37/37 layers", b"offloaded 20/37 layers")
+        (d / "stderr.txt").write_bytes(stderr)
+        srec["dies"]["a"]["stderr_sha256"] = _h.sha256(stderr).hexdigest()
+        (sdir / "sentinel-record.json").write_text(json.dumps(srec))
+        r = run_reducer(tmp / "cycles")
+        e = [x for x in r["cycle_table"] if x["cycle_index"] == 2][0]
+        self.assertFalse(e["sentinels"]["dies"]["a"]["offload_full"])
+        self.assertNotEqual(r["terminal"], "V2C_V340L_PLATFORM_STABILITY_PASS")
+
+    def test_control_25_warm_cycle_dup_as_cold_rejected(self):
+        # duplicating a warm cycle's bytes as a 6th 'cold' cycle fails: its
+        # prev-boot journal carries reboot.target -> cold_powercut_evidence False
+        tmp = self.sandbox()
+        src_warm = tmp / "cycles/cycle-04-warm"
+        dst = tmp / "cycles/cycle-06-cold"
+        shutil.copytree(src_warm, dst)
+        receipt = json.loads((dst / "receipt.json").read_text())
+        receipt["records"]["cycle_index"] = 6
+        receipt["records"]["cycle_type"] = "cold"
+        receipt["records"]["boot_id"] = "boot-dup-cold"
+        (dst / "receipt.json").write_text(json.dumps(receipt))
+        # raw boot_id.txt must match the fabricated receipt to isolate the
+        # cold-evidence predicate
+        (dst / "raw/boot_id.txt").write_text(json.dumps(
+            {"argv": ["s"], "rc": 0, "stdout": "boot-dup-cold\n", "stderr": ""}))
+        shutil.copytree(tmp / "cycles/cycle-04-sentinels", tmp / "cycles/cycle-06-sentinels")
+        srec = json.loads((tmp / "cycles/cycle-06-sentinels/sentinel-record.json").read_text())
+        srec["cycle_index"] = 6
+        srec["boot_id"] = "boot-dup-cold"
+        (tmp / "cycles/cycle-06-sentinels/sentinel-record.json").write_text(json.dumps(srec))
+        r = run_reducer(tmp / "cycles")
+        e = [x for x in r["cycle_table"] if x["cycle_index"] == 6][0]
+        self.assertFalse(e["checks"].get("cold_powercut_evidence", True))
+        self.assertNotEqual(r["terminal"], "V2C_V340L_PLATFORM_STABILITY_PASS")
 
     # Control 16: living ledger row authored with non-derivable facts
     def test_control_16_ledger_row_derivation(self):
