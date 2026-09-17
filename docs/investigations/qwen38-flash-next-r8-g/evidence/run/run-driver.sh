@@ -95,11 +95,13 @@ stop_pid () {
 
 cd $REPO
 export PYTHONPATH=$REPO/scripts
+ARMS=${ARMS:-"reference candidate"}   # rerun filter for clean-backend repairs
+
 
 case $STAGE in
 nonpert)
   OUT=$EV/nonpert; mkdir -p $OUT
-  for ARM in reference candidate; do
+  for ARM in $ARMS; do
     if [ "$ARM" = candidate ]; then bash $RUN/wait_backends.sh; fi
     for I in 1 2; do
       gpu_idle_gate || exit 1
@@ -118,7 +120,7 @@ nonpert)
   echo NONPERT_COMPLETE ;;
 coarse)
   OUT=$EV/coarse; mkdir -p $OUT
-  for ARM in reference candidate; do
+  for ARM in $ARMS; do
     if [ "$ARM" = candidate ]; then bash $RUN/wait_backends.sh; fi
     for I in 1 2; do
       gpu_idle_gate || exit 1
@@ -137,7 +139,7 @@ coarse)
   echo COARSE_COMPLETE ;;
 refine)
   OUT=$EV/refine; mkdir -p $OUT
-  for ARM in reference candidate; do
+  for ARM in $ARMS; do
     if [ "$ARM" = candidate ]; then bash $RUN/wait_backends.sh; fi
     for I in 1 2; do
       gpu_idle_gate || exit 1
@@ -156,7 +158,7 @@ refine)
   echo REFINE_COMPLETE ;;
 contrast)
   OUT=$EV/contrast; mkdir -p $OUT
-  for ARM in reference candidate; do
+  for ARM in $ARMS; do
     if [ "$ARM" = candidate ]; then bash $RUN/wait_backends.sh; fi
     for I in 1 2; do
       gpu_idle_gate || exit 1
