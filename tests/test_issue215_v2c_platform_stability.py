@@ -24,6 +24,8 @@ sys.path.insert(0, str(REPO / "scripts"))
 
 import issue215_campaign_plan as plan_mod  # noqa: E402
 
+
+V2_ID = "issue215-v2c-v340l-platform-stability-v2"
 AREA = REPO / "docs/investigations/vulkan-v2-c-v340l-platform-stability"
 
 
@@ -138,7 +140,7 @@ BASE_RAW = {
 
 SENTINEL_RECORD = {
     "schema": "inferswarm.v2c.execution-sentinel/1",
-    "campaign_id": plan_mod.CAMPAIGN_ID,
+    "campaign_id": V2_ID,
     "cycle_index": 1, "boot_id": "b1",
     "dies": {
         "a": {"selector": "Vulkan1", "probe_bdf": "06:00.0", "result": "PASS",
@@ -199,7 +201,7 @@ def write_receipt(cdir: Path, idx: int, kind: str, boot_id: str, prev: str | Non
                   changed: bool = False, transition: str | None = None) -> None:
     receipt = {"records": {
         "schema": "inferswarm.v2c.post-boot-snapshot/1",
-        "campaign_id": plan_mod.CAMPAIGN_ID,
+        "campaign_id": V2_ID,
         "cycle_index": idx, "cycle_type": kind,
         "requested_transition": transition or ("systemctl reboot" if kind == "warm" else None),
         "prev_boot_id": prev, "boot_id": boot_id,
@@ -222,7 +224,7 @@ def write_sentinel(cycles: Path, idx: int, boot_id: str, *, mutator=None) -> Non
 
 def run_reducer(cycles_root: Path):
     mod = load_reducer()
-    plan = {"campaign_plan": {"campaign_id": plan_mod.CAMPAIGN_ID},
+    plan = {"campaign_plan": {"campaign_id": V2_ID},
             "campaign_plan_digest": "0" * 64}
     return mod.derive(cycles_root, plan)
 
@@ -459,10 +461,14 @@ class TerminalMutationControls(unittest.TestCase):
 
 class CampaignPlanTests(unittest.TestCase):
     def test_plan_digest_binds_semantics(self):
-        doc = json.loads((AREA / "CAMPAIGN-PLAN.json").read_text())
+        doc = json.loads((AREA / "CAMPAIGN-PLAN-V2.json").read_text())
         payload = json.dumps(doc["campaign_plan"], sort_keys=True, separators=(",", ":"),
                              allow_nan=False).encode()
         self.assertEqual(hashlib.sha256(payload).hexdigest(), doc["campaign_plan_digest"])
+        # v2 supersedes v1 honestly: v1 terminal recorded as BLOCKED, never FAIL
+        sup = doc["campaign_plan"]["supersedes"]
+        self.assertEqual(sup["v1_terminal"], "V2C_EVIDENCE_BLOCKED")
+        self.assertNotIn("PLATFORM_STABILITY_FAIL", sup["v1_terminal"])
 
     def test_frozen_sequence_minimums(self):
         plan = plan_mod.build_plan()["sequence"]["cycles"]

@@ -428,7 +428,7 @@ def derive(cycles_root: Path, plan: dict) -> dict:
 def main() -> int:
     root = repo_root()
     area = area_root(root)
-    plan = load_json(area / "CAMPAIGN-PLAN.json")
+    plan = load_json(area / "CAMPAIGN-PLAN-V2.json")
     reduction = derive(area / "cycles", plan)
     out = area / "TERMINAL.json"
     payload = json.dumps(reduction, indent=1, sort_keys=True, allow_nan=False)

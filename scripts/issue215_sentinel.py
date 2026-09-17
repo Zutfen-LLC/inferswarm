@@ -33,7 +33,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 SCHEMA = "inferswarm.v2c.execution-sentinel/1"
-CAMPAIGN_ID = "issue215-v2c-v340l-platform-stability-v1"
+CAMPAIGN_ID = "issue215-v2c-v340l-platform-stability-v2"
 
 RUNTIME_EXECUTABLE = "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli"
 MODEL = "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf"

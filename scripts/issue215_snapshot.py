@@ -94,7 +94,7 @@ def capture(cycle: int, kind: str, prev_boot_id: str | None, out_root: Path,
     boot_id = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
     records: dict = {
         "schema": SCHEMA,
-        "campaign_id": "issue215-v2c-v340l-platform-stability-v1",
+        "campaign_id": "issue215-v2c-v340l-platform-stability-v2",
         "cycle_index": cycle,
         "cycle_type": kind,
         "requested_transition": requested_transition,
