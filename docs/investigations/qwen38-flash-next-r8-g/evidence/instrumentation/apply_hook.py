@@ -166,6 +166,7 @@ static bool r8g_boundary_observer(struct ggml_tensor * t, bool ask,
                     std::stoi(item.substr(colon + 1));
             } catch (...) {}
         }
+        std::filesystem::create_directories(out_dir);
         frozen_parsed = true;
     }
     const std::string name(t->name);
