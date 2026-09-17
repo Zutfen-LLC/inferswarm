@@ -48,8 +48,9 @@ import tempfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from issue207_r8g_reduce import (  # noqa: E402
-    REPO, boundary_state, check_nonperturbation, first_interval,
-    load_captures, target_execution_binding, verify_manifest)
+    REPO, boundary_state, boundary_state_strict, check_nonperturbation,
+    first_interval, load_captures, target_execution_binding,
+    verify_manifest)
 from issue207_r8g_authority import (  # noqa: E402
     COARSE_BOUNDARIES, SEAM_ANCHOR_BOUNDARY, TERMINAL_LOCALIZED,
     TERMINAL_NONMONOTONIC, load_decision_inputs)
@@ -144,13 +145,19 @@ def main():
                   if verify_capture(c5, inputs) else True,
                   "NC5", results)
 
-    # NC6 — boundary identity blanked
+    # NC6 — boundary identity blanked: the frozen boundary's row must
+    # EXIST in the capture; a missing/blanked row is a hard rejection in
+    # boundary_state_strict, not "unobservable"
     c6 = copy.deepcopy(cap)
-    if c6["boundary_rows"]:
-        c6["boundary_rows"][0] = dict(c6["boundary_rows"][0], name="")
-    expect_reject(lambda: target_execution_binding(c6) and True,
-                  "NC6-soft", results)
-    # (anchor name gone -> binding returns None -> unobservable; recorded)
+    anchor_name = c6["boundary_rows"][0]["name"] if c6["boundary_rows"] \
+        else "l_last-2"
+    c6["boundary_rows"] = [
+        dict(r, name="" if r["name"] == anchor_name else r["name"])
+        for r in c6["boundary_rows"]]
+    expect_reject(
+        lambda: boundary_state_strict(c6, c6.get("phase_dir", "coarse"),
+                                      anchor_name),
+        "NC6", results)
 
     # NC7/NC8/NC10 — sidecar tamper family against boundary_state
     import issue207_r8g_reduce as Rd

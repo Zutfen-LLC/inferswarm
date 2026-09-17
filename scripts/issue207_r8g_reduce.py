@@ -171,6 +171,20 @@ def boundary_state(cap, phase_dir, name):
             "seq": want_seq}
 
 
+def boundary_state_strict(cap, phase_dir, name):
+    """Hard-fail variant of boundary_state for FROZEN boundary names that
+    the capture MUST have observed at the target execution: a missing row
+    (blanked/stale/substituted identity) raises Blocked instead of
+    returning None."""
+    st = boundary_state(cap, phase_dir, name)
+    if st is None:
+        e0 = target_execution_binding(cap)
+        why = ("no binding" if e0 is None else
+               "no row for %s at target execution %d" % (name, e0))
+        raise Blocked("boundary observation lacking identity: " + why)
+    return st
+
+
 def check_nonperturbation(caps, inputs):
     """Instrumented captures must reproduce accepted generated tokens;
     seam-anchor row must byte-match the accepted R8-E pos-0 row."""
