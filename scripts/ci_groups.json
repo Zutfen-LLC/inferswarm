@@ -89,6 +89,11 @@
     "test_issue187_r7a"
    ]
   },
+  "issue-209-r7b": {
+   "test_modules": [
+    "test_issue209_r7b"
+   ]
+  },
   "issue-74-79": {
    "test_modules": [
     "test_issue74_methodology",
@@ -280,6 +285,9 @@
   ],
   "docs/investigations/deepseek-v41-flash-r7-a/": [
    "issue-187-r7a"
+  ],
+  "docs/investigations/deepseek-v41-flash-r7-b/": [
+   "issue-209-r7b"
   ],
   "docs/investigations/link-x1-envelope/": [
    "vulkan-v0-b"
@@ -919,6 +927,12 @@
   "scripts/issue200_r8f_terminal_reduction.py": [
    "issue-99-103"
   ],
+  "scripts/issue209_r7b_manifest.py": [
+   "issue-209-r7b"
+  ],
+  "scripts/issue209_r7b_reducer.py": [
+   "issue-209-r7b"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "vulkan-v0-b"
   ],
@@ -1152,6 +1166,9 @@
   ],
   "tests/test_issue200_r8f_source_policy.py": [
    "issue-99-103"
+  ],
+  "tests/test_issue209_r7b.py": [
+   "issue-209-r7b"
   ],
   "tests/test_issue35_corrections.py": [
    "vulkan-v0-b"
