@@ -202,6 +202,9 @@ GROUP_TEST_MODULES = {
     "issue-187-r7a": [
         "test_issue187_r7a",
     ],
+    "issue-209-r7b": [
+        "test_issue209_r7b",
+    ],
     "issue-137": [
         "test_issue137_regime4_diagnosis",
         "test_issue137_regime4_diagnosis_correction",
@@ -299,6 +302,7 @@ PATH_GROUPS = {
     "tests/test_evidence_manifest_lifecycle.py": ["repo-integrity"],
     "tests/test_issue131_cpu_test_env.py": ["repo-integrity"],
     "tests/test_issue187_r7a.py": ["issue-187-r7a"],
+    "tests/test_issue209_r7b.py": ["issue-209-r7b"],
     "scripts/bootstrap_test_env.py": ["repo-integrity"],   # + env authority -> full
     "scripts/check_test_env.py": ["repo-integrity"],       # + env authority -> full
     "requirements-test.txt": ["repo-integrity"],           # + env authority -> full
@@ -485,6 +489,10 @@ PATH_GROUPS = {
     "scripts/issue187_r7a_census.py": ["issue-187-r7a"],
     "scripts/issue187_r7a_manifest.py": ["issue-187-r7a"],
     "scripts/issue187_r7a_reducer.py": ["issue-187-r7a"],
+    "scripts/issue209_r7b_manifest.py": ["issue-209-r7b"],
+    "scripts/issue209_r7b_reducer.py": ["issue-209-r7b"],
+    "scripts/issue209_r7b_fixture.py": ["issue-209-r7b"],
+    "docs/investigations/deepseek-v41-flash-r7-b/": ["issue-209-r7b"],
     "scripts/issue182_manifest.py": ["issue-182-arm-e"],
     # Issue #213 campaign gate ordering (orchestration tooling + tests)
     "scripts/issue213_gate_orchestration.py": ["issue-213-gate-ordering"],

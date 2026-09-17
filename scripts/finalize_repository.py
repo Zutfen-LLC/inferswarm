@@ -1297,6 +1297,39 @@ _R7A_AUTHORED = frozenset({
     f"{_R7A}/external/inference/config.json",
     f"{_R7A}/external/inference/model.py",
 })
+_R7A_CENSUS = f"{_R7A}/tensor-census.json"
+_R7B = "docs/investigations/deepseek-v41-flash-r7-b"
+_R7B_TERMINAL = f"{_R7B}/terminal-reduction.json"
+_R7B_HASHES = f"{_R7B}/producer-hashes.json"
+_R7B_MANIFEST = f"{_R7B}/MANIFEST.sha256"
+_R7B_PRODUCERS = frozenset({
+    "scripts/issue209_r7b_reducer.py",
+    "scripts/issue209_r7b_manifest.py",
+    "scripts/issue209_r7b_fixture.py",
+    "tests/test_issue209_r7b.py",
+})
+_R7B_RETAINED_VLLM = frozenset({
+    f"{_R7B}/external/vllm/v1/core/kv_cache_manager.py",
+    f"{_R7B}/external/vllm/v1/core/single_type_kv_cache_manager.py",
+    f"{_R7B}/external/vllm/v1/core/kv_cache_coordinator.py",
+    f"{_R7B}/external/vllm/v1/core/sched/scheduler.py",
+    f"{_R7B}/external/vllm/v1/kv_cache_interface.py",
+    f"{_R7B}/external/vllm/models/deepseek_v41/attention.py",
+    f"{_R7B}/external/vllm/models/deepseek_v41/nvidia/model.py",
+    f"{_R7B}/external/vllm/model_executor/models/utils.py",
+    f"{_R7B}/external/vllm/model_executor/model_loader/default_loader.py",
+})
+
+_R7B_AUTHORED = frozenset({
+    f"{_R7B}/README.md",
+    f"{_R7B}/external-source-evidence.json",
+    f"{_R7B}/mainline-reconciliation.json",
+    f"{_R7B}/runtime-authority.json",
+    f"{_R7B}/strategy-authority.json",
+    f"{_R7B}/superseded-69e07e5.json",
+    f"{_R7B}/superseded-9feb7e74.json",
+    f"{_R7B}/superseded-253d19b.json",
+})
 # The additive Issue #130 successor bundle: current-finalization
 # integrity for the Issue #130 sources, never a rewrite of the closed
 # Issue #117 parent bundle (accepted at commit d1afad6, unchanged).
@@ -1571,6 +1604,44 @@ def _issue187_manifest_producer(run: StageRun, scratch: Path
     return {_R7A_MANIFEST: r7a_manifest.manifest_bytes(run.root)}
 
 
+def _issue209_fixture_producer(run: StageRun, scratch: Path
+                               ) -> dict[str, bytes]:
+    """Deterministic compact execution-contract fixture document."""
+    _scripts(run.root)
+    import issue209_r7b_fixture as r7b_fixture  # noqa: PLC0415
+    document = r7b_fixture.build_document(run.root)
+    return {f"{_R7B}/execution-contract-fixture.json": (
+        json.dumps(document, sort_keys=True, separators=(",", ":"))
+        + "\n").encode("utf-8")}
+
+
+def _issue209_terminal_producer(run: StageRun, scratch: Path
+                                ) -> dict[str, bytes]:
+    """Derive the bounded R7-B runtime-substrate terminal offline."""
+    _scripts(run.root)
+    import issue209_r7b_reducer as r7b  # noqa: PLC0415
+    document = r7b.reduction_document(run.root)
+    return {_R7B_TERMINAL: (json.dumps(document, sort_keys=True,
+                                       separators=(",", ":"))
+                            + "\n").encode("utf-8")}
+
+
+def _issue209_producer_hashes(run: StageRun, scratch: Path
+                              ) -> dict[str, bytes]:
+    """Record the R7-B reducer, manifest builder, and test identities."""
+    _scripts(run.root)
+    import issue209_r7b_manifest as r7b_manifest  # noqa: PLC0415
+    return {_R7B_HASHES: r7b_manifest.producer_hash_bytes(run.root)}
+
+
+def _issue209_manifest_producer(run: StageRun, scratch: Path
+                                ) -> dict[str, bytes]:
+    """Terminal integrity manifest for the additive static R7-B bundle."""
+    _scripts(run.root)
+    import issue209_r7b_manifest as r7b_manifest  # noqa: PLC0415
+    return {_R7B_MANIFEST: r7b_manifest.manifest_bytes(run.root)}
+
+
 def _successor_bundle_files() -> list[str]:
     return [f"{_BUNDLE_130}/parent-binding.json",
             f"{_BUNDLE_130}/producer-hashes.json",
@@ -1735,6 +1806,64 @@ def default_registry() -> tuple[Stage, ...]:
             covers=_R7A_AUTHORED | _R7A_PRODUCERS | {_R7A_TERMINAL, _R7A_HASHES},
             after=frozenset({"issue187-producer-hashes"}),
             producer=_issue187_manifest_producer,
+        ),
+        Stage(
+            id="issue209-fixture",
+            kind="derived",
+            description="Issue #209 compact execution-contract fixture (deterministic)",
+            reads=frozenset({
+                f"{_R7B}/strategy-authority.json",
+                f"{_R7B}/runtime-authority.json",
+                f"{_R7B}/external-source-evidence.json",
+                f"{_R7B}/superseded-253d19b.json",
+                f"{_R7A}/tensor-census.json",
+                f"{_R7A}/external/LICENSE",
+                f"{_R7A}/terminal-reduction.json",
+                f"{_R7A}/MANIFEST.sha256",
+                f"{_R7A}/external/inference/config.json",
+                f"{_R7A}/external/inference/model.py",
+                "scripts/issue209_r7b_fixture.py",
+                "scripts/issue209_r7b_reducer.py",
+            }),
+            writes=frozenset({f"{_R7B}/execution-contract-fixture.json"}),
+            after=frozenset({"issue187-manifest"}),
+            producer=_issue209_fixture_producer,
+        ),
+        Stage(
+            id="issue209-terminal",
+            kind="derived",
+            description="Offline Issue #209 R7-B runtime-substrate reduction",
+            reads=_R7B_AUTHORED | {_R7A_TERMINAL, _R7A_MANIFEST,
+                                   _R7A_CENSUS,
+                                   f"{_R7A}/external/LICENSE",
+                                   f"{_R7A}/external/inference/config.json",
+                                   f"{_R7A}/external/inference/model.py",
+                                   f"{_R7B}/execution-contract-fixture.json",
+                                   *_R7B_RETAINED_VLLM,
+                                   "scripts/issue209_r7b_reducer.py"},
+            writes=frozenset({_R7B_TERMINAL}),
+            after=frozenset({"issue187-manifest", "issue209-fixture"}),
+            producer=_issue209_terminal_producer,
+        ),
+        Stage(
+            id="issue209-producer-hashes",
+            kind="index",
+            description="Issue #209 reducer/manifest/test identity ledger",
+            reads=_R7B_PRODUCERS,
+            writes=frozenset({_R7B_HASHES}),
+            after=frozenset({"issue209-terminal"}),
+            producer=_issue209_producer_hashes,
+        ),
+        Stage(
+            id="issue209-manifest",
+            kind="terminal-manifest",
+            description="Terminal integrity manifest for the additive Issue #209 R7-B bundle",
+            writes=frozenset({_R7B_MANIFEST}),
+            covers=(_R7B_AUTHORED | _R7B_PRODUCERS | _R7B_RETAINED_VLLM
+                    | {_R7B_TERMINAL, _R7B_HASHES,
+                       f"{_R7B}/execution-contract-fixture.json"}),
+            after=frozenset({"issue209-producer-hashes"}),
+            producer=_issue209_manifest_producer,
         ),
     )
 
