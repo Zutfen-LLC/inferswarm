@@ -24,6 +24,24 @@ SPEC=${2:?boundary spec}
 RUN=$EV/run
 mkdir -p $TMP $RUN
 
+
+# Fail-closed GPU-idle gate (physical finding 2026-09-16: a stray
+# leftover process holding GPU memory changes the memory-fit -> layer
+# split -> kernel assignment -> float32 bytes, even with identical
+# tokens). Refuse to launch any capture unless every local GPU is free
+# of compute apps AND memory.used is at the idle floor (< 100 MiB).
+gpu_idle_gate () {
+  bad=$(nvidia-smi --query-compute-apps=pid --format=csv,noheader 2>/dev/null | wc -l)
+  if [ "$bad" != "0" ]; then
+    echo "GPU-IDLE GATE: compute apps present:"; nvidia-smi --query-compute-apps=pid,process_name,used_memory --format=csv,noheader
+    return 1
+  fi
+  for M in $(nvidia-smi --query-gpu=memory.used --format=csv,noheader,nounits); do
+    if [ "$M" -gt 100 ]; then echo "GPU-IDLE GATE: memory.used=${M}MiB > 100"; return 1; fi
+  done
+  return 0
+}
+
 arm_port () { case "$1" in reference) echo 8341;; candidate) echo 8343;; esac; }
 
 launch_obs () {  # $1 arm $2 bout $3 bjsonl $4 ljsonl $5 log
@@ -84,6 +102,7 @@ nonpert)
   for ARM in reference candidate; do
     if [ "$ARM" = candidate ]; then bash $RUN/wait_backends.sh; fi
     for I in 1 2; do
+      gpu_idle_gate || exit 1
       launch_obs $ARM $TMP/bout-$ARM-$I $TMP/b-$ARM-$I.jsonl \
         $TMP/l-$ARM-$I.jsonl $TMP/obs-server-$ARM-$I.log
       wait_port $TMP/obs-server-$ARM-$I.log
@@ -102,6 +121,7 @@ coarse)
   for ARM in reference candidate; do
     if [ "$ARM" = candidate ]; then bash $RUN/wait_backends.sh; fi
     for I in 1 2; do
+      gpu_idle_gate || exit 1
       launch_obs $ARM $TMP/bout-c-$ARM-$I $TMP/b-c-$ARM-$I.jsonl \
         $TMP/l-c-$ARM-$I.jsonl $TMP/obs-server-c-$ARM-$I.log
       wait_port $TMP/obs-server-c-$ARM-$I.log
@@ -120,6 +140,7 @@ refine)
   for ARM in reference candidate; do
     if [ "$ARM" = candidate ]; then bash $RUN/wait_backends.sh; fi
     for I in 1 2; do
+      gpu_idle_gate || exit 1
       launch_obs $ARM $TMP/bout-r-$ARM-$I $TMP/b-r-$ARM-$I.jsonl \
         $TMP/l-r-$ARM-$I.jsonl $TMP/obs-server-r-$ARM-$I.log
       wait_port $TMP/obs-server-r-$ARM-$I.log
@@ -138,6 +159,7 @@ contrast)
   for ARM in reference candidate; do
     if [ "$ARM" = candidate ]; then bash $RUN/wait_backends.sh; fi
     for I in 1 2; do
+      gpu_idle_gate || exit 1
       launch_obs $ARM $TMP/bout-x-$ARM-$I $TMP/b-x-$ARM-$I.jsonl \
         $TMP/l-x-$ARM-$I.jsonl $TMP/obs-server-x-$ARM-$I.log
       wait_port $TMP/obs-server-x-$ARM-$I.log
