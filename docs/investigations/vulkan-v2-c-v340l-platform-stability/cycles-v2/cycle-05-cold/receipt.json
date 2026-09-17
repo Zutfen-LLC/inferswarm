@@ -1,0 +1,316 @@
+{
+ "records": {
+  "schema": "inferswarm.v2c.post-boot-snapshot/1",
+  "campaign_id": "issue215-v2c-v340l-platform-stability-v2",
+  "cycle_index": 5,
+  "cycle_type": "cold",
+  "requested_transition": "operator power-off -> power-on",
+  "prev_boot_id": "217fd102-099d-4447-9fae-6723ce9c7e55",
+  "boot_id": "9345db65-58de-477a-958e-d2c1487f2b93",
+  "boot_id_changed": true,
+  "captured_utc": "2026-09-17T21:53:38.016782+00:00"
+ },
+ "artifacts": [
+  {
+   "probe": "boot_id.txt",
+   "name": "boot_id.txt",
+   "bytes": 140,
+   "sha256": "2e728eed632a9385536aa336d58b1c47575ed114cd62a4a5b611422ae81c8521",
+   "rc": 0
+  },
+  {
+   "probe": "uptime.txt",
+   "name": "uptime.txt",
+   "bytes": 97,
+   "sha256": "402ef1b95099c81f6e7ce8405077ef3d9039bb5878b7aced909f122d5b04234e",
+   "rc": 0
+  },
+  {
+   "probe": "uname.txt",
+   "name": "uname.txt",
+   "bytes": 189,
+   "sha256": "8fe0c2f50bfaa6a6b7e70c7803ed63039d9c9c705d24fcbf51dbabe6695a4cd1",
+   "rc": 0
+  },
+  {
+   "probe": "cmdline.txt",
+   "name": "cmdline.txt",
+   "bytes": 199,
+   "sha256": "12f9a998f71896d72c89cb7a4d2fe6e44fc88f98476f1c5eed034ab217c98d4c",
+   "rc": 0
+  },
+  {
+   "probe": "dmi-board.txt",
+   "name": "dmi-board.txt",
+   "bytes": 118,
+   "sha256": "7df8e0dfc029ec84eddcc92a3abd315a6b68bf20e1e9ad3a17876f7226e8a9b5",
+   "rc": 0
+  },
+  {
+   "probe": "dmi-board-product.txt",
+   "name": "dmi-board-product.txt",
+   "bytes": 117,
+   "sha256": "bbe358c2e1cf2b6aa983a6e61a05d42aa27507ba5bbe9a7cbd6ba18721bdb8a0",
+   "rc": 0
+  },
+  {
+   "probe": "dmi-bios-version.txt",
+   "name": "dmi-bios-version.txt",
+   "bytes": 103,
+   "sha256": "b85bcf85d83ccb2a954f082a64eee97eb7246d936bbf2f7c8a0f0b9ce95fc5b4",
+   "rc": 0
+  },
+  {
+   "probe": "os-release.txt",
+   "name": "os-release.txt",
+   "bytes": 396,
+   "sha256": "9bf47b326e2071fb9636f0a5601f5bfbb89473fdbfed02d339b35128544891ab",
+   "rc": 0
+  },
+  {
+   "probe": "amdgpu-version.txt",
+   "name": "amdgpu-version.txt",
+   "bytes": 157,
+   "sha256": "8ea620365b2d79044ef135f52d07b8e10e8e792d77f523d7687669e60cb92e63",
+   "rc": 1
+  },
+  {
+   "probe": "modinfo-amdgpu.txt",
+   "name": "modinfo-amdgpu.txt",
+   "bytes": 57055,
+   "sha256": "b2e39bc204f75c9ca66009ae5d7da7aec99165d11cd009f04ac2e4ca9db8003a",
+   "rc": 0
+  },
+  {
+   "probe": "vulkan-loader-version.txt",
+   "name": "vulkan-loader-version.txt",
+   "bytes": 131,
+   "sha256": "25377d61419ba7c28bede75d7bc9c2509c47c38d351a7af8336a946e07853714",
+   "rc": 0
+  },
+  {
+   "probe": "icd-list.txt",
+   "name": "icd-list.txt",
+   "bytes": 674,
+   "sha256": "250b07d3895562ae14bb6b0c2c2eeefe2f7bdb6eb2f3d0c937d06e24390319e5",
+   "rc": 0
+  },
+  {
+   "probe": "vulkaninfo-summary.txt",
+   "name": "vulkaninfo-summary.txt",
+   "bytes": 4627,
+   "sha256": "172f00731980a6dfb867282381d6e93691e2e977f2a4ac3629ad98a69901bcc3",
+   "rc": 0
+  },
+  {
+   "probe": "lspci-nn.txt",
+   "name": "lspci-nn.txt",
+   "bytes": 2451,
+   "sha256": "eb0e4442c5be54f771747268e8b5fc329095baa3a3fe0b7c870a64cb02a711bc",
+   "rc": 0
+  },
+  {
+   "probe": "lspci-tree.txt",
+   "name": "lspci-tree.txt",
+   "bytes": 472,
+   "sha256": "263412d40e0ab26754d933ecb8a5fc38e07a76526d49a0e4a0bd3a5eddfd2b7b",
+   "rc": 0
+  },
+  {
+   "probe": "lspci-vv-06-00.0.txt",
+   "name": "lspci-vv-06-00.0.txt",
+   "bytes": 6336,
+   "sha256": "e2ebeb52f79583165a86a0a28c6bf237dcc4fe497ad3ffd5fd2bd80cdbb921b7",
+   "rc": 0
+  },
+  {
+   "probe": "lspci-vv-09-00.0.txt",
+   "name": "lspci-vv-09-00.0.txt",
+   "bytes": 6336,
+   "sha256": "70d0103d20c09b5546e08c8e43080ce1f73816c8fdb7b86450117d9dc60b07d9",
+   "rc": 0
+  },
+  {
+   "probe": "lspci-vv-full.txt",
+   "name": "lspci-vv-full.txt",
+   "bytes": 73040,
+   "sha256": "457e71c00a8898c4cc19c998a572505f2fd652f3d2ab1ff9cbfae5968f7a9dbd",
+   "rc": 0
+  },
+  {
+   "probe": "iommu-groups.txt",
+   "name": "iommu-groups.txt",
+   "bytes": 115,
+   "sha256": "8ffdbd039d5d48fb422320d404c5f13435af525248be7735c2efacb6a2fdf34c",
+   "rc": 0
+  },
+  {
+   "probe": "render-nodes.txt",
+   "name": "render-nodes.txt",
+   "bytes": 663,
+   "sha256": "c418e3ab146adeaa034e4be8bbfc0632cef097790a2a3281ff64dd125da3af65",
+   "rc": 0
+  },
+  {
+   "probe": "drm-cards.txt",
+   "name": "drm-cards.txt",
+   "bytes": 1739,
+   "sha256": "4d34460c9ca8d026d52847e09e3dc3a77a25f83c140608f5fc242ee159300554",
+   "rc": 0
+  },
+  {
+   "probe": "gpu-sysfs-mem.txt",
+   "name": "gpu-sysfs-mem.txt",
+   "bytes": 494,
+   "sha256": "440468447f3ec9517a76687a696b7a04ed0ddd11936c3467c60bb847d7ef351e",
+   "rc": 0
+  },
+  {
+   "probe": "ras-ecc.txt",
+   "name": "ras-ecc.txt",
+   "bytes": 209,
+   "sha256": "37159cf16347887828f9eba526006ec8a88d2f7a0950b525bc87e8c59a598747",
+   "rc": 1
+  },
+  {
+   "probe": "sriov.txt",
+   "name": "sriov.txt",
+   "bytes": 349,
+   "sha256": "cb1b3e59869fd9b31c0d95594b8eb4b91820f7818f816875b0dda51fb0a809e9",
+   "rc": 0
+  },
+  {
+   "probe": "vulkan-list-devices.txt",
+   "name": "vulkan-list-devices.txt",
+   "bytes": 383,
+   "sha256": "a25b9efa5ac325925c20f22a19d200f22d748ed76b1908f56ecb54c8dc371e3f",
+   "rc": 0
+  },
+  {
+   "probe": "nic-link.txt",
+   "name": "nic-link.txt",
+   "bytes": 572,
+   "sha256": "087cb2f281dec2ba6e1efc5902213543c81b84dbc28441d75aaf6070670b8bcf",
+   "rc": 0
+  },
+  {
+   "probe": "nic-addr.txt",
+   "name": "nic-addr.txt",
+   "bytes": 316,
+   "sha256": "ec3fd0a68a42e2972eda41ef9cbf24c79ba1c8c6283523025bd4c010d528efb8",
+   "rc": 0
+  },
+  {
+   "probe": "nic-route.txt",
+   "name": "nic-route.txt",
+   "bytes": 221,
+   "sha256": "a19b30ff981f17da0b4b49aebb112d1596ad3a7d0f84c0e5790594f679b023db",
+   "rc": 0
+  },
+  {
+   "probe": "nic-driver.txt",
+   "name": "nic-driver.txt",
+   "bytes": 232,
+   "sha256": "973e33f2baee7369d5b17f0eebca4bc326c554f86d43af0e06e11273c18aa3d2",
+   "rc": 0
+  },
+  {
+   "probe": "gateway-ping.txt",
+   "name": "gateway-ping.txt",
+   "bytes": 480,
+   "sha256": "d1843f0795a2c74c50d8e757ed6f18cd99184c891266190d0f5a4e7f72f41ed3",
+   "rc": 0
+  },
+  {
+   "probe": "lsusb.txt",
+   "name": "lsusb.txt",
+   "bytes": 489,
+   "sha256": "9e244b26a4fe8c2b3bf628804d6286f94b4401ab3737fc5154975c5cf65fbc8a",
+   "rc": 0
+  },
+  {
+   "probe": "usb-controllers.txt",
+   "name": "usb-controllers.txt",
+   "bytes": 438,
+   "sha256": "6600614491497291a7d9401e022a8e4dfb48b5e74038f3320508c566bb53b183",
+   "rc": 0
+  },
+  {
+   "probe": "usb-devices-sysfs.txt",
+   "name": "usb-devices-sysfs.txt",
+   "bytes": 489,
+   "sha256": "ad865bffa8dbf2c3086c72a5be8710499ac6722ccce4f9563da70d95a08ff21d",
+   "rc": 0
+  },
+  {
+   "probe": "lsblk.txt",
+   "name": "lsblk.txt",
+   "bytes": 425,
+   "sha256": "9705b43441ebb11e6c0785af4922eb9737fdf0cb651c6f4bc719999cb8c259ed",
+   "rc": 0
+  },
+  {
+   "probe": "findmnt-root.txt",
+   "name": "findmnt-root.txt",
+   "bytes": 164,
+   "sha256": "cbaccddd918eb994363e128dcefc8208329f36171fcf2ecccecf4cf4c05055fd",
+   "rc": 0
+  },
+  {
+   "probe": "storage-sentinel.txt",
+   "name": "storage-sentinel.txt",
+   "bytes": 237,
+   "sha256": "99019bfc4e79e283a047d84b4eb15d920ea60a0d01bbe87d2adcc7a043808f54",
+   "rc": 0
+  },
+  {
+   "probe": "mdadm-detail.txt",
+   "name": "mdadm-detail.txt",
+   "bytes": 116,
+   "sha256": "255e9cb20a2b308b9f1cc8832bf05793662c5674272bb450fb1d7fb131d56ed3",
+   "rc": 0
+  },
+  {
+   "probe": "journal-errors.txt",
+   "name": "journal-errors.txt",
+   "bytes": 1679,
+   "sha256": "ac617c1bb69e275aa6ffc6f160f26dd7fd4f185152fb9c2e560db8fb7c283bda",
+   "rc": 0
+  },
+  {
+   "probe": "journal-warnings.txt",
+   "name": "journal-warnings.txt",
+   "bytes": 75755,
+   "sha256": "603b1545f929b6b42803ac11291dd5095d64ff9bdc7dc298d829009693abc460",
+   "rc": 0
+  },
+  {
+   "probe": "dmesg.txt",
+   "name": "dmesg.txt",
+   "bytes": 134582,
+   "sha256": "520df6455e9eb4b6e559fb04a304a2c8519ab532f1ca412040bc9c32ae616fcb",
+   "rc": 0
+  },
+  {
+   "probe": "journal-aer.txt",
+   "name": "journal-aer.txt",
+   "bytes": 134671,
+   "sha256": "78791f2b3a5ca63f39317cf43c7aaea62b6fb3ac497c6b04b45c65aa490cc873",
+   "rc": 0
+  },
+  {
+   "probe": "prev-boot-shutdown.txt",
+   "name": "prev-boot-shutdown.txt",
+   "bytes": 10286,
+   "sha256": "29b1218b662102da12b4dc64b6d6320524eb2d150ff034ad52750be6d3581722",
+   "rc": 0
+  },
+  {
+   "probe": "prev-boot-last-lines.txt",
+   "name": "prev-boot-last-lines.txt",
+   "bytes": 7437,
+   "sha256": "05ce78a9345825f5095d58289fa3cace6a8ff946a9f7fd74d819bd1858777324",
+   "rc": 0
+  }
+ ]
+}

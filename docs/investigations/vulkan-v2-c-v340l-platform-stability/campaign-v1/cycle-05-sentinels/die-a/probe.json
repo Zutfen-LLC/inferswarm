@@ -1,0 +1,26 @@
+{
+ "argv": [
+  "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+  "-m",
+  "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+  "--temp",
+  "0",
+  "--seed",
+  "42",
+  "-n",
+  "0",
+  "-ngl",
+  "0",
+  "--device",
+  "Vulkan1",
+  "-lv",
+  "4",
+  "-p",
+  "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+  "-st"
+ ],
+ "rc": 0,
+ "identity_proof_line": "using device Vulkan1 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:06:00.0) - 8168 MiB free",
+ "bdf": "06:00.0",
+ "zero_generation_proof": []
+}

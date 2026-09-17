@@ -1,0 +1,9 @@
+{
+ "argv": [
+  "cat",
+  "/sys/module/amdgpu/version"
+ ],
+ "rc": 1,
+ "stdout": "",
+ "stderr": "cat: /sys/module/amdgpu/version: No such file or directory\n"
+}

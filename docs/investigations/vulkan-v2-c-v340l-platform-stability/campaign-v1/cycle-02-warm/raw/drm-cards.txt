@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "ls",
+  "-la",
+  "/sys/class/drm/"
+ ],
+ "rc": 0,
+ "stdout": "total 0\ndrwxr-xr-x  2 root root    0 Sep 17 17:00 .\ndrwxr-xr-x 62 root root    0 Sep 17 16:59 ..\nlrwxrwxrwx  1 root root    0 Sep 17 17:00 card0 -> ../../devices/pci0000:00/0000:00:02.0/drm/card0\nlrwxrwxrwx  1 root root    0 Sep 17 17:00 card0-DP-1 -> ../../devices/pci0000:00/0000:00:02.0/drm/card0/card0-DP-1\nlrwxrwxrwx  1 root root    0 Sep 17 17:00 card0-DP-2 -> ../../devices/pci0000:00/0000:00:02.0/drm/card0/card0-DP-2\nlrwxrwxrwx  1 root root    0 Sep 17 17:00 card0-HDMI-A-1 -> ../../devices/pci0000:00/0000:00:02.0/drm/card0/card0-HDMI-A-1\nlrwxrwxrwx  1 root root    0 Sep 17 17:00 card0-HDMI-A-2 -> ../../devices/pci0000:00/0000:00:02.0/drm/card0/card0-HDMI-A-2\nlrwxrwxrwx  1 root root    0 Sep 17 17:00 card0-HDMI-A-3 -> ../../devices/pci0000:00/0000:00:02.0/drm/card0/card0-HDMI-A-3\nlrwxrwxrwx  1 root root    0 Sep 17 17:00 card1 -> ../../devices/pci0000:00/0000:00:1d.0/0000:02:00.0/0000:03:00.0/0000:04:00.0/0000:05:00.0/0000:06:00.0/drm/card1\nlrwxrwxrwx  1 root root    0 Sep 17 17:00 card2 -> ../../devices/pci0000:00/0000:00:1d.0/0000:02:00.0/0000:03:01.0/0000:07:00.0/0000:08:00.0/0000:09:00.0/drm/card2\nlrwxrwxrwx  1 root root    0 Sep 17 17:00 renderD128 -> ../../devices/pci0000:00/0000:00:02.0/drm/renderD128\nlrwxrwxrwx  1 root root    0 Sep 17 17:00 renderD129 -> ../../devices/pci0000:00/0000:00:1d.0/0000:02:00.0/0000:03:00.0/0000:04:00.0/0000:05:00.0/0000:06:00.0/drm/renderD129\nlrwxrwxrwx  1 root root    0 Sep 17 17:00 renderD130 -> ../../devices/pci0000:00/0000:00:1d.0/0000:02:00.0/0000:03:01.0/0000:07:00.0/0000:08:00.0/0000:09:00.0/drm/renderD130\n-r--r--r--  1 root root 4096 Sep 17 17:00 version\n",
+ "stderr": ""
+}

@@ -24,28 +24,25 @@ CAVEAT on "now" speeds: GPU links may downtrain link SPEED to Gen1 (2.5GT/s) at 
 | 6 | SLOT 6 | legacy PCI 32-bit | - | EMPTY (available) | - | - |
 
 ## inferswarm02  (MINERDUDE 12XTREME, Intel 200-series/B250 PCH, Debian 13)
-DMI slot usage flags unreliable on this board (all "Available"); occupancy derived from lspci.
+Current arrangement (V2-C platform-stability campaign, Issue #215,
+2026-09-17 — mechanically measured and re-verified across baseline + 4 warm
+reboots + 1 cold power cycle; raw receipts under
+`docs/investigations/vulkan-v2-c-v340l-platform-stability/cycles-v2/`):
+
 | Slot / root port | Designation | Capability | Occupant | Device LnkCap | Negotiated now |
 |------|-------------|------------|----------|---------------|----------------|
-| 00:1c.5 (DMI "PCI-Express" x16 slot) | x16 (Gen3) wired | AMD Radeon RX 470/480/570/580 (Ellesmere) @02:00.0 via x1 riser, Sapphire "RX 570 Pulse 4GB" label [1da2:e353], 8 GiB measured | Gen3 x16 | Gen1 x1 (riser) |
-| 00:1d.0 | PCH Root Port #10 | Gen3 x1 | AMD Radeon RX 5600 XT (Navi 10) @05:00.0 behind on-card switch (03:00.0/04:00.0), Sapphire [1da2:e411], 5.98 GiB measured | Gen4 x16 (endpoint); switch trains Gen4 x16 internally, Gen1 x1 to root | Gen1 x1 at root (riser) |
-| 00:1d.2 | PCH Root Port #11 | Gen3 x1 | AMD Radeon RX 470/480/570/580 (Ellesmere) @06:00.0, Sapphire Nitro+ [1da2:e366], 8 GiB measured | Gen3 x16 | Gen1 x1 (riser) |
-| 00:1d.3 | PCH Root Port #12 | Gen3 x1 | RTX 3060 Ti LHR (GA104) @07:00.0, eVga [3842:4667], 8 GiB | Gen1 x16 (riser-masked; native Gen4) | Gen1 x1 (riser) |
-| 00:1c.0 | (DMI x1 mappings unreliable) | Gen2 x1 observed | Realtek RTL8111 GbE @01:00.0 | Gen1 x1 | Gen1 x1 |
-| PCIE-8 (00:1d.1) | x4 slot | Gen3 x4 | EMPTY (available) | - | - |
-Notes (2026-09-15 refresh): four discrete GPUs are installed, ALL on x1
-risers from chipset root ports; no GPU occupies a direct (non-riser) slot
-wiring. The 3060 Ti reports LnkCap Gen1 x16 (native GA104 is Gen4 x16) —
-cheap x1 riser/bridge masks endpoint capability. The RX 5600 XT is behind
-its own onboard PCIe switch; its internal link trains Gen4 x16 while the
-external root-port link is Gen1 x1. Known fleet state: 4 GPUs on x1 mining
-risers.
+| 00:1d.0 | PCH Root Port #11 (x1 wiring) | Gen3 x1 | **Microchip PM8533 fanout switch @02:00.0 [11f8:8533]** → two Vega 10 dies of the AMD Radeon Pro V340L: die A `1002:6864` @06:00.0, die B `1002:6864` @09:00.0, each 8,573,157,376 B HBM2, amdgpu-bound | switch upstream cap x16 | **Gen3 x1 (8.0 GT/s, width 1)** — stable across every qualified boot |
+| (switch-internal) | PM8533 downstream 03:00.0 / 03:01.0 | Gen3 x16 | Vega 10 PCIe Bridges (1022:1470/1471) feeding each die | Gen3 x16 | Gen3 x16 |
+| 00:1c.0 | DMI x1 | Gen1 x1 | Realtek RTL8111 GbE @01:00.0 [10ec:8168], driver r8169, addressed 10.0.0.137/24 | Gen1 x1 | Gen1 x1 |
+| 00:14.0 | chipset USB | - | Intel 200-Series xHCI USB 3.0 [8086:a2af] + root hubs | - | - |
+| (SATA) | - | - | root storage /dev/sda3 (ext4, 223.9G) | - | - |
 
-Historical note: the 2026-09-13/14 ledger recorded the two Ellesmere cards
-at 02:00.0 and 03:00.0 and the 3060 Ti at 04:00.0. The 2026-09-15 refresh
-finds the 5600 XT at 05:00.0, the second Ellesmere now at 06:00.0, and the
-3060 Ti at 07:00.0 — BDFs shifted with the riser re-plumb; the cards
-themselves are unchanged (subsystem IDs match the R8-A census exactly).
+GPU population on inferswarm02 is now exactly the V340L (two Vega 10
+dies, ~16 GiB aggregate HBM2 as two independent 8 GiB resources). The
+prior RX 5600 XT / Ellesmere / 3060 Ti arrangement recorded by Issue #196
+(2026-09-15) is HISTORICAL — the host was restabilized after the V340L
+installation incident and those cards are no longer observed. SR-IOV: 4
+total VFs per die, 0 enabled.
 
 ## inferswarm03  (Tiger Lake-H platform, Debian 13)
 | Slot | Designation | Capability | Occupant | Device LnkCap | Negotiated now |
@@ -169,15 +166,17 @@ record remains correct for its capture window and is retained byte-preserved
 in `docs/investigations/qwen38-flash-next-r8-a/hardware-census.json`; the
 R8-A reported-not-observed RX 6800 XT row described a real 2026-09-14
 observation and is superseded for CURRENT state by this 2026-09-15 refresh
-(the card is now installed on Valinor). The Radeon Pro V340L remains
-pending hardware and excluded from all deployed totals.
+(the card is now installed on Valinor). The Radeon Pro V340L described there was
+installed on inferswarm02 after the #196 window and is CURRENT hardware
+(see the inferswarm02 section and the V2-C campaign record); the #196
+totals are historical for their capture window.
 
 ## Actionable observations
 1. inferswarm03 GPU2 (03:00.0) negotiated WIDTH x4 (downgraded) in an x16 slot - worth
    checking BIOS bifurcation settings if full x16 expected.
 2. GPU link speeds may read Gen1 at idle (normal power management); verify under load
    with `sudo lspci -s <bdf> -vv | grep LnkSta` while a GPU job runs.
-3. inferswarm02's four GPUs all sit on x1 mining risers - ~985MB/s ceiling each.
+3. inferswarm02's current GPU is the V340L behind the PM8533 fanout; the card's upstream path is Gen3 x1 (~985MB/s ceiling), mechanically proven in the V2-C campaign. The former four-GPU x1-riser arrangement is historical (#196).
 4. inferswarm04's x16 slot is Gen2 (5GT/s = 4GB/s ceiling for the RTX 3090).
 5. Valinor's RX 6800 XT now exercises Gen4 signaling (endpoint and internal switch
    link at Gen4 x16; external root-port link Gen4 x8). NOTE: x8 width with PCIEX16_2
@@ -197,3 +196,4 @@ Record test-relevant physical changes here in addition to updating the current t
 | 2026-09-13 | Added two reserve HP Z440 chassis | Reported identical to deployed inferswarm01; kept outside deployed census pending per-host audit and commissioning. |
 | 2026-09-14 | Issue #189 R8-A accelerator census refresh | Read-only per-device VRAM measurement (amdgpu sysfs, nvidia-smi) and fleet-wide device sweep; retained in docs/investigations/qwen38-flash-next-r8-a/hardware-census.json. Confirmed 80 GiB NVIDIA on 01-04 and 2x8 GiB Ellesmere on 02; recorded reported-but-unobserved AMD devices and pending V340L as non-deployed. |
 | 2026-09-15 | Issue #196 living inventory refresh | Valinor: GTX 1060 3GB replaced by XFX RX 6800 XT in PCIEX16_1; PCIEX16_2 NVMe adapter removed (slot now empty); measured external link Gen4 x8 despite empty PCIEX16_2. inferswarm02: RX 5600 XT (Navi 10, 5.98 GiB) newly observed at 05:00.0; both Ellesmere cards remain (02:00.0, 06:00.0 after BDF shift); 3060 Ti moved to 07:00.0. Measurement basis: read-only dmidecode/lspci -vvv/sysfs/vulkaninfo/nvidia-smi scans; raw receipts at docs/hardware/current-inventory/2026-09-15/. Fleet: 10 GPUs, 101.98 GiB execution-fleet (01-04), 117.97 GiB including Valinor. |
+| 2026-09-17 | Issue #215 V2-C V2C_V340L_PLATFORM_STABILITY_PASS | inferswarm02: V340L (PM8533 + two Vega 10 dies @06:00.0/09:00.0, Gen3 x1 upstream) is the current installed configuration; prior #196 inventory (RX 5600 XT / Ellesmere x2 / 3060 Ti on x1 risers) is historical. Proven stable across baseline + 4 warm reboots + 1 operator cold power cycle with zero manual interventions; both dies independently reproduce the accepted V2-B byte-exact qualification. Raw receipts: docs/investigations/vulkan-v2-c-v340l-platform-stability/cycles-v2/. |

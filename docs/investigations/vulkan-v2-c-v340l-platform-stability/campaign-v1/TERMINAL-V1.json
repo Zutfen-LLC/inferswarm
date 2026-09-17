@@ -1,0 +1,530 @@
+{
+ "all_cycles_pass": false,
+ "baseline": {
+  "boot_id": "abb4b4ff-b595-4305-86c0-168554096852",
+  "checks": {
+   "bars_assigned_not_disabled": true,
+   "bars_nonoverlapping": true,
+   "both_vega_amdgpu_bound": true,
+   "exactly_two_vega_functions": true,
+   "gateway_reachable": true,
+   "hbm_capacity_expected": true,
+   "nic_addressed": true,
+   "nic_link_up": true,
+   "nic_present_bound": true,
+   "no_amdgpu_failure": true,
+   "no_controller_failure": true,
+   "no_dmar_fault": true,
+   "no_fatal_aer": true,
+   "no_unresolved_bar": true,
+   "pm8533_fanout_present": true,
+   "root_fs_mounted_expected": true,
+   "storage_sentinel_ok": true,
+   "two_vega_vulkan_devices": true,
+   "upstream_gen3_x1": true,
+   "usb_controllers_enumerated": true
+  },
+  "cycle_index": 0,
+  "cycle_result": "PASS",
+  "cycle_type": "baseline",
+  "failed_checks": []
+ },
+ "campaign_id": "issue215-v2c-v340l-platform-stability-v1",
+ "campaign_plan_digest": "2219bb144328c063ab597b0fd511fc4800d7babc2f9d1991f99d7cdc84089e24",
+ "capture_unavailable_cycles": [
+  4
+ ],
+ "cold_cycles": 1,
+ "cycle_table": [
+  {
+   "boot_id": "12455d1b-b849-4181-99c5-99eb6f022240",
+   "checks": {
+    "bars_assigned_not_disabled": true,
+    "bars_nonoverlapping": true,
+    "boot_id_changed": true,
+    "boot_id_unique_across_cycles": true,
+    "both_vega_amdgpu_bound": true,
+    "exactly_two_vega_functions": true,
+    "gateway_reachable": true,
+    "hbm_capacity_expected": true,
+    "nic_addressed": true,
+    "nic_link_up": true,
+    "nic_present_bound": true,
+    "no_amdgpu_failure": true,
+    "no_controller_failure": true,
+    "no_dmar_fault": true,
+    "no_fatal_aer": true,
+    "no_unresolved_bar": true,
+    "pm8533_fanout_present": true,
+    "root_fs_mounted_expected": true,
+    "sentinels_pass": true,
+    "storage_sentinel_ok": true,
+    "two_vega_vulkan_devices": true,
+    "upstream_gen3_x1": true,
+    "usb_controllers_enumerated": true
+   },
+   "cycle_index": 1,
+   "cycle_result": "PASS",
+   "cycle_type": "warm",
+   "detail": {
+    "boot_id": "12455d1b-b849-4181-99c5-99eb6f022240",
+    "error_classes": {
+     "amdgpu_failure_count": 0,
+     "controller_failure_count": 0,
+     "correctable_aer_count": 167,
+     "dmar_fault_count": 0,
+     "fatal_aer_count": 0,
+     "unresolved_bar_count": 0
+    },
+    "link": {
+     "ok": true,
+     "parts": {
+      "root_port": true,
+      "switch_upstream": true
+     }
+    },
+    "prev_boot_id": "abb4b4ff-b595-4305-86c0-168554096852",
+    "switch_bdfs": [
+     "02:00.0",
+     "03:00.0",
+     "03:01.0"
+    ],
+    "usb_missing_from_baseline": [],
+    "vega_bdfs": [
+     "06:00.0",
+     "09:00.0"
+    ]
+   },
+   "failed_checks": [],
+   "requested_transition": "systemctl reboot",
+   "sentinels": {
+    "boot_id": "12455d1b-b849-4181-99c5-99eb6f022240",
+    "dies": {
+     "a": {
+      "accounting_three_tuple": {
+       "source_fetches_after_ready": 0,
+       "unexplained_persistent_host_mirror_bytes": 0,
+       "unplanned_state_movements": 0
+      },
+      "byte_exact": true,
+      "identity_proof_line": "using device Vulkan1 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:06:00.0) - 8168 MiB free",
+      "offload_full": true,
+      "probe_bdf": "06:00.0",
+      "result": "PASS",
+      "selector": "Vulkan1",
+      "stderr_sha256": "ce554371e277af7d6e9a5d6cd4a212a9895ad3b4d65e3436515ef42f7ded9463",
+      "stdout_sha256": "788a482b38be4c01fea38eaa62fa01455a883e00d148b8a769d67713ce6cc1cd",
+      "visible_output_sha256": "d0c1410074799fba4bf380f68b6654d2e8690d6805877186a5501f20629380fa"
+     },
+     "b": {
+      "accounting_three_tuple": {
+       "source_fetches_after_ready": 0,
+       "unexplained_persistent_host_mirror_bytes": 0,
+       "unplanned_state_movements": 0
+      },
+      "byte_exact": true,
+      "identity_proof_line": "using device Vulkan2 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:09:00.0) - 8168 MiB free",
+      "offload_full": true,
+      "probe_bdf": "09:00.0",
+      "result": "PASS",
+      "selector": "Vulkan2",
+      "stderr_sha256": "0480d64fb635070aa904785452ee2c5f4174211a3c41c804b0113f2ec519a376",
+      "stdout_sha256": "8bc00c806b1b67d290637d9654939462d98769d45a200cda74bbb908148dcb1d",
+      "visible_output_sha256": "d0c1410074799fba4bf380f68b6654d2e8690d6805877186a5501f20629380fa"
+     }
+    },
+    "probe_bdfs": [
+     "06:00.0",
+     "09:00.0"
+    ],
+    "sentinel_result": "PASS"
+   }
+  },
+  {
+   "boot_id": "e0d0cf21-003d-4c08-aa26-41fc415eb647",
+   "checks": {
+    "bars_assigned_not_disabled": true,
+    "bars_nonoverlapping": true,
+    "boot_id_changed": true,
+    "boot_id_unique_across_cycles": true,
+    "both_vega_amdgpu_bound": true,
+    "exactly_two_vega_functions": true,
+    "gateway_reachable": true,
+    "hbm_capacity_expected": true,
+    "nic_addressed": true,
+    "nic_link_up": true,
+    "nic_present_bound": true,
+    "no_amdgpu_failure": true,
+    "no_controller_failure": true,
+    "no_dmar_fault": true,
+    "no_fatal_aer": true,
+    "no_unresolved_bar": true,
+    "pm8533_fanout_present": true,
+    "root_fs_mounted_expected": true,
+    "sentinels_pass": true,
+    "storage_sentinel_ok": true,
+    "two_vega_vulkan_devices": true,
+    "upstream_gen3_x1": true,
+    "usb_controllers_enumerated": true
+   },
+   "cycle_index": 2,
+   "cycle_result": "PASS",
+   "cycle_type": "warm",
+   "detail": {
+    "boot_id": "e0d0cf21-003d-4c08-aa26-41fc415eb647",
+    "error_classes": {
+     "amdgpu_failure_count": 0,
+     "controller_failure_count": 0,
+     "correctable_aer_count": 160,
+     "dmar_fault_count": 0,
+     "fatal_aer_count": 0,
+     "unresolved_bar_count": 0
+    },
+    "link": {
+     "ok": true,
+     "parts": {
+      "root_port": true,
+      "switch_upstream": true
+     }
+    },
+    "prev_boot_id": "12455d1b-b849-4181-99c5-99eb6f022240",
+    "switch_bdfs": [
+     "02:00.0",
+     "03:00.0",
+     "03:01.0"
+    ],
+    "usb_missing_from_baseline": [],
+    "vega_bdfs": [
+     "06:00.0",
+     "09:00.0"
+    ]
+   },
+   "failed_checks": [],
+   "requested_transition": "systemctl reboot",
+   "sentinels": {
+    "boot_id": "e0d0cf21-003d-4c08-aa26-41fc415eb647",
+    "dies": {
+     "a": {
+      "accounting_three_tuple": {
+       "source_fetches_after_ready": 0,
+       "unexplained_persistent_host_mirror_bytes": 0,
+       "unplanned_state_movements": 0
+      },
+      "byte_exact": true,
+      "identity_proof_line": "using device Vulkan1 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:06:00.0) - 8168 MiB free",
+      "offload_full": true,
+      "probe_bdf": "06:00.0",
+      "result": "PASS",
+      "selector": "Vulkan1",
+      "stderr_sha256": "90ba6d95a6d768b2314547512719e30feca1fc76f8874edc3af295b2e8e48242",
+      "stdout_sha256": "660b9a85142d420b1a66ba4450237880ab0274a87bb39a3154c7660bb133d7d8",
+      "visible_output_sha256": "d0c1410074799fba4bf380f68b6654d2e8690d6805877186a5501f20629380fa"
+     },
+     "b": {
+      "accounting_three_tuple": {
+       "source_fetches_after_ready": 0,
+       "unexplained_persistent_host_mirror_bytes": 0,
+       "unplanned_state_movements": 0
+      },
+      "byte_exact": true,
+      "identity_proof_line": "using device Vulkan2 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:09:00.0) - 8168 MiB free",
+      "offload_full": true,
+      "probe_bdf": "09:00.0",
+      "result": "PASS",
+      "selector": "Vulkan2",
+      "stderr_sha256": "809d5b9dda27322fd1b4aefd75e5bb2a342bda79ee4e16048ba766129e3848b5",
+      "stdout_sha256": "95a84621a2da9c5b83976852ccb2c98ca827cf364fdbbb6293f5c9113ac693a2",
+      "visible_output_sha256": "d0c1410074799fba4bf380f68b6654d2e8690d6805877186a5501f20629380fa"
+     }
+    },
+    "probe_bdfs": [
+     "06:00.0",
+     "09:00.0"
+    ],
+    "sentinel_result": "PASS"
+   }
+  },
+  {
+   "boot_id": "3edc3d73-eefa-4da1-a0fb-4b49bbc5fdfc",
+   "checks": {
+    "bars_assigned_not_disabled": true,
+    "bars_nonoverlapping": true,
+    "boot_id_changed": true,
+    "boot_id_unique_across_cycles": true,
+    "both_vega_amdgpu_bound": true,
+    "exactly_two_vega_functions": true,
+    "gateway_reachable": true,
+    "hbm_capacity_expected": true,
+    "nic_addressed": true,
+    "nic_link_up": true,
+    "nic_present_bound": true,
+    "no_amdgpu_failure": true,
+    "no_controller_failure": true,
+    "no_dmar_fault": true,
+    "no_fatal_aer": true,
+    "no_unresolved_bar": true,
+    "pm8533_fanout_present": true,
+    "root_fs_mounted_expected": true,
+    "sentinels_pass": true,
+    "storage_sentinel_ok": true,
+    "two_vega_vulkan_devices": true,
+    "upstream_gen3_x1": true,
+    "usb_controllers_enumerated": true
+   },
+   "cycle_index": 3,
+   "cycle_result": "PASS",
+   "cycle_type": "warm",
+   "detail": {
+    "boot_id": "3edc3d73-eefa-4da1-a0fb-4b49bbc5fdfc",
+    "error_classes": {
+     "amdgpu_failure_count": 0,
+     "controller_failure_count": 0,
+     "correctable_aer_count": 143,
+     "dmar_fault_count": 0,
+     "fatal_aer_count": 0,
+     "unresolved_bar_count": 0
+    },
+    "link": {
+     "ok": true,
+     "parts": {
+      "root_port": true,
+      "switch_upstream": true
+     }
+    },
+    "prev_boot_id": "e0d0cf21-003d-4c08-aa26-41fc415eb647",
+    "switch_bdfs": [
+     "02:00.0",
+     "03:00.0",
+     "03:01.0"
+    ],
+    "usb_missing_from_baseline": [],
+    "vega_bdfs": [
+     "06:00.0",
+     "09:00.0"
+    ]
+   },
+   "failed_checks": [],
+   "requested_transition": "systemctl reboot",
+   "sentinels": {
+    "boot_id": "3edc3d73-eefa-4da1-a0fb-4b49bbc5fdfc",
+    "dies": {
+     "a": {
+      "accounting_three_tuple": {
+       "source_fetches_after_ready": 0,
+       "unexplained_persistent_host_mirror_bytes": 0,
+       "unplanned_state_movements": 0
+      },
+      "byte_exact": true,
+      "identity_proof_line": "using device Vulkan1 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:06:00.0) - 8168 MiB free",
+      "offload_full": true,
+      "probe_bdf": "06:00.0",
+      "result": "PASS",
+      "selector": "Vulkan1",
+      "stderr_sha256": "884a455ace2928b7464d8084a96a17a771571ca424fe22a8389adda0cebd325f",
+      "stdout_sha256": "fe415e4411da5b040d62a4c93d9e3abd1659f30b0e703c1af893e1e012a9d933",
+      "visible_output_sha256": "d0c1410074799fba4bf380f68b6654d2e8690d6805877186a5501f20629380fa"
+     },
+     "b": {
+      "accounting_three_tuple": {
+       "source_fetches_after_ready": 0,
+       "unexplained_persistent_host_mirror_bytes": 0,
+       "unplanned_state_movements": 0
+      },
+      "byte_exact": true,
+      "identity_proof_line": "using device Vulkan2 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:09:00.0) - 8168 MiB free",
+      "offload_full": true,
+      "probe_bdf": "09:00.0",
+      "result": "PASS",
+      "selector": "Vulkan2",
+      "stderr_sha256": "fc844a5b0535af9add8e220145fefe5789c93b06443f46a40aa883e4647166c7",
+      "stdout_sha256": "09e17ecd94eb15d5afdb01e23553a653d97c9ffa90a22a8dbabe596f43adb190",
+      "visible_output_sha256": "d0c1410074799fba4bf380f68b6654d2e8690d6805877186a5501f20629380fa"
+     }
+    },
+    "probe_bdfs": [
+     "06:00.0",
+     "09:00.0"
+    ],
+    "sentinel_result": "PASS"
+   }
+  },
+  {
+   "boot_id": "aecd8d94-ae9d-4c8e-bd2a-89545b860767",
+   "checks": {
+    "bars_assigned_not_disabled": true,
+    "bars_nonoverlapping": true,
+    "boot_id_changed": true,
+    "boot_id_unique_across_cycles": true,
+    "both_vega_amdgpu_bound": true,
+    "exactly_two_vega_functions": true,
+    "gateway_reachable": true,
+    "hbm_capacity_expected": true,
+    "nic_addressed": true,
+    "nic_link_up": true,
+    "nic_present_bound": true,
+    "no_amdgpu_failure": true,
+    "no_controller_failure": true,
+    "no_dmar_fault": true,
+    "no_fatal_aer": true,
+    "no_unresolved_bar": true,
+    "pm8533_fanout_present": true,
+    "root_fs_mounted_expected": true,
+    "sentinels_pass": false,
+    "storage_sentinel_ok": true,
+    "two_vega_vulkan_devices": true,
+    "upstream_gen3_x1": true,
+    "usb_controllers_enumerated": true
+   },
+   "cycle_index": 4,
+   "cycle_result": "FAIL",
+   "cycle_type": "warm",
+   "detail": {
+    "boot_id": "aecd8d94-ae9d-4c8e-bd2a-89545b860767",
+    "error_classes": {
+     "amdgpu_failure_count": 0,
+     "controller_failure_count": 0,
+     "correctable_aer_count": 162,
+     "dmar_fault_count": 0,
+     "fatal_aer_count": 0,
+     "unresolved_bar_count": 0
+    },
+    "link": {
+     "ok": true,
+     "parts": {
+      "root_port": true,
+      "switch_upstream": true
+     }
+    },
+    "prev_boot_id": "3edc3d73-eefa-4da1-a0fb-4b49bbc5fdfc",
+    "switch_bdfs": [
+     "02:00.0",
+     "03:00.0",
+     "03:01.0"
+    ],
+    "usb_missing_from_baseline": [],
+    "vega_bdfs": [
+     "06:00.0",
+     "09:00.0"
+    ]
+   },
+   "failed_checks": [
+    "sentinels_pass"
+   ],
+   "requested_transition": "systemctl reboot",
+   "sentinel_capture_unavailable": true,
+   "sentinels": {
+    "reason": "sentinel-record.json missing or empty",
+    "sentinel_result": "CAPTURE_UNAVAILABLE"
+   }
+  },
+  {
+   "boot_id": "00639214-b62b-4af1-adf2-23685c6ff7d9",
+   "checks": {
+    "bars_assigned_not_disabled": true,
+    "bars_nonoverlapping": true,
+    "boot_id_changed": true,
+    "boot_id_unique_across_cycles": true,
+    "both_vega_amdgpu_bound": true,
+    "exactly_two_vega_functions": true,
+    "gateway_reachable": true,
+    "hbm_capacity_expected": true,
+    "nic_addressed": true,
+    "nic_link_up": true,
+    "nic_present_bound": true,
+    "no_amdgpu_failure": true,
+    "no_controller_failure": true,
+    "no_dmar_fault": true,
+    "no_fatal_aer": true,
+    "no_unresolved_bar": true,
+    "pm8533_fanout_present": true,
+    "root_fs_mounted_expected": true,
+    "sentinels_pass": true,
+    "storage_sentinel_ok": true,
+    "two_vega_vulkan_devices": true,
+    "upstream_gen3_x1": true,
+    "usb_controllers_enumerated": true
+   },
+   "cycle_index": 5,
+   "cycle_result": "PASS",
+   "cycle_type": "cold",
+   "detail": {
+    "boot_id": "00639214-b62b-4af1-adf2-23685c6ff7d9",
+    "error_classes": {
+     "amdgpu_failure_count": 0,
+     "controller_failure_count": 0,
+     "correctable_aer_count": 215,
+     "dmar_fault_count": 0,
+     "fatal_aer_count": 0,
+     "unresolved_bar_count": 0
+    },
+    "link": {
+     "ok": true,
+     "parts": {
+      "root_port": true,
+      "switch_upstream": true
+     }
+    },
+    "prev_boot_id": "aecd8d94-ae9d-4c8e-bd2a-89545b860767",
+    "switch_bdfs": [
+     "02:00.0",
+     "03:00.0",
+     "03:01.0"
+    ],
+    "usb_missing_from_baseline": [],
+    "vega_bdfs": [
+     "06:00.0",
+     "09:00.0"
+    ]
+   },
+   "failed_checks": [],
+   "requested_transition": "operator power-off -> power-on",
+   "sentinels": {
+    "boot_id": "00639214-b62b-4af1-adf2-23685c6ff7d9",
+    "dies": {
+     "a": {
+      "accounting_three_tuple": {
+       "source_fetches_after_ready": 0,
+       "unexplained_persistent_host_mirror_bytes": 0,
+       "unplanned_state_movements": 0
+      },
+      "byte_exact": true,
+      "identity_proof_line": "using device Vulkan1 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:06:00.0) - 8168 MiB free",
+      "offload_full": true,
+      "probe_bdf": "06:00.0",
+      "result": "PASS",
+      "selector": "Vulkan1",
+      "stderr_sha256": "d50805c13286b04806ae9a79efd26fb77b5132e2f00d21cba2b5985a69b93129",
+      "stdout_sha256": "7f49fe6667231bb8573b20d4ad0ddc1a74945571a7fe38a07d6ac7820f72b196",
+      "visible_output_sha256": "d0c1410074799fba4bf380f68b6654d2e8690d6805877186a5501f20629380fa"
+     },
+     "b": {
+      "accounting_three_tuple": {
+       "source_fetches_after_ready": 0,
+       "unexplained_persistent_host_mirror_bytes": 0,
+       "unplanned_state_movements": 0
+      },
+      "byte_exact": true,
+      "identity_proof_line": "using device Vulkan2 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:09:00.0) - 8168 MiB free",
+      "offload_full": true,
+      "probe_bdf": "09:00.0",
+      "result": "PASS",
+      "selector": "Vulkan2",
+      "stderr_sha256": "71a6a3cacd34aca9c4f405f2e555ba6028b92a4d28b9914963aeb893d364ba7c",
+      "stdout_sha256": "1b9a995e659b51e04080a685f95e88e2971b8dec933ce876545bb15a50f2d0f5",
+      "visible_output_sha256": "d0c1410074799fba4bf380f68b6654d2e8690d6805877186a5501f20629380fa"
+     }
+    },
+    "probe_bdfs": [
+     "06:00.0",
+     "09:00.0"
+    ],
+    "sentinel_result": "PASS"
+   }
+  }
+ ],
+ "manual_interventions": [],
+ "schema": "inferswarm.v2c.terminal-reduction/1",
+ "sentinels_all_pass": true,
+ "terminal": "V2C_EVIDENCE_BLOCKED",
+ "warm_cycles": 4
+}

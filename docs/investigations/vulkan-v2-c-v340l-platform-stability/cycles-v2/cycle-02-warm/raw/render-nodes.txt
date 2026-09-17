@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "ls",
+  "-la",
+  "/dev/dri/by-path/"
+ ],
+ "rc": 0,
+ "stdout": "total 0\ndrwxr-xr-x 2 root root 160 Sep 17 17:40 .\ndrwxr-xr-x 3 root root 180 Sep 17 17:40 ..\nlrwxrwxrwx 1 root root   8 Sep 17 17:40 pci-0000:00:02.0-card -> ../card0\nlrwxrwxrwx 1 root root  13 Sep 17 17:40 pci-0000:00:02.0-render -> ../renderD128\nlrwxrwxrwx 1 root root   8 Sep 17 17:40 pci-0000:06:00.0-card -> ../card1\nlrwxrwxrwx 1 root root  13 Sep 17 17:40 pci-0000:06:00.0-render -> ../renderD129\nlrwxrwxrwx 1 root root   8 Sep 17 17:40 pci-0000:09:00.0-card -> ../card2\nlrwxrwxrwx 1 root root  13 Sep 17 17:40 pci-0000:09:00.0-render -> ../renderD130\n",
+ "stderr": ""
+}

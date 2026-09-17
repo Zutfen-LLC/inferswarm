@@ -1,0 +1,9 @@
+{
+ "argv": [
+  "findmnt",
+  "/"
+ ],
+ "rc": 0,
+ "stdout": "TARGET SOURCE    FSTYPE OPTIONS\n/      /dev/sda3 ext4   rw,relatime,errors=remount-ro\n",
+ "stderr": ""
+}

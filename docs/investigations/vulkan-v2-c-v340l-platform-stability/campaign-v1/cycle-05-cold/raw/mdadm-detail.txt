@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "bash",
+  "-c",
+  "cat /proc/mdstat 2>/dev/null || true"
+ ],
+ "rc": 0,
+ "stdout": "",
+ "stderr": ""
+}

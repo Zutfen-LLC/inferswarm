@@ -1,0 +1,9 @@
+{
+ "argv": [
+  "cat",
+  "/proc/sys/kernel/random/boot_id"
+ ],
+ "rc": 0,
+ "stdout": "00639214-b62b-4af1-adf2-23685c6ff7d9\n",
+ "stderr": ""
+}

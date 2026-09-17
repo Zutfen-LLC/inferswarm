@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "dmidecode",
+  "-s",
+  "baseboard-manufacturer"
+ ],
+ "rc": 0,
+ "stdout": "MINERDUDE\n",
+ "stderr": ""
+}

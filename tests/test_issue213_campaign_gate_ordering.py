@@ -1029,7 +1029,14 @@ class PreservationTests(unittest.TestCase):
                             "scripts/plan_ci.py", "scripts/ci_groups.json",
                             "scripts/run_full_cpu_suite.py",
                             ".github/workflows/ci.yml",
-                            "tests/test_issue184_final_closure.py")
+                            "tests/test_issue184_final_closure.py",
+                            # Issue #215 V2-C: additive campaign surface
+                            # (evidence namespace, living hardware docs,
+                            # producers, controls) pending on main.
+                            "scripts/issue215_",
+                            "tests/test_issue215_",
+                            "docs/investigations/vulkan-v2-c-v340l-platform-stability/",
+                            "docs/hardware/")
         for path in changed:
             self.assertTrue(path.startswith(allowed_prefixes),
                             f"unexpected changed path: {path}")

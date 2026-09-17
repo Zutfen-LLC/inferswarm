@@ -1,0 +1,212 @@
+{
+ "campaign_plan": {
+  "accepted_predecessors": {
+   "v2a_merge": "e38ebe91a0604fb666397ddae675248e9f819f60",
+   "v2a_terminal": "V2A_REUSABLE_DEVICE_QUALIFICATION_HARNESS_PASS",
+   "v2b_merge": "f91119d05e7079c780c7b88be6138fed0920b759",
+   "v2b_terminal": "V2B_V340L_DUAL_DIE_QUALIFICATION_PASS"
+  },
+  "campaign_id": "issue215-v2c-v340l-platform-stability-v1",
+  "failure_predicates": {
+   "kernel": [
+    "unresolved BAR/resource allocation for a required device fails the cycle",
+    "required endpoint/controller missing fails the cycle",
+    "fatal AER on the qualified path fails the cycle (correctable physical-layer messages are retained as observations; they do not fail the cycle unless final device state is broken)",
+    "IOMMU/DMAR fault invalidating device operation fails the cycle",
+    "amdgpu init/reset/hang failure affecting either die fails the cycle",
+    "manual recovery required fails the cycle"
+   ],
+   "network": [
+    "intended NIC present + driver-bound",
+    "interface exists, carrier/link-up",
+    "expected address/route via ordinary configuration (dhcp)",
+    "gateway reachability sentinel passes (3/3)",
+    "no manual driver reload or interface surgery"
+   ],
+   "storage": [
+    "boot/root storage controller + device present",
+    "root filesystem mounted from the expected device/source",
+    "non-destructive read/write health sentinel passes",
+    "no storage controller resource failure"
+   ],
+   "usb": [
+    "baseline USB host controller set remains enumerated (superset tolerated, disappearance fails)",
+    "optional input device: if present at baseline, same device identity remains enumerated"
+   ],
+   "v340l": [
+    "exactly one PM8533 fanout topology present with exactly two Vega 1002:6864 physical functions",
+    "both Vega functions amdgpu-bound",
+    "final BARs assigned, non-overlapping, and every BAR has a real host bridge window",
+    "both functions expose expected device-local capacity (~8 GiB) and usable Vulkan devices",
+    "fresh selector->physical-device binding unique (2 distinct selectors, 2 distinct BDFs)",
+    "root port + switch upstream retain Gen3 x1 (8.0 GT/s, width 1) campaign identity",
+    "no unresolved final PCI resource allocation failure"
+   ]
+  },
+  "final_boot_full_check": {
+   "mode": "v2a_harness canonical execution via accepted authority semantics",
+   "requirement": "die A and die B each pass one canonical execution with byte-exact visible output and clean accounting; #210 evidence is never reinterpreted or overwritten"
+  },
+  "issue": 215,
+  "per_cycle_probes": {
+   "errors": [
+    "journalctl -b: AER/fatal/nonfatal PCIe, amdgpu init/reset/fault, DMAR/IOMMU faults, IRQ conflicts, NIC/USB/storage init errors, PCI BAR allocation failures/retries"
+   ],
+   "host": [
+    "boot_id",
+    "uptime",
+    "uname -a",
+    "/proc/cmdline",
+    "dmidecode BIOS/board identity",
+    "amdgpu module identity",
+    "Vulkan loader + ICD identity"
+   ],
+   "pci": [
+    "lspci -PP -nn -vv full topology",
+    "root port -> PM8533 -> Vega endpoint path",
+    "endpoint/bridge driver binding",
+    "final BAR/resource map",
+    "LnkCap/LnkSta on endpoint, switch upstream, root port",
+    "SR-IOV total/active VFs",
+    "IOMMU groups",
+    "irq assignments"
+   ],
+   "peripherals": [
+    "NIC presence/driver/interface/MAC/link/address/route",
+    "USB host controllers + root hubs + attached input devices (lsusb)",
+    "storage controller/root fs mount + non-destructive read/write sentinel"
+   ],
+   "vulkan": [
+    "llama-cli --list-devices fresh enumeration",
+    "identity probe binding selector->BDF"
+   ]
+  },
+  "physical_subject": {
+   "expected_hbm_bytes_per_die": 8573157376,
+   "hostname": "inferswarm02",
+   "model": "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+   "model_bytes": 1929903264,
+   "model_sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
+   "pm8533_switch_dev": "11f8:8533",
+   "pm8533_switch_ids": [
+    "1022:1470",
+    "1022:1471"
+   ],
+   "runtime_executable": "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+   "runtime_executable_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+   "runtime_source": "/home/zutfen/.cache/v0c-llama.cpp",
+   "runtime_source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+   "vega_die_ids": {
+    "a": {
+     "compute_unit_id": "cu-v340l-die-a",
+     "memory_resource_id": "mr-v340l-die-a-vram",
+     "vendor_device": "1002:6864"
+    },
+    "b": {
+     "compute_unit_id": "cu-v340l-die-b",
+     "memory_resource_id": "mr-v340l-die-b-vram",
+     "vendor_device": "1002:6864"
+    }
+   }
+  },
+  "readiness": {
+   "max_wait_ping_s": 300,
+   "max_wait_ssh_s": 300,
+   "max_wait_vulkan_s": 600,
+   "network_sentinel": {
+    "count": 3,
+    "kind": "gateway_ping",
+    "maxfail": 0,
+    "target": "10.0.0.1"
+   },
+   "ssh_port_timeout_s": 10,
+   "vulkan_probe_cmd": "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli --list-devices"
+  },
+  "schema": "inferswarm.v2c.campaign-plan/1",
+  "sentinel": {
+   "accounting_keys": [
+    "unexplained_persistent_host_mirror_bytes",
+    "source_fetches_after_ready",
+    "unplanned_state_movements"
+   ],
+   "argv": [
+    "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+    "-m",
+    "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+    "--temp",
+    "0",
+    "--seed",
+    "42",
+    "-n",
+    "8",
+    "-ngl",
+    "99",
+    "--device",
+    "<selector>",
+    "-lv",
+    "4",
+    "-p",
+    "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+    "-st"
+   ],
+   "comparator": "byte-exact-prefix-of-accepted-reference",
+   "n_tokens": 8,
+   "offload_requirement": "full offload (-ngl 99) with zero fallback; offloaded layers must equal the accepted per-die full-offload count observed at qualification",
+   "reference": "docs/investigations/vulkan-v1-a/reference-visible-output.txt",
+   "reference_provenance": "accepted V1-A frozen visible greedy output (reused byte-identically by accepted V2-B)",
+   "reference_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d",
+   "repeats": 1,
+   "selector_resolution": "fresh per-boot discovery; never reuse a previous boot's selector authority"
+  },
+  "sequence": {
+   "cold_rule": "the cold cycle is a real power-off -> power-on only if operator power action is recorded in the cycle artifact; otherwise the campaign ends warm-only",
+   "cycles": [
+    {
+     "index": 0,
+     "note": "pre-reboot baseline snapshot; not counted as a boot transition",
+     "transition": null,
+     "type": "baseline"
+    },
+    {
+     "index": 1,
+     "note": "ordinary OS reboot path",
+     "transition": "systemctl reboot",
+     "type": "warm"
+    },
+    {
+     "index": 2,
+     "note": "ordinary OS reboot path",
+     "transition": "systemctl reboot",
+     "type": "warm"
+    },
+    {
+     "index": 3,
+     "note": "ordinary OS reboot path",
+     "transition": "systemctl reboot",
+     "type": "warm"
+    },
+    {
+     "index": 4,
+     "note": "additional (4th) warm reboot satisfying the >=1 extra warm/firmware requirement",
+     "transition": "systemctl reboot",
+     "type": "warm"
+    },
+    {
+     "index": 5,
+     "note": "full cold power cycle executed by the operator on signal; never counted as warm",
+     "transition": "operator power-off -> power-on",
+     "type": "cold"
+    }
+   ],
+   "denominator_rule": "every requested transition that reaches evaluation is retained, pass or fail; a failed cycle is never omitted from the denominator"
+  },
+  "starting_main": "36d0d7a7301230512dbbc2bca65388b6800dec6f",
+  "terminals": {
+   "blocked": "V2C_EVIDENCE_BLOCKED",
+   "fail": "V2C_V340L_PLATFORM_STABILITY_FAIL",
+   "pass": "V2C_V340L_PLATFORM_STABILITY_PASS",
+   "warm_only": "V2C_V340L_WARM_REBOOT_STABILITY_ONLY"
+  }
+ },
+ "campaign_plan_digest": "2219bb144328c063ab597b0fd511fc4800d7babc2f9d1991f99d7cdc84089e24"
+}

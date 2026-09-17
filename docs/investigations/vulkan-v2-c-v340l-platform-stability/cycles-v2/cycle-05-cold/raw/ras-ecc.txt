@@ -1,0 +1,10 @@
+{
+ "argv": [
+  "bash",
+  "-c",
+  "for d in /sys/class/drm/card*/device/ras; do echo == $d; cat $d/gpu_err_cnt 2>/dev/null; done"
+ ],
+ "rc": 1,
+ "stdout": "== /sys/class/drm/card*/device/ras\n",
+ "stderr": ""
+}

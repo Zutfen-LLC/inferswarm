@@ -1,0 +1,9 @@
+{
+ "argv": [
+  "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+  "--list-devices"
+ ],
+ "rc": 0,
+ "stdout": "Available devices:\n  Vulkan0: Intel(R) HD Graphics 510 (SKL GT1) (7954 MiB, 7158 MiB free)\n  Vulkan1: AMD Radeon Pro V340 (RADV VEGA10) (8176 MiB, 8168 MiB free)\n  Vulkan2: AMD Radeon Pro V340 (RADV VEGA10) (8176 MiB, 8168 MiB free)\n",
+ "stderr": ""
+}

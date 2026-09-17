@@ -1,0 +1,9 @@
+{
+ "argv": [
+  "ip",
+  "route"
+ ],
+ "rc": 0,
+ "stdout": "default via 10.0.0.1 dev enp1s0 proto dhcp src 10.0.0.137 metric 1002 \n10.0.0.0/24 dev enp1s0 proto dhcp scope link src 10.0.0.137 metric 1002 \n",
+ "stderr": ""
+}

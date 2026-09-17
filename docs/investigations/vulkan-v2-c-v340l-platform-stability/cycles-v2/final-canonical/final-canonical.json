@@ -1,0 +1,74 @@
+{
+ "schema": "inferswarm.v2c.final-canonical/1",
+ "campaign_id": "issue215-v2c-v340l-platform-stability-v2",
+ "boot_id": "9345db65-58de-477a-958e-d2c1487f2b93",
+ "repo_head": "4b6075114862f9c3ac794e7636c87aac1488dc70",
+ "discovery": {
+  "inventory_sha256": "b7c1987fe5f09e62e5de236d0af4c999999edd5a516a9d0cce86b8fdd5fa0db5",
+  "bindings_sha256": "1bdf02e4e957f4c70732ad473d9c651c9fa419ebbd77ce9f67dd19ef6257b9e2",
+  "measured_utc": "2026-09-17T21:55:09.698708+00:00",
+  "bindings": [
+   {
+    "selector": "Vulkan0",
+    "pci_bdf": "00:02.0",
+    "binding_status": "BOUND"
+   },
+   {
+    "selector": "Vulkan1",
+    "pci_bdf": "06:00.0",
+    "binding_status": "BOUND"
+   },
+   {
+    "selector": "Vulkan2",
+    "pci_bdf": "09:00.0",
+    "binding_status": "BOUND"
+   }
+  ]
+ },
+ "dies": {
+  "a": {
+   "qualification_result": "PASS",
+   "offloaded_layers": [
+    37,
+    37
+   ],
+   "canonical_result": "PASS",
+   "plan_digest": "debb1216a638c538d439bd6a9edccc0fc89c223ba4a8dc646193cc1e2a988507",
+   "byte_exact_visible_output": true,
+   "accounting_three_tuple": {
+    "unexplained_persistent_host_mirror_bytes": 0,
+    "source_fetches_after_ready": 0,
+    "unplanned_state_movements": 0
+   },
+   "canonical_proof_digest": "36812cbd3dcc2cd27a8a51f5db9d54621b405f0b5b4539f532213b7011c2d2f0",
+   "raw_stdout_sha256_rerashed": "8deb27e1b4f18e2eaa1071d3c62d6e5e3495d99909ab3998721d28952124ff26",
+   "raw_stderr_sha256_rehashed": "453b244b5387bf72929a6ba3ff99f6a38636fba05234ddcbefc4d0d4eae60db3",
+   "recorded_stdout_sha256": "8deb27e1b4f18e2eaa1071d3c62d6e5e3495d99909ab3998721d28952124ff26",
+   "recorded_stderr_sha256": "453b244b5387bf72929a6ba3ff99f6a38636fba05234ddcbefc4d0d4eae60db3",
+   "raw_bytes_match_record": true
+  },
+  "b": {
+   "qualification_result": "PASS",
+   "offloaded_layers": [
+    37,
+    37
+   ],
+   "canonical_result": "PASS",
+   "plan_digest": "7c50281d4b70540de3204e517e06356ebc25ed40f44564f0bcb8be8fe4fc9109",
+   "byte_exact_visible_output": true,
+   "accounting_three_tuple": {
+    "unexplained_persistent_host_mirror_bytes": 0,
+    "source_fetches_after_ready": 0,
+    "unplanned_state_movements": 0
+   },
+   "canonical_proof_digest": "3f1637c277acfb363ec0cdddb61ea0d0255e2ff294cdfada09408350580c86f3",
+   "raw_stdout_sha256_rerashed": "4c2ecf37856624f0db8646957265dda39e1354ba09f1a84844415fe7b9156c20",
+   "raw_stderr_sha256_rehashed": "fa08e70272fad437f9a4e3801b3c0c03628927b597acacec63d300a5cb16e190",
+   "recorded_stdout_sha256": "4c2ecf37856624f0db8646957265dda39e1354ba09f1a84844415fe7b9156c20",
+   "recorded_stderr_sha256": "fa08e70272fad437f9a4e3801b3c0c03628927b597acacec63d300a5cb16e190",
+   "raw_bytes_match_record": true
+  }
+ },
+ "result": "PASS",
+ "captured_utc": "2026-09-17T21:57:03.326506+00:00"
+}

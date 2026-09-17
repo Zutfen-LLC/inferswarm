@@ -285,6 +285,17 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue210_assemble.py",
             "scripts/issue210_terminal.py",
             "scripts/issue210_manifest.py",
+            # Issue #215 V2-C: additive V340L platform-stability campaign
+            # producers, independently pinned by the V2-C evidence manifest.
+            "scripts/issue215_campaign_plan.py",
+            "scripts/issue215_snapshot.py",
+            "scripts/issue215_sentinel.py",
+            "scripts/issue215_terminal.py",
+            "scripts/issue215_final_canonical.py",
+            "scripts/issue215_build_final_authorities.py",
+            "scripts/issue215_build_final_authorities_v2.py",
+            "scripts/issue215_v2_authority.py",
+            "scripts/issue215_manifest.py",
             # Issue #213 campaign gate ordering: orchestration tooling and
             # CI registration, independently covered by its own group.
             "scripts/issue213_gate_orchestration.py",
