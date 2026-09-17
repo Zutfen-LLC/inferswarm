@@ -109,6 +109,18 @@ so direct legitimate invocation cannot bypass single-launch behavior.
   SHA + canonical suite population identity (the runner's own plan digest
   and count) + environment authority hashes. An arbitrary caller-supplied
   lock key is never accepted as authority;
+- a **clean committed worktree is a prerequisite to the launch identity
+  itself**: every guarded canonical full-suite request in a Git checkout
+  establishes a clean committed worktree (the runner's own
+  `ensure_clean_git_worktree` doctrine — the same `git status --porcelain`
+  census and the same fail-closed behavior on git-status failure inside a
+  real work tree) BEFORE deriving a reusable launch identity, consulting
+  an existing completion, attaching to an existing launch, or launching
+  the suite. A dirty worktree is **refused**, never treated as merely
+  another cache-key component: the runner contract requires a committed
+  exact head, so a dirty tree cannot reuse a prior clean-head completion
+  or bypass the runner's fail-closed dirty-tree check. Plain non-Git
+  fixture roots keep the runner's existing unguarded behavior;
 - the first request wins an atomic `O_CREAT | O_EXCL` lock creation and
   owns the single launch; concurrent losers of the create race re-read and
   **attach**, waiting on the owner's bounded completion receipt instead of
@@ -123,6 +135,22 @@ so direct legitimate invocation cannot bypass single-launch behavior.
   consume; distinct head/config/environment identities derive distinct keys
   and never share results. This is bounded local state, not a generalized
   persistent build cache;
+- a completion receipt is **mechanically validated against the launch
+  identity** before it can suppress an actual suite launch: matching key
+  and SHA alone never authorize reuse. The embedded `result` must be a
+  canonical runner result (known full-suite runner schema, real boolean
+  `ok`, positive integer count, valid 64-hex serial/executed digests),
+  its outcome must agree with the record's top-level `ok` flag, and a
+  PASS additionally requires serial digest == executed digest, a count
+  exactly equal to the launch identity's suite count, and digests exactly
+  equal to the launch identity's suite population digest. Malformed,
+  missing, or forged result fields fail closed — an incomplete result
+  such as `{"ok": true}` can never suppress a fresh suite;
+- a completed FAIL is delivered only to requests that already attached to
+  the live launch (the single real result of the one underlying launch);
+  it is never interpreted as a reusable PASS. A later independent
+  invocation after a completed FAIL **reruns** the suite — a failure
+  never suppresses a fresh launch;
 - if the underlying suite raises, no completion is written: waiters fail
   closed and the next identical request launches fresh.
 

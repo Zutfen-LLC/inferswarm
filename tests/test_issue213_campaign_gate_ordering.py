@@ -111,6 +111,53 @@ def runner_result(ok=True, serial="f" * 64, count=2759,
             "executed_digest": serial, "count": count}
 
 
+def canonical_result_for(identity: dict, ok: bool = True) -> dict:
+    """A canonical runner result bound to a launch identity's suite."""
+    suite = identity["suite"]
+    executed = suite["serial_digest"] if ok else None
+    return {"schema": gate.RUNNER_SCHEMA, "ok": ok,
+            "serial_digest": suite["serial_digest"],
+            "executed_digest": executed, "count": suite["count"]}
+
+
+_guard_repo_seq = 0
+
+
+def make_guard_fixture_repo(add_cleanup) -> Path:
+    """Clean committed fixture repo with tests + a tracked production file.
+
+    Same shape as the concurrency fixture (unique module names per repo —
+    discovery imports pollute ``sys.modules``), plus a tracked
+    non-test/non-authority production file so production-code drift is
+    distinguishable from test-body drift.
+    """
+    global _guard_repo_seq
+    _guard_repo_seq += 1
+    prefix = f"issue213g{_guard_repo_seq}"
+    root = Path(tempfile.mkdtemp(prefix=f"{prefix}-root-"))
+    add_cleanup(lambda: subprocess.run(["rm", "-rf", str(root)], check=False))
+    repo = root / "repo"
+    repo.mkdir()
+    for cmd in (("git", "init", "-q"),
+                ("git", "config", "user.email", "t@example.invalid"),
+                ("git", "config", "user.name", "t")):
+        subprocess.run(cmd, cwd=repo, check=True)
+    (repo / "tests").mkdir()
+    module_name = f"test_{prefix}"
+    add_cleanup(sys.modules.pop, module_name, None)
+    (repo / "tests" / f"{module_name}.py").write_text(
+        "import unittest\nclass A(unittest.TestCase):\n"
+        " def test_x(self): self.assertTrue(True)\n", encoding="utf-8")
+    (repo / "tool.py").write_text("VALUE = 1\n", encoding="utf-8")
+    for rel in gate.ENV_AUTHORITY_FILES:
+        path = repo / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("authority\n", encoding="utf-8")
+    subprocess.run(("git", "add", "-A"), cwd=repo, check=True)
+    subprocess.run(("git", "commit", "-qm", "init"), cwd=repo, check=True)
+    return repo
+
+
 class GatePlanTests(unittest.TestCase):
     """Controls 1, 2, 10, 11, 19, 20, 21, 22 — ordering and fail-closed
     plan semantics, mandatory final gates, and execution vs cycle counts."""
@@ -649,7 +696,15 @@ class LaunchGuardTests(unittest.TestCase):
         identity = make_final_head(sha="1" * 40).to_dict() | {
             "schema": gate.LAUNCH_IDENTITY_SCHEMA}
         guard = gate.LaunchGuard(identity, lock_dir=guard_dir)
-        guard.write_completion({"ok": True, "count": 3}, started_unix=1.0)
+        # canonical runner result shaped from the launch identity's own
+        # suite population (a bare {"ok": True, "count": 3} is FORGED and
+        # must fail closed — see the forged-completion controls)
+        suite = identity["suite"]
+        canonical = {"schema": gate.RUNNER_SCHEMA, "ok": True,
+                     "serial_digest": suite["serial_digest"],
+                     "executed_digest": suite["executed_digest"],
+                     "count": suite["count"]}
+        guard.write_completion(canonical, started_unix=1.0)
         record = guard.find_valid_completion()
         self.assertIsNotNone(record)
         self.assertTrue(record["ok"])
@@ -661,7 +716,7 @@ class LaunchGuardTests(unittest.TestCase):
         # a completion for a different identity key fails closed
         guard.completion_path().write_text(json.dumps(
             {"schema": gate.COMPLETION_SCHEMA, "key": "c" * 64,
-             "git_commit_sha": "1" * 40, "ok": True, "result": {},
+             "git_commit_sha": "1" * 40, "ok": True, "result": canonical,
              "started_unix": 1.0, "ended_unix": 2.0}), encoding="utf-8")
         with self.assertRaises(gate.GateOrderingError):
             guard.find_valid_completion()
@@ -725,11 +780,12 @@ class ConcurrencyTests(unittest.TestCase):
         lock_dir = repo.parent / "locks"
         launches = []
         release = threading.Event()
+        identity = gate.launch_request_identity(repo)
 
         def fake_suite():
             launches.append(time.time())
             release.wait(10)  # hold the "suite" so the duplicate must attach
-            return {"ok": True, "count": 1, "fake": True}
+            return canonical_result_for(identity)
 
         results = {}
 
@@ -757,10 +813,9 @@ class ConcurrencyTests(unittest.TestCase):
         second.join(30)
         self.assertEqual(len(launches), 1,
                          "exactly ONE underlying suite launch required")
-        self.assertEqual(results["first"], {"ok": True, "count": 1,
-                                            "fake": True})
-        self.assertEqual(results["second"], {"ok": True, "count": 1,
-                                             "fake": True},
+        expected = canonical_result_for(identity)
+        self.assertEqual(results["first"], expected)
+        self.assertEqual(results["second"], expected,
                          "attacher must consume the owner's result")
 
     def test_head_drift_forces_fresh_execution(self):
@@ -770,7 +825,10 @@ class ConcurrencyTests(unittest.TestCase):
 
         def fake_suite():
             launches.append(1)
-            return {"ok": True, "count": 1, "head": gate.git_commit_sha(repo)}
+            identity = gate.launch_request_identity(repo)
+            result = canonical_result_for(identity)
+            result["head"] = gate.git_commit_sha(repo)
+            return result
 
         first = gate.run_single_head_suite(repo, suite_command=fake_suite,
                                            lock_dir=lock_dir)
@@ -797,7 +855,7 @@ class ConcurrencyTests(unittest.TestCase):
 
         def fake_suite():
             launches.append(1)
-            return {"ok": True, "count": 1}
+            return canonical_result_for(gate.launch_request_identity(repo))
 
         gate.run_single_head_suite(repo, suite_command=fake_suite,
                                    lock_dir=lock_dir)
@@ -988,6 +1046,255 @@ class PreservationTests(unittest.TestCase):
         self.assertIn(
             "payload = run_single_head_suite(args.root, jobs=args.jobs,",
             source)
+
+
+class DirtyWorktreeGuardTests(unittest.TestCase):
+    """Controls 27-30 — clean committed worktree is a PREREQUISITE to
+    launch identity derivation, completion lookup/reuse, attach, and
+    launch (all would PASS on 43367f8 where a dirty tree could consume a
+    prior clean-head completion)."""
+
+    def _repo(self):
+        repo = make_guard_fixture_repo(self.addCleanup)
+        lock_dir = repo.parent / "guard-locks"
+        launches: list[float] = []
+
+        def fake_suite():
+            launches.append(time.time())
+            return canonical_result_for(gate.launch_request_identity(repo))
+
+        return repo, lock_dir, launches, fake_suite
+
+    def test_control27_dirty_production_code_refused(self):
+        # A. clean PASS first, then uncommitted tracked production drift:
+        # the second guarded request MUST be refused — not launched, and
+        # the cached PASS must NOT come back out.
+        repo, lock_dir, launches, fake_suite = self._repo()
+        first = gate.run_single_head_suite(repo, suite_command=fake_suite,
+                                           lock_dir=lock_dir)
+        self.assertTrue(first["ok"])
+        self.assertEqual(len(launches), 1)
+        (repo / "tool.py").write_text("VALUE = 2\n", encoding="utf-8")
+        with self.assertRaises(gate.GateOrderingError) as caught:
+            gate.run_single_head_suite(repo, suite_command=fake_suite,
+                                       lock_dir=lock_dir)
+        self.assertIn("dirty Git worktree", str(caught.exception))
+        # the underlying suite was NOT launched for the dirty request
+        self.assertEqual(len(launches), 1)
+        # identity derivation itself is refused (before any lookup)
+        with self.assertRaises(gate.GateOrderingError):
+            gate.launch_request_identity(repo)
+        # the canonical runner seam surfaces the same refusal under the
+        # runner's own error contract
+        with self.assertRaises(runner.SuiteError):
+            runner.run_single_head_suite(repo)
+
+    def test_control28_dirty_test_body_same_id_refused(self):
+        # B. modify an existing test's body WITHOUT changing its ID or
+        # the suite count: identity stays the same, so on 43367f8 the
+        # prior completion would be consumed; it MUST be refused instead.
+        repo, lock_dir, launches, fake_suite = self._repo()
+        gate.run_single_head_suite(repo, suite_command=fake_suite,
+                                   lock_dir=lock_dir)
+        self.assertEqual(len(launches), 1)
+        module = next((repo / "tests").glob("test_*.py"))
+        module.write_text(
+            "import unittest\nclass A(unittest.TestCase):\n"
+            " def test_x(self): self.assertTrue(False)\n",  # body drift
+            encoding="utf-8")
+        with self.assertRaises(gate.GateOrderingError):
+            gate.run_single_head_suite(repo, suite_command=fake_suite,
+                                       lock_dir=lock_dir)
+        self.assertEqual(len(launches), 1,
+                         "dirty request must not reach the suite")
+        # discard the drift: SAME committed head, same test-ID population
+        # — proving the refusal was driven by the dirty tree, not by an
+        # identity change, and that valid reuse resumes at the same head
+        subprocess.run(("git", "checkout", "--", "."), cwd=repo, check=True)
+        gate.run_single_head_suite(repo, suite_command=fake_suite,
+                                   lock_dir=lock_dir)
+        self.assertEqual(len(launches), 1,
+                         "same committed head: reuse, not relaunch")
+
+    def test_control29_staged_uncommitted_drift_refused(self):
+        # C. `git add` a tracked modification (staged, uncommitted):
+        # refusal is required exactly like unstaged drift.
+        repo, lock_dir, launches, fake_suite = self._repo()
+        gate.run_single_head_suite(repo, suite_command=fake_suite,
+                                   lock_dir=lock_dir)
+        (repo / "tool.py").write_text("VALUE = 3\n", encoding="utf-8")
+        subprocess.run(("git", "add", "tool.py"), cwd=repo, check=True)
+        with self.assertRaises(gate.GateOrderingError):
+            gate.run_single_head_suite(repo, suite_command=fake_suite,
+                                       lock_dir=lock_dir)
+        self.assertEqual(len(launches), 1)
+
+    def test_control30_untracked_dirtiness_matches_runner_doctrine(self):
+        # D. untracked files count as dirtiness under the SAME
+        # `git status --porcelain` census the runner uses — the guard
+        # must agree with the runner's own verdict on the same tree.
+        repo, lock_dir, launches, fake_suite = self._repo()
+        gate.run_single_head_suite(repo, suite_command=fake_suite,
+                                   lock_dir=lock_dir)
+        (repo / "untracked.txt").write_text("dirt\n", encoding="utf-8")
+        try:
+            runner.run_suite(repo)
+            runner_refused = False
+        except runner.SuiteError:
+            runner_refused = True  # runner refuses (dirty by its census)
+        try:
+            gate.run_single_head_suite(repo, suite_command=fake_suite,
+                                       lock_dir=lock_dir)
+            guard_refused = False
+        except gate.GateOrderingError:
+            guard_refused = True
+        self.assertIs(guard_refused, runner_refused,
+                      "guard must mirror the runner's dirty verdict on "
+                      "the identical tree")
+        self.assertEqual(len(launches),
+                         2 if not guard_refused else 1,
+                         "a clean-by-census tree would reuse/launch through "
+                         "the guard's own fake suite; a dirty one must "
+                         "refuse before launching")
+
+
+class CompletionHardeningTests(unittest.TestCase):
+    """Controls 31-37 — a completion receipt mechanically validated
+    against the launch identity; malformed/forged/inconsistent records
+    can never suppress a fresh suite launch (all fail on 43367f8)."""
+
+    def _identity_and_guard(self):
+        guard_dir = Path(tempfile.mkdtemp(prefix="issue213-hard-"))
+        self.addCleanup(lambda: subprocess.run(
+            ["rm", "-rf", str(guard_dir)], check=False))
+        identity = make_final_head(sha="3" * 40).to_dict() | {
+            "schema": gate.LAUNCH_IDENTITY_SCHEMA}
+        guard = gate.LaunchGuard(identity, lock_dir=guard_dir)
+        return identity, guard
+
+    def _forge(self, guard, *, result, ok=True, sha="3" * 40):
+        guard.completion_path().write_text(json.dumps(
+            {"schema": gate.COMPLETION_SCHEMA, "key": guard.key,
+             "git_commit_sha": sha, "ok": ok, "result": result,
+             "started_unix": 1.0, "ended_unix": 2.0}), encoding="utf-8")
+
+    def test_control31_forged_minimal_result_fails_closed(self):
+        # E. correct key + correct SHA + {"ok": true} (or any incomplete
+        # result) MUST fail closed, never authorize reuse.
+        identity, guard = self._identity_and_guard()
+        for forged in ({"ok": True}, {"ok": True, "count": 3},
+                       {}, "not-a-dict"):
+            self._forge(guard, result=forged)
+            with self.assertRaises(gate.GateOrderingError):
+                guard.find_valid_completion()
+
+    def test_control32_wrong_result_count_rejected(self):
+        # F. correct key/SHA but a runner-result count differing from the
+        # launch identity suite count => reject.
+        identity, guard = self._identity_and_guard()
+        suite = identity["suite"]
+        result = {"schema": gate.RUNNER_SCHEMA, "ok": True,
+                  "serial_digest": suite["serial_digest"],
+                  "executed_digest": suite["executed_digest"],
+                  "count": suite["count"] + 5}
+        self._forge(guard, result=result)
+        with self.assertRaises(gate.GateOrderingError):
+            guard.find_valid_completion()
+
+    def test_control33_wrong_or_malformed_digests_rejected(self):
+        # G. malformed, unequal, or launch-identity-mismatched digests.
+        identity, guard = self._identity_and_guard()
+        suite = identity["suite"]
+        other = "a" * 64
+        cases = [
+            # malformed shape
+            {"schema": gate.RUNNER_SCHEMA, "ok": True,
+             "serial_digest": "not-hex", "executed_digest": "not-hex",
+             "count": suite["count"]},
+            # serial != executed on a PASS
+            {"schema": gate.RUNNER_SCHEMA, "ok": True,
+             "serial_digest": suite["serial_digest"],
+             "executed_digest": other, "count": suite["count"]},
+            # well-formed but bound to a DIFFERENT population than the
+            # launch identity's
+            {"schema": gate.RUNNER_SCHEMA, "ok": True,
+             "serial_digest": other, "executed_digest": other,
+             "count": suite["count"]},
+        ]
+        for result in cases:
+            self._forge(guard, result=result)
+            with self.assertRaises(gate.GateOrderingError):
+                guard.find_valid_completion()
+
+    def test_control34_outcome_flag_inconsistency_fails_closed(self):
+        # H. top-level success + runner-result failure, and vice versa.
+        identity, guard = self._identity_and_guard()
+        suite = identity["suite"]
+        pass_result = {"schema": gate.RUNNER_SCHEMA, "ok": True,
+                       "serial_digest": suite["serial_digest"],
+                       "executed_digest": suite["executed_digest"],
+                       "count": suite["count"]}
+        fail_result = dict(pass_result, ok=False, executed_digest=None)
+        # completion says ok=True, runner result says ok=False
+        self._forge(guard, result=fail_result, ok=True)
+        with self.assertRaises(gate.GateOrderingError):
+            guard.find_valid_completion()
+        # completion says ok=False, runner result says ok=True
+        self._forge(guard, result=pass_result, ok=False)
+        with self.assertRaises(gate.GateOrderingError):
+            guard.find_valid_completion(allow_fail=True)
+
+    def test_control35_completed_fail_policy(self):
+        # A completed FAIL is structurally valid (deliverable to a
+        # concurrent ATTACHER via allow_fail=True) but is NEVER a
+        # reusable PASS: the default reuse path ignores it, so a later
+        # independent invocation launches a fresh suite.
+        identity, guard = self._identity_and_guard()
+        fail_result = canonical_result_for(identity, ok=False)
+        self._forge(guard, result=fail_result, ok=False)
+        # attacher path may consume the bounded completed failure
+        record = guard.find_valid_completion(allow_fail=True)
+        self.assertIsNotNone(record)
+        self.assertFalse(record["ok"])
+        # reuse path must NOT consume it
+        self.assertIsNone(guard.find_valid_completion())
+
+    def test_control36_fail_completion_never_suppresses_fresh_launch(self):
+        # The documented policy, proven end to end: after a suite FAIL on
+        # a clean exact head, a later independent identical invocation
+        # RERUNS the suite (two real launches), while a concurrent
+        # attacher would have consumed the one bounded FAIL result.
+        repo = make_guard_fixture_repo(self.addCleanup)
+        lock_dir = repo.parent / "policy-locks"
+        launches = []
+
+        def failing_suite():
+            launches.append(1)
+            return canonical_result_for(
+                gate.launch_request_identity(repo), ok=False)
+
+        first = gate.run_single_head_suite(repo, suite_command=failing_suite,
+                                           lock_dir=lock_dir)
+        self.assertFalse(first["ok"])
+        second = gate.run_single_head_suite(repo, suite_command=failing_suite,
+                                            lock_dir=lock_dir)
+        self.assertFalse(second["ok"])
+        self.assertEqual(len(launches), 2,
+                         "a completed FAIL must be rerun by a later "
+                         "independent invocation, never reused as "
+                         "launch suppression")
+
+    def test_control37_canonical_pass_completion_round_trip(self):
+        # Positive control: a canonical PASS completion bound to the
+        # launch identity IS reusable (find_valid_completion returns it).
+        identity, guard = self._identity_and_guard()
+        guard.write_completion(canonical_result_for(identity),
+                               started_unix=1.0)
+        record = guard.find_valid_completion()
+        self.assertIsNotNone(record)
+        self.assertTrue(record["ok"])
+        self.assertEqual(record["result"]["count"],
+                         identity["suite"]["count"])
 
 
 if __name__ == "__main__":

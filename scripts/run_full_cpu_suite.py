@@ -510,8 +510,12 @@ def run_single_head_suite(root: Path = ROOT, *, jobs: int | None = None,
     Thin delegation to ``issue213_gate_orchestration.run_single_head_suite``
     so the guard lives at the canonical invocation seam with exactly one
     dependency edge.  Non-git roots run unguarded, mirroring the runner's
-    own git doctrine.  Import is local: tests import THIS module first, and
-    the orchestration module loads THIS module only lazily for ``plan()``.
+    own git doctrine; a dirty Git worktree is refused BEFORE identity
+    derivation/completion reuse (the guard enforces the runner's own
+    ``ensure_clean_git_worktree`` doctrine), surfacing here as the
+    runner's own ``SuiteError`` so the CLI keeps its FAIL/exit-1 contract.
+    Import is local: tests import THIS module first, and the orchestration
+    module loads THIS module only lazily for ``plan()``.
     """
     sys.path.insert(0, str(SCRIPTS))
     try:
@@ -521,14 +525,17 @@ def run_single_head_suite(root: Path = ROOT, *, jobs: int | None = None,
             sys.path.remove(str(SCRIPTS))
         except ValueError:  # pragma: no cover (defensive)
             pass
-    return gate.run_single_head_suite(
-        Path(root), jobs=jobs, timeout=timeout, retain_dir=retain_dir)
+    try:
+        return gate.run_single_head_suite(
+            Path(root), jobs=jobs, timeout=timeout, retain_dir=retain_dir)
+    except gate.GateOrderingError as error:
+        raise SuiteError(str(error)) from error
 
 
 def _result(ok: bool, serial_ids: list[str], executed_ids: list[str], jobs: int,
             tasks: list[Task], timings: list[dict], diagnostics: list[str],
             executed_digest: str | None = None) -> dict:
-    return {"ok": ok, "serial_ids": serial_ids, "executed_ids": executed_ids,
+    return {"schema": SCHEMA, "ok": ok, "serial_ids": serial_ids, "executed_ids": executed_ids,
             "serial_digest": identity_digest(sorted(serial_ids)),
             "executed_digest": executed_digest, "count": len(serial_ids), "jobs": jobs,
             "tasks": [{"index": task.index, "phase": task.phase, "tmpdir_mode": task.tmpdir_mode,

@@ -438,10 +438,6 @@ def git_commit_sha(root: Path) -> str:
                              "git HEAD")
 
 
-def git_tree_clean(root: Path) -> bool:
-    return _git_output(root, "status", "--porcelain") == ""
-
-
 def environment_identity(root: Path) -> dict:
     """Fail-closed environment/dependency authority identity.
 
@@ -783,6 +779,39 @@ def _inside_git_work_tree(root: Path) -> bool:
     return probe.returncode == 0 and probe.stdout.strip() == "true"
 
 
+def git_tree_clean(root: Path) -> bool:
+    return _git_output(root, "status", "--porcelain") == ""
+
+
+def _require_clean_committed_worktree(root: Path) -> None:
+    """The guard's clean-worktree doctrine (Issue #213 correction pass).
+
+    Mirrors the runner's ``ensure_clean_git_worktree`` exactly — same
+    ``git rev-parse --is-inside-work-tree`` probe, same ``git status
+    --porcelain`` census (staged, unstaged, and untracked dirtiness all
+    count), same fail-closed behavior when ``git status`` fails inside a
+    real work tree — so the guard cannot diverge from the runner's own
+    semantics.  A plain non-Git fixture root keeps the runner's existing
+    unguarded behavior.
+    """
+    if not _inside_git_work_tree(root):
+        return
+    status = subprocess.run(
+        ["git", "-C", str(root), "status", "--porcelain"],
+        capture_output=True, text=True)
+    if status.returncode != 0:
+        # Fail closed exactly as the runner does: a git failure inside a
+        # real work tree must never be treated as a clean tree.
+        raise GateOrderingError(
+            f"git status failed inside a work tree (fail closed): "
+            f"{status.stderr.strip()}")
+    if status.stdout:
+        raise GateOrderingError(
+            "refusing guarded full-suite request on dirty Git worktree "
+            "(fail closed): commit or stash before deriving the launch "
+            "identity, consulting a completion, attaching, or launching")
+
+
 def launch_request_identity(root: Path) -> dict:
     """Mechanically derived (head, suite-config, environment) launch identity.
 
@@ -790,8 +819,18 @@ def launch_request_identity(root: Path) -> dict:
     population identity (runner plan digest + count + canonical command),
     and the required environment authority hashes.  An arbitrary
     caller-supplied lock key is never accepted anywhere in this module.
+
+    A Git worktree MUST be clean and committed BEFORE the identity is
+    derived: the guard's clean-worktree doctrine is the runner's own
+    (``ensure_clean_git_worktree`` — same ``git status --porcelain``
+    census, same fail-closed behavior on git failure inside a real work
+    tree), applied here so that a dirty tree is REFUSED before any
+    completion lookup, attach, or launch can occur.  A dirty worktree is
+    never merely another cache-key component: the runner contract
+    requires a committed exact head.
     """
     root = Path(root).resolve()
+    _require_clean_committed_worktree(root)
     digest, count = _canonical_plan_identity(root)
     identity = {
         "schema": LAUNCH_IDENTITY_SCHEMA,
@@ -895,11 +934,17 @@ class LaunchGuard:
             return None
         return payload
 
-    def find_valid_completion(self) -> dict | None:
+    def find_valid_completion(self, *, allow_fail: bool = False) -> dict | None:
         """Return a mechanically valid completion for THIS identity.
 
         Malformed completion content fails closed; an expired completion is
         ignored (bounded liveness, will be overwritten by the next owner).
+        By default only a PASS completion (a validated canonical runner
+        result proven against this launch identity) is returned: a
+        completed FAIL is never a reusable PASS.  ``allow_fail=True`` is
+        the concurrent-attacher path — the bounded completed failure is
+        delivered to a request that already attached to the live launch,
+        never to a later independent invocation.
         """
         path = self.completion_path()
         try:
@@ -907,6 +952,8 @@ class LaunchGuard:
         except (OSError, json.JSONDecodeError):
             return None
         self._validate_completion(record)
+        if not allow_fail and not record["ok"]:
+            return None
         try:
             age = time.time() - path.stat().st_mtime
         except OSError:
@@ -916,6 +963,16 @@ class LaunchGuard:
         return record
 
     def _validate_completion(self, record: object) -> None:
+        """Structural completion contract (fail closed on every field).
+
+        A completion suppresses an actual full-suite launch, so a matched
+        key, a matched SHA, ``result`` being any dict, and ``ok`` being
+        any boolean never authorize reuse on their own.  The embedded
+        runner result must be a canonical full-suite runner payload whose
+        outcome agrees with the record's ``ok`` flag; a PASS additionally
+        binds its count and serial/executed digests to THIS launch
+        identity's suite population.
+        """
         if not isinstance(record, dict) or record.get("schema") != COMPLETION_SCHEMA:
             raise GateOrderingError(
                 f"malformed suite completion receipt (fail closed): "
@@ -927,12 +984,30 @@ class LaunchGuard:
         if record.get("git_commit_sha") != self.identity["git_commit_sha"]:
             raise GateOrderingError(
                 "completion receipt head mismatch (fail closed)")
-        if not isinstance(record.get("ok"), bool):
+        ok = record.get("ok")
+        if not isinstance(ok, bool):
             raise GateOrderingError(
                 "completion receipt outcome malformed (fail closed)")
-        if not isinstance(record.get("result"), dict):
+        result = record.get("result")
+        # A canonical runner result is required — any dict is not enough.
+        self._validated_runner_result(result, require_pass=ok)
+        if result["ok"] is not ok:
             raise GateOrderingError(
-                "completion receipt result payload malformed (fail closed)")
+                "completion receipt ok flag disagrees with the embedded "
+                "runner result (fail closed)")
+        if ok:
+            # A reusable PASS binds the runner-proven population to THIS
+            # launch identity's suite: exact count and exact digest.
+            if result["count"] != self.identity["suite"]["count"]:
+                raise GateOrderingError(
+                    "completion receipt runner count differs from the "
+                    "launch identity suite count (fail closed)")
+            if (result["serial_digest"] != self.identity["suite"]["serial_digest"]
+                    or result["executed_digest"]
+                    != self.identity["suite"]["executed_digest"]):
+                raise GateOrderingError(
+                    "completion receipt runner digests differ from the "
+                    "launch identity suite population digest (fail closed)")
         started: object = record.get("started_unix")
         ended: object = record.get("ended_unix")
         for name, value in (("started_unix", started), ("ended_unix", ended)):
@@ -944,6 +1019,61 @@ class LaunchGuard:
         if ended < started:
             raise GateOrderingError(
                 "completion receipt timestamps inverted (fail closed)")
+
+    def _validated_runner_result(self, result: object,
+                                 *, require_pass: bool) -> dict:
+        """Require a canonical full-suite runner result payload (fail closed).
+
+        Known runner schema, ``ok`` a real boolean, positive integer
+        count, and 64-hex serial/executed digests.  For a PASS
+        (``require_pass=True`` — the only outcome that may authorize
+        reuse) the serial and executed digests must additionally be EQUAL:
+        that equality is the runner's own pass-closed proof that the
+        executed population matched the serial discovery, and the runner
+        emits it only on success.  Malformed, missing, or forged fields
+        reject.
+        """
+        if not isinstance(result, dict):
+            raise GateOrderingError(
+                "completion receipt result payload malformed (fail closed)")
+        if result.get("schema") != RUNNER_SCHEMA:
+            raise GateOrderingError(
+                "completion receipt result is not a canonical runner "
+                f"result (fail closed): {result.get('schema')!r}")
+        ok = result.get("ok")
+        if not isinstance(ok, bool) or ok is not require_pass:
+            raise GateOrderingError(
+                "completion receipt runner result ok is malformed or "
+                f"disagrees with the declared outcome (fail closed): {ok!r}")
+        count = result.get("count")
+        if not isinstance(count, int) or isinstance(count, bool) or count < 1:
+            raise GateOrderingError(
+                "completion receipt runner result count is not a positive "
+                f"integer (fail closed): {count!r}")
+        serial = result.get("serial_digest")
+        executed = result.get("executed_digest")
+        if not isinstance(serial, str) or not _SHA256_RE.fullmatch(serial):
+            raise GateOrderingError(
+                "completion receipt runner result serial_digest is malformed "
+                f"(fail closed): {serial!r}")
+        if ok:
+            if not isinstance(executed, str) or not _SHA256_RE.fullmatch(executed):
+                raise GateOrderingError(
+                    "completion receipt runner result executed_digest is "
+                    f"malformed (fail closed): {executed!r}")
+            if serial != executed:
+                raise GateOrderingError(
+                    "completion receipt runner result serial/executed "
+                    "digests differ on a PASS (fail closed)")
+        elif executed is not None and (not isinstance(executed, str)
+                                        or not _SHA256_RE.fullmatch(executed)):
+            # A runner FAIL carries either the serial digest of the
+            # discovered population or no executed digest at all (the
+            # executed-ID proof failed); anything else is malformed.
+            raise GateOrderingError(
+                "completion receipt runner result executed_digest is "
+                f"malformed (fail closed): {executed!r}")
+        return result
 
     def acquire_or_attach(self) -> dict:
         """Return ``{"attached": bool, ...}`` for one logical launch request.
@@ -1077,6 +1207,16 @@ def run_single_head_suite(root: Path, *, timeout: float = 1800.0,
 
     If the underlying suite raises, no completion is written: waiters fail
     closed and the next identical request launches fresh.
+
+    A guarded request (Git checkout) REFUSES a dirty worktree up front —
+    before the launch identity is derived, before any completion is
+    consulted, before attaching, before launching (the runner's own
+    ``ensure_clean_git_worktree`` doctrine; a dirty tree is never just
+    another cache-key component).  Completion policy: a validated PASS
+    completion is consumed by identical requests within the bounded
+    window; a completed FAIL is delivered ONLY to requests that already
+    attached to the live launch — a later independent invocation reruns
+    the suite (a FAIL never suppresses a fresh launch).
     """
     root = Path(root).resolve()
 
@@ -1089,6 +1229,9 @@ def run_single_head_suite(root: Path, *, timeout: float = 1800.0,
 
     if not _inside_git_work_tree(root):
         return _invoke()
+    # Clean committed worktree BEFORE identity derivation, completion
+    # lookup, attach, or launch (fail closed exactly like the runner).
+    _require_clean_committed_worktree(root)
     identity = launch_request_identity(root)
     guard = LaunchGuard(identity, lock_dir=lock_dir,
                         poll_seconds=0.02 if suite_command is not None else 0.05)
@@ -1111,10 +1254,17 @@ def run_single_head_suite(root: Path, *, timeout: float = 1800.0,
 
 
 def _await_completion(guard: LaunchGuard, owner_pid: int) -> dict:
-    """Wait behind the live owner; fail closed if it dies without receipt."""
+    """Wait behind the live owner; fail closed if it dies without receipt.
+
+    This request already ATTACHED to the live launch, so the bounded
+    completed outcome — PASS or FAIL — is delivered as the one real
+    result of the single underlying launch.  A FAIL is never a reusable
+    PASS: only ``find_valid_completion()`` (the pre-attach reuse path)
+    filters to PASS-only.
+    """
     deadline = time.monotonic() + LAUNCH_GUARD_TIMEOUT_SECONDS
     while True:
-        completed = guard.find_valid_completion()
+        completed = guard.find_valid_completion(allow_fail=True)
         if completed is not None:
             return completed["result"]
         if not _alive(owner_pid):
