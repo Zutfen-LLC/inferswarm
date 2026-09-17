@@ -31,6 +31,14 @@ scratch ``TMPDIR`` so ordinary modules cannot collide on volatile paths.
 Use ``.venv/bin/python scripts/run_full_cpu_suite.py`` for the preferred local
 full CPU-suite command.  ``unittest discover`` remains useful for direct
 single-process debugging and equivalence checks.
+
+Single-launch deduplication (Issue #213): the canonical invocation path
+(delegating to :func:`run_single_head_suite`) guarantees at most ONE real
+suite process per ``(exact head, suite configuration, environment
+authority)`` request on a host.  Concurrent identical requests attach
+behind the live launch and consume its mechanically validated completion
+receipt; distinct identities never share results.  The launch identity is
+derived mechanically from the repository, never from a caller-supplied key.
 """
 from __future__ import annotations
 
@@ -50,6 +58,7 @@ from pathlib import Path
 from typing import Iterable
 
 ROOT = Path(__file__).resolve().parents[1]
+SCRIPTS = ROOT / "scripts"
 SCHEMA = "parallel-full-cpu-suite/1"
 DEFAULT_MAX_JOBS = 4
 # Kept in one interpreter because the historical Issue #133 fixture deliberately
@@ -493,6 +502,29 @@ def run_suite(root: Path = ROOT, tests_dir: Path | None = None, *, jobs: int | N
                    timings, diagnostics, executed_digest)
 
 
+def run_single_head_suite(root: Path = ROOT, *, jobs: int | None = None,
+                          timeout: float = 1800.0,
+                          retain_dir: Path | None = None) -> dict:
+    """Canonical single-launch entry (Issue #213 duplicate-launch guard).
+
+    Thin delegation to ``issue213_gate_orchestration.run_single_head_suite``
+    so the guard lives at the canonical invocation seam with exactly one
+    dependency edge.  Non-git roots run unguarded, mirroring the runner's
+    own git doctrine.  Import is local: tests import THIS module first, and
+    the orchestration module loads THIS module only lazily for ``plan()``.
+    """
+    sys.path.insert(0, str(SCRIPTS))
+    try:
+        import issue213_gate_orchestration as gate
+    finally:
+        try:
+            sys.path.remove(str(SCRIPTS))
+        except ValueError:  # pragma: no cover (defensive)
+            pass
+    return gate.run_single_head_suite(
+        Path(root), jobs=jobs, timeout=timeout, retain_dir=retain_dir)
+
+
 def _result(ok: bool, serial_ids: list[str], executed_ids: list[str], jobs: int,
             tasks: list[Task], timings: list[dict], diagnostics: list[str],
             executed_digest: str | None = None) -> dict:
@@ -546,8 +578,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.list_only:
             payload = plan(args.root, tests_dir, args.jobs)
         else:
-            payload = run_suite(args.root, tests_dir, jobs=args.jobs, timeout=args.timeout,
-                                retain_dir=args.retain_dir)
+            payload = run_single_head_suite(args.root, jobs=args.jobs,
+                                            timeout=args.timeout,
+                                            retain_dir=args.retain_dir)
     except (SuiteError, ValueError) as error:
         print(f"parallel-full-cpu-suite: FAIL {error}", file=sys.stderr)
         return 1

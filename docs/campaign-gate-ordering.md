@@ -45,9 +45,9 @@ PRE-REVIEW PHASE (cheap, reviewer-trust gates only)
   CI planner self-check (where touched)
 -> ADVERSARIAL EXACT-HEAD REVIEWS (read-only, against the frozen head)
 -> APPLY ALL ACCEPTED REVIEW FIXES (focused checks re-run as needed)
--> FINAL-HEAD PHASE (exactly once, on the final reviewed head)
-  one full CPU suite
-  one hosted exact-head CI
+-> FINAL-HEAD PHASE (requirements proven against one final reviewed head)
+  one full CPU suite (mandatory; never omitted from a campaign plan)
+  one hosted exact-head CI (mandatory; never omitted from a campaign plan)
   finalizer/status fixed-point checks
 -> HANDOFF
 ```
@@ -56,10 +56,14 @@ Invariants:
 
 1. Nothing is deleted or weakened; tests and thresholds are unchanged.
 2. Final handoff still requires a full CPU suite on the final exact head
-   wherever current policy requires it.
+   wherever current policy requires it — and for campaign handoffs
+   governed by this doctrine the full-suite and hosted-CI gates are
+   MANDATORY plan members: a plan omitting either (including an empty
+   final-head phase) fails closed, with no caller-supplied bypass.
 3. Final handoff still requires hosted CI SUCCESS on the final exact head
-   wherever current policy requires it. Review GO verdicts are necessary but
-   never sufficient (enforced by `handoff_gate_status`).
+   wherever current policy requires it, proven through a structured
+   exact-head status. Review GO verdicts are necessary but never
+   sufficient (enforced by `handoff_gate_status`).
 4. Review-driven changes invalidate prior exact-head validation exactly as
    today; the optimization is ordering, not exemption.
 5. Every check that reviewers need to trust the head (invariant 5 of the
@@ -95,16 +99,32 @@ already in the canonical list.
 ## Duplicate-launch prevention (Phase 2)
 
 One logical final-head full-suite request launches at most one suite process
-for that head/configuration on a host. A cooperative single-launch lock
-(``LaunchLock`` in the orchestration module) implements this:
+for that `(head, suite configuration, environment authority)` identity on a
+host. The guard (`LaunchGuard` + `run_single_head_suite` in the orchestration
+module) is integrated into the **canonical invocation path**: the
+`run_full_cpu_suite.py` CLI itself delegates through `run_single_head_suite`,
+so direct legitimate invocation cannot bypass single-launch behavior.
 
-- the first request acquires the lock and owns the launch;
-- a concurrent duplicate request **attaches** (waits on the existing
-  process) rather than starting a second suite;
-- polling always attaches to the existing process;
-- a stale lock (holder process gone) is pruned and retaken;
-- a malformed lock, or a lock held by a different suite configuration,
-  fails closed — no second launch.
+- the launch identity key is **derived mechanically** — exact repository
+  SHA + canonical suite population identity (the runner's own plan digest
+  and count) + environment authority hashes. An arbitrary caller-supplied
+  lock key is never accepted as authority;
+- the first request wins an atomic `O_CREAT | O_EXCL` lock creation and
+  owns the single launch; concurrent losers of the create race re-read and
+  **attach**, waiting on the owner's bounded completion receipt instead of
+  starting a second suite (race-safe for truly concurrent starters);
+- the lock records the PID of the process that actually invokes the suite,
+  never a parent that could exit while an untracked suite child remains;
+- a stale holder is replaced only when **mechanically proven dead**
+  (`os.kill(pid, 0)` → `ESRCH`); a holder alive past the suite wall or a
+  malformed/unreadable lock fails closed — no second launch;
+- the owner writes a bounded completion receipt (validated shape, capped
+  liveness) that concurrent and immediately-following identical requests
+  consume; distinct head/config/environment identities derive distinct keys
+  and never share results. This is bounded local state, not a generalized
+  persistent build cache;
+- if the underlying suite raises, no completion is written: waiters fail
+  closed and the next identical request launches fresh.
 
 The #210 session's two successive `run_full_cpu_suite.py --json`
 appearances were audited (session record, 2026-09-17): they were **two real
@@ -122,20 +142,66 @@ the smallest record binding a PASS to its exact identity:
 
 | Field | Source |
 |---|---|
-| `git_commit_sha` | `git rev-parse HEAD`, clean tree enforced |
-| `suite` | runner schema, canonical command, serial + executed identity digests, count |
-| `environment` | sha256 of each environment authority file (`requirements-test.txt`, bootstrap, doctor) |
+| `git_commit_sha` | `git rev-parse HEAD`, clean tree enforced, exact 40-hex shape |
+| `suite` | runner schema (must be the known runner schema), canonical command, serial + executed identity digests (hex, equal), positive count |
+| `environment` | sha256 of each environment authority file — the complete required set, exactly (missing or unknown keys rejected) |
 | `result` | `PASS` only |
+| `count` | positive integer, consistent with the suite count |
 | `started_unix` / `ended_unix` | positive duration required |
 
-Reuse rules (all fail closed): head drift, suite-configuration drift, or
+Validation is **structural and fail-closed**, never arbitrary
+nested-dictionary equality: unknown schema, non-canonical command,
+malformed digest shapes, serial/executed inequality, non-positive or
+inconsistent counts, incomplete or unknown environment authority keys,
+malformed SHA shape, and non-positive durations all reject. Reuse rules
+(all fail closed): head drift, suite-configuration drift, or
 environment/dependency drift invalidates reuse and requires a fresh run; a
 failed/cancelled/incomplete receipt can never satisfy the gate; no receipt
-may be presented as current if its exact-head binding cannot be proven
-(schema check + full identity match). Receipts are advisory deduplication
-metadata for orchestration, **not** accepted scientific evidence and not a
-persistent cache — campaigns that must retain validation evidence retain it
-through the existing evidence lifecycle, not through receipts.
+may be presented as current if its exact-head binding cannot be proven.
+Receipts are advisory deduplication metadata for orchestration, **not**
+accepted scientific evidence and not a persistent cache — campaigns that
+must retain validation evidence retain it through the existing evidence
+lifecycle, not through receipts.
+
+## Independently bound final handoff (exact-head means exact-head)
+
+`handoff_gate_status` takes an **independently derived**
+`FinalHeadRequest` — the current/final head identity derived from the
+repository itself (`current_final_head_request`: clean tree, `git
+rev-parse HEAD`, the runner's canonical plan of that tree, environment
+authority hashes) — and never identity extracted from the receipt under
+validation. Both final gates must bind to that one exact SHA:
+
+- the suite receipt must validate (structurally, per above) against the
+  final-head request identity;
+- hosted-CI success must present a **structured status receipt**
+  (`hosted-ci-exact-head-status/1`: exact `git_commit_sha`, `SUCCESS`
+  result, nonempty run identity, optional run URL). A bare unbound
+  boolean can never complete handoff; malformed or missing CI identity
+  rejects.
+
+Handoff is therefore impossible when the suite receipt is from SHA A and
+the final head is SHA B, when the CI SUCCESS is from SHA A and the final
+head is SHA B, when suite and CI are individually valid but bound to
+different SHAs, or when either identity is malformed or incomplete.
+
+## Review-critical reuse and accounting terminology
+
+A review-critical expensive gate that ran pre-review is **stale** when
+review mutates the head — it runs again on the new final head. When review
+does **not** mutate the head, its exact-head result satisfies the final
+requirement through mechanically validated reuse: no duplicate-phase error,
+no second physical execution. The final-head plan records this explicitly:
+`requirements` names what must be *proven* against the final head, `gates`
+names what is *physically executed* there, and `reuse_satisfied_final`
+lists requirements discharged by a validated pre-review result.
+
+Accounting is mechanically distinct:
+
+- `expensive_gate_executions` counts PHYSICAL expensive-gate executions;
+- `final_validation_cycles` counts complete final validation CYCLES — one
+  normal cycle is ONE cycle containing the full suite AND hosted CI proven
+  against one final head.
 
 ## Phase 0 audit — gate classification at the time of adoption
 

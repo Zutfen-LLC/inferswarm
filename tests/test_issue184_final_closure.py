@@ -276,6 +276,10 @@ class Issue184PreservationTests(unittest.TestCase):
             # Issue #213 campaign gate ordering: orchestration tooling and
             # CI registration, independently covered by its own group.
             "scripts/issue213_gate_orchestration.py",
+            # Issue #213 correction pass: single-launch guard integrated
+            # into the canonical runner path (scripts/run_full_cpu_suite.py),
+            # independently covered by test_run_full_cpu_suite.
+            "scripts/run_full_cpu_suite.py",
             ".github/workflows/ci.yml")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)

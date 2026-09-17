@@ -488,6 +488,10 @@ PATH_GROUPS = {
     # Issue #213 campaign gate ordering (orchestration tooling + tests)
     "scripts/issue213_gate_orchestration.py": ["issue-213-gate-ordering"],
     "docs/campaign-gate-ordering.md": ["issue-213-gate-ordering"],
+    # The parallel full-suite runner itself (Issue #173): its contract
+    # tests are repo-integrity modules; classify explicitly instead of
+    # failing closed to full regression for every runner-only change.
+    "scripts/run_full_cpu_suite.py": ["repo-integrity"],
     # Issue #137 retained evidence lives inside the #117 evidence tree;
     # the narrower #137 subtree fans out to both its semantic group and
     # the broader shared-tree lineage (the #117 prefix rule above also

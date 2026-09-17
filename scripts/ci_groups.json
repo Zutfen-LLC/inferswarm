@@ -981,6 +981,9 @@
   "scripts/issue99_proof.py": [
    "issue-99-103"
   ],
+  "scripts/run_full_cpu_suite.py": [
+   "repo-integrity"
+  ],
   "scripts/seal_issue74_holdout.py": [
    "issue-74-79"
   ],
