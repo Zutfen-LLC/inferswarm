@@ -167,18 +167,35 @@ roots keep the runner's existing unguarded behavior. The default canonical
 ### Retention and reuse policy (smallest safe policy, no artifact cache)
 
 A cached run without retained per-task artifacts cannot silently satisfy a
-later `--retain-dir` invocation:
+later `--retain-dir` invocation.  `summary.json` finalization is part of
+the guarded **logical request**: the launch owner writes it after the
+underlying suite produced the full per-task retained set and *before* the
+completion receipt is published and the launch lock is released, so a
+successful completion is never observable while the retained artifact
+contract is incomplete (there is no post-suite/pre-summary window in
+which a second identical request could observe a completion over an
+incomplete retained directory).  The runner CLI never writes
+`summary.json`; the orchestration seam is its single writer.
 
 - concurrent identical requests with the same retention request may
-  deduplicate (exactly one launch; the retained artifacts land once, in the
-  one requested directory);
+  deduplicate (exactly one launch; the retained artifacts land once, in
+  the one requested directory, complete before any completion is
+  observable);
 - sequential cached-PASS reuse is **disabled** when satisfying the request
-  would omit the requested retained artifacts — the request performs a fresh
-  underlying suite run unless the exact documented artifact set is
-  mechanically proven present and compatible in the requested directory
-  (per-task `task-N-modules.json`, `task-N-expected.json`, `task-N.json`,
-  `task-N-stdout.txt`, `task-N-stderr.txt` for every task, plus the CLI's
-  `summary.json`);
+  would omit the requested retained artifacts — an empty (or absent)
+  requested directory with an existing completion performs a fresh
+  underlying suite run that produces them; reuse is permitted only when
+  the requested directory mechanically proves the exact documented
+  artifact set (per-task `task-N-modules.json`, `task-N-expected.json`,
+  `task-N.json`, `task-N-stdout.txt`, `task-N-stderr.txt` for every task,
+  plus `summary.json`);
+- a **non-empty directory that is not the exact documented set fails
+  closed** with a precise error before any launch: the runner refuses a
+  non-empty retain directory, so a fresh launch would only produce a
+  misleading "retain directory is not empty" failure while silently
+  disabling completion reuse.  Resolve the directory deliberately (or
+  point the request at a new empty directory); a fresh retained run
+  requires a new empty retain directory;
 - this is a presence check against the exact retained set — **no
   generalized artifact cache** is built.
 

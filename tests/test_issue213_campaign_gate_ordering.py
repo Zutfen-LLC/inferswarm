@@ -1922,5 +1922,237 @@ class CustomTestsTreeHeadBindingTests(unittest.TestCase):
                          "reuse and launch")
 
 
+class RetainedArtifactCompletionRaceTests(unittest.TestCase):
+    """Controls 52-54 (Issue #213 retained-artifact completion-race
+    correction) — REAL invocation-path proof that a successful retained
+    completion is never observable before the exact retained artifact
+    contract (every per-task file plus ``summary.json``) is complete.
+    Controls 52 and 53 FAIL on the pre-correction head a59d8e9, where
+    ``run_single_head_suite`` published the completion and released the
+    launch lock BEFORE the CLI wrote ``summary.json``: a second identical
+    retained request in that window observed a completion over an
+    incomplete retained set, disabled reuse, and attempted a fresh launch
+    that the runner refuses ("retain directory is not empty")."""
+
+    def _repo(self, add_cleanup):
+        global _guard_repo_seq
+        _guard_repo_seq += 1
+        prefix = f"issue213r{_guard_repo_seq}"
+        root = Path(tempfile.mkdtemp(prefix=f"{prefix}-root-"))
+        add_cleanup(lambda: subprocess.run(
+            ["rm", "-rf", str(root)], check=False))
+        repo = root / "repo"
+        repo.mkdir()
+        for cmd in (("git", "init", "-q"),
+                    ("git", "config", "user.email", "t@example.invalid"),
+                    ("git", "config", "user.name", "t")):
+            subprocess.run(cmd, cwd=repo, check=True)
+        (repo / "tests").mkdir()
+        module = f"test_{prefix}"
+        add_cleanup(sys.modules.pop, module, None)
+        (repo / "tests" / f"{module}.py").write_text(
+            "import unittest\nclass A(unittest.TestCase):\n"
+            " def test_x(self): pass\n", encoding="utf-8")
+        for rel in gate.ENV_AUTHORITY_FILES:
+            path = repo / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("authority\n", encoding="utf-8")
+        subprocess.run(("git", "add", "-A"), cwd=repo, check=True)
+        subprocess.run(("git", "commit", "-qm", "init"), cwd=repo,
+                       check=True)
+        return repo
+
+    def _patched_runner(self):
+        calls = []
+        original = runner.run_suite
+
+        def recording(root, tests_dir=None, **kwargs):
+            calls.append({"root": str(root),
+                          "retain_dir": kwargs.get("retain_dir")})
+            return original(Path(root), tests_dir, **kwargs)
+
+        runner.run_suite = recording
+        self.addCleanup(setattr, runner, "run_suite", original)
+        return calls
+
+    # CONTROL 52 — post-suite/pre-summary concurrent retain request.
+    # Deterministically force the first retained logical request into the
+    # previous vulnerable timing point (underlying suite finished,
+    # per-task artifacts on disk, summary.json not yet written — on the
+    # corrected head that point lies INSIDE the guarded logical request)
+    # and issue a second identical request there.
+    def test_control52_post_suite_pre_summary_concurrent_retain(self):
+        repo = self._repo(self.addCleanup)
+        lock_dir = repo.parent / "locks"
+        calls = self._patched_runner()
+        retain_dir = repo.parent / "retained"
+        suite_done = threading.Event()   # per-task set on disk, no summary
+        release = threading.Event()
+
+        original = runner.run_suite
+
+        def pausing_suite(root, tests_dir=None, **kwargs):
+            result = original(Path(root), tests_dir, **kwargs)
+            suite_done.set()              # the vulnerable timing point
+            release.wait(30)
+            return result
+
+        runner.run_suite = pausing_suite
+        self.addCleanup(setattr, runner, "run_suite", original)
+
+        outcomes = {}
+
+        def request(name):
+            try:
+                started = time.monotonic()
+                result = gate.run_single_head_suite(
+                    repo, retain_dir=retain_dir, lock_dir=lock_dir)
+                outcomes[name] = {
+                    "result": result,
+                    "summary_present_at_return":
+                        (retain_dir / "summary.json").is_file(),
+                    "waited": time.monotonic() - started}
+            except BaseException as error:  # noqa: BLE001
+                outcomes[name] = {"error": error}
+
+        first = threading.Thread(target=request, args=("first",))
+        first.start()
+        deadline = time.monotonic() + 30
+        while not suite_done.is_set() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        self.assertTrue(suite_done.is_set(), "first request never ran")
+        self.assertEqual(len(calls), 1)
+        # The vulnerable point: per-task artifacts exist, summary does NOT.
+        self.assertFalse((retain_dir / "summary.json").is_file(),
+                         "fixture must pause BEFORE summary finalization")
+        second = threading.Thread(target=request, args=("second",))
+        second.start()
+        time.sleep(0.5)
+        # While the owner sits in the window, the duplicate must neither
+        # launch nor fail: it attaches behind the live owner.
+        self.assertTrue(second.is_alive(),
+                        "second request must attach and wait, not fail")
+        self.assertEqual(len(calls), 1,
+                         "second request started another suite inside the "
+                         "post-suite/pre-summary window")
+        release.set()
+        first.join(120)
+        second.join(120)
+        # Exactly one underlying suite launch for the whole scenario.
+        self.assertEqual(len(calls), 1,
+                         "exactly ONE underlying suite launch required")
+        for name in ("first", "second"):
+            self.assertNotIn("error", outcomes[name],
+                             f"{name} request failed: "
+                             f"{outcomes[name].get('error')!r}")
+            self.assertTrue(outcomes[name]["result"]["ok"])
+            # The complete retained contract (per-task set + summary) was
+            # available before this request returned a successful result.
+            self.assertTrue(
+                outcomes[name]["summary_present_at_return"],
+                f"{name} request observed a completion before "
+                f"summary.json existed")
+        self.assertTrue((retain_dir / "summary.json").is_file())
+        task_count = len(outcomes["first"]["result"]["tasks"])
+        for index in range(task_count):
+            for suffix in gate.RETAINED_TASK_SUFFIXES:
+                self.assertTrue(
+                    (retain_dir / f"task-{index}{suffix}").is_file(),
+                    f"missing retained artifact task-{index}{suffix}")
+
+    # CONTROL 52 (sequential form): after the first retained request has
+    # fully returned (the old CLI timing point), an identical request
+    # reuses the validation — zero second launch, and NEVER the runner's
+    # "retain directory is not empty" secondary failure.
+    def test_control52_sequential_reuse_no_nonempty_failure(self):
+        repo = self._repo(self.addCleanup)
+        lock_dir = repo.parent / "locks"
+        calls = self._patched_runner()
+        retain_dir = repo.parent / "retained-seq"
+        first = gate.run_single_head_suite(repo, retain_dir=retain_dir,
+                                           lock_dir=lock_dir)
+        self.assertTrue(first["ok"])
+        self.assertEqual(len(calls), 1)
+        # The retained contract was complete BEFORE the first request
+        # returned (the corrected ordering); on a59d8e9 the seam returned
+        # with no summary.json and the second request below died with a
+        # fresh-launch attempt into the non-empty directory.
+        self.assertTrue((retain_dir / "summary.json").is_file(),
+                        "summary.json must be finalized inside the "
+                        "guarded logical request, before it returns")
+        second = gate.run_single_head_suite(repo, retain_dir=retain_dir,
+                                            lock_dir=lock_dir)
+        self.assertTrue(second["ok"])
+        self.assertEqual(second, first,
+                         "the reused completion must be the exact result")
+        self.assertEqual(len(calls), 1,
+                         "identical retained request must reuse, not "
+                         "relaunch")
+
+    # CONTROL 53 — partial retained set: a valid same-identity completion
+    # plus a deliberately incomplete non-empty retain directory fails
+    # closed with the documented precise error BEFORE any launch; no
+    # hidden fresh launch into the non-empty directory occurs.
+    def test_control53_partial_retained_set_fails_closed(self):
+        repo = self._repo(self.addCleanup)
+        lock_dir = repo.parent / "locks"
+        calls = self._patched_runner()
+        retain_dir = repo.parent / "retained-partial"
+        first = gate.run_single_head_suite(repo, retain_dir=retain_dir,
+                                           lock_dir=lock_dir)
+        self.assertTrue(first["ok"])
+        self.assertEqual(len(calls), 1)
+        # Deliberately incomplete: remove one per-task artifact while
+        # keeping the directory non-empty.
+        (retain_dir / "task-0-stdout.txt").unlink()
+        with self.assertRaises(gate.GateOrderingError) as caught:
+            gate.run_single_head_suite(repo, retain_dir=retain_dir,
+                                       lock_dir=lock_dir)
+        message = str(caught.exception)
+        self.assertIn("fail closed", message)
+        self.assertIn("non-empty", message)
+        self.assertEqual(len(calls), 1,
+                         "a partial retained set must NOT trigger a "
+                         "hidden fresh launch")
+        # The complementary partial shape (summary removed, per-task set
+        # present) fails closed identically.
+        (retain_dir / "summary.json").unlink()
+        with self.assertRaises(gate.GateOrderingError) as caught2:
+            gate.run_single_head_suite(repo, retain_dir=retain_dir,
+                                       lock_dir=lock_dir)
+        self.assertIn("fail closed", str(caught2.exception))
+        self.assertEqual(len(calls), 1)
+
+    # CONTROL 54 — complete retained set: a complete, mechanically valid
+    # retained set permits sequential exact-config reuse with zero
+    # second launch.
+    def test_control54_complete_retained_set_reuses(self):
+        repo = self._repo(self.addCleanup)
+        lock_dir = repo.parent / "locks"
+        calls = self._patched_runner()
+        retain_dir = repo.parent / "retained-complete"
+        first = gate.run_single_head_suite(repo, retain_dir=retain_dir,
+                                           lock_dir=lock_dir)
+        self.assertTrue(first["ok"])
+        self.assertEqual(len(calls), 1)
+        task_count = len(first["tasks"])
+        for index in range(task_count):
+            for suffix in gate.RETAINED_TASK_SUFFIXES:
+                self.assertTrue(
+                    (retain_dir / f"task-{index}{suffix}").is_file())
+        self.assertTrue((retain_dir / "summary.json").is_file())
+        summary_before = (retain_dir / "summary.json").read_bytes()
+        second = gate.run_single_head_suite(repo, retain_dir=retain_dir,
+                                            lock_dir=lock_dir)
+        self.assertTrue(second["ok"])
+        self.assertEqual(second, first)
+        self.assertEqual(len(calls), 1,
+                         "complete retained set must permit sequential "
+                         "exact-config reuse with zero second launch")
+        self.assertEqual(
+            (retain_dir / "summary.json").read_bytes(), summary_before,
+            "reuse must not rewrite the retained summary")
+
+
 if __name__ == "__main__":
     unittest.main()

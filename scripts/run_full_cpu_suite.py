@@ -705,9 +705,13 @@ def main(argv: list[str] | None = None) -> int:
         print("parallel-full-cpu-suite: FAIL\n" + payload["diagnostics"], file=sys.stderr)
     if args.list_only:
         return 0
-    if args.retain_dir is not None:
-        summary = Path(args.retain_dir).resolve() / "summary.json"
-        _atomic_json(summary, payload)
+    # NOTE (Issue #213 retained-artifact correction): summary.json is
+    # finalized INSIDE the guarded logical request by the orchestration
+    # seam (issue213_gate_orchestration.run_single_head_suite), BEFORE the
+    # completion receipt is published and the launch lock released.  The
+    # CLI must never write it separately: a second writer here would
+    # re-open the post-suite/pre-summary window in which a completion is
+    # observable while the retained contract is still incomplete.
     return 0 if payload["ok"] else 1
 
 

@@ -1427,26 +1427,73 @@ class LaunchGuard:
         temporary.replace(self.completion_path())
 
 
-def _retained_artifacts_present(retain_dir: Path,
-                                task_count: int) -> bool:
-    """Mechanically prove the documented retained artifact set is present.
+def _retain_directory_state(retain_dir: Path, task_count: int) -> str:
+    """Classify the requested retain directory for reuse decisions.
 
-    A cached run can satisfy a ``--retain-dir`` request ONLY when the
-    requested directory already contains every documented per-task
-    artifact (assignment, expected-IDs, receipt, captured stdout/stderr)
-    for every task of the completed run plus ``summary.json``.  This is a
-    presence check against the exact retained set — never a generalized
-    artifact cache.
+    Returns ``"empty"`` (absent, or present but containing nothing), the
+    literal ``"complete"`` (the exact documented retained set for
+    ``task_count`` tasks plus ``summary.json`` is fully present), or
+    ``"partial"`` (non-empty but NOT the exact documented set).  A
+    ``"partial"`` directory can never back reuse NOR accept a fresh
+    launch: the runner refuses a non-empty retain directory, so rerunning
+    into it would fail; fail closed instead so the operator resolves the
+    directory deliberately.
     """
     retain_dir = Path(retain_dir)
-    if not (retain_dir / "summary.json").is_file():
-        return False
+    if not retain_dir.exists():
+        return "empty"
+    if not retain_dir.is_dir():
+        return "partial"
+    entries = sorted(p.name for p in retain_dir.iterdir())
+    if not entries:
+        return "empty"
+    expected = {"summary.json"}
     for index in range(task_count):
-        for suffix in ("-modules.json", "-expected.json", ".json",
-                       "-stdout.txt", "-stderr.txt"):
-            if not (retain_dir / f"task-{index}{suffix}").is_file():
-                return False
-    return True
+        for suffix in RETAINED_TASK_SUFFIXES:
+            expected.add(f"task-{index}{suffix}")
+    # Exact-set match: no missing documented artifact, no extra entry.
+    if set(entries) == expected:
+        return "complete"
+    return "partial"
+
+
+def _finalize_retained_summary(retain_dir: Path, result: dict) -> None:
+    """Write ``summary.json`` as the FINAL retained artifact.
+
+    Called INSIDE the guarded logical request, after the underlying suite
+    produced the full per-task retained set and before the completion
+    receipt is published and the launch lock released — so no successful
+    completion can become observable before the retained contract is
+    complete.  The single summary writer: the runner CLI delegates
+    retained finalization to this seam and never writes ``summary.json``
+    itself.
+
+    For a PASS this is strict: the complete documented per-task set must
+    already be present, otherwise the request fails closed WITHOUT
+    publishing a completion (publishing over an incomplete retained
+    directory would re-create the race this ordering prevents).  For a
+    FAIL the summary is still written (it records the failure exactly as
+    the CLI historically did); a FAIL never authorizes reuse, and the
+    resulting non-exact directory set fail-closes any later identical
+    retained request until the operator resolves it.
+    """
+    retain_dir = Path(retain_dir)
+    task_count = len(result.get("tasks") or [])
+    if result.get("ok"):
+        for index in range(task_count):
+            for suffix in RETAINED_TASK_SUFFIXES:
+                if not (retain_dir / f"task-{index}{suffix}").is_file():
+                    raise GateOrderingError(
+                        f"underlying suite did not produce the complete "
+                        f"documented per-task retained set (fail closed, "
+                        f"no completion published): missing "
+                        f"task-{index}{suffix} in {retain_dir}")
+        if not retain_dir.is_dir():
+            raise GateOrderingError(
+                f"requested retain directory was not created by the "
+                f"underlying suite (fail closed): {retain_dir}")
+    runner = _load_runner_module()
+    runner._atomic_json(retain_dir / "summary.json", result)
 
 
 def run_single_head_suite(root: Path, *, tests_dir: Path | None = None,
@@ -1490,12 +1537,24 @@ def run_single_head_suite(root: Path, *, tests_dir: Path | None = None,
 
     Retention policy (smallest safe policy, no generalized artifact
     cache): a non-retained completion can never silently satisfy a
-    ``--retain-dir`` request.  Sequential cached-PASS reuse is disabled
-    when satisfying the request would omit the requested retained
-    per-task artifacts; the request performs a fresh underlying suite run
-    unless the exact documented artifact set is mechanically proven
-    present and compatible.  Concurrent identical requests that share the
-    same retention request may deduplicate normally.
+    ``--retain-dir`` request.  ``summary.json`` finalization is part of
+    the guarded LOGICAL request: the owner writes it AFTER the
+    underlying suite produced the full per-task retained set and
+    BEFORE the completion receipt is published and the launch lock
+    released, so a successful completion is never observable while the
+    retained artifact contract is incomplete (no post-suite/pre-summary
+    window).  The runner CLI never writes ``summary.json`` — the seam
+    is its only writer.  Sequential cached-PASS reuse requires the
+    requested directory to mechanically prove the exact documented
+    artifact set (per-task files plus ``summary.json``); an EMPTY (or
+    absent) directory with an existing completion forces a fresh
+    underlying run that produces the artifacts; a NON-EMPTY directory
+    that is not the exact documented set FAILS CLOSED before any
+    launch — the runner refuses a non-empty retain directory, so
+    rerunning would only produce a misleading "not empty" failure.
+    Concurrent identical requests that share the same retention
+    request may deduplicate normally (the retained set lands once,
+    complete, before any completion is observable).
 
     If the underlying suite raises, no completion is written: waiters fail
     closed and the next identical request launches fresh.
@@ -1513,6 +1572,18 @@ def run_single_head_suite(root: Path, *, tests_dir: Path | None = None,
     root = Path(root).resolve()
     effective_tests = Path(tests_dir or root / "tests").resolve()
 
+    def _finalize(result: dict) -> dict:
+        # Retained request: summary.json finalization is part of the
+        # LOGICAL request.  On the guarded path this runs BEFORE the
+        # completion receipt is published and the launch lock released,
+        # so a successful completion can never be observable while the
+        # retained artifact contract is incomplete; on the unguarded
+        # non-Git path it still guarantees the full retained set is
+        # delivered by the one invocation that produced the artifacts.
+        if retain_dir is not None:
+            _finalize_retained_summary(Path(retain_dir), result)
+        return result
+
     def _invoke() -> dict:
         if suite_command is not None:
             return suite_command()
@@ -1521,7 +1592,7 @@ def run_single_head_suite(root: Path, *, tests_dir: Path | None = None,
                                 timeout=timeout, retain_dir=retain_dir)
 
     if not _inside_git_work_tree(root):
-        return _invoke()
+        return _finalize(_invoke())
     # Clean committed worktree BEFORE identity derivation, completion
     # lookup, attach, or launch (fail closed exactly like the runner);
     # a Git-backed custom tests tree must be head-bound (fail closed).
@@ -1537,12 +1608,23 @@ def run_single_head_suite(root: Path, *, tests_dir: Path | None = None,
         # Retention request: sequential reuse of a possibly non-retained
         # PASS is allowed ONLY when the requested directory mechanically
         # proves the full documented per-task artifact set (plus the
-        # summary); otherwise a fresh underlying run produces them.
+        # summary); otherwise a fresh underlying run produces them.  A
+        # NON-EMPTY but incomplete/inconsistent directory fails closed
+        # BEFORE any launch: the runner refuses a non-empty retain
+        # directory, so a fresh launch would fail with a misleading
+        # "not empty" error while silently disabling reuse — resolve the
+        # directory deliberately (or point at a new empty one) instead.
         completed = guard.find_valid_completion()
         if completed is not None:
             task_count = len(completed["result"].get("tasks") or [])
-            accept_completion = _retained_artifacts_present(
-                Path(retain_dir), task_count)
+            state = _retain_directory_state(Path(retain_dir), task_count)
+            if state == "partial":
+                raise GateOrderingError(
+                    f"retain directory is not empty and does not contain "
+                    f"the exact documented retained artifact set for this "
+                    f"request (fail closed, refusing to launch into a "
+                    f"non-empty directory): {retain_dir}")
+            accept_completion = state == "complete"
     outcome = guard.acquire_or_attach(accept_completion=accept_completion)
     if outcome["attached"]:
         if outcome["completed"]:
@@ -1551,6 +1633,7 @@ def run_single_head_suite(root: Path, *, tests_dir: Path | None = None,
     started = time.time()
     try:
         result = _invoke()
+        _finalize(result)
     except BaseException:
         # No completion receipt: concurrent waiters fail closed, and the
         # next identical request legitimately launches fresh.
