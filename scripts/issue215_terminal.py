@@ -205,7 +205,7 @@ def derive_cycle(cycle_dir: Path, baseline_usb: set[str] | None,
 
     # Vulkan fresh enumeration
     vulkan_enum = _stdout_of(raw / "vulkan-list-devices.txt")
-    v_sel = re.findall(r"^(Vulkan[0-9]+): (.*)$", vulkan_enum, re.M)
+    v_sel = re.findall(r"^\s*(Vulkan[0-9]+):\s+(.*)$", vulkan_enum, re.M)
     checks["two_vega_vulkan_devices"] = sum(1 for _, n in v_sel if "V340" in n or "Vega" in n) == 2
 
     # NIC
@@ -257,20 +257,18 @@ def derive_cycle(cycle_dir: Path, baseline_usb: set[str] | None,
 
 
 def verify_gen3_x1(full_vv: str, switch_bdfs: list[str], vega_bdfs: list[str]) -> dict:
-    """Root port + PM8533 upstream must show Speed 8.0GT/s Width x1 in LnkSta."""
-    blocks = re.split(r"^[0-9a-f]{2}:", full_vv, flags=re.M)
+    """Root port + PM8533 upstream must show Speed 8GT/s (or 8.0GT/s) Width x1
+    in LnkSta (lspci prints 'Speed 8GT/s' for Gen3)."""
     ok = {"root_port": False, "switch_upstream": False}
-    # find the switch upstream block and its parent root port
     for bdf in switch_bdfs:
         m = re.search(re.escape(bdf) + r".*?(?=^[0-9a-f]{2}:[0-9a-f]{2}\.[0-9] |\Z)", full_vv, re.S | re.M)
         if not m:
             continue
         block = m.group(0)
-        sta = re.search(r"LnkSta:\s*Speed 8\.0GT/s, Width x?1\b", block)
+        sta = re.search(r"LnkSta:\s*Speed 8(\.0)?GT/s, Width x?1\b", block)
         ok["switch_upstream"] = ok["switch_upstream"] or bool(sta)
-        # root port = the block's reported upstream bridge
-    # root port via root-port probe: the root port 00:1d.0 style block
-    rp = re.search(r"LnkSta:\s*Speed 8\.0GT/s, Width x?1\b", full_vv)
+    # root port: the root port feeding the switch (00:1d.0 class block)
+    rp = re.search(r"Root Port[^\n]*\n(?:.*\n)*?.*?LnkSta:\s*Speed 8(\.0)?GT/s, Width x?1\b", full_vv)
     ok["root_port"] = bool(rp)
     return {"ok": ok["root_port"] and ok["switch_upstream"], "parts": ok}
 
