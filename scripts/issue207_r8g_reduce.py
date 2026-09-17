@@ -404,7 +404,19 @@ def derive(verbose=True):
 
 
 def main():
-    derive()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--write", action="store_true",
+                    help="write terminal-reduction.json (canonical JSON)")
+    a = ap.parse_args()
+    out = derive(verbose=not a.write)
+    if a.write:
+        p = os.path.join(REPO, R8G_DIR, "terminal-reduction.json")
+        with open(p, "w") as fh:
+            json.dump(out, fh, indent=2, sort_keys=True)
+            fh.write("\n")
+        print("wrote", p, "terminal:", out["terminal"])
+    return 0
 
 
 if __name__ == "__main__":
