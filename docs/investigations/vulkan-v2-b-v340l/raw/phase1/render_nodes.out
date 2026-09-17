@@ -1,0 +1,10 @@
+total 0
+drwxr-xr-x  3 root root        180 Sep 17 09:49 .
+drwxr-xr-x 18 root root       3320 Sep 17 09:49 ..
+drwxr-xr-x  2 root root        160 Sep 17 09:49 by-path
+crw-rw----  1 root video  226,   0 Sep 17 09:49 card0
+crw-rw----  1 root video  226,   1 Sep 17 09:49 card1
+crw-rw----  1 root video  226,   2 Sep 17 09:49 card2
+crw-rw----  1 root render 226, 128 Sep 17 09:49 renderD128
+crw-rw----  1 root render 226, 129 Sep 17 09:49 renderD129
+crw-rw----  1 root render 226, 130 Sep 17 09:49 renderD130
