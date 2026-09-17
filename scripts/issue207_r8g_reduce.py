@@ -132,15 +132,20 @@ def target_execution_binding(cap):
     return min(r["seq"] for r in rows)
 
 
+def decision_position(case):
+    return {"case-256": 5, "case-4096": 0}[case]
+
+
 def boundary_state(cap, phase_dir, name):
-    """Bytes-derived state of boundary `name` at the target execution:
-    re-hash the retained sidecar of the occurrence bound to the target
-    execution; cross-check the authored row. Returns (sha256, nbytes,
-    n_nonfinite) or None if unobservable at the target execution."""
+    """Bytes-derived state of boundary `name` at the DECISION-position
+    execution of the capture's case (pos 0 for case-4096, pos 5 for
+    case-256: one valid-anchor occurrence per generated position).
+    Re-hashes the retained sidecar; cross-checks the authored row.
+    Returns the state dict or None if unobservable."""
     e0 = target_execution_binding(cap)
     if e0 is None:
         return None
-    want_seq = e0   # one occurrence per execution for every frozen name
+    want_seq = e0 + decision_position(cap["case"])
     rows = [r for r in cap["boundary_rows"]
             if r["name"] == name and r["seq"] == want_seq]
     if len(rows) != 1:
