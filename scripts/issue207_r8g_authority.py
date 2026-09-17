@@ -249,6 +249,50 @@ COARSE_BOUNDARIES = (
 )
 SEAM_ANCHOR_BOUNDARY = ("result_output", 0)   # row cross-check vs R8-E bytes
 
+# Token-axis dimension per boundary name, DERIVED FROM the pinned source
+# shapes (src/models/qwen4exp.cpp @ b29c606e):
+#   - 3D per-stream tensors [n_embd, hc, T]  -> tokdim 2:
+#     l_last-<il> (build_hc_combine output; after the il==47 get_rows the
+#     token axis remains ne[2]); Qcur-<il> ([n_embd_head, n_head, T])
+#   - 3D linear-attention tensors [X, n_seq_tokens, n_seqs] -> tokdim 1:
+#     linear_attn_qkv_mixed, conv_output_silu, final_output (reshape_3d
+#     with n_seq_tokens on dim 1)
+#   - 2D token-major tensors [X, T]           -> tokdim 1:
+#     model.input_embed, result_norm, result_output, linear_attn_out,
+#     ffn_moe_out, ffn_out, attn_pregate, attn_gated, attn_output,
+#     ple_conv_out ([n_embd, hc, T]? NO: reshape_3d(n_embd, hc, n_tokens)
+#     -> tokdim 2)
+TOKDIM = {
+    "model.input_embed": 1,
+    "l_last": 2,
+    "result_norm": 1,
+    "result_output": 1,
+    "Qcur": 2,
+    "linear_attn_qkv_mixed": 1,
+    "conv_output_silu": 1,
+    "final_output": 1,
+    "linear_attn_out": 1,
+    "ffn_moe_out": 1,
+    "ffn_out": 1,
+    "attn_pregate": 1,
+    "attn_gated": 1,
+    "attn_output": 1,
+    "ple_conv_out": 2,
+}
+
+def tokdim_of(name):
+    parts = name.rsplit("-", 1)
+    base = parts[0] if len(parts) == 2 and parts[1].isdigit() else name
+    return TOKDIM.get(base, 1)
+
+def spec_for(names):
+    """Frozen LLAMA_OBSERVE_BOUNDARIES spec string for a name list."""
+    return ";".join(f"{n}:{tokdim_of(n)}" for n in names)
+
+def coarse_spec():
+    return spec_for([n for n, _ in COARSE_BOUNDARIES] +
+                    [SEAM_ANCHOR_BOUNDARY[0]])
+
 def gdn_sublist(il):
     sub = []
     if il == PLE_LAYER:
