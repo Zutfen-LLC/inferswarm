@@ -176,5 +176,27 @@ class TestFrozenSets(unittest.TestCase):
                             .exists(), f)
 
 
+
+class TestDecisionPositionBinding(unittest.TestCase):
+    def test_decision_position(self):
+        self.assertEqual(R.decision_position("case-4096"), 0)
+        self.assertEqual(R.decision_position("case-256"), 5)
+
+    def test_boundary_state_binds_decision_exec(self):
+        # capture with anchors at seqs 9..16 (valid) -> case-4096 pos0
+        # binds seq 9; case-256 pos5 binds seq 14
+        cap = {"case": "case-4096", "boundary_rows": [
+            {"name": "result_output", "seq": s, "sha256": "v%d" % s}
+            for s in range(9, 17)] + [
+            {"name": "b", "seq": s, "sha256": "NA"} for s in range(9, 17)]}
+        self.assertEqual(R.target_execution_binding(cap), 9)
+
+    def test_unknown_case_fails_closed(self):
+        try:
+            R.decision_position("case-999")
+            self.fail("expected KeyError")
+        except KeyError:
+            pass
+
 if __name__ == "__main__":
     unittest.main()
