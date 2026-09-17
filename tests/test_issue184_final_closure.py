@@ -207,6 +207,7 @@ class Issue184PreservationTests(unittest.TestCase):
         allowed = (
             "docs/", "README.md", "ROADMAP.md", "ARCHITECTURE.md",
             "tests/", "scripts/plan_ci.py", "scripts/ci_groups.json",
+            "AGENTS.md", "CONTRIBUTING.md",
             "scripts/finalize_repository.py",
             "scripts/issue189_r8a_reducer.py",
             "scripts/issue191_r8b_authority.py",
@@ -272,6 +273,9 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue207_r8g_reduce.py",
             "scripts/issue207_r8g_negative_controls.py",
             "scripts/issue207_r8g_manifest.py",
+            # Issue #213 campaign gate ordering: orchestration tooling and
+            # CI registration, independently covered by its own group.
+            "scripts/issue213_gate_orchestration.py",
             ".github/workflows/ci.yml")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)

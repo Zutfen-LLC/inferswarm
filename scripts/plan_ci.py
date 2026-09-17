@@ -195,6 +195,10 @@ GROUP_TEST_MODULES = {
     "issue-182-arm-e": [
         "test_issue182_arm_e",
     ],
+    # Issue #213: campaign gate ordering / exact-head suite receipts.
+    "issue-213-gate-ordering": [
+        "test_issue213_campaign_gate_ordering",
+    ],
     "issue-187-r7a": [
         "test_issue187_r7a",
     ],
@@ -481,6 +485,9 @@ PATH_GROUPS = {
     "scripts/issue187_r7a_manifest.py": ["issue-187-r7a"],
     "scripts/issue187_r7a_reducer.py": ["issue-187-r7a"],
     "scripts/issue182_manifest.py": ["issue-182-arm-e"],
+    # Issue #213 campaign gate ordering (orchestration tooling + tests)
+    "scripts/issue213_gate_orchestration.py": ["issue-213-gate-ordering"],
+    "docs/campaign-gate-ordering.md": ["issue-213-gate-ordering"],
     # Issue #137 retained evidence lives inside the #117 evidence tree;
     # the narrower #137 subtree fans out to both its semantic group and
     # the broader shared-tree lineage (the #117 prefix rule above also

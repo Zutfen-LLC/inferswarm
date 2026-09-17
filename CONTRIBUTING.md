@@ -45,6 +45,12 @@ temporary internal structure.
 The repository is documentation plus CPU-only evidence tooling. Nothing here
 needs a GPU.
 
+Work that follows a physical/research campaign handoff (evidence PRs with
+adversarial review) must schedule validation per the
+[campaign gate ordering](docs/campaign-gate-ordering.md) rule: cheap
+reviewer-trust gates before review, and the single full-suite + hosted-CI
+cycle only on the final reviewed head, after review-driven fixes land.
+
 The canonical CPU test environment (Issue #131) is declared once in
 [`requirements-test.txt`](requirements-test.txt) (which installs the immutable
 Issue #117 frozen tokenizer requirements by reference, never by duplication).

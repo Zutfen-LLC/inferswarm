@@ -89,6 +89,11 @@
     "test_issue187_r7a"
    ]
   },
+  "issue-213-gate-ordering": {
+   "test_modules": [
+    "test_issue213_campaign_gate_ordering"
+   ]
+  },
   "issue-74-79": {
    "test_modules": [
     "test_issue74_methodology",
@@ -221,6 +226,9 @@
   ],
   "docs/benchmarks/workloads/": [
    "repo-integrity"
+  ],
+  "docs/campaign-gate-ordering.md": [
+   "issue-213-gate-ordering"
   ],
   "docs/evidence-manifests.md": [
    "repo-integrity"
@@ -918,6 +926,9 @@
   ],
   "scripts/issue200_r8f_terminal_reduction.py": [
    "issue-99-103"
+  ],
+  "scripts/issue213_gate_orchestration.py": [
+   "issue-213-gate-ordering"
   ],
   "scripts/issue35_coarse_concurrent.py": [
    "vulkan-v0-b"
