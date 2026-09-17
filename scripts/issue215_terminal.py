@@ -293,23 +293,34 @@ def derive_cycle(cycle_dir: Path, baseline_usb: set[str] | None,
     hbm = [int(x) for x in re.findall(r"^([0-9]{9,})$", mem_text, re.M)]
     checks["hbm_capacity_expected"] = len(hbm) >= 2 and sorted(hbm)[-2:] == [EXPECTED_HBM_BYTES] * 2
 
-    # link state: root port (parent of switch bus) + switch upstream, block-scoped
+    # Link state, anchored at the ROOT BUS: a root port is a bridge whose
+    # PRIMARY bus is 00; the PM8533 UPSTREAM port is the switch block whose
+    # PRIMARY bus equals that root port's SECONDARY. Downstream switch ports
+    # (whose parent is the switch itself, not a root port) can never satisfy
+    # either predicate. Both bound blocks must show Gen3 x1 (8.0 GT/s, width 1).
     gen3 = {"root_port": False, "switch_upstream": False}
-    for s in switches:
-        sb = blocks.get(s["bdf"])
-        if not sb:
-            continue
-        sta = _lnksta(sb)
-        if sta and sta["speed"] == 8.0 and sta["width"] == 1:
-            gen3["switch_upstream"] = True
-        buses = _bus_primary_secondary(sb)
-        if buses:
-            for cand_bdf, cand_block in blocks.items():
-                cb = _bus_primary_secondary(cand_block)
-                if cb and cb[1] == buses[0]:
-                    rst = _lnksta(cand_block)
-                    if rst and rst["speed"] == 8.0 and rst["width"] == 1:
-                        gen3["root_port"] = True
+    detail["link_chain"] = None
+    for rp_bdf, rp_block in blocks.items():
+        rp_buses = _bus_primary_secondary(rp_block)
+        if not rp_buses or rp_buses[0] != 0:
+            continue  # not a root-bus bridge (root port)
+        for s in switches:
+            sb = blocks.get(s["bdf"])
+            if not sb:
+                continue
+            s_buses = _bus_primary_secondary(sb)
+            if not s_buses or s_buses[0] != rp_buses[1]:
+                continue  # this switch port's parent is not THIS root port
+            rst = _lnksta(rp_block)
+            sst = _lnksta(sb)
+            rp_ok = bool(rst and rst["speed"] == 8.0 and rst["width"] == 1)
+            sw_ok = bool(sst and sst["speed"] == 8.0 and sst["width"] == 1)
+            if rp_ok:
+                gen3["root_port"] = True
+            if sw_ok:
+                gen3["switch_upstream"] = True
+            detail["link_chain"] = {"root_port_bdf": rp_bdf, "switch_upstream_bdf": s["bdf"],
+                                    "root_port_sta": rst, "switch_upstream_sta": sst}
     checks["upstream_gen3_x1"] = gen3["root_port"] and gen3["switch_upstream"]
     detail["link"] = {"ok": checks["upstream_gen3_x1"], "parts": gen3}
 

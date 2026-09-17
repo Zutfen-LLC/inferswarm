@@ -652,6 +652,52 @@ class TerminalMutationControls(unittest.TestCase):
         self.assertFalse(e["checks"].get("cold_powercut_evidence", True))
         self.assertNotEqual(r["terminal"], "V2C_V340L_PLATFORM_STABILITY_PASS")
 
+
+    # Round-2 review attacks: root-port binding must anchor at bus 00 and
+    # bind the switch UPSTREAM port specifically (downstream switch ports
+    # must never satisfy either predicate).
+    def _mutate_block(self, tmp, header, old, new):
+        import re as _re
+        raw = (tmp / "cycles/cycle-02-warm/raw/lspci-vv-full.txt")
+        d = json.loads(raw.read_text())
+        s = d["stdout"]
+        i = s.find(header)
+        assert i >= 0
+        # block span: from the header line to the next column-0 device header
+        m = _re.search(r"\n(?=[0-9A-Fa-f]{2}:)", s[i + len(header):])
+        end = i + len(header) + m.start() if m else len(s)
+        block = s[i:end]
+        assert old in block, f"pattern not in block for {header}: block tail={block[-80:]!r}"
+        d["stdout"] = s[:i] + block.replace(old, new, 1) + s[end:]
+        raw.write_text(json.dumps(d))
+
+    def test_control_26_true_root_port_degrade_rejected(self):
+        tmp = self.sandbox()
+        tab = chr(9)  # real TAB, matching the fixture indentation
+        self._mutate_block(tmp, "00:1d.0 PCI bridge",
+                           "LnkSta:" + tab + "Speed 8GT/s, Width x1",
+                           "LnkSta:" + tab + "Speed 2.5GT/s, Width x1")
+        self.assertNotEqual(self.derive_terminal(tmp), "V2C_V340L_PLATFORM_STABILITY_PASS")
+
+    def test_control_27_switch_upstream_only_degrade_rejected(self):
+        tmp = self.sandbox()
+        tab = chr(9)
+        self._mutate_block(tmp, "00:1d.0/02:00.0 PCI bridge",
+                           "LnkSta:" + tab + "Speed 8.0GT/s, Width x1",
+                           "LnkSta:" + tab + "Speed 2.5GT/s, Width x1")
+        self.assertNotEqual(self.derive_terminal(tmp), "V2C_V340L_PLATFORM_STABILITY_PASS")
+
+    def test_control_28_root_port_block_deleted_rejected(self):
+        tmp = self.sandbox()
+        raw = (tmp / "cycles/cycle-02-warm/raw/lspci-vv-full.txt")
+        d = json.loads(raw.read_text())
+        s = d["stdout"]
+        i = s.find("00:1d.0 PCI bridge")
+        j = s.find("00:1d.0/02:00.0 PCI bridge")
+        d["stdout"] = s[:i] + s[j:]
+        raw.write_text(json.dumps(d))
+        self.assertNotEqual(self.derive_terminal(tmp), "V2C_V340L_PLATFORM_STABILITY_PASS")
+
     # Control 16: living ledger row authored with non-derivable facts
     def test_control_16_ledger_row_derivation(self):
         # structural: the reducer contains no bare-True authored check

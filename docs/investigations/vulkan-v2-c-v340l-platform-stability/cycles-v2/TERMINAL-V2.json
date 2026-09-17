@@ -87,6 +87,18 @@
       "switch_upstream": true
      }
     },
+    "link_chain": {
+     "root_port_bdf": "00:1d.0",
+     "root_port_sta": {
+      "speed": 8.0,
+      "width": 1
+     },
+     "switch_upstream_bdf": "02:00.0",
+     "switch_upstream_sta": {
+      "speed": 8.0,
+      "width": 1
+     }
+    },
     "prev_boot_id": "00639214-b62b-4af1-adf2-23685c6ff7d9",
     "prev_boot_saw_reboot_target": true,
     "switch_bdfs": [
@@ -213,6 +225,18 @@
      "parts": {
       "root_port": true,
       "switch_upstream": true
+     }
+    },
+    "link_chain": {
+     "root_port_bdf": "00:1d.0",
+     "root_port_sta": {
+      "speed": 8.0,
+      "width": 1
+     },
+     "switch_upstream_bdf": "02:00.0",
+     "switch_upstream_sta": {
+      "speed": 8.0,
+      "width": 1
      }
     },
     "prev_boot_id": "a818689d-cfe7-4a9f-8c40-cccfa02a166c",
@@ -343,6 +367,18 @@
       "switch_upstream": true
      }
     },
+    "link_chain": {
+     "root_port_bdf": "00:1d.0",
+     "root_port_sta": {
+      "speed": 8.0,
+      "width": 1
+     },
+     "switch_upstream_bdf": "02:00.0",
+     "switch_upstream_sta": {
+      "speed": 8.0,
+      "width": 1
+     }
+    },
     "prev_boot_id": "3a09883b-79f7-4d3b-9736-6f5ff08fbbc8",
     "prev_boot_saw_reboot_target": true,
     "switch_bdfs": [
@@ -471,6 +507,18 @@
       "switch_upstream": true
      }
     },
+    "link_chain": {
+     "root_port_bdf": "00:1d.0",
+     "root_port_sta": {
+      "speed": 8.0,
+      "width": 1
+     },
+     "switch_upstream_bdf": "02:00.0",
+     "switch_upstream_sta": {
+      "speed": 8.0,
+      "width": 1
+     }
+    },
     "prev_boot_id": "7389ba53-f455-4a73-b13d-2b98983de48c",
     "prev_boot_saw_reboot_target": true,
     "switch_bdfs": [
@@ -597,6 +645,18 @@
      "parts": {
       "root_port": true,
       "switch_upstream": true
+     }
+    },
+    "link_chain": {
+     "root_port_bdf": "00:1d.0",
+     "root_port_sta": {
+      "speed": 8.0,
+      "width": 1
+     },
+     "switch_upstream_bdf": "02:00.0",
+     "switch_upstream_sta": {
+      "speed": 8.0,
+      "width": 1
      }
     },
     "prev_boot_id": "217fd102-099d-4447-9fae-6723ce9c7e55",
