@@ -1,8 +1,8 @@
 {
-  "scripts/issue207_r8g_authority.py": "fd21c96ca84e4595f33b1d187d56520c19576ee860ffeb409e5d3a5979096e7a",
+  "scripts/issue207_r8g_authority.py": "d8f70ae967b367e93956d409e6548116a34f6913afa57f632d9dcc1f8399edbd",
   "scripts/issue207_r8g_capture.py": "050c10547f93496ac804d1056b017d941256acf646e052148e659e9e2c07b5cd",
   "scripts/issue207_r8g_launch.py": "5169f720b9505a2b0cc60d9231708b32884752c3c92a604447f1a7ef1db90f00",
-  "scripts/issue207_r8g_manifest.py": "062b3c91303b85442b63a6ccdd136b9d6b55a88509cb1d6db14341eeb20afe67",
-  "scripts/issue207_r8g_negative_controls.py": "8fc51ab4b6016bc3f57cfcdde3e26482437a8f3bb34f4bd9874e09d4133e2b50",
-  "scripts/issue207_r8g_reduce.py": "8f809016511d6e052cd4ecb03a9d1a8b5f8cfd24f944a04a1cdccc1ab87a7989"
+  "scripts/issue207_r8g_manifest.py": "d89393135242c778aae302ef1839f2b4451280bb49c2d585fe76dd34240a696a",
+  "scripts/issue207_r8g_negative_controls.py": "cb4a7a11ab6d4a16e8d2c02ebb8aca8545681729697566e103b0d858fea491d8",
+  "scripts/issue207_r8g_reduce.py": "73f5ea9c1b88d157437d4f04bdd38735f80de000986eacc632a656badbed5917"
 }

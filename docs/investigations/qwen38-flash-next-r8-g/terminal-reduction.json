@@ -1,30 +1,57 @@
 {
   "campaign": "issue207-r8g-boundary-localization",
+  "capture_identity_problems": [],
+  "case256_authorized_all_equal": false,
   "case256_contrast": {
     "applied": true,
+    "authorized_set": [
+      "model.input_embed",
+      "linear_attn_qkv_mixed-0",
+      "conv_output_silu-0",
+      "final_output-0",
+      "linear_attn_out-0",
+      "ffn_moe_out-0",
+      "ffn_out-0",
+      "ple_conv_out-1",
+      "linear_attn_qkv_mixed-1",
+      "conv_output_silu-1",
+      "final_output-1",
+      "linear_attn_out-1",
+      "ffn_moe_out-1",
+      "ffn_out-1",
+      "linear_attn_qkv_mixed-2",
+      "conv_output_silu-2",
+      "final_output-2",
+      "linear_attn_out-2",
+      "ffn_moe_out-2",
+      "ffn_out-2",
+      "l_last-2",
+      "l_last-23"
+    ],
+    "authorized_set_source": "authority.case256_authorized_set() = case-4096 terminal boundary set + adjacent coarse anchors + one frozen checkpoint (l_last-23)",
     "observations": [
+      {
+        "boundary": "model.input_embed",
+        "verdict": "equal"
+      },
+      {
+        "boundary": "linear_attn_qkv_mixed-0",
+        "verdict": "equal"
+      },
       {
         "boundary": "conv_output_silu-0",
         "verdict": "equal"
       },
       {
-        "boundary": "conv_output_silu-1",
+        "boundary": "final_output-0",
         "verdict": "equal"
       },
       {
-        "boundary": "conv_output_silu-2",
-        "verdict": "differ"
+        "boundary": "linear_attn_out-0",
+        "verdict": "equal"
       },
       {
         "boundary": "ffn_moe_out-0",
-        "verdict": "differ"
-      },
-      {
-        "boundary": "ffn_moe_out-1",
-        "verdict": "differ"
-      },
-      {
-        "boundary": "ffn_moe_out-2",
         "verdict": "differ"
       },
       {
@@ -32,15 +59,15 @@
         "verdict": "differ"
       },
       {
-        "boundary": "ffn_out-1",
+        "boundary": "ple_conv_out-1",
         "verdict": "differ"
       },
       {
-        "boundary": "ffn_out-2",
-        "verdict": "differ"
+        "boundary": "linear_attn_qkv_mixed-1",
+        "verdict": "equal"
       },
       {
-        "boundary": "final_output-0",
+        "boundary": "conv_output_silu-1",
         "verdict": "equal"
       },
       {
@@ -48,7 +75,39 @@
         "verdict": "differ"
       },
       {
+        "boundary": "linear_attn_out-1",
+        "verdict": "differ"
+      },
+      {
+        "boundary": "ffn_moe_out-1",
+        "verdict": "differ"
+      },
+      {
+        "boundary": "ffn_out-1",
+        "verdict": "differ"
+      },
+      {
+        "boundary": "linear_attn_qkv_mixed-2",
+        "verdict": "differ"
+      },
+      {
+        "boundary": "conv_output_silu-2",
+        "verdict": "differ"
+      },
+      {
         "boundary": "final_output-2",
+        "verdict": "differ"
+      },
+      {
+        "boundary": "linear_attn_out-2",
+        "verdict": "differ"
+      },
+      {
+        "boundary": "ffn_moe_out-2",
+        "verdict": "differ"
+      },
+      {
+        "boundary": "ffn_out-2",
         "verdict": "differ"
       },
       {
@@ -58,50 +117,11 @@
       {
         "boundary": "l_last-23",
         "verdict": "differ"
-      },
-      {
-        "boundary": "l_last-5",
-        "verdict": "differ"
-      },
-      {
-        "boundary": "linear_attn_out-0",
-        "verdict": "equal"
-      },
-      {
-        "boundary": "linear_attn_out-1",
-        "verdict": "differ"
-      },
-      {
-        "boundary": "linear_attn_out-2",
-        "verdict": "differ"
-      },
-      {
-        "boundary": "linear_attn_qkv_mixed-0",
-        "verdict": "equal"
-      },
-      {
-        "boundary": "linear_attn_qkv_mixed-1",
-        "verdict": "equal"
-      },
-      {
-        "boundary": "linear_attn_qkv_mixed-2",
-        "verdict": "differ"
-      },
-      {
-        "boundary": "model.input_embed",
-        "verdict": "equal"
-      },
-      {
-        "boundary": "ple_conv_out-1",
-        "verdict": "differ"
-      },
-      {
-        "boundary": "result_output",
-        "verdict": "differ"
       }
     ],
     "repeat_unstable": []
   },
+  "case256_first_authorized_differing": "ffn_moe_out-0",
   "case4096_coarse_results": [
     {
       "boundary": "model.input_embed",
@@ -182,35 +202,54 @@
   },
   "coarse_repeat_unstable": [],
   "comparison_contract": "exact-f32-bytes-per-position",
+  "first_observed_differing_sub_boundary": "ffn_moe_out-0",
+  "input_manifest_rows": 4855,
   "nonmonotonic_detected_coarse": false,
-  "nonperturbation_problems": [],
   "r8d_v2_evidence_byte_preserved": true,
   "r8e_evidence_byte_preserved": true,
   "refinement": {
     "applied": true,
+    "frozen_set": [
+      "linear_attn_qkv_mixed-0",
+      "conv_output_silu-0",
+      "final_output-0",
+      "linear_attn_out-0",
+      "ffn_moe_out-0",
+      "ffn_out-0",
+      "ple_conv_out-1",
+      "linear_attn_qkv_mixed-1",
+      "conv_output_silu-1",
+      "final_output-1",
+      "linear_attn_out-1",
+      "ffn_moe_out-1",
+      "ffn_out-1",
+      "linear_attn_qkv_mixed-2",
+      "conv_output_silu-2",
+      "final_output-2",
+      "linear_attn_out-2",
+      "ffn_moe_out-2",
+      "ffn_out-2"
+    ],
+    "frozen_set_source": "authority.refinement_ordered_map(model.input_embed, l_last-2)",
     "observations": [
+      {
+        "boundary": "linear_attn_qkv_mixed-0",
+        "verdict": "equal"
+      },
       {
         "boundary": "conv_output_silu-0",
         "verdict": "equal"
       },
       {
-        "boundary": "conv_output_silu-1",
+        "boundary": "final_output-0",
         "verdict": "equal"
       },
       {
-        "boundary": "conv_output_silu-2",
-        "verdict": "differ"
+        "boundary": "linear_attn_out-0",
+        "verdict": "equal"
       },
       {
         "boundary": "ffn_moe_out-0",
-        "verdict": "differ"
-      },
-      {
-        "boundary": "ffn_moe_out-1",
-        "verdict": "differ"
-      },
-      {
-        "boundary": "ffn_moe_out-2",
         "verdict": "differ"
       },
       {
@@ -218,39 +257,7 @@
         "verdict": "differ"
       },
       {
-        "boundary": "ffn_out-1",
-        "verdict": "differ"
-      },
-      {
-        "boundary": "ffn_out-2",
-        "verdict": "differ"
-      },
-      {
-        "boundary": "final_output-0",
-        "verdict": "equal"
-      },
-      {
-        "boundary": "final_output-1",
-        "verdict": "differ"
-      },
-      {
-        "boundary": "final_output-2",
-        "verdict": "differ"
-      },
-      {
-        "boundary": "linear_attn_out-0",
-        "verdict": "equal"
-      },
-      {
-        "boundary": "linear_attn_out-1",
-        "verdict": "differ"
-      },
-      {
-        "boundary": "linear_attn_out-2",
-        "verdict": "differ"
-      },
-      {
-        "boundary": "linear_attn_qkv_mixed-0",
+        "boundary": "ple_conv_out-1",
         "verdict": "equal"
       },
       {
@@ -258,15 +265,47 @@
         "verdict": "equal"
       },
       {
+        "boundary": "conv_output_silu-1",
+        "verdict": "equal"
+      },
+      {
+        "boundary": "final_output-1",
+        "verdict": "differ"
+      },
+      {
+        "boundary": "linear_attn_out-1",
+        "verdict": "differ"
+      },
+      {
+        "boundary": "ffn_moe_out-1",
+        "verdict": "differ"
+      },
+      {
+        "boundary": "ffn_out-1",
+        "verdict": "differ"
+      },
+      {
         "boundary": "linear_attn_qkv_mixed-2",
         "verdict": "differ"
       },
       {
-        "boundary": "ple_conv_out-1",
-        "verdict": "equal"
+        "boundary": "conv_output_silu-2",
+        "verdict": "differ"
       },
       {
-        "boundary": "result_output",
+        "boundary": "final_output-2",
+        "verdict": "differ"
+      },
+      {
+        "boundary": "linear_attn_out-2",
+        "verdict": "differ"
+      },
+      {
+        "boundary": "ffn_moe_out-2",
+        "verdict": "differ"
+      },
+      {
+        "boundary": "ffn_out-2",
         "verdict": "differ"
       }
     ],
@@ -275,9 +314,11 @@
   "repeats": 2,
   "schema": "inferswarm.issue207.reduction/1",
   "seam_anchor_row_sha256": {
-    "candidate": "d4a0a88fff3a4214c732deb0b7e6c0f29d207db008fda734072570450f0e7661",
-    "reference": "e79a8490e33d25bc9ac0b9c49a26ffd443b5dd37d966275c35c920a6541eeb7a"
+    "case-256:candidate": null,
+    "case-256:reference": null,
+    "case-4096:candidate": "d4a0a88fff3a4214c732deb0b7e6c0f29d207db008fda734072570450f0e7661",
+    "case-4096:reference": "e79a8490e33d25bc9ac0b9c49a26ffd443b5dd37d966275c35c920a6541eeb7a"
   },
-  "terminal": "R8G_LOCALIZATION_EVIDENCE_BLOCKED",
-  "terminal_reason": "manifest digest mismatch: docs/investigations/qwen38-flash-next-r8-g/README.md"
+  "terminal": "R8G_NONMONOTONIC_RUNTIME_DIVERGENCE_CHARACTERIZED",
+  "terminal_reason": "R3: boundary ffn_moe_out-0 differs and later boundaries (ple_conv_out-1, linear_attn_qkv_mixed-1, conv_output_silu-1) match again inside the frozen ordered refinement interval \u2014 divergence structure is non-monotonic; earliest-boundary interpretation prohibited"
 }

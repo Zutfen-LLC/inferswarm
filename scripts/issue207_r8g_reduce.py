@@ -1,36 +1,59 @@
 #!/usr/bin/env python3
 """Issue #207 R8-G: terminal reduction (CPU-only, stdlib).
 
-Consumes the retained capture records + raw sidecars under
-docs/investigations/qwen38-flash-next-r8-g/evidence/ and derives,
-fail-closed:
+Correction round 2026-09-17 (maintainer review of PR #208 head
+dfb1ef6): the reduction was rebuilt around four fixes —
+(1) manifest/terminal closure split: the reducer now verifies an
+EVIDENCE INPUT manifest (evidence/input-manifest.json) that covers only
+immutable reduction inputs; reduction outputs (terminal-reduction.json,
+README) are pinned by a separate final closure (CLOSURE.sha256) which
+is NEVER an input to the terminal it contains (no digest cycle);
+(2) refinement non-monotonic detection under the frozen R3 rule is
+applied across the COMPLETE ordered refinement interval in frozen
+SOURCE order — any differ at position k followed by an equal boundary
+at k' > k makes the interval NON-MONOTONIC;
+(3) terminal predicates are mechanically strict (see TERMINAL
+DERIVATION below);
+(4) boundary sets are executable authority: coarse consumes exactly
+COARSE_BOUNDARIES; refinement consumes exactly the mechanically derived
+frozen sub-boundaries of the first coarse interval plus the authorized
+PLE bracket; case-256 consumes exactly the mechanically derived
+authorized contrast set.
 
-  Phase A (non-perturbation): instrumented captures reproduce the
-  accepted R8-D/R8-E generated tokens; the seam-anchor logits row
-  (result_output decode-0 column) byte-matches the accepted R8-E pos-0
-  row for case-4096 (both arms), proving the observation build changed
-  no accepted next token and no terminal score row.
+TERMINAL DERIVATION (exactly one terminal, fail-closed):
 
-  Phase B (binding): every boundary comparison input is derived from the
-  retained raw sidecar bytes (sha256 recomputed; authored hook fields
-  are cross-checks only); graph-execution binding derives the target
-  execution from the earliest VALID result_output occurrence; repeat
-  captures must be byte-identical per (case, arm, boundary).
+  R8G_EARLIEST_RUNTIME_BOUNDARY_LOCALIZED requires ALL of:
+    - one frozen ordered refinement interval (mechanically derived);
+    - every acceptance-required earlier boundary OBSERVABLE (a missing
+      earlier frozen boundary blocks the exact-earliest claim);
+    - every earlier boundary equal;
+    - the candidate boundary different;
+    - the immediately preceding boundary equal;
+    - NO later reconvergence anywhere in the frozen interval (an equal
+      boundary after the first differ makes the earliest-boundary
+      interpretation misleading under R3).
 
-  Phase C (coarse localization, case-4096): per frozen coarse boundary,
-  cross-arm compare the target-execution last-token column bytes; find
-  the first interval (last-matching, first-differing).
+  R8G_NONMONOTONIC_RUNTIME_DIVERGENCE_CHARACTERIZED requires:
+    - at least one differ followed by a LATER equal boundary inside the
+      frozen bounded interval; and
+    - the COMPLETE retained map of the prospectively frozen interval
+      (every frozen sub-boundary observable in both arms) — R3 needs
+      the whole ordered map, otherwise the structure is not honestly
+      characterized.
 
-  Phase D (refinement): apply the frozen refinement rule (R1/R2/R3)
-  inside the first coarse interval ONLY.
+  R8G_RUNTIME_DIVERGENCE_INTERVAL_LOCALIZED when finer observation is
+  honestly unavailable (frozen interval brackets the onset but some
+  required sub-boundary is unobservable with no reconvergence).
 
-  Phase E (case-256 contrast): the frozen contrast set only.
+  R8G_LOCALIZATION_EVIDENCE_BLOCKED for any missing/invalid authority
+  (input-manifest drift, authored-vs-bytes contradiction, tampered
+  sidecar, predecessor manifest mismatch, ...).
 
-  Phase F: exactly one terminal (see authority TERMINALS).
-
-The reducer is a manifest consumer: every MANIFEST.sha256 row is
-re-hashed against on-disk bytes and the file-set equality is checked;
-any mismatch is BLOCKED (tampered evidence), never silently accepted.
+Graph-execution binding and byte-derivation are unchanged from the
+accepted observation campaign: every boundary verdict is derived from
+the retained raw sidecar bytes at the target execution (earliest valid
+result_output occurrence + decision position); authored hook rows are
+cross-checks only.
 """
 import hashlib
 import json
@@ -41,15 +64,25 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from issue207_r8g_authority import (  # noqa: E402
     CAMPAIGN_ID, CASE256_CONTRAST_EXTRA, COARSE_BOUNDARIES,
-    COMPARISON_CONTRACT, R8E_CASE4096_TOKENS, R8G_DIR, RED_SCHEMA,
-    REPEATS, SEAM_ANCHOR_BOUNDARY, TERMINAL_BLOCKED, TERMINAL_INTERVAL,
-    TERMINAL_LOCALIZED, TERMINAL_NONMONOTONIC, layer_sublist,
-    load_decision_inputs, load_r8e_pos0_row_sha, r8d_v2_manifest_ok,
-    r8e_manifest_ok)
+    COMPARISON_CONTRACT, PLE_BRACKET_AUTHORIZED, R8E_CASE4096_TOKENS,
+    R8G_DIR, RED_SCHEMA, REPEATS, SEAM_ANCHOR_BOUNDARY, TERMINAL_BLOCKED,
+    TERMINAL_INTERVAL, TERMINAL_LOCALIZED, TERMINAL_NONMONOTONIC,
+    case256_authorized_set, load_decision_inputs, load_r8e_pos0_row_sha,
+    r8d_v2_manifest_ok, r8e_manifest_ok, refinement_ordered_map)
 
 REPO = os.path.abspath(os.path.join(HERE, ".."))
 EV = os.path.join(REPO, R8G_DIR, "evidence")
 DECISION_POS = {"case-256": 5, "case-4096": 0}
+
+
+def set_repo(repo):
+    """Point the module's evidence root at a sandbox repo root (used by
+    --repo and the negative-control harness; production default is the
+    repository the script lives in)."""
+    global REPO, EV
+    REPO = repo
+    EV = os.path.join(REPO, R8G_DIR, "evidence")
+INPUT_MANIFEST_SCHEMA = "inferswarm.issue207.input-manifest/1"
 
 
 def sha_b(b):
@@ -65,36 +98,48 @@ class Blocked(Exception):
     pass
 
 
-def verify_manifest(repo):
-    """Every manifest row re-hashed; file-set equality (manifest and
-    producer-hashes excluded; manifests never list themselves)."""
-    man = os.path.join(REPO, R8G_DIR, "MANIFEST.sha256")
-    if not os.path.exists(man):
-        raise Blocked("R8-G manifest missing")
-    listed = set()
-    for line in open(man):
-        line = line.strip()
-        if not line:
-            continue
-        digest, name = line.split("  ", 1)
-        p = os.path.join(REPO, name)
-        if not os.path.exists(p):
-            raise Blocked("manifest row missing on disk: " + name)
-        if sha_b(open(p, "rb").read()) != digest:
-            raise Blocked("manifest digest mismatch: " + name)
-        listed.add(name)
-    onDisk = set()
-    root = os.path.join(REPO, R8G_DIR)
-    for dirpath, _, files in os.walk(root):
+def verify_input_manifest(repo):
+    """Every input-manifest row re-hashed against on-disk bytes; file-set
+    equality against the evidence tree (input-manifest.json and nothing
+    derived excluded). A listed reducer OUTPUT row fails closed (digest
+    cycle prevention)."""
+    p = os.path.join(repo, R8G_DIR, "evidence", "input-manifest.json")
+    if not os.path.exists(p):
+        raise Blocked("evidence input manifest missing")
+    doc = json.load(open(p))
+    if doc.get("schema") != INPUT_MANIFEST_SCHEMA:
+        raise Blocked("input manifest schema drift")
+    rows = doc.get("rows", {})
+    derived_names = {
+        R8G_DIR + "/README.md",
+        R8G_DIR + "/terminal-reduction.json",
+        R8G_DIR + "/producer-hashes.json",
+        R8G_DIR + "/CLOSURE.sha256",
+        R8G_DIR + "/evidence/input-manifest.json",
+        R8G_DIR + "/MANIFEST.sha256",
+    }
+    for rel, want in rows.items():
+        fp = os.path.join(repo, rel)
+        if rel in derived_names:
+            raise Blocked("derived artifact listed as input row: " + rel)
+        if not os.path.exists(fp):
+            raise Blocked("input row missing on disk: " + rel)
+        if sha_b(open(fp, "rb").read()) != want:
+            raise Blocked("input digest mismatch: " + rel)
+    on_disk = set()
+    for dirpath, _, files in os.walk(os.path.join(repo, R8G_DIR,
+                                                  "evidence")):
         for f in files:
-            rel = os.path.relpath(os.path.join(dirpath, f), REPO)
-            if f not in ("MANIFEST.sha256", "producer-hashes.json"):
-                onDisk.add(rel)
-    if listed != onDisk:
-        raise Blocked("manifest file-set drift: only-listed=%r only-disk=%r"
-                      % (sorted(listed - onDisk)[:3],
-                         sorted(onDisk - listed)[:3]))
-    return len(listed)
+            if f == "input-manifest.json":
+                continue
+            rel = os.path.relpath(os.path.join(dirpath, f), repo)
+            on_disk.add(rel)
+    if set(rows) != on_disk:
+        raise Blocked(
+            "input manifest file-set drift: only-listed=%r only-disk=%r"
+            % (sorted(set(rows) - on_disk)[:3],
+               sorted(on_disk - set(rows))[:3]))
+    return len(rows)
 
 
 def load_captures(phase_dir):
@@ -117,6 +162,31 @@ def capture_sidecar(cap, phase_dir, name, seq):
                         f"{safe_name(name)}__{seq}.f32")
 
 
+def open_retained_sidecar(cap, phase_dir, name, seq):
+    """Path-authority-hardened sidecar open (correction item 14):
+    lstat the retained artifact; require a REGULAR file; reject
+    symlinks; require canonical-path containment inside the correct
+    evidence/<phase>/<capture-sidecar-dir> directory; defeat
+    path/inode aliasing of one acceptance identity onto another
+    capture's retained bytes."""
+    p = capture_sidecar(cap, phase_dir, name, seq)
+    want_dir = os.path.realpath(
+        os.path.join(EV, phase_dir, cap.get("boundary_sidecar_dir", "")))
+    st = os.lstat(p)                     # lstat: never follow the link
+    import stat as _stat
+    if _stat.S_ISLNK(st.st_mode):
+        raise Blocked("sidecar is a symlink: " + p)
+    if not _stat.S_ISREG(st.st_mode):
+        raise Blocked("sidecar is not a regular file: " + p)
+    real = os.path.realpath(p)
+    if os.path.commonpath([real, want_dir]) != want_dir:
+        raise Blocked("sidecar outside its capture directory: " + p)
+    if real != os.path.abspath(p):
+        raise Blocked("sidecar path is not canonical: " + p)
+    with open(p, "rb") as fh:
+        return fh.read(), p
+
+
 def target_execution_binding(cap):
     """Frozen derivation: the target execution (whose logits produced
     generated position 0 for case-4096 / the DECISION position for the
@@ -133,15 +203,17 @@ def target_execution_binding(cap):
 
 
 def decision_position(case):
-    return {"case-256": 5, "case-4096": 0}[case]
+    try:
+        return {"case-256": 5, "case-4096": 0}[case]
+    except KeyError:
+        raise Blocked("unknown case: %r" % case)
 
 
 def boundary_state(cap, phase_dir, name):
     """Bytes-derived state of boundary `name` at the DECISION-position
-    execution of the capture's case (pos 0 for case-4096, pos 5 for
-    case-256: one valid-anchor occurrence per generated position).
-    Re-hashes the retained sidecar; cross-checks the authored row.
-    Returns the state dict or None if unobservable."""
+    execution of the capture's case. Re-hashes the retained sidecar
+    through the path-authority-hardened open; cross-checks the authored
+    row. Returns the state dict or None if unobservable."""
     e0 = target_execution_binding(cap)
     if e0 is None:
         return None
@@ -153,14 +225,11 @@ def boundary_state(cap, phase_dir, name):
     row = rows[0]
     if row["sha256"] == "NA":
         return None
-    p = capture_sidecar(cap, phase_dir, name, want_seq)
-    if not os.path.exists(p):
-        raise Blocked("sidecar missing: " + p)
-    b = open(p, "rb").read()
+    b, p = open_retained_sidecar(cap, phase_dir, name, want_seq)
     got = sha_b(b)
     if got != row["sha256"]:
-        raise Blocked("authored-vs-bytes contradiction for %s seq %d"
-                      % (name, want_seq))
+        raise Blocked("authored-vs-bytes contradiction for %s seq %d (%s)"
+                      % (name, want_seq, p))
     if len(b) != row["col_nbytes"]:
         raise Blocked("sidecar size contradiction for %s seq %d"
                       % (name, want_seq))
@@ -177,10 +246,8 @@ def boundary_state(cap, phase_dir, name):
 
 
 def boundary_state_strict(cap, phase_dir, name):
-    """Hard-fail variant of boundary_state for FROZEN boundary names that
-    the capture MUST have observed at the target execution: a missing row
-    (blanked/stale/substituted identity) raises Blocked instead of
-    returning None."""
+    """Hard-fail variant for FROZEN boundary names the capture MUST have
+    observed at the target execution: a missing row raises Blocked."""
     st = boundary_state(cap, phase_dir, name)
     if st is None:
         e0 = target_execution_binding(cap)
@@ -190,33 +257,71 @@ def boundary_state_strict(cap, phase_dir, name):
     return st
 
 
-def check_nonperturbation(caps, inputs):
-    """Instrumented captures must reproduce accepted generated tokens;
-    seam-anchor row must byte-match the accepted R8-E pos-0 row."""
-    problems = []
-    seam = {}
-    for cap in caps:
-        key = (cap["case"], cap["arm"], cap["label"])
-        exp = inputs[cap["case"]][cap["arm"]]["generated_tokens"]
-        got = cap["response_generated_tokens"]
-        n = min(len(exp), len(got))
-        if got[:n] != exp[:n]:
-            problems.append(f"token drift {key}: {got[:8]} vs {exp[:8]}")
-        if cap["case"] == "case-4096":
-            want = load_r8e_pos0_row_sha(REPO, cap["arm"])
-            if cap["f32_row_sha256"] != want:
-                problems.append(f"seam-anchor row drift {key}")
-            anchor = boundary_state(cap, "nonpert",
-                                    SEAM_ANCHOR_BOUNDARY[0])
-            if anchor is None or anchor["sha256"] != want:
-                problems.append(f"result_output column != accepted row {key}")
-            seam[cap["arm"]] = cap["f32_row_sha256"]
-    return problems, seam
+def check_capture_identity(cap, inputs, r8e_row_sha, phase_dir):
+    """Per-capture identity gates (fail-closed list): accepted prompt,
+    canonical request bytes, token-position binding, accepted-token
+    reproduction, seam-anchor row identity (arm-anchored — defeats
+    placement swap), and arm placement consistency with the retained
+    R8-E rows.
+
+    Seam anchor derivation: the hook's f32_row_sha256 when retained
+    (nonpert/coarse/refine phases), else the boundary observer's
+    result_output column at the decision execution (contrast phases ran
+    LLAMA_OBSERVE_POS=0 so no hook row bytes exist there; the observer
+    column IS the full logits row at that execution and must byte-match
+    the accepted R8-E row)."""
+    import base64
+    case, arm = cap["case"], cap["arm"]
+    probs = []
+    exp_prompt = list(inputs[case][arm]["prompt_token_ids"])
+    req = json.loads(base64.b64decode(cap["request_body_b64"]))
+    if req.get("prompt") != exp_prompt:
+        probs.append("request prompt != accepted case prompt")
+    anchor_sha = cap["f32_row_sha256"]
+    if anchor_sha is None:
+        st = boundary_state(cap, phase_dir, SEAM_ANCHOR_BOUNDARY[0])
+        anchor_sha = st["sha256"] if st else None
+    if anchor_sha != r8e_row_sha[(case, arm)]:
+        probs.append("seam-anchor row sha != accepted R8-E row for "
+                     "(%s, %s)" % (case, arm))
+    # token-position binding
+    pos = decision_position(case)
+    tgt = [r for r in cap["logits_hook_rows"] if r["pos"] == pos]
+    if not tgt:
+        probs.append("no logits hook row at decision position %d" % pos)
+    else:
+        gt = cap["response_generated_tokens"] or []
+        if pos >= len(gt) or tgt[0]["tok"] != gt[pos]:
+            probs.append("hook tok != response token at decision pos")
+    exp_tok = inputs[case][arm]["generated_tokens"]
+    got = cap["response_generated_tokens"]
+    n = min(len(exp_tok), len(got))
+    if got[:n] != exp_tok[:n]:
+        probs.append("token drift (%s,%s): %r vs %r"
+                     % (case, arm, got[:4], exp_tok[:4]))
+    return probs
+
+
+def load_r8e_rows(repo):
+    """Accepted R8-E retained row shas for BOTH cases (case-4096 pos 0,
+    case-256 pos 5), per arm, loaded mechanically from the accepted R8-E
+    capture records."""
+    out = {}
+    for case, arm in (("case-4096", "reference"), ("case-4096", "candidate"),
+                      ("case-256", "reference"), ("case-256", "candidate")):
+        p = os.path.join(
+            repo, "docs/investigations/qwen38-flash-next-r8-e",
+            "evidence", "observations",
+            f"capture-{case}-{arm}-obs1.json")
+        d = json.load(open(p))
+        assert d["case"] == case and d["arm"] == arm
+        out[(case, arm)] = d["f32_row_sha256"]
+    return out
 
 
 def check_repeat_stability(caps, phase_dir, names):
-    """Per (case, arm, boundary): the retained bytes of repeat captures
-    must be byte-identical (independently re-derived shas compared)."""
+    """Per (case, arm, boundary): retained bytes of repeat captures must
+    be byte-identical (independently re-derived shas compared)."""
     per_key = {}
     for cap in caps:
         if cap.get("phase_dir", phase_dir) != phase_dir:
@@ -231,9 +336,6 @@ def check_repeat_stability(caps, phase_dir, names):
 
 
 def compare_arms(per_key, case, names):
-    """First interval: last-matching then first-differing boundary, in
-    frozen order. Also detects non-monotonic structure (a LATER boundary
-    matching again after a differing one)."""
     results = []
     for name in names:
         ref = per_key.get((case, "reference", name))
@@ -247,11 +349,11 @@ def compare_arms(per_key, case, names):
 
 def first_interval(results):
     """(last_matching, first_differing) or None; plus non-monotonic
-    detection: any equal AFTER the first differ."""
+    detection: any equal AFTER the first differ (frozen R3 rule)."""
     first_diff = None
     last_match_before = None
     nonmono = False
-    for i, (name, verdict) in enumerate(results):
+    for name, verdict in results:
         if verdict == "equal":
             if first_diff is not None:
                 nonmono = True
@@ -265,65 +367,160 @@ def first_interval(results):
     return (last_match_before, first_diff), nonmono, last_match_before
 
 
-def derive(verbose=True):
+def refinements_nonmonotonic(ordered_results):
+    """R3 across the COMPLETE ordered refinement interval: any differ at
+    ordered position k followed by an equal boundary at k' > k."""
+    seen_differ = False
+    for name, verdict in ordered_results:
+        if verdict == "differ":
+            seen_differ = True
+        elif verdict == "equal" and seen_differ:
+            return True
+    return False
+
+
+def terminal_selection(blocked, coarse_results, refinement_results,
+                       refinement_applied):
+    """Mechanically strict terminal predicates (correction item 7)."""
+    if blocked:
+        return TERMINAL_BLOCKED, "; ".join(blocked)
+    interval, nonmono_coarse, _ = first_interval(coarse_results)
+
+    # unobservable coarse boundaries block honest derivation
+    unobs = [n for n, v in coarse_results if v == "unobservable"]
+    if unobs:
+        return TERMINAL_BLOCKED, ("unobservable frozen coarse "
+                                  "boundaries: %s" % ", ".join(unobs[:4]))
+    if interval is None:
+        if all(v == "equal" for _, v in coarse_results):
+            return TERMINAL_INTERVAL, ("no coarse boundary differs; the "
+                                       "frozen coarse set does not "
+                                       "bracket the onset; finer "
+                                       "observation requires a "
+                                       "separately authorized seam")
+        return TERMINAL_BLOCKED, "coarse derivation inconsistency"
+
+    if not refinement_applied:
+        return TERMINAL_INTERVAL, ("coarse interval localized; "
+                                   "refinement evidence unavailable")
+
+    ordered = refinement_results          # already in frozen source order
+    # every frozen refinement boundary must be observable (complete map)
+    unobs_r = [n for n, v in ordered if v == "unobservable"]
+    if unobs_r:
+        return TERMINAL_BLOCKED, ("frozen refinement boundary "
+                                  "unobservable: %s"
+                                  % ", ".join(unobs_r[:4]))
+
+    if refinements_nonmonotonic(ordered):
+        first_diff = next(n for n, v in ordered if v == "differ")
+        reconverged = [n for n, v in ordered
+                       if v == "equal"
+                       and ordered.index((n, v)) >
+                       next(i for i, (nm, _) in enumerate(ordered)
+                            if nm == first_diff)]
+        return TERMINAL_NONMONOTONIC, (
+            "R3: boundary %s differs and later boundaries (%s) match "
+            "again inside the frozen ordered refinement interval — "
+            "divergence structure is non-monotonic; earliest-boundary "
+            "interpretation prohibited"
+            % (first_diff, ", ".join(reconverged[:3])))
+
+    # monotonic: earliest differing boundary with ALL earlier equal
+    first_diff = next((n for n, v in ordered if v == "differ"), None)
+    if first_diff is None:
+        return TERMINAL_INTERVAL, ("frozen refinement interval fully "
+                                   "observed and all boundaries equal "
+                                   "while the coarse boundary differs")
+    idx = [n for n, _ in ordered].index(first_diff)
+    if idx == 0:
+        return TERMINAL_INTERVAL, ("earliest frozen sub-boundary already "
+                                   "differs; no observable earlier "
+                                   "boundary in the frozen set")
+    return TERMINAL_LOCALIZED, first_diff
+
+
+def derive(verbose=True, repo=None):
+    if repo:
+        set_repo(repo)
+        repo_root = repo
+    else:
+        repo_root = REPO
     out: dict = {"schema": RED_SCHEMA, "campaign": CAMPAIGN_ID}
     blocked = []
 
     # 0. predecessors byte-preserved
-    ok, why = r8d_v2_manifest_ok(REPO)
+    ok, why = r8d_v2_manifest_ok(repo_root)
     out["r8d_v2_evidence_byte_preserved"] = ok
     if not ok:
         blocked.append("R8-D v2: " + why)
-    ok, why = r8e_manifest_ok(REPO)
+    ok, why = r8e_manifest_ok(repo_root)
     out["r8e_evidence_byte_preserved"] = ok
     if not ok:
         blocked.append("R8-E: " + why)
 
-    # 0b. this campaign's manifest
+    # 0b. evidence INPUT manifest (reduction inputs only; the final
+    # closure is NOT read here — no digest cycle)
     try:
-        out["manifest_rows"] = verify_manifest(REPO)
+        out["input_manifest_rows"] = verify_input_manifest(repo_root)
     except Blocked as e:
         blocked.append(str(e))
 
-    inputs = load_decision_inputs(REPO)
+    inputs = load_decision_inputs(repo_root)
+    r8e_rows = load_r8e_rows(repo_root)
 
-    # A. non-perturbation
-    np_caps = load_captures("nonpert")
-    problems, seam = check_nonperturbation(np_caps, inputs)
-    out["nonperturbation_problems"] = problems
-    if problems:
-        blocked.append("non-perturbation: " + "; ".join(problems[:3]))
+    # A. capture identity + non-perturbation across ALL retained phases
+    problems = []
+    seam = {}
+    for phase in ("nonpert", "coarse", "refine", "refine-ple",
+                  "contrast", "contrast-ple"):
+        for cap in load_captures(phase):
+            probs = check_capture_identity(cap, inputs,
+                                           r8e_rows, phase)
+            if probs:
+                problems.append("%s/%s/%s: %s" % (
+                    phase, cap["case"], cap["arm"], "; ".join(probs)))
+            seam[cap["case"] + ":" + cap["arm"]] = cap["f32_row_sha256"]
+    out["capture_identity_problems"] = problems
     out["seam_anchor_row_sha256"] = seam
+    if problems:
+        blocked.append("capture identity: " + "; ".join(problems[:3]))
 
-    # B+C. coarse localization on case-4096
+    # B+C. coarse localization on case-4096 — consume EXACTLY the
+    # frozen COARSE_BOUNDARIES (nothing else, in frozen order)
     coarse_names = [n for n, _ in COARSE_BOUNDARIES]
     coarse_caps = load_captures("coarse")
     unstable, per_key = check_repeat_stability(
         coarse_caps, "coarse", coarse_names)
     out["coarse_repeat_unstable"] = unstable
+    if unstable:
+        blocked.append("coarse repeat instability: %r" % unstable[:3])
     res4096 = compare_arms(per_key, "case-4096", coarse_names)
     out["case4096_coarse_results"] = [
         {"boundary": n, "verdict": v} for n, v in res4096]
-    interval, nonmono, last_all_match = first_interval(res4096)
+    interval, nonmono_coarse, _ = first_interval(res4096)
     out["case4096_first_interval"] = (
         None if interval is None else
         {"last_matching": interval[0], "first_differing": interval[1]})
-    out["nonmonotonic_detected_coarse"] = nonmono
+    out["nonmonotonic_detected_coarse"] = nonmono_coarse
 
-    # D. refinement (refine = frozen layer-0..2 sublists; refine-ple =
-    # corrected PLE-layer bracket ple_conv_out-1, per the GGUF-metadata
-    # correction recorded in the authority — both retained)
+    # D. refinement: consume EXACTLY the mechanically derived frozen
+    # sub-boundaries of the first coarse interval plus the authorized
+    # PLE bracket, in frozen SOURCE order. Rows beyond that set are
+    # retained incidental evidence and never enter the terminal.
+    refinement = {"applied": False, "observations": [],
+                  "frozen_set_source": "authority.refinement_ordered_map("
+                  "model.input_embed, l_last-2)"}
     refine_caps = load_captures("refine") + load_captures("refine-ple")
-    refinement = {"applied": False, "observations": []}
-    if interval is not None and not nonmono and refine_caps:
-        # frozen rule R1/R2 results are recorded from the refine captures
+    if interval is not None and refine_caps:
+        frozen_ordered = refinement_ordered_map(*interval)
+        refinement["frozen_set"] = [n for n, _ in frozen_ordered]
         runstable, rper_key = check_repeat_stability(
-            refine_caps, "refine",
-            sorted({r["name"] for c in refine_caps
-                    for r in c["boundary_rows"]}))
+            refine_caps, "refine", [n for n, _ in frozen_ordered])
         refinement["repeat_unstable"] = runstable
-        for name in sorted({n for (c, a, n) in rper_key
-                            if c == "case-4096"}):
+        if runstable:
+            blocked.append("refine repeat instability: %r" % runstable[:3])
+        for name in [n for n, _ in frozen_ordered]:
             ref = rper_key.get(("case-4096", "reference", name))
             cand = rper_key.get(("case-4096", "candidate", name))
             if ref and cand:
@@ -335,18 +532,26 @@ def derive(verbose=True):
         refinement["applied"] = True
     out["refinement"] = refinement
 
-    # E. case-256 contrast
+    # E. case-256 contrast: consume EXACTLY the mechanically derived
+    # authorized set (correction item 10)
+    contrast = {"applied": False, "observations": [],
+                "authorized_set_source":
+                    "authority.case256_authorized_set() = case-4096 "
+                    "terminal boundary set + adjacent coarse anchors + "
+                    "one frozen checkpoint (" + CASE256_CONTRAST_EXTRA +
+                    ")"}
     contrast_caps = (load_captures("contrast") +
                      load_captures("contrast-ple"))
-    contrast = {"applied": False, "observations": []}
     if contrast_caps:
+        authorized = case256_authorized_set()
+        contrast["authorized_set"] = list(authorized)
         cunstable, cper_key = check_repeat_stability(
-            contrast_caps, "contrast",
-            sorted({r["name"] for c in contrast_caps
-                    for r in c["boundary_rows"]}))
+            contrast_caps, "contrast", list(authorized))
         contrast["repeat_unstable"] = cunstable
-        for name in sorted({n for (c, a, n) in cper_key
-                            if c == "case-256"}):
+        if cunstable:
+            blocked.append("contrast repeat instability: %r"
+                           % cunstable[:3])
+        for name in authorized:
             ref = cper_key.get(("case-256", "reference", name))
             cand = cper_key.get(("case-256", "candidate", name))
             if ref and cand:
@@ -358,61 +563,29 @@ def derive(verbose=True):
         contrast["applied"] = True
     out["case256_contrast"] = contrast
 
-    # F. terminal selection (fail-closed)
-    terminal = None
-    terminal_reason = None
-    if blocked:
-        terminal = TERMINAL_BLOCKED
-        terminal_reason = "; ".join(blocked)
-    elif nonmono:
-        terminal = TERMINAL_NONMONOTONIC
-    elif interval is None:
-        # all coarse boundaries equal (or unobservable)
-        if all(v == "equal" for _, v in res4096):
-            terminal = TERMINAL_INTERVAL
-            terminal_reason = ("no coarse boundary differs; the frozen "
-                               "coarse set does not bracket the onset; "
-                               "finer observation requires a separately "
-                               "authorized seam")
-        else:
-            terminal = TERMINAL_BLOCKED
-            terminal_reason = "unobservable boundaries in the frozen set"
-    else:
-        lm, fd = interval
-        # exact earliest boundary requires: refinement exhausted to one
-        # boundary with its immediately preceding boundary matching
-        obs = refinement["observations"] if refinement["applied"] else []
-        if obs:
-            # order the observations by the FROZEN source execution order
-            # (graph construction order = execution order), NOT by dict
-            # iteration; the earliest divergent boundary is the first
-            # differing one in that order.
-            from issue207_r8g_authority import layer_sublist, PLE_LAYER
-            frozen_order = []
-            for il in range(0, 3):
-                frozen_order += [n for n, _ in layer_sublist(il)]
-            rank = {n: i for i, n in enumerate(frozen_order)}
-            differing = sorted(
-                [o["boundary"] for o in obs if o["verdict"] == "differ"],
-                key=lambda n: rank.get(n, 10**6))
-            equaling = sorted(
-                [o["boundary"] for o in obs if o["verdict"] == "equal"],
-                key=lambda n: rank.get(n, 10**6))
-            if len(differing) == 1 and equaling:
-                # is the differing sub-boundary the earliest? requires
-                # every earlier frozen sub-boundary to be equal
-                terminal = TERMINAL_LOCALIZED
-                terminal_reason = differing[0]
-            elif not differing:
-                terminal = TERMINAL_INTERVAL
-                terminal_reason = ("interval localized; sub-boundaries all "
-                                   "match while the layer output differs")
-            else:
-                terminal = TERMINAL_LOCALIZED
-                terminal_reason = differing[0]
-        else:
-            terminal = TERMINAL_INTERVAL
-            terminal_reason = "coarse interval localized; refinement n/a"
+    # descriptive first-observed-differing sub-boundary (NOT a terminal
+    # claim; retained for README reconciliation)
+    if refinement["applied"]:
+        fd = next((o["boundary"] for o in refinement["observations"]
+                   if o["verdict"] == "differ"), None)
+        out["first_observed_differing_sub_boundary"] = fd
+    # case-256 classification derived ONLY from the authorized set
+    if contrast["applied"]:
+        fd256 = next((o["boundary"] for o in contrast["observations"]
+                      if o["verdict"] == "differ"), None)
+        out["case256_first_authorized_differing"] = fd256
+        vals = [o["verdict"] for o in contrast["observations"]]
+        out["case256_authorized_all_equal"] = all(
+            v == "equal" for v in vals)
+
+    # F. terminal selection (fail-closed, mechanically strict)
+    terminal, terminal_reason = terminal_selection(
+        blocked,
+        [(o["boundary"], o["verdict"])
+         for o in out["case4096_coarse_results"]],
+        [(o["boundary"], o["verdict"])
+         for o in refinement["observations"]],
+        refinement["applied"])
     out["terminal"] = terminal
     out["terminal_reason"] = terminal_reason
     out["comparison_contract"] = COMPARISON_CONTRACT
@@ -427,10 +600,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--write", action="store_true",
                     help="write terminal-reduction.json (canonical JSON)")
+    ap.add_argument("--repo", default=None,
+                    help="repo root override (sandbox controls)")
     a = ap.parse_args()
-    out = derive(verbose=not a.write)
+    repo = os.path.abspath(a.repo) if a.repo else None
+    out = derive(verbose=not a.write, repo=repo)
     if a.write:
-        p = os.path.join(REPO, R8G_DIR, "terminal-reduction.json")
+        p = os.path.join(REPO, R8G_DIR,
+                         "terminal-reduction.json")
         with open(p, "w") as fh:
             json.dump(out, fh, indent=2, sort_keys=True)
             fh.write("\n")

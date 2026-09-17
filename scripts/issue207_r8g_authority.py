@@ -255,6 +255,104 @@ COARSE_BOUNDARIES = (
 )
 SEAM_ANCHOR_BOUNDARY = ("result_output", 0)   # row cross-check vs R8-E bytes
 
+
+def refinement_frozen_set(last_matching, first_differing):
+    """Mechanically derive the frozen refinement sub-boundary set for the
+    first coarse interval (last_matching, first_differing], per the
+    prospectively frozen R1/R2 rule.
+
+    R1 (j - i == 1 adjacent l_last pair a -> a+1): the ordered
+    intra-layer sub-boundaries of layer b = a+1, plus ONLY any separately
+    prospectively frozen bracket explicitly authorized before
+    observation (the corrected PLE bracket ple_conv_out-1, whose
+    pre-observation authorization is retained in the campaign record).
+
+    R2 (j - i > 1): not applicable here — but the derivation stays
+    mechanical: sublists of every layer strictly inside the interval
+    plus the boundary layers of the first-differing layer.
+
+    The result is ORDERED by frozen graph construction order = source
+    execution order (the same order the observer emitted rows).
+    Anything outside this tuple is NOT acceptance authority (retained
+    rows may exist as incidental evidence only)."""
+    def layer_of(name):
+        if name == "model.input_embed":
+            return -1
+        if name.startswith("l_last-"):
+            return int(name.rsplit("-", 1)[1])
+        raise ValueError("not a coarse layer boundary: %r" % name)
+    lo = layer_of(last_matching) if last_matching else -1
+    hi = layer_of(first_differing)
+    out = []
+    rng = range(0, hi + 1) if lo < 0 else range(lo + 1, hi + 1)
+    for il in rng:
+        if lo < 0 and il < hi and not (0 <= il <= 2):
+            # embedding -> l_last-2 interval only brackets layers 0..2
+            continue
+        out.extend([t for t in layer_sublist(il)])
+    return tuple(out)
+
+
+#: The corrected PLE bracket (ple_conv_out-1), prospectively authorized
+#: BEFORE observation (GGUF-metadata correction 2026-09-16, commit
+#: 69ff3b4, prior to any cross-arm refinement comparison). It is a
+#: member of the frozen refinement interval by that authorization, not
+#: by row availability.
+PLE_BRACKET_AUTHORIZED = ("ple_conv_out-1", 0)
+
+
+def refinement_ordered_map(last_matching, first_differing):
+    """The complete ordered refinement interval consumed by R3: the
+    mechanically derived frozen sub-boundaries of the first coarse
+    interval PLUS the authorized PLE bracket (deduped, source order)."""
+    base = list(refinement_frozen_set(last_matching, first_differing))
+    seen = {n for n, _ in base}
+    out = []
+    if PLE_BRACKET_AUTHORIZED[0] not in seen:
+        # insert at its source position: PLE conv runs first in layer 1
+        ins = 0
+        for i, (n, _) in enumerate(base):
+            if n.startswith(("linear_attn_qkv_mixed-1", "conv_output_silu-1",
+                             "final_output-1", "linear_attn_out-1",
+                             "ffn_moe_out-1", "ffn_out-1")):
+                ins = i
+                break
+        base.insert(ins, PLE_BRACKET_AUTHORIZED)
+    out = tuple(base)
+    return out
+
+
+def case256_authorized_set():
+    """Mechanically derive the exact authorized case-256 contrast set
+    from the FINAL accepted case-4096 result and the prospectively
+    frozen extra checkpoint (Issue #207 Phase 4):
+
+      - the accepted case-4096 localized/bounded boundary set actually
+        consumed by the case-4096 terminal derivation (the frozen
+        refinement interval of the first coarse interval — because the
+        case-4096 terminal is derived over that interval, its bounded
+        boundaries are the case-4096 authority);
+      - its immediately adjacent accepted boundaries (the coarse
+        interval anchors model.input_embed and l_last-2 that bracket
+        the refined interval);
+      - at most one additional prospectively frozen checkpoint
+        (CASE256_CONTRAST_EXTRA = l_last-23).
+
+    Observer rows outside this set are retained as incidental evidence
+    and can never expand the acceptance claim."""
+    refined = [n for n, _ in refinement_ordered_map(
+        "model.input_embed", "l_last-2")]
+    adjacent = ["model.input_embed", "l_last-2"]
+    ordered = []
+    for n in [adjacent[0]] + refined + [adjacent[1]]:
+        if n not in ordered:
+            ordered.append(n)
+    if CASE256_CONTRAST_EXTRA not in ordered:
+        # keep source order: l_last-23 is after all layer 0..2 boundaries
+        ordered.append(CASE256_CONTRAST_EXTRA)
+    return tuple(ordered)
+
+
 # Token-axis dimension per boundary name, DERIVED FROM the pinned source
 # shapes (src/models/qwen4exp.cpp @ b29c606e):
 #   - 3D per-stream tensors [n_embd, hc, T]  -> tokdim 2:
