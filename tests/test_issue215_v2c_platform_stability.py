@@ -770,6 +770,44 @@ class TerminalMutationControls(unittest.TestCase):
         raw.write_text(json.dumps(d))
         self.assertNotEqual(self.derive_terminal(tmp), "V2C_V340L_PLATFORM_STABILITY_PASS")
 
+
+    # Round-5 review attack (R5): relocate the switch upstream's vv Bus primary
+    # onto a forged-benign second root port. The tree's switch span still lives
+    # under the TRUE root port's branch, so the relocated chain is
+    # uncorroborated and only the degraded true chain remains.
+    def test_control_32_switch_primary_relocation_rejected(self):
+        tmp = self.sandbox()
+        raw = (tmp / "cycles/cycle-02-warm/raw/lspci-vv-full.txt")
+        d = json.loads(raw.read_text())
+        s = d["stdout"]
+        # degrade true root port 00:1d.0
+        i = s.find("00:1d.0 PCI bridge")
+        end = i
+        for line in s[i:].splitlines(keepends=True)[1:]:
+            if line and not line.startswith((chr(9), " ")):
+                break
+            end += len(line)
+        s = s[:i] + s[i:end].replace("Speed 8GT/s, Width x1", "Speed 2.5GT/s, Width x1") + s[end:]
+        # forge 00:1c.0 LnkSta to 8GT/s x1 (keep its real secondary=01)
+        i = s.find("00:1c.0 PCI bridge")
+        end = i
+        for line in s[i:].splitlines(keepends=True)[1:]:
+            if line and not line.startswith((chr(9), " ")):
+                break
+            end += len(line)
+        s = s[:i] + s[i:end].replace("Speed 2.5GT/s, Width x1", "Speed 8GT/s, Width x1") + s[end:]
+        # relocate the switch upstream's primary 02 -> 01
+        i = s.find("00:1d.0/02:00.0 PCI bridge")
+        end = i
+        for line in s[i:].splitlines(keepends=True)[1:]:
+            if line and not line.startswith((chr(9), " ")):
+                break
+            end += len(line)
+        s = s[:i] + s[i:end].replace("primary=02", "primary=01") + s[end:]
+        d["stdout"] = s
+        raw.write_text(json.dumps(d))
+        self.assertNotEqual(self.derive_terminal(tmp), "V2C_V340L_PLATFORM_STABILITY_PASS")
+
     # Control 16: living ledger row authored with non-derivable facts
     def test_control_16_ledger_row_derivation(self):
         # structural: the reducer contains no bare-True authored check

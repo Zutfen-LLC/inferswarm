@@ -157,11 +157,19 @@ def _lnksta(block: str) -> dict | None:
     return {"speed": float(m.group(1)), "width": int(m.group(2))}
 
 
-def _bus_primary_secondary(block: str) -> tuple[int, int] | None:
-    m = re.search(r"Bus: primary=([0-9A-Fa-f]+), secondary=([0-9A-Fa-f]+)", block)
+def _bus_span(block: str) -> tuple[int, int, int] | None:
+    """(primary, secondary, subordinate) from a bridge's Bus line."""
+    m = re.search(r"Bus: primary=([0-9A-Fa-f]+), secondary=([0-9A-Fa-f]+)(?:, subordinate=([0-9A-Fa-f]+))?",
+                  block)
     if not m:
         return None
-    return int(m.group(1), 16), int(m.group(2), 16)
+    sub = int(m.group(3), 16) if m.group(3) else int(m.group(2), 16)
+    return int(m.group(1), 16), int(m.group(2), 16), sub
+
+
+def _bus_primary_secondary(block: str) -> tuple[int, int] | None:
+    span = _bus_span(block)
+    return (span[0], span[1]) if span else None
 
 
 def _endpoint_bars(block: str) -> list[tuple[int, int]]:
@@ -320,19 +328,19 @@ def derive_cycle(cycle_dir: Path, baseline_usb: set[str] | None,
         s_buses = _bus_primary_secondary(sb)
         if not s_buses:
             continue
-        tree_roots = tree_root_port_for_switch(tree_text, s_buses[0])
         for rp_bdf, rp_block in blocks.items():
             if rp_bdf not in nn_bridge_bdfs:
                 continue
             rp_buses = _bus_primary_secondary(rp_block)
             if not rp_buses or rp_buses[0] != 0 or rp_buses[1] != s_buses[0]:
                 continue
-            # tree corroboration: the tree must ALSO show this root port
-            # opening the switch's primary bus (tree devices are abbreviated
-            # as '1d.0'; vv keys are '00:1d.0' — compare on the short form)
-            rp_short = rp_bdf.split(":")[1]  # '1d.0'
-            if not any(d == rp_short or d.endswith(rp_short) or rp_short.endswith(d)
-                       for d in tree_roots):
+            # tree corroboration, both sides: the root port opens the
+            # switch's primary bus AND the switch's own (secondary,
+            # subordinate) span appears INSIDE that root port's tree branch.
+            rp_short = rp_bdf.split(":")[1]
+            s_span = _bus_span(sb)
+            if not s_span or not tree_chain_corroborated(
+                    tree_text, rp_short, rp_buses[1], s_span[1], s_span[2]):
                 continue
             rst = _lnksta(rp_block)
             sst = _lnksta(sb)
@@ -428,6 +436,22 @@ def parse_lspci_tree(text: str) -> dict[str, tuple[int, int]]:
     return spans
 
 
+def tree_span_for_device(tree_text: str, short_dev: str) -> tuple[int, int] | None:
+    """The tree-claimed (secondary, subordinate) bus span a bridge device
+    opens, e.g. tree '00.0-[03-09]' under the 1d.0 line -> (0x03, 0x09).
+    Used to corroborate the SWITCH UPSTREAM's own Bus line from the tree,
+    so an attacker cannot relocate the chain by editing only the vv file."""
+    best: tuple[int, int] | None = None
+    for m in re.finditer(r"([0-9a-f]{1,2}\\.[0-9a-f])\\s*-\\[([0-9a-f]{2})(?:-([0-9a-f]{2}))?\\]",
+                         tree_text):
+        if m.group(1) != short_dev:
+            continue
+        sec = int(m.group(2), 16)
+        sub = int(m.group(3), 16) if m.group(3) else sec
+        best = (sec, sub)
+    return best
+
+
 def tree_root_port_for_switch(tree_text: str, switch_secondary: int) -> set[str]:
     """Bridge devices in the TREE whose secondary == the switch's primary bus.
     lspci -t abbreviates devices as '<bus><zero-padded?>.0' (e.g. '1d.0-[02-09]');
@@ -441,6 +465,30 @@ def tree_root_port_for_switch(tree_text: str, switch_secondary: int) -> set[str]
         if sec == switch_secondary:
             found.add(dev)
     return found
+
+def tree_chain_corroborated(tree_text: str, rp_short: str, rp_secondary: int,
+                            switch_sec: int, switch_sub: int) -> bool:
+    """The tree must show the root port rp_short opening rp_secondary AND the
+    switch upstream span (switch_sec, switch_sub) nested within that root
+    port branch. Root-bus ports are the "+-xx.N-[..]"/"\\-xx.N-[..]" tokens at
+    line starts; a port branch runs until the next root-bus port token. lspci
+    nests the switch directly on the root-port line
+    ("+-1d.0-[02-09]----00.0-[03-09]"), so the branch includes that line."""
+    root_pat = r"(?m)^\s*[+\\]-([0-9a-f]{2}\.[0-9a-f])\s*-\[([0-9a-f]{2})(?:-([0-9a-f]{2}))?\]"
+    inner_pat = r"[0-9a-f]{1,2}\.[0-9a-f]\s*-\[([0-9a-f]{2})(?:-([0-9a-f]{2}))?\]"
+    root_ports = list(re.finditer(root_pat, tree_text))
+    for i, m in enumerate(root_ports):
+        if m.group(1) != rp_short or int(m.group(2), 16) != rp_secondary:
+            continue
+        branch_end = root_ports[i + 1].start() if i + 1 < len(root_ports) else len(tree_text)
+        branch = tree_text[m.end():branch_end]
+        for d in re.finditer(inner_pat, branch):
+            d_sec = int(d.group(1), 16)
+            d_sub = int(d.group(2), 16) if d.group(2) else d_sec
+            if (d_sec, d_sub) == (switch_sec, switch_sub):
+                return True
+    return False
+
 
 def _stdout_of(path: Path) -> str:
     """Raw artifacts store probe results as JSON {argv, rc, stdout, stderr}."""
