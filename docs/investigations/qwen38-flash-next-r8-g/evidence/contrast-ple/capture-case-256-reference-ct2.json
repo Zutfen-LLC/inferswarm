@@ -1,0 +1,2869 @@
+{
+  "arm": "reference",
+  "boundary_row_count": 117,
+  "boundary_rows": [
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "model.input_embed",
+      "nbytes": 2580480,
+      "ne": [
+        2560,
+        252,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 252,
+      "seq": 1,
+      "sha256": "688e8210b3f15bb8469a2fda8e2d0d3e7e3b1f53d3ddfb311fd77fa0565c8b4f",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "linear_attn_qkv_mixed-0",
+      "nbytes": 10321920,
+      "ne": [
+        10240,
+        252,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 252,
+      "seq": 1,
+      "sha256": "c99a75da0bc80f18d200fb487c1513b7e72c8bd97a3a26e446d9d53a30613b2d",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "ple_conv_out-1",
+      "nbytes": 10321920,
+      "ne": [
+        2560,
+        4,
+        252,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 252,
+      "seq": 1,
+      "sha256": "61cca78a888d690f888beb91ce16d9d8b49d31df7df94db34aed4c90ba795a17",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "linear_attn_qkv_mixed-1",
+      "nbytes": 10321920,
+      "ne": [
+        10240,
+        252,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 252,
+      "seq": 1,
+      "sha256": "bc247bf63dcc5357d268ea1a834ac792f82e786f3c5145ce23683f8c25d58da2",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "conv_output_silu-1",
+      "nbytes": 10321920,
+      "ne": [
+        10240,
+        252,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 252,
+      "seq": 1,
+      "sha256": "d8f2c22da581f7b6a5ab18eae74d63607fc1046ecff1ef9dbc0932364470989c",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 24576,
+      "n_nonfinite": 0,
+      "name": "final_output-1",
+      "nbytes": 6193152,
+      "ne": [
+        6144,
+        252,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 252,
+      "seq": 1,
+      "sha256": "fbf4f93d3fa01b4bed3765d676ef96ff33cdf3ed83b041411149c045069234c7",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "linear_attn_out-1",
+      "nbytes": 2580480,
+      "ne": [
+        2560,
+        252,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 252,
+      "seq": 1,
+      "sha256": "ef1feaaf394f51447f3e3f412528ca32ba6bc388a3d5bc1d41edd4b74f03b88f",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "ffn_moe_out-1",
+      "nbytes": 2580480,
+      "ne": [
+        2560,
+        252,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 252,
+      "seq": 1,
+      "sha256": "0d87870b5ce51ffa345affac277f21a9bffc71fc2c445d515f27c4b27f99768a",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "ffn_out-1",
+      "nbytes": 2580480,
+      "ne": [
+        2560,
+        252,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 252,
+      "seq": 1,
+      "sha256": "36410cde5bbfd5f111b2508f30e0945cfea4b2ad2de1d72b2c0917f46d2acda7",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-2",
+      "nbytes": 10321920,
+      "ne": [
+        2560,
+        4,
+        252,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 252,
+      "seq": 1,
+      "sha256": "ff3b55138f17726ecb397815f09d485b8241f3258af3cfbc61cf68afccaf7659",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-5",
+      "nbytes": 10321920,
+      "ne": [
+        2560,
+        4,
+        252,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 252,
+      "seq": 1,
+      "sha256": "94179320169064e8457f00961e8d36824d23057c3b7ac92e280543ed9436f1d0",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-23",
+      "nbytes": 10321920,
+      "ne": [
+        2560,
+        4,
+        252,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 252,
+      "seq": 1,
+      "sha256": "16e4ede9d4870b01dfc7edbf74dd43e5e73d0563cb437e316826000d0db9b239",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 0,
+      "n_nonfinite": -1,
+      "name": "result_output",
+      "nbytes": 0,
+      "ne": [
+        248320,
+        0,
+        1,
+        1
+      ],
+      "noncontig": true,
+      "ntok": 0,
+      "seq": 1,
+      "sha256": "NA",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "model.input_embed",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 4,
+      "seq": 2,
+      "sha256": "66844a5d8d61119c1a241a267b1aed0111cdbf203536d0cb9c4bf79b3df29393",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "linear_attn_qkv_mixed-0",
+      "nbytes": 163840,
+      "ne": [
+        10240,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 4,
+      "seq": 2,
+      "sha256": "6debeaeeef214c859743349a8a245af1829c9c89386d2464f84e80f6fd38012d",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "ple_conv_out-1",
+      "nbytes": 163840,
+      "ne": [
+        2560,
+        4,
+        4,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 4,
+      "seq": 2,
+      "sha256": "83e747214b94a52ef67ac6c971b808fbe217cdc852343d9cc9ae5fc19cd233db",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "linear_attn_qkv_mixed-1",
+      "nbytes": 163840,
+      "ne": [
+        10240,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 4,
+      "seq": 2,
+      "sha256": "85d816c4c2546f1e46e410c9e2438c504c8bc89422d07c85630c5b9c8639222f",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "conv_output_silu-1",
+      "nbytes": 163840,
+      "ne": [
+        10240,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 4,
+      "seq": 2,
+      "sha256": "19248a214b6273c8431dacfb324079725ab28ec47891088e821376951f580965",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 24576,
+      "n_nonfinite": 0,
+      "name": "final_output-1",
+      "nbytes": 98304,
+      "ne": [
+        6144,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 4,
+      "seq": 2,
+      "sha256": "b56d1f0c3ff03b459e2c2a2dea510417338aa6a35677b2bf2827dd17fa73973a",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "linear_attn_out-1",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 4,
+      "seq": 2,
+      "sha256": "6003abb992f7ef036190c8b730a9a539137c7d0eac0420d784e9f7b9135ebac5",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "ffn_moe_out-1",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 4,
+      "seq": 2,
+      "sha256": "50fe1521bcda22d1627af2d037fbfee582bca1bb2520583e3b020effc235a67a",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "ffn_out-1",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 4,
+      "seq": 2,
+      "sha256": "90b0613719c6064b9de958191020ec7b9ea920c50b4eecad165e11c8d8d93a24",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-2",
+      "nbytes": 163840,
+      "ne": [
+        2560,
+        4,
+        4,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 4,
+      "seq": 2,
+      "sha256": "f95ae772cf45e5215677f0c3496ea82300081d19e232617fe9bb71707df4e01f",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-5",
+      "nbytes": 163840,
+      "ne": [
+        2560,
+        4,
+        4,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 4,
+      "seq": 2,
+      "sha256": "3f8293546809f9e68dc7dc51f938a0a16b383f6700a46401a45573bc85378d6f",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-23",
+      "nbytes": 163840,
+      "ne": [
+        2560,
+        4,
+        4,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 4,
+      "seq": 2,
+      "sha256": "24af5e44cc08636bada69d71f773a55c0cf7797610f3fa1f966fa6a0d916c413",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 993280,
+      "n_nonfinite": 0,
+      "name": "result_output",
+      "nbytes": 993280,
+      "ne": [
+        248320,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 2,
+      "sha256": "c321cafeaca1d643bde3102a946c430fe403a1e4a9114d2ea550701d0d5223f2",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "model.input_embed",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 3,
+      "sha256": "951301ee903e4f13736bf564e2077c9beaebacd02bb795f3bc33d1ed3c8169e4",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "linear_attn_qkv_mixed-0",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 3,
+      "sha256": "2a7f5c3e47e6e22ed3684c36dff69c73cfbc1a172d559b90aa48fbd974c0a209",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "ple_conv_out-1",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 3,
+      "sha256": "858dfc465c63960f372f5cafbe123aa8408621379adb36891931c33fc32450d5",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "linear_attn_qkv_mixed-1",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 3,
+      "sha256": "7e979ed2a11291d0e861173398b505bc53916a8a56811e371e68344838dd5c8d",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "conv_output_silu-1",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 3,
+      "sha256": "d70e829a786b21d7147696b8a0d8a74956a399fa959b2320967a934d8e218a4e",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 24576,
+      "n_nonfinite": 0,
+      "name": "final_output-1",
+      "nbytes": 24576,
+      "ne": [
+        6144,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 3,
+      "sha256": "4bd41ee25b2a33570663e586ec6f2a4e880084c006c7a5642d52c058a3aed9b4",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "linear_attn_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 3,
+      "sha256": "a5d1761a3289d91acd711a5c12c8df7cd58464dcf10b07642523903ddede9f63",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "ffn_moe_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 3,
+      "sha256": "29305f27dac1fed4fb5d2c2434ebe9788fc9b164a2e53b61e88974e273d992f4",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "ffn_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 3,
+      "sha256": "f3bdfac4361df40e2037f82d41c7d386eb1ab7a960da2bb29455b51744815015",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-2",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 3,
+      "sha256": "f73e925316226fa6f55b07100599bdcf63d0a1963ab7d4f7f6655f66336d3f6f",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-5",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 3,
+      "sha256": "af9edd45753e5b913bd0cb0a46aa73dd0dbce9d154c8faab9281dcd3cda9c380",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-23",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 3,
+      "sha256": "4ce283885e74d7f5dc16bc783bb70cd3eaf49584d040ee1fe383f2092ba8958f",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 993280,
+      "n_nonfinite": 0,
+      "name": "result_output",
+      "nbytes": 993280,
+      "ne": [
+        248320,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 3,
+      "sha256": "e72c071880d471d4f289c388e787c6a18f3447b92690d5bfff1591a28dcc3f9d",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "model.input_embed",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 4,
+      "sha256": "4aa9931bad1f89d68563ef94bda334f45fd85a881dd6be5664abcff849d9c398",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "linear_attn_qkv_mixed-0",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 4,
+      "sha256": "737b7c9bee21dc75311092e9fc5c370b2b81d0bcfa798960ef1f1faaeeb25a5d",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "ple_conv_out-1",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 4,
+      "sha256": "98e6e61b9377ea59e3a1464c123ed031a8d464f130f38737b00a2d03a6cd81c8",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "linear_attn_qkv_mixed-1",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 4,
+      "sha256": "0a1eb753e83b3f2ba89fe344a6e638df52de1c325fc4cfe13f7ea57a65c95823",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "conv_output_silu-1",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 4,
+      "sha256": "ba9a0ffd785b0c076017730e2eba726e81a292c5618d812c0de611098308ec7f",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 24576,
+      "n_nonfinite": 0,
+      "name": "final_output-1",
+      "nbytes": 24576,
+      "ne": [
+        6144,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 4,
+      "sha256": "eb3a7d290708f49f788cca756764c270c2e017d23dd7891f347e349209a5f022",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "linear_attn_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 4,
+      "sha256": "160effab2e792d490ccbbd97d7f8003d5b3931f5b877e669dc017d8d58f31796",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "ffn_moe_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 4,
+      "sha256": "fac8962fede3cd42876ef476f5121a71105231621f45883ed833fbac428dd87a",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "ffn_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 4,
+      "sha256": "979db3e4c4cb5874094e25f2a0649f8e3c614bcd73f5f37fd27688394fd48b00",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-2",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 4,
+      "sha256": "f2c5f913b2f36d6a5f0240de2b135001f77d17c4d017ca7feaf6cca8c5caef2b",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-5",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 4,
+      "sha256": "87a504b2f61aa734df895c20ee99555457b2907fcc008e4d0b3fc14eefd2ae6f",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-23",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 4,
+      "sha256": "1fc555d58cee3694bc9fc94eaf568e2b2a05a12d2311a6e6b512509e7ce13ebb",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 993280,
+      "n_nonfinite": 0,
+      "name": "result_output",
+      "nbytes": 993280,
+      "ne": [
+        248320,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 4,
+      "sha256": "90f8f17d04cb93f0b5b513900694be7fab2eb689712348b65bfb4ea29798a144",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "model.input_embed",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 5,
+      "sha256": "5bdab991a23893d0290ac8eb738ca878020b761a1a431f7fd3e7cc9ce1320c6a",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "linear_attn_qkv_mixed-0",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 5,
+      "sha256": "7f8f9ae487ec7b89c96e9880437fa251001d4e4abad117115486aa2638b212ed",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "ple_conv_out-1",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 5,
+      "sha256": "007f43297a2a12cd580926f6ef7c91de3c65ddfcb8b79b8aaafc1dbd7c0b9db6",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "linear_attn_qkv_mixed-1",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 5,
+      "sha256": "e656313ee32c7dc5e84bd27c26001fad40ceef58dba863be3c240ae7a693e75a",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "conv_output_silu-1",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 5,
+      "sha256": "d49d1c636bba4ac14ebc88049ac8c1661dcd957cf93c0e01c39dd69c40b52761",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 24576,
+      "n_nonfinite": 0,
+      "name": "final_output-1",
+      "nbytes": 24576,
+      "ne": [
+        6144,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 5,
+      "sha256": "291c7ea6087fed6c050e69d693b056765a261f5559811863cb6883c56e6c48d1",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "linear_attn_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 5,
+      "sha256": "a9888180c06c3abad089263ee6f7ae55c1577661afbfc5d5cd3d282234fe2c30",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "ffn_moe_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 5,
+      "sha256": "1b3e78beab5a68a93656f23daea7f5cc7f47ee5a4c86767273d71713a713a1b9",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "ffn_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 5,
+      "sha256": "2928d3869c91659b62fe24d2b1d04e9168a9b8b60d110f77a4f40fcc34a859dc",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-2",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 5,
+      "sha256": "3c7e53d8926ba79b80348fd6aa4a981653df41bc580baadbb4bdf4428f32a774",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-5",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 5,
+      "sha256": "eaeb11f5fa903b9acc13eed8721b29b8fb6139d09059f66d30b8892f95376009",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-23",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 5,
+      "sha256": "53f33e6ae314e9ce9f74205b9e233b4fd26443716aed3e68b74165ae7792bd1e",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 993280,
+      "n_nonfinite": 0,
+      "name": "result_output",
+      "nbytes": 993280,
+      "ne": [
+        248320,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 5,
+      "sha256": "0c6667579c6c5ffa1be4f79fb10791625260ac9a7e6828427d793031bd9c8ac1",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "model.input_embed",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 6,
+      "sha256": "127d5f87a0f43cbed081f0ce08f852ec9a022298b07c7cf3cf1af32f29b0f267",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "linear_attn_qkv_mixed-0",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 6,
+      "sha256": "a19a695b8b10dd72ae5afe6347a75c8924f43d88870f31dc7abd8cc4d3eb4fc2",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "ple_conv_out-1",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 6,
+      "sha256": "40bab189858b3e7a97b1c3d993e6d7c49f6b0f5cdea40ef007a4998f1d9775f4",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "linear_attn_qkv_mixed-1",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 6,
+      "sha256": "9041dfabb5bafc96aa49f478e478914bb00cc8a39925cfd1297fbeff286b4c2d",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "conv_output_silu-1",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 6,
+      "sha256": "db5b8615c31e59da48d1f8d2543eba0db1dbe58bc63680807cd71dc950611731",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 24576,
+      "n_nonfinite": 0,
+      "name": "final_output-1",
+      "nbytes": 24576,
+      "ne": [
+        6144,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 6,
+      "sha256": "d575645c02bf304e0b6886c317e06285198a7074ab21ca45096cf4aa1ceda9a0",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "linear_attn_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 6,
+      "sha256": "c48ddf62d69b2b8b87b947abe48801ee19c59c0f8474b1c014fa01d0dc0b0343",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "ffn_moe_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 6,
+      "sha256": "7b3f863adedf6748908d60e726c0b7daf87337f23baeae5fb2c504f907d6f3fb",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "ffn_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 6,
+      "sha256": "e9f75394b4d271f31f158cf60ccf28828a937cde66903667da47cd585000e3a6",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-2",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 6,
+      "sha256": "85de1bb667e5ad30b8b9d9e5d0d94dc7460745382bc95b1f87c0ecc351322b10",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-5",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 6,
+      "sha256": "cc59001ab9b40e662b604fb85d04f7eff6db27ec2ee7f1dc0fb759bae7d8b8d1",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-23",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 6,
+      "sha256": "e1913e2785ae4ed35f4960c00292b1e6eb042f705457bbad81758db8775e77a8",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 993280,
+      "n_nonfinite": 0,
+      "name": "result_output",
+      "nbytes": 993280,
+      "ne": [
+        248320,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 6,
+      "sha256": "f5703df1acb290c2225716063458a37b600415040482beff52d3eb68303439d7",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "model.input_embed",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 7,
+      "sha256": "bb2c334fe6ceda15796c1e1cfcb3be4ee7523a7d1ba35535122664d2ccd0047b",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "linear_attn_qkv_mixed-0",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 7,
+      "sha256": "d95d8cba621c5f68ce5d32a530035d4429f3da12c3a78d4c4a2997afa4bbaa10",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "ple_conv_out-1",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 7,
+      "sha256": "5f0dc5234751d877d85461eab50c851026a6d01545ca8b8bd0d85e43458ab3f0",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "linear_attn_qkv_mixed-1",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 7,
+      "sha256": "989fe5180ea45aa49f9dec5dd6e6a23347e5e1dcc8aa800c8b78a8d9b8ddd731",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "conv_output_silu-1",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 7,
+      "sha256": "4952721616d1c65e02ecad0e58459952480d23d67bff9203fdce585f13f2cbea",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 24576,
+      "n_nonfinite": 0,
+      "name": "final_output-1",
+      "nbytes": 24576,
+      "ne": [
+        6144,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 7,
+      "sha256": "5389c0c6ca10fa1e5f3ef9760d224d0bc81f7bd7478034e328212b4bad699ef1",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "linear_attn_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 7,
+      "sha256": "4d0039dbf1bd9f1afe2d30dad1e1e5ef39fc23ff59be2217b2c24be05d21deab",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "ffn_moe_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 7,
+      "sha256": "d3c1208368bd9c98b978be8f0776255145efa0778e27267cdfbb2759733dc1f8",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "ffn_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 7,
+      "sha256": "0af4bd84c2ab51377af5e300f36986a6228bc40bc7823fd5f8f889702e922111",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-2",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 7,
+      "sha256": "c69e3dbe8a2d3728b56312223166950402856b70487d740f8d0f13549e95c44d",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-5",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 7,
+      "sha256": "8012002a5a9ac8924e5105b3f8f07d11625c7d76a34502a1e759766c1675faa4",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-23",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 7,
+      "sha256": "5d3a24e94caada6f90449d58cd71fe226a6394fe85a10bee8213f272971a8316",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 993280,
+      "n_nonfinite": 0,
+      "name": "result_output",
+      "nbytes": 993280,
+      "ne": [
+        248320,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 7,
+      "sha256": "1fd17a48f88678df7d375f3b7668268d1a4c13b183fd46ea7cf056dd5819190e",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "model.input_embed",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 8,
+      "sha256": "0325444ea7a4c55e565b92f95630eb09f00182174a6796475234a90e3d6781b0",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "linear_attn_qkv_mixed-0",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 8,
+      "sha256": "e37ecb907dabb10cb062bc19c673b64a982eca4891cac40d8b50e8ec60a7ad75",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "ple_conv_out-1",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 8,
+      "sha256": "367766e9abba6c888f0b59ad0c3999c5db5f9a0cd1b327c23d212b9c11581f87",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "linear_attn_qkv_mixed-1",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 8,
+      "sha256": "3d9edb74ffecbdf77a1a2a7b9376427516cd8692d2a5e9e37cd9bce7b472e2d7",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "conv_output_silu-1",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 8,
+      "sha256": "3ce50fe136de436aba14380bb9fca696488a491c4783d600366fed116fae7a5c",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 24576,
+      "n_nonfinite": 0,
+      "name": "final_output-1",
+      "nbytes": 24576,
+      "ne": [
+        6144,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 8,
+      "sha256": "9893ee2643d538811313807464c92217b37eb59cd1e3b0e04ffe3a71afde7586",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "linear_attn_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 8,
+      "sha256": "c5162fb81082164b6b91101e571d04ff65bbbe984de51eb9948de6e838db716c",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "ffn_moe_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 8,
+      "sha256": "fe189ee0b6f7036583869eb34d7a8bbd69d0bdb5173f33f43d44154f6d7c32a7",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "ffn_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 8,
+      "sha256": "b995bb5b7aaf077a19034fa56fd78eec23c4805030b72ecffcfa8302d2e4a447",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-2",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 8,
+      "sha256": "e6222d4d2af66bfd5b96f46821ea3c50d7758633be802dbb74d838f2559d186c",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-5",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 8,
+      "sha256": "bf5f58ecca21909747d7c5fa60647964ebcd665f934fe0d69ff0fc59a0aa5be6",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-23",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 8,
+      "sha256": "7f7bf66c3348ec569d915d73fb2d577a092317895e1a1801e2d7d7049d4f4558",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 993280,
+      "n_nonfinite": 0,
+      "name": "result_output",
+      "nbytes": 993280,
+      "ne": [
+        248320,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 8,
+      "sha256": "7277602bee9ecbc4ff662d1912d725da36c5a4ad3254cbd5d197c0d66ec86078",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "model.input_embed",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 9,
+      "sha256": "64d4e9bbc2a4647920928c7d26c71eba1449773d0dbdb87331de6de11fc354d4",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "linear_attn_qkv_mixed-0",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 9,
+      "sha256": "090db0dae3d8221be4f8b8a88fe7908bcb72455ad85836154a5e65ccc7e3f89e",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "ple_conv_out-1",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 9,
+      "sha256": "357fc61124a1257af700ad09c7771a038a4f3bdc18b2cea25d6b0cb3f4b9062d",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "linear_attn_qkv_mixed-1",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 9,
+      "sha256": "3073a1d6a3c33b70437bbf7dfcd492392b836eb4d51c69e624eed1f7bec5843a",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "conv_output_silu-1",
+      "nbytes": 40960,
+      "ne": [
+        10240,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 9,
+      "sha256": "e148deb6492a7d0366cc05b4d9f939e5943a37d209d21e880b2ea8a912dea2e4",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 24576,
+      "n_nonfinite": 0,
+      "name": "final_output-1",
+      "nbytes": 24576,
+      "ne": [
+        6144,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 9,
+      "sha256": "cb568efba5e97584b9ff3bd1c58d723a7ec4bae3ee2d3eac50121541dfd0c3a2",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "linear_attn_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 9,
+      "sha256": "93911b4c726abf9f78bfb43e399422a9741ad3f1ac54b6e13f12e5c1c2d5f75c",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "ffn_moe_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 9,
+      "sha256": "082300d2a8e7903cb636045a7c6b9ef61bee09dfe46be425ab0d452890c78e3f",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 10240,
+      "n_nonfinite": 0,
+      "name": "ffn_out-1",
+      "nbytes": 10240,
+      "ne": [
+        2560,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 9,
+      "sha256": "b3eea7de84b2afd1237571d1e244cc44b20a5ed56c91fa0da3f32413cfd499b1",
+      "tokdim": 1,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-2",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 9,
+      "sha256": "2c45a71a33fa14d8d81e197372b5759ba160a57789082f28a435ad92fc1de3c8",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-5",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 9,
+      "sha256": "f598b8772d34210a31f396e89bccab84cadcece288985ee552a8806e82d7051a",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 40960,
+      "n_nonfinite": 0,
+      "name": "l_last-23",
+      "nbytes": 40960,
+      "ne": [
+        2560,
+        4,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 9,
+      "sha256": "16b7e93961cfbd3118d22eb6ebd2979c0b43bc98eb23e4c1a24a4cd401fdcd9c",
+      "tokdim": 2,
+      "type": "f32"
+    },
+    {
+      "col_nbytes": 993280,
+      "n_nonfinite": 0,
+      "name": "result_output",
+      "nbytes": 993280,
+      "ne": [
+        248320,
+        1,
+        1,
+        1
+      ],
+      "noncontig": false,
+      "ntok": 1,
+      "seq": 9,
+      "sha256": "fdcfba079c3b5fbe86c290332828c396fb4bcf5a45047a4fe40b532bcc9536f2",
+      "tokdim": 1,
+      "type": "f32"
+    }
+  ],
+  "boundary_rows_problems": [],
+  "boundary_sidecar_dir": "sc-case-256-reference-ct2",
+  "boundary_sidecar_sizes": {
+    "conv_output_silu-1__1.f32": 40960,
+    "conv_output_silu-1__2.f32": 40960,
+    "conv_output_silu-1__3.f32": 40960,
+    "conv_output_silu-1__4.f32": 40960,
+    "conv_output_silu-1__5.f32": 40960,
+    "conv_output_silu-1__6.f32": 40960,
+    "conv_output_silu-1__7.f32": 40960,
+    "conv_output_silu-1__8.f32": 40960,
+    "conv_output_silu-1__9.f32": 40960,
+    "ffn_moe_out-1__1.f32": 10240,
+    "ffn_moe_out-1__2.f32": 10240,
+    "ffn_moe_out-1__3.f32": 10240,
+    "ffn_moe_out-1__4.f32": 10240,
+    "ffn_moe_out-1__5.f32": 10240,
+    "ffn_moe_out-1__6.f32": 10240,
+    "ffn_moe_out-1__7.f32": 10240,
+    "ffn_moe_out-1__8.f32": 10240,
+    "ffn_moe_out-1__9.f32": 10240,
+    "ffn_out-1__1.f32": 10240,
+    "ffn_out-1__2.f32": 10240,
+    "ffn_out-1__3.f32": 10240,
+    "ffn_out-1__4.f32": 10240,
+    "ffn_out-1__5.f32": 10240,
+    "ffn_out-1__6.f32": 10240,
+    "ffn_out-1__7.f32": 10240,
+    "ffn_out-1__8.f32": 10240,
+    "ffn_out-1__9.f32": 10240,
+    "final_output-1__1.f32": 24576,
+    "final_output-1__2.f32": 24576,
+    "final_output-1__3.f32": 24576,
+    "final_output-1__4.f32": 24576,
+    "final_output-1__5.f32": 24576,
+    "final_output-1__6.f32": 24576,
+    "final_output-1__7.f32": 24576,
+    "final_output-1__8.f32": 24576,
+    "final_output-1__9.f32": 24576,
+    "l_last-23__1.f32": 40960,
+    "l_last-23__2.f32": 40960,
+    "l_last-23__3.f32": 40960,
+    "l_last-23__4.f32": 40960,
+    "l_last-23__5.f32": 40960,
+    "l_last-23__6.f32": 40960,
+    "l_last-23__7.f32": 40960,
+    "l_last-23__8.f32": 40960,
+    "l_last-23__9.f32": 40960,
+    "l_last-2__1.f32": 40960,
+    "l_last-2__2.f32": 40960,
+    "l_last-2__3.f32": 40960,
+    "l_last-2__4.f32": 40960,
+    "l_last-2__5.f32": 40960,
+    "l_last-2__6.f32": 40960,
+    "l_last-2__7.f32": 40960,
+    "l_last-2__8.f32": 40960,
+    "l_last-2__9.f32": 40960,
+    "l_last-5__1.f32": 40960,
+    "l_last-5__2.f32": 40960,
+    "l_last-5__3.f32": 40960,
+    "l_last-5__4.f32": 40960,
+    "l_last-5__5.f32": 40960,
+    "l_last-5__6.f32": 40960,
+    "l_last-5__7.f32": 40960,
+    "l_last-5__8.f32": 40960,
+    "l_last-5__9.f32": 40960,
+    "linear_attn_out-1__1.f32": 10240,
+    "linear_attn_out-1__2.f32": 10240,
+    "linear_attn_out-1__3.f32": 10240,
+    "linear_attn_out-1__4.f32": 10240,
+    "linear_attn_out-1__5.f32": 10240,
+    "linear_attn_out-1__6.f32": 10240,
+    "linear_attn_out-1__7.f32": 10240,
+    "linear_attn_out-1__8.f32": 10240,
+    "linear_attn_out-1__9.f32": 10240,
+    "linear_attn_qkv_mixed-0__1.f32": 40960,
+    "linear_attn_qkv_mixed-0__2.f32": 40960,
+    "linear_attn_qkv_mixed-0__3.f32": 40960,
+    "linear_attn_qkv_mixed-0__4.f32": 40960,
+    "linear_attn_qkv_mixed-0__5.f32": 40960,
+    "linear_attn_qkv_mixed-0__6.f32": 40960,
+    "linear_attn_qkv_mixed-0__7.f32": 40960,
+    "linear_attn_qkv_mixed-0__8.f32": 40960,
+    "linear_attn_qkv_mixed-0__9.f32": 40960,
+    "linear_attn_qkv_mixed-1__1.f32": 40960,
+    "linear_attn_qkv_mixed-1__2.f32": 40960,
+    "linear_attn_qkv_mixed-1__3.f32": 40960,
+    "linear_attn_qkv_mixed-1__4.f32": 40960,
+    "linear_attn_qkv_mixed-1__5.f32": 40960,
+    "linear_attn_qkv_mixed-1__6.f32": 40960,
+    "linear_attn_qkv_mixed-1__7.f32": 40960,
+    "linear_attn_qkv_mixed-1__8.f32": 40960,
+    "linear_attn_qkv_mixed-1__9.f32": 40960,
+    "model.input_embed__1.f32": 10240,
+    "model.input_embed__2.f32": 10240,
+    "model.input_embed__3.f32": 10240,
+    "model.input_embed__4.f32": 10240,
+    "model.input_embed__5.f32": 10240,
+    "model.input_embed__6.f32": 10240,
+    "model.input_embed__7.f32": 10240,
+    "model.input_embed__8.f32": 10240,
+    "model.input_embed__9.f32": 10240,
+    "ple_conv_out-1__1.f32": 40960,
+    "ple_conv_out-1__2.f32": 40960,
+    "ple_conv_out-1__3.f32": 40960,
+    "ple_conv_out-1__4.f32": 40960,
+    "ple_conv_out-1__5.f32": 40960,
+    "ple_conv_out-1__6.f32": 40960,
+    "ple_conv_out-1__7.f32": 40960,
+    "ple_conv_out-1__8.f32": 40960,
+    "ple_conv_out-1__9.f32": 40960,
+    "result_output__1.f32": 0,
+    "result_output__2.f32": 993280,
+    "result_output__3.f32": 993280,
+    "result_output__4.f32": 993280,
+    "result_output__5.f32": 993280,
+    "result_output__6.f32": 993280,
+    "result_output__7.f32": 993280,
+    "result_output__8.f32": 993280,
+    "result_output__9.f32": 993280
+  },
+  "boundary_spec": "linear_attn_qkv_mixed-0:1;ple_conv_out-1:2;linear_attn_qkv_mixed-1:1;conv_output_silu-1:1;final_output-1:1;linear_attn_out-1:1;ffn_moe_out-1:1;ffn_out-1:1;model.input_embed:1;l_last-2:2;l_last-5:2;l_last-23:2;result_output:1",
+  "campaign": "issue207-r8g-boundary-localization",
+  "capture_problems": [],
+  "case": "case-256",
+  "elapsed_s": 4.24,
+  "ended_utc": "2026-09-17T03:56:35Z",
+  "f32_row_floats": 0,
+  "f32_row_nonfinite": null,
+  "f32_row_sha256": null,
+  "generated_position_target": 5,
+  "git_clean": false,
+  "git_head": "94bfb53dfc548820a7f9c859a19b7ce461526f50",
+  "label": "case-256-reference-ct2",
+  "logits_hook_rows": [
+    {
+      "focus": [],
+      "n_nonfinite": 0,
+      "n_vocab": 248320,
+      "pos": 0,
+      "tok": 561,
+      "top": [
+        [
+          561,
+          15.7115765
+        ],
+        [
+          359,
+          14.5212688
+        ],
+        [
+          271,
+          14.3915939
+        ],
+        [
+          328,
+          14.1834602
+        ],
+        [
+          198,
+          12.9113531
+        ],
+        [
+          220,
+          12.7234087
+        ],
+        [
+          1165,
+          12.3540497
+        ],
+        [
+          4486,
+          11.8996677
+        ],
+        [
+          2838,
+          11.6562824
+        ],
+        [
+          5044,
+          11.6390724
+        ],
+        [
+          1541,
+          11.6261129
+        ],
+        [
+          695,
+          11.5669546
+        ],
+        [
+          357,
+          11.3361597
+        ],
+        [
+          18037,
+          11.2234182
+        ],
+        [
+          2500,
+          11.0800571
+        ],
+        [
+          3437,
+          11.0602188
+        ]
+      ]
+    },
+    {
+      "focus": [],
+      "n_nonfinite": 0,
+      "n_vocab": 248320,
+      "pos": 1,
+      "tok": 324,
+      "top": [
+        [
+          324,
+          16.4937935
+        ],
+        [
+          40554,
+          15.5925531
+        ],
+        [
+          51624,
+          14.3453884
+        ],
+        [
+          29262,
+          14.3264475
+        ],
+        [
+          54517,
+          14.1980162
+        ],
+        [
+          23167,
+          14.1229258
+        ],
+        [
+          8026,
+          13.1217537
+        ],
+        [
+          2235,
+          12.5873117
+        ],
+        [
+          13071,
+          12.5399113
+        ],
+        [
+          78812,
+          12.2070961
+        ],
+        [
+          16382,
+          12.1983633
+        ],
+        [
+          9117,
+          12.0059214
+        ],
+        [
+          13234,
+          11.9460831
+        ],
+        [
+          3474,
+          11.8108635
+        ],
+        [
+          1483,
+          11.781826
+        ],
+        [
+          3000,
+          11.7201519
+        ]
+      ]
+    },
+    {
+      "focus": [],
+      "n_nonfinite": 0,
+      "n_vocab": 248320,
+      "pos": 2,
+      "tok": 55965,
+      "top": [
+        [
+          55965,
+          19.913044
+        ],
+        [
+          21204,
+          14.992363
+        ],
+        [
+          271,
+          13.3732185
+        ],
+        [
+          1487,
+          9.90323544
+        ],
+        [
+          65138,
+          9.86152458
+        ],
+        [
+          1055,
+          9.83242416
+        ],
+        [
+          27404,
+          9.51202011
+        ],
+        [
+          2173,
+          8.75832176
+        ],
+        [
+          8208,
+          8.60211945
+        ],
+        [
+          248044,
+          8.50265312
+        ],
+        [
+          1077,
+          8.40476608
+        ],
+        [
+          812,
+          8.3523941
+        ],
+        [
+          198,
+          8.2929554
+        ],
+        [
+          1672,
+          8.14997482
+        ],
+        [
+          3034,
+          7.94929218
+        ],
+        [
+          602,
+          7.8916769
+        ]
+      ]
+    },
+    {
+      "focus": [],
+      "n_nonfinite": 0,
+      "n_vocab": 248320,
+      "pos": 3,
+      "tok": 51624,
+      "top": [
+        [
+          51624,
+          19.183836
+        ],
+        [
+          271,
+          15.4331942
+        ],
+        [
+          2426,
+          11.9754705
+        ],
+        [
+          561,
+          11.8053427
+        ],
+        [
+          78812,
+          11.4608421
+        ],
+        [
+          579,
+          11.090992
+        ],
+        [
+          8341,
+          11.0065269
+        ],
+        [
+          13262,
+          10.9582863
+        ],
+        [
+          557,
+          10.7936306
+        ],
+        [
+          198,
+          10.6705647
+        ],
+        [
+          18291,
+          10.4867134
+        ],
+        [
+          760,
+          10.3078117
+        ],
+        [
+          29014,
+          10.2805996
+        ],
+        [
+          12,
+          9.832407
+        ],
+        [
+          321,
+          9.76932812
+        ],
+        [
+          369,
+          9.59611225
+        ]
+      ]
+    },
+    {
+      "focus": [],
+      "n_nonfinite": 0,
+      "n_vocab": 248320,
+      "pos": 4,
+      "tok": 29014,
+      "top": [
+        [
+          29014,
+          17.4604874
+        ],
+        [
+          271,
+          15.8104668
+        ],
+        [
+          579,
+          14.4395533
+        ],
+        [
+          37444,
+          13.1603203
+        ],
+        [
+          1179,
+          12.6119919
+        ],
+        [
+          1018,
+          12.6042633
+        ],
+        [
+          557,
+          12.2671137
+        ],
+        [
+          29547,
+          12.1065807
+        ],
+        [
+          33351,
+          12.001708
+        ],
+        [
+          995,
+          11.9520292
+        ],
+        [
+          6749,
+          11.867445
+        ],
+        [
+          10184,
+          11.8637838
+        ],
+        [
+          1467,
+          11.7947588
+        ],
+        [
+          14428,
+          11.6430149
+        ],
+        [
+          12076,
+          11.6181917
+        ],
+        [
+          5820,
+          11.5273647
+        ]
+      ]
+    },
+    {
+      "focus": [],
+      "n_nonfinite": 0,
+      "n_vocab": 248320,
+      "pos": 5,
+      "tok": 271,
+      "top": [
+        [
+          271,
+          16.706398
+        ],
+        [
+          34227,
+          16.0985374
+        ],
+        [
+          31347,
+          13.8097343
+        ],
+        [
+          25292,
+          13.649128
+        ],
+        [
+          16570,
+          12.9183235
+        ],
+        [
+          279,
+          12.6028099
+        ],
+        [
+          198,
+          12.2910347
+        ],
+        [
+          4558,
+          12.0122089
+        ],
+        [
+          264,
+          11.8309116
+        ],
+        [
+          28279,
+          11.4856672
+        ],
+        [
+          60163,
+          11.4422951
+        ],
+        [
+          220,
+          11.4031944
+        ],
+        [
+          799,
+          11.3510332
+        ],
+        [
+          50614,
+          11.2276688
+        ],
+        [
+          1132,
+          11.1310263
+        ],
+        [
+          11292,
+          11.1305199
+        ]
+      ]
+    },
+    {
+      "focus": [],
+      "n_nonfinite": 0,
+      "n_vocab": 248320,
+      "pos": 6,
+      "tok": 248068,
+      "top": [
+        [
+          248068,
+          16.660347
+        ],
+        [
+          760,
+          15.086647
+        ],
+        [
+          3836,
+          13.872345
+        ],
+        [
+          19,
+          13.2710285
+        ],
+        [
+          1076,
+          13.1658249
+        ],
+        [
+          8160,
+          12.8255033
+        ],
+        [
+          27775,
+          12.6581268
+        ],
+        [
+          7691,
+          12.3033695
+        ],
+        [
+          40,
+          12.1411667
+        ],
+        [
+          2064,
+          12.0128403
+        ],
+        [
+          5836,
+          11.7155275
+        ],
+        [
+          34227,
+          11.6159363
+        ],
+        [
+          1206,
+          11.5727034
+        ],
+        [
+          248044,
+          11.475008
+        ],
+        [
+          32177,
+          11.3748026
+        ],
+        [
+          623,
+          11.3691273
+        ]
+      ]
+    },
+    {
+      "focus": [],
+      "n_nonfinite": 0,
+      "n_vocab": 248320,
+      "pos": 7,
+      "tok": 271,
+      "top": [
+        [
+          271,
+          27.1607285
+        ],
+        [
+          198,
+          25.8348083
+        ],
+        [
+          4558,
+          15.3405437
+        ],
+        [
+          1358,
+          15.2372608
+        ],
+        [
+          248046,
+          15.0767593
+        ],
+        [
+          695,
+          13.8315105
+        ],
+        [
+          13488,
+          13.3572588
+        ],
+        [
+          248044,
+          13.0364695
+        ],
+        [
+          987,
+          12.7628117
+        ],
+        [
+          56963,
+          12.6858101
+        ],
+        [
+          6987,
+          12.2319069
+        ],
+        [
+          318,
+          12.1306534
+        ],
+        [
+          2228,
+          11.85882
+        ],
+        [
+          25952,
+          11.6272173
+        ],
+        [
+          18050,
+          11.2131233
+        ],
+        [
+          248069,
+          10.8181419
+        ]
+      ]
+    }
+  ],
+  "phase": "contrast",
+  "phase_dir": "contrast",
+  "preexisting_boundary_rows": 0,
+  "preexisting_logits_rows": 0,
+  "producer": "issue207_r8g_capture.py",
+  "producer_sha256": "050c10547f93496ac804d1056b017d941256acf646e052148e659e9e2c07b5cd",
+  "prompt_sha256": "647c266d9e9b7769679d875a1d06fb7c47cf6f4b3acd9fb5d0364f2baa7a94b5",
+  "prompt_token_count": 256,
+  "request_body_b64": "eyJjYWNoZV9wcm9tcHQiOmZhbHNlLCJuX3ByZWRpY3QiOjgsInByb21wdCI6WzI1MjMsNTEzLDE0MjEyLDI2NCw0MDU1NCwxNDMzLDEzLDU2MSwzMjQsNTU5NjUsNTE2MjQsMjkwMTQsMzQyMjcsMTgwMzAsMTYzODIsMTUxOCwyNzksMjkyNjIsNDkxNzIsMTgwMTgsMTA1OTgsMTMsNTYxLDMyNCw1NTk2NSw1MTYyNCwyOTAxNCwzNDIyNywxODAzMCwxNjM4MiwxNTE4LDI3OSwyOTI2Miw0OTE3MiwxODAxOCwxMDU5OCwxMyw1NjEsMzI0LDU1OTY1LDUxNjI0LDI5MDE0LDM0MjI3LDE4MDMwLDE2MzgyLDE1MTgsMjc5LDI5MjYyLDQ5MTcyLDE4MDE4LDEwNTk4LDEzLDU2MSwzMjQsNTU5NjUsNTE2MjQsMjkwMTQsMzQyMjcsMTgwMzAsMTYzODIsMTUxOCwyNzksMjkyNjIsNDkxNzIsMTgwMTgsMTA1OTgsMTMsNTYxLDMyNCw1NTk2NSw1MTYyNCwyOTAxNCwzNDIyNywxODAzMCwxNjM4MiwxNTE4LDI3OSwyOTI2Miw0OTE3MiwxODAxOCwxMDU5OCwxMyw1NjEsMzI0LDU1OTY1LDUxNjI0LDI5MDE0LDM0MjI3LDE4MDMwLDE2MzgyLDE1MTgsMjc5LDI5MjYyLDQ5MTcyLDE4MDE4LDEwNTk4LDEzLDU2MSwzMjQsNTU5NjUsNTE2MjQsMjkwMTQsMzQyMjcsMTgwMzAsMTYzODIsMTUxOCwyNzksMjkyNjIsNDkxNzIsMTgwMTgsMTA1OTgsMTMsNTYxLDMyNCw1NTk2NSw1MTYyNCwyOTAxNCwzNDIyNywxODAzMCwxNjM4MiwxNTE4LDI3OSwyOTI2Miw0OTE3MiwxODAxOCwxMDU5OCwxMyw1NjEsMzI0LDU1OTY1LDUxNjI0LDI5MDE0LDM0MjI3LDE4MDMwLDE2MzgyLDE1MTgsMjc5LDI5MjYyLDQ5MTcyLDE4MDE4LDEwNTk4LDEzLDU2MSwzMjQsNTU5NjUsNTE2MjQsMjkwMTQsMzQyMjcsMTgwMzAsMTYzODIsMTUxOCwyNzksMjkyNjIsNDkxNzIsMTgwMTgsMTA1OTgsMTMsNTYxLDMyNCw1NTk2NSw1MTYyNCwyOTAxNCwzNDIyNywxODAzMCwxNjM4MiwxNTE4LDI3OSwyOTI2Miw0OTE3MiwxODAxOCwxMDU5OCwxMyw1NjEsMzI0LDU1OTY1LDUxNjI0LDI5MDE0LDM0MjI3LDE4MDMwLDE2MzgyLDE1MTgsMjc5LDI5MjYyLDQ5MTcyLDE4MDE4LDEwNTk4LDEzLDU2MSwzMjQsNTU5NjUsNTE2MjQsMjkwMTQsMzQyMjcsMTgwMzAsMTYzODIsMTUxOCwyNzksMjkyNjIsNDkxNzIsMTgwMTgsMTA1OTgsMTMsNTYxLDMyNCw1NTk2NSw1MTYyNCwyOTAxNCwzNDIyNywxODAzMCwxNjM4MiwxNTE4LDI3OSwyOTI2Miw0OTE3MiwxODAxOCwxMDU5OCwxMyw1NjEsMzI0LDU1OTY1LDUxNjI0LDI5MDE0LDM0MjI3LDE4MDMwLDE2MzgyLDE1MTgsMjc5LDI5MjYyLDQ5MTcyLDE4MDE4LDEwNTk4LDEzLDU2MSwzMjQsNTU5NjUsNTE2MjQsMjkwMTQsMzQyMjcsMTgwMzAsMTYzODIsMTUxOCwyNzksMjkyNjIsNDkxNzIsMTgwMTgsMTA1OTgsMTMsMjIwLDU2MSwxNzI3LDE0MzMsNDIwMiwxMTY5MCw0MzAsMTA2OTUsMjVdLCJyZXR1cm5fdG9rZW5zIjp0cnVlLCJzYW1wbGVycyI6WyJ0b3BfayJdLCJzZWVkIjowLCJzdHJlYW0iOmZhbHNlLCJ0ZW1wZXJhdHVyZSI6MC4wLCJ0b3BfayI6MX0=",
+  "request_body_sha256": "16c315a6abe789ef86fde92a5d56fd780b56a5ff059d9568c9e26d21cfd6c6d3",
+  "response_body_b64": "eyJpbmRleCI6MCwiY29udGVudCI6IiBUaGUgbGlnaHRob3VzZSBrZWVwZXIgY291bnRlZFxuXG48dGhpbms+XG5cbiIsInRva2VucyI6WzU2MSwzMjQsNTU5NjUsNTE2MjQsMjkwMTQsMjcxLDI0ODA2OCwyNzFdLCJpZF9zbG90IjozLCJzdG9wIjp0cnVlLCJtb2RlbCI6Ii9zcnYvbW9kZWxzL3F3ZW4zOC11ZC1pcTEtcy9Rd2VuMy44LUZsYXNoLU5leHQtVUQtSVExX1MtMDAwMDEtb2YtMDAwMDMuZ2d1ZiIsInRva2Vuc19wcmVkaWN0ZWQiOjgsInRva2Vuc19ldmFsdWF0ZWQiOjI1NiwiZ2VuZXJhdGlvbl9zZXR0aW5ncyI6eyJzZWVkIjowLCJ0ZW1wZXJhdHVyZSI6MC4wLCJkeW5hdGVtcF9yYW5nZSI6MC4wLCJkeW5hdGVtcF9leHBvbmVudCI6MS4wLCJ0b3BfayI6MSwidG9wX3AiOjAuOTQ5OTk5OTg4MDc5MDcxLCJtaW5fcCI6MC4wNTAwMDAwMDA3NDUwNTgwNiwidG9wX25fc2lnbWEiOi0xLjAsInh0Y19wcm9iYWJpbGl0eSI6MC4wLCJ4dGNfdGhyZXNob2xkIjowLjEwMDAwMDAwMTQ5MDExNjEyLCJ0eXBpY2FsX3AiOjEuMCwicmVwZWF0X2xhc3RfbiI6NjQsInJlcGVhdF9wZW5hbHR5IjoxLjAsInByZXNlbmNlX3BlbmFsdHkiOjAuMCwiZnJlcXVlbmN5X3BlbmFsdHkiOjAuMCwiZHJ5X211bHRpcGxpZXIiOjAuMCwiZHJ5X2Jhc2UiOjEuNzUsImRyeV9hbGxvd2VkX2xlbmd0aCI6MiwiZHJ5X3BlbmFsdHlfbGFzdF9uIjo2NCwiZHJ5X3NlcXVlbmNlX2JyZWFrZXJzIjpbIlxuIiwiOiIsIlwiIiwiKiJdLCJtaXJvc3RhdCI6MCwibWlyb3N0YXRfdGF1Ijo1LjAsIm1pcm9zdGF0X2V0YSI6MC4xMDAwMDAwMDE0OTAxMTYxMiwiYWRhcHRpdmVfdGFyZ2V0IjotMS4wLCJhZGFwdGl2ZV9kZWNheSI6MC44OTk5OTk5NzYxNTgxNDIxLCJzdG9wIjpbXSwibWF4X3Rva2VucyI6OCwibl9wcmVkaWN0Ijo4LCJuX2tlZXAiOjAsIm5fZGlzY2FyZCI6MCwiaWdub3JlX2VvcyI6ZmFsc2UsInN0cmVhbSI6ZmFsc2UsImxvZ2l0X2JpYXMiOltdLCJuX3Byb2JzIjowLCJtaW5fa2VlcCI6MCwiZ3JhbW1hciI6IiIsImdyYW1tYXJfbGF6eSI6ZmFsc2UsImdyYW1tYXJfdHJpZ2dlcnMiOltdLCJwcmVzZXJ2ZWRfdG9rZW5zIjpbXSwiY2hhdF9mb3JtYXQiOiJDb250ZW50LW9ubHkiLCJyZWFzb25pbmdfZm9ybWF0IjoiZGVlcHNlZWsiLCJyZWFzb25pbmdfaW5fY29udGVudCI6ZmFsc2UsImdlbmVyYXRpb25fcHJvbXB0IjoiIiwic2FtcGxlcnMiOlsidG9wX2siXSwic3BlY3VsYXRpdmUudHlwZXMiOiJub25lIiwidGltaW5nc19wZXJfdG9rZW4iOmZhbHNlLCJwb3N0X3NhbXBsaW5nX3Byb2JzIjpmYWxzZSwiYmFja2VuZF9zYW1wbGluZyI6ZmFsc2UsImxvcmEiOltdfSwicHJvbXB0IjoiWW91IGFyZSByZWNvcmRpbmcgYSB0aWRlIGxvZy4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gVGhlIGxpZ2h0aG91c2Uga2VlcGVyIGNvdW50ZWQgZm9ydHktb25lIHdhdmVzIGJlZm9yZSB0aGUgZm9naG9ybiBhbnN3ZXJlZCB0d2ljZS4gIFRoZSBuZXh0IGxvZyBlbnRyeSBiZWdpbnMgYXMgZm9sbG93czoiLCJoYXNfbmV3X2xpbmUiOnRydWUsInRydW5jYXRlZCI6ZmFsc2UsInN0b3BfdHlwZSI6ImxpbWl0Iiwic3RvcHBpbmdfd29yZCI6IiIsInRva2Vuc19jYWNoZWQiOjI2MywidGltaW5ncyI6eyJjYWNoZV9uIjowLCJwcm9tcHRfbiI6MjU2LCJwcm9tcHRfbXMiOjMyMDYuMjI4LCJwcm9tcHRfcGVyX3Rva2VuX21zIjoxMi41MjQzMjgxMjUsInByb21wdF9wZXJfc2Vjb25kIjo3OS44NDQ2MDI0NDI0OTYzLCJwcmVkaWN0ZWRfbiI6OCwicHJlZGljdGVkX21zIjoxMDEyLjc1NiwicHJlZGljdGVkX3Blcl90b2tlbl9tcyI6MTQ0LjY3OTQyODU3MTQyODU2LCJwcmVkaWN0ZWRfcGVyX3NlY29uZCI6Ni45MTE4MzI2NjI1NTY0MzF9fQ==",
+  "response_body_sha256": "53da708e0838773da7baf2d626c34a018277735b7886d4cfbfa8bd19f9c8ca3b",
+  "response_generated_tokens": [
+    561,
+    324,
+    55965,
+    51624,
+    29014,
+    271,
+    248068,
+    271
+  ],
+  "response_stop_type": "limit",
+  "response_timings": {
+    "cache_n": 0,
+    "predicted_ms": 1012.756,
+    "predicted_n": 8,
+    "predicted_per_second": 6.911832662556431,
+    "predicted_per_token_ms": 144.67942857142856,
+    "prompt_ms": 3206.228,
+    "prompt_n": 256,
+    "prompt_per_second": 79.8446024424963,
+    "prompt_per_token_ms": 12.524328125
+  },
+  "schema": "inferswarm.issue207.boundary-observation/1",
+  "server_env_hint": "LLAMA_OBSERVE_BOUNDARIES=linear_attn_qkv_mixed-0:1;ple_conv_out-1:2;linear_attn_qkv_mixed-1:1;conv_output_silu-1:1;final_output-1:1;linear_attn_out-1:1;ffn_moe_out-1:1;ffn_out-1:1;model.input_embed:1;l_last-2:2;l_last-5:2;l_last-23:2;result_output:1",
+  "started_utc": "2026-09-17T03:56:30Z"
+}

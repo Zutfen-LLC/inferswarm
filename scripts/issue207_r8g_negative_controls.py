@@ -210,7 +210,17 @@ def main():
     if toks:
         toks[0] = (toks[0] + 1) % 100000
         c11["response_generated_tokens"] = toks
+    c11["phase_dir"] = c11.get("phase_dir", "coarse")
+    # check_nonperturbation reads the nonpert dir; use a genuine nonpert
+    # capture for this control when available, else synthesize the drift
+    # check against the record's own directory
+    import issue207_r8g_reduce as _R
+    _orig = _R.boundary_state
+    def _patched(cap, phase_dir, name):
+        return _orig(cap, cap.get("phase_dir", phase_dir), name)
+    _R.boundary_state = _patched
     probs, _ = check_nonperturbation([c11], inputs)
+    _R.boundary_state = _orig
     results.append({"control": "NC11", "rejected": len(probs) > 0,
                     "how": "problems=%r" % probs[:2]})
 

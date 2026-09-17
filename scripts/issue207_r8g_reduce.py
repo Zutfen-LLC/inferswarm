@@ -310,8 +310,10 @@ def derive(verbose=True):
         {"last_matching": interval[0], "first_differing": interval[1]})
     out["nonmonotonic_detected_coarse"] = nonmono
 
-    # D. refinement
-    refine_caps = load_captures("refine")
+    # D. refinement (refine = frozen layer-0..2 sublists; refine-ple =
+    # corrected PLE-layer bracket ple_conv_out-1, per the GGUF-metadata
+    # correction recorded in the authority — both retained)
+    refine_caps = load_captures("refine") + load_captures("refine-ple")
     refinement = {"applied": False, "observations": []}
     if interval is not None and not nonmono and refine_caps:
         # frozen rule R1/R2 results are recorded from the refine captures
@@ -334,7 +336,8 @@ def derive(verbose=True):
     out["refinement"] = refinement
 
     # E. case-256 contrast
-    contrast_caps = load_captures("contrast")
+    contrast_caps = (load_captures("contrast") +
+                     load_captures("contrast-ple"))
     contrast = {"applied": False, "observations": []}
     if contrast_caps:
         cunstable, cper_key = check_repeat_stability(
@@ -380,10 +383,21 @@ def derive(verbose=True):
         # boundary with its immediately preceding boundary matching
         obs = refinement["observations"] if refinement["applied"] else []
         if obs:
-            differing = [o["boundary"] for o in obs
-                         if o["verdict"] == "differ"]
-            equaling = [o["boundary"] for o in obs
-                        if o["verdict"] == "equal"]
+            # order the observations by the FROZEN source execution order
+            # (graph construction order = execution order), NOT by dict
+            # iteration; the earliest divergent boundary is the first
+            # differing one in that order.
+            from issue207_r8g_authority import layer_sublist, PLE_LAYER
+            frozen_order = []
+            for il in range(0, 3):
+                frozen_order += [n for n, _ in layer_sublist(il)]
+            rank = {n: i for i, n in enumerate(frozen_order)}
+            differing = sorted(
+                [o["boundary"] for o in obs if o["verdict"] == "differ"],
+                key=lambda n: rank.get(n, 10**6))
+            equaling = sorted(
+                [o["boundary"] for o in obs if o["verdict"] == "equal"],
+                key=lambda n: rank.get(n, 10**6))
             if len(differing) == 1 and equaling:
                 # is the differing sub-boundary the earliest? requires
                 # every earlier frozen sub-boundary to be equal
