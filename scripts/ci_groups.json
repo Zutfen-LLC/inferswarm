@@ -89,14 +89,14 @@
     "test_issue187_r7a"
    ]
   },
-  "issue-213-gate-ordering": {
-   "test_modules": [
-    "test_issue213_campaign_gate_ordering"
-   ]
-  },
   "issue-209-r7b": {
    "test_modules": [
     "test_issue209_r7b"
+   ]
+  },
+  "issue-213-gate-ordering": {
+   "test_modules": [
+    "test_issue213_campaign_gate_ordering"
    ]
   },
   "issue-74-79": {
