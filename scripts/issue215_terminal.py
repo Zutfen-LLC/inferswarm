@@ -142,8 +142,11 @@ def split_lspci_blocks(text: str) -> dict[str, str]:
     for i, m in enumerate(matches):
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
         bdf = m.group(2)
-        blocks.setdefault(bdf, "")
-        blocks[bdf] += text[m.start():end]
+        if bdf in blocks:
+            raise ReductionError(
+                f"duplicate device block for final BDF {bdf} in lspci dump — "
+                "injected or malformed topology evidence fails closed")
+        blocks[bdf] = text[m.start():end]
     return blocks
 
 
@@ -293,24 +296,32 @@ def derive_cycle(cycle_dir: Path, baseline_usb: set[str] | None,
     hbm = [int(x) for x in re.findall(r"^([0-9]{9,})$", mem_text, re.M)]
     checks["hbm_capacity_expected"] = len(hbm) >= 2 and sorted(hbm)[-2:] == [EXPECTED_HBM_BYTES] * 2
 
-    # Link state, anchored at the ROOT BUS: a root port is a bridge whose
-    # PRIMARY bus is 00; the PM8533 UPSTREAM port is the switch block whose
-    # PRIMARY bus equals that root port's SECONDARY. Downstream switch ports
-    # (whose parent is the switch itself, not a root port) can never satisfy
-    # either predicate. Both bound blocks must show Gen3 x1 (8.0 GT/s, width 1).
+    # Link state, anchored at the ROOT BUS and cross-bound to the nn topology:
+    # a root-port candidate must be a bridge ENUMERATED IN lspci-nn (not a
+    # vv-only fabrication), its primary bus must be 00, and the bound switch
+    # upstream must be an nn-enumerated switch row whose vv block declares
+    # primary == that root port's secondary. Duplicate final-BDF vv blocks
+    # are rejected at parse time, so a forged prepend cannot ride a real row.
+    nn_bridge_bdfs = {r["bdf"] for r in lspci if r["id"].lower() in
+                      ("8086:a294", "8086:a29a", "8086:a295", "8086:a296", "8086:a297",
+                       "8086:a298", "8086:a299", "8086:a29a", "8086:a398") } |                      {r["bdf"] for r in lspci if r["desc"].lower().startswith("pci bridge")
+                      and r["id"].split(":")[0] == "8086"}
+    nn_switch_bdfs = {s["bdf"] for s in switches}
     gen3 = {"root_port": False, "switch_upstream": False}
     detail["link_chain"] = None
     for rp_bdf, rp_block in blocks.items():
+        if rp_bdf not in nn_bridge_bdfs:
+            continue  # vv block without a matching nn row = fabricated topology
         rp_buses = _bus_primary_secondary(rp_block)
         if not rp_buses or rp_buses[0] != 0:
             continue  # not a root-bus bridge (root port)
         for s in switches:
-            sb = blocks.get(s["bdf"])
-            if not sb:
+            if s["bdf"] not in nn_switch_bdfs or s["bdf"] not in blocks:
                 continue
+            sb = blocks[s["bdf"]]
             s_buses = _bus_primary_secondary(sb)
             if not s_buses or s_buses[0] != rp_buses[1]:
-                continue  # this switch port's parent is not THIS root port
+                continue  # this switch row's parent is not THIS root port
             rst = _lnksta(rp_block)
             sst = _lnksta(sb)
             rp_ok = bool(rst and rst["speed"] == 8.0 and rst["width"] == 1)

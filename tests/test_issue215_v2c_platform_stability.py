@@ -87,6 +87,9 @@ FULL_VV = """00:00.0 Host bridge [0600]: Intel Corp Host Bridge [8086:190f]
 \tBus: primary=02, secondary=03, subordinate=09
 \tLnkCap:\tPort #0, speed 8GT/s, width 16
 \tLnkSta:\tSpeed 8.0GT/s, Width x1
+00:1d.0/02:00.0/03:00.0 PCI bridge [0604]: Microchip PM8533 [11f8:8533]
+\tBus: primary=03, secondary=04, subordinate=06
+\tLnkSta:\tSpeed 8.0GT/s, Width x16
 00:1d.0/02:00.0/03:00.0/04:00.0/05:00.0/06:00.0 Display controller [0380]: AMD/ATI Vega 10 [1002:6864] (rev 05)
 \tRegion 0: Memory at 2800000000 (64-bit, prefetchable) [size=8G]
 \tRegion 5: Memory at 90000000 (32-bit, non-prefetchable) [size=512K]
@@ -697,6 +700,41 @@ class TerminalMutationControls(unittest.TestCase):
         d["stdout"] = s[:i] + s[j:]
         raw.write_text(json.dumps(d))
         self.assertNotEqual(self.derive_terminal(tmp), "V2C_V340L_PLATFORM_STABILITY_PASS")
+
+
+    # Round-3 review attacks: fabricated root-bus bridge blocks (nn-unlisted)
+    # and duplicate final-BDF block injection must both fail closed.
+    def test_control_29_fabricated_root_bus_bridge_rejected(self):
+        tmp = self.sandbox()
+        self._mutate_block(tmp, "00:1d.0 PCI bridge",
+                           "LnkSta:" + chr(9) + "Speed 8GT/s, Width x1",
+                           "LnkSta:" + chr(9) + "Speed 2.5GT/s, Width x1")
+        # insert a fake root-bus bridge NOT enumerated in lspci-nn
+        raw = (tmp / "cycles/cycle-02-warm/raw/lspci-vv-full.txt")
+        d = json.loads(raw.read_text())
+        fake = ("00:1d.1 PCI bridge [0604]: Intel Fake Root Port [8086:a29a]\n"
+                "\tBus: primary=00, secondary=02, subordinate=09\n"
+                "\tLnkSta:\tSpeed 8GT/s, Width x1\n")
+        d["stdout"] = d["stdout"].replace(
+            "00:1d.0/02:00.0 PCI bridge", fake + "00:1d.0/02:00.0 PCI bridge", 1)
+        raw.write_text(json.dumps(d))
+        self.assertNotEqual(self.derive_terminal(tmp), "V2C_V340L_PLATFORM_STABILITY_PASS")
+
+    def test_control_30_duplicate_final_bdf_block_rejected(self):
+        tmp = self.sandbox()
+        self._mutate_block(tmp, "00:1d.0/02:00.0 PCI bridge",
+                           "LnkSta:" + chr(9) + "Speed 8.0GT/s, Width x1",
+                           "LnkSta:" + chr(9) + "Speed 2.5GT/s, Width x1")
+        raw = (tmp / "cycles/cycle-02-warm/raw/lspci-vv-full.txt")
+        d = json.loads(raw.read_text())
+        fake = ("00:1d.0/03:00.0 PCI bridge [0604]: Microchip PM8533 [11f8:8533]\n"
+                "\tBus: primary=02, secondary=09, subordinate=09\n"
+                "\tLnkSta:\tSpeed 8GT/s, Width x1\n")
+        d["stdout"] = d["stdout"].replace(
+            "00:1d.0/02:00.0/03:00.0", fake + "00:1d.0/02:00.0/03:00.0", 1)
+        raw.write_text(json.dumps(d))
+        with self.assertRaises(Exception):
+            run_reducer(tmp / "cycles")
 
     # Control 16: living ledger row authored with non-derivable facts
     def test_control_16_ledger_row_derivation(self):
