@@ -504,11 +504,17 @@ def assemble_soak(evidence_root: Path) -> dict[str, Any]:
         raise AssemblyError("soak retained no telemetry samples")
     journal_texts = []
     for s in samples:
+        # every listed telemetry sample must EXIST on disk (a deleted
+        # file must fail closed — control #12) and its journal delta too
+        tpath = evidence_root / soak_dir / s["rel"]
+        if not tpath.is_file():
+            raise AssemblyError(f"soak telemetry file missing: {s['rel']}")
         rel = s["rel"].replace("telemetry-", "journal-").replace(
             ".json", ".stdout")
         p = evidence_root / soak_dir / rel
-        if p.is_file():
-            journal_texts.append(p.read_bytes())
+        if not p.is_file():
+            raise AssemblyError(f"soak journal delta missing: {rel}")
+        journal_texts.append(p.read_bytes())
     scan = _scan_soak_faults(samples, doc.get("events") or [],
                              journal_texts)
     if scan["journal_fault_counts"]["fatal_aer"] > 0:
@@ -523,6 +529,18 @@ def assemble_soak(evidence_root: Path) -> dict[str, Any]:
         raise AssemblyError(
             "soak telemetry gap exceeds frozen tolerance (a reset/crash "
             "could hide in the gap)")
+    # Sample-count denominator: the retained samples must COVER the full
+    # soak window at the frozen cadence (dropping a sample from both the
+    # summary and disk must fail closed — control #12).
+    expected_min = duration // SOAK_CADENCE_S
+    if len(samples) < expected_min:
+        raise AssemblyError(
+            f"soak sample count {len(samples)} < required {expected_min} "
+            f"for {duration}s at {SOAK_CADENCE_S}s cadence")
+    span_ok = (samples[-1]["monotonic_ns"] - samples[0]["monotonic_ns"]
+               >= (duration - 2 * SOAK_CADENCE_S) * 1_000_000_000)
+    if not span_ok:
+        raise AssemblyError("soak sample span does not cover the window")
     # checkpoints + final sentinel
     checkpoint_summaries = sorted(
         (evidence_root / soak_dir / "raw").glob("checkpoint-*.json"))
