@@ -309,6 +309,7 @@ class Issue184PreservationTests(unittest.TestCase):
             # producers, independently pinned by the V2-D evidence
             # manifest and the issue216 producer closure.
             "scripts/issue216_receipt.py",
+            "scripts/issue216_freeze.py",
             "scripts/issue216_physical_authority.py",
             "scripts/issue216_host.py",
             "scripts/issue216_execution.py",

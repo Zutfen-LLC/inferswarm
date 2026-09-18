@@ -1045,6 +1045,8 @@ class PreservationTests(unittest.TestCase):
                             # dual-die campaign surface pending on main.
                             "scripts/issue216_",
                             "tests/test_issue216_",
+                            "tests/issue216_v2d_fixtures.py",
+                            "tests/fixtures_v2d_identity_probe_bytes.json",
                             "docs/investigations/vulkan-v2-d-v340l-concurrent/",
                             "docs/hardware/")
         for path in changed:
