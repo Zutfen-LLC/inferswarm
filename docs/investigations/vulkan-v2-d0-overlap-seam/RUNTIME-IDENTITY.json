@@ -11,5 +11,10 @@
   "patch_generator": "scripts/issue219_patch.py",
   "patch_diff": "runtime-patch.diff",
   "insert_only": true,
-  "env_gate": "GGML_VK_OBSERVE_INTERVAL"
+  "env_gate": "GGML_VK_OBSERVE_INTERVAL",
+  "as_run_note": "The retained physical captures were produced by the round-1 instrument, whose availability readback had an 8-byte-stride/16-byte-record defect (garbage availability channel; verdict-irrelevant — see README 'Round-2 correction'). The as-run diff is preserved byte-exact below; runtime-patch.diff is the corrected generator output for future (#216) use.",
+  "as_run_patch_diff": "runtime-patch.as-run.diff",
+  "as_run_patch_diff_sha256": "b070296b5a1235382e1665859f09da7f85ddaa0400d358f0b58ba9904cbaab5e",
+  "as_run_instrumented_ggml_vulkan_sha256": "7bf68ed5064aabea099a37ab0f8a10cea8ab42eaff4d9c28dfb85d2f675eac46",
+  "corrected_instrumented_ggml_vulkan_sha256": "6469472015ade1f01075101af982076ff7ddbbcc0c8404017f8f3a6e4489bfc4"
 }

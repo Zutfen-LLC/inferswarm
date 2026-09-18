@@ -213,8 +213,18 @@ class ReducerControlTests(unittest.TestCase):
             self.reduce(rec)
 
     def test_11_incomplete_drain_rejected(self):
+        # Completeness authority: the PLAIN getQueryPoolResults result.
+        # eNotReady == some query in the range was not yet complete.
         rec = synth_record()
-        rec["drains"][0]["availability"] = [0, 1]
+        rec["drains"][0]["get_query_result"] = "eNotReady"
+        p = write_record(self.tmp, rec)
+        loaded = R.load_observe_record(p)
+        with self.assertRaises(R.ReductionError):
+            R.require_complete_drains(loaded)
+
+    def test_11b_non_success_plain_result_rejected(self):
+        rec = synth_record()
+        rec["drains"][0]["get_query_result"] = "eErrorDeviceLost"
         p = write_record(self.tmp, rec)
         loaded = R.load_observe_record(p)
         with self.assertRaises(R.ReductionError):
@@ -313,10 +323,35 @@ class CorrectionControls(unittest.TestCase):
 
     def test_14_17_doctored_ledger_vs_bytes(self):
         # replay cross-check: a doctored ledger summary that disagrees with
-        # the retained bytes must fail closed (structural: the replay
-        # function compares replay vs ledger and raises)
-        import inspect
-        self.assertTrue(hasattr(R, "replay_perturbation_run"))
+        # the retained bytes must fail closed.  Forge the summary INSIDE a
+        # /tmp copy of the real ledger and prove the replay raises.
+        import copy as _copy
+        ev = REPO / "docs/investigations/vulkan-v2-d0-overlap-seam"
+        ledger = json.loads(
+            (ev / "perturbation" / "LEDGER-perturbation.json").read_text())
+        forged = _copy.deepcopy(ledger)
+        run0 = forged["runs"][0]
+        run0["reduced_summary"]["byte_exact"] = (
+            not run0["reduced_summary"]["byte_exact"])
+        run_dir = ev / "perturbation" / run0["label"]
+        reference = (REPO / "docs/investigations/vulkan-v1-a"
+                     / "reference-visible-output.txt").read_bytes()
+        with self.assertRaises(R.ReductionError):
+            R.replay_perturbation_run(run_dir, run0["label"], run0, reference)
+
+    def test_14b_ledger_digest_mismatch_rejected(self):
+        # A ledger row whose recorded stdout digest does not match the
+        # retained bytes fails closed at the digest check.
+        ev = REPO / "docs/investigations/vulkan-v2-d0-overlap-seam"
+        ledger = json.loads(
+            (ev / "perturbation" / "LEDGER-perturbation.json").read_text())
+        run0 = ledger["runs"][0]
+        run0["stdout_sha256"] = "0" * 64
+        run_dir = ev / "perturbation" / run0["label"]
+        reference = (REPO / "docs/investigations/vulkan-v1-a"
+                     / "reference-visible-output.txt").read_bytes()
+        with self.assertRaises(R.ReductionError):
+            R.replay_perturbation_run(run_dir, run0["label"], run0, reference)
 
     def test_18_rubric_digest_binding(self):
         committed = json.loads(
@@ -336,6 +371,99 @@ class CorrectionControls(unittest.TestCase):
                    if l.startswith("-") and not l.startswith("---")]
         self.assertEqual(removed, [])
         self.assertTrue(diff.startswith("--- a/ggml/src/ggml-vulkan/ggml-vulkan.cpp"))
+
+
+class ManifestClosureTests(unittest.TestCase):
+    """File-set closure + tamper controls for the V2-D0 evidence tree."""
+
+    EV = REPO / "docs/investigations/vulkan-v2-d0-overlap-seam"
+
+    def _rows(self):
+        lines = (self.EV / "MANIFEST.sha256").read_text().splitlines()
+        rows = {}
+        for line in lines:
+            if not line.strip():
+                continue
+            digest, rel = line.split("  ", 1)
+            rows[rel] = digest
+        return rows
+
+    def test_manifest_covers_on_disk_file_set_exactly(self):
+        rows = self._rows()
+        on_disk = {p.relative_to(REPO).as_posix() for p in self.EV.rglob("*")
+                   if p.is_file() and p.name != "MANIFEST.sha256"}
+        self.assertEqual(set(rows), on_disk)
+
+    def test_manifest_digests_bind_bytes(self):
+        import hashlib
+        for rel, digest in self._rows().items():
+            actual = hashlib.sha256((REPO / rel).read_bytes()).hexdigest()
+            self.assertEqual(actual, digest, rel)
+
+    def test_manifest_detects_tampered_evidence(self):
+        # A doctored evidence byte must be detectable: flip one byte in a
+        # /tmp sandbox copy and prove the digest check would fail.
+        import hashlib
+        rows = self._rows()
+        rel = "docs/investigations/vulkan-v2-d0-overlap-seam/README.md"
+        doctored = (REPO / rel).read_bytes() + b"tamper"
+        self.assertNotEqual(
+            hashlib.sha256(doctored).hexdigest(), rows[rel])
+
+    @staticmethod
+    def _check_manifest(ev_root: Path):
+        """Recompute closure over a sandbox tree; returns list of problems."""
+        problems = []
+        lines = (ev_root / "MANIFEST.sha256").read_text().splitlines()
+        rows = {}
+        for line in lines:
+            if not line.strip():
+                continue
+            digest, rel = line.split("  ", 1)
+            rows[rel] = digest
+        on_disk = {p.relative_to(ev_root).as_posix()
+                   for p in ev_root.rglob("*")
+                   if p.is_file() and p.name != "MANIFEST.sha256"}
+        listed = {r.split("vulkan-v2-d0-overlap-seam/", 1)[1]
+                  if "vulkan-v2-d0-overlap-seam/" in r else r
+                  for r in rows}
+        missing = on_disk - listed
+        extra = listed - on_disk
+        if missing:
+            problems.append(f"files missing from manifest: {sorted(missing)}")
+        if extra:
+            problems.append(f"manifest rows with no file: {sorted(extra)}")
+        for rel, digest in rows.items():
+            prefix = ("docs/investigations/vulkan-v2-d0-overlap-seam/")
+            local = rel.split(prefix, 1)[1] if rel.startswith(prefix) else rel
+            f = ev_root / local
+            if f.is_file():
+                import hashlib
+                if hashlib.sha256(f.read_bytes()).hexdigest() != digest:
+                    problems.append(f"digest mismatch: {rel}")
+        return problems
+
+    def test_manifest_detects_missing_and_extra_rows(self):
+        import shutil
+        import tempfile
+        # sandbox copy of the evidence tree (manifest + files)
+        with tempfile.TemporaryDirectory(prefix="issue219-mt-") as td:
+            sandbox = Path(td) / "ev"
+            sandbox.mkdir()
+            shutil.copytree(self.EV, sandbox / "vulkan-v2-d0-overlap-seam")
+            root = sandbox / "vulkan-v2-d0-overlap-seam"
+            # 1. extra unlisted file -> closure must flag it
+            (root / "rogue.txt").write_text("x")
+            problems = self._check_manifest(root)
+            self.assertTrue(any("missing from manifest" in p for p in problems),
+                            problems)
+            (root / "rogue.txt").unlink()
+            # 2. doctored evidence byte -> digest check must flag it
+            target = root / "README.md"
+            target.write_bytes(target.read_bytes() + b"tamper")
+            problems = self._check_manifest(root)
+            self.assertTrue(any("digest mismatch" in p for p in problems),
+                            problems)
 
 
 if __name__ == "__main__":

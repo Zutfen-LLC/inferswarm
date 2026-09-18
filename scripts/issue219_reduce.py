@@ -108,17 +108,23 @@ def load_observe_record(path: Path) -> dict:
 
 
 def require_complete_drains(record: dict) -> None:
+    # Completeness authority: the PLAIN getQueryPoolResults call (e64, no
+    # availability).  Per the Vulkan specification, that call returns
+    # VK_NOT_READY iff any requested query in the range is not yet ready;
+    # VK_SUCCESS means every value was written.  The availability channel
+    # retained by the as-run seam is unusable as a completeness signal:
+    # the as-run readback used an 8-byte stride with eWithAvailability
+    # (16-byte records), so the retained availability words are the tick
+    # values themselves (see README "as-run availability channel").  The
+    # plain call's result string is the spec-correct signal the retained
+    # bytes actually carry.
     for drain in record["drains"]:
-        if str(drain.get("get_query_result_availability")).lower() not in (
+        if str(drain.get("get_query_result")).lower() not in (
                 "esuccess", "success", "vk_success", "0"):
             raise ReductionError(
-                f"drain {drain['drain_index']}: query readback not eSuccess: "
-                f"{drain.get('get_query_result_availability')!r}")
-        for i, avail in enumerate(drain["availability"]):
-            if not avail:
-                raise ReductionError(
-                    f"drain {drain['drain_index']}: tick {i} incomplete "
-                    "(availability 0 after runtime fence wait)")
+                f"drain {drain['drain_index']}: plain query readback not "
+                f"eSuccess (incomplete queries): "
+                f"{drain.get('get_query_result')!r}")
         if drain.get("calibration_result") != 0:
             raise ReductionError(
                 f"drain {drain['drain_index']}: calibration_result "

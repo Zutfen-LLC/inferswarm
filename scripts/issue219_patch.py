@@ -219,9 +219,12 @@ static void vk_observe_write_end_tick(ggml_backend_vk_context * ctx, const vk_co
 
 // Drain: called only where the runtime itself has already waited on the
 // queue fence, so every written query has completed execution.
-// getQueryPoolResults is called WITHOUT eWait; availability bits are
-// requested per query and retained raw.  If any query is incomplete the
-// drain record says so and the reducer fails closed on it.
+// getQueryPoolResults is called WITHOUT eWait.  Completeness authority is
+// the PLAIN call's return value: per the Vulkan spec it is VK_NOT_READY
+// iff any query in the range is still incomplete and VK_SUCCESS only when
+// every value was written; the drain record retains that result string
+// (get_query_result) and the reducer fails closed on it.  The second,
+// per-query availability readback is retained for diagnostics only.
 static void vk_observe_drain(ggml_backend_vk_context * ctx) {
     if (!vk_observe_interval_enabled || !ctx->observe_query_pool) {
         return;
@@ -231,16 +234,19 @@ static void vk_observe_drain(ggml_backend_vk_context * ctx) {
     if (count == 0) {
         return;
     }
-    // availability bits packed after the values: stride = sizeof(uint64_t)
+    // Plain readback (completeness authority): 8-byte values, 8-byte stride.
     std::vector<uint64_t> ticks(count, 0);
-    std::vector<uint64_t> avail(count, 0);
     auto res = ctx->device->device.getQueryPoolResults(
         ctx->observe_query_pool, from, count,
         ticks.size() * sizeof(uint64_t), ticks.data(), sizeof(uint64_t),
         vk::QueryResultFlagBits::e64);
+    // Per-query availability (diagnostic): with eWithAvailability each
+    // query occupies a 16-byte record (8-byte value + 8-byte availability
+    // word), so the buffer holds 2*count words and the stride is 16.
+    std::vector<uint64_t> packed(count * 2, 0);
     auto res_avail = ctx->device->device.getQueryPoolResults(
         ctx->observe_query_pool, from, count,
-        avail.size() * sizeof(uint64_t), avail.data(), sizeof(uint64_t),
+        packed.size() * sizeof(uint64_t), packed.data(), 2 * sizeof(uint64_t),
         vk::QueryResultFlagBits::e64 | vk::QueryResultFlagBits::eWithAvailability);
     // Calibrated pair at this drain: DEVICE + CLOCK_MONOTONIC.
     const VkCalibratedTimestampInfoEXT infos[2] = {
@@ -264,9 +270,9 @@ static void vk_observe_drain(ggml_backend_vk_context * ctx) {
     for (uint32_t i = 1; i < count; i++) {
         o << "," << ticks[i];
     }
-    o << "],\"availability\":[" << avail[0];
+    o << "],\"availability\":[" << packed[1];
     for (uint32_t i = 1; i < count; i++) {
-        o << "," << avail[i];
+        o << "," << packed[2 * i + 1];
     }
     o << "],\"get_query_result\":\"" << vk::to_string(res)
       << "\",\"get_query_result_availability\":\"" << vk::to_string(res_avail)

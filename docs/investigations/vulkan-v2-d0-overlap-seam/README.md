@@ -118,4 +118,44 @@ all are closed in the correction commit:
   and ~3 orders below the −4.07 s control gap. The eAllCommands
   end-tick brackets conservatively (begin ticks can only be early);
   the pool-growth destroyQueryPool race is unreachable at this
-  campaign's tick volume and fail-closed (availability=0) if reached.
+  campaign's tick volume and fail-closed (plain-call result
+  VK_NOT_READY) if reached.
+
+## Round-2 correction (exact-head Lane-1 P1 closure)
+
+Adversarial re-review at the final head found one P1 in the instrument,
+not in the verdict: the as-run availability readback passed an 8-byte
+stride with `eWithAvailability` (16-byte records), so (a) the retained
+`availability` arrays are the tick values themselves (garbage channel,
+`avail[i] == ticks[i]` in 100% of retained entries), (b) the final
+availability word wrote 8 bytes past the buffer end (bounded, no
+observable effect — ticks come from the separate plain readback), and
+(c) both reducer completeness checks consumed that channel and were
+therefore vacuous on genuine captures, while the genuine spec-correct
+signal — the plain call's `get_query_result` (VK_NOT_READY iff any
+query incomplete), which the retained bytes already carry — was
+unconsumed.
+
+Correction (reduction-layer + generator; NO physical re-capture):
+
+- Reducer (`scripts/issue219_reduce.py`): completeness authority is now
+  the plain call's `get_query_result`; the vacuous availability checks
+  are removed. Validated against ALL retained captures (200/200 plain
+  `Success`) and against negative controls (forged `eNotReady`,
+  non-`Success` strings).
+- Generator (`scripts/issue219_patch.py`): the availability readback is
+  fixed to the spec-correct 16-byte interleaved layout (2*count-word
+  buffer, 16-byte stride, even/odd indexing) — eliminates the OOB write
+  and the garbage channel for every future (#216) use of the seam.
+  `runtime-patch.diff` is regenerated and remains pure-insertion,
+  pristine sha256 unchanged (bc9c8071…).
+- As-run diff preserved byte-exact as
+  `runtime-patch.as-run.diff` (sha256 b070296b…), because the retained
+  captures were produced by that exact instrument.
+- Terminal re-derived from the same retained bytes after the fix:
+  unchanged `V2D0_VULKAN_WORKLOAD_OVERLAP_SEAM_PASS`. The as-run
+  availability defect is verdict-irrelevant by construction (the
+  verdict never consumed that channel), and completeness is
+  independently established by the plain-call Success on every drain,
+  the fence-wait-adjacent drain sites, monotone ticks, and exact
+  count reconciliation.

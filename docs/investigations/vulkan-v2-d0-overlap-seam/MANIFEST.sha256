@@ -1,6 +1,6 @@
-3b89863605a4d7fdb4d3359d25f11fc5c944121194950f2a6bfb4ea6d2d75737  docs/investigations/vulkan-v2-d0-overlap-seam/README.md
+fd3567be59a3b6a998d32757a049aac528c12ce273e9e3d759d45c859fd78b51  docs/investigations/vulkan-v2-d0-overlap-seam/README.md
 826c45c8532c3dd4f417e0225f8aa1b6816081ed43f4ede5bc90f75590766bf9  docs/investigations/vulkan-v2-d0-overlap-seam/REDUCTION.json
-777188c942630d93999f31141102671c9e9636299c54667bed3198f0953ae4f1  docs/investigations/vulkan-v2-d0-overlap-seam/RUNTIME-IDENTITY.json
+19a76cc80ecc9f3ef151fff4c455d4c4bcbece86d0bc10c2ff9188dfd6558311  docs/investigations/vulkan-v2-d0-overlap-seam/RUNTIME-IDENTITY.json
 8a770eb16c3b40095138422eb199765817782766274cd3f000dab1f4988773f5  docs/investigations/vulkan-v2-d0-overlap-seam/SEAM-RUBRIC.json
 a57fcead9dc23aa196a88fb8a41a2187c6b72cc218f4cda913cf734f9e0ad60b  docs/investigations/vulkan-v2-d0-overlap-seam/capability/CAPABILITY.json
 d7c428b948151b941b3b004c2f29d026830a86d215e8a92598d06c42c85f653b  docs/investigations/vulkan-v2-d0-overlap-seam/capability/raw/boot_id.meta.json
@@ -111,4 +111,5 @@ b3636a12b96d39f0b8e718cd7fe21cae5da94c46b396464829642c982901ab57  docs/investiga
 e796b53510671011f2f1c8a110582fc7afa151ce829e7af58074ee430cf6e947  docs/investigations/vulkan-v2-d0-overlap-seam/perturbation/Vulkan2-enabled-3/Vulkan2-enabled-3.stdout
 330850e0380d775c6fe78ded54d2621e4f5befee3773489937c80b828775b05c  docs/investigations/vulkan-v2-d0-overlap-seam/perturbation/Vulkan2-enabled-3/observe.jsonl
 e1cd6a7f4c382aea4012e18597ec88044164ddcbd13bd8186ff1553e038503bf  docs/investigations/vulkan-v2-d0-overlap-seam/perturbation/Vulkan2-enabled-3/run.json
-b070296b5a1235382e1665859f09da7f85ddaa0400d358f0b58ba9904cbaab5e  docs/investigations/vulkan-v2-d0-overlap-seam/runtime-patch.diff
+b070296b5a1235382e1665859f09da7f85ddaa0400d358f0b58ba9904cbaab5e  docs/investigations/vulkan-v2-d0-overlap-seam/runtime-patch.as-run.diff
+a7f1548c82a4b94a27f50fbb5a5138e73281cafb55ebfd972a7e1c968466c703  docs/investigations/vulkan-v2-d0-overlap-seam/runtime-patch.diff

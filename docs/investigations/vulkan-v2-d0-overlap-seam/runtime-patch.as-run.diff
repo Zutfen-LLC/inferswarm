@@ -42,7 +42,7 @@
      vk::QueryPool query_pool;
      std::vector<const char *> query_fusion_names;
      std::vector<int> query_fusion_node_count;
-@@ -2563,6 +2584,191 @@
+@@ -2563,6 +2584,185 @@
      int32_t num_queries {};
      int32_t query_idx {};
  };
@@ -160,12 +160,9 @@
 +
 +// Drain: called only where the runtime itself has already waited on the
 +// queue fence, so every written query has completed execution.
-+// getQueryPoolResults is called WITHOUT eWait.  Completeness authority is
-+// the PLAIN call's return value: per the Vulkan spec it is VK_NOT_READY
-+// iff any query in the range is still incomplete and VK_SUCCESS only when
-+// every value was written; the drain record retains that result string
-+// (get_query_result) and the reducer fails closed on it.  The second,
-+// per-query availability readback is retained for diagnostics only.
++// getQueryPoolResults is called WITHOUT eWait; availability bits are
++// requested per query and retained raw.  If any query is incomplete the
++// drain record says so and the reducer fails closed on it.
 +static void vk_observe_drain(ggml_backend_vk_context * ctx) {
 +    if (!vk_observe_interval_enabled || !ctx->observe_query_pool) {
 +        return;
@@ -175,19 +172,16 @@
 +    if (count == 0) {
 +        return;
 +    }
-+    // Plain readback (completeness authority): 8-byte values, 8-byte stride.
++    // availability bits packed after the values: stride = sizeof(uint64_t)
 +    std::vector<uint64_t> ticks(count, 0);
++    std::vector<uint64_t> avail(count, 0);
 +    auto res = ctx->device->device.getQueryPoolResults(
 +        ctx->observe_query_pool, from, count,
 +        ticks.size() * sizeof(uint64_t), ticks.data(), sizeof(uint64_t),
 +        vk::QueryResultFlagBits::e64);
-+    // Per-query availability (diagnostic): with eWithAvailability each
-+    // query occupies a 16-byte record (8-byte value + 8-byte availability
-+    // word), so the buffer holds 2*count words and the stride is 16.
-+    std::vector<uint64_t> packed(count * 2, 0);
 +    auto res_avail = ctx->device->device.getQueryPoolResults(
 +        ctx->observe_query_pool, from, count,
-+        packed.size() * sizeof(uint64_t), packed.data(), 2 * sizeof(uint64_t),
++        avail.size() * sizeof(uint64_t), avail.data(), sizeof(uint64_t),
 +        vk::QueryResultFlagBits::e64 | vk::QueryResultFlagBits::eWithAvailability);
 +    // Calibrated pair at this drain: DEVICE + CLOCK_MONOTONIC.
 +    const VkCalibratedTimestampInfoEXT infos[2] = {
@@ -211,9 +205,9 @@
 +    for (uint32_t i = 1; i < count; i++) {
 +        o << "," << ticks[i];
 +    }
-+    o << "],\"availability\":[" << packed[1];
++    o << "],\"availability\":[" << avail[0];
 +    for (uint32_t i = 1; i < count; i++) {
-+        o << "," << packed[2 * i + 1];
++        o << "," << avail[i];
 +    }
 +    o << "],\"get_query_result\":\"" << vk::to_string(res)
 +      << "\",\"get_query_result_availability\":\"" << vk::to_string(res_avail)
@@ -234,7 +228,7 @@
  
  static void * const vk_ptr_base = (void *)(uintptr_t) 0x1000;  // NOLINT
  
-@@ -2844,6 +3050,7 @@
+@@ -2844,6 +3044,7 @@
          }
      }
      ctx->device->device.resetFences({ ctx->fence });
@@ -242,7 +236,7 @@
  }
  
  static constexpr uint32_t kSpvOpCooperativeMatrixLoadTensorNV = 5367;
-@@ -6804,6 +7011,107 @@
+@@ -6804,6 +7005,107 @@
  
          device->max_workgroup_size_log2 = uint32_t(log2f(float(device->properties.limits.maxComputeWorkGroupInvocations)));
  
@@ -350,7 +344,7 @@
          std::vector<vk::QueueFamilyProperties> queue_family_props = device->physical_device.getQueueFamilyProperties();
  
          // Try to find a non-graphics compute queue and transfer-focused queues
-@@ -7282,6 +7590,9 @@
+@@ -7282,6 +7584,9 @@
  #endif
          device->name = GGML_VK_NAME + std::to_string(idx);
  
@@ -360,7 +354,7 @@
          device_create_info
              .setFlags(vk::DeviceCreateFlags())
              .setQueueCreateInfos(device_queue_create_infos)
-@@ -7292,6 +7603,17 @@
+@@ -7292,6 +7597,17 @@
          if (device->device_fault) {
              device->pfn_vkGetDeviceFaultInfoEXT = (PFN_vkGetDeviceFaultInfoEXT)
                  vkGetDeviceProcAddr(device->device, "vkGetDeviceFaultInfoEXT");
@@ -378,7 +372,7 @@
          }
  
          // Queues
-@@ -7767,6 +8089,12 @@
+@@ -7767,6 +8083,12 @@
          vk_instance.pfn_vkCmdInsertDebugUtilsLabelEXT = (PFN_vkCmdInsertDebugUtilsLabelEXT) vkGetInstanceProcAddr(vk_instance.instance, "vkCmdInsertDebugUtilsLabelEXT");
      }
  
@@ -391,7 +385,7 @@
      vk_perf_logger_enabled = getenv("GGML_VK_PERF_LOGGER") != nullptr;
      vk_perf_logger_concurrent = getenv("GGML_VK_PERF_LOGGER_CONCURRENT") != nullptr;
      vk_enable_sync_logger = getenv("GGML_VK_SYNC_LOGGER") != nullptr;
-@@ -8514,6 +8842,7 @@
+@@ -8514,6 +8836,7 @@
  
          ctx->compute_ctx = result;
          ggml_vk_ctx_begin(ctx->device, result);
@@ -399,7 +393,7 @@
      }
  
      if (ctx->device->async_use_transfer_queue && ctx->transfer_semaphore_last_submitted < ctx->transfer_semaphore.value) {
-@@ -16521,6 +16850,7 @@
+@@ -16521,6 +16844,7 @@
  #endif
  
      if (submit || last_node) {
@@ -407,7 +401,7 @@
          ggml_vk_ctx_end(compute_ctx);
  
          // TODO probably it'd be better to pass a exit_node flag to ggml_vk_compute_forward
-@@ -16630,6 +16960,10 @@
+@@ -16630,6 +16954,10 @@
  // Clean up on backend free
  static void ggml_vk_cleanup(ggml_backend_vk_context * ctx) {
      VK_LOG_DEBUG("ggml_vk_cleanup(" << ctx->name << ")");
@@ -418,7 +412,7 @@
      // discard any unsubmitted command buffers
      ctx->compute_ctx.reset();
      // wait for any pending command buffers to finish
-@@ -17183,6 +17517,7 @@
+@@ -17183,6 +17511,7 @@
              cmd_buf = compute_ctx->s->buffer;
          }
  
@@ -426,7 +420,7 @@
          ggml_vk_ctx_end(compute_ctx);
  
          for (auto& cpy : compute_ctx->in_memcpys) {
-@@ -18011,6 +18346,31 @@
+@@ -18011,6 +18340,31 @@
          last_node -= 1;
      }
  
@@ -458,7 +452,7 @@
      // Reserve tensor context space for all nodes
      ctx->tensor_ctxs.resize(cgraph->n_nodes);
  
-@@ -18124,6 +18484,7 @@
+@@ -18124,6 +18478,7 @@
              // Flush the current batch before recording a node that would push it over the flop threshold
              if (flops_per_submit != 0 && submitted_nodes > 0 && batch_flops + node_flops >= flops_per_submit) {
                  vk_context flush_ctx = ggml_vk_get_compute_ctx(ctx);
