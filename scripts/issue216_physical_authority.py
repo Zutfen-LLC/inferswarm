@@ -225,8 +225,8 @@ def build_authority(root: Path = ROOT) -> dict[str, Any]:
             "must_use_v2a_r3_validation": True,
             "require_exact_participant_set": ["a", "b"],
             "require_distinct_selector_bdf": True,
-            "require_distinct_device_uuid": True,
             "require_intended_identity_corroboration": True,
+            "device_uuid_cross_bind": "per-run, via each execution's seam observe-record header (assembler-enforced)",
             "require_raw_probe_revalidation": True,
         },
         "nonclaims": [
@@ -313,17 +313,17 @@ def fresh_map(authority_path: Path, attempt_id: str, out: Path,
                 f"die {die}: expected selector={hist['selector']} "
                 f"bdf={hist['pci_bdf']}")
         row = match[0]
-        uuid = _probe_device_uuid(inventory, row["selector"])
         rows[die] = {
             "intended_identity": authority["intended_participants"][die],
             "fresh_selector": row["selector"],
             "fresh_pci_bdf": row["pci_bdf"],
             "fresh_device_name": row["device_name"],
-            "fresh_device_uuid": uuid,
             "fresh_binding": row,
         }
-    if rows["a"]["fresh_device_uuid"] == rows["b"]["fresh_device_uuid"]:
-        raise AuthorityError("fresh device UUIDs collide")
+    # Distinct physical identity per participant is established by the
+    # R3 binding (distinct selector AND distinct BDF, both verified by
+    # the accepted validator); the per-run device-UUID cross-bind is
+    # enforced by the assembler via each run's seam observe header.
 
     record = {
         "schema": "inferswarm.v2d.fresh-mapping/2",
@@ -339,17 +339,6 @@ def fresh_map(authority_path: Path, attempt_id: str, out: Path,
     record["mapping_digest"] = sha256(canonical(
         {k: v for k, v in record.items() if k != "mapping_digest"}))
     return record
-
-
-def _probe_device_uuid(inventory: dict[str, Any], selector: str) -> str:
-    """Extract device UUID for a selector from the fresh inventory."""
-    rows = inventory.get("devices") or inventory.get("enumeration") or []
-    for row in rows:
-        if row.get("selector") == selector or row.get("name") == selector:
-            uuid = row.get("device_uuid") or row.get("uuid")
-            if uuid:
-                return str(uuid)
-    raise AuthorityError(f"no device UUID in fresh inventory for {selector}")
 
 
 def main() -> int:

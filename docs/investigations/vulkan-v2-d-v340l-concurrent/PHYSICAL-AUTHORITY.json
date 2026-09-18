@@ -43,7 +43,7 @@
    }
   }
  },
- "authority_digest": "e47b2d4d167cc98d329bb694fe57d4b7e9ef8d1b6fc89bbddc7e7a68552f4c67",
+ "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1",
  "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
  "historical_qualification_bindings": {
   "a": {
@@ -73,8 +73,8 @@
   "intended identity only: no selector/BDF in this document authorizes execution; execution requires a fresh mapping receipt corroborating this identity on the current boot"
  ],
  "required_fresh_mapping": {
+  "device_uuid_cross_bind": "per-run, via each execution's seam observe-record header (assembler-enforced)",
   "must_use_v2a_r3_validation": true,
-  "require_distinct_device_uuid": true,
   "require_distinct_selector_bdf": true,
   "require_exact_participant_set": [
    "a",
