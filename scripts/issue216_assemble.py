@@ -712,14 +712,37 @@ def assemble(evidence_root: Path) -> dict[str, Any]:
     return out
 
 
+def emit_terminal(assembly: dict[str, Any], evidence_root: Path) -> Path:
+    """Write the campaign TERMINAL record (reduction-completed only)."""
+    terminal = {
+        "schema": SCHEMA_TERMINAL,
+        "campaign_id": rc.CAMPAIGN_ID,
+        "terminal": assembly["terminal"],
+        "vocabulary": list(TERMINALS),
+        "producer_head": assembly.get("producer_head"),
+    }
+    out = evidence_root / "TERMINAL.json"
+    out.write_bytes(json.dumps(terminal, indent=1, sort_keys=True)
+                    .encode() + b"\n")
+    return out
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--evidence-root", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--emit-terminal", action="store_true")
     args = ap.parse_args()
-    assembly = assemble(Path(args.evidence_root))
+    root = Path(args.evidence_root)
+    assembly = assemble(root)
+    import subprocess
+    assembly["producer_head"] = subprocess.run(
+        ["git", "-C", str(REPO), "rev-parse", "HEAD"],
+        capture_output=True, text=True).stdout.strip()
     Path(args.out).write_bytes(json.dumps(assembly, indent=1,
                                           sort_keys=True).encode() + b"\n")
+    if args.emit_terminal:
+        emit_terminal(assembly, root)
     print(json.dumps({"terminal": assembly.get("terminal")}))
     return 0
 
