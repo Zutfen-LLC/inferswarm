@@ -50,6 +50,7 @@ CLOSURE_NAME = "PRODUCER-CLOSURE.json"
 # before emitting.
 CLOSURE_SOURCES = (
     "scripts/issue216_receipt.py",
+    "scripts/issue216_freeze.py",
     "scripts/issue216_physical_authority.py",
     "scripts/issue216_host.py",
     "scripts/issue216_execution.py",
@@ -70,7 +71,14 @@ FROZEN_RUNTIME = {
     "executable_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
     "model": "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
     "model_sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
-    "model_bytes": 2001162224,
+    # model_bytes was stale (2001162224). The accepted V2-B/V2-C frozen
+    # runtime authority — and the physical model file on inferswarm02 —
+    # carry 1929903264; the authority builder verifies equality against
+    # the accepted predecessor bytes, so this field must describe the
+    # SAME predecessor-frozen model (verified 2026-09-18 against
+    # PHYSICAL-AUTHORITY.json runtime.model_bytes and the on-host file
+    # size). Predecessor authority bytes are unchanged.
+    "model_bytes": 1929903264,
     "reference_path": "docs/investigations/vulkan-v1-a/reference-visible-output.txt",
     "reference_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d",
     # V2-D concurrency authority instrument: the CORRECTED #219 seam build.
@@ -164,54 +172,41 @@ def load_receipt(path: Path) -> dict[str, Any]:
 
 # ---------------------------------------------------------------------------
 # Producer-source closure (pre-execution freeze).
+#
+# CORRECTED (schema /3): the closure now proves EXECUTED-BYTE identity.
+# The old /2 closure hashed `git show :<path>` (the Git index) while
+# Python executed working-tree bytes, so unstaged producer drift was
+# invisible. All closure logic lives in issue216_freeze (fail-closed:
+# worktree == index == HEAD for every source; pinned producer head;
+# no missing/untracked/substituted sources). This module re-exports the
+# freeze API so existing `rc.verify_closure` / `rc.closure_document`
+# callers get the corrected semantics.
 # ---------------------------------------------------------------------------
 
 def closure_document(repo: Path = ROOT) -> dict[str, Any]:
-    """Current closure: sha256 of every closure source at the Git worktree.
-
-    Sources are read through `git show :<path>` so the closure binds the
-    COMMITTED bytes, not working-tree drift.
-    """
-    sources = {}
-    for rel in CLOSURE_SOURCES:
-        proc = subprocess.run(["git", "-C", str(repo), "show", f":{rel}"],
-                              capture_output=True)
-        if proc.returncode != 0:
-            raise ReceiptError(f"closure source not in Git index: {rel}")
-        sources[rel] = sha256_bytes(proc.stdout)
-    return {"schema": "inferswarm.v2d.producer-closure/2",
-            "campaign_id": CAMPAIGN_ID,
-            "sources": sources}
+    """Corrected closure: worktree==index==HEAD per source, pinned head."""
+    from issue216_freeze import closure_document as _closure
+    return _closure(repo)
 
 
 def verify_closure(repo: Path = ROOT,
                    committed: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Verify the committed closure record against the Git index bytes.
+    """Verify the committed closure record against the live frozen tree.
 
-    Returns the verified closure; raises ReceiptError on any drift.
+    Returns the verified closure; raises ReceiptError on any drift
+    (staged, unstaged, missing/substituted source, moved HEAD, or a
+    retired schema /2 record).
     """
-    record_path = repo / AREA_REL / CLOSURE_NAME
-    if committed is None:
-        if not record_path.is_file():
-            raise ReceiptError(f"committed closure missing: {record_path}")
-        committed = json.loads(record_path.read_text(encoding="utf-8"))
-    current = closure_document(repo)
-    if committed.get("campaign_id") != CAMPAIGN_ID:
-        raise ReceiptError("closure campaign mismatch")
-    if committed.get("schema") != current["schema"]:
-        raise ReceiptError("closure schema mismatch")
-    if committed["sources"] != current["sources"]:
-        diff = [k for k in set(committed["sources"])
-                | set(current["sources"])
-                if committed["sources"].get(k) != current["sources"].get(k)]
-        raise ReceiptError(f"closure source drift: {diff}")
-    return committed
+    from issue216_freeze import verify_closure as _verify, FreezeError
+    try:
+        return _verify(repo, committed)
+    except FreezeError as exc:
+        raise ReceiptError(str(exc)) from exc
 
 
 def write_closure(repo: Path = ROOT) -> Path:
-    record_path = repo / AREA_REL / CLOSURE_NAME
-    record_path.parent.mkdir(parents=True, exist_ok=True)
-    doc = closure_document(repo)
-    record_path.write_bytes(json.dumps(doc, indent=1, sort_keys=True)
-                            .encode("utf-8") + b"\n")
-    return record_path
+    from issue216_freeze import write_closure as _write, FreezeError
+    try:
+        return _write(repo)
+    except FreezeError as exc:
+        raise ReceiptError(str(exc)) from exc

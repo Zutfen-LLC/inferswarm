@@ -1,16 +1,19 @@
 {
  "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
- "schema": "inferswarm.v2d.producer-closure/2",
+ "closure_digest": "be526ce6cc5ab03545e184f33eaa34ceecdfeaf0b5acb9b4642a379760f319dd",
+ "producer_head": "5279509403c175251016779b4833922fb85ed3eb",
+ "schema": "inferswarm.v2d.producer-closure/3",
  "sources": {
   "scripts/issue216_assemble.py": "db807031efb8c8469bbb8ff2d59c86c4f324e4a85a9956afe72b634cac6dacea",
   "scripts/issue216_concurrent.py": "1d4670ed6585a8f9a187e75b7ebeb88f171f16e73851047c6f8fea8b2a061882",
   "scripts/issue216_execution.py": "3da6ebd4fff20b4b67634049eeef6ea88bf3009646e866ec932aec67f27dbfa4",
   "scripts/issue216_fault.py": "1cac3ac9617df73dda0ffc9fecd42448435f200c46a1e86c6e7915cfd03ca7b6",
+  "scripts/issue216_freeze.py": "6b4f0a7f3b7d9f0b828aa78701e28e74cb51a3f3de245bd239381f5174a17cfb",
   "scripts/issue216_host.py": "1405f54c72b185a65ed3aee5fabac42f1e4272dbc716ea3c578bd719fa303a00",
   "scripts/issue216_manifest.py": "5565bda4274140874426d599756b6bda6df401ea5645e3c6458b9cb1d9d6bc89",
   "scripts/issue216_physical_authority.py": "88a523fa15ff584da71e7a9e99cabb7fe1b7e935e01dac480e7378e49e32266a",
   "scripts/issue216_preflight.py": "b8d055c4060abf90a5ace423ee28c2d3a014a41109404c862de398675e8d5106",
-  "scripts/issue216_receipt.py": "91c2d9b6d620060c7b3cd5c657652baf61e1525ba124282cecc31ef3e393e939",
+  "scripts/issue216_receipt.py": "9467bbba6532aa6b3af1ecda1eebf311af38afb0d640d90591adb9076ad7725e",
   "scripts/issue216_reset.py": "fa9ded1ddb253df114d1b77ecb1f04a66c3d71561e5dbff44b7cd13d37e5441b",
   "scripts/issue216_soak.py": "fecdddab880b1aa23032401d22baa4d7533ed1451eee8e1fbdeb68bf054987d3",
   "scripts/issue216_transport.py": "a7dc2fb422caa8d21953d2135d9ec404402d176440008e2547f5ddf803f83736"
