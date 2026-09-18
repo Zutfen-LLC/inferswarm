@@ -877,7 +877,7 @@ def assemble_transport(evidence_root: Path,
         selector, bdf = mapping.expected(die)
         row = dual["participants"][die]
         dual_verified[die] = _verify_transport_probe(
-            evidence_root, f"dual/{die}", row, bdf,
+            evidence_root, f"transport/dual/{die}", row, bdf,
             int(selector.replace("Vulkan", "")),
             f"transport dual/{die}")
     # FIX 5: dual-arm process overlap RE-DERIVED from retained timing
@@ -944,24 +944,72 @@ def _scan_soak_faults(samples: list[dict[str, Any]],
     gaps_ok = all(
         (b - a) <= (SOAK_CADENCE_S + SOAK_CADENCE_TOLERANCE_S) * 1_000_000_000
         for a, b in zip(times, times[1:]))
-    # participant exits: any 'participant_exit_with_sibling_active' or
-    # unplanned exit event is an affirmative platform/correctness event
-    unplanned_exits = [e for e in events
-                       if e.get("event") == "participant_exit"]
+    # participant exits: the soak workload is a ROLLING sequence of
+    # bounded concurrent pairs. A NORMAL completion cycle is:
+    #   participant_exit (BOTH dies of the pair, every rc == 0)
+    #   -> pair_completed -> pair_launched (next pair).
+    # An UNPLANNED exit (platform failure) is any of:
+    #   * a reaped participant with rc != 0;
+    #   * a ONE-SIDED exit (one die of a pair exited, sibling active);
+    #   * an exit whose pair never reaches pair_completed (a silent
+    #     restart/replacement would otherwise disappear).
+    normal_exits = 0
+    unplanned: list[dict[str, Any]] = []
+    completed_pairs: set[str] = set()
+    exited_pairs_pending: dict[str, list] = {}
+    for e in events:
+        ev = e.get("event")
+        if ev == "participant_exit":
+            reaped = e.get("pair_die") or []
+            for key, rc_ in reaped:
+                pair, die = str(key).split(":", 1)
+                if rc_ != 0:
+                    unplanned.append({"event": "participant_exit",
+                                      "who": key, "rc": rc_,
+                                      "monotonic_ns": e.get(
+                                          "monotonic_ns")})
+                exited_pairs_pending.setdefault(pair, []).append(die)
+            normal_exits += 1
+        elif ev == "pair_completed":
+            for pair in (e.get("pair") or []):
+                completed_pairs.add(str(pair))
+                exited_pairs_pending.pop(str(pair), None)
+        elif ev == "pair_launched":
+            # any pair that had exits but never completed before the
+            # next launch = silent replacement
+            for pair, dies in list(exited_pairs_pending.items()):
+                if len(dies) < 2:
+                    unplanned.append({"event": "one_sided_exit",
+                                      "pair": pair, "dies": dies,
+                                      "monotonic_ns": e.get(
+                                          "monotonic_ns")})
+                else:
+                    unplanned.append({"event": "exit_without_completion",
+                                      "pair": pair,
+                                      "monotonic_ns": e.get(
+                                          "monotonic_ns")})
+            exited_pairs_pending.clear()
+    # leftovers at end-of-events with incomplete pairs
+    for pair, dies in exited_pairs_pending.items():
+        unplanned.append({"event": "incomplete_pair_at_end",
+                          "pair": pair, "dies": dies})
     silent_restart = [e for e in events
                       if e.get("event") == "pair_launched"
                       and any(p.get("event") == "participant_exit"
                              for p in events
                              if p.get("monotonic_ns", 0) < e[
-                                 "monotonic_ns"])]
+                                 "monotonic_ns"]
+                             and not any(c.get("event") == "pair_completed"
+                                         for c in events
+                                         if c.get("monotonic_ns", 0)
+                                         > p.get("monotonic_ns", 0)
+                                         < e.get("monotonic_ns", 0)))]
     return {"journal_fault_counts": fatal, "cadence_gaps_ok": gaps_ok,
             "sample_count": len(samples),
-            "unplanned_participant_exits": len(unplanned_exits),
-            "unplanned_exits_detail": [
-                {"event": e.get("event"),
-                 "pair_die": e.get("pair_die"),
-                 "monotonic_ns": e.get("monotonic_ns")}
-                for e in unplanned_exits],
+            "unplanned_participant_exits": len(unplanned),
+            "unplanned_exits_detail": unplanned,
+            "normal_completion_cycles": normal_exits,
+            "completed_pairs": len(completed_pairs),
             "silent_restarts": [
                 {"event": e.get("event"), "pair": e.get("pair"),
                  "monotonic_ns": e.get("monotonic_ns")}
