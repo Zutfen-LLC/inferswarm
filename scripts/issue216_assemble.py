@@ -1569,7 +1569,10 @@ def assemble(evidence_root: Path) -> dict[str, Any]:
             window_start = datetime.fromisoformat(
                 pre["captured_utc"].replace("Z", "+00:00"))
             ts_candidates: list[datetime] = [window_start]
-            for rel in ("transport/transport.json",
+            for rel in ("baseline-a.json", "baseline-b.json",
+                        "concurrent/c01.json", "concurrent/c02.json",
+                        "concurrent/c03.json",
+                        "transport/transport.json",
                         "soak/soak.json", "fault-a/fault-a.json",
                         "fault-b/fault-b.json", "reset/reset.json"):
                 try:
@@ -1585,13 +1588,26 @@ def assemble(evidence_root: Path) -> dict[str, Any]:
                             pass
                         break
             window_end = max(ts_candidates)
-        except Exception:
+        except Exception as exc:
+            # fail-closed observability: a window we cannot derive is
+            # recorded, never silently skipped (the scan may not just
+            # not run on a tree that retains faults)
+            out["platform_fault_scan_error"] = (
+                f"campaign window not derivable from phase records: "
+                f"{exc}")
             window_start = None
         if window_start is not None and window_end is not None:
             try:
+                scan_end = window_end + timedelta(minutes=15)
                 fault_scan = scan_campaign_faults(
-                    evidence_root, window_start,
-                    window_end + timedelta(minutes=15))
+                    evidence_root, window_start, scan_end)
+                fault_scan["window_utc"] = [
+                    window_start.isoformat(), scan_end.isoformat()]
+                fault_scan["window_note"] = (
+                    "start = verified preflight captured_utc; end = "
+                    "latest retained phase-record timestamp + 15 min "
+                    "(a wedged phase writes no record; the slack "
+                    "admits faults in the tail after the last record)")
                 out["platform_fault_scan"] = fault_scan
                 in_window_hits = [
                     (src, h) for src, hits

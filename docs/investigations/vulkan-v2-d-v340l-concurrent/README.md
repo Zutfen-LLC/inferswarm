@@ -32,9 +32,11 @@ freeze. Reduction-only changes after retained output are admitted via
 2. Single-die baselines (3 reps each): both dies 3/3 correct, full
    offload, accounting 0/0/0, correct die identity throughout.
 3. Concurrent pairs c01/c02/c03: 3/3 clean repeats, seam-classified
-   OVERLAP. #219 overlap lower bounds: c01 2 511 893 ns,
-   c02 4 588 483 ns, c03 2 586 522 ns. (The stale "+~9.17 ms on c01"
-   statement described the superseded chain's assembly and is removed.)
+   OVERLAP. Chain-2 #219 overlap lower bounds (from the retained
+   ASSEMBLY.json): c01 2 511 893 ns, c02 2 550 241 ns,
+   c03 2 929 381 ns. (The superseded chain-1 values — c01 2 718 318 /
+   c02 4 588 483 / c03 2 586 522 ns — and the "+~9.17 ms on c01"
+   statement described chain-1's assembly and are removed.)
 4. Transport: single-A arm completed clean. The single-B probe was in
    flight when the platform fault (below) struck.
 
@@ -52,7 +54,12 @@ wedged kworker before eventually completing.
 
 Retained proof: `evidence/fault-capture/` (dmesg at fault, full
 boot journal at fault, process states incl. the D-state stack, both
-dies' lspci -vvv, SHA256SUMS verified). The assembler's campaign-
+dies' lspci -vvv, SHA256SUMS verified). Provenance disclosure: the
+capture was taken by the orchestrator over ssh at fault time, BEFORE
+the reboot, reading the host kernel's own journald/dmesg bytes; the
+dmesg ring buffer had already churned past the fault lines, so the
+journal capture is the authoritative source (all 9 in-window fault
+lines live there; dmesg-at-fault.txt holds 0). The assembler's campaign-
 window fault scan (journalctl + dmesg -T grammars; window bounded by
 the phase records' own timestamps) re-derives 9 in-window fault lines
 from the journal capture and classifies
