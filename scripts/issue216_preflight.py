@@ -100,7 +100,7 @@ def collect_preflight(*, repo: Path, out: Path, attempt_id: str,
         "info_vram_total 2>/dev/null; done"])
     art("ras", ["bash", "-c",
         "for d in /sys/class/drm/card*/device/ras; do echo == $d; cat $d/"
-        "gpu_err_cnt 2>/dev/null; done"])
+        "gpu_err_cnt 2>/dev/null; done; true"], optional=True)
     art("nic_link", ["ip", "-d", "link", "show", "enp1s0"])
     art("gateway_ping", ["ping", "-c", "3", "-W", "2", "10.0.0.1"],
         timeout=60)
