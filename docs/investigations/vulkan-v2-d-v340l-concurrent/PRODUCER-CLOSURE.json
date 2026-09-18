@@ -1,10 +1,10 @@
 {
  "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
- "closure_digest": "329781524ca7f3c6c0214b428d92b8b96ee32c68e4e6861911287b98bde1802b",
- "producer_head": "ace9395cc5cb4ea7b405df3d0190e9f688ca6f6e",
+ "closure_digest": "298a556357921522db31dee5fd83d733025630b4ca789a1e3daf255c4029fde7",
+ "producer_head": "87c943311819a636787619341a40368ab6d39e62",
  "schema": "inferswarm.v2d.producer-closure/3",
  "sources": {
-  "scripts/issue216_assemble.py": "d3575f8486903c05b0cd7fae91adc661c0dde30747bfb2132e29470bc7737f04",
+  "scripts/issue216_assemble.py": "197bbb6b440b1ebd3d0f571d6709df3ad6b0ea7e24939a56b319028f38e0f2b9",
   "scripts/issue216_concurrent.py": "20a2cf569076875879fca0c03af07949217aeec3f2b1c5adb7baa512fd3df1fb",
   "scripts/issue216_execution.py": "1e18e2a846ff83e37d7850fbf2d68a87cf4d22a1bd90bd6bdc899756b07ccb22",
   "scripts/issue216_fault.py": "2f82ac9e2df8f9fd79c0b268697fcc6c163c9d3efb533015f595dde5b8fec805",
