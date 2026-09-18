@@ -353,7 +353,7 @@
   }
  },
  "prerequisites_ok": true,
- "producer_head": "27ab437d6609ab37a0f87d16ba17f302232d120d",
+ "producer_head": "25341e29bb17b143227581b7415cbe5d1cf5a778",
  "reset": {
   "disposition": "DEVICE_RESET_ISOLATION_NOT_AVAILABLE",
   "reason": "sysfs reset file present, but both Vega functions are downstream of the same physical PM8533 fanout switch on one dual-die V340L board: the sysfs reset (function level secondary-bus-reset/FLR class) is not a documented, function-isolated reset mechanism for this dual-die board topology; issue #216 prohibits improvised bus/bridge resets, so no reset arm is executed"
