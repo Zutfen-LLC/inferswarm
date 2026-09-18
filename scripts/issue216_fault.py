@@ -55,6 +55,8 @@ def launch_participant(d: Path, die: str, mapping: dict[str, Any],
 
 def finish_participant(die: str, spec: dict[str, Any],
                        proc: subprocess.Popen, repo: Path) -> dict:
+    """Finish one participant; the retained run.exit-code byte is the
+    authority for its exit status (SIGKILL -> -9)."""
     spec["stdout_f"].close()
     spec["stderr_f"].close()
     stdout = (spec["dir"] / "run.stdout").read_bytes()
@@ -118,8 +120,14 @@ def run_fault_arm(*, repo: Path, out: Path, attempt_id: str, arm: str,
     # 3. terminate victim with SIGKILL; prove gone
     kill_at = time.monotonic_ns()
     procs[victim].send_signal(signal.SIGKILL)
-    procs[victim].wait(timeout=30)
+    victim_rc = procs[victim].wait(timeout=30)
     victim_gone = procs[victim].poll() is not None
+    # Retain the victim's own exit code durably: the SIGKILL evidence.
+    vspec = specs[victim]
+    vspec["stdout_f"].close()
+    vspec["stderr_f"].close()
+    host.durable_write(vspec["dir"] / "run.exit-code",
+                       f"{victim_rc}\n".encode())
     # 4. sibling must finish its bounded work
     sib_spec = specs[sibling]
     try:

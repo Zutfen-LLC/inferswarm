@@ -376,6 +376,8 @@ def assemble_concurrent(evidence_root: Path, ledger: dict[str, Any]
         pair = _read_json(
             evidence_root,
             f"concurrent/{att['attempt_id']}/pair-{att['attempt_id']}.json")
+        _require_binding(pair, f"concurrent {att['attempt_id']}",
+                           evidence_root)
         verdicts = {}
         for die in ("a", "b"):
             verdicts[die] = rederive_execution(
@@ -491,6 +493,7 @@ def _scan_soak_faults(samples: list[dict[str, Any]],
 
 def assemble_soak(evidence_root: Path) -> dict[str, Any]:
     doc, soak_dir = _phase_json(evidence_root, "soak/soak-*.json")
+    _require_binding(doc, "soak", evidence_root)
     duration = doc.get("duration_s", 0)
     if duration < SOAK_MIN_DURATION_S:
         raise PlatformFailure(
@@ -543,6 +546,16 @@ def assemble_soak(evidence_root: Path) -> dict[str, Any]:
                               require_overlap=False)
     bad_checkpoints = [c for c in checkpoint_verdicts
                        if not c["correct"]]
+    if bad_checkpoints:
+        raise PlatformFailure(
+            f"soak correctness sentinel failed: {bad_checkpoints}")
+    if not final_row["pair_correct"]:
+        raise PlatformFailure("soak final post-soak sentinel failed")
+    growth = _derive_ecc_growth(evidence_root, samples, soak_dir)
+    grew = [bdf for bdf, row in (growth.get("growth") or {}).items()
+            if isinstance(row, dict) and row.get("ras_growth", 0) > 0]
+    if grew:
+        raise PlatformFailure(f"uncorrected ECC/RAS growth: {grew}")
     return {
         "duration_s": duration,
         "stop_reason": doc.get("stop_reason"),
@@ -551,8 +564,7 @@ def assemble_soak(evidence_root: Path) -> dict[str, Any]:
         "checkpoints": checkpoint_verdicts,
         "final_sentinel_correct": final_row["pair_correct"],
         "all_checkpoints_correct": not bad_checkpoints,
-        "ecc_growth": _derive_ecc_growth(evidence_root, samples,
-                                        soak_dir),
+        "ecc_growth": growth,
     }
 
 
@@ -588,8 +600,24 @@ def _derive_ecc_growth(evidence_root: Path,
 
 def assemble_fault_arm(evidence_root: Path, arm: str) -> dict[str, Any]:
     doc = _read_json(evidence_root, f"fault-arm-{arm}.json")
+    _require_binding(doc, f"fault arm {arm}", evidence_root)
     sibling = doc["sibling"]
     victim = doc["victim"]
+    # victim-gone is RE-DERIVED from the retained exit-code bytes: a
+    # SIGKILLed process exits negative (signal). The authored boolean is
+    # only a cross-check.
+    victim_exit_raw = _read_raw(
+        evidence_root,
+        f"fault-arm-{arm}-loss/initial/{victim}/run.exit-code")
+    try:
+        victim_exit = int(victim_exit_raw.decode().strip())
+    except ValueError:
+        raise AssemblyError("victim exit-code not parseable")
+    victim_gone = victim_exit < 0
+    if doc.get("victim_gone") is True and not victim_gone:
+        raise AssemblyError(
+            f"authored victim_gone contradicts retained exit code "
+            f"{victim_exit}")
     sibling_run = rederive_execution(
         evidence_root, doc["sibling_run"],
         f"fault-arm-{arm}-loss/initial/{sibling}")
@@ -604,7 +632,8 @@ def assemble_fault_arm(evidence_root: Path, arm: str) -> dict[str, Any]:
         "sibling_run"].get("selected_bdf")
     return {
         "arm": arm,
-        "victim_gone": doc.get("victim_gone") is True,
+        "victim_exit_code": victim_exit,
+        "victim_gone": victim_gone,
         "sibling_correct": sibling_run["correct"],
         "sibling_stayed_on_die": sibling_stayed,
         "relaunch_correct": relaunch_run["correct"],
@@ -639,6 +668,38 @@ def classify(assembly: dict[str, Any]) -> str:
     if not all(assembly.get(k) for k in required):
         return "V2D_EVIDENCE_INCOMPLETE_AFTER_CONCURRENCY"
     return "V2D_V340L_CONCURRENT_DUAL_DIE_STABILITY_PASS"
+
+
+_FROZEN_AUTHORITY_DIGEST: str | None = None
+_FROZEN_MAPPING_DIGEST: str | None = None
+
+
+def _require_binding(doc: dict[str, Any], what: str,
+                     evidence_root: Path | None = None) -> None:
+    """Every phase record must carry the SAME frozen authority and the
+    fresh mapping bound at preflight; anything else fails closed."""
+    global _FROZEN_AUTHORITY_DIGEST, _FROZEN_MAPPING_DIGEST
+    if _FROZEN_AUTHORITY_DIGEST is None:
+        authority_doc = json.loads(
+            (REPO / "docs/investigations/vulkan-v2-d-v340l-concurrent/"
+             "PHYSICAL-AUTHORITY.json").read_bytes())
+        _FROZEN_AUTHORITY_DIGEST = authority_doc["authority_digest"]
+    if doc.get("authority_digest") != _FROZEN_AUTHORITY_DIGEST:
+        raise AssemblyError(
+            f"{what}: authority digest "
+            f"{doc.get('authority_digest')} != frozen")
+    md = doc.get("mapping_digest")
+    if md is None:
+        return
+    if _FROZEN_MAPPING_DIGEST is None:
+        if evidence_root is None:
+            return
+        preflight, _pd = _phase_json(evidence_root,
+                                     "preflight/preflight*.json")
+        _FROZEN_MAPPING_DIGEST = preflight["mapping_digest"]
+    if md != _FROZEN_MAPPING_DIGEST:
+        raise AssemblyError(
+            f"{what}: mapping digest {md} != preflight's")
 
 
 def assemble(evidence_root: Path) -> dict[str, Any]:

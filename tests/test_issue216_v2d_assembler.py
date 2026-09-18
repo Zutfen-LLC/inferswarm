@@ -26,6 +26,8 @@ sys.path.insert(0, str(REPO / "scripts"))
 sys.path.insert(0, str(REPO / "tests"))
 
 import issue216_assemble as asm
+import issue216_physical_authority as _pa
+__AUTH__ = _pa.build_authority()["authority_digest"]
 from test_issue216_v2d_concurrent import (clean_run, synth_run_bytes,
                                            write_run)
 
@@ -82,7 +84,7 @@ def synth_pair_fixture(root: Path, attempt: str, *, overlap_ms=(100, 150),
     pair = {"attempt_id": attempt, "phase": "concurrent",
             "participants": {}, "observe_rels": {},
             "wrapper_intervals_ns": {"a": [0, 1], "b": [0, 1]},
-            "authority_digest": "x", "mapping_digest": "y"}
+            "authority_digest": __AUTH__, "mapping_digest": "M"}
     # die A runs at [0,200]ms device-domain; die B overlapping
     a_spans = ((0, 200),)
     b_spans = ((overlap_ms[0], overlap_ms[0] + 50),)
@@ -123,8 +125,8 @@ def build_complete_tree(root: Path, *, n_concurrent: int = 3,
     preflight = {
         "schema": "inferswarm.v2d.preflight/2", "campaign_id":
             "issue216-v2d-v340l-concurrent-dual-die-v2",
-        "attempt_id": "pf1", "authority_digest": "x",
-        "mapping_digest": "y", "boot_id": "b-1",
+        "attempt_id": "pf1", "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1",
+        "mapping_digest": "M", "boot_id": "b-1",
         "bdfs": ["0000:06:00.0", "0000:09:00.0"],
         "sentinels": {"a": {"correct": True}, "b": {"correct": True}},
     }
@@ -202,7 +204,7 @@ def build_complete_tree(root: Path, *, n_concurrent: int = 3,
             soak_duration_s, "cadence_s": 60, "checkpoint_every_s": 600,
         "sched_tolerance_s": 15, "stop_reason": "duration_reached",
         "pairs_launched": 60, "events": [], "samples": samples,
-        "authority_digest": "x", "mapping_digest": "y",
+        "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1", "mapping_digest": "M",
     }
     (root / "soak").mkdir(exist_ok=True)
     (root / "soak" / "soak-sk1.json").write_bytes(
@@ -226,7 +228,7 @@ def _checkpoint_pair(root: Path, cp_dir: Path, tag: str) -> dict:
     pair = {"attempt_id": tag, "phase": "soak-checkpoint",
             "participants": {}, "observe_rels": {},
             "wrapper_intervals_ns": {"a": [0, 1], "b": [0, 1]},
-            "authority_digest": "x", "mapping_digest": "y"}
+            "authority_digest": __AUTH__, "mapping_digest": "M"}
     for die, bdf, sel in (("a", "0000:06:00.0", "Vulkan1"),
                           ("b", "0000:09:00.0", "Vulkan2")):
         run = synth_run_bytes(f"run-{tag}", bdf=bdf, selector=sel)
@@ -254,6 +256,9 @@ def _build_fault_arm(root: Path, arm: str) -> None:
     sib_sel = "Vulkan1" if sibling == "a" else "Vulkan2"
     init = base / "initial"
     rel_dir = base / "relaunch"
+    # victim's own retained exit code: SIGKILLed (negative)
+    (init / victim).mkdir(parents=True, exist_ok=True)
+    (init / victim / "run.exit-code").write_bytes(b"-9\n")
     sib_run = synth_run_bytes(f"fault-sib-{arm}", bdf=sib_bdf,
                               selector=sib_sel)
     write_run(init / sibling, sib_run, "")
@@ -272,7 +277,7 @@ def _build_fault_arm(root: Path, arm: str) -> None:
         "sibling_run": clean_run(sib_run), "relaunch_run":
             clean_run(vic_run),
         "recovery_sentinel": rec_pair,
-        "authority_digest": "x", "mapping_digest": "y",
+        "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1", "mapping_digest": "M",
     }
     (root / f"fault-arm-{arm}.json").write_bytes(
         json.dumps(doc, indent=1).encode())
