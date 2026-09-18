@@ -88,7 +88,9 @@ def current_head(repo: Path) -> str:
     return proc.stdout.decode().strip()
 
 
-def closure_document(repo: Path = rc.ROOT) -> dict[str, Any]:
+def closure_document(repo: Path = rc.ROOT,
+                      sources: tuple[str, ...] | None = None
+                      ) -> dict[str, Any]:
     """Build the corrected closure over the CURRENT tree + HEAD.
 
     Fails closed (FreezeError) unless, for every closure source:
@@ -97,10 +99,15 @@ def closure_document(repo: Path = rc.ROOT) -> dict[str, Any]:
     substituted source. Returns the closure document whose
     `closure_digest` binds {producer_head, sources} — this digest is
     what every phase record must carry and what the assembler verifies.
+
+    `sources` overrides the closure source set for CPU tests that build
+    a mini producer repo (the default is the campaign's
+    rc.CLOSURE_SOURCES).
     """
     head = current_head(repo)
-    sources: dict[str, str] = {}
-    for rel in rc.CLOSURE_SOURCES:
+    closure_sources = sources if sources is not None else rc.CLOSURE_SOURCES
+    out_sources: dict[str, str] = {}
+    for rel in closure_sources:
         if not is_tracked_at_head(repo, rel, head):
             raise FreezeError(
                 f"closure source not tracked at producer HEAD {head}: {rel}")
@@ -117,12 +124,12 @@ def closure_document(repo: Path = rc.ROOT) -> dict[str, Any]:
         if idx != hd:
             raise FreezeError(
                 f"staged producer drift (index != HEAD): {rel}")
-        sources[rel] = wt
+        out_sources[rel] = wt
     doc = {
         "schema": "inferswarm.v2d.producer-closure/3",
         "campaign_id": rc.CAMPAIGN_ID,
         "producer_head": head,
-        "sources": sources,
+        "sources": out_sources,
     }
     doc["closure_digest"] = hashlib.sha256(
         rc.canonical({k: v for k, v in doc.items()
@@ -131,7 +138,9 @@ def closure_document(repo: Path = rc.ROOT) -> dict[str, Any]:
 
 
 def verify_closure(repo: Path = rc.ROOT,
-                   committed: dict[str, Any] | None = None
+                   committed: dict[str, Any] | None = None,
+                   sources: tuple[str, ...] | None = None,
+                   record_rel: str | None = None
                    ) -> dict[str, Any]:
     """Verify the committed closure record against the LIVE tree.
 
@@ -154,7 +163,9 @@ def verify_closure(repo: Path = rc.ROOT,
       4. `git diff --name-only <pin> HEAD -- <sources>` is empty (no
          intervening commit replaced a producer between freeze and now).
     """
-    record_path = repo / rc.AREA_REL / rc.CLOSURE_NAME
+    record_path = repo / (record_rel
+                          if record_rel is not None
+                          else f"{rc.AREA_REL}/{rc.CLOSURE_NAME}")
     if committed is None:
         if not record_path.is_file():
             raise FreezeError(f"committed closure missing: {record_path}")
@@ -171,7 +182,8 @@ def verify_closure(repo: Path = rc.ROOT,
     if not isinstance(pinned, str) or len(pinned) != 40 \
             or any(c not in "0123456789abcdef" for c in pinned):
         raise FreezeError("closure record does not pin a producer HEAD")
-    if set(committed.get("sources") or {}) != set(rc.CLOSURE_SOURCES):
+    closure_sources = sources if sources is not None else rc.CLOSURE_SOURCES
+    if set(committed.get("sources") or {}) != set(closure_sources):
         raise FreezeError(
             "closure source set mismatch (missing/untracked/substituted "
             "closure source)")
@@ -194,7 +206,7 @@ def verify_closure(repo: Path = rc.ROOT,
                 f"unstaged producer drift (worktree != pin): {rel}")
     # (4) HEAD may advance past the pin only without touching sources
     diff = _git_bytes(repo, "diff", "--name-only", pinned,
-                      current_head(repo), "--", *rc.CLOSURE_SOURCES)
+                      current_head(repo), "--", *closure_sources)
     if diff is None or diff.strip():
         raise FreezeError(
             "producer sources changed between the pinned head and HEAD — "
@@ -233,12 +245,16 @@ def require_frozen(repo: Path = rc.ROOT) -> dict[str, Any]:
     return verify_closure(repo)
 
 
-def assert_execution_provenance(repo: Path = rc.ROOT) -> dict[str, Any]:
+def assert_execution_provenance(repo: Path = rc.ROOT,
+                                  sources: tuple[str, ...] | None = None,
+                                  record_rel: str | None = None
+                                  ) -> dict[str, Any]:
     """Fail-closed proof that the bytes about to execute ARE the frozen
     bytes: for every closure source, the working-tree file's bytes hash
     to the committed closure's source digest (executed-byte identity),
     and independently equal HEAD's blob (reviewed identity)."""
-    closure = verify_closure(repo)
+    closure = verify_closure(repo, sources=sources,
+                             record_rel=record_rel)
     head = closure["producer_head"]
     for rel, expected in closure["sources"].items():
         wt = worktree_source_sha256(repo, rel)

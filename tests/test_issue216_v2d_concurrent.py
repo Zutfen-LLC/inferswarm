@@ -170,44 +170,133 @@ class TestReceiptProtocol(unittest.TestCase):
             with self.assertRaises(rc.ReceiptError):
                 rc.emit_receipt(out, receipt)
 
-    def test_closure_drift_rejected(self):
-        # Closure binds COMMITTED bytes: an uncommitted producer file
-        # (or one whose committed bytes differ from the closure record)
-        # must fail closed.
+class TestProducerFreeze(unittest.TestCase):
+    """FIX 1: the corrected producer freeze proves EXECUTED-BYTE
+    identity (worktree == index == HEAD per source, pinned producer
+    head). The old test asserted the index-based closure IGNORED
+    unstaged drift — exactly the defect this correction removes."""
+
+    SRC = ("scripts/issue216_receipt.py",)
+
+    def _mini_repo(self, td: str) -> Path:
+        repo = Path(td)
+        subprocess.run(["git", "init", "-q", str(repo)], check=True)
+        subprocess.run(["git", "-C", str(repo), "config",
+                        "user.email", "t@t"], check=True)
+        subprocess.run(["git", "-C", str(repo), "config",
+                        "user.name", "t"], check=True)
+        src_dir = repo / "scripts"
+        src_dir.mkdir()
+        (repo / "docs" / "x").mkdir(parents=True)
+        (src_dir / "issue216_receipt.py").write_text(
+            "CLOSURE_SOURCES = ('scripts/issue216_receipt.py',)\n"
+            "CAMPAIGN_ID = 'c'\n"
+            "AREA_REL = 'docs/x'\n"
+            "CLOSURE_NAME = 'PRODUCER-CLOSURE.json'\n"
+            "ROOT = __import__('pathlib').Path(__file__)"
+            ".resolve().parents[1]\n"
+            "class ReceiptError(RuntimeError): pass\n"
+            "def canonical(v): return __import__('json')"
+            ".dumps(v, sort_keys=True).encode()\n")
+        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(repo), "commit", "-qm", "x"],
+                       check=True)
+        return repo
+
+    def test_unstaged_drift_fails_closed(self):
+        import issue216_freeze as fz
         with tempfile.TemporaryDirectory() as td:
-            repo = Path(td)
-            # minimal git repo with one closure source committed
-            subprocess.run(["git", "init", "-q", str(repo)], check=True)
-            subprocess.run(["git", "-C", str(repo), "config",
-                            "user.email", "t@t"], check=True)
-            subprocess.run(["git", "-C", str(repo), "config",
-                            "user.name", "t"], check=True)
-            src_dir = repo / "scripts"
-            src_dir.mkdir()
-            (src_dir / "issue216_receipt.py").write_text("# v1\n")
+            repo = self._mini_repo(td)
+            record = fz.closure_document(repo, sources=self.SRC)
+            fz.verify_closure(repo, committed=record,
+                              sources=self.SRC)  # green baseline
+            (repo / "scripts" / "issue216_receipt.py").write_text("# v2\n")
+            with self.assertRaises(fz.FreezeError) as cm:
+                fz.verify_closure(repo, committed=record, sources=self.SRC)
+            self.assertIn("unstaged producer drift", str(cm.exception))
+
+    def test_staged_drift_fails_closed(self):
+        import issue216_freeze as fz
+        with tempfile.TemporaryDirectory() as td:
+            repo = self._mini_repo(td)
+            record = fz.closure_document(repo, sources=self.SRC)
+            (repo / "scripts" / "issue216_receipt.py").write_text("# v2\n")
             subprocess.run(["git", "-C", str(repo), "add", "-A"],
                            check=True)
-            subprocess.run(["git", "-C", str(repo), "commit", "-qm", "x"],
+            with self.assertRaises(fz.FreezeError) as cm:
+                fz.verify_closure(repo, committed=record, sources=self.SRC)
+            self.assertIn("staged producer drift", str(cm.exception))
+
+    def test_head_source_mismatch_fails_closed(self):
+        import issue216_freeze as fz
+        with tempfile.TemporaryDirectory() as td:
+            repo = self._mini_repo(td)
+            record = fz.closure_document(repo, sources=self.SRC)
+            bad = copy.deepcopy(record)
+            bad["producer_head"] = "0" * 40
+            with self.assertRaises(fz.FreezeError) as cm:
+                fz.verify_closure(repo, committed=bad, sources=self.SRC)
+            self.assertIn("not present at pinned producer head",
+                          str(cm.exception))
+
+    def test_closure_record_mutation_fails_closed(self):
+        import issue216_freeze as fz
+        with tempfile.TemporaryDirectory() as td:
+            repo = self._mini_repo(td)
+            record = fz.closure_document(repo, sources=self.SRC)
+            bad = copy.deepcopy(record)
+            bad["sources"]["scripts/issue216_receipt.py"] = "1" * 64
+            with self.assertRaises(fz.FreezeError):
+                fz.verify_closure(repo, committed=bad, sources=self.SRC)
+            bad2 = copy.deepcopy(record)
+            bad2["closure_digest"] = "2" * 64
+            with self.assertRaises(fz.FreezeError) as cm:
+                fz.verify_closure(repo, committed=bad2, sources=self.SRC)
+            self.assertIn("digest does not bind", str(cm.exception))
+
+    def test_execution_blocked_from_dirty_tree(self):
+        import issue216_freeze as fz
+        with tempfile.TemporaryDirectory() as td:
+            repo = self._mini_repo(td)
+            record = fz.closure_document(repo, sources=self.SRC)
+            (repo / "docs" / "x" / "PRODUCER-CLOSURE.json").write_bytes(
+                json.dumps(record, indent=1, sort_keys=True).encode()
+                + b"\n")
+            subprocess.run(["git", "-C", str(repo), "add", "-A"],
                            check=True)
-            # closure record for the committed bytes
-            saved = rc.CLOSURE_SOURCES
-            try:
-                rc.CLOSURE_SOURCES = ("scripts/issue216_receipt.py",)
-                record = rc.closure_document(repo)
-                # drift: rewrite working tree (uncommitted) -> closure
-                # reads committed bytes, so record still verifies
-                (src_dir / "issue216_receipt.py").write_text("# v2\n")
-                self.assertEqual(
-                    rc.verify_closure(repo, committed=record)["sources"],
-                    record["sources"])
-                # but a closure record with different committed bytes
-                # must fail
-                bad = copy.deepcopy(record)
-                bad["sources"]["scripts/issue216_receipt.py"] = "0" * 64
-                with self.assertRaises(rc.ReceiptError):
-                    rc.verify_closure(repo, committed=bad)
-            finally:
-                rc.CLOSURE_SOURCES = saved
+            subprocess.run(["git", "-C", str(repo), "commit", "-qm", "cl"],
+                           check=True)
+            fz.assert_execution_provenance(
+                repo, sources=self.SRC,
+                record_rel="docs/x/PRODUCER-CLOSURE.json")
+            (repo / "scripts" / "issue216_receipt.py").write_text(
+                "# dirty\n")
+            with self.assertRaises(fz.FreezeError) as cm:
+                fz.assert_execution_provenance(
+                    repo, sources=self.SRC,
+                    record_rel="docs/x/PRODUCER-CLOSURE.json")
+            self.assertIn("unstaged producer drift", str(cm.exception))
+
+    def test_missing_source_fails_closed(self):
+        import issue216_freeze as fz
+        with tempfile.TemporaryDirectory() as td:
+            repo = self._mini_repo(td)
+            record = fz.closure_document(repo, sources=self.SRC)
+            (repo / "scripts" / "issue216_receipt.py").unlink()
+            with self.assertRaises(fz.FreezeError) as cm:
+                fz.verify_closure(repo, committed=record, sources=self.SRC)
+            self.assertIn("missing from worktree", str(cm.exception))
+
+    def test_retired_schema_two_record_fails_closed(self):
+        import issue216_freeze as fz
+        with tempfile.TemporaryDirectory() as td:
+            repo = self._mini_repo(td)
+            record = fz.closure_document(repo, sources=self.SRC)
+            retired = copy.deepcopy(record)
+            retired["schema"] = "inferswarm.v2d.producer-closure/2"
+            with self.assertRaises(fz.FreezeError) as cm:
+                fz.verify_closure(repo, committed=retired, sources=self.SRC)
+            self.assertIn("schema mismatch", str(cm.exception))
 
 
 class TestAuthority(unittest.TestCase):
