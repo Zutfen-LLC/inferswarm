@@ -144,7 +144,7 @@
   }
  },
  "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
- "closure_digest": "b0681f7e80b16ccefc4d3a748515e0877faf9216a7ed3734b78fd74714f9cdf5",
+ "closure_digest": "148c8e833026661fa5f8ffe8bf57922e79d993707e49488c47b7435f367ef801",
  "closure_sources": [
   "scripts/issue216_assemble.py",
   "scripts/issue216_concurrent.py",
@@ -395,7 +395,12 @@
      "utc": "2026-09-18T16:28:36-04:00"
     }
    ]
-  }
+  },
+  "window_note": "start = verified preflight captured_utc; end = latest retained phase-record timestamp + 15 min (a wedged phase writes no record; the slack admits faults in the tail after the last record)",
+  "window_utc": [
+   "2026-09-18T20:27:08.672200+00:00",
+   "2026-09-18T20:42:08.672200+00:00"
+  ]
  },
  "preflight": {
   "bdfs": [
@@ -435,7 +440,7 @@
   }
  },
  "prerequisites_ok": true,
- "producer_head": "7c68b43c539e1674d72eea6984fbf041f8a10640",
+ "producer_head": "15ef08a7fcbcb46036eb9418110728a82664a7b5",
  "reset": null,
  "reset_missing_reason": "missing raw artifact: reset-determination.json",
  "schema": "inferswarm.v2d.assembly/2",
