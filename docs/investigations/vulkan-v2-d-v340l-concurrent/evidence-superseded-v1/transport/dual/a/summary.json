@@ -1,0 +1,143 @@
+{
+  "bidirectional": {
+    "bytes_per_transfer": 67108864,
+    "count": 8,
+    "gbps_max": 0.418,
+    "gbps_median": 0.412,
+    "gbps_min": 0.389,
+    "time_ms_max": 172.702693,
+    "time_ms_median": 162.727637,
+    "time_ms_min": 160.460457,
+    "time_ms_p90": 163.151978
+  },
+  "link": {
+    "idle_pre_generation": 3,
+    "idle_pre_width": 16,
+    "max_capability": {
+      "generation": 3,
+      "width": 16
+    },
+    "negotiated_under_load": {
+      "generation": 3,
+      "sysfs_speed_label": "8.0 GT/s PCIe",
+      "width": 16
+    },
+    "sample_count": 173
+  },
+  "provenance": {
+    "label": "MEASURED",
+    "measured_utc": "2026-09-18T14:53:25Z",
+    "probe_binary_sha256": "2719aa4b1877cf14daaa5dc5795ada13bb9e62ca0ea6a86030d7606f4596e021",
+    "probe_source_sha256": "297c951b9177bb22ed937e065825f67fc40622be5a9bff113b71b0fc83b955b5",
+    "raw_schema": "inferswarm.issue35.transport-probe/1"
+  },
+  "schema": "inferswarm.issue35.transport-summary/1",
+  "small_transfer_service": {
+    "bytes_per_transfer": 4096,
+    "count": 200,
+    "gbps_max": 0.02,
+    "gbps_median": 0.012,
+    "gbps_min": 0.003,
+    "time_ms_max": 1.604882,
+    "time_ms_median": 0.339132,
+    "time_ms_min": 0.200517,
+    "time_ms_p90": 0.435408
+  },
+  "subject_identity": {
+    "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+    "name_match_index": 0,
+    "pci_bdf": "06:00.0",
+    "twin_binding": "identity-probe selector->BDF binding (raw-byte derived) plus isolated-workload link observation; substrate link class is pinned at its floor under load (see link-log)",
+    "vk_api_version": "1.4.305"
+  },
+  "sustained_transfers": {
+    "d2h_134217728": {
+      "bytes_per_transfer": 134217728,
+      "count": 8,
+      "gbps_max": 0.634,
+      "gbps_median": 0.626,
+      "gbps_min": 0.48,
+      "time_ms_max": 279.647554,
+      "time_ms_median": 214.345274,
+      "time_ms_min": 211.702224,
+      "time_ms_p90": 216.209522
+    },
+    "d2h_16777216": {
+      "bytes_per_transfer": 16777216,
+      "count": 8,
+      "gbps_max": 0.614,
+      "gbps_median": 0.602,
+      "gbps_min": 0.376,
+      "time_ms_max": 44.64987,
+      "time_ms_median": 27.858871,
+      "time_ms_min": 27.313651,
+      "time_ms_p90": 39.58574
+    },
+    "d2h_4194304": {
+      "bytes_per_transfer": 4194304,
+      "count": 8,
+      "gbps_max": 0.602,
+      "gbps_median": 0.596,
+      "gbps_min": 0.594,
+      "time_ms_max": 7.06517,
+      "time_ms_median": 7.037375,
+      "time_ms_min": 6.964616,
+      "time_ms_p90": 7.055803
+    },
+    "d2h_67108864": {
+      "bytes_per_transfer": 67108864,
+      "count": 8,
+      "gbps_max": 0.629,
+      "gbps_median": 0.623,
+      "gbps_min": 0.619,
+      "time_ms_max": 108.472549,
+      "time_ms_median": 107.637288,
+      "time_ms_min": 106.613835,
+      "time_ms_p90": 108.363184
+    },
+    "h2d_134217728": {
+      "bytes_per_transfer": 134217728,
+      "count": 8,
+      "gbps_max": 0.45,
+      "gbps_median": 0.449,
+      "gbps_min": 0.438,
+      "time_ms_max": 306.321799,
+      "time_ms_median": 299.24877,
+      "time_ms_min": 298.554267,
+      "time_ms_p90": 301.309968
+    },
+    "h2d_16777216": {
+      "bytes_per_transfer": 16777216,
+      "count": 8,
+      "gbps_max": 0.442,
+      "gbps_median": 0.437,
+      "gbps_min": 0.435,
+      "time_ms_max": 38.580365,
+      "time_ms_median": 38.356628,
+      "time_ms_min": 37.978875,
+      "time_ms_p90": 38.403209
+    },
+    "h2d_4194304": {
+      "bytes_per_transfer": 4194304,
+      "count": 8,
+      "gbps_max": 0.422,
+      "gbps_median": 0.418,
+      "gbps_min": 0.405,
+      "time_ms_max": 10.349623,
+      "time_ms_median": 10.026124,
+      "time_ms_min": 9.931571,
+      "time_ms_p90": 10.291046
+    },
+    "h2d_67108864": {
+      "bytes_per_transfer": 67108864,
+      "count": 8,
+      "gbps_max": 0.459,
+      "gbps_median": 0.449,
+      "gbps_min": 0.445,
+      "time_ms_max": 150.704385,
+      "time_ms_median": 149.5728,
+      "time_ms_min": 146.204848,
+      "time_ms_p90": 150.365252
+    }
+  }
+}

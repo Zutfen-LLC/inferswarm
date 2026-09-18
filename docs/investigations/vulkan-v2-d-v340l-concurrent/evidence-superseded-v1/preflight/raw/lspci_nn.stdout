@@ -1,0 +1,21 @@
+00:00.0 Host bridge [0600]: Intel Corporation Xeon E3-1200 v5/E3-1500 v5/6th Gen Core Processor Host Bridge/DRAM Registers [8086:190f] (rev 07)
+00:02.0 VGA compatible controller [0300]: Intel Corporation HD Graphics 510 [8086:1902] (rev 06)
+00:08.0 System peripheral [0880]: Intel Corporation Xeon E3-1200 v5/v6 / E3-1500 v5 / 6th/7th/8th Gen Core Processor Gaussian Mixture Model [8086:1911]
+00:14.0 USB controller [0c03]: Intel Corporation 200 Series/Z370 Chipset Family USB 3.0 xHCI Controller [8086:a2af]
+00:14.2 Signal processing controller [1180]: Intel Corporation 200 Series PCH Thermal Subsystem [8086:a2b1]
+00:16.0 Communication controller [0780]: Intel Corporation 200 Series PCH CSME HECI #1 [8086:a2ba]
+00:1c.0 PCI bridge [0604]: Intel Corporation 200 Series PCH PCI Express Root Port #5 [8086:a294] (rev f0)
+00:1d.0 PCI bridge [0604]: Intel Corporation 200 Series PCH PCI Express Root Port #11 [8086:a29a] (rev f0)
+00:1f.0 ISA bridge [0601]: Intel Corporation 200 Series PCH LPC Controller (B250) [8086:a2c8]
+00:1f.2 Memory controller [0580]: Intel Corporation 200 Series/Z370 Chipset Family Power Management Controller [8086:a2a1]
+00:1f.4 SMBus [0c05]: Intel Corporation 200 Series/Z370 Chipset Family SMBus Controller [8086:a2a3]
+01:00.0 Ethernet controller [0200]: Realtek Semiconductor Co., Ltd. RTL8111/8168/8211/8411 PCI Express Gigabit Ethernet Controller [10ec:8168] (rev 07)
+02:00.0 PCI bridge [0604]: Microchip Technology PM8533 PFX 48xG3 PCIe Fanout Switch [11f8:8533]
+03:00.0 PCI bridge [0604]: Microchip Technology PM8533 PFX 48xG3 PCIe Fanout Switch [11f8:8533]
+03:01.0 PCI bridge [0604]: Microchip Technology PM8533 PFX 48xG3 PCIe Fanout Switch [11f8:8533]
+04:00.0 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Vega 10 PCIe Bridge [1022:1470] (rev 05)
+05:00.0 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Vega 10 PCIe Bridge [1022:1471]
+06:00.0 Display controller [0380]: Advanced Micro Devices, Inc. [AMD/ATI] Vega 10 [Radeon Pro V340/Instinct MI25x2] [1002:6864] (rev 05)
+07:00.0 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Vega 10 PCIe Bridge [1022:1470] (rev 05)
+08:00.0 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Vega 10 PCIe Bridge [1022:1471]
+09:00.0 Display controller [0380]: Advanced Micro Devices, Inc. [AMD/ATI] Vega 10 [Radeon Pro V340/Instinct MI25x2] [1002:6864] (rev 05)

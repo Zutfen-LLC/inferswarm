@@ -1,0 +1,25 @@
+{
+ "both_functions_behind_one_switch": true,
+ "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
+ "disposition": "DEVICE_RESET_ISOLATION_NOT_AVAILABLE",
+ "kernel_docs_stdout": "parm:           reset_method:GPU reset method (-1 = auto (default), 0 = legacy, 1 = mode0, 2 = mode1, 3 = mode2, 4 = baco/bamaco) (int)\nparm:           bad_page_threshold:Bad page threshold(-1 = ignore threshold (default value), 0 = disable bad page retirement, -2 = threshold determined by a formula, 0 < threshold < max records, user-defined threshold) (int)\nparm:           num_kcq:number of kernel compute queue user want to setup (8 if set to greater than 8 or less than 0, only affect gfx 8+) (int)\nPROBE_DONE\n",
+ "lspci_tree": "-[0000:00]-+-00.0\n           +-02.0\n           +-08.0\n           +-14.0\n           +-14.2\n           +-16.0\n           +-1c.0-[01]----00.0\n           +-1d.0-[02-09]----00.0-[03-09]--+-00.0-[04-06]----00.0-[05-06]----00.0-[06]----00.0\n           |                               \\-01.0-[07-09]----00.0-[08-09]----00.0-[09]----00.0\n           +-1f.0\n           +-1f.2\n           \\-1f.4\n",
+ "probes": {
+  "a": {
+   "bdf": "0000:06:00.0",
+   "device_sysfs_path": "/sys/bus/pci/devices/0000:06:00.0",
+   "driver": "\tKernel driver in use: amdgpu\n",
+   "reset_file_path": "/sys/bus/pci/devices/0000:06:00.0/reset",
+   "reset_file_present": true
+  },
+  "b": {
+   "bdf": "0000:09:00.0",
+   "device_sysfs_path": "/sys/bus/pci/devices/0000:09:00.0",
+   "driver": "\tKernel driver in use: amdgpu\n",
+   "reset_file_path": "/sys/bus/pci/devices/0000:09:00.0/reset",
+   "reset_file_present": true
+  }
+ },
+ "reason": "sysfs reset file present, but both Vega functions are downstream of the same physical PM8533 fanout switch on one dual-die V340L board: the sysfs reset (function level secondary-bus-reset/FLR class) is not a documented, function-isolated reset mechanism for this dual-die board topology; issue #216 prohibits improvised bus/bridge resets, so no reset arm is executed",
+ "schema": "inferswarm.v2d.reset-determination/2"
+}

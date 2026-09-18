@@ -1,0 +1,3200 @@
+{
+  "bidir": [
+    {
+      "bytes_each_direction": 33554432,
+      "ms": 162.919879,
+      "rep": 0
+    },
+    {
+      "bytes_each_direction": 33554432,
+      "ms": 172.702693,
+      "rep": 1
+    },
+    {
+      "bytes_each_direction": 33554432,
+      "ms": 160.460457,
+      "rep": 2
+    },
+    {
+      "bytes_each_direction": 33554432,
+      "ms": 163.019618,
+      "rep": 3
+    },
+    {
+      "bytes_each_direction": 33554432,
+      "ms": 161.408389,
+      "rep": 4
+    },
+    {
+      "bytes_each_direction": 33554432,
+      "ms": 162.535395,
+      "rep": 5
+    },
+    {
+      "bytes_each_direction": 33554432,
+      "ms": 163.151978,
+      "rep": 6
+    },
+    {
+      "bytes_each_direction": 33554432,
+      "ms": 161.90746,
+      "rep": 7
+    }
+  ],
+  "identity": {
+    "api_version": "1.4.305",
+    "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+    "name_match_count": 2,
+    "name_match_rank": 0,
+    "vk_device_index": 1
+  },
+  "latency": [
+    {
+      "bytes": 4096,
+      "ms": 0.537194,
+      "rep": 0
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.493196,
+      "rep": 1
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.494429,
+      "rep": 2
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.467896,
+      "rep": 3
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.54578,
+      "rep": 4
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.405103,
+      "rep": 5
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.37842,
+      "rep": 6
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.324047,
+      "rep": 7
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.306351,
+      "rep": 8
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.438886,
+      "rep": 9
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.438987,
+      "rep": 10
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.437594,
+      "rep": 11
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.376955,
+      "rep": 12
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.395863,
+      "rep": 13
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.428382,
+      "rep": 14
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.449124,
+      "rep": 15
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.435118,
+      "rep": 16
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.396387,
+      "rep": 17
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.373874,
+      "rep": 18
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.381721,
+      "rep": 19
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.437943,
+      "rep": 20
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.443685,
+      "rep": 21
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.33069,
+      "rep": 22
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.242676,
+      "rep": 23
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.23034,
+      "rep": 24
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.249877,
+      "rep": 25
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.269414,
+      "rep": 26
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.332403,
+      "rep": 27
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.337827,
+      "rep": 28
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.317206,
+      "rep": 29
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.239179,
+      "rep": 30
+    },
+    {
+      "bytes": 4096,
+      "ms": 1.604882,
+      "rep": 31
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.47566,
+      "rep": 32
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.449029,
+      "rep": 33
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.364401,
+      "rep": 34
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.333498,
+      "rep": 35
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.351399,
+      "rep": 36
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.389862,
+      "rep": 37
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.40174,
+      "rep": 38
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.411705,
+      "rep": 39
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.389324,
+      "rep": 40
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.39668,
+      "rep": 41
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.342378,
+      "rep": 42
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.369901,
+      "rep": 43
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.397974,
+      "rep": 44
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.422494,
+      "rep": 45
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.379077,
+      "rep": 46
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.317314,
+      "rep": 47
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.245306,
+      "rep": 48
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.25809,
+      "rep": 49
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.299952,
+      "rep": 50
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.366646,
+      "rep": 51
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.396364,
+      "rep": 52
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.368606,
+      "rep": 53
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.331824,
+      "rep": 54
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.315921,
+      "rep": 55
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.281897,
+      "rep": 56
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.289778,
+      "rep": 57
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.333575,
+      "rep": 58
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.327199,
+      "rep": 59
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.355813,
+      "rep": 60
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.347869,
+      "rep": 61
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.352172,
+      "rep": 62
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.349006,
+      "rep": 63
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.406992,
+      "rep": 64
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.402229,
+      "rep": 65
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.273002,
+      "rep": 66
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.305023,
+      "rep": 67
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.253627,
+      "rep": 68
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.228555,
+      "rep": 69
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.200517,
+      "rep": 70
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.252312,
+      "rep": 71
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.394449,
+      "rep": 72
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.365658,
+      "rep": 73
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.39206,
+      "rep": 74
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.284932,
+      "rep": 75
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.299424,
+      "rep": 76
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.305952,
+      "rep": 77
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.389878,
+      "rep": 78
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.365618,
+      "rep": 79
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.306503,
+      "rep": 80
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.26317,
+      "rep": 81
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.223082,
+      "rep": 82
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.336491,
+      "rep": 83
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.35019,
+      "rep": 84
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.220615,
+      "rep": 85
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.395733,
+      "rep": 86
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.398752,
+      "rep": 87
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.398236,
+      "rep": 88
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.341124,
+      "rep": 89
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.30104,
+      "rep": 90
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.297945,
+      "rep": 91
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.281756,
+      "rep": 92
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.29206,
+      "rep": 93
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.268144,
+      "rep": 94
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.404169,
+      "rep": 95
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.377313,
+      "rep": 96
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.404535,
+      "rep": 97
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.360581,
+      "rep": 98
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.33871,
+      "rep": 99
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.327437,
+      "rep": 100
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.290703,
+      "rep": 101
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.316951,
+      "rep": 102
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.322631,
+      "rep": 103
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.255638,
+      "rep": 104
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.220636,
+      "rep": 105
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.319096,
+      "rep": 106
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.340508,
+      "rep": 107
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.312741,
+      "rep": 108
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.386806,
+      "rep": 109
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.386923,
+      "rep": 110
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.350058,
+      "rep": 111
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.313609,
+      "rep": 112
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.352272,
+      "rep": 113
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.356988,
+      "rep": 114
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.323018,
+      "rep": 115
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.295199,
+      "rep": 116
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.259407,
+      "rep": 117
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.244178,
+      "rep": 118
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.23626,
+      "rep": 119
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.222652,
+      "rep": 120
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.284922,
+      "rep": 121
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.267564,
+      "rep": 122
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.320511,
+      "rep": 123
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.388067,
+      "rep": 124
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.374808,
+      "rep": 125
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.273583,
+      "rep": 126
+    },
+    {
+      "bytes": 4096,
+      "ms": 1.386616,
+      "rep": 127
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.472193,
+      "rep": 128
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.386608,
+      "rep": 129
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.389424,
+      "rep": 130
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.393326,
+      "rep": 131
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.382221,
+      "rep": 132
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.417692,
+      "rep": 133
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.404461,
+      "rep": 134
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.370734,
+      "rep": 135
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.351406,
+      "rep": 136
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.297159,
+      "rep": 137
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.265263,
+      "rep": 138
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.310218,
+      "rep": 139
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.408684,
+      "rep": 140
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.442602,
+      "rep": 141
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.398827,
+      "rep": 142
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.340237,
+      "rep": 143
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.263166,
+      "rep": 144
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.243207,
+      "rep": 145
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.282547,
+      "rep": 146
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.278364,
+      "rep": 147
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.411207,
+      "rep": 148
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.359227,
+      "rep": 149
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.350486,
+      "rep": 150
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.392012,
+      "rep": 151
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.395219,
+      "rep": 152
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.436436,
+      "rep": 153
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.380838,
+      "rep": 154
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.364186,
+      "rep": 155
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.351965,
+      "rep": 156
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.252543,
+      "rep": 157
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.238911,
+      "rep": 158
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.257519,
+      "rep": 159
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.289185,
+      "rep": 160
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.323387,
+      "rep": 161
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.312436,
+      "rep": 162
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.288991,
+      "rep": 163
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.316532,
+      "rep": 164
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.297444,
+      "rep": 165
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.309273,
+      "rep": 166
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.289152,
+      "rep": 167
+    },
+    {
+      "bytes": 4096,
+      "ms": 1.432047,
+      "rep": 168
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.255727,
+      "rep": 169
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.313551,
+      "rep": 170
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.419351,
+      "rep": 171
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.435408,
+      "rep": 172
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.343606,
+      "rep": 173
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.300906,
+      "rep": 174
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.317855,
+      "rep": 175
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.333998,
+      "rep": 176
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.349582,
+      "rep": 177
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.339553,
+      "rep": 178
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.340802,
+      "rep": 179
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.393777,
+      "rep": 180
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.332197,
+      "rep": 181
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.324059,
+      "rep": 182
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.285889,
+      "rep": 183
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.204116,
+      "rep": 184
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.294435,
+      "rep": 185
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.40137,
+      "rep": 186
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.372128,
+      "rep": 187
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.314909,
+      "rep": 188
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.254949,
+      "rep": 189
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.251596,
+      "rep": 190
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.225878,
+      "rep": 191
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.20979,
+      "rep": 192
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.269713,
+      "rep": 193
+    },
+    {
+      "bytes": 4096,
+      "ms": 1.576608,
+      "rep": 194
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.224809,
+      "rep": 195
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.209174,
+      "rep": 196
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.253774,
+      "rep": 197
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.277389,
+      "rep": 198
+    },
+    {
+      "bytes": 4096,
+      "ms": 0.297647,
+      "rep": 199
+    }
+  ],
+  "link_samples": [
+    {
+      "phase": "idle:pre",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:17Z"
+    },
+    {
+      "phase": "load:pre",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:17Z"
+    },
+    {
+      "phase": "watch:0",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:17Z"
+    },
+    {
+      "phase": "watch:1",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:17Z"
+    },
+    {
+      "phase": "watch:2",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:17Z"
+    },
+    {
+      "phase": "watch:3",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:17Z"
+    },
+    {
+      "phase": "watch:4",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:17Z"
+    },
+    {
+      "phase": "watch:5",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:17Z"
+    },
+    {
+      "phase": "watch:6",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:17Z"
+    },
+    {
+      "phase": "watch:7",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:17Z"
+    },
+    {
+      "phase": "watch:8",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:17Z"
+    },
+    {
+      "phase": "watch:9",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:17Z"
+    },
+    {
+      "phase": "watch:10",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:17Z"
+    },
+    {
+      "phase": "watch:11",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:17Z"
+    },
+    {
+      "phase": "watch:12",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:17Z"
+    },
+    {
+      "phase": "watch:13",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:17Z"
+    },
+    {
+      "phase": "watch:14",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:17Z"
+    },
+    {
+      "phase": "watch:15",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:17Z"
+    },
+    {
+      "phase": "watch:16",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:17",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:18",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:19",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:20",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:21",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:22",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:23",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:24",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:25",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:26",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:27",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:28",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:29",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:30",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:31",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:32",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:33",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:34",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:18Z"
+    },
+    {
+      "phase": "watch:35",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:36",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:37",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:38",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:39",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:40",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:41",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:42",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:43",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:44",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:45",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:46",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:47",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:48",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:49",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:50",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:51",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:52",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:53",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:54",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:19Z"
+    },
+    {
+      "phase": "watch:55",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:56",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:57",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:58",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:59",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:60",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:61",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:62",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:63",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:64",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:65",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:66",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:67",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:68",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:69",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:70",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:71",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:72",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:73",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:20Z"
+    },
+    {
+      "phase": "watch:74",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:75",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:76",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:77",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:78",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:79",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:80",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:81",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:82",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:83",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:84",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:85",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:86",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:87",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:88",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:89",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:90",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:91",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:92",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:21Z"
+    },
+    {
+      "phase": "watch:93",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:94",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:95",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:96",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:97",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:98",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:99",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:100",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:101",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:102",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:103",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:104",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:105",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:106",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:107",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:108",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:109",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:110",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:111",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:112",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:22Z"
+    },
+    {
+      "phase": "watch:113",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:114",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:115",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:116",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:117",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:118",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:119",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:120",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:121",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:122",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:123",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:124",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:125",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:126",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:127",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:128",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:129",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:130",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:131",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:23Z"
+    },
+    {
+      "phase": "watch:132",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:133",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:134",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:135",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:136",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:137",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:138",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:139",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:140",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:141",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:142",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:143",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:144",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:145",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:146",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:147",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:148",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:149",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:150",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:24Z"
+    },
+    {
+      "phase": "watch:151",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "watch:152",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "watch:153",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "watch:154",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "watch:155",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "watch:156",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "watch:157",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "watch:158",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "watch:159",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "watch:160",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "watch:161",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "watch:162",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "watch:163",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "watch:164",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "watch:165",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "watch:166",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "watch:167",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "watch:168",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "load:post",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    },
+    {
+      "phase": "idle:post",
+      "subject": {
+        "current_link_speed": "8.0 GT/s PCIe",
+        "current_link_width": "16",
+        "max_link_speed": "8.0 GT/s PCIe",
+        "max_link_width": "16"
+      },
+      "utc": "2026-09-18T14:53:25Z"
+    }
+  ],
+  "measured_utc": "2026-09-18T14:53:25Z",
+  "probe_stderr": "",
+  "probe_stdout": "{\"vk_device_index\": 1, \"device_name\": \"AMD Radeon Pro V340 (RADV VEGA10)\", \"name_match_rank\": 0, \"name_match_count\": 2, \"api_version\": \"1.4.305\"}\n\"sustained\": [\n  {\"dir\": \"h2d\", \"bytes\": 4194304, \"rep\": 0, \"ms\": 10.012019},\n  {\"dir\": \"h2d\", \"bytes\": 4194304, \"rep\": 1, \"ms\": 10.040228},\n  {\"dir\": \"h2d\", \"bytes\": 4194304, \"rep\": 2, \"ms\": 10.011052},\n  {\"dir\": \"h2d\", \"bytes\": 4194304, \"rep\": 3, \"ms\": 10.291046},\n  {\"dir\": \"h2d\", \"bytes\": 4194304, \"rep\": 4, \"ms\": 10.210320},\n  {\"dir\": \"h2d\", \"bytes\": 4194304, \"rep\": 5, \"ms\": 10.349623},\n  {\"dir\": \"h2d\", \"bytes\": 4194304, \"rep\": 6, \"ms\": 9.960940},\n  {\"dir\": \"h2d\", \"bytes\": 4194304, \"rep\": 7, \"ms\": 9.931571},\n  {\"dir\": \"d2h\", \"bytes\": 4194304, \"rep\": 0, \"ms\": 7.065170},\n  {\"dir\": \"d2h\", \"bytes\": 4194304, \"rep\": 1, \"ms\": 6.986896},\n  {\"dir\": \"d2h\", \"bytes\": 4194304, \"rep\": 2, \"ms\": 7.054627},\n  {\"dir\": \"d2h\", \"bytes\": 4194304, \"rep\": 3, \"ms\": 7.055803},\n  {\"dir\": \"d2h\", \"bytes\": 4194304, \"rep\": 4, \"ms\": 7.020661},\n  {\"dir\": \"d2h\", \"bytes\": 4194304, \"rep\": 5, \"ms\": 6.964616},\n  {\"dir\": \"d2h\", \"bytes\": 4194304, \"rep\": 6, \"ms\": 7.038447},\n  {\"dir\": \"d2h\", \"bytes\": 4194304, \"rep\": 7, \"ms\": 7.036304},\n  {\"dir\": \"h2d\", \"bytes\": 16777216, \"rep\": 0, \"ms\": 38.580365},\n  {\"dir\": \"h2d\", \"bytes\": 16777216, \"rep\": 1, \"ms\": 38.355879},\n  {\"dir\": \"h2d\", \"bytes\": 16777216, \"rep\": 2, \"ms\": 38.357378},\n  {\"dir\": \"h2d\", \"bytes\": 16777216, \"rep\": 3, \"ms\": 38.372844},\n  {\"dir\": \"h2d\", \"bytes\": 16777216, \"rep\": 4, \"ms\": 38.403209},\n  {\"dir\": \"h2d\", \"bytes\": 16777216, \"rep\": 5, \"ms\": 38.327700},\n  {\"dir\": \"h2d\", \"bytes\": 16777216, \"rep\": 6, \"ms\": 37.990116},\n  {\"dir\": \"h2d\", \"bytes\": 16777216, \"rep\": 7, \"ms\": 37.978875},\n  {\"dir\": \"d2h\", \"bytes\": 16777216, \"rep\": 0, \"ms\": 27.313651},\n  {\"dir\": \"d2h\", \"bytes\": 16777216, \"rep\": 1, \"ms\": 27.565615},\n  {\"dir\": \"d2h\", \"bytes\": 16777216, \"rep\": 2, \"ms\": 29.323843},\n  {\"dir\": \"d2h\", \"bytes\": 16777216, \"rep\": 3, \"ms\": 44.649870},\n  {\"dir\": \"d2h\", \"bytes\": 16777216, \"rep\": 4, \"ms\": 39.585740},\n  {\"dir\": \"d2h\", \"bytes\": 16777216, \"rep\": 5, \"ms\": 27.517335},\n  {\"dir\": \"d2h\", \"bytes\": 16777216, \"rep\": 6, \"ms\": 27.921068},\n  {\"dir\": \"d2h\", \"bytes\": 16777216, \"rep\": 7, \"ms\": 27.796674},\n  {\"dir\": \"h2d\", \"bytes\": 67108864, \"rep\": 0, \"ms\": 149.331649},\n  {\"dir\": \"h2d\", \"bytes\": 67108864, \"rep\": 1, \"ms\": 148.991179},\n  {\"dir\": \"h2d\", \"bytes\": 67108864, \"rep\": 2, \"ms\": 146.204848},\n  {\"dir\": \"h2d\", \"bytes\": 67108864, \"rep\": 3, \"ms\": 146.229860},\n  {\"dir\": \"h2d\", \"bytes\": 67108864, \"rep\": 4, \"ms\": 150.365252},\n  {\"dir\": \"h2d\", \"bytes\": 67108864, \"rep\": 5, \"ms\": 149.942263},\n  {\"dir\": \"h2d\", \"bytes\": 67108864, \"rep\": 6, \"ms\": 150.704385},\n  {\"dir\": \"h2d\", \"bytes\": 67108864, \"rep\": 7, \"ms\": 149.813950},\n  {\"dir\": \"d2h\", \"bytes\": 67108864, \"rep\": 0, \"ms\": 108.086762},\n  {\"dir\": \"d2h\", \"bytes\": 67108864, \"rep\": 1, \"ms\": 106.613835},\n  {\"dir\": \"d2h\", \"bytes\": 67108864, \"rep\": 2, \"ms\": 108.472549},\n  {\"dir\": \"d2h\", \"bytes\": 67108864, \"rep\": 3, \"ms\": 107.337749},\n  {\"dir\": \"d2h\", \"bytes\": 67108864, \"rep\": 4, \"ms\": 107.804453},\n  {\"dir\": \"d2h\", \"bytes\": 67108864, \"rep\": 5, \"ms\": 107.388231},\n  {\"dir\": \"d2h\", \"bytes\": 67108864, \"rep\": 6, \"ms\": 107.470124},\n  {\"dir\": \"d2h\", \"bytes\": 67108864, \"rep\": 7, \"ms\": 108.363184},\n  {\"dir\": \"h2d\", \"bytes\": 134217728, \"rep\": 0, \"ms\": 299.214568},\n  {\"dir\": \"h2d\", \"bytes\": 134217728, \"rep\": 1, \"ms\": 301.309968},\n  {\"dir\": \"h2d\", \"bytes\": 134217728, \"rep\": 2, \"ms\": 306.321799},\n  {\"dir\": \"h2d\", \"bytes\": 134217728, \"rep\": 3, \"ms\": 300.008569},\n  {\"dir\": \"h2d\", \"bytes\": 134217728, \"rep\": 4, \"ms\": 299.145068},\n  {\"dir\": \"h2d\", \"bytes\": 134217728, \"rep\": 5, \"ms\": 298.554267},\n  {\"dir\": \"h2d\", \"bytes\": 134217728, \"rep\": 6, \"ms\": 299.282973},\n  {\"dir\": \"h2d\", \"bytes\": 134217728, \"rep\": 7, \"ms\": 299.073211},\n  {\"dir\": \"d2h\", \"bytes\": 134217728, \"rep\": 0, \"ms\": 214.044128},\n  {\"dir\": \"d2h\", \"bytes\": 134217728, \"rep\": 1, \"ms\": 212.815618},\n  {\"dir\": \"d2h\", \"bytes\": 134217728, \"rep\": 2, \"ms\": 214.627013},\n  {\"dir\": \"d2h\", \"bytes\": 134217728, \"rep\": 3, \"ms\": 214.518722},\n  {\"dir\": \"d2h\", \"bytes\": 134217728, \"rep\": 4, \"ms\": 211.702224},\n  {\"dir\": \"d2h\", \"bytes\": 134217728, \"rep\": 5, \"ms\": 214.171826},\n  {\"dir\": \"d2h\", \"bytes\": 134217728, \"rep\": 6, \"ms\": 216.209522},\n  {\"dir\": \"d2h\", \"bytes\": 134217728, \"rep\": 7, \"ms\": 279.647554}\n],\n\"latency\": [\n  {\"bytes\": 4096, \"rep\": 0, \"ms\": 0.537194},  {\"bytes\": 4096, \"rep\": 1, \"ms\": 0.493196},  {\"bytes\": 4096, \"rep\": 2, \"ms\": 0.494429},  {\"bytes\": 4096, \"rep\": 3, \"ms\": 0.467896},  {\"bytes\": 4096, \"rep\": 4, \"ms\": 0.545780},  {\"bytes\": 4096, \"rep\": 5, \"ms\": 0.405103},  {\"bytes\": 4096, \"rep\": 6, \"ms\": 0.378420},  {\"bytes\": 4096, \"rep\": 7, \"ms\": 0.324047},  {\"bytes\": 4096, \"rep\": 8, \"ms\": 0.306351},  {\"bytes\": 4096, \"rep\": 9, \"ms\": 0.438886},  {\"bytes\": 4096, \"rep\": 10, \"ms\": 0.438987},  {\"bytes\": 4096, \"rep\": 11, \"ms\": 0.437594},  {\"bytes\": 4096, \"rep\": 12, \"ms\": 0.376955},  {\"bytes\": 4096, \"rep\": 13, \"ms\": 0.395863},  {\"bytes\": 4096, \"rep\": 14, \"ms\": 0.428382},  {\"bytes\": 4096, \"rep\": 15, \"ms\": 0.449124},  {\"bytes\": 4096, \"rep\": 16, \"ms\": 0.435118},  {\"bytes\": 4096, \"rep\": 17, \"ms\": 0.396387},  {\"bytes\": 4096, \"rep\": 18, \"ms\": 0.373874},  {\"bytes\": 4096, \"rep\": 19, \"ms\": 0.381721},  {\"bytes\": 4096, \"rep\": 20, \"ms\": 0.437943},  {\"bytes\": 4096, \"rep\": 21, \"ms\": 0.443685},  {\"bytes\": 4096, \"rep\": 22, \"ms\": 0.330690},  {\"bytes\": 4096, \"rep\": 23, \"ms\": 0.242676},  {\"bytes\": 4096, \"rep\": 24, \"ms\": 0.230340},  {\"bytes\": 4096, \"rep\": 25, \"ms\": 0.249877},  {\"bytes\": 4096, \"rep\": 26, \"ms\": 0.269414},  {\"bytes\": 4096, \"rep\": 27, \"ms\": 0.332403},  {\"bytes\": 4096, \"rep\": 28, \"ms\": 0.337827},  {\"bytes\": 4096, \"rep\": 29, \"ms\": 0.317206},  {\"bytes\": 4096, \"rep\": 30, \"ms\": 0.239179},  {\"bytes\": 4096, \"rep\": 31, \"ms\": 1.604882},  {\"bytes\": 4096, \"rep\": 32, \"ms\": 0.475660},  {\"bytes\": 4096, \"rep\": 33, \"ms\": 0.449029},  {\"bytes\": 4096, \"rep\": 34, \"ms\": 0.364401},  {\"bytes\": 4096, \"rep\": 35, \"ms\": 0.333498},  {\"bytes\": 4096, \"rep\": 36, \"ms\": 0.351399},  {\"bytes\": 4096, \"rep\": 37, \"ms\": 0.389862},  {\"bytes\": 4096, \"rep\": 38, \"ms\": 0.401740},  {\"bytes\": 4096, \"rep\": 39, \"ms\": 0.411705},  {\"bytes\": 4096, \"rep\": 40, \"ms\": 0.389324},  {\"bytes\": 4096, \"rep\": 41, \"ms\": 0.396680},  {\"bytes\": 4096, \"rep\": 42, \"ms\": 0.342378},  {\"bytes\": 4096, \"rep\": 43, \"ms\": 0.369901},  {\"bytes\": 4096, \"rep\": 44, \"ms\": 0.397974},  {\"bytes\": 4096, \"rep\": 45, \"ms\": 0.422494},  {\"bytes\": 4096, \"rep\": 46, \"ms\": 0.379077},  {\"bytes\": 4096, \"rep\": 47, \"ms\": 0.317314},  {\"bytes\": 4096, \"rep\": 48, \"ms\": 0.245306},  {\"bytes\": 4096, \"rep\": 49, \"ms\": 0.258090},  {\"bytes\": 4096, \"rep\": 50, \"ms\": 0.299952},  {\"bytes\": 4096, \"rep\": 51, \"ms\": 0.366646},  {\"bytes\": 4096, \"rep\": 52, \"ms\": 0.396364},  {\"bytes\": 4096, \"rep\": 53, \"ms\": 0.368606},  {\"bytes\": 4096, \"rep\": 54, \"ms\": 0.331824},  {\"bytes\": 4096, \"rep\": 55, \"ms\": 0.315921},  {\"bytes\": 4096, \"rep\": 56, \"ms\": 0.281897},  {\"bytes\": 4096, \"rep\": 57, \"ms\": 0.289778},  {\"bytes\": 4096, \"rep\": 58, \"ms\": 0.333575},  {\"bytes\": 4096, \"rep\": 59, \"ms\": 0.327199},  {\"bytes\": 4096, \"rep\": 60, \"ms\": 0.355813},  {\"bytes\": 4096, \"rep\": 61, \"ms\": 0.347869},  {\"bytes\": 4096, \"rep\": 62, \"ms\": 0.352172},  {\"bytes\": 4096, \"rep\": 63, \"ms\": 0.349006},  {\"bytes\": 4096, \"rep\": 64, \"ms\": 0.406992},  {\"bytes\": 4096, \"rep\": 65, \"ms\": 0.402229},  {\"bytes\": 4096, \"rep\": 66, \"ms\": 0.273002},  {\"bytes\": 4096, \"rep\": 67, \"ms\": 0.305023},  {\"bytes\": 4096, \"rep\": 68, \"ms\": 0.253627},  {\"bytes\": 4096, \"rep\": 69, \"ms\": 0.228555},  {\"bytes\": 4096, \"rep\": 70, \"ms\": 0.200517},  {\"bytes\": 4096, \"rep\": 71, \"ms\": 0.252312},  {\"bytes\": 4096, \"rep\": 72, \"ms\": 0.394449},  {\"bytes\": 4096, \"rep\": 73, \"ms\": 0.365658},  {\"bytes\": 4096, \"rep\": 74, \"ms\": 0.392060},  {\"bytes\": 4096, \"rep\": 75, \"ms\": 0.284932},  {\"bytes\": 4096, \"rep\": 76, \"ms\": 0.299424},  {\"bytes\": 4096, \"rep\": 77, \"ms\": 0.305952},  {\"bytes\": 4096, \"rep\": 78, \"ms\": 0.389878},  {\"bytes\": 4096, \"rep\": 79, \"ms\": 0.365618},  {\"bytes\": 4096, \"rep\": 80, \"ms\": 0.306503},  {\"bytes\": 4096, \"rep\": 81, \"ms\": 0.263170},  {\"bytes\": 4096, \"rep\": 82, \"ms\": 0.223082},  {\"bytes\": 4096, \"rep\": 83, \"ms\": 0.336491},  {\"bytes\": 4096, \"rep\": 84, \"ms\": 0.350190},  {\"bytes\": 4096, \"rep\": 85, \"ms\": 0.220615},  {\"bytes\": 4096, \"rep\": 86, \"ms\": 0.395733},  {\"bytes\": 4096, \"rep\": 87, \"ms\": 0.398752},  {\"bytes\": 4096, \"rep\": 88, \"ms\": 0.398236},  {\"bytes\": 4096, \"rep\": 89, \"ms\": 0.341124},  {\"bytes\": 4096, \"rep\": 90, \"ms\": 0.301040},  {\"bytes\": 4096, \"rep\": 91, \"ms\": 0.297945},  {\"bytes\": 4096, \"rep\": 92, \"ms\": 0.281756},  {\"bytes\": 4096, \"rep\": 93, \"ms\": 0.292060},  {\"bytes\": 4096, \"rep\": 94, \"ms\": 0.268144},  {\"bytes\": 4096, \"rep\": 95, \"ms\": 0.404169},  {\"bytes\": 4096, \"rep\": 96, \"ms\": 0.377313},  {\"bytes\": 4096, \"rep\": 97, \"ms\": 0.404535},  {\"bytes\": 4096, \"rep\": 98, \"ms\": 0.360581},  {\"bytes\": 4096, \"rep\": 99, \"ms\": 0.338710},  {\"bytes\": 4096, \"rep\": 100, \"ms\": 0.327437},  {\"bytes\": 4096, \"rep\": 101, \"ms\": 0.290703},  {\"bytes\": 4096, \"rep\": 102, \"ms\": 0.316951},  {\"bytes\": 4096, \"rep\": 103, \"ms\": 0.322631},  {\"bytes\": 4096, \"rep\": 104, \"ms\": 0.255638},  {\"bytes\": 4096, \"rep\": 105, \"ms\": 0.220636},  {\"bytes\": 4096, \"rep\": 106, \"ms\": 0.319096},  {\"bytes\": 4096, \"rep\": 107, \"ms\": 0.340508},  {\"bytes\": 4096, \"rep\": 108, \"ms\": 0.312741},  {\"bytes\": 4096, \"rep\": 109, \"ms\": 0.386806},  {\"bytes\": 4096, \"rep\": 110, \"ms\": 0.386923},  {\"bytes\": 4096, \"rep\": 111, \"ms\": 0.350058},  {\"bytes\": 4096, \"rep\": 112, \"ms\": 0.313609},  {\"bytes\": 4096, \"rep\": 113, \"ms\": 0.352272},  {\"bytes\": 4096, \"rep\": 114, \"ms\": 0.356988},  {\"bytes\": 4096, \"rep\": 115, \"ms\": 0.323018},  {\"bytes\": 4096, \"rep\": 116, \"ms\": 0.295199},  {\"bytes\": 4096, \"rep\": 117, \"ms\": 0.259407},  {\"bytes\": 4096, \"rep\": 118, \"ms\": 0.244178},  {\"bytes\": 4096, \"rep\": 119, \"ms\": 0.236260},  {\"bytes\": 4096, \"rep\": 120, \"ms\": 0.222652},  {\"bytes\": 4096, \"rep\": 121, \"ms\": 0.284922},  {\"bytes\": 4096, \"rep\": 122, \"ms\": 0.267564},  {\"bytes\": 4096, \"rep\": 123, \"ms\": 0.320511},  {\"bytes\": 4096, \"rep\": 124, \"ms\": 0.388067},  {\"bytes\": 4096, \"rep\": 125, \"ms\": 0.374808},  {\"bytes\": 4096, \"rep\": 126, \"ms\": 0.273583},  {\"bytes\": 4096, \"rep\": 127, \"ms\": 1.386616},  {\"bytes\": 4096, \"rep\": 128, \"ms\": 0.472193},  {\"bytes\": 4096, \"rep\": 129, \"ms\": 0.386608},  {\"bytes\": 4096, \"rep\": 130, \"ms\": 0.389424},  {\"bytes\": 4096, \"rep\": 131, \"ms\": 0.393326},  {\"bytes\": 4096, \"rep\": 132, \"ms\": 0.382221},  {\"bytes\": 4096, \"rep\": 133, \"ms\": 0.417692},  {\"bytes\": 4096, \"rep\": 134, \"ms\": 0.404461},  {\"bytes\": 4096, \"rep\": 135, \"ms\": 0.370734},  {\"bytes\": 4096, \"rep\": 136, \"ms\": 0.351406},  {\"bytes\": 4096, \"rep\": 137, \"ms\": 0.297159},  {\"bytes\": 4096, \"rep\": 138, \"ms\": 0.265263},  {\"bytes\": 4096, \"rep\": 139, \"ms\": 0.310218},  {\"bytes\": 4096, \"rep\": 140, \"ms\": 0.408684},  {\"bytes\": 4096, \"rep\": 141, \"ms\": 0.442602},  {\"bytes\": 4096, \"rep\": 142, \"ms\": 0.398827},  {\"bytes\": 4096, \"rep\": 143, \"ms\": 0.340237},  {\"bytes\": 4096, \"rep\": 144, \"ms\": 0.263166},  {\"bytes\": 4096, \"rep\": 145, \"ms\": 0.243207},  {\"bytes\": 4096, \"rep\": 146, \"ms\": 0.282547},  {\"bytes\": 4096, \"rep\": 147, \"ms\": 0.278364},  {\"bytes\": 4096, \"rep\": 148, \"ms\": 0.411207},  {\"bytes\": 4096, \"rep\": 149, \"ms\": 0.359227},  {\"bytes\": 4096, \"rep\": 150, \"ms\": 0.350486},  {\"bytes\": 4096, \"rep\": 151, \"ms\": 0.392012},  {\"bytes\": 4096, \"rep\": 152, \"ms\": 0.395219},  {\"bytes\": 4096, \"rep\": 153, \"ms\": 0.436436},  {\"bytes\": 4096, \"rep\": 154, \"ms\": 0.380838},  {\"bytes\": 4096, \"rep\": 155, \"ms\": 0.364186},  {\"bytes\": 4096, \"rep\": 156, \"ms\": 0.351965},  {\"bytes\": 4096, \"rep\": 157, \"ms\": 0.252543},  {\"bytes\": 4096, \"rep\": 158, \"ms\": 0.238911},  {\"bytes\": 4096, \"rep\": 159, \"ms\": 0.257519},  {\"bytes\": 4096, \"rep\": 160, \"ms\": 0.289185},  {\"bytes\": 4096, \"rep\": 161, \"ms\": 0.323387},  {\"bytes\": 4096, \"rep\": 162, \"ms\": 0.312436},  {\"bytes\": 4096, \"rep\": 163, \"ms\": 0.288991},  {\"bytes\": 4096, \"rep\": 164, \"ms\": 0.316532},  {\"bytes\": 4096, \"rep\": 165, \"ms\": 0.297444},  {\"bytes\": 4096, \"rep\": 166, \"ms\": 0.309273},  {\"bytes\": 4096, \"rep\": 167, \"ms\": 0.289152},  {\"bytes\": 4096, \"rep\": 168, \"ms\": 1.432047},  {\"bytes\": 4096, \"rep\": 169, \"ms\": 0.255727},  {\"bytes\": 4096, \"rep\": 170, \"ms\": 0.313551},  {\"bytes\": 4096, \"rep\": 171, \"ms\": 0.419351},  {\"bytes\": 4096, \"rep\": 172, \"ms\": 0.435408},  {\"bytes\": 4096, \"rep\": 173, \"ms\": 0.343606},  {\"bytes\": 4096, \"rep\": 174, \"ms\": 0.300906},  {\"bytes\": 4096, \"rep\": 175, \"ms\": 0.317855},  {\"bytes\": 4096, \"rep\": 176, \"ms\": 0.333998},  {\"bytes\": 4096, \"rep\": 177, \"ms\": 0.349582},  {\"bytes\": 4096, \"rep\": 178, \"ms\": 0.339553},  {\"bytes\": 4096, \"rep\": 179, \"ms\": 0.340802},  {\"bytes\": 4096, \"rep\": 180, \"ms\": 0.393777},  {\"bytes\": 4096, \"rep\": 181, \"ms\": 0.332197},  {\"bytes\": 4096, \"rep\": 182, \"ms\": 0.324059},  {\"bytes\": 4096, \"rep\": 183, \"ms\": 0.285889},  {\"bytes\": 4096, \"rep\": 184, \"ms\": 0.204116},  {\"bytes\": 4096, \"rep\": 185, \"ms\": 0.294435},  {\"bytes\": 4096, \"rep\": 186, \"ms\": 0.401370},  {\"bytes\": 4096, \"rep\": 187, \"ms\": 0.372128},  {\"bytes\": 4096, \"rep\": 188, \"ms\": 0.314909},  {\"bytes\": 4096, \"rep\": 189, \"ms\": 0.254949},  {\"bytes\": 4096, \"rep\": 190, \"ms\": 0.251596},  {\"bytes\": 4096, \"rep\": 191, \"ms\": 0.225878},  {\"bytes\": 4096, \"rep\": 192, \"ms\": 0.209790},  {\"bytes\": 4096, \"rep\": 193, \"ms\": 0.269713},  {\"bytes\": 4096, \"rep\": 194, \"ms\": 1.576608},  {\"bytes\": 4096, \"rep\": 195, \"ms\": 0.224809},  {\"bytes\": 4096, \"rep\": 196, \"ms\": 0.209174},  {\"bytes\": 4096, \"rep\": 197, \"ms\": 0.253774},  {\"bytes\": 4096, \"rep\": 198, \"ms\": 0.277389},  {\"bytes\": 4096, \"rep\": 199, \"ms\": 0.297647}\n],\n\"bidir\": [\n  {\"bytes_each_direction\": 33554432, \"rep\": 0, \"ms\": 162.919879},  {\"bytes_each_direction\": 33554432, \"rep\": 1, \"ms\": 172.702693},  {\"bytes_each_direction\": 33554432, \"rep\": 2, \"ms\": 160.460457},  {\"bytes_each_direction\": 33554432, \"rep\": 3, \"ms\": 163.019618},  {\"bytes_each_direction\": 33554432, \"rep\": 4, \"ms\": 161.408389},  {\"bytes_each_direction\": 33554432, \"rep\": 5, \"ms\": 162.535395},  {\"bytes_each_direction\": 33554432, \"rep\": 6, \"ms\": 163.151978},  {\"bytes_each_direction\": 33554432, \"rep\": 7, \"ms\": 161.907460}\n]\n",
+  "schema": "inferswarm.issue35.transport-probe/1",
+  "subject": {
+    "control_bdfs": [],
+    "device_name_substring": "AMD Radeon Pro V340",
+    "name_match_index": 0,
+    "pci_bdf": "06:00.0",
+    "probe_args": [
+      "AMD Radeon Pro V340",
+      "0"
+    ],
+    "probe_binary_sha256": "2719aa4b1877cf14daaa5dc5795ada13bb9e62ca0ea6a86030d7606f4596e021",
+    "probe_source_sha256": "297c951b9177bb22ed937e065825f67fc40622be5a9bff113b71b0fc83b955b5",
+    "runtime_executable": "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+    "runtime_executable_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+    "selector": "Vulkan1"
+  },
+  "sustained": [
+    {
+      "bytes": 4194304,
+      "dir": "h2d",
+      "ms": 10.012019,
+      "rep": 0
+    },
+    {
+      "bytes": 4194304,
+      "dir": "h2d",
+      "ms": 10.040228,
+      "rep": 1
+    },
+    {
+      "bytes": 4194304,
+      "dir": "h2d",
+      "ms": 10.011052,
+      "rep": 2
+    },
+    {
+      "bytes": 4194304,
+      "dir": "h2d",
+      "ms": 10.291046,
+      "rep": 3
+    },
+    {
+      "bytes": 4194304,
+      "dir": "h2d",
+      "ms": 10.21032,
+      "rep": 4
+    },
+    {
+      "bytes": 4194304,
+      "dir": "h2d",
+      "ms": 10.349623,
+      "rep": 5
+    },
+    {
+      "bytes": 4194304,
+      "dir": "h2d",
+      "ms": 9.96094,
+      "rep": 6
+    },
+    {
+      "bytes": 4194304,
+      "dir": "h2d",
+      "ms": 9.931571,
+      "rep": 7
+    },
+    {
+      "bytes": 4194304,
+      "dir": "d2h",
+      "ms": 7.06517,
+      "rep": 0
+    },
+    {
+      "bytes": 4194304,
+      "dir": "d2h",
+      "ms": 6.986896,
+      "rep": 1
+    },
+    {
+      "bytes": 4194304,
+      "dir": "d2h",
+      "ms": 7.054627,
+      "rep": 2
+    },
+    {
+      "bytes": 4194304,
+      "dir": "d2h",
+      "ms": 7.055803,
+      "rep": 3
+    },
+    {
+      "bytes": 4194304,
+      "dir": "d2h",
+      "ms": 7.020661,
+      "rep": 4
+    },
+    {
+      "bytes": 4194304,
+      "dir": "d2h",
+      "ms": 6.964616,
+      "rep": 5
+    },
+    {
+      "bytes": 4194304,
+      "dir": "d2h",
+      "ms": 7.038447,
+      "rep": 6
+    },
+    {
+      "bytes": 4194304,
+      "dir": "d2h",
+      "ms": 7.036304,
+      "rep": 7
+    },
+    {
+      "bytes": 16777216,
+      "dir": "h2d",
+      "ms": 38.580365,
+      "rep": 0
+    },
+    {
+      "bytes": 16777216,
+      "dir": "h2d",
+      "ms": 38.355879,
+      "rep": 1
+    },
+    {
+      "bytes": 16777216,
+      "dir": "h2d",
+      "ms": 38.357378,
+      "rep": 2
+    },
+    {
+      "bytes": 16777216,
+      "dir": "h2d",
+      "ms": 38.372844,
+      "rep": 3
+    },
+    {
+      "bytes": 16777216,
+      "dir": "h2d",
+      "ms": 38.403209,
+      "rep": 4
+    },
+    {
+      "bytes": 16777216,
+      "dir": "h2d",
+      "ms": 38.3277,
+      "rep": 5
+    },
+    {
+      "bytes": 16777216,
+      "dir": "h2d",
+      "ms": 37.990116,
+      "rep": 6
+    },
+    {
+      "bytes": 16777216,
+      "dir": "h2d",
+      "ms": 37.978875,
+      "rep": 7
+    },
+    {
+      "bytes": 16777216,
+      "dir": "d2h",
+      "ms": 27.313651,
+      "rep": 0
+    },
+    {
+      "bytes": 16777216,
+      "dir": "d2h",
+      "ms": 27.565615,
+      "rep": 1
+    },
+    {
+      "bytes": 16777216,
+      "dir": "d2h",
+      "ms": 29.323843,
+      "rep": 2
+    },
+    {
+      "bytes": 16777216,
+      "dir": "d2h",
+      "ms": 44.64987,
+      "rep": 3
+    },
+    {
+      "bytes": 16777216,
+      "dir": "d2h",
+      "ms": 39.58574,
+      "rep": 4
+    },
+    {
+      "bytes": 16777216,
+      "dir": "d2h",
+      "ms": 27.517335,
+      "rep": 5
+    },
+    {
+      "bytes": 16777216,
+      "dir": "d2h",
+      "ms": 27.921068,
+      "rep": 6
+    },
+    {
+      "bytes": 16777216,
+      "dir": "d2h",
+      "ms": 27.796674,
+      "rep": 7
+    },
+    {
+      "bytes": 67108864,
+      "dir": "h2d",
+      "ms": 149.331649,
+      "rep": 0
+    },
+    {
+      "bytes": 67108864,
+      "dir": "h2d",
+      "ms": 148.991179,
+      "rep": 1
+    },
+    {
+      "bytes": 67108864,
+      "dir": "h2d",
+      "ms": 146.204848,
+      "rep": 2
+    },
+    {
+      "bytes": 67108864,
+      "dir": "h2d",
+      "ms": 146.22986,
+      "rep": 3
+    },
+    {
+      "bytes": 67108864,
+      "dir": "h2d",
+      "ms": 150.365252,
+      "rep": 4
+    },
+    {
+      "bytes": 67108864,
+      "dir": "h2d",
+      "ms": 149.942263,
+      "rep": 5
+    },
+    {
+      "bytes": 67108864,
+      "dir": "h2d",
+      "ms": 150.704385,
+      "rep": 6
+    },
+    {
+      "bytes": 67108864,
+      "dir": "h2d",
+      "ms": 149.81395,
+      "rep": 7
+    },
+    {
+      "bytes": 67108864,
+      "dir": "d2h",
+      "ms": 108.086762,
+      "rep": 0
+    },
+    {
+      "bytes": 67108864,
+      "dir": "d2h",
+      "ms": 106.613835,
+      "rep": 1
+    },
+    {
+      "bytes": 67108864,
+      "dir": "d2h",
+      "ms": 108.472549,
+      "rep": 2
+    },
+    {
+      "bytes": 67108864,
+      "dir": "d2h",
+      "ms": 107.337749,
+      "rep": 3
+    },
+    {
+      "bytes": 67108864,
+      "dir": "d2h",
+      "ms": 107.804453,
+      "rep": 4
+    },
+    {
+      "bytes": 67108864,
+      "dir": "d2h",
+      "ms": 107.388231,
+      "rep": 5
+    },
+    {
+      "bytes": 67108864,
+      "dir": "d2h",
+      "ms": 107.470124,
+      "rep": 6
+    },
+    {
+      "bytes": 67108864,
+      "dir": "d2h",
+      "ms": 108.363184,
+      "rep": 7
+    },
+    {
+      "bytes": 134217728,
+      "dir": "h2d",
+      "ms": 299.214568,
+      "rep": 0
+    },
+    {
+      "bytes": 134217728,
+      "dir": "h2d",
+      "ms": 301.309968,
+      "rep": 1
+    },
+    {
+      "bytes": 134217728,
+      "dir": "h2d",
+      "ms": 306.321799,
+      "rep": 2
+    },
+    {
+      "bytes": 134217728,
+      "dir": "h2d",
+      "ms": 300.008569,
+      "rep": 3
+    },
+    {
+      "bytes": 134217728,
+      "dir": "h2d",
+      "ms": 299.145068,
+      "rep": 4
+    },
+    {
+      "bytes": 134217728,
+      "dir": "h2d",
+      "ms": 298.554267,
+      "rep": 5
+    },
+    {
+      "bytes": 134217728,
+      "dir": "h2d",
+      "ms": 299.282973,
+      "rep": 6
+    },
+    {
+      "bytes": 134217728,
+      "dir": "h2d",
+      "ms": 299.073211,
+      "rep": 7
+    },
+    {
+      "bytes": 134217728,
+      "dir": "d2h",
+      "ms": 214.044128,
+      "rep": 0
+    },
+    {
+      "bytes": 134217728,
+      "dir": "d2h",
+      "ms": 212.815618,
+      "rep": 1
+    },
+    {
+      "bytes": 134217728,
+      "dir": "d2h",
+      "ms": 214.627013,
+      "rep": 2
+    },
+    {
+      "bytes": 134217728,
+      "dir": "d2h",
+      "ms": 214.518722,
+      "rep": 3
+    },
+    {
+      "bytes": 134217728,
+      "dir": "d2h",
+      "ms": 211.702224,
+      "rep": 4
+    },
+    {
+      "bytes": 134217728,
+      "dir": "d2h",
+      "ms": 214.171826,
+      "rep": 5
+    },
+    {
+      "bytes": 134217728,
+      "dir": "d2h",
+      "ms": 216.209522,
+      "rep": 6
+    },
+    {
+      "bytes": 134217728,
+      "dir": "d2h",
+      "ms": 279.647554,
+      "rep": 7
+    }
+  ],
+  "twin_binding": {
+    "bound": true,
+    "identity_probe": {
+      "method": "zero-token identity probe (accepted bounded method)",
+      "pci_bdf": "06:00.0",
+      "selector": "Vulkan1",
+      "tokens_generated": 0
+    },
+    "method": "identity-probe selector->BDF binding (raw-byte derived) plus isolated-workload link observation; substrate link class is pinned at its floor under load (see link-log)"
+  }
+}

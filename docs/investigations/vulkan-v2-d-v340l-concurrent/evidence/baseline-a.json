@@ -1,0 +1,708 @@
+{
+ "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1",
+ "closure_digest": "a450d5769f17c1f3610de6ff5c521924b86aaa92f8c142c3ad7a40764eb28fb6",
+ "die": "a",
+ "mapping_digest": "c161922b0edb74fd0800aae404cbc4641020af2a99d6a35379c6f12a2e3a125b",
+ "producer_head": "d921033063b8d9c1891b12bc461c06263d385f34",
+ "reps": [
+  {
+   "aer_post": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   },
+   "aer_pre": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   },
+   "bdf": "06:00.0",
+   "die": "a",
+   "rep": 1,
+   "run": {
+    "accounting_crosscheck": {
+     "basis": "direct llama.cpp named buffers plus before/after memory-breakdown rows; never process RSS",
+     "device_compute_bytes": 109586678,
+     "device_context_bytes": 1207959552,
+     "device_resident_model_bytes": 1923948216,
+     "host_context_kv_output_compute_bytes": 42572186,
+     "intentional_host_mapping_or_cache_bytes": 255254856,
+     "predecessor": {
+      "limitation": "pinned the first subject's observed selector label; failed closed on any other subject",
+      "reducer": "scripts/v0c_canonical_run.py::parse_accounting",
+      "reducer_sha256": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+      "schema": "inferswarm.v0c.materialization-accounting/1"
+     },
+     "raw_lines": {
+      "device_compute": [
+       "0.03.910.019 I sched_reserve:    Vulkan1 compute buffer size =   104.51 MiB"
+      ],
+      "device_context": [
+       "0.03.869.867 I llama_kv_cache:    Vulkan1 KV buffer size =  1152.00 MiB"
+      ],
+      "device_memory_before_after": [
+       "0.00.641.863 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+       "0.04.950.248 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
+      ],
+      "device_model": [
+       "0.01.043.765 I load_tensors:      Vulkan1 model buffer size =  1834.82 MiB"
+      ],
+      "host_compute": [
+       "0.03.910.025 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+      ],
+      "host_mapping": [
+       "0.01.043.764 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+      ],
+      "host_memory_final": [
+       "0.04.950.249 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+      ],
+      "host_memory_pre_realization": [
+       "0.00.641.863 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+      ],
+      "host_output": [
+       "0.03.869.261 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+      ],
+      "ready_state": [
+       "0.04.042.121 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+      ],
+      "source_fetches_after_ready": [],
+      "unplanned_state_movements": []
+     },
+     "released_staging_bytes": 0,
+     "representation_conversion_bytes": 0,
+     "required_persistent_host_bytes": 0,
+     "schema": "inferswarm.v0c.materialization-accounting/2",
+     "selected_resource": "Vulkan1",
+     "source_fetches_after_ready": 0,
+     "unexplained_persistent_host_mirror_bytes": 0,
+     "unplanned_state_movements": 0
+    },
+    "argv": [
+     "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+     "-m",
+     "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+     "--temp",
+     "0",
+     "--seed",
+     "42",
+     "-n",
+     "48",
+     "-ngl",
+     "99",
+     "--device",
+     "Vulkan1",
+     "-lv",
+     "4",
+     "-p",
+     "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+     "-st"
+    ],
+    "correctness_crosscheck": {
+     "byte_exact_visible_output": true,
+     "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+    },
+    "correctness_semantics": "byte-exact-equality-with-reference",
+    "exit_code": 0,
+    "exit_code_rel": "rep-01/baseline-blR-a-01.exit-code",
+    "fallback_present": false,
+    "label": "baseline-blR-a-01",
+    "offloaded_layers": [
+     37,
+     37
+    ],
+    "selected_bdf": "0000:06:00.0",
+    "stderr_bytes": 19985,
+    "stderr_rel": "rep-01/baseline-blR-a-01.stderr",
+    "stderr_sha256": "252d574ee121393c691138b81dd0a9ee92851d478b21e87dca664e8a6db02176",
+    "stdout_bytes": 1353,
+    "stdout_rel": "rep-01/baseline-blR-a-01.stdout",
+    "stdout_sha256": "9fac752993f9c2a4e5943531312665cc77386bcb1dbff16105d9a4dec5eeff4a",
+    "timed_out": false,
+    "workload_interval_ns": [
+     81308879439407,
+     81313942659647
+    ]
+   },
+   "selector": "Vulkan1",
+   "telemetry_post": {
+    "bdf": "06:00.0",
+    "current_link_speed": "8.0 GT/s PCIe",
+    "current_link_width": "16",
+    "gpu_busy_percent": 0,
+    "hwmon": {
+     "hwmon6": {
+      "fan1_enable": 0,
+      "fan1_input": 0,
+      "fan1_max": 0,
+      "fan1_min": 0,
+      "fan1_target": 0,
+      "freq1_input": 705000000,
+      "freq1_label": "sclk",
+      "freq2_input": 167000000,
+      "freq2_label": "mclk",
+      "in0_input": 800,
+      "in0_label": "vddgfx",
+      "name": "amdgpu",
+      "power1_cap": 110000000,
+      "power1_cap_default": 110000000,
+      "power1_cap_max": 110000000,
+      "power1_cap_min": 0,
+      "power1_input": 9000000,
+      "power1_label": "PPT",
+      "pwm1": 24,
+      "pwm1_enable": 2,
+      "pwm1_max": 255,
+      "pwm1_min": 0,
+      "temp1_crit": 85000,
+      "temp1_crit_hyst": -273150,
+      "temp1_emergency": 90000,
+      "temp1_input": 40000,
+      "temp1_label": "edge",
+      "temp2_crit": 105000,
+      "temp2_crit_hyst": -273150,
+      "temp2_emergency": 110000,
+      "temp2_input": 42000,
+      "temp2_label": "junction",
+      "temp3_crit": 95000,
+      "temp3_crit_hyst": -273150,
+      "temp3_emergency": 100000,
+      "temp3_input": 40000,
+      "temp3_label": "mem"
+     }
+    },
+    "mem_busy_percent": null,
+    "monotonic_ns": 81313962692505,
+    "ras_gpu_err_cnt": null,
+    "vram_total_bytes": 8573157376,
+    "vram_used_bytes": 3140513792
+   },
+   "telemetry_pre": {
+    "bdf": "06:00.0",
+    "current_link_speed": "8.0 GT/s PCIe",
+    "current_link_width": "16",
+    "gpu_busy_percent": 0,
+    "hwmon": {
+     "hwmon6": {
+      "fan1_enable": 0,
+      "fan1_input": 0,
+      "fan1_max": 0,
+      "fan1_min": 0,
+      "fan1_target": 0,
+      "freq1_input": 9000000,
+      "freq1_label": "sclk",
+      "freq2_input": 167000000,
+      "freq2_label": "mclk",
+      "in0_input": 750,
+      "in0_label": "vddgfx",
+      "name": "amdgpu",
+      "power1_cap": 110000000,
+      "power1_cap_default": 110000000,
+      "power1_cap_max": 110000000,
+      "power1_cap_min": 0,
+      "power1_input": 4000000,
+      "power1_label": "PPT",
+      "pwm1": 24,
+      "pwm1_enable": 2,
+      "pwm1_max": 255,
+      "pwm1_min": 0,
+      "temp1_crit": 85000,
+      "temp1_crit_hyst": -273150,
+      "temp1_emergency": 90000,
+      "temp1_input": 37000,
+      "temp1_label": "edge",
+      "temp2_crit": 105000,
+      "temp2_crit_hyst": -273150,
+      "temp2_emergency": 110000,
+      "temp2_input": 40000,
+      "temp2_label": "junction",
+      "temp3_crit": 95000,
+      "temp3_crit_hyst": -273150,
+      "temp3_emergency": 100000,
+      "temp3_input": 38000,
+      "temp3_label": "mem"
+     }
+    },
+    "mem_busy_percent": null,
+    "monotonic_ns": 81308876160323,
+    "ras_gpu_err_cnt": null,
+    "vram_total_bytes": 8573157376,
+    "vram_used_bytes": 8339456
+   },
+   "verdict": {
+    "accounting_tuple_zero": true,
+    "byte_exact": true,
+    "clean_exit": true,
+    "correct": true,
+    "full_offload": true,
+    "no_fallback": true,
+    "selected_bdf": "0000:06:00.0"
+   }
+  },
+  {
+   "aer_post": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   },
+   "aer_pre": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   },
+   "bdf": "06:00.0",
+   "die": "a",
+   "rep": 2,
+   "run": {
+    "accounting_crosscheck": {
+     "basis": "direct llama.cpp named buffers plus before/after memory-breakdown rows; never process RSS",
+     "device_compute_bytes": 109586678,
+     "device_context_bytes": 1207959552,
+     "device_resident_model_bytes": 1923948216,
+     "host_context_kv_output_compute_bytes": 42572186,
+     "intentional_host_mapping_or_cache_bytes": 255254856,
+     "predecessor": {
+      "limitation": "pinned the first subject's observed selector label; failed closed on any other subject",
+      "reducer": "scripts/v0c_canonical_run.py::parse_accounting",
+      "reducer_sha256": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+      "schema": "inferswarm.v0c.materialization-accounting/1"
+     },
+     "raw_lines": {
+      "device_compute": [
+       "0.03.916.811 I sched_reserve:    Vulkan1 compute buffer size =   104.51 MiB"
+      ],
+      "device_context": [
+       "0.03.875.524 I llama_kv_cache:    Vulkan1 KV buffer size =  1152.00 MiB"
+      ],
+      "device_memory_before_after": [
+       "0.00.646.167 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+       "0.04.926.529 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
+      ],
+      "device_model": [
+       "0.01.048.643 I load_tensors:      Vulkan1 model buffer size =  1834.82 MiB"
+      ],
+      "host_compute": [
+       "0.03.916.818 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+      ],
+      "host_mapping": [
+       "0.01.048.642 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+      ],
+      "host_memory_final": [
+       "0.04.926.530 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+      ],
+      "host_memory_pre_realization": [
+       "0.00.646.199 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+      ],
+      "host_output": [
+       "0.03.874.911 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+      ],
+      "ready_state": [
+       "0.04.043.195 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+      ],
+      "source_fetches_after_ready": [],
+      "unplanned_state_movements": []
+     },
+     "released_staging_bytes": 0,
+     "representation_conversion_bytes": 0,
+     "required_persistent_host_bytes": 0,
+     "schema": "inferswarm.v0c.materialization-accounting/2",
+     "selected_resource": "Vulkan1",
+     "source_fetches_after_ready": 0,
+     "unexplained_persistent_host_mirror_bytes": 0,
+     "unplanned_state_movements": 0
+    },
+    "argv": [
+     "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+     "-m",
+     "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+     "--temp",
+     "0",
+     "--seed",
+     "42",
+     "-n",
+     "48",
+     "-ngl",
+     "99",
+     "--device",
+     "Vulkan1",
+     "-lv",
+     "4",
+     "-p",
+     "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+     "-st"
+    ],
+    "correctness_crosscheck": {
+     "byte_exact_visible_output": true,
+     "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+    },
+    "correctness_semantics": "byte-exact-equality-with-reference",
+    "exit_code": 0,
+    "exit_code_rel": "rep-02/baseline-blR-a-02.exit-code",
+    "fallback_present": false,
+    "label": "baseline-blR-a-02",
+    "offloaded_layers": [
+     37,
+     37
+    ],
+    "selected_bdf": "0000:06:00.0",
+    "stderr_bytes": 19985,
+    "stderr_rel": "rep-02/baseline-blR-a-02.stderr",
+    "stderr_sha256": "762318a140330c535323d966e0394c53b479c04fb18cc6bfc3ebca11f2aee68b",
+    "stdout_bytes": 1353,
+    "stdout_rel": "rep-02/baseline-blR-a-02.stdout",
+    "stdout_sha256": "f3f3e955b9639e345f694b175cc72ec0acfe23ec0a3cbb382f6e82a6fb9c52ed",
+    "timed_out": false,
+    "workload_interval_ns": [
+     81313969818945,
+     81319001491417
+    ]
+   },
+   "selector": "Vulkan1",
+   "telemetry_post": {
+    "bdf": "06:00.0",
+    "current_link_speed": "8.0 GT/s PCIe",
+    "current_link_width": "16",
+    "gpu_busy_percent": 0,
+    "hwmon": {
+     "hwmon6": {
+      "fan1_enable": 0,
+      "fan1_input": 0,
+      "fan1_max": 0,
+      "fan1_min": 0,
+      "fan1_target": 0,
+      "freq1_input": 710000000,
+      "freq1_label": "sclk",
+      "freq2_input": 167000000,
+      "freq2_label": "mclk",
+      "in0_input": 800,
+      "in0_label": "vddgfx",
+      "name": "amdgpu",
+      "power1_cap": 110000000,
+      "power1_cap_default": 110000000,
+      "power1_cap_max": 110000000,
+      "power1_cap_min": 0,
+      "power1_input": 9000000,
+      "power1_label": "PPT",
+      "pwm1": 26,
+      "pwm1_enable": 2,
+      "pwm1_max": 255,
+      "pwm1_min": 0,
+      "temp1_crit": 85000,
+      "temp1_crit_hyst": -273150,
+      "temp1_emergency": 90000,
+      "temp1_input": 41000,
+      "temp1_label": "edge",
+      "temp2_crit": 105000,
+      "temp2_crit_hyst": -273150,
+      "temp2_emergency": 110000,
+      "temp2_input": 43000,
+      "temp2_label": "junction",
+      "temp3_crit": 95000,
+      "temp3_crit_hyst": -273150,
+      "temp3_emergency": 100000,
+      "temp3_input": 41000,
+      "temp3_label": "mem"
+     }
+    },
+    "mem_busy_percent": null,
+    "monotonic_ns": 81319028169165,
+    "ras_gpu_err_cnt": null,
+    "vram_total_bytes": 8573157376,
+    "vram_used_bytes": 3140513792
+   },
+   "telemetry_pre": {
+    "bdf": "06:00.0",
+    "current_link_speed": "8.0 GT/s PCIe",
+    "current_link_width": "16",
+    "gpu_busy_percent": 0,
+    "hwmon": {
+     "hwmon6": {
+      "fan1_enable": 0,
+      "fan1_input": 0,
+      "fan1_max": 0,
+      "fan1_min": 0,
+      "fan1_target": 0,
+      "freq1_input": 699000000,
+      "freq1_label": "sclk",
+      "freq2_input": 167000000,
+      "freq2_label": "mclk",
+      "in0_input": 800,
+      "in0_label": "vddgfx",
+      "name": "amdgpu",
+      "power1_cap": 110000000,
+      "power1_cap_default": 110000000,
+      "power1_cap_max": 110000000,
+      "power1_cap_min": 0,
+      "power1_input": 9000000,
+      "power1_label": "PPT",
+      "pwm1": 24,
+      "pwm1_enable": 2,
+      "pwm1_max": 255,
+      "pwm1_min": 0,
+      "temp1_crit": 85000,
+      "temp1_crit_hyst": -273150,
+      "temp1_emergency": 90000,
+      "temp1_input": 40000,
+      "temp1_label": "edge",
+      "temp2_crit": 105000,
+      "temp2_crit_hyst": -273150,
+      "temp2_emergency": 110000,
+      "temp2_input": 43000,
+      "temp2_label": "junction",
+      "temp3_crit": 95000,
+      "temp3_crit_hyst": -273150,
+      "temp3_emergency": 100000,
+      "temp3_input": 41000,
+      "temp3_label": "mem"
+     }
+    },
+    "mem_busy_percent": null,
+    "monotonic_ns": 81313966702263,
+    "ras_gpu_err_cnt": null,
+    "vram_total_bytes": 8573157376,
+    "vram_used_bytes": 3140513792
+   },
+   "verdict": {
+    "accounting_tuple_zero": true,
+    "byte_exact": true,
+    "clean_exit": true,
+    "correct": true,
+    "full_offload": true,
+    "no_fallback": true,
+    "selected_bdf": "0000:06:00.0"
+   }
+  },
+  {
+   "aer_post": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   },
+   "aer_pre": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   },
+   "bdf": "06:00.0",
+   "die": "a",
+   "rep": 3,
+   "run": {
+    "accounting_crosscheck": {
+     "basis": "direct llama.cpp named buffers plus before/after memory-breakdown rows; never process RSS",
+     "device_compute_bytes": 109586678,
+     "device_context_bytes": 1207959552,
+     "device_resident_model_bytes": 1923948216,
+     "host_context_kv_output_compute_bytes": 42572186,
+     "intentional_host_mapping_or_cache_bytes": 255254856,
+     "predecessor": {
+      "limitation": "pinned the first subject's observed selector label; failed closed on any other subject",
+      "reducer": "scripts/v0c_canonical_run.py::parse_accounting",
+      "reducer_sha256": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+      "schema": "inferswarm.v0c.materialization-accounting/1"
+     },
+     "raw_lines": {
+      "device_compute": [
+       "0.03.904.212 I sched_reserve:    Vulkan1 compute buffer size =   104.51 MiB"
+      ],
+      "device_context": [
+       "0.03.863.138 I llama_kv_cache:    Vulkan1 KV buffer size =  1152.00 MiB"
+      ],
+      "device_memory_before_after": [
+       "0.00.641.652 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+       "0.04.975.588 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
+      ],
+      "device_model": [
+       "0.01.040.615 I load_tensors:      Vulkan1 model buffer size =  1834.82 MiB"
+      ],
+      "host_compute": [
+       "0.03.904.219 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+      ],
+      "host_mapping": [
+       "0.01.040.614 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+      ],
+      "host_memory_final": [
+       "0.04.975.589 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+      ],
+      "host_memory_pre_realization": [
+       "0.00.641.653 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+      ],
+      "host_output": [
+       "0.03.862.532 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+      ],
+      "ready_state": [
+       "0.04.048.794 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+      ],
+      "source_fetches_after_ready": [],
+      "unplanned_state_movements": []
+     },
+     "released_staging_bytes": 0,
+     "representation_conversion_bytes": 0,
+     "required_persistent_host_bytes": 0,
+     "schema": "inferswarm.v0c.materialization-accounting/2",
+     "selected_resource": "Vulkan1",
+     "source_fetches_after_ready": 0,
+     "unexplained_persistent_host_mirror_bytes": 0,
+     "unplanned_state_movements": 0
+    },
+    "argv": [
+     "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+     "-m",
+     "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+     "--temp",
+     "0",
+     "--seed",
+     "42",
+     "-n",
+     "48",
+     "-ngl",
+     "99",
+     "--device",
+     "Vulkan1",
+     "-lv",
+     "4",
+     "-p",
+     "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+     "-st"
+    ],
+    "correctness_crosscheck": {
+     "byte_exact_visible_output": true,
+     "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+    },
+    "correctness_semantics": "byte-exact-equality-with-reference",
+    "exit_code": 0,
+    "exit_code_rel": "rep-03/baseline-blR-a-03.exit-code",
+    "fallback_present": false,
+    "label": "baseline-blR-a-03",
+    "offloaded_layers": [
+     37,
+     37
+    ],
+    "selected_bdf": "0000:06:00.0",
+    "stderr_bytes": 19985,
+    "stderr_rel": "rep-03/baseline-blR-a-03.stderr",
+    "stderr_sha256": "d0a22c897e4a0eee256378a9176c637b92b959d75d8673ee936d5244b9ac74c5",
+    "stdout_bytes": 1353,
+    "stdout_rel": "rep-03/baseline-blR-a-03.stdout",
+    "stdout_sha256": "be2be7c50bc41b790afe9dc250a897bb52b30524566aa9e2dd976d9f60138a83",
+    "timed_out": false,
+    "workload_interval_ns": [
+     81319040937998,
+     81324119758035
+    ]
+   },
+   "selector": "Vulkan1",
+   "telemetry_post": {
+    "bdf": "06:00.0",
+    "current_link_speed": "8.0 GT/s PCIe",
+    "current_link_width": "16",
+    "gpu_busy_percent": 0,
+    "hwmon": {
+     "hwmon6": {
+      "fan1_enable": 0,
+      "fan1_input": 0,
+      "fan1_max": 0,
+      "fan1_min": 0,
+      "fan1_target": 0,
+      "freq1_input": 719000000,
+      "freq1_label": "sclk",
+      "freq2_input": 167000000,
+      "freq2_label": "mclk",
+      "in0_input": 800,
+      "in0_label": "vddgfx",
+      "name": "amdgpu",
+      "power1_cap": 110000000,
+      "power1_cap_default": 110000000,
+      "power1_cap_max": 110000000,
+      "power1_cap_min": 0,
+      "power1_input": 9000000,
+      "power1_label": "PPT",
+      "pwm1": 30,
+      "pwm1_enable": 2,
+      "pwm1_max": 255,
+      "pwm1_min": 0,
+      "temp1_crit": 85000,
+      "temp1_crit_hyst": -273150,
+      "temp1_emergency": 90000,
+      "temp1_input": 41000,
+      "temp1_label": "edge",
+      "temp2_crit": 105000,
+      "temp2_crit_hyst": -273150,
+      "temp2_emergency": 110000,
+      "temp2_input": 44000,
+      "temp2_label": "junction",
+      "temp3_crit": 95000,
+      "temp3_crit_hyst": -273150,
+      "temp3_emergency": 100000,
+      "temp3_input": 42000,
+      "temp3_label": "mem"
+     }
+    },
+    "mem_busy_percent": null,
+    "monotonic_ns": 81324142266760,
+    "ras_gpu_err_cnt": null,
+    "vram_total_bytes": 8573157376,
+    "vram_used_bytes": 3140513792
+   },
+   "telemetry_pre": {
+    "bdf": "06:00.0",
+    "current_link_speed": "8.0 GT/s PCIe",
+    "current_link_width": "16",
+    "gpu_busy_percent": 0,
+    "hwmon": {
+     "hwmon6": {
+      "fan1_enable": 0,
+      "fan1_input": 0,
+      "fan1_max": 0,
+      "fan1_min": 0,
+      "fan1_target": 0,
+      "freq1_input": 699000000,
+      "freq1_label": "sclk",
+      "freq2_input": 167000000,
+      "freq2_label": "mclk",
+      "in0_input": 800,
+      "in0_label": "vddgfx",
+      "name": "amdgpu",
+      "power1_cap": 110000000,
+      "power1_cap_default": 110000000,
+      "power1_cap_max": 110000000,
+      "power1_cap_min": 0,
+      "power1_input": 9000000,
+      "power1_label": "PPT",
+      "pwm1": 26,
+      "pwm1_enable": 2,
+      "pwm1_max": 255,
+      "pwm1_min": 0,
+      "temp1_crit": 85000,
+      "temp1_crit_hyst": -273150,
+      "temp1_emergency": 90000,
+      "temp1_input": 41000,
+      "temp1_label": "edge",
+      "temp2_crit": 105000,
+      "temp2_crit_hyst": -273150,
+      "temp2_emergency": 110000,
+      "temp2_input": 43000,
+      "temp2_label": "junction",
+      "temp3_crit": 95000,
+      "temp3_crit_hyst": -273150,
+      "temp3_emergency": 100000,
+      "temp3_input": 41000,
+      "temp3_label": "mem"
+     }
+    },
+    "mem_busy_percent": null,
+    "monotonic_ns": 81319036153274,
+    "ras_gpu_err_cnt": null,
+    "vram_total_bytes": 8573157376,
+    "vram_used_bytes": 2066771968
+   },
+   "verdict": {
+    "accounting_tuple_zero": true,
+    "byte_exact": true,
+    "clean_exit": true,
+    "correct": true,
+    "full_offload": true,
+    "no_fallback": true,
+    "selected_bdf": "0000:06:00.0"
+   }
+  }
+ ]
+}

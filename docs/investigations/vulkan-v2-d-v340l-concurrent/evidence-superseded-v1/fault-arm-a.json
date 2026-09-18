@@ -1,0 +1,463 @@
+{
+ "arm": "a",
+ "attempt_id": "faC2",
+ "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1",
+ "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
+ "kill_method": "SIGKILL",
+ "mapping_digest": "d8a58717e9e91bcb4dfed9b180d0e9fe8cc937b6cf9cd5509554aa90550860c8",
+ "recovery_sentinel": {
+  "attempt_id": "faulta-recovery",
+  "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1",
+  "mapping_digest": "d8a58717e9e91bcb4dfed9b180d0e9fe8cc937b6cf9cd5509554aa90550860c8",
+  "observe_rels": {
+   "a": "a/observe-faulta-recovery.jsonl",
+   "b": "b/observe-faulta-recovery.jsonl"
+  },
+  "participants": {
+   "a": {
+    "accounting_crosscheck": {
+     "basis": "direct llama.cpp named buffers plus before/after memory-breakdown rows; never process RSS",
+     "device_compute_bytes": 109586678,
+     "device_context_bytes": 1207959552,
+     "device_resident_model_bytes": 1923948216,
+     "host_context_kv_output_compute_bytes": 42572186,
+     "intentional_host_mapping_or_cache_bytes": 255254856,
+     "predecessor": {
+      "limitation": "pinned the first subject's observed selector label; failed closed on any other subject",
+      "reducer": "scripts/v0c_canonical_run.py::parse_accounting",
+      "reducer_sha256": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+      "schema": "inferswarm.v0c.materialization-accounting/1"
+     },
+     "raw_lines": {
+      "device_compute": [
+       "0.06.626.901 I sched_reserve:    Vulkan1 compute buffer size =   104.51 MiB"
+      ],
+      "device_context": [
+       "0.06.586.874 I llama_kv_cache:    Vulkan1 KV buffer size =  1152.00 MiB"
+      ],
+      "device_memory_before_after": [
+       "0.00.701.315 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+       "0.07.843.627 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 5075 + (3091 =  1834 +    1152 +     104) +           8 |"
+      ],
+      "device_model": [
+       "0.01.141.107 I load_tensors:      Vulkan1 model buffer size =  1834.82 MiB"
+      ],
+      "host_compute": [
+       "0.06.626.919 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+      ],
+      "host_mapping": [
+       "0.01.141.086 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+      ],
+      "host_memory_final": [
+       "0.07.843.628 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+      ],
+      "host_memory_pre_realization": [
+       "0.00.701.334 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+      ],
+      "host_output": [
+       "0.06.586.105 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+      ],
+      "ready_state": [
+       "0.06.906.997 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+      ],
+      "source_fetches_after_ready": [],
+      "unplanned_state_movements": []
+     },
+     "released_staging_bytes": 0,
+     "representation_conversion_bytes": 0,
+     "required_persistent_host_bytes": 0,
+     "schema": "inferswarm.v0c.materialization-accounting/2",
+     "selected_resource": "Vulkan1",
+     "source_fetches_after_ready": 0,
+     "unexplained_persistent_host_mirror_bytes": 0,
+     "unplanned_state_movements": 0
+    },
+    "argv": [
+     "/home/zutfen/is219-v2d0-src/build-v2d0-observe-v216/bin/llama-cli",
+     "-m",
+     "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+     "--temp",
+     "0",
+     "--seed",
+     "42",
+     "-n",
+     "48",
+     "-ngl",
+     "99",
+     "--device",
+     "Vulkan1",
+     "-lv",
+     "4",
+     "-p",
+     "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+     "-st"
+    ],
+    "correctness_crosscheck": {
+     "byte_exact_visible_output": true,
+     "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+    },
+    "correctness_semantics": "byte-exact-equality-with-reference",
+    "exit_code": 0,
+    "exit_code_rel": "a/run-faulta-recovery.exit-code",
+    "fallback_present": false,
+    "label": "concurrent-faulta-recovery-a",
+    "offloaded_layers": [
+     37,
+     37
+    ],
+    "selected_bdf": "0000:06:00.0",
+    "stderr_bytes": 19985,
+    "stderr_rel": "a/run-faulta-recovery.stderr",
+    "stderr_sha256": "c9ecc569dfc1821438b2e75612819db398dec6ca72f00aa935bb8d2eb0421b2d",
+    "stdout_bytes": 1409,
+    "stdout_rel": "a/run-faulta-recovery.stdout",
+    "stdout_sha256": "131a1f1acdfbef3d4ff0f1bdb6fcd9a69e6d9807da8345dedf880908649c8a7a",
+    "timed_out": false,
+    "workload_interval_ns": [
+     67034300924836,
+     67042270360622
+    ]
+   },
+   "b": {
+    "accounting_crosscheck": {
+     "basis": "direct llama.cpp named buffers plus before/after memory-breakdown rows; never process RSS",
+     "device_compute_bytes": 109586678,
+     "device_context_bytes": 1207959552,
+     "device_resident_model_bytes": 1923948216,
+     "host_context_kv_output_compute_bytes": 42572186,
+     "intentional_host_mapping_or_cache_bytes": 255254856,
+     "predecessor": {
+      "limitation": "pinned the first subject's observed selector label; failed closed on any other subject",
+      "reducer": "scripts/v0c_canonical_run.py::parse_accounting",
+      "reducer_sha256": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+      "schema": "inferswarm.v0c.materialization-accounting/1"
+     },
+     "raw_lines": {
+      "device_compute": [
+       "0.06.644.351 I sched_reserve:    Vulkan2 compute buffer size =   104.51 MiB"
+      ],
+      "device_context": [
+       "0.06.600.494 I llama_kv_cache:    Vulkan2 KV buffer size =  1152.00 MiB"
+      ],
+      "device_memory_before_after": [
+       "0.00.693.039 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+       "0.07.846.523 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 5075 + (3091 =  1834 +    1152 +     104) +           8 |"
+      ],
+      "device_model": [
+       "0.01.139.468 I load_tensors:      Vulkan2 model buffer size =  1834.82 MiB"
+      ],
+      "host_compute": [
+       "0.06.644.398 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+      ],
+      "host_mapping": [
+       "0.01.139.449 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+      ],
+      "host_memory_final": [
+       "0.07.846.524 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+      ],
+      "host_memory_pre_realization": [
+       "0.00.693.039 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+      ],
+      "host_output": [
+       "0.06.599.864 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+      ],
+      "ready_state": [
+       "0.06.898.742 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+      ],
+      "source_fetches_after_ready": [],
+      "unplanned_state_movements": []
+     },
+     "released_staging_bytes": 0,
+     "representation_conversion_bytes": 0,
+     "required_persistent_host_bytes": 0,
+     "schema": "inferswarm.v0c.materialization-accounting/2",
+     "selected_resource": "Vulkan2",
+     "source_fetches_after_ready": 0,
+     "unexplained_persistent_host_mirror_bytes": 0,
+     "unplanned_state_movements": 0
+    },
+    "argv": [
+     "/home/zutfen/is219-v2d0-src/build-v2d0-observe-v216/bin/llama-cli",
+     "-m",
+     "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+     "--temp",
+     "0",
+     "--seed",
+     "42",
+     "-n",
+     "48",
+     "-ngl",
+     "99",
+     "--device",
+     "Vulkan2",
+     "-lv",
+     "4",
+     "-p",
+     "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+     "-st"
+    ],
+    "correctness_crosscheck": {
+     "byte_exact_visible_output": true,
+     "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+    },
+    "correctness_semantics": "byte-exact-equality-with-reference",
+    "exit_code": 0,
+    "exit_code_rel": "b/run-faulta-recovery.exit-code",
+    "fallback_present": false,
+    "label": "concurrent-faulta-recovery-b",
+    "offloaded_layers": [
+     37,
+     37
+    ],
+    "selected_bdf": "0000:09:00.0",
+    "stderr_bytes": 19985,
+    "stderr_rel": "b/run-faulta-recovery.stderr",
+    "stderr_sha256": "4d5d3d714b2a3cbc1f302708268ecbf0154c31cf1745e8db5d6f5c87de1d563b",
+    "stdout_bytes": 1409,
+    "stdout_rel": "b/run-faulta-recovery.stdout",
+    "stdout_sha256": "dea47c74d8ca10e4a5c920d1d50100572c4b02776ce6d8d3be91c244609e4dc3",
+    "timed_out": false,
+    "workload_interval_ns": [
+     67034301521911,
+     67042307156419
+    ]
+   }
+  },
+  "phase": "fault-recovery",
+  "wrapper_intervals_ns": {
+   "a": [
+    67034300924836,
+    67042270360622
+   ],
+   "b": [
+    67034301521911,
+    67042307156419
+   ]
+  }
+ },
+ "relaunch_run": {
+  "accounting_crosscheck": {
+   "basis": "direct llama.cpp named buffers plus before/after memory-breakdown rows; never process RSS",
+   "device_compute_bytes": 109586678,
+   "device_context_bytes": 1207959552,
+   "device_resident_model_bytes": 1923948216,
+   "host_context_kv_output_compute_bytes": 42572186,
+   "intentional_host_mapping_or_cache_bytes": 255254856,
+   "predecessor": {
+    "limitation": "pinned the first subject's observed selector label; failed closed on any other subject",
+    "reducer": "scripts/v0c_canonical_run.py::parse_accounting",
+    "reducer_sha256": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+    "schema": "inferswarm.v0c.materialization-accounting/1"
+   },
+   "raw_lines": {
+    "device_compute": [
+     "0.03.892.515 I sched_reserve:    Vulkan1 compute buffer size =   104.51 MiB"
+    ],
+    "device_context": [
+     "0.03.853.432 I llama_kv_cache:    Vulkan1 KV buffer size =  1152.00 MiB"
+    ],
+    "device_memory_before_after": [
+     "0.00.637.731 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+     "0.05.001.571 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
+    ],
+    "device_model": [
+     "0.01.035.573 I load_tensors:      Vulkan1 model buffer size =  1834.82 MiB"
+    ],
+    "host_compute": [
+     "0.03.892.522 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+    ],
+    "host_mapping": [
+     "0.01.035.572 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+    ],
+    "host_memory_final": [
+     "0.05.001.572 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+    ],
+    "host_memory_pre_realization": [
+     "0.00.637.732 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+    ],
+    "host_output": [
+     "0.03.852.835 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+    ],
+    "ready_state": [
+     "0.04.049.672 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+    ],
+    "source_fetches_after_ready": [],
+    "unplanned_state_movements": []
+   },
+   "released_staging_bytes": 0,
+   "representation_conversion_bytes": 0,
+   "required_persistent_host_bytes": 0,
+   "schema": "inferswarm.v0c.materialization-accounting/2",
+   "selected_resource": "Vulkan1",
+   "source_fetches_after_ready": 0,
+   "unexplained_persistent_host_mirror_bytes": 0,
+   "unplanned_state_movements": 0
+  },
+  "argv": [
+   "/home/zutfen/is219-v2d0-src/build-v2d0-observe-v216/bin/llama-cli",
+   "-m",
+   "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+   "--temp",
+   "0",
+   "--seed",
+   "42",
+   "-n",
+   "48",
+   "-ngl",
+   "99",
+   "--device",
+   "Vulkan1",
+   "-lv",
+   "4",
+   "-p",
+   "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+   "-st"
+  ],
+  "correctness_crosscheck": {
+   "byte_exact_visible_output": true,
+   "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+  },
+  "correctness_semantics": "byte-exact-equality-with-reference",
+  "exit_code": 0,
+  "exit_code_rel": "run.exit-code",
+  "fallback_present": false,
+  "label": "fault-a",
+  "offloaded_layers": [
+   37,
+   37
+  ],
+  "selected_bdf": "0000:06:00.0",
+  "stderr_bytes": 19985,
+  "stderr_rel": "run.stderr",
+  "stderr_sha256": "71825b821ac7923b470990d27992d864a9f41517abd679c8c2930a580c98cfc0",
+  "stdout_bytes": 1353,
+  "stdout_rel": "run.stdout",
+  "stdout_sha256": "8b3e17ce11853d33dae55e06b6a380490e1cb50634196a9ced02243062f6c085",
+  "timed_out": false,
+  "workload_interval_ns": null
+ },
+ "relaunch_verdict": {
+  "accounting_tuple_zero": true,
+  "byte_exact": true,
+  "clean_exit": true,
+  "correct": true,
+  "full_offload": true,
+  "no_fallback": true,
+  "selected_bdf": "0000:06:00.0"
+ },
+ "schema": "inferswarm.v2d.fault-arm/2",
+ "sibling": "b",
+ "sibling_run": {
+  "accounting_crosscheck": {
+   "basis": "direct llama.cpp named buffers plus before/after memory-breakdown rows; never process RSS",
+   "device_compute_bytes": 109586678,
+   "device_context_bytes": 1207959552,
+   "device_resident_model_bytes": 1923948216,
+   "host_context_kv_output_compute_bytes": 42572186,
+   "intentional_host_mapping_or_cache_bytes": 255254856,
+   "predecessor": {
+    "limitation": "pinned the first subject's observed selector label; failed closed on any other subject",
+    "reducer": "scripts/v0c_canonical_run.py::parse_accounting",
+    "reducer_sha256": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+    "schema": "inferswarm.v0c.materialization-accounting/1"
+   },
+   "raw_lines": {
+    "device_compute": [
+     "0.03.996.466 I sched_reserve:    Vulkan2 compute buffer size =   104.51 MiB"
+    ],
+    "device_context": [
+     "0.03.957.192 I llama_kv_cache:    Vulkan2 KV buffer size =  1152.00 MiB"
+    ],
+    "device_memory_before_after": [
+     "0.00.689.725 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+     "0.05.231.872 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
+    ],
+    "device_model": [
+     "0.01.114.593 I load_tensors:      Vulkan2 model buffer size =  1834.82 MiB"
+    ],
+    "host_compute": [
+     "0.03.996.473 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+    ],
+    "host_mapping": [
+     "0.01.114.592 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+    ],
+    "host_memory_final": [
+     "0.05.231.873 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+    ],
+    "host_memory_pre_realization": [
+     "0.00.689.746 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+    ],
+    "host_output": [
+     "0.03.956.597 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+    ],
+    "ready_state": [
+     "0.04.281.581 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+    ],
+    "source_fetches_after_ready": [],
+    "unplanned_state_movements": []
+   },
+   "released_staging_bytes": 0,
+   "representation_conversion_bytes": 0,
+   "required_persistent_host_bytes": 0,
+   "schema": "inferswarm.v0c.materialization-accounting/2",
+   "selected_resource": "Vulkan2",
+   "source_fetches_after_ready": 0,
+   "unexplained_persistent_host_mirror_bytes": 0,
+   "unplanned_state_movements": 0
+  },
+  "argv": [
+   "/home/zutfen/is219-v2d0-src/build-v2d0-observe-v216/bin/llama-cli",
+   "-m",
+   "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+   "--temp",
+   "0",
+   "--seed",
+   "42",
+   "-n",
+   "48",
+   "-ngl",
+   "99",
+   "--device",
+   "Vulkan2",
+   "-lv",
+   "4",
+   "-p",
+   "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+   "-st"
+  ],
+  "correctness_crosscheck": {
+   "byte_exact_visible_output": true,
+   "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+  },
+  "correctness_semantics": "byte-exact-equality-with-reference",
+  "exit_code": 0,
+  "exit_code_rel": "run.exit-code",
+  "fallback_present": false,
+  "killed_sibling_at_ns": 67024714981930,
+  "label": "fault-b",
+  "offloaded_layers": [
+   37,
+   37
+  ],
+  "selected_bdf": "0000:09:00.0",
+  "stderr_bytes": 19985,
+  "stderr_rel": "run.stderr",
+  "stderr_sha256": "64df8ff0cd8d71a5528a795cc2b25dc24777418ca4d5c3fe613eb2cf17e7c7cb",
+  "stdout_bytes": 1357,
+  "stdout_rel": "run.stdout",
+  "stdout_sha256": "b4602d66ed0d50878ce8fa3e43026be037fe350cd2f60b8c2d7707e52ba1cfe5",
+  "timed_out": false,
+  "workload_interval_ns": null
+ },
+ "sibling_verdict": {
+  "accounting_tuple_zero": true,
+  "byte_exact": true,
+  "clean_exit": true,
+  "correct": true,
+  "full_offload": true,
+  "no_fallback": true,
+  "selected_bdf": "0000:09:00.0"
+ },
+ "victim": "a",
+ "victim_gone": true
+}

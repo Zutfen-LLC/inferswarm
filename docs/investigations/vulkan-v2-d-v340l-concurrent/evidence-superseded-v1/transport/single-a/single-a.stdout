@@ -1,0 +1,9 @@
+{
+  "raw": "/srv/inferswarm/is216/evidence/transport/single-a/raw/probe.json",
+  "evidence": "/srv/inferswarm/is216/evidence/transport/single-a/summary.json",
+  "link_under_load": {
+    "generation": 3,
+    "width": 16,
+    "sysfs_speed_label": "8.0 GT/s PCIe"
+  }
+}
