@@ -189,6 +189,16 @@ def run_pair(*, repo: Path, out: Path, attempt_id: str,
     }
 
 
+def _ledger_rows(concurrent_root: Path) -> list[dict]:
+    """Rebuild the attempt ledger from retained pair dirs (every retained
+    attempt, successes and failures alike)."""
+    rows = []
+    for d in sorted(concurrent_root.glob("c*")):
+        if d.is_dir() and (d / f"pair-{d.name}.json").is_file():
+            rows.append({"attempt_id": d.name, "status": "run"})
+    return rows
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -219,6 +229,8 @@ def main() -> int:
                                   attempt_id=args.attempt_id,
                                   authority=authority, mapping=mapping,
                                   die=args.die, reps=args.reps)
+        (out.parent / f"baseline-{args.die}.json").write_bytes(
+            json.dumps(result, indent=1, sort_keys=True).encode() + b"\n")
         ok = all(r["verdict"]["correct"] for r in result["reps"])
         print(json.dumps({"ok": ok, "die": args.die}))
         return 0 if ok else 1
@@ -227,6 +239,8 @@ def main() -> int:
                       phase=args.phase)
     (out / f"pair-{args.attempt_id}.json").write_bytes(
         json.dumps(result, indent=1, sort_keys=True).encode() + b"\n")
+    (out.parent / "attempt-ledger.json").write_bytes(json.dumps({
+        "attempts": _ledger_rows(out.parent)}, indent=1).encode() + b"\n")
     verdicts = {d: ex.reduce_run(r) for d, r in result["participants"].items()}
     print(json.dumps({"attempt": args.attempt_id,
                       "verdicts": {d: v["correct"] for d, v in
