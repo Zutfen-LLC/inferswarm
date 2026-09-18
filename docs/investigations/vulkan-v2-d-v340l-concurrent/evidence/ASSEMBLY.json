@@ -1,5 +1,142 @@
 {
- "blocked_reason": "missing raw artifact: baseline-a/baseline-blC-a-01.stdout",
+ "baselines": {
+  "a": {
+   "all_correct": true,
+   "rows": [
+    {
+     "rep": 1,
+     "verdict": {
+      "accounting": {
+       "source_fetches_after_ready": 0,
+       "unexplained_persistent_host_mirror_bytes": 0,
+       "unplanned_state_movements": 0
+      },
+      "accounting_zero": true,
+      "byte_exact": true,
+      "clean_exit": true,
+      "correct": true,
+      "correctness_semantics": "byte-exact-equality-with-reference",
+      "exit_code": 0,
+      "full_offload": true,
+      "label": "baseline-blC-a-01",
+      "no_fallback": true,
+      "selected_bdf": "0000:06:00.0",
+      "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+     }
+    },
+    {
+     "rep": 2,
+     "verdict": {
+      "accounting": {
+       "source_fetches_after_ready": 0,
+       "unexplained_persistent_host_mirror_bytes": 0,
+       "unplanned_state_movements": 0
+      },
+      "accounting_zero": true,
+      "byte_exact": true,
+      "clean_exit": true,
+      "correct": true,
+      "correctness_semantics": "byte-exact-equality-with-reference",
+      "exit_code": 0,
+      "full_offload": true,
+      "label": "baseline-blC-a-02",
+      "no_fallback": true,
+      "selected_bdf": "0000:06:00.0",
+      "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+     }
+    },
+    {
+     "rep": 3,
+     "verdict": {
+      "accounting": {
+       "source_fetches_after_ready": 0,
+       "unexplained_persistent_host_mirror_bytes": 0,
+       "unplanned_state_movements": 0
+      },
+      "accounting_zero": true,
+      "byte_exact": true,
+      "clean_exit": true,
+      "correct": true,
+      "correctness_semantics": "byte-exact-equality-with-reference",
+      "exit_code": 0,
+      "full_offload": true,
+      "label": "baseline-blC-a-03",
+      "no_fallback": true,
+      "selected_bdf": "0000:06:00.0",
+      "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+     }
+    }
+   ]
+  },
+  "b": {
+   "all_correct": true,
+   "rows": [
+    {
+     "rep": 1,
+     "verdict": {
+      "accounting": {
+       "source_fetches_after_ready": 0,
+       "unexplained_persistent_host_mirror_bytes": 0,
+       "unplanned_state_movements": 0
+      },
+      "accounting_zero": true,
+      "byte_exact": true,
+      "clean_exit": true,
+      "correct": true,
+      "correctness_semantics": "byte-exact-equality-with-reference",
+      "exit_code": 0,
+      "full_offload": true,
+      "label": "baseline-blC-b-01",
+      "no_fallback": true,
+      "selected_bdf": "0000:09:00.0",
+      "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+     }
+    },
+    {
+     "rep": 2,
+     "verdict": {
+      "accounting": {
+       "source_fetches_after_ready": 0,
+       "unexplained_persistent_host_mirror_bytes": 0,
+       "unplanned_state_movements": 0
+      },
+      "accounting_zero": true,
+      "byte_exact": true,
+      "clean_exit": true,
+      "correct": true,
+      "correctness_semantics": "byte-exact-equality-with-reference",
+      "exit_code": 0,
+      "full_offload": true,
+      "label": "baseline-blC-b-02",
+      "no_fallback": true,
+      "selected_bdf": "0000:09:00.0",
+      "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+     }
+    },
+    {
+     "rep": 3,
+     "verdict": {
+      "accounting": {
+       "source_fetches_after_ready": 0,
+       "unexplained_persistent_host_mirror_bytes": 0,
+       "unplanned_state_movements": 0
+      },
+      "accounting_zero": true,
+      "byte_exact": true,
+      "clean_exit": true,
+      "correct": true,
+      "correctness_semantics": "byte-exact-equality-with-reference",
+      "exit_code": 0,
+      "full_offload": true,
+      "label": "baseline-blC-b-03",
+      "no_fallback": true,
+      "selected_bdf": "0000:09:00.0",
+      "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+     }
+    }
+   ]
+  }
+ },
  "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
  "closure_sources": [
   "scripts/issue216_assemble.py",
@@ -15,6 +152,175 @@
   "scripts/issue216_soak.py",
   "scripts/issue216_transport.py"
  ],
+ "concurrent": {
+  "attempts": [
+   {
+    "attempt_id": "c01",
+    "pair": {
+     "attempt_id": "c01",
+     "overlap": {
+      "lower_bound_ns": 2718318,
+      "uncertainty_ns": 43309,
+      "upper_bound_ns": 2804936,
+      "verdict": "OVERLAP"
+     },
+     "pair_correct": true,
+     "participants": {
+      "a": {
+       "accounting": {
+        "source_fetches_after_ready": 0,
+        "unexplained_persistent_host_mirror_bytes": 0,
+        "unplanned_state_movements": 0
+       },
+       "accounting_zero": true,
+       "byte_exact": true,
+       "clean_exit": true,
+       "correct": true,
+       "correctness_semantics": "byte-exact-equality-with-reference",
+       "exit_code": 0,
+       "full_offload": true,
+       "label": "concurrent-c01-a",
+       "no_fallback": true,
+       "selected_bdf": "0000:06:00.0",
+       "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+      },
+      "b": {
+       "accounting": {
+        "source_fetches_after_ready": 0,
+        "unexplained_persistent_host_mirror_bytes": 0,
+        "unplanned_state_movements": 0
+       },
+       "accounting_zero": true,
+       "byte_exact": true,
+       "clean_exit": true,
+       "correct": true,
+       "correctness_semantics": "byte-exact-equality-with-reference",
+       "exit_code": 0,
+       "full_offload": true,
+       "label": "concurrent-c01-b",
+       "no_fallback": true,
+       "selected_bdf": "0000:09:00.0",
+       "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+      }
+     }
+    },
+    "status": "run"
+   },
+   {
+    "attempt_id": "c02",
+    "pair": {
+     "attempt_id": "c02",
+     "overlap": {
+      "lower_bound_ns": 4588483,
+      "uncertainty_ns": 146515,
+      "upper_bound_ns": 4881513,
+      "verdict": "OVERLAP"
+     },
+     "pair_correct": true,
+     "participants": {
+      "a": {
+       "accounting": {
+        "source_fetches_after_ready": 0,
+        "unexplained_persistent_host_mirror_bytes": 0,
+        "unplanned_state_movements": 0
+       },
+       "accounting_zero": true,
+       "byte_exact": true,
+       "clean_exit": true,
+       "correct": true,
+       "correctness_semantics": "byte-exact-equality-with-reference",
+       "exit_code": 0,
+       "full_offload": true,
+       "label": "concurrent-c02-a",
+       "no_fallback": true,
+       "selected_bdf": "0000:06:00.0",
+       "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+      },
+      "b": {
+       "accounting": {
+        "source_fetches_after_ready": 0,
+        "unexplained_persistent_host_mirror_bytes": 0,
+        "unplanned_state_movements": 0
+       },
+       "accounting_zero": true,
+       "byte_exact": true,
+       "clean_exit": true,
+       "correct": true,
+       "correctness_semantics": "byte-exact-equality-with-reference",
+       "exit_code": 0,
+       "full_offload": true,
+       "label": "concurrent-c02-b",
+       "no_fallback": true,
+       "selected_bdf": "0000:09:00.0",
+       "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+      }
+     }
+    },
+    "status": "run"
+   },
+   {
+    "attempt_id": "c03",
+    "pair": {
+     "attempt_id": "c03",
+     "overlap": {
+      "lower_bound_ns": 2586522,
+      "uncertainty_ns": 50547,
+      "upper_bound_ns": 2687616,
+      "verdict": "OVERLAP"
+     },
+     "pair_correct": true,
+     "participants": {
+      "a": {
+       "accounting": {
+        "source_fetches_after_ready": 0,
+        "unexplained_persistent_host_mirror_bytes": 0,
+        "unplanned_state_movements": 0
+       },
+       "accounting_zero": true,
+       "byte_exact": true,
+       "clean_exit": true,
+       "correct": true,
+       "correctness_semantics": "byte-exact-equality-with-reference",
+       "exit_code": 0,
+       "full_offload": true,
+       "label": "concurrent-c03-a",
+       "no_fallback": true,
+       "selected_bdf": "0000:06:00.0",
+       "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+      },
+      "b": {
+       "accounting": {
+        "source_fetches_after_ready": 0,
+        "unexplained_persistent_host_mirror_bytes": 0,
+        "unplanned_state_movements": 0
+       },
+       "accounting_zero": true,
+       "byte_exact": true,
+       "clean_exit": true,
+       "correct": true,
+       "correctness_semantics": "byte-exact-equality-with-reference",
+       "exit_code": 0,
+       "full_offload": true,
+       "label": "concurrent-c03-b",
+       "no_fallback": true,
+       "selected_bdf": "0000:09:00.0",
+       "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+      }
+     }
+    },
+    "status": "run"
+   }
+  ],
+  "clean_repeats": 3,
+  "failures": [],
+  "meets_minimum": true,
+  "overlap_failures": []
+ },
+ "fault_a": null,
+ "fault_a_missing_reason": "missing raw artifact: fault-arm-a-loss/initial/b/run.stdout",
+ "fault_b": null,
+ "fault_b_missing_reason": "missing raw artifact: fault-arm-b-loss/initial/a/run.stdout",
+ "platform_failure": null,
  "preflight": {
   "bdfs": [
    "06:00.0",
@@ -32,8 +338,96 @@
    "b": true
   }
  },
- "prerequisites_ok": false,
- "producer_head": "33af68af41fef195ed1ccdd0d4028aaf9a3c8245",
+ "prerequisites_ok": true,
+ "producer_head": "03b65371ff06a1b9a6edf12db8d18622774c1e09",
+ "reset": {
+  "disposition": "DEVICE_RESET_ISOLATION_NOT_AVAILABLE",
+  "reason": "sysfs reset file present, but both Vega functions are downstream of the same physical PM8533 fanout switch on one dual-die V340L board: the sysfs reset (function level secondary-bus-reset/FLR class) is not a documented, function-isolated reset mechanism for this dual-die board topology; issue #216 prohibits improvised bus/bridge resets, so no reset arm is executed"
+ },
  "schema": "inferswarm.v2d.assembly/2",
- "terminal": "V2D_EVIDENCE_BLOCKED"
+ "soak": {
+  "all_checkpoints_correct": true,
+  "checkpoints": [
+   {
+    "checkpoint": "checkpoint-0600",
+    "correct": true
+   },
+   {
+    "checkpoint": "checkpoint-1200",
+    "correct": true
+   },
+   {
+    "checkpoint": "checkpoint-1800",
+    "correct": true
+   },
+   {
+    "checkpoint": "checkpoint-2400",
+    "correct": true
+   },
+   {
+    "checkpoint": "checkpoint-3000",
+    "correct": true
+   }
+  ],
+  "duration_s": 3600,
+  "ecc_growth": {
+   "growth": {
+    "06:00.0": {
+     "aer_first": {
+      "aer_dev_correctable": {},
+      "aer_dev_fatal": {},
+      "aer_dev_nonfatal": {}
+     },
+     "aer_last": {
+      "aer_dev_correctable": {},
+      "aer_dev_fatal": {},
+      "aer_dev_nonfatal": {}
+     },
+     "ras_first": null,
+     "ras_last": null
+    },
+    "09:00.0": {
+     "aer_first": {
+      "aer_dev_correctable": {},
+      "aer_dev_fatal": {},
+      "aer_dev_nonfatal": {}
+     },
+     "aer_last": {
+      "aer_dev_correctable": {},
+      "aer_dev_fatal": {},
+      "aer_dev_nonfatal": {}
+     },
+     "ras_first": null,
+     "ras_last": null
+    }
+   }
+  },
+  "final_sentinel_correct": true,
+  "scan": {
+   "journal_fault_counts": {
+    "amdgpu_reset": 0,
+    "amdgpu_timeout": 0,
+    "fatal_aer": 0,
+    "thermal": 0
+   },
+   "sample_count": 60
+  },
+  "stop_reason": "duration_reached"
+ },
+ "terminal": "V2D_EVIDENCE_INCOMPLETE_AFTER_CONCURRENCY",
+ "transport": {
+  "modes": {
+   "dual": {
+    "exit_code": 0,
+    "probe_process_overlap": true
+   },
+   "single-a": {
+    "exit_code": 0
+   },
+   "single-b": {
+    "exit_code": 0
+   }
+  },
+  "note": "throughput/latency values are descriptive only; no transport number is a correctness predicate"
+ }
 }

@@ -89,7 +89,7 @@ def run_fault_arm(*, repo: Path, out: Path, attempt_id: str, arm: str,
     rc.verify_closure(repo)
     victim = arm
     sibling = "b" if arm == "a" else "a"
-    base = out / f"arm-{arm}-loss"
+    base = out / f"fault-arm-{arm}-loss"
     # 1. start the frozen concurrent pair
     procs: dict[str, Any] = {}
     specs: dict[str, Any] = {}
