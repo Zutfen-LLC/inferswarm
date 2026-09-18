@@ -57,10 +57,15 @@ def collect_baseline(*, repo: Path, out: Path, attempt_id: str,
                      authority: dict[str, Any],
                      mapping: dict[str, Any], die: str,
                      reps: int) -> dict[str, Any]:
-    """Frozen single-die baseline: reps repeats + telemetry each rep."""
-    rc.verify_closure(repo)
+    """Frozen single-die baseline: reps repeats + telemetry each rep.
+
+    FIX 1: the summary binds the producer closure. FIX 2: each rep's
+    execution identity (selector+BDF) is enforced by run_execution."""
+    closure = rc.verify_closure(repo)
     participant = mapping["participants"][die]
     runtime = authority["runtime"]
+    identity = ex.require_identity(participant["fresh_selector"],
+                                   participant["fresh_pci_bdf"])
     rows: list[dict[str, Any]] = []
     for i in range(1, reps + 1):
         bdf = participant["fresh_pci_bdf"]
@@ -71,7 +76,8 @@ def collect_baseline(*, repo: Path, out: Path, attempt_id: str,
         rep_dir = out / f"rep-{i:02d}"
         run = ex.run_execution(argv=argv,
                                out_dir=rep_dir,
-                               label=f"baseline-{attempt_id}-{die}-{i:02d}")
+                               label=f"baseline-{attempt_id}-{die}-{i:02d}",
+                               expected_selector_bdf=identity)
         # rel paths must resolve against the BASELINE dir (phase_dir),
         # so prefix with the rep dir
         for key in ("stdout_rel", "stderr_rel", "exit_code_rel"):
@@ -98,7 +104,11 @@ def collect_baseline(*, repo: Path, out: Path, attempt_id: str,
                   "telemetry_pre": pre, "telemetry_post": post},
                  [run["stdout_rel"], run["stderr_rel"],
                   run["exit_code_rel"]])
-    return {"die": die, "reps": rows}
+    return {"die": die, "reps": rows,
+            "closure_digest": closure["closure_digest"],
+            "producer_head": closure["producer_head"],
+            "authority_digest": authority["authority_digest"],
+            "mapping_digest": mapping["mapping_digest"]}
 
 
 def run_pair(*, repo: Path, out: Path, attempt_id: str,
@@ -110,8 +120,13 @@ def run_pair(*, repo: Path, out: Path, attempt_id: str,
     Scheduling: shared ready/start gate (both processes alive before
     either launches its workload). Overlap authority: the seam observe
     records (assembler-classified).
-    """
-    rc.verify_closure(repo)
+
+    FIX 1: the pair summary binds the producer closure. FIX 2: each
+    participant's post-hoc identity is re-derived from its retained
+    stderr + argv and must equal its fresh-mapped (selector, BDF) or
+    the pair FAILS CLOSED at collection time (the assembler re-checks
+    independently)."""
+    closure = rc.verify_closure(repo)
     runtime = authority["runtime"]
     observe_exe = runtime["observe_runtime_executable"]
     env_gate = runtime["observe_env_gate"]
@@ -130,7 +145,10 @@ def run_pair(*, repo: Path, out: Path, attempt_id: str,
         env_extra = {env_gate: str(observe_file)}
         procs[die] = {"argv": argv, "dir": d,
                       "observe_rel": f"{die}/observe-{attempt_id}.jsonl",
-                      "observe_file": observe_file, "env_extra": env_extra}
+                      "observe_file": observe_file, "env_extra": env_extra,
+                      "identity": ex.require_identity(
+                          participant["fresh_selector"],
+                          participant["fresh_pci_bdf"])}
 
     children: dict[str, subprocess.Popen] = {}
     wrapper_intervals: dict[str, list[int | None]] = {}
@@ -164,6 +182,18 @@ def run_pair(*, repo: Path, out: Path, attempt_id: str,
         host.durable_write(d / f"run-{attempt_id}.exit-code",
                            f"{child.returncode}\n".encode())
         stderr_text = stderr.decode("utf-8", "replace")
+        # FIX 2 producer-side identity gate: re-derive from retained
+        # bytes and fail closed on any wrong-die execution
+        got_selected = ex.parse_selected_bdf(stderr_text)
+        exp_selector, exp_bdf = spec["identity"].split("|", 1)
+        got_selector = (spec["argv"][spec["argv"].index("--device") + 1]
+                        if "--device" in spec["argv"] else None)
+        if got_selector != exp_selector or not ex._selector_bdf_match(
+                got_selector, got_selected, spec["identity"]):
+            raise RuntimeError(
+                f"concurrent participant {die} identity failure: argv "
+                f"selector {got_selector!r}/selected BDF {got_selected!r} "
+                f"!= fresh mapping ({exp_selector!r}, {exp_bdf!r})")
         run = {
             "label": f"concurrent-{attempt_id}-{die}",
             "argv": spec["argv"],
@@ -177,7 +207,7 @@ def run_pair(*, repo: Path, out: Path, attempt_id: str,
             "stdout_rel": f"{die}/run-{attempt_id}.stdout",
             "stderr_rel": f"{die}/run-{attempt_id}.stderr",
             "exit_code_rel": f"{die}/run-{attempt_id}.exit-code",
-            "selected_bdf": ex.parse_selected_bdf(stderr_text),
+            "selected_bdf": got_selected,
             "offloaded_layers": ex.parse_offload(stderr_text),
             "fallback_present": "fallback" in stderr_text.lower(),
         }
@@ -191,6 +221,8 @@ def run_pair(*, repo: Path, out: Path, attempt_id: str,
         "wrapper_intervals_ns": wrapper_intervals,
         "authority_digest": authority["authority_digest"],
         "mapping_digest": mapping["mapping_digest"],
+        "closure_digest": closure["closure_digest"],
+        "producer_head": closure["producer_head"],
     }
 
 

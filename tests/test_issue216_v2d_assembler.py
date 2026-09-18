@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Issue #216 assembler state-machine tests — synthetic fixture trees.
 
-Each test builds a COMPLETE synthetic evidence tree (preflight,
-baselines, 3 concurrent pairs with seam records, transport, soak, fault
+Each test builds a COMPLETE synthetic evidence tree (preflight with a
+R3-revalidating fresh mapping, baselines, 3 concurrent pairs with seam
+records, transport with #35-faithful raw probe records, soak, fault
 arms, reset) exercising the REAL assembler (imported, then as a
 subprocess in the mutation controls), then mutates one fact and asserts
 the exact terminal flips.
@@ -14,6 +15,7 @@ calibration pairs; monotonic ticks).
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import subprocess
 import sys
@@ -28,8 +30,11 @@ sys.path.insert(0, str(REPO / "tests"))
 import issue216_assemble as asm
 import issue216_physical_authority as _pa
 __AUTH__ = _pa.build_authority()["authority_digest"]
+import issue216_v2d_fixtures as fx
+__BIND__ = fx.closure_binding()
 from test_issue216_v2d_concurrent import (clean_run, synth_run_bytes,
                                            write_run)
+import issue216_v2d_fixtures as fx
 
 PERIOD_NS = 37.037
 
@@ -84,7 +89,9 @@ def synth_pair_fixture(root: Path, attempt: str, *, overlap_ms=(100, 150),
     pair = {"attempt_id": attempt, "phase": "concurrent",
             "participants": {}, "observe_rels": {},
             "wrapper_intervals_ns": {"a": [0, 1], "b": [0, 1]},
-            "authority_digest": __AUTH__, "mapping_digest": "M"}
+            "authority_digest": __AUTH__, "mapping_digest": "M",
+            "closure_digest": __BIND__["closure_digest"],
+            "producer_head": __BIND__["producer_head"]}
     # die A runs at [0,200]ms device-domain; die B overlapping
     a_spans = ((0, 200),)
     b_spans = ((overlap_ms[0], overlap_ms[0] + 50),)
@@ -117,20 +124,33 @@ def build_complete_tree(root: Path, *, n_concurrent: int = 3,
                         soak_duration_s: int = 3600) -> dict:
     """Complete synthetic evidence tree: all phases PASS-shaped."""
     root.mkdir(parents=True, exist_ok=True)
+    BIND = fx.closure_binding()
+    # fresh mapping artifact (R3-revalidating, retained probe bytes)
+    mapping_doc = fx.build_mapping_doc(root)
+    MAPPING_DIGEST = mapping_doc["mapping_digest"]
     # preflight (collector layout: summary + raw inside the phase dir)
     (root / "preflight").mkdir(exist_ok=True)
     (root / "preflight" / "raw").mkdir(exist_ok=True)
     (root / "preflight" / "raw" / "journal_faults.stdout").write_bytes(
         b"no faults\n")
+    # sentinels: full run rows + raw bytes so the assembler re-derives
+    sentinels = {}
+    for die, bdf, sel in (("a", "0000:06:00.0", "Vulkan1"),
+                          ("b", "0000:09:00.0", "Vulkan2")):
+        run = synth_run_bytes(f"sentinel-pf1-{die}", bdf=bdf, selector=sel)
+        write_run(root / "preflight" / "sentinel" / die, run, "")
+        run_row = clean_run(run)
+        sentinels[die] = {"correct": True, "run": run_row}
     preflight = {
         "schema": "inferswarm.v2d.preflight/2", "campaign_id":
             "issue216-v2d-v340l-concurrent-dual-die-v2",
-        "attempt_id": "pf1", "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1",
-        "mapping_digest": "M", "boot_id": "b-1",
+        "attempt_id": "pf1", "authority_digest": __AUTH__,
+        "mapping_digest": MAPPING_DIGEST, "boot_id": "b-1",
+        "closure_digest": BIND["closure_digest"],
+        "producer_head": BIND["producer_head"],
         "bdfs": ["0000:06:00.0", "0000:09:00.0"],
-        "sentinels": {"a": {"correct": True}, "b": {"correct": True}},
+        "sentinels": sentinels,
     }
-    (root / "preflight").mkdir(exist_ok=True)
     (root / "preflight" / "preflight.json").write_bytes(
         json.dumps(preflight, indent=1).encode())
     # baselines
@@ -146,7 +166,12 @@ def build_complete_tree(root: Path, *, n_concurrent: int = 3,
             write_run(dd, run, "")
             reps.append({"rep": i, "run": clean_run(run)})
         (root / f"baseline-{die}.json").write_bytes(
-            json.dumps({"die": die, "reps": reps}, indent=1).encode())
+            json.dumps({"die": die, "reps": reps,
+                        "authority_digest": __AUTH__,
+                        "mapping_digest": MAPPING_DIGEST,
+                        "closure_digest": BIND["closure_digest"],
+                        "producer_head": BIND["producer_head"]},
+                       indent=1).encode())
     # concurrent attempts
     attempts = []
     for i in range(1, n_concurrent + 1):
@@ -155,15 +180,45 @@ def build_complete_tree(root: Path, *, n_concurrent: int = 3,
         attempts.append({"attempt_id": att, "status": "run"})
     (root / "attempt-ledger.json").write_bytes(
         json.dumps({"attempts": attempts}, indent=1).encode())
-    # transport
-    transport = {
-        "single-a": {"exit_code": 0},
-        "single-b": {"exit_code": 0},
-        "dual": {"participants": {"a": {"exit_code": 0},
-                                  "b": {"exit_code": 0}},
-                 "probe_process_overlap": True,
-                 "intervals_ns": {"a": [0, 100], "b": [10, 110]}},
-    }
+    # transport: #35-faithful raw records per arm + the phase summary
+    transport = {"authority_digest": __AUTH__,
+                 "mapping_digest": MAPPING_DIGEST,
+                 "closure_digest": BIND["closure_digest"],
+                 "producer_head": BIND["producer_head"]}
+    for mode, die, sel_idx, match_idx in (
+            ("single-a", "a", 1, 0), ("single-b", "b", 2, 1)):
+        bdf = "0000:06:00.0" if die == "a" else "0000:09:00.0"
+        record = fx.synth_transport_probe_record(bdf, sel_idx, match_idx)
+        mode_dir = root / "transport" / mode
+        (mode_dir / "raw").mkdir(parents=True, exist_ok=True)
+        (mode_dir / "raw" / "probe.json").write_bytes(
+            json.dumps(record, indent=1).encode())
+        stdout_b = record["probe_stdout"].encode()
+        (mode_dir / f"{mode}.stdout").write_bytes(stdout_b)
+        (mode_dir / f"{mode}.exit-code").write_bytes(b"0\n")
+        transport[mode] = {
+            "exit_code": 0, "stdout_rel": f"{mode}.stdout",
+            "exit_code_rel": f"{mode}.exit-code",
+            "stdout_sha256": hashlib.sha256(stdout_b).hexdigest()}
+    dual_parts = {}
+    for die, sel_idx, match_idx in (("a", 1, 0), ("b", 2, 1)):
+        bdf = "0000:06:00.0" if die == "a" else "0000:09:00.0"
+        record = fx.synth_transport_probe_record(bdf, sel_idx, match_idx)
+        ddir = root / "transport" / "dual" / die
+        (ddir / "raw").mkdir(parents=True, exist_ok=True)
+        (ddir / "raw" / "probe.json").write_bytes(
+            json.dumps(record, indent=1).encode())
+        stdout_b = record["probe_stdout"].encode()
+        (ddir / "probe.stdout").write_bytes(stdout_b)
+        (ddir / "probe.exit-code").write_bytes(b"0\n")
+        dual_parts[die] = {
+            "exit_code": 0, "stdout_rel": "probe.stdout",
+            "exit_code_rel": "probe.exit-code",
+            "stdout_sha256": hashlib.sha256(stdout_b).hexdigest()}
+    transport["dual"] = {"participants": dual_parts,
+                         "probe_process_overlap": True,
+                         "intervals_ns": {"a": [0, 100],
+                                          "b": [10, 110]}}
     (root / "transport").mkdir(exist_ok=True)
     (root / "transport" / "transport-tp1.json").write_bytes(
         json.dumps(transport, indent=1).encode())
@@ -177,12 +232,17 @@ def build_complete_tree(root: Path, *, n_concurrent: int = 3,
                 "telemetry": {"0000:06:00.0": {"ras_gpu_err_cnt": 0},
                               "0000:09:00.0": {"ras_gpu_err_cnt": 0}},
                 "aer": {"0000:06:00.0": {"aer_dev_fatal": {}},
-                        "0000:09:00.0": {"aer_dev_fatal": {}}}}
+                        "0000:09:00.0": {"aer_dev_fatal": {}}},
+                "pids": {"a": {"pid": 101, "state": "R"},
+                         "b": {"pid": 102, "state": "R"}}}
         rel = f"raw/telemetry-{i:04d}.json"  # soak-dir-relative
-        (raw / Path(rel).name).write_bytes(json.dumps(snap).encode())
+        snap_bytes = json.dumps(snap, sort_keys=True).encode()
+        (raw / Path(rel).name).write_bytes(snap_bytes)
         (raw / Path(rel).name.replace("telemetry-", "journal-").replace(
             ".json", ".stdout")).write_bytes(b"clean\n")
-        samples.append({"sample": i, "rel": rel, "monotonic_ns": t})
+        samples.append({"sample": i, "rel": rel, "monotonic_ns": t,
+                        "sha256": hashlib.sha256(snap_bytes).hexdigest()})
+    (raw / "journal-final.stdout").write_bytes(b"clean\n")
     # checkpoints every 600s (summary json + run dir, collector shape)
     for cps in range(600, soak_duration_s + 1, 600):
         cp_dir = raw / f"checkpoint-{cps:04d}"
@@ -204,7 +264,9 @@ def build_complete_tree(root: Path, *, n_concurrent: int = 3,
             soak_duration_s, "cadence_s": 60, "checkpoint_every_s": 600,
         "sched_tolerance_s": 15, "stop_reason": "duration_reached",
         "pairs_launched": 60, "events": [], "samples": samples,
-        "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1", "mapping_digest": "M",
+        "authority_digest": __AUTH__, "mapping_digest": MAPPING_DIGEST,
+        "closure_digest": BIND["closure_digest"],
+        "producer_head": BIND["producer_head"],
     }
     (root / "soak").mkdir(exist_ok=True)
     (root / "soak" / "soak-sk1.json").write_bytes(
@@ -216,10 +278,18 @@ def build_complete_tree(root: Path, *, n_concurrent: int = 3,
     (root / "reset-determination.json").write_bytes(json.dumps({
         "schema": "inferswarm.v2d.reset-determination/2",
         "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
-        "probes": {}, "lspci_tree": "", "both_functions_behind_one_switch":
-            True, "kernel_docs_stdout": "",
+        "probes": {"a": {"bdf": "0000:06:00.0",
+                         "reset_file_present": True},
+                   "b": {"bdf": "0000:09:00.0",
+                         "reset_file_present": True}},
+        "lspci_tree": "-+-[06]-+-06.00.0\n`-[09]-+-09.00.0\n",
+        "both_functions_behind_one_switch": True,
+        "kernel_docs_stdout": "amdgpu reset docs\nPROBE_DONE\n",
         "disposition": "DEVICE_RESET_ISOLATION_NOT_AVAILABLE",
         "reason": "shared switch",
+        "authority_digest": __AUTH__, "mapping_digest": "M",
+        "closure_digest": __BIND__["closure_digest"],
+        "producer_head": __BIND__["producer_head"],
     }, indent=1).encode())
     return {"root": root, "attempts": attempts}
 
@@ -228,7 +298,9 @@ def _checkpoint_pair(root: Path, cp_dir: Path, tag: str) -> dict:
     pair = {"attempt_id": tag, "phase": "soak-checkpoint",
             "participants": {}, "observe_rels": {},
             "wrapper_intervals_ns": {"a": [0, 1], "b": [0, 1]},
-            "authority_digest": __AUTH__, "mapping_digest": "M"}
+            "authority_digest": __AUTH__, "mapping_digest": "M",
+            "closure_digest": __BIND__["closure_digest"],
+            "producer_head": __BIND__["producer_head"]}
     for die, bdf, sel in (("a", "0000:06:00.0", "Vulkan1"),
                           ("b", "0000:09:00.0", "Vulkan2")):
         run = synth_run_bytes(f"run-{tag}", bdf=bdf, selector=sel)
@@ -277,7 +349,9 @@ def _build_fault_arm(root: Path, arm: str) -> None:
         "sibling_run": clean_run(sib_run), "relaunch_run":
             clean_run(vic_run),
         "recovery_sentinel": rec_pair,
-        "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1", "mapping_digest": "M",
+        "authority_digest": __AUTH__, "mapping_digest": "M",
+        "closure_digest": __BIND__["closure_digest"],
+        "producer_head": __BIND__["producer_head"],
     }
     (root / f"fault-arm-{arm}.json").write_bytes(
         json.dumps(doc, indent=1).encode())

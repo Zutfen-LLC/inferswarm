@@ -74,7 +74,16 @@ def run_execution(*, argv: list[str], out_dir: Path, label: str,
                   env_extra: dict[str, str] | None = None,
                   expected_selector_bdf: str | None = None,
                   timeout: int = 1800) -> dict[str, Any]:
-    """Run one frozen execution; retain raw bytes; derive cross-checks."""
+    """Run one frozen execution; retain raw bytes; derive cross-checks.
+
+    FIX 2: `expected_selector_bdf` is a correctness-bearing invariant —
+    when given, the execution's argv selector is derived from argv and
+    its stderr-selected BDF from the retained stderr bytes, and BOTH
+    must equal the expected (selector, BDF) pair or the run FAILS
+    CLOSED (ReceiptError) before any derived field is trusted. This is
+    the producer-side half; the assembler re-derives and re-enforces
+    the same invariant independently.
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ)
     if env_extra:
@@ -96,6 +105,20 @@ def run_execution(*, argv: list[str], out_dir: Path, label: str,
     host.durable_write(out_dir / f"{label}.exit-code",
                        f"{rc}\n".encode())
     stderr_text = stderr.decode("utf-8", "replace")
+    selected = parse_selected_bdf(stderr_text)
+    if expected_selector_bdf is not None:
+        expected_bdf = expected_selector_bdf
+        argv_selector = None
+        if "--device" in argv:
+            argv_selector = argv[argv.index("--device") + 1]
+        if argv_selector is None or not _selector_bdf_match(
+                argv_selector, selected, expected_selector_bdf):
+            raise RuntimeError(
+                f"execution identity failure for {label}: argv selector "
+                f"{argv_selector!r} / stderr-selected BDF {selected!r} "
+                f"do not equal the fresh-mapped identity "
+                f"({argv_selector!r} expected selector, "
+                f"{expected_bdf!r} expected BDF)")
     return {
         "label": label,
         "argv": argv,
@@ -109,10 +132,36 @@ def run_execution(*, argv: list[str], out_dir: Path, label: str,
         "stdout_rel": f"{label}.stdout",
         "stderr_rel": f"{label}.stderr",
         "exit_code_rel": f"{label}.exit-code",
-        "selected_bdf": parse_selected_bdf(stderr_text),
+        "selected_bdf": selected,
         "offloaded_layers": parse_offload(stderr_text),
         "fallback_present": "fallback" in stderr_text.lower(),
     }
+
+
+def _selector_bdf_match(got_selector: str | None,
+                        got_bdf: str | None,
+                        expected_pair: str) -> bool:
+    """expected_pair is '<selector>|<bdf>' — see require_identity()."""
+    try:
+        exp_selector, exp_bdf = expected_pair.split("|", 1)
+    except ValueError:
+        return False
+    return (got_selector == exp_selector
+            and _norm_bdf(got_bdf) == _norm_bdf(exp_bdf))
+
+
+def _norm_bdf(bdf: str | None) -> str | None:
+    if not isinstance(bdf, str):
+        return None
+    bdf = bdf.strip()
+    if not bdf.startswith(("0000:",)) and len(bdf.split(":")) == 2:
+        bdf = f"0000:{bdf}"
+    return bdf.lower()
+
+
+def require_identity(selector: str, bdf: str) -> str:
+    """Build the expected-identity pair for run_execution."""
+    return f"{selector}|{bdf}"
 
 
 def correctness_semantics(argv: list[str]) -> str:

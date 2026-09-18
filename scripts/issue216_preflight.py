@@ -37,7 +37,7 @@ def _now() -> str:
 
 def collect_preflight(*, repo: Path, out: Path, attempt_id: str,
                       authority_path: Path) -> dict[str, Any]:
-    rc.verify_closure(repo)
+    closure = rc.verify_closure(repo)
     authority = json.loads(authority_path.read_text(encoding="utf-8"))
     if not pa.verify_authority(authority, repo):
         raise pa.AuthorityError("authority invalid at preflight")
@@ -132,6 +132,8 @@ def collect_preflight(*, repo: Path, out: Path, attempt_id: str,
         "campaign_id": rc.CAMPAIGN_ID,
         "attempt_id": attempt_id,
         "authority_digest": authority["authority_digest"],
+        "closure_digest": closure["closure_digest"],
+        "producer_head": closure["producer_head"],
         "mapping_digest": mapping["mapping_digest"],
         "boot_id": boot,
         "captured_utc": _now(),
@@ -149,7 +151,12 @@ def collect_preflight(*, repo: Path, out: Path, attempt_id: str,
 def run_sentinels(*, repo: Path, out: Path, attempt_id: str,
                   authority: dict[str, Any], mapping: dict[str, Any],
                   runtime: dict[str, Any]) -> dict[str, Any]:
-    """One fresh single-die sentinel per die through the accepted argv."""
+    """One fresh single-die sentinel per die through the accepted argv.
+
+    FIX 2: each sentinel's (selector, BDF) identity is enforced by
+    run_execution itself — the fresh-mapped pair must be what actually
+    executed or the phase fails closed."""
+    closure = rc.verify_closure(repo)
     results = {}
     for die in ("a", "b"):
         participant = mapping["participants"][die]
@@ -158,11 +165,15 @@ def run_sentinels(*, repo: Path, out: Path, attempt_id: str,
         run = ex.run_execution(
             argv=argv, out_dir=out / "sentinel" / die,
             label=f"sentinel-{attempt_id}-{die}",
-            expected_selector_bdf=participant["fresh_pci_bdf"])
+            expected_selector_bdf=ex.require_identity(
+                participant["fresh_selector"],
+                participant["fresh_pci_bdf"]))
         run = ex.derive_execution_facts(repo, run,
                                         out / "sentinel" / die)
         results[die] = ex.reduce_run(run)
         results[die]["run"] = run
+    results["closure_digest"] = closure["closure_digest"]
+    results["producer_head"] = closure["producer_head"]
     return results
 
 

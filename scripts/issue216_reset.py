@@ -146,9 +146,12 @@ def main() -> int:
     args = ap.parse_args()
     repo = Path(args.repo)
     out = Path(args.out)
-    rc.verify_closure(repo)
+    closure = rc.verify_closure(repo)
     mapping = json.loads(Path(args.mapping).read_text())
     record = determine(repo, mapping)
+    record["closure_digest"] = closure["closure_digest"]
+    record["producer_head"] = closure["producer_head"]
+    record["mapping_digest"] = mapping["mapping_digest"]
     out.mkdir(parents=True, exist_ok=True)
     (out / "reset-determination.json").write_bytes(
         json.dumps(record, indent=1, sort_keys=True).encode() + b"\n")

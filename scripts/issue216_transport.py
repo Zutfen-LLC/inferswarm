@@ -88,7 +88,7 @@ def main() -> int:
     args = ap.parse_args()
     repo = Path(args.repo)
     out = Path(args.out)
-    rc.verify_closure(repo)
+    closure = rc.verify_closure(repo)
     authority = json.loads(Path(args.authority).read_text())
     mapping = json.loads(Path(args.mapping).read_text())
     runtime = authority["runtime"]
@@ -104,6 +104,11 @@ def main() -> int:
                            part["fresh_pci_bdf"],
                            out / mode / "raw", out / mode / "summary.json")
         runs[mode] = run_probe_instance(argv, out / mode, mode)
+        # FIX 5 producer-side: the probe's identity binding must equal
+        # the fresh-mapped BDF for this die (verified against the raw
+        # probe record the accepted probe just wrote)
+        _require_probe_identity(out / mode, part["fresh_pci_bdf"],
+                                f"transport {mode}")
 
     # dual arm: two concurrent instances
     argvs = {}
@@ -165,13 +170,47 @@ def main() -> int:
                     "probe_process_overlap": overlap,
                     "intervals_ns": intervals}
 
+    # FIX 5 producer-side: dual-arm probe identity bindings
+    for die in ("a", "b"):
+        part = mapping["participants"][die]
+        _require_probe_identity(out / "dual" / die,
+                                part["fresh_pci_bdf"],
+                                f"transport dual/{die}")
+
     (out / f"transport-{args.attempt_id}.json").write_bytes(
-        json.dumps(runs, indent=1, sort_keys=True).encode() + b"\n")
+        json.dumps({
+            **runs,
+            "authority_digest": authority["authority_digest"],
+            "mapping_digest": mapping["mapping_digest"],
+            "closure_digest": closure["closure_digest"],
+            "producer_head": closure["producer_head"],
+        }, indent=1, sort_keys=True).encode() + b"\n")
     ok = all(r["exit_code"] == 0 for r in
              (runs["single-a"], runs["single-b"])) and \
         all(r["exit_code"] == 0 for r in dual_runs.values()) and overlap
     print(json.dumps({"ok": ok, "modes": sorted(runs)}))
     return 0 if ok else 1
+
+
+def _require_probe_identity(mode_dir: Path, expected_bdf: str,
+                            what: str) -> None:
+    """FIX 5 producer-side identity gate: verify the accepted #35
+    probe's own retained identity binding (its raw probe record's
+    twin_binding.identity_probe.pci_bdf) equals the fresh-mapped BDF
+    for this arm's die."""
+    probe_path = mode_dir / "raw" / "probe.json"
+    if not probe_path.is_file():
+        raise RuntimeError(f"{what}: probe raw record missing")
+    record = json.loads(probe_path.read_bytes())
+    ib = ((record.get("twin_binding") or {}).get("identity_probe") or {})
+    got = ib.get("pci_bdf")
+    norm = lambda b: (f"0000:{b}" if isinstance(b, str)
+                      and not b.startswith("0000:") and len(b.split(":")) == 2
+                      else b)
+    if norm(got) != norm(expected_bdf):
+        raise RuntimeError(
+            f"{what}: probe identity binding BDF {got!r} != fresh "
+            f"mapping {expected_bdf!r}")
 
 
 def _match_index(mapping: dict[str, Any], die: str) -> int:

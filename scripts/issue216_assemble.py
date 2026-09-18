@@ -60,6 +60,10 @@ import issue219_reduce as seam
 import v0c_correctness
 import v1c_accounting
 
+# Mapping/identity machinery (FIX 2): BDF normalization + fresh-mapping
+# revalidation reuse the ACCEPTED V2-A R3 discovery validator.
+import v2a_discovery_v3 as r3
+
 _RAW_PARSE_ERRORS = (v0c_correctness.CorrectnessError,
                      v1c_accounting.AccountingError)
 
@@ -82,6 +86,21 @@ SOAK_CHECKPOINT_EVERY_S = 600
 
 SCHEMA_ASSEMBLY = "inferswarm.v2d.assembly/2"
 SCHEMA_TERMINAL = "inferswarm.v2d.terminal/2"
+
+
+# Frozen transport matrix (FIX 5): the accepted #35 ladder — sizes in
+# bytes, repetitions per size, plus the small-transfer service and
+# bidirectional samples. The assembler re-derives completeness from the
+# retained raw probe records; a missing size/rep fails closed.
+TRANSPORT_SIZES = (4194304, 16777216, 67108864, 134217728)
+TRANSPORT_REPS = 8
+TRANSPORT_SMALL_BYTES = 4096
+TRANSPORT_SMALL_REPS = 200
+TRANSPORT_BIDIR_BYTES_EACH = 33554432
+TRANSPORT_BIDIR_REPS = 8
+# #216 under-load link-state evidence: at least this many load-phase
+# link samples must be retained per probe with a parseable state.
+TRANSPORT_MIN_LOAD_SAMPLES = 10
 
 
 class AssemblyError(RuntimeError):
@@ -140,6 +159,191 @@ def _bdf_bus(bdf: str | None) -> int | None:
 
 
 # ---------------------------------------------------------------------------
+# FIX 2: fresh-mapping -> actual-execution binding.
+# ---------------------------------------------------------------------------
+
+_BDF_RE = None
+
+
+def normalize_bdf(bdf: str | None) -> str | None:
+    """Normalize BDF spellings: `06:00.0` == `0000:06:00.0`.
+
+    Returns the canonical 4-part domain-prefixed form (0000:06:00.0) or
+    None for malformed input. Every identity comparison in this
+    assembler goes through this function.
+    """
+    global _BDF_RE
+    if _BDF_RE is None:
+        import re as _re
+        _BDF_RE = _re.compile(
+            r"^(?:([0-9a-fA-F]{4}):)?([0-9a-fA-F]{2}):"
+            r"([0-9a-fA-F]{2})\.([0-7])$")
+    if not isinstance(bdf, str):
+        return None
+    m = _BDF_RE.match(bdf.strip())
+    if not m:
+        return None
+    dom = (m.group(1) or "0000").lower()
+    return f"{dom}:{m.group(2).lower()}:{m.group(3).lower()}.{m.group(4)}"
+
+
+def bdfs_equal(a: str | None, b: str | None) -> bool:
+    na, nb = normalize_bdf(a), normalize_bdf(b)
+    return na is not None and na == nb
+
+
+class VerifiedMapping:
+    """The retained fresh-mapping artifact, revalidated from its own
+    retained raw bytes through the ACCEPTED V2-A R3 machinery.
+
+    Carries the exact expected (selector, BDF) per participant; every
+    execution identity check compares against THIS object, never
+    against copied fields inside phase records.
+    """
+
+    def __init__(self, doc: dict[str, Any], raw_root: Path):
+        self.doc = doc
+        if doc.get("schema") != "inferswarm.v2d.fresh-mapping/2":
+            raise AssemblyError("fresh mapping schema mismatch")
+        if doc.get("campaign_id") != rc.CAMPAIGN_ID:
+            raise AssemblyError("fresh mapping campaign mismatch")
+        # recompute mapping_digest over the retained record content
+        body = {k: v for k, v in doc.items() if k != "mapping_digest"}
+        recomputed = hashlib.sha256(rc.canonical(body)).hexdigest()
+        if doc.get("mapping_digest") != recomputed:
+            raise AssemblyError("fresh mapping digest does not bind content")
+        self.digest = recomputed
+        self.participants: dict[str, dict[str, str]] = {}
+        # Revalidate the R3 discovery authority from retained evidence:
+        # every Vega binding's identity probe must re-verify against its
+        # retained raw bytes through the accepted shared validator, and
+        # the fresh (selector, BDF) must equal the probe's own proof.
+        bindings = doc.get("bindings") or {}
+        for die in ("a", "b"):
+            part = (doc.get("participants") or {}).get(die)
+            if not isinstance(part, dict):
+                raise AssemblyError(f"mapping missing participant {die}")
+            fresh_binding = part.get("fresh_binding") or {}
+            probe = fresh_binding.get("identity_probe")
+            if not isinstance(probe, dict):
+                raise AssemblyError(
+                    f"participant {die} binding lacks an R3 identity probe")
+            try:
+                r3.validate_probe_record(probe, raw_root=raw_root,
+                                         expected_selector=part.get(
+                                             "fresh_selector"))
+            except Exception as exc:  # DiscoveryError + OSError
+                raise AssemblyError(
+                    f"R3 revalidation failed for die {die}: {exc}") from exc
+            probe_bdf = normalize_bdf(probe.get("observed_pci_bdf"))
+            sel_bdf = normalize_bdf(part.get("fresh_pci_bdf"))
+            if probe_bdf is None or probe_bdf != sel_bdf:
+                raise AssemblyError(
+                    f"die {die}: R3 probe BDF {probe.get('observed_pci_bdf')}"
+                    f" != mapping BDF {part.get('fresh_pci_bdf')}")
+            if fresh_binding.get("pci_bdf") != part.get("fresh_pci_bdf"):
+                raise AssemblyError(
+                    f"die {die}: binding row BDF != participant BDF")
+            selector = part.get("fresh_selector")
+            if not isinstance(selector, str) or not selector:
+                raise AssemblyError(f"die {die} missing selector")
+            if sel_bdf is None:
+                raise AssemblyError(f"die {die} malformed mapping BDF")
+            self.participants[die] = {
+                "selector": selector,
+                "bdf": sel_bdf,
+            }
+        if len({p["selector"] for p in self.participants.values()}) != 2 \
+                or len({p["bdf"] for p in self.participants.values()}) != 2:
+            raise AssemblyError(
+                "mapping does not bind two distinct selector/BDF pairs")
+        # the record's intended-identity corroboration must also hold:
+        # historical selector/BDF (accepted V2-B) == fresh binding
+        hist = ((json.loads((REPO / "docs/investigations/"
+                             "vulkan-v2-d-v340l-concurrent/"
+                             "PHYSICAL-AUTHORITY.json").read_bytes())
+                 ).get("historical_qualification_bindings") or {})
+        for die in ("a", "b"):
+            h = hist.get(die) or {}
+            if not bdfs_equal(h.get("pci_bdf"),
+                              self.participants[die]["bdf"]) \
+                    or h.get("selector") != self.participants[die]["selector"]:
+                raise AssemblyError(
+                    f"fresh mapping does not corroborate the accepted "
+                    f"V2-B qualification binding for die {die}")
+
+    def expected(self, die: str) -> tuple[str, str]:
+        return (self.participants[die]["selector"],
+                self.participants[die]["bdf"])
+
+
+def load_verified_mapping(evidence_root: Path) -> VerifiedMapping:
+    mapping_dir = evidence_root / "preflight" / "mapping"
+    doc_path = mapping_dir / "fresh-mapping.json"
+    if not doc_path.is_file():
+        raise AssemblyError("fresh mapping artifact missing")
+    doc = json.loads(doc_path.read_bytes())
+    return VerifiedMapping(doc, raw_root=mapping_dir / "raw")
+
+
+def require_execution_identity(die: str, run: dict[str, Any],
+                               verdict: dict[str, Any],
+                               mapping: VerifiedMapping,
+                               what: str) -> None:
+    """FIX 2 core invariant: the execution's argv selector and its
+    stderr-selected BDF must BOTH equal the participant's verified fresh
+    mapping. Applied assembler-side for every correctness-bearing
+    execution regardless of producer-side checks."""
+    exp_selector, exp_bdf = mapping.expected(die)
+    argv = run.get("argv") or []
+    try:
+        got_selector = argv[argv.index("--device") + 1]
+    except (ValueError, IndexError):
+        raise AssemblyError(f"{what}: argv carries no --device selector")
+    if got_selector != exp_selector:
+        raise CorrectnessFailure(
+            f"{what}: die {die} argv selector {got_selector} != fresh "
+            f"mapping {exp_selector}")
+    got_bdf = verdict.get("selected_bdf")
+    if not bdfs_equal(got_bdf, exp_bdf):
+        raise CorrectnessFailure(
+            f"{what}: die {die} executed on BDF {got_bdf} != fresh "
+            f"mapping {exp_bdf} (wrong-die execution)")
+
+
+def require_seam_identity(die: str, overlap_row: dict[str, Any],
+                          mapping: VerifiedMapping, what: str) -> None:
+    """Bind the #219 seam record to the same exact participant/device
+    identity (domain/bus/device/function equality, not just distinct
+    buses): the seam record's PCI location must equal the participant's
+    fresh-mapped BDF."""
+    _, exp_bdf = mapping.expected(die)
+    header_bus = overlap_row.get("pci_bus")
+    if header_bus is None:
+        raise AssemblyError(f"{what}: seam record for die {die} has no PCI bus")
+    exp = normalize_bdf(exp_bdf)
+    if exp is None:
+        raise AssemblyError(f"{what}: participant {die} BDF malformed")
+    bus = int(exp.split(":")[1], 16)
+    dev = int(exp.split(":")[2].split(".")[0], 16)
+    fn = int(exp.split(".")[1])
+    if int(header_bus) != bus:
+        raise CorrectnessFailure(
+            f"{what}: die {die} seam record bus {header_bus} != fresh "
+            f"mapping bus {bus}")
+    # device/function come from the record re-derivation in
+    # rederive_overlap; require them when present
+    hd = overlap_row.get("pci_device")
+    hf = overlap_row.get("pci_function")
+    if hd is not None and int(hd) != dev:
+        raise CorrectnessFailure(
+            f"{what}: die {die} seam record device {hd} != {dev}")
+    if hf is not None and int(hf) != fn:
+        raise CorrectnessFailure(
+            f"{what}: die {die} seam record function {hf} != {fn}")
+
+
+# ---------------------------------------------------------------------------
 # Execution re-derivation (receipt -> verdict, from bytes).
 # ---------------------------------------------------------------------------
 
@@ -187,6 +391,10 @@ def rederive_execution(evidence_root: Path, run: dict[str, Any],
                         and offload[0] > 0)
     clean_exit = exit_code == 0
     accounting_zero = all(accounting.get(k) == 0 for k in ACCOUNTING_KEYS)
+    try:
+        argv_selector = run["argv"][run["argv"].index("--device") + 1]
+    except (ValueError, IndexError, KeyError):
+        argv_selector = None
     return {
         "label": run["label"],
         "exit_code": exit_code,
@@ -197,6 +405,7 @@ def rederive_execution(evidence_root: Path, run: dict[str, Any],
         "full_offload": full_offload,
         "no_fallback": not fallback,
         "selected_bdf": selected,
+        "argv_selector": argv_selector,
         "accounting": {k: accounting.get(k) for k in ACCOUNTING_KEYS},
         "accounting_zero": accounting_zero,
         "correct": (clean_exit and correctness["byte_exact_visible_output"]
@@ -228,11 +437,14 @@ def rederive_overlap(evidence_root: Path, observe_rel: str,
                               last.max_deviation_ns)
     per_sub = seam.ticks_to_monotonic(subs, chosen, period)
     union = seam.union_intervals(per_sub)
+    header = record["header"]
     return {
         "rel": rel,
         "record_sha256": record["sha256"],
-        "device_uuid": record["header"].get("device_uuid"),
-        "pci_bus": record["header"].get("pci_bus"),
+        "device_uuid": header.get("device_uuid"),
+        "pci_bus": header.get("pci_bus"),
+        "pci_device": header.get("pci_device"),
+        "pci_function": header.get("pci_function"),
         "submissions": len(subs),
         "union": union,
         "max_deviation_ns": max_dev,
@@ -260,18 +472,24 @@ def classify_pair_overlap(a: dict[str, Any], b: dict[str, Any]) -> dict:
 # ---------------------------------------------------------------------------
 
 def assemble_pair(evidence_root: Path, pair: dict[str, Any],
-                  pair_dir: str, *, require_overlap: bool = True
+                  pair_dir: str, mapping: VerifiedMapping, *,
+                  require_overlap: bool = True
                   ) -> dict[str, Any]:
+    what = f"pair {pair.get('attempt_id')}"
+    _require_binding(pair, what, evidence_root)
     verdicts = {}
     for die in ("a", "b"):
         verdicts[die] = rederive_execution(
             evidence_root, pair["participants"][die], pair_dir)
+        require_execution_identity(die, pair["participants"][die],
+                                   verdicts[die], mapping, what)
     overlap_rows = {}
     for die in ("a", "b"):
         overlap_rows[die] = rederive_overlap(
             evidence_root, pair["observe_rels"][die], pair_dir)
-    # cross-bind: participant selected BDF bus must match its own seam
-    # record bus (participant/record substitution fails closed)
+        require_seam_identity(die, overlap_rows[die], mapping, what)
+    # cross-bind: participant selected BDF must match its own seam
+    # record PCI location (participant/record substitution fails closed)
     for die in ("a", "b"):
         bus = _bdf_bus(verdicts[die]["selected_bdf"])
         rec_bus = overlap_rows[die]["pci_bus"]
@@ -301,8 +519,24 @@ def assemble_pair(evidence_root: Path, pair: dict[str, Any],
     }
 
 
-def assemble_preflight(evidence_root: Path) -> dict[str, Any]:
+def _load_sentinel_run(preflight: dict[str, Any], die: str,
+                       evidence_root: Path, pf_dir: str) -> dict[str, Any]:
+    """FIX 3: sentinel runs live in the retained preflight record under
+    sentinels.<die>.run (the collector retains the full run row); the
+    raw bytes sit in preflight/sentinel/<die>/."""
+    sentinel = ((preflight.get("sentinels") or {}).get(die) or {})
+    run = sentinel.get("run")
+    if not isinstance(run, dict):
+        raise AssemblyError(
+            f"preflight sentinel {die} retains no run row (raw bytes "
+            "unverifiable)")
+    return run
+
+
+def assemble_preflight(evidence_root: Path,
+                       mapping: VerifiedMapping) -> dict[str, Any]:
     preflight, pf_dir = _phase_json(evidence_root, "preflight/preflight*.json")
+    pf_dir = str(pf_dir)
     journal = _read_raw(evidence_root,
                         f"{pf_dir}/raw/journal_faults.stdout")
     text = journal.decode("utf-8", "replace")
@@ -316,29 +550,59 @@ def assemble_preflight(evidence_root: Path) -> dict[str, Any]:
         "dmar_fault": len(re.findall(r"DMAR:[^\n]*(fault|error)",
                                      text, re.I)),
     }
+    # FIX 3: re-derive each sentinel's verdict from its RAW bytes
+    # through the accepted reducers; authored `correct` booleans are not
+    # authority (they are cross-checked when present).
     sentinels = preflight.get("sentinels") or {}
     if not sentinels:
         raise AssemblyError("preflight has no sentinel results")
+    sentinel_verdicts = {}
+    for die in ("a", "b"):
+        run = _load_sentinel_run(preflight, die, evidence_root, pf_dir)
+        # sentinel raws resolve against preflight/sentinel/<die>
+        verdict = rederive_execution(evidence_root, run,
+                                     f"{pf_dir}/sentinel/{die}")
+        require_execution_identity(die, run, verdict, mapping,
+                                   "preflight sentinel")
+        authored = sentinels.get(die) or {}
+        if isinstance(authored.get("correct"), bool) \
+                and authored["correct"] != verdict["correct"]:
+            raise AssemblyError(
+                f"preflight sentinel {die} authored verdict disagrees with "
+                f"raw-byte re-derivation ({authored['correct']} vs "
+                f"{verdict['correct']})")
+        sentinel_verdicts[die] = verdict
     return {
         "boot_id": preflight["boot_id"],
         "journal_fault_counts": counts,
         "preexisting_fault_free": all(v == 0 for v in counts.values()),
-        "sentinels_correct": {d: (s or {}).get("correct") is True
-                              for d, s in sentinels.items()},
+        "sentinels_correct": {d: v["correct"]
+                              for d, v in sentinel_verdicts.items()},
+        "sentinels_rederived": {
+            d: {k: v[k] for k in ("clean_exit", "byte_exact",
+                                  "full_offload", "no_fallback",
+                                  "selected_bdf", "accounting_zero",
+                                  "correct")}
+            for d, v in sentinel_verdicts.items()},
         "bdfs": preflight.get("bdfs"),
     }
 
 
-def assemble_baselines(evidence_root: Path, plan: dict[str, Any]
+def assemble_baselines(evidence_root: Path, mapping: VerifiedMapping,
+                       plan: dict[str, Any]
                        ) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for die in ("a", "b"):
         rel = f"baseline-{die}.json"
         doc = _read_json(evidence_root, rel)
+        _require_binding(doc, f"baseline {die}", evidence_root)
         rows = []
         for rep in doc["reps"]:
             verdict = rederive_execution(evidence_root, rep["run"],
                                          f"baseline-{die}")
+            require_execution_identity(die, rep["run"], verdict, mapping,
+                                       f"baseline die {die} rep "
+                                       f"{rep.get('rep')}")
             rows.append({"rep": rep["rep"], "verdict": verdict})
         out[die] = {"rows": rows,
                     "all_correct": all(r["verdict"]["correct"]
@@ -350,8 +614,8 @@ def assemble_baselines(evidence_root: Path, plan: dict[str, Any]
     return out
 
 
-def assemble_concurrent(evidence_root: Path, ledger: dict[str, Any]
-                        ) -> dict[str, Any]:
+def assemble_concurrent(evidence_root: Path, ledger: dict[str, Any],
+                        mapping: VerifiedMapping) -> dict[str, Any]:
     """All retained concurrent attempts (successes AND failures).
 
     A retained repeat whose seam classification is NON_OVERLAP/INDETERMINATE
@@ -383,11 +647,17 @@ def assemble_concurrent(evidence_root: Path, ledger: dict[str, Any]
             verdicts[die] = rederive_execution(
                 evidence_root, pair["participants"][die],
                 f"concurrent/{att['attempt_id']}")
+            require_execution_identity(
+                die, pair["participants"][die], verdicts[die], mapping,
+                f"concurrent {att['attempt_id']}")
         overlap_rows = {}
         for die in ("a", "b"):
             overlap_rows[die] = rederive_overlap(
                 evidence_root, pair["observe_rels"][die],
                 f"concurrent/{att['attempt_id']}")
+            require_seam_identity(
+                die, overlap_rows[die], mapping,
+                f"concurrent {att['attempt_id']}")
         for die in ("a", "b"):
             bus = _bdf_bus(verdicts[die]["selected_bdf"])
             rec_bus = overlap_rows[die]["pci_bus"]
@@ -427,28 +697,221 @@ def assemble_concurrent(evidence_root: Path, ledger: dict[str, Any]
             "meets_minimum": len(clean) >= MIN_CONCURRENT_REPEATS}
 
 
-def assemble_transport(evidence_root: Path) -> dict[str, Any]:
-    doc, _tdir = _phase_json(evidence_root, "transport/transport-*.json")
-    modes = {}
-    for mode in ("single-a", "single-b"):
-        if mode not in doc or doc[mode].get("exit_code") != 0:
-            raise AssemblyError(f"transport mode {mode} missing/failed")
-        modes[mode] = {"exit_code": doc[mode]["exit_code"]}
+def _verify_transport_probe(evidence_root: Path, mode_dir: str,
+                            row: dict[str, Any],
+                            expected_bdf: str | None,
+                            expected_selector_index: int | None,
+                            what: str) -> dict[str, Any]:
+    """FIX 5: mechanically validate ONE #35 probe instance from its
+    retained raw evidence, reusing the accepted probe's own reducer
+    semantics (parse_probe_output / reduce_rows / link state classes).
+
+    Validates from retained bytes:
+      * the probe actually completed: retained raw exit-code bytes == 0
+        (raw bytes are authority; the authored summary exit_code is a
+        cross-check that must agree);
+      * probe.json parses through the accepted parser (identity header
+        + measurement rows);
+      * the retained identity probe binds the expected exact physical
+        BDF (the accepted probe's own identity binding);
+      * the full frozen transfer ladder is present: every size x both
+        directions x TRANSPORT_REPS reps, the small-transfer service
+        run, and the bidirectional run;
+      * under-load link-state samples exist (the #216 requirement).
+    """
+    def resolve(rel: str) -> Path:
+        return evidence_root / rel
+
+    # raw exit-code bytes are the authority
+    exit_rel = row.get("exit_code_rel")
+    if not exit_rel:
+        raise AssemblyError(f"{what}: no retained exit-code artifact")
+    exit_path = resolve(f"{mode_dir}/{exit_rel}"
+                        if not str(exit_rel).startswith(mode_dir)
+                        else exit_rel)
+    if not exit_path.is_file():
+        raise AssemblyError(f"{what}: exit-code artifact missing")
+    try:
+        raw_exit = int(exit_path.read_bytes().decode().strip())
+    except ValueError:
+        raise AssemblyError(f"{what}: exit-code bytes unparseable")
+    if raw_exit != 0:
+        raise AssemblyError(f"{what}: probe exit {raw_exit} (raw bytes)")
+    if row.get("exit_code") != raw_exit:
+        raise AssemblyError(
+            f"{what}: authored exit code {row.get('exit_code')} != raw "
+            f"bytes {raw_exit} (forged summary)")
+    # raw stdout must exist and hash-bind
+    stdout_rel = row.get("stdout_rel")
+    if not stdout_rel:
+        raise AssemblyError(f"{what}: no retained probe stdout")
+    stdout_path = resolve(f"{mode_dir}/{stdout_rel}"
+                          if not str(stdout_rel).startswith(mode_dir)
+                          else stdout_rel)
+    if not stdout_path.is_file():
+        raise AssemblyError(f"{what}: probe stdout missing (missing probe "
+                            "output)")
+    stdout_bytes = stdout_path.read_bytes()
+    if row.get("stdout_sha256") is not None \
+            and hashlib.sha256(stdout_bytes).hexdigest() != row["stdout_sha256"]:
+        raise AssemblyError(f"{what}: probe stdout hash mismatch")
+    # the structured raw record through the accepted parser
+    probe_path = resolve(f"{mode_dir}/raw/probe.json"
+                         if mode_dir else "raw/probe.json")
+    if not probe_path.is_file():
+        raise AssemblyError(f"{what}: raw probe record missing")
+    raw_record = json.loads(probe_path.read_bytes())
+    if raw_record.get("schema") != "inferswarm.issue35.transport-probe/1":
+        raise AssemblyError(f"{what}: raw probe schema mismatch")
+    import issue35_link_probe as x1
+    try:
+        parsed = x1.parse_probe_output(raw_record["probe_stdout"])
+    except Exception as exc:
+        raise AssemblyError(f"{what}: probe output unparseable: {exc}")
+    identity = parsed["identity"]
+    if expected_selector_index is not None \
+            and identity.get("vk_device_index") != expected_selector_index:
+        raise AssemblyError(
+            f"{what}: probe vk_device_index "
+            f"{identity.get('vk_device_index')} != expected "
+            f"{expected_selector_index}")
+    # exact BDF: the probe's own identity binding + subject record
+    ib = ((raw_record.get("twin_binding") or {}).get("identity_probe")
+          or {})
+    if expected_bdf is not None:
+        if not bdfs_equal(ib.get("pci_bdf"), expected_bdf):
+            raise AssemblyError(
+                f"{what}: probe identity binding BDF {ib.get('pci_bdf')} "
+                f"!= fresh mapping {expected_bdf} (wrong-die measurement)")
+        subj = raw_record.get("subject") or {}
+        if not bdfs_equal(subj.get("pci_bdf"), expected_bdf):
+            raise AssemblyError(
+                f"{what}: probe subject BDF {subj.get('pci_bdf')} != "
+                f"fresh mapping {expected_bdf}")
+    # frozen ladder completeness, reduced through the accepted reducer
+    sustained: dict[tuple[str, int], list[dict]] = {}
+    for r in parsed.get("sustained") or []:
+        sustained.setdefault((r["dir"], int(r["bytes"])), []).append(r)
+    for direction in ("h2d", "d2h"):
+        for size in TRANSPORT_SIZES:
+            rows_ = sustained.get((direction, size))
+            if not rows_:
+                raise AssemblyError(
+                    f"{what}: missing {direction} {size} transfer "
+                    "measurement")
+            if len(rows_) != TRANSPORT_REPS:
+                raise AssemblyError(
+                    f"{what}: {direction} {size} has {len(rows_)} reps "
+                    f"!= frozen {TRANSPORT_REPS}")
+            try:
+                x1.reduce_rows(rows_)
+            except Exception as exc:
+                raise AssemblyError(
+                    f"{what}: {direction} {size} rows fail the accepted "
+                    f"reducer: {exc}")
+    latency = parsed.get("latency") or []
+    if not latency or any(int(r.get("bytes", 0)) != TRANSPORT_SMALL_BYTES
+                           for r in latency):
+        raise AssemblyError(f"{what}: small-transfer service run missing "
+                            "or wrong size")
+    if len(latency) != TRANSPORT_SMALL_REPS:
+        raise AssemblyError(
+            f"{what}: small-transfer reps {len(latency)} != frozen "
+            f"{TRANSPORT_SMALL_REPS}")
+    bidir = parsed.get("bidir") or []
+    if not bidir or any(int(r.get("bytes_each_direction", 0))
+                        != TRANSPORT_BIDIR_BYTES_EACH for r in bidir):
+        raise AssemblyError(f"{what}: bidirectional run missing or wrong "
+                            "size")
+    if len(bidir) != TRANSPORT_BIDIR_REPS:
+        raise AssemblyError(
+            f"{what}: bidirectional reps {len(bidir)} != frozen "
+            f"{TRANSPORT_BIDIR_REPS}")
+    # under-load link-state evidence (#216)
+    link_samples = raw_record.get("link_samples") or []
+    load_samples = [s for s in link_samples
+                    if str(s.get("phase", "")).startswith(("load", "watch"))]
+    if len(load_samples) < TRANSPORT_MIN_LOAD_SAMPLES:
+        raise AssemblyError(
+            f"{what}: only {len(load_samples)} under-load link samples "
+            f"retained (< {TRANSPORT_MIN_LOAD_SAMPLES})")
+    return {
+        "exit_code": raw_exit,
+        "ladder_complete": True,
+        "sustained_groups": len(sustained),
+        "small_transfer_reps": len(latency),
+        "bidir_reps": len(bidir),
+        "load_link_samples": len(load_samples),
+        "identity_bdf": ib.get("pci_bdf"),
+    }
+
+
+def assemble_transport(evidence_root: Path,
+                       mapping: VerifiedMapping) -> dict[str, Any]:
+    doc, tdir = _phase_json(evidence_root, "transport/transport-*.json")
+    _require_binding(doc, "transport", evidence_root)
+    modes: dict[str, Any] = {}
+    # single arms: exact physical BDF/selector per arm from the mapping
+    for mode, die in (("single-a", "a"), ("single-b", "b")):
+        selector, bdf = mapping.expected(die)
+        row = doc.get(mode)
+        if not isinstance(row, dict):
+            raise AssemblyError(f"transport mode {mode} missing")
+        modes[mode] = _verify_transport_probe(
+            evidence_root, mode, row, bdf,
+            int(selector.replace("Vulkan", "")), f"transport {mode}")
     if "dual" not in doc:
         raise AssemblyError("transport dual mode missing")
     dual = doc["dual"]
     for die in ("a", "b"):
-        if dual["participants"][die].get("exit_code") != 0:
-            raise AssemblyError(f"dual transport participant {die} failed")
-    if not dual.get("probe_process_overlap"):
+        if not isinstance(dual.get("participants", {}).get(die), dict):
+            raise AssemblyError(f"dual transport participant {die} missing")
+    dual_verified = {}
+    for die in ("a", "b"):
+        selector, bdf = mapping.expected(die)
+        row = dual["participants"][die]
+        dual_verified[die] = _verify_transport_probe(
+            evidence_root, f"dual/{die}", row, bdf,
+            int(selector.replace("Vulkan", "")),
+            f"transport dual/{die}")
+    # FIX 5: dual-arm process overlap RE-DERIVED from retained timing
+    # fields (the authored probe_process_overlap boolean is not
+    # authority; it is cross-checked).
+    intervals = dual.get("intervals_ns") or {}
+    overlap_derived = False
+    spans = {}
+    for die in ("a", "b"):
+        iv = intervals.get(die)
+        if (not isinstance(iv, list) or len(iv) != 2
+                or not isinstance(iv[0], int) or not isinstance(iv[1], int)):
+            raise AssemblyError(
+                f"dual transport participant {die}: retained interval "
+                "fields incomplete (overlap not derivable)")
+        spans[die] = (iv[0], iv[1])
+    overlap_derived = max(spans["a"][0], spans["b"][0]) \
+        < min(spans["a"][1], spans["b"][1])
+    if not overlap_derived:
         raise AssemblyError(
-            "dual transport arm shows no probe-process overlap "
-            "(single-die measurements mislabeled simultaneous)")
+            "dual transport arm: retained launch intervals show no probe-"
+            "process overlap (single-die measurements mislabeled "
+            "simultaneous)")
+    if dual.get("probe_process_overlap") is False:
+        raise AssemblyError(
+            "authored dual-overlap boolean contradicts retained intervals")
     modes["dual"] = {"exit_code": 0,
-                     "probe_process_overlap": True}
-    return {"modes": modes,
-            "note": "throughput/latency values are descriptive only; "
-                    "no transport number is a correctness predicate"}
+                     "probe_process_overlap": overlap_derived,
+                     "participants": dual_verified}
+    return {
+        "modes": modes,
+        "ladder": {"sizes_bytes": list(TRANSPORT_SIZES),
+                   "reps": TRANSPORT_REPS,
+                   "small_transfer": {"bytes": TRANSPORT_SMALL_BYTES,
+                                      "reps": TRANSPORT_SMALL_REPS},
+                   "bidir": {"bytes_each": TRANSPORT_BIDIR_BYTES_EACH,
+                             "reps": TRANSPORT_BIDIR_REPS}},
+        "note": "throughput/latency values are descriptive only; "
+                "no transport number is a correctness predicate"
+    }
 
 
 def _scan_soak_faults(samples: list[dict[str, Any]],
@@ -488,11 +951,22 @@ def _scan_soak_faults(samples: list[dict[str, Any]],
     return {"journal_fault_counts": fatal, "cadence_gaps_ok": gaps_ok,
             "sample_count": len(samples),
             "unplanned_participant_exits": len(unplanned_exits),
+            "unplanned_exits_detail": [
+                {"event": e.get("event"),
+                 "pair_die": e.get("pair_die"),
+                 "monotonic_ns": e.get("monotonic_ns")}
+                for e in unplanned_exits],
+            "silent_restarts": [
+                {"event": e.get("event"), "pair": e.get("pair"),
+                 "monotonic_ns": e.get("monotonic_ns")}
+                for e in silent_restart],
             "events": [e.get("event") for e in events]}
 
 
-def assemble_soak(evidence_root: Path) -> dict[str, Any]:
+def assemble_soak(evidence_root: Path,
+                  mapping: VerifiedMapping) -> dict[str, Any]:
     doc, soak_dir = _phase_json(evidence_root, "soak/soak-*.json")
+    soak_dir = str(soak_dir)
     _require_binding(doc, "soak", evidence_root)
     duration = doc.get("duration_s", 0)
     if duration < SOAK_MIN_DURATION_S:
@@ -502,19 +976,38 @@ def assemble_soak(evidence_root: Path) -> dict[str, Any]:
     samples = doc.get("samples") or []
     if not samples:
         raise AssemblyError("soak retained no telemetry samples")
+    # FIX 6: sample numbering/order must be strictly ascending from 1
+    numbers = [s.get("sample") for s in samples]
+    if numbers != list(range(1, len(samples) + 1)):
+        raise AssemblyError(
+            f"soak sample numbering/order invalid (expected 1..N "
+            f"ascending, got {numbers[:5]}...)")
     journal_texts = []
     for s in samples:
-        # every listed telemetry sample must EXIST on disk (a deleted
-        # file must fail closed — control #12) and its journal delta too
+        # every listed telemetry sample must EXIST on disk and hash-bind
+        # to its retained sha256 (a deleted OR TAMPERED file must fail
+        # closed — control #12 + FIX 6 hash verification)
         tpath = evidence_root / soak_dir / s["rel"]
         if not tpath.is_file():
             raise AssemblyError(f"soak telemetry file missing: {s['rel']}")
+        data = tpath.read_bytes()
+        if "sha256" in s and hashlib.sha256(data).hexdigest() != s["sha256"]:
+            raise AssemblyError(
+                f"soak telemetry hash mismatch: {s['rel']}")
         rel = s["rel"].replace("telemetry-", "journal-").replace(
             ".json", ".stdout")
         p = evidence_root / soak_dir / rel
         if not p.is_file():
             raise AssemblyError(f"soak journal delta missing: {rel}")
         journal_texts.append(p.read_bytes())
+    # FIX 6: scan journal-final.stdout IN ADDITION to cadence deltas
+    # (events between the last cadence tick and termination, including
+    # the final sentinel window, must not be invisible)
+    final_journal = evidence_root / soak_dir / "raw/journal-final.stdout"
+    if not final_journal.is_file():
+        raise AssemblyError("soak final journal (journal-final.stdout) "
+                            "missing")
+    journal_texts.append(final_journal.read_bytes())
     scan = _scan_soak_faults(samples, doc.get("events") or [],
                              journal_texts)
     if scan["journal_fault_counts"]["fatal_aer"] > 0:
@@ -529,9 +1022,30 @@ def assemble_soak(evidence_root: Path) -> dict[str, Any]:
         raise AssemblyError(
             "soak telemetry gap exceeds frozen tolerance (a reset/crash "
             "could hide in the gap)")
+    # FIX 6: PID/liveness fields are consumed, not ignored: any GONE
+    # participant during an active interval is a platform failure
+    pid_rows = _scan_soak_pids(evidence_root, soak_dir, samples)
+    if pid_rows["gone_during_active"]:
+        raise PlatformFailure(
+            "soak participant PID GONE during an active interval: "
+            f"{pid_rows['gone_during_active']}")
+    # FIX 6: an unplanned participant exit is an affirmative platform
+    # failure, never a silent restart
+    if scan["unplanned_participant_exits"]:
+        raise PlatformFailure(
+            "unplanned participant exit during soak: "
+            f"{scan['unplanned_exits_detail']}")
+    if scan["silent_restarts"]:
+        raise PlatformFailure(
+            "unplanned exit followed by silent replacement during soak: "
+            f"{scan['silent_restarts']}")
+    # FIX 6: the completed campaign's stop reason must be duration_reached
+    if doc.get("stop_reason") != "duration_reached":
+        raise PlatformFailure(
+            f"soak stop reason {doc.get('stop_reason')!r} inconsistent "
+            "with a completed campaign (expected 'duration_reached')")
     # Sample-count denominator: the retained samples must COVER the full
-    # soak window at the frozen cadence (dropping a sample from both the
-    # summary and disk must fail closed — control #12).
+    # soak window at the frozen cadence.
     expected_min = duration // SOAK_CADENCE_S
     if len(samples) < expected_min:
         raise AssemblyError(
@@ -541,7 +1055,7 @@ def assemble_soak(evidence_root: Path) -> dict[str, Any]:
                >= (duration - 2 * SOAK_CADENCE_S) * 1_000_000_000)
     if not span_ok:
         raise AssemblyError("soak sample span does not cover the window")
-    # checkpoints + final sentinel
+    # checkpoints + final sentinel (all bound to the verified mapping)
     checkpoint_summaries = sorted(
         (evidence_root / soak_dir / "raw").glob("checkpoint-*.json"))
     expected_checkpoints = duration // SOAK_CHECKPOINT_EVERY_S
@@ -553,14 +1067,14 @@ def assemble_soak(evidence_root: Path) -> dict[str, Any]:
     for cp in checkpoint_summaries:
         pair = json.loads(cp.read_bytes())
         pair_dir = f"{soak_dir}/raw/{cp.stem}"
-        row = assemble_pair(evidence_root, pair, pair_dir,
+        row = assemble_pair(evidence_root, pair, pair_dir, mapping,
                             require_overlap=False)
         checkpoint_verdicts.append({"checkpoint": cp.stem,
                                    "correct": row["pair_correct"]})
     final_pair = _read_json(evidence_root,
                             f"{soak_dir}/raw/final-sentinel.json")
     final_row = assemble_pair(evidence_root, final_pair,
-                              f"{soak_dir}/raw/final-sentinel",
+                              f"{soak_dir}/raw/final-sentinel", mapping,
                               require_overlap=False)
     bad_checkpoints = [c for c in checkpoint_verdicts
                        if not c["correct"]]
@@ -579,11 +1093,32 @@ def assemble_soak(evidence_root: Path) -> dict[str, Any]:
         "stop_reason": doc.get("stop_reason"),
         "scan": {k: scan[k] for k in ("journal_fault_counts",
                                       "sample_count")},
+        "pid_liveness": {"samples_scanned": pid_rows["samples_scanned"],
+                         "gone_during_active":
+                             pid_rows["gone_during_active"]},
         "checkpoints": checkpoint_verdicts,
         "final_sentinel_correct": final_row["pair_correct"],
         "all_checkpoints_correct": not bad_checkpoints,
         "ecc_growth": growth,
     }
+
+
+def _scan_soak_pids(evidence_root: Path, soak_dir: str,
+                    samples: list[dict[str, Any]]) -> dict[str, Any]:
+    """FIX 6: consume the retained PID/liveness fields from every
+    telemetry sample. A participant whose /proc state reads GONE during
+    an interval where the soak believed it active is a platform
+    failure. Sample rows carry pids.<die> = {pid, state}."""
+    gone: list[str] = []
+    scanned = 0
+    for s in samples:
+        snap = _read_json(evidence_root, f"{soak_dir}/{s['rel']}")
+        pids = snap.get("pids") or {}
+        scanned += 1
+        for die, row in pids.items():
+            if isinstance(row, dict) and row.get("state") == "GONE":
+                gone.append(f"sample {s.get('sample')} die {die}")
+    return {"samples_scanned": scanned, "gone_during_active": gone}
 
 
 def _derive_ecc_growth(evidence_root: Path,
@@ -616,14 +1151,32 @@ def _derive_ecc_growth(evidence_root: Path,
     return {"growth": growth}
 
 
-def assemble_fault_arm(evidence_root: Path, arm: str) -> dict[str, Any]:
+SIGKILL_EXIT_CODE = -9  # frozen platform result: subprocess SIGKILL
+
+
+def assemble_fault_arm(evidence_root: Path, arm: str,
+                       mapping: VerifiedMapping) -> dict[str, Any]:
     doc = _read_json(evidence_root, f"fault-arm-{arm}.json")
     _require_binding(doc, f"fault arm {arm}", evidence_root)
     sibling = doc["sibling"]
     victim = doc["victim"]
-    # victim-gone is RE-DERIVED from the retained exit-code bytes: a
-    # SIGKILLed process exits negative (signal). The authored boolean is
-    # only a cross-check.
+    what = f"fault arm {arm}"
+    # FIX 4: exact arm derivation
+    if arm == "a" and not (victim == "a" and sibling == "b"):
+        raise AssemblyError(
+            f"fault arm A requires victim==a sibling==b (got victim="
+            f"{victim} sibling={sibling})")
+    if arm == "b" and not (victim == "b" and sibling == "a"):
+        raise AssemblyError(
+            f"fault arm B requires victim==b sibling==a (got victim="
+            f"{victim} sibling={sibling})")
+    if doc.get("kill_method") != "SIGKILL":
+        raise AssemblyError(
+            f"fault arm {arm}: kill_method {doc.get('kill_method')!r} != "
+            "frozen SIGKILL")
+    # victim-gone is RE-DERIVED from the retained exit-code bytes and
+    # must equal the frozen SIGKILL result EXACTLY (-9 on this
+    # platform), not merely < 0.
     victim_exit_raw = _read_raw(
         evidence_root,
         f"fault-arm-{arm}-loss/initial/{victim}/run.exit-code")
@@ -631,41 +1184,150 @@ def assemble_fault_arm(evidence_root: Path, arm: str) -> dict[str, Any]:
         victim_exit = int(victim_exit_raw.decode().strip())
     except ValueError:
         raise AssemblyError("victim exit-code not parseable")
-    victim_gone = victim_exit < 0
-    if doc.get("victim_gone") is True and not victim_gone:
+    if victim_exit != SIGKILL_EXIT_CODE:
+        raise PlatformFailure(
+            f"fault arm {arm}: victim exit code {victim_exit} != frozen "
+            f"SIGKILL result {SIGKILL_EXIT_CODE}")
+    victim_gone = True
+    if doc.get("victim_gone") is not True:
         raise AssemblyError(
-            f"authored victim_gone contradicts retained exit code "
-            f"{victim_exit}")
+            f"fault arm {arm}: authored victim_gone contradicts the "
+            "retained SIGKILL exit code")
+    # survivor: correct AND on the fresh-mapped SIBLING identity
     sibling_run = rederive_execution(
         evidence_root, doc["sibling_run"],
         f"fault-arm-{arm}-loss/initial/{sibling}")
+    require_execution_identity(sibling, doc["sibling_run"], sibling_run,
+                               mapping, f"{what} survivor")
+    # relaunch: correct AND on the fresh-mapped VICTIM identity
     relaunch_run = rederive_execution(
         evidence_root, doc["relaunch_run"],
         f"fault-arm-{arm}-loss/relaunch/{victim}")
+    require_execution_identity(victim, doc["relaunch_run"], relaunch_run,
+                               mapping, f"{what} victim relaunch")
+    # recovery pair independently satisfies the exact mapping
     sentinel_row = assemble_pair(
         evidence_root, doc["recovery_sentinel"],
-        f"fault-arm-{arm}-loss/recovery-sentinel",
+        f"fault-arm-{arm}-loss/recovery-sentinel", mapping,
         require_overlap=False)
-    sibling_stayed = sibling_run["selected_bdf"] == doc[
-        "sibling_run"].get("selected_bdf")
+    if not sibling_run["correct"]:
+        raise PlatformFailure(
+            f"fault arm {arm}: survivor failed correctness")
+    if not relaunch_run["correct"]:
+        raise PlatformFailure(
+            f"fault arm {arm}: victim relaunch failed correctness")
     return {
         "arm": arm,
+        "victim": victim,
+        "sibling": sibling,
+        "kill_method": doc["kill_method"],
         "victim_exit_code": victim_exit,
         "victim_gone": victim_gone,
         "sibling_correct": sibling_run["correct"],
-        "sibling_stayed_on_die": sibling_stayed,
+        "sibling_selected_bdf": sibling_run["selected_bdf"],
         "relaunch_correct": relaunch_run["correct"],
+        "relaunch_selected_bdf": relaunch_run["selected_bdf"],
         "recovery_sentinel_correct": sentinel_row["pair_correct"],
     }
 
 
-def assemble_reset(evidence_root: Path) -> dict[str, Any]:
+RESET_NOT_AVAILABLE = "DEVICE_RESET_ISOLATION_NOT_AVAILABLE"
+RESET_ARM_EXECUTED = "RESET_ARM_EXECUTED"
+
+
+def _derive_reset_disposition(record: dict[str, Any]) -> dict[str, Any]:
+    """FIX 7: mechanically re-derive the reset disposition from the
+    retained read-only topology/reset-mechanism evidence. The authored
+    `disposition` string is not authority.
+
+    Derivation over the retained probes (never authored fields):
+      * per-die sysfs `reset` file presence;
+      * whether both Vega functions sit behind one physical fanout
+        switch (retained lspci tree);
+      * kernel-doc/driver evidence for a documented per-function reset.
+    For this V340L topology the mechanically derived result is
+    DEVICE_RESET_ISOLATION_NOT_AVAILABLE whenever the only exposed
+    mechanism is the shared-board sysfs reset: a board-level reset
+    cannot isolate one die and is not documented as function-safe for
+    this dual-die topology. NO reset is ever executed by this
+    assembler.
+    """
+    probes = record.get("probes") or {}
+    if not isinstance(probes, dict) or set(probes) != {"a", "b"}:
+        raise AssemblyError("reset determination: probe set invalid")
+    for die, p in probes.items():
+        if not isinstance(p, dict) or "reset_file_present" not in p:
+            raise AssemblyError(
+                f"reset determination: die {die} probe lacks the sysfs "
+                "reset-file observation")
+    reset_present = {die: bool(p.get("reset_file_present"))
+                     for die, p in probes.items()}
+    tree = record.get("lspci_tree")
+    if not isinstance(tree, str) or not tree.strip():
+        raise AssemblyError(
+            "reset determination: retained lspci tree missing/empty")
+    shared = record.get("both_functions_behind_one_switch")
+    if not isinstance(shared, bool):
+        raise AssemblyError(
+            "reset determination: shared-switch derivation missing")
+    docs = record.get("kernel_docs_stdout")
+    if not isinstance(docs, str) or "PROBE_DONE" not in docs:
+        raise AssemblyError(
+            "reset determination: kernel-doc probe output missing")
+    # derivation (mirrors the frozen determine() logic over RETAINED
+    # bytes — the accepted collector's own predicate, re-run here)
+    if not any(reset_present.values()):
+        derived = RESET_NOT_AVAILABLE
+        reason = ("no sysfs reset mechanism exposed by the driver for "
+                  "these functions")
+    elif shared:
+        derived = RESET_NOT_AVAILABLE
+        reason = ("sysfs reset file present, but both Vega functions are "
+                  "downstream of the same physical PM8533 fanout switch "
+                  "on one dual-die V340L board: the sysfs reset (function "
+                  "level secondary-bus-reset/FLR class) is not a "
+                  "documented, function-isolated reset mechanism for this "
+                  "dual-die board topology; issue #216 prohibits "
+                  "improvised bus/bridge resets, so no reset arm is "
+                  "executed")
+    else:
+        derived = "DOCUMENTED_MECHANISM_AVAILABLE"
+        reason = "reset file(s) present without shared-board conflict"
+    return {"derived": derived, "reason": reason,
+            "reset_file_present": reset_present,
+            "both_functions_behind_one_switch": shared}
+
+
+def assemble_reset(evidence_root: Path,
+                   mapping: VerifiedMapping) -> dict[str, Any]:
     doc = _read_json(evidence_root, "reset-determination.json")
-    disposition = doc.get("disposition")
-    if disposition not in ("DEVICE_RESET_ISOLATION_NOT_AVAILABLE",
-                           "RESET_ARM_EXECUTED"):
+    derivation = _derive_reset_disposition(doc)
+    disposition = derivation["derived"]
+    if disposition not in (RESET_NOT_AVAILABLE, RESET_ARM_EXECUTED):
         raise AssemblyError(f"unknown reset disposition: {disposition}")
-    return {"disposition": disposition, "reason": doc.get("reason")}
+    if doc.get("disposition") != disposition:
+        raise AssemblyError(
+            f"authored reset disposition {doc.get('disposition')!r} "
+            f"contradicts the mechanical derivation {disposition!r}")
+    # bind the reset determination's per-die BDFs to the mapping
+    probes = doc.get("probes") or {}
+    for die in ("a", "b"):
+        _, exp_bdf = mapping.expected(die)
+        got = normalize_bdf((probes.get(die) or {}).get("bdf"))
+        if got is None or got != exp_bdf:
+            raise AssemblyError(
+                f"reset determination die {die} BDF "
+                f"{(probes.get(die) or {}).get('bdf')} != fresh mapping "
+                f"{exp_bdf}")
+    return {"disposition": disposition,
+            "reason": derivation["reason"],
+            "derivation": {
+                "reset_file_present": derivation["reset_file_present"],
+                "both_functions_behind_one_switch":
+                    derivation["both_functions_behind_one_switch"],
+                "mechanism": "re-derived from retained sysfs/lspci/"
+                             "kernel-doc evidence; authored string never "
+                             "authority"}}
 
 
 # ---------------------------------------------------------------------------
@@ -690,13 +1352,16 @@ def classify(assembly: dict[str, Any]) -> str:
 
 _FROZEN_AUTHORITY_DIGEST: str | None = None
 _FROZEN_MAPPING_DIGEST: str | None = None
+_FROZEN_CLOSURE_DIGEST: str | None = None
 
 
 def _require_binding(doc: dict[str, Any], what: str,
                      evidence_root: Path | None = None) -> None:
-    """Every phase record must carry the SAME frozen authority and the
-    fresh mapping bound at preflight; anything else fails closed."""
+    """Every phase record must carry the SAME frozen authority, the
+    fresh mapping bound at preflight, AND the producer-freeze closure
+    digest (FIX 1 phase→producer binding); anything else fails closed."""
     global _FROZEN_AUTHORITY_DIGEST, _FROZEN_MAPPING_DIGEST
+    global _FROZEN_CLOSURE_DIGEST
     if _FROZEN_AUTHORITY_DIGEST is None:
         authority_doc = json.loads(
             (REPO / "docs/investigations/vulkan-v2-d-v340l-concurrent/"
@@ -706,9 +1371,25 @@ def _require_binding(doc: dict[str, Any], what: str,
         raise AssemblyError(
             f"{what}: authority digest "
             f"{doc.get('authority_digest')} != frozen")
+    # FIX 1: every phase record binds the producer-freeze closure digest
+    if _FROZEN_CLOSURE_DIGEST is None:
+        closure = rc.verify_closure(REPO)
+        _FROZEN_CLOSURE_DIGEST = closure["closure_digest"]
+    closure_digest = _FROZEN_CLOSURE_DIGEST
+    assert closure_digest is not None
+    if doc.get("closure_digest") is None:
+        raise AssemblyError(
+            f"{what}: no producer-closure binding (evidence predates the "
+            "corrected freeze cannot carry executed-byte provenance)")
+    if doc.get("closure_digest") != closure_digest:
+        raise AssemblyError(
+            f"{what}: closure digest {str(doc.get('closure_digest'))[:16]} "
+            f"!= frozen producer closure "
+            f"{closure_digest[:16]} (evidence from another "
+            "producer identity)")
     md = doc.get("mapping_digest")
     if md is None:
-        return
+        raise AssemblyError(f"{what}: no mapping binding")
     if _FROZEN_MAPPING_DIGEST is None:
         if evidence_root is None:
             return
@@ -721,24 +1402,36 @@ def _require_binding(doc: dict[str, Any], what: str,
 
 
 def assemble(evidence_root: Path) -> dict[str, Any]:
+    # FIX 1: verify the corrected producer freeze FIRST — the assembler
+    # reduces nothing unless the live tree still proves executed-byte
+    # identity against the pinned producer head.
     closure = rc.verify_closure(REPO)
     out: dict[str, Any] = {
         "schema": SCHEMA_ASSEMBLY,
         "campaign_id": rc.CAMPAIGN_ID,
         "closure_sources": sorted(closure["sources"]),
+        "producer_head": closure["producer_head"],
+        "closure_digest": closure["closure_digest"],
     }
     platform_failure = None
     prerequisites_ok = True
     concurrent_failure = None
+    mapping: VerifiedMapping | None = None
     try:
-        preflight = assemble_preflight(evidence_root)
+        # FIX 2: verify the retained fresh mapping artifact FIRST (R3
+        # revalidation from its own retained probe bytes); every phase's
+        # identity checks compare against this verified mapping.
+        mapping = load_verified_mapping(evidence_root)
+        out["mapping_digest"] = mapping.digest
+        preflight = assemble_preflight(evidence_root, mapping)
         out["preflight"] = preflight
         if not preflight["preexisting_fault_free"] or not all(
                 preflight["sentinels_correct"].values()):
             prerequisites_ok = False
-        out["baselines"] = assemble_baselines(evidence_root, {})
+        out["baselines"] = assemble_baselines(evidence_root, mapping, {})
         ledger = _read_json(evidence_root, "attempt-ledger.json")
-        out["concurrent"] = assemble_concurrent(evidence_root, ledger)
+        out["concurrent"] = assemble_concurrent(evidence_root, ledger,
+                                                mapping)
     except CorrectnessFailure as exc:
         # a valid simultaneous execution violated a correctness
         # predicate (identity/attribution/accounting) — never BLOCKED
@@ -755,34 +1448,48 @@ def assemble(evidence_root: Path) -> dict[str, Any]:
         out["concurrent_failure"] = concurrent_failure
         out["terminal"] = "V2D_V340L_CONCURRENT_CORRECTNESS_FAIL"
         return out
+    assert mapping is not None  # prerequisites_ok implies mapping loaded
     # post-concurrency phases; failures classify per the rules
     try:
-        out["transport"] = assemble_transport(evidence_root)
+        out["transport"] = assemble_transport(evidence_root, mapping)
     except AssemblyError as exc:
         out["transport"] = None
         out["transport_missing_reason"] = str(exc)
     try:
-        out["soak"] = assemble_soak(evidence_root)
+        out["soak"] = assemble_soak(evidence_root, mapping)
     except PlatformFailure as exc:
         platform_failure = str(exc)
+    except CorrectnessFailure as exc:
+        # a soak checkpoint/final sentinel executed on the wrong device
+        # identity — survivor/checkpoint corruption class, never PASS
+        platform_failure = platform_failure or (
+            f"soak identity violation: {exc}")
     except AssemblyError as exc:
         out["soak"] = None
         out["soak_missing_reason"] = str(exc)
     for arm, key in (("a", "fault_a"), ("b", "fault_b")):
         try:
-            out[key] = assemble_fault_arm(evidence_root, arm)
+            out[key] = assemble_fault_arm(evidence_root, arm, mapping)
             if not (out[key]["victim_gone"] and out[key]["sibling_correct"]
-                    and out[key]["sibling_stayed_on_die"]
                     and out[key]["relaunch_correct"]
                     and out[key]["recovery_sentinel_correct"]):
                 platform_failure = platform_failure or (
                     f"fault arm {arm}: survivor corruption or failed "
                     f"recovery")
+        except PlatformFailure as exc:
+            out[key] = None
+            platform_failure = platform_failure or str(exc)
+        except CorrectnessFailure as exc:
+            # wrong-die survivor/relaunch/recovery execution: a fault-arm
+            # participant silently rebound to the other die — never PASS
+            out[key] = None
+            platform_failure = platform_failure or (
+                f"fault arm {arm} identity violation: {exc}")
         except AssemblyError as exc:
             out[key] = None
             out[f"{key}_missing_reason"] = str(exc)
     try:
-        out["reset"] = assemble_reset(evidence_root)
+        out["reset"] = assemble_reset(evidence_root, mapping)
     except AssemblyError as exc:
         out["reset"] = None
         out["reset_missing_reason"] = str(exc)

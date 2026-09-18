@@ -78,7 +78,15 @@ def telemetry_snapshot(out_dir: Path, sample: int, bdfs: list[str],
 def run_soak(*, repo: Path, out: Path, attempt_id: str,
              authority: dict[str, Any], mapping: dict[str, Any],
              duration_s: int) -> dict[str, Any]:
-    rc.verify_closure(repo)
+    closure = rc.verify_closure(repo)
+    # FIX 2: the identity pair each soak participant (and the final
+    # sentinel, and every checkpoint via run_pair) must satisfy
+    identities = {
+        die: ex.require_identity(
+            mapping["participants"][die]["fresh_selector"],
+            mapping["participants"][die]["fresh_pci_bdf"])
+        for die in ("a", "b")
+    }
     if duration_s < MIN_DURATION_S:
         raise SystemExit("frozen soak parameters rejected: duration")
     bdfs = [mapping["participants"][d]["fresh_pci_bdf"]
@@ -119,7 +127,8 @@ def run_soak(*, repo: Path, out: Path, attempt_id: str,
             active[f"{idx}:{die}"] = p
         events.append({"event": "pair_launched", "pair": idx,
                        "monotonic_ns": time.monotonic_ns(),
-                       "pids": {k: p.pid for k, p in active.items()}})
+                       "pids": {k: p.pid for k, p in active.items()},
+                       "identity_pairs": dict(identities)})
 
     launch_pair()
     sample_no = 0
@@ -219,6 +228,8 @@ def run_soak(*, repo: Path, out: Path, attempt_id: str,
         "samples": samples,
         "authority_digest": authority["authority_digest"],
         "mapping_digest": mapping["mapping_digest"],
+        "closure_digest": closure["closure_digest"],
+        "producer_head": closure["producer_head"],
     }
     (out / f"soak-{attempt_id}.json").write_bytes(
         json.dumps(record, indent=1, sort_keys=True).encode() + b"\n")

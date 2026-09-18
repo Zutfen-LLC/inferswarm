@@ -84,13 +84,45 @@ def finish_participant(die: str, spec: dict[str, Any],
     return run
 
 
+def _require_fault_identity(die: str, run: dict[str, Any],
+                            identity_pair: str, what: str) -> None:
+    """FIX 4 producer-side gate: survivor/relaunch must have actually
+    executed on the fresh-mapped (selector, BDF), re-derived from the
+    retained stderr + argv bytes."""
+    stderr_text = (Path(run.get("_stderr_path") or "") .read_text(
+        errors="replace") if run.get("_stderr_path") else "")
+    # finish_participant already parsed from retained bytes; re-derive
+    # from the run row's own argv + selected_bdf (both retained-byte
+    # derived at collection time; the assembler re-derives again)
+    argv = run.get("argv") or []
+    got_selector = argv[argv.index("--device") + 1] \
+        if "--device" in argv else None
+    got_bdf = run.get("selected_bdf")
+    if not ex._selector_bdf_match(got_selector, got_bdf, identity_pair):
+        raise RuntimeError(
+            f"fault {what} (die {die}) identity failure: selector "
+            f"{got_selector!r} / BDF {got_bdf!r} != fresh mapping pair "
+            f"{identity_pair!r}")
+
+
 def run_fault_arm(*, repo: Path, out: Path, attempt_id: str, arm: str,
                   authority: dict[str, Any],
                   mapping: dict[str, Any]) -> dict[str, Any]:
-    """arm in ('a','b'): the die to terminate; sibling is the other."""
-    rc.verify_closure(repo)
+    """arm in ('a','b'): the die to terminate; sibling is the other.
+
+    FIX 1: binds the producer closure. FIX 4: the arm derivation is
+    exact (victim == arm, sibling == the other) and the frozen kill
+    method is SIGKILL; survivor/relaunch identity pairs are enforced
+    from retained bytes."""
+    closure = rc.verify_closure(repo)
     victim = arm
     sibling = "b" if arm == "a" else "a"
+    identities = {
+        die: ex.require_identity(
+            mapping["participants"][die]["fresh_selector"],
+            mapping["participants"][die]["fresh_pci_bdf"])
+        for die in ("a", "b")
+    }
     base = out / f"fault-arm-{arm}-loss"
     # 1. start the frozen concurrent pair
     procs: dict[str, Any] = {}
@@ -137,6 +169,8 @@ def run_fault_arm(*, repo: Path, out: Path, attempt_id: str, arm: str,
         procs[sibling].wait(timeout=30)
     sibling_run = finish_participant(sibling, sib_spec, procs[sibling],
                                      repo)
+    _require_fault_identity(sibling, sibling_run, identities[sibling],
+                            "survivor")
     sibling_verdict = ex.reduce_run(sibling_run)
     sibling_run["killed_sibling_at_ns"] = kill_at
     # 5. relaunch victim from the exact frozen argv/config
@@ -144,6 +178,8 @@ def run_fault_arm(*, repo: Path, out: Path, attempt_id: str, arm: str,
                                       mapping, authority, attempt_id)
     rproc.wait(timeout=1900)
     relaunch_run = finish_participant(victim, rspec, rproc, repo)
+    _require_fault_identity(victim, relaunch_run, identities[victim],
+                            "victim relaunch")
     relaunch_verdict = ex.reduce_run(relaunch_run)
     # 6. fresh A+B concurrent sentinel
     sentinel = conc.run_pair(repo=repo, out=base / "recovery-sentinel",
@@ -166,6 +202,8 @@ def run_fault_arm(*, repo: Path, out: Path, attempt_id: str, arm: str,
         "recovery_sentinel": sentinel,
         "authority_digest": authority["authority_digest"],
         "mapping_digest": mapping["mapping_digest"],
+        "closure_digest": closure["closure_digest"],
+        "producer_head": closure["producer_head"],
     }
     (out / f"fault-arm-{arm}.json").write_bytes(
         json.dumps(record, indent=1, sort_keys=True).encode() + b"\n")
