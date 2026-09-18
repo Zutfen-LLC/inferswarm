@@ -122,6 +122,8 @@ def collect_preflight(*, repo: Path, out: Path, attempt_id: str,
     # Fresh mapping (intended-identity corroborating discovery)
     mapping = pa.fresh_map(authority_path, attempt_id, out / "mapping",
                            repo)
+    (out / "mapping" / "fresh-mapping.json").write_bytes(
+        json.dumps(mapping, indent=1, sort_keys=True).encode() + b"\n")
 
     aer = {bdf: host.aer_counters(bdf) for bdf in bdfs}
 
