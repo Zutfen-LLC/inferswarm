@@ -1,57 +1,105 @@
-# V2-D — concurrent V340L dual-die qualification (issue #216)
+# V2-D — concurrent V340L dual-die qualification (issue #216) — CORRECTED campaign
 
-Status: COMPLETE — terminal `V2D_V340L_CONCURRENT_DUAL_DIE_STABILITY_PASS` (derived by `scripts/issue216_assemble.py` from retained bytes; see `evidence/ASSEMBLY.json` + `evidence/TOKEN_TERMINAL.json` if present).
+Status: COMPLETE — terminal **`V2D_V340L_PLATFORM_STRESS_FAIL`**
+(retained; derived by `scripts/issue216_assemble.py` from retained
+bytes; see `evidence/ASSEMBLY.json`).
 
 Campaign: `issue216-v2d-v340l-concurrent-dual-die-v2`
 Authority: `PHYSICAL-AUTHORITY.json` (intended identity from accepted
 V2-B/V2-C manifest-pinned bytes; #219 corrected-seam runtime pins).
 
-## Architecture (post-#218-rejection)
+## Why a corrected campaign
 
-See `AUDIT-REJECTIONS.md`. Concurrency authority is the accepted #219
-vulkan-timestamp-observe seam (corrected instrument build,
-ggml-vulkan sha256 `6469472…`), never process/wrapper lifetime. All
-verdicts are re-derived from retained raw bytes by
-`scripts/issue216_assemble.py` through the accepted parsers
-(v0c_correctness with per-argv semantics, v1c_accounting,
-issue219_reduce overlap machinery).
+The original tooling's producer closure (schema /2) hashed the Git
+INDEX (`git show :<path>`) while Python executed WORKING-TREE bytes —
+it could not prove executed-byte identity. The correction (PR #221
+correction campaign) replaced it with a fail-closed producer freeze
+(schema /3: worktree == index == HEAD per closure source, pinned
+producer head, self-bound digest) and rebuilt every reducer named in
+the correction spec (mapping→execution binding, sentinel re-derivation,
+fault-arm exactness, transport re-derivation, soak hardening, reset
+re-derivation), then re-ran the physical campaign under the corrected
+freeze. Reduction-only changes after retained output are admitted via
+`AMENDMENTS.json` with a mechanical collector-unchanged proof.
 
-## Phases
+## Chain-2 results (producer pin d921033, evidence head f6af8c7)
 
 1. Preflight (fresh topology/mapping/sentinels): PASS — both fresh
-   sentinels correct, journal fault-free, BDFs 06:00.0/09:00.0.
-2. Single-die baselines (3 reps each): both dies 3/3 correct,
-   full offload, accounting 0/0/0.
-3. Concurrent pairs (3): 3/3 clean repeats, seam-classified OVERLAP
-   (conservative lower bound ~+9.17 ms on c01; distinct device UUIDs
-   per participant).
-4. Transport (single-A/single-B/dual via accepted #35 probe):
-   all arms green with probe-process overlap; negotiated Gen3 at the
-   endpoints; single-die ~0.63–0.79 GB/s per direction; dual shows
-   measurable per-die degradation (shared upstream path contention) —
-   descriptive only, no performance threshold is a PASS predicate.
-5. Soak (60 min): COMPLETE — 3600 s duration_reached, 61 sustained
-   concurrent pairs, 60 telemetry samples at 60 s cadence, 10/10
-   checkpoints correct, final post-soak sentinel correct, journal
-   fault-free (no amdgpu reset/hang, no fatal AER, no thermal alarm),
-   ECC/RAS growth zero.
-6. Fault arms A/B: PASS both — victim SIGKILLed and proven gone,
-   sibling stayed on its die and finished correct (no fallback or
-   reassignment), victim relaunched from the frozen argv and rebound
-   to its die, fresh A+B recovery sentinel correct.
-7. Reset: `DEVICE_RESET_ISOLATION_NOT_AVAILABLE` — sysfs reset files
-   exist but both Vega functions sit behind one physical PM8533
-   fanout switch on the dual-die board; no documented function-isolated
-   reset mechanism for this topology (issue prohibits improvised
-   bus/bridge resets).
+   sentinels correct (re-derived from raw bytes), journal fault-free;
+   fresh mapping Vulkan1 ↔ `0000:06:00.0`, Vulkan2 ↔ `0000:09:00.0`
+   (R3 re-verified; every execution argv-selector + stderr-BDF bound
+   to it).
+2. Single-die baselines (3 reps each): both dies 3/3 correct, full
+   offload, accounting 0/0/0, correct die identity throughout.
+3. Concurrent pairs c01/c02/c03: 3/3 clean repeats, seam-classified
+   OVERLAP. #219 overlap lower bounds: c01 2 511 893 ns,
+   c02 4 588 483 ns, c03 2 586 522 ns. (The stale "+~9.17 ms on c01"
+   statement described the superseded chain's assembly and is removed.)
+4. Transport: single-A arm completed clean. The single-B probe was in
+   flight when the platform fault (below) struck.
 
-## Non-claims (inherited)
+## The retained platform fault (why the terminal is STRESS_FAIL)
 
-No 16-GiB unified memory claim; no model-specific Qwen/DeepSeek
-qualification; no mixed-vendor execution; no planner policy; no
-production support. Device-reset isolation only if a documented-safe
-mechanism exists (determination retained).
+2026-09-18 16:28:33 EDT (20:28:33 UTC), seconds after the transport
+phase began: `amdgpu 0000:09:00.0: ring gfx timeout, signaled
+seq=5131, emitted seq=5132` while the accepted #35 probe measured
+die B. The driver dumped IP state (devcoredump created), the GPU
+reset FAILED (`GPU reset end with ret = -62`), and the reset kworker
+wedged in `dm_suspend` (D-state) for over an hour; the probe process
+hung uninterruptibly in `dma_fence_wait` inside `amdgpu_vm_fini` on
+device close. The host needed a reboot, which itself stalled on the
+wedged kworker before eventually completing.
 
-Evidence layout: phase summaries at the evidence root; raw bytes in
-phase subdirs; receipts bind raw bytes by content; `MANIFEST.sha256`
-regenerated by `scripts/issue216_manifest.py` (never hand-edited).
+Retained proof: `evidence/fault-capture/` (dmesg at fault, full
+boot journal at fault, process states incl. the D-state stack, both
+dies' lspci -vvv, SHA256SUMS verified). The assembler's campaign-
+window fault scan (journalctl + dmesg -T grammars; window bounded by
+the phase records' own timestamps) re-derives 9 in-window fault lines
+from the journal capture and classifies
+`V2D_V340L_PLATFORM_STRESS_FAIL`.
+
+Per issue #216's terminal vocabulary: a valid frozen campaign whose
+retained evidence positively demonstrates a GPU hang/reset is a
+PLATFORM_STRESS_FAIL — never relabeled, never erased by later missing
+evidence (soak/fault/reset never ran after the fault), and the
+campaign may not be rerun under the same authority seeking a PASS.
+
+Honest context: the SUPERSEDED chain-1 (defective index-based closure;
+`evidence-superseded-v1/`) ran byte-identical producers (verified
+`git diff` on every physical producer) through ALL phases — including
+a clean 3600 s soak and both fault arms — and completed cleanly. The
+fault is therefore an intermittent platform fault of this V340L
+dual-die topology under sustained concurrent load (chain-1 soak +
+chain-2 rerun back-to-back the same evening), not a tooling
+regression. Chain-1's clean completion does not erase chain-2's
+retained fault.
+
+## Non-claims (inherited + fault-driven)
+
+- Device-level reset isolation was NOT executed; the read-only
+  determination (`DEVICE_RESET_ISOLATION_NOT_AVAILABLE`) is retained
+  — both Vega functions sit behind one physical PM8533 fanout switch
+  and no documented function-isolated reset exists for this topology.
+- No throughput threshold is a PASS predicate anywhere; transport
+  magnitudes are descriptive only.
+- The topology is NOT qualified as a trustworthy concurrent resource:
+  the retained fault stands against it.
+- No 16-GiB unified memory claim; no model-specific Qwen/DeepSeek
+  qualification; no mixed-vendor execution; no planner policy; no
+  production support.
+- Correctable PCIe AER events on the NVMe fanout path (02:00.0,
+  Phison 11f8:8533) appeared at background rates all day (554 lines);
+  they are correctable-error noise on the switch port, not GPU faults.
+
+## Evidence layout
+
+- `evidence/` — chain-2 retained output (141 files) plus
+  `fault-capture/`.
+- `evidence-superseded-v1/` — chain-1 output under the defective
+  /2 closure (762 files); retained history, never deleted; see its
+  README for what it DID prove and why it cannot carry terminal
+  authority.
+- Phase summaries at the evidence root; raw bytes in phase subdirs;
+  receipts bind raw bytes by content; `PRODUCER-CLOSURE.json`
+  (schema /3), `AMENDMENTS.json`, `MANIFEST.sha256` regenerated by
+  `scripts/issue216_manifest.py` (never hand-edited).

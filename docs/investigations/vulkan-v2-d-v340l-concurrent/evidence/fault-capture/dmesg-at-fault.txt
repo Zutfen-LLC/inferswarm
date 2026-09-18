@@ -1,0 +1,1415 @@
+[Fri Sep 18 16:59:55 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 16:59:55 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 16:59:55 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 16:59:55 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 16:59:55 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 16:59:55 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 16:59:55 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 16:59:55 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 16:59:55 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 16:59:56 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 16:59:56 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 16:59:56 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 16:59:56 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 16:59:58 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 16:59:58 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 16:59:58 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 16:59:58 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:00 2026] aer_ratelimit: 82 callbacks suppressed
+[Fri Sep 18 17:00:00 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:00 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:00 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:00 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:00 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:00 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:02 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:02 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:02 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:02 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:04 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:04 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:04 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:04 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:05 2026] aer_ratelimit: 83 callbacks suppressed
+[Fri Sep 18 17:00:05 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Data Link Layer, (Receiver ID)
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000080/0000e000
+[Fri Sep 18 17:00:05 2026] pcieport 0000:02:00.0:    [ 7] BadDLLP               
+[Fri Sep 18 17:00:06 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:06 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:06 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:06 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:08 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:08 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:08 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:08 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:10 2026] aer_ratelimit: 78 callbacks suppressed
+[Fri Sep 18 17:00:10 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:10 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:10 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:10 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:10 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:10 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:10 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:10 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:10 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:10 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:10 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:10 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:11 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:11 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:11 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:11 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:11 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:11 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:11 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:11 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:11 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:11 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:11 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:11 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:12 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:12 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:12 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:12 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:14 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:14 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:14 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:14 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:15 2026] aer_ratelimit: 83 callbacks suppressed
+[Fri Sep 18 17:00:15 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:15 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:15 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:15 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:15 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:15 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:15 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:15 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:15 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:15 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:15 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:15 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:15 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:15 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:15 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:15 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:15 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:15 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:15 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:15 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:16 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:16 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:16 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:16 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:16 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:16 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:16 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:16 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:16 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:16 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:16 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:16 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:16 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:16 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:16 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:16 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:16 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:16 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:16 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:16 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:16 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:16 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:16 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:16 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:18 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:18 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:18 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:18 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:20 2026] aer_ratelimit: 82 callbacks suppressed
+[Fri Sep 18 17:00:20 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:20 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:20 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:20 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:20 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:20 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:20 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:20 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:20 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:20 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:20 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:20 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:21 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:21 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:21 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:21 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:21 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:21 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:21 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:21 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:21 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:22 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:22 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:22 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:22 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:24 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:24 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:24 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:24 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:25 2026] aer_ratelimit: 72 callbacks suppressed
+[Fri Sep 18 17:00:25 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:25 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:25 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:25 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:25 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:25 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:25 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:25 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:25 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:25 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:25 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:25 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:25 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:25 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:25 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:25 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:25 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:25 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:25 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:25 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:26 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:26 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:26 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:26 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:26 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:26 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:26 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:26 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:26 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:26 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:26 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:26 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:26 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:26 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:26 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:26 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:26 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:26 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:26 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:26 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:26 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:26 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:26 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:26 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:28 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:28 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:28 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:28 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:30 2026] aer_ratelimit: 73 callbacks suppressed
+[Fri Sep 18 17:00:30 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:30 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:30 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:30 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:30 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:30 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:30 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:30 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:30 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:30 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:30 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:30 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:30 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:30 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:30 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:30 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:30 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:30 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:30 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:30 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:30 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:30 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:30 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:30 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:30 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:30 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:30 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:30 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:31 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:31 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:31 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:31 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:31 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:31 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:31 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:31 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:31 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:31 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:31 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:31 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:31 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:31 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:31 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:31 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:32 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:32 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:32 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:32 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:34 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:34 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:34 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:34 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:35 2026] aer_ratelimit: 69 callbacks suppressed
+[Fri Sep 18 17:00:35 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:35 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:35 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:35 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:36 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:36 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:36 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:36 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:36 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:36 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:36 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:36 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:36 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:36 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:36 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:36 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:36 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:36 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:38 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:38 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:38 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:38 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:40 2026] aer_ratelimit: 68 callbacks suppressed
+[Fri Sep 18 17:00:40 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:40 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:40 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:40 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:40 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:40 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:40 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:40 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:40 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:40 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:40 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:40 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:40 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:40 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:40 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:40 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:40 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:40 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:40 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:40 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:41 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:41 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:41 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:41 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:41 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:41 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:41 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:41 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:41 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:41 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:41 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:41 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:41 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:41 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:41 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:41 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:41 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:41 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:41 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:41 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:41 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:41 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:41 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:41 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:42 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:42 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:42 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:42 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:44 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:44 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:44 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:44 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:45 2026] aer_ratelimit: 77 callbacks suppressed
+[Fri Sep 18 17:00:45 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:45 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:45 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:45 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:46 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:46 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:46 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:46 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:46 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:46 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:46 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:46 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:46 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:46 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:46 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:46 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:46 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:46 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:48 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:48 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:48 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:48 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:50 2026] aer_ratelimit: 88 callbacks suppressed
+[Fri Sep 18 17:00:50 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:50 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:50 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:50 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:50 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:50 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:50 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:50 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:51 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:51 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:51 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:51 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:51 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:51 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:51 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:51 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:51 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:51 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:51 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:51 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:51 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:53 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:53 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:53 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:53 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:55 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:55 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:55 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:55 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:56 2026] aer_ratelimit: 77 callbacks suppressed
+[Fri Sep 18 17:00:56 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:00:56 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:00:57 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:57 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:57 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:57 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:00:59 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:00:59 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:00:59 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:00:59 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:01 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:01 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:01 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:01 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:01 2026] aer_ratelimit: 64 callbacks suppressed
+[Fri Sep 18 17:01:01 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:01 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:03 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:03 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:03 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:03 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:05 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:05 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:05 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:05 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:06 2026] aer_ratelimit: 85 callbacks suppressed
+[Fri Sep 18 17:01:06 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:06 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:07 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:07 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:07 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:07 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:09 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:09 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:09 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:09 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:11 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:11 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:11 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:11 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:11 2026] aer_ratelimit: 75 callbacks suppressed
+[Fri Sep 18 17:01:11 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:11 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:13 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:13 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:13 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:13 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:15 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:15 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:15 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:15 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:16 2026] aer_ratelimit: 74 callbacks suppressed
+[Fri Sep 18 17:01:16 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:16 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:17 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:17 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:17 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:17 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:19 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:19 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:19 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:19 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:21 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:21 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:21 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:21 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:21 2026] aer_ratelimit: 78 callbacks suppressed
+[Fri Sep 18 17:01:21 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:21 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:21 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:21 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:21 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:21 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:21 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:21 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:21 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:21 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:22 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:22 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:22 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:22 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:23 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:23 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:23 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:23 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:25 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:25 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:25 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:25 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:26 2026] aer_ratelimit: 76 callbacks suppressed
+[Fri Sep 18 17:01:26 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:26 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:26 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:26 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:26 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:26 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:26 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:26 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:26 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:26 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:26 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:26 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:26 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:26 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:26 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:26 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:26 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:26 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:26 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:26 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:26 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:26 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:26 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:26 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:27 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:27 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:27 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:27 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:27 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:27 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:27 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:27 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:27 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:27 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:27 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:27 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:27 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:27 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:27 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:27 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:27 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:27 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:27 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:27 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:29 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:29 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:29 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:29 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:31 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:31 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:31 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:31 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:31 2026] aer_ratelimit: 84 callbacks suppressed
+[Fri Sep 18 17:01:31 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:31 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:31 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:31 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:31 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:31 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:31 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:31 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:31 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:32 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:32 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:32 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:32 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:32 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:32 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:32 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:32 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:33 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:33 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:33 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:33 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:35 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:35 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:35 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:35 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:36 2026] aer_ratelimit: 75 callbacks suppressed
+[Fri Sep 18 17:01:36 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:36 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:36 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:36 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:36 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:36 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:36 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:36 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:36 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:37 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:37 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:37 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:37 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:37 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:37 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:37 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:37 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:37 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:37 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:37 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:37 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:39 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:39 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:39 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:39 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:41 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:41 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:41 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:41 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:41 2026] aer_ratelimit: 87 callbacks suppressed
+[Fri Sep 18 17:01:41 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:41 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:41 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:41 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:41 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:41 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:41 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:41 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:41 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:41 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:41 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:41 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:42 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:42 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:42 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:42 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:42 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:42 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:42 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:42 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:43 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:43 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:43 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:43 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:45 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:45 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:45 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:45 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:46 2026] aer_ratelimit: 69 callbacks suppressed
+[Fri Sep 18 17:01:46 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:46 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:46 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:46 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:46 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:46 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:46 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:46 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:46 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:46 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:46 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:46 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:46 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:46 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:46 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:46 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:47 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:47 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:47 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:47 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:47 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:47 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:47 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:47 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:47 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:47 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:47 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:47 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:47 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:47 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:47 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:47 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:47 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:47 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:47 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:47 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:47 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:47 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:47 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:47 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:47 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:47 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:47 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:47 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:49 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:49 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:49 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:49 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:51 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:51 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:51 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:51 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:51 2026] aer_ratelimit: 71 callbacks suppressed
+[Fri Sep 18 17:01:51 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:51 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:51 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:51 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:51 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:51 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:51 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:51 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:51 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:51 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:51 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:51 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:51 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:51 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:51 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:51 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:51 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:51 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:51 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:51 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:52 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:52 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:52 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:52 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:52 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:52 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:52 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:52 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:52 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:52 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:52 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:52 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:52 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:52 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:52 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:52 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:52 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:52 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:52 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:52 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:53 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:53 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:53 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:53 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:55 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:55 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:55 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:55 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:56 2026] aer_ratelimit: 85 callbacks suppressed
+[Fri Sep 18 17:01:56 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:56 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:56 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:56 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:56 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:56 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:56 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:56 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:56 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:56 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:56 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:56 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:56 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:56 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:56 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:56 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:56 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:56 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:56 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:56 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:56 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:56 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:56 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:56 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:57 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:57 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:57 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:57 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:57 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:57 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:57 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:57 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:57 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:57 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:57 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:57 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:57 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:01:57 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:01:57 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:01:57 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:01:57 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:57 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:57 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:57 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:01:59 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:01:59 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:01:59 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:01:59 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:02:01 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:02:01 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:02:01 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:02:01 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:02:01 2026] aer_ratelimit: 77 callbacks suppressed
+[Fri Sep 18 17:02:01 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:01 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:01 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:01 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:01 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:01 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:01 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:01 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:01 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:01 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:01 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:01 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:01 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:01 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:01 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:01 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:02 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:02 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:02 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:02 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:02 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:02 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:02 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:02 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:02 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:02 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:02 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:02 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:02 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:02 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:02 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:02 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:02 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:02 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:02 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:02 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:02 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:02 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:02 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:02 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:03 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:02:03 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:02:03 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:02:03 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:02:05 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:02:05 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:02:05 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:02:05 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:02:07 2026] aer_ratelimit: 74 callbacks suppressed
+[Fri Sep 18 17:02:07 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:07 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:07 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:02:07 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:02:07 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:02:07 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:02:09 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:02:09 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:02:09 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:02:09 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:02:11 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:02:11 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:02:11 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:02:11 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:02:12 2026] aer_ratelimit: 88 callbacks suppressed
+[Fri Sep 18 17:02:12 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:12 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:12 2026] IPv6: enp1s0: IPv6 duplicate address 2601:18c:9280:d0a6::2c5 used by dc:4a:3e:65:50:16 detected!
+[Fri Sep 18 17:02:12 2026] IPv6: enp1s0: IPv6 duplicate address fd28:e64f:c45c::2c5 used by 80:16:09:07:7d:1d detected!
+[Fri Sep 18 17:02:13 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:02:13 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:02:13 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:02:13 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:02:15 2026] amdgpu 0000:09:00.0: Failed to send message: 0x63, ret value: 0xffffffff
+[Fri Sep 18 17:02:15 2026] amdgpu 0000:09:00.0: Failed to send message: 0x26, ret value: 0xffffffff
+[Fri Sep 18 17:02:15 2026] amdgpu: [powerplay] Failed message: 0x37, input parameter: 0x0, error code: 0xffffffff
+[Fri Sep 18 17:02:15 2026] amdgpu 0000:09:00.0: Failed to send message: 0x61, ret value: 0xffffffff
+[Fri Sep 18 17:02:17 2026] aer_ratelimit: 79 callbacks suppressed
+[Fri Sep 18 17:02:17 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:17 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:17 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:17 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:17 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:17 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:17 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:17 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:17 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:17 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:17 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:17 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+[Fri Sep 18 17:02:17 2026] pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+[Fri Sep 18 17:02:17 2026] pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+[Fri Sep 18 17:02:17 2026] pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+[Fri Sep 18 17:02:17 2026] pcieport 0000:02:00.0:    [ 0] RxErr                  (First)

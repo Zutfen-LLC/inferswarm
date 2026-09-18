@@ -1,5 +1,5 @@
 {
- "attempt_id": "pfC1",
+ "attempt_id": "pfR1",
  "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1",
  "authority_path": "/srv/inferswarm/is216/repo/docs/investigations/vulkan-v2-d-v340l-concurrent/PHYSICAL-AUTHORITY.json",
  "bindings": {
@@ -16,7 +16,7 @@
    },
    {
     "authorization": "NON_AUTHORIZING",
-    "binding_proof_sha256": "b0fc4ef76ed2e84dfabdae8d8bda44fba206719c575ba8b0a06facebf26d36a2",
+    "binding_proof_sha256": "ba66c111749658417764c4f73261145c7f1891afde6fd93509a9b4f116365de1",
     "binding_status": "BOUND",
     "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
     "identity_probe": {
@@ -50,9 +50,9 @@
      "raw_stderr_path": "./identity-probe-stderr-vulkan1.txt",
      "raw_stdout_path": "./identity-probe-stdout-vulkan1.txt",
      "selector": "Vulkan1",
-     "started_utc": "2026-09-18T14:51:35.689576+00:00",
-     "stderr_sha256": "f2fdf38a5f76fd2e2cd4005be6d78153008760ae4672d4c0d90610e988d5ab9c",
-     "stdout_sha256": "9fdddf2f3a48c696f056eeb0bde66215162e5784047cb0ef17a0aa3ffa848797",
+     "started_utc": "2026-09-18T20:27:00.094022+00:00",
+     "stderr_sha256": "05b0eb45c94bc5445852c28a7da6694d972f83aaa98d6f107e766d0ae5200a6f",
+     "stdout_sha256": "8b012bd7c94b22db5a85fcf6b5af607733cc860128a4b389dc018a7a8704d61c",
      "zero_generation_proof": [
       "Generation: 0.0 t/s"
      ]
@@ -63,7 +63,7 @@
    },
    {
     "authorization": "NON_AUTHORIZING",
-    "binding_proof_sha256": "e475c0fb0219f369eb7c573ba7b5adf534d766d6c71e2578bc34e25f9813abf0",
+    "binding_proof_sha256": "a96e68850304627f2b1ec32ea71c630340492b8663661f71d9701a10794978ad",
     "binding_status": "BOUND",
     "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
     "identity_probe": {
@@ -97,9 +97,9 @@
      "raw_stderr_path": "./identity-probe-stderr-vulkan2.txt",
      "raw_stdout_path": "./identity-probe-stdout-vulkan2.txt",
      "selector": "Vulkan2",
-     "started_utc": "2026-09-18T14:51:39.965170+00:00",
-     "stderr_sha256": "6ec082cd6ca8ec8f3a97193608c1005eac31ba4826e3b72b54cd1f17d1a68b8d",
-     "stdout_sha256": "790ad3a80ab9f057353a2c27ad92b4d69c0422d96f3ad7c3e3135d9f12d0b3af",
+     "started_utc": "2026-09-18T20:27:04.388623+00:00",
+     "stderr_sha256": "33d93130e862c22dbe027ef8d0a7a5afe67999f0c8e5805e3ece1c4cb2163ba4",
+     "stdout_sha256": "6a967406bbacb217ecdab17935c6ef27a64f3cede962f8a621569086701113c4",
      "zero_generation_proof": [
       "Generation: 0.0 t/s"
      ]
@@ -110,7 +110,7 @@
    }
   ],
   "inventory_hostname": "inferswarm02",
-  "inventory_measured_utc": "2026-09-18T14:51:35.689509+00:00",
+  "inventory_measured_utc": "2026-09-18T20:27:00.093958+00:00",
   "inventory_runtime_executable": "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
   "inventory_runtime_executable_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
   "inventory_schema": "inferswarm.v2a.discovery-inventory/3",
@@ -118,7 +118,7 @@
    "inventory data only: no selection, promotion, authorization, or correctness reference may be derived from this document",
    "identity probe generates zero model tokens; it proves only selector -> stable BDF and can never be a correctness reference"
   ],
-  "reviewed_utc": "2026-09-18T14:51:35.689559+00:00",
+  "reviewed_utc": "2026-09-18T20:27:00.094006+00:00",
   "schema": "inferswarm.v2a.discovery-bindings/3"
  },
  "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
@@ -163,7 +163,7 @@
    }
   ],
   "hostname": "inferswarm02",
-  "measured_utc": "2026-09-18T14:51:35.689509+00:00",
+  "measured_utc": "2026-09-18T20:27:00.093958+00:00",
   "node_identity_source": "os.uname().nodename on the proving node",
   "nonclaims": [
    "inventory data only: no selection, promotion, authorization, or correctness reference may be derived from this document",
@@ -174,12 +174,12 @@
   "schema": "inferswarm.v2a.discovery-inventory/3",
   "vulkan_loader_identity": "1.4.309"
  },
- "mapping_digest": "d8a58717e9e91bcb4dfed9b180d0e9fe8cc937b6cf9cd5509554aa90550860c8",
+ "mapping_digest": "c161922b0edb74fd0800aae404cbc4641020af2a99d6a35379c6f12a2e3a125b",
  "participants": {
   "a": {
    "fresh_binding": {
     "authorization": "NON_AUTHORIZING",
-    "binding_proof_sha256": "b0fc4ef76ed2e84dfabdae8d8bda44fba206719c575ba8b0a06facebf26d36a2",
+    "binding_proof_sha256": "ba66c111749658417764c4f73261145c7f1891afde6fd93509a9b4f116365de1",
     "binding_status": "BOUND",
     "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
     "identity_probe": {
@@ -213,9 +213,9 @@
      "raw_stderr_path": "./identity-probe-stderr-vulkan1.txt",
      "raw_stdout_path": "./identity-probe-stdout-vulkan1.txt",
      "selector": "Vulkan1",
-     "started_utc": "2026-09-18T14:51:35.689576+00:00",
-     "stderr_sha256": "f2fdf38a5f76fd2e2cd4005be6d78153008760ae4672d4c0d90610e988d5ab9c",
-     "stdout_sha256": "9fdddf2f3a48c696f056eeb0bde66215162e5784047cb0ef17a0aa3ffa848797",
+     "started_utc": "2026-09-18T20:27:00.094022+00:00",
+     "stderr_sha256": "05b0eb45c94bc5445852c28a7da6694d972f83aaa98d6f107e766d0ae5200a6f",
+     "stdout_sha256": "8b012bd7c94b22db5a85fcf6b5af607733cc860128a4b389dc018a7a8704d61c",
      "zero_generation_proof": [
       "Generation: 0.0 t/s"
      ]
@@ -237,7 +237,7 @@
   "b": {
    "fresh_binding": {
     "authorization": "NON_AUTHORIZING",
-    "binding_proof_sha256": "e475c0fb0219f369eb7c573ba7b5adf534d766d6c71e2578bc34e25f9813abf0",
+    "binding_proof_sha256": "a96e68850304627f2b1ec32ea71c630340492b8663661f71d9701a10794978ad",
     "binding_status": "BOUND",
     "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
     "identity_probe": {
@@ -271,9 +271,9 @@
      "raw_stderr_path": "./identity-probe-stderr-vulkan2.txt",
      "raw_stdout_path": "./identity-probe-stdout-vulkan2.txt",
      "selector": "Vulkan2",
-     "started_utc": "2026-09-18T14:51:39.965170+00:00",
-     "stderr_sha256": "6ec082cd6ca8ec8f3a97193608c1005eac31ba4826e3b72b54cd1f17d1a68b8d",
-     "stdout_sha256": "790ad3a80ab9f057353a2c27ad92b4d69c0422d96f3ad7c3e3135d9f12d0b3af",
+     "started_utc": "2026-09-18T20:27:04.388623+00:00",
+     "stderr_sha256": "33d93130e862c22dbe027ef8d0a7a5afe67999f0c8e5805e3ece1c4cb2163ba4",
+     "stdout_sha256": "6a967406bbacb217ecdab17935c6ef27a64f3cede962f8a621569086701113c4",
      "zero_generation_proof": [
       "Generation: 0.0 t/s"
      ]

@@ -25,9 +25,9 @@ available commands:
 
 
 > identity-probe
-"
+An
 
-[ Prompt: 236.9 t/s | Generation: 0.0 t/s ]
+[ Prompt: 239.3 t/s | Generation: 0.0 t/s ]
 
 
 Exiting...

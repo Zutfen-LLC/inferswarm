@@ -12,13 +12,14 @@
        "unplanned_state_movements": 0
       },
       "accounting_zero": true,
+      "argv_selector": "Vulkan1",
       "byte_exact": true,
       "clean_exit": true,
       "correct": true,
       "correctness_semantics": "byte-exact-equality-with-reference",
       "exit_code": 0,
       "full_offload": true,
-      "label": "baseline-blC-a-01",
+      "label": "baseline-blR-a-01",
       "no_fallback": true,
       "selected_bdf": "0000:06:00.0",
       "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
@@ -33,13 +34,14 @@
        "unplanned_state_movements": 0
       },
       "accounting_zero": true,
+      "argv_selector": "Vulkan1",
       "byte_exact": true,
       "clean_exit": true,
       "correct": true,
       "correctness_semantics": "byte-exact-equality-with-reference",
       "exit_code": 0,
       "full_offload": true,
-      "label": "baseline-blC-a-02",
+      "label": "baseline-blR-a-02",
       "no_fallback": true,
       "selected_bdf": "0000:06:00.0",
       "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
@@ -54,13 +56,14 @@
        "unplanned_state_movements": 0
       },
       "accounting_zero": true,
+      "argv_selector": "Vulkan1",
       "byte_exact": true,
       "clean_exit": true,
       "correct": true,
       "correctness_semantics": "byte-exact-equality-with-reference",
       "exit_code": 0,
       "full_offload": true,
-      "label": "baseline-blC-a-03",
+      "label": "baseline-blR-a-03",
       "no_fallback": true,
       "selected_bdf": "0000:06:00.0",
       "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
@@ -80,13 +83,14 @@
        "unplanned_state_movements": 0
       },
       "accounting_zero": true,
+      "argv_selector": "Vulkan2",
       "byte_exact": true,
       "clean_exit": true,
       "correct": true,
       "correctness_semantics": "byte-exact-equality-with-reference",
       "exit_code": 0,
       "full_offload": true,
-      "label": "baseline-blC-b-01",
+      "label": "baseline-blR-b-01",
       "no_fallback": true,
       "selected_bdf": "0000:09:00.0",
       "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
@@ -101,13 +105,14 @@
        "unplanned_state_movements": 0
       },
       "accounting_zero": true,
+      "argv_selector": "Vulkan2",
       "byte_exact": true,
       "clean_exit": true,
       "correct": true,
       "correctness_semantics": "byte-exact-equality-with-reference",
       "exit_code": 0,
       "full_offload": true,
-      "label": "baseline-blC-b-02",
+      "label": "baseline-blR-b-02",
       "no_fallback": true,
       "selected_bdf": "0000:09:00.0",
       "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
@@ -122,13 +127,14 @@
        "unplanned_state_movements": 0
       },
       "accounting_zero": true,
+      "argv_selector": "Vulkan2",
       "byte_exact": true,
       "clean_exit": true,
       "correct": true,
       "correctness_semantics": "byte-exact-equality-with-reference",
       "exit_code": 0,
       "full_offload": true,
-      "label": "baseline-blC-b-03",
+      "label": "baseline-blR-b-03",
       "no_fallback": true,
       "selected_bdf": "0000:09:00.0",
       "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
@@ -138,11 +144,13 @@
   }
  },
  "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
+ "closure_digest": "b0681f7e80b16ccefc4d3a748515e0877faf9216a7ed3734b78fd74714f9cdf5",
  "closure_sources": [
   "scripts/issue216_assemble.py",
   "scripts/issue216_concurrent.py",
   "scripts/issue216_execution.py",
   "scripts/issue216_fault.py",
+  "scripts/issue216_freeze.py",
   "scripts/issue216_host.py",
   "scripts/issue216_manifest.py",
   "scripts/issue216_physical_authority.py",
@@ -159,9 +167,9 @@
     "pair": {
      "attempt_id": "c01",
      "overlap": {
-      "lower_bound_ns": 2718318,
-      "uncertainty_ns": 43309,
-      "upper_bound_ns": 2804936,
+      "lower_bound_ns": 2511893,
+      "uncertainty_ns": 81734,
+      "upper_bound_ns": 2675361,
       "verdict": "OVERLAP"
      },
      "pair_correct": true,
@@ -173,6 +181,7 @@
         "unplanned_state_movements": 0
        },
        "accounting_zero": true,
+       "argv_selector": "Vulkan1",
        "byte_exact": true,
        "clean_exit": true,
        "correct": true,
@@ -191,6 +200,7 @@
         "unplanned_state_movements": 0
        },
        "accounting_zero": true,
+       "argv_selector": "Vulkan2",
        "byte_exact": true,
        "clean_exit": true,
        "correct": true,
@@ -211,9 +221,9 @@
     "pair": {
      "attempt_id": "c02",
      "overlap": {
-      "lower_bound_ns": 4588483,
-      "uncertainty_ns": 146515,
-      "upper_bound_ns": 4881513,
+      "lower_bound_ns": 2550241,
+      "uncertainty_ns": 37405,
+      "upper_bound_ns": 2625051,
       "verdict": "OVERLAP"
      },
      "pair_correct": true,
@@ -225,6 +235,7 @@
         "unplanned_state_movements": 0
        },
        "accounting_zero": true,
+       "argv_selector": "Vulkan1",
        "byte_exact": true,
        "clean_exit": true,
        "correct": true,
@@ -243,6 +254,7 @@
         "unplanned_state_movements": 0
        },
        "accounting_zero": true,
+       "argv_selector": "Vulkan2",
        "byte_exact": true,
        "clean_exit": true,
        "correct": true,
@@ -263,9 +275,9 @@
     "pair": {
      "attempt_id": "c03",
      "overlap": {
-      "lower_bound_ns": 2586522,
-      "uncertainty_ns": 50547,
-      "upper_bound_ns": 2687616,
+      "lower_bound_ns": 2929381,
+      "uncertainty_ns": 54616,
+      "upper_bound_ns": 3038613,
       "verdict": "OVERLAP"
      },
      "pair_correct": true,
@@ -277,6 +289,7 @@
         "unplanned_state_movements": 0
        },
        "accounting_zero": true,
+       "argv_selector": "Vulkan1",
        "byte_exact": true,
        "clean_exit": true,
        "correct": true,
@@ -295,6 +308,7 @@
         "unplanned_state_movements": 0
        },
        "accounting_zero": true,
+       "argv_selector": "Vulkan2",
        "byte_exact": true,
        "clean_exit": true,
        "correct": true,
@@ -316,25 +330,73 @@
   "meets_minimum": true,
   "overlap_failures": []
  },
- "fault_a": {
-  "arm": "a",
-  "recovery_sentinel_correct": true,
-  "relaunch_correct": true,
-  "sibling_correct": true,
-  "sibling_stayed_on_die": true,
-  "victim_exit_code": -9,
-  "victim_gone": true
+ "fault_a": null,
+ "fault_a_missing_reason": "missing raw artifact: fault-arm-a.json",
+ "fault_b": null,
+ "fault_b_missing_reason": "missing raw artifact: fault-arm-b.json",
+ "mapping_digest": "c161922b0edb74fd0800aae404cbc4641020af2a99d6a35379c6f12a2e3a125b",
+ "platform_failure": "retained platform fault in campaign window: gpu_reset_or_ring_timeout at 2026-09-18T16:28:33-04:00 [fault-capture/journal-full-at-fault.txt.gz] Sep 18 16:28:33 inferswarm02 kernel: amdgpu 0000:09:00.0: ring gfx timeout, signaled seq=5131, emitted seq=5132",
+ "platform_fault_scan": {
+  "sources": {
+   "fault-capture/dmesg-at-fault.txt": [],
+   "fault-capture/journal-full-at-fault.txt.gz": [
+    {
+     "class": "gpu_reset_or_ring_timeout",
+     "in_window": true,
+     "line": "Sep 18 16:28:33 inferswarm02 kernel: amdgpu 0000:09:00.0: ring gfx timeout, signaled seq=5131, emitted seq=5132",
+     "utc": "2026-09-18T16:28:33-04:00"
+    },
+    {
+     "class": "gpu_reset_or_ring_timeout",
+     "in_window": true,
+     "line": "Sep 18 16:28:33 inferswarm02 kernel: amdgpu 0000:09:00.0: Starting gfx ring reset",
+     "utc": "2026-09-18T16:28:33-04:00"
+    },
+    {
+     "class": "gpu_reset_or_ring_timeout",
+     "in_window": true,
+     "line": "Sep 18 16:28:33 inferswarm02 kernel: amdgpu 0000:09:00.0: Ring gfx reset failed",
+     "utc": "2026-09-18T16:28:33-04:00"
+    },
+    {
+     "class": "gpu_reset_or_ring_timeout",
+     "in_window": true,
+     "line": "Sep 18 16:28:33 inferswarm02 kernel: amdgpu 0000:09:00.0: GPU reset begin!. Source:  1",
+     "utc": "2026-09-18T16:28:33-04:00"
+    },
+    {
+     "class": "gpu_reset_or_ring_timeout",
+     "in_window": true,
+     "line": "Sep 18 16:28:34 inferswarm02 kernel: amdgpu 0000:09:00.0: GPU reset end with ret = -62",
+     "utc": "2026-09-18T16:28:34-04:00"
+    },
+    {
+     "class": "gpu_reset_or_ring_timeout",
+     "in_window": true,
+     "line": "Sep 18 16:28:36 inferswarm02 kernel: amdgpu 0000:09:00.0: ring gfx timeout, signaled seq=5132, emitted seq=5132",
+     "utc": "2026-09-18T16:28:36-04:00"
+    },
+    {
+     "class": "gpu_reset_or_ring_timeout",
+     "in_window": true,
+     "line": "Sep 18 16:28:36 inferswarm02 kernel: amdgpu 0000:09:00.0: Starting gfx ring reset",
+     "utc": "2026-09-18T16:28:36-04:00"
+    },
+    {
+     "class": "gpu_reset_or_ring_timeout",
+     "in_window": true,
+     "line": "Sep 18 16:28:36 inferswarm02 kernel: amdgpu 0000:09:00.0: Ring gfx reset failed",
+     "utc": "2026-09-18T16:28:36-04:00"
+    },
+    {
+     "class": "gpu_reset_or_ring_timeout",
+     "in_window": true,
+     "line": "Sep 18 16:28:36 inferswarm02 kernel: amdgpu 0000:09:00.0: GPU reset begin!. Source:  1",
+     "utc": "2026-09-18T16:28:36-04:00"
+    }
+   ]
+  }
  },
- "fault_b": {
-  "arm": "b",
-  "recovery_sentinel_correct": true,
-  "relaunch_correct": true,
-  "sibling_correct": true,
-  "sibling_stayed_on_die": true,
-  "victim_exit_code": -9,
-  "victim_gone": true
- },
- "platform_failure": null,
  "preflight": {
   "bdfs": [
    "06:00.0",
@@ -350,98 +412,36 @@
   "sentinels_correct": {
    "a": true,
    "b": true
+  },
+  "sentinels_rederived": {
+   "a": {
+    "accounting_zero": true,
+    "byte_exact": true,
+    "clean_exit": true,
+    "correct": true,
+    "full_offload": true,
+    "no_fallback": true,
+    "selected_bdf": "0000:06:00.0"
+   },
+   "b": {
+    "accounting_zero": true,
+    "byte_exact": true,
+    "clean_exit": true,
+    "correct": true,
+    "full_offload": true,
+    "no_fallback": true,
+    "selected_bdf": "0000:09:00.0"
+   }
   }
  },
  "prerequisites_ok": true,
- "producer_head": "25341e29bb17b143227581b7415cbe5d1cf5a778",
- "reset": {
-  "disposition": "DEVICE_RESET_ISOLATION_NOT_AVAILABLE",
-  "reason": "sysfs reset file present, but both Vega functions are downstream of the same physical PM8533 fanout switch on one dual-die V340L board: the sysfs reset (function level secondary-bus-reset/FLR class) is not a documented, function-isolated reset mechanism for this dual-die board topology; issue #216 prohibits improvised bus/bridge resets, so no reset arm is executed"
- },
+ "producer_head": "7c68b43c539e1674d72eea6984fbf041f8a10640",
+ "reset": null,
+ "reset_missing_reason": "missing raw artifact: reset-determination.json",
  "schema": "inferswarm.v2d.assembly/2",
- "soak": {
-  "all_checkpoints_correct": true,
-  "checkpoints": [
-   {
-    "checkpoint": "checkpoint-0600",
-    "correct": true
-   },
-   {
-    "checkpoint": "checkpoint-1200",
-    "correct": true
-   },
-   {
-    "checkpoint": "checkpoint-1800",
-    "correct": true
-   },
-   {
-    "checkpoint": "checkpoint-2400",
-    "correct": true
-   },
-   {
-    "checkpoint": "checkpoint-3000",
-    "correct": true
-   }
-  ],
-  "duration_s": 3600,
-  "ecc_growth": {
-   "growth": {
-    "06:00.0": {
-     "aer_first": {
-      "aer_dev_correctable": {},
-      "aer_dev_fatal": {},
-      "aer_dev_nonfatal": {}
-     },
-     "aer_last": {
-      "aer_dev_correctable": {},
-      "aer_dev_fatal": {},
-      "aer_dev_nonfatal": {}
-     },
-     "ras_first": null,
-     "ras_last": null
-    },
-    "09:00.0": {
-     "aer_first": {
-      "aer_dev_correctable": {},
-      "aer_dev_fatal": {},
-      "aer_dev_nonfatal": {}
-     },
-     "aer_last": {
-      "aer_dev_correctable": {},
-      "aer_dev_fatal": {},
-      "aer_dev_nonfatal": {}
-     },
-     "ras_first": null,
-     "ras_last": null
-    }
-   }
-  },
-  "final_sentinel_correct": true,
-  "scan": {
-   "journal_fault_counts": {
-    "amdgpu_reset": 0,
-    "amdgpu_timeout": 0,
-    "fatal_aer": 0,
-    "thermal": 0
-   },
-   "sample_count": 60
-  },
-  "stop_reason": "duration_reached"
- },
- "terminal": "V2D_V340L_CONCURRENT_DUAL_DIE_STABILITY_PASS",
- "transport": {
-  "modes": {
-   "dual": {
-    "exit_code": 0,
-    "probe_process_overlap": true
-   },
-   "single-a": {
-    "exit_code": 0
-   },
-   "single-b": {
-    "exit_code": 0
-   }
-  },
-  "note": "throughput/latency values are descriptive only; no transport number is a correctness predicate"
- }
+ "soak": null,
+ "soak_missing_reason": "phase summary not singleton for soak/soak-*.json: 0 hits",
+ "terminal": "V2D_V340L_PLATFORM_STRESS_FAIL",
+ "transport": null,
+ "transport_missing_reason": "phase summary not singleton for transport/transport-*.json: 0 hits"
 }

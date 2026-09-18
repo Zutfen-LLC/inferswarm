@@ -2,13 +2,13 @@
   "bidirectional": {
     "bytes_per_transfer": 67108864,
     "count": 8,
-    "gbps_max": 0.734,
-    "gbps_median": 0.733,
-    "gbps_min": 0.73,
-    "time_ms_max": 91.867728,
-    "time_ms_median": 91.575867,
-    "time_ms_min": 91.390324,
-    "time_ms_p90": 91.756011
+    "gbps_max": 0.735,
+    "gbps_median": 0.732,
+    "gbps_min": 0.731,
+    "time_ms_max": 91.75406,
+    "time_ms_median": 91.659854,
+    "time_ms_min": 91.313309,
+    "time_ms_p90": 91.700797
   },
   "link": {
     "idle_pre_generation": 3,
@@ -26,7 +26,7 @@
   },
   "provenance": {
     "label": "MEASURED",
-    "measured_utc": "2026-09-18T14:52:59Z",
+    "measured_utc": "2026-09-18T20:28:23Z",
     "probe_binary_sha256": "2719aa4b1877cf14daaa5dc5795ada13bb9e62ca0ea6a86030d7606f4596e021",
     "probe_source_sha256": "297c951b9177bb22ed937e065825f67fc40622be5a9bff113b71b0fc83b955b5",
     "raw_schema": "inferswarm.issue35.transport-probe/1"
@@ -37,11 +37,11 @@
     "count": 200,
     "gbps_max": 0.042,
     "gbps_median": 0.041,
-    "gbps_min": 0.012,
-    "time_ms_max": 0.330914,
-    "time_ms_median": 0.099899,
-    "time_ms_min": 0.098033,
-    "time_ms_p90": 0.105406
+    "gbps_min": 0.014,
+    "time_ms_max": 0.288665,
+    "time_ms_median": 0.10034,
+    "time_ms_min": 0.098338,
+    "time_ms_p90": 0.105559
   },
   "subject_identity": {
     "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
@@ -54,90 +54,90 @@
     "d2h_134217728": {
       "bytes_per_transfer": 134217728,
       "count": 8,
-      "gbps_max": 0.797,
+      "gbps_max": 0.813,
       "gbps_median": 0.786,
-      "gbps_min": 0.78,
-      "time_ms_max": 172.05466,
-      "time_ms_median": 170.81809,
-      "time_ms_min": 168.308029,
-      "time_ms_p90": 171.724644
+      "gbps_min": 0.781,
+      "time_ms_max": 171.919382,
+      "time_ms_median": 170.668626,
+      "time_ms_min": 165.187054,
+      "time_ms_p90": 171.22246
     },
     "d2h_16777216": {
       "bytes_per_transfer": 16777216,
       "count": 8,
-      "gbps_max": 0.767,
-      "gbps_median": 0.763,
-      "gbps_min": 0.762,
-      "time_ms_max": 22.025532,
-      "time_ms_median": 21.989828,
-      "time_ms_min": 21.874029,
-      "time_ms_p90": 22.022799
+      "gbps_max": 0.766,
+      "gbps_median": 0.764,
+      "gbps_min": 0.759,
+      "time_ms_max": 22.110871,
+      "time_ms_median": 21.959505,
+      "time_ms_min": 21.893595,
+      "time_ms_p90": 22.010719
     },
     "d2h_4194304": {
       "bytes_per_transfer": 4194304,
       "count": 8,
-      "gbps_max": 0.747,
+      "gbps_max": 0.745,
       "gbps_median": 0.742,
-      "gbps_min": 0.735,
-      "time_ms_max": 5.70574,
-      "time_ms_median": 5.651738,
-      "time_ms_min": 5.613539,
-      "time_ms_p90": 5.65862
+      "gbps_min": 0.738,
+      "time_ms_max": 5.683255,
+      "time_ms_median": 5.652497,
+      "time_ms_min": 5.627426,
+      "time_ms_p90": 5.661512
     },
     "d2h_67108864": {
       "bytes_per_transfer": 67108864,
       "count": 8,
-      "gbps_max": 0.784,
-      "gbps_median": 0.781,
-      "gbps_min": 0.779,
-      "time_ms_max": 86.156281,
-      "time_ms_median": 85.937107,
-      "time_ms_min": 85.544019,
-      "time_ms_p90": 86.127815
+      "gbps_max": 0.797,
+      "gbps_median": 0.782,
+      "gbps_min": 0.774,
+      "time_ms_max": 86.70909,
+      "time_ms_median": 85.807864,
+      "time_ms_min": 84.189064,
+      "time_ms_p90": 86.121888
     },
     "h2d_134217728": {
       "bytes_per_transfer": 134217728,
       "count": 8,
-      "gbps_max": 0.697,
+      "gbps_max": 0.695,
       "gbps_median": 0.695,
       "gbps_min": 0.694,
-      "time_ms_max": 193.493045,
-      "time_ms_median": 193.086123,
-      "time_ms_min": 192.551147,
-      "time_ms_p90": 193.36933
+      "time_ms_max": 193.319305,
+      "time_ms_median": 193.197497,
+      "time_ms_min": 193.019767,
+      "time_ms_p90": 193.285166
     },
     "h2d_16777216": {
       "bytes_per_transfer": 16777216,
       "count": 8,
-      "gbps_max": 0.682,
-      "gbps_median": 0.679,
-      "gbps_min": 0.676,
-      "time_ms_max": 24.81431,
-      "time_ms_median": 24.724638,
-      "time_ms_min": 24.613017,
-      "time_ms_p90": 24.811621
+      "gbps_max": 0.68,
+      "gbps_median": 0.678,
+      "gbps_min": 0.677,
+      "time_ms_max": 24.795499,
+      "time_ms_median": 24.748956,
+      "time_ms_min": 24.669475,
+      "time_ms_p90": 24.790415
     },
     "h2d_4194304": {
       "bytes_per_transfer": 4194304,
       "count": 8,
-      "gbps_max": 0.642,
-      "gbps_median": 0.637,
-      "gbps_min": 0.635,
-      "time_ms_max": 6.609306,
-      "time_ms_median": 6.579782,
-      "time_ms_min": 6.530025,
-      "time_ms_p90": 6.602296
+      "gbps_max": 0.635,
+      "gbps_median": 0.634,
+      "gbps_min": 0.632,
+      "time_ms_max": 6.634135,
+      "time_ms_median": 6.614184,
+      "time_ms_min": 6.604023,
+      "time_ms_p90": 6.627519
     },
     "h2d_67108864": {
       "bytes_per_transfer": 67108864,
       "count": 8,
-      "gbps_max": 0.694,
-      "gbps_median": 0.692,
-      "gbps_min": 0.69,
-      "time_ms_max": 97.282782,
-      "time_ms_median": 97.036337,
-      "time_ms_min": 96.714971,
-      "time_ms_p90": 97.217105
+      "gbps_max": 0.695,
+      "gbps_median": 0.693,
+      "gbps_min": 0.691,
+      "time_ms_max": 97.177397,
+      "time_ms_median": 96.800062,
+      "time_ms_min": 96.550532,
+      "time_ms_p90": 97.07159
     }
   }
 }

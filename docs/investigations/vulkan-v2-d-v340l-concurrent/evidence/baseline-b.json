@@ -1,5 +1,9 @@
 {
+ "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1",
+ "closure_digest": "a450d5769f17c1f3610de6ff5c521924b86aaa92f8c142c3ad7a40764eb28fb6",
  "die": "b",
+ "mapping_digest": "c161922b0edb74fd0800aae404cbc4641020af2a99d6a35379c6f12a2e3a125b",
+ "producer_head": "d921033063b8d9c1891b12bc461c06263d385f34",
  "reps": [
   {
    "aer_post": {
@@ -31,35 +35,35 @@
      },
      "raw_lines": {
       "device_compute": [
-       "0.03.921.722 I sched_reserve:    Vulkan2 compute buffer size =   104.51 MiB"
+       "0.03.925.943 I sched_reserve:    Vulkan2 compute buffer size =   104.51 MiB"
       ],
       "device_context": [
-       "0.03.880.384 I llama_kv_cache:    Vulkan2 KV buffer size =  1152.00 MiB"
+       "0.03.884.709 I llama_kv_cache:    Vulkan2 KV buffer size =  1152.00 MiB"
       ],
       "device_memory_before_after": [
-       "0.00.643.802 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
-       "0.04.960.793 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
+       "0.00.639.505 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+       "0.04.946.131 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
       ],
       "device_model": [
-       "0.01.041.822 I load_tensors:      Vulkan2 model buffer size =  1834.82 MiB"
+       "0.01.036.814 I load_tensors:      Vulkan2 model buffer size =  1834.82 MiB"
       ],
       "host_compute": [
-       "0.03.921.730 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+       "0.03.925.951 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
       ],
       "host_mapping": [
-       "0.01.041.821 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+       "0.01.036.813 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
       ],
       "host_memory_final": [
-       "0.04.960.794 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+       "0.04.946.132 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
       ],
       "host_memory_pre_realization": [
-       "0.00.643.802 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+       "0.00.639.505 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
       ],
       "host_output": [
-       "0.03.879.777 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+       "0.03.884.109 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
       ],
       "ready_state": [
-       "0.04.044.364 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+       "0.04.044.460 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
       ],
       "source_fetches_after_ready": [],
       "unplanned_state_movements": []
@@ -99,24 +103,24 @@
     },
     "correctness_semantics": "byte-exact-equality-with-reference",
     "exit_code": 0,
-    "exit_code_rel": "rep-01/baseline-blC-b-01.exit-code",
+    "exit_code_rel": "rep-01/baseline-blR-b-01.exit-code",
     "fallback_present": false,
-    "label": "baseline-blC-b-01",
+    "label": "baseline-blR-b-01",
     "offloaded_layers": [
      37,
      37
     ],
     "selected_bdf": "0000:09:00.0",
     "stderr_bytes": 19985,
-    "stderr_rel": "rep-01/baseline-blC-b-01.stderr",
-    "stderr_sha256": "af8045b665ba4d14801014ae332773275bde36ca1d94e004f991591dd6d9c721",
+    "stderr_rel": "rep-01/baseline-blR-b-01.stderr",
+    "stderr_sha256": "6d148519043bbe5742520b68ca16132ffa2ff8dad5930222fc2d5f899721db0e",
     "stdout_bytes": 1353,
-    "stdout_rel": "rep-01/baseline-blC-b-01.stdout",
-    "stdout_sha256": "5252ad4657b19f4b29867f98d85b5dd2eafc8b054d73ce7b260d0403b972b304",
+    "stdout_rel": "rep-01/baseline-blR-b-01.stdout",
+    "stdout_sha256": "3ffe8f6e0305485fecd9840981f1af42cc244500d7cf3aaa4650bd272bfa86a7",
     "timed_out": false,
     "workload_interval_ns": [
-     65667887491920,
-     65672962884007
+     81324331171387,
+     81329392559594
     ]
    },
    "selector": "Vulkan2",
@@ -132,7 +136,7 @@
       "fan1_max": 0,
       "fan1_min": 0,
       "fan1_target": 0,
-      "freq1_input": 686000000,
+      "freq1_input": 689000000,
       "freq1_label": "sclk",
       "freq2_input": 167000000,
       "freq2_label": "mclk",
@@ -152,22 +156,22 @@
       "temp1_crit": 85000,
       "temp1_crit_hyst": -273150,
       "temp1_emergency": 90000,
-      "temp1_input": 31000,
+      "temp1_input": 33000,
       "temp1_label": "edge",
       "temp2_crit": 105000,
       "temp2_crit_hyst": -273150,
       "temp2_emergency": 110000,
-      "temp2_input": 33000,
+      "temp2_input": 34000,
       "temp2_label": "junction",
       "temp3_crit": 95000,
       "temp3_crit_hyst": -273150,
       "temp3_emergency": 100000,
-      "temp3_input": 31000,
+      "temp3_input": 34000,
       "temp3_label": "mem"
      }
     },
     "mem_busy_percent": null,
-    "monotonic_ns": 65673002132831,
+    "monotonic_ns": 81329432619583,
     "ras_gpu_err_cnt": null,
     "vram_total_bytes": 8573157376,
     "vram_used_bytes": 1932554240
@@ -204,22 +208,22 @@
       "temp1_crit": 85000,
       "temp1_crit_hyst": -273150,
       "temp1_emergency": 90000,
-      "temp1_input": 29000,
+      "temp1_input": 31000,
       "temp1_label": "edge",
       "temp2_crit": 105000,
       "temp2_crit_hyst": -273150,
       "temp2_emergency": 110000,
-      "temp2_input": 31000,
+      "temp2_input": 33000,
       "temp2_label": "junction",
       "temp3_crit": 95000,
       "temp3_crit_hyst": -273150,
       "temp3_emergency": 100000,
-      "temp3_input": 29000,
+      "temp3_input": 30000,
       "temp3_label": "mem"
      }
     },
     "mem_busy_percent": null,
-    "monotonic_ns": 65667884384543,
+    "monotonic_ns": 81324327760075,
     "ras_gpu_err_cnt": null,
     "vram_total_bytes": 8573157376,
     "vram_used_bytes": 8339456
@@ -264,35 +268,35 @@
      },
      "raw_lines": {
       "device_compute": [
-       "0.03.936.701 I sched_reserve:    Vulkan2 compute buffer size =   104.51 MiB"
+       "0.03.939.557 I sched_reserve:    Vulkan2 compute buffer size =   104.51 MiB"
       ],
       "device_context": [
-       "0.03.895.934 I llama_kv_cache:    Vulkan2 KV buffer size =  1152.00 MiB"
+       "0.03.899.613 I llama_kv_cache:    Vulkan2 KV buffer size =  1152.00 MiB"
       ],
       "device_memory_before_after": [
-       "0.00.647.569 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
-       "0.04.932.155 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
+       "0.00.650.834 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+       "0.04.933.916 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
       ],
       "device_model": [
-       "0.01.043.891 I load_tensors:      Vulkan2 model buffer size =  1834.82 MiB"
+       "0.01.049.555 I load_tensors:      Vulkan2 model buffer size =  1834.82 MiB"
       ],
       "host_compute": [
-       "0.03.936.708 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+       "0.03.939.563 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
       ],
       "host_mapping": [
-       "0.01.043.890 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+       "0.01.049.554 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
       ],
       "host_memory_final": [
-       "0.04.932.156 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+       "0.04.933.917 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
       ],
       "host_memory_pre_realization": [
-       "0.00.647.570 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+       "0.00.650.835 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
       ],
       "host_output": [
-       "0.03.895.332 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+       "0.03.899.003 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
       ],
       "ready_state": [
-       "0.04.047.526 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+       "0.04.044.807 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
       ],
       "source_fetches_after_ready": [],
       "unplanned_state_movements": []
@@ -332,24 +336,24 @@
     },
     "correctness_semantics": "byte-exact-equality-with-reference",
     "exit_code": 0,
-    "exit_code_rel": "rep-02/baseline-blC-b-02.exit-code",
+    "exit_code_rel": "rep-02/baseline-blR-b-02.exit-code",
     "fallback_present": false,
-    "label": "baseline-blC-b-02",
+    "label": "baseline-blR-b-02",
     "offloaded_layers": [
      37,
      37
     ],
     "selected_bdf": "0000:09:00.0",
     "stderr_bytes": 19985,
-    "stderr_rel": "rep-02/baseline-blC-b-02.stderr",
-    "stderr_sha256": "1150f06835daeedf654e8ab3e8d0a431fea8ef68291fddf0e900ee60525d4a52",
+    "stderr_rel": "rep-02/baseline-blR-b-02.stderr",
+    "stderr_sha256": "49279557adeb6decb2ee79db14733e54d0a915d11c0dcfc996eeb5fcb2f2d187",
     "stdout_bytes": 1353,
-    "stdout_rel": "rep-02/baseline-blC-b-02.stdout",
-    "stdout_sha256": "59f1eab0fb61680048ab50990daca84f27466b8ceb742bfb7969815a6a3ec890",
+    "stdout_rel": "rep-02/baseline-blR-b-02.stdout",
+    "stdout_sha256": "3035abf05ffa73219d135940897e8b82268429dfeb9fbb516d4fc2feaa07f664",
     "timed_out": false,
     "workload_interval_ns": [
-     65673016137084,
-     65678062213899
+     81329446053365,
+     81334479459150
     ]
    },
    "selector": "Vulkan2",
@@ -365,7 +369,7 @@
       "fan1_max": 0,
       "fan1_min": 0,
       "fan1_target": 0,
-      "freq1_input": 717000000,
+      "freq1_input": 736000000,
       "freq1_label": "sclk",
       "freq2_input": 167000000,
       "freq2_label": "mclk",
@@ -378,32 +382,32 @@
       "power1_cap_min": 0,
       "power1_input": 7000000,
       "power1_label": "PPT",
-      "pwm1": 28,
+      "pwm1": 30,
       "pwm1_enable": 2,
       "pwm1_max": 255,
       "pwm1_min": 0,
       "temp1_crit": 85000,
       "temp1_crit_hyst": -273150,
       "temp1_emergency": 90000,
-      "temp1_input": 32000,
+      "temp1_input": 34000,
       "temp1_label": "edge",
       "temp2_crit": 105000,
       "temp2_crit_hyst": -273150,
       "temp2_emergency": 110000,
-      "temp2_input": 34000,
+      "temp2_input": 35000,
       "temp2_label": "junction",
       "temp3_crit": 95000,
       "temp3_crit_hyst": -273150,
       "temp3_emergency": 100000,
-      "temp3_input": 33000,
+      "temp3_input": 35000,
       "temp3_label": "mem"
      }
     },
     "mem_busy_percent": null,
-    "monotonic_ns": 65678087754585,
+    "monotonic_ns": 81334509026505,
     "ras_gpu_err_cnt": null,
     "vram_total_bytes": 8573157376,
-    "vram_used_bytes": 2066771968
+    "vram_used_bytes": 3140513792
    },
    "telemetry_pre": {
     "bdf": "09:00.0",
@@ -417,7 +421,7 @@
       "fan1_max": 0,
       "fan1_min": 0,
       "fan1_target": 0,
-      "freq1_input": 674000000,
+      "freq1_input": 678000000,
       "freq1_label": "sclk",
       "freq2_input": 167000000,
       "freq2_label": "mclk",
@@ -437,22 +441,22 @@
       "temp1_crit": 85000,
       "temp1_crit_hyst": -273150,
       "temp1_emergency": 90000,
-      "temp1_input": 31000,
+      "temp1_input": 33000,
       "temp1_label": "edge",
       "temp2_crit": 105000,
       "temp2_crit_hyst": -273150,
       "temp2_emergency": 110000,
-      "temp2_input": 33000,
+      "temp2_input": 34000,
       "temp2_label": "junction",
       "temp3_crit": 95000,
       "temp3_crit_hyst": -273150,
       "temp3_emergency": 100000,
-      "temp3_input": 31000,
+      "temp3_input": 34000,
       "temp3_label": "mem"
      }
     },
     "mem_busy_percent": null,
-    "monotonic_ns": 65673011028287,
+    "monotonic_ns": 81329441211593,
     "ras_gpu_err_cnt": null,
     "vram_total_bytes": 8573157376,
     "vram_used_bytes": 1932554240
@@ -497,35 +501,35 @@
      },
      "raw_lines": {
       "device_compute": [
-       "0.03.936.689 I sched_reserve:    Vulkan2 compute buffer size =   104.51 MiB"
+       "0.03.922.145 I sched_reserve:    Vulkan2 compute buffer size =   104.51 MiB"
       ],
       "device_context": [
-       "0.03.895.876 I llama_kv_cache:    Vulkan2 KV buffer size =  1152.00 MiB"
+       "0.03.882.586 I llama_kv_cache:    Vulkan2 KV buffer size =  1152.00 MiB"
       ],
       "device_memory_before_after": [
-       "0.00.645.938 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
-       "0.04.934.866 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
+       "0.00.646.114 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+       "0.04.938.327 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
       ],
       "device_model": [
-       "0.01.049.447 I load_tensors:      Vulkan2 model buffer size =  1834.82 MiB"
+       "0.01.043.373 I load_tensors:      Vulkan2 model buffer size =  1834.82 MiB"
       ],
       "host_compute": [
-       "0.03.936.696 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+       "0.03.922.153 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
       ],
       "host_mapping": [
-       "0.01.049.446 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+       "0.01.043.372 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
       ],
       "host_memory_final": [
-       "0.04.934.867 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+       "0.04.938.328 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
       ],
       "host_memory_pre_realization": [
-       "0.00.645.938 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+       "0.00.646.146 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
       ],
       "host_output": [
-       "0.03.895.278 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+       "0.03.881.987 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
       ],
       "ready_state": [
-       "0.04.047.758 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+       "0.04.040.183 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
       ],
       "source_fetches_after_ready": [],
       "unplanned_state_movements": []
@@ -565,80 +569,28 @@
     },
     "correctness_semantics": "byte-exact-equality-with-reference",
     "exit_code": 0,
-    "exit_code_rel": "rep-03/baseline-blC-b-03.exit-code",
+    "exit_code_rel": "rep-03/baseline-blR-b-03.exit-code",
     "fallback_present": false,
-    "label": "baseline-blC-b-03",
+    "label": "baseline-blR-b-03",
     "offloaded_layers": [
      37,
      37
     ],
     "selected_bdf": "0000:09:00.0",
     "stderr_bytes": 19985,
-    "stderr_rel": "rep-03/baseline-blC-b-03.stderr",
-    "stderr_sha256": "f8cc23cb6ec9197b65142ae1307a45796162891bf46f94c83684872eeccf79a5",
+    "stderr_rel": "rep-03/baseline-blR-b-03.stderr",
+    "stderr_sha256": "46d86e62443af13e12214a549afd069504c3bffe4d6c2102428d04b45868afcc",
     "stdout_bytes": 1353,
-    "stdout_rel": "rep-03/baseline-blC-b-03.stdout",
-    "stdout_sha256": "83843c696440f7a0f515a3f5025ddb8be1a8acc6b3513acf55bfac187ec76401",
+    "stdout_rel": "rep-03/baseline-blR-b-03.stdout",
+    "stdout_sha256": "3c750b6119b37a71270f70d1765d94eb27ef045098a8271db72679f961729a1f",
     "timed_out": false,
     "workload_interval_ns": [
-     65678100969981,
-     65683143767636
+     81334515446050,
+     81339566028018
     ]
    },
    "selector": "Vulkan2",
    "telemetry_post": {
-    "bdf": "09:00.0",
-    "current_link_speed": "8.0 GT/s PCIe",
-    "current_link_width": "16",
-    "gpu_busy_percent": 0,
-    "hwmon": {
-     "hwmon7": {
-      "fan1_enable": 0,
-      "fan1_input": 0,
-      "fan1_max": 0,
-      "fan1_min": 0,
-      "fan1_target": 0,
-      "freq1_input": 724000000,
-      "freq1_label": "sclk",
-      "freq2_input": 167000000,
-      "freq2_label": "mclk",
-      "in0_input": 800,
-      "in0_label": "vddgfx",
-      "name": "amdgpu",
-      "power1_cap": 110000000,
-      "power1_cap_default": 110000000,
-      "power1_cap_max": 110000000,
-      "power1_cap_min": 0,
-      "power1_input": 8000000,
-      "power1_label": "PPT",
-      "pwm1": 32,
-      "pwm1_enable": 2,
-      "pwm1_max": 255,
-      "pwm1_min": 0,
-      "temp1_crit": 85000,
-      "temp1_crit_hyst": -273150,
-      "temp1_emergency": 90000,
-      "temp1_input": 33000,
-      "temp1_label": "edge",
-      "temp2_crit": 105000,
-      "temp2_crit_hyst": -273150,
-      "temp2_emergency": 110000,
-      "temp2_input": 34000,
-      "temp2_label": "junction",
-      "temp3_crit": 95000,
-      "temp3_crit_hyst": -273150,
-      "temp3_emergency": 100000,
-      "temp3_input": 33000,
-      "temp3_label": "mem"
-     }
-    },
-    "mem_busy_percent": null,
-    "monotonic_ns": 65683165870362,
-    "ras_gpu_err_cnt": null,
-    "vram_total_bytes": 8573157376,
-    "vram_used_bytes": 3140513792
-   },
-   "telemetry_pre": {
     "bdf": "09:00.0",
     "current_link_speed": "8.0 GT/s PCIe",
     "current_link_width": "16",
@@ -663,32 +615,84 @@
       "power1_cap_min": 0,
       "power1_input": 7000000,
       "power1_label": "PPT",
-      "pwm1": 28,
+      "pwm1": 32,
       "pwm1_enable": 2,
       "pwm1_max": 255,
       "pwm1_min": 0,
       "temp1_crit": 85000,
       "temp1_crit_hyst": -273150,
       "temp1_emergency": 90000,
-      "temp1_input": 32000,
+      "temp1_input": 34000,
       "temp1_label": "edge",
       "temp2_crit": 105000,
       "temp2_crit_hyst": -273150,
       "temp2_emergency": 110000,
-      "temp2_input": 34000,
+      "temp2_input": 35000,
       "temp2_label": "junction",
       "temp3_crit": 95000,
       "temp3_crit_hyst": -273150,
       "temp3_emergency": 100000,
-      "temp3_input": 33000,
+      "temp3_input": 34000,
       "temp3_label": "mem"
      }
     },
     "mem_busy_percent": null,
-    "monotonic_ns": 65678095850474,
+    "monotonic_ns": 81339598438199,
     "ras_gpu_err_cnt": null,
     "vram_total_bytes": 8573157376,
     "vram_used_bytes": 2066771968
+   },
+   "telemetry_pre": {
+    "bdf": "09:00.0",
+    "current_link_speed": "8.0 GT/s PCIe",
+    "current_link_width": "16",
+    "gpu_busy_percent": 0,
+    "hwmon": {
+     "hwmon7": {
+      "fan1_enable": 0,
+      "fan1_input": 0,
+      "fan1_max": 0,
+      "fan1_min": 0,
+      "fan1_target": 0,
+      "freq1_input": 731000000,
+      "freq1_label": "sclk",
+      "freq2_input": 167000000,
+      "freq2_label": "mclk",
+      "in0_input": 800,
+      "in0_label": "vddgfx",
+      "name": "amdgpu",
+      "power1_cap": 110000000,
+      "power1_cap_default": 110000000,
+      "power1_cap_max": 110000000,
+      "power1_cap_min": 0,
+      "power1_input": 7000000,
+      "power1_label": "PPT",
+      "pwm1": 30,
+      "pwm1_enable": 2,
+      "pwm1_max": 255,
+      "pwm1_min": 0,
+      "temp1_crit": 85000,
+      "temp1_crit_hyst": -273150,
+      "temp1_emergency": 90000,
+      "temp1_input": 34000,
+      "temp1_label": "edge",
+      "temp2_crit": 105000,
+      "temp2_crit_hyst": -273150,
+      "temp2_emergency": 110000,
+      "temp2_input": 35000,
+      "temp2_label": "junction",
+      "temp3_crit": 95000,
+      "temp3_crit_hyst": -273150,
+      "temp3_emergency": 100000,
+      "temp3_input": 34000,
+      "temp3_label": "mem"
+     }
+    },
+    "mem_busy_percent": null,
+    "monotonic_ns": 81334512552218,
+    "ras_gpu_err_cnt": null,
+    "vram_total_bytes": 8573157376,
+    "vram_used_bytes": 3140513792
    },
    "verdict": {
     "accounting_tuple_zero": true,

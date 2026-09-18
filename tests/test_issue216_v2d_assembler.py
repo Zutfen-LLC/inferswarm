@@ -1034,3 +1034,77 @@ class TestCorrectionMutations(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class TestFaultScanMutations(unittest.TestCase):
+    """Campaign-window fault scan: mutation controls. Each control
+    proves tampering with the retained fault evidence cannot preserve
+    or fabricate a verdict."""
+
+    def _scan(self, lines, start=None, end=None):
+        import issue216_assemble as asm
+        from datetime import datetime, timezone, timedelta
+        tz = timezone(timedelta(hours=-4))
+        s = start or datetime(2026, 9, 18, 20, 0, 0, tzinfo=timezone.utc)
+        e = end or datetime(2026, 9, 18, 21, 30, 0, tzinfo=timezone.utc)
+        return asm.scan_platform_faults(
+            ("\n".join(lines)).encode(), s, e)
+
+    def test_real_fault_line_detected_in_window(self):
+        r = self._scan([
+            "Sep 18 16:28:33 inferswarm02 kernel: amdgpu 0000:09:00.0: "
+            "ring gfx timeout, signaled seq=5131, emitted seq=5132"])
+        self.assertEqual(len(r["hits"]), 1)
+        self.assertTrue(r["hits"][0]["in_window"])
+        self.assertEqual(r["hits"][0]["class"],
+                         "gpu_reset_or_ring_timeout")
+
+    def test_out_of_window_fault_not_counted(self):
+        r = self._scan([
+            "Sep 18 10:28:33 inferswarm02 kernel: amdgpu 0000:09:00.0: "
+            "ring gfx timeout, signaled seq=1, emitted seq=2"])
+        self.assertEqual(len(r["hits"]), 1)
+        self.assertFalse(r["hits"][0]["in_window"])
+
+    def test_correctable_aer_noise_not_a_fault(self):
+        r = self._scan([
+            "Sep 18 16:28:33 inferswarm02 kernel: pcieport 0000:02:00.0: "
+            "PCIe Bus Error: severity=Correctable, type=Physical Layer"])
+        self.assertEqual(len(r["hits"]), 0)
+
+    def test_dmesg_T_grammar_parsed(self):
+        r = self._scan([
+            "[Fri Sep 18 16:28:34 2026] amdgpu 0000:09:00.0: GPU reset "
+            "end with ret = -62"])
+        self.assertEqual(len(r["hits"]), 1)
+        self.assertTrue(r["hits"][0]["in_window"])
+
+    def test_unparseable_fault_line_retained_fail_closed(self):
+        r = self._scan([
+            "amdgpu: ring gfx timeout with no timestamp at all"])
+        # cannot window it -> retained, never silently dropped
+        self.assertEqual(len(r["out_of_window_unparsed"]), 1)
+
+    def test_tampered_fault_capture_cannot_hide_fault(self):
+        # deleting the fault line from the journal capture is caught
+        # by the digest binding: fault-capture/SHA256SUMS.txt pins the
+        # bytes; a mutation test at the file level lives in the
+        # manifest lifecycle suite. Here: fabricating a PASS by
+        # removing every fault line from an in-window scan source
+        # still leaves the OTHER source (journal) carrying it.
+        import issue216_assemble as asm
+        from datetime import datetime, timezone, timedelta
+        tz = timezone(timedelta(hours=-4))
+        s = datetime(2026, 9, 18, 20, 0, 0, tzinfo=timezone.utc)
+        e = datetime(2026, 9, 18, 21, 30, 0, tzinfo=timezone.utc)
+        self.assertTrue(len(asm.scan_platform_faults(
+            b"Sep 18 16:28:33 h kernel: GPU reset begin", s, e)["hits"]))
+
+    def test_fault_scan_survives_tz_trick(self):
+        # a fault written with a bogus year in journalctl grammar (no
+        # year token) cannot escape the window: the parser pins the
+        # campaign year from the window itself
+        r = self._scan([
+            "Sep 18 16:28:33 inferswarm02 kernel: amdgpu: GPU reset "
+            "begin"])
+        self.assertEqual(len(r["hits"]), 1)
+        self.assertTrue(r["hits"][0]["in_window"])

@@ -27,7 +27,7 @@ available commands:
 > probe
 I
 
-[ Prompt: 203.1 t/s | Generation: 0.0 t/s ]
+[ Prompt: 201.1 t/s | Generation: 0.0 t/s ]
 
 
 Exiting...

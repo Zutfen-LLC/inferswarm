@@ -11,7 +11,7 @@
    "aer_dev_nonfatal": {}
   }
  },
- "attempt_id": "pfC1",
+ "attempt_id": "pfR1",
  "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1",
  "bdfs": [
   "06:00.0",
@@ -19,7 +19,8 @@
  ],
  "boot_id": "9345db65-58de-477a-958e-d2c1487f2b93",
  "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
- "captured_utc": "2026-09-18T14:51:44.247854+00:00",
+ "captured_utc": "2026-09-18T20:27:08.672200+00:00",
+ "closure_digest": "a450d5769f17c1f3610de6ff5c521924b86aaa92f8c142c3ad7a40764eb28fb6",
  "journal_fault_counts": {
   "amdgpu_failure": 0,
   "amdgpu_reset": 0,
@@ -29,7 +30,7 @@
   "thermal": 0
  },
  "mapping": {
-  "attempt_id": "pfC1",
+  "attempt_id": "pfR1",
   "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1",
   "authority_path": "/srv/inferswarm/is216/repo/docs/investigations/vulkan-v2-d-v340l-concurrent/PHYSICAL-AUTHORITY.json",
   "bindings": {
@@ -46,7 +47,7 @@
     },
     {
      "authorization": "NON_AUTHORIZING",
-     "binding_proof_sha256": "b0fc4ef76ed2e84dfabdae8d8bda44fba206719c575ba8b0a06facebf26d36a2",
+     "binding_proof_sha256": "ba66c111749658417764c4f73261145c7f1891afde6fd93509a9b4f116365de1",
      "binding_status": "BOUND",
      "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
      "identity_probe": {
@@ -80,9 +81,9 @@
       "raw_stderr_path": "./identity-probe-stderr-vulkan1.txt",
       "raw_stdout_path": "./identity-probe-stdout-vulkan1.txt",
       "selector": "Vulkan1",
-      "started_utc": "2026-09-18T14:51:35.689576+00:00",
-      "stderr_sha256": "f2fdf38a5f76fd2e2cd4005be6d78153008760ae4672d4c0d90610e988d5ab9c",
-      "stdout_sha256": "9fdddf2f3a48c696f056eeb0bde66215162e5784047cb0ef17a0aa3ffa848797",
+      "started_utc": "2026-09-18T20:27:00.094022+00:00",
+      "stderr_sha256": "05b0eb45c94bc5445852c28a7da6694d972f83aaa98d6f107e766d0ae5200a6f",
+      "stdout_sha256": "8b012bd7c94b22db5a85fcf6b5af607733cc860128a4b389dc018a7a8704d61c",
       "zero_generation_proof": [
        "Generation: 0.0 t/s"
       ]
@@ -93,7 +94,7 @@
     },
     {
      "authorization": "NON_AUTHORIZING",
-     "binding_proof_sha256": "e475c0fb0219f369eb7c573ba7b5adf534d766d6c71e2578bc34e25f9813abf0",
+     "binding_proof_sha256": "a96e68850304627f2b1ec32ea71c630340492b8663661f71d9701a10794978ad",
      "binding_status": "BOUND",
      "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
      "identity_probe": {
@@ -127,9 +128,9 @@
       "raw_stderr_path": "./identity-probe-stderr-vulkan2.txt",
       "raw_stdout_path": "./identity-probe-stdout-vulkan2.txt",
       "selector": "Vulkan2",
-      "started_utc": "2026-09-18T14:51:39.965170+00:00",
-      "stderr_sha256": "6ec082cd6ca8ec8f3a97193608c1005eac31ba4826e3b72b54cd1f17d1a68b8d",
-      "stdout_sha256": "790ad3a80ab9f057353a2c27ad92b4d69c0422d96f3ad7c3e3135d9f12d0b3af",
+      "started_utc": "2026-09-18T20:27:04.388623+00:00",
+      "stderr_sha256": "33d93130e862c22dbe027ef8d0a7a5afe67999f0c8e5805e3ece1c4cb2163ba4",
+      "stdout_sha256": "6a967406bbacb217ecdab17935c6ef27a64f3cede962f8a621569086701113c4",
       "zero_generation_proof": [
        "Generation: 0.0 t/s"
       ]
@@ -140,7 +141,7 @@
     }
    ],
    "inventory_hostname": "inferswarm02",
-   "inventory_measured_utc": "2026-09-18T14:51:35.689509+00:00",
+   "inventory_measured_utc": "2026-09-18T20:27:00.093958+00:00",
    "inventory_runtime_executable": "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
    "inventory_runtime_executable_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
    "inventory_schema": "inferswarm.v2a.discovery-inventory/3",
@@ -148,7 +149,7 @@
     "inventory data only: no selection, promotion, authorization, or correctness reference may be derived from this document",
     "identity probe generates zero model tokens; it proves only selector -> stable BDF and can never be a correctness reference"
    ],
-   "reviewed_utc": "2026-09-18T14:51:35.689559+00:00",
+   "reviewed_utc": "2026-09-18T20:27:00.094006+00:00",
    "schema": "inferswarm.v2a.discovery-bindings/3"
   },
   "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
@@ -193,7 +194,7 @@
     }
    ],
    "hostname": "inferswarm02",
-   "measured_utc": "2026-09-18T14:51:35.689509+00:00",
+   "measured_utc": "2026-09-18T20:27:00.093958+00:00",
    "node_identity_source": "os.uname().nodename on the proving node",
    "nonclaims": [
     "inventory data only: no selection, promotion, authorization, or correctness reference may be derived from this document",
@@ -204,12 +205,12 @@
    "schema": "inferswarm.v2a.discovery-inventory/3",
    "vulkan_loader_identity": "1.4.309"
   },
-  "mapping_digest": "d8a58717e9e91bcb4dfed9b180d0e9fe8cc937b6cf9cd5509554aa90550860c8",
+  "mapping_digest": "c161922b0edb74fd0800aae404cbc4641020af2a99d6a35379c6f12a2e3a125b",
   "participants": {
    "a": {
     "fresh_binding": {
      "authorization": "NON_AUTHORIZING",
-     "binding_proof_sha256": "b0fc4ef76ed2e84dfabdae8d8bda44fba206719c575ba8b0a06facebf26d36a2",
+     "binding_proof_sha256": "ba66c111749658417764c4f73261145c7f1891afde6fd93509a9b4f116365de1",
      "binding_status": "BOUND",
      "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
      "identity_probe": {
@@ -243,9 +244,9 @@
       "raw_stderr_path": "./identity-probe-stderr-vulkan1.txt",
       "raw_stdout_path": "./identity-probe-stdout-vulkan1.txt",
       "selector": "Vulkan1",
-      "started_utc": "2026-09-18T14:51:35.689576+00:00",
-      "stderr_sha256": "f2fdf38a5f76fd2e2cd4005be6d78153008760ae4672d4c0d90610e988d5ab9c",
-      "stdout_sha256": "9fdddf2f3a48c696f056eeb0bde66215162e5784047cb0ef17a0aa3ffa848797",
+      "started_utc": "2026-09-18T20:27:00.094022+00:00",
+      "stderr_sha256": "05b0eb45c94bc5445852c28a7da6694d972f83aaa98d6f107e766d0ae5200a6f",
+      "stdout_sha256": "8b012bd7c94b22db5a85fcf6b5af607733cc860128a4b389dc018a7a8704d61c",
       "zero_generation_proof": [
        "Generation: 0.0 t/s"
       ]
@@ -267,7 +268,7 @@
    "b": {
     "fresh_binding": {
      "authorization": "NON_AUTHORIZING",
-     "binding_proof_sha256": "e475c0fb0219f369eb7c573ba7b5adf534d766d6c71e2578bc34e25f9813abf0",
+     "binding_proof_sha256": "a96e68850304627f2b1ec32ea71c630340492b8663661f71d9701a10794978ad",
      "binding_status": "BOUND",
      "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
      "identity_probe": {
@@ -301,9 +302,9 @@
       "raw_stderr_path": "./identity-probe-stderr-vulkan2.txt",
       "raw_stdout_path": "./identity-probe-stdout-vulkan2.txt",
       "selector": "Vulkan2",
-      "started_utc": "2026-09-18T14:51:39.965170+00:00",
-      "stderr_sha256": "6ec082cd6ca8ec8f3a97193608c1005eac31ba4826e3b72b54cd1f17d1a68b8d",
-      "stdout_sha256": "790ad3a80ab9f057353a2c27ad92b4d69c0422d96f3ad7c3e3135d9f12d0b3af",
+      "started_utc": "2026-09-18T20:27:04.388623+00:00",
+      "stderr_sha256": "33d93130e862c22dbe027ef8d0a7a5afe67999f0c8e5805e3ece1c4cb2163ba4",
+      "stdout_sha256": "6a967406bbacb217ecdab17935c6ef27a64f3cede962f8a621569086701113c4",
       "zero_generation_proof": [
        "Generation: 0.0 t/s"
       ]
@@ -325,7 +326,7 @@
   },
   "schema": "inferswarm.v2d.fresh-mapping/2"
  },
- "mapping_digest": "d8a58717e9e91bcb4dfed9b180d0e9fe8cc937b6cf9cd5509554aa90550860c8",
+ "mapping_digest": "c161922b0edb74fd0800aae404cbc4641020af2a99d6a35379c6f12a2e3a125b",
  "probes": [
   {
    "argv": [
@@ -529,7 +530,7 @@
    "name": "gateway_ping",
    "returncode": 0,
    "stdout_rel": "raw/gateway_ping.stdout",
-   "stdout_sha256": "4631a9d235831806ecce94da9fc4b5cea70b6eae25939a2ebc097c0112ef5e13"
+   "stdout_sha256": "6925197a922a32c8dcb38cc74cf81366279d047ef070b769cf84f612316a6606"
   },
   {
    "argv": [
@@ -574,9 +575,10 @@
    "name": "journal_faults",
    "returncode": 0,
    "stdout_rel": "raw/journal_faults.stdout",
-   "stdout_sha256": "f5f9284b735919326f39a8585623e2a9d135e02768cfe69f0436f984b60fdadb"
+   "stdout_sha256": "be58dae664092b89fc8f89e6d14e8d1ed02834db7d1f3d2eca1da9213bbedd85"
   }
  ],
+ "producer_head": "d921033063b8d9c1891b12bc461c06263d385f34",
  "schema": "inferswarm.v2d.preflight/2",
  "sentinels": {
   "a": {
@@ -602,35 +604,35 @@
      },
      "raw_lines": {
       "device_compute": [
-       "0.03.890.961 I sched_reserve:    Vulkan1 compute buffer size =   104.51 MiB"
+       "0.03.902.075 I sched_reserve:    Vulkan1 compute buffer size =   104.51 MiB"
       ],
       "device_context": [
-       "0.03.850.965 I llama_kv_cache:    Vulkan1 KV buffer size =  1152.00 MiB"
+       "0.03.862.207 I llama_kv_cache:    Vulkan1 KV buffer size =  1152.00 MiB"
       ],
       "device_memory_before_after": [
-       "0.00.636.924 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
-       "0.04.324.854 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
+       "0.00.646.098 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+       "0.04.320.597 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
       ],
       "device_model": [
-       "0.01.033.045 I load_tensors:      Vulkan1 model buffer size =  1834.82 MiB"
+       "0.01.043.580 I load_tensors:      Vulkan1 model buffer size =  1834.82 MiB"
       ],
       "host_compute": [
-       "0.03.890.967 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+       "0.03.902.082 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
       ],
       "host_mapping": [
-       "0.01.033.044 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+       "0.01.043.579 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
       ],
       "host_memory_final": [
-       "0.04.324.854 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+       "0.04.320.598 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
       ],
       "host_memory_pre_realization": [
-       "0.00.636.925 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+       "0.00.646.098 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
       ],
       "host_output": [
-       "0.03.850.367 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+       "0.03.861.597 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
       ],
       "ready_state": [
-       "0.04.047.683 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+       "0.04.045.249 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
       ],
       "source_fetches_after_ready": [],
       "unplanned_state_movements": []
@@ -670,24 +672,24 @@
     },
     "correctness_semantics": "byte-exact-prefix-of-reference",
     "exit_code": 0,
-    "exit_code_rel": "sentinel-pfC1-a.exit-code",
+    "exit_code_rel": "sentinel-pfR1-a.exit-code",
     "fallback_present": false,
-    "label": "sentinel-pfC1-a",
+    "label": "sentinel-pfR1-a",
     "offloaded_layers": [
      37,
      37
     ],
     "selected_bdf": "0000:06:00.0",
     "stderr_bytes": 19985,
-    "stderr_rel": "sentinel-pfC1-a.stderr",
-    "stderr_sha256": "18841d727f6d57cedfb70a618c62062377f52814ea19baf3e1d913e5646299dc",
+    "stderr_rel": "sentinel-pfR1-a.stderr",
+    "stderr_sha256": "eb19ab1e50997e34aed00322a2aea44f1981325bc5494c6b8d3d047629a65008",
     "stdout_bytes": 1177,
-    "stdout_rel": "sentinel-pfC1-a.stdout",
-    "stdout_sha256": "189650c1fb6a289751ee2947864335239c7dc9e179087a8fe819ee42767b1c49",
+    "stdout_rel": "sentinel-pfR1-a.stdout",
+    "stdout_sha256": "702c393dc485bbade5c8fa1de7e9ca2c6e5daae61f7c2ccb65c4eb2dba882be3",
     "timed_out": false,
     "workload_interval_ns": [
-     61175272258722,
-     61179691759172
+     81299796774414,
+     81304213997625
     ]
    },
    "selected_bdf": "0000:06:00.0"
@@ -715,35 +717,35 @@
      },
      "raw_lines": {
       "device_compute": [
-       "0.03.929.662 I sched_reserve:    Vulkan2 compute buffer size =   104.51 MiB"
+       "0.03.923.344 I sched_reserve:    Vulkan2 compute buffer size =   104.51 MiB"
       ],
       "device_context": [
-       "0.03.888.403 I llama_kv_cache:    Vulkan2 KV buffer size =  1152.00 MiB"
+       "0.03.881.882 I llama_kv_cache:    Vulkan2 KV buffer size =  1152.00 MiB"
       ],
       "device_memory_before_after": [
-       "0.00.643.012 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
-       "0.04.317.889 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
+       "0.00.647.014 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+       "0.04.317.006 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
       ],
       "device_model": [
-       "0.01.040.652 I load_tensors:      Vulkan2 model buffer size =  1834.82 MiB"
+       "0.01.042.778 I load_tensors:      Vulkan2 model buffer size =  1834.82 MiB"
       ],
       "host_compute": [
-       "0.03.929.669 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+       "0.03.923.351 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
       ],
       "host_mapping": [
-       "0.01.040.651 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+       "0.01.042.777 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
       ],
       "host_memory_final": [
-       "0.04.317.890 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+       "0.04.317.007 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
       ],
       "host_memory_pre_realization": [
-       "0.00.643.012 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+       "0.00.647.015 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
       ],
       "host_output": [
-       "0.03.887.795 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+       "0.03.881.271 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
       ],
       "ready_state": [
-       "0.04.042.836 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+       "0.04.046.630 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
       ],
       "source_fetches_after_ready": [],
       "unplanned_state_movements": []
@@ -783,24 +785,24 @@
     },
     "correctness_semantics": "byte-exact-prefix-of-reference",
     "exit_code": 0,
-    "exit_code_rel": "sentinel-pfC1-b.exit-code",
+    "exit_code_rel": "sentinel-pfR1-b.exit-code",
     "fallback_present": false,
-    "label": "sentinel-pfC1-b",
+    "label": "sentinel-pfR1-b",
     "offloaded_layers": [
      37,
      37
     ],
     "selected_bdf": "0000:09:00.0",
     "stderr_bytes": 19985,
-    "stderr_rel": "sentinel-pfC1-b.stderr",
-    "stderr_sha256": "dcb985210f06873ff2676f584ccbefb0a5b1a835952aeb88626a12f97d158f5c",
+    "stderr_rel": "sentinel-pfR1-b.stderr",
+    "stderr_sha256": "f166c4e76de11505241fa73162fcaf9b2ae6525ad576a2ad17b745da19b881f6",
     "stdout_bytes": 1177,
-    "stdout_rel": "sentinel-pfC1-b.stdout",
-    "stdout_sha256": "69bf1afec2ff8d49ceb3f916bb7368bb807bb145e8836d31ee5b64fcb9bb00bb",
+    "stdout_rel": "sentinel-pfR1-b.stdout",
+    "stdout_sha256": "35db34e0699ed4cbfd3ba857fc1ba99ea32471e25e52540f7d0bf020388114dc",
     "timed_out": false,
     "workload_interval_ns": [
-     61179719034164,
-     61184149846179
+     81304252729660,
+     81308672662611
     ]
    },
    "selected_bdf": "0000:09:00.0"
@@ -854,7 +856,7 @@
     }
    },
    "mem_busy_percent": null,
-   "monotonic_ns": 61175265805114,
+   "monotonic_ns": 81299690152082,
    "ras_gpu_err_cnt": null,
    "vram_total_bytes": 8573157376,
    "vram_used_bytes": 8339456
@@ -863,7 +865,7 @@
    "bdf": "09:00.0",
    "current_link_speed": "8.0 GT/s PCIe",
    "current_link_width": "16",
-   "gpu_busy_percent": 3,
+   "gpu_busy_percent": 2,
    "hwmon": {
     "hwmon7": {
      "fan1_enable": 0,
@@ -891,22 +893,22 @@
      "temp1_crit": 85000,
      "temp1_crit_hyst": -273150,
      "temp1_emergency": 90000,
-     "temp1_input": 31000,
+     "temp1_input": 32000,
      "temp1_label": "edge",
      "temp2_crit": 105000,
      "temp2_crit_hyst": -273150,
      "temp2_emergency": 110000,
-     "temp2_input": 33000,
+     "temp2_input": 34000,
      "temp2_label": "junction",
      "temp3_crit": 95000,
      "temp3_crit_hyst": -273150,
      "temp3_emergency": 100000,
-     "temp3_input": 31000,
+     "temp3_input": 33000,
      "temp3_label": "mem"
     }
    },
    "mem_busy_percent": null,
-   "monotonic_ns": 61175268815658,
+   "monotonic_ns": 81299693457550,
    "ras_gpu_err_cnt": null,
    "vram_total_bytes": 8573157376,
    "vram_used_bytes": 3140513792
