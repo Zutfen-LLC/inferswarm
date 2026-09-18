@@ -46,8 +46,20 @@ def collect_preflight(*, repo: Path, out: Path, attempt_id: str,
     raw.mkdir(parents=True, exist_ok=True)
     probes: list[dict[str, Any]] = []
 
-    def art(name: str, argv: list[str], timeout: int = 120) -> dict:
-        receipt = host.run_probe(argv, timeout=timeout)
+    def art(name: str, argv: list[str], timeout: int = 120,
+            optional: bool = False) -> dict:
+        # optional probes mirror the accepted V2-C precedent: sources
+        # genuinely absent on this kernel (e.g. amdgpu /sys version)
+        # are retained as failed receipts, recorded unavailable —
+        # never silently dropped, never fatal.
+        try:
+            receipt = host.run_probe(argv, timeout=timeout)
+        except host.HostObservationError as exc:
+            if not optional:
+                raise
+            receipt = {"argv": argv, "returncode": 1,
+                       "stdout": "", "stderr": str(exc),
+                       "optional_unavailable": True}
         host.durable_write(raw / f"{name}.stdout",
                            receipt["stdout"].encode())
         host.durable_write(raw / f"{name}.stderr",
@@ -63,7 +75,8 @@ def collect_preflight(*, repo: Path, out: Path, attempt_id: str,
     art("boot_id", ["cat", "/proc/sys/kernel/random/boot_id"])
     art("uname", ["uname", "-a"])
     art("kernel_cmdline", ["cat", "/proc/cmdline"])
-    art("amdgpu_version", ["cat", "/sys/module/amdgpu/version"])
+    art("amdgpu_version", ["cat", "/sys/module/amdgpu/version"],
+        optional=True)
     art("vulkan_loader", ["dpkg-query", "-W",
                           "-f=${Version}\n", "libvulkan1"])
     art("icd_list", ["ls", "-la", "/usr/share/vulkan/icd.d/"])

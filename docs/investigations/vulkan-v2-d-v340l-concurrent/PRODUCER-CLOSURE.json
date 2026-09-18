@@ -9,7 +9,7 @@
   "scripts/issue216_host.py": "cff444ec3095da97bf0f50e86a97e1913bb7c7aea04b3dd404e372de61071951",
   "scripts/issue216_manifest.py": "5565bda4274140874426d599756b6bda6df401ea5645e3c6458b9cb1d9d6bc89",
   "scripts/issue216_physical_authority.py": "0efd68a235c78b5a8183ba37ca2da857f5208a6fd9490b39a4da8e65a47023cb",
-  "scripts/issue216_preflight.py": "f28e2881d4cad956ea305ae501f5e5d260d3c5ce9ee5add5c480467a7aa21506",
+  "scripts/issue216_preflight.py": "21724c0213ceee4a2738750d4938ef2bf5180c612e438dbcbd9b0178598565f9",
   "scripts/issue216_receipt.py": "c72318131e99cbb0b6049dd11490a358871d842339d794712a56a5cc50480ace",
   "scripts/issue216_reset.py": "fa9ded1ddb253df114d1b77ecb1f04a66c3d71561e5dbff44b7cd13d37e5441b",
   "scripts/issue216_soak.py": "f240e58a708e19704130a0b46e6d285bd578c1f987341d5f878f41e811257f8f",
