@@ -7,6 +7,7 @@
     "upper_bound_ns": 2499436,
     "verdict": "OVERLAP"
   },
+  "capability_ok": true,
   "control": {
     "lower_bound_ns": -4072485412,
     "max_deviation_ns_a": 18330,
@@ -10238,6 +10239,166 @@
     }
   },
   "perturbation_clean": true,
+  "perturbation_replay": {
+    "runs": [
+      {
+        "clean": true,
+        "label": "Vulkan1-disabled-1",
+        "replayed": {
+          "accounting": {
+            "source_fetches_after_ready": 0,
+            "unexplained_persistent_host_mirror_bytes": 0,
+            "unplanned_state_movements": 0
+          },
+          "byte_exact": true,
+          "exit_code": 0
+        }
+      },
+      {
+        "clean": true,
+        "label": "Vulkan1-disabled-2",
+        "replayed": {
+          "accounting": {
+            "source_fetches_after_ready": 0,
+            "unexplained_persistent_host_mirror_bytes": 0,
+            "unplanned_state_movements": 0
+          },
+          "byte_exact": true,
+          "exit_code": 0
+        }
+      },
+      {
+        "clean": true,
+        "label": "Vulkan1-disabled-3",
+        "replayed": {
+          "accounting": {
+            "source_fetches_after_ready": 0,
+            "unexplained_persistent_host_mirror_bytes": 0,
+            "unplanned_state_movements": 0
+          },
+          "byte_exact": true,
+          "exit_code": 0
+        }
+      },
+      {
+        "clean": true,
+        "label": "Vulkan1-enabled-1",
+        "replayed": {
+          "accounting": {
+            "source_fetches_after_ready": 0,
+            "unexplained_persistent_host_mirror_bytes": 0,
+            "unplanned_state_movements": 0
+          },
+          "byte_exact": true,
+          "exit_code": 0
+        }
+      },
+      {
+        "clean": true,
+        "label": "Vulkan1-enabled-2",
+        "replayed": {
+          "accounting": {
+            "source_fetches_after_ready": 0,
+            "unexplained_persistent_host_mirror_bytes": 0,
+            "unplanned_state_movements": 0
+          },
+          "byte_exact": true,
+          "exit_code": 0
+        }
+      },
+      {
+        "clean": true,
+        "label": "Vulkan1-enabled-3",
+        "replayed": {
+          "accounting": {
+            "source_fetches_after_ready": 0,
+            "unexplained_persistent_host_mirror_bytes": 0,
+            "unplanned_state_movements": 0
+          },
+          "byte_exact": true,
+          "exit_code": 0
+        }
+      },
+      {
+        "clean": true,
+        "label": "Vulkan2-disabled-1",
+        "replayed": {
+          "accounting": {
+            "source_fetches_after_ready": 0,
+            "unexplained_persistent_host_mirror_bytes": 0,
+            "unplanned_state_movements": 0
+          },
+          "byte_exact": true,
+          "exit_code": 0
+        }
+      },
+      {
+        "clean": true,
+        "label": "Vulkan2-disabled-2",
+        "replayed": {
+          "accounting": {
+            "source_fetches_after_ready": 0,
+            "unexplained_persistent_host_mirror_bytes": 0,
+            "unplanned_state_movements": 0
+          },
+          "byte_exact": true,
+          "exit_code": 0
+        }
+      },
+      {
+        "clean": true,
+        "label": "Vulkan2-disabled-3",
+        "replayed": {
+          "accounting": {
+            "source_fetches_after_ready": 0,
+            "unexplained_persistent_host_mirror_bytes": 0,
+            "unplanned_state_movements": 0
+          },
+          "byte_exact": true,
+          "exit_code": 0
+        }
+      },
+      {
+        "clean": true,
+        "label": "Vulkan2-enabled-1",
+        "replayed": {
+          "accounting": {
+            "source_fetches_after_ready": 0,
+            "unexplained_persistent_host_mirror_bytes": 0,
+            "unplanned_state_movements": 0
+          },
+          "byte_exact": true,
+          "exit_code": 0
+        }
+      },
+      {
+        "clean": true,
+        "label": "Vulkan2-enabled-2",
+        "replayed": {
+          "accounting": {
+            "source_fetches_after_ready": 0,
+            "unexplained_persistent_host_mirror_bytes": 0,
+            "unplanned_state_movements": 0
+          },
+          "byte_exact": true,
+          "exit_code": 0
+        }
+      },
+      {
+        "clean": true,
+        "label": "Vulkan2-enabled-3",
+        "replayed": {
+          "accounting": {
+            "source_fetches_after_ready": 0,
+            "unexplained_persistent_host_mirror_bytes": 0,
+            "unplanned_state_movements": 0
+          },
+          "byte_exact": true,
+          "exit_code": 0
+        }
+      }
+    ]
+  },
   "schema": "inferswarm.v2d0.reduce/1",
   "terminal": "V2D0_VULKAN_WORKLOAD_OVERLAP_SEAM_PASS"
 }

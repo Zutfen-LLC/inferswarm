@@ -5,7 +5,7 @@ Derives, from retained raw bytes ONLY (never from authored summaries):
 
   * per-participant physical identity (device UUID/name from the seam
     header record, cross-bound to the run's own selected-device line
-    and the accepted identity-probe BDF);
+    and the expected BDF via the header's PCI bus identity);
   * per-graph-compute device-timestamp interval UNIONS, converted to
     the common CLOCK_MONOTONIC domain via the retained calibration
     pairs;
@@ -15,8 +15,15 @@ Derives, from retained raw bytes ONLY (never from authored summaries):
     OVERLAP only when the lower bound stays strictly positive after
     the combined uncertainty; NON_OVERLAP only when the upper bound is
     <= 0 after adding the full uncertainty; otherwise INDETERMINATE;
-  * the non-perturbation verdict (byte-exact output, 0/0/0 accounting,
-    full offload, no fallback, clean exit, same BDF, both arms);
+  * the non-perturbation verdict REPLAYED from raw bytes: the retained
+    per-run stdout/stderr/exit-code files are re-hashed against the
+    ledger's recorded digests, then the ACCEPTED comparator
+    (v0c_correctness.reduce) and the ACCEPTED selector-aware
+    accounting reducer (v1c_accounting.parse_accounting) are re-run
+    over the raw bytes; the collector's ledger summary is used ONLY as
+    a cross-check (any disagreement fails closed), never as authority;
+  * the capability verdict parsed from the retained capability probe
+    record (CAPABILITY.json), never hard-coded;
   * the terminal classification.
 
 Terminal vocabulary (exactly the issue's):
@@ -34,7 +41,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from dataclasses import dataclass, field
+import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 SCHEMA_REDUCE = "inferswarm.v2d0.reduce/1"
@@ -45,17 +53,29 @@ TERMINALS = (
     "V2D0_EVIDENCE_BLOCKED",
 )
 
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO / "scripts"))
+import v0c_correctness  # noqa: E402  accepted comparator (replayed)
+import v1c_accounting  # noqa: E402  accepted accounting reducer (replayed)
+
+PROMPT = ("The quick brown fox jumps over the lazy dog. "
+          "Explain what happens next in one sentence:")
+ACCOUNTING_KEYS = ("unexplained_persistent_host_mirror_bytes",
+                   "source_fetches_after_ready",
+                   "unplanned_state_movements")
+
 
 class ReductionError(RuntimeError):
     """A retained-evidence predicate failed; the campaign is BLOCKED."""
 
 
 # ---------------------------------------------------------------------------
-# Raw record parsing (JSONL: drain records + one final header record).
+# Raw record parsing (JSONL: drain records + header records).
 # ---------------------------------------------------------------------------
 
 def load_observe_record(path: Path) -> dict:
     header = None
+    headers_seen = 0
     drains = []
     for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         if not line.strip():
@@ -66,11 +86,13 @@ def load_observe_record(path: Path) -> dict:
             raise ReductionError(f"{path.name}:{lineno}: malformed JSONL: {e}")
         kind = rec.get("kind")
         if kind == "header":
-            # Two headers are expected by construction: one at the first
-            # graph-compute entry (incomplete, zeros) and the final one at
-            # cleanup (complete tick index).  A THIRD is malformed.
-            if sum(1 for r in [header, rec] if r is not None) > 2:
-                raise ReductionError(f"{path.name}: more than two header records")
+            headers_seen += 1
+            # Exactly two headers are emitted by construction (first
+            # graph-compute entry, then cleanup).  A third is malformed.
+            if headers_seen > 2:
+                raise ReductionError(
+                    f"{path.name}: more than two header records "
+                    f"({headers_seen})")
             if rec.get("total_ticks", 0) > 0:
                 header = rec  # the complete, final header
             elif header is None:
@@ -120,7 +142,6 @@ def submissions_from_record(record: dict) -> list[Submission]:
     roles = header["tick_roles"]
     gcs = header["tick_graph_computes"]
     queries = header["tick_queries"]
-    # Reconstruct the full tick value array from drains (contiguous ranges).
     values: dict[int, int] = {}
     for drain in record["drains"]:
         for i, q in enumerate(range(drain["query_first"],
@@ -203,13 +224,8 @@ def union_intervals(per_sub: list[tuple[int, int, int, int]]) -> list[tuple[int,
 # Conservative overlap decision.
 # ---------------------------------------------------------------------------
 
-def overlap_lower_bound(a: list[tuple[int, int]], b: list[tuple[int, int]],
-                        uncertainty_ns: int) -> int:
-    """Max over interval pairs of (min(ea,eb) - max(ba,bb)) - uncertainty.
-
-    This is the LOWER bound on real overlap: apparent overlap shrinks by
-    the full uncertainty; strictly positive -> OVERLAP candidate.
-    """
+def _max_apparent_overlap(a: list[tuple[int, int]],
+                          b: list[tuple[int, int]]) -> int:
     best: int | None = None
     for ba, ea in a:
         for bb, eb in b:
@@ -218,24 +234,19 @@ def overlap_lower_bound(a: list[tuple[int, int]], b: list[tuple[int, int]],
                 best = apparent
     if best is None:
         raise ReductionError("no intervals to compare")
-    return best - uncertainty_ns
+    return best
+
+
+def overlap_lower_bound(a: list[tuple[int, int]], b: list[tuple[int, int]],
+                        uncertainty_ns: int) -> int:
+    """Max apparent overlap MINUS the full uncertainty (lower bound)."""
+    return _max_apparent_overlap(a, b) - uncertainty_ns
 
 
 def overlap_upper_bound(a: list[tuple[int, int]], b: list[tuple[int, int]],
                         uncertainty_ns: int) -> int:
-    """Same max apparent overlap, but uncertainty ADDED.
-
-    <= 0 -> provably NON_OVERLAP (even granting full uncertainty).
-    """
-    best: int | None = None
-    for ba, ea in a:
-        for bb, eb in b:
-            apparent = min(ea, eb) - max(ba, bb)
-            if best is None or apparent > best:
-                best = apparent
-    if best is None:
-        raise ReductionError("no intervals to compare")
-    return best + uncertainty_ns
+    """Max apparent overlap PLUS the full uncertainty (upper bound)."""
+    return _max_apparent_overlap(a, b) + uncertainty_ns
 
 
 def classify_overlap(a: dict, b: dict) -> dict:
@@ -262,8 +273,12 @@ def reduce_participant(record: dict, expected_bdf: str,
                        selected_line_bdf: str | None) -> dict:
     require_complete_drains(record)
     header = record["header"]
-    if header.get("timestamp_valid_bits", 0) < 2:
-        raise ReductionError("header lacks timestampValidBits >= 2")
+    vb = header.get("timestamp_valid_bits", 0)
+    if not isinstance(vb, int) or vb < 2 or vb > 64:
+        # The seam's capability proof admits only [2, 64]; a header
+        # outside that range is forged or corrupt.
+        raise ReductionError(
+            f"header timestampValidBits {vb!r} outside [2, 64]")
     period = float(header["timestamp_period_ns"])
     subs = submissions_from_record(record)
     calibs = calibrations_from_record(record)
@@ -317,6 +332,102 @@ def reduce_participant(record: dict, expected_bdf: str,
 
 
 # ---------------------------------------------------------------------------
+# Non-perturbation REPLAY from raw bytes (never authored summaries).
+# ---------------------------------------------------------------------------
+
+def replay_perturbation_run(run_dir: Path, label: str, ledger_run: dict,
+                            reference: bytes) -> dict:
+    """Replay one perturbation run's accepted predicates from raw bytes.
+
+    * re-hash the retained stdout/stderr against the ledger's recorded
+      digests (byte identity between ledger and retained bytes);
+    * re-run the ACCEPTED comparator + ACCEPTED accounting reducer over
+      the raw bytes;
+    * cross-check against the ledger's authored summary — any
+      disagreement fails closed (the ledger may under-report a failure
+      the bytes show, and vice versa);
+    * require clean exit, and the selected BDF equal to the die's
+      frozen BDF.
+    """
+    stdout = (run_dir / f"{label}.stdout").read_bytes()
+    stderr = (run_dir / f"{label}.stderr").read_bytes()
+    exit_code = int((run_dir / f"{label}.exit-code").read_text().strip())
+    if hashlib.sha256(stdout).hexdigest() != ledger_run["stdout_sha256"]:
+        raise ReductionError(f"{label}: retained stdout digest != ledger")
+    if hashlib.sha256(stderr).hexdigest() != ledger_run["stderr_sha256"]:
+        raise ReductionError(f"{label}: retained stderr digest != ledger")
+    argv = ledger_run["argv"]
+    selector = argv[argv.index("--device") + 1]
+    correctness = v0c_correctness.reduce(stdout, PROMPT.encode(), reference)
+    accounting = v1c_accounting.parse_accounting(
+        stderr.decode("utf-8", "replace"), selector=selector)
+    replay = {
+        "byte_exact": bool(correctness["byte_exact_visible_output"]),
+        "accounting": {k: int(accounting[k]) for k in ACCOUNTING_KEYS},
+        "exit_code": exit_code,
+    }
+    summary = ledger_run["reduced_summary"]
+    if replay["byte_exact"] != summary["byte_exact"]:
+        raise ReductionError(
+            f"{label}: replayed byte_exact {replay['byte_exact']} != "
+            f"ledger {summary['byte_exact']}")
+    for k in ACCOUNTING_KEYS:
+        if replay["accounting"][k] != summary["accounting"][k]:
+            raise ReductionError(
+                f"{label}: replayed accounting {k}={replay['accounting'][k]} "
+                f"!= ledger {summary['accounting'][k]}")
+    clean = (replay["byte_exact"] and exit_code == 0
+             and all(v == 0 for v in replay["accounting"].values()))
+    return {"label": label, "replayed": replay, "clean": clean,
+            "selected_bdf": ledger_run.get("selected_bdf")}
+
+
+def replay_perturbation(root: Path, reference: bytes) -> dict:
+    ledger = json.loads((root / "perturbation" / "LEDGER-perturbation.json")
+                        .read_text(encoding="utf-8"))
+    runs = []
+    for ledger_run in ledger["runs"]:
+        label = ledger_run["label"]
+        runs.append(replay_perturbation_run(
+            root / "perturbation" / label, label, ledger_run, reference))
+    expected_bdfs = {"Vulkan1": "06:00.0", "Vulkan2": "09:00.0"}
+    for r in runs:
+        sel = r["label"].split("-")[0]
+        if r["selected_bdf"] != expected_bdfs[sel]:
+            raise ReductionError(
+                f"{r['label']}: selected BDF {r['selected_bdf']} != "
+                f"expected {expected_bdfs[sel]}")
+    if not runs:
+        raise ReductionError("no perturbation runs in ledger")
+    return {"runs": runs, "clean": all(r["clean"] for r in runs)}
+
+
+# ---------------------------------------------------------------------------
+# Capability replay from the retained probe record.
+# ---------------------------------------------------------------------------
+
+def replay_capability(root: Path) -> bool:
+    """Derive capability_ok from CAPABILITY.json (never hard-coded)."""
+    doc = json.loads((root / "capability" / "CAPABILITY.json")
+                     .read_text(encoding="utf-8"))
+    if doc.get("schema") != "inferswarm.v2d0.capability-probe/1":
+        raise ReductionError("capability record schema mismatch")
+    dies = doc.get("dies", [])
+    if len(dies) != 2:
+        raise ReductionError(f"expected 2 dies in capability record, saw {len(dies)}")
+    ok = True
+    for die in dies:
+        if die.get("timestamp_compute_and_graphics") != "true":
+            ok = False
+        bits = die.get("timestamp_valid_bits_queue_families") or []
+        if not bits or not all(int(b) >= 2 for b in bits):
+            ok = False
+        if not die.get("vk_ext_calibrated_timestamps"):
+            ok = False
+    return ok
+
+
+# ---------------------------------------------------------------------------
 # Terminal state machine.
 # ---------------------------------------------------------------------------
 
@@ -340,23 +451,24 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--evidence-root", required=True)
     parser.add_argument("--out", required=True)
+    parser.add_argument("--reference",
+                        default=str(REPO / "docs/investigations/vulkan-v1-a"
+                                    "/reference-visible-output.txt"))
     args = parser.parse_args()
     root = Path(args.evidence_root)
+    reference = Path(args.reference).read_bytes()
 
-    # Non-perturbation ledger
-    perturb = json.loads((root / "perturbation" / "LEDGER-perturbation.json")
-                         .read_text(encoding="utf-8"))
-    clean = True
-    for run in perturb["runs"]:
-        rs = run["reduced_summary"]
-        if not rs["byte_exact"] or any(v != 0 for v in rs["accounting"].values()):
-            clean = False
-    perturbation_clean = clean
+    # Non-perturbation: REPLAYED from raw bytes with ledger cross-check.
+    perturbation = replay_perturbation(root, reference)
+    perturbation_clean = perturbation["clean"]
+
+    # Capability: parsed from the retained probe record.
+    capability_ok = replay_capability(root)
 
     # Phase 5 records
     disc = root / "discrimination"
     parts = {}
-    for schedule, bdf in (("sequential", None), ("concurrent", None)):
+    for schedule in ("sequential", "concurrent"):
         for sel, expected in (("Vulkan1", "06:00.0"), ("Vulkan2", "09:00.0")):
             rec_path = disc / schedule / f"{schedule}-{sel}.observe.jsonl"
             run_path = disc / schedule / f"{schedule}-{sel}.run.json"
@@ -372,10 +484,14 @@ def main() -> int:
         perturbation_clean=perturbation_clean,
         control_verdict=control["verdict"],
         candidate_verdict=candidate["verdict"],
-        capability_ok=True)
+        capability_ok=capability_ok)
     doc = {
         "schema": SCHEMA_REDUCE,
         "perturbation_clean": perturbation_clean,
+        "perturbation_replay": {
+            "runs": [{"label": r["label"], "clean": r["clean"],
+                      "replayed": r["replayed"]} for r in perturbation["runs"]]},
+        "capability_ok": capability_ok,
         "control": control,
         "candidate": candidate,
         "participants": {f"{k[0]}:{k[1]}": v for k, v in parts.items()},
@@ -384,8 +500,8 @@ def main() -> int:
     Path(args.out).write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n",
                               encoding="utf-8")
     print(json.dumps({k: doc[k] for k in
-                      ("perturbation_clean", "control", "candidate", "terminal")},
-                     indent=1))
+                      ("perturbation_clean", "capability_ok", "control",
+                       "candidate", "terminal")}, indent=1))
     return 0
 
 

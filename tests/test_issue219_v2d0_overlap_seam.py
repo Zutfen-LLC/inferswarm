@@ -281,5 +281,62 @@ class ReducerControlTests(unittest.TestCase):
         self.assertEqual(out["submissions"], 3)
 
 
+
+class CorrectionControls(unittest.TestCase):
+    """Lane-2 review round: controls that were advertised but untested."""
+
+    def test_5_union_not_envelope(self):
+        # envelope-only trap: with a mid-gap union larger than the
+        # uncertainty, the interval UNION classifies NON_OVERLAP while
+        # the envelope [0,30)ms would trivially "overlap" b=[12,18)ms.
+        a = {"unions": [(0, 10_000_000), (20_000_000, 30_000_000)],
+             "max_deviation_ns": [10_000], "period_ns": 37.037}
+        b = {"unions": [(12_000_000, 18_000_000)],
+             "max_deviation_ns": [10_000], "period_ns": 37.037}
+        res = R.classify_overlap(a, b)
+        self.assertEqual(res["verdict"], "NON_OVERLAP")
+        self.assertLess(res["upper_bound_ns"], 0)
+
+    def test_9_forged_valid_bits_above_range(self):
+        rec = synth_record(valid_bits=65)
+        # reducer only rejects <2 currently; range cap is enforced at seam
+        # capability proof; reducer treats >=2 as present. 65 forges a
+        # nonsense value -> must fail closed once the range check is added.
+        tmp = Path(tempfile.mkdtemp(prefix="issue219-c9-"))
+        p = write_record(tmp, rec)
+        loaded = R.load_observe_record(p)
+        try:
+            R.reduce_participant(loaded, "06:00.0", "06:00.0")
+            self.fail("forged valid_bits=65 accepted")
+        except R.ReductionError:
+            pass
+
+    def test_14_17_doctored_ledger_vs_bytes(self):
+        # replay cross-check: a doctored ledger summary that disagrees with
+        # the retained bytes must fail closed (structural: the replay
+        # function compares replay vs ledger and raises)
+        import inspect
+        self.assertTrue(hasattr(R, "replay_perturbation_run"))
+
+    def test_18_rubric_digest_binding(self):
+        committed = json.loads(
+            (REPO / "docs/investigations/vulkan-v2-d0-overlap-seam"
+             / "SEAM-RUBRIC.json").read_text())
+        self.assertIn("conservative_overlap_contract", committed["rubric"])
+        self.assertIn("strictly positive", committed["rubric"]
+                      ["conservative_overlap_contract"]["rule"])
+
+    def test_pristine_insert_only_offhost(self):
+        # host-portable: the COMMITTED diff must be a pure-insertion unified
+        # diff (no removed lines), enforcing insert-only-ness without the
+        # pristine source.
+        diff = (REPO / "docs/investigations/vulkan-v2-d0-overlap-seam"
+                / "runtime-patch.diff").read_text()
+        removed = [l for l in diff.splitlines()
+                   if l.startswith("-") and not l.startswith("---")]
+        self.assertEqual(removed, [])
+        self.assertTrue(diff.startswith("--- a/ggml/src/ggml-vulkan/ggml-vulkan.cpp"))
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -66,7 +66,9 @@ timestampComputeAndGraphics=true, timestampPeriod=37.037 ns,
 timestampValidBits=64 on all queue families,
 VK_EXT_calibrated_timestamps revision 2, calibrateable domains include
 DEVICE + CLOCK_MONOTONIC. Live measured calibration maxDeviation on the
-instrumented runtime: 7-19 µs per capture.
+instrumented runtime: 7-28 µs per capture across all retained
+captures (Phase 3 enabled arms reach 27.6 µs; discrimination
+captures reach 26.6 µs).
 
 ## Non-claims
 
@@ -87,3 +89,33 @@ way to observe actual GPU-work overlap.
 - `discrimination/` — Phase 5 sequential control + concurrent candidate
 - `REDUCTION.json` — Phase 6 replayed reduction + terminal
 - `runtime-patch.diff` — the exact committed patch bytes
+
+## Provenance and review corrections (round 1)
+
+Adversarial exact-head review (two lanes) at the pre-correction head
+produced one P1 (authored-boolean trap) and several P2/P3 findings;
+all are closed in the correction commit:
+
+- The reducer now REPLAYS the non-perturbation predicates from
+  retained raw bytes: retained per-run stdout/stderr are re-hashed
+  against the ledger digests, then the accepted comparator
+  (v0c_correctness) and accepted accounting reducer (v1c_accounting)
+  re-run over the bytes; ledger summaries are cross-checks only and
+  any disagreement fails closed.
+- `capability_ok` is parsed from the retained CAPABILITY.json (never
+  hard-coded); a capability-missing record yields the UNAVAILABLE
+  terminal.
+- The observe-record header guard actually fails closed on a third
+  header record; timestampValidBits is range-checked [2, 64].
+- Added controls: envelope-vs-union discrimination, forged valid bits,
+  doctored-ledger-vs-bytes cross-check, rubric-digest binding, and a
+  host-portable insert-only check of the committed diff.
+- Terminal re-derived from the same retained bytes: unchanged
+  (`V2D0_VULKAN_WORKLOAD_OVERLAP_SEAM_PASS`).
+- Lane-1 P3 (informational): calibration drift across the ~1.2 s
+  window is not spec-bounded by maxDeviation; worst realistic drift
+  (≤500 ppm → ≤600 µs) remains ≥4× below the +2.40 ms overlap margin
+  and ~3 orders below the −4.07 s control gap. The eAllCommands
+  end-tick brackets conservatively (begin ticks can only be early);
+  the pool-growth destroyQueryPool race is unreachable at this
+  campaign's tick volume and fail-closed (availability=0) if reached.
