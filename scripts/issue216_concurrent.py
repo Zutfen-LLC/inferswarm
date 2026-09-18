@@ -92,7 +92,7 @@ def collect_baseline(*, repo: Path, out: Path, attempt_id: str,
             "aer_post": post_aer,
         }
         rows.append(row)
-        _receipt(out / f"rep-{i:02d}", "baseline", attempt_id,
+        _receipt(out, "baseline", attempt_id,
                  f"v2d-baseline-{attempt_id}-{die}-{i:02d}",
                  {"die": die, "rep": i, "run": run, "verdict": row["verdict"],
                   "telemetry_pre": pre, "telemetry_post": post},
