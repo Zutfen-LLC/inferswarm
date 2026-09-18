@@ -1,8 +1,8 @@
-86b45bddea8ac70b67a6ecef5609e01037c7526719dea178dd1f24b2d97aae7d  docs/investigations/vulkan-v2-d-v340l-concurrent/AMENDMENTS.json
+2158ca5a9bbd6c792ca546f11dcd7974361c93b850a3c1b6cd69fa38627666a6  docs/investigations/vulkan-v2-d-v340l-concurrent/AMENDMENTS.json
 013f23bde2742b5d69f9853d647ff3186a8c31f02bfe7a354c611f03c7e526b0  docs/investigations/vulkan-v2-d-v340l-concurrent/AUDIT-REJECTIONS.md
 9cccaca3220c008c7d178b76515ee21beb43dc5ce72b36ae96209eb2eaf1fecc  docs/investigations/vulkan-v2-d-v340l-concurrent/PHYSICAL-AUTHORITY.json
-03c304e99cbeebc2525ad85fafbc0ee9e0a1123f1dd693b9227ef4ad1300cfe0  docs/investigations/vulkan-v2-d-v340l-concurrent/PRODUCER-CLOSURE.json
-c99c43c882cfb648c4aa8d3b859bbc41320d77e61c7e22dc127229c54d7cb0d5  docs/investigations/vulkan-v2-d-v340l-concurrent/README.md
+e347632eea1c099e27afa75c7c6da1ffdb42dcc1b3b431cfdef164bedfbd53ab  docs/investigations/vulkan-v2-d-v340l-concurrent/PRODUCER-CLOSURE.json
+1b047dbb5c67d7a981d973830561a116aa31fcd99384f2b7283dbcad7152321b  docs/investigations/vulkan-v2-d-v340l-concurrent/README.md
 3627590d6d6919d4baef5643968908bcf4e4c70b67f854fe5cfa94f5cf7b6169  docs/investigations/vulkan-v2-d-v340l-concurrent/evidence/ASSEMBLY.json
 70bc55c362851146655fd7124a68232711723e976da0fff19277d996a69094a7  docs/investigations/vulkan-v2-d-v340l-concurrent/evidence/TERMINAL.json
 e18dd6b2b73f425d764406ead75bc6ab2afd4f58e7842feb9d296f5b15818ab2  docs/investigations/vulkan-v2-d-v340l-concurrent/evidence/attempt-ledger.json
@@ -147,7 +147,7 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  docs/investiga
 2719aa4b1877cf14daaa5dc5795ada13bb9e62ca0ea6a86030d7606f4596e021  docs/investigations/vulkan-v2-d-v340l-concurrent/evidence/transport-build/x1p_transport_probe
 297c951b9177bb22ed937e065825f67fc40622be5a9bff113b71b0fc83b955b5  docs/investigations/vulkan-v2-d-v340l-concurrent/evidence/transport-build/x1p_transport_probe.c
 b9a8cba6424f34d6fc6edcaf0582cb5ceded53af4ef368d14d96a9bebaebc21f  docs/investigations/vulkan-v2-d-v340l-concurrent/evidence-superseded-v1/ASSEMBLY.json
-4847ef93b35a3d41b8f65f20b598d4e78aba77058dd961909a917425575ff73c  docs/investigations/vulkan-v2-d-v340l-concurrent/evidence-superseded-v1/README.md
+6e8df76591f44594725fd155f54025e1ee86dbb5830d0e3ef54a0ef27dd7c27c  docs/investigations/vulkan-v2-d-v340l-concurrent/evidence-superseded-v1/README.md
 4367fbbecb2c6d0b0abc0d37ac3c41fb59fa98fb482f549de83a02bef023fae6  docs/investigations/vulkan-v2-d-v340l-concurrent/evidence-superseded-v1/TERMINAL.json
 e18dd6b2b73f425d764406ead75bc6ab2afd4f58e7842feb9d296f5b15818ab2  docs/investigations/vulkan-v2-d-v340l-concurrent/evidence-superseded-v1/attempt-ledger.json
 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa  docs/investigations/vulkan-v2-d-v340l-concurrent/evidence-superseded-v1/baseline-a/rep-01/baseline-blC-a-01.exit-code
