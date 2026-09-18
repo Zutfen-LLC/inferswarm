@@ -172,8 +172,6 @@ def run_sentinels(*, repo: Path, out: Path, attempt_id: str,
                                         out / "sentinel" / die)
         results[die] = ex.reduce_run(run)
         results[die]["run"] = run
-    results["closure_digest"] = closure["closure_digest"]
-    results["producer_head"] = closure["producer_head"]
     return results
 
 
