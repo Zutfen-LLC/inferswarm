@@ -109,7 +109,7 @@ def synth_run_bytes(label: str, *, correct: bool = True,
     stderr = ("\n".join(stderr_lines) + "\n").encode()
     return {
         "label": label,
-        "argv": ["/bin/llama-cli", "-m", "m.gguf", "--device", selector],
+        "argv": ["/bin/llama-cli", "-m", "m.gguf", "-n", "48", "--device", selector],
         "workload_interval_ns": [1000, 2000],
         "timed_out": False,
         "exit_code": exit_code,

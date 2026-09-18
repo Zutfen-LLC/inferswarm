@@ -115,24 +115,61 @@ def run_execution(*, argv: list[str], out_dir: Path, label: str,
     }
 
 
+def correctness_semantics(argv: list[str]) -> str:
+    """The frozen correctness contract, derived from the run's own argv.
+
+    -n 8 (bounded sentinel): byte-exact PREFIX of the accepted reference
+    (accepted V2-C sentinel semantics). -n 48 (full subject): byte-exact
+    EQUALITY with the accepted reference (accepted V2-B/V2-D0 semantics).
+    Any other -n value fails closed at derivation.
+    """
+    n = int(argv[argv.index("-n") + 1])
+    if n == 8:
+        return "byte-exact-prefix-of-reference"
+    if n == 48:
+        return "byte-exact-equality-with-reference"
+    raise ValueError(f"unfrozen token count in argv: -n {n}")
+
+
+def reduce_correctness(stdout: bytes, reference: bytes,
+                      semantics: str) -> dict[str, Any]:
+    """Apply the frozen comparator with the run's own semantics."""
+    visible = extract_visible(stdout)
+    if semantics == "byte-exact-prefix-of-reference":
+        ok = bool(visible) and reference.startswith(visible)
+    elif semantics == "byte-exact-equality-with-reference":
+        ok = visible == reference
+    else:
+        raise ValueError(f"unknown semantics: {semantics}")
+    return {"visible_response_sha256": sha256_bytes(visible),
+            "byte_exact_visible_output": ok}
+
+
+def extract_visible(transcript: bytes) -> bytes:
+    import v0c_correctness
+    return v0c_correctness.extract_visible_response(
+        transcript, PROMPT.encode())
+
+
 def derive_execution_facts(repo: Path, run: dict[str, Any],
                            out_dir: Path) -> dict[str, Any]:
     """Re-derive correctness/accounting from retained bytes with the
     ACCEPTED parsers (same functions the assembler re-runs; used here
     only as collector cross-checks)."""
     sys.path.insert(0, str(repo / "scripts"))
-    import v0c_correctness
     import v1c_accounting
     stdout = (out_dir / run["stdout_rel"]).read_bytes()
     stderr_text = (out_dir / run["stderr_rel"]).read_text(
         encoding="utf-8", errors="replace")
     reference = (repo / "docs/investigations/vulkan-v1-a/"
                  "reference-visible-output.txt").read_bytes()
-    correctness = v0c_correctness.reduce(stdout, PROMPT.encode(), reference)
+    semantics = correctness_semantics(run["argv"])
+    correctness = reduce_correctness(stdout, reference, semantics)
     selector = run["argv"][run["argv"].index("--device") + 1]
     accounting = v1c_accounting.parse_accounting(
         stderr_text, selector=selector)
     run_out = dict(run)
+    run_out["correctness_semantics"] = semantics
     run_out["correctness_crosscheck"] = {
         "visible_response_sha256": correctness["visible_response_sha256"],
         "byte_exact_visible_output": correctness["byte_exact_visible_output"],

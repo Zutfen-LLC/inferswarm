@@ -144,7 +144,8 @@ def rederive_execution(evidence_root: Path, run: dict[str, Any],
                  "reference-visible-output.txt").read_bytes()
     import v0c_correctness
     import v1c_accounting
-    correctness = v0c_correctness.reduce(stdout, PROMPT_BYTES, reference)
+    semantics = ex.correctness_semantics(run["argv"])
+    correctness = ex.reduce_correctness(stdout, reference, semantics)
     stderr_text = stderr.decode("utf-8", "replace")
     selector = run["argv"][run["argv"].index("--device") + 1]
     accounting = v1c_accounting.parse_accounting(stderr_text,
@@ -176,6 +177,7 @@ def rederive_execution(evidence_root: Path, run: dict[str, Any],
         "label": run["label"],
         "exit_code": exit_code,
         "clean_exit": clean_exit,
+        "correctness_semantics": semantics,
         "visible_response_sha256": correctness["visible_response_sha256"],
         "byte_exact": correctness["byte_exact_visible_output"] is True,
         "full_offload": full_offload,
