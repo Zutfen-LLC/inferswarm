@@ -1036,6 +1036,11 @@ class PreservationTests(unittest.TestCase):
                             "scripts/issue215_",
                             "tests/test_issue215_",
                             "docs/investigations/vulkan-v2-c-v340l-platform-stability/",
+                            # Issue #219 V2-D0: additive seam-qualification
+                            # surface pending on main.
+                            "scripts/issue219_",
+                            "tests/test_issue219_",
+                            "docs/investigations/vulkan-v2-d0-overlap-seam/",
                             "docs/hardware/")
         for path in changed:
             self.assertTrue(path.startswith(allowed_prefixes),

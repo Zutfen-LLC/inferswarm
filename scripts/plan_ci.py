@@ -250,6 +250,7 @@ GROUP_TEST_MODULES = {
         "test_v2a_discovery_authority_binding_r3",
         "test_issue210_v2b_v340l",
         "test_issue215_v2c_platform_stability",
+        "test_issue219_v2d0_overlap_seam",
         "test_issue35_link_probe",
         "test_issue35_role_sweep",
         "test_issue35_envelope",
@@ -693,6 +694,15 @@ PATH_GROUPS = {
     "scripts/issue215_sentinel.py": ["vulkan-v0-b"],
     "scripts/issue215_terminal.py": ["vulkan-v0-b"],
     "tests/test_issue215_v2c_platform_stability.py": ["vulkan-v0-b"],
+    # Issue #219 V2-D0 overlap-seam qualification producers.
+    "docs/investigations/vulkan-v2-d0-overlap-seam/": ["vulkan-v0-b"],
+    "scripts/issue219_seam_rubric.py": ["vulkan-v0-b"],
+    "scripts/issue219_capability_probe.py": ["vulkan-v0-b"],
+    "scripts/issue219_patch.py": ["vulkan-v0-b"],
+    "scripts/issue219_observe_collector.py": ["vulkan-v0-b"],
+    "scripts/issue219_reduce.py": ["vulkan-v0-b"],
+    "scripts/issue219_manifest.py": ["vulkan-v0-b"],
+    "tests/test_issue219_v2d0_overlap_seam.py": ["vulkan-v0-b"],
     "tests/test_v2a_discovery_authority_binding_r3.py": ["vulkan-v0-b"],
     # Issue #35 x1 interconnect envelope campaign (same accepted
     # evidence-lifecycle family; the manifest generator is shared).

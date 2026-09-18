@@ -296,6 +296,15 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue215_build_final_authorities_v2.py",
             "scripts/issue215_v2_authority.py",
             "scripts/issue215_manifest.py",
+            # Issue #219 V2-D0: additive Vulkan workload-overlap
+            # observation-seam qualification producers, independently
+            # pinned by the V2-D0 evidence manifest.
+            "scripts/issue219_seam_rubric.py",
+            "scripts/issue219_capability_probe.py",
+            "scripts/issue219_patch.py",
+            "scripts/issue219_observe_collector.py",
+            "scripts/issue219_reduce.py",
+            "scripts/issue219_manifest.py",
             # Issue #213 campaign gate ordering: orchestration tooling and
             # CI registration, independently covered by its own group.
             "scripts/issue213_gate_orchestration.py",
