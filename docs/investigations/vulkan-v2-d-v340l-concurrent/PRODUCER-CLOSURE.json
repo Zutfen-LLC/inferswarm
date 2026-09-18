@@ -1,7 +1,7 @@
 {
  "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
- "closure_digest": "8f5dfcf757f5096cd7f3ac0dbcc0a1578248b133cbfe877c6e55494d60bc4f92",
- "producer_head": "6efb4ebd55a2c09428947b7dcfe7cc7d905bc23f",
+ "closure_digest": "c71e022f97f38cf90735633bc53e2c09227c6d526509b350d6805401dc2c8d1d",
+ "producer_head": "a49141ec4c281a2b68deb42423b7dfbcbffb0be8",
  "schema": "inferswarm.v2d.producer-closure/3",
  "sources": {
   "scripts/issue216_assemble.py": "8b7082e9fc429826c0780b0cbebbcff907a2276184f3662be13b4f5f9f02feb0",
@@ -12,7 +12,7 @@
   "scripts/issue216_host.py": "1405f54c72b185a65ed3aee5fabac42f1e4272dbc716ea3c578bd719fa303a00",
   "scripts/issue216_manifest.py": "5565bda4274140874426d599756b6bda6df401ea5645e3c6458b9cb1d9d6bc89",
   "scripts/issue216_physical_authority.py": "88a523fa15ff584da71e7a9e99cabb7fe1b7e935e01dac480e7378e49e32266a",
-  "scripts/issue216_preflight.py": "40de705c567a2e51f086d194d5cabd998415933fdfee3c8676fb586ed2b55d0a",
+  "scripts/issue216_preflight.py": "9ebd3b85f32180907da12950887c1f79cea4f9e985103a04429e0f842002cd44",
   "scripts/issue216_receipt.py": "9467bbba6532aa6b3af1ecda1eebf311af38afb0d640d90591adb9076ad7725e",
   "scripts/issue216_reset.py": "2d0cc7d5f97627ea32735f7fef93ecbff3e3f1da8c898f8e1228a21fc39fdbc6",
   "scripts/issue216_soak.py": "521afd4e16df98e0e9a9515540f765b8e43d07010ce5bfe395cbbc48a45373e3",
