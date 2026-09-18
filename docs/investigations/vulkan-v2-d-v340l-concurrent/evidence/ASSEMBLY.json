@@ -316,10 +316,22 @@
   "meets_minimum": true,
   "overlap_failures": []
  },
- "fault_a": null,
- "fault_a_missing_reason": "missing raw artifact: fault-arm-a-loss/initial/b/run.stdout",
- "fault_b": null,
- "fault_b_missing_reason": "missing raw artifact: fault-arm-b-loss/initial/a/run.stdout",
+ "fault_a": {
+  "arm": "a",
+  "recovery_sentinel_correct": true,
+  "relaunch_correct": true,
+  "sibling_correct": true,
+  "sibling_stayed_on_die": true,
+  "victim_gone": true
+ },
+ "fault_b": {
+  "arm": "b",
+  "recovery_sentinel_correct": true,
+  "relaunch_correct": true,
+  "sibling_correct": true,
+  "sibling_stayed_on_die": true,
+  "victim_gone": true
+ },
  "platform_failure": null,
  "preflight": {
   "bdfs": [
@@ -339,7 +351,7 @@
   }
  },
  "prerequisites_ok": true,
- "producer_head": "03b65371ff06a1b9a6edf12db8d18622774c1e09",
+ "producer_head": "638546c03fca62918127fa459604778fd3b67c13",
  "reset": {
   "disposition": "DEVICE_RESET_ISOLATION_NOT_AVAILABLE",
   "reason": "sysfs reset file present, but both Vega functions are downstream of the same physical PM8533 fanout switch on one dual-die V340L board: the sysfs reset (function level secondary-bus-reset/FLR class) is not a documented, function-isolated reset mechanism for this dual-die board topology; issue #216 prohibits improvised bus/bridge resets, so no reset arm is executed"
@@ -414,7 +426,7 @@
   },
   "stop_reason": "duration_reached"
  },
- "terminal": "V2D_EVIDENCE_INCOMPLETE_AFTER_CONCURRENCY",
+ "terminal": "V2D_V340L_CONCURRENT_DUAL_DIE_STABILITY_PASS",
  "transport": {
   "modes": {
    "dual": {

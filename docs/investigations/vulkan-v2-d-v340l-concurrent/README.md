@@ -1,6 +1,6 @@
 # V2-D — concurrent V340L dual-die qualification (issue #216)
 
-Status: IN PROGRESS (physical phases running under frozen producer head).
+Status: COMPLETE — terminal `V2D_V340L_CONCURRENT_DUAL_DIE_STABILITY_PASS` (derived by `scripts/issue216_assemble.py` from retained bytes; see `evidence/ASSEMBLY.json` + `evidence/TOKEN_TERMINAL.json` if present).
 
 Campaign: `issue216-v2d-v340l-concurrent-dual-die-v2`
 Authority: `PHYSICAL-AUTHORITY.json` (intended identity from accepted
@@ -30,9 +30,20 @@ issue219_reduce overlap machinery).
    endpoints; single-die ~0.63–0.79 GB/s per direction; dual shows
    measurable per-die degradation (shared upstream path contention) —
    descriptive only, no performance threshold is a PASS predicate.
-5. Soak (60 min, 60 s telemetry cadence, 600 s checkpoints): running.
-6. Fault arms A/B + recovery: pending.
-7. Reset disposition: pending.
+5. Soak (60 min): COMPLETE — 3600 s duration_reached, 61 sustained
+   concurrent pairs, 60 telemetry samples at 60 s cadence, 10/10
+   checkpoints correct, final post-soak sentinel correct, journal
+   fault-free (no amdgpu reset/hang, no fatal AER, no thermal alarm),
+   ECC/RAS growth zero.
+6. Fault arms A/B: PASS both — victim SIGKILLed and proven gone,
+   sibling stayed on its die and finished correct (no fallback or
+   reassignment), victim relaunched from the frozen argv and rebound
+   to its die, fresh A+B recovery sentinel correct.
+7. Reset: `DEVICE_RESET_ISOLATION_NOT_AVAILABLE` — sysfs reset files
+   exist but both Vega functions sit behind one physical PM8533
+   fanout switch on the dual-die board; no documented function-isolated
+   reset mechanism for this topology (issue prohibits improvised
+   bus/bridge resets).
 
 ## Non-claims (inherited)
 
