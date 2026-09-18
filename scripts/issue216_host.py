@@ -89,7 +89,7 @@ def bdf_to_drm_card(bdf: str) -> Path:
 
 def aer_counters(bdf: str) -> dict[str, Any]:
     """AER sysfs counters for one endpoint (raw names -> int)."""
-    base = Path("/sys/bus/pci/devices") / bdf
+    base = Path("/sys/bus/pci/devices") / sysfs_bdf(bdf)
     out: dict[str, Any] = {}
     for name in ("aer_dev_correctable", "aer_dev_nonfatal",
                  "aer_dev_fatal"):
@@ -109,6 +109,12 @@ def aer_counters(bdf: str) -> dict[str, Any]:
     return out
 
 
+def sysfs_bdf(bdf: str) -> str:
+    """Normalize a BDF to the sysfs name (always 0000-domain-prefixed)."""
+    bdf = bdf.strip()
+    return bdf if bdf.startswith(("0000:", "^[0-9a-f]{4}:")) else f"0000:{bdf}"
+
+
 def telemetry_sample(bdf: str) -> dict[str, Any]:
     """One hwmon/sysfs telemetry sample for one Vega die.
 
@@ -116,7 +122,7 @@ def telemetry_sample(bdf: str) -> dict[str, Any]:
     gpu_busy_percent and memory clocks come from amdgpu sysfs; ECC/RAS
     from the ras dir when present.
     """
-    dev = Path("/sys/bus/pci/devices") / bdf
+    dev = Path("/sys/bus/pci/devices") / sysfs_bdf(bdf)
     sample: dict[str, Any] = {
         "monotonic_ns": time.monotonic_ns(),
         "bdf": bdf,
