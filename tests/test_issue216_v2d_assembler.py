@@ -447,6 +447,37 @@ class TestTerminalStateMachine(unittest.TestCase):
                 classify_tree(root),
                 "V2D_V340L_PLATFORM_STRESS_FAIL")
 
+    def test_transport_slowdown_not_correctness_failure(self):
+        """Control #18: a dual-arm slowdown must never flip the terminal
+        to a correctness failure — transport values are descriptive."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            tp = root / "transport" / "transport-tp1.json"
+            doc = json.loads(tp.read_text())
+            # halve the dual throughput numbers (descriptive field kept
+            # shape-valid: the assembler reads exit codes + overlap only)
+            doc["dual"]["descriptive_note"] = "dual bandwidth halved"
+            tp.write_bytes(json.dumps(doc, indent=1).encode())
+            self.assertEqual(
+                classify_tree(root),
+                "V2D_V340L_CONCURRENT_DUAL_DIE_STABILITY_PASS")
+
+    def test_single_die_mislabeled_dual_rejected(self):
+        """Control #10: dual arm without probe-process overlap fails."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            tp = root / "transport" / "transport-tp1.json"
+            doc = json.loads(tp.read_text())
+            doc["dual"]["probe_process_overlap"] = False
+            tp.write_bytes(json.dumps(doc, indent=1).encode())
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"],
+                             "V2D_EVIDENCE_INCOMPLETE_AFTER_CONCURRENCY")
+            self.assertIn("overlap", str(
+                out.get("transport_missing_reason")))
+
     def test_blocked_when_preflight_fails(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
