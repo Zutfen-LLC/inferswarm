@@ -111,6 +111,20 @@ def _read_json(evidence_root: Path, rel: str) -> Any:
     return json.loads(_read_raw(evidence_root, rel))
 
 
+def _phase_json(evidence_root: Path, pattern: str) -> tuple[dict, Path]:
+    """Locate the singleton phase summary matching pattern (e.g.
+    'soak/soak-*.json'); return (doc, phase_dir) where phase_dir is the
+    directory raw rel paths resolve against ('' = evidence root)."""
+    hits = sorted(evidence_root.glob(pattern))
+    if len(hits) != 1:
+        raise AssemblyError(
+            f"phase summary not singleton for {pattern}: {len(hits)} hits")
+    doc = json.loads(hits[0].read_bytes())
+    phase_dir = hits[0].parent.relative_to(evidence_root).as_posix() \
+        if hits[0].parent != evidence_root else ""
+    return doc, phase_dir
+
+
 def _hash_ok(data: bytes, expected: str, what: str) -> None:
     if hashlib.sha256(data).hexdigest() != expected:
         raise AssemblyError(f"raw byte hash mismatch: {what}")
@@ -288,8 +302,9 @@ def assemble_pair(evidence_root: Path, pair: dict[str, Any],
 
 
 def assemble_preflight(evidence_root: Path) -> dict[str, Any]:
-    preflight = _read_json(evidence_root, "preflight.json")
-    journal = _read_raw(evidence_root, "preflight/raw/journal_faults.stdout")
+    preflight, pf_dir = _phase_json(evidence_root, "preflight/preflight*.json")
+    journal = _read_raw(evidence_root,
+                        f"{pf_dir}/raw/journal_faults.stdout")
     text = journal.decode("utf-8", "replace")
     counts = {
         "fatal_aer": len(re.findall(
@@ -411,7 +426,7 @@ def assemble_concurrent(evidence_root: Path, ledger: dict[str, Any]
 
 
 def assemble_transport(evidence_root: Path) -> dict[str, Any]:
-    doc = _read_json(evidence_root, "transport.json")
+    doc, _tdir = _phase_json(evidence_root, "transport/transport-*.json")
     modes = {}
     for mode in ("single-a", "single-b"):
         if mode not in doc or doc[mode].get("exit_code") != 0:
@@ -475,7 +490,7 @@ def _scan_soak_faults(samples: list[dict[str, Any]],
 
 
 def assemble_soak(evidence_root: Path) -> dict[str, Any]:
-    doc = _read_json(evidence_root, "soak.json")
+    doc, soak_dir = _phase_json(evidence_root, "soak/soak-*.json")
     duration = doc.get("duration_s", 0)
     if duration < SOAK_MIN_DURATION_S:
         raise PlatformFailure(
@@ -488,7 +503,7 @@ def assemble_soak(evidence_root: Path) -> dict[str, Any]:
     for s in samples:
         rel = s["rel"].replace("telemetry-", "journal-").replace(
             ".json", ".stdout")
-        p = evidence_root / rel
+        p = evidence_root / soak_dir / rel
         if p.is_file():
             journal_texts.append(p.read_bytes())
     scan = _scan_soak_faults(samples, doc.get("events") or [],
@@ -507,7 +522,7 @@ def assemble_soak(evidence_root: Path) -> dict[str, Any]:
             "could hide in the gap)")
     # checkpoints + final sentinel
     checkpoint_summaries = sorted(
-        (evidence_root / "raw").glob("checkpoint-*.json"))
+        (evidence_root / soak_dir / "raw").glob("checkpoint-*.json"))
     expected_checkpoints = duration // SOAK_CHECKPOINT_EVERY_S
     if len(checkpoint_summaries) + 1 < expected_checkpoints:
         raise AssemblyError(
@@ -516,14 +531,15 @@ def assemble_soak(evidence_root: Path) -> dict[str, Any]:
     checkpoint_verdicts = []
     for cp in checkpoint_summaries:
         pair = json.loads(cp.read_bytes())
-        pair_dir = f"raw/{cp.stem}"
+        pair_dir = f"{soak_dir}/raw/{cp.stem}"
         row = assemble_pair(evidence_root, pair, pair_dir,
                             require_overlap=False)
         checkpoint_verdicts.append({"checkpoint": cp.stem,
                                    "correct": row["pair_correct"]})
-    final_pair = _read_json(evidence_root, "raw/final-sentinel.json")
+    final_pair = _read_json(evidence_root,
+                            f"{soak_dir}/raw/final-sentinel.json")
     final_row = assemble_pair(evidence_root, final_pair,
-                              "raw/final-sentinel",
+                              f"{soak_dir}/raw/final-sentinel",
                               require_overlap=False)
     bad_checkpoints = [c for c in checkpoint_verdicts
                        if not c["correct"]]
@@ -535,18 +551,20 @@ def assemble_soak(evidence_root: Path) -> dict[str, Any]:
         "checkpoints": checkpoint_verdicts,
         "final_sentinel_correct": final_row["pair_correct"],
         "all_checkpoints_correct": not bad_checkpoints,
-        "ecc_growth": _derive_ecc_growth(evidence_root, samples),
+        "ecc_growth": _derive_ecc_growth(evidence_root, samples,
+                                        soak_dir),
     }
 
 
 def _derive_ecc_growth(evidence_root: Path,
-                       samples: list[dict[str, Any]]) -> dict[str, Any]:
+                       samples: list[dict[str, Any]],
+                       soak_dir: str = "") -> dict[str, Any]:
     """Derive uncorrected ECC/RAS growth from the retained telemetry
     snapshots (first vs last sample per BDF)."""
     if not samples:
         return {"growth": None, "reason": "no samples"}
-    first = _read_json(evidence_root, samples[0]["rel"])
-    last = _read_json(evidence_root, samples[-1]["rel"])
+    first = _read_json(evidence_root, f"{soak_dir}/{samples[0]['rel']}")
+    last = _read_json(evidence_root, f"{soak_dir}/{samples[-1]['rel']}")
     growth: dict[str, Any] = {}
     for bdf in (first.get("telemetry") or {}):
         f = (first.get("aer") or {}).get(bdf) or {}
