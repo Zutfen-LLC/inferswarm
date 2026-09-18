@@ -3,7 +3,7 @@
  "schema": "inferswarm.v2d.producer-closure/2",
  "sources": {
   "scripts/issue216_assemble.py": "e283a5af661304bcf4499439334efd61bf5fa951309ce1cb6c6d1d0ea3851af2",
-  "scripts/issue216_concurrent.py": "d14467b10ac3f256f0a6e9bbb8348b6e4471498e9152ce5feff726b549c4c9f1",
+  "scripts/issue216_concurrent.py": "5f31b600353df3fcd44426e0d656761662bf3d4727f111cd684e15b5e25a7fb0",
   "scripts/issue216_execution.py": "3da6ebd4fff20b4b67634049eeef6ea88bf3009646e866ec932aec67f27dbfa4",
   "scripts/issue216_fault.py": "09562be31f6c601ba40c1d6d5ec4359349f6df5e3b49e17613dddac01164a4e5",
   "scripts/issue216_host.py": "cff444ec3095da97bf0f50e86a97e1913bb7c7aea04b3dd404e372de61071951",

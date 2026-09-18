@@ -176,7 +176,7 @@ def run_pair(*, repo: Path, out: Path, attempt_id: str,
             "offloaded_layers": ex.parse_offload(stderr_text),
             "fallback_present": "fallback" in stderr_text.lower(),
         }
-        run = ex.derive_execution_facts(repo, run, d)
+        run = ex.derive_execution_facts(repo, run, out)
         exits[die] = run
     return {
         "attempt_id": attempt_id,
