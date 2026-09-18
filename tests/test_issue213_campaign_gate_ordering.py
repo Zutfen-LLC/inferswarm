@@ -1036,6 +1036,9 @@ class PreservationTests(unittest.TestCase):
                             "scripts/issue215_",
                             "tests/test_issue215_",
                             "docs/investigations/vulkan-v2-c-v340l-platform-stability/",
+                            # Issue #216 V2-D: additive successor namespace.
+                            "docs/investigations/vulkan-v2-d-v340l-concurrent/",
+                            "scripts/issue216_", "tests/test_issue216_",
                             "docs/hardware/")
         for path in changed:
             self.assertTrue(path.startswith(allowed_prefixes),
