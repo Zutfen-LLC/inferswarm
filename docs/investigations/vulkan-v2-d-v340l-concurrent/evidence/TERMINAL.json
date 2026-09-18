@@ -1,0 +1,13 @@
+{
+ "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
+ "producer_head": "33af68af41fef195ed1ccdd0d4028aaf9a3c8245",
+ "schema": "inferswarm.v2d.terminal/2",
+ "terminal": "V2D_EVIDENCE_BLOCKED",
+ "vocabulary": [
+  "V2D_V340L_CONCURRENT_DUAL_DIE_STABILITY_PASS",
+  "V2D_V340L_CONCURRENT_CORRECTNESS_FAIL",
+  "V2D_V340L_PLATFORM_STRESS_FAIL",
+  "V2D_EVIDENCE_INCOMPLETE_AFTER_CONCURRENCY",
+  "V2D_EVIDENCE_BLOCKED"
+ ]
+}

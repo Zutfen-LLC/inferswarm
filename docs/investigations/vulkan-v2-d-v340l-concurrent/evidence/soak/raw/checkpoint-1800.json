@@ -1,0 +1,230 @@
+{
+ "attempt_id": "soakcp1800",
+ "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1",
+ "mapping_digest": "d8a58717e9e91bcb4dfed9b180d0e9fe8cc937b6cf9cd5509554aa90550860c8",
+ "observe_rels": {
+  "a": "a/observe-soakcp1800.jsonl",
+  "b": "b/observe-soakcp1800.jsonl"
+ },
+ "participants": {
+  "a": {
+   "accounting_crosscheck": {
+    "basis": "direct llama.cpp named buffers plus before/after memory-breakdown rows; never process RSS",
+    "device_compute_bytes": 109586678,
+    "device_context_bytes": 1207959552,
+    "device_resident_model_bytes": 1923948216,
+    "host_context_kv_output_compute_bytes": 42572186,
+    "intentional_host_mapping_or_cache_bytes": 255254856,
+    "predecessor": {
+     "limitation": "pinned the first subject's observed selector label; failed closed on any other subject",
+     "reducer": "scripts/v0c_canonical_run.py::parse_accounting",
+     "reducer_sha256": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+     "schema": "inferswarm.v0c.materialization-accounting/1"
+    },
+    "raw_lines": {
+     "device_compute": [
+      "0.13.021.128 I sched_reserve:    Vulkan1 compute buffer size =   104.51 MiB"
+     ],
+     "device_context": [
+      "0.12.945.855 I llama_kv_cache:    Vulkan1 KV buffer size =  1152.00 MiB"
+     ],
+     "device_memory_before_after": [
+      "0.01.462.314 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 8167 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+      "0.14.464.067 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 3240 + (3091 =  1834 +    1152 +     104) +        1843 |"
+     ],
+     "device_model": [
+      "0.02.297.614 I load_tensors:      Vulkan1 model buffer size =  1834.82 MiB"
+     ],
+     "host_compute": [
+      "0.13.021.144 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+     ],
+     "host_mapping": [
+      "0.02.297.613 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+     ],
+     "host_memory_final": [
+      "0.14.464.068 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+     ],
+     "host_memory_pre_realization": [
+      "0.01.462.372 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+     ],
+     "host_output": [
+      "0.12.945.049 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+     ],
+     "ready_state": [
+      "0.13.186.747 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+     ],
+     "source_fetches_after_ready": [],
+     "unplanned_state_movements": []
+    },
+    "released_staging_bytes": 0,
+    "representation_conversion_bytes": 0,
+    "required_persistent_host_bytes": 0,
+    "schema": "inferswarm.v0c.materialization-accounting/2",
+    "selected_resource": "Vulkan1",
+    "source_fetches_after_ready": 0,
+    "unexplained_persistent_host_mirror_bytes": 0,
+    "unplanned_state_movements": 0
+   },
+   "argv": [
+    "/home/zutfen/is219-v2d0-src/build-v2d0-observe-v216/bin/llama-cli",
+    "-m",
+    "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+    "--temp",
+    "0",
+    "--seed",
+    "42",
+    "-n",
+    "48",
+    "-ngl",
+    "99",
+    "--device",
+    "Vulkan1",
+    "-lv",
+    "4",
+    "-p",
+    "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+    "-st"
+   ],
+   "correctness_crosscheck": {
+    "byte_exact_visible_output": true,
+    "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+   },
+   "correctness_semantics": "byte-exact-equality-with-reference",
+   "exit_code": 0,
+   "exit_code_rel": "a/run-soakcp1800.exit-code",
+   "fallback_present": false,
+   "label": "concurrent-soakcp1800-a",
+   "offloaded_layers": [
+    37,
+    37
+   ],
+   "selected_bdf": "0000:06:00.0",
+   "stderr_bytes": 19985,
+   "stderr_rel": "a/run-soakcp1800.stderr",
+   "stderr_sha256": "8ee6c5138dae52bcbf42cfd6754360eecf6678c8a8c5bda31b099ebb58207ca5",
+   "stdout_bytes": 1529,
+   "stdout_rel": "a/run-soakcp1800.stdout",
+   "stdout_sha256": "0ac681957e317e3b90f243e30b2ba84450514a2c3142e05dfcc3f393b687fb25",
+   "timed_out": false,
+   "workload_interval_ns": [
+    63078466172663,
+    63093060683507
+   ]
+  },
+  "b": {
+   "accounting_crosscheck": {
+    "basis": "direct llama.cpp named buffers plus before/after memory-breakdown rows; never process RSS",
+    "device_compute_bytes": 109586678,
+    "device_context_bytes": 1207959552,
+    "device_resident_model_bytes": 1923948216,
+    "host_context_kv_output_compute_bytes": 42572186,
+    "intentional_host_mapping_or_cache_bytes": 255254856,
+    "predecessor": {
+     "limitation": "pinned the first subject's observed selector label; failed closed on any other subject",
+     "reducer": "scripts/v0c_canonical_run.py::parse_accounting",
+     "reducer_sha256": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+     "schema": "inferswarm.v0c.materialization-accounting/1"
+    },
+    "raw_lines": {
+     "device_compute": [
+      "0.13.128.157 I sched_reserve:    Vulkan2 compute buffer size =   104.51 MiB"
+     ],
+     "device_context": [
+      "0.13.074.775 I llama_kv_cache:    Vulkan2 KV buffer size =  1152.00 MiB"
+     ],
+     "device_memory_before_after": [
+      "0.01.471.489 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 8167 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+      "0.14.662.843 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 3240 + (3091 =  1834 +    1152 +     104) +        1843 |"
+     ],
+     "device_model": [
+      "0.02.388.699 I load_tensors:      Vulkan2 model buffer size =  1834.82 MiB"
+     ],
+     "host_compute": [
+      "0.13.128.217 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+     ],
+     "host_mapping": [
+      "0.02.388.679 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+     ],
+     "host_memory_final": [
+      "0.14.662.843 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+     ],
+     "host_memory_pre_realization": [
+      "0.01.471.490 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+     ],
+     "host_output": [
+      "0.13.074.093 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+     ],
+     "ready_state": [
+      "0.13.392.806 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+     ],
+     "source_fetches_after_ready": [],
+     "unplanned_state_movements": []
+    },
+    "released_staging_bytes": 0,
+    "representation_conversion_bytes": 0,
+    "required_persistent_host_bytes": 0,
+    "schema": "inferswarm.v0c.materialization-accounting/2",
+    "selected_resource": "Vulkan2",
+    "source_fetches_after_ready": 0,
+    "unexplained_persistent_host_mirror_bytes": 0,
+    "unplanned_state_movements": 0
+   },
+   "argv": [
+    "/home/zutfen/is219-v2d0-src/build-v2d0-observe-v216/bin/llama-cli",
+    "-m",
+    "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+    "--temp",
+    "0",
+    "--seed",
+    "42",
+    "-n",
+    "48",
+    "-ngl",
+    "99",
+    "--device",
+    "Vulkan2",
+    "-lv",
+    "4",
+    "-p",
+    "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+    "-st"
+   ],
+   "correctness_crosscheck": {
+    "byte_exact_visible_output": true,
+    "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+   },
+   "correctness_semantics": "byte-exact-equality-with-reference",
+   "exit_code": 0,
+   "exit_code_rel": "b/run-soakcp1800.exit-code",
+   "fallback_present": false,
+   "label": "concurrent-soakcp1800-b",
+   "offloaded_layers": [
+    37,
+    37
+   ],
+   "selected_bdf": "0000:09:00.0",
+   "stderr_bytes": 19985,
+   "stderr_rel": "b/run-soakcp1800.stderr",
+   "stderr_sha256": "b4d1249b926389132bef60bcddf16e9f355bd8c52da70010306f77603e18b882",
+   "stdout_bytes": 1533,
+   "stdout_rel": "b/run-soakcp1800.stdout",
+   "stdout_sha256": "993c3553333ed4cac684108fe00c5743a8e7846cdf4d9bd0cc4071754517d79b",
+   "timed_out": false,
+   "workload_interval_ns": [
+    63078467536681,
+    63093239494409
+   ]
+  }
+ },
+ "phase": "soak-checkpoint",
+ "wrapper_intervals_ns": {
+  "a": [
+   63078466172663,
+   63093060683507
+  ],
+  "b": [
+   63078467536681,
+   63093239494409
+  ]
+ }
+}

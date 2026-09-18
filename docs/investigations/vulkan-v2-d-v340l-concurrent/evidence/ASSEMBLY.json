@@ -1,0 +1,39 @@
+{
+ "blocked_reason": "missing raw artifact: baseline-a/baseline-blC-a-01.stdout",
+ "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
+ "closure_sources": [
+  "scripts/issue216_assemble.py",
+  "scripts/issue216_concurrent.py",
+  "scripts/issue216_execution.py",
+  "scripts/issue216_fault.py",
+  "scripts/issue216_host.py",
+  "scripts/issue216_manifest.py",
+  "scripts/issue216_physical_authority.py",
+  "scripts/issue216_preflight.py",
+  "scripts/issue216_receipt.py",
+  "scripts/issue216_reset.py",
+  "scripts/issue216_soak.py",
+  "scripts/issue216_transport.py"
+ ],
+ "preflight": {
+  "bdfs": [
+   "06:00.0",
+   "09:00.0"
+  ],
+  "boot_id": "9345db65-58de-477a-958e-d2c1487f2b93",
+  "journal_fault_counts": {
+   "amdgpu_failure": 0,
+   "dmar_fault": 0,
+   "fatal_aer": 0
+  },
+  "preexisting_fault_free": true,
+  "sentinels_correct": {
+   "a": true,
+   "b": true
+  }
+ },
+ "prerequisites_ok": false,
+ "producer_head": "33af68af41fef195ed1ccdd0d4028aaf9a3c8245",
+ "schema": "inferswarm.v2d.assembly/2",
+ "terminal": "V2D_EVIDENCE_BLOCKED"
+}

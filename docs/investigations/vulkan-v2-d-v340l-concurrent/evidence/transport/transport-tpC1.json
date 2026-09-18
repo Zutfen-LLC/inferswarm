@@ -1,0 +1,155 @@
+{
+ "dual": {
+  "intervals_ns": {
+   "a": [
+    61260967983765,
+    61276948431445
+   ],
+   "b": [
+    61260968679160,
+    61278076297933
+   ]
+  },
+  "participants": {
+   "a": {
+    "argv": [
+     "/usr/bin/python3",
+     "/srv/inferswarm/is216/repo/scripts/issue35_link_probe.py",
+     "--device-name-substring",
+     "AMD Radeon Pro V340",
+     "--name-match-index",
+     "0",
+     "--selector-index",
+     "1",
+     "--runtime-executable",
+     "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+     "--model",
+     "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+     "--pci-bdf",
+     "06:00.0",
+     "--raw-dir",
+     "/srv/inferswarm/is216/evidence/transport/dual/a/raw",
+     "--build-dir",
+     "/srv/inferswarm/is216/evidence/transport-build",
+     "--evidence-out",
+     "/srv/inferswarm/is216/evidence/transport/dual/a/summary.json"
+    ],
+    "exit_code": 0,
+    "exit_code_rel": "dual/a/probe.exit-code",
+    "interval_ns": [
+     61260967983765,
+     61276948431445
+    ],
+    "stderr_rel": "dual/a/probe.stderr",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stdout_rel": "dual/a/probe.stdout",
+    "stdout_sha256": "5ddc30bd76b57a197f074311e3aea52270d8748b96bb12e2c1b007c8a622a1ff"
+   },
+   "b": {
+    "argv": [
+     "/usr/bin/python3",
+     "/srv/inferswarm/is216/repo/scripts/issue35_link_probe.py",
+     "--device-name-substring",
+     "AMD Radeon Pro V340",
+     "--name-match-index",
+     "1",
+     "--selector-index",
+     "2",
+     "--runtime-executable",
+     "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+     "--model",
+     "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+     "--pci-bdf",
+     "09:00.0",
+     "--raw-dir",
+     "/srv/inferswarm/is216/evidence/transport/dual/b/raw",
+     "--build-dir",
+     "/srv/inferswarm/is216/evidence/transport-build",
+     "--evidence-out",
+     "/srv/inferswarm/is216/evidence/transport/dual/b/summary.json"
+    ],
+    "exit_code": 0,
+    "exit_code_rel": "dual/b/probe.exit-code",
+    "interval_ns": [
+     61260968679160,
+     61278076297933
+    ],
+    "stderr_rel": "dual/b/probe.stderr",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stdout_rel": "dual/b/probe.stdout",
+    "stdout_sha256": "ceacba49bcf3cad0dbb430a74273a0d60074e6070eb03dc591c945ca649ef46a"
+   }
+  },
+  "probe_process_overlap": true
+ },
+ "single-a": {
+  "argv": [
+   "/usr/bin/python3",
+   "/srv/inferswarm/is216/repo/scripts/issue35_link_probe.py",
+   "--device-name-substring",
+   "AMD Radeon Pro V340",
+   "--name-match-index",
+   "0",
+   "--selector-index",
+   "1",
+   "--runtime-executable",
+   "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+   "--model",
+   "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+   "--pci-bdf",
+   "06:00.0",
+   "--raw-dir",
+   "/srv/inferswarm/is216/evidence/transport/single-a/raw",
+   "--build-dir",
+   "/srv/inferswarm/is216/evidence/transport-build",
+   "--evidence-out",
+   "/srv/inferswarm/is216/evidence/transport/single-a/summary.json"
+  ],
+  "exit_code": 0,
+  "exit_code_rel": "single-a.exit-code",
+  "interval_ns": [
+   61239884567744,
+   61250411836693
+  ],
+  "label": "single-a",
+  "stderr_rel": "single-a.stderr",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_rel": "single-a.stdout",
+  "stdout_sha256": "2ac96fbca4e24a1e6a544082857a84ac1e7cf242b8206baae0d698a89bcba7d3"
+ },
+ "single-b": {
+  "argv": [
+   "/usr/bin/python3",
+   "/srv/inferswarm/is216/repo/scripts/issue35_link_probe.py",
+   "--device-name-substring",
+   "AMD Radeon Pro V340",
+   "--name-match-index",
+   "1",
+   "--selector-index",
+   "2",
+   "--runtime-executable",
+   "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+   "--model",
+   "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+   "--pci-bdf",
+   "09:00.0",
+   "--raw-dir",
+   "/srv/inferswarm/is216/evidence/transport/single-b/raw",
+   "--build-dir",
+   "/srv/inferswarm/is216/evidence/transport-build",
+   "--evidence-out",
+   "/srv/inferswarm/is216/evidence/transport/single-b/summary.json"
+  ],
+  "exit_code": 0,
+  "exit_code_rel": "single-b.exit-code",
+  "interval_ns": [
+   61250430411858,
+   61260950748177
+  ],
+  "label": "single-b",
+  "stderr_rel": "single-b.stderr",
+  "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_rel": "single-b.stdout",
+  "stdout_sha256": "c898ca3df39cb89f0da61338dcb18810b0415b48d923940f6bd71446c1cd966a"
+ }
+}

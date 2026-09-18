@@ -1,0 +1,143 @@
+{
+  "bidirectional": {
+    "bytes_per_transfer": 67108864,
+    "count": 8,
+    "gbps_max": 0.738,
+    "gbps_median": 0.734,
+    "gbps_min": 0.73,
+    "time_ms_max": 91.936315,
+    "time_ms_median": 91.434145,
+    "time_ms_min": 90.903667,
+    "time_ms_p90": 91.882829
+  },
+  "link": {
+    "idle_pre_generation": 3,
+    "idle_pre_width": 16,
+    "max_capability": {
+      "generation": 3,
+      "width": 16
+    },
+    "negotiated_under_load": {
+      "generation": 3,
+      "sysfs_speed_label": "8.0 GT/s PCIe",
+      "width": 16
+    },
+    "sample_count": 120
+  },
+  "provenance": {
+    "label": "MEASURED",
+    "measured_utc": "2026-09-18T14:53:09Z",
+    "probe_binary_sha256": "2719aa4b1877cf14daaa5dc5795ada13bb9e62ca0ea6a86030d7606f4596e021",
+    "probe_source_sha256": "297c951b9177bb22ed937e065825f67fc40622be5a9bff113b71b0fc83b955b5",
+    "raw_schema": "inferswarm.issue35.transport-probe/1"
+  },
+  "schema": "inferswarm.issue35.transport-summary/1",
+  "small_transfer_service": {
+    "bytes_per_transfer": 4096,
+    "count": 200,
+    "gbps_max": 0.041,
+    "gbps_median": 0.04,
+    "gbps_min": 0.013,
+    "time_ms_max": 0.313968,
+    "time_ms_median": 0.10227,
+    "time_ms_min": 0.099202,
+    "time_ms_p90": 0.112457
+  },
+  "subject_identity": {
+    "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+    "name_match_index": 1,
+    "pci_bdf": "09:00.0",
+    "twin_binding": "identity-probe selector->BDF binding (raw-byte derived) plus isolated-workload link observation; substrate link class is pinned at its floor under load (see link-log)",
+    "vk_api_version": "1.4.305"
+  },
+  "sustained_transfers": {
+    "d2h_134217728": {
+      "bytes_per_transfer": 134217728,
+      "count": 8,
+      "gbps_max": 0.802,
+      "gbps_median": 0.786,
+      "gbps_min": 0.783,
+      "time_ms_max": 171.365955,
+      "time_ms_median": 170.723483,
+      "time_ms_min": 167.449596,
+      "time_ms_p90": 171.23989
+    },
+    "d2h_16777216": {
+      "bytes_per_transfer": 16777216,
+      "count": 8,
+      "gbps_max": 0.769,
+      "gbps_median": 0.762,
+      "gbps_min": 0.761,
+      "time_ms_max": 22.054085,
+      "time_ms_median": 22.013974,
+      "time_ms_min": 21.815361,
+      "time_ms_p90": 22.035484
+    },
+    "d2h_4194304": {
+      "bytes_per_transfer": 4194304,
+      "count": 8,
+      "gbps_max": 0.764,
+      "gbps_median": 0.743,
+      "gbps_min": 0.736,
+      "time_ms_max": 5.698013,
+      "time_ms_median": 5.648035,
+      "time_ms_min": 5.491948,
+      "time_ms_p90": 5.687282
+    },
+    "d2h_67108864": {
+      "bytes_per_transfer": 67108864,
+      "count": 8,
+      "gbps_max": 0.783,
+      "gbps_median": 0.78,
+      "gbps_min": 0.777,
+      "time_ms_max": 86.403314,
+      "time_ms_median": 85.998894,
+      "time_ms_min": 85.726552,
+      "time_ms_p90": 86.195812
+    },
+    "h2d_134217728": {
+      "bytes_per_transfer": 134217728,
+      "count": 8,
+      "gbps_max": 0.695,
+      "gbps_median": 0.694,
+      "gbps_min": 0.693,
+      "time_ms_max": 193.772252,
+      "time_ms_median": 193.310226,
+      "time_ms_min": 193.009036,
+      "time_ms_p90": 193.684927
+    },
+    "h2d_16777216": {
+      "bytes_per_transfer": 16777216,
+      "count": 8,
+      "gbps_max": 0.68,
+      "gbps_median": 0.679,
+      "gbps_min": 0.674,
+      "time_ms_max": 24.892617,
+      "time_ms_median": 24.691944,
+      "time_ms_min": 24.66809,
+      "time_ms_p90": 24.839916
+    },
+    "h2d_4194304": {
+      "bytes_per_transfer": 4194304,
+      "count": 8,
+      "gbps_max": 0.637,
+      "gbps_median": 0.634,
+      "gbps_min": 0.628,
+      "time_ms_max": 6.674331,
+      "time_ms_median": 6.614403,
+      "time_ms_min": 6.585571,
+      "time_ms_p90": 6.645798
+    },
+    "h2d_67108864": {
+      "bytes_per_transfer": 67108864,
+      "count": 8,
+      "gbps_max": 0.695,
+      "gbps_median": 0.693,
+      "gbps_min": 0.683,
+      "time_ms_max": 98.275404,
+      "time_ms_median": 96.895331,
+      "time_ms_min": 96.585912,
+      "time_ms_p90": 96.950177
+    }
+  }
+}

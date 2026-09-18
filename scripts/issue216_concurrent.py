@@ -68,10 +68,15 @@ def collect_baseline(*, repo: Path, out: Path, attempt_id: str,
         pre_aer = host.aer_counters(bdf)
         argv = ex.execution_argv(runtime["executable"], runtime["model"],
                                  participant["fresh_selector"])
+        rep_dir = out / f"rep-{i:02d}"
         run = ex.run_execution(argv=argv,
-                               out_dir=out / f"rep-{i:02d}",
+                               out_dir=rep_dir,
                                label=f"baseline-{attempt_id}-{die}-{i:02d}")
-        run = ex.derive_execution_facts(repo, run, out / f"rep-{i:02d}")
+        # rel paths must resolve against the BASELINE dir (phase_dir),
+        # so prefix with the rep dir
+        for key in ("stdout_rel", "stderr_rel", "exit_code_rel"):
+            run[key] = f"rep-{i:02d}/{run[key]}"
+        run = ex.derive_execution_facts(repo, run, out)
         post = host.telemetry_sample(bdf)
         post_aer = host.aer_counters(bdf)
         row = {

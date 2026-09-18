@@ -1,0 +1,2189 @@
+{
+ "attempt_id": "skC1",
+ "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1",
+ "cadence_s": 60,
+ "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
+ "checkpoint_every_s": 600,
+ "duration_s": 3600,
+ "ended_ns": 64878271187584,
+ "events": [
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 61278252648873,
+   "pair": 1,
+   "pids": {
+    "1:a": 85068,
+    "1:b": 85069
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 61294426913973,
+   "pair_die": [
+    [
+     "1:a",
+     0
+    ],
+    [
+     "1:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 61294426930706,
+   "pair": [
+    "1"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 61294430033858,
+   "pair": 2,
+   "pids": {
+    "2:a": 85120,
+    "2:b": 85121
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 61338326354799,
+   "pair_die": [
+    [
+     "2:a",
+     0
+    ],
+    [
+     "2:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 61338326362347,
+   "pair": [
+    "2"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 61338327730870,
+   "pair": 3,
+   "pids": {
+    "3:a": 85198,
+    "3:b": 85199
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 61398324429340,
+   "pair_die": [
+    [
+     "3:a",
+     0
+    ],
+    [
+     "3:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 61398324436039,
+   "pair": [
+    "3"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 61398326170970,
+   "pair": 4,
+   "pids": {
+    "4:a": 85324,
+    "4:b": 85325
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 61458364524620,
+   "pair_die": [
+    [
+     "4:a",
+     0
+    ],
+    [
+     "4:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 61458364531474,
+   "pair": [
+    "4"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 61458365711371,
+   "pair": 5,
+   "pids": {
+    "5:a": 85416,
+    "5:b": 85417
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 61518330589596,
+   "pair_die": [
+    [
+     "5:a",
+     0
+    ],
+    [
+     "5:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 61518330596536,
+   "pair": [
+    "5"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 61518332364798,
+   "pair": 6,
+   "pids": {
+    "6:a": 85512,
+    "6:b": 85513
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 61578326147732,
+   "pair_die": [
+    [
+     "6:a",
+     0
+    ],
+    [
+     "6:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 61578326155301,
+   "pair": [
+    "6"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 61578327890812,
+   "pair": 7,
+   "pids": {
+    "7:a": 85642,
+    "7:b": 85643
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 61638332091978,
+   "pair_die": [
+    [
+     "7:a",
+     0
+    ],
+    [
+     "7:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 61638332099302,
+   "pair": [
+    "7"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 61638333846927,
+   "pair": 8,
+   "pids": {
+    "8:a": 85736,
+    "8:b": 85737
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 61698341402191,
+   "pair_die": [
+    [
+     "8:a",
+     0
+    ],
+    [
+     "8:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 61698341418083,
+   "pair": [
+    "8"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 61698345600754,
+   "pair": 9,
+   "pids": {
+    "9:a": 85787,
+    "9:b": 85788
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 61758336640681,
+   "pair_die": [
+    [
+     "9:a",
+     0
+    ],
+    [
+     "9:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 61758336648238,
+   "pair": [
+    "9"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 61758338405773,
+   "pair": 10,
+   "pids": {
+    "10:a": 85908,
+    "10:b": 85909
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 61818331371939,
+   "pair_die": [
+    [
+     "10:a",
+     0
+    ],
+    [
+     "10:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 61818331379810,
+   "pair": [
+    "10"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 61818333408756,
+   "pair": 11,
+   "pids": {
+    "11:a": 85992,
+    "11:b": 85993
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 61878326885993,
+   "pair_die": [
+    [
+     "11:a",
+     0
+    ],
+    [
+     "11:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 61878326894312,
+   "pair": [
+    "11"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 61878328654229,
+   "pair": 12,
+   "pids": {
+    "12:a": 86070,
+    "12:b": 86071
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 61938350397491,
+   "pair_die": [
+    [
+     "12:a",
+     0
+    ],
+    [
+     "12:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 61938350405546,
+   "pair": [
+    "12"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 61938351791012,
+   "pair": 13,
+   "pids": {
+    "13:a": 86236,
+    "13:b": 86237
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 61998330528978,
+   "pair_die": [
+    [
+     "13:a",
+     0
+    ],
+    [
+     "13:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 61998330546079,
+   "pair": [
+    "13"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 61998333933323,
+   "pair": 14,
+   "pids": {
+    "14:a": 86319,
+    "14:b": 86320
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 62058323318080,
+   "pair_die": [
+    [
+     "14:a",
+     0
+    ],
+    [
+     "14:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 62058323327025,
+   "pair": [
+    "14"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 62058324831031,
+   "pair": 15,
+   "pids": {
+    "15:a": 86427,
+    "15:b": 86428
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 62118333846145,
+   "pair_die": [
+    [
+     "15:a",
+     0
+    ],
+    [
+     "15:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 62118333854663,
+   "pair": [
+    "15"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 62118335520068,
+   "pair": 16,
+   "pids": {
+    "16:a": 86577,
+    "16:b": 86578
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 62178348432905,
+   "pair_die": [
+    [
+     "16:a",
+     0
+    ],
+    [
+     "16:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 62178348443009,
+   "pair": [
+    "16"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 62178350275542,
+   "pair": 17,
+   "pids": {
+    "17:a": 86667,
+    "17:b": 86668
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 62238329959448,
+   "pair_die": [
+    [
+     "17:a",
+     0
+    ],
+    [
+     "17:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 62238329967375,
+   "pair": [
+    "17"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 62238331711928,
+   "pair": 18,
+   "pids": {
+    "18:a": 86793,
+    "18:b": 86794
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 62298325511298,
+   "pair_die": [
+    [
+     "18:a",
+     0
+    ],
+    [
+     "18:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 62298325519555,
+   "pair": [
+    "18"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 62298327281463,
+   "pair": 19,
+   "pids": {
+    "19:a": 86959,
+    "19:b": 86960
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 62358325537519,
+   "pair_die": [
+    [
+     "19:a",
+     0
+    ],
+    [
+     "19:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 62358325545508,
+   "pair": [
+    "19"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 62358327310305,
+   "pair": 20,
+   "pids": {
+    "20:a": 87050,
+    "20:b": 87051
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 62418328748175,
+   "pair_die": [
+    [
+     "20:a",
+     0
+    ],
+    [
+     "20:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 62418328755762,
+   "pair": [
+    "20"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 62418330513472,
+   "pair": 21,
+   "pids": {
+    "21:a": 87141,
+    "21:b": 87142
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 62478326527164,
+   "pair_die": [
+    [
+     "21:a",
+     0
+    ],
+    [
+     "21:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 62478326535126,
+   "pair": [
+    "21"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 62478328282604,
+   "pair": 22,
+   "pids": {
+    "22:a": 87210,
+    "22:b": 87211
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 62538326136271,
+   "pair_die": [
+    [
+     "22:a",
+     0
+    ],
+    [
+     "22:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 62538326143760,
+   "pair": [
+    "22"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 62538327663346,
+   "pair": 23,
+   "pids": {
+    "23:a": 87356,
+    "23:b": 87357
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 62598343193920,
+   "pair_die": [
+    [
+     "23:a",
+     0
+    ],
+    [
+     "23:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 62598343202399,
+   "pair": [
+    "23"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 62598344712757,
+   "pair": 24,
+   "pids": {
+    "24:a": 87441,
+    "24:b": 87442
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 62658337992141,
+   "pair_die": [
+    [
+     "24:a",
+     0
+    ],
+    [
+     "24:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 62658338000363,
+   "pair": [
+    "24"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 62658339876993,
+   "pair": 25,
+   "pids": {
+    "25:a": 87601,
+    "25:b": 87602
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 62718331305494,
+   "pair_die": [
+    [
+     "25:a",
+     0
+    ],
+    [
+     "25:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 62718331313492,
+   "pair": [
+    "25"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 62718332855189,
+   "pair": 26,
+   "pids": {
+    "26:a": 87696,
+    "26:b": 87697
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 62778332370125,
+   "pair_die": [
+    [
+     "26:a",
+     0
+    ],
+    [
+     "26:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 62778332381072,
+   "pair": [
+    "26"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 62778334120582,
+   "pair": 27,
+   "pids": {
+    "27:a": 87762,
+    "27:b": 87763
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 62838334443963,
+   "pair_die": [
+    [
+     "27:a",
+     0
+    ],
+    [
+     "27:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 62838334451966,
+   "pair": [
+    "27"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 62838336212891,
+   "pair": 28,
+   "pids": {
+    "28:a": 87890,
+    "28:b": 87891
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 62898325319697,
+   "pair_die": [
+    [
+     "28:a",
+     0
+    ],
+    [
+     "28:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 62898325337994,
+   "pair": [
+    "28"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 62898328514990,
+   "pair": 29,
+   "pids": {
+    "29:a": 87957,
+    "29:b": 87958
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 62958332161497,
+   "pair_die": [
+    [
+     "29:a",
+     0
+    ],
+    [
+     "29:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 62958332169763,
+   "pair": [
+    "29"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 62958333903557,
+   "pair": 30,
+   "pids": {
+    "30:a": 88101,
+    "30:b": 88102
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 63018327841523,
+   "pair_die": [
+    [
+     "30:a",
+     0
+    ],
+    [
+     "30:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 63018327849308,
+   "pair": [
+    "30"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 63018329659988,
+   "pair": 31,
+   "pids": {
+    "31:a": 88225,
+    "31:b": 88226
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 63078329034391,
+   "pair_die": [
+    [
+     "31:a",
+     0
+    ],
+    [
+     "31:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 63078329042093,
+   "pair": [
+    "31"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 63078330826468,
+   "pair": 32,
+   "pids": {
+    "32:a": 88315,
+    "32:b": 88316
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 63138329486961,
+   "pair_die": [
+    [
+     "32:a",
+     0
+    ],
+    [
+     "32:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 63138329495160,
+   "pair": [
+    "32"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 63138330891654,
+   "pair": 33,
+   "pids": {
+    "33:a": 88445,
+    "33:b": 88446
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 63198342933512,
+   "pair_die": [
+    [
+     "33:a",
+     0
+    ],
+    [
+     "33:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 63198342941715,
+   "pair": [
+    "33"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 63198344692340,
+   "pair": 34,
+   "pids": {
+    "34:a": 88532,
+    "34:b": 88533
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 63258345280907,
+   "pair_die": [
+    [
+     "34:a",
+     0
+    ],
+    [
+     "34:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 63258345289125,
+   "pair": [
+    "34"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 63258347034149,
+   "pair": 35,
+   "pids": {
+    "35:a": 88592,
+    "35:b": 88593
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 63318334490450,
+   "pair_die": [
+    [
+     "35:a",
+     0
+    ],
+    [
+     "35:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 63318334499502,
+   "pair": [
+    "35"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 63318336242136,
+   "pair": 36,
+   "pids": {
+    "36:a": 88659,
+    "36:b": 88660
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 63378329636566,
+   "pair_die": [
+    [
+     "36:a",
+     0
+    ],
+    [
+     "36:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 63378329644670,
+   "pair": [
+    "36"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 63378331394524,
+   "pair": 37,
+   "pids": {
+    "37:a": 88793,
+    "37:b": 88794
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 63438330317351,
+   "pair_die": [
+    [
+     "37:a",
+     0
+    ],
+    [
+     "37:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 63438330325906,
+   "pair": [
+    "37"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 63438332086817,
+   "pair": 38,
+   "pids": {
+    "38:a": 88853,
+    "38:b": 88854
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 63498329866434,
+   "pair_die": [
+    [
+     "38:a",
+     0
+    ],
+    [
+     "38:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 63498329874377,
+   "pair": [
+    "38"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 63498331714075,
+   "pair": 39,
+   "pids": {
+    "39:a": 88964,
+    "39:b": 88965
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 63558355736637,
+   "pair_die": [
+    [
+     "39:a",
+     0
+    ],
+    [
+     "39:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 63558355745152,
+   "pair": [
+    "39"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 63558357162978,
+   "pair": 40,
+   "pids": {
+    "40:a": 89084,
+    "40:b": 89085
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 63618337779000,
+   "pair_die": [
+    [
+     "40:a",
+     0
+    ],
+    [
+     "40:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 63618337787341,
+   "pair": [
+    "40"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 63618339175881,
+   "pair": 41,
+   "pids": {
+    "41:a": 89166,
+    "41:b": 89167
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 63678331838960,
+   "pair_die": [
+    [
+     "41:a",
+     0
+    ],
+    [
+     "41:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 63678331847290,
+   "pair": [
+    "41"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 63678333643768,
+   "pair": 42,
+   "pids": {
+    "42:a": 89245,
+    "42:b": 89246
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 63738341627832,
+   "pair_die": [
+    [
+     "42:a",
+     0
+    ],
+    [
+     "42:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 63738341636065,
+   "pair": [
+    "42"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 63738343380454,
+   "pair": 43,
+   "pids": {
+    "43:a": 89409,
+    "43:b": 89410
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 63798342438640,
+   "pair_die": [
+    [
+     "43:a",
+     0
+    ],
+    [
+     "43:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 63798342447189,
+   "pair": [
+    "43"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 63798343833061,
+   "pair": 44,
+   "pids": {
+    "44:a": 89526,
+    "44:b": 89527
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 63858337198807,
+   "pair_die": [
+    [
+     "44:a",
+     0
+    ],
+    [
+     "44:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 63858337206611,
+   "pair": [
+    "44"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 63858338600977,
+   "pair": 45,
+   "pids": {
+    "45:a": 89592,
+    "45:b": 89593
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 63918337215318,
+   "pair_die": [
+    [
+     "45:a",
+     0
+    ],
+    [
+     "45:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 63918337222827,
+   "pair": [
+    "45"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 63918338747904,
+   "pair": 46,
+   "pids": {
+    "46:a": 89708,
+    "46:b": 89709
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 63978333345230,
+   "pair_die": [
+    [
+     "46:a",
+     0
+    ],
+    [
+     "46:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 63978333362080,
+   "pair": [
+    "46"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 63978337522166,
+   "pair": 47,
+   "pids": {
+    "47:a": 89810,
+    "47:b": 89811
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 64038343017281,
+   "pair_die": [
+    [
+     "47:a",
+     0
+    ],
+    [
+     "47:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 64038343026108,
+   "pair": [
+    "47"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 64038344589530,
+   "pair": 48,
+   "pids": {
+    "48:a": 89908,
+    "48:b": 89909
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 64098337728544,
+   "pair_die": [
+    [
+     "48:a",
+     0
+    ],
+    [
+     "48:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 64098337737027,
+   "pair": [
+    "48"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 64098339496571,
+   "pair": 49,
+   "pids": {
+    "49:a": 89993,
+    "49:b": 89994
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 64158349770567,
+   "pair_die": [
+    [
+     "49:a",
+     0
+    ],
+    [
+     "49:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 64158349778963,
+   "pair": [
+    "49"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 64158351535063,
+   "pair": 50,
+   "pids": {
+    "50:a": 90103,
+    "50:b": 90104
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 64218339367834,
+   "pair_die": [
+    [
+     "50:a",
+     0
+    ],
+    [
+     "50:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 64218339377800,
+   "pair": [
+    "50"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 64218341262938,
+   "pair": 51,
+   "pids": {
+    "51:a": 90152,
+    "51:b": 90153
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 64278333527436,
+   "pair_die": [
+    [
+     "51:a",
+     0
+    ],
+    [
+     "51:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 64278333535552,
+   "pair": [
+    "51"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 64278334936221,
+   "pair": 52,
+   "pids": {
+    "52:a": 90274,
+    "52:b": 90275
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 64338345810951,
+   "pair_die": [
+    [
+     "52:a",
+     0
+    ],
+    [
+     "52:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 64338345828226,
+   "pair": [
+    "52"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 64338349480281,
+   "pair": 53,
+   "pids": {
+    "53:a": 90385,
+    "53:b": 90386
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 64398334456820,
+   "pair_die": [
+    [
+     "53:a",
+     0
+    ],
+    [
+     "53:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 64398334464860,
+   "pair": [
+    "53"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 64398336212345,
+   "pair": 54,
+   "pids": {
+    "54:a": 90453,
+    "54:b": 90454
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 64458340574614,
+   "pair_die": [
+    [
+     "54:a",
+     0
+    ],
+    [
+     "54:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 64458340583186,
+   "pair": [
+    "54"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 64458341960389,
+   "pair": 55,
+   "pids": {
+    "55:a": 90574,
+    "55:b": 90575
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 64518343028586,
+   "pair_die": [
+    [
+     "55:a",
+     0
+    ],
+    [
+     "55:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 64518343037105,
+   "pair": [
+    "55"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 64518344802335,
+   "pair": 56,
+   "pids": {
+    "56:a": 90640,
+    "56:b": 90641
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 64578337658819,
+   "pair_die": [
+    [
+     "56:a",
+     0
+    ],
+    [
+     "56:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 64578337667010,
+   "pair": [
+    "56"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 64578339426673,
+   "pair": 57,
+   "pids": {
+    "57:a": 90707,
+    "57:b": 90708
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 64638338704517,
+   "pair_die": [
+    [
+     "57:a",
+     0
+    ],
+    [
+     "57:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 64638338712611,
+   "pair": [
+    "57"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 64638340477979,
+   "pair": 58,
+   "pids": {
+    "58:a": 90812,
+    "58:b": 90813
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 64698348309561,
+   "pair_die": [
+    [
+     "58:a",
+     0
+    ],
+    [
+     "58:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 64698348319542,
+   "pair": [
+    "58"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 64698350081279,
+   "pair": 59,
+   "pids": {
+    "59:a": 90893,
+    "59:b": 90894
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 64758336074780,
+   "pair_die": [
+    [
+     "59:a",
+     0
+    ],
+    [
+     "59:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 64758336083747,
+   "pair": [
+    "59"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 64758337859435,
+   "pair": 60,
+   "pids": {
+    "60:a": 90960,
+    "60:b": 90961
+   }
+  },
+  {
+   "event": "participant_exit",
+   "monotonic_ns": 64818341299690,
+   "pair_die": [
+    [
+     "60:a",
+     0
+    ],
+    [
+     "60:b",
+     0
+    ]
+   ]
+  },
+  {
+   "event": "pair_completed",
+   "monotonic_ns": 64818341307853,
+   "pair": [
+    "60"
+   ]
+  },
+  {
+   "event": "pair_launched",
+   "monotonic_ns": 64818343065954,
+   "pair": 61,
+   "pids": {
+    "61:a": 91038,
+    "61:b": 91039
+   }
+  }
+ ],
+ "mapping_digest": "d8a58717e9e91bcb4dfed9b180d0e9fe8cc937b6cf9cd5509554aa90550860c8",
+ "pairs_launched": 61,
+ "requested_duration_s": 3600,
+ "samples": [
+  {
+   "monotonic_ns": 61278252710419,
+   "rel": "raw/telemetry-0001.json",
+   "sample": 1,
+   "sha256": "5188432f57b37cb4d25a5e6184e0df568919526efb55fd8971f52a71ffaa8d24"
+  },
+  {
+   "monotonic_ns": 61338253092476,
+   "rel": "raw/telemetry-0002.json",
+   "sample": 2,
+   "sha256": "a6fc98a5c9687dc243e3455f711ca6c9e0dfd02095333481e2c9aa1a8e352ec3"
+  },
+  {
+   "monotonic_ns": 61398253434284,
+   "rel": "raw/telemetry-0003.json",
+   "sample": 3,
+   "sha256": "944a8c0c7fc35618080e44278e411eb2c84df4ab235702a467a44b06f96b3e30"
+  },
+  {
+   "monotonic_ns": 61458253774385,
+   "rel": "raw/telemetry-0004.json",
+   "sample": 4,
+   "sha256": "395c5053a7e3ac1060e83667c6f5f41accdfca315f8989af19a652eb8a906997"
+  },
+  {
+   "monotonic_ns": 61518253919772,
+   "rel": "raw/telemetry-0005.json",
+   "sample": 5,
+   "sha256": "d5869eb8057308c50000060a497455155cf526e324864f252d8dd7d57807af4f"
+  },
+  {
+   "monotonic_ns": 61578254191705,
+   "rel": "raw/telemetry-0006.json",
+   "sample": 6,
+   "sha256": "c8d35f6d167e9507e500478b9b12e7545372eab3b35ad95c7da7e02a6e8cca07"
+  },
+  {
+   "monotonic_ns": 61638254441971,
+   "rel": "raw/telemetry-0007.json",
+   "sample": 7,
+   "sha256": "6f2c9ce18f46e59b3ed85c6204370ed62daca29c0528c42250c23d89c30c026a"
+  },
+  {
+   "monotonic_ns": 61698254779820,
+   "rel": "raw/telemetry-0008.json",
+   "sample": 8,
+   "sha256": "2d8d57da848f7685c5a1579b46c1b7df4a09d47d107745f118aaaa8cf76f1cd0"
+  },
+  {
+   "monotonic_ns": 61758255066372,
+   "rel": "raw/telemetry-0009.json",
+   "sample": 9,
+   "sha256": "3fc9c8fc2e862aedc5d7f652d4afb382d2765e139380cd8fa50414ca4b3ddb19"
+  },
+  {
+   "monotonic_ns": 61818255408035,
+   "rel": "raw/telemetry-0010.json",
+   "sample": 10,
+   "sha256": "e19dcebf55d061cda8052be988302fba4d781e4f2e63da302de510f9fc6ceb16"
+  },
+  {
+   "monotonic_ns": 61878255746037,
+   "rel": "raw/telemetry-0011.json",
+   "sample": 11,
+   "sha256": "c29560eba27e00c70676508a3ffb6337ef9f9a2fd85388c840abe0222fafd0b7"
+  },
+  {
+   "monotonic_ns": 61938255995008,
+   "rel": "raw/telemetry-0012.json",
+   "sample": 12,
+   "sha256": "18ba135192619de1b6f616eb11517d5a10b26e19842c69b5a2a000f004629410"
+  },
+  {
+   "monotonic_ns": 61998256336002,
+   "rel": "raw/telemetry-0013.json",
+   "sample": 13,
+   "sha256": "53e84fb71aa1cc303aa44f51a8e592b90ea1333c4f5d24ff111e84b62101d4ef"
+  },
+  {
+   "monotonic_ns": 62058256501897,
+   "rel": "raw/telemetry-0014.json",
+   "sample": 14,
+   "sha256": "fc750d45070e6c0b19a3ef1b4d4a473faba5d1d8eab110a1100efdb53ff2a986"
+  },
+  {
+   "monotonic_ns": 62118256837698,
+   "rel": "raw/telemetry-0015.json",
+   "sample": 15,
+   "sha256": "13dbcb3bd88cf9bada78935450ad51045cbb0c9d5e88d736acbbb2ee67cdbffb"
+  },
+  {
+   "monotonic_ns": 62178257181981,
+   "rel": "raw/telemetry-0016.json",
+   "sample": 16,
+   "sha256": "81cdf76906b8e6bdf68151992c0251410042bd096cb561288ffc19d2cdcf0b41"
+  },
+  {
+   "monotonic_ns": 62238257513551,
+   "rel": "raw/telemetry-0017.json",
+   "sample": 17,
+   "sha256": "fe74793b4963dc9a4ddfcef7387527a6767e52949b7a24699552d8ad63cde168"
+  },
+  {
+   "monotonic_ns": 62298257765014,
+   "rel": "raw/telemetry-0018.json",
+   "sample": 18,
+   "sha256": "f5ef3aaf608c8115c1b41730eddebb8d3df0f12bbb4d64d30380a094420221f7"
+  },
+  {
+   "monotonic_ns": 62358258024118,
+   "rel": "raw/telemetry-0019.json",
+   "sample": 19,
+   "sha256": "000968b4492373930cb6b3b78fa9039807f5cc6bf1eab8b0c4e857710778d5df"
+  },
+  {
+   "monotonic_ns": 62418258365425,
+   "rel": "raw/telemetry-0020.json",
+   "sample": 20,
+   "sha256": "bb5623f944cafffa7eba6698d8c50e4461b3a88e4b99573cb2234f2db5822257"
+  },
+  {
+   "monotonic_ns": 62478258635103,
+   "rel": "raw/telemetry-0021.json",
+   "sample": 21,
+   "sha256": "7c865ca975c5756b8ca504d6cad667418b5be1122088532547f13b9d54af9698"
+  },
+  {
+   "monotonic_ns": 62538258970668,
+   "rel": "raw/telemetry-0022.json",
+   "sample": 22,
+   "sha256": "15c1e5205c129e962e0b4726be32c020e75116da79eaf1c1bc14ec7c7a74a4b5"
+  },
+  {
+   "monotonic_ns": 62598259310370,
+   "rel": "raw/telemetry-0023.json",
+   "sample": 23,
+   "sha256": "7be6a37a5b2519473e5697218679177ecae421ed4991698e04b4007abb7b4506"
+  },
+  {
+   "monotonic_ns": 62658259641745,
+   "rel": "raw/telemetry-0024.json",
+   "sample": 24,
+   "sha256": "5e8a781ed2c6108503e1810a1c273c4631ad71d2e1d60f91fb294c2bd49a56e3"
+  },
+  {
+   "monotonic_ns": 62718259917458,
+   "rel": "raw/telemetry-0025.json",
+   "sample": 25,
+   "sha256": "11c60dc16db2a4d95d1c72d7bfb6633fa2d6d1e6834d90390fadfe2f0fb1e732"
+  },
+  {
+   "monotonic_ns": 62778260259187,
+   "rel": "raw/telemetry-0026.json",
+   "sample": 26,
+   "sha256": "2916e8efd8fba3d86a17f071a5816e515857dbcc9e6654c66217a98aa218096c"
+  },
+  {
+   "monotonic_ns": 62838260548758,
+   "rel": "raw/telemetry-0027.json",
+   "sample": 27,
+   "sha256": "8682a60f52b57d80f07ec88d1f0f78479f99e7a39541c025489b0be2a7799e0f"
+  },
+  {
+   "monotonic_ns": 62898260890158,
+   "rel": "raw/telemetry-0028.json",
+   "sample": 28,
+   "sha256": "d7c7114633a776cf79374aa9dfa90837afeed6b20d0f9bfe82ff6bdb219855a8"
+  },
+  {
+   "monotonic_ns": 62958261184499,
+   "rel": "raw/telemetry-0029.json",
+   "sample": 29,
+   "sha256": "007684d1b5eb49d9148a411c4fa93c12d6f1357c0664520cfdcb244cde218d62"
+  },
+  {
+   "monotonic_ns": 63018261475283,
+   "rel": "raw/telemetry-0030.json",
+   "sample": 30,
+   "sha256": "bba0085a09d2ed3e6ef3c88c2d41e27eea4591398d3b5708742664f460e8ce8f"
+  },
+  {
+   "monotonic_ns": 63078261819995,
+   "rel": "raw/telemetry-0031.json",
+   "sample": 31,
+   "sha256": "5263be21d9e442b0a43c62f7961eb178f0f0aff4a299e53f4b7676ea342a68ea"
+  },
+  {
+   "monotonic_ns": 63138262167628,
+   "rel": "raw/telemetry-0032.json",
+   "sample": 32,
+   "sha256": "572b67dcdcc1611edf0718ee690220ba5cd419668e04e4dbb92550b6af8f6b18"
+  },
+  {
+   "monotonic_ns": 63198262429891,
+   "rel": "raw/telemetry-0033.json",
+   "sample": 33,
+   "sha256": "04466876b5eb8fdeea448fa85f4c983f9f1ee0631a22016876b901b96f4b44b9"
+  },
+  {
+   "monotonic_ns": 63258262730929,
+   "rel": "raw/telemetry-0034.json",
+   "sample": 34,
+   "sha256": "ee1a064accea81f7b1d1362d0c3f21795590ebeb5874f88eb52945329d8e863b"
+  },
+  {
+   "monotonic_ns": 63318263036587,
+   "rel": "raw/telemetry-0035.json",
+   "sample": 35,
+   "sha256": "bfe864986101f75c69446b7f3a59ce752761080ccdb6850f8392ec06d26475dd"
+  },
+  {
+   "monotonic_ns": 63378263384718,
+   "rel": "raw/telemetry-0036.json",
+   "sample": 36,
+   "sha256": "08fe03dc34f331aeb369a6bb793944816d4db9ed4bf405727495bbfe5ca206c2"
+  },
+  {
+   "monotonic_ns": 63438263675991,
+   "rel": "raw/telemetry-0037.json",
+   "sample": 37,
+   "sha256": "be47dfcd4c6fb31f38bfc2045c3f6387c3a0e2bddf464f6c19b1b4d4ba83b775"
+  },
+  {
+   "monotonic_ns": 63498263986895,
+   "rel": "raw/telemetry-0038.json",
+   "sample": 38,
+   "sha256": "f4a9252832f508a692ec561cd95b1d03989582ceb63d70fb40b60af24c9ab368"
+  },
+  {
+   "monotonic_ns": 63558264326932,
+   "rel": "raw/telemetry-0039.json",
+   "sample": 39,
+   "sha256": "d594b0e8c47536ead0ea3fbc26bbd99861721af210d7cc4445f32083a430b768"
+  },
+  {
+   "monotonic_ns": 63618264671486,
+   "rel": "raw/telemetry-0040.json",
+   "sample": 40,
+   "sha256": "978b3324db6e82034cee72a8dbdc500edf345f46133262771c214c59eab09a97"
+  },
+  {
+   "monotonic_ns": 63678264975328,
+   "rel": "raw/telemetry-0041.json",
+   "sample": 41,
+   "sha256": "c0f86ec00290d7f9fd011aa751cb4d076fbd82bf076833d9e52bbcc020c292fc"
+  },
+  {
+   "monotonic_ns": 63738265303047,
+   "rel": "raw/telemetry-0042.json",
+   "sample": 42,
+   "sha256": "68f419431c321a888df5a2a11e565bc1efe52b302b74063bb805365b5b00d684"
+  },
+  {
+   "monotonic_ns": 63798265553058,
+   "rel": "raw/telemetry-0043.json",
+   "sample": 43,
+   "sha256": "b2eaaa280cbb297643d5bd132aa89a6daa1720e73cc5555f8fe9db7fcb21c32d"
+  },
+  {
+   "monotonic_ns": 63858265863562,
+   "rel": "raw/telemetry-0044.json",
+   "sample": 44,
+   "sha256": "4df8bc0f36376562ab6b09fb4379ca8aaceb6f007771b2685bcc5f9255b780e2"
+  },
+  {
+   "monotonic_ns": 63918266122050,
+   "rel": "raw/telemetry-0045.json",
+   "sample": 45,
+   "sha256": "2d0787fafc07a5875fa828fbe044136f8f46789739b158f8d194383cf7b3a74c"
+  },
+  {
+   "monotonic_ns": 63978266466319,
+   "rel": "raw/telemetry-0046.json",
+   "sample": 46,
+   "sha256": "530c7305fb2edd52e2a7e9816e753c6cd26b85fb37930b7fc435c60f425e870a"
+  },
+  {
+   "monotonic_ns": 64038266808338,
+   "rel": "raw/telemetry-0047.json",
+   "sample": 47,
+   "sha256": "07199b17cc7731c1927622d6c059d8d67acc7f5ee63fd45a922c2afde6ba0558"
+  },
+  {
+   "monotonic_ns": 64098267131526,
+   "rel": "raw/telemetry-0048.json",
+   "sample": 48,
+   "sha256": "1c8181d553e26a5103164d2f87289c99139862b46d0699dcdd7da6bc7b35398a"
+  },
+  {
+   "monotonic_ns": 64158267445887,
+   "rel": "raw/telemetry-0049.json",
+   "sample": 49,
+   "sha256": "634b7a4b7d903690f81fd4683e35d365d87124f325f539da54a88039741b89ee"
+  },
+  {
+   "monotonic_ns": 64218267759915,
+   "rel": "raw/telemetry-0050.json",
+   "sample": 50,
+   "sha256": "a435b3612d03cb2a2de0e3ab394b6738f02211ede87c86f02e3b494ba5646781"
+  },
+  {
+   "monotonic_ns": 64278268079646,
+   "rel": "raw/telemetry-0051.json",
+   "sample": 51,
+   "sha256": "d46fe7dfecf87eed6306955a0933563a4c1c914af8dd2b2c42d513374e0f7378"
+  },
+  {
+   "monotonic_ns": 64338268402500,
+   "rel": "raw/telemetry-0052.json",
+   "sample": 52,
+   "sha256": "70b29d4d3f7ffeebb1c73595a76059663b5d375e9ac77331a3bf2288fe6c1316"
+  },
+  {
+   "monotonic_ns": 64398268751155,
+   "rel": "raw/telemetry-0053.json",
+   "sample": 53,
+   "sha256": "a7fb448420f875b67c703ded60d85c399c6b523af46db270dda5c492f3c16ad8"
+  },
+  {
+   "monotonic_ns": 64458269074521,
+   "rel": "raw/telemetry-0054.json",
+   "sample": 54,
+   "sha256": "bedeb5ad7e5d0111e186e94a57b63104bf783c8c182ac2a661bb67eb033eed5a"
+  },
+  {
+   "monotonic_ns": 64518269394043,
+   "rel": "raw/telemetry-0055.json",
+   "sample": 55,
+   "sha256": "91ec9ac8088c265f08988db1e6947c6f5e1e18a8aa08f2de570476bc93b3a4c1"
+  },
+  {
+   "monotonic_ns": 64578269643205,
+   "rel": "raw/telemetry-0056.json",
+   "sample": 56,
+   "sha256": "c20d5cd8c6f8fb2839375445e7ce501f4ff9e7d08f8327acdfff48e0d2cbfe37"
+  },
+  {
+   "monotonic_ns": 64638269948136,
+   "rel": "raw/telemetry-0057.json",
+   "sample": 57,
+   "sha256": "03fe9ebaf405c1d7c5d9a5be7ff563b58a6c46bdffddde71ec094381852a7eb5"
+  },
+  {
+   "monotonic_ns": 64698270282664,
+   "rel": "raw/telemetry-0058.json",
+   "sample": 58,
+   "sha256": "1705279c8582e5f4c0d2f8742cda8a237e317626eedd438f324212acbfb85bbf"
+  },
+  {
+   "monotonic_ns": 64758270563151,
+   "rel": "raw/telemetry-0059.json",
+   "sample": 59,
+   "sha256": "20cece2a0dac93907a4369b58e0ea6c49a148303408735dd979b937c24d6b878"
+  },
+  {
+   "monotonic_ns": 64818270904103,
+   "rel": "raw/telemetry-0060.json",
+   "sample": 60,
+   "sha256": "a4b8c1f728ba23abe81775dae6fe11dbb5b5f21714f743ccbd4dedfb502208b4"
+  }
+ ],
+ "sched_tolerance_s": 15,
+ "schema": "inferswarm.v2d.soak-run/2",
+ "started_ns": 61278251020819,
+ "stop_reason": "duration_reached"
+}

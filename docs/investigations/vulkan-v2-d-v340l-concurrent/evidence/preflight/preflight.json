@@ -1,0 +1,915 @@
+{
+ "aer_counters": {
+  "06:00.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  },
+  "09:00.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  }
+ },
+ "attempt_id": "pfC1",
+ "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1",
+ "bdfs": [
+  "06:00.0",
+  "09:00.0"
+ ],
+ "boot_id": "9345db65-58de-477a-958e-d2c1487f2b93",
+ "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
+ "captured_utc": "2026-09-18T14:51:44.247854+00:00",
+ "journal_fault_counts": {
+  "amdgpu_failure": 0,
+  "amdgpu_reset": 0,
+  "amdgpu_timeout": 0,
+  "dmar_fault": 0,
+  "fatal_aer": 0,
+  "thermal": 0
+ },
+ "mapping": {
+  "attempt_id": "pfC1",
+  "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1",
+  "authority_path": "/srv/inferswarm/is216/repo/docs/investigations/vulkan-v2-d-v340l-concurrent/PHYSICAL-AUTHORITY.json",
+  "bindings": {
+   "authorization": "NON_AUTHORIZING",
+   "bindings": [
+    {
+     "authorization": "NON_AUTHORIZING",
+     "binding_status": "BOUND",
+     "device_name": "Intel(R) HD Graphics 510 (SKL GT1)",
+     "lspci_line": "00:02.0 VGA compatible controller: Intel Corporation HD Graphics 510 (rev 06)",
+     "pci_bdf": "00:02.0",
+     "resolution_mechanism": "unique exact device-name join (runtime row -> loader PCI block -> lspci slot)",
+     "selector": "Vulkan0"
+    },
+    {
+     "authorization": "NON_AUTHORIZING",
+     "binding_proof_sha256": "b0fc4ef76ed2e84dfabdae8d8bda44fba206719c575ba8b0a06facebf26d36a2",
+     "binding_status": "BOUND",
+     "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+     "identity_probe": {
+      "argv": [
+       "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+       "-m",
+       "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+       "--device",
+       "Vulkan1",
+       "-ngl",
+       "99",
+       "-n",
+       "0",
+       "-p",
+       "identity-probe",
+       "--no-warmup",
+       "-st",
+       "-lv",
+       "4"
+      ],
+      "authorization": "NON_AUTHORIZING",
+      "exit_code": 0,
+      "generated_tokens": 0,
+      "identity_proof_line": "using device Vulkan1 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:06:00.0)",
+      "nonclaims": [
+       "inventory data only: no selection, promotion, authorization, or correctness reference may be derived from this document",
+       "identity probe generates zero model tokens; it proves only selector -> stable BDF and can never be a correctness reference"
+      ],
+      "observed_pci_bdf": "06:00.0",
+      "probe_kind": "NON_CORRECTNESS_BEARING_IDENTITY_PROBE",
+      "raw_stderr_path": "./identity-probe-stderr-vulkan1.txt",
+      "raw_stdout_path": "./identity-probe-stdout-vulkan1.txt",
+      "selector": "Vulkan1",
+      "started_utc": "2026-09-18T14:51:35.689576+00:00",
+      "stderr_sha256": "f2fdf38a5f76fd2e2cd4005be6d78153008760ae4672d4c0d90610e988d5ab9c",
+      "stdout_sha256": "9fdddf2f3a48c696f056eeb0bde66215162e5784047cb0ef17a0aa3ffa848797",
+      "zero_generation_proof": [
+       "Generation: 0.0 t/s"
+      ]
+     },
+     "pci_bdf": "06:00.0",
+     "resolution_mechanism": "runtime identity probe (zero generated tokens); the runtime's own selected-device line states the BDF",
+     "selector": "Vulkan1"
+    },
+    {
+     "authorization": "NON_AUTHORIZING",
+     "binding_proof_sha256": "e475c0fb0219f369eb7c573ba7b5adf534d766d6c71e2578bc34e25f9813abf0",
+     "binding_status": "BOUND",
+     "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+     "identity_probe": {
+      "argv": [
+       "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+       "-m",
+       "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+       "--device",
+       "Vulkan2",
+       "-ngl",
+       "99",
+       "-n",
+       "0",
+       "-p",
+       "identity-probe",
+       "--no-warmup",
+       "-st",
+       "-lv",
+       "4"
+      ],
+      "authorization": "NON_AUTHORIZING",
+      "exit_code": 0,
+      "generated_tokens": 0,
+      "identity_proof_line": "using device Vulkan2 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:09:00.0)",
+      "nonclaims": [
+       "inventory data only: no selection, promotion, authorization, or correctness reference may be derived from this document",
+       "identity probe generates zero model tokens; it proves only selector -> stable BDF and can never be a correctness reference"
+      ],
+      "observed_pci_bdf": "09:00.0",
+      "probe_kind": "NON_CORRECTNESS_BEARING_IDENTITY_PROBE",
+      "raw_stderr_path": "./identity-probe-stderr-vulkan2.txt",
+      "raw_stdout_path": "./identity-probe-stdout-vulkan2.txt",
+      "selector": "Vulkan2",
+      "started_utc": "2026-09-18T14:51:39.965170+00:00",
+      "stderr_sha256": "6ec082cd6ca8ec8f3a97193608c1005eac31ba4826e3b72b54cd1f17d1a68b8d",
+      "stdout_sha256": "790ad3a80ab9f057353a2c27ad92b4d69c0422d96f3ad7c3e3135d9f12d0b3af",
+      "zero_generation_proof": [
+       "Generation: 0.0 t/s"
+      ]
+     },
+     "pci_bdf": "09:00.0",
+     "resolution_mechanism": "runtime identity probe (zero generated tokens); the runtime's own selected-device line states the BDF",
+     "selector": "Vulkan2"
+    }
+   ],
+   "inventory_hostname": "inferswarm02",
+   "inventory_measured_utc": "2026-09-18T14:51:35.689509+00:00",
+   "inventory_runtime_executable": "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+   "inventory_runtime_executable_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+   "inventory_schema": "inferswarm.v2a.discovery-inventory/3",
+   "nonclaims": [
+    "inventory data only: no selection, promotion, authorization, or correctness reference may be derived from this document",
+    "identity probe generates zero model tokens; it proves only selector -> stable BDF and can never be a correctness reference"
+   ],
+   "reviewed_utc": "2026-09-18T14:51:35.689559+00:00",
+   "schema": "inferswarm.v2a.discovery-bindings/3"
+  },
+  "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
+  "fixture": false,
+  "inventory": {
+   "authorization": "NON_AUTHORIZING",
+   "devices": [
+    {
+     "binding_status": "BOUND",
+     "device_local_vram_bytes": 8340373504,
+     "device_local_vram_free_bytes": 7505707008,
+     "device_name": "Intel(R) HD Graphics 510 (SKL GT1)",
+     "loader_driver_name": "Intel open-source Mesa driver",
+     "lspci_line": "00:02.0 VGA compatible controller: Intel Corporation HD Graphics 510 (rev 06)",
+     "pci_bdf": "00:02.0",
+     "selector": "Vulkan0",
+     "vendor_device_ids": "8086:1902"
+    },
+    {
+     "binding_status": "AMBIGUOUS",
+     "candidate_bdfs": [
+      "06:00.0",
+      "09:00.0"
+     ],
+     "device_local_vram_bytes": 8573157376,
+     "device_local_vram_free_bytes": 8564768768,
+     "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+     "pci_bdf": null,
+     "selector": "Vulkan1"
+    },
+    {
+     "binding_status": "AMBIGUOUS",
+     "candidate_bdfs": [
+      "06:00.0",
+      "09:00.0"
+     ],
+     "device_local_vram_bytes": 8573157376,
+     "device_local_vram_free_bytes": 8564768768,
+     "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+     "pci_bdf": null,
+     "selector": "Vulkan2"
+    }
+   ],
+   "hostname": "inferswarm02",
+   "measured_utc": "2026-09-18T14:51:35.689509+00:00",
+   "node_identity_source": "os.uname().nodename on the proving node",
+   "nonclaims": [
+    "inventory data only: no selection, promotion, authorization, or correctness reference may be derived from this document",
+    "identity probe generates zero model tokens; it proves only selector -> stable BDF and can never be a correctness reference"
+   ],
+   "runtime_executable": "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+   "runtime_executable_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+   "schema": "inferswarm.v2a.discovery-inventory/3",
+   "vulkan_loader_identity": "1.4.309"
+  },
+  "mapping_digest": "d8a58717e9e91bcb4dfed9b180d0e9fe8cc937b6cf9cd5509554aa90550860c8",
+  "participants": {
+   "a": {
+    "fresh_binding": {
+     "authorization": "NON_AUTHORIZING",
+     "binding_proof_sha256": "b0fc4ef76ed2e84dfabdae8d8bda44fba206719c575ba8b0a06facebf26d36a2",
+     "binding_status": "BOUND",
+     "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+     "identity_probe": {
+      "argv": [
+       "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+       "-m",
+       "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+       "--device",
+       "Vulkan1",
+       "-ngl",
+       "99",
+       "-n",
+       "0",
+       "-p",
+       "identity-probe",
+       "--no-warmup",
+       "-st",
+       "-lv",
+       "4"
+      ],
+      "authorization": "NON_AUTHORIZING",
+      "exit_code": 0,
+      "generated_tokens": 0,
+      "identity_proof_line": "using device Vulkan1 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:06:00.0)",
+      "nonclaims": [
+       "inventory data only: no selection, promotion, authorization, or correctness reference may be derived from this document",
+       "identity probe generates zero model tokens; it proves only selector -> stable BDF and can never be a correctness reference"
+      ],
+      "observed_pci_bdf": "06:00.0",
+      "probe_kind": "NON_CORRECTNESS_BEARING_IDENTITY_PROBE",
+      "raw_stderr_path": "./identity-probe-stderr-vulkan1.txt",
+      "raw_stdout_path": "./identity-probe-stdout-vulkan1.txt",
+      "selector": "Vulkan1",
+      "started_utc": "2026-09-18T14:51:35.689576+00:00",
+      "stderr_sha256": "f2fdf38a5f76fd2e2cd4005be6d78153008760ae4672d4c0d90610e988d5ab9c",
+      "stdout_sha256": "9fdddf2f3a48c696f056eeb0bde66215162e5784047cb0ef17a0aa3ffa848797",
+      "zero_generation_proof": [
+       "Generation: 0.0 t/s"
+      ]
+     },
+     "pci_bdf": "06:00.0",
+     "resolution_mechanism": "runtime identity probe (zero generated tokens); the runtime's own selected-device line states the BDF",
+     "selector": "Vulkan1"
+    },
+    "fresh_device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+    "fresh_pci_bdf": "06:00.0",
+    "fresh_selector": "Vulkan1",
+    "intended_identity": {
+     "compute_unit_id": "cu-v340l-die-a",
+     "hostname": "inferswarm02",
+     "memory_resource_id": "mr-v340l-die-a-vram",
+     "vram_bytes": 8573157376
+    }
+   },
+   "b": {
+    "fresh_binding": {
+     "authorization": "NON_AUTHORIZING",
+     "binding_proof_sha256": "e475c0fb0219f369eb7c573ba7b5adf534d766d6c71e2578bc34e25f9813abf0",
+     "binding_status": "BOUND",
+     "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+     "identity_probe": {
+      "argv": [
+       "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+       "-m",
+       "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+       "--device",
+       "Vulkan2",
+       "-ngl",
+       "99",
+       "-n",
+       "0",
+       "-p",
+       "identity-probe",
+       "--no-warmup",
+       "-st",
+       "-lv",
+       "4"
+      ],
+      "authorization": "NON_AUTHORIZING",
+      "exit_code": 0,
+      "generated_tokens": 0,
+      "identity_proof_line": "using device Vulkan2 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:09:00.0)",
+      "nonclaims": [
+       "inventory data only: no selection, promotion, authorization, or correctness reference may be derived from this document",
+       "identity probe generates zero model tokens; it proves only selector -> stable BDF and can never be a correctness reference"
+      ],
+      "observed_pci_bdf": "09:00.0",
+      "probe_kind": "NON_CORRECTNESS_BEARING_IDENTITY_PROBE",
+      "raw_stderr_path": "./identity-probe-stderr-vulkan2.txt",
+      "raw_stdout_path": "./identity-probe-stdout-vulkan2.txt",
+      "selector": "Vulkan2",
+      "started_utc": "2026-09-18T14:51:39.965170+00:00",
+      "stderr_sha256": "6ec082cd6ca8ec8f3a97193608c1005eac31ba4826e3b72b54cd1f17d1a68b8d",
+      "stdout_sha256": "790ad3a80ab9f057353a2c27ad92b4d69c0422d96f3ad7c3e3135d9f12d0b3af",
+      "zero_generation_proof": [
+       "Generation: 0.0 t/s"
+      ]
+     },
+     "pci_bdf": "09:00.0",
+     "resolution_mechanism": "runtime identity probe (zero generated tokens); the runtime's own selected-device line states the BDF",
+     "selector": "Vulkan2"
+    },
+    "fresh_device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+    "fresh_pci_bdf": "09:00.0",
+    "fresh_selector": "Vulkan2",
+    "intended_identity": {
+     "compute_unit_id": "cu-v340l-die-b",
+     "hostname": "inferswarm02",
+     "memory_resource_id": "mr-v340l-die-b-vram",
+     "vram_bytes": 8573157376
+    }
+   }
+  },
+  "schema": "inferswarm.v2d.fresh-mapping/2"
+ },
+ "mapping_digest": "d8a58717e9e91bcb4dfed9b180d0e9fe8cc937b6cf9cd5509554aa90550860c8",
+ "probes": [
+  {
+   "argv": [
+    "cat",
+    "/proc/sys/kernel/random/boot_id"
+   ],
+   "name": "boot_id",
+   "returncode": 0,
+   "stdout_rel": "raw/boot_id.stdout",
+   "stdout_sha256": "1e8db6ae629f9de83e0c872ad68f86bea6272c15dcb97621a76b49bbf13f3553"
+  },
+  {
+   "argv": [
+    "uname",
+    "-a"
+   ],
+   "name": "uname",
+   "returncode": 0,
+   "stdout_rel": "raw/uname.stdout",
+   "stdout_sha256": "f5ef23b711460e6dff85fd1980692a7c1f2a4a621ee5e7dd1da1c6267e1c0ba3"
+  },
+  {
+   "argv": [
+    "cat",
+    "/proc/cmdline"
+   ],
+   "name": "kernel_cmdline",
+   "returncode": 0,
+   "stdout_rel": "raw/kernel_cmdline.stdout",
+   "stdout_sha256": "d8b5ee2ebd3024c8d6c102d0f74fddcd25cff37b7f2776c09806d0462099f147"
+  },
+  {
+   "argv": [
+    "cat",
+    "/sys/module/amdgpu/version"
+   ],
+   "name": "amdgpu_version",
+   "returncode": 1,
+   "stdout_rel": "raw/amdgpu_version.stdout",
+   "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "argv": [
+    "dpkg-query",
+    "-W",
+    "-f=${Version}\n",
+    "libvulkan1"
+   ],
+   "name": "vulkan_loader",
+   "returncode": 0,
+   "stdout_rel": "raw/vulkan_loader.stdout",
+   "stdout_sha256": "ca208cfa4c55ff97c31e773a49485237ce1d22fadd913ec6f8606a568d672282"
+  },
+  {
+   "argv": [
+    "ls",
+    "-la",
+    "/usr/share/vulkan/icd.d/"
+   ],
+   "name": "icd_list",
+   "returncode": 0,
+   "stdout_rel": "raw/icd_list.stdout",
+   "stdout_sha256": "d91bcbde5f1f25a9da780c62e722ed849f0a191e7d315c39e063a465f99b2958"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-nn"
+   ],
+   "name": "lspci_nn",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_nn.stdout",
+   "stdout_sha256": "c3ff6131191c88175eb78c6d6c4153ff1443cb2c3a8b5497e0f437dd854beaf1"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-t"
+   ],
+   "name": "lspci_tree",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_tree.stdout",
+   "stdout_sha256": "e77cabb8f2bc8a6ab20fdce641a9517142da23a6caf51c4bcfd9b6513fd3acf5"
+  },
+  {
+   "argv": [
+    "vulkaninfo",
+    "--summary"
+   ],
+   "name": "vulkaninfo_summary",
+   "returncode": 0,
+   "stdout_rel": "raw/vulkaninfo_summary.stdout",
+   "stdout_sha256": "9a6934ecd67ba38a3a48f73afc7f8080706e151e888f8e717614898b47591357"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-PP",
+    "-nn",
+    "-vv",
+    "-s",
+    "06:00.0"
+   ],
+   "name": "lspci_vv_06-00.0",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_vv_06-00.0.stdout",
+   "stdout_sha256": "79b86e458386f664f4b731f85ed7940f14653c91c8a0ac114bc0ee8ecde80873"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-PP",
+    "-nn",
+    "-vv",
+    "-s",
+    "09:00.0"
+   ],
+   "name": "lspci_vv_09-00.0",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_vv_09-00.0.stdout",
+   "stdout_sha256": "dc64508be6ad8b7ea9b4302d79eacbd48930084d6a6a06e356f53814171b4ce7"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-PP",
+    "-nn",
+    "-vv"
+   ],
+   "name": "lspci_vv_full",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_vv_full.stdout",
+   "stdout_sha256": "92e2f46fb77cc73a231e1a0d44662b91bbf0c2f970904a9d8490182052b804c7"
+  },
+  {
+   "argv": [
+    "ls",
+    "-la",
+    "/dev/dri/by-path/"
+   ],
+   "name": "render_nodes",
+   "returncode": 0,
+   "stdout_rel": "raw/render_nodes.stdout",
+   "stdout_sha256": "9149ff97daa4c8e492a372da82bfb83c176dab9f1d091229ac70f70d269ca6a7"
+  },
+  {
+   "argv": [
+    "bash",
+    "-c",
+    "for d in /sys/bus/pci/devices/*; do t=$(cat $d/vendor):$(cat $d/device); if [ \"$t\" = \"0x1002/0x6864\" ] || [ \"$t\" = \"0x1022/0x1470\" ] || [ \"$t\" = \"0x1022/0x1471\" ]; then echo == $d; cat $d/sriov_totalvfs 2>/dev/null; cat $d/sriov_numvfs 2>/dev; fi; done"
+   ],
+   "name": "sriov",
+   "returncode": 0,
+   "stdout_rel": "raw/sriov.stdout",
+   "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "argv": [
+    "bash",
+    "-c",
+    "for d in /sys/class/drm/card*/device; do echo == $d; cat $d/mem_info_vram_total 2>/dev/null; done"
+   ],
+   "name": "vram_totals",
+   "returncode": 0,
+   "stdout_rel": "raw/vram_totals.stdout",
+   "stdout_sha256": "a44273b7182d4f37dc16cc94d2e2687ebdefe6308397b441a1f16dfcc695b7a7"
+  },
+  {
+   "argv": [
+    "bash",
+    "-c",
+    "for d in /sys/class/drm/card*/device/ras; do echo == $d; cat $d/gpu_err_cnt 2>/dev/null; done; true"
+   ],
+   "name": "ras",
+   "returncode": 0,
+   "stdout_rel": "raw/ras.stdout",
+   "stdout_sha256": "a52d6b68877ec60a9d1fa4313aefae5ba1edd37f0601e3557efb34b8d9012fa6"
+  },
+  {
+   "argv": [
+    "ip",
+    "-d",
+    "link",
+    "show",
+    "enp1s0"
+   ],
+   "name": "nic_link",
+   "returncode": 0,
+   "stdout_rel": "raw/nic_link.stdout",
+   "stdout_sha256": "cd1b4e72fdd3ce5f18cae2d349fc1aafd1f561cb6ca33c167f0c2a606f295e28"
+  },
+  {
+   "argv": [
+    "ping",
+    "-c",
+    "3",
+    "-W",
+    "2",
+    "10.0.0.1"
+   ],
+   "name": "gateway_ping",
+   "returncode": 0,
+   "stdout_rel": "raw/gateway_ping.stdout",
+   "stdout_sha256": "4631a9d235831806ecce94da9fc4b5cea70b6eae25939a2ebc097c0112ef5e13"
+  },
+  {
+   "argv": [
+    "lsusb"
+   ],
+   "name": "lsusb",
+   "returncode": 0,
+   "stdout_rel": "raw/lsusb.stdout",
+   "stdout_sha256": "2689720098158b89d2ad4902efbe448a4ffacd929b38456fbb0e74669d33f686"
+  },
+  {
+   "argv": [
+    "lsblk",
+    "-o",
+    "NAME,SIZE,TYPE,MOUNTPOINT,MODEL"
+   ],
+   "name": "lsblk",
+   "returncode": 0,
+   "stdout_rel": "raw/lsblk.stdout",
+   "stdout_sha256": "5e0fb2a31d093c315b3fb73ab0b0fd36574147a02c57218adffac7129cfd91de"
+  },
+  {
+   "argv": [
+    "bash",
+    "-c",
+    "set -e; f=$(mktemp /var/tmp/issue216-fs-sentinel.XXXXXX); printf issue216 > $f; sync; cat $f; rm -f $f; echo STORAGE_SENTINEL_OK"
+   ],
+   "name": "storage_sentinel",
+   "returncode": 0,
+   "stdout_rel": "raw/storage_sentinel.stdout",
+   "stdout_sha256": "39339fe15ee5d68847d670ee4ff5ecda0f34666f39b4adab50dec791a457fab5"
+  },
+  {
+   "argv": [
+    "journalctl",
+    "-b",
+    "-k",
+    "--no-pager",
+    "-g",
+    "amdgpu|AER|pcieport|DMAR|dmar|[Rr]eset|[Hh]ang|ECC"
+   ],
+   "name": "journal_faults",
+   "returncode": 0,
+   "stdout_rel": "raw/journal_faults.stdout",
+   "stdout_sha256": "f5f9284b735919326f39a8585623e2a9d135e02768cfe69f0436f984b60fdadb"
+  }
+ ],
+ "schema": "inferswarm.v2d.preflight/2",
+ "sentinels": {
+  "a": {
+   "accounting_tuple_zero": true,
+   "byte_exact": true,
+   "clean_exit": true,
+   "correct": true,
+   "full_offload": true,
+   "no_fallback": true,
+   "run": {
+    "accounting_crosscheck": {
+     "basis": "direct llama.cpp named buffers plus before/after memory-breakdown rows; never process RSS",
+     "device_compute_bytes": 109586678,
+     "device_context_bytes": 1207959552,
+     "device_resident_model_bytes": 1923948216,
+     "host_context_kv_output_compute_bytes": 42572186,
+     "intentional_host_mapping_or_cache_bytes": 255254856,
+     "predecessor": {
+      "limitation": "pinned the first subject's observed selector label; failed closed on any other subject",
+      "reducer": "scripts/v0c_canonical_run.py::parse_accounting",
+      "reducer_sha256": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+      "schema": "inferswarm.v0c.materialization-accounting/1"
+     },
+     "raw_lines": {
+      "device_compute": [
+       "0.03.890.961 I sched_reserve:    Vulkan1 compute buffer size =   104.51 MiB"
+      ],
+      "device_context": [
+       "0.03.850.965 I llama_kv_cache:    Vulkan1 KV buffer size =  1152.00 MiB"
+      ],
+      "device_memory_before_after": [
+       "0.00.636.924 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+       "0.04.324.854 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
+      ],
+      "device_model": [
+       "0.01.033.045 I load_tensors:      Vulkan1 model buffer size =  1834.82 MiB"
+      ],
+      "host_compute": [
+       "0.03.890.967 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+      ],
+      "host_mapping": [
+       "0.01.033.044 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+      ],
+      "host_memory_final": [
+       "0.04.324.854 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+      ],
+      "host_memory_pre_realization": [
+       "0.00.636.925 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+      ],
+      "host_output": [
+       "0.03.850.367 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+      ],
+      "ready_state": [
+       "0.04.047.683 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+      ],
+      "source_fetches_after_ready": [],
+      "unplanned_state_movements": []
+     },
+     "released_staging_bytes": 0,
+     "representation_conversion_bytes": 0,
+     "required_persistent_host_bytes": 0,
+     "schema": "inferswarm.v0c.materialization-accounting/2",
+     "selected_resource": "Vulkan1",
+     "source_fetches_after_ready": 0,
+     "unexplained_persistent_host_mirror_bytes": 0,
+     "unplanned_state_movements": 0
+    },
+    "argv": [
+     "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+     "-m",
+     "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+     "--temp",
+     "0",
+     "--seed",
+     "42",
+     "-n",
+     "8",
+     "-ngl",
+     "99",
+     "--device",
+     "Vulkan1",
+     "-lv",
+     "4",
+     "-p",
+     "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+     "-st"
+    ],
+    "correctness_crosscheck": {
+     "byte_exact_visible_output": true,
+     "visible_response_sha256": "d0c1410074799fba4bf380f68b6654d2e8690d6805877186a5501f20629380fa"
+    },
+    "correctness_semantics": "byte-exact-prefix-of-reference",
+    "exit_code": 0,
+    "exit_code_rel": "sentinel-pfC1-a.exit-code",
+    "fallback_present": false,
+    "label": "sentinel-pfC1-a",
+    "offloaded_layers": [
+     37,
+     37
+    ],
+    "selected_bdf": "0000:06:00.0",
+    "stderr_bytes": 19985,
+    "stderr_rel": "sentinel-pfC1-a.stderr",
+    "stderr_sha256": "18841d727f6d57cedfb70a618c62062377f52814ea19baf3e1d913e5646299dc",
+    "stdout_bytes": 1177,
+    "stdout_rel": "sentinel-pfC1-a.stdout",
+    "stdout_sha256": "189650c1fb6a289751ee2947864335239c7dc9e179087a8fe819ee42767b1c49",
+    "timed_out": false,
+    "workload_interval_ns": [
+     61175272258722,
+     61179691759172
+    ]
+   },
+   "selected_bdf": "0000:06:00.0"
+  },
+  "b": {
+   "accounting_tuple_zero": true,
+   "byte_exact": true,
+   "clean_exit": true,
+   "correct": true,
+   "full_offload": true,
+   "no_fallback": true,
+   "run": {
+    "accounting_crosscheck": {
+     "basis": "direct llama.cpp named buffers plus before/after memory-breakdown rows; never process RSS",
+     "device_compute_bytes": 109586678,
+     "device_context_bytes": 1207959552,
+     "device_resident_model_bytes": 1923948216,
+     "host_context_kv_output_compute_bytes": 42572186,
+     "intentional_host_mapping_or_cache_bytes": 255254856,
+     "predecessor": {
+      "limitation": "pinned the first subject's observed selector label; failed closed on any other subject",
+      "reducer": "scripts/v0c_canonical_run.py::parse_accounting",
+      "reducer_sha256": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+      "schema": "inferswarm.v0c.materialization-accounting/1"
+     },
+     "raw_lines": {
+      "device_compute": [
+       "0.03.929.662 I sched_reserve:    Vulkan2 compute buffer size =   104.51 MiB"
+      ],
+      "device_context": [
+       "0.03.888.403 I llama_kv_cache:    Vulkan2 KV buffer size =  1152.00 MiB"
+      ],
+      "device_memory_before_after": [
+       "0.00.643.012 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+       "0.04.317.889 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
+      ],
+      "device_model": [
+       "0.01.040.652 I load_tensors:      Vulkan2 model buffer size =  1834.82 MiB"
+      ],
+      "host_compute": [
+       "0.03.929.669 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+      ],
+      "host_mapping": [
+       "0.01.040.651 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+      ],
+      "host_memory_final": [
+       "0.04.317.890 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+      ],
+      "host_memory_pre_realization": [
+       "0.00.643.012 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+      ],
+      "host_output": [
+       "0.03.887.795 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+      ],
+      "ready_state": [
+       "0.04.042.836 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+      ],
+      "source_fetches_after_ready": [],
+      "unplanned_state_movements": []
+     },
+     "released_staging_bytes": 0,
+     "representation_conversion_bytes": 0,
+     "required_persistent_host_bytes": 0,
+     "schema": "inferswarm.v0c.materialization-accounting/2",
+     "selected_resource": "Vulkan2",
+     "source_fetches_after_ready": 0,
+     "unexplained_persistent_host_mirror_bytes": 0,
+     "unplanned_state_movements": 0
+    },
+    "argv": [
+     "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+     "-m",
+     "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+     "--temp",
+     "0",
+     "--seed",
+     "42",
+     "-n",
+     "8",
+     "-ngl",
+     "99",
+     "--device",
+     "Vulkan2",
+     "-lv",
+     "4",
+     "-p",
+     "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+     "-st"
+    ],
+    "correctness_crosscheck": {
+     "byte_exact_visible_output": true,
+     "visible_response_sha256": "d0c1410074799fba4bf380f68b6654d2e8690d6805877186a5501f20629380fa"
+    },
+    "correctness_semantics": "byte-exact-prefix-of-reference",
+    "exit_code": 0,
+    "exit_code_rel": "sentinel-pfC1-b.exit-code",
+    "fallback_present": false,
+    "label": "sentinel-pfC1-b",
+    "offloaded_layers": [
+     37,
+     37
+    ],
+    "selected_bdf": "0000:09:00.0",
+    "stderr_bytes": 19985,
+    "stderr_rel": "sentinel-pfC1-b.stderr",
+    "stderr_sha256": "dcb985210f06873ff2676f584ccbefb0a5b1a835952aeb88626a12f97d158f5c",
+    "stdout_bytes": 1177,
+    "stdout_rel": "sentinel-pfC1-b.stdout",
+    "stdout_sha256": "69bf1afec2ff8d49ceb3f916bb7368bb807bb145e8836d31ee5b64fcb9bb00bb",
+    "timed_out": false,
+    "workload_interval_ns": [
+     61179719034164,
+     61184149846179
+    ]
+   },
+   "selected_bdf": "0000:09:00.0"
+  }
+ },
+ "telemetry_idle": {
+  "06:00.0": {
+   "bdf": "06:00.0",
+   "current_link_speed": "8.0 GT/s PCIe",
+   "current_link_width": "16",
+   "gpu_busy_percent": 0,
+   "hwmon": {
+    "hwmon6": {
+     "fan1_enable": 0,
+     "fan1_input": 0,
+     "fan1_max": 0,
+     "fan1_min": 0,
+     "fan1_target": 0,
+     "freq1_input": 9000000,
+     "freq1_label": "sclk",
+     "freq2_input": 167000000,
+     "freq2_label": "mclk",
+     "in0_input": 750,
+     "in0_label": "vddgfx",
+     "name": "amdgpu",
+     "power1_cap": 110000000,
+     "power1_cap_default": 110000000,
+     "power1_cap_max": 110000000,
+     "power1_cap_min": 0,
+     "power1_input": 4000000,
+     "power1_label": "PPT",
+     "pwm1": 24,
+     "pwm1_enable": 2,
+     "pwm1_max": 255,
+     "pwm1_min": 0,
+     "temp1_crit": 85000,
+     "temp1_crit_hyst": -273150,
+     "temp1_emergency": 90000,
+     "temp1_input": 37000,
+     "temp1_label": "edge",
+     "temp2_crit": 105000,
+     "temp2_crit_hyst": -273150,
+     "temp2_emergency": 110000,
+     "temp2_input": 40000,
+     "temp2_label": "junction",
+     "temp3_crit": 95000,
+     "temp3_crit_hyst": -273150,
+     "temp3_emergency": 100000,
+     "temp3_input": 38000,
+     "temp3_label": "mem"
+    }
+   },
+   "mem_busy_percent": null,
+   "monotonic_ns": 61175265805114,
+   "ras_gpu_err_cnt": null,
+   "vram_total_bytes": 8573157376,
+   "vram_used_bytes": 8339456
+  },
+  "09:00.0": {
+   "bdf": "09:00.0",
+   "current_link_speed": "8.0 GT/s PCIe",
+   "current_link_width": "16",
+   "gpu_busy_percent": 3,
+   "hwmon": {
+    "hwmon7": {
+     "fan1_enable": 0,
+     "fan1_input": 0,
+     "fan1_max": 0,
+     "fan1_min": 0,
+     "fan1_target": 0,
+     "freq1_input": 263000000,
+     "freq1_label": "sclk",
+     "freq2_input": 167000000,
+     "freq2_label": "mclk",
+     "in0_input": 800,
+     "in0_label": "vddgfx",
+     "name": "amdgpu",
+     "power1_cap": 110000000,
+     "power1_cap_default": 110000000,
+     "power1_cap_max": 110000000,
+     "power1_cap_min": 0,
+     "power1_input": 7000000,
+     "power1_label": "PPT",
+     "pwm1": 24,
+     "pwm1_enable": 2,
+     "pwm1_max": 255,
+     "pwm1_min": 0,
+     "temp1_crit": 85000,
+     "temp1_crit_hyst": -273150,
+     "temp1_emergency": 90000,
+     "temp1_input": 31000,
+     "temp1_label": "edge",
+     "temp2_crit": 105000,
+     "temp2_crit_hyst": -273150,
+     "temp2_emergency": 110000,
+     "temp2_input": 33000,
+     "temp2_label": "junction",
+     "temp3_crit": 95000,
+     "temp3_crit_hyst": -273150,
+     "temp3_emergency": 100000,
+     "temp3_input": 31000,
+     "temp3_label": "mem"
+    }
+   },
+   "mem_busy_percent": null,
+   "monotonic_ns": 61175268815658,
+   "ras_gpu_err_cnt": null,
+   "vram_total_bytes": 8573157376,
+   "vram_used_bytes": 3140513792
+  }
+ }
+}
