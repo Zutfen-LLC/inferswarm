@@ -1610,14 +1610,25 @@ def assemble(evidence_root: Path) -> dict[str, Any]:
                     "admits faults in the tail after the last record)")
                 out["platform_fault_scan"] = fault_scan
                 in_window_hits = [
-                    (src, h) for src, hits
-                    in fault_scan["sources"].items() for h in hits]
+                    (src, h) for src, record
+                    in fault_scan["sources"].items()
+                    for h in record.get("in_window", [])]
+                unparsed_hits = [
+                    (src, line) for src, record
+                    in fault_scan["sources"].items()
+                    for line in record.get("unparsed", [])]
                 if in_window_hits:
                     src, hit = in_window_hits[0]
                     platform_failure = platform_failure or (
                         f"retained platform fault in campaign window: "
                         f"{hit['class']} at {hit['utc']} "
                         f"[{src}] {hit['line'][:120]}")
+                elif unparsed_hits:
+                    src, line = unparsed_hits[0]
+                    platform_failure = platform_failure or (
+                        "retained unparseable platform-fault line; "
+                        f"campaign window cannot be proven [{src}] "
+                        f"{line[:160]}")
             except Exception as exc:  # scan itself must never crash out
                 out["platform_fault_scan_error"] = str(exc)
     out["platform_failure"] = platform_failure
@@ -1757,7 +1768,7 @@ def scan_campaign_faults(evidence_root: Path,
     capture (dmesg/journal dump taken at fault time; a producer-side
     capture is admissible platform evidence because it postdates the
     fault and re-reads the kernel ring buffer)."""
-    sources: dict[str, list[dict[str, Any]]] = {}
+    sources: dict[str, dict[str, Any]] = {}
     # journal deltas + final from the soak raw dir (may be absent in a
     # BLOCKED-classified tree — scan is additive, never fatal)
     soak_raw = evidence_root / "soak" / "raw"
@@ -1769,7 +1780,10 @@ def scan_campaign_faults(evidence_root: Path,
                                     window_start, window_end)
         in_win = [h for h in scan["hits"] if h["in_window"]]
         if in_win or scan["out_of_window_unparsed"]:
-            sources[str(jf.relative_to(evidence_root))] = in_win
+            sources[str(jf.relative_to(evidence_root))] = {
+                "in_window": in_win,
+                "unparsed": scan["out_of_window_unparsed"],
+            }
     # retained host fault capture (taken at fault time, pre-reboot).
     # The journal capture is authoritative: the kernel ring buffer had
     # already churned past the fault lines when dmesg was taken.
@@ -1780,15 +1794,21 @@ def scan_campaign_faults(evidence_root: Path,
             if f.is_file():
                 scan = scan_platform_faults(f.read_bytes(),
                                             window_start, window_end)
-                sources[f"fault-capture/{name}"] = [
-                    h for h in scan["hits"] if h["in_window"]]
+                sources[f"fault-capture/{name}"] = {
+                    "in_window": [h for h in scan["hits"]
+                                  if h["in_window"]],
+                    "unparsed": scan["out_of_window_unparsed"],
+                }
         jz = fc / "journal-full-at-fault.txt.gz"
         if jz.is_file():
             import gzip
             scan = scan_platform_faults(gzip.decompress(jz.read_bytes()),
                                         window_start, window_end)
-            sources["fault-capture/journal-full-at-fault.txt.gz"] = [
-                h for h in scan["hits"] if h["in_window"]]
+            sources["fault-capture/journal-full-at-fault.txt.gz"] = {
+                "in_window": [h for h in scan["hits"]
+                              if h["in_window"]],
+                "unparsed": scan["out_of_window_unparsed"],
+            }
     return {"sources": sources}
 
 

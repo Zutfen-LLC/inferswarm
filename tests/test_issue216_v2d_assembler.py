@@ -1084,6 +1084,21 @@ class TestFaultScanMutations(unittest.TestCase):
         # cannot window it -> retained, never silently dropped
         self.assertEqual(len(r["out_of_window_unparsed"]), 1)
 
+    def test_campaign_scan_retains_unparseable_source_line(self):
+        import issue216_assemble as asm
+        from datetime import datetime, timezone
+        with tempfile.TemporaryDirectory() as td:
+            raw = Path(td) / "soak" / "raw"
+            raw.mkdir(parents=True)
+            (raw / "journal-final.stdout").write_text(
+                "amdgpu: ring gfx timeout without a timestamp\n")
+            result = asm.scan_campaign_faults(
+                Path(td), datetime(2026, 9, 18, tzinfo=timezone.utc),
+                datetime(2026, 9, 19, tzinfo=timezone.utc))
+            record = result["sources"]["soak/raw/journal-final.stdout"]
+            self.assertEqual(len(record["unparsed"]), 1)
+            self.assertEqual(record["in_window"], [])
+
     def test_tampered_fault_capture_cannot_hide_fault(self):
         # deleting the fault line from the journal capture is caught
         # by the digest binding: fault-capture/SHA256SUMS.txt pins the
