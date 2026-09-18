@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "cat",
+    "/proc/cmdline"
+  ],
+  "rc": 0,
+  "stdout_sha256": "d8b5ee2ebd3024c8d6c102d0f74fddcd25cff37b7f2776c09806d0462099f147",
+  "stdout_bytes": 114,
+  "stderr_bytes": 0
+}

@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "lspci",
+    "-nn"
+  ],
+  "rc": 0,
+  "stdout_sha256": "c3ff6131191c88175eb78c6d6c4153ff1443cb2c3a8b5497e0f437dd854beaf1",
+  "stdout_bytes": 2354,
+  "stderr_bytes": 0
+}

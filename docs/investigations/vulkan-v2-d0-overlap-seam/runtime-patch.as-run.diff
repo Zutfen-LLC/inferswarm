@@ -1,0 +1,462 @@
+--- a/ggml/src/ggml-vulkan/ggml-vulkan.cpp
++++ b/ggml/src/ggml-vulkan/ggml-vulkan.cpp
+@@ -48,6 +48,8 @@
+ #    include <spirv/unified1/spirv.hpp>
+ #endif
+ 
++#include <fstream>
++#include <cstdio>
+ #include <algorithm>
+ #include <cmath>
+ #include <iomanip>
+@@ -931,6 +933,15 @@
+ 
+     bool device_fault {};
+     PFN_vkGetDeviceFaultInfoEXT pfn_vkGetDeviceFaultInfoEXT {};
++    // V2-D0 observation seam
++    uint32_t observe_ts_valid_bits = 0;
++    PFN_vkGetCalibratedTimestampsEXT pfn_vkGetCalibratedTimestampsEXT = nullptr;
++    uint32_t observe_pci_domain = 0;
++    uint32_t observe_pci_bus = 0;
++    uint32_t observe_pci_device = 0;
++    uint32_t observe_pci_function = 0;
++    bool observe_pci_valid = false;
++    uint8_t observe_device_uuid[VK_UUID_SIZE] = {};
+ 
+     bool serialize_submissions {};
+ 
+@@ -2555,6 +2566,16 @@
+ 
+     // for GGML_VK_PERF_LOGGER
+     std::unique_ptr<vk_perf_logger> perf_logger;
++    // V2-D0 observation seam state
++    vk::QueryPool observe_query_pool;
++    uint32_t observe_query_count = 0;
++    uint32_t observe_query_idx = 0;
++    uint32_t observe_drained_idx = 0;
++    uint32_t observe_drain_count = 0;
++    uint64_t observe_graph_computes = 0;
++    std::vector<uint32_t> observe_tick_roles;   // 0=begin, 1=end
++    std::vector<uint32_t> observe_tick_gc;      // graph-compute seq per tick
++    std::vector<uint32_t> observe_tick_query;   // query index per tick
+     vk::QueryPool query_pool;
+     std::vector<const char *> query_fusion_names;
+     std::vector<int> query_fusion_node_count;
+@@ -2563,6 +2584,185 @@
+     int32_t num_queries {};
+     int32_t query_idx {};
+ };
++
++
++// ---------------------------------------------------------------------------
++// V2-D0 observation seam (InferSwarm issue #219). Observation-only.
++// Inert unless GGML_VK_OBSERVE_INTERVAL is set at instance init.
++// Adds device timestamp queries inside compute command buffers that
++// already exist; adds no fences, barriers, semaphores, or host waits.
++// ---------------------------------------------------------------------------
++static bool vk_observe_interval_enabled = false;
++static std::string vk_observe_interval_path;
++
++// Append-only JSON Lines sink; opened lazily at first record.
++static void vk_observe_append_line(const std::string & line) {
++    std::ofstream out(vk_observe_interval_path,
++                      std::ios::binary | std::ios::app);
++    out << line << "\n";
++    out.flush();
++}
++
++static std::string vk_observe_json_escape(const std::string & s) {
++    std::string out;
++    for (char c : s) {
++        switch (c) {
++            case '"':  out += "\\\""; break;
++            case '\\': out += "\\\\"; break;
++            case '\n': out += "\\n";  break;
++            case '\r': out += "\\r";  break;
++            case '\t': out += "\\t";  break;
++            default:   out += c;      break;
++        }
++    }
++    return out;
++}
++
++static void vk_observe_emit_header(ggml_backend_vk_context * ctx) {
++    if (!vk_observe_interval_enabled) {
++        return;
++    }
++    std::ostringstream o;
++    o << "{\"kind\":\"header\",\"schema\":\"inferswarm.v2d0.observe-record/1\""
++      << ",\"device_label\":\"" << vk_observe_json_escape(ctx->name) << "\""
++      << ",\"device_name\":\""
++      << vk_observe_json_escape(std::string(ctx->device->properties.deviceName.data()))
++      << "\",\"device_uuid\":\"";
++    static const char hex[] = "0123456789abcdef";
++    for (uint32_t i = 0; i < VK_UUID_SIZE; i++) {
++        uint8_t b = ctx->device->observe_device_uuid[i];
++        o << hex[b >> 4] << hex[b & 0xf];
++    }
++    o << "\",\"vendor_id\":" << ctx->device->properties.vendorID
++      << ",\"device_id\":" << ctx->device->properties.deviceID
++      << ",\"pci_domain\":" << ctx->device->observe_pci_domain
++      << ",\"pci_bus\":" << ctx->device->observe_pci_bus
++      << ",\"pci_device\":" << ctx->device->observe_pci_device
++      << ",\"pci_function\":" << ctx->device->observe_pci_function
++      << ",\"timestamp_period_ns\":"
++      << ctx->device->properties.limits.timestampPeriod
++      << ",\"timestamp_valid_bits\":"
++      << ctx->device->observe_ts_valid_bits
++      << ",\"graph_computes\":" << ctx->observe_graph_computes
++      << ",\"total_ticks\":" << ctx->observe_tick_roles.size()
++      << ",\"tick_roles\":[";
++    for (size_t i = 0; i < ctx->observe_tick_roles.size(); i++) {
++        o << (i ? "," : "") << ctx->observe_tick_roles[i];
++    }
++    o << "],\"tick_graph_computes\":[";
++    for (size_t i = 0; i < ctx->observe_tick_gc.size(); i++) {
++        o << (i ? "," : "") << ctx->observe_tick_gc[i];
++    }
++    o << "],\"tick_queries\":[";
++    for (size_t i = 0; i < ctx->observe_tick_query.size(); i++) {
++        o << (i ? "," : "") << ctx->observe_tick_query[i];
++    }
++    o << "]}";
++    try {
++        vk_observe_append_line(o.str());
++    } catch (const std::exception &) {
++        // observation must never take the runtime down; a failed record
++        // makes the reducer fail closed on a missing/short file
++    }
++}
++
++static void vk_observe_write_begin_tick(ggml_backend_vk_context * ctx, const vk_context & subctx) {
++    if (!vk_observe_interval_enabled || !ctx->observe_query_pool) {
++        return;
++    }
++    if (subctx->s == nullptr || ctx->observe_query_idx + 2 > ctx->observe_query_count) {
++        return; // capacity is grown at graph-compute entry; never mid-buffer
++    }
++    subctx->s->buffer->buf.writeTimestamp(vk::PipelineStageFlagBits::eAllCommands,
++                                          ctx->observe_query_pool, ctx->observe_query_idx);
++    ctx->observe_tick_roles.push_back(0u);
++    ctx->observe_tick_gc.push_back((uint32_t) ctx->observe_graph_computes);
++    ctx->observe_tick_query.push_back(ctx->observe_query_idx);
++    ctx->observe_query_idx++;
++}
++
++static void vk_observe_write_end_tick(ggml_backend_vk_context * ctx, const vk_context & subctx) {
++    if (!vk_observe_interval_enabled || !ctx->observe_query_pool) {
++        return;
++    }
++    if (subctx->s == nullptr || ctx->observe_query_idx + 1 > ctx->observe_query_count) {
++        return;
++    }
++    subctx->s->buffer->buf.writeTimestamp(vk::PipelineStageFlagBits::eAllCommands,
++                                          ctx->observe_query_pool, ctx->observe_query_idx);
++    ctx->observe_tick_roles.push_back(1u);
++    ctx->observe_tick_gc.push_back((uint32_t) ctx->observe_graph_computes);
++    ctx->observe_tick_query.push_back(ctx->observe_query_idx);
++    ctx->observe_query_idx++;
++}
++
++// Drain: called only where the runtime itself has already waited on the
++// queue fence, so every written query has completed execution.
++// getQueryPoolResults is called WITHOUT eWait; availability bits are
++// requested per query and retained raw.  If any query is incomplete the
++// drain record says so and the reducer fails closed on it.
++static void vk_observe_drain(ggml_backend_vk_context * ctx) {
++    if (!vk_observe_interval_enabled || !ctx->observe_query_pool) {
++        return;
++    }
++    const uint32_t from = ctx->observe_drained_idx;
++    const uint32_t count = ctx->observe_query_idx - from;
++    if (count == 0) {
++        return;
++    }
++    // availability bits packed after the values: stride = sizeof(uint64_t)
++    std::vector<uint64_t> ticks(count, 0);
++    std::vector<uint64_t> avail(count, 0);
++    auto res = ctx->device->device.getQueryPoolResults(
++        ctx->observe_query_pool, from, count,
++        ticks.size() * sizeof(uint64_t), ticks.data(), sizeof(uint64_t),
++        vk::QueryResultFlagBits::e64);
++    auto res_avail = ctx->device->device.getQueryPoolResults(
++        ctx->observe_query_pool, from, count,
++        avail.size() * sizeof(uint64_t), avail.data(), sizeof(uint64_t),
++        vk::QueryResultFlagBits::e64 | vk::QueryResultFlagBits::eWithAvailability);
++    // Calibrated pair at this drain: DEVICE + CLOCK_MONOTONIC.
++    const VkCalibratedTimestampInfoEXT infos[2] = {
++        {VK_STRUCTURE_TYPE_CALIBRATED_TIMESTAMP_INFO_EXT, nullptr,
++         VK_TIME_DOMAIN_DEVICE_EXT},
++        {VK_STRUCTURE_TYPE_CALIBRATED_TIMESTAMP_INFO_EXT, nullptr,
++         VK_TIME_DOMAIN_CLOCK_MONOTONIC_EXT},
++    };
++    uint64_t values[2] = {0, 0};
++    uint64_t max_deviation = 0;
++    VkResult cal_res = VK_ERROR_FEATURE_NOT_PRESENT;
++    if (ctx->device->pfn_vkGetCalibratedTimestampsEXT) {
++        cal_res = ctx->device->pfn_vkGetCalibratedTimestampsEXT(
++            ctx->device->device, 2, infos, values, &max_deviation);
++    }
++    std::ostringstream o;
++    o << "{\"kind\":\"drain\",\"drain_index\":" << (uint64_t) ctx->observe_drain_count
++      << ",\"query_first\":" << (uint64_t) from
++      << ",\"query_count\":" << (uint64_t) count
++      << ",\"ticks\":[" << ticks[0];
++    for (uint32_t i = 1; i < count; i++) {
++        o << "," << ticks[i];
++    }
++    o << "],\"availability\":[" << avail[0];
++    for (uint32_t i = 1; i < count; i++) {
++        o << "," << avail[i];
++    }
++    o << "],\"get_query_result\":\"" << vk::to_string(res)
++      << "\",\"get_query_result_availability\":\"" << vk::to_string(res_avail)
++      << "\",\"calibration_device\":" << values[0]
++      << ",\"calibration_monotonic_ns\":" << values[1]
++      << ",\"calibration_max_deviation_ns\":" << max_deviation
++      << ",\"calibration_result\":" << (int32_t) cal_res
++      << ",\"drain_graph_computes\":" << (uint64_t) ctx->observe_graph_computes
++      << "}";
++    try {
++        vk_observe_append_line(o.str());
++    } catch (const std::exception &) {
++        // never take the runtime down
++    }
++    ctx->observe_drain_count++;
++    ctx->observe_drained_idx = ctx->observe_query_idx;
++}
+ 
+ static void * const vk_ptr_base = (void *)(uintptr_t) 0x1000;  // NOLINT
+ 
+@@ -2844,6 +3044,7 @@
+         }
+     }
+     ctx->device->device.resetFences({ ctx->fence });
++    vk_observe_drain(ctx);
+ }
+ 
+ static constexpr uint32_t kSpvOpCooperativeMatrixLoadTensorNV = 5367;
+@@ -6804,6 +7005,107 @@
+ 
+         device->max_workgroup_size_log2 = uint32_t(log2f(float(device->properties.limits.maxComputeWorkGroupInvocations)));
+ 
++        // V2-D0 observation seam: fail-closed capability proof on the exact
++        // compute queue family and the calibrated-timestamp extension.
++        // Runs only when the seam gate is set; throws before the logical
++        // device exists when any predicate fails.
++        bool observe_ts_ok = false;
++        bool observe_calibrated_ext = false;
++        if (vk_observe_interval_enabled) {
++            {
++                VkPhysicalDevicePCIBusInfoPropertiesEXT observe_pci_props;
++                observe_pci_props.sType =
++                    VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PCI_BUS_INFO_PROPERTIES_EXT;
++                observe_pci_props.pNext = nullptr;
++                VkPhysicalDeviceIDProperties observe_id_props;
++                observe_id_props.sType =
++                    VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ID_PROPERTIES;
++                observe_id_props.pNext = &observe_pci_props;
++                VkPhysicalDeviceProperties2 observe_props2;
++                observe_props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
++                observe_props2.pNext = &observe_id_props;
++                vkGetPhysicalDeviceProperties2(device->physical_device,
++                                                &observe_props2);
++                device->observe_pci_domain = observe_pci_props.pciDomain;
++                device->observe_pci_bus = observe_pci_props.pciBus;
++                device->observe_pci_device = observe_pci_props.pciDevice;
++                device->observe_pci_function = observe_pci_props.pciFunction;
++                device->observe_pci_valid = true;
++                for (uint32_t i = 0; i < VK_UUID_SIZE; i++) {
++                    device->observe_device_uuid[i] = observe_id_props.deviceUUID[i];
++                }
++            }
++            std::vector<vk::QueueFamilyProperties> observe_qfp =
++                device->physical_device.getQueueFamilyProperties();
++            const vk::QueueFlagBits observe_gfx =
++                (getenv("GGML_VK_ALLOW_GRAPHICS_QUEUE") != nullptr)
++                    ? (vk::QueueFlagBits)0 : vk::QueueFlagBits::eGraphics;
++            const uint32_t observe_cq = ggml_vk_find_queue_family_index(
++                observe_qfp, vk::QueueFlagBits::eCompute, observe_gfx, -1, 1);
++            device->observe_ts_valid_bits = observe_qfp[observe_cq].timestampValidBits;
++            observe_ts_ok = device->properties.limits.timestampComputeAndGraphics
++                            && device->observe_ts_valid_bits >= 2
++                            && device->observe_ts_valid_bits <= 64;
++            if (!observe_ts_ok) {
++                throw vk::SystemError(
++                    vk::Result::eErrorFeatureNotPresent,
++                    "GGML_VK_OBSERVE_INTERVAL: compute queue family does not support timestamps");
++            }
++            for (const auto & properties : ext_props) {
++                if (strcmp("VK_EXT_calibrated_timestamps", properties.extensionName) == 0) {
++                    observe_calibrated_ext = true;
++                }
++            }
++            if (!observe_calibrated_ext) {
++                throw vk::SystemError(
++                    vk::Result::eErrorFeatureNotPresent,
++                    "GGML_VK_OBSERVE_INTERVAL: VK_EXT_calibrated_timestamps not supported");
++            }
++            uint32_t observe_domain_count = 0;
++            {
++                PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT
++                    observe_pfn_domains =
++                        (PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsEXT)
++                        vkGetInstanceProcAddr(vk_instance.instance,
++                            "vkGetPhysicalDeviceCalibrateableTimeDomainsEXT");
++                if (!observe_pfn_domains) {
++                    throw vk::SystemError(
++                        vk::Result::eErrorFeatureNotPresent,
++                        "GGML_VK_OBSERVE_INTERVAL: calibrateable time domain query unresolved");
++                }
++                VkTimeDomainEXT observe_domains_buf[8];
++                uint32_t observe_domains_got = 8;
++                std::vector<VkTimeDomainEXT> observe_domains;
++                VkResult observe_domain_res = observe_pfn_domains(
++                    device->physical_device, &observe_domains_got, observe_domains_buf);
++                if (observe_domain_res == VK_INCOMPLETE || observe_domains_got == 8) {
++                    observe_domain_count = observe_domains_got;
++                    observe_domains.assign(observe_domain_count, VK_TIME_DOMAIN_DEVICE_EXT);
++                    observe_domain_res = observe_pfn_domains(
++                        device->physical_device, &observe_domain_count, observe_domains.data());
++                } else if (observe_domain_res == VK_SUCCESS) {
++                    observe_domain_count = observe_domains_got;
++                    observe_domains.assign(observe_domains_buf,
++                                           observe_domains_buf + observe_domains_got);
++                }
++                if (observe_domain_res != VK_SUCCESS) {
++                    throw vk::SystemError(
++                        vk::Result::eErrorFeatureNotPresent,
++                        "GGML_VK_OBSERVE_INTERVAL: calibrateable time domain query failed");
++                }
++                bool observe_has_device = false, observe_has_mono = false;
++                for (uint32_t i = 0; i < observe_domain_count; i++) {
++                    if (observe_domains[i] == VK_TIME_DOMAIN_DEVICE_EXT) observe_has_device = true;
++                    if (observe_domains[i] == VK_TIME_DOMAIN_CLOCK_MONOTONIC_EXT) observe_has_mono = true;
++                }
++                if (!observe_has_device || !observe_has_mono) {
++                    throw vk::SystemError(
++                        vk::Result::eErrorFeatureNotPresent,
++                        "GGML_VK_OBSERVE_INTERVAL: DEVICE/CLOCK_MONOTONIC time domains unavailable");
++                }
++            }
++        }
++
+         std::vector<vk::QueueFamilyProperties> queue_family_props = device->physical_device.getQueueFamilyProperties();
+ 
+         // Try to find a non-graphics compute queue and transfer-focused queues
+@@ -7282,6 +7584,9 @@
+ #endif
+         device->name = GGML_VK_NAME + std::to_string(idx);
+ 
++        if (observe_calibrated_ext) {
++            device_extensions.push_back("VK_EXT_calibrated_timestamps");
++        }
+         device_create_info
+             .setFlags(vk::DeviceCreateFlags())
+             .setQueueCreateInfos(device_queue_create_infos)
+@@ -7292,6 +7597,17 @@
+         if (device->device_fault) {
+             device->pfn_vkGetDeviceFaultInfoEXT = (PFN_vkGetDeviceFaultInfoEXT)
+                 vkGetDeviceProcAddr(device->device, "vkGetDeviceFaultInfoEXT");
++        }
++        // V2-D0 observation seam: resolve the calibrated-timestamp
++        // entrypoint with the file's established device-PFN pattern.
++        if (observe_calibrated_ext) {
++            device->pfn_vkGetCalibratedTimestampsEXT = (PFN_vkGetCalibratedTimestampsEXT)
++                vkGetDeviceProcAddr(device->device, "vkGetCalibratedTimestampsEXT");
++            if (!device->pfn_vkGetCalibratedTimestampsEXT) {
++                throw vk::SystemError(
++                    vk::Result::eErrorFeatureNotPresent,
++                    "GGML_VK_OBSERVE_INTERVAL: vkGetCalibratedTimestampsEXT unresolved");
++            }
+         }
+ 
+         // Queues
+@@ -7767,6 +8083,12 @@
+         vk_instance.pfn_vkCmdInsertDebugUtilsLabelEXT = (PFN_vkCmdInsertDebugUtilsLabelEXT) vkGetInstanceProcAddr(vk_instance.instance, "vkCmdInsertDebugUtilsLabelEXT");
+     }
+ 
++    // V2-D0 observation seam: single gate, read once. Inert when unset.
++    const char * vk_observe_env = getenv("GGML_VK_OBSERVE_INTERVAL");
++    if (vk_observe_env != nullptr && vk_observe_env[0] != '\0') {
++        vk_observe_interval_enabled = true;
++        vk_observe_interval_path = vk_observe_env;
++    }
+     vk_perf_logger_enabled = getenv("GGML_VK_PERF_LOGGER") != nullptr;
+     vk_perf_logger_concurrent = getenv("GGML_VK_PERF_LOGGER_CONCURRENT") != nullptr;
+     vk_enable_sync_logger = getenv("GGML_VK_SYNC_LOGGER") != nullptr;
+@@ -8514,6 +8836,7 @@
+ 
+         ctx->compute_ctx = result;
+         ggml_vk_ctx_begin(ctx->device, result);
++        vk_observe_write_begin_tick(ctx, result);
+     }
+ 
+     if (ctx->device->async_use_transfer_queue && ctx->transfer_semaphore_last_submitted < ctx->transfer_semaphore.value) {
+@@ -16521,6 +16844,7 @@
+ #endif
+ 
+     if (submit || last_node) {
++        vk_observe_write_end_tick(ctx, compute_ctx);
+         ggml_vk_ctx_end(compute_ctx);
+ 
+         // TODO probably it'd be better to pass a exit_node flag to ggml_vk_compute_forward
+@@ -16630,6 +16954,10 @@
+ // Clean up on backend free
+ static void ggml_vk_cleanup(ggml_backend_vk_context * ctx) {
+     VK_LOG_DEBUG("ggml_vk_cleanup(" << ctx->name << ")");
++    // V2-D0 observation seam: emit the header record exactly once. Drain
++    // records were appended at each fence drain; the header carries device
++    // identity, capability facts, and tick/graph-compute totals.
++    vk_observe_emit_header(ctx);
+     // discard any unsubmitted command buffers
+     ctx->compute_ctx.reset();
+     // wait for any pending command buffers to finish
+@@ -17183,6 +17511,7 @@
+             cmd_buf = compute_ctx->s->buffer;
+         }
+ 
++        vk_observe_write_end_tick(ctx, compute_ctx);
+         ggml_vk_ctx_end(compute_ctx);
+ 
+         for (auto& cpy : compute_ctx->in_memcpys) {
+@@ -18011,6 +18340,31 @@
+         last_node -= 1;
+     }
+ 
++    // V2-D0 observation seam: mark a new generation graph compute and
++    // grow the timestamp query pool if needed. The host has drained all
++    // prior graph computes before the next one begins, so growing here
++    // races nothing; the pool is never reset, so indices stay monotonic.
++    if (vk_observe_interval_enabled) {
++        ctx->observe_graph_computes += 1;
++        const uint32_t observe_need =
++            ctx->observe_query_idx + (uint32_t) (2 * cgraph->n_nodes + 8);
++        if (ctx->observe_query_count < observe_need) {
++            if (ctx->observe_query_pool) {
++                ctx->device->device.destroyQueryPool(ctx->observe_query_pool);
++                ctx->observe_query_pool = vk::QueryPool();
++            }
++            uint32_t observe_capacity = 4096;
++            while (observe_capacity < observe_need) {
++                observe_capacity *= 2;
++            }
++            vk::QueryPoolCreateInfo observe_qci;
++            observe_qci.queryType = vk::QueryType::eTimestamp;
++            observe_qci.queryCount = observe_capacity;
++            ctx->observe_query_pool = ctx->device->device.createQueryPool(observe_qci);
++            ctx->observe_query_count = observe_capacity;
++        }
++    }
++
+     // Reserve tensor context space for all nodes
+     ctx->tensor_ctxs.resize(cgraph->n_nodes);
+ 
+@@ -18124,6 +18478,7 @@
+             // Flush the current batch before recording a node that would push it over the flop threshold
+             if (flops_per_submit != 0 && submitted_nodes > 0 && batch_flops + node_flops >= flops_per_submit) {
+                 vk_context flush_ctx = ggml_vk_get_compute_ctx(ctx);
++                vk_observe_write_end_tick(ctx, flush_ctx);
+                 ggml_vk_ctx_end(flush_ctx);
+                 flush_ctx->exit_tensor_idx = -1;
+                 ctx->compute_ctx.reset();

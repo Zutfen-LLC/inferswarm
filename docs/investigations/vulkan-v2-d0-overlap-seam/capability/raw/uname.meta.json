@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "uname",
+    "-a"
+  ],
+  "rc": 0,
+  "stdout_sha256": "f5ef23b711460e6dff85fd1980692a7c1f2a4a621ee5e7dd1da1c6267e1c0ba3",
+  "stdout_bytes": 113,
+  "stderr_bytes": 0
+}

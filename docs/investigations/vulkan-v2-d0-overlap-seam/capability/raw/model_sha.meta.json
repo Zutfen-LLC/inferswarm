@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "sha256sum",
+    "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf"
+  ],
+  "rc": 0,
+  "stdout_sha256": "8f331263241345c02cab1061afe8b03ef6434d73d12be3510c6c5ab001d84681",
+  "stdout_bytes": 129,
+  "stderr_bytes": 0
+}

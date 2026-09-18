@@ -1,0 +1,20 @@
+{
+  "schema": "inferswarm.v2d0.runtime-identity/1",
+  "pinned_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
+  "pristine_ggml_vulkan_sha256": "bc9c8071618d14db73ff0c3f16cfc21c24e5f7f67c1ceefc731dec65b559e00c",
+  "instrumented_ggml_vulkan_sha256": "7bf68ed5064aabea099a37ab0f8a10cea8ab42eaff4d9c28dfb85d2f675eac46",
+  "instrumented_llama_cli_sha256": "d385854a1bc70731f93fb9696251d111358b528f4c4f4bb62f30129511145404",
+  "accepted_llama_cli_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+  "build_tree": "/home/zutfen/is219-v2d0-src (separate copy; the accepted tree /home/zutfen/.cache/v0c-llama.cpp was never modified)",
+  "build_dir": "build-v2d0-observe (Ninja, Release, BUILD_SHARED_LIBS=ON, GGML_VULKAN=ON, GGML_CUDA=OFF, GGML_NATIVE=ON)",
+  "model_sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
+  "patch_generator": "scripts/issue219_patch.py",
+  "patch_diff": "runtime-patch.diff",
+  "insert_only": true,
+  "env_gate": "GGML_VK_OBSERVE_INTERVAL",
+  "as_run_note": "The retained physical captures were produced by the round-1 instrument, whose availability readback had an 8-byte-stride/16-byte-record defect (garbage availability channel; verdict-irrelevant — see README 'Round-2 correction'). The as-run diff is preserved byte-exact below; runtime-patch.diff is the corrected generator output for future (#216) use.",
+  "as_run_patch_diff": "runtime-patch.as-run.diff",
+  "as_run_patch_diff_sha256": "b070296b5a1235382e1665859f09da7f85ddaa0400d358f0b58ba9904cbaab5e",
+  "as_run_instrumented_ggml_vulkan_sha256": "7bf68ed5064aabea099a37ab0f8a10cea8ab42eaff4d9c28dfb85d2f675eac46",
+  "corrected_instrumented_ggml_vulkan_sha256": "6469472015ade1f01075101af982076ff7ddbbcc0c8404017f8f3a6e4489bfc4"
+}

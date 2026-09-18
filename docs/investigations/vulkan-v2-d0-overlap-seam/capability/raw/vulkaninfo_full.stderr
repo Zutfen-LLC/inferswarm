@@ -1,0 +1,2 @@
+ERROR: [Loader Message] Code 0 : loader_scanned_icd_add: Could not get 'vkCreateInstance' via 'vk_icdGetInstanceProcAddr' for ICD libGLX_nvidia.so.0
+'DISPLAY' environment variable not set... skipping surface info

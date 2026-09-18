@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "cat",
+    "/usr/share/vulkan/icd.d/radeon_icd.x86_64.json"
+  ],
+  "rc": 1,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stdout_bytes": 0,
+  "stderr_bytes": 79
+}
