@@ -40,14 +40,19 @@ import issue35_link_probe as x1  # accepted transport probe
 
 def _probe_argv(repo: Path, build_dir: Path, device_name_substring: str,
                 match_index: int, selector_index: int, runtime: str,
-                model: str) -> list[str]:
+                model: str, bdf: str, raw_dir: Path,
+                evidence_out: Path) -> list[str]:
     return [sys.executable, str(repo / "scripts" / "issue35_link_probe.py"),
             "--device-name-substring", device_name_substring,
             "--name-match-index", str(match_index),
             "--selector-index", str(selector_index),
             "--runtime-executable", runtime,
             "--model", model,
-            "--build-dir", str(build_dir)]
+            "--pci-bdf", bdf,
+            "--control-bdf", "00:02.0",
+            "--raw-dir", str(raw_dir),
+            "--build-dir", str(build_dir),
+            "--evidence-out", str(evidence_out)]
 
 
 def run_probe_instance(argv: list[str], out_dir: Path, label: str,
@@ -92,21 +97,25 @@ def main() -> int:
     runs: dict[str, Any] = {}
     # single-die arms
     for mode, die in (("single-a", "a"), ("single-b", "b")):
-        p = mapping["participants"][die]
+        part = mapping["participants"][die]
         argv = _probe_argv(repo, Path(args.build_dir),
-                           "AMD Radeon Pro V340", _match_index(
-                               mapping, die),
+                           "AMD Radeon Pro V340", _match_index(mapping, die),
                            _selector_index(mapping, die),
-                           runtime["executable"], runtime["model"])
+                           runtime["executable"], runtime["model"],
+                           part["fresh_pci_bdf"],
+                           out / mode / "raw", out / mode / "summary.json")
         runs[mode] = run_probe_instance(argv, out / mode, mode)
 
     # dual arm: two concurrent instances
-    argvs = {die: _probe_argv(repo, Path(args.build_dir),
-                              "AMD Radeon Pro V340",
-                              _match_index(mapping, die),
-                              _selector_index(mapping, die),
-                              runtime["executable"], runtime["model"])
-             for die in ("a", "b")}
+    argvs = {}
+    for die in ("a", "b"):
+        part = mapping["participants"][die]
+        argvs[die] = _probe_argv(
+            repo, Path(args.build_dir), "AMD Radeon Pro V340",
+            _match_index(mapping, die), _selector_index(mapping, die),
+            runtime["executable"], runtime["model"],
+            part["fresh_pci_bdf"],
+            out / "dual" / die / "raw", out / "dual" / die / "summary.json")
     procs = {}
     intervals: dict[str, list[int | None]] = {}
     for die in ("a", "b"):
