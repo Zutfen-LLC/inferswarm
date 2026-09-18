@@ -142,6 +142,7 @@ def emit_receipt(out_dir: Path, receipt: dict[str, Any]) -> Path:
     for binding in receipt["raw_bindings"]:
         if set(binding) != {"rel_path", "sha256", "byte_count"}:
             raise ReceiptError(f"bad raw binding shape: {binding}")
+    out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"{receipt['receipt_id']}.json"
     if out.exists():
         raise ReceiptError(f"duplicate receipt id: {receipt['receipt_id']}")

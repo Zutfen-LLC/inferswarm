@@ -10,7 +10,7 @@
   "scripts/issue216_manifest.py": "5565bda4274140874426d599756b6bda6df401ea5645e3c6458b9cb1d9d6bc89",
   "scripts/issue216_physical_authority.py": "88a523fa15ff584da71e7a9e99cabb7fe1b7e935e01dac480e7378e49e32266a",
   "scripts/issue216_preflight.py": "b8d055c4060abf90a5ace423ee28c2d3a014a41109404c862de398675e8d5106",
-  "scripts/issue216_receipt.py": "c72318131e99cbb0b6049dd11490a358871d842339d794712a56a5cc50480ace",
+  "scripts/issue216_receipt.py": "91c2d9b6d620060c7b3cd5c657652baf61e1525ba124282cecc31ef3e393e939",
   "scripts/issue216_reset.py": "fa9ded1ddb253df114d1b77ecb1f04a66c3d71561e5dbff44b7cd13d37e5441b",
   "scripts/issue216_soak.py": "f240e58a708e19704130a0b46e6d285bd578c1f987341d5f878f41e811257f8f",
   "scripts/issue216_transport.py": "539b41503283f79caede79914ac423bdf13439d0701100ee7c8bebf9495e9545"
