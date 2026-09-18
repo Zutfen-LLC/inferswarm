@@ -1638,12 +1638,49 @@ _FAULT_SCAN_RES = [(cls, re.compile(pat, re.IGNORECASE))
 _CAMPAIGN_HOST_TZ = timezone(timedelta(hours=-4), name="EDT")
 
 
-def _parse_journal_ts(parts: list[str]) -> datetime | None:
-    """journalctl default format: 'Sep 18 16:28:33 host prog: msg'."""
-    try:
-        naive = datetime.strptime(" ".join(parts[:3]),
-                                  "%b %d %H:%M:%S")
-    except ValueError:
+def _parse_journal_ts(parts: list[str],
+                      default_year: int = 2026) -> datetime | None:
+    """Timestamp grammars retained in this campaign's fault captures:
+
+    - journalctl default: 'Sep 18 16:28:33 host kernel: ...'
+      (host-local; campaign tz EDT = UTC-4)
+    - dmesg -T: '[Fri Sep 18 16:28:33 2026] ...'
+    Accepts the leading token slice the caller passes (parts[:3] for
+    journalctl; the dmesg prefix needs 5 tokens, so this helper joins
+    what it gets and also handles the full-line form).
+    """
+    txt = " ".join(parts)
+    naive = None
+    if not parts:
+        return None
+    if parts[0].startswith("["):
+        # '[Fri Sep 18 16:28:33 2026]' — possibly truncated at 3 tokens
+        inner = txt.strip("[]")
+        toks = inner.split(" ")
+        # drop weekday token, need 'Sep 18 16:28:33 [2026]'
+        if len(toks) >= 4:
+            try:
+                naive = datetime.strptime(" ".join(toks[1:5]),
+                                          "%b %d %H:%M:%S %Y")
+            except ValueError:
+                naive = None
+        if naive is None and len(toks) >= 3:
+            try:
+                naive = datetime.strptime(" ".join(toks[1:4]),
+                                          "%b %d %H:%M:%S")
+            except ValueError:
+                naive = None
+    else:
+        # journalctl default grammar carries NO year token; the window
+        # derivation supplies the campaign year (both window bounds are
+        # in the same campaign year by construction).
+        try:
+            naive = datetime.strptime(txt, "%b %d %H:%M:%S")
+        except ValueError:
+            naive = None
+        if naive is not None:
+            naive = naive.replace(year=default_year)
+    if naive is None:
         return None
     return naive.replace(tzinfo=_CAMPAIGN_HOST_TZ)
 
@@ -1670,8 +1707,11 @@ def scan_platform_faults(
                 break
         if matched_cls is None:
             continue
-        parts = line.split(" ", 4)
-        ts = _parse_journal_ts(parts[:3]) if len(parts) >= 4 else None
+        parts = line.split(" ")
+        ts = (_parse_journal_ts(
+            parts[:5] if parts and parts[0].startswith("[") else parts[:3],
+            default_year=window_start_utc.year)
+            if len(parts) >= 4 else None)
         if ts is None:
             unparsed_fault_lines.append(line.strip()[:400])
             continue
@@ -1714,7 +1754,9 @@ def scan_campaign_faults(evidence_root: Path,
         in_win = [h for h in scan["hits"] if h["in_window"]]
         if in_win or scan["out_of_window_unparsed"]:
             sources[str(jf.relative_to(evidence_root))] = in_win
-    # retained host fault capture (taken at fault time, pre-reboot)
+    # retained host fault capture (taken at fault time, pre-reboot).
+    # The journal capture is authoritative: the kernel ring buffer had
+    # already churned past the fault lines when dmesg was taken.
     fc = evidence_root / "fault-capture"
     if fc.is_dir():
         for name in ("dmesg-at-fault.txt",):
@@ -1724,6 +1766,13 @@ def scan_campaign_faults(evidence_root: Path,
                                             window_start, window_end)
                 sources[f"fault-capture/{name}"] = [
                     h for h in scan["hits"] if h["in_window"]]
+        jz = fc / "journal-full-at-fault.txt.gz"
+        if jz.is_file():
+            import gzip
+            scan = scan_platform_faults(gzip.decompress(jz.read_bytes()),
+                                        window_start, window_end)
+            sources["fault-capture/journal-full-at-fault.txt.gz"] = [
+                h for h in scan["hits"] if h["in_window"]]
     return {"sources": sources}
 
 
