@@ -204,14 +204,28 @@ def verify_closure(repo: Path = rc.ROOT,
         if wt != expected:
             raise FreezeError(
                 f"unstaged producer drift (worktree != pin): {rel}")
-    # (4) HEAD may advance past the pin only without touching sources
+    # (4) HEAD may advance past the pin only without touching sources.
+    # A reduction-only AMENDMENT (see accepted_amended_digests) is the
+    # one legal exception: physical collectors unchanged, reducer
+    # hardened, authority NOT regenerated. The amendment must pin the
+    # OLD producer head whose closure the retained evidence binds and
+    # carry its self-bound closure digest.
     diff = _git_bytes(repo, "diff", "--name-only", pinned,
                       current_head(repo), "--", *closure_sources)
     if diff is None or diff.strip():
-        raise FreezeError(
-            "producer sources changed between the pinned head and HEAD — "
-            "re-freeze (regenerate the closure) before any producer emits "
-            "or the assembler reduces")
+        amended = accepted_amended_digests(repo)
+        pin_diff = _git_bytes(repo, "diff", "--name-only", pinned,
+                              current_head(repo), "--",
+                              *PHYSICAL_PRODUCERS)
+        # The live pin must itself be an amendment entry (the evidence
+        # binds THIS record's digest) — otherwise the closure moved and
+        # the retained evidence belongs to another producer identity.
+        entry = amended.get(committed.get("closure_digest"))
+        if entry is None or pin_diff is None or pin_diff.strip():
+            raise FreezeError(
+                "producer sources changed between the pinned head and "
+                "HEAD — re-freeze (regenerate the closure) before any "
+                "producer emits or the assembler reduces")
     # digest binding: record digest must equal the canonical digest of
     # its own content
     body = {k: v for k, v in committed.items() if k != "closure_digest"}
@@ -268,3 +282,94 @@ def assert_execution_provenance(repo: Path = rc.ROOT,
                 f"reviewed-identity failure: HEAD blob {rel} hash {hd} "
                 f"!= closure {expected}")
     return closure
+
+
+# --- reduction-only amendment protocol -------------------------------
+# Reduction-layer hardening AFTER retained physical output does not
+# invalidate the evidence: the collectors' executed bytes are unchanged.
+# An AMENDMENTS.json entry records each such transition and the verifier
+# re-proves, mechanically, that no PHYSICAL producer changed between
+# the head the evidence binds and the current HEAD.
+
+PHYSICAL_PRODUCERS: tuple[str, ...] = (
+    "scripts/issue216_physical_authority.py",
+    "scripts/issue216_host.py",
+    "scripts/issue216_execution.py",
+    "scripts/issue216_preflight.py",
+    "scripts/issue216_concurrent.py",
+    "scripts/issue216_transport.py",
+    "scripts/issue216_soak.py",
+    "scripts/issue216_fault.py",
+    "scripts/issue216_reset.py",
+)
+
+AMENDMENT_SCHEMA = "inferswarm.v2d.producer-amendments/1"
+
+
+def _closure_digest_at(repo: Path, pin: str) -> str | None:
+    """Recompute the committed closure record's self-bound digest at an
+    arbitrary historical pin (fails closed on any tampering)."""
+    raw = _git_bytes(repo, "show",
+                     f"{pin}:{rc.AREA_REL}/{rc.CLOSURE_NAME}")
+    if not raw:
+        return None
+    try:
+        doc = json.loads(raw.decode("utf-8"))
+        body = {k: v for k, v in doc.items() if k != "closure_digest"}
+        import hashlib as _h
+        recomputed = _h.sha256(rc.canonical(body)).hexdigest()
+    except Exception:
+        return None
+    return recomputed if recomputed == doc.get("closure_digest") \
+        else None
+
+
+def accepted_amended_digests(repo: Path = rc.ROOT) -> dict[str, dict]:
+    """Return {closure_digest: amendment_entry} for every reduction-only
+    amendment whose collector-unchanged proof holds against the LIVE
+    tree. Fails closed: any malformed/unprovable entry raises."""
+    path = repo / rc.AREA_REL / "AMENDMENTS.json"
+    if not path.is_file():
+        return {}
+    doc = json.loads(path.read_text(encoding="utf-8"))
+    if doc.get("schema") != AMENDMENT_SCHEMA:
+        raise FreezeError(f"amendment record schema mismatch "
+                          f"(expected {AMENDMENT_SCHEMA})")
+    accepted: dict[str, dict] = {}
+    head = current_head(repo)
+    for entry in doc.get("amendments", []):
+        pin = entry.get("evidence_producer_head")
+        digest = entry.get("evidence_closure_digest")
+        if not isinstance(pin, str) or len(pin) != 40 \
+                or not isinstance(digest, str) or len(digest) != 64:
+            raise FreezeError("amendment entry malformed "
+                              "(pin/digest shape)")
+        # (a) the pin must be real history reachable from HEAD
+        reach = subprocess.run(
+            ["git", "-C", str(repo), "merge-base", "--is-ancestor",
+             pin, head], capture_output=True)
+        if reach.returncode != 0:
+            raise FreezeError(
+                f"amendment pin {pin[:12]} is not an ancestor of HEAD")
+        # (b) the recorded digest must equal the closure record's own
+        # self-bound digest as committed at the pin
+        at_pin = _closure_digest_at(repo, pin)
+        if at_pin is None or at_pin != digest:
+            raise FreezeError(
+                f"amendment digest for pin {pin[:12]} does not match "
+                "the closure record committed at that pin")
+        # (c) collector-unchanged proof: no PHYSICAL producer byte may
+        # differ between the evidence pin and the live HEAD
+        changed = _git_bytes(repo, "diff", "--name-only", pin, head,
+                             "--", *PHYSICAL_PRODUCERS)
+        if changed is None or changed.strip():
+            raise FreezeError(
+                f"amendment for pin {pin[:12]} is invalid: physical "
+                f"producers changed ({changed.decode()[:200]})")
+        if entry.get("authority_regenerated"):
+            raise FreezeError(
+                f"amendment for pin {pin[:12]} regenerated the "
+                "authority — not a reduction-only fix; evidence is "
+                "superseded and a new campaign is required")
+        accepted[digest] = entry
+    return accepted

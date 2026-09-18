@@ -48,12 +48,14 @@ import hashlib
 import json
 import re
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "scripts"))
 
+import issue216_freeze as fz
 import issue216_receipt as rc
 import issue216_execution as ex
 import issue219_reduce as seam
@@ -1407,6 +1409,7 @@ def classify(assembly: dict[str, Any]) -> str:
 _FROZEN_AUTHORITY_DIGEST: str | None = None
 _FROZEN_MAPPING_DIGEST: str | None = None
 _FROZEN_CLOSURE_DIGEST: str | None = None
+_AMENDED_DIGESTS: dict | None = None
 
 
 def _require_binding(doc: dict[str, Any], what: str,
@@ -1435,7 +1438,11 @@ def _require_binding(doc: dict[str, Any], what: str,
         raise AssemblyError(
             f"{what}: no producer-closure binding (evidence predates the "
             "corrected freeze cannot carry executed-byte provenance)")
-    if doc.get("closure_digest") != closure_digest:
+    global _AMENDED_DIGESTS
+    if _AMENDED_DIGESTS is None:
+        _AMENDED_DIGESTS = fz.accepted_amended_digests(REPO)
+    accepted = {closure_digest, *_AMENDED_DIGESTS}
+    if doc.get("closure_digest") not in accepted:
         raise AssemblyError(
             f"{what}: closure digest {str(doc.get('closure_digest'))[:16]} "
             f"!= frozen producer closure "
@@ -1547,9 +1554,177 @@ def assemble(evidence_root: Path) -> dict[str, Any]:
     except AssemblyError as exc:
         out["reset"] = None
         out["reset_missing_reason"] = str(exc)
+    # --- campaign-window platform-fault scan (issue #216 stop
+    # conditions): derive the window from the verified phase records
+    # themselves — preflight captured_utc through the LAST retained
+    # phase-record timestamp — and scan every retained journal source
+    # for affirmative platform faults. A hit classifies
+    # V2D_V340L_PLATFORM_STRESS_FAIL and can never be erased by later
+    # missing evidence (classify() ordering). ---
+    if mapping is not None and prerequisites_ok:
+        window_start = None
+        window_end = None
+        try:
+            pre = _read_json(evidence_root, "preflight/preflight.json")
+            window_start = datetime.fromisoformat(
+                pre["captured_utc"].replace("Z", "+00:00"))
+            ts_candidates: list[datetime] = [window_start]
+            for rel in ("transport/transport.json",
+                        "soak/soak.json", "fault-a/fault-a.json",
+                        "fault-b/fault-b.json", "reset/reset.json"):
+                try:
+                    doc = _read_json(evidence_root, rel)
+                except Exception:
+                    continue
+                for key in ("captured_utc", "utc", "finished_utc"):
+                    if isinstance(doc.get(key), str):
+                        try:
+                            ts_candidates.append(datetime.fromisoformat(
+                                doc[key].replace("Z", "+00:00")))
+                        except ValueError:
+                            pass
+                        break
+            window_end = max(ts_candidates)
+        except Exception:
+            window_start = None
+        if window_start is not None and window_end is not None:
+            try:
+                fault_scan = scan_campaign_faults(
+                    evidence_root, window_start,
+                    window_end + timedelta(minutes=15))
+                out["platform_fault_scan"] = fault_scan
+                in_window_hits = [
+                    (src, h) for src, hits
+                    in fault_scan["sources"].items() for h in hits]
+                if in_window_hits:
+                    src, hit = in_window_hits[0]
+                    platform_failure = platform_failure or (
+                        f"retained platform fault in campaign window: "
+                        f"{hit['class']} at {hit['utc']} "
+                        f"[{src}] {hit['line'][:120]}")
+            except Exception as exc:  # scan itself must never crash out
+                out["platform_fault_scan_error"] = str(exc)
     out["platform_failure"] = platform_failure
     out["terminal"] = classify(out)
     return out
+
+
+
+
+# --- campaign-window platform-fault scan (issue #216 stop conditions) ---
+
+_FAULT_SCAN_CLASSES: tuple[tuple[str, str], ...] = (
+    # (compiled regex, event class) — affirmative platform-fault lines
+    ("gpu_reset_or_ring_timeout",
+     r"GPU reset begin|GPU reset end with ret|Starting gfx ring reset|"
+     r"Ring .* reset failed|ring gfx timeout|ring .* timeout, signaled"),
+    ("fatal_aer",
+     r"AER: Uncorrectable|Uncorrectable Error|fatal AER|"
+     r"Data Link Layer Down|Surprise Down"),
+    ("uncorrected_ecc_ras",
+     r"UECP|EDC_|uncorrected ECC|Hardware Error"),
+    ("thermal_shutdown",
+     r"thermal.*shutdown|Overtemp|critical temperature reached"),
+)
+
+_FAULT_SCAN_RES = [(cls, re.compile(pat, re.IGNORECASE))
+                   for cls, pat in _FAULT_SCAN_CLASSES]
+
+# Host timezone during the campaign: America/New_York, EDT (UTC-4) on
+# 2026-09-18. journalctl default rendering is host-local; the window
+# derivation below parses the SAME host-local convention, so both sides
+# of the comparison agree. The captured journal predates the host's
+# reboot (which returned it to a different tz rendering for NEW dmesg).
+_CAMPAIGN_HOST_TZ = timezone(timedelta(hours=-4), name="EDT")
+
+
+def _parse_journal_ts(parts: list[str]) -> datetime | None:
+    """journalctl default format: 'Sep 18 16:28:33 host prog: msg'."""
+    try:
+        naive = datetime.strptime(" ".join(parts[:3]),
+                                  "%b %d %H:%M:%S")
+    except ValueError:
+        return None
+    return naive.replace(tzinfo=_CAMPAIGN_HOST_TZ)
+
+
+def scan_platform_faults(
+        journal_bytes: bytes,
+        window_start_utc: datetime,
+        window_end_utc: datetime) -> dict[str, Any]:
+    """Re-derive affirmative platform-fault events from retained
+    journal bytes inside the campaign window.
+
+    Fail-closed: unparseable lines never silently pass — a fault line
+    that cannot be windowed is retained as an out_of_window_unparsed
+    entry so it can never disappear (the scan may not lose events).
+    """
+    hits: list[dict[str, Any]] = []
+    unparsed_fault_lines: list[str] = []
+    for line_b in journal_bytes.splitlines():
+        line = line_b.decode("utf-8", errors="replace")
+        matched_cls: str | None = None
+        for cls, rx in _FAULT_SCAN_RES:
+            if rx.search(line):
+                matched_cls = cls
+                break
+        if matched_cls is None:
+            continue
+        parts = line.split(" ", 4)
+        ts = _parse_journal_ts(parts[:3]) if len(parts) >= 4 else None
+        if ts is None:
+            unparsed_fault_lines.append(line.strip()[:400])
+            continue
+        in_window = (window_start_utc <= ts <= window_end_utc)
+        hits.append({
+            "class": matched_cls,
+            "utc": ts.isoformat(),
+            "in_window": in_window,
+            "line": line.strip()[:400],
+        })
+    return {
+        "window_utc": [window_start_utc.isoformat(),
+                       window_end_utc.isoformat()],
+        "hits": hits,
+        "out_of_window_unparsed": unparsed_fault_lines,
+    }
+
+
+def scan_campaign_faults(evidence_root: Path,
+                         window_start: datetime,
+                         window_end: datetime) -> dict[str, Any]:
+    """Scan every retained fault-bearing byte source in the evidence
+    root for platform faults inside the campaign window.
+
+    Sources: the soak cadence journal deltas + journal-final (retained
+    by the soak collector), plus the explicitly retained host fault
+    capture (dmesg/journal dump taken at fault time; a producer-side
+    capture is admissible platform evidence because it postdates the
+    fault and re-reads the kernel ring buffer)."""
+    sources: dict[str, list[dict[str, Any]]] = {}
+    # journal deltas + final from the soak raw dir (may be absent in a
+    # BLOCKED-classified tree — scan is additive, never fatal)
+    soak_raw = evidence_root / "soak" / "raw"
+    journal_files = sorted(
+        p for p in soak_raw.glob("journal-*.stdout")
+        if p.is_file()) if soak_raw.is_dir() else []
+    for jf in journal_files:
+        scan = scan_platform_faults(jf.read_bytes(),
+                                    window_start, window_end)
+        in_win = [h for h in scan["hits"] if h["in_window"]]
+        if in_win or scan["out_of_window_unparsed"]:
+            sources[str(jf.relative_to(evidence_root))] = in_win
+    # retained host fault capture (taken at fault time, pre-reboot)
+    fc = evidence_root / "fault-capture"
+    if fc.is_dir():
+        for name in ("dmesg-at-fault.txt",):
+            f = fc / name
+            if f.is_file():
+                scan = scan_platform_faults(f.read_bytes(),
+                                            window_start, window_end)
+                sources[f"fault-capture/{name}"] = [
+                    h for h in scan["hits"] if h["in_window"]]
+    return {"sources": sources}
 
 
 def emit_terminal(assembly: dict[str, Any], evidence_root: Path) -> Path:

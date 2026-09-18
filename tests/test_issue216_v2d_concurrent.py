@@ -395,3 +395,53 @@ class TestExecutionDerivation(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class TestAmendmentProtocol(unittest.TestCase):
+    """Reduction-only amendment protocol: chain-2 evidence stays bound
+    to its producer pin while reducer hardening moves HEAD."""
+
+    def test_amendment_record_wellformed_and_accepted(self):
+        import issue216_freeze as fz
+        from pathlib import Path
+        acc = fz.accepted_amended_digests(Path('.'))
+        self.assertIn("a450d5769f17c1f3" + "610de6ff5c521924b86aaa92"
+                      "f8c142c3ad7a40764eb28fb6", acc)
+
+    def test_forged_amendment_digest_rejected(self):
+        import issue216_freeze as fz, json, tempfile, shutil
+        from pathlib import Path
+        repo = Path('.').resolve()
+        with tempfile.TemporaryDirectory() as td:
+            # mini repo: copy git dir? too heavy — instead directly
+            # mutate the AMENDMENTS bytes via the committed override
+            src = repo / "docs/investigations/vulkan-v2-d-v340l-concurrent/AMENDMENTS.json"
+            orig = src.read_text()
+            try:
+                doc = json.loads(orig)
+                doc["amendments"][0]["evidence_closure_digest"] = "0"*64
+                src.write_text(json.dumps(doc, indent=1, sort_keys=True))
+                with self.assertRaises(fz.FreezeError):
+                    fz.accepted_amended_digests(repo)
+            finally:
+                src.write_text(orig)
+
+    def test_amendment_rejects_collector_change(self):
+        # simulate: physical producer changed since the evidence pin ->
+        # accepted_amended_digests must fail (proof (c)).
+        import issue216_freeze as fz, json, tempfile
+        from pathlib import Path
+        repo = Path('.').resolve()
+        src = repo / "docs/investigations/vulkan-v2-d-v340l-concurrent/AMENDMENTS.json"
+        orig = src.read_text()
+        try:
+            doc = json.loads(orig)
+            # point the entry at a pin where collectors DID change
+            # since (any commit before the freeze rewrite works; use
+            # the branch base where issue216_preflight differed)
+            doc["amendments"][0]["evidence_producer_head"] = \
+                "d0a31202c5d6b086eb3e374c790954b5fa2c7be4"
+            src.write_text(json.dumps(doc, indent=1, sort_keys=True))
+            with self.assertRaises(fz.FreezeError):
+                fz.accepted_amended_digests(repo)
+        finally:
+            src.write_text(orig)

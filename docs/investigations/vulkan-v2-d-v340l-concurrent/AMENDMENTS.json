@@ -1,0 +1,15 @@
+{
+ "amendments": [
+  {
+   "amendment_id": "v2d-reduction-platform-fault-scan",
+   "schema_note": "reduction-only hardening after retained chain-2 physical output; collectors' executed bytes unchanged",
+   "evidence_producer_head": "f6af8c7f080e75049e85b56869985408fc5c3a8c",
+   "evidence_closure_digest": "a450d5769f17c1f3610de6ff5c521924b86aaa92f8c142c3ad7a40764eb28fb6",
+   "reason": "chain-2 canonical rerun completed preflight/baselines/c01-c03 cleanly and then die B (0000:09:00.0) hit an amdgpu ring gfx timeout during the transport probe; the GPU reset failed (ret=-62) and wedged (dm_suspend D-state). The assembler previously had no campaign-window platform-fault scan, so it would have misclassified the retained affirmative fault as EVIDENCE_INCOMPLETE. The scan re-derives platform faults from retained journal bytes inside the window bounded by the phase records' own timestamps.",
+   "correction": "scripts/issue216_assemble.py: campaign-window platform-fault scan (scan_platform_faults/scan_campaign_faults) + window derivation from preflight captured_utc through last retained phase-record timestamp; scripts/issue216_freeze.py: AMENDMENTS.json protocol (accepted_amended_digests) admitting reduction-only transitions with a mechanical collector-unchanged proof.",
+   "collector_unchanged_proof": "git diff --name-only f6af8c7..HEAD -- <PHYSICAL_PRODUCERS> is empty (enforced mechanically by accepted_amended_digests at every verify)",
+   "authority_regenerated": false
+  }
+ ],
+ "schema": "inferswarm.v2d.producer-amendments/1"
+}
