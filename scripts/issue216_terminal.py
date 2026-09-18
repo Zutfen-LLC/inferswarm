@@ -61,6 +61,7 @@ def _transport(samples: list[dict[str, Any]]) -> tuple[bool, dict[str, dict[str,
 def facts_from_assembly(data: dict[str, Any], plan: dict[str, Any]) -> dict[str, Any]:
     receipts = data["receipts"]
     preflight = _rows(data, "inferswarm.v2d.preflight-receipt/1")
+    baselines = _rows(data, "inferswarm.v2d.execution-attempt/1")
     pairs = _rows(data, "inferswarm.v2d.concurrent-attempt/1")
     samples = _rows(data, "inferswarm.v2d.transport-sample/1")
     telemetry = sorted(_rows(data, "inferswarm.v2d.soak-telemetry/1"), key=lambda x: x.get("sequence", -1))
@@ -68,6 +69,11 @@ def facts_from_assembly(data: dict[str, Any], plan: dict[str, Any]) -> dict[str,
     soak = _rows(data, "inferswarm.v2d.soak-run/1")
     arms = _rows(data, "inferswarm.v2d.fault-isolation/1")
     resets = _rows(data, "inferswarm.v2d.reset-disposition/1")
+    expected_baselines = {(f"baseline-{die}-{rep}", die) for die in ("a", "b") for rep in range(1, 4)}
+    baseline_keys = {(row.get("attempt_id"), row.get("die")) for row in baselines}
+    baseline_complete = baseline_keys == expected_baselines and all(
+        row.get("correctness") is True and row.get("offload") is True and row.get("fallback") is False
+        and row.get("accounting") == [0, 0, 0] and row.get("clean_exit") is True for row in baselines)
     expected_ids = {"concurrent-1", "concurrent-2", "concurrent-3"}
     ids = {x["attempt_id"] for x in pairs}
     pair_overlap = bool(pairs) and all(_interval_overlap(x["workload_intervals_ns"]["a"], x["workload_intervals_ns"]["b"]) for x in pairs)
@@ -95,7 +101,8 @@ def facts_from_assembly(data: dict[str, Any], plan: dict[str, Any]) -> dict[str,
     reset_ok = len(resets) == 1 and ((resets[0].get("disposition") == "DEVICE_RESET_ISOLATION_NOT_AVAILABLE" and resets[0].get("documented_support_absent") is True) or (resets[0].get("disposition") == "RESET_EXECUTED" and resets[0].get("documented_mechanism") and resets[0].get("post_reset_rediscovery") is True and resets[0].get("post_reset_independent_correctness") is True and resets[0].get("post_reset_concurrent_correctness") is True))
     later_complete = denominator_complete and matrix_ok and soak_ok and arm_ok and reset_ok
     return {
-        "preflight_valid": len(preflight) == 1,
+        "preflight_valid": len(preflight) == 1 and baseline_complete,
+        "baseline_repetitions_complete": baseline_complete,
         "concurrency_established": concurrency_established,
         "concurrent_denominator_complete": denominator_complete,
         "concurrent_correct": valid_concurrent,

@@ -1,6 +1,6 @@
 {
  "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v1",
- "closure_digest": "986750cd4c68056435330cd00b678844218e5cd09a1936c93984d2889315bfbb",
+ "closure_digest": "81cac180696570ce24c01dc9c710d85ddb5a9476500b69d31df395a7c62fca11",
  "closure_inputs": [
   {
    "path": "docs/investigations/vulkan-v2-d-v340l-concurrent/CAMPAIGN-PLAN.json",
@@ -16,7 +16,7 @@
   },
   {
    "path": "docs/investigations/vulkan-v2-d-v340l-concurrent/producer-hashes.json",
-   "sha256": "89bf623977fb3e36ad858b4e638239a95604ca68698feadfcb6542717296a284"
+   "sha256": "d0ae36ae0b7126ab1f3b9933526358f1a357066c352de55634605b1fea7957c2"
   }
  ],
  "producer_hashes": [
@@ -58,7 +58,7 @@
   },
   {
    "path": "scripts/issue216_terminal.py",
-   "sha256": "0904330601343c2b170c0a333a83cf476d86b55bdf50d1cd8e3affab724f199d"
+   "sha256": "96617794cc5c553e0a0c69032501f667fdca02d4a268ba81198ea9de5f6c4b6d"
   },
   {
    "path": "scripts/issue216_manifest.py",
