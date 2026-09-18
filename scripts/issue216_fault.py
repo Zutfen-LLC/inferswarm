@@ -159,7 +159,7 @@ def run_fault_arm(*, repo: Path, out: Path, attempt_id: str, arm: str,
         "authority_digest": authority["authority_digest"],
         "mapping_digest": mapping["mapping_digest"],
     }
-    (base / f"fault-arm-{arm}.json").write_bytes(
+    (out / f"fault-arm-{arm}.json").write_bytes(
         json.dumps(record, indent=1, sort_keys=True).encode() + b"\n")
     return record
 
