@@ -250,7 +250,7 @@ def build_complete_tree(root: Path, *, n_concurrent: int = 3,
                         "sha256": hashlib.sha256(snap_bytes).hexdigest()})
     (raw / "journal-final.stdout").write_bytes(b"clean\n")
     # checkpoints every 600s (summary json + run dir, collector shape)
-    for cps in range(600, soak_duration_s + 1, 600):
+    for cps in range(600, soak_duration_s, 600):
         cp_dir = raw / f"checkpoint-{cps:04d}"
         cp_dir.mkdir(parents=True, exist_ok=True)
         pair = _checkpoint_pair(root, cp_dir, f"cp{cps}")
@@ -601,6 +601,435 @@ class TestTerminalStateMachine(unittest.TestCase):
                 capture_output=True, text=True, cwd=str(REPO))
             self.assertEqual(proc.returncode, 0, proc.stderr)
             self.assertIn("PLATFORM_STRESS_FAIL", proc.stdout)
+
+
+
+
+class TestCorrectionMutations(unittest.TestCase):
+    """Correction-campaign adversarial controls: internally
+    self-consistent WRONG-DIE evidence must prevent PASS."""
+
+    def _swap_pair_dies(self, root: Path, att: str) -> None:
+        """Swap A and B raw executions PLUS their authored
+        selected_bdf/argv fields — fully self-consistent wrong-die
+        evidence (each participant carrying the other die's bytes)."""
+        import hashlib as _h
+        ppath = root / "concurrent" / att / f"pair-{att}.json"
+        pair = json.loads(ppath.read_bytes())
+        rd = root / "concurrent" / att
+        raws = {}
+        for k in ("a", "b"):
+            run = pair["participants"][k]
+            raws[k] = {key: (rd / run[key]).read_bytes()
+                       for key in ("stdout_rel", "stderr_rel",
+                                   "exit_code_rel")}
+        for k, other in (("a", "b"), ("b", "a")):
+            run = pair["participants"][k]
+            for key in ("stdout_rel", "stderr_rel", "exit_code_rel"):
+                (rd / run[key]).write_bytes(raws[other][key])
+            run["stdout_sha256"] = _h.sha256(raws[other]["stdout_rel"]).hexdigest()
+            run["stderr_sha256"] = _h.sha256(raws[other]["stderr_rel"]).hexdigest()
+            argv = run["argv"]
+            sel = argv[argv.index("--device") + 1]
+            argv[argv.index("--device") + 1] = (
+                "Vulkan2" if sel == "Vulkan1" else "Vulkan1")
+            run["selected_bdf"] = (
+                "0000:09:00.0" if run["selected_bdf"] == "0000:06:00.0"
+                else "0000:06:00.0")
+        # seam records follow their executions
+        oa, ob = pair["observe_rels"]["a"], pair["observe_rels"]["b"]
+        pair["observe_rels"]["a"], pair["observe_rels"]["b"] = ob, oa
+        ppath.write_bytes(json.dumps(pair, indent=1, sort_keys=True)
+                          .encode() + b"\n")
+
+    def test_ab_swap_prevents_pass(self):
+        """FIX 2 mutation: swap A and B raw executions + authored
+        selected_bdf fields — the identity invariant must reject."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            self.assertEqual(
+                classify_tree(root),
+                "V2D_V340L_CONCURRENT_DUAL_DIE_STABILITY_PASS")
+            self._swap_pair_dies(root, "c02")
+            self.assertEqual(
+                classify_tree(root),
+                "V2D_V340L_CONCURRENT_CORRECTNESS_FAIL")
+
+    def test_a_on_b_bdf_consistent_forgery_prevents_pass(self):
+        """FIX 2 mutation: A genuinely executes on B's BDF while every
+        authored field is changed to agree with the wrong BDF."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            ppath = root / "concurrent" / "c01" / "pair-c01.json"
+            pair = json.loads(ppath.read_bytes())
+            run = pair["participants"]["a"]
+            rd = root / "concurrent" / "c01"
+            stderr = (rd / run["stderr_rel"]).read_text()
+            forged = stderr.replace("0000:06:00.0", "0000:09:00.0")
+            (rd / run["stderr_rel"]).write_bytes(forged.encode())
+            import hashlib as _h
+            run["stderr_sha256"] = _h.sha256(forged.encode()).hexdigest()
+            run["selected_bdf"] = "0000:09:00.0"
+            ppath.write_bytes(json.dumps(pair, indent=1,
+                                         sort_keys=True).encode())
+            # two dies were used (b is on 09 too) — but participant a's
+            # identity != fresh mapping: must fail, not PASS
+            out = asm.assemble(root)
+            self.assertNotEqual(
+                out["terminal"],
+                "V2D_V340L_CONCURRENT_DUAL_DIE_STABILITY_PASS")
+            self.assertEqual(out["terminal"],
+                             "V2D_V340L_CONCURRENT_CORRECTNESS_FAIL")
+
+    def test_b_on_a_bdf_consistent_forgery_prevents_pass(self):
+        """FIX 2 mutation: symmetric B-on-A case."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            ppath = root / "concurrent" / "c01" / "pair-c01.json"
+            pair = json.loads(ppath.read_bytes())
+            run = pair["participants"]["b"]
+            rd = root / "concurrent" / "c01"
+            stderr = (rd / run["stderr_rel"]).read_text()
+            forged = stderr.replace("0000:09:00.0", "0000:06:00.0")
+            (rd / run["stderr_rel"]).write_bytes(forged.encode())
+            import hashlib as _h
+            run["stderr_sha256"] = _h.sha256(forged.encode()).hexdigest()
+            run["selected_bdf"] = "0000:06:00.0"
+            ppath.write_bytes(json.dumps(pair, indent=1,
+                                         sort_keys=True).encode())
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"],
+                             "V2D_V340L_CONCURRENT_CORRECTNESS_FAIL")
+
+    def test_fault_victim_exit_11_prevents_pass(self):
+        """FIX 4 mutation: victim exit -11 (SIGSEGV) != frozen -9."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            (root / "fault-arm-a-loss" / "initial" / "a" /
+             "run.exit-code").write_bytes(b"-11\n")
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"],
+                             "V2D_V340L_PLATFORM_STRESS_FAIL")
+
+    def test_fault_wrong_kill_method_prevents_pass(self):
+        """FIX 4 mutation: kill_method SIGTERM."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            fp = root / "fault-arm-b.json"
+            doc = json.loads(fp.read_bytes())
+            doc["kill_method"] = "SIGTERM"
+            fp.write_bytes(json.dumps(doc, indent=1).encode())
+            out = asm.assemble(root)
+            self.assertNotEqual(
+                out["terminal"],
+                "V2D_V340L_CONCURRENT_DUAL_DIE_STABILITY_PASS")
+
+    def test_fault_survivor_on_victim_bdf_prevents_pass(self):
+        """FIX 4 mutation: survivor genuinely executes on the victim's
+        BDF with ALL authored fields changed consistently."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            fp = root / "fault-arm-a.json"
+            doc = json.loads(fp.read_bytes())
+            run = doc["sibling_run"]
+            rd = root / "fault-arm-a-loss" / "initial" / "b"
+            stderr = (rd / run["stderr_rel"]).read_text()
+            forged = stderr.replace("0000:09:00.0", "0000:06:00.0")
+            (rd / run["stderr_rel"]).write_bytes(forged.encode())
+            import hashlib as _h
+            run["stderr_sha256"] = _h.sha256(forged.encode()).hexdigest()
+            run["selected_bdf"] = "0000:06:00.0"
+            doc["sibling_run"] = run
+            fp.write_bytes(json.dumps(doc, indent=1).encode())
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"],
+                             "V2D_V340L_PLATFORM_STRESS_FAIL")
+
+    def test_fault_relaunch_on_sibling_bdf_prevents_pass(self):
+        """FIX 4 mutation: victim relaunch genuinely executes on the
+        sibling's BDF with all authored fields changed consistently."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            fp = root / "fault-arm-b.json"
+            doc = json.loads(fp.read_bytes())
+            run = doc["relaunch_run"]
+            rd = root / "fault-arm-b-loss" / "relaunch" / "b"
+            stderr = (rd / run["stderr_rel"]).read_text()
+            forged = stderr.replace("0000:09:00.0", "0000:06:00.0")
+            (rd / run["stderr_rel"]).write_bytes(forged.encode())
+            import hashlib as _h
+            run["stderr_sha256"] = _h.sha256(forged.encode()).hexdigest()
+            run["selected_bdf"] = "0000:06:00.0"
+            doc["relaunch_run"] = run
+            fp.write_bytes(json.dumps(doc, indent=1).encode())
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"],
+                             "V2D_V340L_PLATFORM_STRESS_FAIL")
+
+    def test_soak_telemetry_hash_mismatch_prevents_pass(self):
+        """FIX 6 mutation: tamper one telemetry sample's bytes."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            p = root / "soak" / "raw" / "telemetry-0030.json"
+            data = json.loads(p.read_bytes())
+            data["telemetry"]["0000:06:00.0"]["ras_gpu_err_cnt"] = 5
+            p.write_bytes(json.dumps(data, sort_keys=True).encode())
+            out = asm.assemble(root)
+            self.assertNotEqual(
+                out["terminal"],
+                "V2D_V340L_CONCURRENT_DUAL_DIE_STABILITY_PASS")
+
+    def test_soak_pid_gone_prevents_pass(self):
+        """FIX 6 mutation: PID GONE during an active interval."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            p = root / "soak" / "raw" / "telemetry-0030.json"
+            data = json.loads(p.read_bytes())
+            data["pids"]["a"]["state"] = "GONE"
+            snap_bytes = json.dumps(data, sort_keys=True).encode()
+            p.write_bytes(snap_bytes)
+            doc = json.loads((root / "soak" / "soak-sk1.json")
+                             .read_bytes())
+            for s in doc["samples"]:
+                if s["sample"] == 30:
+                    s["sha256"] = hashlib.sha256(snap_bytes).hexdigest()
+            (root / "soak" / "soak-sk1.json").write_bytes(
+                json.dumps(doc, indent=1).encode())
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"],
+                             "V2D_V340L_PLATFORM_STRESS_FAIL")
+
+    def test_soak_silent_replacement_prevents_pass(self):
+        """FIX 6 mutation: unplanned exit then silent relaunch."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            sp = root / "soak" / "soak-sk1.json"
+            doc = json.loads(sp.read_bytes())
+            doc["events"] = [
+                {"event": "participant_exit",
+                 "pair_die": [["1:a", -9]], "monotonic_ns": 100},
+                {"event": "pair_launched", "pair": 2,
+                 "monotonic_ns": 200},
+            ]
+            sp.write_bytes(json.dumps(doc, indent=1).encode())
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"],
+                             "V2D_V340L_PLATFORM_STRESS_FAIL")
+
+    def test_soak_fault_only_in_final_journal_prevents_pass(self):
+        """FIX 6 mutation: reset/hang event present ONLY in
+        journal-final.stdout (invisible to cadence deltas)."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            (root / "soak" / "raw" / "journal-final.stdout").write_bytes(
+                b"amdgpu: GPU reset triggered after soak\n")
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"],
+                             "V2D_V340L_PLATFORM_STRESS_FAIL")
+
+    def test_soak_altered_stop_reason_prevents_pass(self):
+        """FIX 6 mutation: stop reason != duration_reached."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            sp = root / "soak" / "soak-sk1.json"
+            doc = json.loads(sp.read_bytes())
+            doc["stop_reason"] = "operator_abort"
+            sp.write_bytes(json.dumps(doc, indent=1).encode())
+            out = asm.assemble(root)
+            self.assertNotEqual(
+                out["terminal"],
+                "V2D_V340L_CONCURRENT_DUAL_DIE_STABILITY_PASS")
+
+    def test_soak_dropped_checkpoint_prevents_pass(self):
+        """FIX 6 mutation: a checkpoint summary removed from disk."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            (root / "soak" / "raw" / "checkpoint-0600.json").unlink()
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"],
+                             "V2D_EVIDENCE_INCOMPLETE_AFTER_CONCURRENCY")
+
+    def test_transport_missing_probe_output_prevents_pass(self):
+        """FIX 5 mutation: single-B probe stdout deleted."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            (root / "transport" / "single-b" / "single-b.stdout").unlink()
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"],
+                             "V2D_EVIDENCE_INCOMPLETE_AFTER_CONCURRENCY")
+
+    def test_transport_forged_exit_code_prevents_pass(self):
+        """FIX 5 mutation: authored exit 0 over raw exit 1 bytes."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            (root / "transport" / "single-a" / "single-a.exit-code"
+             ).write_bytes(b"1\n")
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"],
+                             "V2D_EVIDENCE_INCOMPLETE_AFTER_CONCURRENCY")
+
+    def test_transport_wrong_bdf_prevents_pass(self):
+        """FIX 5 mutation: dual/A probe identity binding points at the
+        wrong die's BDF."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            pp = root / "transport" / "dual" / "a" / "raw" / "probe.json"
+            rec = json.loads(pp.read_bytes())
+            rec["twin_binding"]["identity_probe"]["pci_bdf"] = "09:00.0"
+            rec["subject"]["pci_bdf"] = "09:00.0"
+            pp.write_bytes(json.dumps(rec, indent=1).encode())
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"],
+                             "V2D_EVIDENCE_INCOMPLETE_AFTER_CONCURRENCY")
+
+    def test_transport_missing_transfer_size_prevents_pass(self):
+        """FIX 5 mutation: one ladder size dropped from the raw record."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            pp = root / "transport" / "single-a" / "raw" / "probe.json"
+            rec = json.loads(pp.read_bytes())
+            stdout = rec["probe_stdout"]
+            # remove one 128MiB h2d rep row group marker: simplest —
+            # drop 8 of the 64 sustained rows via body rewrite
+            import re as _re
+            lines = stdout.splitlines()
+            # reconstruct without 8 of the h2d_134217728 rows
+            kept, dropped = [], 0
+            for ln in lines:
+                if '"dir":"h2d"' in ln and "134217728" in ln \
+                        and '"rep":7' in ln:
+                    dropped += 1
+                    continue
+                kept.append(ln)
+            rec["probe_stdout"] = "\n".join(kept) + "\n"
+            pp.write_bytes(json.dumps(rec, indent=1).encode())
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"],
+                             "V2D_EVIDENCE_INCOMPLETE_AFTER_CONCURRENCY")
+
+    def test_transport_forged_overlap_boolean_prevents_pass(self):
+        """FIX 5 mutation: authored probe_process_overlap=True over
+        non-overlapping retained intervals."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            tp = root / "transport" / "transport-tp1.json"
+            doc = json.loads(tp.read_bytes())
+            doc["dual"]["intervals_ns"] = {"a": [0, 100], "b": [500, 900]}
+            doc["dual"]["probe_process_overlap"] = True
+            tp.write_bytes(json.dumps(doc, indent=1).encode())
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"],
+                             "V2D_EVIDENCE_INCOMPLETE_AFTER_CONCURRENCY")
+            self.assertIn("overlap",
+                          str(out.get("transport_missing_reason")))
+
+    def test_reset_forged_disposition_prevents_pass(self):
+        """FIX 7 mutation: authored RESET_ARM_EXECUTED over evidence
+        deriving NOT_AVAILABLE."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            rp = root / "reset-determination.json"
+            doc = json.loads(rp.read_bytes())
+            doc["disposition"] = "RESET_ARM_EXECUTED"
+            doc["reason"] = "forged"
+            rp.write_bytes(json.dumps(doc, indent=1).encode())
+            out = asm.assemble(root)
+            self.assertNotEqual(
+                out["terminal"],
+                "V2D_V340L_CONCURRENT_DUAL_DIE_STABILITY_PASS")
+
+    def test_reset_missing_mechanism_evidence_blocks(self):
+        """FIX 7 mutation: probes stripped of the reset-file
+        observation (derivation impossible)."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            rp = root / "reset-determination.json"
+            doc = json.loads(rp.read_bytes())
+            doc["probes"] = {}
+            rp.write_bytes(json.dumps(doc, indent=1).encode())
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"],
+                             "V2D_EVIDENCE_INCOMPLETE_AFTER_CONCURRENCY")
+
+    def test_preflight_authored_sentinel_verdict_not_authority(self):
+        """FIX 3 mutation: authored correct=True over broken raw bytes
+        (byte-exactness destroyed) must BLOCK, not PASS."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            pf = json.loads((root / "preflight" / "preflight.json")
+                            .read_bytes())
+            run = pf["sentinels"]["a"]["run"]
+            sp = root / "preflight" / "sentinel" / "a"
+            stdout = (sp / run["stdout_rel"]).read_bytes()
+            tampered = stdout.replace(b"pangram", b"PANGRAM")
+            (sp / run["stdout_rel"]).write_bytes(tampered)
+            run["stdout_sha256"] = hashlib.sha256(tampered).hexdigest()
+            pf["sentinels"]["a"]["correct"] = True  # authored lie
+            (root / "preflight" / "preflight.json").write_bytes(
+                json.dumps(pf, indent=1).encode())
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"], "V2D_EVIDENCE_BLOCKED")
+
+    def test_mapping_digest_mutation_blocks(self):
+        """FIX 2 mutation: a phase record carrying a foreign mapping
+        digest fails closed."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            bp = root / "baseline-a.json"
+            doc = json.loads(bp.read_bytes())
+            doc["mapping_digest"] = "0" * 64
+            bp.write_bytes(json.dumps(doc, indent=1).encode())
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"], "V2D_EVIDENCE_BLOCKED")
+
+    def test_phase_record_without_closure_binding_blocks(self):
+        """FIX 1 mutation: a phase record with no producer-closure
+        binding cannot carry executed-byte provenance."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            fp = root / "fault-arm-a.json"
+            doc = json.loads(fp.read_bytes())
+            del doc["closure_digest"]
+            fp.write_bytes(json.dumps(doc, indent=1).encode())
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"],
+                             "V2D_EVIDENCE_INCOMPLETE_AFTER_CONCURRENCY")
+
+    def test_phase_record_foreign_closure_binding_blocks(self):
+        """FIX 1 mutation: evidence from another producer identity."""
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            build_complete_tree(root)
+            fp = root / "fault-arm-b.json"
+            doc = json.loads(fp.read_bytes())
+            doc["closure_digest"] = "3" * 64
+            fp.write_bytes(json.dumps(doc, indent=1).encode())
+            out = asm.assemble(root)
+            self.assertEqual(out["terminal"],
+                             "V2D_EVIDENCE_INCOMPLETE_AFTER_CONCURRENCY")
 
 
 if __name__ == "__main__":
