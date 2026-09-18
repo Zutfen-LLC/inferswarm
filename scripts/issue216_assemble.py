@@ -289,7 +289,7 @@ def assemble_pair(evidence_root: Path, pair: dict[str, Any],
 
 def assemble_preflight(evidence_root: Path) -> dict[str, Any]:
     preflight = _read_json(evidence_root, "preflight.json")
-    journal = _read_raw(evidence_root, "raw/journal_faults.stdout")
+    journal = _read_raw(evidence_root, "preflight/raw/journal_faults.stdout")
     text = journal.decode("utf-8", "replace")
     counts = {
         "fatal_aer": len(re.findall(
