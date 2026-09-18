@@ -176,12 +176,14 @@ def main() -> int:
 
 
 def _match_index(mapping: dict[str, Any], die: str) -> int:
-    sel = mapping["participants"][die]["fresh_selector"]
-    return int(sel.replace("Vulkan", "")) - 1
+    """C-probe enumeration index among identically-named devices: the
+    loader enumerates Vulkan1 before Vulkan2, so die a -> 0, die b -> 1."""
+    return 0 if mapping["participants"][die]["fresh_selector"].endswith("1") else 1
 
 
 def _selector_index(mapping: dict[str, Any], die: str) -> int:
-    return _match_index(mapping, die)
+    """The runtime selector NUMBER (Vulkan1 -> 1, Vulkan2 -> 2)."""
+    return int(mapping["participants"][die]["fresh_selector"].replace("Vulkan", ""))
 
 
 if __name__ == "__main__":
