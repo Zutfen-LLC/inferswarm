@@ -162,7 +162,7 @@ def run_soak(*, repo: Path, out: Path, attempt_id: str,
             still = [k for k in active if k.split(":")[0] in idx_done]
             if not still:
                 events.append({"event": "pair_completed",
-                               "pair": idx_done,
+                               "pair": sorted(idx_done),
                                "monotonic_ns": time.monotonic_ns()})
                 launch_pair()
             else:
