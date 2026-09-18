@@ -144,7 +144,7 @@
   }
  },
  "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
- "closure_digest": "148c8e833026661fa5f8ffe8bf57922e79d993707e49488c47b7435f367ef801",
+ "closure_digest": "0bc9757879e536e1d62489248dec260b5d7012ca5a657d390aa1559063d56dc3",
  "closure_sources": [
   "scripts/issue216_assemble.py",
   "scripts/issue216_concurrent.py",
@@ -338,63 +338,69 @@
  "platform_failure": "retained platform fault in campaign window: gpu_reset_or_ring_timeout at 2026-09-18T16:28:33-04:00 [fault-capture/journal-full-at-fault.txt.gz] Sep 18 16:28:33 inferswarm02 kernel: amdgpu 0000:09:00.0: ring gfx timeout, signaled seq=5131, emitted seq=5132",
  "platform_fault_scan": {
   "sources": {
-   "fault-capture/dmesg-at-fault.txt": [],
-   "fault-capture/journal-full-at-fault.txt.gz": [
-    {
-     "class": "gpu_reset_or_ring_timeout",
-     "in_window": true,
-     "line": "Sep 18 16:28:33 inferswarm02 kernel: amdgpu 0000:09:00.0: ring gfx timeout, signaled seq=5131, emitted seq=5132",
-     "utc": "2026-09-18T16:28:33-04:00"
-    },
-    {
-     "class": "gpu_reset_or_ring_timeout",
-     "in_window": true,
-     "line": "Sep 18 16:28:33 inferswarm02 kernel: amdgpu 0000:09:00.0: Starting gfx ring reset",
-     "utc": "2026-09-18T16:28:33-04:00"
-    },
-    {
-     "class": "gpu_reset_or_ring_timeout",
-     "in_window": true,
-     "line": "Sep 18 16:28:33 inferswarm02 kernel: amdgpu 0000:09:00.0: Ring gfx reset failed",
-     "utc": "2026-09-18T16:28:33-04:00"
-    },
-    {
-     "class": "gpu_reset_or_ring_timeout",
-     "in_window": true,
-     "line": "Sep 18 16:28:33 inferswarm02 kernel: amdgpu 0000:09:00.0: GPU reset begin!. Source:  1",
-     "utc": "2026-09-18T16:28:33-04:00"
-    },
-    {
-     "class": "gpu_reset_or_ring_timeout",
-     "in_window": true,
-     "line": "Sep 18 16:28:34 inferswarm02 kernel: amdgpu 0000:09:00.0: GPU reset end with ret = -62",
-     "utc": "2026-09-18T16:28:34-04:00"
-    },
-    {
-     "class": "gpu_reset_or_ring_timeout",
-     "in_window": true,
-     "line": "Sep 18 16:28:36 inferswarm02 kernel: amdgpu 0000:09:00.0: ring gfx timeout, signaled seq=5132, emitted seq=5132",
-     "utc": "2026-09-18T16:28:36-04:00"
-    },
-    {
-     "class": "gpu_reset_or_ring_timeout",
-     "in_window": true,
-     "line": "Sep 18 16:28:36 inferswarm02 kernel: amdgpu 0000:09:00.0: Starting gfx ring reset",
-     "utc": "2026-09-18T16:28:36-04:00"
-    },
-    {
-     "class": "gpu_reset_or_ring_timeout",
-     "in_window": true,
-     "line": "Sep 18 16:28:36 inferswarm02 kernel: amdgpu 0000:09:00.0: Ring gfx reset failed",
-     "utc": "2026-09-18T16:28:36-04:00"
-    },
-    {
-     "class": "gpu_reset_or_ring_timeout",
-     "in_window": true,
-     "line": "Sep 18 16:28:36 inferswarm02 kernel: amdgpu 0000:09:00.0: GPU reset begin!. Source:  1",
-     "utc": "2026-09-18T16:28:36-04:00"
-    }
-   ]
+   "fault-capture/dmesg-at-fault.txt": {
+    "in_window": [],
+    "unparsed": []
+   },
+   "fault-capture/journal-full-at-fault.txt.gz": {
+    "in_window": [
+     {
+      "class": "gpu_reset_or_ring_timeout",
+      "in_window": true,
+      "line": "Sep 18 16:28:33 inferswarm02 kernel: amdgpu 0000:09:00.0: ring gfx timeout, signaled seq=5131, emitted seq=5132",
+      "utc": "2026-09-18T16:28:33-04:00"
+     },
+     {
+      "class": "gpu_reset_or_ring_timeout",
+      "in_window": true,
+      "line": "Sep 18 16:28:33 inferswarm02 kernel: amdgpu 0000:09:00.0: Starting gfx ring reset",
+      "utc": "2026-09-18T16:28:33-04:00"
+     },
+     {
+      "class": "gpu_reset_or_ring_timeout",
+      "in_window": true,
+      "line": "Sep 18 16:28:33 inferswarm02 kernel: amdgpu 0000:09:00.0: Ring gfx reset failed",
+      "utc": "2026-09-18T16:28:33-04:00"
+     },
+     {
+      "class": "gpu_reset_or_ring_timeout",
+      "in_window": true,
+      "line": "Sep 18 16:28:33 inferswarm02 kernel: amdgpu 0000:09:00.0: GPU reset begin!. Source:  1",
+      "utc": "2026-09-18T16:28:33-04:00"
+     },
+     {
+      "class": "gpu_reset_or_ring_timeout",
+      "in_window": true,
+      "line": "Sep 18 16:28:34 inferswarm02 kernel: amdgpu 0000:09:00.0: GPU reset end with ret = -62",
+      "utc": "2026-09-18T16:28:34-04:00"
+     },
+     {
+      "class": "gpu_reset_or_ring_timeout",
+      "in_window": true,
+      "line": "Sep 18 16:28:36 inferswarm02 kernel: amdgpu 0000:09:00.0: ring gfx timeout, signaled seq=5132, emitted seq=5132",
+      "utc": "2026-09-18T16:28:36-04:00"
+     },
+     {
+      "class": "gpu_reset_or_ring_timeout",
+      "in_window": true,
+      "line": "Sep 18 16:28:36 inferswarm02 kernel: amdgpu 0000:09:00.0: Starting gfx ring reset",
+      "utc": "2026-09-18T16:28:36-04:00"
+     },
+     {
+      "class": "gpu_reset_or_ring_timeout",
+      "in_window": true,
+      "line": "Sep 18 16:28:36 inferswarm02 kernel: amdgpu 0000:09:00.0: Ring gfx reset failed",
+      "utc": "2026-09-18T16:28:36-04:00"
+     },
+     {
+      "class": "gpu_reset_or_ring_timeout",
+      "in_window": true,
+      "line": "Sep 18 16:28:36 inferswarm02 kernel: amdgpu 0000:09:00.0: GPU reset begin!. Source:  1",
+      "utc": "2026-09-18T16:28:36-04:00"
+     }
+    ],
+    "unparsed": []
+   }
   },
   "window_note": "start = verified preflight captured_utc; end = latest retained phase-record timestamp + 15 min (a wedged phase writes no record; the slack admits faults in the tail after the last record)",
   "window_utc": [
@@ -440,7 +446,7 @@
   }
  },
  "prerequisites_ok": true,
- "producer_head": "15ef08a7fcbcb46036eb9418110728a82664a7b5",
+ "producer_head": "8c1a01ab8841468949fdf4e4a3724b8f30042617",
  "reset": null,
  "reset_missing_reason": "missing raw artifact: reset-determination.json",
  "schema": "inferswarm.v2d.assembly/2",

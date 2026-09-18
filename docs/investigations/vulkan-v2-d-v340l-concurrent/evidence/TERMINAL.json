@@ -1,6 +1,6 @@
 {
  "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
- "producer_head": "15ef08a7fcbcb46036eb9418110728a82664a7b5",
+ "producer_head": "8c1a01ab8841468949fdf4e4a3724b8f30042617",
  "schema": "inferswarm.v2d.terminal/2",
  "terminal": "V2D_V340L_PLATFORM_STRESS_FAIL",
  "vocabulary": [
