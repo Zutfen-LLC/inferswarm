@@ -1,6 +1,6 @@
 
 
-Loading model... |-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/ 
+Loading model... |-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\ 
 
 ▄▄ ▄▄
 ██ ██
@@ -27,7 +27,7 @@ available commands:
 > The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:
 The sentence "The quick brown fox jumps over the lazy dog" is a well-known pangram, and after this sentence, the next sentence could be anything, as there is no specific rule or context provided for what comes next.
 
-[ Prompt: 275.0 t/s | Generation: 58.5 t/s ]
+[ Prompt: 283.6 t/s | Generation: 59.0 t/s ]
 
 
 Exiting...

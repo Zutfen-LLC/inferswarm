@@ -1,6 +1,6 @@
 {
  "arm": "b",
- "attempt_id": "fbC1",
+ "attempt_id": "fbC2",
  "authority_digest": "f3d48961758d1681d606400e9b9765c055152dc0becdaac7c8428970eba970d1",
  "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
  "kill_method": "SIGKILL",
@@ -30,35 +30,35 @@
      },
      "raw_lines": {
       "device_compute": [
-       "0.06.632.456 I sched_reserve:    Vulkan1 compute buffer size =   104.51 MiB"
+       "0.06.632.940 I sched_reserve:    Vulkan1 compute buffer size =   104.51 MiB"
       ],
       "device_context": [
-       "0.06.591.795 I llama_kv_cache:    Vulkan1 KV buffer size =  1152.00 MiB"
+       "0.06.590.252 I llama_kv_cache:    Vulkan1 KV buffer size =  1152.00 MiB"
       ],
       "device_memory_before_after": [
-       "0.00.688.622 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
-       "0.07.856.520 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 5075 + (3091 =  1834 +    1152 +     104) +           8 |"
+       "0.00.682.752 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+       "0.07.857.454 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 5075 + (3091 =  1834 +    1152 +     104) +           8 |"
       ],
       "device_model": [
-       "0.01.131.324 I load_tensors:      Vulkan1 model buffer size =  1834.82 MiB"
+       "0.01.123.912 I load_tensors:      Vulkan1 model buffer size =  1834.82 MiB"
       ],
       "host_compute": [
-       "0.06.632.510 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+       "0.06.633.052 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
       ],
       "host_mapping": [
-       "0.01.131.323 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+       "0.01.123.889 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
       ],
       "host_memory_final": [
-       "0.07.856.521 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+       "0.07.857.455 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
       ],
       "host_memory_pre_realization": [
-       "0.00.688.622 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+       "0.00.682.771 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
       ],
       "host_output": [
-       "0.06.590.945 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+       "0.06.589.651 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
       ],
       "ready_state": [
-       "0.06.890.915 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+       "0.06.885.212 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
       ],
       "source_fetches_after_ready": [],
       "unplanned_state_movements": []
@@ -108,14 +108,14 @@
     "selected_bdf": "0000:06:00.0",
     "stderr_bytes": 19985,
     "stderr_rel": "a/run-faultb-recovery.stderr",
-    "stderr_sha256": "256aa25d393b79f4417585d96c8c55cfbf8afd6692bd4a6b07dde522b7a45aa2",
+    "stderr_sha256": "db840172421fd91258370499ec5dddbb7c0636d0ef1d9c544050154d832e2f34",
     "stdout_bytes": 1409,
     "stdout_rel": "a/run-faultb-recovery.stdout",
-    "stdout_sha256": "dddaeafa34ad31c515604426074a10d78d2420154bdceb0d3fdd1ad571f082be",
+    "stdout_sha256": "ba72a89d03ba80980865a1662569301e6342746f0cb6bfb29e61bea405754ca5",
     "timed_out": false,
     "workload_interval_ns": [
-     65853194075102,
-     65861197766624
+     67052881980520,
+     67060881547735
     ]
    },
    "b": {
@@ -134,35 +134,35 @@
      },
      "raw_lines": {
       "device_compute": [
-       "0.06.634.615 I sched_reserve:    Vulkan2 compute buffer size =   104.51 MiB"
+       "0.06.611.025 I sched_reserve:    Vulkan2 compute buffer size =   104.51 MiB"
       ],
       "device_context": [
-       "0.06.594.723 I llama_kv_cache:    Vulkan2 KV buffer size =  1152.00 MiB"
+       "0.06.569.864 I llama_kv_cache:    Vulkan2 KV buffer size =  1152.00 MiB"
       ],
       "device_memory_before_after": [
-       "0.00.690.812 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
-       "0.07.852.148 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 5075 + (3091 =  1834 +    1152 +     104) +           8 |"
+       "0.00.679.036 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+       "0.07.861.200 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 5075 + (3091 =  1834 +    1152 +     104) +           8 |"
       ],
       "device_model": [
-       "0.01.131.544 I load_tensors:      Vulkan2 model buffer size =  1834.82 MiB"
+       "0.01.119.216 I load_tensors:      Vulkan2 model buffer size =  1834.82 MiB"
       ],
       "host_compute": [
-       "0.06.634.626 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+       "0.06.611.042 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
       ],
       "host_mapping": [
-       "0.01.131.521 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+       "0.01.119.197 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
       ],
       "host_memory_final": [
-       "0.07.852.148 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+       "0.07.861.201 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
       ],
       "host_memory_pre_realization": [
-       "0.00.690.830 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+       "0.00.679.054 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
       ],
       "host_output": [
-       "0.06.594.115 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+       "0.06.568.996 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
       ],
       "ready_state": [
-       "0.06.891.331 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+       "0.06.886.816 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
       ],
       "source_fetches_after_ready": [],
       "unplanned_state_movements": []
@@ -210,28 +210,28 @@
      37
     ],
     "selected_bdf": "0000:09:00.0",
-    "stderr_bytes": 19932,
+    "stderr_bytes": 19985,
     "stderr_rel": "b/run-faultb-recovery.stderr",
-    "stderr_sha256": "c9fb2a547dcf0fc99736188c77fb3436aaa49df9e2c33f62b365b464e0551f34",
+    "stderr_sha256": "ce43a5c9cde0c93905c462019b792486da508b6dca40e41b990166f3e387b338",
     "stdout_bytes": 1409,
     "stdout_rel": "b/run-faultb-recovery.stdout",
-    "stdout_sha256": "86bcce8deb86039994d28afa5acdac49fa75f3464c7a940b32a5016675b20c19",
+    "stdout_sha256": "212de52cabc95a59cf833735d81f32329e6fa9f162d7da7f3b2de278301c1571",
     "timed_out": false,
     "workload_interval_ns": [
-     65853194685947,
-     65861221011225
+     67052882505152,
+     67060902902581
     ]
    }
   },
   "phase": "fault-recovery",
   "wrapper_intervals_ns": {
    "a": [
-    65853194075102,
-    65861197766624
+    67052881980520,
+    67060881547735
    ],
    "b": [
-    65853194685947,
-    65861221011225
+    67052882505152,
+    67060902902581
    ]
   }
  },
@@ -251,35 +251,35 @@
    },
    "raw_lines": {
     "device_compute": [
-     "0.03.937.490 I sched_reserve:    Vulkan2 compute buffer size =   104.51 MiB"
+     "0.03.930.731 I sched_reserve:    Vulkan2 compute buffer size =   104.51 MiB"
     ],
     "device_context": [
-     "0.03.896.779 I llama_kv_cache:    Vulkan2 KV buffer size =  1152.00 MiB"
+     "0.03.890.113 I llama_kv_cache:    Vulkan2 KV buffer size =  1152.00 MiB"
     ],
     "device_memory_before_after": [
-     "0.00.647.381 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
-     "0.04.963.385 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
+     "0.00.650.443 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+     "0.04.986.239 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
     ],
     "device_model": [
-     "0.01.047.050 I load_tensors:      Vulkan2 model buffer size =  1834.82 MiB"
+     "0.01.047.376 I load_tensors:      Vulkan2 model buffer size =  1834.82 MiB"
     ],
     "host_compute": [
-     "0.03.937.501 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+     "0.03.930.739 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
     ],
     "host_mapping": [
-     "0.01.047.049 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+     "0.01.047.375 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
     ],
     "host_memory_final": [
-     "0.04.963.386 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+     "0.04.986.241 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
     ],
     "host_memory_pre_realization": [
-     "0.00.647.381 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+     "0.00.650.444 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
     ],
     "host_output": [
-     "0.03.896.170 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+     "0.03.889.516 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
     ],
     "ready_state": [
-     "0.04.048.560 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+     "0.04.054.174 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
     ],
     "source_fetches_after_ready": [],
     "unplanned_state_movements": []
@@ -329,10 +329,10 @@
   "selected_bdf": "0000:09:00.0",
   "stderr_bytes": 19985,
   "stderr_rel": "run.stderr",
-  "stderr_sha256": "3e7bb289584de857c7518686ea941c4cacc3d12a1191c6a03191904186b4e431",
+  "stderr_sha256": "51999e3ec6778e5d9f7a72efa830f98a1232bf3bf195588de22a1b4a0434f161",
   "stdout_bytes": 1353,
   "stdout_rel": "run.stdout",
-  "stdout_sha256": "0d0963e6c4ab8fe132619af5159c194f97cca7ac71fe694566881f764f475ea6",
+  "stdout_sha256": "9f2413fe7c81b413313055c3f7950552651490d3f3f4e574ea8bc65cff0e46a6",
   "timed_out": false,
   "workload_interval_ns": null
  },
@@ -363,35 +363,35 @@
    },
    "raw_lines": {
     "device_compute": [
-     "0.03.979.988 I sched_reserve:    Vulkan1 compute buffer size =   104.51 MiB"
+     "0.03.953.084 I sched_reserve:    Vulkan1 compute buffer size =   104.51 MiB"
     ],
     "device_context": [
-     "0.03.939.241 I llama_kv_cache:    Vulkan1 KV buffer size =  1152.00 MiB"
+     "0.03.914.141 I llama_kv_cache:    Vulkan1 KV buffer size =  1152.00 MiB"
     ],
     "device_memory_before_after": [
-     "0.00.687.618 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
-     "0.05.244.333 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
+     "0.00.671.658 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+     "0.05.003.218 I common_memory_breakdown_print: |   - Vulkan1 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
     ],
     "device_model": [
-     "0.01.115.313 I load_tensors:      Vulkan1 model buffer size =  1834.82 MiB"
+     "0.01.095.130 I load_tensors:      Vulkan1 model buffer size =  1834.82 MiB"
     ],
     "host_compute": [
-     "0.03.979.995 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+     "0.03.953.092 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
     ],
     "host_mapping": [
-     "0.01.115.312 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+     "0.01.095.129 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
     ],
     "host_memory_final": [
-     "0.05.244.335 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+     "0.05.003.219 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
     ],
     "host_memory_pre_realization": [
-     "0.00.687.638 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+     "0.00.671.678 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
     ],
     "host_output": [
-     "0.03.938.637 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+     "0.03.913.553 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
     ],
     "ready_state": [
-     "0.04.284.479 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+     "0.04.055.741 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
     ],
     "source_fetches_after_ready": [],
     "unplanned_state_movements": []
@@ -433,7 +433,7 @@
   "exit_code": 0,
   "exit_code_rel": "run.exit-code",
   "fallback_present": false,
-  "killed_sibling_at_ns": 65843622733675,
+  "killed_sibling_at_ns": 67043511643134,
   "label": "fault-a",
   "offloaded_layers": [
    37,
@@ -442,10 +442,10 @@
   "selected_bdf": "0000:06:00.0",
   "stderr_bytes": 19985,
   "stderr_rel": "run.stderr",
-  "stderr_sha256": "05672cdf1207121d5988ca9f4f14702b5b6b849d8ebd599c79f599b68d2d657e",
-  "stdout_bytes": 1357,
+  "stderr_sha256": "132feb910908bd2cf5913fa479e86a92d3998057b4f5219ad55ad3aa388f2fe8",
+  "stdout_bytes": 1353,
   "stdout_rel": "run.stdout",
-  "stdout_sha256": "953d150cfd117ec2c6430297f978b7ff59f5b36b973042aa0865bf5b712301d8",
+  "stdout_sha256": "52af8f83561ebd4d0963488245432c68f6caf1c69aa1c8c6f44cfe8faacbcd59",
   "timed_out": false,
   "workload_interval_ns": null
  },
