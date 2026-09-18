@@ -1041,6 +1041,11 @@ class PreservationTests(unittest.TestCase):
                             "scripts/issue219_",
                             "tests/test_issue219_",
                             "docs/investigations/vulkan-v2-d0-overlap-seam/",
+                            # Issue #216 V2-D: additive concurrent
+                            # dual-die campaign surface pending on main.
+                            "scripts/issue216_",
+                            "tests/test_issue216_",
+                            "docs/investigations/vulkan-v2-d-v340l-concurrent/",
                             "docs/hardware/")
         for path in changed:
             self.assertTrue(path.startswith(allowed_prefixes),

@@ -305,6 +305,21 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue219_observe_collector.py",
             "scripts/issue219_reduce.py",
             "scripts/issue219_manifest.py",
+            # Issue #216 V2-D: additive concurrent dual-die campaign
+            # producers, independently pinned by the V2-D evidence
+            # manifest and the issue216 producer closure.
+            "scripts/issue216_receipt.py",
+            "scripts/issue216_physical_authority.py",
+            "scripts/issue216_host.py",
+            "scripts/issue216_execution.py",
+            "scripts/issue216_preflight.py",
+            "scripts/issue216_concurrent.py",
+            "scripts/issue216_transport.py",
+            "scripts/issue216_soak.py",
+            "scripts/issue216_fault.py",
+            "scripts/issue216_reset.py",
+            "scripts/issue216_assemble.py",
+            "scripts/issue216_manifest.py",
             # Issue #213 campaign gate ordering: orchestration tooling and
             # CI registration, independently covered by its own group.
             "scripts/issue213_gate_orchestration.py",
