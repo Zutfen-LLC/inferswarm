@@ -1,7 +1,24 @@
 # V2-D0 — Vulkan workload-overlap observation-seam qualification (issue #219)
 
-Status: IN PROGRESS — seam implemented and validated on-host; campaign
-evidence capture pending. No terminal claimed yet.
+Status: COMPLETE — terminal `V2D0_VULKAN_WORKLOAD_OVERLAP_SEAM_PASS`
+(derived by `scripts/issue219_reduce.py` from retained bytes; see
+`REDUCTION.json`). The qualified seam is available to #216 as its
+GPU-work-overlap observation instrument.
+
+Instrument validation results (Phase 5, conservative contract):
+
+- sequential (non-overlap) control: NON_OVERLAP with margin — the
+  upper bound on overlap after ADDING the full uncertainty is
+  −4.072 s (the runs are seconds apart; uncertainty is ~36 µs);
+- concurrent (overlap-candidate) schedule: OVERLAP — the lower bound
+  on overlap after SUBTRACTING the full uncertainty is +2.40 ms
+  (combined uncertainty ~50 µs, worst per-capture maxDeviation 26.6 µs).
+
+Non-perturbation (Phase 3): 12/12 runs clean — both dies, disabled and
+enabled arms, 3 repeats each: byte-exact visible output vs the accepted
+frozen V1-A reference (accepted comparator), accounting tuple 0/0/0
+(accepted reducer), full offload, no fallback, clean exits, selected
+BDF per die as frozen (Vulkan1→06:00.0, Vulkan2→09:00.0).
 
 ## Objective
 

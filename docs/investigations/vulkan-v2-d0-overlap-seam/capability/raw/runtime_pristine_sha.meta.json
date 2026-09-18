@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "sha256sum",
+    "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli"
+  ],
+  "rc": 0,
+  "stdout_sha256": "74c1d54f40aa26cac75d4a87192d4e3feb437086383dd938530bfae4bee68626",
+  "stdout_bytes": 131,
+  "stderr_bytes": 0
+}

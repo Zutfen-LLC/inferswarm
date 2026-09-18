@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "vulkaninfo",
+    "--summary"
+  ],
+  "rc": 0,
+  "stdout_sha256": "9a6934ecd67ba38a3a48f73afc7f8080706e151e888f8e717614898b47591357",
+  "stdout_bytes": 4115,
+  "stderr_bytes": 213
+}

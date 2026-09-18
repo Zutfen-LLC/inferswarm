@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "dpkg-query",
+    "-W",
+    "-f=${Version}\\n",
+    "libvulkan1"
+  ],
+  "rc": 0,
+  "stdout_sha256": "ca208cfa4c55ff97c31e773a49485237ce1d22fadd913ec6f8606a568d672282",
+  "stdout_bytes": 12,
+  "stderr_bytes": 0
+}

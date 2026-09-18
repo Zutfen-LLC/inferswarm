@@ -1,0 +1,96 @@
+{
+  "argv": [
+    "/home/zutfen/is219-v2d0-src/build-v2d0-observe/bin/llama-cli",
+    "-m",
+    "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+    "--temp",
+    "0",
+    "--seed",
+    "42",
+    "-n",
+    "48",
+    "-ngl",
+    "99",
+    "--device",
+    "Vulkan2",
+    "-lv",
+    "4",
+    "-p",
+    "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+    "-st"
+  ],
+  "env_extra": [],
+  "exit_code": 0,
+  "label": "Vulkan2-disabled-3",
+  "reduced": {
+    "accounting": {
+      "basis": "direct llama.cpp named buffers plus before/after memory-breakdown rows; never process RSS",
+      "device_compute_bytes": 109586678,
+      "device_context_bytes": 1207959552,
+      "device_resident_model_bytes": 1923948216,
+      "host_context_kv_output_compute_bytes": 42572186,
+      "intentional_host_mapping_or_cache_bytes": 255254856,
+      "predecessor": {
+        "limitation": "pinned the first subject's observed selector label; failed closed on any other subject",
+        "reducer": "scripts/v0c_canonical_run.py::parse_accounting",
+        "reducer_sha256": "db3eff0587204c5ea6aebde34380611dc34a58ba7f772293df425f61f3c546bb",
+        "schema": "inferswarm.v0c.materialization-accounting/1"
+      },
+      "raw_lines": {
+        "device_compute": [
+          "0.03.932.963 I sched_reserve:    Vulkan2 compute buffer size =   104.51 MiB"
+        ],
+        "device_context": [
+          "0.03.892.865 I llama_kv_cache:    Vulkan2 KV buffer size =  1152.00 MiB"
+        ],
+        "device_memory_before_after": [
+          "0.00.645.578 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 8168 + (3091 =  1834 +    1152 +     104) +       -3083 |",
+          "0.04.969.164 I common_memory_breakdown_print: |   - Vulkan2 (Pro V340 (RADV VEGA10)) |  8176 = 5076 + (3091 =  1834 +    1152 +     104) +           8 |"
+        ],
+        "device_model": [
+          "0.01.045.438 I load_tensors:      Vulkan2 model buffer size =  1834.82 MiB"
+        ],
+        "host_compute": [
+          "0.03.932.969 I sched_reserve: Vulkan_Host compute buffer size =    40.02 MiB"
+        ],
+        "host_mapping": [
+          "0.01.045.437 I load_tensors:   CPU_Mapped model buffer size =   243.43 MiB"
+        ],
+        "host_memory_final": [
+          "0.04.969.166 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+        ],
+        "host_memory_pre_realization": [
+          "0.00.645.579 I common_memory_breakdown_print: |   - Host                             |                  283 =   243 +       0 +      40                |"
+        ],
+        "host_output": [
+          "0.03.892.246 I llama_context: Vulkan_Host  output buffer size =     0.58 MiB"
+        ],
+        "ready_state": [
+          "0.04.044.726 I slot   operator(): id  0 | task 0 | cached n_tokens = 0, memory_seq_rm [0, end)"
+        ],
+        "source_fetches_after_ready": [],
+        "unplanned_state_movements": []
+      },
+      "released_staging_bytes": 0,
+      "representation_conversion_bytes": 0,
+      "required_persistent_host_bytes": 0,
+      "schema": "inferswarm.v0c.materialization-accounting/2",
+      "selected_resource": "Vulkan2",
+      "source_fetches_after_ready": 0,
+      "unexplained_persistent_host_mirror_bytes": 0,
+      "unplanned_state_movements": 0
+    },
+    "correctness": {
+      "byte_exact_visible_output": true,
+      "reference_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d",
+      "schema": "inferswarm.v0c.correctness-result/2",
+      "visible_response_bytes": "The sentence \"The quick brown fox jumps over the lazy dog\" is a well-known pangram, and after this sentence, the next sentence could be anything, as there is no specific rule or context provided for what comes next.",
+      "visible_response_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d"
+    }
+  },
+  "selected_bdf": "09:00.0",
+  "started_utc": "2026-09-18T04:12:55.942411+00:00",
+  "stderr_sha256": "1a064155bf785888efc076e6ba6d749b29b0e95716cdd849607ec3ad6d247afb",
+  "stdout_sha256": "c48c9d1b0f258606b18de8750aaaf79743de368835458ab55989f2d8d3dbc117",
+  "wall_seconds": 5.085
+}

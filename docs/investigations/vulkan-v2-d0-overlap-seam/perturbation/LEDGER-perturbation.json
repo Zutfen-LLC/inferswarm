@@ -1,0 +1,475 @@
+{
+  "measured_utc": "2026-09-18T04:13:11.247478+00:00",
+  "phase": "perturbation",
+  "runs": [
+    {
+      "argv": [
+        "/home/zutfen/is219-v2d0-src/build-v2d0-observe/bin/llama-cli",
+        "-m",
+        "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+        "--temp",
+        "0",
+        "--seed",
+        "42",
+        "-n",
+        "48",
+        "-ngl",
+        "99",
+        "--device",
+        "Vulkan1",
+        "-lv",
+        "4",
+        "-p",
+        "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+        "-st"
+      ],
+      "env_extra": [],
+      "exit_code": 0,
+      "label": "Vulkan1-disabled-1",
+      "reduced_summary": {
+        "accounting": {
+          "source_fetches_after_ready": 0,
+          "unexplained_persistent_host_mirror_bytes": 0,
+          "unplanned_state_movements": 0
+        },
+        "byte_exact": true
+      },
+      "selected_bdf": "06:00.0",
+      "started_utc": "2026-09-18T04:12:14.955503+00:00",
+      "stderr_sha256": "aa490e23ce58fc8fe35ca1712456d740525b4d62e21b029711d6117e5b18a123",
+      "stdout_sha256": "c835955cf7de0516033b183774acc105a88f7908f538dbff75c273af63c30eb8",
+      "wall_seconds": 5.071
+    },
+    {
+      "argv": [
+        "/home/zutfen/is219-v2d0-src/build-v2d0-observe/bin/llama-cli",
+        "-m",
+        "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+        "--temp",
+        "0",
+        "--seed",
+        "42",
+        "-n",
+        "48",
+        "-ngl",
+        "99",
+        "--device",
+        "Vulkan1",
+        "-lv",
+        "4",
+        "-p",
+        "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+        "-st"
+      ],
+      "env_extra": [],
+      "exit_code": 0,
+      "label": "Vulkan1-disabled-2",
+      "reduced_summary": {
+        "accounting": {
+          "source_fetches_after_ready": 0,
+          "unexplained_persistent_host_mirror_bytes": 0,
+          "unplanned_state_movements": 0
+        },
+        "byte_exact": true
+      },
+      "selected_bdf": "06:00.0",
+      "started_utc": "2026-09-18T04:12:20.054819+00:00",
+      "stderr_sha256": "8bc2c82f24bdcacd4f6709e367d78af34984c16e1300780924c1f08ab6c12401",
+      "stdout_sha256": "073c5010eee2a744427e8277e2713af56e7c426c25ca23633b030a13ae8dd553",
+      "wall_seconds": 5.063
+    },
+    {
+      "argv": [
+        "/home/zutfen/is219-v2d0-src/build-v2d0-observe/bin/llama-cli",
+        "-m",
+        "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+        "--temp",
+        "0",
+        "--seed",
+        "42",
+        "-n",
+        "48",
+        "-ngl",
+        "99",
+        "--device",
+        "Vulkan1",
+        "-lv",
+        "4",
+        "-p",
+        "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+        "-st"
+      ],
+      "env_extra": [],
+      "exit_code": 0,
+      "label": "Vulkan1-disabled-3",
+      "reduced_summary": {
+        "accounting": {
+          "source_fetches_after_ready": 0,
+          "unexplained_persistent_host_mirror_bytes": 0,
+          "unplanned_state_movements": 0
+        },
+        "byte_exact": true
+      },
+      "selected_bdf": "06:00.0",
+      "started_utc": "2026-09-18T04:12:25.168292+00:00",
+      "stderr_sha256": "a390a1447338bd8fd5dea8c86f0bacb4b2b4b655394399b339c6b84cf5e74be9",
+      "stdout_sha256": "11c14ba845324140996670008a27424b00884df727798a6104c7eeda75f3dac2",
+      "wall_seconds": 5.088
+    },
+    {
+      "argv": [
+        "/home/zutfen/is219-v2d0-src/build-v2d0-observe/bin/llama-cli",
+        "-m",
+        "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+        "--temp",
+        "0",
+        "--seed",
+        "42",
+        "-n",
+        "48",
+        "-ngl",
+        "99",
+        "--device",
+        "Vulkan1",
+        "-lv",
+        "4",
+        "-p",
+        "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+        "-st"
+      ],
+      "env_extra": [
+        "GGML_VK_OBSERVE_INTERVAL"
+      ],
+      "exit_code": 0,
+      "label": "Vulkan1-enabled-1",
+      "reduced_summary": {
+        "accounting": {
+          "source_fetches_after_ready": 0,
+          "unexplained_persistent_host_mirror_bytes": 0,
+          "unplanned_state_movements": 0
+        },
+        "byte_exact": true
+      },
+      "selected_bdf": "06:00.0",
+      "started_utc": "2026-09-18T04:12:30.295374+00:00",
+      "stderr_sha256": "225f93d5582cd31884a6f8980cec213fdb8814b433b4c41e8818198eec64849a",
+      "stdout_sha256": "370c60a72dc98f229e655a98c9ced598cc82cea09e271e451f4ec20a6d7c8ebd",
+      "wall_seconds": 5.096
+    },
+    {
+      "argv": [
+        "/home/zutfen/is219-v2d0-src/build-v2d0-observe/bin/llama-cli",
+        "-m",
+        "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+        "--temp",
+        "0",
+        "--seed",
+        "42",
+        "-n",
+        "48",
+        "-ngl",
+        "99",
+        "--device",
+        "Vulkan1",
+        "-lv",
+        "4",
+        "-p",
+        "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+        "-st"
+      ],
+      "env_extra": [
+        "GGML_VK_OBSERVE_INTERVAL"
+      ],
+      "exit_code": 0,
+      "label": "Vulkan1-enabled-2",
+      "reduced_summary": {
+        "accounting": {
+          "source_fetches_after_ready": 0,
+          "unexplained_persistent_host_mirror_bytes": 0,
+          "unplanned_state_movements": 0
+        },
+        "byte_exact": true
+      },
+      "selected_bdf": "06:00.0",
+      "started_utc": "2026-09-18T04:12:35.474149+00:00",
+      "stderr_sha256": "2dfc6ec17895ca25651e3be880f3b15fe6bbbe6874802d59c947004521efff68",
+      "stdout_sha256": "3fffef6fb58add0d2db2cc0361dc444a05302bf22415e85735ef1f9bc6a345d1",
+      "wall_seconds": 5.138
+    },
+    {
+      "argv": [
+        "/home/zutfen/is219-v2d0-src/build-v2d0-observe/bin/llama-cli",
+        "-m",
+        "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+        "--temp",
+        "0",
+        "--seed",
+        "42",
+        "-n",
+        "48",
+        "-ngl",
+        "99",
+        "--device",
+        "Vulkan1",
+        "-lv",
+        "4",
+        "-p",
+        "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+        "-st"
+      ],
+      "env_extra": [
+        "GGML_VK_OBSERVE_INTERVAL"
+      ],
+      "exit_code": 0,
+      "label": "Vulkan1-enabled-3",
+      "reduced_summary": {
+        "accounting": {
+          "source_fetches_after_ready": 0,
+          "unexplained_persistent_host_mirror_bytes": 0,
+          "unplanned_state_movements": 0
+        },
+        "byte_exact": true
+      },
+      "selected_bdf": "06:00.0",
+      "started_utc": "2026-09-18T04:12:40.610044+00:00",
+      "stderr_sha256": "fd2f97fbbe2eeb420e9485c28090ea6e42fc42a78c3101ed04e7470188add4ae",
+      "stdout_sha256": "f81f692fa0203270272be3a4ec3e7414ddf9daf00cfa1ffc870ef0153d3f3223",
+      "wall_seconds": 5.097
+    },
+    {
+      "argv": [
+        "/home/zutfen/is219-v2d0-src/build-v2d0-observe/bin/llama-cli",
+        "-m",
+        "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+        "--temp",
+        "0",
+        "--seed",
+        "42",
+        "-n",
+        "48",
+        "-ngl",
+        "99",
+        "--device",
+        "Vulkan2",
+        "-lv",
+        "4",
+        "-p",
+        "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+        "-st"
+      ],
+      "env_extra": [],
+      "exit_code": 0,
+      "label": "Vulkan2-disabled-1",
+      "reduced_summary": {
+        "accounting": {
+          "source_fetches_after_ready": 0,
+          "unexplained_persistent_host_mirror_bytes": 0,
+          "unplanned_state_movements": 0
+        },
+        "byte_exact": true
+      },
+      "selected_bdf": "09:00.0",
+      "started_utc": "2026-09-18T04:12:45.708872+00:00",
+      "stderr_sha256": "76811e28ba7791a01247e56fbcd27ee99d484465441a594656e6bac806e0735c",
+      "stdout_sha256": "7f8828e964a06e35ee698896c4119ce10c7c0f7b233b782598d9f50b3ed34004",
+      "wall_seconds": 5.067
+    },
+    {
+      "argv": [
+        "/home/zutfen/is219-v2d0-src/build-v2d0-observe/bin/llama-cli",
+        "-m",
+        "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+        "--temp",
+        "0",
+        "--seed",
+        "42",
+        "-n",
+        "48",
+        "-ngl",
+        "99",
+        "--device",
+        "Vulkan2",
+        "-lv",
+        "4",
+        "-p",
+        "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+        "-st"
+      ],
+      "env_extra": [],
+      "exit_code": 0,
+      "label": "Vulkan2-disabled-2",
+      "reduced_summary": {
+        "accounting": {
+          "source_fetches_after_ready": 0,
+          "unexplained_persistent_host_mirror_bytes": 0,
+          "unplanned_state_movements": 0
+        },
+        "byte_exact": true
+      },
+      "selected_bdf": "09:00.0",
+      "started_utc": "2026-09-18T04:12:50.825039+00:00",
+      "stderr_sha256": "f03ee787e35009d061461c82fe8f4d63ff05f85c79d5d9b9ffe1299d9f6c6d47",
+      "stdout_sha256": "8e1878b4037114d8626073758a5c32666be32cf099af73ce20978d4f2c1299d1",
+      "wall_seconds": 5.087
+    },
+    {
+      "argv": [
+        "/home/zutfen/is219-v2d0-src/build-v2d0-observe/bin/llama-cli",
+        "-m",
+        "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+        "--temp",
+        "0",
+        "--seed",
+        "42",
+        "-n",
+        "48",
+        "-ngl",
+        "99",
+        "--device",
+        "Vulkan2",
+        "-lv",
+        "4",
+        "-p",
+        "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+        "-st"
+      ],
+      "env_extra": [],
+      "exit_code": 0,
+      "label": "Vulkan2-disabled-3",
+      "reduced_summary": {
+        "accounting": {
+          "source_fetches_after_ready": 0,
+          "unexplained_persistent_host_mirror_bytes": 0,
+          "unplanned_state_movements": 0
+        },
+        "byte_exact": true
+      },
+      "selected_bdf": "09:00.0",
+      "started_utc": "2026-09-18T04:12:55.942411+00:00",
+      "stderr_sha256": "1a064155bf785888efc076e6ba6d749b29b0e95716cdd849607ec3ad6d247afb",
+      "stdout_sha256": "c48c9d1b0f258606b18de8750aaaf79743de368835458ab55989f2d8d3dbc117",
+      "wall_seconds": 5.085
+    },
+    {
+      "argv": [
+        "/home/zutfen/is219-v2d0-src/build-v2d0-observe/bin/llama-cli",
+        "-m",
+        "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+        "--temp",
+        "0",
+        "--seed",
+        "42",
+        "-n",
+        "48",
+        "-ngl",
+        "99",
+        "--device",
+        "Vulkan2",
+        "-lv",
+        "4",
+        "-p",
+        "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+        "-st"
+      ],
+      "env_extra": [
+        "GGML_VK_OBSERVE_INTERVAL"
+      ],
+      "exit_code": 0,
+      "label": "Vulkan2-enabled-1",
+      "reduced_summary": {
+        "accounting": {
+          "source_fetches_after_ready": 0,
+          "unexplained_persistent_host_mirror_bytes": 0,
+          "unplanned_state_movements": 0
+        },
+        "byte_exact": true
+      },
+      "selected_bdf": "09:00.0",
+      "started_utc": "2026-09-18T04:13:01.049399+00:00",
+      "stderr_sha256": "4bf127c848108431d2e8c692a3cad8b9ec785c48ffcd0aa17f5f3dab06de0763",
+      "stdout_sha256": "2b11e96c6c6dd386ba9cc00c4e8c32d6110f6fd431515478d895c728c10af221",
+      "wall_seconds": 5.079
+    },
+    {
+      "argv": [
+        "/home/zutfen/is219-v2d0-src/build-v2d0-observe/bin/llama-cli",
+        "-m",
+        "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+        "--temp",
+        "0",
+        "--seed",
+        "42",
+        "-n",
+        "48",
+        "-ngl",
+        "99",
+        "--device",
+        "Vulkan2",
+        "-lv",
+        "4",
+        "-p",
+        "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+        "-st"
+      ],
+      "env_extra": [
+        "GGML_VK_OBSERVE_INTERVAL"
+      ],
+      "exit_code": 0,
+      "label": "Vulkan2-enabled-2",
+      "reduced_summary": {
+        "accounting": {
+          "source_fetches_after_ready": 0,
+          "unexplained_persistent_host_mirror_bytes": 0,
+          "unplanned_state_movements": 0
+        },
+        "byte_exact": true
+      },
+      "selected_bdf": "09:00.0",
+      "started_utc": "2026-09-18T04:13:06.153895+00:00",
+      "stderr_sha256": "e299833774ed8ef92c7f66e24ca4f761502cbeb0ac09f0b94ac52e1d89894df9",
+      "stdout_sha256": "54aec7d17670542a1e3a7c7b46564091693ab8130bed2aadb1db446bcd2d1004",
+      "wall_seconds": 5.077
+    },
+    {
+      "argv": [
+        "/home/zutfen/is219-v2d0-src/build-v2d0-observe/bin/llama-cli",
+        "-m",
+        "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+        "--temp",
+        "0",
+        "--seed",
+        "42",
+        "-n",
+        "48",
+        "-ngl",
+        "99",
+        "--device",
+        "Vulkan2",
+        "-lv",
+        "4",
+        "-p",
+        "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:",
+        "-st"
+      ],
+      "env_extra": [
+        "GGML_VK_OBSERVE_INTERVAL"
+      ],
+      "exit_code": 0,
+      "label": "Vulkan2-enabled-3",
+      "reduced_summary": {
+        "accounting": {
+          "source_fetches_after_ready": 0,
+          "unexplained_persistent_host_mirror_bytes": 0,
+          "unplanned_state_movements": 0
+        },
+        "byte_exact": true
+      },
+      "selected_bdf": "09:00.0",
+      "started_utc": "2026-09-18T04:13:11.238768+00:00",
+      "stderr_sha256": "b3636a12b96d39f0b8e718cd7fe21cae5da94c46b396464829642c982901ab57",
+      "stdout_sha256": "e796b53510671011f2f1c8a110582fc7afa151ce829e7af58074ee430cf6e947",
+      "wall_seconds": 5.058
+    }
+  ],
+  "schema": "inferswarm.v2d0.observe-run/1"
+}

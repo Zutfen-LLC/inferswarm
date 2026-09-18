@@ -1,0 +1,42 @@
+{
+  "dies": [
+    {
+      "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+      "timestamp_compute_and_graphics": "true",
+      "timestamp_period_ns": "37.037",
+      "timestamp_valid_bits_queue_families": [
+        "64",
+        "64",
+        "64"
+      ],
+      "vk_ext_calibrated_timestamps": true
+    },
+    {
+      "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+      "timestamp_compute_and_graphics": "true",
+      "timestamp_period_ns": "37.037",
+      "timestamp_valid_bits_queue_families": [
+        "64",
+        "64",
+        "64"
+      ],
+      "vk_ext_calibrated_timestamps": true
+    }
+  ],
+  "hostname": "inferswarm02",
+  "measured_utc": "2026-09-18T04:11:18.605724+00:00",
+  "raw_probes": [
+    "boot_id",
+    "cmdline",
+    "loader_version",
+    "lspci_nn",
+    "mesa_version",
+    "model_sha",
+    "radv_icd",
+    "runtime_pristine_sha",
+    "uname",
+    "vulkaninfo_full",
+    "vulkaninfo_summary"
+  ],
+  "schema": "inferswarm.v2d0.capability-probe/1"
+}
