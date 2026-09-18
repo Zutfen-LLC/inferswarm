@@ -65,14 +65,21 @@ evidence (soak/fault/reset never ran after the fault), and the
 campaign may not be rerun under the same authority seeking a PASS.
 
 Honest context: the SUPERSEDED chain-1 (defective index-based closure;
-`evidence-superseded-v1/`) ran byte-identical producers (verified
-`git diff` on every physical producer) through ALL phases — including
-a clean 3600 s soak and both fault arms — and completed cleanly. The
-fault is therefore an intermittent platform fault of this V340L
-dual-die topology under sustained concurrent load (chain-1 soak +
-chain-2 rerun back-to-back the same evening), not a tooling
-regression. Chain-1's clean completion does not erase chain-2's
-retained fault.
+`evidence-superseded-v1/`) completed ALL phases cleanly — including a
+3600 s soak and both fault arms — the same evening, hours before
+chain-2 hit the fault. Within chain-1 the producers were frozen
+byte-stable for its whole run (git diff over its own span is empty),
+but chain-1's collector bytes are NOT identical to chain-2's: the
+correction branch rebuilt 7 of 9 physical producers between the
+chains, so cross-chain tooling-regression claims are NOT what the
+byte-diff proves. What the evidence does establish: chain-2 itself —
+under the corrected, executed-byte-proven freeze — passed preflight,
+baselines, and 3/3 concurrent pairs, then hit the fault; the fault
+lines are kernel-originated (ring gfx timeout, driver-initiated reset,
+ret=-62) on the mapping-verified die B, and no producer defect can
+synthesize kernel journal lines. The fault is retained as a platform
+observation of this V340L dual-die topology under sustained concurrent
+load; chain-1's earlier clean completion does not erase it.
 
 ## Non-claims (inherited + fault-driven)
 
@@ -93,8 +100,9 @@ retained fault.
 
 ## Evidence layout
 
-- `evidence/` — chain-2 retained output (141 files) plus
-  `fault-capture/`.
+- `evidence/` — chain-2 retained output: 143 files total (phase
+  records/raw bytes plus `fault-capture/`; the 141 figure sometimes
+  cited counts phases before ASSEMBLY/TERMINAL were emitted).
 - `evidence-superseded-v1/` — chain-1 output under the defective
   /2 closure (762 files); retained history, never deleted; see its
   README for what it DID prove and why it cannot carry terminal

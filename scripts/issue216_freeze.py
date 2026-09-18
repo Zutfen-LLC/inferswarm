@@ -308,13 +308,25 @@ AMENDMENT_SCHEMA = "inferswarm.v2d.producer-amendments/1"
 
 def _closure_digest_at(repo: Path, pin: str) -> str | None:
     """Recompute the committed closure record's self-bound digest at an
-    arbitrary historical pin (fails closed on any tampering)."""
+    arbitrary historical pin (fails closed on any tampering).
+
+    Admits ONLY corrected-freeze records: the pinned record must be
+    schema /3 with the frozen campaign id and the exact closure-source
+    set — the retired index-based /2 closure (or any other self-bound
+    record a future amendment might pin) can never re-enter the
+    assembler's accepted-digest set through an amendment entry."""
     raw = _git_bytes(repo, "show",
                      f"{pin}:{rc.AREA_REL}/{rc.CLOSURE_NAME}")
     if not raw:
         return None
     try:
         doc = json.loads(raw.decode("utf-8"))
+        if doc.get("schema") != "inferswarm.v2d.producer-closure/3":
+            return None
+        if doc.get("campaign_id") != rc.CAMPAIGN_ID:
+            return None
+        if set(doc.get("sources") or {}) != set(rc.CLOSURE_SOURCES):
+            return None
         body = {k: v for k, v in doc.items() if k != "closure_digest"}
         import hashlib as _h
         recomputed = _h.sha256(rc.canonical(body)).hexdigest()

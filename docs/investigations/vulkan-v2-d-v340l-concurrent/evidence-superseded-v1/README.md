@@ -1,5 +1,13 @@
 # Evidence superseded by the V2-D correction campaign
 
+SUPERSEDED: true. Campaign-id note: this directory's retained records
+(including its TERMINAL.json STABILITY_PASS) carry the SAME campaign_id
+as the corrected chain-2 evidence at ../evidence/ (opposite terminals,
+distinguished only by directory). Consumers MUST NOT treat
+campaign_id+terminal as unique across the two; directory location plus
+this README is the supersession marker. Never delete; never cite as
+terminal authority.
+
 The evidence formerly at `evidence/` (this directory) was produced by the
 DEFECTIVE producer closure (schema /2): its `closure_document()` hashed
 `git show :<path>` (the Git INDEX) while Python executed WORKING-TREE
