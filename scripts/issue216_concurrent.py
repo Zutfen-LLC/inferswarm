@@ -22,6 +22,9 @@ from pathlib import Path
 
 from issue216_campaign_plan import CAMPAIGN_ID, build_plan
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+DEFAULT_REPO = SCRIPT_DIR.parent
+
 PROMPT = "The quick brown fox jumps over the lazy dog. Explain what happens next in one sentence:"
 
 
@@ -161,9 +164,9 @@ def main() -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("participant")
     p.add_argument("--die", choices=("a", "b"), required=True); p.add_argument("--attempt", required=True)
-    p.add_argument("--out", required=True); p.add_argument("--repo", required=True); p.add_argument("--gate", required=True)
+    p.add_argument("--out", required=True); p.add_argument("--repo", default=str(DEFAULT_REPO)); p.add_argument("--gate", required=True)
     q = sub.add_parser("pair")
-    q.add_argument("--attempt", required=True); q.add_argument("--out", required=True); q.add_argument("--repo", required=True)
+    q.add_argument("--attempt", required=True); q.add_argument("--out", required=True); q.add_argument("--repo", default=str(DEFAULT_REPO))
     args = ap.parse_args()
     return participant(args) if args.cmd == "participant" else pair(args)
 

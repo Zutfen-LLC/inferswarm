@@ -18,6 +18,7 @@ sys.path.insert(0, str(REPO / "scripts"))
 
 import issue216_campaign_plan as plan_mod  # noqa: E402
 import issue216_terminal as terminal_mod  # noqa: E402
+import issue216_concurrent as concurrent_mod  # noqa: E402
 
 
 def valid_record() -> dict:
@@ -80,6 +81,11 @@ class CampaignPlanTests(unittest.TestCase):
         self.assertEqual(plan["transport"]["modes"], ["single-a", "single-b", "dual"])
         self.assertEqual(plan["fault_isolation"]["arms"],
                          ["a-loss-b-survives", "b-loss-a-survives"])
+
+
+class ConcurrentCollectorContractTests(unittest.TestCase):
+    def test_repository_default_is_local_script_root(self):
+        self.assertEqual(concurrent_mod.DEFAULT_REPO, concurrent_mod.SCRIPT_DIR.parent)
 
 
 class TerminalReducerTests(unittest.TestCase):
