@@ -115,9 +115,11 @@ def build_complete_tree(root: Path, *, n_concurrent: int = 3,
                         soak_duration_s: int = 3600) -> dict:
     """Complete synthetic evidence tree: all phases PASS-shaped."""
     root.mkdir(parents=True, exist_ok=True)
-    # preflight
-    (root / "raw").mkdir(exist_ok=True)
-    (root / "raw" / "journal_faults.stdout").write_bytes(b"no faults\n")
+    # preflight (collector layout: summary + raw inside the phase dir)
+    (root / "preflight").mkdir(exist_ok=True)
+    (root / "preflight" / "raw").mkdir(exist_ok=True)
+    (root / "preflight" / "raw" / "journal_faults.stdout").write_bytes(
+        b"no faults\n")
     preflight = {
         "schema": "inferswarm.v2d.preflight/2", "campaign_id":
             "issue216-v2d-v340l-concurrent-dual-die-v2",
@@ -126,7 +128,8 @@ def build_complete_tree(root: Path, *, n_concurrent: int = 3,
         "bdfs": ["0000:06:00.0", "0000:09:00.0"],
         "sentinels": {"a": {"correct": True}, "b": {"correct": True}},
     }
-    (root / "preflight.json").write_bytes(
+    (root / "preflight").mkdir(exist_ok=True)
+    (root / "preflight" / "preflight.json").write_bytes(
         json.dumps(preflight, indent=1).encode())
     # baselines
     for die in ("a", "b"):
@@ -159,10 +162,12 @@ def build_complete_tree(root: Path, *, n_concurrent: int = 3,
                  "probe_process_overlap": True,
                  "intervals_ns": {"a": [0, 100], "b": [10, 110]}},
     }
-    (root / "transport.json").write_bytes(
+    (root / "transport").mkdir(exist_ok=True)
+    (root / "transport" / "transport-tp1.json").write_bytes(
         json.dumps(transport, indent=1).encode())
     # soak: 60 samples of 60s cadence = 3600s, no faults
-    raw = root / "raw"
+    raw = root / "soak" / "raw"
+    raw.mkdir(parents=True, exist_ok=True)
     samples = []
     for i in range(1, 61):
         t = i * 60 * 10 ** 9
@@ -171,9 +176,9 @@ def build_complete_tree(root: Path, *, n_concurrent: int = 3,
                               "0000:09:00.0": {"ras_gpu_err_cnt": 0}},
                 "aer": {"0000:06:00.0": {"aer_dev_fatal": {}},
                         "0000:09:00.0": {"aer_dev_fatal": {}}}}
-        rel = f"raw/telemetry-{i:04d}.json"
-        (root / rel).write_bytes(json.dumps(snap).encode())
-        (root / rel.replace("telemetry-", "journal-").replace(
+        rel = f"raw/telemetry-{i:04d}.json"  # soak-dir-relative
+        (raw / Path(rel).name).write_bytes(json.dumps(snap).encode())
+        (raw / Path(rel).name.replace("telemetry-", "journal-").replace(
             ".json", ".stdout")).write_bytes(b"clean\n")
         samples.append({"sample": i, "rel": rel, "monotonic_ns": t})
     # checkpoints every 600s (summary json + run dir, collector shape)
@@ -199,7 +204,9 @@ def build_complete_tree(root: Path, *, n_concurrent: int = 3,
         "pairs_launched": 60, "events": [], "samples": samples,
         "authority_digest": "x", "mapping_digest": "y",
     }
-    (root / "soak.json").write_bytes(json.dumps(soak, indent=1).encode())
+    (root / "soak").mkdir(exist_ok=True)
+    (root / "soak" / "soak-sk1.json").write_bytes(
+        json.dumps(soak, indent=1).encode())
     # fault arms
     for arm in ("a", "b"):
         _build_fault_arm(root, arm)
@@ -378,7 +385,7 @@ class TestTerminalStateMachine(unittest.TestCase):
             root = Path(td)
             build_complete_tree(root)
             # inject an amdgpu reset line into a retained journal delta
-            p = root / "raw" / "journal-0030.stdout"
+            p = root / "soak" / "raw" / "journal-0030.stdout"
             p.write_bytes(b"amdgpu: GPU reset triggered\n")
             self.assertEqual(
                 classify_tree(root),
@@ -388,13 +395,13 @@ class TestTerminalStateMachine(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             build_complete_tree(root)
-            doc = json.loads((root / "soak.json").read_text())
+            doc = json.loads((root / "soak" / "soak-sk1.json").read_text())
             # genuine mid-soak worker exit (stop before 60 min)
             doc["duration_s"] = 1800
             doc["stop_reason"] = "participant_exit_with_sibling_active"
             doc["events"] = [{"event": "participant_exit",
                               "monotonic_ns": 1800 * 10**9}]
-            (root / "soak.json").write_bytes(json.dumps(doc).encode())
+            (root / "soak" / "soak-sk1.json").write_bytes(json.dumps(doc).encode())
             self.assertEqual(
                 classify_tree(root),
                 "V2D_V340L_PLATFORM_STRESS_FAIL")
@@ -411,10 +418,10 @@ class TestTerminalStateMachine(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             build_complete_tree(root)
-            doc = json.loads((root / "soak.json").read_text())
+            doc = json.loads((root / "soak" / "soak-sk1.json").read_text())
             # remove middle samples -> 120s gap
             doc["samples"] = doc["samples"][:30] + doc["samples"][58:]
-            (root / "soak.json").write_bytes(json.dumps(doc).encode())
+            (root / "soak" / "soak-sk1.json").write_bytes(json.dumps(doc).encode())
             # cadence gap -> AssemblyError path -> soak missing -> INCOMPLETE
             self.assertEqual(
                 classify_tree(root),
@@ -444,9 +451,9 @@ class TestTerminalStateMachine(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             build_complete_tree(root)
-            doc = json.loads((root / "preflight.json").read_text())
+            doc = json.loads((root / "preflight" / "preflight.json").read_text())
             doc["sentinels"]["a"]["correct"] = False
-            (root / "preflight.json").write_bytes(json.dumps(doc).encode())
+            (root / "preflight" / "preflight.json").write_bytes(json.dumps(doc).encode())
             self.assertEqual(
                 classify_tree(root),
                 "V2D_EVIDENCE_BLOCKED")
@@ -466,7 +473,7 @@ class TestTerminalStateMachine(unittest.TestCase):
             self.assertEqual(proc.returncode, 0, proc.stderr)
             self.assertIn("STABILITY_PASS", proc.stdout)
             # mutate: amdgpu reset in soak journal
-            (root / "raw" / "journal-0030.stdout").write_bytes(
+            (root / "soak" / "raw" / "journal-0030.stdout").write_bytes(
                 b"amdgpu: GPU reset triggered\n")
             out2 = Path(td) / "a2.json"
             proc = subprocess.run(
