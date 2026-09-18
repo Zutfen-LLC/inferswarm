@@ -1,14 +1,14 @@
 {
  "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
- "closure_digest": "a450d5769f17c1f3610de6ff5c521924b86aaa92f8c142c3ad7a40764eb28fb6",
- "producer_head": "d921033063b8d9c1891b12bc461c06263d385f34",
+ "closure_digest": "fb212b9fcb714544a0d505ad1ce9e73bd91ea4d8da0c76eee8216fe02de2235d",
+ "producer_head": "f41846d7c7052913edb9a3a781df2970c40792ac",
  "schema": "inferswarm.v2d.producer-closure/3",
  "sources": {
-  "scripts/issue216_assemble.py": "80ef7fbd694d9091e3283bac296e65d43c74c8c0bd4a56bbf2ec6edee7e7f66c",
+  "scripts/issue216_assemble.py": "4c0d6ca35f54dc8e06f60a1ba7cc39b57df2372f964b41314151dec79971f014",
   "scripts/issue216_concurrent.py": "20a2cf569076875879fca0c03af07949217aeec3f2b1c5adb7baa512fd3df1fb",
   "scripts/issue216_execution.py": "1e18e2a846ff83e37d7850fbf2d68a87cf4d22a1bd90bd6bdc899756b07ccb22",
   "scripts/issue216_fault.py": "2f82ac9e2df8f9fd79c0b268697fcc6c163c9d3efb533015f595dde5b8fec805",
-  "scripts/issue216_freeze.py": "2d740c20e8985f74f23c73dc447dabe3358b63b4062b7036377fa5dbd8f41f78",
+  "scripts/issue216_freeze.py": "b08717a950c05fb6625fb01918bbd95f0d5ef61fe06b5ab6babb5424ec92fc12",
   "scripts/issue216_host.py": "1405f54c72b185a65ed3aee5fabac42f1e4272dbc716ea3c578bd719fa303a00",
   "scripts/issue216_manifest.py": "5565bda4274140874426d599756b6bda6df401ea5645e3c6458b9cb1d9d6bc89",
   "scripts/issue216_physical_authority.py": "88a523fa15ff584da71e7a9e99cabb7fe1b7e935e01dac480e7378e49e32266a",
