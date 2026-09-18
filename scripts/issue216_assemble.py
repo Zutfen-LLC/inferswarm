@@ -719,18 +719,25 @@ def _verify_transport_probe(evidence_root: Path, mode_dir: str,
         run, and the bidirectional run;
       * under-load link-state samples exist (the #216 requirement).
     """
-    def resolve(rel: str, mode_dir: str) -> Path:
-        # collector rows resolve against the TRANSPORT phase dir; dual
-        # rows carry 'dual/<die>/...' prefixes, single rows bare names
-        if str(rel).startswith("transport/"):
+    # Collector rel-path conventions (run_probe_instance vs the dual
+    # launcher): single-arm rows are OUT-DIR-relative (out/<mode>/),
+    # dual rows are TRANSPORT-relative (dual/<die>/...). Both resolve
+    # against the transport phase dir with the mode_dir join handling
+    # the difference: single rows sit inside transport/<mode>/, dual
+    # rows carry their own dual/<die>/ prefix.
+    base = f"transport/{mode_dir}" \
+        if not mode_dir.startswith("transport/") else mode_dir
+
+    def resolve(rel: str) -> Path:
+        if str(rel).startswith(base + "/"):
             return evidence_root / rel
-        return evidence_root / "transport" / rel
+        return evidence_root / base / rel
 
     # raw exit-code bytes are the authority
     exit_rel = row.get("exit_code_rel")
     if not exit_rel:
         raise AssemblyError(f"{what}: no retained exit-code artifact")
-    exit_path = resolve(exit_rel, mode_dir)
+    exit_path = resolve(exit_rel)
     if not exit_path.is_file():
         raise AssemblyError(f"{what}: exit-code artifact missing")
     try:
@@ -747,7 +754,7 @@ def _verify_transport_probe(evidence_root: Path, mode_dir: str,
     stdout_rel = row.get("stdout_rel")
     if not stdout_rel:
         raise AssemblyError(f"{what}: no retained probe stdout")
-    stdout_path = resolve(stdout_rel, mode_dir)
+    stdout_path = resolve(stdout_rel)
     if not stdout_path.is_file():
         raise AssemblyError(f"{what}: probe stdout missing (missing probe "
                             "output)")
@@ -756,7 +763,7 @@ def _verify_transport_probe(evidence_root: Path, mode_dir: str,
             and hashlib.sha256(stdout_bytes).hexdigest() != row["stdout_sha256"]:
         raise AssemblyError(f"{what}: probe stdout hash mismatch")
     # the structured raw record through the accepted parser
-    probe_path = resolve(f"{mode_dir}/raw/probe.json", mode_dir)
+    probe_path = resolve("raw/probe.json")
     if not probe_path.is_file():
         raise AssemblyError(f"{what}: raw probe record missing")
     raw_record = json.loads(probe_path.read_bytes())
