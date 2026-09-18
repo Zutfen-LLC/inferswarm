@@ -49,7 +49,6 @@ def _probe_argv(repo: Path, build_dir: Path, device_name_substring: str,
             "--runtime-executable", runtime,
             "--model", model,
             "--pci-bdf", bdf,
-            "--control-bdf", "00:02.0",
             "--raw-dir", str(raw_dir),
             "--build-dir", str(build_dir),
             "--evidence-out", str(evidence_out)]
