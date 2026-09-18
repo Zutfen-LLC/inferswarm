@@ -1,7 +1,7 @@
 {
  "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v2",
- "closure_digest": "b0681f7e80b16ccefc4d3a748515e0877faf9216a7ed3734b78fd74714f9cdf5",
- "producer_head": "107620838fa5ab0ccd7b0984e70b187bafe78b8e",
+ "closure_digest": "a4984c93c4bacf85442946ab4ce3999fd9f2865de90210110d30319cd667a272",
+ "producer_head": "32d830812dc912787833977cdf2ca67c3fb67397",
  "schema": "inferswarm.v2d.producer-closure/3",
  "sources": {
   "scripts/issue216_assemble.py": "9c2b9ee6f65c57455fed38869d8ac32b43093725f057790f4233d3b75906b4d2",
