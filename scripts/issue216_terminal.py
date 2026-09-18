@@ -1,155 +1,144 @@
 #!/usr/bin/env python3
-"""Issue #216 — V2-D terminal reducer.
-
-Reduces the prospectively frozen campaign record into exactly one V2-D terminal.
-The record is assembled by the dedicated collectors from retained receipts; this
-module never turns a throughput loss into a correctness failure and never
-promotes two independent 8-GiB resources into a coherent 16-GiB resource.
-It supports an environment root seam for isolated mutation controls only.
-"""
+"""Issue #216 terminal reducer: raw receipts -> assembly -> facts -> terminal."""
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
-import os
 from pathlib import Path
+from statistics import mean, median
 from typing import Any
 
-from issue216_campaign_plan import build_plan, plan_document
+import issue216_assemble as assemble
+import issue216_campaign_plan as campaign
+import issue216_physical_authority as authority
 
-ROOT_ENV = "INFERSWARM_ISSUE216_ROOT"
-NS = "vulkan-v2-d-v340l-concurrent"
-CLEAN_ACCOUNTING = ("unexplained_persistent_host_mirror_bytes", "source_fetches_after_ready",
-                    "unplanned_state_movements")
-
-
-class ReductionError(RuntimeError):
-    pass
+ROOT = Path(__file__).resolve().parents[1]
+AREA_REL = "docs/investigations/vulkan-v2-d-v340l-concurrent"
 
 
-def _clean_participant(p: dict[str, Any], expected_die: str, expected_selector: str,
-                       expected_bdf: str) -> bool:
-    accounting = p.get("accounting") or {}
-    return (p.get("die") == expected_die and p.get("selector") == expected_selector
-            and p.get("bdf") == expected_bdf and p.get("result") == "PASS"
-            and p.get("full_offload") is True and p.get("byte_exact") is True
-            and p.get("clean_exit") is True and p.get("finite_output") is True
-            and p.get("fallback") is False
-            and all(accounting.get(k) == 0 for k in CLEAN_ACCOUNTING))
+def canonical(value: Any) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
 
 
-def _participants_clean(pair: dict[str, Any], plan: dict[str, Any]) -> bool:
-    resources = plan["physical_resources"]
-    a = pair.get("a") or {}
-    b = pair.get("b") or {}
-    return (_clean_participant(a, "a", resources["a"]["selector"], resources["a"]["expected_bdf"])
-            and _clean_participant(b, "b", resources["b"]["selector"], resources["b"]["expected_bdf"])
-            and a.get("bdf") != b.get("bdf") and a.get("selector") != b.get("selector"))
+def classify(facts: dict[str, Any], plan: dict[str, Any] | None = None) -> str:
+    terms = (plan or campaign.build_plan())["terminals"]
+    # Positive stress evidence wins over every missing later artifact.
+    if facts.get("valid_concurrent_correctness") and facts.get("affirmative_stress_failure"):
+        return terms["stress_fail"]
+    if not facts.get("preflight_valid") or not facts.get("concurrency_established"):
+        return terms["blocked"]
+    if not facts.get("concurrent_correct"):
+        return terms["correctness_fail"]
+    if not facts.get("later_complete"):
+        return terms["post_concurrency_incomplete"]
+    return terms["pass"]
 
 
-def _overlap(intervals: dict[str, Any]) -> bool:
-    try:
-        a0, a1 = intervals["a"]
-        b0, b1 = intervals["b"]
-        return isinstance(a0, int) and isinstance(a1, int) and isinstance(b0, int) and isinstance(b1, int) and max(a0, b0) < min(a1, b1)
-    except (KeyError, TypeError, ValueError):
-        return False
+def _rows(data: dict[str, Any], schema: str) -> list[dict[str, Any]]:
+    return [x for x in data["receipts"] if x["schema"] == schema]
 
 
-def _required_samples(soak: dict[str, Any], plan: dict[str, Any]) -> int:
-    duration = plan["soak"]["minimum_duration_seconds"]
-    cadence = plan["soak"]["telemetry_cadence_seconds"]
-    return duration // cadence + 1
+def _interval_overlap(a: list[int], b: list[int]) -> bool:
+    return len(a) == len(b) == 2 and max(a[0], b[0]) < min(a[1], b[1])
 
 
-def reduce_record(record: dict[str, Any], plan: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Derive terminal status from a normalized record whose entries are bound
-    to retained collector receipts. No caller-provided PASS field is trusted;
-    every required predicate is recomputed here."""
-    plan = plan or build_plan()
-    checks: dict[str, bool] = {}
-    preflight = record.get("preflight") or {}
-    checks["preflight"] = (preflight.get("result") == "PASS"
-                            and preflight.get("predecessors_preserved") is True
-                            and preflight.get("two_distinct_dies") is True
-                            and preflight.get("gen3_x1_topology") is True)
-
-    baselines = record.get("baselines") or {}
-    checks["baselines"] = all(len(baselines.get(die, [])) >= 3
-                              and all(_clean_participant(p, die,
-                                                         plan["physical_resources"][die]["selector"],
-                                                         plan["physical_resources"][die]["expected_bdf"])
-                                      for p in baselines.get(die, []))
-                              for die in ("a", "b"))
-
-    repeats = record.get("concurrent") or []
-    expected_ids = [f"repeat-{n}" for n in range(1, plan["concurrent"]["retained_repetitions"] + 1)]
-    checks["concurrent_repetitions"] = [r.get("id") for r in repeats] == expected_ids
-    checks["concurrent_participants"] = bool(repeats) and all(
-        r.get("status") == "PASS" and _participants_clean(r.get("participants") or {}, plan) for r in repeats)
-    checks["actual_temporal_overlap"] = bool(repeats) and all(_overlap(r.get("intervals_ns") or {}) for r in repeats)
-    valid_concurrent = all(checks[k] for k in ("concurrent_repetitions", "concurrent_participants", "actual_temporal_overlap"))
-
-    transport = record.get("transport") or {}
-    checks["transport"] = (transport.get("modes") == plan["transport"]["modes"]
-                            and transport.get("directions") == plan["transport"]["directions"]
-                            and transport.get("all_required_sizes_present") is True
-                            and transport.get("uncertainty_present") is True
-                            and transport.get("under_load_link_state") is True)
-
-    soak = record.get("soak") or {}
-    checks["soak_duration"] = soak.get("duration_seconds") >= plan["soak"]["minimum_duration_seconds"]
-    checks["telemetry_continuity"] = (soak.get("telemetry_cadence_seconds") == plan["soak"]["telemetry_cadence_seconds"]
-                                      and soak.get("telemetry_samples", 0) >= _required_samples(soak, plan)
-                                      and soak.get("continuous_liveness") is True and soak.get("silent_restart") is False)
-    checks["soak_health"] = all(soak.get(k) is False for k in (
-        "fatal_aer", "amdgpu_fault", "uncorrected_ecc_ras_growth", "thermal_alarm", "host_peripheral_failure"))
-    required_sentinels = plan["soak"]["minimum_duration_seconds"] // plan["soak"]["sentinel_checkpoint_seconds"] + 1
-    checks["soak_sentinels"] = len(soak.get("sentinels") or []) >= required_sentinels and all(x == "PASS" for x in soak.get("sentinels") or [])
-
-    isolation = record.get("fault_isolation") or {}
-    checks["fault_isolation"] = (isolation.get("a-loss-b-survives") == "PASS"
-                                  and isolation.get("b-loss-a-survives") == "PASS"
-                                  and isolation.get("final_concurrent_sentinel") == "PASS")
-    reset = record.get("device_reset") or {}
-    checks["reset_disposition"] = reset.get("result") in (
-        plan["device_reset"]["unsupported_terminal"], "PASS")
-    scope = record.get("claim_scope") or {}
-    checks["nonclaims"] = all(scope.get(k) is False for k in (
-        "aggregate_16gib", "model_program", "planner_policy", "slowdown_is_correctness_failure"))
-
-    if not checks["preflight"]:
-        terminal = plan["terminals"]["blocked"]
-    elif not valid_concurrent or not checks["baselines"]:
-        terminal = plan["terminals"]["correctness_fail"]
-    elif not all(checks[k] for k in ("transport", "soak_duration", "telemetry_continuity", "soak_health",
-                                     "soak_sentinels", "fault_isolation", "reset_disposition", "nonclaims")):
-        # After valid concurrent correctness, any failed or missing sustained
-        # evidence is a stress failure; BLOCKED cannot erase observed output.
-        terminal = plan["terminals"]["stress_fail"]
-    else:
-        terminal = plan["terminals"]["pass"]
-    return {"schema": "inferswarm.v2d.terminal-reduction/1", "campaign_id": plan["campaign_id"],
-            "checks": checks, "terminal": terminal}
+def _transport(samples: list[dict[str, Any]]) -> tuple[bool, dict[str, dict[str, float]]]:
+    expected = {(mode, direction, size, repetition, participant)
+                for mode in ("single-a", "single-b", "dual")
+                for direction in ("h2d", "d2h")
+                for size in (4096, 4 * 1024**2, 64 * 1024**2, 512 * 1024**2)
+                for repetition in range(1, 6)
+                for participant in (("a", "b") if mode == "dual" else (("a",) if mode == "single-a" else ("b",)))}
+    observed = {(x["mode"], x["direction"], x["size_bytes"], x["repetition"], x["participant"]) for x in samples}
+    groups: dict[str, list[float]] = {}
+    for sample in samples:
+        groups.setdefault(f"{sample['mode']}:{sample['direction']}:{sample['size_bytes']}", []).append(float(sample["measured_value"]))
+    reductions = {key: {"count": len(values), "min": min(values), "max": max(values), "median": median(values), "mean": mean(values)} for key, values in groups.items()}
+    return observed == expected, reductions
 
 
-def _root() -> Path:
-    return Path(os.environ[ROOT_ENV]) if os.environ.get(ROOT_ENV) else Path(__file__).resolve().parents[1]
+def facts_from_assembly(data: dict[str, Any], plan: dict[str, Any]) -> dict[str, Any]:
+    receipts = data["receipts"]
+    preflight = _rows(data, "inferswarm.v2d.preflight-receipt/1")
+    pairs = _rows(data, "inferswarm.v2d.concurrent-attempt/1")
+    samples = _rows(data, "inferswarm.v2d.transport-sample/1")
+    telemetry = sorted(_rows(data, "inferswarm.v2d.soak-telemetry/1"), key=lambda x: x.get("sequence", -1))
+    checkpoints = _rows(data, "inferswarm.v2d.soak-checkpoint/1")
+    soak = _rows(data, "inferswarm.v2d.soak-run/1")
+    arms = _rows(data, "inferswarm.v2d.fault-isolation/1")
+    resets = _rows(data, "inferswarm.v2d.reset-disposition/1")
+    expected_ids = {"concurrent-1", "concurrent-2", "concurrent-3"}
+    ids = {x["attempt_id"] for x in pairs}
+    pair_overlap = bool(pairs) and all(_interval_overlap(x["workload_intervals_ns"]["a"], x["workload_intervals_ns"]["b"]) for x in pairs)
+    concurrency_established = bool(pairs) and pair_overlap
+    denominator_complete = expected_ids <= ids
+    pair_ok = all(all(p["correctness"] is True and p["offload"] is True and p["fallback"] is False and p["accounting"] == [0, 0, 0] and p["clean_exit"] is True for p in row["participants"].values()) for row in pairs)
+    valid_concurrent = concurrency_established and pair_ok
+    matrix_ok, statistics = _transport(samples)
+    soak_ok = False
+    stress = False
+    if len(soak) == 1:
+        run = soak[0]
+        duration = int(run.get("ended_monotonic_ns", 0)) - int(run.get("started_monotonic_ns", 0))
+        cadence = int(run.get("telemetry_cadence_seconds", -1)); tolerance = int(run.get("allowed_scheduling_tolerance_seconds", -1))
+        seq = [x.get("sequence") for x in telemetry]
+        timestamps = [x.get("monotonic_ns") for x in telemetry]
+        numeric_timestamps = [int(t) for t in timestamps if isinstance(t, int)]
+        continuous = (seq == list(range(1, 62)) and len(set(numeric_timestamps)) == 61 and len(numeric_timestamps) == 61
+                      and all((b-a) <= (cadence+tolerance) * 1_000_000_000 for a, b in zip(numeric_timestamps, numeric_timestamps[1:])))
+        checkpoint_ids = {x.get("checkpoint_seconds") for x in checkpoints}
+        soak_ok = duration >= 3600 * 1_000_000_000 and cadence == 60 and tolerance == 15 and continuous and checkpoint_ids == {0, 600, 1200, 1800, 2400, 3000, 3600} and run.get("final_sentinel_correct") is True
+        stress = bool(run.get("raw_stress_events")) or any(x.get("amdgpu_reset") is True or x.get("fatal_aer") is True or x.get("uncorrected_ecc_growth") is True or x.get("worker_restarted") is True for x in telemetry)
+    arm_ok = {x.get("arm") for x in arms} == {"a-loss-b-survives", "b-loss-a-survives"} and all(
+        x.get("pre_health") is True and x.get("target_exited") is True and x.get("survivor_same_pid") is True and x.get("survivor_original_die") is True and x.get("survivor_no_fallback") is True and x.get("survivor_correctness") is True and x.get("relaunch_fresh_rebind") is True and x.get("per_die_recovery") is True and x.get("final_concurrent_sentinel") is True for x in arms)
+    reset_ok = len(resets) == 1 and ((resets[0].get("disposition") == "DEVICE_RESET_ISOLATION_NOT_AVAILABLE" and resets[0].get("documented_support_absent") is True) or (resets[0].get("disposition") == "RESET_EXECUTED" and resets[0].get("documented_mechanism") and resets[0].get("post_reset_rediscovery") is True and resets[0].get("post_reset_independent_correctness") is True and resets[0].get("post_reset_concurrent_correctness") is True))
+    later_complete = denominator_complete and matrix_ok and soak_ok and arm_ok and reset_ok
+    return {
+        "preflight_valid": len(preflight) == 1,
+        "concurrency_established": concurrency_established,
+        "concurrent_denominator_complete": denominator_complete,
+        "concurrent_correct": valid_concurrent,
+        "valid_concurrent_correctness": valid_concurrent,
+        "affirmative_stress_failure": stress,
+        "later_complete": later_complete,
+        "transport_matrix_complete": matrix_ok,
+        "transport_statistics": statistics,
+        "soak_complete": soak_ok,
+        "fault_arms_complete": arm_ok,
+        "reset_disposition_complete": reset_ok,
+        "source_receipt_identities": data["source_receipt_identities"],
+    }
+
+
+def reduce_tree(root: Path, authority_digest: str, *, fixture: bool = False, plan: dict[str, Any] | None = None) -> dict[str, Any]:
+    manifest = assemble.build_input_manifest(root)
+    data = assemble.assemble(root, manifest, authority_digest, fixture=fixture)
+    current_plan = plan or campaign.build_plan()
+    facts = facts_from_assembly(data, current_plan)
+    return {"schema": "inferswarm.v2d.terminal-reduction/3", "campaign_id": data["campaign_id"], "fixture": fixture,
+            "input_manifest_digest": manifest["manifest_digest"], "authority_digest": authority_digest,
+            "facts": facts, "terminal": classify(facts, current_plan)}
+
+
+def reduce(root: Path = ROOT) -> dict[str, Any]:
+    area = root / AREA_REL
+    plan_doc = json.loads((area / "CAMPAIGN-PLAN.json").read_text())
+    plan = plan_doc["campaign_plan"]
+    if plan_doc.get("campaign_plan_digest") != hashlib.sha256(canonical(plan)).hexdigest():
+        raise ValueError("campaign plan digest mismatch")
+    physical = json.loads((area / "PHYSICAL-AUTHORITY.json").read_text())
+    if not authority.verify_authority(physical, root):
+        raise ValueError("physical authority mismatch")
+    return reduce_tree(area, physical["authority_digest"], plan=plan)
 
 
 def main() -> int:
-    root = _root()
-    area = root / "docs" / "investigations" / NS
-    doc = json.loads((area / "CAMPAIGN-PLAN.json").read_text(encoding="utf-8"))
-    expected = plan_document()["campaign_plan_digest"]
-    if doc.get("campaign_plan_digest") != expected:
-        raise ReductionError("campaign plan digest does not bind the committed frozen plan")
-    record = json.loads((area / "CAMPAIGN-RECORD.json").read_text(encoding="utf-8"))
-    result = reduce_record(record, doc["campaign_plan"])
-    (area / "TERMINAL.json").write_text(json.dumps(result, indent=1, sort_keys=True) + "\n", encoding="utf-8")
-    print(json.dumps({"terminal": result["terminal"]}))
-    return 0
-
+    ap = argparse.ArgumentParser(); ap.add_argument("--repo", default=str(ROOT)); ap.add_argument("--write", action="store_true")
+    args = ap.parse_args(); result = reduce(Path(args.repo))
+    if args.write:
+        (Path(args.repo) / AREA_REL / "TERMINAL.json").write_bytes(json.dumps(result, indent=1, sort_keys=True).encode()+b"\n")
+    print(json.dumps(result, indent=1, sort_keys=True)); return 0
 
 if __name__ == "__main__":
     raise SystemExit(main())

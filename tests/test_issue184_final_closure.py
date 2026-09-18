@@ -299,7 +299,14 @@ class Issue184PreservationTests(unittest.TestCase):
             # Issue #216 V2-D: additive concurrent V340L campaign producers,
             # independently pinned by the V2-D evidence manifest.
             "scripts/issue216_campaign_plan.py",
+            "scripts/issue216_physical_authority.py",
+            "scripts/issue216_preflight.py",
+            "scripts/issue216_assemble.py",
             "scripts/issue216_concurrent.py",
+            "scripts/issue216_transport.py",
+            "scripts/issue216_soak.py",
+            "scripts/issue216_fault_isolation.py",
+            "scripts/issue216_reset.py",
             "scripts/issue216_terminal.py",
             "scripts/issue216_manifest.py",
             # Issue #213 campaign gate ordering: orchestration tooling and

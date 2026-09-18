@@ -983,16 +983,37 @@
   "scripts/issue215_terminal.py": [
    "vulkan-v0-b"
   ],
+  "scripts/issue216_assemble.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/issue216_campaign_plan.py": [
    "vulkan-v0-b"
   ],
   "scripts/issue216_concurrent.py": [
    "vulkan-v0-b"
   ],
+  "scripts/issue216_fault_isolation.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/issue216_manifest.py": [
    "vulkan-v0-b"
   ],
+  "scripts/issue216_physical_authority.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue216_preflight.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue216_reset.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue216_soak.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/issue216_terminal.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue216_transport.py": [
    "vulkan-v0-b"
   ],
   "scripts/issue35_coarse_concurrent.py": [

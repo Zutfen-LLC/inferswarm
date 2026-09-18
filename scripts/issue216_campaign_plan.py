@@ -19,14 +19,13 @@ AREA = ROOT / "docs" / "investigations" / "vulkan-v2-d-v340l-concurrent"
 CAMPAIGN_ID = "issue216-v2d-v340l-concurrent-dual-die-v1"
 STARTING_MAIN = "605d0b465dc2bd015a7c832c67f4adcd7aefeb61"
 
-RUNTIME = {
-    "executable": "/home/hermes/v0a/llama.cpp/build-vulkan/bin/llama-cli",
-    "executable_sha256": "c4bcd6a94e0b7fdb1959e6542ce0f85bb905c6c9083fcd1a7b6b0daf15e2c9be",
-    "source_commit": "8ea290247c87ced2ab245b056ffe96dbcf90d36c",
-    "model": "/home/hermes/v0a/models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
-    "model_sha256": "9c9f56a391a3abbd5b89d0245bf6106081bcc3173119d4229235dd9d23253f94",
-    "reference": "docs/investigations/vulkan-v1-a/reference-visible-output.txt",
-    "reference_sha256": "9013db8fb38982f9085754e69fa3feb2f74c7372360da686fe90a3444f26182d",
+# Runtime/model and selector/BDF facts are intentionally NOT repeated here.
+# `issue216_physical_authority.py` derives those immutable identities from the
+# accepted V2-B and V2-C authority bytes, then a fresh mapping receipt binds
+# execution-time selectors to those intended physical devices.
+RUNTIME_AUTHORITY = {
+    "physical_authority_path": "docs/investigations/vulkan-v2-d-v340l-concurrent/PHYSICAL-AUTHORITY.json",
+    "physical_authority_schema": "inferswarm.v2d.physical-authority/1",
     "comparator": "scripts/v0c_correctness.py",
     "accounting_reducer": "scripts/v1c_accounting.py",
 }
@@ -36,6 +35,10 @@ TERMINALS = {
     "correctness_fail": "V2D_V340L_CONCURRENT_CORRECTNESS_FAIL",
     "stress_fail": "V2D_V340L_PLATFORM_STRESS_FAIL",
     "blocked": "V2D_EVIDENCE_BLOCKED",
+    # Prospective taxonomy correction: lack/corruption of a later mandatory
+    # receipt is not affirmative platform failure and cannot erase an observed
+    # concurrent result by relabeling it BLOCKED.
+    "post_concurrency_incomplete": "V2D_EVIDENCE_INCOMPLETE_AFTER_CONCURRENCY",
 }
 
 
@@ -56,16 +59,16 @@ def build_plan() -> dict:
             "x1_merge": "8aadbd6ea3c635741cc67fcc9d9ba1d1dd8d500a",
             "x1_terminal": "X1_MINIMUM_VIABLE_PARTICIPANT_ENVELOPE_ESTABLISHED",
         },
-        "runtime": RUNTIME,
+        "runtime_authority": RUNTIME_AUTHORITY,
         "physical_resources": {
-            "a": {"selector": "Vulkan1", "expected_bdf": "06:00.0",
-                  "compute_unit_id": "cu-v340l-die-a", "memory_resource_id": "mr-v340l-die-a-vram",
+            # Roles and immutable CU/MR identities only. Current selector/BDF
+            # mappings are execution-time observations in FRESH-PHYSICAL-MAPPING.
+            "a": {"compute_unit_id": "cu-v340l-die-a", "memory_resource_id": "mr-v340l-die-a-vram",
                   "vram_bytes": 8573157376},
-            "b": {"selector": "Vulkan2", "expected_bdf": "09:00.0",
-                  "compute_unit_id": "cu-v340l-die-b", "memory_resource_id": "mr-v340l-die-b-vram",
+            "b": {"compute_unit_id": "cu-v340l-die-b", "memory_resource_id": "mr-v340l-die-b-vram",
                   "vram_bytes": 8573157376},
-            "shared_upstream": {"root_port": "00:1d.0", "switch_upstream": "02:00.0",
-                                "required_negotiated": "Gen3 x1", "switch": "PM8533"},
+            "shared_upstream": {"required_negotiated": "Gen3 x1", "switch": "PM8533",
+                                "topology_assignment": "fresh preflight only"},
         },
         "preflight": {
             "required": ["host_kernel_amdgpu_icd_runtime", "full_pci_topology_and_bars",
@@ -79,9 +82,9 @@ def build_plan() -> dict:
         "concurrent": {
             "retained_repetitions": 3,
             "warmups": 1,
-            "participants": {"a": "Vulkan1", "b": "Vulkan2"},
-            "synchronization": "same-host start-gate file; both child receipts record monotonic start/end",
-            "overlap_requirement": "strict positive monotonic interval intersection for every retained repeat",
+            "participants": "derived exclusively from fresh physical-authority mapping receipt",
+            "synchronization": "same-host start gate plus retained per-die workload-activity interval; wrapper lifetime alone is insufficient",
+            "overlap_requirement": "strict positive monotonic intersection of per-die correctness-bearing workload activity intervals",
             "workload": "v2-compatible-8-token-sentinel",
             "required": ["byte_exact", "full_offload", "zero_accounting", "clean_exit",
                          "no_nan_inf", "per_die_attribution", "no_cross_substitution"],
@@ -124,7 +127,38 @@ def build_plan() -> dict:
             "no mixed AMD/NVIDIA execution", "no SR-IOV VF support", "no ROCm/HIP support",
             "no generic planner scoring or automatic placement policy", "no production service or HA claim",
         ],
-        "validation_order": "Issue #213: focused/preservation/reducer/finalizer before review; one full suite and one hosted CI only on final reviewed head",
+        "producer_contract": {
+            "raw_receipt_schemas": [
+                "inferswarm.v2d.physical-authority/1",
+                "inferswarm.v2d.fresh-physical-mapping/1",
+                "inferswarm.v2d.preflight-receipt/1",
+                "inferswarm.v2d.execution-attempt/1",
+                "inferswarm.v2d.participant-receipt/1",
+                "inferswarm.v2d.concurrent-attempt/1",
+                "inferswarm.v2d.transport-sample/1",
+                "inferswarm.v2d.transport-run/1",
+                "inferswarm.v2d.transport-reduction/1",
+                "inferswarm.v2d.soak-telemetry/1",
+                "inferswarm.v2d.soak-checkpoint/1",
+                "inferswarm.v2d.soak-run/1",
+                "inferswarm.v2d.fault-isolation/1",
+                "inferswarm.v2d.reset-disposition/1",
+                "inferswarm.v2d.campaign-assembly/2",
+                "inferswarm.v2d.terminal-reduction/3",
+            ],
+            "required_producers": [
+                "scripts/issue216_physical_authority.py", "scripts/issue216_preflight.py",
+                "scripts/issue216_concurrent.py", "scripts/issue216_transport.py",
+                "scripts/issue216_soak.py", "scripts/issue216_fault_isolation.py",
+                "scripts/issue216_reset.py", "scripts/issue216_assemble.py",
+                "scripts/issue216_terminal.py", "scripts/issue216_manifest.py",
+            ],
+            "receipt_binding_required": ["campaign_id", "attempt_id", "producer_path_sha256",
+                "repo_head", "host", "boot_id", "authority_digest", "fresh_mapping_digest",
+                "runtime_binary_sha256", "model_sha256", "selector_bdf_physical_identity",
+                "argv", "raw_paths_sha256", "source_receipt_identities"],
+        },
+        "validation_order": "Issue #213: focused/preservation/manifest/terminal/finalizer/status/CI-planner before review; one full suite and one hosted CI only on final reviewed head",
     }
 
 

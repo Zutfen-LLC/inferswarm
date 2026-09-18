@@ -1,0 +1,54 @@
+{
+ "campaign_id": "issue216-v2d-v340l-concurrent-dual-die-v1",
+ "producers": [
+  {
+   "path": "scripts/issue216_campaign_plan.py",
+   "sha256": "83319c375492758b31c73bf5290718082f6a1c3e0fedbf11b80fbad3d7d6142d"
+  },
+  {
+   "path": "scripts/issue216_physical_authority.py",
+   "sha256": "93b338acfd649423f02c4255fd052a36fda47d2fe23786c5b89971c72e3d87ce"
+  },
+  {
+   "path": "scripts/issue216_preflight.py",
+   "sha256": "61ddf17ca1fcfaa2e4a9c9dbd5cdb34a216781434bea2e4ae1f07ea6e65a1c35"
+  },
+  {
+   "path": "scripts/issue216_concurrent.py",
+   "sha256": "3279ba45fe5232aa8106b7d3872503d51961163bf6606d4d51fe80866e859274"
+  },
+  {
+   "path": "scripts/issue216_transport.py",
+   "sha256": "eaa10a20495273254a42c785acc776613a64059547cb9de28ad8d33293f645cb"
+  },
+  {
+   "path": "scripts/issue216_soak.py",
+   "sha256": "9be8c31029c26bde80df318384cbb1352d451a51ed72803822c5e8d5af33bf89"
+  },
+  {
+   "path": "scripts/issue216_fault_isolation.py",
+   "sha256": "2e1ee43aca2225fc1040d8152eacd8783456a254bedf28b0575ab1f37af6e58f"
+  },
+  {
+   "path": "scripts/issue216_reset.py",
+   "sha256": "3b6308261d5266f5dff9dc15da79401bc1497cf3a4d4fb28ccff90a950fa6abf"
+  },
+  {
+   "path": "scripts/issue216_assemble.py",
+   "sha256": "727a30a09c23f36de07a94d2be6519c6fb5bac2a64b22b27d3496f92480cd050"
+  },
+  {
+   "path": "scripts/issue216_terminal.py",
+   "sha256": "0904330601343c2b170c0a333a83cf476d86b55bdf50d1cd8e3affab724f199d"
+  },
+  {
+   "path": "scripts/issue216_manifest.py",
+   "sha256": "798e005050444181b8bbfc02d30435060f2ff8b71084ea2b3bd43f10f259aa89"
+  },
+  {
+   "path": "tests/test_issue216_v2d_concurrent.py",
+   "sha256": "cd0526d6f40f9658aa09ef85757e8ead5b49afc654031eac86cb4670060ca778"
+  }
+ ],
+ "schema": "inferswarm.v2d.producer-hashes/2"
+}
