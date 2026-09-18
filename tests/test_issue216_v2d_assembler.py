@@ -79,6 +79,11 @@ def synth_observe_jsonl(*, bus: int = 6, spans_ms=((0, 200), (400, 600)),
     return ("\n".join(lines) + "\n").encode()
 
 
+def _mapping_digest(root: Path) -> str:
+    return json.loads((root / "preflight" / "mapping" /
+                       "fresh-mapping.json").read_bytes())["mapping_digest"]
+
+
 def synth_pair_fixture(root: Path, attempt: str, *, overlap_ms=(100, 150),
                        die_a_correct=True, die_b_correct=True,
                        die_a_bdf="0000:06:00.0",
@@ -89,7 +94,8 @@ def synth_pair_fixture(root: Path, attempt: str, *, overlap_ms=(100, 150),
     pair = {"attempt_id": attempt, "phase": "concurrent",
             "participants": {}, "observe_rels": {},
             "wrapper_intervals_ns": {"a": [0, 1], "b": [0, 1]},
-            "authority_digest": __AUTH__, "mapping_digest": "M",
+            "authority_digest": __AUTH__,
+            "mapping_digest": _mapping_digest(root),
             "closure_digest": __BIND__["closure_digest"],
             "producer_head": __BIND__["producer_head"]}
     # die A runs at [0,200]ms device-domain; die B overlapping
@@ -287,7 +293,8 @@ def build_complete_tree(root: Path, *, n_concurrent: int = 3,
         "kernel_docs_stdout": "amdgpu reset docs\nPROBE_DONE\n",
         "disposition": "DEVICE_RESET_ISOLATION_NOT_AVAILABLE",
         "reason": "shared switch",
-        "authority_digest": __AUTH__, "mapping_digest": "M",
+        "authority_digest": __AUTH__,
+        "mapping_digest": _mapping_digest(root),
         "closure_digest": __BIND__["closure_digest"],
         "producer_head": __BIND__["producer_head"],
     }, indent=1).encode())
@@ -298,7 +305,8 @@ def _checkpoint_pair(root: Path, cp_dir: Path, tag: str) -> dict:
     pair = {"attempt_id": tag, "phase": "soak-checkpoint",
             "participants": {}, "observe_rels": {},
             "wrapper_intervals_ns": {"a": [0, 1], "b": [0, 1]},
-            "authority_digest": __AUTH__, "mapping_digest": "M",
+            "authority_digest": __AUTH__,
+            "mapping_digest": _mapping_digest(root),
             "closure_digest": __BIND__["closure_digest"],
             "producer_head": __BIND__["producer_head"]}
     for die, bdf, sel in (("a", "0000:06:00.0", "Vulkan1"),
@@ -349,7 +357,8 @@ def _build_fault_arm(root: Path, arm: str) -> None:
         "sibling_run": clean_run(sib_run), "relaunch_run":
             clean_run(vic_run),
         "recovery_sentinel": rec_pair,
-        "authority_digest": __AUTH__, "mapping_digest": "M",
+        "authority_digest": __AUTH__,
+        "mapping_digest": _mapping_digest(root),
         "closure_digest": __BIND__["closure_digest"],
         "producer_head": __BIND__["producer_head"],
     }

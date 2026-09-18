@@ -858,7 +858,7 @@ def assemble_transport(evidence_root: Path,
         if not isinstance(row, dict):
             raise AssemblyError(f"transport mode {mode} missing")
         modes[mode] = _verify_transport_probe(
-            evidence_root, mode, row, bdf,
+            evidence_root, f"transport/{mode}", row, bdf,
             int(selector.replace("Vulkan", "")), f"transport {mode}")
     if "dual" not in doc:
         raise AssemblyError("transport dual mode missing")
