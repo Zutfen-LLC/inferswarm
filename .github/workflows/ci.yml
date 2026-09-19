@@ -571,7 +571,9 @@ jobs:
       - name: Doctor CPU test environment (Issue #131)
         run: .venv/bin/python scripts/check_test_env.py
       - name: Run group issue-213-gate-ordering
-        run: python3 -m unittest tests.test_issue213_campaign_gate_ordering -v
+        # Issue #226 adds the hosted final-validation controls to this
+        # doctrinal group (same orchestration line).
+        run: python3 -m unittest tests.test_issue213_campaign_gate_ordering tests.test_issue226_final_validation_ci -v
 
   issue-187-r7a:
     name: Group issue-187-r7a

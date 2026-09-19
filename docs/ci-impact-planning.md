@@ -64,6 +64,20 @@ CI workflow (full regression is the default), or push to `main` — every
 push to `main` runs the complete CPU regression contract regardless of
 the changed paths.
 
+## Hosted Final CPU Validation (Issue #226)
+
+Ordinary PR CI above stays impact-selected and never runs the full
+suite on a PR push. The canonical full CPU suite runs HOSTED exactly
+once, explicitly, on the maintainer-reviewed PR head:
+[`final-cpu-validation.yml`](../.github/workflows/final-cpu-validation.yml)
+(`workflow_dispatch` with the required 40-hex `expected_sha`; the
+dispatch ref is transport only). It executes the canonical
+`scripts/run_full_cpu_suite.py --json` plus the finalizer/status checks
+on that exact SHA and retains a structured exact-head receipt. Campaign
+handoff requires the ordinary `CI Gate` AND the `Final CPU Validation
+Gate` on the same exact head; see
+[campaign gate ordering](campaign-gate-ordering.md).
+
 ## Groups
 
 Registered group ids live in `scripts/ci_groups.json` (`groups` key).

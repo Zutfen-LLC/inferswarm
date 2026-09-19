@@ -96,7 +96,8 @@
   },
   "issue-213-gate-ordering": {
    "test_modules": [
-    "test_issue213_campaign_gate_ordering"
+    "test_issue213_campaign_gate_ordering",
+    "test_issue226_final_validation_ci"
    ]
   },
   "issue-222-r7c": {

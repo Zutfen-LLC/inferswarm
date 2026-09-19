@@ -1267,7 +1267,14 @@ class PreservationTests(unittest.TestCase):
                             # regression module, exactly as the #209/#187
                             # campaign registrations did on main.
                             "scripts/finalize_repository.py",
-                            "tests/test_finalize_repository.py")
+                            "tests/test_finalize_repository.py",
+                            # Issue #226: hosted Final CPU Validation —
+                            # additive final-validation workflow, doctrine
+                            # docs, and controls registered into the
+                            # issue-213-gate-ordering group.
+                            ".github/workflows/final-cpu-validation.yml",
+                            "tests/test_issue226_final_validation_ci.py",
+                            "docs/ci-impact-planning.md")
         for path in changed:
             self.assertTrue(path.startswith(allowed_prefixes),
                             f"unexpected changed path: {path}")
