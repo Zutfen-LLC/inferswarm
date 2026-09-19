@@ -1099,7 +1099,7 @@ def run_ext_matrix_probe(*, build_dir: Path, raw_dir: Path) -> dict[str, Any]:
     host.durable_write(raw_dir / "ext-matrix.stderr", stderr.encode())
     host.durable_write(raw_dir / "ext-matrix.exit-code",
                        f"{proc.returncode}\n".encode())
-    parsed = parse_capability_output(stdout, proc.returncode)
+    parsed = parse_ext_matrix_output(stdout, proc.returncode)
     return {
         "parsed": parsed,
         "stdout_rel": "ext-matrix.stdout",
@@ -1121,6 +1121,18 @@ def parse_capability_output(stdout: str, exit_code: int) -> dict[str, Any]:
     doc = json.loads(text)
     if "group_count" not in doc or "groups" not in doc:
         raise ProbeError("capability probe JSON missing groups")
+    return doc
+
+
+def parse_ext_matrix_output(stdout: str, exit_code: int) -> dict[str, Any]:
+    if exit_code != 0:
+        raise ProbeError(f"ext-matrix probe exit {exit_code}")
+    text = stdout.strip()
+    if not text.startswith("{"):
+        raise ProbeError("ext-matrix probe emitted no JSON object")
+    doc = json.loads(text)
+    if "dies" not in doc:
+        raise ProbeError("ext-matrix probe JSON missing dies")
     return doc
 
 
