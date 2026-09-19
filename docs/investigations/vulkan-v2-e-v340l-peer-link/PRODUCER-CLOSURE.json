@@ -1,19 +1,19 @@
 {
  "campaign_id": "issue228-v2e-v340l-interdie-peer-link",
- "closure_digest": "0973306af3f6d70a39af1a2d169b74052ccb8138e6b01d11767eea9295180463",
- "producer_head": "8c25184c54ce660020047711a2755c55178f8195",
+ "closure_digest": "8cc902616282d61fa71b4457887bf3106e1db54ac755989d42a323d68b585005",
+ "producer_head": "9ea6e71105648699f8841cf44fc860d5530a6584",
  "schema": "inferswarm.v2e.producer-closure/1",
  "sources": {
-  "scripts/issue228_assemble.py": "0c4c61c19ee065fead9fdbe13915ca52cdf52b37a8d11204a070a24ae6df9867",
+  "scripts/issue228_assemble.py": "6b3487fe3e36555932bfa6b38cdfe4a4b1bfdc2f28a81d4574be066764c6cd70",
   "scripts/issue228_authority.py": "c39a34d797864f28cecafa705fd137ed64bb46b1e348086fcaf0bed62bdbf317",
-  "scripts/issue228_baselines.py": "cee86ea146472077ba3780319a4e0f8cce982c719a720128fc7487ca7f684aab",
-  "scripts/issue228_capability.py": "387280c645b783ad15f4581e7fc7e79efdc1d6c6494f2bad486e5b863de7812b",
+  "scripts/issue228_baselines.py": "5033e2bfa4fd90625ade99f90e161cd90608cf603f783cd672a04037e98eccc4",
+  "scripts/issue228_capability.py": "dc7b8c5d13c92a673f6d4de95f0524fec70163f2ef67ff79ad54e7491ea0f801",
   "scripts/issue228_freeze.py": "ca00c858f7c5ee2842a4aca9672dd1ce5fb5f0f395dc48b2f892d9ea142eb095",
   "scripts/issue228_host.py": "6fd87397d2cb09a2b385283c2aba381689bf53ab3070940068829a708383768f",
-  "scripts/issue228_ladder.py": "a28ae8ac7a7c916300f4b976eff7fd11a4e12ad91dba3060016e0947f46e0f7a",
+  "scripts/issue228_ladder.py": "21e22522b74a87287ff8cecff30e2743cfc83714c96bdfb8b70fd23a8aa74835",
   "scripts/issue228_manifest.py": "a8ca2dec96cc7e107917e526212e084db67bcc97231f9043020f12e427e6ee15",
-  "scripts/issue228_probe.py": "cb3a34c7fbafc1bc5dbd73adf1855e8b7b5211d24e26e9624adb8e0231f91fc5",
+  "scripts/issue228_probe.py": "3a43f9045277b5fb96e865be69bbe760dca370f6ce2d3fe38b695857a25acacc",
   "scripts/issue228_receipt.py": "b94918cdd34a00cad52e68b8cb7e45270a145cb1a2135260e072340ac140e662",
-  "scripts/issue228_reduce.py": "2cfc2bc8e887f00539151a9ef7f19b70062d7886928029ba6b3611b16465d3d3"
+  "scripts/issue228_reduce.py": "82a9b3a4da6d03b3bcaf631fa11b490a6d026a2309a29533d2415ac0b5da3e41"
  }
 }
