@@ -229,6 +229,30 @@ class FinalValidationWorkflowTests(unittest.TestCase):
         permissions = self.doc["permissions"]
         self.assertEqual(permissions, {"contents": "read"})
 
+    def test_every_step_shape_is_valid_actions_step(self):
+        # A step must be exactly one of: a `uses` step (with optional
+        # `with`), a `run` step, or a metadata-only step (name/if/env).
+        # Anything else (e.g. a bare action input at step level) makes
+        # GitHub reject the whole workflow file with zero jobs — the
+        # failure mode observed on the first push of this workflow.
+        allowed_keys = {"name", "uses", "with", "run", "if", "env",
+                        "id", "working-directory", "shell",
+                        "timeout-minutes", "continue-on-error"}
+        for step in self.doc["jobs"]["final-cpu-validation"]["steps"]:
+            unknown = set(step) - allowed_keys
+            self.assertEqual(
+                unknown, set(),
+                f"step {step.get('name')!r} has invalid keys {unknown}")
+            has_uses, has_run = "uses" in step, "run" in step
+            self.assertNotEqual(has_uses, has_run,
+                                f"step {step.get('name')!r} must be "
+                                f"exactly one of uses/run")
+        # and the setup-python step pins the interpreter under `with`
+        setup = next(s for s in
+                     self.doc["jobs"]["final-cpu-validation"]["steps"]
+                     if "setup-python" in s.get("uses", ""))
+        self.assertEqual(setup["with"], {"python-version": "3.12"})
+
     def test_control20_main_push_full_regression_unchanged(self):
         # The ordinary workflow keeps --mode full on push-to-main and the
         # planner's full mode still selects every registered group.
