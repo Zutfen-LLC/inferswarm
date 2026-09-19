@@ -95,14 +95,14 @@ def collect_preflight(*, repo: Path, out: Path, attempt_id: str,
         "for g in /sys/kernel/iommu_groups/*; do echo \"== group "
         "$(basename $g)\"; for d in $g/devices/*; do echo $(basename $d) "
         "$(lspci -s $(basename $d | cut -d: -f2-) -nn 2>/dev/null | "
-        "head -1); done; done"])
+        "head -1); done; done; true"])
     art("acs_bits", ["bash", "-c",
         "for d in 00:1d.0 02:00.0 03:00.0 03:01.0 04:00.0 05:00.0 "
         "07:00.0 08:00.0; do echo == $d; lspci -PP -vv -s $d 2>/dev/null "
-        "| grep -A3 'Access Control'; done"])
+        "| grep -A3 'Access Control'; done; true"])
     art("vram_totals", ["bash", "-c",
         "for d in /sys/class/drm/card*/device; do echo == $d; cat $d/mem_"
-        "info_vram_total 2>/dev/null; done"])
+        "info_vram_total 2>/dev/null; done; true"])
     art("ras", ["bash", "-c",
         "for d in /sys/class/drm/card*/device/ras; do echo == $d; cat $d/"
         "gpu_err_cnt 2>/dev/null; done; true"], optional=True)
