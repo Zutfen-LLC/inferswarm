@@ -1,0 +1,19 @@
+{
+ "campaign_id": "issue228-v2e-v340l-interdie-peer-link",
+ "closure_digest": "27fbecf1af359dcd451b19499eff4540513f42dee05b2088f6e285879759edf0",
+ "producer_head": "8d90cc44a1fe1bfd11866b2735fdf91820ccb6b4",
+ "schema": "inferswarm.v2e.producer-closure/1",
+ "sources": {
+  "scripts/issue228_assemble.py": "0c4c61c19ee065fead9fdbe13915ca52cdf52b37a8d11204a070a24ae6df9867",
+  "scripts/issue228_authority.py": "c39a34d797864f28cecafa705fd137ed64bb46b1e348086fcaf0bed62bdbf317",
+  "scripts/issue228_baselines.py": "cee86ea146472077ba3780319a4e0f8cce982c719a720128fc7487ca7f684aab",
+  "scripts/issue228_capability.py": "7444fc3a1d212032ec8cc653d9ea2a08ef7d88d2e0f82f0565107936f3155227",
+  "scripts/issue228_freeze.py": "ca00c858f7c5ee2842a4aca9672dd1ce5fb5f0f395dc48b2f892d9ea142eb095",
+  "scripts/issue228_host.py": "6fd87397d2cb09a2b385283c2aba381689bf53ab3070940068829a708383768f",
+  "scripts/issue228_ladder.py": "a28ae8ac7a7c916300f4b976eff7fd11a4e12ad91dba3060016e0947f46e0f7a",
+  "scripts/issue228_manifest.py": "a8ca2dec96cc7e107917e526212e084db67bcc97231f9043020f12e427e6ee15",
+  "scripts/issue228_probe.py": "99c27c4a93e14e7da2f6f6d9fd95f5b539c786743ef37b564ce9537d6fc43194",
+  "scripts/issue228_receipt.py": "b94918cdd34a00cad52e68b8cb7e45270a145cb1a2135260e072340ac140e662",
+  "scripts/issue228_reduce.py": "2cfc2bc8e887f00539151a9ef7f19b70062d7886928029ba6b3611b16465d3d3"
+ }
+}
