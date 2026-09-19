@@ -1,10 +1,10 @@
-# Campaign validation gate ordering (Issue #213)
+# Campaign validation gate ordering (Issues #213 / #224)
 
 Normative rule for how a physical/research campaign schedules validation
-around adversarial review. This document is the single repository-owned
-authority for campaign handoff gate ordering; campaign issues and review
-prompts must not restate a different order. The machine-checked model and
-exact-head suite receipts live in
+around independent review. This document is the single repository-owned
+authority for campaign handoff gate ordering and review authority;
+campaign issues and review prompts must not restate a different order.
+The machine-checked model and exact-head suite receipts live in
 [`scripts/issue213_gate_orchestration.py`](../scripts/issue213_gate_orchestration.py)
 with focused tests in
 [`tests/test_issue213_campaign_gate_ordering.py`](../tests/test_issue213_campaign_gate_ordering.py).
@@ -14,7 +14,7 @@ deduplication**, never test semantics, exact-head correctness guarantees, or
 #148 CI impact planning — the planner and the `CI Gate` remain authoritative
 for what CI runs.
 
-## Motivation (observed in #210 / PR #212)
+## Motivation (observed in #210 / PR #212, revised by #224)
 
 The pre-#213 convention ran expensive validation in this order:
 
@@ -29,7 +29,20 @@ review lanes returned GO with only P3 findings and the fixes created a new
 head — voiding the first exact-head results. The redundancy is structural,
 not accidental: any post-review commit invalidates pre-review exact-head
 validation by design, so running it before review wastes it whenever review
-mutates the head.
+mutates the head. Issue #213 fixed the ordering.
+
+Issue #224 revises the **review lane default** on top of that ordering: the
+two delegated adversarial lanes that #213-era boilerplate made mandatory were
+routinely consuming 600–1200 seconds each, often timing out before
+structured completion, while the maintainer independently reviewed the
+pushed exact head at handoff anyway (concrete trigger: issue #222 / PR #223,
+where delegated Lane 2 hit the 1200-second cap after performing its scopes
+and the maintainer then performed the authoritative exact-head review before
+merge). The assurance actually wanted is **independent review of the exact
+proposed head**, not a mandatory count of delegated LLM sessions. The
+canonical review authority is therefore now the maintainer exact-head PR
+review; delegated agent/LLM adversarial reviews are optional, targeted,
+advisory work.
 
 ## Canonical ordering
 
@@ -43,14 +56,26 @@ PRE-REVIEW PHASE (cheap, reviewer-trust gates only)
   prospective correctness/authority freeze checks
   finalizer/status pre-review integrity checks
   CI planner self-check (where touched)
--> ADVERSARIAL EXACT-HEAD REVIEWS (read-only, against the frozen head)
--> APPLY ALL ACCEPTED REVIEW FIXES (focused checks re-run as needed)
+-> PUSH EXACT HEAD + OPEN PR
+-> INDEPENDENT REVIEW (read-only, against the exact proposed head)
+   default authority: MAINTAINER EXACT-HEAD PR REVIEW
+   optional advisory: delegated agent/LLM reviews (no default count/timeout)
+-> APPLY ALL ACCEPTED REVIEW FIXES (focused checks re-run as needed;
+   if the head changes, the maintainer review repeats on the new exact head)
 -> FINAL-HEAD PHASE (requirements proven against one final reviewed head)
   one full CPU suite (mandatory; never omitted from a campaign plan)
   one hosted exact-head CI (mandatory; never omitted from a campaign plan)
   finalizer/status fixed-point checks
--> HANDOFF
+-> MAINTAINER VERIFIES HEAD DID NOT MOVE + FINAL GATES GREEN -> MERGE
 ```
+
+A PR may be opened before hosted CI completes. If hosted CI happens to run
+before the maintainer GO and the head remains unchanged, the existing #213
+exact-head binding/reuse rules may satisfy the final CI requirement; do not
+launch a duplicate CI run merely to make it occur chronologically after
+review. If review changes the head, old CI is naturally invalidated. The
+full CPU suite remains deferred until after maintainer GO unless the
+campaign explicitly declares it review-critical.
 
 Invariants:
 
@@ -67,34 +92,90 @@ Invariants:
 4. Review-driven changes invalidate prior exact-head validation exactly as
    today; the optimization is ordering, not exemption.
 5. Every check that reviewers need to trust the head (invariant 5 of the
-   issue) still runs BEFORE review — the pre-review list above is unchanged
-   from campaign doctrine; only the full suite and hosted CI moved.
+   #213 issue) still runs BEFORE review — the pre-review list above is
+   unchanged from campaign doctrine; only the full suite and hosted CI
+   moved.
 6. A pre-review full suite or hosted CI run remains allowed ONLY when a
-   campaign explicitly declares it **review-critical** (a review lane
-   genuinely requires that result as an input) or repository policy names a
-   concrete reason. Declaration is per-campaign, per-gate, and recorded in
-   the campaign plan; it never becomes a default.
+   campaign explicitly declares it **review-critical** (an independent
+   review genuinely requires that result as an input) or repository policy
+   names a concrete reason. Declaration is per-campaign, per-gate, and
+   recorded in the campaign plan; it never becomes a default.
 7. Unknown gates, malformed plans, or ambiguous workflow state fail closed
    to the existing broader validation (a fresh full-suite + hosted-CI run).
 8. A post-final-suite review, where a campaign requires one, is read-only.
    Any resulting mutation creates a new final head and legitimately
    re-triggers final validation.
 
+## Review authority (Issue #224)
+
+### Default required review
+
+One **maintainer exact-head review** of the pushed PR head.
+
+Requirements:
+
+- the reviewer inspects the actual pushed artifact/diff/evidence;
+- the review names or otherwise mechanically identifies the exact head
+  being reviewed;
+- P0/P1 findings block handoff;
+- accepted fixes create a new head and require re-review;
+- maintainer GO is necessary but not sufficient: the final
+  suite/CI/finalizer gates must still pass.
+
+There is deliberately **no repository mechanism** by which the
+implementation agent can mint a self-authored `maintainer_review_go=true`
+receipt and mechanically satisfy independent review. Maintainer review is
+process authority outside the implementation agent's evidence graph; the
+machine-checked `handoff_gate_status` remains a purely mechanical decision
+over suite/CI/finalizer identity and never consumes a review verdict
+(maintainer or delegated) as an input.
+
+### Delegated agent/LLM review (optional by default)
+
+- zero delegated lanes is valid under the default plan;
+- there is no default lane count;
+- there is no default 600/1200-second review requirement;
+- delegated reviews may be requested for a narrow specialist surface when
+  useful;
+- a campaign may explicitly require one or more delegated reviews only
+  when it states a concrete reason that independent specialist review
+  materially adds assurance (declared prospectively in the campaign
+  issue — never retrofitted to justify a run that already happened);
+- optional delegated review timeout/truncation does not block maintainer
+  handoff;
+- findings from an optional delegated review are still real findings:
+  accepted P0/P1 corrections must be resolved if surfaced before handoff;
+- do not launch broad duplicate "review the whole campaign" lanes merely
+  because historical issues used two lanes.
+
+Examples where a targeted delegated review can still be justified:
+
+- cryptographic/security boundary;
+- unusually novel evidence/provenance mechanism;
+- destructive migration or irreversible external action;
+- specialist runtime/source audit materially outside the maintainer's
+  primary review;
+- the maintainer explicitly requests a second opinion.
+
 ## Review workflow semantics (Phase 4)
 
-Adversarial review lanes verify the correctness/evidence surfaces assigned
-to the lane, mechanically, against the frozen review head. Lanes must not:
+Independent review — by default the maintainer exact-head PR review,
+optionally plus delegated advisory lanes — verifies the
+correctness/evidence surfaces assigned to it, mechanically, against the
+exact proposed head. Reviews must not:
 
 - require or re-run the full CPU suite or hosted CI unless the campaign
-  declared that gate review-critical for that lane;
+  declared that gate review-critical for that review;
 - re-run unrelated campaign gates;
 
-and each lane returns findings against the frozen head. After all lanes
-complete, the maintainer/agent applies accepted fixes, then the single
-final expensive validation cycle runs. If a lane needs assurance that
-focused tests or campaign reducers are green before review, the campaign
-names those narrower gates in the pre-review phase — they are cheap and
-already in the canonical list.
+and each review returns findings against the exact head. After the
+maintainer review (and any delegated lanes) complete, the maintainer/agent
+applies accepted fixes — if the head changed, the maintainer review
+repeats on the new exact head — and then the single final expensive
+validation cycle runs. If a review needs assurance that focused tests or
+campaign reducers are green before review, the campaign names those
+narrower gates in the pre-review phase — they are cheap and already in the
+canonical list.
 
 ## Duplicate-launch prevention (Phase 2)
 
@@ -338,6 +419,20 @@ Accounting is mechanically distinct:
   normal cycle is ONE cycle containing the full suite AND hosted CI proven
   against one final head.
 
+## Machine-checked orchestration (Issue #224 semantics)
+
+The #213 schemas and exact-head receipt machinery are preserved unchanged;
+no schema version changed. The `adversarial-review` phase identifier is
+retained for compatibility and redefined canonically as the **independent
+review phase** (alias `independent-review`), defaulting to maintainer
+exact-head PR review. The plan now records `delegated_review_lanes`
+(default 0, validated non-negative) and `delegated_review_required: false`
+— delegated review is explicitly NOT represented as a mandatory gate, and
+`handoff_gate_status` remains the mechanical final-validation decision
+over suite/CI/finalizer identity only. Its documentation no longer implies
+that delegated review GO is a machine input, and there is no
+agent-self-asserted review receipt anywhere in the module.
+
 ## Phase 0 audit — gate classification at the time of adoption
 
 | Source | Gate | Classification |
@@ -351,7 +446,7 @@ Accounting is mechanically distinct:
 | #210/PR #212 observed practice | full suite + hosted CI BEFORE review, both re-run after review fixes | REDUNDANT_CURRENTLY (the pattern this issue eliminates) |
 | Freeze-ordering rules (authority before observation) | prospective freeze checks | PRE_REVIEW_REQUIRED |
 | #148 planner / `CI Gate` | impact-selected CI | NOT_APPLICABLE (authoritative; untouched) |
-| Adversarial review prompts (delegate lanes) | mechanical lane verification | PRE_REVIEW_REQUIRED (the lanes themselves); requiring full-suite/CI results in a lane is BOTH_WITH_JUSTIFICATION (only with a review-critical declaration) |
+| Independent review (Issue #224: maintainer exact-head PR review by default; delegated lanes optional) | mechanical review of the pushed exact head | PRE_REVIEW_REQUIRED (the review itself); requiring full-suite/CI results in a review is BOTH_WITH_JUSTIFICATION (only with a review-critical declaration) |
 
 Historical evidence, terminals, and manifests are untouched by this
 reclassification — the audit classifies guidance, not retained bytes.

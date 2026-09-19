@@ -48,6 +48,24 @@ Correction-pass controls (would FAIL on the pre-correction head 0e5695b):
     (identity must be mechanically derived);
 26. the canonical runner CLI path is guarded (direct legitimate invocation
     cannot bypass single-launch behavior).
+
+Issue #224 controls (maintainer exact-head PR review doctrine):
+
+27. canonical campaign planning requires no delegated review count — the
+    default plan carries ZERO delegated lanes and is valid;
+28. a positive delegated lane count is advisory only (never a machine
+    input, never changes expensive-gate executions); a negative/boolean/
+    non-integer count fails closed;
+29. handoff_gate_status has NO review-verdict parameter, and a complete
+    mechanical handoff needs zero review artifacts;
+30. missing/invalid final suite or CI cannot be replaced by
+    maintainer/delegated review prose (GO-shaped dicts are not receipts);
+31. the orchestration module provides no self-authored review-GO receipt
+    mechanism, and the review phase carries no gates;
+32. canonical doctrine states maintainer review occurs on the pushed PR
+    head and must repeat after review-driven mutation;
+33. final-head mutation still invalidates exact-head validation
+    identities (#213 semantics unchanged by #224).
 """
 from __future__ import annotations
 
@@ -301,6 +319,190 @@ class GatePlanTests(unittest.TestCase):
         with self.assertRaises(gate.GateOrderingError):
             gate.CampaignFlow("issue-X",
                               final_head=("finalizer-status-fixed-point-checks",))
+
+
+class MaintainerReviewDoctrineTests(unittest.TestCase):
+    """Issue #224 controls 27-33 — maintainer exact-head PR review is the
+    default independent review authority; delegated agent/LLM adversarial
+    reviews are optional advisory lanes with no default count or timeout,
+    and no review verdict is a machine input to handoff."""
+
+    def test_control27_default_plan_requires_zero_delegated_lanes(self):
+        # The default plan (no delegated-lane argument at all) is valid,
+        # carries ZERO delegated lanes, requires none, and names the
+        # maintainer exact-head PR review as the review authority.
+        flow = gate.CampaignFlow("issue-224-default",
+                                 pre_review=("focused-changed-surface-tests",))
+        self.assertEqual(flow.delegated_review_lanes, 0)
+        plan = gate.plan_campaign_gates(flow, review_mutates_head=True)
+        self.assertEqual(plan["delegated_review_lanes"], 0)
+        self.assertFalse(plan["delegated_review_required"])
+        self.assertEqual(plan["default_review_authority"],
+                         "maintainer-exact-head-pr-review")
+        # planning never asks for a delegated review count: the canonical
+        # flow construction has no required review-lane parameter.
+        import inspect
+        params = list(inspect.signature(gate.CampaignFlow.__init__).parameters)
+        self.assertNotIn("required_delegated_reviews", params)
+        self.assertNotIn("delegated_review_required", params)
+        # and the review phase is not represented as a mandatory gate:
+        # the independent-review phase carries NO gates.
+        review_phase = [p for p in plan["phases"]
+                        if p["phase"] == gate.REVIEW_PHASE_ID]
+        self.assertEqual(len(review_phase), 1)
+        self.assertEqual(review_phase[0]["gates"], [])
+        self.assertIn(gate.REVIEW_PHASE_ALIAS,
+                      review_phase[0]["note"])
+        self.assertIn("maintainer", review_phase[0]["note"])
+
+    def test_control28_delegated_lanes_advisory_only(self):
+        # A positive delegated lane count is advisory metadata: it never
+        # changes the expensive-gate execution schedule and never marks
+        # delegated review as required.
+        base = gate.plan_campaign_gates(
+            gate.CampaignFlow("issue-224-advisory",
+                              delegated_review_lanes=0),
+            review_mutates_head=True)
+        with_lanes = gate.plan_campaign_gates(
+            gate.CampaignFlow("issue-224-advisory",
+                              delegated_review_lanes=2),
+            review_mutates_head=True)
+        self.assertEqual(with_lanes["delegated_review_lanes"], 2)
+        self.assertFalse(with_lanes["delegated_review_required"])
+        self.assertEqual(base["expensive_gate_executions"],
+                         with_lanes["expensive_gate_executions"])
+        self.assertEqual(base["final_validation_cycles"],
+                         with_lanes["final_validation_cycles"])
+        # the trace is likewise invariant to the advisory lane count
+        t0 = gate.trace_campaign(False, True, ())
+        t2 = gate.trace_campaign(False, True, (), delegated_review_lanes=2)
+        self.assertEqual(t0["expensive_gate_executions"],
+                         t2["expensive_gate_executions"])
+        self.assertEqual(t2["delegated_review_lanes"], 2)
+        self.assertFalse(t2["delegated_review_required"])
+
+    def test_control28_malformed_delegated_lane_counts_fail_closed(self):
+        for bad in (-1, True, 1.5, "2", None):
+            with self.assertRaises(gate.GateOrderingError,
+                                   msg=f"lanes={bad!r}"):
+                gate.CampaignFlow("issue-224-bad",
+                                  delegated_review_lanes=bad)
+
+    def test_control29_handoff_has_no_review_parameter(self):
+        # handoff_gate_status is a purely mechanical decision over
+        # suite/CI/finalizer identity: no review-verdict parameter exists,
+        # and a fully green mechanical handoff needs ZERO review artifacts.
+        import inspect
+        params = list(inspect.signature(
+            gate.handoff_gate_status.__wrapped__
+            if hasattr(gate.handoff_gate_status, "__wrapped__")
+            else gate.handoff_gate_status).parameters)
+        for forbidden in ("review_go", "maintainer_review_go",
+                          "delegated_review_go", "review_verdict",
+                          "review_status"):
+            self.assertNotIn(forbidden, params)
+        head = make_final_head(sha="b" * 40)
+        suite = make_receipt(sha="b" * 40)
+        ci = gate.build_hosted_ci_status("b" * 40, "run-79")
+        status = gate.handoff_gate_status(head, suite, ci, finalizer_ok=True)
+        self.assertTrue(status["handoff_complete"])
+        self.assertIn("no review verdict", status["note"])
+
+    def test_control30_review_prose_cannot_replace_final_gates(self):
+        # GO-shaped review prose (maintainer or delegated) is not a
+        # receipt: it cannot stand in for a missing/invalid suite receipt
+        # or hosted-CI status.
+        head = make_final_head(sha="b" * 40)
+        go_prose = {
+            "schema": "maintainer-review-go/1",
+            "git_commit_sha": "b" * 40,
+            "verdict": "GO",
+            "reviewer": "maintainer",
+        }
+        delegated_prose = {
+            "schema": "delegated-review-go/1",
+            "git_commit_sha": "b" * 40,
+            "verdict": "GO",
+            "lanes": 2,
+        }
+        # missing suite + CI: review prose is not an input at all — the
+        # only accepted keyword arguments are the mechanical ones.
+        status = gate.handoff_gate_status(head, None, None,
+                                          finalizer_ok=True)
+        self.assertFalse(status["handoff_complete"])
+        # a GO-shaped dict is not a suite receipt (unknown schema raises)
+        with self.assertRaises(gate.GateOrderingError):
+            gate.handoff_gate_status(head, go_prose, None, finalizer_ok=True)
+        with self.assertRaises(gate.GateOrderingError):
+            gate.handoff_gate_status(head, delegated_prose, None,
+                                     finalizer_ok=True)
+        # a GO-shaped dict is not a hosted-CI status either
+        ci_ok = gate.build_hosted_ci_status("b" * 40, "run-80")
+        with self.assertRaises(gate.GateOrderingError):
+            gate.handoff_gate_status(head, None, go_prose, finalizer_ok=True)
+        # and it cannot repair a receipt bound to a DIFFERENT head
+        stale = make_receipt(sha="a" * 40)
+        status = gate.handoff_gate_status(head, stale, ci_ok,
+                                          finalizer_ok=True)
+        self.assertFalse(status["handoff_complete"])
+
+    def test_control31_no_self_authored_review_receipt(self):
+        # The orchestration module deliberately provides NO mechanism by
+        # which the implementation agent can mint a review-GO receipt: no
+        # build/receipt function for review verdicts exists, and no schema
+        # constant carries review-GO semantics.
+        source = (ROOT / "scripts" / "issue213_gate_orchestration.py").read_text(
+            encoding="utf-8")
+        for forbidden in ("maintainer_review_go", "review_go_receipt",
+                          "build_review_receipt", "build_maintainer_review",
+                          "REVIEW_RECEIPT_SCHEMA"):
+            self.assertNotIn(forbidden, source)
+        # and the module exports no review-receipt builder
+        for name in dir(gate):
+            self.assertFalse(
+                name.startswith(("build_review", "build_maintainer_review")),
+                f"forbidden review-receipt builder: {name}")
+
+    def test_control32_doctrine_states_maintainer_exact_head_review(self):
+        # Canonical doctrine: maintainer review occurs on the PUSHED PR
+        # head, must mechanically identify the exact head, and must repeat
+        # after review-driven mutation; delegated review is optional.
+        text = (ROOT / "docs" / "campaign-gate-ordering.md").read_text(
+            encoding="utf-8")
+        self.assertIn("maintainer exact-head review", text.lower())
+        self.assertIn("pushed PR head", text)
+        self.assertIn("require re-review", text)
+        self.assertIn("zero delegated lanes is valid", text)
+        self.assertIn("no default lane count", text)
+        self.assertIn("no default 600/1200-second review requirement", text)
+        # the canonical workflow names the maintainer review authority
+        self.assertIn("MAINTAINER EXACT-HEAD PR REVIEW", text)
+        # and review-driven head mutation forces a fresh maintainer review
+        self.assertIn(
+            "if the head changes, the maintainer review repeats", text)
+
+    def test_control33_final_head_mutation_still_invalidates_identity(self):
+        # #213 exact-head semantics are unchanged by #224: a receipt bound
+        # to the pre-mutation head cannot satisfy the post-mutation final
+        # head, regardless of review authority.
+        before = make_final_head(sha="a" * 40)
+        after = make_final_head(sha="b" * 40)
+        receipt = make_receipt(sha="a" * 40)
+        self.assertTrue(
+            gate.validate_receipt(receipt, before.to_dict()))
+        self.assertFalse(
+            gate.validate_receipt(receipt, after.to_dict()))
+        ci_before = gate.build_hosted_ci_status("a" * 40, "run-81")
+        self.assertFalse(
+            gate.validate_hosted_ci_status(ci_before, "b" * 40))
+        # and the plan still schedules the mandatory final gates on the
+        # mutated head (one full suite + one hosted CI)
+        plan = gate.plan_campaign_gates(
+            gate.CampaignFlow("issue-224-mutation"),
+            review_mutates_head=True)
+        scheduled = [g for phase in plan["phases"] for g in phase["gates"]]
+        self.assertEqual(scheduled.count("full-cpu-suite"), 1)
+        self.assertEqual(scheduled.count("hosted-exact-head-ci"), 1)
 
 
 class ReceiptTests(unittest.TestCase):
