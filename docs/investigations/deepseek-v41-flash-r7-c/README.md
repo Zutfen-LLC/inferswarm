@@ -29,7 +29,7 @@ consumes R7-A/R7-B byte-for-byte and stops before model-state acquisition.
 The mechanical post-R7-B applicability audit classifies the 2,370 changed paths
 from the R7-B merge through reconciled main: 4 campaign-gate/CI paths, 2,357
 separate V340L Vulkan/hardware paths, and 9 other documentation/test paths. Its
-verbatim changed-path census is retained as `mainline-changed-paths.txt` (the
+changed-path census is retained as `mainline-changed-paths.txt` (the sorted
 output of the frozen read-only `git diff --name-only
 54d36cb9d8a4c0603abeb18968a8ffb7b52ca10e..fe690249873a9bf7ca19d788a2fab5e580473394`
 query, re-derived and byte-compared by a focused test), so the audit is a
@@ -127,8 +127,9 @@ cut, a re-signed R7-C authority that is not the deterministic derivation from
 the frozen predecessor bytes (alternate cut, authored stage bounds, substituted
 model/runtime/producer identity), an incomplete candidate-host set, a stale
 fleet census, a missing raw receipt, a parsed row that contradicts its retained
-receipt, duplicate or unknown device rows, aggregate-VRAM placement, and an
-authored terminal that differs from the deterministic reduction. Every one of
+receipt, duplicate or unknown device rows, a placement that relies on aggregate
+VRAM, and an authored terminal that differs from the deterministic reduction.
+Every one of
 these is an internal-consistency check. Where the retained raw bytes are
 themselves forged consistently with the rows derived from them - a fabricated
 receipt, an emptied foreign-process receipt that silently re-issues an occupied
@@ -137,11 +138,11 @@ cannot tell the forgery from a genuine observation, because the bundle carries
 no out-of-band signing anchor. Such a forgery produces a DIFFERENT reduction
 document: the retained terminal *document* is not reachable through it, and the
 reducer rejects the pair with `committed terminal differs from deterministic
-reduction`. What such a forgery CAN reproduce is the terminal string itself -
-the accepted value is `R7C_CURRENT_FLEET_CAPACITY_PREREQUISITE` under any census
-whose every resource is far below both stage bounds, which is what this fleet is
-- and a joint census-plus-terminal rewrite is certified by the finalizer exactly
-as the retained pair is. That is the disclosed no-anchor boundary, not a
+reduction`. What such a forgery CAN reproduce is the terminal string itself: any
+census that cannot place both stages on distinct resources yields
+`R7C_CURRENT_FLEET_CAPACITY_PREREQUISITE`, and this fleet is such a census. A
+joint census-plus-terminal rewrite is then certified by the finalizer exactly as
+the retained pair is. That is the disclosed no-anchor boundary, not a
 protection: a terminal string is not acceptance. The fleet record retains the
 exact source hash, command
 receipts, raw GPU rows, foreign-process rows, and any SSH timeout receipts that
