@@ -51,8 +51,14 @@ independent review) must schedule validation per the
 reviewer-trust gates before review, the default independent review being
 the maintainer's exact-head review of the pushed PR (delegated agent/LLM
 adversarial reviews are optional, targeted advisory lanes with no default
-count or timeout), and the single full-suite + hosted-CI cycle only on the
-final reviewed head, after review-driven fixes land.
+count or timeout), then final validation of the single reviewed head:
+one hosted **Final CPU Validation** run (the canonical full CPU suite,
+dispatched via `final-cpu-validation.yml` on the exact reviewed SHA —
+`gh workflow run final-cpu-validation.yml --ref <branch> -f
+expected_sha=<sha>`) plus the ordinary hosted CI run, both on the same
+exact head. A separate local full-suite run is not additionally required
+once the hosted final validation is accepted; local runs remain
+diagnostic.
 
 The canonical CPU test environment (Issue #131) is declared once in
 [`requirements-test.txt`](requirements-test.txt) (which installs the immutable

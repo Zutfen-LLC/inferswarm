@@ -332,7 +332,12 @@ class Issue184PreservationTests(unittest.TestCase):
             # producer, independently pinned by its additive R7-C evidence
             # manifest and covered by its own CI group.
             "scripts/issue222_r7c.py",
-            ".github/workflows/ci.yml")
+            ".github/workflows/ci.yml",
+            # Issue #226: additive hosted Final CPU Validation workflow
+            # (workflow_dispatch-only, exact-SHA bound); no producer or
+            # retained-evidence surface, independently covered by the
+            # issue-213-gate-ordering CI group.
+            ".github/workflows/final-cpu-validation.yml")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)
 

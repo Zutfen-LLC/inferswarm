@@ -198,6 +198,10 @@ GROUP_TEST_MODULES = {
     # Issue #213: campaign gate ordering / exact-head suite receipts.
     "issue-213-gate-ordering": [
         "test_issue213_campaign_gate_ordering",
+        # Issue #226: hosted Final CPU Validation CI (successor doctrine
+        # in the same orchestration line; envelope validates against the
+        # same #213 machinery).
+        "test_issue226_final_validation_ci",
     ],
     "issue-187-r7a": [
         "test_issue187_r7a",
@@ -504,7 +508,12 @@ PATH_GROUPS = {
     "scripts/issue222_r7c.py": ["issue-222-r7c"],
     "docs/investigations/deepseek-v41-flash-r7-b/": ["issue-209-r7b"],
     "scripts/issue182_manifest.py": ["issue-182-arm-e"],
-    # Issue #213 campaign gate ordering (orchestration tooling + tests)
+    # Issue #213 campaign gate ordering (orchestration tooling + tests);
+    # Issue #226 adds the hosted Final CPU Validation workflow, envelope
+    # seams, and its controls in the same doctrinal group.  (Workflow
+    # files themselves stay under the CI_WORKFLOW_PREFIXES fail-closed
+    # rule — a workflow change always selects full regression; these
+    # entries deliberately do NOT narrow that.)
     "scripts/issue213_gate_orchestration.py": ["issue-213-gate-ordering"],
     "docs/campaign-gate-ordering.md": ["issue-213-gate-ordering"],
     # The parallel full-suite runner itself (Issue #173): its contract

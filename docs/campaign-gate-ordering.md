@@ -1,4 +1,4 @@
-# Campaign validation gate ordering (Issues #213 / #224)
+# Campaign validation gate ordering (Issues #213 / #224 / #226)
 
 Normative rule for how a physical/research campaign schedules validation
 around independent review. This document is the single repository-owned
@@ -64,8 +64,12 @@ PRE-REVIEW PHASE (cheap, reviewer-trust gates only)
    if the head changes, the maintainer review repeats on the new exact head)
 -> FINAL-HEAD PHASE (requirements proven against one final reviewed head)
   one full CPU suite (mandatory; never omitted from a campaign plan)
+    — satisfied by the HOSTED Final CPU Validation run on the exact head
+      (Issue #226); a separate local full-suite run is NOT additionally
+      required, and the full suite is not run on every PR push
   one hosted exact-head CI (mandatory; never omitted from a campaign plan)
-  finalizer/status fixed-point checks
+  finalizer/status fixed-point checks (embedded in the hosted Final CPU
+    Validation run, or satisfied from its receipt)
 -> MAINTAINER VERIFIES HEAD DID NOT MOVE + FINAL GATES GREEN -> MERGE
 ```
 
@@ -400,6 +404,81 @@ Handoff is therefore impossible when the suite receipt is from SHA A and
 the final head is SHA B, when the CI SUCCESS is from SHA A and the final
 head is SHA B, when suite and CI are individually valid but bound to
 different SHAs, or when either identity is malformed or incomplete.
+
+## Hosted Final CPU Validation (Issue #226)
+
+The canonical full CPU suite runs HOSTED as the explicit post-review
+final validation — one workflow, one exact head, one run. This replaces
+the former separate local-full-suite + hosted-CI coordination: after
+this doctrine, **a separate local canonical full-suite execution is no
+longer a required handoff gate** when an accepted hosted Final CPU
+Validation exists for the exact head. Local full-suite runs remain
+available diagnostically, but do not run both by default.
+
+Workflow: [`.github/workflows/final-cpu-validation.yml`](../.github/workflows/final-cpu-validation.yml),
+exposing the stable check **Final CPU Validation Gate**. Properties:
+
+- **Trigger**: `workflow_dispatch` only, with the required 40-hex
+  `expected_sha` input (plus an optional `pr_number` for audit
+  navigation). The dispatch `--ref` is transport only; `expected_sha` is
+  the execution authority. The workflow is invoked after maintainer GO
+  as process doctrine — the workflow deliberately does not encode a
+  maintainer-approval receipt (there is no agent-self-asserted review
+  authority anywhere in this doctrine).
+- **Exact-head binding**: the workflow validates the `expected_sha`
+  shape, checks out that exact commit, and mechanically requires
+  `git rev-parse HEAD == expected_sha` before any suite execution. A
+  moving branch ref can never change the validated subject; a wrong
+  checked-out SHA fails before the suite runs.
+- **Canonical execution**: it bootstraps and doctors the canonical
+  Issue #131 CPU environment, then runs the canonical
+  `scripts/run_full_cpu_suite.py --json` under the canonical
+  final-validation configuration (default tests directory, default jobs
+  schedule, default per-task timeout, no retention) — the same
+  discovery/population-authority/serial-vs-executed identity contract as
+  a local run. "All CI groups succeeded" is never a substitute; a suite
+  FAIL fails the gate; the composition step re-derives the head's
+  canonical plan and requires the executed population, count, and
+  configuration to match it.
+- **Fixed-point checks**: the deterministic finalizer `--check` and
+  `sync_project_status.py --check` run as steps on the same exact head
+  before the receipt is composed; a failure of either fails the gate.
+- **Receipt**: the run retains a structured artifact binding the
+  envelope schema (`hosted-final-validation-receipt/1`), the exact
+  `expected_sha`/checked-out SHA, the GitHub run id/attempt, the
+  workflow name, and the embedded #213 exact-head suite receipt (which
+  itself carries the canonical suite command/configuration, serial and
+  executed identity digests, test count, and the environment-authority
+  identity). Malformed or missing identity fails the job — the artifact
+  is never acceptance by itself.
+- **Merge contract**: the final handoff requires BOTH on the same exact
+  PR head — the ordinary PR **CI Gate** SUCCESS (impact-selected
+  correctness + repo integrity) AND the **Final CPU Validation Gate**
+  SUCCESS (canonical full suite + finalizer/status). They remain
+  distinct checks; neither green boolean substitutes for the other.
+- **Head mutation**: a Final CPU Validation result is valid only for its
+  exact SHA. If the PR head changes after review or final validation,
+  the prior maintainer GO and the prior final-validation run no longer
+  apply; ordinary PR CI runs naturally on the new head, the maintainer
+  re-reviews, and a new final-validation run is required after GO.
+  Branch name, PR number, and "latest successful run" are never a
+  substitute for exact head identity.
+- **Ordinary PRs unchanged**: PR CI stays impact-selected
+  (planner + repo-integrity + selected groups); the full canonical CPU
+  suite is not run on every PR push. Push-to-main full-regression
+  behavior is unchanged as a post-merge safety net.
+
+`handoff_gate_status` consumes this through the optional
+`final_validation_receipt` parameter (added by #226 with a fail-closed
+default of `None`; the pre-#226 four-argument call keeps its exact
+semantics). The envelope satisfies the full-suite requirement ONLY
+through its embedded suite receipt validated against the FULL
+independently derived final-head identity — same SHA, same canonical
+suite configuration, same environment authority — plus proven
+finalizer/status checks. A bare workflow-success boolean can never
+satisfy the gate; supplying BOTH a local suite receipt and a hosted
+final-validation receipt is a fail-closed error (exactly one
+full-suite proof, no competing contracts).
 
 ## Review-critical reuse and accounting terminology
 

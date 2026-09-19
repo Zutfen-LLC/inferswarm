@@ -53,6 +53,21 @@ handoff.  Four concerns live here:
    SHA, ``SUCCESS`` result, run identity); a bare unbound boolean can never
    complete handoff.
 
+5. **Hosted Final CPU Validation receipts (Issue #226).**  The canonical
+   full CPU suite may run HOSTED — the ``final-cpu-validation.yml``
+   workflow executes the same ``run_full_cpu_suite.py`` runner on one
+   exact dispatched SHA and emits a ``hosted-final-validation-receipt/1``
+   envelope wrapping the ordinary exact-head suite receipt plus GitHub
+   run identity.  ``build_final_validation_receipt`` /
+   ``validate_final_validation_receipt`` are the fail-closed envelope
+   contract: an envelope satisfies a final-head request only through its
+   embedded, independently validated suite receipt plus proven
+   finalizer/status checks — never through a bare workflow-success
+   boolean.  With the Issue #226 doctrine the hosted final-validation
+   receipt is the canonical way the full-suite requirement is satisfied;
+   a separate local full-suite receipt is NOT additionally required
+   (``handoff_gate_status`` accepts either proof, exactly one).
+
 This module is orchestration metadata tooling, NOT a hash-pinned evidence
 producer and NOT a persistent result cache: the launch guard keeps at most
 one bounded completion receipt per live identity on a host; receipts are
@@ -79,6 +94,11 @@ from pathlib import Path
 SCHEMA = "campaign-gate-ordering/1"
 RECEIPT_SCHEMA = "exact-head-suite-receipt/1"
 CI_STATUS_SCHEMA = "hosted-ci-exact-head-status/1"
+# Hosted Final CPU Validation envelope (Issue #226): wraps the ordinary
+# exact-head suite receipt with GitHub run identity and the finalizer /
+# project-status proof.  It is an ENVELOPE over the #213 machinery, never
+# a competing identity format.
+FINAL_VALIDATION_RECEIPT_SCHEMA = "hosted-final-validation-receipt/1"
 LAUNCH_IDENTITY_SCHEMA = "suite-launch-identity/1"
 LAUNCH_LOCK_SCHEMA = "suite-launch-lock/2"
 COMPLETION_SCHEMA = "suite-launch-completion/1"
@@ -761,6 +781,146 @@ def validate_hosted_ci_status(status: dict, expected_sha: str) -> bool:
     return sha == expected_sha
 
 
+def build_final_validation_receipt(git_commit_sha: str, suite_receipt: dict,
+                                   *, github_run_id: str,
+                                   github_run_attempt: int,
+                                   workflow: str = "Final CPU Validation",
+                                   pr_number: int | None = None,
+                                   finalizer_check: bool,
+                                   project_status_check: bool) -> dict:
+    """Build a hosted Final CPU Validation envelope (Issue #226).
+
+    The envelope is DERIVED, never trusted: it embeds a structurally
+    validated exact-head suite receipt (validated here against the
+    envelope's own SHA) plus GitHub run identity and the two hosted
+    fixed-point checks.  ``finalizer_check`` / ``project_status_check``
+    are the hosted proof inputs and must be proven booleans — the
+    workflow's own composition step runs only after those checks
+    succeeded, and the handoff gate below re-requires them.
+    """
+    _validate_git_sha(git_commit_sha, "final-validation git_commit_sha")
+    if not isinstance(suite_receipt, dict):
+        raise GateOrderingError(
+            "final-validation suite receipt is not an object (fail closed)")
+    if suite_receipt.get("schema") != RECEIPT_SCHEMA:
+        raise GateOrderingError(
+            "final-validation envelope must embed an exact-head suite "
+            f"receipt (fail closed): {suite_receipt.get('schema')!r}")
+    # Bind the embedded receipt to the envelope SHA independently of any
+    # request: structural validation plus exact SHA agreement.
+    validate_receipt(suite_receipt,
+                     {**request_identity(suite_receipt),
+                      "git_commit_sha": git_commit_sha})
+    if not isinstance(github_run_id, str) or not github_run_id.strip():
+        raise GateOrderingError(
+            "final-validation run identity is malformed (fail closed): "
+            f"{github_run_id!r}")
+    if (not isinstance(github_run_attempt, int)
+            or isinstance(github_run_attempt, bool)
+            or github_run_attempt < 1):
+        raise GateOrderingError(
+            "final-validation run attempt is malformed (fail closed): "
+            f"{github_run_attempt!r}")
+    if not isinstance(workflow, str) or not workflow.strip():
+        raise GateOrderingError(
+            "final-validation workflow name is malformed (fail closed): "
+            f"{workflow!r}")
+    if pr_number is not None and (not isinstance(pr_number, int)
+                                  or isinstance(pr_number, bool)
+                                  or pr_number < 1):
+        raise GateOrderingError(
+            "final-validation pr_number is malformed (fail closed): "
+            f"{pr_number!r}")
+    for name, value in (("finalizer_check", finalizer_check),
+                        ("project_status_check", project_status_check)):
+        if not isinstance(value, bool):
+            raise GateOrderingError(
+                f"final-validation {name} must be a boolean (fail closed): "
+                f"{value!r}")
+    envelope = {
+        "schema": FINAL_VALIDATION_RECEIPT_SCHEMA,
+        "git_commit_sha": git_commit_sha,
+        "suite_receipt": suite_receipt,
+        "github_run_id": github_run_id,
+        "github_run_attempt": github_run_attempt,
+        "workflow": workflow,
+        "finalizer_check": finalizer_check,
+        "project_status_check": project_status_check,
+    }
+    if pr_number is not None:
+        envelope["pr_number"] = pr_number
+    validate_final_validation_receipt(envelope, git_commit_sha)
+    return envelope
+
+
+def validate_final_validation_receipt(envelope: dict,
+                                      expected_sha: str) -> bool:
+    """Validate a hosted final-validation envelope (fail closed).
+
+    An envelope proves the canonical full-suite requirement ONLY through
+    its embedded suite receipt — structurally validated and bound to the
+    SAME exact SHA as the envelope — plus hosted finalizer and
+    project-status proof.  A bare workflow-success boolean can never
+    satisfy this.  Malformed/missing/unknown fields raise; a well-formed
+    envelope for a DIFFERENT SHA returns False (stale, not this head).
+    """
+    if not isinstance(envelope, dict):
+        raise GateOrderingError(
+            "final-validation receipt is not an object (fail closed)")
+    if envelope.get("schema") != FINAL_VALIDATION_RECEIPT_SCHEMA:
+        raise GateOrderingError(
+            "unknown final-validation receipt schema (fail closed): "
+            f"{envelope.get('schema')!r}")
+    sha = _validate_git_sha(envelope.get("git_commit_sha"),
+                            "final-validation receipt git_commit_sha")
+    if not isinstance(envelope.get("suite_receipt"), dict):
+        raise GateOrderingError(
+            "final-validation receipt lacks the embedded suite receipt "
+            "(fail closed)")
+    # The embedded suite receipt must be structurally valid AND bound to
+    # the envelope's own SHA (an embedded receipt from another head is
+    # exactly the substitution this must reject).
+    if not validate_receipt(envelope["suite_receipt"],
+                            {**request_identity(envelope["suite_receipt"]),
+                             "git_commit_sha": sha}):
+        raise GateOrderingError(
+            "final-validation embedded suite receipt does not bind to the "
+            "envelope SHA (fail closed)")
+    for name in ("github_run_id",):
+        value = envelope.get(name)
+        if not isinstance(value, str) or not value.strip():
+            raise GateOrderingError(
+                f"final-validation receipt {name} is malformed (fail "
+                f"closed): {value!r}")
+    if (not isinstance(envelope.get("github_run_attempt"), int)
+            or isinstance(envelope.get("github_run_attempt"), bool)
+            or envelope["github_run_attempt"] < 1):
+        raise GateOrderingError(
+            "final-validation receipt github_run_attempt is malformed "
+            f"(fail closed): {envelope.get('github_run_attempt')!r}")
+    if not isinstance(envelope.get("workflow"), str) \
+            or not envelope.get("workflow", "").strip():
+        raise GateOrderingError(
+            "final-validation receipt workflow is malformed (fail closed): "
+            f"{envelope.get('workflow')!r}")
+    for name in ("finalizer_check", "project_status_check"):
+        if not isinstance(envelope.get(name), bool):
+            raise GateOrderingError(
+                f"final-validation receipt {name} is malformed (fail "
+                f"closed): {envelope.get(name)!r}")
+        if not envelope[name]:
+            raise GateOrderingError(
+                f"final-validation receipt {name} did not pass (fail "
+                "closed)")
+    if "pr_number" in envelope:
+        pr = envelope["pr_number"]
+        if not isinstance(pr, int) or isinstance(pr, bool) or pr < 1:
+            raise GateOrderingError(
+                f"final-validation receipt pr_number is malformed (fail "
+                f"closed): {pr!r}")
+    return sha == expected_sha
+
+
 @dataclass(frozen=True)
 class FinalHeadRequest:
     """An independently derived current/final-head request identity.
@@ -994,7 +1154,8 @@ def current_final_head_request(root: Path, *, tests_dir: Path | None = None,
 def handoff_gate_status(final_head: FinalHeadRequest,
                         suite_receipt: dict | None,
                         hosted_ci_status: dict | None,
-                        finalizer_ok: bool) -> dict:
+                        finalizer_ok: bool,
+                        final_validation_receipt: dict | None = None) -> dict:
     """Final handoff decision (fail closed).
 
     Every required final gate is proven against the ONE independently
@@ -1007,6 +1168,19 @@ def handoff_gate_status(final_head: FinalHeadRequest,
     is process authority outside the implementation agent's evidence
     graph, and this decision is purely mechanical over
     suite/CI/finalizer identity (Issue #224).
+
+    Issue #226: the full-suite requirement may be satisfied by EITHER a
+    local exact-head suite receipt (``suite_receipt``) OR a hosted Final
+    CPU Validation receipt (``final_validation_receipt``) bound to the
+    same exact head and carrying the canonical suite identity — exactly
+    one proof is required, never both (no local+hosted double
+    requirement).  A hosted final-validation receipt proves the full-suite
+    requirement AND the finalizer/status fixed-point checks it embeds; it
+    never substitutes for the ordinary hosted-CI gate.  Migration is fail
+    closed: pre-#226 callers passing only the four original arguments keep
+    their exact semantics (the original call shape must pass
+    ``suite_receipt``), and passing BOTH suite receipts is rejected rather
+    than silently preferring one.
     """
     if not isinstance(final_head, FinalHeadRequest):
         raise GateOrderingError(
@@ -1017,6 +1191,41 @@ def handoff_gate_status(final_head: FinalHeadRequest,
         # Malformed receipts RAISE (visible fail-closed rejection), never
         # silently degrade to a quiet False.
         suite_ok = validate_receipt(suite_receipt, final_head.to_dict())
+    hosted_final_ok = False
+    if final_validation_receipt is not None:
+        # A bare workflow-success boolean can never satisfy this: the
+        # envelope must embed a suite receipt that validates against the
+        # SAME independently derived final head (not merely against the
+        # envelope's own claimed SHA) plus proven finalizer/status checks.
+        if not validate_final_validation_receipt(
+                final_validation_receipt, final_head.git_commit_sha):
+            raise GateOrderingError(
+                "hosted final-validation receipt is well-formed for "
+                "another head (fail closed): it cannot satisfy this final "
+                "head request")
+        # The embedded suite receipt must validate against the FULL
+        # independently derived final-head identity — same canonical suite
+        # configuration AND environment authority, not merely the same
+        # SHA — exactly like a local suite receipt (#213 guarantee:
+        # a result from a different suite configuration or environment
+        # can never satisfy this gate).
+        if not validate_receipt(final_validation_receipt["suite_receipt"],
+                                final_head.to_dict()):
+            raise GateOrderingError(
+                "hosted final-validation receipt's suite identity (suite "
+                "configuration or environment authority) does not match "
+                "the final-head request (fail closed)")
+        hosted_final_ok = True
+        if suite_receipt is not None and suite_ok:
+            raise GateOrderingError(
+                "passing BOTH a local suite receipt and a hosted "
+                "final-validation receipt creates two competing "
+                "final-validation contracts (fail closed): supply exactly "
+                "one full-suite proof")
+        suite_ok = True
+        # The hosted final-validation receipt proves the finalizer/status
+        # fixed-point checks on the same exact head (validated above to
+        # have passed); it never weakens an explicit finalizer_ok=False.
     ci_ok = False
     if hosted_ci_status is not None:
         # A bare boolean cannot satisfy this: the structured status must
@@ -1030,13 +1239,19 @@ def handoff_gate_status(final_head: FinalHeadRequest,
         "handoff_complete": ok,
         "final_head_sha": final_head.git_commit_sha,
         "full_suite_receipt_valid": suite_ok,
+        "full_suite_proof": ("hosted-final-validation" if hosted_final_ok
+                             else ("exact-head-suite-receipt"
+                                   if suite_receipt is not None else None)),
         "hosted_ci_success": ci_ok,
         "finalizer_status_ok": finalizer_ok,
         "note": ("all final gates must bind to the one independently "
                  "supplied final-head identity; this decision is purely "
                  "mechanical over suite/CI/finalizer identity — no review "
                  "verdict (maintainer or delegated) is a machine input, "
-                 "and review GO is necessary but never sufficient"),
+                 "and review GO is necessary but never sufficient; the "
+                 "full-suite requirement is satisfied by exactly one of a "
+                 "local exact-head suite receipt or a hosted "
+                 "final-validation receipt (Issue #226), never both"),
     }
 
 
