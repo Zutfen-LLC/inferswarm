@@ -223,7 +223,8 @@ def verify_authority(doc: dict[str, Any], root: Path = ROOT) -> bool:
         return False
 
 
-def write_authority(root: Path = ROOT) -> Path:
+def write_authority(root: Path | None = None) -> Path:
+    root = Path(root) if root is not None else ROOT
     out = root / rc.AREA_REL / "PHYSICAL-AUTHORITY.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_bytes(json.dumps(build_authority(root), indent=1,
