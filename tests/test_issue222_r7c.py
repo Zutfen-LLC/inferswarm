@@ -107,6 +107,7 @@ class Issue222R7CTests(unittest.TestCase):
         fleet = r7c.assemble_fleet(authority, records, collected_at_unix=1000)
         self.assertEqual(fleet["candidate_hosts"], list(r7c.CANDIDATE_HOSTS))
         self.assertEqual(fleet["unavailable_hosts"], ["inferswarm02", "inferswarm04"])
+        self.assertEqual(set(fleet["host_records"]), set(r7c.CANDIDATE_HOSTS))
         self.assertEqual(len(fleet["resources"]), 0)
         with self.assertRaisesRegex(ValueError, "candidate-host set"):
             r7c.assemble_fleet(authority, {"inferswarm01": records["inferswarm01"]},

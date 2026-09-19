@@ -267,6 +267,7 @@ def assemble_fleet(authority: dict[str, Any], records: dict[str, dict[str, Any]]
         "authority_sha256": authority.get("authority_sha256"),
         "candidate_hosts": list(CANDIDATE_HOSTS),
         "unavailable_hosts": unavailable,
+        "host_records": {host: records[host] for host in CANDIDATE_HOSTS},
         "resources": resources,
         "observation_problems": observation_problems,
         "collected_at_unix": int(time.time()) if collected_at_unix is None else collected_at_unix,
