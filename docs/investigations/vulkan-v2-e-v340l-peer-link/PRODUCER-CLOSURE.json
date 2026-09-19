@@ -1,13 +1,13 @@
 {
  "campaign_id": "issue228-v2e-v340l-interdie-peer-link",
- "closure_digest": "27fbecf1af359dcd451b19499eff4540513f42dee05b2088f6e285879759edf0",
- "producer_head": "8d90cc44a1fe1bfd11866b2735fdf91820ccb6b4",
+ "closure_digest": "76f884ed1762d4e71e67c62b4cfc34eaf1b2f8608ae0729d1882e5353777b7bc",
+ "producer_head": "c7d8d74593e9a8d424bbff285093708973c8420e",
  "schema": "inferswarm.v2e.producer-closure/1",
  "sources": {
   "scripts/issue228_assemble.py": "0c4c61c19ee065fead9fdbe13915ca52cdf52b37a8d11204a070a24ae6df9867",
   "scripts/issue228_authority.py": "c39a34d797864f28cecafa705fd137ed64bb46b1e348086fcaf0bed62bdbf317",
   "scripts/issue228_baselines.py": "cee86ea146472077ba3780319a4e0f8cce982c719a720128fc7487ca7f684aab",
-  "scripts/issue228_capability.py": "7444fc3a1d212032ec8cc653d9ea2a08ef7d88d2e0f82f0565107936f3155227",
+  "scripts/issue228_capability.py": "387280c645b783ad15f4581e7fc7e79efdc1d6c6494f2bad486e5b863de7812b",
   "scripts/issue228_freeze.py": "ca00c858f7c5ee2842a4aca9672dd1ce5fb5f0f395dc48b2f892d9ea142eb095",
   "scripts/issue228_host.py": "6fd87397d2cb09a2b385283c2aba381689bf53ab3070940068829a708383768f",
   "scripts/issue228_ladder.py": "a28ae8ac7a7c916300f4b976eff7fd11a4e12ad91dba3060016e0947f46e0f7a",
