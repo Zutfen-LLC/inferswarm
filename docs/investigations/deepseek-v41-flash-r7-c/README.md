@@ -116,26 +116,35 @@ above. Hardening the producer changed its bytes and therefore invalidated the
 earlier census's collector-identity binding, so it cannot carry acceptance. It
 proved only that the four candidates were probed and that two of them did not
 answer at that time; it never carried acceptance under the accepted authority,
-because the accepted terminal is re-derived under the final authority.
+because the accepted terminal is re-derived under the final authority. Its
+retained terminal field does hold the same terminal string - a terminal string
+is not acceptance.
 
 ## Controls and scope
 
 The committed reducer/tests fail closed on mutated R7-A/R7-B authority, altered
 cut, a re-signed R7-C authority that is not the deterministic derivation from
 the frozen predecessor bytes (alternate cut, authored stage bounds, substituted
-model/runtime/producer identity), incomplete candidate-host set, stale fleet
-census, missing foreign-process receipts, foreign-process availability
-substitution, duplicate or unknown device rows, aggregate-VRAM placement, and an
-authored terminal that differs from the deterministic reduction. The fleet
-record retains the exact source hash, command receipts, raw GPU rows,
-foreign-process rows, and any SSH timeout receipts that the reduction consumes.
-Receipt digests establish the integrity of the retained raw bytes, not their
-authenticity: the census carries no out-of-band signing anchor and is trusted
-through maintainer review of this bundle. Freshness is enforced against the real
-clock at collection and reduction time, but re-verifying a frozen bundle reuses
-the terminal's own preserved `reduced_at_unix`, so a jointly re-dated
-census/terminal pair is not detectable from the bundle alone - the same
-disclosed no-anchor boundary.
+model/runtime/producer identity), an incomplete candidate-host set, a stale
+fleet census, a missing raw receipt, a parsed row that contradicts its retained
+receipt, duplicate or unknown device rows, aggregate-VRAM placement, and an
+authored terminal that differs from the deterministic reduction. Every one of
+these is an internal-consistency check. Where the retained raw bytes are
+themselves forged consistently with the rows derived from them - a fabricated
+receipt, an emptied foreign-process receipt that silently re-issues an occupied
+resource as available, a jointly re-dated census/terminal pair - the reducer
+cannot tell the forgery from a genuine observation, because the bundle carries
+no out-of-band signing anchor. Such a forgery produces a DIFFERENT reduction
+document, which is rejected against the retained terminal (`committed terminal
+differs from deterministic reduction`), so the accepted terminal value is not
+reachable through it. The fleet record retains the exact source hash, command
+receipts, raw GPU rows, foreign-process rows, and any SSH timeout receipts that
+the reduction consumes. Freshness is enforced against the real clock at
+collection and reduction time, but re-verifying a frozen bundle reuses the
+terminal's own preserved `reduced_at_unix`, so a jointly re-dated census/terminal
+pair is not detectable from the bundle alone - the same disclosed no-anchor
+boundary. The README-to-`repo_head` pin above is likewise a test-only anchor,
+for the same reason: the finalizer sandbox has no repository and no git.
 
 This result establishes no DeepSeek numerical correctness, full checkpoint
 execution, performance, serving readiness, production support, conversion,

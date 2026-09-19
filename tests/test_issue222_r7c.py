@@ -4,6 +4,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -413,22 +414,28 @@ class Issue222R7CTests(unittest.TestCase):
         authority = json.loads((area / "authority.json").read_text())
         fleet = json.loads((area / "fleet-census.json").read_text())
         committed = json.loads((area / "terminal-reduction.json").read_text())
+        r7b_terminal = json.loads((root / r7c.R7B_TERMINAL).read_text())
+        r7a_census = json.loads((root / r7c.R7A_CENSUS).read_text())
         audit = authority["mainline_applicability_audit"]
         rejected = committed["placement"]["rejected"]
+        stage_a = authority["stage_footprints"]["stage-a"]
+        stage_b = authority["stage_footprints"]["stage-b"]
         claims = {
             "repo_head": authority["repo_head"],
-            "R7-A merge": "7417c2f58a63d4da854ff399ba6fea5bd722da83",
+            "R7-A merge": r7b_terminal["predecessor"]["merge"],
             "R7-B merge": r7c.R7B_MERGE,
             "reconciled main": r7c.RECONCILED_MAIN,
             "model revision": authority["model"]["revision"],
             "runtime revision": authority["runtime"]["revision"],
+            "sharded safetensors": f"{len({row['shard'] for row in r7a_census['tensors']})} official sharded",
             "terminal": committed["terminal"],
-            "stage-a bound": f"{authority['stage_footprints']['stage-a']['logical_required_bytes']:,}",
-            "stage-b bound": f"{authority['stage_footprints']['stage-b']['logical_required_bytes']:,}",
-            "stage-a tensors": f"{authority['stage_footprints']['stage-a']['tensor_count']:,}",
-            "stage-b tensors": f"{authority['stage_footprints']['stage-b']['tensor_count']:,}",
-            "stage-a shard count": f"| {len(authority['stage_footprints']['stage-a']['shards'])} |",
-            "stage-b shard count": f"| {len(authority['stage_footprints']['stage-b']['shards'])} |",
+            "phase": f"stopped at Phase {committed['phase_stop'].split()[1]}",
+            "stage-a bound": f"{stage_a['logical_required_bytes']:,}",
+            "stage-b bound": f"{stage_b['logical_required_bytes']:,}",
+            "stage-a tensors": f"{stage_a['tensor_count']:,}",
+            "stage-b tensors": f"{stage_b['tensor_count']:,}",
+            "stage-a shard count": f"| {len(stage_a['shards'])} |",
+            "stage-b shard count": f"| {len(stage_b['shards'])} |",
             "changed paths": f"{audit['changed_path_count']:,}",
             "campaign gate paths": f"{audit['scope_counts']['campaign_gate_ordering_or_ci']} campaign-gate/CI paths",
             "vulkan paths": f"{audit['scope_counts']['vulkan_campaigns_and_hardware_inventory']:,} separate V340L Vulkan/hardware paths",
@@ -440,6 +447,7 @@ class Issue222R7CTests(unittest.TestCase):
         }
         for label, value in claims.items():
             with self.subTest(claim=label):
+                self.assertGreater(len(value), 1, f"degenerate derived claim {label}")
                 self.assertIn(value, flat, f"README does not state {label}={value}")
         for resource in fleet["resources"]:
             with self.subTest(resource=resource["resource_id"]):
@@ -449,20 +457,62 @@ class Issue222R7CTests(unittest.TestCase):
         for process in [p for r in fleet["resources"] for p in r["foreign_processes"]]:
             with self.subTest(foreign_pid=process["pid"]):
                 self.assertIn(process["pid"], flat)
-        # The superseded-observation paragraph cites specific commits; pin what
-        # those commits' retained censuses actually say.
-        self.assertEqual(fleet["unavailable_hosts"], [])
-        for commit, expected in (
-                ("1001c47", ["inferswarm02", "inferswarm04"]),
-                ("1cd140e", [])):
-            with self.subTest(superseded=commit):
-                blob = subprocess.run(
-                    ["git", "-C", str(root), "show",
-                     f"{commit}:{r7c.AREA}/fleet-census.json"],
-                    capture_output=True, text=True)
-                self.assertEqual(blob.returncode, 0, blob.stderr)
-                self.assertEqual(json.loads(blob.stdout)["unavailable_hosts"], expected)
-                self.assertIn(commit, readme)
+                self.assertIn(f"({process['used_memory_mib']} MiB)", flat)
+        if not fleet["unavailable_hosts"]:
+            self.assertIn("`unavailable_hosts` is empty", flat)
+        # No stale identity may hide in the prose: every 40-hex token the README
+        # cites must be one of the retained identities. This is the check whose
+        # absence let a stale generation head survive two rounds.
+        known = {authority["repo_head"], r7b_terminal["predecessor"]["merge"],
+                 r7c.R7B_MERGE, r7c.RECONCILED_MAIN,
+                 authority["model"]["revision"], authority["runtime"]["revision"]}
+        for token in re.findall(r"\b[0-9a-f]{40}\b", flat):
+            with self.subTest(hex_token=token):
+                self.assertIn(token, known,
+                              f"README cites an identity that is not retained: {token}")
+        # The superseded-observation paragraph cites specific commits; pin the
+        # facts it attributes to them against those commits' retained censuses.
+        blobs = {}
+        for commit in ("1001c47", "cf391c1", "beb5d79", "1cd140e"):
+            blob = subprocess.run(
+                ["git", "-C", str(root), "show",
+                 f"{commit}:{r7c.AREA}/fleet-census.json"],
+                capture_output=True, text=True)
+            self.assertEqual(blob.returncode, 0, blob.stderr)
+            self.assertIn(commit, flat)
+            blobs[commit] = json.loads(blob.stdout)
+        superseded = blobs["1001c47"]
+        self.assertEqual(superseded, blobs["cf391c1"])
+        self.assertEqual(superseded, blobs["beb5d79"])
+        self.assertEqual(superseded["unavailable_hosts"],
+                         ["inferswarm02", "inferswarm04"])
+        self.assertEqual(len(superseded["resources"]), 4)
+        self.assertIn(f"{max(r['usable_device_bytes'] for r in superseded['resources']):,}", flat)
+        self.assertIn(superseded["host_records"]["inferswarm01"]["collector_sha256"][:8], flat)
+        later = blobs["1cd140e"]
+        self.assertEqual(later["unavailable_hosts"], [])
+        self.assertEqual(len(later["resources"]), len(fleet["resources"]))
+        self.assertEqual(max(r["usable_device_bytes"] for r in later["resources"]),
+                         rejected["stage-a"]["largest_compatible_usable_bytes"])
+
+    def test_missing_raw_receipt_and_unknown_device_row_fail_closed(self):
+        """The two receipt-surface claims the README's control list makes."""
+        authority = r7c.build_authority(ROOT, repo_head="f" * 40)
+        fleet = self._valid_fleet(authority)
+
+        missing = copy.deepcopy(fleet)
+        del missing["host_records"]["inferswarm01"]["receipts"]["nvidia_smi_apps"]
+        with self.assertRaisesRegex(ValueError, "raw receipt absent"):
+            r7c.reduction_document(authority, missing, now_unix=1000)
+
+        unknown = copy.deepcopy(fleet)
+        record = unknown["host_records"]["inferswarm01"]
+        record["receipts"]["nvidia_smi_apps"] = self._receipt(
+            ["nvidia-smi", "--query-compute-apps=pid,gpu_uuid,used_memory",
+             "--format=csv,noheader,nounits"],
+            "4242, GPU-not-in-the-gpu-receipt, 512\n")
+        with self.assertRaisesRegex(ValueError, "names unknown GPU"):
+            r7c.reduction_document(authority, unknown, now_unix=1000)
 
 
 if __name__ == "__main__":
