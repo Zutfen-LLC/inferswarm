@@ -1,0 +1,39 @@
+{
+ "attempt_id": "pf2-map",
+ "authority_digest": "74b11cae67619d81482170e266fe6e4cb6b9e7f0424f619faa1c1e639fef71f7",
+ "authority_path": "/home/hermes/is228-pf2/docs/investigations/vulkan-v2-e-v340l-peer-link/PHYSICAL-AUTHORITY.json",
+ "bindings_path": "raw/bindings.json",
+ "campaign_id": "issue228-v2e-v340l-interdie-peer-link",
+ "fixture": false,
+ "inventory_measured_utc": "2026-09-19T22:49:10.566015+00:00",
+ "mapping_digest": "43949f488e821b3f7f92ac9e7c14cea0c6afddd4d2b16870b3d38b0654ef513c",
+ "nonclaims": [
+  "NON_AUTHORIZING for model inference; authorizes only V2-E peer-link measurement device binding"
+ ],
+ "participants": {
+  "a": {
+   "fresh_device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+   "fresh_pci_bdf": "06:00.0",
+   "fresh_selector": "Vulkan1",
+   "intended_identity": {
+    "compute_unit_id": "cu-v340l-die-a",
+    "hostname": "inferswarm02",
+    "memory_resource_id": "mr-v340l-die-a-vram",
+    "vram_bytes": 8573157376
+   }
+  },
+  "b": {
+   "fresh_device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+   "fresh_pci_bdf": "09:00.0",
+   "fresh_selector": "Vulkan2",
+   "intended_identity": {
+    "compute_unit_id": "cu-v340l-die-b",
+    "hostname": "inferswarm02",
+    "memory_resource_id": "mr-v340l-die-b-vram",
+    "vram_bytes": 8573157376
+   }
+  }
+ },
+ "reviewed_utc": "2026-09-19T22:49:10.566086+00:00",
+ "schema": "inferswarm.v2e.fresh-mapping/1"
+}

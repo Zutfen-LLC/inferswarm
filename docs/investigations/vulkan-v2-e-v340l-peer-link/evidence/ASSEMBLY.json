@@ -1,0 +1,242 @@
+{
+ "attempt": "pf2",
+ "blocked_reason": "census advertises capable mechanism(s) ['vulkan-external-memory-fd'] but transfer execution is disabled for this campaign; without measured transfers no functional, correct, measured peer path can be established (no measured transfers retained)",
+ "campaign_id": "issue228-v2e-v340l-interdie-peer-link",
+ "campaign_window_utc": [
+  "2026-09-19T22:49:20.190929+00:00",
+  "2026-09-19T22:49:26.195942+00:00"
+ ],
+ "capability_verdict": {
+  "api": {
+   "effective": "1.4.309",
+   "ext_matrix_effective": "1.4.309",
+   "requested": "1.1.0"
+  },
+  "capable_mechanisms": [
+   "vulkan-external-memory-fd"
+  ],
+  "census_valid": true,
+  "external_memory": {
+   "directions": {
+    "dma_buf": {
+     "a_to_b": {
+      "compatible_handle_types_ok": 0,
+      "destination_importable": true,
+      "source_exportable": true,
+      "usable": 0
+     },
+     "b_to_a": {
+      "compatible_handle_types_ok": 0,
+      "destination_importable": true,
+      "source_exportable": true,
+      "usable": 0
+     }
+    },
+    "opaque_fd": {
+     "a_to_b": {
+      "compatible_handle_types_ok": 1,
+      "destination_importable": true,
+      "source_exportable": true,
+      "usable": 1
+     },
+     "b_to_a": {
+      "compatible_handle_types_ok": 1,
+      "destination_importable": true,
+      "source_exportable": true,
+      "usable": 1
+     }
+    }
+   },
+   "usable_handle_types": [
+    "opaque_fd"
+   ]
+  },
+  "failure_reasons": [],
+  "group": {
+   "both_dies_in_one_group": false,
+   "note": "no Vulkan device group contains both V340 dies (co-membership absent on this stack)"
+  },
+  "identity": {
+   "join_ok": true,
+   "participants": {
+    "a": {
+     "api_version": "1.4.305",
+     "derived_bdf": "0000:06:00.0",
+     "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+     "device_uuid": "00000000060000000000000000000000"
+    },
+    "b": {
+     "api_version": "1.4.305",
+     "derived_bdf": "0000:09:00.0",
+     "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+     "device_uuid": "00000000090000000000000000000000"
+    }
+   }
+  },
+  "peer_features": {
+   "both_directions_device_local_copy": false,
+   "directions": {
+    "a_to_b": {
+     "basis": "no multi-die group; query unreachable",
+     "present": false
+    },
+    "b_to_a": {
+     "basis": "no multi-die group; query unreachable",
+     "present": false
+    }
+   }
+  },
+  "scoped_observations": {
+   "device_extensions": {
+    "die_0": {
+     "relevant": {
+      "VK_EXT_external_memory_dma_buf": true,
+      "VK_KHR_device_group": true,
+      "VK_KHR_external_memory": true,
+      "VK_KHR_external_memory_fd": true
+     },
+     "total": 191
+    },
+    "die_1": {
+     "relevant": {
+      "VK_EXT_external_memory_dma_buf": true,
+      "VK_KHR_device_group": true,
+      "VK_KHR_external_memory": true,
+      "VK_KHR_external_memory_fd": true
+     },
+     "total": 191
+    }
+   },
+   "host_only_handle_observations": {
+    "die_0": {
+     "host_allocation_exportable_or_importable": true
+    },
+    "die_1": {
+     "host_allocation_exportable_or_importable": true
+    }
+   },
+   "image_probe_observations": {
+    "die_0": [
+     {
+      "exportable": true,
+      "handle_type": "opaque_fd",
+      "importable": true,
+      "query_result": 0
+     },
+     {
+      "exportable": false,
+      "handle_type": "dma_buf",
+      "importable": false,
+      "query_result": -11
+     }
+    ],
+    "die_1": [
+     {
+      "exportable": true,
+      "handle_type": "opaque_fd",
+      "importable": true,
+      "query_result": 0
+     },
+     {
+      "exportable": false,
+      "handle_type": "dma_buf",
+      "importable": false,
+      "query_result": -11
+     }
+    ]
+   },
+   "instance_extensions": {
+    "relevant": {
+     "VK_EXT_external_memory_dma_buf": false,
+     "VK_KHR_device_group_creation": true,
+     "VK_KHR_external_memory_capabilities": true,
+     "VK_KHR_external_memory_fd": false,
+     "VK_KHR_get_physical_device_properties2": true
+    },
+    "total": 25
+   }
+  }
+ },
+ "closure_digest": "8cc902616282d61fa71b4457887bf3106e1db54ac755989d42a323d68b585005",
+ "closure_sources": [
+  "scripts/issue228_assemble.py",
+  "scripts/issue228_authority.py",
+  "scripts/issue228_baselines.py",
+  "scripts/issue228_capability.py",
+  "scripts/issue228_freeze.py",
+  "scripts/issue228_host.py",
+  "scripts/issue228_ladder.py",
+  "scripts/issue228_manifest.py",
+  "scripts/issue228_probe.py",
+  "scripts/issue228_receipt.py",
+  "scripts/issue228_reduce.py"
+ ],
+ "fault_scan": {
+  "any": false,
+  "fault_lines": {},
+  "unresolved_fault_lines": []
+ },
+ "mechanism": {
+  "advertised_mechanisms": [
+   "vulkan-external-memory-fd"
+  ],
+  "available": false,
+  "basis": "capability-advertised-but-no-implementation",
+  "external_memory_directions": {
+   "dma_buf": {
+    "a_to_b": {
+     "compatible_handle_types_ok": 0,
+     "destination_importable": true,
+     "source_exportable": true,
+     "usable": 0
+    },
+    "b_to_a": {
+     "compatible_handle_types_ok": 0,
+     "destination_importable": true,
+     "source_exportable": true,
+     "usable": 0
+    }
+   },
+   "opaque_fd": {
+    "a_to_b": {
+     "compatible_handle_types_ok": 1,
+     "destination_importable": true,
+     "source_exportable": true,
+     "usable": 1
+    },
+    "b_to_a": {
+     "compatible_handle_types_ok": 1,
+     "destination_importable": true,
+     "source_exportable": true,
+     "usable": 1
+    }
+   }
+  },
+  "group": {
+   "both_dies_in_one_group": false,
+   "note": "no Vulkan device group contains both V340 dies (co-membership absent on this stack)"
+  },
+  "implementation": null,
+  "implementation_status": "no-transfer-implementation-reviewed-or-frozen",
+  "note": "Advertised capability is NOT proof a usable mechanism exists on the installed runtime, and this campaign has no reviewed transfer implementation; execution is refused.",
+  "peer_directions": {
+   "a_to_b": {
+    "basis": "no multi-die group; query unreachable",
+    "present": false
+   },
+   "b_to_a": {
+    "basis": "no multi-die group; query unreachable",
+    "present": false
+   }
+  },
+  "selected_mechanism": null
+ },
+ "producer_head": "9ea6e71105648699f8841cf44fc860d5530a6584",
+ "schema": "inferswarm.v2e.assembly/2",
+ "terminal": "V2E_EVIDENCE_BLOCKED",
+ "v2d_inherited_fault": {
+  "relation": "inherited safety constraint; not in this campaign window and not re-counted here",
+  "retained_at": "docs/investigations/vulkan-v2-d-v340l-concurrent/evidence/fault-capture/",
+  "terminal": "V2D_V340L_PLATFORM_STRESS_FAIL"
+ }
+}

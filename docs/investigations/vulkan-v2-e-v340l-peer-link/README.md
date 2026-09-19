@@ -4,8 +4,9 @@ Status: CORRECTION ROUND 1 — attempt-1 campaign SUPERSEDED (invalid
 capability-census producer); corrected producers + corrected read-only
 census (attempt `pf2`) retained; transfer execution HARD-DISABLED.
 Terminal re-derived mechanically from the corrected attempt:
-**`V2E_V340L_P2P_API_PREREQUISITE`**. PR OPEN/UNMERGED awaiting
-maintainer exact-head review.
+**`V2E_EVIDENCE_BLOCKED`** (capable mechanism advertised; no reviewed
+transfer implementation; zero transfers executed). PR OPEN/UNMERGED
+awaiting maintainer exact-head review.
 
 Campaign: `issue228-v2e-v340l-interdie-peer-link`
 
@@ -64,15 +65,27 @@ in the census artifacts):
    (host_allocation / host_mapped_foreign) are recorded as
    observations and never treated as direct peer access.
 
-Because the corrected census is complete and valid, and capability
-absence is established for the exact resource/usage/handle
-combinations actually queried validly, the mechanically derived
-terminal for attempt pf2 is `V2E_V340L_P2P_API_PREREQUISITE`,
-scoped to the accepted stack (Mesa RADV 25.0.7-2+deb13u1, loader
-1.4.309.0-1). This is NOT a claim that the hardware lacks a peer
-path, NOT a claim that another substrate would expose one, and NOT
-`P2P_UNAVAILABLE` (the census establishes API-level absence on this
-stack, not a platform-level prohibition).
+**The corrected census FINDS a capable mechanism the superseded census
+reported absent.** `opaque_fd` external memory is exportable on each
+die and importable on the other with compatible handle types for
+transfer-usage buffers, in BOTH directions (`vulkan-external-memory-fd`
+advertised). The device-group peer path remains unreachable
+(single-device groups only). dma_buf is export/import-capable on both
+dies but `VK_EXT_external_memory_dma_buf` is NOT enumerated by the
+loader/ICD, so the dma_buf handle type is not compatible for these
+resources and is not a usable mechanism on this stack; host-only
+handle types are recorded as observations only.
+
+Because a capable mechanism IS advertised but this campaign has no
+reviewed transfer implementation (execution hard-disabled), no
+measured transfers exist and no functional peer-path conclusion is
+derivable. The mechanically derived terminal for attempt pf2 is
+**`V2E_EVIDENCE_BLOCKED`**: the evidence cannot establish an
+authorized classification. This is NOT `P2P_API_PREREQUISITE` (a
+mechanism exists in-stack — the superseded round's prerequisite
+conclusion is retired), NOT a functional claim, and NOT a claim that
+the advertised capability would work in practice (advertised
+capability is not validated execution).
 
 ## Transfer fence (structural)
 
