@@ -1,15 +1,28 @@
 #!/usr/bin/env python3
 """Issue #228 — V2-E deterministic reduction helpers.
 
-Every reduction in this module re-derives its output from PRIMARY RAW
-BYTES retained under the evidence root. Nothing is taken from authored
-summaries. Used by both the assembler and the negative-control tests.
+Correction round (maintainer NO-GO on c9822fe):
+
+* ``reduce_transfers`` now REQUIRES per-repeat correctness: every timed
+  row must have a matching correctness row (same direction, same rep
+  identity) whose ``ok`` is exactly true; duplicate rep ids, dropped
+  reps, rep-set mismatch against the frozen repetition count, and any
+  ``ok=false`` or ``correctness_fail`` row are ReduceErrors — a
+  correctness failure can never become a functional terminal;
+* ``reduce_route`` separates advertised capability from validated
+  execution: without measured correct transfers there is no functional
+  route conclusion at all;
+* census verdicts come from probe.validate_capability_census — the
+  reduction never re-derives capability from raw rows with looser
+  rules than the validator.
+
+Every reduction re-derives its output from PRIMARY RAW BYTES retained
+under the evidence root. Nothing is taken from authored summaries.
 """
 from __future__ import annotations
 
 import json
 import statistics
-from pathlib import Path
 from typing import Any
 
 import issue228_receipt as rc
@@ -34,11 +47,18 @@ def parse_probe_stream(stdout: str, exit_code: int) -> list[dict[str, Any]]:
     return records
 
 
-def reduce_transfers(records: list[dict[str, Any]], direction: str
+def reduce_transfers(records: list[dict[str, Any]], direction: str,
+                     expected_reps: int | None = None,
                      ) -> dict[str, Any]:
     """Reduce one direction's timed rows to the frozen distribution
-    summary (median/min/max/p10/p90, count, bytes, gbps). Fail-closed on
-    zero/negative times, mixed sizes, or missing correctness rows."""
+    summary, requiring per-repeat correctness evidence.
+
+    Fail-closed on: zero timed rows; any correctness_fail row; any
+    correctness row with ok != true; timed/correctness rep-set
+    mismatch; duplicate rep ids; dropped reps (when ``expected_reps``
+    is given, the rep set must be exactly 0..expected_reps-1); zero/
+    negative times or bytes; mixed sizes.
+    """
     timed = [r for r in records
              if r.get("kind") == "transfer" and r.get("dir") == direction]
     checks = [r for r in records
@@ -52,10 +72,29 @@ def reduce_transfers(records: list[dict[str, Any]], direction: str
         raise ReduceError(
             f"correctness failures retained for {direction}: "
             f"{[r.get('rep') for r in fails]}")
-    if len(checks) != len(timed):
+    not_ok = [r for r in checks if r.get("ok") is not True]
+    if not_ok:
         raise ReduceError(
-            f"correctness row count {len(checks)} != timed {len(timed)} "
-            f"for {direction}")
+            f"correctness rows with ok != true for {direction}: "
+            f"{[(r.get('rep'), r.get('ok')) for r in not_ok]}")
+    timed_ids = [r.get("rep") for r in timed]
+    check_ids = [r.get("rep") for r in checks]
+    int_timed = sorted(int(i) for i in timed_ids if isinstance(i, int))
+    if len(set(timed_ids)) != len(timed_ids):
+        raise ReduceError(
+            f"duplicate timed rep ids for {direction}: {timed_ids}")
+    if len(set(check_ids)) != len(check_ids):
+        raise ReduceError(
+            f"duplicate correctness rep ids for {direction}: {check_ids}")
+    if set(timed_ids) != set(check_ids):
+        raise ReduceError(
+            f"timed/correctness rep-set mismatch for {direction}: "
+            f"timed={sorted(timed_ids)} correctness={sorted(check_ids)}")
+    if expected_reps is not None:
+        if timed_ids != list(range(expected_reps)):
+            raise ReduceError(
+                f"incomplete repetition set for {direction}: expected "
+                f"reps 0..{expected_reps - 1}, saw {sorted(timed_ids)}")
     for row in timed:
         if row.get("ms", 0) <= 0 or row.get("bytes", 0) <= 0:
             raise ReduceError(f"invalid timed row: {row!r}")
@@ -84,6 +123,7 @@ def reduce_transfers(records: list[dict[str, Any]], direction: str
         "gbps_min": round(min(gbps), 3),
         "gbps_max": round(max(gbps), 3),
         "correctness_ok": True,
+        "correctness_reps": int_timed,
     }
 
 
@@ -95,17 +135,27 @@ def reduce_route(assembly: dict[str, Any]) -> dict[str, Any]:
         downstream activity without upstream activity;
       UPSTREAM_OR_HOST_ROUTE_PROVEN — counters/observations prove the
         host-facing path carried the peer traffic;
-      PEER_FUNCTIONAL_ROUTE_UNRESOLVED — peer copies work but route
-        evidence cannot distinguish;
+      PEER_FUNCTIONAL_ROUTE_UNRESOLVED — peer transfers functional but
+        route evidence cannot distinguish;
       NO_PEER_TRANSFER_AVAILABLE — no peer mechanism existed to observe.
+
+    Correction: a functional-route conclusion of any kind requires
+    MEASURED CORRECT TRANSFERS; without them the only derivable
+    conclusions are NO_PEER_TRANSFER_AVAILABLE or none at all.
     """
-    route_counters = assembly.get("route_counters_available")
     mechanism = (assembly.get("mechanism") or {})
+    transfers = assembly.get("validated_transfers")
     if not mechanism.get("available"):
         return {
             "route_conclusion": "NO_PEER_TRANSFER_AVAILABLE",
-            "basis": "no peer-transfer mechanism existed to observe",
+            "basis": "no peer-transfer mechanism was available to observe",
         }
+    if not transfers:
+        raise ReduceError(
+            "mechanism available but no measured correct transfers "
+            "retained; a functional route conclusion requires validated "
+            "transfer evidence")
+    route_counters = assembly.get("route_counters_available")
     if not route_counters:
         return {
             "route_conclusion": "PEER_FUNCTIONAL_ROUTE_UNRESOLVED",
@@ -119,29 +169,30 @@ def reduce_route(assembly: dict[str, Any]) -> dict[str, Any]:
         "route conclusion")
 
 
-def rederive_capability_facts(capability: dict[str, Any]) -> dict[str, Any]:
-    """Re-derive the mechanism classification from the retained
-    capability JSON (same logic as issue228_ladder.classify_mechanism,
-    kept reduction-side so the assembler never trusts the collector's
-    own summary)."""
-    groups = capability.get("groups") or []
-    multi = [g for g in groups
-             if len([d for d in g.get("devices", [])
-                     if d.get("is_v340")]) >= 2]
-    group_ok = bool(multi)
-    peer_features = capability.get("peer_memory_features") or []
-    directions = sorted([[int(f["local_device"]), int(f["peer_device"])]
-                         for f in peer_features
-                         if f.get("heap_device_local")
-                         and f.get("copy_src") and f.get("copy_dst")])
-    ext = capability.get("external_memory_matrix") or {}
-    ext_any = any(
-        row.get("exportable") or row.get("importable")
-        for die in ext.get("dies", [])
-        for row in list(die.get("buffer_matrix", []))
-        + list(die.get("image_probes", [])))
+def rederive_capability_facts(verdict: dict[str, Any]) -> dict[str, Any]:
+    """Reduction-side capability facts FROM A VALIDATED CENSUS VERDICT.
+
+    The raw-row derivation of the rejected round lived here and
+    accepted one-sided/duplicated/host-only evidence; it is replaced by
+    consumption of probe.validate_capability_census output, which the
+    assembler re-runs over the retained raw bytes.
+    """
+    if not verdict.get("census_valid"):
+        return {"census_valid": False,
+                "failure_reasons":
+                    list(verdict.get("failure_reasons") or [])}
+    peer = verdict.get("peer_features") or {}
+    dirs = peer.get("directions") or {}
     return {
-        "multi_device_vega_group_present": group_ok,
-        "peer_copy_directions": directions,
-        "secondary_ext_memory_features": ext_any,
+        "census_valid": True,
+        "multi_device_vega_group_present":
+            (verdict.get("group") or {}).get(
+                "both_dies_in_one_group", False),
+        "peer_copy_directions_present": sorted(
+            str(d) for d, row in dirs.items() if row.get("present")),
+        "secondary_ext_memory_features":
+            bool((verdict.get("external_memory") or {}).get(
+                "usable_handle_types")),
+        "capable_mechanisms":
+            list(verdict.get("capable_mechanisms") or []),
     }

@@ -1,0 +1,39 @@
+{
+ "schema": "inferswarm.v2e.supersession/1",
+ "campaign_id": "issue228-v2e-v340l-interdie-peer-link",
+ "superseded_attempt": {
+  "attempt_id": "pf1",
+  "producer_head": "8c25184c54ce660020047711a2755c55178f8195",
+  "closure_digest": "0973306af3f6d70a0e5857f2b0e79679d102a2a97564ea417c238ea682dbbb59",
+  "terminal_claimed": "V2E_V340L_P2P_API_PREREQUISITE",
+  "retained_at": "evidence/attempt-1-superseded/",
+  "evidence_tree_sha256_of_hashes": "7af20065486beac0efa1b522db805fec887d3305ca9017ba36d851380d9e1d9b",
+  "disposition": "superseded, non-authoritative history"
+ },
+ "reason": "The attempt-1 capability census producer created its Vulkan instance without pApplicationInfo, so the loader provided Vulkan 1.0 semantics while the probe called Vulkan 1.1 core functionality (vkEnumeratePhysicalDeviceGroups, vkGetDeviceGroupPeerMemoryFeatures). Per the Vulkan specification an instance created without application info is a 1.0 instance. The resulting negative observations cannot establish that a different runtime is required; the census must be corrected before its results are interpretable.",
+ "additional_defects_retained_for_record": [
+  "peer query used a non-spec argument order (device, local, peer, heap) instead of (device, heapIndex, localDeviceIndex, remoteDeviceIndex)",
+  "the transfer ladder retrieved one logical queue for every group device and submitted without device-group execution masks, so all work executed on device zero; its staged/bidir paths allocated two command buffers into scalar handles",
+  "the mechanism gate treated any exportable-or-importable flag (including zero-usage and host-only handle types) as a usable dma-buf mechanism while the runner always launched the device-group implementation",
+  "the reducer accepted incomplete repetition sets, did not bind correctness rows to timed rows per repetition, and mapped correctness failures to a functional terminal (P2P_FUNCTIONAL_ROUTE_UNRESOLVED)"
+ ],
+ "bindings_preserved": {
+  "predecessor_authority": "PHYSICAL-AUTHORITY.json unchanged (sha256 621d465f4ac2db160cfeadf3306875f73dfe7f447b474a89af1ec8900ca4a256); accepted V2-B/V2-C/V2-D0/V2-D bytes and the #216 PLATFORM_STRESS_FAIL inheritance are untouched",
+  "raw_observations": "every attempt-1 raw byte is preserved verbatim under evidence/attempt-1-superseded/ with original file identities (git rename history intact); no attempt-1 byte is relabeled as output of a corrected producer"
+ },
+ "corrected_attempt": {
+  "attempt_id": "pf2",
+  "status_at_record_time": "pending collection under the corrected producers after this correction round is committed and the closure re-frozen",
+  "producer_changes": [
+   "scripts/issue228_probe.py: census-only module; Vulkan 1.1 instance with explicit pApplicationInfo; requested/effective versions, loader/ICD extension availability recorded; per-device deviceUUID identity; spec-order peer query; valid-usage-only external-memory matrix; validate_capability_census fail-closed authority; transfer machinery removed",
+   "scripts/issue228_capability.py: validates census before conclusions; UUID->BDF join to the accepted fresh mapping; attempt-pf2 identity",
+   "scripts/issue228_ladder.py / issue228_baselines.py: transfer execution hard-disabled; discovery separated from execution authorization; refusal artifacts carry the validated verdict",
+   "scripts/issue228_reduce.py: per-repeat correctness binding; duplicated/dropped rep rejection; functional conclusions require measured transfers",
+   "scripts/issue228_assemble.py: reduces only attempt pf2; complete-coverage-or-BLOCKED; authority-bound mapping join; window-year fault bounding; no functional terminal without transfer evidence"
+  ]
+ },
+ "nonclaims": [
+  "the supersession record itself authorizes nothing; only a maintainer-accepted merge makes any of it canonical",
+  "no corrected observation existed at the time this record was written; the corrected census is collected only after the corrected producers are committed and the closure re-frozen"
+ ]
+}

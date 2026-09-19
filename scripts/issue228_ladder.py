@@ -1,30 +1,35 @@
 #!/usr/bin/env python3
-"""Issue #228 — V2-E transfer ladder runner (Phases 3-7).
+"""Issue #228 — V2-E transfer-mechanism gate (Phases 3-7) — DISABLED.
 
-Executes the frozen transfer ladder ONLY when the retained capability
-evidence establishes a usable peer mechanism. The runner REFUSES to
-execute any transfer when the capability census classifies the selected
-mechanism as unavailable — the mechanism gate is mechanical, not
-authored:
+Correction round (maintainer NO-GO on c9822fe). Physical transfer
+execution is HARD-DISABLED for this campaign:
 
-  * device-group peer path requires a >=2-device group containing both
-    Vega dies AND COPY_SRC/COPY_DST peer features for the device-local
-    heaps in both directions;
-  * the secondary in-stack path (external-memory dma-buf/opaque-fd
-    import) requires exportable+importable features on BOTH dies;
-  * any other mechanism is out of scope for this campaign (no substrate
-    replacement authorized).
+* the attempt-1 transfer producer could not identify inter-die traffic
+  (a single logical queue was retrieved for every group device and
+  submits carried no device-group execution masks, so every copy
+  executed on device zero), and its staged/bidir paths allocated two
+  command buffers into scalar handles;
+* no corrected transfer producer has been reviewed or frozen. Until one
+  exists, ANY capability observation — including a corrected positive
+  one — refuses execution rather than launching the old machinery;
+* no reachable path may mislabel device-zero or same-die work as
+  inter-die P2P, so no transfer path is reachable at all.
 
-When a mechanism IS available the runner executes the frozen ladder
-with per-arm health snapshots, immediate-stop conditions, and retained
-raw bytes for every attempt. When it is NOT available the runner emits
-the refusal artifact (retained) and the campaign's transfer phases are
-classified by the assembler.
+Discovery vs execution are now separate:
+
+* ``classify_mechanism`` derives ADVERTISED capability from a VALIDATED
+  census verdict (probe.validate_capability_census) — it never treats
+  an exportable-OR-importable flag, a host-only handle type, or
+  duplicated one-way rows as a usable mechanism;
+* ``authorize_execution`` always refuses (0 transfers) and records why.
+
+The frozen refusal artifact carries the same closure binding and the
+census verdict, so the assembler can reduce without any transfer
+evidence.
 """
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from datetime import datetime, timezone
@@ -32,99 +37,128 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import issue228_host as host
-import issue228_probe as probe
 import issue228_receipt as rc
 
 ROOT = Path(__file__).resolve().parents[1]
+
+#: The transfer implementation this campaign once shipped is deleted;
+#: no implementation exists behind this gate.
+IMPLEMENTATION_STATUS = "no-transfer-implementation-reviewed-or-frozen"
 
 
 class MechanismUnavailable(RuntimeError):
     """No in-stack peer mechanism is available; transfers refused."""
 
 
+class TransferExecutionDisabled(RuntimeError):
+    """Physical transfer execution is disabled for this campaign."""
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def classify_mechanism(capability: dict[str, Any]) -> dict[str, Any]:
-    """Mechanically classify the available peer-transfer mechanism from
-    the retained capability census (groups + peer features + external
-    memory matrix). Fail-closed: anything short of a proven mechanism
-    is UNAVAILABLE."""
-    groups = capability.get("groups") or []
-    vega_multi = None
-    for g in groups:
-        vega = [d for d in g.get("devices", [])
-                if d.get("is_v340")]
-        if len(vega) >= 2:
-            vega_multi = g
-            break
-    group_ok = vega_multi is not None
-    peer_features = capability.get("peer_memory_features") or []
-    devlocal_copy = [
-        f for f in peer_features
-        if f.get("heap_device_local") and f.get("copy_src") and f.get("copy_dst")
-    ]
-    # both directions between the two vega device indices (canonical
-    # JSON-safe list-of-lists so a round-tripped artifact compares equal
-    # to the freshly classified one)
-    directions = sorted(
-        [[int(f["local_device"]), int(f["peer_device"])]
-         for f in devlocal_copy]
-    )
-    both_dirs = group_ok and len(directions) >= 2
+def classify_mechanism(verdict: dict[str, Any]) -> dict[str, Any]:
+    """Classify ADVERTISED peer-transfer capability from a VALIDATED
+    census verdict (probe.validate_capability_census output).
 
-    ext = capability.get("external_memory_matrix") or {}
-    ext_any = False
-    for die in ext.get("dies", []):
-        for row in die.get("buffer_matrix", []):
-            if row.get("exportable") or row.get("importable"):
-                ext_any = True
-        for row in die.get("image_probes", []):
-            if row.get("exportable") or row.get("importable"):
-                ext_any = True
+    Distinguishes advertised capability from an implemented mechanism:
+    even when the census advertises a capable mechanism, this campaign
+    has NO reviewed transfer implementation, so ``implementation`` is
+    always None and execution is always refused.
 
-    if group_ok and both_dirs:
+    One-sided or host-only external-memory features, duplicated one-way
+    peer rows, and missing directions never yield a usable mechanism.
+    """
+    if not verdict.get("census_valid"):
         return {
-            "selected_mechanism": "vulkan-device-group-peer-copy",
-            "available": True,
-            "group_device_count": vega_multi["device_count"],
-            "copy_capable_directions": sorted(directions),
-            "secondary_ext_memory_features": ext_any,
+            "selected_mechanism": None,
+            "available": False,
+            "basis": "census-invalid",
+            "census_failure_reasons":
+                list(verdict.get("failure_reasons") or []),
+            "implementation": None,
         }
-    if ext_any:
+    capable = list(verdict.get("capable_mechanisms") or [])
+    group = verdict.get("group") or {}
+    peer = verdict.get("peer_features") or {}
+    ext = verdict.get("external_memory") or {}
+    if not capable:
+        reasons: list[str] = []
+        if not group.get("both_dies_in_one_group"):
+            reasons.append(
+                "no Vulkan device group contains both V340 dies "
+                "(co-membership absent; vkGetDeviceGroupPeerMemoryFeatures "
+                "unreachable for the pair on this stack)")
+        else:
+            dirs = peer.get("directions") or {}
+            missing = [d for d in ("a_to_b", "b_to_a")
+                       if not (dirs.get(d) or {}).get("present")]
+            if missing:
+                reasons.append(
+                    f"peer-memory features absent/incomplete for "
+                    f"directions {missing} on device-local heaps")
+        usable = ext.get("usable_handle_types") or []
+        if not usable:
+            reasons.append(
+                "no fd-carried external-memory handle type "
+                "(opaque_fd/dma_buf) is exportable on the source AND "
+                "importable on the destination die with compatible "
+                "handle types for transfer-usage buffers, in either "
+                "required direction")
         return {
-            "selected_mechanism": "vulkan-external-memory-dmabuf",
-            "available": True,
-            "group_ok": group_ok,
-            "secondary_ext_memory_features": True,
+            "selected_mechanism": None,
+            "available": False,
+            "basis": "no-capable-mechanism-advertised",
+            "capability_absence_reasons": reasons,
+            "group": group,
+            "peer_directions": peer.get("directions"),
+            "external_memory_directions": ext.get("directions"),
+            "implementation": None,
         }
+    # capability advertised — but no implementation exists
     return {
         "selected_mechanism": None,
         "available": False,
-        "group_ok": group_ok,
-        "multi_device_vega_group_present": group_ok,
-        "peer_copy_directions": sorted(directions),
-        "secondary_ext_memory_features": ext_any,
-        "missing_capability": (
-            "Vulkan loader exposes every physical device in a "
-            "single-device group (no multi-device group contains both "
-            "Vega dies), so vkGetDeviceGroupPeerMemoryFeatures/peer "
-            "copies are unreachable; and no external-memory handle type "
-            "(opaque_fd, dma_buf, host_allocation, host_mapped_foreign) "
-            "is exportable or importable for buffers or images on "
-            "either die. No in-stack peer-memory mechanism exists "
-            "without replacing the runtime/driver substrate."
-            if not group_ok and not ext_any else
-            "peer mechanism incomplete"),
+        "basis": "capability-advertised-but-no-implementation",
+        "advertised_mechanisms": capable,
+        "group": group,
+        "peer_directions": peer.get("directions"),
+        "external_memory_directions": ext.get("directions"),
+        "implementation": None,
+        "implementation_status": IMPLEMENTATION_STATUS,
+        "note": (
+            "Advertised capability is NOT proof a usable mechanism "
+            "exists on the installed runtime, and this campaign has no "
+            "reviewed transfer implementation; execution is refused."),
+    }
+
+
+def authorize_execution(mechanism: dict[str, Any]) -> dict[str, Any]:
+    """Execution authorization: always refuses under this campaign.
+
+    Returns the refusal decision record. A capability-only correction
+    can never authorize transfers; a future reviewed producer must
+    replace this function wholesale.
+    """
+    return {
+        "authorized": False,
+        "executed_transfers": 0,
+        "reason": (
+            "Physical transfer execution is disabled for campaign "
+            f"{rc.CAMPAIGN_ID}: no transfer producer has been reviewed "
+            "or frozen (the attempt-1 producer could not identify "
+            "inter-die traffic and was removed). Corrected capability "
+            "observations do not authorize physical execution."),
+        "mechanism_basis": mechanism.get("basis"),
     }
 
 
 def stop_condition_fired(health_delta: dict[str, Any],
                          journal_delta: dict[str, Any]) -> str | None:
     """Immediate-stop conditions (issue Phase 3). Returns the condition
-    name or None."""
+    name or None. Retained for the reducer's use on any future ladder
+    evidence; no execution path reaches it in this campaign."""
     counts = journal_delta.get("counts") or {}
     if counts.get("amdgpu_timeout"):
         return "ring_timeout_or_hang"
@@ -143,93 +177,26 @@ def stop_condition_fired(health_delta: dict[str, Any],
     return None
 
 
-def run_ladder(*, repo: Path, out: Path, attempt_id: str,
-               preflight: dict[str, Any], build_dir: Path) -> dict[str, Any]:
+def emit_refusal(*, repo: Path, out: Path, attempt_id: str,
+                 verdict: dict[str, Any]) -> dict[str, Any]:
+    """Emit the transfer-phase refusal artifact (retained evidence)."""
     closure = rc.verify_closure(repo)
-    mechanism = classify_mechanism(preflight["capability"])
+    mechanism = classify_mechanism(verdict)
+    decision = authorize_execution(mechanism)
     out.mkdir(parents=True, exist_ok=True)
-
-    if not mechanism["available"]:
-        doc = {
-            "schema": "inferswarm.v2e.ladder-refusal/1",
-            "campaign_id": rc.CAMPAIGN_ID,
-            "attempt_id": attempt_id,
-            "captured_utc": _now(),
-            "closure_digest": closure["closure_digest"],
-            "producer_head": closure["producer_head"],
-            "mechanism": mechanism,
-            "refusal": (
-                "No in-stack peer-transfer mechanism is available; the "
-                "frozen ladder is refused. Any transfer arm under this "
-                "campaign would have to run a substituted substrate, "
-                "which the issue forbids."),
-            "executed_transfers": 0,
-        }
-        (out / "refusal.json").write_bytes(
-            json.dumps(doc, indent=1, sort_keys=True).encode() + b"\n")
-        return doc
-
-    # Mechanism available: execute the frozen ladder (sizes ascending,
-    # health snapshot + journal delta after every size boundary,
-    # immediate-stop honored).
-    binary, source, source_sha = probe.compile_probe(build_dir)
-    raw = out / "raw"
-    raw.mkdir(parents=True, exist_ok=True)
-    health0 = host.health_snapshot(rc.HEALTH_BDFS)
-    journal0 = host.journal_scan()
-    rows: list[dict[str, Any]] = []
-    stopped: str | None = None
-    for size in rc.LADDER_SIZES:
-        result = probe.run_transfer(binary=binary, mode="ladder",
-                                    args=[str(size), str(rc.REPS_PER_SIZE),
-                                          str(rc.WARMUPS_PER_SIZE)],
-                                    timeout=900)
-        rel = f"ladder-{size}.stdout"
-        host.durable_write(raw / rel, result["stdout"].encode())
-        host.durable_write(raw / f"ladder-{size}.stderr",
-                           result["stderr"].encode())
-        host.durable_write(raw / f"ladder-{size}.exit-code",
-                           f"{result['returncode']}\n".encode())
-        rows.append({
-            "size": size,
-            "stdout_rel": f"raw/{rel}",
-            "stdout_sha256": hashlib.sha256(
-                result["stdout"].encode()).hexdigest(),
-            "exit_code": result["returncode"],
-        })
-        health1 = host.health_snapshot(rc.HEALTH_BDFS)
-        journal1 = host.journal_scan(cursor=journal0["next_cursor"])
-        host.durable_write(raw / f"journal-{size}.stdout",
-                           journal1["text"].encode())
-        delta = host.aer_delta(health0, health1)
-        cond = stop_condition_fired(delta, journal1)
-        if cond is not None:
-            stopped = cond
-            break
-        if result["returncode"] != 0:
-            stopped = f"probe_exit_{result['returncode']}"
-            break
-        health0 = health1
-        journal0 = journal1
-
     doc = {
-        "schema": "inferswarm.v2e.ladder/1",
+        "schema": "inferswarm.v2e.ladder-refusal/2",
         "campaign_id": rc.CAMPAIGN_ID,
         "attempt_id": attempt_id,
         "captured_utc": _now(),
         "closure_digest": closure["closure_digest"],
         "producer_head": closure["producer_head"],
         "mechanism": mechanism,
-        "frozen_sizes": list(rc.LADDER_SIZES),
-        "reps": rc.REPS_PER_SIZE,
-        "warmups": rc.WARMUPS_PER_SIZE,
-        "rows": rows,
-        "stop_condition": stopped,
-        "probe_source_sha256": source_sha,
-        "probe_binary_sha256": hashlib.sha256(
-            binary.read_bytes()).hexdigest(),
+        "execution_decision": decision,
+        "refusal": decision["reason"],
+        "executed_transfers": 0,
     }
-    (out / "ladder.json").write_bytes(
+    (out / "refusal.json").write_bytes(
         json.dumps(doc, indent=1, sort_keys=True).encode() + b"\n")
     return doc
 
@@ -238,19 +205,23 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", default=str(ROOT))
     ap.add_argument("--out", required=True)
-    ap.add_argument("--attempt-id", default="lad1")
-    ap.add_argument("--preflight", required=True)
-    ap.add_argument("--build-dir", default="/var/tmp/issue228-build")
+    ap.add_argument("--attempt-id", default="lad2")
+    ap.add_argument("--preflight", required=True,
+                    help="path to a preflight.json (attempt pf2)")
     args = ap.parse_args()
     preflight = json.loads(Path(args.preflight).read_text())
-    doc = run_ladder(repo=Path(args.repo), out=Path(args.out),
-                     attempt_id=args.attempt_id, preflight=preflight,
-                     build_dir=Path(args.build_dir))
-    print(json.dumps({"ladder": str(Path(args.out)),
+    verdict = preflight.get("capability_verdict")
+    if not verdict:
+        raise SystemExit(
+            "preflight carries no capability_verdict; only a corrected "
+            "(pf2) preflight may drive the transfer gate")
+    doc = emit_refusal(repo=Path(args.repo), out=Path(args.out),
+                       attempt_id=args.attempt_id, verdict=verdict)
+    print(json.dumps({"refusal": str(Path(args.out) / "refusal.json"),
                       "mechanism_available":
                           doc["mechanism"]["available"],
-                      "stop_condition": doc.get("stop_condition")},
-                     indent=2))
+                      "executed_transfers":
+                          doc["executed_transfers"]}, indent=2))
     return 0
 
 

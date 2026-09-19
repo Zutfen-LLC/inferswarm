@@ -1,18 +1,24 @@
 #!/usr/bin/env python3
 """Issue #228 — V2-E fresh topology + capability census (Phases 1-2).
 
-Read-only first: complete topology/capability census BEFORE any transfer
-execution. Retains raw probe bytes + receipts for every observation:
-host/kernel/cmdline identity, complete lspci -PP -nn -vv topology with
-LnkCap/LnkSta, BAR map, ACS capability/control bits, IOMMU groups, AER
-baselines, amdgpu health, peripheral sentinels, plus the Vulkan
-device-group capability audit (enumeration, group membership,
-subset-allocation, per-die memory heaps, and — via the #228 capability
-probe binary — vkGetDeviceGroupPeerMemoryFeatures for every
-(device, heap) candidate pair).
+Correction round (maintainer NO-GO on c9822fe):
 
-No transfer is executed here. The capability probe allocates NO memory
-beyond device creation and queries capability entry points only.
+* the capability census is VALIDATED (issue228_probe
+  .validate_capability_census) before any conclusion is drawn from it;
+  an invalid census is an evidence failure, never capability absence;
+* the census is physically joined to the accepted fresh A/B mapping by
+  deviceUUID->BDF corroboration (name substrings and enumeration order
+  are never physical authority), and the census's own UUID-derived BDFs
+  must agree with the mapping's participants;
+* the census artifacts carry an explicit ``attempt`` identity
+  (``pf1`` = superseded attempt-1 bytes retained verbatim; ``pf2`` =
+  this corrected attempt) so corrected observations are never mistaken
+  for attempt-1 output and vice versa;
+* no transfer execution exists in this collector (the ladder/baseline
+  runners are hard-disabled; see issue228_ladder).
+
+Read-only first: complete topology/capability census with raw probe
+bytes + receipts for every observation. No transfer is executed here.
 """
 from __future__ import annotations
 
@@ -32,9 +38,44 @@ import issue228_probe as probe
 
 ROOT = Path(__file__).resolve().parents[1]
 
+#: attempt identity for this collector. attempt-1 (``pf1``) observations
+#: are retained verbatim under evidence/preflight/ and are SUPERSEDED;
+#: corrected observations use ``pf2``.
+ATTEMPT_ID = "pf2"
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def census_join_mapping(cap: dict[str, Any], mapping: dict[str, Any],
+                        ) -> dict[str, str]:
+    """Fail-closed UUID/BDF corroboration between the fresh census and
+    the accepted fresh mapping. Returns participant->BDF on success;
+    raises pa.AuthorityError when the two disagree."""
+    expected: dict[str, str] = {}
+    for die, row in mapping["participants"].items():
+        bdf = probe.normalize_bdf(row["fresh_pci_bdf"])
+        expected[die] = bdf
+    vega_uuids = set()
+    for g in cap.get("groups", []):
+        for d in g.get("devices", []):
+            if d.get("is_v340") and d.get("device_uuid"):
+                vega_uuids.add(d["device_uuid"])
+    derived: dict[str, str] = {}
+    for uuid in sorted(vega_uuids):
+        bdf = probe.bdf_from_device_uuid(uuid)
+        if bdf is None:
+            raise pa.AuthorityError(
+                f"census deviceUUID {uuid} does not parse to a BDF")
+        derived[uuid] = bdf
+    derived_bdfs = set(derived.values())
+    expected_bdfs = set(expected.values())
+    if derived_bdfs != expected_bdfs:
+        raise pa.AuthorityError(
+            f"census UUID-derived BDFs {sorted(derived_bdfs)} disagree "
+            f"with the accepted fresh mapping {sorted(expected_bdfs)}")
+    return expected
 
 
 def collect_preflight(*, repo: Path, out: Path, attempt_id: str,
@@ -83,8 +124,6 @@ def collect_preflight(*, repo: Path, out: Path, attempt_id: str,
     art("lspci_tree", ["lspci", "-tv"])
     art("vulkaninfo_summary", ["vulkaninfo", "--summary"], timeout=300)
     art("vulkaninfo_full", ["vulkaninfo"], timeout=600)
-    # full verbose topology with -PP (full path) for every port on the
-    # root->switch->die path plus both dies
     for bdf in rc.ROUTE_BDFS.values():
         art(f"lspci_vv_{bdf.replace(':', '-')}",
             ["lspci", "-PP", "-nn", "-vv", "-s", bdf.removeprefix("0000:")],
@@ -124,7 +163,6 @@ def collect_preflight(*, repo: Path, out: Path, attempt_id: str,
                    "stdout_sha256": hashlib.sha256(
                        journal["text"].encode()).hexdigest()})
 
-    # health baseline over the full route BDF set
     health0 = host.health_snapshot(rc.HEALTH_BDFS)
     tel_a = host.telemetry_sample("0000:06:00.0")
     tel_b = host.telemetry_sample("0000:09:00.0")
@@ -146,7 +184,7 @@ def collect_preflight(*, repo: Path, out: Path, attempt_id: str,
     probes.append({
         "name": "capability_probe",
         "argv": ["<embedded C probe>"],
-        "returncode": 0,
+        "returncode": cap["exit_code"],
         "stdout_rel": f"raw/{cap['stdout_rel']}",
         "stdout_sha256": cap["stdout_sha256"],
     })
@@ -154,15 +192,26 @@ def collect_preflight(*, repo: Path, out: Path, attempt_id: str,
     probes.append({
         "name": "external_memory_matrix_probe",
         "argv": ["<embedded C probe>", "ext-matrix"],
-        "returncode": 0,
-        "stdout_rel": f"raw/{ext['stdout_rel']}",
+        "returncode": ext["exit_code"],
         "stdout_sha256": ext["stdout_sha256"],
+        "stdout_rel": f"raw/{ext['stdout_rel']}",
     })
     capability_doc = dict(cap["parsed"])
     capability_doc["external_memory_matrix"] = ext["parsed"]
 
+    # fail-closed physical identity join (census <-> accepted mapping)
+    joined = census_join_mapping(cap["parsed"], mapping)
+
+    # validate the census BEFORE any conclusion is drawn from it
+    verdict = probe.validate_capability_census(
+        cap["parsed"], ext["parsed"], joined)
+    if not verdict["census_valid"]:
+        raise probe.CensusInvalid(
+            "capability census invalid; no capability conclusion may be "
+            "drawn: " + "; ".join(verdict["failure_reasons"]))
+
     doc = {
-        "schema": "inferswarm.v2e.preflight/1",
+        "schema": "inferswarm.v2e.preflight/2",
         "campaign_id": rc.CAMPAIGN_ID,
         "attempt_id": attempt_id,
         "captured_utc": _now(),
@@ -177,6 +226,7 @@ def collect_preflight(*, repo: Path, out: Path, attempt_id: str,
         "journal_fault_counts": journal["counts"],
         "journal_next_cursor": journal["next_cursor"],
         "capability": capability_doc,
+        "capability_verdict": verdict,
         "nonclaims": [
             "read-only census: no peer transfer executed in this phase",
         ],
@@ -190,7 +240,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", default=str(ROOT))
     ap.add_argument("--out", required=True)
-    ap.add_argument("--attempt-id", default="pf1")
+    ap.add_argument("--attempt-id", default=ATTEMPT_ID)
     ap.add_argument("--authority", required=True)
     ap.add_argument("--build-dir", default="/var/tmp/issue228-build")
     args = ap.parse_args()
@@ -199,10 +249,17 @@ def main() -> int:
                             authority_path=Path(args.authority),
                             build_dir=Path(args.build_dir))
     print(json.dumps({"preflight": str(Path(args.out) / "preflight.json"),
-                      "capability_ok":
-                          doc["capability"].get("capability_ok"),
-                      "peer_features": doc["capability"].get(
-                          "peer_memory_features")},
+                      "census_valid":
+                          doc["capability_verdict"]["census_valid"],
+                      "capable_mechanisms":
+                          doc["capability_verdict"]["capable_mechanisms"],
+                      "group": doc["capability_verdict"]["group"],
+                      "peer_directions":
+                          doc["capability_verdict"]["peer_features"][
+                              "directions"],
+                      "external_memory":
+                          doc["capability_verdict"]["external_memory"][
+                              "usable_handle_types"]},
                          indent=2))
     return 0
 

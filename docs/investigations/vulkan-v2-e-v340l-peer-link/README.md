@@ -1,111 +1,110 @@
 # V2-E — V340L inter-die peer-link qualification (issue #228)
 
-Status: CAMPAIGN COMPLETE — terminal **`V2E_V340L_P2P_API_PREREQUISITE`**
-(re-derived deterministically by `scripts/issue228_assemble.py` from the
-retained evidence bytes; see `evidence/ASSEMBLY.json`,
-`evidence/TERMINAL.json`).
+Status: CORRECTION ROUND 1 — attempt-1 campaign SUPERSEDED (invalid
+capability-census producer); corrected producers + corrected read-only
+census (attempt `pf2`) retained; transfer execution HARD-DISABLED.
+Terminal re-derived mechanically from the corrected attempt:
+**`V2E_V340L_P2P_API_PREREQUISITE`**. PR OPEN/UNMERGED awaiting
+maintainer exact-head review.
 
-Campaign: `issue228-v2e-v340l-peer-link`
-Producer pin: `8c25184c54ce660020047711a2755c55178f8195`
-(closure `/1`, digest `0973306a…`; executed-byte freeze: worktree ==
-index == HEAD per closure source, verified on the proving host before
-any collection and by the assembler before any reduction).
-Authority: `PHYSICAL-AUTHORITY.json` (intended identity derived
-exclusively from accepted V2-B/V2-C/V2-D0/V2-D manifest-pinned bytes;
-every predecessor file re-hashed at build through its own accepted
-`MANIFEST.sha256` rows).
+Campaign: `issue228-v2e-v340l-interdie-peer-link`
 
-## What this campaign asked (issue #228)
+## Superseded attempt-1 (pf1, NON-AUTHORITATIVE history)
 
-> Can the V340L's two independently addressable Vega dies exchange data
-> directly through their on-card PM8533 PCIe-switch topology at
-> materially different bandwidth/latency from host-mediated traffic,
-> and can that route be proven without relying on the X12's shared
-> Gen3 x1 upstream link?
+The original campaign (producer pin `8c25184`, closure `/1` digest
+`0973306a…`) claimed `V2E_V340L_P2P_API_PREREQUISITE` from a census
+whose Vulkan instance was created WITHOUT `pApplicationInfo` — a
+Vulkan 1.0 instance per the specification — while calling Vulkan 1.1
+core functionality (`vkEnumeratePhysicalDeviceGroups`,
+`vkGetDeviceGroupPeerMemoryFeatures`). Under that invalid
+configuration the negative observations cannot establish that a
+different runtime is required. The maintainer exact-head review of
+c9822fe returned NO-GO. All attempt-1 evidence is preserved byte-for-
+byte under `evidence/attempt-1-superseded/` with its original
+producer/closure bindings and file identities; nothing was relabeled
+as output of a corrected producer. Machine-readable supersession
+record: `evidence/SUPERSESSION.json` (also retains, for the record:
+the non-spec peer-query argument order; the transfer path's
+device-zero execution labeling; OR-gated external-memory mechanism
+authorization; permissive reduction accepting incomplete repetitions
+and mapping correctness failures to a functional terminal).
 
-## What the retained evidence establishes
+## Corrected attempt (pf2)
 
-**No in-stack peer-memory mechanism exists on the accepted software
-stack.** Both candidate mechanisms were probed mechanically and are
-unavailable:
+Correction sequence (freeze-before-output honored): corrected
+producers committed and pushed FIRST, producer closure re-frozen at
+the corrected head (closure `/1`, new digest), closure verified on
+inferswarm02, then the corrected read-only census collected under
+attempt `pf2` and retained separately from the superseded attempt.
+Zero transfers were executed at any point (the fence is structural —
+see below).
 
-1. **Vulkan device-group peer path** (the preferred mechanism): the
-   loader (`libvulkan1` 1.3.150 / RADV Mesa 25.0.7-2+deb13u1) exposes
-   exactly 5 physical-device groups, EVERY one single-device — the two
-   Vega dies are never co-members of any group. With no multi-device
-   group, `VkDeviceGroupDeviceCreateInfo` cannot span the dies and
-   `vkGetDeviceGroupPeerMemoryFeatures` is unreachable for the pair.
-   Retained: `evidence/preflight/raw/capability-probe.stdout`
-   (`vega_group_present: false`).
-2. **Secondary in-stack mechanism — external-memory import**
-   (`VK_EXT_external_memory_dma_buf` + `VK_KHR_external_memory_fd`,
-   both enumerated as present on both dies): the full handle-type ×
-   usage × feature matrix returns ZERO exportable and ZERO importable
-   features for buffers (transfer/storage/uniform) and images
-   (opaque_fd, dma_buf, host_allocation, host_mapped_foreign) on BOTH
-   dies. Retained: `evidence/preflight/raw/ext-matrix.stdout`.
+### What the corrected census establishes (physically bound)
 
-The ladder runner's mechanism gate therefore REFUSED the frozen
-transfer ladder (`evidence/ladder/refusal.json`,
-`executed_transfers: 0`), and the matched-baseline collectors refused
-for the same reason (`evidence/baselines/refusal.json`). No transfer
-was executed; the #216 faulting transport seam was not rerun; no model
-inference was run.
+Every enumerated device carries its `deviceUUID` (the RADV UUID
+encodes the PCI BDF) and the census is joined to the fresh accepted
+A/B mapping by UUID→BDF corroboration — never by name substring or
+enumeration order. The census ran under an explicit Vulkan 1.1
+instance configuration (requested 1.1.0, effective loader 1.4.309;
+versions and relevant instance/device extension availability retained
+in the census artifacts):
 
-This is the issue's `V2E_V340L_P2P_API_PREREQUISITE` case exactly:
-"topology suggests a possible peer path but the current accepted
-software stack exposes no safe mechanism capable of exercising or
-observing it without installing/replacing a materially different
-runtime/driver substrate." The topology DOES suggest a possible path
-(same-card PM8533 fanout ancestry), and substrate replacement (ROCm/HIP
-compute ICD, different loader/driver) would be required — which the
-issue forbids introducing.
+1. **Device-group peer path**: the loader exposes every physical
+   device in a single-device group — the two V340 dies are never
+   co-members of any group, so `VkDeviceGroupDeviceCreateInfo` cannot
+   span the dies and `vkGetDeviceGroupPeerMemoryFeatures` (invoked in
+   its spec argument order by the corrected probe) is unreachable for
+   the pair on this stack.
+2. **External-memory path**: valid resource usages only (the invalid
+   zero-usage rows of the superseded round are excluded from
+   authoritative decisions). No fd-carried handle type (opaque_fd,
+   dma_buf) is exportable on the source die AND importable on the
+   destination die with compatible handle types for transfer-usage
+   buffers, in either required direction. Host-only handle types
+   (host_allocation / host_mapped_foreign) are recorded as
+   observations and never treated as direct peer access.
 
-## Why this is not `V2E_V340L_P2P_UNAVAILABLE`
+Because the corrected census is complete and valid, and capability
+absence is established for the exact resource/usage/handle
+combinations actually queried validly, the mechanically derived
+terminal for attempt pf2 is `V2E_V340L_P2P_API_PREREQUISITE`,
+scoped to the accepted stack (Mesa RADV 25.0.7-2+deb13u1, loader
+1.4.309.0-1). This is NOT a claim that the hardware lacks a peer
+path, NOT a claim that another substrate would expose one, and NOT
+`P2P_UNAVAILABLE` (the census establishes API-level absence on this
+stack, not a platform-level prohibition).
 
-`P2P_UNAVAILABLE` requires the CURRENT physical/kernel/IOMMU/ACS/
-device-group authority to mechanically establish that direct peer
-access is unavailable. The retained capability census establishes an
-API-level absence on the accepted stack, not a platform-level
-prohibition. Notable supporting (non-authoritative) context retained
-in the preflight: ACS is ENABLED on both Vega bridge downstream ports
-(05:00.0/08:00.0: `SrcValid+ ReqRedir+ CmpltRedir+ UpstreamFwd+`),
-which would redirect peer transactions upstream even if an API path
-existed — a routing-config observation, not a capability prohibition,
-and explicitly not promoted to authority per the issue's "verify, do
-not promote" instruction for operator observations.
+## Transfer fence (structural)
 
-## Topology and health retained (Phase 1, read-only)
+Physical transfer execution is disabled in code for this campaign:
+the attempt-1 transfer producer — which retrieved one logical queue
+for every group device, submitted without device-group execution
+masks (all work executed on device zero), and allocated two command
+buffers into scalar handles in its staged/bidir paths — was DELETED,
+not repaired. `issue228_ladder.authorize_execution` always refuses
+(0 transfers), and the assembler rejects any ladder artifact
+outright. Re-enabling physical transfers requires a new, reviewed
+producer; a corrected positive census can never authorize the old
+ladder.
 
-- Complete `lspci -PP -nn -vv` for the whole root→switch→die path:
-  root port `00:1d.0` (PCH RP#11, LnkCap/ Sta Gen3 x1), PM8533
-  upstream `02:00.0` (LnkSta Gen3 x1; AER correctable RxErr baseline
-  ~1.47M retained — the known background class on this port),
-  downstream `03:00.0`/`03:01.0` (Gen3 x16), separate Vega bridge
-  chains `04:00.0/05:00.0 → 06:00.0` (die A) and
-  `07:00.0/08:00.0 → 09:00.0` (die B; upstream bridge 07:00.0
-  negotiates `Width x1 (downgraded)` — a fresh observation retained in
-  the raw lspci bytes, distinct from V2-C's ledger row).
-- Both dies: Gen3 x16 endpoint links, 8 GiB HBM each (heap map
-  retained inside the capability census), amdgpu-bound, distinct IOMMU
-  groups (14 / 17).
-- Fresh mapping (R3 zero-token identity probes, no model tokens):
-  `Vulkan1 ↔ 06:00.0` (die A), `Vulkan2 ↔ 09:00.0` (die B),
-  corroborating the accepted V2-B/V2-C authority identity
-  (`evidence/preflight/mapping/`).
-- Journal fault baseline at collection: zero fault-class lines in the
-  current boot window; AER/telemetry baseline retained in
-  `evidence/preflight/preflight.json`.
+## Topology and health context (retained read-only)
+
+Unchanged from the attempt-1 preflight and still retained verbatim
+under `evidence/attempt-1-superseded/preflight/` (raw lspci/-vv/ACS/
+IOMMU/AER/journal bytes; same-card PM8533 fanout ancestry; die B
+bridge `07:00.0` width-downgrade observation; ACS enabled on both
+Vega bridge downstream ports — routing-config context, not capability
+authority). The corrected pf2 preflight re-collects this context
+freshly; both attempts' bytes are retained.
 
 ## Safety inheritance (V2-D)
 
 The retained #216 fault (`V2D_V340L_PLATFORM_STRESS_FAIL`: die B
-ring-gfx timeout, failed reset ret=-62, wedged reset worker during the
-accepted #35 x1 transport seam) is pinned inside
-`PHYSICAL-AUTHORITY.json` as a hard constraint and carried in
-`evidence/ASSEMBLY.json` as inherited context (not re-counted in this
-campaign's window). V2-E executed no transfer at all; the refusal
-path is the safety-correct outcome of the mechanism gate.
+ring-gfx timeout, failed reset ret=-62, wedged reset worker during
+the accepted #35 x1 transport seam) remains pinned inside
+`PHYSICAL-AUTHORITY.json` (unchanged, sha256
+`621d465f…`) as a hard constraint. V2-E executed no transfer in
+either attempt; the refusal path is the safety-correct outcome.
 
 ## Non-claims (inherited, unchanged)
 
@@ -113,34 +112,35 @@ No coherent 16-GiB GPU address space; no xGMI / Infinity Fabric; no
 unified-memory semantics; no model-inference correctness or utility;
 no production V340L support; no multi-card X12 compatibility; no
 generic planner preference; no sustained dual-die stability claim; no
-safety claim for the #216 faulting transport mechanism. Correctable
+safety claim for the #216 faulting transport mechanism; advertised
+capability is never conflated with validated execution. Correctable
 AER RxErr activity on the PM8533 upstream port is retained
 quantitatively and is not promoted to any failure threshold.
 
 ## Evidence layout
 
-- `evidence/preflight/` — Phase 1-2 census: 31 probes with raw bytes +
-  receipts, fresh mapping, capability census + external-memory matrix,
-  health/journal baselines.
-- `evidence/ladder/refusal.json` — Phase 3 mechanism-gate refusal
-  (frozen ladder never executed).
-- `evidence/baselines/refusal.json` — Phase 4 refusal (controls for
-  peer arms that do not exist; #216 seam not rerun).
+- `evidence/attempt-1-superseded/` — the complete superseded attempt-1
+  tree (preflight incl. raw bytes + fresh mapping, ladder/baselines
+  refusals, ASSEMBLY/TERMINAL), byte-preserved.
+- `evidence/SUPERSESSION.json` — machine-readable supersession record.
+- `evidence/preflight/` — corrected attempt-pf2 census (validated,
+  UUID-bound), fresh pf2 mapping, raw probe bytes.
+- `evidence/ladder/refusal.json`, `evidence/baselines/refusal.json` —
+  corrected-attempt execution refusals (0 transfers).
 - `evidence/ASSEMBLY.json`, `evidence/TERMINAL.json` — deterministic
-  reduction (regenerable: `scripts/issue228_assemble.py
-  --evidence-root docs/investigations/vulkan-v2-e-v340l-peer-link/evidence`).
+  reduction of the corrected attempt (regenerable:
+  `scripts/issue228_assemble.py --evidence-root <this dir>/evidence`).
 - `PHYSICAL-AUTHORITY.json`, `PRODUCER-CLOSURE.json` — frozen authority
-  and executed-byte closure.
+  (unchanged) and the re-frozen executed-byte closure.
 - `MANIFEST.sha256` — regenerated by `scripts/issue228_manifest.py`
   (never hand-edited).
 
 ## Successor implications
 
-The result determines the next experiment boundary the issue asked
-for: a cross-die inference placement experiment is NOT justified on
-the current stack — any A↔B data path would be host-mediated through
-the shared Gen3 x1 root link (already characterized by the accepted
-#35 envelope and the retained #216 transport evidence). Revisiting the
+A cross-die inference placement experiment is NOT justified on the
+current stack — any A↔B data path would be host-mediated through the
+shared Gen3 x1 root link (already characterized by the accepted #35
+envelope and the retained #216 transport evidence). Revisiting the
 peer-link question requires a different, explicitly-authorized runtime
 substrate decision (e.g. a compute ICD with dmabuf peer support),
 which is a maintainer decision outside this campaign.
