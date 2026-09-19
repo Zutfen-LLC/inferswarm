@@ -6,14 +6,15 @@ consumes R7-A/R7-B byte-for-byte and stops before model-state acquisition.
 ## Authority
 
 - Starting reconciled main: `fe690249873a9bf7ca19d788a2fab5e580473394`.
-- Corrected producer/authority head: `31bec059a9016de61ebcdfc61b4b9e4766493441`
-  (`authority.json.repo_head`). `repo_head` is a generation stamp - the producer
-  head the authority was generated at - and is echoed back by the derivation
-  rather than independently bound; it is not a verifiable claim. What is
-  verified is that the retained authority is a pure function of the frozen
-  R7-A/R7-B predecessor bytes, the campaign constants and the retained
-  changed-path census, re-derived and byte-compared - never trusted as authored
-  input - at reduction and finalization time.
+- Corrected producer/authority head: `25cf36dab553c80b30ed618c4d1da6ea9b4a0bd2`
+  (`authority.json.repo_head`, pinned against this line by a focused test).
+  `repo_head` is a generation stamp - the producer head the authority was
+  generated at - and is echoed back by the derivation rather than independently
+  bound; it is not a verifiable claim. What is verified is that the retained
+  authority is a pure function of the frozen R7-A/R7-B predecessor bytes, the
+  campaign constants and the retained changed-path census, re-derived and
+  byte-compared - never trusted as authored input - at reduction and
+  finalization time.
 - R7-A: merge `7417c2f58a63d4da854ff399ba6fea5bd722da83`, terminal
   `R7A_DEEPSEEK_V41_SUBSTRATE_PREREQUISITE`.
 - R7-B: merge `54d36cb9d8a4c0603abeb18968a8ffb7b52ca10e`, terminal
@@ -72,16 +73,21 @@ and `inferswarm02` and `inferswarm04` are present with full host records. The
 two `inferswarm03` resources carry visible foreign compute processes and are
 excluded from legal placement. Every resource row - including total, available
 and used bytes, UUID, PCI BDF and driver version - is re-derived by the reducer
-from the retained raw `nvidia-smi` receipt bytes, and the reducer rejects
-forged, duplicated, substituted, stale or incomplete receipts.
+from the retained raw `nvidia-smi` receipt bytes. A parsed row that contradicts
+its receipt, a duplicate or unknown device row, a receipt whose digest does not
+match its bytes, and a stale census all fail closed. What is rejected is
+internal inconsistency: receipt bytes forged consistently with their own
+re-parsed rows cannot be told apart from genuine ones without an out-of-band
+anchor, as disclosed under "Controls and scope".
 
 No individual compatible, currently available resource satisfies either stage
 lower bound. The largest single compatible usable resource is 25,294,798,848
 bytes (`inferswarm04/gpu-0`, the RTX 3090), leaving per-resource deficits of
 326,940,703,728 bytes for stage A and 123,852,309,984 bytes for stage B. The
-compatible aggregate of 58,544,095,232 bytes is reported for transparency only
-and is never used as a placement rule: each contiguous stage must fit one
-resource, and aggregate-VRAM arithmetic can never substitute for that.
+aggregate of the compatible, unoccupied resources (58,544,095,232 bytes) is
+reported for transparency only and is never used as a placement rule: each
+contiguous stage must fit one resource, and aggregate-VRAM arithmetic can never
+substitute for that.
 
 ## Terminal
 
@@ -109,8 +115,8 @@ resource (25,294,798,848) and the accepted deficits, and then by the observation
 above. Hardening the producer changed its bytes and therefore invalidated the
 earlier census's collector-identity binding, so it cannot carry acceptance. It
 proved only that the four candidates were probed and that two of them did not
-answer at that time; it never carried the accepted terminal, because the
-accepted terminal is re-derived under the final authority.
+answer at that time; it never carried acceptance under the accepted authority,
+because the accepted terminal is re-derived under the final authority.
 
 ## Controls and scope
 

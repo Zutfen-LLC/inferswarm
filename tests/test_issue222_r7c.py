@@ -4,6 +4,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -398,6 +399,70 @@ class Issue222R7CTests(unittest.TestCase):
         self.assertEqual(size_result["rejected"]["stage-a"]["reason"],
                          "no single compatible resource satisfies the stage lower bound")
         self.assertEqual(size_result["rejected"]["stage-a"]["deficit_bytes"], 10)
+
+    def test_readme_claims_match_the_retained_evidence(self):
+        """Pin every machine-checkable README claim against the retained bytes.
+
+        A stale `repo_head` citation in the README was filed as a P1 twice
+        because no control tied the prose to the evidence; this is that control.
+        """
+        root = Path(__file__).resolve().parents[1]
+        area = root / r7c.AREA
+        readme = (area / "README.md").read_text()
+        flat = " ".join(readme.split())  # prose claims may wrap across lines
+        authority = json.loads((area / "authority.json").read_text())
+        fleet = json.loads((area / "fleet-census.json").read_text())
+        committed = json.loads((area / "terminal-reduction.json").read_text())
+        audit = authority["mainline_applicability_audit"]
+        rejected = committed["placement"]["rejected"]
+        claims = {
+            "repo_head": authority["repo_head"],
+            "R7-A merge": "7417c2f58a63d4da854ff399ba6fea5bd722da83",
+            "R7-B merge": r7c.R7B_MERGE,
+            "reconciled main": r7c.RECONCILED_MAIN,
+            "model revision": authority["model"]["revision"],
+            "runtime revision": authority["runtime"]["revision"],
+            "terminal": committed["terminal"],
+            "stage-a bound": f"{authority['stage_footprints']['stage-a']['logical_required_bytes']:,}",
+            "stage-b bound": f"{authority['stage_footprints']['stage-b']['logical_required_bytes']:,}",
+            "stage-a tensors": f"{authority['stage_footprints']['stage-a']['tensor_count']:,}",
+            "stage-b tensors": f"{authority['stage_footprints']['stage-b']['tensor_count']:,}",
+            "stage-a shard count": f"| {len(authority['stage_footprints']['stage-a']['shards'])} |",
+            "stage-b shard count": f"| {len(authority['stage_footprints']['stage-b']['shards'])} |",
+            "changed paths": f"{audit['changed_path_count']:,}",
+            "campaign gate paths": f"{audit['scope_counts']['campaign_gate_ordering_or_ci']} campaign-gate/CI paths",
+            "vulkan paths": f"{audit['scope_counts']['vulkan_campaigns_and_hardware_inventory']:,} separate V340L Vulkan/hardware paths",
+            "other paths": f"{audit['scope_counts']['other_docs_or_tests']} other documentation/test paths",
+            "largest usable": f"{rejected['stage-a']['largest_compatible_usable_bytes']:,}",
+            "stage-a deficit": f"{rejected['stage-a']['deficit_bytes']:,}",
+            "stage-b deficit": f"{rejected['stage-b']['deficit_bytes']:,}",
+            "aggregate": f"{committed['placement']['aggregate_compatible_usable_bytes']:,}",
+        }
+        for label, value in claims.items():
+            with self.subTest(claim=label):
+                self.assertIn(value, flat, f"README does not state {label}={value}")
+        for resource in fleet["resources"]:
+            with self.subTest(resource=resource["resource_id"]):
+                self.assertIn(resource["resource_id"], flat)
+                self.assertIn(resource["name"], flat)
+                self.assertIn(f"{resource['available_device_bytes']:,}", flat)
+        for process in [p for r in fleet["resources"] for p in r["foreign_processes"]]:
+            with self.subTest(foreign_pid=process["pid"]):
+                self.assertIn(process["pid"], flat)
+        # The superseded-observation paragraph cites specific commits; pin what
+        # those commits' retained censuses actually say.
+        self.assertEqual(fleet["unavailable_hosts"], [])
+        for commit, expected in (
+                ("1001c47", ["inferswarm02", "inferswarm04"]),
+                ("1cd140e", [])):
+            with self.subTest(superseded=commit):
+                blob = subprocess.run(
+                    ["git", "-C", str(root), "show",
+                     f"{commit}:{r7c.AREA}/fleet-census.json"],
+                    capture_output=True, text=True)
+                self.assertEqual(blob.returncode, 0, blob.stderr)
+                self.assertEqual(json.loads(blob.stdout)["unavailable_hosts"], expected)
+                self.assertIn(commit, readme)
 
 
 if __name__ == "__main__":
