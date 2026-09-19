@@ -469,7 +469,7 @@ class Issue222R7CTests(unittest.TestCase):
                 self.assertIn(row, flat, f"README does not state the row: {row}")
         for process in [p for r in fleet["resources"] for p in r["foreign_processes"]]:
             with self.subTest(foreign_pid=process["pid"]):
-                self.assertIn(process["pid"], flat)
+                self.assertIn(str(process["pid"]), flat)
                 self.assertIn(f"({process['used_memory_mib']} MiB)", flat)
         if not fleet["unavailable_hosts"]:
             self.assertIn("`unavailable_hosts` is empty", flat)
