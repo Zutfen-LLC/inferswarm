@@ -77,9 +77,9 @@ class Issue222R7CTests(unittest.TestCase):
             "schema": r7c.FLEET_SCHEMA,
             "resources": [
                 {"resource_id": "gpu-1", "compatible": True,
-                 "usable_device_bytes": 1},
+                 "usable_device_bytes": 1, "foreign_processes": []},
                 {"resource_id": "gpu-2", "compatible": True,
-                 "usable_device_bytes": 1},
+                 "usable_device_bytes": 1, "foreign_processes": []},
             ],
         }
         reduced = r7c.reduction_document(authority, fleet)
@@ -131,8 +131,9 @@ class Issue222R7CTests(unittest.TestCase):
         occupied = copy.deepcopy(base_fleet)
         occupied["collected_at_unix"] = 1000
         occupied["resources"][0]["foreign_processes"] = [{"pid": "9"}]
-        with self.assertRaisesRegex(ValueError, "foreign process"):
-            r7c.reduction_document(authority, occupied, now_unix=1000)
+        reduced = r7c.reduction_document(authority, occupied, now_unix=1000)
+        self.assertEqual(reduced["terminal"], r7c.CAPACITY_PREREQUISITE)
+        self.assertEqual(reduced["placement"]["aggregate_compatible_usable_bytes"], 0)
 
 
 if __name__ == "__main__":

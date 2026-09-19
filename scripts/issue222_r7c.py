@@ -288,7 +288,9 @@ def legal_placement(stages: dict[str, dict[str, Any]], fleet: dict[str, Any]) ->
     resources = fleet.get("resources")
     if not isinstance(resources, list) or not resources:
         raise ValueError("ISSUE222_FAIL: fleet contains no resource rows")
-    compatible = [row for row in resources if row.get("compatible") is True]
+    compatible = [row for row in resources
+                  if row.get("compatible") is True
+                  and not row.get("foreign_processes")]
     aggregate = sum(int(row.get("usable_device_bytes", 0)) for row in compatible)
     placements: dict[str, str] = {}
     rejected: dict[str, dict[str, Any]] = {}
@@ -331,8 +333,8 @@ def _validate_fleet(fleet: dict[str, Any], now_unix: int | None) -> None:
         if not isinstance(observed, int) or observed < now_unix - FRESHNESS_SECONDS or observed > now_unix + 60:
             raise ValueError("ISSUE222_FAIL: fleet freshness invalid")
     for row in fleet.get("resources", []):
-        if row.get("foreign_processes"):
-            raise ValueError("ISSUE222_FAIL: foreign process occupies candidate resource")
+        if not isinstance(row.get("foreign_processes"), list):
+            raise ValueError("ISSUE222_FAIL: foreign-process receipt absent")
 
 
 def reduction_document(authority: dict[str, Any], fleet: dict[str, Any], *, now_unix: int | None = None) -> dict[str, Any]:
@@ -432,7 +434,7 @@ def collect_local(authority_path: Path, out: Path) -> dict[str, Any]:
                               "usable_device_bytes": free, "driver_version": parts[7],
                               "compatible": True, "foreign_processes": apps_by_uuid.get(parts[1], [])})
     document = {"schema": FLEET_SCHEMA, "campaign_id": authority.get("campaign_id"),
-                "authority_sha256": authority.get("authority_sha256"),
+                "host": host["stdout"].strip(), "authority_sha256": authority.get("authority_sha256"),
                 "collector_sha256": sha256(Path(__file__).resolve()),
                 "collected_at_unix": int(time.time()), "receipts": receipts,
                 "resources": resources, "problems": problems}
