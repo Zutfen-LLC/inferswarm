@@ -20,6 +20,165 @@ import finalize_repository as finalizer  # noqa: E402
 import plan_ci  # noqa: E402
 
 
+# The R7-C README's text is pinned in full by
+# Issue222R7CTests.test_readme_text_matches_its_pinned_expectation. The
+# placeholders are filled from the retained evidence; any prose change must be
+# made together with the text it observes.
+_README_TEMPLATE = r"""# R7-C — {model_name} current-fleet physical feasibility
+
+Status: COMPLETE — bounded capacity prerequisite. This additive R7-C bundle
+consumes R7-A/R7-B byte-for-byte and stops before model-state acquisition.
+
+## Authority
+
+- Starting reconciled main: `{reconciled_main}`.
+- Corrected producer/authority head: `{repo_head}`
+  (`authority.json.repo_head`, pinned against this line by a focused test).
+  `repo_head` is a generation stamp - the producer head the authority was
+  generated at - and is echoed back by the derivation rather than independently
+  bound; it is not a verifiable claim. What is verified is that the retained
+  authority is a pure function of the frozen R7-A/R7-B predecessor bytes, the
+  campaign constants and the retained changed-path census, re-derived and
+  byte-compared - never trusted as authored input - at reduction and
+  finalization time.
+- R7-A: merge `{r7a_merge}`, terminal
+  `{r7a_terminal}`.
+- R7-B: merge `{r7b_merge}`, terminal
+  `{r7b_terminal}`.
+- Official subject: `{model_repository}` at
+  `{model_revision}`; 48 official sharded
+  safetensors, with no conversion authority.
+- Runtime: vLLM `{runtime_revision}`.
+- Strategy: the accepted `{shape}` subject with fixed cut 20:
+  stage A `[0,20)`, stage B `[20,40)`, no cross-stage cache dependency.
+
+The mechanical post-R7-B applicability audit classifies the {changed_paths} changed paths
+from the R7-B merge through reconciled main: 4 campaign-gate/CI paths, {vulkan_paths}
+separate V340L Vulkan/hardware paths, and 9 other documentation/test paths. Its
+verbatim changed-path census is retained as `mainline-changed-paths.txt` (the
+output of the frozen read-only `git diff --name-only
+{diff_range}`
+query, re-derived and byte-compared by a focused test), so the audit is a
+function of retained bytes rather than a live query. That anchor is enforced by
+the focused test in the `{group}` CI group; the finalizer sandbox has no
+repository and no git, so the anchor is test-only and is not re-verified inside
+the finalizer. The audit finds no change to R7-A census authority, R7-B vLLM
+authority, or the selected R7-B strategy.
+
+## Derived text-only stage contract
+
+| Stage | Tensor count | Shards touched | Logical-required parameter lower bound |
+| --- | ---: | ---: | ---: |
+| A `[0,20)` plus embeddings | {a_tensors} | 23 | {a_bytes} bytes |
+| B `[20,40)` plus norm/head | {b_tensors} | 21 | {b_bytes} bytes |
+
+These are exact official tensor byte sums derived from the retained R7-A header
+census. They are lower bounds for device-resident immutable parameters under
+the exact no-conversion/no-offload subject. They are not relabeled as host
+staging, KV/cache, allocator/workspace, or boundary-transfer measurements.
+Those runtime terms remain unknown or prospectively measurable because Phase 2
+stopped the campaign.
+
+## Fresh fleet census and legal placement
+
+The frozen collector was run read-only on all {hosts_word} current NVIDIA candidates
+under the re-frozen authority, after that authority was committed and pushed.
+All {hosts_word} hosts were reachable and returned six GPU resources:
+
+| Resource | Device | Available bytes | Foreign compute |
+| --- | --- | ---: | --- |
+{resource_rows}
+
+`unavailable_hosts` is empty: no host is retained as a zero-capacity boundary,
+{present_hosts} with full host records. The
+two `{occupied_host}` resources carry visible foreign compute processes and are
+excluded from legal placement. Every resource row - including total, available
+and used bytes, UUID, PCI BDF and driver version - is re-derived by the reducer
+from the retained raw `nvidia-smi` receipt bytes. A parsed row that contradicts
+its receipt, a duplicate or unknown device row, a receipt whose digest does not
+match its bytes, and a stale census all fail closed. What is rejected is
+internal inconsistency: receipt bytes forged consistently with their own
+re-parsed rows cannot be told apart from genuine ones without an out-of-band
+anchor, as disclosed under "Controls and scope".
+
+No individual compatible, currently available resource satisfies either stage
+lower bound. The largest single compatible usable resource is {largest}
+bytes (`{biggest_id}`, the {biggest_device}), leaving per-resource deficits of
+{deficit_a} bytes for stage A and {deficit_b} bytes for stage B. The
+aggregate of the compatible, unoccupied resources ({aggregate} bytes) is
+reported for transparency only and is never used as a placement rule: each
+contiguous stage must fit one resource, and aggregate-VRAM arithmetic can never
+substitute for that.
+
+## Terminal
+
+`{terminal_value}`
+
+Required successor prerequisite: a compatible single-resource capacity path for
+each exact R7-B contiguous stage, without an alternate cut, tensor parallelism,
+CPU/disk offload, representation conversion, or hybrid execution.
+
+The reduction stopped at Phase 2. No official checkpoint body bytes were
+acquired; no model runtime initialized; no tensor sentinel, full-model forward
+pass, benchmark, serving run, AMD/Vulkan path, or alternate placement mechanism
+was executed.
+
+## Superseded observation
+
+The zero-capacity census/terminal pair is retained in git history at commit
+`1001c47` (unchanged through `cf391c1` and `beb5d79`): it recorded
+`unavailable_hosts: ["{sup_unavailable0}", "{sup_unavailable1}"]`, {hosts_word} resources, and
+deficits computed against a {sup_largest}-byte largest resource, under
+pre-hardening producer bytes (`collector_sha256` `{sup_collector8}...`). It was
+superseded twice: first by the re-observation committed at `1cd140e`, which
+already carried an all-reachable, six-resource census with the accepted largest
+resource ({largest}) and the accepted deficits, and then by the observation
+above. Hardening the producer changed its bytes and therefore invalidated the
+earlier census's collector-identity binding, so it cannot carry acceptance. It
+proved only that the {hosts_word} candidates were probed and that two of them did not
+answer at that time; it never carried acceptance under the accepted authority,
+because the accepted terminal is re-derived under the final authority. Its
+retained terminal field does hold the same terminal string - a terminal string
+is not acceptance.
+
+## Controls and scope
+
+The committed reducer/tests fail closed on mutated R7-A/R7-B authority, altered
+cut, a re-signed R7-C authority that is not the deterministic derivation from
+the frozen predecessor bytes (alternate cut, authored stage bounds, substituted
+model/runtime/producer identity), an incomplete candidate-host set, a stale
+fleet census, a missing raw receipt, a parsed row that contradicts its retained
+receipt, duplicate or unknown device rows, aggregate-VRAM placement, and an
+authored terminal that differs from the deterministic reduction. Every one of
+these is an internal-consistency check. Where the retained raw bytes are
+themselves forged consistently with the rows derived from them - a fabricated
+receipt, an emptied foreign-process receipt that silently re-issues an occupied
+resource as available, a jointly re-dated census/terminal pair - the reducer
+cannot tell the forgery from a genuine observation, because the bundle carries
+no out-of-band signing anchor. Such a forgery produces a DIFFERENT reduction
+document: the retained terminal *document* is not reachable through it, and the
+reducer rejects the pair with `committed terminal differs from deterministic
+reduction`. What such a forgery CAN reproduce is the terminal string itself -
+the accepted value is `{terminal_value}` under any census
+whose every resource is far below both stage bounds, which is what this fleet is
+- and a joint census-plus-terminal rewrite is certified by the finalizer exactly
+as the retained pair is. That is the disclosed no-anchor boundary, not a
+protection: a terminal string is not acceptance. The fleet record retains the
+exact source hash, command
+receipts, raw GPU rows, foreign-process rows, and any SSH timeout receipts that
+the reduction consumes. Freshness is enforced against the real clock at
+collection and reduction time, but re-verifying a frozen bundle reuses the
+terminal's own preserved `reduced_at_unix`, so a jointly re-dated census/terminal
+pair is not detectable from the bundle alone - the same disclosed no-anchor
+boundary. The README-to-`repo_head` pin above is likewise a test-only anchor,
+for the same reason: the finalizer sandbox has no repository and no git.
+
+This result establishes no DeepSeek numerical correctness, full checkpoint
+execution, performance, serving readiness, production support, conversion,
+expert-local/hybrid support, tensor parallelism, CPU offload, AMD/Vulkan
+support, or generic planner preference.
+"""
+
 class Issue222R7CTests(unittest.TestCase):
     def test_real_predecessors_and_stage_footprints_are_verified(self):
         authority = r7c.build_authority(ROOT, repo_head="f" * 40)
@@ -702,6 +861,106 @@ class Issue222R7CTests(unittest.TestCase):
         for commit in ("1001c47", "cf391c1", "beb5d79", "1cd140e"):
             with self.subTest(superseded_commit=commit):
                 self.assertIn(commit, sections["Superseded observation"])
+
+    def test_readme_text_matches_its_pinned_expectation(self):
+        """The README's text is pinned in full, with its evidence interpolated.
+
+        The README is the only retained R7-C artifact whose content guard is not
+        a finalizer-regenerated manifest (MANIFEST.sha256 is rewritten from the
+        bytes it covers), so its text is pinned here in full: the document must
+        equal the expectation assembled below, which interpolates the retained
+        values. Any prose change - an inverted sentence, an added claim, a
+        duplicated heading, or a second occurrence of a value - fails this
+        control and must be made in the same change as the text it observes.
+        """
+        root = Path(__file__).resolve().parents[1]
+        area = root / r7c.AREA
+        readme = (area / "README.md").read_text()
+        authority = json.loads((area / "authority.json").read_text())
+        fleet = json.loads((area / "fleet-census.json").read_text())
+        terminal = json.loads((area / "terminal-reduction.json").read_text())
+        r7b_terminal = json.loads((root / r7c.R7B_TERMINAL).read_text())
+        r7a_census = json.loads((root / r7c.R7A_CENSUS).read_text())
+        stage_a = authority["stage_footprints"]["stage-a"]
+        stage_b = authority["stage_footprints"]["stage-b"]
+        strategy = authority["strategy"]
+        audit = authority["mainline_applicability_audit"]
+        rejected = terminal["placement"]["rejected"]
+        occupied = [row for row in fleet["resources"] if row["foreign_processes"]]
+        biggest = max(fleet["resources"], key=lambda row: row["usable_device_bytes"])
+        superseded_blob = subprocess.run(
+            ["git", "-C", str(root), "show", f"1001c47:{r7c.AREA}/fleet-census.json"],
+            capture_output=True, text=True)
+        self.assertEqual(superseded_blob.returncode, 0, superseded_blob.stderr)
+        superseded = json.loads(superseded_blob.stdout)
+        values = {
+            "model_name": authority["model"]["repository"].split("/", 1)[1].replace("-", " "),
+            "reconciled_main": r7c.RECONCILED_MAIN,
+            "repo_head": authority["repo_head"],
+            "r7a_merge": r7b_terminal["predecessor"]["merge"],
+            "r7b_merge": r7c.R7B_MERGE,
+            "r7a_terminal": authority["r7a"]["terminal"],
+            "r7b_terminal": authority["r7b"]["terminal"],
+            "model_repository": authority["model"]["repository"],
+            "model_revision": authority["model"]["revision"],
+            "shard_count": len({row["shard"] for row in r7a_census["tensors"]}),
+            "runtime_revision": authority["runtime"]["revision"],
+            "shape": strategy["shape"],
+            "cut": strategy["cut_layer"],
+            "a0": strategy["stage_a_layers"][0],
+            "a1": strategy["stage_a_layers"][1],
+            "b0": strategy["stage_b_layers"][0],
+            "b1": strategy["stage_b_layers"][1],
+            "changed_paths": f"{audit['changed_path_count']:,}",
+            "ci_paths": audit["scope_counts"]["campaign_gate_ordering_or_ci"],
+            "vulkan_paths": f"{audit['scope_counts']['vulkan_campaigns_and_hardware_inventory']:,}",
+            "other_paths": audit["scope_counts"]["other_docs_or_tests"],
+            "group": next(name for name, modules in plan_ci.GROUP_TEST_MODULES.items()
+                          if "test_issue222_r7c" in modules),
+            "hosts_word": {2: "two", 4: "four", 5: "five", 6: "six"}[len(fleet["candidate_hosts"])],
+            "resources_word": {2: "two", 4: "four", 5: "five", 6: "six"}[len(fleet["resources"])],
+            "a_tensors": f"{stage_a['tensor_count']:,}",
+            "a_shards": len(stage_a["shards"]),
+            "a_bytes": f"{stage_a['logical_required_bytes']:,}",
+            "b_tensors": f"{stage_b['tensor_count']:,}",
+            "b_shards": len(stage_b["shards"]),
+            "b_bytes": f"{stage_b['logical_required_bytes']:,}",
+            "phase": terminal["phase_stop"].split()[1],
+            "resource_rows": "\n".join(
+                f"| `{row['resource_id']}` | {row['name']} | {row['available_device_bytes']:,} | "
+                + (", ".join(f"PID {p['pid']} ({p['used_memory_mib']} MiB)"
+                             for p in row["foreign_processes"]) or "none")
+                + " |" for row in fleet["resources"]),
+            "unavailable0": fleet["unavailable_hosts"][0] if fleet["unavailable_hosts"] else "",
+            "unavailable1": fleet["unavailable_hosts"][1] if fleet["unavailable_hosts"] else "",
+            "largest": f"{rejected['stage-a']['largest_compatible_usable_bytes']:,}",
+            "biggest_id": biggest["resource_id"],
+            "biggest_device": biggest["name"].replace("NVIDIA GeForce ", ""),
+            "deficit_a": f"{rejected['stage-a']['deficit_bytes']:,}",
+            "deficit_b": f"{rejected['stage-b']['deficit_bytes']:,}",
+            "aggregate": f"{terminal['placement']['aggregate_compatible_usable_bytes']:,}",
+            "terminal_value": terminal["terminal"],
+            "sup_unavailable0": superseded["unavailable_hosts"][0],
+            "sup_unavailable1": superseded["unavailable_hosts"][1],
+            "sup_resources_word": {2: "two", 4: "four", 5: "five", 6: "six"}[len(superseded["resources"])],
+            "sup_largest": f"{max(r['usable_device_bytes'] for r in superseded['resources']):,}",
+            "sup_collector8": superseded["host_records"]["inferswarm01"]["collector_sha256"][:8],
+            "sup_candidates_word": {2: "two", 4: "four", 5: "five", 6: "six"}[len(superseded["resources"])],
+            "sup_absent_word": {2: "two", 4: "four", 5: "five", 6: "six"}[len(superseded["unavailable_hosts"])],
+            "present_hosts": (f"and `{superseded['unavailable_hosts'][0]}` and "
+                              f"`{superseded['unavailable_hosts'][1]}` are present"),
+            "occupied_word": {2: "two", 4: "four", 5: "five", 6: "six"}[len(occupied)],
+            "occupied_host": sorted({row["host"] for row in occupied})[0],
+            "diff_range": f"{r7c.R7B_MERGE}..{r7c.RECONCILED_MAIN}",
+            "rejection_message": "committed terminal differs from deterministic reduction",
+        }
+        self.assertEqual(readme, _README_TEMPLATE.format(**values),
+                         "README text differs from its pinned expectation")
+        headings = [line[3:].strip() for line in readme.splitlines()
+                    if line.startswith("## ")]
+        self.assertEqual(len(headings), len(set(headings)),
+                         f"duplicate README sections: {headings}")
+
 
     def test_missing_raw_receipt_and_unknown_device_row_fail_closed(self):
         """The two receipt-surface claims the README's control list makes."""
