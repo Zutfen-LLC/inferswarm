@@ -17,6 +17,7 @@ sys.path.insert(0, str(SCRIPTS))
 
 import issue222_r7c as r7c  # noqa: E402
 import finalize_repository as finalizer  # noqa: E402
+import plan_ci  # noqa: E402
 
 
 class Issue222R7CTests(unittest.TestCase):
@@ -555,6 +556,152 @@ class Issue222R7CTests(unittest.TestCase):
         self.assertIn(str(caught.exception).removeprefix("ISSUE222_FAIL: "), flat)
         self.assertIn("no out-of-band signing anchor", flat)
         self.assertIn("a terminal string is not acceptance", flat)
+
+    def test_readme_sections_state_their_own_retained_values(self):
+        """Section-scoped pins: a value must appear in the section that owns it.
+
+        The sibling control asserts presence in the whole document, so a value
+        that legitimately occurs twice can mask a corruption of one instance.
+        This control pins each phrase inside its owning section - including the
+        canonical terminal declaration, both contract-table rows, the superseded
+        paragraph's candidate count, and the controls paragraph's corrected
+        clause and disclosures.
+        """
+        root = Path(__file__).resolve().parents[1]
+        area = root / r7c.AREA
+        readme = (area / "README.md").read_text()
+        sections, current = {}, "preamble"
+        for line in readme.splitlines():
+            if line.startswith("## "):
+                current = line[3:].strip()
+            sections.setdefault(current, []).append(line)
+        sections = {name: " ".join(" ".join(lines).split())
+                    for name, lines in sections.items()}
+        authority = json.loads((area / "authority.json").read_text())
+        fleet = json.loads((area / "fleet-census.json").read_text())
+        committed = json.loads((area / "terminal-reduction.json").read_text())
+        r7b_terminal = json.loads((root / r7c.R7B_TERMINAL).read_text())
+        r7a_census = json.loads((root / r7c.R7A_CENSUS).read_text())
+        audit = authority["mainline_applicability_audit"]
+        rejected = committed["placement"]["rejected"]
+        stage_a = authority["stage_footprints"]["stage-a"]
+        stage_b = authority["stage_footprints"]["stage-b"]
+        strategy = authority["strategy"]
+        layers_a, layers_b = strategy["stage_a_layers"], strategy["stage_b_layers"]
+        largest = rejected["stage-a"]["largest_compatible_usable_bytes"]
+        words = {2: "two", 4: "four", 5: "five", 6: "six"}
+        shard_count = len({row["shard"] for row in r7a_census["tensors"]})
+        phase = committed["phase_stop"].split()[1]
+        group = next(name for name, modules in plan_ci.GROUP_TEST_MODULES.items()
+                     if "test_issue222_r7c" in modules)
+        occupied_resources = [r for r in fleet["resources"] if r["foreign_processes"]]
+        occupied_hosts = sorted({r["host"] for r in occupied_resources})
+        biggest = max(fleet["resources"], key=lambda r: r["usable_device_bytes"])
+        superseded_blob = subprocess.run(
+            ["git", "-C", str(root), "show", f"1001c47:{r7c.AREA}/fleet-census.json"],
+            capture_output=True, text=True)
+        self.assertEqual(superseded_blob.returncode, 0, superseded_blob.stderr)
+        superseded = json.loads(superseded_blob.stdout)
+        old_largest = max(r["usable_device_bytes"] for r in superseded["resources"])
+        previously_unavailable = superseded["unavailable_hosts"]
+        old_collector = superseded["host_records"]["inferswarm01"]["collector_sha256"]
+        model_name = authority["model"]["repository"].split("/", 1)[1].replace("-", " ")
+        probe_authority = r7c.build_authority(ROOT, repo_head="f" * 40)
+        probe_fleet = self._valid_fleet(probe_authority)
+        probe_terminal = r7c.reduction_document(probe_authority, probe_fleet, now_unix=1000)
+        tampered = copy.deepcopy(probe_terminal)
+        tampered["placement"]["aggregate_compatible_usable_bytes"] += 1
+        with self.assertRaises(ValueError) as caught:
+            r7c.verify_committed_terminal(probe_authority, probe_fleet, tampered)
+        rejection_message = str(caught.exception).removeprefix("ISSUE222_FAIL: ")
+
+        expected = {
+            "preamble": [f"# R7-C — {model_name} current-fleet physical feasibility"],
+            "Authority": [
+                f"Starting reconciled main: `{r7c.RECONCILED_MAIN}`",
+                f"Corrected producer/authority head: `{authority['repo_head']}`",
+                f"R7-A: merge `{r7b_terminal['predecessor']['merge']}`, terminal "
+                f"`{authority['r7a']['terminal']}`",
+                f"R7-B: merge `{r7c.R7B_MERGE}`, terminal `{authority['r7b']['terminal']}`",
+                f"Official subject: `{authority['model']['repository']}` at "
+                f"`{authority['model']['revision']}`; {shard_count} official sharded "
+                "safetensors, with no conversion authority",
+                f"Runtime: vLLM `{authority['runtime']['revision']}`",
+                f"Strategy: the accepted `{strategy['shape']}` subject with fixed cut "
+                f"{strategy['cut_layer']}: stage A `[{layers_a[0]},{layers_a[1]})`, "
+                f"stage B `[{layers_b[0]},{layers_b[1]})`",
+                f"classifies the {audit['changed_path_count']:,} changed paths",
+                f"{audit['scope_counts']['campaign_gate_ordering_or_ci']} campaign-gate/CI paths, "
+                f"{audit['scope_counts']['vulkan_campaigns_and_hardware_inventory']:,} separate "
+                f"V340L Vulkan/hardware paths, and "
+                f"{audit['scope_counts']['other_docs_or_tests']} other documentation/test paths",
+                f"`git diff --name-only {r7c.R7B_MERGE}..{r7c.RECONCILED_MAIN}`",
+                f"focused test in the `{group}` CI group",
+            ],
+            "Derived text-only stage contract": [
+                f"| A `[{layers_a[0]},{layers_a[1]})` plus embeddings | "
+                f"{stage_a['tensor_count']:,} | {len(stage_a['shards'])} | "
+                f"{stage_a['logical_required_bytes']:,} bytes |",
+                f"| B `[{layers_b[0]},{layers_b[1]})` plus norm/head | "
+                f"{stage_b['tensor_count']:,} | {len(stage_b['shards'])} | "
+                f"{stage_b['logical_required_bytes']:,} bytes |",
+                f"because Phase {phase} stopped the campaign",
+            ],
+            "Fresh fleet census and legal placement": [
+                f"run read-only on all {words[len(fleet['candidate_hosts'])]} current "
+                "NVIDIA candidates",
+                f"All {words[len(fleet['candidate_hosts'])]} hosts were reachable and "
+                f"returned {words[len(fleet['resources'])]} GPU resources",
+                "`unavailable_hosts` is empty",
+                f"and `{previously_unavailable[0]}` and `{previously_unavailable[1]}` are "
+                "present with full host records",
+                f"The {words[len(occupied_resources)]} `{occupied_hosts[0]}` resources carry "
+                "visible foreign compute processes",
+                f"The largest single compatible usable resource is {largest:,} bytes "
+                f"(`{biggest['resource_id']}`, the {biggest['name'].replace('NVIDIA GeForce ', '')})",
+                f"leaving per-resource deficits of {rejected['stage-a']['deficit_bytes']:,} bytes "
+                f"for stage A and {rejected['stage-b']['deficit_bytes']:,} bytes for stage B",
+                "aggregate of the compatible, unoccupied resources "
+                f"({committed['placement']['aggregate_compatible_usable_bytes']:,} bytes)",
+            ],
+            "Terminal": [
+                f"`{committed['terminal']}`",
+                f"The reduction stopped at Phase {phase}.",
+                # An authored disclosure (not a derived value): pinning its
+                # presence is what stops it being silently reworded into its
+                # own negation.
+                "No official checkpoint body bytes were acquired; no model runtime "
+                "initialized; no tensor sentinel, full-model forward pass, benchmark, "
+                "serving run, AMD/Vulkan path, or alternate placement mechanism was executed.",
+            ],
+            "Superseded observation": [
+                f'`unavailable_hosts: ["{previously_unavailable[0]}", '
+                f'"{previously_unavailable[1]}"]`, {words[len(superseded["resources"])]} resources, '
+                f"and deficits computed against a {old_largest:,}-byte largest resource",
+                f"pre-hardening producer bytes (`collector_sha256` `{old_collector[:8]}...`)",
+                f"first by the re-observation committed at `1cd140e`, which already carried an "
+                f"all-reachable, {words[len(fleet['resources'])]}-resource census with the "
+                f"accepted largest resource ({largest:,})",
+                f"proved only that the {words[len(superseded['resources'])]} candidates were "
+                f"probed and that {words[len(previously_unavailable)]} of them did not answer "
+                "at that time",
+            ],
+            "Controls and scope": [
+                "the retained terminal *document* is not reachable through it",
+                rejection_message,
+                "no out-of-band signing anchor",
+                "a terminal string is not acceptance",
+            ],
+        }
+        self.assertEqual(sorted(sections), sorted(expected))
+        for name, phrases in expected.items():
+            for phrase in phrases:
+                with self.subTest(section=name, phrase=phrase):
+                    self.assertIn(phrase, sections[name],
+                                  f"section {name!r} does not state: {phrase}")
+        for commit in ("1001c47", "cf391c1", "beb5d79", "1cd140e"):
+            with self.subTest(superseded_commit=commit):
+                self.assertIn(commit, sections["Superseded observation"])
 
     def test_missing_raw_receipt_and_unknown_device_row_fail_closed(self):
         """The two receipt-surface claims the README's control list makes."""
