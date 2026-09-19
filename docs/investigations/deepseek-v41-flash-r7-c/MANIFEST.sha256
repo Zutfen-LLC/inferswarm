@@ -1,0 +1,7 @@
+0a8be9719bbe85b6e3805ab6915e1be40c59e98298a588bafa3ae49f134c7f26  docs/investigations/deepseek-v41-flash-r7-c/README.md
+2d9eeadf7d61a0af823914792931f977b0cd08adcaf55a47e27eacdd12fd97f1  docs/investigations/deepseek-v41-flash-r7-c/authority.json
+ab96127ea55a05e364f1ecfeb843dced80bf59b44ce639a4459f85dadb5eaa4d  docs/investigations/deepseek-v41-flash-r7-c/fleet-census.json
+1a567e173bf7c342f552c3c9745af6550f459ebfd73571d96b09f097c223ad5c  docs/investigations/deepseek-v41-flash-r7-c/producer-hashes.json
+0ba87c1ad5eaa9bd3b4ea4519f942638a88d9421109df208d10fec459fc65249  docs/investigations/deepseek-v41-flash-r7-c/terminal-reduction.json
+6b9942f7f8ab06e7a9bebcc86492b1a21aa1e98930c1f96c9cedc29f36188346  scripts/issue222_r7c.py
+9e512d97ce75e37dac0d05e469aa9eef1c55fe525c3227003313a4a6f685cb43  tests/test_issue222_r7c.py
