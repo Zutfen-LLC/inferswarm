@@ -116,9 +116,11 @@ jobs:
         run: |
           python3 - <<'EOF'
           import json, sys
+          from pathlib import Path
           sys.path.insert(0, "scripts")
           import issue213_gate_orchestration as gate
 
+          repo = Path(".").resolve()
           expected_sha = "${{ inputs.expected_sha }}"
           run_id = "${{ github.run_id }}"
           run_attempt = int("${{ github.run_attempt }}")
@@ -150,7 +152,7 @@ jobs:
           # checked-out tree and require the executed run to match it: a
           # different suite configuration or environment cannot validate
           # this head.
-          request = gate.current_final_head_request(".")
+          request = gate.current_final_head_request(repo)
           if request.git_commit_sha != expected_sha:
               die("final-head request SHA drifted from expected_sha")
           if request.suite["serial_digest"] != suite["serial_digest"]:
@@ -167,7 +169,7 @@ jobs:
           started = float(open("/tmp/suite-started.unix").read().strip())
           ended = float(open("/tmp/suite-ended.unix").read().strip())
           try:
-              receipt = gate.build_receipt(".", result, started, ended)
+              receipt = gate.build_receipt(repo, result, started, ended)
           except gate.GateOrderingError as error:
               die(f"cannot bind suite receipt to the exact head: {error}")
           if not gate.validate_receipt(receipt.to_dict(),
