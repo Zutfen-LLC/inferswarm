@@ -190,23 +190,23 @@ def verify_receipt_digest(path: Path) -> dict[str, Any]:
 # issue228_freeze (same corrected semantics as the accepted #216 /3).
 # ---------------------------------------------------------------------------
 
-def closure_document(repo: Path = ROOT) -> dict[str, Any]:
+def closure_document(repo: Path | None = None) -> dict[str, Any]:
     from issue228_freeze import closure_document as _closure
-    return _closure(repo)
+    return _closure(Path(repo) if repo is not None else ROOT)
 
 
-def verify_closure(repo: Path = ROOT,
+def verify_closure(repo: Path | None = None,
                    committed: dict[str, Any] | None = None) -> dict[str, Any]:
     from issue228_freeze import verify_closure as _verify, FreezeError
     try:
-        return _verify(repo, committed)
+        return _verify(Path(repo) if repo is not None else ROOT, committed)
     except FreezeError as exc:
         raise ReceiptError(str(exc)) from exc
 
 
-def write_closure(repo: Path = ROOT) -> Path:
+def write_closure(repo: Path | None = None) -> Path:
     from issue228_freeze import write_closure as _write, FreezeError
     try:
-        return _write(repo)
+        return _write(Path(repo) if repo is not None else ROOT)
     except FreezeError as exc:
         raise ReceiptError(str(exc)) from exc

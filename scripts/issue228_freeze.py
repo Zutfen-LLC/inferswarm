@@ -66,9 +66,10 @@ def current_head(repo: Path) -> str:
     return proc.stdout.decode().strip()
 
 
-def closure_document(repo: Path = rc.ROOT,
+def closure_document(repo: Path | None = None,
                      sources: tuple[str, ...] | None = None
                      ) -> dict[str, Any]:
+    repo = Path(repo) if repo is not None else rc.ROOT
     head = current_head(repo)
     closure_sources = sources if sources is not None else rc.CLOSURE_SOURCES
     out_sources: dict[str, str] = {}
@@ -102,11 +103,12 @@ def closure_document(repo: Path = rc.ROOT,
     return doc
 
 
-def verify_closure(repo: Path = rc.ROOT,
+def verify_closure(repo: Path | None = None,
                    committed: dict[str, Any] | None = None,
                    sources: tuple[str, ...] | None = None,
                    record_rel: str | None = None
                    ) -> dict[str, Any]:
+    repo = Path(repo) if repo is not None else rc.ROOT
     record_path = repo / (record_rel
                           if record_rel is not None
                           else f"{rc.AREA_REL}/{rc.CLOSURE_NAME}")
@@ -156,7 +158,8 @@ def verify_closure(repo: Path = rc.ROOT,
     return committed
 
 
-def write_closure(repo: Path = rc.ROOT) -> Path:
+def write_closure(repo: Path | None = None) -> Path:
+    repo = Path(repo) if repo is not None else rc.ROOT
     record_path = repo / rc.AREA_REL / rc.CLOSURE_NAME
     record_path.parent.mkdir(parents=True, exist_ok=True)
     doc = closure_document(repo)
@@ -165,7 +168,7 @@ def write_closure(repo: Path = rc.ROOT) -> Path:
     return record_path
 
 
-def require_frozen(repo: Path = rc.ROOT) -> dict[str, Any]:
+def require_frozen(repo: Path | None = None) -> dict[str, Any]:
     """Producer-side gate: verify the freeze immediately before any
     correctness-bearing emission."""
-    return verify_closure(repo)
+    return verify_closure(Path(repo) if repo is not None else rc.ROOT)
