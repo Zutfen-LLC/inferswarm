@@ -1048,7 +1048,24 @@ class PreservationTests(unittest.TestCase):
                             "tests/issue216_v2d_fixtures.py",
                             "tests/fixtures_v2d_identity_probe_bytes.json",
                             "docs/investigations/vulkan-v2-d-v340l-concurrent/",
-                            "docs/hardware/")
+                            "docs/hardware/",
+                            # Issue #222 R7-C: additive current-fleet
+                            # physical-feasibility surface (evidence
+                            # namespace, producer, regression module) plus
+                            # the regenerated #130 finalization pin bundle
+                            # that any change to scripts/finalize_repository.py
+                            # legitimately rewrites.
+                            "scripts/issue222_",
+                            "tests/test_issue222_",
+                            "docs/investigations/deepseek-v41-flash-r7-c/",
+                            "docs/implementation/r6-successor-dense-full-integration-117/evidence/issue-130-finalization/",
+                            # Shared finalization authority: registering the
+                            # additive R7-C finalizer stages necessarily moves
+                            # scripts/finalize_repository.py and its own
+                            # regression module, exactly as the #209/#187
+                            # campaign registrations did on main.
+                            "scripts/finalize_repository.py",
+                            "tests/test_finalize_repository.py")
         for path in changed:
             self.assertTrue(path.startswith(allowed_prefixes),
                             f"unexpected changed path: {path}")

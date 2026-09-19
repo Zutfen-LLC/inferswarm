@@ -328,6 +328,10 @@ class Issue184PreservationTests(unittest.TestCase):
             # into the canonical runner path (scripts/run_full_cpu_suite.py),
             # independently covered by test_run_full_cpu_suite.
             "scripts/run_full_cpu_suite.py",
+            # Issue #222 R7-C: additive current-fleet physical-feasibility
+            # producer, independently pinned by its additive R7-C evidence
+            # manifest and covered by its own CI group.
+            "scripts/issue222_r7c.py",
             ".github/workflows/ci.yml")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)
