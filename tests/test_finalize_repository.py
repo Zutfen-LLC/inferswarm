@@ -545,7 +545,11 @@ class MigrationContractTests(unittest.TestCase):
                         order.index("issue209-terminal"))
         self.assertLess(order.index("issue209-terminal"),
                         order.index("issue209-producer-hashes"))
-        self.assertEqual(order[-1], "issue209-manifest")
+        self.assertLess(order.index("issue209-manifest"),
+                        order.index("issue222-terminal"))
+        self.assertLess(order.index("issue222-terminal"),
+                        order.index("issue222-producer-hashes"))
+        self.assertEqual(order[-1], "issue222-manifest")
 
     def test_status_sync_declares_consumed_documents_as_self_inputs(self):
         # status-sync's desired bytes consume the existing bytes of every

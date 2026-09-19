@@ -1330,6 +1330,21 @@ _R7B_AUTHORED = frozenset({
     f"{_R7B}/superseded-9feb7e74.json",
     f"{_R7B}/superseded-253d19b.json",
 })
+_R7C = "docs/investigations/deepseek-v41-flash-r7-c"
+_R7C_AUTHORITY = f"{_R7C}/authority.json"
+_R7C_FLEET = f"{_R7C}/fleet-census.json"
+_R7C_TERMINAL = f"{_R7C}/terminal-reduction.json"
+_R7C_HASHES = f"{_R7C}/producer-hashes.json"
+_R7C_MANIFEST = f"{_R7C}/MANIFEST.sha256"
+_R7C_PRODUCERS = frozenset({
+    "scripts/issue222_r7c.py",
+    "tests/test_issue222_r7c.py",
+})
+_R7C_AUTHORED = frozenset({
+    f"{_R7C}/README.md",
+    _R7C_AUTHORITY,
+    _R7C_FLEET,
+})
 # The additive Issue #130 successor bundle: current-finalization
 # integrity for the Issue #130 sources, never a rewrite of the closed
 # Issue #117 parent bundle (accepted at commit d1afad6, unchanged).
@@ -1642,6 +1657,50 @@ def _issue209_manifest_producer(run: StageRun, scratch: Path
     return {_R7B_MANIFEST: r7b_manifest.manifest_bytes(run.root)}
 
 
+def _issue222_terminal_producer(run: StageRun, scratch: Path
+                               ) -> dict[str, bytes]:
+    """Derive the R7-C capacity/materialization terminal from frozen bytes."""
+    _scripts(run.root)
+    import issue222_r7c as r7c  # noqa: PLC0415
+    authority_bytes = run.read(_R7C_AUTHORITY)
+    fleet_bytes = run.read(_R7C_FLEET)
+    if authority_bytes is None or fleet_bytes is None:
+        raise FinalizationError("Issue #222 authority or fleet census is missing")
+    authority = json.loads(authority_bytes)
+    fleet = json.loads(fleet_bytes)
+    document = r7c.reduction_document(authority, fleet)
+    return {_R7C_TERMINAL: (json.dumps(document, sort_keys=True,
+                                       separators=(",", ":"))
+                            + "\n").encode("utf-8")}
+
+
+def _issue222_producer_hashes(run: StageRun, scratch: Path
+                              ) -> dict[str, bytes]:
+    """Record the independent R7-C authority/reducer and test identities."""
+    rows = {}
+    for path in sorted(_R7C_PRODUCERS):
+        content = run.read(path)
+        if content is None:
+            raise FinalizationError(f"Issue #222 producer is missing: {path}")
+        rows[path] = _sha256(content)
+    return {_R7C_HASHES: (json.dumps(rows, indent=2, sort_keys=True)
+                          + "\n").encode("utf-8")}
+
+
+def _issue222_manifest_producer(run: StageRun, scratch: Path
+                                 ) -> dict[str, bytes]:
+    """Terminal manifest for the additive R7-C physical evidence bundle."""
+    rows = {}
+    for path in sorted(_R7C_AUTHORED | _R7C_PRODUCERS
+                       | {_R7C_TERMINAL, _R7C_HASHES}):
+        content = run.read(path)
+        if content is None:
+            raise FinalizationError(f"Issue #222 manifest input is missing: {path}")
+        rows[path] = _sha256(content)
+    body = "".join(f"{digest}  {path}\n" for path, digest in sorted(rows.items()))
+    return {_R7C_MANIFEST: body.encode("utf-8")}
+
+
 def _successor_bundle_files() -> list[str]:
     return [f"{_BUNDLE_130}/parent-binding.json",
             f"{_BUNDLE_130}/producer-hashes.json",
@@ -1864,6 +1923,34 @@ def default_registry() -> tuple[Stage, ...]:
                        f"{_R7B}/execution-contract-fixture.json"}),
             after=frozenset({"issue209-producer-hashes"}),
             producer=_issue209_manifest_producer,
+        ),
+        Stage(
+            id="issue222-terminal",
+            kind="derived",
+            description=("R7-C deterministic terminal from frozen R7-A/R7-B "
+                         "authority and a retained fresh NVIDIA fleet census"),
+            reads=(_R7C_AUTHORED | {"scripts/issue222_r7c.py"}),
+            writes=frozenset({_R7C_TERMINAL}),
+            after=frozenset({"issue209-manifest"}),
+            producer=_issue222_terminal_producer,
+        ),
+        Stage(
+            id="issue222-producer-hashes",
+            kind="index",
+            description="Issue #222 producer and regression-test identity ledger",
+            reads=_R7C_PRODUCERS,
+            writes=frozenset({_R7C_HASHES}),
+            after=frozenset({"issue222-terminal"}),
+            producer=_issue222_producer_hashes,
+        ),
+        Stage(
+            id="issue222-manifest",
+            kind="terminal-manifest",
+            description="Terminal integrity manifest for the additive Issue #222 R7-C bundle",
+            writes=frozenset({_R7C_MANIFEST}),
+            covers=_R7C_AUTHORED | _R7C_PRODUCERS | {_R7C_TERMINAL, _R7C_HASHES},
+            after=frozenset({"issue222-producer-hashes"}),
+            producer=_issue222_manifest_producer,
         ),
     )
 
