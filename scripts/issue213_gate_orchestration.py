@@ -9,11 +9,20 @@ handoff.  Four concerns live here:
    reviewer-trust-building gates) followed by the final-head phase (the one
    full-suite + one hosted-CI run on the final reviewed head).  The two
    expensive gates are MANDATORY final-head gates: a plan that omits either
-   (or both) fails closed.  Adversarial review runs against the frozen
-   pre-review head and MUST NOT request the expensive gates unless the
-   campaign explicitly declares them review-critical.  Any unknown gate or
-   workflow state fails closed to the existing broader behavior (fresh full
-   validation).
+   (or both) fails closed.  Independent review (Issue #224: the
+   ``adversarial-review`` phase identifier is retained for compatibility;
+   its canonical semantics are now the INDEPENDENT REVIEW phase) runs
+   against the exact proposed head and MUST NOT request the expensive
+   gates unless the campaign explicitly declares them review-critical.
+   The default independent review authority is the maintainer's exact-head
+   review of the pushed PR; delegated agent/LLM adversarial reviews are
+   optional targeted advisory work with no default lane count and no
+   default review timeout.  No review verdict — maintainer or delegated —
+   is a machine input to handoff, and this module deliberately provides NO
+   agent-self-asserted review receipt: maintainer review is process
+   authority outside the implementation agent's evidence graph.  Any
+   unknown gate or workflow state fails closed to the existing broader
+   behavior (fresh full validation).
 
 2. **Duplicate-launch prevention (Phase 2) — on the canonical invocation
    path.**  ``run_single_head_suite`` is the single-launch seam wired into
@@ -111,9 +120,22 @@ ENV_AUTHORITY_FILES = (
 # The runner whose invocation is guarded and whose results are receipted.
 SUITE_RUNNER = "scripts/run_full_cpu_suite.py"
 
-# Gates reviewers may need before reviewing the frozen head.  All are cheap,
-# scoped, and already required by existing campaign doctrine; NONE of them is
-# the full CPU suite or hosted CI.
+# Independent review semantics (Issue #224).  The ``adversarial-review``
+# phase identifier is retained for compatibility; its canonical meaning is
+# now the INDEPENDENT REVIEW phase.  The default independent review
+# authority is one maintainer exact-head review of the pushed PR head.
+# Delegated agent/LLM adversarial reviews are OPTIONAL targeted advisory
+# work: zero delegated lanes is valid, there is no default lane count and
+# no default review timeout, and no delegated-review completion is a
+# machine input to handoff.  There is deliberately NO agent-self-asserted
+# review receipt in this module.
+REVIEW_PHASE_ID = "adversarial-review"
+REVIEW_PHASE_ALIAS = "independent-review"
+DELEGATED_REVIEW_DEFAULT_LANES = 0
+
+# Gates reviewers may need before reviewing the exact proposed head.  All
+# are cheap, scoped, and already required by existing campaign doctrine;
+# NONE of them is the full CPU suite or hosted CI.
 PRE_REVIEW_GATES = frozenset({
     "focused-changed-surface-tests",
     "campaign-reducer-negative-controls",
@@ -342,10 +364,15 @@ class CampaignFlow:
     """One campaign's gate schedule under the canonical ordering.
 
     ``campaign_id``      — stable campaign identity (e.g. ``issue-210``).
-    ``pre_review``       — gates run before adversarial review freezes.
+    ``pre_review``       — gates run before independent review freezes.
     ``final_head``       — gates run once on the final reviewed head.
     ``review_critical``  — expensive gates a review lane explicitly needs
                             as an input (each requires justification).
+    ``delegated_review_lanes`` — OPTIONAL delegated agent/LLM adversarial
+                            review lanes (Issue #224).  Default 0 (zero
+                            delegated lanes is valid); any positive count
+                            is advisory only and is never a machine input
+                            to handoff.
     """
 
     campaign_id: str
@@ -353,6 +380,7 @@ class CampaignFlow:
     final_head: tuple[str, ...] = ("full-cpu-suite", "hosted-exact-head-ci",
                                    "finalizer-status-fixed-point-checks")
     review_critical: tuple[str, ...] = ()
+    delegated_review_lanes: int = DELEGATED_REVIEW_DEFAULT_LANES
 
     def __post_init__(self) -> None:
         unknown_pre = [g for g in self.pre_review if g not in PRE_REVIEW_GATES]
@@ -386,6 +414,15 @@ class CampaignFlow:
             raise GateOrderingError(
                 "review-critical gates are scheduled before review anyway; "
                 f"remove the declaration (fail closed): {sorted(overlap_rc)}")
+        # Delegated lanes (Issue #224): an optional advisory count.  It
+        # must be a non-negative integer, and it never authorizes anything:
+        # not a required lane minimum, not a machine input to handoff.
+        lanes = self.delegated_review_lanes
+        if (not isinstance(lanes, int) or isinstance(lanes, bool)
+                or lanes < 0):
+            raise GateOrderingError(
+                "delegated review lanes must be a non-negative integer "
+                f"(fail closed): {lanes!r}")
 
 
 def plan_campaign_gates(flow: CampaignFlow,
@@ -417,17 +454,24 @@ def plan_campaign_gates(flow: CampaignFlow,
                          "validation is deferred to the final head"),
             },
             {
-                "phase": "adversarial-review",
+                "phase": REVIEW_PHASE_ID,
                 "gates": [],
-                "note": ("read-only against the frozen pre-review head; "
-                         "reviewers must not require full-suite/hosted-CI "
-                         "results unless declared review-critical"),
+                "note": ("independent review (alias: "
+                         f"{REVIEW_PHASE_ALIAS}): read-only against the "
+                         "exact proposed head — by default the maintainer's "
+                         "exact-head PR review; delegated agent/LLM reviews "
+                         "are optional advisory lanes with no default count "
+                         "or timeout; reviewers must not require "
+                         "full-suite/hosted-CI results unless declared "
+                         "review-critical"),
             },
             {
                 "phase": "apply-accepted-review-fixes",
                 "gates": [],
                 "note": ("all accepted findings incorporated; focused "
-                         "checks re-run as needed"),
+                         "checks re-run as needed; a review-driven head "
+                         "mutation requires a fresh maintainer review of "
+                         "the new exact head"),
             },
             {
                 "phase": "final-head",
@@ -442,6 +486,13 @@ def plan_campaign_gates(flow: CampaignFlow,
         ],
         "review_critical": list(flow.review_critical),
         "review_mutates_head": review_mutates_head,
+        # Issue #224: delegated agent/LLM adversarial reviews are optional
+        # advisory work.  The default plan carries ZERO delegated lanes and
+        # requires none; a positive count records a campaign's prospective
+        # choice and is never a machine input to handoff.
+        "delegated_review_lanes": flow.delegated_review_lanes,
+        "delegated_review_required": False,
+        "default_review_authority": "maintainer-exact-head-pr-review",
     }
     executions: dict[str, int] = {}
     for gate in sorted(set(flow.final_head) & REVIEW_CRITICAL_EXCEPTIONS):
@@ -950,8 +1001,12 @@ def handoff_gate_status(final_head: FinalHeadRequest,
     supplied final-head identity.  The suite receipt is validated against
     ``final_head`` — never against identity extracted from the receipt —
     and hosted-CI success must be mechanically bound to the same exact SHA
-    through a structured status.  Adversarial review alone can never mark
-    handoff complete.
+    through a structured status.  Independent review — the maintainer's
+    exact-head PR review by default, plus any optional delegated advisory
+    reviews — can never mark handoff complete through this function: review
+    is process authority outside the implementation agent's evidence
+    graph, and this decision is purely mechanical over
+    suite/CI/finalizer identity (Issue #224).
     """
     if not isinstance(final_head, FinalHeadRequest):
         raise GateOrderingError(
@@ -978,8 +1033,10 @@ def handoff_gate_status(final_head: FinalHeadRequest,
         "hosted_ci_success": ci_ok,
         "finalizer_status_ok": finalizer_ok,
         "note": ("all final gates must bind to the one independently "
-                 "supplied final-head identity; review GO verdicts are "
-                 "necessary but never sufficient"),
+                 "supplied final-head identity; this decision is purely "
+                 "mechanical over suite/CI/finalizer identity — no review "
+                 "verdict (maintainer or delegated) is a machine input, "
+                 "and review GO is necessary but never sufficient"),
     }
 
 
@@ -1674,7 +1731,8 @@ def _await_completion(guard: LaunchGuard, owner_pid: int) -> dict:
 # ---------------------------------------------------------------------------
 
 def trace_campaign(old_order: bool, review_mutates_head: bool = True,
-                   review_critical: tuple[str, ...] = ()) -> dict:
+                   review_critical: tuple[str, ...] = (),
+                   delegated_review_lanes: int = 0) -> dict:
     """Synthetic trace of expensive-gate EXECUTIONS under one ordering.
 
     ``old_order=True``  models the #210/PR-#212 sequence: full suite +
@@ -1682,7 +1740,8 @@ def trace_campaign(old_order: bool, review_mutates_head: bool = True,
     ``old_order=False`` is the canonical ordering.  A review-critical gate
       that ran pre-review contributes a second physical execution only
       when review mutated the head; without mutation the exact-head result
-      is reused and counted once.
+      is reused and counted once.  The trace is independent of who reviews
+      (maintainer exact-head review by default; delegated lanes optional).
     """
     gates = ("full-cpu-suite", "hosted-exact-head-ci")
     if old_order:
@@ -1697,6 +1756,10 @@ def trace_campaign(old_order: bool, review_mutates_head: bool = True,
         "old_order": old_order,
         "review_mutates_head": review_mutates_head,
         "review_critical": sorted(review_critical),
+        # Issue #224: delegated lanes are advisory and never change the
+        # expensive-gate execution trace.
+        "delegated_review_lanes": delegated_review_lanes,
+        "delegated_review_required": False,
         "expensive_gate_executions": executions,
         "total_expensive_executions": sum(executions.values()),
         "final_validation_cycles": 1,

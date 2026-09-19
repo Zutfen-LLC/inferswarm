@@ -11,9 +11,12 @@ recorded authority, regenerate managed sections, and update affected explanatory
 prose. Explain any no-impact determination in the PR description. Never treat
 an observed PASS, generated status text, or green CI as execution authorization.
 
-Campaign/review handoffs follow `docs/campaign-gate-ordering.md` (Issue #213):
-run the cheap pre-review gates, freeze the head for adversarial review, apply
-accepted fixes, then run exactly one full CPU suite and one hosted exact-head
-CI on the final head. Adversarial review never substitutes for those final
-gates, and a pre-review full suite or hosted CI run requires an explicit
-review-critical declaration.
+Campaign/review handoffs follow `docs/campaign-gate-ordering.md` (Issues
+#213/#224): run the cheap pre-review gates, push the exact head and open the
+PR, obtain the default independent review — the maintainer's exact-head PR
+review (delegated agent/LLM adversarial reviews are optional, targeted,
+advisory lanes with no default count or timeout) — apply accepted fixes
+(re-reviewing the new head if it moved), then run exactly one full CPU
+suite and one hosted exact-head CI on the final head. Independent review
+never substitutes for those final gates, and a pre-review full suite or
+hosted CI run requires an explicit review-critical declaration.

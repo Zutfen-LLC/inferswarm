@@ -46,10 +46,13 @@ The repository is documentation plus CPU-only evidence tooling. Nothing here
 needs a GPU.
 
 Work that follows a physical/research campaign handoff (evidence PRs with
-adversarial review) must schedule validation per the
+independent review) must schedule validation per the
 [campaign gate ordering](docs/campaign-gate-ordering.md) rule: cheap
-reviewer-trust gates before review, and the single full-suite + hosted-CI
-cycle only on the final reviewed head, after review-driven fixes land.
+reviewer-trust gates before review, the default independent review being
+the maintainer's exact-head review of the pushed PR (delegated agent/LLM
+adversarial reviews are optional, targeted advisory lanes with no default
+count or timeout), and the single full-suite + hosted-CI cycle only on the
+final reviewed head, after review-driven fixes land.
 
 The canonical CPU test environment (Issue #131) is declared once in
 [`requirements-test.txt`](requirements-test.txt) (which installs the immutable
