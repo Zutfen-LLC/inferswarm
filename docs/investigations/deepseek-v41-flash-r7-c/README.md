@@ -135,9 +135,15 @@ receipt, an emptied foreign-process receipt that silently re-issues an occupied
 resource as available, a jointly re-dated census/terminal pair - the reducer
 cannot tell the forgery from a genuine observation, because the bundle carries
 no out-of-band signing anchor. Such a forgery produces a DIFFERENT reduction
-document, which is rejected against the retained terminal (`committed terminal
-differs from deterministic reduction`), so the accepted terminal value is not
-reachable through it. The fleet record retains the exact source hash, command
+document: the retained terminal *document* is not reachable through it, and the
+reducer rejects the pair with `committed terminal differs from deterministic
+reduction`. What such a forgery CAN reproduce is the terminal string itself -
+the accepted value is `R7C_CURRENT_FLEET_CAPACITY_PREREQUISITE` under any census
+whose every resource is far below both stage bounds, which is what this fleet is
+- and a joint census-plus-terminal rewrite is certified by the finalizer exactly
+as the retained pair is. That is the disclosed no-anchor boundary, not a
+protection: a terminal string is not acceptance. The fleet record retains the
+exact source hash, command
 receipts, raw GPU rows, foreign-process rows, and any SSH timeout receipts that
 the reduction consumes. Freshness is enforced against the real clock at
 collection and reduction time, but re-verifying a frozen bundle reuses the

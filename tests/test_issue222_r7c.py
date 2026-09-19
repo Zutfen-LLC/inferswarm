@@ -402,10 +402,14 @@ class Issue222R7CTests(unittest.TestCase):
         self.assertEqual(size_result["rejected"]["stage-a"]["deficit_bytes"], 10)
 
     def test_readme_claims_match_the_retained_evidence(self):
-        """Pin every machine-checkable README claim against the retained bytes.
+        """Pin the README's machine-checkable claims AND their attributions.
 
         A stale `repo_head` citation in the README was filed as a P1 twice
-        because no control tied the prose to the evidence; this is that control.
+        because no control tied the prose to the evidence. This control derives
+        each pinned value from the retained bytes, asserts it inside the exact
+        phrase that attributes it, refuses any 40-hex identity the README cites
+        that is not a retained identity, and checks the superseded-observation
+        paragraph against those commits' own censuses.
         """
         root = Path(__file__).resolve().parents[1]
         area = root / r7c.AREA
@@ -454,6 +458,14 @@ class Issue222R7CTests(unittest.TestCase):
                 self.assertIn(resource["resource_id"], flat)
                 self.assertIn(resource["name"], flat)
                 self.assertIn(f"{resource['available_device_bytes']:,}", flat)
+            # The exact table row, so a single-cell corruption cannot hide
+            # behind the same figure appearing in the prose.
+            foreign = ", ".join(f"PID {p['pid']} ({p['used_memory_mib']} MiB)"
+                                for p in resource["foreign_processes"]) or "none"
+            row = (f"| `{resource['resource_id']}` | {resource['name']} | "
+                   f"{resource['available_device_bytes']:,} | {foreign} |")
+            with self.subTest(row=resource["resource_id"]):
+                self.assertIn(row, flat, f"README does not state the row: {row}")
         for process in [p for r in fleet["resources"] for p in r["foreign_processes"]]:
             with self.subTest(foreign_pid=process["pid"]):
                 self.assertIn(process["pid"], flat)
@@ -494,6 +506,55 @@ class Issue222R7CTests(unittest.TestCase):
         self.assertEqual(len(later["resources"]), len(fleet["resources"]))
         self.assertEqual(max(r["usable_device_bytes"] for r in later["resources"]),
                          rejected["stage-a"]["largest_compatible_usable_bytes"])
+        # Attribution-level pins: a figure is also asserted inside the exact
+        # phrase that attributes it, so a corrupted figure cannot hide behind a
+        # duplicate occurrence elsewhere in the README.
+        words = {4: "four", 6: "six"}
+        superseded_largest = max(r["usable_device_bytes"] for r in superseded["resources"])
+        sentences = [
+            f"Corrected producer/authority head: `{authority['repo_head']}`",
+            f"R7-A: merge `{r7b_terminal['predecessor']['merge']}`, terminal `{authority['r7a']['terminal']}`",
+            f"R7-B: merge `{r7c.R7B_MERGE}`, terminal `{authority['r7b']['terminal']}`",
+            f"Official subject: `{authority['model']['repository']}` at `{authority['model']['revision']}`; "
+            f"{len({row['shard'] for row in r7a_census['tensors']})} official sharded safetensors, "
+            "with no conversion authority",
+            f"Runtime: vLLM `{authority['runtime']['revision']}`",
+            f"Strategy: the accepted `{authority['strategy']['shape']}` subject with fixed cut "
+            f"{authority['strategy']['cut_layer']}",
+            f"stage A `[{authority['strategy']['stage_a_layers'][0]},{authority['strategy']['stage_a_layers'][1]})`, "
+            f"stage B `[{authority['strategy']['stage_b_layers'][0]},{authority['strategy']['stage_b_layers'][1]})`",
+            f"All {words[len(fleet['candidate_hosts'])]} hosts were reachable and returned "
+            f"{words[len(fleet['resources'])]} GPU resources",
+            f'`unavailable_hosts: ["{superseded["unavailable_hosts"][0]}", '
+            f'"{superseded["unavailable_hosts"][1]}"]`, {words[len(superseded["resources"])]} resources, '
+            f"and deficits computed against a {superseded_largest:,}-byte largest resource",
+            "pre-hardening producer bytes (`collector_sha256` "
+            f"`{superseded['host_records']['inferswarm01']['collector_sha256'][:8]}...`)",
+            f"an all-reachable, {words[len(later['resources'])]}-resource census with the accepted "
+            f"largest resource ({rejected['stage-a']['largest_compatible_usable_bytes']:,})",
+            f"The largest single compatible usable resource is "
+            f"{rejected['stage-a']['largest_compatible_usable_bytes']:,} bytes",
+            f"leaving per-resource deficits of {rejected['stage-a']['deficit_bytes']:,} bytes for "
+            f"stage A and {rejected['stage-b']['deficit_bytes']:,} bytes for stage B",
+            "aggregate of the compatible, unoccupied resources "
+            f"({committed['placement']['aggregate_compatible_usable_bytes']:,} bytes)",
+            f"The reduction stopped at Phase {committed['phase_stop'].split()[1]}",
+        ]
+        for sentence in sentences:
+            with self.subTest(sentence=sentence):
+                self.assertIn(sentence, flat, f"README does not state: {sentence}")
+        # The controls paragraph must keep quoting the message the reducer
+        # actually raises, and must keep disclosing the no-anchor boundary.
+        probe_authority = r7c.build_authority(ROOT, repo_head="f" * 40)
+        probe_fleet = self._valid_fleet(probe_authority)
+        probe_terminal = r7c.reduction_document(probe_authority, probe_fleet, now_unix=1000)
+        tampered = copy.deepcopy(probe_terminal)
+        tampered["placement"]["aggregate_compatible_usable_bytes"] += 1
+        with self.assertRaises(ValueError) as caught:
+            r7c.verify_committed_terminal(probe_authority, probe_fleet, tampered)
+        self.assertIn(str(caught.exception).removeprefix("ISSUE222_FAIL: "), flat)
+        self.assertIn("no out-of-band signing anchor", flat)
+        self.assertIn("a terminal string is not acceptance", flat)
 
     def test_missing_raw_receipt_and_unknown_device_row_fail_closed(self):
         """The two receipt-surface claims the README's control list makes."""
