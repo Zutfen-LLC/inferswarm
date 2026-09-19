@@ -51,6 +51,8 @@ MODEL_REPOSITORY = "deepseek-ai/DeepSeek-V4.1-Flash"
 MODEL_REVISION = "dba1be0a40aa45a94ad051997016db3960a90277"
 VLLM_REVISION = "0eae9acd4d01574e12d4ecf6a0229813f7fdb799"
 FRESHNESS_SECONDS = 900
+R7B_MERGE = "54d36cb9d8a4c0603abeb18968a8ffb7b52ca10e"
+RECONCILED_MAIN = "fe690249873a9bf7ca19d788a2fab5e580473394"
 CANDIDATE_HOSTS = ("inferswarm01", "inferswarm02", "inferswarm03", "inferswarm04")
 _LAYER = re.compile(r"^layers\.(\d+)\.")
 
@@ -157,6 +159,39 @@ def derive_stage_footprints(root: Path) -> dict[str, dict[str, Any]]:
     return stages
 
 
+def mainline_applicability_audit(root: Path) -> dict[str, Any]:
+    """Mechanically classify all post-R7-B mainline paths before R7-C output."""
+    result = subprocess.run(["git", "-C", str(root), "diff", "--name-only",
+                             f"{R7B_MERGE}..{RECONCILED_MAIN}"],
+                            capture_output=True, text=True)
+    if result.returncode != 0:
+        raise ValueError("ISSUE222_FAIL: cannot audit post-R7-B mainline")
+    paths = sorted(path for path in result.stdout.splitlines() if path)
+    r7_paths = [path for path in paths if path.startswith((R7A + "/", R7B + "/",
+                                                            "scripts/issue187_", "scripts/issue209_",
+                                                            "tests/test_issue187_", "tests/test_issue209_"))]
+    if r7_paths:
+        raise ValueError("ISSUE222_FAIL: post-R7-B mainline changes R7 authority or strategy")
+    scope_counts = {
+        "campaign_gate_ordering_or_ci": sum(path.startswith((".github/", "scripts/issue213_", "tests/test_issue213_", "docs/campaign-gate-ordering")) for path in paths),
+        "vulkan_campaigns_and_hardware_inventory": sum(path.startswith(("docs/investigations/vulkan", "docs/hardware/", "scripts/issue215_", "scripts/issue216_", "scripts/issue219_", "tests/test_issue215", "tests/test_issue216", "tests/test_issue219")) for path in paths),
+        "other_docs_or_tests": 0,
+    }
+    scope_counts["other_docs_or_tests"] = len(paths) - sum(scope_counts.values())
+    return {
+        "start_after_r7b_merge": R7B_MERGE,
+        "reconciled_main": RECONCILED_MAIN,
+        "changed_path_count": len(paths),
+        "scope_counts": scope_counts,
+        "r7_authority_or_strategy_changes": r7_paths,
+        "conclusion": (
+            "The post-R7-B mainline delta contains campaign-gate ordering/CI and "
+            "separate V340L Vulkan/hardware campaign material; it changes neither "
+            "the R7-A census, R7-B vLLM source authority, selected contiguous-stage "
+            "strategy, nor DeepSeek artifact/materialization authority."),
+    }
+
+
 def build_authority(root: Path = ROOT, repo_head: str | None = None) -> dict[str, Any]:
     """Freeze all static R7-C inputs before any physical census is admitted."""
     _require_hashes(root)
@@ -187,6 +222,7 @@ def build_authority(root: Path = ROOT, repo_head: str | None = None) -> dict[str
         "issue": 222,
         "campaign_id": "r7c-deepseek-v41-physical-feasibility/1",
         "repo_head": repo_head,
+        "mainline_applicability_audit": mainline_applicability_audit(root),
         "model": {"repository": MODEL_REPOSITORY, "revision": MODEL_REVISION,
                   "representation": "48 official sharded safetensors"},
         "runtime": {"id": "vllm-current-source", "revision": VLLM_REVISION},

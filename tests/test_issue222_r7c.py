@@ -22,6 +22,12 @@ class Issue222R7CTests(unittest.TestCase):
                          "R7A_DEEPSEEK_V41_SUBSTRATE_PREREQUISITE")
         self.assertEqual(authority["r7b"]["terminal"],
                          "R7B_DEEPSEEK_V41_PHYSICAL_GATE_READY")
+        audit = authority["mainline_applicability_audit"]
+        self.assertEqual(audit["start_after_r7b_merge"],
+                         "54d36cb9d8a4c0603abeb18968a8ffb7b52ca10e")
+        self.assertEqual(audit["reconciled_main"],
+                         "fe690249873a9bf7ca19d788a2fab5e580473394")
+        self.assertEqual(audit["r7_authority_or_strategy_changes"], [])
         stages = authority["stage_footprints"]
         self.assertEqual(set(stages), {"stage-a", "stage-b"})
         self.assertGreater(stages["stage-a"]["logical_required_bytes"], 0)
