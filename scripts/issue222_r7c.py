@@ -38,6 +38,15 @@ MATERIALIZATION_PREREQUISITE = "R7C_OFFICIAL_STATE_MATERIALIZATION_PREREQUISITE"
 RUNTIME_PREREQUISITE = "R7C_RUNTIME_DEVICE_PREREQUISITE"
 EVIDENCE_BLOCKED = "R7C_EVIDENCE_BLOCKED"
 PASS_TERMINAL = "R7C_DEEPSEEK_V41_PHYSICAL_FEASIBILITY_PASS"
+HOST_RECORD_SCHEMA = "inferswarm.issue222.r7c-host-record/1"
+CONNECTION_FAILURE_SCHEMA = "inferswarm.issue222.r7c-connection-failure/1"
+EXPECTED_RECEIPT_ARGV = {
+    "nvidia_smi_gpu": ["nvidia-smi", "--query-gpu=index,uuid,pci.bus_id,name,memory.total,memory.free,memory.used,driver_version", "--format=csv,noheader,nounits"],
+    "nvidia_smi_apps": ["nvidia-smi", "--query-compute-apps=pid,gpu_uuid,used_memory", "--format=csv,noheader,nounits"],
+    "hostname": ["hostname"],
+    "storage": ["df", "-B1", "."],
+    "memory": ["free", "-b"],
+}
 EXPECTED = {
     R7A_CENSUS: "25f61e88289ae4b6f101fea563e5556d37cb96291f6c108ad26d9513d6da1bbc",
     R7A_TERMINAL: "aee287f59199622b97bdf9862624f990416ee838eebea397e6a64d99526806dc",
@@ -265,14 +274,99 @@ def build_authority(root: Path = ROOT, repo_head: str | None = None) -> dict[str
     return document
 
 
+def _receipt(receipts: dict[str, Any], name: str) -> dict[str, Any]:
+    receipt = receipts.get(name)
+    if not isinstance(receipt, dict):
+        raise ValueError(f"ISSUE222_FAIL: raw receipt absent {name}")
+    if receipt.get("argv") != EXPECTED_RECEIPT_ARGV[name]:
+        raise ValueError(f"ISSUE222_FAIL: raw receipt command drift {name}")
+    for field in ("stdout", "stderr"):
+        if not isinstance(receipt.get(field), str):
+            raise ValueError(f"ISSUE222_FAIL: raw receipt bytes absent {name}")
+        if receipt.get(f"{field}_sha256") != hashlib.sha256(receipt[field].encode()).hexdigest():
+            raise ValueError(f"ISSUE222_FAIL: raw receipt hash drift {name}")
+    if not isinstance(receipt.get("returncode"), int):
+        raise ValueError(f"ISSUE222_FAIL: raw receipt return code absent {name}")
+    return receipt
+
+
+def _raw_resources(host: str, receipts: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
+    """Recompute resource and foreign-process rows from retained raw bytes."""
+    checked = {name: _receipt(receipts, name) for name in EXPECTED_RECEIPT_ARGV}
+    if checked["hostname"]["returncode"] != 0 or checked["hostname"]["stdout"].strip() != host:
+        raise ValueError("ISSUE222_FAIL: hostname receipt contradicts host identity")
+    gpu, apps = checked["nvidia_smi_gpu"], checked["nvidia_smi_apps"]
+    if gpu["returncode"] != 0 or apps["returncode"] != 0:
+        raise ValueError("ISSUE222_FAIL: required NVIDIA raw receipt failed")
+    apps_by_uuid: dict[str, list[dict[str, str]]] = {}
+    for line in apps["stdout"].splitlines():
+        parts = [item.strip() for item in line.split(",")]
+        if len(parts) != 3 or not all(parts) or not parts[0].isdigit() or not parts[2].isdigit():
+            raise ValueError("ISSUE222_FAIL: nvidia-smi app raw receipt unparseable")
+        apps_by_uuid.setdefault(parts[1], []).append(
+            {"pid": parts[0], "used_memory_mib": parts[2]})
+    resources: list[dict[str, Any]] = []
+    seen_indexes, seen_uuids = set(), set()
+    for line in gpu["stdout"].splitlines():
+        parts = [item.strip() for item in line.split(",")]
+        if len(parts) != 8 or not all(parts) or not parts[0].isdigit():
+            raise ValueError("ISSUE222_FAIL: nvidia-smi GPU raw receipt unparseable")
+        try:
+            total, free, used = (int(parts[index]) * 1024 * 1024 for index in (4, 5, 6))
+        except ValueError as error:
+            raise ValueError("ISSUE222_FAIL: nvidia-smi GPU raw receipt unparseable") from error
+        if min(total, free, used) < 0 or free + used > total or parts[0] in seen_indexes or parts[1] in seen_uuids:
+            raise ValueError("ISSUE222_FAIL: nvidia-smi GPU raw receipt contradictory")
+        seen_indexes.add(parts[0])
+        seen_uuids.add(parts[1])
+        resources.append({
+            "resource_id": f"{host}/gpu-{parts[0]}", "host": host, "index": parts[0],
+            "uuid": parts[1], "pci_bdf": parts[2], "name": parts[3],
+            "total_device_bytes": total, "available_device_bytes": free,
+            "used_device_bytes": used, "usable_device_bytes": free,
+            "driver_version": parts[7], "compatible": True,
+            "foreign_processes": apps_by_uuid.pop(parts[1], []),
+        })
+    if apps_by_uuid:
+        raise ValueError("ISSUE222_FAIL: nvidia-smi app receipt names unknown GPU")
+    problems = [name for name, receipt in checked.items() if receipt["returncode"] != 0]
+    return resources, problems
+
+
+def _validate_record(authority: dict[str, Any], host: str, record: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str], bool]:
+    """Validate provenance and derive every admitted resource from raw receipts."""
+    if not isinstance(record, dict) or record.get("host") != host:
+        raise ValueError("ISSUE222_FAIL: host identity drift in census record")
+    if (record.get("campaign_id") != authority.get("campaign_id")
+            or record.get("authority_sha256") != authority.get("authority_sha256")
+            or record.get("collector_sha256") != authority.get("producer_sha256")):
+        raise ValueError("ISSUE222_FAIL: host record provenance drift")
+    if not isinstance(record.get("collected_at_unix"), int):
+        raise ValueError("ISSUE222_FAIL: host record collection time absent")
+    failed = record.get("connection_failure")
+    if failed is not None:
+        if (record.get("schema") != CONNECTION_FAILURE_SCHEMA or not isinstance(failed, dict)
+                or not isinstance(failed.get("returncode"), int) or failed["returncode"] == 0
+                or not isinstance(failed.get("stderr"), str) or not failed["stderr"]
+                or failed.get("stderr_sha256") != hashlib.sha256(failed["stderr"].encode()).hexdigest()):
+            raise ValueError("ISSUE222_FAIL: malformed connection-failure receipt")
+        if "resources" in record or "receipts" in record:
+            raise ValueError("ISSUE222_FAIL: unavailable host carries resource receipt")
+        return [], [], True
+    if record.get("schema") != HOST_RECORD_SCHEMA:
+        raise ValueError("ISSUE222_FAIL: host record schema drift")
+    receipts = record.get("receipts")
+    if not isinstance(receipts, dict):
+        raise ValueError("ISSUE222_FAIL: host raw receipts absent")
+    resources, problems = _raw_resources(host, receipts)
+    if record.get("resources") != resources or record.get("problems") != problems:
+        raise ValueError("ISSUE222_FAIL: parsed resource rows contradict raw receipts")
+    return resources, problems, False
+
+
 def assemble_fleet(authority: dict[str, Any], records: dict[str, dict[str, Any]], *,
                    collected_at_unix: int | None = None) -> dict[str, Any]:
-    """Assemble one current-fleet census from every frozen NVIDIA candidate.
-
-    A failed SSH connection is retained as an unavailable resource boundary,
-    not silently dropped and not treated as capacity. A reachable host must
-    have been collected by the exact authority-pinned source bytes.
-    """
+    """Assemble one provenance-checked census from every frozen candidate."""
     expected_hosts = authority.get("candidate_hosts")
     if expected_hosts != list(CANDIDATE_HOSTS) or set(records) != set(CANDIDATE_HOSTS):
         raise ValueError("ISSUE222_FAIL: candidate-host set drift")
@@ -280,44 +374,39 @@ def assemble_fleet(authority: dict[str, Any], records: dict[str, dict[str, Any]]
     unavailable: list[str] = []
     observation_problems: list[dict[str, Any]] = []
     for host in CANDIDATE_HOSTS:
-        record = records[host]
-        failed = record.get("connection_failure")
-        if isinstance(failed, dict):
-            if not isinstance(failed.get("returncode"), int) or failed["returncode"] == 0 or not failed.get("stderr"):
-                raise ValueError("ISSUE222_FAIL: malformed connection-failure receipt")
+        host_resources, problems, failed = _validate_record(authority, host, records[host])
+        if failed:
             unavailable.append(host)
-            continue
-        if record.get("host") != host:
-            raise ValueError("ISSUE222_FAIL: host identity drift in census record")
-        if record.get("collector_sha256") != authority.get("producer_sha256"):
-            raise ValueError("ISSUE222_FAIL: collector source identity drift")
-        if record.get("problems"):
-            observation_problems.append({"host": host, "problems": record["problems"]})
-        for resource in record.get("resources", []):
-            if resource.get("host") != host:
-                raise ValueError("ISSUE222_FAIL: resource/host cross-binding drift")
-            resources.append(resource)
+        else:
+            resources.extend(host_resources)
+            if problems:
+                observation_problems.append({"host": host, "problems": problems})
+    collected = int(time.time()) if collected_at_unix is None else collected_at_unix
+    if not isinstance(collected, int):
+        raise ValueError("ISSUE222_FAIL: fleet collection time absent")
     return {
-        "schema": FLEET_SCHEMA,
-        "campaign_id": authority.get("campaign_id"),
+        "schema": FLEET_SCHEMA, "campaign_id": authority.get("campaign_id"),
         "authority_sha256": authority.get("authority_sha256"),
-        "candidate_hosts": list(CANDIDATE_HOSTS),
-        "unavailable_hosts": unavailable,
+        "candidate_hosts": list(CANDIDATE_HOSTS), "unavailable_hosts": unavailable,
         "host_records": {host: records[host] for host in CANDIDATE_HOSTS},
-        "resources": resources,
-        "observation_problems": observation_problems,
-        "collected_at_unix": int(time.time()) if collected_at_unix is None else collected_at_unix,
+        "resources": resources, "observation_problems": observation_problems,
+        "collected_at_unix": collected,
     }
 
 
-def record_connection_failure(host: str, returncode: int, stderr: str) -> dict[str, Any]:
-    """Preserve a failed read-only SSH attempt as an unavailable-host receipt."""
+def record_connection_failure(authority: dict[str, Any], host: str, returncode: int, stderr: str,
+                              *, collected_at_unix: int | None = None) -> dict[str, Any]:
+    """Preserve a provenance-bound failed read-only SSH attempt."""
     if host not in CANDIDATE_HOSTS or returncode == 0 or not stderr:
         raise ValueError("ISSUE222_FAIL: invalid connection-failure receipt")
-    return {"schema": "inferswarm.issue222.r7c-connection-failure/1", "host": host,
-            "connection_failure": {"returncode": returncode, "stderr": stderr,
-                                   "stderr_sha256": hashlib.sha256(stderr.encode()).hexdigest()},
-            "collector_sha256": sha256(Path(__file__).resolve())}
+    return {
+        "schema": CONNECTION_FAILURE_SCHEMA, "campaign_id": authority.get("campaign_id"),
+        "authority_sha256": authority.get("authority_sha256"), "host": host,
+        "collected_at_unix": int(time.time()) if collected_at_unix is None else collected_at_unix,
+        "connection_failure": {"returncode": returncode, "stderr": stderr,
+                               "stderr_sha256": hashlib.sha256(stderr.encode()).hexdigest()},
+        "collector_sha256": sha256(Path(__file__).resolve()),
+    }
 
 
 def legal_placement(stages: dict[str, dict[str, Any]], fleet: dict[str, Any]) -> dict[str, Any]:
@@ -361,16 +450,24 @@ def legal_placement(stages: dict[str, dict[str, Any]], fleet: dict[str, Any]) ->
     }
 
 
-def _validate_fleet(fleet: dict[str, Any], now_unix: int | None) -> None:
+def _validate_fleet(authority: dict[str, Any], fleet: dict[str, Any], now_unix: int) -> None:
+    if not isinstance(now_unix, int):
+        raise ValueError("ISSUE222_FAIL: explicit reduction time required")
     if fleet.get("schema") != FLEET_SCHEMA:
         raise ValueError("ISSUE222_FAIL: fleet schema drift")
-    if now_unix is not None:
-        observed = fleet.get("collected_at_unix")
-        if not isinstance(observed, int) or observed < now_unix - FRESHNESS_SECONDS or observed > now_unix + 60:
-            raise ValueError("ISSUE222_FAIL: fleet freshness invalid")
-    for row in fleet.get("resources", []):
-        if not isinstance(row.get("foreign_processes"), list):
-            raise ValueError("ISSUE222_FAIL: foreign-process receipt absent")
+    records = fleet.get("host_records")
+    if not isinstance(records, dict):
+        raise ValueError("ISSUE222_FAIL: host records absent from fleet")
+    observed = fleet.get("collected_at_unix")
+    if not isinstance(observed, int):
+        raise ValueError("ISSUE222_FAIL: fleet freshness invalid")
+    expected = assemble_fleet(authority, records, collected_at_unix=observed)
+    if canonical(fleet) != canonical(expected):
+        raise ValueError("ISSUE222_FAIL: fleet bypasses assembled raw-receipt provenance")
+    timestamps = [observed] + [records[host].get("collected_at_unix") for host in CANDIDATE_HOSTS]
+    if any(not isinstance(value, int) or value < now_unix - FRESHNESS_SECONDS
+           or value > now_unix + 60 for value in timestamps):
+        raise ValueError("ISSUE222_FAIL: fleet freshness invalid")
 
 
 def reduction_document(authority: dict[str, Any], fleet: dict[str, Any], *, now_unix: int | None = None) -> dict[str, Any]:
@@ -380,7 +477,9 @@ def reduction_document(authority: dict[str, Any], fleet: dict[str, Any], *, now_
     claimed = raw.pop("authority_sha256", None)
     if claimed != hashlib.sha256(canonical(raw)).hexdigest():
         raise ValueError("ISSUE222_FAIL: authority self-digest drift")
-    _validate_fleet(fleet, now_unix)
+    if now_unix is None:
+        raise ValueError("ISSUE222_FAIL: explicit reduction time required")
+    _validate_fleet(authority, fleet, now_unix)
     stage_footprints = authority.get("stage_footprints")
     if not isinstance(stage_footprints, dict):
         raise ValueError("ISSUE222_FAIL: stage footprints absent")
@@ -400,6 +499,7 @@ def reduction_document(authority: dict[str, Any], fleet: dict[str, Any], *, now_
             "shards": authority["stage_footprints"][key]["shards"],
         } for key in ("stage-a", "stage-b")},
         "fleet_census_sha256": hashlib.sha256(canonical(fleet)).hexdigest(),
+        "reduced_at_unix": now_unix,
         "placement": placement,
         "terminal": CAPACITY_PREREQUISITE,
         "smallest_prerequisite": (
@@ -412,7 +512,10 @@ def reduction_document(authority: dict[str, Any], fleet: dict[str, Any], *, now_
 
 
 def verify_committed_terminal(authority: dict[str, Any], fleet: dict[str, Any], committed: dict[str, Any]) -> None:
-    expected = reduction_document(authority, fleet)
+    preserved_time = committed.get("reduced_at_unix")
+    if not isinstance(preserved_time, int):
+        raise ValueError("ISSUE222_FAIL: committed terminal lacks preserved reduction time")
+    expected = reduction_document(authority, fleet, now_unix=preserved_time)
     if committed.get("terminal") != expected["terminal"]:
         raise ValueError("ISSUE222_FAIL: authored terminal contradicts reduction")
     if committed != expected:
@@ -444,33 +547,13 @@ def collect_local(authority_path: Path, out: Path) -> dict[str, Any]:
     memory = _probe(["free", "-b"])
     receipts = {"nvidia_smi_gpu": gpu, "nvidia_smi_apps": apps, "hostname": host,
                 "storage": storage, "memory": memory}
-    problems = [name for name, receipt in receipts.items() if receipt["returncode"] != 0]
-    apps_by_uuid: dict[str, list[dict[str, str]]] = {}
-    if apps["returncode"] == 0:
-        for line in apps["stdout"].splitlines():
-            parts = [item.strip() for item in line.split(",")]
-            if len(parts) == 3:
-                apps_by_uuid.setdefault(parts[1], []).append({"pid": parts[0], "used_memory_mib": parts[2]})
-    resources = []
-    if gpu["returncode"] == 0:
-        for line in gpu["stdout"].splitlines():
-            parts = [item.strip() for item in line.split(",")]
-            if len(parts) != 8:
-                problems.append("nvidia_smi_gpu_unparseable")
-                continue
-            try:
-                total, free, used = (int(parts[i]) * 1024 * 1024 for i in (4, 5, 6))
-            except ValueError:
-                problems.append("nvidia_smi_gpu_unparseable")
-                continue
-            resources.append({"resource_id": f"{host['stdout'].strip()}/gpu-{parts[0]}",
-                              "host": host["stdout"].strip(), "index": parts[0], "uuid": parts[1],
-                              "pci_bdf": parts[2], "name": parts[3], "total_device_bytes": total,
-                              "available_device_bytes": free, "used_device_bytes": used,
-                              "usable_device_bytes": free, "driver_version": parts[7],
-                              "compatible": True, "foreign_processes": apps_by_uuid.get(parts[1], [])})
-    document = {"schema": FLEET_SCHEMA, "campaign_id": authority.get("campaign_id"),
-                "host": host["stdout"].strip(), "authority_sha256": authority.get("authority_sha256"),
+    host_name = host["stdout"].strip()
+    try:
+        resources, problems = _raw_resources(host_name, receipts)
+    except ValueError as error:
+        raise SystemExit(f"ISSUE222_COLLECT_FAIL: {error}") from error
+    document = {"schema": HOST_RECORD_SCHEMA, "campaign_id": authority.get("campaign_id"),
+                "host": host_name, "authority_sha256": authority.get("authority_sha256"),
                 "collector_sha256": sha256(Path(__file__).resolve()),
                 "collected_at_unix": int(time.time()), "receipts": receipts,
                 "resources": resources, "problems": problems}
@@ -516,10 +599,11 @@ def main() -> int:
             records[host] = json.loads(path.read_text())
         document = assemble_fleet(json.loads(args.authority.read_text()), records)
     elif args.record_connection_failure:
-        if args.host is None or args.returncode is None or args.stderr_file is None:
-            parser.error("--record-connection-failure requires --host --returncode --stderr-file")
-        document = record_connection_failure(args.host, args.returncode,
-                                             args.stderr_file.read_text())
+        if (args.authority is None or args.host is None or args.returncode is None
+                or args.stderr_file is None):
+            parser.error("--record-connection-failure requires --authority --host --returncode --stderr-file")
+        document = record_connection_failure(json.loads(args.authority.read_text()), args.host,
+                                             args.returncode, args.stderr_file.read_text())
     else:
         if args.authority is None or args.fleet is None:
             parser.error("--reduce requires --authority and --fleet")

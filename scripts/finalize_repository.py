@@ -1664,14 +1664,17 @@ def _issue222_terminal_producer(run: StageRun, scratch: Path
     import issue222_r7c as r7c  # noqa: PLC0415
     authority_bytes = run.read(_R7C_AUTHORITY)
     fleet_bytes = run.read(_R7C_FLEET)
-    if authority_bytes is None or fleet_bytes is None:
-        raise FinalizationError("Issue #222 authority or fleet census is missing")
+    terminal_bytes = run.read(_R7C_TERMINAL)
+    if authority_bytes is None or fleet_bytes is None or terminal_bytes is None:
+        raise FinalizationError("Issue #222 authority, fleet census, or preserved terminal is missing")
     authority = json.loads(authority_bytes)
     fleet = json.loads(fleet_bytes)
-    document = r7c.reduction_document(authority, fleet)
-    return {_R7C_TERMINAL: (json.dumps(document, sort_keys=True,
-                                       separators=(",", ":"))
-                            + "\n").encode("utf-8")}
+    committed = json.loads(terminal_bytes)
+    try:
+        r7c.verify_committed_terminal(authority, fleet, committed)
+    except ValueError as error:
+        raise FinalizationError(f"Issue #222 preserved terminal verification failed: {error}") from error
+    return {_R7C_TERMINAL: terminal_bytes}
 
 
 def _issue222_producer_hashes(run: StageRun, scratch: Path
@@ -1929,7 +1932,7 @@ def default_registry() -> tuple[Stage, ...]:
             kind="derived",
             description=("R7-C deterministic terminal from frozen R7-A/R7-B "
                          "authority and a retained fresh NVIDIA fleet census"),
-            reads=(_R7C_AUTHORED | {"scripts/issue222_r7c.py"}),
+            reads=(_R7C_AUTHORED | {_R7C_TERMINAL, "scripts/issue222_r7c.py"}),
             writes=frozenset({_R7C_TERMINAL}),
             after=frozenset({"issue209-manifest"}),
             producer=_issue222_terminal_producer,

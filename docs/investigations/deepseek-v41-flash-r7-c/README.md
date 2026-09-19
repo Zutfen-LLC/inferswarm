@@ -6,7 +6,8 @@ consumes R7-A/R7-B byte-for-byte and stops before model-state acquisition.
 ## Authority
 
 - Starting reconciled main: `fe690249873a9bf7ca19d788a2fab5e580473394`.
-- Frozen producer head before physical collection: `e35217553385a56ef3864c6391a3002457049c95`.
+- Authority source repo head: `c02f6daa657b0804e8d259139bb3523551362712`.
+- Frozen collector/authority head before physical collection: `e35217553385a56ef3864c6391a3002457049c95`.
 - R7-A: merge `7417c2f58a63d4da854ff399ba6fea5bd722da83`, terminal
   `R7A_DEEPSEEK_V41_SUBSTRATE_PREREQUISITE`.
 - R7-B: merge `54d36cb9d8a4c0603abeb18968a8ffb7b52ca10e`, terminal
