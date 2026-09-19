@@ -51,6 +51,7 @@ MODEL_REPOSITORY = "deepseek-ai/DeepSeek-V4.1-Flash"
 MODEL_REVISION = "dba1be0a40aa45a94ad051997016db3960a90277"
 VLLM_REVISION = "0eae9acd4d01574e12d4ecf6a0229813f7fdb799"
 FRESHNESS_SECONDS = 900
+CANDIDATE_HOSTS = ("inferswarm01", "inferswarm02", "inferswarm03", "inferswarm04")
 _LAYER = re.compile(r"^layers\.(\d+)\.")
 
 
@@ -189,6 +190,7 @@ def build_authority(root: Path = ROOT, repo_head: str | None = None) -> dict[str
         "model": {"repository": MODEL_REPOSITORY, "revision": MODEL_REVISION,
                   "representation": "48 official sharded safetensors"},
         "runtime": {"id": "vllm-current-source", "revision": VLLM_REVISION},
+        "candidate_hosts": list(CANDIDATE_HOSTS),
         "strategy": {"shape": "contiguous_stage", "cut_layer": 20,
                      "stage_a_layers": [0, 20], "stage_b_layers": [20, 40],
                      "cross_stage_cache": "none at layer-20 cut"},
@@ -225,6 +227,60 @@ def build_authority(root: Path = ROOT, repo_head: str | None = None) -> dict[str
     }
     document["authority_sha256"] = hashlib.sha256(canonical(document)).hexdigest()
     return document
+
+
+def assemble_fleet(authority: dict[str, Any], records: dict[str, dict[str, Any]], *,
+                   collected_at_unix: int | None = None) -> dict[str, Any]:
+    """Assemble one current-fleet census from every frozen NVIDIA candidate.
+
+    A failed SSH connection is retained as an unavailable resource boundary,
+    not silently dropped and not treated as capacity. A reachable host must
+    have been collected by the exact authority-pinned source bytes.
+    """
+    expected_hosts = authority.get("candidate_hosts")
+    if expected_hosts != list(CANDIDATE_HOSTS) or set(records) != set(CANDIDATE_HOSTS):
+        raise ValueError("ISSUE222_FAIL: candidate-host set drift")
+    resources: list[dict[str, Any]] = []
+    unavailable: list[str] = []
+    observation_problems: list[dict[str, Any]] = []
+    for host in CANDIDATE_HOSTS:
+        record = records[host]
+        failed = record.get("connection_failure")
+        if isinstance(failed, dict):
+            if not isinstance(failed.get("returncode"), int) or failed["returncode"] == 0 or not failed.get("stderr"):
+                raise ValueError("ISSUE222_FAIL: malformed connection-failure receipt")
+            unavailable.append(host)
+            continue
+        if record.get("host") != host:
+            raise ValueError("ISSUE222_FAIL: host identity drift in census record")
+        if record.get("collector_sha256") != authority.get("producer_sha256"):
+            raise ValueError("ISSUE222_FAIL: collector source identity drift")
+        if record.get("problems"):
+            observation_problems.append({"host": host, "problems": record["problems"]})
+        for resource in record.get("resources", []):
+            if resource.get("host") != host:
+                raise ValueError("ISSUE222_FAIL: resource/host cross-binding drift")
+            resources.append(resource)
+    return {
+        "schema": FLEET_SCHEMA,
+        "campaign_id": authority.get("campaign_id"),
+        "authority_sha256": authority.get("authority_sha256"),
+        "candidate_hosts": list(CANDIDATE_HOSTS),
+        "unavailable_hosts": unavailable,
+        "resources": resources,
+        "observation_problems": observation_problems,
+        "collected_at_unix": int(time.time()) if collected_at_unix is None else collected_at_unix,
+    }
+
+
+def record_connection_failure(host: str, returncode: int, stderr: str) -> dict[str, Any]:
+    """Preserve a failed read-only SSH attempt as an unavailable-host receipt."""
+    if host not in CANDIDATE_HOSTS or returncode == 0 or not stderr:
+        raise ValueError("ISSUE222_FAIL: invalid connection-failure receipt")
+    return {"schema": "inferswarm.issue222.r7c-connection-failure/1", "host": host,
+            "connection_failure": {"returncode": returncode, "stderr": stderr,
+                                   "stderr_sha256": hashlib.sha256(stderr.encode()).hexdigest()},
+            "collector_sha256": sha256(Path(__file__).resolve())}
 
 
 def legal_placement(stages: dict[str, dict[str, Any]], fleet: dict[str, Any]) -> dict[str, Any]:
@@ -389,10 +445,16 @@ def main() -> int:
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--write-authority", action="store_true")
     mode.add_argument("--collect", action="store_true")
+    mode.add_argument("--assemble-fleet", action="store_true")
+    mode.add_argument("--record-connection-failure", action="store_true")
     mode.add_argument("--reduce", action="store_true")
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--authority", type=Path)
     parser.add_argument("--fleet", type=Path)
+    parser.add_argument("--records-dir", type=Path)
+    parser.add_argument("--host")
+    parser.add_argument("--returncode", type=int)
+    parser.add_argument("--stderr-file", type=Path)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--repo-head")
     args = parser.parse_args()
@@ -404,6 +466,21 @@ def main() -> int:
         document = collect_local(args.authority, args.out)
         print(json.dumps({"resources": len(document["resources"]), "problems": document["problems"]}))
         return 0
+    elif args.assemble_fleet:
+        if args.authority is None or args.records_dir is None:
+            parser.error("--assemble-fleet requires --authority and --records-dir")
+        records = {}
+        for host in CANDIDATE_HOSTS:
+            path = args.records_dir / f"{host}.json"
+            if not path.is_file():
+                parser.error(f"missing host record: {path}")
+            records[host] = json.loads(path.read_text())
+        document = assemble_fleet(json.loads(args.authority.read_text()), records)
+    elif args.record_connection_failure:
+        if args.host is None or args.returncode is None or args.stderr_file is None:
+            parser.error("--record-connection-failure requires --host --returncode --stderr-file")
+        document = record_connection_failure(args.host, args.returncode,
+                                             args.stderr_file.read_text())
     else:
         if args.authority is None or args.fleet is None:
             parser.error("--reduce requires --authority and --fleet")

@@ -92,6 +92,26 @@ class Issue222R7CTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "authored terminal"):
             r7c.verify_committed_terminal(authority, fleet, forged)
 
+    def test_fleet_assembly_requires_every_frozen_candidate_host(self):
+        authority = r7c.build_authority(ROOT, repo_head="f" * 40)
+        records = {
+            "inferswarm01": {"host": "inferswarm01", "resources": [],
+                              "problems": [], "collector_sha256": authority["producer_sha256"]},
+            "inferswarm03": {"host": "inferswarm03", "resources": [],
+                              "problems": [], "collector_sha256": authority["producer_sha256"]},
+            "inferswarm02": {"host": "inferswarm02", "connection_failure": {
+                "returncode": 255, "stderr": "timed out"}},
+            "inferswarm04": {"host": "inferswarm04", "connection_failure": {
+                "returncode": 255, "stderr": "timed out"}},
+        }
+        fleet = r7c.assemble_fleet(authority, records, collected_at_unix=1000)
+        self.assertEqual(fleet["candidate_hosts"], list(r7c.CANDIDATE_HOSTS))
+        self.assertEqual(fleet["unavailable_hosts"], ["inferswarm02", "inferswarm04"])
+        self.assertEqual(len(fleet["resources"]), 0)
+        with self.assertRaisesRegex(ValueError, "candidate-host set"):
+            r7c.assemble_fleet(authority, {"inferswarm01": records["inferswarm01"]},
+                               collected_at_unix=1000)
+
     def test_stale_and_foreign_process_fleet_rows_fail_closed(self):
         authority = r7c.build_authority(ROOT, repo_head="f" * 40)
         base_fleet = {
