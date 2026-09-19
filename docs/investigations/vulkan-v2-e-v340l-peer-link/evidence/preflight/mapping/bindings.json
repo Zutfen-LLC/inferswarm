@@ -1,0 +1,128 @@
+{
+ "authorization": "NON_AUTHORIZING",
+ "bindings": [
+  {
+   "authorization": "NON_AUTHORIZING",
+   "binding_status": "BOUND",
+   "device_name": "Intel(R) HD Graphics 510 (SKL GT1)",
+   "lspci_line": "00:02.0 VGA compatible controller: Intel Corporation HD Graphics 510 (rev 06)",
+   "pci_bdf": "00:02.0",
+   "resolution_mechanism": "unique exact device-name join (runtime row -> loader PCI block -> lspci slot)",
+   "selector": "Vulkan0"
+  },
+  {
+   "authorization": "NON_AUTHORIZING",
+   "binding_proof_sha256": "a4c146d133fac58f77e2f00791c7aa88d4d9802740d6e9dfe8cd6c45d4c58e10",
+   "binding_status": "BOUND",
+   "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+   "identity_probe": {
+    "argv": [
+     "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+     "-m",
+     "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+     "--device",
+     "Vulkan1",
+     "-ngl",
+     "99",
+     "-n",
+     "0",
+     "-p",
+     "identity-probe",
+     "--no-warmup",
+     "-st",
+     "-lv",
+     "4"
+    ],
+    "authorization": "NON_AUTHORIZING",
+    "exit_code": 0,
+    "generated_tokens": 0,
+    "identity_proof_line": "using device Vulkan1 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:06:00.0)",
+    "nonclaims": [
+     "inventory data only: no selection, promotion, authorization, or correctness reference may be derived from this document",
+     "identity probe generates zero model tokens; it proves only selector -> stable BDF and can never be a correctness reference"
+    ],
+    "observed_pci_bdf": "06:00.0",
+    "probe_kind": "NON_CORRECTNESS_BEARING_IDENTITY_PROBE",
+    "raw_stderr_path": "./identity-probe-stderr-vulkan1.txt",
+    "raw_stdout_path": "./identity-probe-stdout-vulkan1.txt",
+    "selector": "Vulkan1",
+    "started_utc": "2026-09-19T17:56:14.883075+00:00",
+    "stderr_sha256": "7ef49706789143bea3dbb7ee45ebe7b5eca3cf372ea45d18f1355c8cb460fbbc",
+    "stdout_sha256": "0dc2c5e2bf313c7ae1d6b4f213343968c20b9ba2073f41ca4125581e031cd074",
+    "zero_generation_proof": [
+     "Generation: 0.0 t/s"
+    ]
+   },
+   "pci_bdf": "06:00.0",
+   "resolution_mechanism": "runtime identity probe (zero generated tokens); the runtime's own selected-device line states the BDF",
+   "selector": "Vulkan1"
+  },
+  {
+   "authorization": "NON_AUTHORIZING",
+   "binding_proof_sha256": "87665f07c51cb50a5133a740770f23c1a166d6cca9cb5d8b3166b3658a365b4d",
+   "binding_status": "BOUND",
+   "device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+   "identity_probe": {
+    "argv": [
+     "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+     "-m",
+     "/home/zutfen/.cache/v0c-models/Qwen2.5-3B-Instruct-Q4_K_M.gguf",
+     "--device",
+     "Vulkan2",
+     "-ngl",
+     "99",
+     "-n",
+     "0",
+     "-p",
+     "identity-probe",
+     "--no-warmup",
+     "-st",
+     "-lv",
+     "4"
+    ],
+    "authorization": "NON_AUTHORIZING",
+    "exit_code": 0,
+    "generated_tokens": 0,
+    "identity_proof_line": "using device Vulkan2 (AMD Radeon Pro V340 (RADV VEGA10)) (0000:09:00.0)",
+    "nonclaims": [
+     "inventory data only: no selection, promotion, authorization, or correctness reference may be derived from this document",
+     "identity probe generates zero model tokens; it proves only selector -> stable BDF and can never be a correctness reference"
+    ],
+    "observed_pci_bdf": "09:00.0",
+    "probe_kind": "NON_CORRECTNESS_BEARING_IDENTITY_PROBE",
+    "raw_stderr_path": "./identity-probe-stderr-vulkan2.txt",
+    "raw_stdout_path": "./identity-probe-stdout-vulkan2.txt",
+    "selector": "Vulkan2",
+    "started_utc": "2026-09-19T17:56:19.179262+00:00",
+    "stderr_sha256": "cc12cb24e4532805916c8bfe2b5f8dd6b7875db66f19f2c923ff30bda942aa9f",
+    "stdout_sha256": "b5f9122c29410b90716ad74e6790eabc58238c5bae915be9d0e0037cdbe66203",
+    "zero_generation_proof": [
+     "Generation: 0.0 t/s"
+    ]
+   },
+   "pci_bdf": "09:00.0",
+   "resolution_mechanism": "runtime identity probe (zero generated tokens); the runtime's own selected-device line states the BDF",
+   "selector": "Vulkan2"
+  },
+  {
+   "authorization": "NON_AUTHORIZING",
+   "binding_status": "BOUND",
+   "device_name": "NVIDIA GeForce RTX 3060 Ti",
+   "lspci_line": "0a:00.0 VGA compatible controller: NVIDIA Corporation GA104 [GeForce RTX 3060 Ti Lite Hash Rate] (rev a1)",
+   "pci_bdf": "0a:00.0",
+   "resolution_mechanism": "unique exact device-name join (runtime row -> loader PCI block -> lspci slot)",
+   "selector": "Vulkan3"
+  }
+ ],
+ "inventory_hostname": "inferswarm02",
+ "inventory_measured_utc": "2026-09-19T17:56:14.883005+00:00",
+ "inventory_runtime_executable": "/home/zutfen/.cache/v0c-llama.cpp/build-v0c-vulkan/bin/llama-cli",
+ "inventory_runtime_executable_sha256": "5a8f5edec3cafce77e371b082f4dd52f07d38a72704a652063f6255a018c36ec",
+ "inventory_schema": "inferswarm.v2a.discovery-inventory/3",
+ "nonclaims": [
+  "inventory data only: no selection, promotion, authorization, or correctness reference may be derived from this document",
+  "identity probe generates zero model tokens; it proves only selector -> stable BDF and can never be a correctness reference"
+ ],
+ "reviewed_utc": "2026-09-19T17:56:14.883058+00:00",
+ "schema": "inferswarm.v2a.discovery-bindings/3"
+}

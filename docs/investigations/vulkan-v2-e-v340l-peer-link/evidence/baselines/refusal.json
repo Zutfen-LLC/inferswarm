@@ -1,0 +1,19 @@
+{
+ "attempt_id": "base1",
+ "campaign_id": "issue228-v2e-v340l-interdie-peer-link",
+ "captured_utc": "2026-09-19T17:56:39.363670+00:00",
+ "closure_digest": "0973306af3f6d70a39af1a2d169b74052ccb8138e6b01d11767eea9295180463",
+ "executed": false,
+ "mechanism": {
+  "available": false,
+  "group_ok": false,
+  "missing_capability": "Vulkan loader exposes every physical device in a single-device group (no multi-device group contains both Vega dies), so vkGetDeviceGroupPeerMemoryFeatures/peer copies are unreachable; and no external-memory handle type (opaque_fd, dma_buf, host_allocation, host_mapped_foreign) is exportable or importable for buffers or images on either die. No in-stack peer-memory mechanism exists without replacing the runtime/driver substrate.",
+  "multi_device_vega_group_present": false,
+  "peer_copy_directions": [],
+  "secondary_ext_memory_features": false,
+  "selected_mechanism": null
+ },
+ "producer_head": "8c25184c54ce660020047711a2755c55178f8195",
+ "refusal": "Matched baselines are controls for peer arms; with no peer mechanism available there is nothing to control, and the #216 faulting transport seam is not rerun.",
+ "schema": "inferswarm.v2e.baselines-refusal/1"
+}

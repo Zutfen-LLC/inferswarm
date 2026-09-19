@@ -1,0 +1,7 @@
+NAME     SIZE TYPE MOUNTPOINT  MODEL
+sda    232.9G disk             Samsung SSD 840 EVO 250GB
+├─sda1     1G part /boot/efi   
+├─sda2     8G part [SWAP]      
+└─sda3 223.9G part /           
+sdb      1.9T disk             TEAM T2532TB
+└─sdb1   1.9T part /srv/models 

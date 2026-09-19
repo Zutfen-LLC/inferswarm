@@ -1,0 +1,31 @@
+{
+ "campaign_id": "issue228-v2e-v340l-interdie-peer-link",
+ "campaign_window_utc": [
+  "2026-09-19T17:56:24.423856+00:00",
+  "2026-09-19T17:56:39.363670+00:00"
+ ],
+ "closure_digest": "0973306af3f6d70a39af1a2d169b74052ccb8138e6b01d11767eea9295180463",
+ "nonclaims": [
+  "no coherent 16-GiB GPU address space claimed",
+  "no xGMI / Infinity Fabric claimed",
+  "no unified-memory semantics claimed",
+  "no model inference correctness claimed",
+  "no production V340L support claimed",
+  "no multi-card X12 compatibility claimed",
+  "no generic planner preference claimed",
+  "no sustained dual-die stability beyond the bounded arms executed",
+  "no safety claim for the #216 faulting transport mechanism"
+ ],
+ "producer_head": "8c25184c54ce660020047711a2755c55178f8195",
+ "schema": "inferswarm.v2e.terminal/1",
+ "terminal": "V2E_V340L_P2P_API_PREREQUISITE",
+ "vocabulary": [
+  "V2E_V340L_LOCAL_P2P_LINK_PASS",
+  "V2E_V340L_P2P_FUNCTIONAL_ROUTE_UNRESOLVED",
+  "V2E_V340L_UPSTREAM_ROUTED_PEER_PATH",
+  "V2E_V340L_P2P_API_PREREQUISITE",
+  "V2E_V340L_P2P_UNAVAILABLE",
+  "V2E_V340L_PLATFORM_STRESS_FAIL",
+  "V2E_EVIDENCE_BLOCKED"
+ ]
+}
