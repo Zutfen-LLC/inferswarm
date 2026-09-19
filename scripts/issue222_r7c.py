@@ -326,8 +326,9 @@ def verify_authority_derivation(authority: dict[str, Any], root: Path = ROOT) ->
     The retained authority carries the stage footprints, cut, model/runtime and
     producer identity that the terminal is derived from, so it must be a pure
     function of the frozen predecessor bytes, the campaign constants, and the
-    pinned repo head - never an authored document the reducer merely trusts. A
-    self-consistent re-signed authority (alternate cut, authored stage bounds,
+    recorded generation head (``repo_head``, echoed back rather than
+    independently bound) - never an authored document the reducer merely trusts.
+    A self-consistent re-signed authority (alternate cut, authored stage bounds,
     substituted model/runtime revision) fails closed here.
     """
     if authority.get("schema") != AUTHORITY_SCHEMA:
@@ -486,11 +487,16 @@ def legal_placement(stages: dict[str, dict[str, Any]], fleet: dict[str, Any]) ->
                       and str(row.get("resource_id")) not in selected_resources]
         if not candidates:
             largest = max((int(row.get("usable_device_bytes", 0)) for row in compatible), default=0)
+            if largest < required:
+                reason = "no single compatible resource satisfies the stage lower bound"
+            else:
+                reason = ("every compatible resource large enough for this stage is "
+                          "already assigned to another stage")
             rejected[stage_id] = {
                 "required_lower_bound_bytes": required,
                 "largest_compatible_usable_bytes": largest,
                 "deficit_bytes": max(required - largest, 0),
-                "reason": "no single compatible resource satisfies the stage lower bound",
+                "reason": reason,
             }
         else:
             selected = sorted(candidates, key=lambda row: (-row["usable_device_bytes"], row.get("resource_id", "")))[0]

@@ -7,9 +7,13 @@ consumes R7-A/R7-B byte-for-byte and stops before model-state acquisition.
 
 - Starting reconciled main: `fe690249873a9bf7ca19d788a2fab5e580473394`.
 - Corrected producer/authority head: `31bec059a9016de61ebcdfc61b4b9e4766493441`
-  (`authority.json.repo_head`). The retained authority is a pure function of the
-  frozen R7-A/R7-B predecessor bytes at this head and is re-derived - never
-  trusted as authored input - at reduction and finalization time.
+  (`authority.json.repo_head`). `repo_head` is a generation stamp - the producer
+  head the authority was generated at - and is echoed back by the derivation
+  rather than independently bound; it is not a verifiable claim. What is
+  verified is that the retained authority is a pure function of the frozen
+  R7-A/R7-B predecessor bytes, the campaign constants and the retained
+  changed-path census, re-derived and byte-compared - never trusted as authored
+  input - at reduction and finalization time.
 - R7-A: merge `7417c2f58a63d4da854ff399ba6fea5bd722da83`, terminal
   `R7A_DEEPSEEK_V41_SUBSTRATE_PREREQUISITE`.
 - R7-B: merge `54d36cb9d8a4c0603abeb18968a8ffb7b52ca10e`, terminal
@@ -28,8 +32,11 @@ verbatim changed-path census is retained as `mainline-changed-paths.txt` (the
 output of the frozen read-only `git diff --name-only
 54d36cb9d8a4c0603abeb18968a8ffb7b52ca10e..fe690249873a9bf7ca19d788a2fab5e580473394`
 query, re-derived and byte-compared by a focused test), so the audit is a
-function of retained bytes rather than a live query. It finds no change to R7-A
-census authority, R7-B vLLM authority, or the selected R7-B strategy.
+function of retained bytes rather than a live query. That anchor is enforced by
+the focused test in the `issue-222-r7c` CI group; the finalizer sandbox has no
+repository and no git, so the anchor is test-only and is not re-verified inside
+the finalizer. The audit finds no change to R7-A census authority, R7-B vLLM
+authority, or the selected R7-B strategy.
 
 ## Derived text-only stage contract
 
@@ -53,12 +60,12 @@ All four hosts were reachable and returned six GPU resources:
 
 | Resource | Device | Available bytes | Foreign compute |
 | --- | --- | ---: | --- |
-| `inferswarm01/gpu-0` | RTX 3060 | 12,485,394,432 | none |
-| `inferswarm01/gpu-1` | RTX 3060 | 12,487,491,584 | none |
-| `inferswarm02/gpu-0` | RTX 3060 Ti | 8,276,410,368 | none |
-| `inferswarm03/gpu-0` | RTX 3060 | 12,341,739,520 | PID 1218154 (184 MiB) |
-| `inferswarm03/gpu-1` | RTX 3060 | 12,341,739,520 | PID 1218155 (184 MiB) |
-| `inferswarm04/gpu-0` | RTX 3090 | 25,294,798,848 | none |
+| `inferswarm01/gpu-0` | NVIDIA GeForce RTX 3060 | 12,485,394,432 | none |
+| `inferswarm01/gpu-1` | NVIDIA GeForce RTX 3060 | 12,487,491,584 | none |
+| `inferswarm02/gpu-0` | NVIDIA GeForce RTX 3060 Ti | 8,276,410,368 | none |
+| `inferswarm03/gpu-0` | NVIDIA GeForce RTX 3060 | 12,341,739,520 | PID 1218154 (184 MiB) |
+| `inferswarm03/gpu-1` | NVIDIA GeForce RTX 3060 | 12,341,739,520 | PID 1218155 (184 MiB) |
+| `inferswarm04/gpu-0` | NVIDIA GeForce RTX 3090 | 25,294,798,848 | none |
 
 `unavailable_hosts` is empty: no host is retained as a zero-capacity boundary,
 and `inferswarm02` and `inferswarm04` are present with full host records. The
@@ -91,14 +98,19 @@ was executed.
 
 ## Superseded observation
 
-An earlier census/terminal pair (retained in git history at commit `1cd140e`)
-was observed under a pre-hardening producer and described `inferswarm02` and
-`inferswarm04` as unreachable zero-capacity boundaries. Hardening the producer
-changed its bytes and therefore invalidated that census's collector-identity
-binding, so it cannot carry acceptance and has been replaced by the fresh
-observation above. It proved only that the four candidates were probed and that
-two of them were unreachable at that time; it never carried the accepted
-terminal, because the accepted terminal is re-derived under the final authority.
+The zero-capacity census/terminal pair is retained in git history at commit
+`1001c47` (unchanged through `cf391c1` and `beb5d79`): it recorded
+`unavailable_hosts: ["inferswarm02", "inferswarm04"]`, four resources, and
+deficits computed against a 12,487,491,584-byte largest resource, under
+pre-hardening producer bytes (`collector_sha256` `6b9942f7...`). It was
+superseded twice: first by the re-observation committed at `1cd140e`, which
+already carried an all-reachable, six-resource census with the accepted largest
+resource (25,294,798,848) and the accepted deficits, and then by the observation
+above. Hardening the producer changed its bytes and therefore invalidated the
+earlier census's collector-identity binding, so it cannot carry acceptance. It
+proved only that the four candidates were probed and that two of them did not
+answer at that time; it never carried the accepted terminal, because the
+accepted terminal is re-derived under the final authority.
 
 ## Controls and scope
 
@@ -113,7 +125,11 @@ record retains the exact source hash, command receipts, raw GPU rows,
 foreign-process rows, and any SSH timeout receipts that the reduction consumes.
 Receipt digests establish the integrity of the retained raw bytes, not their
 authenticity: the census carries no out-of-band signing anchor and is trusted
-through maintainer review of this bundle.
+through maintainer review of this bundle. Freshness is enforced against the real
+clock at collection and reduction time, but re-verifying a frozen bundle reuses
+the terminal's own preserved `reduced_at_unix`, so a jointly re-dated
+census/terminal pair is not detectable from the bundle alone - the same
+disclosed no-anchor boundary.
 
 This result establishes no DeepSeek numerical correctness, full checkpoint
 execution, performance, serving readiness, production support, conversion,

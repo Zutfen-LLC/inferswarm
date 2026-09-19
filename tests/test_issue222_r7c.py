@@ -76,8 +76,13 @@ class Issue222R7CTests(unittest.TestCase):
         self.assertFalse(result["legal"])
         self.assertEqual(result["terminal"], r7c.CAPACITY_PREREQUISITE)
         self.assertEqual(result["aggregate_compatible_usable_bytes"], 60)
+        # 20 + 40 aggregate still cannot host one 30-byte stage: stage A takes
+        # the only large-enough resource and stage B is left without a distinct
+        # one. The reason is derived, not the size claim.
         self.assertEqual(result["rejected"]["stage-b"]["reason"],
-                         "no single compatible resource satisfies the stage lower bound")
+                         "every compatible resource large enough for this stage is "
+                         "already assigned to another stage")
+        self.assertEqual(result["rejected"]["stage-b"]["deficit_bytes"], 0)
 
     def test_capacity_terminal_is_derived_not_authored(self):
         authority = r7c.build_authority(ROOT, repo_head="f" * 40)
@@ -346,6 +351,53 @@ class Issue222R7CTests(unittest.TestCase):
             authority["stage_footprints"], legal)["legal"])
         with self.assertRaisesRegex(ValueError, "no PASS is admitted"):
             r7c.reduction_document(authority, legal, now_unix=1000)
+
+    def test_retained_changed_path_census_is_part_of_the_authority_derivation(self):
+        """The authority must be a pure function of retained bytes, with no git.
+
+        The finalizer sandbox has no repository and no git, so the derivation
+        must succeed from the copied predecessor tree plus the retained
+        changed-path census alone - and must fail closed when that census is
+        altered.
+        """
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            r7c.copy_predecessor_inputs(ROOT, root)
+            census = root / r7c.MAINLINE_PATHS
+            census.parent.mkdir(parents=True, exist_ok=True)
+            census.write_bytes((ROOT / r7c.MAINLINE_PATHS).read_bytes())
+            committed = json.loads((ROOT / r7c.AREA / "authority.json").read_text())
+            # Positive control: a git-free sandbox still reproduces the authority.
+            r7c.verify_authority_derivation(committed, root)
+            self.assertFalse((root / ".git").exists())
+            # Negative control: an altered retained census breaks the derivation.
+            census.write_bytes(b"")
+            with self.assertRaisesRegex(ValueError, "not the deterministic derivation"):
+                r7c.verify_authority_derivation(committed, root)
+
+    def test_resource_exhaustion_reports_an_accurate_reason(self):
+        """A stage blocked by an already-assigned resource is not misreported."""
+        stages = {
+            "stage-a": {"logical_required_bytes": 30},
+            "stage-b": {"logical_required_bytes": 30},
+        }
+        fleet = {"resources": [{"resource_id": "gpu-1", "compatible": True,
+                                "usable_device_bytes": 100, "foreign_processes": []}]}
+        result = r7c.legal_placement(stages, fleet)
+        self.assertFalse(result["legal"])
+        self.assertEqual(result["placements"], {"stage-a": "gpu-1"})
+        rejected = result["rejected"]["stage-b"]
+        self.assertEqual(rejected["deficit_bytes"], 0)
+        self.assertEqual(rejected["reason"],
+                         "every compatible resource large enough for this stage is "
+                         "already assigned to another stage")
+        # The size-based claim is reserved for a genuinely undersized fleet.
+        undersized = {"resources": [{"resource_id": "gpu-1", "compatible": True,
+                                     "usable_device_bytes": 20, "foreign_processes": []}]}
+        size_result = r7c.legal_placement(stages, undersized)
+        self.assertEqual(size_result["rejected"]["stage-a"]["reason"],
+                         "no single compatible resource satisfies the stage lower bound")
+        self.assertEqual(size_result["rejected"]["stage-a"]["deficit_bytes"], 10)
 
 
 if __name__ == "__main__":
