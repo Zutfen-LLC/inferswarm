@@ -99,6 +99,11 @@
     "test_issue213_campaign_gate_ordering"
    ]
   },
+  "issue-222-r7c": {
+   "test_modules": [
+    "test_issue222_r7c"
+   ]
+  },
   "issue-74-79": {
    "test_modules": [
     "test_issue74_methodology",
@@ -301,6 +306,9 @@
   ],
   "docs/investigations/deepseek-v41-flash-r7-b/": [
    "issue-209-r7b"
+  ],
+  "docs/investigations/deepseek-v41-flash-r7-c/": [
+   "issue-222-r7c"
   ],
   "docs/investigations/link-x1-envelope/": [
    "vulkan-v0-b"
@@ -1042,6 +1050,9 @@
   "scripts/issue219_seam_rubric.py": [
    "vulkan-v0-b"
   ],
+  "scripts/issue222_r7c.py": [
+   "issue-222-r7c"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "vulkan-v0-b"
   ],
@@ -1296,6 +1307,9 @@
   ],
   "tests/test_issue219_v2d0_overlap_seam.py": [
    "vulkan-v0-b"
+  ],
+  "tests/test_issue222_r7c.py": [
+   "issue-222-r7c"
   ],
   "tests/test_issue35_corrections.py": [
    "vulkan-v0-b"

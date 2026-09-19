@@ -105,10 +105,17 @@ class Issue222R7CTests(unittest.TestCase):
     def _valid_fleet(self, authority, collected_at=1000):
         gpu = self._receipt(
             ["nvidia-smi", "--query-gpu=index,uuid,pci.bus_id,name,memory.total,memory.free,memory.used,driver_version", "--format=csv,noheader,nounits"],
-            "0, GPU-r7c-test, 00000000:01:00.0, Test GPU, 10, 1, 9, 1.0\n")
+            "0, GPU-r7c-test, 00000000:01:00.0, NVIDIA GeForce RTX 3060, 10, 1, 9, 1.0\n")
         apps = self._receipt(
             ["nvidia-smi", "--query-compute-apps=pid,gpu_uuid,used_memory", "--format=csv,noheader,nounits"])
         host = self._receipt(["hostname"], "inferswarm01\n")
+        receipts = {"nvidia_smi_gpu": gpu, "nvidia_smi_apps": apps, "hostname": host,
+                    "storage": self._receipt(["df", "-B1", "."], "header\n"),
+                    "memory": self._receipt(["free", "-b"], "header\n")}
+        # The fixture exercises the producer's own parser: rows are never
+        # hand-authored, so a parser hardening cannot silently stop being
+        # covered by the fixture.
+        resources, problems = r7c._raw_resources("inferswarm01", receipts)
         records = {
             "inferswarm01": {
                 "schema": "inferswarm.issue222.r7c-host-record/1",
@@ -116,19 +123,7 @@ class Issue222R7CTests(unittest.TestCase):
                 "authority_sha256": authority["authority_sha256"],
                 "collector_sha256": authority["producer_sha256"],
                 "host": "inferswarm01", "collected_at_unix": collected_at,
-                "receipts": {"nvidia_smi_gpu": gpu, "nvidia_smi_apps": apps,
-                             "hostname": host,
-                             "storage": self._receipt(["df", "-B1", "."], "header\n"),
-                             "memory": self._receipt(["free", "-b"], "header\n")},
-                "resources": [{
-                    "resource_id": "inferswarm01/gpu-0", "host": "inferswarm01",
-                    "index": "0", "uuid": "GPU-r7c-test", "pci_bdf": "00000000:01:00.0",
-                    "name": "Test GPU", "total_device_bytes": 10 * 1024 * 1024,
-                    "available_device_bytes": 1024 * 1024,
-                    "used_device_bytes": 9 * 1024 * 1024,
-                    "usable_device_bytes": 1024 * 1024, "driver_version": "1.0",
-                    "compatible": True, "foreign_processes": [],
-                }], "problems": [],
+                "receipts": receipts, "resources": resources, "problems": problems,
             },
         }
         for host_name in r7c.CANDIDATE_HOSTS[1:]:
@@ -227,6 +222,130 @@ class Issue222R7CTests(unittest.TestCase):
         reduced = r7c.reduction_document(authority, occupied, now_unix=1000)
         self.assertEqual(reduced["terminal"], r7c.CAPACITY_PREREQUISITE)
         self.assertEqual(reduced["placement"]["aggregate_compatible_usable_bytes"], 0)
+
+    def test_committed_authority_terminal_and_bounds_are_pinned(self):
+        """The delivered bundle's own bounds and terminal are asserted, not implied."""
+        root = Path(__file__).resolve().parents[1]
+        area = root / r7c.AREA
+        authority = json.loads((area / "authority.json").read_text())
+        fleet = json.loads((area / "fleet-census.json").read_text())
+        committed = json.loads((area / "terminal-reduction.json").read_text())
+        r7c.verify_committed_terminal(authority, fleet, committed, root=root)
+        self.assertEqual(committed["terminal"], r7c.CAPACITY_PREREQUISITE)
+        # The Issue #222 acceptance values, asserted against the retained bytes.
+        self.assertEqual(authority["stage_footprints"]["stage-a"]["logical_required_bytes"],
+                         352235502576)
+        self.assertEqual(authority["stage_footprints"]["stage-b"]["logical_required_bytes"],
+                         149147108832)
+        self.assertEqual(committed["placement"]["rejected"]["stage-a"]["required_lower_bound_bytes"],
+                         352235502576)
+        self.assertEqual(committed["placement"]["rejected"]["stage-b"]["required_lower_bound_bytes"],
+                         149147108832)
+        self.assertFalse(committed["placement"]["legal"])
+
+    def test_resigned_authority_cannot_bypass_authority_derivation(self):
+        """A self-consistent re-signed authority must fail closed (round-1 P1)."""
+        authority = r7c.build_authority(ROOT, repo_head="f" * 40)
+        fleet = self._valid_fleet(authority)
+
+        def _alternate_cut(document):
+            document["strategy"].update({"cut_layer": 14, "stage_a_layers": [0, 14],
+                                         "stage_b_layers": [14, 40]})
+
+        attacks = {
+            "alternate cut 14": _alternate_cut,
+            "authored stage-a lower bound": lambda d: d["stage_footprints"]["stage-a"].update(
+                {"logical_required_bytes": 1}),
+            "authored stage-a tensor count": lambda d: d["stage_footprints"]["stage-a"].update(
+                {"tensor_count": 1}),
+            "emptied stage-b shard list": lambda d: d["stage_footprints"]["stage-b"].update(
+                {"shards": []}),
+            "substituted model revision": lambda d: d["model"].update({"revision": "0" * 40}),
+            "substituted runtime revision": lambda d: d["runtime"].update({"revision": "1" * 40}),
+            "substituted producer identity": lambda d: d.update({"producer_sha256": "deadbeef" * 8}),
+            "dropped R7-B binding": lambda d: d["r7b"].update({"terminal_sha256": "0" * 64}),
+        }
+        for name, mutate in attacks.items():
+            with self.subTest(attack=name):
+                forged = copy.deepcopy(authority)
+                mutate(forged)
+                forged.pop("authority_sha256")
+                forged["authority_sha256"] = hashlib.sha256(r7c.canonical(forged)).hexdigest()
+                resealed = copy.deepcopy(fleet)
+                resealed["authority_sha256"] = forged["authority_sha256"]
+                for host in resealed["host_records"]:
+                    resealed["host_records"][host]["authority_sha256"] = forged["authority_sha256"]
+                with self.assertRaisesRegex(ValueError, "not the deterministic derivation"):
+                    r7c.reduction_document(forged, resealed, now_unix=1000)
+
+    def test_authority_derivation_requires_pinned_repo_head(self):
+        authority = r7c.build_authority(ROOT, repo_head="f" * 40)
+        for bad in (None, "", "abc", 12345):
+            with self.subTest(repo_head=bad):
+                forged = copy.deepcopy(authority)
+                forged["repo_head"] = bad
+                forged.pop("authority_sha256")
+                forged["authority_sha256"] = hashlib.sha256(r7c.canonical(forged)).hexdigest()
+                with self.assertRaisesRegex(ValueError, "repo head"):
+                    r7c.verify_authority_derivation(forged, ROOT)
+
+    def test_retained_mainline_changed_path_census_is_rederivable(self):
+        root = Path(__file__).resolve().parents[1]
+        retained = (root / r7c.MAINLINE_PATHS).read_bytes()
+        self.assertEqual(retained, r7c.derive_mainline_changed_paths(root))
+        audit = r7c.mainline_applicability_audit(root)
+        self.assertEqual(audit["r7_authority_or_strategy_changes"], [])
+        self.assertEqual(audit["reconciled_main"], r7c.RECONCILED_MAIN)
+
+    def _gpu_receipt(self, stdout):
+        return self._receipt(
+            ["nvidia-smi", "--query-gpu=index,uuid,pci.bus_id,name,memory.total,memory.free,memory.used,driver_version", "--format=csv,noheader,nounits"],
+            stdout)
+
+    def test_device_compatibility_is_derived_from_receipt_bytes(self):
+        self.assertTrue(r7c._compatible_device("NVIDIA GeForce RTX 3090"))
+        self.assertFalse(r7c._compatible_device("AMD Radeon RX 7900 XTX"))
+        receipts = {
+            "nvidia_smi_gpu": self._gpu_receipt(
+                "0, GPU-x, 00000000:01:00.0, AMD Radeon RX 7900 XTX, 24576, 24123, 1, 1.0\n"),
+            "nvidia_smi_apps": self._receipt(
+                ["nvidia-smi", "--query-compute-apps=pid,gpu_uuid,used_memory", "--format=csv,noheader,nounits"]),
+            "hostname": self._receipt(["hostname"], "inferswarm01\n"),
+            "storage": self._receipt(["df", "-B1", "."], "header\n"),
+            "memory": self._receipt(["free", "-b"], "header\n"),
+        }
+        resources, _ = r7c._raw_resources("inferswarm01", receipts)
+        self.assertFalse(resources[0]["compatible"])
+
+    def test_duplicate_pci_bdf_fails_closed(self):
+        receipts = {
+            "nvidia_smi_gpu": self._gpu_receipt(
+                "0, GPU-a, 00000000:01:00.0, NVIDIA GeForce RTX 3060, 12288, 11907, 1, 1.0\n"
+                "1, GPU-b, 00000000:01:00.0, NVIDIA GeForce RTX 3060, 12288, 11907, 1, 1.0\n"),
+            "nvidia_smi_apps": self._receipt(
+                ["nvidia-smi", "--query-compute-apps=pid,gpu_uuid,used_memory", "--format=csv,noheader,nounits"]),
+            "hostname": self._receipt(["hostname"], "inferswarm01\n"),
+            "storage": self._receipt(["df", "-B1", "."], "header\n"),
+            "memory": self._receipt(["free", "-b"], "header\n"),
+        }
+        with self.assertRaisesRegex(ValueError, "contradictory"):
+            r7c._raw_resources("inferswarm01", receipts)
+
+    def test_legal_capacity_cannot_emit_pass_from_this_reducer(self):
+        """The PASS terminal stays unreachable: a legal fleet raises instead."""
+        authority = r7c.build_authority(ROOT, repo_head="f" * 40)
+        fleet = self._valid_fleet(authority)
+        record = fleet["host_records"]["inferswarm01"]
+        record["receipts"]["nvidia_smi_gpu"] = self._gpu_receipt(
+            "0, GPU-huge-a, 00000000:01:00.0, NVIDIA GeForce RTX 3090, 1048576, 1048576, 0, 1.0\n"
+            "1, GPU-huge-b, 00000000:02:00.0, NVIDIA GeForce RTX 3090, 1048576, 1048576, 0, 1.0\n")
+        record["resources"], record["problems"] = r7c._raw_resources(
+            "inferswarm01", record["receipts"])
+        legal = r7c.assemble_fleet(authority, fleet["host_records"], collected_at_unix=1000)
+        self.assertTrue(r7c.legal_placement(
+            authority["stage_footprints"], legal)["legal"])
+        with self.assertRaisesRegex(ValueError, "no PASS is admitted"):
+            r7c.reduction_document(authority, legal, now_unix=1000)
 
 
 if __name__ == "__main__":

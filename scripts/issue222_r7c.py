@@ -62,6 +62,8 @@ VLLM_REVISION = "0eae9acd4d01574e12d4ecf6a0229813f7fdb799"
 FRESHNESS_SECONDS = 900
 R7B_MERGE = "54d36cb9d8a4c0603abeb18968a8ffb7b52ca10e"
 RECONCILED_MAIN = "fe690249873a9bf7ca19d788a2fab5e580473394"
+MAINLINE_PATHS = f"{AREA}/mainline-changed-paths.txt"
+MAINLINE_PATHS_COMMAND = ("diff", "--name-only", f"{R7B_MERGE}..{RECONCILED_MAIN}")
 CANDIDATE_HOSTS = ("inferswarm01", "inferswarm02", "inferswarm03", "inferswarm04")
 _LAYER = re.compile(r"^layers\.(\d+)\.")
 
@@ -168,14 +170,31 @@ def derive_stage_footprints(root: Path) -> dict[str, dict[str, Any]]:
     return stages
 
 
-def mainline_applicability_audit(root: Path) -> dict[str, Any]:
-    """Mechanically classify all post-R7-B mainline paths before R7-C output."""
-    result = subprocess.run(["git", "-C", str(root), "diff", "--name-only",
-                             f"{R7B_MERGE}..{RECONCILED_MAIN}"],
+def derive_mainline_changed_paths(root: Path) -> bytes:
+    """Run the frozen read-only changed-path query for the post-R7-B mainline.
+
+    The query is a fact about two fixed commits, so its verbatim output is
+    retained as evidence (``MAINLINE_PATHS``) rather than re-queried at
+    reduction time. A focused test re-runs this query and compares bytes.
+    """
+    result = subprocess.run(["git", "-C", str(root), *MAINLINE_PATHS_COMMAND],
                             capture_output=True, text=True)
     if result.returncode != 0:
         raise ValueError("ISSUE222_FAIL: cannot audit post-R7-B mainline")
     paths = sorted(path for path in result.stdout.splitlines() if path)
+    return ("\n".join(paths) + "\n").encode()
+
+
+def mainline_applicability_audit(root: Path) -> dict[str, Any]:
+    """Mechanically classify the RETAINED post-R7-B mainline changed-path census."""
+    try:
+        raw = (root / MAINLINE_PATHS).read_bytes()
+    except OSError as error:
+        raise ValueError(
+            "ISSUE222_FAIL: retained post-R7-B mainline changed-path census missing") from error
+    paths = sorted(path for path in raw.decode("utf-8").splitlines() if path)
+    if len(paths) != len(set(paths)):
+        raise ValueError("ISSUE222_FAIL: retained mainline changed-path census has duplicates")
     r7_paths = [path for path in paths if path.startswith((R7A + "/", R7B + "/",
                                                             "scripts/issue187_", "scripts/issue209_",
                                                             "tests/test_issue187_", "tests/test_issue209_"))]
@@ -268,6 +287,7 @@ def build_authority(root: Path = ROOT, repo_head: str | None = None) -> dict[str
         "non_claims": [
             "No checkpoint body download, model runtime initialization, full-model inference, serving, conversion, alternate cut, tensor parallelism, CPU offload, hybrid placement, or AMD/Vulkan work occurred.",
             "A capacity prerequisite is a successful bounded R7-C result, not a model execution failure.",
+            "Fleet receipt digests establish the integrity of the retained raw bytes, not their authenticity; the census carries no out-of-band signing anchor and is trusted through maintainer review of this retained bundle.",
         ],
     }
     document["authority_sha256"] = hashlib.sha256(canonical(document)).hexdigest()
@@ -290,6 +310,38 @@ def _receipt(receipts: dict[str, Any], name: str) -> dict[str, Any]:
     return receipt
 
 
+def _compatible_device(name: str) -> bool:
+    """Derive legal-placement compatibility from the queried device name.
+
+    The accepted R7-B subject is the pinned vLLM DeepSeek V4.1 NVIDIA path, so
+    a device is only legally placeable when the receipt's own device name names
+    an NVIDIA device. This is derived from retained raw bytes, never authored.
+    """
+    return name.startswith("NVIDIA")
+
+
+def verify_authority_derivation(authority: dict[str, Any], root: Path = ROOT) -> None:
+    """Re-derive the authority from frozen R7-A/R7-B bytes and byte-compare.
+
+    The retained authority carries the stage footprints, cut, model/runtime and
+    producer identity that the terminal is derived from, so it must be a pure
+    function of the frozen predecessor bytes, the campaign constants, and the
+    pinned repo head - never an authored document the reducer merely trusts. A
+    self-consistent re-signed authority (alternate cut, authored stage bounds,
+    substituted model/runtime revision) fails closed here.
+    """
+    if authority.get("schema") != AUTHORITY_SCHEMA:
+        raise ValueError("ISSUE222_FAIL: authority schema drift")
+    repo_head = authority.get("repo_head")
+    if not isinstance(repo_head, str) or len(repo_head) != 40:
+        raise ValueError("ISSUE222_FAIL: authority repo head absent")
+    derived = build_authority(root, repo_head=repo_head)
+    if canonical(derived) != canonical(authority):
+        raise ValueError(
+            "ISSUE222_FAIL: retained authority is not the deterministic derivation "
+            "from the frozen R7-A/R7-B predecessor bytes")
+
+
 def _raw_resources(host: str, receipts: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str]]:
     """Recompute resource and foreign-process rows from retained raw bytes."""
     checked = {name: _receipt(receipts, name) for name in EXPECTED_RECEIPT_ARGV}
@@ -306,7 +358,7 @@ def _raw_resources(host: str, receipts: dict[str, Any]) -> tuple[list[dict[str, 
         apps_by_uuid.setdefault(parts[1], []).append(
             {"pid": parts[0], "used_memory_mib": parts[2]})
     resources: list[dict[str, Any]] = []
-    seen_indexes, seen_uuids = set(), set()
+    seen_indexes, seen_uuids, seen_bdfs = set(), set(), set()
     for line in gpu["stdout"].splitlines():
         parts = [item.strip() for item in line.split(",")]
         if len(parts) != 8 or not all(parts) or not parts[0].isdigit():
@@ -315,16 +367,20 @@ def _raw_resources(host: str, receipts: dict[str, Any]) -> tuple[list[dict[str, 
             total, free, used = (int(parts[index]) * 1024 * 1024 for index in (4, 5, 6))
         except ValueError as error:
             raise ValueError("ISSUE222_FAIL: nvidia-smi GPU raw receipt unparseable") from error
-        if min(total, free, used) < 0 or free + used > total or parts[0] in seen_indexes or parts[1] in seen_uuids:
+        if (min(total, free, used) < 0 or free + used > total
+                or parts[0] in seen_indexes or parts[1] in seen_uuids
+                or parts[2] in seen_bdfs):
             raise ValueError("ISSUE222_FAIL: nvidia-smi GPU raw receipt contradictory")
         seen_indexes.add(parts[0])
         seen_uuids.add(parts[1])
+        seen_bdfs.add(parts[2])
         resources.append({
             "resource_id": f"{host}/gpu-{parts[0]}", "host": host, "index": parts[0],
             "uuid": parts[1], "pci_bdf": parts[2], "name": parts[3],
             "total_device_bytes": total, "available_device_bytes": free,
             "used_device_bytes": used, "usable_device_bytes": free,
-            "driver_version": parts[7], "compatible": True,
+            "driver_version": parts[7],
+            "compatible": _compatible_device(parts[3]),
             "foreign_processes": apps_by_uuid.pop(parts[1], []),
         })
     if apps_by_uuid:
@@ -470,13 +526,15 @@ def _validate_fleet(authority: dict[str, Any], fleet: dict[str, Any], now_unix: 
         raise ValueError("ISSUE222_FAIL: fleet freshness invalid")
 
 
-def reduction_document(authority: dict[str, Any], fleet: dict[str, Any], *, now_unix: int | None = None) -> dict[str, Any]:
+def reduction_document(authority: dict[str, Any], fleet: dict[str, Any], *,
+                       now_unix: int | None = None, root: Path = ROOT) -> dict[str, Any]:
     if authority.get("schema") != AUTHORITY_SCHEMA:
         raise ValueError("ISSUE222_FAIL: authority schema drift")
     raw = dict(authority)
     claimed = raw.pop("authority_sha256", None)
     if claimed != hashlib.sha256(canonical(raw)).hexdigest():
         raise ValueError("ISSUE222_FAIL: authority self-digest drift")
+    verify_authority_derivation(authority, root)
     if now_unix is None:
         raise ValueError("ISSUE222_FAIL: explicit reduction time required")
     _validate_fleet(authority, fleet, now_unix)
@@ -501,7 +559,7 @@ def reduction_document(authority: dict[str, Any], fleet: dict[str, Any], *, now_
         "fleet_census_sha256": hashlib.sha256(canonical(fleet)).hexdigest(),
         "reduced_at_unix": now_unix,
         "placement": placement,
-        "terminal": CAPACITY_PREREQUISITE,
+        "terminal": placement["terminal"],
         "smallest_prerequisite": (
             "A compatible single-resource capacity path for each exact R7-B contiguous stage, without tensor parallelism, offload, conversion, or an alternate cut."),
         "phase_stop": "Phase 2 capacity gate; no Phase 3 official-state acquisition was authorized",
@@ -511,11 +569,12 @@ def reduction_document(authority: dict[str, Any], fleet: dict[str, Any], *, now_
     return document
 
 
-def verify_committed_terminal(authority: dict[str, Any], fleet: dict[str, Any], committed: dict[str, Any]) -> None:
+def verify_committed_terminal(authority: dict[str, Any], fleet: dict[str, Any],
+                              committed: dict[str, Any], root: Path = ROOT) -> None:
     preserved_time = committed.get("reduced_at_unix")
     if not isinstance(preserved_time, int):
         raise ValueError("ISSUE222_FAIL: committed terminal lacks preserved reduction time")
-    expected = reduction_document(authority, fleet, now_unix=preserved_time)
+    expected = reduction_document(authority, fleet, now_unix=preserved_time, root=root)
     if committed.get("terminal") != expected["terminal"]:
         raise ValueError("ISSUE222_FAIL: authored terminal contradicts reduction")
     if committed != expected:
@@ -566,6 +625,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--write-authority", action="store_true")
+    mode.add_argument("--write-changed-paths", action="store_true")
     mode.add_argument("--collect", action="store_true")
     mode.add_argument("--assemble-fleet", action="store_true")
     mode.add_argument("--record-connection-failure", action="store_true")
@@ -580,6 +640,10 @@ def main() -> int:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--repo-head")
     args = parser.parse_args()
+    if args.write_changed_paths:
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_bytes(derive_mainline_changed_paths(args.root))
+        return 0
     if args.write_authority:
         document = build_authority(args.root, repo_head=args.repo_head)
     elif args.collect:

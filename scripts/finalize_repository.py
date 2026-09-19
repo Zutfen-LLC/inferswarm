@@ -1342,8 +1342,21 @@ _R7C_PRODUCERS = frozenset({
 })
 _R7C_AUTHORED = frozenset({
     f"{_R7C}/README.md",
+    f"{_R7C}/mainline-changed-paths.txt",
     _R7C_AUTHORITY,
     _R7C_FLEET,
+})
+# The frozen R7-A/R7-B predecessor bytes the retained R7-C authority is
+# re-derived from: the terminal stage must re-derive (never trust) the
+# authority, so every predecessor input is a declared read.
+_R7C_PREDECESSOR_INPUTS = frozenset({
+    f"{_R7A}/tensor-census.json",
+    _R7A_TERMINAL,
+    _R7A_MANIFEST,
+    f"{_R7B}/strategy-authority.json",
+    f"{_R7B}/runtime-authority.json",
+    _R7B_TERMINAL,
+    _R7B_MANIFEST,
 })
 # The additive Issue #130 successor bundle: current-finalization
 # integrity for the Issue #130 sources, never a rewrite of the closed
@@ -1671,7 +1684,7 @@ def _issue222_terminal_producer(run: StageRun, scratch: Path
     fleet = json.loads(fleet_bytes)
     committed = json.loads(terminal_bytes)
     try:
-        r7c.verify_committed_terminal(authority, fleet, committed)
+        r7c.verify_committed_terminal(authority, fleet, committed, root=run.root)
     except ValueError as error:
         raise FinalizationError(f"Issue #222 preserved terminal verification failed: {error}") from error
     return {_R7C_TERMINAL: terminal_bytes}
@@ -1932,7 +1945,8 @@ def default_registry() -> tuple[Stage, ...]:
             kind="derived",
             description=("R7-C deterministic terminal from frozen R7-A/R7-B "
                          "authority and a retained fresh NVIDIA fleet census"),
-            reads=(_R7C_AUTHORED | {_R7C_TERMINAL, "scripts/issue222_r7c.py"}),
+            reads=(_R7C_AUTHORED | _R7C_PREDECESSOR_INPUTS
+                   | {_R7C_TERMINAL, "scripts/issue222_r7c.py"}),
             writes=frozenset({_R7C_TERMINAL}),
             after=frozenset({"issue209-manifest"}),
             producer=_issue222_terminal_producer,
