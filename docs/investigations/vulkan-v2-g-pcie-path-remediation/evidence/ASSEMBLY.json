@@ -1,0 +1,266 @@
+{
+ "assembled_utc": "2026-09-20T15:14:32.400639+00:00",
+ "campaign_id": "issue232-v2g-pcie-path-remediation",
+ "closure_digest": "7a5505af200cc0fabfe7703115c200d84abff995f130e63c89f2e769e93bb301",
+ "nonclaims": [
+  "no causal claim between the historical chronic RxErr condition and the #216/#230 amdgpu ring/reset faults without discriminating evidence",
+  "no soak/sustained-load stability claimed",
+  "no model inference correctness or utility claimed",
+  "no production V340L support or route claimed",
+  "correctable-AER disappearance alone is not proof the V340L fault is solved",
+  "no claim that the remediated arrangement is the only clean one",
+  "advertisement is never conflated with validated execution"
+ ],
+ "producer_head": "52a65b19e736851310d6a472002a44d3fb398c8b",
+ "reduction": {
+  "authored_terminal_agrees": true,
+  "basis": [
+   "all 4 replay arms exact-correct through the historical 64-MiB fault scale (sizes=[4096, 1048576, 16777216, 67108864]) with no qualifying platform fault or material RxErr recurrence"
+  ],
+  "campaign_id": "issue232-v2g-pcie-path-remediation",
+  "gate": {
+   "checks": {
+    "cold_confirmation_repeated": true,
+    "interval_full_length": true,
+    "no_amdgpu_timeout_reset": true,
+    "peripherals_no_regression": true,
+    "sources_agree": true,
+    "topology_chain_unique": true,
+    "upstream_rxerr_zero": true,
+    "width_matches_declared_wiring": true,
+    "zero_uncorrectable_and_dpc": true
+   },
+   "cold_confirmations": {
+    "boot_ids": [
+     "433128ac-e81e-4239-bdd3-30a46c6a3a02"
+    ],
+    "observed": 1,
+    "required": 1
+   },
+   "failed_checks": [],
+   "result": "PASS",
+   "rxerr": {
+    "journal_upstream_events": 0,
+    "sysfs_rxerr_delta": 0,
+    "threshold": 0,
+    "upstream_bdf": "0000:02:00.0"
+   }
+  },
+  "interventions": [
+   {
+    "component": "pm8533_upstream_reseat",
+    "declared_bundle": false,
+    "intervention_id": "v2g-iv-1789914635",
+    "pre_census_rel": "censuses/20260920T141102Z/census.json",
+    "pre_census_sha256": "ad76a5753fc1a65ae0a6c66215fb0ebe8607a20ec0db6c2a1d95b7c11240b4a2",
+    "recorded_utc": "2026-09-20T14:30:35.340901+00:00"
+   },
+   {
+    "component": "bundle_declared",
+    "declared_bundle": true,
+    "intervention_id": "v2g-iv-1789914946",
+    "pre_census_rel": "censuses/20260920T141102Z/census.json",
+    "pre_census_sha256": "ad76a5753fc1a65ae0a6c66215fb0ebe8607a20ec0db6c2a1d95b7c11240b4a2",
+    "recorded_utc": "2026-09-20T14:35:46.230234+00:00"
+   },
+   {
+    "component": "pm8533_upstream_slot_move",
+    "declared_bundle": false,
+    "intervention_id": "v2g-iv-1789914953",
+    "pre_census_rel": "censuses/20260920T143239Z/census.json",
+    "pre_census_sha256": "379a4e6fa11e67fc0ae8d4a30bdef4f315f9df91da091f07f6a643d587ea7325",
+    "recorded_utc": "2026-09-20T14:35:53.695424+00:00"
+   },
+   {
+    "component": "pm8533_upstream_slot_move",
+    "declared_bundle": false,
+    "intervention_id": "v2g-iv-1789916067",
+    "pre_census_rel": "censuses/20260920T144209Z/census.json",
+    "pre_census_sha256": "cbc17471ffd60b5cdc66db6d85cb298aae259ec5032fcb46886e884b7cfc57c4",
+    "recorded_utc": "2026-09-20T14:54:27.841980+00:00"
+   }
+  ],
+  "observations": [
+   {
+    "boot_id": "201768fa-0696-4293-ad6a-176922d2acb5",
+    "elapsed_minutes": 15.020416161916666,
+    "journal_severity_events": {
+     "Correctable": 1781,
+     "DPC": 0,
+     "Uncorrectable": 0
+    },
+    "journal_upstream_events": 1780,
+    "note": "phase-1 idle baseline observation (chronic condition present)",
+    "observation_id": "v2g-obs-1789914391",
+    "rates_per_minute": {
+     "0000:00:14.0": 0.0,
+     "0000:00:1d.0": 0.0,
+     "0000:01:00.0": 0.0,
+     "0000:02:00.0": 0.0,
+     "0000:06:00.0": 0.0,
+     "0000:09:00.0": 0.0,
+     "0000:0a:00.0": 0.0
+    },
+    "sources_agree_zero_or_equal": false,
+    "started_utc": "2026-09-20T14:11:31.196863+00:00",
+    "sysfs_rxerr_delta": null,
+    "upstream_bdf": "0000:02:00.0",
+    "upstream_speed": 8.0,
+    "upstream_width": 1
+   },
+   {
+    "boot_id": "adb4fa6d-620a-4916-9aa1-4c84bd7c351c",
+    "elapsed_minutes": 2.0011762965833335,
+    "journal_severity_events": {
+     "Correctable": 0,
+     "DPC": 0,
+     "Uncorrectable": 0
+    },
+    "journal_upstream_events": 0,
+    "note": "clean candidate interval 1 (daughterboard-return boot adb4fa6d, root port 1d.0)",
+    "observation_id": "v2g-obs-1789916482",
+    "rates_per_minute": {
+     "0000:00:14.0": 0.0,
+     "0000:00:1d.0": 0.0,
+     "0000:01:00.0": 0.0,
+     "0000:02:00.0": 0.0,
+     "0000:06:00.0": 0.0,
+     "0000:09:00.0": 0.0
+    },
+    "sources_agree_zero_or_equal": true,
+    "started_utc": "2026-09-20T14:59:21.661297+00:00",
+    "sysfs_rxerr_delta": 0,
+    "upstream_bdf": "0000:02:00.0",
+    "upstream_speed": 8.0,
+    "upstream_width": 1
+   },
+   {
+    "boot_id": "433128ac-e81e-4239-bdd3-30a46c6a3a02",
+    "elapsed_minutes": 2.0250157652666667,
+    "journal_severity_events": {
+     "Correctable": 0,
+     "DPC": 0,
+     "Uncorrectable": 0
+    },
+    "journal_upstream_events": 0,
+    "note": "cold confirmation interval 2",
+    "observation_id": "v2g-obs-1789916747",
+    "rates_per_minute": {
+     "0000:00:14.0": 0.0,
+     "0000:00:1d.0": 0.0,
+     "0000:01:00.0": 0.0,
+     "0000:02:00.0": 0.0,
+     "0000:06:00.0": 0.0,
+     "0000:09:00.0": 0.0
+    },
+    "sources_agree_zero_or_equal": true,
+    "started_utc": "2026-09-20T15:03:47.304886+00:00",
+    "sysfs_rxerr_delta": 0,
+    "upstream_bdf": "0000:02:00.0",
+    "upstream_speed": 8.0,
+    "upstream_width": 1
+   }
+  ],
+  "observations_count": 3,
+  "qualification": {
+   "boot_id": "433128ac-e81e-4239-bdd3-30a46c6a3a02",
+   "same_die_ok": {
+    "0000:06:00.0": true,
+    "0000:09:00.0": true
+   },
+   "stop_condition": null,
+   "upstream_rxerr_delta": 0
+  },
+  "replay": {
+   "arms": [
+    {
+     "arm": "replay-1048576",
+     "exit_code": 0,
+     "replay_producer_head": "30cf699688aa3d718fb475f5390317ebb4ba7385",
+     "size_bytes": 1048576,
+     "stdout_sha256": "876b1d78dffe9638be1679f8b75c0d2019b9329054b61d4fa3c0872a62892eff",
+     "stop_condition": null,
+     "summary_ok_true": true,
+     "validated": true
+    },
+    {
+     "arm": "replay-16777216",
+     "exit_code": 0,
+     "replay_producer_head": "30cf699688aa3d718fb475f5390317ebb4ba7385",
+     "size_bytes": 16777216,
+     "stdout_sha256": "18dbe6ffac9fe5a5ff200f8ecb0e993bcfba858d232aa2e27c7306128348a2ca",
+     "stop_condition": null,
+     "summary_ok_true": true,
+     "validated": true
+    },
+    {
+     "arm": "replay-4096",
+     "exit_code": 0,
+     "replay_producer_head": "30cf699688aa3d718fb475f5390317ebb4ba7385",
+     "size_bytes": 4096,
+     "stdout_sha256": "e54215cbdccc67ca307fe92107fb1742da85ecc977330925f8f58cc7d5b3f838",
+     "stop_condition": null,
+     "summary_ok_true": true,
+     "validated": true
+    },
+    {
+     "arm": "replay-67108864",
+     "exit_code": 0,
+     "replay_producer_head": "30cf699688aa3d718fb475f5390317ebb4ba7385",
+     "size_bytes": 67108864,
+     "stdout_sha256": "bd8714108d20bc5466a908d30b4590887b0eabf78e21a315de7aa3c526e9fce6",
+     "stop_condition": null,
+     "summary_ok_true": true,
+     "validated": true
+    }
+   ],
+   "decision": "REPLAY_AUTHORIZED",
+   "halted": false,
+   "order_entries": [
+    {
+     "arm": "replay-4096",
+     "detail": {
+      "ns": 1135199,
+      "size": 4096
+     },
+     "state": "passed"
+    },
+    {
+     "arm": "replay-1048576",
+     "detail": {
+      "ns": 4205988,
+      "size": 1048576
+     },
+     "state": "passed"
+    },
+    {
+     "arm": "replay-16777216",
+     "detail": {
+      "ns": 50887368,
+      "size": 16777216
+     },
+     "state": "passed"
+    },
+    {
+     "arm": "replay-67108864",
+     "detail": {
+      "ns": 224477777,
+      "size": 67108864
+     },
+     "state": "passed"
+    }
+   ],
+   "producer_byte_identical": true,
+   "reasons": []
+  },
+  "terminal": "V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS"
+ },
+ "schema": "inferswarm.v2g.assembly/1",
+ "state_dimensions": {
+  "amdgpu_ring_reset_stability": "amdgpu fault classes from journal windows only",
+  "external_memory_correctness": "replay arms' exact-correct results only",
+  "pcie_path_health": "chronic RxErr condition remediated iff the clean-link gate passed",
+  "physical_route": "derived only from measured behavior under the frozen route rule (never from naming)",
+  "v340l_driver_health": "both dies enumerate + minimal same-die usability (qualification phase)"
+ }
+}

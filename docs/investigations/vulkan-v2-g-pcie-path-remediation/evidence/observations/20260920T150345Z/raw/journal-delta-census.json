@@ -1,0 +1,14 @@
+{
+ "announcement_lines": 0,
+ "context_lines": 0,
+ "detail_lines": 0,
+ "events": {
+  "Correctable": 0,
+  "DPC": 0,
+  "Uncorrectable": 0
+ },
+ "events_by_severity_prefix": {},
+ "events_by_source": {},
+ "events_by_type_class": {},
+ "total_lines": 0
+}
