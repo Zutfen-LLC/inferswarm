@@ -1,11 +1,21 @@
 # V2-G — inferswarm02 PCIe RxErr path remediation + clean-link requalification (issue #232)
 
-Status: **CAMPAIGN IN PROGRESS — producers frozen at `492b82e`
-(closure digest bound in `PRODUCER-CLOSURE.json`); NO physical
-remediation observation retained yet.** This PR ships the frozen
-campaign tooling first (the freeze-before-output rule); physical
-phases execute on inferswarm02 under this freeze and their evidence
-lands as additive commits.
+Status: **CAMPAIGN COMPLETE — terminal
+`V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS` (derived deterministically
+from retained evidence).** The chronic Correctable RxErr flood was
+remediated by the physical intervention sequence (see the four-state
+ladder below), the clean-link gate passed and repeated across a
+genuine cold power cycle, the bounded qualification passed, and the
+authorized B→A replay ran all four arms (4 KiB → 64 MiB, one
+exact-correct rep each) with ZERO platform fault or RxErr recurrence
+— including the historical 64-MiB fault scale. PR OPEN/UNMERGED
+awaiting maintainer exact-head review.
+
+**Nonclaim (issue-mandated):** this does NOT establish that the
+chronic RxErr condition caused (or was the only precondition of) the
+historical #216/#230 amdgpu faults — the retained evidence shows the
+fault did not reproduce on the remediated path at the replayed scale,
+nothing more. No soak stability, no route, no production support.
 
 Campaign: `issue232-v2g-pcie-path-remediation`
 
@@ -28,6 +38,27 @@ The accepted evidence makes NO causal claim between them. V2-G tests
 the PCIe transport environment FIRST: remediate the physical path, prove
 a clean link under a prospective gate, and only then authorize one
 narrowly bounded replay of the previously faulting seam.
+
+## Outcome (retained evidence, 2026-09-20)
+
+| State | Config | Result |
+|---|---|---|
+| chronic baseline | original: root port 00:1d.0 + 3060 Ti neighbor | FLOOD (~250k events/boot fault boot; 11180 in 1.6 h fresh boot; 188 sysfs RxErr in the first post-bundle minute) |
+| intervention 1 (bundle) | reseat + 3060 Ti removal (declared bundle, no individual attribution) | FLOOD persists |
+| intervention 2 | upstream moved to motherboard slot (root port 00:1c.5) | CLEAN (zero events, zero counters) |
+| intervention 3 | returned to daughterboard port 2 (root port 00:1d.0 again) | **CLEAN** — same path as chronic, now clean |
+
+The daughterboard path itself is not intrinsically faulty: the same
+root port that carried the chronic flood runs clean after the
+intervention sequence. Operator testimony (retained): the card now
+sits in daughterboard port 2; daughterboard slots 3+ steal PCH lanes
+from the NIC (RTL8111 stops functioning), constraining alternatives.
+No causal attribution beyond the retained four-state ladder is made.
+
+Replay (B→A opaque_fd, one rep each, immediate-stop armed, producer
+byte-identical to the accepted V2-F pin `30cf6996`): 4 KiB ✓,
+1 MiB ✓, 16 MiB ✓, **64 MiB ✓** — every arm exact-correct, zero
+RxErr delta, zero amdgpu journal events, no width/topology change.
 
 ## Separate state dimensions (never conflated)
 
