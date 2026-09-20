@@ -193,6 +193,7 @@
     "test_issue228_v2e_assembler",
     "test_issue230_v2f_external_memory",
     "test_issue230_v2f_vk_contract",
+    "test_issue232_v2g_pcie_remediation",
     "test_issue35_link_probe",
     "test_issue35_role_sweep",
     "test_issue35_envelope",
@@ -376,6 +377,9 @@
    "vulkan-v0-b"
   ],
   "docs/investigations/vulkan-v2-f-v340l-external-memory/": [
+   "vulkan-v0-b"
+  ],
+  "docs/investigations/vulkan-v2-g-pcie-path-remediation/": [
    "vulkan-v0-b"
   ],
   "docs/project-status.json": [
@@ -1130,6 +1134,39 @@
   "scripts/issue230_transfer.py": [
    "vulkan-v0-b"
   ],
+  "scripts/issue232_assemble.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue232_authority.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue232_baseline.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue232_freeze.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue232_gate.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue232_host.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue232_manifest.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue232_qualify.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue232_receipt.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue232_reduce.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue232_replay.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "vulkan-v0-b"
   ],
@@ -1401,6 +1438,9 @@
    "vulkan-v0-b"
   ],
   "tests/test_issue230_v2f_vk_contract.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_issue232_v2g_pcie_remediation.py": [
    "vulkan-v0-b"
   ],
   "tests/test_issue35_corrections.py": [
