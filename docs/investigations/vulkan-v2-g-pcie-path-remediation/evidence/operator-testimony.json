@@ -1,0 +1,24 @@
+{
+ "schema": "inferswarm.v2g.operator-testimony/1",
+ "campaign_id": "issue232-v2g-pcie-path-remediation",
+ "recorded_utc": "2026-09-20T15:05:00+00:00",
+ "operator": "zutfen (at host, directing interventions)",
+ "statements": [
+  {
+   "statement": "The PM8533 upstream card is now in daughterboard port 2.",
+   "relevance": "binds the current clean configuration to a physical slot identity, not just a BDF"
+  },
+  {
+   "statement": "Moving the card to daughterboard slot 3 or higher prevented the network port (RTL8111 NIC, root port 00:1c.0) from functioning.",
+   "relevance": "consistent with PCH lane multiplexing on the MINERDUDE 12XTREME (12 x1 slots share a limited PCH lane pool; populating higher slots steals lanes from other functions). Constrains the remediation matrix: motherboard/higher daughterboard slots are NOT free alternatives — they cost the NIC. Retained as physical-route context; no causal claim about the chronic RxErr condition is drawn from it."
+  },
+  {
+   "statement": "Cycle 1 (declared as reseat) also removed the RTX 3060 Ti from the neighboring slot; corrected to a declared bundle.",
+   "relevance": "already retained as intervention v2g-iv-1789914946 (bundle_declared)"
+  }
+ ],
+ "nonclaims": [
+  "operator testimony is context, not a substitute for retained measured evidence",
+  "the lane-multiplexing observation does not attribute the chronic RxErr flood to any component"
+ ]
+}
