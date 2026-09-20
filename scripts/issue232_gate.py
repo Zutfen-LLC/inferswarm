@@ -332,8 +332,9 @@ def main() -> int:
     result = evaluate_gate(
         observation=obs, census=census, interventions=interventions,
         cold_confirmation_observations=confs, cold_proof=cold_proof)
-    out = Path(args.out_rel) if args.out_rel else \
-        (ev / "gate-result.json")
+    # out-rel is EVIDENCE-ROOT-relative (same convention as every
+    # other V2-G CLI) — never CWD-relative
+    out = ev / args.out_rel if args.out_rel else (ev / "gate-result.json")
     host.durable_write(out,
                        json.dumps(result, indent=1,
                                   sort_keys=True).encode() + b"\n")
