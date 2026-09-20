@@ -17,6 +17,7 @@ import gzip
 import hashlib
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -218,7 +219,25 @@ def write_synth_evidence(tmp: Path, *, gate_result="PASS",
                          cold_proof_root=ROOT_A,
                          boot_proof_root=ROOT_A,
                          write_boot_proof=True,
-                         authz_binding_root=ROOT_A):
+                         authz_binding_root=ROOT_A,
+                         authz_decision_utc="2026-09-20T12:00:00+00:00",
+                         order_entry_utc=None,
+                         authz_gate_digest=None,
+                         superseded_gate_digests=(),
+                         arm_producer_head="0" * 40,
+                         arm_closure_digest="0" * 64,
+                         closure_producer_head="0" * 40,
+                         closure_closure_digest="0" * 64,
+                         amendments=None):
+    """Synthetic evidence root shaped like the real V2-G evidence.
+
+    Defaults model a VALID prospective replay: the authorization
+    decision (12:00) mechanically precedes every arm (12:01+), the
+    authorization pins the retained gate-result digest, and every arm
+    carries the CURRENT closure identity. Every authority defect the
+    2026-09-20 correction closes is expressed by overriding one
+    parameter.
+    """
     ev = tmp / "evidence"
     ev.mkdir(parents=True, exist_ok=True)
     (ev / "observations" / "a").mkdir(parents=True, exist_ok=True)
@@ -239,7 +258,10 @@ def write_synth_evidence(tmp: Path, *, gate_result="PASS",
         "cold_confirmation_boot_ids": ["boot-y"],
         "cold_confirmation_root_ports": [cold_proof_root],
     }
-    (ev / "gate-result.json").write_text(json.dumps(gate_doc))
+    gate_bytes = json.dumps(gate_doc).encode()
+    (ev / "gate-result.json").write_bytes(gate_bytes)
+    if authz_gate_digest is None:
+        authz_gate_digest = hashlib.sha256(gate_bytes).hexdigest()
     (ev / "qualification").mkdir(exist_ok=True)
     q = synth_qualification_pass(root_port=qual_root)
     q["stop_condition"] = quals_stop
@@ -248,12 +270,23 @@ def write_synth_evidence(tmp: Path, *, gate_result="PASS",
     if write_boot_proof:
         (ev / "boot-proof.json").write_text(json.dumps(
             synth_boot_proof(root_port=boot_proof_root)))
+    if superseded_gate_digests:
+        sup = ev / "superseded-20260920-topology-rebinding"
+        sup.mkdir(parents=True, exist_ok=True)
+        for d in superseded_gate_digests:
+            (sup / "replay-authorization.json").write_text(json.dumps({
+                "schema": "inferswarm.v2g.replay-authorization/1",
+                "gate_result_digest": d,
+                "decision_utc": "2026-09-20T11:00:00+00:00",
+            }))
     if replay_authorized is not None:
         (ev / "replay-authorization.json").write_text(json.dumps({
             "schema": "inferswarm.v2g.replay-authorization/1",
             "campaign_id": rc.CAMPAIGN_ID,
             "decision": "REPLAY_AUTHORIZED" if replay_authorized
             else "REPLAY_REFUSED",
+            "decision_utc": authz_decision_utc,
+            "gate_result_digest": authz_gate_digest,
             "reasons": [],
             "replay_boot_id": "boot-y",
             "topology_binding": {
@@ -271,10 +304,19 @@ def write_synth_evidence(tmp: Path, *, gate_result="PASS",
                 "byte_identical_to_accepted": True},
         }))
     if order_entries is not None:
+        if order_entry_utc is None:
+            # mechanically AFTER the default authorization decision
+            order_entry_utc = ["2026-09-20T12:01:00+00:00"] * len(
+                order_entries)
+        entries = []
+        for e, utc in zip(order_entries, order_entry_utc):
+            e = dict(e)
+            e.setdefault("recorded_utc", utc)
+            entries.append(e)
         (ev / "replay-order-state.json").write_text(json.dumps({
             "schema": "inferswarm.v2g.replay-order/1",
             "campaign_id": rc.CAMPAIGN_ID,
-            "entries": order_entries,
+            "entries": entries,
             "chain_digest": "0" * 64,
         }))
     if arms:
@@ -300,6 +342,8 @@ def write_synth_evidence(tmp: Path, *, gate_result="PASS",
                 "stdout_sha256": hashlib.sha256(
                     stdout.encode()).hexdigest(),
                 "replay_producer_head": "0" * 40,
+                "producer_head": arm_producer_head,
+                "closure_digest": arm_closure_digest,
             }))
     if halted:
         entries = order_entries or []
@@ -310,11 +354,23 @@ def write_synth_evidence(tmp: Path, *, gate_result="PASS",
                 "entries": entries + [
                     {"arm": (arms[-1][0] if arms else "replay-4096"),
                      "state": "failed",
+                     "recorded_utc": "2026-09-20T12:05:00+00:00",
                      "detail": {"stop_condition":
                                 (arms[-1][1] if arms else
                                  "ring_timeout_or_hang")}}],
                 "chain_digest": "0" * 64,
             }))
+    if amendments is not None:
+        (tmp / "AMENDMENTS.json").write_text(json.dumps(amendments))
+    # committed closure view next to the evidence root (the reducer's
+    # standalone fallback reads exactly this path)
+    (tmp / "PRODUCER-CLOSURE.json").write_text(json.dumps({
+        "schema": "inferswarm.v2g.producer-closure/1",
+        "campaign_id": rc.CAMPAIGN_ID,
+        "producer_head": closure_producer_head,
+        "closure_digest": closure_closure_digest,
+        "sources": {},
+    }))
     return ev
 
 
@@ -345,6 +401,339 @@ def synth_replay_stdout(size=4096, ok=True):
 # ---------------------------------------------------------------------------
 # Authority tests
 # ---------------------------------------------------------------------------
+
+def _write_closure_tmp(td, *, with_authority: bool = False) -> Path:
+    """Mini repo whose closure source set matches CLOSURE_SOURCES
+    byte-for-byte at its HEAD, so verify_closure passes there.
+    With ``with_authority``, also builds the V2-G PHYSICAL-AUTHORITY
+    (needs the V2-F predecessor bytes, resolved from the real repo
+    via AREA overrides)."""
+    repo = Path(td) / "minirepo"
+    repo.mkdir(parents=True, exist_ok=True)
+    def _g(*args: str) -> None:
+        subprocess.run(["git", "-C", str(repo), *args], check=True,
+                       capture_output=True)
+    if not with_authority:
+        _g("init", "-q")
+        _g("config", "user.email", "t@example.com")
+        _g("config", "user.name", "t")
+    else:
+        # graft: fetch the real history first, then branch from the
+        # V2-F merge commit (the authority builder requires it to be
+        # an ancestor of HEAD); an empty fresh repo cannot checkout a
+        # fetched commit, so init on the branch directly
+        _g("init", "-q", "--initial-branch", "work")
+        _g("config", "user.email", "t@example.com")
+        _g("config", "user.name", "t")
+        _g("remote", "add", "real", str(REPO))
+        _g("fetch", "-q", "real",
+           "c21840e4a1e5b5c81c366dd23b18ff582f9670b1")
+        _g("checkout", "-q", "-B", "work",
+           "c21840e4a1e5b5c81c366dd23b18ff582f9670b1")
+    for rel in rc.CLOSURE_SOURCES:
+        dst = repo / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(REPO / rel, dst)
+    if with_authority:
+        # the authority builder reads V2-F predecessor bytes via
+        # repo-relative paths; give the mini repo a full docs tree
+        # through symlinked investigation dirs (read-only inputs)
+        (repo / "docs" / "investigations").mkdir(
+            parents=True, exist_ok=True)
+        for item in (REPO / "docs" / "investigations").iterdir():
+            dst = repo / "docs" / "investigations" / item.name
+            if not dst.exists():
+                dst.symlink_to(item)
+    if with_authority:
+        # the authority builder requires the V2-F merge commit to be
+        # an ANCESTOR of HEAD; the graft branch in _write_closure_tmp
+        # starts exactly there, so nothing more is needed here — the
+        # closure sources were laid on top before the commit.
+        pass
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+    subprocess.run(["git", "-C", str(repo), "commit", "-qm", "closure"],
+                   check=True)
+    fz.write_closure(repo)
+    if with_authority:
+        doc = pa.build_authority(repo)
+        out = repo / rc.AREA_REL / "PHYSICAL-AUTHORITY.json"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(json.dumps(doc, indent=1,
+                                   sort_keys=True).encode()
+                        + b"\n")
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+    subprocess.run(
+        ["git", "-C", str(repo), "commit", "-qm", "closure2",
+         "--allow-empty"], check=True)  # authority bytes are ignored
+    return repo
+
+
+class TestClosureSourceCompleteness(unittest.TestCase):
+    """The closure must pin every correctness-bearing producer —
+    including bootproof/coldproof, whose outputs feed replay
+    authorization and terminal reduction (authority correction
+    2026-09-20)."""
+
+    def test_bootproof_and_coldproof_in_closure_sources(self):
+        self.assertIn("scripts/issue232_bootproof.py",
+                      rc.CLOSURE_SOURCES)
+        self.assertIn("scripts/issue232_coldproof.py",
+                      rc.CLOSURE_SOURCES)
+
+    def test_bootproof_and_coldproof_are_physical_producers(self):
+        self.assertIn("scripts/issue232_bootproof.py",
+                      fz.PHYSICAL_PRODUCERS)
+        self.assertIn("scripts/issue232_coldproof.py",
+                      fz.PHYSICAL_PRODUCERS)
+
+    def test_closure_source_set_is_exactly_the_known_producers(self):
+        expected = {
+            "scripts/issue232_receipt.py",
+            "scripts/issue232_freeze.py",
+            "scripts/issue232_authority.py",
+            "scripts/issue232_host.py",
+            "scripts/issue232_baseline.py",
+            "scripts/issue232_gate.py",
+            "scripts/issue232_qualify.py",
+            "scripts/issue232_replay.py",
+            "scripts/issue232_reduce.py",
+            "scripts/issue232_assemble.py",
+            "scripts/issue232_manifest.py",
+            "scripts/issue232_bootproof.py",
+            "scripts/issue232_coldproof.py",
+        }
+        self.assertEqual(set(rc.CLOSURE_SOURCES), expected)
+
+    def test_closure_rejects_missing_bootproof_from_set(self):
+        # a committed closure whose source set OMITS bootproof must
+        # fail verification (control: helper omitted from closure
+        # authority => fail closed)
+        with tempfile.TemporaryDirectory() as td:
+            repo = _write_closure_tmp(td)
+            committed = json.loads(
+                (repo / "docs/investigations"
+                 / "vulkan-v2-g-pcie-path-remediation"
+                 / "PRODUCER-CLOSURE.json").read_text())
+            dropped = dict(committed)
+            dropped["sources"] = {
+                k: v for k, v in committed["sources"].items()
+                if k != "scripts/issue232_bootproof.py"}
+            with self.assertRaises(fz.FreezeError):
+                fz.verify_closure(repo, committed=dropped)
+
+
+class TestProspectiveAuthorization(unittest.TestCase):
+    """The replay authorization must mechanically PREDATE the first
+    executed arm and bind the retained gate digest — a corrected
+    authorization created after replay is retrospective and can never
+    authorize the retained arms (authority correction 2026-09-20)."""
+
+    ARMS4 = [("replay-4096", None, True),
+             ("replay-1048576", None, True),
+             ("replay-16777216", None, True),
+             ("replay-67108864", None, True)]
+    ORDER4 = [{"arm": f"replay-{s}", "state": "passed",
+               "detail": {}} for s in (4096, 1048576, 16777216,
+                                      67108864)]
+
+    # --- literal regression: the exact retained #232 defect --------
+    RETAINED_AUTHZ_UTC = "2026-09-20T16:57:20.265606+00:00"
+    RETAINED_ARM_UTC = [
+        "2026-09-20T15:14:05.182250+00:00",
+        "2026-09-20T15:14:12.449888+00:00",
+        "2026-09-20T15:14:14.749495+00:00",
+        "2026-09-20T15:14:24.736884+00:00",
+    ]
+    RETAINED_SUPERSEDED_GATE_DIGEST = (
+        "c90bc7f173d0ac5d154d4c98bd1ff0779dcf036f"
+        "6a52761d472f784c125013e3")
+
+    def _reduce(self, **kw):
+        with tempfile.TemporaryDirectory() as td:
+            ev = write_synth_evidence(Path(td),
+                                      arms=self.ARMS4,
+                                      order_entries=self.ORDER4,
+                                      **kw)
+            return red.derive_terminal(ev)
+
+    def test_control_authz_after_first_arm_blocks(self):
+        r = self._reduce(
+            authz_decision_utc="2026-09-20T12:02:30+00:00",
+            order_entry_utc=[
+                "2026-09-20T12:01:00+00:00",
+                "2026-09-20T12:03:00+00:00",
+                "2026-09-20T12:04:00+00:00",
+                "2026-09-20T12:05:00+00:00"])
+        self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+        self.assertTrue(any("AFTER the first retained arm" in b
+                            for b in r["basis"]))
+
+    def test_control_authz_after_last_arm_blocks(self):
+        r = self._reduce(
+            authz_decision_utc="2026-09-20T12:09:00+00:00")
+        self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+        self.assertTrue(any("AFTER the last retained arm" in b
+                            for b in r["basis"]))
+
+    def test_control_retained_literal_timestamps_block(self):
+        # the EXACT retained timestamps of the #232 defect: corrected
+        # authorization 16:57:20 vs arms 15:14:05..15:14:24 — this
+        # defect can never silently recur.
+        r = self._reduce(
+            authz_decision_utc=self.RETAINED_AUTHZ_UTC,
+            order_entry_utc=self.RETAINED_ARM_UTC)
+        self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+        self.assertTrue(any(
+            "16:57:20.265606" in b and "AFTER" in b
+            for b in r["basis"]))
+
+    def test_control_prospective_authz_stale_gate_digest_blocks(self):
+        # prospective timestamp BUT pins the superseded root-A gate
+        # digest while the retained gate/arms are root-B
+        r = self._reduce(
+            authz_decision_utc="2026-09-20T11:59:00+00:00",
+            authz_gate_digest=self.RETAINED_SUPERSEDED_GATE_DIGEST,
+            superseded_gate_digests=[
+                self.RETAINED_SUPERSEDED_GATE_DIGEST])
+        self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+        self.assertTrue(any("SUPERSEDED gate" in b
+                            for b in r["basis"]))
+
+    def test_control_authz_unknown_gate_digest_blocks(self):
+        r = self._reduce(
+            authz_decision_utc="2026-09-20T11:59:00+00:00",
+            authz_gate_digest="f" * 64)
+        self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+        self.assertTrue(any(
+            "does not match the retained gate-result.json" in b
+            for b in r["basis"]))
+
+    def test_control_posthoc_bootproof_agreement_does_not_heal(self):
+        # a boot proof that AGREES with the arms (default ROOT_A) is
+        # post-campaign evidence: it cannot make a retrospective
+        # authorization prospective (control 4).
+        r = self._reduce(
+            authz_decision_utc="2026-09-20T12:09:00+00:00",
+            boot_proof_root=ROOT_A)
+        self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+        self.assertTrue(any("AFTER the last retained arm" in b
+                            for b in r["basis"]))
+
+    def test_control_missing_arm_timestamps_block(self):
+        with tempfile.TemporaryDirectory() as td:
+            ev = write_synth_evidence(
+                Path(td), arms=self.ARMS4,
+                order_entries=self.ORDER4)
+            doc = json.loads(
+                (ev / "replay-order-state.json").read_text())
+            for e in doc["entries"]:
+                e.pop("recorded_utc", None)
+            (ev / "replay-order-state.json").write_text(
+                json.dumps(doc))
+            r = red.derive_terminal(ev)
+            self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+            self.assertTrue(any(
+                "carries no recorded_utc" in b for b in r["basis"]))
+
+    def test_positive_prospective_authz_reaches_replay_pass(self):
+        r = self._reduce()  # defaults: valid gate + authz precede arms
+        self.assertEqual(r["terminal"],
+                         "V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS")
+
+
+class TestRetainedArmProvenance(unittest.TestCase):
+    """Retained arms carry their EXECUTING producer identity. Arms
+    produced under a historical (different) closure cannot pass
+    through the current closure without an explicit immutable
+    historical-closure amendment (authority correction 2026-09-20)."""
+
+    ARMS4 = TestProspectiveAuthorization.ARMS4
+    ORDER4 = TestProspectiveAuthorization.ORDER4
+
+    HIST_HEAD = "5" * 40
+    HIST_DIGEST = "7" * 64
+
+    def _reduce(self, **kw):
+        with tempfile.TemporaryDirectory() as td:
+            ev = write_synth_evidence(
+                Path(td), arms=self.ARMS4,
+                order_entries=self.ORDER4, **kw)
+            return red.derive_terminal(ev)
+
+    def test_control_historical_closure_digest_blocks(self):
+        r = self._reduce(arm_producer_head=self.HIST_HEAD,
+                         arm_closure_digest=self.HIST_DIGEST)
+        self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+        self.assertTrue(any(
+            "no admissible immutable historical-closure amendment"
+            in b for b in r["basis"]))
+
+    def test_control_historical_producer_head_blocks(self):
+        r = self._reduce(arm_producer_head=self.HIST_HEAD)
+        self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+        self.assertTrue(any(
+            "no admissible immutable historical-closure amendment"
+            in b for b in r["basis"]))
+
+    def test_control_unpinned_arm_identity_blocks(self):
+        with tempfile.TemporaryDirectory() as td:
+            ev = write_synth_evidence(
+                Path(td), arms=self.ARMS4,
+                order_entries=self.ORDER4)
+            for p in sorted((ev / "arms").glob("replay-*.json")):
+                doc = json.loads(p.read_text())
+                doc["producer_head"] = None
+                p.write_text(json.dumps(doc))
+            r = red.derive_terminal(ev)
+            self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+            self.assertTrue(any(
+                "retains no producer_head" in b for b in r["basis"]))
+
+    def test_control_changed_physical_producer_not_reduction_only(
+            self):
+        # issue232_replay.py is classified PHYSICAL_PRODUCER: a
+        # reduction-only amendment across a changed replay producer
+        # is structurally refused by accepted_amended_digests (its
+        # physical-producer diff check raises), and the reducer
+        # treats ANY refusal as no-admission.
+        from issue232_freeze import PHYSICAL_PRODUCERS
+        self.assertIn("scripts/issue232_replay.py",
+                      PHYSICAL_PRODUCERS)
+        # even a WELL-FORMED amendment cannot admit arms whose
+        # historical pin is not the amendment's pin: the pin-match
+        # rejection fires even when the admission map is populated
+        problems = red._historical_provenance_problems(
+            [{"arm": "replay-4096", "producer_head": self.HIST_HEAD,
+              "closure_digest": self.HIST_DIGEST}],
+            {"producer_head": "0" * 40,
+             "closure_digest": "0" * 64},
+            {self.HIST_DIGEST: {"evidence_producer_head":
+                                "9" * 40}})
+        self.assertTrue(any("historical pin" in p for p in problems))
+
+    def test_positive_current_identity_reaches_replay_pass(self):
+        r = self._reduce()  # arms carry the current closure identity
+        self.assertEqual(r["terminal"],
+                         "V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS")
+
+
+class TestRetainedEvidenceRegression(unittest.TestCase):
+    """The REAL retained #232 evidence must reduce to
+    V2G_EVIDENCE_BLOCKED under the corrected invariants (the arms ran
+    15:14, the corrected authorization is 16:57, and the arms carry
+    the historical 52a65b19/7a5505af identity)."""
+
+    def test_retained_evidence_reduces_to_evidence_blocked(self):
+        r = red.derive_terminal(
+            REPO / "docs/investigations"
+            / "vulkan-v2-g-pcie-path-remediation" / "evidence")
+        self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+        joined = " | ".join(r["basis"])
+        self.assertIn("0000:00:1d.0", joined)
+        self.assertIn("16:57:20.265606", joined)
+        self.assertIn("52a65b19e736", joined)
+        self.assertIn("7a5505af200c", joined)
+
 
 class TestAuthority(unittest.TestCase):
     @classmethod
@@ -620,6 +1009,16 @@ class TestCleanLinkGate(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestInterventions(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # producers must verify their closure before emitting; this
+        # round edits producers, so the closure is pinned at a
+        # throwaway head committed with exactly CLOSURE_SOURCES (the
+        # committed closure in this worktree is mid-correction and
+        # legitimately refuses until re-frozen)
+        cls.repo = _write_closure_tmp(
+            Path(tempfile.mkdtemp()))
+
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
         self.ev = self.tmp / "evidence"
@@ -629,7 +1028,7 @@ class TestInterventions(unittest.TestCase):
 
     def test_control_6_single_component_only(self):
         doc = baseline.record_intervention(
-            repo=REPO if False else self._repo_stub(),
+            repo=TestInterventions.repo,
             out=self.ev / "interventions",
             component="pm8533_upstream_reseat",
             description="reseated the switch card in slot 3",
@@ -640,7 +1039,7 @@ class TestInterventions(unittest.TestCase):
     def test_control_6_bundle_must_declare_itself(self):
         with self.assertRaises(baseline.BaselineError):
             baseline.record_intervention(
-                repo=self._repo_stub(),
+                repo=TestInterventions.repo,
                 out=self.ev / "interventions",
                 component="pm8533_upstream_reseat",
                 description="reseat + slot move at once",
@@ -658,6 +1057,15 @@ class TestInterventions(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestReplayAuthorization(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # authorize() verifies the closure + re-verifies the physical
+        # authority before deciding; pin both at a throwaway
+        # committed head (this round edits producers, so the live
+        # committed closure mid-correction correctly refuses)
+        cls.repo = _write_closure_tmp(
+            Path(tempfile.mkdtemp()), with_authority=True)
+
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
         self.ev = self.tmp / "evidence"
@@ -685,7 +1093,9 @@ class TestReplayAuthorization(unittest.TestCase):
             json.dumps({"schema":
                         "inferswarm.v2g.qualification/1",
                         "stop_condition": None}))
-        decision = replay.authorize(repo=REPO, evidence_root=self.ev)
+        decision = replay.authorize(
+            repo=TestReplayAuthorization.repo,
+            evidence_root=self.ev)
         self.assertFalse(decision["authorized"])
         self.assertEqual(decision["decision"], "REPLAY_REFUSED")
         self.assertTrue(any("gate" in r for r in decision["reasons"]))

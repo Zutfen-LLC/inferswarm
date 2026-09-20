@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import re
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -170,6 +171,8 @@ def reduce_replay(evidence_root: Path) -> dict[str, Any] | None:
         raise ReductionError("bad replay authorization schema")
     out: dict[str, Any] = {
         "decision": authz.get("decision"),
+        "decision_utc": authz.get("decision_utc"),
+        "gate_result_digest": authz.get("gate_result_digest"),
         "reasons": authz.get("reasons"),
         "producer_byte_identical": authz.get("replay_producer", {})
         .get("byte_identical_to_accepted"),
@@ -185,6 +188,13 @@ def reduce_replay(evidence_root: Path) -> dict[str, Any] | None:
              "detail": e.get("detail")}
             for e in entries]
         out["halted"] = any(e["state"] == "failed" for e in entries)
+        # retained arm execution timestamps (prospective-authorization
+        # invariant input — never trust the authorization's own claim
+        # about when the arms ran)
+        out["order_entry_utc"] = [
+            {"arm": e["arm"], "state": e["state"],
+             "recorded_utc": e.get("recorded_utc")}
+            for e in entries]
     # retained boot/topology continuity proof (2026-09-20 correction):
     # read from the RETAINED FILE, never from the authorization's
     # summary of it — the two must agree and the file's own topology
@@ -229,6 +239,8 @@ def reduce_replay(evidence_root: Path) -> dict[str, Any] | None:
                 "stdout_sha256": arm.get("stdout_sha256"),
                 "replay_producer_head":
                     arm.get("replay_producer_head"),
+                "producer_head": arm.get("producer_head"),
+                "closure_digest": arm.get("closure_digest"),
                 "boot_id": arm.get("boot_id"),
                 "root_port_bdf": arm.get("root_port_bdf"),
                 "upstream_bdf": arm.get("upstream_bdf"),
@@ -255,14 +267,196 @@ def fault_class_from_arm(arm: dict[str, Any]) -> str | None:
     return None
 
 
-def derive_terminal(evidence_root: Path) -> dict[str, Any]:
+# ---------------------------------------------------------------------------
+# Prospective-authorization invariant (2026-09-20 authority correction)
+# ---------------------------------------------------------------------------
+# Issue #232's contract is that replay authorization exists BEFORE the
+# first replay arm executes AND is derived from the gate/topology under
+# which the replay is claimed. A post-campaign boot/topology proof may
+# establish what hardware state executed the arms; it can NEVER
+# retroactively satisfy the prospective-authorization requirement. The
+# check below is purely mechanical over retained timestamps and
+# retained digest bindings — no authored summary is trusted.
+
+AUTHZ_EVIDENCE_SKEW_S = 300.0
+#: The authorization decision and the first arm must sit on one
+#: authority horizon: an authorization recorded more than this many
+#: seconds AFTER an arm executed is definitionally retrospective. (An
+#: authorization BEFORE an arm is prospective at any distance; arms
+#: refuse to run without one at execution time.)
+
+
+def _parse_utc(text: Any) -> datetime:
+    if not isinstance(text, str):
+        raise ReductionError(f"not a UTC timestamp: {text!r}")
+    try:
+        return datetime.fromisoformat(text)
+    except ValueError as exc:
+        raise ReductionError(
+            f"malformed UTC timestamp {text!r}") from exc
+
+
+def check_prospective_authorization(
+        *, authz: dict[str, Any], order: dict[str, Any],
+        gate_digest_retained: str,
+        superseded_gate_digests: set[str]) -> dict[str, Any]:
+    """Mechanically derive whether the retained replay authorization
+    is PROSPECTIVE for the retained arms and bound to the gate digest
+    the terminal claims. Returns a dict with ``valid`` plus a
+    machine-readable ``problems`` list (basis material)."""
+    problems: list[str] = []
+    authz_utc = authz.get("decision_utc")
+    if not authz_utc:
+        return {"valid": False, "problems":
+                ["retained replay authorization carries no "
+                 "decision_utc"]}
+    authz_dt = _parse_utc(authz_utc)
+
+    executed = [e for e in order.get("entries") or []
+                if e.get("state") in ("passed", "failed")]
+    if not executed:
+        return {"valid": False, "problems":
+                ["replay order state retains no executed arm — "
+                 "no prospective authorization can be evaluated"]}
+    executed_utc = []
+    for e in executed:
+        utc = e.get("recorded_utc")
+        if not utc:
+            return {"valid": False, "problems": [
+                f"order-state entry {e.get('arm')!r} carries no "
+                "recorded_utc timestamp"]}
+        executed_utc.append((e["arm"], _parse_utc(utc)))
+    first_arm, first_dt = executed_utc[0]
+    last_arm, last_dt = executed_utc[-1]
+
+    # (1)+(3): the authorization must PREDATE the first arm. An
+    # authorization after the first arm is retrospective; after the
+    # last arm it is maximally so.
+    if authz_dt > first_dt:
+        delta = (authz_dt - first_dt).total_seconds()
+        if authz_dt > last_dt:
+            problems.append(
+                f"replay authorization decision_utc {authz_utc} is "
+                f"{delta:.0f}s AFTER the last retained arm "
+                f"{last_arm} ({last_arm} recorded "
+                f"{executed_utc[-1][1].isoformat()}) — the entire "
+                "ladder predates the authorization")
+        else:
+            problems.append(
+                f"replay authorization decision_utc {authz_utc} is "
+                f"{delta:.0f}s AFTER the first retained arm "
+                f"{first_arm} (recorded "
+                f"{first_dt.isoformat()}) — retrospective, cannot "
+                "authorize arms that already executed")
+    # an authorization between arms is accepted as predating the
+    # FIRST arm only if it actually predates it; the branch above
+    # already rejected the opposite. no additional skew test is
+    # needed: the boundary is the first arm, mechanically.
+
+    # (2)+(4): the authorization must bind the gate digest of the
+    # gate result the terminal is derived from.
+    authz_gate = authz.get("gate_result_digest")
+    if not authz_gate:
+        problems.append(
+            "retained replay authorization pins no gate_result_digest")
+    elif authz_gate != gate_digest_retained:
+        if authz_gate in superseded_gate_digests:
+            problems.append(
+                "replay authorization gate_result_digest "
+                f"{authz_gate} points at the SUPERSEDED gate "
+                "authority, not the retained gate-result.json "
+                f"({gate_digest_retained})")
+        else:
+            problems.append(
+                "replay authorization gate_result_digest "
+                f"{authz_gate} does not match the retained "
+                f"gate-result.json digest ({gate_digest_retained})")
+
+    return {"valid": not problems, "problems": problems}
+
+
+# ---------------------------------------------------------------------------
+# Historical physical evidence provenance (immutable historical closure)
+# ---------------------------------------------------------------------------
+# The retained replay arms were executed under an OLDER producer
+# identity (producer_head/closure_digest) than the current authority.
+# They remain scientifically informative, but a reduction-only
+# amendment may admit them ONLY through an explicit amendment record
+# proving every physical producer that emitted them byte-unchanged
+# between the executing pin and the current authority. Because
+# scripts/issue232_replay.py changed after the arms executed, no such
+# amendment is possible for this campaign — the arms stay retained
+# with their ORIGINAL identities and REPLAY_PASS stays unreachable.
+
+HISTORICAL_PIN_FIELDS = ("producer_head", "closure_digest")
+
+
+def _historical_provenance_problems(
+        arm_rows: list[dict[str, Any]],
+        closure: dict[str, Any],
+        admitted_historical_pins: dict[str, dict] | None = None
+        ) -> list[str]:
+    problems: list[str] = []
+    for a in arm_rows:
+        arm = a.get("arm")
+        head = a.get("producer_head")
+        digest = a.get("closure_digest")
+        for field, value in zip(HISTORICAL_PIN_FIELDS, (head, digest)):
+            if not isinstance(value, str) or not value:
+                problems.append(
+                    f"{arm} retains no {field} — unpinned physical "
+                    "producer identity makes REPLAY_PASS unreachable")
+        if problems:
+            continue
+        assert isinstance(head, str) and isinstance(digest, str)
+        if head == closure.get("producer_head") \
+                and digest == closure.get("closure_digest"):
+            continue  # current authority: ordinary path
+        entry = (admitted_historical_pins or {}).get(digest)
+        if entry is None:
+            problems.append(
+                f"{arm} was produced under historical authority "
+                f"producer_head={head[:12]} closure_digest="
+                f"{digest[:12]} which differs from the current "
+                f"closure ({closure.get('producer_head', '')[:12]}/"
+                f"{closure.get('closure_digest', '')[:12]}) and no "
+                "admissible immutable historical-closure amendment "
+                "covers it — the arm cannot pass through the current "
+                "closure")
+        elif entry.get("evidence_producer_head") != head:
+            problems.append(
+                f"{arm} historical pin {head[:12]} is not the pin "
+                "admitted by the amendment record")
+    return problems
+
+
+def derive_terminal(evidence_root: Path,
+                    *, closure: dict[str, Any] | None = None
+                    ) -> dict[str, Any]:
     """Deterministic Phase 6 terminal from retained bytes (issue
-    controls 18/20: authored records never override the reduction)."""
+    controls 18/20: authored records never override the reduction).
+
+    ``closure`` is the VERIFIED producer-closure document (the
+    assembler passes it after verify_closure). When omitted, the
+    committed closure next to the evidence root is used; when no
+    closure view exists at all, retained-arm provenance cannot be
+    validated and REPLAY_PASS is unreachable (fail closed)."""
     obs = reduce_observations(evidence_root)
     gate = reduce_gate(evidence_root)
     interventions = reduce_interventions(evidence_root)
     qual = reduce_qualification(evidence_root)
     replay = reduce_replay(evidence_root)
+
+    # closure view for retained-arm provenance validation: the
+    # assembler passes its VERIFIED closure; a standalone reduction
+    # falls back to the committed document; TOTAL absence fails the
+    # provenance gate (REPLAY_PASS unreachable).
+    closure_view = closure
+    if closure_view is None:
+        committed = (evidence_root.parent / rc.CLOSURE_NAME)
+        if committed.is_file():
+            closure_view = json.loads(
+                committed.read_text(encoding="utf-8"))
 
     terminal: str
     basis: list[str] = []
@@ -270,6 +464,45 @@ def derive_terminal(evidence_root: Path) -> dict[str, Any]:
     gate_passed = gate.get("result") == "PASS"
     replay_auth = bool(replay and replay.get("decision")
                        == "REPLAY_AUTHORIZED")
+
+    # --- prospective-authorization invariant (2026-09-20 authority
+    # correction): a retained REPLAY_AUTHORIZED decision is only an
+    # admissible replay authority if it mechanically PREDATES the
+    # first executed arm AND binds the retained gate digest. A
+    # corrected/replacement authorization produced after any arm
+    # executed is retrospective evidence, never authorization.
+    authz_ok = replay_auth
+    authz_problems: list[str] = []
+    if replay_auth:
+        order_rows = (replay or {}).get("order_entry_utc") or []
+        authz_doc = _load(evidence_root / "replay-authorization.json")
+        superseded_gate_digests: set[str] = set()
+        for sup in sorted((evidence_root
+                           / "superseded-20260920-topology-rebinding")
+                          .glob("replay-authorization.json")):
+            sup_doc = _load(sup)
+            if sup_doc.get("gate_result_digest"):
+                superseded_gate_digests.add(
+                    sup_doc["gate_result_digest"])
+        gate_digest_retained = rc.sha256_bytes(
+            (evidence_root / "gate-result.json").read_bytes())
+        if order_rows:
+            order_for_check = {"entries": [
+                {"arm": r["arm"], "state": r["state"],
+                 "recorded_utc": r["recorded_utc"]}
+                for r in order_rows]}
+            verdict = check_prospective_authorization(
+                authz=authz_doc, order=order_for_check,
+                gate_digest_retained=gate_digest_retained,
+                superseded_gate_digests=superseded_gate_digests)
+            authz_ok = bool(verdict["valid"])
+            authz_problems = list(verdict["problems"])
+        else:
+            authz_ok = False
+            authz_problems = [
+                "retained replay order state carries no arm "
+                "timestamps — prospective authorization cannot be "
+                "verified"]
 
     if not gate_passed:
         terminal = "V2G_PCIE_PATH_REMEDIATION_FAILED"
@@ -407,7 +640,41 @@ def derive_terminal(evidence_root: Path) -> dict[str, Any]:
                     topo_problems.append(
                         f"{a['arm']} boot {arm_boot} != boot-proof "
                         f"{bp.get('replay_boot_id')}")
-            if target in sizes and all_ok and topology_agrees:
+
+            # --- historical provenance of the retained arms ----------
+            # Every correctness-bearing retained arm artifact carries
+            # its executing producer_head/closure_digest. Arms produced
+            # under a DIFFERENT (historical) producer identity than
+            # the current closure are admissible ONLY through an
+            # explicit immutable historical-closure amendment record
+            # (AMENDMENTS.json) proving every physical producer
+            # byte-unchanged between the executing pin and HEAD. No
+            # such record is retained for this campaign: the replay
+            # producer itself changed after the arms executed, so the
+            # arms keep their original identities and cannot satisfy
+            # REPLAY_PASS through the current closure.
+            from issue232_freeze import accepted_amended_digests
+            admitted_historical: dict[str, dict] = {}
+            try:
+                # AMENDMENTS.json lives in the campaign area root
+                # (the evidence root's parent); absence => no
+                # historical admission at all
+                admitted_historical = accepted_amended_digests(
+                    evidence_root.parent)
+            except Exception:
+                admitted_historical = {}
+            prov_problems: list[str] = []
+            if closure_view is None:
+                prov_problems = [
+                    "no producer-closure view available — retained-arm "
+                    "provenance cannot be validated (REPLAY_PASS "
+                    "unreachable)"]
+            else:
+                prov_problems = _historical_provenance_problems(
+                    arms, closure_view, admitted_historical)
+
+            if target in sizes and all_ok and topology_agrees \
+                    and authz_ok and not prov_problems:
                 terminal = \
                     "V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS"
                 basis.append(
@@ -420,14 +687,42 @@ def derive_terminal(evidence_root: Path) -> dict[str, Any]:
                     "gate/cold-proof/qualification/replay: root port "
                     f"{gate_root}, upstream {gate_up}, replay boot "
                     f"{(bp or {}).get('replay_boot_id')}")
-            elif target in sizes and all_ok and not topology_agrees:
-                terminal = "V2G_EVIDENCE_BLOCKED"
                 basis.append(
-                    "replay arms passed but topology identity "
-                    "continuity is NOT established from retained "
-                    f"bytes ({'; '.join(topo_problems)}) — the pass "
-                    "cannot be attributed to the remediated path "
-                    "without renewed physical authorization")
+                    "replay authorization decision_utc "
+                    f"{(replay or {}).get('decision_utc')} "
+                    "mechanically predates the first executed arm "
+                    "and binds the retained gate-result digest")
+            elif target in sizes and all_ok and (
+                    not topology_agrees or not authz_ok
+                    or prov_problems):
+                terminal = "V2G_EVIDENCE_BLOCKED"
+                # informative dimensions that REMAIN established by
+                # the retained bytes (reported separately; they do
+                # not rehabilitate the replay classification)
+                basis.append(
+                    "corrected retained evidence establishes the "
+                    "daughterboard path root "
+                    f"{gate_root} -> upstream {gate_up}, and the "
+                    "clean candidate/cold-confirmation/"
+                    "qualification evidence for that topology "
+                    "remains intact")
+                basis.append(
+                    f"all {len(arms)} physical replay arms produced "
+                    "exact-correct results with retained healthy "
+                    "windows (scientifically informative; the "
+                    "physical transfers themselves are not inferred "
+                    "invalid)")
+                for p in authz_problems:
+                    basis.append(f"authorization inadmissible: {p}")
+                for p in prov_problems:
+                    basis.append(f"provenance inadmissible: {p}")
+                for p in topo_problems:
+                    basis.append(f"topology inadmissible: {p}")
+                if not authz_problems and not prov_problems \
+                        and not topo_problems:
+                    basis.append(
+                        "replay classification blocked without a "
+                        "retained specific reason (fail-closed)")
             else:
                 terminal = "V2G_EVIDENCE_BLOCKED"
                 basis.append(

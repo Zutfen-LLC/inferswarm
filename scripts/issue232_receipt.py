@@ -62,6 +62,8 @@ CLOSURE_SOURCES = (
     "scripts/issue232_reduce.py",
     "scripts/issue232_assemble.py",
     "scripts/issue232_manifest.py",
+    "scripts/issue232_bootproof.py",
+    "scripts/issue232_coldproof.py",
 )
 
 # ---------------------------------------------------------------------------

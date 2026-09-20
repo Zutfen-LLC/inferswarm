@@ -29,7 +29,7 @@ class AssembleError(RuntimeError):
 
 def assemble(*, repo: Path, evidence_root: Path) -> dict[str, Any]:
     closure = rc.verify_closure(repo)  # binding verified FIRST
-    reduction = reduce.derive_terminal(evidence_root)
+    reduction = reduce.derive_terminal(evidence_root, closure=closure)
 
     terminal = reduction["terminal"]
     assembly = {

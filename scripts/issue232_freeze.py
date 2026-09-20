@@ -31,7 +31,11 @@ SCHEMA_CLOSURE = "inferswarm.v2g.producer-closure/1"
 #: Collector (physical observation) producers. A reduction-only
 #: amendment must prove these byte-unchanged between the evidence pin
 #: and HEAD; they are the bytes whose executed identity the retained
-#: raw evidence binds.
+#: raw evidence binds. bootproof/coldproof are included (2026-09-20
+#: authority correction): they emit correctness/authority-bearing
+#: artifacts consumed by replay authorization and terminal reduction,
+#: so an amendment across a changed bootproof/coldproof is a producer
+#: change, not a reduction-only edit.
 PHYSICAL_PRODUCERS: tuple[str, ...] = (
     "scripts/issue232_receipt.py",
     "scripts/issue232_authority.py",
@@ -40,6 +44,8 @@ PHYSICAL_PRODUCERS: tuple[str, ...] = (
     "scripts/issue232_gate.py",
     "scripts/issue232_qualify.py",
     "scripts/issue232_replay.py",
+    "scripts/issue232_bootproof.py",
+    "scripts/issue232_coldproof.py",
 )
 
 
