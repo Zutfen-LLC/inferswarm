@@ -420,14 +420,24 @@ def _write_closure_tmp(td, *, with_authority: bool = False) -> Path:
     else:
         # graft: fetch the real history first, then branch from the
         # V2-F merge commit (the authority builder requires it to be
-        # an ancestor of HEAD); an empty fresh repo cannot checkout a
-        # fetched commit, so init on the branch directly
+        # an ancestor of HEAD). DEPTH-1 fetch: only that commit's
+        # tree is needed (the builder's ancestor check is satisfied
+        # by the commit being HEAD's parent), and a full-history
+        # fetch is ~1.3 GB per test class.
         _g("init", "-q", "--initial-branch", "work")
         _g("config", "user.email", "t@example.com")
         _g("config", "user.name", "t")
         _g("remote", "add", "real", str(REPO))
-        _g("fetch", "-q", "real",
-           "c21840e4a1e5b5c81c366dd23b18ff582f9670b1")
+        # depth-2: the tree of the V2-F merge commit PLUS its parent
+        # history enough for the builder's blob read of the pinned
+        # replay producer commit 30cf6996 (a depth-1 graft cannot
+        # serve unrelated pinned blobs); still far smaller than a
+        # full-history fetch
+        _g("fetch", "--depth=5", "-q", "real",
+           "c21840e4a1e5b5c81c366dd23b18ff582f9670b1",
+           "30cf699688aa3d718fb475f5390317ebb4ba7385")
+        _g("fetch", "--depth=1", "-q", "real",
+           "30cf699688aa3d718fb475f5390317ebb4ba7385")
         _g("checkout", "-q", "-B", "work",
            "c21840e4a1e5b5c81c366dd23b18ff582f9670b1")
     for rel in rc.CLOSURE_SOURCES:
@@ -435,25 +445,24 @@ def _write_closure_tmp(td, *, with_authority: bool = False) -> Path:
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(REPO / rel, dst)
     if with_authority:
-        # the authority builder reads V2-F predecessor bytes via
-        # repo-relative paths; give the mini repo a full docs tree
-        # through symlinked investigation dirs (read-only inputs)
-        (repo / "docs" / "investigations").mkdir(
-            parents=True, exist_ok=True)
-        for item in (REPO / "docs" / "investigations").iterdir():
-            dst = repo / "docs" / "investigations" / item.name
-            if not dst.exists():
-                dst.symlink_to(item)
-    if with_authority:
-        # the authority builder requires the V2-F merge commit to be
-        # an ANCESTOR of HEAD; the graft branch in _write_closure_tmp
-        # starts exactly there, so nothing more is needed here — the
-        # closure sources were laid on top before the commit.
+        # the authority builder reads V2-F (and earlier) predecessor
+        # bytes via repo-relative paths — the checked-out predecessor
+        # tree already contains ALL of those, so NO symlinking is
+        # needed or allowed: a symlinked V2-G area would redirect the
+        # closure/authority writes below INTO THE REAL REPO.
         pass
     subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
     subprocess.run(["git", "-C", str(repo), "commit", "-qm", "closure"],
                    check=True)
-    fz.write_closure(repo)
+    # write the closure INTO THE MINI REPO explicitly — fz.write_
+    # closure() defaults to rc.ROOT (the REAL repo) and would clobber
+    # the live closure document mid-test
+    doc = fz.closure_document(repo)
+    closure_path = repo / rc.AREA_REL / rc.CLOSURE_NAME
+    closure_path.parent.mkdir(parents=True, exist_ok=True)
+    closure_path.write_bytes(json.dumps(doc, indent=1,
+                                        sort_keys=True).encode()
+                             + b"\n")
     if with_authority:
         doc = pa.build_authority(repo)
         out = repo / rc.AREA_REL / "PHYSICAL-AUTHORITY.json"
