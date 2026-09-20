@@ -1,0 +1,15 @@
+{
+ "attribution_policy": "single variable: pm8533_upstream_reseat",
+ "campaign_id": "issue232-v2g-pcie-path-remediation",
+ "closure_digest": "a65171ba49f7a17c088cec9c42ed0f3cd998a0a58477b5887c5d91577b3afd4f",
+ "component": "pm8533_upstream_reseat",
+ "declared_bundle": false,
+ "description": "Reseat the PM8533 switch card in its current slot (root port 00:1d.0 path): power off, remove card, inspect and re-latch contacts, verify mechanical seating and auxiliary power connectors, reinstall in the SAME slot (single variable - no slot change, no cable substitution), cold power-cycle.",
+ "intervention_id": "v2g-iv-1789914635",
+ "operator_declared": true,
+ "pre_census_rel": "censuses/20260920T141102Z/census.json",
+ "pre_census_sha256": "ad76a5753fc1a65ae0a6c66215fb0ebe8607a20ec0db6c2a1d95b7c11240b4a2",
+ "producer_head": "60bdb13545301f202aad01eb581686a012556bb9",
+ "recorded_utc": "2026-09-20T14:30:35.340901+00:00",
+ "schema": "inferswarm.v2g.intervention/1"
+}
