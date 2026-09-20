@@ -86,10 +86,84 @@ def authorize(*, repo: Path, evidence_root: Path) -> dict[str, Any]:
     if not gate.get("checks", {}).get("cold_confirmation_repeated"):
         ok = False
         reasons.append("required cold confirmation(s) missing")
+    if not gate.get("checks", {}).get("topology_identity_continuity"):
+        ok = False
+        reasons.append(
+            "gate topology identity continuity not established "
+            "(census/candidate/cold-confirmation identities disagree)")
     if qual.get("stop_condition") is not None:
         ok = False
         reasons.append(
             f"qualification stopped: {qual.get('stop_condition')}")
+
+    # --- topology identity agreement across gate/cold-proof/qual ----
+    # (2026-09-20 correction: REPLAY_AUTHORIZED is reachable only when
+    # the gate-bound chain, the cold-proof confirmation topologies, the
+    # qualification live-derived chain AND the boot-continuity proof
+    # all name the SAME root port + upstream. A gate bound to a stale
+    # motherboard-slot census cannot authorize a replay that runs on
+    # the daughterboard path — or vice versa.)
+    gate_chain = (gate.get("detail") or {}).get("chain") or {}
+    gate_root = gate_chain.get("root_port")
+    gate_up = gate_chain.get("switch_upstream")
+    qchain = qual.get("chain") or {}
+    topology_binding: dict[str, Any] = {
+        "gate_root_port": gate_root,
+        "gate_switch_upstream": gate_up,
+        "qualification_root_port": qchain.get("root_port_bdf"),
+        "qualification_switch_upstream":
+            qchain.get("switch_upstream_bdf"),
+    }
+    if ok and (gate_root != qchain.get("root_port_bdf")
+               or gate_up != qchain.get("switch_upstream_bdf")):
+        ok = False
+        reasons.append(
+            "gate-bound topology disagrees with the qualification "
+            f"chain (gate {gate_root}->{gate_up}, qualification "
+            f"{qchain.get('root_port_bdf')}->"
+            f"{qchain.get('switch_upstream_bdf')})")
+
+    cold_path = evidence_root / "cold-proof.json"
+    if cold_path.is_file():
+        cold = _load(cold_path, "inferswarm.v2g.cold-proof/1")
+        cycle_roots = [c.get("root_port_bdf")
+                       for c in cold.get("cycles") or []]
+        cycle_ups = [c.get("switch_upstream_bdf")
+                     for c in cold.get("cycles") or []]
+        topology_binding["cold_proof_root_ports"] = cycle_roots
+        topology_binding["cold_proof_switch_upstreams"] = cycle_ups
+        if ok and (not cycle_roots or any(
+                r != gate_root for r in cycle_roots) or any(
+                u != gate_up for u in cycle_ups)):
+            ok = False
+            reasons.append(
+                "cold-proof confirmation topology disagrees with the "
+                f"gate-bound chain (cold {cycle_roots}->"
+                f"{cycle_ups}, gate {gate_root}->{gate_up})")
+
+    boot_path = evidence_root / "boot-proof.json"
+    if boot_path.is_file():
+        bp = _load(boot_path, "inferswarm.v2g.boot-proof/1")
+        bt = bp.get("topology") or {}
+        topology_binding["boot_proof"] = {
+            "replay_boot_id": bp.get("replay_boot_id"),
+            "root_port": bt.get("root_port"),
+            "switch_upstream": bt.get("switch_upstream"),
+            "negotiated_width": bt.get("negotiated_width"),
+        }
+        if ok and (bt.get("root_port") != gate_root
+                   or bt.get("switch_upstream") != gate_up):
+            ok = False
+            reasons.append(
+                "boot-proof replay topology disagrees with the "
+                "gate-bound chain")
+    else:
+        # fail closed: the replay boot must be mechanically bound
+        ok = False
+        reasons.append(
+            "no replay boot/topology continuity proof retained "
+            "(boot-proof.json) — the exact replay boot cannot be "
+            "authorized by assumption")
 
     # predecessor preservation (authority re-verify)
     import issue232_authority as pa
@@ -139,6 +213,9 @@ def authorize(*, repo: Path, evidence_root: Path) -> dict[str, Any]:
         },
         "frozen_arm_ladder": [dict(r) for r in rc.REPLAY_LADDER],
         "first_arm_bytes": rc.REPLAY_LADDER[0]["size_bytes"],
+        "topology_binding": topology_binding,
+        "replay_boot_id": (topology_binding.get("boot_proof") or {})
+        .get("replay_boot_id"),
         "stop_conditions": list(rc.REPLAY_STOP_CONDITIONS),
         "material_rxerr_rate_per_min": MATERIAL_RXERR_RATE_PER_MIN,
         "closure_digest": closure["closure_digest"],
@@ -347,6 +424,27 @@ def run_arm(*, repo: Path, evidence_root: Path, arm: str,
     up_bdf = live_chain["switch_upstream_bdf"]
     rp_bdf = live_chain["root_port_bdf"]
 
+    # --- topology continuity vs the authorization (2026-09-20
+    # correction): the arm must execute on the SAME root port and
+    # upstream the gate authorized and the boot-proof binds; a
+    # cross-topology arm (e.g. authorized on the daughterboard path,
+    # executed on a motherboard slot) is refused before any transfer.
+    bound = authz.get("topology_binding") or {}
+    if rp_bdf != bound.get("gate_root_port") \
+            or up_bdf != bound.get("gate_switch_upstream"):
+        raise ReplayError(
+            "arm topology diverges from the authorized topology "
+            f"(live {rp_bdf}->{up_bdf}, authorized "
+            f"{bound.get('gate_root_port')}->"
+            f"{bound.get('gate_switch_upstream')})")
+    arm_boot = host.boot_id()
+    authorized_boot = authz.get("replay_boot_id")
+    if authorized_boot and arm_boot != authorized_boot:
+        raise ReplayError(
+            "arm boot differs from the boot-proof replay boot "
+            f"(live {arm_boot}, authorized {authorized_boot}) — the "
+            "host rebooted between authorization and execution")
+
     j0 = host.journal_scan()
     start_aer = {bdf: host.aer_counters(bdf) for bdf in
                  sorted({*vegas, up_bdf, rp_bdf})}
@@ -422,8 +520,11 @@ def run_arm(*, repo: Path, evidence_root: Path, arm: str,
         "size_bytes": size,
         "mechanism": rc.REPLAY_MECHANISM,
         "direction": rc.REPLAY_DIRECTION,
+        "boot_id": arm_boot,
         "src_bdf": src_bdf, "dst_bdf": dst_bdf,
         "upstream_bdf": up_bdf, "root_port_bdf": rp_bdf,
+        "negotiated_width": (live_chain.get("switch_upstream_sta")
+                             or {}).get("width"),
         "exit_code": rep["returncode"],
         "stdout_rel": f"raw/{arm}.stdout",
         "stdout_sha256": rep.get("stdout_sha256"),

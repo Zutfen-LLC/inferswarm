@@ -110,15 +110,17 @@ def synth_observation(*, boot_id="boot-x", rxerr=0, journal_rxerr=None,
 
 
 def synth_census(*, chain_ok=True, vegas=("0000:06:00.0",
-                                          "0000:09:00.0")):
+                                          "0000:09:00.0"),
+                 boot_id="boot-x", root_port="0000:00:1d.0",
+                 upstream="0000:02:00.0"):
     return {
         "schema": "inferswarm.v2g.census/1",
         "campaign_id": rc.CAMPAIGN_ID,
         "census_id": "v2g-census-synth",
-        "boot_id": "boot-x",
+        "boot_id": boot_id,
         "derived_chain": {
-            "root_port_bdf": "0000:00:1d.0",
-            "switch_upstream_bdf": "0000:02:00.0",
+            "root_port_bdf": root_port,
+            "switch_upstream_bdf": upstream,
             "root_port_sta": {"speed": 8.0, "width": 1},
             "root_port_cap": {"speed": 8.0, "width": 1},
             "switch_upstream_sta": {"speed": 8.0, "width": 1,
@@ -167,7 +169,8 @@ def synth_gate_pass():
         cold_proof=cold_proof)
 
 
-def synth_qualification_pass():
+def synth_qualification_pass(*, root_port="0000:00:1d.0",
+                             upstream="0000:02:00.0"):
     return {
         "schema": "inferswarm.v2g.qualification/1",
         "campaign_id": rc.CAMPAIGN_ID,
@@ -177,13 +180,45 @@ def synth_qualification_pass():
             "0000:09:00.0": {"ok": True}},
         "upstream_rxerr_delta": 0,
         "boot_id": "boot-y",
+        "chain": {
+            "root_port_bdf": root_port,
+            "switch_upstream_bdf": upstream,
+        },
+    }
+
+
+ROOT_A = "0000:00:1d.0"
+ROOT_B = "0000:00:1c.5"
+UPSTREAM = "0000:02:00.0"
+
+
+def synth_boot_proof(*, root_port=ROOT_A, upstream=UPSTREAM,
+                     replay_boot_id="boot-y"):
+    return {
+        "schema": "inferswarm.v2g.boot-proof/1",
+        "campaign_id": rc.CAMPAIGN_ID,
+        "replay_boot_id": replay_boot_id,
+        "topology": {
+            "root_port": root_port,
+            "switch_upstream": upstream,
+            "negotiated_width": 1,
+        },
+        "continuity": {"anchor_census_boot_id": replay_boot_id},
     }
 
 
 def write_synth_evidence(tmp: Path, *, gate_result="PASS",
                          replay_authorized: bool | None = True,
                          arms=(), halted=False, obs_rxerr=0,
-                         quals_stop=None, order_entries=None):
+                         quals_stop=None, order_entries=None,
+                         qual_root=ROOT_A,
+                         arm_root=ROOT_A, arm_upstream=UPSTREAM,
+                         arm_roots=None,
+                         gate_root=ROOT_A, gate_upstream=UPSTREAM,
+                         cold_proof_root=ROOT_A,
+                         boot_proof_root=ROOT_A,
+                         write_boot_proof=True,
+                         authz_binding_root=ROOT_A):
     ev = tmp / "evidence"
     ev.mkdir(parents=True, exist_ok=True)
     (ev / "observations" / "a").mkdir(parents=True, exist_ok=True)
@@ -196,12 +231,23 @@ def write_synth_evidence(tmp: Path, *, gate_result="PASS",
         obs["journal_census_delta"]))
     gate_doc = synth_gate_pass()
     gate_doc["result"] = gate_result
+    gate_doc.setdefault("detail", {})["chain"] = {
+        "root_port": gate_root,
+        "switch_upstream": gate_upstream,
+        "census_boot_id": "boot-x",
+        "observation_boot_id": "boot-x",
+        "cold_confirmation_boot_ids": ["boot-y"],
+        "cold_confirmation_root_ports": [cold_proof_root],
+    }
     (ev / "gate-result.json").write_text(json.dumps(gate_doc))
     (ev / "qualification").mkdir(exist_ok=True)
-    q = synth_qualification_pass()
+    q = synth_qualification_pass(root_port=qual_root)
     q["stop_condition"] = quals_stop
     (ev / "qualification" / "qualification.json").write_text(
         json.dumps(q))
+    if write_boot_proof:
+        (ev / "boot-proof.json").write_text(json.dumps(
+            synth_boot_proof(root_port=boot_proof_root)))
     if replay_authorized is not None:
         (ev / "replay-authorization.json").write_text(json.dumps({
             "schema": "inferswarm.v2g.replay-authorization/1",
@@ -209,6 +255,17 @@ def write_synth_evidence(tmp: Path, *, gate_result="PASS",
             "decision": "REPLAY_AUTHORIZED" if replay_authorized
             else "REPLAY_REFUSED",
             "reasons": [],
+            "replay_boot_id": "boot-y",
+            "topology_binding": {
+                "gate_root_port": authz_binding_root,
+                "gate_switch_upstream": UPSTREAM,
+                **({"boot_proof": {
+                    "replay_boot_id": "boot-y",
+                    "root_port": boot_proof_root,
+                    "switch_upstream": UPSTREAM,
+                    "negotiated_width": 1,
+                }} if write_boot_proof else {}),
+            },
             "replay_producer": {
                 "producer_head": "0" * 40,
                 "byte_identical_to_accepted": True},
@@ -222,16 +279,24 @@ def write_synth_evidence(tmp: Path, *, gate_result="PASS",
         }))
     if arms:
         (ev / "raw").mkdir(exist_ok=True)
-        for arm, stop, ok in arms:
+        for idx, (arm, stop, ok) in enumerate(arms):
             size = int(arm.split("-")[1])
             stdout = synth_replay_stdout(size, ok=ok)
             (ev / "raw" / f"{arm}.stdout").write_text(stdout)
             (ev / "arms").mkdir(exist_ok=True)
+            if arm_roots is not None:
+                a_root, a_up = arm_roots[idx]
+            else:
+                a_root, a_up = arm_root, arm_upstream
             (ev / "arms" / f"{arm}.json").write_text(json.dumps({
                 "arm": arm, "size_bytes": size, "exit_code": 0,
+                "boot_id": "boot-y",
                 "stdout_rel": f"raw/{arm}.stdout",
                 "validated": ok and stop is None,
                 "stop_condition": stop,
+                "root_port_bdf": a_root,
+                "upstream_bdf": a_up,
+                "negotiated_width": 1,
                 "stdout_sha256": hashlib.sha256(
                     stdout.encode()).hexdigest(),
                 "replay_producer_head": "0" * 40,
@@ -809,6 +874,366 @@ class TestTerminalReduction(unittest.TestCase):
             "severity_counts"]["Correctable"] = 999999
         with self.assertRaises(pa.AuthorityError):
             pa.verify_authority(d, REPO)
+
+
+# ---------------------------------------------------------------------------
+# Topology-identity continuity (2026-09-20 correction controls)
+# ---------------------------------------------------------------------------
+
+class TestTopologyIdentityContinuity(unittest.TestCase):
+    """The 1c.5-vs-1d.0 defect class: a gate bound to one root port
+    must never authorize/credit evidence executed on another. Each
+    control builds a full synthetic evidence tree where EXACTLY ONE
+    identity axis crosses (root A vs root B) and asserts the gate /
+    authorization / terminal fail closed."""
+
+    COLD_PROOF = {"cycles": [
+        {"prev_boot_ended_without_reboot_target": True,
+         "shutdown_record_present": True}]}
+
+    def _gate(self, *, census, obs, confs, interventions=None):
+        return gate.evaluate_gate(
+            observation=obs, census=census,
+            interventions=interventions or [synth_intervention()],
+            cold_confirmation_observations=confs,
+            cold_proof=self.COLD_PROOF)
+
+    def test_control_cold_confirmation_on_root_b_fails(self):
+        # clean candidate on root A + cold confirmation on root B
+        r = self._gate(
+            census=synth_census(),
+            obs=synth_observation(),
+            confs=[synth_observation(boot_id="b2", )])
+        # tamper ONLY the confirmation's root port to root B
+        confs = [synth_observation(boot_id="b2")]
+        confs[0]["chain_roles"]["root_port"] = ROOT_B
+        r2 = self._gate(
+            census=synth_census(), obs=synth_observation(),
+            confs=confs)
+        self.assertTrue(
+            r["checks"]["topology_identity_continuity"])
+        self.assertFalse(
+            r2["checks"]["topology_identity_continuity"])
+        self.assertEqual(r2["result"], "FAIL")
+        self.assertIn("topology_identity_continuity",
+                      r2["failed_checks"])
+
+    def test_control_stale_census_boot_fails(self):
+        # the census is from a DIFFERENT boot than the candidate
+        # observation (the literal 2026-09-20 defect: the gate was fed
+        # intervention-3's pre-census from the motherboard-slot boot)
+        r = self._gate(
+            census=synth_census(boot_id="boot-OTHER",
+                                root_port=ROOT_B),
+            obs=synth_observation(),
+            confs=[synth_observation(boot_id="b2")])
+        self.assertFalse(
+            r["checks"]["topology_identity_continuity"])
+        self.assertEqual(r["result"], "FAIL")
+
+    def test_control_census_chain_vs_observation_roles(self):
+        # census boot matches but its derived chain names root B while
+        # the observation's live-derived roles name root A
+        r = self._gate(
+            census=synth_census(root_port=ROOT_B),
+            obs=synth_observation(),
+            confs=[synth_observation(boot_id="b2")])
+        self.assertFalse(
+            r["checks"]["topology_identity_continuity"])
+
+    def test_control_gate_root_a_qualification_root_b(self):
+        # gate bound to root A; qualification chain on root B
+        with tempfile.TemporaryDirectory() as td:
+            ev = write_synth_evidence(
+                Path(td), qual_root=ROOT_B,
+                arms=[("replay-4096", None, True)],
+                order_entries=[{"arm": "replay-4096",
+                                "state": "passed", "detail": {}}])
+            # authorization re-check must refuse the disagreement
+            # (synth evidence writes an authz with a matching binding;
+            # flip ONLY the qualification chain to root B)
+            qpath = ev / "qualification" / "qualification.json"
+            q = json.loads(qpath.read_text())
+            q["chain"]["root_port_bdf"] = ROOT_B
+            qpath.write_text(json.dumps(q))
+            # the reducer terminal path must not reach REPLAY_PASS on
+            # crossed identities: re-derive with the authz binding
+            # naming root A while qualification names root B
+            r = red.derive_terminal(ev)
+            self.assertEqual(r["terminal"],
+                             "V2G_EVIDENCE_BLOCKED")
+
+    def test_control_gate_root_a_replay_arm_root_b(self):
+        # gate bound to root A; one arm executed on root B
+        LADDER = ("replay-4096", "replay-1048576",
+                  "replay-16777216", "replay-67108864")
+        with tempfile.TemporaryDirectory() as td:
+            ev = write_synth_evidence(
+                Path(td),
+                arms=[(n, None, True) for n in LADDER],
+                order_entries=[
+                    {"arm": n, "state": "passed", "detail": {}}
+                    for n in LADDER],
+                arm_roots=[(ROOT_A, UPSTREAM), (ROOT_B, UPSTREAM),
+                           (ROOT_A, UPSTREAM), (ROOT_A, UPSTREAM)])
+            r = red.derive_terminal(ev)
+            self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+            self.assertTrue(any(ROOT_B in b for b in r["basis"]))
+
+    def test_control_arms_crossing_topologies(self):
+        # both arms pass but on DIFFERENT roots from each other
+        with tempfile.TemporaryDirectory() as td:
+            ev = write_synth_evidence(
+                Path(td),
+                arms=[("replay-4096", None, True),
+                      ("replay-1048576", None, True)],
+                order_entries=[
+                    {"arm": "replay-4096", "state": "passed",
+                     "detail": {}},
+                    {"arm": "replay-1048576", "state": "passed",
+                     "detail": {}}],
+                arm_roots=[(ROOT_A, UPSTREAM),
+                           (ROOT_B, UPSTREAM)])
+            r = red.derive_terminal(ev)
+            self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+
+    def test_control_no_boot_proof_no_replay_pass(self):
+        # fail closed: without a retained boot proof the pass cannot
+        # be attributed to any topology
+        with tempfile.TemporaryDirectory() as td:
+            ev = write_synth_evidence(
+                Path(td),
+                arms=[("replay-4096", None, True),
+                      ("replay-1048576", None, True),
+                      ("replay-16777216", None, True),
+                      ("replay-67108864", None, True)],
+                order_entries=[
+                    {"arm": n, "state": "passed", "detail": {}}
+                    for n in ("replay-4096", "replay-1048576",
+                              "replay-16777216", "replay-67108864")],
+                write_boot_proof=False)
+            r = red.derive_terminal(ev)
+            self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+            self.assertTrue(any("boot-proof" in b for b in r["basis"]))
+
+    def test_control_authz_binding_disagrees_with_boot_proof(self):
+        # the authorization document claims a topology the retained
+        # boot-proof does not establish
+        LADDER = ("replay-4096", "replay-1048576",
+                  "replay-16777216", "replay-67108864")
+        with tempfile.TemporaryDirectory() as td:
+            ev = write_synth_evidence(
+                Path(td),
+                arms=[(n, None, True) for n in LADDER],
+                order_entries=[
+                    {"arm": n, "state": "passed", "detail": {}}
+                    for n in LADDER],
+                boot_proof_root=ROOT_A,
+                authz_binding_root=ROOT_B)
+            r = red.derive_terminal(ev)
+            self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+            self.assertTrue(any("disagrees" in b or "different" in b
+                                for b in r["basis"]))
+
+    def test_positive_continuity_reaches_replay_pass(self):
+        # positive control: all identities agree -> REPLAY_PASS still
+        # reachable through the REAL reducer (proves the new checks
+        # are not simply always-fail)
+        with tempfile.TemporaryDirectory() as td:
+            ev = write_synth_evidence(
+                Path(td),
+                arms=[("replay-4096", None, True),
+                      ("replay-1048576", None, True),
+                      ("replay-16777216", None, True),
+                      ("replay-67108864", None, True)],
+                order_entries=[
+                    {"arm": n, "state": "passed", "detail": {}}
+                    for n in ("replay-4096", "replay-1048576",
+                              "replay-16777216", "replay-67108864")])
+            r = red.derive_terminal(ev)
+            self.assertEqual(
+                r["terminal"], "V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS")
+
+    def test_control_authored_terminal_claiming_wrong_topology(self):
+        # authored final report claiming a topology different from
+        # the retained replay authority: the TERMINAL.json agreement
+        # check fires only on the terminal token, so the REPORT-level
+        # guard lives in the reducer basis + assembler; here assert
+        # the assembled basis names the bound topology and a TERMINAL
+        # contradicting the reduction is refused (control 20 path)
+        with tempfile.TemporaryDirectory() as td:
+            ev = write_synth_evidence(
+                Path(td),
+                arms=[("replay-4096", None, True),
+                      ("replay-1048576", None, True),
+                      ("replay-16777216", None, True),
+                      ("replay-67108864", None, True)],
+                order_entries=[
+                    {"arm": n, "state": "passed", "detail": {}}
+                    for n in ("replay-4096", "replay-1048576",
+                              "replay-16777216", "replay-67108864")])
+            r = red.derive_terminal(ev)
+            # the basis must name the EXACT bound topology
+            self.assertTrue(any(ROOT_A in b and UPSTREAM in b
+                                for b in r["basis"]))
+            # a hand-authored terminal doc contradicting the
+            # deterministic reduction is still refused
+            (ev / "TERMINAL.json").write_text(json.dumps(
+                {"terminal": "V2G_PCIE_PATH_CLEAN_NO_REPLAY"}))
+            with self.assertRaises(red.ReductionError):
+                red.derive_terminal(ev)
+
+
+class TestBootProof(unittest.TestCase):
+    """Boot-continuity proof builder: parse/compute/fail-closed."""
+
+    def _probe_raw(self, *, boot_id="boot-y", uptime=100.0,
+                   probed_utc="2026-09-20T16:00:00+00:00",
+                   root_short="1d.0"):
+        return (
+            "=== boot_id\n"
+            f"{boot_id}\n"
+            "=== uptime_seconds\n"
+            f"{uptime}\n"
+            "=== probed_utc\n"
+            f"{probed_utc}\n"
+            "=== kernel\n7.1.8+deb13-amd64\n"
+            "=== lspci_nn\n"
+            "02:00.0 PCI bridge [0604]: Microchip Technology PM8533 "
+            "PFX 48xG3 PCIe Fanout Switch [11f8:8533]\n"
+            "06:00.0 Display controller [0380]: AMD Vega 10 "
+            "[1002:6864]\n"
+            "09:00.0 Display controller [0380]: AMD Vega 10 "
+            "[1002:6864]\n"
+            "=== lspci_tree\n"
+            f"-[0000:00]-+-1d.0-[02-09]----00.0-[03-09]--+-00.0-"
+            f"[04-06]----00.0-[05-06]----00.0-[06]----00.0  Advanced "
+            "Micro Devices, Inc. [AMD/ATI] Vega 10 [Radeon Pro "
+            "V340/Instinct MI25x2]\n"
+            "            |                               "
+            "\\-01.0-[07-09]----00.0-[08-09]----00.0-[09]----00.0  "
+            "Advanced Micro Devices, Inc. [AMD/ATI] Vega 10 [Radeon "
+            "Pro V340/Instinct MI25x2]\n")
+
+    def _ev(self, tmp: Path, *, probe=None, census_boot="boot-y",
+            census_mono_s=50.0,
+            census_utc="2026-09-20T15:59:10+00:00",
+            census_root=ROOT_A, qual_root=ROOT_A,
+            order_utc=("2026-09-20T15:59:40+00:00",
+                       "2026-09-20T15:59:50+00:00")):
+        import issue232_bootproof as bp
+        ev = tmp / "evidence"
+        (ev / "censuses" / "anchor").mkdir(parents=True, exist_ok=True)
+        (ev / "censuses" / "anchor" / "census.json").write_text(
+            json.dumps({
+                "schema": "inferswarm.v2g.census/1",
+                "boot_id": census_boot,
+                "collected_utc": census_utc,
+                "host_health": {"monotonic_ns": int(census_mono_s
+                                                    * 1e9)},
+                "derived_chain": {
+                    "root_port_bdf": census_root,
+                    "switch_upstream_bdf": UPSTREAM,
+                    "root_port_sta": {"width": 1},
+                    "switch_upstream_sta": {"width": 1}},
+                "vega_bdfs": ["0000:06:00.0", "0000:09:00.0"],
+            }))
+        (ev / "qualification").mkdir(parents=True, exist_ok=True)
+        (ev / "qualification" / "qualification.json").write_text(
+            json.dumps({
+                "schema": "inferswarm.v2g.qualification/1",
+                "boot_id": census_boot,
+                "collected_utc": census_utc,
+                "chain": {"root_port_bdf": qual_root,
+                          "switch_upstream_bdf": UPSTREAM},
+            }))
+        entries = []
+        for i, arm in enumerate(("replay-4096", "replay-1048576")):
+            entries.append({"arm": arm, "state": "passed",
+                            "recorded_utc": order_utc[i],
+                            "detail": {}})
+        doc = {"schema": "inferswarm.v2g.replay-order/1",
+               "campaign_id": rc.CAMPAIGN_ID,
+               "entries": entries}
+        import issue232_replay as replay_mod
+        doc["chain_digest"] = replay_mod._chain(doc)
+        (ev / "replay-order-state.json").write_text(json.dumps(doc))
+        (ev / "arms").mkdir(parents=True, exist_ok=True)
+        for arm in ("replay-4096", "replay-1048576"):
+            (ev / "arms" / f"{arm}.json").write_text(json.dumps(
+                {"arm": arm}))
+            (ev / "raw").mkdir(parents=True, exist_ok=True)
+            (ev / "raw" / f"{arm}-identity.stdout").write_text(
+                json.dumps({"devices": [
+                    {"bdf": "0000:06:00.0",
+                     "uuid": "u-a"},
+                    {"bdf": "0000:09:00.0",
+                     "uuid": "u-b"}]}))
+        probe_rel = "raw/bootproof-probe.stdout"
+        (ev / "raw").mkdir(parents=True, exist_ok=True)
+        (ev / probe_rel).write_text(probe if probe is not None
+                                    else self._probe_raw())
+        return ev, probe_rel
+
+    def test_boot_proof_binds_replay_boot(self):
+        import issue232_bootproof as bp
+        with tempfile.TemporaryDirectory() as td:
+            ev, probe_rel = self._ev(Path(td))
+            doc = bp.build_boot_proof(
+                evidence_root=ev, probe_raw_rel=probe_rel,
+                anchor_census_rel="censuses/anchor")
+            self.assertEqual(doc["replay_boot_id"], "boot-y")
+            self.assertEqual(doc["topology"]["root_port"], ROOT_A)
+            self.assertEqual(doc["topology"]["switch_upstream"],
+                             UPSTREAM)
+            self.assertLessEqual(doc["continuity"]["drift_s"], 5.0)
+
+    def test_boot_proof_reboot_fails_closed(self):
+        import issue232_bootproof as bp
+        with tempfile.TemporaryDirectory() as td:
+            ev, probe_rel = self._ev(
+                Path(td),
+                probe=self._probe_raw(boot_id="boot-REBOOTED"))
+            with self.assertRaises(bp.BootProofError):
+                bp.build_boot_proof(
+                    evidence_root=ev, probe_raw_rel=probe_rel,
+                    anchor_census_rel="censuses/anchor")
+
+    def test_boot_proof_uptime_drift_fails_closed(self):
+        import issue232_bootproof as bp
+        with tempfile.TemporaryDirectory() as td:
+            # uptime inconsistent with census monotonic + wall clock
+            ev, probe_rel = self._ev(
+                Path(td), probe=self._probe_raw(uptime=13.0))
+            with self.assertRaises(bp.BootProofError):
+                bp.build_boot_proof(
+                    evidence_root=ev, probe_raw_rel=probe_rel,
+                    anchor_census_rel="censuses/anchor")
+
+    def test_boot_proof_arm_window_outside_interval_fails(self):
+        import issue232_bootproof as bp
+        with tempfile.TemporaryDirectory() as td:
+            ev, probe_rel = self._ev(
+                Path(td),
+                order_utc=("2026-09-20T17:30:00+00:00",
+                           "2026-09-20T17:30:10+00:00"))
+            with self.assertRaises(bp.BootProofError):
+                bp.build_boot_proof(
+                    evidence_root=ev, probe_raw_rel=probe_rel,
+                    anchor_census_rel="censuses/anchor")
+
+    def test_boot_proof_topology_move_fails_closed(self):
+        import issue232_bootproof as bp
+        with tempfile.TemporaryDirectory() as td:
+            # the present-day tree shows the card on root B while the
+            # anchor census derived root A
+            raw = self._probe_raw().replace(
+                "1d.0-[02-09]", "1c.5-[02-09]")
+            ev, probe_rel = self._ev(Path(td), probe=raw)
+            with self.assertRaises(bp.BootProofError):
+                bp.build_boot_proof(
+                    evidence_root=ev, probe_raw_rel=probe_rel,
+                    anchor_census_rel="censuses/anchor")
 
 
 if __name__ == "__main__":

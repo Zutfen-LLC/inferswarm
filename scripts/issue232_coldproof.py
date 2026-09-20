@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """Issue #232 — helper: build the gate's cold-proof JSON from retained
 census cold-cycle evidence rows (Phase 3 input assembly; reads only
-retained bytes, writes the bound document)."""
+retained bytes, writes the bound document).
+
+2026-09-20 correction: each confirmation cycle also binds the
+TOPOLOGY DERIVED FROM THAT CENSUS'S OWN RAW BYTES (root port +
+upstream from derived_chain) so the cold proof carries the exact
+topology identity of every confirmation boot alongside its boot id.
+"""
 import argparse
 import json
 import sys
@@ -32,9 +38,17 @@ def main() -> int:
             raise SystemExit(
                 f"census {rel} does not prove a COLD transition "
                 "(warm reboot evidence present — control 8)")
+        derived = doc.get("derived_chain") or {}
+        if not (derived.get("root_port_bdf")
+                and derived.get("switch_upstream_bdf")):
+            raise SystemExit(
+                f"census {rel} lacks a derived chain — cannot bind "
+                "the confirmation topology")
         cycles.append({
             "census_rel": rel,
             "boot_id": doc["boot_id"],
+            "root_port_bdf": derived["root_port_bdf"],
+            "switch_upstream_bdf": derived["switch_upstream_bdf"],
             "prev_boot_ended_without_reboot_target":
                 cce["prev_boot_ended_without_reboot_target"],
             "shutdown_record_present":

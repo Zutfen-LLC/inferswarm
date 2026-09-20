@@ -11,7 +11,21 @@ nothing here trusts an authored summary field that can be recomputed.
 Gate predicates (all must hold on the SAME candidate observation):
   topology       — the derived chain is present and unique (root port
                    -> PM8533 upstream), both Vega dies enumerate, die
-                   count exactly two;
+                   count exactly two; TOPOLOGY IDENTITY CONTINUITY is
+                   mechanically bound: the census MUST be from the
+                   candidate observation's own boot (boot-id equality)
+                   and its derived chain MUST equal the candidate
+                   observation's live-derived chain_roles, and every
+                   cold confirmation observation MUST carry the SAME
+                   root-port/upstream identity. A stale census from a
+                   different intervention state (e.g. a motherboard-
+                   slot census retained after a daughterboard return)
+                   is rejected mechanically — never by operator
+                   diligence (correction 2026-09-20: the first
+                   accepted gate evaluation was fed the intervention-3
+                   PRE-census, binding root 00:1c.5 while the
+                   candidate/cold/qualification/replay evidence is
+                   00:1d.0);
   identity       — the UUID-derived die identity join is consistent
                    (identity probe) — checked by the qualify phase and
                    re-checked here from the observation's retained
@@ -137,14 +151,50 @@ def evaluate_gate(*, observation: dict[str, Any],
     # --- topology ---
     chain = observation.get("chain_bdfs") or []
     derived = census.get("derived_chain") or {}
+    roles = observation.get("chain_roles") or {}
     has_chain = bool(derived.get("root_port_bdf")
                      and derived.get("switch_upstream_bdf"))
     checks["topology_chain_unique"] = has_chain \
         and len(census.get("vega_bdfs") or []) == 2
+
+    # --- topology identity continuity (2026-09-20 correction) -----
+    # The gate input census previously trusted operator selection and
+    # its derived_chain was copied verbatim into the gate detail. The
+    # retained 2026-09-20 evaluation was fed the intervention-3
+    # PRE-census (motherboard slot, root 00:1c.5) while the candidate
+    # observation, cold confirmation, qualification and every replay
+    # arm live-derived root 00:1d.0. The gate must MECHANICALLY bind:
+    #   (a) the census boot-id == the candidate observation boot-id;
+    #   (b) the census derived chain == the observation's own
+    #       live-derived chain_roles (root port + upstream);
+    #   (c) every cold confirmation carries the SAME root-port and
+    #       upstream identity as the candidate observation.
+    obs_root = roles.get("root_port")
+    obs_up = roles.get("switch_upstream")
+    census_boot = census.get("boot_id")
+    obs_boot = observation.get("boot_id")
+    topology_cont = bool(obs_root and obs_up and census_boot
+                         and census_boot == obs_boot
+                         and derived.get("root_port_bdf") == obs_root
+                         and derived.get("switch_upstream_bdf")
+                         == obs_up)
+    for c in (cold_confirmation_observations or []):
+        croles = c.get("chain_roles") or {}
+        topology_cont = topology_cont and (
+            croles.get("root_port") == obs_root
+            and croles.get("switch_upstream") == obs_up)
+    checks["topology_identity_continuity"] = topology_cont
     detail["chain"] = {
-        "root_port": derived.get("root_port_bdf"),
-        "switch_upstream": derived.get("switch_upstream_bdf"),
+        "root_port": obs_root or derived.get("root_port_bdf"),
+        "switch_upstream": obs_up or derived.get("switch_upstream_bdf"),
         "vega": census.get("vega_bdfs"),
+        "census_boot_id": census_boot,
+        "observation_boot_id": obs_boot,
+        "cold_confirmation_boot_ids": [
+            c.get("boot_id") for c in cold_confirmation_observations],
+        "cold_confirmation_root_ports": [
+            (c.get("chain_roles") or {}).get("root_port")
+            for c in cold_confirmation_observations],
     }
 
     # --- width (control 2: distinguish speed downtraining) ----------
