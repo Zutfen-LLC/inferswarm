@@ -15,6 +15,7 @@
   "closure_digest": "8cc902616282d61fa71b4457887bf3106e1db54ac755989d42a323d68b585005",
   "collection_host": "inferswarm02",
   "findings": {
+   "_capable_mechanisms_note": "frozen-verdict mechanism list; the round-2 advertisement re-derivation classifies both opaque_fd and dma_buf as advertised-bidirectional (see AMENDMENTS.json)",
    "api": {
     "effective": "1.4.309",
     "requested": "1.1.0"
@@ -24,9 +25,11 @@
    ],
    "device_group_peer_path": "unreachable: every group single-device; peer query spec-order rows cannot exist",
    "external_memory": {
-    "dma_buf": "export/import flags present on both dies but VK_EXT_external_memory_dma_buf not enumerated; handle type not compatible for these resources; NOT a usable mechanism on this stack",
+    "_round1_authored_dma_buf_wording_preserved": "export/import flags present on both dies but VK_EXT_external_memory_dma_buf not enumerated; handle type not compatible for these resources; NOT a usable mechanism on this stack",
+    "_round1_correction_note": "the round-1 wording above mis-transcribed the Vulkan registry dma_buf bit (0x80 vs registry 0x200) and misread the instance-level extension observation as device-level absence; corrected by the reduction-only amendment v2e-reduction-registry-bit-derivation (AMENDMENTS.json)",
+    "dma_buf": "advertised-bidirectional for transfer-usage buffers on both dies (exportable=true, importable=true, compatibleHandleTypes=513 including the dma_buf registry bit 0x200; device extension VK_EXT_external_memory_dma_buf enumerated on both dies); advertisement only \u2014 not a reviewed implementation, not a validated transfer, not a route fact",
     "host_only": "observed exportable/importable (host_allocation); retained as observation, never treated as direct peer access",
-    "opaque_fd": "usable in both directions (source exportable AND destination importable, compatible handle types)"
+    "opaque_fd": "advertised-bidirectional for transfer-usage buffers on both dies (exportable=true, importable=true, compatibleHandleTypes=513; device extension VK_KHR_external_memory_fd enumerated on both dies); advertisement only \u2014 not a reviewed implementation, not a validated transfer, not a route fact"
    },
    "identity_join": {
     "a": "0000:06:00.0",

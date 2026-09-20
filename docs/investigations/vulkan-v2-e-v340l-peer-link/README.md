@@ -1,12 +1,16 @@
 # V2-E — V340L inter-die peer-link qualification (issue #228)
 
-Status: CORRECTION ROUND 1 — attempt-1 campaign SUPERSEDED (invalid
+Status: CORRECTION ROUND 2 — attempt-1 campaign SUPERSEDED (invalid
 capability-census producer); corrected producers + corrected read-only
 census (attempt `pf2`) retained; transfer execution HARD-DISABLED.
-Terminal re-derived mechanically from the corrected attempt:
-**`V2E_EVIDENCE_BLOCKED`** (capable mechanism advertised; no reviewed
-transfer implementation; zero transfers executed). PR OPEN/UNMERGED
-awaiting maintainer exact-head review.
+Round 2 is a reduction-only amendment (see `AMENDMENTS.json`): the
+round-1 derived verdict and prose mis-stated dma_buf; both fd-carried
+handle types are now classified from the unchanged raw bytes exactly
+as the retained observations justify. Terminal re-derived mechanically
+from the corrected attempt: **`V2E_EVIDENCE_BLOCKED`** (capable
+mechanisms advertised; no reviewed transfer implementation; zero
+transfers executed). PR OPEN/UNMERGED awaiting maintainer exact-head
+review.
 
 Campaign: `issue228-v2e-v340l-interdie-peer-link`
 
@@ -58,34 +62,54 @@ in the census artifacts):
    the pair on this stack.
 2. **External-memory path**: valid resource usages only (the invalid
    zero-usage rows of the superseded round are excluded from
-   authoritative decisions). No fd-carried handle type (opaque_fd,
-   dma_buf) is exportable on the source die AND importable on the
-   destination die with compatible handle types for transfer-usage
-   buffers, in either required direction. Host-only handle types
-   (host_allocation / host_mapped_foreign) are recorded as
-   observations and never treated as direct peer access.
+   authoritative decisions). Host-only handle types (host_allocation /
+   host_mapped_foreign) are recorded as observations and never treated
+   as direct peer access.
 
-**The corrected census FINDS a capable mechanism the superseded census
-reported absent.** `opaque_fd` external memory is exportable on each
-die and importable on the other with compatible handle types for
-transfer-usage buffers, in BOTH directions (`vulkan-external-memory-fd`
-advertised). The device-group peer path remains unreachable
-(single-device groups only). dma_buf is export/import-capable on both
-dies but `VK_EXT_external_memory_dma_buf` is NOT enumerated by the
-loader/ICD, so the dma_buf handle type is not compatible for these
-resources and is not a usable mechanism on this stack; host-only
-handle types are recorded as observations only.
+**The corrected census FINDS capable mechanisms the superseded census
+reported absent.** On BOTH dies, for transfer-usage buffers, the
+retained raw observations report, for BOTH fd-carried handle types:
 
-Because a capable mechanism IS advertised but this campaign has no
-reviewed transfer implementation (execution hard-disabled), no
+- `VK_KHR_external_memory_fd` and `VK_EXT_external_memory_dma_buf` are
+  enumerated as DEVICE extensions on both dies (the loader exposes
+  neither as an INSTANCE extension — that instance-level `false` is a
+  scoped observation, not absence of the device extension);
+- `opaque_fd`: exportable=true, importable=true,
+  compatibleHandleTypes=513;
+- `dma_buf`: exportable=true, importable=true,
+  compatibleHandleTypes=513 (0x1|0x200 — the mask carries the dma_buf
+  registry bit).
+
+The round-1 derived verdict mis-classified dma_buf as
+handle-type-incompatible because the frozen producer validator's bit
+table mapped dma_buf to 0x80 (HOST_ALLOCATION's bit; the registry
+value is 0x200), so its mask test `513 & 0x80 == 0` failed against
+the same retained bytes; the accompanying prose additionally denied
+the device-extension enumeration. Both statements are corrected by
+this round: the reduction-layer re-derivation
+(`scripts/issue228_reduce.py::rederive_external_memory`, recorded in
+`AMENDMENTS.json`) classifies BOTH `opaque_fd` and `dma_buf` as
+advertised-bidirectional for transfer-usage buffers.
+
+**Advertisement is not validated execution.** These are API
+property-query advertisements (extension enumeration + feature flags +
+compatible-handle-type masks). Neither handle type has a reviewed
+cross-device transfer implementation in this campaign, zero transfers
+were executed, and nothing here establishes whether either path
+actually moves data between the dies, how it performs, or what
+physical route (switch-internal or host-facing x1) it would use.
+
+Because capable mechanisms ARE advertised (both `opaque_fd` and
+`dma_buf`, transfer-usage buffers, both directions) but this campaign
+has no reviewed transfer implementation (execution hard-disabled), no
 measured transfers exist and no functional peer-path conclusion is
-derivable. The mechanically derived terminal for attempt pf2 is
+derivable. The mechanically derived terminal for attempt pf2 remains
 **`V2E_EVIDENCE_BLOCKED`**: the evidence cannot establish an
-authorized classification. This is NOT `P2P_API_PREREQUISITE` (a
-mechanism exists in-stack — the superseded round's prerequisite
-conclusion is retired), NOT a functional claim, and NOT a claim that
-the advertised capability would work in practice (advertised
-capability is not validated execution).
+authorized classification. This is NOT `P2P_API_PREREQUISITE`
+(advertised in-stack mechanisms exist — the superseded round's
+prerequisite conclusion is retired), NOT a functional claim, and NOT
+a claim that the advertised capability would work in practice
+(advertised capability is not validated execution).
 
 ## Transfer fence (structural)
 
@@ -145,15 +169,22 @@ quantitatively and is not promoted to any failure threshold.
   `scripts/issue228_assemble.py --evidence-root <this dir>/evidence`).
 - `PHYSICAL-AUTHORITY.json`, `PRODUCER-CLOSURE.json` — frozen authority
   (unchanged) and the re-frozen executed-byte closure.
+- `AMENDMENTS.json` — reduction-only amendment ledger (accepted #216
+  protocol): pins the evidence closure the retained pf2 bytes bind and
+  mechanically proves the collector producers byte-unchanged.
 - `MANIFEST.sha256` — regenerated by `scripts/issue228_manifest.py`
   (never hand-edited).
 
 ## Successor implications
 
 A cross-die inference placement experiment is NOT justified on the
-current stack — any A↔B data path would be host-mediated through the
-shared Gen3 x1 root link (already characterized by the accepted #35
-envelope and the retained #216 transport evidence). Revisiting the
-peer-link question requires a different, explicitly-authorized runtime
-substrate decision (e.g. a compute ICD with dmabuf peer support),
-which is a maintainer decision outside this campaign.
+current evidence. The corrected census has NOT established any
+physical route — no transfer occurred, so whether an A↔B path via
+`opaque_fd` or `dma_buf` is switch-internal or host-mediated through
+the shared Gen3 x1 root link is unmeasured (the accepted #35 envelope
+and the retained #216 transport evidence characterize the host-facing
+x1 link itself, not the route any external-memory transfer would
+take). Justifying a placement experiment requires a separately
+reviewed, #216-safety-classified external-memory transfer producer
+that establishes correctness, performance, and route — a maintainer
+decision outside this campaign.

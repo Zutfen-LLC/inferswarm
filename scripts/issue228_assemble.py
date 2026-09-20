@@ -33,6 +33,25 @@ observations cannot establish capability absence. It is moved under
 evidence/attempt-1-superseded/ verbatim; reduction reads only the
 corrected attempt (pf2).
 
+Correction round 2 (reduction-only amendment; see the area
+AMENDMENTS.json): the frozen producer validator mis-transcribed the
+Vulkan registry handle-type bits (dma_buf mapped to 0x80 =
+HOST_ALLOCATION's bit; the registry value is 0x200). Against the
+retained raw ext-matrix bytes (dma_buf transfer buffers advertise
+export/import with compatibleHandleTypes=513 = 0x1|0x200 on BOTH dies,
+and the device extension VK_EXT_external_memory_dma_buf IS enumerated
+on both dies) the frozen mask check ``513 & 0x80 == 0`` produced a
+false dma_buf-incompatible derived verdict, and authored prose mistook
+the instance-level extension observation for device-level enumeration.
+This assembler now re-derives the external-memory ADVERTISEMENT from
+the same unchanged raw bytes with registry-correct bits
+(red.rederive_external_memory) and keeps the frozen validator's
+census/identity/group derivations (whose bytes the retained embedded
+verdicts bind). Advertisement remains distinct from validated
+execution: no functional terminal is reachable without measured
+transfer evidence (unchanged), and no reviewed transfer implementation
+exists (zero transfers executed — unchanged).
+
 Mutually exclusive terminals (exactly the issue's vocabulary):
 
   V2E_V340L_LOCAL_P2P_LINK_PASS
@@ -63,7 +82,7 @@ import issue228_reduce as red
 import issue228_ladder as ladder
 import issue228_probe as probe
 
-SCHEMA_ASSEMBLY = "inferswarm.v2e.assembly/2"
+SCHEMA_ASSEMBLY = "inferswarm.v2e.assembly/3"
 SCHEMA_TERMINAL = "inferswarm.v2e.terminal/2"
 
 TERMINALS = (
@@ -211,7 +230,9 @@ def assemble(evidence_root: Path) -> dict[str, Any]:
                 f"preflight attempt {preflight.get('attempt_id')!r} is "
                 f"not the corrected attempt {ATTEMPT_ID!r}; superseded "
                 f"attempt-1 evidence cannot be reduced")
-        if preflight.get("closure_digest") != closure["closure_digest"]:
+        accepted_closures = {closure["closure_digest"],
+                             *fz.accepted_amended_digests(REPO)}
+        if preflight.get("closure_digest") not in accepted_closures:
             raise AssemblyError("preflight binds a different closure")
         mapping = _read_json(
             evidence_root / "preflight" / "mapping" / "fresh-mapping.json")
@@ -281,7 +302,10 @@ def assemble(evidence_root: Path) -> dict[str, Any]:
         expected_bdfs: dict[str, str] = {}
         for die, row in mapping["participants"].items():
             expected_bdfs[die] = probe.normalize_bdf(row["fresh_pci_bdf"])
-        # re-derive the census verdict from retained raw bytes
+        # re-derive the census verdict from retained raw bytes through
+        # the FROZEN producer validator (retention-integrity reference:
+        # the retained embedded verdicts were produced by exactly this
+        # derivation) ...
         verdict = probe.validate_capability_census(
             cap_json, ext_json, expected_bdfs)
         out["capability_verdict"] = verdict
@@ -293,8 +317,60 @@ def assemble(evidence_root: Path) -> dict[str, Any]:
             raise AssemblyError(
                 "preflight capability verdict diverges from the "
                 "assembler's re-derivation over retained raw bytes")
+        # ... and re-derive the external-memory ADVERTISEMENT
+        # classification from the same unchanged raw bytes with
+        # registry-correct handle-type bits (reduction-layer amendment:
+        # the frozen validator mis-transcribed the dma_buf bit, so its
+        # dma_buf compatibility derivation is not authoritative — see
+        # the area AMENDMENTS.json ledger). Advertisement is never
+        # treated as validated execution below.
+        advertisement = red.rederive_external_memory(
+            ext_json, expected_bdfs)
+        out["external_memory_advertisement"] = advertisement
+        if not advertisement.get("census_valid"):
+            raise AssemblyError(
+                "external-memory advertisement re-derivation failed: "
+                + "; ".join(advertisement.get("failure_reasons") or []))
+        # retention cross-check: the retained preflight verdict's
+        # external_memory rows must equal the FROZEN derivation's rows
+        # (they were produced by the frozen producer); divergence means
+        # retained bytes were tampered with, not that the frozen
+        # derivation is authoritative for dma_buf classification.
+        frozen_verdict = verdict
+        retained = (preflight.get("capability_verdict") or {}).get(
+            "external_memory") or {}
+        if retained.get("directions") != \
+                (frozen_verdict.get("external_memory") or {}).get(
+                    "directions"):
+            raise AssemblyError(
+                "retained preflight external-memory rows diverge from "
+                "the frozen derivation over the same raw bytes")
         mechanism = ladder.classify_mechanism(verdict)
-        out["mechanism"] = mechanism
+        # the refusal comparison below requires the raw classification
+        # output (byte-compatible with the retained refusal artifact);
+        # the advertisement annotation is attached to the assembly's
+        # OWN copy only.
+        out["mechanism"] = dict(mechanism)
+        out["mechanism"]["external_memory_note"] = (
+            "external_memory_directions rows above are the FROZEN "
+            "producer validator output over the same retained raw "
+            "bytes (retention reference). Its dma_buf compatibility "
+            "derivation used a mis-transcribed handle-type bit and is "
+            "superseded for classification by the reduction-layer "
+            "advertisement re-derivation in "
+            "external_memory_advertisement (AMENDMENTS.json).")
+        out["mechanism"]["external_memory_advertisement"] = {
+            "advertised_bidirectional_handle_types":
+                advertisement["advertised_bidirectional_handle_types"],
+            "per_handle_state": {
+                h: row["advertisement_state"]
+                for h, row in advertisement["advertisement"].items()},
+            "note": (
+                "classification basis per handle type is property-query "
+                "ADVERTISEMENT with the enabling extension enumerated; "
+                "advertisement is not a reviewed implementation and "
+                "not validated execution"),
+        }
     except (AssemblyError, json.JSONDecodeError, KeyError, ValueError,
             probe.CensusInvalid) as exc:
         out["blocked_reason"] = str(exc)
@@ -321,7 +397,7 @@ def assemble(evidence_root: Path) -> dict[str, Any]:
                 "no transfer-phase refusal artifact; incomplete "
                 "evidence")
         refusal = _read_json(refusal_file)
-        if refusal.get("closure_digest") != closure["closure_digest"]:
+        if refusal.get("closure_digest") not in accepted_closures:
             raise AssemblyError(
                 "ladder refusal binds a different closure")
         if refusal.get("attempt_id") != LADDER_ATTEMPT_ID:
@@ -331,7 +407,7 @@ def assemble(evidence_root: Path) -> dict[str, Any]:
             raise AssemblyError(
                 "ladder artifact claims executed transfers under a "
                 "disabled-transfer campaign")
-        if refusal.get("mechanism") != mechanism:
+        if refusal.get("mechanism") != mechanism:  # raw classification
             raise AssemblyError(
                 "refusal mechanism classification diverges from the "
                 "assembler's re-derivation")

@@ -1,0 +1,17 @@
+{
+ "amendments": [
+  {
+   "amendment_id": "v2e-reduction-registry-bit-derivation",
+   "authority_regenerated": false,
+   "collector_unchanged_proof": "git diff --name-only 9ea6e71..HEAD -- <PHYSICAL_PRODUCERS> is empty (enforced mechanically by accepted_amended_digests at every verify_closure call)",
+   "correction": "scripts/issue228_reduce.py: registry-correct VkExternalMemoryHandleTypeFlagBits table (opaque_fd 0x1, dma_buf 0x200) + enabling-extension enumeration gate; rederive_external_memory classifies advertisement per handle type/direction from the unchanged raw ext-matrix bytes. scripts/issue228_assemble.py (schema /3): advertisement re-derivation attached to the assembly; frozen producer validator retained as the retention-integrity reference for the retained embedded verdicts. scripts/issue228_freeze.py: reduction-only amendment protocol (accepted #216 V2-D semantics). scripts/issue228_ladder.py: docstring only. tests: registry-bit regression battery + old-defect proof on the frozen validator.",
+   "evidence_closure_digest": "8cc902616282d61fa71b4457887bf3106e1db54ac755989d42a323d68b585005",
+   "evidence_producer_closure_pins": "9ea6e71105648699f8841cf44fc860d5530a6584",
+   "evidence_producer_head": "e4a1092e18c937dd29aaecd7cf8db2df233a2d57",
+   "pin_basis": "the commit whose closure record carries the bound digest 8cc90261 (the record pins producer head 9ea6e71; the retained pf2 phase records carry closure_digest 8cc90261)",
+   "reason": "Maintainer review of 549b997 found the derived capability verdict and authored prose contradicted the retained pf2 raw ext-matrix bytes: both V340 dies enumerate the device extension VK_EXT_external_memory_dma_buf=true, and dma_buf transfer buffers advertise exportable=true/importable=true with compatibleHandleTypes=513 (0x1|0x200) on BOTH dies. The frozen producer validator's HANDLE_TYPE_BITS table mis-transcribed the Vulkan registry (dma_buf mapped to 0x80 = HOST_ALLOCATION's bit; the registry value is 0x200), so its mask check 513 & 0x80 == 0 produced a false dma_buf-incompatible derived verdict, and authored prose additionally claimed the extension was not enumerated. The corrected reduction-layer derivation classifies BOTH opaque_fd and dma_buf as advertised-bidirectional from the same unchanged bytes. Advertisement remains distinct from validated execution: no reviewed transfer implementation exists, zero transfers executed, the terminal stays V2E_EVIDENCE_BLOCKED, and no physical observation, raw byte, or collector byte changed.",
+   "schema_note": "reduction-only correction after retained attempt-pf2 physical output; collectors' executed bytes unchanged; no physical rerun required or performed"
+  }
+ ],
+ "schema": "inferswarm.v2e.producer-amendments/1"
+}

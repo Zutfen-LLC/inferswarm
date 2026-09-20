@@ -132,14 +132,19 @@ def synth_capability_v2(*, multi_group: bool = False,
 
 def synth_ext_matrix_v2(*, features: bool = False,
                         one_sided: bool = False,
-                        host_only: bool = False) -> dict:
+                        host_only: bool = False,
+                        dma_buf_enumerated: bool | None = None) -> dict:
+    """Synthetic ext-matrix census, faithful to the real C emitter's
+    retained bytes: compatibleHandleTypes carries the handle type's
+    own Vulkan REGISTRY bit (dma_buf 0x200, so real dma_buf rows read
+    513 = 0x1|0x200; host_allocation rows read 128 = 0x80)."""
     def row(ht, usage, ex, im, compat=None):
         return {"handle_type": ht, "usage": usage,
                 "exportable": ex, "importable": im,
                 "compatible": compat if compat is not None else
-                (0x80 if ht == "dma_buf" else
+                (0x201 if ht == "dma_buf" else
                  0x1 if ht == "opaque_fd" else
-                 0x20 if ht == "host_allocation" else 0x40)}
+                 0x80 if ht == "host_allocation" else 0x100)}
     dies = []
     for d in (0, 1):
         uuid = ("00000000" + ("06" if d == 0 else "09") + "00"
@@ -149,7 +154,10 @@ def synth_ext_matrix_v2(*, features: bool = False,
                    "host_mapped_foreign"):
             for u in ("transfer", "storage", "uniform"):
                 ex = im = False
-                if features and ht == "dma_buf" and u == "transfer":
+                if features and ht in ("opaque_fd", "dma_buf") \
+                        and u == "transfer":
+                    # mirrors the real retained pf2 bytes: BOTH
+                    # fd-carried handle types advertise export+import
                     ex = im = True
                 if one_sided and ht == "dma_buf" and u == "transfer":
                     # die 0 can export; die 1 cannot import
@@ -163,7 +171,9 @@ def synth_ext_matrix_v2(*, features: bool = False,
             "die": d, "device_uuid": uuid,
             "die_0_extensions" if d == 0 else "die_1_extensions":
                 {"total": 1, "relevant": {
-                    "VK_EXT_external_memory_dma_buf": features}},
+                    "VK_EXT_external_memory_dma_buf":
+                        (features if dma_buf_enumerated is None
+                         else dma_buf_enumerated)}},
             "buffer_matrix": matrix,
             "image_probes": [
                 {"handle_type": t, "query_result": 0,
@@ -502,6 +512,172 @@ class CensusValidationTests(unittest.TestCase):
         self.assertFalse(v["census_valid"])
         self.assertTrue(any("invalid" in r and "indices" in r
                             for r in v["failure_reasons"]))
+
+
+# -----------------------------------------------------------------------
+# Correction round 2: registry-bit advertisement re-derivation
+# -----------------------------------------------------------------------
+
+class ExternalMemoryAdvertisementTests(unittest.TestCase):
+    """The reduction-layer re-derivation (red.rederive_external_memory)
+    classifies external-memory ADVERTISEMENT from raw ext-matrix bytes
+    with Vulkan-registry handle-type bits and an explicit
+    enabling-extension enumeration gate.
+
+    Regression demanded by the round-2 review: when
+    VK_EXT_external_memory_dma_buf=true AND bilateral transfer-buffer
+    export/import=true AND compatibleHandleTypes includes the dma_buf
+    bit, the derived census CANNOT state the extension is not
+    enumerated / dma_buf unusable.
+    """
+
+    EXPECT = {"a": "0000:06:00.0", "b": "0000:09:00.0"}
+
+    def test_registry_bits_are_the_vulkan_registry_values(self):
+        # OPAQUE_FD 0x1, DMA_BUF 0x200 per the Vulkan registry
+        # (VkExternalMemoryHandleTypeFlagBits); 0x80 is
+        # HOST_ALLOCATION's bit — the frozen validator's transcription
+        # error this round corrects.
+        self.assertEqual(red.REGISTRY_HANDLE_TYPE_BITS["opaque_fd"], 0x1)
+        self.assertEqual(red.REGISTRY_HANDLE_TYPE_BITS["dma_buf"], 0x200)
+        self.assertNotEqual(red.REGISTRY_HANDLE_TYPE_BITS["dma_buf"],
+                            0x80)
+
+    def test_retained_raw_bytes_self_evidence_the_registry_layout(self):
+        # the retained pf2 raw ext-matrix rows prove the bit layout:
+        # a handle type's compatibleHandleTypes always includes its
+        # own bit (dma_buf rows read 513 -> 0x200; host_allocation
+        # rows read 128 -> 0x80).
+        raw = json.loads(
+            (REPO / "docs/investigations/vulkan-v2-e-v340l-peer-link/"
+             "evidence/preflight/raw/ext-matrix.stdout").read_text())
+        for die in raw["dies"]:
+            for r in die["buffer_matrix"]:
+                if r["usage"] != "transfer":
+                    continue
+                if r["handle_type"] == "dma_buf":
+                    self.assertEqual(r["compatible"], 513)
+                    self.assertTrue(r["compatible"] & 0x200)
+                if r["handle_type"] == "host_allocation":
+                    self.assertEqual(r["compatible"], 128)
+
+    def test_real_retained_bytes_classify_dma_buf_advertised(self):
+        # THE round-2 regression: with the enabling extension
+        # enumerated + bilateral export/import + dma_buf compatibility
+        # present in the raw bytes, the derived census must NOT state
+        # "extension not enumerated" or dma_buf unusable.
+        raw = json.loads(
+            (REPO / "docs/investigations/vulkan-v2-e-v340l-peer-link/"
+             "evidence/preflight/raw/ext-matrix.stdout").read_text())
+        out = red.rederive_external_memory(raw, self.EXPECT)
+        self.assertTrue(out["census_valid"], out.get("failure_reasons"))
+        dma = out["advertisement"]["dma_buf"]
+        self.assertEqual(dma["advertisement_state"],
+                         "advertised-bidirectional")
+        self.assertTrue(dma["extension_enumerated_both_dies"])
+        self.assertIn("dma_buf",
+                      out["advertised_bidirectional_handle_types"])
+        for d in ("a_to_b", "b_to_a"):
+            self.assertTrue(dma["directions"][d]["usable"])
+            self.assertTrue(dma["directions"][d]
+                            ["compatible_handle_types_ok"])
+            self.assertTrue(dma["directions"][d]
+                            ["extension_enumerated"] is True)
+        # and opaque_fd likewise (unchanged conclusion, corrected basis)
+        self.assertIn("opaque_fd",
+                      out["advertised_bidirectional_handle_types"])
+
+    def test_old_frozen_validator_defect_reproduced(self):
+        # old-defect proof: the FROZEN producer validator, run over the
+        # same retained raw bytes with its mis-transcribed dma_buf bit
+        # (0x80), derives compatible_handle_types_ok=0 / usable=0 for
+        # dma_buf — the false verdict this round corrects. The frozen
+        # validator stays byte-frozen as the retention reference; the
+        # corrected classification lives in the reduction layer.
+        raw = json.loads(
+            (REPO / "docs/investigations/vulkan-v2-e-v340l-peer-link/"
+             "evidence/preflight/raw/ext-matrix.stdout").read_text())
+        cap = json.loads(
+            (REPO / "docs/investigations/vulkan-v2-e-v340l-peer-link/"
+             "evidence/preflight/raw/capability-probe.stdout").read_text())
+        frozen = probe.validate_capability_census(cap, raw, self.EXPECT)
+        dma = frozen["external_memory"]["directions"]["dma_buf"]
+        self.assertEqual(dma["a_to_b"]["compatible_handle_types_ok"], 0)
+        self.assertEqual(dma["a_to_b"]["usable"], 0)
+        self.assertNotIn("dma_buf", frozen["external_memory"]
+                         ["usable_handle_types"])
+
+    def test_enumerated_false_downgrades_to_extension_not_enumerated(self):
+        # extension NOT enumerated + bilateral flags + compatible bits:
+        # the derived state must be extension-not-enumerated, never
+        # advertised-bidirectional.
+        ext = synth_ext_matrix_v2(features=True,
+                                  dma_buf_enumerated=False)
+        out = red.rederive_external_memory(ext, self.EXPECT)
+        dma = out["advertisement"]["dma_buf"]
+        self.assertEqual(dma["advertisement_state"],
+                         "extension-not-enumerated")
+        self.assertNotIn("dma_buf",
+                         out["advertised_bidirectional_handle_types"])
+
+    def test_one_sided_flags_not_advertised_bidirectional(self):
+        ext = synth_ext_matrix_v2(one_sided=True)
+        out = red.rederive_external_memory(ext, self.EXPECT)
+        dma = out["advertisement"]["dma_buf"]
+        self.assertEqual(dma["advertisement_state"],
+                         "advertised-one-direction")
+
+    def test_no_features_not_advertised(self):
+        ext = synth_ext_matrix_v2(features=False)
+        out = red.rederive_external_memory(ext, self.EXPECT)
+        self.assertEqual(
+            out["advertisement"]["dma_buf"]["advertisement_state"],
+            "not-advertised")
+        self.assertEqual(
+            out["advertisement"]["opaque_fd"]["advertisement_state"],
+            "not-advertised")
+
+    def test_host_only_rows_never_peer_advertisement(self):
+        ext = synth_ext_matrix_v2(host_only=True)
+        out = red.rederive_external_memory(ext, self.EXPECT)
+        # host-only handle types are not part of the peer advertisement
+        # derivation at all
+        self.assertNotIn("host_allocation", out["advertisement"])
+        self.assertNotIn("host_mapped_foreign", out["advertisement"])
+        self.assertEqual(
+            out["advertised_bidirectional_handle_types"], [])
+
+    def test_compatible_without_own_bit_not_usable(self):
+        # a compatible mask carrying only OPAQUE_FD (0x1) on a dma_buf
+        # row must NOT count as dma_buf-compatible (the mask must
+        # include the handle type's OWN registry bit)
+        ext = synth_ext_matrix_v2(features=True)
+        for die in ext["dies"]:
+            for r in die["buffer_matrix"]:
+                if r["handle_type"] == "dma_buf" \
+                        and r["usage"] == "transfer":
+                    r["compatible"] = 0x1  # opaque_fd only
+        out = red.rederive_external_memory(ext, self.EXPECT)
+        dma = out["advertisement"]["dma_buf"]
+        for d in ("a_to_b", "b_to_a"):
+            self.assertFalse(dma["directions"][d]
+                             ["compatible_handle_types_ok"])
+            self.assertFalse(dma["directions"][d]["usable"])
+
+    def test_identity_join_failure_fails_closed(self):
+        ext = synth_ext_matrix_v2(features=True)
+        out = red.rederive_external_memory(
+            ext, {"a": "0000:0c:00.0", "b": "0000:0d:00.0"})
+        self.assertFalse(out["census_valid"])
+
+    def test_advertisement_is_not_execution_nonclaims_present(self):
+        ext = synth_ext_matrix_v2(features=True)
+        out = red.rederive_external_memory(ext, self.EXPECT)
+        joined = " ".join(out["nonclaims"])
+        self.assertIn("not a reviewed cross-device implementation",
+                      joined)
+        self.assertIn("not a validated transfer", joined)
+        self.assertIn("establishes no physical route", joined)
 
 
 # ---------------------------------------------------------------------------
