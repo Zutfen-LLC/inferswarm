@@ -16,6 +16,7 @@ from typing import Any
 
 import issue232_receipt as rc
 import issue232_reduce as reduce
+from issue232_freeze import accepted_amended_digests
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -29,7 +30,10 @@ class AssembleError(RuntimeError):
 
 def assemble(*, repo: Path, evidence_root: Path) -> dict[str, Any]:
     closure = rc.verify_closure(repo)  # binding verified FIRST
-    reduction = reduce.derive_terminal(evidence_root, closure=closure)
+    admitted = accepted_amended_digests(repo)
+    reduction = reduce.derive_terminal(
+        evidence_root, closure=closure,
+        admitted_historical_pins=admitted)
 
     terminal = reduction["terminal"]
     assembly = {

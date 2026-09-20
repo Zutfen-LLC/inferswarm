@@ -16,6 +16,7 @@ from typing import Any
 
 import issue232_receipt as rc
 import issue232_host as host
+import issue232_replay as replay_order
 
 
 class ReductionError(RuntimeError):
@@ -164,25 +165,44 @@ def reduce_qualification(evidence_root: Path) -> dict[str, Any] | None:
 
 def reduce_replay(evidence_root: Path) -> dict[str, Any] | None:
     authz_path = evidence_root / "replay-authorization.json"
-    if not authz_path.is_file():
-        return None
-    authz = _load(authz_path)
-    if authz.get("schema") != "inferswarm.v2g.replay-authorization/1":
-        raise ReductionError("bad replay authorization schema")
-    out: dict[str, Any] = {
-        "decision": authz.get("decision"),
-        "decision_utc": authz.get("decision_utc"),
-        "gate_result_digest": authz.get("gate_result_digest"),
-        "reasons": authz.get("reasons"),
-        "producer_byte_identical": authz.get("replay_producer", {})
-        .get("byte_identical_to_accepted"),
-        "replay_boot_id": authz.get("replay_boot_id"),
-        "topology_binding": authz.get("topology_binding"),
-    }
+    out: dict[str, Any] = {}
+    if authz_path.is_file():
+        authz = _load(authz_path)
+        if authz.get("schema") != "inferswarm.v2g.replay-authorization/1":
+            raise ReductionError("bad replay authorization schema")
+        out.update({
+            "decision": authz.get("decision"),
+            "decision_utc": authz.get("decision_utc"),
+            "gate_result_digest": authz.get("gate_result_digest"),
+            "reasons": authz.get("reasons"),
+            "producer_byte_identical": authz.get("replay_producer", {})
+            .get("byte_identical_to_accepted"),
+            "replay_boot_id": authz.get("replay_boot_id"),
+            "topology_binding": authz.get("topology_binding"),
+        })
     order_path = evidence_root / "replay-order-state.json"
     if order_path.is_file():
-        order = _load(order_path)
+        try:
+            order = replay_order._load_order(order_path)
+            replay_order._verify_chain(order)
+        except (ValueError, TypeError, KeyError, replay_order.ReplayError) as exc:
+            raise ReductionError(f"invalid replay order state: {exc}") from exc
         entries = order.get("entries") or []
+        if not isinstance(entries, list):
+            raise ReductionError("invalid replay order state entries")
+        previous_dt: datetime | None = None
+        for index, entry in enumerate(entries):
+            if (index >= len(replay_order.ORDER_SEQUENCE)
+                    or not isinstance(entry, dict)
+                    or entry.get("arm") != replay_order.ORDER_SEQUENCE[index]):
+                raise ReductionError("replay order state violates frozen ladder")
+            if entry.get("state") not in ("passed", "failed") or \
+                    (index < len(entries) - 1 and entry["state"] == "failed"):
+                raise ReductionError("replay order state has invalid execution state")
+            recorded_dt = _parse_utc(entry.get("recorded_utc"))
+            if previous_dt is not None and recorded_dt <= previous_dt:
+                raise ReductionError("replay arm timestamps are not strictly increasing")
+            previous_dt = recorded_dt
         out["order_entries"] = [
             {"arm": e["arm"], "state": e["state"],
              "detail": e.get("detail")}
@@ -290,10 +310,13 @@ def _parse_utc(text: Any) -> datetime:
     if not isinstance(text, str):
         raise ReductionError(f"not a UTC timestamp: {text!r}")
     try:
-        return datetime.fromisoformat(text)
+        value = datetime.fromisoformat(text)
     except ValueError as exc:
         raise ReductionError(
             f"malformed UTC timestamp {text!r}") from exc
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ReductionError(f"timezone-naive UTC timestamp {text!r}")
+    return value
 
 
 def check_prospective_authorization(
@@ -326,21 +349,27 @@ def check_prospective_authorization(
                 f"order-state entry {e.get('arm')!r} carries no "
                 "recorded_utc timestamp"]}
         executed_utc.append((e["arm"], _parse_utc(utc)))
-    first_arm, first_dt = executed_utc[0]
-    last_arm, last_dt = executed_utc[-1]
+    first_arm, first_dt = min(executed_utc, key=lambda row: row[1])
+    last_arm, last_dt = max(executed_utc, key=lambda row: row[1])
 
     # (1)+(3): the authorization must PREDATE the first arm. An
     # authorization after the first arm is retrospective; after the
     # last arm it is maximally so.
-    if authz_dt > first_dt:
+    if authz_dt >= first_dt:
         delta = (authz_dt - first_dt).total_seconds()
         if authz_dt > last_dt:
+            last_delta = (authz_dt - last_dt).total_seconds()
             problems.append(
                 f"replay authorization decision_utc {authz_utc} is "
-                f"{delta:.0f}s AFTER the last retained arm "
+                f"{last_delta:.0f}s AFTER the last retained arm "
                 f"{last_arm} ({last_arm} recorded "
-                f"{executed_utc[-1][1].isoformat()}) — the entire "
+                f"{last_dt.isoformat()}) — the entire "
                 "ladder predates the authorization")
+        elif authz_dt == first_dt:
+            problems.append(
+                f"replay authorization decision_utc {authz_utc} equals "
+                f"the first retained arm {first_arm} recorded_utc "
+                f"{first_dt.isoformat()} — not prospective")
         else:
             problems.append(
                 f"replay authorization decision_utc {authz_utc} is "
@@ -424,7 +453,7 @@ def _historical_provenance_problems(
                 "admissible immutable historical-closure amendment "
                 "covers it — the arm cannot pass through the current "
                 "closure")
-        elif entry.get("evidence_producer_head") != head:
+        elif entry.get("closure_producer_head") != head:
             problems.append(
                 f"{arm} historical pin {head[:12]} is not the pin "
                 "admitted by the amendment record")
@@ -432,7 +461,8 @@ def _historical_provenance_problems(
 
 
 def derive_terminal(evidence_root: Path,
-                    *, closure: dict[str, Any] | None = None
+                    *, closure: dict[str, Any] | None = None,
+                    admitted_historical_pins: dict[str, dict] | None = None
                     ) -> dict[str, Any]:
     """Deterministic Phase 6 terminal from retained bytes (issue
     controls 18/20: authored records never override the reduction).
@@ -512,15 +542,30 @@ def derive_terminal(evidence_root: Path,
             f"(gate result {gate.get('result')!r}; failed checks: "
             f"{gate.get('failed_checks')})")
     elif not replay_auth:
-        terminal = "V2G_PCIE_PATH_CLEAN_NO_REPLAY"
-        basis.append(
-            "clean-link gate passed but replay was not authorized/ "
-            f"performed (decision: "
-            f"{(replay or {}).get('decision')})")
+        arms = (replay or {}).get("arms") or []
+        executed = [row for row in ((replay or {}).get("order_entries") or [])
+                    if row.get("state") in ("passed", "failed")]
+        if arms or executed:
+            terminal = "V2G_EVIDENCE_BLOCKED"
+            basis.append(
+                "physical replay occurred without admissible prospective "
+                "authority: retained arms and/or executed replay order "
+                f"entries exist (decision: {(replay or {}).get('decision')})")
+        else:
+            terminal = "V2G_PCIE_PATH_CLEAN_NO_REPLAY"
+            basis.append(
+                "clean-link gate passed and retained evidence shows no "
+                "executed replay arm "
+                f"(decision: {(replay or {}).get('decision')})")
+    elif not authz_ok and (replay.get("arms") or replay.get("order_entries")) \
+            and (replay.get("halted") or not replay.get("arms")):
+        terminal = "V2G_EVIDENCE_BLOCKED"
+        basis.extend(f"authorization inadmissible: {p}"
+                     for p in authz_problems)
     else:
         arms = replay.get("arms") or []
         halted = bool(replay.get("halted"))
-        if not arms:
+        if not arms and not (replay.get("order_entries") or []):
             terminal = "V2G_PCIE_PATH_CLEAN_NO_REPLAY"
             basis.append(
                 "replay authorized but no arm executed (no retained "
@@ -654,16 +699,6 @@ def derive_terminal(evidence_root: Path,
             # producer itself changed after the arms executed, so the
             # arms keep their original identities and cannot satisfy
             # REPLAY_PASS through the current closure.
-            from issue232_freeze import accepted_amended_digests
-            admitted_historical: dict[str, dict] = {}
-            try:
-                # AMENDMENTS.json lives in the campaign area root
-                # (the evidence root's parent); absence => no
-                # historical admission at all
-                admitted_historical = accepted_amended_digests(
-                    evidence_root.parent)
-            except Exception:
-                admitted_historical = {}
             prov_problems: list[str] = []
             if closure_view is None:
                 prov_problems = [
@@ -672,7 +707,7 @@ def derive_terminal(evidence_root: Path,
                     "unreachable)"]
             else:
                 prov_problems = _historical_provenance_problems(
-                    arms, closure_view, admitted_historical)
+                    arms, closure_view, admitted_historical_pins)
 
             if target in sizes and all_ok and topology_agrees \
                     and authz_ok and not prov_problems:

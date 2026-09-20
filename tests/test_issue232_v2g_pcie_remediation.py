@@ -22,6 +22,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from datetime import datetime, timedelta
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -305,20 +306,22 @@ def write_synth_evidence(tmp: Path, *, gate_result="PASS",
         }))
     if order_entries is not None:
         if order_entry_utc is None:
-            # mechanically AFTER the default authorization decision
-            order_entry_utc = ["2026-09-20T12:01:00+00:00"] * len(
-                order_entries)
+            first = datetime.fromisoformat("2026-09-20T12:01:00+00:00")
+            order_entry_utc = [
+                (first + timedelta(minutes=i)).isoformat()
+                for i in range(len(order_entries))]
         entries = []
         for e, utc in zip(order_entries, order_entry_utc):
             e = dict(e)
             e.setdefault("recorded_utc", utc)
             entries.append(e)
-        (ev / "replay-order-state.json").write_text(json.dumps({
+        order_doc = {
             "schema": "inferswarm.v2g.replay-order/1",
             "campaign_id": rc.CAMPAIGN_ID,
             "entries": entries,
-            "chain_digest": "0" * 64,
-        }))
+        }
+        order_doc["chain_digest"] = replay._chain(order_doc)
+        (ev / "replay-order-state.json").write_text(json.dumps(order_doc))
     if arms:
         (ev / "raw").mkdir(exist_ok=True)
         for idx, (arm, stop, ok) in enumerate(arms):
@@ -348,7 +351,7 @@ def write_synth_evidence(tmp: Path, *, gate_result="PASS",
     if halted:
         entries = order_entries or []
         if not any(e.get("state") == "failed" for e in entries):
-            (ev / "replay-order-state.json").write_text(json.dumps({
+            order_doc = {
                 "schema": "inferswarm.v2g.replay-order/1",
                 "campaign_id": rc.CAMPAIGN_ID,
                 "entries": entries + [
@@ -358,8 +361,9 @@ def write_synth_evidence(tmp: Path, *, gate_result="PASS",
                      "detail": {"stop_condition":
                                 (arms[-1][1] if arms else
                                  "ring_timeout_or_hang")}}],
-                "chain_digest": "0" * 64,
-            }))
+            }
+            order_doc["chain_digest"] = replay._chain(order_doc)
+            (ev / "replay-order-state.json").write_text(json.dumps(order_doc))
     if amendments is not None:
         (tmp / "AMENDMENTS.json").write_text(json.dumps(amendments))
     # committed closure view next to the evidence root (the reducer's
@@ -565,6 +569,69 @@ class TestProspectiveAuthorization(unittest.TestCase):
                                       **kw)
             return red.derive_terminal(ev)
 
+    def test_missing_authorization_with_arms_blocks(self):
+        r = self._reduce(replay_authorized=None)
+        self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+
+    def test_missing_authorization_with_executed_order_blocks(self):
+        with tempfile.TemporaryDirectory() as td:
+            ev = write_synth_evidence(
+                Path(td), replay_authorized=None,
+                order_entries=self.ORDER4)
+            r = red.derive_terminal(ev)
+            self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+
+    def test_refused_authorization_with_arms_blocks(self):
+        r = self._reduce(replay_authorized=False)
+        self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+
+    def test_equal_authorization_timestamp_blocks(self):
+        r = self._reduce(
+            authz_decision_utc="2026-09-20T12:01:00+00:00")
+        self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
+
+    def test_one_microsecond_before_first_arm_is_prospective(self):
+        r = self._reduce(
+            authz_decision_utc="2026-09-20T12:00:59.999999+00:00")
+        self.assertEqual(r["terminal"],
+                         "V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS")
+
+    def test_missing_authorization_without_execution_is_clean(self):
+        with tempfile.TemporaryDirectory() as td:
+            ev = write_synth_evidence(Path(td), replay_authorized=None)
+            self.assertEqual(red.derive_terminal(ev)["terminal"],
+                             "V2G_PCIE_PATH_CLEAN_NO_REPLAY")
+
+    def test_refused_authorization_without_execution_is_clean(self):
+        with tempfile.TemporaryDirectory() as td:
+            ev = write_synth_evidence(Path(td), replay_authorized=False)
+            self.assertEqual(red.derive_terminal(ev)["terminal"],
+                             "V2G_PCIE_PATH_CLEAN_NO_REPLAY")
+
+    def test_order_state_integrity_controls(self):
+        mutations = (
+            ("stale digest", lambda d: d["entries"][0].update(
+                recorded_utc="2026-09-20T11:01:00+00:00"), False),
+            ("missing digest", lambda d: d.pop("chain_digest"), False),
+            ("bad schema", lambda d: d.update(schema="wrong"), True),
+            ("bad campaign", lambda d: d.update(campaign_id="wrong"), True),
+            ("reordered ladder", lambda d: d["entries"].reverse(), True),
+            ("nonmonotonic time", lambda d: d["entries"][1].update(
+                recorded_utc=d["entries"][0]["recorded_utc"]), True),
+        )
+        for name, mutate, rechain in mutations:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as td:
+                ev = write_synth_evidence(
+                    Path(td), arms=self.ARMS4, order_entries=self.ORDER4)
+                path = ev / "replay-order-state.json"
+                doc = json.loads(path.read_text())
+                mutate(doc)
+                if rechain:
+                    doc["chain_digest"] = replay._chain(doc)
+                path.write_text(json.dumps(doc))
+                with self.assertRaises(red.ReductionError):
+                    red.derive_terminal(ev)
+
     def test_control_authz_after_first_arm_blocks(self):
         r = self._reduce(
             authz_decision_utc="2026-09-20T12:02:30+00:00",
@@ -637,12 +704,12 @@ class TestProspectiveAuthorization(unittest.TestCase):
                 (ev / "replay-order-state.json").read_text())
             for e in doc["entries"]:
                 e.pop("recorded_utc", None)
+            doc["chain_digest"] = replay._chain(doc)
             (ev / "replay-order-state.json").write_text(
                 json.dumps(doc))
-            r = red.derive_terminal(ev)
-            self.assertEqual(r["terminal"], "V2G_EVIDENCE_BLOCKED")
-            self.assertTrue(any(
-                "carries no recorded_utc" in b for b in r["basis"]))
+            with self.assertRaisesRegex(red.ReductionError,
+                                        "not a UTC timestamp"):
+                red.derive_terminal(ev)
 
     def test_positive_prospective_authz_reaches_replay_pass(self):
         r = self._reduce()  # defaults: valid gate + authz precede arms
@@ -717,13 +784,72 @@ class TestRetainedArmProvenance(unittest.TestCase):
             {"producer_head": "0" * 40,
              "closure_digest": "0" * 64},
             {self.HIST_DIGEST: {"evidence_producer_head":
-                                "9" * 40}})
+                                "9" * 40,
+                                "closure_producer_head": "9" * 40}})
         self.assertTrue(any("historical pin" in p for p in problems))
 
     def test_positive_current_identity_reaches_replay_pass(self):
         r = self._reduce()  # arms carry the current closure identity
         self.assertEqual(r["terminal"],
                          "V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS")
+
+
+class TestHistoricalAmendmentAssembler(unittest.TestCase):
+    def _fixture(self, tmp: Path) -> tuple[Path, Path, str]:
+        repo = _write_closure_tmp(tmp)
+        area = repo / rc.AREA_REL
+        historical = json.loads((area / rc.CLOSURE_NAME).read_text())
+        historical_pin = subprocess.check_output(
+            ["git", "-C", str(repo), "rev-parse", "HEAD"], text=True
+        ).strip()
+        current = fz.closure_document(repo)
+        (area / rc.CLOSURE_NAME).write_text(json.dumps(current))
+        subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+        subprocess.run(["git", "-C", str(repo), "commit", "-qm",
+                        "new closure"], check=True)
+        (area / "AMENDMENTS.json").write_text(json.dumps({
+            "schema": fz.AMENDMENT_SCHEMA,
+            "amendments": [{
+                "evidence_producer_head": historical_pin,
+                "evidence_closure_digest": historical["closure_digest"],
+                "evidence_producer_closure_pins": historical["producer_head"],
+            }],
+        }))
+        ev = write_synth_evidence(
+            tmp / "synthetic", arms=TestProspectiveAuthorization.ARMS4,
+            order_entries=TestProspectiveAuthorization.ORDER4,
+            arm_producer_head=historical["producer_head"],
+            arm_closure_digest=historical["closure_digest"])
+        target = area / "evidence"
+        shutil.copytree(ev, target)
+        return repo, target, historical_pin
+
+    def test_admitted_historical_closure_reaches_real_assembler(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo, ev, _ = self._fixture(Path(td))
+            result = asm.assemble(repo=repo, evidence_root=ev)
+            self.assertEqual(result["reduction"]["terminal"],
+                             "V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS")
+
+    def test_changed_physical_producer_rejected_by_real_assembler(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo, ev, _ = self._fixture(Path(td))
+            producer = repo / "scripts/issue232_replay.py"
+            producer.write_bytes(producer.read_bytes() + b"\n# changed\n")
+            subprocess.run(["git", "-C", str(repo), "add", "-A"],
+                           check=True)
+            subprocess.run(["git", "-C", str(repo), "commit", "-qm",
+                            "changed physical producer"], check=True)
+            current = fz.closure_document(repo)
+            (repo / rc.AREA_REL / rc.CLOSURE_NAME).write_text(
+                json.dumps(current))
+            subprocess.run(["git", "-C", str(repo), "add", "-A"],
+                           check=True)
+            subprocess.run(["git", "-C", str(repo), "commit", "-qm",
+                            "new changed closure"], check=True)
+            with self.assertRaisesRegex(fz.FreezeError,
+                                        "physical producers changed"):
+                asm.assemble(repo=repo, evidence_root=ev)
 
 
 class TestRetainedEvidenceRegression(unittest.TestCase):
@@ -740,6 +866,7 @@ class TestRetainedEvidenceRegression(unittest.TestCase):
         joined = " | ".join(r["basis"])
         self.assertIn("0000:00:1d.0", joined)
         self.assertIn("16:57:20.265606", joined)
+        self.assertIn("6176s AFTER the last retained arm", joined)
         self.assertIn("52a65b19e736", joined)
         self.assertIn("7a5505af200c", joined)
 

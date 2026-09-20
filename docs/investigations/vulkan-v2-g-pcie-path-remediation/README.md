@@ -162,6 +162,33 @@ intact, four exact-correct arms with healthy windows — scientifically
 informative but not admissible for `V2G_PCIE_PATH_REMEDIATED_
 REPLAY_PASS` under #232's prospective-authorization contract.
 
+### Authority correction round 3: retained execution and order state
+
+The reducer now reads replay arms and replay order state even when
+`replay-authorization.json` is absent or records `REPLAY_REFUSED`.
+If either source records physical execution without admissible
+prospective authority, the terminal is `V2G_EVIDENCE_BLOCKED`.
+`V2G_PCIE_PATH_CLEAN_NO_REPLAY` requires a passed gate and no
+retained replay execution.
+
+Before the reducer uses an order-state timestamp, it checks the
+schema, campaign ID, canonical chain digest, frozen arm order, and
+strictly increasing timezone-aware timestamps. An authorization
+must strictly predate the first executed arm. Equal timestamps do
+not establish prospective authority. The retained order state
+passes these checks. The corrected authorization remains
+retrospective: it follows the first arm by 6195.083356 seconds and
+the last arm by 6175.528722 seconds.
+
+The assembler now resolves `AMENDMENTS.json` from the repository
+root and passes verified historical admissions to the reducer.
+Each admitted closure supplies the producer pin recorded in that
+closure for comparison with retained arms. A temporary Git fixture
+proves admission when every physical producer is byte-identical.
+A changed replay producer rejects the amendment. The actual four
+arms remain inadmissible because `issue232_replay.py` changed after
+their execution. The terminal remains `V2G_EVIDENCE_BLOCKED`.
+
 ## Separate state dimensions (never conflated)
 
 - **PCIE_PATH_HEALTH** — the chronic RxErr condition and its remediation;

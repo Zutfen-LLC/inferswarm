@@ -228,7 +228,8 @@ def _closure_digest_at(repo: Path, pin: str) -> str | None:
 def accepted_amended_digests(repo: Path | None = None) -> dict[str, dict]:
     """Return {closure_digest: amendment_entry} for every reduction-only
     amendment whose collector-unchanged proof holds against the LIVE
-    tree. Fails closed: any malformed/unprovable entry raises."""
+    tree. Each entry includes the verified closure producer head.
+    Fails closed: any malformed/unprovable entry raises."""
     repo = Path(repo) if repo is not None else rc.ROOT
     path = repo / rc.AREA_REL / "AMENDMENTS.json"
     if not path.is_file():
@@ -257,6 +258,13 @@ def accepted_amended_digests(repo: Path | None = None) -> dict[str, dict]:
             raise FreezeError(
                 f"amendment digest for pin {pin[:12]} does not match "
                 "the closure record committed at that pin")
+        closure_raw = _git_bytes(
+            repo, "show", f"{pin}:{rc.AREA_REL}/{rc.CLOSURE_NAME}")
+        if closure_raw is None:
+            raise FreezeError("historical closure unavailable")
+        closure_head = json.loads(closure_raw)["producer_head"]
+        if entry.get("evidence_producer_closure_pins", closure_head) != closure_head:
+            raise FreezeError("amendment closure producer pin mismatch")
         changed = _git_bytes(repo, "diff", "--name-only", pin, head,
                              "--", *PHYSICAL_PRODUCERS)
         if changed is None or changed.strip():
@@ -265,7 +273,7 @@ def accepted_amended_digests(repo: Path | None = None) -> dict[str, dict]:
             raise FreezeError(
                 f"amendment for pin {pin[:12]} is invalid: physical "
                 f"producers changed ({changed_names})")
-        accepted[digest] = entry
+        accepted[digest] = {**entry, "closure_producer_head": closure_head}
     return accepted
 
 
@@ -273,4 +281,3 @@ def require_frozen(repo: Path | None = None) -> dict[str, Any]:
     """Producer-side gate: verify the freeze immediately before any
     correctness-bearing emission."""
     return verify_closure(Path(repo) if repo is not None else rc.ROOT)
-
