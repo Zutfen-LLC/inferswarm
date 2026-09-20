@@ -280,23 +280,39 @@ def run_arm(*, repo: Path, evidence_root: Path, arm: str,
         (repo / rc.AREA_REL / "PHYSICAL-AUTHORITY.json")
         .read_text(encoding="utf-8"))
     apin = authority["replay_producer_pin"]
+    # byte-identity proof of the EXECUTED producer: the pinned source
+    # is the accepted #230 python module (its embedded C is compiled);
+    # prove the WORKTREE module bytes == the pinned V2-F blob and that
+    # no commit between the pin and HEAD touched it, then import the
+    # module and compile its own embedded C (the accepted runner path)
     blob = subprocess.run(
         ["git", "-C", str(repo), "cat-file", "blob",
          f"{pin['producer_head']}:{pin['transfer_source']}"],
         capture_output=True).stdout
     blob_sha = hashlib.sha256(blob).hexdigest()
+    worktree_module = repo / pin["transfer_source"]
+    worktree_sha = hashlib.sha256(
+        worktree_module.read_bytes()).hexdigest()
+    drift = subprocess.run(
+        ["git", "-C", str(repo), "diff", "--name-only",
+         pin["producer_head"], "HEAD", "--", pin["transfer_source"]],
+        capture_output=True).stdout
     if blob_sha != apin["transfer_source_sha256"] \
-            or blob_sha != pin.get("transfer_source_sha256_rederived"):
-        raise ReplayError("producer bytes diverge from the accepted pin")
+            or blob_sha != pin.get("transfer_source_sha256_rederived") \
+            or worktree_sha != blob_sha or drift.strip():
+        raise ReplayError(
+            "replay producer bytes diverge from the accepted pin "
+            f"(blob={blob_sha[:12]} worktree={worktree_sha[:12]} "
+            f"drift={drift.decode()[:80]!r})")
     sys.path.insert(0, str(repo / "scripts"))
     import issue230_transfer as transfer
     build_dir.mkdir(parents=True, exist_ok=True)
-    binary, src = transfer.compile_transfer(
-        build_dir, source_override=blob.decode("utf-8"))
-    # bind the executed source bytes
+    binary, src = transfer.compile_transfer(build_dir)
+    # bind the executed source bytes (module + the compiled C)
     raw = evidence_root / "raw"
     raw.mkdir(parents=True, exist_ok=True)
-    host.durable_write(raw / f"{arm}-producer-source.c", blob)
+    host.durable_write(raw / f"{arm}-producer-module.py", blob)
+    host.durable_write(raw / f"{arm}-producer-source.c", src.encode())
     host.durable_write(
         raw / f"{arm}-producer-binary.sha256",
         hashlib.sha256(binary.read_bytes()).hexdigest().encode())
