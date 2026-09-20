@@ -141,9 +141,6 @@ def collect_preflight(*, repo: Path, out: Path, attempt_id: str,
     if idy["returncode"] != 0:
         raise transfer.ProbeError(
             f"V2-F identity probe failed: {idy['stderr'][:300]}")
-    idy_parsed = transfer.parse_transfer_stdout(idy["stdout"])
-    # (identity event carries the device list; arm==None is expected —
-    # parse_transfer_stdout's arm requirement applies to transfer runs)
     devices = idy_parsed_identity_devices(idy["stdout"])
     uuid_bdfs = {d["bdf"] for d in devices if d["bdf"]}
     expected = {host.sysfs_bdf(bdf_a), host.sysfs_bdf(bdf_b)}
