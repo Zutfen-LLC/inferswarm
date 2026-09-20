@@ -270,14 +270,23 @@ def run_arm(*, repo: Path, evidence_root: Path, arm: str,
     if rung["reps"] != 1 or rung["warmups"] != 0:
         raise ReplayError("frozen replay rung must be 1 rep, 0 warmup")
 
-    # compile the accepted V2-F producer source, verbatim
+    # compile the accepted V2-F producer source, verbatim; the byte
+    # identity is re-derived HERE (run-time) from the pinned V2-F head
+    # and cross-checked against both the authority pin and the
+    # authorization document's rederived hash
     pin = authz["replay_producer"]
+    import issue232_authority as pa
+    authority = json.loads(
+        (repo / rc.AREA_REL / "PHYSICAL-AUTHORITY.json")
+        .read_text(encoding="utf-8"))
+    apin = authority["replay_producer_pin"]
     blob = subprocess.run(
         ["git", "-C", str(repo), "cat-file", "blob",
          f"{pin['producer_head']}:{pin['transfer_source']}"],
         capture_output=True).stdout
-    if hashlib.sha256(blob).hexdigest() != \
-            pin["transfer_source_sha256"]:
+    blob_sha = hashlib.sha256(blob).hexdigest()
+    if blob_sha != apin["transfer_source_sha256"] \
+            or blob_sha != pin.get("transfer_source_sha256_rederived"):
         raise ReplayError("producer bytes diverge from the accepted pin")
     sys.path.insert(0, str(repo / "scripts"))
     import issue230_transfer as transfer
