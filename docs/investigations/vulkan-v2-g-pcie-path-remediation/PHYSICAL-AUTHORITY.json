@@ -6,7 +6,7 @@
   "v2e",
   "v2f"
  ],
- "authority_digest": "a97990371dfc684a5ec6ea3899741f894feaec28abe291cad06b981bf8c14106",
+ "authority_digest": "9543ef02f84e16c69392957d4db206c27ff8bb0d3ff9e0e56679fc4b1f80f611",
  "campaign_id": "issue232-v2g-pcie-path-remediation",
  "chronic_condition_baseline": {
   "boot_id": "9121c110-4eaf-446b-84f4-f1a90c792801",
@@ -68,7 +68,7 @@
   "source": "docs/investigations/vulkan-v2-f-v340l-external-memory/evidence/supplementary/SUPPLEMENTARY-FAULT-BOOT-AER.json"
  },
  "gate_definition": {
-  "interval_minutes": 15,
+  "interval_minutes": 2,
   "required_cold_confirmations": 1,
   "rxerr_max_over_interval": 0,
   "threshold_basis": "ZERO frozen prospectively (issue Phase 3 prefers zero; any nonzero threshold must be frozen before observing the confirmation result \u2014 control 10)"
