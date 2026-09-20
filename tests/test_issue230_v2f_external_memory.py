@@ -61,7 +61,8 @@ def synth_transfer_stdout(mechanism="opaque_fd", direction="a_to_b",
         "source": {"bdf": bdf_src, "queue_family": 0},
         "destination": {"bdf": bdf_dst, "queue_family": 0,
                         "import_memory_type": 0,
-                        "import_compatible_bits": 513},
+                        "import_compatible_bits": 513,
+                        "fd_props_query_supported": 1},
         "handle_type_bit": ht, "fd_lifecycle": fd_life}))
     for rep in range(-warmups, reps):
         measured = rep >= 0

@@ -274,6 +274,12 @@ VkResult vkGetMemoryFdPropertiesKHR(VkDevice d, VkFlags ht, int fd,
         REC("FDPROPS REJECTED\n");
         return VK_ERROR_INVALID_EXTERNAL_HANDLE;
     }
+    /* mirror installed Mesa: the query is implemented for DMA_BUF
+     * only; OPAQUE_FD gets INVALID_EXTERNAL_HANDLE even same-device */
+    if (ht == VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT) {
+        REC("FDPROPS OPAQUE_FD UNSUPPORTED (Mesa behavior)\n");
+        return VK_ERROR_INVALID_EXTERNAL_HANDLE;
+    }
     out->memoryTypeBits = 0x3;
     return VK_SUCCESS;
 }

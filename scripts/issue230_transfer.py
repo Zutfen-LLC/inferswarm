@@ -294,10 +294,21 @@ static void make_import_view(Logical *lg, int fd,
                              VkExternalMemoryHandleTypeFlagBits ht,
                              VkDeviceSize size, Buf *out,
                              int32_t *chosen_type,
-                             VkExternalMemoryHandleTypeFlags *compat_out) {
-    /* Query which memory types the fd can be imported as on THIS device
-     * (vkGetMemoryFdPropertiesKHR; the authoritative compatibility
-     * query for fd-based import). */
+                             VkExternalMemoryHandleTypeFlags *compat_out,
+                             int *props_query_mode) {
+    /* Memory-type compatibility for the import.
+     *
+     * vkGetMemoryFdPropertiesKHR is the authoritative fd query, but
+     * the installed Mesa implements it ONLY for DMA_BUF: for
+     * OPAQUE_FD it returns VK_ERROR_INVALID_EXTERNAL_HANDLE even on
+     * the exporting device itself (physically observed on this stack;
+     * retained in the attempt-1 supersession record). Per the Vulkan
+     * spec the query is OPTIONAL: for opaque_fd the destination
+     * buffer is created WITH VkExternalMemoryBufferCreateInfo chained,
+     * so its own memoryRequirements.memoryTypeBits already reflects
+     * importability of that handle type, and the import itself is
+     * validated by vkAllocateMemory (checked). The query outcome is
+     * retained either way; dma_buf REQUIRES a successful query. */
     PFN_vkGetMemoryFdPropertiesKHR pGetProps =
         (PFN_vkGetMemoryFdPropertiesKHR)vkGetDeviceProcAddr(
             lg->dev, "vkGetMemoryFdPropertiesKHR");
@@ -307,12 +318,15 @@ static void make_import_view(Logical *lg, int fd,
     memset(&fp, 0, sizeof fp);
     fp.sType = VK_STRUCTURE_TYPE_MEMORY_FD_PROPERTIES_KHR;
     VkResult r = pGetProps(lg->dev, ht, fd, &fp);
-    if (r != VK_SUCCESS) {
+    int query_supported = (r == VK_SUCCESS);
+    if (!query_supported && ht == VK_EXTERNAL_MEMORY_HANDLE_TYPE_DMA_BUF_BIT_EXT) {
         STAGE("fd_import_properties");
-        fprintf(stderr, "{\"event\":\"error\",\"stage\":\"fd_import_properties\",\"vkResult\":%d,\"detail\":\"vkGetMemoryFdPropertiesKHR rejected the fd for this handle type\"}\n", (int)r);
+        fprintf(stderr, "{\"event\":\"error\",\"stage\":\"fd_import_properties\",\"vkResult\":%d,\"detail\":\"vkGetMemoryFdPropertiesKHR rejected the fd for the dma_buf handle type (query is required for dma_buf)\"}\n", (int)r);
         exit(2);
     }
-    if (compat_out) *compat_out = fp.memoryTypeBits;
+    if (props_query_mode)
+        *props_query_mode = query_supported ? 1 : 0;
+    if (compat_out) *compat_out = query_supported ? fp.memoryTypeBits : 0xFFFFFFFFu;
 
     VkExternalMemoryBufferCreateInfo eb;
     memset(&eb, 0, sizeof eb);
@@ -329,7 +343,9 @@ static void make_import_view(Logical *lg, int fd,
        "vkCreateBuffer(destination import view)");
     VkMemoryRequirements mr;
     vkGetBufferMemoryRequirements(lg->dev, out->buf, &mr);
-    uint32_t usable = mr.memoryTypeBits & fp.memoryTypeBits;
+    uint32_t usable = query_supported
+        ? (mr.memoryTypeBits & fp.memoryTypeBits)
+        : mr.memoryTypeBits;  /* import-chained buffer requirements */
     CKC(usable != 0, "memory_dest_import",
         "empty memory-type intersection (buffer requirements & import"
         " properties) for the destination import");
@@ -590,7 +606,9 @@ static int transfer_main(int argc, char **argv) {
     Buf d_view, d_local, d_staging;
     int32_t chosen_type = -1;
     VkExternalMemoryHandleTypeFlags compat = 0;
-    make_import_view(&lg_dst, fd, ht, size, &d_view, &chosen_type, &compat);
+    int props_query_supported = -1;
+    make_import_view(&lg_dst, fd, ht, size, &d_view, &chosen_type,
+                     &compat, &props_query_supported);
     /* fd lifecycle: opaque_fd consumed by driver on successful import;
      * dma_buf kept by caller, closed once below. */
     int fd_consumed = !dma;
@@ -616,12 +634,13 @@ static int transfer_main(int argc, char **argv) {
            "\"size\":%llu,\"reps\":%d,\"warmups\":%d,"
            "\"source\":{\"bdf\":\"%s\",\"queue_family\":%u},"
            "\"destination\":{\"bdf\":\"%s\",\"queue_family\":%u,"
-           "\"import_memory_type\":%d,\"import_compatible_bits\":%u},"
+           "\"import_memory_type\":%d,\"import_compatible_bits\":%u,"
+           "\"fd_props_query_supported\":%d},"
            "\"handle_type_bit\":%u,\"fd_lifecycle\":\"%s\"}\n",
            mechanism, direction, (unsigned long long)size, reps, warmups,
            devs[isrc].bdf, lg_src.queue_family, devs[idst].bdf,
            lg_dst.queue_family, (int)chosen_type, (unsigned)compat,
-           (unsigned)ht, fd_consumed
+           props_query_supported, (unsigned)ht, fd_consumed
                ? "opaque_fd: consumed by driver on import"
                : "dma_buf: caller closes after import");
 
