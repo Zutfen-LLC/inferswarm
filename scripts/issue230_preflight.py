@@ -130,8 +130,12 @@ def collect_preflight(*, repo: Path, out: Path, attempt_id: str,
 
     # V2-F Vulkan identity probe (current-boot UUID->BDF corroboration)
     binary, _source = transfer.compile_transfer(build_dir)
-    bdf_a = mapping["participants"]["a"]["fresh_pci_bdf"]
-    bdf_b = mapping["participants"]["b"]["fresh_pci_bdf"]
+    # R3 mapping carries short BDFs (06:00.0); the C probe derives the
+    # 16-char domain-prefixed form from deviceUUIDs — normalize (the
+    # documented BDF-form pitfall; a silent strcmp mismatch fails the
+    # join).
+    bdf_a = host.sysfs_bdf(mapping["participants"]["a"]["fresh_pci_bdf"])
+    bdf_b = host.sysfs_bdf(mapping["participants"]["b"]["fresh_pci_bdf"])
     idy = transfer.run_probe(binary, ["identity", bdf_a, bdf_b],
                              raw, "identity-probe", timeout=120)
     if idy["returncode"] != 0:

@@ -40,8 +40,9 @@ def _durable(path: Path, doc: dict[str, Any]) -> None:
 
 
 def _arm_bdfs(mapping: dict[str, Any]) -> dict[str, str]:
-    return {die: row["fresh_pci_bdf"] if not row["fresh_pci_bdf"]
-            .startswith("0000:") else row["fresh_pci_bdf"]
+    # normalize to the 16-char domain-prefixed form the C probe's
+    # UUID-derived BDFs use (R3 mapping carries short BDFs)
+    return {die: host.sysfs_bdf(row["fresh_pci_bdf"])
             for die, row in mapping["participants"].items()}
 
 
