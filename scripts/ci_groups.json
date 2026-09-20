@@ -1143,6 +1143,9 @@
   "scripts/issue232_baseline.py": [
    "vulkan-v0-b"
   ],
+  "scripts/issue232_coldproof.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/issue232_freeze.py": [
    "vulkan-v0-b"
   ],

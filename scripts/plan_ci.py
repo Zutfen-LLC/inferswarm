@@ -775,6 +775,7 @@ PATH_GROUPS = {
     "scripts/issue232_reduce.py": ["vulkan-v0-b"],
     "scripts/issue232_assemble.py": ["vulkan-v0-b"],
     "scripts/issue232_manifest.py": ["vulkan-v0-b"],
+    "scripts/issue232_coldproof.py": ["vulkan-v0-b"],
     "tests/test_issue232_v2g_pcie_remediation.py": ["vulkan-v0-b"],
     "tests/test_issue230_v2f_external_memory.py": ["vulkan-v0-b"],
     "tests/test_issue230_v2f_vk_contract.py": ["vulkan-v0-b"],
