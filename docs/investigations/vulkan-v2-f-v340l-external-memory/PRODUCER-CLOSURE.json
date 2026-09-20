@@ -1,7 +1,7 @@
 {
  "campaign_id": "issue230-v2f-v340l-external-memory",
- "closure_digest": "97b1735cc218761c788a6a508d79609ee06650993fe6f0b105927450c82cdbf9",
- "producer_head": "4409c1b619b423f7c074b55cdede9f153a86c208",
+ "closure_digest": "23bc91d40d2a70e5eac9df377aea3fa52635b28dff1477b46ee5514e023dc1f3",
+ "producer_head": "d7176f0e00e6385d8bcb01bdde90208cceaa7bb4",
  "schema": "inferswarm.v2f.producer-closure/1",
  "sources": {
   "scripts/issue230_assemble.py": "a110feb910017d4ea750728a80ac712fe0371cc15f5d3f9b9d2f81ac7bb36704",
@@ -9,7 +9,7 @@
   "scripts/issue230_freeze.py": "bf059f4753f922ab1a1f76c697a5166b714e821311eaf5cb05e3f5c98d59742b",
   "scripts/issue230_host.py": "2fe8250793d99454a046d521d1756c8281a9cf487ee88681884bae5188655cc2",
   "scripts/issue230_manifest.py": "723273ea98a9e7e47a9f0c50bb9bbf74d3a02299851c4d6e3bb994c97724ce88",
-  "scripts/issue230_preflight.py": "4db5bc2aa0fc30a3e17e456b8337ee28725a62fb9b96a4f77267af1ba0438b6a",
+  "scripts/issue230_preflight.py": "3b52ca5df4f8b2a56cb263bb6de52c87ced889e39d7b384e10a1f8fff4856682",
   "scripts/issue230_receipt.py": "c83d1707b97f153cea4feea820e6a7e83534ff5a98ff73c79e31c53603e230ef",
   "scripts/issue230_reduce.py": "71998a86c6e728ba5c9fb5f203194e552f72070b60b572b2e4ca0751e1b9654a",
   "scripts/issue230_runner.py": "6af2c5f9d3b1deabb169f39d42b4eeda2f50abd56597c7ba940a7260695f3cea",
