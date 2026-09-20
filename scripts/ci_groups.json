@@ -194,6 +194,7 @@
     "test_issue230_v2f_external_memory",
     "test_issue230_v2f_vk_contract",
     "test_issue232_v2g_pcie_remediation",
+    "test_issue234_r8h_vulkan",
     "test_issue35_link_probe",
     "test_issue35_role_sweep",
     "test_issue35_envelope",
@@ -338,6 +339,9 @@
    "vulkan-v0-b"
   ],
   "docs/investigations/qwen38-flash-next-r8-g/": [
+   "vulkan-v0-b"
+  ],
+  "docs/investigations/qwen38-flash-next-r8-h-vulkan/": [
    "vulkan-v0-b"
   ],
   "docs/investigations/vulkan-v0-a/": [
@@ -1173,6 +1177,39 @@
   "scripts/issue232_replay.py": [
    "vulkan-v0-b"
   ],
+  "scripts/issue234_assemble.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue234_authority.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue234_freeze.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue234_health.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue234_host.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue234_ladder.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue234_manifest.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue234_placement.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue234_receipt.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue234_reduce.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue234_runtime.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "vulkan-v0-b"
   ],
@@ -1447,6 +1484,9 @@
    "vulkan-v0-b"
   ],
   "tests/test_issue232_v2g_pcie_remediation.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_issue234_r8h_vulkan.py": [
    "vulkan-v0-b"
   ],
   "tests/test_issue35_corrections.py": [
