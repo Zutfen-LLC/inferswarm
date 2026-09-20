@@ -41,7 +41,12 @@ narrowly bounded replay of the previously faulting seam.
 ## Frozen campaign parameters (before any retained observation)
 
 - Clean-link gate: **zero Correctable RxErr** on the candidate upstream
-  path over a fixed 15-minute interval (both sources: sysfs counters
+  path over a fixed interval — **2 minutes since the 2026-09-20
+  operator-directed amendment (15 min originally frozen; amended before
+  any gate evaluation was retained; zero threshold and cold-cycle
+  confirmation unchanged; basis: the chronic condition measures
+  120-850 events/min, so a 2-minute window separates fault from clean
+  by ~3 orders of magnitude)** (both sources: sysfs counters
   AND journal event census, which must agree), zero Uncorrectable/DPC,
   no amdgpu fault classes, expected topology + declared width (idle
   speed downtraining is NOT width downgrade), no peripheral

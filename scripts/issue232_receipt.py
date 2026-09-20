@@ -121,7 +121,16 @@ CLEAN_LINK_RXERR_MAX = 0
 #: evaluation: one full interval of sysfs AER counters + journal event
 #: census on the candidate path, GPUs idle (no workload before the
 #: gate).
-GATE_INTERVAL_MINUTES = 15
+#:
+#: AMENDED 2026-09-20 (operator-directed, BEFORE any gate evaluation
+#: was retained): 15 -> 2 minutes. Empirical basis: the chronic
+#: condition is immediately evident at 120-850 events/min (188 sysfs
+#: RxErr in the FIRST MINUTE post-bundle; ~950 events expected per
+#: 2-min fault-condition window vs 0 in the clean condition) — a
+#: 2-minute interval separates the populations by three orders of
+#: magnitude. The ZERO-RxErr threshold is UNCHANGED (control 10); the
+#: cold-power-cycle confirmation requirement is UNCHANGED (control 8).
+GATE_INTERVAL_MINUTES = 2
 
 #: The clean result must repeat across at least one COLD power cycle
 #: (issue Phase 3; warm reboot never substitutes — control 8).
