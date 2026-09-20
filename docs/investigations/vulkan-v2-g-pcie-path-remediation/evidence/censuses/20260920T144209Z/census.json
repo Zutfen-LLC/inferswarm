@@ -1,0 +1,756 @@
+{
+ "aer_counters": {
+  "0000:00:1c.0": {
+   "aer_dev_correctable": {
+    "BadDLLP": 0,
+    "BadTLP": 0,
+    "CorrIntErr": 0,
+    "HeaderOF": 0,
+    "NonFatalErr": 0,
+    "Rollover": 0,
+    "RxErr": 0,
+    "TOTAL_ERR_COR": 0,
+    "Timeout": 0
+   },
+   "aer_dev_fatal": {
+    "ACSViol": 0,
+    "AtomicOpBlocked": 0,
+    "BlockedTLP": 0,
+    "CmpltAbrt": 0,
+    "CmpltTO": 0,
+    "DLP": 0,
+    "DMWrReqBlocked": 0,
+    "ECRC": 0,
+    "FCP": 0,
+    "IDECheck": 0,
+    "MalfTLP": 0,
+    "MisIDETLP": 0,
+    "PCRC_CHECK": 0,
+    "PoisonTLPBlocked": 0,
+    "RxOF": 0,
+    "SDES": 0,
+    "TLP": 0,
+    "TLPBlockedErr": 0,
+    "TLPXlatBlocked": 0,
+    "TOTAL_ERR_FATAL": 0,
+    "UncorrIntErr": 0,
+    "Undefined": 0,
+    "UnsupReq": 0,
+    "UnxCmplt": 0
+   },
+   "aer_dev_nonfatal": {
+    "ACSViol": 0,
+    "AtomicOpBlocked": 0,
+    "BlockedTLP": 0,
+    "CmpltAbrt": 0,
+    "CmpltTO": 0,
+    "DLP": 0,
+    "DMWrReqBlocked": 0,
+    "ECRC": 0,
+    "FCP": 0,
+    "IDECheck": 0,
+    "MalfTLP": 0,
+    "MisIDETLP": 0,
+    "PCRC_CHECK": 0,
+    "PoisonTLPBlocked": 0,
+    "RxOF": 0,
+    "SDES": 0,
+    "TLP": 0,
+    "TLPBlockedErr": 0,
+    "TLPXlatBlocked": 0,
+    "TOTAL_ERR_NONFATAL": 0,
+    "UncorrIntErr": 0,
+    "Undefined": 0,
+    "UnsupReq": 0,
+    "UnxCmplt": 0
+   }
+  },
+  "0000:00:1c.5": {
+   "aer_dev_correctable": {
+    "BadDLLP": 0,
+    "BadTLP": 0,
+    "CorrIntErr": 0,
+    "HeaderOF": 0,
+    "NonFatalErr": 0,
+    "Rollover": 0,
+    "RxErr": 0,
+    "TOTAL_ERR_COR": 0,
+    "Timeout": 0
+   },
+   "aer_dev_fatal": {
+    "ACSViol": 0,
+    "AtomicOpBlocked": 0,
+    "BlockedTLP": 0,
+    "CmpltAbrt": 0,
+    "CmpltTO": 0,
+    "DLP": 0,
+    "DMWrReqBlocked": 0,
+    "ECRC": 0,
+    "FCP": 0,
+    "IDECheck": 0,
+    "MalfTLP": 0,
+    "MisIDETLP": 0,
+    "PCRC_CHECK": 0,
+    "PoisonTLPBlocked": 0,
+    "RxOF": 0,
+    "SDES": 0,
+    "TLP": 0,
+    "TLPBlockedErr": 0,
+    "TLPXlatBlocked": 0,
+    "TOTAL_ERR_FATAL": 0,
+    "UncorrIntErr": 0,
+    "Undefined": 0,
+    "UnsupReq": 0,
+    "UnxCmplt": 0
+   },
+   "aer_dev_nonfatal": {
+    "ACSViol": 0,
+    "AtomicOpBlocked": 0,
+    "BlockedTLP": 0,
+    "CmpltAbrt": 0,
+    "CmpltTO": 0,
+    "DLP": 0,
+    "DMWrReqBlocked": 0,
+    "ECRC": 0,
+    "FCP": 0,
+    "IDECheck": 0,
+    "MalfTLP": 0,
+    "MisIDETLP": 0,
+    "PCRC_CHECK": 0,
+    "PoisonTLPBlocked": 0,
+    "RxOF": 0,
+    "SDES": 0,
+    "TLP": 0,
+    "TLPBlockedErr": 0,
+    "TLPXlatBlocked": 0,
+    "TOTAL_ERR_NONFATAL": 0,
+    "UncorrIntErr": 0,
+    "Undefined": 0,
+    "UnsupReq": 0,
+    "UnxCmplt": 0
+   }
+  },
+  "0000:00:1d.3": {
+   "aer_dev_correctable": -1,
+   "aer_dev_fatal": -1,
+   "aer_dev_nonfatal": -1
+  },
+  "0000:02:00.0": {
+   "aer_dev_correctable": {
+    "BadDLLP": 0,
+    "BadTLP": 0,
+    "CorrIntErr": 0,
+    "HeaderOF": 0,
+    "NonFatalErr": 0,
+    "Rollover": 0,
+    "RxErr": 0,
+    "TOTAL_ERR_COR": 0,
+    "Timeout": 0
+   },
+   "aer_dev_fatal": {
+    "ACSViol": 0,
+    "AtomicOpBlocked": 0,
+    "BlockedTLP": 0,
+    "CmpltAbrt": 0,
+    "CmpltTO": 0,
+    "DLP": 0,
+    "DMWrReqBlocked": 0,
+    "ECRC": 0,
+    "FCP": 0,
+    "IDECheck": 0,
+    "MalfTLP": 0,
+    "MisIDETLP": 0,
+    "PCRC_CHECK": 0,
+    "PoisonTLPBlocked": 0,
+    "RxOF": 0,
+    "SDES": 0,
+    "TLP": 0,
+    "TLPBlockedErr": 0,
+    "TLPXlatBlocked": 0,
+    "TOTAL_ERR_FATAL": 0,
+    "UncorrIntErr": 0,
+    "Undefined": 0,
+    "UnsupReq": 0,
+    "UnxCmplt": 0
+   },
+   "aer_dev_nonfatal": {
+    "ACSViol": 0,
+    "AtomicOpBlocked": 0,
+    "BlockedTLP": 0,
+    "CmpltAbrt": 0,
+    "CmpltTO": 0,
+    "DLP": 0,
+    "DMWrReqBlocked": 0,
+    "ECRC": 0,
+    "FCP": 0,
+    "IDECheck": 0,
+    "MalfTLP": 0,
+    "MisIDETLP": 0,
+    "PCRC_CHECK": 0,
+    "PoisonTLPBlocked": 0,
+    "RxOF": 0,
+    "SDES": 0,
+    "TLP": 0,
+    "TLPBlockedErr": 0,
+    "TLPXlatBlocked": 0,
+    "TOTAL_ERR_NONFATAL": 0,
+    "UncorrIntErr": 0,
+    "Undefined": 0,
+    "UnsupReq": 0,
+    "UnxCmplt": 0
+   }
+  },
+  "0000:06:00.0": {
+   "aer_dev_correctable": {
+    "BadDLLP": 0,
+    "BadTLP": 0,
+    "CorrIntErr": 0,
+    "HeaderOF": 0,
+    "NonFatalErr": 0,
+    "Rollover": 0,
+    "RxErr": 0,
+    "TOTAL_ERR_COR": 0,
+    "Timeout": 0
+   },
+   "aer_dev_fatal": {
+    "ACSViol": 0,
+    "AtomicOpBlocked": 0,
+    "BlockedTLP": 0,
+    "CmpltAbrt": 0,
+    "CmpltTO": 0,
+    "DLP": 0,
+    "DMWrReqBlocked": 0,
+    "ECRC": 0,
+    "FCP": 0,
+    "IDECheck": 0,
+    "MalfTLP": 0,
+    "MisIDETLP": 0,
+    "PCRC_CHECK": 0,
+    "PoisonTLPBlocked": 0,
+    "RxOF": 0,
+    "SDES": 0,
+    "TLP": 0,
+    "TLPBlockedErr": 0,
+    "TLPXlatBlocked": 0,
+    "TOTAL_ERR_FATAL": 0,
+    "UncorrIntErr": 0,
+    "Undefined": 0,
+    "UnsupReq": 0,
+    "UnxCmplt": 0
+   },
+   "aer_dev_nonfatal": {
+    "ACSViol": 0,
+    "AtomicOpBlocked": 0,
+    "BlockedTLP": 0,
+    "CmpltAbrt": 0,
+    "CmpltTO": 0,
+    "DLP": 0,
+    "DMWrReqBlocked": 0,
+    "ECRC": 0,
+    "FCP": 0,
+    "IDECheck": 0,
+    "MalfTLP": 0,
+    "MisIDETLP": 0,
+    "PCRC_CHECK": 0,
+    "PoisonTLPBlocked": 0,
+    "RxOF": 0,
+    "SDES": 0,
+    "TLP": 0,
+    "TLPBlockedErr": 0,
+    "TLPXlatBlocked": 0,
+    "TOTAL_ERR_NONFATAL": 0,
+    "UncorrIntErr": 0,
+    "Undefined": 0,
+    "UnsupReq": 0,
+    "UnxCmplt": 0
+   }
+  },
+  "0000:09:00.0": {
+   "aer_dev_correctable": {
+    "BadDLLP": 0,
+    "BadTLP": 0,
+    "CorrIntErr": 0,
+    "HeaderOF": 0,
+    "NonFatalErr": 0,
+    "Rollover": 0,
+    "RxErr": 0,
+    "TOTAL_ERR_COR": 0,
+    "Timeout": 0
+   },
+   "aer_dev_fatal": {
+    "ACSViol": 0,
+    "AtomicOpBlocked": 0,
+    "BlockedTLP": 0,
+    "CmpltAbrt": 0,
+    "CmpltTO": 0,
+    "DLP": 0,
+    "DMWrReqBlocked": 0,
+    "ECRC": 0,
+    "FCP": 0,
+    "IDECheck": 0,
+    "MalfTLP": 0,
+    "MisIDETLP": 0,
+    "PCRC_CHECK": 0,
+    "PoisonTLPBlocked": 0,
+    "RxOF": 0,
+    "SDES": 0,
+    "TLP": 0,
+    "TLPBlockedErr": 0,
+    "TLPXlatBlocked": 0,
+    "TOTAL_ERR_FATAL": 0,
+    "UncorrIntErr": 0,
+    "Undefined": 0,
+    "UnsupReq": 0,
+    "UnxCmplt": 0
+   },
+   "aer_dev_nonfatal": {
+    "ACSViol": 0,
+    "AtomicOpBlocked": 0,
+    "BlockedTLP": 0,
+    "CmpltAbrt": 0,
+    "CmpltTO": 0,
+    "DLP": 0,
+    "DMWrReqBlocked": 0,
+    "ECRC": 0,
+    "FCP": 0,
+    "IDECheck": 0,
+    "MalfTLP": 0,
+    "MisIDETLP": 0,
+    "PCRC_CHECK": 0,
+    "PoisonTLPBlocked": 0,
+    "RxOF": 0,
+    "SDES": 0,
+    "TLP": 0,
+    "TLPBlockedErr": 0,
+    "TLPXlatBlocked": 0,
+    "TOTAL_ERR_NONFATAL": 0,
+    "UncorrIntErr": 0,
+    "Undefined": 0,
+    "UnsupReq": 0,
+    "UnxCmplt": 0
+   }
+  },
+  "0000:0a:00.0": {
+   "aer_dev_correctable": -1,
+   "aer_dev_fatal": -1,
+   "aer_dev_nonfatal": -1
+  }
+ },
+ "authority_digest": "a97990371dfc684a5ec6ea3899741f894feaec28abe291cad06b981bf8c14106",
+ "boot_id": "34c41853-d054-4c31-8be3-671e887f203c",
+ "campaign_id": "issue232-v2g-pcie-path-remediation",
+ "census_id": "v2g-census-1789915341",
+ "closure_digest": "27aa223314a3a9fec52b136dcf51a3215b3ba077f0f5fe867cdf189878846de2",
+ "cold_cycle_evidence": {
+  "last_x_sha256": "f6856f1b9a13fcc20190cc06d50e10e9a87377274580b185fc98378695cd1850",
+  "prev_boot_ended_without_reboot_target": true,
+  "prev_tail_sha256": "572254cac3e19afff407c9ff517949aef77c56617cca32b1012fa7c55b9a916d",
+  "shutdown_record_present": true
+ },
+ "collected_utc": "2026-09-20T14:42:21.008112+00:00",
+ "derived_chain": {
+  "root_port_bdf": "0000:00:1c.5",
+  "root_port_cap": {
+   "speed": 8.0,
+   "width": 1
+  },
+  "root_port_sta": {
+   "speed": 8.0,
+   "width": 1,
+   "width_downgraded": false
+  },
+  "switch_upstream_bdf": "0000:02:00.0",
+  "switch_upstream_cap": {
+   "speed": 8.0,
+   "width": 16
+  },
+  "switch_upstream_sta": {
+   "speed": 8.0,
+   "width": 1,
+   "width_downgraded": true
+  }
+ },
+ "host_health": {
+  "loadavg": "0.37 0.26 0.11 1/180 1616",
+  "meminfo_bytes": {
+   "MemAvailable": 15613435904,
+   "MemFree": 14203494400,
+   "SwapFree": 8589930496
+  },
+  "monotonic_ns": 176012477267,
+  "uptime": "176.01 303.50"
+ },
+ "journal_aer_event_census": {
+  "announcement_lines": 0,
+  "context_lines": 3,
+  "detail_lines": 178,
+  "events": {
+   "Correctable": 0,
+   "DPC": 0,
+   "Uncorrectable": 0
+  },
+  "events_by_severity_prefix": {},
+  "events_by_source": {},
+  "events_by_type_class": {},
+  "total_lines": 181
+ },
+ "journal_fault_counts": {
+  "amdgpu_failure": 0,
+  "amdgpu_reset": 0,
+  "amdgpu_timeout": 0,
+  "dmar_fault": 0,
+  "fatal_aer": 0,
+  "thermal": 0
+ },
+ "link_sysfs": {
+  "0000:00:1c.0": {
+   "current_link_speed": "2.5 GT/s PCIe",
+   "current_link_width": "1",
+   "max_link_speed": "8.0 GT/s PCIe",
+   "max_link_width": "1"
+  },
+  "0000:00:1c.5": {
+   "current_link_speed": "8.0 GT/s PCIe",
+   "current_link_width": "1",
+   "max_link_speed": "8.0 GT/s PCIe",
+   "max_link_width": "1"
+  },
+  "0000:00:1d.3": {
+   "current_link_speed": null,
+   "current_link_width": null,
+   "max_link_speed": null,
+   "max_link_width": null
+  },
+  "0000:02:00.0": {
+   "current_link_speed": "8.0 GT/s PCIe",
+   "current_link_width": "1",
+   "max_link_speed": "8.0 GT/s PCIe",
+   "max_link_width": "16"
+  },
+  "0000:06:00.0": {
+   "current_link_speed": "8.0 GT/s PCIe",
+   "current_link_width": "16",
+   "max_link_speed": "8.0 GT/s PCIe",
+   "max_link_width": "16"
+  },
+  "0000:09:00.0": {
+   "current_link_speed": "8.0 GT/s PCIe",
+   "current_link_width": "16",
+   "max_link_speed": "8.0 GT/s PCIe",
+   "max_link_width": "16"
+  },
+  "0000:0a:00.0": {
+   "current_link_speed": null,
+   "current_link_width": null,
+   "max_link_speed": null,
+   "max_link_width": null
+  }
+ },
+ "nic": {
+  "enp1s0": {
+   "rx_bytes": 422823,
+   "tx_bytes": 348418
+  },
+  "lo": {
+   "rx_bytes": 15152,
+   "tx_bytes": 15152
+  },
+  "monotonic_ns": 176012479419,
+  "tailscale0": {
+   "rx_bytes": 88543,
+   "tx_bytes": 176945
+  }
+ },
+ "note": "post-intervention-2 (pm8533_upstream_slot_move to root port 00:1c.5) cold boot - FLOOD ABSENT",
+ "probes": [
+  {
+   "argv": [
+    "cat",
+    "/proc/sys/kernel/random/boot_id"
+   ],
+   "name": "boot_id",
+   "returncode": 0,
+   "stdout_rel": "raw/boot_id.stdout",
+   "stdout_sha256": "27fab7536c1591d4f25ade45fe2ebd649519987cf95353eff8307ff62ea3aa93"
+  },
+  {
+   "argv": [
+    "uname",
+    "-a"
+   ],
+   "name": "uname",
+   "returncode": 0,
+   "stdout_rel": "raw/uname.stdout",
+   "stdout_sha256": "f5ef23b711460e6dff85fd1980692a7c1f2a4a621ee5e7dd1da1c6267e1c0ba3"
+  },
+  {
+   "argv": [
+    "cat",
+    "/proc/cmdline"
+   ],
+   "name": "kernel_cmdline",
+   "returncode": 0,
+   "stdout_rel": "raw/kernel_cmdline.stdout",
+   "stdout_sha256": "d8b5ee2ebd3024c8d6c102d0f74fddcd25cff37b7f2776c09806d0462099f147"
+  },
+  {
+   "argv": [
+    "cat",
+    "/proc/uptime"
+   ],
+   "name": "uptime",
+   "returncode": 0,
+   "stdout_rel": "raw/uptime.stdout",
+   "stdout_sha256": "afd4616af6fd6302c3491b21ddb26bce4cc290d2d7684851d2e3611c75398477"
+  },
+  {
+   "argv": [
+    "sudo",
+    "-n",
+    "dmidecode",
+    "-t",
+    "baseboard",
+    "-t",
+    "bios"
+   ],
+   "name": "dmidecode_baseboard",
+   "returncode": 0,
+   "stdout_rel": "raw/dmidecode_baseboard.stdout",
+   "stdout_sha256": "ee0794764c38d4072398a2bde8040b3a69c29559587c2f6b3c16f123ee75259a"
+  },
+  {
+   "argv": [
+    "cat",
+    "/sys/module/amdgpu/version"
+   ],
+   "name": "amdgpu_version",
+   "returncode": 1,
+   "stdout_rel": "raw/amdgpu_version.stdout",
+   "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "argv": [
+    "dpkg-query",
+    "-W",
+    "-f=${Version}\\n",
+    "libvulkan1"
+   ],
+   "name": "vulkan_loader",
+   "returncode": 0,
+   "stdout_rel": "raw/vulkan_loader.stdout",
+   "stdout_sha256": "ca208cfa4c55ff97c31e773a49485237ce1d22fadd913ec6f8606a568d672282"
+  },
+  {
+   "argv": [
+    "ls",
+    "-la",
+    "/usr/share/vulkan/icd.d/"
+   ],
+   "name": "icd_list",
+   "returncode": 0,
+   "stdout_rel": "raw/icd_list.stdout",
+   "stdout_sha256": "d91bcbde5f1f25a9da780c62e722ed849f0a191e7d315c39e063a465f99b2958"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-nn"
+   ],
+   "name": "lspci_nn",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_nn.stdout",
+   "stdout_sha256": "96f42986cbc2d7c727d411b7c2667c6b8552d9c71cf7e10cedd0fc38145015d4"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-tv"
+   ],
+   "name": "lspci_tree",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_tree.stdout",
+   "stdout_sha256": "54a80e1555fbbe1ad2d56259a29e81b6b03f31b7f459619e71a369a4bdcc4d88"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-PP",
+    "-nn",
+    "-vv",
+    "-d",
+    "11f8:8533"
+   ],
+   "name": "lspci_vv_full",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_vv_full.stdout",
+   "stdout_sha256": "248dd06e3e2e41f478a5588f502bc0288ef33d92ec28277d756d5d6741bf2cbd"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-PP",
+    "-nn",
+    "-vv",
+    "-s",
+    "00:00.0"
+   ],
+   "name": "lspci_vv_s_0000-00-00.0",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_vv_s_0000-00-00.0.stdout",
+   "stdout_sha256": "5b2ffbd53a8e93b344999f4d6fd6f8160741dbad217035956c1bc3561dab9020"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-PP",
+    "-nn",
+    "-vv",
+    "-s",
+    "00:1c.0"
+   ],
+   "name": "lspci_vv_s_0000-00-1c.0",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_vv_s_0000-00-1c.0.stdout",
+   "stdout_sha256": "33e6005c7bb288905de0be7faf491846f545b0a4409f07b160055081f2eb7c96"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-PP",
+    "-nn",
+    "-vv",
+    "-s",
+    "00:1c.5"
+   ],
+   "name": "lspci_vv_s_0000-00-1c.5",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_vv_s_0000-00-1c.5.stdout",
+   "stdout_sha256": "08a5da4eaf9f7b17f3ad67cc9d871c3f75c33c7c1cf8cebb517a4e121dad0b79"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-PP",
+    "-nn",
+    "-vv",
+    "-s",
+    "00:1f.0"
+   ],
+   "name": "lspci_vv_s_0000-00-1f.0",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_vv_s_0000-00-1f.0.stdout",
+   "stdout_sha256": "b803a94f4e388636fa3ba88ca5f9146f8ddc173d436e0de09ef19dc17ceb9166"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-PP",
+    "-nn",
+    "-vv",
+    "-d",
+    "1002:6864"
+   ],
+   "name": "lspci_vv_vega",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_vv_vega.stdout",
+   "stdout_sha256": "33836a8fa7b9babdab1cc965f216636a2becd0c6b24124e8bc0705a563b06c49"
+  },
+  {
+   "argv": [
+    "ls",
+    "-la",
+    "/dev/dri/by-path/"
+   ],
+   "name": "render_nodes",
+   "returncode": 0,
+   "stdout_rel": "raw/render_nodes.stdout",
+   "stdout_sha256": "aef54f2ce0512f1d6332f91e6852c58edab452b07da8331b2a4aeff31271f935"
+  },
+  {
+   "argv": [
+    "sudo",
+    "-n",
+    "journalctl",
+    "-b",
+    "-1",
+    "-k",
+    "--no-pager",
+    "-n",
+    "200"
+   ],
+   "name": "prev_boot_journal_tail",
+   "returncode": 0,
+   "stdout_rel": "raw/prev_boot_journal_tail.stdout",
+   "stdout_sha256": "572254cac3e19afff407c9ff517949aef77c56617cca32b1012fa7c55b9a916d"
+  },
+  {
+   "argv": [
+    "last",
+    "-x",
+    "reboot",
+    "shutdown",
+    "-n",
+    "12"
+   ],
+   "name": "prev_boot_last_reboot",
+   "returncode": 0,
+   "stdout_rel": "raw/prev_boot_last_reboot.stdout",
+   "stdout_sha256": "f6856f1b9a13fcc20190cc06d50e10e9a87377274580b185fc98378695cd1850"
+  },
+  {
+   "argv": [
+    "lsusb"
+   ],
+   "name": "lsusb",
+   "returncode": 0,
+   "stdout_rel": "raw/lsusb.stdout",
+   "stdout_sha256": "2689720098158b89d2ad4902efbe448a4ffacd929b38456fbb0e74669d33f686"
+  },
+  {
+   "argv": [
+    "ip",
+    "-brief",
+    "link"
+   ],
+   "name": "nic_state",
+   "returncode": 0,
+   "stdout_rel": "raw/nic_state.stdout",
+   "stdout_sha256": "5fecc044e7e0d52d3d29dd68ddfcb3b4c811e73719c1e495868317ed2ae0c8c3"
+  },
+  {
+   "argv": [
+    "df",
+    "-h",
+    "/"
+   ],
+   "name": "storage",
+   "returncode": 0,
+   "stdout_rel": "raw/storage.stdout",
+   "stdout_sha256": "73f73d2e38e982fde0463eafae30338f5d9d4ad2c16ca5ec8999e67c0ec52697"
+  },
+  {
+   "argv": [
+    "ping",
+    "-c",
+    "3",
+    "-W",
+    "2",
+    "10.0.0.1"
+   ],
+   "name": "gateway_ping",
+   "returncode": 0,
+   "stdout_rel": "raw/gateway_ping.stdout",
+   "stdout_sha256": "535480564835303da1dcad04e361a2604e9efab1e70263267887f3a26f0e2e8b"
+  }
+ ],
+ "producer_head": "c2c39858205203d92f7befb091fb50cb2b521f30",
+ "schema": "inferswarm.v2g.census/1",
+ "storage": {
+  "free_bytes": 162765594624,
+  "write_ok": true
+ },
+ "vega_bdfs": [
+  "0000:06:00.0",
+  "0000:09:00.0"
+ ]
+}
