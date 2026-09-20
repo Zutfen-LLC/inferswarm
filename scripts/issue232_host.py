@@ -359,6 +359,33 @@ def tree_chain_corroborated(tree_text: str, rp_short: str,
     return False
 
 
+def bus00_bridge_bdfs(rows: list[dict[str, Any]]) -> list[str]:
+    """All bus-00 PCI bridges from nn rows (identity-free: root ports
+    are bus-00 bridges regardless of their 8086:xxxx device id — the
+    slot move landed on a295 where the historical port was a29a)."""
+    return sorted(r["bdf"] for r in rows
+                  if "bridge" in r["desc"].lower()
+                  and r["bdf"].startswith("0000:00:"))
+
+
+def collect_vv_bytes(timeout: int = 180) -> str:
+    """Combined `lspci -PP -nn -vv` text for every bus-00 bridge, every
+    PM8533 row, and every Vega row (live). Chain derivation needs the
+    Bus:/LnkSta lines of ALL candidate root ports, not a hardcoded
+    device id."""
+    nn = run_probe(["lspci", "-nn"])["stdout"]
+    rows = parse_lspci_nn(nn)
+    bdfs = sorted(set(bus00_bridge_bdfs(rows))
+                  | {r["bdf"] for r in rows if r["id"] == PM8533_ID}
+                  | {r["bdf"] for r in rows if r["id"] == VEGA_ID})
+    parts = []
+    for bdf in bdfs:
+        parts.append(run_probe(
+            ["lspci", "-PP", "-nn", "-vv", "-s",
+             bdf.removeprefix("0000:")], timeout=timeout)["stdout"])
+    return "\n".join(parts)
+
+
 def derive_chain(lspci_nn_text: str, lspci_tree_text: str,
                  lspci_vv_text: str) -> dict[str, Any]:
     """Derive the CURRENT root-port -> switch-upstream chain from fresh

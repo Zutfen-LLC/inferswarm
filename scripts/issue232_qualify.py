@@ -74,9 +74,7 @@ def run_qualification(*, repo: Path, evidence_root: Path,
     # fresh chain
     nn = host.run_probe(["lspci", "-nn"])["stdout"]
     tree = host.run_probe(["lspci", "-tv"])["stdout"]
-    vv = "\n".join(host.run_probe(
-        ["lspci", "-PP", "-nn", "-vv", "-d", i], timeout=180)["stdout"]
-        for i in (host.PM8533_ID, "8086:a29a", host.VEGA_ID))
+    vv = host.collect_vv_bytes()
     chain = host.derive_chain(nn, tree, vv)
     rows = host.parse_lspci_nn(nn)
     vegas = sorted(r["bdf"] for r in rows if r["id"] == host.VEGA_ID)

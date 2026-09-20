@@ -317,9 +317,7 @@ def run_arm(*, repo: Path, evidence_root: Path, arm: str,
     # fresh chain derivation for the health-window BDF set (control 1:
     # never hardcode the historical upstream BDF after a slot move)
     tree = host.run_probe(["lspci", "-tv"])["stdout"]
-    vv = "\n".join(host.run_probe(
-        ["lspci", "-PP", "-nn", "-vv", "-d", i], timeout=180)["stdout"]
-        for i in (host.PM8533_ID, "8086:a29a", host.VEGA_ID))
+    vv = host.collect_vv_bytes()
     live_chain = host.derive_chain(nn, tree, vv)
     up_bdf = live_chain["switch_upstream_bdf"]
     rp_bdf = live_chain["root_port_bdf"]

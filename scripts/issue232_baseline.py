@@ -113,8 +113,15 @@ def collect_census(*, repo: Path, out: Path, note: str | None = None
     art("lspci_tree", ["lspci", "-tv"])
     art("lspci_vv_full", ["lspci", "-PP", "-nn", "-vv", "-d",
                           "11f8:8533"], timeout=180)
-    art("lspci_vv_bridges", ["lspci", "-PP", "-nn", "-vv", "-d",
-                             "8086:a29a"], timeout=180)
+    # per-BDF vv for EVERY bus-00 bridge + Vega row: root-port device
+    # ids differ across slots (a294/a295/a29a on this PCH family) —
+    # never collect by a single hardcoded id
+    nn_rows0 = host.parse_lspci_nn(
+        (raw / "lspci_nn.stdout").read_text(encoding="utf-8"))
+    for _bdf in host.bus00_bridge_bdfs(nn_rows0):
+        art(f"lspci_vv_s_{_bdf.replace(':', '-')}",
+            ["lspci", "-PP", "-nn", "-vv", "-s",
+             _bdf.removeprefix("0000:")], timeout=180)
     art("lspci_vv_vega", ["lspci", "-PP", "-nn", "-vv", "-d",
                           "1002:6864"], timeout=180)
     art("render_nodes", ["ls", "-la", "/dev/dri/by-path/"])
@@ -135,10 +142,13 @@ def collect_census(*, repo: Path, out: Path, note: str | None = None
     # literals — control 1)
     nn_text = (raw / "lspci_nn.stdout").read_text(encoding="utf-8")
     tree_text = (raw / "lspci_tree.stdout").read_text(encoding="utf-8")
-    vv_text = "\n".join(
-        (raw / n).read_text(encoding="utf-8") for n in
-        ("lspci_vv_full.stdout", "lspci_vv_bridges.stdout",
-         "lspci_vv_vega.stdout"))
+    vv_parts = [(raw / "lspci_vv_full.stdout").read_text(
+        encoding="utf-8")]
+    for _p in sorted(raw.glob("lspci_vv_s_*.stdout")):
+        vv_parts.append(_p.read_text(encoding="utf-8"))
+    vv_parts.append((raw / "lspci_vv_vega.stdout").read_text(
+        encoding="utf-8"))
+    vv_text = "\n".join(vv_parts)
     chain = host.derive_chain(nn_text, tree_text, vv_text)
     rows = host.parse_lspci_nn(nn_text)
     vega_rows = [r for r in rows if r["id"] == host.VEGA_ID]
@@ -223,10 +233,7 @@ def run_observation(*, repo: Path, out: Path, minutes: int,
 
     nn0 = host.run_probe(["lspci", "-nn"])["stdout"]
     tree0 = host.run_probe(["lspci", "-tv"])["stdout"]
-    vv0 = "\n".join(host.run_probe(
-        ["lspci", "-PP", "-nn", "-vv", "-d", i],
-        timeout=180)["stdout"] for i in
-        (host.PM8533_ID, "8086:a29a", host.VEGA_ID))
+    vv0 = host.collect_vv_bytes()
     live_chain = host.derive_chain(nn0, tree0, vv0)
     chain_bdfs = _current_chain_bdfs(repo, live_chain)
 
@@ -276,10 +283,7 @@ def run_observation(*, repo: Path, out: Path, minutes: int,
         }
     nn = host.run_probe(["lspci", "-nn"])["stdout"]
     tree = host.run_probe(["lspci", "-tv"])["stdout"]
-    vv = "\n".join(host.run_probe(
-        ["lspci", "-PP", "-nn", "-vv", "-d", i],
-        timeout=180)["stdout"] for i in
-        (host.PM8533_ID, "8086:a29a", host.VEGA_ID))
+    vv = host.collect_vv_bytes()
     chain = host.derive_chain(nn, tree, vv)
     doc = {
         "schema": "inferswarm.v2g.observation/1",
@@ -383,10 +387,7 @@ def _current_chain_bdfs(repo: Path,
     if chain is None:
         nn = host.run_probe(["lspci", "-nn"])["stdout"]
         tree = host.run_probe(["lspci", "-tv"])["stdout"]
-        vv = "\n".join(host.run_probe(
-            ["lspci", "-PP", "-nn", "-vv", "-d", i],
-            timeout=180)["stdout"] for i in
-            (host.PM8533_ID, "8086:a29a", host.VEGA_ID))
+        vv = host.collect_vv_bytes()
         chain = host.derive_chain(nn, tree, vv)
         rows = host.parse_lspci_nn(nn)
     else:
