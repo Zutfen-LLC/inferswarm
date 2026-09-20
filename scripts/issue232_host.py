@@ -78,7 +78,22 @@ def sysfs_bdf(bdf: str) -> str:
 # ---------------------------------------------------------------------------
 
 def aer_counters(bdf: str) -> dict[str, Any]:
-    """AER sysfs counters for one BDF (parsed name->int, unavailable=-1)."""
+    """AER sysfs counters for one BDF (parsed name->int, unavailable=-1).
+
+    Handles BOTH kernel formats: ``RxErr=93177`` (older) and
+    ``RxErr 93177`` (kernel 7.1.x space-separated pairs). A file that
+    exists but parses to zero counters is marked ``{"_unparseable": -1}``
+    so downstream zero-checks fail closed — an empty dict never
+    masquerades as "no events".
+
+    NOTE (measured 2026-09-20, boot 201768fa): the kernel journal
+    RATE-LIMITS AER prints while the flood runs — sysfs counters are
+    the authoritative per-event count (measured ~8x the journal line
+    count at flood rates: 93,217 cumulative sysfs RxErr vs ~11.2k
+    journal severity lines in the same boot window). Zero-checks
+    require BOTH sources at zero; journal line counts never scale to
+    event counts under rate limiting.
+    """
     base = Path("/sys/bus/pci/devices") / sysfs_bdf(bdf)
     out: dict[str, Any] = {}
     for name in ("aer_dev_correctable", "aer_dev_nonfatal",
@@ -88,14 +103,30 @@ def aer_counters(bdf: str) -> dict[str, Any]:
             out[name] = -1  # unavailable marker (never silently zero)
             continue
         fields: dict[str, int] = {}
-        for token in val.split():
-            if "=" in token:
-                k, v = token.rsplit("=", 1)
+        toks = val.split()
+        if "=" in val:
+            for token in toks:
+                k, sep, v = token.partition("=")
+                if not sep:
+                    continue
                 try:
                     fields[k] = int(v)
                 except ValueError:
                     fields[k] = -1
-        out[name] = fields
+        else:
+            it = iter(toks)
+            for k in it:
+                v = next(it, None)
+                if v is None:
+                    break
+                try:
+                    fields[k] = int(v)
+                except ValueError:
+                    fields[k] = -1
+        if not fields:
+            out[name] = {"_unparseable": -1}  # fail closed
+        else:
+            out[name] = fields
     return out
 
 
