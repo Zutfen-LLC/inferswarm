@@ -321,6 +321,20 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue216_reset.py",
             "scripts/issue216_assemble.py",
             "scripts/issue216_manifest.py",
+            # Issue #228 V2-E: additive V340L inter-die peer-link
+            # campaign producers, independently pinned by the V2-E
+            # evidence manifest and the issue228 producer closure.
+            "scripts/issue228_receipt.py",
+            "scripts/issue228_freeze.py",
+            "scripts/issue228_authority.py",
+            "scripts/issue228_host.py",
+            "scripts/issue228_capability.py",
+            "scripts/issue228_probe.py",
+            "scripts/issue228_ladder.py",
+            "scripts/issue228_baselines.py",
+            "scripts/issue228_reduce.py",
+            "scripts/issue228_assemble.py",
+            "scripts/issue228_manifest.py",
             # Issue #213 campaign gate ordering: orchestration tooling and
             # CI registration, independently covered by its own group.
             "scripts/issue213_gate_orchestration.py",

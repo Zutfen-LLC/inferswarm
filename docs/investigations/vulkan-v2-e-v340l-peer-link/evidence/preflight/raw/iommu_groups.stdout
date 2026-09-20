@@ -1,0 +1,44 @@
+== group 0
+0000:00:02.0 00:02.0 VGA compatible controller [0300]: Intel Corporation HD Graphics 510 [8086:1902] (rev 06)
+== group 1
+0000:00:00.0 00:00.0 Host bridge [0600]: Intel Corporation Xeon E3-1200 v5/E3-1500 v5/6th Gen Core Processor Host Bridge/DRAM Registers [8086:190f] (rev 07)
+== group 10
+0000:02:00.0 02:00.0 PCI bridge [0604]: Microchip Technology PM8533 PFX 48xG3 PCIe Fanout Switch [11f8:8533]
+== group 11
+0000:03:00.0 03:00.0 PCI bridge [0604]: Microchip Technology PM8533 PFX 48xG3 PCIe Fanout Switch [11f8:8533]
+== group 12
+0000:03:01.0 03:01.0 PCI bridge [0604]: Microchip Technology PM8533 PFX 48xG3 PCIe Fanout Switch [11f8:8533]
+== group 13
+0000:04:00.0 04:00.0 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Vega 10 PCIe Bridge [1022:1470] (rev 05)
+== group 14
+0000:05:00.0 05:00.0 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Vega 10 PCIe Bridge [1022:1471]
+== group 15
+0000:06:00.0 06:00.0 Display controller [0380]: Advanced Micro Devices, Inc. [AMD/ATI] Vega 10 [Radeon Pro V340/Instinct MI25x2] [1002:6864] (rev 05)
+== group 16
+0000:07:00.0 07:00.0 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Vega 10 PCIe Bridge [1022:1470] (rev 05)
+== group 17
+0000:08:00.0 08:00.0 PCI bridge [0604]: Advanced Micro Devices, Inc. [AMD] Vega 10 PCIe Bridge [1022:1471]
+== group 18
+0000:09:00.0 09:00.0 Display controller [0380]: Advanced Micro Devices, Inc. [AMD/ATI] Vega 10 [Radeon Pro V340/Instinct MI25x2] [1002:6864] (rev 05)
+== group 19
+0000:0a:00.0 0a:00.0 VGA compatible controller [0300]: NVIDIA Corporation GA104 [GeForce RTX 3060 Ti Lite Hash Rate] [10de:2489] (rev a1)
+0000:0a:00.1 0a:00.1 Audio device [0403]: NVIDIA Corporation GA104 High Definition Audio Controller [10de:228b] (rev a1)
+== group 2
+0000:00:08.0 00:08.0 System peripheral [0880]: Intel Corporation Xeon E3-1200 v5/v6 / E3-1500 v5 / 6th/7th/8th Gen Core Processor Gaussian Mixture Model [8086:1911]
+== group 3
+0000:00:14.0 00:14.0 USB controller [0c03]: Intel Corporation 200 Series/Z370 Chipset Family USB 3.0 xHCI Controller [8086:a2af]
+0000:00:14.2 00:14.2 Signal processing controller [1180]: Intel Corporation 200 Series PCH Thermal Subsystem [8086:a2b1]
+== group 4
+0000:00:16.0 00:16.0 Communication controller [0780]: Intel Corporation 200 Series PCH CSME HECI #1 [8086:a2ba]
+== group 5
+0000:00:1c.0 00:1c.0 PCI bridge [0604]: Intel Corporation 200 Series PCH PCI Express Root Port #5 [8086:a294] (rev f0)
+== group 6
+0000:00:1d.0 00:1d.0 PCI bridge [0604]: Intel Corporation 200 Series PCH PCI Express Root Port #11 [8086:a29a] (rev f0)
+== group 7
+0000:00:1d.3 00:1d.3 PCI bridge [0604]: Intel Corporation 200 Series PCH PCI Express Root Port #12 [8086:a29b] (rev f0)
+== group 8
+0000:00:1f.0 00:1f.0 ISA bridge [0601]: Intel Corporation 200 Series PCH LPC Controller (B250) [8086:a2c8]
+0000:00:1f.2 00:1f.2 Memory controller [0580]: Intel Corporation 200 Series/Z370 Chipset Family Power Management Controller [8086:a2a1]
+0000:00:1f.4 00:1f.4 SMBus [0c05]: Intel Corporation 200 Series/Z370 Chipset Family SMBus Controller [8086:a2a3]
+== group 9
+0000:01:00.0 01:00.0 Ethernet controller [0200]: Realtek Semiconductor Co., Ltd. RTL8111/8168/8211/8411 PCI Express Gigabit Ethernet Controller [10ec:8168] (rev 07)

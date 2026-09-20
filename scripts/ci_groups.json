@@ -189,6 +189,8 @@
     "test_issue219_v2d0_overlap_seam",
     "test_issue216_v2d_concurrent",
     "test_issue216_v2d_assembler",
+    "test_issue228_v2e_peer_link",
+    "test_issue228_v2e_assembler",
     "test_issue35_link_probe",
     "test_issue35_role_sweep",
     "test_issue35_envelope",
@@ -366,6 +368,9 @@
    "vulkan-v0-b"
   ],
   "docs/investigations/vulkan-v2-d0-overlap-seam/": [
+   "vulkan-v0-b"
+  ],
+  "docs/investigations/vulkan-v2-e-v340l-peer-link/": [
    "vulkan-v0-b"
   ],
   "docs/project-status.json": [
@@ -1054,6 +1059,39 @@
   "scripts/issue222_r7c.py": [
    "issue-222-r7c"
   ],
+  "scripts/issue228_assemble.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue228_authority.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue228_baselines.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue228_capability.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue228_freeze.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue228_host.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue228_ladder.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue228_manifest.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue228_probe.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue228_receipt.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue228_reduce.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "vulkan-v0-b"
   ],
@@ -1311,6 +1349,12 @@
   ],
   "tests/test_issue222_r7c.py": [
    "issue-222-r7c"
+  ],
+  "tests/test_issue228_v2e_assembler.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_issue228_v2e_peer_link.py": [
+   "vulkan-v0-b"
   ],
   "tests/test_issue35_corrections.py": [
    "vulkan-v0-b"

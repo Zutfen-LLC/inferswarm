@@ -1250,6 +1250,16 @@ class PreservationTests(unittest.TestCase):
                             "tests/issue216_v2d_fixtures.py",
                             "tests/fixtures_v2d_identity_probe_bytes.json",
                             "docs/investigations/vulkan-v2-d-v340l-concurrent/",
+                            # Issue #228 V2-E: additive inter-die
+                            # peer-link campaign surface pending on main.
+                            "scripts/issue228_",
+                            "tests/test_issue228_",
+                            # Issue #228 correction round 1: the
+                            # recording Vulkan stub the corrected
+                            # census contract tests compile the real
+                            # embedded C against (same #228 surface).
+                            "tests/issue228_vk_stub/",
+                            "docs/investigations/vulkan-v2-e-v340l-peer-link/",
                             "docs/hardware/",
                             # Issue #222 R7-C: additive current-fleet
                             # physical-feasibility surface (evidence

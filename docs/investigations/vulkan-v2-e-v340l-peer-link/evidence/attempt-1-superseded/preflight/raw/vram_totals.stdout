@@ -1,0 +1,15 @@
+== /sys/class/drm/card0/device
+== /sys/class/drm/card0-DP-1/device
+== /sys/class/drm/card0-DP-2/device
+== /sys/class/drm/card0-HDMI-A-1/device
+== /sys/class/drm/card0-HDMI-A-2/device
+== /sys/class/drm/card0-HDMI-A-3/device
+== /sys/class/drm/card1/device
+8573157376
+== /sys/class/drm/card2/device
+8573157376
+== /sys/class/drm/card3/device
+== /sys/class/drm/card3-DP-3/device
+== /sys/class/drm/card3-DP-4/device
+== /sys/class/drm/card3-DP-5/device
+== /sys/class/drm/card3-HDMI-A-4/device
