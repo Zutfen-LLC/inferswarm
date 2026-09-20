@@ -851,6 +851,17 @@ class TestHistoricalAmendmentAssembler(unittest.TestCase):
                                         "physical producers changed"):
                 asm.assemble(repo=repo, evidence_root=ev)
 
+    def test_malformed_amendment_rejected_by_real_assembler(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo, ev, _ = self._fixture(Path(td))
+            amendment = repo / rc.AREA_REL / "AMENDMENTS.json"
+            doc = json.loads(amendment.read_text())
+            doc["schema"] = "wrong"
+            amendment.write_text(json.dumps(doc))
+            with self.assertRaisesRegex(fz.FreezeError,
+                                        "amendment record schema mismatch"):
+                asm.assemble(repo=repo, evidence_root=ev)
+
 
 class TestRetainedEvidenceRegression(unittest.TestCase):
     """The REAL retained #232 evidence must reduce to
