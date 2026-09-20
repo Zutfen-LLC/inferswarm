@@ -351,7 +351,21 @@ class Issue184PreservationTests(unittest.TestCase):
             # (workflow_dispatch-only, exact-SHA bound); no producer or
             # retained-evidence surface, independently covered by the
             # issue-213-gate-ordering CI group.
-            ".github/workflows/final-cpu-validation.yml")
+            ".github/workflows/final-cpu-validation.yml",
+            # Issue #230 V2-F: additive external-memory transfer campaign
+            # producers, independently pinned by the V2-F evidence
+            # manifest and the issue230 producer closure.
+            "scripts/issue230_receipt.py",
+            "scripts/issue230_freeze.py",
+            "scripts/issue230_authority.py",
+            "scripts/issue230_host.py",
+            "scripts/issue230_preflight.py",
+            "scripts/issue230_safety.py",
+            "scripts/issue230_transfer.py",
+            "scripts/issue230_runner.py",
+            "scripts/issue230_reduce.py",
+            "scripts/issue230_assemble.py",
+            "scripts/issue230_manifest.py")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)
 
