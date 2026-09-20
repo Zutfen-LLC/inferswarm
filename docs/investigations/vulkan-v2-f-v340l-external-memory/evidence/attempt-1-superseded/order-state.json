@@ -1,0 +1,18 @@
+{
+ "campaign_id": "issue230-v2f-v340l-external-memory",
+ "chain_digest": "442289df74a228944c0ffbf0114b57ef6a9826b8f694b6673b3ea2bb2e2f2c57",
+ "entries": [
+  {
+   "arm": "probe-opaque_fd-a_to_b",
+   "detail": {
+    "failed_size": 4096,
+    "stderr_excerpt": "{\"event\":\"error\",\"stage\":\"fd_import_properties\",\"vkResult\":-1000072003,\"detail\":\"vkGetMemoryFdPropertiesKHR rejected the fd for this handle type\"}\n",
+    "stop_condition": "nonzero_probe_exit",
+    "validation_error": null
+   },
+   "recorded_utc": "2026-09-20T06:13:27.522980+00:00",
+   "state": "failed"
+  }
+ ],
+ "schema": "inferswarm.v2f.execution-order/1"
+}

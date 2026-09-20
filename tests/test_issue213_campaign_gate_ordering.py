@@ -1284,7 +1284,15 @@ class PreservationTests(unittest.TestCase):
                             # issue-213-gate-ordering group.
                             ".github/workflows/final-cpu-validation.yml",
                             "tests/test_issue226_final_validation_ci.py",
-                            "docs/ci-impact-planning.md")
+                            "docs/ci-impact-planning.md",
+                            # Issue #230 V2-F: additive external-memory
+                            # transfer campaign surface (evidence
+                            # namespace, producers, stub, regression
+                            # modules) pending on main.
+                            "scripts/issue230_",
+                            "tests/test_issue230_",
+                            "tests/issue230_vk_stub/",
+                            "docs/investigations/vulkan-v2-f-v340l-external-memory/")
         for path in changed:
             self.assertTrue(path.startswith(allowed_prefixes),
                             f"unexpected changed path: {path}")

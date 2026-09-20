@@ -1,0 +1,163 @@
+==   97968 D<   dma_fence_default_wait                   [kworker/u9:8+ttm]
+[<0>] dma_fence_default_wait+0x1dc/0x2c0
+[<0>] dma_fence_wait_timeout+0xc8/0x1a0
+[<0>] dma_resv_wait_timeout+0xc1/0x1d0
+[<0>] ttm_bo_delayed_delete+0x32/0x90 [ttm]
+[<0>] process_one_work+0x198/0x390
+[<0>] worker_thread+0x1af/0x320
+[<0>] kthread+0xe3/0x120
+[<0>] ret_from_fork+0x2ba/0x340
+[<0>] ret_from_fork_asm+0x1a/0x30
+
+==  169843 D<   dma_fence_default_wait                   [kworker/u9:1+ttm]
+[<0>] dma_fence_default_wait+0x1dc/0x2c0
+[<0>] dma_fence_wait_timeout+0xc8/0x1a0
+[<0>] dma_resv_wait_timeout+0xc1/0x1d0
+[<0>] ttm_bo_delayed_delete+0x32/0x90 [ttm]
+[<0>] process_one_work+0x198/0x390
+[<0>] worker_thread+0x1af/0x320
+[<0>] kthread+0xe3/0x120
+[<0>] ret_from_fork+0x2ba/0x340
+[<0>] ret_from_fork_asm+0x1a/0x30
+
+==  169845 D<   dma_fence_default_wait                   [kworker/u9:3+ttm]
+[<0>] dma_fence_default_wait+0x1dc/0x2c0
+[<0>] dma_fence_wait_timeout+0xc8/0x1a0
+[<0>] dma_resv_wait_timeout+0xc1/0x1d0
+[<0>] ttm_bo_delayed_delete+0x32/0x90 [ttm]
+[<0>] process_one_work+0x198/0x390
+[<0>] worker_thread+0x1af/0x320
+[<0>] kthread+0xe3/0x120
+[<0>] ret_from_fork+0x2ba/0x340
+[<0>] ret_from_fork_asm+0x1a/0x30
+
+==  169847 D<   dma_fence_default_wait                   [kworker/u9:5+ttm]
+[<0>] dma_fence_default_wait+0x1dc/0x2c0
+[<0>] dma_fence_wait_timeout+0xc8/0x1a0
+[<0>] dma_resv_wait_timeout+0xc1/0x1d0
+[<0>] ttm_bo_delayed_delete+0x32/0x90 [ttm]
+[<0>] process_one_work+0x198/0x390
+[<0>] worker_thread+0x1af/0x320
+[<0>] kthread+0xe3/0x120
+[<0>] ret_from_fork+0x2ba/0x340
+[<0>] ret_from_fork_asm+0x1a/0x30
+
+==  169877 D<   dma_fence_default_wait                   [kworker/u9:12+ttm]
+[<0>] dma_fence_default_wait+0x1dc/0x2c0
+[<0>] dma_fence_wait_timeout+0xc8/0x1a0
+[<0>] dma_resv_wait_timeout+0xc1/0x1d0
+[<0>] ttm_bo_delayed_delete+0x32/0x90 [ttm]
+[<0>] process_one_work+0x198/0x390
+[<0>] worker_thread+0x1af/0x320
+[<0>] kthread+0xe3/0x120
+[<0>] ret_from_fork+0x2ba/0x340
+[<0>] ret_from_fork_asm+0x1a/0x30
+
+==  169879 D<   dma_fence_default_wait                   [kworker/u9:14+ttm]
+[<0>] dma_fence_default_wait+0x1dc/0x2c0
+[<0>] dma_fence_wait_timeout+0xc8/0x1a0
+[<0>] dma_resv_wait_timeout+0xc1/0x1d0
+[<0>] ttm_bo_delayed_delete+0x32/0x90 [ttm]
+[<0>] process_one_work+0x198/0x390
+[<0>] worker_thread+0x1af/0x320
+[<0>] kthread+0xe3/0x120
+[<0>] ret_from_fork+0x2ba/0x340
+[<0>] ret_from_fork_asm+0x1a/0x30
+
+==  172335 D    dm_suspend                               [kworker/u8:2+amdgpu-reset-dev]
+[<0>] dm_suspend+0x15e/0x360 [amdgpu]
+[<0>] amdgpu_ip_block_suspend+0x27/0x40 [amdgpu]
+[<0>] amdgpu_device_ip_suspend_phase1+0x98/0x130 [amdgpu]
+[<0>] amdgpu_device_pre_asic_reset+0xef/0x560 [amdgpu]
+[<0>] amdgpu_device_asic_reset+0x45/0x4db [amdgpu]
+[<0>] amdgpu_device_gpu_recover.cold+0x25f/0x2bb [amdgpu]
+[<0>] amdgpu_job_timedout.cold+0x2ea/0x390 [amdgpu]
+[<0>] drm_sched_job_timedout+0x7e/0x160 [gpu_sched]
+[<0>] process_one_work+0x198/0x390
+[<0>] worker_thread+0x1af/0x320
+[<0>] kthread+0xe3/0x120
+[<0>] ret_from_fork+0x2ba/0x340
+[<0>] ret_from_fork_asm+0x1a/0x30
+
+==  172443 D<   dma_fence_default_wait                   [kworker/u9:0+ttm]
+[<0>] dma_fence_default_wait+0x1dc/0x2c0
+[<0>] dma_fence_wait_timeout+0xc8/0x1a0
+[<0>] dma_resv_wait_timeout+0xc1/0x1d0
+[<0>] ttm_bo_delayed_delete+0x32/0x90 [ttm]
+[<0>] process_one_work+0x198/0x390
+[<0>] worker_thread+0x1af/0x320
+[<0>] kthread+0xe3/0x120
+[<0>] ret_from_fork+0x2ba/0x340
+[<0>] ret_from_fork_asm+0x1a/0x30
+
+==  172444 D<   dma_fence_default_wait                   [kworker/u9:4+ttm]
+[<0>] dma_fence_default_wait+0x1dc/0x2c0
+[<0>] dma_fence_wait_timeout+0xc8/0x1a0
+[<0>] dma_resv_wait_timeout+0xc1/0x1d0
+[<0>] ttm_bo_delayed_delete+0x32/0x90 [ttm]
+[<0>] process_one_work+0x198/0x390
+[<0>] worker_thread+0x1af/0x320
+[<0>] kthread+0xe3/0x120
+[<0>] ret_from_fork+0x2ba/0x340
+[<0>] ret_from_fork_asm+0x1a/0x30
+
+==  172445 D<   dma_fence_default_wait                   [kworker/u9:6+ttm]
+[<0>] dma_fence_default_wait+0x1dc/0x2c0
+[<0>] dma_fence_wait_timeout+0xc8/0x1a0
+[<0>] dma_resv_wait_timeout+0xc1/0x1d0
+[<0>] ttm_bo_delayed_delete+0x32/0x90 [ttm]
+[<0>] process_one_work+0x198/0x390
+[<0>] worker_thread+0x1af/0x320
+[<0>] kthread+0xe3/0x120
+[<0>] ret_from_fork+0x2ba/0x340
+[<0>] ret_from_fork_asm+0x1a/0x30
+
+==  172446 D<   dma_fence_default_wait                   [kworker/u9:7+ttm]
+[<0>] dma_fence_default_wait+0x1dc/0x2c0
+[<0>] dma_fence_wait_timeout+0xc8/0x1a0
+[<0>] dma_resv_wait_timeout+0xc1/0x1d0
+[<0>] ttm_bo_delayed_delete+0x32/0x90 [ttm]
+[<0>] process_one_work+0x198/0x390
+[<0>] worker_thread+0x1af/0x320
+[<0>] kthread+0xe3/0x120
+[<0>] ret_from_fork+0x2ba/0x340
+[<0>] ret_from_fork_asm+0x1a/0x30
+
+==  172447 D<   dma_fence_default_wait                   [kworker/u9:10+ttm]
+[<0>] dma_fence_default_wait+0x1dc/0x2c0
+[<0>] dma_fence_wait_timeout+0xc8/0x1a0
+[<0>] dma_resv_wait_timeout+0xc1/0x1d0
+[<0>] ttm_bo_delayed_delete+0x32/0x90 [ttm]
+[<0>] process_one_work+0x198/0x390
+[<0>] worker_thread+0x1af/0x320
+[<0>] kthread+0xe3/0x120
+[<0>] ret_from_fork+0x2ba/0x340
+[<0>] ret_from_fork_asm+0x1a/0x30
+
+==  172475 D<   dma_fence_default_wait                   [kworker/u9:15+ttm]
+[<0>] dma_fence_default_wait+0x1dc/0x2c0
+[<0>] dma_fence_wait_timeout+0xc8/0x1a0
+[<0>] dma_resv_wait_timeout+0xc1/0x1d0
+[<0>] ttm_bo_delayed_delete+0x32/0x90 [ttm]
+[<0>] process_one_work+0x198/0x390
+[<0>] worker_thread+0x1af/0x320
+[<0>] kthread+0xe3/0x120
+[<0>] ret_from_fork+0x2ba/0x340
+[<0>] ret_from_fork_asm+0x1a/0x30
+
+==  173158 D    dma_fence_default_wait                   [issue230_transf]
+[<0>] dma_fence_default_wait+0x1dc/0x2c0
+[<0>] dma_fence_wait_timeout+0xc8/0x1a0
+[<0>] amdgpu_vm_fini+0xf1/0x6e0 [amdgpu]
+[<0>] amdgpu_driver_postclose_kms+0x1ac/0x290 [amdgpu]
+[<0>] drm_file_free+0x228/0x290 [drm]
+[<0>] drm_release+0x5c/0xe0 [drm]
+[<0>] amdgpu_drm_release+0x5f/0xd0 [amdgpu]
+[<0>] __fput+0xe6/0x2b0
+[<0>] task_work_run+0x5c/0x90
+[<0>] do_exit+0x2e5/0xab0
+[<0>] do_group_exit+0x30/0x80
+[<0>] __x64_sys_exit_group+0x18/0x20
+[<0>] x64_sys_call+0x102c/0x1530
+[<0>] do_syscall_64+0xea/0x640
+[<0>] entry_SYSCALL_64_after_hwframe+0x76/0x7e

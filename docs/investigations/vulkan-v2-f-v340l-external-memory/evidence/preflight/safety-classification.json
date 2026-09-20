@@ -1,0 +1,47 @@
+{
+ "campaign_id": "issue230-v2f-v340l-external-memory",
+ "candidate_seam": {
+  "health_telemetry": "per-arm AER deltas on all 7 health BDFs, amdgpu journal fault scan with cursor chaining, link state at every topology hop, VRAM/busy telemetry, host reachability sentinel (gateway ping), NIC byte counters, storage sentinel",
+  "host_upstream_traffic_expected": " Vulkan API/submit traffic only (kilobytes of command stream over the x1 link); the data path under test is the imported-memory copy itself, whose route is measured, not assumed",
+  "immediate_stop_conditions": [
+   "correctness mismatch",
+   "ring timeout / hang",
+   "GPU reset or failed reset",
+   "device disappearance",
+   "fatal/nonfatal uncorrectable PCIe/AER fault",
+   "kernel wedge",
+   "host reachability loss",
+   "thermal critical condition",
+   "unexpected fallback/staging that invalidates the arm's label",
+   "any nonzero probe exit (fail-closed evidence failure)"
+  ],
+  "initial_size": 4096,
+  "material_differences": [
+   "no transport/serving stack: no llama.cpp, no model, no sustained request loop; single bounded copies only",
+   "no concurrency: exactly one submit in flight on the whole platform at any instant (the #216 fault struck under concurrent dual-die transport load)",
+   "per-die queue submission through dedicated logical devices created from UUID-bound physical devices (not a device-group mask over one logical device)",
+   "immediate-stop on the first anomaly with retained earliest failure; the #216 campaign escalated to soak after faults",
+   "size ladder starts at 4 KiB \u2014 the #216 fault occurred at sustated transport scale, orders of magnitude above every early rung of this ladder"
+  ],
+  "mechanism": "Vulkan external-memory fd export/import between two logical devices, one per Vega die, executing one fence-ordered vkCmdCopyBuffer of a bounded buffer, sequential (never concurrent with any other GPU work in this campaign)",
+  "refusal_basis": null,
+  "repetition_policy": "5 retained measured reps + 1 warmup per size/direction, sequential; the first physical execution is a single 4-KiB probe",
+  "synchronization_model": "explicit VkFence per submit; vkWaitForFences before any subsequent operation; no timeline semaphores, no concurrent access, no persistent submission threads"
+ },
+ "captured_utc": "2026-09-20T06:18:43.800670+00:00",
+ "classification": "MATERIALLY_DIFFERENT_BOUNDED_PROBE",
+ "faulting_seam": {
+  "fault": "amdgpu ring-gfx timeout on die B 0000:09:00.0, signaled seq=5131 emitted seq=5132, driver-initiated GPU reset FAILED ret=-62, reset kworker wedged in dm_suspend",
+  "issue": 216,
+  "mechanism": "accepted #35 per-die x1 transport probe: llama.cpp serve/transport load driven through the host-facing Gen3 x1 upstream link under sustained CONCURRENT dual-die load",
+  "terminal": "V2D_V340L_PLATFORM_STRESS_FAIL"
+ },
+ "first_physical_execution": {
+  "direction": "a_to_b",
+  "mechanism": "opaque_fd",
+  "repetitions": 1,
+  "size_bytes": 4096
+ },
+ "inherited_constraint": "V2D_V340L_PLATFORM_STRESS_FAIL stands; the #35 transport seam is never executed by this campaign; absence of a fault in this mechanism is not permission for unbounded stress",
+ "schema": "inferswarm.v2f.safety-classification/1"
+}

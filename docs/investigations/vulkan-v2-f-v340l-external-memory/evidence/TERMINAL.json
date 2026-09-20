@@ -1,0 +1,33 @@
+{
+ "attempt": "v1",
+ "campaign_id": "issue230-v2f-v340l-external-memory",
+ "campaign_window_utc": [
+  "2026-09-20T06:45:04.308363+00:00",
+  "2026-09-20T06:45:04.309236+00:00"
+ ],
+ "closure_digest": "0d9a17b97ef1cbea8c10850d4b95044a14fd6cd6d43c85e97296339015a87bf7",
+ "nonclaims": [
+  "no coherent 16-GiB GPU address space claimed",
+  "no xGMI / Infinity Fabric claimed",
+  "no unified-memory semantics claimed",
+  "no model inference correctness or utility claimed",
+  "no production V340L support claimed",
+  "no multi-card X12 compatibility claimed",
+  "no sustained/soak stability claimed",
+  "no safety claim for the #216 faulting transport mechanism",
+  "advertisement is never conflated with validated execution",
+  "validated execution is never conflated with route proof"
+ ],
+ "producer_head": "30cf699688aa3d718fb475f5390317ebb4ba7385",
+ "schema": "inferswarm.v2f.terminal/1",
+ "terminal": "V2F_V340L_PLATFORM_STRESS_FAIL",
+ "vocabulary": [
+  "V2F_V340L_EXTERNAL_MEMORY_LOCAL_P2P_PASS",
+  "V2F_V340L_EXTERNAL_MEMORY_FUNCTIONAL_ROUTE_UNRESOLVED",
+  "V2F_V340L_EXTERNAL_MEMORY_UPSTREAM_ROUTED",
+  "V2F_V340L_EXTERNAL_MEMORY_PARTIAL",
+  "V2F_V340L_EXTERNAL_MEMORY_UNAVAILABLE",
+  "V2F_V340L_PLATFORM_STRESS_FAIL",
+  "V2F_EVIDENCE_BLOCKED"
+ ]
+}

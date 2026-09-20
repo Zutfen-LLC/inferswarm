@@ -1,0 +1,187 @@
+{
+ "accepted_sources": {
+  "v2b": {
+   "authorities": {
+    "a": {
+     "path": "docs/investigations/vulkan-v2-b-v340l/AUTHORITY-V340L-A.json",
+     "sha256": "59e2429914564b9bfc8a4d5a33a303d10f3fbd8e6dbecfdb8fcee5723ca61f54"
+    },
+    "b": {
+     "path": "docs/investigations/vulkan-v2-b-v340l/AUTHORITY-V340L-B.json",
+     "sha256": "109f5752a30ab1befca68118b3fa8e7c770cf083b302054025908a60da200eab"
+    }
+   },
+   "manifest": {
+    "path": "docs/investigations/vulkan-v2-b-v340l/MANIFEST.sha256",
+    "rows": 128
+   },
+   "merge": "f91119d05e7079c780b7b88be6138fed0920b759",
+   "terminal": {
+    "path": "docs/investigations/vulkan-v2-b-v340l/TERMINAL.json",
+    "required_terminal": "V2B_V340L_DUAL_DIE_QUALIFICATION_PASS",
+    "sha256": "fb9e1c5c6cd6934cc035b7d5b05e4a3342770bc85ba878d65533e5f54ae76147"
+   }
+  },
+  "v2c": {
+   "authorities": {
+    "a": {
+     "path": "docs/investigations/vulkan-v2-c-v340l-platform-stability/AUTHORITY-V2C-V2-FINAL-A.json",
+     "sha256": "078d46a8b088ff7eb91041f3df866b963f7f64b8a1bf85859f406ae3f8120b33"
+    },
+    "b": {
+     "path": "docs/investigations/vulkan-v2-c-v340l-platform-stability/AUTHORITY-V2C-V2-FINAL-B.json",
+     "sha256": "3cff3ed7cb1e222a724fe4130938fcb1bfd0af37a528498a6504f01c01912c69"
+    }
+   },
+   "manifest": {
+    "path": "docs/investigations/vulkan-v2-c-v340l-platform-stability/MANIFEST.sha256",
+    "rows": 1279
+   },
+   "merge": "605d0b465dc2bd015a7c832c6744adcd7aefeb61",
+   "terminal": {
+    "path": "docs/investigations/vulkan-v2-c-v340l-platform-stability/cycles-v2/TERMINAL-V2.json",
+    "required_terminal": "V2C_V340L_PLATFORM_STABILITY_PASS",
+    "sha256": "497b5b966fa658657105ba2212fdf2f07bd14840a02db24d7d8297d12c8c97fe"
+   }
+  },
+  "v2d": {
+   "fault_evidence": {
+    "path": "docs/investigations/vulkan-v2-d-v340l-concurrent/evidence/ASSEMBLY.json",
+    "sha256": "e63570132fdd978c2e6184433ff7ac91329f8cc863b13686c4ba53de2c45f44f"
+   },
+   "manifest": {
+    "path": "docs/investigations/vulkan-v2-d-v340l-concurrent/MANIFEST.sha256",
+    "rows": 911
+   },
+   "merge": "fe690249873a9bf7ca19d788a2fab5e580473394",
+   "terminal": {
+    "path": "docs/investigations/vulkan-v2-d-v340l-concurrent/evidence/TERMINAL.json",
+    "required_terminal": "V2D_V340L_PLATFORM_STRESS_FAIL",
+    "sha256": "71f38bff6f6a5300b55f90515a60c100105c649406baa65634a63e3c713327f0"
+   }
+  },
+  "v2e": {
+   "census": {
+    "advertised_bidirectional_amended": [
+     "dma_buf",
+     "opaque_fd"
+    ],
+    "assembly": {
+     "path": "docs/investigations/vulkan-v2-e-v340l-peer-link/evidence/ASSEMBLY.json",
+     "sha256": "2aa5543b734a34b8934c100a36918381a4a5f318662db4e80c3563de0e6e4dd1"
+    },
+    "attempt": "pf2",
+    "external_memory_directions": {
+     "dma_buf": {
+      "a_to_b": {
+       "compatible_handle_types_ok": 0,
+       "destination_importable": true,
+       "source_exportable": true,
+       "usable": 0
+      },
+      "b_to_a": {
+       "compatible_handle_types_ok": 0,
+       "destination_importable": true,
+       "source_exportable": true,
+       "usable": 0
+      }
+     },
+     "opaque_fd": {
+      "a_to_b": {
+       "compatible_handle_types_ok": 1,
+       "destination_importable": true,
+       "source_exportable": true,
+       "usable": 1
+      },
+      "b_to_a": {
+       "compatible_handle_types_ok": 1,
+       "destination_importable": true,
+       "source_exportable": true,
+       "usable": 1
+      }
+     }
+    },
+    "mapping": {
+     "path": "docs/investigations/vulkan-v2-e-v340l-peer-link/evidence/preflight/mapping/fresh-mapping.json",
+     "sha256": "ed7ad2c9bb14d0ff7241746b96afe6cc6b8ba59622cd3a51ed94b4a97f252fa1"
+    },
+    "note": "advertisement authority ONLY (accepted round-2 amended classification over the unchanged pf2 raw bytes): property-query advertisement, zero transfers, no validated execution (V2E_EVIDENCE_BLOCKED)",
+    "preflight": {
+     "path": "docs/investigations/vulkan-v2-e-v340l-peer-link/evidence/preflight/preflight.json",
+     "sha256": "4f24348908d9f076646565f08844e261075eb4b3f24c616b2a8ce856b3090bf0"
+    },
+    "raw": [
+     {
+      "path": "docs/investigations/vulkan-v2-e-v340l-peer-link/evidence/preflight/raw/capability-probe.stdout",
+      "sha256": "88bfc8f739589965a2ef59b210500e26dc6d62dca01ca2fc87431ff8df5db248"
+     },
+     {
+      "path": "docs/investigations/vulkan-v2-e-v340l-peer-link/evidence/preflight/raw/ext-matrix.stdout",
+      "sha256": "715612501c2a95efb2759358e1ce876bb74e3323d34b7be9ea0bc2b013b3b0a9"
+     }
+    ],
+    "usable_handle_types_frozen_validator": [
+     "opaque_fd"
+    ]
+   },
+   "manifest": {
+    "path": "docs/investigations/vulkan-v2-e-v340l-peer-link/MANIFEST.sha256",
+    "rows": 156
+   },
+   "merge": "78a91de435ffc9e1678574a754bbdd49d67dbd7a",
+   "terminal": {
+    "path": "docs/investigations/vulkan-v2-e-v340l-peer-link/evidence/TERMINAL.json",
+    "required_terminal": "V2E_EVIDENCE_BLOCKED",
+    "sha256": "9e6ad02d41bcc818f1224c0b045980deee67ab39203bf5e77afebd17bfa650b3"
+   }
+  }
+ },
+ "authority_digest": "f6cc23066105c2612c7dc0166d9ded4b529df494c6fa913327c93fe09c702e6b",
+ "campaign_id": "issue230-v2f-v340l-external-memory",
+ "historical_qualification_bindings": {
+  "a": {
+   "pci_bdf": "06:00.0",
+   "selector": "Vulkan1"
+  },
+  "b": {
+   "pci_bdf": "09:00.0",
+   "selector": "Vulkan2"
+  }
+ },
+ "intended_participants": {
+  "a": {
+   "compute_unit_id": "cu-v340l-die-a",
+   "hostname": "inferswarm02",
+   "memory_resource_id": "mr-v340l-die-a-vram",
+   "vram_bytes": 8573157376
+  },
+  "b": {
+   "compute_unit_id": "cu-v340l-die-b",
+   "hostname": "inferswarm02",
+   "memory_resource_id": "mr-v340l-die-b-vram",
+   "vram_bytes": 8573157376
+  }
+ },
+ "nonclaims": [
+  "intended identity only: no selector/BDF in this document authorizes execution; execution requires a fresh mapping receipt corroborating this identity on the current boot",
+  "the inherited V2-D PLATFORM_STRESS_FAIL is a safety constraint, not platform-trustworthiness evidence",
+  "the consumed V2-E census is advertisement authority only; advertisement is not validated execution and not route evidence"
+ ],
+ "required_fresh_mapping": {
+  "must_use_v2a_r3_validation": true,
+  "require_current_boot_uuid_bdf_join": true,
+  "require_distinct_selector_bdf": true,
+  "require_exact_participant_set": [
+   "a",
+   "b"
+  ],
+  "require_intended_identity_corroboration": true,
+  "require_raw_probe_revalidation": true,
+  "schema": "inferswarm.v2f.fresh-mapping/1"
+ },
+ "schema": "inferswarm.v2f.physical-authority/1",
+ "v2d_safety_inheritance": {
+  "constraint": "The #216 retained transport-phase fault (amdgpu ring-gfx timeout on die B 0000:09:00.0, failed reset ret=-62) stands. V2-F must not execute the #35 per-die x1 transport seam. Any candidate transfer mechanism must be classified against that seam BEFORE execution (issue230_safety); a materially-same mechanism is unsafe unless the bounded probe prospectively changes the fault preconditions and starts below the faulting scale.",
+  "terminal": "V2D_V340L_PLATFORM_STRESS_FAIL"
+ }
+}

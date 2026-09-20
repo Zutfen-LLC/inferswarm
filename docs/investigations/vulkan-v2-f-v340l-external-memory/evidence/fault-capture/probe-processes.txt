@@ -1,0 +1,218 @@
+      1       0 Ss    1-05:24:24 /sbin/init
+      2       0 S     1-05:24:24 [kthreadd]
+      3       2 S     1-05:24:24 [pool_workqueue_release]
+      4       2 I<    1-05:24:24 [kworker/R-rcu_gp]
+      5       2 I<    1-05:24:24 [kworker/R-sync_wq]
+      6       2 I<    1-05:24:24 [kworker/R-kvfree_rcu_reclaim]
+      7       2 I<    1-05:24:24 [kworker/R-slub_flushwq]
+      8       2 I<    1-05:24:24 [kworker/R-netns]
+     10       2 I<    1-05:24:24 [kworker/0:0H-kblockd]
+     13       2 I<    1-05:24:24 [kworker/R-mm_percpu_wq]
+     14       2 S     1-05:24:24 [ksoftirqd/0]
+     15       2 I     1-05:24:24 [rcu_preempt]
+     16       2 S     1-05:24:24 [rcu_exp_par_gp_kthread_worker/0]
+     17       2 S     1-05:24:24 [rcu_exp_gp_kthread_worker]
+     18       2 S     1-05:24:24 [migration/0]
+     19       2 S     1-05:24:24 [kprobe-optimizer]
+     20       2 S     1-05:24:24 [idle_inject/0]
+     21       2 S     1-05:24:24 [cpuhp/0]
+     22       2 S     1-05:24:24 [cpuhp/1]
+     23       2 S     1-05:24:24 [idle_inject/1]
+     24       2 S     1-05:24:24 [migration/1]
+     25       2 S     1-05:24:24 [ksoftirqd/1]
+     27       2 I<    1-05:24:24 [kworker/1:0H-kblockd]
+     30       2 S     1-05:24:24 [kdevtmpfs]
+     31       2 I<    1-05:24:24 [kworker/R-inet_frag_wq]
+     32       2 I     1-05:24:24 [rcu_tasks_kthread]
+     33       2 I     1-05:24:24 [rcu_tasks_rude_kthread]
+     34       2 S     1-05:24:24 [kauditd]
+     35       2 S     1-05:24:24 [khungtaskd]
+     36       2 S     1-05:24:24 [oom_reaper]
+     37       2 I<    1-05:24:24 [kworker/R-writeback]
+     38       2 S     1-05:24:24 [kcompactd0]
+     39       2 SN    1-05:24:24 [ksmd]
+     40       2 SN    1-05:24:24 [khugepaged]
+     41       2 I<    1-05:24:24 [kworker/R-kblockd]
+     42       2 I<    1-05:24:24 [kworker/R-blkcg_punt_bio]
+     43       2 I<    1-05:24:24 [kworker/R-kintegrityd]
+     45       2 S     1-05:24:24 [irq/9-acpi]
+     47       2 I<    1-05:24:23 [kworker/R-tpm_dev_wq]
+     48       2 I<    1-05:24:23 [kworker/R-edac-poller]
+     49       2 I<    1-05:24:23 [kworker/R-devfreq_wq]
+     50       2 I<    1-05:24:23 [kworker/R-quota_events_unbound]
+     51       2 S     1-05:24:23 [irq/120-dmar0-prq]
+     52       2 S     1-05:24:23 [kswapd0]
+     53       2 I     1-05:24:23 [kdamond.0]
+     55       2 I<    1-05:24:23 [kworker/R-kthrotld]
+     56       2 S     1-05:24:23 [irq/123-aerdrv]
+     57       2 S     1-05:24:23 [irq/124-aerdrv]
+     58       2 S     1-05:24:23 [irq/125-aerdrv]
+     59       2 I<    1-05:24:23 [kworker/R-acpi_thermal_pm]
+     60       2 I<    1-05:24:23 [kworker/R-mld]
+     61       2 I<    1-05:24:23 [kworker/R-ipv6_addrconf]
+     62       2 I<    1-05:24:23 [kworker/R-kstrp]
+    148       2 S     1-05:24:23 [watchdogd]
+    157       2 I<    1-05:24:22 [kworker/R-uas]
+    158       2 S     1-05:24:22 [scsi_eh_0]
+    159       2 I<    1-05:24:22 [kworker/R-scsi_tmf_0]
+    161       2 I<    1-05:24:22 [kworker/0:1H-kblockd]
+    162       2 S     1-05:24:22 [scsi_eh_1]
+    163       2 I<    1-05:24:22 [kworker/R-scsi_tmf_1]
+    192       2 I<    1-05:24:21 [kworker/1:1H-kblockd]
+    198       2 S     1-05:24:21 [jbd2/sda3-8]
+    199       2 I<    1-05:24:21 [kworker/R-ext4-rsv-conversion]
+    244       1 Ss    1-05:24:20 /usr/lib/systemd/systemd-journald
+    273       1 Ss    1-05:24:20 /usr/lib/systemd/systemd-udevd
+    277       2 S     1-05:24:20 [psimon]
+    334       2 S     1-05:24:20 [irq/134-mei_me]
+    529       1 Ss    1-05:24:19 /usr/sbin/cron -f
+    530       1 Ss    1-05:24:19 /usr/bin/dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+    552       1 S     1-05:24:19 dhcpcd: enp1s0 [ip4] [ip6]
+    553     552 S     1-05:24:19 dhcpcd: [privileged proxy] enp1s0 [ip4] [ip6]
+    554     552 S     1-05:24:19 dhcpcd: [network proxy] enp1s0 [ip4] [ip6]
+    555     552 S     1-05:24:19 dhcpcd: [control proxy] enp1s0 [ip4] [ip6]
+    560       1 Ss    1-05:24:19 /usr/lib/systemd/systemd-logind
+    561       1 Ssl   1-05:24:19 /usr/sbin/tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/run/tailscale/tailscaled.sock --port=41641
+    562       1 Ss    1-05:24:19 /usr/bin/nvidia-persistenced --user nvidia-persistenced
+    604       2 S     1-05:24:18 [jbd2/sdb1-8]
+    605       2 I<    1-05:24:18 [kworker/R-ext4-rsv-conversion]
+    611       1 Ss+   1-05:24:18 /sbin/agetty -o -- \u --noreset --noclear - linux
+    613       1 Ss    1-05:24:18 sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
+    657       2 I<    1-05:24:18 [kworker/R-cfg80211]
+    678       2 I<    1-05:24:17 [kworker/R-ttm]
+    679       2 S     1-05:24:17 [card0-crtc0]
+    680       2 S     1-05:24:17 [card0-crtc1]
+    681       2 S     1-05:24:17 [card0-crtc2]
+    690     553 S     1-05:24:13 dhcpcd: [BPF ARP] enp1s0 10.0.0.137
+    692       2 I<    1-05:24:12 [kworker/R-amdgpu-reset-dev]
+    693       2 S     1-05:24:12 [nv_queue]
+    694       2 S     1-05:24:12 [nv_mem_pool_scrubber_queue]
+    695       2 S     1-05:24:12 [nv_mem_pool_scrubber_queue]
+    696       2 S     1-05:24:12 [nv_mem_pool_scrubber_queue]
+    697       2 S     1-05:24:12 [nv_queue]
+    700       2 S     1-05:24:12 [nv_open_q]
+    701       2 S     1-05:24:12 [irq/136-nvidia]
+    702       2 S     1-05:24:12 [nvidia]
+    703       2 S     1-05:24:12 [nv_queue]
+    704     553 S     1-05:24:12 dhcpcd: [DHCP6 proxy] fe80::6474:a6f0:2f20:571a
+    709       2 I<    1-05:24:12 [kworker/R-ttm]
+    710       2 S     1-05:24:11 [card1-crtc0]
+    711       2 S     1-05:24:11 [card1-crtc1]
+    712       2 S     1-05:24:11 [card1-crtc2]
+    713       2 S     1-05:24:11 [card1-crtc3]
+    714       2 S     1-05:24:11 [card1-crtc4]
+    715       2 S     1-05:24:11 [card1-crtc5]
+    716       2 I<    1-05:24:11 [kworker/R-gfx]
+    717       2 I<    1-05:24:11 [kworker/R-comp_1.0.0]
+    718       2 I<    1-05:24:11 [kworker/R-comp_1.1.0]
+    719       2 I<    1-05:24:11 [kworker/R-comp_1.2.0]
+    720       2 I<    1-05:24:11 [kworker/R-comp_1.3.0]
+    721       2 I<    1-05:24:11 [kworker/R-comp_1.0.1]
+    722       2 I<    1-05:24:11 [kworker/R-comp_1.1.1]
+    723       2 I<    1-05:24:11 [kworker/R-comp_1.2.1]
+    724       2 I<    1-05:24:11 [kworker/R-comp_1.3.1]
+    725       2 I<    1-05:24:11 [kworker/R-sdma0]
+    726       2 I<    1-05:24:11 [kworker/R-page0]
+    727       2 I<    1-05:24:11 [kworker/R-sdma1]
+    728       2 I<    1-05:24:11 [kworker/R-page1]
+    729       2 I<    1-05:24:11 [kworker/R-uvd_0]
+    730       2 I<    1-05:24:11 [kworker/R-uvd_enc_0.0]
+    731       2 I<    1-05:24:11 [kworker/R-uvd_enc_0.1]
+    732       2 I<    1-05:24:11 [kworker/R-vce0]
+    733       2 I<    1-05:24:11 [kworker/R-vce1]
+    734       2 I<    1-05:24:11 [kworker/R-vce2]
+    735       2 I<    1-05:24:11 [kworker/R-amdgpu-reset-dev]
+    736       2 I<    1-05:24:11 [kworker/R-ttm]
+    737       2 S     1-05:24:10 [card2-crtc0]
+    738       2 S     1-05:24:10 [card2-crtc1]
+    739       2 S     1-05:24:10 [card2-crtc2]
+    740       2 S     1-05:24:10 [card2-crtc3]
+    741       2 S     1-05:24:10 [card2-crtc4]
+    742       2 S     1-05:24:10 [card2-crtc5]
+    743       2 I<    1-05:24:10 [kworker/R-gfx]
+    744       2 I<    1-05:24:10 [kworker/R-comp_1.0.0]
+    745       2 I<    1-05:24:10 [kworker/R-comp_1.1.0]
+    746       2 I<    1-05:24:10 [kworker/R-comp_1.2.0]
+    747       2 I<    1-05:24:10 [kworker/R-comp_1.3.0]
+    748       2 I<    1-05:24:10 [kworker/R-comp_1.0.1]
+    749       2 I<    1-05:24:10 [kworker/R-comp_1.1.1]
+    750       2 I<    1-05:24:10 [kworker/R-comp_1.2.1]
+    751       2 I<    1-05:24:10 [kworker/R-comp_1.3.1]
+    752       2 I<    1-05:24:10 [kworker/R-sdma0]
+    753       2 I<    1-05:24:10 [kworker/R-page0]
+    754       2 I<    1-05:24:10 [kworker/R-sdma1]
+    755       2 I<    1-05:24:10 [kworker/R-page1]
+    756       2 I<    1-05:24:10 [kworker/R-uvd_0]
+    757       2 I<    1-05:24:10 [kworker/R-uvd_enc_0.0]
+    758       2 I<    1-05:24:10 [kworker/R-uvd_enc_0.1]
+    759       2 I<    1-05:24:10 [kworker/R-vce0]
+    760       2 I<    1-05:24:10 [kworker/R-vce1]
+    761       2 I<    1-05:24:10 [kworker/R-vce2]
+    768     553 S     1-05:24:10 dhcpcd: [DHCP6 proxy] fd28:e64f:c45c:0:56fe:4e31:ae4a:cca0
+    769       2 S     1-05:24:10 [nvidia-modeset/kthread_q]
+    770       2 S     1-05:24:10 [nvidia-modeset/deferred_close_kthread_q]
+    789       1 Ss    1-05:24:10 python3 /usr/local/sbin/octofan-control
+    805     553 S     1-05:24:10 dhcpcd: [DHCP6 proxy] 2601:18c:9280:d0a6:b15e:95e7:186f:d458
+    816     553 S     1-05:24:09 dhcpcd: [DHCP6 proxy] fd28:e64f:c45c::8c8
+    817     553 S     1-05:24:09 dhcpcd: [DHCP6 proxy] 2601:18c:9280:d0a6::8c8
+    840       1 Ssl   1-05:24:09 /usr/lib/systemd/systemd-timesyncd
+    939     553 S     1-05:24:07 dhcpcd: [BOOTP proxy] 10.0.0.137
+   1080     613 Ss    1-05:22:46 sshd-session: zutfen [priv]
+   1091       1 Ss    1-05:22:44 /usr/lib/systemd/systemd --user
+   1092       2 S     1-05:22:44 [psimon]
+   1094    1091 S     1-05:22:44 (sd-pam)
+   1107    1080 S     1-05:22:44 sshd-session: zutfen@pts/0
+   1108    1107 Ss    1-05:22:44 -bash
+   1138       2 S     1-05:22:40 [UVM global queue]
+   1139       2 S     1-05:22:40 [UVM deferred release queue]
+   1140       2 S     1-05:22:40 [UVM Tools Event Queue]
+   2332    1108 Sl+   1-05:10:12 nvtop
+   5881     613 Ss    1-04:36:25 sshd-session: zutfen [priv]
+   5894    5881 S     1-04:36:22 sshd-session: zutfen@pts/1
+   5895    5894 Ss    1-04:36:22 -bash
+   5901    5895 Sl+   1-04:36:21 nvtop
+  97968       2 D<      12:49:26 [kworker/u9:8+ttm]
+ 109411       2 I       10:55:20 [kworker/u8:0-ext4-rsv-conversion]
+ 127130       2 I<      07:55:41 [kworker/u9:9-ttm]
+ 166348       2 I       01:02:49 [kworker/0:1-events]
+ 168903       2 I          37:00 [kworker/1:1-events]
+ 169435       2 I          36:02 [kworker/u8:4-flush-8:0]
+ 169843       2 D<         35:20 [kworker/u9:1+ttm]
+ 169844       2 I<         35:20 [kworker/u9:2-ttm]
+ 169845       2 D<         35:20 [kworker/u9:3+ttm]
+ 169847       2 D<         35:20 [kworker/u9:5+ttm]
+ 169877       2 D<         35:16 [kworker/u9:12+ttm]
+ 169879       2 D<         35:16 [kworker/u9:14+ttm]
+ 171994       1 Ss         27:00 /usr/lib/systemd/systemd --user
+ 171996  171994 S          27:00 (sd-pam)
+ 172335       2 D          26:46 [kworker/u8:2+amdgpu-reset-dev]
+ 172336       2 I          26:46 [kworker/u8:3-flush-8:0]
+ 172443       2 D<         26:18 [kworker/u9:0+ttm]
+ 172444       2 D<         26:18 [kworker/u9:4+ttm]
+ 172445       2 D<         26:18 [kworker/u9:6+ttm]
+ 172446       2 D<         26:18 [kworker/u9:7+ttm]
+ 172447       2 D<         26:18 [kworker/u9:10+ttm]
+ 172448       2 I<         26:18 [kworker/u9:11-ttm]
+ 172449       2 I<         26:18 [kworker/u9:13-ttm]
+ 172475       2 D<         26:13 [kworker/u9:15+ttm]
+ 173052       1 Ss         22:59 bash -c cd /srv/inferswarm/is230/repo && sudo -n python3 scripts/issue230_runner.py --evidence-root /srv/inferswarm/is230/evidence ladder --mechanism opaque_fd --direction b_to_a 2>&1 | tail -5 && sudo chown -R hermes:hermes /srv/inferswarm/is230/evidence
+ 173053  173052 S          22:59 sudo -n python3 scripts/issue230_runner.py --evidence-root /srv/inferswarm/is230/evidence ladder --mechanism opaque_fd --direction b_to_a
+ 173054  173052 S          22:59 tail -5
+ 173056  173053 S          22:59 python3 scripts/issue230_runner.py --evidence-root /srv/inferswarm/is230/evidence ladder --mechanism opaque_fd --direction b_to_a
+ 173158  173056 D          22:31 [issue230_transf]
+ 173745     613 Ss         15:44 sshd-session: hermes [priv]
+ 173752  173745 S          15:44 sshd-session: hermes@notty
+ 173753  173752 Ss         15:44 bash -c while pgrep -f "issue230_runner.*ladder.*b_to_a" >/dev/null 2>&1; do sleep 10; done; echo LADGER_DONE; grep -c passed /srv/inferswarm/is230/evidence/order-state.json; ls /srv/inferswarm/is230/evidence/arms/ 2>/dev/null
+ 174183       2 I          12:22 [kworker/0:2-cgroup_release]
+ 174514       2 I          09:21 [kworker/1:0-cgroup_free]
+ 175250       2 I          02:59 [kworker/0:0-cgroup_release]
+ 175275       2 I          02:54 [kworker/1:2-cgroup_free]
+ 175873       2 I          00:07 [kworker/u8:1]
+ 175889     613 Ss         00:03 sshd-session: hermes [priv]
+ 175896  175889 S          00:03 sshd-session: hermes@notty
+ 175897  175896 Ss         00:03 bash -c sudo -n python3 /var/tmp/fault_capture_230.py 2>&1 | tail -16; sudo chown -R hermes:hermes /srv/inferswarm/is230/evidence
+ 175898  175897 S          00:03 sudo -n python3 /var/tmp/fault_capture_230.py
+ 175899  175897 S          00:03 tail -16
+ 175901  175898 S          00:03 python3 /var/tmp/fault_capture_230.py
+ 175905  173753 S          00:02 sleep 10
+ 175922  175901 R          00:00 ps -eo pid,ppid,stat,etime,args --no-headers

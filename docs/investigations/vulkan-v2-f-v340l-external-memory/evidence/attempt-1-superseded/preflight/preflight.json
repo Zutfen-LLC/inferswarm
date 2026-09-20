@@ -1,0 +1,558 @@
+{
+ "attempt_id": "v1",
+ "authority_digest": "f6cc23066105c2612c7dc0166d9ded4b529df494c6fa913327c93fe09c702e6b",
+ "boot_id": "9121c110-4eaf-446b-84f4-f1a90c792801",
+ "campaign_id": "issue230-v2f-v340l-external-memory",
+ "captured_utc": "2026-09-20T06:12:50.988643+00:00",
+ "closure_digest": "23bc91d40d2a70e5eac9df377aea3fa52635b28dff1477b46ee5514e023dc1f3",
+ "health_baseline": {
+  "aer": {
+   "0000:00:1d.0": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   },
+   "0000:02:00.0": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   },
+   "0000:03:00.0": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   },
+   "0000:03:01.0": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   },
+   "0000:06:00.0": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   },
+   "0000:09:00.0": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   },
+   "0000:0a:00.0": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   }
+  },
+  "link": {
+   "0000:00:1d.0": {
+    "current_link_speed": "8.0 GT/s PCIe",
+    "current_link_width": "1",
+    "max_link_speed": "8.0 GT/s PCIe",
+    "max_link_width": "1"
+   },
+   "0000:02:00.0": {
+    "current_link_speed": "8.0 GT/s PCIe",
+    "current_link_width": "1",
+    "max_link_speed": "8.0 GT/s PCIe",
+    "max_link_width": "16"
+   },
+   "0000:03:00.0": {
+    "current_link_speed": "8.0 GT/s PCIe",
+    "current_link_width": "16",
+    "max_link_speed": "8.0 GT/s PCIe",
+    "max_link_width": "16"
+   },
+   "0000:03:01.0": {
+    "current_link_speed": "8.0 GT/s PCIe",
+    "current_link_width": "16",
+    "max_link_speed": "8.0 GT/s PCIe",
+    "max_link_width": "16"
+   },
+   "0000:06:00.0": {
+    "current_link_speed": "8.0 GT/s PCIe",
+    "current_link_width": "16",
+    "max_link_speed": "8.0 GT/s PCIe",
+    "max_link_width": "16"
+   },
+   "0000:09:00.0": {
+    "current_link_speed": "8.0 GT/s PCIe",
+    "current_link_width": "16",
+    "max_link_speed": "8.0 GT/s PCIe",
+    "max_link_width": "16"
+   },
+   "0000:0a:00.0": {
+    "current_link_speed": "2.5 GT/s PCIe",
+    "current_link_width": "1",
+    "max_link_speed": "16.0 GT/s PCIe",
+    "max_link_width": "16"
+   }
+  },
+  "monotonic_ns": 103925634841655
+ },
+ "identity_probe_ok": true,
+ "journal_fault_counts": {
+  "amdgpu_failure": 0,
+  "amdgpu_reset": 0,
+  "amdgpu_timeout": 0,
+  "dmar_fault": 0,
+  "fatal_aer": 0,
+  "thermal": 0
+ },
+ "journal_next_cursor": "s=d64845595db1483b885f7fae3b0e0c31;i=276b3b;b=9121c1104eaf446b84f4f1a90c792801;m=1831a14a4b;t=65be4045ff215;x=c467be1c925bf3ed",
+ "mapping_digest": "6cb7fe0e6a1d35eaebf364c7a9c26b66c0040fa8a0fda26e40b26df39d4a71f6",
+ "nonclaims": [
+  "read-only preflight: no transfer executed in this phase",
+  "the consumed #228 census is advertisement authority only"
+ ],
+ "predecessor_preservation": {
+  "v2b": {
+   "drift": [],
+   "manifest": "docs/investigations/vulkan-v2-b-v340l/MANIFEST.sha256",
+   "rows": 128
+  },
+  "v2c": {
+   "drift": [],
+   "manifest": "docs/investigations/vulkan-v2-c-v340l-platform-stability/MANIFEST.sha256",
+   "rows": 1279
+  },
+  "v2d": {
+   "drift": [],
+   "manifest": "docs/investigations/vulkan-v2-d-v340l-concurrent/MANIFEST.sha256",
+   "rows": 911
+  },
+  "v2e": {
+   "drift": [],
+   "manifest": "docs/investigations/vulkan-v2-e-v340l-peer-link/MANIFEST.sha256",
+   "rows": 156
+  }
+ },
+ "probes": [
+  {
+   "argv": [
+    "cat",
+    "/proc/sys/kernel/random/boot_id"
+   ],
+   "name": "boot_id",
+   "returncode": 0,
+   "stdout_rel": "raw/boot_id.stdout",
+   "stdout_sha256": "16853f2dd66e69646dfec59330b2c461a926cb0a5853096851211a8f7c02fc7b"
+  },
+  {
+   "argv": [
+    "uname",
+    "-a"
+   ],
+   "name": "uname",
+   "returncode": 0,
+   "stdout_rel": "raw/uname.stdout",
+   "stdout_sha256": "f5ef23b711460e6dff85fd1980692a7c1f2a4a621ee5e7dd1da1c6267e1c0ba3"
+  },
+  {
+   "argv": [
+    "cat",
+    "/proc/cmdline"
+   ],
+   "name": "kernel_cmdline",
+   "returncode": 0,
+   "stdout_rel": "raw/kernel_cmdline.stdout",
+   "stdout_sha256": "d8b5ee2ebd3024c8d6c102d0f74fddcd25cff37b7f2776c09806d0462099f147"
+  },
+  {
+   "argv": [
+    "cat",
+    "/sys/module/amdgpu/version"
+   ],
+   "name": "amdgpu_version",
+   "returncode": 1,
+   "stdout_rel": "raw/amdgpu_version.stdout",
+   "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+   "argv": [
+    "dpkg-query",
+    "-W",
+    "-f=${Version}\n",
+    "libvulkan1"
+   ],
+   "name": "vulkan_loader",
+   "returncode": 0,
+   "stdout_rel": "raw/vulkan_loader.stdout",
+   "stdout_sha256": "ca208cfa4c55ff97c31e773a49485237ce1d22fadd913ec6f8606a568d672282"
+  },
+  {
+   "argv": [
+    "ls",
+    "-la",
+    "/usr/share/vulkan/icd.d/"
+   ],
+   "name": "icd_list",
+   "returncode": 0,
+   "stdout_rel": "raw/icd_list.stdout",
+   "stdout_sha256": "d91bcbde5f1f25a9da780c62e722ed849f0a191e7d315c39e063a465f99b2958"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-nn"
+   ],
+   "name": "lspci_nn",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_nn.stdout",
+   "stdout_sha256": "f8023942c9bbadf1928d93d5c8304afa9fe782f268ca147dd11793e9e7b4976c"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-tv"
+   ],
+   "name": "lspci_tree",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_tree.stdout",
+   "stdout_sha256": "45b7b5ee1c0cb45778b4a6b0d9e70716c3a3d9d87de0f0b2b247c4dfffafde8d"
+  },
+  {
+   "argv": [
+    "vulkaninfo",
+    "--summary"
+   ],
+   "name": "vulkaninfo_summary",
+   "returncode": 0,
+   "stdout_rel": "raw/vulkaninfo_summary.stdout",
+   "stdout_sha256": "b4bd83f157558ad6fbe965e92b0ed76279062fe946341671aa0a254feb34cc49"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-PP",
+    "-nn",
+    "-vv",
+    "-s",
+    "00:1d.0"
+   ],
+   "name": "lspci_vv_0000-00-1d.0",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_vv_0000-00-1d.0.stdout",
+   "stdout_sha256": "53c7021cace28390ccf0861ea828f6ed9a3bcc480a4490a3360d3c5171c2ce94"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-PP",
+    "-nn",
+    "-vv",
+    "-s",
+    "02:00.0"
+   ],
+   "name": "lspci_vv_0000-02-00.0",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_vv_0000-02-00.0.stdout",
+   "stdout_sha256": "e2213385db24c29dd8c2309436623d436906a6bdf29fb1c0572714076f05a434"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-PP",
+    "-nn",
+    "-vv",
+    "-s",
+    "03:00.0"
+   ],
+   "name": "lspci_vv_0000-03-00.0",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_vv_0000-03-00.0.stdout",
+   "stdout_sha256": "f3c9e1606f5b2f10efa675ad2141421e6160321ee28008e4da0efceef78b9bab"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-PP",
+    "-nn",
+    "-vv",
+    "-s",
+    "03:01.0"
+   ],
+   "name": "lspci_vv_0000-03-01.0",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_vv_0000-03-01.0.stdout",
+   "stdout_sha256": "5537d96a62c4c11eb49cf0a430609f53e3c19bf0e4ec84f8d041e97480ba212c"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-PP",
+    "-nn",
+    "-vv",
+    "-s",
+    "06:00.0"
+   ],
+   "name": "lspci_vv_0000-06-00.0",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_vv_0000-06-00.0.stdout",
+   "stdout_sha256": "d7da609dbbdd41cc2096667708aa12b13205de5fa23ff84ac0100b5e9b63a199"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-PP",
+    "-nn",
+    "-vv",
+    "-s",
+    "09:00.0"
+   ],
+   "name": "lspci_vv_0000-09-00.0",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_vv_0000-09-00.0.stdout",
+   "stdout_sha256": "e723a82e03494ce4170bb6bb52fee5b91a795bccbfead407c9c0f019feae98c8"
+  },
+  {
+   "argv": [
+    "lspci",
+    "-PP",
+    "-nn",
+    "-vv",
+    "-s",
+    "0a:00.0"
+   ],
+   "name": "lspci_vv_0000-0a-00.0",
+   "returncode": 0,
+   "stdout_rel": "raw/lspci_vv_0000-0a-00.0.stdout",
+   "stdout_sha256": "8d4a6ab13f33fd7130a9aa80ac4491f02bc1b3b32224e85dc5f299aad8f36473"
+  },
+  {
+   "argv": [
+    "ls",
+    "-la",
+    "/dev/dri/by-path/"
+   ],
+   "name": "render_nodes",
+   "returncode": 0,
+   "stdout_rel": "raw/render_nodes.stdout",
+   "stdout_sha256": "31068760a11f78f0484c7251ec48edd5cb64f6c065544f80192f25115311f027"
+  },
+  {
+   "argv": [
+    "bash",
+    "-c",
+    "for g in /sys/kernel/iommu_groups/*; do echo \"== group $(basename $g)\"; for d in $g/devices/*; do echo $(basename $d) $(lspci -s $(basename $d | cut -d: -f2-) -nn 2>/dev/null | head -1); done; done; true"
+   ],
+   "name": "iommu_groups",
+   "returncode": 0,
+   "stdout_rel": "raw/iommu_groups.stdout",
+   "stdout_sha256": "153cbc66c2b81e94570f62f5f9c4d2b8f5bd6cd1dc7d98a6364bf9a2f0b9fc06"
+  },
+  {
+   "argv": [
+    "bash",
+    "-c",
+    "for d in 00:1d.0 02:00.0 03:00.0 03:01.0 06:00.0 09:00.0 0a:00.0; do echo == $d; lspci -PP -vv -s $d 2>/dev/null | grep -A3 'Access Control'; done; true"
+   ],
+   "name": "acs_bits",
+   "returncode": 0,
+   "stdout_rel": "raw/acs_bits.stdout",
+   "stdout_sha256": "42223936f20a9ad582208514b4d8ab97a6dd211d629f65eb2683b110aee308d1"
+  },
+  {
+   "argv": [
+    "bash",
+    "-c",
+    "for d in /sys/class/drm/card*/device; do echo == $d; cat $d/mem_info_vram_total 2>/dev/null; done; true"
+   ],
+   "name": "vram_totals",
+   "returncode": 0,
+   "stdout_rel": "raw/vram_totals.stdout",
+   "stdout_sha256": "db252b8bafcbf1fda33cb74b6af984ff4e51484585e13edee1b8a7437051cdfb"
+  },
+  {
+   "argv": [
+    "ip",
+    "-d",
+    "link",
+    "show"
+   ],
+   "name": "nic_link",
+   "returncode": 0,
+   "stdout_rel": "raw/nic_link.stdout",
+   "stdout_sha256": "936e771a91bf9906a7d42a6467c101e78b38345cc7f827930f85902caaf15d65"
+  },
+  {
+   "argv": [
+    "ping",
+    "-c",
+    "3",
+    "-W",
+    "2",
+    "10.0.0.1"
+   ],
+   "name": "gateway_ping",
+   "returncode": 0,
+   "stdout_rel": "raw/gateway_ping.stdout",
+   "stdout_sha256": "c380423f60cd666116c59508aab6bcd36d441b21ba56281455d05db507359c4e"
+  },
+  {
+   "argv": [
+    "lsusb"
+   ],
+   "name": "lsusb",
+   "returncode": 0,
+   "stdout_rel": "raw/lsusb.stdout",
+   "stdout_sha256": "2689720098158b89d2ad4902efbe448a4ffacd929b38456fbb0e74669d33f686"
+  },
+  {
+   "argv": [
+    "lsblk",
+    "-o",
+    "NAME,SIZE,TYPE,MOUNTPOINT,MODEL"
+   ],
+   "name": "lsblk",
+   "returncode": 0,
+   "stdout_rel": "raw/lsblk.stdout",
+   "stdout_sha256": "5e0fb2a31d093c315b3fb73ab0b0fd36574147a02c57218adffac7129cfd91de"
+  },
+  {
+   "argv": [
+    "bash",
+    "-c",
+    "set -e; f=$(mktemp /var/tmp/issue230-fs-sentinel.XXXXXX); printf issue230 > $f; sync; cat $f; rm -f $f; echo STORAGE_SENTINEL_OK"
+   ],
+   "name": "storage_sentinel",
+   "returncode": 0,
+   "stdout_rel": "raw/storage_sentinel.stdout",
+   "stdout_sha256": "0300a96687e6e330c714b76ec07c143885f5dbe04093dc010a5e8b7e54dfde52"
+  },
+  {
+   "argv": [
+    "journalctl",
+    "-b",
+    "-k",
+    "--no-pager",
+    "-g",
+    "amdgpu|AER|pcieport|DMAR|dmar|[Rr]eset|[Hh]ang|ECC"
+   ],
+   "name": "journal_faults",
+   "returncode": 0,
+   "stdout_rel": "raw/journal_faults.stdout",
+   "stdout_sha256": "616e01bbf135ddfce2caf4cfce7ac2e9cd47fa8740a5d7f15c938758de19993c"
+  },
+  {
+   "argv": [
+    "<embedded C probe>",
+    "identity",
+    "0000:06:00.0",
+    "0000:09:00.0"
+   ],
+   "name": "identity_probe",
+   "returncode": 0,
+   "stdout_rel": "raw/identity-probe.stdout",
+   "stdout_sha256": "67023699e3b45137c60a5a0ad2fc944b868ab4a4cb6150faa9e118a7d9a89422"
+  }
+ ],
+ "producer_head": "d7176f0e00e6385d8bcb01bdde90208cceaa7bb4",
+ "safety_classification_path": "safety-classification.json",
+ "schema": "inferswarm.v2f.preflight/1",
+ "telemetry_idle": {
+  "a": {
+   "bdf": "0000:06:00.0",
+   "current_link_speed": "8.0 GT/s PCIe",
+   "current_link_width": "16",
+   "gpu_busy_percent": 0,
+   "hwmon": {
+    "hwmon6": {
+     "fan1_enable": 0,
+     "fan1_input": 0,
+     "fan1_max": 0,
+     "fan1_min": 0,
+     "fan1_target": 0,
+     "freq1_input": 9000000,
+     "freq1_label": "sclk",
+     "freq2_input": 167000000,
+     "freq2_label": "mclk",
+     "in0_input": 750,
+     "in0_label": "vddgfx",
+     "name": "amdgpu",
+     "power1_cap": 110000000,
+     "power1_cap_default": 110000000,
+     "power1_cap_max": 110000000,
+     "power1_cap_min": 0,
+     "power1_input": 4000000,
+     "power1_label": "PPT",
+     "pwm1": 24,
+     "pwm1_enable": 2,
+     "pwm1_max": 255,
+     "pwm1_min": 0,
+     "temp1_crit": 85000,
+     "temp1_crit_hyst": -273150,
+     "temp1_emergency": 90000,
+     "temp1_input": 31000,
+     "temp1_label": "edge",
+     "temp2_crit": 105000,
+     "temp2_crit_hyst": -273150,
+     "temp2_emergency": 110000,
+     "temp2_input": 34000,
+     "temp2_label": "junction",
+     "temp3_crit": 95000,
+     "temp3_crit_hyst": -273150,
+     "temp3_emergency": 100000,
+     "temp3_input": 32000,
+     "temp3_label": "mem"
+    }
+   },
+   "mem_busy_percent": null,
+   "monotonic_ns": 103925637577478,
+   "ras_gpu_err_cnt": null,
+   "vram_total_bytes": 8573157376,
+   "vram_used_bytes": 8351744
+  },
+  "b": {
+   "bdf": "0000:09:00.0",
+   "current_link_speed": "8.0 GT/s PCIe",
+   "current_link_width": "16",
+   "gpu_busy_percent": 0,
+   "hwmon": {
+    "hwmon7": {
+     "fan1_enable": 0,
+     "fan1_input": 0,
+     "fan1_max": 0,
+     "fan1_min": 0,
+     "fan1_target": 0,
+     "freq1_input": 9000000,
+     "freq1_label": "sclk",
+     "freq2_input": 167000000,
+     "freq2_label": "mclk",
+     "in0_input": 750,
+     "in0_label": "vddgfx",
+     "name": "amdgpu",
+     "power1_cap": 110000000,
+     "power1_cap_default": 110000000,
+     "power1_cap_max": 110000000,
+     "power1_cap_min": 0,
+     "power1_input": 4000000,
+     "power1_label": "PPT",
+     "pwm1": 24,
+     "pwm1_enable": 2,
+     "pwm1_max": 255,
+     "pwm1_min": 0,
+     "temp1_crit": 85000,
+     "temp1_crit_hyst": -273150,
+     "temp1_emergency": 90000,
+     "temp1_input": 27000,
+     "temp1_label": "edge",
+     "temp2_crit": 105000,
+     "temp2_crit_hyst": -273150,
+     "temp2_emergency": 110000,
+     "temp2_input": 29000,
+     "temp2_label": "junction",
+     "temp3_crit": 95000,
+     "temp3_crit_hyst": -273150,
+     "temp3_emergency": 100000,
+     "temp3_input": 26000,
+     "temp3_label": "mem"
+    }
+   },
+   "mem_busy_percent": null,
+   "monotonic_ns": 103925640545757,
+   "ras_gpu_err_cnt": null,
+   "vram_total_bytes": 8573157376,
+   "vram_used_bytes": 8351744
+  }
+ }
+}

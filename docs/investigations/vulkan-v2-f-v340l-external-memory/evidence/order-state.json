@@ -1,0 +1,66 @@
+{
+ "campaign_id": "issue230-v2f-v340l-external-memory",
+ "chain_digest": "6662ad07922c0ce9a101b7076e09e1c0c36062b962c970e1c166dd04a4050d72",
+ "entries": [
+  {
+   "arm": "probe-opaque_fd-a_to_b",
+   "detail": {
+    "direction": "a_to_b",
+    "mechanism": "opaque_fd",
+    "reps": 1,
+    "sizes": [
+     4096
+    ],
+    "warmups": 0
+   },
+   "recorded_utc": "2026-09-20T06:19:13.522095+00:00",
+   "state": "passed"
+  },
+  {
+   "arm": "probe-opaque_fd-b_to_a",
+   "detail": {
+    "direction": "b_to_a",
+    "mechanism": "opaque_fd",
+    "reps": 1,
+    "sizes": [
+     4096
+    ],
+    "warmups": 0
+   },
+   "recorded_utc": "2026-09-20T06:19:53.706898+00:00",
+   "state": "passed"
+  },
+  {
+   "arm": "ladder-opaque_fd-a_to_b",
+   "detail": {
+    "direction": "a_to_b",
+    "mechanism": "opaque_fd",
+    "reps": 5,
+    "sizes": [
+     4096,
+     65536,
+     1048576,
+     16777216,
+     67108864,
+     268435456
+    ],
+    "warmups": 1
+   },
+   "recorded_utc": "2026-09-20T06:21:49.516416+00:00",
+   "state": "passed"
+  },
+  {
+   "arm": "ladder-opaque_fd-b_to_a",
+   "detail": {
+    "failed_size": 67108864,
+    "fault_capture": "fault-capture/fault-capture.json",
+    "note": "runner process itself wedged waiting on the D-state probe; result recorded by the fault-capture step per the retained-earliest-failure rule",
+    "runner_wedged": true,
+    "stop_condition": "ring_timeout_or_hang"
+   },
+   "recorded_utc": "2026-09-20T06:44:56.893058+00:00",
+   "state": "failed"
+  }
+ ],
+ "schema": "inferswarm.v2f.execution-order/1"
+}
