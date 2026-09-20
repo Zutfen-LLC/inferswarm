@@ -191,6 +191,8 @@
     "test_issue216_v2d_assembler",
     "test_issue228_v2e_peer_link",
     "test_issue228_v2e_assembler",
+    "test_issue230_v2f_external_memory",
+    "test_issue230_v2f_vk_contract",
     "test_issue35_link_probe",
     "test_issue35_role_sweep",
     "test_issue35_envelope",
@@ -371,6 +373,9 @@
    "vulkan-v0-b"
   ],
   "docs/investigations/vulkan-v2-e-v340l-peer-link/": [
+   "vulkan-v0-b"
+  ],
+  "docs/investigations/vulkan-v2-f-v340l-external-memory/": [
    "vulkan-v0-b"
   ],
   "docs/project-status.json": [
@@ -1092,6 +1097,39 @@
   "scripts/issue228_reduce.py": [
    "vulkan-v0-b"
   ],
+  "scripts/issue230_assemble.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue230_authority.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue230_freeze.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue230_host.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue230_manifest.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue230_preflight.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue230_receipt.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue230_reduce.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue230_runner.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue230_safety.py": [
+   "vulkan-v0-b"
+  ],
+  "scripts/issue230_transfer.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/issue35_coarse_concurrent.py": [
    "vulkan-v0-b"
   ],
@@ -1290,6 +1328,9 @@
   "scripts/verify_issue95_v4_unseal.py": [
    "issue-83-95"
   ],
+  "tests/issue230_vk_stub/": [
+   "vulkan-v0-b"
+  ],
   "tests/test_evidence_manifest_lifecycle.py": [
    "repo-integrity"
   ],
@@ -1354,6 +1395,12 @@
    "vulkan-v0-b"
   ],
   "tests/test_issue228_v2e_peer_link.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_issue230_v2f_external_memory.py": [
+   "vulkan-v0-b"
+  ],
+  "tests/test_issue230_v2f_vk_contract.py": [
    "vulkan-v0-b"
   ],
   "tests/test_issue35_corrections.py": [
