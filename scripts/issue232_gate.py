@@ -67,6 +67,29 @@ class GateError(RuntimeError):
     pass
 
 
+def _journal_upstream_events(census_delta: dict[str, Any],
+                             up_bdf: str) -> int:
+    """Correctable+Uncorrectable journal events attributed to the
+    upstream BDF over the observation window. ZERO total events means
+    the source row is legitimately ABSENT (aer_event_census only adds
+    sources that produced events) — that is 0, not "unavailable". A
+    nonzero total with no row for the upstream is unattributable and
+    fails closed as -1."""
+    events = (census_delta or {}).get("events") or {}
+    total = (events.get("Correctable", 0) or 0) \
+        + (events.get("Uncorrectable", 0) or 0) \
+        + (events.get("DPC", 0) or 0)
+    src = ((census_delta or {}).get("events_by_source") or {}
+           ).get(up_bdf) or {}
+    attributed = (src.get("Correctable", 0) or 0) \
+        + (src.get("Uncorrectable", 0) or 0)
+    if attributed:
+        return attributed
+    if total == 0:
+        return 0
+    return -1  # events exist but none attributable — fail closed
+
+
 def _load_observation(path: Path) -> dict[str, Any]:
     doc = json.loads(path.read_text(encoding="utf-8"))
     if doc.get("schema") != "inferswarm.v2g.observation/1":
@@ -172,10 +195,8 @@ def evaluate_gate(*, observation: dict[str, Any],
         deltas = (observation.get("aer_deltas") or {}).get(up_bdf) or {}
         corr = deltas.get("aer_dev_correctable") or {}
         rxerr_sysfs = corr.get("RxErr", -1)
-        j_src = ((observation.get("journal_census_delta") or {})
-                 .get("events_by_source") or {}).get(up_bdf) or {}
-        rxerr_journal = (j_src.get("Correctable", -1)
-                        + j_src.get("Uncorrectable", 0))
+        rxerr_journal = _journal_upstream_events(
+            observation.get("journal_census_delta"), up_bdf)
         checks["upstream_rxerr_zero"] = (
             rxerr_sysfs == rc.CLEAN_LINK_RXERR_MAX
             and rxerr_journal == rc.CLEAN_LINK_RXERR_MAX)
@@ -257,14 +278,12 @@ def _rxerr_row(observation: dict[str, Any]) -> dict[str, Any]:
         return {"error": "no upstream BDF"}
     deltas = (observation.get("aer_deltas") or {}).get(up_bdf) or {}
     corr = deltas.get("aer_dev_correctable") or {}
-    j_src = ((observation.get("journal_census_delta") or {})
-             .get("events_by_source") or {}).get(up_bdf) or {}
     return {
         "boot_id": observation.get("boot_id"),
         "upstream_bdf": up_bdf,
         "sysfs_rxerr_delta": corr.get("RxErr", -1),
-        "journal_upstream_events": (j_src.get("Correctable", -1)
-                                    + j_src.get("Uncorrectable", 0)),
+        "journal_upstream_events": _journal_upstream_events(
+            observation.get("journal_census_delta"), up_bdf),
     }
 
 
