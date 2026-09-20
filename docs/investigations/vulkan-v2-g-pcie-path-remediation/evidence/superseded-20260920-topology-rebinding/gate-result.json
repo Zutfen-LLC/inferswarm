@@ -7,7 +7,6 @@
   "peripherals_no_regression": true,
   "sources_agree": true,
   "topology_chain_unique": true,
-  "topology_identity_continuity": true,
   "upstream_rxerr_zero": true,
   "width_matches_declared_wiring": true,
   "zero_uncorrectable_and_dpc": true
@@ -22,15 +21,7 @@
    "thermal": 0
   },
   "chain": {
-   "census_boot_id": "adb4fa6d-620a-4916-9aa1-4c84bd7c351c",
-   "cold_confirmation_boot_ids": [
-    "433128ac-e81e-4239-bdd3-30a46c6a3a02"
-   ],
-   "cold_confirmation_root_ports": [
-    "0000:00:1d.0"
-   ],
-   "observation_boot_id": "adb4fa6d-620a-4916-9aa1-4c84bd7c351c",
-   "root_port": "0000:00:1d.0",
+   "root_port": "0000:00:1c.5",
    "switch_upstream": "0000:02:00.0",
    "vega": [
     "0000:06:00.0",

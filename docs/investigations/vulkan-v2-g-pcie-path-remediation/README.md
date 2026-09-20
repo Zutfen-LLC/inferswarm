@@ -60,6 +60,47 @@ byte-identical to the accepted V2-F pin `30cf6996`): 4 KiB ✓,
 1 MiB ✓, 16 MiB ✓, **64 MiB ✓** — every arm exact-correct, zero
 RxErr delta, zero amdgpu journal events, no width/topology change.
 
+### Topology-identity correction (2026-09-20, PR #233 review)
+
+The first retained gate evaluation was fed intervention-3's
+PRE-census (motherboard slot, root port **00:1c.5**, boot 34c41853)
+via a free-choice `--census-rel` while the candidate observation
+(boot adb4fa6d), cold confirmation (boot 433128ac), qualification
+and all four replay arms are root **00:1d.0** — the daughterboard
+path this campaign's authority question is about. The gate never
+cross-bound its census to the observations it judged (reducer
+selection defect, not an execution defect: every phase collector
+live-derived its own chain, and all of them agree on 1d.0).
+
+Corrected in place, mechanically:
+
+- the gate now requires census boot-id == candidate observation
+  boot-id, census chain == observation chain_roles, and identical
+  root/upstream on every cold confirmation
+  (`topology_identity_continuity`);
+- each cold-proof cycle binds its census's derived topology;
+- `boot-proof.json` (new, reduction-only) binds the replay boot
+  from retained bytes plus one read-only present-day probe: boot-id
+  equality + uptime arithmetic vs the anchor census monotonic clock
+  + arm-window containment + present-day tree corroboration +
+  per-arm UUID joins. Retained proof: replay executed on boot
+  **433128ac** (the cold-confirmation/qualification boot), root
+  **00:1d.0**, upstream 02:00.0, x1 — drift 0.004 s;
+- replay authorization requires gate/cold-proof/qualification/
+  boot-proof topology agreement (fail-closed without the boot
+  proof); every arm now records boot_id and negotiated width and
+  refuses execution on a diverging topology or boot;
+- the terminal reducer makes REPLAY_PASS unreachable without that
+  agreement — crossed identities reduce to `V2G_EVIDENCE_BLOCKED`.
+
+No physical evidence was recollected. The superseded gate-result,
+authorization, cold-proof, assembly, and terminal bytes are retained
+verbatim under `evidence/superseded-20260920-topology-rebinding/`
+(the superseded authorization's pinned gate digest still matches the
+quarantined bytes). The deterministic terminal is unchanged —
+`V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS` — now with the topology
+basis the retained bytes always established.
+
 ## Separate state dimensions (never conflated)
 
 - **PCIE_PATH_HEALTH** — the chronic RxErr condition and its remediation;
@@ -170,7 +211,7 @@ Any stop condition: STOP, retain, reduce (the assembler derives the
 terminal from the order state and arm records automatically), report.
 Nothing is rerun under the same authority.
 
-## Controls (fail-closed; 39-test suite)
+## Controls (fail-closed; 54-test suite)
 
 The issue's 20 required rejections are exercised through the real
 gate/reducer/assembler paths in

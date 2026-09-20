@@ -1,9 +1,9 @@
 {
  "authorized": true,
  "campaign_id": "issue232-v2g-pcie-path-remediation",
- "closure_digest": "d30c7700b9c9e8879780be41cdd97c2938e173a49164efcdade81338bb5d092f",
+ "closure_digest": "23cbbafdae7018a241d87a8d7421fede6d2de629ea776b282347802eae4eb67d",
  "decision": "REPLAY_AUTHORIZED",
- "decision_utc": "2026-09-20T16:57:20.265606+00:00",
+ "decision_utc": "2026-09-20T15:11:12.333325+00:00",
  "first_arm_bytes": 4096,
  "frozen_arm_ladder": [
   {
@@ -27,12 +27,11 @@
    "warmups": 0
   }
  ],
- "gate_result_digest": "5e4a6bebdb7f0cab63587a6dc8b87cff740cebe0c6e6d62de8c339da75eeb4e9",
+ "gate_result_digest": "c90bc7f173d0ac5d154d4c98bd1ff0779dcf036f6a52761d472f784c125013e3",
  "material_rxerr_rate_per_min": 4.77,
- "producer_head": "38c6ec52df99a93056fa7d7b3b1cccd9db834dda",
+ "producer_head": "040b5d98051ad1066494c935f435656236978187",
  "qualification_digest": "b0ff8a12a8f29111114a10d652c2c14af1a0370931f54ae3b1302af298ed864d",
  "reasons": [],
- "replay_boot_id": "433128ac-e81e-4239-bdd3-30a46c6a3a02",
  "replay_producer": {
   "byte_identical_to_accepted": true,
   "campaign": "issue230-v2f-v340l-external-memory",
@@ -52,23 +51,5 @@
   "material_rxerr_flood_recurrence",
   "unexpected_topology_or_width_change",
   "nonzero_producer_exit"
- ],
- "topology_binding": {
-  "boot_proof": {
-   "negotiated_width": 1,
-   "replay_boot_id": "433128ac-e81e-4239-bdd3-30a46c6a3a02",
-   "root_port": "0000:00:1d.0",
-   "switch_upstream": "0000:02:00.0"
-  },
-  "cold_proof_root_ports": [
-   "0000:00:1d.0"
-  ],
-  "cold_proof_switch_upstreams": [
-   "0000:02:00.0"
-  ],
-  "gate_root_port": "0000:00:1d.0",
-  "gate_switch_upstream": "0000:02:00.0",
-  "qualification_root_port": "0000:00:1d.0",
-  "qualification_switch_upstream": "0000:02:00.0"
- }
+ ]
 }

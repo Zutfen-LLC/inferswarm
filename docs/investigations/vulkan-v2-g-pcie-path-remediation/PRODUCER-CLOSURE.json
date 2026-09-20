@@ -1,19 +1,19 @@
 {
  "campaign_id": "issue232-v2g-pcie-path-remediation",
- "closure_digest": "7a5505af200cc0fabfe7703115c200d84abff995f130e63c89f2e769e93bb301",
- "producer_head": "52a65b19e736851310d6a472002a44d3fb398c8b",
+ "closure_digest": "d30c7700b9c9e8879780be41cdd97c2938e173a49164efcdade81338bb5d092f",
+ "producer_head": "38c6ec52df99a93056fa7d7b3b1cccd9db834dda",
  "schema": "inferswarm.v2g.producer-closure/1",
  "sources": {
   "scripts/issue232_assemble.py": "3956e9676c41e6bd61b3fa5e077c2139a9a8260ddd393308854168f5b3cf8dc0",
   "scripts/issue232_authority.py": "58ad29e258d665af38cefca4a8f7956307178f9d1c7edb2026072863a29729f2",
   "scripts/issue232_baseline.py": "76cedff78e339fda3d4080a1a3b3aab6661b9796ffcc900be3e2d2e0c56e4e73",
   "scripts/issue232_freeze.py": "844b59d7ef3a93d8ae14958c3533a108e80755d7b47a570e44675ef29e14b0b8",
-  "scripts/issue232_gate.py": "c59b6f58ce92aab446015d576b5a91c038a777f3ee02a730cfec88d8cb948321",
+  "scripts/issue232_gate.py": "bff8222c80ddeb4b37f947e95e02509cac184af9841b649ab60f628173b6088f",
   "scripts/issue232_host.py": "d240a8acd15b62ca38534ac7b8e5fdef9ef2d473decb864c56990a1832def5fc",
   "scripts/issue232_manifest.py": "d1aa69092fd281ba77a6c14130ed2918426ba7d205792e6fa34a3197507931f2",
   "scripts/issue232_qualify.py": "3f9dac3b4acddb3716253f007dc6a6c7f96ce8f2801da6d986318f201b96d397",
   "scripts/issue232_receipt.py": "e232ec70a9056b83644714de3d3196220ee4eb868ec5315cfda017113f3e901d",
-  "scripts/issue232_reduce.py": "d5737ee3c785841927d05f57beff8ce797eea74f6f6c7139080f0728a80afaf2",
-  "scripts/issue232_replay.py": "944dea87debe6e771c95dbbcada8ef41817da35903a5e1c029e47221cb323e00"
+  "scripts/issue232_reduce.py": "abb563aad5057cc50f859a71b0e91c78b7d5f854d849da42c86d3ea8c84a26c6",
+  "scripts/issue232_replay.py": "1c592369a52a24d8e289bfbc8bfafa47c60592e626a3ee9d5eebc294bc233180"
  }
 }

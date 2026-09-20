@@ -1,0 +1,51 @@
+{
+ "campaign_id": "issue232-v2g-pcie-path-remediation",
+ "continuity": {
+  "anchor_census_boot_id": "433128ac-e81e-4239-bdd3-30a46c6a3a02",
+  "anchor_census_collected_utc": "2026-09-20T15:06:44.314887+00:00",
+  "anchor_census_monotonic_s": 218.356159195,
+  "anchor_census_rel": "censuses/20260920T150632Z",
+  "arm_window_inside_interval": true,
+  "arm_window_utc": [
+   "2026-09-20T15:14:05.182250+00:00",
+   "2026-09-20T15:14:24.736884+00:00"
+  ],
+  "boot_start_utc": "2026-09-20T15:03:05.962476+00:00",
+  "drift_s": 0.0037481950002984377,
+  "expected_probe_uptime_s": 5659.503748195,
+  "observed_probe_uptime_s": 5659.5,
+  "order_state_chain_digest": "f5dd926955ec837e1206bb6e5ebaf89aaef16adff6011fe89fe74913e7e9e839",
+  "tolerance_s": 5.0
+ },
+ "kind": "reduction-only post-campaign continuity proof; no campaign phase executed; the live probe is a read-only present-day observation, labeled as such",
+ "probe": {
+  "boot_id": "433128ac-e81e-4239-bdd3-30a46c6a3a02",
+  "kernel": "7.1.8+deb13-amd64",
+  "probed_utc": "2026-09-20T16:37:25.462476Z",
+  "raw_rel": "raw/bootproof-probe.stdout",
+  "raw_sha256": "98fbe76d8c4a2c9fffab5318af0b61933d6458946a5fa26f85d5773c072716c7",
+  "uptime_seconds": 5659.5
+ },
+ "qualification_binding": {
+  "boot_id": "433128ac-e81e-4239-bdd3-30a46c6a3a02",
+  "collected_utc": "2026-09-20T15:10:56.961352+00:00",
+  "root_port": "0000:00:1d.0",
+  "switch_upstream": "0000:02:00.0"
+ },
+ "replay_boot_id": "433128ac-e81e-4239-bdd3-30a46c6a3a02",
+ "schema": "inferswarm.v2g.boot-proof/1",
+ "topology": {
+  "negotiated_width": 1,
+  "root_port": "0000:00:1d.0",
+  "root_port_width": 1,
+  "switch_upstream": "0000:02:00.0",
+  "vega_bdfs": [
+   "0000:06:00.0",
+   "0000:09:00.0"
+  ]
+ },
+ "v340_uuids": {
+  "0000:06:00.0": "00000000060000000000000000000000",
+  "0000:09:00.0": "00000000090000000000000000000000"
+ }
+}
