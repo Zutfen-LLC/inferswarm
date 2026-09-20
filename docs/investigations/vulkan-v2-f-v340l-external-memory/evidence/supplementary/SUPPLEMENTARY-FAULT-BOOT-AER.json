@@ -1,0 +1,55 @@
+{
+ "campaign_id": "issue230-v2f-v340l-external-memory",
+ "collected_utc": "2026-09-20T12:47:00+00:00",
+ "interpretation": {
+  "chronic": "the Correctable RxErr flood from the PM8533 upstream port 0000:02:00.0 began at boot init (Sep 18 21:20:35), ~34.5h before the campaign's first arm, at the SAME average rate (~477 lines/min) as during the campaign window \u2014 a chronic condition of the width-downgraded Gen3 x1 upstream link, not a campaign-triggered event",
+  "scope_note": "the fault-boot journal also contains the fault-window lines already retained in fault-capture/; this packet supplements them with the WHOLE-boot AER record and its quantification",
+  "severity": "all 250,851 parsed severities are Correctable (Physical Layer RxErr); ZERO uncorrectable, ZERO DPC containment events in the entire fault boot \u2014 including through the fault and the wedged shutdown",
+  "stop_condition_review": "the campaign's immediate-stop rule fired on the amdgpu ring-timeout/reset signature (a GPU fault class), not on any AER class \u2014 consistent with the retained evidence; the operator's console observation is fully explained by this chronic correctable flood scrolling during the ~12-minute shutdown wedge (fault 02:22-02:45 EDT Sep 20; shutdown completion 08:26:40 EDT; next boot 08:38:25 EDT)"
+ },
+ "nonclaims": [
+  "no causal claim between the chronic correctable RxErr flood and the amdgpu fault is made or implied; correlation windows are retained for the maintainer to adjudicate",
+  "the 370 lines from the root port and 19+11 from the Vega bridges are retained but not individually classified here",
+  "this packet is supplementary and reduction-only: no producer byte changed; the campaign terminal and all retained campaign evidence are unchanged"
+ ],
+ "quantification": {
+  "by_source_bdf": {
+   "0000:00:1d.0": 370,
+   "0000:02:00.0": 250507,
+   "0000:04:00.0": 19,
+   "0000:07:00.0": 11
+  },
+  "by_window": {
+   "campaign_window_0219_0245": 12409,
+   "post_campaign_to_shutdown": 162175,
+   "pre_campaign_through_20260920_0219": 828988
+  },
+  "rate_per_minute": {
+   "campaign_window": 477,
+   "post_campaign": 232,
+   "pre_campaign_avg": 477
+  },
+  "severity_counts": {
+   "Correctable": 250851,
+   "DPC": 0,
+   "Uncorrectable": 0
+  }
+ },
+ "schema": "inferswarm.v2f.supplementary-aer/1",
+ "source": {
+  "boot_id": "9121c110-4eaf-446b-84f4-f1a90c792801",
+  "boot_window": [
+   "2026-09-18T21:49:27-04:00",
+   "2026-09-20T08:26:40-04:00"
+  ],
+  "command": "journalctl -b -1 -k --no-pager -g AER|pcieport",
+  "first_line": "Sep 18 21:20:35",
+  "last_line": "Sep 20 08:26:37",
+  "raw_bytes_uncompressed": 117162625,
+  "raw_file": "aer-fault-boot-full.txt.gz",
+  "raw_line_count_note": "1003572 matched lines total; 250851 carry parsed severity fields (the remainder are pcieport/AER context lines: _OSC, ACS, and the multi-line per-error detail blocks)",
+  "raw_lines": 1003572,
+  "raw_sha256_gz": "267006ea0c9536466f13254d93ec1b9972b3136d7860932e97a78d30c7bd7f82"
+ },
+ "why_retained": "operator observed bus errors on the console while power-cycling the host after the campaign fault; the persistent journal of the fault boot holds the full record"
+}

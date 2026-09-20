@@ -202,3 +202,5 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  docs/investiga
 9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa  docs/investigations/vulkan-v2-f-v340l-external-memory/evidence/raw/probe-opaque_fd-b_to_a-identity.exit-code
 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  docs/investigations/vulkan-v2-f-v340l-external-memory/evidence/raw/probe-opaque_fd-b_to_a-identity.stderr
 67023699e3b45137c60a5a0ad2fc944b868ab4a4cb6150faa9e118a7d9a89422  docs/investigations/vulkan-v2-f-v340l-external-memory/evidence/raw/probe-opaque_fd-b_to_a-identity.stdout
+04cf4d2497261f2e3de1192ddacc4b7ff384edb78cd35ab4944086c75fce526d  docs/investigations/vulkan-v2-f-v340l-external-memory/evidence/supplementary/SUPPLEMENTARY-FAULT-BOOT-AER.json
+267006ea0c9536466f13254d93ec1b9972b3136d7860932e97a78d30c7bd7f82  docs/investigations/vulkan-v2-f-v340l-external-memory/evidence/supplementary/aer-fault-boot-full.txt.gz
