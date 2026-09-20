@@ -1,7 +1,7 @@
 {
  "campaign_id": "issue232-v2g-pcie-path-remediation",
- "closure_digest": "f82ce389adad74c09db84de56c4bdfe069a1c23b372715b6a5b4cef81f83f690",
- "producer_head": "34de5c6c69e0e46b4e130bc3b954bd5eb9e21b32",
+ "closure_digest": "4096141d968cff68f1648912304017a3142173c92ba19f077bc42a26966a8435",
+ "producer_head": "9d1ad2400c2960c22c856444735a511542a2ba06",
  "schema": "inferswarm.v2g.producer-closure/1",
  "sources": {
   "scripts/issue232_assemble.py": "27c3ad025d9ffc4c6b02529a4a8dcd462895f39a8739e70532637650f0a55c9c",
@@ -15,7 +15,7 @@
   "scripts/issue232_manifest.py": "d1aa69092fd281ba77a6c14130ed2918426ba7d205792e6fa34a3197507931f2",
   "scripts/issue232_qualify.py": "3f9dac3b4acddb3716253f007dc6a6c7f96ce8f2801da6d986318f201b96d397",
   "scripts/issue232_receipt.py": "a15e3f27c98b47534188c50a5d5c027d772b28a83e911a6126489c0ad4677b1a",
-  "scripts/issue232_reduce.py": "ed2954d446d3f5d7baab84336d05f60e44eb677372c5f003e4f38284069999c8",
+  "scripts/issue232_reduce.py": "32aae334e179fafad182aace7006fe7c41cb112f887a2306ddafeed77a91d26e",
   "scripts/issue232_replay.py": "1c592369a52a24d8e289bfbc8bfafa47c60592e626a3ee9d5eebc294bc233180"
  }
 }

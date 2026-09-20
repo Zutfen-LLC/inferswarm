@@ -1,7 +1,7 @@
 {
- "assembled_utc": "2026-09-20T19:41:21.372908+00:00",
+ "assembled_utc": "2026-09-20T19:19:56.897831+00:00",
  "campaign_id": "issue232-v2g-pcie-path-remediation",
- "closure_digest": "f82ce389adad74c09db84de56c4bdfe069a1c23b372715b6a5b4cef81f83f690",
+ "closure_digest": "4096141d968cff68f1648912304017a3142173c92ba19f077bc42a26966a8435",
  "nonclaims": [
   "no causal claim between the historical chronic RxErr condition and the #216/#230 amdgpu ring/reset faults without discriminating evidence",
   "no soak/sustained-load stability claimed",
@@ -11,17 +11,17 @@
   "no claim that the remediated arrangement is the only clean one",
   "advertisement is never conflated with validated execution"
  ],
- "producer_head": "34de5c6c69e0e46b4e130bc3b954bd5eb9e21b32",
+ "producer_head": "9d1ad2400c2960c22c856444735a511542a2ba06",
  "reduction": {
   "authored_terminal_agrees": true,
   "basis": [
    "corrected retained evidence establishes the daughterboard path root 0000:00:1d.0 -> upstream 0000:02:00.0, and the clean candidate/cold-confirmation/qualification evidence for that topology remains intact",
    "all 4 physical replay arms produced exact-correct results with retained healthy windows (scientifically informative; the physical transfers themselves are not inferred invalid)",
    "authorization inadmissible: replay authorization decision_utc 2026-09-20T16:57:20.265606+00:00 is 6176s AFTER the last retained arm replay-67108864 (replay-67108864 recorded 2026-09-20T15:14:24.736884+00:00) \u2014 the entire ladder predates the authorization",
-   "provenance inadmissible: replay-4096 was produced under historical authority producer_head=52a65b19e736 closure_digest=7a5505af200c which differs from the current closure (34de5c6c69e0/f82ce389adad) and no admissible immutable historical-closure amendment covers it \u2014 the arm cannot pass through the current closure",
-   "provenance inadmissible: replay-1048576 was produced under historical authority producer_head=52a65b19e736 closure_digest=7a5505af200c which differs from the current closure (34de5c6c69e0/f82ce389adad) and no admissible immutable historical-closure amendment covers it \u2014 the arm cannot pass through the current closure",
-   "provenance inadmissible: replay-16777216 was produced under historical authority producer_head=52a65b19e736 closure_digest=7a5505af200c which differs from the current closure (34de5c6c69e0/f82ce389adad) and no admissible immutable historical-closure amendment covers it \u2014 the arm cannot pass through the current closure",
-   "provenance inadmissible: replay-67108864 was produced under historical authority producer_head=52a65b19e736 closure_digest=7a5505af200c which differs from the current closure (34de5c6c69e0/f82ce389adad) and no admissible immutable historical-closure amendment covers it \u2014 the arm cannot pass through the current closure"
+   "provenance inadmissible: replay-1048576 was produced under historical authority producer_head=52a65b19e736 closure_digest=7a5505af200c which differs from the current closure (9d1ad2400c29/4096141d968c) and no admissible immutable historical-closure amendment covers it \u2014 the arm cannot pass through the current closure",
+   "provenance inadmissible: replay-16777216 was produced under historical authority producer_head=52a65b19e736 closure_digest=7a5505af200c which differs from the current closure (9d1ad2400c29/4096141d968c) and no admissible immutable historical-closure amendment covers it \u2014 the arm cannot pass through the current closure",
+   "provenance inadmissible: replay-4096 was produced under historical authority producer_head=52a65b19e736 closure_digest=7a5505af200c which differs from the current closure (9d1ad2400c29/4096141d968c) and no admissible immutable historical-closure amendment covers it \u2014 the arm cannot pass through the current closure",
+   "provenance inadmissible: replay-67108864 was produced under historical authority producer_head=52a65b19e736 closure_digest=7a5505af200c which differs from the current closure (9d1ad2400c29/4096141d968c) and no admissible immutable historical-closure amendment covers it \u2014 the arm cannot pass through the current closure"
   ],
   "campaign_id": "issue232-v2g-pcie-path-remediation",
   "gate": {
@@ -197,24 +197,7 @@
    "upstream_rxerr_delta": 0
   },
   "replay": {
-   "arm_order_problems": [],
    "arms": [
-    {
-     "arm": "replay-4096",
-     "boot_id": null,
-     "closure_digest": "7a5505af200cc0fabfe7703115c200d84abff995f130e63c89f2e769e93bb301",
-     "exit_code": 0,
-     "negotiated_width": null,
-     "producer_head": "52a65b19e736851310d6a472002a44d3fb398c8b",
-     "replay_producer_head": "30cf699688aa3d718fb475f5390317ebb4ba7385",
-     "root_port_bdf": "0000:00:1d.0",
-     "size_bytes": 4096,
-     "stdout_sha256": "e54215cbdccc67ca307fe92107fb1742da85ecc977330925f8f58cc7d5b3f838",
-     "stop_condition": null,
-     "summary_ok_true": true,
-     "upstream_bdf": "0000:02:00.0",
-     "validated": true
-    },
     {
      "arm": "replay-1048576",
      "boot_id": null,
@@ -248,6 +231,22 @@
      "validated": true
     },
     {
+     "arm": "replay-4096",
+     "boot_id": null,
+     "closure_digest": "7a5505af200cc0fabfe7703115c200d84abff995f130e63c89f2e769e93bb301",
+     "exit_code": 0,
+     "negotiated_width": null,
+     "producer_head": "52a65b19e736851310d6a472002a44d3fb398c8b",
+     "replay_producer_head": "30cf699688aa3d718fb475f5390317ebb4ba7385",
+     "root_port_bdf": "0000:00:1d.0",
+     "size_bytes": 4096,
+     "stdout_sha256": "e54215cbdccc67ca307fe92107fb1742da85ecc977330925f8f58cc7d5b3f838",
+     "stop_condition": null,
+     "summary_ok_true": true,
+     "upstream_bdf": "0000:02:00.0",
+     "validated": true
+    },
+    {
      "arm": "replay-67108864",
      "boot_id": null,
      "closure_digest": "7a5505af200cc0fabfe7703115c200d84abff995f130e63c89f2e769e93bb301",
@@ -264,7 +263,6 @@
      "validated": true
     }
    ],
-   "authorized": true,
    "boot_proof": {
     "anchor_census_boot_id": "433128ac-e81e-4239-bdd3-30a46c6a3a02",
     "negotiated_width": 1,
