@@ -1,14 +1,20 @@
 # V2-G — inferswarm02 PCIe RxErr path remediation + clean-link requalification (issue #232)
 
-Status: **CAMPAIGN COMPLETE — terminal
-`V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS` (derived deterministically
-from retained evidence).** The chronic Correctable RxErr flood was
-remediated by the physical intervention sequence (see the four-state
-ladder below), the clean-link gate passed and repeated across a
-genuine cold power cycle, the bounded qualification passed, and the
-authorized B→A replay ran all four arms (4 KiB → 64 MiB, one
-exact-correct rep each) with ZERO platform fault or RxErr recurrence
-— including the historical 64-MiB fault scale. PR OPEN/UNMERGED
+Status: **EVIDENCE BLOCKED — terminal
+`V2G_EVIDENCE_BLOCKED` (derived deterministically from retained
+evidence).** The chronic Correctable RxErr flood was remediated by
+the physical intervention sequence (four-state ladder below), the
+clean-link gate passed and repeated across a genuine cold power
+cycle on the corrected daughterboard topology (root 00:1d.0), the
+bounded qualification passed, and all four replay arms (4 KiB →
+64 MiB) produced exact-correct results with healthy windows.
+However, the replay cannot satisfy issue #232's prospective
+authorization contract (see the authority correction below): the
+only authorization that existed BEFORE the arms was bound to the
+superseded 00:1c.5 gate, and the corrected authorization was
+produced ~103 minutes AFTER the ladder executed. The arms are
+retained as scientifically informative physical evidence; the
+transfers themselves are NOT inferred invalid. PR OPEN/UNMERGED
 awaiting maintainer exact-head review.
 
 **Nonclaim (issue-mandated):** this does NOT establish that the
@@ -97,9 +103,64 @@ No physical evidence was recollected. The superseded gate-result,
 authorization, cold-proof, assembly, and terminal bytes are retained
 verbatim under `evidence/superseded-20260920-topology-rebinding/`
 (the superseded authorization's pinned gate digest still matches the
-quarantined bytes). The deterministic terminal is unchanged —
-`V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS` — now with the topology
-basis the retained bytes always established.
+quarantined bytes).
+
+### Authority correction round 2 (2026-09-20, PR #233 review): prospective authorization + producer closure
+
+The topology correction above still left two authority defects that
+the terminal reducer now closes mechanically:
+
+**Retrospective replay authorization.** Retained order state shows
+the four arms executed 15:14:05–15:14:24 UTC. The ONLY authorization
+that existed prospectively (superseded, decision 15:11:12) was bound
+to the stale 00:1c.5 gate (digest `c90bc7f1…`). The corrected
+authorization (16:57:20, gate digest `5e4a6beb…`) was produced
+~103 minutes AFTER the entire ladder executed. A post-campaign
+boot/topology proof may establish what hardware state executed the
+arms; it can never retroactively satisfy #232's requirement that
+replay authorization exist before replay and derive from the valid
+clean-link gate. The reducer now rejects REPLAY_PASS unless
+mechanically, from retained bytes: (1) a valid authorization
+predates the first arm's order-state `recorded_utc`; (2) that
+authorization's `gate_result_digest` equals the retained
+gate-result.json digest (a digest pointing at a superseded gate is
+rejected explicitly); (3) any corrected/replacement authorization
+produced after an arm executed is retrospective — inadmissible; (4)
+authorizations pinning superseded/contradictory gate digests are
+inadmissible. Nothing was solved by editing timestamps, copying the
+corrected topology into the old authorization, or rewriting retained
+artifacts: the corrected authorization and its assembly/terminal are
+quarantined verbatim under
+`evidence/superseded-20260920-authorization-retrospective/`.
+
+**Producer/closure identity.** The retained arms carry their
+EXECUTING identity `producer_head=52a65b19…`,
+`closure_digest=7a5505af…` (head 52a65b1, between the two replay
+producer fixes). The current authority is a different closure, and
+`issue232_freeze.py` classifies `issue232_replay.py` as a
+PHYSICAL_PRODUCER — that file changed after the arms executed
+(38c6ec5), so the arms are NOT silently admitted through the
+current closure and are NOT rewritten to claim they were. The
+closure source set now also pins `issue232_bootproof.py` and
+`issue232_coldproof.py` (correctness/authority-bearing helpers
+consumed by replay authorization and terminal reduction), and both
+are PHYSICAL_PRODUCERS — no reduction-only amendment may cross a
+changed bootproof/coldproof. An explicit immutable historical-closure
+amendment path exists (`AMENDMENTS.json`, fail-closed: pin must be
+an ancestor, the closure digest must match the record committed at
+that pin, and every PHYSICAL_PRODUCER byte-unchanged pin→HEAD), but
+no such amendment is admissible for this campaign precisely because
+the replay producer changed. Missing/unbound arm producer identity
+makes REPLAY_PASS unreachable.
+
+**Resulting terminal: `V2G_EVIDENCE_BLOCKED`** (not
+`V2G_PCIE_PATH_CLEAN_NO_REPLAY` — physical replay did occur; its
+authority is insufficient for the replay classification). The
+clean-link/topology dimension remains reportable separately: root
+00:1d.0 established, clean candidate/cold/qualification evidence
+intact, four exact-correct arms with healthy windows — scientifically
+informative but not admissible for `V2G_PCIE_PATH_REMEDIATED_
+REPLAY_PASS` under #232's prospective-authorization contract.
 
 ## Separate state dimensions (never conflated)
 
@@ -211,10 +272,11 @@ Any stop condition: STOP, retain, reduce (the assembler derives the
 terminal from the order state and arm records automatically), report.
 Nothing is rerun under the same authority.
 
-## Controls (fail-closed; 54-test suite)
+## Controls (fail-closed; 72-test suite)
 
-The issue's 20 required rejections are exercised through the real
-gate/reducer/assembler paths in
+The issue's 20 required rejections plus the two 2026-09-20 authority
+corrections are exercised through the real
+gate/reducer/assembler/closure paths in
 `tests/test_issue232_v2g_pcie_remediation.py`: stale-BDF chain
 rejection (fresh-bytes re-derivation, duplicate-block injection),
 speed-vs-width conflation, journal-context-vs-event conflation,
@@ -225,4 +287,14 @@ warm-reboot-as-cold, single-interval acceptance, post-hoc threshold
 topology/width mismatch, replay-before-gate, changed producer, direct
 fault-scale jump, missing correctness observation, RxErr recurrence
 during replay, predecessor rewrite (authority refusal), rerun-after-
-failure, authored-terminal contradiction.
+failure, authored-terminal contradiction — plus: authorization after
+the first arm, authorization after the last arm, the LITERAL retained
+timestamps of this defect, prospective authorization bound to the
+superseded gate digest, unknown gate digest, post-hoc boot-proof
+agreement that cannot heal a retrospective authorization, missing arm
+timestamps, historical arm closure digest, historical arm producer
+head, unpinned arm identity, changed physical producer not treated as
+a reduction-only amendment, bootproof/coldproof omitted from closure
+sources — and positive controls proving REPLAY_PASS stays reachable
+when a valid gate + prospective authorization precede the arms and
+all closure identities agree.
