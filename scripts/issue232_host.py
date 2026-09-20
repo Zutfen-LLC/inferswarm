@@ -458,8 +458,21 @@ def journal_scan(cursor: str | None = None) -> dict[str, Any]:
             "-g", "amdgpu|AER|pcieport|DMAR|dmar|[Rr]eset|[Hh]ang|ECC"]
     if cursor:
         argv += ["--after-cursor", cursor]
-    receipt = run_probe(argv, timeout=300)
-    text = receipt["stdout"]
+    # journalctl -g exits 1 when NO entries match the pattern — that
+    # is the CLEAN result (a fault-free window), not a probe failure.
+    # Only other nonzero codes (or a stderr error) fail closed.
+    try:
+        receipt = run_probe(argv, timeout=300)
+        text = receipt["stdout"]
+    except HostObservationError as exc:
+        import subprocess as _sp
+        p2 = _sp.run(argv, capture_output=True, timeout=300)
+        no_entries = (p2.returncode == 1
+                      and b"No entries" in p2.stdout
+                      and not p2.stderr.strip())
+        if not no_entries:
+            raise
+        text = ""
     cursor_argv = ["sudo", "-n", "journalctl", "-b", "-k",
                    "--no-pager", "-n", "1", "-o", "json"]
     creceipt = run_probe(cursor_argv, timeout=60)
