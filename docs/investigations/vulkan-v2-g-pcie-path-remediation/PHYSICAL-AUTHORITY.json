@@ -1,0 +1,171 @@
+{
+ "accepted_sources": [
+  "v2b",
+  "v2c",
+  "v2d",
+  "v2e",
+  "v2f"
+ ],
+ "authority_digest": "9543ef02f84e16c69392957d4db206c27ff8bb0d3ff9e0e56679fc4b1f80f611",
+ "campaign_id": "issue232-v2g-pcie-path-remediation",
+ "chronic_condition_baseline": {
+  "boot_id": "9121c110-4eaf-446b-84f4-f1a90c792801",
+  "cross_check": {
+   "events_correctable_equal": true,
+   "upstream_events_equal": true
+  },
+  "reparsed_from_raw_bytes": {
+   "events": {
+    "Correctable": 250851,
+    "DPC": 0,
+    "Uncorrectable": 0
+   },
+   "events_by_source": {
+    "0000:00:1d.0": {
+     "Correctable": 370,
+     "DPC": 0,
+     "Uncorrectable": 0
+    },
+    "0000:02:00.0": {
+     "Correctable": 250507,
+     "DPC": 0,
+     "Uncorrectable": 0
+    },
+    "0000:04:00.0": {
+     "Correctable": 19,
+     "DPC": 0,
+     "Uncorrectable": 0
+    },
+    "0000:07:00.0": {
+     "Correctable": 11,
+     "DPC": 0,
+     "Uncorrectable": 0
+    }
+   },
+   "events_by_type_class": {
+    "Data Link Layer": 673,
+    "Physical Layer": 250178
+   }
+  },
+  "retained_quantification": {
+   "by_source_bdf": {
+    "0000:00:1d.0": 370,
+    "0000:02:00.0": 250507,
+    "0000:04:00.0": 19,
+    "0000:07:00.0": 11
+   },
+   "rate_per_minute": {
+    "campaign_window": 477,
+    "post_campaign": 232,
+    "pre_campaign_avg": 477
+   },
+   "severity_counts": {
+    "Correctable": 250851,
+    "DPC": 0,
+    "Uncorrectable": 0
+   }
+  },
+  "source": "docs/investigations/vulkan-v2-f-v340l-external-memory/evidence/supplementary/SUPPLEMENTARY-FAULT-BOOT-AER.json"
+ },
+ "gate_definition": {
+  "interval_minutes": 2,
+  "required_cold_confirmations": 1,
+  "rxerr_max_over_interval": 0,
+  "threshold_basis": "ZERO frozen prospectively (issue Phase 3 prefers zero; any nonzero threshold must be frozen before observing the confirmation result \u2014 control 10)"
+ },
+ "historical_topology": {
+  "control_nv": "0000:0a:00.0",
+  "die_a": "0000:06:00.0",
+  "die_b": "0000:09:00.0",
+  "root_port": "0000:00:1d.0",
+  "switch_downstream_a": "0000:03:00.0",
+  "switch_downstream_b": "0000:03:01.0",
+  "switch_upstream": "0000:02:00.0"
+ },
+ "historical_topology_note": "observation context ONLY: after any power-cycle or physical intervention the chain and die BDFs are RE-DERIVED from fresh census bytes (PM8533 identity + bus chaining + tree corroboration + UUID join); these literals never authorize",
+ "nonclaims": [
+  "intended identity only: nothing in this document authorizes physical execution; every observation requires a fresh census receipt on the current boot",
+  "the chronic RxErr condition's causal relationship to the #216/#230 amdgpu faults is UNKNOWN and stays unclaimed",
+  "the inherited V2-F PLATFORM_STRESS_FAIL is the replay QUESTION, never permission"
+ ],
+ "replay_plan": {
+  "direction": "b_to_a",
+  "ladder": [
+   {
+    "reps": 1,
+    "size_bytes": 4096,
+    "warmups": 0
+   },
+   {
+    "reps": 1,
+    "size_bytes": 1048576,
+    "warmups": 0
+   },
+   {
+    "reps": 1,
+    "size_bytes": 16777216,
+    "warmups": 0
+   },
+   {
+    "reps": 1,
+    "size_bytes": 67108864,
+    "warmups": 0
+   }
+  ],
+  "mechanism": "opaque_fd",
+  "stop_conditions": [
+   "correctness_mismatch",
+   "ring_timeout_or_hang",
+   "gpu_reset_or_reset_failure",
+   "device_disappearance",
+   "d_state_wedge",
+   "uncorrectable_aer_or_dpc",
+   "material_rxerr_flood_recurrence",
+   "unexpected_topology_or_width_change",
+   "nonzero_producer_exit"
+  ]
+ },
+ "replay_producer_pin": {
+  "campaign": "issue230-v2f-v340l-external-memory",
+  "closure_digest": "0d9a17b97ef1cbea8c10850d4b95044a14fd6cd6d43c85e97296339015a87bf7",
+  "closure_rel": "docs/investigations/vulkan-v2-f-v340l-external-memory/PRODUCER-CLOSURE.json",
+  "producer_head": "30cf699688aa3d718fb475f5390317ebb4ba7385",
+  "transfer_source": "scripts/issue230_transfer.py",
+  "transfer_source_sha256": "79e3b59affbc0fdbc6e39ac39e91ec91ab541c4f3e7677741ebd24868af18a42"
+ },
+ "schema": "inferswarm.v2g.physical-authority/1",
+ "terminals": {
+  "v2b": {
+   "campaign_window_utc": null,
+   "path": "docs/investigations/vulkan-v2-b-v340l/TERMINAL.json",
+   "terminal": "V2B_V340L_DUAL_DIE_QUALIFICATION_PASS"
+  },
+  "v2c": {
+   "campaign_window_utc": null,
+   "path": "docs/investigations/vulkan-v2-c-v340l-platform-stability/cycles-v2/TERMINAL-V2.json",
+   "terminal": "V2C_V340L_PLATFORM_STABILITY_PASS"
+  },
+  "v2d": {
+   "campaign_window_utc": null,
+   "path": "docs/investigations/vulkan-v2-d-v340l-concurrent/evidence/TERMINAL.json",
+   "terminal": "V2D_V340L_PLATFORM_STRESS_FAIL"
+  },
+  "v2e": {
+   "campaign_window_utc": [
+    "2026-09-19T22:49:20.190929+00:00",
+    "2026-09-19T22:49:26.195942+00:00"
+   ],
+   "path": "docs/investigations/vulkan-v2-e-v340l-peer-link/evidence/TERMINAL.json",
+   "terminal": "V2E_EVIDENCE_BLOCKED"
+  },
+  "v2f": {
+   "campaign_window_utc": [
+    "2026-09-20T06:45:04.308363+00:00",
+    "2026-09-20T06:45:04.309236+00:00"
+   ],
+   "path": "docs/investigations/vulkan-v2-f-v340l-external-memory/evidence/TERMINAL.json",
+   "terminal": "V2F_V340L_PLATFORM_STRESS_FAIL"
+  }
+ },
+ "v2f_merge": "c21840e4a1e5b5c81c366dd23b18ff582f9670b1"
+}

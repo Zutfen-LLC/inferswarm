@@ -1,0 +1,200 @@
+Sep 20 10:30:45 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:45 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:45 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:45 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:45 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:45 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:46 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:46 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:46 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:46 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:46 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:46 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:46 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:46 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:46 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:46 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:46 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:46 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:50 inferswarm02 kernel: aer_ratelimit: 50 callbacks suppressed
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:50 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:51 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:55 inferswarm02 kernel: aer_ratelimit: 53 callbacks suppressed
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:55 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:30:56 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:00 inferswarm02 kernel: aer_ratelimit: 59 callbacks suppressed
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:00 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:01 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:01 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:01 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:01 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:01 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:01 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:01 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:01 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:05 inferswarm02 kernel: aer_ratelimit: 57 callbacks suppressed
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:05 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:06 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:06 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:06 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:06 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:06 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:06 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:06 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:06 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:06 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:06 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:06 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:06 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:10 inferswarm02 kernel: EXT4-fs (sdb1): unmounting filesystem 3fee1720-74f8-47ee-8560-448cd2539a07.
+Sep 20 10:31:10 inferswarm02 kernel: aer_ratelimit: 58 callbacks suppressed
+Sep 20 10:31:10 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:10 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:10 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:10 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:11 inferswarm02 kernel: r8169 0000:01:00.0 enp1s0: Link is Down
+Sep 20 10:31:11 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:11 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:11 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:11 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:11 inferswarm02 systemd-shutdown[1]: Syncing filesystems and block devices.
+Sep 20 10:31:11 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0
+Sep 20 10:31:11 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)
+Sep 20 10:31:11 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000
+Sep 20 10:31:11 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)
+Sep 20 10:31:11 inferswarm02 systemd-shutdown[1]: Sending SIGTERM to remaining processes...
+Sep 20 10:31:11 inferswarm02 systemd-journald[242]: Received SIGTERM from PID 1 (systemd-shutdow).

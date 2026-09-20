@@ -1,0 +1,74 @@
+{
+ "authorized": true,
+ "campaign_id": "issue232-v2g-pcie-path-remediation",
+ "closure_digest": "d30c7700b9c9e8879780be41cdd97c2938e173a49164efcdade81338bb5d092f",
+ "decision": "REPLAY_AUTHORIZED",
+ "decision_utc": "2026-09-20T16:57:20.265606+00:00",
+ "first_arm_bytes": 4096,
+ "frozen_arm_ladder": [
+  {
+   "reps": 1,
+   "size_bytes": 4096,
+   "warmups": 0
+  },
+  {
+   "reps": 1,
+   "size_bytes": 1048576,
+   "warmups": 0
+  },
+  {
+   "reps": 1,
+   "size_bytes": 16777216,
+   "warmups": 0
+  },
+  {
+   "reps": 1,
+   "size_bytes": 67108864,
+   "warmups": 0
+  }
+ ],
+ "gate_result_digest": "5e4a6bebdb7f0cab63587a6dc8b87cff740cebe0c6e6d62de8c339da75eeb4e9",
+ "material_rxerr_rate_per_min": 4.77,
+ "producer_head": "38c6ec52df99a93056fa7d7b3b1cccd9db834dda",
+ "qualification_digest": "b0ff8a12a8f29111114a10d652c2c14af1a0370931f54ae3b1302af298ed864d",
+ "reasons": [],
+ "replay_boot_id": "433128ac-e81e-4239-bdd3-30a46c6a3a02",
+ "replay_producer": {
+  "byte_identical_to_accepted": true,
+  "campaign": "issue230-v2f-v340l-external-memory",
+  "closure_digest": "0d9a17b97ef1cbea8c10850d4b95044a14fd6cd6d43c85e97296339015a87bf7",
+  "producer_head": "30cf699688aa3d718fb475f5390317ebb4ba7385",
+  "transfer_source": "scripts/issue230_transfer.py",
+  "transfer_source_sha256_rederived": "79e3b59affbc0fdbc6e39ac39e91ec91ab541c4f3e7677741ebd24868af18a42"
+ },
+ "schema": "inferswarm.v2g.replay-authorization/1",
+ "stop_conditions": [
+  "correctness_mismatch",
+  "ring_timeout_or_hang",
+  "gpu_reset_or_reset_failure",
+  "device_disappearance",
+  "d_state_wedge",
+  "uncorrectable_aer_or_dpc",
+  "material_rxerr_flood_recurrence",
+  "unexpected_topology_or_width_change",
+  "nonzero_producer_exit"
+ ],
+ "topology_binding": {
+  "boot_proof": {
+   "negotiated_width": 1,
+   "replay_boot_id": "433128ac-e81e-4239-bdd3-30a46c6a3a02",
+   "root_port": "0000:00:1d.0",
+   "switch_upstream": "0000:02:00.0"
+  },
+  "cold_proof_root_ports": [
+   "0000:00:1d.0"
+  ],
+  "cold_proof_switch_upstreams": [
+   "0000:02:00.0"
+  ],
+  "gate_root_port": "0000:00:1d.0",
+  "gate_switch_upstream": "0000:02:00.0",
+  "qualification_root_port": "0000:00:1d.0",
+  "qualification_switch_upstream": "0000:02:00.0"
+ }
+}

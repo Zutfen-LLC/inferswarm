@@ -1292,7 +1292,13 @@ class PreservationTests(unittest.TestCase):
                             "scripts/issue230_",
                             "tests/test_issue230_",
                             "tests/issue230_vk_stub/",
-                            "docs/investigations/vulkan-v2-f-v340l-external-memory/")
+                            "docs/investigations/vulkan-v2-f-v340l-external-memory/",
+                            # Issue #232 V2-G: additive PCIe-path
+                            # remediation campaign surface pending on
+                            # main.
+                            "scripts/issue232_",
+                            "tests/test_issue232_",
+                            "docs/investigations/vulkan-v2-g-pcie-path-remediation/")
         for path in changed:
             self.assertTrue(path.startswith(allowed_prefixes),
                             f"unexpected changed path: {path}")

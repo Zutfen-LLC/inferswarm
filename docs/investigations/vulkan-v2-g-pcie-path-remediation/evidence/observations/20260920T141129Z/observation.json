@@ -1,0 +1,305 @@
+{
+ "aer_deltas": {
+  "0000:00:14.0": {
+   "aer_dev_correctable": null,
+   "aer_dev_fatal": null,
+   "aer_dev_nonfatal": null
+  },
+  "0000:00:1d.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  },
+  "0000:01:00.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  },
+  "0000:02:00.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  },
+  "0000:06:00.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  },
+  "0000:09:00.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  },
+  "0000:0a:00.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  }
+ },
+ "aer_end": {
+  "0000:00:14.0": {
+   "aer_dev_correctable": -1,
+   "aer_dev_fatal": -1,
+   "aer_dev_nonfatal": -1
+  },
+  "0000:00:1d.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  },
+  "0000:01:00.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  },
+  "0000:02:00.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  },
+  "0000:06:00.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  },
+  "0000:09:00.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  },
+  "0000:0a:00.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  }
+ },
+ "aer_start": {
+  "0000:00:14.0": {
+   "aer_dev_correctable": -1,
+   "aer_dev_fatal": -1,
+   "aer_dev_nonfatal": -1
+  },
+  "0000:00:1d.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  },
+  "0000:01:00.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  },
+  "0000:02:00.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  },
+  "0000:06:00.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  },
+  "0000:09:00.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  },
+  "0000:0a:00.0": {
+   "aer_dev_correctable": {},
+   "aer_dev_fatal": {},
+   "aer_dev_nonfatal": {}
+  }
+ },
+ "boot_id": "201768fa-0696-4293-ad6a-176922d2acb5",
+ "campaign_id": "issue232-v2g-pcie-path-remediation",
+ "chain_bdfs": [
+  "0000:00:14.0",
+  "0000:00:1d.0",
+  "0000:01:00.0",
+  "0000:02:00.0",
+  "0000:06:00.0",
+  "0000:09:00.0",
+  "0000:0a:00.0"
+ ],
+ "chain_roles": {
+  "root_port": "0000:00:1d.0",
+  "root_port_cap": {
+   "speed": 8.0,
+   "width": 1
+  },
+  "root_port_sta": {
+   "speed": 8.0,
+   "width": 1,
+   "width_downgraded": false
+  },
+  "switch_upstream": "0000:02:00.0",
+  "switch_upstream_cap": {
+   "speed": 8.0,
+   "width": 16
+  },
+  "switch_upstream_sta": {
+   "speed": 8.0,
+   "width": 1,
+   "width_downgraded": true
+  }
+ },
+ "closure_digest": "65b6d156b16441d1624467fdd13e716829318e4199088bfa01fcaff6d7c364b9",
+ "elapsed_minutes": 15.020416161916666,
+ "ended_utc": "2026-09-20T14:26:31.477740+00:00",
+ "host_health": {
+  "loadavg": "0.74 0.70 0.73 1/195 12622",
+  "meminfo_bytes": {
+   "MemAvailable": 15513624576,
+   "MemFree": 12559286272,
+   "SwapFree": 8589930496
+  },
+  "monotonic_ns": 6585675234743,
+  "uptime": "6585.67 12850.45"
+ },
+ "journal_census_delta": {
+  "announcement_lines": 1781,
+  "context_lines": 0,
+  "detail_lines": 3562,
+  "events": {
+   "Correctable": 1781,
+   "DPC": 0,
+   "Uncorrectable": 0
+  },
+  "events_by_severity_prefix": {
+   "0000:00:1d.0": {
+    "Correctable": 1,
+    "DPC": 0,
+    "Uncorrectable": 0
+   },
+   "0000:02:00.0": {
+    "Correctable": 1780,
+    "DPC": 0,
+    "Uncorrectable": 0
+   }
+  },
+  "events_by_source": {
+   "0000:00:1d.0": {
+    "Correctable": 1,
+    "DPC": 0,
+    "Uncorrectable": 0
+   },
+   "0000:02:00.0": {
+    "Correctable": 1780,
+    "DPC": 0,
+    "Uncorrectable": 0
+   }
+  },
+  "events_by_type_class": {
+   "Data Link Layer": 2,
+   "Physical Layer": 1779
+  },
+  "total_lines": 7124
+ },
+ "journal_fault_counts": {
+  "amdgpu_failure": 0,
+  "amdgpu_reset": 0,
+  "amdgpu_timeout": 0,
+  "dmar_fault": 0,
+  "fatal_aer": 0,
+  "thermal": 0
+ },
+ "link_sysfs_end": {
+  "0000:00:14.0": {
+   "current_link_speed": null,
+   "current_link_width": null,
+   "max_link_speed": null,
+   "max_link_width": null
+  },
+  "0000:00:1d.0": {
+   "current_link_speed": "8.0 GT/s PCIe",
+   "current_link_width": "1",
+   "max_link_speed": "8.0 GT/s PCIe",
+   "max_link_width": "1"
+  },
+  "0000:01:00.0": {
+   "current_link_speed": "2.5 GT/s PCIe",
+   "current_link_width": "1",
+   "max_link_speed": "2.5 GT/s PCIe",
+   "max_link_width": "1"
+  },
+  "0000:02:00.0": {
+   "current_link_speed": "8.0 GT/s PCIe",
+   "current_link_width": "1",
+   "max_link_speed": "8.0 GT/s PCIe",
+   "max_link_width": "16"
+  },
+  "0000:06:00.0": {
+   "current_link_speed": "8.0 GT/s PCIe",
+   "current_link_width": "16",
+   "max_link_speed": "8.0 GT/s PCIe",
+   "max_link_width": "16"
+  },
+  "0000:09:00.0": {
+   "current_link_speed": "8.0 GT/s PCIe",
+   "current_link_width": "16",
+   "max_link_speed": "8.0 GT/s PCIe",
+   "max_link_width": "16"
+  },
+  "0000:0a:00.0": {
+   "current_link_speed": "2.5 GT/s PCIe",
+   "current_link_width": "1",
+   "max_link_speed": "16.0 GT/s PCIe",
+   "max_link_width": "16"
+  }
+ },
+ "nic": {
+  "enp1s0": {
+   "rx_bytes": 154823698,
+   "tx_bytes": 9103256
+  },
+  "lo": {
+   "rx_bytes": 9776,
+   "tx_bytes": 9776
+  },
+  "monotonic_ns": 6585665910554,
+  "tailscale0": {
+   "rx_bytes": 314310,
+   "tx_bytes": 1458052
+  }
+ },
+ "note": "phase-1 idle baseline observation (chronic condition present)",
+ "observation_id": "v2g-obs-1789914391",
+ "producer_head": "e1852a13c0417561fb229d86d2d3f24621216fb4",
+ "rates": {
+  "0000:00:14.0": {
+   "correctable_events": 0,
+   "rate_per_minute": 0.0
+  },
+  "0000:00:1d.0": {
+   "correctable_events": 0,
+   "rate_per_minute": 0.0
+  },
+  "0000:01:00.0": {
+   "correctable_events": 0,
+   "rate_per_minute": 0.0
+  },
+  "0000:02:00.0": {
+   "correctable_events": 0,
+   "rate_per_minute": 0.0
+  },
+  "0000:06:00.0": {
+   "correctable_events": 0,
+   "rate_per_minute": 0.0
+  },
+  "0000:09:00.0": {
+   "correctable_events": 0,
+   "rate_per_minute": 0.0
+  },
+  "0000:0a:00.0": {
+   "correctable_events": 0,
+   "rate_per_minute": 0.0
+  }
+ },
+ "requested_minutes": 15,
+ "schema": "inferswarm.v2g.observation/1",
+ "started_utc": "2026-09-20T14:11:31.196863+00:00",
+ "storage": {
+  "free_bytes": 162764873728,
+  "write_ok": true
+ }
+}

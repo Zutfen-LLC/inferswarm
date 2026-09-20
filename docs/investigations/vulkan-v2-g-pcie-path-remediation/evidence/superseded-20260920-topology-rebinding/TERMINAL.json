@@ -1,0 +1,31 @@
+{
+ "basis": [
+  "all 4 replay arms exact-correct through the historical 64-MiB fault scale (sizes=[4096, 1048576, 16777216, 67108864]) with no qualifying platform fault or material RxErr recurrence"
+ ],
+ "campaign_id": "issue232-v2g-pcie-path-remediation",
+ "campaign_window_utc": [
+  "2026-09-20T15:14:32.400639+00:00",
+  "2026-09-20T15:14:32.400639+00:00"
+ ],
+ "closure_digest": "7a5505af200cc0fabfe7703115c200d84abff995f130e63c89f2e769e93bb301",
+ "nonclaims": [
+  "no causal claim between the historical chronic RxErr condition and the #216/#230 amdgpu ring/reset faults without discriminating evidence",
+  "no soak/sustained-load stability claimed",
+  "no model inference correctness or utility claimed",
+  "no production V340L support or route claimed",
+  "correctable-AER disappearance alone is not proof the V340L fault is solved",
+  "no claim that the remediated arrangement is the only clean one",
+  "advertisement is never conflated with validated execution"
+ ],
+ "producer_head": "52a65b19e736851310d6a472002a44d3fb398c8b",
+ "schema": "inferswarm.v2g.terminal/1",
+ "terminal": "V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS",
+ "vocabulary": [
+  "V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS",
+  "V2G_PCIE_PATH_REMEDIATED_FAULT_REPRODUCED",
+  "V2G_PCIE_PATH_REMEDIATED_DIFFERENT_FAILURE",
+  "V2G_PCIE_PATH_REMEDIATION_FAILED",
+  "V2G_PCIE_PATH_CLEAN_NO_REPLAY",
+  "V2G_EVIDENCE_BLOCKED"
+ ]
+}

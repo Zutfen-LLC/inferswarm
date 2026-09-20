@@ -365,7 +365,23 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue230_runner.py",
             "scripts/issue230_reduce.py",
             "scripts/issue230_assemble.py",
-            "scripts/issue230_manifest.py")
+            "scripts/issue230_manifest.py",
+            # Issue #232 V2-G: additive PCIe-path remediation campaign
+            # producers, independently pinned by the V2-G evidence
+            # manifest and the issue232 producer closure.
+            "scripts/issue232_receipt.py",
+            "scripts/issue232_freeze.py",
+            "scripts/issue232_authority.py",
+            "scripts/issue232_host.py",
+            "scripts/issue232_baseline.py",
+            "scripts/issue232_gate.py",
+            "scripts/issue232_qualify.py",
+            "scripts/issue232_replay.py",
+            "scripts/issue232_reduce.py",
+            "scripts/issue232_assemble.py",
+            "scripts/issue232_manifest.py",
+            "scripts/issue232_coldproof.py",
+            "scripts/issue232_bootproof.py")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)
 

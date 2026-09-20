@@ -1,0 +1,75 @@
+{
+ "campaign_id": "issue232-v2g-pcie-path-remediation",
+ "checks": {
+  "cold_confirmation_repeated": true,
+  "interval_full_length": true,
+  "no_amdgpu_timeout_reset": true,
+  "peripherals_no_regression": true,
+  "sources_agree": true,
+  "topology_chain_unique": true,
+  "upstream_rxerr_zero": true,
+  "width_matches_declared_wiring": true,
+  "zero_uncorrectable_and_dpc": true
+ },
+ "detail": {
+  "amdgpu_fault_counts": {
+   "amdgpu_failure": 0,
+   "amdgpu_reset": 0,
+   "amdgpu_timeout": 0,
+   "dmar_fault": 0,
+   "fatal_aer": 0,
+   "thermal": 0
+  },
+  "chain": {
+   "root_port": "0000:00:1c.5",
+   "switch_upstream": "0000:02:00.0",
+   "vega": [
+    "0000:06:00.0",
+    "0000:09:00.0"
+   ]
+  },
+  "cold_confirmations": {
+   "boot_ids": [
+    "433128ac-e81e-4239-bdd3-30a46c6a3a02"
+   ],
+   "observed": 1,
+   "per_confirmation_rxerr": [
+    {
+     "boot_id": "433128ac-e81e-4239-bdd3-30a46c6a3a02",
+     "journal_upstream_events": 0,
+     "sysfs_rxerr_delta": 0,
+     "upstream_bdf": "0000:02:00.0"
+    }
+   ],
+   "required": 1
+  },
+  "rxerr": {
+   "journal_upstream_events": 0,
+   "sysfs_rxerr_delta": 0,
+   "threshold": 0,
+   "upstream_bdf": "0000:02:00.0"
+  },
+  "severity_events_over_interval": {
+   "Correctable": 0,
+   "DPC": 0,
+   "Uncorrectable": 0
+  },
+  "width": {
+   "declared": 1,
+   "note": "speed may idle-downtrain between observations; only WIDTH is a gate predicate (control 2)",
+   "root_port": 1,
+   "switch_speed": 8.0,
+   "switch_upstream": 1
+  }
+ },
+ "failed_checks": [],
+ "gate_definition": {
+  "frozen_before_any_confirmation_result": true,
+  "intended_width": 1,
+  "interval_minutes": 2,
+  "required_cold_confirmations": 1,
+  "rxerr_max_over_interval": 0
+ },
+ "result": "PASS",
+ "schema": "inferswarm.v2g.clean-link-gate/1"
+}

@@ -1,0 +1,15 @@
+{
+ "attribution_policy": "NO individual component attribution for a declared bundle",
+ "campaign_id": "issue232-v2g-pcie-path-remediation",
+ "closure_digest": "a65171ba49f7a17c088cec9c42ed0f3cd998a0a58477b5887c5d91577b3afd4f",
+ "component": "bundle_declared",
+ "declared_bundle": true,
+ "description": "CORRECTION to v2g-iv-1789914635 (declared pre-boot as single-variable reseat): operator testimony after the cycle confirms TWO changes were made in the same power-off window: (1) PM8533/V340L reseated in its current slot, AND (2) the RTX 3060 Ti (root port 00:1d.3, bus 0a) removed from the neighboring slot entirely. Per control 6 this cycle is a DECLARED BUNDLE - no improvement or persistence is attributable to either component individually. Result of the bundle: chronic RxErr flood STILL PRESENT (post-bundle census 20260920T143239Z: sysfs RxErr 188 within the first minute on 0000:02:00.0; journal 75 correctable events from the upstream port).",
+ "intervention_id": "v2g-iv-1789914946",
+ "operator_declared": true,
+ "pre_census_rel": "censuses/20260920T141102Z/census.json",
+ "pre_census_sha256": "ad76a5753fc1a65ae0a6c66215fb0ebe8607a20ec0db6c2a1d95b7c11240b4a2",
+ "producer_head": "60bdb13545301f202aad01eb581686a012556bb9",
+ "recorded_utc": "2026-09-20T14:35:46.230234+00:00",
+ "schema": "inferswarm.v2g.intervention/1"
+}

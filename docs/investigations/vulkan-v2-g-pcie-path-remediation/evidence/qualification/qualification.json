@@ -1,0 +1,96 @@
+{
+ "boot_id": "433128ac-e81e-4239-bdd3-30a46c6a3a02",
+ "campaign_id": "issue232-v2g-pcie-path-remediation",
+ "chain": {
+  "root_port_bdf": "0000:00:1d.0",
+  "root_port_cap": {
+   "speed": 8.0,
+   "width": 1
+  },
+  "root_port_sta": {
+   "speed": 8.0,
+   "width": 1,
+   "width_downgraded": false
+  },
+  "switch_upstream_bdf": "0000:02:00.0",
+  "switch_upstream_cap": {
+   "speed": 8.0,
+   "width": 16
+  },
+  "switch_upstream_sta": {
+   "speed": 8.0,
+   "width": 1,
+   "width_downgraded": true
+  }
+ },
+ "closure_digest": "23cbbafdae7018a241d87a8d7421fede6d2de629ea776b282347802eae4eb67d",
+ "collected_utc": "2026-09-20T15:10:56.961352+00:00",
+ "gate_checks_passed": {
+  "cold_confirmation_repeated": true,
+  "interval_full_length": true,
+  "no_amdgpu_timeout_reset": true,
+  "peripherals_no_regression": true,
+  "sources_agree": true,
+  "topology_chain_unique": true,
+  "upstream_rxerr_zero": true,
+  "width_matches_declared_wiring": true,
+  "zero_uncorrectable_and_dpc": true
+ },
+ "gate_result_rel": "gate-result.json",
+ "identity_join_ok": true,
+ "journal_census_delta": {
+  "announcement_lines": 0,
+  "context_lines": 0,
+  "detail_lines": 0,
+  "events": {
+   "Correctable": 0,
+   "DPC": 0,
+   "Uncorrectable": 0
+  },
+  "events_by_severity_prefix": {},
+  "events_by_source": {},
+  "events_by_type_class": {},
+  "total_lines": 0
+ },
+ "journal_fault_counts": {
+  "amdgpu_failure": 0,
+  "amdgpu_reset": 0,
+  "amdgpu_timeout": 0,
+  "dmar_fault": 0,
+  "fatal_aer": 0,
+  "thermal": 0
+ },
+ "producer_head": "040b5d98051ad1066494c935f435656236978187",
+ "qualification_id": "v2g-qual-1789917056",
+ "same_die_operations": {
+  "0000:06:00.0": {
+   "exit_code": 0,
+   "ok": true,
+   "stdout_rel": "raw/qualify-samedie-0.stdout"
+  },
+  "0000:09:00.0": {
+   "exit_code": 0,
+   "ok": true,
+   "stdout_rel": "raw/qualify-samedie-1.stdout"
+  }
+ },
+ "schema": "inferswarm.v2g.qualification/1",
+ "stop_condition": null,
+ "upstream_rxerr_delta": 0,
+ "vega_bdfs": [
+  "0000:06:00.0",
+  "0000:09:00.0"
+ ],
+ "vram_census": {
+  "0000:06:00.0": {
+   "driver": "06:00.0 Display controller: Advanced Micro Devices, Inc. [AMD/ATI] Vega 10 [Radeon Pro V340/Instinct MI25x2] (rev 05)\n\tSubsystem: Advanced Micro Devices, Inc. [AMD/ATI] Device 0c00\n\tKernel driver in use: amdgpu\n\tKernel modules: amdgpu\n",
+   "vram_total_bytes": 8573157376,
+   "vram_used_bytes": 8327168
+  },
+  "0000:09:00.0": {
+   "driver": "09:00.0 Display controller: Advanced Micro Devices, Inc. [AMD/ATI] Vega 10 [Radeon Pro V340/Instinct MI25x2] (rev 05)\n\tSubsystem: Advanced Micro Devices, Inc. [AMD/ATI] Device 0c00\n\tKernel driver in use: amdgpu\n\tKernel modules: amdgpu\n",
+   "vram_total_bytes": 8573157376,
+   "vram_used_bytes": 8327168
+  }
+ }
+}

@@ -1,0 +1,3 @@
+{"event":"arm","kind":"samedie","size":4194304,"reps":1,"warmups":0,"die_a":"0000:06:00.0","die_b":"0000:06:00.0"}
+{"event":"rep","rep":0,"measured":1,"seed":589627393,"ok":true,"elapsed_ns":5546884}
+{"event":"summary","kind":"samedie","size":4194304,"ok":true}

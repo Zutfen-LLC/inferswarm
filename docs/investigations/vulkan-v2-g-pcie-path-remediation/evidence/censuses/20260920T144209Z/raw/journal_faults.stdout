@@ -1,0 +1,181 @@
+Sep 20 10:39:28 inferswarm02 kernel: Command line: BOOT_IMAGE=/boot/vmlinuz-7.1.8+deb13-amd64 root=UUID=f3a7ad1c-0eae-4cbb-93d1-237704be9444 ro amdgpu.rebar=0 quiet
+Sep 20 10:39:28 inferswarm02 kernel: ACPI: DMAR 0x0000000085A46498 0000A8 (v01 INTEL  EDK2     00000001 INTL 00000001)
+Sep 20 10:39:28 inferswarm02 kernel: ACPI: Reserving DMAR table memory at [mem 0x85a46498-0x85a4653f]
+Sep 20 10:39:28 inferswarm02 kernel: Kernel command line: BOOT_IMAGE=/boot/vmlinuz-7.1.8+deb13-amd64 root=UUID=f3a7ad1c-0eae-4cbb-93d1-237704be9444 ro amdgpu.rebar=0 quiet
+Sep 20 10:39:28 inferswarm02 kernel: DMAR: Host address width 39
+Sep 20 10:39:28 inferswarm02 kernel: DMAR: DRHD base: 0x000000fed90000 flags: 0x0
+Sep 20 10:39:28 inferswarm02 kernel: DMAR: dmar0: reg_base_addr fed90000 ver 1:0 cap 1c0000c40660462 ecap 7e3ff0505e
+Sep 20 10:39:28 inferswarm02 kernel: DMAR: DRHD base: 0x000000fed91000 flags: 0x1
+Sep 20 10:39:28 inferswarm02 kernel: DMAR: dmar1: reg_base_addr fed91000 ver 1:0 cap d2008c40660462 ecap f050da
+Sep 20 10:39:28 inferswarm02 kernel: DMAR: RMRR base: 0x0000008cbd3000 end: 0x0000008ce1cfff
+Sep 20 10:39:28 inferswarm02 kernel: DMAR: RMRR base: 0x0000008d800000 end: 0x0000008fffffff
+Sep 20 10:39:28 inferswarm02 kernel: DMAR-IR: IOAPIC id 2 under DRHD base  0xfed91000 IOMMU 1
+Sep 20 10:39:28 inferswarm02 kernel: DMAR-IR: HPET id 0 under DRHD base 0xfed91000
+Sep 20 10:39:28 inferswarm02 kernel: DMAR-IR: Queued invalidation will be enabled to support x2apic and Intr-remapping.
+Sep 20 10:39:28 inferswarm02 kernel: DMAR-IR: Enabled IRQ remapping in x2apic mode
+Sep 20 10:39:28 inferswarm02 kernel: acpi PNP0A08:00: _OSC: OS now controls [PCIeHotplug SHPCHotplug PME AER PCIeCapability LTR]
+Sep 20 10:39:28 inferswarm02 kernel: DMAR: No ATSR found
+Sep 20 10:39:28 inferswarm02 kernel: DMAR: No SATC found
+Sep 20 10:39:28 inferswarm02 kernel: DMAR: dmar0: Using Queued invalidation
+Sep 20 10:39:28 inferswarm02 kernel: DMAR: dmar1: Using Queued invalidation
+Sep 20 10:39:28 inferswarm02 kernel: DMAR: Intel(R) Virtualization Technology for Directed I/O
+Sep 20 10:39:28 inferswarm02 kernel: pcieport 0000:00:1c.0: Intel SPT PCH root port ACS workaround enabled
+Sep 20 10:39:28 inferswarm02 kernel: pcieport 0000:00:1c.0: PME: Signaling with IRQ 123
+Sep 20 10:39:28 inferswarm02 kernel: pcieport 0000:00:1c.0: AER: enabled with IRQ 123
+Sep 20 10:39:28 inferswarm02 kernel: pcieport 0000:00:1c.5: Intel SPT PCH root port ACS workaround enabled
+Sep 20 10:39:28 inferswarm02 kernel: pcieport 0000:00:1c.5: PME: Signaling with IRQ 124
+Sep 20 10:39:28 inferswarm02 kernel: pcieport 0000:00:1c.5: AER: enabled with IRQ 124
+Sep 20 10:39:28 inferswarm02 systemd[1]: systemd 257.13-1~deb13u1 running in system mode (+PAM +AUDIT +SELINUX +APPARMOR +IMA +IPE +SMACK +SECCOMP +GCRYPT -GNUTLS +OPENSSL +ACL +BLKID +CURL +ELFUTILS +FIDO2 +IDN2 -IDN +IPTC +KMOD +LIBCRYPTSETUP +LIBCRYPTSETUP_PLUGINS +LIBFDISK +PCRE2 +PWQUALITY +P11KIT +QRENCODE +TPM2 +BZIP2 +LZ4 +XZ +ZLIB +ZSTD +BPF_FRAMEWORK +BTF -XKBCOMMON -UTMP +SYSVINIT +LIBARCHIVE)
+Sep 20 10:39:29 inferswarm02 kernel: EDAC ie31200: No ECC support
+Sep 20 10:39:29 inferswarm02 kernel: EDAC ie31200: No ECC support
+Sep 20 10:39:31 inferswarm02 kernel: i915 0000:00:02.0: vgaarb: VGA decodes changed: olddecodes=io+mem,decodes=io:owns=io+mem
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu: Virtual CRAT table created for CPU
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu: Topology: Add CPU node
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: enabling device (0000 -> 0002)
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: initializing kernel modesetting (VEGA10 0x1002:0x6864 0x1002:0x0C00 0x05).
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: register mmio base: 0x90000000
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: register mmio size: 524288
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: detected ip block number 0 <common_v2_0_0> (soc15_common)
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: detected ip block number 1 <gmc_v9_0_0> (gmc_v9_0)
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: detected ip block number 2 <ih_v4_0_0> (vega10_ih)
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: detected ip block number 3 <psp_v3_1_0> (psp)
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: detected ip block number 4 <smu_v1_0_0> (powerplay)
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: detected ip block number 5 <dce_v1_0_0> (dm)
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: detected ip block number 6 <gfx_v9_0_0> (gfx_v9_0)
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: detected ip block number 7 <sdma_v4_0_0> (sdma_v4_0)
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: detected ip block number 8 <uvd_v7_0_0> (uvd_v7_0)
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: detected ip block number 9 <vce_v4_0_0> (vce_v4_0)
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: Fetched VBIOS from platform
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: [drm] ATOM BIOS: 113-D0531800-101, build: 430251  , ver: 016.001.001.000.011120, 2018/09/19
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: [drm] UVD(0) is enabled in VM mode
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: [drm] UVD(0) ENC is enabled in VM mode
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: Found VCE firmware Version: 57.6 Binary ID: 4
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: [drm] VCE enabled in VM mode
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: Trusted Memory Zone (TMZ) feature not supported
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: PCIE atomic ops is not supported
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: GPU posting now...
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: MEM ECC is active.
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: SRAM ECC is not presented.
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: vm size is 262144 GB, 4 levels, block size is 9-bit, fragment size is 9-bit
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: VRAM: 8176M 0x000000F400000000 - 0x000000F5FEFFFFFF (8176M used)
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: GART: 512M 0x0000000000000000 - 0x000000001FFFFFFF
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: [drm] Detected VRAM RAM=8176M, BAR=8192M
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: [drm] RAM width 2048bits HBM
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0:  8176M of VRAM memory ready
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0:  7953M of GTT memory ready.
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: [drm] GART: num cpu pages 131072, num gpu pages 131072
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: memory partition mode query is not supported
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: [drm] PCIE GART of 512M enabled.
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: [drm] PTB located at 0x000000F5FEF00000
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu: hwmgr_sw_init smu backed is vega10_smu
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: [drm] Found UVD firmware Version: 66.43 Family ID: 17
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: [drm] PSP loading UVD firmware
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: [drm] PSP loading VCE firmware
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: reserve 0x400000 from 0xf5fe400000 for PSP TMR
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: [drm] Display Core v3.2.378 initialized on DCE 12.0
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: kiq ring mec 2 pipe 1 q 0
+Sep 20 10:39:36 inferswarm02 kernel: amdgpu 0000:06:00.0: [drm] UVD and UVD ENC initialized successfully.
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: [drm] VCE initialized successfully.
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu: Virtual CRAT table created for GPU
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu: Topology: Add GPU node [0x1002:0x6864]
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: SE 4, SH per SE 1, CU per SH 16, active_cu_number 56
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring gfx uses VM inv eng 0 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring comp_1.0.0 uses VM inv eng 1 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring comp_1.1.0 uses VM inv eng 4 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring comp_1.2.0 uses VM inv eng 5 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring comp_1.3.0 uses VM inv eng 6 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring comp_1.0.1 uses VM inv eng 7 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring comp_1.1.1 uses VM inv eng 8 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring comp_1.2.1 uses VM inv eng 9 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring comp_1.3.1 uses VM inv eng 10 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring kiq_0.2.1.0 uses VM inv eng 11 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring sdma0 uses VM inv eng 0 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring sdma0 shares VM invalidation engine 0 with ring page0 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring page0 uses VM inv eng 1 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring sdma1 uses VM inv eng 4 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring sdma1 shares VM invalidation engine 4 with ring page1 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring page1 uses VM inv eng 5 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring uvd_0 uses VM inv eng 6 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring uvd_enc_0.0 uses VM inv eng 7 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring uvd_enc_0.1 uses VM inv eng 8 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring vce0 uses VM inv eng 9 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring vce1 uses VM inv eng 10 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: ring vce2 uses VM inv eng 11 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu: HMM registered 8176MB device memory
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: Runtime PM not available
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:06:00.0: [drm] Registered 6 planes with drm panic
+Sep 20 10:39:37 inferswarm02 kernel: [drm] Initialized amdgpu 3.64.0 for 0000:06:00.0 on minor 1
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: enabling device (0000 -> 0002)
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: initializing kernel modesetting (VEGA10 0x1002:0x6864 0x1002:0x0C00 0x05).
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: register mmio base: 0x90400000
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: register mmio size: 524288
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: detected ip block number 0 <common_v2_0_0> (soc15_common)
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: detected ip block number 1 <gmc_v9_0_0> (gmc_v9_0)
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: detected ip block number 2 <ih_v4_0_0> (vega10_ih)
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: detected ip block number 3 <psp_v3_1_0> (psp)
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: detected ip block number 4 <smu_v1_0_0> (powerplay)
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: detected ip block number 5 <dce_v1_0_0> (dm)
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: detected ip block number 6 <gfx_v9_0_0> (gfx_v9_0)
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: detected ip block number 7 <sdma_v4_0_0> (sdma_v4_0)
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: detected ip block number 8 <uvd_v7_0_0> (uvd_v7_0)
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: detected ip block number 9 <vce_v4_0_0> (vce_v4_0)
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: Fetched VBIOS from platform
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: [drm] ATOM BIOS: 113-D0531800-101, build: 430251  , ver: 016.001.001.000.011120, 2018/09/19
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: [drm] UVD(0) is enabled in VM mode
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: [drm] UVD(0) ENC is enabled in VM mode
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: Found VCE firmware Version: 57.6 Binary ID: 4
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: [drm] VCE enabled in VM mode
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: Trusted Memory Zone (TMZ) feature not supported
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: PCIE atomic ops is not supported
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: GPU posting now...
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: MEM ECC is active.
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: SRAM ECC is not presented.
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: vm size is 262144 GB, 4 levels, block size is 9-bit, fragment size is 9-bit
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: VRAM: 8176M 0x000000F400000000 - 0x000000F5FEFFFFFF (8176M used)
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: GART: 512M 0x0000000000000000 - 0x000000001FFFFFFF
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: [drm] Detected VRAM RAM=8176M, BAR=8192M
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: [drm] RAM width 2048bits HBM
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0:  8176M of VRAM memory ready
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0:  7953M of GTT memory ready.
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: [drm] GART: num cpu pages 131072, num gpu pages 131072
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: memory partition mode query is not supported
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: [drm] PCIE GART of 512M enabled.
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: [drm] PTB located at 0x000000F5FEF00000
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu: hwmgr_sw_init smu backed is vega10_smu
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: [drm] Found UVD firmware Version: 66.43 Family ID: 17
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: [drm] PSP loading UVD firmware
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: [drm] PSP loading VCE firmware
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: reserve 0x400000 from 0xf5fe400000 for PSP TMR
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: [drm] Display Core v3.2.378 initialized on DCE 12.0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: kiq ring mec 2 pipe 1 q 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: [drm] UVD and UVD ENC initialized successfully.
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: [drm] VCE initialized successfully.
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu: Virtual CRAT table created for GPU
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu: Topology: Add GPU node [0x1002:0x6864]
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: SE 4, SH per SE 1, CU per SH 16, active_cu_number 56
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring gfx uses VM inv eng 0 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring comp_1.0.0 uses VM inv eng 1 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring comp_1.1.0 uses VM inv eng 4 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring comp_1.2.0 uses VM inv eng 5 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring comp_1.3.0 uses VM inv eng 6 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring comp_1.0.1 uses VM inv eng 7 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring comp_1.1.1 uses VM inv eng 8 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring comp_1.2.1 uses VM inv eng 9 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring comp_1.3.1 uses VM inv eng 10 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring kiq_0.2.1.0 uses VM inv eng 11 on hub 0
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring sdma0 uses VM inv eng 0 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring sdma0 shares VM invalidation engine 0 with ring page0 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring page0 uses VM inv eng 1 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring sdma1 uses VM inv eng 4 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring sdma1 shares VM invalidation engine 4 with ring page1 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring page1 uses VM inv eng 5 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring uvd_0 uses VM inv eng 6 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring uvd_enc_0.0 uses VM inv eng 7 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring uvd_enc_0.1 uses VM inv eng 8 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring vce0 uses VM inv eng 9 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring vce1 uses VM inv eng 10 on hub 8
+Sep 20 10:39:37 inferswarm02 kernel: amdgpu 0000:09:00.0: ring vce2 uses VM inv eng 11 on hub 8
+Sep 20 10:39:38 inferswarm02 kernel: amdgpu: HMM registered 8176MB device memory
+Sep 20 10:39:38 inferswarm02 kernel: amdgpu 0000:09:00.0: Runtime PM not available
+Sep 20 10:39:38 inferswarm02 kernel: amdgpu 0000:09:00.0: [drm] Registered 6 planes with drm panic
+Sep 20 10:39:38 inferswarm02 kernel: [drm] Initialized amdgpu 3.64.0 for 0000:09:00.0 on minor 2

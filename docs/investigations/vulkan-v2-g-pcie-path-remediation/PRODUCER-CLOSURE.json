@@ -1,0 +1,21 @@
+{
+ "campaign_id": "issue232-v2g-pcie-path-remediation",
+ "closure_digest": "f82ce389adad74c09db84de56c4bdfe069a1c23b372715b6a5b4cef81f83f690",
+ "producer_head": "34de5c6c69e0e46b4e130bc3b954bd5eb9e21b32",
+ "schema": "inferswarm.v2g.producer-closure/1",
+ "sources": {
+  "scripts/issue232_assemble.py": "27c3ad025d9ffc4c6b02529a4a8dcd462895f39a8739e70532637650f0a55c9c",
+  "scripts/issue232_authority.py": "58ad29e258d665af38cefca4a8f7956307178f9d1c7edb2026072863a29729f2",
+  "scripts/issue232_baseline.py": "76cedff78e339fda3d4080a1a3b3aab6661b9796ffcc900be3e2d2e0c56e4e73",
+  "scripts/issue232_bootproof.py": "89b33c23eb1419a5ad9a84ad5462767d91c4ccf82c8f827db7c1a239e35c0738",
+  "scripts/issue232_coldproof.py": "007dff9dbaf840c4e8ff3dcce078ddeba5841a04ab6bc3eb425a9a1adb068d35",
+  "scripts/issue232_freeze.py": "b77f829439ab9e3f768d1dfbd92507e61b9c12bf8073120b1ce8152919dee357",
+  "scripts/issue232_gate.py": "bff8222c80ddeb4b37f947e95e02509cac184af9841b649ab60f628173b6088f",
+  "scripts/issue232_host.py": "d240a8acd15b62ca38534ac7b8e5fdef9ef2d473decb864c56990a1832def5fc",
+  "scripts/issue232_manifest.py": "d1aa69092fd281ba77a6c14130ed2918426ba7d205792e6fa34a3197507931f2",
+  "scripts/issue232_qualify.py": "3f9dac3b4acddb3716253f007dc6a6c7f96ce8f2801da6d986318f201b96d397",
+  "scripts/issue232_receipt.py": "a15e3f27c98b47534188c50a5d5c027d772b28a83e911a6126489c0ad4677b1a",
+  "scripts/issue232_reduce.py": "ed2954d446d3f5d7baab84336d05f60e44eb677372c5f003e4f38284069999c8",
+  "scripts/issue232_replay.py": "1c592369a52a24d8e289bfbc8bfafa47c60592e626a3ee9d5eebc294bc233180"
+ }
+}

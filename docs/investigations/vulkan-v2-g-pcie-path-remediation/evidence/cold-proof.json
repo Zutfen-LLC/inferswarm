@@ -1,0 +1,15 @@
+{
+ "cycles": [
+  {
+   "boot_id": "433128ac-e81e-4239-bdd3-30a46c6a3a02",
+   "census_rel": "censuses/20260920T150632Z",
+   "last_x_sha256": "46360470ad693655fb543da83d40124ac076f26d7a7729c60364de01e6169d77",
+   "prev_boot_ended_without_reboot_target": true,
+   "prev_tail_sha256": "e479adb0599e75d0c029a3661c83fd2e01443a6fedf26aca2ca6947195c1314e",
+   "root_port_bdf": "0000:00:1d.0",
+   "shutdown_record_present": true,
+   "switch_upstream_bdf": "0000:02:00.0"
+  }
+ ],
+ "schema": "inferswarm.v2g.cold-proof/1"
+}

@@ -1,0 +1,43 @@
+{
+ "campaign_id": "issue232-v2g-pcie-path-remediation",
+ "chain_digest": "f5dd926955ec837e1206bb6e5ebaf89aaef16adff6011fe89fe74913e7e9e839",
+ "entries": [
+  {
+   "arm": "replay-4096",
+   "detail": {
+    "ns": 1135199,
+    "size": 4096
+   },
+   "recorded_utc": "2026-09-20T15:14:05.182250+00:00",
+   "state": "passed"
+  },
+  {
+   "arm": "replay-1048576",
+   "detail": {
+    "ns": 4205988,
+    "size": 1048576
+   },
+   "recorded_utc": "2026-09-20T15:14:12.449888+00:00",
+   "state": "passed"
+  },
+  {
+   "arm": "replay-16777216",
+   "detail": {
+    "ns": 50887368,
+    "size": 16777216
+   },
+   "recorded_utc": "2026-09-20T15:14:14.749495+00:00",
+   "state": "passed"
+  },
+  {
+   "arm": "replay-67108864",
+   "detail": {
+    "ns": 224477777,
+    "size": 67108864
+   },
+   "recorded_utc": "2026-09-20T15:14:24.736884+00:00",
+   "state": "passed"
+  }
+ ],
+ "schema": "inferswarm.v2g.replay-order/1"
+}

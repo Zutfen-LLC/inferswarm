@@ -1,0 +1,15 @@
+{
+ "attribution_policy": "single variable: pm8533_upstream_slot_move",
+ "campaign_id": "issue232-v2g-pcie-path-remediation",
+ "closure_digest": "27aa223314a3a9fec52b136dcf51a3215b3ba077f0f5fe867cdf189878846de2",
+ "component": "pm8533_upstream_slot_move",
+ "declared_bundle": false,
+ "description": "DAUGHTERBOARD DISCRIMINATOR (declared after the fact - operator powered off before this declaration could be recorded; pre-census anchor is the last retained state census 20260920T144209Z): returned the PM8533 upstream from the motherboard slot (root port 00:1c.5, flood ABSENT) to a slot ON THE DAUGHTERBOARD (prior daughterboard path root port 00:1d.0 flooded chronically). If the flood RETURNS the chronic source is the daughterboard path (slot/cable/connector), not the card; if it stays absent, the prior 1d.0 flood was position-specific.",
+ "intervention_id": "v2g-iv-1789916067",
+ "operator_declared": true,
+ "pre_census_rel": "censuses/20260920T144209Z/census.json",
+ "pre_census_sha256": "cbc17471ffd60b5cdc66db6d85cb298aae259ec5032fcb46886e884b7cfc57c4",
+ "producer_head": "c2c39858205203d92f7befb091fb50cb2b521f30",
+ "recorded_utc": "2026-09-20T14:54:27.841980+00:00",
+ "schema": "inferswarm.v2g.intervention/1"
+}

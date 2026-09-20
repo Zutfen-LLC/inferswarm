@@ -1,0 +1,15 @@
+{
+ "attribution_policy": "single variable: pm8533_upstream_slot_move",
+ "campaign_id": "issue232-v2g-pcie-path-remediation",
+ "closure_digest": "a65171ba49f7a17c088cec9c42ed0f3cd998a0a58477b5887c5d91577b3afd4f",
+ "component": "pm8533_upstream_slot_move",
+ "declared_bundle": false,
+ "description": "Operator-directed slot move, single new variable on top of the declared bundle state: move the PM8533 upstream from its current slot (PCH root port 00:1d.0 path) to a DIFFERENT PCH x1 slot (operator-selected target; tests the operator hypothesis that the chronic RxErr source is the specific slot/bus path - if the flood follows the card it is card/adapter-side, if it vanishes it was the slot path). Cold power cycle after the move. Expected post-move: switch upstream enumerates at a NEW BDF on a different root port; chain re-derivation is by PM8533 identity + bus chaining (fresh bytes only).",
+ "intervention_id": "v2g-iv-1789914953",
+ "operator_declared": true,
+ "pre_census_rel": "censuses/20260920T143239Z/census.json",
+ "pre_census_sha256": "379a4e6fa11e67fc0ae8d4a30bdef4f315f9df91da091f07f6a643d587ea7325",
+ "producer_head": "60bdb13545301f202aad01eb581686a012556bb9",
+ "recorded_utc": "2026-09-20T14:35:53.695424+00:00",
+ "schema": "inferswarm.v2g.intervention/1"
+}

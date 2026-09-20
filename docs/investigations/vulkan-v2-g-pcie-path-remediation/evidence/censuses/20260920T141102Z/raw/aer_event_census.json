@@ -1,0 +1,39 @@
+{
+ "announcement_lines": 11191,
+ "context_lines": 4,
+ "detail_lines": 22562,
+ "events": {
+  "Correctable": 11190,
+  "DPC": 0,
+  "Uncorrectable": 0
+ },
+ "events_by_severity_prefix": {
+  "0000:00:1d.0": {
+   "Correctable": 11,
+   "DPC": 0,
+   "Uncorrectable": 0
+  },
+  "0000:02:00.0": {
+   "Correctable": 11179,
+   "DPC": 0,
+   "Uncorrectable": 0
+  }
+ },
+ "events_by_source": {
+  "0000:00:1d.0": {
+   "Correctable": 11,
+   "DPC": 0,
+   "Uncorrectable": 0
+  },
+  "0000:02:00.0": {
+   "Correctable": 11180,
+   "DPC": 0,
+   "Uncorrectable": 0
+  }
+ },
+ "events_by_type_class": {
+  "Data Link Layer": 16,
+  "Physical Layer": 11174
+ },
+ "total_lines": 44947
+}
