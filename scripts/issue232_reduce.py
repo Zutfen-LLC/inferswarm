@@ -171,6 +171,7 @@ def reduce_replay(evidence_root: Path) -> dict[str, Any] | None:
         if authz.get("schema") != "inferswarm.v2g.replay-authorization/1":
             raise ReductionError("bad replay authorization schema")
         out.update({
+            "authorized": authz.get("authorized"),
             "decision": authz.get("decision"),
             "decision_utc": authz.get("decision_utc"),
             "gate_result_digest": authz.get("gate_result_digest"),
@@ -236,8 +237,10 @@ def reduce_replay(evidence_root: Path) -> dict[str, Any] | None:
         }
     arms_dir = evidence_root / "arms"
     arm_rows: list[dict[str, Any]] = []
+    arm_files: list[Path] = []
     if arms_dir.is_dir():
-        for path in sorted(arms_dir.glob("replay-*.json")):
+        for path in sorted(arms_dir.glob("*.json")):
+            arm_files.append(path)
             arm = _load(path)
             raw_rel = arm.get("stdout_rel")
             if not isinstance(raw_rel, str):
@@ -266,7 +269,50 @@ def reduce_replay(evidence_root: Path) -> dict[str, Any] | None:
                 "upstream_bdf": arm.get("upstream_bdf"),
                 "negotiated_width": arm.get("negotiated_width"),
             })
-    out["arms"] = arm_rows
+    # The order state is the execution census. A directory listing is
+    # never an independent source of terminal-arm authority.
+    entries = out.get("order_entries") or []
+    problems: list[str] = []
+    expected_sizes = {f"replay-{r['size_bytes']}": r["size_bytes"]
+                      for r in rc.REPLAY_LADDER}
+    by_name: dict[str, dict[str, Any]] = {}
+    for path, arm in zip(arm_files, arm_rows):
+        name = arm.get("arm")
+        if not isinstance(name, str) or path.stem != name:
+            problems.append(f"arm artifact {path.name} does not match its arm name")
+        if name in by_name:
+            problems.append(f"duplicate arm artifact for {name!r}")
+        else:
+            by_name[name] = arm
+    ordered: list[dict[str, Any]] = []
+    for entry in entries:
+        name = entry["arm"]
+        arm = by_name.get(name)
+        if arm is None:
+            problems.append(f"order entry {name} has no arm artifact")
+            continue
+        ordered.append(arm)
+        size = expected_sizes.get(name)
+        if type(arm.get("size_bytes")) is not int or arm["size_bytes"] != size:
+            problems.append(f"{name} arm size does not match the frozen ladder")
+        detail = entry.get("detail")
+        if isinstance(detail, dict) and "size" in detail \
+                and (type(detail["size"]) is not int
+                     or detail["size"] != arm.get("size_bytes")):
+            problems.append(f"{name} order detail size disagrees with arm size")
+        stopped = arm.get("stop_condition") is not None
+        if entry["state"] == "passed" and stopped:
+            problems.append(f"passed order entry {name} has an arm stop condition")
+        if entry["state"] == "failed" and not stopped:
+            problems.append(f"failed order entry {name} has no arm stop condition")
+        if isinstance(detail, dict) and "stop_condition" in detail \
+                and detail["stop_condition"] != arm.get("stop_condition"):
+            problems.append(f"{name} order stop condition disagrees with arm")
+    for name in sorted(by_name.keys() - {e["arm"] for e in entries},
+                       key=str):
+        problems.append(f"arm artifact {name} is outside the executed order prefix")
+    out["arm_order_problems"] = problems
+    out["arms"] = ordered
     return out
 
 
@@ -436,7 +482,7 @@ def _historical_provenance_problems(
         if missing:
             problems.append(
                 f"{arm} retains no {missing[0]} — unpinned physical "
-                "producer identity makes REPLAY_PASS unreachable")
+                "producer identity blocks replay classification")
             continue
         assert isinstance(head, str) and isinstance(digest, str)
         if head == closure.get("producer_head") \
@@ -457,6 +503,88 @@ def _historical_provenance_problems(
             problems.append(
                 f"{arm} historical pin {head[:12]} is not the pin "
                 "admitted by the amendment record")
+    return problems
+
+
+def _execution_authority_problems(
+        evidence_root: Path, gate: dict[str, Any],
+        qual: dict[str, Any] | None, replay: dict[str, Any],
+        arms: list[dict[str, Any]], closure: dict[str, Any] | None,
+        admitted_historical_pins: dict[str, dict] | None,
+        authz_problems: list[str]) -> list[str]:
+    """Check authority for every executed arm before any replay terminal."""
+    problems = [f"authorization inadmissible: {p}" for p in authz_problems]
+    problems.extend(f"arm/order inadmissible: {p}"
+                    for p in replay.get("arm_order_problems") or [])
+    chain = gate.get("chain") or {}
+    gate_root = chain.get("root_port")
+    gate_up = chain.get("switch_upstream")
+    binding = replay.get("topology_binding") or {}
+    bp = replay.get("boot_proof") or {}
+    authz_bp = binding.get("boot_proof") or {}
+    if not gate_root or not gate_up:
+        problems.append("topology inadmissible: clean-link gate has no chain identity")
+    if (binding.get("gate_root_port") != gate_root
+            or binding.get("gate_switch_upstream") != gate_up):
+        problems.append("topology inadmissible: authorization gate topology "
+                        "disagrees with retained clean-link gate")
+    if not bp:
+        problems.append("topology inadmissible: no boot-proof retained for replay")
+    else:
+        if (bp.get("root_port") != gate_root
+                or bp.get("switch_upstream") != gate_up):
+            problems.append("topology inadmissible: boot-proof topology "
+                            "disagrees with gate chain")
+        if not bp.get("replay_boot_id") or \
+                bp.get("anchor_census_boot_id") != bp.get("replay_boot_id"):
+            problems.append("topology inadmissible: boot-proof replay boot "
+                            "does not match its anchor census boot")
+        if replay.get("replay_boot_id") != bp.get("replay_boot_id"):
+            problems.append("topology inadmissible: authorization replay boot "
+                            "disagrees with retained boot-proof")
+    if not authz_bp or any(bp.get(k) != authz_bp.get(k) for k in (
+            "replay_boot_id", "root_port", "switch_upstream",
+            "negotiated_width")):
+        problems.append("topology inadmissible: authorization boot-proof "
+                        "binding disagrees with retained boot-proof.json")
+    if qual is None:
+        problems.append("topology inadmissible: no replay qualification retained")
+    elif (qual.get("root_port_bdf") != gate_root
+          or qual.get("switch_upstream_bdf") != gate_up):
+        problems.append("topology inadmissible: qualification chain "
+                        "disagrees with clean-link gate")
+    cold_path = evidence_root / "cold-proof.json"
+    if cold_path.is_file():
+        for cyc in _load(cold_path).get("cycles") or []:
+            if (cyc.get("root_port_bdf") != gate_root
+                    or cyc.get("switch_upstream_bdf") != gate_up):
+                problems.append("topology inadmissible: cold-proof confirmation "
+                                "topology contradicts gate-bound chain")
+    for arm in arms:
+        name = arm["arm"]
+        root = arm.get("root_port_bdf")
+        up = arm.get("upstream_bdf")
+        if root is None or up is None:
+            problems.append(f"topology inadmissible: {name} retains no topology identity")
+        elif root != gate_root or up != gate_up:
+            problems.append(f"topology inadmissible: {name} ran on {root}->{up}, "
+                            f"gate bound {gate_root}->{gate_up}")
+        if arm.get("boot_id") is not None and \
+                arm["boot_id"] != bp.get("replay_boot_id"):
+            problems.append(f"topology inadmissible: {name} boot "
+                            f"{arm['boot_id']} != boot-proof "
+                            f"{bp.get('replay_boot_id')}")
+        if arm.get("negotiated_width") is not None and \
+                arm["negotiated_width"] != bp.get("negotiated_width"):
+            problems.append(f"topology inadmissible: {name} negotiated width "
+                            "disagrees with boot-proof")
+    if closure is None:
+        problems.append("provenance inadmissible: no producer-closure view "
+                        "available — retained-arm provenance cannot be validated")
+    else:
+        problems.extend(f"provenance inadmissible: {p}" for p in
+                        _historical_provenance_problems(
+                            arms, closure, admitted_historical_pins))
     return problems
 
 
@@ -493,8 +621,8 @@ def derive_terminal(evidence_root: Path,
     basis: list[str] = []
 
     gate_passed = gate.get("result") == "PASS"
-    replay_auth = bool(replay and replay.get("decision")
-                       == "REPLAY_AUTHORIZED")
+    replay_auth = bool(replay and replay.get("authorized") is True
+                       and replay.get("decision") == "REPLAY_AUTHORIZED")
 
     # --- prospective-authorization invariant (2026-09-20 authority
     # correction): a retained REPLAY_AUTHORIZED decision is only an
@@ -535,235 +663,104 @@ def derive_terminal(evidence_root: Path,
                 "timestamps — prospective authorization cannot be "
                 "verified"]
 
+    arms = (replay or {}).get("arms") or []
+    entries = (replay or {}).get("order_entries") or []
+    binding_problems = (replay or {}).get("arm_order_problems") or []
+    executed = bool(arms or entries or binding_problems)
+    failed_entry = entries[-1] if entries and entries[-1]["state"] == "failed" else None
+    failed_arm = (arms[-1] if failed_entry and not binding_problems
+                  and len(arms) == len(entries) else None)
+    if failed_entry:
+        basis.append(
+            f"retained replay order state observed a failure at "
+            f"{failed_entry['arm']} "
+            f"(stop={(failed_arm or {}).get('stop_condition')!r}); "
+            "this observation remains scientifically informative")
     if not gate_passed:
-        terminal = "V2G_PCIE_PATH_REMEDIATION_FAILED"
+        terminal = ("V2G_EVIDENCE_BLOCKED" if executed else
+                    "V2G_PCIE_PATH_REMEDIATION_FAILED")
         basis.append(
             "clean-link gate did not pass on any tested intervention "
             f"(gate result {gate.get('result')!r}; failed checks: "
             f"{gate.get('failed_checks')})")
+    elif not executed:
+        terminal = "V2G_PCIE_PATH_CLEAN_NO_REPLAY"
+        basis.append(
+            "clean-link gate passed and retained evidence shows no "
+            "executed replay arm "
+            f"(decision: {(replay or {}).get('decision')})")
     elif not replay_auth:
-        arms = (replay or {}).get("arms") or []
-        executed = [row for row in ((replay or {}).get("order_entries") or [])
-                    if row.get("state") in ("passed", "failed")]
-        if arms or executed:
-            terminal = "V2G_EVIDENCE_BLOCKED"
-            basis.append(
-                "physical replay occurred without admissible prospective "
-                "authority: retained arms and/or executed replay order "
-                f"entries exist (decision: {(replay or {}).get('decision')})")
-        else:
-            terminal = "V2G_PCIE_PATH_CLEAN_NO_REPLAY"
-            basis.append(
-                "clean-link gate passed and retained evidence shows no "
-                "executed replay arm "
-                f"(decision: {(replay or {}).get('decision')})")
-    elif not authz_ok and (replay.get("arms") or replay.get("order_entries")) \
-            and (replay.get("halted") or not replay.get("arms")):
         terminal = "V2G_EVIDENCE_BLOCKED"
-        basis.extend(f"authorization inadmissible: {p}"
-                     for p in authz_problems)
+        basis.append(
+            "physical replay occurred without admissible prospective "
+            "authority: retained arms and/or executed replay order "
+            f"entries exist (decision: {(replay or {}).get('decision')})")
     else:
-        arms = replay.get("arms") or []
-        halted = bool(replay.get("halted"))
-        if not arms and not (replay.get("order_entries") or []):
-            terminal = "V2G_PCIE_PATH_CLEAN_NO_REPLAY"
+        # Classify the physical observation separately from its authority.
+        # The failed arm comes only from the verified final order entry.
+        authority_problems = _execution_authority_problems(
+            evidence_root, gate, qual, replay, arms, closure_view,
+            admitted_historical_pins, authz_problems)
+        if not authz_ok and not authz_problems:
+            authority_problems.append(
+                "authorization inadmissible: prospective authorization failed")
+        if authority_problems:
+            terminal = "V2G_EVIDENCE_BLOCKED"
+            chain = gate.get("chain") or {}
             basis.append(
-                "replay authorized but no arm executed (no retained "
-                "arm evidence)")
-        elif halted:
-            failed_arm = next(
-                (a for a in arms if a.get("stop_condition")), None)
-            if failed_arm is None:
-                # halted order state but no stop condition retained on
-                # any arm row — the failure evidence is incomplete
-                terminal = "V2G_EVIDENCE_BLOCKED"
-                basis.append(
-                    "replay order state records a failure but no arm "
-                    "retains its stop condition (incomplete failure "
-                    "evidence)")
-            else:
-                cls = fault_class_from_arm(failed_arm)
-                if cls == "AMDGPU_RING_RESET_FAULT":
-                    terminal = \
-                        "V2G_PCIE_PATH_REMEDIATED_FAULT_REPRODUCED"
-                    basis.append(
-                        f"bounded replay reproduced the #216/#230-"
-                        f"class amdgpu ring/reset fault at "
-                        f"{failed_arm['size_bytes']} bytes "
-                        f"(stop={failed_arm['stop_condition']})")
-                else:
-                    terminal = \
-                        "V2G_PCIE_PATH_REMEDIATED_DIFFERENT_FAILURE"
-                    basis.append(
-                        f"bounded replay failed differently at "
-                        f"{failed_arm['size_bytes']} bytes "
-                        f"(class={cls}, stop="
-                        f"{failed_arm['stop_condition']})")
-        else:
-            sizes = sorted(a["size_bytes"] for a in arms)
-            target = rc.REPLAY_LADDER[-1]["size_bytes"]
-            all_ok = all(a["summary_ok_true"] and a["validated"]
-                         for a in arms)
-            # --- topology continuity (2026-09-20 correction) ---------
-            # REPLAY_PASS requires every arm's retained root port and
-            # upstream to EQUAL the gate-authorized topology, and the
-            # authorization's boot-proof topology to agree with the
-            # gate/qualification chain. Historical arm records that
-            # predate boot_id retention are admissible ONLY through
-            # the retained boot-continuity proof (boot-proof.json),
-            # whose own topology must equal the gate topology; arms
-            # carrying their own boot ids must match it too.
-            gate_root = ((gate.get("chain") or {})
-                         .get("root_port"))
-            gate_up = ((gate.get("chain") or {})
-                       .get("switch_upstream"))
-            # the retained cold-proof (if present) must bind the SAME
-            # root/upstream for every confirmation cycle
-            cold_path = evidence_root / "cold-proof.json"
-            if cold_path.is_file():
-                cold_doc = _load(cold_path)
-                for cyc in cold_doc.get("cycles") or []:
-                    if cyc.get("root_port_bdf") != gate_root \
-                            or cyc.get("switch_upstream_bdf") != gate_up:
-                        raise ReductionError(
-                            "cold-proof confirmation topology "
-                            f"({cyc.get('root_port_bdf')}->"
-                            f"{cyc.get('switch_upstream_bdf')}) "
-                            "contradicts the gate-bound chain "
-                            f"({gate_root}->{gate_up})")
-            binding = ((replay or {}).get("topology_binding") or {})
-            bp = ((replay or {}).get("boot_proof")
-                  or binding.get("boot_proof") or {})
-            topology_agrees = True
-            topo_problems: list[str] = []
-            authz_bp = binding.get("boot_proof") or {}
-            if binding.get("gate_root_port") is not None \
-                    and binding.get("gate_root_port") != gate_root:
-                topology_agrees = False
-                topo_problems.append(
-                    "authorization claims a gate topology different "
-                    "from the retained gate-result chain")
-            if binding.get("gate_switch_upstream") is not None \
-                    and binding.get("gate_switch_upstream") != gate_up:
-                topology_agrees = False
-                topo_problems.append(
-                    "authorization claims a gate upstream different "
-                    "from the retained gate-result chain")
-            if bp and authz_bp and any(
-                    bp.get(k) != authz_bp.get(k) for k in (
-                        "replay_boot_id", "root_port",
-                        "switch_upstream", "negotiated_width")):
-                topology_agrees = False
-                topo_problems.append(
-                    "authorization boot-proof binding disagrees with "
-                    "the retained boot-proof.json")
-            if bp:
-                if bp.get("root_port") != gate_root \
-                        or bp.get("switch_upstream") != gate_up:
-                    topology_agrees = False
-                    topo_problems.append(
-                        "boot-proof topology disagrees with gate chain")
-            else:
-                topology_agrees = False
-                topo_problems.append(
-                    "no boot-proof retained for the replay boot")
-            for a in arms:
-                arm_root = a.get("root_port_bdf")
-                arm_up = a.get("upstream_bdf")
-                if arm_root is None or arm_up is None:
-                    topology_agrees = False
-                    topo_problems.append(
-                        f"{a['arm']} retains no topology identity")
-                elif arm_root != gate_root or arm_up != gate_up:
-                    topology_agrees = False
-                    topo_problems.append(
-                        f"{a['arm']} ran on {arm_root}->{arm_up}, "
-                        f"gate bound {gate_root}->{gate_up}")
-                arm_boot = a.get("boot_id")
-                if arm_boot is not None and bp \
-                        and arm_boot != bp.get("replay_boot_id"):
-                    topology_agrees = False
-                    topo_problems.append(
-                        f"{a['arm']} boot {arm_boot} != boot-proof "
-                        f"{bp.get('replay_boot_id')}")
-
-            # --- historical provenance of the retained arms ----------
-            # Every correctness-bearing retained arm artifact carries
-            # its executing producer_head/closure_digest. Arms produced
-            # under a DIFFERENT (historical) producer identity than
-            # the current closure are admissible ONLY through an
-            # explicit immutable historical-closure amendment record
-            # (AMENDMENTS.json) proving every physical producer
-            # byte-unchanged between the executing pin and HEAD. No
-            # such record is retained for this campaign: the replay
-            # producer itself changed after the arms executed, so the
-            # arms keep their original identities and cannot satisfy
-            # REPLAY_PASS through the current closure.
-            prov_problems: list[str] = []
-            if closure_view is None:
-                prov_problems = [
-                    "no producer-closure view available — retained-arm "
-                    "provenance cannot be validated (REPLAY_PASS "
-                    "unreachable)"]
-            else:
-                prov_problems = _historical_provenance_problems(
-                    arms, closure_view, admitted_historical_pins)
-
-            if target in sizes and all_ok and topology_agrees \
-                    and authz_ok and not prov_problems:
-                terminal = \
-                    "V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS"
-                basis.append(
-                    f"all {len(arms)} replay arms exact-correct "
-                    f"through the historical 64-MiB fault scale "
-                    f"(sizes={sizes}) with no qualifying platform "
-                    "fault or material RxErr recurrence")
-                basis.append(
-                    "topology identity continuous across "
-                    "gate/cold-proof/qualification/replay: root port "
-                    f"{gate_root}, upstream {gate_up}, replay boot "
-                    f"{(bp or {}).get('replay_boot_id')}")
-                basis.append(
-                    "replay authorization decision_utc "
-                    f"{(replay or {}).get('decision_utc')} "
-                    "mechanically predates the first executed arm "
-                    "and binds the retained gate-result digest")
-            elif target in sizes and all_ok and (
-                    not topology_agrees or not authz_ok
-                    or prov_problems):
-                terminal = "V2G_EVIDENCE_BLOCKED"
-                # informative dimensions that REMAIN established by
-                # the retained bytes (reported separately; they do
-                # not rehabilitate the replay classification)
-                basis.append(
-                    "corrected retained evidence establishes the "
-                    "daughterboard path root "
-                    f"{gate_root} -> upstream {gate_up}, and the "
-                    "clean candidate/cold-confirmation/"
-                    "qualification evidence for that topology "
-                    "remains intact")
+                "corrected retained evidence establishes the daughterboard "
+                f"path root {chain.get('root_port')} -> upstream "
+                f"{chain.get('switch_upstream')}, and the clean candidate/"
+                "cold-confirmation/qualification evidence for that topology "
+                "remains intact")
+            if arms and all(a["summary_ok_true"] and a["validated"] for a in arms):
                 basis.append(
                     f"all {len(arms)} physical replay arms produced "
-                    "exact-correct results with retained healthy "
-                    "windows (scientifically informative; the "
-                    "physical transfers themselves are not inferred "
-                    "invalid)")
-                for p in authz_problems:
-                    basis.append(f"authorization inadmissible: {p}")
-                for p in prov_problems:
-                    basis.append(f"provenance inadmissible: {p}")
-                for p in topo_problems:
-                    basis.append(f"topology inadmissible: {p}")
-                if not authz_problems and not prov_problems \
-                        and not topo_problems:
-                    basis.append(
-                        "replay classification blocked without a "
-                        "retained specific reason (fail-closed)")
+                    "exact-correct results with retained healthy windows "
+                    "(scientifically informative; the physical transfers "
+                    "themselves are not inferred invalid)")
+            basis.extend(authority_problems)
+        elif failed_entry:
+            assert failed_arm is not None
+            cls = fault_class_from_arm(failed_arm)
+            if cls == "AMDGPU_RING_RESET_FAULT":
+                terminal = "V2G_PCIE_PATH_REMEDIATED_FAULT_REPRODUCED"
+                basis.append(
+                    "bounded replay reproduced the #216/#230-class "
+                    f"amdgpu ring/reset fault at {failed_arm['size_bytes']} "
+                    f"bytes (stop={failed_arm['stop_condition']})")
+            else:
+                terminal = "V2G_PCIE_PATH_REMEDIATED_DIFFERENT_FAILURE"
+                basis.append(
+                    f"bounded replay failed differently at "
+                    f"{failed_arm['size_bytes']} bytes "
+                    f"(class={cls}, stop={failed_arm['stop_condition']})")
+        else:
+            sizes = [a["size_bytes"] for a in arms]
+            all_ok = all(a["summary_ok_true"] and a["validated"] for a in arms)
+            if len(arms) == len(rc.REPLAY_LADDER) and all_ok:
+                terminal = "V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS"
+                basis.append(
+                    f"all {len(arms)} replay arms exact-correct through "
+                    f"the historical 64-MiB fault scale (sizes={sizes}) "
+                    "with no qualifying platform fault or material RxErr recurrence")
+                chain = gate.get("chain") or {}
+                basis.append(
+                    "topology identity continuous across gate/cold-proof/"
+                    "qualification/replay: root port "
+                    f"{chain.get('root_port')}, upstream "
+                    f"{chain.get('switch_upstream')}, replay boot "
+                    f"{(replay.get('boot_proof') or {}).get('replay_boot_id')}")
+                basis.append(
+                    "replay authorization decision_utc "
+                    f"{replay.get('decision_utc')} mechanically predates "
+                    "the first executed arm and binds the retained "
+                    "gate-result digest")
             else:
                 terminal = "V2G_EVIDENCE_BLOCKED"
                 basis.append(
-                    "replay arms present but the retained evidence "
-                    "does not establish the full-ladder pass "
+                    "replay arms present but retained evidence does not "
+                    "establish the full-ladder pass "
                     f"(sizes={sizes}, all_ok={all_ok})")
 
     # control 20: authored TERMINAL.json must agree with this reduction

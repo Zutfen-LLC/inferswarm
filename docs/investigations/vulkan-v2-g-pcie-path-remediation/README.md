@@ -189,6 +189,28 @@ A changed replay producer rejects the amendment. The actual four
 arms remain inadmissible because `issue232_replay.py` changed after
 their execution. The terminal remains `V2G_EVIDENCE_BLOCKED`.
 
+### Replay execution authority and order binding
+
+The reducer applies one execution-authority check before it assigns
+`REPLAY_PASS`, `FAULT_REPRODUCED`, or `DIFFERENT_FAILURE`. The check
+requires prospective authorization bound to the retained gate digest.
+It also requires the gate, authorization, boot proof, qualification,
+cold proof, and every executed arm to agree on topology and boot
+identity. Each arm must carry a current producer identity or an
+immutable historical identity admitted by the verified amendment.
+An inadmissible failure remains an observed physical failure. Its
+primary terminal is `V2G_EVIDENCE_BLOCKED`.
+
+The verified order state defines the exact executed arm prefix. Each
+entry requires one arm artifact with the same name and frozen size.
+An order detail size must match the arm size. A passed entry requires
+no arm stop condition. A failed final entry requires an arm stop
+condition. Extra or missing arm artifacts block replay classification.
+The reducer selects a failed arm from the final order entry only after
+these checks pass. The retained four arms satisfy the order binding.
+They remain inadmissible because authorization was retrospective and
+the historical replay producer changed after execution.
+
 ## Separate state dimensions (never conflated)
 
 - **PCIE_PATH_HEALTH** — the chronic RxErr condition and its remediation;

@@ -284,6 +284,7 @@ def write_synth_evidence(tmp: Path, *, gate_result="PASS",
         (ev / "replay-authorization.json").write_text(json.dumps({
             "schema": "inferswarm.v2g.replay-authorization/1",
             "campaign_id": rc.CAMPAIGN_ID,
+            "authorized": replay_authorized,
             "decision": "REPLAY_AUTHORIZED" if replay_authorized
             else "REPLAY_REFUSED",
             "decision_utc": authz_decision_utc,
@@ -795,6 +796,22 @@ class TestRetainedArmProvenance(unittest.TestCase):
 
 
 class TestHistoricalAmendmentAssembler(unittest.TestCase):
+    @staticmethod
+    def _mark_final_arm_failed(ev: Path):
+        name = "replay-67108864"
+        arm_path = ev / "arms" / f"{name}.json"
+        arm = json.loads(arm_path.read_text())
+        arm["stop_condition"] = "ring_timeout_or_hang"
+        arm["validated"] = False
+        arm_path.write_text(json.dumps(arm))
+        order_path = ev / "replay-order-state.json"
+        order = json.loads(order_path.read_text())
+        order["entries"][-1]["state"] = "failed"
+        order["entries"][-1]["detail"]["stop_condition"] = \
+            "ring_timeout_or_hang"
+        order["chain_digest"] = replay._chain(order)
+        order_path.write_text(json.dumps(order))
+
     def _fixture(self, tmp: Path) -> tuple[Path, Path, str]:
         repo = _write_closure_tmp(tmp)
         area = repo / rc.AREA_REL
@@ -830,6 +847,24 @@ class TestHistoricalAmendmentAssembler(unittest.TestCase):
             result = asm.assemble(repo=repo, evidence_root=ev)
             self.assertEqual(result["reduction"]["terminal"],
                              "V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS")
+
+    def test_admitted_historical_failure_reaches_real_assembler(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo, ev, _ = self._fixture(Path(td))
+            self._mark_final_arm_failed(ev)
+            result = asm.assemble(repo=repo, evidence_root=ev)
+            self.assertEqual(
+                result["reduction"]["terminal"],
+                "V2G_PCIE_PATH_REMEDIATED_FAULT_REPRODUCED")
+
+    def test_historical_failure_without_amendment_blocks_real_assembler(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo, ev, _ = self._fixture(Path(td))
+            self._mark_final_arm_failed(ev)
+            (repo / rc.AREA_REL / "AMENDMENTS.json").unlink()
+            result = asm.assemble(repo=repo, evidence_root=ev)
+            self.assertEqual(result["reduction"]["terminal"],
+                             "V2G_EVIDENCE_BLOCKED")
 
     def test_changed_physical_producer_rejected_by_real_assembler(self):
         with tempfile.TemporaryDirectory() as td:
@@ -1431,6 +1466,114 @@ class TestTerminalReduction(unittest.TestCase):
             "severity_counts"]["Correctable"] = 999999
         with self.assertRaises(pa.AuthorityError):
             pa.verify_authority(d, REPO)
+
+
+# ---------------------------------------------------------------------------
+# Replay execution authority and arm/order cross-binding
+# ---------------------------------------------------------------------------
+
+class TestReplayExecutionBinding(unittest.TestCase):
+    """Each replay terminal requires one ordered arm and valid authority."""
+
+    PASS_ARMS = TestProspectiveAuthorization.ARMS4
+    PASS_ORDER = TestProspectiveAuthorization.ORDER4
+    FAIL_ARMS = [("replay-4096", None, True),
+                 ("replay-1048576", "ring_timeout_or_hang", False)]
+    FAIL_ORDER = [
+        {"arm": "replay-4096", "state": "passed", "detail": {}},
+        {"arm": "replay-1048576", "state": "failed",
+         "detail": {"stop_condition": "ring_timeout_or_hang"}},
+    ]
+
+    def _check(self, arms, order, *, expected="V2G_EVIDENCE_BLOCKED",
+               mutate=None, **kwargs):
+        with tempfile.TemporaryDirectory() as td:
+            ev = write_synth_evidence(Path(td), arms=arms,
+                                      order_entries=order, **kwargs)
+            if mutate:
+                mutate(ev)
+            result = red.derive_terminal(ev)
+            self.assertEqual(result["terminal"], expected)
+            return result
+
+    @staticmethod
+    def _change_arm(ev, name, change):
+        path = ev / "arms" / f"{name}.json"
+        doc = json.loads(path.read_text())
+        change(doc)
+        path.write_text(json.dumps(doc))
+
+    def test_failed_historical_arm_without_amendment_blocks(self):
+        result = self._check(
+            self.FAIL_ARMS, self.FAIL_ORDER,
+            arm_producer_head="5" * 40,
+            arm_closure_digest="7" * 64)
+        self.assertTrue(any("historical-closure amendment" in b
+                            for b in result["basis"]))
+        self.assertTrue(any("observed a failure" in b
+                            for b in result["basis"]))
+
+    def test_failed_arm_on_other_topology_blocks(self):
+        result = self._check(self.FAIL_ARMS, self.FAIL_ORDER,
+                             arm_roots=[(ROOT_A, UPSTREAM),
+                                        (ROOT_B, UPSTREAM)])
+        self.assertTrue(any("gate bound" in b for b in result["basis"]))
+
+    def test_failed_arm_missing_or_contradictory_boot_proof_blocks(self):
+        for kwargs in ({"write_boot_proof": False},
+                       {"boot_proof_root": ROOT_B}):
+            with self.subTest(kwargs=kwargs):
+                result = self._check(self.FAIL_ARMS, self.FAIL_ORDER,
+                                     **kwargs)
+                self.assertTrue(any("boot-proof" in b
+                                    for b in result["basis"]))
+
+    def test_full_arm_directory_with_partial_order_blocks(self):
+        self._check(self.PASS_ARMS, self.PASS_ORDER[:1])
+
+    def test_order_entry_without_arm_artifact_blocks(self):
+        self._check(self.PASS_ARMS[:1], self.PASS_ORDER[:2])
+
+    def test_extra_arm_artifact_blocks(self):
+        self._check(self.PASS_ARMS[:2], self.PASS_ORDER[:1])
+
+    def test_failed_order_arm_differs_from_stopped_arm_blocks(self):
+        arms = [("replay-4096", "ring_timeout_or_hang", False),
+                ("replay-1048576", None, True)]
+        self._check(arms, self.FAIL_ORDER)
+
+    def test_passed_order_entry_with_stop_blocks(self):
+        self._check([(self.FAIL_ARMS[0]),
+                     ("replay-1048576", "ring_timeout_or_hang", False)],
+                    self.PASS_ORDER[:2])
+
+    def test_failed_order_entry_without_stop_blocks(self):
+        self._check(self.PASS_ARMS[:2], self.FAIL_ORDER)
+
+    def test_arm_name_size_and_order_detail_mismatch_block(self):
+        changes = (
+            lambda d: d.update(arm="replay-67108864"),
+            lambda d: d.update(size_bytes=8192),
+        )
+        for change in changes:
+            with self.subTest(change=change):
+                self._check(self.PASS_ARMS[:1], self.PASS_ORDER[:1],
+                            mutate=lambda ev: self._change_arm(
+                                ev, "replay-4096", change))
+        order = [{"arm": "replay-4096", "state": "passed",
+                  "detail": {"size": 8192}}]
+        self._check(self.PASS_ARMS[:1], order)
+
+    def test_positive_authorized_failure_terminals_and_pass(self):
+        self._check(self.FAIL_ARMS, self.FAIL_ORDER,
+                    expected="V2G_PCIE_PATH_REMEDIATED_FAULT_REPRODUCED")
+        different = [("replay-4096", "correctness_mismatch", False)]
+        order = [{"arm": "replay-4096", "state": "failed",
+                  "detail": {"stop_condition": "correctness_mismatch"}}]
+        self._check(different, order,
+                    expected="V2G_PCIE_PATH_REMEDIATED_DIFFERENT_FAILURE")
+        self._check(self.PASS_ARMS, self.PASS_ORDER,
+                    expected="V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS")
 
 
 # ---------------------------------------------------------------------------
