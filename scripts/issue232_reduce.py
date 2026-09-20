@@ -401,12 +401,13 @@ def _historical_provenance_problems(
         arm = a.get("arm")
         head = a.get("producer_head")
         digest = a.get("closure_digest")
-        for field, value in zip(HISTORICAL_PIN_FIELDS, (head, digest)):
-            if not isinstance(value, str) or not value:
-                problems.append(
-                    f"{arm} retains no {field} — unpinned physical "
-                    "producer identity makes REPLAY_PASS unreachable")
-        if problems:
+        missing = [field for field, value
+                   in zip(HISTORICAL_PIN_FIELDS, (head, digest))
+                   if not isinstance(value, str) or not value]
+        if missing:
+            problems.append(
+                f"{arm} retains no {missing[0]} — unpinned physical "
+                "producer identity makes REPLAY_PASS unreachable")
             continue
         assert isinstance(head, str) and isinstance(digest, str)
         if head == closure.get("producer_head") \
