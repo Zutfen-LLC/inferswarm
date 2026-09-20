@@ -254,7 +254,11 @@ def write_synth_evidence(tmp: Path, *, gate_result="PASS",
 
 
 def synth_replay_stdout(size=4096, ok=True):
-    lines = [json.dumps({
+    # compact separators: the real C producer prints compact JSON
+    # (no space after ':' or ','), and the correctness check matches
+    # '"ok":true' exactly
+    J = lambda o: json.dumps(o, separators=(",", ":"))
+    lines = [J({
         "event": "arm", "mechanism": "opaque_fd",
         "direction": "b_to_a", "size": size, "reps": 1, "warmups": 0,
         "source": {"bdf": "0000:09:00.0", "queue_family": 0},
@@ -264,10 +268,10 @@ def synth_replay_stdout(size=4096, ok=True):
                         "fd_props_query_supported": 0},
         "handle_type_bit": 1,
         "fd_lifecycle": "opaque_fd: consumed by driver on import"})]
-    lines.append(json.dumps({
+    lines.append(J({
         "event": "rep", "rep": 0, "measured": 1, "seed": 1,
         "ok": ok, "elapsed_ns": 1_000_000}))
-    lines.append(json.dumps({
+    lines.append(J({
         "event": "summary", "mechanism": "opaque_fd",
         "direction": "b_to_a", "size": size, "ok": ok}))
     return "\n".join(lines) + "\n"
@@ -606,19 +610,20 @@ class TestReplayAuthorization(unittest.TestCase):
                         "stop_condition": qual_stop}))
 
     def test_control_13_refused_before_gate(self):
-        self._write(gate_result="FAIL")
-        # authorize() re-verifies the authority against the real repo
-        # (needs the committed closure): exercise the gate-check path
+        self.ev.mkdir(parents=True, exist_ok=True)
         doc = {"schema": "inferswarm.v2g.clean-link-gate/1",
                "result": "FAIL",
                "checks": {"cold_confirmation_repeated": False}}
         (self.ev / "gate-result.json").write_text(json.dumps(doc))
+        (self.ev / "qualification").mkdir(parents=True, exist_ok=True)
         (self.ev / "qualification" / "qualification.json").write_text(
             json.dumps({"schema":
                         "inferswarm.v2g.qualification/1",
                         "stop_condition": None}))
-        with self.assertRaises(replay.ReplayError):
-            replay.authorize(repo=REPO, evidence_root=self.ev)
+        decision = replay.authorize(repo=REPO, evidence_root=self.ev)
+        self.assertFalse(decision["authorized"])
+        self.assertEqual(decision["decision"], "REPLAY_REFUSED")
+        self.assertTrue(any("gate" in r for r in decision["reasons"]))
 
     def test_first_arm_is_4k_not_fault_scale(self):
         self.assertEqual(rc.REPLAY_LADDER[0]["size_bytes"], 4096)

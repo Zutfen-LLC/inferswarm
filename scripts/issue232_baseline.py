@@ -339,9 +339,13 @@ def record_intervention(*, repo: Path, out: Path, component: str,
     if not description or len(description) > 2000:
         raise BaselineError("intervention needs a 1..2000 char "
                             "description of the physical delta")
-    pre = repo / pre_census_rel
+    # pre-census rel paths are EVIDENCE-ROOT-relative (census docs
+    # record them that way); resolve against the evidence root that
+    # holds the interventions dir
+    pre = out.parent / pre_census_rel
     if not pre.is_file():
-        raise BaselineError(f"pre-census not found: {pre_census_rel}")
+        raise BaselineError(f"pre-census not found: {pre_census_rel} "
+                            f"(looked in {out.parent})")
     closure = rc.verify_closure(repo)
     doc = {
         "schema": "inferswarm.v2g.intervention/1",
