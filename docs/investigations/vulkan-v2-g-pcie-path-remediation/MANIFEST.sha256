@@ -1,8 +1,8 @@
 3977a224b2df7b0b3c739a2bfd3b0cd07fe3858f16209b00e8d1af58448ffc45  docs/investigations/vulkan-v2-g-pcie-path-remediation/PHYSICAL-AUTHORITY.json
-d2f276382ff540727d503f0140c5f0df253719b91176c4bdc993a4989afaedfa  docs/investigations/vulkan-v2-g-pcie-path-remediation/PRODUCER-CLOSURE.json
+48afdf6001eba2bd988261c0b28e8594f490bca86c4e7472278e452a038cf2f1  docs/investigations/vulkan-v2-g-pcie-path-remediation/PRODUCER-CLOSURE.json
 2f06807f551c676101ec37a70e800ad989b9d4e532f544b11f92c7f04f1d8732  docs/investigations/vulkan-v2-g-pcie-path-remediation/README.md
-51ca616d95cc50174a28721f0714d6ba0b0486f78d2c3caf37297fad41ceffd3  docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/ASSEMBLY.json
-42a86ac9d7ef6bfe0bae540948ac59688a7afe5434df4d82bc60f8e2e12f4fa1  docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/TERMINAL.json
+4748aade73cbefd0fed1c5aa63c274de4d3c9b52cecaa8d0e6101afc386b86a7  docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/ASSEMBLY.json
+d45b17012cb9038648fb7ec0a33c869246009d96ee0e03bf20bb2e874f4aa1c9  docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/TERMINAL.json
 3bd9157088932cee570baef05d79c4fb1743a10a6433bd94210478e1cfcb5c95  docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/arms/replay-1048576.json
 a86538ac20ff00e147ff0f3388894fdd32d2ff65ae149c5f2cc705f268febdf7  docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/arms/replay-16777216.json
 5f01ed94db02dce50eecbcfb7e2729818a658b7843b4101aba7c62628f03f085  docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/arms/replay-4096.json
@@ -353,6 +353,11 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  docs/investiga
 bd8714108d20bc5466a908d30b4590887b0eabf78e21a315de7aa3c526e9fce6  docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/raw/replay-67108864.stdout
 17fc3013b55c7844705db892933dbef63e9779e34b452f808785e8e7c28ba2bc  docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/replay-authorization.json
 e7afb119c99275b49ceb0bb5efc7075a82b1804a3863219e2ef1e23d5735380b  docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/replay-order-state.json
+51ca616d95cc50174a28721f0714d6ba0b0486f78d2c3caf37297fad41ceffd3  docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/superseded-20260920-authorization-retrospective/ASSEMBLY.json
+c1c57a62554c1967643875ee1d246c259b598e21adff61d6cf563c47403b07c9  docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/superseded-20260920-authorization-retrospective/PRODUCER-CLOSURE.superseded.json
+42a86ac9d7ef6bfe0bae540948ac59688a7afe5434df4d82bc60f8e2e12f4fa1  docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/superseded-20260920-authorization-retrospective/TERMINAL.json
+42a86ac9d7ef6bfe0bae540948ac59688a7afe5434df4d82bc60f8e2e12f4fa1  docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/superseded-20260920-authorization-retrospective/TERMINAL.live.json
+17fc3013b55c7844705db892933dbef63e9779e34b452f808785e8e7c28ba2bc  docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/superseded-20260920-authorization-retrospective/replay-authorization.json
 611cb38c54dede5dcb907e186f809d45ca117a0808299410f7a1168c48936331  docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/superseded-20260920-topology-rebinding/ASSEMBLY.json
 300d3686c80865b2d61de666f53e85f60e58cfb9e3ed504c589f9dd97291562f  docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/superseded-20260920-topology-rebinding/TERMINAL.json
 e985b16e0ca2bb2e8b74f69fefe75f6e87fadf78b61f97eea7d19da27edd522f  docs/investigations/vulkan-v2-g-pcie-path-remediation/evidence/superseded-20260920-topology-rebinding/cold-proof.json

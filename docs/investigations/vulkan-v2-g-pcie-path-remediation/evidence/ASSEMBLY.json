@@ -1,7 +1,7 @@
 {
- "assembled_utc": "2026-09-20T16:57:34.735412+00:00",
+ "assembled_utc": "2026-09-20T17:57:17.797161+00:00",
  "campaign_id": "issue232-v2g-pcie-path-remediation",
- "closure_digest": "d30c7700b9c9e8879780be41cdd97c2938e173a49164efcdade81338bb5d092f",
+ "closure_digest": "e7a49d3a4e587239c9c3ced16c3fb090770ba7051a1687cb831962ac2fc19ac3",
  "nonclaims": [
   "no causal claim between the historical chronic RxErr condition and the #216/#230 amdgpu ring/reset faults without discriminating evidence",
   "no soak/sustained-load stability claimed",
@@ -11,12 +11,17 @@
   "no claim that the remediated arrangement is the only clean one",
   "advertisement is never conflated with validated execution"
  ],
- "producer_head": "38c6ec52df99a93056fa7d7b3b1cccd9db834dda",
+ "producer_head": "cc933f45ebce7c2eb6714845d0768ffc771b94df",
  "reduction": {
   "authored_terminal_agrees": true,
   "basis": [
-   "all 4 replay arms exact-correct through the historical 64-MiB fault scale (sizes=[4096, 1048576, 16777216, 67108864]) with no qualifying platform fault or material RxErr recurrence",
-   "topology identity continuous across gate/cold-proof/qualification/replay: root port 0000:00:1d.0, upstream 0000:02:00.0, replay boot 433128ac-e81e-4239-bdd3-30a46c6a3a02"
+   "corrected retained evidence establishes the daughterboard path root 0000:00:1d.0 -> upstream 0000:02:00.0, and the clean candidate/cold-confirmation/qualification evidence for that topology remains intact",
+   "all 4 physical replay arms produced exact-correct results with retained healthy windows (scientifically informative; the physical transfers themselves are not inferred invalid)",
+   "authorization inadmissible: replay authorization decision_utc 2026-09-20T16:57:20.265606+00:00 is 6195s AFTER the last retained arm replay-67108864 (replay-67108864 recorded 2026-09-20T15:14:24.736884+00:00) \u2014 the entire ladder predates the authorization",
+   "provenance inadmissible: replay-1048576 was produced under historical authority producer_head=52a65b19e736 closure_digest=7a5505af200c which differs from the current closure (cc933f45ebce/e7a49d3a4e58) and no admissible immutable historical-closure amendment covers it \u2014 the arm cannot pass through the current closure",
+   "provenance inadmissible: replay-16777216 was produced under historical authority producer_head=52a65b19e736 closure_digest=7a5505af200c which differs from the current closure (cc933f45ebce/e7a49d3a4e58) and no admissible immutable historical-closure amendment covers it \u2014 the arm cannot pass through the current closure",
+   "provenance inadmissible: replay-4096 was produced under historical authority producer_head=52a65b19e736 closure_digest=7a5505af200c which differs from the current closure (cc933f45ebce/e7a49d3a4e58) and no admissible immutable historical-closure amendment covers it \u2014 the arm cannot pass through the current closure",
+   "provenance inadmissible: replay-67108864 was produced under historical authority producer_head=52a65b19e736 closure_digest=7a5505af200c which differs from the current closure (cc933f45ebce/e7a49d3a4e58) and no admissible immutable historical-closure amendment covers it \u2014 the arm cannot pass through the current closure"
   ],
   "campaign_id": "issue232-v2g-pcie-path-remediation",
   "gate": {
@@ -196,8 +201,10 @@
     {
      "arm": "replay-1048576",
      "boot_id": null,
+     "closure_digest": "7a5505af200cc0fabfe7703115c200d84abff995f130e63c89f2e769e93bb301",
      "exit_code": 0,
      "negotiated_width": null,
+     "producer_head": "52a65b19e736851310d6a472002a44d3fb398c8b",
      "replay_producer_head": "30cf699688aa3d718fb475f5390317ebb4ba7385",
      "root_port_bdf": "0000:00:1d.0",
      "size_bytes": 1048576,
@@ -210,8 +217,10 @@
     {
      "arm": "replay-16777216",
      "boot_id": null,
+     "closure_digest": "7a5505af200cc0fabfe7703115c200d84abff995f130e63c89f2e769e93bb301",
      "exit_code": 0,
      "negotiated_width": null,
+     "producer_head": "52a65b19e736851310d6a472002a44d3fb398c8b",
      "replay_producer_head": "30cf699688aa3d718fb475f5390317ebb4ba7385",
      "root_port_bdf": "0000:00:1d.0",
      "size_bytes": 16777216,
@@ -224,8 +233,10 @@
     {
      "arm": "replay-4096",
      "boot_id": null,
+     "closure_digest": "7a5505af200cc0fabfe7703115c200d84abff995f130e63c89f2e769e93bb301",
      "exit_code": 0,
      "negotiated_width": null,
+     "producer_head": "52a65b19e736851310d6a472002a44d3fb398c8b",
      "replay_producer_head": "30cf699688aa3d718fb475f5390317ebb4ba7385",
      "root_port_bdf": "0000:00:1d.0",
      "size_bytes": 4096,
@@ -238,8 +249,10 @@
     {
      "arm": "replay-67108864",
      "boot_id": null,
+     "closure_digest": "7a5505af200cc0fabfe7703115c200d84abff995f130e63c89f2e769e93bb301",
      "exit_code": 0,
      "negotiated_width": null,
+     "producer_head": "52a65b19e736851310d6a472002a44d3fb398c8b",
      "replay_producer_head": "30cf699688aa3d718fb475f5390317ebb4ba7385",
      "root_port_bdf": "0000:00:1d.0",
      "size_bytes": 67108864,
@@ -258,6 +271,8 @@
     "switch_upstream": "0000:02:00.0"
    },
    "decision": "REPLAY_AUTHORIZED",
+   "decision_utc": "2026-09-20T16:57:20.265606+00:00",
+   "gate_result_digest": "5e4a6bebdb7f0cab63587a6dc8b87cff740cebe0c6e6d62de8c339da75eeb4e9",
    "halted": false,
    "order_entries": [
     {
@@ -293,6 +308,28 @@
      "state": "passed"
     }
    ],
+   "order_entry_utc": [
+    {
+     "arm": "replay-4096",
+     "recorded_utc": "2026-09-20T15:14:05.182250+00:00",
+     "state": "passed"
+    },
+    {
+     "arm": "replay-1048576",
+     "recorded_utc": "2026-09-20T15:14:12.449888+00:00",
+     "state": "passed"
+    },
+    {
+     "arm": "replay-16777216",
+     "recorded_utc": "2026-09-20T15:14:14.749495+00:00",
+     "state": "passed"
+    },
+    {
+     "arm": "replay-67108864",
+     "recorded_utc": "2026-09-20T15:14:24.736884+00:00",
+     "state": "passed"
+    }
+   ],
    "producer_byte_identical": true,
    "reasons": [],
    "replay_boot_id": "433128ac-e81e-4239-bdd3-30a46c6a3a02",
@@ -315,7 +352,7 @@
     "qualification_switch_upstream": "0000:02:00.0"
    }
   },
-  "terminal": "V2G_PCIE_PATH_REMEDIATED_REPLAY_PASS"
+  "terminal": "V2G_EVIDENCE_BLOCKED"
  },
  "schema": "inferswarm.v2g.assembly/1",
  "state_dimensions": {
