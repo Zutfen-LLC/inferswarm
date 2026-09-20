@@ -379,7 +379,8 @@ class Issue184PreservationTests(unittest.TestCase):
             "scripts/issue232_replay.py",
             "scripts/issue232_reduce.py",
             "scripts/issue232_assemble.py",
-            "scripts/issue232_manifest.py")
+            "scripts/issue232_manifest.py",
+            "scripts/issue232_coldproof.py")
         for path in changed:
             self.assertTrue(path.startswith(allowed), path)
 
