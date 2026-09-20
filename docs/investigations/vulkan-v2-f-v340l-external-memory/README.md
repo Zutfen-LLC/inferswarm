@@ -1,9 +1,11 @@
 # V2-F — V340L external-memory inter-die transfer qualification (issue #230)
 
-Status: PRODUCERS FROZEN — awaiting physical campaign execution on
-inferswarm02 under this exact closure. This README is the frozen
-methodology + runbook; physical results land under `evidence/` only
-after the producer freeze is committed and verified on the host.
+Status: **CAMPAIGN HALTED — terminal `V2F_V340L_PLATFORM_STRESS_FAIL`
+(derived deterministically from retained evidence).** The bounded
+campaign triggered the #216-class platform fault at rung 64 MiB of the
+B→A opaque_fd ladder and stopped immediately; the earliest causal arm
+and full fault capture are retained. PR OPEN/UNMERGED awaiting
+maintainer exact-head review.
 
 Campaign: `issue230-v2f-v340l-external-memory`
 
@@ -104,6 +106,69 @@ control; otherwise `PEER_FUNCTIONAL_ROUTE_UNRESOLVED`. The x1 ceiling
 is MEASURED (fresh linkio per-leg medians; conservative 2·size/elapsed
 fallback), never nominal Gen3 arithmetic. A bypass claim requires the
 matched controls to exist.
+
+## Outcome (retained evidence, 2026-09-20)
+
+Boot `9121c110-4eaf-446b-84f4-f1a90c792801` (same boot as the accepted
+#228 pf2 census). Corrected attempt a2 under closure head `67dd8d6`.
+
+Executed arms, in frozen order (all under the safety order state,
+digest-chained in `evidence/order-state.json`):
+
+1. `probe-opaque_fd-a_to_b` — 4 KiB, PASSED, `ok:true`,
+   986,904 ns — **the first physically executed, exactly-verified
+   cross-die transfer in this campaign family.** Destination device
+   bound `0000:09:00.0` by UUID; `fd_props_query_supported:0`
+   (the Mesa query limitation, retained per arm).
+2. `probe-opaque_fd-b_to_a` — 4 KiB, PASSED, `ok:true`, 1,112,885 ns.
+3. `ladder-opaque_fd-a_to_b` — all 6 sizes (4 KiB…256 MiB), 5 measured
+   reps + 1 warmup each, every rep `ok:true`. PASSED.
+4. `ladder-opaque_fd-b_to_a` — 4 KiB/64 KiB/1 MiB/16 MiB clean; at the
+   64 MiB rung die A (the B→A destination) hit **`ring gfx timeout,
+   signaled seq=202, emitted seq=203` → ring gfx reset failed → GPU
+   reset end ret=-62 → devcoredump created**, and the probe process
+   wedged D-state in `dma_fence_wait` inside `amdgpu_vm_fini` on
+   device close (the #216 fault signature, this time on die A). FAILED;
+   campaign halted; no arm after it may run under this authority.
+
+The safety order machine refused all further arms automatically; the
+deterministic assembler derived `V2F_V340L_PLATFORM_STRESS_FAIL` from
+the order state (fault scan), exactly as the terminal vocabulary
+requires. Nothing was rerun; the earliest failure is the retained
+result. Full fault capture: `evidence/fault-capture/` (journal window,
+D-state stacks, devcoredump identity+hash, per-die lspci, AER, DRM
+state).
+
+What the retained evidence DOES establish (bounded by the fault):
+
+- The external-memory seam is REAL on this stack: opaque_fd export
+  (die A) → destination-die import → destination-submitted copy →
+  exact byte verification, both directions, sizes through 16 MiB
+  (B→A) / 256 MiB (A→B), sequential fence-ordered, zero platform
+  disturbance in those arms (health windows clean; only the known
+  correctable AER RxErr activity on the PM8533 upstream port,
+  quantitatively retained as in #228).
+- The fault preconditions of #216 were NOT materially escaped at
+  scale: the #216-class fault reproduced under this bounded,
+  non-concurrent, non-transport seam at 64 MiB on the receiving die.
+  The safety classification's "materially different" premise held for
+  every executed arm below that rung and is falsified as a general
+  claim by the retained fault — the platform, not the mechanism
+  class, is the binding constraint.
+
+## Attempt-1 supersession (producer defect, non-authoritative)
+
+`evidence/attempt-1-superseded/` retains the first attempt byte-for-byte
+(its own order state shows the probe failing at the producer's
+mandatory `vkGetMemoryFdPropertiesKHR` gate). The gate was a producer
+defect: Mesa implements that query for DMA_BUF only — for OPAQUE_FD it
+fails even on the exporting device, while DIRECT import + cross-die
+copy succeeds (scratch diagnostic; never retained as campaign
+evidence). Corrected in `30cf699` (query outcome recorded per arm;
+dma_buf requires it; opaque_fd proceeds via import-chained buffer
+requirements with the checked `vkAllocateMemory` as validator);
+re-frozen at `67dd8d6` BEFORE any retained physical output. See
+`evidence/SUPERSESSION.json`.
 
 ## Runbook (inferswarm02, one arm per invocation)
 

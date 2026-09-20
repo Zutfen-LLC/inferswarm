@@ -1,0 +1,54 @@
+{
+ "assembled_utc": "2026-09-20T06:45:04.308363+00:00",
+ "attempt": "v1",
+ "campaign_id": "issue230-v2f-v340l-external-memory",
+ "closure_digest": "0d9a17b97ef1cbea8c10850d4b95044a14fd6cd6d43c85e97296339015a87bf7",
+ "closure_sources": [
+  "scripts/issue230_assemble.py",
+  "scripts/issue230_authority.py",
+  "scripts/issue230_freeze.py",
+  "scripts/issue230_host.py",
+  "scripts/issue230_manifest.py",
+  "scripts/issue230_preflight.py",
+  "scripts/issue230_receipt.py",
+  "scripts/issue230_reduce.py",
+  "scripts/issue230_runner.py",
+  "scripts/issue230_safety.py",
+  "scripts/issue230_transfer.py"
+ ],
+ "platform_fault": {
+  "arm": "ladder-opaque_fd-b_to_a",
+  "stop_condition": "ring_timeout_or_hang"
+ },
+ "prerequisites": {
+  "authority_digest": "f6cc23066105c2612c7dc0166d9ded4b529df494c6fa913327c93fe09c702e6b",
+  "boot_id": "9121c110-4eaf-446b-84f4-f1a90c792801",
+  "mapping_digest": "76766571a50971bf677ee85a402a4406d16d8ac7af9978df8a95d6331c6e85d6",
+  "predecessor_preservation": {
+   "v2b": {
+    "drift": [],
+    "manifest": "docs/investigations/vulkan-v2-b-v340l/MANIFEST.sha256",
+    "rows": 128
+   },
+   "v2c": {
+    "drift": [],
+    "manifest": "docs/investigations/vulkan-v2-c-v340l-platform-stability/MANIFEST.sha256",
+    "rows": 1279
+   },
+   "v2d": {
+    "drift": [],
+    "manifest": "docs/investigations/vulkan-v2-d-v340l-concurrent/MANIFEST.sha256",
+    "rows": 911
+   },
+   "v2e": {
+    "drift": [],
+    "manifest": "docs/investigations/vulkan-v2-e-v340l-peer-link/MANIFEST.sha256",
+    "rows": 156
+   }
+  },
+  "safety_classification": "MATERIALLY_DIFFERENT_BOUNDED_PROBE"
+ },
+ "producer_head": "30cf699688aa3d718fb475f5390317ebb4ba7385",
+ "schema": "inferswarm.v2f.assembly/1",
+ "terminal": "V2F_V340L_PLATFORM_STRESS_FAIL"
+}

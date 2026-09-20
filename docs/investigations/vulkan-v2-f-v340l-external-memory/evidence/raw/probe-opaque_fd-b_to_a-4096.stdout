@@ -1,0 +1,3 @@
+{"event":"arm","mechanism":"opaque_fd","direction":"b_to_a","size":4096,"reps":1,"warmups":0,"source":{"bdf":"0000:09:00.0","queue_family":0},"destination":{"bdf":"0000:06:00.0","queue_family":0,"import_memory_type":0,"import_compatible_bits":4294967295,"fd_props_query_supported":0},"handle_type_bit":1,"fd_lifecycle":"opaque_fd: consumed by driver on import"}
+{"event":"rep","rep":0,"measured":1,"seed":587206657,"ok":true,"elapsed_ns":1112885}
+{"event":"summary","mechanism":"opaque_fd","direction":"b_to_a","size":4096,"ok":true}

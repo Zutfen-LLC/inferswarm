@@ -1,0 +1,24 @@
+{
+ "schema": "inferswarm.v2f.supersession/1",
+ "campaign_id": "issue230-v2f-v340l-external-memory",
+ "recorded_utc": "2026-09-20T06:55:00+00:00",
+ "superseded_attempt": {
+  "attempt_id": "a1",
+  "producer_head": "ae9aec0",
+  "closure_digest_pinned": "9346f36ad7ca0be6a345055665389dc54a6977a4d1f33c9dbbcf6aeea4ffd08e",
+  "location": "evidence/attempt-1-superseded/",
+  "defect": "producer defect, not a platform fault: the attempt-1 producer required vkGetMemoryFdPropertiesKHR to succeed before any import. The installed Mesa implements that query for DMA_BUF only — for OPAQUE_FD it returns VK_ERROR_INVALID_EXTERNAL_HANDLE (-1000072003) even on the SAME device that exported the fd (physically observed; scratch diagnostic retained in the correction commit message trail). The Vulkan spec makes the query optional; for opaque_fd the destination buffer is created with VkExternalMemoryBufferCreateInfo chained, so its own memoryRequirements.memoryTypeBits already reflects importability, and vkAllocateMemory validates the import itself.",
+  "observation": "first physical probe (opaque_fd a_to_b 4 KiB) exited 2 at stage fd_import_properties; zero transfers validated under attempt-1 authority",
+  "correction": "commit 30cf699 — query retained and recorded per arm (fd_props_query_supported), dma_buf REQUIRES a successful query, opaque_fd proceeds via import-chained buffer requirements with the checked vkAllocateMemory as the import validator; recording stub mirrors the Mesa behavior in the contract tests"
+ },
+ "corrected_attempt": {
+  "attempt_id": "a2",
+  "producer_head": "67dd8d6",
+  "closure_digest": "see PRODUCER-CLOSURE.json at the evidence commit",
+  "location": "evidence/ (preflight v1 collected under the corrected closure)"
+ },
+ "nonclaims": [
+  "attempt-1 evidence is NON-AUTHORITATIVE history, retained byte-for-byte with its own order state; nothing from it feeds the corrected attempt's reduction",
+  "the attempt-1 failure was NEVER a platform observation; no GPU state was disturbed (the failure preceded any inter-die submit)"
+ ]
+}

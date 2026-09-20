@@ -1,0 +1,8 @@
+{"event":"arm","mechanism":"opaque_fd","direction":"b_to_a","size":65536,"reps":5,"warmups":1,"source":{"bdf":"0000:09:00.0","queue_family":0},"destination":{"bdf":"0000:06:00.0","queue_family":0,"import_memory_type":0,"import_compatible_bits":4294967295,"fd_props_query_supported":0},"handle_type_bit":1,"fd_lifecycle":"opaque_fd: consumed by driver on import"}
+{"event":"rep","rep":-1,"measured":0,"seed":587268097,"ok":true}
+{"event":"rep","rep":0,"measured":1,"seed":587268098,"ok":true,"elapsed_ns":592794}
+{"event":"rep","rep":1,"measured":1,"seed":587268099,"ok":true,"elapsed_ns":545034}
+{"event":"rep","rep":2,"measured":1,"seed":587268100,"ok":true,"elapsed_ns":486171}
+{"event":"rep","rep":3,"measured":1,"seed":587268101,"ok":true,"elapsed_ns":558683}
+{"event":"rep","rep":4,"measured":1,"seed":587268102,"ok":true,"elapsed_ns":460344}
+{"event":"summary","mechanism":"opaque_fd","direction":"b_to_a","size":65536,"ok":true}

@@ -1,0 +1,363 @@
+{
+ "arm": "probe-opaque_fd-a_to_b",
+ "authorized_predecessors": [],
+ "closure_digest": "0d9a17b97ef1cbea8c10850d4b95044a14fd6cd6d43c85e97296339015a87bf7",
+ "health_window": {
+  "aer_delta": {
+   "0000:00:1d.0": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   },
+   "0000:02:00.0": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   },
+   "0000:03:00.0": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   },
+   "0000:03:01.0": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   },
+   "0000:06:00.0": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   },
+   "0000:09:00.0": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   },
+   "0000:0a:00.0": {
+    "aer_dev_correctable": {},
+    "aer_dev_fatal": {},
+    "aer_dev_nonfatal": {}
+   }
+  },
+  "arm": "probe-opaque_fd-a_to_b",
+  "health_after": {
+   "aer": {
+    "0000:00:1d.0": {
+     "aer_dev_correctable": {},
+     "aer_dev_fatal": {},
+     "aer_dev_nonfatal": {}
+    },
+    "0000:02:00.0": {
+     "aer_dev_correctable": {},
+     "aer_dev_fatal": {},
+     "aer_dev_nonfatal": {}
+    },
+    "0000:03:00.0": {
+     "aer_dev_correctable": {},
+     "aer_dev_fatal": {},
+     "aer_dev_nonfatal": {}
+    },
+    "0000:03:01.0": {
+     "aer_dev_correctable": {},
+     "aer_dev_fatal": {},
+     "aer_dev_nonfatal": {}
+    },
+    "0000:06:00.0": {
+     "aer_dev_correctable": {},
+     "aer_dev_fatal": {},
+     "aer_dev_nonfatal": {}
+    },
+    "0000:09:00.0": {
+     "aer_dev_correctable": {},
+     "aer_dev_fatal": {},
+     "aer_dev_nonfatal": {}
+    },
+    "0000:0a:00.0": {
+     "aer_dev_correctable": {},
+     "aer_dev_fatal": {},
+     "aer_dev_nonfatal": {}
+    }
+   },
+   "link": {
+    "0000:00:1d.0": {
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "1",
+     "max_link_speed": "8.0 GT/s PCIe",
+     "max_link_width": "1"
+    },
+    "0000:02:00.0": {
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "1",
+     "max_link_speed": "8.0 GT/s PCIe",
+     "max_link_width": "16"
+    },
+    "0000:03:00.0": {
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "16",
+     "max_link_speed": "8.0 GT/s PCIe",
+     "max_link_width": "16"
+    },
+    "0000:03:01.0": {
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "16",
+     "max_link_speed": "8.0 GT/s PCIe",
+     "max_link_width": "16"
+    },
+    "0000:06:00.0": {
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "16",
+     "max_link_speed": "8.0 GT/s PCIe",
+     "max_link_width": "16"
+    },
+    "0000:09:00.0": {
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "16",
+     "max_link_speed": "8.0 GT/s PCIe",
+     "max_link_width": "16"
+    },
+    "0000:0a:00.0": {
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "1",
+     "max_link_speed": "16.0 GT/s PCIe",
+     "max_link_width": "16"
+    }
+   },
+   "monotonic_ns": 104321047604352
+  },
+  "host_health_after": {
+   "loadavg": "2.00 1.70 1.57 1/225 172613",
+   "meminfo_bytes": {
+    "MemAvailable": 15233089536,
+    "MemFree": 8696418304,
+    "SwapFree": 8589930496
+   },
+   "monotonic_ns": 104321056752391,
+   "uptime": "104321.05 204011.78"
+  },
+  "journal_fault_counts": {
+   "amdgpu_failure": 0,
+   "amdgpu_reset": 0,
+   "amdgpu_timeout": 0,
+   "dmar_fault": 0,
+   "fatal_aer": 0,
+   "thermal": 0
+  },
+  "journal_scan": {
+   "argv": [
+    "journalctl",
+    "-b",
+    "-k",
+    "--no-pager",
+    "-g",
+    "amdgpu|AER|pcieport|DMAR|dmar|[Rr]eset|[Hh]ang|ECC",
+    "--after-cursor",
+    "s=d64845595db1483b885f7fae3b0e0c31;i=2779ce;b=9121c1104eaf446b84f4f1a90c792801;m=18490bcc29;t=65be41bca73f3;x=2a9f65e40fbfd1d4"
+   ],
+   "next_cursor": "s=d64845595db1483b885f7fae3b0e0c31;i=277a52;b=9121c1104eaf446b84f4f1a90c792801;m=184a0366ed;t=65be41cc20eb7;x=1cd0dc311e620221",
+   "text": "Sep 20 02:19:01 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:01 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:01 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:01 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:02 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:07 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:00:1d.0: AER: Correctable error message received from 0000:02:00.0\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0: PCIe Bus Error: severity=Correctable, type=Physical Layer, (Receiver ID)\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:   device [11f8:8533] error status/mask=00000001/0000e000\nSep 20 02:19:12 inferswarm02 kernel: pcieport 0000:02:00.0:    [ 0] RxErr                  (First)\n"
+  },
+  "nic_after": {
+   "enp1s0": {
+    "rx_bytes": 591727641,
+    "tx_bytes": 178395634
+   },
+   "monotonic_ns": 104321056404510
+  },
+  "telemetry_after": {
+   "a": {
+    "bdf": "0000:06:00.0",
+    "current_link_speed": "8.0 GT/s PCIe",
+    "current_link_width": "16",
+    "gpu_busy_percent": 0,
+    "hwmon": {
+     "hwmon6": {
+      "fan1_enable": 0,
+      "fan1_input": 0,
+      "fan1_max": 0,
+      "fan1_min": 0,
+      "fan1_target": 0,
+      "freq1_input": 9000000,
+      "freq1_label": "sclk",
+      "freq2_input": 167000000,
+      "freq2_label": "mclk",
+      "in0_input": 750,
+      "in0_label": "vddgfx",
+      "name": "amdgpu",
+      "power1_cap": 110000000,
+      "power1_cap_default": 110000000,
+      "power1_cap_max": 110000000,
+      "power1_cap_min": 0,
+      "power1_input": 4000000,
+      "power1_label": "PPT",
+      "pwm1": 24,
+      "pwm1_enable": 2,
+      "pwm1_max": 255,
+      "pwm1_min": 0,
+      "temp1_crit": 85000,
+      "temp1_crit_hyst": -273150,
+      "temp1_emergency": 90000,
+      "temp1_input": 30000,
+      "temp1_label": "edge",
+      "temp2_crit": 105000,
+      "temp2_crit_hyst": -273150,
+      "temp2_emergency": 110000,
+      "temp2_input": 33000,
+      "temp2_label": "junction",
+      "temp3_crit": 95000,
+      "temp3_crit_hyst": -273150,
+      "temp3_emergency": 100000,
+      "temp3_input": 31000,
+      "temp3_label": "mem"
+     }
+    },
+    "mem_busy_percent": null,
+    "monotonic_ns": 104321050222734,
+    "ras_gpu_err_cnt": null,
+    "vram_total_bytes": 8573157376,
+    "vram_used_bytes": 8351744
+   },
+   "b": {
+    "bdf": "0000:09:00.0",
+    "current_link_speed": "8.0 GT/s PCIe",
+    "current_link_width": "16",
+    "gpu_busy_percent": 0,
+    "hwmon": {
+     "hwmon7": {
+      "fan1_enable": 0,
+      "fan1_input": 0,
+      "fan1_max": 0,
+      "fan1_min": 0,
+      "fan1_target": 0,
+      "freq1_input": 9000000,
+      "freq1_label": "sclk",
+      "freq2_input": 167000000,
+      "freq2_label": "mclk",
+      "in0_input": 750,
+      "in0_label": "vddgfx",
+      "name": "amdgpu",
+      "power1_cap": 110000000,
+      "power1_cap_default": 110000000,
+      "power1_cap_max": 110000000,
+      "power1_cap_min": 0,
+      "power1_input": 4000000,
+      "power1_label": "PPT",
+      "pwm1": 24,
+      "pwm1_enable": 2,
+      "pwm1_max": 255,
+      "pwm1_min": 0,
+      "temp1_crit": 85000,
+      "temp1_crit_hyst": -273150,
+      "temp1_emergency": 90000,
+      "temp1_input": 27000,
+      "temp1_label": "edge",
+      "temp2_crit": 105000,
+      "temp2_crit_hyst": -273150,
+      "temp2_emergency": 110000,
+      "temp2_input": 28000,
+      "temp2_label": "junction",
+      "temp3_crit": 95000,
+      "temp3_crit_hyst": -273150,
+      "temp3_emergency": 100000,
+      "temp3_input": 26000,
+      "temp3_label": "mem"
+     }
+    },
+    "mem_busy_percent": null,
+    "monotonic_ns": 104321052698790,
+    "ras_gpu_err_cnt": null,
+    "vram_total_bytes": 8573157376,
+    "vram_used_bytes": 8351744
+   }
+  },
+  "upstream_after": {
+   "link": {
+    "0000:00:1d.0": {
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "1",
+     "max_link_speed": "8.0 GT/s PCIe",
+     "max_link_width": "1"
+    },
+    "0000:02:00.0": {
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "1",
+     "max_link_speed": "8.0 GT/s PCIe",
+     "max_link_width": "16"
+    },
+    "0000:03:00.0": {
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "16",
+     "max_link_speed": "8.0 GT/s PCIe",
+     "max_link_width": "16"
+    },
+    "0000:03:01.0": {
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "16",
+     "max_link_speed": "8.0 GT/s PCIe",
+     "max_link_width": "16"
+    },
+    "0000:06:00.0": {
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "16",
+     "max_link_speed": "8.0 GT/s PCIe",
+     "max_link_width": "16"
+    },
+    "0000:09:00.0": {
+     "current_link_speed": "8.0 GT/s PCIe",
+     "current_link_width": "16",
+     "max_link_speed": "8.0 GT/s PCIe",
+     "max_link_width": "16"
+    }
+   },
+   "monotonic_ns": 104321055044278,
+   "vram_used": {
+    "0000:06:00.0": 8351744,
+    "0000:09:00.0": 8351744
+   }
+  }
+ },
+ "producer_head": "30cf699688aa3d718fb475f5390317ebb4ba7385",
+ "sizes": [
+  {
+   "arm_record": {
+    "destination": {
+     "bdf": "0000:09:00.0",
+     "fd_props_query_supported": 0,
+     "import_compatible_bits": 4294967295,
+     "import_memory_type": 0,
+     "queue_family": 0
+    },
+    "direction": "a_to_b",
+    "event": "arm",
+    "fd_lifecycle": "opaque_fd: consumed by driver on import",
+    "handle_type_bit": 1,
+    "mechanism": "opaque_fd",
+    "reps": 1,
+    "size": 4096,
+    "source": {
+     "bdf": "0000:06:00.0",
+     "queue_family": 0
+    },
+    "warmups": 0
+   },
+   "exit_code": 0,
+   "measured_reps": [
+    {
+     "elapsed_ns": 986904,
+     "event": "rep",
+     "measured": 1,
+     "ok": true,
+     "rep": 0,
+     "seed": 587206657
+    }
+   ],
+   "size": 4096,
+   "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+   "stdout_rel": "raw/probe-opaque_fd-a_to_b-4096.stdout",
+   "stdout_sha256": "fcc1afd166690baf059ae61609e1e4664118d654d894ee21ea0006ef80b6c2ac",
+   "validated": true,
+   "warmup_reps": []
+  }
+ ],
+ "status": "PASSED"
+}

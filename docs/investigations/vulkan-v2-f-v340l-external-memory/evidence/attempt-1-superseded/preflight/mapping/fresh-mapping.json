@@ -1,0 +1,39 @@
+{
+ "attempt_id": "v1-map",
+ "authority_digest": "f6cc23066105c2612c7dc0166d9ded4b529df494c6fa913327c93fe09c702e6b",
+ "authority_path": "docs/investigations/vulkan-v2-f-v340l-external-memory/PHYSICAL-AUTHORITY.json",
+ "bindings_path": "raw/bindings.json",
+ "campaign_id": "issue230-v2f-v340l-external-memory",
+ "fixture": false,
+ "inventory_measured_utc": "2026-09-20T06:12:40.106816+00:00",
+ "mapping_digest": "6cb7fe0e6a1d35eaebf364c7a9c26b66c0040fa8a0fda26e40b26df39d4a71f6",
+ "nonclaims": [
+  "NON_AUTHORIZING for model inference; authorizes only V2-F external-memory transfer device binding"
+ ],
+ "participants": {
+  "a": {
+   "fresh_device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+   "fresh_pci_bdf": "06:00.0",
+   "fresh_selector": "Vulkan1",
+   "intended_identity": {
+    "compute_unit_id": "cu-v340l-die-a",
+    "hostname": "inferswarm02",
+    "memory_resource_id": "mr-v340l-die-a-vram",
+    "vram_bytes": 8573157376
+   }
+  },
+  "b": {
+   "fresh_device_name": "AMD Radeon Pro V340 (RADV VEGA10)",
+   "fresh_pci_bdf": "09:00.0",
+   "fresh_selector": "Vulkan2",
+   "intended_identity": {
+    "compute_unit_id": "cu-v340l-die-b",
+    "hostname": "inferswarm02",
+    "memory_resource_id": "mr-v340l-die-b-vram",
+    "vram_bytes": 8573157376
+   }
+  }
+ },
+ "reviewed_utc": "2026-09-20T06:12:40.106868+00:00",
+ "schema": "inferswarm.v2f.fresh-mapping/1"
+}

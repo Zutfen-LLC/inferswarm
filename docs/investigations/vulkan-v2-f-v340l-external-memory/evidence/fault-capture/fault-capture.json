@@ -1,0 +1,29 @@
+{
+ "artifacts": {
+  "aer-at-fault.txt": "9a3d9ae814f4e195db1e9146cb501f73ed2c99edf613004fd290839fc7eeb180",
+  "devcoredump.txt": "b095f5f195356475b095c36766ad90ff6a917b142e78ef7a6d0b9b9722999ee6",
+  "dmesg-at-fault.txt": "717e47ec946cb99d5673eaf67e4f2daf19f13eb1a4fcfef91f84d94b91825ab3",
+  "drm-state.txt": "5f77ac303c24fb4c7fee6927bbb463e40bed3895bf3d4d95e91c2c730b6dd3ef",
+  "dstate-processes.txt": "195b86708e991c644b2911a37d06b54ad14c73fc96d5a69ab58e6921fc66f327",
+  "dstate-stacks.txt": "5bbf049125e1b10e1deb4abf91dc166a3da49857b65c8476f6b8b0b72d745a28",
+  "journal-amdgpu-full.txt": "7586dae656f236cba4b6de7425d93d951b952451d6c9be737d118a2d7d1132d8",
+  "journal-fault-window.txt": "6fe36464bcf6f53235beadb95aae3ddbc58826cbcd81c81da24bd35fb15f5591",
+  "lspci-die-a.txt": "b19d09351978395dce870373d26186fadf1fe1503427bc2fa4ad3f2aa674db31",
+  "lspci-die-b.txt": "e723a82e03494ce4170bb6bb52fee5b91a795bccbfead407c9c0f019feae98c8",
+  "probe-processes.txt": "bc4de8dc7c5fb23de205e8d85ee2bb9895104ab72e087969df7718c779dd9c0f"
+ },
+ "campaign_id": "issue230-v2f-v340l-external-memory",
+ "captured_utc": "2026-09-20T06:44:53.604822+00:00",
+ "fault": {
+  "arm_in_flight": "ladder-opaque_fd-b_to_a",
+  "arm_size": 67108864,
+  "die": "0000:06:00.0",
+  "note": "die A is the DESTINATION die of the b_to_a transfer in flight; the a_to_b full ladder had already PASSED (probe + 6/6 sizes correct) before the fault",
+  "observed_utc_window": [
+   "2026-09-20T02:22:29",
+   "2026-09-20T06:44:53.604822+00:00"
+  ],
+  "signature": "ring gfx timeout signaled seq=202 emitted seq=203; ring gfx reset failed; GPU reset end ret=-62; devcoredump created; probe process D-state in dma_fence_wait inside amdgpu_vm_fini on close; ttm kworkers wedged"
+ },
+ "schema": "inferswarm.v2f.fault-capture/1"
+}

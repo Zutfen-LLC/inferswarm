@@ -1,0 +1,22 @@
+card0
+card0-DP-1
+card0-DP-2
+card0-HDMI-A-1
+card0-HDMI-A-2
+card0-HDMI-A-3
+card1
+card2
+card3
+card3-DP-3
+card3-DP-4
+card3-DP-5
+card3-HDMI-A-4
+renderD128
+renderD129
+renderD130
+renderD131
+version
+== /sys/class/drm/card1/device/mem_info_vram_used
+75763712
+== /sys/class/drm/card2/device/mem_info_vram_used
+8646656

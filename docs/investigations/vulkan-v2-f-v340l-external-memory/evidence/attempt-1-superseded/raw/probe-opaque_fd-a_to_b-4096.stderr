@@ -1,0 +1,1 @@
+{"event":"error","stage":"fd_import_properties","vkResult":-1000072003,"detail":"vkGetMemoryFdPropertiesKHR rejected the fd for this handle type"}
