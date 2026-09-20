@@ -5,7 +5,7 @@
   "2026-09-19T22:49:20.190929+00:00",
   "2026-09-19T22:49:26.195942+00:00"
  ],
- "closure_digest": "8cc902616282d61fa71b4457887bf3106e1db54ac755989d42a323d68b585005",
+ "closure_digest": "4d39b28cd02ac7ca3ee97d49759a76d0ff234f57b154979933765fafcbc501be",
  "nonclaims": [
   "no coherent 16-GiB GPU address space claimed",
   "no xGMI / Infinity Fabric claimed",
@@ -18,7 +18,7 @@
   "no safety claim for the #216 faulting transport mechanism",
   "no claim that a corrected census alone establishes or excludes a physical peer path; advertised capability is not validated execution"
  ],
- "producer_head": "9ea6e71105648699f8841cf44fc860d5530a6584",
+ "producer_head": "9a7b479c3cd50f302b26c2464e0e30e9995340df",
  "schema": "inferswarm.v2e.terminal/2",
  "terminal": "V2E_EVIDENCE_BLOCKED",
  "vocabulary": [

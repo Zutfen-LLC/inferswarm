@@ -157,7 +157,7 @@
    }
   }
  },
- "closure_digest": "8cc902616282d61fa71b4457887bf3106e1db54ac755989d42a323d68b585005",
+ "closure_digest": "4d39b28cd02ac7ca3ee97d49759a76d0ff234f57b154979933765fafcbc501be",
  "closure_sources": [
   "scripts/issue228_assemble.py",
   "scripts/issue228_authority.py",
@@ -171,6 +171,64 @@
   "scripts/issue228_receipt.py",
   "scripts/issue228_reduce.py"
  ],
+ "external_memory_advertisement": {
+  "advertised_bidirectional_handle_types": [
+   "dma_buf",
+   "opaque_fd"
+  ],
+  "advertisement": {
+   "dma_buf": {
+    "advertisement_state": "advertised-bidirectional",
+    "all_directions_usable": true,
+    "compatible_handle_types_ok_both_directions": true,
+    "directions": {
+     "a_to_b": {
+      "compatible_handle_types_ok": true,
+      "destination_importable": true,
+      "extension_enumerated": true,
+      "source_exportable": true,
+      "usable": true
+     },
+     "b_to_a": {
+      "compatible_handle_types_ok": true,
+      "destination_importable": true,
+      "extension_enumerated": true,
+      "source_exportable": true,
+      "usable": true
+     }
+    },
+    "extension_enumerated_both_dies": true
+   },
+   "opaque_fd": {
+    "advertisement_state": "advertised-bidirectional",
+    "all_directions_usable": true,
+    "compatible_handle_types_ok_both_directions": true,
+    "directions": {
+     "a_to_b": {
+      "compatible_handle_types_ok": true,
+      "destination_importable": true,
+      "extension_enumerated": true,
+      "source_exportable": true,
+      "usable": true
+     },
+     "b_to_a": {
+      "compatible_handle_types_ok": true,
+      "destination_importable": true,
+      "extension_enumerated": true,
+      "source_exportable": true,
+      "usable": true
+     }
+    },
+    "extension_enumerated_both_dies": true
+   }
+  },
+  "census_valid": true,
+  "nonclaims": [
+   "advertisement is a property-query result, not a reviewed cross-device implementation",
+   "advertisement is not a validated transfer; zero transfers were executed in this campaign",
+   "advertisement establishes no physical route (no transfer occurred; route unmeasured)"
+  ]
+ },
  "fault_scan": {
   "any": false,
   "fault_lines": {},
@@ -182,6 +240,17 @@
   ],
   "available": false,
   "basis": "capability-advertised-but-no-implementation",
+  "external_memory_advertisement": {
+   "advertised_bidirectional_handle_types": [
+    "dma_buf",
+    "opaque_fd"
+   ],
+   "note": "classification basis per handle type is property-query ADVERTISEMENT with the enabling extension enumerated; advertisement is not a reviewed implementation and not validated execution",
+   "per_handle_state": {
+    "dma_buf": "advertised-bidirectional",
+    "opaque_fd": "advertised-bidirectional"
+   }
+  },
   "external_memory_directions": {
    "dma_buf": {
     "a_to_b": {
@@ -212,6 +281,7 @@
     }
    }
   },
+  "external_memory_note": "external_memory_directions rows above are the FROZEN producer validator output over the same retained raw bytes (retention reference). Its dma_buf compatibility derivation used a mis-transcribed handle-type bit and is superseded for classification by the reduction-layer advertisement re-derivation in external_memory_advertisement (AMENDMENTS.json).",
   "group": {
    "both_dies_in_one_group": false,
    "note": "no Vulkan device group contains both V340 dies (co-membership absent on this stack)"
@@ -231,8 +301,8 @@
   },
   "selected_mechanism": null
  },
- "producer_head": "9ea6e71105648699f8841cf44fc860d5530a6584",
- "schema": "inferswarm.v2e.assembly/2",
+ "producer_head": "9a7b479c3cd50f302b26c2464e0e30e9995340df",
+ "schema": "inferswarm.v2e.assembly/3",
  "terminal": "V2E_EVIDENCE_BLOCKED",
  "v2d_inherited_fault": {
   "relation": "inherited safety constraint; not in this campaign window and not re-counted here",
