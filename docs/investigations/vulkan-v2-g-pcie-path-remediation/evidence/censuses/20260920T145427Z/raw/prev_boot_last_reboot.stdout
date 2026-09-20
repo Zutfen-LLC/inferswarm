@@ -1,0 +1,17 @@
+reboot   system boot  7.1.8+deb13-amd6 Sun Sep 20 10:53 - still running
+reboot   system boot  7.1.8+deb13-amd6 Sun Sep 20 10:53 - crash 
+reboot   system boot  7.1.8+deb13-amd6 Sun Sep 20 10:47 - crash 
+reboot   system boot  7.1.8+deb13-amd6 Sun Sep 20 10:39 - crash 
+reboot   system boot  7.1.8+deb13-amd6 Sun Sep 20 10:32 - crash 
+reboot   system boot  7.1.8+deb13-amd6 Sun Sep 20 08:36 - 10:31  (01:54)
+shutdown system down  7.1.8+deb13-amd6 Sun Sep 20 10:31 - 10:32  (00:01)
+reboot   system boot  7.1.8+deb13-amd6 Fri Sep 18 21:20 - 08:25 (1+11:04)
+shutdown system down  7.1.8+deb13-amd6 Sun Sep 20 08:25 - 08:36  (00:11)
+reboot   system boot  7.1.8+deb13-amd6 Fri Sep 18 20:49 - crash 
+reboot   system boot  7.1.8+deb13-amd6 Fri Sep 18 20:34 - crash 
+reboot   system boot  7.1.8+deb13-amd6 Fri Sep 18 18:22 - crash 
+reboot   system boot  7.1.8+deb13-amd6 Thu Sep 17 17:52 - 17:51  (23:59)
+shutdown system down  7.1.8+deb13-amd6 Fri Sep 18 17:51 - 18:22  (00:30)
+reboot   system boot  7.1.8+deb13-amd6 Thu Sep 17 17:45 - crash 
+
+wtmpdb begins Thu Sep 17 17:45:03 2026
