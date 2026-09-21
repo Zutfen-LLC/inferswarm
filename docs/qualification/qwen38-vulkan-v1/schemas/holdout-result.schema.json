@@ -1,0 +1,1 @@
+{"properties":{"campaign":{"type":"string"},"case_results":{"type":"array"},"schema":{"const":"inferswarm.issue237.holdout-result/1"},"terminal":{"type":"string"}},"required":["schema","campaign","case_results","terminal"],"type":"object"}
