@@ -1,7 +1,7 @@
 {
  "campaign": "issue234-r8h-vulkan-single-die-qualification",
- "closure_digest": "1e46ebca9b53c00ef341bf424ecdd79b187a7f377d8c463e957027b5449a49dd",
- "producer_head": "9807b967aca9dd8b6c7542a8f8aa24c12b9e8a25",
+ "closure_digest": "0839bad3c850212c8b0ec12eb8430415c2d8925e9e4e838fdab654fa5d37f816",
+ "producer_head": "d31a52d59ce876585a152978cf14916fc9d979fa",
  "schema": "inferswarm.r8h.producer-closure/1",
  "sources": {
   "scripts/issue234_assemble.py": {
@@ -25,8 +25,8 @@
    "sha256": "8d81d0be90d0b13553647a6f7896e9ac8ae13070f9d97966ea7d8a021828f056"
   },
   "scripts/issue234_ladder.py": {
-   "bytes": 9813,
-   "sha256": "67acbd33c0598028da554baa81d87c355d43aa3bd9dba739013b58e996f6ba6d"
+   "bytes": 10854,
+   "sha256": "ec1732cb9c277057ca668f1d389de3c0cc033b08052708060706003fc86bf0aa"
   },
   "scripts/issue234_manifest.py": {
    "bytes": 891,
@@ -41,8 +41,8 @@
    "sha256": "1c828688027255a2fa64632187c1ab5e7a78b6616e58b257433adca42194bc26"
   },
   "scripts/issue234_reduce.py": {
-   "bytes": 15133,
-   "sha256": "4a172496a137858a8fdb83bfa3b793c29f186573aae85c9c459f1a4fb76d8f9d"
+   "bytes": 15401,
+   "sha256": "b170697919e16ee0a30880c313c2985d7d89b5a8951a06b056496b8234258b5b"
   },
   "scripts/issue234_runtime.py": {
    "bytes": 8126,

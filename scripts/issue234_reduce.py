@@ -144,7 +144,7 @@ def reduce_placement(evidence: Path) -> dict[str, Any]:
     problems = []
     if sel_vram <= 0:
         problems.append("zero_selected_die_residency")
-    if exc_vram != 0:
+    if exc_vram >= rc.EXCLUDED_DIE_MAX_BYTES:
         problems.append("excluded_die_active")
     if sel.get("headroom_bytes") is not None and \
             sel["headroom_bytes"] < 0:
@@ -192,7 +192,8 @@ def reduce_ladder(evidence: Path) -> dict[str, Any]:
                 repeats[0]["comparison"]["first_divergence"]
                 if repeats else None),
         }
-        if status == "FAIL" and any_fail is None:
+        if status in ("FAIL", "FAIL_DETERMINISTIC",
+                      "FAIL_NONDETERMINISTIC") and any_fail is None:
             any_fail = case_id
         if status == "NOT_EXECUTED" and prev_pass:
             escalation_ok = False
@@ -321,7 +322,10 @@ def derive_terminal(evidence: Path, closure: dict[str, Any] | None = None
         elif failed is not None:
             terminal = TERMINAL_CORRECTNESS_FAIL
             div = ladder["cases"][failed].get("first_divergence")
-            basis.append(f"{failed} deterministic mismatch: {div}")
+            det = ladder["cases"][failed].get("deterministic")
+            basis.append(f"{failed} "
+                         f"{'deterministic' if det else 'NONdeterministic'} "
+                         f"difference from reference: {div}")
         else:
             terminal = TERMINAL_CORRECTNESS_FAIL
             basis.append("nondeterministic repeat or non-PASS case "

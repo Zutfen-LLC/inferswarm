@@ -1,4 +1,15 @@
 90af4c5e91427acebb4e828c62e2d3590e5fa29c61c792f9e1a48ba7e3576154  docs/investigations/qwen38-flash-next-r8-h-vulkan/PHYSICAL-AUTHORITY.json
-9516f8e281b93a2e6bc2cfbe1eea79d157d4d87afb23ec33711975cb8e0e1a86  docs/investigations/qwen38-flash-next-r8-h-vulkan/PRODUCER-CLOSURE.json
-5a28ca7107967a8d43d2483e81ac9a19efa8d3f2ddbdfe1a479de2d107f13b91  docs/investigations/qwen38-flash-next-r8-h-vulkan/README.md
+72a6b5650429e6293a13171bf5dfa0ee4ecf794520de3e0700091598d54e47ec  docs/investigations/qwen38-flash-next-r8-h-vulkan/PRODUCER-CLOSURE.json
+747864d52f335aff44fd431943938efcce65cf71b68384de2fe0629b250ff896  docs/investigations/qwen38-flash-next-r8-h-vulkan/README.md
+90af4c5e91427acebb4e828c62e2d3590e5fa29c61c792f9e1a48ba7e3576154  docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/PHYSICAL-AUTHORITY.json
+919e193b81fd69644c87dc9b04bdcbfaa0f19c559520df976690d7bbd193206b  docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/TERMINAL.json
+90d9303b844615bfee906eee1b5ac475af51d806e83ff8cf0d0fbe30f34e5287  docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/backing/backing-verification.json
+0b8a65e419998936eeb68afd1fe563b5b2e75875888de3d3fa0c8df3c8eba805  docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/candidate/backing-verification.txt
+6452f30b50fbd83569aff6ea44e41dbd3055b067ee4f6687f7fa0e0d5588c7e6  docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/candidate/ladder-server.log
+fc2d68223fe5bf881564284c4e82a235d2e1a867d3da13fa5a390d8f575b918e  docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/candidate/ladder.json
+6f8a05d50896a285e08bac5e2a8d2ee8691fcb8f79cef54d24c2cc645be4c594  docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/candidate/placement.json
 62098bff5c4a8b14a7951326e6bdf3757b66dc39337ee55e7607fc6fd5af50c1  docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/host-inventory/INCIDENT-authorized-keys-20260920.md
+cccf6d4628247ab16caf25fe0c52b27472ce3fe527019989a19f19f06b953a76  docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/host-inventory/census.json
+bda5db25b706ac75f28b4df7e2a7ea64d65f8c10ff2bf8b2627cbec57b62d6a7  docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/host-inventory/runtime-qualification.json
+6f8a05d50896a285e08bac5e2a8d2ee8691fcb8f79cef54d24c2cc645be4c594  docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/placement/placement.json
+bda5db25b706ac75f28b4df7e2a7ea64d65f8c10ff2bf8b2627cbec57b62d6a7  docs/investigations/qwen38-flash-next-r8-h-vulkan/evidence/runtime/runtime-qualification.json

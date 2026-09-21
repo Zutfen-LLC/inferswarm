@@ -52,17 +52,50 @@ both sides 16-char domain-prefixed).
   producer closure written).
 - Phase 1 runtime qualification — DONE (build + identity + selector
   mapping; no model).
-- Phase 2 placement freeze — PENDING model backing (load-only ngl
-  ladder, smallest nonzero residency rule, output-blind).
-- Phase 3 correctness ladder — PENDING (case-256 → 1024 → 3072 → 4096,
-  3 repeats, exact token/stop vs frozen reference).
-- Phase 4 execution-truth proof — PENDING (residency deltas on both
-  dies, backend activity, process/drm association, PLE host-side
-  classification).
-- Phase 5 restart control — PENDING (exact-PID termination, die idle
-  tolerance, relaunch, case-256 + largest passed case).
-- Phase 6 platform health — collector built (amdgpu/AER/PCIe stop
-  classes from raw journal bytes; armed between ladder cases).
+- Phase 2 placement freeze — DONE 2026-09-20: ngl=1 selected by the
+  frozen mechanical rule (smallest nonzero model-buffer residency on
+  the selected die: 1,050,275,840 bytes at 0000:06:00.0; excluded die
+  0000:09:00.0 shows only 12,288 bytes of driver-enumeration noise,
+  under the frozen <1 MiB bound). Load-only preflight; no correctness
+  output emitted; all attempts retained in evidence.
+- Phase 3 correctness ladder — EXECUTED 2026-09-20, halted at first
+  case per the frozen escalation rule: case-256 FAIL_DETERMINISTIC
+  (all 3 repeats identical; tokens diverge from the accepted R8-D
+  reference at position 5: candidate 34227 vs reference 271).
+  Cases 1024/3072/4096 NOT_EXECUTED per the escalation contract.
+- Phase 4 execution-truth proof — residency deltas captured per
+  attempt and per ladder run (selected die loaded/released, excluded
+  die flat); platform health windows clean (no amdgpu fault classes,
+  0 correctable RxErr lines).
+- Phase 5 restart control — NOT REACHED (only required for a PASS
+  path; the correctness terminal short-circuits escalation).
+- Phase 6 platform health — collector armed between cases; final
+  snapshot clean; no stop classes fired.
+
+## Terminal result
+
+**R8H_QWEN38_VULKAN_CORRECTNESS_FAIL** (reduced 2026-09-20,
+scripts/issue234_reduce.py, evidence/TERMINAL.json):
+
+- backing VERIFIED (3/3 members byte-exact vs accepted authority,
+  total 72,546,461,344);
+- runtime QUALIFIED (pin b29c606e Vulkan-only build, selector binds
+  die 06:00.0, other die excluded);
+- placement LEGAL (ngl=1, nonzero residency on selected die only);
+- Vulkan execution PROVEN and DETERMINISTIC (3/3 identical repeats);
+- case-256 deterministically differs from the accepted R8-D
+  true-greedy reference at token 5 (34227 "e" → "forty-one…" vs
+  271 "\n"): a cross-backend numerical divergence in the IQ1_S
+  dequant/greedy path, not nondeterminism and not a platform fault.
+
+Meaning: this die/runtime pair is a deterministic, healthy Vulkan
+execution environment whose greedy token stream does NOT match the
+accepted CUDA-derived reference byte-for-byte. It does not qualify as
+a truthful local execution environment for this subject under the
+frozen exact-match contract, and nothing here authorizes mixed-vendor
+execution. A successor campaign may investigate the divergence class
+(near-tie logits at the divergence point) under a separately reviewed
+issue.
 
 ## Terminals (deterministic, scripts/issue234_reduce.py)
 

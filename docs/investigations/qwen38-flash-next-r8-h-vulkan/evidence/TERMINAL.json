@@ -1,0 +1,76 @@
+{
+ "campaign": "issue234-r8h-vulkan-single-die-qualification",
+ "checks": {
+  "authority": {
+   "merges": [
+    "r8a",
+    "r8d",
+    "r8f",
+    "r8g",
+    "start_main",
+    "v2e",
+    "v2f",
+    "v2g"
+   ],
+   "ok": true
+  },
+  "backing": {
+   "status": "VERIFIED"
+  },
+  "health": {
+   "correctable_rxerr_lines": 0,
+   "link_change": null,
+   "status": "CLEAN",
+   "stop_classes": [],
+   "vram_released": true
+  },
+  "ladder": {
+   "cases": {
+    "case-1024": {
+     "deterministic": true,
+     "first_divergence": null,
+     "repeats_retained": 0,
+     "status": "NOT_EXECUTED"
+    },
+    "case-256": {
+     "deterministic": true,
+     "first_divergence": {
+      "candidate": 34227,
+      "position": 5,
+      "reference": 271
+     },
+     "repeats_retained": 3,
+     "status": "FAIL_DETERMINISTIC"
+    },
+    "case-3072": {
+     "deterministic": true,
+     "first_divergence": null,
+     "repeats_retained": 0,
+     "status": "NOT_EXECUTED"
+    },
+    "case-4096": {
+     "deterministic": true,
+     "first_divergence": null,
+     "repeats_retained": 0,
+     "status": "NOT_EXECUTED"
+    }
+   },
+   "deterministic": null,
+   "escalation_rule_ok": true,
+   "first_failing_case": "case-256",
+   "halted": "case-256:deterministic_mismatch",
+   "status": "PRESENT"
+  },
+  "placement": {
+   "status": "FROZEN"
+  },
+  "runtime": {
+   "status": "QUALIFIED"
+  }
+ },
+ "schema": "inferswarm.r8h.terminal-reduction/1",
+ "terminal": "R8H_QWEN38_VULKAN_CORRECTNESS_FAIL",
+ "terminal_basis": [
+  "case-256 deterministic difference from reference: {'candidate': 34227, 'position': 5, 'reference': 271}"
+ ]
+}

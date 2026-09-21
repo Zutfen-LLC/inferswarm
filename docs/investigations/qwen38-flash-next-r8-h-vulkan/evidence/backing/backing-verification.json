@@ -1,0 +1,25 @@
+{
+  "schema": "inferswarm.r8h.backing/1",
+  "members": [
+    {
+      "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+      "bytes": 10946624,
+      "sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd",
+      "sha256_ok": true
+    },
+    {
+      "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+      "bytes": 49990818368,
+      "sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6",
+      "sha256_ok": true
+    },
+    {
+      "member": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+      "bytes": 22544696352,
+      "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a",
+      "sha256_ok": true
+    }
+  ],
+  "source": "inferswarm01:/srv/models/qwen38-ud-iq1-s (accepted fleet Source)",
+  "method": "controller-relay LAN transfer + fresh sha256 on inferswarm02 2026-09-20"
+}

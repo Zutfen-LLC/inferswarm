@@ -154,17 +154,34 @@ def main() -> int:
                                     "reason": f"halted after {halted}"}
                 continue
             case_repeats = []
-            case_exact = None
             for rep in range(1, rc.REPEATS_PER_CASE + 1):
                 obs = run_case(args.port, prompts[case_id])
                 cmp = compare(obs, reference["cases"][case_id])
                 case_repeats.append({"repeat": rep, "observation": obs,
                                      "comparison": cmp})
-                case_exact = cmp["exact"]
-                if not cmp["exact"]:
-                    break  # deterministic mismatch: no further repeats
+            # Determinism evidence: repeats must be self-consistent
+            # (identical token ids AND stop type) regardless of whether
+            # they match the reference. The CORRECTNESS_FAIL terminal
+            # requires a DETERMINISTIC difference from the reference;
+            # nondeterministic repeats are a distinct failure class.
+            rep_tokens = [r["observation"]["generated_tokens"]
+                          for r in case_repeats]
+            rep_stops = [r["observation"]["stop_type"]
+                         for r in case_repeats]
+            deterministic = (len(set(map(str, rep_tokens))) == 1 and
+                             len(set(map(str, rep_stops))) == 1)
+            any_exact = any(r["comparison"]["exact"] for r in case_repeats)
+            all_exact = all(r["comparison"]["exact"] for r in case_repeats)
+            if all_exact:
+                case_status = "PASS"
+            elif deterministic:
+                case_status = "FAIL_DETERMINISTIC"
+            else:
+                case_status = "FAIL_NONDETERMINISTIC"
             results[case_id] = {
-                "status": "PASS" if case_exact else "FAIL",
+                "status": case_status,
+                "deterministic": deterministic,
+                "any_exact": any_exact,
                 "repeats": case_repeats,
                 "reference": reference["cases"][case_id],
             }
@@ -180,10 +197,11 @@ def main() -> int:
             if stops:
                 halted = f"{case_id}:{'+'.join(stops)}"
                 results[case_id]["status"] = (
-                    "FAIL" if case_exact is False else
-                    "PASS_BUT_HALTED")
-            elif not case_exact:
-                halted = f"{case_id}:deterministic_mismatch"
+                    "FAIL" if not all_exact else "PASS_BUT_HALTED")
+            elif case_status != "PASS":
+                halted = (f"{case_id}:"
+                          f"{'deterministic' if deterministic else 'nondeterministic'}"
+                          "_mismatch")
         # final snapshot after all cases
         health_after = health.snapshot(args.selected_sysfs,
                                        args.excluded_sysfs)
