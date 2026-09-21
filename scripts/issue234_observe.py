@@ -77,7 +77,11 @@ class CollectError(RuntimeError):
 
 
 def sha(p: Path) -> str:
-    return hashlib.sha256(Path(p).read_bytes()).hexdigest()
+    h = hashlib.sha256()
+    with Path(p).open("rb") as fh:
+        for block in iter(lambda: fh.read(1024 * 1024), b""):
+            h.update(block)
+    return h.hexdigest()
 
 
 def _run(cmd: list[str], env: dict | None = None,

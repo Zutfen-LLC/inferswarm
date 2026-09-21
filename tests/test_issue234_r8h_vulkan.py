@@ -9,18 +9,21 @@ control-suite contract. CPU-only; no physical execution.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import struct
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "scripts"))
 import issue234_receipt as rc          # noqa: E402
 import issue234_reduce as red          # noqa: E402
 import issue234_assemble as asm        # noqa: E402
+import issue234_observe as obs         # noqa: E402
 
 
 def w(p: Path, doc) -> Path:
@@ -522,6 +525,16 @@ CLOSURE = {"schema": "inferswarm.r8h.producer-closure/2",
 
 def real_closure():
     return rc.verify_closure(REPO)
+
+
+class TestCollectorStreamingHash(unittest.TestCase):
+    def test_model_hashing_never_uses_read_bytes(self):
+        with tempfile.TemporaryDirectory() as t:
+            p = Path(t) / "member.gguf"
+            payload = b"x" * (2 * 1024 * 1024 + 17)
+            p.write_bytes(payload)
+            with mock.patch.object(Path, "read_bytes", side_effect=AssertionError):
+                self.assertEqual(obs.sha(p), hashlib.sha256(payload).hexdigest())
 
 
 class TestRequiredPosition(unittest.TestCase):
