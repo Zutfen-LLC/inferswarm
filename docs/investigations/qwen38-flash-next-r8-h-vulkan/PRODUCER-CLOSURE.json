@@ -1,0 +1,74 @@
+{
+ "campaign": "issue234-r8h-matched-backend-device-parity",
+ "closure_digest": "e7a4091505f160933da36aae6d4bd828324621373546c408034ebdf3f72a6e2e",
+ "producer_head": "377d2ff3343e74c674ac5dd19fdee41baa9053f0",
+ "schema": "inferswarm.r8h.producer-closure/2",
+ "sources": {
+  "scripts/issue234_assemble.py": {
+   "bytes": 16502,
+   "class": "reduction",
+   "git_blob": "ed783e49991e870dfa3511624222577bc961323a",
+   "sha256": "00ea78089bc9fda39757c156128bdcf55e3f70dd1396c3838933bf6b7e707b03"
+  },
+  "scripts/issue234_authority.py": {
+   "bytes": 10401,
+   "class": "reduction",
+   "git_blob": "b7ddf7280607e680b7e427df2d6a3650e73c182b",
+   "sha256": "25419f9a683d4de69cc41adbc0c670708aac1ea98d7aa60b359fa47a89ace8ad"
+  },
+  "scripts/issue234_freeze.py": {
+   "bytes": 7726,
+   "class": "reduction",
+   "git_blob": "9239863f091c4b7b69ef6e47915b9e062a4e12d6",
+   "sha256": "e189cf68a3be349cddc251f80efea9d53d6b6f813323f02d633469d930f593f7"
+  },
+  "scripts/issue234_health.py": {
+   "bytes": 7877,
+   "class": "physical",
+   "git_blob": "5c24af7c38bebd77074a2ea61db97b8f969245a9",
+   "sha256": "49b762c5fc717db5356847e7217478660ee0baf4314ef0ae3120e195ac2dc3b0"
+  },
+  "scripts/issue234_host.py": {
+   "bytes": 12448,
+   "class": "physical",
+   "git_blob": "11ded00eca7550a8ca01998cfed7cfd86a777130",
+   "sha256": "f40f9ea9f66dbf9e9eba3df783f6127b9d67d018b17c831dad7b3113d5e999a2"
+  },
+  "scripts/issue234_ladder.py": {
+   "bytes": 9384,
+   "class": "physical",
+   "git_blob": "f021727d39c89c7d684ca44bf0284d5793b4d499",
+   "sha256": "5426fa177cfccd3649bacf042553c19a9ceed973b87d38c16eb1eb995f0a6d41"
+  },
+  "scripts/issue234_manifest.py": {
+   "bytes": 891,
+   "class": "reduction",
+   "git_blob": "457af9cc2a90f978314f3147a94e3cc3c6c308c2",
+   "sha256": "90dfe7afd966eaa004424f01830073782cc0f14b81ed97d3e0f9a300ec3d060e"
+  },
+  "scripts/issue234_placement.py": {
+   "bytes": 10535,
+   "class": "physical",
+   "git_blob": "94dbc289c057d3eaea358f822fc4b326407dd6a1",
+   "sha256": "353aa64558409918d6180bcf75c7dd690f943ab3c05d9e2e933846933014ddfa"
+  },
+  "scripts/issue234_receipt.py": {
+   "bytes": 18240,
+   "class": "reduction",
+   "git_blob": "738c1a778395e96acbb52ca005bc1a500361a00c",
+   "sha256": "6ff3421da6ab1145120489fdef3578eff7a5179ed2c69eea35a5d6bbc2624c4a"
+  },
+  "scripts/issue234_reduce.py": {
+   "bytes": 27297,
+   "class": "reduction",
+   "git_blob": "41c9b1d0205f3593debcfed78d65530067b1a27f",
+   "sha256": "7826c2c1a29ea42bb42fc909a20028dbef6e4d58d063294f63d5357a3bc253b6"
+  },
+  "scripts/issue234_runtime.py": {
+   "bytes": 19784,
+   "class": "physical",
+   "git_blob": "b09e09b51e2bf3c7cf7bcc917cc8b064b7aebbb7",
+   "sha256": "65cfdf1a09953a34cb3291910b70169483c775b74bc88563b2f3c2f333947dcf"
+  }
+ }
+}

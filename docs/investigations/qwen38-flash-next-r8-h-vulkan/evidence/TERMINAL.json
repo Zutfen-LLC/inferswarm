@@ -1,0 +1,142 @@
+{
+ "campaign": "issue234-r8h-matched-backend-device-parity",
+ "checks": {
+  "authority_ok": true,
+  "backing": {
+   "A": {
+    "host": "inferswarm01",
+    "status": "VERIFIED",
+    "total_bytes": 72546461344
+   },
+   "B": {
+    "host": "inferswarm01",
+    "status": "VERIFIED",
+    "total_bytes": 72546461344
+   },
+   "C": {
+    "host": "inferswarm02",
+    "status": "VERIFIED",
+    "total_bytes": 72546461344
+   }
+  },
+  "execution_truth": {
+   "A": {
+    "backend": "cuda",
+    "problems": [],
+    "status": "OK"
+   },
+   "B": {
+    "backend": "vulkan",
+    "problems": [],
+    "status": "OK"
+   },
+   "C": {
+    "backend": "vulkan",
+    "problems": [],
+    "status": "OK"
+   }
+  },
+  "health": {
+   "A": {
+    "sources": [
+     "ladder-A-case-256.json"
+    ],
+    "status": "CLEAN",
+    "stop_classes": []
+   },
+   "B": {
+    "sources": [
+     "ladder-B-case-256.json"
+    ],
+    "status": "CLEAN",
+    "stop_classes": []
+   },
+   "C": {
+    "sources": [
+     "ladder-C-case-256.json"
+    ],
+    "status": "CLEAN",
+    "stop_classes": []
+   }
+  },
+  "ladder": {
+   "case-1024": {
+    "all_deterministic": null,
+    "all_repeats_ok": null,
+    "classification": null,
+    "executed": false
+   },
+   "case-256": {
+    "all_deterministic": true,
+    "all_repeats_ok": true,
+    "classification": "MULTI_AXIS",
+    "executed": true
+   },
+   "case-3072": {
+    "all_deterministic": null,
+    "all_repeats_ok": null,
+    "classification": null,
+    "executed": false
+   },
+   "case-4096": {
+    "all_deterministic": null,
+    "all_repeats_ok": null,
+    "classification": null,
+    "executed": false
+   }
+  },
+  "placement": {
+   "A": {
+    "ngl": 1,
+    "problems": [],
+    "selected_delta_bytes": 1189085184,
+    "status": "LEGAL"
+   },
+   "B": {
+    "ngl": 1,
+    "problems": [],
+    "selected_delta_bytes": 1083179008,
+    "status": "LEGAL"
+   },
+   "C": {
+    "ngl": 1,
+    "problems": [],
+    "selected_delta_bytes": 1050353664,
+    "status": "LEGAL"
+   }
+  },
+  "runtime": {
+   "A": {
+    "binary_sha256": "9a39749c1ff448fe4374d8b951f46e443a1e28a7971df9fbbf5493c2d55bea03",
+    "problems": [],
+    "status": "QUALIFIED"
+   },
+   "B": {
+    "binary_sha256": "21707f2568d80fb781b445cd472588e83501e1cc66dcf10885b286e34c02573e",
+    "problems": [],
+    "status": "QUALIFIED"
+   },
+   "C": {
+    "binary_sha256": "21707f2568d80fb781b445cd472588e83501e1cc66dcf10885b286e34c02573e",
+    "problems": [],
+    "status": "QUALIFIED"
+   }
+  },
+  "score_characterization": {
+   "problems": [],
+   "status": "OK"
+  }
+ },
+ "external_anchor_note": "R8-D streams retained as external anchor; they did not participate in terminal derivation.",
+ "pairwise_map": {
+  "case-1024": null,
+  "case-256": "MULTI_AXIS",
+  "case-3072": null,
+  "case-4096": null
+ },
+ "schema": "inferswarm.r8h.terminal-reduction/2",
+ "terminal": "R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED",
+ "terminal_basis": [
+  "case-256: multi-axis pairwise map: {'AB': False, 'BC': False, 'AC': False}; score characterization retained"
+ ]
+}
