@@ -1,7 +1,0 @@
-{
- "consumed": false,
- "decrypt_performed": false,
- "schema": "inferswarm.issue237.superseded-holdout-attempt/1",
- "what": "first seal (ciphertext f90806c5611d06234f18a853987b4476268d55c9c68d8c1428040260aeec81b9)",
- "why_superseded": "sealed before the historical-exclusion-inventory canonical-encoding unification (issue74 canonical_json_bytes); its rejection set computed token-id hashes under a divergent local encoding. Never decrypted, never consumed by any calibration/threshold derivation; plaintext and recipient key destroyed before the replacement seal. Retained ciphertext is inert without the destroyed key."
-}

@@ -159,24 +159,44 @@ Profile `DECISION_STABILITY/1` (not strict universal exact-token):
   72/1440 = 0.05; zero-exceedance probability >= 0.95). No
   cross-family independence assumed (union bound only).
 
-## 8. Target generator (fresh, Qwen-specific)
+## 8. Target generator (fresh, Qwen-specific, R8-band corrected)
 
 Frozen 24-component IID mixture: six content classes (ordinary prose,
 source-code syntax, mathematics/numerals, multilingual, repetitive
 low-entropy, punctuation/whitespace rare/high-entropy) x four length
-regimes (4–8, 24–28, 36–40, 52–56 tokens), uniform 1/24 weights,
-SHA-256-seeded per-draw component + target-length selection frozen before
-any content exists. Prompts are rendered from a fresh Qwen lexeme pool and
-tokenized with the pinned Qwen tokenizer (reconstructed from the accepted
-GGUF member-1 header bytes and validated against all four accepted R8-B
-fixture-ladder tokenizations — `scripts/issue237_reconstruct_tokenizer.py`,
-tokenizer sha256 `8de1d385...`). One frozen IID mixture law generates BOTH
+regimes, uniform 1/24 weights, SHA-256-seeded per-draw component +
+target-length selection frozen before any content exists.
+
+The four predictive length regimes are NOT design constants: they are
+mechanically derived from the accepted R8-B fixture-ladder `target_band`
+fields (`docs/investigations/qwen38-flash-next-r8-b/evidence/reference/fixture-ladder.json`,
+sha256 `419bde66...` — the context regimes where R8 already demonstrated
+Qwen's length-sensitive numerical behavior):
+
+- case-256 → `[250,264]` (rendered 256)
+- case-1024 → `[1018,1032]` (rendered 1022)
+- case-3072 → `[3066,3080]` (rendered 3077)
+- case-4096 → `[4090,4104]` (rendered 4097)
+
+`scripts/issue237_length_bands.py` derives the bands from those bytes
+fail-closed, and the freeze tooling/test suite cross-checks the frozen band
+set against the same authority — a regression to the Gemma qualification
+bands (4-8/24-28/36-40/52-56) that the first freeze carried cannot pass.
+Band identity in generated authority comes from the mechanically bound
+`length_regime_authority` manifest block; the ladder order above is prose
+context, not a second authority.
+
+Prompts are rendered from a fresh Qwen lexeme pool and tokenized with the
+pinned Qwen tokenizer (reconstructed from the accepted GGUF member-1
+header bytes and validated against all four accepted R8-B fixture-ladder
+tokenizations — `scripts/issue237_reconstruct_tokenizer.py`, tokenizer
+sha256 `8de1d385...`). One frozen IID mixture law generates BOTH
 calibration and holdout. Realized component counts are observations, not
 quotas. R8's historical 256/1024/3072/4096 fixtures informed regime design
 only; their identities (and every extractable R8-A..H + consumed Gemma
-qualification identity — 2888 distinct sha256) are excluded by the
-hash-bound inventory with the conditional-rejection law (regenerate only
-the prompt realization; never redraw the component/length).
+qualification identity) are excluded by the hash-bound inventory with the
+conditional-rejection law (regenerate only the prompt realization; never
+redraw the component/length).
 
 - Calibration: **1416** IID draws (`c237-*`), public seed.
 - Fresh sealed holdout: **24** IID draws (`h237-*`), independent secret seed.
@@ -184,20 +204,59 @@ the prompt realization; never redraw the component/length).
   reference-input-only selection (margin-based, frozen before any candidate
   output exists), zero predictive sample count.
 
-## 9. Sealed holdout and custody
+## 9. Sealed holdout, supersession history, and custody
 
 Single-use holdout CMS-sealed (AES-256-CBC to a fresh RSA-3072 recipient)
-BEFORE physical calibration: ciphertext `sealed/holdout.cms`
-(sha256 `f90806c5...`), public certificate, public per-draw identity
-commitment (case id, component, token count, prompt/token-IDs hashes — no
-plaintext), custody record with NO private material in Git. State:
-`SEALED_CUSTODY_INCOMPLETE` (one verified local custodian; fail-closed
-until a second independent custodian copy is established — the unseal
-preflight refuses otherwise). No decrypt occurred in this issue
-(structural CMS checks only). The future campaign may open it only after
-complete valid calibration evidence, mechanically derived limits, frozen
-threshold/contract artifacts, and maintainer authorization
-(`scripts/issue237_unseal_preflight.py` stops at the decision boundary).
+BEFORE physical calibration: ciphertext `sealed/holdout.cms`, public
+certificate, public per-draw identity commitment (case id, component,
+token count, prompt/token-IDs hashes — no plaintext), custody record with
+NO private material in Git.
+
+Lifecycle and custody are TWO INDEPENDENT axes:
+
+- Holdout lifecycle (the commitment `state` field):
+  `SEALED_NOT_CONSUMED` — sealed, not decrypted, not consumed, still the
+  single-use future holdout. Custody completeness is NEVER encoded in
+  this field.
+- Custody (the custody record's `custody_status` field):
+  `INCOMPLETE` until at least two INDEPENDENTLY VERIFIED custodian copies
+  of the recipient private key + secret seed exist
+  (`required_independently_verified_custodians: 2`). A custodian row is
+  verified only with a mechanical verification receipt — a byte-level
+  copy whose availability/comparison can be re-derived against the public
+  key/seed commitments without exposing secret material. The current
+  record carries one UNVERIFIED local sealing-host custodian (verified:
+  false, with an explicit no-receipt note); the honest verified count is
+  zero and the prose claims none. `unseal_authorized = false`.
+
+The ACTIVE ciphertext/certificate identity is never hand-written here or
+in any generated authority: it is mechanically derived from the
+`sealed/holdout.cms` + certificate bytes and cross-bound to the active
+commitment by the freeze tooling, which also rejects any commitment
+naming a superseded seal SHA.
+
+Supersession history (both prior seals permanently ineligible as future
+calibration/threshold/holdout evidence; machine-readable records under
+`sealed/superseded/`):
+
+1. first seal `f90806c5` — superseded at the canonical-encoding
+   unification (never decrypted/consumed; plaintext+key destroyed at the
+   time);
+2. short-context seal `7bcdad8b` — superseded by this correction
+   BEFORE physical execution: it was generated under the copied Gemma
+   4-56 length bands, not the corrected R8-band population (never
+   decrypted/consumed; plaintext, seed, and recipient key destroyed
+   after the corrected seal was safely generated; superseded ciphertext
+   not retained in Git — the record binds the SHA-256 identity only).
+
+No decrypt occurred in this issue (structural CMS checks only). The
+future campaign may open the active seal only after complete valid
+calibration evidence, mechanically derived limits, frozen
+threshold/contract artifacts, COMPLETED custody, and maintainer
+authorization (`scripts/issue237_unseal_preflight.py` checks all six
+preconditions — lifecycle state, custody status, verified custodians,
+calibration completeness, frozen thresholds, maintainer authorization —
+and still stops at the decision boundary).
 
 ## 10. Corpus / semantic replay profile
 
@@ -214,6 +273,9 @@ reference/candidate observations: `schemas/` +
 ## 11. Tooling (deterministic, fail-closed, CPU/static)
 
 - `scripts/issue237_methodology.py` — the frozen methodology contract;
+- `scripts/issue237_length_bands.py` — fail-closed R8-B fixture-ladder
+  authority that DERIVES the four predictive length bands (a Gemma-band
+  regression cannot pass validation);
 - `scripts/issue237_reconstruct_tokenizer.py` — GGUF-header→tokenizer.json
   reconstruction + fixture validation;
 - `scripts/issue237_build_exclusion_inventory.py` — hash-bound historical

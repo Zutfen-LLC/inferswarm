@@ -145,6 +145,10 @@ def _tokenizer_block() -> dict[str, str]:
         "path": TOKENIZER_ASSET_PATH,
         "sha256": TOKENIZER_JSON_SHA256,
         "note": "reconstructed from accepted GGUF member-1 header bytes; fixture-validated",
+        "token_counts_verified": (
+            "every case token_ids list was produced by encoding with THIS "
+            "tokenizer and its length equals token_count exactly"
+        ),
     }
 
 
@@ -152,6 +156,10 @@ def _mixture_case(seed: str, namespace: str, prefix: str, tokenizer: Any,
                   content_class: str, regime_index: int, target: int,
                   index: int, ordinal: int) -> dict[str, Any]:
     low, high = LENGTH_REGIMES[regime_index]
+    if not low <= target <= high:
+        raise GenerationError(
+            f"target {target} outside frozen band [{low},{high}]"
+        )
     cell = f"{content_class}:{low}-{high}"
     text, token_ids = generate_prompt(
         tokenizer, seed=seed, namespace=namespace, content_class=content_class,
@@ -174,6 +182,11 @@ def generate_mixture_cases(tokenizer: Any, *, seed: str, namespace: str,
         ]:
             raise GenerationError("component outside the frozen universe")
         target = target_length(seed, namespace, regime_index, index)
+        band_low, band_high = LENGTH_REGIMES[regime_index]
+        if not band_low <= target <= band_high:
+            raise GenerationError(
+                "target-length law produced a value outside the frozen band"
+            )
         attempt = 0
         while True:
             if attempt == 0:
@@ -199,6 +212,12 @@ def generate_mixture_cases(tokenizer: Any, *, seed: str, namespace: str,
     case_ids = {case["case_id"] for case in cases}
     if len(case_ids) != count:
         raise GenerationError("mixture draw produced a duplicate case_id")
+    for case in cases:
+        band_low, band_high = LENGTH_REGIMES[case["length_regime_index"]]
+        if not band_low <= case["token_count"] <= band_high:
+            raise GenerationError(
+                f"case {case['case_id']} token count outside its frozen band"
+            )
     return cases
 
 
@@ -214,7 +233,10 @@ def generate_stress_pool_cases(tokenizer: Any, exclusions: set[str]) -> list[dic
         for regime_index in range(len(LENGTH_REGIMES)):
             for index in range(2):
                 low, high = LENGTH_REGIMES[regime_index]
-                target = low + index % (high - low + 1)
+                # two distinct targets per band, derived from the band
+                # bounds (not a modulo of the band width, which would
+                # collapse for bands wider than 2)
+                target = low if index == 0 else high
                 case = _mixture_case(
                     STRESS_POOL_SEED, "stress", "p237-", tokenizer, class_name,
                     regime_index, target, index, index + 1,

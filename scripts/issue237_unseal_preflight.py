@@ -10,8 +10,11 @@ decrypted — and hard-stops at the decision boundary WITHOUT decrypting:
   from retained calibration bytes);
 - threshold/contract artifacts are committed and frozen (git-tracked at the
   exact head, sha-pinned);
-- holdout commitment/custody validate (no plaintext leaks, ciphertext hash);
-- custody is satisfied (state SEALED_NOT_CONSUMED + >=2 verified custodians);
+- holdout commitment/custody validate (no plaintext leaks, active
+  ciphertext hash mechanically derived from sealed/holdout.cms);
+- holdout lifecycle state is SEALED_NOT_CONSUMED;
+- custody is COMPLETE (>=2 independently VERIFIED custodians, tracked on
+  its own custody_status axis);
 - maintainer unseal authorization record exists for THIS campaign head.
 
 Exit code 0 with ``"decision": "READY_FOR_MAINTAINER_UNSEAL_DECISION"`` is
@@ -68,16 +71,18 @@ def preflight() -> dict[str, Any]:
     holdout_validation = validate_holdout_commitment()
     checks["holdout_commitment"] = holdout_validation["status"]
 
-    # 3. custody satisfied
+    # 3. custody satisfied (lifecycle and custody are independent axes)
     custody = json.loads((DOCS / "manifests/holdout-custody-record.json").read_text())
     if not custody_is_satisfied(custody):
+        verified = [c for c in custody.get("custodians", []) if c.get("verified")]
         return {
             "schema": "inferswarm.issue237.unseal-preflight/1",
             "decision": "BLOCKED",
             "checks": checks,
             "reason": (
-                "holdout custody incomplete: need SEALED_NOT_CONSUMED with at "
-                "least two independently verified custodians"
+                "holdout custody incomplete: need SEALED_NOT_CONSUMED with "
+                f"custody_status COMPLETE (at least {m.REQUIRED_VERIFIED_CUSTODIANS} "
+                f"independently verified custodians; have {len(verified)})"
             ),
         }
     checks["custody"] = "SATISFIED"

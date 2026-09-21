@@ -26,6 +26,16 @@ Subcommands:
       Emit the frozen methodology manifest set (deterministic; fails if any
       validation fails).
 
+Determinism contract (issue #237 correction): the frozen
+``manifests/validation-report.json`` must be BYTE-IDENTICAL to a freshly
+derived freeze. ``freeze`` therefore derives the complete report from the
+current active repository artifacts, and ``check`` proves the fixed point.
+Active ciphertext identity is always MECHANICAL — derived by hashing
+``sealed/holdout.cms`` — and cross-bound to the commitment; a superseded
+seal SHA can never appear as the active identity because every value in
+the report comes from the live bytes, and the validator explicitly rejects
+commitments naming any superseded SHA.
+
 Pure stdlib (plus `tokenizers` only where corpus tokenization must be
 re-verified; those paths are optional and marked).
 """
@@ -46,6 +56,12 @@ from issue237_build_exclusion_inventory import (  # noqa: E402
     build_inventory,
     historical_identity_set,
 )
+from issue237_length_bands import (  # noqa: E402
+    LENGTH_REGIMES as DERIVED_LENGTH_REGIMES,
+    length_regimes_provenance,
+    validate_frozen_bands,
+)
+from issue237_seal_holdout import superseded_ciphertext_shas  # noqa: E402
 from issue74_methodology import canonical_json_bytes, sha256_bytes  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[1]
@@ -179,6 +195,14 @@ def validate_prerequisites() -> dict[str, Any]:
     findings["r8h_terminal"] = sha256_file(R8H_TERMINAL_JSON)
     findings["r8h_authority"] = sha256_file(R8H_AUTHORITY)
 
+    # R8-B fixture authority for the corrected length bands.
+    require(
+        tuple(tuple(b) for b in DERIVED_LENGTH_REGIMES)
+        == tuple(tuple(b) for b in m.LENGTH_REGIMES),
+        "methodology length regimes drift from the R8-B fixture authority",
+    )
+    findings["r8b_fixture_ladder"] = length_regimes_provenance()["authority_sha256"]
+
     findings["status"] = "PASS"
     findings["predecessor_binding"] = {
         "r8h_merge": m.R8H_MERGE_SHA,
@@ -233,6 +257,13 @@ def validate_methodology() -> dict[str, Any]:
         and subject["candidate_arm"]["host"] == "inferswarm02",
         "arm host drift",
     )
+    # Corrected predictive length bands: mechanically bound to the R8-B
+    # fixture authority; the Gemma 4-56 bands must fail here.
+    validate_frozen_bands(m.LENGTH_REGIMES)
+    require(
+        m.LENGTH_REGIMES == DERIVED_LENGTH_REGIMES,
+        "frozen length regimes do not equal the R8-B derived authority",
+    )
     return {
         "schema": "inferswarm.issue237.methodology-validation/1",
         "status": "PASS",
@@ -260,6 +291,10 @@ def validate_corpora(*, retokenize: bool = False) -> dict[str, Any]:
         len(stress["cases"]) == m.STRESS_POOL_CASES,
         "stress pool case count drift",
     )
+
+    # Frozen bands mechanically match the R8 fixture authority before any
+    # corpus law is applied.
+    validate_frozen_bands(m.LENGTH_REGIMES)
 
     # IID draw derivation: replay the frozen streams exactly.
     drawn = list(m.component_stream(m.CALIBRATION_SEED, "calibration", len(cases)))
@@ -316,6 +351,12 @@ def validate_corpora(*, retokenize: bool = False) -> dict[str, Any]:
             case["token_count"] == len(case["token_ids"]),
             f"token count drift: {case['case_id']}",
         )
+        # Case-declared regime must equal the frozen R8-derived regime.
+        low, high = m.LENGTH_REGIMES[case["length_regime_index"]]
+        require(
+            list(case["length_regime"]) == [low, high],
+            f"case length_regime drift: {case['case_id']}",
+        )
 
     # No quota balancing: realized counts are observations with multinomial spread.
     realized = calibration["realized_component_counts"]
@@ -342,6 +383,7 @@ def validate_corpora(*, retokenize: bool = False) -> dict[str, Any]:
         "stress_cases": len(stress["cases"]),
         "realized_component_counts_are_observations": True,
         "historical_exclusion_verified": True,
+        "length_regimes_match_r8b_authority": True,
     }
     if retokenize:
         # optional deep re-tokenization check (needs `tokenizers`)
@@ -362,9 +404,11 @@ def validate_holdout_commitment() -> dict[str, Any]:
         commitment["schema"] == m.HOLDOUT_COMMITMENT_SCHEMA,
         "commitment schema drift",
     )
+    # Lifecycle state is its OWN axis: sealed, not decrypted, not consumed.
+    # Custody completeness lives only in the custody record's custody_status.
     require(
-        commitment["state"] in ("SEALED_NOT_CONSUMED", "SEALED_CUSTODY_INCOMPLETE"),
-        "holdout state must be sealed-family without decrypt",
+        commitment["state"] == m.HOLDOUT_STATE_LIFECYCLE,
+        "holdout lifecycle state must be SEALED_NOT_CONSUMED",
     )
     require(
         commitment["case_count"] == m.HOLDOUT_CASES,
@@ -374,9 +418,21 @@ def validate_holdout_commitment() -> dict[str, Any]:
         len(commitment["draws"]) == m.HOLDOUT_CASES,
         "holdout draw count drift",
     )
+    # Active ciphertext identity is MECHANICAL: derived from the active
+    # sealed/holdout.cms bytes, then cross-bound to the commitment.
+    active_ciphertext_sha = sha256_file(ciphertext_path)
     require(
-        commitment["ciphertext_sha256"] == sha256_file(ciphertext_path),
-        "ciphertext hash mismatch",
+        commitment["ciphertext_sha256"] == active_ciphertext_sha,
+        "commitment does not bind the ACTIVE ciphertext (sealed/holdout.cms)",
+    )
+    superseded = superseded_ciphertext_shas()
+    require(
+        active_ciphertext_sha not in superseded,
+        "sealed/holdout.cms is a SUPERSEDED seal; it cannot be the active holdout",
+    )
+    require(
+        commitment["ciphertext_sha256"] not in superseded,
+        "commitment names a superseded ciphertext SHA as the active holdout",
     )
     require(
         commitment["recipient_certificate_sha256"] == sha256_file(certificate_path),
@@ -389,6 +445,14 @@ def validate_holdout_commitment() -> dict[str, Any]:
     ids = [d["case_id"] for d in commitment["draws"]]
     require(len(set(ids)) == m.HOLDOUT_CASES, "duplicate holdout case ids")
     require(all(i.startswith("h237-") for i in ids), "holdout id prefix drift")
+    # Every draw's regime is one of the frozen R8-derived bands.
+    frozen_bands = {tuple(b) for b in m.LENGTH_REGIMES}
+    for draw in commitment["draws"]:
+        regime = tuple(draw["length_regime"])
+        require(regime in frozen_bands, "holdout draw outside frozen bands")
+        low, high = regime
+        require(low <= draw["token_count"] <= high,
+                f"holdout token count outside band: {draw['case_id']}")
 
     # certificate is a parseable public-key certificate (openssl, no decrypt)
     run = subprocess.run(
@@ -408,9 +472,29 @@ def validate_holdout_commitment() -> dict[str, Any]:
         custody["schema"] == m.HOLDOUT_CUSTODY_SCHEMA,
         "custody schema drift",
     )
+    # Custody axis: independent field, honest verification counts.
+    require(
+        custody["custody_status"] in (m.CUSTODY_STATUS_INCOMPLETE,
+                                      m.CUSTODY_STATUS_COMPLETE),
+        "custody status drift",
+    )
     require(
         custody["holdout_state"] == commitment["state"],
-        "custody/commitment state mismatch",
+        "custody/commitment lifecycle state mismatch",
+    )
+    verified = [c for c in custody.get("custodians", []) if c.get("verified")]
+    complete = (
+        custody["custody_status"] == m.CUSTODY_STATUS_COMPLETE
+        and len(verified) >= m.REQUIRED_VERIFIED_CUSTODIANS
+    )
+    require(
+        custody["custody_status"] == m.CUSTODY_STATUS_COMPLETE
+        or len(verified) < m.REQUIRED_VERIFIED_CUSTODIANS,
+        "custody status INCOMPLETE with enough verified custodians is dishonest",
+    )
+    require(
+        custody.get("unseal_authorized") is False,
+        "unseal must not be authorized at freeze time",
     )
     require(
         custody.get("private_key_in_git") is False
@@ -421,31 +505,54 @@ def validate_holdout_commitment() -> dict[str, Any]:
         "schema": "inferswarm.issue237.holdout-validation/1",
         "status": "PASS",
         "state": commitment["state"],
+        "custody_status": custody["custody_status"],
+        "verified_custodian_count": len(verified),
+        "custody_complete": complete,
         "case_count": commitment["case_count"],
         "ciphertext_sha256": commitment["ciphertext_sha256"],
         "decrypt_performed": False,
     }
 
 
-def cmd_freeze() -> dict[str, Any]:
-    findings = {
+def derive_freeze_report() -> dict[str, Any]:
+    """The complete validation report, derived from current active bytes."""
+    return {
         "schema": "inferswarm.issue237.freeze/1",
         "prerequisites": validate_prerequisites(),
         "methodology": validate_methodology(),
         "corpora": validate_corpora(),
         "holdout": validate_holdout_commitment(),
     }
+
+
+def cmd_freeze() -> dict[str, Any]:
+    findings = derive_freeze_report()
     (DOCS / "manifests/validation-report.json").write_bytes(
         canonical_json_bytes(findings)
     )
     return findings
 
 
+def cmd_check() -> dict[str, Any]:
+    """Prove the committed validation report is byte-identical to a fresh
+    freeze derivation (the frozen-state fixed point)."""
+    committed = (DOCS / "manifests/validation-report.json").read_bytes()
+    fresh = canonical_json_bytes(derive_freeze_report())
+    ok = committed == fresh
+    return {
+        "schema": "inferswarm.issue237.freeze-fixed-point/1",
+        "status": "PASS" if ok else "FAIL",
+        "committed_sha256": sha256_bytes(committed),
+        "fresh_sha256": sha256_bytes(fresh),
+        "byte_identical": ok,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=[
         "validate-prerequisites", "validate-methodology", "validate-corpora",
-        "validate-holdout-commitment", "freeze",
+        "validate-holdout-commitment", "freeze", "check",
     ])
     args = parser.parse_args(argv)
     if args.command == "validate-prerequisites":
@@ -456,6 +563,8 @@ def main(argv: list[str] | None = None) -> int:
         result = validate_corpora()
     elif args.command == "validate-holdout-commitment":
         result = validate_holdout_commitment()
+    elif args.command == "check":
+        result = cmd_check()
     else:
         result = cmd_freeze()
     print(json.dumps(result, indent=1, sort_keys=True))

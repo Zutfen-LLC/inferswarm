@@ -1223,6 +1223,9 @@
   "scripts/issue237_generate_corpora.py": [
    "vulkan-v0-b"
   ],
+  "scripts/issue237_length_bands.py": [
+   "vulkan-v0-b"
+  ],
   "scripts/issue237_methodology.py": [
    "vulkan-v0-b"
   ],

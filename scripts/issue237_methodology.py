@@ -46,6 +46,11 @@ from issue95_v4_methodology import (  # noqa: F401 (re-exported identity)
     is_sha256,
     margin_on_domain,
 )
+from issue237_length_bands import (  # noqa: F401 (authority re-export)
+    derive_length_regimes,
+    length_regimes_provenance,
+    validate_frozen_bands,
+)
 from issue74_methodology import (
     MethodologyError,
     canonical_json_bytes,
@@ -407,10 +412,14 @@ CONTENT_CLASSES: tuple[str, ...] = (
 )
 
 # Context/input regimes relevant to the intended Qwen heterogeneous-Vulkan
-# strategy (R8-H matched geometry, ctx 8192): four length regimes.
-LENGTH_REGIMES: tuple[tuple[int, int], ...] = (
-    (4, 8), (24, 28), (36, 40), (52, 56),
-)
+# strategy (R8-H matched geometry, ctx 8192): four length regimes DERIVED
+# from the accepted R8-B fixture-ladder target_band fields (250-264 /
+# 1018-1032 / 3066-3080 / 4090-4104) — the context regimes where R8
+# demonstrated Qwen's length-sensitive numerical behavior. The Gemma
+# qualification bands (4-8/24-28/36-40/52-56) found in the first freeze did
+# not exercise those regimes and are superseded.
+LENGTH_REGIMES: tuple[tuple[int, int], ...] = derive_length_regimes()
+validate_frozen_bands(LENGTH_REGIMES)
 
 LEXEMES: dict[str, tuple[str, ...]] = {
     "ordinary-prose": (
@@ -449,9 +458,20 @@ LEXEMES: dict[str, tuple[str, ...]] = {
     ),
 }
 
-CALIBRATION_SEED = "inferswarm-issue-237-qwen38-vulkan-calibration-v1"
-STRESS_POOL_SEED = "inferswarm-issue-237-qwen38-vulkan-stress-v1"
+CALIBRATION_SEED = "inferswarm-issue-237-qwen38-vulkan-calibration-v2-r8bands"
+STRESS_POOL_SEED = "inferswarm-issue-237-qwen38-vulkan-stress-v2-r8bands"
 HOLDOUT_NAMESPACE = "qwen38-vulkan-v1-sealed-holdout"
+
+# Holdout lifecycle and custody are TWO INDEPENDENT axes (issue #237
+# correction): the lifecycle state never encodes custody completeness.
+# - HOLDOUT_STATE_LIFECYCLE: sealed / not decrypted / not consumed / still
+#   the single-use future holdout;
+# - custody_status: whether the required independently verified custodian
+#   copies of the recipient key + secret seed exist yet.
+HOLDOUT_STATE_LIFECYCLE = "SEALED_NOT_CONSUMED"
+CUSTODY_STATUS_INCOMPLETE = "INCOMPLETE"
+CUSTODY_STATUS_COMPLETE = "COMPLETE"
+REQUIRED_VERIFIED_CUSTODIANS = 2
 
 CALIBRATION_SCHEMA = "inferswarm.issue237.calibration-corpus/1"
 STRESS_POOL_SCHEMA = "inferswarm.issue237.stress-pool/1"
@@ -556,14 +576,18 @@ def mixture_population_declaration() -> dict[str, Any]:
                 "against all four accepted R8-B fixture-ladder tokenizations"
             ),
         },
+        "length_regime_authority": length_regimes_provenance(),
         "note": (
             "Calibration uses the public seed; the holdout uses an "
             "independent secret seed. Both arms use THIS identical generator "
             "law, so calibration and holdout cases are IID draws from one "
-            "frozen mixture population (issue #108 Q2). Historical R8 "
-            "256/1024/3072/4096 fixtures informed regime design only; their "
-            "prompt/token identities are excluded from fresh predictive "
-            "material by the hash-bound inventory."
+            "frozen mixture population (issue #108 Q2). The four predictive "
+            "length regimes are mechanically derived from the accepted R8-B "
+            "fixture-ladder target_band fields (the context regimes where "
+            "R8 demonstrated Qwen's length-sensitive numerical behavior); "
+            "historical R8 256/1024/3072/4096 prompt/token identities "
+            "informed regime design only and are excluded from fresh "
+            "predictive material by the hash-bound inventory."
         ),
     }
 
@@ -706,6 +730,10 @@ __all__ = [
     "CONTRACT_ID",
     "CONTENT_CLASSES",
     "CONSTRUCTION",
+    "CUSTODY_STATUS_COMPLETE",
+    "CUSTODY_STATUS_INCOMPLETE",
+    "HOLDOUT_STATE_LIFECYCLE",
+    "REQUIRED_VERIFIED_CUSTODIANS",
     "DECISION_COUNT",
     "HOLDOUT_CASES",
     "HOLDOUT_COMMITMENT_SCHEMA",
@@ -713,6 +741,9 @@ __all__ = [
     "HOLDOUT_NAMESPACE",
     "HOLDOUT_PLAINTEXT_SCHEMA",
     "LENGTH_REGIMES",
+    "derive_length_regimes",
+    "length_regimes_provenance",
+    "validate_frozen_bands",
     "LEXEMES",
     "M",
     "MIXTURE_COMPONENTS",

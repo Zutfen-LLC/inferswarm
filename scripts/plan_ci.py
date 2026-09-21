@@ -807,6 +807,7 @@ PATH_GROUPS = {
     "scripts/issue237_semantic_adjudication.py": ["vulkan-v0-b"],
     "scripts/issue237_unseal_preflight.py": ["vulkan-v0-b"],
     "scripts/issue237_schemas.py": ["vulkan-v0-b"],
+    "scripts/issue237_length_bands.py": ["vulkan-v0-b"],
     "tests/test_issue237_r8i_methodology.py": ["vulkan-v0-b"],
     "tests/test_issue230_v2f_external_memory.py": ["vulkan-v0-b"],
     "tests/test_issue230_v2f_vk_contract.py": ["vulkan-v0-b"],

@@ -16,6 +16,21 @@ The private key and the secret seed NEVER enter the repository. No decrypt
 is performed (structural CMS checks only). Fresh secret seed comes from
 CSPRNG; the fresh RSA keypair is generated here and the private key written
 only to an operator-nominated path OUTSIDE the repo.
+
+Lifecycle and custody are TWO INDEPENDENT axes (issue #237 correction):
+
+- the commitment carries the lifecycle state ``SEALED_NOT_CONSUMED``
+  (sealed; not decrypted; not consumed; still the single-use future
+  holdout) and never encodes custody completeness in that field;
+- the custody record carries ``custody_status`` (INCOMPLETE until the
+  required independently verified custodian copies exist) with
+  ``unseal_authorized = false``, and reports per-custodian verification
+  honestly (a local sealing copy with no mechanical verification receipt
+  is ``verified: false``).
+
+Supersession records for prior seals are APPENDED by
+``record_superseded_holdout`` (namespaced, mechanically excluded from the
+active authority by the commitment validator).
 """
 from __future__ import annotations
 
@@ -36,8 +51,8 @@ from issue74_methodology import canonical_json_bytes, sha256_bytes  # noqa: E402
 REPO = Path(__file__).resolve().parents[1]
 DOCS = REPO / "docs/qualification/qwen38-vulkan-v1"
 
-SEALED_NOT_CONSUMED = "SEALED_NOT_CONSUMED"
-SEALED_CUSTODY_INCOMPLETE = "SEALED_CUSTODY_INCOMPLETE"
+SUPERSEDED_SCHEMA = "inferswarm.issue237.superseded-holdout-attempt/1"
+SUPERSEDED_DIR = DOCS / "sealed/superseded"
 
 
 class SealError(RuntimeError):
@@ -89,7 +104,7 @@ def seal(plaintext: Path, certificate: Path, out_cms: Path) -> None:
 
 def build_commitment(holdout: dict[str, Any], ciphertext: Path,
                      certificate: Path, secret_seed_sha: str,
-                     state: str, generator_sha: str) -> dict[str, Any]:
+                     generator_sha: str) -> dict[str, Any]:
     if holdout.get("schema") != m.HOLDOUT_PLAINTEXT_SCHEMA:
         raise SealError("holdout plaintext schema mismatch")
     cases = holdout.get("cases", [])
@@ -125,7 +140,7 @@ def build_commitment(holdout: dict[str, Any], ciphertext: Path,
     return {
         "schema": m.HOLDOUT_COMMITMENT_SCHEMA,
         "contract_id": m.CONTRACT_ID,
-        "state": state,
+        "state": m.HOLDOUT_STATE_LIFECYCLE,
         "case_count": m.HOLDOUT_CASES,
         "cipher": "CMS AES-256-CBC to RSA-3072 recipient",
         "ciphertext_sha256": sha256_file(ciphertext),
@@ -134,43 +149,141 @@ def build_commitment(holdout: dict[str, Any], ciphertext: Path,
         "draws": draws,
         "generator": "scripts/issue237_generate_corpora.py",
         "generator_sha256": generator_sha,
+        "superseded_seals": {
+            "record_glob": "sealed/superseded/superseded-holdout-*.json",
+            "rule": (
+                "every prior seal has a namespaced supersession record; "
+                "their ciphertext SHAs can never satisfy active-holdout "
+                "validation (the freeze validator derives the active "
+                "ciphertext identity mechanically from sealed/holdout.cms "
+                "and rejects any commitment naming a superseded SHA)"
+            ),
+        },
         "unseal_rule": (
             "single-use; the future physical campaign may open it only after "
             "(1) complete valid calibration evidence, (2) mechanically "
             "derived numerical limits, (3) committed frozen threshold/"
-            "contract artifacts, (4) maintainer unseal authorization. No "
-            "decrypt occurs in issue #237."
+            "contract artifacts, (4) completed custody (independently "
+            "verified custodian copies), and (5) maintainer unseal "
+            "authorization. No decrypt occurs in issue #237."
         ),
         "plaintext_retention": "sealing host only; never committed",
     }
 
 
-def build_custody(state: str, custodians: list[dict[str, Any]],
+def build_custody(custodians: list[dict[str, Any]],
                   secret_seed_sha: str) -> dict[str, Any]:
+    verified = [c for c in custodians if c.get("verified")]
+    complete = len(verified) >= m.REQUIRED_VERIFIED_CUSTODIANS
     return {
         "schema": m.HOLDOUT_CUSTODY_SCHEMA,
         "contract_id": m.CONTRACT_ID,
-        "holdout_state": state,
+        "holdout_state": m.HOLDOUT_STATE_LIFECYCLE,
+        "custody_status": (
+            m.CUSTODY_STATUS_COMPLETE if complete
+            else m.CUSTODY_STATUS_INCOMPLETE
+        ),
+        "required_independently_verified_custodians": (
+            m.REQUIRED_VERIFIED_CUSTODIANS
+        ),
+        "verified_custodian_count": len(verified),
+        "verification_rule": (
+            "a custodian row is verified only when a mechanical verification "
+            "receipt exists: a byte-level copy of the recipient private key "
+            "and secret seed whose availability/comparison can be re-derived "
+            "against the public key/seed commitments without exposing secret "
+            "material. An unverified sealing-host copy without such a "
+            "receipt counts as a custodian, never as a verified one."
+        ),
         "unseal_authorized": False,
         "private_key_in_git": False,
         "secret_seed_in_git": False,
         "custodians": custodians,
         "secret_seed_sha256": secret_seed_sha,
         "note": (
-            "Fail-closed custody: unless at least two independently verified "
-            "custodian copies of the recipient private key + secret seed "
-            "exist, the state stays SEALED_CUSTODY_INCOMPLETE and no unseal "
-            "preflight may proceed."
+            "Fail-closed custody, tracked on its own axis: the lifecycle "
+            f"stays {m.HOLDOUT_STATE_LIFECYCLE} regardless of custody; until "
+            f"at least {m.REQUIRED_VERIFIED_CUSTODIANS} independently "
+            "verified custodian copies of the recipient private key + secret "
+            "seed exist, custody_status stays "
+            f"{m.CUSTODY_STATUS_INCOMPLETE} and no unseal preflight may "
+            "proceed."
         ),
     }
 
 
 def custody_is_satisfied(record: dict[str, Any]) -> bool:
-    if record.get("holdout_state") != SEALED_NOT_CONSUMED:
+    """Custody is satisfied only with the required VERIFIED custodians AND
+    a lifecycle that is still sealed-not-consumed."""
+    if record.get("holdout_state") != m.HOLDOUT_STATE_LIFECYCLE:
+        return False
+    if record.get("custody_status") != m.CUSTODY_STATUS_COMPLETE:
         return False
     custodians = record.get("custodians", [])
     verified = [c for c in custodians if c.get("verified")]
-    return len(verified) >= 2
+    return len(verified) >= m.REQUIRED_VERIFIED_CUSTODIANS
+
+
+def superseded_ciphertext_shas() -> set[str]:
+    """Every SHA-256 named as a superseded seal in the namespaced records."""
+    shas: set[str] = set()
+    if not SUPERSEDED_DIR.is_dir():
+        return shas
+    for path in sorted(SUPERSEDED_DIR.glob("superseded-holdout-*.json")):
+        record = json.loads(path.read_text())
+        if record.get("schema") != SUPERSEDED_SCHEMA:
+            raise SealError(f"unknown schema in supersession record: {path.name}")
+        sha = record.get("ciphertext_sha256")
+        if not isinstance(sha, str) or len(sha) != 64:
+            raise SealError(f"malformed ciphertext sha in {path.name}")
+        shas.add(sha)
+    return shas
+
+
+def record_superseded_holdout(
+    *,
+    label: str,
+    ciphertext_sha256: str,
+    recipient_certificate_sha256: str | None,
+    secret_seed_sha256: str | None,
+    case_count: int,
+    reason: str,
+    disposition: dict[str, Any],
+) -> Path:
+    """Append an honest supersession record for a prior seal.
+
+    The record never carries plaintext or key bytes; the disposition block
+    describes destruction of obsolete private material without exposing it.
+    """
+    for value, name in (
+        (ciphertext_sha256, "ciphertext_sha256"),
+        (recipient_certificate_sha256, "recipient_certificate_sha256"),
+        (secret_seed_sha256, "secret_seed_sha256"),
+    ):
+        if value is not None and (not isinstance(value, str) or len(value) != 64):
+            raise SealError(f"malformed {name}")
+    SUPERSEDED_DIR.mkdir(parents=True, exist_ok=True)
+    record = {
+        "schema": SUPERSEDED_SCHEMA,
+        "label": label,
+        "ciphertext_sha256": ciphertext_sha256,
+        "recipient_certificate_sha256": recipient_certificate_sha256,
+        "secret_seed_sha256": secret_seed_sha256,
+        "case_count": case_count,
+        "consumed": False,
+        "decrypt_performed": False,
+        "reason": reason,
+        "ineligibility": (
+            "permanently ineligible as future calibration, threshold, "
+            "stress-output, or holdout evidence for this contract"
+        ),
+        "disposition": disposition,
+    }
+    out = SUPERSEDED_DIR / f"superseded-holdout-{label}.json"
+    if out.exists():
+        raise SealError(f"refusing to overwrite supersession record {out.name}")
+    out.write_bytes(canonical_json_bytes(record))
+    return out
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -182,6 +295,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--private-key-dir", required=True, type=Path,
                         help="directory OUTSIDE the repo for the new keypair")
     parser.add_argument("--custodian-label", default="local-sealing-host")
+    parser.add_argument("--record-superseded", action="append", default=[],
+                        metavar="CIPHERTEXT_SHA",
+                        help="prior ciphertext sha256 to record as superseded")
     args = parser.parse_args(argv)
 
     for label, path in (
@@ -212,7 +328,6 @@ def main(argv: list[str] | None = None) -> int:
     commitment = build_commitment(
         holdout, out_cms, out_cert,
         sha256_bytes(secret_seed.encode()),
-        SEALED_CUSTODY_INCOMPLETE,
         sha256_file(generator),
     )
     (DOCS / "manifests").mkdir(exist_ok=True)
@@ -220,12 +335,16 @@ def main(argv: list[str] | None = None) -> int:
         canonical_json_bytes(commitment)
     )
     custody = build_custody(
-        SEALED_CUSTODY_INCOMPLETE,
         [
             {
                 "label": args.custodian_label,
                 "holds": ["recipient private key", "secret seed"],
                 "verified": False,
+                "verification_receipt": (
+                    "none: the local sealing-host copy has no mechanical "
+                    "verification receipt; it counts as a custodian, not a "
+                    "verified custodian"
+                ),
             }
         ],
         sha256_bytes(secret_seed.encode()),
@@ -233,12 +352,21 @@ def main(argv: list[str] | None = None) -> int:
     (DOCS / "manifests/holdout-custody-record.json").write_bytes(
         canonical_json_bytes(custody)
     )
+    for sha in args.record_superseded:
+        if sha == commitment["ciphertext_sha256"]:
+            raise SealError("cannot supersede the seal just created")
+        if sha not in superseded_ciphertext_shas():
+            raise SealError(
+                f"--record-superseded sha {sha} has no supersession record; "
+                "write it with record-superseded-holdout first"
+            )
     print(
         json.dumps(
             {
                 "sealed": True,
                 "ciphertext_sha256": commitment["ciphertext_sha256"],
                 "state": commitment["state"],
+                "custody_status": custody["custody_status"],
                 "case_count": commitment["case_count"],
                 "decrypt_performed": False,
             },
