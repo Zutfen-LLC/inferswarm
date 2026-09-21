@@ -1,0 +1,78 @@
+{
+ "arm": "A",
+ "binaries": {
+  "bin_dir": {
+   "libggml-base.so": "0a565afe8b05e1c07f6f88568417680f06df78c1eaa1acb8567276fadc01afb1",
+   "libggml-base.so.0": "0a565afe8b05e1c07f6f88568417680f06df78c1eaa1acb8567276fadc01afb1",
+   "libggml-base.so.0.24.0": "0a565afe8b05e1c07f6f88568417680f06df78c1eaa1acb8567276fadc01afb1",
+   "libggml-cpu.so": "c04e137fed17c0359b21115f44847cce7b856680d873fa9dd933176ad1d359e4",
+   "libggml-cpu.so.0": "c04e137fed17c0359b21115f44847cce7b856680d873fa9dd933176ad1d359e4",
+   "libggml-cpu.so.0.24.0": "c04e137fed17c0359b21115f44847cce7b856680d873fa9dd933176ad1d359e4",
+   "libggml-cuda.so": "048899452b87a4fe9f0e75f05c09568c5e97fc636e99cfab41f3071012496fc5",
+   "libggml-cuda.so.0": "048899452b87a4fe9f0e75f05c09568c5e97fc636e99cfab41f3071012496fc5",
+   "libggml-cuda.so.0.24.0": "048899452b87a4fe9f0e75f05c09568c5e97fc636e99cfab41f3071012496fc5",
+   "libggml.so": "14e692a5136b3ecf9af746212c8bbb215de2863c9e60ff6759cacbf33c4220ac",
+   "libggml.so.0": "14e692a5136b3ecf9af746212c8bbb215de2863c9e60ff6759cacbf33c4220ac",
+   "libggml.so.0.24.0": "14e692a5136b3ecf9af746212c8bbb215de2863c9e60ff6759cacbf33c4220ac",
+   "llama-server": "9a39749c1ff448fe4374d8b951f46e443a1e28a7971df9fbbf5493c2d55bea03"
+  },
+  "llama-server": {
+   "sha256": "9a39749c1ff448fe4374d8b951f46e443a1e28a7971df9fbbf5493c2d55bea03"
+  }
+ },
+ "build": {
+  "cmake_flags": {
+   "CMAKE_BUILD_TYPE": "Release",
+   "CMAKE_CUDA_COMPILER": "/usr/local/cuda/bin/nvcc",
+   "CMAKE_CXX_COMPILER": "/usr/bin/c++",
+   "GGML_CUDA": "ON",
+   "GGML_VULKAN": "OFF"
+  },
+  "cmake_version": "cmake version 3.31.6",
+  "compiler": "g++ (Debian 14.2.0-19) 14.2.0"
+ },
+ "campaign": "issue234-r8h-matched-backend-device-parity",
+ "frozen_gpu": {
+  "bdf": "00000000:02:00.0",
+  "driver": "610.57.04",
+  "name": "NVIDIA GeForce RTX 3060",
+  "uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"
+ },
+ "raw": {
+  "list_devices_all": "Available devices:\n  CUDA0: NVIDIA GeForce RTX 3060 (11907 MiB, 11794 MiB free)\n  CUDA1: NVIDIA GeForce RTX 3060 (11909 MiB, 11796 MiB free)\n",
+  "list_devices_restricted": "Available devices:\n  CUDA0: NVIDIA GeForce RTX 3060 (11907 MiB, 11794 MiB free)\n"
+ },
+ "schema": "inferswarm.r8h.runtime-cuda/2",
+ "selector": {
+  "all_devices": [
+   {
+    "label": "CUDA0",
+    "mib": 11907,
+    "name": "NVIDIA GeForce RTX 3060"
+   },
+   {
+    "label": "CUDA1",
+    "mib": 11909,
+    "name": "NVIDIA GeForce RTX 3060"
+   }
+  ],
+  "mechanism": "CUDA_VISIBLE_DEVICES",
+  "restricted_devices": [
+   {
+    "label": "CUDA0",
+    "mib": 11907,
+    "name": "NVIDIA GeForce RTX 3060"
+   }
+  ],
+  "value": "0",
+  "value_semantics": "nvidia-smi index of frozen GPU GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099 (BDF 00000000:02:00.0)",
+  "vulkan_devices_present": []
+ },
+ "source": {
+  "build_dir": "build-r8h-cuda",
+  "clean": true,
+  "revision": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "worktree": "/home/hermes/llama.cpp/r8h-matched"
+ },
+ "version_output": "version: 0.4.1-dev (build 10964, commit b29c606e2)\nbuilt with GNU 14.2.0 for Linux x86_64"
+}

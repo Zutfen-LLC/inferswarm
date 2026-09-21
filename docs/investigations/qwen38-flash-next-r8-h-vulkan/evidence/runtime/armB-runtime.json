@@ -1,0 +1,72 @@
+{
+ "arm": "B",
+ "binaries": {
+  "bin_dir": {
+   "libggml-base.so": "0a565afe8b05e1c07f6f88568417680f06df78c1eaa1acb8567276fadc01afb1",
+   "libggml-base.so.0": "0a565afe8b05e1c07f6f88568417680f06df78c1eaa1acb8567276fadc01afb1",
+   "libggml-base.so.0.24.0": "0a565afe8b05e1c07f6f88568417680f06df78c1eaa1acb8567276fadc01afb1",
+   "libggml-cpu.so": "c64b8f5bb496c3deb5898e4b886ad8f8975ed06dd8becca11f08976852c71be2",
+   "libggml-cpu.so.0": "c64b8f5bb496c3deb5898e4b886ad8f8975ed06dd8becca11f08976852c71be2",
+   "libggml-cpu.so.0.24.0": "c64b8f5bb496c3deb5898e4b886ad8f8975ed06dd8becca11f08976852c71be2",
+   "libggml-vulkan.so": "c99e467346b346751b349d428afeb18dfccd1ded2838c72ed727b5f0fd1c677c",
+   "libggml-vulkan.so.0": "c99e467346b346751b349d428afeb18dfccd1ded2838c72ed727b5f0fd1c677c",
+   "libggml-vulkan.so.0.24.0": "c99e467346b346751b349d428afeb18dfccd1ded2838c72ed727b5f0fd1c677c",
+   "libggml.so": "eb39bb8f6d967a196b619a3714cfb80582e7117f2364201695fa5a2a801281c1",
+   "libggml.so.0": "eb39bb8f6d967a196b619a3714cfb80582e7117f2364201695fa5a2a801281c1",
+   "libggml.so.0.24.0": "eb39bb8f6d967a196b619a3714cfb80582e7117f2364201695fa5a2a801281c1",
+   "llama-server": "21707f2568d80fb781b445cd472588e83501e1cc66dcf10885b286e34c02573e"
+  },
+  "llama-server": {
+   "sha256": "21707f2568d80fb781b445cd472588e83501e1cc66dcf10885b286e34c02573e"
+  }
+ },
+ "build": {
+  "cmake_flags": {
+   "CMAKE_BUILD_TYPE": "Release",
+   "CMAKE_CXX_COMPILER": "/usr/bin/c++",
+   "GGML_CUDA": "OFF",
+   "GGML_VULKAN": "ON"
+  },
+  "cmake_version": "cmake version 3.31.6",
+  "compiler": "g++ (Debian 14.2.0-19) 14.2.0"
+ },
+ "campaign": "issue234-r8h-matched-backend-device-parity",
+ "deployed": null,
+ "raw": {
+  "list_devices_all": "Available devices:\n  Vulkan0: NVIDIA GeForce RTX 3060 (12534 MiB, 12136 MiB free)\n  Vulkan1: NVIDIA GeForce RTX 3060 (12534 MiB, 12150 MiB free)\n",
+  "list_devices_restricted": ""
+ },
+ "schema": "inferswarm.r8h.runtime-vulkan/2",
+ "selector": {
+  "attempts": [
+   {
+    "devices": [
+     {
+      "label": "Vulkan0",
+      "mib": 12534,
+      "name": "NVIDIA GeForce RTX 3060"
+     }
+    ],
+    "idx": 0,
+    "raw": "Available devices:\n  Vulkan0: NVIDIA GeForce RTX 3060 (12534 MiB, 12136 MiB free)\n"
+   }
+  ],
+  "chosen_device": {
+   "label": "Vulkan0",
+   "mib": 12534,
+   "name": "NVIDIA GeForce RTX 3060"
+  },
+  "mechanism": "GGML_VK_VISIBLE_DEVICES",
+  "target_bdf": "00000000:02:00.0",
+  "target_deviceUUID": "1fc28f83-1d45-926e-54d0-ba1e835ef099",
+  "target_gpu_index": 0,
+  "value": "0"
+ },
+ "source": {
+  "build_dir": "build-r8h-vk",
+  "clean": true,
+  "revision": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+  "worktree": "/home/hermes/llama.cpp/r8h-matched"
+ },
+ "version_output": "version: 0.4.1-dev (build 10964, commit b29c606e2)\nbuilt with GNU 14.2.0 for Linux x86_64"
+}
