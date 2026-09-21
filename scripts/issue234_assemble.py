@@ -31,19 +31,141 @@ class AssembleError(RuntimeError):
     pass
 
 
+#: Frozen per-host deployed-producer matrix (round-2 correction of the
+#: fail-open `deployed.get("producers")` read, which matched nothing in
+#: the retained schema and performed ZERO comparisons). The retained
+#: deployed-producers.json keys each host's hashes by producer BASENAME
+#: (the name under which the producer was deployed to
+#: /tmp/is234r/producers/scripts/ on each execution host); each maps to
+#: the closure source `scripts/<basename>`. Semantics:
+#:  * the exact expected execution host set is required — a missing
+#:    host fails closed;
+#:  * for each host the exact physical-producer set that actually
+#:    executed is frozen explicitly — a missing producer fails closed;
+#:  * every retained hash must equal the frozen physical-producer pin
+#:    (closure blob sha256 at e7d822a) — mismatch fails closed;
+#:  * a producer substituted for an expected one fails closed;
+#:  * `all_hosts_match_pin` is DERIVED from the comparisons, never
+#:    read from the authored boolean.
+DEPLOYED_PRODUCER_BASENAMES: tuple[str, ...] = (
+    "issue234_host.py",
+    "issue234_runtime.py",
+    "issue234_placement.py",
+    "issue234_ladder.py",
+    "issue234_health.py",
+)
+EXPECTED_DEPLOYED_HOSTS: dict[str, tuple[str, ...]] = {
+    "inferswarm01": DEPLOYED_PRODUCER_BASENAMES,
+    "inferswarm02": DEPLOYED_PRODUCER_BASENAMES,
+}
+
+
+def verify_deployed_producers(deployed: dict[str, Any],
+                              closure: dict[str, Any]) -> dict[str, Any]:
+    """Fail-closed deployed-producer verification (round 2).
+
+    The retained deployed-producers.json carries hashes under
+    hosts.<hostname>.hashes — NOT under a top-level `producers` key
+    (the round-1 reader matched nothing there and compared zero
+    hashes: a fail-open). This verifier requires the exact frozen
+    (host, producer) matrix above and hash equality with the frozen
+    physical-producer pin for every entry."""
+    problems: list[str] = []
+    if not isinstance(deployed, dict):
+        raise AssembleError("deployed-producers document is not an object")
+    hosts = deployed.get("hosts")
+    if not isinstance(hosts, dict) or not hosts:
+        raise AssembleError(
+            "deployed-producers document lacks hosts.<hostname>.hashes")
+    # 1. exact host set
+    want_hosts = set(EXPECTED_DEPLOYED_HOSTS)
+    got_hosts = set(hosts)
+    for missing in sorted(want_hosts - got_hosts):
+        problems.append(f"missing_host:{missing}")
+    for unexpected in sorted(got_hosts - want_hosts):
+        problems.append(f"unexpected_host:{unexpected}")
+    per_host: dict[str, Any] = {}
+    for host in sorted(want_hosts & got_hosts):
+        entry = hosts[host]
+        hashes = entry.get("hashes") if isinstance(entry, dict) else None
+        if not isinstance(hashes, dict):
+            problems.append(f"{host}:no_hashes_map")
+            per_host[host] = {"match_pin": False,
+                              "reason": "no_hashes_map"}
+            continue
+        want_set = set(EXPECTED_DEPLOYED_HOSTS[host])
+        got_set = set(hashes)
+        for missing in sorted(want_set - got_set):
+            problems.append(f"{host}:missing_producer:{missing}")
+        for unexpected in sorted(got_set - want_set):
+            problems.append(f"{host}:unexpected_producer:{unexpected}")
+        mismatches = []
+        for name in sorted(want_set & got_set):
+            rel = f"scripts/{name}"
+            meta = closure["sources"].get(rel)
+            if meta is None or meta.get("class") != "physical":
+                problems.append(f"{host}:not_closure_bound:{rel}")
+                continue
+            if hashes[name] != meta["sha256"]:
+                problems.append(
+                    f"{host}:hash_mismatch:{name}:"
+                    f"{hashes[name][:12]}!={meta['sha256'][:12]}")
+                mismatches.append(name)
+        per_host[host] = {
+            "match_pin": not mismatches and not any(
+                p.startswith(f"{host}:") for p in problems),
+            "checked": sorted(want_set & got_set),
+        }
+    # 2. derived verdict — the authored boolean is never trusted
+    derived_all_match = not problems
+    authored = deployed.get("all_hosts_match_pin")
+    if authored is not True and derived_all_match:
+        # authored flag missing/false while hashes genuinely match:
+        # derived truth wins, but record the disagreement
+        problems.append("authored_all_hosts_match_pin_disagrees")
+        derived_all_match = derived_all_match  # noqa: PLW0127
+    # stale-authority resolution (round 2): the retained
+    # closure_producer_head field names a SUPERSEDED closure pin
+    # (377d2ff, the pre-6357c8a re-pin). Rename semantics are applied
+    # by the freeze producer; here we mechanically validate it against
+    # the closure lineage so a contradictory authority field can never
+    # pass uninterpreted.
+    stale_pin = deployed.get("closure_producer_head")
+    if stale_pin is not None:
+        # must be an ancestor of the ACTIVE closure pin (i.e. a real
+        # predecessor in the closure lineage, not a foreign SHA)
+        active = closure.get("producer_head")
+        if active:
+            import subprocess
+            proc = subprocess.run(
+                ["git", "-C", str(rc.ROOT), "merge-base",
+                 "--is-ancestor", stale_pin, active],
+                capture_output=True)
+            if proc.returncode != 0:
+                problems.append(
+                    f"closure_producer_head_not_in_lineage:{stale_pin[:12]}")
+    result = {
+        "derived_all_hosts_match_pin": derived_all_match,
+        "per_host": per_host,
+        "expected_hosts": sorted(EXPECTED_DEPLOYED_HOSTS),
+        "expected_matrix": {h: list(v) for h, v in
+                            EXPECTED_DEPLOYED_HOSTS.items()},
+        "authored_all_hosts_match_pin": authored,
+        "stale_closure_producer_head": stale_pin,
+        "problems": problems,
+    }
+    if problems:
+        raise AssembleError(
+            "deployed-producer verification failed: " + "; ".join(problems))
+    return result
+
+
 def assemble(evidence_root: Path, repo: Path | None = None) -> dict[str, Any]:
     closure = rc.verify_closure(repo or rc.ROOT)
     deployed = json.loads(
         (evidence_root / "freeze" / "deployed-producers.json")
         .read_text(encoding="utf-8"))
-    for rel, got in deployed.get("producers", {}).items():
-        meta = closure["sources"].get(rel)
-        if meta is None or meta.get("class") != "physical":
-            raise AssembleError(f"deployed producer not closure-bound: {rel}")
-        if got != meta["sha256"]:
-            raise AssembleError(
-                f"deployed producer hash mismatch: {rel}: {got} != "
-                f"{meta['sha256']}")
+    deployed_check = verify_deployed_producers(deployed, closure)
     terminal_doc = red.derive_terminal(evidence_root, closure=closure)
     return {
         "schema": "inferswarm.r8h.assembly/2",
@@ -52,6 +174,7 @@ def assemble(evidence_root: Path, repo: Path | None = None) -> dict[str, Any]:
             "producer_head": closure["producer_head"],
             "closure_digest": closure["closure_digest"],
         },
+        "deployed_producers": deployed_check,
         **terminal_doc,
     }
 
@@ -246,8 +369,10 @@ def _mut_armc_cuda_present(b: Path) -> None:
 
 
 def _mut_divergence_without_characterization(b: Path) -> None:
-    # control 33: B deterministically diverges from A while the score
-    # characterization is REMOVED (the honest missing-evidence case)
+    # control 21: B deterministically diverges from A (token stream
+    # mutated) while the characterization summary is REMOVED — the
+    # honest missing-summary case; raw observation bytes, if present,
+    # then fail non-perturbation against the mutated ladder stream.
     case = _first_exec_case(b)
     p = _arm(b, case, "B")
     d = _load(p)
@@ -256,6 +381,22 @@ def _mut_divergence_without_characterization(b: Path) -> None:
         toks[0] = toks[0] + 1
         rep["raw_response"]["tokens"] = toks
     _write(p, d)
+    c = b / "candidate" / f"score-characterization-{case}.json"
+    if c.is_file():
+        c.unlink()
+
+
+def _mut_raw_characterization_missing(b: Path) -> None:
+    # control 33 (round-2 strengthened): the divergent ladder evidence
+    # is fully intact but the ENTIRE raw characterization corpus
+    # (observation jsonl + float32 rows + responses + prospective pin
+    # + summaries) is absent — divergence WITHOUT the required score
+    # characterization must block, not classify.
+    import shutil as _sh
+    char_root = b / "candidate" / "characterization"
+    if char_root.is_dir():
+        _sh.rmtree(char_root)
+    case = _first_exec_case(b)
     c = b / "candidate" / f"score-characterization-{case}.json"
     if c.is_file():
         c.unlink()
@@ -346,7 +487,7 @@ CONTROLS: dict[int, dict[str, Any]] = {
     32: {"d": "B == C interpreted as proof of common root cause",
          "fn": _mut_authored_status, "expect": "unchanged"},
     33: {"d": "divergence classified without required score characterization",
-         "fn": _mut_divergence_without_characterization,
+         "fn": _mut_raw_characterization_missing,
          "expect": "error"},
     34: {"d": "an arm missing one of exactly 3 repeats",
          "fn": _mut_repeat_drop, "expect": "error"},

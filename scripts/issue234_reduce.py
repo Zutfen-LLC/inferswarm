@@ -28,7 +28,9 @@ R8H_QWEN38_VULKAN_CORRECTNESS_FAIL is RETIRED and can never be emitted.
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import struct
 from pathlib import Path
 from typing import Any
 
@@ -440,29 +442,346 @@ def _residency_bytes(pre: dict, post: dict) -> int:
 # Terminal derivation
 # -----------------------------------------------------------------------
 
-def characterization_ok(evidence: Path, case_id: str) -> dict[str, Any]:
+#: focal token set for the pre-choice characterization (the union of
+#: the retained canonical winners + the R8-E historical focal pair).
+FOCAL_TOKENS: tuple[int, ...] = (328, 561, 271, 34227, 12188, 248068)
+
+
+def pairwise_first_divergences(case: dict[str, Any]) -> dict[str, Any]:
+    """Mechanical pairwise first-divergence positions for one case,
+    derived ONLY from the raw first-repeat token streams the ladder
+    reduction retained (never from authored comparison fields)."""
+    pw = case.get("pairwise")
+    if not pw:
+        return {}
+    out: dict[str, Any] = {}
+    for pair in ("AB", "BC", "AC"):
+        rel = pw[pair]
+        fd = rel.get("first_divergence")
+        out[pair] = {
+            "exact": rel.get("exact"),
+            "first_divergence_position":
+                None if fd is None else fd.get("position"),
+        }
+    return out
+
+
+def required_characterization_position(case: dict[str, Any]) -> int | None:
+    """required_characterization_position = min(non-null pairwise
+    first-divergence positions). None when no pair diverges (no
+    characterization required) or the map is absent."""
+    divs = [v["first_divergence_position"]
+            for v in pairwise_first_divergences(case).values()
+            if v["first_divergence_position"] is not None]
+    return min(divs) if divs else None
+
+
+def _f32_rank_map(values: list[float]) -> dict[int, int]:
+    """rank (1-based, descending value, ascending token on ties) -> token."""
+    order = sorted(range(len(values)), key=lambda i: (-values[i], i))
+    return {tok: rank + 1 for rank, tok in enumerate(order)}
+
+
+def _derive_arm_characterization(
+        arm_dir: Path, arm: str, position: int,
+        canonical_tokens: list[int] | None,
+        arm_identity: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Re-derive one arm's pre-choice score characterization from RAW
+    observation bytes only (R8-E byte-authority contract).
+
+    Inputs: the raw hook JSONL, the full-vocab float32 row sidecar at
+    the required position, and the raw observation response. Everything
+    (top-K, winner, ranks, focal scores, margins) is derived from the
+    f32 BYTES; the JSONL row is required to agree; the response tokens
+    must equal the canonical arm ladder stream (non-perturbation);
+    the summary document, when present, must agree or the reduction
+    fails closed (authored mutation never silently passes)."""
+    jsonl = arm_dir / f"{arm}.jsonl"
+    f32 = arm_dir / f"{arm}.jsonl.pos{position}.f32"
+    resp_p = arm_dir / f"{arm}.resp.json"
+    for p in (jsonl, f32, resp_p):
+        if not p.is_file():
+            raise ReduceError(
+                f"arm{arm} raw characterization input missing: {p}")
+    rows = [json.loads(line) for line in
+            jsonl.read_text(encoding="utf-8").splitlines() if line.strip()]
+    row = next((r for r in rows if r.get("pos") == position), None)
+    if row is None:
+        raise ReduceError(
+            f"arm{arm} jsonl has no row at generated position {position}")
+    n_vocab = row.get("n_vocab")
+    if not isinstance(n_vocab, int) or n_vocab <= 0:
+        raise ReduceError(f"arm{arm} jsonl row lacks vocabulary size")
+    # -- float32 byte authority --------------------------------------
+    raw = f32.read_bytes()
+    if len(raw) != n_vocab * 4:
+        raise ReduceError(
+            f"arm{arm} f32 sidecar length {len(raw)} != n_vocab*4 "
+            f"({n_vocab}*4)")
+    import struct  # noqa: F401  (kept for contract clarity)
+    values = list(struct.unpack(f"<{n_vocab}f", raw))
+    n_nonfinite = sum(1 for v in values if v != v or v in
+                      (float("inf"), float("-inf")))
+    if n_nonfinite:
+        raise ReduceError(
+            f"arm{arm} f32 row carries {n_nonfinite} non-finite values")
+    if row.get("n_nonfinite") not in (None, 0):
+        raise ReduceError(f"arm{arm} jsonl reports non-finite scores")
+    rank_map = _f32_rank_map(values)
+    order = sorted(range(n_vocab), key=lambda i: (-values[i], i))
+    top_k = [{"token": t, "logit": values[t]} for t in order[:2]]
+    winner = order[0]
+    runner_up = order[1]
+    margin = values[winner] - values[runner_up]
+    focal = {str(t): {"rank": rank_map.get(t),
+                      "logit": values[t] if t < n_vocab else None}
+             for t in FOCAL_TOKENS if t < n_vocab}
+    # -- JSONL agreement (hook rows must match the byte-derived truth) --
+    jtop = row.get("top") or []
+    for k, (tok, val) in enumerate(jtop[:2]):
+        if tok != top_k[k]["token"]:
+            raise ReduceError(
+                f"arm{arm} jsonl top-{k + 1} token {tok} != f32-derived "
+                f"{top_k[k]['token']}")
+        if abs(val - top_k[k]["logit"]) > 1e-6:
+            raise ReduceError(
+                f"arm{arm} jsonl top-{k + 1} logit drift vs f32 bytes")
+    if row.get("tok") != winner:
+        raise ReduceError(
+            f"arm{arm} sampled token {row.get('tok')} != f32 argmax "
+            f"{winner} at position {position}")
+    for t, r, v in row.get("focus") or []:
+        if str(t) in focal and (r != focal[str(t)]["rank"]
+                                or abs(v - focal[str(t)]["logit"]) > 1e-6):
+            raise ReduceError(
+                f"arm{arm} jsonl focal drift vs f32 bytes: {t}")
+    # -- non-perturbation against the canonical ladder stream --------
+    resp = json.loads(resp_p.read_text(encoding="utf-8"))
+    obs_tokens = resp.get("tokens")
+    if not isinstance(obs_tokens, list):
+        raise ReduceError(f"arm{arm} observation response lacks tokens")
+    if canonical_tokens is None:
+        raise ReduceError(
+            f"arm{arm} canonical ladder stream unavailable for "
+            f"non-perturbation comparison")
+    non_perturbing = obs_tokens == list(canonical_tokens)
+    # -- arm/backend/host/device identity binding ---------------------
+    # host from the retained backing receipt (execution host of the
+    # canonical arm); backend/device from the runtime receipt's
+    # frozen_gpu/selector fields — never from the characterization
+    # summary.
+    problems: list[str] = []
+    if arm_identity:
+        want_gpu = arm_identity.get("frozen_gpu") or {}
+        got_name = (arm_identity.get("selector", {})
+                    .get("devices", [{}])[0].get("name", ""))
+        if want_gpu.get("name") and got_name and \
+                want_gpu["name"] not in got_name:
+            problems.append(
+                f"device:{got_name!r}!={want_gpu['name']!r}")
+    out = {
+        "winner_token": winner,
+        "top_2": top_k,
+        "winner_vs_runner_up_margin": round(margin, 9),
+        "focal_pair_328_561_margin": round(
+            abs(values[328] - values[561]), 9) if n_vocab > 561 else None,
+        "focal_tokens": focal,
+        "n_vocab": n_vocab,
+        "f32_sha256": hashlib.sha256(raw).hexdigest(),
+        "jsonl_sha256": hashlib.sha256(jsonl.read_bytes()).hexdigest(),
+        "observed_tokens": obs_tokens,
+        "non_perturbation_identical": non_perturbing,
+        "identity_problems": problems,
+    }
+    if not non_perturbing:
+        raise ReduceError(
+            f"arm{arm} observation perturbs generation: response tokens "
+            f"differ from the canonical ladder stream")
+    return out
+
+
+def _validate_observation_pin(evidence: Path, position: int) -> list[str]:
+    """Closure-pin the observation producer: the prospective
+    pos0-observation-pin document must exist and match the frozen
+    observation identities in issue234_receipt (llama.cpp pin, hook
+    diff digest, hook env, per-arm observation binaries, prompt
+    identity, non-perturbation contract) BEFORE any characterization
+    derived from observation bytes can be accepted."""
+    p = evidence / "candidate" / "characterization" / "pos0" / \
+        "pos0-observation-pin.json"
+    if not p.is_file():
+        return ["observation_pin:absent"]
+    try:
+        doc = json.loads(p.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return ["observation_pin:unparsable"]
+    problems: list[str] = []
+    op = doc.get("observation_producer", {})
+    if op.get("llama_cpp_source_pin") != rc.LLAMA_CPP_PIN:
+        problems.append("observation_pin:llama_pin")
+    if op.get("hook_source_sha256_of_diff") != rc.OBSERVATION_HOOK_DIFF_SHA256:
+        problems.append("observation_pin:hook_diff")
+    hook_env = op.get("hook_env", {})
+    if hook_env.get("LLAMA_OBSERVE_FOCUS") != rc.OBSERVATION_FOCUS_ENV:
+        problems.append("observation_pin:focus_env")
+    if hook_env.get("LLAMA_OBSERVE_POS") != str(position):
+        problems.append("observation_pin:pos_env")
+    if op.get("prompt_sha256") != rc.PROMPT_CASE256_SHA256:
+        problems.append("observation_pin:prompt")
+    bins = op.get("observation_binaries", {})
+    for arm in ("A", "B", "C"):
+        want = rc.OBSERVATION_BINARIES.get(arm, {})
+        got = bins.get(f"{arm}_{'cuda' if arm == 'A' else 'vulkan'}_"
+                       f"{'inferswarm01' if arm != 'C' else 'inferswarm02'}",
+                       {}) or bins.get(arm, {})
+        if not got or got.get("sha256") != want.get("sha256"):
+            problems.append(f"observation_pin:arm{arm}:binary")
+    scope = doc.get("scope", {})
+    if scope.get("canonical_ladder_rerun") is not False:
+        problems.append("observation_pin:rerun_not_forbidden")
+    if scope.get("generated_position") != position:
+        problems.append("observation_pin:scope_position")
+    return problems
+
+
+def characterization_ok(evidence: Path, case_id: str,
+                        required_position: int | None,
+                        ladder_case: dict[str, Any] | None = None,
+                        ) -> dict[str, Any]:
     """Required pre-choice score characterization for a divergent rung
-    (issue #12 / control 33). Must bind the case, the first divergent
-    position, and ALL THREE arms with the R8-E observation methodology
-    and a non-perturbation proof."""
+    (issue #12 / control 33, round-2 hardened).
+
+    The characterization is ACCEPTED only when ALL of the following are
+    mechanically true:
+      1. `required_position` (derived by the caller from the raw
+         pairwise token streams as the MINIMUM pairwise first-divergence
+         position) is not None and the retained characterization binds
+         EXACTLY that generated position (position 5 must NOT satisfy
+         the global gate when any pair diverges at position 0);
+      2. for EVERY arm the full raw observation inputs exist (jsonl +
+         float32 row + response) and every derived quantity is
+         re-derived from the float32 bytes with JSONL agreement;
+      3. the observation response tokens equal the canonical arm
+         ladder stream (non-perturbation; a forged
+         non_perturbation_identical=true with differing response
+         tokens fails closed);
+      4. the authored summary, when present, agrees with the raw
+         derivation (authored winner/logit/rank/sidecar-digest mutation
+         either leaves the terminal unchanged — because authority is
+         the raw bytes — or fails the summary-consistency check;
+         it is never silently accepted);
+      5. a SECONDARY characterization at a later pairwise divergence
+         (e.g. B/C position 5) is retained and reported but does NOT
+         satisfy the global first-divergence gate.
+
+    Returns a status document; the summary document's own authored
+    fields are never trusted as authority."""
     p = evidence / "candidate" / f"score-characterization-{case_id}.json"
+    summary_present = p.is_file()
+    problems: list[str] = []
+    if required_position is None:
+        return {"status": "ABSENT",
+                "problems": ["no_pairwise_divergence"]}
+    # canonical first-repeat streams for non-perturbation binding
+    canon: dict[str, list[int] | None] = {}
+    if ladder_case is not None:
+        for arm in ("A", "B", "C"):
+            a = ladder_case.get("arms", {}).get(arm, {})
+            canon[arm] = a.get("tokens")
+    derived: dict[str, Any] = {}
+    arm_identities = _arm_identity_map(evidence)
+    base_dir = evidence / "candidate" / "characterization"
+    arm_dir = base_dir / "pos0" if required_position == 0 else base_dir
+    if required_position == 0:
+        problems.extend(_validate_observation_pin(
+            evidence, required_position))
+    for arm in ("A", "B", "C"):
+        try:
+            derived[arm] = _derive_arm_characterization(
+                arm_dir, arm, required_position, canon.get(arm),
+                arm_identities.get(arm))
+        except ReduceError as e:
+            problems.append(f"arm{arm}:{str(e)[:160]}")
+    # -- summary consistency (authored fields must agree or fail) ----
+    summary_status = "ABSENT"
+    if summary_present:
+        doc = _load(p)
+        summary_status = "PRESENT"
+        if doc.get("case_id") != case_id:
+            problems.append("summary:case_binding")
+        if doc.get("generated_position") != required_position:
+            problems.append(
+                f"summary:generated_position:"
+                f"{doc.get('generated_position')}!={required_position}")
+        arms = doc.get("arms", {})
+        for arm in ("A", "B", "C"):
+            a = arms.get(arm, {})
+            d = derived.get(arm)
+            if d is None:
+                continue
+            if a.get("winner_token") is not None and \
+                    a.get("winner_token") != d["winner_token"]:
+                problems.append(f"summary:arm{arm}:winner_mismatch")
+            side = a.get("raw_sidecar_sha256") or {}
+            if side.get("f32_pos0") and \
+                    side.get("f32_pos0") != d["f32_sha256"]:
+                problems.append(f"summary:arm{arm}:f32_digest_mismatch")
+            if side.get("f32_pos5") and required_position == 5 and \
+                    side.get("f32_pos5") != d["f32_sha256"]:
+                problems.append(f"summary:arm{arm}:f32_digest_mismatch")
+    # -- secondary (position-5 B/C) retention -------------------------
+    secondary = _secondary_characterization(evidence, case_id)
+    ok = not problems and all(
+        v is not None for v in derived.values())
+    return {
+        "status": "OK" if ok else "INSUFFICIENT",
+        "problems": problems,
+        "required_position": required_position,
+        "summary_status": summary_status,
+        "derived": derived,
+        "secondary": secondary,
+    }
+
+
+def _arm_identity_map(evidence: Path) -> dict[str, dict[str, Any]]:
+    """Host/backend binding per arm from the retained runtime receipts
+    (never from the characterization summary)."""
+    out: dict[str, dict[str, Any]] = {}
+    for arm in ("A", "B", "C"):
+        p = evidence / "runtime" / f"arm{arm}-runtime.json"
+        if not p.is_file():
+            continue
+        doc = _load(p)
+        out[arm] = {
+            "host": doc.get("host"),
+            "backend": "cuda" if arm == "A" else "vulkan",
+            "binary_sha256": doc.get("binaries", {})
+            .get("llama-server", {}).get("sha256"),
+        }
+    return out
+
+
+def _secondary_characterization(evidence: Path, case_id: str) \
+        -> dict[str, Any]:
+    """Retained secondary B/C characterization at their own first
+    divergence (position 5 for this campaign). Reported for nuance;
+    NEVER satisfies the global first-divergence gate."""
+    p = evidence / "candidate" / "characterization" / \
+        "pos5-secondary" / f"score-characterization-{case_id}.json"
     if not p.is_file():
         return {"status": "ABSENT"}
     doc = _load(p)
-    problems = []
-    if doc.get("case_id") != case_id:
-        problems.append("case_binding")
-    arms = doc.get("arms", {})
-    for arm in ("A", "B", "C"):
-        a = arms.get(arm, {})
-        if not a.get("top_k"):
-            problems.append(f"arm{arm}:no_topk")
-        if a.get("non_perturbation_identical") is not True:
-            problems.append(f"arm{arm}:no_nonperturbation_proof")
-    if doc.get("generated_position") is None:
-        problems.append("no_generated_position")
-    return {"status": "OK" if not problems else "INSUFFICIENT",
-            "problems": problems}
+    pos = doc.get("generated_position")
+    return {
+        "status": "RETAINED",
+        "classification": "secondary_device_axis_characterization",
+        "generated_position": pos,
+        "document_sha256": hashlib.sha256(
+            p.read_bytes()).hexdigest(),
+        "note": ("retained secondary evidence; binds the B/C device "
+                 "axis divergence only and does not satisfy the "
+                 "global first-divergence characterization gate"),
+    }
 
 
 def classify_pairwise(case: dict[str, Any]) -> str | None:
@@ -574,7 +893,9 @@ def derive_terminal(evidence: Path, closure: dict[str, Any] | None = None
                     basis.append(f"parity at {executed} but ladder "
                                  "incomplete for PASS")
             elif cls == "BACKEND_DIVERGENT":
-                char = characterization_ok(evidence, first_case)
+                req = required_characterization_position(case)
+                char = characterization_ok(evidence, first_case, req,
+                                           ladder_case=case)
                 checks["score_characterization"] = char
                 if char["status"] != "OK":
                     terminal = TERMINAL_BLOCKED
@@ -587,10 +908,13 @@ def derive_terminal(evidence: Path, closure: dict[str, Any] | None = None
                     basis.append(
                         f"{first_case}: A!=B, B==C (Vulkan differs from "
                         "CUDA on the same RTX 3060; NVIDIA/Vulkan and "
-                        "AMD/Vulkan agree); score characterization "
-                        "retained")
+                        "AMD/Vulkan agree); earliest-divergence position-"
+                        f"{req} characterization derived from raw f32 "
+                        "bytes")
             elif cls == "DEVICE_DIVERGENT":
-                char = characterization_ok(evidence, first_case)
+                req = required_characterization_position(case)
+                char = characterization_ok(evidence, first_case, req,
+                                           ladder_case=case)
                 checks["score_characterization"] = char
                 if char["status"] != "OK":
                     terminal = TERMINAL_BLOCKED
@@ -603,21 +927,31 @@ def derive_terminal(evidence: Path, closure: dict[str, Any] | None = None
                     basis.append(
                         f"{first_case}: A==B, B!=C (same RTX 3060 agrees "
                         "across CUDA/Vulkan; V340L/Vulkan differs); "
-                        "score characterization retained")
+                        "earliest-divergence position-"
+                        f"{req} characterization derived from raw f32 "
+                        "bytes")
             else:
-                char = characterization_ok(evidence, first_case)
+                req = required_characterization_position(case)
+                char = characterization_ok(evidence, first_case, req,
+                                           ladder_case=case)
                 checks["score_characterization"] = char
                 if char["status"] != "OK":
                     terminal = TERMINAL_BLOCKED
                     basis.append(
                         f"{first_case}: multi-axis pairwise map but "
-                        f"required score characterization "
+                        f"required earliest-divergence (position-"
+                        f"{req}) score characterization "
                         f"{char['status']} {char.get('problems', [])}")
                 else:
                     terminal = TERMINAL_MULTI_AXIS
-                    basis.append(f"{first_case}: multi-axis pairwise map: "
-                                 f"{ {k: v['exact'] for k, v in case['pairwise'].items()} }; "
-                                 "score characterization retained")
+                    basis.append(
+                        f"{first_case}: multi-axis pairwise map: "
+                        f"{ {k: v['exact'] for k, v in case['pairwise'].items()} }; "
+                        f"earliest divergence position {req} "
+                        "(A<->B and A<->C diverge at 0; B<->C at 5); "
+                        "position-0 characterization re-derived from "
+                        "raw float32 bytes; position-5 retained as "
+                        "secondary_device_axis_characterization")
 
     # retired-terminal guard: can never be emitted
     assert terminal != RETIRED_TERMINAL

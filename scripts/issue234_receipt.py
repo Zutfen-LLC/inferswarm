@@ -71,8 +71,38 @@ REDUCTION_PRODUCERS: tuple[str, ...] = (
     "scripts/issue234_reduce.py",
     "scripts/issue234_assemble.py",
     "scripts/issue234_manifest.py",
+    # Round-2 closure pin: the characterization assembler is
+    # terminal-bearing reduction authority (its output feeds the
+    # control-33 gate) and must be closure-bound like every other
+    # reduction producer.
+    "scripts/issue234_characterize.py",
 )
 CLOSURE_SOURCES: tuple[str, ...] = PHYSICAL_PRODUCERS + REDUCTION_PRODUCERS
+
+#: Observation-only score-characterization producer identity (R8-E
+#: hook, Issue #199 methodology, same llama.cpp pin). The hook is INERT
+#: unless LLAMA_OBSERVE_LOGITS is set; it reads the logits row the
+#: sampler just consumed and writes no llama/ggml state. Round-2
+#: closure-pinned: the reducer validates the prospective observation
+#: pin document against these constants before accepting any
+#: characterization derived from observation bytes.
+OBSERVATION_HOOK_DIFF_SHA256 = (
+    "058674419daa1189b25b80e99278001e437827a97c9a2d68ed7e24f03df0d659")
+OBSERVATION_HOOK_ADDED_LINES = 85
+OBSERVATION_FOCUS_ENV = "328,561,271,34227,12188,248068"
+OBSERVATION_BINARIES: dict[str, dict[str, str]] = {
+    "A": {"host": "inferswarm01", "backend": "cuda",
+          "sha256": "2242e96363c651184c1565969abe4eaf619c1c534e965fdb053db4119f16be2f"},
+    "B": {"host": "inferswarm01", "backend": "vulkan",
+          "sha256": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0"},
+    "C": {"host": "inferswarm02", "backend": "vulkan",
+          # byte-identical to B (01-built, deployed to 02)
+          "sha256": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0"},
+}
+#: case-256 fixture prompt identity (equals the accepted R8-E capture
+#: binding prompt_sha256 for the same fixture row).
+PROMPT_CASE256_SHA256 = (
+    "647c266d9e9b7769679d875a1d06fb7c47cf6f4b3acd9fb5d0364f2baa7a94b5")
 
 # -----------------------------------------------------------------------
 # Frozen campaign authorities (issue #234 binding — consumed, never
