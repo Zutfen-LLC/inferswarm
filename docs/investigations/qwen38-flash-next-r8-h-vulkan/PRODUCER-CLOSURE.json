@@ -1,20 +1,26 @@
 {
  "campaign": "issue234-r8h-matched-backend-device-parity",
- "closure_digest": "af4feaaf1a10b392ec76955283d3819889b825d89f0f930599f322fc3e366cfd",
- "producer_head": "6357c8afd4552ca3293ed2e9896461c9c1081066",
+ "closure_digest": "22cbcbf3bf9fd2f7141e0cf17fac123e1921c2813ec4d23d5fbfc8db44455ce3",
+ "producer_head": "2c5f773ec5e00b0aaca9b8fec086fe10b7abbb67",
  "schema": "inferswarm.r8h.producer-closure/2",
  "sources": {
   "scripts/issue234_assemble.py": {
-   "bytes": 16502,
+   "bytes": 23038,
    "class": "reduction",
-   "git_blob": "ed783e49991e870dfa3511624222577bc961323a",
-   "sha256": "00ea78089bc9fda39757c156128bdcf55e3f70dd1396c3838933bf6b7e707b03"
+   "git_blob": "228e0fd5aa159d3a517ab1a90ff79a7dd7a1ee8c",
+   "sha256": "58e22bfc2757c70483ca4f01a4e8b91c806f0be7b457681a66dd114b7f92043b"
   },
   "scripts/issue234_authority.py": {
    "bytes": 10401,
    "class": "reduction",
    "git_blob": "b7ddf7280607e680b7e427df2d6a3650e73c182b",
    "sha256": "25419f9a683d4de69cc41adbc0c670708aac1ea98d7aa60b359fa47a89ace8ad"
+  },
+  "scripts/issue234_characterize.py": {
+   "bytes": 8976,
+   "class": "reduction",
+   "git_blob": "002102ca0bfe5108462a6db51714f2d2c9c6c9f6",
+   "sha256": "bb17e2412e99b64b2d0c5eba0ccf87291f3d4bffc7a4c478e934ef62c980f990"
   },
   "scripts/issue234_freeze.py": {
    "bytes": 7726,
@@ -53,16 +59,16 @@
    "sha256": "353aa64558409918d6180bcf75c7dd690f943ab3c05d9e2e933846933014ddfa"
   },
   "scripts/issue234_receipt.py": {
-   "bytes": 18240,
+   "bytes": 19911,
    "class": "reduction",
-   "git_blob": "738c1a778395e96acbb52ca005bc1a500361a00c",
-   "sha256": "6ff3421da6ab1145120489fdef3578eff7a5179ed2c69eea35a5d6bbc2624c4a"
+   "git_blob": "d19c4b7c2918c84f8c9924aa700a81350b103803",
+   "sha256": "38763c0bdb5dde4c2d9ebad9b74c411ae049917dc8d4899a20cb2644dbd2f4f1"
   },
   "scripts/issue234_reduce.py": {
-   "bytes": 28026,
+   "bytes": 43700,
    "class": "reduction",
-   "git_blob": "8630853fff6f0ab54d8f3930eb4de057b9bd7344",
-   "sha256": "265de9a39c727f49d3a84ba374c72f54918cd357a2e27402239c0c49db4a33e4"
+   "git_blob": "9f38f38ec3d9edb29c8c91d35a6a6bae4038a9af",
+   "sha256": "61ed251e2c0f8c8bb45455be665cdac53dd0e74879db38bcc847c904b6e2a043"
   },
   "scripts/issue234_runtime.py": {
    "bytes": 19784,
