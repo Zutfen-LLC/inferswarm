@@ -523,10 +523,15 @@ def collect(arm: str, server: Path, model_dir: Path, out_dir: Path,
     sel_loaded = _entry(mem_loaded, sel_key_uuid, sel_key_bdf)
     sel_post = _entry(mem_post, sel_key_uuid, sel_key_bdf)
     sel_post_exit = _entry(mem_post_exit, sel_key_uuid, sel_key_bdf)
-    sel_delta_loaded = {k: sel_loaded.get(k, 0) - sel_pre.get(k, 0)
-                        for k in set(sel_pre) | set(sel_loaded)}
-    sel_delta_post = {k: sel_post.get(k, 0) - sel_pre.get(k, 0)
-                      for k in set(sel_pre) | set(sel_post)}
+
+    def _deltas(a: dict, b: dict) -> dict[str, int]:
+        keys = (set(a) | set(b)) - {"bdf"}
+        return {k: b.get(k, 0) - a.get(k, 0)
+                for k in keys
+                if isinstance(a.get(k, 0), int) and isinstance(b.get(k, 0), int)}
+
+    sel_delta_loaded = _deltas(sel_pre, sel_loaded)
+    sel_delta_post = _deltas(sel_pre, sel_post)
     # during-run peak across monitor samples in loaded/generation phases
     during_peak = 0
     for s in samples:
