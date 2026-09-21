@@ -1,0 +1,467 @@
+{
+  "authored_at": "2026-09-21T15:00:00Z",
+  "campaign": "issue234-r8h-matched-backend-device-parity",
+  "collector": {
+    "commit": "c155e1bd867a18c8aef9128323602ff910acc824",
+    "path": "scripts/issue234_observe.py",
+    "sha256": "38fad9b7e459458cb409e1aba45157239e87f7deed5a8056ba28e21955795a7b"
+  },
+  "non_perturbation_contract": "Each observation response token stream must equal its retained canonical ladder stream exactly; mismatches quarantine the observation and never cause a ladder replay.",
+  "observation_producer": {
+    "execution_packages": {
+      "A": {
+        "objects": {
+          "libggml-base.so": {
+            "bytes": 891624,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libggml-base.so.0.24.0",
+            "sha256": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b"
+          },
+          "libggml-base.so.0": {
+            "bytes": 891624,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libggml-base.so.0.24.0",
+            "sha256": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b"
+          },
+          "libggml-base.so.0.24.0": {
+            "bytes": 891624,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libggml-base.so.0.24.0",
+            "sha256": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b"
+          },
+          "libggml-cpu.so": {
+            "bytes": 1193512,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libggml-cpu.so.0.24.0",
+            "sha256": "1a231057b9658dcdb18ccc5de608142e698d3de06c8a15a97b841753b5ff77ed"
+          },
+          "libggml-cpu.so.0": {
+            "bytes": 1193512,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libggml-cpu.so.0.24.0",
+            "sha256": "1a231057b9658dcdb18ccc5de608142e698d3de06c8a15a97b841753b5ff77ed"
+          },
+          "libggml-cpu.so.0.24.0": {
+            "bytes": 1193512,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libggml-cpu.so.0.24.0",
+            "sha256": "1a231057b9658dcdb18ccc5de608142e698d3de06c8a15a97b841753b5ff77ed"
+          },
+          "libggml-cuda.so": {
+            "bytes": 64468808,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libggml-cuda.so.0.24.0",
+            "sha256": "eb3adc6dd4b1813dac1453b2edb40b49bdd480101ae5765a95c90ced3e9bfbf6"
+          },
+          "libggml-cuda.so.0": {
+            "bytes": 64468808,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libggml-cuda.so.0.24.0",
+            "sha256": "eb3adc6dd4b1813dac1453b2edb40b49bdd480101ae5765a95c90ced3e9bfbf6"
+          },
+          "libggml-cuda.so.0.24.0": {
+            "bytes": 64468808,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libggml-cuda.so.0.24.0",
+            "sha256": "eb3adc6dd4b1813dac1453b2edb40b49bdd480101ae5765a95c90ced3e9bfbf6"
+          },
+          "libggml.so": {
+            "bytes": 55712,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libggml.so.0.24.0",
+            "sha256": "5ef2f8d650474b64f4a79258617dff7ecf2a491f5be4d5d8bc20cc4065cf661c"
+          },
+          "libggml.so.0": {
+            "bytes": 55712,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libggml.so.0.24.0",
+            "sha256": "5ef2f8d650474b64f4a79258617dff7ecf2a491f5be4d5d8bc20cc4065cf661c"
+          },
+          "libggml.so.0.24.0": {
+            "bytes": 55712,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libggml.so.0.24.0",
+            "sha256": "5ef2f8d650474b64f4a79258617dff7ecf2a491f5be4d5d8bc20cc4065cf661c"
+          },
+          "libllama-common.so": {
+            "bytes": 5773640,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libllama-common.so.0.4.1",
+            "sha256": "86ddfece0bd60124d92f46366e21715ca81bf339ed020cf9ee8fed96dcb868f8"
+          },
+          "libllama-common.so.0": {
+            "bytes": 5773640,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libllama-common.so.0.4.1",
+            "sha256": "86ddfece0bd60124d92f46366e21715ca81bf339ed020cf9ee8fed96dcb868f8"
+          },
+          "libllama-common.so.0.4.1": {
+            "bytes": 5773640,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libllama-common.so.0.4.1",
+            "sha256": "86ddfece0bd60124d92f46366e21715ca81bf339ed020cf9ee8fed96dcb868f8"
+          },
+          "libllama-server-impl.so": {
+            "bytes": 6853096,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libllama-server-impl.so",
+            "sha256": "12eee474f0e1a67ca3a92edb3c240892cc08dfd31527757e993523224435ba3e"
+          },
+          "libllama.so": {
+            "bytes": 4587232,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libllama.so.0.4.1",
+            "sha256": "78e30eb97f35c8b772fdfa228b8c60f85308c0cfa9dd546ddcff7f5ae1f2f9b0"
+          },
+          "libllama.so.0": {
+            "bytes": 4587232,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libllama.so.0.4.1",
+            "sha256": "78e30eb97f35c8b772fdfa228b8c60f85308c0cfa9dd546ddcff7f5ae1f2f9b0"
+          },
+          "libllama.so.0.4.1": {
+            "bytes": 4587232,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libllama.so.0.4.1",
+            "sha256": "78e30eb97f35c8b772fdfa228b8c60f85308c0cfa9dd546ddcff7f5ae1f2f9b0"
+          },
+          "libmtmd.so": {
+            "bytes": 1915992,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libmtmd.so.0.4.1",
+            "sha256": "887a79bfe82eb65029e97da89aa7d497d36a648dc1c914eb60c60ea58e2ee093"
+          },
+          "libmtmd.so.0": {
+            "bytes": 1915992,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libmtmd.so.0.4.1",
+            "sha256": "887a79bfe82eb65029e97da89aa7d497d36a648dc1c914eb60c60ea58e2ee093"
+          },
+          "libmtmd.so.0.4.1": {
+            "bytes": 1915992,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/libmtmd.so.0.4.1",
+            "sha256": "887a79bfe82eb65029e97da89aa7d497d36a648dc1c914eb60c60ea58e2ee093"
+          },
+          "llama-server": {
+            "bytes": 17920,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/llama-server",
+            "sha256": "2242e96363c651184c1565969abe4eaf619c1c534e965fdb053db4119f16be2f"
+          }
+        },
+        "root": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin"
+      },
+      "B": {
+        "objects": {
+          "libggml-base.so": {
+            "bytes": 891624,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libggml-base.so.0.24.0",
+            "sha256": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b"
+          },
+          "libggml-base.so.0": {
+            "bytes": 891624,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libggml-base.so.0.24.0",
+            "sha256": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b"
+          },
+          "libggml-base.so.0.24.0": {
+            "bytes": 891624,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libggml-base.so.0.24.0",
+            "sha256": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b"
+          },
+          "libggml-cpu.so": {
+            "bytes": 975376,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libggml-cpu.so.0.24.0",
+            "sha256": "4478a41913583f7a3f6ee5b165894cb78c668bf3fb0f67f0fea1689a69aa7e63"
+          },
+          "libggml-cpu.so.0": {
+            "bytes": 975376,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libggml-cpu.so.0.24.0",
+            "sha256": "4478a41913583f7a3f6ee5b165894cb78c668bf3fb0f67f0fea1689a69aa7e63"
+          },
+          "libggml-cpu.so.0.24.0": {
+            "bytes": 975376,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libggml-cpu.so.0.24.0",
+            "sha256": "4478a41913583f7a3f6ee5b165894cb78c668bf3fb0f67f0fea1689a69aa7e63"
+          },
+          "libggml-vulkan.so": {
+            "bytes": 42347200,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libggml-vulkan.so.0.24.0",
+            "sha256": "8e24de75a099e407d2a43be4013bf8c72fceb7bb8a2f4618448822982e2935a9"
+          },
+          "libggml-vulkan.so.0": {
+            "bytes": 42347200,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libggml-vulkan.so.0.24.0",
+            "sha256": "8e24de75a099e407d2a43be4013bf8c72fceb7bb8a2f4618448822982e2935a9"
+          },
+          "libggml-vulkan.so.0.24.0": {
+            "bytes": 42347200,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libggml-vulkan.so.0.24.0",
+            "sha256": "8e24de75a099e407d2a43be4013bf8c72fceb7bb8a2f4618448822982e2935a9"
+          },
+          "libggml.so": {
+            "bytes": 55712,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libggml.so.0.24.0",
+            "sha256": "07c318bbe7f091e5e986689a08668776131438adc006e8041b8bb8ad3d0d507e"
+          },
+          "libggml.so.0": {
+            "bytes": 55712,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libggml.so.0.24.0",
+            "sha256": "07c318bbe7f091e5e986689a08668776131438adc006e8041b8bb8ad3d0d507e"
+          },
+          "libggml.so.0.24.0": {
+            "bytes": 55712,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libggml.so.0.24.0",
+            "sha256": "07c318bbe7f091e5e986689a08668776131438adc006e8041b8bb8ad3d0d507e"
+          },
+          "libllama-common.so": {
+            "bytes": 5773640,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libllama-common.so.0.4.1",
+            "sha256": "e0cd75928540ba4e199ec1a926fc52045fc2e0115d43218dec685ceb52eb80a6"
+          },
+          "libllama-common.so.0": {
+            "bytes": 5773640,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libllama-common.so.0.4.1",
+            "sha256": "e0cd75928540ba4e199ec1a926fc52045fc2e0115d43218dec685ceb52eb80a6"
+          },
+          "libllama-common.so.0.4.1": {
+            "bytes": 5773640,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libllama-common.so.0.4.1",
+            "sha256": "e0cd75928540ba4e199ec1a926fc52045fc2e0115d43218dec685ceb52eb80a6"
+          },
+          "libllama-server-impl.so": {
+            "bytes": 6853096,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libllama-server-impl.so",
+            "sha256": "d604ec0dc9f5afbba7f8c87fbd488af1a24230886197a41189b892ca53ebecc7"
+          },
+          "libllama.so": {
+            "bytes": 4587232,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libllama.so.0.4.1",
+            "sha256": "a6cbe541faca2e00539f5b0fa7776cbac520b44e6da050dc461ff5f604ba9b8b"
+          },
+          "libllama.so.0": {
+            "bytes": 4587232,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libllama.so.0.4.1",
+            "sha256": "a6cbe541faca2e00539f5b0fa7776cbac520b44e6da050dc461ff5f604ba9b8b"
+          },
+          "libllama.so.0.4.1": {
+            "bytes": 4587232,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libllama.so.0.4.1",
+            "sha256": "a6cbe541faca2e00539f5b0fa7776cbac520b44e6da050dc461ff5f604ba9b8b"
+          },
+          "libmtmd.so": {
+            "bytes": 1915992,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libmtmd.so.0.4.1",
+            "sha256": "38a60efd4e9268c0f5eb1a757b132151a3e233bd0b0bf0c76312d6a762f7cb19"
+          },
+          "libmtmd.so.0": {
+            "bytes": 1915992,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libmtmd.so.0.4.1",
+            "sha256": "38a60efd4e9268c0f5eb1a757b132151a3e233bd0b0bf0c76312d6a762f7cb19"
+          },
+          "libmtmd.so.0.4.1": {
+            "bytes": 1915992,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/libmtmd.so.0.4.1",
+            "sha256": "38a60efd4e9268c0f5eb1a757b132151a3e233bd0b0bf0c76312d6a762f7cb19"
+          },
+          "llama-server": {
+            "bytes": 17920,
+            "realpath": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/llama-server",
+            "sha256": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0"
+          }
+        },
+        "root": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin"
+      },
+      "C": {
+        "objects": {
+          "libggml-base.so": {
+            "bytes": 891624,
+            "realpath": "/tmp/is234r/obs-vk-bin/libggml-base.so.0.24.0",
+            "sha256": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b"
+          },
+          "libggml-base.so.0": {
+            "bytes": 891624,
+            "realpath": "/tmp/is234r/obs-vk-bin/libggml-base.so.0.24.0",
+            "sha256": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b"
+          },
+          "libggml-base.so.0.24.0": {
+            "bytes": 891624,
+            "realpath": "/tmp/is234r/obs-vk-bin/libggml-base.so.0.24.0",
+            "sha256": "f75cc111ecd6dc1d5795a2c431be690a20e5e84befb6ce0e1dfdefcc989cc45b"
+          },
+          "libggml-cpu.so": {
+            "bytes": 975376,
+            "realpath": "/tmp/is234r/obs-vk-bin/libggml-cpu.so.0.24.0",
+            "sha256": "4478a41913583f7a3f6ee5b165894cb78c668bf3fb0f67f0fea1689a69aa7e63"
+          },
+          "libggml-cpu.so.0": {
+            "bytes": 975376,
+            "realpath": "/tmp/is234r/obs-vk-bin/libggml-cpu.so.0.24.0",
+            "sha256": "4478a41913583f7a3f6ee5b165894cb78c668bf3fb0f67f0fea1689a69aa7e63"
+          },
+          "libggml-cpu.so.0.24.0": {
+            "bytes": 975376,
+            "realpath": "/tmp/is234r/obs-vk-bin/libggml-cpu.so.0.24.0",
+            "sha256": "4478a41913583f7a3f6ee5b165894cb78c668bf3fb0f67f0fea1689a69aa7e63"
+          },
+          "libggml-vulkan.so": {
+            "bytes": 42347200,
+            "realpath": "/tmp/is234r/obs-vk-bin/libggml-vulkan.so.0.24.0",
+            "sha256": "8e24de75a099e407d2a43be4013bf8c72fceb7bb8a2f4618448822982e2935a9"
+          },
+          "libggml-vulkan.so.0": {
+            "bytes": 42347200,
+            "realpath": "/tmp/is234r/obs-vk-bin/libggml-vulkan.so.0.24.0",
+            "sha256": "8e24de75a099e407d2a43be4013bf8c72fceb7bb8a2f4618448822982e2935a9"
+          },
+          "libggml-vulkan.so.0.24.0": {
+            "bytes": 42347200,
+            "realpath": "/tmp/is234r/obs-vk-bin/libggml-vulkan.so.0.24.0",
+            "sha256": "8e24de75a099e407d2a43be4013bf8c72fceb7bb8a2f4618448822982e2935a9"
+          },
+          "libggml.so": {
+            "bytes": 55712,
+            "realpath": "/tmp/is234r/obs-vk-bin/libggml.so.0.24.0",
+            "sha256": "07c318bbe7f091e5e986689a08668776131438adc006e8041b8bb8ad3d0d507e"
+          },
+          "libggml.so.0": {
+            "bytes": 55712,
+            "realpath": "/tmp/is234r/obs-vk-bin/libggml.so.0.24.0",
+            "sha256": "07c318bbe7f091e5e986689a08668776131438adc006e8041b8bb8ad3d0d507e"
+          },
+          "libggml.so.0.24.0": {
+            "bytes": 55712,
+            "realpath": "/tmp/is234r/obs-vk-bin/libggml.so.0.24.0",
+            "sha256": "07c318bbe7f091e5e986689a08668776131438adc006e8041b8bb8ad3d0d507e"
+          },
+          "libllama-common.so": {
+            "bytes": 5773640,
+            "realpath": "/tmp/is234r/obs-vk-bin/libllama-common.so.0.4.1",
+            "sha256": "e0cd75928540ba4e199ec1a926fc52045fc2e0115d43218dec685ceb52eb80a6"
+          },
+          "libllama-common.so.0": {
+            "bytes": 5773640,
+            "realpath": "/tmp/is234r/obs-vk-bin/libllama-common.so.0.4.1",
+            "sha256": "e0cd75928540ba4e199ec1a926fc52045fc2e0115d43218dec685ceb52eb80a6"
+          },
+          "libllama-common.so.0.4.1": {
+            "bytes": 5773640,
+            "realpath": "/tmp/is234r/obs-vk-bin/libllama-common.so.0.4.1",
+            "sha256": "e0cd75928540ba4e199ec1a926fc52045fc2e0115d43218dec685ceb52eb80a6"
+          },
+          "libllama-server-impl.so": {
+            "bytes": 6853096,
+            "realpath": "/tmp/is234r/obs-vk-bin/libllama-server-impl.so",
+            "sha256": "d604ec0dc9f5afbba7f8c87fbd488af1a24230886197a41189b892ca53ebecc7"
+          },
+          "libllama.so": {
+            "bytes": 4587232,
+            "realpath": "/tmp/is234r/obs-vk-bin/libllama.so.0.4.1",
+            "sha256": "a6cbe541faca2e00539f5b0fa7776cbac520b44e6da050dc461ff5f604ba9b8b"
+          },
+          "libllama.so.0": {
+            "bytes": 4587232,
+            "realpath": "/tmp/is234r/obs-vk-bin/libllama.so.0.4.1",
+            "sha256": "a6cbe541faca2e00539f5b0fa7776cbac520b44e6da050dc461ff5f604ba9b8b"
+          },
+          "libllama.so.0.4.1": {
+            "bytes": 4587232,
+            "realpath": "/tmp/is234r/obs-vk-bin/libllama.so.0.4.1",
+            "sha256": "a6cbe541faca2e00539f5b0fa7776cbac520b44e6da050dc461ff5f604ba9b8b"
+          },
+          "libmtmd.so": {
+            "bytes": 1915992,
+            "realpath": "/tmp/is234r/obs-vk-bin/libmtmd.so.0.4.1",
+            "sha256": "38a60efd4e9268c0f5eb1a757b132151a3e233bd0b0bf0c76312d6a762f7cb19"
+          },
+          "libmtmd.so.0": {
+            "bytes": 1915992,
+            "realpath": "/tmp/is234r/obs-vk-bin/libmtmd.so.0.4.1",
+            "sha256": "38a60efd4e9268c0f5eb1a757b132151a3e233bd0b0bf0c76312d6a762f7cb19"
+          },
+          "libmtmd.so.0.4.1": {
+            "bytes": 1915992,
+            "realpath": "/tmp/is234r/obs-vk-bin/libmtmd.so.0.4.1",
+            "sha256": "38a60efd4e9268c0f5eb1a757b132151a3e233bd0b0bf0c76312d6a762f7cb19"
+          },
+          "llama-server": {
+            "bytes": 17920,
+            "realpath": "/tmp/is234r/obs-vk-bin/llama-server",
+            "sha256": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0"
+          }
+        },
+        "root": "/tmp/is234r/obs-vk-bin"
+      }
+    },
+    "hook_env": {
+      "LLAMA_OBSERVE_FOCUS": "328,561,271,34227,12188,248068",
+      "LLAMA_OBSERVE_POS": "0"
+    },
+    "hook_source_sha256_of_diff": "058674419daa1189b25b80e99278001e437827a97c9a2d68ed7e24f03df0d659",
+    "icd_sha256": {
+      "B": "5d0a0cd95951433c9ae3699932765c88ad5060288ebefeebd6c55ab945ef4be1",
+      "C": "3ed98fea4666d3e45577422eb20fee22820c85b087333f3528e5e9f0e8dc78d2"
+    },
+    "launch_contract": {
+      "host": "127.0.0.1",
+      "port": 18493
+    },
+    "llama_cpp_source_pin": "b29c606e28a01b1bc8c1351026a0fa6e616bf6c4",
+    "model_members": [
+      {
+        "bytes": 10946624,
+        "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00001-of-00003.gguf",
+        "sha256": "88a1420825a9304063e882ada29d438263617f51ac8923d438d927496693bafd"
+      },
+      {
+        "bytes": 49990818368,
+        "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00002-of-00003.gguf",
+        "sha256": "3a62e35bbf9add4733bd1438ebd3a67649d5edd6cb0e72bb78e33c913992b2b6"
+      },
+      {
+        "bytes": 22544696352,
+        "name": "Qwen3.8-Flash-Next-UD-IQ1_S-00003-of-00003.gguf",
+        "sha256": "0e25ceaeb89b8a80aa973c6c0c7448943682f7408c2855b2ebd016b7643a861a"
+      }
+    ],
+    "model_subject": "/srv/models/qwen38-ud-iq1-s",
+    "observation_binaries": {
+      "A_cuda_inferswarm01": {
+        "path": "/home/hermes/llama.cpp/r8h-obs/build-obs-cuda/bin/llama-server",
+        "sha256": "2242e96363c651184c1565969abe4eaf619c1c534e965fdb053db4119f16be2f"
+      },
+      "B_vulkan_inferswarm01": {
+        "path": "/home/hermes/llama.cpp/r8h-obs/build-obs-vk/bin/llama-server",
+        "sha256": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0"
+      },
+      "C_vulkan_inferswarm02": {
+        "path": "/tmp/is234r/obs-vk-bin/llama-server",
+        "sha256": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0"
+      }
+    },
+    "prompt_len": 256,
+    "prompt_sha256": "647c266d9e9b7769679d875a1d06fb7c47cf6f4b3acd9fb5d0364f2baa7a94b5",
+    "request_contract": {
+      "cache_prompt": false,
+      "n_predict": 8,
+      "return_tokens": true,
+      "samplers": [
+        "top_k"
+      ],
+      "seed": 0,
+      "stream": false,
+      "temperature": 0.0,
+      "top_k": 1
+    },
+    "same_vulkan_package": true,
+    "selectors": {
+      "A": {
+        "CUDA_VISIBLE_DEVICES": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"
+      },
+      "B": {
+        "CUDA_VISIBLE_DEVICES": "-1",
+        "GGML_VK_VISIBLE_DEVICES": "0",
+        "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/nvidia_icd.json"
+      },
+      "C": {
+        "CUDA_VISIBLE_DEVICES": "-1",
+        "GGML_VK_VISIBLE_DEVICES": "0",
+        "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/radeon_icd.json"
+      }
+    }
+  },
+  "purpose": "Prospective complete-execution-payload authority for the bounded position-0 A/B/C recollection. The accepted canonical 3x3 ladder is not authorized for replay. Round-3 pos0 evidence remains retained as superseded execution evidence because it lacks execution-time member-2/member-3 SHA-256 and complete dynamic-package bindings.",
+  "schema": "inferswarm.r8h.pos0-observation-pin/2",
+  "scope": {
+    "arms": [
+      "A",
+      "B",
+      "C"
+    ],
+    "canonical_ladder_rerun": false,
+    "case": "case-256",
+    "execution_receipts_required": true,
+    "generated_position": 0,
+    "later_rungs": "none authorized",
+    "n_predict": 8,
+    "repeats_per_arm": 1
+  },
+  "supersedes": "candidate/characterization/pos0/ (round-3 receipts retained byte-identically; not selected for terminal authority)"
+}
