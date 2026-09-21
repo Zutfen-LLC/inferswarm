@@ -43,16 +43,21 @@ class AssembleError(RuntimeError):
 #:  * for each host the exact physical-producer set that actually
 #:    executed is frozen explicitly — a missing producer fails closed;
 #:  * every retained hash must equal the frozen physical-producer pin
-#:    (closure blob sha256 at e7d822a) — mismatch fails closed;
+#:    (closure blob sha256) — mismatch fails closed;
 #:  * a producer substituted for an expected one fails closed;
 #:  * `all_hosts_match_pin` is DERIVED from the comparisons, never
 #:    read from the authored boolean.
+#: Round 3 adds the observation execution-identity collector
+#: (issue234_observe.py) to the matrix: it is a physical producer
+#: (it executes the observation runs) deployed to BOTH execution
+#: hosts, and its deployed bytes are verified like every other.
 DEPLOYED_PRODUCER_BASENAMES: tuple[str, ...] = (
     "issue234_host.py",
     "issue234_runtime.py",
     "issue234_placement.py",
     "issue234_ladder.py",
     "issue234_health.py",
+    "issue234_observe.py",
 )
 EXPECTED_DEPLOYED_HOSTS: dict[str, tuple[str, ...]] = {
     "inferswarm01": DEPLOYED_PRODUCER_BASENAMES,

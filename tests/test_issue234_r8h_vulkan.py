@@ -71,12 +71,14 @@ def make_obs_corpus(ev: Path, arm: str, tokens: list[int],
     (d / f"{arm}.jsonl").write_text(obs_jsonl(position, f32row, tokens[0]))
     (d / f"{arm}.jsonl.pos{position}.f32").write_bytes(f32row)
     w(d / f"{arm}.resp.json", {"tokens": tokens})
+    (d / f"{arm}.server.log").write_bytes(b"synthetic server log\n")
     if pin and dir_name == "pos0" and not (d / "pos0-observation-pin.json"
                                            ).is_file():
         pin_doc = {
             "schema": "inferswarm.r8h.pos0-observation-pin/1",
             "scope": {"generated_position": position,
-                      "canonical_ladder_rerun": False},
+                      "canonical_ladder_rerun": False,
+                      "execution_receipts_required": True},
             "observation_producer": {
                 "llama_cpp_source_pin": rc.LLAMA_CPP_PIN,
                 "hook_source_sha256_of_diff": rc.OBSERVATION_HOOK_DIFF_SHA256,
@@ -84,6 +86,12 @@ def make_obs_corpus(ev: Path, arm: str, tokens: list[int],
                     "LLAMA_OBSERVE_FOCUS": rc.OBSERVATION_FOCUS_ENV,
                     "LLAMA_OBSERVE_POS": str(position)},
                 "prompt_sha256": rc.PROMPT_CASE256_SHA256,
+                "selectors": {a: dict(rc.OBSERVATION_LAUNCH_ENV[a])
+                              for a in "ABC"},
+                "icd_sha256": {
+                    "B": rc.OBSERVATION_ICD_SHA256[
+                        "B_nvidia_inferswarm01"],
+                    "C": rc.OBSERVATION_ICD_SHA256["C_radeon"]},
                 "observation_binaries": {
                     "A_cuda_inferswarm01": {"sha256": rc.OBSERVATION_BINARIES["A"]["sha256"]},
                     "B_vulkan_inferswarm01": {"sha256": rc.OBSERVATION_BINARIES["B"]["sha256"]},
@@ -92,6 +100,195 @@ def make_obs_corpus(ev: Path, arm: str, tokens: list[int],
             },
         }
         w(d / "pos0-observation-pin.json", pin_doc)
+
+
+def obs_receipt(arm: str, out_dir: Path, *, tokens: list[int],
+                jsonl: Path, f32: Path, resp: Path,
+                server_log: Path | None = None,
+                overrides: dict | None = None) -> Path:
+    """Synthesize a mechanically-valid observation execution receipt
+    (schema /1) matching the frozen authorities; each artifact digest
+    binds the receipt to the real raw bytes on disk."""
+    frozen = rc.OBSERVATION_FROZEN_DEVICES
+    env = dict(rc.OBSERVATION_LAUNCH_ENV[arm])
+    env["LLAMA_OBSERVE_FOCUS"] = rc.OBSERVATION_FOCUS_ENV
+    env["LLAMA_OBSERVE_POS"] = "0"
+    env["LLAMA_OBSERVE_LOGITS"] = str(jsonl)
+    bin_meta = rc.OBSERVATION_BINARIES[arm]
+    if arm == "A":
+        sel = {"uuid": frozen["frozen_rtx3060"]["uuid"],
+               "bdf": frozen["frozen_rtx3060"]["bdf"]}
+        ex = [{"uuid": frozen["frozen_rtx3060"]["sibling"]["uuid"],
+               "bdf": frozen["frozen_rtx3060"]["sibling"]["bdf"]}]
+        ld = {"raw": "CUDA0: NVIDIA GeForce RTX 3060 (12288 MiB)",
+              "parsed": [{"label": "CUDA0",
+                          "name": "NVIDIA GeForce RTX 3060",
+                          "mib": "12288"}]}
+        vk = None
+        maps = ["libggml-base.so", "libggml-cpu.so", "libggml-cuda.so"]
+    elif arm == "B":
+        g = frozen["frozen_rtx3060"]
+        sel = {"uuid": g["uuid"], "bdf": g["bdf"],
+               "deviceUUID": g["vulkan_deviceUUID"]}
+        ex = [{"uuid": g["sibling"]["uuid"], "bdf": g["sibling"]["bdf"]}]
+        ld = {"raw": "Vulkan0: NVIDIA GeForce RTX 3060 (12534 MiB)",
+              "parsed": [{"label": "Vulkan0",
+                          "name": "NVIDIA GeForce RTX 3060",
+                          "mib": "12534"}]}
+        vk = {"gpus": {
+            "GPU0": {"deviceName": "NVIDIA GeForce RTX 3060",
+                     "deviceUUID": g["vulkan_deviceUUID"],
+                     "driverName": "NVIDIA"},
+            "GPU1": {"deviceName": "NVIDIA GeForce RTX 3060",
+                     "deviceUUID": "d5c05739-96c1-7e49-89b6-bf54c2121c55",
+                     "driverName": "NVIDIA"}}}
+        maps = ["libggml-base.so", "libggml-cpu.so", "libggml-vulkan.so"]
+    else:
+        sel = {"bdf": frozen["C_selected_die"]["bdf"],
+               "deviceUUID": frozen["C_selected_die"]["deviceUUID"]}
+        ex = [{"bdf": frozen["C_excluded_die"]["bdf"],
+               "deviceUUID": frozen["C_excluded_die"]["deviceUUID"]}]
+        ld = {"raw": "Vulkan0: AMD Radeon Pro V340 (8176 MiB)",
+              "parsed": [{"label": "Vulkan0",
+                          "name": "AMD Radeon Pro V340 (RADV VEGA10)",
+                          "mib": "8176"}]}
+        vk = {"gpus": {
+            "GPU0": {"deviceName": "AMD Radeon Pro V340 (RADV VEGA10)",
+                     "deviceUUID": frozen["C_selected_die"]["deviceUUID"],
+                     "driverName": "RADV",
+                     "driverID": "DRIVER_ID_MESA_RADV"},
+            "GPU1": {"deviceName": "AMD Radeon Pro V340 (RADV VEGA10)",
+                     "deviceUUID": frozen["C_excluded_die"]["deviceUUID"],
+                     "driverName": "RADV",
+                     "driverID": "DRIVER_ID_MESA_RADV"}}}
+        maps = ["libggml-base.so", "libggml-cpu.so", "libggml-vulkan.so"]
+    phys = []
+    smi_join = {}
+    if vk:
+        if arm == "B":
+            g = frozen["frozen_rtx3060"]
+            smi_join = {"GPU-" + g["vulkan_deviceUUID"]: g["bdf"],
+                        "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55":
+                            g["sibling"]["bdf"]}
+        for gpu, f in sorted(vk["gpus"].items()):
+            e = {"gpu_index": gpu, "deviceName": f.get("deviceName"),
+                 "deviceUUID": f.get("deviceUUID"),
+                 "driverName": f.get("driverName"),
+                 "driverID": f.get("driverID")}
+            if arm == "B":
+                e["bdf"] = smi_join.get("GPU-" + f.get("deviceUUID", ""))
+            else:
+                h = (f.get("deviceUUID") or "").replace("-", "")
+                e["bdf"] = (f"{h[0:8]}:{h[8:10]}:{h[10:12]}."
+                            f"{int(h[12:14], 16) & 0x7}"
+                            if len(h) == 32 else "")
+            phys.append(e)
+    icd = None
+    if arm in ("B", "C"):
+        icd = {"path": rc.OBSERVATION_LAUNCH_ENV[arm]["VK_ICD_FILENAMES"],
+               "sha256": rc.OBSERVATION_ICD_SHA256[
+                   "B_nvidia_inferswarm01" if arm == "B" else "C_radeon"],
+               "library_path": "libGLX_nvidia.so.0"}
+    compute = []
+    if arm == "A":
+        compute = [{"t": 1.0, "phase": "generation",
+                    "pid": 4242,
+                    "gpu_uuid": frozen["frozen_rtx3060"]["uuid"],
+                    "used_memory": "900 MiB"}]
+    receipt: dict = {
+        "schema": "inferswarm.r8h.observation-execution-receipt/1",
+        "campaign": rc.CAMPAIGN_ID,
+        "case_id": "case-256",
+        "generated_position": 0,
+        "arm": arm,
+        "host": {"hostname": rc.ARMS[arm]["host"],
+                 "boot_id": "b" * 8 + "-0000-0000-0000-" + "0" * 12},
+        "observation_binary": {
+            "path": f"/opt/obs/{arm}/llama-server",
+            "sha256": bin_meta["sha256"],
+            "bin_dir": {"llama-server": bin_meta["sha256"]}},
+        "source": ({"provenance": "local_r8h_obs_worktree",
+                    "worktree": "/opt/src",
+                    "llama_cpp_pin": rc.LLAMA_CPP_PIN,
+                    "modified_paths": [" M tools/server/server-context.cpp"],
+                    "clean_excluding_hook": True,
+                    "hook_diff_sha256": rc.OBSERVATION_HOOK_DIFF_SHA256,
+                    "hook_diff_lines": 103}
+                   if arm != "C" else
+                   {"provenance": "byte_identity_to_arm_B_binary"}),
+        "launch": {
+            "pid": 4242,
+            "argv": [f"/opt/obs/{arm}/llama-server", "--model",
+                     "/models/m1.gguf", "--n-gpu-layers", "1",
+                     "--ctx-size", "8192", "--batch-size", "512",
+                     "--port", "18493", "--host", "127.0.0.1"],
+            "env": env,
+            "env_present_keys": sorted(env),
+            "icd": icd,
+        },
+        "in_process_backends": {"mapped_libggml": maps},
+        "model": {"path": "/models", "first_member": "/models/m1.gguf",
+                  "members": [{"name": m["member"], "bytes": m["bytes"]}
+                              for m in rc.MODEL_MEMBERS],
+                  "member_1_sha256": rc.MODEL_MEMBERS[0]["sha256"],
+                  "backing_receipt": f"arm{arm}-backing.json"},
+        "geometry": {"ngl": rc.MATCHED_NGL,
+                     "ctx": dict(rc.CONTEXT_SETTINGS)},
+        "request": {"contract": dict(rc.REQUEST_CONTRACT),
+                    "prompt_sha256": rc.PROMPT_CASE256_SHA256,
+                    "prompt_len": 252},
+        "device_proof": {
+            "backend": "cuda" if arm == "A" else "vulkan",
+            "list_devices": ld,
+            "vulkaninfo": vk,
+            "vulkan_physical_devices": phys,
+            "nvidia_uuid_bdf_table": (smi_join if arm == "B" else None),
+            "selected": sel,
+            "excluded": ex,
+        },
+        "residency": {
+            "sampler_interval_s": 5,
+            "selected_pre": {"mem_used_mib": 1},
+            "selected_loaded": {"mem_used_mib": 941},
+            "selected_post": {"mem_used_mib": 941},
+            "selected_post_exit": {"mem_used_mib": 1},
+            "selected_delta_loaded": {"mem_used_mib": 940},
+            "selected_delta_post": {"mem_used_mib": 940},
+            "selected_during_peak_delta_bytes": 940 * 1024 * 1024,
+            "selected_delta_bytes": 940 * 1024 * 1024,
+            "excluded": [{**e2, "pre": {"mem_used_mib": 1},
+                          "peak_delta_bytes": 0} for e2 in ex],
+            "compute_apps_bound_to_pid": compute,
+            "n_samples": 12,
+        },
+        "cpu_fallback": {
+            "no_usable_gpu_warning_present": False,
+            "devices_listed_under_launch_env": True,
+            "selected_model_scale_residency": True,
+            "fallback": False,
+        },
+        "exit": {"returncode": 0, "terminated_by_driver": True},
+        "t_start": "2026-09-21T00:00:00+0000",
+        "t_end": "2026-09-21T00:05:00+0000",
+        "artifacts": {
+            "observation_jsonl": rc.sha256_bytes(jsonl.read_bytes()),
+            "pos0_f32": rc.sha256_bytes(f32.read_bytes()),
+            "response": rc.sha256_bytes(resp.read_bytes()),
+            "server_log": (rc.sha256_bytes(server_log.read_bytes())
+                           if server_log and server_log.is_file() else
+                           rc.sha256_bytes(b"log")),
+        },
+        "generated_tokens": list(tokens),
+    }
+    if overrides:
+        for k, v in overrides.items():
+            if callable(v):
+                v(receipt)
+            else:
+                receipt[k] = v
+    receipt["digest"] = "PENDING"
+    receipt["digest"] = rc.sha256_bytes(rc.canonical(receipt))
+    return w(out_dir / f"observation-receipt-{arm}.json", receipt)
 
 
 def make_summary(ev: Path, case: str, position: int, f32s: dict[str, bytes],
@@ -115,7 +312,8 @@ def make_evidence(tmp: Path, *, a=TOKENS_A, b=TOKENS_B, c=TOKENS_C,
                   det_b=True, characterization=None, case="case-256",
                   drop_b_repeat=False, extra_cases=(),
                   bdf_b="00000000:02:00.0",
-                  obs_position=0) -> Path:
+                  obs_position=0,
+                  receipt_overrides: dict | None = None) -> Path:
     ev = tmp / "evidence"
     authority = {
         "campaign": rc.CAMPAIGN_ID,
@@ -237,6 +435,16 @@ def make_evidence(tmp: Path, *, a=TOKENS_A, b=TOKENS_B, c=TOKENS_C,
     f32s = {"A": F32_A, "B": F32_B, "C": F32_C}
     for arm, toks in (("A", a), ("B", b), ("C", c)):
         make_obs_corpus(ev, arm, toks, f32s[arm], position=obs_position)
+    # observation execution receipts (round-3: identity-bound
+    # observation collection)
+    pos0 = ev / "candidate" / "characterization" / "pos0"
+    for arm, toks in (("A", a), ("B", b), ("C", c)):
+        obs_receipt(arm, pos0, tokens=toks,
+                    jsonl=pos0 / f"{arm}.jsonl",
+                    f32=pos0 / f"{arm}.jsonl.pos0.f32",
+                    resp=pos0 / f"{arm}.resp.json",
+                    server_log=pos0 / f"{arm}.server.log",
+                    overrides=(receipt_overrides or {}).get(arm))
     make_summary(ev, case, obs_position, f32s,
                  {k: struct.unpack(
                      f"<{N_VOCAB}f", v)[0 if k == "A" else 561]
@@ -442,6 +650,385 @@ class TestRawBoundCharacterization(unittest.TestCase):
             p.write_bytes(p.read_bytes()[:-4])
             doc = red.derive_terminal(ev, closure=CLOSURE)
             self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+
+
+class TestObservationExecutionTruth(unittest.TestCase):
+    """Round-3 blocker: observation executions mechanically bound to
+    the GPU/backend selectors they represent. Every mutation below
+    must fail closed (BLOCKED), never silently classify."""
+
+    RECEIPT_MUTATIONS = {
+        "absent": "receipt file removed",
+        "armA_wrong_rtx": "Arm A selected the sibling 3060",
+        "armB_different_than_A": "Arm B on a different 3060 than A",
+        "armC_wrong_die": "Arm C on the excluded V340L die",
+        "relative_icd_B": "Arm B relative ICD path",
+        "relative_icd_C": "Arm C relative ICD path",
+        "missing_icd_B": "Arm B ICD entry removed",
+        "wrong_icd_vendor_B": "AMD devices visible under B's ICD",
+        "cpu_fallback": "no-usable-GPU fallback markers",
+        "wrong_binary_hash": "observation binary hash drift",
+        "wrong_host": "receipt executed on the wrong host",
+        "selector_pin_mismatch": "pin selector != execution env",
+        "zero_selected_activity": "selected GPU carried no residency",
+        "excluded_active": "excluded device active during run",
+        "forged_equality": "canonical tokens with wrong identity",
+    }
+    # test-method name for each mutation-class label
+    _TEST_FOR = {
+        "absent": "test_receipt_absent_blocks",
+        "armA_wrong_rtx": "test_armA_wrong_rtx_blocks",
+        "armB_different_than_A": "test_armB_different_gpu_than_A_blocks",
+        "armC_wrong_die": "test_armC_wrong_die_blocks",
+        "relative_icd_B": "test_relative_icd_B_blocks",
+        "relative_icd_C": "test_relative_icd_C_blocks",
+        "missing_icd_B": "test_missing_icd_B_blocks",
+        "wrong_icd_vendor_B": "test_wrong_icd_vendor_B_blocks",
+        "cpu_fallback": "test_cpu_fallback_blocks",
+        "wrong_binary_hash": "test_wrong_binary_hash_blocks",
+        "wrong_host": "test_wrong_host_blocks",
+        "selector_pin_mismatch": "test_selector_pin_vs_receipt_mismatch_blocks",
+        "zero_selected_activity": "test_zero_selected_activity_blocks",
+        "excluded_active": "test_excluded_device_active_blocks",
+        "forged_equality": "test_forged_token_equality_blocks",
+    }
+
+    def _receipts_dir(self, ev: Path) -> Path:
+        return ev / "candidate" / "characterization" / "pos0"
+
+    def _load(self, p: Path) -> dict:
+        return json.loads(p.read_text())
+
+    def _rewrite(self, p: Path, mutate) -> None:
+        d = self._load(p)
+        mutate(d)
+        d["digest"] = "PENDING"
+        d["digest"] = rc.sha256_bytes(rc.canonical(d))
+        p.write_text(json.dumps(d, indent=1, sort_keys=True) + "\n")
+
+    def test_baseline_identity_bound_ok(self):
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_MULTI_AXIS)
+            sc = doc["checks"]["score_characterization"]
+            ot = sc["observation_execution_truth"]
+            for arm in ("A", "B", "C"):
+                self.assertEqual(ot[arm]["status"], "OK",
+                                 f"{arm}: {ot[arm]['problems']}")
+            self.assertTrue(ot["AB_same_gpu"]["same_frozen_rtx3060"])
+
+    def test_receipt_absent_blocks(self):
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            d = self._receipts_dir(ev)
+            (d / "observation-receipt-B.json").unlink()
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+            ot = (doc["checks"]["score_characterization"]
+                  ["observation_execution_truth"])
+            self.assertEqual(ot["B"]["status"], "ABSENT")
+
+    def test_armA_wrong_rtx_blocks(self):
+        # Arm A executed on the SIBLING 3060 (UUID/BDF swap)
+        def mut(d):
+            d["device_proof"]["selected"] = {
+                "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+                "bdf": "00000000:03:00.0"}
+            d["residency"]["compute_apps_bound_to_pid"] = [{
+                "t": 1.0, "phase": "generation", "pid": 4242,
+                "gpu_uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+                "used_memory": "900 MiB"}]
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._rewrite(self._receipts_dir(ev) /
+                          "observation-receipt-A.json", mut)
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+            ot = (doc["checks"]["score_characterization"]
+                  ["observation_execution_truth"])
+            self.assertIn("armA:selected_uuid:", "".join(
+                ot["A"]["problems"]))
+
+    def test_armB_different_gpu_than_A_blocks(self):
+        # B's receipts claim the sibling while A stays frozen -> A/B
+        # same-GPU relation breaks AND B's own binding breaks
+        def mut(d):
+            d["device_proof"]["selected"] = {
+                "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+                "bdf": "00000000:03:00.0",
+                "deviceUUID": "d5c05739-96c1-7e49-89b6-bf54c2121c55"}
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._rewrite(self._receipts_dir(ev) /
+                          "observation-receipt-B.json", mut)
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+            ot = (doc["checks"]["score_characterization"]
+                  ["observation_execution_truth"])
+            self.assertFalse(ot["AB_same_gpu"]["same_frozen_rtx3060"])
+
+    def test_armC_wrong_die_blocks(self):
+        # C executed on the EXCLUDED die 09:00.0
+        def mut(d):
+            d["device_proof"]["selected"] = {
+                "bdf": "00000000:09:00.0",
+                "deviceUUID": "00000000-0900-0000-0000-000000000000"}
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._rewrite(self._receipts_dir(ev) /
+                          "observation-receipt-C.json", mut)
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+            ot = (doc["checks"]["score_characterization"]
+                  ["observation_execution_truth"])
+            self.assertIn("armC:selected_die", "".join(
+                ot["C"]["problems"]))
+
+    def test_relative_icd_B_blocks(self):
+        # the quarantined-incident class: relative VK_ICD_FILENAMES
+        def mut(d):
+            d["launch"]["env"]["VK_ICD_FILENAMES"] = "nvidia_icd.json"
+            d["launch"]["icd"]["path"] = "nvidia_icd.json"
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._rewrite(self._receipts_dir(ev) /
+                          "observation-receipt-B.json", mut)
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+
+    def test_relative_icd_C_blocks(self):
+        def mut(d):
+            d["launch"]["env"]["VK_ICD_FILENAMES"] = "radeon_icd.json"
+            d["launch"]["icd"]["path"] = "radeon_icd.json"
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._rewrite(self._receipts_dir(ev) /
+                          "observation-receipt-C.json", mut)
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+
+    def test_missing_icd_B_blocks(self):
+        def mut(d):
+            d["launch"]["env"].pop("VK_ICD_FILENAMES", None)
+            d["launch"]["icd"] = None
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._rewrite(self._receipts_dir(ev) /
+                          "observation-receipt-B.json", mut)
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+
+    def test_wrong_icd_vendor_B_blocks(self):
+        # B's restricted census unexpectedly shows RADV devices
+        def mut(d):
+            (d["device_proof"]["vulkan_physical_devices"]
+             .append({"gpu_index": "GPU2",
+                      "deviceName": "AMD Radeon Pro V340",
+                      "deviceUUID": "x" * 36,
+                      "driverName": "RADV"}))
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._rewrite(self._receipts_dir(ev) /
+                          "observation-receipt-B.json", mut)
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+
+    def test_cpu_fallback_blocks(self):
+        # markers of the quarantined incident: warning present,
+        # no model-scale residency
+        def mut(d):
+            d["cpu_fallback"]["no_usable_gpu_warning_present"] = True
+            d["residency"]["selected_delta_bytes"] = 0
+            d["residency"]["selected_during_peak_delta_bytes"] = 0
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._rewrite(self._receipts_dir(ev) /
+                          "observation-receipt-B.json", mut)
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+            ot = (doc["checks"]["score_characterization"]
+                  ["observation_execution_truth"])
+            probs = "".join(ot["B"]["problems"])
+            self.assertIn("cpu_fallback_warning", probs)
+            self.assertIn("no_model_scale_residency", probs)
+
+    def test_wrong_binary_hash_blocks(self):
+        def mut(d):
+            d["observation_binary"]["sha256"] = "0" * 64
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._rewrite(self._receipts_dir(ev) /
+                          "observation-receipt-A.json", mut)
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+
+    def test_wrong_host_blocks(self):
+        def mut(d):
+            d["host"]["hostname"] = "inferswarm09"
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._rewrite(self._receipts_dir(ev) /
+                          "observation-receipt-C.json", mut)
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+
+    def test_selector_pin_vs_receipt_mismatch_blocks(self):
+        # pin says selector 0; execution env says 1
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._rewrite(self._receipts_dir(ev) / "pos0-observation-pin.json",
+                          lambda d: d["observation_producer"]
+                          ["selectors"]["B"].__setitem__(
+                              "GGML_VK_VISIBLE_DEVICES", "1"))
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+            sc = doc["checks"]["score_characterization"]
+            self.assertIn("observation_pin:armB:selector",
+                          "".join(sc["problems"]))
+
+    def test_zero_selected_activity_blocks(self):
+        def mut(d):
+            d["residency"]["selected_delta_bytes"] = 1024
+            d["residency"]["selected_during_peak_delta_bytes"] = 1024
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._rewrite(self._receipts_dir(ev) /
+                          "observation-receipt-A.json", mut)
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+            ot = (doc["checks"]["score_characterization"]
+                  ["observation_execution_truth"])
+            self.assertIn("armA:zero_selected_device_activity",
+                          "".join(ot["A"]["problems"]))
+
+    def test_excluded_device_active_blocks(self):
+        def mut(d):
+            d["residency"]["excluded"][0]["peak_delta_bytes"] = \
+                900 * 1024 * 1024
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._rewrite(self._receipts_dir(ev) /
+                          "observation-receipt-C.json", mut)
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+
+    def test_forged_token_equality_blocks(self):
+        # canonical tokens in the receipt but the raw RESPONSE bytes
+        # differ (the forged-equality class: tokens alone prove
+        # nothing; artifact digests + non-perturbation bind truth)
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            p = self._receipts_dir(ev) / "B.resp.json"
+            d = self._load(p)
+            d["tokens"] = [999999] + d["tokens"][1:]
+            p.write_text(json.dumps(d))
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+
+    def test_receipt_digest_tamper_blocks(self):
+        # mutate a validated field WITHOUT re-digesting
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            p = self._receipts_dir(ev) / "observation-receipt-A.json"
+            d = self._load(p)
+            d["device_proof"]["selected"]["uuid"] = "GPU-forged"
+            p.write_text(json.dumps(d))
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+            ot = (doc["checks"]["score_characterization"]
+                  ["observation_execution_truth"])
+            self.assertIn("observation_receipt:digest",
+                          "".join(ot["A"]["problems"]))
+
+    def test_no_cuda_backend_mapped_blocks(self):
+        # maps show CPU-only backends in the CUDA arm
+        def mut(d):
+            d["in_process_backends"]["mapped_libggml"] = [
+                "libggml-base.so", "libggml-cpu.so"]
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._rewrite(self._receipts_dir(ev) /
+                          "observation-receipt-A.json", mut)
+            doc = red.derive_terminal(ev, closure=CLOSURE)
+            self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+
+    def test_receipt_covers_all_mutation_classes(self):
+        # structural: each documented mutation class has a test
+        for label in self.RECEIPT_MUTATIONS:
+            self.assertTrue(
+                hasattr(self, self._TEST_FOR[label]),
+                f"missing mutation-class test: {label}")
+
+
+class TestObservationPinSelectors(unittest.TestCase):
+    """Round-3: the pin's selector/ICD authority is mechanically
+    enforced (previously authored strings nothing validated)."""
+
+    def _pin(self, ev: Path) -> Path:
+        return (ev / "candidate" / "characterization" / "pos0" /
+                "pos0-observation-pin.json")
+
+    def _mutate_pin(self, ev, mutate):
+        d = json.loads(self._pin(ev).read_text())
+        mutate(d)
+        self._pin(ev).write_text(json.dumps(d))
+
+    def test_valid_pin_passes(self):
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            problems = red._validate_observation_pin(ev, 0)
+            self.assertEqual(problems, [])
+
+    def test_pin_selector_mutation_blocks(self):
+        for arm, key, val in (
+                ("A", "CUDA_VISIBLE_DEVICES", "GPU-forged"),
+                ("B", "GGML_VK_VISIBLE_DEVICES", "1"),
+                ("C", "VK_ICD_FILENAMES", "/other/radeon_icd.json")):
+            with tempfile.TemporaryDirectory() as t:
+                ev = make_evidence(Path(t))
+                self._mutate_pin(
+                    ev, lambda d, a=arm, k=key, v=val:
+                    d["observation_producer"]["selectors"][a]
+                    .__setitem__(k, v))
+                problems = red._validate_observation_pin(ev, 0)
+                self.assertTrue(
+                    any(f"arm{arm}:selector" in p for p in problems),
+                    f"{arm}/{key}: {problems}")
+
+    def test_pin_relative_icd_blocks(self):
+        for arm in ("B", "C"):
+            with tempfile.TemporaryDirectory() as t:
+                ev = make_evidence(Path(t))
+                self._mutate_pin(
+                    ev, lambda d, a=arm:
+                    d["observation_producer"]["selectors"][a]
+                    .__setitem__("VK_ICD_FILENAMES", "radeon_icd.json"))
+                problems = red._validate_observation_pin(ev, 0)
+                self.assertTrue(
+                    any("icd_not_absolute" in p or
+                        f"arm{a}:selector" in p
+                        for p in problems for a in [arm]),
+                    f"{arm}: {problems}")
+
+    def test_pin_missing_selector_blocks(self):
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._mutate_pin(
+                ev, lambda d:
+                d["observation_producer"]["selectors"].pop("A"))
+            problems = red._validate_observation_pin(ev, 0)
+            self.assertTrue(any("selector" in p for p in problems))
+
+    def test_pin_icd_sha_mutation_blocks(self):
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._mutate_pin(
+                ev, lambda d:
+                d["observation_producer"]["icd_sha256"]
+                .__setitem__("B", "0" * 64))
+            problems = red._validate_observation_pin(ev, 0)
+            self.assertTrue(any("icd_sha256" in p for p in problems))
 
 
 class TestReducerTerminals(unittest.TestCase):

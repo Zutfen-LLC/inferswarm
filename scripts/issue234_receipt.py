@@ -60,6 +60,14 @@ PHYSICAL_PRODUCERS: tuple[str, ...] = (
     "scripts/issue234_placement.py",
     "scripts/issue234_ladder.py",
     "scripts/issue234_health.py",
+    # Round-3: the observation execution-identity collector physically
+    # executes the bounded observation-only runs and emits their
+    # execution receipts; it is a physical producer deployed to BOTH
+    # execution hosts. NOTE: its bytes are frozen at the ROUND-3 pin
+    # (not e7d822a, which predates it) — the closure lineage pins
+    # e7d822a physical producers byte-identical, with this producer
+    # added by the round-3 re-pin.
+    "scripts/issue234_observe.py",
 )
 # REDUCTION/AUTHORITY PRODUCERS: may be amended after the pin by
 # reduction-only commits, but never to conceal physical-producer drift;
@@ -103,6 +111,64 @@ OBSERVATION_BINARIES: dict[str, dict[str, str]] = {
 #: binding prompt_sha256 for the same fixture row).
 PROMPT_CASE256_SHA256 = (
     "647c266d9e9b7769679d875a1d06fb7c47cf6f4b3acd9fb5d0364f2baa7a94b5")
+
+#: Canonical case-256 first-repeat streams (raw ladder receipts,
+#: reduce_ladder authority). Bound into the observation receipts for
+#: the non-perturbation quarantine gate.
+CANONICAL_CASE256_STREAMS: dict[str, list[int]] = {
+    "A": [328, 760, 40554, 1, 271, 12188, 279, 1727],
+    "B": [561, 324, 55965, 51624, 29014, 271, 248068, 271],
+    "C": [561, 324, 55965, 51624, 29014, 34227, 18030, 16382],
+}
+
+#: Exact frozen observation launch environments (round-3 execution-
+#: identity binding). Arm A pins the frozen RTX 3060 by CUDA_VISIBLE_
+#: DEVICES UUID; arms B/C pin the Vulkan selector plus an ABSOLUTE ICD
+#: path. These literals are the selector authority the observation pin
+#: and the execution-truth reducer both enforce.
+OBSERVATION_LAUNCH_ENV: dict[str, dict[str, str]] = {
+    "A": {"CUDA_VISIBLE_DEVICES":
+          "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"},
+    "B": {"GGML_VK_VISIBLE_DEVICES": "0",
+          "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/nvidia_icd.json",
+          "CUDA_VISIBLE_DEVICES": "-1"},
+    "C": {"GGML_VK_VISIBLE_DEVICES": "0",
+          "VK_ICD_FILENAMES": "/usr/share/vulkan/icd.d/radeon_icd.json",
+          "CUDA_VISIBLE_DEVICES": "-1"},
+}
+
+#: Frozen device identities the observation execution receipts must
+#: prove (joined from the campaign freeze + live censuses).
+OBSERVATION_FROZEN_DEVICES: dict[str, Any] = {
+    "frozen_rtx3060": {
+        "uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099",
+        "bdf": "00000000:02:00.0",
+        "vulkan_deviceUUID": "1fc28f83-1d45-926e-54d0-ba1e835ef099",
+        "sibling": {
+            "uuid": "GPU-d5c05739-96c1-7e49-89b6-bf54c2121c55",
+            "bdf": "00000000:03:00.0",
+        },
+    },
+    "C_selected_die": {
+        "bdf": "00000000:06:00.0",
+        "deviceUUID": "00000000-0600-0000-0000-000000000000",
+    },
+    "C_excluded_die": {
+        "bdf": "00000000:09:00.0",
+        "deviceUUID": "00000000-0900-0000-0000-000000000000",
+    },
+}
+
+#: ICD authority for the observation arms: absolute paths only; each
+#: file must hash to these literals (mutated/substituted ICD files
+#: fail closed). nvidia_icd.json sha is host-scoped (01 vs 02 carry
+#: different bytes — both recorded); radeon_icd.json is byte-identical
+#: on both hosts.
+OBSERVATION_ICD_SHA256: dict[str, str] = {
+    "B_nvidia_inferswarm01":
+        "5d0a0cd95951433c9ae3699932765c88ad5060288ebefeebd6c55ab945ef4be1",
+    "C_radeon": "3ed98fea4666d3e45577422eb20fee22820c85b087333f3528e5e9f0e8dc78d2",
+}
 
 # -----------------------------------------------------------------------
 # Frozen campaign authorities (issue #234 binding — consumed, never

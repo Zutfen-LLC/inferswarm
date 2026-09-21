@@ -484,8 +484,7 @@ def _f32_rank_map(values: list[float]) -> dict[int, int]:
 
 def _derive_arm_characterization(
         arm_dir: Path, arm: str, position: int,
-        canonical_tokens: list[int] | None,
-        arm_identity: dict[str, Any] | None = None) -> dict[str, Any]:
+        canonical_tokens: list[int] | None) -> dict[str, Any]:
     """Re-derive one arm's pre-choice score characterization from RAW
     observation bytes only (R8-E byte-authority contract).
 
@@ -565,20 +564,11 @@ def _derive_arm_characterization(
             f"arm{arm} canonical ladder stream unavailable for "
             f"non-perturbation comparison")
     non_perturbing = obs_tokens == list(canonical_tokens)
-    # -- arm/backend/host/device identity binding ---------------------
-    # host from the retained backing receipt (execution host of the
-    # canonical arm); backend/device from the runtime receipt's
-    # frozen_gpu/selector fields — never from the characterization
-    # summary.
-    problems: list[str] = []
-    if arm_identity:
-        want_gpu = arm_identity.get("frozen_gpu") or {}
-        got_name = (arm_identity.get("selector", {})
-                    .get("devices", [{}])[0].get("name", ""))
-        if want_gpu.get("name") and got_name and \
-                want_gpu["name"] not in got_name:
-            problems.append(
-                f"device:{got_name!r}!={want_gpu['name']!r}")
+    # ROUND-3 NOTE: observation backend/device/host/binary identity is
+    # validated ONLY by reduce_observation_execution_truth (one
+    # fail-closed authority path); the earlier partial identity check
+    # keyed on runtime-receipt fields this function never supplied and
+    # could never fire (removed as inert).
     out = {
         "winner_token": winner,
         "top_2": top_k,
@@ -591,7 +581,6 @@ def _derive_arm_characterization(
         "jsonl_sha256": hashlib.sha256(jsonl.read_bytes()).hexdigest(),
         "observed_tokens": obs_tokens,
         "non_perturbation_identical": non_perturbing,
-        "identity_problems": problems,
     }
     if not non_perturbing:
         raise ReduceError(
@@ -601,11 +590,13 @@ def _derive_arm_characterization(
 
 
 def _validate_observation_pin(evidence: Path, position: int) -> list[str]:
-    """Closure-pin the observation producer: the prospective
-    pos0-observation-pin document must exist and match the frozen
-    observation identities in issue234_receipt (llama.cpp pin, hook
-    diff digest, hook env, per-arm observation binaries, prompt
-    identity, non-perturbation contract) BEFORE any characterization
+    """Closure-pin the observation producer (round-3 hardened): the
+    prospective pos0-observation-pin document must exist and match the
+    frozen observation identities in issue234_receipt (llama.cpp pin,
+    hook diff digest, hook env, per-arm observation binaries, prompt
+    identity, non-perturbation contract) AND the exact selector/ICD
+    authority (round-3: the pin previously carried selector strings
+    that nothing mechanically enforced) BEFORE any characterization
     derived from observation bytes can be accepted."""
     p = evidence / "candidate" / "characterization" / "pos0" / \
         "pos0-observation-pin.json"
@@ -636,12 +627,404 @@ def _validate_observation_pin(evidence: Path, position: int) -> list[str]:
                        {}) or bins.get(arm, {})
         if not got or got.get("sha256") != want.get("sha256"):
             problems.append(f"observation_pin:arm{arm}:binary")
+    # -- round-3: exact selector/ICD authority --------------------------
+    # The pin's selectors must equal the frozen launch environments
+    # EXACTLY (arm A CUDA selector to the frozen RTX UUID; arms B/C
+    # Vulkan selector plus ABSOLUTE ICD path). A relative ICD, a
+    # missing selector, or any mutation fails closed here.
+    sels = op.get("selectors", {})
+    for arm in ("A", "B", "C"):
+        want_env = rc.OBSERVATION_LAUNCH_ENV[arm]
+        got = sels.get(arm)
+        if not isinstance(got, dict):
+            problems.append(f"observation_pin:arm{arm}:selector:not_a_map")
+            continue
+        for key, want_val in want_env.items():
+            if got.get(key) != want_val:
+                problems.append(
+                    f"observation_pin:arm{arm}:selector:{key}")
+        if arm in ("B", "C"):
+            icd = got.get("VK_ICD_FILENAMES")
+            if icd is not None and not icd.startswith("/"):
+                problems.append(
+                    f"observation_pin:arm{arm}:icd_not_absolute")
+    # ICD byte authority carried by the pin
+    icd_pins = op.get("icd_sha256", {})
+    want_icd = {arm: rc.OBSERVATION_ICD_SHA256[key]
+                for arm, key in (("B", "B_nvidia_inferswarm01"),
+                                 ("C", "C_radeon"))}
+    for arm, want_val in want_icd.items():
+        if icd_pins.get(arm) != want_val:
+            problems.append(f"observation_pin:arm{arm}:icd_sha256")
+    # collector identity (prospective: pinned BEFORE collection)
+    coll = doc.get("collector", {})
+    if coll.get("sha256"):
+        closure_coll = _closure_collector_sha()
+        if closure_coll is not None and \
+                coll.get("sha256") != closure_coll:
+            problems.append("observation_pin:collector_sha256")
     scope = doc.get("scope", {})
     if scope.get("canonical_ladder_rerun") is not False:
         problems.append("observation_pin:rerun_not_forbidden")
     if scope.get("generated_position") != position:
         problems.append("observation_pin:scope_position")
+    if scope.get("execution_receipts_required") is not True:
+        problems.append("observation_pin:receipts_not_required")
     return problems
+
+
+def _closure_collector_sha() -> str | None:
+    """sha256 of the committed observation collector at HEAD (the
+    closure pins its blob; a drifted worktree copy fails verify_closure
+    independently). Returns None when git is unavailable (sandboxed
+    control runs operate on copied evidence trees, not the repo)."""
+    import subprocess
+    proc = subprocess.run(
+        ["git", "-C", str(rc.ROOT), "show",
+         "HEAD:scripts/issue234_observe.py"],
+        capture_output=True)
+    if proc.returncode != 0:
+        return None
+    return hashlib.sha256(proc.stdout).hexdigest()
+
+
+# ---------------------------------------------------------------------
+# Observation execution truth (round-3: the observation runs must be
+# mechanically bound to the GPU/backend selectors they represent)
+# ---------------------------------------------------------------------
+
+def _receipt_problems(arm: str, doc: dict[str, Any],
+                      base: Path, position: int,
+                      canonical_tokens: list[int] | None) -> list[str]:
+    """Mechanical per-arm validation of one observation execution
+    receipt against every frozen authority. Every check derives from
+    receipt bytes + retained raw bytes; authored booleans are never
+    trusted (the captured /proc environment, mapped libraries, device
+    censuses, and residency deltas are the proof)."""
+    problems: list[str] = []
+    frozen_env = rc.OBSERVATION_LAUNCH_ENV[arm]
+    frozen = rc.OBSERVATION_FROZEN_DEVICES
+
+    # ---- envelope / identity ----------------------------------------
+    if doc.get("campaign") != rc.CAMPAIGN_ID:
+        problems.append(f"arm{arm}:campaign")
+    if doc.get("case_id") != "case-256":
+        problems.append(f"arm{arm}:case")
+    if doc.get("generated_position") != position:
+        problems.append(f"arm{arm}:position")
+    if doc.get("arm") != arm:
+        problems.append(f"arm{arm}:arm_field")
+    host = doc.get("host", {})
+    want_host = rc.ARMS[arm]["host"]
+    if host.get("hostname") != want_host:
+        problems.append(f"arm{arm}:host:{host.get('hostname')}")
+    if not host.get("boot_id"):
+        problems.append(f"arm{arm}:boot_id")
+
+    # ---- binary identity --------------------------------------------
+    ob = doc.get("observation_binary", {})
+    want_bin = rc.OBSERVATION_BINARIES.get(arm, {})
+    if ob.get("sha256") != want_bin.get("sha256"):
+        problems.append(f"arm{arm}:binary_sha256:{ob.get('sha256')}")
+    if not ob.get("path"):
+        problems.append(f"arm{arm}:binary_path")
+
+    # ---- source pin / hook identity ---------------------------------
+    src = doc.get("source", {})
+    prov = src.get("provenance")
+    if prov == "local_r8h_obs_worktree":
+        if src.get("llama_cpp_pin") != rc.LLAMA_CPP_PIN:
+            problems.append(f"arm{arm}:source_pin")
+        if src.get("hook_diff_sha256") != rc.OBSERVATION_HOOK_DIFF_SHA256:
+            problems.append(f"arm{arm}:hook_diff")
+        if src.get("clean_excluding_hook") is not True:
+            problems.append(f"arm{arm}:source_dirty")
+    elif prov == "byte_identity_to_arm_B_binary":
+        if arm != "C":
+            problems.append(f"arm{arm}:bad_provenance")
+        # arm C's binary must be byte-identical to arm B's (deployed)
+        if ob.get("sha256") != rc.OBSERVATION_BINARIES["B"]["sha256"]:
+            problems.append(f"arm{arm}:not_byte_identical_to_B")
+    else:
+        problems.append(f"arm{arm}:provenance")
+
+    # ---- launch argv / environment -----------------------------------
+    launch = doc.get("launch", {})
+    argv = launch.get("argv") or []
+    if not argv:
+        problems.append(f"arm{arm}:no_argv")
+    else:
+        if argv[0] != ob.get("path"):
+            problems.append(f"arm{arm}:argv_binary_mismatch")
+        flat = " ".join(argv)
+        for flag, want in (("--n-gpu-layers", str(rc.MATCHED_NGL)),
+                           ("--ctx-size",
+                            str(rc.CONTEXT_SETTINGS["ctx-size"])),
+                           ("--batch-size",
+                            str(rc.CONTEXT_SETTINGS["batch-size"]))):
+            if f"{flag} {want}" not in flat:
+                problems.append(f"arm{arm}:argv:{flag}")
+    # the /proc/PID/environ capture must carry the EXACT frozen
+    # selector/ICD environment (mutation of the actual execution
+    # selector fails closed here)
+    got_env = launch.get("env") or {}
+    for key, want_val in frozen_env.items():
+        if got_env.get(key) != want_val:
+            problems.append(
+                f"arm{arm}:env:{key}:{got_env.get(key)!r}")
+    # hook env
+    if got_env.get("LLAMA_OBSERVE_FOCUS") != rc.OBSERVATION_FOCUS_ENV:
+        problems.append(f"arm{arm}:env:observe_focus")
+    if got_env.get("LLAMA_OBSERVE_POS") != str(position):
+        problems.append(f"arm{arm}:env:observe_pos")
+    # ICD authority (absolute path + byte hash)
+    if arm in ("B", "C"):
+        icd = launch.get("icd") or {}
+        want_icd_path = frozen_env["VK_ICD_FILENAMES"]
+        if icd.get("path") != want_icd_path:
+            problems.append(f"arm{arm}:icd_path:{icd.get('path')}")
+        want_icd_sha = rc.OBSERVATION_ICD_SHA256[
+            "B_nvidia_inferswarm01" if arm == "B" else "C_radeon"]
+        if icd.get("sha256") != want_icd_sha:
+            problems.append(f"arm{arm}:icd_sha256")
+        if not str(icd.get("path", "")).startswith("/"):
+            problems.append(f"arm{arm}:icd_not_absolute")
+
+    # ---- in-process backend participation ----------------------------
+    mapped = set((doc.get("in_process_backends") or {})
+                 .get("mapped_libggml") or [])
+    if arm == "A":
+        if "libggml-cuda.so" not in mapped and \
+                "libggml-cuda.so.0" not in mapped:
+            problems.append(f"arm{arm}:cuda_backend_not_mapped")
+        if any("vulkan" in m for m in mapped):
+            problems.append(f"arm{arm}:vulkan_backend_in_cuda_arm")
+    else:
+        if not any("vulkan" in m for m in mapped):
+            problems.append(f"arm{arm}:vulkan_backend_not_mapped")
+        if any("cuda" in m for m in mapped):
+            problems.append(f"arm{arm}:cuda_backend_in_vulkan_arm")
+
+    # ---- device proof -------------------------------------------------
+    dp = doc.get("device_proof", {})
+    want_backend = "cuda" if arm == "A" else "vulkan"
+    if dp.get("backend") != want_backend:
+        problems.append(f"arm{arm}:backend:{dp.get('backend')}")
+    ld_parsed = (dp.get("list_devices") or {}).get("parsed") or []
+    if not ld_parsed:
+        problems.append(f"arm{arm}:no_devices_under_launch_env")
+    else:
+        if arm == "A" and not any(
+                d.get("label", "").startswith("CUDA") for d in ld_parsed):
+            problems.append(f"arm{arm}:no_cuda_device_listed")
+        if arm != "A" and not any(
+                d.get("label", "").startswith("Vulkan") for d in ld_parsed):
+            problems.append(f"arm{arm}:no_vulkan_device_listed")
+        if any(d.get("label", "").startswith("CUDA") for d in ld_parsed) \
+                and arm != "A":
+            problems.append(f"arm{arm}:cuda_device_in_vulkan_arm")
+        if any(d.get("label", "").startswith("Vulkan") for d in ld_parsed) \
+                and arm == "A":
+            problems.append(f"arm{arm}:vulkan_device_in_cuda_arm")
+    sel = dp.get("selected") or {}
+    excluded = dp.get("excluded") or []
+    g3060 = frozen["frozen_rtx3060"]
+    if arm in ("A", "B"):
+        if sel.get("uuid") != g3060["uuid"]:
+            problems.append(f"arm{arm}:selected_uuid:{sel.get('uuid')}")
+        if sel.get("bdf") != g3060["bdf"]:
+            problems.append(f"arm{arm}:selected_bdf:{sel.get('bdf')}")
+    else:
+        c_sel = frozen["C_selected_die"]
+        c_ex = frozen["C_excluded_die"]
+        if sel.get("bdf") != c_sel["bdf"]:
+            problems.append(f"arm{arm}:selected_die:{sel.get('bdf')}")
+        if sel.get("deviceUUID") != c_sel["deviceUUID"]:
+            problems.append(f"arm{arm}:selected_uuid:{sel.get('deviceUUID')}")
+        if not excluded or excluded[0].get("bdf") != c_ex["bdf"]:
+            problems.append(f"arm{arm}:excluded_die_binding")
+    # vulkan physical-device join (arms B/C): GPU0 under the exact ICD
+    if arm in ("B", "C"):
+        phys = dp.get("vulkan_physical_devices") or []
+        gpu0 = next((e for e in phys if e.get("gpu_index") == "GPU0"), None)
+        if gpu0 is None:
+            problems.append(f"arm{arm}:no_vulkan_gpu0")
+        else:
+            if arm == "B":
+                if gpu0.get("deviceUUID") != g3060["vulkan_deviceUUID"]:
+                    problems.append(
+                        f"arm{arm}:vk_gpu0_uuid:{gpu0.get('deviceUUID')}")
+                if gpu0.get("bdf") != g3060["bdf"]:
+                    problems.append(f"arm{arm}:vk_gpu0_bdf:{gpu0.get('bdf')}")
+                if "NVIDIA" not in (gpu0.get("driverName") or ""):
+                    problems.append(f"arm{arm}:vk_gpu0_not_nvidia_icd")
+            else:
+                if gpu0.get("bdf") != frozen["C_selected_die"]["bdf"]:
+                    problems.append(
+                        f"arm{arm}:vk_gpu0_bdf:{gpu0.get('bdf')}")
+                if "RADV" not in (gpu0.get("driverName") or "") \
+                        and "radv" not in (gpu0.get("driverID") or ""):
+                    problems.append(f"arm{arm}:vk_gpu0_not_radv")
+        # wrong ICD vendor: the OTHER vendor's devices must be absent
+        # under the restricted census
+        for e in phys:
+            dn = (e.get("driverName") or "").upper()
+            if arm == "B" and ("RADV" in dn or "AMD" in dn):
+                problems.append(f"arm{arm}:amd_device_under_nvidia_icd")
+            if arm == "C" and "NVIDIA" in dn:
+                problems.append(f"arm{arm}:nvidia_device_under_radv_icd")
+    # CUDA live binding (arm A): the server PID must be bound to the
+    # frozen GPU by nvidia-smi compute-apps during generation
+    if arm == "A":
+        bound = (doc.get("residency", {})
+                 .get("compute_apps_bound_to_pid")) or []
+        phases = {b.get("phase") for b in bound}
+        if not bound:
+            problems.append(f"arm{arm}:no_compute_app_binding")
+        elif not ({"loaded", "generation"} & phases):
+            problems.append(f"arm{arm}:compute_binding_outside_window")
+        for b in bound:
+            if b.get("gpu_uuid") != g3060["uuid"]:
+                problems.append(
+                    f"arm{arm}:compute_bound_to_wrong_gpu:"
+                    f"{b.get('gpu_uuid')}")
+
+    # ---- residency / activity ----------------------------------------
+    res = doc.get("residency", {})
+    sel_bytes = res.get("selected_delta_bytes")
+    if not isinstance(sel_bytes, int) or \
+            sel_bytes < rc.EXCLUDED_DEVICE_MAX_BYTES:
+        problems.append(f"arm{arm}:zero_selected_device_activity")
+    for ex in res.get("excluded") or []:
+        peak = ex.get("peak_delta_bytes")
+        if not isinstance(peak, int) or \
+                peak >= rc.EXCLUDED_DEVICE_MAX_BYTES:
+            problems.append(f"arm{arm}:excluded_device_active:{ex.get('bdf')}")
+
+    # ---- CPU-fallback rejection (re-derived, never the authored
+    #      boolean) -----------------------------------------------------
+    cf = doc.get("cpu_fallback", {})
+    warning = cf.get("no_usable_gpu_warning_present") is True
+    listed = bool(ld_parsed)
+    if warning:
+        problems.append(f"arm{arm}:cpu_fallback_warning")
+    if not listed:
+        problems.append(f"arm{arm}:no_devices_listed")
+    if not (isinstance(sel_bytes, int)
+            and sel_bytes >= rc.EXCLUDED_DEVICE_MAX_BYTES):
+        problems.append(f"arm{arm}:no_model_scale_residency")
+
+    # ---- artifacts bind the receipt to the retained bytes -------------
+    arts = doc.get("artifacts", {})
+    for key, fname in (("observation_jsonl", f"{arm}.jsonl"),
+                       ("pos0_f32", f"{arm}.jsonl.pos{position}.f32"),
+                       ("response", f"{arm}.resp.json"),
+                       ("server_log", f"{arm}.server.log")):
+        want_p = base / fname
+        if not want_p.is_file():
+            problems.append(f"arm{arm}:artifact_missing:{fname}")
+            continue
+        if arts.get(key) != hashlib.sha256(
+                want_p.read_bytes()).hexdigest():
+            problems.append(f"arm{arm}:artifact_digest:{key}")
+
+    # ---- generated stream equals the canonical stream -----------------
+    toks = doc.get("generated_tokens")
+    if canonical_tokens is not None and toks != list(canonical_tokens):
+        problems.append(f"arm{arm}:tokens_not_canonical")
+
+    # ---- exit ----------------------------------------------------------
+    if doc.get("exit", {}).get("returncode") not in (-15, 143, 0):
+        problems.append(
+            f"arm{arm}:exit:{doc.get('exit', {}).get('returncode')}")
+    return problems
+
+
+def reduce_observation_execution_truth(
+        evidence: Path, position: int = 0,
+        canonical_streams: dict[str, list[int] | None] | None = None,
+        closure: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Round-3 blocker fix: the observation-only score-characterization
+    executions must be mechanically bound to the GPU/backend selectors
+    they claim to represent. Token equality with the canonical stream
+    is NOT identity proof (the quarantined relative-ICD incident
+    proved fallback CAN change tokens, but equality was never proof).
+
+    For each A/B/C characterization arm this reducer mechanically
+    compares, from receipt bytes + retained raw bytes + frozen
+    authorities only:
+      * the prospective observation pin (selectors/ICD/binaries);
+      * the observation execution receipt (launch env captured at
+        exec from /proc/PID/environ, argv, mapped backends, device
+        censuses under the exact launch env, residency deltas,
+        compute-app bindings, artifact digests, generated stream);
+      * the campaign freeze (frozen RTX 3060 / V340L die identities);
+      * the canonical runtime authority (llama.cpp pin, hook digest);
+      * the selected GPU identity (A/B MUST select the SAME frozen
+        RTX 3060 UUID/BDF; C MUST select die 06:00.0 and exclude
+        09:00.0);
+      * the observation binary identity (actual deployed hash MUST
+        equal the prospectively authorized hash).
+
+    Returns {arm: {status: OK|FAIL|ABSENT, problems, ...}}; the score
+    characterization terminal gate requires status == OK for all
+    three arms, else R8H_EVIDENCE_BLOCKED."""
+    base = evidence / "candidate" / "characterization" / f"pos{position}"
+    out: dict[str, Any] = {}
+    for arm in ("A", "B", "C"):
+        p = base / f"observation-receipt-{arm}.json"
+        if not p.is_file():
+            out[arm] = {"status": "ABSENT",
+                        "problems": ["observation_receipt:absent"]}
+            continue
+        try:
+            doc = json.loads(p.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            out[arm] = {"status": "ABSENT",
+                        "problems": ["observation_receipt:unparsable"]}
+            continue
+        # self-digest envelope (tamper with any validated field ->
+        # digest mismatch fails closed before field checks run)
+        digest = doc.get("digest")
+        body = dict(doc)
+        body["digest"] = "PENDING"
+        if rc.sha256_bytes(rc.canonical(body)) != digest:
+            out[arm] = {"status": "FAIL",
+                        "problems": ["observation_receipt:digest"]}
+            continue
+        can = (canonical_streams or {}).get(arm)
+        problems = _receipt_problems(arm, doc, base, position, can)
+        sel = ((doc.get("device_proof") or {}).get("selected") or {})
+        out[arm] = {
+            "status": "OK" if not problems else "FAIL",
+            "problems": problems,
+            "host": (doc.get("host") or {}).get("hostname"),
+            "binary_sha256": (doc.get("observation_binary") or {})
+            .get("sha256"),
+            "selected_gpu": {
+                "uuid": sel.get("uuid"),
+                "bdf": sel.get("bdf"),
+                "deviceUUID": sel.get("deviceUUID"),
+            },
+            "backend": (doc.get("device_proof") or {}).get("backend"),
+            "selected_delta_bytes":
+                (doc.get("residency") or {}).get("selected_delta_bytes"),
+        }
+    # ---- cross-arm relation: A and B executed on the SAME GPU --------
+    g3060 = rc.OBSERVATION_FROZEN_DEVICES["frozen_rtx3060"]
+    a_sel = out.get("A", {}).get("selected_gpu") or {}
+    b_sel = out.get("B", {}).get("selected_gpu") or {}
+    ab_same = (a_sel.get("uuid") == b_sel.get("uuid") ==
+               g3060["uuid"] and
+               a_sel.get("bdf") == b_sel.get("bdf") == g3060["bdf"])
+    out["AB_same_gpu"] = {
+        "uuid": g3060["uuid"], "bdf": g3060["bdf"],
+        "A": a_sel, "B": b_sel,
+        "same_frozen_rtx3060": ab_same,
+        "status": "OK" if ab_same else "FAIL",
+        "problems": [] if ab_same else ["A_B_gpu_identity_divergence"],
+    }
+    return out
 
 
 def characterization_ok(evidence: Path, case_id: str,
@@ -689,17 +1072,30 @@ def characterization_ok(evidence: Path, case_id: str,
             a = ladder_case.get("arms", {}).get(arm, {})
             canon[arm] = a.get("tokens")
     derived: dict[str, Any] = {}
-    arm_identities = _arm_identity_map(evidence)
     base_dir = evidence / "candidate" / "characterization"
     arm_dir = base_dir / "pos0" if required_position == 0 else base_dir
+    obs_truth: dict[str, Any] | None = None
     if required_position == 0:
         problems.extend(_validate_observation_pin(
             evidence, required_position))
+        # ROUND-3 BLOCKER FIX: the observation executions must be
+        # mechanically bound to the GPU/backend selectors they claim
+        # to represent. Token equality is NOT identity proof; the
+        # observation execution receipts are.
+        obs_truth = reduce_observation_execution_truth(
+            evidence, required_position, canonical_streams=canon)
+        obs_fail = {a: v for a, v in obs_truth.items()
+                    if isinstance(v, dict) and v.get("status") != "OK"}
+        if obs_fail:
+            problems.append(
+                "observation_execution_truth:"
+                + json.dumps({a: (v.get("problems") or
+                                  [v.get("status")])[:4]
+                              for a, v in obs_fail.items()})[:400])
     for arm in ("A", "B", "C"):
         try:
             derived[arm] = _derive_arm_characterization(
-                arm_dir, arm, required_position, canon.get(arm),
-                arm_identities.get(arm))
+                arm_dir, arm, required_position, canon.get(arm))
         except ReduceError as e:
             problems.append(f"arm{arm}:{str(e)[:160]}")
     # -- summary consistency -------------------------------------------
@@ -746,25 +1142,8 @@ def characterization_ok(evidence: Path, case_id: str,
         "summary_disagreements": disagreements,
         "derived": derived,
         "secondary": secondary,
+        "observation_execution_truth": obs_truth,
     }
-
-
-def _arm_identity_map(evidence: Path) -> dict[str, dict[str, Any]]:
-    """Host/backend binding per arm from the retained runtime receipts
-    (never from the characterization summary)."""
-    out: dict[str, dict[str, Any]] = {}
-    for arm in ("A", "B", "C"):
-        p = evidence / "runtime" / f"arm{arm}-runtime.json"
-        if not p.is_file():
-            continue
-        doc = _load(p)
-        out[arm] = {
-            "host": doc.get("host"),
-            "backend": "cuda" if arm == "A" else "vulkan",
-            "binary_sha256": doc.get("binaries", {})
-            .get("llama-server", {}).get("sha256"),
-        }
-    return out
 
 
 def _secondary_characterization(evidence: Path, case_id: str) \
@@ -958,6 +1337,26 @@ def derive_terminal(evidence: Path, closure: dict[str, Any] | None = None
                         "position-0 characterization re-derived from "
                         "raw float32 bytes; position-5 retained as "
                         "secondary_device_axis_characterization")
+                    basis.append(
+                        "divergence structure decomposed without a "
+                        "single causal-root claim: backend-associated "
+                        "A<->B divergence at position 0 (same frozen "
+                        "RTX 3060, CUDA vs Vulkan); A<->C also "
+                        "diverging at 0 (backend+device axes "
+                        "concurrent); B<->C equal through position 4 "
+                        "and first diverging at position 5 (later "
+                        "device/backend interaction); each axis is "
+                        "characterized separately")
+                    ot = (checks.get("score_characterization") or {}
+                          .get("observation_execution_truth") or {})
+                    if ot:
+                        basis.append(
+                            "observation execution identity "
+                            "mechanically bound for all three arms "
+                            "(receipts prove launch env, ICD, selected "
+                            "GPU UUID/BDF, backend participation, "
+                            "residency, and binary identity; A and B "
+                            "prove the SAME frozen RTX 3060)")
 
     # retired-terminal guard: can never be emitted
     assert terminal != RETIRED_TERMINAL
