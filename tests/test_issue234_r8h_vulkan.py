@@ -1400,6 +1400,15 @@ class TestDeployedProducerVerification(unittest.TestCase):
                     "issue234_ladder.py"),
                 "ladder")
 
+    def test_missing_receipt_dependency_fails(self):
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._expect_fail(
+                ev,
+                lambda d: d["hosts"]["inferswarm02"]["hashes"].pop(
+                    "issue234_receipt.py"),
+                "receipt-dependency")
+
     def test_wrong_ladder_hash_fails(self):
         with tempfile.TemporaryDirectory() as t:
             ev = make_evidence(Path(t))
