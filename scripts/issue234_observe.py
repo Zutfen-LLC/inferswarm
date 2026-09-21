@@ -61,7 +61,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import issue234_receipt as rc
 
-RECEIPT_SCHEMA = "inferswarm.r8h.observation-execution-receipt/1"
+RECEIPT_SCHEMA = rc.OBSERVATION_RECEIPT_SCHEMA
 POSITION = 0
 MODEL_SCALE_BYTES = rc.EXCLUDED_DEVICE_MAX_BYTES  # 8 MiB noise bound;
 # a selected device carrying LESS than this never held model tensors.
@@ -250,26 +250,70 @@ def source_identity(worktree: Path | None) -> dict[str, Any]:
     }
 
 
+def execution_package_manifest(server: Path) -> dict[str, Any]:
+    """Hash the complete executable/shared-object package before launch.
+
+    Aliases are retained by name, while each record hashes the resolved regular
+    file.  Authority therefore survives soname symlinks but never reduces to a
+    basename-only assertion.
+    """
+    root = server.parent.resolve()
+    objects: dict[str, dict[str, Any]] = {}
+    for entry in sorted(root.iterdir()):
+        if entry.name != "llama-server" and ".so" not in entry.name:
+            continue
+        try:
+            resolved = entry.resolve(strict=True)
+            st = resolved.stat()
+        except OSError as e:
+            raise CollectError(f"package object unavailable {entry}: {e}") from e
+        if not resolved.is_file():
+            raise CollectError(f"package object is not a regular file: {entry}")
+        objects[entry.name] = {
+            "realpath": str(resolved),
+            "bytes": st.st_size,
+            "sha256": sha(resolved),
+        }
+    if "llama-server" not in objects:
+        raise CollectError("execution package lacks llama-server")
+    return {"root": str(root), "objects": objects}
+
+
+def maps_backend_objects(pid: int) -> list[dict[str, Any]]:
+    """Capture mapped libggml objects as paths plus underlying-byte identity."""
+    found: dict[tuple[str, str], dict[str, Any]] = {}
+    try:
+        for line in Path(f"/proc/{pid}/maps").read_text().splitlines():
+            fields = line.split()
+            if len(fields) < 6:
+                continue
+            path = fields[-1]
+            if "libggml" not in Path(path).name or path.endswith(" (deleted)"):
+                continue
+            p = Path(path)
+            try:
+                resolved = p.resolve(strict=True)
+                st = resolved.stat()
+            except OSError:
+                continue
+            key = (str(p), str(resolved))
+            found[key] = {"name": p.name, "path": str(p),
+                          "realpath": str(resolved), "bytes": st.st_size,
+                          "sha256": sha(resolved)}
+    except (FileNotFoundError, ProcessLookupError):
+        pass
+    return sorted(found.values(), key=lambda x: (x["name"], x["path"]))
+
+
 def bin_dir_hashes(server: Path) -> dict[str, str]:
-    out = {}
-    for f in sorted(server.parent.iterdir()):
-        if f.is_file() and (f.name.startswith("libggml") or
-                            f.name == "llama-server"):
-            out[f.name] = sha(f)
-    return out
+    """Legacy summary retained for readers; /2 authority is package manifest."""
+    return {name: meta["sha256"] for name, meta in
+            execution_package_manifest(server)["objects"].items()}
 
 
 def maps_backend_libraries(pid: int) -> list[str]:
-    libs = set()
-    try:
-        for line in Path(f"/proc/{pid}/maps").read_text().splitlines():
-            if "libggml" in line:
-                path = line.split()[-1]
-                base = path.rsplit("/", 1)[-1]
-                libs.add(base)
-    except (FileNotFoundError, ProcessLookupError):
-        pass
-    return sorted(libs)
+    """Legacy basename summary retained alongside object-identity records."""
+    return sorted({m["name"] for m in maps_backend_objects(pid)})
 
 
 def proc_env(pid: int) -> dict[str, str]:
@@ -301,8 +345,8 @@ def collect(arm: str, server: Path, model_dir: Path, out_dir: Path,
     pfx = out_dir / arm
     jsonl_path = Path(f"{pfx}.jsonl")
     for stale in (jsonl_path, Path(f"{pfx}.resp.json"),
-                  Path(f"{pfx}.server.log"), Path(f"{pfx}.jsonl.pos0.f32"),
-                  Path(f"{pfx}.jsonl.pos0.f32.tmp")):
+                  Path(f"{pfx}.request.json"), Path(f"{pfx}.server.log"),
+                  Path(f"{pfx}.jsonl.pos0.f32"), Path(f"{pfx}.jsonl.pos0.f32.tmp")):
         stale.unlink(missing_ok=True)
 
     hostname = os.uname().nodename
@@ -315,15 +359,21 @@ def collect(arm: str, server: Path, model_dir: Path, out_dir: Path,
     prompt_sha = sha(prompt_path)
     if prompt_sha != rc.PROMPT_CASE256_SHA256:
         raise CollectError("prompt identity drift")
-    prompt_doc = json.loads(prompt_path.read_text())
+    prompt_raw = prompt_path.read_bytes()
+    prompt_doc = json.loads(prompt_raw)
     model_files = sorted(model_dir.glob("*.gguf"))
     if len(model_files) != len(rc.MODEL_MEMBERS):
         raise CollectError("model member count drift")
-    member_names = [m.name for m in model_files]
-    want_names = [m["member"] for m in rc.MODEL_MEMBERS]
-    if member_names != want_names:
-        raise CollectError("model member set drift")
-    binary_sha = sha(server)
+    model_members = []
+    for want, member in zip(rc.MODEL_MEMBERS, model_files):
+        actual = {"name": member.name, "bytes": member.stat().st_size,
+                  "sha256": sha(member)}
+        if actual != {"name": want["member"], "bytes": want["bytes"],
+                      "sha256": want["sha256"]}:
+            raise CollectError(f"model member identity drift: {member.name}")
+        model_members.append(actual)
+    execution_package = execution_package_manifest(server)
+    binary_sha = execution_package["objects"]["llama-server"]["sha256"]
 
     icd_path: str | None = None
     icd_doc: dict[str, Any] | None = None
@@ -343,6 +393,10 @@ def collect(arm: str, server: Path, model_dir: Path, out_dir: Path,
     env["LLAMA_OBSERVE_LOGITS"] = str(jsonl_path)
     env["LLAMA_OBSERVE_FOCUS"] = rc.OBSERVATION_FOCUS_ENV
     env["LLAMA_OBSERVE_POS"] = str(POSITION)
+    request_body = {**rc.REQUEST_CONTRACT, "prompt": prompt_doc}
+    request_raw = rc.canonical(request_body)
+    request_path = Path(f"{pfx}.request.json")
+    request_path.write_bytes(request_raw)
 
     src_id = source_identity(source_worktree)
     if src_id.get("provenance") == "local_r8h_obs_worktree":
@@ -471,17 +525,16 @@ def collect(arm: str, server: Path, model_dir: Path, out_dir: Path,
         phase[0] = "loaded"
         argv_proc = proc_argv(pid)
         env_proc = proc_env(pid)
-        maps_libs = maps_backend_libraries(pid)
+        mapped_objects = maps_backend_objects(pid)
+        maps_libs = sorted({m["name"] for m in mapped_objects})
         mem_loaded = snapshot()
 
-        # the request (exact frozen contract)
+        # Send the exact retained canonical bytes, never a second serialization.
         phase[0] = "generation"
-        body = dict(rc.REQUEST_CONTRACT)
-        body["prompt"] = prompt_doc
         import urllib.request
         req = urllib.request.Request(
             f"http://127.0.0.1:{port}/completion",
-            data=json.dumps(body).encode(),
+            data=request_raw,
             headers={"Content-Type": "application/json"})
         resp = json.loads(urllib.request.urlopen(req, timeout=7200).read())
         Path(f"{pfx}.resp.json").write_text(
@@ -605,7 +658,9 @@ def collect(arm: str, server: Path, model_dir: Path, out_dir: Path,
         "observation_binary": {
             "path": str(server),
             "sha256": binary_sha,
-            "bin_dir": bin_dir_hashes(server),
+            "bin_dir": {name: meta["sha256"] for name, meta in
+                        execution_package["objects"].items()},
+            "package": execution_package,
         },
         "source": src_id,
         "launch": {
@@ -620,20 +675,25 @@ def collect(arm: str, server: Path, model_dir: Path, out_dir: Path,
                              "library_path")}
                     if icd_doc else None),
         },
-        "in_process_backends": {"mapped_libggml": maps_libs},
+        "in_process_backends": {"mapped_libggml": maps_libs,
+                                "mapped_objects": mapped_objects},
         "model": {
             "path": str(model_files[0].parent),
             "first_member": str(model_files[0]),
-            "members": [{"name": m.name, "bytes": m.stat().st_size}
-                        for m in model_files],
-            "member_1_sha256": sha(model_files[0]),
+            "members": model_members,
+            "total_bytes": sum(m["bytes"] for m in model_members),
             "backing_receipt": backing_rel[arm],
         },
         "geometry": {"ngl": rc.MATCHED_NGL,
                      "ctx": dict(rc.CONTEXT_SETTINGS)},
-        "request": {"contract": body_contract,
-                    "prompt_sha256": prompt_sha,
-                    "prompt_len": len(prompt_doc)},
+        "request": {
+            "contract": body_contract,
+            "prompt_sha256": prompt_sha,
+            "prompt_len": len(prompt_doc),
+            "payload": {"path": request_path.name,
+                        "sha256": sha(request_path),
+                        "bytes": len(request_raw)},
+        },
         "device_proof": dev_proof,
         "residency": {
             "sampler_interval_s": 5,
@@ -667,6 +727,7 @@ def collect(arm: str, server: Path, model_dir: Path, out_dir: Path,
             "observation_jsonl": sha(jsonl_path),
             "pos0_f32": sha(Path(f"{pfx}.jsonl.pos0.f32"))
             if Path(f"{pfx}.jsonl.pos0.f32").is_file() else None,
+            "request_payload": sha(request_path),
             "response": sha(Path(f"{pfx}.resp.json")),
             "server_log": sha(log_path),
         },

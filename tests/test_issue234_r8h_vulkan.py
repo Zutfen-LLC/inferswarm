@@ -63,6 +63,24 @@ def obs_jsonl(position: int, f32row: bytes, sampled: int) -> str:
     return json.dumps(row) + "\n"
 
 
+def synthetic_package(arm: str) -> dict:
+    """Pinned execution package fixture; B/C deliberately share bytes."""
+    backend = "libggml-cuda.so" if arm == "A" else "libggml-vulkan.so"
+    tag = "a" if arm == "A" else "v"
+    objects = {
+        name: {"realpath": f"/package/{name}", "bytes": size,
+               "sha256": digest}
+        for name, size, digest in (
+            ("llama-server", 101, rc.OBSERVATION_BINARIES[arm]["sha256"]),
+            ("libggml.so", 102, tag * 64),
+            ("libggml-base.so", 103, tag.upper() * 64),
+            ("libggml-cpu.so", 104, ("c" if arm == "A" else "d") * 64),
+            (backend, 105, ("e" if arm == "A" else "f") * 64),
+        )
+    }
+    return {"root": f"/opt/obs/{arm}", "objects": objects}
+
+
 def make_obs_corpus(ev: Path, arm: str, tokens: list[int],
                     f32row: bytes, *, position: int = 0,
                     dir_name: str = "pos0", pin: bool = True) -> None:
@@ -75,7 +93,7 @@ def make_obs_corpus(ev: Path, arm: str, tokens: list[int],
     if pin and dir_name == "pos0" and not (d / "pos0-observation-pin.json"
                                            ).is_file():
         pin_doc = {
-            "schema": "inferswarm.r8h.pos0-observation-pin/1",
+            "schema": "inferswarm.r8h.pos0-observation-pin/2",
             "scope": {"generated_position": position,
                       "canonical_ladder_rerun": False,
                       "execution_receipts_required": True},
@@ -97,6 +115,15 @@ def make_obs_corpus(ev: Path, arm: str, tokens: list[int],
                     "B_vulkan_inferswarm01": {"sha256": rc.OBSERVATION_BINARIES["B"]["sha256"]},
                     "C_vulkan_inferswarm02": {"sha256": rc.OBSERVATION_BINARIES["C"]["sha256"]},
                 },
+                "execution_packages": {a: synthetic_package(a) for a in "ABC"},
+                "same_vulkan_package": True,
+                "model_members": [{"name": m["member"], "bytes": m["bytes"],
+                                   "sha256": m["sha256"]} for m in rc.MODEL_MEMBERS],
+                "model_subject": "/models",
+                "prompt_sha256": rc.PROMPT_CASE256_SHA256,
+                "prompt_len": rc.PROMPT_CASE256_LENGTH,
+                "request_contract": dict(rc.REQUEST_CONTRACT),
+                "launch_contract": {"port": 18493, "host": "127.0.0.1"},
             },
         }
         w(d / "pos0-observation-pin.json", pin_doc)
@@ -189,6 +216,17 @@ def obs_receipt(arm: str, out_dir: Path, *, tokens: list[int],
                "sha256": rc.OBSERVATION_ICD_SHA256[
                    "B_nvidia_inferswarm01" if arm == "B" else "C_radeon"],
                "library_path": "libGLX_nvidia.so.0"}
+    package = synthetic_package(arm)
+    mapped_objects = [
+        {"name": name, "path": f"/opt/obs/{arm}/{name}",
+         "realpath": meta["realpath"], "bytes": meta["bytes"],
+         "sha256": meta["sha256"]}
+        for name, meta in package["objects"].items() if name.startswith("libggml")]
+    prompt = [0] * 256
+    request_body = {**rc.REQUEST_CONTRACT, "prompt": prompt}
+    request_raw = rc.canonical(request_body)
+    request_path = jsonl.parent / f"{arm}.request.json"
+    request_path.write_bytes(request_raw)
     compute = []
     if arm == "A":
         compute = [{"t": 1.0, "phase": "generation",
@@ -196,7 +234,7 @@ def obs_receipt(arm: str, out_dir: Path, *, tokens: list[int],
                     "gpu_uuid": frozen["frozen_rtx3060"]["uuid"],
                     "used_memory": "900 MiB"}]
     receipt: dict = {
-        "schema": "inferswarm.r8h.observation-execution-receipt/1",
+        "schema": "inferswarm.r8h.observation-execution-receipt/2",
         "campaign": rc.CAMPAIGN_ID,
         "case_id": "case-256",
         "generated_position": 0,
@@ -206,7 +244,10 @@ def obs_receipt(arm: str, out_dir: Path, *, tokens: list[int],
         "observation_binary": {
             "path": f"/opt/obs/{arm}/llama-server",
             "sha256": bin_meta["sha256"],
-            "bin_dir": {"llama-server": bin_meta["sha256"]}},
+            "bin_dir": {name: meta["sha256"]
+                        for name, meta in package["objects"].items()},
+            "package": package,
+        },
         "source": ({"provenance": "local_r8h_obs_worktree",
                     "worktree": "/opt/src",
                     "llama_cpp_pin": rc.LLAMA_CPP_PIN,
@@ -219,24 +260,31 @@ def obs_receipt(arm: str, out_dir: Path, *, tokens: list[int],
         "launch": {
             "pid": 4242,
             "argv": [f"/opt/obs/{arm}/llama-server", "--model",
-                     "/models/m1.gguf", "--n-gpu-layers", "1",
-                     "--ctx-size", "8192", "--batch-size", "512",
-                     "--port", "18493", "--host", "127.0.0.1"],
+                     f"/models/{rc.MODEL_MEMBERS[0]['member']}",
+                     "--n-gpu-layers", "1", "--ctx-size", "8192",
+                     "--batch-size", "512", "--port", "18493",
+                     "--host", "127.0.0.1"],
             "env": env,
             "env_present_keys": sorted(env),
             "icd": icd,
         },
-        "in_process_backends": {"mapped_libggml": maps},
-        "model": {"path": "/models", "first_member": "/models/m1.gguf",
-                  "members": [{"name": m["member"], "bytes": m["bytes"]}
+        "in_process_backends": {"mapped_libggml": maps,
+                                "mapped_objects": mapped_objects},
+        "model": {"path": "/models",
+                  "first_member": f"/models/{rc.MODEL_MEMBERS[0]['member']}",
+                  "members": [{"name": m["member"], "bytes": m["bytes"],
+                               "sha256": m["sha256"]}
                               for m in rc.MODEL_MEMBERS],
-                  "member_1_sha256": rc.MODEL_MEMBERS[0]["sha256"],
+                  "total_bytes": rc.TOTAL_MODEL_BYTES,
                   "backing_receipt": f"arm{arm}-backing.json"},
         "geometry": {"ngl": rc.MATCHED_NGL,
                      "ctx": dict(rc.CONTEXT_SETTINGS)},
         "request": {"contract": dict(rc.REQUEST_CONTRACT),
                     "prompt_sha256": rc.PROMPT_CASE256_SHA256,
-                    "prompt_len": 252},
+                    "prompt_len": 256,
+                    "payload": {"path": request_path.name,
+                                "sha256": rc.sha256_bytes(request_raw),
+                                "bytes": len(request_raw)}},
         "device_proof": {
             "backend": "cuda" if arm == "A" else "vulkan",
             "list_devices": ld,
@@ -273,6 +321,7 @@ def obs_receipt(arm: str, out_dir: Path, *, tokens: list[int],
         "artifacts": {
             "observation_jsonl": rc.sha256_bytes(jsonl.read_bytes()),
             "pos0_f32": rc.sha256_bytes(f32.read_bytes()),
+            "request_payload": rc.sha256_bytes(request_raw),
             "response": rc.sha256_bytes(resp.read_bytes()),
             "server_log": (rc.sha256_bytes(server_log.read_bytes())
                            if server_log and server_log.is_file() else
@@ -673,6 +722,22 @@ class TestObservationExecutionTruth(unittest.TestCase):
         "zero_selected_activity": "selected GPU carried no residency",
         "excluded_active": "excluded device active during run",
         "forged_equality": "canonical tokens with wrong identity",
+        "model_member_1_sha": "model member 1 sha256 drift",
+        "model_member_2_sha": "model member 2 sha256 drift",
+        "model_member_3_sha": "model member 3 sha256 drift",
+        "model_member_size": "model member byte length drift",
+        "model_member_missing": "model member missing",
+        "model_member_foreign": "foreign/additional model member",
+        "prompt_sha": "prompt sha256 drift",
+        "request_contract": "sampler/top-k/temperature/seed/n_predict drift",
+        "duplicate_argv": "conflicting duplicate execution argv option",
+        "model_path": "argv model path does not bind model subject",
+        "vulkan_package": "libggml-vulkan bytes drift",
+        "cuda_package": "libggml-cuda bytes drift",
+        "common_package": "common libggml bytes drift",
+        "missing_package": "required backend package object absent",
+        "bc_package": "B/C Vulkan package mismatch",
+        "mapped_package": "mapped backend object outside authorized package",
     }
     # test-method name for each mutation-class label
     _TEST_FOR = {
@@ -691,6 +756,22 @@ class TestObservationExecutionTruth(unittest.TestCase):
         "zero_selected_activity": "test_zero_selected_activity_blocks",
         "excluded_active": "test_excluded_device_active_blocks",
         "forged_equality": "test_forged_token_equality_blocks",
+        "model_member_1_sha": "test_model_member_hashes_block",
+        "model_member_2_sha": "test_model_member_hashes_block",
+        "model_member_3_sha": "test_model_member_hashes_block",
+        "model_member_size": "test_model_member_shape_blocks",
+        "model_member_missing": "test_model_member_shape_blocks",
+        "model_member_foreign": "test_model_member_shape_blocks",
+        "prompt_sha": "test_prompt_and_request_contract_block",
+        "request_contract": "test_prompt_and_request_contract_block",
+        "duplicate_argv": "test_duplicate_execution_argv_blocks",
+        "model_path": "test_wrong_model_path_blocks",
+        "vulkan_package": "test_execution_package_hashes_block",
+        "cuda_package": "test_execution_package_hashes_block",
+        "common_package": "test_execution_package_hashes_block",
+        "missing_package": "test_missing_required_package_object_blocks",
+        "bc_package": "test_bc_vulkan_package_mismatch_blocks",
+        "mapped_package": "test_mapped_object_not_authorized_blocks",
     }
 
     def _receipts_dir(self, ev: Path) -> Path:
@@ -952,6 +1033,112 @@ class TestObservationExecutionTruth(unittest.TestCase):
                           "observation-receipt-A.json", mut)
             doc = red.derive_terminal(ev, closure=CLOSURE)
             self.assertEqual(doc["terminal"], red.TERMINAL_BLOCKED)
+
+    def test_model_member_hashes_block(self):
+        for index in range(3):
+            with self.subTest(member=index + 1), tempfile.TemporaryDirectory() as t:
+                ev = make_evidence(Path(t))
+                def mut(d, i=index):
+                    d["model"]["members"][i]["sha256"] = "0" * 64
+                self._rewrite(self._receipts_dir(ev) /
+                              "observation-receipt-A.json", mut)
+                self.assertEqual(red.derive_terminal(ev, closure=CLOSURE)["terminal"],
+                                 red.TERMINAL_BLOCKED)
+
+    def test_model_member_shape_blocks(self):
+        mutations = {
+            "size": lambda d: d["model"]["members"][1].__setitem__("bytes", 1),
+            "missing": lambda d: d["model"].__setitem__("members", d["model"]["members"][:-1]),
+            "foreign": lambda d: d["model"]["members"].append(
+                {"name": "foreign.gguf", "bytes": 1, "sha256": "f" * 64}),
+        }
+        for label, mut in mutations.items():
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as t:
+                ev = make_evidence(Path(t))
+                self._rewrite(self._receipts_dir(ev) /
+                              "observation-receipt-B.json", mut)
+                self.assertEqual(red.derive_terminal(ev, closure=CLOSURE)["terminal"],
+                                 red.TERMINAL_BLOCKED)
+
+    def test_prompt_and_request_contract_block(self):
+        mutations = {
+            "prompt": lambda d: d["request"].__setitem__("prompt_sha256", "0" * 64),
+            "samplers": lambda d: d["request"]["contract"].__setitem__("samplers", ["greedy"]),
+            "top_k": lambda d: d["request"]["contract"].__setitem__("top_k", 2),
+            "temperature": lambda d: d["request"]["contract"].__setitem__("temperature", 0.5),
+            "seed": lambda d: d["request"]["contract"].__setitem__("seed", 1),
+            "n_predict": lambda d: d["request"]["contract"].__setitem__("n_predict", 9),
+        }
+        for label, mut in mutations.items():
+            with self.subTest(label=label), tempfile.TemporaryDirectory() as t:
+                ev = make_evidence(Path(t))
+                self._rewrite(self._receipts_dir(ev) /
+                              "observation-receipt-C.json", mut)
+                self.assertEqual(red.derive_terminal(ev, closure=CLOSURE)["terminal"],
+                                 red.TERMINAL_BLOCKED)
+
+    def test_duplicate_execution_argv_blocks(self):
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._rewrite(self._receipts_dir(ev) / "observation-receipt-A.json",
+                          lambda d: d["launch"]["argv"].extend(
+                              ["--n-gpu-layers", "99"]))
+            self.assertEqual(red.derive_terminal(ev, closure=CLOSURE)["terminal"],
+                             red.TERMINAL_BLOCKED)
+
+    def test_wrong_model_path_blocks(self):
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            def mut(d):
+                argv = d["launch"]["argv"]
+                argv[argv.index("--model") + 1] = "/models/foreign.gguf"
+            self._rewrite(self._receipts_dir(ev) / "observation-receipt-B.json", mut)
+            self.assertEqual(red.derive_terminal(ev, closure=CLOSURE)["terminal"],
+                             red.TERMINAL_BLOCKED)
+
+    def test_execution_package_hashes_block(self):
+        cases = (("A", "libggml-cuda.so"), ("B", "libggml-vulkan.so"),
+                 ("C", "libggml.so"), ("C", "libggml-base.so"))
+        for arm, obj in cases:
+            with self.subTest(arm=arm, object=obj), tempfile.TemporaryDirectory() as t:
+                ev = make_evidence(Path(t))
+                def mut(d, o=obj):
+                    d["observation_binary"].setdefault("package", {}) \
+                        .setdefault("objects", {})[o] = {"sha256": "0" * 64}
+                self._rewrite(self._receipts_dir(ev) /
+                              f"observation-receipt-{arm}.json", mut)
+                self.assertEqual(red.derive_terminal(ev, closure=CLOSURE)["terminal"],
+                                 red.TERMINAL_BLOCKED)
+
+    def test_missing_required_package_object_blocks(self):
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._rewrite(self._receipts_dir(ev) / "observation-receipt-B.json",
+                          lambda d: d["observation_binary"].setdefault(
+                              "package", {}).setdefault("objects", {}).pop(
+                              "libggml-vulkan.so", None))
+            self.assertEqual(red.derive_terminal(ev, closure=CLOSURE)["terminal"],
+                             red.TERMINAL_BLOCKED)
+
+    def test_bc_vulkan_package_mismatch_blocks(self):
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._rewrite(self._receipts_dir(ev) / "observation-receipt-C.json",
+                          lambda d: d["observation_binary"].setdefault(
+                              "package", {}).setdefault("objects", {}).__setitem__(
+                                  "libggml-vulkan.so", {"sha256": "c" * 64}))
+            self.assertEqual(red.derive_terminal(ev, closure=CLOSURE)["terminal"],
+                             red.TERMINAL_BLOCKED)
+
+    def test_mapped_object_not_authorized_blocks(self):
+        with tempfile.TemporaryDirectory() as t:
+            ev = make_evidence(Path(t))
+            self._rewrite(self._receipts_dir(ev) / "observation-receipt-B.json",
+                          lambda d: d["in_process_backends"].__setitem__(
+                              "mapped_objects", [{"path": "/tmp/libggml-vulkan.so",
+                                                  "sha256": "f" * 64}]))
+            self.assertEqual(red.derive_terminal(ev, closure=CLOSURE)["terminal"],
+                             red.TERMINAL_BLOCKED)
 
     def test_receipt_covers_all_mutation_classes(self):
         # structural: each documented mutation class has a test

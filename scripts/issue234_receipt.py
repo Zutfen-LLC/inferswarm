@@ -47,6 +47,8 @@ NS = "qwen38-flash-next-r8-h-vulkan"
 SUPERSEDED_REL = f"{AREA_REL}/evidence/superseded-20260920-original-comparator"
 
 RECEIPT_SCHEMA = "inferswarm.r8h.receipt/2"
+OBSERVATION_RECEIPT_SCHEMA = "inferswarm.r8h.observation-execution-receipt/2"
+OBSERVATION_PIN_SCHEMA = "inferswarm.r8h.pos0-observation-pin/2"
 CLOSURE_NAME = "PRODUCER-CLOSURE.json"
 FREEZE_REL = f"{AREA_REL}/evidence/freeze/campaign-freeze.json"
 
@@ -111,6 +113,7 @@ OBSERVATION_BINARIES: dict[str, dict[str, str]] = {
 #: binding prompt_sha256 for the same fixture row).
 PROMPT_CASE256_SHA256 = (
     "647c266d9e9b7769679d875a1d06fb7c47cf6f4b3acd9fb5d0364f2baa7a94b5")
+PROMPT_CASE256_LENGTH = 256
 
 #: Canonical case-256 first-repeat streams (raw ladder receipts,
 #: reduce_ladder authority). Bound into the observation receipts for

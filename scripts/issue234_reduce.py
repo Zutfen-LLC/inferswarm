@@ -589,6 +589,49 @@ def _derive_arm_characterization(
     return out
 
 
+def _required_package_prefixes(arm: str) -> tuple[str, ...]:
+    return ("llama-server", "libggml.so", "libggml-base.so", "libggml-cpu.so",
+            "libggml-cuda.so" if arm == "A" else "libggml-vulkan.so")
+
+
+def _package_shape_problems(arm: str, package: Any) -> list[str]:
+    if not isinstance(package, dict) or not isinstance(package.get("root"), str):
+        return ["not_a_package"]
+    objects = package.get("objects")
+    if not isinstance(objects, dict):
+        return ["objects_not_a_map"]
+    problems = []
+    for prefix in _required_package_prefixes(arm):
+        if not any(name == prefix or name.startswith(prefix + ".")
+                   for name in objects):
+            problems.append(f"missing:{prefix}")
+    for name, meta in objects.items():
+        if (not isinstance(name, str) or not isinstance(meta, dict)
+                or not isinstance(meta.get("realpath"), str)
+                or not isinstance(meta.get("bytes"), int)
+                or meta["bytes"] <= 0
+                or not isinstance(meta.get("sha256"), str)
+                or len(meta["sha256"]) != 64):
+            problems.append(f"bad:{name}")
+    return problems
+
+
+def _package_byte_identity(package: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+    """Filename-keyed underlying-byte identity; excludes host-local paths."""
+    objects = (package or {}).get("objects") or {}
+    return {name: {"bytes": meta.get("bytes"), "sha256": meta.get("sha256")}
+            for name, meta in objects.items() if isinstance(meta, dict)}
+
+
+def _observation_pin(evidence: Path, position: int) -> dict[str, Any] | None:
+    p = evidence / "candidate" / "characterization" / f"pos{position}" / \
+        "pos0-observation-pin.json"
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
 def _validate_observation_pin(evidence: Path, position: int) -> list[str]:
     """Closure-pin the observation producer (round-3 hardened): the
     prospective pos0-observation-pin document must exist and match the
@@ -607,6 +650,8 @@ def _validate_observation_pin(evidence: Path, position: int) -> list[str]:
     except json.JSONDecodeError:
         return ["observation_pin:unparsable"]
     problems: list[str] = []
+    if doc.get("schema") != rc.OBSERVATION_PIN_SCHEMA:
+        problems.append("observation_pin:schema")
     op = doc.get("observation_producer", {})
     if op.get("llama_cpp_source_pin") != rc.LLAMA_CPP_PIN:
         problems.append("observation_pin:llama_pin")
@@ -627,6 +672,31 @@ def _validate_observation_pin(evidence: Path, position: int) -> list[str]:
                        {}) or bins.get(arm, {})
         if not got or got.get("sha256") != want.get("sha256"):
             problems.append(f"observation_pin:arm{arm}:binary")
+    packages = op.get("execution_packages", {})
+    for arm in ("A", "B", "C"):
+        for problem in _package_shape_problems(arm, packages.get(arm)):
+            problems.append(f"observation_pin:arm{arm}:package:{problem}")
+    if op.get("same_vulkan_package") is not True:
+        problems.append("observation_pin:bc_same_package_not_required")
+    elif (isinstance(packages.get("B"), dict) and isinstance(packages.get("C"), dict)
+          and _package_byte_identity(packages["B"]) !=
+              _package_byte_identity(packages["C"])):
+        problems.append("observation_pin:bc_package_mismatch")
+    launch_contract = op.get("launch_contract", {})
+    if launch_contract != {"port": 18493, "host": "127.0.0.1"}:
+        problems.append("observation_pin:launch_contract")
+    expected_members = [{"name": m["member"], "bytes": m["bytes"],
+                         "sha256": m["sha256"]} for m in rc.MODEL_MEMBERS]
+    if op.get("model_members") != expected_members:
+        problems.append("observation_pin:model_members")
+    if not isinstance(op.get("model_subject"), str) or not op["model_subject"].startswith("/"):
+        problems.append("observation_pin:model_subject")
+    if op.get("prompt_sha256") != rc.PROMPT_CASE256_SHA256:
+        problems.append("observation_pin:prompt_sha256")
+    if op.get("prompt_len") != rc.PROMPT_CASE256_LENGTH:
+        problems.append("observation_pin:prompt_len")
+    if op.get("request_contract") != rc.REQUEST_CONTRACT:
+        problems.append("observation_pin:request_contract")
     # -- round-3: exact selector/ICD authority --------------------------
     # The pin's selectors must equal the frozen launch environments
     # EXACTLY (arm A CUDA selector to the frozen RTX UUID; arms B/C
@@ -695,7 +765,8 @@ def _closure_collector_sha() -> str | None:
 
 def _receipt_problems(arm: str, doc: dict[str, Any],
                       base: Path, position: int,
-                      canonical_tokens: list[int] | None) -> list[str]:
+                      canonical_tokens: list[int] | None,
+                      pin: dict[str, Any] | None) -> list[str]:
     """Mechanical per-arm validation of one observation execution
     receipt against every frozen authority. Every check derives from
     receipt bytes + retained raw bytes; authored booleans are never
@@ -706,6 +777,8 @@ def _receipt_problems(arm: str, doc: dict[str, Any],
     frozen = rc.OBSERVATION_FROZEN_DEVICES
 
     # ---- envelope / identity ----------------------------------------
+    if doc.get("schema") != rc.OBSERVATION_RECEIPT_SCHEMA:
+        problems.append(f"arm{arm}:receipt_schema")
     if doc.get("campaign") != rc.CAMPAIGN_ID:
         problems.append(f"arm{arm}:campaign")
     if doc.get("case_id") != "case-256":
@@ -728,6 +801,13 @@ def _receipt_problems(arm: str, doc: dict[str, Any],
         problems.append(f"arm{arm}:binary_sha256:{ob.get('sha256')}")
     if not ob.get("path"):
         problems.append(f"arm{arm}:binary_path")
+    pin_op = (pin or {}).get("observation_producer", {})
+    want_package = (pin_op.get("execution_packages") or {}).get(arm)
+    got_package = ob.get("package")
+    for problem in _package_shape_problems(arm, got_package):
+        problems.append(f"arm{arm}:package:{problem}")
+    if want_package is None or got_package != want_package:
+        problems.append(f"arm{arm}:package_not_authorized")
 
     # ---- source pin / hook identity ---------------------------------
     src = doc.get("source", {})
@@ -751,19 +831,84 @@ def _receipt_problems(arm: str, doc: dict[str, Any],
     # ---- launch argv / environment -----------------------------------
     launch = doc.get("launch", {})
     argv = launch.get("argv") or []
+    model = doc.get("model") or {}
     if not argv:
         problems.append(f"arm{arm}:no_argv")
+    elif argv[0] != ob.get("path"):
+        problems.append(f"arm{arm}:argv_binary_mismatch")
     else:
-        if argv[0] != ob.get("path"):
-            problems.append(f"arm{arm}:argv_binary_mismatch")
-        flat = " ".join(argv)
-        for flag, want in (("--n-gpu-layers", str(rc.MATCHED_NGL)),
-                           ("--ctx-size",
-                            str(rc.CONTEXT_SETTINGS["ctx-size"])),
-                           ("--batch-size",
-                            str(rc.CONTEXT_SETTINGS["batch-size"]))):
-            if f"{flag} {want}" not in flat:
-                problems.append(f"arm{arm}:argv:{flag}")
+        pairs = argv[1:]
+        expected = {
+            "--model": model.get("first_member"),
+            "--n-gpu-layers": str(rc.MATCHED_NGL),
+            "--ctx-size": str(rc.CONTEXT_SETTINGS["ctx-size"]),
+            "--batch-size": str(rc.CONTEXT_SETTINGS["batch-size"]),
+            "--port": str((pin_op.get("launch_contract") or {}).get("port")),
+            "--host": (pin_op.get("launch_contract") or {}).get("host"),
+        }
+        parsed: dict[str, str] = {}
+        if len(pairs) != len(expected) * 2:
+            problems.append(f"arm{arm}:argv_arity")
+        else:
+            for flag, value in zip(pairs[::2], pairs[1::2]):
+                if flag not in expected:
+                    problems.append(f"arm{arm}:argv_unexpected:{flag}")
+                elif flag in parsed:
+                    problems.append(f"arm{arm}:argv_duplicate:{flag}")
+                else:
+                    parsed[flag] = value
+            for flag, value in expected.items():
+                if parsed.get(flag) != value:
+                    problems.append(f"arm{arm}:argv:{flag}")
+
+    # ---- execution-time model identity --------------------------------
+    want_members = [{"name": m["member"], "bytes": m["bytes"],
+                     "sha256": m["sha256"]} for m in rc.MODEL_MEMBERS]
+    got_members = model.get("members")
+    if got_members != want_members:
+        problems.append(f"arm{arm}:model_members")
+    if model.get("total_bytes") != rc.TOTAL_MODEL_BYTES:
+        problems.append(f"arm{arm}:model_total_bytes")
+    first = model.get("first_member")
+    model_subject = pin_op.get("model_subject")
+    if (not isinstance(first, str) or model_subject != model.get("path")
+            or Path(first).name != rc.MODEL_MEMBERS[0]["member"]
+            or str(Path(first).parent) != model.get("path")):
+        problems.append(f"arm{arm}:model_path")
+    if model.get("backing_receipt") != f"arm{arm}-backing.json":
+        problems.append(f"arm{arm}:backing_receipt")
+
+    # ---- request contract / raw transmitted payload -------------------
+    request = doc.get("request") or {}
+    if request.get("prompt_sha256") != pin_op.get("prompt_sha256"):
+        problems.append(f"arm{arm}:prompt_sha256")
+    if request.get("contract") != pin_op.get("request_contract"):
+        problems.append(f"arm{arm}:request_contract")
+    expected_prompt_len = pin_op.get("prompt_len")
+    if request.get("prompt_len") != expected_prompt_len:
+        problems.append(f"arm{arm}:prompt_len")
+    payload = request.get("payload") or {}
+    payload_name = payload.get("path")
+    payload_path = base / payload_name if isinstance(payload_name, str) and \
+        "/" not in payload_name else None
+    if payload_path is None or not payload_path.is_file():
+        problems.append(f"arm{arm}:request_payload_missing")
+    else:
+        raw_payload = payload_path.read_bytes()
+        if (payload.get("bytes") != len(raw_payload)
+                or payload.get("sha256") != hashlib.sha256(raw_payload).hexdigest()):
+            problems.append(f"arm{arm}:request_payload_digest")
+        try:
+            decoded_payload = json.loads(raw_payload)
+        except json.JSONDecodeError:
+            problems.append(f"arm{arm}:request_payload_json")
+        else:
+            prompt = decoded_payload.pop("prompt", None)
+            if decoded_payload != rc.REQUEST_CONTRACT:
+                problems.append(f"arm{arm}:request_payload_contract")
+            if not isinstance(prompt, (str, list)) or len(prompt) != expected_prompt_len:
+                problems.append(f"arm{arm}:request_payload_prompt")
+
     # the /proc/PID/environ capture must carry the EXACT frozen
     # selector/ICD environment (mutation of the actual execution
     # selector fails closed here)
@@ -808,6 +953,26 @@ def _receipt_problems(arm: str, doc: dict[str, Any],
             problems.append(f"arm{arm}:vulkan_backend_not_mapped")
         if has_cuda:
             problems.append(f"arm{arm}:cuda_backend_in_vulkan_arm")
+    package_objects = (got_package or {}).get("objects") or {}
+    mapped_objects = (doc.get("in_process_backends") or {}).get(
+        "mapped_objects") or []
+    if not isinstance(mapped_objects, list):
+        problems.append(f"arm{arm}:mapped_objects_not_list")
+        mapped_objects = []
+    mapped_names = set()
+    for mapped_object in mapped_objects:
+        name = mapped_object.get("name") if isinstance(mapped_object, dict) else None
+        expected_object = package_objects.get(name)
+        if (expected_object is None or not isinstance(mapped_object, dict)
+                or any(mapped_object.get(k) != expected_object.get(k)
+                       for k in ("realpath", "bytes", "sha256"))):
+            problems.append(f"arm{arm}:mapped_object_not_authorized:{name}")
+        else:
+            mapped_names.add(name)
+    for prefix in _required_package_prefixes(arm)[1:]:
+        if not any(name == prefix or name.startswith(prefix + ".")
+                   for name in mapped_names):
+            problems.append(f"arm{arm}:required_object_not_mapped:{prefix}")
 
     # ---- device proof -------------------------------------------------
     dp = doc.get("device_proof", {})
@@ -925,6 +1090,7 @@ def _receipt_problems(arm: str, doc: dict[str, Any],
     arts = doc.get("artifacts", {})
     for key, fname in (("observation_jsonl", f"{arm}.jsonl"),
                        ("pos0_f32", f"{arm}.jsonl.pos{position}.f32"),
+                       ("request_payload", f"{arm}.request.json"),
                        ("response", f"{arm}.resp.json"),
                        ("server_log", f"{arm}.server.log")):
         want_p = base / fname
@@ -978,6 +1144,7 @@ def reduce_observation_execution_truth(
     three arms, else R8H_EVIDENCE_BLOCKED."""
     base = evidence / "candidate" / "characterization" / f"pos{position}"
     out: dict[str, Any] = {}
+    pin = _observation_pin(evidence, position)
     for arm in ("A", "B", "C"):
         p = base / f"observation-receipt-{arm}.json"
         if not p.is_file():
@@ -1000,7 +1167,7 @@ def reduce_observation_execution_truth(
                         "problems": ["observation_receipt:digest"]}
             continue
         can = (canonical_streams or {}).get(arm)
-        problems = _receipt_problems(arm, doc, base, position, can)
+        problems = _receipt_problems(arm, doc, base, position, can, pin)
         sel = ((doc.get("device_proof") or {}).get("selected") or {})
         out[arm] = {
             "status": "OK" if not problems else "FAIL",
@@ -1016,6 +1183,8 @@ def reduce_observation_execution_truth(
             "backend": (doc.get("device_proof") or {}).get("backend"),
             "selected_delta_bytes":
                 (doc.get("residency") or {}).get("selected_delta_bytes"),
+            "package_objects": ((doc.get("observation_binary") or {})
+                                .get("package") or {}).get("objects"),
         }
     # ---- cross-arm relation: A and B executed on the SAME GPU --------
     g3060 = rc.OBSERVATION_FROZEN_DEVICES["frozen_rtx3060"]
@@ -1030,6 +1199,14 @@ def reduce_observation_execution_truth(
         "same_frozen_rtx3060": ab_same,
         "status": "OK" if ab_same else "FAIL",
         "problems": [] if ab_same else ["A_B_gpu_identity_divergence"],
+    }
+    b_objects = _package_byte_identity({"objects": out.get("B", {}).get("package_objects")})
+    c_objects = _package_byte_identity({"objects": out.get("C", {}).get("package_objects")})
+    bc_same = b_objects == c_objects and bool(b_objects)
+    out["BC_same_vulkan_package"] = {
+        "same_authorized_package": bc_same,
+        "status": "OK" if bc_same else "FAIL",
+        "problems": [] if bc_same else ["B_C_vulkan_package_mismatch"],
     }
     return out
 
