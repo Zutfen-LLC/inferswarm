@@ -143,7 +143,9 @@ PLACEMENT_RULE = "smallest-ngl-nonzero-residency"
 NGL_CANDIDATE_LADDER: tuple[int, ...] = (1, 2, 4, 8, 16, 24, 32, 40, 48, 49)
 CONTEXT_SETTINGS: dict[str, Any] = {
     "ctx-size": 8192,
-    "batch": 512,
+    # CLI flag at pin b29c606e is --batch-size (common/arg.cpp:1666,
+    # {"-b", "--batch-size"}); plain --batch is rejected by the server.
+    "batch-size": 512,
 }
 
 #: V340L single-die capacity contract: one die == one 8-GiB Memory
@@ -152,6 +154,15 @@ CONTEXT_SETTINGS: dict[str, Any] = {
 #: buffers on the die must leave >= 512 MiB below the die's reported
 #: heap budget for runtime/KV/workspace allocations.
 DIE_HEAP_BYTES = 8 * 1024**3
+
+#: Excluded-die noise bound for placement selection. Vulkan instance
+#: creation initializes the amdgpu driver on BOTH dies (observed
+#: 12288-byte sysfs delta even when the server exits before loading
+#: any model bytes), so byte-exact zero is not achievable. Model tensor
+#: residency at IQ1_S is MiB-scale at minimum; KiB-scale deltas are
+#: enumeration noise. Mechanical rule: excluded die is "unused" iff its
+#: vram delta stays below 1 MiB (no model-scale residency possible).
+EXCLUDED_DIE_MAX_BYTES = 1024 * 1024
 SAFETY_HEADROOM_BYTES = 512 * 1024**2
 
 # -----------------------------------------------------------------------

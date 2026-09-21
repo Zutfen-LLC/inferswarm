@@ -77,7 +77,7 @@ def preflight_ngl(server: Path, model_dir: Path, ngl: int,
     full_env.update(env)
     model = model_dir / rc.MODEL_MEMBERS[0]["member"]
     cmd = [str(server), "--model", str(model),
-           "--n-gpu-layers", str(ngl), "--ctx-size", "8192", "--batch", "512",
+           "--n-gpu-layers", str(ngl), "--ctx-size", "8192", "--batch-size", "512",
            "--port", str(port), "--host", "127.0.0.1"]
     log_path = log_dir / f"preflight-ngl{ngl}.log"
     rec: dict[str, Any] = {}
@@ -152,7 +152,7 @@ def select_geometry(attempts: list[dict[str, Any]]) -> dict[str, Any]:
                        default=0)
         exc_vram = max((v for k, v in exc.items() if "vram_used" in k),
                        default=0)
-        if sel_vram > 0 and exc_vram == 0:
+        if sel_vram > 0 and exc_vram < rc.EXCLUDED_DIE_MAX_BYTES:
             vulkan_mib = rec["placement"]["vulkan_buffers_mib"]
             on_die_mib = sum(v for k, v in vulkan_mib.items()
                              if k.startswith("Vulkan"))

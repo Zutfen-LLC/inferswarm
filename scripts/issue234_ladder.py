@@ -108,7 +108,7 @@ def launch_server(server: Path, model: Path, ngl: int, port: int,
         [str(server), "--model", str(model),
          "--n-gpu-layers", str(ngl),
          "--ctx-size", str(rc.CONTEXT_SETTINGS["ctx-size"]),
-         "--batch", str(rc.CONTEXT_SETTINGS["batch"]),
+         "--batch-size", str(rc.CONTEXT_SETTINGS["batch-size"]),
          "--port", str(port), "--host", "127.0.0.1"],
         stdout=log, stderr=subprocess.STDOUT, env=env)
 
