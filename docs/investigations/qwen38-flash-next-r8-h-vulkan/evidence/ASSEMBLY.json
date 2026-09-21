@@ -153,7 +153,6 @@
        "rank": 2
       }
      },
-     "identity_problems": [],
      "jsonl_sha256": "b00fdf5d155b1d8a3ad0ac9ab9de2a2079bf24531cb6139233d7e74dee67b35f",
      "n_vocab": 248320,
      "non_perturbation_identical": true,
@@ -209,7 +208,6 @@
        "rank": 1
       }
      },
-     "identity_problems": [],
      "jsonl_sha256": "4d21645fc57c3f0e1424c32a2d6c4863a903486141caaae4b9f86210d20b87e7",
      "n_vocab": 248320,
      "non_perturbation_identical": true,
@@ -265,7 +263,6 @@
        "rank": 1
       }
      },
-     "identity_problems": [],
      "jsonl_sha256": "757f4aeec7f172d3648f602b28903f11d29c9788d4e1b2c5f2ff15543b5e0dc2",
      "n_vocab": 248320,
      "non_perturbation_identical": true,
@@ -293,6 +290,64 @@
      "winner_vs_runner_up_margin": 0.37494278
     }
    },
+   "observation_execution_truth": {
+    "A": {
+     "backend": "cuda",
+     "binary_sha256": "2242e96363c651184c1565969abe4eaf619c1c534e965fdb053db4119f16be2f",
+     "host": "inferswarm01",
+     "problems": [],
+     "selected_delta_bytes": 1214251008,
+     "selected_gpu": {
+      "bdf": "00000000:02:00.0",
+      "deviceUUID": null,
+      "uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"
+     },
+     "status": "OK"
+    },
+    "AB_same_gpu": {
+     "A": {
+      "bdf": "00000000:02:00.0",
+      "deviceUUID": null,
+      "uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"
+     },
+     "B": {
+      "bdf": "00000000:02:00.0",
+      "deviceUUID": "1fc28f83-1d45-926e-54d0-ba1e835ef099",
+      "uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"
+     },
+     "bdf": "00000000:02:00.0",
+     "problems": [],
+     "same_frozen_rtx3060": true,
+     "status": "OK",
+     "uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"
+    },
+    "B": {
+     "backend": "vulkan",
+     "binary_sha256": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0",
+     "host": "inferswarm01",
+     "problems": [],
+     "selected_delta_bytes": 1096810496,
+     "selected_gpu": {
+      "bdf": "00000000:02:00.0",
+      "deviceUUID": "1fc28f83-1d45-926e-54d0-ba1e835ef099",
+      "uuid": "GPU-1fc28f83-1d45-926e-54d0-ba1e835ef099"
+     },
+     "status": "OK"
+    },
+    "C": {
+     "backend": "vulkan",
+     "binary_sha256": "dcee5bcf8d80a7c99f2d71b753afd4c678d51a43154ed83bc2e208cced1b3ab0",
+     "host": "inferswarm02",
+     "problems": [],
+     "selected_delta_bytes": 1054781440,
+     "selected_gpu": {
+      "bdf": "00000000:06:00.0",
+      "deviceUUID": "00000000-0600-0000-0000-000000000000",
+      "uuid": null
+     },
+     "status": "OK"
+    }
+   },
    "problems": [],
    "required_position": 0,
    "secondary": {
@@ -308,8 +363,8 @@
   }
  },
  "closure": {
-  "closure_digest": "130243fcaa99af4c45b2b0f62b4ec3c718dd1a80bb9193fa2639e1c5a0e02364",
-  "producer_head": "88a96f54803564daf89cd16f6debae34af691bb5"
+  "closure_digest": "88e33783fc84713c034d7d1ab22c018fa67eff075af54d765e0aab7173d4990d",
+  "producer_head": "8ce69c1faf597779324ddb8103576f27c42591e6"
  },
  "controls_receipt": {
   "all_ok": true,
@@ -511,7 +566,7 @@
     "terminal": "R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED"
    },
    "33": {
-    "d": "divergence classified without required score characterization",
+    "d": "divergence classified without required score characterization (raw corpus OR execution receipts absent)",
     "expect": "error",
     "ok": true,
     "terminal": "R8H_EVIDENCE_BLOCKED"
@@ -587,14 +642,16 @@
     "issue234_runtime.py",
     "issue234_placement.py",
     "issue234_ladder.py",
-    "issue234_health.py"
+    "issue234_health.py",
+    "issue234_observe.py"
    ],
    "inferswarm02": [
     "issue234_host.py",
     "issue234_runtime.py",
     "issue234_placement.py",
     "issue234_ladder.py",
-    "issue234_health.py"
+    "issue234_health.py",
+    "issue234_observe.py"
    ]
   },
   "per_host": {
@@ -603,6 +660,7 @@
      "issue234_health.py",
      "issue234_host.py",
      "issue234_ladder.py",
+     "issue234_observe.py",
      "issue234_placement.py",
      "issue234_runtime.py"
     ],
@@ -613,6 +671,7 @@
      "issue234_health.py",
      "issue234_host.py",
      "issue234_ladder.py",
+     "issue234_observe.py",
      "issue234_placement.py",
      "issue234_runtime.py"
     ],
@@ -632,6 +691,8 @@
  "schema": "inferswarm.r8h.terminal-reduction/2",
  "terminal": "R8H_QWEN38_MULTI_AXIS_DIVERGENCE_CHARACTERIZED",
  "terminal_basis": [
-  "case-256: multi-axis pairwise map: {'AB': False, 'BC': False, 'AC': False}; earliest divergence position 0 (A<->B and A<->C diverge at 0; B<->C at 5); position-0 characterization re-derived from raw float32 bytes; position-5 retained as secondary_device_axis_characterization"
+  "case-256: multi-axis pairwise map: {'AB': False, 'BC': False, 'AC': False}; earliest divergence position 0 (A<->B and A<->C diverge at 0; B<->C at 5); position-0 characterization re-derived from raw float32 bytes; position-5 retained as secondary_device_axis_characterization",
+  "divergence structure decomposed without a single causal-root claim: backend-associated A<->B divergence at position 0 (same frozen RTX 3060, CUDA vs Vulkan); A<->C also diverging at 0 (backend+device axes concurrent); B<->C equal through position 4 and first diverging at position 5 (later device/backend interaction); each axis is characterized separately",
+  "observation execution identity mechanically bound for all three arms (receipts prove launch env, ICD, selected GPU UUID/BDF, backend participation, residency, and binary identity; A and B prove the SAME frozen RTX 3060)"
  ]
 }

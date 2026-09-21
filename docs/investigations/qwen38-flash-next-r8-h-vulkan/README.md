@@ -191,23 +191,90 @@ Non-claims (explicit):
   wrong generated position, summary/raw digest binding break,
   raw-sidecar tamper, and non-perturbation forgery.
 
-## 6. Validation at final head (round 2)
+## 6. Validation at final head (round 3)
+
+Round 3 (maintainer finding on `c1ac7237`) closed the last blocker:
+the observation-only score-characterization executions were not
+mechanically bound to the GPU/backend selectors they claimed to
+represent. The retained round-2 pos0 corpus proved token/logit output
+only — observation tokens equal to the canonical stream is NOT
+identity proof (the quarantined relative-ICD CPU-fallback incident
+demonstrated wrong-environment execution is a real failure class).
+
+What round 3 added:
+
+- **Observation execution receipts** (schema
+  `inferswarm.r8h.observation-execution-receipt/1`, one per arm under
+  `evidence/candidate/characterization/pos0/`): launch host + boot
+  id, exact observation binary path/sha256/bin-dir hashes, llama.cpp
+  source pin + hook diff digest, exact launch argv (`/proc/PID/
+  cmdline`) and environment (`/proc/PID/environ`, captured at exec),
+  in-process backend participation (`/proc/PID/maps` libggml
+  objects), device identity under the exact launch environment
+  (`--list-devices`, `vulkaninfo` GPU UUID→BDF joins via nvidia-smi
+  and RADV BDF-encoded UUIDs), pre/during/post accelerator residency
+  with excluded-device bounds, live `nvidia-smi` compute-apps binding
+  of the server PID to the frozen GPU UUID (arm A), CPU-fallback
+  rejection evidence, artifact digests binding the receipt to the
+  retained jsonl/f32/resp/server-log bytes, and the generated stream
+  (non-perturbation quarantine before any receipt exists).
+- **Bounded recollection** under the prospective pin
+  `pos0/pos0-observation-pin.json` (schema /2, authored BEFORE
+  collection) and the closure-pinned physical collector
+  `scripts/issue234_observe.py` (deployed sha `ddbe8d3c…` verified
+  byte-identical on BOTH execution hosts before collection). The
+  canonical 3×3 ladder was NOT rerun; the recollected pos0 JSONL rows
+  and float32 rows are BYTE-IDENTICAL to the round-2 corpus
+  (superseded-round2-unbound/), so every score finding is retained
+  unchanged.
+- **Terminal gate**: `reduce_observation_execution_truth` re-validates
+  every identity relation from receipt bytes (arm A CUDA selector to
+  the frozen RTX 3060 UUID `GPU-1fc28f83…` at `00000000:02:00.0`;
+  arm B absolute NVIDIA ICD + Vulkan selector resolving to the SAME
+  frozen 3060 — the A/B same-GPU relation is derived, not assumed;
+  arm C absolute Radeon ICD resolving to V340L die `06:00.0` with
+  die `09:00.0` excluded and under the frozen bound; no CUDA
+  participation in Vulkan arms and vice versa; no CPU fallback;
+  observation binary hash equal to the prospectively authorized
+  hash). The score characterization gate requires
+  `observation_execution_truth.status == OK` for all three arms,
+  else `R8H_EVIDENCE_BLOCKED`.
+- **Pin hardening**: `_validate_observation_pin` now enforces the
+  exact pinned selector/ICD authority (arm A CUDA selector; arms B/C
+  Vulkan selector + ABSOLUTE ICD path + ICD file sha256), so a
+  mutated pin selector or a diverging execution selector blocks
+  independently.
+- **Inert identity check removed**: the round-2
+  `_arm_identity_map()`/`_derive_arm_characterization()` pairing
+  could never fire (the map never supplied the fields the
+  characterization looked for). Observation identity is centralized
+  in the execution-truth reducer — one fail-closed authority path.
+- **Control 33 strengthened** with a receipts-only-absent companion
+  mutation; focused suite extended to 65 tests covering 15
+  receipt-mutation classes (wrong GPU, B≠A GPU, wrong die, relative/
+  missing ICD, wrong ICD vendor, CPU fallback, wrong binary hash,
+  wrong host, pin↔receipt selector mismatch, zero selected activity,
+  excluded-device active, forged token equality, digest tamper,
+  absent receipt, missing backend mapping) — all fail closed.
+
+Validation at the final round-3 head:
 
 - closure verifies (ancestor + blob identity pin→HEAD + worktree;
-  characterize.py closure-bound);
+  observe.py closure-bound as a physical producer);
 - deployed producer verification mechanically executes against BOTH
-  hosts with the frozen 2×5 matrix (round 1 compared zero hashes);
+  hosts with the frozen 2×6 matrix (five e7d822a producers +
+  the round-3 collector), all hashes live-read and pin-equal;
 - deterministic terminal reduction ×2 (byte-identical);
-- focused #234 suite (39 tests) green; #184 and #213 preservation
+- focused #234 suite (65 tests) green; #184 and #213 preservation
   suites green with the narrow additive #234 allowance;
 - `finalize_repository.py --check` and `sync_project_status.py
   --check` pass; CI planner untouched (test module name unchanged);
 - `MANIFEST.sha256` regenerated LAST, after every README/evidence
-  artifact was final (round 1's manifest recorded a stale README
-  digest — the manifest is now the final content-bearing step).
+  artifact was final.
 
 ## 7. Non-events (confirmed)
 
 No RPC, no mixed simultaneous AMD/NVIDIA execution, no cross-die
 V340L use, no runtime upgrade past the pin, no alternate
-quantization, no planner policy change, no ordinary serving traffic.
+quantization, no planner policy change, no ordinary serving traffic,
+no canonical ladder rerun in round 3.
